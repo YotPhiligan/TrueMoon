@@ -4,3 +4,8 @@ public interface ILog
 {
     
 }
+
+public class LogMessage
+{
+    
+}

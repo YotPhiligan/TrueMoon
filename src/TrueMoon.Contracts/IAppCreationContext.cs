@@ -4,6 +4,7 @@ namespace TrueMoon;
 
 public interface IAppCreationContext
 {
-    IAppCreationContext AddService(Action<IServiceConfigurationContext> action);
-    IAppCreationContext ConfigureDependecies<T>(Action<T> action);
+    IAppCreationContext AddCommonDependencies(Action<IDependenciesRegistrationContext> action);
+    IAppCreationContext AddStandaloneService(Action<IServiceConfigurationContext> action);
+    IAppCreationContext AddDependencies<T>(Action<T> action);
 }

@@ -10,8 +10,9 @@ public class AppTests
     public async Task AppCreate()
     {
         await using var app = App.Create(context => context
-            .AddService(v=>v.)
-            .AddService()
+            .AddCommonDependencies(registrationContext => registrationContext.Add<object>())
+            .AddStandaloneService(v=>v
+                .Dependencies.Add<object, string>())
         );
 
         await app.StartAsync();

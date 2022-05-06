@@ -21,16 +21,16 @@ public class App : IApp
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return Task.CompletedTask;
     }
 
     public static IApp Create(Action<IAppCreationContext> action)
     {
-        throw new NotImplementedException();
+        return new App();
     }
 }
