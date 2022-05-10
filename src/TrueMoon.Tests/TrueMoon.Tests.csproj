@@ -21,6 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj" />
       <ProjectReference Include="..\TrueMoon\TrueMoon.csproj" />
     </ItemGroup>
 

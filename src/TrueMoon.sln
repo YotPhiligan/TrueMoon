@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Items", "Items", "{01FFF981
 		..\.gitignore = ..\.gitignore
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Extensions.DependencyInjection", "TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj", "{4EFF9FAC-2FF9-4166-9525-B70FC3431597}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,5 +33,9 @@ Global
 		{1B399E16-43E9-460B-BE1F-45708E8A194C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1B399E16-43E9-460B-BE1F-45708E8A194C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1B399E16-43E9-460B-BE1F-45708E8A194C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EFF9FAC-2FF9-4166-9525-B70FC3431597}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EFF9FAC-2FF9-4166-9525-B70FC3431597}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EFF9FAC-2FF9-4166-9525-B70FC3431597}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EFF9FAC-2FF9-4166-9525-B70FC3431597}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

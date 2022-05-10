@@ -20,9 +20,3 @@ public interface IDependencyDescriptor<T,TImplementation> : IDependencyDescripto
 {
 
 }
-
-public enum ServiceLifetime
-{
-    Singleton,
-    Transient
-}

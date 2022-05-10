@@ -4,7 +4,8 @@ namespace TrueMoon;
 
 public interface IAppCreationContext
 {
+    IAppParameters Parameters { get; }
     IAppCreationContext AddCommonDependencies(Action<IDependenciesRegistrationContext> action);
-    IAppCreationContext AddStandaloneService(Action<IServiceConfigurationContext> action);
-    IAppCreationContext AddDependencies<T>(Action<T> action);
+    IAppCreationContext AddProcessingEnclave(Action<IProcessingEnclaveConfigurationContext> action);
+    IAppCreationContext UseDependencyInjection<T>(T? container = default) where T : IDependencyInjectionProvider;
 }

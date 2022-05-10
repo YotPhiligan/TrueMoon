@@ -1,19 +1,23 @@
-using TrueMoon.Dependencies;
+﻿using TrueMoon.Dependencies;
 
-namespace TrueMoon;
+namespace TrueMoon.Enclaves;
 
 /// <inheritdoc />
-public class AppCreationContext : IAppCreationContext, IServiceProviderBuilder
+public class EnclaveCreationContext : IAppCreationContext, IServiceProviderBuilder
 {
     private readonly IDependenciesRegistrationContext _dependenciesRegistrationContext;
-    private readonly List<Action<IProcessingEnclaveConfigurationContext>> _enclavesActions = new ();
-    private IDependencyInjectionProvider? _dependencyInjectionProvider;
+    private Action<IProcessingEnclaveConfigurationContext>? _action;
+    private readonly int _id;
+    private int _enclavesCount;
+    private IDependencyInjectionProvider _dependencyInjectionProvider;
 
-    public AppCreationContext(IAppParameters parameters,
+    public EnclaveCreationContext(IAppParameters parameters,
         IDependenciesRegistrationContext dependenciesRegistrationContext)
     {
         _dependenciesRegistrationContext = dependenciesRegistrationContext;
         Parameters = parameters;
+
+        _id = Parameters.GetEnclaveId() ?? default;
     }
 
     public IAppParameters Parameters { get; }
@@ -22,6 +26,7 @@ public class AppCreationContext : IAppCreationContext, IServiceProviderBuilder
     public IAppCreationContext AddCommonDependencies(Action<IDependenciesRegistrationContext> action)
     {
         if (action == null) throw new ArgumentNullException(nameof(action));
+
         action(_dependenciesRegistrationContext);
         return this;
     }
@@ -30,7 +35,17 @@ public class AppCreationContext : IAppCreationContext, IServiceProviderBuilder
     public IAppCreationContext AddProcessingEnclave(Action<IProcessingEnclaveConfigurationContext> action)
     {
         if (action == null) throw new ArgumentNullException(nameof(action));
-        _enclavesActions.Add(action);
+        if (_action != null)
+        {
+            return this;
+        }
+        
+        if (_id == _enclavesCount)
+        {
+            _action = action;
+        }
+        _enclavesCount++;
+        
         return this;
     }
 
@@ -42,6 +57,8 @@ public class AppCreationContext : IAppCreationContext, IServiceProviderBuilder
         return this;
     }
 
+    public string Name { get; set; }
+    
     public IServiceProvider Build()
     {
         var descriptors = _dependenciesRegistrationContext.GetDescriptors();

@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using TrueMoon.Dependencies;
+using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
 
 namespace TrueMoon.Tests;
@@ -10,9 +11,11 @@ public class AppTests
     public async Task AppCreate()
     {
         await using var app = App.Create(context => context
+            .UseDependencyInjection<DependencyInjectionProvider>()
             .AddCommonDependencies(registrationContext => registrationContext.Add<object>())
-            .AddStandaloneService(v=>v
-                .Dependencies.Add<object, string>())
+            .AddProcessingEnclave(configurationContext => configurationContext
+                .AddDependencies(registrationContext => registrationContext.Add<object, string>())
+            )
         );
 
         await app.StartAsync();
