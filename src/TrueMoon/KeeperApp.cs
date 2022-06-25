@@ -1,8 +1,17 @@
-﻿namespace TrueMoon;
+﻿using TrueMoon.Dependencies;
+
+namespace TrueMoon;
 
 /// <inheritdoc />
 public class KeeperApp : IApp
 {
+    public KeeperApp(IAppParameters parameters, 
+        IServiceProvider services)
+    {
+        Parameters = parameters;
+        Services = services;
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
@@ -34,13 +43,22 @@ public class KeeperApp : IApp
     public IAppParameters Parameters { get; }
 
     /// <inheritdoc />
-    public Task StartAsync(CancellationToken cancellationToken = default)
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        var services = Services.ResolveAll<IStartable>();
+
+        foreach (var service in services)
+        {
+            await service.StartAsync(cancellationToken);
+        }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken = default)
+    public async Task StopAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        var services = Services.ResolveAll<IStoppable>();
+        foreach (var service in services)
+        {
+            await service.StopAsync(cancellationToken);
+        }
     }
 }

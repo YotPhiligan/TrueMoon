@@ -28,6 +28,17 @@ public static class ServicesRegistrationContextExtensions
         return context;
     }
     
+    public static IDependenciesRegistrationContext Add<TImplementation>(this IDependenciesRegistrationContext context, Action<IDependencyRegistrationContext<TImplementation>> action) 
+        where TImplementation : class
+    {
+        if (action == null) throw new ArgumentNullException(nameof(action));
+        var ctx = new DependencyRegistrationContext<TImplementation>();
+        action(ctx);
+        var descriptor = ctx.GetDescriptor();
+        context.AddDependency(descriptor);
+        return context;
+    }
+    
     public static IDependenciesRegistrationContext RemoveAll<T>(this IDependenciesRegistrationContext context)
     {
         var descriptors= context.GetDescriptors<T>();
@@ -51,9 +62,30 @@ public static class ServicesRegistrationContextExtensions
 
         return context;
     }
-}
 
-public interface ICustomDiContainerAccessor
-{
-    bool TryGetTypedContainer<T>(out T container);
+    public interface IDependencyRegistrationContext<TImplementation>
+    {
+        IDependencyRegistrationContext<TImplementation> With<T>();
+    }
+
+    internal class DependencyRegistrationContext<TImplementation> : IDependencyRegistrationContext<TImplementation>
+    {
+        private readonly List<Type> _types = new ();
+        public IDependencyRegistrationContext<TImplementation> With<T>()
+        {
+            var type = typeof(T);
+            if (_types.Contains(type))
+            {
+                return this;
+            }
+            _types.Add(type);
+            return this;
+        }
+
+        public DependencyDescriptor<TImplementation> GetDescriptor()
+        {
+            var descriptor = new DependencyDescriptor<TImplementation>(_types);
+            return descriptor;
+        }
+    }
 }

@@ -3,11 +3,11 @@ namespace TrueMoon.Dependencies;
 public interface IDependencyDescriptor
 {
     Type GetServiceType();
-    Type? GetImplementationType();
+    Type GetImplementationType();
     
     ServiceLifetime Lifetime { get; }
 
-    IReadOnlyList<Type>? GetAdditionalImplementationTypes();
+    IReadOnlyList<Type>? GetAdditionalTypes();
 }
 
 public interface IDependencyDescriptor<T> : IDependencyDescriptor

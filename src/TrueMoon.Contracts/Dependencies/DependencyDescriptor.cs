@@ -28,15 +28,15 @@ public record DependencyDescriptor<T> : IDependencyDescriptor<T>
     public Func<IServiceProvider,T>? Factory { get; }
     public Type GetServiceType() => typeof(T);
 
-    public virtual Type? GetImplementationType() => GetServiceType();
+    public virtual Type GetImplementationType() => GetServiceType();
 
     public ServiceLifetime Lifetime { get; }
-    public IReadOnlyList<Type>? GetAdditionalImplementationTypes() => _additionalTypes;
+    public IReadOnlyList<Type>? GetAdditionalTypes() => _additionalTypes;
 }
 
 public record DependencyDescriptor<T,TImplementation> : DependencyDescriptor<T>, IDependencyDescriptor<T,TImplementation> where TImplementation : T
 {
     public DependencyDescriptor(ServiceLifetime lifetime = ServiceLifetime.Singleton) : base(lifetime) {}
 
-    public override Type? GetImplementationType() => typeof(TImplementation);
+    public override Type GetImplementationType() => typeof(TImplementation);
 }

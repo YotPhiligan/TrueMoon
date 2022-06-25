@@ -25,7 +25,14 @@ public static class App
         }
         else
         {
-            ctx.AddCommonDependencies(t=>t.Add<IApp,KeeperApp>());
+            ctx.AddCommonDependencies(t=>t
+                .Add<IApp,KeeperApp>()
+                .Add<EnclavesController>(context => context
+                    .With<IEnclavesController>()
+                    .With<IStartable>()
+                    .With<IStoppable>()
+                )
+            );
         }
         
         ctx.AddCommonDependencies(t=>t.Add(parameters));
