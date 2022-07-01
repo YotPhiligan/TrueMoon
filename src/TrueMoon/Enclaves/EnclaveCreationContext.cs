@@ -65,16 +65,3 @@ public class EnclaveCreationContext : IAppCreationContext, IServiceProviderBuild
         return _dependencyInjectionProvider?.GetServiceProvider(descriptors) ?? throw new InvalidOperationException();
     }
 }
-
-public class EnclavesController : IEnclavesController, IStartable, IStoppable
-{
-    public Task StartAsync(CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-}
