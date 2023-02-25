@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
+using TrueMoon.Tests.Services;
 using Xunit;
 
 namespace TrueMoon.Tests;
@@ -11,8 +12,8 @@ public class AppTests
     public async Task AppCreate()
     {
         await using var app = App.Create(context => context
-            .UseDependencyInjection<DependencyInjectionProvider>()
-            .AddCommonDependencies(registrationContext => registrationContext
+            .UseDI()
+            .AddDependencies(registrationContext => registrationContext
                 .Add<ICommonService1, CommonService1>()
                 .Add<CommonStartableService>(v=>v.With<IStartable>())
             )
@@ -20,11 +21,38 @@ public class AppTests
 
         await app.StartAsync();
 
-        var startableService = app.Services.Resolve<IStartable>();
+        var service = app.Services.Resolve<IStartable>();
 
-        Assert.IsType<CommonStartableService>(startableService);
+        Assert.IsType<CommonStartableService>(service);
 
-        Assert.True((startableService as CommonStartableService).IsStarted);
+        Assert.True((service as CommonStartableService).IsStarted);
+    }
+    
+    [Fact]
+    public void Create()
+    {
+        using var app = App.Create(context => context.UseDI());
+        Assert.NotNull(app);
+        Assert.NotEmpty(app.Name);
+    }
+
+    [Fact]
+    public async Task RunAsync()
+    {
+        await App.RunAsync(context => context
+            .UseDI()
+            .AddDependencies(t=>t.Add<LifeTimeExecutor>(d=>d.With<IStartable>()))
+        );
+        
+        Assert.True(true);
+    }
+    
+    [Fact]
+    public async Task RunAsyncWithConfigurator()
+    {
+        await App.RunAsync<Configurator>();
+        
+        Assert.True(true);
     }
     
     // [Fact]
@@ -40,34 +68,4 @@ public class AppTests
     //
     //     await app.StartAsync();
     // }
-}
-
-public interface IService1
-{
-    
-}
-
-public class Service1 : IService1
-{
-    
-}
-
-public interface ICommonService1
-{
-    
-}
-
-public class CommonService1 : ICommonService1
-{
-    
-}
-
-public class CommonStartableService : IStartable
-{
-    public bool IsStarted { get; private set; }
-    public Task StartAsync(CancellationToken cancellationToken = default)
-    {
-        IsStarted = true;
-        return Task.CompletedTask;
-    }
 }

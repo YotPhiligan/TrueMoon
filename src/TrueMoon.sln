@@ -11,9 +11,30 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Items", "Items", "{01FFF981
 		Directory.Build.props = Directory.Build.props
 		global.json = global.json
 		..\.gitignore = ..\.gitignore
+		Directory.packages.props = Directory.packages.props
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Extensions.DependencyInjection", "TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj", "{4EFF9FAC-2FF9-4166-9525-B70FC3431597}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Thorium", "TrueMoon.Thorium\TrueMoon.Thorium.csproj", "{799C59F0-4346-4089-8FB6-88B9AF3C03EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Alloy", "TrueMoon.Alloy\TrueMoon.Alloy.csproj", "{8DF1B895-6596-4DD2-A9C3-FF9E8993BE47}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Aluminum", "TrueMoon.Aluminum\TrueMoon.Aluminum.csproj", "{E7C1380E-B427-40B4-82BB-2BFBC0232E79}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Titanium", "TrueMoon.Titanium\TrueMoon.Titanium.csproj", "{CA0AF64F-286D-4C83-92AF-C44A86BBD52D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Titanium.Tests", "TrueMoon.Titanium.Tests\TrueMoon.Titanium.Tests.csproj", "{245EF79D-B5D3-4CD8-A81C-267FFDE98425}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Thorium.Generator", "TrueMoon.Thorium.Generator\TrueMoon.Thorium.Generator.csproj", "{A23795FE-AB51-4D97-A476-6E6A1188E8C6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Core", "TrueMoon.Core\TrueMoon.Core.csproj", "{4911CB1D-9FAB-4288-8CF2-E1223460BC60}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ManualTests", "ManualTests", "{BF0EF421-2E06-46CC-8D0A-7279A5E5DDD5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TitaniumTest", "ManualTests\TitaniumTest\TitaniumTest.csproj", "{F12ADCB2-BAC9-44E8-9DC2-195165C2FEF5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Thorium.Tests", "TrueMoon.Thorium.Tests\TrueMoon.Thorium.Tests.csproj", "{8EA3061B-135D-4C0A-9D8B-0291721DCC82}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,5 +58,44 @@ Global
 		{4EFF9FAC-2FF9-4166-9525-B70FC3431597}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4EFF9FAC-2FF9-4166-9525-B70FC3431597}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4EFF9FAC-2FF9-4166-9525-B70FC3431597}.Release|Any CPU.Build.0 = Release|Any CPU
+		{799C59F0-4346-4089-8FB6-88B9AF3C03EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{799C59F0-4346-4089-8FB6-88B9AF3C03EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{799C59F0-4346-4089-8FB6-88B9AF3C03EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{799C59F0-4346-4089-8FB6-88B9AF3C03EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DF1B895-6596-4DD2-A9C3-FF9E8993BE47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DF1B895-6596-4DD2-A9C3-FF9E8993BE47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DF1B895-6596-4DD2-A9C3-FF9E8993BE47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DF1B895-6596-4DD2-A9C3-FF9E8993BE47}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7C1380E-B427-40B4-82BB-2BFBC0232E79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7C1380E-B427-40B4-82BB-2BFBC0232E79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7C1380E-B427-40B4-82BB-2BFBC0232E79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7C1380E-B427-40B4-82BB-2BFBC0232E79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA0AF64F-286D-4C83-92AF-C44A86BBD52D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA0AF64F-286D-4C83-92AF-C44A86BBD52D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA0AF64F-286D-4C83-92AF-C44A86BBD52D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA0AF64F-286D-4C83-92AF-C44A86BBD52D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{245EF79D-B5D3-4CD8-A81C-267FFDE98425}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{245EF79D-B5D3-4CD8-A81C-267FFDE98425}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{245EF79D-B5D3-4CD8-A81C-267FFDE98425}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{245EF79D-B5D3-4CD8-A81C-267FFDE98425}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A23795FE-AB51-4D97-A476-6E6A1188E8C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A23795FE-AB51-4D97-A476-6E6A1188E8C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A23795FE-AB51-4D97-A476-6E6A1188E8C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A23795FE-AB51-4D97-A476-6E6A1188E8C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4911CB1D-9FAB-4288-8CF2-E1223460BC60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4911CB1D-9FAB-4288-8CF2-E1223460BC60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4911CB1D-9FAB-4288-8CF2-E1223460BC60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4911CB1D-9FAB-4288-8CF2-E1223460BC60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F12ADCB2-BAC9-44E8-9DC2-195165C2FEF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F12ADCB2-BAC9-44E8-9DC2-195165C2FEF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F12ADCB2-BAC9-44E8-9DC2-195165C2FEF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F12ADCB2-BAC9-44E8-9DC2-195165C2FEF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8EA3061B-135D-4C0A-9D8B-0291721DCC82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8EA3061B-135D-4C0A-9D8B-0291721DCC82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8EA3061B-135D-4C0A-9D8B-0291721DCC82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8EA3061B-135D-4C0A-9D8B-0291721DCC82}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F12ADCB2-BAC9-44E8-9DC2-195165C2FEF5} = {BF0EF421-2E06-46CC-8D0A-7279A5E5DDD5}
 	EndGlobalSection
 EndGlobal

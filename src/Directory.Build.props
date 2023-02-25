@@ -1,23 +1,38 @@
 <Project>
   <PropertyGroup>
-    <Version Condition="'$(Version)' == ''">0.0.1.0-alpha</Version>
+    <Version Condition="'$(Version)' == ''">0.0.3.2-alpha</Version>
     <Authors>yotphiligan</Authors>
     <Company>yotphiligan</Company>
     <Product>TrueMoon</Product>
     <PackageTags>Desktop</PackageTags>
-    <Copyright>Copyright © yotphiligan 2022</Copyright>
+    <Copyright>Copyright © yotphiligan 2023</Copyright>
 
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageProjectUrl>https://idscan.net</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    
     <LangVersion>latest</LangVersion>
     <DebugType>embedded</DebugType>
     <DebugSymbols>true</DebugSymbols>
     
     <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TieredPGO>true</TieredPGO>
 
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <TF>net6.0</TF>
-    <TestsTF>net6.0</TestsTF>
+    <IsPackable>true</IsPackable>
+    
+    <TF>net7.0</TF>
+    <TestsTF>net7.0</TestsTF>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false"/>
+    <None Include="..\..\materials\icon.png" Pack="true" PackagePath="\" Visible="false"/>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false"/>
+  </ItemGroup>
+  
 </Project>

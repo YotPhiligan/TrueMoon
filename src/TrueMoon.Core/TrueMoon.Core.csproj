@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(TF)</TargetFramework>
+        <RootNamespace>TrueMoon</RootNamespace>
+    </PropertyGroup>
+
+</Project>

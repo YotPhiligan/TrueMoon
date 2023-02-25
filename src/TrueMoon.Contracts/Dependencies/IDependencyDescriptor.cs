@@ -4,10 +4,9 @@ public interface IDependencyDescriptor
 {
     Type GetServiceType();
     Type GetImplementationType();
-    
     ServiceLifetime Lifetime { get; }
-
     IReadOnlyList<Type>? GetAdditionalTypes();
+    object? GetInstance();
 }
 
 public interface IDependencyDescriptor<T> : IDependencyDescriptor

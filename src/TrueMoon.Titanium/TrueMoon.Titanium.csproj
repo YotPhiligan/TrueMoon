@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(TF)</TargetFramework>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
+      <ProjectReference Include="..\TrueMoon.Core\TrueMoon.Core.csproj" />
+    </ItemGroup>
+    
+</Project>
