@@ -1,14 +1,18 @@
 ﻿using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
+using TrueMoon.Diagnostics;
 
 namespace TrueMoon;
 
 /// <inheritdoc />
 public class DefaultApp : IApp
 {
-    public DefaultApp(IConfiguration parameters, 
+    private readonly IEventsSource<DefaultApp> _eventsSource;
+
+    public DefaultApp(IEventsSource<DefaultApp> eventsSource, IConfiguration parameters, 
         IServiceProvider services)
     {
+        _eventsSource = eventsSource;
         Configuration = parameters;
         Services = services;
     }
@@ -76,7 +80,14 @@ public class DefaultApp : IApp
         var services = Services.ResolveAll<IStoppable>();
         foreach (var service in services)
         {
-            await service.StopAsync(cancellationToken);
+            try
+            {
+                await service.StopAsync(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _eventsSource.Exception(e);
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using TrueMoon.Configuration;
 using TrueMoon.Diagnostics;
+using TrueMoon.Titanium.Units;
 
 namespace TrueMoon.Titanium;
 
@@ -21,7 +22,7 @@ public class UnitParentProcessEventsHandler : IStartable, IDisposable
         _i = configuration.GetProcessingUnitParentId();
     }
 
-    public void StartListen(int parentProcessId)
+    public void StartListen(int parentProcessId, CancellationToken cancellationToken = default)
     {
         var id = parentProcessId;
         void Close()
@@ -47,6 +48,8 @@ public class UnitParentProcessEventsHandler : IStartable, IDisposable
                     Close();
                 }
             }, null, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
+
+            _ = Task.Factory.StartNew(()=>ListenCodes(cancellationToken),cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
         catch (Exception e)
         {
@@ -54,9 +57,33 @@ public class UnitParentProcessEventsHandler : IStartable, IDisposable
         }
     }
 
+    private async Task ListenCodes(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var code = await Console.In.ReadLineAsync(cancellationToken);
+
+                switch (code)
+                {
+                    case UnitCodes.Exit:
+                        _eventsSource.Write(() => "exit requested");
+                        _appLifetime.Cancel();
+                        return;
+                }
+            }
+        }
+        catch (OperationCanceledException) {}
+        catch (Exception e)
+        {
+            _eventsSource.Exception(e);
+        }
+    }
+
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
-        StartListen(_i ?? throw new InvalidOperationException("Invalid parent process id"));
+        StartListen(_i ?? throw new InvalidOperationException("Invalid parent process id"), cancellationToken);
         return Task.CompletedTask;
     }
 

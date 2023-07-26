@@ -2,7 +2,6 @@
 
 public class ThoriumConfiguration
 {
-    public string? Name { get; set; }
     public byte SmallSignals { get; set; } = 32;
     public int SmallSignalSize { get; set; } = 100 * 1024;
 

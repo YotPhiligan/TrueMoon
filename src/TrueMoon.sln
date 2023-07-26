@@ -36,6 +36,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TitaniumTest", "ManualTests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Thorium.Tests", "TrueMoon.Thorium.Tests\TrueMoon.Thorium.Tests.csproj", "{8EA3061B-135D-4C0A-9D8B-0291721DCC82}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlloyTest", "ManualTests\AlloyTest\AlloyTest.csproj", "{D1FE7FCF-2AEC-48D9-80D6-2D93AE59D183}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Thorium.Generator.Tests", "TrueMoon.Thorium.Generator.Tests\TrueMoon.Thorium.Generator.Tests.csproj", "{1CA9218B-7DBE-4ABB-9800-FB3C639456B6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -94,8 +98,17 @@ Global
 		{8EA3061B-135D-4C0A-9D8B-0291721DCC82}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8EA3061B-135D-4C0A-9D8B-0291721DCC82}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8EA3061B-135D-4C0A-9D8B-0291721DCC82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1FE7FCF-2AEC-48D9-80D6-2D93AE59D183}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1FE7FCF-2AEC-48D9-80D6-2D93AE59D183}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1FE7FCF-2AEC-48D9-80D6-2D93AE59D183}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1FE7FCF-2AEC-48D9-80D6-2D93AE59D183}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CA9218B-7DBE-4ABB-9800-FB3C639456B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CA9218B-7DBE-4ABB-9800-FB3C639456B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CA9218B-7DBE-4ABB-9800-FB3C639456B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CA9218B-7DBE-4ABB-9800-FB3C639456B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F12ADCB2-BAC9-44E8-9DC2-195165C2FEF5} = {BF0EF421-2E06-46CC-8D0A-7279A5E5DDD5}
+		{D1FE7FCF-2AEC-48D9-80D6-2D93AE59D183} = {BF0EF421-2E06-46CC-8D0A-7279A5E5DDD5}
 	EndGlobalSection
 EndGlobal

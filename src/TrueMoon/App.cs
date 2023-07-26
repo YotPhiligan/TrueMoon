@@ -60,7 +60,9 @@ public static class App
                 throw new AppCreationException("Failed to create the app", e);
             }
 
-            var modules = ctx.GetModules();
+            var modules = ctx.GetModules()
+                .OrderBy(t=>t.ExecutionFlowOrder)
+                .ToList();
         
             foreach (var module in modules)
             {
@@ -167,8 +169,6 @@ public static class App
         catch (Exception e)
         {
             AppSource.Exception(e);
-            //Console.WriteLine(e);
-            throw;
         }
     }
     

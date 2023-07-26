@@ -54,6 +54,9 @@ public class ArrayPoolBufferWriter<T> : IBufferWriter<T>, IDisposable
     /// </summary>
     public ReadOnlySpan<T> WrittenSpan => _buffer.AsSpan(0, _index);
 
+    public Memory<T> Buffer => _buffer.AsMemory(0, _index);
+    public Span<T> WrittenSpanWritable => _buffer.AsSpan(0, _index);
+    
     /// <summary>
     /// Returns the amount of data written to the underlying buffer so far.
     /// </summary>

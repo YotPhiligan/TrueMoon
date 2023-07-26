@@ -22,6 +22,7 @@ public class UnitsController : IUnitsController, IStartable, IStoppable, IDispos
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        _eventsSource.Trace();
         foreach (var unitConfiguration in _storage.UnitConfigurations.Where(t=>t.StartupPolicy is UnitStartupPolicy.Immediate))
         {
             await SpawnUnitCoreAsync(unitConfiguration, cancellationToken: cancellationToken);
@@ -30,6 +31,7 @@ public class UnitsController : IUnitsController, IStartable, IStoppable, IDispos
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
+        _eventsSource.Trace();
         foreach (var handle in _unitHandles)
         {
             await handle.StopAsync(cancellationToken);

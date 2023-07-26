@@ -1,14 +1,13 @@
 <Project>
   <PropertyGroup>
-    <Version Condition="'$(Version)' == ''">0.0.3.2-alpha</Version>
+    <Version Condition="'$(Version)' == ''">0.0.4.0-alpha</Version>
     <Authors>yotphiligan</Authors>
-    <Company>yotphiligan</Company>
-    <Product>TrueMoon</Product>
+    <Company>TrueMoon</Company>
+    <Product>TrueMoon Framework</Product>
     <PackageTags>Desktop</PackageTags>
     <Copyright>Copyright © yotphiligan 2023</Copyright>
 
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageProjectUrl>https://idscan.net</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
     

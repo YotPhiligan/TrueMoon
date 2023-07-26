@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>$(TestsTF)</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\TrueMoon.Alloy\TrueMoon.Alloy.csproj" />
+        <ProjectReference Include="..\..\TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj" />
+        <ProjectReference Include="..\..\TrueMoon\TrueMoon.csproj" />
+    </ItemGroup>
+
+</Project>

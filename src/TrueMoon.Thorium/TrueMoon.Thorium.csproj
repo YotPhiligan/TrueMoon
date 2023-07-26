@@ -11,8 +11,4 @@
       <ProjectReference Include="..\TrueMoon.Thorium.Generator\TrueMoon.Thorium.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
     </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="MemoryPack" />
-    </ItemGroup>
-
 </Project>

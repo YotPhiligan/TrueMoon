@@ -1,6 +1,6 @@
-namespace TrueMoon.Aluminum;
+﻿namespace TrueMoon.Aluminum;
 
-public interface IView
+public interface IView : IWithProperties, IWithContent
 {
-    IElement? Root { get; }
+     
 }

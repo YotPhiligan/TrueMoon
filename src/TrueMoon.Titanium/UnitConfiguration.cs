@@ -58,9 +58,17 @@ public class UnitConfiguration : ConfigurableBase, IUnitConfiguration
         set => Set(nameof(Name), value);
     }
 
+    /// <inheritdoc />
     public bool? IsControlAppLifetime
     {
         get => Get<bool?>(nameof(IsControlAppLifetime))!; 
         set => Set(nameof(IsControlAppLifetime), value);
+    }
+
+    /// <inheritdoc />
+    public int? TerminationDelay
+    {
+        get => Get<int?>(nameof(TerminationDelay))!; 
+        set => Set(nameof(TerminationDelay), value);
     }
 }

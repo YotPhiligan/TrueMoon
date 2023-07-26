@@ -12,7 +12,10 @@ public static class AppCreationContextExtensions
         action?.Invoke(configuration);
         var subscription = new DiagnosticSubscription(configuration);
         context.Configuration.Set<IDiagnosticsConfiguration>(ConfigurationExtensions.DiagnosticsConfigurationName, configuration);
-        context.AddDependencies(t => t.Add(subscription));
+        context.AddDependencies(t => t
+            .Add(subscription)
+            .Add<IEventsSourceFactory, EventsSourceFactory>()
+        );
         return context;
     }
 }

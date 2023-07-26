@@ -6,4 +6,10 @@ public interface IVisual
     float Y { get; set; }
     float Width { get; set; }
     float Height { get; set; }
+    bool IsVisible { get; set; }
+}
+
+public interface IVisualPresenter
+{
+    
 }

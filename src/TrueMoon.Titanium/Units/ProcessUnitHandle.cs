@@ -78,7 +78,8 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
         var info = new ProcessStartInfo
         {
             FileName = GetProcessFilePath(),
-            UseShellExecute = true
+            UseShellExecute = false,
+            RedirectStandardInput = true
         };
 
         return info;
@@ -102,4 +103,48 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
         Process?.Dispose();
         return ValueTask.CompletedTask;
     }
+
+    public override async Task<bool?> StopAsync(CancellationToken cancellationToken = default)
+    {
+        bool? result = false;
+        try
+        {
+            if (Process != null)
+            {
+                Process.Exited -= ProcessOnExited;
+
+                try
+                {
+                    using var cts = new CancellationTokenSource(Configuration.TerminationDelay ?? 1000);
+                    //using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
+
+                    await Process.StandardInput.WriteLineAsync(UnitCodes.Exit);
+                    
+                    if (!Process.HasExited)
+                    {
+                        await Process.WaitForExitAsync(cts.Token);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    Process.Kill(true);
+                }
+                
+                Process.Close();
+            }
+
+            result = true;
+        }
+        catch (Exception e)
+        {
+            EventsSource.Exception(e);
+        }
+
+        return result;
+    }
+}
+
+public static class UnitCodes
+{
+    public const string Exit = "qe";
 }

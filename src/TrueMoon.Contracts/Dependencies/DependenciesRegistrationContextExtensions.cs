@@ -9,13 +9,14 @@ public static class DependenciesRegistrationContextExtensions
     }
     
     public static IDependenciesRegistrationContext Add<T>(this IDependenciesRegistrationContext context, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        where T : class
     {
         context.AddDescriptor(new DependencyDescriptor<T>(serviceLifetime));
         return context;
     }
 
     public static IDependenciesRegistrationContext Add<T, TImplementation>(this IDependenciesRegistrationContext context, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton) 
-        where TImplementation : T
+        where TImplementation : class,T
     {
         context.AddDescriptor(new DependencyDescriptor<T,TImplementation>(serviceLifetime));
         return context;
@@ -55,43 +56,48 @@ public static class DependenciesRegistrationContextExtensions
         return context;
     }
 
-    public static IDependenciesRegistrationContext AddSingleton<T>(this IDependenciesRegistrationContext context) =>
+    public static IDependenciesRegistrationContext AddSingleton<T>(this IDependenciesRegistrationContext context)
+        where T : class =>
         context.Add<T>();
     
     public static IDependenciesRegistrationContext AddSingleton<T,TImplementation>(this IDependenciesRegistrationContext context)
-        where TImplementation : T
+        where TImplementation : class,T
         => context.Add<T,TImplementation>();
     
-    public static IDependenciesRegistrationContext AddTransient<T>(this IDependenciesRegistrationContext context) =>
+    public static IDependenciesRegistrationContext AddTransient<T>(this IDependenciesRegistrationContext context) 
+        where T : class =>
         context.Add<T>(ServiceLifetime.Transient);
     
     public static IDependenciesRegistrationContext AddTransient<T,TImplementation>(this IDependenciesRegistrationContext context)
-        where TImplementation : T
+        where TImplementation : class,T
         => context.Add<T,TImplementation>(ServiceLifetime.Transient);
 
-    public static IDependenciesRegistrationContext TryAdd<T>(this IDependenciesRegistrationContext context, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton) 
+    public static IDependenciesRegistrationContext TryAdd<T>(this IDependenciesRegistrationContext context, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        where T : class
         => context.Exist<T>() 
             ? context 
             : context.Add<T>(serviceLifetime);
     
     public static IDependenciesRegistrationContext TryAdd<T,TImplementation>(this IDependenciesRegistrationContext context, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton) 
-        where TImplementation : T
+        where TImplementation : class,T
         => context.Exist<T>() 
             ? context 
             : context.Add<T,TImplementation>(serviceLifetime);
 
-    public static IDependenciesRegistrationContext TryAddTransient<T>(this IDependenciesRegistrationContext context) =>
+    public static IDependenciesRegistrationContext TryAddTransient<T>(this IDependenciesRegistrationContext context) 
+        where T : class =>
         context.TryAdd<T>(ServiceLifetime.Transient);
     
-    public static IDependenciesRegistrationContext TryAddSingleton<T>(this IDependenciesRegistrationContext context) =>
+    public static IDependenciesRegistrationContext TryAddSingleton<T>(this IDependenciesRegistrationContext context) 
+        where T : class =>
         context.TryAdd<T>();
     
     public static IDependenciesRegistrationContext TryAddTransient<T,TImplementation>(this IDependenciesRegistrationContext context)
-        where TImplementation : T
+        where TImplementation : class, T
         => context.TryAdd<T,TImplementation>(ServiceLifetime.Transient);
     
     public static IDependenciesRegistrationContext TryAddSingleton<T,TImplementation>(this IDependenciesRegistrationContext context)
-        where TImplementation : T
+        where TImplementation : class, T
         => context.TryAdd<T,TImplementation>(); 
 
     public static IDependenciesRegistrationContext ConfigureWith<T>(this IDependenciesRegistrationContext context, Action<T> action)

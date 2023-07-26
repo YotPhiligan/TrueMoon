@@ -1,4 +1,6 @@
-﻿using TrueMoon.Configuration;
+﻿using System.Diagnostics;
+using System.Reflection;
+using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 
@@ -14,6 +16,7 @@ public class TitaniumModule : ITitaniumModule
         _eventsSource = eventsSource;
     }
 
+    public ModuleExecutionFlowOrder ExecutionFlowOrder => ModuleExecutionFlowOrder.Start;
     public string Name => nameof(TitaniumModule);
 
     public void Configure(IAppCreationContext context)
@@ -51,7 +54,38 @@ public class TitaniumModule : ITitaniumModule
 
     public void Execute(IServiceProvider serviceProvider, IConfiguration configuration)
     {
+        if (!configuration.IsProcessingUnit())
+        {
+            CheckTrailingProcesses();
+        }
         _eventsSource.Trace("Executed");
+    }
+
+    private static void CheckTrailingProcesses()
+    {
+        try
+        {
+            var currentProcessId = Environment.ProcessId;
+            var name = Assembly.GetEntryAssembly()?.GetName().Name;
+            if (string.IsNullOrWhiteSpace(name)) return;
+            
+            var process = Process.GetProcessesByName(name);
+            foreach (var p in process.Where(t => t.Id != currentProcessId).ToList())
+            {
+                try
+                {
+                    p.Kill(true);
+                }
+                catch (Exception)
+                {
+                    //
+                }
+            }
+        }
+        catch (Exception)
+        {
+            //
+        }
     }
 
     public void AddUnitConfiguration(Action<IAppCreationContext> action, Action<IUnitConfiguration>? configureAction = default)

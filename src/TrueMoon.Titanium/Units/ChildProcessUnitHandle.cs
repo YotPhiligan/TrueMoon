@@ -14,6 +14,5 @@ public class ChildProcessUnitHandle : ProcessUnitHandle
     protected override void ProcessLaunchArguments(Collection<string> collection)
     {
         base.ProcessLaunchArguments(collection);
-        collection.Add("");
     }
 }

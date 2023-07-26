@@ -14,4 +14,5 @@ public interface IUnitConfiguration : IConfigurable
     string Name { get; set; }
     
     bool? IsControlAppLifetime { get; set; }
+    int? TerminationDelay { get; set; }
 }
