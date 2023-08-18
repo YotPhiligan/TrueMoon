@@ -2,16 +2,15 @@
 using TrueMoon.Diagnostics;
 using TrueMoon.Thorium.IO.SharedMemory.Utils;
 using TrueMoon.Thorium.IO.Signals;
-using TrueMoon.Threading;
 
 namespace TrueMoon.Thorium.IO.SharedMemory;
 
 public class MemorySignalClient<T> : MemorySignalProcessorBase, ISignalClient<T>
 {
-    public MemorySignalClient(IEventsSource<MemorySignalClient<T>> eventsSource) : base($"tm_{typeof(T).FullName}")
+    public MemorySignalClient(IEventsSource<MemorySignalClient<T>> eventsSource, SignalsTaskScheduler signalsTaskScheduler) : base($"tm_{typeof(T).FullName}")
     {
         _eventsSource = eventsSource;
-        _taskScheduler = new TmTaskScheduler(nameof(MemorySignalClient<T>), 4);
+        _taskScheduler = signalsTaskScheduler.TaskScheduler;
     }
 
     private readonly object _writeSync = new ();
@@ -283,7 +282,7 @@ public class MemorySignalClient<T> : MemorySignalProcessorBase, ISignalClient<T>
         }
     }
 
-    private readonly TmTaskScheduler _taskScheduler;
+    private readonly TaskScheduler _taskScheduler;
     private readonly IEventsSource<MemorySignalClient<T>> _eventsSource;
 
     private Signal SendCore(ReadOnlySpan<byte> data, SignalType signalType, byte methodCode, CancellationToken cancellationToken = default)
@@ -383,11 +382,5 @@ public class MemorySignalClient<T> : MemorySignalProcessorBase, ISignalClient<T>
         {
             Console.WriteLine(e);
         }
-    }
-
-    protected override void ReleaseResources()
-    {
-        _taskScheduler.Dispose();
-        base.ReleaseResources();
     }
 }

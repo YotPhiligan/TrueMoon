@@ -10,14 +10,14 @@ public class MemorySignalServer<T> : MemorySignalProcessorBase, ISignalServer<T>
     protected readonly IEventsSource EventsSource;
     private readonly ISignalServerHandler<T> _handler;
     private readonly int _readThreads;
-    private TmTaskScheduler _taskScheduler;
-    private TmTaskScheduler _messageProcessingTaskScheduler;
+    private readonly TaskScheduler _taskScheduler;
 
     private CancellationTokenSource _cts;
     private bool _isInitialized;
 
-    public MemorySignalServer(IEventsSource<MemorySignalServer<T>> eventsSource, ISignalServerHandler<T> handler) : base($"tm_{typeof(T).FullName}")
+    public MemorySignalServer(IEventsSource<MemorySignalServer<T>> eventsSource, SignalsTaskScheduler taskScheduler, ISignalServerHandler<T> handler) : base($"tm_{typeof(T).FullName}")
     {
+        _taskScheduler = taskScheduler.TaskScheduler;
         EventsSource = eventsSource;
         _handler = handler;
         _readThreads = 4;
@@ -31,8 +31,6 @@ public class MemorySignalServer<T> : MemorySignalProcessorBase, ISignalServer<T>
             return;
         }
         _cts = new CancellationTokenSource();
-        _taskScheduler = new TmTaskScheduler(nameof(MemorySignalServer<T>), 1,_cts.Token);
-        _messageProcessingTaskScheduler = new TmTaskScheduler(nameof(MemorySignalServer<T>), _readThreads, _cts.Token);
         Task.Factory.StartNew(() =>
             {
                 try
@@ -118,7 +116,7 @@ public class MemorySignalServer<T> : MemorySignalProcessorBase, ISignalServer<T>
     {
         Task.Factory.StartNew(async () => await ProcessSignalAsync(signal, cancellationToken),
             cancellationToken, TaskCreationOptions.PreferFairness,
-            _messageProcessingTaskScheduler);
+            _taskScheduler);
     }
 
     private async Task ProcessSignalAsync(Signal signal, CancellationToken cancellationToken = default)
@@ -211,8 +209,6 @@ public class MemorySignalServer<T> : MemorySignalProcessorBase, ISignalServer<T>
     protected override void ReleaseResources()
     {
         _cts.Cancel();
-        _taskScheduler.Dispose();
-        _messageProcessingTaskScheduler.Dispose();
         _cts.Dispose();
     }
     

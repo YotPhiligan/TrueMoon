@@ -12,7 +12,12 @@ public interface ITestService
     Task Foo3Async(TestPoco2 poco, CancellationToken cancellationToken = default);
 
     Task<TestPoco> Foo4Async(TestPoco2 poco, CancellationToken cancellationToken = default);
+    Task<bool?> Foo5Async(TestPoco3 poco, CancellationToken cancellationToken = default);
 
+    Task<bool?> Foo6Async(TestRecordPoco1 poco, CancellationToken cancellationToken = default);
+    Task<TestEnum1?> Foo7Async(TestEnum1 v1, TestEnum2? NulV2, TestRecordPoco1 poco, TestPoco? nulTestPoco, CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<string, string>> Foo8Async(TestPoco4 testPoco, CancellationToken cancellationToken = default);
+    
     public void VoidMethod();
     public Task MethodAsync();
 }
@@ -52,6 +57,26 @@ public class ListenTestService : ITestService
         var result = poco.Poco;
         result.Text = "new text";
         return Task.FromResult(result);
+    }
+
+    public async Task<bool?> Foo5Async(TestPoco3 poco, CancellationToken cancellationToken = default)
+    {
+        return poco.NulBoolValue;
+    }    
+    
+    public async Task<bool?> Foo6Async(TestRecordPoco1 poco, CancellationToken cancellationToken = default)
+    {
+        return poco.BoolValue;
+    }
+
+    public async Task<TestEnum1?> Foo7Async(TestEnum1 v1, TestEnum2? NulV2, TestRecordPoco1 poco, TestPoco? nulTestPoco, CancellationToken cancellationToken = default)
+    {
+        return v1;
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> Foo8Async(TestPoco4 testPoco, CancellationToken cancellationToken = default)
+    {
+        return new Dictionary<string, string>();
     }
 
     public void VoidMethod()
