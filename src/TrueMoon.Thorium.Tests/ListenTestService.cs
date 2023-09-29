@@ -31,7 +31,7 @@ public class ListenTestService : ITestService
     {
         var testPoco = new TestPoco
         {
-            Text = "42 text",
+            Text = "42 text",// + $" {DateTime.Now.TimeOfDay}",
             FloatValue = .2f,
             IntValue = 42,
             Memory = new byte[]{0,1,2,3,}

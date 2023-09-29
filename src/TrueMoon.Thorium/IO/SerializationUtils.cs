@@ -13,7 +13,7 @@ public static class SerializationUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WriteInstanceState(bool state, IBufferWriter<byte> bufferWriter)
     {
-        var target = bufferWriter.GetSpan();
+        var target = bufferWriter.GetSpan(1);
 
         target[0] = (byte)(state ? 1 : 0);
         
@@ -24,7 +24,7 @@ public static class SerializationUtils
     public static void Write<T>(T value, IBufferWriter<byte> bufferWriter)
     {
         var size = Unsafe.SizeOf<T>();
-        var target = bufferWriter.GetSpan();
+        var target = bufferWriter.GetSpan(size);
         Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(target), value);
         bufferWriter.Advance(size);
     }
@@ -35,20 +35,21 @@ public static class SerializationUtils
         byte state;
         if (value is null)
         {
-            var target1 = bufferWriter.GetSpan();
+            var target1 = bufferWriter.GetSpan(1);
             state = 0;
             MemoryMarshal.Write(target1, ref state);
+            bufferWriter.Advance(1);
             return;
         }
-        var target = bufferWriter.GetSpan();
+        var target = bufferWriter.GetSpan(1);
         state = 1;
         MemoryMarshal.Write(target, ref state);
         bufferWriter.Advance(1);
-        target = bufferWriter.GetSpan();
         var size = Encoding.Unicode.GetByteCount(value);
+        target = bufferWriter.GetSpan(sizeof(int));
         MemoryMarshal.Write(target, ref size);
         bufferWriter.Advance(sizeof(int));
-        target = bufferWriter.GetSpan();
+        target = bufferWriter.GetSpan(size);
         size = Encoding.Unicode.GetBytes(value, target);
         bufferWriter.Advance(size);
     }
@@ -56,11 +57,11 @@ public static class SerializationUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WriteBytes(ReadOnlyMemory<byte> data, IBufferWriter<byte> bufferWriter)
     {
-        var target = bufferWriter.GetSpan();
+        var target = bufferWriter.GetSpan(sizeof(int));
         var dataLength = data.Length;
         MemoryMarshal.Write(target, ref dataLength);
         bufferWriter.Advance(sizeof(int));
-        target = bufferWriter.GetSpan();
+        target = bufferWriter.GetSpan(dataLength);
         data.Span.CopyTo(target);
         bufferWriter.Advance(dataLength);
     }
@@ -81,6 +82,7 @@ public static class SerializationUtils
     {
         if (data[0] == 0)
         {
+            offset += 1;
             return null;
         }
         var size = MemoryMarshal.Read<int>(data[1..]);
@@ -94,10 +96,10 @@ public static class SerializationUtils
     public static Memory<byte> ReadBytes(ReadOnlySpan<byte> data, ref int offset)
     {
         var size = MemoryMarshal.Read<int>(data);
-        var array = ArrayPool<byte>.Shared.Rent(size);
-        data[sizeof(int)..].CopyTo(array);
+        var mem = ArrayPool<byte>.Shared.Rent(size).AsMemory(0, size);
+        data.Slice(sizeof(int),size).CopyTo(mem.Span);
         offset += sizeof(int)+size;
-        return array.AsMemory(0, size);
+        return mem;
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

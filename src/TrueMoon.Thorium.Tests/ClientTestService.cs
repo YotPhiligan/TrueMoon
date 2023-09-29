@@ -4,11 +4,11 @@ namespace TrueMoon.Thorium.Tests;
 
 public class ClientTestService : ITestService
 {
-    private readonly ISignalClient<ITestService> _signalClient;
+    private readonly IInvocationClient<ITestService> _invocationClient;
 
-    public ClientTestService(ISignalClient<ITestService> signalClient)
+    public ClientTestService(IInvocationClient<ITestService> invocationClient)
     {
-        _signalClient = signalClient;
+        _invocationClient = invocationClient;
     }
     
     public Task FooAsync(CancellationToken cancellationToken = default)
@@ -28,7 +28,7 @@ public class ClientTestService : ITestService
 
     public Task Foo2Async(TestPoco poco, CancellationToken cancellationToken = default)
     {
-        return _signalClient.InvokeAsync(3, 
+        return _invocationClient.InvokeAsync(3, 
             writer =>
             {
                 poco.Serialize(writer);
@@ -42,7 +42,7 @@ public class ClientTestService : ITestService
     
     public Task<TestPoco> Foo4Async(TestPoco2 poco, CancellationToken cancellationToken = default)
     {
-        return _signalClient.InvokeAsync(5, 
+        return _invocationClient.InvokeAsync(5, 
             writer =>
             {
                 poco.Serialize(writer);
@@ -51,7 +51,7 @@ public class ClientTestService : ITestService
         {
             var offset = 0;
             TestPoco? result = default;
-            return result.Deserialize(handle.GetData(), ref offset);
+            return result.Deserialize(handle.Span, ref offset);
         }, cancellationToken);
     }
 

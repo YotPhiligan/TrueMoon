@@ -14,6 +14,7 @@ public class TestPoco2
     public string Text2 { get; set; }
     public TestPoco Poco { get; set; }
     public float M { get; set; }
+    public string? NulStr { get; set; }
 }
 
 public class TestPoco3
@@ -46,3 +47,22 @@ public enum TestEnum2
 }
 
 public record TestRecordPoco1(int IntVal, bool BoolValue, Guid? NulGuidValue, TestEnum1 TestEnum1Value, TestEnum2? NulTestEnum2Value, IReadOnlyList<string> Texts, object? NulOptionalObject = default);
+
+public readonly record struct TestStruct1(int X, float Y, bool Z);
+
+public class TestClass1
+{
+    public (bool boolValue, int intVal, float? nulFloat, TestPoco poco) Test1((bool boolValue, int intVal, float? nulFloat, TestPoco poco) b)
+    {
+        (bool boolValue, int intVal, float? nulFloat, TestPoco poco) v = b;
+
+        var boolValue = true;
+        int intVal = 42;
+        float? nulFloat = null;
+        TestPoco poco = new TestPoco();
+        
+        v = (boolValue, intVal,nulFloat, poco);
+
+        return v;
+    }
+}

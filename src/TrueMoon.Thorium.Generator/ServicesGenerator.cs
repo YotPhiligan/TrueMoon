@@ -3,24 +3,14 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using TrueMoon.Thorium.Generator.Extensions;
+using TrueMoon.Thorium.Generator.Utils;
 
 namespace TrueMoon.Thorium.Generator;
-
-public class GeneratorContext
-{
-    public SourceProductionContext SourceProductionContext { get; }
-}
-
-public class SerializerGenerator
-{
-    
-}
 
 [Generator(LanguageNames.CSharp)]
 public class ServicesGenerator : IIncrementalGenerator
 {
-    private const string NamespacePart = "TrueMoon.Generated";
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var data = context.SyntaxProvider
@@ -42,7 +32,10 @@ public class ServicesGenerator : IIncrementalGenerator
 
         try
         {
-            var typesList = new List<ITypeSymbol>();
+            //var n = compilation.AssemblyName.Replace(".", string.Empty).Trim();
+            var assembly = compilation.Assembly.Name;
+            
+            var ctx = new GenerationContext(sourceProductionContext, assembly);
         
             var values = interfaces.Distinct();
         
@@ -59,23 +52,26 @@ public class ServicesGenerator : IIncrementalGenerator
                     continue;
                 }
         
+                if (list.Any(t=> SymbolEqualityComparer.Default.Equals(t.interfaceSymbol, interfaceSymbol)))
+                {
+                    continue;
+                }
+                
                 var l = interfaceSymbol.GetMembers().ToList();
-        
+                
                 list.Add((interfaceSymbol, l));
             }
-        
-            var n = compilation.AssemblyName.Replace(".", string.Empty).Trim();
-            var a = compilation.Assembly.Name;
 
             var services = new List<(string, string)>();
             var handlers = new List<(string, string)>();
+            
             foreach (var (type, members) in list)
             {
-                var implementation = GenerateService(sourceProductionContext, type, members, typesList);
-                services.Add(($"{type}", $"{NamespacePart}.{implementation}"));
+                var implementation = GenerateService(ctx, type, members);
+                services.Add(($"{type}", $"{ctx.NamespacePrefix}.{implementation}"));
 
-                var handler = GenerateHandler(sourceProductionContext, type, members, typesList);
-                handlers.Add(($"{type}", $"{NamespacePart}.{handler}"));
+                var handler = GenerateHandler(ctx, type, members);
+                handlers.Add(($"{type}", $"{ctx.NamespacePrefix}.{handler}"));
             }
         
             var sb = new StringBuilder();
@@ -84,7 +80,7 @@ public class ServicesGenerator : IIncrementalGenerator
             sb.AppendLine("using TrueMoon.Thorium.IO;");
             sb.AppendLine("using System.Runtime.CompilerServices;");
             sb.AppendLine();
-            sb.AppendLine($"namespace {NamespacePart};");
+            sb.AppendLine($"namespace {ctx.NamespacePrefix};");
             sb.AppendLine();
         
             sb.AppendLine("public static class ModuleInitializer");
@@ -94,17 +90,17 @@ public class ServicesGenerator : IIncrementalGenerator
             sb.AppendLine("    {");
             foreach (var service in services)
             {
-                sb.AppendLine($"        SignalServiceStorage.Shared.Register<{service.Item1},{service.Item2}>();");
+                sb.AppendLine($"        InvocationServiceStorage.Shared.Register<global::{service.Item1},global::{service.Item2}>();");
             }
             foreach (var handler in handlers)
             {
-                sb.AppendLine($"        SignalServiceStorage.Shared.RegisterHandler<ISignalServerHandler<{handler.Item1}>,{handler.Item2}>();");
+                sb.AppendLine($"        InvocationServiceStorage.Shared.RegisterHandler<IInvocationServerHandler<global::{handler.Item1}>,global::{handler.Item2}>();");
             }
             sb.AppendLine("    }");
             sb.AppendLine("}");
 
             var source = sb.ToString();
-            sourceProductionContext.AddSource("SignalServiceInitializer.g.cs", source);
+            sourceProductionContext.AddSource("InvocationServiceInitializer.g.cs", source);
         }
         catch (Exception e)
         {
@@ -112,105 +108,52 @@ public class ServicesGenerator : IIncrementalGenerator
         }
     }
 
-    private static string GenerateService(SourceProductionContext sourceProductionContext, INamedTypeSymbol type,
-        List<ISymbol> members, List<ITypeSymbol> typesList)
+    private static string GenerateService(GenerationContext context, 
+        INamedTypeSymbol type,
+        IReadOnlyList<ISymbol> members)
     {
-        var name = type?.Name;
-        var fullname = type?.ToDisplayString();
-
-        var implementationClassName = (name.StartsWith("I") ? name.Substring(1) : name) + "GeneratedImplementation";
-
-        var sb = new StringBuilder();
-        sb.AppendLine("// auto-generated by TrueMoon.Thorium.Generator");
-        sb.AppendLine("using System;");
-        sb.AppendLine("using System.Threading.Tasks;");
-        sb.AppendLine("using TrueMoon.Thorium.IO;");
-        sb.AppendLine();
-        sb.AppendLine($"namespace {NamespacePart};");
-        sb.AppendLine();
-
-        sb.AppendLine($"// {fullname}");
-        sb.AppendLine($"public sealed class {implementationClassName} : {fullname}");
-        sb.AppendLine("{");
-        sb.AppendLine($"    private readonly ISignalClient<{fullname}> _signalClient;");
-        sb.AppendLine($"    public {implementationClassName}(ISignalClient<{fullname}> signalClient)");
-        sb.AppendLine("    {");
-        sb.AppendLine("        _signalClient = signalClient;");
-        sb.AppendLine("    }");
-        sb.AppendLine();
+        var handle = context.CreateSourceHandle(type);
+        handle.BeginServiceGeneratedImplementation();
 
         byte methodIndex = 0;
         foreach (var member in members)
         {
-            if (member is IMethodSymbol methodSymbol)
-            {
-                GenerateMethod(sourceProductionContext, typesList, methodSymbol, methodIndex, sb);
-                methodIndex++;
-            }
+            if (member is not IMethodSymbol methodSymbol) continue;
+            handle.GenerateMethod(methodSymbol, methodIndex);
+            methodIndex++;
         }
 
-        sb.AppendLine("}");
+        handle.Complete();
 
-        var source = sb.ToString();
-        sourceProductionContext.AddSource($"{implementationClassName}.g.cs", source);
-
-        return implementationClassName;
+        return handle.ImplementationClassName;
     }
     
-    private static string GenerateHandler(SourceProductionContext sourceProductionContext, INamedTypeSymbol type,
-        List<ISymbol> members, List<ITypeSymbol> typeSymbols)
+    private static string GenerateHandler(GenerationContext context, 
+        INamedTypeSymbol type,
+        IReadOnlyList<ISymbol> members)
     {
-        var name = type?.Name;
-        var fullname = type?.ToDisplayString();
-
-        var handlerImplementationClassName = (name.StartsWith("I") ? name.Substring(1) : name) + "SignalServerHandler";
-
-        var sb = new StringBuilder();
-        sb.AppendLine("// auto-generated by TrueMoon.Thorium.Generator");
-        sb.AppendLine("using System;");
-        sb.AppendLine("using System.Buffers;");
-        sb.AppendLine("using TrueMoon.Diagnostics;");
-        sb.AppendLine("using System.Threading.Tasks;");
-        sb.AppendLine("using TrueMoon.Thorium.IO;");
+        var handle = context.CreateSourceHandle(type,"InvocationServerHandler");
+        handle.BeginServiceHandler();
         
-        sb.AppendLine();
-        sb.AppendLine($"namespace {NamespacePart};");
-        sb.AppendLine();
-
-        sb.AppendLine($"// {fullname}");
-        sb.AppendLine($"public sealed class {handlerImplementationClassName} : ISignalServerHandler<{fullname}>");
-        sb.AppendLine("{");
-        sb.AppendLine($"    private readonly {fullname} _service;");
-        sb.AppendLine($"    private readonly IEventsSource<{handlerImplementationClassName}> _eventsSource;");
-        sb.AppendLine($"    public {handlerImplementationClassName}({fullname} service, IEventsSource<{handlerImplementationClassName}> eventsSource)");
-        sb.AppendLine("    {");
-        sb.AppendLine("        _service = service;");
-        sb.AppendLine("        _eventsSource = eventsSource;");
-        sb.AppendLine("    }");
-        sb.AppendLine();
-        sb.AppendLine("    public async Task<bool> HandleAsync(byte method, IMemoryReadHandle readHandle, IBufferWriter<byte> bufferWriter, CancellationToken cancellationToken = default)");
-        sb.AppendLine("    {");
-        sb.AppendLine("        switch (method)");
-        sb.AppendLine("        {");
         var methodIndex = 0;
         foreach (var member in members)
         {
             if (member is IMethodSymbol methodSymbol)
             {   
-                var (returnType, _, isTask, returnTypeSymbol) = GetMethodReturnDetails(methodSymbol);
+                var (returnType, _, isTask, returnTypeSymbol) = methodSymbol.GetReturnDetails();
 
-                sb.AppendLine($"            case {methodIndex}:");
-                sb.AppendLine("            {");
+                handle.AppendLine($"            case {methodIndex}:");
+                handle.AppendLine("            {");
                 if (returnType is not null)
                 {
-                    sb.AppendLine($"                {returnType} result = default;");
+                    handle.AppendLine($"                {GenerationUtils.GetTypeString(returnTypeSymbol)} result = default;");
                 }
-                sb.AppendLine("                try");
-                sb.AppendLine("                {");
+                handle.AppendLine("                try");
+                handle.AppendLine("                {");
                 string parametersStr = string.Empty;
                 if (methodSymbol.Parameters.Any())
                 {
-                    sb.AppendLine("                    var offset = 0;");
+                    handle.AppendLine("                    var offset = 0;");
                     foreach (var parameterSymbol in methodSymbol.Parameters)
                     {
                         if (WellKnownTypes.IsCancellationToken(parameterSymbol.Type))
@@ -220,53 +163,97 @@ public class ServicesGenerator : IIncrementalGenerator
                         else
                         {
                             var metadataName = parameterSymbol.MetadataName;
-                            sb.AppendLine($"                    {parameterSymbol.Type} {metadataName} = default;");
-                            if (parameterSymbol.Type is {TypeKind:TypeKind.Class or TypeKind.Struct} && WellKnownTypes.NotContains(parameterSymbol.Type))
+                            var parameterTypeString = GenerationUtils.GetTypeString(parameterSymbol.Type);
+                            handle.AppendLine($"                    {parameterTypeString} {metadataName} = default;");
+
+                            switch (parameterSymbol.Type)
                             {
-                                sb.AppendLine($"                    {metadataName} = {metadataName}.Deserialize(readHandle.GetData()[offset..], ref offset);");
-                            }
-                            else
-                            {
-                                var b = parameterSymbol.Type switch
+                                case IArrayTypeSymbol ar:
                                 {
-                                    {} when parameterSymbol.Type.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                                    {} when parameterSymbol.Type.Name.Contains("Memory") => "Bytes",
-                                    INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated } => $"<{$"{parameterSymbol.Type}".TrimEnd('?')}>",
-                                    _ => $"<{parameterSymbol.Type}>"
-                                };
-                
-                                if (parameterSymbol.Type is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                                {
-                                    sb.AppendLine("            if (SerializationUtils.ReadInstanceState(readHandle.GetData()[offset..], ref offset))");
-                                    sb.AppendLine("            {");
-                                    sb.AppendLine(parameterSymbol.Type.TypeKind == TypeKind.Enum
-                                        ? $"                {metadataName} = ({methodSymbol.ReturnType})SerializationUtils.Read<int>(readHandle.GetData()[offset..], ref offset);"
-                                        : $"                {metadataName} = SerializationUtils.Read{b}(readHandle.GetData()[offset..], ref offset);");
-                                    sb.AppendLine("            }");
+                                    var arrayItemType = ar.ElementType;
+                                    var r = handle.GenerateDeserializationForItemsBase(arrayItemType, metadataName, spanSource:"readHandle.Span");
+                                    handle.AppendLine($"            {metadataName} = {r};");
+                                    break;
                                 }
-                                else
+                                case INamedTypeSymbol { IsTupleType:true, TupleElements.IsEmpty:false } tupleSymbol:
                                 {
-                                    sb.AppendLine(parameterSymbol.Type.TypeKind == TypeKind.Enum
-                                        ? $"            {metadataName} = ({parameterSymbol.Type})SerializationUtils.Read<int>(readHandle.GetData()[offset..], ref offset);"
-                                        : $"            {metadataName} = SerializationUtils.Read{b}(readHandle.GetData()[offset..], ref offset);");
+                                    var r = handle.GenerateDeserializationForTuple(tupleSymbol, metadataName, spanSource:"readHandle.Span");
+                                    handle.AppendLine($"            {metadataName} = {r};");
+                                    break;
+                                }
+                                case INamedTypeSymbol
+                                {
+                                    TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true, Name: "List" or "IReadOnlyList"
+                                } p:
+                                {
+                                    var listItemType = p.TypeArguments.First();
+                                    var r = handle.GenerateDeserializationForItemsBase(listItemType, metadataName, true, spanSource:"readHandle.Span");
+                                    handle.AppendLine($"            {metadataName} = {r};");
+                                    break;
+                                }
+                                case INamedTypeSymbol
+                                {
+                                    TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true,
+                                    Name: "Dictionary" or "IReadOnlyDictionary"
+                                } p:
+                                {
+                                    var keyType = p.TypeArguments[0];
+                                    var valueType = p.TypeArguments[1];
+                                    var r = handle.GenerateDeserializationForDictionaryBase(keyType, valueType, metadataName, spanSource:"readHandle.Span");
+                                    handle.AppendLine($"            {metadataName} = {r};");
+                                    break;
+                                }
+                                case { TypeKind: TypeKind.Class or TypeKind.Struct }
+                                    when WellKnownTypes.NotContains(parameterSymbol.Type):
+                                {
+                                    handle.AppendLine($"                    {metadataName} = {metadataName}.Deserialize(readHandle.Span, ref offset);");
+                                    break;
+                                }
+                                default:
+                                {
+                                    var b = parameterSymbol.Type switch
+                                    {
+                                        {} when parameterSymbol.Type.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
+                                        {} when parameterSymbol.Type.Name.Contains("Memory") => "Bytes",
+                                        INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated } => $"<{$"{parameterTypeString}".TrimEnd('?')}>",
+                                        _ => $"<{parameterTypeString}>"
+                                    };
+                    
+                                    if (parameterSymbol.Type is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                                    {
+                                        handle.AppendLine("            if (SerializationUtils.ReadInstanceState(readHandle.Span[offset..], ref offset))");
+                                        handle.AppendLine("            {");
+                                        handle.AppendLine(parameterSymbol.Type.TypeKind == TypeKind.Enum
+                                            ? $"                {metadataName} = ({parameterTypeString})SerializationUtils.Read<int>(readHandle.Span[offset..], ref offset);"
+                                            : $"                {metadataName} = SerializationUtils.Read{b}(readHandle.Span[offset..], ref offset);");
+                                        handle.AppendLine("            }");
+                                    }
+                                    else
+                                    {
+                                        handle.AppendLine(parameterSymbol.Type.TypeKind == TypeKind.Enum
+                                            ? $"            {metadataName} = ({parameterTypeString})SerializationUtils.Read<int>(readHandle.Span[offset..], ref offset);"
+                                            : $"            {metadataName} = SerializationUtils.Read{b}(readHandle.Span[offset..], ref offset);");
+                                    }
+                                    break;
                                 }
                             }
+
                             parametersStr += $"{metadataName}, ";
                         }
                     }
                 }
                 parametersStr = parametersStr.TrimEnd(' ', ',');
 
-                sb.AppendLine(returnType is not null
+                handle.AppendLine(returnType is not null
                     ? $"                    result = {(isTask ? "await " : string.Empty)}_service.{member.MetadataName}({parametersStr});"
                     : $"                    {(isTask ? "await " : string.Empty)}_service.{member.MetadataName}({parametersStr});");
 
-                sb.AppendLine("                }");
-                sb.AppendLine("                catch (Exception e)");
-                sb.AppendLine("                {");
-                sb.AppendLine("                    _eventsSource.Exception(e);");
-                sb.AppendLine("                    return false;");
-                sb.AppendLine("                }");
+                handle.AppendLine("                }");
+                handle.AppendLine("                catch (Exception e)");
+                handle.AppendLine("                {");
+                handle.AppendLine("                    _eventsSource.Exception(e);");
+                handle.AppendLine("                    return (false,e);");
+                handle.AppendLine("                }");
 
                 if (returnType is not null)
                 {
@@ -282,7 +269,12 @@ public class ServicesGenerator : IIncrementalGenerator
                         case IArrayTypeSymbol ar:
                         {
                             var arrayItemType = ar.ElementType;
-                            GenerateSerializationForItems(typeSymbols, sourceProductionContext, arrayItemType, sb, "result", instanceName:"");
+                            handle.GenerateSerializationForItems(arrayItemType, "result", instanceName:"");
+                            break;
+                        }
+                        case INamedTypeSymbol { IsTupleType:true, TupleElements.IsEmpty:false } tupleSymbol:
+                        {
+                            handle.GenerateSerializationForTuple(tupleSymbol, "result", instanceName:"");
                             break;
                         }
                         case INamedTypeSymbol
@@ -291,7 +283,7 @@ public class ServicesGenerator : IIncrementalGenerator
                         } p:
                         {
                             var listItemType = p.TypeArguments.First();
-                            GenerateSerializationForItems(typeSymbols, sourceProductionContext, listItemType, sb, "result", isCount:true, instanceName:"");
+                            handle.GenerateSerializationForItems(listItemType, "result", isCount:true, instanceName:"");
                             break;
                         }
                         case INamedTypeSymbol
@@ -302,12 +294,12 @@ public class ServicesGenerator : IIncrementalGenerator
                         {
                             var keyType = p.TypeArguments[0];
                             var valueType = p.TypeArguments[1];
-                            GenerateSerializationForDictionary(typeSymbols, sourceProductionContext, keyType, valueType, sb, "result", instanceName:"");
+                            handle.GenerateSerializationForDictionary(keyType, valueType, "result", instanceName:"");
                             break;
                         }
                         case {TypeKind:TypeKind.Class or TypeKind.Struct} 
                        when WellKnownTypes.NotContains(returnType.TrimEnd('?')):
-                            sb.AppendLine("                result.Serialize(bufferWriter);");
+                            handle.AppendLine("                result.Serialize(bufferWriter);");
                             break;
                         default:
                         {
@@ -320,21 +312,21 @@ public class ServicesGenerator : IIncrementalGenerator
                 
                             if (isAnnotated)
                             {
-                                sb.AppendLine($"            if (result != null)");
-                                sb.AppendLine("            {");
-                                sb.AppendLine("                SerializationUtils.WriteInstanceState(true, bufferWriter);");
-                                sb.AppendLine(returnTypeSymbol.TypeKind == TypeKind.Enum
+                                handle.AppendLine($"            if (result != null)");
+                                handle.AppendLine("            {");
+                                handle.AppendLine("                SerializationUtils.WriteInstanceState(true, bufferWriter);");
+                                handle.AppendLine(returnTypeSymbol.TypeKind == TypeKind.Enum
                                     ? $"               SerializationUtils.Write<int>((int)result.Value, bufferWriter);"
                                     : $"               SerializationUtils.Write{b}(result.Value, bufferWriter);");
-                                sb.AppendLine("            }");
-                                sb.AppendLine("            else");
-                                sb.AppendLine("            {");
-                                sb.AppendLine("                SerializationUtils.WriteInstanceState(false, bufferWriter);");
-                                sb.AppendLine("            }");
+                                handle.AppendLine("            }");
+                                handle.AppendLine("            else");
+                                handle.AppendLine("            {");
+                                handle.AppendLine("                SerializationUtils.WriteInstanceState(false, bufferWriter);");
+                                handle.AppendLine("            }");
                             }
                             else
                             {
-                                sb.AppendLine(returnTypeSymbol.TypeKind == TypeKind.Enum
+                                handle.AppendLine(returnTypeSymbol.TypeKind == TypeKind.Enum
                                     ? $"           SerializationUtils.Write<int>((int)result, bufferWriter);"
                                     : $"           SerializationUtils.Write{b}(result, bufferWriter);");
                             }
@@ -344,1007 +336,28 @@ public class ServicesGenerator : IIncrementalGenerator
                     }
                 }
 
-                sb.AppendLine("            }");
-                sb.AppendLine("            break;");
+                handle.AppendLine("            }");
+                handle.AppendLine("            break;");
                 methodIndex++;
             }
         }
-        sb.AppendLine("        }");
+        handle.AppendLine("        }");
 
-        sb.AppendLine("        return true;");
-        sb.AppendLine("    }");
-        sb.AppendLine("}");
-
-        var source2 = sb.ToString();
-        sourceProductionContext.AddSource($"{handlerImplementationClassName}.g.cs", source2);
+        handle.AppendLine("        return (true, null);");
+        handle.AppendLine("    }");
         
-        return handlerImplementationClassName;
-    }
+        handle.Complete();
         
-    private static (string? type, bool isVoid, bool isTask, ITypeSymbol? returnTypeSymbol) GetMethodReturnDetails(IMethodSymbol methodSymbol)
-    {
-        var isTask = $"{methodSymbol.ReturnType}" == "Task" || methodSymbol.ReturnType.ToDisplayString().Contains("Task");
-        var isVoid = $"{methodSymbol.ReturnType}" == "void" || methodSymbol.ReturnType.ToDisplayString().Contains("void");
-
-        ITypeSymbol? returnTypeSymbol = isVoid 
-            ? default 
-            : (isTask ? default : methodSymbol.ReturnType);
-        
-        string? returnType = isVoid 
-            ? default 
-            : (isTask ? default : $"{methodSymbol.ReturnType}");
-        
-        if (isTask && methodSymbol.ReturnType is INamedTypeSymbol { IsGenericType: true } v
-                   && v.TypeArguments.Any())
-        {
-            returnTypeSymbol = v.TypeArguments[0];
-            returnType = $"{returnTypeSymbol}";
-        }
-
-        return (returnType, isVoid, isTask, returnTypeSymbol);
-    }
-
-    private static void GenerateMethod(SourceProductionContext sourceProductionContext, List<ITypeSymbol> typesList,
-        IMethodSymbol methodSymbol, byte methodIndex, StringBuilder sb)
-    {
-        var parameters = methodSymbol.Parameters;
-        var anyParameters = parameters.Any();
-        
-        var str = "";
-        string? cancellationTokenParameter = default;
-
-        if (anyParameters)
-        {
-            foreach (var symbol in parameters)
-            {
-                if (symbol.Type.TypeKind is TypeKind.Class or TypeKind.Struct)
-                {
-                    GenerateSerializationExtensions(typesList, sourceProductionContext, symbol.Type);
-                }
-
-                str += $"{symbol.Type} {symbol.MetadataName}{(symbol.IsOptional ? " = default" : string.Empty)}, ";
-
-                if (symbol.Type.Name.Contains("CancellationToken"))
-                {
-                    cancellationTokenParameter = symbol.MetadataName;
-                }
-            }
-        }
-
-        str = str.TrimEnd();
-        str = str.TrimEnd(',');
-
-        var (returnType, isVoid, isTask, returnTypeSymbol) = GetMethodReturnDetails(methodSymbol);
-
-        sb.AppendLine($"    public {methodSymbol.ReturnType} {methodSymbol.Name}({str})");
-        sb.AppendLine("    {");
-        if (isTask)
-        {
-            sb.AppendLine($"        return _signalClient.InvokeAsync({methodIndex}");
-        }
-        else
-        {
-            sb.AppendLine(isVoid
-                ? $"        _signalClient.Invoke({methodIndex}"
-                : $"        return _signalClient.Invoke({methodIndex}");
-        }
-        if (parameters.Length == 0 || (parameters.Length == 1 && cancellationTokenParameter != null))
-        {
-            sb.AppendLine("            , null");
-        }
-        else
-        {
-            sb.AppendLine("            , writer =>");
-            sb.AppendLine("            {");
-            foreach (var parameterSymbol in parameters.Where(parameterSymbol => !WellKnownTypes.IsCancellationToken(parameterSymbol.Type)))
-            {
-                if (parameterSymbol.Type is {TypeKind:TypeKind.Class or TypeKind.Struct} && WellKnownTypes.NotContains(parameterSymbol.Type))
-                {
-                    sb.AppendLine($"                {parameterSymbol.MetadataName}.Serialize(writer);");
-                }
-                else
-                {
-                    var b = parameterSymbol.Type switch
-                    {
-                        {} when parameterSymbol.Type.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                        {} when parameterSymbol.Type.Name.Contains("Memory") => "Bytes",
-                        _ => ""
-                    };
-                
-                    if (parameterSymbol.Type is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                    {
-                        sb.AppendLine($"            if ({parameterSymbol.MetadataName} != null)");
-                        sb.AppendLine("            {");
-                        sb.AppendLine("                SerializationUtils.WriteInstanceState(true, writer);");
-                        sb.AppendLine(parameterSymbol.Type.TypeKind == TypeKind.Enum
-                            ? $"               SerializationUtils.Write<int>((int){parameterSymbol.MetadataName}.Value, writer);"
-                            : $"               SerializationUtils.Write{b}({parameterSymbol.MetadataName}.Value, writer);");
-                        sb.AppendLine("            }");
-                        sb.AppendLine("            else");
-                        sb.AppendLine("            {");
-                        sb.AppendLine("                SerializationUtils.WriteInstanceState(false, writer);");
-                        sb.AppendLine("            }");
-                    }
-                    else
-                    {
-                        sb.AppendLine(parameterSymbol.Type.TypeKind == TypeKind.Enum
-                            ? $"           SerializationUtils.Write<int>((int){parameterSymbol.MetadataName}, writer);"
-                            : $"           SerializationUtils.Write{b}({parameterSymbol.MetadataName}, writer);");
-                    }
-                }
-            }
-            sb.AppendLine("            }");
-        }
-
-        if (!isVoid && returnType is not null)
-        {
-            sb.AppendLine("            , handle =>");
-            sb.AppendLine("            {");
-            sb.AppendLine("                var offset = 0;");
-            sb.AppendLine($"                {returnType} result = default;");
-            
-            
-            var isAnnotated = returnTypeSymbol.NullableAnnotation == NullableAnnotation.Annotated;
-            
-            if (returnTypeSymbol is INamedTypeSymbol {MetadataName:"Nullable`1", TypeArguments.Length:1} tp && isAnnotated)
-            {
-                returnTypeSymbol = tp.TypeArguments[0];
-            }
-            
-            switch (returnTypeSymbol)
-            {
-                case IArrayTypeSymbol ar:
-                {
-                    var arrayItemType = ar.ElementType;
-                    GenerateSerializationExtensions(typesList, sourceProductionContext, arrayItemType);
-                    var r = GenerateDeserializationForItemsBase(arrayItemType, sb, "result", spanSource:"handle.GetData()");
-                    sb.AppendLine($"            result = {r};");
-                    sb.AppendLine("            return result;");
-                    break;
-                }
-                case INamedTypeSymbol
-                {
-                    TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true, Name: "List" or "IReadOnlyList"
-                } p:
-                {
-                    var listItemType = p.TypeArguments.First();
-                    GenerateSerializationExtensions(typesList, sourceProductionContext, listItemType);
-                    var r = GenerateDeserializationForItemsBase(listItemType, sb, "result", true, spanSource:"handle.GetData()");
-                    sb.AppendLine($"            result = {r};");
-                    sb.AppendLine("            return result;");
-                    break;
-                }
-                case INamedTypeSymbol
-                {
-                    TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true,
-                    Name: "Dictionary" or "IReadOnlyDictionary"
-                } p:
-                {
-                    var keyType = p.TypeArguments[0];
-                    var valueType = p.TypeArguments[1];
-                    GenerateSerializationExtensions(typesList, sourceProductionContext, keyType);
-                    GenerateSerializationExtensions(typesList, sourceProductionContext, valueType);
-                    var r = GenerateDeserializationForDictionaryBase(keyType, valueType, sb, "result", spanSource:"handle.GetData()");
-                    sb.AppendLine($"            result = {r};");
-                    sb.AppendLine("            return result;");
-                    break;
-                }
-                case {TypeKind:TypeKind.Class or TypeKind.Struct} 
-                when WellKnownTypes.NotContains(returnType.TrimEnd('?')):
-                    GenerateSerializationExtensions(typesList, sourceProductionContext, returnTypeSymbol);
-                    sb.AppendLine("                return result.Deserialize(handle.GetData()[offset..], ref offset);");
-                    break;
-                default:
-                {
-                    var b = returnTypeSymbol switch
-                    {
-                        {} when returnTypeSymbol.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                        {} when returnTypeSymbol.Name.Contains("Memory") => "Bytes",
-                        INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated } => $"<{$"{returnTypeSymbol}".TrimEnd('?')}>",
-                        _ => $"<{returnTypeSymbol}>"
-                    };
-                
-                    if (isAnnotated)
-                    {
-                        sb.AppendLine("            if (SerializationUtils.ReadInstanceState(handle.GetData()[offset..], ref offset))");
-                        sb.AppendLine("            {");
-                        sb.AppendLine(returnTypeSymbol.TypeKind == TypeKind.Enum
-                            ? $"                result = ({returnTypeSymbol})SerializationUtils.Read<int>(handle.GetData()[offset..], ref offset);"
-                            : $"                result = SerializationUtils.Read{b}(handle.GetData()[offset..], ref offset);");
-                        sb.AppendLine("            }");
-                    }
-                    else
-                    {
-                        sb.AppendLine(returnTypeSymbol.TypeKind == TypeKind.Enum
-                            ? $"            result = ({returnTypeSymbol})SerializationUtils.Read<int>(handle.GetData()[offset..], ref offset);"
-                            : $"            result = SerializationUtils.Read{b}(handle.GetData()[offset..], ref offset);");
-                    }
-                
-                    sb.AppendLine("                return result;");
-                    break;
-                }
-            }
-            sb.AppendLine("            }");
-        }
-        
-        sb.AppendLine(cancellationTokenParameter != null
-            ? $"            , {cancellationTokenParameter});"
-            : "            );");
-        sb.AppendLine("    }");
-
-        sb.AppendLine();
-    }
-
-    private static void GenerateSerializationExtensions(List<ITypeSymbol> types, SourceProductionContext sourceProductionContext, ITypeSymbol type)
-    {
-        if (WellKnownTypes.Contains(type))
-        {
-            return;
-        }
-        
-        if (types.Contains(type))
-        {
-            return;
-        }
-        types.Add(type);
-        
-        var name = type.Name;
-
-        var members = type.GetMembers();
-
-        var sb = new StringBuilder();
-        sb.AppendLine("// auto-generated by TrueMoon.Thorium.Generator");
-        sb.AppendLine("using System.Buffers;");
-        sb.AppendLine("using System.Collections.Generic;");
-        sb.AppendLine("using TrueMoon.Thorium;");
-        sb.AppendLine("using TrueMoon.Thorium.IO;");
-        sb.AppendLine("using System.Runtime.CompilerServices;");
-        sb.AppendLine();
-        sb.AppendLine($"namespace {NamespacePart};");
-        sb.AppendLine();
-        
-        sb.AppendLine($"// {type},  {name}");
-        sb.AppendLine($"public static class {name}SerializationExtensions");
-        sb.AppendLine("{");
-
-        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-
-        var typeStr = type.NullableAnnotation == NullableAnnotation.Annotated
-            ? $"{type}"
-            : $"{type}?";
-
-        var typeValue = typeStr.TrimEnd('?');
-        
-        sb.AppendLine($"    public static void Serialize(this {typeStr} instance, IBufferWriter<byte> bufferWriter)");
-        sb.AppendLine("    {");
-        sb.AppendLine("        if (instance != null)"); 
-        sb.AppendLine("        {");
-        sb.AppendLine("            SerializationUtils.WriteInstanceState(true, bufferWriter);");
-        foreach (var member in members)
-        {
-            switch (member)
-            {
-                case IPropertySymbol property when property.SetMethod == null || property.DeclaredAccessibility != Accessibility.Public:
-                    continue;
-                case IPropertySymbol property:
-                    ProcessMemberTypeSerialization(sourceProductionContext, sb, property.Name, property.Type, types);
-                    break;
-                case IFieldSymbol field when field.IsReadOnly || field.IsConst || field.DeclaredAccessibility != Accessibility.Public:
-                    continue;
-                case IFieldSymbol field:
-                    ProcessMemberTypeSerialization(sourceProductionContext, sb, field.Name, field.Type, types);
-                    break;
-            }
-        }
-        sb.AppendLine("        }");
-        sb.AppendLine("        else");
-        sb.AppendLine("        {");
-        sb.AppendLine("            SerializationUtils.WriteInstanceState(false, bufferWriter);");
-        sb.AppendLine("        }");
-
-
-        sb.AppendLine("    }");
-    
-        sb.AppendLine();
-        
-        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
-        sb.AppendLine($"    public static {typeValue} Deserialize(this {typeStr} instance, ReadOnlySpan<byte> span, ref int offset)");
-        sb.AppendLine("    {");
-        sb.AppendLine($"        {typeValue}? result = default;");
-        sb.AppendLine("        if (SerializationUtils.ReadInstanceState(span[offset..], ref offset))");
-        sb.AppendLine("        {");
-        
-        if (type is INamedTypeSymbol {IsRecord:true} p)
-        {
-            var recordParameters = string.Empty;
-            
-            var list = new List<string>();
-            var constructorsCandidates =
-                p.Constructors
-                    .Where(t => !(t.Parameters.Length == 1 && t.Parameters.First().Type != p))
-                    .ToList();
-            
-            if (constructorsCandidates.Any())
-            {
-                var constructor = constructorsCandidates
-                    .OrderByDescending(t=>t.Parameters.Length)
-                    .First();
-                
-                foreach (var constructorParameter in constructor.Parameters)
-                {
-                    var met = constructorParameter.MetadataName;
-                    var itemName = ProcessRecordMemberTypeDeserialization(sb, met, constructorParameter.Type);
-                    recordParameters += $"{met}: {itemName},";
-                    list.Add(met);
-                }
-                
-                recordParameters = recordParameters.TrimEnd(',', ' ');
-
-                var initOnlyMembers = members
-                    .Where(t => t is IPropertySymbol { SetMethod.IsInitOnly: true } && !list.Contains(t.MetadataName))
-                    .Cast<IPropertySymbol>()
-                    .ToList();
-                
-                if (initOnlyMembers.Count > 0)
-                {
-                    var propsList = new List<(string, string)>();
-                    foreach (var initOnlyMember in initOnlyMembers)
-                    {
-                        var itemName = ProcessRecordMemberTypeDeserialization(sb, initOnlyMember.MetadataName, initOnlyMember.Type);
-                        propsList.Add((initOnlyMember.MetadataName,itemName));
-                        list.Add(initOnlyMember.MetadataName);
-                    }
-                    sb.AppendLine($"            result = new {typeValue}({recordParameters})");
-                    sb.AppendLine("            {");
-                    foreach (var valueTuple in propsList)
-                    {
-                        sb.AppendLine($"                {valueTuple.Item1} = {valueTuple.Item2},");
-                    }
-                    sb.AppendLine("            };");
-                }
-                else
-                {
-                    sb.AppendLine($"            result = new {typeValue}({recordParameters});");
-                }
-            }
-            
-            foreach (var member in members.Where(t=>!list.Contains(t.MetadataName)))
-            {
-                switch (member)
-                {
-                    case IPropertySymbol property when property.SetMethod == null || property.DeclaredAccessibility != Accessibility.Public:
-                        continue;
-                    case IPropertySymbol property:
-                        ProcessMemberTypeDeserialization(sb, property.Name, property.Type);
-                        break;
-                    case IFieldSymbol field when field.IsReadOnly || field.IsConst || field.DeclaredAccessibility != Accessibility.Public:
-                        continue;
-                    case IFieldSymbol field:
-                        ProcessMemberTypeDeserialization(sb, field.Name, field.Type);
-                        break;
-                }
-            }
-        }
-        else if(type is INamedTypeSymbol pt)
-        {
-            var recordParameters = string.Empty;
-            
-            var list = new List<string>();
-            if (pt.Constructors.Length > 0)
-            {
-                var constructor = pt.Constructors
-                    .OrderByDescending(t => t.Parameters.Length)
-                    .First();
-                
-                foreach (var constructorParameter in constructor.Parameters)
-                {
-                    var met = constructorParameter.MetadataName;
-                    var itemName = ProcessRecordMemberTypeDeserialization(sb, met, constructorParameter.Type);
-                    recordParameters += $"{met}: {itemName},";
-                    list.Add(met);
-                }
-                
-                recordParameters = recordParameters.TrimEnd(',', ' ');
-
-                var initOnlyMembers = members
-                    .Where(t => t is IPropertySymbol { SetMethod.IsInitOnly: true } && !list.Contains(t.MetadataName))
-                    .Cast<IPropertySymbol>()
-                    .ToList();
-                
-                if (initOnlyMembers.Count > 0)
-                {
-                    var propsList = new List<(string, string)>();
-                    foreach (var initOnlyMember in initOnlyMembers)
-                    {
-                        var itemName = ProcessRecordMemberTypeDeserialization(sb, initOnlyMember.MetadataName, initOnlyMember.Type);
-                        propsList.Add((initOnlyMember.MetadataName,itemName));
-                        list.Add(initOnlyMember.MetadataName);
-                    }
-                    sb.AppendLine($"            result = new {typeValue}({recordParameters})");
-                    sb.AppendLine("            {");
-                    foreach (var valueTuple in propsList)
-                    {
-                        sb.AppendLine($"                {valueTuple.Item1} = {valueTuple.Item2},");
-                    }
-                    sb.AppendLine("            };");
-                }
-                else
-                {
-                    sb.AppendLine($"            result = new {typeValue}({recordParameters});");
-                }
-            }
-            
-            foreach (var member in members.Where(t=>!list.Contains(t.MetadataName)))
-            {
-                switch (member)
-                {
-                    case IPropertySymbol property when property.SetMethod == null || property.DeclaredAccessibility != Accessibility.Public:
-                        continue;
-                    case IPropertySymbol property:
-                        ProcessMemberTypeDeserialization(sb, property.Name, property.Type);
-                        break;
-                    case IFieldSymbol field when field.IsReadOnly || field.IsConst || field.DeclaredAccessibility != Accessibility.Public:
-                        continue;
-                    case IFieldSymbol field:
-                        ProcessMemberTypeDeserialization(sb, field.Name, field.Type);
-                        break;
-                }
-            }
-        }
-        else
-        {
-            sb.AppendLine($"            result = new {typeValue}();");
-            foreach (var member in members)
-            {
-                switch (member)
-                {
-                    case IPropertySymbol property when property.SetMethod == null || property.DeclaredAccessibility != Accessibility.Public:
-                        continue;
-                    case IPropertySymbol property:
-                        ProcessMemberTypeDeserialization(sb, property.Name, property.Type);
-                        break;
-                    case IFieldSymbol field when field.IsReadOnly || field.IsConst || field.DeclaredAccessibility != Accessibility.Public:
-                        continue;
-                    case IFieldSymbol field:
-                        ProcessMemberTypeDeserialization(sb, field.Name, field.Type);
-                        break;
-                }
-            }
-        }
-        
-        sb.AppendLine("        };");
-        sb.AppendLine("        return result;");
-
-        sb.AppendLine("    }");
-
-        sb.AppendLine("}");
-
-        var source = sb.ToString();
-        
-        var hintName = $"{type.ToString().TrimEnd('?',' ')}.SerializationExtensions.g.cs";
-        sourceProductionContext.AddSource(hintName, source);
-    }
-
-    private static void ProcessMemberTypeSerialization(SourceProductionContext context, StringBuilder sb, string name, ITypeSymbol typeSymbol, List<ITypeSymbol> types)
-    {
-        switch (typeSymbol)
-        {
-            case IArrayTypeSymbol ar:
-            {
-                var arrayItemType = ar.ElementType;
-                GenerateSerializationForItems(types, context, arrayItemType, sb, name);
-                break;
-            }
-            case INamedTypeSymbol
-            {
-                TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true,
-                Name: "List" or "IReadOnlyList"
-            } p:
-            {
-                var listItemType = p.TypeArguments.First();
-                GenerateSerializationForItems(types, context, listItemType, sb, name, true);
-                break;
-            }
-            case INamedTypeSymbol
-            {
-                TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true,
-                Name: "Dictionary" or "IReadOnlyDictionary"
-            } p:
-            {
-                var keyType = p.TypeArguments[0];
-                var valueType = p.TypeArguments[1];
-                GenerateSerializationForDictionary(types, context, keyType, valueType, sb, name);
-                break;
-            }
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.IsObject(typeSymbol):
-                // TODO object
-                //sb.AppendLine($"            instance.{name}.Serialize(bufferWriter);");
-                break;
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(typeSymbol):
-                GenerateSerializationExtensions(types, context, typeSymbol);
-                sb.AppendLine($"            instance.{name}.Serialize(bufferWriter);");
-                break;
-            default:
-            {
-                var b = typeSymbol switch
-                {
-                    {} when typeSymbol.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                    {} when typeSymbol.Name.Contains("Memory") => "Bytes",
-                    _ => ""
-                };
-                
-                if (typeSymbol is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                {
-                    sb.AppendLine($"            if (instance.{name} != null)");
-                    sb.AppendLine("            {");
-                    sb.AppendLine("               SerializationUtils.WriteInstanceState(true, bufferWriter);");
-                    sb.AppendLine(typeSymbol.TypeKind == TypeKind.Enum 
-                        ? $"               SerializationUtils.Write<int>((int)instance.{name}.Value, bufferWriter);" 
-                        : $"               SerializationUtils.Write{b}(instance.{name}.Value, bufferWriter);");
-                    sb.AppendLine("            }");
-                    sb.AppendLine("            else");
-                    sb.AppendLine("            {");
-                    sb.AppendLine("                SerializationUtils.WriteInstanceState(false, bufferWriter);");
-                    sb.AppendLine("            }");
-                }
-                else
-                {
-                    sb.AppendLine(typeSymbol.TypeKind == TypeKind.Enum 
-                        ? $"            SerializationUtils.Write<int>((int)instance.{name}, bufferWriter);" 
-                        : $"            SerializationUtils.Write{b}(instance.{name}, bufferWriter);");
-                }
-
-                break;
-            }
-        }
-    }
-
-    private static void ProcessMemberTypeDeserialization(StringBuilder sb, string name, ITypeSymbol typeSymbol)
-    {
-        switch (typeSymbol)
-        {
-            case IArrayTypeSymbol ar:
-            {
-                var arrayItemType = ar.ElementType;
-                GenerateDeserializationForItems(arrayItemType, sb, name);
-                break;
-            }
-            case INamedTypeSymbol { TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true, Name: "List" or "IReadOnlyList" } p:
-            {
-                var listItemType = p.TypeArguments.First();
-                GenerateDeserializationForItems(listItemType, sb, name, true);
-                break;
-            }
-            case INamedTypeSymbol
-            {
-                TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true,
-                Name: "Dictionary" or "IReadOnlyDictionary"
-            } p:
-            {
-                var keyType = p.TypeArguments[0];
-                var valueType = p.TypeArguments[1];
-                GenerateDeserializationForDictionary(keyType, valueType, sb, name);
-                break;
-            }
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.IsObject(typeSymbol):
-                // TODO object
-                //sb.AppendLine($"            result.{name} = new object();");
-                break;
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(typeSymbol):
-                sb.AppendLine($"            result.{name} = result.{name}.Deserialize(span, ref offset);");
-                break;
-            default:
-            {
-                var b = typeSymbol switch
-                {
-                    {} when typeSymbol.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                    {} when typeSymbol.Name.Contains("Memory") => "Bytes",
-                    INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated } => $"<{$"{typeSymbol}".TrimEnd('?')}>",
-                    _ => $"<{typeSymbol}>"
-                };
-                
-                if (typeSymbol is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                {
-                    sb.AppendLine("            if (SerializationUtils.ReadInstanceState(span[offset..], ref offset))");
-                    sb.AppendLine("            {");
-                    sb.AppendLine(typeSymbol.TypeKind == TypeKind.Enum
-                        ? $"                result.{name} = ({typeSymbol})SerializationUtils.Read<int>(span[offset..], ref offset);"
-                        : $"                result.{name} = SerializationUtils.Read{b}(span[offset..], ref offset);");
-                    sb.AppendLine("            }");
-                }
-                else
-                {
-                    sb.AppendLine(typeSymbol.TypeKind == TypeKind.Enum
-                        ? $"            result.{name} = ({typeSymbol})SerializationUtils.Read<int>(span[offset..], ref offset);"
-                        : $"            result.{name} = SerializationUtils.Read{b}(span[offset..], ref offset);");
-                }
-
-                break;
-            }
-        }
+        return handle.ImplementationClassName;
     }
     
-    private static string ProcessRecordMemberTypeDeserialization(StringBuilder sb, string name, ITypeSymbol typeSymbol)
-    {
-        switch (typeSymbol)
-        {
-            case IArrayTypeSymbol ar:
-            {
-                var arrayItemType = ar.ElementType;
-                return GenerateDeserializationForItemsBase(arrayItemType, sb, name);
-            }
-            case INamedTypeSymbol { TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true, Name: "List" or "IReadOnlyList" } p:
-            {
-                var listItemType = p.TypeArguments.First();
-                return GenerateDeserializationForItemsBase(listItemType, sb, name, true);
-            }
-            case INamedTypeSymbol
-            {
-                TypeKind: TypeKind.Class or TypeKind.Interface or TypeKind.Error, IsGenericType: true,
-                Name: "Dictionary" or "IReadOnlyDictionary"
-            } p:
-            {
-                var keyType = p.TypeArguments[0];
-                var valueType = p.TypeArguments[1];
-                return GenerateDeserializationForDictionaryBase(keyType, valueType, sb, name);
-            }
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.IsObject(typeSymbol):
-                // TODO object
-                sb.AppendLine($"            var {name} = new object();");
-                return name;
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(typeSymbol):
-                sb.AppendLine($"            var {name} = result.{name}.Deserialize(span[offset..], ref offset);");
-                return name;
-            default:
-            {
-                var b = typeSymbol switch
-                {
-                    {} when typeSymbol.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                    {} when typeSymbol.Name.Contains("Memory") => "Bytes",
-                    INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated } => $"<{$"{typeSymbol}".TrimEnd('?')}>",
-                    _ => $"<{typeSymbol}>"
-                };
-                
-                if (typeSymbol is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                {
-                    sb.AppendLine($"            {typeSymbol} {name} = default;");
-                    sb.AppendLine("            if (SerializationUtils.ReadInstanceState(span[offset..], ref offset))");
-                    sb.AppendLine("            {");
-
-                    sb.AppendLine(typeSymbol.TypeKind == TypeKind.Enum
-                        ? $"                {name} = ({typeSymbol})SerializationUtils.Read<int>(span[offset..], ref offset);"
-                        : $"                {name} = SerializationUtils.Read{b}(span[offset..], ref offset);");
-
-                    sb.AppendLine("            }");
-                }
-                else
-                {
-                    sb.AppendLine(typeSymbol.TypeKind == TypeKind.Enum
-                        ? $"                var {name} = ({typeSymbol})SerializationUtils.Read<int>(span[offset..], ref offset);"
-                        : $"                var {name} = SerializationUtils.Read{b}(span[offset..], ref offset);");
-                }
-
-                return name;
-            }
-        }
-    }
-
-    private static void GenerateSerializationForItems(List<ITypeSymbol> types, SourceProductionContext sourceProductionContext,
-        ITypeSymbol arrayItemType, StringBuilder sb, string propertyName, bool isCount = false, string instanceName = "instance.")
-    {
-        var sizeStr = isCount ? "Count" : "Lenght";
-        sb.AppendLine($"            if ({instanceName}{propertyName} != null)");
-        sb.AppendLine("            {");
-        sb.AppendLine("                SerializationUtils.WriteInstanceState(true, bufferWriter);");
-        sb.AppendLine($"                SerializationUtils.WriteElementsCount({instanceName}{propertyName}.{sizeStr}, bufferWriter);");
-        sb.AppendLine($"                for(var i = 0; i < {instanceName}{propertyName}.{sizeStr}; i++)");
-        sb.AppendLine("                {");
-        sb.AppendLine($"                    var item = {instanceName}{propertyName}[i];");
-        switch (arrayItemType)
-        {
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(arrayItemType):
-                GenerateSerializationExtensions(types, sourceProductionContext, arrayItemType);
-                sb.AppendLine("                    item.Serialize(bufferWriter);");
-                break;
-            default:
-            {
-                var b = arrayItemType switch
-                {
-                    {} when arrayItemType.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                    {} when arrayItemType.Name.Contains("Memory") => "Bytes",
-                    _ => ""
-                };
-                
-                if (arrayItemType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                {
-                    sb.AppendLine($"                    if (item != null)");
-                    sb.AppendLine("                    {");
-                    sb.AppendLine("                        SerializationUtils.WriteInstanceState(true, bufferWriter);");
-                    sb.AppendLine(arrayItemType.TypeKind == TypeKind.Enum
-                        ? "            SerializationUtils.Write<int>((int)item.Value, bufferWriter);"
-                        : $"                        SerializationUtils.Write{b}(item.Value, bufferWriter);");
-                    sb.AppendLine("                    }");
-                    sb.AppendLine("                    else");
-                    sb.AppendLine("                    {");
-                    sb.AppendLine("                        SerializationUtils.WriteInstanceState(false, bufferWriter);");
-                    sb.AppendLine("                    }");
-                }
-                else
-                {
-                    sb.AppendLine(arrayItemType.TypeKind == TypeKind.Enum
-                        ? "            SerializationUtils.Write<int>((int)item, bufferWriter);"
-                        : $"                        SerializationUtils.Write{b}(item, bufferWriter);");
-                }
-
-                break;
-            }
-        }
-        sb.AppendLine("                }");
-        sb.AppendLine("            }");
-        sb.AppendLine("            else");
-        sb.AppendLine("            {");
-        sb.AppendLine("                SerializationUtils.WriteInstanceState(false, bufferWriter);");
-        sb.AppendLine("            }");
-    }
-    
-    private static void GenerateDeserializationForItems(ITypeSymbol itemType, StringBuilder sb, string propertyName, bool isList = false)
-    {
-        GenerateDeserializationForItemsBase(itemType, sb, propertyName, isList);
-        sb.AppendLine($"            result.{propertyName} = {propertyName}Items;");
-    }
-    
-    private static string GenerateDeserializationForItemsBase(ITypeSymbol itemType, StringBuilder sb, string propertyName, bool isList = false, string spanSource = "span")
-    {
-        sb.AppendLine(isList ? $"            List<{itemType}> {propertyName}Items = default;" : $"            {itemType}[] {propertyName}Items = default;");
-
-        sb.AppendLine($"            if (SerializationUtils.ReadInstanceState({spanSource}[offset..], ref offset))");
-        sb.AppendLine("            {");
-        sb.AppendLine($"                var count = SerializationUtils.ReadElementsCount({spanSource}[offset..], ref offset);");
-        sb.AppendLine(isList
-            ? $"                {propertyName}Items = new List<{itemType}>(count);"
-            : $"                {propertyName}Items = new {itemType}[count];");
-        sb.AppendLine("                for(var i = 0; i < count; i++)");
-        sb.AppendLine("                {");
-        sb.AppendLine($"                    {itemType} item = default;");
-        
-        switch (itemType)
-        {
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(itemType):
-                sb.AppendLine($"            item = item.Deserialize({spanSource}[offset..], ref offset);");
-                break;
-            default:
-            {
-                var b = itemType switch
-                {
-                    {} when itemType.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                    {} when itemType.Name.Contains("Memory") => "Bytes",
-                    INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated } => $"<{$"{itemType}".TrimEnd('?')}>",
-                    _ => $"<{itemType}>"
-                };
-                
-                if (itemType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                {
-                    sb.AppendLine($"            if (SerializationUtils.ReadInstanceState({spanSource}[offset..], ref offset))");
-                    sb.AppendLine("            {");
-                    sb.AppendLine(itemType.TypeKind == TypeKind.Enum
-                        ? $"                item = ({itemType})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"                item = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
-                    sb.AppendLine("            }");
-                }
-                else
-                {
-                    sb.AppendLine(itemType.TypeKind == TypeKind.Enum
-                        ? $"            item = ({itemType})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"            item = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
-                }
-                break;
-            }
-        }
-        
-        sb.AppendLine($"                    {propertyName}Items[i] = item;");
-        sb.AppendLine("                }");
-        sb.AppendLine("            }");
-        
-        return $"{propertyName}Items";
-    }
-
-    private static void GenerateSerializationForDictionary(List<ITypeSymbol> types, SourceProductionContext sourceProductionContext,
-        ITypeSymbol keyType, ITypeSymbol valueType, StringBuilder sb, string propertyName, string instanceName = "instance.")
-    {
-        sb.AppendLine($"            if ({instanceName}{propertyName} != null)");
-        sb.AppendLine("            {");
-        sb.AppendLine("                SerializationUtils.WriteInstanceState(true, bufferWriter);");
-        sb.AppendLine($"                SerializationUtils.WriteElementsCount({instanceName}{propertyName}.Count, bufferWriter);");
-        sb.AppendLine($"                foreach (var pair in {instanceName}{propertyName})");
-        sb.AppendLine("                {");
-        sb.AppendLine("                    var key = pair.Key;");
-        sb.AppendLine("                    var value = pair.Value;");
-        switch (keyType)
-        {
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(keyType):
-                GenerateSerializationExtensions(types, sourceProductionContext, keyType);
-                sb.AppendLine("                    key.Serialize(bufferWriter);");
-                break;
-            default:
-            {
-                var b = keyType switch
-                {
-                    {} when keyType.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                    {} when keyType.Name.Contains("Memory") => "Bytes",
-                    _ => ""
-                };
-                
-                if (keyType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                {
-                    sb.AppendLine($"                    if (key != null)");
-                    sb.AppendLine("                    {");
-                    sb.AppendLine("                        SerializationUtils.WriteInstanceState(true, bufferWriter);");
-                    sb.AppendLine(keyType.TypeKind == TypeKind.Enum
-                        ? "            SerializationUtils.Write<int>((int)key.Value, bufferWriter);"
-                        : $"                        SerializationUtils.Write{b}(key.Value, bufferWriter);");
-                    sb.AppendLine("                    }");
-                    sb.AppendLine("                    else");
-                    sb.AppendLine("                    {");
-                    sb.AppendLine("                        SerializationUtils.WriteInstanceState(false, bufferWriter);");
-                    sb.AppendLine("                    }");
-                }
-                else
-                {
-                    sb.AppendLine(keyType.TypeKind == TypeKind.Enum
-                        ? "            SerializationUtils.Write<int>((int)key, bufferWriter);"
-                        : $"                        SerializationUtils.Write{b}(key, bufferWriter);");
-                }
-
-                break;
-            }
-        }
-        switch (valueType)
-        {
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(valueType):
-                GenerateSerializationExtensions(types, sourceProductionContext, valueType);
-                sb.AppendLine("                    value.Serialize(bufferWriter);");
-                break;
-            default:
-            {
-                var b = valueType switch
-                {
-                    {} when valueType.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                    {} when valueType.Name.Contains("Memory") => "Bytes",
-                    _ => ""
-                };
-                
-                if (valueType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                {
-                    sb.AppendLine($"                    if (value != null)");
-                    sb.AppendLine("                    {");
-                    sb.AppendLine("                        SerializationUtils.WriteInstanceState(true, bufferWriter);");
-                    sb.AppendLine(valueType.TypeKind == TypeKind.Enum
-                        ? "            SerializationUtils.Write<int>((int)value.Value, bufferWriter);"
-                        : $"                        SerializationUtils.Write{b}(value.Value, bufferWriter);");
-                    sb.AppendLine("                    }");
-                    sb.AppendLine("                    else");
-                    sb.AppendLine("                    {");
-                    sb.AppendLine("                        SerializationUtils.WriteInstanceState(false, bufferWriter);");
-                    sb.AppendLine("                    }");
-                }
-                else
-                {
-                    sb.AppendLine(valueType.TypeKind == TypeKind.Enum
-                        ? "            SerializationUtils.Write<int>((int)value, bufferWriter);"
-                        : $"                        SerializationUtils.Write{b}(value, bufferWriter);");
-                }
-
-                break;
-            }
-        }
-        sb.AppendLine("                }");
-        sb.AppendLine("            }");
-        sb.AppendLine("            else");
-        sb.AppendLine("            {");
-        sb.AppendLine("                SerializationUtils.WriteInstanceState(false, bufferWriter);");
-        sb.AppendLine("            }");
-    }
-    
-    private static string GenerateDeserializationForDictionaryBase(ITypeSymbol keyType, ITypeSymbol valueType, StringBuilder sb, string propertyName, string spanSource = "span")
-    {
-        sb.AppendLine($"            Dictionary<{keyType},{valueType}> {propertyName}Dictionary = default;");
-
-        sb.AppendLine($"            if (SerializationUtils.ReadInstanceState({spanSource}[offset..], ref offset))");
-        sb.AppendLine("            {");
-        sb.AppendLine($"                var count = SerializationUtils.ReadElementsCount({spanSource}[offset..], ref offset);");
-        sb.AppendLine($"                {propertyName}Dictionary = new Dictionary<{keyType},{valueType}>(count);");
-        sb.AppendLine("                for(var i = 0; i < count; i++)");
-        sb.AppendLine("                {");
-        sb.AppendLine($"                    {keyType} key = default;");
-        sb.AppendLine($"                    {valueType} value = default;");
-        
-        switch (keyType)
-        {
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(keyType):
-                sb.AppendLine($"            key = key.Deserialize({spanSource}[offset..], ref offset);");
-                break;
-            default:
-            {
-                var b = keyType switch
-                {
-                    {} when keyType.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                    {} when keyType.Name.Contains("Memory") => "Bytes",
-                    INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated } => $"<{$"{keyType}".TrimEnd('?')}>",
-                    _ => $"<{keyType}>"
-                };
-                
-                if (keyType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                {
-                    sb.AppendLine($"            if (SerializationUtils.ReadInstanceState({spanSource}[offset..], ref offset))");
-                    sb.AppendLine("            {");
-                    sb.AppendLine(keyType.TypeKind == TypeKind.Enum
-                        ? $"                key = ({keyType})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"                key = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
-                    sb.AppendLine("            }");
-                }
-                else
-                {
-                    sb.AppendLine(keyType.TypeKind == TypeKind.Enum
-                        ? $"            key = ({keyType})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"            key = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
-                }
-                break;
-            }
-        }
-        
-        switch (valueType)
-        {
-            case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(valueType):
-                sb.AppendLine($"            value = value.Deserialize({spanSource}[offset..], ref offset);");
-                break;
-            default:
-            {
-                var b = valueType switch
-                {
-                    {} when valueType.Name.Equals("string", StringComparison.InvariantCultureIgnoreCase) => "String",
-                    {} when valueType.Name.Contains("Memory") => "Bytes",
-                    INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated } => $"<{$"{valueType}".TrimEnd('?')}>",
-                    _ => $"<{valueType}>"
-                };
-                
-                if (valueType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
-                {
-                    sb.AppendLine($"            if (SerializationUtils.ReadInstanceState({spanSource}[offset..], ref offset))");
-                    sb.AppendLine("            {");
-                    sb.AppendLine(valueType.TypeKind == TypeKind.Enum
-                        ? $"                value = ({valueType})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"                value = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
-                    sb.AppendLine("            }");
-                }
-                else
-                {
-                    sb.AppendLine(valueType.TypeKind == TypeKind.Enum
-                        ? $"            value = ({valueType})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"            value = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
-                }
-                break;
-            }
-        }
-        
-        sb.AppendLine($"                    {propertyName}Dictionary.Add(key, value);");
-        sb.AppendLine("                }");
-        sb.AppendLine("            }");
-        
-        return $"{propertyName}Dictionary";
-    }
-    
-    private static void GenerateDeserializationForDictionary(ITypeSymbol keyType, ITypeSymbol valueType, StringBuilder sb, string propertyName, string spanSource = "span")
-    {
-        GenerateDeserializationForDictionaryBase( keyType, valueType, sb, propertyName, spanSource);
-        sb.AppendLine($"            result.{propertyName} = {propertyName}Dictionary;");
-    }
     
     private static bool CheckInterfaces(
         SyntaxNode syntaxNode,
         CancellationToken cancellationToken) =>
         syntaxNode.IsKind(SyntaxKind.GenericName) 
         && syntaxNode is GenericNameSyntax v
-        && v.Identifier.Text.Contains("UseSignalService");
+        && (v.Identifier.Text.Contains("UseInvocationService") || v.Identifier.Text.Contains("ListenInvocationService"));
 
 
     private static TypeSyntax? GetTypeOrNull(
@@ -1355,56 +368,8 @@ public class ServicesGenerator : IIncrementalGenerator
         {
             var node = i.TypeArgumentList.Arguments[0];
             return node;
-            //return i;
         }
 
         return null;
     }
-}
-
-internal static class WellKnownTypes
-{
-    private static readonly IReadOnlyList<string> Types = new[]
-    {
-        "object",
-        "Object",
-        "bool",
-        "Bool",
-        "int",
-        "Int32",
-        "float",
-        "Float",
-        "byte",
-        "Byte",
-        "long",
-        "Int64",
-        "string",
-        "String",
-        "double",
-        "Double",
-        "CancellationToken",
-        "Memory<byte>",
-        "Memory",
-        "Nullable",
-        "DateTime",
-        "DateTimeOffset",
-        "TimeSpan",
-        "Guid",
-    };
-    
-    internal static bool Contains(ITypeSymbol symbol) 
-        => !NotContains(symbol);
-    internal static bool NotContains(ITypeSymbol symbol) 
-        => !Types.Contains(symbol.Name) && !Types.Contains($"{symbol}");
-    internal static bool NotContains(string symbol) 
-        => !Types.Contains(symbol) && !Types.Contains($"{symbol}");
-    
-    internal static bool IsCancellationToken(ITypeSymbol symbol) 
-        => symbol.Name == "CancellationToken" || $"{symbol}" == "CancellationToken";
-    
-    internal static bool IsObject(ITypeSymbol symbol) 
-        => symbol.Name == "Object" || $"{symbol}" == "Object" || symbol.Name == "object" || $"{symbol}" == "object";
-    
-    internal static bool IsNullable(ITypeSymbol symbol) 
-        => $"{symbol}".Contains("System.Nullable");
 }

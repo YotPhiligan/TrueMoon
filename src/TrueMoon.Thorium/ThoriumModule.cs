@@ -3,7 +3,7 @@ using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 using TrueMoon.Thorium.IO;
-using TrueMoon.Thorium.IO.SharedMemory;
+using TrueMoon.Thorium.IO.Pipes;
 
 namespace TrueMoon.Thorium;
 
@@ -24,7 +24,7 @@ public class ThoriumModule : IThoriumModule
 
     public void Configure(IAppCreationContext context)
     {
-        context.AddDependencies(t => t.Add<ISignalServerHandlerResolver, SignalServerHandlerResolver>());
+        context.AddDependencies(t => t.Add<IInvocationServerHandlerResolver, InvocationServerHandlerResolver>());
         
         var configurationContext = new ThoriumConfigurationContext(context);
         if (_configurationDelegate != null)
@@ -33,7 +33,7 @@ public class ThoriumModule : IThoriumModule
         }
         else
         {
-            configurationContext.Memory();
+            configurationContext.Pipes();
         }
         
         if (context.Configuration.IsProcessingUnit())
@@ -56,18 +56,6 @@ public class ThoriumModule : IThoriumModule
                 }
             });
         }
-        else
-        {
-            context.AddDependencies(t =>
-            {
-                t.Add(_configuration);
-                var list = SignalServiceStorage.Shared.GetSignalHandlesRegistrations();
-                foreach (var action in list)
-                {
-                    action(t);
-                }
-            });
-        }
 
         _eventsSource.Trace("Configured");
     }
@@ -77,27 +65,14 @@ public class ThoriumModule : IThoriumModule
         var sb = new StringBuilder();
         if (configuration.IsProcessingUnit())
         {
-            var servers = serviceProvider.ResolveAll<ISignalServer>().ToList();
+            var servers = serviceProvider.ResolveAll<IInvocationServer>().ToList();
             
             if (servers.Any())
             {
-                sb.AppendLine("Signal servers: ");
+                sb.AppendLine("Servers: ");
                 foreach (var server in servers)
                 {
                     sb.AppendLine($"    {server.Id} ({server.GetType()})");
-                }
-            }
-        }
-        else
-        {
-            var handles = serviceProvider.ResolveAll<ISignalsHandle>().ToList();
-            
-            if (handles.Any())
-            {
-                sb.AppendLine("Signal Handles: ");
-                foreach (var handle in handles)
-                {
-                    sb.AppendLine($"    {handle.Name} ({handle.GetType()})");
                 }
             }
         }
@@ -116,24 +91,24 @@ public class ThoriumModule : IThoriumModule
         void Registration(IDependenciesRegistrationContext context) =>
             context.Add(provider =>
             {
-                var factory = provider.Resolve<ISignalClientFactory>();
+                var factory = provider.Resolve<IInvocationClientFactory>();
                 return factory.Create<T>();
             });
 
-        _clientServices.Add((typeof(T),SignalServiceStorage.Shared.GetService<T>(), Registration));
+        _clientServices.Add((typeof(T),InvocationServiceStorage.Shared.GetService<T>(), Registration));
     }
 
     public void ListenService<T, TService>() where TService : class, T
     {
-        var handlerTypeAbstraction = typeof(ISignalServerHandler<T>);
-        var handlerType = SignalServiceStorage.Shared.GetHandler<T>();
+        var handlerTypeAbstraction = typeof(IInvocationServerHandler<T>);
+        var handlerType = InvocationServiceStorage.Shared.GetHandler<T>();
         var serviceType = typeof(T);
         var implementationType = typeof(TService);
 
         void Registration(IDependenciesRegistrationContext context) =>
-            context.Add<ISignalServer>(provider =>
+            context.Add<IInvocationServer>(provider =>
             {
-                var factory = provider.Resolve<ISignalServerFactory>();
+                var factory = provider.Resolve<IInvocationServerFactory>();
                 return factory.Create<T>();
             });
 

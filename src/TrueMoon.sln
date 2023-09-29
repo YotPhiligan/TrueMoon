@@ -11,7 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Items", "Items", "{01FFF981
 		Directory.Build.props = Directory.Build.props
 		global.json = global.json
 		..\.gitignore = ..\.gitignore
-		Directory.packages.props = Directory.packages.props
+		Directory.Packages.props = Directory.Packages.props
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrueMoon.Extensions.DependencyInjection", "TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj", "{4EFF9FAC-2FF9-4166-9525-B70FC3431597}"

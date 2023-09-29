@@ -12,15 +12,15 @@ await App.RunAsync(context => context
         .Filters("TrueMoon")
     )
     .UseDI()
-    .UseSignals()
+    .UseInvocations()
     .AddUnit(ctx => ctx
-        .UseSignalService<ITestService>()
+        .UseInvocationService<ITestService>()
         .AddDependencies(registrationContext => registrationContext
             .Add<Sender>(dependencyRegistrationContext => dependencyRegistrationContext
                 .WithAppLifetime())
         ) 
     )
     .AddUnit(configuration => configuration
-        .ListenSignalService<ITestService, ListenTestService>()
+        .ListenInvocationService<ITestService, ListenTestService>()
     )
 );
