@@ -25,7 +25,7 @@ public class DependencyInjectionProvider : IDependencyInjectionProvider
             
             var serviceDescriptor = descriptor switch
             {
-                {} when instance != null =>
+                not null when instance != null =>
                     new ServiceDescriptor(serviceType, instance),
                 
                 {Lifetime:ServiceLifetime.Singleton} when factory != null
@@ -59,10 +59,7 @@ public class DependencyInjectionProvider : IDependencyInjectionProvider
             }
         }
 
-        var serviceProvider = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = Debugger.IsAttached,
-        });
+        var serviceProvider = serviceCollection.BuildServiceProvider(Debugger.IsAttached);
 
         return serviceProvider;
     }

@@ -1,6 +1,5 @@
 ﻿namespace TrueMoon.Thorium.Generator.Tests;
 
-[UsesVerify]
 public class ServicesGeneratorSnapshotTests
 {
     [Fact]

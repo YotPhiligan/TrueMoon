@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using TrueMoon.Configuration;
+﻿using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 using TrueMoon.Exceptions;
@@ -17,7 +16,7 @@ public static class App
     /// <returns>instance of created app</returns>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="AppCreationException"></exception>
-    public static IApp Create(Action<IAppCreationContext> action)
+    public static IApp Create(Action<IAppCreationContext> action, CancellationTokenSource? cancellationTokenSource = default)
     {
         // if (AppSource.IsEnabled($"{DiagnosticEventsRoot}.CreateStart"))
         // {
@@ -25,8 +24,8 @@ public static class App
         // }
         
         using var createEvent = AppSource.UseActivity();
-        
-        if (action == null) throw new ArgumentNullException(nameof(action));
+
+        ArgumentNullException.ThrowIfNull(action);
 
         try
         {
@@ -42,6 +41,7 @@ public static class App
                 .Add<IApp,DefaultApp>()
                 .Add(pathResolver)
                 .Add(configuration)
+                .Add(new AppCancellationTokenSourceHandle(cancellationTokenSource ?? new CancellationTokenSource()))
                 .Add<DefaultAppLifetime>(d=>d
                     .With<IAppLifetimeHandler>()
                     .With<IAppLifetime>()
@@ -97,7 +97,7 @@ public static class App
         
             var app = serviceProvider.Resolve<IApp>() ?? throw new AppCreationException($"Failed to instantiate the \"{nameof(IApp)}\"");
             
-            Console.CancelKeyPress += (sender, args) =>
+            Console.CancelKeyPress += (_, _) =>
             {
                 app.Services.Resolve<IAppLifetime>()?.Cancel();
             };
@@ -106,8 +106,7 @@ public static class App
         }
         catch (Exception e)
         {
-            AppSource.Write(() => e ,"Exceptions");
-
+            AppSource.Exception(e);
             throw;
         }
     }
@@ -135,11 +134,11 @@ public static class App
     /// <exception cref="AppCreationException"></exception>
     public static async Task RunAsync(Action<IAppCreationContext> action, CancellationToken cancellationToken = default)
     {
-        await using var app = Create(action);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        
+        await using var app = Create(action, cts);
         
         using var runEvent = AppSource.UseActivity();
-
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         
         try
         {
@@ -148,8 +147,6 @@ public static class App
             {
                 throw new AppCreationException($"{nameof(IAppLifetimeHandler)} is missing");
             }
-        
-            lifetimeHandler.SetCancellationTokenSource(cts);
             
             await app.StartAsync(cts.Token);
             
@@ -177,7 +174,7 @@ public static class App
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <exception cref="AppCreationException"></exception>
-    public static async Task RunAsync<T>(CancellationToken cancellationToken = default) where T : class 
+    public static Task RunAsync<T>(CancellationToken cancellationToken = default) where T : class 
     {
         var configurator = Activator.CreateInstance<T>();
         var type = configurator.GetType();
@@ -189,11 +186,11 @@ public static class App
 
         var parameters = method.GetParameters();
         
-        if (!parameters.Any() || parameters.First().ParameterType != typeof(IAppCreationContext))
+        if (parameters.Length == 0 || parameters.First().ParameterType != typeof(IAppCreationContext))
         {
             throw new AppCreationException($"{typeof(T)} does not contain method \"Configure\" with \"{nameof(IAppCreationContext)}\" parameter");
         }
         
-        await RunAsync(t=>method.Invoke(configurator, new object?[]{t}), cancellationToken);
+        return RunAsync(t=>method.Invoke(configurator, [t]), cancellationToken);
     }
 }

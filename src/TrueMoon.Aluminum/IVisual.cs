@@ -1,15 +1,15 @@
 namespace TrueMoon.Aluminum;
 
-public interface IVisual
+public interface IVisual : IEnumerable<IVisual>
 {
-    float X { get; set; }
-    float Y { get; set; }
-    float Width { get; set; }
-    float Height { get; set; }
+    int X { get; set; }
+    int Y { get; set; }
+    int Width { get; set; }
+    int Height { get; set; }
     bool IsVisible { get; set; }
-}
-
-public interface IVisualPresenter
-{
     
+    IVisual? Root { get; set; }
+    IContentPresenter? ContentPresenter { get; }
+
+    void Add(IVisual visual);
 }

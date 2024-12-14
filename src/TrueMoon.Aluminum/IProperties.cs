@@ -1,6 +1,6 @@
 ﻿namespace TrueMoon.Aluminum;
 
-public interface IWithProperties
+public interface IProperties
 {
     T? Get<T>(string? name = default);
     void Set<T>(string name, T? value);

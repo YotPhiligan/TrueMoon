@@ -1,6 +1,6 @@
 namespace TrueMoon.Aluminum;
 
-public interface IElement : IWithProperties
+public interface IElement : IProperties
 {
     IElement? Parent { get; set; }
 }

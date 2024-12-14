@@ -6,7 +6,6 @@ using TrueMoon.Extensions.DependencyInjection;
 await App.RunAsync(context => context
     .UseDiagnostics(configuration => configuration
         .OnEvent(@event => Console.WriteLine($"{@event}"))
-        .Filters("TrueMoon")
     )
     .UseDI()
     .UsePresentation()

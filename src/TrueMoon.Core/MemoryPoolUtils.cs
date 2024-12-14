@@ -24,10 +24,17 @@ public static class MemoryPoolUtils
 
     public static bool TryReturn<T>(ReadOnlyMemory<T> memory)
     {
-        if (MemoryMarshal.TryGetArray(memory, out var segment) && segment.Array is { Length: > 0 })
+        try
         {
-            ArrayPool<T>.Shared.Return(segment.Array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
-            return true;
+            if (MemoryMarshal.TryGetArray(memory, out var segment) && segment.Array is { Length: > 0 })
+            {
+                ArrayPool<T>.Shared.Return(segment.Array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
+                return true;
+            }
+        }
+        catch (Exception e)
+        {
+            return false;
         }
 
         return false;

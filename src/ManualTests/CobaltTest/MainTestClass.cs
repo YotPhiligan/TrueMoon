@@ -1,0 +1,1 @@
+﻿public class MainTestClass(IService1 service1, IService2 service2) : IMainTestClass;

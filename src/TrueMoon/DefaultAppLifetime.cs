@@ -2,6 +2,8 @@ using TrueMoon.Diagnostics;
 
 namespace TrueMoon;
 
+public record AppCancellationTokenSourceHandle(CancellationTokenSource CancellationTokenSource);
+
 /// <summary>
 /// Default app lifetime implementation
 /// </summary>
@@ -9,19 +11,23 @@ public class DefaultAppLifetime : IAppLifetime, IAppLifetimeHandler
 {
     private readonly IEventsSource<IAppLifetime> _eventsSource;
 
-    public DefaultAppLifetime(IEventsSource<IAppLifetime> eventsSource)
+    public DefaultAppLifetime(IEventsSource<IAppLifetime> eventsSource, 
+        AppCancellationTokenSourceHandle appCancellationTokenSourceHandle)
     {
         _eventsSource = eventsSource;
+        _cts = appCancellationTokenSourceHandle.CancellationTokenSource;
     }
     
-    private readonly List<Action> _stoppingActions = new ();
-    private readonly List<Action> _stoppedActions = new ();
+    private readonly List<Action> _stoppingActions = [];
+    private readonly List<Action> _stoppedActions = [];
     private readonly TaskCompletionSource _tcs = new ();
-    private CancellationTokenSource _cts;
+    private readonly CancellationTokenSource _cts;
     private bool _isCancelRequested;
 
     private readonly object _sync = new ();
 
+    public CancellationToken AppCancellationToken => _cts.Token;
+    
     /// <inheritdoc />
     public void Cancel()
     {
@@ -60,8 +66,8 @@ public class DefaultAppLifetime : IAppLifetime, IAppLifetimeHandler
     }
 
     /// <inheritdoc />
-    public async Task WaitAsync(CancellationToken cancellationToken = default) 
-        => await _tcs.Task.WaitAsync(cancellationToken);
+    public Task WaitAsync(CancellationToken cancellationToken = default) 
+        => _tcs.Task.WaitAsync(cancellationToken);
 
     /// <inheritdoc />
     public void Stopping()
@@ -100,10 +106,5 @@ public class DefaultAppLifetime : IAppLifetime, IAppLifetimeHandler
             }
         }
         _eventsSource.Trace(nameof(Stopped));
-    }
-
-    public void SetCancellationTokenSource(CancellationTokenSource source)
-    {
-        _cts = source;
     }
 }

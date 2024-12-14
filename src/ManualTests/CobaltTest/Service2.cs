@@ -1,0 +1,1 @@
+﻿public class Service2 : IService2;

@@ -7,14 +7,14 @@
 
     <ItemGroup>
         <PackageReference Include="Silk.NET" />
-        <PackageReference Include="Silk.NET.Windowing.Extensions.Veldrid" />
         <PackageReference Include="SkiaSharp" />
-        <PackageReference Include="Veldrid.SPIRV" />
+        <PackageReference Include="Topten.RichTextKit" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Aluminum\TrueMoon.Aluminum.csproj" />
       <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
+      <ProjectReference Include="..\TrueMoon.Core\TrueMoon.Core.csproj" />
     </ItemGroup>
     
 </Project>

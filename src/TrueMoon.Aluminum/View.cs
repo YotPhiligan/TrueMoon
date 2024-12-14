@@ -1,36 +1,26 @@
 ﻿namespace TrueMoon.Aluminum;
 
-public class View : IView
+public abstract class View : PropertiesBase, IView
 {
-    public T? Get<T>(string? name = default)
+    protected Func<object>? _contentFunc;
+    public void Content(Func<object> func)
+    {
+        _contentFunc = func;
+    }
+
+    public virtual object? GetContent()
     {
         throw new NotImplementedException();
     }
+}
 
-    public void Set<T>(string name, T? value)
+public abstract class View<TData> : View, IView<TData>
+{
+    public void Content(TData? data, Func<TData?, object> func)
     {
-        throw new NotImplementedException();
+        DataContext = data;
+        _contentFunc = () => func(DataContext);
     }
 
-    public void Set<T>(T? value)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool Has(string name)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool Has<T>()
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool TryGet<T>(string name, out T? parameter)
-    {
-        throw new NotImplementedException();
-    }
-
-    public object? Content { get; }
+    public TData? DataContext { get; set; }
 }

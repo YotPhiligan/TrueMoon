@@ -1,11 +1,11 @@
 <Project>
   <PropertyGroup>
-    <Version Condition="'$(Version)' == ''">0.1.9.17-alpha</Version>
+    <Version Condition="'$(Version)' == ''">0.2.1.0-alpha</Version>
     <Authors>yotphiligan</Authors>
     <Company>TrueMoon</Company>
     <Product>TrueMoon Framework</Product>
     <PackageTags>Desktop</PackageTags>
-    <Copyright>Copyright © yotphiligan 2023</Copyright>
+    <Copyright>Copyright © yotphiligan 2024</Copyright>
 
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -24,8 +24,8 @@
 
     <IsPackable>true</IsPackable>
     
-    <TF>net7.0</TF>
-    <TestsTF>net7.0</TestsTF>
+    <TF>net9.0</TF>
+    <TestsTF>net9.0</TestsTF>
   </PropertyGroup>
 
   <ItemGroup>

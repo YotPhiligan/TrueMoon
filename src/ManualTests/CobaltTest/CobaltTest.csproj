@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>$(TestsTF)</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\..\TrueMoon.Cobalt\TrueMoon.Cobalt.csproj"/>
+        <ProjectReference Include="..\..\TrueMoon\TrueMoon.csproj" />
+        <ProjectReference Include="..\..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+    </ItemGroup>
+
+</Project>

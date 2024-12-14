@@ -15,7 +15,7 @@ public class GenerationContext
 
     public string NamespacePrefix { get; }
     public SourceProductionContext SourceProductionContext { get; }
-    public List<ITypeSymbol> Types { get; } = new List<ITypeSymbol>();
+    public List<ITypeSymbol> Types { get; } = [];
 
     public SourceHandle CreateSourceHandle(INamedTypeSymbol symbol, string sourceNamePostfix = "GeneratedImplementation")
     {

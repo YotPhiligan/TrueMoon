@@ -1,0 +1,29 @@
+﻿<Solution>
+  <Folder Name="/Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="global.json" />
+    <File Path="..\.gitignore" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/ManualTests/">
+    <Project Path="ManualTests\AlloyTest\AlloyTest.csproj" Type="Classic C#" />
+    <Project Path="ManualTests\CobaltTest\CobaltTest.csproj" Type="Classic C#" />
+    <Project Path="ManualTests\TitaniumTest\TitaniumTest.csproj" Type="Classic C#" />
+  </Folder>
+  <Project Path="TrueMoon.Alloy\TrueMoon.Alloy.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Aluminum\TrueMoon.Aluminum.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Cobalt.Tests\TrueMoon.Cobalt.Tests.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Contracts\TrueMoon.Contracts.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Core\TrueMoon.Core.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Tests\TrueMoon.Tests.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Thorium.Generator.Tests\TrueMoon.Thorium.Generator.Tests.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Thorium.Generator\TrueMoon.Thorium.Generator.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Thorium.Tests\TrueMoon.Thorium.Tests.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Thorium\TrueMoon.Thorium.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Titanium.Tests\TrueMoon.Titanium.Tests.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon.Titanium\TrueMoon.Titanium.csproj" Type="Classic C#" />
+  <Project Path="TrueMoon\TrueMoon.csproj" Type="Classic C#" />
+</Solution>
