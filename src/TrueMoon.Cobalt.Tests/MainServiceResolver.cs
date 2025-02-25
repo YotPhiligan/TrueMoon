@@ -11,4 +11,6 @@ public class MainServiceResolver : IResolver<IMainService, MainService>
 
     public bool IsServiceDisposable { get; } = false;
     public ResolvingServiceLifetime ServiceLifetime { get; }
+    
+    object IResolver.Resolve(IResolvingContext context) => Resolve(context);
 }

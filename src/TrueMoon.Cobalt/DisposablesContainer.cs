@@ -1,37 +1,11 @@
-using System.Collections.Frozen;
+﻿namespace TrueMoon.Cobalt;
 
-namespace TrueMoon.Cobalt;
-
-public class ResolvingContext : IResolvingContext, IDisposable, IAsyncDisposable
+public class DisposablesContainer : IDisposable, IAsyncDisposable
 {
-    private readonly FrozenDictionary<Type,IResolver> _resolvers;
     private readonly List<object> _disposables = [];
     private readonly Lock _lock = new ();
-
-    public ResolvingContext()
-    {
-        _resolvers = ServiceResolvers.Shared.GetResolvers();
-    }
     
-    public T Resolve<T>()
-    {
-        if (_resolvers.TryGetValue(typeof(T), out var resolver) 
-            && resolver is IResolver<T> resolverTyped)
-        {
-            var value = resolverTyped.Resolve(this);
-            
-            if (resolver.IsServiceDisposable && value != null)
-            {
-                AddDisposable(value);
-            }
-            
-            return value;
-        }
-        
-        throw new ServiceResolvingException<T>();
-    }
-
-    private void AddDisposable<T>(T value)
+    public void Add<T>(T value)
     {
         lock (_lock)
         {

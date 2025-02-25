@@ -2,7 +2,7 @@
 
 public static class AppCreationContextExtensions
 {
-    public static IAppCreationContext UseInvocations(this IAppCreationContext context, Action<IThoriumConfigurationContext>? action = default)
+    public static IAppConfigurationContext UseInvocations(this IAppConfigurationContext context, Action<IThoriumConfigurationContext>? action = default)
     {
         var thorium = context.GetThorium();
 
@@ -11,7 +11,7 @@ public static class AppCreationContextExtensions
         return context;
     }
     
-    public static IThoriumModule GetThorium(this IAppCreationContext context)
+    public static IThoriumModule GetThorium(this IAppConfigurationContext context)
     {
         var module = context.GetModule<IThoriumModule>();
         if (module is not null) return module;
@@ -20,14 +20,14 @@ public static class AppCreationContextExtensions
         return module;
     }
 
-    public static IAppCreationContext UseInvocationService<T>(this IAppCreationContext context)
+    public static IAppConfigurationContext UseInvocationService<T>(this IAppConfigurationContext context)
     {
         var module = context.GetThorium();
         module.UseService<T>();
         return context;
     }
     
-    public static IAppCreationContext ListenInvocationService<T,TService>(this IAppCreationContext context)
+    public static IAppConfigurationContext ListenInvocationService<T,TService>(this IAppConfigurationContext context)
         where TService: class, T
     {
         var module = context.GetThorium();

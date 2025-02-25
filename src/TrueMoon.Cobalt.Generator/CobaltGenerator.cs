@@ -12,80 +12,141 @@ public class CobaltGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var data = context.SyntaxProvider
-            .CreateSyntaxProvider(CheckInterfaces, GetTypeOrNull)
-            .Where(item => item.Item2 is not null)
+            .CreateSyntaxProvider(CheckMethods, GetMethods)
+            .Where(item => item is not null)
             .Collect();
 
         var r = context.CompilationProvider.Combine(data);
-
-        context.RegisterSourceOutput(r,
-            static (sourceProductionContext, d) => Generate1(d.Left, d.Right, sourceProductionContext));
+        
+        context.RegisterSourceOutput(r,static (sourceProductionContext, d) => Generate2(d.Left, d.Right, sourceProductionContext));
     }
 
-    private static void Generate1(Compilation compilation, ImmutableArray<(int,TypeSyntax?,TypeSyntax?)> interfaces,
+    private static void Generate2(Compilation compilation, ImmutableArray<GenericNameSyntax> input,
         SourceProductionContext sourceProductionContext)
     {
-        if (interfaces.IsDefaultOrEmpty)
+        if (input.IsDefaultOrEmpty)
         {
             return;
         }
 
         try
         {
-            var assembly = compilation.Assembly.Name;
-            
-        
-            var values = interfaces.Distinct();
-        
+            var values = input.Distinct();
 
-            var list = new List<string>();
+            var b = compilation.GetDiagnostics();
+            
+            var assembly = compilation.Assembly.Name;
+
+            var serviceNameIndex = 0;
+            var list = new List<(string service, ResolvingServiceCreationType creationType, string? factoryCode)>();
             foreach (var syntax in values)
             {
-                SemanticModel semanticModel = compilation.GetSemanticModel(syntax.Item2.SyntaxTree);
-                var typeInfo = semanticModel.GetTypeInfo(syntax.Item2);
-                var typeSymbol = typeInfo.Type;
+                SemanticModel semanticModel = compilation.GetSemanticModel(syntax.SyntaxTree);  
                 
-                SemanticModel semanticModel2 = compilation.GetSemanticModel(syntax.Item3.SyntaxTree);
-                var typeInfo2 = semanticModel2.GetTypeInfo(syntax.Item3);
-                var typeSymbol2 = typeInfo2.Type;
-
-                if (typeSymbol is not INamedTypeSymbol interfaceSymbol)
+                var (lifetime, creationType, type) = GetDetails(syntax);
+                
+                if (semanticModel.GetSymbolInfo(syntax).Symbol is IMethodSymbol methodSymbol)
                 {
-                    continue;
-                }
-        
-                // if (list.Any(t=> SymbolEqualityComparer.Default.Equals(t.interfaceSymbol, interfaceSymbol)))
-                // {
-                //     continue;
-                // }
+                    bool isCompositeAdditions = false;
+                    (string name, string code) generated = default;
+                    
+                    if (syntax.TypeArgumentList.Arguments.Count == 1 
+                        && creationType is ResolvingServiceCreationType.Instance
+                        && methodSymbol.Parameters.Length == 1)
+                    {
+                        var serviceTypeSymbol = GetTypeSymbol(semanticModel,syntax.TypeArgumentList.Arguments[0]);
 
-                var generated = GenerateTypeResolver(syntax.Item1, interfaceSymbol, typeSymbol2 as INamedTypeSymbol);
+                        generated = GenerateTypeResolver(assembly, lifetime, ResolvingServiceCreationType.Instance, serviceTypeSymbol!);
+                    }
+                    else if (syntax.TypeArgumentList.Arguments.Count == 1 
+                        && creationType == null
+                        && methodSymbol.Parameters.Length == 1)
+                    {
+                        var serviceTypeSymbol = GetTypeSymbol(semanticModel,syntax.TypeArgumentList.Arguments[0]);
+                        creationType = ResolvingServiceCreationType.Factory;
+
+                        generated = GenerateTypeResolver(assembly, lifetime, ResolvingServiceCreationType.Factory, serviceTypeSymbol!);
+                    }
+                    else if (syntax.TypeArgumentList.Arguments.Count == 2 && type == ResolvingServiceType.OpenGeneric)
+                    {
+                        var serviceTypeSymbol = GetTypeSymbol(semanticModel,syntax.TypeArgumentList.Arguments[0]);
+                        var implementationTypeSymbol = GetTypeSymbol(semanticModel,syntax.TypeArgumentList.Arguments[1]);
+
+                        generated = GenerateTypeResolver(assembly, lifetime, creationType ?? ResolvingServiceCreationType.New, serviceTypeSymbol!, implementationTypeSymbol);
+                    }
+                    else if (syntax.TypeArgumentList.Arguments.Count == 2)
+                    {
+                        var serviceTypeSymbol = GetTypeSymbol(semanticModel,syntax.TypeArgumentList.Arguments[0]);
+                        var implementationTypeSymbol = GetTypeSymbol(semanticModel,syntax.TypeArgumentList.Arguments[1]);
                 
-                sourceProductionContext.AddSource($"{generated.name}.g.cs", generated.code);
-                
-                list.Add(generated.name);
+                        generated = GenerateTypeResolver(assembly, lifetime, creationType ?? ResolvingServiceCreationType.New, serviceTypeSymbol!, implementationTypeSymbol);
+                    }
+                    else if (syntax.TypeArgumentList.Arguments.Count > 2 && type == ResolvingServiceType.Composite)
+                    {
+                        var serviceTypeSymbol = GetTypeSymbol(semanticModel,syntax.TypeArgumentList.Arguments[0]);
+
+                        generated = GenerateTypeResolver(assembly, lifetime, ResolvingServiceCreationType.New, serviceTypeSymbol!);
+                        
+                        isCompositeAdditions = true;
+                    }
+
+                    sourceProductionContext.AddSource($"{generated.name}{serviceNameIndex}.g.cs", generated.code);
+                        
+                    list.Add((generated.name, creationType ?? ResolvingServiceCreationType.New, null));
+
+                    serviceNameIndex++;
+        
+                    if (isCompositeAdditions)
+                    {
+                        var serviceTypeSymbolF = GetTypeSymbol(semanticModel,syntax.TypeArgumentList.Arguments[0]);
+                        for (var i = 1; i < syntax.TypeArgumentList.Arguments.Count; i++)
+                        {
+                            var serviceTypeSymbol = GetTypeSymbol(semanticModel,syntax.TypeArgumentList.Arguments[i]);
+                            var generated1 = GenerateTypeResolver(assembly, lifetime, ResolvingServiceCreationType.Factory, serviceTypeSymbol!);
+                            
+                            sourceProductionContext.AddSource($"{generated1.name}{serviceNameIndex}.g.cs", generated1.code);
+                            
+                            list.Add((generated1.name, ResolvingServiceCreationType.Factory, $"resolver => resolver.Resolve<global::{serviceTypeSymbolF}>()"));
+                            serviceNameIndex++;
+                        }
+                    }
+                    // if (list.Any(t=> SymbolEqualityComparer.Default.Equals(t.interfaceSymbol, interfaceSymbol)))
+                    // {
+                    //     continue;
+                    // }
+                }
             }
         
             var sb = new StringBuilder();
             sb.AppendLine("// auto-generated by TrueMoon.Cobalt.Generator");
             sb.AppendLine("using TrueMoon.Cobalt;");
+            sb.AppendLine("using TrueMoon.Services;");
             sb.AppendLine("using System.Runtime.CompilerServices;");
             sb.AppendLine();
-            sb.AppendLine($"namespace TrueMoon.Cobalt.Generated;");
+            sb.AppendLine($"namespace {assembly}.Cobalt.Generated;");
             sb.AppendLine();
-        
+            
             sb.AppendLine("public static class CobaltResolversRegistration");
             sb.AppendLine("{");
             sb.AppendLine("    [ModuleInitializer]");
             sb.AppendLine("    public static void Init()");
             sb.AppendLine("    {");
-            foreach (var service in list)
+            foreach (var (service, creationType, factoryCode) in list)
             {
-                sb.AppendLine($"        ServiceResolvers.Shared.Add(() => new {service}());");
+                var parameter = creationType switch
+                {
+                    ResolvingServiceCreationType.None => string.Empty,
+                    ResolvingServiceCreationType.New => string.Empty,
+                    ResolvingServiceCreationType.Instance => "a.GetInstance()",
+                    ResolvingServiceCreationType.Factory when !string.IsNullOrWhiteSpace(factoryCode) => factoryCode,
+                    ResolvingServiceCreationType.Factory => "a.GetFactory()",
+                    _ => string.Empty
+                };
+                sb.AppendLine($"        ServiceResolvers.Shared.Add(a => new {service}({parameter}));");
             }
             sb.AppendLine("    }");
             sb.AppendLine("}");
-
+            
             var source = sb.ToString();
             sourceProductionContext.AddSource("CobaltResolversRegistration.g.cs", source);
         }
@@ -93,25 +154,61 @@ public class CobaltGenerator : IIncrementalGenerator
         {
             throw new InvalidOperationException($"Exception - {e.GetType()}: {e.Message}, StackTrace: {e.StackTrace}", e);
         }
+
+        return;
+
+        INamedTypeSymbol? GetTypeSymbol(SemanticModel semanticModel, TypeSyntax syntax)
+        {
+            if (semanticModel.GetTypeInfo(syntax).Type is INamedTypeSymbol typeSymbol)
+            {
+                return typeSymbol;
+            }
+
+            return null;
+        }
     }
 
-    private static (string name, string code) GenerateTypeResolver(int lifetime, INamedTypeSymbol service, INamedTypeSymbol? implementation = default)
+    private static (ResolvingServiceLifetime lifetime, ResolvingServiceCreationType? creationType, ResolvingServiceType type) GetDetails(GenericNameSyntax syntax) =>
+        syntax.Identifier.Text switch
+        {
+            "Singleton" => (ResolvingServiceLifetime.Singleton, null, ResolvingServiceType.Service),
+            "Transient" => (ResolvingServiceLifetime.Transient, null, ResolvingServiceType.Service),
+            "Instance" => (ResolvingServiceLifetime.Singleton, ResolvingServiceCreationType.Instance,
+                ResolvingServiceType.Service),
+            "Composite" => (ResolvingServiceLifetime.Singleton, ResolvingServiceCreationType.New,
+                ResolvingServiceType.Composite),
+            "OpenSingleton" => (ResolvingServiceLifetime.Singleton, ResolvingServiceCreationType.Factory,
+                ResolvingServiceType.OpenGeneric),
+            "OpenTransient" => (ResolvingServiceLifetime.Transient, ResolvingServiceCreationType.Factory,
+                ResolvingServiceType.OpenGeneric),
+            _ => (ResolvingServiceLifetime.None, null, ResolvingServiceType.None)
+        };
+
+    private static (string name, string code) GenerateTypeResolver(string assembly, ResolvingServiceLifetime lifetime,
+        ResolvingServiceCreationType creationType, 
+        INamedTypeSymbol service,
+        INamedTypeSymbol? implementation = default)
     {
         var sb = new StringBuilder();
         sb.AppendLine("// auto-generated by TrueMoon.Cobalt.Generator");
+        sb.AppendLine("using TrueMoon.Services;");
         sb.AppendLine("using TrueMoon.Cobalt;");
         sb.AppendLine("using System.Runtime.CompilerServices;");
         sb.AppendLine();
-        sb.AppendLine("namespace TrueMoon.Cobalt.Generated;");
+        sb.AppendLine($"namespace {assembly}.Cobalt.Generated;");
         sb.AppendLine();
         
+        string className = default;
         if (implementation != null)
         {
             sb.AppendLine($"public class {implementation.Name}Resolver : IResolver<global::{service}, global::{implementation}>");
+
+            className = $"{implementation.Name}Resolver";
         }
         else
         {
             sb.AppendLine($"public class {service.Name}Resolver : IResolver<global::{service}>");
+            className = $"{service.Name}Resolver";
         }
         
         var resolvingType = implementation ?? service;
@@ -122,100 +219,144 @@ public class CobaltGenerator : IIncrementalGenerator
         
         sb.AppendLine("{");
         
-        if (lifetime == 0)
+        if (lifetime == ResolvingServiceLifetime.Singleton)
         {
-            sb.AppendLine($"    private global::{service.Name} _instance;");
+            sb.AppendLine($"    private global::{service} _instance;");
             sb.AppendLine();
         }
         
         switch (lifetime)
         {
-            case 0:
+            case ResolvingServiceLifetime.Singleton:
                 sb.AppendLine("    public ResolvingServiceLifetime ServiceLifetime => ResolvingServiceLifetime.Singleton;");
                 break;
-            case 1:
+            case ResolvingServiceLifetime.Transient:
                 sb.AppendLine("    public ResolvingServiceLifetime ServiceLifetime => ResolvingServiceLifetime.Transient;");
                 break;
         }
 
         sb.AppendLine();
         
-        sb.AppendLine($"    public global::{service.Name} Resolve(IResolvingContext context)");
+        if (creationType == ResolvingServiceCreationType.Instance)
+        {
+            sb.AppendLine($"    public {service.Name}Resolver(global::{service} instance)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        _instance = instance;");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+        }
+        else if (creationType == ResolvingServiceCreationType.Factory)
+        {
+            sb.AppendLine($"    private readonly Func<IServiceResolver,global::{service}> _factory; ");
+            sb.AppendLine();
+            sb.AppendLine($"    public {service.Name}Resolver(Func<IServiceResolver,global::{service}> factory)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        _factory = factory;");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+        }
+        
+        sb.AppendLine($"    public global::{service} Resolve(IResolvingContext context)");
         sb.AppendLine("    {");
         
-        if (lifetime == 0)
+        if (lifetime == ResolvingServiceLifetime.Singleton)
         {
-            sb.AppendLine($"        if(_instance != null) return _instance;");
-            sb.AppendLine();
+            if (creationType != ResolvingServiceCreationType.Instance)
+            {
+                sb.AppendLine("        if(_instance != null) return _instance;");
+                sb.AppendLine();
+            }
         }
         
         var i = 0;
         var parametersString = string.Empty;
-        foreach (var symbol in higherConstructor.Parameters)
+        if (higherConstructor != null)
         {
-            var serviceName = $"service{i}"; 
-            sb.AppendLine($"        var {serviceName} = context.Resolve<global::{symbol.Type}>();");
-            parametersString += serviceName + ",";
-            i++;
+            foreach (var symbol in higherConstructor.Parameters)
+            {
+                var serviceName = $"service{i}";
+                sb.AppendLine($"        var {serviceName} = context.Resolve<global::{symbol.Type}>();");
+                parametersString += serviceName + ",";
+                i++;
+            }
         }
 
-        if (lifetime == 0)
+        if (lifetime == ResolvingServiceLifetime.Singleton)
         {
-            sb.AppendLine($"        _instance = new global::{resolvingType}({parametersString.TrimEnd(',')});");
+            if (creationType == ResolvingServiceCreationType.Factory)
+            {
+                sb.AppendLine("        _instance = _factory(context);");
+            }
+            else if (creationType == ResolvingServiceCreationType.New)
+            {
+                sb.AppendLine($"        _instance = new global::{resolvingType}({parametersString.TrimEnd(',')});");
+            }
+
             sb.AppendLine("        return _instance;");
         }
         else
         {
-            sb.AppendLine($"        return new global::{resolvingType}({parametersString.TrimEnd(',')});");
+            sb.AppendLine(creationType == ResolvingServiceCreationType.Factory
+                ? "        return _factory(context);"
+                : $"        return new global::{resolvingType}({parametersString.TrimEnd(',')});");
         }
         
         sb.AppendLine("    }");
 
-        var isDisposable = resolvingType.AllInterfaces.Any(t=>t.Name == "IDisposable");
+        var isDisposable = resolvingType.AllInterfaces.Any(t=>t.Name is "IDisposable" or "IAsyncDisposable");
         
         sb.AppendLine();
         sb.AppendLine("    public bool IsServiceDisposable { get; } = " + (isDisposable ? "true" : "false") + ";");
+        sb.AppendLine();
+        sb.AppendLine("    object IResolver.Resolve(IResolvingContext context) => Resolve(context);");
         sb.AppendLine("}");
 
         var source = sb.ToString();
 
-        return ($"{implementation.Name}Resolver", source);
+        return (className, source);
     }
-    
-    private static bool CheckInterfaces(
-        SyntaxNode syntaxNode,
-        CancellationToken cancellationToken) =>
-        syntaxNode.IsKind(SyntaxKind.GenericName)
-        && syntaxNode is GenericNameSyntax { Identifier.Text: "AddSingleton" or "AddTransient" or "Add" };
 
-
-    private static (int,TypeSyntax?,TypeSyntax?) GetTypeOrNull(
+    private static GenericNameSyntax? GetMethods(
         GeneratorSyntaxContext context,
         CancellationToken cancellationToken)
     {
         if (context.Node is GenericNameSyntax i && i.TypeArgumentList.Arguments.Any())
         {
-            var regType = i.Identifier.Text switch
-            {
-                "AddSingleton" => 0,
-                "AddTransient" => 1,
-                "Add" => 0,
-                _ => -1
-            };
-
-            if (i.TypeArgumentList.Arguments.Count == 2)
-            {
-                var node = i.TypeArgumentList.Arguments[0];
-                var node2 = i.TypeArgumentList.Arguments[1];
-                return (regType, node, node2);
-            }
-            if (i.TypeArgumentList.Arguments.Count == 1)
-            {
-                var node = i.TypeArgumentList.Arguments[0];
-                return (regType, node, null);
-            }
+            return i;
         }
-
-        return (-1, null, null);
+        return null;
     }
+    
+    private static bool CheckMethods(
+        SyntaxNode syntaxNode,
+        CancellationToken cancellationToken) =>
+        syntaxNode.IsKind(SyntaxKind.GenericName)
+        && syntaxNode is GenericNameSyntax
+        {
+            Identifier.Text: "Singleton" or "Transient" or "Instance" or "Composite" or "OpenSingleton"
+            or "OpenTransient",
+        };
+}
+
+public enum ResolvingServiceLifetime
+{
+    None,
+    Singleton,
+    Transient,
+}
+
+public enum ResolvingServiceCreationType
+{
+    None,
+    New,
+    Instance,
+    Factory
+}
+
+public enum ResolvingServiceType
+{
+    None,
+    Service,
+    Composite,
+    OpenGeneric
 }

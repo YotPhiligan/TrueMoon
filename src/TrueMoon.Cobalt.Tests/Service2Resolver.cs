@@ -10,4 +10,5 @@ public class Service2Resolver : IResolver<IService2, Service2>
 
     public bool IsServiceDisposable { get; }
     public ResolvingServiceLifetime ServiceLifetime { get; }
+    object IResolver.Resolve(IResolvingContext context) => Resolve(context);
 }

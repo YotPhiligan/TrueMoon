@@ -3,5 +3,5 @@
 public interface IThoriumConfigurationContext
 {
     ThoriumConfiguration Configuration { get; }
-    IAppCreationContext AppCreationContext { get; }
+    IAppConfigurationContext AppConfigurationContext { get; }
 }

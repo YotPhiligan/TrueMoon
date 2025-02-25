@@ -2,8 +2,6 @@ using TrueMoon.Diagnostics;
 
 namespace TrueMoon;
 
-public record AppCancellationTokenSourceHandle(CancellationTokenSource CancellationTokenSource);
-
 /// <summary>
 /// Default app lifetime implementation
 /// </summary>
@@ -12,10 +10,10 @@ public class DefaultAppLifetime : IAppLifetime, IAppLifetimeHandler
     private readonly IEventsSource<IAppLifetime> _eventsSource;
 
     public DefaultAppLifetime(IEventsSource<IAppLifetime> eventsSource, 
-        AppCancellationTokenSourceHandle appCancellationTokenSourceHandle)
+        AppCancellationTokenSourceHandle? appCancellationTokenSourceHandle = default)
     {
         _eventsSource = eventsSource;
-        _cts = appCancellationTokenSourceHandle.CancellationTokenSource;
+        _cts = appCancellationTokenSourceHandle?.CancellationTokenSource ?? new CancellationTokenSource();
     }
     
     private readonly List<Action> _stoppingActions = [];
@@ -24,7 +22,7 @@ public class DefaultAppLifetime : IAppLifetime, IAppLifetimeHandler
     private readonly CancellationTokenSource _cts;
     private bool _isCancelRequested;
 
-    private readonly object _sync = new ();
+    private readonly Lock _sync = new ();
 
     public CancellationToken AppCancellationToken => _cts.Token;
     

@@ -5,7 +5,7 @@ namespace TrueMoon.Alloy;
 
 public static class AppCreationContextExtensions
 {
-    public static IAppCreationContext UsePresentation(this IAppCreationContext context, Action<PresentationConfiguration>? configurationDelegate = default)
+    public static IAppConfigurationContext UsePresentation(this IAppConfigurationContext context, Action<PresentationConfiguration>? configurationDelegate = default)
     {
         var module = context.GetAlloy();
         
@@ -14,7 +14,7 @@ public static class AppCreationContextExtensions
         return context;
     }
     
-    public static IAppCreationContext UsePresentation(this IAppCreationContext context, Action<IView> viewConfigurationDelegate, Action<PresentationConfiguration>? configurationDelegate = default)
+    public static IAppConfigurationContext UsePresentation(this IAppConfigurationContext context, Action<IView> viewConfigurationDelegate, Action<PresentationConfiguration>? configurationDelegate = default)
     {
         var module = context.GetAlloy();
         
@@ -24,7 +24,7 @@ public static class AppCreationContextExtensions
         return context;
     }
     
-    public static IAppCreationContext UsePresentation<TView>(this IAppCreationContext context, Action<PresentationConfiguration>? configurationDelegate = default)
+    public static IAppConfigurationContext UsePresentation<TView>(this IAppConfigurationContext context, Action<PresentationConfiguration>? configurationDelegate = default)
         where TView : IView
     {
         var module = context.GetAlloy();
@@ -35,7 +35,7 @@ public static class AppCreationContextExtensions
         return context;
     }
     
-    public static IAlloyModule GetAlloy(this IAppCreationContext context)
+    public static IAlloyModule GetAlloy(this IAppConfigurationContext context)
     {
         var module = context.GetModule<IAlloyModule>();
         if (module is not null) return module;

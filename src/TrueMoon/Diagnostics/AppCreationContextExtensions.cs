@@ -5,16 +5,17 @@ namespace TrueMoon.Diagnostics;
 
 public static class AppCreationContextExtensions
 {
-    public static IAppCreationContext UseDiagnostics(this IAppCreationContext context, Action<IDiagnosticsConfiguration>? action = default)
+    public static IAppConfigurationContext UseDiagnostics(this IAppConfigurationContext context, Action<IDiagnosticsConfiguration>? action = default)
     {
         var configuration = new DiagnosticsConfiguration();
         configuration.AddFilters("TrueMoon");
         action?.Invoke(configuration);
         var subscription = new DiagnosticSubscription(configuration);
-        context.Configuration.Set<IDiagnosticsConfiguration>(ConfigurationExtensions.DiagnosticsConfigurationName, configuration);
-        context.AddDependencies(t => t
-            .Add(subscription)
-            .Add<IEventsSourceFactory, EventsSourceFactory>()
+        context.Configuration(conf =>
+            conf.Set<IDiagnosticsConfiguration>(ConfigurationExtensions.DiagnosticsConfigurationName, configuration));
+        context.Services(t => t
+            .Instance(subscription)
+            .Singleton<IEventsSourceFactory, EventsSourceFactory>()
         );
         return context;
     }

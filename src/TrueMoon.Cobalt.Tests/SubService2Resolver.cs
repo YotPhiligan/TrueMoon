@@ -9,4 +9,5 @@ public class SubService2Resolver : IResolver<SubService2, SubService2>
 
     public bool IsServiceDisposable { get; }
     public ResolvingServiceLifetime ServiceLifetime { get; }
+    object IResolver.Resolve(IResolvingContext context) => Resolve(context);
 }

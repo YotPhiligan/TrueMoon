@@ -6,7 +6,7 @@ public static class ThoriumConfigurationContextExtensions
 {
     public static IThoriumConfigurationContext Pipes(this IThoriumConfigurationContext context)
     {
-        context.AppCreationContext.AddDependencies(registrationContext => registrationContext
+        context.AppConfigurationContext.AddDependencies(registrationContext => registrationContext
             .RemoveAll<IInvocationClientFactory>()
             .RemoveAll<IInvocationServerFactory>()
             .Add<IInvocationClientFactory, PipesInvocationClientFactory>()

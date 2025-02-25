@@ -1,5 +1,4 @@
-﻿using TrueMoon.Configuration;
-using TrueMoon.Dependencies;
+﻿using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 using TrueMoon.Exceptions;
 
@@ -7,123 +6,13 @@ namespace TrueMoon;
 
 public static class App
 {
-    private static readonly IEventsSource AppSource = new EventsSource($"{typeof(App).FullName}");
-    
-    /// <summary>
-    /// Configure new app
-    /// </summary>
-    /// <param name="action">configuration delegate</param>
-    /// <returns>instance of created app</returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    /// <exception cref="AppCreationException"></exception>
-    public static IApp Create(Action<IAppCreationContext> action, CancellationTokenSource? cancellationTokenSource = default)
-    {
-        // if (AppSource.IsEnabled($"{DiagnosticEventsRoot}.CreateStart"))
-        // {
-        //     AppSource.Write($"{DiagnosticEventsRoot}.CreateStart", Message.Trace());
-        // }
-        
-        using var createEvent = AppSource.UseActivity();
+    private static readonly IEventsSource ConfiguratorSource = new EventsSource("App");
 
+    public static IAppBuilder Builder(Action<IAppBuilderConfigurationContext> action)
+    {
         ArgumentNullException.ThrowIfNull(action);
-
-        try
-        {
-            var dependenciesContext = new DependenciesRegistrationContext();
-        
-            IPathResolver pathResolver = new PathResolver();
-        
-            IConfiguration configuration = CreateConfiguration(pathResolver);
-        
-            IAppCreationContext ctx = new AppCreationContext(configuration, dependenciesContext);
-        
-            ctx.AddDependencies(t=>t
-                .Add<IApp,DefaultApp>()
-                .Add(pathResolver)
-                .Add(configuration)
-                .Add(new AppCancellationTokenSourceHandle(cancellationTokenSource ?? new CancellationTokenSource()))
-                .Add<DefaultAppLifetime>(d=>d
-                    .With<IAppLifetimeHandler>()
-                    .With<IAppLifetime>()
-                )
-                .Add(typeof(IEventsSource<>), typeof(EventsSource<>))
-            );
-
-            ctx.UseProvider<SimpleDependencyInjectionProvider>();
-        
-            try
-            {
-                action(ctx);
-            }
-            catch (Exception e)
-            {
-                throw new AppCreationException("Failed to create the app", e);
-            }
-
-            var modules = ctx.GetModules()
-                .OrderBy(t=>t.ExecutionFlowOrder)
-                .ToList();
-        
-            foreach (var module in modules)
-            {
-                try
-                {
-                    module.Configure(ctx);
-                }
-                catch (Exception e)
-                {
-                    throw new AppCreationException($"Failed to configure \"{module.Name}\" module", e);
-                }
-            }
-        
-            if (ctx is not IServiceProviderBuilder serviceProviderBuilder)
-            {
-                throw new AppCreationException($"Failed to instantiate the \"{nameof(IApp)}\"");
-            }
-        
-            var serviceProvider = serviceProviderBuilder.Build();
-
-            foreach (var module in modules)
-            {
-                try
-                {
-                    module.Execute(serviceProvider, configuration);
-                }
-                catch (Exception e)
-                {
-                    throw new AppCreationException($"Failed to execute \"{module.Name}\" module", e);
-                }
-            }
-        
-            var app = serviceProvider.Resolve<IApp>() ?? throw new AppCreationException($"Failed to instantiate the \"{nameof(IApp)}\"");
-            
-            Console.CancelKeyPress += (_, _) =>
-            {
-                app.Services.Resolve<IAppLifetime>()?.Cancel();
-            };
-            
-            return app;
-        }
-        catch (Exception e)
-        {
-            AppSource.Exception(e);
-            throw;
-        }
-    }
-
-    private static Configuration.Configuration CreateConfiguration(IPathResolver pathResolver)
-    {
-        var argsSection = new CommandLineArgsProvider();
-        var jsonProvider = new JsonConfigurationProvider(pathResolver);
-        var defaultProvider = new DefaultConfigurationProvider();
-        var configuration = new Configuration.Configuration(new List<IConfigurationProvider>
-        {
-            argsSection,
-            defaultProvider,
-            jsonProvider
-        });
-        
-        return configuration;
+        var builder = AppBuilder.Create(action);
+        return builder;
     }
 
     /// <summary>
@@ -132,13 +21,22 @@ public static class App
     /// <param name="action">configuration delegate</param>
     /// <param name="cancellationToken"></param>
     /// <exception cref="AppCreationException"></exception>
-    public static async Task RunAsync(Action<IAppCreationContext> action, CancellationToken cancellationToken = default)
+    public static Task RunAsync(Action<IAppConfigurationContext> action, CancellationToken cancellationToken = default)
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var builder = Builder(_ => {});
+        ConfiguratorSource.Trace("Builder ready");
         
-        await using var app = Create(action, cts);
+        return RunAsync(builder, action, cancellationToken);
+    }
+    
+    public static async Task RunAsync(IAppBuilder builder, Action<IAppConfigurationContext> action, CancellationToken cancellationToken = default)
+    {
+        builder.Setup(action);
         
-        using var runEvent = AppSource.UseActivity();
+        await using var app = builder.Build();
+        ConfiguratorSource.Trace("Created");
+        
+        using var runEvent = ConfiguratorSource.UseActivity();
         
         try
         {
@@ -148,24 +46,24 @@ public static class App
                 throw new AppCreationException($"{nameof(IAppLifetimeHandler)} is missing");
             }
             
-            await app.StartAsync(cts.Token);
+            await app.StartAsync(cancellationToken);
             
-            AppSource.Trace("Started");
+            ConfiguratorSource.Trace("Started");
             
-            await lifetimeHandler.WaitAsync(cts.Token);
+            await lifetimeHandler.WaitAsync(cancellationToken);
 
-            AppSource.Trace("Stopping");
+            ConfiguratorSource.Trace("Stopping");
             lifetimeHandler.Stopping();
         
-            await app.StopAsync(cts.Token);
+            await app.StopAsync(cancellationToken);
 
             lifetimeHandler.Stopped();
             
-            AppSource.Trace("Stopped");
+            ConfiguratorSource.Trace("Stopped");
         }
         catch (Exception e)
         {
-            AppSource.Exception(e);
+            ConfiguratorSource.Exception(e);
         }
     }
     
@@ -186,9 +84,9 @@ public static class App
 
         var parameters = method.GetParameters();
         
-        if (parameters.Length == 0 || parameters.First().ParameterType != typeof(IAppCreationContext))
+        if (parameters.Length == 0 || parameters.First().ParameterType != typeof(IAppConfigurationContext))
         {
-            throw new AppCreationException($"{typeof(T)} does not contain method \"Configure\" with \"{nameof(IAppCreationContext)}\" parameter");
+            throw new AppCreationException($"{typeof(T)} does not contain method \"Configure\" with \"{nameof(IAppConfigurationContext)}\" parameter");
         }
         
         return RunAsync(t=>method.Invoke(configurator, [t]), cancellationToken);

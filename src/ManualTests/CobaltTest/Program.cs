@@ -1,13 +1,13 @@
 ﻿using TrueMoon;
 using TrueMoon.Cobalt;
-using TrueMoon.Dependencies;
 
 var r = ServiceResolvers.Shared.GetResolvers();
 
 await App.RunAsync(context => context
-    .AddDependencies(registrationContext => registrationContext
-        .AddTransient<IMainTestClass, MainTestClass>()
-        .AddSingleton<IService1, Service1>()
-        .AddSingleton<IService2, Service2>()
+    .Services(registrationContext => registrationContext
+        .Transient<IMainTestClass, MainTestClass>()
+        .Singleton<IService1, Service1>()
+        .Singleton<IService2, Service2>()
+        //.Singleton<Service2>(resolver => resolver.Resolve<Service2>())
     )
 );

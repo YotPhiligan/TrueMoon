@@ -3,6 +3,7 @@ using System.Reflection;
 using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
+using TrueMoon.Modules;
 
 namespace TrueMoon.Titanium;
 
@@ -19,7 +20,7 @@ public class TitaniumModule : ITitaniumModule
     public ModuleExecutionFlowOrder ExecutionFlowOrder => ModuleExecutionFlowOrder.Start;
     public string Name => nameof(TitaniumModule);
 
-    public void Configure(IAppCreationContext context)
+    public void Configure(IAppConfigurationContext context)
     {
         if (context.Configuration.IsProcessingUnit() 
             && context.Configuration.GetProcessingUnitId() is { } id)
@@ -88,7 +89,7 @@ public class TitaniumModule : ITitaniumModule
         }
     }
 
-    public void AddUnitConfiguration(Action<IAppCreationContext> action, Action<IUnitConfiguration>? configureAction = default)
+    public void AddUnitConfiguration(Action<IAppConfigurationContext> action, Action<IUnitConfiguration>? configureAction = default)
     {
         var unitConfiguration = new UnitConfiguration(_units.Count+1, action);
         configureAction?.Invoke(unitConfiguration);

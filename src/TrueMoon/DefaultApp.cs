@@ -15,6 +15,11 @@ public class DefaultApp : IApp
         _eventsSource = eventsSource;
         Configuration = parameters;
         Services = services;
+        
+        Console.CancelKeyPress += (_, _) =>
+        {
+            Services.Resolve<IAppLifetime>()?.Cancel();
+        };
     }
 
     private bool _isDisposed;
@@ -67,16 +72,21 @@ public class DefaultApp : IApp
     /// <inheritdoc />
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        _eventsSource.Trace("Starting");
         var services = Services.ResolveAll<IStartable>();
 
         foreach (var service in services)
         {
             await service.StartAsync(cancellationToken);
         }
+        
+        _eventsSource.Trace("Started");
     }
 
+    /// <inheritdoc />
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
+        _eventsSource.Trace("Stopping");
         var services = Services.ResolveAll<IStoppable>();
         foreach (var service in services)
         {
@@ -89,5 +99,7 @@ public class DefaultApp : IApp
                 _eventsSource.Exception(e);
             }
         }
+        
+        _eventsSource.Trace("Stopped");
     }
 }

@@ -1,6 +1,5 @@
+using TrueMoon.Services;
+
 namespace TrueMoon.Cobalt;
 
-public interface IResolvingContext
-{
-    T Resolve<T>();
-}
+public interface IResolvingContext : IServiceResolver;

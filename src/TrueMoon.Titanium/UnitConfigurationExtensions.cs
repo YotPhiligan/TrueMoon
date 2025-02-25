@@ -4,7 +4,7 @@ namespace TrueMoon.Titanium;
 
 public static class UnitConfigurationExtensions
 {
-    public static IUnitConfiguration Configure(this IUnitConfiguration configuration, Action<IAppCreationContext> action)
+    public static IUnitConfiguration Configure(this IUnitConfiguration configuration, Action<IAppConfigurationContext> action)
     {
         configuration.ConfigurationDelegate = action;
         return configuration;

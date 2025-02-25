@@ -7,12 +7,12 @@ public static class AppCreationContextExtensions
     /// <summary>
     /// Configure isolated processing unit
     /// <para>Depending on the settings may or may not be started in separate child process (by default in separate process)</para>
-    /// <remarks>Processing unit uses the same dependencies added with <see cref="IAppCreationContext.AddDependencies"/> in main process. This can be overridden in processing unit configuration</remarks>
+    /// <remarks>Processing unit uses the same dependencies added with <see cref="IAppConfigurationContext.AddDependencies"/> in main process. This can be overridden in processing unit configuration</remarks>
     /// </summary>
     /// <param name="context">app creation context</param>
     /// <param name="action">processing unit configuration delegate</param>
     /// <returns></returns>
-    public static IAppCreationContext AddUnit(this IAppCreationContext context, Action<IAppCreationContext> action, Action<IUnitConfiguration>? configureAction = default)
+    public static IAppConfigurationContext AddUnit(this IAppConfigurationContext context, Action<IAppConfigurationContext> action, Action<IUnitConfiguration>? configureAction = default)
     {
         ArgumentNullException.ThrowIfNull(action);
 
@@ -26,12 +26,12 @@ public static class AppCreationContextExtensions
     /// <summary>
     /// Configure isolated processing unit
     /// <para>Depending on the settings may or may not be started in separate child process (by default in separate process)</para>
-    /// <remarks>Processing unit uses the same dependencies added with <see cref="IAppCreationContext.AddDependencies"/> in main process. This can be overridden in processing unit configuration</remarks>
+    /// <remarks>Processing unit uses the same dependencies added with <see cref="IAppConfigurationContext.AddDependencies"/> in main process. This can be overridden in processing unit configuration</remarks>
     /// </summary>
     /// <param name="context">app creation context</param>
     /// <param name="action">processing unit configuration delegate</param>
     /// <returns></returns>
-    public static IAppCreationContext AddUnit(this IAppCreationContext context, Action<IUnitConfiguration> action)
+    public static IAppConfigurationContext AddUnit(this IAppConfigurationContext context, Action<IUnitConfiguration> action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
@@ -42,7 +42,7 @@ public static class AppCreationContextExtensions
         return context;
     }
 
-    public static ITitaniumModule GetTitanium(this IAppCreationContext context)
+    public static ITitaniumModule GetTitanium(this IAppConfigurationContext context)
     {
         var module = context.GetModule<ITitaniumModule>();
         if (module is not null) return module;
@@ -51,7 +51,7 @@ public static class AppCreationContextExtensions
         return module;
     }
     
-    public static IAppCreationContext UseProcessingUnits(this IAppCreationContext context)
+    public static IAppConfigurationContext UseProcessingUnits(this IAppConfigurationContext context)
     {
         _ = context.GetTitanium();
         return context;

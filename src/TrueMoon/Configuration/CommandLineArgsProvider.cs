@@ -27,14 +27,7 @@ public class CommandLineArgsProvider : IConfigurationProvider
     
     private void SetCore(string key, object? value)
     {
-        if (_dictionary.ContainsKey(key))
-        {
-            _dictionary[key] = value;
-        }
-        else
-        {
-            _dictionary.Add(key,value);
-        }
+        _dictionary[key] = value;
     }
 
     public string Name => ConfigurationSectionNames.CommandLineArguments;

@@ -6,7 +6,7 @@ public interface IUnitConfiguration : IConfigurable
 {
     int Index { get; }
 
-    Action<IAppCreationContext> ConfigurationDelegate { get; set; }
+    Action<IAppConfigurationContext> ConfigurationDelegate { get; set; }
     UnitStartupPolicy? StartupPolicy { get; set; }
     UnitHostingPolicy? HostingPolicy { get; set; }
     UnitLifetimePolicy? LifetimePolicy { get; set; }

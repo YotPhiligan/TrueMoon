@@ -1,3 +1,5 @@
+using TrueMoon.Modules;
+
 namespace TrueMoon.Thorium;
 
 public interface IThoriumModule : IModule

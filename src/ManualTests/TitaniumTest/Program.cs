@@ -15,9 +15,8 @@ await App.RunAsync(context => context
     .UseInvocations()
     .AddUnit(ctx => ctx
         .UseInvocationService<ITestService>()
-        .AddDependencies(registrationContext => registrationContext
-            .Add<Sender>(dependencyRegistrationContext => dependencyRegistrationContext
-                .WithAppLifetime())
+        .Services(registrationContext => registrationContext
+            .Composite<Sender,IStartable,IStoppable>()
         ) 
     )
     .AddUnit(configuration => configuration

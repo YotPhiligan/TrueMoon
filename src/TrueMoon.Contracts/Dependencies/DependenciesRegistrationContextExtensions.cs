@@ -127,7 +127,7 @@ public static class DependenciesRegistrationContextExtensions
 
     internal class DependencyRegistrationContext<TImplementation> : IDependencyRegistrationContext<TImplementation>
     {
-        private readonly List<Type> _types = new ();
+        private readonly List<Type> _types = [];
         public IDependencyRegistrationContext<TImplementation> With<T>()
         {
             var type = typeof(T);

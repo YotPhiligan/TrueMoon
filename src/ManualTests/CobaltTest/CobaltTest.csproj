@@ -5,11 +5,6 @@
         <TargetFramework>$(TestsTF)</TargetFramework>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
-    </ItemGroup>
     
     <ItemGroup>
         <ProjectReference Include="..\..\TrueMoon.Cobalt\TrueMoon.Cobalt.csproj"/>

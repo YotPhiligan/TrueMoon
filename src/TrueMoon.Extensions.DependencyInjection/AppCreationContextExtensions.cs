@@ -2,8 +2,8 @@ namespace TrueMoon.Extensions.DependencyInjection;
 
 public static class AppCreationContextExtensions
 {
-    public static IAppCreationContext UseDI(this IAppCreationContext context)
+    public static IAppConfigurationContext UseDI(this IAppBuilderConfigurationContext context)
     {
-        return context.UseProvider<DependencyInjectionProvider>();
+        return context.ServiceResolverBuilder<DependencyInjectionProvider>();
     }
 }

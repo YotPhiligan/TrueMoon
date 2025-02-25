@@ -12,7 +12,5 @@ public interface IDependenciesRegistrationContext
     bool Exist(Func<IDependencyDescriptor, bool> searchFunc);
     bool Exist<T>(Func<IDependencyDescriptor<T>, bool>? searchFunc = default);
     
-    
-    
     bool RemoveDependency(IDependencyDescriptor dependencyDescriptor);
 }

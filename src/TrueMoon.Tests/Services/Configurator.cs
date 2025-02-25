@@ -5,7 +5,7 @@ namespace TrueMoon.Tests.Services;
 
 public class Configurator
 {
-    public void Configure(IAppCreationContext context)
+    public void Configure(IAppConfigurationContext context)
     {
         context.UseDI();
         context.AddDependencies(t => t.Add<LifeTimeExecutor>(d => d.With<IStartable>()));

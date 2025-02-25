@@ -2,6 +2,7 @@
 using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
+using TrueMoon.Modules;
 using TrueMoon.Thorium.IO;
 using TrueMoon.Thorium.IO.Pipes;
 
@@ -22,7 +23,7 @@ public class ThoriumModule : IThoriumModule
         _eventsSource = eventsSource;
     }
 
-    public void Configure(IAppCreationContext context)
+    public void Configure(IAppConfigurationContext context)
     {
         context.AddDependencies(t => t.Add<IInvocationServerHandlerResolver, InvocationServerHandlerResolver>());
         

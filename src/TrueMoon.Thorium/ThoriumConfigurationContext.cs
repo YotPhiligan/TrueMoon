@@ -2,12 +2,12 @@
 
 public class ThoriumConfigurationContext : IThoriumConfigurationContext
 {
-    public ThoriumConfigurationContext(IAppCreationContext appCreationContext)
+    public ThoriumConfigurationContext(IAppConfigurationContext appConfigurationContext)
     {
         Configuration = new ThoriumConfiguration();
-        AppCreationContext = appCreationContext;
+        AppConfigurationContext = appConfigurationContext;
     }
     
     public ThoriumConfiguration Configuration { get; }
-    public IAppCreationContext AppCreationContext { get; }
+    public IAppConfigurationContext AppConfigurationContext { get; }
 }

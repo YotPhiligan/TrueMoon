@@ -2,6 +2,7 @@ using TrueMoon.Aluminum;
 using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
+using TrueMoon.Modules;
 
 namespace TrueMoon.Alloy;
 
@@ -20,7 +21,7 @@ public class AlloyModule : IAlloyModule
     
     public string Name => nameof(AlloyModule);
     
-    public void Configure(IAppCreationContext context)
+    public void Configure(IAppConfigurationContext context)
     {
         context.AddDependencies(registrationContext => registrationContext
             .AddSingleton<IViewManager,ViewManager>()

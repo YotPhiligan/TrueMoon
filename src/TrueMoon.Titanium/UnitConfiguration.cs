@@ -4,7 +4,7 @@ namespace TrueMoon.Titanium;
 
 public class UnitConfiguration : ConfigurableBase, IUnitConfiguration
 {
-    public UnitConfiguration(int index, Action<IAppCreationContext> action)
+    public UnitConfiguration(int index, Action<IAppConfigurationContext> action)
     {
         ArgumentNullException.ThrowIfNull(action);
         
@@ -17,9 +17,9 @@ public class UnitConfiguration : ConfigurableBase, IUnitConfiguration
     public int Index { get; }
 
     /// <inheritdoc />
-    public Action<IAppCreationContext> ConfigurationDelegate
+    public Action<IAppConfigurationContext> ConfigurationDelegate
     {
-        get => Get<Action<IAppCreationContext>>(nameof(ConfigurationDelegate))!; 
+        get => Get<Action<IAppConfigurationContext>>(nameof(ConfigurationDelegate))!; 
         set => Set(nameof(ConfigurationDelegate), value);
     }
 

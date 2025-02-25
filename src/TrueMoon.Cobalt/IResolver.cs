@@ -4,6 +4,8 @@ public interface IResolver
 {
     bool IsServiceDisposable { get; }
     ResolvingServiceLifetime ServiceLifetime { get; }
+    
+    object Resolve(IResolvingContext context);
 }
 
 public interface IResolver<TService> : IResolver
