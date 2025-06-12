@@ -1,8 +1,7 @@
 ﻿namespace TrueMoon.Cobalt;
 
-public interface ITypedResolversContainer
+public interface ITypedResolversContainer : IResolversContainerBase
 {
-    public string TypeId { get; }
     public Type EnumerableType { get; }
     
     IResolver[] GetResolvers(IServicesRegistrationAccessor accessor);

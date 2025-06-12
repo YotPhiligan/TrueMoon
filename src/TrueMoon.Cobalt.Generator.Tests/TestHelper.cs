@@ -6,7 +6,7 @@ namespace TrueMoon.Cobalt.Generator.Tests;
 
 public static class TestHelper
 {
-    public static Task Verify(string source)
+    public static GeneratorDriverRunResult Verify(string source)
     {
         // Parse the provided string into a C# syntax tree
         SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source);
@@ -36,6 +36,6 @@ public static class TestHelper
         driver = driver.RunGenerators(compilation);
 
         // Use verify to snapshot test the source generator output!
-        return Verifier.Verify(driver);
+        return driver.GetRunResult();
     }
 }

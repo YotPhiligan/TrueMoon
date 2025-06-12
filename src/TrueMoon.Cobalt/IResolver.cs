@@ -1,10 +1,7 @@
 namespace TrueMoon.Cobalt;
 
-public interface IResolver
+public interface IResolver : IResolverBase
 {
-    bool IsServiceDisposable { get; }
-    ResolvingServiceLifetime ServiceLifetime { get; }
-    
     object Resolve(IResolvingContext context);
 }
 

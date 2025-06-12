@@ -7,7 +7,7 @@
     <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
       <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
-        <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+      <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
     </ItemGroup>
 
 </Project>

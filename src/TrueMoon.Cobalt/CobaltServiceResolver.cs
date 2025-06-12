@@ -6,7 +6,7 @@ namespace TrueMoon.Cobalt;
 public class CobaltServiceResolver : IServiceResolver, IDisposable, IAsyncDisposable
 {
     private readonly IServicesRegistrationAccessor _registrationAccessor;
-    private readonly FrozenDictionary<Type,ITypedResolversContainer> _resolvers;
+    private readonly FrozenDictionary<Type, IResolversContainerBase> _resolvers;
     private readonly DisposablesContainer _disposables = new ();
 
     public CobaltServiceResolver(IServicesRegistrationAccessor registrationAccessor)

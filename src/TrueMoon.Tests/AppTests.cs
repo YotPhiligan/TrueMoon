@@ -11,27 +11,29 @@ public class AppTests
     [Fact]
     public async Task AppCreate()
     {
-        await using var app = App.Create(context => context
-            .UseDI()
-            .AddDependencies(registrationContext => registrationContext
-                .Add<ICommonService1, CommonService1>()
-                .Add<CommonStartableService>(v=>v.With<IStartable>())
+        await using var app = App.Build(context => context
+            .Services(registrationContext => registrationContext
+                .Singleton<ICommonService1, CommonService1>()
+                .Singleton<IStartable,CommonStartableService>()
             )
         );
 
         await app.StartAsync();
 
         var service = app.Services.Resolve<IStartable>();
+        var services = app.Services.ResolveAll<IStartable>();
 
-        Assert.IsType<CommonStartableService>(service);
+        var service2 = services.FirstOrDefault(t => t.GetType() == typeof(CommonStartableService));
 
-        Assert.True((service as CommonStartableService).IsStarted);
+        Assert.IsType<CommonStartableService>(service2);
+
+        Assert.True((service2 as CommonStartableService).IsStarted);
     }
     
     [Fact]
     public void Create()
     {
-        using var app = App.Create(context => context.UseDI());
+        using var app = App.Build();
         Assert.NotNull(app);
         Assert.NotEmpty(app.Name);
     }
@@ -40,8 +42,7 @@ public class AppTests
     public async Task RunAsync()
     {
         await App.RunAsync(context => context
-            .UseDI()
-            .AddDependencies(t=>t.Add<LifeTimeExecutor>(d=>d.With<IStartable>()))
+            .Services(t=>t.Singleton<IStartable,LifeTimeExecutor>())
         );
         
         Assert.True(true);
@@ -54,18 +55,4 @@ public class AppTests
         
         Assert.True(true);
     }
-    
-    // [Fact]
-    // public async Task AppCreateEnclave()
-    // {
-    //     await using var app = App.Create(context => context
-    //         .UseDependencyInjection<DependencyInjectionProvider>()
-    //         .AddCommonDependencies(registrationContext => registrationContext.Add<ICommonService1, CommonService1>())
-    //         .AddProcessingEnclave(configurationContext => configurationContext
-    //             .AddDependencies(registrationContext => registrationContext.Add<IService1, Service1>())
-    //         )
-    //     );
-    //
-    //     await app.StartAsync();
-    // }
 }

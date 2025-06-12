@@ -1,0 +1,1 @@
+﻿public class TestGenericClass<T> : ITestGenericClass<T>;

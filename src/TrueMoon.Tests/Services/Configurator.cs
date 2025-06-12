@@ -7,7 +7,6 @@ public class Configurator
 {
     public void Configure(IAppConfigurationContext context)
     {
-        context.UseDI();
-        context.AddDependencies(t => t.Add<LifeTimeExecutor>(d => d.With<IStartable>()));
+        context.Services(t => t.Singleton<IStartable,LifeTimeExecutor>());
     }
 }

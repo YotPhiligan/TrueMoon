@@ -41,7 +41,7 @@ public class AppBuilder : IAppBuilder
             .Singleton<IApp,DefaultApp>()
             .Instance(configuration)
             .Composite<DefaultAppLifetime,IAppLifetimeHandler,IAppLifetime>()
-            //.OpenSingleton<IEventsSource,EventsSource>()
+            .Singleton(typeof(IEventsSource<>),typeof(EventsSource<>))
         );
         
         foreach (var action in _configureActions)

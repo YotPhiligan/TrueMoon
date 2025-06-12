@@ -91,4 +91,20 @@ public static class App
         
         return RunAsync(t=>method.Invoke(configurator, [t]), cancellationToken);
     }
+    
+    public static IApp Build(Action<IAppConfigurationContext>? action = default)
+    {
+        var builder = Builder(_ => {});
+        ConfiguratorSource.Trace("Builder ready");
+        
+        if (action != null)
+        {
+            builder.Setup(action);
+        }
+        
+        var app = builder.Build();
+        ConfiguratorSource.Trace("Created");
+
+        return app;
+    }
 }

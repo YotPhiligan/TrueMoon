@@ -1,9 +1,11 @@
-﻿namespace TrueMoon.Cobalt.Generator.Tests;
+﻿using Xunit;
+
+namespace TrueMoon.Cobalt.Generator.Tests;
 
 public class GeneratorTests
 {
     [Fact]
-    public Task GeneratesCorrectly()
+    public void GeneratesCorrectly()
     {
         var source = @"
 using System;
@@ -26,11 +28,11 @@ await App.RunAsync(t => t
 }
 ";
         // Pass the source code to our helper and snapshot test the output
-        return TestHelper.Verify(source);
+        var result = TestHelper.Verify(source);
     }
     
     [Fact]
-    public Task GeneratesCorrectly2()
+    public void GeneratesCorrectly2()
     {
         var source = @"
 using System;
@@ -91,6 +93,106 @@ test2.Services(c => c
 }
 ";
         // Pass the source code to our helper and snapshot test the output
-        return TestHelper.Verify(source);
+        var result = TestHelper.Verify(source);
+    }
+    
+    [Fact]
+    public void GeneratesCorrectly3()
+    {
+        var source = @"
+using System;
+
+public interface ITestInterface
+{
+ITestInterface Singleton(Type s, Type t);
+}
+
+public class TestInterface : ITestInterface
+{
+public ITestInterface Singleton(Type s, Type t)
+{
+return this;
+}
+}
+
+public class Test2
+{
+public void Services(Action<ITestInterface> action)
+{
+}
+}
+
+public class TestGClass
+{
+public TestGClass(string a)
+{
+}
+}
+
+public class TestGClass<T> : TestGClass
+{
+public TestGClass() : base(""str"") {}
+}
+
+public class Program
+{
+public static void Main(string[] args)
+{
+var test2 = new Test2();
+test2.Services(c => c
+    .Singleton(typeof(TestGClass<>),typeof(TestGClass<>))
+);
+
+}
+}
+";
+        // Pass the source code to our helper and snapshot test the output
+        var result = TestHelper.Verify(source);
+    }
+    
+    [Fact]
+    public void GeneratesCorrectly4()
+    {
+        var source = @"
+using System;
+
+public interface ITestInterface
+{
+ITestInterface Instance<T>(T s);
+}
+
+public class TestInterface : ITestInterface
+{
+public ITestInterface Instance<T>(T s)
+{
+return this;
+}
+}
+
+public class Test2
+{
+public void Services(Action<ITestInterface> action)
+{
+}
+}
+
+public interface ITestGClass;
+
+public class TestGClass : ITestGClass;
+
+public class Program
+{
+public static void Main(string[] args)
+{
+var test2 = new Test2();
+test2.Services(c => c
+    .Instance(new TestGClass())
+);
+
+}
+}
+";
+        // Pass the source code to our helper and snapshot test the output
+        var result = TestHelper.Verify(source);
     }
 }
