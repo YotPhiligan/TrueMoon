@@ -2,11 +2,10 @@ using TrueMoon.Aluminum;
 using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
-using TrueMoon.Modules;
 
 namespace TrueMoon.Alloy;
 
-public class AlloyModule : IAlloyModule
+public class AlloyModule
 {
     private readonly IEventsSource<AlloyModule> _eventsSource;
 
@@ -16,20 +15,18 @@ public class AlloyModule : IAlloyModule
 
         Configuration = new PresentationConfiguration();
     }
-
-    public ModuleExecutionFlowOrder ExecutionFlowOrder => ModuleExecutionFlowOrder.End;
     
     public string Name => nameof(AlloyModule);
     
     public void Configure(IAppConfigurationContext context)
     {
-        context.AddDependencies(registrationContext => registrationContext
-            .AddSingleton<IViewManager,ViewManager>()
-            .AddSingleton<IFactory<IGraphicsPlatform>, GlGraphicsPlatformFactory>()
-            .AddSingleton<IFactory<IViewPresenter>, SkiaGlViewPresenterFactory>()
-            .AddSingleton<IFactory<IContentPresenter>, SkiaContentPresenterFactory>()
-            .AddSingleton<IFactory<IViewHandle>, ViewHandleFactory>()
-            .AddSingleton<IVisualTreeBuilder, VisualTreeBuilder>()
+        context.Services(registrationContext => registrationContext
+            .Singleton<IViewManager,ViewManager>()
+            .Singleton<IFactory<IGraphicsPlatform>, GlGraphicsPlatformFactory>()
+            .Singleton<IFactory<IViewPresenter>, SkiaGlViewPresenterFactory>()
+            .Singleton<IFactory<IContentPresenter>, SkiaContentPresenterFactory>()
+            .Singleton<IFactory<IViewHandle>, ViewHandleFactory>()
+            .Singleton<IVisualTreeBuilder, VisualTreeBuilder>()
         );
 
         if (Configuration.StartupViewType is { IsAbstract: true } or { IsInterface: true })
@@ -44,8 +41,8 @@ public class AlloyModule : IAlloyModule
         
         if (Configuration.StartupViewType is { IsClass: true, IsAbstract: false })
         {
-            context.AddDependencies(registrationContext => registrationContext
-                .Add(Configuration.StartupViewType, Configuration.StartupViewType)
+            context.Services(registrationContext => registrationContext
+                .Singleton(Configuration.StartupViewType, Configuration.StartupViewType)
             );
         }
     }

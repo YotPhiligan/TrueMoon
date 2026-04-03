@@ -35,12 +35,8 @@ public static class AppCreationContextExtensions
         return context;
     }
     
-    public static IAlloyModule GetAlloy(this IAppConfigurationContext context)
+    public static AlloyModule GetAlloy(this IAppConfigurationContext context)
     {
-        var module = context.GetModule<IAlloyModule>();
-        if (module is not null) return module;
-        module = new AlloyModule(context.CreateEventsSource<AlloyModule>());
-        context.AddModule(module);
-        return module;
+        throw new NotImplementedException();
     }
 }

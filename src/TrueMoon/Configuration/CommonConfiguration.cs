@@ -19,7 +19,7 @@ public class CommonConfiguration : IConfiguration
 
     private IConfigurationSection? GetSectionCore(string? name = default)
     {
-        if (_sections == null || !_sections.Any())
+        if (_sections == null || _sections.Count == 0)
         {
             RefreshCore();
         }
@@ -61,6 +61,19 @@ public class CommonConfiguration : IConfiguration
     {
         section = GetSection(name);
         return section != null;
+    }
+
+    public IConfigurationSection[] GetSections()
+    {
+        _semaphoreSlim.Wait();
+        try
+        {
+            return _sections?.ToArray() ?? [];
+        }
+        finally
+        {
+            _semaphoreSlim.Release();
+        }
     }
 
     /// <inheritdoc />

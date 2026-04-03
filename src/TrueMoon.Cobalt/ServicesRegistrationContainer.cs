@@ -4,29 +4,79 @@ namespace TrueMoon.Cobalt;
 
 public class ServicesRegistrationContainer : IServicesRegistrationContainer, IServicesRegistrationAccessor
 {
-    private readonly Dictionary<Type,object> _instances = [];
-    private readonly List<IFactoryContainer> _factories = [];
+    private readonly List<ServiceRegistrationHandle> _registrationHandles = [];
+    private readonly Lock _lock = new ();
+
+    private void Add(ServiceRegistrationHandle handle)
+    {
+        lock (_lock)
+        {
+            _registrationHandles.Add(handle);
+        }
+    }
     
     public void RegisterInstance<TInstance>(TInstance instance)
     {
         ArgumentNullException.ThrowIfNull(instance);
-        _instances[typeof(TInstance)] = instance;
+        Add(ServiceRegistration.Instance(instance));
     }
 
-    public void RegisterFactory<TService>(Func<IServiceResolver,TService> factory)
+    public void RegisterSingleton<TService>(Func<IServiceResolver, TService> factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
-        _factories.Add(new FactoryContainer<TService>(factory));
+        var container = new FactoryContainer<TService>(factory);
+        Add(ServiceRegistration.Singleton(container));
     }
-    
-    public TInstance? GetInstance<TInstance>() =>
-        _instances.TryGetValue(typeof(TInstance), out var instance)
-            ? (TInstance?)instance 
-            : default;
 
-    public IFactoryContainer<TService> GetFactory<TService>()
+    public void RegisterSingleton<TService>() => RegisterSingleton(typeof(TService));
+
+    public void RegisterSingleton<TService, TImplementation>() where TImplementation : class, TService 
+        => RegisterSingleton(typeof(TService), typeof(TImplementation));
+
+    public void RegisterSingleton(Type service, Type implementation) => Add(ServiceRegistration.Singleton(service, implementation));
+
+    public void RegisterSingleton(Type service) => Add(ServiceRegistration.Singleton(service));
+
+    public void RegisterTransient<TService>(Func<IServiceResolver, TService> factory)
     {
-        var factory = _factories.FirstOrDefault(c => c.Id == TypeUtils.GetTypeId<TService>());
-        return (IFactoryContainer<TService>)factory;
+        ArgumentNullException.ThrowIfNull(factory);
+        var container = new FactoryContainer<TService>(factory);
+        Add(ServiceRegistration.Transient(container));
     }
+
+    public void RegisterTransient<TService>() 
+        => RegisterTransient(typeof(TService));
+
+    public void RegisterTransient<TService, TImplementation>() where TImplementation : class, TService 
+        => RegisterTransient(typeof(TService), typeof(TImplementation));
+
+    public void RegisterTransient(Type service, Type implementation) 
+        => Add(ServiceRegistration.Transient(service, implementation));
+
+    public void RegisterTransient(Type service) => Add(ServiceRegistration.Transient(service));
+
+    public void RemoveRegistration<TService, TImplementation>() 
+        where TImplementation : class, TService
+    {
+        lock (_lock)
+        {
+            var handle = _registrationHandles.FirstOrDefault(t =>
+                t.ServiceType == typeof(TService) && t.ImplementationType == typeof(TImplementation));
+
+            if (handle != null)
+            {
+                _registrationHandles.Remove(handle);
+            }
+        }
+    }
+
+    public void RemoveAllRegistration<TService>()
+    {
+        lock (_lock)
+        {
+            _registrationHandles.RemoveAll(t=>t.ServiceType == typeof(TService));
+        }
+    }
+
+    public IReadOnlyList<ServiceRegistrationHandle> GetHandles() => _registrationHandles;
 }

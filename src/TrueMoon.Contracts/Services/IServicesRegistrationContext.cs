@@ -36,10 +36,10 @@ public interface IServicesRegistrationContext
     
     IServicesRegistrationContext Remove<TService,TImplementation>() where TImplementation : class, TService;
 
-    IServicesRegistrationContext Replace<TService, TImplementation, TImplementationReplacement>()
-        where TImplementation : class,
-        TService
-        where TImplementationReplacement : class,
-        TService
-        where TService : class;
+    IServicesRegistrationContext RemoveAll<T>();
+    
+    bool Exist<TService>();
+    bool Exist<TService, TImplementation>() where TImplementation : class, TService;
+    bool Exist(Type serviceType);
+    bool Exist(Type serviceType, Type implementationType);
 }

@@ -1,6 +1,8 @@
-﻿namespace TrueMoon.Services;
+﻿using TrueMoon.Configuration;
+
+namespace TrueMoon.Services;
 
 public interface IServiceResolverBuilder
 {
-    IServiceResolver Build(IEnumerable<Action<IServicesRegistrationContext>> registrations); 
+    IServiceResolver Build(IConfiguration configuration, IEnumerable<Action<IConfiguration,IServicesRegistrationContext>> registrations); 
 }

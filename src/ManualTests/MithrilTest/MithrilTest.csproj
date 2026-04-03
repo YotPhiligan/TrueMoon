@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>$(TestsTF)</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj" />
+        <ProjectReference Include="..\..\TrueMoon.Enerit\TrueMoon.Enerit.csproj" />
+        <ProjectReference Include="..\..\TrueMoon.Mithril\TrueMoon.Mithril.csproj" />
+        <ProjectReference Include="..\..\TrueMoon\TrueMoon.csproj" />
+        <ProjectReference Include="..\..\TrueMoon.Enerit.Generator\TrueMoon.Enerit.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+    </ItemGroup>
+
+</Project>

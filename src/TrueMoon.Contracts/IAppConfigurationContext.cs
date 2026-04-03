@@ -1,6 +1,4 @@
 ﻿using TrueMoon.Configuration;
-using TrueMoon.Diagnostics;
-using TrueMoon.Modules;
 using TrueMoon.Services;
 
 namespace TrueMoon;
@@ -16,6 +14,6 @@ public interface IAppConfigurationContext
     /// <param name="action">dependencies configuration delegate</param>
     /// <returns></returns>
     IAppConfigurationContext Services(Action<IServicesRegistrationContext> action);
+    IAppConfigurationContext Services(Action<IConfiguration, IServicesRegistrationContext> action);
     IAppConfigurationContext Configuration(Action<IConfiguration> action);
-    IAppConfigurationContext Modules(Action<IModuleConfigurationContext> action);
 }

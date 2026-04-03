@@ -1,13 +1,15 @@
+using TrueMoon.Services;
+
 namespace TrueMoon.Cobalt.Tests;
 
-public class SubService2Resolver : IResolver<SubService2, SubService2>
+public class SubService2Resolver : IResolver<SubService2, SubService2>, IObjectResolver
 {
-    public SubService2 Resolve(IResolvingContext context)
+    public SubService2 Resolve(IServiceResolver context)
     {
         return new SubService2();
     }
 
     public bool IsServiceDisposable { get; }
-    public ResolvingServiceLifetime ServiceLifetime { get; }
-    object IResolver.Resolve(IResolvingContext context) => Resolve(context);
+    public ServiceLifetime ServiceLifetime { get; }
+    object IObjectResolver.Resolve(IServiceResolver context) => Resolve(context);
 }

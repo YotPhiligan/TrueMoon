@@ -7,4 +7,6 @@ public class FactoryContainer<TService>(Func<IServiceResolver, TService> factory
     public Func<IServiceResolver, TService> Get() => factory;
 
     public string Id { get; } = TypeUtils.GetTypeId<TService>();
+
+    public override string ToString() => $"Factory: {Id}";
 }

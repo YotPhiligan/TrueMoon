@@ -9,7 +9,7 @@ public class AppBuilder : IAppBuilder
 {
     private readonly IServiceResolverBuilder _serviceResolverBuilder;
     private readonly List<Action<IAppConfigurationContext>> _configureActions = [];
-    private Action<IConfigurationBuilder>? _configurationBuilderAction;
+    private readonly List<Action<IConfigurationBuilder>> _configurationBuilderActions = [];
 
     public AppBuilder(IServiceResolverBuilder serviceResolverBuilder)
     {
@@ -18,7 +18,8 @@ public class AppBuilder : IAppBuilder
     
     public IAppBuilder Configuration(Action<IConfigurationBuilder> action)
     {
-        _configurationBuilderAction = action;
+        ArgumentNullException.ThrowIfNull(action);
+        _configurationBuilderActions.Add(action);
         return this;
     }
 
@@ -31,7 +32,11 @@ public class AppBuilder : IAppBuilder
     public IApp Build()
     {
         var configurationBuilder = new ConfigurationBuilder();
-        _configurationBuilderAction?.Invoke(configurationBuilder);
+        
+        foreach (var action in _configurationBuilderActions)
+        {
+            action(configurationBuilder);
+        }
         
         var configuration = configurationBuilder.Build();
         
@@ -44,48 +49,26 @@ public class AppBuilder : IAppBuilder
             .Singleton(typeof(IEventsSource<>),typeof(EventsSource<>))
         );
         
-        foreach (var action in _configureActions)
-        {
-            action(ctx);
-        }
-
         foreach (var action in ctx.GetConfigurations())
         {
             action(configuration);
         }
         
-        var serviceResolver = _serviceResolverBuilder.Build(ctx.GetServicesRegistrations());
+        foreach (var action in _configureActions)
+        {
+            action(ctx);
+        }
         
-        // var modules = ctx.GetModules()
-        //     .OrderBy(t=>t.ExecutionFlowOrder)
-        //     .ToList();
-        //
-        // foreach (var module in modules)
-        // {
-        //     try
-        //     {
-        //         module.Configure(ctx);
-        //     }
-        //     catch (Exception e)
-        //     {
-        //         throw new AppCreationException($"Failed to configure \"{module.Name}\" module", e);
-        //     }
-        // }
+        var serviceResolver = _serviceResolverBuilder.Build(configuration, ctx.GetServicesRegistrations());
+        
+        var app = CreateApp(serviceResolver);
+        
+        return app;
+    }
 
-        // foreach (var module in modules)
-        // {
-        //     try
-        //     {
-        //         module.Execute(serviceProvider, configuration);
-        //     }
-        //     catch (Exception e)
-        //     {
-        //         throw new AppCreationException($"Failed to execute \"{module.Name}\" module", e);
-        //     }
-        // }
-        
+    protected virtual IApp CreateApp(IServiceResolver serviceResolver)
+    {
         var app = serviceResolver.Resolve<IApp>() ?? throw new AppCreationException($"Failed to instantiate the \"{nameof(IApp)}\"");
-        
         return app;
     }
 

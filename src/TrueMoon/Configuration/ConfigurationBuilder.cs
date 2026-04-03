@@ -48,9 +48,11 @@ public class ConfigurationBuilder : IConfigurationBuilder
     public IConfiguration Build()
     {
         var argsSection = new CommandLineArgsProvider();
+        var envSection = new EnvironmentVariablesProvider();
         var defaultProvider = new DefaultConfigurationProvider();
         var configuration = new CommonConfiguration([
             argsSection,
+            envSection,
             defaultProvider,
         ]);
         

@@ -55,31 +55,31 @@ public class CobaltGenerator : IIncrementalGenerator
                     ResolverSourceItem item = null;
                     switch (methodSymbol.Name)
                     {
-                        case "Instance":
-                        {
-                            INamedTypeSymbol serviceTypeSymbol = null;
-                            if (methodSymbol.TypeArguments.Length == 1)
-                            {
-                                // Instance<T>(obj)
-                                serviceTypeSymbol = methodSymbol.TypeArguments[0] as INamedTypeSymbol;
-                            }
-                            else
-                            {
-                                // Instance(obj)
-                                serviceTypeSymbol = methodSymbol.Parameters[0].Type as INamedTypeSymbol;
-                            }
-
-                            var generated = GenerateTypeResolver(assembly, ResolvingServiceLifetime.Singleton, ResolvingServiceCreationType.Instance, serviceTypeSymbol!);
-
-                            item = new ResolverSourceItem
-                            {
-                                ServiceName = generated.name,
-                                CreationType = ResolvingServiceCreationType.Instance,
-                                ServiceTypeSymbol = serviceTypeSymbol,
-                                Source = generated.code
-                            };
-                        }
-                            break;
+                        // case "Instance":
+                        // {
+                        //     INamedTypeSymbol serviceTypeSymbol = null;
+                        //     if (methodSymbol.TypeArguments.Length == 1)
+                        //     {
+                        //         // Instance<T>(obj)
+                        //         serviceTypeSymbol = methodSymbol.TypeArguments[0] as INamedTypeSymbol;
+                        //     }
+                        //     else
+                        //     {
+                        //         // Instance(obj)
+                        //         serviceTypeSymbol = methodSymbol.Parameters[0].Type as INamedTypeSymbol;
+                        //     }
+                        //
+                        //     var generated = GenerateTypeResolver(assembly, ResolvingServiceLifetime.Singleton, ResolvingServiceCreationType.Instance, serviceTypeSymbol!);
+                        //
+                        //     item = new ResolverSourceItem
+                        //     {
+                        //         ServiceName = generated.name,
+                        //         CreationType = ResolvingServiceCreationType.Instance,
+                        //         ServiceTypeSymbol = serviceTypeSymbol,
+                        //         Source = generated.code
+                        //     };
+                        // }
+                        //     break;
                         case "Singleton":
                         {
                             if (methodSymbol.TypeArguments.Length == 1)
@@ -417,15 +417,15 @@ public class CobaltGenerator : IIncrementalGenerator
             var vstr = item.CreationType switch
             {
                 ResolvingServiceCreationType.New =>
-                    $"        ServiceResolvers.Shared.Add(a => new {item.ServiceName}());",
-                ResolvingServiceCreationType.Instance => $"        ServiceResolvers.Shared.Add(a => new {item.ServiceName}(a.GetInstance<global::{item.ServiceTypeSymbol}>()));",
-                ResolvingServiceCreationType.Factory when !string.IsNullOrWhiteSpace(item.FactoryCode) => 
-                    $"        ServiceResolvers.Shared.Add(a => new {item.ServiceName}({item.FactoryCode}));",
-                ResolvingServiceCreationType.Factory => 
-                    $"        ServiceResolvers.Shared.Add(a => new {item.ServiceName}(a.GetFactory<global::{item.ServiceTypeSymbol}>().Get()));",
+                    $"        ServiceResolvers.Shared.Add(() => new {item.ServiceName}());",
+                //ResolvingServiceCreationType.Instance => $"        ServiceResolvers.Shared.Add(() => new {item.ServiceName}(a.GetInstance<global::{item.ServiceTypeSymbol}>()));",
+                // ResolvingServiceCreationType.Factory when !string.IsNullOrWhiteSpace(item.FactoryCode) => 
+                //     $"        ServiceResolvers.Shared.Add(() => new {item.ServiceName}({item.FactoryCode}));",
+                //ResolvingServiceCreationType.Factory => 
+                //    $"        ServiceResolvers.Shared.Add(() => new {item.ServiceName}(a.GetFactory<global::{item.ServiceTypeSymbol}>().Get()));",
                 ResolvingServiceCreationType.Generic => 
-                    $"        ServiceResolvers.Shared.Add(typeof(global::{item.ServiceTypeSymbol}), a => new {item.ServiceName}());",
-                _ => $"        ServiceResolvers.Shared.Add(a => new {item.ServiceName}());",
+                    $"        ServiceResolvers.Shared.Add(typeof(global::{item.ServiceTypeSymbol}), () => new {item.ServiceName}());",
+                _ => $"        ServiceResolvers.Shared.Add(() => new {item.ServiceName}());",
             };
 
             sb.AppendLine(vstr);
@@ -460,6 +460,7 @@ public class CobaltGenerator : IIncrementalGenerator
     {
         var sb = new StringBuilder();
         sb.AppendLine("// auto-generated by TrueMoon.Cobalt.Generator");
+        sb.AppendLine("using System;");
         sb.AppendLine("using TrueMoon.Services;");
         sb.AppendLine("using TrueMoon.Cobalt;");
         sb.AppendLine("using System.Runtime.CompilerServices;");
@@ -471,12 +472,12 @@ public class CobaltGenerator : IIncrementalGenerator
         if (implementation != null)
         {
             className = $"{implementation.Name}Resolver";
-            sb.AppendLine($"public class {className} : IResolver<global::{service}, global::{implementation}>");
+            sb.AppendLine($"public class {className} : IResolver<global::{service}, global::{implementation}>, IObjectResolver");
         }
         else
         {
             className = $"{service.Name}Resolver";
-            sb.AppendLine($"public class {className} : IResolver<global::{service}>");
+            sb.AppendLine($"public class {className} : IResolver<global::{service}>, IObjectResolver");
         }
         
         var resolvingType = implementation ?? service;
@@ -496,35 +497,36 @@ public class CobaltGenerator : IIncrementalGenerator
         switch (lifetime)
         {
             case ResolvingServiceLifetime.Singleton:
-                sb.AppendLine("    public ResolvingServiceLifetime ServiceLifetime => ResolvingServiceLifetime.Singleton;");
+                sb.AppendLine("    public ServiceLifetime ServiceLifetime => ServiceLifetime.Singleton;");
                 break;
             case ResolvingServiceLifetime.Transient:
-                sb.AppendLine("    public ResolvingServiceLifetime ServiceLifetime => ResolvingServiceLifetime.Transient;");
+                sb.AppendLine("    public ServiceLifetime ServiceLifetime => ServiceLifetime.Transient;");
                 break;
         }
 
         sb.AppendLine();
         
-        if (creationType == ResolvingServiceCreationType.Instance)
-        {
-            sb.AppendLine($"    public {service.Name}Resolver(global::{service} instance)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        _instance = instance;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-        }
-        else if (creationType == ResolvingServiceCreationType.Factory)
-        {
-            sb.AppendLine($"    private readonly Func<IServiceResolver,global::{service}> _factory; ");
-            sb.AppendLine();
-            sb.AppendLine($"    public {service.Name}Resolver(Func<IServiceResolver,global::{service}> factory)");
-            sb.AppendLine("    {");
-            sb.AppendLine("        _factory = factory;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-        }
+        // if (creationType == ResolvingServiceCreationType.Instance)
+        // {
+        //     sb.AppendLine($"    public {service.Name}Resolver(global::{service} instance)");
+        //     sb.AppendLine("    {");
+        //     sb.AppendLine("        _instance = instance;");
+        //     sb.AppendLine("    }");
+        //     sb.AppendLine();
+        // }
+        // else 
+        // if (creationType == ResolvingServiceCreationType.Factory)
+        // {
+        //     sb.AppendLine($"    private readonly Func<IServiceResolver,global::{service}> _factory; ");
+        //     sb.AppendLine();
+        //     sb.AppendLine($"    public {service.Name}Resolver(Func<IServiceResolver,global::{service}> factory)");
+        //     sb.AppendLine("    {");
+        //     sb.AppendLine("        _factory = factory;");
+        //     sb.AppendLine("    }");
+        //     sb.AppendLine();
+        // }
         
-        sb.AppendLine($"    public global::{service} Resolve(IResolvingContext context)");
+        sb.AppendLine($"    public global::{service} Resolve(IServiceResolver context)");
         sb.AppendLine("    {");
         
         if (lifetime == ResolvingServiceLifetime.Singleton)
@@ -553,11 +555,12 @@ public class CobaltGenerator : IIncrementalGenerator
 
         if (lifetime == ResolvingServiceLifetime.Singleton)
         {
-            if (creationType == ResolvingServiceCreationType.Factory)
-            {
-                sb.AppendLine("        _instance = _factory(context);");
-            }
-            else if (creationType == ResolvingServiceCreationType.New)
+            // if (creationType == ResolvingServiceCreationType.Factory)
+            // {
+            //     sb.AppendLine("        _instance = _factory(context);");
+            // }
+            // else 
+            if (creationType == ResolvingServiceCreationType.New)
             {
                 sb.AppendLine($"        _instance = new global::{resolvingType}({parametersString.TrimEnd(',')});");
             }
@@ -566,9 +569,11 @@ public class CobaltGenerator : IIncrementalGenerator
         }
         else
         {
-            sb.AppendLine(creationType == ResolvingServiceCreationType.Factory
-                ? "        return _factory(context);"
-                : $"        return new global::{resolvingType}({parametersString.TrimEnd(',')});");
+            // sb.AppendLine(creationType == ResolvingServiceCreationType.Factory
+            //     ? "        return _factory(context);"
+            //     : $"        return new global::{resolvingType}({parametersString.TrimEnd(',')});");
+            
+            sb.AppendLine($"        return new global::{resolvingType}({parametersString.TrimEnd(',')});");
         }
         
         sb.AppendLine("    }");
@@ -578,7 +583,7 @@ public class CobaltGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("    public bool IsServiceDisposable { get; } = " + (isDisposable ? "true" : "false") + ";");
         sb.AppendLine();
-        sb.AppendLine("    object IResolver.Resolve(IResolvingContext context) => Resolve(context);");
+        sb.AppendLine("    object IObjectResolver.Resolve(IServiceResolver context) => Resolve(context);");
         sb.AppendLine("}");
 
         var source = sb.ToString();
@@ -603,13 +608,13 @@ public class CobaltGenerator : IIncrementalGenerator
         string className = default;
         if (implementation != null)
         {
-            sb.AppendLine($"public class {implementation.Name}Resolver : IUnboundGenericResolver");
+            sb.AppendLine($"public class {implementation.Name}Resolver : IGenericResolver");
 
             className = $"{implementation.Name}Resolver";
         }
         else
         {
-            sb.AppendLine($"public class {service.Name}Resolver : IUnboundGenericResolver");
+            sb.AppendLine($"public class {service.Name}Resolver : IGenericResolver");
             className = $"{service.Name}Resolver";
         }
         
@@ -630,17 +635,17 @@ public class CobaltGenerator : IIncrementalGenerator
         switch (lifetime)
         {
             case ResolvingServiceLifetime.Singleton:
-                sb.AppendLine("    public ResolvingServiceLifetime ServiceLifetime => ResolvingServiceLifetime.Singleton;");
+                sb.AppendLine("    public ServiceLifetime ServiceLifetime => ServiceLifetime.Singleton;");
                 break;
             case ResolvingServiceLifetime.Transient:
-                sb.AppendLine("    public ResolvingServiceLifetime ServiceLifetime => ResolvingServiceLifetime.Transient;");
+                sb.AppendLine("    public ServiceLifetime ServiceLifetime => ServiceLifetime.Transient;");
                 break;
         }
 
         sb.AppendLine();
         sb.AppendLine($"    private static readonly Type UnboundGenericType = typeof(global::{resolvingType});");
         
-        sb.AppendLine("    public object ResolveGeneric(Type[] genericArgument, IResolvingContext context)");
+        sb.AppendLine("    public object? Resolve(Type[] genericArgument, IServiceResolver context)");
         sb.AppendLine("    {");
         sb.AppendLine("        var type = UnboundGenericType.MakeGenericType(genericArgument);");
         sb.AppendLine();

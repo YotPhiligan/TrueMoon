@@ -1,21 +1,22 @@
 ﻿using System.Reflection;
+using TrueMoon.Services;
 
 namespace TrueMoon.Cobalt.Tests;
 
-public class TestGenericService2Resolver : IUnboundGenericResolver
+public class TestGenericService2Resolver : IGenericResolver
 {
     public bool IsServiceDisposable { get; }
-    public ResolvingServiceLifetime ServiceLifetime { get; }
+    public ServiceLifetime ServiceLifetime { get; }
     
     private static readonly Type UnboundGenericType = typeof(TestGenericService2<>); 
     
     private readonly Dictionary<Type, object> _instances = new ();
     
-    public object ResolveGeneric(Type[] genericArgument, IResolvingContext context)
+    public object Resolve(Type[] genericArgument, IServiceResolver context)
     {
         var type = UnboundGenericType.MakeGenericType(genericArgument);
         
-        if (ServiceLifetime == ResolvingServiceLifetime.Singleton 
+        if (ServiceLifetime == ServiceLifetime.Singleton 
             && _instances.TryGetValue(type, out var value))
         {
             return value;
@@ -28,7 +29,7 @@ public class TestGenericService2Resolver : IUnboundGenericResolver
         var ctr = ctrs.First(t=>t.GetParameters().Length == args.Length);
         var item = ctr.Invoke(BindingFlags.Default, null, args, null);
 
-        if (ServiceLifetime == ResolvingServiceLifetime.Singleton)
+        if (ServiceLifetime == ServiceLifetime.Singleton)
         {
             _instances.Add(type, item);
         }

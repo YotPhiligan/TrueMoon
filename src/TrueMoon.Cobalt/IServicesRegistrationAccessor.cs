@@ -2,6 +2,5 @@
 
 public interface IServicesRegistrationAccessor
 {
-    TInstance? GetInstance<TInstance>();
-    IFactoryContainer<TService> GetFactory<TService>();
+    IReadOnlyList<ServiceRegistrationHandle> GetHandles();
 }

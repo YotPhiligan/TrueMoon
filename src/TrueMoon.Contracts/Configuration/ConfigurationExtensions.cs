@@ -2,19 +2,35 @@
 
 public static class ConfigurationExtensions
 {
-    public static IConfiguration Set<T>(this IConfiguration configuration, string key, T? value, string? sectionName = default)
+    public static IConfiguration Set<T>(this IConfiguration configuration, T? value, string? key = null, string? sectionName = null)
     {
         var section = configuration.GetSection(sectionName);
         if (section is null)
         {
             throw new InvalidOperationException($"section \"{sectionName}\" not found");
         }
+        
+        key ??= typeof(T).Name;
+        
         section.Set(key, value);
         return configuration;
     }
     
-    public static T? Get<T>(this IConfiguration configuration, string key, string? sectionName = default)
+    public static T? Get<T>(this IConfiguration configuration, string? key = null, string? sectionName = null)
     {
+        key ??= typeof(T).Name;
+        
+        if (string.IsNullOrWhiteSpace(sectionName))
+        {
+            foreach (var configurationSection in configuration.GetSections())
+            {
+                if (configurationSection.TryGetValue<T>(key, out var value))
+                {
+                    return value;
+                }
+            }
+        }
+        
         var section = configuration.GetSection(sectionName);
         return section != null ? section.Get<T>(key) : default;
     }
@@ -30,5 +46,19 @@ public static class ConfigurationExtensions
         var section = configuration.GetSection();
 
         return section?.Get<string>("appName");
+    }
+    
+    public static T GetOrCreate<T>(this IConfiguration configuration, string? key = null, string? sectionName = null)
+        where T : class, new()
+    {
+        var item = configuration.Get<T>(key,sectionName);
+        if (item != null)
+        {
+            return item;
+        }
+        
+        item ??= new T();
+        configuration.Set(item, key, sectionName);
+        return item;
     }
 }

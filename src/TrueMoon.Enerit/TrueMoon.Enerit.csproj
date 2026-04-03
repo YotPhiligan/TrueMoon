@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(TF)</TargetFramework>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
+      <ProjectReference Include="..\TrueMoon.Core\TrueMoon.Core.csproj" />
+      <ProjectReference Include="..\TrueMoon.Enerit.Generator\TrueMoon.Enerit.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+    </ItemGroup>
+
+
+</Project>

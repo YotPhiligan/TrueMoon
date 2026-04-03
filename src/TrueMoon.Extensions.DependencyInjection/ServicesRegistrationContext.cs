@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using TrueMoon.Services;
 
 namespace TrueMoon.Extensions.DependencyInjection;
@@ -133,6 +134,23 @@ public class ServicesRegistrationContext : IServicesRegistrationContext
         _serviceCollection.AddSingleton<TService,TImplementationReplacement>();
         return this;
     }
-    
+
+    public IServicesRegistrationContext RemoveAll<T>()
+    {
+        _serviceCollection.RemoveAll<T>();
+        return this;
+    }
+
+    public bool Exist<TService>() 
+        => Exist(typeof(TService));
+
+    public bool Exist<TService, TImplementation>() where TImplementation : class, TService 
+        => Exist(typeof(TService), typeof(TImplementation));
+
+    public bool Exist(Type serviceType) 
+        => _serviceCollection.Any(t=>t.ServiceType == serviceType);
+
+    public bool Exist(Type serviceType, Type implementationType) => _serviceCollection.Any(t=>t.ServiceType == serviceType && t.ImplementationType == implementationType);
+
     public IServiceCollection GetServiceCollection() => _serviceCollection;
 }
