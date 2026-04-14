@@ -3,7 +3,7 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace TrueMoon.Thorium.Generator;
+namespace TrueMoon.Enerit.Generator;
 
 [Generator(LanguageNames.CSharp)]
 public class SignalsMappingGenerator : IIncrementalGenerator

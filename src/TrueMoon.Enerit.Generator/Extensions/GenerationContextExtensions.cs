@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
-using TrueMoon.Thorium.Generator.Utils;
+using TrueMoon.Enerit.Generator.Utils;
 
-namespace TrueMoon.Thorium.Generator.Extensions;
+namespace TrueMoon.Enerit.Generator.Extensions;
 
 public static class GenerationContextExtensions
 {

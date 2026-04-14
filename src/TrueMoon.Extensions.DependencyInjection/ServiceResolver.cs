@@ -3,16 +3,21 @@ using TrueMoon.Services;
 
 namespace TrueMoon.Extensions.DependencyInjection;
 
-public class ServiceResolver(ServiceProvider serviceProvider) : IServiceResolver
+public class ServiceResolver(IServiceProvider serviceProvider) : IServiceResolver
 {
+    private static readonly Type ResolverType = typeof(IServiceResolver);
     public object? GetService(Type serviceType)
     {
+        if (serviceType == ResolverType)
+        {
+            return this;
+        }
         return serviceProvider.GetService(serviceType);
     }
 
     public T Resolve<T>()
     {
-        if (typeof(T) == typeof(IServiceResolver))
+        if (typeof(T) == ResolverType)
         {
             return (T)(object)this;
         }
@@ -22,6 +27,11 @@ public class ServiceResolver(ServiceProvider serviceProvider) : IServiceResolver
 
     public T? TryResolve<T>()
     {
-        throw new NotImplementedException();
+        if (typeof(T) == ResolverType)
+        {
+            return (T)(object)this;
+        }
+        
+        return serviceProvider.GetService<T>();
     }
 }

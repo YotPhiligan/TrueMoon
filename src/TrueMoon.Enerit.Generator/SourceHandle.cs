@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace TrueMoon.Thorium.Generator;
+namespace TrueMoon.Enerit.Generator;
 
 public class SourceHandle
 {
@@ -22,7 +22,7 @@ public class SourceHandle
         
         var name = _symbol?.Name;
 
-        ImplementationClassName = (name.StartsWith("I") ? name.Substring(1) : name) + sourceNamePostfix;
+        ImplementationClassName = (name.StartsWith('I') ? name[1..] : name) + sourceNamePostfix;
     }
 
     public string ImplementationClassName { get; private set; }

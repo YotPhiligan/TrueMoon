@@ -1,14 +1,23 @@
 using System.Collections;
+using TrueMoon.Services;
 
 namespace TrueMoon.Dependencies;
 
 public static class ServiceProviderExtensions
 {
-    public static T? Resolve<T>(this IServiceProvider serviceProvider) 
-        => serviceProvider.GetService(typeof(T)) is T value 
-            ? value 
-            : default;
+    private static readonly Type ResolverType = typeof(IServiceResolver);
     
+    public static T? Resolve<T>(this IServiceProvider serviceProvider)
+    {
+        if (typeof(T) == ResolverType && serviceProvider is IServiceResolver s)
+        {
+            return (T?)s;
+        }
+        return serviceProvider.GetService(typeof(T)) is T value
+            ? value
+            : default;
+    }
+
     public static IEnumerable<T> ResolveAll<T>(this IServiceProvider serviceProvider)
     {
         var o = serviceProvider.GetService(typeof(IEnumerable<T>));

@@ -2,11 +2,13 @@
 using TrueMoon;
 using TrueMoon.Diagnostics;
 using TrueMoon.Enerit;
+using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Mithril;
 
 await App.Builder(t=>t.UseDI())
     .RunAsync(context => context
+        .PipesServiceTransport()
         .UseDiagnostics(configuration => configuration
             .OnEvent(@event => Console.WriteLine($"{@event}"))
             .Filters("TrueMoon")

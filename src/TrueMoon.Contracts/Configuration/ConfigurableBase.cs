@@ -48,8 +48,14 @@ public abstract class ConfigurableBase : IConfigurable
     /// <inheritdoc />
     public virtual bool TryGetValue<T>(string key, out T? value)
     {
-        value = Get<T>(key);
-        return value != null;
+        if (_dictionary.TryGetValue(key, out var v) && v is T?)
+        {
+            value = (T?)_dictionary[key];
+            return true;
+        }
+
+        value = default;
+        return false;
     }
 
     /// <inheritdoc />

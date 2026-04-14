@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 
-namespace TrueMoon.Thorium.Generator;
+namespace TrueMoon.Enerit.Generator;
 
 public class GenerationContext
 {

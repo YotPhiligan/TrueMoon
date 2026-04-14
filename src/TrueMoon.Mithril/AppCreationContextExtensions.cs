@@ -8,7 +8,7 @@ public static class AppCreationContextExtensions
 
     internal static IReadOnlyList<(int index, Action<IUnitConfiguration>? config)> GetUnitConfigurations() =>
         List.Select(t => (t.index, t.config)).ToList();
-    
+
     /// <summary>
     /// Configure isolated processing unit
     /// <para>Depending on the settings may or may not be started in separate child process (by default in separate process)</para>
@@ -16,12 +16,19 @@ public static class AppCreationContextExtensions
     /// </summary>
     /// <param name="context">app creation context</param>
     /// <param name="action">processing unit configuration delegate</param>
+    /// <param name="configureAction">unit hosting configuration</param>
     /// <returns></returns>
     public static IAppConfigurationContext AddUnit(this IAppConfigurationContext context, Action<IAppConfigurationContext> action, Action<IUnitConfiguration>? configureAction = null)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        List.Add((List.Count, action, configureAction));
+        List.Add((List.Count+1, action, configureAction ?? (t =>
+        {
+            t.HostingPolicy = UnitHostingPolicy.ChildProcess;
+            t.LifetimePolicy = UnitLifetimePolicy.App;
+            t.StartupPolicy = UnitStartupPolicy.Immediate;
+            t.RestartPolicy = UnitRestartPolicy.Always;
+        })));
         
         context.Services((configuration, ctx) =>
         {
@@ -37,7 +44,7 @@ public static class AppCreationContextExtensions
                 
                 v.action(context);
 
-                if (configuration.GetProcessingUnitParentId() is {} p)
+                if (configuration.GetProcessingUnitParentId() is not null)
                 {
                     if (!ctx.Exist<IStartable,UnitParentProcessEventsHandler>())
                     {

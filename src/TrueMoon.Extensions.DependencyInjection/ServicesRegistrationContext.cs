@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using TrueMoon.Dependencies;
 using TrueMoon.Services;
 
 namespace TrueMoon.Extensions.DependencyInjection;
@@ -30,7 +31,7 @@ public class ServicesRegistrationContext : IServicesRegistrationContext
     public IServicesRegistrationContext Singleton<TService>(Func<IServiceResolver, TService> factory) 
         where TService : class
     {
-        _serviceCollection.AddSingleton<TService>(s => factory(s.GetService<IServiceResolver>()));
+        _serviceCollection.AddSingleton<TService>(s => factory(s.Resolve<IServiceResolver>()));
         return this;
     }
 
@@ -57,7 +58,7 @@ public class ServicesRegistrationContext : IServicesRegistrationContext
     public IServicesRegistrationContext Transient<TService>(Func<IServiceResolver, TService> factory) 
         where TService : class
     {
-        _serviceCollection.AddTransient<TService>(s => factory(s.GetService<IServiceResolver>()));
+        _serviceCollection.AddTransient<TService>(s => factory(s.Resolve<IServiceResolver>()));
         return this;
     }
 

@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace TrueMoon.Thorium.Generator.Utils;
+namespace TrueMoon.Enerit.Generator.Utils;
 
 internal static class GenerationUtils
 {

@@ -9,6 +9,7 @@ public static class EneriteConfigurationContextExtensions
             .RemoveAll<IInvocationServerFactory>()
             .Singleton<IInvocationClientFactory, PipesInvocationClientFactory>()
             .Singleton<IInvocationServerFactory, PipesInvocationServerFactory>()
+            .Transient<IInvocationServerHandlerResolver, InvocationServerHandlerResolver>()
         );
         return context;
     }

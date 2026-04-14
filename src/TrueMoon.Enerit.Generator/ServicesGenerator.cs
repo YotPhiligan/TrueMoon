@@ -3,10 +3,10 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using TrueMoon.Thorium.Generator.Extensions;
-using TrueMoon.Thorium.Generator.Utils;
+using TrueMoon.Enerit.Generator.Extensions;
+using TrueMoon.Enerit.Generator.Utils;
 
-namespace TrueMoon.Thorium.Generator;
+namespace TrueMoon.Enerit.Generator;
 
 [Generator(LanguageNames.CSharp)]
 public class ServicesGenerator : IIncrementalGenerator

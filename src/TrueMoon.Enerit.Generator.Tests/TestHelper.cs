@@ -1,6 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using TrueMoon.Thorium.Generator;
 
 namespace TrueMoon.Enerit.Generator.Tests;
 

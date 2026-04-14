@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 
-namespace TrueMoon.Thorium.Generator.Extensions;
+namespace TrueMoon.Enerit.Generator.Extensions;
 
 public static class SymbolExtensions
 {
