@@ -52,7 +52,7 @@ public static class AppCreationContextExtensions
                     }
                 }
 
-                configuration.Set(true, "mithril_configured");
+                configuration.Set("mithril_configured", true);
                 return;
             }
         
@@ -69,7 +69,7 @@ public static class AppCreationContextExtensions
                 {
                     ctx.Composite<UnitsController, IUnitsController, IStartable, IStoppable>();
                     
-                    configuration.Set(true, "mithril_configured");
+                    configuration.Set("mithril_configured",true);
                 }
             }
             

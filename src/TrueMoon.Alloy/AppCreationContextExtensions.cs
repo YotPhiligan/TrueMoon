@@ -1,42 +1,37 @@
-﻿using TrueMoon.Aluminum;
-using TrueMoon.Dependencies;
+﻿using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy;
 
 public static class AppCreationContextExtensions
 {
-    public static IAppConfigurationContext UsePresentation(this IAppConfigurationContext context, Action<PresentationConfiguration>? configurationDelegate = default)
+    public static IAppConfigurationContext UsePresentation<TView>(this IAppConfigurationContext context, Action<PresentationConfiguration>? configurationDelegate = null)
+        where TView : class, IView
     {
-        var module = context.GetAlloy();
+        context.ConfigurePresentationBase();
         
-        configurationDelegate?.Invoke(module.Configuration);
-        
-        return context;
-    }
-    
-    public static IAppConfigurationContext UsePresentation(this IAppConfigurationContext context, Action<IView> viewConfigurationDelegate, Action<PresentationConfiguration>? configurationDelegate = default)
-    {
-        var module = context.GetAlloy();
-        
-        configurationDelegate?.Invoke(module.Configuration);
-        module.Configuration.StartupViewCreationDelegate = viewConfigurationDelegate;
-        
-        return context;
-    }
-    
-    public static IAppConfigurationContext UsePresentation<TView>(this IAppConfigurationContext context, Action<PresentationConfiguration>? configurationDelegate = default)
-        where TView : IView
-    {
-        var module = context.GetAlloy();
-        
-        configurationDelegate?.Invoke(module.Configuration);
-        module.Configuration.StartupViewType = typeof(TView);
+        var configuration = new PresentationConfiguration();
+        configurationDelegate?.Invoke(configuration);
+        configuration.StartupViewType ??= typeof(TView);
 
+        context.Services(registrationContext => registrationContext
+            .Singleton<TView>()
+            .Singleton<IView>(t => t.Resolve<TView>())
+            .Instance(configuration)
+        );
+        
         return context;
     }
     
-    public static AlloyModule GetAlloy(this IAppConfigurationContext context)
+    private static void ConfigurePresentationBase(this IAppConfigurationContext context)
     {
-        throw new NotImplementedException();
+        context.Services(registrationContext => registrationContext
+            .Singleton<IViewManager,ViewManager>()
+            .Singleton<IFactory<IGraphicsPlatform>, GlGraphicsPlatformFactory>()
+            .Singleton<IFactory<IViewPresenter>, SkiaGlViewPresenterFactory>()
+            .Singleton<IFactory<IContentPresenter>, SkiaContentPresenterFactory>()
+            .Singleton<IFactory<IViewHandle>, ViewHandleFactory>()
+            .Singleton<IVisualTreeBuilder, VisualTreeBuilder>()
+            .Composite<PresentationInitializer,IPresentationInitializer,IStartable>()
+        );
     }
 }

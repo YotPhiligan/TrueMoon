@@ -1,4 +1,5 @@
-﻿using TrueMoon;
+﻿using AlloyTest;
+using TrueMoon;
 using TrueMoon.Alloy;
 using TrueMoon.Diagnostics;
 using TrueMoon.Extensions.DependencyInjection;
@@ -8,5 +9,6 @@ await App.Builder(t=>t.UseDI())
         .UseDiagnostics(configuration => configuration
             .OnEvent(@event => Console.WriteLine($"{@event}"))
         )
-        .UsePresentation()
+        .UsePresentation<View1>()
+        .Services(t=>t.Singleton<View2>())
     );

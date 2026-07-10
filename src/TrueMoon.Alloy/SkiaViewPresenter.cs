@@ -1,6 +1,6 @@
 ﻿using Silk.NET.OpenGL;
 using SkiaSharp;
-using TrueMoon.Aluminum;
+using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy;
 
@@ -325,7 +325,7 @@ public class SkiaViewPresenter : IViewPresenter
                 break;
             }
 
-            visual.ContentPresenter?.Present(dt, _contentPresenterContext);
+            visual?.Presenter?.Present(dt, _contentPresenterContext);
         }
         
         _canvas.Flush();

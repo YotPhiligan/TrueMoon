@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\TrueMoon.Argentum\TrueMoon.Argentum.csproj" />
+      <ProjectReference Include="..\TrueMoon.Argentis\TrueMoon.Argentis.csproj" />
       <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
       <ProjectReference Include="..\TrueMoon.Core\TrueMoon.Core.csproj" />
     </ItemGroup>

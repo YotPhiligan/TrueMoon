@@ -1,5 +1,5 @@
 ﻿using System.Collections;
-using TrueMoon.Aluminum;
+using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy;
 
@@ -35,7 +35,6 @@ public class Visual : IVisual
     public int Height { get; set; }
     public bool IsVisible { get; set; }
     public IVisual? Root { get; set; }
-    public IContentPresenter? ContentPresenter { get; }
     
     public void Add(IVisual visual)
     {

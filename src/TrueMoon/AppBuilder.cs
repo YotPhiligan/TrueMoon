@@ -49,14 +49,14 @@ public class AppBuilder : IAppBuilder
             .Singleton(typeof(IEventsSource<>),typeof(EventsSource<>))
         );
         
-        foreach (var action in ctx.GetConfigurations())
-        {
-            action(configuration);
-        }
-        
         foreach (var action in _configureActions)
         {
             action(ctx);
+        }
+        
+        foreach (var action in ctx.GetConfigurations())
+        {
+            action(configuration);
         }
         
         var serviceResolver = _serviceResolverBuilder.Build(configuration, ctx.GetServicesRegistrations());

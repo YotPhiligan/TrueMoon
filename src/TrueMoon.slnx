@@ -17,7 +17,7 @@
     <Project Path="ManualTests\CobaltTest\CobaltTest.csproj" />
   </Folder>
   <Project Path="TrueMoon.Alloy\TrueMoon.Alloy.csproj" />
-  <Project Path="TrueMoon.Argentum/TrueMoon.Argentum.csproj" />
+  <Project Path="TrueMoon.Argentis/TrueMoon.Argentis.csproj" />
   <Project Path="TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
   <Project Path="TrueMoon.Core\TrueMoon.Core.csproj" />
   <Project Path="TrueMoon.Enerit.Generator.Tests/TrueMoon.Enerit.Generator.Tests.csproj" />

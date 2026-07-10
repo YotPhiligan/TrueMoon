@@ -21,8 +21,7 @@ public class ServicesRegistrationContext : IServicesRegistrationContext
     }
 
     public IServicesRegistrationContext Singleton<TService, TImplementation>() 
-        where TImplementation : class, 
-        TService where TService : class
+        where TImplementation : class, TService where TService : class
     {
         _serviceCollection.AddSingleton<TService,TImplementation>();
         return this;
@@ -104,6 +103,59 @@ public class ServicesRegistrationContext : IServicesRegistrationContext
         _serviceCollection.AddSingleton<TService2>(s=> s.GetService<TImplementation>());
         _serviceCollection.AddSingleton<TService3>(s=> s.GetService<TImplementation>());
         _serviceCollection.AddSingleton<TService4>(s=> s.GetService<TImplementation>());
+        return this;
+    }
+
+    public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3, TService4, TService5>() where TImplementation : class, TService1, TService2, TService3, TService4, TService5 where TService1 : class where TService2 : class where TService3 : class where TService4 : class where TService5 : class
+    {
+        _serviceCollection.AddSingleton<TImplementation>();
+        _serviceCollection.AddSingleton<TService1>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService2>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService3>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService4>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService5>(s=> s.GetService<TImplementation>());
+        return this;
+    }
+
+    public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3, TService4, TService5,
+        TService6>() where TImplementation : class, TService1, TService2, TService3, TService4, TService5, TService6 where TService1 : class where TService2 : class where TService3 : class where TService4 : class where TService5 : class where TService6 : class
+    {
+        _serviceCollection.AddSingleton<TImplementation>();
+        _serviceCollection.AddSingleton<TService1>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService2>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService3>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService4>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService5>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService6>(s=> s.GetService<TImplementation>());
+        return this;
+    }
+
+    public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3, TService4, TService5,
+        TService6, TService7>() where TImplementation : class, TService1, TService2, TService3, TService4, TService5, TService6, TService7 where TService1 : class where TService2 : class where TService3 : class where TService4 : class where TService5 : class where TService6 : class where TService7 : class
+    {
+        _serviceCollection.AddSingleton<TImplementation>();
+        _serviceCollection.AddSingleton<TService1>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService2>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService3>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService4>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService5>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService6>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService7>(s=> s.GetService<TImplementation>());
+        return this;
+    }
+
+    public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3, TService4, TService5,
+        TService6, TService7, TService8>() where TImplementation : class, TService1, TService2, TService3, TService4, TService5, TService6, TService7, TService8 where TService1 : class where TService2 : class where TService3 : class where TService4 : class where TService5 : class where TService6 : class where TService7 : class where TService8 : class
+    {
+        _serviceCollection.AddSingleton<TImplementation>();
+        _serviceCollection.AddSingleton<TService1>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService2>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService3>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService4>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService5>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService6>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService7>(s=> s.GetService<TImplementation>());
+        _serviceCollection.AddSingleton<TService8>(s=> s.GetService<TImplementation>());
         return this;
     }
 

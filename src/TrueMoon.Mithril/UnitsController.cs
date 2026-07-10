@@ -21,7 +21,13 @@ public class UnitsController : IUnitsController, IStartable, IStoppable, IDispos
         
         _unitConfigurations = [..list.Select(t=>
         {
-            var unitConfiguration = new UnitConfiguration(t.index);
+            var unitConfiguration = new UnitConfiguration(t.index)
+            {
+                HostingPolicy = UnitHostingPolicy.ChildProcess,
+                LifetimePolicy = UnitLifetimePolicy.App,
+                StartupPolicy = UnitStartupPolicy.Immediate,
+                RestartPolicy = UnitRestartPolicy.Always
+            };
             t.config?.Invoke(unitConfiguration);
             return unitConfiguration;
         })];
@@ -34,8 +40,11 @@ public class UnitsController : IUnitsController, IStartable, IStoppable, IDispos
     {
         _eventsSource.Trace();
         CheckTrailingProcesses();
-        foreach (var unitConfiguration in _unitConfigurations.Where(t=>t.StartupPolicy is UnitStartupPolicy.Immediate))
+        var unitConfigurations =
+            _unitConfigurations.Where(t => t.StartupPolicy is UnitStartupPolicy.Immediate).ToList();
+        foreach (var unitConfiguration in unitConfigurations)
         {
+            _eventsSource.Write(()=>$"{unitConfiguration.Index}, {unitConfiguration.Name} spawning...");
             await SpawnUnitCoreAsync(unitConfiguration, cancellationToken: cancellationToken);
         }
     }

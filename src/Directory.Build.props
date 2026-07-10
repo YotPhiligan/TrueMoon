@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version Condition="'$(Version)' == ''">0.2.2.0-alpha</Version>
+    <Version Condition="'$(Version)' == ''">0.2.2.7-alpha</Version>
     <Authors>yotphiligan</Authors>
     <Company>TrueMoon</Company>
     <Product>TrueMoon Framework</Product>

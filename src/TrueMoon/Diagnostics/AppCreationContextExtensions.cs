@@ -12,7 +12,7 @@ public static class AppCreationContextExtensions
         action?.Invoke(configuration);
         var subscription = new DiagnosticSubscription(configuration);
         context.Configuration(conf =>
-            conf.Set<IDiagnosticsConfiguration>(configuration,ConfigurationExtensions.DiagnosticsConfigurationName));
+            conf.Set<IDiagnosticsConfiguration>(ConfigurationExtensions.DiagnosticsConfigurationName,configuration));
         context.Services(t => t
             .Instance(subscription)
             .Singleton<IEventsSourceFactory, EventsSourceFactory>()

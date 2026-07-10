@@ -1,4 +1,4 @@
-﻿using TrueMoon.Aluminum;
+﻿using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Presenters;
 
@@ -16,7 +16,7 @@ public class CommonContentPresenter<T> : IContentPresenter<T>
             throw new InvalidOperationException($"Invalid presenter context - {context}");
         }
         
-        //ctx.Canvas.DrawRect();
+        //ctx.Canvas.DrawRect(Content);
     }
 
     public T? Content { get; }

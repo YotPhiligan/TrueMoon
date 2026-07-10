@@ -2,15 +2,13 @@
 
 public static class ConfigurationExtensions
 {
-    public static IConfiguration Set<T>(this IConfiguration configuration, T? value, string? key = null, string? sectionName = null)
+    public static IConfiguration Set<T>(this IConfiguration configuration, string key, T? value, string? sectionName = null)
     {
         var section = configuration.GetSection(sectionName);
         if (section is null)
         {
             throw new InvalidOperationException($"section \"{sectionName}\" not found");
         }
-        
-        key ??= typeof(T).Name;
         
         section.Set(key, value);
         return configuration;
@@ -58,7 +56,7 @@ public static class ConfigurationExtensions
         }
         
         item ??= new T();
-        configuration.Set(item, key, sectionName);
+        configuration.Set(key, item, sectionName);
         return item;
     }
 }

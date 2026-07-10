@@ -2,6 +2,7 @@
 using Silk.NET.Windowing;
 using TrueMoon.Diagnostics;
 using TrueMoon.Threading;
+using IView = TrueMoon.Argentis.IView;
 
 namespace TrueMoon.Alloy;
 
@@ -112,11 +113,11 @@ public class ViewHandle : IViewHandle
 
     public event Action Closed;
 
-    public void Attach(TrueMoon.Aluminum.IView? view)
+    public void Attach(IView? view)
     {
         View = view;
     }
     
-    public TrueMoon.Aluminum.IView? View { get; private set; }
+    public IView? View { get; private set; }
     public IVisualTree VisualTree { get; private set; }
 }

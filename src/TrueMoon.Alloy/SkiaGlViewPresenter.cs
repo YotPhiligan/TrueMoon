@@ -12,6 +12,8 @@ public class SkiaGlViewPresenter : IViewPresenter
     private SKCanvas? _canvas;
     private GL? _gl;
     private SkiaContentPresenterContext? _contentPresenterContext;
+    private SKFont _skFont;
+    private SKPaint _fontPaint;
 
     private void RecreateRenderTarget(int width, int height)
     {
@@ -26,35 +28,37 @@ public class SkiaGlViewPresenter : IViewPresenter
 
     public void Present(double t, IVisualTree visualTree)
     {
-        _grContext.ResetContext();
+        //_grContext.ResetContext();
         
         //_canvas.Clear(SKColors.Transparent);
         using var red = new SKPaint();
         red.Color = new SKColor(255, 0, 0, 255);
         _canvas.DrawCircle(150, 150, 100, red);
         
-        using var skFont = new SKFont();
-        skFont.Size = 14;
-        skFont.Typeface = SKTypeface.FromFamilyName("Segoe UI");
-        using var blob = SKTextBlob.Create($"text test {DateTime.Now}".AsSpan(), skFont);
+        using var blob = SKTextBlob.Create($"text test {DateTime.Now.TimeOfDay:G}".AsSpan(), _skFont);
         
-        using var fontPaint = new SKPaint();
-        fontPaint.Color = SKColors.White;
-        _canvas.DrawText(blob, 100, 100, fontPaint);
-        
-        foreach (var visual in visualTree)
-        {
-            if (_contentPresenterContext == null)
-            {
-                break;
-            }
+        _canvas.DrawText(blob, 100, 100, _fontPaint);
 
-            visual.ContentPresenter?.Present(t, _contentPresenterContext);
+        try
+        {
+            foreach (var visual in visualTree)
+            {
+                if (_contentPresenterContext == null)
+                {
+                    break;
+                }
+
+                visual?.Presenter?.Present(t, _contentPresenterContext);
+            }
+        }
+        catch (Exception e)
+        {
+            
         }
         
         _canvas.Flush();
         
-        ClearState();
+        //ClearState();
     }
 
     private void ClearState()
@@ -106,6 +110,14 @@ public class SkiaGlViewPresenter : IViewPresenter
         _grGlInterface = GRGlInterface.Create((name => view.GLContext!.TryGetProcAddress(name, out var addr) ? addr : 0));
         _grGlInterface.Validate();
         _grContext = GRContext.CreateGl(_grGlInterface);
+        GRContext.CreateVulkan(new GRVkBackendContext());
         RecreateRenderTarget(view.FramebufferSize.X, view.FramebufferSize.Y);
+        
+        _skFont = new SKFont();
+        _skFont.Size = 14;
+        _skFont.Typeface = SKTypeface.FromFamilyName("Segoe UI");
+        
+        _fontPaint = new SKPaint();
+        _fontPaint.Color = SKColors.White;
     }
 }
