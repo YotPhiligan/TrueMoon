@@ -1,16 +1,8 @@
 namespace TrueMoon.Argentis;
 
+/// <summary>A rectangle primitive. Retains the original prototype spelling for source compatibility.</summary>
 public class Rectagle : Element
 {
-    public float Width
-    {
-        get => Get<float>(nameof(Width)); 
-        set => Set(nameof(Width), value);
-    }
-    
-    public float Height
-    {
-        get => Get<float>(nameof(Height)); 
-        set => Set(nameof(Height), value);
-    }
+    /// <inheritdoc />
+    protected override void DrawCore(IDrawingContext context) => context.Fill(Bounds, Foreground);
 }

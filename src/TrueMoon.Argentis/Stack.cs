@@ -5,8 +5,15 @@ public static class Stack
     public static VStack Vertical(Action<IElementsList>? action = null)
     {
         var vStack = new VStack();
-        
+        action?.Invoke(vStack);
         return vStack;
+    }
+
+    public static HStack Horizontal(Action<IElementsList>? action = null)
+    {
+        var stack = new HStack();
+        action?.Invoke(stack);
+        return stack;
     }
 }
 

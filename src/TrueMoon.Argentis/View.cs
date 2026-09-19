@@ -1,26 +1,22 @@
-﻿namespace TrueMoon.Argentis;
+namespace TrueMoon.Argentis;
 
-public abstract class View : PropertiesBase, IView
+/// <summary>A reusable view authored in a C# class.</summary>
+public abstract class View : ContentControl, IView
 {
-    protected Func<object>? _contentFunc;
-    public void Content(Func<object> func)
+    /// <summary>Creates content once. Use SetContent to replace it dynamically.</summary>
+    public void Content(Func<object> factory)
     {
-        _contentFunc = func;
+        ArgumentNullException.ThrowIfNull(factory);
+        SetContent(factory() as Element ?? throw new ArgumentException("View content must be an Element.", nameof(factory)));
     }
-
-    public virtual object? GetContent()
-    {
-        return _contentFunc?.Invoke();
-    }
+    /// <inheritdoc />
+    public virtual object? GetContent() => Child;
 }
-
+/// <summary>A view with a typed data context.</summary>
 public abstract class View<TData> : View, IView<TData>
 {
-    public void Content(TData? data, Func<TData?, object> func)
-    {
-        DataContext = data;
-        _contentFunc = () => func(DataContext);
-    }
-
+    /// <inheritdoc />
     public TData? DataContext { get; set; }
+    /// <inheritdoc />
+    public void Content(TData? data, Func<TData?, object> factory) { DataContext = data; Content(() => factory(DataContext)); }
 }

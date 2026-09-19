@@ -1,68 +1,24 @@
 namespace TrueMoon.Argentis;
 
+/// <summary>Fluent composition and configuration helpers.</summary>
 public static class ElementExtensions
 {
-    // public static T Append<T, TAppend>(this T element, TAppend append) 
-    //     where T : IElement where TAppend : IElement
-    // {
-    //     element.Add(append);
-    //     return element;
-    // }
-    //     
-    // public static T Set<T, TProperty>(this T element, TProperty property) 
-    //     where T : IElement
-    //     where TProperty : IParameter
-    // {
-    //     element.SetProperty(property);
-    //     return element;
-    // }
-    //
-    // public static T Background<T>(this T element, string color)
-    //     where T : IElement
-    // {
-    //     element.Set(new Properties.Background());
-    //     return element;
-    // }
-        
-    // public static T Frame<T>(this T element, int width = -1, int height = -1, int x = 0, int y = 0)
-    //     where T : IElement
-    // {
-    //     element.Set(new Frame{Width = width, Height = height, X = x, Y = y});
-    //     return element;
-    // }
-    
-    public static T Width<T>(this T element, float width)
-        where T : IElement
-    {
-        element.Set(nameof(Width), width);
-        return element;
-    }
-    
-    public static T Height<T>(this T element, float height)
-        where T : IElement
-    {
-        element.Set(nameof(Height), height);
-        return element;
-    }
-
-    // public static T Classes<T>(this T element, string classes)
-    //     where T : IUiObject
-    // {
-    //     element.Set(ClassesKey, classes);
-    //     return element;
-    // }
-    //
-    // public static T Classes<T>(this T element, params string[] classes)
-    //     where T : IUiObject
-    // {
-    //     element.Set(ClassesKey, classes);
-    //     return element;
-    // }
-    //
-    // public static T Style<T>(this T element, IStyle<T> style)
-    //     where T : IElement
-    // {
-    //     element.Set(StyleKey, style);
-    //     return element;
-    // }
+    /// <summary>Sets a fixed width.</summary>
+    public static T Width<T>(this T element, float width) where T : Element { element.Width = width; return element; }
+    /// <summary>Sets a fixed height.</summary>
+    public static T Height<T>(this T element, float height) where T : Element { element.Height = height; return element; }
+    /// <summary>Sets a typed property.</summary>
+    public static T SetValue<T, TValue>(this T element, UiProperty<TValue> property, TValue value) where T : Element { element.Set(property, value); return element; }
+    /// <summary>Applies arbitrary strongly typed configuration.</summary>
+    public static T Configure<T>(this T element, Action<T> configure) where T : Element { configure(element); return element; }
+    /// <summary>Applies internal spacing.</summary>
+    public static T Padding<T>(this T element, float padding) where T : Element { element.Padding = new Thickness(padding); return element; }
+    /// <summary>Applies a background color.</summary>
+    public static T Background<T>(this T element, Color color) where T : Element { element.Background = color; return element; }
+    /// <summary>Adds child elements in paint order.</summary>
+    public static T WithChildren<T>(this T element, params Element[] children) where T : ElementList { foreach (var child in children) element.Items.Add(child); return element; }
+    /// <summary>Assigns replaceable content.</summary>
+    public static T Content<T>(this T element, Element? content) where T : ContentControl { element.SetContent(content); return element; }
+    /// <summary>Registers a button action.</summary>
+    public static T OnClick<T>(this T element, Action action) where T : Button { element.Click += action; return element; }
 }
