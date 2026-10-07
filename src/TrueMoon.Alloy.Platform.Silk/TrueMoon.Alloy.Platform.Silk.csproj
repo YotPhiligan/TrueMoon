@@ -6,5 +6,6 @@
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Alloy/TrueMoon.Alloy.csproj" />
     <PackageReference Include="Silk.NET" />
+    <PackageReference Include="Silk.NET.Vulkan.Extensions.EXT" />
   </ItemGroup>
 </Project>

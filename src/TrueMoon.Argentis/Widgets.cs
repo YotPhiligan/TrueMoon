@@ -3,6 +3,11 @@ namespace TrueMoon.Argentis;
 /// <summary>A labeled check box with a bindable boolean value.</summary>
 public sealed class CheckBox : Button
 {
+    /// <summary>Creates a new CheckBox with its constructor defaults.</summary>
+    /// <param name="text">The literal label.</param>
+    /// <returns>A new independent CheckBox for Fluent configuration.</returns>
+    public static CheckBox Create(string text = "") => new(text);
+
     /// <summary>Checked state.</summary>
     public static readonly UiProperty<bool> IsCheckedProperty = new("IsChecked", false);
     /// <summary>Creates a check box.</summary>
@@ -24,6 +29,10 @@ public sealed class CheckBox : Button
 /// <summary>A horizontal progress indicator in the inclusive range zero to one.</summary>
 public class ProgressBar : Element
 {
+    /// <summary>Creates a new ProgressBar with its constructor defaults.</summary>
+    /// <returns>A new independent ProgressBar for Fluent configuration.</returns>
+    public static ProgressBar Create() => new();
+
     /// <summary>Normalized value.</summary>
     public static readonly UiProperty<float> ValueProperty = new("Value", 0, Invalidation.Render, v => float.IsFinite(v) && v >= 0 && v <= 1);
     /// <summary>The normalized progress.</summary>
@@ -41,6 +50,10 @@ public class ProgressBar : Element
 /// <summary>A normalized slider supporting dragging and arrow keys.</summary>
 public sealed class Slider : ProgressBar
 {
+    /// <summary>Creates a new Slider with its constructor defaults.</summary>
+    /// <returns>A new independent Slider for Fluent configuration.</returns>
+    public new static Slider Create() => new();
+
     private bool _dragging;
     /// <inheritdoc />
     public override bool Focusable => true;
@@ -53,7 +66,8 @@ public sealed class Slider : ProgressBar
         if (input.Kind == InputKind.PointerDown && input.Button == 0) { _dragging = true; context.Capture(this); context.Focus(this); }
         if (_dragging && input.Kind is InputKind.PointerDown or InputKind.PointerMove or InputKind.PointerUp)
         {
-            Value = Bounds.Width == 0 ? 0 : Math.Clamp((input.X - Bounds.X) / Bounds.Width, 0, 1);
+            try { Value = Bounds.Width == 0 ? 0 : Math.Clamp((input.X - Bounds.X) / Bounds.Width, 0, 1); }
+            catch { _dragging = false; context.ReleaseCapture(this); throw; }
             if (input.Kind == InputKind.PointerUp) { _dragging = false; context.ReleaseCapture(this); }
             return true;
         }
@@ -68,6 +82,10 @@ public sealed class Slider : ProgressBar
 /// <summary>Displays a borrowed decoded image; its caller owns the image lifetime.</summary>
 public sealed class Image : Element
 {
+    /// <summary>Creates a new Image with its constructor defaults.</summary>
+    /// <returns>A new independent Image for Fluent configuration.</returns>
+    public static Image Create() => new();
+
     private IImageSource? _source;
     /// <summary>The decoded image.</summary>
     public IImageSource? Source { get => _source; set { VerifyAccess(); _source = value; Invalidate(Invalidation.Layout); } }

@@ -4,9 +4,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Silk.NET" Version="2.23.0" />
+    <PackageVersion Include="Silk.NET.Vulkan" Version="2.23.0" />
+    <PackageVersion Include="Silk.NET.Vulkan.Extensions.EXT" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.Windowing.Extensions.Veldrid" Version="2.19.0" />
-    <PackageVersion Include="SkiaSharp" Version="4.152.1" />
-    <PackageVersion Include="Topten.RichTextKit" Version="0.4.167" />
+    <PackageVersion Include="SkiaSharp" Version="4.153.1" />
+    <PackageVersion Include="Topten.RichTextKit" Version="0.5.168" />
     <PackageVersion Include="Veldrid.SPIRV" Version="1.0.15" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" PrivateAssets="all" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />

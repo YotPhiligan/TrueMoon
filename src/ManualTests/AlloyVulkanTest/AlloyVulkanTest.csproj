@@ -6,7 +6,13 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
+    <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
+    <ProjectReference Include="../../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="../../TrueMoon.Alloy.Platform.Silk/TrueMoon.Alloy.Platform.Silk.csproj" />
     <ProjectReference Include="../../TrueMoon.Alloy.Rendering.Skia/TrueMoon.Alloy.Rendering.Skia.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Shaders/*.spv" />
   </ItemGroup>
 </Project>

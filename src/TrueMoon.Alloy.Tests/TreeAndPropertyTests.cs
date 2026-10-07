@@ -78,7 +78,7 @@ public sealed class TreeAndPropertyTests
 
         panel.Items.Move(0, 1);
 
-        Assert.Equal(new Element[] { second, first }, panel.Children);
+        Assert.Equal([second, first], panel.Children);
         Assert.True(first.IsAttached);
         Assert.True(first.IsFocused);
         Assert.Same(panel, first.Parent);

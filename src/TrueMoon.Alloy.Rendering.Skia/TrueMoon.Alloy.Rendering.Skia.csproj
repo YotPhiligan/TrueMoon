@@ -5,6 +5,17 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Alloy/TrueMoon.Alloy.csproj" />
+    <PackageReference Include="Silk.NET.Vulkan" />
     <PackageReference Include="SkiaSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Keep our extension separate from the upstream native-assets package. The host resolves
+         both SkiaSharp and the interop bindings to this same library before any native call. -->
+    <None Remove="NativeAssets/win-x64/libSkiaSharp.dll" />
+    <None Include="NativeAssets/win-x64/libSkiaSharp.dll"
+          TargetPath="truemoon-native/win-x64/libSkiaSharp.dll"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+          Pack="true" PackagePath="contentFiles/any/any/truemoon-native/win-x64/"
+          PackageCopyToOutput="true" PackageFlatten="false" />
   </ItemGroup>
 </Project>

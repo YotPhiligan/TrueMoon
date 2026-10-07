@@ -1,4 +1,4 @@
-﻿<Solution>
+<Solution>
   <Folder Name="/Cobalt/">
     <Project Path="TrueMoon.Cobalt.Generator.Tests\TrueMoon.Cobalt.Generator.Tests.csproj" />
     <Project Path="TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" />
@@ -12,10 +12,15 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/ManualTests/">
+    <Project Path="ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj" />
     <Project Path="ManualTests/MithrilTest/MithrilTest.csproj" />
     <Project Path="ManualTests\AlloyTest\AlloyTest.csproj" />
     <Project Path="ManualTests\CobaltTest\CobaltTest.csproj" />
   </Folder>
+  <Project Path="TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
+  <Project Path="TrueMoon.Alloy.Platform.Silk/TrueMoon.Alloy.Platform.Silk.csproj" />
+  <Project Path="TrueMoon.Alloy.Rendering.Skia/TrueMoon.Alloy.Rendering.Skia.csproj" />
+  <Project Path="TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj" />
   <Project Path="TrueMoon.Alloy\TrueMoon.Alloy.csproj" />
   <Project Path="TrueMoon.Argentis/TrueMoon.Argentis.csproj" />
   <Project Path="TrueMoon.Contracts\TrueMoon.Contracts.csproj" />

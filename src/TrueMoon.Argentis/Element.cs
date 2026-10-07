@@ -5,8 +5,14 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
 {
     private readonly Dictionary<object, object?> _values = [];
     private readonly List<IDisposable> _subscriptions = [];
+    private readonly List<IDisposable> _attachmentSubscriptions = [];
+    private readonly HashSet<object> _boundProperties = [];
     private Action? _verifyAccess;
     private Action<Action>? _post;
+    private Action<Element>? _detaching;
+    private int _attachmentVersion;
+    private bool _disposing;
+    internal bool ChangingTree { get; set; }
     private Style? _style;
     private Thickness _margin, _padding;
     private float _minWidth, _minHeight, _maxWidth = float.PositiveInfinity, _maxHeight = float.PositiveInfinity;
@@ -74,7 +80,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     public event Action<Element, object>? PropertyChanged;
     /// <summary>Raised when this element or a descendant needs work.</summary>
     public event Action<Invalidation>? Invalidated;
-    /// <summary>Raised after host attachment or detachment.</summary>
+    /// <summary>Raised after the entire subtree attachment changes. Queue follow-up tree mutations through the host.</summary>
     public event Action? AttachmentChanged;
 
     /// <summary>Gets a local, styled, themed, or default value in that order.</summary>
@@ -95,81 +101,223 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         var previous = Get(property);
         _values[property] = value;
         if (EqualityComparer<T>.Default.Equals(previous, value)) return;
-        Invalidate(property.Affects);
-        PropertyChanged?.Invoke(this, property);
+        NotifyPropertyChanged(property, property.Affects);
     }
     /// <summary>Removes a local override so style and theme values become visible.</summary>
     public void Clear<T>(UiProperty<T> property)
     {
         VerifyAccess();
         if (!_values.Remove(property)) return;
-        Invalidate(property.Affects);
-        PropertyChanged?.Invoke(this, property);
+        NotifyPropertyChanged(property, property.Affects);
+    }
+    /// <summary>Restores control invariants after a typed property commits and before observers run.</summary>
+    /// <param name="property">The changed typed property identifier.</param>
+    protected virtual void OnPropertyChanged(object property) { }
+
+    private void NotifyPropertyChanged(object property, Invalidation reason)
+    {
+        List<Exception>? errors = null;
+        try { OnPropertyChanged(property); }
+        catch (Exception error) { (errors ??= []).Add(error); }
+        try { Invalidate(reason); }
+        catch (Exception error) { (errors ??= []).Add(error); }
+        var handlers = PropertyChanged;
+        if (handlers != null)
+            foreach (Action<Element, object> handler in handlers.GetInvocationList())
+            {
+                try { handler(this, property); }
+                catch (Exception error) { (errors ??= []).Add(error); }
+            }
+        TreeChange.ThrowErrors(errors);
     }
     /// <summary>Requests rendering or layout at the owning session.</summary>
     public void Invalidate(Invalidation reason = Invalidation.Render)
     {
-        Invalidated?.Invoke(reason);
-        Parent?.Invalidate(reason);
+        List<Exception>? errors = null;
+        var handlers = Invalidated;
+        if (handlers != null)
+            foreach (Action<Invalidation> handler in handlers.GetInvocationList())
+            {
+                try { handler(reason); }
+                catch (Exception error) { (errors ??= []).Add(error); }
+            }
+        try { Parent?.Invalidate(reason); }
+        catch (Exception error) { (errors ??= []).Add(error); }
+        TreeChange.ThrowErrors(errors);
     }
     /// <summary>Checks that mutations are performed on the session's owner thread.</summary>
     public void VerifyAccess() { ObjectDisposedException.ThrowIf(_disposed, this); _verifyAccess?.Invoke(); }
-    /// <summary>Schedules a mutation through the host dispatcher when attached.</summary>
-    public void Dispatch(Action action) { if (_disposed) return; if (_post != null) _post(action); else action(); }
-    /// <summary>Tracks a subscription for disposal with the element.</summary>
-    public void Own(IDisposable subscription) { VerifyAccess(); _subscriptions.Add(subscription); }
+    /// <summary>Schedules a mutation on the host thread. Queued work is skipped after this attachment ends.</summary>
+    /// <param name="action">The mutation; runs immediately when unattached and is ignored after disposal.</param>
+    public void Dispatch(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        if (_disposed) return;
+        var version = Volatile.Read(ref _attachmentVersion);
+        var post = _post;
+        if (post == null) action();
+        else post(() => { if (!_disposed && IsAttached && version == Volatile.Read(ref _attachmentVersion)) action(); });
+    }
+    internal Action<Action> CaptureAttachmentDispatcher()
+    {
+        VerifyAccess();
+        var post = _post ?? throw new InvalidOperationException("An attachment dispatcher requires an attached element.");
+        var version = Volatile.Read(ref _attachmentVersion);
+        return action => post(() => { if (!_disposed && IsAttached && version == Volatile.Read(ref _attachmentVersion)) action(); });
+    }
+    /// <summary>Tracks a resource until disposal. Removal and reparenting retain it.</summary>
+    /// <param name="subscription">The resource whose ownership transfers to this element.</param>
+    public void Own(IDisposable subscription)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(subscription);
+        if (_disposing) throw new InvalidOperationException("Cannot own resources during disposal.");
+        _subscriptions.Add(subscription);
+    }
+    /// <summary>Tracks a resource until the current attachment ends. Reattachment requires a new subscription.</summary>
+    /// <param name="subscription">The resource whose ownership transfers only when this call succeeds.</param>
+    public void OwnAttachment(IDisposable subscription)
+    {
+        VerifyAccess();
+        ArgumentNullException.ThrowIfNull(subscription);
+        if (!IsAttached || _disposing) throw new InvalidOperationException("An attachment subscription requires an attached, live element.");
+        _attachmentSubscriptions.Add(subscription);
+    }
+
+    internal void OwnBinding(object property, Func<IDisposable> create)
+    {
+        VerifyAccess();
+        if (_disposing) throw new InvalidOperationException("Cannot create bindings during disposal.");
+        if (!_boundProperties.Add(property)) throw new InvalidOperationException("The UI property already has a binding.");
+        IDisposable? binding = null;
+        try { binding = create(); Own(binding); }
+        catch
+        {
+            _boundProperties.Remove(property);
+            binding?.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Checks owner-thread access and rejects structural changes during tree notifications or disposal.</summary>
+    public void VerifyTreeAccess()
+    {
+        VerifyAccess();
+        for (Element? node = this; node != null; node = node.Parent)
+            if (node.ChangingTree || node._disposing) throw new InvalidOperationException("UI tree changes cannot be reentrant.");
+    }
 
     internal void ValidateChild(Element child)
     {
-        VerifyAccess();
+        VerifyTreeAccess();
         ArgumentNullException.ThrowIfNull(child);
         ObjectDisposedException.ThrowIf(child.IsDisposed, child);
         if (child.Parent != null || child.IsAttached) throw new InvalidOperationException("An element can have only one owner.");
         for (Element? node = this; node != null; node = node.Parent)
             if (ReferenceEquals(node, child)) throw new InvalidOperationException("An element cannot contain itself or an ancestor.");
+        child.ValidateUnattachedSubtree();
     }
-    internal void Adopt(Element child)
+    private void ValidateUnattachedSubtree()
+    {
+        VerifyTreeAccess();
+        if (IsAttached) throw new InvalidOperationException("The subtree already belongs to a UI session.");
+        foreach (var child in Children) child.ValidateUnattachedSubtree();
+    }
+    internal void Adopt(Element child, TreeChange change)
     {
         child.Parent = this;
-        child.ApplyTheme(Theme);
-        if (_verifyAccess != null) child.Attach(_verifyAccess, _post!);
-        Invalidate(Invalidation.Tree | Invalidation.Layout);
+        child.ApplyThemeCore(Theme, change);
+        if (_verifyAccess != null) child.AttachCore(_verifyAccess, _post!, _detaching, change);
+        change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
     }
-    internal void Orphan(Element child)
+    internal void Orphan(Element child, TreeChange change)
     {
-        child.Detach();
         child.Parent = null;
-        Invalidate(Invalidation.Tree | Invalidation.Layout);
+        child.DetachCore(change);
+        change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
     }
     /// <summary>Attaches this subtree to a host; normally called by UiSession.</summary>
-    public void Attach(Action verifyAccess, Action<Action> post)
+    /// <param name="verifyAccess">Checks access to the host's owner thread.</param>
+    /// <param name="post">Queues work on the host's owner thread.</param>
+    public void Attach(Action verifyAccess, Action<Action> post) => Attach(verifyAccess, post, null);
+    /// <summary>Attaches this subtree and notifies the host before detach notifications run.</summary>
+    /// <param name="verifyAccess">Checks access to the host's owner thread.</param>
+    /// <param name="post">Queues work on the host's owner thread.</param>
+    /// <param name="detaching">Clears host references after attachment ends and before user detach notifications.</param>
+    public void Attach(Action verifyAccess, Action<Action> post, Action<Element>? detaching)
     {
-        VerifyAccess();
-        if (IsAttached) throw new InvalidOperationException("The element already belongs to a UI session.");
-        _verifyAccess = verifyAccess;
-        _post = post;
-        foreach (var child in Children) child.Attach(verifyAccess, post);
-        AttachmentChanged?.Invoke();
+        ArgumentNullException.ThrowIfNull(verifyAccess);
+        ArgumentNullException.ThrowIfNull(post);
+        verifyAccess();
+        ValidateUnattachedSubtree();
+        if (Parent != null) throw new InvalidOperationException("Only an unowned root can be attached directly.");
+        using var change = new TreeChange(this);
+        AttachCore(verifyAccess, post, detaching, change);
+        change.Complete();
     }
-    /// <summary>Disconnects host services and attachment-scoped bindings.</summary>
+    private void AttachCore(Action verifyAccess, Action<Action> post, Action<Element>? detaching, TreeChange change)
+    {
+        var nodes = Subtree().ToArray();
+        foreach (var node in nodes)
+        {
+            node._verifyAccess = verifyAccess;
+            node._post = post;
+            node._detaching = detaching;
+            Interlocked.Increment(ref node._attachmentVersion);
+        }
+        foreach (var node in nodes.Reverse()) change.Notify(node.AttachmentChanged);
+    }
+    private IEnumerable<Element> Subtree()
+    {
+        yield return this;
+        foreach (var child in Children) foreach (var node in child.Subtree()) yield return node;
+    }
+    /// <summary>Disconnects an unowned root without disposing it. Owned children must be removed by their container.</summary>
     public void Detach()
     {
+        VerifyTreeAccess();
+        if (Parent != null) throw new InvalidOperationException("Remove an owned child before detaching it.");
         if (!IsAttached) return;
-        VerifyAccess();
-        foreach (var child in Children) child.Detach();
-        _verifyAccess = null;
-        _post = null;
-        _hovered = _focused = false;
-        OnInputCancelled();
-        AttachmentChanged?.Invoke();
+        using var change = new TreeChange(this);
+        DetachCore(change);
+        change.Complete();
+    }
+    private void DetachCore(TreeChange change)
+    {
+        var nodes = Subtree().Where(node => node.IsAttached).ToArray();
+        foreach (var node in nodes)
+        {
+            var detaching = node._detaching;
+            change.Schedule(() => detaching?.Invoke(node));
+            node._verifyAccess = null;
+            node._post = null;
+            node._detaching = null;
+            Interlocked.Increment(ref node._attachmentVersion);
+            node._hovered = node._focused = false;
+        }
+        foreach (var node in nodes.Reverse())
+        {
+            change.Schedule(node.OnInputCancelled);
+            var subscriptions = node._attachmentSubscriptions.ToArray();
+            node._attachmentSubscriptions.Clear();
+            foreach (var subscription in subscriptions) change.Schedule(subscription.Dispose);
+            change.Notify(node.AttachmentChanged);
+        }
     }
     /// <summary>Applies the session's theme to this subtree.</summary>
     public void ApplyTheme(Theme theme)
     {
         VerifyAccess();
-        Theme = theme;
-        foreach (var child in Children) child.ApplyTheme(theme);
-        Invalidate(Invalidation.Layout);
+        ArgumentNullException.ThrowIfNull(theme);
+        using var change = new TreeChange(this);
+        ApplyThemeCore(theme, change);
+        change.Complete();
+    }
+    private void ApplyThemeCore(Theme theme, TreeChange change)
+    {
+        var nodes = Subtree().ToArray();
+        foreach (var node in nodes) node.Theme = theme;
+        foreach (var node in nodes.Reverse()) change.Schedule(() => node.Invalidate(Invalidation.Layout));
     }
     /// <summary>Measures the subtree within a logical size constraint.</summary>
     public void Measure(Size available, ITextLayoutService text)
@@ -224,16 +372,31 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (value < 0 || float.IsNaN(value) || (!infinite && !float.IsFinite(value))) throw new ArgumentOutOfRangeException(nameof(value));
     }
     private void VerifyThickness(Thickness t) { VerifySize(t.Left); VerifySize(t.Top); VerifySize(t.Right); VerifySize(t.Bottom); }
-    /// <inheritdoc />
+    /// <summary>Disposes an unowned subtree and its resources exactly once, continuing cleanup after callback errors.</summary>
+    /// <remarks>Remove an owned child before disposing it. Containers dispose their remaining children automatically.</remarks>
     public virtual void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed || _disposing) return;
         VerifyAccess();
-        Detach();
-        foreach (var subscription in _subscriptions) subscription.Dispose();
-        _subscriptions.Clear();
-        foreach (var child in Children) child.Dispose();
-        Invalidated = null; PropertyChanged = null; AttachmentChanged = null;
-        _disposed = true;
+        if (Parent != null && !Parent._disposing) throw new InvalidOperationException("Remove an owned child before disposing it.");
+        // Parent disposal already holds the tree lock, while retaining virtual child disposal.
+        using var change = Parent?._disposing == true ? new TreeChange() : new TreeChange(this);
+        _disposing = true;
+        try
+        {
+            DetachCore(change);
+            change.Flush();
+            var subscriptions = _subscriptions.ToArray();
+            _subscriptions.Clear();
+            foreach (var subscription in subscriptions) change.Run(subscription.Dispose);
+            foreach (var child in Children) change.Run(child.Dispose);
+        }
+        finally
+        {
+            Invalidated = null; PropertyChanged = null; AttachmentChanged = null;
+            _disposed = true;
+            _disposing = false;
+        }
+        change.Complete();
     }
 }

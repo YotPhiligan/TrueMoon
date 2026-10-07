@@ -8,14 +8,14 @@ public abstract class ElementList : Element, IEnumerable<Element>, IElementsList
 {
     /// <summary>Creates the child collection.</summary>
     protected ElementList() => Items = new ElementCollection(this);
-    /// <summary>Mutable children; changes invalidate layout automatically.</summary>
+    /// <summary>Mutable owned children. Removal/replacement transfers the old subtree to the caller without disposal.</summary>
     public ElementCollection Items { get; }
     /// <inheritdoc />
     public override IReadOnlyList<Element> Children => Items;
     /// <summary>Adds an element and returns this container.</summary>
     public ElementList Add(Element element) { Items.Add(element); return this; }
     /// <inheritdoc />
-    public void Add1<TElement>(TElement element) where TElement : IElement => Items.Add((Element)element);
+    public void Add1<TElement>(TElement element) where TElement : IElement => Items.Add((Element)(IElement)element);
     /// <inheritdoc />
     public IEnumerator<Element> GetEnumerator() => Items.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -28,43 +28,55 @@ public sealed class ElementCollection(Element owner) : Collection<Element>, IRea
     protected override void InsertItem(int index, Element item)
     {
         owner.ValidateChild(item);
+        using var change = new TreeChange(owner, item);
         base.InsertItem(index, item);
-        owner.Adopt(item);
+        owner.Adopt(item, change);
+        change.Complete();
     }
     /// <inheritdoc />
     protected override void SetItem(int index, Element item)
     {
+        owner.VerifyTreeAccess();
         if (ReferenceEquals(this[index], item)) return;
         owner.ValidateChild(item);
         var previous = this[index];
+        using var change = new TreeChange(owner, previous, item);
         base.SetItem(index, item);
-        owner.Orphan(previous);
-        owner.Adopt(item);
+        owner.Orphan(previous, change);
+        owner.Adopt(item, change);
+        change.Complete();
     }
     /// <inheritdoc />
     protected override void RemoveItem(int index)
     {
-        owner.VerifyAccess();
+        owner.VerifyTreeAccess();
         var item = this[index];
+        using var change = new TreeChange(owner, item);
         base.RemoveItem(index);
-        owner.Orphan(item);
+        owner.Orphan(item, change);
+        change.Complete();
     }
     /// <inheritdoc />
     protected override void ClearItems()
     {
-        owner.VerifyAccess();
+        owner.VerifyTreeAccess();
         var previous = this.ToArray();
+        using var change = new TreeChange(previous.Prepend(owner).ToArray());
         base.ClearItems();
-        foreach (var item in previous) owner.Orphan(item);
+        foreach (var item in previous) owner.Orphan(item, change);
+        change.Complete();
     }
     /// <summary>Moves a child without detaching it or losing focus and subscriptions.</summary>
     public void Move(int oldIndex, int newIndex)
     {
-        owner.VerifyAccess();
+        owner.VerifyTreeAccess();
         if ((uint)newIndex >= Count) throw new ArgumentOutOfRangeException(nameof(newIndex));
         var item = this[oldIndex];
+        if (oldIndex == newIndex) return;
+        using var change = new TreeChange(owner);
         base.RemoveItem(oldIndex);
         base.InsertItem(newIndex, item);
-        owner.Invalidate(Invalidation.Layout);
+        change.Schedule(() => owner.Invalidate(Invalidation.Layout));
+        change.Complete();
     }
 }

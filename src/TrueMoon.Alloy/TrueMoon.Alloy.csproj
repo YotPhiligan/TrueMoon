@@ -6,15 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Silk.NET" />
-        <PackageReference Include="SkiaSharp" />
-        <PackageReference Include="Topten.RichTextKit" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Argentis\TrueMoon.Argentis.csproj" />
-      <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
-      <ProjectReference Include="..\TrueMoon.Core\TrueMoon.Core.csproj" />
     </ItemGroup>
     
 </Project>

@@ -3,6 +3,11 @@ namespace TrueMoon.Argentis;
 /// <summary>A pointer- and keyboard-activated button.</summary>
 public class Button : Text
 {
+    /// <summary>Creates a new button with the current theme's default appearance.</summary>
+    /// <param name="text">The literal label.</param>
+    /// <returns>A new independent Button for Fluent configuration.</returns>
+    public static Button Simple(string text = "") => new(text);
+
     private bool _pressed;
     /// <summary>Creates a button with a label.</summary>
     public Button(string text = "") : base(text) => Padding = new Thickness(12, 8, 12, 8);
@@ -44,5 +49,9 @@ public class Button : Text
     /// <inheritdoc />
     public override void OnInputCancelled() { _pressed = false; Invalidate(); }
     /// <inheritdoc />
-    public override void Dispose() { Click = null; base.Dispose(); }
+    public override void Dispose()
+    {
+        try { base.Dispose(); }
+        finally { if (IsDisposed) Click = null; }
+    }
 }

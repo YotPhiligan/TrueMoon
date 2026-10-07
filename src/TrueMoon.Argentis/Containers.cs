@@ -3,6 +3,10 @@ namespace TrueMoon.Argentis;
 /// <summary>Places children in the same slot, painting later children on top.</summary>
 public class Panel : ElementList
 {
+    /// <summary>Creates a new Panel with its constructor defaults.</summary>
+    /// <returns>A new independent Panel for Fluent configuration.</returns>
+    public static Panel Create() => new();
+
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
@@ -17,24 +21,32 @@ public class Panel : ElementList
 /// <summary>An element with replaceable content.</summary>
 public class ContentControl : Element
 {
+    /// <summary>Creates a new ContentControl with its constructor defaults.</summary>
+    /// <returns>A new independent ContentControl for Fluent configuration.</returns>
+    public static ContentControl Create() => new();
+
     private Element? _content;
     private Element[] _children = [];
     /// <summary>The current child.</summary>
     public Element? Child => _content;
     /// <inheritdoc />
     public override IReadOnlyList<Element> Children => _children;
-    /// <summary>Replaces content while retaining the rest of the tree.</summary>
+    /// <summary>Replaces content. The caller owns the detached old subtree and must reuse or dispose it.</summary>
+    /// <param name="content">An unowned live subtree, or null to clear content.</param>
+    /// <remarks>Validation failures preserve the tree. Notification failures are reported after the replacement commits.</remarks>
     public void SetContent(Element? content)
     {
-        VerifyAccess();
+        VerifyTreeAccess();
         if (ReferenceEquals(content, _content)) return;
         if (content != null) ValidateChild(content);
         var previous = _content;
+        using var change = new TreeChange(this, previous, content);
         _content = content;
         _children = content == null ? [] : [content];
-        if (previous != null) Orphan(previous);
-        if (content != null) Adopt(content);
-        Invalidate(Invalidation.Tree | Invalidation.Layout);
+        if (previous != null) Orphan(previous, change);
+        if (content != null) Adopt(content, change);
+        change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
+        change.Complete();
     }
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text) { Child?.Measure(available, text); return Child?.DesiredSize ?? default; }
@@ -45,6 +57,10 @@ public class ContentControl : Element
 /// <summary>A content container with a theme-colored outline.</summary>
 public class Border : ContentControl
 {
+    /// <summary>Creates a new Border with its constructor defaults.</summary>
+    /// <returns>A new independent Border for Fluent configuration.</returns>
+    public new static Border Create() => new();
+
     /// <inheritdoc />
     protected override void DrawCore(IDrawingContext context) => context.Stroke(Bounds.Deflate(new Thickness(.5f)), Theme.Control, 1, 4);
 }
@@ -52,6 +68,10 @@ public class Border : ContentControl
 /// <summary>A vertically scrolling, clipped content container.</summary>
 public class ScrollViewer : ContentControl
 {
+    /// <summary>Creates a new ScrollViewer with its constructor defaults.</summary>
+    /// <returns>A new independent ScrollViewer for Fluent configuration.</returns>
+    public new static ScrollViewer Create() => new();
+
     private float _offset;
     /// <summary>Scroll offset in logical pixels, clamped during layout.</summary>
     public float Offset { get => _offset; set { VerifyAccess(); if (!float.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(value)); _offset = Math.Max(0, value); Invalidate(Invalidation.Layout); } }

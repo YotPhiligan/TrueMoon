@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\TrueMoon.Alloy\TrueMoon.Alloy.csproj" />
+        <ProjectReference Include="..\..\TrueMoon.Alloy.Hosting\TrueMoon.Alloy.Hosting.csproj" />
         <ProjectReference Include="..\..\TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj" />
         <ProjectReference Include="..\..\TrueMoon\TrueMoon.csproj" />
     </ItemGroup>

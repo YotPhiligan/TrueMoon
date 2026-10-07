@@ -3,6 +3,11 @@ namespace TrueMoon.Argentis;
 /// <summary>A single line of display text.</summary>
 public class Text : Element, ITextElement
 {
+    /// <summary>Creates a new plain text label without markup processing.</summary>
+    /// <param name="value">The literal text content.</param>
+    /// <returns>A new independent Text for Fluent configuration.</returns>
+    public static Text Plain(string value = "") => new(value);
+
     /// <summary>The text content property.</summary>
     public static readonly UiProperty<string> ValueProperty = new("Text", "", Invalidation.Layout, v => v != null);
     /// <summary>Creates a label.</summary>

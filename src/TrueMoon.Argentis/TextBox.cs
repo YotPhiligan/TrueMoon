@@ -5,6 +5,10 @@ namespace TrueMoon.Argentis;
 /// <summary>A single-line editor with grapheme-aware navigation, selection, and clipboard commands.</summary>
 public sealed class TextBox : Element
 {
+    /// <summary>Creates a new TextBox with its constructor defaults.</summary>
+    /// <returns>A new independent TextBox for Fluent configuration.</returns>
+    public static TextBox Create() => new();
+
     /// <summary>The editable string.</summary>
     public static readonly UiProperty<string> ValueProperty = new("Value", "", Invalidation.Layout, v => v != null && !v.Contains('\r') && !v.Contains('\n'));
     private int _caret, _anchor;
@@ -15,7 +19,13 @@ public sealed class TextBox : Element
     /// <inheritdoc />
     public override bool Focusable => true;
     /// <summary>The editor content.</summary>
-    public string Value { get => Get(ValueProperty); set { Set(ValueProperty, value); ClampSelection(); } }
+    public string Value { get => Get(ValueProperty); set => Set(ValueProperty, value); }
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(object property)
+    {
+        base.OnPropertyChanged(property);
+        if (ReferenceEquals(property, ValueProperty)) ClampSelection();
+    }
     /// <summary>UTF-16 caret position.</summary>
     public int CaretIndex => _caret;
     /// <summary>Start of the selected UTF-16 range.</summary>
@@ -26,7 +36,14 @@ public sealed class TextBox : Element
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     { _text = text; ClampSelection(); return new Size(160, text.Measure("Mg", FontSize, FontFamily).Height); }
     private float MeasurePrefix(int position) => _text?.Measure(Value[..position], FontSize, FontFamily).Width ?? 0;
-    private void ClampSelection() { _caret = Math.Min(_caret, Value.Length); _anchor = Math.Min(_anchor, Value.Length); }
+    private void ClampSelection()
+    {
+        var value = Value;
+        var positions = StringInfo.ParseCombiningCharacters(value);
+        int Clamp(int index) => index >= value.Length ? value.Length : positions.LastOrDefault(position => position <= Math.Max(0, index));
+        _caret = Clamp(_caret);
+        _anchor = Clamp(_anchor);
+    }
     private int Previous(int index) => StringInfo.ParseCombiningCharacters(Value).LastOrDefault(i => i < index);
     private int Next(int index) => StringInfo.ParseCombiningCharacters(Value).FirstOrDefault(i => i > index, Value.Length);
     private void Move(int position, bool select) { _caret = position; if (!select) _anchor = position; Invalidate(); }
@@ -35,6 +52,7 @@ public sealed class TextBox : Element
         var start = SelectionStart;
         Value = Value.Remove(start, SelectionLength).Insert(start, replacement.Replace("\r", "").Replace("\n", ""));
         _caret = _anchor = start + replacement.Replace("\r", "").Replace("\n", "").Length;
+        ClampSelection();
         Invalidate(Invalidation.Layout);
     }
     /// <inheritdoc />

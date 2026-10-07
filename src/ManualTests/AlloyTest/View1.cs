@@ -2,16 +2,30 @@ using TrueMoon.Argentis;
 
 namespace AlloyTest;
 
-public class View1 : View
+/// <summary>A settings form mixing static factories and public constructors.</summary>
+public sealed class View1 : View<SettingsModel>
 {
-    public View1(View2 view2) : base()
-        => this.Content(() => Stack
-            .Vertical(list => list
-                    .Add(Shapes.Line())
-                    .Add(Shapes.Rectagle()
-                        .Width(200)
-                        .Height(100))
-                    //.Add(view2)
-                )
-            .Width(100));
+    /// <summary>Creates the retained form for a model supplied by DI.</summary>
+    /// <param name="model">The state preserved independently of the controls.</param>
+    public View1(SettingsModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        Content(model, _ => VStack.Create()
+            .Width(600)
+            .Padding(24)
+            .Configure(stack => stack.Spacing = 12)
+            .WithChildren(
+                Text.Plain("Настройки").Configure(text => text.FontSize = 24),
+                new Text("Имя"),
+                TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.Name),
+                CheckBox.Create("Получать уведомления")
+                    .BindTwoWay(CheckBox.IsCheckedProperty, model, x => x.Enabled),
+                Text.Plain("Громкость"),
+                new Slider().BindTwoWay(ProgressBar.ValueProperty, model, x => x.Volume),
+                Border.Create().Padding(12).Content(Text.Plain().BindText(model, x => x.Summary)),
+                HStack.Create().Configure(stack => stack.Spacing = 12).WithChildren(
+                    Button.Simple("Загрузить пример").OnClick(model.LoadExample),
+                    new Button("Сбросить").OnClick(model.Reset))
+            ));
+    }
 }
