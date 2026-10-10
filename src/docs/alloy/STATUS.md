@@ -1,6 +1,6 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа: **2026-10-10 — native callback fault boundary и teardown proof** в отдельном worktree `codex/alloy-next` от origin/main b15d85f. Проверены только локальные UI проекты и consumers; результат представлен до объединения. Alpha не завершён.
+Последняя работа: **2026-10-10 — объединение callback fault protection и повторные проверки в main**. Агентный коммит `cbae354` объединён с Enerit; состояние исходников при проверках — `d56f217`. Alpha не завершён.
 
 Область: Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting, UI tests и consumers. [UI план](PLAN.md), [история](HISTORY.md), [общий план](../PLAN.md), [общий статус](../STATUS.md), [формат](../PLANNING.md).
 
@@ -18,7 +18,11 @@
 
 Наличие реализации не означает итоговую готовность этапа. Подробные изменения и точные commands/configuration находятся в HISTORY; общий solution build не является UI или full-solution test pass.
 
-## Текущие проверки — callback fault run2026-10-10
+## Текущие проверки — интеграция в main2026-10-10
+
+[Команды и scope](HISTORY.md#интеграция-в-main--2026-10-10): Windows/Debug/net10.0, SDK10.0.401. UI suite **469passed/0failed/0skipped**; AlloyVulkanTest build exit0, **0errors/227warnings**. Debug callback probe — **6direct +12hosted failures +12healthy recreations**, first cause/cleanup/Completion/StopAsync, HWND/tree/registry/все3hooks0, Vulkan validation0errors/0warnings. Артефакты — ignored `TestResults/AgentMerge` в основном checkout. Published Release, прежние chrome/rendering-failure probes и physical DPI matrix при интеграции не повторялись.
+
+## Предыдущие проверки — агентный callback run2026-10-10
 
 [Изменения, команды и scope](HISTORY.md#49--k7-callback-fault-boundary-и-cleanup-2026-10-10).
 

@@ -1246,3 +1246,18 @@ dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --no-build --no-res
 ### Границы результата и продолжение
 
 Этот проход доказывает bounded error/teardown/recreate на указанной машине. Native window hooks сняты после каждой сессии, но длительный lifecycle/resize soak, WeakReference retention/VRAM profiling не выполнялись. Natural DPI callback fault не заменяет отдельную fault injection Chrome/GDI/RemoveWindowSubclass failure. Synthetic/direct messages не доказывают physical input/settings/Shell Snap, physical100/200%/mixed-monitor DPI или device/context loss. Font/full golden, package/independent consumer и final supported alpha matrix остаются. Приоритет следующего шага4.9d/K3 — подготовленное физическое DPI окружение; доступный ограниченный независимый шаг — долгий lifecycle новых hooks без глобальных settings изменений.
+
+## Интеграция в main — 2026-10-10
+
+Коммит агента `cbae35403fb09487acf1ffed87d34974fd0121dd` объединён через `d56f217a0e918623c8dd4eb2036c813d85c2a5b8`, после merge Enerit `0a65e2e`. Проверяемые исходники: main `d56f217`, cwd `E:/source/my/TrueMoon/src`. Windows x64, Debug/net10.0, SDK10.0.401, xUnit2.9.3/VSTest. При интеграции не менялись UI source/public API, contracts/build/package настройки.
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --logger 'trx;LogFileName=alloy-ui.trx' --results-directory TestResults/AgentMerge --verbosity minimal
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Debug --verbosity minimal
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-callback-failure --validation --callback-output TestResults/AgentMerge/alloy-callbacks-debug.json
+```
+
+Все три команды exit0. UI suite **469passed/0failed/0skipped**, TRX counters прочитаны отдельно. Consumer build **0errors/227warnings**; это локальная incremental Debug сборка, не повтор full solution baseline. Callback probe: **6direct cases +12hosted failures +12healthy recreations**, OpenGL/Vulkan×3appearance×subscriber/DPI. Проверены original cause/stack, ordered cleanup error, Completion/StopAsync identity, disposed tree/focus, registry/HWND и DPI/chrome/transparency hooks0; Vulkan validation **0errors/0warnings**. JSON содержит12 hosted results и zero hook counters. VK_LAYER_PATH задан только для процесса shell/probe и восстановлен в finally; глобальные настройки не менялись.
+
+Ignored evidence в основном checkout: `TestResults/AgentMerge/alloy-ui.log/.trx`, `alloy-consumer-build.log`, `alloy-callbacks-debug.log/.json`. Published Release,4previous chrome/rendering-failure probes, physical DPI/settings/device loss, long soak/VRAM и consumer packaging при интеграции не повторялись. Их агентные/исторические результаты сохраняют прежний scope. Не подтверждается readiness остальных модулей или full alpha.

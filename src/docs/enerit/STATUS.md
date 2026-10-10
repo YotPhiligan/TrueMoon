@@ -1,6 +1,8 @@
 # Enerit: состояние и точка продолжения
 
-Дата: **2026-10-10 — ENE0 baseline и локальное исправление inherited generated mapping**. [План](PLAN.md), [история проверок](HISTORY.md), [общий статус](../STATUS.md). Работа выполнена отдельно в `codex/enerit-next` от `origin/main` (`b15d85f`); с основной веткой пока не объединена.
+Дата: **2026-10-10 — объединение inherited generated mapping fix и повторные проверки в main**. [План](PLAN.md), [история проверок](HISTORY.md), [общий статус](../STATUS.md). Агентный коммит `6e554e3` объединён с Alloy/Argentis; состояние исходников при проверках — `d56f217`.
+
+В main повторены runtime **10passed/0failed/0skipped** и generator **9passed/0failed/0skipped**, Windows/Debug/net10.0/SDK10.0.401. Команды и TRX — [интеграционная запись](HISTORY.md#интеграция-в-main--2026-10-10); результаты исходного агентного baseline отдельно ниже.
 
 ## Реализация и проверки
 
@@ -18,7 +20,7 @@
 
 Исправлен локальный bug `ServicesGenerator`: `GetMembers()` исключал методы базовых интерфейсов, вызывая CS0535 в generated client. Новый список сохраняет declared order, добавляет inherited методы, объединяет эквивалентные сигнатуры независимо от имён параметров. Dispatch через declaring interface устраняет CS0121 для одинаковых inherited signatures; diamond не дублирует метод, разные overloads сохраняются. Новые тесты действительно запускают generator, проверяют diagnostics и emit обоих adapters против metadata references runtime/Contracts.
 
-Публичные runtime/Contracts API, общие build/package настройки и общий STATUS не менялись. ENE0 подтверждён для указанной Windows Debug конфигурации; ENE1 выполнен частично, весь serialization contract не закрыт.
+Публичные runtime/Contracts API и общие build/package настройки не менялись. При интеграции обновлён общий STATUS. ENE0 подтверждён для указанной Windows Debug конфигурации; ENE1 выполнен частично, весь serialization contract не закрыт.
 
 ## Блокеры и ограничения
 
@@ -26,8 +28,8 @@
 - Для inherited mapping добавлены новые codes после declared методов; общий порядок inherited methods остаётся связан с Roslyn symbols и одинаковым интерфейсом на обеих сторонах. Межверсионная совместимость protocol mapping не установлена.
 - Предел byte method code не исправлялся: client использует byte counter, handler — int. Более256 методов и соответствующая generator diagnostic требуют отдельного шага.
 - Разные return types для одинаковых signatures, generic/static members и дополнительные типы payload не входят в новые пять cases.
-- Существующие build warnings (включая duplicate central PackageVersion/несколько sources/nullability) остаются; full solution, Release и UI checks не запускались.
+- Существующие build warnings (включая duplicate central PackageVersion/несколько sources/nullability) остаются; full solution и Enerit Release checks не запускались. Отдельные UI проверки интеграции не подтверждают Enerit transport readiness.
 
 ## Следующий конкретный шаг
 
-Рассмотреть и объединить локальный inherited mapping fix после review. Затем продолжить ENE1: проверить реальную сериализацию/null/collections и malformed payloads отдельно от compilation. Для ENE2 первым кандидатом остаются pipes; требуется bounded own-process scenario с cancellation/error/disconnect и cleanup. MMF остаётся отдельно неподтверждённым.
+Продолжить ENE1: проверить реальную сериализацию/null/collections и malformed payloads отдельно от compilation. Для ENE2 первым кандидатом остаются pipes; требуется bounded own-process scenario с cancellation/error/disconnect и cleanup. MMF остаётся отдельно неподтверждённым.

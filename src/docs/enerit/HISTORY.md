@@ -55,3 +55,14 @@ Runtime exit0: **Passed10, Failed0, Skipped0**. Generator final exit0: **Passed9
 | «Обновите статусы модулей» | STATUS.md содержит фактические checks, limitations и следующий шаг; этот HISTORY хранит команды/evidence |
 
 Предел256 byte method codes, межверсионная стабильность inherited order, payload compatibility, package delivery и separate-process/cancellation/disconnect/error/cleanup остаются непроверенными. Существующие shared build warnings не устранялись. Native UI checks, solution/Release build и процессы другого worktree не запускались и не останавливались.
+
+## Интеграция в main — 2026-10-10
+
+Коммит агента `6e554e309032671c1858ac8079d6b8465ebc6aff` объединён через merge `0a65e2e`; затем объединён UI `cbae354` через `d56f217a0e918623c8dd4eb2036c813d85c2a5b8`. Проверяемые исходники: main `d56f217`, cwd `E:/source/my/TrueMoon/src`. Windows, Debug/net10.0, SDK10.0.401, xUnit2.9.3/VSTest. Новых изменений runtime/generator при интеграции не потребовалось; общие contracts/build/package настройки сохранены.
+
+```powershell
+dotnet test TrueMoon.Enerit.Tests/TrueMoon.Enerit.Tests.csproj --configuration Debug --blame-hang --blame-hang-timeout 60s --logger 'trx;LogFileName=enerit-runtime.trx' --results-directory TestResults/AgentMerge --verbosity minimal
+dotnet test TrueMoon.Enerit.Generator.Tests/TrueMoon.Enerit.Generator.Tests.csproj --configuration Debug --blame-hang --blame-hang-timeout 60s --logger 'trx;LogFileName=enerit-generator.trx' --results-directory TestResults/AgentMerge --verbosity minimal
+```
+
+Обе команды exit0. Runtime **10passed/0failed/0skipped**, generator **9passed/0failed/0skipped**. Новые build/restore/test runs выполнены после обоих merge, а не скопированы из агентного evidence. TRX counters отдельно прочитаны и совпали с console summaries. Логи/TRX — ignored `TestResults/AgentMerge/enerit-runtime.*` и `enerit-generator.*` в основном checkout. Discovery отдельно не повторялась. Own-process/MMF/fault transport matrix и Enerit Release/package consumer не запускались; ограничения ENE1/ENE2 сохраняются. UI проверки имеют самостоятельную запись и не считаются transport evidence Enerit.
