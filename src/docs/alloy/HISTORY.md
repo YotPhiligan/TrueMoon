@@ -1182,3 +1182,67 @@ Assembly version: `4.152.0.0`, NuGet version: `4.152.1`. Нативная PE-т�
 
 - **2026-09-27:** восстановлен и сохранён полный план; прочитаны UI-модули, примеры и существующие тесты; зафиксированы частично написанные этапы и отсутствующие интеграции; запуск тестов остановлен ошибкой CS0030; добавлен указатель в `src/AGENTS.md` для следующих сессий.
 - **2026-09-27, продолжение:** исправлена CS0030; подключены четыре UI-проекта к решению; 29 тестов Alloy прошли напрямую и через решение. GPU-пример расширен до 12 композиций с alpha/text/пересозданием поверхностей и повторным использованием устройства хоста; финальный запуск прошёл. Добавлены скрипт инвентаризации API и отчёт об ограничении внешнего Vulkan interop, проверены native exports. Зафиксировано отдельное падение общего AppCreate-теста.
+
+## 4.9 / K7 callback fault boundary и cleanup, 2026-10-10
+
+Параллельная работа отдельно от Enerit: `E:/source/my/TrueMoon-worktrees/alloy/src`, branch `codex/alloy-next`, base origin/main `b15d85f095b6fb1cbe00c4439d11d7bac71e6dc8`. Общие contracts/build/solution/plans не менялись, merge/push не выполнялись. Проход ограничен callback fault handling и bounded teardown/recreation; alpha и физические DPI требования сохраняются.
+
+### Реализация и найденный дефект
+
+Win32 DPI/Chrome/transparent framebuffer subclasses уже сохраняли managed errors в ExceptionDispatchInfo. Однако GLFW mouse handler вызывал `_dpi.PixelScale` до входа в защищённый Hosting Input handler. После native DPI fault этот accessor мог бросить через native callback boundary. Direct SilkWindowHost subscribers Render/Input также не имели собственной защиты.
+
+Добавлен internal WindowCallbackBoundary: Execute возвращает нормально, сохраняет первый exception/stack и подавляет последующие operations. Внутри защищённого Execute перед user callback проверяется VerifyWindowAccess, включая pending Win32 hook fault; поэтому следующий keyboard/text/focus callback после DPI fault тоже не вызывает user code. Все native-origin mouse/wheel/keyboard/text/focus/render handlers подключены через boundary. Render delegate создаётся один раз; input closures остаются, их allocations не измерялись этим проходом. VerifyWindowAccess передаёт ошибку на owner thread вне dispatch; Run выполняет также финальную Verify после завершающего DoEvents. Existing Hosting Completion/StopAsync и UiCleanup best-effort teardown сохраняют исходную причину и cleanup errors. Public API, thread/window/device ownership, renderer/Argentis, net10.0/xUnit/native ABI не изменены.
+
+### Новые проверки
+
+WindowCallbackBoundaryTests — focused xUnit proof, **Passed:6, Failed:0, Skipped:0**. Требования:
+
+| Требование | Evidence |
+| --- | --- |
+| Successful callbacks и Verify без повторного dispatch | SuccessfulCallbacksContinueAndVerificationDoesNotDispatch |
+| Deferred failure без native unwind, original identity/stack | FailureReturnsNormallyThenVerificationPreservesCauseAndStack |
+| Последующие user handlers не выполняются и не заменяют причину | LaterCallbacksCannotRunUserCodeOrReplaceFirstCause |
+| Reentrant first captured cause | ReentrantFailurePreservesFirstCapturedCause |
+| Независимая здоровая новая boundary | FreshBoundaryIsIndependentOfFaultedWindow |
+| Pending hook fault до user handler | PendingHookFailureIsCapturedBeforeUserHandlerAndLaterVerification |
+
+Новый `--window-callback-failure` probe посылает directed сообщения только собственным HWND. DPI injection — WM_GETDPISCALEDSIZE с dpi0 и валидным SIZE: настоящий Win32WindowDpi.Dispatch вызывает SetScaledSize→WindowPixelScale error, возвращает normally и сохраняет исключение. Это не физический DPI переход. Mouse/key/text/focus failures — реальные directed Win32→GLFW→Silk handlers; Render case — managed DoRender dispatch, не выдаётся за native WM_PAINT. После первого fault повторяются key/text/focus/render/mouse/DPI callbacks; subscriber counter не меняется, первая причина сохраняется. Dispose дважды освобождает HWND и DPI/chrome/transparency hooks.
+
+Hosted cases — OpenGL/Vulkan×Opaque/Opacity/PerPixel×subscriber/DPI =12. Перед fault сохраняются editor focus/capture, закрытие намеренно бросает cleanup error. Проверены ordered original+cleanup causes, Completion/StopAsync exception identity, root/editor disposal, focus reset, registry0, HWND0 и hooks0. Затем на том же HostedUiSessionFactory запускается новая здоровая window/session с3frames, после закрытия registry/hooks0. Каждый финальный Debug и published Release run: **6direct +12hosted failures +12healthy recreations**, validation **0errors/0warnings** включая teardown. Оба выполнены после последнего semantic change с pending-hook guard.
+
+### Фактически выполненные команды
+
+PowerShell cwd всегда этот worktree src; SDK10.0.401, Windows x64, net10.0, xUnit2.9.3/VSTest. No full solution baseline.
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --filter FullyQualifiedName~WindowCallbackBoundaryTests --no-restore --logger 'trx;LogFileName=boundary.trx' --results-directory TestResults/AlloyCallbacks --verbosity minimal
+# Passed:6, Failed:0, Skipped:0, exit0
+
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --verbosity minimal
+# Initial consumer build exit0, 728warnings/0errors (включая один исправленный CS8778 probe warning).
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --no-restore -o TestResults/AlloyCallbacks/publish --verbosity minimal
+# exit0, native/assets доставлены в publish.
+
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/AlloyCallbacks/tools/validation-1.4.363.0/Bin).Path
+dotnet run --no-restore --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --window-callback-failure --validation --callback-output TestResults/AlloyCallbacks/callbacks-debug.json
+dotnet TestResults/AlloyCallbacks/publish/AlloyVulkanTest.dll --window-callback-failure --validation --callback-output TestResults/AlloyCallbacks/callbacks-release.json
+# Each exit0;6direct +12hosted failures +12healthy recreations; registry/HWND/hooks0; validation0/0.
+
+# Existing regression, each Debug and published Release:
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-chrome --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --settings-failure --validation
+dotnet TestResults/AlloyCallbacks/publish/AlloyVulkanTest.dll --window-chrome --validation
+dotnet TestResults/AlloyCallbacks/publish/AlloyVulkanTest.dll --settings-failure --validation
+#4probe runs exit0, actual scenario summaries in logs, validation0/0 including teardown.
+
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --no-build --no-restore --logger 'trx;LogFileName=ui-debug.trx' --results-directory TestResults/AlloyCallbacks --verbosity minimal
+# Final UI run: Passed:469, Failed:0, Skipped:0, exit0.
+```
+
+Первый callback probe attempt без VK_LAYER_PATH завершился exit-532462766 на unavailable VK_LAYER_KHRONOS_validation при первом Vulkan window startup после6direct+6OpenGL successes. Это не passing полный запуск. `callbacks-debug.log` сохраняет попытку; финальные полные logs — callbacks-debug-final.log и callbacks-release.log. Validation tooling1.4.363.0 скопирован из существующей ignored tool dependency в локальный TestResults этого worktree; VK_LAYER_PATH задан только процессу shell/probe, глобальная среда и Windows settings не менялись. SDK/native/binary/tooling SHA256 — provenance.json.
+
+Артефакты ignored `TestResults/AlloyCallbacks`: boundary/ui-debug TRX/logs, build-debug.log, publish-release.log, callback JSON/logs,4existing-regression logs, provenance.json, published consumer, tools/validation copy. Intermediate artifacts не включены в commit; git diff --check проверен отдельно.
+
+### Границы результата и продолжение
+
+Этот проход доказывает bounded error/teardown/recreate на указанной машине. Native window hooks сняты после каждой сессии, но длительный lifecycle/resize soak, WeakReference retention/VRAM profiling не выполнялись. Natural DPI callback fault не заменяет отдельную fault injection Chrome/GDI/RemoveWindowSubclass failure. Synthetic/direct messages не доказывают physical input/settings/Shell Snap, physical100/200%/mixed-monitor DPI или device/context loss. Font/full golden, package/independent consumer и final supported alpha matrix остаются. Приоритет следующего шага4.9d/K3 — подготовленное физическое DPI окружение; доступный ограниченный независимый шаг — долгий lifecycle новых hooks без глобальных settings изменений.

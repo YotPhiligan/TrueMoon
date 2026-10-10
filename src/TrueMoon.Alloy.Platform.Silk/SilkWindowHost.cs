@@ -32,6 +32,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     private readonly global::Silk.NET.GLFW.Glfw? _glfw;
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private bool _disposed;
+    private readonly WindowCallbackBoundary _callbacks;
     /// <summary>The native graphics window. Windows client/position coordinates are physical pixels; use Viewport and Resize for UI coordinates.</summary>
     public IWindow NativeWindow { get; }
     /// <inheritdoc />
@@ -93,6 +94,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     /// <param name="chrome">Custom frame settings; requires Decorated=false and Windows x64.</param>
     public unsafe SilkWindowHost(int width, int height, string title, bool openGL, WindowAppearance appearance, WindowChromeOptions? chrome)
     {
+        _callbacks = new WindowCallbackBoundary(VerifyWindowAccess);
         ArgumentNullException.ThrowIfNull(appearance);
         appearance.Validate(); Appearance = appearance;
         if (width <= 0 || height <= 0) throw new ArgumentOutOfRangeException(nameof(width));
@@ -147,20 +149,21 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
             _input = NativeWindow.CreateInput();
             if (OperatingSystem.IsWindows() && NativeWindow.Native?.Win32 is { } win32)
                 _windowsClipboard = new Win32Clipboard(win32.Hwnd, Win32ClipboardApi.Instance);
-            NativeWindow.Render += _ => RenderRequested?.Invoke();
-            NativeWindow.FocusChanged += focused => { if (!focused) Input?.Invoke(new UiInput(InputKind.FocusLost)); };
+            Action render = () => RenderRequested?.Invoke();
+            NativeWindow.Render += _ => _callbacks.Execute(render);
+            NativeWindow.FocusChanged += focused => _callbacks.Execute(() => { if (!focused) Input?.Invoke(new UiInput(InputKind.FocusLost)); });
             foreach (var mouse in _input.Mice)
             {
-                mouse.MouseMove += (_, p) => PointerInput(InputKind.PointerMove, p.X, p.Y);
-                mouse.MouseDown += (m, b) => PointerInput(InputKind.PointerDown, m.Position.X, m.Position.Y, (int)b);
-                mouse.MouseUp += (m, b) => PointerInput(InputKind.PointerUp, m.Position.X, m.Position.Y, (int)b);
-                mouse.Scroll += (m, wheel) => PointerInput(InputKind.Wheel, m.Position.X, m.Position.Y, wheel: wheel.Y);
+                mouse.MouseMove += (_, p) => _callbacks.Execute(() => PointerInput(InputKind.PointerMove, p.X, p.Y));
+                mouse.MouseDown += (m, b) => _callbacks.Execute(() => PointerInput(InputKind.PointerDown, m.Position.X, m.Position.Y, (int)b));
+                mouse.MouseUp += (m, b) => _callbacks.Execute(() => PointerInput(InputKind.PointerUp, m.Position.X, m.Position.Y, (int)b));
+                mouse.Scroll += (m, wheel) => _callbacks.Execute(() => PointerInput(InputKind.Wheel, m.Position.X, m.Position.Y, wheel: wheel.Y));
             }
             foreach (var keyboard in _input.Keyboards)
             {
-                keyboard.KeyDown += (k, key, _) => KeyInput(k, key, InputKind.KeyDown);
-                keyboard.KeyUp += (k, key, _) => KeyInput(k, key, InputKind.KeyUp);
-                keyboard.KeyChar += (_, c) => Input?.Invoke(new UiInput(InputKind.Text, Text: c.ToString()));
+                keyboard.KeyDown += (k, key, _) => _callbacks.Execute(() => KeyInput(k, key, InputKind.KeyDown));
+                keyboard.KeyUp += (k, key, _) => _callbacks.Execute(() => KeyInput(k, key, InputKind.KeyUp));
+                keyboard.KeyChar += (_, c) => _callbacks.Execute(() => Input?.Invoke(new UiInput(InputKind.Text, Text: c.ToString())));
             }
         }
         catch (Exception error) { UiCleanup.Complete(error, () => _input?.Dispose(), () => _transparency?.Dispose(), () => _chrome?.Dispose(), () => _dpi?.Dispose(), NativeWindow.Dispose, () => _glfw?.Dispose()); throw; }
@@ -229,6 +232,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (Environment.CurrentManagedThreadId != _thread) throw new InvalidOperationException("Window access requires its owner thread.");
+        _callbacks.Verify();
         _transparency?.Verify();
         _chrome?.Verify();
         _dpi?.Verify();
@@ -298,6 +302,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
             if (!NativeWindow.IsClosing) NativeWindow.DoRender();
         });
         NativeWindow.DoEvents();
+        VerifyWindowAccess();
     }
     /// <inheritdoc />
     public void Close() { VerifyWindowAccess(); NativeWindow.Close(); }

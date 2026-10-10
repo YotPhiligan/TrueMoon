@@ -11,6 +11,7 @@ if (nativePathIndex >= 0 && nativePathIndex + 1 == args.Length)
     throw new ArgumentException("--native-skia requires a DLL path.");
 SkiaNativeLibrary.Initialize(nativePathIndex >= 0 ? args[nativePathIndex + 1] : null);
 Console.WriteLine($"Native Skia: {SkiaNativeLibrary.LoadedPath}");
+if (args.Contains("--window-callback-failure")) { await WindowCallbackProbe.RunAsync(args); return; }
 if (args.Contains("--window-dpi")) { WindowDpiProbe.Run(args); return; }
 if (args.Contains("--window-chrome")) { await WindowChromeProbe.RunAsync(args.Contains("--validation")); return; }
 if (args.Contains("--window-snap")) { WindowSnapProbe.Run(args.Contains("--validation")); return; }

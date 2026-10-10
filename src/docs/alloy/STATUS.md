@@ -1,6 +1,6 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа: **2026-10-09 — реорганизация планов и статусов**, без новых build/tests/GPU/publish. Последний записанный code run — Windows DPI2026-10-09; его результаты сохранены отдельно ниже с датой. Alpha не завершён.
+Последняя работа: **2026-10-10 — native callback fault boundary и teardown proof** в отдельном worktree `codex/alloy-next` от origin/main b15d85f. Проверены только локальные UI проекты и consumers; результат представлен до объединения. Alpha не завершён.
 
 Область: Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting, UI tests и consumers. [UI план](PLAN.md), [история](HISTORY.md), [общий план](../PLAN.md), [общий статус](../STATUS.md), [формат](../PLANNING.md).
 
@@ -14,13 +14,25 @@
 | Rendering/HUD | Raster/OpenGL/Vulkan, borrowed raw-handle HUD, retained composition, failure/recreate и resources reuse | GPU/validation/selected-pixel baseline проверялись; real loss, long VRAM/lifecycle и full golden открыты |
 | Windows4.9 | Appearance/custom frame/native Snap, native DPI Scale/resize/input/min-max | HWND DPI144/UiScale1.5 проверен; physical100/200%/разные DPI мониторов не проверены |
 | Consumers | AlloyTest/AlloyVulkanTest, shared Settings model/script и Debug/Release smoke | Package/independent final consumer delivery остаётся alpha задачей |
-| После alpha | PA1–PA10 в UI плане | Запланировано; beta API и расширения не реализованы этой реорганизацией |
+| После alpha | PA1–PA10 в UI плане | Запланировано; beta API и расширения не входят в текущий alpha проход |
 
 Наличие реализации не означает итоговую готовность этапа. Подробные изменения и точные commands/configuration находятся в HISTORY; общий solution build не является UI или full-solution test pass.
 
-## Последние записанные UI проверки — code run2026-10-09
+## Текущие проверки — callback fault run2026-10-10
 
-Это предыдущий code run перед текущей документационной правкой. [Полная запись DPI](HISTORY.md#49d--k3-native-windows-dpi--реализация-и-запуск-2026-10-09).
+[Изменения, команды и scope](HISTORY.md#49--k7-callback-fault-boundary-и-cleanup-2026-10-10).
+
+- Platform.Silk сохраняет первую ошибку native-origin mouse/key/text/focus/render handler, проверяет pending Win32 hook fault до пользовательского handler и передаёт причину через VerifyWindowAccess/Run вне native dispatch. Последующие handlers подавляются; ownership и teardown порядок сохранены.
+- Focused WindowCallbackBoundaryTests **6passed/0failed/0skipped**; финальная UI suite **469passed/0failed/0skipped**, SDK10.0.401/net10.0/xUnit2.9.3/VSTest. Это локальная UI suite, не общий baseline.
+- Native callback probe **Debug и published Release**, каждый: **6direct cases +12hosted failures +12healthy recreations**. Native mouse/key/text/focus, directed DPI subclass failure и managed Render dispatch; OpenGL/Vulkan×Opaque/Opacity/PerPixel. First cause/stack, original+cleanup errors, Completion/StopAsync identity, tree/focus/registry/HWND и все3hooks после каждой сессии проверены; Vulkan validation **0errors/0warnings**. Полный pending-hook guard включён в оба финальных запуска.
+- Existing `--window-chrome` и `--settings-failure` повторены в Debug/published Release — **4probe runs exit0**, validation0/0 включая teardown. Локальный UI consumer build и Release publish exit0; другие модули и solution tests не запускались.
+- Первый probe attempt без process VK_LAYER_PATH завершился missing validation layer после успешной direct/OpenGL части. Полные финальные проверки выполнены с копией установленного validation tooling в этом worktree, без глобальных environment/settings изменений.
+
+Артефакты: ignored TestResults/AlloyCallbacks — TRX, logs, callbacks-debug/release.json, provenance hashes, локальная validation tooling copy и published consumer. Направленные сообщения не являются physical DPI/device loss; длительный soak/VRAM и принудительные failures RemoveWindowSubclass/GDI/Chrome hooks этим проходом не подтверждены.
+
+## Предыдущие UI проверки — code run2026-10-09
+
+Это предыдущий code run перед текущей callback правкой. [Полная запись DPI](HISTORY.md#49d--k3-native-windows-dpi--реализация-и-запуск-2026-10-09).
 
 - Focused WindowDpiTests **12/12**, UI suite **463/463**, failed/skipped0, SDK10.0.401/net10.0/xUnit2.9.3/VSTest. Это не full solution suite.
 - Final Debug/published Release regression **32/32 actual scenarios**: DPI/chrome/Snap/alpha/compare/HUD/controlled failure и16standalone smoke. Ошибка runner flags обнаружена и10cases повторены; evidence определяется actual scope reports, не одним exit0.
@@ -37,14 +49,14 @@
 
 | Критерий | Состояние на дату сверки |
 | --- | --- |
-| K1. Ядро без GPU | Текущая UI suite **2026-10-09:463passed/0failed/0skipped**, focused DPI12/12. Реализация/тесты включают clipboard/rendering failure/drawing resources/window/DPI contracts. CPU raster/PNG требуют native Skia; это не полный solution test suite. |
+| K1. Ядро без GPU | Текущая UI suite **2026-10-10:469passed/0failed/0skipped**, focused callbacks6/6. Предыдущий DPI run2026-10-09:12/12. Реализация/тесты включают clipboard/rendering failure/drawing resources/window/DPI contracts. CPU raster/PNG требуют native Skia; это не полный solution test suite. |
 | K2. Raster и GPU | Shared View1 повторно проверен2026-10-09 Debug/Release на raster/GL/Vulkan:3scales×40steps, logical bounds/states и selected RGBA samples с допуском1. **Fixed-font assets/full golden fixtures отсутствуют**; smoke их не заменяет. |
 | K3. Windows и DPI | Native DPI contract реализован2026-10-09:HWND DPI144/UiScale1.5, logical resize/input/min-max, minimize/zero-size/restore и Debug/Release alpha/Snap/physical input проверены. Pure/directed100/150/200% и headless Scale-only state tests прошли. Реальные100/200%/разные DPI мониторов недоступны в текущем окружении, settings off/Aero Shake и часть physical cancel проверок впереди. |
 | K4. Одинаковое поведение бекендов | Общие runtime/drawing/text и тот же Settings script raster/GL/Vulkan сравнили bounds/model/input/selected pixels в Debug/Release2026-10-09. Полное сравнение текста с доставляемыми fixed fonts ещё не выполнено. |
 | K5. HUD-ввод и ресурсы | Shared Settings HUD2026-10-09 Debug/Release:90compositions/36draws/2sessions/5readbacks, outside passthrough/capture/focus/alpha/dynamic content, resize/minimize/restore, новая UI-сессия из модели и host-owned device проверены при native Scale1.5. Итоговый supported configuration проход остаётся. |
-| K6. Vulkan validation | Текущие DPI/window/Snap/alpha/shared Settings/HUD/controlled failure/standalone/physical input probes2026-10-09 Debug/Release сообщили0errors/0warnings, включая teardown. Другие physical DPI/OS/GPU configurations и итоговый supported configuration проход остаются. |
-| K7. Повторные сессии | Последний записанный short retirement после reuse2026-10-08:KHR/legacy каждый5sessions/50frames/10swapchains, counters/subscriptions/roots0. Текущие window/DPI probes2026-10-09 проверили новые hooks0. Long200sessions2026-10-04 — исторический run; новые window hooks требуют длительного lifecycle/resize soak, VRAM/driver profiling отдельно. |
-| K8. Потеря устройства | **Контракт и controlled failure/recreate повторно проверены2026-10-09 Debug/Release**: error→host, terminal stop, cleanup, новая session/tree из прежней модели на здоровом device. **Physical device/context loss**, accepted DeviceLost abandonment и реальный lost-device teardown не индуцировались; полный K8 не закрыт. |
+| K6. Vulkan validation | Текущий callback fault/chrome/controlled rendering failure run2026-10-10 Debug/published Release:0errors/0warnings включая teardown. Предыдущая DPI/window/Snap/alpha/Settings/HUD/standalone/physical input matrix2026-10-09 сообщила0/0. Другие physical DPI/OS/GPU configurations и итоговый supported configuration проход остаются. |
+| K7. Повторные сессии | Текущий callback fault run2026-10-10:по12failed+12healthy hosted windows в Debug/published Release, HWND/tree/registry/все3hooks0 после teardown. Это bounded fault/recreate proof. Short retirement2026-10-08 и long200sessions2026-10-04 — исторические; длительный lifecycle/resize soak новых hooks и VRAM/driver profiling остаются. |
+| K8. Потеря устройства | **Контракт и controlled failure/recreate повторно проверены2026-10-10 Debug/published Release**: error→host, terminal stop, cleanup, новая session/tree из прежней модели на здоровом device. **Physical device/context loss**, accepted DeviceLost abandonment и реальный lost-device teardown не индуцировались; полный K8 не закрыт. |
 | K9. Производительность | **Baseline, allocation/CPU profile и одна подтверждённая reuse оптимизация выполнены2026-10-07/08.** Shared Settings static/property/list; cached paint/FIFO16fonts, до/после24000rawframes. Static0layout/draw/Update allocations. Managed Update allocations уменьшились~120→46KB/property и~140→66KB/list. Native/VRAM/GPU timestamps не измерены; performance budget не согласован. |
 
 Alpha K1–K9 не объявляется завершённой. Требования и окончательная matrix остаются в [плане](PLAN.md#воспроизводимый-итоговый-проход-alpha); readiness table содержит датированные результаты, а не запуск документационной правки.
@@ -52,7 +64,7 @@ Alpha K1–K9 не объявляется завершённой. Требова
 ## Блокеры и ограничения
 
 1. Physical100/200% и разные DPI мониторов отсутствуют в текущем проверенном окружении. Native DPI contract реализован, полный K3/4.9d не закрыт.
-2. Settings off/Aero Shake, часть physical cancel/release-outside, callback fault injection и долгий lifecycle4.9 ещё нужны. Alt+Space без PowerToys interception — отдельная проверка. Старые opacity/legacy capture failures не объявлены исправленными текущей alpha matrix.
+2. Settings off/Aero Shake, часть physical cancel/release-outside и долгий lifecycle4.9 ещё нужны. Native-origin callback faults/DPI subclass error проверены2026-10-10; искусственные Chrome/GDI/RemoveWindowSubclass failures не проверены. Alt+Space без PowerToys interception — отдельная проверка. Старые opacity/legacy capture failures не объявлены исправленными текущей alpha matrix.
 3. Доставляемые fixed fonts/full golden, long resource/VRAM soak, real device/context loss и final independent/package consumer остаются открытыми.
 4. Нерегулярный прежний standalone Name binding mismatch не получил root-cause fix; passing smoke не закрывает расследование воспроизводимости.
 5. Core/DI failures и full solution tests учитываются в общем и соответствующих модульных статусах, а не как самостоятельные UI задачи. При влиянии на UI Hosting указывать точный integration blocker.
