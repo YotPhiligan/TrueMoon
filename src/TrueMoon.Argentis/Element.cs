@@ -14,7 +14,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     private bool _disposing;
     internal bool ChangingTree { get; set; }
     private Style? _style;
-    private Thickness _margin, _padding;
+    private Thickness _margin;
     private float _minWidth, _minHeight, _maxWidth = float.PositiveInfinity, _maxHeight = float.PositiveInfinity;
     private LayoutAlignment _horizontal = LayoutAlignment.Stretch, _vertical = LayoutAlignment.Stretch;
     private bool _disposed;
@@ -24,6 +24,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     IElement? IElement.Parent => Parent;
     /// <summary>Child elements in paint order.</summary>
     public virtual IReadOnlyList<Element> Children => Array.Empty<Element>();
+    /// <summary>The root-coordinate viewport clipping this element's children for drawing and hit testing.</summary>
+    public virtual Rect ChildClipBounds => Bounds;
     /// <summary>The arranged rectangle in root coordinates.</summary>
     public Rect Bounds { get; private set; }
     /// <summary>The requested size, including margins.</summary>
@@ -36,6 +38,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     public bool IsDisposed => _disposed;
     /// <summary>Whether this element accepts keyboard focus.</summary>
     public virtual bool Focusable => false;
+    /// <summary>Custom title-bar role. Focusable controls stay client input unless explicitly Maximize; Client subtrees always exclude native roles.</summary>
+    public WindowRegionRole WindowRegion { get => Get(UiProperties.WindowRegion); set => Set(UiProperties.WindowRegion, value); }
     /// <summary>Whether the pointer is over this element.</summary>
     public bool IsHovered { get => _hovered; set { if (_hovered != value) { VerifyAccess(); _hovered = value; Invalidate(Invalidation.Render); } } }
     /// <summary>Whether this element has keyboard focus.</summary>
@@ -57,7 +61,9 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <summary>External spacing.</summary>
     public Thickness Margin { get => _margin; set { VerifyThickness(value); _margin = value; Invalidate(Invalidation.Layout); } }
     /// <summary>Internal spacing.</summary>
-    public Thickness Padding { get => _padding; set { VerifyThickness(value); _padding = value; Invalidate(Invalidation.Layout); } }
+    public Thickness Padding { get => Get(UiProperties.Padding); set => Set(UiProperties.Padding, value); }
+    /// <summary>The control's theme padding when no local or style value is present.</summary>
+    protected virtual Thickness ThemePadding => default;
     /// <summary>Horizontal placement within the parent slot.</summary>
     public LayoutAlignment HorizontalAlignment { get => _horizontal; set { VerifyAccess(); _horizontal = value; Invalidate(Invalidation.Layout); } }
     /// <summary>Vertical placement within the parent slot.</summary>
@@ -91,6 +97,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (ReferenceEquals(property, UiProperties.Foreground)) return (T)(object)Theme.Foreground;
         if (ReferenceEquals(property, UiProperties.FontSize)) return (T)(object)Theme.FontSize;
         if (ReferenceEquals(property, UiProperties.FontFamily)) return (T)(object)Theme.FontFamily;
+        if (ReferenceEquals(property, UiProperties.Padding)) return (T)(object)ThemePadding;
+        if (ReferenceEquals(property, UiProperties.Spacing)) return (T)(object)Theme.StackSpacing;
         return property.DefaultValue;
     }
     /// <summary>Sets a typed local value and invalidates its dependent work.</summary>
@@ -355,7 +363,14 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
             context.Clip(Bounds);
             if (Background.A != 0) context.Fill(Bounds, Background);
             DrawCore(context);
-            foreach (var child in Children) child.Draw(context);
+            var childClip = ChildClipBounds;
+            if (Children.Count != 0 && childClip != Bounds)
+            {
+                context.Save();
+                try { context.Clip(childClip); foreach (var child in Children) child.Draw(context); }
+                finally { context.Restore(); }
+            }
+            else foreach (var child in Children) child.Draw(context);
             if (IsFocused) context.Stroke(Bounds.Deflate(new Thickness(1)), Theme.Accent, 2, 3);
         }
         finally { context.Restore(); }

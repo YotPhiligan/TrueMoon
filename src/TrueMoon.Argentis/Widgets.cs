@@ -11,7 +11,9 @@ public sealed class CheckBox : Button
     /// <summary>Checked state.</summary>
     public static readonly UiProperty<bool> IsCheckedProperty = new("IsChecked", false);
     /// <summary>Creates a check box.</summary>
-    public CheckBox(string text = "") : base(text) => Padding = new Thickness(36, 8, 12, 8);
+    public CheckBox(string text = "") : base(text) { }
+    /// <inheritdoc />
+    protected override Thickness ThemePadding => Theme.ButtonPadding with { Left = Theme.ButtonPadding.Left + 24 };
     /// <summary>The current value.</summary>
     public bool IsChecked { get => Get(IsCheckedProperty); set => Set(IsCheckedProperty, value); }
     /// <inheritdoc />
@@ -21,8 +23,9 @@ public sealed class CheckBox : Button
     {
         base.DrawCore(context);
         var box = new Rect(Bounds.X + 10, Bounds.Y + (Bounds.Height - 16) / 2, 16, 16);
-        context.Stroke(box, Theme.Accent, 2, 2);
-        if (IsChecked) context.Fill(box.Deflate(new Thickness(4)), Theme.Accent);
+        var color = IsEffectivelyEnabled ? Theme.Accent : Theme.Disabled;
+        context.Stroke(box, color, 2, 2);
+        if (IsChecked) context.Fill(box.Deflate(new Thickness(4)), color);
     }
 }
 
@@ -43,7 +46,7 @@ public class ProgressBar : Element
     protected override void DrawCore(IDrawingContext context)
     {
         context.Fill(Bounds, Theme.Control, 4);
-        context.Fill(Bounds with { Width = Bounds.Width * Value }, Theme.Accent, 4);
+        context.Fill(Bounds with { Width = Bounds.Width * Value }, IsEffectivelyEnabled ? Theme.Accent : Theme.Disabled, 4);
     }
 }
 
@@ -63,6 +66,7 @@ public sealed class Slider : ProgressBar
     public override bool HandleInput(UiInput input, IInputContext context)
     {
         if (!IsEffectivelyEnabled) return false;
+        if (input.Kind is InputKind.PointerDown or InputKind.PointerUp && input.Button != 0) return false;
         if (input.Kind == InputKind.PointerDown && input.Button == 0) { _dragging = true; context.Capture(this); context.Focus(this); }
         if (_dragging && input.Kind is InputKind.PointerDown or InputKind.PointerMove or InputKind.PointerUp)
         {

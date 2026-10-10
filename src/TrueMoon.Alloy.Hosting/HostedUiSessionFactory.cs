@@ -37,8 +37,8 @@ public sealed class HostedUiSessionFactory : IUiSessionFactory, IStoppable, IDis
             // Validate before changing any session: a game must close sessions on its frame thread
             // before stopping App from another thread. Never destroy a borrowed/in-flight frame.
             foreach (var session in _sessions) { session.VerifyAccess(); session.Rendering.VerifyAvailable(); }
-            foreach (var session in _sessions.ToArray()) session.Dispose();
             _stopped = true;
+            UiCleanup.Complete(null, _sessions.ToArray().Select(session => (Action)session.Dispose).ToArray());
         }
     }
 }

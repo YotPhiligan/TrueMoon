@@ -94,10 +94,18 @@ public sealed class VulkanInteropSurface : IDisposable
             throw new ArgumentOutOfRangeException(nameof(layout), "Returning an image must preserve its contents.");
         // Same-device/same-queue sequential contract. Host has already recorded its barriers.
         _device.WaitIdle();
-        if (VulkanInteropNative.Return(lease.Handle, (uint)layout, _device.QueueFamily) != 1)
+        if (!_context.IsAbandoned && VulkanInteropNative.Return(lease.Handle, (uint)layout, _device.QueueFamily) != 1)
             throw new InvalidOperationException("Could not apply the host's Vulkan image state to Skia.");
         lease.Handle.Dispose();
         _lease = null;
+    }
+    internal void Abandon(VulkanTextureLease lease, UiRenderingException failure)
+    {
+        VerifyThread(); ArgumentNullException.ThrowIfNull(failure);
+        if (failure.Kind != UiRenderingFailureKind.DeviceLost) throw new ArgumentException("Only confirmed device loss permits abandoning a lease.", nameof(failure));
+        if (_lease != lease) throw new InvalidOperationException("This texture lease is not active.");
+        _context.AbandonContext(false);
+        lease.Handle.Dispose(); _lease = null;
     }
 
     /// <inheritdoc />
@@ -107,9 +115,13 @@ public sealed class VulkanInteropSurface : IDisposable
         if (_disposed) return;
         if (_lease != null || _drawing)
             throw new InvalidOperationException("Return the host texture before destroying the UI surface.");
-        _device.WaitIdle();
-        _surface.Dispose();
+        Exception? failure = null;
+        try { _device.WaitIdle(); }
+        // Completion was not confirmed. Never issue destructive GPU calls against potentially in-flight work.
+        catch (Exception error)
+        { failure = error; _context.AbandonContext(false); }
         _disposed = true;
+        UiCleanup.Complete(failure, _surface.Dispose);
     }
 }
 
@@ -126,6 +138,9 @@ public sealed class VulkanTextureLease
     public VulkanTextureInfo Info => !Handle.IsClosed ? _info : throw new ObjectDisposedException(nameof(VulkanTextureLease));
     /// <summary>Waits for completed host work and returns its actual state to Skia.</summary>
     public void Return(ImageLayout finalLayout) => _owner.Return(this, finalLayout);
+    /// <summary>Discards the lease only after the host confirms device loss; never use for an ordinary draw/return error. Host Vulkan handles must stay alive through UI cleanup.</summary>
+    /// <param name="failure">Confirmed DeviceLost failure reported to the UI session by the host.</param>
+    public void AbandonAfterDeviceLoss(UiRenderingException failure) => _owner.Abandon(this, failure);
 }
 /// <summary>ABI v1 Vulkan image descriptor; no ownership of the image is transferred.</summary>
 [StructLayout(LayoutKind.Sequential)]

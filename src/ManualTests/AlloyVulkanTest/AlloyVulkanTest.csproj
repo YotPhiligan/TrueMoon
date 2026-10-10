@@ -15,4 +15,15 @@
   <ItemGroup>
     <EmbeddedResource Include="Shaders/*.spv" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Reuse the actual standalone scene and script; do not reference its executable. -->
+    <Compile Include="../AlloyTest/View1.cs" Link="Settings/View1.cs" />
+    <Compile Include="../AlloyTest/SettingsModel.cs" Link="Settings/SettingsModel.cs" />
+    <Compile Include="../AlloyTest/SettingsRow.cs" Link="Settings/SettingsRow.cs" />
+    <Compile Include="../AlloyTest/LoadStatus.cs" Link="Settings/LoadStatus.cs" />
+    <Compile Include="../AlloyTest/LoadStatusRegion.cs" Link="Settings/LoadStatusRegion.cs" />
+    <Compile Include="../AlloyTest/VolumeMeter.cs" Link="Settings/VolumeMeter.cs" />
+    <Compile Include="../AlloyTest/SettingsFormSmoke.cs" Link="Settings/SettingsFormSmoke.cs" />
+    <Content Include="../AlloyTest/Assets/alloy-mark.png" Link="Assets/alloy-mark.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

@@ -25,6 +25,7 @@ public sealed class SkiaRasterSurface : IUiRenderSurface
 {
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private readonly SKSurface _measurement;
+    private readonly SkiaDrawingResources _drawingResources;
     private SKSurface? _surface;
     private UiViewport _viewport;
     private bool _disposed, _drawing, _hasFrame;
@@ -35,9 +36,14 @@ public sealed class SkiaRasterSurface : IUiRenderSurface
     {
         _measurement = SKSurface.Create(new SKImageInfo(1, 1))
             ?? throw new InvalidOperationException("Could not create text service surface.");
-        TextLayout = new SkiaDrawingContext(_measurement.Canvas);
-        try { Resize(viewport); }
-        catch { _measurement.Dispose(); throw; }
+        try
+        {
+            _drawingResources = new SkiaDrawingResources();
+            TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
+            Resize(viewport);
+        }
+        catch (Exception error)
+        { UiCleanup.Complete(error, () => _drawingResources?.Dispose(), _measurement.Dispose); throw; }
     }
 
     /// <inheritdoc />
@@ -78,7 +84,7 @@ public sealed class SkiaRasterSurface : IUiRenderSurface
             var canvas = _surface.Canvas;
             canvas.Clear(SKColors.Transparent);
             canvas.Save();
-            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas)); }
+            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources)); }
             finally { canvas.Restore(); }
             _hasFrame = true;
         }
@@ -99,7 +105,8 @@ public sealed class SkiaRasterSurface : IUiRenderSurface
     {
         if (_disposed) return;
         VerifyAvailable();
-        _surface?.Dispose(); _measurement.Dispose(); _disposed = true;
+        _disposed = true;
+        UiCleanup.Complete(null, _drawingResources.Dispose, () => _surface?.Dispose(), _measurement.Dispose);
     }
 }
 
@@ -112,7 +119,7 @@ public static class RasterUiSessionExtensions
     public static SKImage SnapshotRasterImage(this UiSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
-        session.VerifyAccess();
+        session.VerifyRendering();
         if (session.NeedsUpdate) throw new InvalidOperationException("Update UI before taking its raster snapshot.");
         return (session.Rendering as SkiaRasterSurface
             ?? throw new InvalidOperationException("Session is not using Skia raster.")).Snapshot();

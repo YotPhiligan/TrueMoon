@@ -3,9 +3,8 @@ namespace TrueMoon.Argentis;
 /// <summary>A stack measuring children along one unconstrained axis.</summary>
 public abstract class StackBase : ElementList
 {
-    private float _spacing;
     /// <summary>Distance between visible children.</summary>
-    public float Spacing { get => _spacing; set { VerifyAccess(); if (!float.IsFinite(value) || value < 0) throw new ArgumentOutOfRangeException(nameof(value)); _spacing = value; Invalidate(Invalidation.Layout); } }
+    public float Spacing { get => Get(UiProperties.Spacing); set => Set(UiProperties.Spacing, value); }
     /// <summary>Whether the stacking axis is vertical.</summary>
     protected virtual bool IsVertical => true;
     /// <inheritdoc />

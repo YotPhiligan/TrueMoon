@@ -12,6 +12,9 @@ public sealed unsafe class VulkanWindowPresenter : IDisposable
     private readonly VulkanDevice _device;
     private readonly KhrSurface _surfaceApi;
     private readonly KhrSwapchain _swapchainApi;
+    private readonly CompositeAlphaFlagsKHR? _requestedAlpha;
+    internal CompositeAlphaFlagsKHR SelectedCompositeAlpha { get; private set; }
+    internal Format SelectedSurfaceFormat { get; private set; }
     private SwapchainKHR _swapchain;
     private Image[] _images = [];
     private Semaphore[] _presentReady = [];
@@ -36,12 +39,37 @@ public sealed unsafe class VulkanWindowPresenter : IDisposable
     public int SwapchainGenerations { get; private set; }
     /// <summary>Uses a borrowed device created for the window surface. The caller disposes it last.</summary>
     public VulkanWindowPresenter(VulkanDevice device)
+        : this(device, null) { }
+
+    /// <summary>Creates a presenter with an explicit window alpha mode. PerPixel requires advertised premultiplied composition.</summary>
+    /// <param name="device">Borrowed window device disposed by the caller after the presenter.</param>
+    /// <param name="transparency">Desktop window composition mode. Uniform opacity is applied by the window host.</param>
+    public VulkanWindowPresenter(VulkanDevice device, WindowTransparencyMode transparency)
+        : this(device, RequestedAlpha(transparency)) { }
+
+    private static CompositeAlphaFlagsKHR? RequestedAlpha(WindowTransparencyMode mode) => mode switch
     {
+        WindowTransparencyMode.PerPixel => CompositeAlphaFlagsKHR.PreMultipliedBitKhr,
+        WindowTransparencyMode.Opaque or WindowTransparencyMode.Opacity => CompositeAlphaFlagsKHR.OpaqueBitKhr,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode))
+    };
+    /// <summary>Whether the window surface advertises premultiplied composite alpha.</summary>
+    public bool SupportsPerPixelTransparency { get; private set; }
+
+    // 4.9a experiment only. The public/default path retains its existing alpha precedence.
+    internal VulkanWindowPresenter(VulkanDevice device, CompositeAlphaFlagsKHR? requestedAlpha)
+    {
+        ArgumentNullException.ThrowIfNull(device);
         _device = device;
+        _requestedAlpha = requestedAlpha;
         if (device.Surface.Handle == 0) throw new ArgumentException("A window surface is required.", nameof(device));
         if (!device.Api.TryGetInstanceExtension(device.Instance, out _surfaceApi)) throw new NotSupportedException("VK_KHR_surface is unavailable.");
         try
         {
+            VulkanDevice.Check(_surfaceApi.GetPhysicalDeviceSurfaceCapabilities(device.PhysicalDevice, device.Surface, out var capabilities), "PresenterSurfaceCapabilities");
+            SupportsPerPixelTransparency = (capabilities.SupportedCompositeAlpha & CompositeAlphaFlagsKHR.PreMultipliedBitKhr) != 0;
+            if (requestedAlpha is { } alpha && (alpha == 0 || (alpha & (alpha - 1)) != 0 || (capabilities.SupportedCompositeAlpha & alpha) == 0))
+                throw new NotSupportedException($"Surface does not support the requested composite alpha: {alpha}; advertised: {capabilities.SupportedCompositeAlpha}.");
             if (!device.Api.TryGetDeviceExtension(device.Instance, device.Device, out _swapchainApi)) throw new NotSupportedException("VK_KHR_swapchain is unavailable.");
             var semaphoreInfo = new SemaphoreCreateInfo { SType = StructureType.SemaphoreCreateInfo };
             VulkanDevice.Check(device.Api.CreateSemaphore(device.Device, in semaphoreInfo, null, out _acquired), "CreateAcquireSemaphore");
@@ -54,7 +82,7 @@ public sealed unsafe class VulkanWindowPresenter : IDisposable
             { SType = StructureType.CommandBufferAllocateInfo, CommandPool = _pool, CommandBufferCount = 1, Level = CommandBufferLevel.Primary };
             VulkanDevice.Check(device.Api.AllocateCommandBuffers(device.Device, in allocate, out _command), "AllocatePresentCommands");
         }
-        catch { Dispose(); throw; }
+        catch (Exception error) { UiCleanup.Complete(error, Dispose); throw; }
     }
     /// <summary>Requests swapchain recreation on the next nonzero frame.</summary>
     public void InvalidateSwapchain() => _recreate = true;
@@ -85,9 +113,11 @@ public sealed unsafe class VulkanWindowPresenter : IDisposable
         if (_extent.Width == 0 || _extent.Height == 0) return false;
         var imageCount = capabilities.MinImageCount + 1;
         if (capabilities.MaxImageCount != 0) imageCount = Math.Min(imageCount, capabilities.MaxImageCount);
-        var alpha = new[] { CompositeAlphaFlagsKHR.OpaqueBitKhr, CompositeAlphaFlagsKHR.PreMultipliedBitKhr,
+        var alpha = _requestedAlpha ?? new[] { CompositeAlphaFlagsKHR.OpaqueBitKhr, CompositeAlphaFlagsKHR.PreMultipliedBitKhr,
             CompositeAlphaFlagsKHR.PostMultipliedBitKhr, CompositeAlphaFlagsKHR.InheritBitKhr }
             .First(a => (capabilities.SupportedCompositeAlpha & a) != 0);
+        if ((alpha & (alpha - 1)) != 0 || alpha == 0 || (capabilities.SupportedCompositeAlpha & alpha) == 0)
+            throw new NotSupportedException($"Surface does not support the requested composite alpha: {alpha}.");
         var create = new SwapchainCreateInfoKHR
         {
             SType = StructureType.SwapchainCreateInfoKhr, Surface = _device.Surface, MinImageCount = imageCount,
@@ -97,6 +127,8 @@ public sealed unsafe class VulkanWindowPresenter : IDisposable
             Clipped = true, OldSwapchain = _swapchain
         };
         VulkanDevice.Check(_swapchainApi.CreateSwapchain(_device.Device, in create, null, out var replacement), "CreateSwapchain");
+        SelectedCompositeAlpha = alpha;
+        SelectedSurfaceFormat = format.Format;
         _liveSwapchains++; _created++; _peakSwapchains = Math.Max(_peakSwapchains, _liveSwapchains);
         if (_swapchain.Handle != 0)
         {
@@ -134,13 +166,25 @@ public sealed unsafe class VulkanWindowPresenter : IDisposable
     /// <summary>Presents the current UI texture. Returns false while suspended or requiring recreation.</summary>
     public bool Present(UiSession session)
     {
-        session.VerifyAccess();
+        session.VerifyRendering();
         var viewport = session.Viewport;
         if (viewport.IsEmpty) return false;
         var lease = session.AcquireVulkanTexture();
         var layout = (ImageLayout)lease.Info.Layout;
-        try { return PresentImage(lease.Info, viewport, state => layout = state); }
-        finally { lease.Return(layout); }
+        Exception? failure = null; var presented = false;
+        try { presented = PresentImage(lease.Info, viewport, state => layout = state); }
+        catch (Exception error) { failure = error; }
+        UiCleanup.Complete(failure,
+            () => { if (failure is UiRenderingException graphics) session.ReportRenderingFailure(graphics); },
+            () =>
+            {
+                if (failure is UiRenderingException { Kind: UiRenderingFailureKind.DeviceLost } lost)
+                { lease.AbandonAfterDeviceLoss(lost); return; }
+                try { lease.Return(layout); }
+                catch (UiRenderingException error) when (error.Kind == UiRenderingFailureKind.DeviceLost)
+                { UiCleanup.Complete(error, () => session.ReportRenderingFailure(error), () => lease.AbandonAfterDeviceLoss(error)); }
+            });
+        return presented;
     }
 
     /// <summary>Presents a borrowed RGBA image, including a host-composited scene. Does not destroy or return its source.</summary>
@@ -275,20 +319,26 @@ public sealed unsafe class VulkanWindowPresenter : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        var vk = _device.Api; vk.DeviceWaitIdle(_device.Device);
-        if (UsesPresentFences)
+        var vk = _device.Api; Exception? failure = null;
+        try
         {
-            CollectRetired(true);
-            for (var i = 0; i < _presentFences.Length; i++) ConfirmFence(_presentFences, _pendingFences, i, true);
+            _device.WaitIdle();
+            if (UsesPresentFences)
+            {
+                CollectRetired(true);
+                for (var i = 0; i < _presentFences.Length; i++) ConfirmFence(_presentFences, _pendingFences, i, true);
+            }
         }
+        catch (UiRenderingException error) when (error.Kind == UiRenderingFailureKind.DeviceLost) { failure = error; }
         // Legacy shutdown retains the unextended Vulkan WaitIdle limitation; resize retirement above
         // uses replacement-image reacquisition rather than treating WaitIdle as presentation proof.
-        foreach (var generation in _retired) DestroyGeneration(generation);
-        _retired.Clear();
-        if (_swapchain.Handle != 0) DestroyGeneration(new(_swapchain, _presentReady, _presentFences, _pendingFences));
-        if (_acquired.Handle != 0) { vk.DestroySemaphore(_device.Device, _acquired, null); _liveSemaphores--; }
-        if (_pool.Handle != 0) { vk.DestroyCommandPool(_device.Device, _pool, null); _livePools--; }
-        _swapchainApi?.Dispose(); _surfaceApi.Dispose();
         _disposed = true;
+        UiCleanup.Complete(failure,
+            () => { foreach (var generation in _retired) DestroyGeneration(generation); _retired.Clear(); },
+            () => { if (_swapchain.Handle != 0) DestroyGeneration(new(_swapchain, _presentReady, _presentFences, _pendingFences)); },
+            () => { if (_acquired.Handle != 0) { vk.DestroySemaphore(_device.Device, _acquired, null); _liveSemaphores--; } },
+            () => { if (_pool.Handle != 0) { vk.DestroyCommandPool(_device.Device, _pool, null); _livePools--; } },
+            () => _swapchainApi?.Dispose(), _surfaceApi.Dispose);
     }
+    internal bool IsDisposed => _disposed;
 }

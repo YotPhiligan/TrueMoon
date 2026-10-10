@@ -3,11 +3,27 @@ using TrueMoon.Alloy.Platform.Silk;
 using TrueMoon.Alloy.Rendering.Skia;
 using AlloyVulkanTest;
 
+// Isolation must run before loading native Skia: only raw GL/Vulkan calls are used.
+if (args.Contains("--vulkan-transparency-isolation")) { VulkanTransparencyIsolation.Run(args); return; }
+
 var nativePathIndex = Array.IndexOf(args, "--native-skia");
 if (nativePathIndex >= 0 && nativePathIndex + 1 == args.Length)
     throw new ArgumentException("--native-skia requires a DLL path.");
 SkiaNativeLibrary.Initialize(nativePathIndex >= 0 ? args[nativePathIndex + 1] : null);
 Console.WriteLine($"Native Skia: {SkiaNativeLibrary.LoadedPath}");
+if (args.Contains("--window-dpi")) { WindowDpiProbe.Run(args); return; }
+if (args.Contains("--window-chrome")) { await WindowChromeProbe.RunAsync(args.Contains("--validation")); return; }
+if (args.Contains("--window-snap")) { WindowSnapProbe.Run(args.Contains("--validation")); return; }
+if (args.Contains("--window-snap-input")) { WindowSnapProbe.RunInput(args); return; }
+if (args.Contains("--window-snap-bar")) { WindowSnapProbe.RunBarInput(args); return; }
+if (args.Contains("--snap-keyboard-control")) { WindowSnapProbe.RunKeyboardControl(); return; }
+if (args.Contains("--window-appearance")) { WindowAppearanceProbe.Run(args); return; }
+if (args.Contains("--window-transparency")) { WindowTransparencyProbe.Run(args); return; }
+if (args.Contains("--settings-baseline")) { SettingsPerformanceProbe.Run(args); return; }
+if (args.Contains("--settings-failure")) { await RenderingFailureProbe.RunAsync(args.Contains("--validation")); return; }
+if (args.Contains("--settings-compare")) { SettingsBackendProbe.Run(args.Contains("--validation")); return; }
+if (args.Contains("--settings-hud") || args.Contains("--settings-hud-demo"))
+{ SettingsHudProbe.Run(args.Contains("--validation"), args.Contains("--settings-hud-demo")); return; }
 if (args.Contains("--raster"))
 {
     var outputIndex = Array.IndexOf(args, "--raster-output");

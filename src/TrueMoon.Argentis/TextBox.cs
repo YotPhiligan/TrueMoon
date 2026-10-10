@@ -15,7 +15,9 @@ public sealed class TextBox : Element
     private float _scrollX;
     private ITextLayoutService? _text;
     /// <summary>Creates a text editor.</summary>
-    public TextBox() { Padding = new Thickness(8); MinWidth = 160; }
+    public TextBox() { MinWidth = 160; }
+    /// <inheritdoc />
+    protected override Thickness ThemePadding => Theme.EditorPadding;
     /// <inheritdoc />
     public override bool Focusable => true;
     /// <summary>The editor content.</summary>

@@ -78,6 +78,22 @@ public class ScrollViewer : ContentControl
     /// <summary>The full content height.</summary>
     public float Extent { get; private set; }
     /// <inheritdoc />
+    public override Rect ChildClipBounds => Bounds.Deflate(Padding);
+    /// <summary>Scrolls enough to expose a root-coordinate rectangle, clamping to the current extent.</summary>
+    /// <param name="rectangle">The arranged bounds of content to reveal; oversized content aligns at the top.</param>
+    public void BringIntoView(Rect rectangle)
+    {
+        VerifyAccess();
+        if (!float.IsFinite(rectangle.X) || !float.IsFinite(rectangle.Y) || !float.IsFinite(rectangle.Width)
+            || !float.IsFinite(rectangle.Height) || rectangle.Width < 0 || rectangle.Height < 0)
+            throw new ArgumentOutOfRangeException(nameof(rectangle));
+        var viewport = ChildClipBounds;
+        var delta = rectangle.Y < viewport.Y || rectangle.Height > viewport.Height ? rectangle.Y - viewport.Y
+            : Math.Max(0, rectangle.Y + rectangle.Height - viewport.Y - viewport.Height);
+        var next = Math.Clamp(Offset + delta, 0, Math.Max(0, Extent - viewport.Height));
+        if (next != Offset) Offset = next;
+    }
+    /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
         Child?.Measure(new Size(available.Width, float.PositiveInfinity), text);
@@ -93,7 +109,7 @@ public class ScrollViewer : ContentControl
     /// <inheritdoc />
     public override bool HandleInput(UiInput input, IInputContext context)
     {
-        if (input.Kind != InputKind.Wheel) return false;
+        if (!IsEffectivelyEnabled || input.Kind != InputKind.Wheel) return false;
         var next = Math.Clamp(Offset - input.WheelDelta * 36, 0, Math.Max(0, Extent - Bounds.Deflate(Padding).Height));
         if (next == Offset) return false;
         Offset = next; return true;

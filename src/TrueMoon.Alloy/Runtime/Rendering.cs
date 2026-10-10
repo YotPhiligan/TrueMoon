@@ -27,7 +27,7 @@ public interface IUiRenderSurface : IDisposable
 {
     /// <summary>The text service shared by measurement and drawing.</summary>
     ITextLayoutService TextLayout { get; }
-    /// <summary>Rejects mutations/disposal while a frame is borrowed by the host.</summary>
+    /// <summary>Checks thread/lifetime and rejects mutations/disposal while a frame is borrowed. Must allow cleanup of a failed context; do not probe GPU health here.</summary>
     void VerifyAvailable();
     /// <summary>Resizes the surface after the host returns its borrowed frame.</summary>
     void Resize(UiViewport viewport);
@@ -37,14 +37,13 @@ public interface IUiRenderSurface : IDisposable
 /// <summary>Optional platform clipboard services. The host owns their lifetime.</summary>
 public interface IUiClipboard
 {
-    /// <summary>Reads text.</summary>
+    /// <summary>Reads text, or null when no text format is available. Operational errors throw UiClipboardException.</summary>
     string? GetText();
-    /// <summary>Writes text.</summary>
+    /// <summary>Replaces clipboard contents with text. Operational errors throw UiClipboardException.</summary>
     void SetText(string text);
 }
 /// <summary>Input routing result for a game or window host.</summary>
 public readonly record struct UiInputResult(bool Handled, bool PointerCaptured, bool KeyboardFocused);
-
 /// <summary>A platform window that supplies normalized input, viewport and frame callbacks.</summary>
 public interface IWindowHost : IDisposable
 {

@@ -39,6 +39,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
     private readonly GRGlInterface _interface;
     private readonly GRContext _context;
     private readonly SKSurface _measurement;
+    private readonly SkiaDrawingResources _drawingResources;
     private SKSurface? _surface;
     private UiViewport _viewport;
     private bool _disposed, _drawing, _hasFrame;
@@ -67,9 +68,14 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
             try
             {
                 _measurement = SKSurface.Create(new SKImageInfo(1, 1)) ?? throw new InvalidOperationException("Could not create text service surface.");
-                TextLayout = new SkiaDrawingContext(_measurement.Canvas);
-                try { Resize(viewport); }
-                catch { _measurement.Dispose(); throw; }
+                try
+                {
+                    _drawingResources = new SkiaDrawingResources();
+                    TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
+                    Resize(viewport);
+                }
+                catch (Exception error)
+                { UiCleanup.Complete(error, () => _drawingResources?.Dispose(), _measurement.Dispose); throw; }
             }
             catch { _context.AbandonContext(true); _context.Dispose(); throw; }
         }
@@ -81,13 +87,18 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (Environment.CurrentManagedThreadId != _thread) throw new InvalidOperationException("OpenGL rendering requires its creator thread.");
         if (_drawing) throw new InvalidOperationException("The OpenGL surface is currently being drawn.");
+    }
+    private void VerifyContext()
+    {
         _host.VerifyCurrent();
-        if (_context.IsAbandoned) throw new InvalidOperationException("The Skia OpenGL context was abandoned.");
+        if (_context.IsAbandoned) throw new UiRenderingException("Skia OpenGL", "VerifyContext", UiRenderingFailureKind.ContextLost,
+            new InvalidOperationException("The Skia OpenGL context was abandoned."));
     }
     /// <inheritdoc />
     public void Resize(UiViewport viewport)
     {
         VerifyAvailable(); viewport.Validate();
+        VerifyContext();
         if (viewport == _viewport) return;
         _context.ResetContext();
         if (viewport.IsEmpty || _surface == null || viewport.Width != _viewport.Width || viewport.Height != _viewport.Height)
@@ -103,6 +114,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
     public void Render(Element root, UiViewport viewport)
     {
         VerifyAvailable(); ArgumentNullException.ThrowIfNull(root); viewport.Validate();
+        VerifyContext();
         if (viewport != _viewport) throw new ArgumentException("Resize before rendering a different viewport.", nameof(viewport));
         if (_surface == null) return;
         _drawing = true; _hasFrame = false;
@@ -110,15 +122,16 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
         {
             _context.ResetContext();
             var canvas = _surface.Canvas; canvas.Clear(SKColors.Transparent); canvas.Save();
-            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas)); }
+            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources)); }
             finally { canvas.Restore(); }
-            _context.Flush(); _hasFrame = true;
+            _context.Flush(); VerifyContext(); _hasFrame = true;
         }
         finally { _drawing = false; }
     }
     private void VerifyFrame()
     {
         VerifyAvailable();
+        VerifyContext();
         if (!_hasFrame || _surface == null) throw new InvalidOperationException("Render a nonempty viewport before using its OpenGL output.");
         _context.ResetContext();
     }
@@ -157,9 +170,15 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
     public void Dispose()
     {
         if (_disposed) return;
-        VerifyAvailable(); _context.ResetContext();
-        _surface?.Dispose(); _measurement.Dispose();
-        _context.AbandonContext(true); _context.Dispose(); _interface.Dispose(); _disposed = true;
+        VerifyAvailable();
+        Exception? failure = null;
+        try { VerifyContext(); _context.ResetContext(); }
+        // If the host cannot make its context current, release managed wrappers without GL calls.
+        catch (Exception error)
+        { failure = error; _context.AbandonContext(false); }
+        _disposed = true;
+        UiCleanup.Complete(failure, _drawingResources.Dispose, () => _surface?.Dispose(), _measurement.Dispose,
+            () => _context.AbandonContext(true), _context.Dispose, _interface.Dispose);
     }
 }
 
@@ -168,7 +187,7 @@ public static class OpenGLUiSessionExtensions
 {
     private static SkiaOpenGLSurface Surface(UiSession session)
     {
-        ArgumentNullException.ThrowIfNull(session); session.VerifyAccess();
+        ArgumentNullException.ThrowIfNull(session); session.VerifyRendering();
         if (session.NeedsUpdate) throw new InvalidOperationException("Update UI before using its OpenGL output.");
         return session.Rendering as SkiaOpenGLSurface ?? throw new InvalidOperationException("Session is not using Skia OpenGL.");
     }
@@ -179,9 +198,16 @@ public static class OpenGLUiSessionExtensions
     /// <param name="sampleCount">Actual destination sample count.</param>
     /// <param name="clear">Whether to clear the destination first.</param>
     public static void PresentOpenGL(this UiSession session, uint framebuffer = 0, int stencilBits = 8, int sampleCount = 0, bool clear = true)
-        => Surface(session).PresentFramebuffer(framebuffer, stencilBits, sampleCount, clear);
+    {
+        try { Surface(session).PresentFramebuffer(framebuffer, stencilBits, sampleCount, clear); }
+        catch (UiRenderingException error) { session.ReportRenderingFailure(error); throw; }
+    }
     /// <summary>Reads UI pixels to an independent caller-owned CPU image for diagnostics.</summary>
     /// <param name="session">Updated OpenGL session.</param>
     /// <returns>Dispose the returned image when finished.</returns>
-    public static SKImage ReadbackOpenGLImage(this UiSession session) => Surface(session).ReadbackImage();
+    public static SKImage ReadbackOpenGLImage(this UiSession session)
+    {
+        try { return Surface(session).ReadbackImage(); }
+        catch (UiRenderingException error) { session.ReportRenderingFailure(error); throw; }
+    }
 }

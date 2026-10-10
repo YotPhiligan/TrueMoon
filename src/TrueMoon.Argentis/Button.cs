@@ -10,7 +10,9 @@ public class Button : Text
 
     private bool _pressed;
     /// <summary>Creates a button with a label.</summary>
-    public Button(string text = "") : base(text) => Padding = new Thickness(12, 8, 12, 8);
+    public Button(string text = "") : base(text) { }
+    /// <inheritdoc />
+    protected override Thickness ThemePadding => Theme.ButtonPadding;
     /// <inheritdoc />
     public override bool Focusable => true;
     /// <summary>Raised once per completed activation.</summary>

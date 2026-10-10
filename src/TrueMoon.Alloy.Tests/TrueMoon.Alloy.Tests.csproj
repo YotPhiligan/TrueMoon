@@ -4,6 +4,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -12,6 +13,20 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Test the actual sample widget source without introducing an App/Silk dependency into this test project. -->
+    <Compile Include="..\ManualTests\AlloyTest\LoadStatus.cs" Link="Demo\LoadStatus.cs" />
+    <Compile Include="..\ManualTests\AlloyTest\CustomTitleBar.cs" Link="Demo\CustomTitleBar.cs" />
+    <Compile Include="..\ManualTests\AlloyTest\LoadStatusRegion.cs" Link="Demo\LoadStatusRegion.cs" />
+    <Compile Include="..\ManualTests\AlloyTest\SettingsModel.cs" Link="Demo\SettingsModel.cs" />
+    <Compile Include="..\ManualTests\AlloyTest\SettingsRow.cs" Link="Demo\SettingsRow.cs" />
+    <Compile Include="..\ManualTests\AlloyTest\View1.cs" Link="Demo\View1.cs" />
+    <Compile Include="..\ManualTests\AlloyTest\VolumeMeter.cs" Link="Demo\VolumeMeter.cs" />
+    <Compile Include="..\TrueMoon.Alloy.Platform.Silk\Win32Clipboard.cs" Link="Platform\Win32Clipboard.cs" />
+    <Compile Include="..\TrueMoon.Alloy.Platform.Silk\Win32ClipboardApi.cs" Link="Platform\Win32ClipboardApi.cs" />
+    <Compile Include="..\TrueMoon.Alloy.Platform.Silk\WindowPixelScale.cs" Link="Platform\WindowPixelScale.cs" />
+    <Content Include="..\ManualTests\AlloyTest\Assets\alloy-mark.png" Link="Assets\alloy-mark.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TrueMoon.Argentis\TrueMoon.Argentis.csproj" />

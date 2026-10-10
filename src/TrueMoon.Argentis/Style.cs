@@ -22,9 +22,17 @@ public sealed class Style
     }
 }
 
-/// <summary>Application-wide colors and typography.</summary>
+/// <summary>Application-wide colors, typography, and control spacing.</summary>
 public sealed record Theme(Color Surface, Color Control, Color Accent, Color Foreground, Color Disabled, float FontSize = 16, string FontFamily = "Segoe UI")
 {
+    private Thickness _buttonPadding = new(12, 8, 12, 8), _editorPadding = new(8);
+    private float _stackSpacing;
+    /// <summary>Default padding of buttons; check boxes add room for their indicator.</summary>
+    public Thickness ButtonPadding { get => _buttonPadding; init { UiProperties.Padding.Validate(value); _buttonPadding = value; } }
+    /// <summary>Default padding of single-line editors.</summary>
+    public Thickness EditorPadding { get => _editorPadding; init { UiProperties.Padding.Validate(value); _editorPadding = value; } }
+    /// <summary>Default distance between visible stack children; zero preserves the original layout default.</summary>
+    public float StackSpacing { get => _stackSpacing; init { UiProperties.Spacing.Validate(value); _stackSpacing = value; } }
     /// <summary>The default dark palette.</summary>
     public static Theme Dark { get; } = new(new(25, 28, 36), new(48, 54, 67), new(93, 153, 255), new(235, 237, 242), new(120, 125, 137));
     /// <summary>A light palette.</summary>

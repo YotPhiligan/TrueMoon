@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq.Expressions;
 
 namespace TrueMoon.Argentis;
@@ -6,6 +8,45 @@ namespace TrueMoon.Argentis;
 /// <summary>Fluent composition and configuration helpers.</summary>
 public static class ElementExtensions
 {
+    /// <summary>Binds an empty container to the latest collection contents, preserving rows by object reference.</summary>
+    /// <param name="element">The container whose children are exclusively managed by this binding.</param>
+    /// <param name="source">Unique non-null reference items. Its owner must serialize changes with UI-thread enumeration.</param>
+    /// <param name="factory">Creates a new unowned subtree. The binding disposes removed rows and failed preparation drafts.</param>
+    /// <returns>The same concrete container.</returns>
+    /// <remarks>Initial attach and notifications synchronize during Update. Reset retains surviving references; intermediate source states may be coalesced. Detach disconnects the source and retains rows.</remarks>
+    public static T BindItems<T, TItem>(this T element, ObservableCollection<TItem> source, Func<TItem, Element> factory)
+        where T : ElementList where TItem : class => BindItemsCore(element, source, source, factory);
+
+    /// <summary>Binds an empty container to a read-only observable collection using reference identity.</summary>
+    /// <param name="element">The container whose children are exclusively managed by this binding.</param>
+    /// <param name="source">Unique non-null reference items, safely readable on the UI owner thread.</param>
+    /// <param name="factory">Creates a new unowned subtree; generated rows are disposed when removed.</param>
+    /// <returns>The same concrete container.</returns>
+    public static T BindItems<T, TItem>(this T element, ReadOnlyObservableCollection<TItem> source, Func<TItem, Element> factory)
+        where T : ElementList where TItem : class => BindItemsCore(element, source, source, factory);
+
+    private static T BindItemsCore<T, TItem>(T element, IReadOnlyList<TItem> items, INotifyCollectionChanged source, Func<TItem, Element> factory)
+        where T : ElementList where TItem : class
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(factory);
+        var binding = new CollectionBinding<TItem>(element, items, source, factory);
+        try { element.Own(binding); }
+        catch { binding.Dispose(); throw; }
+        return element;
+    }
+
+    /// <summary>Requests synchronization of a registered collection binding at the next Update.</summary>
+    /// <param name="element">The bound container. Detached containers refresh on their next attachment.</param>
+    /// <returns>The same concrete container.</returns>
+    public static T RefreshItems<T>(this T element) where T : ElementList
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        element.Items.RefreshBinding();
+        return element;
+    }
+
     /// <summary>Sets a fixed width.</summary>
     public static T Width<T>(this T element, float width) where T : Element { element.Width = width; return element; }
     /// <summary>Sets a fixed height.</summary>

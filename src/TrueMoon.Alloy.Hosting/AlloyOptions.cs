@@ -36,6 +36,8 @@ namespace TrueMoon.Alloy.Hosting
             if (Window != null) Window.OpenGL = _skiaOpenGL;
             if (!presentation && !ExternalHost) throw new InvalidOperationException("UseAlloy requires UseExternalHost; use UsePresentation for a window.");
             if (Window != null && (Window.Width <= 0 || Window.Height <= 0)) throw new ArgumentOutOfRangeException("Window size");
+            if (Window != null) { ArgumentNullException.ThrowIfNull(Window.Appearance); Window.Appearance.Validate(); }
+            Window?.ValidateChrome();
         }
     }
 
@@ -49,6 +51,21 @@ namespace TrueMoon.Alloy.Hosting
         public int Height { get; set; } = 540;
         /// <summary>Window title.</summary>
         public string Title { get; set; } = "TrueMoon UI";
+        /// <summary>Explicit immutable transparency and decoration settings.</summary>
+        public WindowAppearance Appearance { get; set; } = new();
+        /// <summary>Optional Windows custom frame. Requires an undecorated window.</summary>
+        public WindowChromeOptions? Chrome { get; set; }
+        /// <summary>Creates Argentis title-bar content on the window owner thread. The window commands remain host-owned.</summary>
+        public Func<IWindowCommands, TrueMoon.Argentis.Element>? TitleBarFactory { get; set; }
+        internal void ValidateChrome()
+        {
+            if (Chrome != null)
+            {
+                Chrome.Validate(); Chrome.ValidateSize(new TrueMoon.Argentis.Size(Width, Height));
+                if (Appearance.Decorated) throw new ArgumentException("Custom chrome requires Decorated=false.");
+            }
+            if (TitleBarFactory != null && Chrome == null) throw new ArgumentException("TitleBarFactory requires custom Chrome.");
+        }
         /// <summary>Optional sink that requires Vulkan core/synchronization validation.</summary>
         public Action<string>? ValidationMessage { get; set; }
     }

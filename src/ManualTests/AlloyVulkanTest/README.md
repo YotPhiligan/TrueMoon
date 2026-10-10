@@ -1,6 +1,92 @@
-﻿# Skia / Vulkan / OpenGL / raster / retained HUD
+# Skia / Vulkan / OpenGL / raster / retained HUD
 
 Windows x64, .NET 10. Native Skia с interop доставляется через Rendering.Skia; ручное копирование DLL не требуется. [Пересборка native](../../TrueMoon.Alloy.Rendering.Skia/README.md).
+
+## Custom frame и native Snap: 4.9c/d
+
+`--window-chrome --validation` проверяет production Windows adapter: OpenGL/Vulkan × native drag on/off × resize on/off; directed WM_NCHITTEST для заголовка, disabled Button/TextBox, всех восьми границ/углов, отрицательных screen coordinates и устаревшего layout. Native limits, fractional rounding, exact client resize, bounded/unbounded maximize/work area, minimize/restore/close и hooks проверяются отдельно. Hosting proof активирует Argentis maximize button через UiSession input, затем queued команды; title factory failure освобождает root/device/window и сохраняет исходную ошибку. Native mouse pointer не перемещается; directed messages не заменяют physical drag/Snap/DPI matrix.
+
+`--window-dpi --validation --dpi-output <JSON>` проверяет production native DPI → UiViewport.Scale на OpenGL/Vulkan × обычное/custom окно × Opaque/Opacity/PerPixel. Размер600×400 задаётся логически; framebuffer, native limits и input сверяются с HWND DPI. Проверяются focus/selection после resize/перемещения, exactly-once client click, minimize/restore и teardown hooks/validation. Окно перемещается на каждый доступный монитор и обратно; ActualDpis/ActualDpiTransitions/UnavailableRequiredDpis показывают физическое покрытие. Directed WM_GETDPISCALEDSIZE для96/144/192 проверяет ответ hook, отдельно от physical transitions. Probe также создаёт per-monitor-v2 HWND из DPI-unaware caller и проверяет восстановление thread context. Настройки Windows не меняются; курсор временно перемещается на кнопку собственного окна и восстанавливается. Для полной K3 matrix нужны доступные100/150/200% и разные DPI мониторов.
+
+```powershell
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --window-dpi --validation --dpi-output TestResults/AlloyDpi/dpi.json
+```
+
+```powershell
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-chrome --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-appearance --custom-chrome --validation --appearance-output TestResults/AlloyTransparency/chrome-debug-alpha.json
+```
+
+`--custom-chrome` добавляет production custom frame к существующей desktop matrix и оставляет6undecorated combinations: оба backend × Opaque/Opacity/PerPixel,80samples/240RGB,48per-pixel hit targets/configuration. JSON содержит CustomChrome/ChromeHooks; нужны видимый desktop и контрольный фон. [API](../../TrueMoon.Alloy.Hosting/README.md#собственный-заголовок-и-оконные-команды), [проверки](../../docs/alloy/STATUS.md).
+
+`--window-snap --validation` выполняет8 directed-message cases (OpenGL/Vulkan × Snap on/off × SystemMenu on/off): HTMAXBUTTON, queued UI hover/press, отпускание вне кнопки, exactly-once click, capture cancel/teardown, disabled exclusion, Space/Enter, caption double-click и четыре входа native system menu. GUI_INMENUMODE проверяется на потоке собственного HWND, затем меню закрывается адресным сообщением. Реальный указатель не перемещается; результат не доказывает системный Snap flyout.
+
+```powershell
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-snap --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-snap-input --validation --snap-output TestResults/AlloyTransparency/snap-input.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-appearance --custom-chrome --native-snap --validation --appearance-output TestResults/AlloyTransparency/snap-alpha.json
+```
+
+`--window-snap-input` использует настоящий SendInput на разблокированном свободном desktop: system move/resize loop, editor exclusion, exactly-once maximize и work area, drag restore, double-click maximize/restore, системное меню по правому клику, edge/corner Snap, hover и Win+Z после каждого этапа. Покрывает OpenGL/Vulkan × Opaque/Opacity/PerPixel. До ввода проверяет foreground и принадлежность стартовой точки своему HWND; отказ guard останавливает дальнейший ввод. Читает Windows arranging/docking/drag-restore settings, не меняет их; отключённые возможности пропускает явно. JSON содержит Checks, Skipped, фактический native DPI и UiScale, Shell hit targets и Failure. Alt+Space, перехваченный PowerToys Run, явно отмечается skipped; `--snap-keyboard-control` сравнивает его с обычным decorated окном.
+
+Flyout проверяется через WindowFromPoint ниже Maximize region: Xaml_WindowedPopupClass принадлежит explorer/ShellHost/ShellExperienceHost. Shell может возвращать HWND отдельной цифровой подсказки, поэтому её rectangle является hit target geometry, а не обязательно границей всего меню. `--capture-snap` сохраняет отдельные PNG для каждого backend/mode: full UI context и target. При закрытии hover указатель уводится в свободную область собственного окна, принадлежность точки проверяется: перемещение внутрь Shell popup искажает последующий Win+Z.
+
+`--window-snap-bar --validation --capture-snap --snap-output <JSON>` удерживает реальный drag у верхнего края, выбирает зону и проверяет результирующую native Snap geometry. PNG показывают системную bar до отпускания; требуется визуальная сверка. Bar может пропускать hit testing, а thumbnail перекрывает указатель, поэтому WindowFromPoint не используется как доказательство её видимости. Оба physical probes освобождают только введённые keys/buttons и восстанавливают курсор. Settings off, Aero Shake и переходы между DPI/мониторами требуют отдельной матрицы; один physical150% монитор не заменяет её. `--native-snap` с `--custom-chrome` проверяет desktop alpha при установленном adapter path.
+
+## Публичная конфигурация окна: 4.9b
+
+`--window-appearance --validation --appearance-output <JSON>` проверяет production `SilkWindowHost`, независимый `WindowAppearance` и публичный Vulkan alpha-selecting presenter. Матрица: OpenGL/Vulkan × decorated/borderless × Opaque/Opacity/PerPixel. На каждом окне: два фона, initial/forced WM_PAINT/resize/minimize-zero-size-restore, alpha0/128/255 либо uniform opacity0/0.5/1. Проверяются реальный Win32 WS_CAPTION, roundtrip opacity, source RGBA, alpha/format, window owner thread/disposed guards, native WindowFromPoint для per-pixel client областей, отсутствие очистки на каждом обычном frame и нулевые hooks/resources после Dispose. Это desktop RGB proof, а не fixed-font full golden или native DPI/monitor matrix. Нужен свободный от перекрытий видимый Windows desktop.
+
+```powershell
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-appearance --validation --appearance-output TestResults/AlloyTransparency/appearance-debug.json
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --no-restore -o TestResults/AlloyTransparency/appearance-publish
+./TestResults/AlloyTransparency/appearance-publish/AlloyVulkanTest.exe --window-appearance --validation --appearance-output TestResults/AlloyTransparency/appearance-release.json
+```
+
+Каждый sample содержит expected/actual RGB; вся новая матрица требует Matches=true, в отличие от исторической capability matrix ниже. Запуск даёт 160 samples/480 RGB точек на configuration, 12 create/dispose foreground окон; для per-pixel — 96 native hit target checks/configuration. При RGB mismatch diagnostics показывают оба набора RGB, native foreground/background targets, visibility и opacity. [Публичный API](../../TrueMoon.Alloy.Hosting/README.md#прозрачность-standalone-окна), [текущие результаты и ограничения](../../docs/alloy/STATUS.md).
+
+## Оконная прозрачность: prototype 4.9a
+
+`--window-transparency` проверяет actual desktop RGB поверх другого окна, а также GPU-source premultiplied alpha. По 7 путей OpenGL/Vulkan: opaque, общая opacity 0/0.5/1, per-pixel alpha 0/128/255; дополнительный internal Vulkan PreMultiplied candidate. Каждый путь проверяется после resize и minimize/zero-size/restore. Три неверных Vulkan alpha requests отвергаются без потери старой сессии и retained presenter resources. Capture использует только центры полос собственных окон; внешние окна не снимаются. Нужен видимый Windows x64 desktop без перекрытия контрольных окон.
+
+```powershell
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --no-restore
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-transparency --validation --transparency-output TestResults/AlloyTransparency/debug.json
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --no-restore -o TestResults/AlloyTransparency/publish
+./TestResults/AlloyTransparency/publish/AlloyVulkanTest.exe --window-transparency --validation --transparency-output TestResults/AlloyTransparency/release.json
+```
+
+Exit 0 означает, что матрица собрана и assertions/control/lifecycle/validation прошли; конкретный режим может иметь `Supported=false`. В JSON сохраняются expected/desktop RGB, logical/framebuffer sizes, advertised/selected Vulkan alpha/format, GL alpha bits, GPU/GLFW/runtime и cleanup. Whole-window opacity никогда не включается вместе с transparent framebuffer. Неподдержанный PreMultiplied flag даёт явный unsupported result, без создания несовместимого swapchain и backend fallback.
+
+Исходная матрица на RTX 5070 Ti / Windows build 26300 / NVIDIA 617.42: OpenGL прошёл per-pixel desktop alpha; Vulkan Opaque и PreMultiplied без очистки не прошли. Дополнительная проверка ниже подтвердила рабочий Vulkan путь. Публичный default presenter сохраняет Opaque-first; внутренний experiment не является оконным API. [Фактические проверки и следующий шаг](../../docs/alloy/STATUS.md). Input/click-through, title bar/Snap, DPI 150/200%/monitor transitions и GPU interop этим prototype не проверяются.
+
+## Изоляция Vulkan / GLFW / DWM: prototype 4.9a.1
+
+`--vulkan-transparency-isolation` запускается до загрузки native Skia. Фон создаётся raw OpenGL, foreground — `vkCmdClearColorImage` в owned GPU image и существующий Vulkan presenter. Readback используется только для проверки source RGBA. Сравниваются Opaque negative control, PreMultiplied baseline и PreMultiplied с `PatBlt(BLACKNESS)` клиентского DC после обработки show/resize, с рамкой и без неё. Alpha 0/128/255 проверяется над двумя фонами, после resize и minimize/restore; opaque endpoint подтверждает, что Vulkan изображение видно. JSON включает RGB samples, alpha/format, validation/lifecycle и проверку отсутствия native libSkiaSharp.dll.
+
+```powershell
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --vulkan-transparency-isolation --validation --isolation-output TestResults/AlloyTransparency/isolation-debug.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-transparency --redirection-clear --validation --transparency-output TestResults/AlloyTransparency/skia-clear-debug.json
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --no-restore -o TestResults/AlloyTransparency/isolation-publish
+./TestResults/AlloyTransparency/isolation-publish/AlloyVulkanTest.exe --vulkan-transparency-isolation --validation --isolation-output TestResults/AlloyTransparency/isolation-release.json
+./TestResults/AlloyTransparency/isolation-publish/AlloyVulkanTest.exe --window-transparency --redirection-clear --validation --transparency-output TestResults/AlloyTransparency/skia-clear-release.json
+```
+
+Raw и Skia candidates с очисткой прошли Debug/published Release на указанной машине. Decorated PreMultiplied baseline повторил смешивание с белым; borderless raw baseline уже работал без очистки. Это проверка существующего GPU пути, а не готовая оконная функция. Нужна интеграция инициализации redirection surface в production paint/resize lifecycle и отдельный capability/input contract; CPU/layered-window transport пока не нужен. [GLFW PR #2815](https://github.com/glfw/glfw/pull/2815) содержит соответствующую гипотезу. Exit0 означает успешное выполнение controls/lifecycle и сбор матрицы; неподдержанные baseline cases могут оставаться в отчёте.
+
+## Отказы и явное пересоздание 2.4/K8
+
+Режим `--settings-failure --validation` проверяет общую View1/SettingsModel: controlled terminal draw на raster/OpenGL/Vulkan, запрет дальнейших Update/input/export, Dispose и explicit new tree/session с прежней моделью и новыми transient states. Vulkan lease при fault остаётся borrowed: преждевременный Dispose и abandonment с BackendFailure отвергаются, normal Return разблокирует cleanup. Check(ErrorDeviceLost) проверяется synthetic result без потери GPU. Registry пытается освободить все сессии при ошибке одной.
+
+Для OpenGL/Vulkan окон проверяются draw failure, external ReportRenderingFailure без throw и создание surface с ошибкой; исходные operation/tree/close errors сохраняются, Ready/Completion/StopAsync их передают, close/notification выполняются один раз, registry0. После draw/report создаётся новое окно из прежней модели. Vulkan core/synchronization validation включает teardown. Probe не обращается к OS clipboard и не индуцирует физический device/context loss; accepted DeviceLost abandonment/реальный lost-device teardown этим результатом не подтверждены. [Контракт владения и восстановления](../../TrueMoon.Alloy.Hosting/README.md#отказ-графики-и-явное-пересоздание-24k8).
+
+```powershell
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --settings-failure --validation
+```
 
 ## Миграция alpha API: PLAN 2.1a
 
@@ -21,6 +107,29 @@ Manual Silk callers используют `SilkVulkanHost` из сборки/name
 Alloy содержит только Runtime/csproj, единственный ProjectReference — Argentis; PackageReference и Core/Contracts удалены. Hosting явно подключает Silk.NET/SkiaSharp/Topten.RichTextKit, Core/Contracts и UI adapters. Platform.Silk остаётся без Skia. Новый explicit Hosting API, native ABI, lease/ownership и retirement не менялись. [AlloyTest](../AlloyTest/README.md) использует Hosting и `UsePresentation<View1>(options => options.UseSkiaOpenGL().UseSilkWindow())`; его `--smoke` закрывает окно после >=30 кадров с 30-секундным cancellation bound, обычный запуск остаётся оконным, retained View1/View2 не изменены.
 
 Все результаты ниже — **исторические**; фактические повторные build/tests/GPU/publish запуски после переноса 2.1b и оставшиеся ограничения записаны отдельно в [STATUS](../../docs/alloy/STATUS.md).
+
+## Общая форма raster/OpenGL/Vulkan и HUD
+
+Новая контрольная сцена — исходный [View1](../AlloyTest/View1.cs)/[SettingsModel](../AlloyTest/SettingsModel.cs) из AlloyTest. Проект compile-link те же sources и [SettingsFormSmoke](../AlloyTest/SettingsFormSmoke.cs), доставляет PNG через PreserveNewest; не ссылается на standalone executable и не содержит копии controls/model. Прежние маленькие probes ниже сохраняются отдельно.
+
+Команды из `src`; VK_LAYER_PATH задавайте только запускаемому процессу, используя существующий validation manifest:
+
+```powershell
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --settings-compare --validation
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --settings-hud --validation
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --settings-hud-demo --validation
+```
+
+[SettingsBackendProbe](SettingsBackendProbe.cs) выполняет40 шагов исходной формы на raster/OpenGL/Vulkan при logical900×1100, scales1/1.5/2. Framebuffer масштабируется соответственно. Сравнивает bounds всего дерева каждого шага и model/rows/focus/selection/scroll/theme/disabled state, количество redraw и5 selected RGBA samples (фон/button/PNG/meter/scroll) с допуском1 на канал. Каждый backend подтверждает5 static Update без draw, zero-size suspend, один draw после restore, Dispose дерева/branches/generated rows и прекращение model subscriptions. Snapshot/GL/Vulkan readback нужен только assertions; production композиция остаётся на GPU. Segoe UI/system font configuration не фиксируется доставляемым font asset; selected pixels избегают glyph/AA edges. Это **не полный fixed-font golden K2/K4**.
+
+[SettingsHudProbe](SettingsHudProbe.cs) — реальное game-owned Vulkan окно1100×1100, borrowed raw device descriptor, host-owned scene/compositor/presenter. Та же форма ограничена720×1000 и включена в прозрачный Panel рядом с alpha overlay показателей и кнопкой сцены. UI обрабатывает форму/список/условные области/темы/scroll по тому же40-step script; необработанный и незахваченный ввод передаётся сцене. Хост изменяет фон и композитит retained texture каждый кадр, UI.Update рисует только при invalidation. Lease возвращается с фактическим layout в finally.
+
+Bounded `--settings-hud` выполняет90 presentations, scene passthrough/button capture, selected scene transparency/alpha readbacks, actual resize/minimize/restore и zero viewport. Явно освобождает первую UI-сессию, создаёт новое дерево из прежней SettingsModel, сохраняет введённый Unicode Name/Rows и отменяет old focus; новое дерево продолжает scene routing/metrics. После teardown registry0 и host device.WaitIdle остаётся доступен. Managed callback errors перехватываются до выхода через GLFW и после Run передаются вызывающему коду. Timeout30s. `--settings-hud-demo` оставляет тот же HUD интерактивным до Escape/закрытия, scripted assertions при этом не выполняются.
+
+Свежие результаты2026-10-07: `--settings-compare --validation` и `--settings-hud --validation` прошли Debug/published Release. Comparison:3 scales ×3 backend,40 steps и29 script draws на сессию +1 restore draw. HUD каждый90 GPU compositions/36 UI draws/2 sessions/5 readbacks, validation0errors/0warnings включая teardown. Standalone AlloyTest OpenGL/Vulkan каждый40 frames в обоих режимах. UI386/386, solution build0errors/1339warnings, оба publish exit0; PNG/native hashes совпадают. [STATUS](../../docs/alloy/STATUS.md) содержит команды, logs и границы.
+
+Новых renderer/runtime/native ABI/packages нет. OS clipboard в этих probes не используется, UI input инъецирован программно; native mouse/keyboard/DPI переходы, fixed-font full golden, long resource/VRAM soak и device-loss остаются отдельным alpha проходом. В историческом запуске2026-10-07 HUD resize использовал scale1; comparison scales — logical DPI simulation. После native DPI contract2026-10-09 HUD принимает window.Viewport.Scale, нормализованный input, делает logical Resize и масштабирует readback coordinates; текущие результаты — STATUS. Контракт backend failure/recreate проверяется отдельно через --settings-failure; успешная смена UI-сессии не является device-loss тестом.
 
 ## OpenGL на общих контрактах
 
@@ -130,7 +239,18 @@ dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --ret
 
 `VulkanWindowPresenter.Resources` возвращает `TrueMoon.Alloy.Hosting.VulkanPresentationResources` и учитывает только принадлежащие presenter Vulkan handles/pools, а `HostedUiSessionFactory.ActiveSessionCount` — зарегистрированные UI-сессии. Это не счётчики всех GPU/Skia/driver allocations и не профиль VRAM. В историческом hardware запуске поддержан KHR fence path; EXT negotiation реализован, но отдельно на EXT-only устройстве не проверен. Принудительный legacy путь проверяется на том же устройстве с отключённым feature.
 
-## Другие проверки
+## Performance baseline Settings K9
+
+```powershell
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --no-restore -o TestResults/AlloyPerformance/publish -v quiet
+./ManualTests/AlloyVulkanTest/MeasureSettings.ps1 -Executable TestResults/AlloyPerformance/publish/AlloyVulkanTest.exe -OutputDirectory TestResults/AlloyPerformance/baseline
+```
+
+Runner выполняет два независимых Release-процесса:32 строки,12 cases (raster/OpenGL/Vulkan/Vulkan HUD × static/property-edit/list-edit), warmup≥100frames и≥500ms,500samples/case. `Rows`, `Samples` (чётное), `Warmup`, `WarmupMilliseconds`, `Runs`, `OutputDirectory` настраиваются параметрами. Прямой режим exe — `--settings-baseline` с `--baseline-rows`, `--baseline-samples`, `--baseline-warmup`, `--baseline-warmup-ms`, `--baseline-output` и optional `--baseline-environment`. Все вызовы — с owner thread без изменения runtime API.
+
+JSON содержит raw samples/counters/GC collections/точные границы/Windows+GPU+driver+SDK metadata и source/binary/native/font/PNG hashes; CSV и Markdown содержат summary. Update включает вложенные layout/render phases, model mutation измеряется отдельно. Managed allocations относятся к owner thread; CPU wall time Render не является GPU timestamp duration. GL completion/Vulkan export-return/HUD composition/presentation вынесены отдельно. Validation выключен в измерениях; для короткой отдельной correctness проверки после настройки VK_LAYER_PATH добавить `-Samples 4 -Warmup 2 -WarmupMilliseconds 0 -Runs 1 -Validation`. System fallback fonts и отсутствие readback не заменяют golden/VRAM проверки. [Методика, текущие результаты и ограничения](../../docs/alloy/PERFORMANCE_BASELINE.md).
+
+## Остальные сценарии
 
 - `--runtime` — UiSession/UseAlloy/DI, input, DPI layout, Post, lease guards и device ownership без окна.
 - `--window` — UsePresentation/App/DI, standalone UI, resize/minimize/restore.

@@ -1,4 +1,24 @@
-﻿# Работа над TrueMoon.Alloy
+﻿# Работа над TrueMoon
+
+## Общие планы и планы модулей
+
+Для общих и межмодульных задач сначала прочитайте:
+
+- [Общий план TrueMoon](docs/PLAN.md).
+- [Общий статус](docs/STATUS.md).
+- [Формат ведения планов](docs/PLANNING.md).
+
+Для локальной работы дополнительно прочитайте PLAN/STATUS соответствующего направления:
+
+- Core/bootstrap/contracts: `docs/core/`.
+- Cobalt/generator/DI adapter: `docs/cobalt/`.
+- Enerit/IPC/generator: `docs/enerit/`.
+- Mithril/units/process lifecycle: `docs/mithril/`.
+- Alloy/Argentis/rendering/platform/Hosting: `docs/alloy/`.
+
+После работы обновляйте статус затронутого модуля; общий STATUS — при изменении межмодульных блокеров, порядка работ или готовности. Детальные задачи ведите в одном модульном плане, общий план ссылается на них. Длинные записи и историю запусков сохраняйте в HISTORY, а в STATUS оставляйте текущую сводку. Не переносите passing результаты одного модуля на другие и не считайте исторические проверки текущим запуском.
+
+## UI направление
 
 Для задач UI-библиотеки TrueMoon.Alloy и TrueMoon.Argentis сначала прочитайте:
 

@@ -30,6 +30,27 @@ Raw `VulkanHostContext` constructors, `new VulkanUiTarget(host)` и `new VulkanI
 
 Native ABI, GPU lease/ownership и алгоритм retirement в 2.1b не менялись. Фактические build/tests/GPU/publish проверки переноса и оставшиеся ограничения записаны в [STATUS](../docs/alloy/STATUS.md). Завершение 2.1 не означает завершения 2.3/alpha.
 
+## Прозрачность standalone-окна
+
+```csharp
+options.UseSkiaVulkan().UseSilkWindow(window =>
+{
+    window.Appearance = new WindowAppearance
+    {
+        Transparency = WindowTransparencyMode.PerPixel,
+        Decorated = false
+    };
+});
+```
+
+Настройки `WindowAppearance` находятся в независимом Alloy contract и фиксируются при создании окна. По умолчанию — `Opaque`, opacity1, стандартная рамка. `PerPixel` использует premultiplied alpha UI: непрозрачный фон view по-прежнему закрывает desktop; для прозрачных областей задайте соответствующую alpha в самом UI. Vulkan требует advertised PreMultiplied composite alpha; неподдержанный framebuffer/surface даёт NotSupportedException при StartAsync, без смены backend. OpenGL использует alpha framebuffer.
+
+`Opacity` — отдельный режим, например `new WindowAppearance { Transparency = WindowTransparencyMode.Opacity, Opacity = .5f }`. `HostedUiWindow.SetOpacity(value)` ставит изменение в очередь owner thread; `SilkWindowHost.SetOpacity(value)` выполняется на owner thread напрямую. Значение должно быть конечным и в0–1. Другие режимы допускают только initial Opacity1 и запрещают SetOpacity. Общая opacity в этом adapter заявлена для Windows; это ограничение явно отражает `AppearanceCapabilities.WindowOpacity`.
+
+`AppearanceCapabilities` сообщает native transparent framebuffer и поддержку uniform opacity. Это не доказательство Vulkan composition: `VulkanWindowPresenter.SupportsPerPixelTransparency` отдельно проверяет surface flag, а `HostedUiWindow.SupportsPerPixelTransparency` сочетает обе проверки после успешного запуска. При прямом использовании SilkWindowHost передавайте `host.Appearance.Transparency` в `new VulkanWindowPresenter(device, mode)`; no-argument presenter сохраняет прежнюю alpha precedence для существующих HUD/opaque callers. Uniform opacity применяет оконный host, а не GPU renderer.
+
+Windows per-pixel adapter инициализирует DWM redirection surface через PatBlt(BLACKNESS) на creation/paint/size/show/DPI/composition событиях. WM_PAINT очищается до передачи сообщения GLFW, чтобы синхронный refresh мог уже представить корректный frame. Очистки на обычном presentation frame нет. Subclass и GC root снимаются до уничтожения HWND на owner thread; native ошибки сохраняются и сообщаются из managed loop. Управляемый click-through не включён: на проверенной Windows alpha0/128/255 области по WindowFromPoint принадлежат этому окну. Отключение рамки не создаёт собственного заголовка, resize regions или Snap — это следующие подэтапы4.9c/d. DPI/monitor transitions и другие GPU/Windows конфигурации требуют отдельного native прохода; [актуальные проверки](../docs/alloy/STATUS.md).
+
 ## HUD в игре
 
 ```csharp
@@ -115,6 +136,87 @@ Create использует исходные значения конструкт
 
 [Требования — пункт 4.8](../docs/alloy/PLAN.md#этап-4-добавить-ввод-контролы-и-оформление). [Фактическое состояние](../docs/alloy/STATUS.md). [Редактируемая форма AlloyTest](../ManualTests/AlloyTest/README.md) использует фабрики и конструкторы вместе с BindTwoWay.
 
+## Тема, отступы и прокрутка
+
+`UiSession.SetTheme` обновляет существующее дерево; новые дети наследуют текущую тему. Local typed value имеет приоритет над Style, Style — над Theme. Typography/Foreground и `UiProperties.Padding`/`Spacing` поддерживают этот порядок; `Clear` открывает следующий уровень.
+
+```csharp
+ui.SetTheme(Theme.Light with
+{
+    ButtonPadding = new Thickness(8, 4, 8, 4),
+    EditorPadding = new Thickness(4),
+    StackSpacing = 6
+});
+var button = Button.Simple("Действие"); // theme ButtonPadding
+button.Style = new Style().With(UiProperties.Padding, new Thickness(10));
+button.Padding = new Thickness(16);   // local overrides style
+button.Clear(UiProperties.Padding);   // restores style padding
+```
+
+Button/TextBox используют свои theme tokens, CheckBox добавляет24px для индикатора. Остальные элементы по умолчанию имеют padding0; StackSpacing по умолчанию0. Исходные constructor layout defaults сохранены. Tokens валидируют конечные неотрицательные значения. Явные локальные `.Padding(...)`/`.Spacing` продолжают перекрывать тему.
+
+`Element.ChildClipBounds` задаёт viewport детей для drawing и hit testing. ScrollViewer исключает padding, wheel bubbles при достижении границы, а `UiSession.Focus`/Tab раскрывает focused child через `BringIntoView(Rect)` от внутреннего viewport к внешнему. Rect передаётся в root coordinates после layout, Offset ограничивается текущим Extent. Прокрутка вертикальная, oversized rectangle выравнивается сверху. [AlloyTest](../ManualTests/AlloyTest/README.md) показывает тему/плотность, disabled fields, изображение и custom VolumeMeter.
+
+## Собственный заголовок и оконные команды
+
+Windows x64 custom frame включается отдельно от прозрачности:
+
+```csharp
+options.UseSilkWindow(window =>
+{
+    window.Appearance = new WindowAppearance { Decorated = false };
+    window.Chrome = new WindowChromeOptions
+    {
+        NativeDrag = true, // явное включение системного перемещения
+        NativeSnapLayouts = true, // Windows 11, собственная maximize/restore кнопка
+        MinimumSize = new Size(480, 300),
+        MaximumSize = new Size(1600, 1000)
+    };
+    window.TitleBarFactory = commands => new HStack
+    {
+        Height = 44, WindowRegion = WindowRegionRole.Caption
+    }.WithChildren(
+        new Text("Моё приложение").Width(240),
+        new TextBox().Width(180),
+        new Button("—").OnClick(commands.Minimize),
+        new Button("□") { WindowRegion = WindowRegionRole.Maximize }.OnClick(() =>
+        {
+            if (commands.State == UiWindowState.Maximized) commands.Restore();
+            else commands.Maximize();
+        }),
+        new Button("×").OnClick(commands.Close));
+});
+```
+
+`TitleBarFactory` вызывается на owner thread с независимым `IWindowCommands`. Hosting оборачивает исходный view в `WindowFrame`: заголовок получает свою высоту, content — оставшуюся клиентскую область. Сессия владеет обоими элементами и освобождает их. Factory должна вернуть новый unowned live element; private allocations до исключения остаются ответственностью factory. После создания root сессии будет WindowFrame; исходный view находится в его Children. Для полностью собственного layout можно оставить factory пустой и задавать Caption/Client непосредственно в view.
+
+`WindowRegion` наследуется дочерними элементами. Focusable controls остаются Client; исключение — явно заданная `WindowRegionRole.Maximize` на enabled maximize/restore кнопке. Disabled кнопка остаётся Client. `WindowRegionRole.Client` исключает весь subtree; такой ролью помечайте собственные интерактивные элементы, которые не принимают keyboard focus. Учитываются clipping, visibility и paint order. Геометрия копируется после UI update: native callback не вызывает UI/пользовательские delegates и не удерживает дерево. На прямом `IWindowChromeHost` после layout вызывайте `SetWindowRegions(WindowRegionMap.Create(root))`; при изменении размеров устаревшие native regions временно отключаются до новой геометрии.
+
+`NativeDrag` по умолчанию false. `Resizable=false` отключает невидимые границы и maximize; otherwise доступны восемь resize codes. `ResizeBorder` задан в 96-DPI единицах и масштабируется по текущему DPI HWND. `MinimumSize`/`MaximumSize` заданы в логических координатах UI: native minimum округляется вверх, maximum вниз по GetDpiForWindow(HWND)/96. Native maximize учитывает текущий monitor work area и application maximum. Для custom frame используйте `SilkWindowHost.Resize`/`HostedUiWindow.Resize`: прямой GLFW Size setter предполагает стандартную рамку и не является этим контрактом.
+
+На Windows Width/Height в UseSilkWindow и параметры Resize — логические 96-DPI размеры клиента. Например,600×400 при150% дают framebuffer900×600 и UiViewport.Scale=1.5. NativeWindow.Size/Position и Win32 client/screen coordinates — физические pixels; SilkWindowHost.Input уже нормализован, повторно делить его на Scale не нужно. Scale берётся из native HWND DPI даже при одинаковых framebuffer/client dimensions. При смене DPI сохраняется логический client size; Hosting обновляет layout до обработки input, custom frame отвергает старые regions. Создание и loop используют scoped per-monitor-v2 thread context с восстановлением caller context. Внешний HUD сам задаёт viewport/Scale и координаты input. [Контракт и границы проверок](../docs/alloy/PLAN.md#контракт-windows-dpi-49d--k3--уточнение-2026-10-09).
+
+Через `HostedUiWindow.Minimize/Maximize/Restore/Resize/Close` команды ставятся на owner thread. `ChromeCapabilities` после startup сообщает поддержку adapter, отдельно от включённых опций и appearance/graphics capabilities. Без Chrome сохраняется прежний GLFW frame; unsupported platform/configuration сообщает исключение. HUD сохраняет оформление окна своего хоста. Windows subclass снимается до уничтожения HWND, callback errors переходят в managed loop/Completion.
+
+`NativeSnapLayouts` default false, требует Resizable и Windows 11; unsupported configuration отклоняется до allocation. Maximize region получает HTMAXBUTTON; non-client hover/leave передаётся DWM. Windows сама показывает Snap UI согласно своим настройкам. `SnapLayouts` capability означает поддержку платформы, а не факт появления flyout при текущих пользовательских настройках. Argentis получает hover/press/release через очередь вне native callback; OnClick вызывается один раз, отпускание вне кнопки и отмена capture не активируют команду. Direct Silk hosts после `NativeWindow.DoEvents()` вызывают `DispatchPendingWindowInput()` до Update; Hosting делает это в своём цикле. Space/Enter остаются обычным routed UI input.
+
+`SystemMenu` default true включает Alt+Space и caption right-click. Необязательный `IWindowSystemMenu.ShowSystemMenu(x,y)` открывает нативное меню в logical client coordinates на owner thread; `HostedUiWindow.ShowSystemMenu` ставит ту же операцию в очередь. Menu Move/Size/Minimize/Maximize/Restore учитывает состояние и Resizable. При SystemMenu=false сервис отклоняет вызов, обе жестовые точки входа подавляются. Double-click Caption отдаётся системной обработке maximize/restore.
+
+Для Snap в узкие зоны выбирайте разумный minimum width и адаптивный title layout: [демонстрационный заголовок](../ManualTests/AlloyTest/CustomTitleBar.cs) сохраняет три кнопки и editor при minimum330. Адаптер снимает GLFW WS_POPUP, сохраняет resize/commands и использует HTCAPTION без WS_CAPTION; системное оформление не занимает client area. Реальные drag/resize, maximized drag restore, края/углы, Snap bar, hover и Win+Z проверяются отдельно от directed-message contract. Глобальная горячая клавиша может перехватить Alt+Space до получения сообщения окном, например PowerToys Run. Полная settings/DPI/monitor matrix остаётся открыта; фактические результаты — [STATUS](../docs/alloy/STATUS.md).
+
+## Clipboard и ошибки ввода
+
+Windows SilkWindowHost использует Win32 для чтения и записи текста на owner thread до Dispose. Get возвращает null без текстового формата. Set заменяет содержимое clipboard; draft HGLOBAL принадлежит адаптеру до успешной передачи Windows, после публикации не освобождается адаптером даже при Close failure. Ошибки доступа и cleanup сохраняются в [UiClipboardException](../TrueMoon.Alloy/Runtime/UiClipboardException.cs), с Read/Write и InnerException. Откат содержимого clipboard после отказа публикации не гарантируется.
+
+При routed input `UiSession` сообщает `ClipboardFailed` на UI-потоке и оставляет окно/редактор доступными. Cut изменяет текст только после успешного Set. Хост может показать сообщение или записать диагностику без содержимого clipboard:
+
+```csharp
+session.ClipboardFailed += error =>
+    ReportClipboardFailure(error.Operation, error.InnerException);
+```
+
+Без подписчика operational failure остаётся обработанным вводом. Подписчик сам отвечает за свой error handling; его исключения распространяются. Прямые `session.GetClipboardText()`/`SetClipboardText(...)` бросают UiClipboardException; programming errors провайдера не подавляются. Dispose снимает подписчиков ClipboardFailed. Контролируемый оконный recovery smoke и native OS smoke учитываются раздельно; команды, fixture и свежие результаты — в [AlloyTest](../ManualTests/AlloyTest/README.md) и [STATUS](../docs/alloy/STATUS.md).
+
 ## Односторонние привязки свойств
 
 В Argentis доступны типизированный Bind для UiProperty и сокращение BindText для Text. Они работают с моделью, реализующей INotifyPropertyChanged, и сохраняют конкретный тип элемента в Fluent-цепочке:
@@ -134,7 +236,7 @@ var apply = new Button("Применить")
 
 Поддерживается прямое instance property, например `x => x.Name`, со стандартным приведением типа. Nested paths, поля и вычисляемые выражения отклоняются ArgumentException. Повторный Bind одного UiProperty отклоняется InvalidOperationException; Unbind/замена регистрации и автоматическое подключение DataContext пока не предусмотрены. Разные UiProperty можно привязывать независимо.
 
-Направление Bind — source → control: даже Bind(TextBox.ValueProperty, ...) не записывает пользовательский ввод в модель. Для редактирования доступен BindTwoWay, описанный ниже; наблюдаемые коллекции ещё предстоят. Getter/validation failure при событии передаётся из Update; после корректного нового уведомления привязка продолжает работу. Ошибки observers не откатывают уже записанное значение. [Контракт и критерии](../docs/alloy/PLAN.md#уточнение-односторонних-property-bindings--2026-10-06), [проверки и следующий шаг](../docs/alloy/STATUS.md).
+Направление Bind — source → control: даже Bind(TextBox.ValueProperty, ...) не записывает пользовательский ввод в модель. Для редактирования доступен BindTwoWay, для наблюдаемых коллекций — BindItems, описанные ниже. Getter/validation failure при событии передаётся из Update; после корректного нового уведомления привязка продолжает работу. Ошибки observers не откатывают уже записанное значение. [Контракт и критерии](../docs/alloy/PLAN.md#уточнение-односторонних-property-bindings--2026-10-06), [проверки и следующий шаг](../docs/alloy/STATUS.md).
 
 ## Двустороннее редактирование
 
@@ -160,7 +262,32 @@ var volume = new Slider()
 
 [Контракт BindTwoWay](../docs/alloy/PLAN.md#контракт-двусторонних-property-bindings-35b--2026-10-06), [проверки и ограничения](../docs/alloy/STATUS.md). Примеры выше используют конструкторы; доступные фабрики можно применять в тех же цепочках, как в форме AlloyTest.
 
+## Привязки коллекций
+
+`BindItems` заполняет первоначально пустой ElementList из ObservableCollection<TItem> или ReadOnlyObservableCollection<TItem>, где TItem — reference type. Возвращается конкретный тип контейнера:
+
+```csharp
+var rows = VStack.Create().BindItems(model.Rows, row =>
+    HStack.Create().WithChildren(
+        TextBox.Create().BindTwoWay(TextBox.ValueProperty, row, x => x.Name),
+        Button.Simple("Удалить").OnClick(() => model.Rows.Remove(row))));
+```
+
+Одному уникальному ненулевому объекту соответствует одна строка, сравнение — ReferenceEquals. Разные объекты, равные по Equals или имеющие одинаковый Id, создают разные строки. Повтор одной ссылки/null отклоняются до изменения дерева. Add/Remove/Replace/Move/Reset и range notifications запрашивают сверку актуального состава при Update; промежуточные состояния могут объединяться. Reset сохраняет строки для тех же объектов и переставляет без detach, включая focus/selection/subscriptions. Новый объект с прежним Id создаёт новую строку. Свойства item изменяют обычные Bind/BindTwoWay, фабрика повторно для них не вызывается.
+
+Source фиксирован до Dispose; замена model property с коллекцией не отслеживается автоматически. После регистрации Items управляется только binding: ручные Add/Remove/Clear/Move/index replacement запрещены даже при detach. Для статических соседей используйте внешний контейнер. `rows.RefreshItems()` запрашивает повторную сверку (например, после исправления причины factory failure); detached контейнер прочитает актуальный состав при следующем attach. Unbind и keys/повторяющиеся occurrences пока не предусмотрены.
+
+До attach source не читается и factory не вызывается. Initial sync также выполняется в следующем Update до layout, а не внутри AttachmentChanged; пока контейнер detached, source subscription отсутствует и прежние строки остаются в контейнере. Reattach восстанавливает одну subscription и сверяет актуальную коллекцию. Captured dispatcher/active guard отбрасывают stale queued/in-flight events. Фоновые уведомления только ставят sync в очередь; snapshot/factory/tree mutations выполняются на UI owner thread. ObservableCollection не становится потокобезопасной: сериализацию изменений и безопасного перечисления обеспечивает её владелец. Обычно worker результат следует применять к модели через dispatcher.
+
+Модель/коллекция остаются caller-owned. Factory возвращает новый live unowned subtree; accepted drafts до commit принадлежат binding, после — контейнеру. При удалении строки binding получает её ownership и вызывает Dispose. Это ответственность binding как caller существующего Remove, не изменение общих правил Remove/SetContent ниже. Detach контейнера сохраняет строки; Dispose освобождает текущих детей обычным путём. Ресурсы, выделенные factory до throw и не возвращённые binding, очищает factory; чужие owned nodes binding не освобождает.
+
+Сначала snapshot проверяется и создаются все новые строки, затем один batch commit фиксирует порядок, parent/attachment и mapping до notifications. Factory/validation failure сохраняет прежнее дерево и очищает drafts best-effort; source не откатывается. Source mutation из factory отклоняет подготовку; source changes из observers ставят отдельную синхронизацию в очередь. Notification/attachment/cleanup failure после commit не откатывает дерево: остальные observers и освобождение удалённых строк продолжаются, ошибки передаются из Update (одиночная исходная либо AggregateException). Автоматически повторять mutation нельзя. Direct UiSession caller может исправить source/factory и вызвать RefreshItems; HostedUiWindow закрывается и сообщает ошибку через Completion/StopAsync по существующей callback boundary.
+
+[Согласованный контракт 3.5c](../docs/alloy/PLAN.md#контракт-коллекционных-привязок-35c--согласован-2026-10-07-после-93a5cae), [реализация и проверки](../docs/alloy/STATUS.md), [динамический список AlloyTest](../ManualTests/AlloyTest/README.md).
+
 ## Владение динамическим деревом
+
+Для условной области loading/error/ready можно связать typed status property через Bind и заменять child обычным SetContent. [LoadStatusRegion в AlloyTest](../ManualTests/AlloyTest/LoadStatusRegion.cs) готовит ветвь до замены и освобождает возвращённую старую ветвь даже при postcommit notification error; factory failure сохраняет отображаемое содержимое до успешного RefreshContent. [Оконный пример](../ManualTests/AlloyTest/README.md) проверяет сохранение focus/selection/scroll соседнего списка. Это внутренний виджет примера; общий BindContent API не введён.
 
 После успешного создания UiSession владеет корнем, оставшимися в нём детьми и render surface. Не отсоединяйте и не передавайте корень живой сессии вручную. Контейнер владеет добавленным ребёнком. `Remove`, `Clear`, замена элемента коллекции и `SetContent` **не вызывают Dispose** старого поддерева: вызывающий код получает владение и обязан переиспользовать или освободить его.
 
@@ -182,6 +309,42 @@ destination.Items.Add(subtree); // Между Remove и Add владеет вы�
 Структурные изменения и закрытие сессии внутри tree notifications запрещены. Используйте `ui.Post(...)` для следующего Update. `element.Dispatch(...)` пропускает ранее queued action после конца attachment, даже при повторном добавлении в ту же сессию. На detached element Dispatch выполняется сразу; из detach notification откладывайте работу через `ui.Post`, не через Dispatch. При неуспешном создании UiSession все узлы и attachment subscriptions отсоединяются, владение корнем остаётся вызывающему коду.
 
 [Правила и проверки](../docs/alloy/STATUS.md). Legacy Hosting.Compatibility использует отдельное старое дерево и этим изменением не исправлен.
+
+## Отказ графики и явное пересоздание 2.4/K8
+
+`UiRenderingException(backend, operation, kind, cause)` сообщает подтверждённый terminal failure: `DeviceLost`, `ContextLost` или `BackendFailure`; cause сохраняется по identity. Обычная ошибка пользовательского DrawCore остаётся retryable: direct UiSession сохраняет invalidation и допускает следующий Update. Standalone при необработанном исключении закрывает окно и передаёт ошибку хосту.
+
+UiSession.Update/Resize и GPU export helpers перехватывают typed rendering failure. Host, обнаруживший отказ собственного presentation/engine, вызывает `ui.ReportRenderingFailure(error)` на owner thread. Первый report сохраняет RenderingFailure/IsFaulted, отменяет focus/capture/hover и queued posts; RenderingFailed вызывается один раз для каждого observer. Ошибки cancellation/observers агрегируются с original failure, остальные observers вызываются. Повторный report возвращает false. Dispose внутри notification/Update запрещён; закрывать сессию следует после выхода из отказавшей операции.
+
+После fault Update/Resize/input/Post/theme/export/presentation запрещены. VerifyAccess допускает owner-thread cleanup; IUiRenderSurface.VerifyAvailable проверяет thread/lifetime/borrowed access, GPU health проверяется отдельно. Dispose сохраняет cleanup errors, пытается освободить остальные доступные ресурсы и уведомляет registry даже при ошибках освобождения. UiCleanup.Complete сохраняет operation error первым и выполняет все переданные безопасные actions; AggregateException может быть вложенным.
+
+Для обычного HUD сначала завершить host GPU работу и вернуть lease с actual layout, затем Dispose UI, затем закрыть host resources. Fault не передаёт владение borrowed image. При **подтверждённом DeviceLost**, после выхода из Render/notification на owner thread:
+
+```csharp
+UiCleanup.Complete(deviceLost,
+    () => ui.ReportRenderingFailure(deviceLost),
+    () => lease.AbandonAfterDeviceLoss(deviceLost),
+    ui.Dispose);
+// Complete после cleanup бросает original error либо AggregateException.
+```
+
+AbandonAfterDeviceLoss отвергает ContextLost/BackendFailure, чужой поток и неактивный lease. Он не ждёт GPU и не возвращает image state, освобождает UI export handle и abandons Skia context. При ContextLost живого Vulkan device обычный Return по-прежнему требует успешного host completion; state update abandoned context пропускается.
+
+Device/instance/queue/loader/feature memory должны жить до освобождения всех UI contexts **даже после abandon**. Это требование [Skia GrDirectContext](https://api.skia.org/classGrDirectContext.html). Abandon(false) предотвращает backend вызовы при разрушении Skia resources. Если GL context невозможно сделать current или Vulkan completion не подтверждён, wrappers освобождаются через abandon; это не доказывает освобождение driver allocations. Host отвечает за окончательное retirement устройства. HostedUiWindow сохраняет Vulkan presenter/device, пока session удерживает lease или предыдущий этап cleanup не завершился. Неизвестный completion failure не объявляется DeviceLost автоматически.
+
+Standalone ловит ошибки внутри native callbacks, освобождает дерево/renderer → presenter/device → input/window, вызывает close callback один раз и передаёт все причины через Ready (creation failure), Completion и StopAsync. OpenGL Closing также перехватывает cleanup errors внутри callback. Vulkan presenter сохраняет presentation error при Return failure и discards lease при подтверждённом DeviceLost. Registry preflight запрещает stop с borrowed frame/чужого потока; после допустимого preflight ошибка одной сессии не мешает cleanup остальных.
+
+Модель остаётся у caller. После освобождения старых controls/подписок создаётся новое дерево из прежней модели:
+
+```csharp
+// model сохраняется host; target описывает живое/пересозданное host устройство.
+var replacement = UiSession.Create(new View1(model), backend, target, viewport);
+replacement.Update();
+```
+
+После настоящего device/context loss новый target предоставляет host. Controlled BackendFailure probe использует прежний здоровый device. Controls, focus/capture/selection/scroll принадлежат новой сессии. Pending bindings старого faulted UI отменяются: новое дерево читает актуальную модель, даже если старый editor не успел получить её последнее значение.
+
+[RenderingFailureProbe](../ManualTests/AlloyVulkanTest/RenderingFailureProbe.cs), режим `--settings-failure --validation`, проверяет controlled terminal draw, external report и creation rollback на реальных GPU/окнах, preservation модели/causes, registry0 и explicit new sessions/windows. Реальный device/context loss не индуцируется; accepted DeviceLost abandonment и teardown настоящего lost device остаются отдельными проверками alpha. Native ABI/packages/assets не менялись.
 
 ## OpenGL HUD и окно
 

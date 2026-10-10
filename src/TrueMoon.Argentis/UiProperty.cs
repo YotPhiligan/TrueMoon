@@ -22,10 +22,17 @@ public sealed class UiProperty<T>(string name, T defaultValue, Invalidation affe
 /// <summary>Properties shared by the standard widgets.</summary>
 public static class UiProperties
 {
+    /// <summary>Custom title-bar role; independent of any native window API.</summary>
+    public static readonly UiProperty<WindowRegionRole> WindowRegion = new("WindowRegion", WindowRegionRole.Inherit,
+        Invalidation.Tree, value => Enum.IsDefined(value));
     /// <summary>Explicit width, or NaN for automatic sizing.</summary>
     public static readonly UiProperty<float> Width = new("Width", float.NaN, Invalidation.Layout, Dimension);
     /// <summary>Explicit height, or NaN for automatic sizing.</summary>
     public static readonly UiProperty<float> Height = new("Height", float.NaN, Invalidation.Layout, Dimension);
+    /// <summary>Internal spacing in logical pixels; local and style values override the control's theme padding.</summary>
+    public static readonly UiProperty<Thickness> Padding = new("Padding", default, Invalidation.Layout, ThicknessValue);
+    /// <summary>Distance between visible stack children in logical pixels.</summary>
+    public static readonly UiProperty<float> Spacing = new("Spacing", 0, Invalidation.Layout, v => float.IsFinite(v) && v >= 0);
     /// <summary>Background fill.</summary>
     public static readonly UiProperty<Color> Background = new("Background", Color.Transparent);
     /// <summary>Text and foreground color.</summary>
@@ -39,4 +46,7 @@ public static class UiProperties
     /// <summary>Whether the element accepts input.</summary>
     public static readonly UiProperty<bool> Enabled = new("Enabled", true, Invalidation.Render | Invalidation.Tree);
     internal static bool Dimension(float v) => float.IsNaN(v) || float.IsFinite(v) && v >= 0;
+    internal static bool ThicknessValue(Thickness value) => float.IsFinite(value.Left) && value.Left >= 0
+        && float.IsFinite(value.Top) && value.Top >= 0 && float.IsFinite(value.Right) && value.Right >= 0
+        && float.IsFinite(value.Bottom) && value.Bottom >= 0;
 }

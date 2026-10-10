@@ -59,7 +59,7 @@ public sealed unsafe class VulkanDevice : IDisposable
         _validationMessage = validationMessage;
         _enablePresentFences = enablePresentFences;
         try { Initialize(); }
-        catch { Dispose(); throw; }
+        catch (Exception error) { UiCleanup.Complete(error, Dispose); throw; }
     }
 
     private void Initialize()
@@ -254,6 +254,8 @@ public sealed unsafe class VulkanDevice : IDisposable
     /// <summary>Throws an actionable error for a failed Vulkan operation.</summary>
     public static void Check(Result result, string operation)
     {
+        if (result == Result.ErrorDeviceLost) throw new UiRenderingException("Vulkan", operation, UiRenderingFailureKind.DeviceLost,
+            new InvalidOperationException($"Vulkan {operation}: {result}"));
         if (result != Result.Success) throw new InvalidOperationException($"Vulkan {operation}: {result}");
     }
 
@@ -261,21 +263,26 @@ public sealed unsafe class VulkanDevice : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        _disposed = true;
+        Exception? failure = null;
         if (Device.Handle != 0)
         {
-            Api.DeviceWaitIdle(Device);
-            Api.DestroyDevice(Device, null);
+            try { Check(Api.DeviceWaitIdle(Device), "Dispose.DeviceWaitIdle"); }
+            catch (UiRenderingException error) when (error.Kind == UiRenderingFailureKind.DeviceLost) { failure = error; }
         }
-        if (Surface.Handle != 0 && Api.TryGetInstanceExtension<KhrSurface>(Instance, out var surfaceApi))
-        {
-            surfaceApi.DestroySurface(Instance, Surface, null);
-            surfaceApi.Dispose();
-        }
-        if (_debugMessenger.Handle != 0) _debugUtils!.DestroyDebugUtilsMessenger(Instance, _debugMessenger, null);
-        _debugUtils?.Dispose();
-        if (Instance.Handle != 0) Api.DestroyInstance(Instance, null);
-        GC.KeepAlive(_debugCallback);
-        Api.Dispose();
+        _disposed = true;
+        UiCleanup.Complete(failure,
+            () => { if (Device.Handle != 0) Api.DestroyDevice(Device, null); },
+            () =>
+            {
+                if (Surface.Handle != 0 && Api.TryGetInstanceExtension<KhrSurface>(Instance, out var surfaceApi))
+                {
+                    try { surfaceApi.DestroySurface(Instance, Surface, null); }
+                    finally { surfaceApi.Dispose(); }
+                }
+            },
+            () => { if (_debugMessenger.Handle != 0) _debugUtils!.DestroyDebugUtilsMessenger(Instance, _debugMessenger, null); },
+            () => _debugUtils?.Dispose(),
+            () => { if (Instance.Handle != 0) Api.DestroyInstance(Instance, null); },
+            () => GC.KeepAlive(_debugCallback), Api.Dispose);
     }
 }

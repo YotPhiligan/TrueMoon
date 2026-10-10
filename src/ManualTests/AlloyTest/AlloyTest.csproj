@@ -7,6 +7,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="Assets\alloy-mark.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\TrueMoon.Alloy.Hosting\TrueMoon.Alloy.Hosting.csproj" />
         <ProjectReference Include="..\..\TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj" />
         <ProjectReference Include="..\..\TrueMoon\TrueMoon.csproj" />

@@ -36,6 +36,7 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface
     private readonly GRVkBackendContext _backend;
     private readonly GRContext _context;
     private readonly SKSurface _measurement;
+    private readonly SkiaDrawingResources _drawingResources;
     private VulkanInteropSurface? _surface;
     private bool _disposed;
     private readonly int _thread = Environment.CurrentManagedThreadId;
@@ -62,10 +63,16 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface
             device.ThrowIfResolutionFailed();
             if (_context == null) throw new NotSupportedException("Skia Vulkan context creation failed.");
             _measurement = SKSurface.Create(new SKImageInfo(1, 1)) ?? throw new InvalidOperationException("Could not create text service surface.");
-            TextLayout = new SkiaDrawingContext(_measurement.Canvas);
+            _drawingResources = new SkiaDrawingResources();
+            TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
             Resize(viewport);
         }
-        catch { _surface?.Dispose(); _measurement?.Dispose(); _context?.Dispose(); _backend?.Dispose(); _extensions?.Dispose(); throw; }
+        catch (Exception error)
+        {
+            UiCleanup.Complete(error, () => _drawingResources?.Dispose(), () => _surface?.Dispose(), () => _measurement?.Dispose(),
+                () => _context?.Dispose(), () => _backend?.Dispose(), () => _extensions?.Dispose());
+            throw;
+        }
     }
     /// <inheritdoc />
     public void VerifyAvailable()
@@ -77,30 +84,44 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface
     /// <inheritdoc />
     public void Resize(UiViewport viewport)
     {
-        VerifyAvailable(); viewport.Validate();
+        VerifyAvailable(); viewport.Validate(); VerifyContext("Resize");
         var replacement = viewport.IsEmpty ? null : new VulkanInteropSurface(_device, _context, new SKSizeI(viewport.Width, viewport.Height));
-        _surface?.Dispose();
+        try { _surface?.Dispose(); }
+        catch (Exception error)
+        {
+            _surface = null;
+            UiCleanup.Complete(error, () => replacement?.Dispose());
+            throw;
+        }
         _surface = replacement;
     }
     /// <inheritdoc />
     public void Render(Element root, UiViewport viewport)
     {
         VerifyAvailable();
+        VerifyContext("Render");
         if (_surface == null) return;
         _surface.Draw(canvas =>
         {
             canvas.Clear(SKColors.Transparent); canvas.Save();
-            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas)); }
+            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources)); }
             finally { canvas.Restore(); }
         });
     }
     /// <summary>Flushes UI work and borrows the GPU image until its actual state is returned.</summary>
-    public VulkanTextureLease AcquireTexture() { VerifyAvailable(); return (_surface ?? throw new InvalidOperationException("Viewport is suspended.")).Acquire(); }
+    public VulkanTextureLease AcquireTexture()
+    { VerifyAvailable(); VerifyContext("AcquireTexture"); return (_surface ?? throw new InvalidOperationException("Viewport is suspended.")).Acquire(); }
+    private void VerifyContext(string operation)
+    {
+        if (_context.IsAbandoned) throw new UiRenderingException("Skia Vulkan", operation, UiRenderingFailureKind.ContextLost,
+            new InvalidOperationException("The Skia Vulkan context was abandoned or lost."));
+    }
     /// <inheritdoc />
     public void Dispose()
     {
         if (_disposed) return;
-        VerifyAvailable(); _surface?.Dispose(); _measurement.Dispose(); _context.Dispose(); _backend.Dispose(); _extensions.Dispose(); _disposed = true;
+        VerifyAvailable(); _disposed = true;
+        UiCleanup.Complete(null, _drawingResources.Dispose, () => _surface?.Dispose(), _measurement.Dispose, _context.Dispose, _backend.Dispose, _extensions.Dispose);
     }
 }
 /// <summary>Vulkan-specific operations on the backend-independent session.</summary>
@@ -109,8 +130,9 @@ public static class VulkanUiSessionExtensions
     /// <summary>Borrows the current rendered UI texture; call Update before the first acquisition.</summary>
     public static VulkanTextureLease AcquireVulkanTexture(this UiSession session)
     {
-        session.VerifyAccess();
+        session.VerifyRendering();
         if (session.NeedsUpdate) throw new InvalidOperationException("Update UI before acquiring its texture.");
-        return (session.Rendering as SkiaVulkanSurface ?? throw new InvalidOperationException("Session is not using Skia Vulkan.")).AcquireTexture();
+        try { return (session.Rendering as SkiaVulkanSurface ?? throw new InvalidOperationException("Session is not using Skia Vulkan.")).AcquireTexture(); }
+        catch (UiRenderingException error) { session.ReportRenderingFailure(error); throw; }
     }
 }
