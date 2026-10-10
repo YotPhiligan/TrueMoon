@@ -265,3 +265,9 @@ $env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.
 ```
 
 Фактические результаты запусков и следующие задачи — [STATUS.md](../../docs/alloy/STATUS.md). Исходники GLSL/SPIR-V и инструкция пересборки — [Shaders](Shaders/README.md).
+
+### Callback fault/teardown proof
+
+`--window-callback-failure --validation` проверяет deferred errors native-origin mouse/key/text/focus handlers, managed Render dispatch и actual DPI subclass fault (directed WM_GETDPISCALEDSIZE dpi0/valid SIZE). Последующие handlers подавляются, ошибка передаётся через VerifyWindowAccess/Run; direct hosts должны проверять VerifyWindowAccess после manual DoEvents/DoRender. NativeWindow/GLFW callbacks никогда не являются местом для unwind managed exceptions.
+
+Для hosted OpenGL/Vulkan×Opaque/Opacity/PerPixel проверяются original+cleanup errors, Completion/StopAsync identity, tree/focus/registry/HWND/DPI/chrome/transparency hooks cleanup и явная здоровая новая session/window. `--callback-output <path>` сохраняет JSON scope/counters. Нужен существующий validation manifest, переданный через process-local VK_LAYER_PATH. Directed faults не являются physical DPI/device loss или long resource soak. [Точные команды и результаты2026-10-10](../../docs/alloy/HISTORY.md#49--k7-callback-fault-boundary-и-cleanup-2026-10-10).
