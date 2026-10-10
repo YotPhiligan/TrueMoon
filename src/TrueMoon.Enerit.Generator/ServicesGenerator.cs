@@ -57,7 +57,7 @@ public class ServicesGenerator : IIncrementalGenerator
                     continue;
                 }
                 
-                var l = interfaceSymbol.GetMembers().ToList();
+                var l = GetServiceMembers(interfaceSymbol);
                 
                 list.Add((interfaceSymbol, l));
             }
@@ -106,6 +106,28 @@ public class ServicesGenerator : IIncrementalGenerator
         {
             throw new InvalidOperationException($"Exception - {e.GetType()}: {e.Message}, StackTrace: {e.StackTrace}", e);
         }
+    }
+
+    private static List<ISymbol> GetServiceMembers(INamedTypeSymbol service)
+    {
+        // Keep declared members first so existing method codes remain unchanged.
+        var members = service.GetMembers().ToList();
+        foreach (var member in service.AllInterfaces.SelectMany(parent => parent.GetMembers()))
+        {
+            if (member is IMethodSymbol method && members.OfType<IMethodSymbol>().Any(existing =>
+                    existing.Name == method.Name && existing.Arity == method.Arity &&
+                    existing.IsStatic == method.IsStatic && existing.RefKind == method.RefKind &&
+                    SymbolEqualityComparer.Default.Equals(existing.ReturnType, method.ReturnType) &&
+                    existing.Parameters.Length == method.Parameters.Length &&
+                    existing.Parameters.Zip(method.Parameters).All(pair =>
+                        pair.First.RefKind == pair.Second.RefKind &&
+                        SymbolEqualityComparer.Default.Equals(pair.First.Type, pair.Second.Type))))
+            {
+                continue;
+            }
+            members.Add(member);
+        }
+        return members;
     }
 
     private static string GenerateService(GenerationContext context, 
@@ -244,9 +266,12 @@ public class ServicesGenerator : IIncrementalGenerator
                 }
                 parametersStr = parametersStr.TrimEnd(' ', ',');
 
+                var serviceTarget = SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, type)
+                    ? "_service"
+                    : $"(({GenerationUtils.GetTypeString(methodSymbol.ContainingType)})_service)";
                 handle.AppendLine(returnType is not null
-                    ? $"                    result = {(isTask ? "await " : string.Empty)}_service.{member.MetadataName}({parametersStr});"
-                    : $"                    {(isTask ? "await " : string.Empty)}_service.{member.MetadataName}({parametersStr});");
+                    ? $"                    result = {(isTask ? "await " : string.Empty)}{serviceTarget}.{member.MetadataName}({parametersStr});"
+                    : $"                    {(isTask ? "await " : string.Empty)}{serviceTarget}.{member.MetadataName}({parametersStr});");
 
                 handle.AppendLine("                }");
                 handle.AppendLine("                catch (Exception e)");
