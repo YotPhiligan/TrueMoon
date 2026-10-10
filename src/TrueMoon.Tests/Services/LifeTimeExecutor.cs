@@ -1,21 +1,22 @@
-﻿namespace TrueMoon.Tests.Services;
 
-public class LifeTimeExecutor : IStartable
+namespace TrueMoon.Tests.Services;
+
+public class LifeTimeExecutor(IAppLifetime lifetime) : IStartable, IStoppable, IDisposable
 {
-    private readonly IAppLifetime _lifetime;
-
-    public LifeTimeExecutor(IAppLifetime lifetime)
-    {
-        _lifetime = lifetime;
-    }
-
+    public bool IsStarted { get; private set; }
+    public bool IsStopped { get; private set; }
+    public int DisposeCount { get; private set; }
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
-        Task.Run(async () =>
-        {
-            await Task.Delay(500);
-            _lifetime.Cancel();
-        });
+        IsStarted = true;
+        lifetime.Cancel();
         return Task.CompletedTask;
     }
+    public Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        IsStopped = true;
+        return Task.CompletedTask;
+    }
+    public void Dispose() => DisposeCount++;
 }

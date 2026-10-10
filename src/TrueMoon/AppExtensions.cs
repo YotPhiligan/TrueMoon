@@ -5,24 +5,10 @@ namespace TrueMoon;
 
 public static class AppExtensions
 {
-    public static async Task RunAsync(this IApp app1, CancellationToken cancellationToken = default)
-    {
-        await using var app = app1;
-        
-        var lifetimeHandler = app.Services.Resolve<IAppLifetimeHandler>();
-        if (lifetimeHandler == null)
-        {
-            throw new AppCreationException($"{nameof(IAppLifetimeHandler)} is missing");
-        }
-            
-        await app.StartAsync(cancellationToken);
-            
-        await lifetimeHandler.WaitAsync(cancellationToken);
-        
-        lifetimeHandler.Stopping();
-        
-        await app.StopAsync(cancellationToken);
-
-        lifetimeHandler.Stopped();
-    }
+    /// <summary>Runs and owns the application through startup, shutdown and disposal.</summary>
+    /// <param name="app">The application whose ownership is transferred to the runner.</param>
+    /// <param name="cancellationToken">Cancels the run; cleanup uses a separate shutdown token.</param>
+    /// <returns>The run operation, retaining any startup, cancellation or cleanup failure.</returns>
+    public static Task RunAsync(this IApp app, CancellationToken cancellationToken = default)
+        => AppRunner.RunAsync(app, cancellationToken);
 }

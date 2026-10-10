@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -16,10 +16,10 @@ public static class SerializationUtils
         var target = bufferWriter.GetSpan(1);
 
         target[0] = (byte)(state ? 1 : 0);
-        
+
         bufferWriter.Advance(1);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Write<T>(T value, IBufferWriter<byte> bufferWriter)
     {
@@ -28,7 +28,7 @@ public static class SerializationUtils
         Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(target), value);
         bufferWriter.Advance(size);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WriteString(string value, IBufferWriter<byte> bufferWriter)
     {
@@ -53,7 +53,7 @@ public static class SerializationUtils
         size = Encoding.Unicode.GetBytes(value, target);
         bufferWriter.Advance(size);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WriteBytes(ReadOnlyMemory<byte> data, IBufferWriter<byte> bufferWriter)
     {
@@ -67,7 +67,7 @@ public static class SerializationUtils
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T Read<T>(ReadOnlySpan<byte> data, ref int offset) 
+    public static T Read<T>(ReadOnlySpan<byte> data, ref int offset)
         where T : struct
     {
         var size = Unsafe.SizeOf<T>();
@@ -91,17 +91,18 @@ public static class SerializationUtils
         offset += head+size;
         return str;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Memory<byte> ReadBytes(ReadOnlySpan<byte> data, ref int offset)
     {
         var size = MemoryMarshal.Read<int>(data);
-        var mem = ArrayPool<byte>.Shared.Rent(size).AsMemory(0, size);
-        data.Slice(sizeof(int),size).CopyTo(mem.Span);
+        var payload = data.Slice(sizeof(int), size);
+        var mem = MemoryPoolUtils.Create(size);
+        payload.CopyTo(mem.Span);
         offset += sizeof(int)+size;
         return mem;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool ReadInstanceState(ReadOnlySpan<byte> data, ref int offset)
     {

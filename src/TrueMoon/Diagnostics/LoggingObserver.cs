@@ -1,34 +1,27 @@
-﻿namespace TrueMoon.Diagnostics;
+namespace TrueMoon.Diagnostics;
 
-internal class LoggingObserver : IObserver<KeyValuePair<string, object?>>
+internal sealed class LoggingObserver(DiagnosticsConfiguration configuration) : IObserver<KeyValuePair<string, object?>>
 {
-    private readonly DiagnosticsConfiguration _diagnosticsConfiguration;
-
-    public LoggingObserver(DiagnosticsConfiguration configuration)
-    {
-        _diagnosticsConfiguration = configuration;
-    }
+    private int _disabled;
+    public void Disable() => Interlocked.Exchange(ref _disabled, 1);
 
     public void OnNext(KeyValuePair<string, object?> value)
     {
-        if (value.Value is DiagnosticEvent payload)
-        {
-            var eventName = value.Key;
-            payload.SetName(eventName);
-            
-            foreach (var listener in _diagnosticsConfiguration.Listeners)
-            {
-                listener(payload);
-            }
-        }
+        if (value.Value is not DiagnosticEvent payload) return;
+        payload.SetName(value.Key);
+        Publish(payload);
     }
-    public void OnCompleted() {}
 
-    public void OnError(Exception error)
+    private void Publish(DiagnosticEvent payload)
     {
-        foreach (var listener in _diagnosticsConfiguration.Listeners)
+        foreach (var listener in configuration.Listeners)
         {
-            listener(DiagnosticEvent.Exception(error));
+            if (Volatile.Read(ref _disabled) != 0) return;
+            try { listener(payload); }
+            catch (Exception) { /* Observers must not disrupt the application or other listeners. */ }
         }
     }
+
+    public void OnCompleted() { }
+    public void OnError(Exception error) => Publish(DiagnosticEvent.Exception(error));
 }

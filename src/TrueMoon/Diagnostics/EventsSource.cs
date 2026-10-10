@@ -1,15 +1,17 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace TrueMoon.Diagnostics;
 
-public class EventsSource : IEventsSource
+public class EventsSource : IEventsSource, IDisposable
 {
-    private readonly DiagnosticSource _source;
+    private readonly DiagnosticListener _source;
+    private int _disposed;
     public string Name { get; }
     
     public EventsSource(string name)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
         
         _source = new DiagnosticListener(Name);
@@ -17,6 +19,7 @@ public class EventsSource : IEventsSource
     
     public Activity StartActivity(string? details = default, string? category = default, [CallerMemberName] string? caller = default)
     {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         var eventName = CreateEventName(category, caller);
         var activity = new Activity(eventName);
         activity.AddTag("caller", caller);
@@ -35,6 +38,8 @@ public class EventsSource : IEventsSource
 
     public void StopActivity(Activity activity)
     {
+        ArgumentNullException.ThrowIfNull(activity);
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         var caller = $"{activity.GetTagItem("caller")}";
         _source.StopActivity(activity,DiagnosticEvent.Trace(caller:caller));
     }
@@ -43,12 +48,13 @@ public class EventsSource : IEventsSource
     {
         DiagnosticEvent GetEvent()
         {
-            var payload = func();
+            var payload = func!();
             return payload is Exception e 
                 ? DiagnosticEvent.Exception(e, category:category, caller: caller) 
                 : DiagnosticEvent.Create(payload, category:category, caller: caller);
         }
 
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         var eventName = CreateEventName(category, caller);
         
         if (!_source.IsEnabled(eventName)) return;
@@ -57,6 +63,11 @@ public class EventsSource : IEventsSource
             ? DiagnosticEvent.Trace(category:category,caller: caller)
             : GetEvent();
         _source.Write(eventName, message);
+    }
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 0) _source.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
 

@@ -1,10 +1,12 @@
 ﻿using TrueMoon.Alloy;
 using TrueMoon.Argentis;
+using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace AlloyTest;
 
 /// <summary>A bounded interaction probe running on the UI owner thread with any backend.</summary>
-internal sealed class SettingsFormSmoke(bool verifyClipboard = false)
+internal sealed class SettingsFormSmoke(bool verifyClipboard = false, bool trace = false)
 {
     internal const string ClipboardFixture = "Alloy clipboard smoke fixture v1";
     private Element[]? _tree;
@@ -30,6 +32,32 @@ internal sealed class SettingsFormSmoke(bool verifyClipboard = false)
     private Element[]? _statusRows;
     private int _statusSelectionStart, _statusSelectionLength;
     private View1? _view;
+    private int _frames;
+    private readonly ConcurrentQueue<TraceEntry>? _trace = trace ? new() : null;
+    private sealed record TraceEntry(int Frame, int Stage, string Event, string ModelName, string EditorValue,
+        bool ModelEnabled, bool Focused, int Caret, int SelectionStart, int SelectionLength, UiInput? Input);
+
+    internal void ObserveNativeInput(UiInput input) => Record("native-input-after-routing", input);
+
+    internal void WriteTrace(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, JsonSerializer.Serialize(new
+        {
+            FrameCalls = _frames, Stage = _stage, Completed = _stage >= 31,
+            Scope = "Last 128 frame/native-input snapshots; native input is observed after Hosting routing, not raw Win32 messages.",
+            Entries = _trace?.ToArray() ?? []
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    private void Record(string name, UiInput? input = null)
+    {
+        if (_trace == null || _model == null || _editor == null || _editor.IsDisposed) return;
+        _trace.Enqueue(new(_frames, _stage, name, _model.Name, _editor.Value, _model.Enabled,
+            _editor.IsFocused, _editor.CaretIndex, _editor.SelectionStart, _editor.SelectionLength, input));
+        while (_trace.Count > 128) _trace.TryDequeue(out _);
+    }
 
     public void Frame(UiSession ui, View1? settingsView = null)
     {
@@ -50,6 +78,8 @@ internal sealed class SettingsFormSmoke(bool verifyClipboard = false)
             _example = _tree.OfType<Button>().Single(button => button.Value == "Загрузить пример");
             _reset = _tree.OfType<Button>().Single(button => button.Value == "Сбросить");
         }
+        _frames++;
+        Record("frame-start");
         Require(_tree.SequenceEqual(FixedTree(_view!)), "Form control identities changed.");
         foreach (var element in Descendants(_list!).Skip(1)) _generated.Add(element);
         foreach (var element in Descendants(_statusRegion!).Skip(1)) _branches.Add(element);
@@ -296,6 +326,7 @@ internal sealed class SettingsFormSmoke(bool verifyClipboard = false)
                 _stage++;
                 break;
         }
+        Record("frame-end");
     }
 
     public void VerifyDisposed()
@@ -308,7 +339,11 @@ internal sealed class SettingsFormSmoke(bool verifyClipboard = false)
 
     private void VerifyValues(string name, bool enabled, float volume)
     {
-        Require(_model!.Name == name && _editor!.Value == name, "Name binding mismatch.");
+        if (_model!.Name != name || _editor!.Value != name)
+            throw new InvalidOperationException($"Name binding mismatch at stage {_stage}, frame {_frames}: " +
+                $"expected={JsonSerializer.Serialize(name)}, model={JsonSerializer.Serialize(_model.Name)}, " +
+                $"editor={JsonSerializer.Serialize(_editor.Value)}, reason={(_model.Name == _editor.Value ? "unexpected-value" : "binding-out-of-sync")}, focused={_editor.IsFocused}, " +
+                $"caret={_editor.CaretIndex}, selection={_editor.SelectionStart}+{_editor.SelectionLength}.");
         Require(_model.Enabled == enabled && _toggle!.IsChecked == enabled, "Toggle binding mismatch.");
         Require(Math.Abs(_model.Volume - volume) < .001f && Math.Abs(_slider!.Value - volume) < .001f, "Volume binding mismatch.");
         var expectedSummary = $"{name} · уведомления: {(enabled ? "вкл." : "выкл.")} · громкость: {volume:P0}";

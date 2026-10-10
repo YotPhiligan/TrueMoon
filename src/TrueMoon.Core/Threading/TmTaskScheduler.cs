@@ -1,114 +1,152 @@
-﻿using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
 using System.Threading.Channels;
 
 namespace TrueMoon.Threading;
 
+/// <summary>Runs tasks on dedicated workers (STA on Windows).</summary>
+/// <remarks>
+/// Disposal and constructor-token cancellation stop acceptance and drain accepted tasks.
+/// Disposal from another thread waits for all workers; disposal from a worker only requests shutdown.
+/// Tasks must cooperate with their own cancellation tokens to interrupt running work.
+/// </remarks>
 public sealed class TmTaskScheduler : TaskScheduler, IDisposable
 {
-    private readonly List<Thread> _threads = new ();
+    private readonly Thread[] _threads;
+    private readonly Channel<Task> _channel = Channel.CreateUnbounded<Task>();
+    private readonly HashSet<Task> _pending = [];
+    private readonly object _gate = new();
+    private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly CancellationTokenRegistration _cancellationRegistration;
+    private int _remainingWorkers;
+    private bool _completed;
 
-    private readonly Channel<Task> _channel;
-    //private readonly BlockingCollection<Task> _tasks = new ();
-    
+    /// <summary>Creates a scheduler with the requested number of dedicated workers.</summary>
+    /// <param name="name">Prefix used in worker thread names.</param>
+    /// <param name="threads">Positive maximum worker count.</param>
+    /// <param name="cancellationToken">Requests queue completion and draining when cancelled.</param>
     public TmTaskScheduler(string name, int threads, CancellationToken cancellationToken = default)
     {
-        if (threads < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(threads));
-        }
-
-        _channel = Channel.CreateUnbounded<Task>(new UnboundedChannelOptions{SingleReader = false, SingleWriter = false});
-        
+        ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
+        _threads = new Thread[threads];
+        _remainingWorkers = threads;
         for (var i = 0; i < threads; i++)
         {
-            var thread = new Thread(()=> ThreadLoop(cancellationToken))
+            var thread = new Thread(ThreadLoop)
             {
                 Name = $"{name}Thread_{i}",
                 IsBackground = true
             };
-            
-#pragma warning disable CA1416
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (OperatingSystem.IsWindows())
             {
                 thread.SetApartmentState(ApartmentState.STA);
             }
-#pragma warning restore CA1416
-            
-            _threads.Add(thread);
+            _threads[i] = thread;
+        }
+        _cancellationRegistration = cancellationToken.Register(static state => ((TmTaskScheduler)state!).Complete(), this);
+        foreach (var thread in _threads)
+        {
             thread.Start();
         }
     }
 
-    private void ThreadLoop(CancellationToken cancellationToken)
+    /// <summary>Completes after every accepted task has run and all workers have exited.</summary>
+    public Task Completion => _completion.Task;
+
+    private void ThreadLoop()
     {
         try
         {
-            // foreach (var t in _tasks.GetConsumingEnumerable(cancellationToken))
-            // {
-            //     TryExecuteTask(t);
-            // }
-
-            var spin = new SpinWait();
-            
-            while (!cancellationToken.IsCancellationRequested)
+            while (_channel.Reader.WaitToReadAsync().AsTask().GetAwaiter().GetResult())
             {
-                if (_channel.Reader.TryRead(out var task))
+                while (_channel.Reader.TryRead(out var task))
                 {
+                    lock (_gate)
+                    {
+                        _pending.Remove(task);
+                    }
                     TryExecuteTask(task);
-                }
-                else
-                {
-                    spin.SpinOnce();
                 }
             }
         }
-        catch (OperationCanceledException)
+        finally
         {
-            
+            if (Interlocked.Decrement(ref _remainingWorkers) == 0)
+            {
+                _cancellationRegistration.Unregister();
+                _completion.TrySetResult();
+            }
         }
     }
 
     /// <inheritdoc />
-    //protected override void QueueTask(Task task) => _tasks.Add(task);
     protected override void QueueTask(Task task)
     {
-        if (_channel.Writer.TryWrite(task))
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_completed, this);
+            _pending.Add(task);
+            if (!_channel.Writer.TryWrite(task))
+            {
+                _pending.Remove(task);
+                throw new ObjectDisposedException(nameof(TmTaskScheduler));
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    protected override IEnumerable<Task> GetScheduledTasks()
+    {
+        lock (_gate)
+        {
+            return _pending.ToArray();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
+    {
+        // A queued task stays owned by the queue. Foreign threads cannot violate worker affinity.
+        if (taskWasPreviouslyQueued || !_threads.Contains(Thread.CurrentThread))
+        {
+            return false;
+        }
+        lock (_gate)
+        {
+            if (_completed)
+            {
+                return false;
+            }
+        }
+        return TryExecuteTask(task);
+    }
+
+    /// <inheritdoc />
+    public override int MaximumConcurrencyLevel => _threads.Length;
+
+    private void Complete()
+    {
+        lock (_gate)
+        {
+            if (_completed)
+            {
+                return;
+            }
+            _completed = true;
+            _channel.Writer.TryComplete();
+        }
+    }
+
+    /// <summary>Stops acceptance, drains queued work and waits unless called on a worker.</summary>
+    public void Dispose()
+    {
+        Complete();
+        _cancellationRegistration.Unregister();
+        if (_threads.Contains(Thread.CurrentThread))
         {
             return;
         }
-
-        var spin = new SpinWait();
-
-        while (!_channel.Writer.TryWrite(task))
+        foreach (var thread in _threads)
         {
-            spin.SpinOnce();
+            thread.Join();
         }
-    }
-
-    /// <inheritdoc />
-    //protected override IEnumerable<Task> GetScheduledTasks() => _tasks.ToArray();
-    protected override IEnumerable<Task> GetScheduledTasks() => Array.Empty<Task>();
-
-    /// <inheritdoc />
-    protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) =>
-        TryExecuteTask(task);
-
-    /// <inheritdoc />
-    public override int MaximumConcurrencyLevel => _threads.Count;
-    
-    public void Dispose()
-    {
-        //_tasks.CompleteAdding();
-        
-        
-        // foreach (var thread in _threads)
-        // {
-        //     thread.Join();
-        // }
-        
-        //_tasks.Dispose();
-
-        _channel.Writer.TryComplete();
     }
 }

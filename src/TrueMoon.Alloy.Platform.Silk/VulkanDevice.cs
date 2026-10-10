@@ -15,6 +15,7 @@ public sealed unsafe class VulkanDevice : IDisposable
     private readonly IWindow? _window;
     private readonly Action<string>? _validationMessage;
     private DebugUtilsMessengerCallbackFunctionEXT? _debugCallback;
+    private PfnDebugUtilsMessengerCallbackEXT _debugCallbackPointer;
     private ExtDebugUtils? _debugUtils;
     private DebugUtilsMessengerEXT _debugMessenger;
     private int _validationErrors;
@@ -95,7 +96,12 @@ public sealed unsafe class VulkanDevice : IDisposable
             MessageSeverity = DebugUtilsMessageSeverityFlagsEXT.WarningBitExt | DebugUtilsMessageSeverityFlagsEXT.ErrorBitExt,
             MessageType = DebugUtilsMessageTypeFlagsEXT.GeneralBitExt | DebugUtilsMessageTypeFlagsEXT.ValidationBitExt | DebugUtilsMessageTypeFlagsEXT.PerformanceBitExt
         };
-        if (_debugCallback != null) debugInfo.PfnUserCallback = new PfnDebugUtilsMessengerCallbackEXT(_debugCallback);
+        if (_debugCallback != null)
+        {
+            // Silk pins the delegate globally; retain the wrapper so teardown can release that root.
+            _debugCallbackPointer = new PfnDebugUtilsMessengerCallbackEXT(_debugCallback);
+            debugInfo.PfnUserCallback = _debugCallbackPointer;
+        }
         var synchronization = ValidationFeatureEnableEXT.SynchronizationValidationExt;
         var validationFeatures = new ValidationFeaturesEXT
         {
@@ -283,6 +289,7 @@ public sealed unsafe class VulkanDevice : IDisposable
             () => { if (_debugMessenger.Handle != 0) _debugUtils!.DestroyDebugUtilsMessenger(Instance, _debugMessenger, null); },
             () => _debugUtils?.Dispose(),
             () => { if (Instance.Handle != 0) Api.DestroyInstance(Instance, null); },
+            () => _debugCallbackPointer.Dispose(),
             () => GC.KeepAlive(_debugCallback), Api.Dispose);
     }
 }

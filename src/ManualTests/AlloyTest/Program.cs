@@ -20,6 +20,12 @@ if (args.Contains("--window-lifetime"))
 
 var clipboardSmoke = args.Contains("--smoke-clipboard");
 var clipboardFailureSmoke = args.Contains("--smoke-clipboard-failure");
+var traceIndex = Array.IndexOf(args, "--smoke-trace");
+if (traceIndex >= 0 && (traceIndex + 1 == args.Length || args[traceIndex + 1].StartsWith("--", StringComparison.Ordinal)))
+    throw new ArgumentException("--smoke-trace requires a JSON output path.");
+var tracePath = traceIndex >= 0 ? args[traceIndex + 1] : null;
+if (tracePath != null && !args.Contains("--smoke") && !clipboardSmoke && !clipboardFailureSmoke)
+    throw new ArgumentException("--smoke-trace requires a smoke mode.");
 if (clipboardSmoke && clipboardFailureSmoke) throw new ArgumentException("Choose one clipboard smoke mode.");
 var clipboardFailures = clipboardFailureSmoke ? new ClipboardFailureSmoke() : null;
 var useVulkan = args.Contains("--vulkan");
@@ -75,7 +81,8 @@ if (!args.Contains("--smoke") && !clipboardSmoke && !clipboardFailureSmoke)
 builder.Setup(configure);
 await using var app = builder.Build();
 var window = (HostedUiWindow)app.Services.GetService(typeof(HostedUiWindow))!;
-var smoke = new SettingsFormSmoke(clipboardSmoke);
+var smoke = new SettingsFormSmoke(clipboardSmoke, tracePath != null);
+if (tracePath != null) window.PostWindow(host => host.Input += smoke.ObserveNativeInput);
 var opacityChanged = false;
 window.FramePresented += ui =>
 {
@@ -93,16 +100,28 @@ window.FramePresented += ui =>
     if (window.PresentedFrames >= 40) window.Close();
 };
 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-await app.StartAsync(timeout.Token);
-if (window.AppearanceCapabilities == null || window.SupportsPerPixelTransparency != (appearance.Transparency == WindowTransparencyMode.PerPixel))
-    throw new InvalidOperationException("Hosted appearance capabilities mismatch.");
-await window.Completion.WaitAsync(timeout.Token);
-await app.StopAsync(timeout.Token);
-if (window.PresentedFrames < 40) throw new InvalidOperationException("Expected at least 40 presented frames.");
-if (appearance.Transparency == WindowTransparencyMode.Opacity && !opacityChanged) throw new InvalidOperationException("Expected a queued opacity update.");
-smoke.VerifyDisposed();
-clipboardFailures?.Verify((HostedUiSessionFactory)app.Services.GetService(typeof(HostedUiSessionFactory))!);
-if (validationMessages != 0) throw new InvalidOperationException($"Standalone settings Vulkan validation reported {validationMessages} warning/error messages.");
-Console.WriteLine($"AlloyTest interactions {(useVulkan ? "Vulkan" : "OpenGL")}/Silk smoke passed: {window.PresentedFrames} frames; form/list/regions, themes/density, disabled/input, wheel/focus scrolling, image/meter, static redraw and disposal verified; OS clipboard: {(clipboardSmoke ? "verified" : "not requested")}.");
-if (validation) Console.WriteLine("Standalone settings Vulkan validation: 0 errors, 0 warnings, including teardown.");
-if (clipboardFailureSmoke) Console.WriteLine("Hosted window clipboard failure/recovery passed with controlled service: copy/cut/paste errors reported, editor/window retained, all retries recovered, registry zero; OS clipboard not accessed.");
+Exception? smokeFailure = null;
+try
+{
+    await app.StartAsync(timeout.Token);
+    if (window.AppearanceCapabilities == null || window.SupportsPerPixelTransparency != (appearance.Transparency == WindowTransparencyMode.PerPixel))
+        throw new InvalidOperationException("Hosted appearance capabilities mismatch.");
+    await window.Completion.WaitAsync(timeout.Token);
+    await app.StopAsync(timeout.Token);
+    if (window.PresentedFrames < 40) throw new InvalidOperationException("Expected at least 40 presented frames.");
+    if (appearance.Transparency == WindowTransparencyMode.Opacity && !opacityChanged) throw new InvalidOperationException("Expected a queued opacity update.");
+    smoke.VerifyDisposed();
+    clipboardFailures?.Verify((HostedUiSessionFactory)app.Services.GetService(typeof(HostedUiSessionFactory))!);
+    if (validationMessages != 0) throw new InvalidOperationException($"Standalone settings Vulkan validation reported {validationMessages} warning/error messages.");
+    Console.WriteLine($"AlloyTest interactions {(useVulkan ? "Vulkan" : "OpenGL")}/Silk smoke passed: {window.PresentedFrames} frames; form/list/regions, themes/density, disabled/input, wheel/focus scrolling, image/meter, static redraw and disposal verified; OS clipboard: {(clipboardSmoke ? "verified" : "not requested")}.");
+    if (validation) Console.WriteLine("Standalone settings Vulkan validation: 0 errors, 0 warnings, including teardown.");
+    if (clipboardFailureSmoke) Console.WriteLine("Hosted window clipboard failure/recovery passed with controlled service: copy/cut/paste errors reported, editor/window retained, all retries recovered, registry zero; OS clipboard not accessed.");
+}
+catch (Exception error) { smokeFailure = error; throw; }
+finally
+{
+    if (tracePath != null)
+        try { smoke.WriteTrace(tracePath); }
+        catch (Exception error) when (smokeFailure != null)
+        { Console.Error.WriteLine($"Smoke trace could not be saved: {error}"); }
+}

@@ -2,36 +2,26 @@ using TrueMoon.Services;
 
 namespace TrueMoon.Cobalt;
 
-public class FactoryResolver<TService> : IResolver<TService>, IObjectResolver
+public class FactoryResolver<TService>(IFactoryContainer<TService> factory, ServiceLifetime lifetime) : IResolver<TService>, IObjectResolver
 {
-    private readonly IFactoryContainer<TService> _factory;
+    private readonly Lock _lock = new();
     private TService? _instance;
-
-    public FactoryResolver(IFactoryContainer<TService> factory, ServiceLifetime lifetime)
+    private bool _initialized;
+    public TService? Resolve(IServiceResolver resolver)
     {
-        _factory = factory;
-        ServiceLifetime = lifetime;
-    }
-    
-    public TService? Resolve(IServiceResolver serviceResolver)
-    {
-        if (ServiceLifetime == ServiceLifetime.Singleton)
+        if (ServiceLifetime != ServiceLifetime.Singleton) return factory.Get()(resolver);
+        lock (_lock)
         {
-            if (_instance != null)
+            if (!_initialized)
             {
-                return _instance;
+                _instance = factory.Get()(resolver);
+                _initialized = true;
             }
-            
-            var func = _factory.Get();
-            _instance = func(serviceResolver);
             return _instance;
         }
-        var func1 = _factory.Get();
-        return func1(serviceResolver);
     }
-
-    public bool IsServiceDisposable { get; }
-    public ServiceLifetime ServiceLifetime { get; }
-    
+    // Runtime values may implement disposal even when TService does not.
+    public bool IsServiceDisposable => true;
+    public ServiceLifetime ServiceLifetime { get; } = lifetime;
     object? IObjectResolver.Resolve(IServiceResolver context) => Resolve(context);
 }

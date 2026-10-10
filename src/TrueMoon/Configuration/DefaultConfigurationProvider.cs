@@ -10,7 +10,7 @@ public class DefaultConfigurationProvider : IConfigurationProvider
     {
         Name = "default";
         var entryAssembly = Assembly.GetEntryAssembly();
-        var name = entryAssembly.GetName().Name;
+        var name = entryAssembly?.GetName().Name ?? "TrueMoon";
         _section.Set("appName", name);
         _list = new() { _section };
     }

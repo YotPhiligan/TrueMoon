@@ -13,6 +13,7 @@ public class AppBuilder : IAppBuilder
 
     public AppBuilder(IServiceResolverBuilder serviceResolverBuilder)
     {
+        ArgumentNullException.ThrowIfNull(serviceResolverBuilder);
         _serviceResolverBuilder = serviceResolverBuilder;
     }
     
@@ -25,6 +26,7 @@ public class AppBuilder : IAppBuilder
 
     public IAppBuilder Setup(Action<IAppConfigurationContext> action)
     {
+        ArgumentNullException.ThrowIfNull(action);
         _configureActions.Add(action);
         return this;
     }
@@ -61,9 +63,24 @@ public class AppBuilder : IAppBuilder
         
         var serviceResolver = _serviceResolverBuilder.Build(configuration, ctx.GetServicesRegistrations());
         
-        var app = CreateApp(serviceResolver);
-        
-        return app;
+        try
+        {
+            if (configuration.Get<IDiagnosticsConfiguration>(TrueMoon.Diagnostics.ConfigurationExtensions.DiagnosticsConfigurationName) != null)
+                serviceResolver.Resolve<DiagnosticSubscription>();
+            return CreateApp(serviceResolver);
+        }
+        catch (Exception error)
+        {
+            var errors = new List<Exception> { error };
+            AppRunner.TryCleanup(() =>
+            {
+                if (serviceResolver is IDisposable disposable) disposable.Dispose();
+                else if (serviceResolver is IAsyncDisposable asyncDisposable)
+                    asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }, errors);
+            AppRunner.ThrowErrors(errors);
+            throw;
+        }
     }
 
     protected virtual IApp CreateApp(IServiceResolver serviceResolver)
@@ -74,6 +91,7 @@ public class AppBuilder : IAppBuilder
 
     public static IAppBuilder Create(Action<IAppBuilderConfigurationContext> action)
     {
+        ArgumentNullException.ThrowIfNull(action);
         var ctx = new AppBuilderConfigurationContext();
         action(ctx);
         var serviceResolverBuilder = ctx.GetServiceResolverBuilder();

@@ -1,14 +1,17 @@
-﻿using System.IO.Pipes;
+using System.IO.Pipes;
 
 namespace TrueMoon.Enerit.IO.Pipes;
 
 public abstract class PipeConectionHandler : IDisposable
 {
     private readonly bool _isClient;
-    protected PipeStream PipeStream;
-    
+    private readonly object _streamGate = new();
+    private PipeStream? _stream;
+    private bool _disposed;
+    protected PipeStream PipeStream => Volatile.Read(ref _stream) ?? throw new ObjectDisposedException(GetType().Name);
+    protected bool IsDisposed { get { lock (_streamGate) { return _disposed; } } }
     public string Name { get; }
-    
+
     public PipeConectionHandler(string name, bool isClient = true)
     {
         _isClient = isClient;
@@ -17,53 +20,62 @@ public abstract class PipeConectionHandler : IDisposable
 
     protected async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        if (_isClient)
+        PipeStream stream = _isClient
+            ? new NamedPipeClientStream(".", Name, PipeDirection.InOut, PipeOptions.Asynchronous)
+            : new NamedPipeServerStream(Name, PipeDirection.InOut, 64, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        lock (_streamGate)
         {
-            var stream = new NamedPipeClientStream(".", Name, PipeDirection.InOut,
-                PipeOptions.Asynchronous);
-            await stream.ConnectAsync(cancellationToken);
-            PipeStream = stream;
+            if (_disposed)
+            {
+                stream.Dispose();
+                throw new ObjectDisposedException(GetType().Name);
+            }
+            // Publish before connecting so Dispose can interrupt an outstanding connection.
+            _stream = stream;
         }
-        else
+        try
         {
-            var stream = new NamedPipeServerStream(Name, PipeDirection.InOut, 64, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-            await stream.WaitForConnectionAsync(cancellationToken);
-            PipeStream = stream;
+            if (stream is NamedPipeClientStream client)
+            {
+                await client.ConnectAsync(cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await ((NamedPipeServerStream)stream).WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch
+        {
+            lock (_streamGate)
+            {
+                if (ReferenceEquals(_stream, stream)) { _stream = null; }
+            }
+            stream.Dispose();
+            throw;
         }
     }
-    
-    protected void Connect()
+
+    protected void Connect(CancellationToken cancellationToken = default) =>
+        ConnectAsync(cancellationToken).GetAwaiter().GetResult();
+
+    public virtual void Dispose()
     {
-        if (_isClient)
+        lock (_streamGate)
         {
-            var stream = new NamedPipeClientStream(".", Name, PipeDirection.InOut,
-                PipeOptions.Asynchronous);
-            stream.Connect();
-            PipeStream = stream;
+            if (_disposed) { return; }
+            _disposed = true;
         }
-        else
-        {
-            var stream = new NamedPipeServerStream(Name, PipeDirection.InOut, 64, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-            stream.WaitForConnection();
-            PipeStream = stream;
-        }
-    }
-    
-    public void Dispose()
-    {
         Reset();
     }
 
     protected void Reset()
     {
-        try
+        PipeStream? stream;
+        lock (_streamGate)
         {
-            PipeStream.Dispose();
-            PipeStream = null;
+            stream = _stream;
+            _stream = null;
         }
-        catch (Exception)
-        {
-            //
-        }
+        stream?.Dispose();
     }
 }

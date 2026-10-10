@@ -33,6 +33,8 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private bool _disposed;
     private readonly WindowCallbackBoundary _callbacks;
+    private readonly Action<double>? _renderHandler;
+    private readonly Action<bool>? _focusHandler;
     /// <summary>The native graphics window. Windows client/position coordinates are physical pixels; use Viewport and Resize for UI coordinates.</summary>
     public IWindow NativeWindow { get; }
     /// <inheritdoc />
@@ -150,8 +152,10 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
             if (OperatingSystem.IsWindows() && NativeWindow.Native?.Win32 is { } win32)
                 _windowsClipboard = new Win32Clipboard(win32.Hwnd, Win32ClipboardApi.Instance);
             Action render = () => RenderRequested?.Invoke();
-            NativeWindow.Render += _ => _callbacks.Execute(render);
-            NativeWindow.FocusChanged += focused => _callbacks.Execute(() => { if (!focused) Input?.Invoke(new UiInput(InputKind.FocusLost)); });
+            _renderHandler = _ => _callbacks.Execute(render);
+            _focusHandler = focused => _callbacks.Execute(() => { if (!focused) Input?.Invoke(new UiInput(InputKind.FocusLost)); });
+            NativeWindow.Render += _renderHandler;
+            NativeWindow.FocusChanged += _focusHandler;
             foreach (var mouse in _input.Mice)
             {
                 mouse.MouseMove += (_, p) => _callbacks.Execute(() => PointerInput(InputKind.PointerMove, p.X, p.Y));
@@ -166,7 +170,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
                 keyboard.KeyChar += (_, c) => _callbacks.Execute(() => Input?.Invoke(new UiInput(InputKind.Text, Text: c.ToString())));
             }
         }
-        catch (Exception error) { UiCleanup.Complete(error, () => _input?.Dispose(), () => _transparency?.Dispose(), () => _chrome?.Dispose(), () => _dpi?.Dispose(), NativeWindow.Dispose, () => _glfw?.Dispose()); throw; }
+        catch (Exception error) { UiCleanup.Complete(error, DetachWindowHandlers, () => _input?.Dispose(), () => _transparency?.Dispose(), () => _chrome?.Dispose(), () => _dpi?.Dispose(), NativeWindow.Dispose, () => _glfw?.Dispose()); throw; }
     }
     /// <summary>Publishes copied title-bar geometry after layout. It is never queried through UI callbacks by native code.</summary>
     /// <param name="regions">Immutable geometry in logical client coordinates.</param>
@@ -312,6 +316,12 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
         if (_disposed) return;
         if (Environment.CurrentManagedThreadId != _thread) throw new InvalidOperationException("Window disposal requires its owner thread.");
         _disposed = true;
-        UiCleanup.Complete(null, () => _input.Dispose(), () => _transparency?.Dispose(), () => _chrome?.Dispose(), () => _dpi?.Dispose(), NativeWindow.Dispose, () => _glfw?.Dispose());
+        UiCleanup.Complete(null, DetachWindowHandlers, () => _input.Dispose(), () => _transparency?.Dispose(), () => _chrome?.Dispose(), () => _dpi?.Dispose(), NativeWindow.Dispose, () => _glfw?.Dispose());
+    }
+    private void DetachWindowHandlers()
+    {
+        // GLFW's platform may retain its last disposed native window. Its managed events must not root this host.
+        if (_renderHandler != null) NativeWindow.Render -= _renderHandler;
+        if (_focusHandler != null) NativeWindow.FocusChanged -= _focusHandler;
     }
 }

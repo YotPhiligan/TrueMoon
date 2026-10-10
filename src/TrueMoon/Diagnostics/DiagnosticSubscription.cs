@@ -1,21 +1,29 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace TrueMoon.Diagnostics;
 
+/// <summary>Owns both the global listener subscription and all matching source subscriptions.</summary>
 public class DiagnosticSubscription : IDisposable
 {
-    private readonly DiagnosticsConfiguration _configuration;
-    private readonly IDisposable? _loggingListener;
+    private readonly DiagnosticObserver _observer;
+    private IDisposable? _allListeners;
 
     public DiagnosticSubscription(DiagnosticsConfiguration configuration)
     {
-        _configuration = configuration;
-        _loggingListener = DiagnosticListener.AllListeners.Subscribe(new DiagnosticObserver(_configuration));
+        ArgumentNullException.ThrowIfNull(configuration);
+        _observer = new DiagnosticObserver(configuration);
+        try { _allListeners = DiagnosticListener.AllListeners.Subscribe(_observer); }
+        catch
+        {
+            _observer.Dispose();
+            throw;
+        }
     }
 
     public void Dispose()
     {
-        _loggingListener?.Dispose();
+        Interlocked.Exchange(ref _allListeners, null)?.Dispose();
+        _observer.Dispose();
         GC.SuppressFinalize(this);
     }
 }

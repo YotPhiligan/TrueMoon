@@ -25,7 +25,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" />
+      <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj" />
       <ProjectReference Include="..\TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
     </ItemGroup>
 

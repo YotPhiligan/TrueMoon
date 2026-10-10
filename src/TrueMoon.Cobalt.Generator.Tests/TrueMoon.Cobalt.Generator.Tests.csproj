@@ -23,8 +23,8 @@
     <ItemGroup>
         <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" />
         <ProjectReference Include="..\TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
-        <ProjectReference Include="..\TrueMoon.Core\TrueMoon.Core.csproj" />
-        <ProjectReference Include="..\TrueMoon\TrueMoon.csproj" />
+
+
     </ItemGroup>
 
 </Project>

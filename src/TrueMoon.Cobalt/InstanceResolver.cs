@@ -10,7 +10,7 @@ public class InstanceResolver<TService> : IResolver<TService>, IObjectResolver
     {
         _instance = instance;
         
-        IsServiceDisposable = _instance is IDisposable;
+        IsServiceDisposable = false; // Instances are borrowed from the caller.
     }
     
     public TService Resolve(IServiceResolver context) => _instance;

@@ -1,69 +1,109 @@
-﻿namespace TrueMoon.Configuration;
+using System.ComponentModel;
+using System.Globalization;
+using System.Text.Json;
 
+namespace TrueMoon.Configuration;
+
+/// <summary>Thread-safe configuration storage with invariant typed conversion.</summary>
 public abstract class ConfigurableBase : IConfigurable
 {
+    private readonly Lock _lock = new();
     private readonly Dictionary<string, object?> _dictionary;
+
     protected ConfigurableBase(Dictionary<string, object?>? dictionary = default)
     {
-        _dictionary = dictionary ?? new Dictionary<string, object?>();
+        _dictionary = dictionary is null ? new() : new(dictionary);
     }
 
-    /// <inheritdoc />
     public virtual bool Exist(string key)
     {
-        return _dictionary.ContainsKey(key);
+        lock (_lock) return _dictionary.ContainsKey(key);
     }
 
-    /// <inheritdoc />
     public virtual void Set<T>(string key, T? value)
     {
-        if (_dictionary.ContainsKey(key))
-        {
-            _dictionary[key] = value;
-        }
-        else
-        {
-            _dictionary.Add(key, value);
-        }
+        lock (_lock) _dictionary[key] = value;
     }
 
-    /// <inheritdoc />
     public virtual T? Get<T>(string key)
     {
-        if (_dictionary.TryGetValue(key, out var v) && v is T?)
+        object? stored;
+        lock (_lock)
         {
-            return (T?)_dictionary[key];
+            if (!_dictionary.TryGetValue(key, out stored)) return default;
         }
-
-        return default;
+        if (TryConvert(stored, out T? result)) return result;
+        throw new FormatException($"Configuration value '{key}' cannot be converted to {typeof(T)}.");
     }
 
-    /// <inheritdoc />
     public virtual Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        var value = Get<T>(key);
-        return Task.FromResult(value);
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Get<T>(key));
     }
 
-    /// <inheritdoc />
     public virtual bool TryGetValue<T>(string key, out T? value)
     {
-        if (_dictionary.TryGetValue(key, out var v) && v is T?)
+        object? stored;
+        lock (_lock)
         {
-            value = (T?)_dictionary[key];
-            return true;
+            if (!_dictionary.TryGetValue(key, out stored))
+            {
+                value = default;
+                return false;
+            }
         }
-
-        value = default;
-        return false;
+        return TryConvert(stored, out value);
     }
 
-    /// <inheritdoc />
-    public IReadOnlyList<string> GetKeys() => _dictionary.Keys.ToList();
+    private static bool TryConvert<T>(object? stored, out T? value)
+    {
+        value = default;
+        if (stored is null) return default(T) is null;
+        if (stored is T typed)
+        {
+            value = typed;
+            return true;
+        }
+        var target = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+        try
+        {
+            object? converted;
+            if (stored is JsonElement json)
+            {
+                // Strings share the same conversion rules as environment and argument values.
+                if (json.ValueKind == JsonValueKind.String)
+                    return TryConvert(json.GetString(), out value);
+                converted = JsonSerializer.Deserialize(json.GetRawText(), typeof(T));
+            }
+            else if (target.IsEnum && stored is string enumText)
+                converted = Enum.Parse(target, enumText, ignoreCase: true);
+            else if (stored is string text && TypeDescriptor.GetConverter(target) is { } converter && converter.CanConvertFrom(typeof(string)))
+                converted = converter.ConvertFrom(null, CultureInfo.InvariantCulture, text);
+            else if (stored is IConvertible && typeof(IConvertible).IsAssignableFrom(target))
+                converted = Convert.ChangeType(stored, target, CultureInfo.InvariantCulture);
+            else return false;
+            value = (T?)converted;
+            return true;
+        }
+        catch (Exception exception) when (exception is FormatException or InvalidCastException or OverflowException or ArgumentException or NotSupportedException or JsonException)
+        {
+            return false;
+        }
+    }
 
-    /// <inheritdoc />
-    public IReadOnlyList<object?> GetValues() => _dictionary.Values.ToList();
+    public IReadOnlyList<string> GetKeys()
+    {
+        lock (_lock) return _dictionary.Keys.ToArray();
+    }
 
-    /// <inheritdoc />
-    public IReadOnlyList<(string key, object? value)> GetList() => _dictionary.Select(t => (t.Key, t.Value)).ToList();
+    public IReadOnlyList<object?> GetValues()
+    {
+        lock (_lock) return _dictionary.Values.ToArray();
+    }
+
+    public IReadOnlyList<(string key, object? value)> GetList()
+    {
+        lock (_lock) return _dictionary.Select(item => (item.Key, item.Value)).ToArray();
+    }
 }

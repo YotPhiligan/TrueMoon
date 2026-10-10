@@ -1,55 +1,40 @@
-﻿using TrueMoon.Configuration;
+using TrueMoon.Configuration;
 
 namespace TrueMoon.Diagnostics;
 
+/// <summary>Mutable diagnostics settings. Public collections are snapshots.</summary>
 public sealed class DiagnosticsConfiguration : ConfigurableBase, IDiagnosticsConfiguration
 {
-    public DiagnosticsConfiguration()
-    {
-        var listeners = new List<Action<DiagnosticEvent>>();
-        Set(nameof(Listeners),listeners);
-        
-        var filters = new List<string>();
-        Set(nameof(Filters),filters);
-    }
+    private readonly Lock _lock = new();
+    private readonly List<Action<DiagnosticEvent>> _listeners = [];
+    private readonly List<string> _filters = [];
 
-    /// <inheritdoc />
     public void AddEventListener(Action<DiagnosticEvent> action)
     {
-        var listeners = Get<List<Action<DiagnosticEvent>>>(nameof(Listeners));
-        if (listeners is null)
-        {
-            throw new InvalidOperationException($"{nameof(Listeners)} is null");
-        }
-        listeners.Add(action);
+        ArgumentNullException.ThrowIfNull(action);
+        lock (_lock) _listeners.Add(action);
     }
 
-    /// <inheritdoc />
-    public IReadOnlyList<Action<DiagnosticEvent>> Listeners 
-        => Get<IReadOnlyList<Action<DiagnosticEvent>>>(nameof(Listeners))!;
+    public IReadOnlyList<Action<DiagnosticEvent>> Listeners
+    {
+        get { lock (_lock) return _listeners.ToArray(); }
+    }
 
-    /// <inheritdoc />
     public void AddFilters(params string[] filters)
     {
-        var filtersList = Get<List<string>>(nameof(Filters));
-        if (filtersList is null)
-        {
-            throw new InvalidOperationException($"{nameof(Filters)} is null");
-        }
-        filtersList.AddRange(filters);
+        ArgumentNullException.ThrowIfNull(filters);
+        foreach (var filter in filters) ArgumentNullException.ThrowIfNull(filter);
+        lock (_lock) _filters.AddRange(filters);
     }
 
-    /// <inheritdoc />
     public void AddFilter(string filter)
     {
-        var filtersList = Get<List<string>>(nameof(Filters));
-        if (filtersList is null)
-        {
-            throw new InvalidOperationException($"{nameof(Filters)} is null");
-        }
-        filtersList.Add(filter);
+        ArgumentNullException.ThrowIfNull(filter);
+        lock (_lock) _filters.Add(filter);
     }
 
-    /// <inheritdoc />
-    public IReadOnlyList<string> Filters => Get<IReadOnlyList<string>>(nameof(Filters))!;
+    public IReadOnlyList<string> Filters
+    {
+        get { lock (_lock) return _filters.ToArray(); }
+    }
 }

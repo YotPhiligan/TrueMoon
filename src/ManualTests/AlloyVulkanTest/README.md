@@ -224,6 +224,36 @@ dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --raw
 
 В предыдущем raw-host шаге оба сценария проверены в Debug и из Release publish с validation 0 errors/0 warnings, включая teardown. Это самостоятельный тестовый host, не интеграция с конкретным сторонним движком. Native DLL/ABI не менялись. [Публичный контракт и пример](../../TrueMoon.Alloy.Hosting/README.md#устройство-чужого-движка).
 
+## Lifecycle окон и resize soak
+
+`--window-lifecycle-soak` по умолчанию создаёт последовательно240 owned HWNDs:20 повторов matrix OpenGL/Vulkan ×Opaque/Opacity/PerPixel ×standard/custom frame. Каждый цикл выполняет3logical client resize, native minimize/restore и explicit zero-size UI suspension, проверяет editor value/grapheme selection/focus после resize и cancellation активного pointer capture при close. Custom frame включает настоящий Argentis title bar и Win32 adapter. Это программные команды на одном текущем physical DPI; physical monitor transitions/Snap/input matrix этим не заменяются.
+
+```powershell
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --window-lifecycle-soak --soak-cycles 240 --soak-output TestResults/AlloyLifecycle/lifecycle.json --validation
+```
+
+Для короткого полного прохода matrix используйте `--soak-cycles 12`. Cycles ограничены1–10000; timeout фиксируется до запуска. После каждого окна проверяются HWND destruction, registry/subscriptions и все3native hooks; каждые12окон и в конце — GC/WeakReference для host/window/session/tree/controls, включая последнюю сессию. Внешний publisher остаётся живым во всём прогоне; owned Update handler снимается при disposal root. Probe сохраняет JSON также при отказе; ошибка записи отчёта не подменяет исходную ошибку.
+
+Счётчики USER/GDI после warm checkpoint не должны превышать его более чем на2/4 соответственно. Process handles/threads/private/working-set/managed bytes сохраняются как наблюдения, без memory/VRAM budget. Ноль WeakReference/registry/hooks не доказывает освобождение всех driver/GPU allocations; для owned swapchain/synchronization handles используйте отдельный retirement probe ниже. Debug и published Release запускаются отдельно с validation layer через process-local `VK_LAYER_PATH`; отчёт записывает фактические cycles/backend/appearance/scale.
+
+При превышении USER/GDI probe завершает оставшиеся заранее заданные cycles, сохраняет весь тренд и возвращает failure; превышение любого checkpoint остаётся отказом. Для отдельной локализации доступен `--native-window-resource-control`:24windows без Skia/UI/VulkanDevice, по умолчанию OpenGL и новый поток для каждого окна. `--native-single-thread` использует один поток; `--native-vulkan-window` выбирает окно без GL context; `--native-direct-silk` обходит TrueMoon host/adapters/input полностью. `--soak-output` сохраняет наблюдения. Успешный exit этого diagnostic control не является passing UI/resource soak.
+
+### Native thread lifetime и shared owner loop controls
+
+`--native-window-resource-control` принимает `--soak-cycles`1–10000 (default24). `--native-raw-wgl` обходит GLFW/Silk: скрытый Win32 STATIC HWND, owned HDC и legacy WGL context,3swaps, unbind/delete/release/destroy на owner thread. `--native-raw-window` — тот же control без DC/GL context. Raw modes исключают Silk/Vulkan/UI flags. Raw WGL context отличается от GLFW context profile; JSON сохраняет фактические vendor/renderer/version.
+
+`--native-workers 1..8` использует фиксированные workers serial round-robin; `--native-single-thread` — вызывающий поток; без обоих flags каждое окно получает новый Thread. Worker reuse здесь — диагностическое сравнение, не реализация production scheduler и не concurrent-window proof. GLFW window creation/event processing ограничены [main thread](https://www.glfw.org/docs/latest/intro.html#thread_safety); worker pool не является portable заменой owner event loop.
+
+`--native-ui-control` включает Skia/OpenGL session, editor focus/selection, не менее12frames и3logical resizes на каждое окно; проверяет disposal/registry, WeakReferences и native hooks. Только этот вариант загружает Skia. JSON всех controls содержит native owner IDs, top-level/message-only own HWND census до/после disposal, process thread IDs, private/managed bytes, handles, USER/GDI. После join workers записывается дополнительная фиксированная1s quiescence sample. HWND census не перечисляет все USER objects; private bytes не равны VRAM. Exit0 означает завершённую диагностику, а не passing full K7.
+
+```powershell
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --native-window-resource-control --native-raw-wgl --soak-cycles 240 --soak-output TestResults/AlloyNativeThreads/raw-wgl.json
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --native-window-resource-control --native-ui-control --native-workers 2 --soak-cycles 240 --soak-output TestResults/AlloyNativeThreads/ui-reuse.json
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --window-shared-loop-control --soak-output TestResults/AlloyNativeThreads/shared-loop.json
+```
+
+Shared-loop control выполняет20rounds на одном owner thread: два live OpenGL HWND/session, закрытие первого и создание replacement при продолжающемся sibling; всего60HWND/1200frames/180resizes. Context делается current перед input/update/render/dispose. GPU session освобождается до HWND/context. Проверяются независимые HWND, registry и DPI hooks2→1→2→0, value/selection,300WeakReferences/retained0, USER/GDI warm round4+2/+4. Focus одновременно двух native окон не утверждается. Это prototype без HostedUiWindow scheduling, Vulkan/alpha/chrome/minimize/cancellation/fault matrix и cross-platform proof; исходный полный lifecycle soak остаётся отдельным критерием. Глобальная GLFW termination не вызывается.
+
 ## Swapchain retirement и ресурсный soak
 
 VulkanDevice автоматически включает доступные instance dependencies и feature swapchainMaintenance1. При доступности предпочитается VK_KHR_swapchain_maintenance1, затем EXT. Presenter создаёт present fence для каждого image; перед reuse/reset и уничтожением поколения ждёт соответствующие presentation fences. Старые swapchain, semaphores и fences освобождаются при resize, а не копятся до закрытия окна.

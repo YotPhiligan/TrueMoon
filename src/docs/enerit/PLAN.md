@@ -18,6 +18,12 @@ TrueMoon.Enerit, Enerit.Generator, Enerit.Tests и Enerit.Generator.Tests. Invoc
 
 До утверждения production readiness определить framing/size limits, method mapping, совместимость payload, cancellation/timeout/disconnect semantics и владение буферами/каналами. Чтение существующих interfaces не означает, что эти гарантии уже выполнены. Pipes и memory-mapped реализации не объявляются равно проверенными.
 
+### Совместимость с Core ownership — 2026-10-10
+
+Исправление pools/scheduler Core потребовало ограниченных изменений pipes: deserialized bytes используют tracked whole rental; client/server владеют schedulers и connection tasks. Dispose прерывает connect/read/write, отклоняет новые invocation, завершает pending responses и дожидается async handlers до закрытия scheduler, нужного их continuations. Request/response buffers возвращаются в finally. Cancellation/disconnect/invalid или truncated response не оставляют ожидание до штатного50s timeout. Headers читаются полностью, EOF наблюдаем.
+
+Эти контракты подтверждены Windows in-process regression tests ([HISTORY](HISTORY.md#совместимость-pools-и-завершение-pipes--2026-10-10)). Framing не изменён; own-process transport, общий payload-size policy, MMF и межверсионная protocol compatibility остаются задачами ENE1–ENE3.
+
 ## Этапы
 
 | ID | Результат | Критерий завершения |

@@ -5,13 +5,20 @@ using AlloyVulkanTest;
 
 // Isolation must run before loading native Skia: only raw GL/Vulkan calls are used.
 if (args.Contains("--vulkan-transparency-isolation")) { VulkanTransparencyIsolation.Run(args); return; }
+if (args.Contains("--native-window-resource-control"))
+{
+    if (args.Contains("--native-ui-control")) SkiaNativeLibrary.Initialize();
+    WindowNativeResourceProbe.Run(args); return;
+}
 
 var nativePathIndex = Array.IndexOf(args, "--native-skia");
 if (nativePathIndex >= 0 && nativePathIndex + 1 == args.Length)
     throw new ArgumentException("--native-skia requires a DLL path.");
 SkiaNativeLibrary.Initialize(nativePathIndex >= 0 ? args[nativePathIndex + 1] : null);
 Console.WriteLine($"Native Skia: {SkiaNativeLibrary.LoadedPath}");
+if (args.Contains("--window-shared-loop-control")) { WindowSharedLoopProbe.Run(args); return; }
 if (args.Contains("--window-callback-failure")) { await WindowCallbackProbe.RunAsync(args); return; }
+if (args.Contains("--window-lifecycle-soak")) { await WindowLifecycleProbe.RunAsync(args); return; }
 if (args.Contains("--window-dpi")) { WindowDpiProbe.Run(args); return; }
 if (args.Contains("--window-chrome")) { await WindowChromeProbe.RunAsync(args.Contains("--validation")); return; }
 if (args.Contains("--window-snap")) { WindowSnapProbe.Run(args.Contains("--validation")); return; }

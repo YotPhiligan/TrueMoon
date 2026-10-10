@@ -91,7 +91,12 @@ public sealed class TextBox : Element
             return true;
         }
         if (input.Kind == InputKind.Text && !string.IsNullOrEmpty(input.Text))
-        { ReplaceSelection(string.Concat(input.Text.Where(c => !char.IsControl(c)))); return true; }
+        {
+            var text = string.Concat(input.Text.Where(c => !char.IsControl(c)));
+            if (text.Length == 0) return false;
+            ReplaceSelection(text);
+            return true;
+        }
         if (input.Kind != InputKind.KeyDown) return false;
         if (input.Control)
         {

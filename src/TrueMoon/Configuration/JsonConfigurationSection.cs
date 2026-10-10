@@ -1,59 +1,41 @@
-﻿namespace TrueMoon.Configuration;
+using System.Text.Json;
 
-public class JsonConfigurationSection : IConfigurationSection, IConfigurationFileHandle
+namespace TrueMoon.Configuration;
+
+/// <summary>A JSON object stored in a file. Set persists changes synchronously.</summary>
+public class JsonConfigurationSection : ConfigurableBase, IConfigurationSection, IConfigurationFileHandle
 {
     private readonly string _filePath;
+    private readonly Lock _fileLock = new();
 
-    public JsonConfigurationSection(string filePath)
+    public JsonConfigurationSection(string filePath) : base(Read(filePath))
     {
-        _filePath = filePath;
+        _filePath = Path.GetFullPath(filePath);
         Name = Path.GetFileNameWithoutExtension(_filePath);
     }
 
-    public bool Exist(string key)
+    private static Dictionary<string, object?> Read(string filePath)
     {
-        throw new NotImplementedException();
+        using var document = JsonDocument.Parse(File.ReadAllText(filePath));
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+            throw new JsonException($"Configuration file '{filePath}' must contain a JSON object.");
+        return document.RootElement.EnumerateObject().ToDictionary(property => property.Name,
+            property => property.Value.ValueKind == JsonValueKind.Null ? null : (object?)property.Value.Clone());
     }
 
-    public void Set<T>(string key, T? value)
+    public override void Set<T>(string key, T? value) where T : default
     {
-        throw new NotImplementedException();
-    }
-
-    public T? Get<T>(string key)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool TryGetValue<T>(string key, out T? value)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IReadOnlyList<string> GetKeys()
-    {
-        throw new NotImplementedException();
-    }
-
-    public IReadOnlyList<object?> GetValues()
-    {
-        throw new NotImplementedException();
-    }
-
-    public IReadOnlyList<(string key, object? value)> GetList()
-    {
-        throw new NotImplementedException();
+        lock (_fileLock)
+        {
+            // Serialize before updating storage; invalid values and failed writes leave the snapshot intact.
+            var entries = GetList().ToDictionary(entry => entry.key, entry => entry.value);
+            entries[key] = value;
+            var json = JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_filePath, json);
+            base.Set(key, value);
+        }
     }
 
     public string Name { get; }
-    
-    public FileInfo GetFileInfo()
-    {
-        return new FileInfo(_filePath);
-    }
+    public FileInfo GetFileInfo() => new(_filePath);
 }

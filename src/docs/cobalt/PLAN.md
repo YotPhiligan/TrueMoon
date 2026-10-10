@@ -18,6 +18,18 @@ App startup/stop/rollback принадлежит [Core](../core/PLAN.md). Cobalt
 
 Зафиксировать реально поддержанные lifetimes, factory/instance ownership, разрешение нескольких регистраций и generics. Возможности разных providers не объявлять идентичными заранее; различия описать и проверить. Новые scopes или автоматическую container migration этот roadmap не вводит.
 
+### Принятые контракты исправления ревью — 2026-10-10
+
+Основание: исправление Core integration и выявленных resolver/generator дефектов. [Проверки и ограничения](HISTORY.md).
+
+- Generated factory выбирается по service type, implementation type и lifetime runtime-регистрации. Переданные factories остаются runtime-owned; лишние generated declarations не добавляют сервисов в runtime graph.
+- Singleton instance принадлежит конкретному resolver, создаётся один раз при конкурентном resolution. Composite aliases2–8 разрешаются в один concrete instance; closed/open generics и typed IEnumerable используют тот же graph. Optional missing-service resolution возвращает null/default, required — наблюдаемую ошибку.
+- Cobalt владеет созданными generated/factory values, включая transients, но не переданными instance registrations. Disposal учитывает reference identity, идёт в обратном порядке, продолжает cleanup после errors и сохраняет их. Sync/async mode использует соответствующий интерфейс, sync поддерживает async-only values.
+- Concurrent Dispose ожидает одно завершение; рекурсивное disposal в той же async call chain не ожидает самого себя. Microsoft DI wrapper — один borrowed instance внутри provider, владеющий provider снаружи.
+- Microsoft DI сохраняет стандартный учёт disposable aliases: Composite aliases имеют shared identity, но provider может вызвать Dispose одного concrete instance несколько раз. Такой сервис должен поддерживать повторный Dispose. Provider cleanup после ошибки также следует стандартному Microsoft DI поведению; гарантия reference-unique/continue-on-error относится к Cobalt.
+
+Scopes, delivery analyzer через package и произвольная поддержка всех declarations не добавлены этим исправлением. COB4/COB5 остаются самостоятельными этапами.
+
 ## Этапы
 
 | ID | Результат | Критерий завершения |

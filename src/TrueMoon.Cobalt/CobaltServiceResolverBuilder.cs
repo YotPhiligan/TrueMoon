@@ -1,4 +1,4 @@
-﻿using System.Collections.Frozen;
+using System.Collections.Frozen;
 using TrueMoon.Configuration;
 using TrueMoon.Services;
 
@@ -8,46 +8,18 @@ public class CobaltServiceResolverBuilder : IServiceResolverBuilder
 {
     public IServiceResolver Build(IConfiguration configuration, IEnumerable<Action<IConfiguration, IServicesRegistrationContext>> registrations)
     {
-        var ctx = new CobaltServicesRegistrationContext();
+        var context = new CobaltServicesRegistrationContext();
         foreach (var registration in registrations)
-        {
-            registration(configuration, ctx);
-        }
-        
-        var servicesRegistrationContainer = ctx.GetContainer();
-        
+            registration(configuration, context);
         var containers = new List<ITypeContainer>();
-        var handles = servicesRegistrationContainer.GetHandles();
-        var resolverFactories = ServiceResolvers.Shared.GetResolvers();
-        
-        foreach (var grouping in handles.GroupBy(t=>t.ServiceType))
+        foreach (var group in context.GetContainer().GetHandles().GroupBy(h => h.ServiceType))
         {
-            var type = grouping.Key;
-            var container = new TypeContainer(type);
-            foreach (var handle in grouping)
-            {
-                if (handle.Resolver != null)
-                {
-                    container.Add(handle.Resolver);
-                }
-                else if (handle.ImplementationType != null)
-                {
-                    var resolver = resolverFactories[handle.ServiceType];
-                    container.Add(resolver);
-                }
-                else if (handle.ServiceType is { IsInterface: false })
-                {
-                    var resolver = resolverFactories[handle.ServiceType];
-                    container.Add(resolver);
-                }
-            }
+            var container = new TypeContainer(group.Key);
+            foreach (var handle in group)
+                container.Add(handle.Resolver ?? ServiceResolvers.Shared.GetFactory(handle.ServiceType,
+                    handle.ImplementationType ?? handle.ServiceType, handle.Lifetime));
             containers.Add(container);
         }
-        
-        var resolversContainer = containers.ToFrozenDictionary(t=>t.Type, t=>t);
-        
-        var serviceResolver = new CobaltServiceResolver(resolversContainer);
-        
-        return serviceResolver;
+        return new CobaltServiceResolver(containers.ToFrozenDictionary(c => c.Type));
     }
 }

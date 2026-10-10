@@ -1,4 +1,3 @@
-﻿using System.Collections;
 using System.Collections.Frozen;
 using TrueMoon.Services;
 
@@ -6,180 +5,81 @@ namespace TrueMoon.Cobalt;
 
 public abstract class CobaltServiceResolverBase : IServiceResolver, IDisposable, IAsyncDisposable
 {
-    private readonly DisposablesContainer _disposables = new ();
-    private readonly FrozenDictionary<Type, ITypeContainer> _resolversContainers;
+    private readonly Lock _lock = new();
+    private readonly DisposablesContainer _disposables = new();
+    private readonly FrozenDictionary<Type, ITypeContainer> _containers;
+    private bool _disposed;
 
-    private static readonly Type EnumerableType = typeof(IEnumerable);
+    protected CobaltServiceResolverBase(FrozenDictionary<Type, ITypeContainer> resolversContainers) => _containers = resolversContainers;
 
-    protected CobaltServiceResolverBase(FrozenDictionary<Type, ITypeContainer> resolversContainers)
-    {
-        _resolversContainers = resolversContainers;
-    }
-
-    public T Resolve<T>()
-    {
-        var r = ResolveCore<T>();
-        
-        if (r != null)
-        {
-            return r;
-        }
-
-        throw new ServiceResolvingException<T>();
-    }
-
-    private T? ResolveCore<T>()
-    {
-        var type = typeof(T);
-        
-        if (_resolversContainers.TryGetValue(type, out var container))
-        {
-            if (container.GetResolver() is IResolver<T> resolver)
-            {
-                var value = resolver.Resolve(this);
-                if (value != null && resolver.IsServiceDisposable)
-                {
-                    _disposables.Add(value);
-                }
-
-                return value;
-            }
-        }
-        
-        if (EnumerableType.IsAssignableFrom(type))
-        {
-            var objects = ResolveEnumerable(type);
-
-            return (T)(IEnumerable)objects;
-        }
-        
-        if (type.IsGenericType)
-        {
-            var genericTypeDefinition = type.GetGenericTypeDefinition();
-            
-            if (_resolversContainers.TryGetValue(genericTypeDefinition, out var c))
-            {
-                var resolver = c.GetResolver();
-                if (resolver is IGenericResolver genericResolver)
-                {
-                    var value = genericResolver.Resolve(type.GenericTypeArguments,this);
-                    
-                    if (value != null && resolver.IsServiceDisposable)
-                    {
-                        _disposables.Add(value);
-                    }
-
-                    if (value != null)
-                    {
-                        return (T)value;
-                    }
-                    
-                    return default;
-                }
-            }
-        }
-
-        if (type == typeof(IServiceResolver) || type == typeof(IServiceProvider))
-        {
-            return (T)(object)this;
-        }
-
-        return default;
-    }
-
-    public T? TryResolve<T>() => ResolveCore<T>();
-
-    private object[] ResolveEnumerable(Type type)
-    {
-        var rcontainer = _resolversContainers.Values
-            .FirstOrDefault(t => t.EnumerableType == type);
-        
-        if (rcontainer == null)
-        {
-            return [];
-        }
-        
-        var resolvers = rcontainer.GetResolvers();
-            
-        var objects = new object[resolvers.Length];
-        for (var i = 0; i < resolvers.Length; i++)
-        {
-            var resolver = resolvers[i];
-            
-            if (resolver is IObjectResolver objectResolver)
-            {
-                var item = objectResolver.Resolve(this);
-                
-                if (item != null && resolver.IsServiceDisposable)
-                {
-                    _disposables.Add(item);
-                }
-                
-                if (item != null)
-                {
-                    objects[i] = item;
-                }
-            }
-        }
-
-        return objects.Where(t=>t != null).ToArray();
-    }
+    public T Resolve<T>() => GetService(typeof(T)) is T value ? value : throw new ServiceResolvingException<T>();
+    public T? TryResolve<T>() => GetService(typeof(T)) is T value ? value : default;
 
     public object? GetService(Type type)
     {
-        if (_resolversContainers.TryGetValue(type, out var container))
+        ArgumentNullException.ThrowIfNull(type);
+        // Serialize construction and ownership bookkeeping with shutdown. The lock is reentrant for dependencies.
+        lock (_lock)
         {
-            var resolver = container.GetResolver();
-            if (resolver is IObjectResolver objectResolver)
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (type == typeof(IServiceResolver) || type == typeof(IServiceProvider)) return this;
+            if (_containers.TryGetValue(type, out var container)) return ResolveItem(container.GetResolver(), type);
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
-                var value = objectResolver.Resolve(this);
-            
-                if (value != null && resolver.IsServiceDisposable)
-                {
-                    _disposables.Add(value);
-                }
-            
-                return value;
+                var element = type.GenericTypeArguments[0];
+                var source = GetContainer(element);
+                var resolvers = source?.GetResolvers() ?? [];
+                var result = Array.CreateInstance(element, resolvers.Length);
+                for (var index = 0; index < resolvers.Length; index++)
+                    result.SetValue(ResolveItem(resolvers[index], element), index);
+                return result;
             }
+            return GetContainer(type) is { } genericContainer ? ResolveItem(genericContainer.GetResolver(), type) : null;
         }
-        
-        if (EnumerableType.IsAssignableFrom(type))
-        {
-            var objects = ResolveEnumerable(type);
-
-            return objects;
-        }
-
-        if (type.IsGenericType)
-        {
-            var genericTypeDefinition = type.GetGenericTypeDefinition();
-            
-            if (_resolversContainers.TryGetValue(genericTypeDefinition, out var c))
-            {
-                var resolver = c.GetResolver();
-                if (resolver is IGenericResolver genericResolver)
-                {
-                    var value = genericResolver.Resolve(type.GenericTypeArguments,this);
-
-                    if (resolver.IsServiceDisposable && value != null)
-                    {
-                        _disposables.Add(value);
-                    }
-                
-                    return value;
-                }
-            }
-        }
-        
-        if (type == typeof(IServiceResolver) || type == typeof(IServiceProvider))
-        {
-            return this;
-        }
-        
-        throw new ServiceResolvingException(type);
     }
-    
-    public void Dispose() => _disposables.Dispose();
 
-    public ValueTask DisposeAsync() => _disposables.DisposeAsync();
+    private ITypeContainer? GetContainer(Type type)
+    {
+        if (_containers.TryGetValue(type, out var container)) return container;
+        return type.IsGenericType && _containers.TryGetValue(type.GetGenericTypeDefinition(), out container) ? container : null;
+    }
+
+    private object? ResolveItem(IResolver resolver, Type type)
+    {
+        var value = resolver switch
+        {
+            IGenericResolver generic => generic.Resolve(type.GenericTypeArguments, this),
+            IObjectResolver objectResolver => objectResolver.Resolve(this),
+            _ => ResolveTypedItem(resolver, type)
+        };
+        if (value != null && resolver.IsServiceDisposable) _disposables.Add(value);
+        return value;
+    }
+
+    private object? ResolveTypedItem(IResolver resolver, Type type)
+    {
+        var contract = typeof(IResolver<>).MakeGenericType(type);
+        if (!contract.IsInstanceOfType(resolver))
+            throw new InvalidOperationException($"Resolver {resolver.GetType()} cannot resolve {type}.");
+        try
+        {
+            return contract.GetMethod(nameof(IResolver<object>.Resolve))!.Invoke(resolver, [this]);
+        }
+        catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException != null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
+            throw;
+        }
+    }
+
+    public void Dispose()
+    {
+        lock (_lock) _disposed = true;
+        _disposables.Dispose();
+    }
+    public ValueTask DisposeAsync()
+    {
+        lock (_lock) _disposed = true;
+        return _disposables.DisposeAsync();
+    }
 }

@@ -29,6 +29,9 @@ internal sealed class VulkanRetirementProbe
     {
         if (cycles is < 1 or > 10000) throw new ArgumentOutOfRangeException(nameof(cycles));
         new VulkanRetirementProbe().RunCore(validation, cycles, legacy);
+        Require(Win32WindowDpi.ActiveHooks == 0 && Win32WindowChrome.ActiveHooks == 0
+            && Win32TransparentFramebuffer.ActiveHooks == 0, "Native hooks retained after retirement window teardown.");
+        Console.WriteLine("Retirement window teardown: all native hooks zero.");
     }
     private static void Require(bool condition, string message)
     { if (!condition) throw new InvalidOperationException(message); }

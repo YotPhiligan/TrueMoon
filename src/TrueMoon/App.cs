@@ -1,12 +1,14 @@
 ﻿using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using TrueMoon.Exceptions;
 
 namespace TrueMoon;
 
 public static class App
 {
-    private static readonly IEventsSource ConfiguratorSource = new EventsSource("App");
+    private static readonly IEventsSource ConfiguratorSource = new EventsSource("TrueMoon.App");
 
     public static IAppBuilder Builder(Action<IAppBuilderConfigurationContext> action)
     {
@@ -23,6 +25,7 @@ public static class App
     /// <exception cref="AppCreationException"></exception>
     public static Task RunAsync(Action<IAppConfigurationContext> action, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(action);
         var builder = Builder(_ => {});
         ConfiguratorSource.Trace("Builder ready");
         
@@ -31,39 +34,23 @@ public static class App
     
     public static async Task RunAsync(IAppBuilder builder, Action<IAppConfigurationContext> action, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(action);
         builder.Setup(action);
         
-        await using var app = builder.Build();
+        var app = builder.Build();
         ConfiguratorSource.Trace("Created");
         
         using var runEvent = ConfiguratorSource.UseActivity();
         
         try
         {
-            var lifetimeHandler = app.Services.Resolve<IAppLifetimeHandler>();
-            if (lifetimeHandler == null)
-            {
-                throw new AppCreationException($"{nameof(IAppLifetimeHandler)} is missing");
-            }
-            
-            await app.StartAsync(cancellationToken);
-            
-            ConfiguratorSource.Trace("Started");
-            
-            await lifetimeHandler.WaitAsync(cancellationToken);
-
-            ConfiguratorSource.Trace("Stopping");
-            lifetimeHandler.Stopping();
-        
-            await app.StopAsync(cancellationToken);
-
-            lifetimeHandler.Stopped();
-            
-            ConfiguratorSource.Trace("Stopped");
+            await AppRunner.RunAsync(app, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
         {
             ConfiguratorSource.Exception(e);
+            throw;
         }
     }
     
@@ -74,22 +61,22 @@ public static class App
     /// <exception cref="AppCreationException"></exception>
     public static Task RunAsync<T>(CancellationToken cancellationToken = default) where T : class 
     {
-        var configurator = Activator.CreateInstance<T>();
-        var type = configurator.GetType();
-        var method = type.GetMethod("Configure");
-        if (method == null)
-        {
-            throw new AppCreationException($"{typeof(T)} does not contain method \"Configure\"");
-        }
-
-        var parameters = method.GetParameters();
-        
-        if (parameters.Length == 0 || parameters.First().ParameterType != typeof(IAppConfigurationContext))
+        var method = typeof(T).GetMethod("Configure", BindingFlags.Public | BindingFlags.Instance,
+            [typeof(IAppConfigurationContext)]);
+        if (method == null || method.ReturnType != typeof(void))
         {
             throw new AppCreationException($"{typeof(T)} does not contain method \"Configure\" with \"{nameof(IAppConfigurationContext)}\" parameter");
         }
         
-        return RunAsync(t=>method.Invoke(configurator, [t]), cancellationToken);
+        var configurator = Activator.CreateInstance<T>();
+        return RunAsync(context =>
+        {
+            try { method.Invoke(configurator, [context]); }
+            catch (TargetInvocationException error) when (error.InnerException != null)
+            {
+                ExceptionDispatchInfo.Capture(error.InnerException).Throw();
+            }
+        }, cancellationToken);
     }
     
     public static IApp Build(Action<IAppConfigurationContext>? action = null)

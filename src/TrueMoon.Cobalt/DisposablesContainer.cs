@@ -1,61 +1,64 @@
-﻿namespace TrueMoon.Cobalt;
+namespace TrueMoon.Cobalt;
 
 public class DisposablesContainer : IDisposable, IAsyncDisposable
 {
+    private readonly Lock _lock = new();
     private readonly List<object> _disposables = [];
-    private readonly Lock _lock = new ();
-    
+    private readonly HashSet<object> _seen = new(ReferenceEqualityComparer.Instance);
+    private Task? _disposeTask;
+    private readonly AsyncLocal<bool> _disposing = new();
+
     public void Add<T>(T value)
     {
+        if (value is not IDisposable and not IAsyncDisposable) return;
         lock (_lock)
         {
-            _disposables.Add(value!);
+            ObjectDisposedException.ThrowIf(_disposeTask != null, this);
+            if (_seen.Add(value)) _disposables.Add(value);
         }
     }
 
-    public void Dispose()
-    {
-        if (_disposables.Count == 0)
-        {
-            return;
-        }
+    public void Dispose() => DisposeCore(false).GetAwaiter().GetResult();
+    public ValueTask DisposeAsync() => new(DisposeCore(true));
 
-        foreach (var item in _disposables)
+    private Task DisposeCore(bool asynchronous)
+    {
+        if (_disposing.Value) return Task.CompletedTask;
+        TaskCompletionSource completion;
+        object[] items;
+        lock (_lock)
         {
-            switch (item)
-            {
-                case IDisposable disposable:
-                    disposable.Dispose();
-                    break;
-                case IAsyncDisposable asyncDisposable:
-                    asyncDisposable
-                        .DisposeAsync()
-                        .AsTask()
-                        .GetAwaiter()
-                        .GetResult();
-                    break;
-            }
+            if (_disposeTask != null) return _disposeTask;
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _disposeTask = completion.Task;
+            items = _disposables.ToArray();
+            _disposables.Clear();
+            _seen.Clear();
         }
+        _ = DrainAsync(items, asynchronous, completion);
+        return completion.Task;
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task DrainAsync(object[] items, bool asynchronous, TaskCompletionSource completion)
     {
-        if (_disposables.Count == 0)
+        _disposing.Value = true;
+        try
         {
-            return;
-        }
-        
-        foreach (var item in _disposables)
-        {
-            switch (item)
+            List<Exception> errors = [];
+            for (var index = items.Length - 1; index >= 0; index--)
             {
-                case IAsyncDisposable asyncDisposable:
-                    await asyncDisposable.DisposeAsync();
-                    break;
-                case IDisposable disposable:
-                    disposable.Dispose();
-                    break;
+                try
+                {
+                    if (items[index] is IAsyncDisposable asyncDisposable && (asynchronous || items[index] is not IDisposable))
+                        await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                    else if (items[index] is IDisposable disposable)
+                        disposable.Dispose();
+                }
+                catch (Exception exception) { errors.Add(exception); }
             }
-        }
+            if (errors.Count == 0) completion.TrySetResult();
+            else completion.TrySetException(new AggregateException("Service cleanup failed.", errors));
+            }
+        finally { _disposing.Value = false; }
     }
 }

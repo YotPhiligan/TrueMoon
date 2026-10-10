@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using TrueMoon.Configuration;
 using TrueMoon.Services;
@@ -32,10 +32,11 @@ public class ServiceResolverBuilder : IServiceResolverBuilder
 
         var serviceCollection = ctx.GetServiceCollection();
         
-        serviceCollection.AddSingleton<IServiceResolver,ServiceResolver>();
+        var resolver = new ServiceResolver();
+        serviceCollection.AddSingleton<IServiceResolver>(resolver);
         
         var serviceProvider = serviceCollection.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = Debugger.IsAttached });
-        var resolver = new ServiceResolver(serviceProvider);
+        resolver.Attach(serviceProvider);
         
         return resolver;
     }

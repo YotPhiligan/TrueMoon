@@ -10,6 +10,77 @@ public sealed class DemoInteractionTests
 {
     private static UiSession Create(View1 view, IUiClipboard? clipboard = null, Surface? surface = null) => new(view, surface ?? new Surface(), new UiViewport(800, 1100), clipboard);
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\r")]
+    [InlineData("\r\n\t")]
+    [InlineData("\b")]
+    [InlineData("\u001b")]
+    [InlineData("\0")]
+    [InlineData("\u007f")]
+    [InlineData("\u0085")]
+    public void ControlOnlyText_PreservesBoundNameGraphemeSelectionAndUnrelatedModelUpdate(string? text)
+    {
+        var model = new SettingsModel { Name = "Ирина 🧑‍💻", Enabled = false };
+        var view = new View1(model);
+        using var ui = Create(view);
+        ui.Update();
+        var editor = view.NameEditor;
+        ui.Focus(editor);
+        Key(ui, UiKey.End);
+        Key(ui, UiKey.Left, shift: true);
+        model.Enabled = true;
+        ui.Update();
+        var notifications = 0;
+        var edits = 0;
+        model.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(SettingsModel.Name)) notifications++; };
+        editor.PropertyChanged += (_, property) => { if (ReferenceEquals(property, TextBox.ValueProperty)) edits++; };
+
+        var result = ui.HandleInput(new UiInput(InputKind.Text, Text: text));
+
+        Assert.Equal("Ирина 🧑‍💻", model.Name);
+        Assert.Equal("Ирина 🧑‍💻", editor.Value);
+        Assert.False(result.Handled);
+        Assert.True(model.Enabled);
+        Assert.True(view.NotificationToggle.IsChecked);
+        Assert.True(editor.IsFocused);
+        Assert.Equal("Ирина ".Length, editor.CaretIndex);
+        Assert.Equal("Ирина ".Length, editor.SelectionStart);
+        Assert.Equal("🧑‍💻".Length, editor.SelectionLength);
+        Assert.Equal(0, notifications);
+        Assert.Equal(0, edits);
+        Assert.False(ui.NeedsUpdate);
+    }
+
+    [Theory]
+    [InlineData("\r\nЖ\t", "Ж")]
+    [InlineData("\0👩‍💻\u007f", "👩‍💻")]
+    public void MixedControlAndVisibleText_ReplacesSelectedGraphemeAndWritesFilteredName(string text, string visible)
+    {
+        var model = new SettingsModel { Name = "Ирина 🧑‍💻" };
+        var view = new View1(model);
+        using var ui = Create(view);
+        ui.Update();
+        var editor = view.NameEditor;
+        ui.Focus(editor);
+        Key(ui, UiKey.End);
+        Key(ui, UiKey.Left, shift: true);
+        var notifications = 0;
+        model.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(SettingsModel.Name)) notifications++; };
+
+        Assert.True(ui.HandleInput(new UiInput(InputKind.Text, Text: text)).Handled);
+
+        Assert.Equal("Ирина " + visible, model.Name);
+        Assert.Equal(model.Name, editor.Value);
+        Assert.Equal(model.Name.Length, editor.CaretIndex);
+        Assert.Equal(0, editor.SelectionLength);
+        Assert.True(editor.IsFocused);
+        Assert.Equal(1, notifications);
+        ui.Update();
+        Assert.Equal(model.Summary, Assert.IsType<Text>(Assert.Single(Descendants(view).OfType<Border>()).Child).Value);
+    }
+
     [Fact]
     public void AppearanceAndDensity_ChangeExistingTreeWhilePreservingEditorGraphemesFocusCaptureAndScroll()
     {

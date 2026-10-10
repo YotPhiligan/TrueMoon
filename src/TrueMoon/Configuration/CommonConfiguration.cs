@@ -1,125 +1,112 @@
-﻿namespace TrueMoon.Configuration;
+namespace TrueMoon.Configuration;
 
-/// <inheritdoc />
+/// <summary>Configuration with providers in descending priority order and atomic refresh snapshots.</summary>
 public class CommonConfiguration : IConfiguration
 {
-    private readonly SemaphoreSlim _semaphoreSlim = new (1);
-    private readonly List<IConfigurationProvider> _configurationProviders;
-    private List<IConfigurationSection>? _sections;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly IConfigurationProvider[] _providers;
+    private IConfigurationSection[] _sections = [];
 
-    /// <summary>
-    /// Create a new instance of <see cref="Configuration"/>
-    /// </summary>
-    /// <param name="configurationProviders">configuration providers</param>
     public CommonConfiguration(IEnumerable<IConfigurationProvider> configurationProviders)
     {
-        _configurationProviders = configurationProviders.ToList();
+        ArgumentNullException.ThrowIfNull(configurationProviders);
+        _providers = configurationProviders.ToArray();
         RefreshCore();
     }
 
-    private IConfigurationSection? GetSectionCore(string? name = default)
+    private IConfigurationSection? GetSectionCore(string? name)
     {
-        if (_sections == null || _sections.Count == 0)
-        {
-            RefreshCore();
-        }
-        
         name = string.IsNullOrWhiteSpace(name) ? ConfigurationSectionNames.Default : name;
-        return _sections?.FirstOrDefault(t => t.Name == name);
+        var matches = _sections.Where(section => section.Name == name).ToArray();
+        return matches.Length switch
+        {
+            0 => null,
+            1 => matches[0],
+            _ => new OverlaySection(name, matches)
+        };
     }
 
-    /// <inheritdoc />
     public IConfigurationSection? GetSection(string? name = default)
     {
-        _semaphoreSlim.Wait();
-        try
-        {
-            return GetSectionCore(name);
-        }
-        finally
-        {
-            _semaphoreSlim.Release();
-        }
+        _gate.Wait();
+        try { return GetSectionCore(name); }
+        finally { _gate.Release(); }
     }
 
-    /// <inheritdoc />
     public async Task<IConfigurationSection?> GetSectionAsync(string? name = default, CancellationToken cancellationToken = default)
     {
-        await _semaphoreSlim.WaitAsync(cancellationToken);
-        try
-        {
-            return GetSectionCore(name);
-        }
-        finally
-        {
-            _semaphoreSlim.Release();
-        }
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return GetSectionCore(name); }
+        finally { _gate.Release(); }
     }
 
-    /// <inheritdoc />
     public bool TryGetSection(string? name, out IConfigurationSection? section)
     {
         section = GetSection(name);
-        return section != null;
+        return section is not null;
     }
 
     public IConfigurationSection[] GetSections()
     {
-        _semaphoreSlim.Wait();
-        try
-        {
-            return _sections?.ToArray() ?? [];
-        }
-        finally
-        {
-            _semaphoreSlim.Release();
-        }
+        _gate.Wait();
+        try { return _sections.ToArray(); }
+        finally { _gate.Release(); }
     }
 
-    /// <inheritdoc />
     public void Refresh()
     {
-        _semaphoreSlim.Wait();
-        try
-        {
-            RefreshCore();
-        }
-        finally
-        {
-            _semaphoreSlim.Release();
-        }
+        _gate.Wait();
+        try { RefreshCore(); }
+        finally { _gate.Release(); }
     }
 
-    /// <inheritdoc />
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
-        await _semaphoreSlim.WaitAsync(cancellationToken);
-        try
-        {
-            RefreshCore();
-        }
-        finally
-        {
-            _semaphoreSlim.Release();
-        }
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { RefreshCore(); }
+        finally { _gate.Release(); }
     }
 
     public object? this[string key]
     {
-        get => this[key, ""];
-        set => this[key, ""] = value;
+        get => this.Get<object>(key);
+        set => this.Set(key, value);
     }
 
     public object? this[string key, string section]
     {
-        get => GetSection(section)?.Get<object>(key);
-        set => GetSection(section)?.Set(key, value);
+        get => this.Get<object>(key, section);
+        set => this.Set(key, value, section);
     }
 
     private void RefreshCore()
     {
-        _sections = _configurationProviders
-            .SelectMany(provider => provider.GetSections())
-            .ToList();
+        // Construct fully before publishing: a broken provider does not erase the last valid snapshot.
+        var sections = _providers.SelectMany(provider => provider.GetSections()).ToArray();
+        _sections = sections;
+    }
+
+    private sealed class OverlaySection(string name, IConfigurationSection[] sections) : IConfigurationSection
+    {
+        public string Name => name;
+        private IConfigurationSection? Find(string key) => sections.FirstOrDefault(section => section.Exist(key));
+        public bool Exist(string key) => Find(key) is not null;
+        public void Set<T>(string key, T? value) => sections[0].Set(key, value);
+        public T? Get<T>(string key) => Find(key) is { } section ? section.Get<T>(key) : default;
+        public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Find(key) is { } section ? section.GetAsync<T>(key, cancellationToken) : Task.FromResult(default(T));
+        }
+        public bool TryGetValue<T>(string key, out T? value)
+        {
+            if (Find(key) is { } section) return section.TryGetValue(key, out value);
+            value = default;
+            return false;
+        }
+        public IReadOnlyList<(string key, object? value)> GetList() => sections.SelectMany(section => section.GetList())
+            .DistinctBy(entry => entry.key).ToArray();
+        public IReadOnlyList<string> GetKeys() => GetList().Select(entry => entry.key).ToArray();
+        public IReadOnlyList<object?> GetValues() => GetList().Select(entry => entry.value).ToArray();
     }
 }

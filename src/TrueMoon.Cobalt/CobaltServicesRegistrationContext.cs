@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using TrueMoon.Services;
 
 namespace TrueMoon.Cobalt;
@@ -68,76 +68,83 @@ public class CobaltServicesRegistrationContext : IServicesRegistrationContext
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public IServicesRegistrationContext Composite<TImplementation, TService1, TService2>() where TImplementation : class, TService1, TService2 where TService1 : class where TService2 : class
     {
-        _container.RegisterSingleton<TService1, TImplementation>();
-        _container.RegisterSingleton<TService2, TImplementation>();
+        _container.RegisterSingleton<TImplementation>();
+        _container.RegisterSingleton<TService1>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService2>(resolver => resolver.Resolve<TImplementation>());
         return this;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3>() where TImplementation : class, TService1, TService2, TService3 where TService1 : class where TService2 : class where TService3 : class
     {
-        _container.RegisterSingleton<TService1, TImplementation>();
-        _container.RegisterSingleton<TService2, TImplementation>();
-        _container.RegisterSingleton<TService3, TImplementation>();
+        _container.RegisterSingleton<TImplementation>();
+        _container.RegisterSingleton<TService1>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService2>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService3>(resolver => resolver.Resolve<TImplementation>());
         return this;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3, TService4>() where TImplementation : class, TService1, TService2, TService3, TService4 where TService1 : class where TService2 : class where TService3 : class where TService4 : class
     {
-        _container.RegisterSingleton<TService1, TImplementation>();
-        _container.RegisterSingleton<TService2, TImplementation>();
-        _container.RegisterSingleton<TService3, TImplementation>();
-        _container.RegisterSingleton<TService4, TImplementation>();
+        _container.RegisterSingleton<TImplementation>();
+        _container.RegisterSingleton<TService1>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService2>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService3>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService4>(resolver => resolver.Resolve<TImplementation>());
         return this;
     }
 
     public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3, TService4, TService5>() where TImplementation : class, TService1, TService2, TService3, TService4, TService5 where TService1 : class where TService2 : class where TService3 : class where TService4 : class where TService5 : class
     {
-        _container.RegisterSingleton<TService1, TImplementation>();
-        _container.RegisterSingleton<TService2, TImplementation>();
-        _container.RegisterSingleton<TService3, TImplementation>();
-        _container.RegisterSingleton<TService4, TImplementation>();
-        _container.RegisterSingleton<TService5, TImplementation>();
+        _container.RegisterSingleton<TImplementation>();
+        _container.RegisterSingleton<TService1>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService2>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService3>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService4>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService5>(resolver => resolver.Resolve<TImplementation>());
         return this;
     }
 
     public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3, TService4, TService5,
         TService6>() where TImplementation : class, TService1, TService2, TService3, TService4, TService5, TService6 where TService1 : class where TService2 : class where TService3 : class where TService4 : class where TService5 : class where TService6 : class
     {
-        _container.RegisterSingleton<TService1, TImplementation>();
-        _container.RegisterSingleton<TService2, TImplementation>();
-        _container.RegisterSingleton<TService3, TImplementation>();
-        _container.RegisterSingleton<TService4, TImplementation>();
-        _container.RegisterSingleton<TService5, TImplementation>();
-        _container.RegisterSingleton<TService6, TImplementation>();
+        _container.RegisterSingleton<TImplementation>();
+        _container.RegisterSingleton<TService1>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService2>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService3>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService4>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService5>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService6>(resolver => resolver.Resolve<TImplementation>());
         return this;
     }
 
     public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3, TService4, TService5,
         TService6, TService7>() where TImplementation : class, TService1, TService2, TService3, TService4, TService5, TService6, TService7 where TService1 : class where TService2 : class where TService3 : class where TService4 : class where TService5 : class where TService6 : class where TService7 : class
     {
-        _container.RegisterSingleton<TService1, TImplementation>();
-        _container.RegisterSingleton<TService2, TImplementation>();
-        _container.RegisterSingleton<TService3, TImplementation>();
-        _container.RegisterSingleton<TService4, TImplementation>();
-        _container.RegisterSingleton<TService5, TImplementation>();
-        _container.RegisterSingleton<TService6, TImplementation>();
-        _container.RegisterSingleton<TService7, TImplementation>();
+        _container.RegisterSingleton<TImplementation>();
+        _container.RegisterSingleton<TService1>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService2>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService3>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService4>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService5>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService6>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService7>(resolver => resolver.Resolve<TImplementation>());
         return this;
     }
 
     public IServicesRegistrationContext Composite<TImplementation, TService1, TService2, TService3, TService4, TService5,
         TService6, TService7, TService8>() where TImplementation : class, TService1, TService2, TService3, TService4, TService5, TService6, TService7, TService8 where TService1 : class where TService2 : class where TService3 : class where TService4 : class where TService5 : class where TService6 : class where TService7 : class where TService8 : class
     {
-        _container.RegisterSingleton<TService1, TImplementation>();
-        _container.RegisterSingleton<TService2, TImplementation>();
-        _container.RegisterSingleton<TService3, TImplementation>();
-        _container.RegisterSingleton<TService4, TImplementation>();
-        _container.RegisterSingleton<TService5, TImplementation>();
-        _container.RegisterSingleton<TService6, TImplementation>();
-        _container.RegisterSingleton<TService7, TImplementation>();
-        _container.RegisterSingleton<TService8, TImplementation>();
+        _container.RegisterSingleton<TImplementation>();
+        _container.RegisterSingleton<TService1>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService2>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService3>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService4>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService5>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService6>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService7>(resolver => resolver.Resolve<TImplementation>());
+        _container.RegisterSingleton<TService8>(resolver => resolver.Resolve<TImplementation>());
         return this;
     }
 
@@ -162,23 +169,10 @@ public class CobaltServicesRegistrationContext : IServicesRegistrationContext
         return this;
     }
 
-    public bool Exist<TService>()
-    {
-        throw new NotImplementedException();
-    }
-
+    public bool Exist<TService>() => Exist(typeof(TService));
     public bool Exist<TService, TImplementation>() where TImplementation : class, TService
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool Exist(Type serviceType)
-    {
-        throw new NotImplementedException();
-    }
-
+        => Exist(typeof(TService), typeof(TImplementation));
+    public bool Exist(Type serviceType) => _container.GetHandles().Any(handle => handle.ServiceType == serviceType);
     public bool Exist(Type serviceType, Type implementationType)
-    {
-        throw new NotImplementedException();
-    }
+        => _container.GetHandles().Any(handle => handle.ServiceType == serviceType && handle.ImplementationType == implementationType);
 }

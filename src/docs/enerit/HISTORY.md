@@ -66,3 +66,28 @@ dotnet test TrueMoon.Enerit.Generator.Tests/TrueMoon.Enerit.Generator.Tests.cspr
 ```
 
 Обе команды exit0. Runtime **10passed/0failed/0skipped**, generator **9passed/0failed/0skipped**. Новые build/restore/test runs выполнены после обоих merge, а не скопированы из агентного evidence. TRX counters отдельно прочитаны и совпали с console summaries. Логи/TRX — ignored `TestResults/AgentMerge/enerit-runtime.*` и `enerit-generator.*` в основном checkout. Discovery отдельно не повторялась. Own-process/MMF/fault transport matrix и Enerit Release/package consumer не запускались; ограничения ENE1/ENE2 сохраняются. UI проверки имеют самостоятельную запись и не считаются transport evidence Enerit.
+
+## Совместимость pools и завершение pipes — 2026-10-10
+
+Исправление Core scheduler/memory ownership по запросу «давай починим все проблемы» потребовало обновить Enerit consumers. MemoryPoolUtils rental используется ReadBytes; отрицательная длина/truncated input отвергается до rental. Connection Dispose виртуален, stream опубликован до cancellable connect; client/server закрывают собственные schedulers, pending response waits и connections. Server не ждёт disposal connections под registry lock. Async handler tasks tracked/unwrapped и завершены до закрытия execution scheduler; request memory возвращается в finally. Ошибки header/payload не оставляют response TCS без завершения.
+
+Дополнительные реальные дефекты, найденные при compatibility review: empty success не завершал response, truncated payload мог удалить TCS и оставить caller до50s timeout; registration-after-dispose, failed send/cancellation/disconnect не убирали pending responses. Исправлено синхронизированное принятие новых requests, fault/cancel completion и self-disposing cancellation registrations. Чтение header/payload использует exact read и observable EOF вместо partial header/бесконечного zero-byte loop. Framing не изменён.
+
+### Проверки
+
+Root после финальных edits выполнил full solution build/test/discovery на Windows, Debug/net10.0, SDK10.0.401, xUnit2.9.3/VSTest: **Enerit runtime30passed/0failed/0skipped**, включая20 новых UtilityLifetimeTests, **generator9passed/0failed/0skipped**. Это новый run; main10/9 из предыдущей записи не перенесён как evidence. Build exit0/errors0; общие1271warnings относятся solution.
+
+[Точные команды и counters](../core/HISTORY.md#исправление-проблем-ядра--2026-10-10). Runtime TRX `TestResults/CoreFixes-Final-20261010/MEGA6_PH-DEV_2026-10-10_16_58_57_net10.0[3].trx`, generator timestamp16:58:58 без суффикса. No-build discovery соответствует30/9.
+
+| Requirement | Evidence в UtilityLifetimeTests |
+| --- | --- |
+| Tracked whole rental/deserialization validation | `DeserializedBytesHaveTrackedWholeRentalOwnership`, `DeserializedBytesRejectTruncatedAndNegativeLengthBeforeRenting` |
+| Owned scheduler/connection shutdown | `ClientDisposeWhileConnectingTerminatesBothOwnedSchedulers`, `ServerConnectionDisposeInterruptsOutstandingConnectAndTerminatesWorkers`, `ServerDisposeTerminatesOwnedSchedulerWithoutClient` |
+| Async handler drain и request return | `ConnectionDisposeWaitsAsyncHandlersAndReturnsTheirRequestMemory` |
+| Full fragmented headers и EOF | `PipeHeadersReadEntireFragmentedFrame`, `PipeHeadersRejectPrematureEof`, `PipePayloadReadRejectsPrematureEof` |
+| Dispose/disconnect/cancel pending cleanup | `ClientDisposeFaultsPendingResponseAndTerminatesWorkers`, `ClientDisconnectFaultsPendingResponseWithoutWaitingForTimeout`, `ClientCancellationRemovesPendingResponseRegistration` |
+| Empty/truncated/invalid response | `ClientCompletesEmptyResponseAndDisposalRejectsFurtherInvocations`, `ClientReportsTruncatedResponseInsteadOfLeavingRequestPending`, `ClientReportsInvalidResponseHeader` |
+
+Assertion/static gap review: concrete error types, pending map emptiness, scheduler Completion, post-return memory guard и independent expected byte content. Raw pipe confirms sent request before cancellation/disconnect; controlled fragmented streams дают детерминированные header/EOF cases. Await/barriers вместо fixed sleeps; forced timeout лишь guard теста. Mutants/coverage не запускались.
+
+Ограничения: tests in-process, handler cancellation кооперативна; own-process, memory-mapped faults/cleanup, payload-size policy, complete serialization и package/Release остаются ENE1–ENE3/ENE5. Старые weak pipe и generator smoke tests не переписаны этим ограниченным consumer fix.

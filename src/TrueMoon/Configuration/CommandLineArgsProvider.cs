@@ -1,42 +1,30 @@
 namespace TrueMoon.Configuration;
 
+/// <summary>Provides a fresh snapshot of command line arguments, excluding the executable.</summary>
 public class CommandLineArgsProvider : IConfigurationProvider
 {
-    private readonly Dictionary<string, object?> _dictionary = new ();
-    
-    public CommandLineArgsProvider()
-    {
-        var args = Environment.GetCommandLineArgs();
+    private readonly Func<IEnumerable<string>> _arguments;
 
-        foreach (var s in args)
-        {
-            if (s.Contains('='))
-            {
-                var parts = s.Split('=');
-                var key = parts[0];
-                var value = parts[1];
-                
-                SetCore(key,value);
-            }
-            else
-            {
-                SetCore(s, default);
-            }
-        }
-    }
-    
-    private void SetCore(string key, object? value)
+    public CommandLineArgsProvider() : this(() => Environment.GetCommandLineArgs().Skip(1)) { }
+
+    /// <summary>Creates a provider from arguments without the executable name.</summary>
+    public CommandLineArgsProvider(Func<IEnumerable<string>> arguments)
     {
-        _dictionary[key] = value;
+        ArgumentNullException.ThrowIfNull(arguments);
+        _arguments = arguments;
     }
 
     public string Name => ConfigurationSectionNames.CommandLineArguments;
-    
+
     public IReadOnlyList<IConfigurationSection> GetSections()
     {
-        return new List<IConfigurationSection>
+        var dictionary = new Dictionary<string, object?>();
+        foreach (var argument in _arguments())
         {
-            new CommandLineArgsSection(_dictionary)
-        };
+            var separator = argument.IndexOf('=');
+            if (separator < 0) dictionary[argument] = null;
+            else dictionary[argument[..separator]] = argument[(separator + 1)..];
+        }
+        return [new CommandLineArgsSection(dictionary)];
     }
 }

@@ -1261,3 +1261,201 @@ dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --windo
 Все три команды exit0. UI suite **469passed/0failed/0skipped**, TRX counters прочитаны отдельно. Consumer build **0errors/227warnings**; это локальная incremental Debug сборка, не повтор full solution baseline. Callback probe: **6direct cases +12hosted failures +12healthy recreations**, OpenGL/Vulkan×3appearance×subscriber/DPI. Проверены original cause/stack, ordered cleanup error, Completion/StopAsync identity, disposed tree/focus, registry/HWND и DPI/chrome/transparency hooks0; Vulkan validation **0errors/0warnings**. JSON содержит12 hosted results и zero hook counters. VK_LAYER_PATH задан только для процесса shell/probe и восстановлен в finally; глобальные настройки не менялись.
 
 Ignored evidence в основном checkout: `TestResults/AgentMerge/alloy-ui.log/.trx`, `alloy-consumer-build.log`, `alloy-callbacks-debug.log/.json`. Published Release,4previous chrome/rendering-failure probes, physical DPI/settings/device loss, long soak/VRAM и consumer packaging при интеграции не повторялись. Их агентные/исторические результаты сохраняют прежний scope. Не подтверждается readiness остальных модулей или full alpha.
+
+## TextBox control-text и Name smoke — 2026-10-10
+
+Работа в основном checkout `E:/source/my/TrueMoon/src` поверх `9d7090a`, без commit/push этого прохода. Цель — расследовать исторический нерегулярный Release/Vulkan SettingsFormSmoke.Frame stage2 Name binding mismatch из K9 profile run. Старый `TestResults/AlloyPerformanceProfile/release-standalone-vulkan-first-failure.log` содержит exception/stack, но не actual model/editor или native input. Поэтому историческая причина остаётся неизвестной.
+
+### Детерминированный дефект и исправление
+
+TextBox.HandleInput фильтровал char.IsControl, затем вызывал ReplaceSelection даже при пустом результате. На выделенном emoji это удаляло grapheme и немедленно записывало изменённое значение через two-way binding. Минимальное исправление: после фильтра вернуть unhandled при отсутствии видимого текста. Явные Backspace/Delete/Cut и clipboard policy не менялись; mixed visible/control text сохраняет обычное замещение после фильтра.
+
+Focused red regression:11cases, **7failed/4passed**, command exit1, expected «Ирина 🧑‍💻», actual «Ирина ». Null/empty input и mixed text уже проходили. После fix **11passed/0failed/0skipped**, exit0. Полная UI suite **480passed/0failed/0skipped**, exit0. SDK10.0.401/net10.0, Windows, xUnit2.9.3/VSTest; run-tests и focused code-testing guidance применены.
+
+| Проверяемое поведение | Exact test evidence |
+| --- | --- |
+| Control-only/empty text не удаляет bound grapheme, не создаёт notifications/redraw и сохраняет focus/selection после unrelated Enabled update | DemoInteractionTests.ControlOnlyText_PreservesBoundNameGraphemeSelectionAndUnrelatedModelUpdate (9cases) |
+| Mixed visible/control text заменяет выбранный grapheme, обновляет модель/summary и завершает selection | DemoInteractionTests.MixedControlAndVisibleText_ReplacesSelectedGraphemeAndWritesFilteredName (2cases) |
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --filter 'FullyQualifiedName~ControlOnlyText_PreservesBoundNameGraphemeSelectionAndUnrelatedModelUpdate|FullyQualifiedName~MixedControlAndVisibleText_ReplacesSelectedGraphemeAndWritesFilteredName' --logger 'trx;LogFileName=control-text-before.trx' --results-directory TestResults/AlloyNameBinding --verbosity minimal
+# Before fix: exit1,7failed/4passed.
+# After fix: same scope with --no-restore and LogFileName=control-text-after.trx; exit0,11passed.
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --no-restore --logger 'trx;LogFileName=ui-final.trx' --results-directory TestResults/AlloyNameBinding --verbosity minimal
+# exit0,480passed/0failed/0skipped.
+```
+
+### Bounded диагностика и фактический native scope
+
+`--smoke-trace <path.json>` сохраняет последние128 frame/native-input snapshots: stage/frame, model/editor, enabled/focus/caret/selection и нормализованный UiInput после Hosting routing. Input routing не меняется. При Name failure error включает expected/model/editor и reason=unexpected-value либо binding-out-of-sync. Если trace не удалось записать после primary failure, ошибка логируется и не маскирует первую причину. Наблюдатель включается до запуска оконного цикла, snapshots записываются на UI owner thread, JSON сохраняется после завершения/отказа. Без trace snapshots не создаются.
+
+Сборки: Debug standalone build и Release publish exit0, initial Debug build728warnings/0errors; final incremental build/publish также exit0. Compile-linked AlloyVulkanTest build exit0.20repeat runs (5×Debug/Release×OpenGL/Vulkan) прошли до финального уточнения reason и защиты trace-write failure; TextBox fix, frame/native snapshots и основной interaction script в них уже присутствовали. Каждый40–41frames и completed stage40–41, stage2 model/editor «Ирина 🧑‍💻», snapshots80–82≤128. **Native input в этих20runs не наблюдался.** Vulkan successful runs сообщали validation0errors/0warnings включая teardown. Повторная успешность не закрывает historical failure.
+
+Финальный диагностический код отдельно проверен ignored `verify-native-trace.ps1`. Script запускает только собственный published Release/Vulkan child, сверяет PID через GetWindowThreadProcessId перед каждым PostMessageW и посылает WM_CHAR исключительно его HWND. P/Invoke declarations используют pointer-sized HWND/WPARAM/LPARAM и Win32 BOOL/int. Нет global input injection/hooks/settings. Child ограничен10s, освобождается только собственный process tree; VK_LAYER_PATH process-local и восстановлен в finally.
+
+- Character88/X: child ожидаемо exit−532462766,18recorded native text events, completed=false/stage1, model/editor оба изменились одинаково, reason=unexpected-value. Это воспроизводит похожий smoke failure из обычного изменения значения, **не доказывает historical cause**.
+- Character13/CR: child exit0, completed=true/stage40,80snapshots, **0native text events**. Текущий GLFW отфильтровал control WM_CHAR до UiInput. Поэтому найденный control-only TextBox defect не объявляется root-cause исторического native Vulkan сбоя.
+- Character88 плюс trace path существующей directory: child ожидаемо exit−532462766, stderr содержит trace-write error и исходный Name InvalidOperationException. Первичная причина сохранена. Эти2negative children не считаются passing smoke; все3outer proof commands exit0.
+
+```powershell
+dotnet build ManualTests/AlloyTest/AlloyTest.csproj --configuration Debug --no-restore --verbosity minimal
+dotnet publish ManualTests/AlloyTest/AlloyTest.csproj --configuration Release --no-restore --output TestResults/AlloyNameBinding/publish --verbosity minimal
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
+# Repeat each Debug/Release and OpenGL/Vulkan combination five times; every run used a distinct --smoke-trace path.
+dotnet ManualTests/AlloyTest/bin/Debug/net10.0/AlloyTest.dll --smoke --smoke-trace TestResults/AlloyNameBinding/Debug-OpenGL-1.json
+dotnet TestResults/AlloyNameBinding/publish/AlloyTest.dll --smoke --vulkan --validation --smoke-trace TestResults/AlloyNameBinding/Release-Vulkan-1.json
+pwsh -NoProfile -File TestResults/AlloyNameBinding/verify-native-trace.ps1 -Character 88
+pwsh -NoProfile -File TestResults/AlloyNameBinding/verify-native-trace.ps1 -Character 13 -ExpectSuccess
+pwsh -NoProfile -File TestResults/AlloyNameBinding/verify-native-trace.ps1 -Character 88 -RejectTraceWrite
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Debug --no-restore --verbosity minimal
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --settings-compare --validation
+```
+
+Последний comparison exit0:3logical scales1/1.5/2×40interaction steps, raster/OpenGL/Vulkan bounds/model/input/selected RGBA согласованы,29draws/backend/scale, static/suspend/restore/disposal passed; Vulkan validation0/0. Это synthetic scale и selected-pixel functional proof, не physical DPI/full golden. Shared sample constructors/compile links остаются совместимыми.
+
+Артефакты ignored `TestResults/AlloyNameBinding`: before/after/final TRX/logs,20run JSON/logs, standalone-runs.json, native proof script/logs/trace, build/publish/compare logs, published consumer, provenance.json. Provenance хранит base HEAD и hashes окончательных source files; в20repeat runs финальный reason/catch refinement ещё отсутствовал, final native proofs выполнялись после него. Полный solution, Enerit/другие модули, physical DPI/device loss, long lifecycle/VRAM, independent package consumer и performance rebaseline не запускались. При естественном повторе Name failure сохранять trace и actual scope; retry не подменяет расследование.
+
+## Lifecycle resize soak и native resource growth — 2026-10-10
+
+Рабочие изменения в основном checkout поверх9d7090a после TextBox/Name шага; commit/push не выполнялись. Scope: Platform.Silk callback lifetime и ManualTests/AlloyVulkanTest probes, без изменений общих contracts/build/package/TFM. net10.0, SDK10.0.401, Windows10.0.26300 x64, native window scale1.5. Inventory adapters: NVIDIA GeForce RTX5070Ti driver32.0.16.1742 и AMD Radeon Graphics32.0.21043.5001; inventory не означает, что конкретный GL/native allocation уже атрибутирован одному из них. Validation1.4.363.0 через process-local VK_LAYER_PATH; native Skia из собственных build/publish artifacts. OS settings не менялись.
+
+### Воспроизведение и исправления callback roots
+
+Первый12-window probe (`short-debug.json/.log`) failed после GC: все6Vulkan host/window/session/tree/controls оставались rooted; GL references освободились. VulkanDevice создавал PfnDebugUtilsMessengerCallbackEXT и терял IDisposable wrapper. Silk.NET2.23.0 закрепляет delegate через GCHandle, освобождаемый wrapper.Dispose; добавлено сохранение wrapper и Dispose после DestroyInstance, включая cleanup failed initialization. KeepAlive сохраняет callback до последнего native teardown вызова. Источники: [Pfn wrapper](https://raw.githubusercontent.com/dotnet/Silk.NET/v2.23.0/src/Vulkan/Silk.NET.Vulkan/PfnDebugUtilsMessengerCallbackEXT.cs), [SilkMarshal](https://raw.githubusercontent.com/dotnet/Silk.NET/v2.23.0/src/Core/Silk.NET.Core/Native/SilkMarshal.cs).
+
+После первого fix освободились5Vulkan graphs; последний оставался и без validation. Это не оказалось async/JIT retention: NoInlining synchronous caller не изменил результат. CLRMD3.1.512801 из уже установленного package, read-only snapshot собственного child, выявил root chain (`roots-detail.log`): StrongHandle/Stack Object[] →WindowPlatforms →GlfwPlatform →последнийGlfwWindow →Update delegate probe →HostedUiWindow. После снятия owned probe Update subscription через root.Own остался только `11:host`. SilkWindowHost дополнительно держался через свои anonymous Render/Focus handlers. Они теперь сохранены в fields и снимаются при constructor failure/Dispose до освобождения input/hooks/HWND. Короткая matrix после обоих production fixes освободила все references.
+
+Automatic heap dump попытка по временным DOTNET_Dbg* process env vars не удалась: createdump сообщил MiniDumpWriteDump/ReadProcessMemory failure. `retention_43252.dmp` — неполный, не считается usable dump/evidence. Env восстановлены. Временные diagnostic wait/resource logging branches в probe удалены; ignored inspect-roots.ps1 относится к исторической instrumented binary, не к final CLI. Root-chain log остаётся свидетельством snapshot, не анализом повреждённого dump.
+
+### Длительный window resource result — FAILED
+
+Новый `--window-lifecycle-soak` задаёт240windows:20повторов каждой GL/Vulkan×Opaque/Opacity/PerPixel×standard/custom комбинации. Каждый цикл:3logical client resize, проверка editor value/emoji grapheme selection/focus, native minimize/restore, explicit zero-size UI suspension и active pointer capture при close/cancel. Publisher и registry живут через все циклы. После каждого HWND: IsWindow0, registry/subscriptions/3hooks0; каждые12окон/в конце GC/WeakReference host/window/session/root/content/editor/button. Собственная Update subscription probe имеет явного owner. JSON также сохраняется при ошибке без маскировки первичной причины.
+
+До запуска приняты warm checkpoint12 и USER/GDI tolerances+2/+4. Первый240-window attempt остановился на24:USER17→23,GDI15. Threshold не менялся. Final bounded run продолжает заранее заданные240cycles ради полного trend, но превышение любого checkpoint сохраняет failure; retry-success вместо failure не использован.
+
+| Configuration | Windows / frames / resize / minimize | Retained refs / hooks / registry / subscriptions | Warm12 →240 USER / GDI | Handles | Private memory | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| Debug | 240 /4782 /720 /240 | 0 из1680 tracked; остальные0 после каждого окна | 16→128 /15→15 | 551→896 | 200.9→638.8MiB | failed, exit−532462766 |
+| Published Release | 240 /4779 /720 /240 | 0 из1680 tracked; остальные0 после каждого окна | 16→130 /15→15 | 551→894 | 196.7→638.0MiB | failed, exit−532462766 |
+
+Elapsed108.30s/107.45s. Vulkan validation messages0errors/0warnings including teardown проверены в каждом из240cycle отдельно. Report.Completed=false/GuiLimitExceeded=true в обоих files; выполнение всех windows не называется passing resource soak. Managed bytes~0.28→0.94MiB(Debug)/~0.27→0.88MiB(Release) включают растущие metadata lists/WeakReferences самого probe; целевые UI объекты собраны. Process private/working-set/handles не являются VRAM counters, а причину их роста только USER controls не устанавливают.
+
+Full reports получены до последних изменений bounded failure-cleanup и уточнения сообщения validation-not-requested; production cleanup, cycle operations и thresholds те же. Финальные short/callback и actual legacy checks выполнены после этих refinements. provenance.json hashes описывают final source, а не приписываются всем intermediate artifacts.
+
+### Native controls — локализация USER growth
+
+`--native-window-resource-control` выполняет24windows без загрузки native Skia/UiSession/VulkanDevice. Это observational diagnostic control, его exit0 не означает passing UI/resource proof. Native wrapper и direct Silk варианты используют3native render iterations/window; каждый child имеет собственный process.
+
+| Scope | Debug USER/GDI first→last | Published Release USER/GDI first→last |
+| --- | --- | --- |
+| TrueMoon Silk host, GL, new thread/window | 9→32 /15→15 | отдельный repeat не запускался |
+| Direct Silk Window, GL, new thread/window; без TrueMoon host/adapters/input | 9→32 /15→15 | 9→32 /15→15 |
+| TrueMoon Silk host, GL, один thread | 24→24 /17→17 | 24→24 /17→17 |
+| TrueMoon Silk host, Vulkan window без GL context, new thread/window | 3→3 /12→12 | 3→3 /12→12 |
+
+USER рост воспроизводится на native OpenGL/new-thread пути до UI/Skia/TrueMoon adapters. Точный native allocator/owner (WGL/GLFW/driver/другая native integration) пока не установлен; driver виновником не объявлен. Dedicated UI thread reuse — возможное отдельное архитектурное решение, сейчас не внедрялось; требуется concurrent windows/owner-thread/shutdown proof. Глобальная GLFW termination и замена USER threshold не приняты. Для Win32 counters сверены primary signatures: [GetGuiResources](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getguiresources), [IsWindow](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindow).
+
+### Passing regression и точный retirement scope
+
+- Final Debug build exit0,0errors/15warnings (incremental); published Release exit0 с существующими warning families. Ни build/publish, ни UI suite не являются full solution baseline.
+- UI suite после production fixes:480passed/0failed/0skipped, xUnit2.9.3/VSTest; ui-lifecycle.trx/log.
+- Final short matrix:12Debug windows/235frames и12published Release/239frames; в каждом36resize/12minimize,84tracked refs/retained0, hooks/registry/subscriptions0, validation0/0. Это короткий warm checkpoint, он не заменяет long failure.
+- Final callback regression в каждом configuration:6direct+12hosted failures+12healthy recreations; original cause/cleanup errors, Completion/StopAsync identity, session/tree/HWND/hooks/registry cleanup, validation0/0. Native faults expected; outer probes exit0.
+- Actual retirement matrix:Debug/published Release×KHR present fences/forced legacy, каждый200sessions/2000frames/400created=destroyed swapchains/10minimize, peak2generations. Fence proofs2000/case, legacy reacquisition399/case. Owned swapchains/semaphores/fences/command pools/retired generations0, registry/subscriptions/400tracked UI refs0, validation0/0 включая device teardown; новая post-window проверка всех3hooks0.
+- First runner ошибочно передал scalar flag: файлы retirement-debug-legacy.log и retirement-release-legacy.log сообщаютKHR, а неlegacy. Они были extra fence runs, не засчитаны в forced-legacy coverage. Literal --legacy-presentation повторил оба configurations; evidence только retirement-*-legacy-actual.log. Проверялся log negotiation/actual counters, не название case.
+- Legacy WaitIdle shutdown limitation сохраняется; поддержанный KHR и forced legacy на текущем устройстве не проверяют EXT-only hardware, physical device loss или полный driver/VRAM lifecycle.
+
+Команды (VK_LAYER_PATH установлен только для собственного process и восстановлен):
+
+```powershell
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Debug --no-restore --verbosity minimal
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Release --no-restore --output TestResults/AlloyLifecycle/publish --verbosity minimal
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --no-restore --logger 'trx;LogFileName=ui-lifecycle.trx' --results-directory TestResults/AlloyLifecycle --verbosity minimal
+# Both following commands intentionally return a failed resource result; retain their JSON/logs.
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-lifecycle-soak --soak-cycles 240 --soak-output TestResults/AlloyLifecycle/lifecycle-debug-full.json --validation
+dotnet TestResults/AlloyLifecycle/publish/AlloyVulkanTest.dll --window-lifecycle-soak --soak-cycles 240 --soak-output TestResults/AlloyLifecycle/lifecycle-release-full.json --validation
+# For each of the two DLLs above; keep configuration-specific paths.
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-lifecycle-soak --soak-cycles 12 --soak-output TestResults/AlloyLifecycle/short-final-debug.json --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-callback-failure --callback-output TestResults/AlloyLifecycle/callback-debug.json --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --retirement-soak --soak-cycles 200 --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --retirement-soak --soak-cycles 200 --legacy-presentation --validation
+dotnet TestResults/AlloyLifecycle/publish/AlloyVulkanTest.dll --retirement-soak --soak-cycles 200 --legacy-presentation --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --soak-output TestResults/AlloyLifecycle/native-gl-new-thread.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-direct-silk --soak-output TestResults/AlloyLifecycle/native-direct-gl.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-single-thread --soak-output TestResults/AlloyLifecycle/native-gl-single-thread.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-vulkan-window --soak-output TestResults/AlloyLifecycle/native-vk-new-thread.json
+```
+
+Артефакты ignored TestResults/AlloyLifecycle содержат logs/TRX/JSON, partial dump, snapshot root chain, published consumer и final source/native provenance. Общий solution/другие модули, physical DPI/монитор transitions, Settings pixel comparison, fixed fonts/full golden, actual device loss, independent package consumer, native VRAM/driver profiling и K9 rebaseline не запускались. Исторический Name failure не объявлен исправленным. K7/alpha остаются открыты; следующий доступный шаг — owner/native allocation/thread lifetime исследование с неизменным resource check, independent delivery остаётся отдельным шагом.
+
+## WGL thread lifetime и shared owner loop — 2026-10-10
+
+Работа в основном checkout `main`, base HEAD `9d7090a`, поверх предыдущих незакоммиченных TextBox/lifecycle fixes. Изменены только manual diagnostics, CLI и UI planning docs; production Hosting/thread/session contracts и общие build/package настройки этим шагом не менялись. Commit/push не выполнялись.
+
+### Реализация и область доказательства
+
+- `NativeWindowDiagnostics` добавляет own top-level/message-only HWND census с class/native owner ID и active GL vendor/renderer/version. Handles census borrowed; оно не перечисляет все USER objects либо child HWND и не устанавливает exact allocator.
+- Raw WGL control: OS STATIC hidden HWND, owned DC, PIXELFORMATDESCRIPTOR40bytes, legacy context,3swaps, unbind→delete context→release DC→destroy HWND на том же owner thread; все cleanup actions выполняются с сохранением original failure. Raw window control не создаёт DC/context. Нет GLFW initialization, Silk window, Skia или UI. Legacy WGL profile отличается от GLFW, оба активных renderer записаны в JSON.
+- Native control:1–10000fixed cycles, default24; fresh Thread/window либо current thread либо1–8serial round-robin workers. После каждого окна GC/GUI/private/managed/handles/thread IDs; до/после window disposal HWND census. После worker join дополнительная fixed1s quiescence observation. Exit0 означает завершённую диагностику, а не соблюдение resource budget. Worker reuse здесь не выполняет concurrent windows.
+- Optional UI control создаёт прямой `HostedUiSessionFactory`/SkiaOpenGL session с editor, не менее12frames/3logical resizes, focus/selection/value verification; disposal при alive context, registry и4WeakReferences/window. Финальный source дополнительно проверяет zero native hooks после каждого окна. Это не `HostedUiWindow` scheduling и не полная appearance/chrome/minimize/Vulkan matrix.
+- Shared-loop prototype работает на вызывающем owner thread:20rounds; два live независимых HWND/session, закрытие первого на12frames и replacement при продолжающемся sibling до36frames. Replacement12frames; context/current/owner guard при input/update/render/dispose. Registry/DPI hooks2→1→2→0, HWND destruction, text/selection,5WeakReferences/window, USER/GDI warm round4+2/+4. Нет одновременно двух native focus promises, cross-platform/fault/cancellation/VRAM proof.
+
+### Изолированные24-cycle controls
+
+Debug, каждый отдельным процессом; `*.json/log` в ignored `TestResults/AlloyNativeThreads`. Fresh-thread случаи полностью join каждый Thread перед sample.
+
+| Control | USER after first window → quiescence | GDI | Private MiB first → quiescence | Итоговый top/message-only HWND census |
+| --- | --- | --- | --- | --- |
+| Direct Silk GL/new-thread |9→32|15→15|58.5→67.4|2|
+| Direct Silk GL/current thread |24→23|17→17|58.5→59.0|9; caller остаётся живым|
+| Direct Silk GL/2reused workers |25→10|17→15|59.8→90.2|2; before join USER32|
+| Raw WGL/new-thread |7→30|7→7|53.9→63.4|2|
+| Raw WGL/current thread |11→11|8→8|53.8→55.6|4; caller остаётся живым|
+| Raw Win32/no GL/new-thread |1→1|0→0|8.5→8.6|0|
+| Direct Silk Vulkan-window/new-thread |3→3|12→12|26.0→27.4|0; no VulkanDevice|
+
+Фактический GL renderer raw/GLFW — `NVIDIA GeForce RTX 5070 Ti/PCIe/SSE2`; JSON содержит version/vendor. Среди оставшихся top-level classes — NVOpenGLPbuffer/IME. Их count не растёт пропорционально USER, поэтому рост не объяснён retained top-level HWND census. Exact USER object type/allocator остаётся неизвестным: это WGL/Windows/active ICD path correlation, не доказанная конкретная driver bug. Private bytes этого control не объясняют целиком прежний mixed GL/Vulkan~640MiB результат.
+
+### Фиксированная240-cycle матрица
+
+Все10процессов завершились exit0/Completed=true; **это observational completion**, не passing full K7. Warm sample — после12window/context, end —240, last — после join/fixed quiescence. Raw new-thread USER growth сохраняется после quiescence; reused owners ограничивают наблюдаемый рост.
+
+| Configuration/control | USER warm→end→quiescence | GDI warm→end | Private MiB warm→end→quiescence | Handles warm→end |
+| --- | --- | --- | --- | --- |
+| Debug raw WGL/new |18→246→246|7→7|83.2→113.1→113.0|381→382|
+| Release raw WGL/new |18→246→246|7→7|84.9→107.5→107.5|386→387|
+| Debug raw WGL/2workers |18→18→8|9→9|87.5→87.2→87.1|460→461|
+| Release raw WGL/2workers |18→18→8|9→9|87.8→88.4→89.3|461→462|
+| Debug UI/new |21→246→246|15→15|102.5→151.5→150.1|489→489|
+| Release UI/new |21→234→234|15→15|99.6→147.6→147.1|487→487|
+| Debug UI/1worker |26→26→10|17→17|98.1→103.4→79.0|555→555|
+| Release UI/1worker |26→26→11|17→17|99.9→104.9→75.5|556→559|
+| Debug UI/2workers |32→32→11|18→18|133.9→142.0→113.8|585→585|
+| Release UI/2workers |32→33→12|18→18|134.2→140.8→115.6|586→588|
+
+Raw/new240distinct native owner IDs; UI/new Debug237distinct, Release225distinct из240новых Thread. Native OS IDs могут переиспользоваться; один новый managed Thread не равен одному новому native ID. Рост USER отwarm кend в этих runs совпадает с ростом числа distinct owner IDs — корреляция с thread identity, exact allocator этим не установлен. UI cases по960WeakReferences retained0; process memory includes growing diagnostic metadata/native allocator caches, не VRAM measurement. Serial reused2workers не объявляются GLFW-supported multi-threaded scheduler.
+
+`runs.json` содержит exact arguments/exit/time; `matrix-provenance.json` сохраняет source/debug/published DLL hashes **до** дополнительного hook assertion/error-report refinement, whitespace format и подключения shared-loop CLI. Основные window/session/resize операции матрицы после этого не менялись. Первые24-cycle controls и UI-short12 относятся к промежуточной diagnostic версии. Современные passing controls ниже выполнялись на финальном source.
+
+### Финальная проверка source
+
+- Debug consumer build exit0,15warnings/0errors; Release publish exit0. Existing warnings — NU1507/CS8602/CS1591; общие настройки не менялись.
+- Shared loop Debug/published Release: каждый20rounds/60HWNDs/1200frames/180resizes,300WeakReferences retained0, registry/hooks0; sibling продолжал рендериться после teardown/replacement. Warm round4→20 USER25→25/24→24, GDI17→17; private120.2→125.0MiB/119.2→120.9MiB, handles526→528/524→526. Fixed warm+2/+4 assertions passed. Глобальная GLFW termination не выполнялась.
+- Финальный serial UI/2workers повторён Debug/published Release по240windows,3resizes/window,960WeakReferences retained0, registry/hooks0. Warm12→240→quiescence USER32→31→11/32→32→11, GDI18→18. Private133.2→137.3→137.5MiB/133.3→138.8→139.9MiB, handles585→582/586→583. Counts/memory не объявляются абсолютным zero native resources или новым memory budget.
+- UI unit suite, original full mixed lifecycle/chrome/alpha/minimize matrix, callback/retirement validation, другие modules/solution, physical DPI, fonts/golden, real loss/package consumer и VRAM profile **не повторялись**. Предыдущие480UI tests и failed mixed lifecycle results сохраняют прежний scope; K7/alpha открыты.
+
+Воспроизведение из `src` (configuration/binary выбирается явно):
+
+```powershell
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Debug --no-restore --verbosity minimal
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Release --no-restore --output TestResults/AlloyNativeThreads/publish --verbosity minimal
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-raw-wgl --soak-cycles 240 --soak-output TestResults/AlloyNativeThreads/raw-new.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-ui-control --native-workers 2 --soak-cycles 240 --soak-output TestResults/AlloyNativeThreads/ui-reuse.json
+dotnet TestResults/AlloyNativeThreads/publish/AlloyVulkanTest.dll --window-shared-loop-control --soak-output TestResults/AlloyNativeThreads/shared-release.json
+```
+
+SDK10.0.401/Windows10.0.26300.0, active renderer NVIDIA RTX5070Ti; установленный driver inventory предыдущего provenance32.0.16.1742 (это inventory, не allocator attribution). Никакие user OS settings не менялись. Артефакты включают reports/logs/publish, intermediate matrix и final source/binary provenance.
+
+### Решение для следующего этапа
+
+GLFW документирует [window/context creation/destruction и event processing на main thread](https://www.glfw.org/docs/latest/intro.html#thread_safety). Поэтому worker reuse принят только как diagnostic comparison. Предлагаемый следующий шаг — app-lifetime owner dispatcher/event loop для standalone Hosting: несколько live окон, отдельные window commands/completion/first-fault, current-context switch и session cleanup-before-context/HWND. Shared loop prototype проверяет только Windows/OpenGL normal path; production API/lifetime/cancellation/shutdown/failure policy и Vulkan integration предстоит реализовать и проверить. Dedicated-thread-per-window контракт ещё не заменён. После замены повторить исходный full240-window matrix и callback/shutdown regressions в Debug/Release с неизменными thresholds. Exact WGL/OS/ICD allocation и mixed private/handles growth продолжают учитываться; доказанной общей resource stability/VRAM readiness нет.

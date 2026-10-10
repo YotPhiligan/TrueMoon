@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,6 +14,8 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
     private readonly TmTaskScheduler _listenTaskScheduler;
     private readonly TmTaskScheduler _taskScheduler;
     private readonly CancellationTokenSource _cts;
+    private readonly CancellationToken _token;
+    private int _disposed;
 
     private readonly ConcurrentDictionary<Guid, TaskCompletionSource<ReadOnlyMemory<byte>>> _responses = new ();
 
@@ -23,20 +25,42 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         _listenTaskScheduler = new TmTaskScheduler($"{Name}_listen", 1);
         _taskScheduler = new TmTaskScheduler($"{Name}_write", 2);
         _cts = new CancellationTokenSource();
+        _token = _cts.Token;
         StartListening();
     }
 
+    public override void Dispose()
+    {
+        lock (_responses)
+        {
+            if (_disposed != 0) { return; }
+            _disposed = 1;
+        }
+        _cts.Cancel();
+        base.Dispose();
+        IsConnected = false;
+        foreach (var pair in _responses)
+        {
+            if (_responses.TryRemove(pair.Key, out var response))
+            {
+                response.TrySetException(new ObjectDisposedException(GetType().Name));
+            }
+        }
+        _listenTaskScheduler.Dispose();
+        _taskScheduler.Dispose();
+        _cts.Dispose();
+    }
     public bool IsConnected { get; private set; }
-    
+
     private void StartListening()
     {
         _ = Task.Factory.StartNew(() =>
         {
-            Connect();
-            _eventsSource.Write(()=>"Connected");
-            IsConnected = true;
             try
             {
+                Connect(_token);
+                _eventsSource.Write(()=>"Connected");
+                IsConnected = true;
                 while (!_cts.IsCancellationRequested)
                 {
                     var (resultGuid, statusCode, len) = PipeStream.GetResponseHeader();
@@ -44,39 +68,40 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                     if (_responses.TryRemove(resultGuid, out var container))
                     {
                         Memory<byte> mem = default;
-                        switch (statusCode)
+                        try
                         {
-                            case 0:
+                            if (len < 0) { throw new InvalidDataException("Response payload length must not be negative."); }
+                            switch (statusCode)
                             {
-                                if (len > 0)
-                                {
-                                    mem = MemoryPoolUtils.Create(len);
-
-                                    PipeStream.ReadFullBuffer(mem);
-                                    container.TrySetResult(mem);
-                                }
-                                break;   
-                            }
-                            case 1:
-                            {
-                                string error = default;
-                                if (len > 0)
-                                {
-                                    try
+                                case 0:
+                                    if (len > 0)
+                                    {
+                                        mem = MemoryPoolUtils.Create(len);
+                                        PipeStream.ReadFullBuffer(mem);
+                                    }
+                                    if (!container.TrySetResult(mem)) { mem.TryReturn(); }
+                                    mem = default;
+                                    break;
+                                case 1:
+                                    string? error = null;
+                                    if (len > 0)
                                     {
                                         mem = MemoryPoolUtils.Create(len);
                                         PipeStream.ReadFullBuffer(mem);
                                         error = Encoding.UTF8.GetString(mem.Span);
                                     }
-                                    finally
-                                    {
-                                        mem.Return();
-                                    }
-                                }
-                                container.TrySetException(new InvocationException(error));
-                                break;
+                                    container.TrySetException(new InvocationException(error));
+                                    break;
+                                default:
+                                    throw new InvalidDataException($"Unknown invocation response status {statusCode}.");
                             }
                         }
+                        catch (Exception error)
+                        {
+                            container.TrySetException(error);
+                            throw;
+                        }
+                        finally { mem.TryReturn(); }
                     }
                     else
                     {
@@ -92,53 +117,59 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
             }
             catch (Exception e)
             {
-                _eventsSource.Exception(e);
-                Reconnect();
+                if (!_token.IsCancellationRequested)
+                {
+                    _eventsSource.Exception(e);
+                    Reconnect();
+                }
             }
-        }, _cts.Token,
+        }, _token,
         TaskCreationOptions.LongRunning,
         _listenTaskScheduler);
     }
 
     private void Reconnect()
     {
-        if (_cts.IsCancellationRequested)
+        if (_cts.IsCancellationRequested || IsDisposed)
         {
             return;
         }
         _eventsSource.Trace();
         IsConnected = false;
+        foreach (var pair in _responses)
+        {
+            if (_responses.TryRemove(pair.Key, out var response))
+            {
+                response.TrySetException(new IOException("The invocation connection was lost."));
+            }
+        }
         Reset();
         StartListening();
     }
 
     private async Task CheckConnectedAsync(CancellationToken cancellationToken = default)
     {
-        if (IsConnected)
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+        while (!IsConnected)
         {
-            return;
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
         }
-
-        while (!cancellationToken.IsCancellationRequested && !IsConnected)
-        {
-            await Task.Delay(1);
-        }
+        cancellationToken.ThrowIfCancellationRequested();
     }
-    
+
     private void CheckConnected(CancellationToken cancellationToken = default)
     {
-        if (IsConnected)
-        {
-            return;
-        }
-
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         var spin = new SpinWait();
-        while (!cancellationToken.IsCancellationRequested && !IsConnected)
+        while (!IsConnected)
         {
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+            cancellationToken.ThrowIfCancellationRequested();
             spin.SpinOnce();
         }
+        cancellationToken.ThrowIfCancellationRequested();
     }
-    
     public async Task<TResult> InvokeAsync<TResult>(byte methodCode, Action<IBufferWriter<byte>>? action, Func<ReadOnlyMemory<byte>, TResult> func, CancellationToken cancellationToken = default)
     {
         using var ctsTimer = new CancellationTokenSource(TimeSpan.FromSeconds(50));
@@ -146,9 +177,9 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         var token = cts.Token;
 
         await CheckConnectedAsync(token);
-        
+
         var tcs = InvokeCore(methodCode, action, token);
-        
+
         var result = await tcs.Task.WaitAsync(token);
         try
         {
@@ -163,12 +194,24 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
     private TaskCompletionSource<ReadOnlyMemory<byte>> InvokeCore(byte methodCode, Action<IBufferWriter<byte>>? action, CancellationToken cancellationToken = default)
     {
         var guid = Guid.NewGuid();
-        
-        var tcs = new TaskCompletionSource<ReadOnlyMemory<byte>>();
-        _responses.TryAdd(guid, tcs);
 
-        ScheduleInvocationCore(guid, methodCode, action, cancellationToken);
-
+        var tcs = new TaskCompletionSource<ReadOnlyMemory<byte>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_responses)
+        {
+            ObjectDisposedException.ThrowIf(_disposed != 0, this);
+            _responses.TryAdd(guid, tcs);
+        }
+        var registration = cancellationToken.Register(() =>
+        {
+            if (_responses.TryRemove(guid, out var pending)) { pending.TrySetCanceled(cancellationToken); }
+        });
+        _ = tcs.Task.ContinueWith(_ => registration.Dispose(), CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        try { ScheduleInvocationCore(guid, methodCode, action, cancellationToken); }
+        catch (Exception error)
+        {
+            if (_responses.TryRemove(guid, out var pending)) { pending.TrySetException(error); }
+        }
         return tcs;
     }
 
@@ -193,13 +236,15 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
 
                 PipeStream.Write(writer.WrittenSpan);
             }
-            catch (IOException)
+            catch (IOException error)
             {
                 _eventsSource.Write(() => "IO error");
+                if (_responses.TryRemove(guid, out var pending)) { pending.TrySetException(error); }
                 Reconnect();
             }
             catch (Exception e)
             {
+                if (_responses.TryRemove(guid, out var pending)) { pending.TrySetException(e); }
                 _eventsSource.Exception(e);
             }
         }, cancellationToken, TaskCreationOptions.PreferFairness, _taskScheduler);
@@ -210,13 +255,13 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         using var ctsTimer = new CancellationTokenSource(TimeSpan.FromSeconds(50));
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ctsTimer.Token, cancellationToken);
         var token = cts.Token;
-        
+
         await CheckConnectedAsync(token);
 
         var guid = Guid.NewGuid();
 
-        TaskCompletionSource? tcs = action != null 
-            ? new TaskCompletionSource() 
+        TaskCompletionSource? tcs = action != null
+            ? new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
             : default;
 
         _ = Task.Factory.StartNew(() =>
@@ -257,7 +302,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         {
             return;
         }
-        
+
         if (tcs != null)
         {
             await tcs.Task.WaitAsync(token);
@@ -268,11 +313,11 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(50));
         var token = cts.Token;
-        
+
         CheckConnected(token);
-        
+
         var tcs = InvokeCore(methodCode, action, token);
-        
+
         tcs.Task.Wait(token);
         var result = tcs.Task.Result;
         try
@@ -289,11 +334,11 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(50));
         var token = cts.Token;
-        
+
         CheckConnected(token);
 
         var guid = Guid.NewGuid();
-        
+
         try
         {
             using var writer = new ArrayPoolBufferWriter<byte>();
