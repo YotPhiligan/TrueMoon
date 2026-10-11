@@ -1,8 +1,16 @@
 # TrueMoon: общий статус
 
-Последняя работа: **2026-10-10 — исправление выявленных проблем Core/DI и зависимого Enerit cleanup**. [Общий план](PLAN.md), [правила ведения](PLANNING.md), [результаты Core](core/STATUS.md), [команды/TRX](core/HISTORY.md#исправление-проблем-ядра--2026-10-10). Полная non-incremental solution сборка: exit0/errors0/warnings1271. Итоговый test run: **643passed/0failed/0skipped**, Mithril discovery0 отдельно. AppCreate failure устранён, contracts зафиксированы в модульных PLAN; NU1506/NU1507 устранены локальными package/source настройками.
+Последняя работа: **2026-10-11 — общий README и навигация документации**. Корневой README дополнен картой существующих модулей, source build/test командами, headless/UI quickstart, examples, local NuGet delivery и ограничениями. Старый Signals пример заменён текущими API; добавлен [индекс документации](README.md), актуальный порядок собран в PLAN без дублирования в release criteria. Проверены локальные ссылки/anchors и компиляция двух точных README C# snippets на ранее подготовленных локальных пакетах:2builds exit0/0warnings/0errors. Приложения, unit tests, полный solution и native проверки в этом документационном шаге не запускались. [Область сверки](HISTORY.md#общий-readme-и-навигация--2026-10-11).
 
-Предыдущая UI работа2026-10-10: native WGL/thread lifetime investigation и shared-loop prototype поверх `9d7090a`. USER growth воспроизведён raw WGL без GLFW/Silk/UI; diagnostic reuse/shared-loop результаты поддерживают следующий Hosting dispatcher шаг. Production UI scheduling ещё не изменён; прежний failed full lifecycle result и G4/K7 остаются открыты. В текущем общем run повторена только unit suite480/480; native/physical probes не повторялись.
+Предыдущая code/package работа: **2026-10-11 — UI package/independent consumer5.4–5.5**. Исправлена transitive native Skia delivery, подготовлены локальные NuGet artifacts и packaged инструкции.12App/backend +4direct renderer smoke прошли Windows x64/net10.0/SDK10.0.401, Debug/Release ×build/publish, framework-dependent без RID;4consumer builds/4publishes exit0/0warnings/0errors. Это UI поставка на указанной конфигурации, не Core5/COB4 headless/analyzer proof и не готовность alpha. Следующий независимый UI шаг — fixed-font golden K2/K4; внешний NVIDIA K7 блокер сохраняется. Unit/full solution tests этим шагом не повторялись. [Результаты и ограничения](alloy/HISTORY.md#package-и-независимый-ui-consumer--2026-10-11).
+
+Предыдущая диагностическая работа: **2026-10-10 — UI WSI stages/raw Win32 и driver screen DC**. [Общий план](PLAN.md), [правила ведения](PLANNING.md), [UI статус](alloy/STATUS.md), [команды, native stack и scope](alloy/HISTORY.md#wsi-stages-raw-win32-и-driver-screen-dc--2026-10-10). Non-incremental Debug UI consumer build exit0/errors0/warnings780, Release publish exit0; native stage/raw/repeat/Hosting controls повторены в Debug/published Release. Unit tests и full solution build этим diagnostic шагом не повторялись.
+
+UI Hosting использует shared process owner loop; concurrent/cancellation/fault/shutdown checks повторно прошли Debug/published Release, validation0/0. GDI trend связан с первым vkCreateSwapchain на новом HWND/surface; raw repro и debugger фиксируют GetDC(NULL) внутри текущего NVIDIA ICD32.0.16.1742 и HDC без последующего ReleaseDC в bounded lifecycle. Raw24cycles NVIDIA GDI6→29, AMD5→5 в Debug/Release; full UI на AMD не проверен. Production ownership/GPU policy не изменены, safe app-side fix не установлен; G4/K7 остаются открыты. Предыдущий full240-window failed USER26→26/GDI23→137; текущий diagnostic его не повторяет.
+
+Предыдущий dispatcher run: UI suite488/488, solution build0errors/1271warnings, Debug/Release functional/short evidence. [Область и ограничения](alloy/HISTORY.md#hosting-owner-dispatcher-и-vulkan-wsi-lifetime--2026-10-10); его passing results не считаются текущими unit/solution checks.
+
+Предыдущий общий Core/DI/Enerit run2026-10-10: **643passed/0failed/0skipped**, Mithril discovery0 отдельно. AppCreate failure устранён, contracts зафиксированы в модульных PLAN; NU1506/NU1507 устранены локальными package/source настройками. [Результаты и ограничения](core/HISTORY.md#исправление-проблем-ядра--2026-10-10). Эти результаты остальных модулей не являются новым UI run.
 
 ## Состояние модулей
 
@@ -12,9 +20,11 @@
 | [Cobalt / DI](cobalt/STATUS.md) | Exact runtime graph, Composite/generics, containers, singleton/owned disposal и adapter wrapper | Runtime37/37, generator6/6; оба providers проверены в Core. Следом COB4 analyzer/package consumer |
 | [Enerit](enerit/STATUS.md) | Inherited mapping сохранён; исправлены pools/worker/handler ownership, partial/EOF reads и pending responses | Runtime30/30, generator9/9, Failed0/Skipped0. Новые20 runtime cases in-process; MMF отключён. Следом ENE1/ENE2 own-process |
 | [Mithril](mithril/STATUS.md) | UnitsController, policies и process handles; production не менялся | Текущий solution discovery0/TRX total0; runtime/manual consumer собраны. Successful process checks не получены |
-| [Alloy / Argentis](alloy/STATUS.md) | TextBox/input diagnostics, cleanup callback roots, native WGL/thread controls и manual shared owner loop. Alpha частична | Unit suite480/480 повторена в solution. Предыдущие raw WGL/reuse/shared-loop probes не повторены; прежний полный mixed resource check **failed**. Production dispatcher/physical DPI/package/VRAM остаются |
+| [Alloy / Argentis](alloy/STATUS.md) | Shared owner dispatcher; transitive native package delivery и independent UI consumer, packaged README. Alpha частична | **2026-10-11:**16package consumer processes passed, Debug/Release build/publish. Предыдущие UI488/488 и full K7 failed; NVIDIA blocker остаётся внешним. Следом fixed-font goldenK2/K4; physical DPI/real loss/VRAM остаются |
 
 Наличие source/test projects означает наличие реализации или сценариев, а не успешное прохождение. Подробности и датированные результаты принадлежат локальным STATUS/HISTORY.
+
+Все unit test/discovery/package/native сведения в таблице относятся к предыдущим runs с их собственными датами и областью вывода. Текущая документационная работа проверила только ссылки/формат и компиляцию двух README примеров.
 
 ## Общие этапы
 
@@ -28,6 +38,10 @@
 | G6. Общая поставка | Общие R1–R6 не закрыты; версия0.2.2.7-alpha не является readiness свидетельством |
 
 ## Общие проверки — датированные сведения
+
+**UI WSI stages2026-10-10:** current non-incremental AlloyVulkanTest Debug consumer build exit0/errors0/warnings780, Release publish exit0. Stage/raw/repeat matrix Debug/published Release: queries без GDI trend, первый swapchain на новой surface/window воспроизводит его; raw teardown orders и thread-exit control проверены. Debug native stacks — screen GetDC(NULL) внутри NVIDIA ICD32.0.16.1742; safe app-side fix не установлен. Hosted dispatcher Debug/Release regression passed/validation0/0. Unit/full solution/full240-window/physical/package checks не повторялись. [Команды и ограничения](alloy/HISTORY.md#wsi-stages-raw-win32-и-driver-screen-dc--2026-10-10).
+
+**UI dispatcher2026-10-10:** Windows/Debug/net10.0/SDK10.0.401; non-incremental `TrueMoon.slnx` build exit0/errors0/warnings1271, UI tests488passed/failed0/skipped0. Release UI consumer publish exit0. Native concurrent/callback/chrome/controlled failure/short cleanup Debug и published Release прошли, validation0/0; два полных240-window прогона **failed** на прежнем GDI limit и предшествуют финальным lifecycle guards. Native24-cycle controls определяют WSI scope, не exact allocator и не VRAM. [Подробности и фактические команды](alloy/HISTORY.md#hosting-owner-dispatcher-и-vulkan-wsi-lifetime--2026-10-10). Другие модульные tests, physical DPI и package consumers не запускались.
 
 **Итог исправлений Core/DI2026-10-10:** Windows/Debug/net10.0, SDK10.0.401, xUnit2.9.3/VSTest. `dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet`: exit0/0errors/1271warnings. Стандартный solution test с no-build/no-restore и отдельная list-tests discovery: exit0. Core81, Cobalt37, Cobalt.Generator6, Enerit30, Enerit.Generator9, Alloy480 — все Passed, Failed0/Skipped0. Mithril TRX total0 не считается passing suite. [Команды, requirement matrix, TRX и ограничения](core/HISTORY.md#исправление-проблем-ядра--2026-10-10); локальные детали — [Cobalt](cobalt/HISTORY.md), [Enerit](enerit/HISTORY.md#совместимость-pools-и-завершение-pipes--2026-10-10). Release/pack/own-process/native UI не запускались.
 
@@ -51,14 +65,14 @@
 - G2 package/headless consumer и generator delivery ещё нужны. Cooperative shutdown не прерывает user Task, игнорирующий cancellation; Microsoft DI alias disposal отличается от Cobalt. Контракты/limitations закреплены в локальных PLAN.
 - Политика поддержанных configuration/SDK/OS, warnings и package consumer matrix общего выпуска требует отдельной фиксации.
 - UI physical DPI matrix ограничена доступным150% монитором. Это ограничение конкретной проверки UI, не препятствие работе над Core/DI/IPC/units.
-- UI K7: прежний полный resource check failed. USER рост локализован до raw WGL на новых потоках без GLFW/Silk/UI; exact allocator и mixed private/handles growth остаются открытыми. Diagnostic reuse/shared-loop normal path проверен; следующим локальным этапом предлагается Hosting owner dispatcher и повтор полной matrix. G4 не закрыт.
+- UI K7: предыдущий full check **failed** USER26→26/GDI23→137. Текущий native trace локализует screen HDC allocation/lifetime до первого swapchain в NVIDIA ICD32.0.16.1742; raw AMD control не воспроизводит GDI trend, но full UI на AMD не проверен. Safe app-side fix не установлен; supported NVIDIA fix или полностью проверенная alternate configuration, затем full matrix с прежними limits. Private/handles и VRAM остаются; G4 не закрыт.
 - Общий lifecycle/ownership/error integration proof и независимая поставка generators ещё не подтверждены.
 
 ## Следующий конкретный шаг
 
 1. G2/CORE5/COB4: независимый headless package consumer на Cobalt/adapter, analyzer delivery, diagnostics, cancellation/error и cleanup. Текущий solution baseline не заменяет package proof.
 2. G3: Enerit ENE1/ENE2 serialization и own-process pipes; Mithril MIT0 bounded own-child startup/exit/cleanup. Current discovery0 требует собственных executable process scenarios.
-3. UI: подготовить physical100/150/200%/разные DPI мониторов и продолжить локальную alpha matrix; пользовательские Windows settings без соответствующего запроса не менять.
+3. UI: fixed-font golden K2/K4 по [локальному порядку](alloy/STATUS.md#следующий-конкретный-шаг); подготовка independent package consumer5.4–5.5 проверена2026-10-11 на Windows x64/net10.0/framework-dependent build/publish. По решению пользователя текущий NVIDIA GDI defect — внешний K7 блокер; поиск app-side workaround пока прекращён. Возврат при supported NVIDIA fix или полностью проверенной alternate GPU configuration, затем full check с прежними limits; private/handles отдельно. Alpha/physical DPI/real loss/VRAM acceptance сохраняются. Пользовательские драйвер/Windows settings без соответствующего запроса не менять.
 
 ## Изменения формата — 2026-10-09
 

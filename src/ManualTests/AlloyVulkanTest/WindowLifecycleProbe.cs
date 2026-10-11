@@ -17,6 +17,7 @@ internal sealed partial class WindowLifecycleProbe
     private readonly List<(string Name, WeakReference Reference)> _released = [];
     private readonly List<WindowResult> _windows = [];
     private readonly List<ProcessSample> _samples = [];
+    private readonly List<ProcessSample> _perWindowSamples = [];
     private readonly Publisher _publisher = new();
     private readonly Stopwatch _elapsed = Stopwatch.StartNew();
     private ProcessSample? _warm;
@@ -34,7 +35,7 @@ internal sealed partial class WindowLifecycleProbe
             "TestResults/AlloyLifecycle/window-lifecycle.json"));
         var probe = new WindowLifecycleProbe();
         Exception? failure = null;
-        try { await probe.RunCoreAsync(cycles, args.Contains("--validation")); }
+        try { await probe.RunCoreAsync(cycles, args.Contains("--validation"), args.Contains("--soak-resource-trace")); }
         catch (Exception error) { failure = error; throw; }
         finally
         {
@@ -45,7 +46,7 @@ internal sealed partial class WindowLifecycleProbe
                 {
                     Utc = DateTime.UtcNow, RequestedWindows = cycles, ValidationRequested = args.Contains("--validation"), Completed = failure == null,
                     Failure = failure?.ToString(), ElapsedSeconds = probe._elapsed.Elapsed.TotalSeconds,
-                    Windows = probe._windows, Samples = probe._samples,
+                    Windows = probe._windows, Samples = probe._samples, PerWindowSamples = probe._perWindowSamples,
                     DpiHooks = Win32WindowDpi.ActiveHooks, ChromeHooks = Win32WindowChrome.ActiveHooks,
                     TransparencyHooks = Win32TransparentFramebuffer.ActiveHooks, Subscriptions = probe._publisher.Count,
                     TrackedReferences = probe._released.Count, RetainedReferences = probe._released.Count(item => item.Reference.IsAlive),
@@ -61,7 +62,7 @@ internal sealed partial class WindowLifecycleProbe
             $"hooks/registry/subscriptions/retained references zero; {(args.Contains("--validation") ? "Vulkan validation zero" : "validation not requested")}. Report: {path}");
     }
 
-    private async Task RunCoreAsync(int cycles, bool validation)
+    private async Task RunCoreAsync(int cycles, bool validation, bool resourceTrace)
     {
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Native lifecycle soak requires Windows.");
         VerifyNoHooks();
@@ -80,6 +81,11 @@ internal sealed partial class WindowLifecycleProbe
                 "Registry or subscriptions retained after closing a window.");
             VerifyNoHooks();
             _publisher.Raise(); // A stale callback would access a disposed tree and fail here.
+            if (resourceTrace)
+            {
+                var sample = Sample(cycle + 1); _perWindowSamples.Add(sample);
+                Console.WriteLine($"Native trace {cycle + 1} GL={openGL}/{modes[cycle / 2 % modes.Length]}/custom={custom}: USER/GDI {sample.UserObjects}/{sample.GdiObjects}.");
+            }
             if ((cycle + 1) % 12 == 0 || cycle + 1 == cycles)
             {
                 await VerifyCollectionAsync(timeout.Token);

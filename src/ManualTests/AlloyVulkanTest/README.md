@@ -254,6 +254,37 @@ dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- --win
 
 Shared-loop control выполняет20rounds на одном owner thread: два live OpenGL HWND/session, закрытие первого и создание replacement при продолжающемся sibling; всего60HWND/1200frames/180resizes. Context делается current перед input/update/render/dispose. GPU session освобождается до HWND/context. Проверяются независимые HWND, registry и DPI hooks2→1→2→0, value/selection,300WeakReferences/retained0, USER/GDI warm round4+2/+4. Focus одновременно двух native окон не утверждается. Это prototype без HostedUiWindow scheduling, Vulkan/alpha/chrome/minimize/cancellation/fault matrix и cross-platform proof; исходный полный lifecycle soak остаётся отдельным критерием. Глобальная GLFW termination не вызывается.
 
+### Production dispatcher и Vulkan resource controls — 2026-10-10
+
+`--hosted-dispatcher --validation` проверяет реальные HostedUiWindow/HostedUiDispatcher: GL/GL, Vulkan/Vulkan и GL/Vulkan пары; один owner через независимые app scopes, разные HWND, resize/selection, native WM_PAINT своего и соседнего окна, close/recreate при продолжающемся sibling, command/startup faults и независимый shutdown. Startup cancellation отменяет ожидание, повтор Start не создаёт второй root; canceled shutdown wait не отменяет cleanup. Проверяются close-before-start, rejected starts/posts, registry/hooks0 и validation0. Это bounded functional proof, не полный K7, physical drag/DPI или VRAM.
+
+`--window-lifecycle-soak --soak-resource-trace` сохраняет дополнительные samples после каждого окна для привязки native роста к backend. Основные warm checkpoint и USER/GDI +2/+4 лимиты не меняются.
+
+Для изоляции Vulkan на одном потоке без HostedUiWindow:
+
+```powershell
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-single-thread --native-vulkan-window --native-vulkan-device --soak-cycles 24 --soak-output TestResults/AlloyDispatcher/vulkan-device.json
+# Добавить один из --native-vulkan-skia / --native-vulkan-swapchain / --native-vulkan-presenter.
+```
+
+Device control не создаёт Skia/presenter/swapchain. Skia control добавляет direct UI session/draw без export/presentation. Swapchain control выполняет native capabilities/formats queries и create/destroy без acquire/submit/present. Presenter control использует raw vkCmdClearColorImage image и существующий presenter без Skia/UI. `--retain-vulkan-loader-control` удерживает Vk.GetApi до окончания программы для проверки loader-lifetime гипотезы. Flags отражаются в JSON; Completed означает завершение diagnostic, а не passing resource stability. No-window/device-loss/VRAM/точный native allocator этими controls не подтверждаются.
+
+### WSI stage и raw Win32 controls — 2026-10-10
+
+`--native-vulkan-wsi-stage capabilities|formats-count|formats|present-modes|swapchain` требует `--native-vulkan-window --native-vulkan-device`; не совмещается с Skia/presenter/старым swapchain flag. Samples отмечают вызовы queries, create/destroy и завершение device/window disposal. `--native-wsi-repeat 1..32` повторяет stage на той же surface, по умолчанию1. Controls не включают validation и не выполняют acquire/submit/present.
+
+`--native-raw-vulkan` с теми же flags создаёт hidden Win32 STATIC HWND, instance с KHR_surface/Win32_surface и device с KHR_swapchain через raw Vulkan bindings. GLFW, Silk Window, production VulkanDevice и Skia не используются. Дополнительный `--native-surface-first` меняет порядок raw teardown на surface→device; оба варианта сначала уничтожают swapchains, затем surface/device, instance и HWND. Изменение native ownership production не требуется.
+
+`--native-vulkan-vendor <hex>` выбирает raw GPU, например0x10DE/NVIDIA или0x1002/AMD; system preferences не меняются, production GPU policy не затронута. Omit `--native-single-thread` для serial new-thread diagnostic. Последний очищает текущий GDI trend после thread exit, но не решает прежний GL/WGL thread lifetime и не принимается как Hosting scheduling workaround.
+
+```powershell
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-single-thread --native-vulkan-window --native-vulkan-device --native-vulkan-wsi-stage formats --soak-cycles 24 --soak-output TestResults/AlloyWsi/formats.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-single-thread --native-vulkan-window --native-vulkan-device --native-vulkan-wsi-stage swapchain --native-raw-vulkan --soak-cycles 24 --soak-output TestResults/AlloyWsi/raw.json
+# Добавить --native-surface-first для другого teardown order или --native-wsi-repeat 4 для4generations/surface.
+```
+
+Debug/published Release controls локализовали GDI trend до первого swapchain на новой surface/window. На текущем NVIDIA ICD native debugger наблюдает `GetDC(NULL)` внутри vkCreateSwapchain и отсутствие последующего ReleaseDC для3конкретных HDC в bounded lifecycle; formats-only control этого callsite не достигает. Raw24cycles на NVIDIA дают GDI6→29, на установленном AMD —5→5 в обоих configurations. Это evidence конкретных ICD, не full UI rendering/K7 или verdict обо всех drivers; private/handles growth отдельно не объяснён. [Команды, hashes, stack и ограничения](../../docs/alloy/HISTORY.md#wsi-stages-raw-win32-и-driver-screen-dc--2026-10-10). Completed в JSON означает завершение diagnostic; K7 не закрыт, прежние warm limits сохранены.
+
 ## Swapchain retirement и ресурсный soak
 
 VulkanDevice автоматически включает доступные instance dependencies и feature swapchainMaintenance1. При доступности предпочитается VK_KHR_swapchain_maintenance1, затем EXT. Presenter создаёт present fence для каждого image; перед reuse/reset и уничтожением поколения ждёт соответствующие presentation fences. Старые swapchain, semaphores и fences освобождаются при resize, а не копятся до закрытия окна.

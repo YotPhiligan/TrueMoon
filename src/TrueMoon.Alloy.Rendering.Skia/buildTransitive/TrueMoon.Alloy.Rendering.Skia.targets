@@ -1,0 +1,4 @@
+<Project>
+  <!-- This sibling is part of the package contract; fail if a malformed package omits it. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\build\TrueMoon.Alloy.Rendering.Skia.targets" />
+</Project>

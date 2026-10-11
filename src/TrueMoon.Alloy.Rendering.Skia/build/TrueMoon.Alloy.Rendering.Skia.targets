@@ -1,0 +1,11 @@
+<Project>
+  <!-- NuGet consumers need the same separate native path as ProjectReference consumers.
+       Standard None items participate in build, publish and clean without custom copy targets. -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\nativeAssets\win-x64\libSkiaSharp.dll"
+          Link="truemoon-native/win-x64/libSkiaSharp.dll"
+          TargetPath="truemoon-native/win-x64/libSkiaSharp.dll"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+          Pack="false" Visible="false" />
+  </ItemGroup>
+</Project>

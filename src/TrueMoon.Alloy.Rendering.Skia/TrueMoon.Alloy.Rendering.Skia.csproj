@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFramework>$(TF)</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Raster, OpenGL and Vulkan rendering for Alloy with bundled extended Skia for Windows x64. Alpha API.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Alloy/TrueMoon.Alloy.csproj" />
@@ -15,7 +17,11 @@
     <None Include="NativeAssets/win-x64/libSkiaSharp.dll"
           TargetPath="truemoon-native/win-x64/libSkiaSharp.dll"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
-          Pack="true" PackagePath="contentFiles/any/any/truemoon-native/win-x64/"
-          PackageCopyToOutput="true" PackageFlatten="false" />
+          Pack="true" PackagePath="nativeAssets/win-x64/" />
+    <None Update="build/TrueMoon.Alloy.Rendering.Skia.targets"
+          Pack="true" PackagePath="build/TrueMoon.Alloy.Rendering.Skia.targets" />
+    <None Update="buildTransitive/TrueMoon.Alloy.Rendering.Skia.targets"
+          Pack="true" PackagePath="buildTransitive/TrueMoon.Alloy.Rendering.Skia.targets" />
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
   </ItemGroup>
 </Project>

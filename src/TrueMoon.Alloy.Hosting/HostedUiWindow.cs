@@ -6,13 +6,21 @@ using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Hosting;
 
-/// <summary>Owns a standalone window and its graphics resources on a dedicated UI thread.</summary>
+/// <summary>Owns a standalone window and graphics resources on the shared Windows UI owner thread.</summary>
 public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
 {
     private readonly SilkUiWindowOptions _options;
     private readonly IUiSessionFactory _sessions;
     private readonly Func<Element> _root;
     private readonly Action? _closed;
+    private readonly HostedUiDispatcher _dispatcher;
+    private readonly object _gate = new();
+    private SilkWindowHost? _window;
+    private VulkanDevice? _device;
+    private VulkanWindowPresenter? _presenter;
+    private UiSession? _session;
+    private Exception? _failure;
+    private bool _rendering;
     private readonly ConcurrentQueue<Action<SilkWindowHost>> _commands = new();
     private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -32,8 +40,20 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
     public WindowChromeCapabilities? ChromeCapabilities { get; private set; }
     /// <summary>Whether the selected window and graphics surface support per-pixel presentation; available after startup.</summary>
     public bool SupportsPerPixelTransparency { get; private set; }
-    /// <summary>Creates the service without allocating a window or GPU resources.</summary>
+    /// <summary>Creates a window in the process default scope without allocating native resources.</summary>
+    /// <param name="options">Window configuration copied before startup.</param>
+    /// <param name="sessions">Factory owning the registered UI sessions.</param>
+    /// <param name="root">Creates the root on the shared owner thread.</param>
+    /// <param name="closed">Called on the owner thread after accepted-window cleanup.</param>
     public HostedUiWindow(SilkUiWindowOptions options, IUiSessionFactory sessions, Func<Element> root, Action? closed = null)
+        : this(options, sessions, root, closed, null) { }
+    /// <summary>Creates the service without allocating a window or GPU resources.</summary>
+    /// <param name="options">Window configuration copied before startup.</param>
+    /// <param name="sessions">Factory owning the registered UI sessions.</param>
+    /// <param name="root">Creates the root on the shared owner thread.</param>
+    /// <param name="closed">Called once on the owner thread after accepted-window cleanup.</param>
+    /// <param name="dispatcher">Application scope; null uses the process default scope.</param>
+    public HostedUiWindow(SilkUiWindowOptions options, IUiSessionFactory sessions, Func<Element> root, Action? closed, HostedUiDispatcher? dispatcher)
     {
         ArgumentNullException.ThrowIfNull(options); ArgumentNullException.ThrowIfNull(sessions); ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(options.Appearance); options.Appearance.Validate();
@@ -41,19 +61,40 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
         _options = new SilkUiWindowOptions { Width = options.Width, Height = options.Height, Title = options.Title,
             OpenGL = options.OpenGL, Appearance = options.Appearance, Chrome = options.Chrome,
             TitleBarFactory = options.TitleBarFactory, ValidationMessage = options.ValidationMessage };
-        _sessions = sessions; _root = root; _closed = closed;
+        _sessions = sessions; _root = root; _closed = closed; _dispatcher = dispatcher ?? HostedUiDispatcher.Shared;
     }
     /// <inheritdoc />
+    /// <remarks>Cancellation cancels only the startup wait. Call Close or StopAsync to close an accepted window.</remarks>
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (Interlocked.Exchange(ref _started, 1) == 0)
-            new Thread(Run) { IsBackground = true, Name = "TrueMoon Alloy UI" }.Start();
+        var schedule = false;
+        lock (_gate)
+        {
+            if (_started == 0)
+            {
+                _started = 1;
+                schedule = !_stop;
+            }
+        }
+        if (schedule)
+        {
+            try { _dispatcher.Start(this, Initialize, Tick, Cleanup, () => _stop, _ready, _completion); }
+            catch (Exception error) { _ready.TrySetException(error); _completion.TrySetException(error); }
+        }
         return _ready.Task.WaitAsync(cancellationToken);
     }
     /// <summary>Queues a native window operation for its owner thread.</summary>
     public void PostWindow(Action<SilkWindowHost> operation)
-    { ArgumentNullException.ThrowIfNull(operation); if (Completion.IsCompleted) throw new ObjectDisposedException(nameof(HostedUiWindow)); _commands.Enqueue(operation); }
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        lock (_gate)
+        {
+            if (_stop || Completion.IsCompleted) throw new ObjectDisposedException(nameof(HostedUiWindow));
+            _commands.Enqueue(operation);
+        }
+        _dispatcher.Wake();
+    }
     /// <summary>Requests a logical window resize.</summary>
     public void Resize(int width, int height)
     {
@@ -80,7 +121,18 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
         PostWindow(w => w.ShowSystemMenu(x, y));
     }
     /// <summary>Requests the window to close on its owner thread.</summary>
-    public void Close() => _stop = true;
+    public void Close()
+    {
+        lock (_gate)
+        {
+            _stop = true;
+            if (_started == 0)
+            {
+                _commands.Clear(); _ready.TrySetCanceled(); _completion.TrySetResult();
+            }
+        }
+        _dispatcher.Wake();
+    }
     /// <summary>Queues uniform opacity change for a window created in Opacity mode.</summary>
     /// <param name="opacity">Finite opacity in the inclusive range zero to one.</param>
     public void SetOpacity(float opacity)
@@ -90,52 +142,69 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
             throw new InvalidOperationException("Uniform opacity requires Opacity mode.");
         PostWindow(w => w.SetOpacity(opacity));
     }
-    private void Run()
+    private void Initialize()
+    {
+        _window = new SilkWindowHost(_options.Width, _options.Height, _options.Title, _options.OpenGL, _options.Appearance, _options.Chrome);
+        AppearanceCapabilities = _window.AppearanceCapabilities;
+        ChromeCapabilities = _window.ChromeCapabilities;
+        if (_options.OpenGL)
+        {
+            var gl = _window.NativeWindow.GLContext ?? throw new NotSupportedException("Silk did not create an OpenGL context.");
+            gl.MakeCurrent();
+            SupportsPerPixelTransparency = _window.AppearanceCapabilities.TransparentFramebuffer;
+            _session = CreateSession(new OpenGLUiTarget(name => gl.TryGetProcAddress(name, out var address) ? address : 0, gl.MakeCurrent), _window);
+        }
+        else
+        {
+            _device = new VulkanDevice(_window.NativeWindow, _options.ValidationMessage);
+            _presenter = new VulkanWindowPresenter(_device, _options.Appearance.Transparency);
+            SupportsPerPixelTransparency = _window.AppearanceCapabilities.TransparentFramebuffer && _presenter.SupportsPerPixelTransparency;
+            _session = CreateSession(SilkVulkanHost.CreateTarget(_device), _window);
+        }
+        _window.Input += Input;
+        _window.RenderRequested += Render;
+    }
+    private bool Tick()
     {
         try
         {
-            SilkWindowHost? window = null;
-            Exception? failure = null;
-            try
+            MakeCurrent();
+            // Finite command batch: a producer cannot starve sibling windows.
+            for (var i = 0; i < 64 && !_stop && _commands.TryDequeue(out var command); i++)
             {
-                window = new SilkWindowHost(_options.Width, _options.Height, _options.Title, _options.OpenGL, _options.Appearance, _options.Chrome);
-                AppearanceCapabilities = window.AppearanceCapabilities;
-                ChromeCapabilities = window.ChromeCapabilities;
-                if (_options.OpenGL) RunOpenGL(window);
-                else RunVulkan(window);
+                // A preceding command may have dispatched a sibling native callback.
+                MakeCurrent(); command(_window!);
             }
-            catch (Exception error) { failure = error; }
-            UiCleanup.Complete(failure, () => window?.Dispose(), () => _closed?.Invoke());
-            _completion.TrySetResult();
+            ThrowFailure();
+            if (_stop) return true;
+            var closing = _window!.Pump();
+            ThrowFailure();
+            return closing || _stop;
         }
-        catch (Exception error)
+        catch
         {
-            _ready.TrySetException(error);
-            _completion.TrySetException(error);
+            ThrowFailure(); // A previously captured callback cause has precedence.
+            throw;
         }
     }
-    private void RunVulkan(SilkWindowHost window)
+    private void MakeCurrent()
     {
-        VulkanDevice? device = null; VulkanWindowPresenter? presenter = null; UiSession? session = null;
-        Exception? failure = null;
+        if (_options.OpenGL) _window?.NativeWindow.GLContext?.MakeCurrent();
+    }
+    private void ThrowFailure()
+    {
+        if (_failure != null) ExceptionDispatchInfo.Capture(_failure).Throw();
+    }
+    private void Cleanup()
+    {
+        lock (_gate) { _stop = true; _commands.Clear(); }
+        var window = _window; var session = _session; var presenter = _presenter; var device = _device;
         try
         {
-            device = new VulkanDevice(window.NativeWindow, _options.ValidationMessage);
-            presenter = new VulkanWindowPresenter(device, _options.Appearance.Transparency);
-            SupportsPerPixelTransparency = window.AppearanceCapabilities.TransparentFramebuffer && presenter.SupportsPerPixelTransparency;
-            session = CreateSession(SilkVulkanHost.CreateTarget(device), window);
-            RunSession(window, session, () =>
-            {
-                if (!presenter.Present(session)) return false;
-                PresentedFrames = presenter.PresentedFrames;
-                SwapchainGenerations = presenter.SwapchainGenerations;
-                return true;
-            });
-        }
-        catch (Exception error) { failure = error; }
-        finally
-        {
-            UiCleanup.Complete(failure, () => session?.Dispose(),
+            UiCleanup.Complete(null,
+                () => { if (window != null) { window.Input -= Input; window.RenderRequested -= Render; } },
+                () => { MakeCurrent(); if (window is { NativeWindow.IsClosing: false }) window.NativeWindow.Close(); },
+                () => { MakeCurrent(); session?.Dispose(); },
                 () =>
                 {
                     if (session is { IsDisposed: false }) throw new InvalidOperationException("UI still owns a borrowed/in-flight frame; keep its presenter/device alive.");
@@ -145,40 +214,14 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
                 {
                     if (session is { IsDisposed: false } || presenter is { IsDisposed: false }) throw new InvalidOperationException("UI/presenter cleanup is incomplete; keep the Vulkan device alive.");
                     device?.Dispose();
-                });
+                },
+                () =>
+                {
+                    if (device is { ValidationErrorCount: > 0 }) throw new InvalidOperationException($"Vulkan validation reported {device.ValidationErrorCount} errors including disposal.");
+                },
+                () => window?.Dispose(), () => _closed?.Invoke());
         }
-        if (device is { ValidationErrorCount: > 0 } completedDevice)
-            throw new InvalidOperationException($"Vulkan validation reported {completedDevice.ValidationErrorCount} errors including disposal.");
-    }
-    private void RunOpenGL(SilkWindowHost window)
-    {
-        SupportsPerPixelTransparency = window.AppearanceCapabilities.TransparentFramebuffer;
-        var gl = window.NativeWindow.GLContext ?? throw new NotSupportedException("Silk did not create an OpenGL context.");
-        var target = new OpenGLUiTarget(name => gl.TryGetProcAddress(name, out var address) ? address : 0, gl.MakeCurrent);
-        var session = CreateSession(target, window);
-        // Release Skia on Closing; SilkWindowHost keeps the context alive until window disposal.
-        Exception? failure = null, closingFailure = null;
-        void Closing()
-        {
-            try { session.Dispose(); }
-            catch (Exception error) { closingFailure = error; }
-        }
-        window.NativeWindow.Closing += Closing;
-        try
-        {
-            RunSession(window, session, () =>
-            {
-                session.PresentOpenGL(); gl.SwapBuffers(); PresentedFrames++; return true;
-            });
-        }
-        catch (Exception error) { failure = error; }
-        finally
-        {
-            window.NativeWindow.Closing -= Closing;
-            UiCleanup.Complete(failure,
-                () => { if (closingFailure != null) ExceptionDispatchInfo.Capture(closingFailure).Throw(); },
-                session.Dispose);
-        }
+        finally { _window = null; _session = null; _presenter = null; _device = null; }
     }
     private UiSession CreateSession(UiRenderTarget target, SilkWindowHost window)
     {
@@ -196,67 +239,76 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
         catch (Exception error) { UiCleanup.Complete(error, root.Dispose,
             () => { if (title is { Parent: null, IsAttached: false, IsDisposed: false }) title.Dispose(); }); throw; }
     }
-    private void RunSession(SilkWindowHost window, UiSession session, Func<bool> present)
+    private void Execute(Action operation)
     {
-        Exception? failure = null;
-        // GLFW may invoke these events from a native refresh/input callback. Never unwind managed exceptions through it.
-        void Execute(Action operation)
+        if (_failure != null || _stop) return;
+        try
         {
-            if (failure != null) return;
-            try
+            // DoEvents may dispatch a sibling callback while a different GL context is current.
+            MakeCurrent();
+            operation();
+            if (_session?.RenderingFailure is { } graphics) ExceptionDispatchInfo.Capture(graphics).Throw();
+        }
+        catch (Exception error)
+        {
+            _failure = error;
+            if (error is UiRenderingException graphics)
             {
-                operation();
-                if (session.RenderingFailure is { } graphics) ExceptionDispatchInfo.Capture(graphics).Throw();
+                try { _session?.ReportRenderingFailure(graphics); }
+                catch (Exception reportingError) { _failure = reportingError; }
             }
-            catch (Exception error)
-            {
-                failure = error; _stop = true;
-                if (error is UiRenderingException graphics)
-                    try { session.ReportRenderingFailure(graphics); }
-                    catch (Exception reportingError) { failure = reportingError; }
-            }
         }
-        void Input(UiInput input) => Execute(() =>
+    }
+    private void SynchronizeViewport()
+    {
+        var window = _window!; var session = _session!;
+        var viewport = window.Viewport;
+        if (viewport != session.Viewport) session.Resize(viewport);
+        var updated = session.Update();
+        if (window.SupportsCustomFrame && updated)
+            window.SetWindowRegions(WindowRegionMap.Create(session.Root));
+    }
+    private void Input(UiInput input) => Execute(() =>
+    {
+        SynchronizeViewport();
+        _session!.HandleInput(input);
+    });
+    private void Render()
+    {
+        if (_rendering) return;
+        _rendering = true;
+        try { Execute(PresentFrame); }
+        finally { _rendering = false; }
+    }
+    private void PresentFrame()
+    {
+        var window = _window!; var session = _session!;
+        if (session.IsDisposed) return;
+        window.VerifyWindowAccess();
+        SynchronizeViewport();
+        if (session.Viewport.IsEmpty) return;
+        if (_options.OpenGL)
         {
-            SynchronizeViewport();
-            session.HandleInput(input);
-        });
-        void SynchronizeViewport()
-        {
-            var viewport = window.Viewport;
-            if (viewport == session.Viewport) return;
-            session.Resize(viewport);
-            var updated = session.Update();
-            if (window.SupportsCustomFrame && updated)
-                window.SetWindowRegions(WindowRegionMap.Create(session.Root));
+            session.PresentOpenGL();
+            window.NativeWindow.GLContext!.SwapBuffers();
+            PresentedFrames++;
         }
-        void Update(double delta)
+        else
         {
-            Execute(() => { while (_commands.TryDequeue(out var command)) command(window); });
-            if (_stop) window.Close();
+            if (!_presenter!.Present(session)) return;
+            PresentedFrames = _presenter.PresentedFrames;
+            SwapchainGenerations = _presenter.SwapchainGenerations;
         }
-        void Render()
-        {
-            Execute(() =>
-            {
-                if (session.IsDisposed) return;
-                window.VerifyWindowAccess();
-                var viewport = window.Viewport;
-                if (viewport != session.Viewport) session.Resize(viewport);
-                var updated = session.Update();
-                if (window.SupportsCustomFrame && updated)
-                    window.SetWindowRegions(WindowRegionMap.Create(session.Root));
-                if (!viewport.IsEmpty && present()) FramePresented?.Invoke(session);
-            });
-        }
-        window.Input += Input; window.NativeWindow.Update += Update; window.RenderRequested += Render;
-        try { _ready.TrySetResult(); window.Run(); }
-        finally { window.Input -= Input; window.NativeWindow.Update -= Update; window.RenderRequested -= Render; }
-        if (failure != null) ExceptionDispatchInfo.Capture(failure).Throw();
+        FramePresented?.Invoke(session);
     }
     /// <inheritdoc />
     public async Task StopAsync(CancellationToken cancellationToken = default)
-    { _stop = true; if (Volatile.Read(ref _started) != 0) await Completion.WaitAsync(cancellationToken).ConfigureAwait(false); }
+    {
+        Close();
+        if (_dispatcher.IsOwnerThread && Volatile.Read(ref _started) != 0 && !Completion.IsCompleted)
+            throw new InvalidOperationException("Await window shutdown outside the UI owner thread; use Close in callbacks.");
+        if (Volatile.Read(ref _started) != 0) await Completion.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
     /// <inheritdoc />
     public ValueTask DisposeAsync() => new(StopAsync());
 }

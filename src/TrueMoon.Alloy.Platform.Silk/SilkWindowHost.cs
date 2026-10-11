@@ -35,6 +35,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     private readonly WindowCallbackBoundary _callbacks;
     private readonly Action<double>? _renderHandler;
     private readonly Action<bool>? _focusHandler;
+    private bool _manualLoop;
     /// <summary>The native graphics window. Windows client/position coordinates are physical pixels; use Viewport and Resize for UI coordinates.</summary>
     public IWindow NativeWindow { get; }
     /// <inheritdoc />
@@ -153,6 +154,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
                 _windowsClipboard = new Win32Clipboard(win32.Hwnd, Win32ClipboardApi.Instance);
             Action render = () => RenderRequested?.Invoke();
             _renderHandler = _ => _callbacks.Execute(render);
+            if (_dpi != null) _dpi.RefreshRequested = () => { if (_manualLoop) _callbacks.Execute(render); };
             _focusHandler = focused => _callbacks.Execute(() => { if (!focused) Input?.Invoke(new UiInput(InputKind.FocusLost)); });
             NativeWindow.Render += _renderHandler;
             NativeWindow.FocusChanged += _focusHandler;
@@ -294,6 +296,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     public void Run()
     {
         VerifyWindowAccess();
+        _manualLoop = false;
         using var awareness = _dpi != null ? new Win32WindowDpi.AwarenessScope() : default;
         // Silk's parameterless Run resets the window on return. Input still owns
         // GLFW callbacks, so keep the native handle alive until our Dispose.
@@ -307,6 +310,22 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
         });
         NativeWindow.DoEvents();
         VerifyWindowAccess();
+    }
+    /// <summary>Processes one owner-loop iteration without resetting or disposing the window.</summary>
+    /// <returns>True when the window requests closure.</returns>
+    /// <remarks>Event processing can invoke callbacks for other windows on this owner thread.</remarks>
+    public bool Pump()
+    {
+        VerifyWindowAccess();
+        using var awareness = _dpi != null ? new Win32WindowDpi.AwarenessScope() : default;
+        _manualLoop = true;
+        NativeWindow.DoEvents();
+        VerifyWindowAccess();
+        DispatchPendingWindowInput();
+        if (!NativeWindow.IsClosing) NativeWindow.DoUpdate();
+        if (!NativeWindow.IsClosing) NativeWindow.DoRender();
+        VerifyWindowAccess();
+        return NativeWindow.IsClosing;
     }
     /// <inheritdoc />
     public void Close() { VerifyWindowAccess(); NativeWindow.Close(); }
@@ -323,5 +342,6 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
         // GLFW's platform may retain its last disposed native window. Its managed events must not root this host.
         if (_renderHandler != null) NativeWindow.Render -= _renderHandler;
         if (_focusHandler != null) NativeWindow.FocusChanged -= _focusHandler;
+        if (_dpi != null) _dpi.RefreshRequested = null;
     }
 }

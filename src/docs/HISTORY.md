@@ -1,0 +1,17 @@
+# TrueMoon: история общей документации
+
+[Общий статус](STATUS.md), [план](PLAN.md), [индекс документов](README.md), [формат ведения](PLANNING.md). Подробные implementation/test/native записи принадлежат HISTORY соответствующего модуля; эта запись не заменяет их результаты.
+
+## Общий README и навигация — 2026-10-11
+
+По запросу пользователя сверены общий README, source projects/ProjectReference graph, solution, SDK/package/test настройки, общие PLAN/STATUS/PLANNING и локальные планы/статусы Core/Cobalt/Enerit/Mithril/Alloy. Корневой README сохраняет английский язык и расширен: назначение,14существующих module/runtime/generator проектов в8областях, зависимости, build/test команды из src, headless и standalone UI quickstart, local NuGet consumer, examples, license, readiness и deployment ограничения. Старые UseSignals/UseSignalService/ListenSignalService отсутствуют в текущем source API; README теперь указывает Enerit UseInvocationService/ListenInvocationService/PipesServiceTransport и builder-level Microsoft DI selection. Существующий MithrilTest приведён ссылкой как composition example с открытым own-process proof, не как подтверждённый запуск.
+
+Добавлен `docs/README.md` с общей/модульной навигацией и практическими guides. В PLAN текущий порядок сведён в раздел развития; дублирующие UI записи убраны из общей release criteria section. Согласованные G1–G6/R1–R6, локальные критерии и architecture/dependencies не изменены. PLANNING уточняет роль root README/index как навигации, не второго roadmap. Общий и UI STATUS отделяют текущую документационную сверку от предыдущих package/native/test runs.
+
+Проверки:
+
+- Два **точных** fenced C# snippets из нового root README извлечены в isolated projects с собственными build/CPM settings. Headless имеет PackageReference на TrueMoon/Extensions.DependencyInjection, UI дополнительно Hosting. Использованы существующий local feed и version `0.2.2.7-alpha.consumer.20261011065747061` предыдущего UI package run, SDK10.0.401/net10.0/Windows/Debug. Оба `dotnet build` завершились exit0/0warnings/0errors. Это compile proof public API examples, не отдельный новый headless consumer lifecycle/COB4 proof.
+- Проверка текущих Markdown документов: **26documents/339local links/76heading links**, problems0; существование локальных file/directory links, heading anchors, balanced code fences, conflict markers/NUL. Исторические модульные HISTORY записи не проверялись как текущие документы, но anchors ссылок на них разрешались. Результаты и exact scope сохранены в `links.json`; добавленные после первого прохода статусы/общая история включены в финальную проверку. `git diff --check` exit0.
+- Артефакты ignored `TestResults/Documentation/Readme20261011`: подготовленный README, extracted source/projects, build logs, local settings, link-check script/report и diff-check log. Корневой README записан в явно запрошенный пользовательский файл; другие файлы вне src не менялись.
+
+Приложения из README, unit/full solution tests, pack/publish и native/GPU checks в этом шаге не запускались. Исторические результаты остаются датированными; alpha/NVIDIA K7 blocker и module readiness не переоценивались. Команда `dotnet test` в README сверена с xUnit2/VSTest/global.json; пустая Mithril discovery не объявляется успешным suite. Общий root README включается в некоторые nupkg через Directory.Build.props, но артефакты предыдущего package run не пересобирались ради документационной правки; UI Hosting/renderer имеют самостоятельные PACKAGE.md.

@@ -2,6 +2,12 @@
 
 Проект предоставляет единый модуль регистрации UI. Настройка выполняется до `Build()` и не создаёт окно или GPU-контекст. Целевая платформа — `net10.0`; поставляемая native Skia для Vulkan/OpenGL/raster пока проверена на Windows x64.
 
+## Подключение через NuGet
+
+Для standalone App на Microsoft DI adapter достаточно PackageReference на `TrueMoon.Alloy.Hosting`, `TrueMoon` и `TrueMoon.Extensions.DependencyInjection` одной версии. Argentis/Alloy/renderer/platform приходят транзитивно; renderer buildTransitive hooks доставляют extended native Skia в `truemoon-native/win-x64/libSkiaSharp.dll` при build/publish. Ручное копирование DLL и ProjectReference потребителю не требуются. Для direct raster/OpenGL/Vulkan session без App достаточно `TrueMoon.Alloy.Rendering.Skia`; общий runtime/controls сами по себе не требуют Hosting.
+
+Минимальная инструкция включена в [package README](PACKAGE.md). [Независимый consumer и локальный feed](../ManualTests/AlloyPackageConsumer/README.md) воспроизводят подготовку пакетов и запуск приложения без repository build/CPM settings. Это проверка поставки, а не объявление alpha готовой; K1–K9 и внешний NVIDIA K7 блокер сохраняются.
+
 ## Миграция alpha API: PLAN 2.1a
 
 Связка Silk/Vulkan renderer находится в сборке и namespace `TrueMoon.Alloy.Hosting`. Для convenience API добавьте ссылку на Hosting и `using TrueMoon.Alloy.Hosting;`:
@@ -332,7 +338,7 @@ AbandonAfterDeviceLoss отвергает ContextLost/BackendFailure, чужой
 
 Device/instance/queue/loader/feature memory должны жить до освобождения всех UI contexts **даже после abandon**. Это требование [Skia GrDirectContext](https://api.skia.org/classGrDirectContext.html). Abandon(false) предотвращает backend вызовы при разрушении Skia resources. Если GL context невозможно сделать current или Vulkan completion не подтверждён, wrappers освобождаются через abandon; это не доказывает освобождение driver allocations. Host отвечает за окончательное retirement устройства. HostedUiWindow сохраняет Vulkan presenter/device, пока session удерживает lease или предыдущий этап cleanup не завершился. Неизвестный completion failure не объявляется DeviceLost автоматически.
 
-Standalone ловит ошибки внутри native callbacks, освобождает дерево/renderer → presenter/device → input/window, вызывает close callback один раз и передаёт все причины через Ready (creation failure), Completion и StopAsync. OpenGL Closing также перехватывает cleanup errors внутри callback. Vulkan presenter сохраняет presentation error при Return failure и discards lease при подтверждённом DeviceLost. Registry preflight запрещает stop с borrowed frame/чужого потока; после допустимого preflight ошибка одной сессии не мешает cleanup остальных.
+Standalone ловит ошибки внутри native callbacks, освобождает дерево/renderer → presenter/device → input/window, вызывает close callback один раз и передаёт все причины через readiness (creation failure), Completion и StopAsync. OpenGL cleanup выполняется на owner thread с current context до уничтожения окна. Vulkan presenter сохраняет presentation error при Return failure и discards lease при подтверждённом DeviceLost. Registry preflight запрещает stop с borrowed frame/чужого потока; после допустимого preflight ошибка одной сессии не мешает cleanup остальных.
 
 Модель остаётся у caller. После освобождения старых controls/подписок создаётся новое дерево из прежней модели:
 
@@ -459,7 +465,27 @@ builder.Setup(app => app.UsePresentation<MyView>(options => options
     })));
 ```
 
-`MyView` наследует `TrueMoon.Argentis.Element` (например, `Panel`). App запускает `HostedUiWindow`, который создаёт дерево, Silk-окно и ресурсы выбранного renderer на выделенном UI-потоке. Для OpenGL замените UseSkiaVulkan на UseSkiaOpenGL. Закрытие окна отменяет App lifetime. Остановка ждёт завершения UI-потока; UI/GPU ресурсы освобождаются до уничтожения принадлежащего хосту устройства или GL-контекста.
+`MyView` наследует `TrueMoon.Argentis.Element` (например, `Panel`). App запускает `HostedUiWindow` через app-scoped `HostedUiDispatcher`: все hosted Windows окна создают дерево и графику на одном process owner thread. Для OpenGL замените UseSkiaVulkan на UseSkiaOpenGL. Закрытие основного окна отменяет App lifetime. Остановка ждёт cleanup окон приложения; UI/GPU ресурсы освобождаются до уничтожения устройства или GL-контекста.
+
+### Owner loop и lifecycle — 2026-10-10
+
+`HostedUiDispatcher` задаёт область приложения; его `StopAsync` закрывает все ещё активные окна этой области, отклоняет новые starts и ждёт их Completion. Ошибки уже завершённых окон проверяются через их собственные Completion/StopAsync; ошибки окон, захваченных shutdown, сообщаются после ожидания всех. Отдельные scopes используют один Windows owner thread: закрытие или ошибка окна/приложения не останавливает соседнее приложение. Owner thread создаётся при первом принятом старте, остаётся background-потоком до выхода процесса и без окон ждёт событие. App stop освобождает окна/devices/UI, но не выполняет глобальную GLFW termination. Это Windows путь; portable main-thread GLFW scheduling для Linux/macOS не заявлен. Прямые Silk hosts нельзя одновременно запускать на другом потоке в том же процессе.
+
+Для ручных standalone consumers прежний четырёхпараметровый constructor сохранён и использует process default scope. Дополнительная перегрузка принимает явный scope:
+
+```csharp
+await using var dispatcher = new HostedUiDispatcher();
+var window = new HostedUiWindow(options, sessions, () => new MyView(), closed: null, dispatcher: dispatcher);
+await window.StartAsync(token);
+// Операции отправляются из любого потока через PostWindow/Resize/Minimize/... .
+await dispatcher.StopAsync(token);
+```
+
+Start идемпотентен. Cancellation token отменяет только ожидание startup/shutdown; принятый start продолжает работу, начатый shutdown продолжает cleanup. Для закрытия используйте Close/StopAsync. Close до первого Start завершает Completion без allocation и отменяет readiness. Commands допускаются до startup, исполняются FIFO на owner thread ограниченными batches; после Close/cleanup отклоняются. Ошибка startup, command, input или frame завершает только своё окно и сохраняется перед cleanup errors. Completion сигнализируется после cleanup и close callback. В owner callbacks вызывайте Close: ожидание StopAsync/dispatcher shutdown внутри owner thread отвергается во избежание deadlock.
+
+OpenGL context выбирается перед input/render/commands/cleanup, включая sibling callbacks из общего native event poll. SilkWindowHost.Pump обрабатывает одну итерацию с DPI scope; существующий DPI hook сохраняет guarded WM_PAINT refresh при native modal move/resize. Дерево и устройство каждого окна остаются отдельными; GPU handoff и Vulkan retirement сохраняют последовательный контракт. Внешний HUD/UiSession.Post этим scheduling изменением не затронут.
+
+Общий loop функционально проверен; **K7 остаётся открытым**: full mixed soak сохраняет USER, но показывает GDI/native рост в Vulkan WSI-пути. Сведения и точный scope — [STATUS](../docs/alloy/STATUS.md), воспроизводимые controls — [manual README](../ManualTests/AlloyVulkanTest/README.md).
 
 Vulkan presenter переносит UI-текстуру в swapchain через GPU blit и обрабатывает resize/out-of-date/suboptimal. OpenGL композитит GPU frame в default framebuffer и swaps buffers. Это самостоятельное окно UI; композиция игровой сцены остаётся задачей игрового хоста. `UseRenderer(factory)` предназначен для пользовательского backend в режиме внешнего хоста.
 

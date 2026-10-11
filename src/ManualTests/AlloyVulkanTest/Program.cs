@@ -4,10 +4,11 @@ using TrueMoon.Alloy.Rendering.Skia;
 using AlloyVulkanTest;
 
 // Isolation must run before loading native Skia: only raw GL/Vulkan calls are used.
+using var loaderControl = args.Contains("--retain-vulkan-loader-control") ? Silk.NET.Vulkan.Vk.GetApi() : null;
 if (args.Contains("--vulkan-transparency-isolation")) { VulkanTransparencyIsolation.Run(args); return; }
 if (args.Contains("--native-window-resource-control"))
 {
-    if (args.Contains("--native-ui-control")) SkiaNativeLibrary.Initialize();
+    if (args.Contains("--native-ui-control") || args.Contains("--native-vulkan-skia")) SkiaNativeLibrary.Initialize();
     WindowNativeResourceProbe.Run(args); return;
 }
 
@@ -17,6 +18,7 @@ if (nativePathIndex >= 0 && nativePathIndex + 1 == args.Length)
 SkiaNativeLibrary.Initialize(nativePathIndex >= 0 ? args[nativePathIndex + 1] : null);
 Console.WriteLine($"Native Skia: {SkiaNativeLibrary.LoadedPath}");
 if (args.Contains("--window-shared-loop-control")) { WindowSharedLoopProbe.Run(args); return; }
+if (args.Contains("--hosted-dispatcher")) { await HostedDispatcherProbe.RunAsync(args.Contains("--validation")); return; }
 if (args.Contains("--window-callback-failure")) { await WindowCallbackProbe.RunAsync(args); return; }
 if (args.Contains("--window-lifecycle-soak")) { await WindowLifecycleProbe.RunAsync(args); return; }
 if (args.Contains("--window-dpi")) { WindowDpiProbe.Run(args); return; }

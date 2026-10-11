@@ -23,6 +23,97 @@ internal static unsafe class VulkanTransparencyIsolation
     private static readonly Rgb Foreground = new(220, 40, 80);
     private static readonly Rgb[] Backgrounds = [new(40, 100, 180), new(180, 140, 40)];
 
+    internal static void RunPresentationControl(SilkWindowHost host, VulkanDevice device)
+    {
+        using var presenter = new VulkanWindowPresenter(device);
+        using var image = new ClearImage(device);
+        image.Clear(Foreground, 255);
+        var frames = 0;
+        void Render()
+        {
+            presenter.PresentImage(image.Info, host.Viewport, image.SetLayout);
+            if (++frames == 3) host.Close();
+        }
+        host.RenderRequested += Render;
+        try { host.Run(); }
+        finally { host.RenderRequested -= Render; }
+    }
+
+    internal static void RunSwapchainControl(VulkanDevice device, string stage = "swapchain", Action<string>? checkpoint = null)
+        => RunSwapchainControl(new WsiContext(device.Api, device.Instance, device.PhysicalDevice, device.Device, device.Surface), stage, checkpoint);
+
+    internal readonly record struct WsiContext(Vk Api, Instance Instance, PhysicalDevice PhysicalDevice, Device Device, SurfaceKHR Surface);
+
+    internal static void RunSwapchainControl(WsiContext device, string stage, Action<string>? checkpoint)
+    {
+        if (!device.Api.TryGetInstanceExtension<KhrSurface>(device.Instance, out var surface))
+            throw new NotSupportedException("Surface extension missing.");
+        using (surface)
+        {
+            if (stage == "capabilities")
+            {
+                VulkanDevice.Check(surface.GetPhysicalDeviceSurfaceCapabilities(device.PhysicalDevice, device.Surface, out _), "Control.SurfaceCapabilities");
+                checkpoint?.Invoke("after-capabilities");
+                return;
+            }
+            if (stage is "formats-count" or "formats")
+            {
+                uint formatCount = 0;
+                VulkanDevice.Check(surface.GetPhysicalDeviceSurfaceFormats(device.PhysicalDevice, device.Surface, ref formatCount, null), "Control.SurfaceFormatsCount");
+                checkpoint?.Invoke("after-formats-count");
+                if (stage == "formats")
+                {
+                    var values = new SurfaceFormatKHR[formatCount];
+                    fixed (SurfaceFormatKHR* pointer = values)
+                        VulkanDevice.Check(surface.GetPhysicalDeviceSurfaceFormats(device.PhysicalDevice, device.Surface, ref formatCount, pointer), "Control.SurfaceFormats");
+                    checkpoint?.Invoke("after-formats");
+                }
+                return;
+            }
+            if (stage == "present-modes")
+            {
+                uint modeCount = 0;
+                VulkanDevice.Check(surface.GetPhysicalDeviceSurfacePresentModes(device.PhysicalDevice, device.Surface, ref modeCount, null), "Control.SurfacePresentModesCount");
+                checkpoint?.Invoke("after-present-modes-count");
+                var values = new PresentModeKHR[modeCount];
+                fixed (PresentModeKHR* pointer = values)
+                    VulkanDevice.Check(surface.GetPhysicalDeviceSurfacePresentModes(device.PhysicalDevice, device.Surface, ref modeCount, pointer), "Control.SurfacePresentModes");
+                checkpoint?.Invoke("after-present-modes");
+                return;
+            }
+            if (stage != "swapchain") throw new ArgumentException("Unknown WSI control stage.", nameof(stage));
+            if (!device.Api.TryGetDeviceExtension<KhrSwapchain>(device.Instance, device.Device, out var swapchain))
+                throw new NotSupportedException("Swapchain extension missing.");
+            using (swapchain)
+            {
+                VulkanDevice.Check(surface.GetPhysicalDeviceSurfaceCapabilities(device.PhysicalDevice, device.Surface, out var capabilities), "Control.SurfaceCapabilities");
+                checkpoint?.Invoke("after-capabilities");
+                uint count = 0;
+                VulkanDevice.Check(surface.GetPhysicalDeviceSurfaceFormats(device.PhysicalDevice, device.Surface, ref count, null), "Control.SurfaceFormats");
+                var formats = new SurfaceFormatKHR[count];
+                fixed (SurfaceFormatKHR* pointer = formats)
+                    VulkanDevice.Check(surface.GetPhysicalDeviceSurfaceFormats(device.PhysicalDevice, device.Surface, ref count, pointer), "Control.SurfaceFormats");
+                checkpoint?.Invoke("after-formats");
+                var format = formats.First(f => f.Format is Format.B8G8R8A8Unorm or Format.R8G8B8A8Unorm);
+                var imageCount = capabilities.MinImageCount + 1;
+                if (capabilities.MaxImageCount != 0) imageCount = Math.Min(imageCount, capabilities.MaxImageCount);
+                var create = new SwapchainCreateInfoKHR
+                {
+                    SType = StructureType.SwapchainCreateInfoKhr, Surface = device.Surface, MinImageCount = imageCount,
+                    ImageFormat = format.Format, ImageColorSpace = format.ColorSpace, ImageExtent = capabilities.CurrentExtent,
+                    ImageArrayLayers = 1, ImageUsage = ImageUsageFlags.TransferDstBit, ImageSharingMode = SharingMode.Exclusive,
+                    PreTransform = capabilities.CurrentTransform, CompositeAlpha = CompositeAlphaFlagsKHR.OpaqueBitKhr,
+                    PresentMode = PresentModeKHR.FifoKhr, Clipped = true
+                };
+                VulkanDevice.Check(swapchain.CreateSwapchain(device.Device, in create, null, out var handle), "Control.CreateSwapchain");
+                // Never acquired/presented/submitted: no presentation or GPU completion is pending.
+                try { checkpoint?.Invoke("after-create-swapchain"); }
+                finally { swapchain.DestroySwapchain(device.Device, handle, null); }
+                checkpoint?.Invoke("after-destroy-swapchain");
+            }
+        }
+    }
+
     internal static void Run(string[] args)
     {
         if (!OperatingSystem.IsWindows()) throw new NotSupportedException("Win32 isolation probe only.");

@@ -16,6 +16,8 @@ internal sealed partial class Win32WindowDpi : IDisposable
     private GCHandle _root;
     private bool _installed;
     private ExceptionDispatchInfo? _failure;
+    private bool _refreshing;
+    internal Action? RefreshRequested;
     internal static int ActiveHooks;
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     private delegate nint SubclassCallback(nint hwnd, uint message, nuint wparam, nint lparam, nuint id, nuint data);
@@ -115,7 +117,17 @@ internal sealed partial class Win32WindowDpi : IDisposable
             }
         }
         catch (Exception error) { if (owner != null) owner._failure ??= ExceptionDispatchInfo.Capture(error); }
-        return DefSubclassProc(hwnd, message, wparam, lparam);
+        var result = DefSubclassProc(hwnd, message, wparam, lparam);
+        // Shared loops do not install Silk Run's private _onFrame callback.
+        // Paint after GLFW/transparent-surface processing, including modal move/resize.
+        if (message == 0xF && owner is { _installed: true, _refreshing: false, _failure: null })
+        {
+            owner._refreshing = true;
+            try { owner.RefreshRequested?.Invoke(); }
+            catch (Exception error) { owner._failure ??= ExceptionDispatchInfo.Capture(error); }
+            finally { owner._refreshing = false; }
+        }
+        return result;
     }
     private void Detach()
     {

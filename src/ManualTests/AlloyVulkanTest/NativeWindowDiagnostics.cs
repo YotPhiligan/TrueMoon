@@ -9,6 +9,7 @@ internal static unsafe partial class NativeWindowDiagnostics
 {
     internal sealed record WindowInfo(string Handle, uint Thread, string Class, bool MessageOnly);
     internal static uint ThreadId => GetCurrentThreadId();
+    internal static nint Module => GetModuleHandleW(null);
     internal static object GraphicsInfo() => new
     {
         Vendor = Marshal.PtrToStringUTF8(glGetString(0x1F00)),
@@ -38,7 +39,7 @@ internal static unsafe partial class NativeWindowDiagnostics
         return result;
     }
 
-    internal static void RunRaw(bool openGL, Action<object?> initialized)
+    internal static void RunRaw(bool openGL, Action<object?> initialized, Action<nint>? windowReady = null)
     {
         nint window = 0, dc = 0, context = 0;
         Exception? failure = null;
@@ -46,7 +47,7 @@ internal static unsafe partial class NativeWindowDiagnostics
         {
             // Predefined STATIC uses the OS window procedure; no managed callback or GLFW initialization.
             window = CreateWindowExW(0, "STATIC", "Raw WGL resource control", 0x80000000,
-                0, 0, 320, 200, 0, 0, 0, 0);
+                0, 0, 320, 200, 0, 0, Module, 0);
             if (window == 0) throw new Win32Exception(Marshal.GetLastPInvokeError());
             if (openGL)
             {
@@ -73,7 +74,7 @@ internal static unsafe partial class NativeWindowDiagnostics
                 for (var frame = 0; frame < 3; frame++)
                     if (SwapBuffers(dc) == 0) throw new Win32Exception(Marshal.GetLastPInvokeError());
             }
-            else initialized(null);
+            else { windowReady?.Invoke(window); initialized(null); }
         }
         catch (Exception error) { failure = error; }
         UiCleanup.Complete(failure,
@@ -96,6 +97,7 @@ internal static unsafe partial class NativeWindowDiagnostics
 
     // HWNDs observed by the census are borrowed. RunRaw owns its HWND/HDC/HGLRC on the calling thread.
     [LibraryImport("kernel32.dll")] private static partial uint GetCurrentThreadId();
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial nint GetModuleHandleW(string? moduleName);
     [LibraryImport("user32.dll", EntryPoint = "FindWindowExW")] private static partial nint FindWindowExW(nint parent, nint after, nint windowClass, nint title);
     [LibraryImport("user32.dll")] private static partial uint GetWindowThreadProcessId(nint window, out uint process);
     [LibraryImport("user32.dll", EntryPoint = "GetClassNameW", SetLastError = true)] private static partial int GetClassNameW(nint window, char* buffer, int count);

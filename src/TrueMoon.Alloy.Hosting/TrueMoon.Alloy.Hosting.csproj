@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFramework>$(TF)</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Optional TrueMoon Alloy App integration and Windows x64 standalone OpenGL/Vulkan hosting. Alpha API.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Silk.NET" />
@@ -14,5 +16,8 @@
     <ProjectReference Include="../TrueMoon.Alloy.Platform.Silk/TrueMoon.Alloy.Platform.Silk.csproj" />
     <ProjectReference Include="../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
     <ProjectReference Include="../TrueMoon.Core/TrueMoon.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
   </ItemGroup>
 </Project>

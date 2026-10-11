@@ -19,9 +19,11 @@ public static class AppConfigurationExtensions
         var options = Configure(configure, true);
         Register(app, options);
         app.Services(services => services.Transient<TView>()
-            .Singleton<HostedUiWindow>(resolver => new HostedUiWindow(options.Window!, resolver.Resolve<IUiSessionFactory>(), () => resolver.Resolve<TView>(), () => resolver.Resolve<IAppLifetime>().Cancel()))
+            .Singleton<HostedUiDispatcher>()
+            .Singleton<HostedUiWindow>(resolver => new HostedUiWindow(options.Window!, resolver.Resolve<IUiSessionFactory>(), () => resolver.Resolve<TView>(), () => resolver.Resolve<IAppLifetime>().Cancel(), resolver.Resolve<HostedUiDispatcher>()))
             .Singleton<IStartable>(resolver => resolver.Resolve<HostedUiWindow>())
-            .Singleton<IStoppable>(resolver => resolver.Resolve<HostedUiWindow>()));
+            .Singleton<IStoppable>(resolver => resolver.Resolve<HostedUiWindow>())
+            .Singleton<IStoppable>(resolver => resolver.Resolve<HostedUiDispatcher>()));
         return app;
     }
     private static AlloyOptions Configure(Action<AlloyOptions> configure, bool presentation)

@@ -6,6 +6,38 @@
 
 Новые подробные записи добавлять датированными разделами истории, текущую сводку обновлять отдельно. Согласованные UI критерии сохраняются.
 
+## Package и независимый UI consumer — 2026-10-11
+
+Выполнена подготовка поставки5.4/5.5. Новый `ManualTests/AlloyPackageConsumer` не включён в solution, имеет собственные Directory.Build.props/targets/Directory.Packages.props и только PackageReference на Hosting/App/Microsoft DI adapter. Его собственные model/view проверяют layout, двухстороннюю binding, смену theme, posted update, static raster redraw, сохранение модели, tree/subscription/session registry cleanup и App startup/shutdown/disposal. ProjectReference/compile-link library sources отсутствуют. Скрипт копирует consumer в новый ignored run, пакует source graph, проверяет local package origin в isolated cache и запускает native cases последовательно.
+
+Первый `first-consumer` run: pack/restore/build/publish Debug exit0, но extended native Skia **не доставлена** в consumer output транзитивно через Hosting. Старый contentFiles/copy-to-output и успешные ProjectReference consumers не являлись доказательством transitive NuGet delivery. Исправление renderer: DLL в nupkg `nativeAssets/win-x64/`, canonical `build/TrueMoon.Alloy.Rendering.Skia.targets` с None/TargetPath/PreserveNewest для build/publish и `buildTransitive` forwarder. Runtime output остаётся `truemoon-native/win-x64/libSkiaSharp.dll`, loader/ABI/production ownership не меняются. Первый `transitive-fix` packaging run дополнительно выявил SDK RecursiveDir: folder PackagePath создавал build/build и buildTransitive/buildTransitive; явные PackagePath filenames исправили layout. Эти failures сохранены, не скрыты последующим успехом. Canonical sibling import — обязательный package contract, отсутствие targets приводит к build failure. Custom Copy targets/NoWarn/cache/driver workaround не добавлялись.
+
+В Hosting/Rendering.Skia nupkg добавлены самостоятельные `PACKAGE.md` и descriptions: подключение, controls/binding, backend choice, thread/resource ownership, migration и deployment ограничения. README в nuspec и наличие файлов в окончательных archives сверены. Root package version не изменена; локальные probe версии задаются CLI. Alpha/NuGet публикации нет.
+
+**Финальный текущий run:** Windows x64, .NET SDK10.0.401, net10.0, framework-dependent без RID, Microsoft DI adapter. Команда из src:
+
+```powershell
+pwsh -NoProfile -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 `
+  -RunDirectory E:/source/my/TrueMoon/src/TestResults/AlloyPackages/final-contract
+```
+
+- Probe package version `0.2.2.7-alpha.consumer.20261011065747061`;11packages собраны,10TrueMoon runtime packages восстановлены именно из local feed в isolated cache. Analyzer package входит в pack graph, но не в restored runtime graph; его delivery/исполнение не проверяются этим Microsoft DI UI consumer.
+- Transitive consumer: Debug/Release build и publish — exit0,0warnings/0errors. **12/12 отдельных процессов passed**:3backends ×2configurations ×2output kinds; raster6script steps +PNG, OpenGL/Vulkan20presented frames каждый. Skia не инициализируется на App configuration/Build, после render загружается только output DLL; Vulkan interop ABI проверен. App stop/disposal выполняется после window completion либо owner-thread raster disposal; tree/binding/registry cleanup и сохранение модели подтверждены.
+- Direct renderer consumer: только Rendering.Skia PackageReference; dependency graph без Hosting/App/Core/Contracts/window platform. Debug/Release build и publish exit0/0warnings/0errors; **4/4 build/publish raster процессов passed**, загружена output DLL. Это дополнительная проверка прямого package hook и независимого runtime пути.
+- SHA-256 native DLL во всех8build/publish output совпал с source: `96525E8EFC1E3BB4B9C64000307D4D11C378FEDAEEB7C1E62D518EF84CDD1ABE`.
+- 11pack logs сохраняют **780warning entries**: CS1591=715, CS8602=3, CS8603=35, CS8604=3, CS8618=15, CS8625=1, CS8629=2, CS9113=2, NU5100=1, NU5128=2, RS1041=1. NU5100 относится к native DLL вне managed lib; NU5128/RS1041 — Cobalt generator. Не объявляется zero-warning production pack или закрытие COB4.
+- Artifacts: ignored `TestResults/AlloyPackages/final-contract` — summary,245input fingerprints,11nupkg SHA-256, local cache/source metadata, project.assets.json и imports, copied consumer source, Debug/Release output/publish,12JSON reports/4PNG, direct source/output, logs. Предыдущие `initial`, `first-consumer`, `transitive-fix`, `targets-layout-fix`, `final-consumer` сохранены с их собственной областью/версией; только `final-contract` соответствует окончательному обязательному forwarder import.
+
+**Границы:** unit/full solution tests и исходный ProjectReference manual regression не запускались отдельными командами в этом шаге; Release pack builds source dependency graph. Vulkan validation, HUD/полная Settings comparison, full golden/fixed fonts, physical DPI/chrome, controlled/real loss, long lifecycle/VRAM/driver resources не проверялись.4consumer builds/4publishes и16process smokes — проверки поставки, не полный K1–K9 проход. Self-contained/single-file/trimming/AOT/ARM64/другие OS и Core5/COB4 independent headless/analyzer scope открыты. Внешний NVIDIA K7 блокер и решение отложить app-side workaround сохраняются. Следующий независимый UI шаг — fixed-font goldenK2/K4.
+
+## Дальнейшие UI задачи и внешний K7 блокер — 2026-10-10
+
+По решению пользователя текущий NVIDIA GDI defect пока учитывается как внешний блокер, нерешённый со стороны TrueMoon. Дальнейший поиск app-side workaround прекращён; это не утверждение о всех NVIDIA drivers и не отмена K7/alpha acceptance. Private/handles growth сохраняется как отдельная неопределённость. Возврат к полному K7 требует supported driver/ICD решения либо отдельно согласованной и полностью проверенной alternate GPU configuration; raw AMD evidence не заменяет full UI проверку.
+
+Сверены планы, package metadata и текущие consumers. AlloyTest/AlloyVulkanTest используют ProjectReference. Rendering.Skia включает custom native DLL через contentFiles/PackageCopyToOutput, но отдельный package consumer ещё не проверен. Fixed-font assets/full golden fixtures отсутствуют, SkiaDrawingContext загружает системный typeface через SKTypeface.FromFamilyName. Поэтому ближайшая независимая задача — подготовка поставки5.4/5.5: локальный feed, отдельный net10.0 consumer только с PackageReference, transitive/native build/publish доставка, raster/OpenGL/Vulkan и App startup/shutdown Debug/Release, документация подключения/ownership. Следом — K2/K4 fixed fonts и полные golden fixtures. Подготовка пакетов не разрешает публикацию alpha; physical DPI/4.9 matrix, real loss, VRAM и итоговый K1–K9 сохраняются, PA1/PA2 остаются после alpha.
+
+В этом шаге выполнены только чтение исходников/планов и правки документации. Новых build, test, publish или native results нет; предыдущие WSI/dispatcher результаты сохраняют свою дату и область вывода.
+
 ---
 
 # TrueMoon.Alloy: состояние реализации и точка продолжения
@@ -1459,3 +1491,194 @@ SDK10.0.401/Windows10.0.26300.0, active renderer NVIDIA RTX5070Ti; устано�
 ### Решение для следующего этапа
 
 GLFW документирует [window/context creation/destruction и event processing на main thread](https://www.glfw.org/docs/latest/intro.html#thread_safety). Поэтому worker reuse принят только как diagnostic comparison. Предлагаемый следующий шаг — app-lifetime owner dispatcher/event loop для standalone Hosting: несколько live окон, отдельные window commands/completion/first-fault, current-context switch и session cleanup-before-context/HWND. Shared loop prototype проверяет только Windows/OpenGL normal path; production API/lifetime/cancellation/shutdown/failure policy и Vulkan integration предстоит реализовать и проверить. Dedicated-thread-per-window контракт ещё не заменён. После замены повторить исходный full240-window matrix и callback/shutdown regressions в Debug/Release с неизменными thresholds. Exact WGL/OS/ICD allocation и mixed private/handles growth продолжают учитываться; доказанной общей resource stability/VRAM readiness нет.
+
+## Hosting owner dispatcher и Vulkan WSI lifetime — 2026-10-10
+
+Работа начата по запросу «давай приступим к задачам» с ближайшего доступного UI шага: production dispatcher вместо отдельного owner thread на каждое HostedUiWindow. Checkout `69223dd`, Windows, .NET SDK10.0.401/net10.0/xUnit2.9.3/VSTest. Изменены Hosting scheduling, manual pump/refresh в Platform.Silk, focused tests и manual diagnostics. HUD ownership и существующий четырёхпараметрический constructor ABI сохранены. Архитектурное уточнение явно записано в PLAN: окна/devices/sessions принадлежат app scope, единый background owner loop — process lifetime. Scope shutdown не завершает global GLFW; Windows-only контракт не обещает portable main-thread scheduling, concurrent direct Silk hosts на другом потоке не поддержаны.
+
+### Реализация и lifecycle
+
+- UiOwnerLoop запускается лениво, обрабатывает не более32startup works за iteration, pump/commands продолжают обслуживать siblings; idle ждёт signal. HostedUiWindow выполняет до64FIFO commands за tick. Startup, commands, input/render и cleanup проходят на одном owner thread с выбором нужного GL context; VulkanDevice/presenter/session остаются отдельными для каждого окна.
+- HostedUiDispatcher регистрируется singleton в AppConfiguration и IStoppable. Shutdown app scope закрывает его окна, ждёт cleanup и отклоняет новые starts; отдельный scope продолжает работу. Cancellation отменяет только ожидание Start/Stop, принятое окно/shutdown продолжаются. Start идемпотентен; Close-before-Start не создаёт HWND/session, readiness cancelled, Completion successful. Posts после close rejected.
+- First fault принадлежит отдельному окну; cleanup сохраняет primary cause и добавляет cleanup failures. Completion публикуется после очистки, callback `_closed` вызывается один раз, здоровые siblings продолжаются. Await незавершённого shutdown на owner thread отклоняется после инициирования Close, чтобы не блокировать loop.
+- Pump заменяет блокирующий Run только для hosted path. Native WM_PAINT refresh на существующем DPI subclass вызывает guarded RenderRequested после default handler; current context выбирается и для sibling callbacks. Reentrant render/native refresh подавляется. Window Closing notification сохранён; session→presenter→device уничтожаются до HWND/context. Существующие borrowed-frame/fence teardown guards не ослаблены.
+- Первый короткий native attempt выявил retention последнего окна/UI graph в idle owner frame. Исправлены lifetime stack boundary (bounded no-inline processing) и очистка callbacks/finished callback/Ready/Completion task references после cleanup. Тест проверяет последний work, без подмены новым. Ошибочное первоначальное ожидание8thread samples исправлено на фактические7 callbacks; это test expectation correction, не доказательство изменения scheduling.
+- Финальная ревизия воспроизвела ещё один defect: sibling WM_PAINT меняет current GL context, следующая FIFO command в том же batch получала чужой context. Native regression сравнивает actual `wglGetCurrentContext` с context своего окна. До fix `command-context-red.log` failed с `Next FIFO command inherited a sibling GL context`; после выбора context перед каждой command итоговые Debug/Release dispatcher probes passed. Это red/green proof, не скрытый retry.
+
+### CPU/build evidence
+
+| Требование | Фактическая проверка |
+| --- | --- |
+| Один owner, sibling работает после close/recreate | `UiOwnerLoopTests.SiblingContinuesAcrossCloseAndRecreationOnSameOwner` |
+| Startup/tick primary cause и cleanup fault isolation | `ParticipantFaultPreservesCauseAndCleanupWithoutStoppingSibling`:4theory cases, startup/tick × cleanup success/failure |
+| Close до startup без allocation | `CloseBeforeStartupSkipsAllocationAndCancelsReadiness` |
+| Shutdown нескольких startup batches; новые работы rejected | `StopDrainsAcceptedWorkAcrossStartupBatchesAndRejectsNewWork` |
+| Idle owner не держит последний target | `IdleLoopDoesNotRetainClosedCallbackTargets` |
+
+Focused8cases passed; итоговая UI suite **488passed/0failed/0skipped**, повторена после constructor compatibility shim и per-command context fix. `TrueMoon.slnx` non-incremental Debug build **exit0/errors0/warnings1271**; Release AlloyVulkanTest publish exit0. Tests Core/Cobalt/Enerit/Mithril не повторялись, full solution test pass не заявлен. CPU loop Compile-linked в UI tests; native dispatcher proof отдельно ниже.
+
+```powershell
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --no-restore --verbosity quiet
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --no-build --no-restore --logger 'trx;LogFileName=ui-debug.trx' --results-directory TestResults/AlloyDispatcher
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Release --no-restore --output TestResults/AlloyDispatcher/publish --verbosity quiet
+```
+
+Артефакты: `solution-build.log`, `ui-debug.trx`, `owner-loop.trx`, `publish.log` в ignored `TestResults/AlloyDispatcher`. Финальные source/binary hashes отдельно в `provenance.json`; их нельзя ретроспективно приписывать более ранним probe stages.
+
+### Native functional proof
+
+Последовательные Debug и published Release `--hosted-dispatcher --validation` прошли для GL/GL, Vulkan/Vulkan и GL/Vulkan. Проверены distinct HWND/same owner, resize/editor selection, own и sibling directed WM_PAINT refresh, GL context следующей FIFO command, close/recreate при продолжающемся sibling, command/startup fault identity, независимые app scopes. Cancellation проверяет отмену startup wait при продолжающемся accepted window, repeated Start без второго root, canceled shutdown wait при продолжающемся shutdown, rejected starts/posts и Close-before-Start. Native focus не может принадлежать обоим окнам одновременно и такого proof не заявлено. После scope cleanup registry/hooks0, Vulkan validation0errors/0warnings. После constructor shim оба configurations повторены (`abi-final-debug/release.log`), после per-command context fix ещё раз (`final-debug/release---hosted-dispatcher.log`).
+
+После финального per-command context fix повторены Debug/published Release:
+
+- Callback regression — в каждом6direct+12hosted failures+12healthy recreations; first cause/stack/cleanup/Completion identity, HWND/tree/registry/hooks0; validation0/0. Итоговые reports — `callback-final-debug/release.json`, logs `final-debug/release---window-callback-failure.log`. В предыдущем run default JSON был перезаписан Release, его отдельный Debug JSON не заявлен.
+- `--window-chrome --validation` и `--settings-failure --validation`:4runs exit0/validation0/0. Failure/recreate — controlled на здоровом device, не physical device loss.
+- Short lifecycle12windows в каждом:220frames Debug/219Release, по36resize/12minimize,84tracked WeakReferences/retained0, hooks/registry/subscriptions0, validation0/0 (`short-debug/release.json` и logs). Предыдущая короткая matrix до per-command fix давала218frames в каждом; текущие reports перезаписаны финальным run. Один warm checkpoint не проверяет длительную resource stability.
+- App/DI AlloyTest Debug `--smoke` OpenGL и `--vulkan --validation`:по40frames, model/editor smoke passed, успешный App shutdown; Vulkan validation0/0. `app-smoke-gl/vk.json` и logs.
+
+Воспроизведение native checks (выбирать один binary/configuration; не запускать окна параллельно из разных processes):
+
+```powershell
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --hosted-dispatcher --validation
+dotnet TestResults/AlloyDispatcher/publish/AlloyVulkanTest.dll --hosted-dispatcher --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-callback-failure --validation --callback-output TestResults/AlloyDispatcher/callback-debug.json
+dotnet TestResults/AlloyDispatcher/publish/AlloyVulkanTest.dll --window-callback-failure --validation --callback-output TestResults/AlloyDispatcher/callback-release.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-chrome --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --settings-failure --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-lifecycle-soak --validation --soak-cycles 12 --soak-output TestResults/AlloyDispatcher/short-debug.json
+dotnet ManualTests/AlloyTest/bin/Debug/net10.0/AlloyTest.dll --smoke --smoke-trace TestResults/AlloyDispatcher/app-smoke-gl.json
+dotnet ManualTests/AlloyTest/bin/Debug/net10.0/AlloyTest.dll --smoke --vulkan --validation --smoke-trace TestResults/AlloyDispatcher/app-smoke-vk.json
+```
+
+VK_LAYER_PATH задан только в shell процесса проверки; OS settings не менялись. Итоговый callback run использует explicit output `callback-final-debug/release.json`; команды выше воспроизводят тот же scope с новыми раздельными filenames.
+
+### Full240-window resource check — failed
+
+Full runs включают native refresh/Closing cleanup, но **предшествуют финальным Close-before-Start, rendering reentrancy, completed-task reference guards, constructor ABI shim и per-command GL context fix**. Суффикс `-final` в имени report относится к тому stage, не означает итоговый passing K7 и не доказывает запуск на последних hashes. Первоначальный `lifecycle-debug.json` до refresh также failed на том же GDI trend. Последние guards подтверждены unit/short/functional runs; полный финальный K7 остаётся required.
+
+| Configuration | Scope | USER warm12→240 | GDI warm12→240 | Handles | Private bytes |
+| --- | --- | --- | --- | --- | --- |
+| Debug |240HWND/4332frames/720resize/240minimize |26→26 |23→137 |601→942 |227491840→635473920 |
+| Published Release |240HWND/4342frames/720resize/240minimize |26→26 |23→137 |601→944 |224841728→640741376 |
+
+Оба failed на неизменных warm USER+2/GDI+4 limits, `Completed=false`, `GuiLimitExceeded=true`. По1680tracked WeakReferences/retained0; после каждого окна registry/subscriptions/3hooks0; Vulkan validation0errors/0warnings включая teardown. Managed/private/handles observations не являются VRAM измерением. USER thread-per-window trend отсутствует в текущих shared-owner full runs, но общая native resource stability не достигнута.
+
+```powershell
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-lifecycle-soak --validation --soak-cycles 240 --soak-output TestResults/AlloyDispatcher/lifecycle-debug-final.json
+dotnet TestResults/AlloyDispatcher/publish/AlloyVulkanTest.dll --window-lifecycle-soak --validation --soak-cycles 240 --soak-output TestResults/AlloyDispatcher/lifecycle-release-final.json
+```
+
+### Native Vulkan isolation
+
+24-cycle Debug controls на одном owner без validation, cleanup и fixed quiescence между windows. Mixed per-window trace показывает GDI+1 после Vulkan, unchanged после GL; warm12→24 GDI23→29/USER26→26. Retained loader handle не изменил результат (`retained-loader.json`).
+
+| Control | GDI after1→quiescent24 | USER | Handles | Scope |
+| --- | --- | --- | --- | --- |
+| VulkanDevice |14→14 |15→15 |492→608 |Без Skia/presenter/swapchain |
+| Vulkan Skia session |14→14 |15→15 |499→615 |Без export/presentation |
+| Raw presentation |15→38 |15→15 |616→778 |Existing presenter, clear raw GPU image; без Skia/UI |
+| Native swapchain control |15→38 |15→15 |505→667 |Capabilities/formats queries, swapchain create/destroy; без acquire/submit/present/Skia/TrueMoon presenter |
+
+Native reports `Completed=true` означают завершение диагностической последовательности, **не resource acceptance pass**. Device-only handles/private observations также растут; отсутствие GDI trend не объявляет эти controls полностью стабильными. WSI GDI trend воспроизводится без Skia/TrueMoon presenter, но query vs create ещё не разделены. Не доказаны exact allocator, конкретный driver defect или принадлежность неизвестного GDI handle; произвольное удаление native handles не выполнялось. Loader retention не является решением.
+
+```powershell
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-lifecycle-soak --soak-cycles 24 --soak-resource-trace --soak-output TestResults/AlloyDispatcher/resource-trace.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-lifecycle-soak --soak-cycles 24 --retain-vulkan-loader-control --soak-resource-trace --soak-output TestResults/AlloyDispatcher/retained-loader.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-vulkan-window --native-single-thread --native-vulkan-device --soak-cycles 24 --soak-output TestResults/AlloyDispatcher/vulkan-device.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-vulkan-window --native-single-thread --native-vulkan-device --native-vulkan-skia --soak-cycles 24 --soak-output TestResults/AlloyDispatcher/vulkan-skia.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-vulkan-window --native-single-thread --native-vulkan-device --native-vulkan-presenter --soak-cycles 24 --soak-output TestResults/AlloyDispatcher/vulkan-presenter.json
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-vulkan-window --native-single-thread --native-vulkan-device --native-vulkan-swapchain --soak-cycles 24 --soak-output TestResults/AlloyDispatcher/vulkan-swapchain.json
+```
+
+Следующий доступный шаг: разделить WSI queries/create controls, установить allocation/lifetime/owner, проверить безопасное освобождение; затем полный240-window Debug/published Release на финальном source с прежними limits и callback/shutdown regression. Device cache/global GLFW termination/ослабление thresholds не приняты как workaround. Physical100/200%/mixed-DPI, fixed fonts/full golden, real device loss, long VRAM и independent package consumer этим шагом не проверялись. K7/alpha остаются открытыми; исторический Name mismatch не объявлен исправленным.
+
+## WSI stages, raw Win32 и driver screen DC — 2026-10-10
+
+По запросу «приступай к следующей задаче» выполнен следующий K7 investigation: разделение surface queries и swapchain create/destroy, независимый raw Win32/Vulkan repro, сравнение lifetime orders/повторных generations/thread exit, native allocation stacks и второй установленный GPU. Production Hosting/renderer/ownership в этом шаге не менялись. Предыдущие dispatcher изменения остаются в рабочем дереве; текущий code diff добавляет только manual diagnostics и документы.
+
+### Реализация diagnostic
+
+- `--native-vulkan-wsi-stage capabilities|formats-count|formats|present-modes|swapchain` с `--native-vulkan-window --native-vulkan-device`: queries разделены, samples после каждого stage и device/host disposal. `--native-wsi-repeat 1..32` повторяет stage на одном HWND/surface, default1. Старый `--native-vulkan-swapchain` сохранён через overload без новых checkpoints.
+- `--native-raw-vulkan`: hidden Win32 STATIC HWND с valid HINSTANCE, raw Vk instance с KHR_surface/Win32_surface, device с KHR_swapchain. Нет GLFW/Silk Window/production VulkanDevice/Skia или acquisition/GPU submit/presentation. Silk raw Vulkan bindings и общий `VulkanDevice.Check` используются только для ABI/result handling. Native handles принадлежат probe; HWND уничтожается на создавшем потоке после Vulkan cleanup.
+- `--native-surface-first` переключает только raw teardown; default device→surface, alternative surface→device. Swapchain всегда уничтожен заранее; затем instance и HWND. При ошибке primary cause сохраняется, cleanup выполняется best-effort. Vulkan [требует уничтожить связанные swapchains до surface](https://docs.vulkan.org/refpages/latest/refpages/source/vkDestroySurfaceKHR.html); surface lifetime не является child logical device. No acquisition/submission/presentation означает отсутствие work/completion, требующего drain в этом control.
+- `--native-vulkan-vendor 0x10DE|0x1002` выбирает matching graphics/present GPU только в raw control, без изменений system preferences/driver. Requested vendor/repeat/stage/host/order отражены в JSON; actual Vulkan GPU name/vendor/device/driver property — в log. Malformed/incompatible flags отвергаются до native allocation.
+- Scope report явно говорит: `Completed=true` — diagnostic завершён, **не USER/GDI acceptance или K7 pass**. Queries controls не включают validation, graphics frames, full alpha/chrome/DPI или VRAM. Неизвестные/native ICD-owned HDC не удаляются приложением.
+
+### Build и проверенная конфигурация
+
+Windows, .NET SDK10.0.401/net10.0. Текущий non-incremental Debug `AlloyVulkanTest.csproj` consumer build **exit0/errors0/warnings780**; Release publish exit0. Это consumer+transitive dependencies, не полный solution build. Unit tests/другие модульные tests/full solution/full240-window check этим diagnostic шагом не запускались. Предыдущие UI488/488 и solution0errors/1271warnings остаются результатом dispatcher stage.
+
+```powershell
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Debug --no-incremental --no-restore --verbosity quiet
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Release --no-restore --output TestResults/AlloyWsi/publish --verbosity quiet
+```
+
+Первый raw build failed на ambiguous target-typed constructor overload; исправлено explicit `WsiContext`. Nullable extension guards добавлены, новые raw warnings устранены. Этот failed build не засчитан как passing run.
+
+### Stage/raw/repeat matrix
+
+18основных controls (9Debug+9published Release), по198windows/configuration:8×24cycles +6windows с4create/destroy repeats. Дополнительно raw new-thread control по24windows/configuration. Все diagnostic sequences завершены, но растущие resource counters не объявлены исправленными. После окна sample выполняет bounded GC observation; после worker join фиксированная1s quiescence, без retry-until-pass.
+
+| Control | Cycles/configuration | GDI after1→quiescent last, Debug/Release | USER | Interpretation |
+| --- | --- | --- | --- | --- |
+| Capabilities |24 |14→14 /14→14 |15→15 |Нет GDI trend |
+| Formats count |24 |14→14 /14→14 |15→15 |Нет GDI trend |
+| Formats count+data |24 |14→14 /14→14 |15→15 |Нет GDI trend |
+| Present modes count+data |24 |14→14 /14→14 |15→15 |Нет GDI trend |
+| Native swapchain stage |24 |15→38 /15→38 |15→15 |Trend появляется при create |
+| Raw Win32 formats |24 |5→5 /5→5 |2→2 |Без GLFW/production VulkanDevice |
+| Raw Win32 swapchain device-first |24 |6→29 /6→29 |2→2 |Trend остаётся после device/surface/instance/HWND cleanup |
+| Raw Win32 swapchain surface-first |24 |6→29 /6→29 |2→2 |Перестановка не освобождает retained resource |
+| Raw4generations/surface |6 |6→11 /6→11 |2→2 |Растёт только при первом create на каждой новой surface/window |
+| Raw new-thread-per-window |24 |5→5 /5→5 |2→2 |Thread exit очищает GDI trend; production scheduling не меняется |
+
+Raw repeat phases подтверждают: cycle1 GDI5→6 при первом create,2/3/4create/destroy остаются6; cycle2 first create6→7, repeats остаются7. New-thread control использует24distinct recorded owner thread IDs, join до after-window sample. Это serial raw control, не concurrent HWND/GLFW scheduling и не общее исправление WGL/new-thread USER issue предыдущего этапа.
+
+Handles/private также меняются в queries/raw controls: например queries с production VulkanDevice492→609handles Debug (Release493→610), raw formats387→504 (Release388→505); raw swapchain400→563 (Release401→564). Эти kernel/private trends **не объяснены** только найденным HDC; отсутствие GDI trend не равно общей resource/VRAM stability.
+
+Артефакты `final-debug/release-<case>.json/.log`, `final-matrix.json`, отдельные `final-debug/release-raw-new-thread.json/.log`. Их source/binary hashes сохранены **до** добавления optional vendor selector в `pre-vendor-provenance.json`; они не переименовываются в runs на последнем source. Начальные exploratory stage/raw reports также сохранены, без переноса их passing completion на K7.
+
+Воспроизведение (один configuration/binary за раз):
+
+```powershell
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-single-thread --native-vulkan-window --native-vulkan-device --native-vulkan-wsi-stage capabilities --soak-cycles 24 --soak-output TestResults/AlloyWsi/capabilities.json
+# Повторить stage formats-count / formats / present-modes / swapchain.
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-single-thread --native-vulkan-window --native-vulkan-device --native-vulkan-wsi-stage swapchain --native-raw-vulkan --soak-cycles 24 --soak-output TestResults/AlloyWsi/raw-device-first.json
+# Добавить --native-surface-first для alternative order.
+# Добавить --native-wsi-repeat 4 --soak-cycles 6 для4generations/surface (оставить только один --soak-cycles).
+# Убрать --native-single-thread для serial new-thread control; это не production workaround.
+# Для Release заменить binary на TestResults/AlloyWsi/publish/AlloyVulkanTest.dll.
+```
+
+### Native allocator/lifetime evidence
+
+Локально скачан [официальный Microsoft WinDbg bundle](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/)1.2610.1001.0. Извлечён только amd64 toolset в ignored `TestResults/AlloyWsi/debugger`, CDB10.0.29661.1004, Authenticode signer Microsoft Corporation/Valid. Системная установка, driver changes, OS settings, global symbol/environment configuration не выполнялись. Compressed archives после hash capture удалены; manifest/URI/hashes/toolset сохранены.
+
+Broad2-cycle trace на GetDC/GetDCEx/GetWindowDC/ReleaseDC/DeleteDC и GDI allocation exports выявил конкретный callsite во время raw vkCreateSwapchain. Targeted return trace на3cycles фиксирует три HDC из `USER32!GetDC(NULL)`, caller `nvoglv64.dll+0xDE1BCA`, затем driver вызывает `wglDescribePixelFormat`. Стек включает raw KhrSwapchain.CreateSwapchain, Vulkan loader и текущий NVIDIA ICD. Private NVIDIA PDB не использовался; имена nearby exports в stack не выдаются за точные имена внутренних функций, module+RVA/version/hash — точное основание.
+
+ICD: RTX5070Ti, vendor0x10DE/device0x2C05; `nvoglv64.dll` file version32.0.16.1742, SHA256 `ADDA6DC8054888D5C52E3F97CF33B742952D16B3F145CED74CFB1012556BD696`. RVA относится только к этому binary. Для HDC `750116d6`, `74011370`, `4f011384` в bounded trace **после их return** не наблюдается ReleaseDC/DeleteDC; GDI6→8, after HWND cleanup census0. Проверка order существенна: handle values могут повторно использоваться, ранний ReleaseDC того же numeric value не является release поздней allocation. Temporal match summary записан в provenance.
+
+Formats-only3cycles negative control: target driver callsite0hits, GDI5→5. Анализ связывает retained screen HDC с первым swapchain create на новом HWND/surface в **текущем ICD**, а не с TrueMoon session ownership. [GetDC(NULL) получает screen DC](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc); [common DC освобождает вызывающий через ReleaseDC на том же потоке](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc). Vulkan surface/swapchain API не передаёт этот HDC приложению; освобождение driver-held handles через hooks/scanning/debugger не принято как production fix.
+
+Артефакты: `gdi-breakpoints.txt`, `gdi-allocation.log`, `cdb-console.log` (combined child stdout+debugger); `gdi-return-breakpoints.txt`, `final-cdb-swapchain/formats-console.log`, debugger logs и reports. Initial broad trace имел warning отсутствующего local symbol directory; директория создана, targeted runs выполнены без этой ошибки. Warning checksum managed assembly не считается private native symbol proof. Decoder/driver module paths и hashes — в provenance.
+
+```powershell
+$dotnetPath=(Get-Command dotnet).Source
+& TestResults/AlloyWsi/debugger/amd64/cdb.exe -G -cf TestResults/AlloyWsi/gdi-return-breakpoints.txt -logo TestResults/AlloyWsi/repro-cdb.log $dotnetPath ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-single-thread --native-vulkan-window --native-vulkan-device --native-raw-vulkan --native-vulkan-wsi-stage swapchain --soak-cycles 3 --soak-output TestResults/AlloyWsi/repro-cdb.json
+```
+
+### Второй GPU и итоговая verification
+
+Read-only inventory обнаружил AMD Radeon(TM) Graphics, установленный driver32.0.21043.5001; raw Vulkan properties vendor0x1002/device0x13C0. Добавлен optional selector и тот же raw24-cycle swapchain control повторён на обоих GPUs в Debug/published Release: **NVIDIA GDI6→29, AMD GDI5→5**, USER2→2 в обоих. Source/binary hashes этого stage отдельно в `provenance.json`, exact reports `gpu-debug/release-nvidia/amd.json/.log`, compact `gpu-matrix.json`. GPU selection меняет только созданный probe device, system setting не изменялся.
+
+```powershell
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --native-window-resource-control --native-single-thread --native-vulkan-window --native-vulkan-device --native-raw-vulkan --native-vulkan-wsi-stage swapchain --native-vulkan-vendor 0x10DE --soak-cycles 24 --soak-output TestResults/AlloyWsi/gpu-debug-nvidia.json
+dotnet TestResults/AlloyWsi/publish/AlloyVulkanTest.dll --native-window-resource-control --native-single-thread --native-vulkan-window --native-vulkan-device --native-raw-vulkan --native-vulkan-wsi-stage swapchain --native-vulkan-vendor 0x1002 --soak-cycles 24 --soak-output TestResults/AlloyWsi/gpu-release-amd.json
+```
+
+Это подтверждает зависимость **GDI trend** от выбранного текущего ICD; не доказывает исправление всех NVIDIA versions, всех drivers, kernel/private/VRAM stability или complete UI rendering на AMD. AMD raw control не содержит Skia/Present/alpha/resize/minimize и не считается full consumer/K7 pass. Default production GPU policy не менялась.
+
+Production `--hosted-dispatcher --validation` повторён в Debug/published Release: GL/GL, Vulkan/Vulkan, mixed pairs, WM_PAINT/следующий command context, cancellation/fault/scope shutdown прошли, registry/hooks0 и validation0errors/0warnings (`hosted-debug/release.log`). Этот functional run предшествует raw-only optional GPU selector, production binary/code не менялся. Callback/chrome/controlled rendering failure и UI unit suite не повторялись.
+
+Этап локализации query/create/native owner выполнен; **safe app-side fix не получен**. K7 GDI acceptance на текущем default NVIDIA остаётся blocker. Для его снятия нужен supported driver/ICD fix или отдельно согласованная и полностью проверенная alternate GPU configuration; другая NVIDIA версия не установлена и не проверена. Private/handles growth расследовать отдельно. После решения — full240-window Debug/published Release на финальном source с прежними warm+2/+4 limits, callback/shutdown regressions и VRAM evidence. Independent package consumer5.4–5.5 остаётся ближайшим независимым UI code deliverable; physical DPI/fixed fonts/real loss/итоговый alpha не сокращены.

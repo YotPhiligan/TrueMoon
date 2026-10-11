@@ -26,6 +26,34 @@ internal static partial class WindowNativeResourceProbe
         var rawWgl = args.Contains("--native-raw-wgl");
         var rawWindow = args.Contains("--native-raw-window");
         var uiControl = args.Contains("--native-ui-control");
+        var deviceControl = args.Contains("--native-vulkan-device");
+        var presenterControl = args.Contains("--native-vulkan-presenter");
+        var skiaControl = args.Contains("--native-vulkan-skia");
+        var swapchainControl = args.Contains("--native-vulkan-swapchain");
+        var stageIndex = Array.IndexOf(args, "--native-vulkan-wsi-stage");
+        if (stageIndex >= 0 && (stageIndex + 1 == args.Length || args[stageIndex + 1] is not ("capabilities" or "formats-count" or "formats" or "present-modes" or "swapchain")))
+            throw new ArgumentException("--native-vulkan-wsi-stage requires capabilities/formats-count/formats/present-modes/swapchain.");
+        var wsiStage = stageIndex >= 0 ? args[stageIndex + 1] : null;
+        var wsiRepeats = ReadInt(args, "--native-wsi-repeat", 1);
+        if (wsiRepeats is < 1 or > 32 || wsiStage == null && args.Contains("--native-wsi-repeat"))
+            throw new ArgumentException("--native-wsi-repeat requires WSI stage and 1..32 repeats on each surface.");
+        var rawVulkan = args.Contains("--native-raw-vulkan");
+        uint rawVendor = 0;
+        var vendorIndex = Array.IndexOf(args, "--native-vulkan-vendor");
+        if (vendorIndex >= 0)
+        {
+            if (!rawVulkan || vendorIndex + 1 == args.Length) throw new ArgumentException("--native-vulkan-vendor requires raw Vulkan and a hexadecimal vendor ID.");
+            rawVendor = Convert.ToUInt32(args[vendorIndex + 1], 16);
+        }
+        var surfaceFirst = args.Contains("--native-surface-first");
+        if ((rawVulkan && (wsiStage == null || directSilk || rawWindow || rawWgl)) || (surfaceFirst && !rawVulkan))
+            throw new ArgumentException("Raw Vulkan requires WSI stage without other native hosts; surface-first is raw Vulkan only.");
+        if (wsiStage != null && (!deviceControl || presenterControl || skiaControl || swapchainControl))
+            throw new ArgumentException("WSI stage requires device control without presenter/Skia/swapchain flags.");
+        if ((presenterControl || skiaControl || swapchainControl) && !deviceControl)
+            throw new ArgumentException("Vulkan presenter/Skia controls require --native-vulkan-device.");
+        if (deviceControl && (openGL || directSilk || rawWgl || rawWindow || uiControl))
+            throw new ArgumentException("Vulkan device control requires --native-vulkan-window with the TrueMoon host.");
         if (uiControl && (rawWgl || rawWindow || directSilk || !openGL))
             throw new ArgumentException("UI control requires the TrueMoon OpenGL host.");
         if (rawWgl && rawWindow) throw new ArgumentException("Choose either raw WGL or raw window control.");
@@ -84,7 +112,14 @@ internal static partial class WindowNativeResourceProbe
                         graphics = info;
                         afterInitialize = NativeWindowDiagnostics.OwnWindows();
                     }
-                    if (rawWgl || rawWindow)
+                    if (rawVulkan)
+                    {
+                        samples.Add(Sample(cycle + 1, "raw-before-host"));
+                        NativeWindowDiagnostics.RunRaw(false, Initialized, hwnd =>
+                            RawVulkanWsiControl.Run(hwnd, wsiStage!, surfaceFirst, wsiRepeats, rawVendor, phase => samples.Add(Sample(cycle + 1, phase))));
+                        samples.Add(Sample(cycle + 1, "raw-after-host-dispose"));
+                    }
+                    else if (rawWgl || rawWindow)
                     {
                         NativeWindowDiagnostics.RunRaw(rawWgl, Initialized);
                     }
@@ -100,11 +135,34 @@ internal static partial class WindowNativeResourceProbe
                             window.Render += _ => { window.GLContext?.SwapBuffers(); if (++directFrames == 3) window.Close(); };
                             window.Run();
                         }
+                        else if (wsiStage != null)
+                        {
+                            void Checkpoint(string phase) => samples.Add(Sample(cycle + 1, phase));
+                            using (var host = new SilkWindowHost(320, 200, "WSI stage control", false))
+                            {
+                                Checkpoint("after-host");
+                                using (var device = new VulkanDevice(host.NativeWindow))
+                                {
+                                    Checkpoint("after-device");
+                                    for (var repeat = 0; repeat < wsiRepeats; repeat++)
+                                        VulkanTransparencyIsolation.RunSwapchainControl(device, wsiStage, phase => Checkpoint($"wsi-{repeat + 1}/{phase}"));
+                                    Initialized(null);
+                                }
+                                Checkpoint("after-device-dispose");
+                            }
+                            Checkpoint("after-host-dispose");
+                        }
                         else
                         {
                             using var host = new SilkWindowHost(320, 200, "Owned native resource control", openGL);
+                            using var device = deviceControl ? new VulkanDevice(host.NativeWindow) : null;
+                            using var skiaFactory = skiaControl ? new HostedUiSessionFactory(new SkiaVulkanRenderBackend()) : null;
+                            using var skiaSession = skiaFactory?.Create(new Text("Native Vulkan Skia control"), SilkVulkanHost.CreateTarget(device!), host.Viewport, host);
+                            skiaSession?.Update();
+                            if (swapchainControl) VulkanTransparencyIsolation.RunSwapchainControl(device!);
                             Initialized(openGL ? NativeWindowDiagnostics.GraphicsInfo() : null);
-                            if (uiControl) RunUi(host, released);
+                            if (presenterControl) VulkanTransparencyIsolation.RunPresentationControl(host, device!);
+                            else if (uiControl) RunUi(host, released);
                             else
                             {
                                 var frames = 0;
@@ -167,11 +225,21 @@ internal static partial class WindowNativeResourceProbe
                     RawWgl = rawWgl,
                     RawWindow = rawWindow,
                     UiControl = uiControl,
+                    VulkanDeviceControl = deviceControl,
+                    VulkanPresenterControl = presenterControl,
+                    VulkanSkiaControl = skiaControl,
+                    VulkanSwapchainControl = swapchainControl,
+                    VulkanWsiStage = wsiStage,
+                    VulkanWsiRepeats = wsiRepeats,
+                    RawVulkan = rawVulkan,
+                    RawVulkanVendor = rawVendor,
+                    SurfaceFirst = surfaceFirst,
+                    RetainedLoaderControl = args.Contains("--retain-vulkan-loader-control"),
                     TrackedUiReferences = released.Count,
                     Workers = workers,
                     Windows = windows,
                     Samples = samples,
-                    Scope = "Serial thread-lifetime diagnostic; workers are reused round-robin, not concurrent windows. Raw WGL uses a hidden STATIC HWND and legacy context. Optional UI control creates OpenGL Skia/session/editor, 12 frames and 3 resizes per window; it does not exercise HostedUiWindow scheduling, Vulkan, chrome/alpha, minimize, VRAM or full K7. HWND census does not enumerate all USER objects. No new production thread contract."
+                    Scope = "Serial native lifetime diagnostic; workers are reused round-robin, not concurrent windows. Raw WGL/Win32 use a hidden STATIC HWND. Raw Vulkan uses only Win32 and Silk's raw Vulkan bindings; no GLFW, VulkanDevice, Skia, acquire/submit/present. Optional UI control creates OpenGL Skia/session/editor, 12 frames and 3 resizes. WSI stages separate capabilities, formats count/data, present-modes, and native swapchain create/destroy; repeat stays on one surface and surface-first changes only raw teardown order. Resource phase samples report each stage. Other Vulkan controls isolate device, Skia and raw GPU presentation. Loader control retains Vk.GetApi until exit. Completion means diagnostic completion, not resource stability. No HostedUiWindow scheduling, chrome/alpha, minimize, VRAM or full K7. HWND census does not enumerate all USER/GDI objects."
                 },
                     new JsonSerializerOptions { WriteIndented = true }));
             }
