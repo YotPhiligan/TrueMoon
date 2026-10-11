@@ -57,6 +57,8 @@ Native asset/ABI, lease/ownership и retirement в 2.1b не изменялис�
 
 Каждая raster/OpenGL/Vulkan UI-поверхность владеет одним SKPaint и ограниченным FIFO-кэшем до16 SKFont/metrics по точным FontFamily/FontSize. Measure и Draw используют одни ресурсы; cache переживает resize/scale/suspend этой поверхности, но не переносится между сессиями. При вытеснении и Dispose освобождаются native fonts; paint освобождается при Dispose. SKFont удерживает native typeface reference, поэтому временный managed SKTypeface освобождается сразу после создания font и не хранится в cache. Canvas/context/device не принадлежат cache.
 
+Для воспроизводимого текста передайте `SkiaFontCatalog.Load(defaultFamily, files)` в constructor выбранного backend. Каталог сохраняет font bytes; unknown family использует explicit default, без системного fallback. Native fonts принадлежат surface, источник файла после Load не нужен. Шрифты и лицензии доставляет приложение; стандартные constructors сохраняют прежнее поведение. [API, golden matrix и точные ограничения](../docs/alloy/GOLDEN_TESTS.md).
+
 Цвет/style/stroke width устанавливаются перед каждой операцией, чтобы stroke не менял последующие fill/text. Ресурсы и TextLayout требуют creator thread; ранее полученный text service после surface.Dispose отклоняет Measure. Cleanup cache включён в constructor rollback и best-effort surface teardown, в том числе при графическом отказе. Новых public API, packages или native ABI нет; InternalsVisibleTo предоставляет доступ только тестовой сборке.
 
 Это ограниченная оптимизация по trace2026-10-08, без cache строк/text blobs, dirty-subtree layout или partial redraw. [До/после, профиль и проверки](../docs/alloy/PERFORMANCE_BASELINE.md#профиль-и-оптимизация-2026-10-08).

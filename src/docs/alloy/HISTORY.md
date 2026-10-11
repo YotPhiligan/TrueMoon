@@ -1682,3 +1682,104 @@ dotnet TestResults/AlloyWsi/publish/AlloyVulkanTest.dll --native-window-resource
 Production `--hosted-dispatcher --validation` повторён в Debug/published Release: GL/GL, Vulkan/Vulkan, mixed pairs, WM_PAINT/следующий command context, cancellation/fault/scope shutdown прошли, registry/hooks0 и validation0errors/0warnings (`hosted-debug/release.log`). Этот functional run предшествует raw-only optional GPU selector, production binary/code не менялся. Callback/chrome/controlled rendering failure и UI unit suite не повторялись.
 
 Этап локализации query/create/native owner выполнен; **safe app-side fix не получен**. K7 GDI acceptance на текущем default NVIDIA остаётся blocker. Для его снятия нужен supported driver/ICD fix или отдельно согласованная и полностью проверенная alternate GPU configuration; другая NVIDIA версия не установлена и не проверена. Private/handles growth расследовать отдельно. После решения — full240-window Debug/published Release на финальном source с прежними warm+2/+4 limits, callback/shutdown regressions и VRAM evidence. Independent package consumer5.4–5.5 остаётся ближайшим независимым UI code deliverable; physical DPI/fixed fonts/real loss/итоговый alpha не сокращены.
+
+## K2/K4 fixed-font golden — 2026-10-11
+
+Scope: explicit font snapshots in Rendering.Skia, backend/Hosting opt-in overloads,
+shared Settings scene symbol alias, full screenshot manual comparison and xUnit
+regressions. net10.0/xUnit preserved; native ABI/device/WSI ownership unchanged.
+No commits/push/package publication in this task.
+
+SkiaFontCatalog.Load validates and snapshots managed bytes. Ordinal aliases and
+explicit default face avoid system lookup; surface owns native fonts/cache16.
+Noto Sans/Symbols/Mono at ffebf8c1ee449e544955a7e813c54f9b73848eac with complete OFL
+are delivered to test/manual outputs; Mono is the independent metrics test face.
+Only Noto Sans/Symbols participate in golden fonts fingerprint.
+30CPU raster PNG:10frames×scales1/1.5/2, view720×1000/viewport900×1100logical,
+text/clipping/alpha/images/themes/disabled/rows/selection/scroll. All pixels tested,
+no masks/outlier percentage. [Method and exact tolerance](GOLDEN_TESTS.md).
+
+Preliminary strict2 failed on thousands of AA edge pixels, max channel156. Symmetric
+radius1 envelope+8/+12 still rejected glyph coverage extrema (e.g. CPU R50 against
+GPU neighborhood minimumR70). Final edge allowance24 is only for local contrast≥8;
+flat/low contrast remains2. Raster/golden and full GL/Vulkan remain strict2. This
+allows bounded edge coverage/position differences, not pixel-identical CPU/GPU.
+Default API/system-font behavior preserved, emoji shaping/fallback not introduced.
+
+After the user-reported OS failure, two new source files had incomplete tails;
+they were restored and rebuilt. No complete result was claimed for the interrupted
+edge attempt (its log/manifest were absent). Font SHA256 stayed intact. Symbols2
+candidate did not contain U+2191: explicit glyph test failed; replaced with Noto
+Sans Symbols and reran glyph/full UI/golden checks. Failed intermediate artifacts
+are retained separately and never counted as final passing runs.
+
+### Final checks
+
+Windows x64/.NET10/SDK10.0.401, NVIDIA GeForce RTX5070Ti, OpenGL3.3/NVIDIA617.42;
+Vulkan vendor4318/device11269/DriverVersion2588573696/API4211039. Native Skia
+SHA25696525E8EFC1E3BB4B9C64000307D4D11C378FEDAEEB7C1E62D518EF84CDD1ABE.
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --no-restore --filter "FullyQualifiedName~SkiaFontCatalogTests|FullyQualifiedName~PixelDifferenceTests" --logger "trx;LogFileName=focused-reviewed.trx" --results-directory TestResults/AlloyGolden/tests --verbosity quiet
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --no-build --no-restore --logger "trx;LogFileName=ui-reviewed.trx" --results-directory TestResults/AlloyGolden/tests --verbosity quiet
+pwsh -NoProfile -File ManualTests/AlloyVulkanTest/RunSettingsGolden.ps1 -OutputDirectory E:/source/my/TrueMoon/src/TestResults/AlloyGolden/final-normal -ValidationLayerPath E:/source/my/TrueMoon/src/TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin
+```
+
+- Final focused suite **44 passed / 0 failed / 0 skipped**; final UI suite
+  **532 passed / 0 failed / 0 skipped**, discovery532, including44new cases.
+  Review added4Hosting cases for all3renderer selectors and null-catalog atomicity;
+  actual AlloyOptions is compile-linked into tests without new host dependencies.
+  Earlier focused33/39, failed528-symbol and passing528 `ui-final-verified.trx`
+  runs are separate records; `ui-reviewed.trx` is the final full green evidence.
+- Final candidate record90/90 cross-backend comparisons, validation0/0.30PNG
+  (2269518bytes) visually reviewed via contact sheet plus full-size samples,
+  including confirmed arrow glyph; copied into source fixtures explicitly.
+- **Normal Debug180/180 +published Release180/180**, exit0/0:90golden,
+  60current-raster/GPU and30strict GL/Vulkan comparisons/configuration.
+ 40script steps×3backend×3scales, selected RGBA tolerance1, static/no redraw,
+ zero-size suspend, restore/disposal/model unsubscribe pass. Full GL/Vulkan max
+ channel delta2, raster/golden0; GPU/raster raw max156 fits documented AA envelope.
+ All comparisons OutsideTolerancePixels0. Vulkan validation0errors/0warnings
+ including device teardown. Source fixtures SHA256 unchanged by runner.
+- Incremental Debug build exit0/0warnings/0errors. Release publish exit0 with
+ 780warning entries (existing warnings retained); not a zero-warning fresh build.
+ Fonts/manifest/reference PNG native assets present and read from build/publish.
+- Original `--settings-compare --validation` repeated Debug/published Release:
+ 3scales×40steps with system font path, selected pixels/layout/state/disposal pass;
+ validation0/0. This confirms the arrow alias change did not break the old scene.
+- `VerifyNegativeControls.ps1` uses ignored copies only: one baseline flat pixel
+ changed by20 at600,900, with updated PNG SHA. Release normal matrix produces
+ 3expected golden failures (one perbackend), each exactly1outside pixel at600,900
+ and3diff PNG. Bad font fingerprint and attempted recording into source baseline
+ are also rejected.3expected child failures/overall script exit0; source fixtures
+  unchanged. This is negative proof, not3passing native golden runs.
+- Final static verification:29changed/new text files contain no NUL/conflict
+  markers; source files have a final newline, project XML is valid. All30reference
+  PNG hashes match the manifest.28documents/358local links/79heading links have
+  no errors; `git diff --check` passed with repository line-ending settings.
+  Original endings of unchanged lines restored without changing normalized
+  content. After normal native verification, only Hosting tests, documentation
+  and line-ending restoration changed; focused44/full532 reruns cover the tests.
+
+Artifacts ignored TestResults/AlloyGolden: candidate/failed/final PNG/report/logs,
+final-normal summary/build/publish/debug/release reports, tests/TRX, contact sheet,
+negative summary and controls. Reports preserve source/binary/native/font/asset
+fingerprints and hardware/runtime/configuration. Internal test matrix/review under
+.git/testagent/alloy-golden, never stageable.
+
+| Outcome | Concrete regression evidence |
+| --- | --- |
+| Snapshots, aliases, no system lookup | SkiaFontCatalogTests.Catalog_SnapshotsFilesAndAliasDictionaryBeforeLaterMutation; Catalog_UsesRegisteredFacesAndExplicitDefaultForUnknownOrdinalAliases |
+| Native font lifetime/thread ownership | SkiaFontCatalogTests.FontCache_EvictionAndDisposalReleaseNativeFontsWithoutInvalidatingCatalog; Catalog_SharedAcrossThreadsCreatesIndependentOwnedNativeFonts; RasterBackend_UsesCatalogForMeasureAcrossResizeAndIndependentSessions |
+| Real arrow glyph | SkiaFontCatalogTests.Catalog_ExplicitSymbolAliasContainsSharedSceneArrowGlyph |
+| Hosting renderer selection and failed-call state | SkiaFontCatalogTests.HostingSelectors_KeepRendererAndStandaloneHostSelectionWithCatalog; HostingSelectors_NullCatalogCannotReplacePreviouslySelectedRenderer |
+| RGBA/alpha and tolerance bounds | PixelDifferenceTests.Compare_ChecksEveryChannelIncludingAlphaAndLastPixel; Compare_ChannelToleranceIncludesBoundaryButRejectsNextValue; Compare_EdgeCoverageToleranceHasAnExactBound |
+| No dropped edge/flat failure | PixelDifferenceTests.Compare_SymmetricEnvelopeRejectsDisappearedEdgeAndShiftBeyondOnePixel; Compare_LowContrastNeighborhoodKeepsStrictTolerance; Compare_EdgeEnvelopeAcceptsAntialiasCoverageButRejectsChangedFlatRegion |
+| Diagnostic diff pixels | PixelDifferenceTests.Diff_MagnifiesMaximumDifferenceIncludingAlphaAndClampsWithoutWrapping; negative3PNG |
+
+Full solution, other modules, NuGet consumer/new overload package delivery,
+standalone physical input/HUD/WSI soak, physical DPI100/200%, real device loss,
+private/handles/VRAM were not rerun. UI K2/K4 checked on the stated configuration;
+NVIDIA K7/final alpha acceptance stay open. Next independent general task is
+CORE5/COB4 headless PackageReference consumer with both providers/analyzer delivery;
+UI remaining4.9physical/K8/VRAM/final matrix keep their existing requirements.

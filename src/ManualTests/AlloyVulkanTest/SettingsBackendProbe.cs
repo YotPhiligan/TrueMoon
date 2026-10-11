@@ -6,6 +6,7 @@ using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Platform.Silk;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
+using System.Runtime.InteropServices;
 
 namespace AlloyVulkanTest;
 
@@ -13,29 +14,32 @@ internal static class SettingsBackendProbe
 {
     private sealed record Result(Rect[] Bounds, string[] States, byte[] Pixels, int Draws);
 
-    internal static void Run(bool validation)
+    internal static void Run(bool validation, SettingsGoldenProbe? golden = null)
     {
         foreach (var scale in new[] { 1f, 1.5f, 2f })
         {
             var viewport = new UiViewport((int)(900 * scale), (int)(1100 * scale), scale);
-            var raster = Exercise(new SkiaRasterRenderBackend(), new RasterUiTarget(), viewport, ui =>
-            { using var image = ui.SnapshotRasterImage(); return RasterProbe.ReadSnapshot(image); });
+            var fonts = golden?.Fonts;
+            var raster = Exercise(fonts == null ? new SkiaRasterRenderBackend() : new SkiaRasterRenderBackend(fonts), new RasterUiTarget(), viewport, ui =>
+            { using var image = ui.SnapshotRasterImage(); return RasterProbe.ReadSnapshot(image); }, golden, "raster");
             using (var window = new SilkWindowHost(320, 240, "Shared settings OpenGL", true))
             using (var gl = GL.GetApi(window.NativeWindow))
             {
-                Match(raster, Exercise(new SkiaOpenGLRenderBackend(), OpenGLProbe.Target(window), viewport, ui =>
-                { using var image = ui.ReadbackOpenGLImage(); return RasterProbe.ReadSnapshot(image); }));
+                RecordOpenGL(golden, gl);
+                Match(raster, Exercise(fonts == null ? new SkiaOpenGLRenderBackend() : new SkiaOpenGLRenderBackend(fonts), OpenGLProbe.Target(window), viewport, ui =>
+                { using var image = ui.ReadbackOpenGLImage(); return RasterProbe.ReadSnapshot(image); }, golden, "opengl"));
                 Require(gl.GetError() == GLEnum.NoError, "Settings OpenGL/teardown generated an error.");
             }
             var device = new VulkanDevice(validationMessage: validation ? Console.Error.WriteLine : null);
             using (device)
             {
-                Match(raster, Exercise(new SkiaVulkanRenderBackend(), SilkVulkanHost.CreateTarget(device), viewport, ui =>
+                if (golden != null) RecordVulkan(golden, device);
+                Match(raster, Exercise(fonts == null ? new SkiaVulkanRenderBackend() : new SkiaVulkanRenderBackend(fonts), SilkVulkanHost.CreateTarget(device), viewport, ui =>
                 {
                     var lease = ui.AcquireVulkanTexture(); var layout = (ImageLayout)lease.Info.Layout;
                     try { return VulkanHostReadback.Read(device, lease.Info, state => layout = state); }
                     finally { lease.Return(layout); }
-                }));
+                }, golden, "vulkan"));
                 device.WaitIdle();
             }
             Require(device.ValidationErrorCount == 0 && device.ValidationWarningCount == 0, "Settings Vulkan validation failed, including teardown.");
@@ -44,15 +48,28 @@ internal static class SettingsBackendProbe
         if (validation) Console.WriteLine("Settings comparison Vulkan validation: 0 errors, 0 warnings, including teardown.");
     }
 
-    private static Result Exercise(IRenderBackend backend, UiRenderTarget target, UiViewport viewport, Func<UiSession, byte[]> read)
+    private static unsafe void RecordVulkan(SettingsGoldenProbe golden, VulkanDevice device)
+    {
+        device.Api.GetPhysicalDeviceProperties(device.PhysicalDevice, out var properties);
+        golden.RecordHardware("vulkan", new { Name = Marshal.PtrToStringUTF8((nint)properties.DeviceName), properties.VendorID, properties.DeviceID, properties.DriverVersion, properties.ApiVersion });
+    }
+    private static void RecordOpenGL(SettingsGoldenProbe? golden, GL gl)
+    {
+        golden?.RecordHardware("opengl", new { Vendor = gl.GetStringS(StringName.Vendor),
+            Renderer = gl.GetStringS(StringName.Renderer), Version = gl.GetStringS(StringName.Version) });
+    }
+
+    private static Result Exercise(IRenderBackend backend, UiRenderTarget target, UiViewport viewport, Func<UiSession, byte[]> read,
+        SettingsGoldenProbe? golden, string backendName)
     {
         var model = new SettingsModel(); var view = new View1(model); var script = new SettingsFormSmoke();
         var states = new List<string>(); var bounds = new List<Rect>(); var draws = 0;
-        using var ui = UiSession.Create(view, backend, target, viewport);
+        using var ui = UiSession.Create(golden == null ? view : SettingsGoldenProbe.Wrap(view), backend, target, viewport);
         for (var frame = 0; frame < 40; frame++)
         {
             if (ui.Update()) draws++;
             bounds.AddRange(Descendants(view).Select(element => element.Bounds));
+            if (golden?.CapturesFrame(frame) == true) golden.Capture(backendName, frame, viewport, read(ui));
             script.Frame(ui);
             states.Add($"{model.Name}|{model.Enabled}|{model.Volume:R}|{model.IsLight}|{model.IsCompact}|{model.ControlsEnabled}|{model.LoadStatus}|{view.NameEditor.SelectionStart}/{view.NameEditor.SelectionLength}/{view.NameEditor.IsFocused}|{view.RowScroll.Offset:R}|{string.Join(';', model.Rows.Select(row => row.Name))}");
         }

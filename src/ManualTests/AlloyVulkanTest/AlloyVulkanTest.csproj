@@ -25,5 +25,7 @@
     <Compile Include="../AlloyTest/VolumeMeter.cs" Link="Settings/VolumeMeter.cs" />
     <Compile Include="../AlloyTest/SettingsFormSmoke.cs" Link="Settings/SettingsFormSmoke.cs" />
     <Content Include="../AlloyTest/Assets/alloy-mark.png" Link="Assets/alloy-mark.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../AlloyTest/Assets/Fonts/*" Link="Assets/Fonts/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Golden/Settings/*.png;Golden/Settings/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

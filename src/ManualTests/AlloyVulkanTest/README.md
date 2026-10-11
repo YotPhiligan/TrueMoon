@@ -110,6 +110,8 @@ Alloy содержит только Runtime/csproj, единственный Pro
 
 ## Общая форма raster/OpenGL/Vulkan и HUD
 
+**Fixed-font full golden K2/K4:** `--settings-golden` использует immutable font catalog, доставляемые OFL fonts и30reference PNG. [Метод, frame matrix, AA допуски и baseline update](../../docs/alloy/GOLDEN_TESTS.md). `RunSettingsGolden.ps1` проверяет Debug/published Release, по180полных сравнений, SHA256/provenance и отсутствие перезаписи fixtures. Diff PNG и report JSON сохраняются при ошибке. Прежний `--settings-compare` ниже остаётся отдельным selected-pixel smoke с системными шрифтами.
+
 Новая контрольная сцена — исходный [View1](../AlloyTest/View1.cs)/[SettingsModel](../AlloyTest/SettingsModel.cs) из AlloyTest. Проект compile-link те же sources и [SettingsFormSmoke](../AlloyTest/SettingsFormSmoke.cs), доставляет PNG через PreserveNewest; не ссылается на standalone executable и не содержит копии controls/model. Прежние маленькие probes ниже сохраняются отдельно.
 
 Команды из `src`; VK_LAYER_PATH задавайте только запускаемому процессу, используя существующий validation manifest:

@@ -8,6 +8,8 @@
 
 Минимальная инструкция включена в [package README](PACKAGE.md). [Независимый consumer и локальный feed](../ManualTests/AlloyPackageConsumer/README.md) воспроизводят подготовку пакетов и запуск приложения без repository build/CPM settings. Это проверка поставки, а не объявление alpha готовой; K1–K9 и внешний NVIDIA K7 блокер сохраняются.
 
+Для доставляемых шрифтов доступны `UseSkiaRaster(fonts)`, `UseSkiaOpenGL(fonts)` и `UseSkiaVulkan(fonts)`, где `fonts` — immutable `SkiaFontCatalog`. Каталог хранит snapshots; surface владеет native fonts. App доставляет font files и лицензии, Load выполняет native font validation до запуска UI. [Пример и правила fallback](../docs/alloy/GOLDEN_TESTS.md#шрифты-и-владение).
+
 ## Миграция alpha API: PLAN 2.1a
 
 Связка Silk/Vulkan renderer находится в сборке и namespace `TrueMoon.Alloy.Hosting`. Для convenience API добавьте ссылку на Hosting и `using TrueMoon.Alloy.Hosting;`:

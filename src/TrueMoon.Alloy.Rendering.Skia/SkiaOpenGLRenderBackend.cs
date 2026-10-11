@@ -22,12 +22,18 @@ public sealed class OpenGLUiTarget : UiRenderTarget
 /// <summary>Creates session-owned GPU surfaces on a borrowed desktop OpenGL context.</summary>
 public sealed class SkiaOpenGLRenderBackend : IRenderBackend
 {
+    private readonly SkiaFontCatalog? _fonts;
+    /// <summary>Uses the platform's system font lookup.</summary>
+    public SkiaOpenGLRenderBackend() { }
+    /// <summary>Uses explicit font snapshots for measurement and drawing.</summary>
+    /// <param name="fonts">Immutable catalog shared safely between surfaces.</param>
+    public SkiaOpenGLRenderBackend(SkiaFontCatalog fonts) => _fonts = fonts ?? throw new ArgumentNullException(nameof(fonts));
     /// <inheritdoc />
     public IUiRenderSurface CreateSurface(UiRenderTarget target, UiViewport viewport)
     {
         if (target is not OpenGLUiTarget gl) throw new ArgumentException("OpenGLUiTarget is required.", nameof(target));
         viewport.Validate(); gl.VerifyCurrent(); SkiaNativeLibrary.Initialize();
-        return new SkiaOpenGLSurface(gl, viewport);
+        return new SkiaOpenGLSurface(gl, viewport, _fonts);
     }
 }
 
@@ -46,7 +52,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
     /// <inheritdoc />
     public ITextLayoutService TextLayout { get; }
 
-    internal SkiaOpenGLSurface(OpenGLUiTarget host, UiViewport viewport)
+    internal SkiaOpenGLSurface(OpenGLUiTarget host, UiViewport viewport, SkiaFontCatalog? fonts = null)
     {
         _host = host;
         foreach (var name in new[] { "glGetString", "glGetIntegerv" })
@@ -70,7 +76,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
                 _measurement = SKSurface.Create(new SKImageInfo(1, 1)) ?? throw new InvalidOperationException("Could not create text service surface.");
                 try
                 {
-                    _drawingResources = new SkiaDrawingResources();
+                    _drawingResources = new SkiaDrawingResources(fonts);
                     TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
                     Resize(viewport);
                 }

@@ -28,7 +28,10 @@
     <Compile Include="..\TrueMoon.Alloy.Platform.Silk\WindowPixelScale.cs" Link="Platform\WindowPixelScale.cs" />
     <Compile Include="..\TrueMoon.Alloy.Platform.Silk\WindowCallbackBoundary.cs" Link="Platform\WindowCallbackBoundary.cs" />
     <Compile Include="..\TrueMoon.Alloy.Hosting\UiOwnerLoop.cs" Link="Hosting\UiOwnerLoop.cs" />
+    <Compile Include="../TrueMoon.Alloy.Hosting/AlloyOptions.cs" Link="Hosting/AlloyOptions.cs" />
+    <Compile Include="../ManualTests/AlloyVulkanTest/PixelDifference.cs" Link="Golden/PixelDifference.cs" />
     <Content Include="..\ManualTests\AlloyTest\Assets\alloy-mark.png" Link="Assets\alloy-mark.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../ManualTests/AlloyTest/Assets/Fonts/*" Link="Assets/Fonts/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TrueMoon.Argentis\TrueMoon.Argentis.csproj" />

@@ -12,12 +12,24 @@ namespace TrueMoon.Alloy.Hosting
         private bool _skiaOpenGL;
         /// <summary>Selects the Skia Vulkan renderer.</summary>
         public AlloyOptions UseSkiaVulkan() { BackendFactory = () => new SkiaVulkanRenderBackend(); _skiaVulkan = true; _skiaOpenGL = false; return this; }
+        /// <summary>Selects Vulkan rendering with explicit font files and no system font lookup.</summary>
+        /// <param name="fonts">Immutable font snapshots shared by surfaces.</param>
+        /// <returns>This configuration for fluent chaining.</returns>
+        public AlloyOptions UseSkiaVulkan(SkiaFontCatalog fonts) { ArgumentNullException.ThrowIfNull(fonts); UseSkiaVulkan(); BackendFactory = () => new SkiaVulkanRenderBackend(fonts); return this; }
         /// <summary>Selects the Skia desktop OpenGL renderer on a host-owned context or standalone Silk window.</summary>
         /// <returns>This configuration for fluent chaining.</returns>
         public AlloyOptions UseSkiaOpenGL() { BackendFactory = () => new SkiaOpenGLRenderBackend(); _skiaOpenGL = true; _skiaVulkan = false; return this; }
+        /// <summary>Selects OpenGL rendering with explicit font files and no system font lookup.</summary>
+        /// <param name="fonts">Immutable font snapshots shared by surfaces.</param>
+        /// <returns>This configuration for fluent chaining.</returns>
+        public AlloyOptions UseSkiaOpenGL(SkiaFontCatalog fonts) { ArgumentNullException.ThrowIfNull(fonts); UseSkiaOpenGL(); BackendFactory = () => new SkiaOpenGLRenderBackend(fonts); return this; }
         /// <summary>Selects in-memory CPU Skia rendering for an external host without a window or Vulkan device.</summary>
         /// <returns>This configuration for fluent chaining.</returns>
         public AlloyOptions UseSkiaRaster() { BackendFactory = () => new SkiaRasterRenderBackend(); _skiaVulkan = false; _skiaOpenGL = false; return this; }
+        /// <summary>Selects CPU rendering with explicit font files and no system font lookup.</summary>
+        /// <param name="fonts">Immutable font snapshots shared by surfaces.</param>
+        /// <returns>This configuration for fluent chaining.</returns>
+        public AlloyOptions UseSkiaRaster(SkiaFontCatalog fonts) { ArgumentNullException.ThrowIfNull(fonts); UseSkiaRaster(); BackendFactory = () => new SkiaRasterRenderBackend(fonts); return this; }
         /// <summary>Selects a custom renderer factory.</summary>
         public AlloyOptions UseRenderer(Func<IRenderBackend> factory) { ArgumentNullException.ThrowIfNull(factory); BackendFactory = factory; _skiaVulkan = false; _skiaOpenGL = false; return this; }
         /// <summary>Lets the game supply graphics targets and drive updates/input/composition.</summary>

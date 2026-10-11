@@ -9,13 +9,19 @@ public sealed class RasterUiTarget : UiRenderTarget;
 /// <summary>Creates session-owned CPU surfaces using the same Skia drawing/text adapter as Vulkan.</summary>
 public sealed class SkiaRasterRenderBackend : IRenderBackend
 {
+    private readonly SkiaFontCatalog? _fonts;
+    /// <summary>Uses the platform's system font lookup.</summary>
+    public SkiaRasterRenderBackend() { }
+    /// <summary>Uses explicit font snapshots for measurement and drawing.</summary>
+    /// <param name="fonts">Immutable catalog shared safely between surfaces.</param>
+    public SkiaRasterRenderBackend(SkiaFontCatalog fonts) => _fonts = fonts ?? throw new ArgumentNullException(nameof(fonts));
     /// <inheritdoc />
     public IUiRenderSurface CreateSurface(UiRenderTarget target, UiViewport viewport)
     {
         if (target is not RasterUiTarget) throw new ArgumentException("RasterUiTarget is required.", nameof(target));
         viewport.Validate();
         SkiaNativeLibrary.Initialize();
-        return new SkiaRasterSurface(viewport);
+        return new SkiaRasterSurface(viewport, _fonts);
     }
 }
 
@@ -32,13 +38,13 @@ public sealed class SkiaRasterSurface : IUiRenderSurface
     /// <inheritdoc />
     public ITextLayoutService TextLayout { get; }
 
-    internal SkiaRasterSurface(UiViewport viewport)
+    internal SkiaRasterSurface(UiViewport viewport, SkiaFontCatalog? fonts = null)
     {
         _measurement = SKSurface.Create(new SKImageInfo(1, 1))
             ?? throw new InvalidOperationException("Could not create text service surface.");
         try
         {
-            _drawingResources = new SkiaDrawingResources();
+            _drawingResources = new SkiaDrawingResources(fonts);
             TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
             Resize(viewport);
         }

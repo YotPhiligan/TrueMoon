@@ -32,6 +32,7 @@ if (args.Contains("--window-transparency")) { WindowTransparencyProbe.Run(args);
 if (args.Contains("--settings-baseline")) { SettingsPerformanceProbe.Run(args); return; }
 if (args.Contains("--settings-failure")) { await RenderingFailureProbe.RunAsync(args.Contains("--validation")); return; }
 if (args.Contains("--settings-compare")) { SettingsBackendProbe.Run(args.Contains("--validation")); return; }
+if (args.Contains("--settings-golden")) { SettingsGoldenProbe.Run(args); return; }
 if (args.Contains("--settings-hud") || args.Contains("--settings-hud-demo"))
 { SettingsHudProbe.Run(args.Contains("--validation"), args.Contains("--settings-hud-demo")); return; }
 if (args.Contains("--raster"))

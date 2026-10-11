@@ -31,7 +31,7 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
 }
 
 // One owner thread and surface lifetime; no global cache or borrowed canvas/context ownership.
-internal sealed class SkiaDrawingResources : IDisposable
+internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null) : IDisposable
 {
     private const int FontCapacity = 16;
     private readonly int _thread = Environment.CurrentManagedThreadId;
@@ -64,7 +64,7 @@ internal sealed class SkiaDrawingResources : IDisposable
         var key = new FontKey(family, size);
         if (_fonts.TryGetValue(key, out var entry)) return entry;
         // SKFont retains its native typeface reference. Do not retain shared managed typeface wrappers.
-        using var typeface = SKTypeface.FromFamilyName(family);
+        using var typeface = fonts == null ? SKTypeface.FromFamilyName(family) : fonts.CreateTypeface(family);
         var font = new SKFont(typeface, size);
         try
         {

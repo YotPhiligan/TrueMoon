@@ -19,13 +19,19 @@ public sealed class VulkanUiTarget : UiRenderTarget
 /// <summary>Creates Skia UI surfaces on externally owned Vulkan devices without creating a window or frame loop.</summary>
 public sealed class SkiaVulkanRenderBackend : IRenderBackend
 {
+    private readonly SkiaFontCatalog? _fonts;
+    /// <summary>Uses the platform's system font lookup.</summary>
+    public SkiaVulkanRenderBackend() { }
+    /// <summary>Uses explicit font snapshots for measurement and drawing.</summary>
+    /// <param name="fonts">Immutable catalog shared safely between surfaces.</param>
+    public SkiaVulkanRenderBackend(SkiaFontCatalog fonts) => _fonts = fonts ?? throw new ArgumentNullException(nameof(fonts));
     /// <inheritdoc />
     public IUiRenderSurface CreateSurface(UiRenderTarget target, UiViewport viewport)
     {
         if (target is not VulkanUiTarget vulkan) throw new ArgumentException("VulkanUiTarget is required.", nameof(target));
         viewport.Validate();
         SkiaNativeLibrary.VerifyVulkanInterop();
-        return new SkiaVulkanSurface(vulkan.Host, viewport);
+        return new SkiaVulkanSurface(vulkan.Host, viewport, _fonts);
     }
 }
 /// <summary>Session-owned context/surface on a borrowed device, with explicit host texture leases.</summary>
@@ -42,7 +48,7 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface
     private readonly int _thread = Environment.CurrentManagedThreadId;
     /// <inheritdoc />
     public ITextLayoutService TextLayout { get; }
-    internal SkiaVulkanSurface(VulkanHostContext device, UiViewport viewport)
+    internal SkiaVulkanSurface(VulkanHostContext device, UiViewport viewport, SkiaFontCatalog? fonts = null)
     {
         _device = device;
         device.WaitIdle();
@@ -63,7 +69,7 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface
             device.ThrowIfResolutionFailed();
             if (_context == null) throw new NotSupportedException("Skia Vulkan context creation failed.");
             _measurement = SKSurface.Create(new SKImageInfo(1, 1)) ?? throw new InvalidOperationException("Could not create text service surface.");
-            _drawingResources = new SkiaDrawingResources();
+            _drawingResources = new SkiaDrawingResources(fonts);
             TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
             Resize(viewport);
         }

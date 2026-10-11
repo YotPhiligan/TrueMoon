@@ -50,7 +50,7 @@ public sealed class View1 : View<SettingsModel>
         RowList = VStack.Create().Configure(stack => stack.Spacing = 8)
             .BindItems(model.Rows, row => HStack.Create().Configure(stack => stack.Spacing = 8).WithChildren(
                 TextBox.Create().Width(260).BindTwoWay(TextBox.ValueProperty, row, x => x.Name),
-                Button.Simple("↑").OnClick(() => model.MoveRowUp(row)),
+                Button.Simple("↑").Configure(button => button.FontFamily = "Segoe UI Symbol").OnClick(() => model.MoveRowUp(row)),
                 new Button("Заменить").OnClick(() => model.ReplaceRow(row)),
                 Button.Simple("Удалить").OnClick(() => model.RemoveRow(row))));
         RowScroll = ScrollViewer.Create().Height(160).Content(RowList);
