@@ -92,8 +92,14 @@ public class PipesSignalServerConnection : PipeConectionHandler
         try
         {
             using var writer = new ArrayPoolBufferWriter<byte>(128);
-            var (isSuccess, exception) = await _handler.HandleAsync(method, memory, writer, token).ConfigureAwait(false);
-            if (writer.WrittenCount != 0)
+            bool isSuccess;
+            Exception? exception;
+            try
+            {
+                (isSuccess, exception) = await _handler.HandleAsync(method, memory, writer, token).ConfigureAwait(false);
+                if (isSuccess) PipesProtocol.ValidatePayloadLength(writer.WrittenCount);
+            }
+            catch (Exception error) { (isSuccess, exception) = (false, error); }
             {
                 using var resultWriter = new ArrayPoolBufferWriter<byte>(128);
                 byte status = isSuccess ? (byte)0 : (byte)1;
@@ -107,10 +113,12 @@ public class PipesSignalServerConnection : PipeConectionHandler
                 else
                 {
                     var bytes = Encoding.UTF8.GetBytes($"{exception}");
+                    if (bytes.Length > PipesProtocol.MaxPayloadLength)
+                        bytes = Encoding.UTF8.GetBytes("Remote error exceeded the pipes payload limit.");
                     SerializationUtils.Write(bytes.Length, resultWriter);
                     resultWriter.Write(bytes);
                 }
-                PipeStream.Write(resultWriter.WrittenSpan);
+                WriteFrame(resultWriter.WrittenSpan);
             }
         }
         catch (Exception error)
@@ -154,9 +162,21 @@ public class PipesInvocationServer<T> : IInvocationServer<T>, IDisposable
     private readonly Lock _sync = new();
     private readonly Task _listener;
     private bool _disposed;
+    private readonly string _pipeName;
 
     public PipesInvocationServer(IEventsSource<PipesInvocationServer<T>> eventsSource, IInvocationServerHandler<T> handler)
+        : this(eventsSource, handler, typeof(T).FullName!) { }
+
+    /// <summary>Creates a server for an explicitly scoped endpoint.</summary>
+    /// <param name="eventsSource">Diagnostics source.</param>
+    /// <param name="handler">Invocation handler.</param>
+    /// <param name="pipeName">Endpoint name without the transport's tm_ prefix; both peers must agree.</param>
+    public PipesInvocationServer(IEventsSource<PipesInvocationServer<T>> eventsSource, IInvocationServerHandler<T> handler, string pipeName)
     {
+        ArgumentNullException.ThrowIfNull(eventsSource);
+        ArgumentNullException.ThrowIfNull(handler);
+        ArgumentException.ThrowIfNullOrWhiteSpace(pipeName);
+        _pipeName = pipeName;
         _eventsSource = eventsSource;
         _handler = handler;
         _taskScheduler = new TmTaskScheduler($"{Id}_exec", 2);
@@ -202,7 +222,7 @@ public class PipesInvocationServer<T> : IInvocationServer<T>, IDisposable
         item.Dispose();
     }
 
-    public string Id => typeof(T).FullName!;
+    public string Id => _pipeName;
 
     public void Dispose()
     {

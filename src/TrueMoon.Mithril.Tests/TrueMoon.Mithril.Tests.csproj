@@ -20,6 +20,34 @@
 
     <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Mithril\TrueMoon.Mithril.csproj" />
+      <ProjectReference Include="../TrueMoon/TrueMoon.csproj" />
+      <ProjectReference Include="../TrueMoon.Cobalt.Generator/TrueMoon.Cobalt.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
+      <ProjectReference Include="../ManualTests/MithrilCompositionProbe/MithrilCompositionProbe.csproj" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="../ManualTests/MithrilRestartProbe/MithrilRestartProbe.csproj" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\ManualTests\MithrilLifecycleProbe\MithrilLifecycleProbe.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
+    <Target Name="CopyMithrilProcessFixture" AfterTargets="Build">
+      <ItemGroup>
+        <MithrilProcessFixture Include="../ManualTests/MithrilLifecycleProbe/bin/$(Configuration)/$(TestsTF)/**/*" />
+      </ItemGroup>
+      <Copy SourceFiles="@(MithrilProcessFixture)"
+            DestinationFiles="@(MithrilProcessFixture->'$(OutDir)process-fixture/%(RecursiveDir)%(Filename)%(Extension)')"
+            SkipUnchangedFiles="true" />
+    </Target>
+
+    <Target Name="CopyMithrilCompositionFixture" AfterTargets="Build">
+      <ItemGroup>
+        <MithrilCompositionFixture Include="../ManualTests/MithrilCompositionProbe/bin/$(Configuration)/$(TestsTF)/**/*" />
+      </ItemGroup>
+      <Copy SourceFiles="@(MithrilCompositionFixture)" DestinationFiles="@(MithrilCompositionFixture->'$(OutDir)composition-fixture/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    </Target>
+
+    <Target Name="CopyMithrilRestartFixture" AfterTargets="Build">
+      <ItemGroup>
+        <MithrilRestartFixture Include="../ManualTests/MithrilRestartProbe/bin/$(Configuration)/$(TestsTF)/**/*" />
+      </ItemGroup>
+      <Copy SourceFiles="@(MithrilRestartFixture)" DestinationFiles="@(MithrilRestartFixture->'$(OutDir)restart-fixture/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    </Target>
 </Project>

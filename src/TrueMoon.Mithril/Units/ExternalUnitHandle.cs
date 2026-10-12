@@ -15,12 +15,12 @@ public class ExternalUnitHandle : ProcessUnitHandle
     {
         var path = Configuration.Get<string>(Key);
 
-        return Path.GetFullPath(path);;
+        if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("External hosting requires an executable path.");
+        return Path.GetFullPath(path);
     }
 
     protected override void ProcessLaunchArguments(Collection<string> collection)
     {
         base.ProcessLaunchArguments(collection);
-        collection.Add("");
     }
 }

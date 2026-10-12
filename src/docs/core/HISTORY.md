@@ -137,3 +137,104 @@ Ignored logs: `TestResults-CoreFixes-solution-build-final-20261010.log`, `TestRe
 Ограничения: cooperative user Task shutdown, standard Microsoft DI alias/error cleanup, disk/permission fault injection, multi-process JSON writes, pointer-level pinning/active-pin return behavior, independent package consumers и Release. Полный IPC/units/native UI matrix принадлежит другим этапам; исправление известных Core дефектов не закрывает G3/G4/G6.
 
 Финальная документальная сверка:13 изменённых planning/status/history документов,113 local links, missing files/anchors0. `git -c core.safecrlf=false diff --check` exit0; удалена лишняя пустая строка JSON section EOF без semantic changes. Scratch research/plan/status/pairing files отсутствуют в working-tree change list. Root assertion inventory:65 named methods/320 static Assert call sites/0 assertion-free в6 Core test files; theory/loop executions не входят в эту метрику.
+
+## CORE5 / COB4 headless package consumer — 2026-10-11
+
+Реализован [воспроизводимый consumer](../../ManualTests/CorePackageConsumer/README.md)
+с собственными исходниками и только PackageReference, вне solution. Runtime C# и
+lifecycle/provider contracts не менялись. Пять package projects получили конкретные
+Description и самостоятельные PACKAGE.md: TrueMoon, Contracts, Cobalt, generator,
+Microsoft DI adapter. Общая версия и net10.0 сохранены, публикации пакетов не было.
+
+Generator доставляется **явным** TrueMoon.Cobalt.Generator reference с PrivateAssets=all;
+runtime nuspec не содержит его автоматической transitive зависимости. Это принятое
+правило поставки, не исправление analyzer runtime. Actual compiler analyzer path/SHA256,
+consumer-generated ModuleInitializer и resolution проверены на NuGet, отдельно от
+ProjectReference unit tests. Microsoft DI consumer дополнительно собирается без generator.
+
+### Итоговый запуск
+
+Windows x64 build26300, SDK10.0.401/runtime.NET10.0.12, net10.0, framework-dependent
+Debug/Release build/publish без RID. Свежая local version:
+`0.2.2.7-alpha.headless.20261011142810069`. Generator DLL SHA256:
+`AB7D23337C3866C6877264F92D825A961DA789FB450D1F3077F42FF8867C5288`.
+Все пять TrueMoon packages получены из нового local feed в isolated cache; source
+mapping и .nupkg.metadata сверены. Consumer assets только package, без UI/Skia/Silk,
+IPC или units. Runtime output не содержит generator/Roslyn DLL.
+
+```powershell
+pwsh -NoProfile -File ManualTests/CorePackageConsumer/RunPackageSmoke.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/CorePackages/final-consumer
+
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj --no-restore --logger "trx;LogFileName=TrueMoon.Tests.trx" --results-directory TestResults/CorePackages/tests --verbosity quiet
+dotnet test TrueMoon.Cobalt.Tests/TrueMoon.Cobalt.Tests.csproj --no-restore --logger "trx;LogFileName=TrueMoon.Cobalt.Tests.trx" --results-directory TestResults/CorePackages/tests --verbosity quiet
+dotnet test TrueMoon.Cobalt.Generator.Tests/TrueMoon.Cobalt.Generator.Tests.csproj --no-restore --logger "trx;LogFileName=TrueMoon.Cobalt.Generator.Tests.trx" --results-directory TestResults/CorePackages/tests --verbosity quiet
+```
+
+Повторять runner в **новом** каталоге; final-consumer уже содержит evidence и не
+перезаписывается. Три component test commands завершились exit0, xUnit2.9.3/VSTest:
+Core81/81, Cobalt37/37, generator6/6, Failed0/Skipped0; TRX totals совпадают.
+
+| Проверка | Фактический результат |
+| --- | --- |
+| App + explicit generator, оба providers | 40/40 processes: 5scenarios ×2providers ×Debug/Release ×build/publish |
+| Direct Cobalt без App/adapter | 4/4 processes, Composite/open generic/transient/borrowed cleanup |
+| Microsoft DI без consumer generator | 20/20 processes, те же5scenarios ×Debug/Release ×build/publish |
+| Generation | По8headless/6direct generated sources на configuration; 4 actual compiler path/hash checks; marker в consumer assembly и автоматически опубликованный graph |
+| Consumer compilation/delivery | 6builds/6publishes exit0/0warnings/0errors |
+| Delivered README | 3точных C# snippets извлечены из packaged PACKAGE.md, 3Release builds +3processes exit0/0warnings/0errors; примеры вручную не адаптировались |
+| Missing generator control | Fresh isolated consumer без generator, compile-time marker сохранён; expected build exit1/CS0246 RHeadlessConsumer. Это отрицательный контроль, не passing build |
+| Runner | exit0, summary.Completed=true, Cases64/ReadmeExamples3, Failure=null |
+
+Сценарии: normal lifetime.Cancel; external cancellation с исходным token;
+startup failure с rollback только worker; stop failure с продолжением worker cleanup;
+build failure с resolver-owned source/subscription/factory cleanup. В normal/cancel/
+stop-failure lifecycle order worker.Start→gate.Start→Stopping→gate.Stop→worker.Stop→Stopped;
+startup failure worker.Start→gate.Start→worker.Stop→Stopping→Stopped, build failure
+не запускает сервисы. Исходные exception identities сохранены (build может иметь wrapper).
+Отдельный shutdown token остаётся cancelable и не canceled после отмены run token.
+
+Composite Worker/aliases и lifetime aliases shared; open Repository<int>/closed
+Repository<string> singleton возвращают Int32:17/String:17 из приоритетного provider,
+app name write/read совпадают. Runtime factory singleton shared; две Ticket transient
+instances различны и освобождены. Factory1/Gate1/Ticket2/WorkerResource1 releases,
+borrowed instance0. Cobalt Worker.Dispose calls1, Microsoft DI calls3 в normal graph;
+Worker идемпотентен и собственный ресурс освобождает один раз. Это сохранённое
+provider difference, а не обещание reference-unique Microsoft DI cleanup.
+
+Observer failure изолирован; framework и consumer diagnostics наблюдались.
+После shutdown/build failure fresh DiagnosticListener не enabled, events не
+доставляются, retained owned source отклоняет операции как disposed. Нет UI,
+clipboard, system settings или чужих процессов; runner ограничивает только
+свои children timeout и завершает только свои зависшие процессы.
+
+Pack exit0 во всех5проектах, **535 warning entries** в pack logs (31/147/177/75/105),
+не zero-warning source build и не535уникальных проблем. Shared XML/RS1041 и прочие
+warnings не исправлялись. Полная solution сборка/другие suites не запускались.
+
+### Промежуточные попытки, артефакты и ограничения
+
+Первый runner `first-consumer`: все64runtime processes прошли, omitted-generator
+build верно отказал CS0246, но verifier ожидал только CS0234 и завершился exit1.
+Classifier исправлен на обе формы отсутствующего namespace; весь итоговый runner
+повторён с новой версией/feed/cache. First summary.Completed=false сохранён и не
+считается итоговым passing run. Позднее добавлена проверка примеров из actual package
+README; она входит в final-consumer. Одна локальная reporting command имела PowerShell
+foreach/pipeline parse error; исправленная сводка сверила все actual reports/TRX.
+
+Ignored TestResults/CorePackages содержит оба runs, feed/package SHA256, isolated
+cache, source copies/SHA256, compiler analyzer list/generated source hashes,
+build/publish output, process reports/logs, negative control и summary; tests/TRX
+отдельно. После executable proof менялась только навигационная документация/статусы.
+
+Не проверялись другие OS/SDK/compiler hosts, физический Ctrl+C/kill/parent exit,
+RID/self-contained/trimming/single-file/NativeAOT, owned disposal failure matrix
+в отдельном package consumer, disk/JSON fault injection и performance. Component
+coverage этих контрактов не выдаётся за более широкий package run. UI K7/physical
+DPI/real loss/VRAM, Enerit/Mithril own-process и общий выпуск остаются открыты.
+CORE5/COB4 выполнен в указанном scope; локально далее COB5 baseline фиксированного
+graph, общий функциональный приоритет — MIT0 bounded own-child, затем ENE1/ENE2.
+
+Final static verification: 31 changed/new text files без NUL/conflict markers,
+source final newline, XML/PowerShell syntax valid. 34documents/374local links/85heading
+links без ошибок; git diff --check exit0. Все123 recorded source fingerprints и
+5package SHA256 совпадают; все64 child reports Completed=true. TestResults ignored.

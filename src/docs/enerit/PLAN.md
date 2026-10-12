@@ -24,6 +24,64 @@ TrueMoon.Enerit, Enerit.Generator, Enerit.Tests и Enerit.Generator.Tests. Invoc
 
 Эти контракты подтверждены Windows in-process regression tests ([HISTORY](HISTORY.md#совместимость-pools-и-завершение-pipes--2026-10-10)). Framing не изменён; own-process transport, общий payload-size policy, MMF и межверсионная protocol compatibility остаются задачами ENE1–ENE3.
 
+### ENE1 ENE2 контракт — 2026-10-11
+
+Принят ограниченный Windows x64/net10.0 pipes baseline: оба peers и generated
+adapters собраны из одинакового service/payload source одной версией генератора.
+Это уточнение payload/error semantics, а не подтверждение protocol versioning,
+межплатформенного ABI или всего G3 composition/restart сценария.
+
+- Request/response frame: Guid (16 bytes), method/status (1 byte), signed payload
+  length (4 bytes), затем payload. Допустимы 0–1 048 576 bytes без header.
+  Входная длина проверяется до rental/dispatch. Полный frame пишется под одним
+  write gate; concurrent responses коррелируются по Guid. Очереди пока без backpressure.
+- Generated payloads: bool/byte/int/long/float/double, int-backed enums,
+  Guid/DateTime/DateTimeOffset/TimeSpan, nullable поддержанные value types,
+  string/string?, Memory<byte>/ReadOnlyMemory<byte>, одномерные arrays,
+  List/IReadOnlyList и Dictionary/IReadOnlyDictionary с поддержанными элементами.
+  Mutable DTO — nongeneric, nonabstract class без inheritance/records, с единственным
+  public parameterless constructor, public readable/writable properties без init-only
+  и mutable instance fields. DTO graph acyclic, не глубже32 узлов.
+  Null и empty strings/collections/DTO различаются presence marker; bytes имеют
+  length без null marker. Nullable string использует один marker своего codec.
+- Collections ограничены65 536 elements; отрицательные/слишком большие counts,
+  невозможные remaining bytes, state вне0/1, negative/odd UTF-16 lengths и truncation
+  дают InvalidDataException. Generated handler отвергает trailing request bytes
+  и неизвестный method code; service при этом не вызывается.
+- TME001 diagnostic отвергает object, decimal/ValueTask, tuples/custom structs,
+  nested collection elements, неподдержанные DTO shapes и static/generic/ref/out
+  service methods, properties/events и более256 методов. Declared/inherited methods
+  и equivalent signature dedup сохраняются. Method IDs зависят от Roslyn order,
+  стабильная схема между разными сборками пока не установлена.
+- Каждый вызов, включая void/Task, получает acknowledgement. Status0 — успешный
+  payload, status1 — UTF-8 remote exception text, превращаемый в InvocationException.
+  Handler throw/reported failure/oversized result также получают error response;
+  слишком длинный error text заменяется bounded сообщением. Неизвестный status или
+  invalid frame disconnect/fault pending; EOF сохраняется как IOException subtype.
+- Request cancellation локальная: pending TCS удаляется/отменяется; отправленный
+  handler продолжает работу до завершения или connection shutdown. Late response
+  полностью читается и возвращается в pool без reconnect. Timeout50s имеет ту же
+  локальную semantics. Retry invocation автоматически не выполняется; reader
+  reconnect создаёт новое соединение для последующих вызовов, с возможными
+  промежуточными попытками во время server teardown.
+- Transport владеет целыми request/response rentals, schedulers и channel.
+  ReadBytes создаёт отдельный tracked rental: handler/caller возвращает bytes,
+  в том числе вложенные DTO/collections, через TryReturn после использования.
+  Автоматический обход/возврат вложенных rentals при partial DTO decode ещё не
+  реализован. Synchronous Dispose ждёт handlers, поэтому игнорирование cancellation
+  может удерживать shutdown; bounded proof использует cooperative handlers.
+
+**Изменение совместимости:** void/Task теперь ждут remote acknowledgement, nullable
+strings больше не получают лишний marker. Старые и новые peers смешивать нельзя.
+Scalar encoding использует native layouts; canonical cross-version/architecture
+wire format, response trailing-byte validation и schema negotiation остаются открыты.
+Старые object/tuple/custom-struct эксперименты MithrilTest исключены из generated
+service interface; сохранены обычные методы implementation, Sender их не использует.
+
+Проверяемый runner и границы — [EneritPipesProbe](../../ManualTests/EneritPipesProbe/README.md).
+ENE1/ENE2 выполнены как этот bounded baseline; общая production/package readiness
+и ENE3–ENE5 из него не следуют.
+
 ## Этапы
 
 | ID | Результат | Критерий завершения |

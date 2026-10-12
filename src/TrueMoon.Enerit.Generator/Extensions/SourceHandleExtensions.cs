@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using TrueMoon.Enerit.Generator.Utils;
 
 namespace TrueMoon.Enerit.Generator.Extensions;
@@ -116,7 +116,7 @@ public static class SourceHandleExtensions
                             _ => ""
                         };
                 
-                        if (parameterSymbol.Type is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                        if (parameterSymbol.Type is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                         {
                             handle.AppendLine($"            if ({parameterSymbol.MetadataName} != null)");
                             handle.AppendLine("            {");
@@ -204,7 +204,7 @@ public static class SourceHandleExtensions
                     break;
                 }
                 case {TypeKind:TypeKind.Class or TypeKind.Struct} 
-                    when WellKnownTypes.NotContains(returnType.TrimEnd('?')):
+                    when WellKnownTypes.NotContains(returnTypeSymbol):
                     handle.Context.GenerateSerializationExtensions(returnTypeSymbol);
                     handle.AppendLine("                return result.Deserialize(handle.Span[offset..], ref offset);");
                     break;
@@ -218,7 +218,7 @@ public static class SourceHandleExtensions
                         _ => $"<{GenerationUtils.GetTypeString(returnTypeSymbol)}>"
                     };
                 
-                    if (isAnnotated)
+                    if (isAnnotated && returnTypeSymbol.IsValueType)
                     {
                         handle.AppendLine("            if (SerializationUtils.ReadInstanceState(handle.Span[offset..], ref offset))");
                         handle.AppendLine("            {");
@@ -297,7 +297,7 @@ public static class SourceHandleExtensions
                     _ => ""
                 };
                 
-                if (typeSymbol is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                if (typeSymbol is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                 {
                     handle.AppendLine($"            if (instance.{name} != null)");
                     handle.AppendLine("            {");
@@ -374,7 +374,7 @@ public static class SourceHandleExtensions
                     _ => $"<{GenerationUtils.GetTypeString(typeSymbol)}>"
                 };
                 
-                if (typeSymbol is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                if (typeSymbol is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                 {
                     handle.AppendLine("            if (SerializationUtils.ReadInstanceState(span[offset..], ref offset))");
                     handle.AppendLine("            {");

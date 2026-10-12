@@ -16,6 +16,7 @@ public static class PipeStreamExtensions
         var resultCode = MemoryMarshal.Read<byte>(responseHeaderBuffer[offset..]);
         offset++;
         var len = MemoryMarshal.Read<int>(responseHeaderBuffer[offset..]);
+        PipesProtocol.ValidatePayloadLength(len);
         return (guidResult,resultCode,len);
     }
 
@@ -32,6 +33,7 @@ public static class PipeStreamExtensions
         var resultCode = MemoryMarshal.Read<byte>(responseHeaderBuffer[offset..]);
         offset++;
         var len = MemoryMarshal.Read<int>(responseHeaderBuffer[offset..]);
+        PipesProtocol.ValidatePayloadLength(len);
         return (guidResult,resultCode,len);
     }
 

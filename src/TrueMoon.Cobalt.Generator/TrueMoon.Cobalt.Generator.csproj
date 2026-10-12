@@ -4,6 +4,8 @@
         <TargetFramework>$(TF)</TargetFramework>
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <Description>C# source generator for TrueMoon Cobalt service registrations. Requires the .NET 10 SDK compiler.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,6 +15,7 @@
 
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+        <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
     </ItemGroup>
 
 

@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -58,6 +58,7 @@ public class ServicesGenerator : IIncrementalGenerator
                 }
                 
                 var l = GetServiceMembers(interfaceSymbol);
+                if (!InvocationContractValidation.Validate(interfaceSymbol, l, sourceProductionContext)) continue;
                 
                 list.Add((interfaceSymbol, l));
             }
@@ -173,9 +174,9 @@ public class ServicesGenerator : IIncrementalGenerator
                 handle.AppendLine("                try");
                 handle.AppendLine("                {");
                 string parametersStr = string.Empty;
+                handle.AppendLine("                    var offset = 0;");
                 if (methodSymbol.Parameters.Any())
                 {
-                    handle.AppendLine("                    var offset = 0;");
                     foreach (var parameterSymbol in methodSymbol.Parameters)
                     {
                         if (WellKnownTypes.IsCancellationToken(parameterSymbol.Type))
@@ -241,7 +242,7 @@ public class ServicesGenerator : IIncrementalGenerator
                                         _ => $"<{parameterTypeString}>"
                                     };
                     
-                                    if (parameterSymbol.Type is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                                    if (parameterSymbol.Type is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                                     {
                                         handle.AppendLine("            if (SerializationUtils.ReadInstanceState(readHandle.Span[offset..], ref offset))");
                                         handle.AppendLine("            {");
@@ -265,6 +266,8 @@ public class ServicesGenerator : IIncrementalGenerator
                     }
                 }
                 parametersStr = parametersStr.TrimEnd(' ', ',');
+
+                handle.AppendLine("                    if (offset != readHandle.Length) throw new global::System.IO.InvalidDataException(\"Unexpected trailing invocation payload.\");");
 
                 var serviceTarget = SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, type)
                     ? "_service"
@@ -323,7 +326,7 @@ public class ServicesGenerator : IIncrementalGenerator
                             break;
                         }
                         case {TypeKind:TypeKind.Class or TypeKind.Struct} 
-                       when WellKnownTypes.NotContains(returnType.TrimEnd('?')):
+                       when WellKnownTypes.NotContains(returnTypeSymbol):
                             handle.AppendLine("                result.Serialize(bufferWriter);");
                             break;
                         default:
@@ -335,7 +338,7 @@ public class ServicesGenerator : IIncrementalGenerator
                                 _ => ""
                             };
                 
-                            if (isAnnotated)
+                            if (isAnnotated && returnTypeSymbol.IsValueType)
                             {
                                 handle.AppendLine($"            if (result != null)");
                                 handle.AppendLine("            {");
@@ -366,6 +369,7 @@ public class ServicesGenerator : IIncrementalGenerator
                 methodIndex++;
             }
         }
+        handle.AppendLine("            default: return (false, new global::System.IO.InvalidDataException(\"Unknown invocation method.\"));");
         handle.AppendLine("        }");
 
         handle.AppendLine("        return (true, null);");

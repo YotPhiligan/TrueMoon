@@ -91,3 +91,115 @@ Root после финальных edits выполнил full solution build/te
 Assertion/static gap review: concrete error types, pending map emptiness, scheduler Completion, post-return memory guard и independent expected byte content. Raw pipe confirms sent request before cancellation/disconnect; controlled fragmented streams дают детерминированные header/EOF cases. Await/barriers вместо fixed sleeps; forced timeout лишь guard теста. Mutants/coverage не запускались.
 
 Ограничения: tests in-process, handler cancellation кооперативна; own-process, memory-mapped faults/cleanup, payload-size policy, complete serialization и package/Release остаются ENE1–ENE3/ENE5. Старые weak pipe и generator smoke tests не переписаны этим ограниченным consumer fix.
+
+## ENE1 ENE2 pipes baseline — 2026-10-11
+
+Принятый [bounded контракт](PLAN.md#ene1-ene2-контракт--2026-10-11) проверен на
+Windows x64 build26300/net10.0, SDK10.0.401/runtime10.0.12, xUnit2.9.3/VSTest.
+Tracked HEAD e52dd4e; этот run включает незакоммиченные Core/Cobalt/Mithril изменения
+предыдущих задач, но не переносит их passing results в Enerit.
+
+### Изменения
+
+- Nullable reference strings больше не генерируют Value/double marker; collection
+  element codecs обходятся рекурсивно без bogus List/Dictionary DTO; Memory result
+  определяется по symbol; dictionary locals scoped именем поля/параметра.
+- TME001 error diagnostics для unsupported payload/service shapes и method count
+  >256. DTO ограничены mutable acyclic classes с public parameterless constructor.
+  Unknown method/trailing request bytes отвергаются до service invocation, включая
+  parameterless methods. Действительные inherited mappings сохранены.
+- Frame length до1MiB проверяется перед inbound rental/dispatch; collection count
+  до65 536, states/UTF-16/remaining lengths проверяются до decode/allocation.
+  WriteFrame сериализует writers, preserving correlation на concurrent calls.
+- Server отправляет empty success и remote error даже при пустом writer. Oversized
+  result/error преобразуются в bounded error. Void/Task ждут acknowledgement.
+- Local cancellation удаляет pending request; late response полностью drained и
+  rental returned. Result/cancellation race не теряет выигравший response buffer.
+  Disconnect сохраняет исходный IOException subtype; только reader сбрасывает
+  соединение и инициирует reconnect. Public endpoint-name overloads сохраняют default
+  factories naming и позволяют независимые уникальные endpoints.
+- Добавлены SerializationContractTests, PipesProtocolTests, PipesProcessTests,
+  PayloadContractTests и executable EneritPipesProbe. Старый mapping test пропускает
+  новый default switch section при сравнении method codes, сохраняя consumer emit.
+  UtilityLifetimeTests теперь ожидает IOException subtype, invalid byte lengths —
+  InvalidDataException. MithrilTest generated interface исключает пять старых
+  неподдержанных object/tuple/custom-struct экспериментов; Sender их не вызывал,
+  обычные implementation methods сохранены.
+
+### Фактические проверки
+
+Из src, каждый из четырёх test commands exit0; final TRX counters проверены.
+
+```powershell
+dotnet test TrueMoon.Enerit.Tests/TrueMoon.Enerit.Tests.csproj --configuration Debug --no-restore --logger 'trx;LogFileName=enerit-debug.trx' --results-directory TestResults/EneritPipes/tests --verbosity quiet
+dotnet test TrueMoon.Enerit.Tests/TrueMoon.Enerit.Tests.csproj --configuration Release --no-restore --logger 'trx;LogFileName=enerit-release.trx' --results-directory TestResults/EneritPipes/tests --verbosity quiet
+dotnet test TrueMoon.Enerit.Generator.Tests/TrueMoon.Enerit.Generator.Tests.csproj --configuration Debug --no-restore --logger 'trx;LogFileName=generator-debug.trx' --results-directory TestResults/EneritPipes/tests --verbosity quiet
+dotnet test TrueMoon.Enerit.Generator.Tests/TrueMoon.Enerit.Generator.Tests.csproj --configuration Release --no-restore --logger 'trx;LogFileName=generator-release.trx' --results-directory TestResults/EneritPipes/tests --verbosity quiet
+dotnet build TrueMoon.slnx --configuration Debug --no-restore --no-incremental --verbosity quiet
+./ManualTests/EneritPipesProbe/RunPipesSmoke.ps1
+```
+
+| Проверка | Passed | Failed | Skipped |
+| --- | --- | --- | --- |
+| Enerit Debug | 71 | 0 | 0 |
+| Enerit Release | 71 | 0 | 0 |
+| Generator Debug | 34 | 0 | 0 |
+| Generator Release | 34 | 0 | 0 |
+
+Runtime сохранил прежние30 cases плюс41 case; generator — прежние9 плюс25.
+Новые19 test methods расширяются до66 cases; process fixture использует реальные
+сервисы с transforms, не replay/echo-only fake transport. Hosted process six-case
+matrix входит в каждую runtime suite и проверяет dotnet entry assembly launch.
+
+Full non-incremental Debug solution build exit0/errors0/warnings1242. Warning debt
+(XML/nullability/analyzers) не устранён этим этапом; build не является test pass
+остальных модулей. UI/native/manual MithrilTest не запускались.
+
+Manual runner: **12/12**, Completed=true,
+UTC2026-10-11T15:42:42.5851680Z, build/publish и все child runs exit0.
+Debug apphost и framework-dependent published Release без RID, шесть сценариев:
+payload,32concurrent, cancellation/late response, disconnect, client-dispose,
+server-rebind. Все12child exit0/owned handle released, pending0/client workers
+completed. Cancellation сохраняет Connections=1/LateResponses=1; same-client rebind
+имеет Connections=2 Debug/3 Release: reconnect во время teardown может попасть
+в ещё закрывающийся listener, но следующий typed call успешно завершён в deadline.
+Сценарии/ownership/точные команды runner — [README](../../ManualTests/EneritPipesProbe/README.md).
+Дополнительная сверка:38 документов,402local links/98heading links,0problems;
+source SHA256 без расхождений, git diff --check exit0. Assertions/gap review выполнен
+по test skills; unsupported/unverified границы оставлены явно открытыми.
+Артефакты ignored `TestResults/EneritPipes`: four TRX, build/test logs,
+manual/summary.json со source SHA256 и14 командами, process stdout/stderr logs.
+
+### Промежуточные failures и исправления
+
+Первый probe build дал22 errors: nullable string.Value, bogus collection codecs,
+dictionary local collision и Memory result extension. Исправлены symbol/type
+handling и collection generation; итоговые generated consumer emission и real
+process typed values прошли.
+
+Первый runtime run:65passed/2failed — stale payload checkpoint expectation28 вместо
+26 и exact IOException expectation вместо EndOfStreamException subtype. После
+коррекции contract expectations итог71/71 в обеих конфигурациях.
+Первый generator run:24passed/6failed — новый default dispatch section мешал
+старому code-mapping test, trailing guard использовал offset без declaration для
+parameterless methods. Filter case labels и offset declaration исправлены,
+полный emit256-method consumer прошёл; итог34/34.
+
+Первый полный build с TME001 обнаружил два diagnostics в старом MithrilTest:
+unsupported record/object payload. Его неиспользуемые unsupported IPC methods
+исключены из interface; final solution build errors0. Первый manual run после
+same-client reconnect прошёл11/12: необоснованное ожидание ровно одного reconnect
+не выдержало legitimate teardown interleaving. Oracle требует фактический
+successful next typed call в20s и Connections>=2; итоговая12/12 прошла без изменения
+transport для сокрытия ошибки. Пропущенных/отключённых новых tests нет.
+
+### Границы результата
+
+Same-build Windows pipes baseline. Cancellation локальная, failed invocation не
+replayed. Native scalar ABI/Roslyn mapping не versioned; void ack/nullable-string
+layout несовместимы со старыми peers. Response trailing bytes, partial nested DTO
+rental cleanup и backpressure остаются открыты. Cooperative handler shutdown
+проверен, игнорирующий cancellation handler может удерживать sync Dispose.
+MMF, App/AddUnit/controller/parent-exit/restart, NuGet delivery и performance
+нуждаются в собственных proofs. Дальнейший общий шаг — Mithril MIT1/MIT2, затем
+MIT3/ENE4 composition.

@@ -14,13 +14,10 @@ public interface ITestService
     Task<TestPoco> Foo4Async(TestPoco2 poco, CancellationToken cancellationToken = default);
     Task<bool?> Foo5Async(TestPoco3 poco, CancellationToken cancellationToken = default);
 
-    Task<bool?> Foo6Async(TestRecordPoco1 poco, CancellationToken cancellationToken = default);
-    Task<TestEnum1?> Foo7Async(TestEnum1 v1, TestEnum2? NulV2, TestRecordPoco1 poco, TestPoco? nulTestPoco, CancellationToken cancellationToken = default);
+    // Legacy object/tuple/custom-struct experiments below remain ordinary implementation methods.
+    // They are not part of the generated ENE1 invocation contract.
     Task<IReadOnlyDictionary<string, string>> Foo8Async(TestPoco4 testPoco, CancellationToken cancellationToken = default);
-    Task<(bool, int?, TestPoco)> Foo9Async((int v1, bool? v2, TestPoco v3, TestPoco2? v4) inputValue, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TestPoco>> Foo10Async(IReadOnlyDictionary<string,TestPoco2> dictionary, CancellationToken cancellationToken = default);
-    Task<(IReadOnlyList<TestPoco>, long)> Foo11Async(int a, CancellationToken cancellationToken = default);
-    Task<(IReadOnlyList<TestStruct1> structs, bool)> Foo12Async(TestStruct1 struct1, CancellationToken cancellationToken = default);
     
     public void VoidMethod();
     public Task MethodAsync();

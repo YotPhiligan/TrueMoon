@@ -2,12 +2,18 @@
 
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
+        <Description>TrueMoon headless application bootstrap, configuration, diagnostics and cooperative lifecycle. Alpha API.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
       <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
       <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
     </ItemGroup>
 
 </Project>

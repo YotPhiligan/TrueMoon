@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>HeadlessConsumer</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableCobaltGenerator Condition="'$(EnableCobaltGenerator)' == ''">true</EnableCobaltGenerator>
+    <RequireCobaltGeneration Condition="'$(RequireCobaltGeneration)' == ''">true</RequireCobaltGeneration>
+    <DefineConstants Condition="'$(RequireCobaltGeneration)' == 'true'">$(DefineConstants);COBALT_GENERATION</DefineConstants>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated/$(Configuration)</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="DirectCobalt/**/*.cs" />
+    <PackageReference Include="TrueMoon" Version="$(TrueMoonPackageVersion)" />
+    <PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="$(TrueMoonPackageVersion)" />
+    <PackageReference Include="TrueMoon.Cobalt.Generator" Version="$(TrueMoonPackageVersion)" PrivateAssets="all" Condition="'$(EnableCobaltGenerator)' == 'true'" />
+  </ItemGroup>
+</Project>

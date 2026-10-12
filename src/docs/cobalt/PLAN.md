@@ -43,6 +43,14 @@ Scopes, delivery analyzer через package и произвольная под�
 
 COB1/COB2 согласовать с CORE1/CORE3. COB3 не означает смену DI provider по ходу app lifecycle. COB4 проверяет именно package consumption, а не только ProjectReference.
 
+**COB4, уточнение и проверка 2026-10-11:** основной совместный сценарий и критерии
+живут в [Core CORE5/COB4](../core/PLAN.md#core5--cob4-независимый-headless-consumer--2026-10-11).
+`TrueMoon.Cobalt.Generator` подключается consumer явно через PackageReference
+с PrivateAssets=all; автоматического transitive analyzer API не вводится.
+Проверены actual analyzer/generated sources, direct Cobalt и App на обоих providers,
+Microsoft DI без consumer generator и отрицательная сборка без обязательного analyzer.
+Ближайший локальный шаг — COB5 измерения фиксированного graph.
+
 ## Критерии готовности
 
 - Поддержанные регистрация/resolution/generics/lifetime cases имеют поведенческие результаты; ошибки сохраняют полезную причину.

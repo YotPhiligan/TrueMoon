@@ -37,11 +37,11 @@ public class UtilityLifetimeTests
         SerializationUtils.Write(4, writer);
         SerializationUtils.Write((byte)1, writer);
         var offset = 0;
-        Assert.Throws<ArgumentOutOfRangeException>(() => SerializationUtils.ReadBytes(writer.WrittenSpan, ref offset));
+        Assert.Throws<InvalidDataException>(() => SerializationUtils.ReadBytes(writer.WrittenSpan, ref offset));
         Assert.Equal(0, offset);
         writer.Clear();
         SerializationUtils.Write(-1, writer);
-        Assert.Throws<ArgumentOutOfRangeException>(() => SerializationUtils.ReadBytes(writer.WrittenSpan, ref offset));
+        Assert.Throws<InvalidDataException>(() => SerializationUtils.ReadBytes(writer.WrittenSpan, ref offset));
         Assert.Equal(0, offset);
     }
 
@@ -147,7 +147,7 @@ public class UtilityLifetimeTests
         var resultTask = client.InvokeAsync((byte)1, null, memory => memory.Length, deadline.Token);
         await Task.Run(() => stream.GetRequestHeader()).WaitAsync(Timeout);
         stream.Dispose();
-        await Assert.ThrowsAsync<IOException>(() => resultTask.WaitAsync(Timeout));
+        await Assert.ThrowsAnyAsync<IOException>(() => resultTask.WaitAsync(Timeout));
         AssertNoPendingResponses(client);
     }
 

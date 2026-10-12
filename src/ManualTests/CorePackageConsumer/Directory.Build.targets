@@ -1,0 +1,6 @@
+<Project>
+  <Target Name="VerifyIndependentPackageConsumer" BeforeTargets="CoreCompile">
+    <Error Condition="'@(ProjectReference)' != ''" Text="This consumer must use packages only." />
+    <WriteLinesToFile File="$(IntermediateOutputPath)resolved-analyzers.txt" Lines="@(Analyzer)" Overwrite="true" />
+  </Target>
+</Project>

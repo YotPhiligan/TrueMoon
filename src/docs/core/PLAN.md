@@ -45,6 +45,31 @@ DI resolver и generators относятся к [Cobalt](../cobalt/PLAN.md), IPC
 
 CORE0 предшествует выбору fixes. CORE1 и COB1/COB2 связаны через service ownership; lifecycle приложения остаётся задачей Core. CORE2/CORE4 развивать по потребности consumers, без неподтверждённого переписывания utilities.
 
+### CORE5 / COB4: независимый headless consumer — 2026-10-11
+
+Основной подробный сценарий этого совместного этапа ведётся здесь; Cobalt COB4
+ссылается на него. [Исходники и воспроизведение](../../ManualTests/CorePackageConsumer/README.md),
+[команды и результаты](HISTORY.md#core5--cob4-headless-package-consumer--2026-10-11).
+
+- Только PackageReference и собственные исходники consumer; отдельный local feed,
+  уникальная prerelease версия, изолированный cache и проверенные source metadata.
+- Headless App на Cobalt/Microsoft DI: configuration, diagnostics, normal lifetime
+  completion, external cancellation, startup/stop/build failure, cleanup и исходные
+  ошибки; Debug/Release × build/publish без RID.
+- COB4 дополнительно проверяет actual compiler analyzer path/SHA256, consumer-generated
+  ModuleInitializer и Composite/open/closed generic graph; direct Cobalt без App/adapter.
+- Генератор подключается явно отдельным `TrueMoon.Cobalt.Generator` PackageReference
+  с `PrivateAssets=all`. Runtime packages не обещают его автоматической доставки.
+  Microsoft DI consumer проверяется также без generator; обязательная Cobalt generation
+  проверяется отрицательной сборкой без analyzer package.
+- Package README примеры извлекаются из собранных артефактов, компилируются и запускаются.
+  Owned/borrowed и provider-specific repeated disposal сохраняют принятые контракты.
+
+Этап проверен на Windows x64/net10.0/SDK10.0.401; это bounded package proof,
+не общий release, UI/process/IPC evidence, trimming/NativeAOT или other compiler hosts.
+Дальше для Core/Cobalt — COB5 startup/resolution/allocations baseline на этом graph;
+ближайший общий функциональный шаг — bounded own-child MIT0/ENE2 scenario.
+
 ## Критерии готовности
 
 - Известный набор тестов действительно обнаружен и пройден, skipped/failed указаны; tests existence не считается passing результатом.

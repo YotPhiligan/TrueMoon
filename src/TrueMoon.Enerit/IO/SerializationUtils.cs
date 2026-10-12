@@ -7,8 +7,15 @@ namespace TrueMoon.Enerit.IO;
 
 public static class SerializationUtils
 {
+    /// <summary>Maximum count accepted by generated collection serializers.</summary>
+    public const int MaxCollectionCount = 65536;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void WriteElementsCount(int count, IBufferWriter<byte> bufferWriter) => Write(count, bufferWriter);
+    public static void WriteElementsCount(int count, IBufferWriter<byte> bufferWriter)
+    {
+        ValidateElementsCount(count);
+        Write(count, bufferWriter);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WriteInstanceState(bool state, IBufferWriter<byte> bufferWriter)
@@ -23,6 +30,8 @@ public static class SerializationUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Write<T>(T value, IBufferWriter<byte> bufferWriter)
     {
+        if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
+            throw new NotSupportedException("Raw serialization requires a value without managed references.");
         var size = Unsafe.SizeOf<T>();
         var target = bufferWriter.GetSpan(size);
         Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(target), value);
@@ -30,7 +39,7 @@ public static class SerializationUtils
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void WriteString(string value, IBufferWriter<byte> bufferWriter)
+    public static void WriteString(string? value, IBufferWriter<byte> bufferWriter)
     {
         byte state;
         if (value is null)
@@ -71,6 +80,7 @@ public static class SerializationUtils
         where T : struct
     {
         var size = Unsafe.SizeOf<T>();
+        RequireBytes(data, size);
         var value = MemoryMarshal.Read<T>(data);
 
         offset += size;
@@ -78,15 +88,19 @@ public static class SerializationUtils
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string ReadString(ReadOnlySpan<byte> data, ref int offset)
+    public static string? ReadString(ReadOnlySpan<byte> data, ref int offset)
     {
+        ValidateState(data);
         if (data[0] == 0)
         {
             offset += 1;
             return null;
         }
+        RequireBytes(data, 1 + sizeof(int));
         var size = MemoryMarshal.Read<int>(data[1..]);
         var head = sizeof(int)+1;
+        if (size < 0 || (size & 1) != 0) throw new InvalidDataException("Invalid UTF-16 byte length.");
+        RequireBytes(data[head..], size);
         var str = Encoding.Unicode.GetString(data.Slice(head, size));
         offset += head+size;
         return str;
@@ -95,7 +109,9 @@ public static class SerializationUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Memory<byte> ReadBytes(ReadOnlySpan<byte> data, ref int offset)
     {
+        RequireBytes(data, sizeof(int));
         var size = MemoryMarshal.Read<int>(data);
+        RequireBytes(data[sizeof(int)..], size);
         var payload = data.Slice(sizeof(int), size);
         var mem = MemoryPoolUtils.Create(size);
         payload.CopyTo(mem.Span);
@@ -106,10 +122,36 @@ public static class SerializationUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool ReadInstanceState(ReadOnlySpan<byte> data, ref int offset)
     {
+        ValidateState(data);
         offset += 1;
         return data[0] == 1;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int ReadElementsCount(ReadOnlySpan<byte> data, ref int offset) => Read<int>(data, ref offset);
+    public static int ReadElementsCount(ReadOnlySpan<byte> data, ref int offset)
+    {
+        RequireBytes(data, sizeof(int));
+        var count = MemoryMarshal.Read<int>(data);
+        ValidateElementsCount(count);
+        // Every currently generated element has at least one byte on the wire.
+        if (count > data.Length - sizeof(int)) throw new InvalidDataException("Collection exceeds the remaining payload.");
+        offset += sizeof(int);
+        return count;
+    }
+
+    private static void ValidateElementsCount(int count)
+    {
+        if (count is < 0 or > MaxCollectionCount) throw new InvalidDataException("Invalid collection count.");
+    }
+
+    private static void ValidateState(ReadOnlySpan<byte> data)
+    {
+        RequireBytes(data, 1);
+        if (data[0] is not (0 or 1)) throw new InvalidDataException("Instance state must be 0 or 1.");
+    }
+
+    private static void RequireBytes(ReadOnlySpan<byte> data, int count)
+    {
+        if (count < 0 || count > data.Length) throw new InvalidDataException("Truncated or invalid serialized payload.");
+    }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using TrueMoon.Enerit.Generator.Utils;
 
 namespace TrueMoon.Enerit.Generator.Extensions;
@@ -55,7 +55,7 @@ public static class SourceHandleSerializationExtensions
                         _ => ""
                     };
                     
-                    if (element.Type is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                    if (element.Type is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                     {
                         handle.AppendLine($"                    if ({instanceName}{propertyName}.{element.MetadataName} != null)");
                         handle.AppendLine("                    {");
@@ -112,7 +112,7 @@ public static class SourceHandleSerializationExtensions
                     _ => ""
                 };
                 
-                if (arrayItemType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                if (arrayItemType is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                 {
                     handle.AppendLine($"                    if (item != null)");
                     handle.AppendLine("                    {");
@@ -188,7 +188,7 @@ public static class SourceHandleSerializationExtensions
                     _ => $"<{typeString}>"
                 };
                 
-                if (itemType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                if (itemType is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                 {
                     handle.AppendLine($"            if (SerializationUtils.ReadInstanceState({spanSource}[offset..], ref offset))");
                     handle.AppendLine("            {");
@@ -247,7 +247,7 @@ public static class SourceHandleSerializationExtensions
                     _ => ""
                 };
                 
-                if (keyType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                if (keyType is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                 {
                     handle.AppendLine($"                    if (key != null)");
                     handle.AppendLine("                    {");
@@ -286,7 +286,7 @@ public static class SourceHandleSerializationExtensions
                     _ => ""
                 };
                 
-                if (valueType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                if (valueType is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                 {
                     handle.AppendLine($"                    if (value != null)");
                     handle.AppendLine("                    {");
@@ -335,13 +335,13 @@ public static class SourceHandleSerializationExtensions
         handle.AppendLine($"                {propertyName}Dictionary = new Dictionary<{keyTypeString},{valueTypeString}>(count);");
         handle.AppendLine("                for(var i = 0; i < count; i++)");
         handle.AppendLine("                {");
-        handle.AppendLine($"                    {keyTypeString} key = default;");
-        handle.AppendLine($"                    {valueTypeString} value = default;");
+        handle.AppendLine($"                    {keyTypeString} {propertyName}Key = default;");
+        handle.AppendLine($"                    {valueTypeString} {propertyName}Value = default;");
         
         switch (keyType)
         {
             case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(keyType):
-                handle.AppendLine($"            key = key.Deserialize({spanSource}, ref offset);");
+                handle.AppendLine($"            {propertyName}Key = {propertyName}Key.Deserialize({spanSource}, ref offset);");
                 break;
             default:
             {
@@ -353,20 +353,20 @@ public static class SourceHandleSerializationExtensions
                     _ => $"<{keyTypeString}>"
                 };
                 
-                if (keyType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                if (keyType is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                 {
                     handle.AppendLine($"            if (SerializationUtils.ReadInstanceState({spanSource}[offset..], ref offset))");
                     handle.AppendLine("            {");
                     handle.AppendLine(keyType.TypeKind == TypeKind.Enum
-                        ? $"                key = ({keyTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"                key = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        ? $"                {propertyName}Key = ({keyTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
+                        : $"                {propertyName}Key = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
                     handle.AppendLine("            }");
                 }
                 else
                 {
                     handle.AppendLine(keyType.TypeKind == TypeKind.Enum
-                        ? $"            key = ({keyTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"            key = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        ? $"            {propertyName}Key = ({keyTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
+                        : $"            {propertyName}Key = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
                 }
                 break;
             }
@@ -375,7 +375,7 @@ public static class SourceHandleSerializationExtensions
         switch (valueType)
         {
             case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(valueType):
-                handle.AppendLine($"            value = value.Deserialize({spanSource}, ref offset);");
+                handle.AppendLine($"            {propertyName}Value = {propertyName}Value.Deserialize({spanSource}, ref offset);");
                 break;
             default:
             {
@@ -387,26 +387,26 @@ public static class SourceHandleSerializationExtensions
                     _ => $"<{valueTypeString}>"
                 };
                 
-                if (valueType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                if (valueType is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                 {
                     handle.AppendLine($"            if (SerializationUtils.ReadInstanceState({spanSource}[offset..], ref offset))");
                     handle.AppendLine("            {");
                     handle.AppendLine(valueType.TypeKind == TypeKind.Enum
-                        ? $"                value = ({valueTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"                value = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        ? $"                {propertyName}Value = ({valueTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
+                        : $"                {propertyName}Value = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
                     handle.AppendLine("            }");
                 }
                 else
                 {
                     handle.AppendLine(valueType.TypeKind == TypeKind.Enum
-                        ? $"            value = ({valueTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"            value = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        ? $"            {propertyName}Value = ({valueTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
+                        : $"            {propertyName}Value = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
                 }
                 break;
             }
         }
         
-        handle.AppendLine($"                    {propertyName}Dictionary.Add(key, value);");
+        handle.AppendLine($"                    {propertyName}Dictionary.Add({propertyName}Key, {propertyName}Value);");
         handle.AppendLine("                }");
         handle.AppendLine("            }");
         
@@ -480,7 +480,7 @@ public static class SourceHandleSerializationExtensions
                         _ => $"<{typeString}>"
                     };
                 
-                    if (itemType is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                    if (itemType is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                     {
                         handle.AppendLine($"            {typeString} {itemName} = default;");
                         handle.AppendLine($"            if (SerializationUtils.ReadInstanceState({spanSource}[offset..], ref offset))");
@@ -553,7 +553,7 @@ public static class SourceHandleSerializationExtensions
                     _ => $"<{typeString}>"
                 };
                 
-                if (typeSymbol is INamedTypeSymbol { NullableAnnotation: NullableAnnotation.Annotated })
+                if (typeSymbol is INamedTypeSymbol { IsValueType: true, NullableAnnotation: NullableAnnotation.Annotated })
                 {
                     handle.AppendLine($"            {typeString} {name} = default;");
                     handle.AppendLine("            if (SerializationUtils.ReadInstanceState(span[offset..], ref offset))");

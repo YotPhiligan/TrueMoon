@@ -3,6 +3,12 @@
   <PropertyGroup>
     <TargetFramework>$(TF)</TargetFramework>
     <RootNamespace>TrueMoon</RootNamespace>
+    <Description>Shared TrueMoon application lifecycle, configuration, diagnostics and service registration contracts. Alpha API.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+  </ItemGroup>
 
 </Project>

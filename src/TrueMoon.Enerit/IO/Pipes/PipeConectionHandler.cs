@@ -6,6 +6,7 @@ public abstract class PipeConectionHandler : IDisposable
 {
     private readonly bool _isClient;
     private readonly object _streamGate = new();
+    private readonly object _writeGate = new();
     private PipeStream? _stream;
     private bool _disposed;
     protected PipeStream PipeStream => Volatile.Read(ref _stream) ?? throw new ObjectDisposedException(GetType().Name);
@@ -57,6 +58,13 @@ public abstract class PipeConectionHandler : IDisposable
 
     protected void Connect(CancellationToken cancellationToken = default) =>
         ConnectAsync(cancellationToken).GetAwaiter().GetResult();
+
+    /// <summary>Writes one complete frame without interleaving concurrent writers.</summary>
+    /// <param name="frame">Header and payload of one invocation frame.</param>
+    protected void WriteFrame(ReadOnlySpan<byte> frame)
+    {
+        lock (_writeGate) { PipeStream.Write(frame); }
+    }
 
     public virtual void Dispose()
     {

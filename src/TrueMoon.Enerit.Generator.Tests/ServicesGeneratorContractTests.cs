@@ -65,7 +65,8 @@ public class ServicesGeneratorContractTests
             var code = (LiteralExpressionSyntax)invocation.ArgumentList.Arguments[0].Expression;
             return $"{method.Identifier.ValueText}:{code.Token.Value}";
         }).Order(StringComparer.Ordinal).ToArray();
-        var handlerCodes = handler.DescendantNodes().OfType<SwitchSectionSyntax>().Select(section =>
+        var handlerCodes = handler.DescendantNodes().OfType<SwitchSectionSyntax>()
+            .Where(section => section.Labels.OfType<CaseSwitchLabelSyntax>().Any()).Select(section =>
         {
             var label = Assert.Single(section.Labels.OfType<CaseSwitchLabelSyntax>());
             var invocation = Assert.Single(section.DescendantNodes().OfType<InvocationExpressionSyntax>(), call => call.Expression is MemberAccessExpressionSyntax access &&

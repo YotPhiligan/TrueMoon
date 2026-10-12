@@ -2,11 +2,17 @@
 
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
+        <Description>TrueMoon Cobalt generated dependency resolution, service registration and owned lifetime management. Alpha API.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     </PropertyGroup>
     
     <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
         <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
     </ItemGroup>
     
 </Project>

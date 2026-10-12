@@ -1,4 +1,4 @@
-﻿using TrueMoon.Configuration;
+using TrueMoon.Configuration;
 
 namespace TrueMoon.Mithril;
 
@@ -41,6 +41,10 @@ public class UnitConfiguration : ConfigurableBase, IUnitConfiguration
         set => Set(nameof(RestartPolicy), value);
     }
 
+    /// <inheritdoc />
+    public int? RestartLimit { get => Get<int?>(nameof(RestartLimit)); set => Set(nameof(RestartLimit), value); }
+    /// <inheritdoc />
+    public int? RestartDelay { get => Get<int?>(nameof(RestartDelay)); set => Set(nameof(RestartDelay), value); }
     /// <inheritdoc />
     public string Name
     {

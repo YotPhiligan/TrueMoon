@@ -20,6 +20,13 @@
     <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Enerit\TrueMoon.Enerit.csproj" />
       <ProjectReference Include="..\TrueMoon\TrueMoon.csproj" />
+      <ProjectReference Include="../ManualTests/EneritPipesProbe/EneritPipesProbe.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
+    <Target Name="CopyEneritProcessFixture" AfterTargets="Build">
+      <ItemGroup>
+        <EneritProcessFixture Include="../ManualTests/EneritPipesProbe/bin/$(Configuration)/$(TestsTF)/**/*" />
+      </ItemGroup>
+      <Copy SourceFiles="@(EneritProcessFixture)" DestinationFiles="@(EneritProcessFixture->'$(OutDir)enerit-fixture/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    </Target>
 </Project>

@@ -31,3 +31,25 @@ Agent direct runs exit0: `dotnet test TrueMoon.Cobalt.Tests/TrueMoon.Cobalt.Test
 Assertion-quality/static test-gap review:32 named regression/generator methods,150 static Assert call sites включая shared compiler helper;160 effective assertions с helper expansion, average5/method. Assertion-free/trivial/self-field0.10/12 категорий; approximation/comparison не нужны этому contract. Removing metadata/lifetime filter, owned tracking/reverse order/uniqueness, optional resolution or recursive bypass изменит identity/count/error/completion assertions. Это static likely-killed reasoning, реальные mutants не запускались.
 
 Package/analyzer delivery, Release/scopes и performance не проверялись. RS1041/net10 generator и прочие shared warnings остаются; ManualTests/CobaltTest собран, отдельный запуск не выполнялся.
+
+## COB4 / CORE5 package consumers — 2026-10-11
+
+Добавлен explicit analyzer/runtime PackageReference consumer и самостоятельные
+Cobalt/generator/adapter PACKAGE.md с конкретной metadata. Runtime/generator C#,
+net10.0 и provider semantics не менялись. Подробный совместный scenario, команды,
+source/package hashes, промежуточный verifier failure и ограничения — в
+[основной истории Core](../core/HISTORY.md#core5--cob4-headless-package-consumer--2026-10-11);
+[воспроизведение](../../ManualTests/CorePackageConsumer/README.md).
+
+На Windows x64/net10.0/SDK10.0.401 проверены actual packaged analyzer path/SHA256,
+headless8/direct6 generated sources/configuration, module initializer и working
+Composite/open/closed generic graph. Runtime output без analyzer/Roslyn. Local version
+0.2.2.7-alpha.headless.20261011142810069: 64matrix +3delivered README processes exit0,
+включая Microsoft DI без consumer generator; отрицательная сборка без обязательного
+analyzer package expected exit1/CS0246. Main runner exit0/Completed=true.
+
+Runtime suite37/37, generator6/6, Core81/81 — fresh Debug component runs,
+Failed0/Skipped0; full solution не повторялся. Cobalt shared Worker disposed1;
+Microsoft DI calls3/resource release1, borrowed0 — ранее принятые различия сохранены.
+Pack warnings/other compiler hosts/RID/AOT/performance сохраняют ограничения Core
+record. COB4 проверен в этой матрице; COB5 baseline остаётся следующим локальным шагом.

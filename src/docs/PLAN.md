@@ -52,7 +52,24 @@ UI alpha и контрольное beta приложение имеют собс
 
 G1–G6 — общий roadmap, а не новые UI требования. За исключением выполненной документальной карты в G1, готовность этих этапов требует отдельных запусков. Даты выпуска и новые публичные API этим планом не назначаются.
 
-Актуальный порядок, сверка2026-10-11: ближайший общий шаг — CORE5/COB4 независимый headless package consumer и analyzer delivery, параллельно локальным ENE1/ENE2 и MIT0 own-process сценариям. Предыдущий solution baseline2026-10-10 подтверждает исправления Core/Cobalt; Mithril discovery0 отдельно не считается passing proof. UI owner dispatcher реализован, package/independent consumer5.4–5.5 проверен2026-10-11 на Windows x64/net10.0/framework-dependent Debug/Release build/publish без RID. Fixed-font goldenK2/K4 проверен2026-10-11:30reference PNG,360full-image comparisons Debug/published Release, UI532/532, validation0/0; следующий независимый общий этап — CORE5/COB4. NVIDIA GDI defect остаётся внешним K7 блокером; поиск app-side workaround отложен по решению пользователя, условия возврата и полный lifecycle acceptance сохраняются в локальном UI плане. Ограниченное UI окружение не останавливает независимые общие работы. Документационная сверка не является новым runtime/test результатом.
+Актуальный порядок, сверка2026-10-11: CORE5/COB4 independent headless package/analyzer
+consumer проверен на Windows x64/net10.0/SDK10.0.401 — 64 matrix + 3 delivered README
+processes, Debug/Release build/publish без RID; текущие Core81/Cobalt37/generator6
+регрессии прошли. [Детальный сценарий у Core](core/PLAN.md#core5--cob4-независимый-headless-consumer--2026-10-11).
+MIT0 bounded own-child baseline проверен2026-10-11: Mithril14/14 Debug и14/14
+Release, manual16/16 Debug/published Release; `Never` handle scope без App/IPC.
+[Локальный контракт](mithril/PLAN.md#mit0-own-child-контракт--2026-10-11).
+ENE1/ENE2 bounded same-build pipes проверен2026-10-11: runtime71/71 и generator34/34
+в Debug/Release, manual12/12; [контракт](enerit/PLAN.md#ene1-ene2-контракт--2026-10-11).
+MIT1/MIT2 App/controller/parent-exit проверен2026-10-11: Mithril65/65 Debug/Release, App matrix28/28 на Cobalt/DI, fresh legacy16/16 в App/Never scope; [контракт](mithril/PLAN.md#mit1mit2-app-composition-контракт--2026-10-11).
+MIT3 bounded restart проверен2026-10-12: Mithril89/89 Debug/Release, restart40/40, App Never regression28/28 и legacy16/16; [контракт](mithril/PLAN.md#mit3-bounded-restart-контракт--2026-10-12).
+Ближайший общий функциональный шаг — MIT4/ENE4 App+IPC+restart composition proof.
+Локальный Core/Cobalt шаг — COB5 startup/resolution/allocations baseline на фиксированном graph.
+UI owner/package5.4–5.5 и fixed-font K2/K4 проверены ранее2026-10-11:
+UI532/532, golden360/360, validation0/0; эти UI проверки текущим headless шагом не повторены.
+NVIDIA GDI defect остаётся внешним K7 блокером; поиск app-side workaround отложен
+по решению пользователя, lifecycle acceptance и условия возврата сохраняются.
+Physical DPI/4.9, real loss/VRAM и итоговый alpha этап остаются в UI плане.
 
 ## Сквозные правила
 

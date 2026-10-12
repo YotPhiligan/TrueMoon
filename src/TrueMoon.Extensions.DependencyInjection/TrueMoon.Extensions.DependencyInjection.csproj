@@ -2,10 +2,16 @@
 
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
+        <Description>Microsoft.Extensions.DependencyInjection adapter for TrueMoon application and service contracts. Alpha API.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
     </ItemGroup>
 
     <ItemGroup>

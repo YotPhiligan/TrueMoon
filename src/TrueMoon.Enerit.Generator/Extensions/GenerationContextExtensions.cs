@@ -7,6 +7,16 @@ public static class GenerationContextExtensions
 {
     internal static void GenerateSerializationExtensions(this GenerationContext context, ITypeSymbol type)
     {
+        if (type is IArrayTypeSymbol array)
+        {
+            context.GenerateSerializationExtensions(array.ElementType);
+            return;
+        }
+        if (type is INamedTypeSymbol { IsGenericType: true, Name: "List" or "IReadOnlyList" or "Dictionary" or "IReadOnlyDictionary" } collection)
+        {
+            foreach (var argument in collection.TypeArguments) context.GenerateSerializationExtensions(argument);
+            return;
+        }
         if (WellKnownTypes.Contains(type))
         {
             return;
