@@ -234,3 +234,204 @@ Historical Enerit generator/manual, other module suites and UI/native checks
 were not promoted to current results. Next functional work MIT4/ENE4.
 
 Final restart matrix UTC:2026-10-12T12:55:07.4611964Z;63 fingerprints verified unchanged,0mismatches. Documentation:40 Markdown files/424local links/106anchors,0problems. PowerShell/XML parse and git diff --check passed.
+
+## MIT4/ENE4 App и generated pipes — 2026-10-14
+
+Требование пользователя: «продолжи выполнение работы». Продолжен ранее выбранный
+MIT4/ENE4, будущий engine/editor план сохранён. Windows x64/build26300, net10.0,
+SDK10.0.402, xUnit2.9.3/VSTest. [Контракт](PLAN.md#mit4ene4-app-и-generated-pipes-контракт--2026-10-14),
+[runner](../../ManualTests/AppUnitsPipesProbe/README.md).
+
+### Изменения и найденные проблемы
+
+Первый настоящий App/Cobalt consumer не мог разрешить внутреннюю pipes factory;
+после explicit transport factories — generated proxy, невидимый sibling Cobalt
+analyzer. Enerit generator теперь сохраняет typed registration actions; storage
+содержит compiled metadata, instances App-local. Внутренние factories/resolver
+регистрируются явно. Consumer подключает UseDiagnostics и объявляет local
+implementation Composite до Listen. Mithril runtime не менялся.
+
+App-owned client/server получили один Start/Stop lifetime wrapper. Startup-failure
+probe сначала обнаружил живые client workers после rollback: IStoppable-only
+wrapper не попадал в Core started set. Он теперь также IStartable, и regression
+проверяет cleanup до App.Dispose. Listen не пропускает server при существующем
+local service; Use/Listen повторяемы. Scoped pipe endpoint выбирается callback;
+выбранное пустое имя не заменяется default.
+
+Промежуточные ошибки fixture исправлены: remote error имеет InvocationException,
+а не IOException; diagnostics factory требует явного UseDiagnostics. Новый
+generator assertion сначала не компилировался из-за неверного имени result;
+исправлен на generatorResult, финальные Debug/Release runs чистые.
+
+Core regression сначала дала80passed/1failed: diagnostics build-failure test
+поймал IAppLifetime.Cancel из parallel App, поскольку default filters включают
+TrueMoon. Assertion теперь наблюдает уникальное событие собственного probe через
+ConcurrentBag; IsEnabled=false/исходная причина/пустой журнал probe сохранены.
+Runtime Core не менялся. Финальные Core suites81/81 в обеих configurations.
+
+### Итоговые команды и evidence
+
+Команды ниже выполнялись из src. Каждый project запускался отдельно с проверкой
+exit code; полный solution build выполнялся после окончательных production правок.
+
+```powershell
+pwsh -NoProfile -File ManualTests/AppUnitsPipesProbe/RunAppUnitsSmoke.ps1 -ResultsDirectory TestResults/AppUnitsPipes/final-manual
+pwsh -NoProfile -File ManualTests/EneritPipesProbe/RunPipesSmoke.ps1 -ResultsDirectory TestResults/AppUnitsPipes/isolated
+
+$projects = @(
+    @('TrueMoon.Enerit.Tests', 'enerit'),
+    @('TrueMoon.Enerit.Generator.Tests', 'generator'),
+    @('TrueMoon.Mithril.Tests', 'mithril'),
+    @('TrueMoon.Tests', 'core'),
+    @('TrueMoon.Cobalt.Tests', 'cobalt'),
+    @('TrueMoon.Cobalt.Generator.Tests', 'cobalt-generator')
+)
+foreach ($project in $projects) {
+    foreach ($configuration in @('Debug', 'Release')) {
+        $name = $project[1] + '-' + $configuration.ToLowerInvariant()
+        dotnet test (Join-Path $project[0] ($project[0] + '.csproj')) --configuration $configuration --no-restore --logger "trx;LogFileName=$name.trx" --results-directory TestResults/AppUnitsPipes/tests --verbosity quiet
+        if ($LASTEXITCODE -ne 0) { throw "Failed $name" }
+    }
+}
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet
+```
+
+| Проверка | Финальный результат |
+| --- | --- |
+| Enerit | Debug102/102 и Release102/102;31 новых cases:13registration +18App/process, прежние71 сохранены |
+| Enerit generator | Debug34/34 и Release34/34;5existing inheritance cases дополнены initializer factory assertions и compile/emit |
+| Mithril | Debug89/89 и Release89/89; отдельная regression, process runtime без изменений |
+| Core | Debug81/81 и Release81/81 после исправления test isolation |
+| Cobalt | Debug37/37 и Release37/37 |
+| Cobalt generator | Debug6/6 и Release6/6 |
+| App composition matrix | 36/36, Completed=true;38commands exit0, Cobalt/DI ×Debug/published Release ×9scenarios |
+| Isolated pipes matrix | 12/12, Completed=true; прежний same-build probe повторён отдельно |
+| Full solution | Non-incremental Debug exit0/errors0/warnings1226 |
+
+Все12final TRX имеют Failed0/NotExecuted0, total698. Ignored artifacts:
+`TestResults/AppUnitsPipes/tests/*.trx`, `generator-*.log`, `mithril-*.log`,
+`core-*.log`, `cobalt-*.log`, `cobalt-generator-*.log`, `enerit-*.log`,
+`solution-debug.log`; process summary/logs в `final-manual` и `isolated`.
+SHA256 каждого файла final-manual SourceSha256 совпал с текущим исходником,
+mismatches0. Каждый case имеет новый каталог/GUID endpoint, поэтому старые markers
+не используются как readiness. Copy fixture target доставляет executable/dependencies
+в существующий Enerit test project; новый project зарегистрирован в TrueMoon.slnx.
+
+### Requirement / observable checks
+
+| Requirement | Тест и наблюдение |
+| --- | --- |
+| «продолжи выполнение работы» | AppUnits_TypedPipes_RestartCancellationFailureAndShutdown:18cases, PID/exit codes/exact counts, same-proxy restart, rollback, child parent-exit cleanup |
+| «продолжи выполнение работы» | StartupFailure_RollsBackPreviouslyResolvedClientBeforeAppDispose:2providers, original exception identity и release1 до provider disposal |
+| «продолжи выполнение работы» | ProxyFactories_AreAppLocalIdempotentAndShareStartStopLifetime и ExistingLocalService_IsPreservedAndListenerStartsAndStopsOnce: per-App identity, single factories/aliases, borrowed local preservation |
+| «продолжи выполнение работы» | PipeFactories_ResolveDefaultOrScopedEndpointsOnBothProviders и ExplicitEndpoint_InvalidValueIsRejectedInsteadOfDefaultFallback:4real connect/stop +3invalid endpoint cases |
+| «продолжи выполнение работы» | GeneratedClientAndHandler_ImplementTheCompleteServiceInterface:typed factories + complete compiled/emit mapping; Debug/Release generator34/34 |
+
+Assertion-quality и static behavioral gap review сохранены в ignored
+`.git/testagent/enerit-mithril/status.md`; coverage/empirical mutation не запускались.
+
+### Границы вывода
+
+MIT4/ENE4 выполнены только в согласованном same-build cooperative own-child pipes
+scope. Pending failed call не replayed; intermediate exit не отменяет controlling
+App, terminal exhaustion отменяет. Parent normal Stop/failed Start проверяют workers
+до App.Dispose. Parent abrupt exit убивает только известный parent; child выполняет
+свой Stop и server cleanup, но client workers убитого parent не наблюдаем:
+ClientCleanupObserved=false/WorkersCompleted=false/Pending=-1.
+
+UI tests/native, independent NuGet/analyzer delivery, other OS, MMF, long stress/
+resource trend, arbitrary custom transports/callbacks и uncooperative handlers не
+проверены. Исторические MIT3 manual40/App28/legacy16 не считаются текущим запуском.
+Следующий общий функциональный приоритет — response validation/partial nested-buffer
+cleanup Enerit, затем MIT5/ENE5 package consumer. Коммит/пуш этим шагом не выполнялся.
+
+Документация после обновления проверена2026-10-14:45Markdown documents,488local links,123heading links,0problems. Default git diff --check passed; новые untracked source/doc files проверены отдельно. Документальный checker в ignored TestResults/AppUnitsPipes/VerifyDocs.ps1, отчет links.json.
+
+## Regression Enerit decode ownership — 2026-10-14
+
+После [Enerit hardening](../enerit/HISTORY.md#strict-response-и-decode-ownership--2026-10-14)
+Mithril89/89 Debug и89/89 Release прошли, Failed0/Skipped0. AppUnitsPipesProbe
+36/36 Cobalt/DI Debug/published Release и isolated pipes12/12 Completed=true;
+source fingerprints current. Mithril runtime/contract не менялись. Final solution
+Debug non-incremental exit0/errors0/warnings1227. Scope same-build cooperative child,
+killed parent client cleanup не наблюдаем; UI/Core/Cobalt/packages не повторены.
+Точные команды/артефакты у Enerit; следующий MIT5/ENE5 independent consumer.
+
+## MIT5/ENE5 independent package consumer — 2026-10-14
+
+Требование: «давай следующий выполним» — package portion после strict decode
+ownership. [Контракт](PLAN.md#mit5ene5-independent-package-contract--2026-10-14),
+[runner](../../ManualTests/UnitsPackageConsumer/README.md).
+Windows x64/build26300/net10.0/SDK10.0.402/xUnit2.9.3/VSTest.
+
+Изменены metadata/README Enerit, Enerit.Generator, Mithril и Description Core.
+Runtime/generator C# logic не менялась. Independent consumer имеет own MSBuild/CPM
+boundary, explicit PackageReference analyzers и compile-time generated type evidence.
+Program/Contract скопированы из AppUnitsPipesProbe; после копирования build/runtime
+не обращаются к source references. Repo global.json выбирает SDK. NuGet mapping и
+isolated cache проверяют origin/version каждого TrueMoon package, без UI/project
+libraries. Actual compiler analyzer paths/SHA и generated sources сохранены.
+Runtime outputs включают apphost/assembly/deps/runtimeconfig и dependency DLLs,
+не содержат analyzer/Roslyn/graphics DLLs. Packages остаются local, не опубликованы.
+
+Первый run ошибочно требовал ReplySerializationExtensions.g.cs вместо actual
+Reply.SerializationExtensions.g.cs; следующий имел Verify-Case параметр Pid,
+конфликтующий с read-only PowerShell PID. Исправлены только runner names/parameter,
+oracles сохранены. Оба failed run directories сохранены; final fresh run полный.
+
+Из src:
+
+```powershell
+pwsh -NoProfile -File ManualTests/UnitsPackageConsumer/RunPackageSmoke.ps1
+$projects = @(
+    @('TrueMoon.Enerit.Tests', 'enerit'),
+    @('TrueMoon.Enerit.Generator.Tests', 'generator'),
+    @('TrueMoon.Mithril.Tests', 'mithril'),
+    @('TrueMoon.Tests', 'core'),
+    @('TrueMoon.Cobalt.Tests', 'cobalt'),
+    @('TrueMoon.Cobalt.Generator.Tests', 'cobalt-generator')
+)
+foreach ($project in $projects) {
+    foreach ($configuration in @('Debug', 'Release')) {
+        $name = $project[1] + '-' + $configuration.ToLowerInvariant()
+        dotnet test (Join-Path $project[0] ($project[0] + '.csproj')) --configuration $configuration --no-restore --logger "trx;LogFileName=$name.trx" --results-directory TestResults/UnitsPackages/tests --verbosity quiet
+        if ($LASTEXITCODE -ne 0) { throw "Failed $name" }
+    }
+}
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet
+```
+
+| Проверка | Финальный результат |
+| --- | --- |
+| Local feed |9packages; metadata/assets, TrueMoon dependency versions,2analyzer-only layouts/SHA проверены |
+| Compiler/source graph |9TrueMoon package libraries в both-generators,8в microsoft-only;0project/UI libraries;4actual compiler configurations |
+| Functional matrix |108/108cases =72Cobalt/DI +36DI без Cobalt analyzer; Debug/Release build/publish, Completed=true |
+| Negative control |Without Enerit analyzer fresh build — ожидаемый CS0234, generated namespace отсутствует |
+| Regression |Enerit126, generator114, Mithril89, Core81, Cobalt37/generator6 отдельно Debug/Release;12TRX/906passed/0failed/0notExecuted |
+| Full solution |Final Debug non-incremental exit0/errors0/warnings1227 |
+
+129runner commands:9packs,2positive restores/4builds/4publishes,108process cases,
+negative restore/build. Result oracles проверяют actual root/child PID, expected1/2
+owned generations/distinct identities, crash/noncrash exit codes, restart counts,
+exact typed/concurrent/error/cancel outcomes, terminal budget cancellation и cleanup
+scope. Probe внутри проверяет before-App.Dispose workers/pending/controller и
+child Stop1/server drain. Parent-exit supervisor kills parent only; killed parent
+client cleanup не наблюдаем и не маркируем passing.
+
+| Requirement | Evidence |
+| --- | --- |
+| «давай следующий выполним» |both-generators-Release-publish-cobalt-restart/budget и соответствующие Debug/build/DI cases; delivered own child, pending fails без replay, same proxy reconnect, terminal cancellation |
+| «давай следующий выполним» |microsoft-only-Debug-build-di-startup-failure/stop-pending/parent-exit и delivery siblings; no Cobalt compiler analyzer, cleanup original cause/PID/stop/worker assertions |
+| «давай следующий выполним» |AnalyzerEvidence.cs +Verify-Assets/Verify-Generation: exact package source/version/cache/analyzer SHA; build-without-enerit-generator expectedCS0234 |
+
+Raw summary/logs preserve all case records, commands, source/producer hashes,
+package descriptions/assets and generated-source fingerprints. QA research/plan/status
+в Git metadata .git/testagent/units-packages не stageable. No new C# unit-test cases:
+existing typed/process/ownership suites reused; package assertions находятся в runner.
+Coverage/empirical mutation не запускались. MIT5 diagnostics и ENE5 latency/throughput/
+allocations остаются отдельными задачами; другие OS/RID/NativeAOT/MMF/stress/UI/
+uncooperative shutdown не проверены. Commit/push не выполнялись.
+
+Final package run: `TestResults\UnitsPackages\run-20261014-094823275`, version `0.2.2.7-alpha.units.20261014094823288`; SourceFiles mismatches0,9nupkgs,108cases,129commands, Completed=true.
+
+Final docs validation:49Markdown documents/515local links/140heading links/0problems. Default git diff --check, new untracked source/doc whitespace/markers, runner parser and touched project XML checks passed. Artifacts ignored TestResults/UnitsPackages/links.json; module/source hashes mismatches0.

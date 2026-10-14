@@ -238,3 +238,26 @@ Final static verification: 31 changed/new text files без NUL/conflict markers
 source final newline, XML/PowerShell syntax valid. 34documents/374local links/85heading
 links без ошибок; git diff --check exit0. Все123 recorded source fingerprints и
 5package SHA256 совпадают; все64 child reports Completed=true. TestResults ignored.
+
+## Diagnostics test isolation при MIT4 — 2026-10-14
+
+Во время [MIT4/ENE4 regression](../mithril/HISTORY.md#mit4ene4-app-и-generated-pipes--2026-10-14)
+TrueMoon.Tests Debug сначала дал80passed/1failed/0skipped.
+AppCreationFailureDisposesResolverOwnedSubscriptions получил IAppLifetime.Cancel
+от параллельного теста через default TrueMoon filters. Исправлена только проверка:
+ConcurrentBag собирает unique eventName собственного DiagnosticListener probe,
+сохраняются original exception, IsEnabled=false и Assert.Empty для post-failure
+события. Production Core без изменений. Final Debug81/81 и Release81/81,
+Failed0/Skipped0, Windows x64/net10.0/SDK10.0.402. Команды/TRX в общем integration
+журнале. Packages/headless64+3/UI этой regression не повторены.
+
+## Package regression MIT5/ENE5 — 2026-10-14
+
+[Общий package журнал/команды](../mithril/HISTORY.md#mit5ene5-independent-package-consumer--2026-10-14).
+Windows x64/net10.0/SDK10.0.402: independent App/IPC/units consumer108/108,
+Cobalt/Microsoft DI включая DI без Cobalt analyzer. Actual packaged dependencies/
+compiler path/SHA и no-runtime-analyzer delivery подтверждены. Related source
+regressions Core81/81, Cobalt37/37/generator6/6 в Debug/Release, Failed0/Skipped0.
+Core получил только package Description; Cobalt/DI adapter C# runtime без изменений.
+Headless64+3/COB5 performance baseline не повторены. Full solution Debug nonincremental
+exit0/errors0/warnings1227; другие UI/native checks не запускались.

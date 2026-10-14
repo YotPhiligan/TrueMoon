@@ -7,7 +7,7 @@ using TrueMoon.Enerit.IO.Pipes;
 
 namespace TrueMoon.Enerit.Tests.Pipes;
 
-public class PipesProtocolTests
+public partial class PipesProtocolTests
 {
     private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(10);
 

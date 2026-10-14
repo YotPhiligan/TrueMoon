@@ -53,3 +53,24 @@ Failed0/Skipped0; full solution не повторялся. Cobalt shared Worker 
 Microsoft DI calls3/resource release1, borrowed0 — ранее принятые различия сохранены.
 Pack warnings/other compiler hosts/RID/AOT/performance сохраняют ограничения Core
 record. COB4 проверен в этой матрице; COB5 baseline остаётся следующим локальным шагом.
+
+## Regression при MIT4/ENE4 — 2026-10-14
+
+Cobalt runtime37/37 и generator6/6 прошли отдельно Debug/Release,
+Failed0/Skipped0, Windows x64/net10.0/SDK10.0.402.
+[Команды/TRX и общий scope](../mithril/HISTORY.md#mit4ene4-app-и-generated-pipes--2026-10-14).
+Production Cobalt/DI adapter без изменений. Explicit Enerit factories решают
+visibility sibling generated classes; local consumer implementation по-прежнему
+имеет явную Composite registration. Source composition36cases проверена на
+Cobalt/Microsoft DI; независимые packages/headless64+3/COB5 baseline не повторены.
+
+## Package regression MIT5/ENE5 — 2026-10-14
+
+[Общий package журнал/команды](../mithril/HISTORY.md#mit5ene5-independent-package-consumer--2026-10-14).
+Windows x64/net10.0/SDK10.0.402: independent App/IPC/units consumer108/108,
+Cobalt/Microsoft DI включая DI без Cobalt analyzer. Actual packaged dependencies/
+compiler path/SHA и no-runtime-analyzer delivery подтверждены. Related source
+regressions Core81/81, Cobalt37/37/generator6/6 в Debug/Release, Failed0/Skipped0.
+Core получил только package Description; Cobalt/DI adapter C# runtime без изменений.
+Headless64+3/COB5 performance baseline не повторены. Full solution Debug nonincremental
+exit0/errors0/warnings1227; другие UI/native checks не запускались.

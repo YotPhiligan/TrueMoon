@@ -9,6 +9,7 @@ public static class SourceHandleExtensions
         IMethodSymbol methodSymbol, 
         byte methodIndex)
     {
+        handle.SelectDecodeScopeName(methodSymbol);
         var parameters = methodSymbol.Parameters;
         var anyParameters = parameters.Any();
         
@@ -147,6 +148,7 @@ public static class SourceHandleExtensions
         {
             handle.AppendLine("            , handle =>");
             handle.AppendLine("            {");
+            handle.AppendLine($"                using var {handle.DecodeScopeName} = new PayloadDecodeScope();");
             handle.AppendLine("                var offset = 0;");
             handle.AppendLine($"                {GenerationUtils.GetTypeString(returnTypeSymbol)} result = default;");
             
@@ -166,14 +168,12 @@ public static class SourceHandleExtensions
                     handle.Context.GenerateSerializationExtensions(arrayItemType);
                     var r = handle.GenerateDeserializationForItemsBase(arrayItemType, "result", spanSource:"handle.Span");
                     handle.AppendLine($"            result = {r};");
-                    handle.AppendLine("            return result;");
                     break;
                 }
                 case INamedTypeSymbol { IsTupleType:true, TupleElements.IsEmpty:false } tupleSymbol:
                 {
                     var r = handle.GenerateDeserializationForTuple(tupleSymbol, "result", spanSource:"handle.Span");
                     handle.AppendLine($"            result = {r};");
-                    handle.AppendLine("            return result;");
                     break;
                 }
                 case INamedTypeSymbol
@@ -185,7 +185,6 @@ public static class SourceHandleExtensions
                     handle.Context.GenerateSerializationExtensions(listItemType);
                     var r = handle.GenerateDeserializationForItemsBase(listItemType, "result", true, spanSource:"handle.Span");
                     handle.AppendLine($"            result = {r};");
-                    handle.AppendLine("            return result;");
                     break;
                 }
                 case INamedTypeSymbol
@@ -200,13 +199,12 @@ public static class SourceHandleExtensions
                     handle.Context.GenerateSerializationExtensions(valueType);
                     var r = handle.GenerateDeserializationForDictionaryBase(keyType, valueType, "result", spanSource:"handle.Span");
                     handle.AppendLine($"            result = {r};");
-                    handle.AppendLine("            return result;");
                     break;
                 }
                 case {TypeKind:TypeKind.Class or TypeKind.Struct} 
                     when WellKnownTypes.NotContains(returnTypeSymbol):
                     handle.Context.GenerateSerializationExtensions(returnTypeSymbol);
-                    handle.AppendLine("                return result.Deserialize(handle.Span[offset..], ref offset);");
+                    handle.AppendLine($"                result = result.Deserialize(handle.Span, ref offset, {handle.DecodeScopeName});");
                     break;
                 default:
                 {
@@ -224,20 +222,21 @@ public static class SourceHandleExtensions
                         handle.AppendLine("            {");
                         handle.AppendLine(returnTypeSymbol.TypeKind == TypeKind.Enum
                             ? $"                result = ({GenerationUtils.GetTypeString(returnTypeSymbol)})SerializationUtils.Read<int>(handle.Span[offset..], ref offset);"
-                            : $"                result = SerializationUtils.Read{b}(handle.Span[offset..], ref offset);");
+                            : $"                result = {handle.ReadCodec(b)}(handle.Span[offset..], ref offset);");
                         handle.AppendLine("            }");
                     }
                     else
                     {
                         handle.AppendLine(returnTypeSymbol.TypeKind == TypeKind.Enum
                             ? $"            result = ({GenerationUtils.GetTypeString(returnTypeSymbol)})SerializationUtils.Read<int>(handle.Span[offset..], ref offset);"
-                            : $"            result = SerializationUtils.Read{b}(handle.Span[offset..], ref offset);");
+                            : $"            result = {handle.ReadCodec(b)}(handle.Span[offset..], ref offset);");
                     }
-                
-                    handle.AppendLine("                return result;");
                     break;
                 }
             }
+            handle.AppendLine("                SerializationUtils.EnsureFullyConsumed(offset, handle.Length);");
+            handle.AppendLine($"                {handle.DecodeScopeName}.Commit();");
+            handle.AppendLine("                return result;");
             handle.AppendLine("            }");
         }
         
@@ -362,7 +361,7 @@ public static class SourceHandleExtensions
                 //sb.AppendLine($"            result.{name} = new object();");
                 break;
             case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(typeSymbol):
-                handle.AppendLine($"            result.{name} = result.{name}.Deserialize(span, ref offset);");
+                handle.AppendLine($"            result.{name} = result.{name}.Deserialize(span, ref offset, {handle.DecodeScopeName});");
                 break;
             default:
             {
@@ -380,14 +379,14 @@ public static class SourceHandleExtensions
                     handle.AppendLine("            {");
                     handle.AppendLine(typeSymbol.TypeKind == TypeKind.Enum
                         ? $"                result.{name} = ({GenerationUtils.GetTypeString(typeSymbol)})SerializationUtils.Read<int>(span[offset..], ref offset);"
-                        : $"                result.{name} = SerializationUtils.Read{b}(span[offset..], ref offset);");
+                        : $"                result.{name} = {handle.ReadCodec(b)}(span[offset..], ref offset);");
                     handle.AppendLine("            }");
                 }
                 else
                 {
                     handle.AppendLine(typeSymbol.TypeKind == TypeKind.Enum
                         ? $"            result.{name} = ({GenerationUtils.GetTypeString(typeSymbol)})SerializationUtils.Read<int>(span[offset..], ref offset);"
-                        : $"            result.{name} = SerializationUtils.Read{b}(span[offset..], ref offset);");
+                        : $"            result.{name} = {handle.ReadCodec(b)}(span[offset..], ref offset);");
                 }
 
                 break;

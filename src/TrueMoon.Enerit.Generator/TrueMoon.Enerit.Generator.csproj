@@ -2,6 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
+        <Description>Source generator for TrueMoon Enerit typed clients, handlers and payload codecs. Requires the .NET 10 SDK compiler.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     </PropertyGroup>
@@ -17,4 +19,5 @@
     
     
     
+    <ItemGroup><None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" /></ItemGroup>
 </Project>

@@ -1,7 +1,6 @@
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using System.Text;
 using TrueMoon.Diagnostics;
 using TrueMoon.Threading;
 
@@ -82,13 +81,14 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                         memory = MemoryPoolUtils.Create(length);
                         PipeStream.ReadFullBuffer(memory);
                     }
+                    var errorMessage = status == 1 ? PipesProtocol.DecodeError(memory.Span) : null;
                     if (!_responses.TryRemove(guid, out var response))
                     {
                         // Cancellation removed this request locally. Drain its entire frame and keep peers alive.
                         _eventsSource.Write(() => $"Discarded late response {guid}", "LateResponse");
                         continue;
                     }
-                    if (status == 1) response.TrySetException(new InvocationException(Encoding.UTF8.GetString(memory.Span)));
+                    if (status == 1) response.TrySetException(new InvocationException(errorMessage!));
                     else if (response.TrySetResult(memory)) memory = default; // Ownership passes to the awaiting caller.
                 }
                 finally { memory.TryReturn(); }
@@ -183,7 +183,11 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
 
     /// <summary>Waits for the remote acknowledgement, including an empty successful response.</summary>
     public async Task InvokeAsync(byte methodCode, Action<IBufferWriter<byte>>? action, CancellationToken cancellationToken = default)
-        => _ = await InvokeAsync(methodCode, action, static _ => 0, cancellationToken).ConfigureAwait(false);
+        => _ = await InvokeAsync(methodCode, action, static payload =>
+        {
+            SerializationUtils.EnsureFullyConsumed(0, payload.Length);
+            return 0;
+        }, cancellationToken).ConfigureAwait(false);
 
     public TResult Invoke<TResult>(byte methodCode, Action<IBufferWriter<byte>>? action, Func<ReadOnlyMemory<byte>, TResult> func)
         => InvokeAsync(methodCode, action, func).GetAwaiter().GetResult();

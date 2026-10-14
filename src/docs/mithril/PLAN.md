@@ -1,6 +1,6 @@
 # Mithril: план units и процессного lifecycle
 
-Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Уточнённые MIT0/MIT1/MIT2/MIT3 contracts записаны ниже; сквозная интеграция и поставка остаются открыты.
+Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Уточнённые MIT0–MIT4 contracts записаны ниже; bounded App/IPC интеграция проверена2026-10-14, независимая поставка остаётся открыта.
 
 ## Границы
 
@@ -73,7 +73,7 @@ MIT0 выполнен в этом scope; MIT1–MIT5 не объявляются
   выдаёт. Restart/parent-crash и конкурентный пользовательский callback остаются
   отдельными MIT2/MIT3 критериями; наличие lifecycle gate не является их proof.
 
-Следующая Mithril работа: MIT1 — изоляция static unit configuration между App
+На момент MIT0 следующая Mithril работа: MIT1 — изоляция static unit configuration между App
 instances, реальный MainProcess contract и ошибки/отмена composition. Затем MIT2
 parent-exit, controller shutdown/error propagation, callbacks/concurrent stop;
 MIT3 restart limits/delay и stop-versus-restart. Общий следующий IPC шаг принадлежит
@@ -129,7 +129,7 @@ App lifetime, Never, Cobalt/Microsoft DI,
   controller/listener и aliases регистрируются явными factories на один instance;
   consumer Cobalt generator нужен его собственным services.
 
-MIT1/MIT2 выполнены только в этом scope. Следующий этап MIT3, затем MIT4/ENE4.
+MIT1/MIT2 выполнены только в этом scope. На момент этого этапа далее MIT3, затем MIT4/ENE4.
 Другие OS, package delivery, stress/resource trend, произвольные callbacks и
 дополнительные lifetime/startup modes остаются открыты.
 
@@ -179,3 +179,86 @@ reentrant/concurrent cleanup подтверждаются bounded own-process sc
 Debug/published Release. Затем MIT4/ENE4 App/AddUnit + generated Enerit IPC.
 Другие OS, stress/resource trend, package delivery и recovery долгоживущих
 production units не выводятся из этой матрицы.
+
+### MIT4/ENE4 App и generated pipes контракт — 2026-10-14
+
+Уточнение сквозного G3 после MIT3: один parent App и один owned AddUnit child,
+App lifetime, Windows x64/net10.0, Cobalt/Microsoft DI. Вызовы проходят через
+`UseInvocationService<T>` и `ListenInvocationService<T,TService>`, generated
+proxy/handler и pipes factories; probe не создаёт adapters/transport напрямую.
+[Consumer и runner](../../ManualTests/AppUnitsPipesProbe/README.md).
+Это основной детальный контракт MIT4/ENE4; Enerit ссылается на него.
+
+- Service/payload sources и версия generator одинаковы у peers. Parent выбирает
+  уникальный endpoint, child наследует его; default service full name сохранён.
+  Diagnostics подключается явно. Consumer local service регистрируется явно
+  перед Listen, чтобы Cobalt видел его constructor graph.
+- Generated registration содержит typed factories, внутренние transport factories
+  также явные. Static storage хранит metadata/factories; service, client и handler
+  instances принадлежат конкретному App. Повторный Use/Listen не создаёт второй
+  transport; существующая local registration сохраняется, но не блокирует Listen.
+- App Start/Stop aliases одного transport lifetime участвуют в startup rollback.
+  У зарегистрированного здесь owned transport Stop выполняет async/sync Dispose,
+  либо IStoppable fallback. Pipes cleanup повторяем; DI disposal позже допустим.
+  Заранее зарегистрированный transport сохраняет lifecycle своего владельца.
+- Typed DTO/null/Unicode,32concurrent, Task acknowledgement, remote exception,
+  local request cancellation и следующий вызов проверяются на обоих providers.
+- OnCrash/limit1/delay50ms: crash owned child завершает старый pending call ошибкой,
+  без retry/replay. Intermediate exit не отменяет App; новый PID/control endpoint
+  и server восстанавливают последующие вызовы через тот же client/proxy.
+  Второй crash исчерпывает бюджет, отменяет controlling App, третьей generation нет.
+- App.Stop при pending cooperative RPC и failed App.Start после предварительного
+  Spawn очищают client pending/workers и owned controller handles до App.Dispose.
+  Cooperative child gracefully выходит0, освобождает server workers и останавливает
+  local service один раз. Stop повторяем.
+- Parent abrupt exit проверяется supervisor: kill только известного parent,
+  без entireProcessTree. Child production parent observer отменяет App, закрывает
+  server/handler и выходит0. Client cleanup убитого parent не наблюдаем и не заявляем.
+
+MIT4/ENE4 выполнены в этом bounded scope при passing Debug/published Release
+36-case matrix и runtime/generator regressions. Нет зависимости Mithril→Enerit;
+production изменения принадлежат Enerit. Независимая package delivery — MIT5/ENE5;
+MMF, другие OS, stress/zero-leak proof, arbitrary custom transports/callbacks и
+uncooperative handlers остаются отдельными критериями. Response validation и partial nested-buffer cleanup Enerit проверены позднее
+того же дня; [локальное решение](../enerit/PLAN.md#ene1ene2-strict-response-и-decode-ownership--2026-10-14).
+Далее MIT5/ENE5 independent package composition.
+
+### MIT5/ENE5 independent package contract — 2026-10-14
+
+Основной детальный plan этой межмодульной поставки ведётся здесь.
+[Runner](../../ManualTests/UnitsPackageConsumer/README.md). Package portion
+MIT5/ENE5 проверяет тот же bounded MIT4 own-child/same-build/cooperative pipes
+contract на Windows x64/net10.0/.NET10 SDK compiler. Operational diagnostics MIT5
+и latency/throughput/allocations baseline ENE5 остаются отдельными критериями.
+
+- Собрать девять packages App/Contracts/Core/Cobalt/Cobalt.Generator/DI adapter/
+  Enerit/Enerit.Generator/Mithril с одинаковой unique prerelease version в local feed.
+  Generator packages analyzer-only; runtime packages имеют нужные dependencies и
+  самостоятельную документацию/metadata assets. NuGet publish не выполняется.
+- В fresh consumer directories скопировать согласованные Program/Contract probe
+  sources как application code. Их build использует только PackageReference;
+  Compile links/ProjectReference и Repo build/CPM defaults не допускаются. Отдельные
+  Directory.Build props/targets/Directory.Packages.props и NuGet.Config являются
+  boundary. Repo global.json по-прежнему выбирает заявленный SDK.
+- TrueMoon dependencies должны реально прийти из unique local feed в isolated
+  package cache. В assets нет project libraries или UI/native dependencies. Проверить
+  metadata source/version/hash и фактические compiler Analyzer paths/bytes, generated
+  client/handler/DTO/initializer sources. В deployed output нет generator/Roslyn DLLs.
+- Explicit PrivateAssets=all references обоих analyzers для Cobalt/DI; дополнительный
+  Microsoft DI consumer исключает Cobalt analyzer. Omitted Enerit analyzer — fresh
+  negative compile control CS0234/CS0246 на concrete generated type evidence.
+  Reflection/ручное construction proxy в functional path не заменяет App resolution.
+- Matrix:9scenarios ×Debug/Release ×build/publish ×(Cobalt,DI,DI без Cobalt analyzer)
+  =108owned case processes. Framework-dependent output без RID включает apphost,
+  assembly/deps/runtimeconfig и dependency DLLs; selected child запускает delivered
+  consumer. Payload/concurrent/cancel/error/restart/budget/Stop pending/rollback/
+  abrupt parent exit сохраняют exact PID/exit/count/lifetime/cleanup oracles.
+- Case deadlines и failure kill/reap ограничены own launched tree. Parent-exit
+  supervisor убивает только известный parent; killed client workers не наблюдаем.
+  Source SHA256/nupkg hashes/commands/actual results сохраняются, stale case markers
+  исключены fresh directories/endpoints. Completed требует108cases и negative control.
+
+Эта package acceptance не закрывает performance/diagnostics, MMF/schema/other OS,
+RID/self-contained/single-file/trimming/NativeAOT, произвольные custom transports,
+uncooperative shutdown или production resource trend. После неё измерить IPC
+baseline, затем уточнить operational diagnostics, сохраняя эти boundaries.

@@ -203,3 +203,149 @@ rental cleanup и backpressure остаются открыты. Cooperative hand
 MMF, App/AddUnit/controller/parent-exit/restart, NuGet delivery и performance
 нуждаются в собственных proofs. Дальнейший общий шаг — Mithril MIT1/MIT2, затем
 MIT3/ENE4 composition.
+
+## ENE4 App registration и lifecycle — 2026-10-14
+
+[Основной integration журнал и точные команды](../mithril/HISTORY.md#mit4ene4-app-и-generated-pipes--2026-10-14)
+ведутся один раз у Mithril. Enerit получил typed generated registration factories,
+App-local metadata construction, explicit internal pipes factories, endpoint selector
+и owned transport Start/Stop wrapper. Existing local service сохраняется, Listen
+всё равно запускает server; повторная registration idempotent. Previously resolved
+client участвует в startup rollback, что подтверждено до App.Dispose.
+
+Windows x64/net10.0/SDK10.0.402: runtime102/102 и generator34/34 отдельно Debug/Release,
+Failed0/Skipped0; App/manual36/36 Cobalt/DI и isolated pipes12/12 Debug/published
+Release, Completed=true. Mithril89, Core81, Cobalt37/generator6 также проверены
+отдельно в каждой configuration. Non-incremental Debug solution build exit0,
+errors0/warnings1226. Финальные process source hashes совпадают, mismatches0.
+
+Wire format этим шагом не изменён. New generated factories требуют runtime
+соответствующих overloads; legacy no-factory metadata fallback сохранён.
+Same-build/cooperative scope; killed parent client cleanup не наблюдаем. MMF,
+independent packages/performance, response trailing-byte validation, partial nested
+ReadBytes cleanup/backpressure/schema negotiation остаются открыты. Следующий
+локальный шаг — response validation и partial nested-buffer cleanup.
+
+## Strict response и decode ownership — 2026-10-14
+
+Требование пользователя: «давай приступим к следующему шагу» — после MIT4/ENE4
+выбран response validation и partial nested-buffer cleanup перед package consumer.
+[Единый локальный контракт](PLAN.md#ene1ene2-strict-response-и-decode-ownership--2026-10-14).
+Windows x64/build26300, net10.0, SDK10.0.402, xUnit2.9.3/VSTest.
+
+### Реализация
+
+PayloadDecodeScope явно владеет ReadBytes rentals одного decode, включая значения,
+которые ещё не присвоены DTO/collection. Failure Dispose возвращает whole rentals;
+Commit передаёт ownership caller или service. Список создаётся только при byte read.
+Nested internal DTO reader получает тот же scope, public prefix reader создаёт
+свой. Reflection graph walk/global ambient state/resource counters не добавлялись.
+
+Generated typed response callback имеет один return после decode, exact-length
+validation и Commit. Null/empty/scalar/bytes/DTO/arrays/lists/dictionaries проходят
+один contract. Handler проверяет ВСЕ arguments и length до Commit/service entry:
+при malformed later parameter прежние rentals возвращены, service не вызван.
+После entry service сам отвечает за rentals даже при собственной ошибке.
+
+Pipes void/Task ack теперь требует empty payload. Error status1 требует strict
+UTF-8; error text декодируется до TryRemove matched pending, поэтому malformed
+message fault также первоначального caller, а не оставляет его ждать timeout.
+Успешный frame с decode failure возвращается в pool; следующий frame работает.
+Read<bool> принимает0/1; duplicate/null dictionary keys дают InvalidDataException.
+Generated local scope name выбирается с учётом parameter name; collision case
+скомпилирован и исполнен. Correct wire format и method IDs не менялись.
+
+### Работа и фактически выполненные проверки
+
+- Baseline до реализации: runtime102/102, generator34/34 Debug, exit0. При первом
+  переносе common return в generator validation ошибочно попала также в request
+  writer block;17existing emit tests failed с CS0103. Исправлен только writer block;
+  финальные compilations/runs чистые, assertions не ослаблены.
+- Runtime added24cases:16scope/length/bool +8raw-pipe responses. Generator added80cases:
+  compiled loaded callbacks/handlers, null/empty/trailing/truncated payloads,
+  nested DTO/collections/DTO dictionary keys, duplicate/null keys, prefix offset,
+  throwing setter/second constructor, no invalid dispatch и successful ownership.
+  Existing supported emission theory дополнена int dictionary key/Memory value.
+- Review нашёл отдельно непокрытый nested DTO dictionary key и constructor failure
+  после первого argument/child; добавлены наблюдаемые rental/exception assertions.
+  Не выполнялись coverage/empirical mutations; static QA в Git metadata scratch.
+
+Из src, test projects запускались отдельно с проверкой exit code, оба configurations.
+Generator final runs повторены после добавления review cases; runtime/Mithril и
+manual final sources не менялись после их успешного запуска.
+
+```powershell
+$projects = @(
+    @('TrueMoon.Enerit.Tests', 'runtime'),
+    @('TrueMoon.Enerit.Generator.Tests', 'generator'),
+    @('TrueMoon.Mithril.Tests', 'mithril')
+)
+foreach ($project in $projects) {
+    foreach ($configuration in @('Debug', 'Release')) {
+        $name = $project[1] + '-' + $configuration.ToLowerInvariant()
+        dotnet test (Join-Path $project[0] ($project[0] + '.csproj')) --configuration $configuration --no-restore --logger "trx;LogFileName=$name.trx" --results-directory TestResults/EneritDecode/tests --verbosity quiet
+        if ($LASTEXITCODE -ne 0) { throw "Failed $name" }
+    }
+}
+pwsh -NoProfile -File ManualTests/AppUnitsPipesProbe/RunAppUnitsSmoke.ps1 -ResultsDirectory TestResults/EneritDecode/app-manual
+pwsh -NoProfile -File ManualTests/EneritPipesProbe/RunPipesSmoke.ps1 -ResultsDirectory TestResults/EneritDecode/isolated
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet
+```
+
+| Проверка | Финальный результат |
+| --- | --- |
+| Runtime | Debug126/126 +Release126/126, Failed0/Skipped0 |
+| Generator | Debug114/114 +Release114/114, Failed0/Skipped0; compiler/emit и actual generated method execution |
+| Mithril | Debug89/89 +Release89/89, Failed0/Skipped0; runtime Mithril без изменений |
+| App composition | 36/36 Cobalt/DI ×Debug/published Release, Completed=true |
+| Isolated pipes | 12/12 Debug/published Release, Completed=true |
+| Solution | Final non-incremental Debug exit0/errors0/warnings1227 |
+
+Итого current6final TRX/658passed/0failed/0notExecuted. Ignored logs/TRX/summary:
+TestResults/EneritDecode/runtime-*.log, generator-*.log, mithril-*.log, tests/*.trx,
+app-manual/summary.json, isolated/summary.json и solution-debug.log. Baseline и
+промежуточные runs имеют отдельные filenames; они не заменяют final counters.
+Process source fingerprints сверены с current source, fresh case directories/GUID
+endpoints исключают stale readiness records. Source/test static Roslyn pairing
+запущен один раз; IDE findTests недоступен. Scratch research/plan/status находятся
+в .git/testagent/enerit-decode и не являются deliverables/stageable files.
+
+### Requirement / evidence
+
+| Requirement | Exact test / observable outcome |
+| --- | --- |
+| «давай приступим к следующему шагу» | GeneratedResponses_RejectTrailingBytesAndRollBackNestedRentals и GeneratedResponses_LaterTruncationReturnsPreviouslyDecodedBytes: InvalidDataException, captured nested whole rentals inaccessible/returned; DTO dictionary keys включены |
+| «давай приступим к следующему шагу» | GeneratedResponses_ConsumeExactlyAndTransferWholeRentalsToCaller и Commit_PreservesCallerOwnershipAndRejectsFurtherReads: exact literal values, live successful rentals, caller TryReturn=true once |
+| «давай приступим к следующему шагу» | GeneratedHandler_InvalidLaterArgumentDoesNotDispatchAndReturnsEarlierRentals / GeneratedHandler_ValidatedArgumentsTransferOwnershipBeforeServiceEntry: Calls0 vs1, original service exception и input ownership |
+| «давай приступим к следующему шагу» | LaterDtoConstructorFailureReturnsEarlierRentalsAndPreservesOriginalError / GeneratedDto_ThrowingSetterReturnsRentalAndPreservesOriginalError: response/request scopes, exact original error identity, earlier rentals returned |
+| «давай приступим к следующему шагу» | Client_NonemptyAcknowledgementIsRejectedAndNextCallSucceeds / Client_InvalidUtf8ErrorFaultsAllPendingWithoutLosingMatchedRequest / Client_DecodeFailureReturnsOuterResponseAndPreservesNextFrame: bounded caller errors, outer rental returned, next valid response |
+
+### Границы и совместимость
+
+Новая generation требует runtime с PayloadDecodeScope/EnsureFullyConsumed. Старый
+generated code не приобретает strict validation автоматически. Valid same-build
+wire unchanged; malformed data теперь отклоняется явно. DTO public Deserialize —
+prefix API, не whole-frame reader. Partial offset и user-code side effects не
+откатываются; successful input/output rentals принадлежат service/caller, в том
+числе после service throw. Manual unscoped ReadBytes/opaque callbacks имеют собственный
+ownership/validation contract. Scope synchronous и не thread-safe.
+
+Core/Cobalt suites, UI/native, independent NuGet/analyzer delivery, other OS,
+performance, MMF/backpressure/schema negotiation и uncooperative shutdown этим
+шагом не проверены. Parent-exit matrix наблюдает child/server cleanup; client
+workers killed parent не наблюдаем. Passing bounded proof не zero-leak/stress claim.
+Далее ENE5/MIT5 independent package composition. Commit/push не выполнялись.
+
+Документация:45Markdown documents,493local links,129heading links,0problems. Checker/links.json — ignored TestResults/EneritDecode. Default git diff --check passed; new untracked source/doc files проверены отдельно. QA research/plan/status отсутствуют в stageable git status.
+
+## ENE5 package portion — 2026-10-14
+
+[Единый журнал/команды](../mithril/HISTORY.md#mit5ene5-independent-package-consumer--2026-10-14).
+Enerit/runtime generator packaged descriptions/README добавлены; C# logic без изменений.
+9local packages,108/108independent consumer cases,4compiler configurations с actual
+analyzer path/SHA, expectedCS0234 без Enerit analyzer. Runtime126/126 и generator114/114
+Debug/Release, Failed0/Skipped0; related Mithril89/Core81/Cobalt37/generator6 также
+прошли отдельно. Final solution Debug non-incremental0errors/1227warnings.
+Same-build Windows x64/net10.0/SDK10.0.402; published/build consumer запускает own child.
+Local packages не опубликованы. Package portion выполнена; ENE5 performance baseline,
+MMF/backpressure/schema/uncooperative shutdown/other OS и MIT5 diagnostics открыты.

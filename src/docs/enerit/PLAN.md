@@ -106,3 +106,86 @@ ENE1/ENE2 выполнены как этот bounded baseline; общая produc
 ## После первой рабочей проверки
 
 Развивать payload compatibility, diagnostics и throughput по реальному consumer. Reconnection/backpressure и новые transports требуют отдельного contract proposal; сетевой RPC этим планом не обещается.
+
+### ENE4 App registration и lifecycle — 2026-10-14
+
+Детальный совместный acceptance ведётся один раз в
+[MIT4/ENE4 контракте Mithril](../mithril/PLAN.md#mit4ene4-app-и-generated-pipes-контракт--2026-10-14).
+Transport остаётся независимым от process controller; same-build pipes scope
+ENE1/ENE2 сохраняется. MMF ENE3 из этой интеграции не следует.
+
+Для App composition generator публикует typed registration factories в
+InvocationServiceStorage. Это compiled metadata, а не global service instances.
+Pipes internal services также создаются explicit factories, без зависимости на
+Cobalt. Новые generated factories требуют runtime с соответствующими overloads;
+старые metadata Register/RegisterHandler без factory сохранены, но type-based
+fallback сохраняет ограничения используемого resolver.
+
+PipesServiceTransport(Func<Type,string>) выбирает service endpoint без `tm_`;
+peers должны согласовать его сами, default overload не изменён. Выбранные null/
+empty/blank names не подменяются default. UseDiagnostics обеспечивает требуемую
+IEventsSourceFactory. Local consumer implementation должна иметь явную видимую
+Cobalt registration; Listen сохраняет существующий service и всё равно запускает
+listener. Use сохраняет existing local registration и не создаёт remote client.
+Повторный вызов idempotent. Owned transports участвуют в App Start/Stop rollback;
+собственные предварительно зарегистрированные transports сохраняют ownership.
+
+Следующий локальный шаг до ENE5: строгая validation response payload до возврата
+результата и cleanup nested ReadBytes rentals при частично неуспешном decode.
+Backpressure, uncooperative shutdown и schema/version negotiation требуют
+отдельного решения; это не обещание production readiness после ENE4.
+
+### ENE1/ENE2 strict response и decode ownership — 2026-10-14
+
+Уточнение перед independent ENE5/MIT5 consumer. Same-build pipes framing и
+supported payload shapes сохраняются; корректный wire format не меняется.
+
+- Generated typed response должен потребить payload полностью: лишний byte,
+  truncation, invalid state/length дают InvalidDataException до возврата результата.
+  Null marker — полный null payload, successful void/Task acknowledgement пуст.
+  Read<bool> принимает только0/1. Duplicate/null dictionary keys отвергаются как
+  InvalidDataException, без частичного результата. Scalar enum/domain ranges этим
+  structural validation не ограничиваются.
+- Status1 text — строгий UTF-8. Malformed text даёт InvalidDataException, fault
+  pending и reconnect; matched request остаётся в pending map до успешного decode
+  error text. Valid empty/Unicode exception message сохраняется. Decode failure
+  внутри корректного success frame fault только этого invocation; frame уже прочитан,
+  следующее сообщение может быть обработано без reconnect.
+- Явный PayloadDecodeScope принадлежит одному synchronous decode. Все ReadBytes,
+  включая вложенные DTO/arrays/lists/dictionaries/keys/parameters, регистрируются
+  у общего root scope. При failure scope возвращает каждую whole rental; обход
+  partially assigned object graph и ambient/static ownership не используются.
+- Response scope Commit выполняется после полного decode и length validation.
+  Caller становится владельцем всех whole nested rentals и возвращает их после
+  использования. Handler Commit выполняется после decode ВСЕХ parameters и
+  validation, перед service entry. После этого service отвечает за эти rentals,
+  включая свой throw/cancellation; automatic return после service вызова не добавляется.
+- Public DTO Deserialize сохраняет prefix/ref offset API и переносит rentals
+  caller после успешного prefix decode; остаток span может содержать следующее значение.
+  Internal nested reader заимствует root scope и самостоятельно не Commit.
+  Throwing user setter/constructor сохраняет исходную ошибку, failure rentals возвращены.
+  Partial failure не обещает откат offset или внешних side effects DTO user code.
+- Opaque manual IInvocationClient decode callback должен сам обеспечить shape/
+  consumed-length validation и nested ownership; transport знает только границы frame.
+  Unscoped ручной SerializationUtils.ReadBytes сохраняет существующий contract.
+
+Проверки: direct scope ownership/guards, реальные compiled generated callbacks и
+handlers с malformed и valid prefixes/collections/DTO, raw pipes invalid ack/error,
+последующее сообщение и outer response rental cleanup. Затем повторить App36 и
+isolated pipes12 Debug/published Release после generator changes. MMF/old generated
+code/schema negotiation/backpressure/uncooperative shutdown/other OS и performance
+не объявляются готовыми. Новая generation требует runtime с PayloadDecodeScope.
+
+### ENE5 package portion — 2026-10-14
+
+Совместный detailed consumer contract ведётся один раз у
+[Mithril MIT5/ENE5](../mithril/PLAN.md#mit5ene5-independent-package-contract--2026-10-14).
+Explicit Enerit analyzer/runtime доставляются в independent same-build pipes App
+consumer на Cobalt/DI; Microsoft DI также без Cobalt analyzer. Generator-only layout,
+compiler path/SHA, metadata/source/version и deployed own child проверяются отдельно
+от source ProjectReference suite. Correct codecs/decode ownership contract сохраняется.
+
+Package portion не означает полного ENE5: следующий отдельный шаг — измерить
+latency/throughput/allocations выбранного scenario до оптимизаций. Operational
+process diagnostics принадлежат MIT5; MMF ENE3, backpressure/schema/uncooperative
+shutdown и другой compiler/platform требуют собственных решений/checks.

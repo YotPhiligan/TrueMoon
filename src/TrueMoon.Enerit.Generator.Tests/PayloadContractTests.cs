@@ -14,6 +14,7 @@ public class PayloadContractTests
     [InlineData("Task<IReadOnlyList<string?>?> Echo(IReadOnlyList<string?>? value);")]
     [InlineData("Task<Dictionary<string, int>?> Echo(Dictionary<string, int>? value);")]
     [InlineData("Task<IReadOnlyDictionary<string, int>?> Echo(IReadOnlyDictionary<string, int>? value);")]
+    [InlineData("Task<Dictionary<int, Memory<byte>>?> Echo(Dictionary<int, Memory<byte>>? value);")]
     [InlineData("Task<Memory<byte>> Echo(Memory<byte> value);")]
     [InlineData("Task<ReadOnlyMemory<byte>> Echo(ReadOnlyMemory<byte> value);")]
     [InlineData("Task<Payload?> Echo(Payload? value);")]

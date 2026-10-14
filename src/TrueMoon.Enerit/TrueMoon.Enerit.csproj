@@ -2,6 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
+        <Description>Same-build typed invocation over named pipes, generated service integration and validated payload ownership. Alpha API.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
@@ -12,4 +14,5 @@
     </ItemGroup>
 
 
+    <ItemGroup><None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" /></ItemGroup>
 </Project>

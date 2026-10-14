@@ -2,6 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
+        <Description>TrueMoon App-local units, owned child process lifecycle and bounded restart policies. Alpha API.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
@@ -10,4 +12,5 @@
       <ProjectReference Include="..\TrueMoon.Core\TrueMoon.Core.csproj" />
     </ItemGroup>
     
+    <ItemGroup><None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" /></ItemGroup>
 </Project>

@@ -148,17 +148,22 @@ public class DiagnosticsTests
     public void AppCreationFailureDisposesResolverOwnedSubscriptions()
     {
         var name = UniqueName();
-        var received = new List<DiagnosticEvent>();
+        var received = new ConcurrentBag<DiagnosticEvent>();
+        var eventName = name + ".after";
         var failure = new InvalidOperationException("creation failed");
         var actual = Record.Exception(() => App.Build(context => context
-            .UseDiagnostics(configuration => configuration.Filters(name).OnEvent(received.Add))
+            .UseDiagnostics(configuration => configuration.Filters(name).OnEvent(item =>
+            {
+                // Default TrueMoon filters also observe parallel Apps; pin this probe only.
+                if (item.Name == eventName) received.Add(item);
+            }))
             .Services(services => services.RemoveAll<IApp>().Singleton<IApp>(_ => throw failure))));
         Assert.NotNull(actual);
         Assert.Contains("creation failed", actual.ToString());
         Assert.True(ContainsException(actual, failure));
         using var probe = new DiagnosticListener(name);
         Assert.False(probe.IsEnabled());
-        probe.Write("after", DiagnosticEvent.Trace());
+        probe.Write(eventName, DiagnosticEvent.Trace());
         Assert.Empty(received);
     }
 

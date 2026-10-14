@@ -91,11 +91,11 @@ public class ServicesGenerator : IIncrementalGenerator
             sb.AppendLine("    {");
             foreach (var service in services)
             {
-                sb.AppendLine($"        InvocationServiceStorage.Shared.Register<global::{service.Item1},global::{service.Item2}>();");
+                sb.AppendLine($"        InvocationServiceStorage.Shared.Register<global::{service.Item1},global::{service.Item2}>(r => r.Singleton<global::{service.Item1}>(p => new global::{service.Item2}(p.Resolve<IInvocationClient<global::{service.Item1}>>())));");
             }
             foreach (var handler in handlers)
             {
-                sb.AppendLine($"        InvocationServiceStorage.Shared.RegisterHandler<IInvocationServerHandler<global::{handler.Item1}>,global::{handler.Item2}>();");
+                sb.AppendLine($"        InvocationServiceStorage.Shared.RegisterHandler<IInvocationServerHandler<global::{handler.Item1}>,global::{handler.Item2}>(r => r.Singleton<IInvocationServerHandler<global::{handler.Item1}>>(p => new global::{handler.Item2}(p.Resolve<global::{handler.Item1}>(), p.Resolve<global::TrueMoon.Diagnostics.IEventsSource<global::{handler.Item2}>>())));");
             }
             sb.AppendLine("    }");
             sb.AppendLine("}");
@@ -163,6 +163,7 @@ public class ServicesGenerator : IIncrementalGenerator
         {
             if (member is IMethodSymbol methodSymbol)
             {   
+                handle.SelectDecodeScopeName(methodSymbol);
                 var (returnType, _, isTask, returnTypeSymbol) = methodSymbol.GetReturnDetails();
 
                 handle.AppendLine($"            case {methodIndex}:");
@@ -174,6 +175,7 @@ public class ServicesGenerator : IIncrementalGenerator
                 handle.AppendLine("                try");
                 handle.AppendLine("                {");
                 string parametersStr = string.Empty;
+                handle.AppendLine($"                    using var {handle.DecodeScopeName} = new PayloadDecodeScope();");
                 handle.AppendLine("                    var offset = 0;");
                 if (methodSymbol.Parameters.Any())
                 {
@@ -229,7 +231,7 @@ public class ServicesGenerator : IIncrementalGenerator
                                 case { TypeKind: TypeKind.Class or TypeKind.Struct }
                                     when WellKnownTypes.NotContains(parameterSymbol.Type):
                                 {
-                                    handle.AppendLine($"                    {metadataName} = {metadataName}.Deserialize(readHandle.Span, ref offset);");
+                                    handle.AppendLine($"                    {metadataName} = {metadataName}.Deserialize(readHandle.Span, ref offset, {handle.DecodeScopeName});");
                                     break;
                                 }
                                 default:
@@ -248,14 +250,14 @@ public class ServicesGenerator : IIncrementalGenerator
                                         handle.AppendLine("            {");
                                         handle.AppendLine(parameterSymbol.Type.TypeKind == TypeKind.Enum
                                             ? $"                {metadataName} = ({parameterTypeString})SerializationUtils.Read<int>(readHandle.Span[offset..], ref offset);"
-                                            : $"                {metadataName} = SerializationUtils.Read{b}(readHandle.Span[offset..], ref offset);");
+                                            : $"                {metadataName} = {handle.ReadCodec(b)}(readHandle.Span[offset..], ref offset);");
                                         handle.AppendLine("            }");
                                     }
                                     else
                                     {
                                         handle.AppendLine(parameterSymbol.Type.TypeKind == TypeKind.Enum
                                             ? $"            {metadataName} = ({parameterTypeString})SerializationUtils.Read<int>(readHandle.Span[offset..], ref offset);"
-                                            : $"            {metadataName} = SerializationUtils.Read{b}(readHandle.Span[offset..], ref offset);");
+                                            : $"            {metadataName} = {handle.ReadCodec(b)}(readHandle.Span[offset..], ref offset);");
                                     }
                                     break;
                                 }
@@ -267,7 +269,8 @@ public class ServicesGenerator : IIncrementalGenerator
                 }
                 parametersStr = parametersStr.TrimEnd(' ', ',');
 
-                handle.AppendLine("                    if (offset != readHandle.Length) throw new global::System.IO.InvalidDataException(\"Unexpected trailing invocation payload.\");");
+                handle.AppendLine("                    SerializationUtils.EnsureFullyConsumed(offset, readHandle.Length);");
+                handle.AppendLine($"                    {handle.DecodeScopeName}.Commit();");
 
                 var serviceTarget = SymbolEqualityComparer.Default.Equals(methodSymbol.ContainingType, type)
                     ? "_service"

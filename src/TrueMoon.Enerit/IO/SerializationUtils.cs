@@ -81,6 +81,8 @@ public static class SerializationUtils
     {
         var size = Unsafe.SizeOf<T>();
         RequireBytes(data, size);
+        if (typeof(T) == typeof(bool) && data[0] > 1)
+            throw new InvalidDataException("Boolean value must be 0 or 1.");
         var value = MemoryMarshal.Read<T>(data);
 
         offset += size;
@@ -137,6 +139,16 @@ public static class SerializationUtils
         if (count > data.Length - sizeof(int)) throw new InvalidDataException("Collection exceeds the remaining payload.");
         offset += sizeof(int);
         return count;
+    }
+
+    /// <summary>Rejects responses or requests that were not consumed exactly.</summary>
+    /// <param name="offset">Consumed bytes from the start of the payload.</param>
+    /// <param name="length">Total payload bytes.</param>
+    /// <exception cref="InvalidDataException">The consumed count differs or either count is negative.</exception>
+    public static void EnsureFullyConsumed(int offset, int length)
+    {
+        if (offset < 0 || length < 0 || offset != length)
+            throw new InvalidDataException("Unexpected trailing or incomplete invocation payload.");
     }
 
     private static void ValidateElementsCount(int count)

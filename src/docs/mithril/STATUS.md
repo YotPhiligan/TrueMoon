@@ -1,58 +1,42 @@
 # Mithril: состояние и точка продолжения
 
-Дата: **2026-10-12 — MIT3 bounded restart**.
-[Контракт](PLAN.md#mit3-bounded-restart-контракт--2026-10-12),
-[история и команды](HISTORY.md#mit3-bounded-restart--2026-10-12),
-[общий статус](../STATUS.md).
+Дата: **2026-10-14 — MIT5/ENE5 package portion**.
+[Контракт](PLAN.md#mit5ene5-independent-package-contract--2026-10-14),
+[команды и scope](HISTORY.md#mit5ene5-independent-package-consumer--2026-10-14),
+[runner](../../ManualTests/UnitsPackageConsumer/README.md), [общий статус](../STATUS.md).
 
-MIT3 проверен на Windows x64/net10.0/SDK10.0.401 для owned child process handles
-и controller lifetime boundary. **Mithril Debug89/89 и Release89/89**,
-Failed0/Skipped0, новые24cases к прежним65. Restart matrix **40/40**
-Debug/published Release, `Completed=true`.
-[Runner](../../ManualTests/MithrilRestartProbe/README.md).
+## Реализация и фактические проверки
 
-## Реализация и текущие проверки
-
-| Область | Реализация | Фактическое свидетельство2026-10-12 |
+| Область | Изменения / scope | Запуск2026-10-14 |
 | --- | --- | --- |
-| Policies | Never/Once/OnCrash/Always; callback только terminal | Normal/nonzero exit каждой policy, mixed crash→normal, exact generation/attempt/callback counts |
-| Budget / delay | RestartLimit default3, zero disables; RestartDelay default250ms; validation before launch | Explicit/default/zero budgets, explicit/default delays,4negative guard cases в handle/controller |
-| Process ownership | Fresh Process/launch info/control endpoint; old generation released | Actual PID/unit/parent/endpoint identity, distinct generations, OS exit codes0/23, current Process=null |
-| Automatic failure | Consumed attempt, LastRestartError/diagnostics, terminal completion | Missing executable Win32Exception, attempts1/callback1; initial-start cause guards сохраняются |
-| Stop / disposal | Stop fence, cancel/drain monitor, graceful/kill/reap owned current process | Stop/Dispose pending60s delay до3s; cancelled preparation без второго child; stopped restarted child, concurrent/repeated Stop и reentrant terminal Dispose |
-| Controlling lifetime | Intermediate exit сохраняет App lifetime; terminal отменяет один раз | Controller с actual owned child sequence и наблюдаемым lifetime; это component composition, без App builder/DI |
-| App regression | MIT1/MIT2 App/main/child/owned external/rollback/parent lifecycle | Fresh28/28 на Cobalt/Microsoft DI в Never scope; обе configurations |
-| Handle regression | MIT0 ownership и legacy stdin compatibility | Fresh16/16, включая sentinel/timeout/cancel/disposal; прежние14cases включены в suite89 |
-| Enerit regression | Own-process launcher в pipes fixture | Runtime71/71 Debug и Release; generator/manual IPC matrix не повторены |
-| Full solution | Non-incremental Debug build | Exit0/errors0/warnings1220; другие module suites/UI не запущены |
+| Package | Description/самостоятельный packaged README; runtime без новых dependencies на Enerit/UI |Mithril и transitive Contracts/Core доставлены из local feed; одинаковые версии/provenance |
+| Own child delivery | Independent PackageReference App, delivered apphost/assembly/deps/runtimeconfig |108/108Debug/Release ×build/publish cases Cobalt/DI и DI без Cobalt analyzer, Completed=true |
+| Restart/lifetime | Existing MIT3/MIT4 contracts; runtime без изменений | Actual distinct PID/control generation, old pending failure без replay, limit1 exhaustion и terminal App cancellation |
+| Stop/rollback/parent exit | Owned controller/transport cleanup на installed runtime | Stop pending, failed second executable, graceful child exit0/local Stop1; before App.Dispose workers/controller drained; killed parent client не наблюдаем |
+| Mithril regression | Existing89cases | Debug89/89 и Release89/89, Failed0/Skipped0 |
+| Related suites | Source graph после pack, отдельно | Enerit126/generator114, Core81, Cobalt37/generator6 в каждой Debug/Release configuration |
+| Solution | Final non-incremental Debug | Exit0/errors0/warnings1227; UI/native не повторены |
 
-Все matrices имеют fresh case directories/logs и source fingerprints. Это source
-ProjectReference consumers, не NuGet proof. Предыдущие MIT0/MIT1/MIT2 runs и их
-ошибки сохранены в HISTORY; они не считаются текущими проверками.
+Windows x64/build26300/net10.0/SDK10.0.402. Source/nupkg/compiler hashes,
+metadata/provenance и generation evidence сохранены в ignored TestResults/UnitsPackages.
+Previous MIT4 source36/isolated12 и decode hardening — предыдущие отдельные runs;
+current package108 не является новым standalone stress/performance measurement.
 
-## Совместимость и ограничения
+## Ограничения
 
-- Always теперь bounded: default3 automatic attempts, delay250ms. Budget на
-  explicit Start, successful restart его не сбрасывает; zero disables restart.
-  Once дополнительно ограничен одним attempt. Nonzero exit — определение OnCrash.
-- OnExit теперь terminal-only, intermediate process exits не отменяют App.
-  OnProcessExited hook наблюдает каждую generation; in-flight terminal callback
-  может завершиться после Stop fence. Intentional Stop новых callback не создаёт.
-- Protected Restart() заменён RestartAsync(CancellationToken). Custom overrides
-  должны соблюдать cancellation/ownership. Completion/RestartCount/
-  LastRestartError доступны для наблюдения; diagnostics failure не блокирует cleanup.
-- MIT3 matrix проверяет child handle/controller boundary. App/DI regression28
-  использует Never: сквозной App/Enerit/restart сценарий ещё нужен в MIT4/ENE4.
-  Main local services не получают process restart; External uses same process
-  base, но external executable restart отдельно не запускался.
-- Main общий App graph, External launched/owned без attach, app-local AddUnit,
-  async child control pipe и остальные MIT1/MIT2 ограничения сохраняются.
-- Другие OS, package delivery, arbitrary custom callbacks/hooks, долгий stress
-  и resource trend не проверены. Passing cleanup не является zero-leak proof.
+MIT5 package portion проверена; **operational diagnostics ещё открыты**, полный
+MIT5 не объявляется закрытым. Framework-dependent без RID, same-build cooperative
+owned child. Main общий App graph; External launched/owned без borrowed attach,
+external executable restart отдельно не подтверждён. Default Always bounded3/delay250,
+terminal-only OnExit/stop fence и остальные MIT0–MIT4 contracts сохраняются.
+
+Package acceptance не обещает other OS/compiler/RID/self-contained/single-file/
+trimming/NativeAOT, arbitrary callbacks/hooks/transports, uncooperative services,
+long resource trend/zero-leak или готовность игрового runtime. Parent-exit proof
+подтверждает child/server cleanup, не workers killed parent.
 
 ## Следующий конкретный шаг
 
-**MIT4/ENE4**: App/AddUnit own child выполняет generated typed Enerit IPC;
-normal/crash/restart/cancellation/shutdown согласуют process и transport cleanup.
-На Cobalt/DI проверить восстановление канала после restart и окончательное
-завершение App. [Отдельный Enerit контракт](../enerit/STATUS.md).
+Общий функциональный приоритет — [Enerit IPC baseline](../enerit/STATUS.md),
+затем MIT5 operational diagnostics: policy/generation/exit/restart-failure/cleanup
+trace и reproducible configuration/commands без расширения process ownership.

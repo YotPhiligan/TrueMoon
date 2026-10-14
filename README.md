@@ -21,7 +21,7 @@ UI is optional: bootstrap, DI, IPC and units do not depend on the graphics modul
 
 ## Build from source
 
-Projects target `net10.0`. SDK selection is defined in [global.json](src/global.json): stable .NET SDK `10.0.100` with `latestMinor` roll-forward. The latest recorded checks used SDK `10.0.401` on Windows. Package versions are centralized in [Directory.Packages.props](src/Directory.Packages.props).
+Projects target `net10.0`. SDK selection is defined in [global.json](src/global.json): stable .NET SDK `10.0.100` with `latestMinor` roll-forward. The latest recorded checks used SDK `10.0.402` on Windows. Package versions are centralized in [Directory.Packages.props](src/Directory.Packages.props).
 
 Run the following from the repository root:
 
@@ -115,7 +115,15 @@ The recorded check on **2026-10-11** passed 12 raster/OpenGL/Vulkan App processe
 
 Enerit exposes `UseInvocationService<T>()` and `ListenInvocationService<T, TService>()`; a pipes transport is configured with `PipesServiceTransport()`. Mithril adds unit configuration through `AddUnit(...)`. The current example is [ManualTests/MithrilTest](src/ManualTests/MithrilTest/Program.cs).
 
-The [bounded Mithril lifecycle probe](src/ManualTests/MithrilLifecycleProbe/README.md) verifies owned child startup/stop/disposal with `RestartPolicy.Never` in Debug and published Release. The [bounded Enerit pipes probe](src/ManualTests/EneritPipesProbe/README.md) verifies generated typed calls between owned processes, concurrent requests, local cancellation, remote errors, disconnect/reconnect and cleanup in Debug and published Release. Peers must use the same sources/generator; void/Task acknowledgements and nullable-string encoding changed. The [Mithril composition probe](src/ManualTests/MithrilCompositionProbe/README.md) verifies App/AddUnit main/child/owned external hosting, rollback and parent exit on both DI providers (28 Debug/published Release cases). Main services share the App graph; External launches an owned executable. New child control uses an async named pipe; manually selected children without its endpoint only observe the parent. The [restart probe](src/ManualTests/MithrilRestartProbe/README.md) checks Never/Once/OnCrash/Always, bounded attempts/delays, terminal-only callbacks and shutdown during restart (40 Debug/published Release cases). Always defaults to three automatic attempts with 250 ms delay. Combined App/Enerit IPC/restart still needs separate verification. Memory-mapped transport readiness and generator package delivery are also open. Follow the [Enerit](src/docs/enerit/STATUS.md) and [Mithril](src/docs/mithril/STATUS.md) statuses before relying on a particular configuration.
+The [bounded Mithril lifecycle probe](src/ManualTests/MithrilLifecycleProbe/README.md) verifies owned child startup/stop/disposal with `RestartPolicy.Never` in Debug and published Release. The [bounded Enerit pipes probe](src/ManualTests/EneritPipesProbe/README.md) verifies generated typed calls between owned processes, concurrent requests, local cancellation, remote errors, disconnect/reconnect and cleanup in Debug and published Release. Peers must use the same sources/generator; void/Task acknowledgements and nullable-string encoding changed.
+
+The [Mithril composition probe](src/ManualTests/MithrilCompositionProbe/README.md) verifies App/AddUnit main/child/owned external hosting, rollback and parent exit on both DI providers (28 Debug/published Release cases). Main services share the App graph; External launches an owned executable. New child control uses an async named pipe; manually selected children without its endpoint only observe the parent.
+
+The [restart probe](src/ManualTests/MithrilRestartProbe/README.md) checks Never/Once/OnCrash/Always, bounded attempts/delays, terminal-only callbacks and shutdown during restart (40 Debug/published Release cases). Always defaults to three automatic attempts with 250 ms delay.
+
+The [App/generated pipes probe](src/ManualTests/AppUnitsPipesProbe/README.md) now verifies the combined App/AddUnit/IPC/restart scenario on Cobalt and Microsoft DI (36 Debug/published Release cases): pending calls fail without replay, the same proxy reconnects to a restarted child, exhausted restart budget cancels the App, and stop/startup rollback clean owned transports before App disposal. Abrupt parent exit verifies cooperative child/server cleanup; cleanup of the killed parent client cannot be observed.
+
+Generated typed responses now reject trailing or malformed payloads; failed nested byte decoding returns its rentals, while successful results remain caller-owned. Services own successfully decoded input rentals from service entry, including when they throw. See the [decode ownership contract](src/docs/enerit/PLAN.md#ene1ene2-strict-response-и-decode-ownership--2026-10-14). New generated code requires the matching updated runtime. The [independent package consumer](src/ManualTests/UnitsPackageConsumer/README.md) checks local NuGet runtime/analyzer delivery and own-child IPC/restart/cleanup on both providers, including Microsoft DI without the Cobalt analyzer. Dated results and limits are in the module statuses. Memory-mapped transport readiness remains open. Follow the [Enerit](src/docs/enerit/STATUS.md) and [Mithril](src/docs/mithril/STATUS.md) statuses before relying on a particular configuration.
 
 ## Examples and documentation
 
@@ -123,6 +131,8 @@ The [bounded Mithril lifecycle probe](src/ManualTests/MithrilLifecycleProbe/READ
 | --- | --- |
 | [CorePackageConsumer](src/ManualTests/CorePackageConsumer/README.md) | Independent local NuGet consumers: headless lifecycle on Cobalt/Microsoft DI, explicit generator delivery, direct Cobalt and packaged README examples |
 | [CobaltTest](src/ManualTests/CobaltTest/Program.cs) | Service registration and application configuration; separate runtime verification remains open |
+| [UnitsPackageConsumer](src/ManualTests/UnitsPackageConsumer/README.md) | Independent local NuGet App/IPC/units consumer, analyzer provenance, both DI providers and delivered child restart/cleanup |
+| [AppUnitsPipesProbe](src/ManualTests/AppUnitsPipesProbe/README.md) | App/AddUnit generated IPC, pending failure/reconnect, restart budget, stop/rollback and parent-exit cleanup on Cobalt/Microsoft DI |
 | [EneritPipesProbe](src/ManualTests/EneritPipesProbe/README.md) | Bounded same-build generated pipes contract and owned-process cleanup; Debug/published Release runner |
 | [MithrilRestartProbe](src/ManualTests/MithrilRestartProbe/README.md) | Bounded owned-process restart policies, budgets/delays, failure and concurrent shutdown |
 | [MithrilCompositionProbe](src/ManualTests/MithrilCompositionProbe/README.md) | App-local units, main/owned child/external, rollback/control EOF/parent exit on Cobalt and Microsoft DI |

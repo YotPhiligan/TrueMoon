@@ -83,6 +83,11 @@ public class ServicesGeneratorContractTests
         };
         Assert.Equal(expectedCodes, clientCodes);
         Assert.Equal(expectedCodes, handlerCodes);
+        var initializer = Assert.Single(generatorResult.GeneratedSources, s => s.HintName == "InvocationServiceInitializer.g.cs").SourceText.ToString();
+        Assert.Contains("r.Singleton<global::Consumer.ITestService>", initializer);
+        Assert.Contains("p.Resolve<IInvocationClient<global::Consumer.ITestService>>", initializer);
+        Assert.Contains("r.Singleton<IInvocationServerHandler<global::Consumer.ITestService>>", initializer);
+        Assert.Contains("p.Resolve<global::TrueMoon.Diagnostics.IEventsSource<", initializer);
         using var assembly = new MemoryStream();
         var emission = generatedCompilation.Emit(assembly);
         Assert.True(emission.Success, string.Join(Environment.NewLine, emission.Diagnostics));

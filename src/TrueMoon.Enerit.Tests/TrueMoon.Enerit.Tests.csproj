@@ -21,6 +21,8 @@
       <ProjectReference Include="..\TrueMoon.Enerit\TrueMoon.Enerit.csproj" />
       <ProjectReference Include="..\TrueMoon\TrueMoon.csproj" />
       <ProjectReference Include="../ManualTests/EneritPipesProbe/EneritPipesProbe.csproj" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="../ManualTests/AppUnitsPipesProbe/AppUnitsPipesProbe.csproj" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
     </ItemGroup>
 
     <Target Name="CopyEneritProcessFixture" AfterTargets="Build">
@@ -28,5 +30,9 @@
         <EneritProcessFixture Include="../ManualTests/EneritPipesProbe/bin/$(Configuration)/$(TestsTF)/**/*" />
       </ItemGroup>
       <Copy SourceFiles="@(EneritProcessFixture)" DestinationFiles="@(EneritProcessFixture->'$(OutDir)enerit-fixture/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    </Target>
+    <Target Name="CopyAppUnitsPipesFixture" AfterTargets="Build">
+      <ItemGroup><AppUnitsPipesFixture Include="../ManualTests/AppUnitsPipesProbe/bin/$(Configuration)/$(TestsTF)/**/*" /></ItemGroup>
+      <Copy SourceFiles="@(AppUnitsPipesFixture)" DestinationFiles="@(AppUnitsPipesFixture->'$(OutDir)app-pipes-fixture/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     </Target>
 </Project>

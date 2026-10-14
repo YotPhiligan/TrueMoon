@@ -1,6 +1,18 @@
 # Cobalt / DI: состояние и точка продолжения
 
-Последняя работа: **2026-10-11 — COB4/CORE5 package/analyzer consumers**.
+Последняя package/regression работа **2026-10-14, MIT5/ENE5 package portion**:
+actual Cobalt compiler analyzer/package graph в independent App/IPC/units consumer,
+в том числе DI без Cobalt analyzer. Cobalt37/37/generator6/6 Debug/Release,
+Failed0/Skipped0; [scope/команды](HISTORY.md#package-regression-mit5ene5--2026-10-14).
+Cobalt/adapter C# logic не менялась; headless64+3/COB5 ниже не повторены.
+
+Предыдущая regression **2026-10-14, MIT4/ENE4**: Cobalt37/37 и generator6/6
+отдельно Debug/Release, Failed0/Skipped0, SDK10.0.402; production без изменений.
+[Scope и команды](HISTORY.md#regression-при-mit4ene4--2026-10-14).
+Source App/IPC composition36cases на обоих providers проверена отдельно;
+package/headless64+3 и COB5 baseline ниже не повторены.
+
+Предыдущая package работа: **2026-10-11 — COB4/CORE5 package/analyzer consumers**.
 Actual compiler analyzer path/SHA256 и generated ModuleInitializer проверены из
 изолированного NuGet cache. Headless/direct Cobalt и оба App providers:
 **64/64 matrix processes + 3/3 packaged README examples**, Debug/Release build/publish;

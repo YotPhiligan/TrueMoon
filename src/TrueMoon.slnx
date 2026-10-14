@@ -18,6 +18,7 @@
     <Project Path="ManualTests/EneritPipesProbe/EneritPipesProbe.csproj" />
     <Project Path="ManualTests/MithrilCompositionProbe/MithrilCompositionProbe.csproj" />
     <Project Path="ManualTests/MithrilRestartProbe/MithrilRestartProbe.csproj" />
+    <Project Path="ManualTests/AppUnitsPipesProbe/AppUnitsPipesProbe.csproj" />
     <Project Path="ManualTests\AlloyTest\AlloyTest.csproj" />
     <Project Path="ManualTests\CobaltTest\CobaltTest.csproj" />
   </Folder>

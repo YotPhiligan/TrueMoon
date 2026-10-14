@@ -22,6 +22,11 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 
 Contracts и Core — разные независимые сборки. DI provider выбирается на builder boundary; IPC, units и UI подключаются по потребности приложения. UI runtime не требует App или конкретного backend; Hosting является опциональной интеграцией. Подробная карта фактических зависимостей хранится в общем плане.
 
+## Планируемые направления
+
+- [Игровой движок и редактор](engine/PLAN.md), [статус](engine/STATUS.md):
+  одна 3D-игра, Editor/Game.Runtime в разных процессах, preview frames и
+  обновление игровой логики. ENG0–ENG8 запланированы; runtime/проекты ещё не созданы.
 ## Практические входные точки
 
 - **Приложение и сервисы:** quickstart в корневом README, затем [Core lifecycle/configuration/diagnostics contracts](core/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10) и [DI ownership](cobalt/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10).
@@ -34,7 +39,8 @@ Contracts и Core — разные независимые сборки. DI provi
 - **App/units и parent lifecycle:** [Mithril composition probe](../ManualTests/MithrilCompositionProbe/README.md): main/child/owned external, rollback и parent exit на Cobalt/DI, App/Never scope.
 - **Bounded restart:** [Mithril restart probe](../ManualTests/MithrilRestartProbe/README.md): policies, attempts/delay, cancelled scheduling и terminal lifetime,40Debug/published Release cases.
 - **Bounded own-process pipes:** [Enerit probe](../ManualTests/EneritPipesProbe/README.md): generated payloads,32concurrent, local cancellation, errors/disconnect/reconnect и cleanup.
-- **IPC и units composition:** [MithrilTest](../ManualTests/MithrilTest/Program.cs), затем локальные статусы Enerit/Mithril. App+IPC/restart proof ещё требуется; пример не является доказательством готовности.
+- **Independent IPC/units packages:** [UnitsPackageConsumer](../ManualTests/UnitsPackageConsumer/README.md):108cases Cobalt/DI Debug/Release build/publish, actual analyzer provenance, DI без Cobalt analyzer и omitted Enerit analyzer negative control.
+- **App/generated IPC/restart:** [AppUnitsPipesProbe](../ManualTests/AppUnitsPipesProbe/README.md):36Debug/published Release cases на Cobalt/DI, pending crash без replay, limit exhaustion, rollback и child cleanup при parent exit. Старый [MithrilTest](../ManualTests/MithrilTest/Program.cs) остаётся примером.
 - **Старый UI API:** [Compatibility guide](../TrueMoon.Alloy.Hosting/Compatibility/README.md); наличие legacy реализации не означает исправление её старых defects.
 
 ## Как читать готовность
@@ -45,7 +51,7 @@ Core/DI package consumer и текущие Core81/Cobalt37/generator6 регре
 2026-10-11; UI package/golden того же дня имеют отдельный scope и не повторены
 headless работой. Mithril MIT0 проверен отдельным run2026-10-11:14/14 Debug,
 14/14 Release, manual16/16 в Never child-handle scope. Enerit отдельный run2026-10-11: runtime71/71 и generator34/34 Debug/Release, manual12/12 same-build pipes.
-Последующий MIT1/MIT2 run: Mithril65/65 Debug/Release, App matrix28/28, fresh legacy16/16; Enerit runtime regression71/71 в каждой configuration. Следующий MIT3 проверен2026-10-12: Mithril89/89 Debug/Release, restart40/40, fresh App Never28/28 и legacy16/16. Теперь общий шаг — MIT4/ENE4 App+IPC+restart.
+Последующий MIT1/MIT2 run: Mithril65/65 Debug/Release, App matrix28/28, fresh legacy16/16; Enerit runtime regression71/71 в каждой configuration. Следующий MIT3 проверен2026-10-12: Mithril89/89 Debug/Release, restart40/40, fresh App Never28/28 и legacy16/16. MIT4/ENE4 проверен2026-10-14: Enerit102/generator34, Mithril89, Core81, Cobalt37/generator6 в каждой Debug/Release configuration, App matrix36/36 и isolated pipes12/12. Последующий Enerit decode hardening того же дня: runtime126/126, generator114/114, Mithril89/89 отдельно Debug/Release, fresh App36/isolated12. Package portion MIT5/ENE5 проверена далее:9nupkgs,108cases,Core81/Cobalt37/generator6 также повторены Debug/Release; далее IPC performance baseline и operational diagnostics.
 Внешний NVIDIA K7, physical DPI,
-real loss/VRAM и общий own-process IPC/units proof остаются открыты. Актуальный
+real loss/VRAM,IPC performance и дополнительные deployment/platform критерии остаются открыты. Актуальный
 порядок работ смотрите в общем и локальных STATUS.

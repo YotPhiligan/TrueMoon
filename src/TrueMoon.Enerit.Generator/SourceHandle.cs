@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace TrueMoon.Enerit.Generator;
@@ -27,6 +27,16 @@ public class SourceHandle
 
     public string ImplementationClassName { get; private set; }
     public GenerationContext Context => _context;
+    internal string DecodeScopeName { get; private set; } = "__tmDecodeScope";
+    internal string ReadCodec(string codec) => codec == "Bytes"
+        ? $"{DecodeScopeName}.ReadBytes"
+        : $"SerializationUtils.Read{codec}";
+
+    internal void SelectDecodeScopeName(IMethodSymbol method)
+    {
+        DecodeScopeName = "__tmDecodeScope";
+        while (method.Parameters.Any(parameter => parameter.Name == DecodeScopeName)) DecodeScopeName += "_";
+    }
 
     public void Complete()
     {

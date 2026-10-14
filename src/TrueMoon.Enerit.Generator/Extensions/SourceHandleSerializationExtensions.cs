@@ -176,7 +176,7 @@ public static class SourceHandleSerializationExtensions
         switch (itemType)
         {
             case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(itemType):
-                handle.AppendLine($"            item = item.Deserialize({spanSource}, ref offset);");
+                handle.AppendLine($"            item = item.Deserialize({spanSource}, ref offset, {handle.DecodeScopeName});");
                 break;
             default:
             {
@@ -194,14 +194,14 @@ public static class SourceHandleSerializationExtensions
                     handle.AppendLine("            {");
                     handle.AppendLine(itemType.TypeKind == TypeKind.Enum
                         ? $"                item = ({typeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"                item = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        : $"                item = {handle.ReadCodec(b)}({spanSource}[offset..], ref offset);");
                     handle.AppendLine("            }");
                 }
                 else
                 {
                     handle.AppendLine(itemType.TypeKind == TypeKind.Enum
                         ? $"            item = ({typeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"            item = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        : $"            item = {handle.ReadCodec(b)}({spanSource}[offset..], ref offset);");
                 }
                 break;
             }
@@ -341,7 +341,7 @@ public static class SourceHandleSerializationExtensions
         switch (keyType)
         {
             case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(keyType):
-                handle.AppendLine($"            {propertyName}Key = {propertyName}Key.Deserialize({spanSource}, ref offset);");
+                handle.AppendLine($"            {propertyName}Key = {propertyName}Key.Deserialize({spanSource}, ref offset, {handle.DecodeScopeName});");
                 break;
             default:
             {
@@ -359,14 +359,14 @@ public static class SourceHandleSerializationExtensions
                     handle.AppendLine("            {");
                     handle.AppendLine(keyType.TypeKind == TypeKind.Enum
                         ? $"                {propertyName}Key = ({keyTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"                {propertyName}Key = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        : $"                {propertyName}Key = {handle.ReadCodec(b)}({spanSource}[offset..], ref offset);");
                     handle.AppendLine("            }");
                 }
                 else
                 {
                     handle.AppendLine(keyType.TypeKind == TypeKind.Enum
                         ? $"            {propertyName}Key = ({keyTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"            {propertyName}Key = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        : $"            {propertyName}Key = {handle.ReadCodec(b)}({spanSource}[offset..], ref offset);");
                 }
                 break;
             }
@@ -375,7 +375,7 @@ public static class SourceHandleSerializationExtensions
         switch (valueType)
         {
             case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(valueType):
-                handle.AppendLine($"            {propertyName}Value = {propertyName}Value.Deserialize({spanSource}, ref offset);");
+                handle.AppendLine($"            {propertyName}Value = {propertyName}Value.Deserialize({spanSource}, ref offset, {handle.DecodeScopeName});");
                 break;
             default:
             {
@@ -393,20 +393,22 @@ public static class SourceHandleSerializationExtensions
                     handle.AppendLine("            {");
                     handle.AppendLine(valueType.TypeKind == TypeKind.Enum
                         ? $"                {propertyName}Value = ({valueTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"                {propertyName}Value = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        : $"                {propertyName}Value = {handle.ReadCodec(b)}({spanSource}[offset..], ref offset);");
                     handle.AppendLine("            }");
                 }
                 else
                 {
                     handle.AppendLine(valueType.TypeKind == TypeKind.Enum
                         ? $"            {propertyName}Value = ({valueTypeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                        : $"            {propertyName}Value = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                        : $"            {propertyName}Value = {handle.ReadCodec(b)}({spanSource}[offset..], ref offset);");
                 }
                 break;
             }
         }
         
-        handle.AppendLine($"                    {propertyName}Dictionary.Add({propertyName}Key, {propertyName}Value);");
+        var nullKeyCheck = keyType.IsReferenceType || keyType.NullableAnnotation == NullableAnnotation.Annotated
+            ? $"{propertyName}Key is null || " : string.Empty;
+        handle.AppendLine($"                    if ({nullKeyCheck}!{propertyName}Dictionary.TryAdd({propertyName}Key, {propertyName}Value)) throw new global::System.IO.InvalidDataException(\"Duplicate or null dictionary key.\");");
         handle.AppendLine("                }");
         handle.AppendLine("            }");
         
@@ -468,7 +470,7 @@ public static class SourceHandleSerializationExtensions
                     break;
                 case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(itemType):
                     handle.AppendLine($"            {typeString} {itemName} = default;");
-                    handle.AppendLine($"            {itemName} = {itemName}.Deserialize({spanSource}[offset..], ref offset);");
+                    handle.AppendLine($"            {itemName} = {itemName}.Deserialize({spanSource}, ref offset, {handle.DecodeScopeName});");
                     break;
                 default:
                 {
@@ -487,14 +489,14 @@ public static class SourceHandleSerializationExtensions
                         handle.AppendLine("            {");
                         handle.AppendLine(itemType.TypeKind == TypeKind.Enum
                             ? $"                {itemName} = ({typeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                            : $"                {itemName} = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                            : $"                {itemName} = {handle.ReadCodec(b)}({spanSource}[offset..], ref offset);");
                         handle.AppendLine("            }");
                     }
                     else
                     {
                         handle.AppendLine(itemType.TypeKind == TypeKind.Enum
                             ? $"            {typeString} {itemName} = ({typeString})SerializationUtils.Read<int>({spanSource}[offset..], ref offset);"
-                            : $"            {typeString} {itemName} = SerializationUtils.Read{b}({spanSource}[offset..], ref offset);");
+                            : $"            {typeString} {itemName} = {handle.ReadCodec(b)}({spanSource}[offset..], ref offset);");
                     }
                     break;
                 }
@@ -540,7 +542,7 @@ public static class SourceHandleSerializationExtensions
                 handle.AppendLine($"            var {name} = new object();");
                 return name;
             case { TypeKind: TypeKind.Class or TypeKind.Struct } when WellKnownTypes.NotContains(typeSymbol):
-                handle.AppendLine($"            var {name} = result.{name}.Deserialize(span[offset..], ref offset);");
+                handle.AppendLine($"            var {name} = result.{name}.Deserialize(span, ref offset, {handle.DecodeScopeName});");
                 return name;
             default:
             {
@@ -561,7 +563,7 @@ public static class SourceHandleSerializationExtensions
 
                     handle.AppendLine(typeSymbol.TypeKind == TypeKind.Enum
                         ? $"                {name} = ({typeString})SerializationUtils.Read<int>(span[offset..], ref offset);"
-                        : $"                {name} = SerializationUtils.Read{b}(span[offset..], ref offset);");
+                        : $"                {name} = {handle.ReadCodec(b)}(span[offset..], ref offset);");
 
                     handle.AppendLine("            }");
                 }
@@ -569,7 +571,7 @@ public static class SourceHandleSerializationExtensions
                 {
                     handle.AppendLine(typeSymbol.TypeKind == TypeKind.Enum
                         ? $"                var {name} = ({typeString})SerializationUtils.Read<int>(span[offset..], ref offset);"
-                        : $"                var {name} = SerializationUtils.Read{b}(span[offset..], ref offset);");
+                        : $"                var {name} = {handle.ReadCodec(b)}(span[offset..], ref offset);");
                 }
 
                 return name;

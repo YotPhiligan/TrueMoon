@@ -63,7 +63,18 @@ ENE1/ENE2 bounded same-build pipes проверен2026-10-11: runtime71/71 и g
 в Debug/Release, manual12/12; [контракт](enerit/PLAN.md#ene1-ene2-контракт--2026-10-11).
 MIT1/MIT2 App/controller/parent-exit проверен2026-10-11: Mithril65/65 Debug/Release, App matrix28/28 на Cobalt/DI, fresh legacy16/16 в App/Never scope; [контракт](mithril/PLAN.md#mit1mit2-app-composition-контракт--2026-10-11).
 MIT3 bounded restart проверен2026-10-12: Mithril89/89 Debug/Release, restart40/40, App Never regression28/28 и legacy16/16; [контракт](mithril/PLAN.md#mit3-bounded-restart-контракт--2026-10-12).
-Ближайший общий функциональный шаг — MIT4/ENE4 App+IPC+restart composition proof.
+MIT4/ENE4 bounded composition проверен2026-10-14: Enerit102/102, generator34/34,
+Mithril89/89, Core81/81, Cobalt37/37/generator6/6 отдельно Debug/Release;
+App/pipes/restart matrix36/36 Cobalt/DI Debug/published Release, isolated pipes12/12.
+[Единый контракт](mithril/PLAN.md#mit4ene4-app-и-generated-pipes-контракт--2026-10-14).
+Enerit strict response/decode ownership проверены далее2026-10-14:
+runtime126/126, generator114/114, Mithril89/89 в Debug/Release, fresh App36/isolated12;
+[локальный контракт](enerit/PLAN.md#ene1ene2-strict-response-и-decode-ownership--2026-10-14).
+MIT5/ENE5 package portion проверена далее2026-10-14:9nupkgs,108consumer cases,
+Cobalt/DI включая DI без Cobalt analyzer, Debug/Release build/publish;
+[контракт](mithril/PLAN.md#mit5ene5-independent-package-contract--2026-10-14).
+Ближайший общий шаг — измеренный IPC baseline до оптимизаций; operational diagnostics
+MIT5 и performance ENE5 остаются открытыми частями этапов.
 Локальный Core/Cobalt шаг — COB5 startup/resolution/allocations baseline на фиксированном graph.
 UI owner/package5.4–5.5 и fixed-font K2/K4 проверены ранее2026-10-11:
 UI532/532, golden360/360, validation0/0; эти UI проверки текущим headless шагом не повторены.
@@ -71,6 +82,21 @@ NVIDIA GDI defect остаётся внешним K7 блокером; поис�
 по решению пользователя, lifecycle acceptance и условия возврата сохраняются.
 Physical DPI/4.9, real loss/VRAM и итоговый alpha этап остаются в UI плане.
 
+## Будущее игровое направление — 2026-10-13
+
+По обсуждению зафиксирован [план engine/editor](engine/PLAN.md) для одной
+не очень сложной 3D-игры: Editor и Game.Runtime в разных процессах, viewport
+кадры, обновление игровой логики, сохранение editor state и standalone game.
+[Статус](engine/STATUS.md): ENG0–ENG8 запланированы, проектов/реализации и
+собственных passing checks ещё нет. Детальные contracts/tasks ведутся там.
+
+Направление использует Core/Cobalt, Mithril/Enerit и Alloy как отдельные
+boundaries, не меняет текущую dependency map. Repeatable unit sessions, frame
+transport и cross-process GPU ownership требуют новой реализации и проверки.
+MIT4/ENE4 завершён в bounded scope2026-10-14; текущий функциональный приоритет —
+измеренный IPC baseline после проверенной MIT5/ENE5 package portion. Выбор первого
+game scenario/platform/API и начало ENG0 относятся к будущему запуску работы.
+UI alpha/K1–K9/PA1–PA10 и внешний K7 блокер не отменяются.
 ## Сквозные правила
 
 - **Lifecycle и ownership:** определить владельца app, service, process, transport и graphics resources; startup failure, cancellation и shutdown имеют проверяемый результат и cleanup.

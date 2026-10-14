@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using TrueMoon.Enerit.Generator.Utils;
 
 namespace TrueMoon.Enerit.Generator.Extensions;
@@ -69,6 +69,14 @@ public static class GenerationContextExtensions
         
         handle.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
         handle.AppendLine($"    public static global::{typeValue} Deserialize(this global::{typeStr} instance, ReadOnlySpan<byte> span, ref int offset)");
+        handle.AppendLine("    {");
+        handle.AppendLine($"        using var {handle.DecodeScopeName} = new PayloadDecodeScope();");
+        handle.AppendLine($"        var result = instance.Deserialize(span, ref offset, {handle.DecodeScopeName});");
+        handle.AppendLine($"        {handle.DecodeScopeName}.Commit();");
+        handle.AppendLine("        return result;");
+        handle.AppendLine("    }");
+        handle.AppendLine();
+        handle.AppendLine($"    internal static global::{typeValue} Deserialize(this global::{typeStr} instance, ReadOnlySpan<byte> span, ref int offset, PayloadDecodeScope {handle.DecodeScopeName})");
         handle.AppendLine("    {");
         handle.AppendLine($"        global::{typeValue}? result = default;");
         handle.AppendLine("        if (SerializationUtils.ReadInstanceState(span[offset..], ref offset))");

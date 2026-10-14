@@ -3,6 +3,7 @@
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
         <RootNamespace>TrueMoon</RootNamespace>
+        <Description>TrueMoon pooled memory ownership, buffer writers, task scheduling and shared application utilities. Alpha API.</Description>
     </PropertyGroup>
 
 </Project>

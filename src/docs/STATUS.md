@@ -1,6 +1,63 @@
 # TrueMoon: общий статус
 
-Последняя работа с кодом и проверками — **2026-10-12, Mithril MIT3**.
+Последняя работа — **2026-10-14, MIT5/ENE5 independent package portion**.
+9local packages и независимый PackageReference App/IPC/units consumer:
+**108/108cases** Debug/Release ×build/publish, Cobalt/DI и DI без Cobalt analyzer;
+Completed=true. Actual package provenance/version,compiler analyzer path/SHA и
+runtime output проверены; omitted Enerit analyzer даёт ожидаемый CS0234.
+Packages не опубликованы. Source fingerprints current/mismatches0.
+Windows x64/net10.0/SDK10.0.402: Enerit126/generator114,Mithril89,Core81,
+Cobalt37/generator6 в каждой Debug/Release configuration — **12TRX/906passed**,
+Failed0/Skipped0. Full non-incremental Debug solution build exit0/errors0/warnings1227.
+[Контракт](mithril/PLAN.md#mit5ene5-independent-package-contract--2026-10-14),
+[команды и границы](mithril/HISTORY.md#mit5ene5-independent-package-consumer--2026-10-14),
+[runner](../ManualTests/UnitsPackageConsumer/README.md).
+Это package portion; **ENE5 performance и MIT5 operational diagnostics открыты**.
+Следующий функциональный шаг — фиксированный IPC latency/throughput/allocations
+baseline до оптимизаций, затем process diagnostics. Same-build/cooperative scope;
+UI/native/MMF/other OS/RID/NativeAOT/stress/uncooperative shutdown не подтверждены.
+
+Предыдущая работа — **2026-10-14, Enerit strict response/decode ownership**.
+Generated responses потребляют payload полностью; explicit decode scope возвращает
+nested byte rentals при failure, включая DTO dictionary keys и более поздние
+arguments. Successful caller/service ownership и DTO prefix API сохраняются.
+Empty ack, canonical bool0/1, strict error UTF-8 и invalid dictionary keys проверены.
+Windows x64/net10.0/SDK10.0.402: **Enerit126/126, generator114/114, Mithril89/89
+отдельно Debug/Release**, Failed0/Skipped0; current6TRX/658passed.
+App/IPC/restart **36/36** Cobalt/DI и isolated pipes **12/12** Debug/published
+Release повторены, Completed=true; fingerprints current/mismatches0.
+Final non-incremental Debug solution build exit0/errors0/warnings1227.
+[Контракт](enerit/PLAN.md#ene1ene2-strict-response-и-decode-ownership--2026-10-14),
+[команды и границы](enerit/HISTORY.md#strict-response-и-decode-ownership--2026-10-14).
+Core/Cobalt suites, UI/native/independent packages/performance не повторены;
+ранние результаты этого же дня принадлежат предыдущему MIT4 run ниже.
+Same-build/cooperative scope, killed parent client cleanup не наблюдаем.
+На момент decode hardening далее была **MIT5/ENE5 package composition**, затем отдельный
+IPC baseline до оптимизаций; backpressure/schema/MMF/uncooperative shutdown открыты.
+
+Предыдущая работа с кодом и проверками — **2026-10-14, MIT4/ENE4**.
+Parent App/AddUnit child, generated typed pipes, same-client reconnect после
+bounded OnCrash restart, budget exhaustion, pending Stop/rollback и child cleanup
+при abrupt parent exit проверены на Cobalt и Microsoft DI.
+Windows x64/net10.0/SDK10.0.402: **Enerit102/102, generator34/34, Mithril89/89,
+Core81/81, Cobalt37/37/generator6/6 отдельно Debug/Release**, Failed0/Skipped0;
+**App matrix36/36 и isolated pipes12/12**, Completed=true.
+Final non-incremental Debug solution build exit0/errors0/warnings1226.
+[Единый контракт](mithril/PLAN.md#mit4ene4-app-и-generated-pipes-контракт--2026-10-14),
+[команды/границы](mithril/HISTORY.md#mit4ene4-app-и-generated-pipes--2026-10-14).
+Production исправления Enerit: explicit typed factories/App-local instances,
+scoped endpoints, transport Start/Stop rollback; Core test isolation исправлена.
+Mithril/Cobalt runtime не изменялись. Same-build/cooperative/ProjectReference scope;
+client cleanup killed parent не наблюдаем. UI/native/package/другие OS/stress не повторены.
+На момент MIT4 следующим шагом были Enerit response validation/partial nested-buffer
+cleanup, затем MIT5/ENE5 independent package composition.
+
+Будущий engine/editor план2026-10-13 сохранён:
+[архитектура и этапы](engine/PLAN.md), [статус](engine/STATUS.md).
+ENG0–ENG8 запланированы, проектов/реализации и собственных code/process/GPU checks
+пока нет. Новый MIT4/ENE4 proof не является реализацией frame transport/hot reload.
+
+Предыдущая работа с кодом и проверками — **2026-10-12, Mithril MIT3**.
 Bounded Never/Once/OnCrash/Always, fresh process/control endpoint, budget/delay,
 terminal callback, cancel/drain monitor при Stop/Dispose. Windows x64/net10.0:
 **Mithril89/89 Debug +89/89 Release**, restart manual40/40; fresh App Never28/28
@@ -8,7 +65,7 @@ Cobalt/DI и legacy16/16. Enerit runtime71/71 в обеих configurations.
 Non-incremental Debug solution build exit0/errors0/warnings1220.
 [Контракт](mithril/PLAN.md#mit3-bounded-restart-контракт--2026-10-12),
 [команды/границы](mithril/HISTORY.md#mit3-bounded-restart--2026-10-12).
-Следующий общий шаг — MIT4/ENE4: сквозной App/AddUnit + generated Enerit IPC/restart.
+На момент MIT3 следующим шагом был MIT4/ENE4: App/AddUnit + generated Enerit IPC/restart.
 External restart/package/другие OS/stress и остальные suites/UI не проверены.
 
 Предыдущая работа с кодом и проверками — **2026-10-11, Mithril MIT1/MIT2**.
@@ -78,27 +135,29 @@ UI Hosting использует shared process owner loop; concurrent/cancellati
 
 | Модуль | Реализация и область вывода | Проверки и продолжение |
 | --- | --- | --- |
-| [Core](core/STATUS.md) | Runner/rollback/cancellation, providers/diagnostics/utilities и независимый package/headless consumer | **2026-10-11:** Core81/81; общий consumer64matrix + 3README processes, metadata/package delivery проверены. Далее COB5 baseline; общий own-child этап отдельно |
-| [Cobalt / DI](cobalt/STATUS.md) | Exact graph, Composite/generics, owned disposal, adapter wrapper и explicit analyzer delivery | **2026-10-11:** Runtime37/37, generator6/6; actual packaged analyzer и оба providers в общей64matrix, Microsoft DI также без generator. Далее COB5 измерения |
-| [Enerit](enerit/STATUS.md) | Same-build generated payload contract, TME001/size limits, acknowledged errors/void, concurrent framing и local cancellation/reconnect | **2026-10-11:** Runtime71/71, generator34/34 отдельно Debug/Release; own-process manual12/12. ENE1/ENE2 bounded baseline; MMF/package/App composition открыты |
-| [Mithril](mithril/STATUS.md) | App-local units, owned processes, controller/parent lifecycle и bounded process restart | **2026-10-12:**89/89 Debug +89/89 Release, restart40/40, App Never28/28 Cobalt/DI + legacy16/16. Сквозной App/IPC/restart остаётся MIT4/ENE4 |
+| [Core](core/STATUS.md) | Runner/rollback/cancellation, providers/diagnostics/utilities и независимый package/headless consumer | **2026-10-14, package portion:** Core81/81 Debug/Release и transitive utility package; package64+3 — исторический2026-10-11. Далее COB5 baseline |
+| [Cobalt / DI](cobalt/STATUS.md) | Exact graph, Composite/generics, owned disposal, adapter wrapper и explicit analyzer delivery | **2026-10-14, package portion:** Runtime37/37/generator6/6 Debug/Release, actual analyzer, independent App/IPC на Cobalt/DI. Package64matrix —2026-10-11; далее COB5 измерения |
+| [Enerit](enerit/STATUS.md) | Same-build generated payload contract, TME001/size limits, acknowledged errors/void, concurrent framing и local cancellation/reconnect | **2026-10-14, hardening:** Runtime126/126/generator114/114 Debug/Release, App36/36 и isolated12/12. Strict response/failed nested decode cleanup проверены; Package portion108case проверена; MMF/performance открыты |
+| [Mithril](mithril/STATUS.md) | App-local units, owned processes, controller/parent lifecycle и bounded process restart | **2026-10-14:**89/89 Debug/Release regression; App/generated IPC/restart36/36 Cobalt/DI. MIT4 и MIT5 package portion108 проверены; operational diagnostics открыты |
 | [Alloy / Argentis](alloy/STATUS.md) | Shared owner, native package delivery, independent consumer, explicit font catalog и30full golden fixtures. Alpha частична | **2026-10-11:** UI532/532, golden360/360 Debug/published Release, validation0/0. Package16processes — предыдущий отдельный run; K7 failed/NVIDIA external blocker, physical DPI/real loss/VRAM сохраняются |
 
 Наличие source/test projects означает наличие реализации или сценариев, а не успешное прохождение. Подробности и датированные результаты принадлежат локальным STATUS/HISTORY.
 
-Текущий MIT3 run: Mithril89+89/manual40+28+16 и Enerit runtime71+71.
-Enerit generator34+34/manual12, MIT0 Mithril14+14/manual16, Core81/Cobalt37/generator6, headless package64+3,
-UI532/golden360 и UI package — отдельные предыдущие runs с собственным scope.
+Текущий package portion run:12TRX/906passed/0failed/0skipped, package108.
+Предыдущий decode hardening run:6TRX/658passed, App36 и isolated12.
+Предыдущий MIT4/ENE4 run того же дня:12TRX/698passed/0failed/0skipped.
+MIT3 restart40/App28/legacy16, MIT0/MIT1/MIT2, headless package64+3, UI532/golden360
+и UI package — отдельные предыдущие runs с собственными датами и scope.
 
 ## Общие этапы
 
 | Этап | Состояние |
 | --- | --- |
-| G1. Исходное состояние | Solution baseline2026-10-10 сохранён отдельно; тогда Mithril tests0. Текущий MIT3 suite89+89; full solution build успешен, остальные suites отдельно |
+| G1. Исходное состояние | Solution baseline2026-10-10 сохранён отдельно; тогда Mithril tests0. Текущий Mithril89+89; final full solution build успешен,12current module TRX отдельно |
 | G2. Core и DI | Известные defects исправлены; component и bounded independent package lifecycle на обоих providers проверены. Дополнительные configuration/utility/platform критерии сохраняют свой scope |
-| G3. IPC и units | MIT0/MIT1/MIT2 App Never и MIT3 bounded handle restart, ENE1/ENE2 pipes проверены; общий App+IPC+restart proof открыт |
+| G3. IPC и units | MIT0–MIT3 и ENE1/ENE2 подтверждены ранее; MIT4/ENE4 same-build App/generated pipes/restart проверен2026-10-14. Strict response/nested failure cleanup и bounded independent package delivery проверены; расширенные transport criteria открыты |
 | G4. UI alpha | Частично; UI критерии и собственный следующий шаг — в Alloy плане |
-| G5. Сквозные examples | Headless package consumer64+3 проверен; App/units в Never scope подтверждён отдельно; restart/IPC и весь заявленный набор открыты |
+| G5. Сквозные examples | Headless package64+3 исторически проверен; source App/typed IPC/restart36case теперь подтверждён. IPC/units package108 теперь проверен; UI и дополнительные deployment/performance criteria отдельно |
 | G6. Общая поставка | Общие R1–R6 не закрыты; версия0.2.2.7-alpha не является readiness свидетельством |
 
 ## Общие проверки — датированные сведения
