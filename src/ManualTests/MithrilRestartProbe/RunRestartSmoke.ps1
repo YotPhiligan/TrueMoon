@@ -21,11 +21,14 @@ $summary = [ordered]@{
     SourceSha256 = [ordered]@{}
     Cases = $cases
 }
-$sourceFiles = Get-ChildItem -LiteralPath (Join-Path $srcRoot 'TrueMoon.Mithril'), (Join-Path $srcRoot 'TrueMoon.Core'), (Join-Path $srcRoot 'TrueMoon.Contracts'), $PSScriptRoot -Recurse -File |
+$sourceFiles = Get-ChildItem -LiteralPath (Join-Path $srcRoot 'TrueMoon.Mithril'), (Join-Path $srcRoot 'TrueMoon.Core'), (Join-Path $srcRoot 'TrueMoon.Contracts'), (Join-Path $srcRoot 'TrueMoon'), (Join-Path $srcRoot 'TrueMoon.Cobalt'), (Join-Path $srcRoot 'TrueMoon.Cobalt.Generator'), $PSScriptRoot -Recurse -File |
     Where-Object { $_.Extension -in @('.cs', '.csproj', '.ps1') -and $_.FullName -notmatch '[\\/](bin|obj)[\\/]' }
 foreach ($file in $sourceFiles) {
     $relative = [IO.Path]::GetRelativePath($srcRoot, $file.FullName)
     $summary.SourceSha256[$relative] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+}
+foreach ($relative in @('Directory.Build.props','Directory.Packages.props','global.json')) {
+    $summary.SourceSha256[$relative] = (Get-FileHash -LiteralPath (Join-Path $srcRoot $relative) -Algorithm SHA256).Hash
 }
 function Invoke-OwnedProcess([string]$FileName, [string[]]$Arguments, [string]$LogPrefix, [int]$TimeoutSeconds) {
     $info = [Diagnostics.ProcessStartInfo]::new($FileName)
@@ -75,12 +78,25 @@ try {
             if ($records.Count -ne 1) { throw "Expected one RESULT in $configuration/$scenario" }
             $report = $records[0].Substring(7) | ConvertFrom-Json
             if ($report.Scenario -ne $scenario -or !$report.Cleanup -or !$report.Completion) { throw 'Invalid restart result.' }
+            $started = @($report.Diagnostics | Where-Object Stage -eq 'Started')
+            $released = @($report.Diagnostics | Where-Object Stage -eq 'ProcessReleased')
+            if ($started.Count -ne $report.Pids.Count -or $released.Count -ne $report.Pids.Count -or
+                @($report.Diagnostics | Where-Object Stage -eq 'Terminal').Count -ne $report.Callbacks -or
+                @($report.Diagnostics | Where-Object Stage -eq 'Restarting').Count -ne $report.Restarts -or
+                @($report.Diagnostics | Where-Object Stage -eq 'Stopped').Count -eq 0) { throw 'Incomplete operational trace.' }
+            for ($i = 0; $i -lt $started.Count; $i++) {
+                if ($started[$i].ProcessId -ne $report.Pids[$i] -or $started[$i].Generation -ne $i + 1 -or
+                    $released[$i].ProcessId -ne $report.Pids[$i] -or $released[$i].ExitCode -ne $report.ExitCodes[$i]) { throw 'Diagnostic ownership mismatch.' }
+            }
             $report | Add-Member -NotePropertyName Configuration -NotePropertyValue $configuration
             $cases.Add($report)
             Write-Host "$configuration/$scenario passed"
         }
     }
     if ($cases.Count -ne 40) { throw 'Incomplete restart matrix.' }
+    foreach ($relative in $summary.SourceSha256.Keys) {
+        if ((Get-FileHash -LiteralPath (Join-Path $srcRoot $relative) -Algorithm SHA256).Hash -ne $summary.SourceSha256[$relative]) { throw "Source changed: $relative" }
+    }
     $summary.Completed = $true
 }
 finally {

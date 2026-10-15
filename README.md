@@ -43,7 +43,7 @@ The bundled native UI path currently supports **Windows x64**. OpenGL/Vulkan exa
 
 ## Minimal application
 
-Reference `TrueMoon` and `TrueMoon.Extensions.DependencyInjection` for this example. Within the source checkout, use ProjectReference to those projects. The independent [headless package consumer](src/ManualTests/CorePackageConsumer/README.md) verifies both providers, lifecycle faults and analyzer delivery in Debug/Release build/publish on Windows x64/net10.0. Applications using the default Cobalt provider must explicitly reference `TrueMoon.Cobalt.Generator` with `PrivateAssets="all"`; Microsoft DI can construct consumer services without it.
+Reference `TrueMoon` and `TrueMoon.Extensions.DependencyInjection` for this example. Within the source checkout, use ProjectReference to those projects. The independent [headless package consumer](src/ManualTests/CorePackageConsumer/README.md) verifies both providers, lifecycle faults and analyzer delivery in Debug/Release build/publish on Windows x64/net10.0. The `TrueMoon.Cobalt` package bundles its matching source generator, including transitive delivery through `TrueMoon`; no separate generator package reference is needed. Source ProjectReference consumers retain an analyzer ProjectReference. Microsoft DI consumers can opt out with `EnableCobaltGenerator=false`.
 
 ```csharp
 using TrueMoon;
@@ -129,7 +129,7 @@ Generated typed responses now reject trailing or malformed payloads; failed nest
 
 | Example | Purpose |
 | --- | --- |
-| [CorePackageConsumer](src/ManualTests/CorePackageConsumer/README.md) | Independent local NuGet consumers: headless lifecycle on Cobalt/Microsoft DI, explicit generator delivery, direct Cobalt and packaged README examples |
+| [CorePackageConsumer](src/ManualTests/CorePackageConsumer/README.md) | Independent local NuGet consumers: headless lifecycle on Cobalt/Microsoft DI, bundled generator delivery, direct Cobalt and packaged README examples |
 | [CobaltTest](src/ManualTests/CobaltTest/Program.cs) | Service registration and application configuration; separate runtime verification remains open |
 | [UnitsPackageConsumer](src/ManualTests/UnitsPackageConsumer/README.md) | Independent local NuGet App/IPC/units consumer, analyzer provenance, both DI providers and delivered child restart/cleanup |
 | [AppUnitsPipesProbe](src/ManualTests/AppUnitsPipesProbe/README.md) | App/AddUnit generated IPC, pending failure/reconnect, restart budget, stop/rollback and parent-exit cleanup on Cobalt/Microsoft DI |

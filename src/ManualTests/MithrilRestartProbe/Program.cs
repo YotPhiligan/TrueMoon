@@ -72,6 +72,15 @@ internal static class Fixture
 
     internal static async Task<object> RunAsync(string scenario, string directory)
     {
+        var diagnostics = new ConcurrentQueue<UnitProcessDiagnostic>();
+        var diagnosticConfig = new DiagnosticsConfiguration();
+        diagnosticConfig.AddFilter(typeof(UnitsController).FullName!);
+        diagnosticConfig.OnEvent(e =>
+        {
+            if (e.Category == "UnitProcess" && e.Payload is UnitProcessDiagnostic trace) diagnostics.Enqueue(trace);
+        });
+        using var subscription = new DiagnosticSubscription(diagnosticConfig);
+        using var events = new EventsSource<UnitsController>();
         var (policy, codes) = Cases[scenario];
         var stopDelay = scenario is "stop-delay" or "dispose-delay";
         var config = new UnitConfiguration(7)
@@ -83,9 +92,9 @@ internal static class Fixture
             TerminationDelay = 3000, IsControlAppLifetime = scenario == "controller-lifetime"
         };
         using var lifetime = new Lifetime();
-        await using var handle = new ObservedHandle(config, directory)
+        await using var handle = new ObservedHandle(config, directory, events)
         { FailRestart = scenario == "restart-failure", BlockPreparation = scenario == "stop-preparation" };
-        await using var controller = new Controller(lifetime, config, handle);
+        await using var controller = new Controller(lifetime, config, handle, events);
         var callbacks = 0;
         if (scenario != "controller-lifetime") handle.OnExit(_ =>
         { Interlocked.Increment(ref callbacks); if (scenario == "reentrant-terminal-dispose") handle.Dispose(); });
@@ -133,7 +142,11 @@ internal static class Fixture
             await handle.Completion.WaitAsync(TimeSpan.FromSeconds(5));
             Check(handle.OwnedProcess is null, "Process handle retained after sequence.");
             if (scenario == "restart-failure")
-            { Check(handle.LastRestartError is System.ComponentModel.Win32Exception && handle.RestartCount == 1, "Automatic failure was not preserved/bounded."); }
+            {
+                Check(handle.LastRestartError is System.ComponentModel.Win32Exception && handle.RestartCount == 1, "Automatic failure was not preserved/bounded.");
+                Check(ReferenceEquals(handle.LastRestartError, diagnostics.Single(x => x.Stage == UnitProcessStage.SequenceFailed).Error),
+                    "Diagnostics replaced the original restart failure.");
+            }
             else Check(handle.LastRestartError is null, "Unexpected monitor/restart error.");
             var intentional = scenario is "stop-delay" or "dispose-delay" or "stop-preparation" or "stop-restarted" or "concurrent-stop";
             Check(callbacks == (scenario == "controller-lifetime" || intentional ? 0 : 1), "Terminal callback count mismatch.");
@@ -146,7 +159,10 @@ internal static class Fixture
             return new { Scenario = scenario, ParentPid = Environment.ProcessId, Pids = identities.Select(x => x.Pid),
                 ExitCodes = observers.Select(x => x.ExitCode).ToArray(), Restarts = handle.RestartCount, Attempts = handle.InfoCalls,
                 Callbacks = scenario == "controller-lifetime" ? lifetime.Calls : callbacks, Cleanup = true, Completion = handle.Completion.IsCompletedSuccessfully,
-                DelayMilliseconds = handle.Delays.ToArray(), Error = handle.LastRestartError?.GetType().Name };
+                DelayMilliseconds = handle.Delays.ToArray(), Error = handle.LastRestartError?.GetType().Name,
+                Diagnostics = diagnostics.Select(x => new { Stage = x.Stage.ToString(), x.RunId, x.UnitIndex, x.UnitName,
+                    x.Generation, x.ProcessId, x.ParentProcessId, x.RestartCount, RestartPolicy = x.RestartPolicy.ToString(),
+                    x.RestartLimit, x.RestartDelay, x.TerminationDelay, x.Reason, x.ExitCode, ErrorType = x.Error?.GetType().Name }).ToArray() };
         }
         finally
         {
@@ -164,7 +180,7 @@ internal static class Fixture
     private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
     private sealed record Identity(int Pid, int Unit, int Parent, string Endpoint);
 
-    private sealed class ObservedHandle(IUnitConfiguration config, string directory) : ChildProcessUnitHandle(config, Events.Instance)
+    private sealed class ObservedHandle(IUnitConfiguration config, string directory, IEventsSource events) : ChildProcessUnitHandle(config, events)
     {
         internal Process? OwnedProcess => Process;
         internal int InfoCalls;
@@ -186,8 +202,8 @@ internal static class Fixture
             return info;
         }
     }
-    private sealed class Controller(Lifetime lifetime, IUnitConfiguration config, ObservedHandle handle)
-        : UnitsController(Events.Instance, lifetime, [config])
+    private sealed class Controller(Lifetime lifetime, IUnitConfiguration config, ObservedHandle handle, IEventsSource<UnitsController> events)
+        : UnitsController(events, lifetime, [config])
     { protected override IUnitHandle CreateHandle(IUnitConfiguration configuration) => handle; }
     private sealed class Lifetime : IAppLifetime, IDisposable
     {
@@ -198,13 +214,5 @@ internal static class Fixture
         public void OnStopped(Action action) { }
         public void OnStopping(Action action) { }
         public void Dispose() => _source.Dispose();
-    }
-    private sealed class Events : IEventsSource<UnitsController>
-    {
-        internal static readonly Events Instance = new();
-        public string Name => "RestartProbe";
-        public Activity StartActivity(string? details = null, string? category = null, string? caller = null) => new(Name);
-        public void StopActivity(Activity activity) => activity.Stop();
-        public void Write(Func<object>? func, string? category = null, string? caller = null) { }
     }
 }

@@ -15,7 +15,8 @@ public class FactoryResolver<TService>(IFactoryContainer<TService> factory, Serv
             if (!_initialized)
             {
                 _instance = factory.Get()(resolver);
-                _initialized = true;
+                // A null result is absence of a value, not a constructed singleton; allow a later retry.
+                _initialized = _instance is not null;
             }
             return _instance;
         }

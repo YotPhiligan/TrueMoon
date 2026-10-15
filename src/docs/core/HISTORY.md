@@ -2,6 +2,328 @@
 
 [План](PLAN.md), [текущий статус](STATUS.md), [общий статус](../STATUS.md).
 
+## Сквозной headless proof — 2026-10-15
+
+Последняя часть согласованного Core quality прохода: configuration + diagnostics +
+App lifecycle/Cobalt в настоящем console consumer. Production/runtime/contracts и
+unit tests этим шагом не менялись. Расширены общие исходники CorePackageConsumer,
+добавлен source project CoreHeadlessProbe и общий runner. Same sources используются
+через ProjectReference и свежие независимые пакеты. Script не входит в solution;
+сам source project собран и опубликован отдельно Debug/Release.
+
+| Сценарий | Проверенные observables |
+| --- | --- |
+| normal | lifetime.Cancel → штатный stop/Dispose; точный trace |
+| cancel | Original external token после cleanup; отдельный shutdown token |
+| start-failure | Original StartError; reverse rollback только запущенных services |
+| stop-failure | Original StopError; остановка остальных services и Dispose продолжаются |
+| build-failure | Original BuildError, диагностическое payload identity; уже созданный ресурс закрыт, startup не начат |
+| config-failure | Original ConfigurationError; регистрации/ресурсы/subscriptions не начинают работу |
+| cleanup-failure, только Cobalt | AggregateException с двумя original StartError/CleanupError; остальные owned объекты освобождены |
+
+Во всех runtime paths кроме config-failure JSON null преобразуется через
+GetOrCreate в ConsumerOptions с BatchSize23, сохраняется в файл и повторно читается
+с той же identity до refresh. Malformed JSON refresh сохраняет прежние sections;
+после восстановления файла refresh работает, старший provider даёт Answer17.
+Двойной UseDiagnostics не доставляет obsolete events и имеет одну subscription/
+factory; throwing observer изолирован, framework/consumer events наблюдаемы.
+После shutdown новые listeners не подписаны, запись в owned source запрещена.
+
+OwnedFactory открывает FileStream/FileShare.None и пишет marker. Во время Start/
+Stop/build-failure exclusive reopen отвергается, после cleanup внутри того же
+процесса файл открывается эксклюзивно и marker читается. Счётчики собственных/
+transient/borrowed objects проверяются независимо от файла. Для config-failure
+файл не существует и opens/releases0; для остальных opens/releases1. Cobalt shared
+Composite Dispose1, Microsoft DI alias calls сохраняют provider semantics.
+Cleanup-failure специально ограничен Cobalt; native Microsoft DI Dispose-error
+поведение не адаптировалось и не объявляется equivalent.
+
+Предварительно: source Debug build0errors/0warnings;3Cobalt процессы normal/config-
+failure/cleanup-failure прошли в TestResults/CoreHeadless/preflight-20261015-113857858.
+Затем финальный единый run:
+
+```powershell
+pwsh -NoProfile -File ManualTests/CoreHeadlessProbe/RunHeadlessProof.ps1
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --logger 'trx;LogFileName=core-debug.trx' --results-directory TestResults/CoreHeadless/run-20261015-113928712/validation
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Release --logger 'trx;LogFileName=core-release.trx' --results-directory TestResults/CoreHeadless/run-20261015-113928712/validation
+dotnet build TrueMoon.slnx -c Debug --no-incremental --no-restore --verbosity quiet
+```
+
+Все exit0; Windows x64/net10.0/SDK10.0.402/.NET10.0.13, xUnit2.9.3/VSTest.
+Core107passed/0failed/0skipped в каждой Debug/Release,2TRX/214passed суммарно.
+Full nonincremental Debug solution build0errors/1183warnings. Отдельных новых unit
+tests нет; текущий suite является regression после свежей package сборки.
+
+Source run: TestResults/CoreHeadless/run-20261015-113928712, Completed=true,
+52processes (Cobalt28/Microsoft24), Debug/Release × build/publish;57commands
+включая4build/publish и nested package runner. Source manifest130files.
+Package run: TestResults/CorePackages/core-quality-20261015-113939900,
+Completed=true; version0.2.2.7-alpha.headless.20261015113940134,4local nupkgs,
+80matrix processes (Cobalt headless28 +direct4/Microsoft48) +3delivered README.
+MS-only compiler opt-out проверен; negative opt-out при обязательной generation —
+expected CS0246/RHeadlessConsumer. Package source manifest127files.
+
+Пакеты восстановлены из собственного feed в изолированный cache с проверкой source
+metadata/version/assets. Analyzer path/SHA и generated ModuleInitializer проверены;
+runtime output не содержит analyzer/Roslyn/UI/IPC/units assemblies. Source и package
+fingerprints повторно сверены до обоих Completed=true;57command logs,52report SHA
+и package-summary SHA находятся в source summary, подробные package logs/reports
+в nested summary. Старые64+3 runs относятся к прежней5-scenario матрице; текущая
+80+3 включает реальные ресурсы и6/7сценариев, их нельзя смешивать с COB7 graph v1.
+Benchmark graph v1/source-файлы не менялись, измерения этим шагом не повторены.
+
+Финальный VerifyFinal.ps1/final-audit.json в source run:130/127source fingerprints,
+mismatches0;52report SHA/package-summary SHA и3copies каждого consumer source
+совпали. Из128App reports108 подтверждают file resource,20 — config failure без
+ресурса,8 — Cobalt combined startup/cleanup failure. Все package App reports имеют
+matching package informational version. Проверены2TRX,9документов/177local links/
+94anchors, AST обоих runners и scoped git diff --check. Source/reference consumer
+Debug/Release builds0warnings/0errors; это не zero-warning всего solution.
+
+Согласованный Core quality проход закрыт в bounded scope: configuration/bootstrap,
+diagnostics и source/package App proof. Нет подтверждённых новых Core блокеров
+для следующего модуля; это не general release. Сохраняются cooperative shutdown30s,
+process-global prefix diagnostics/in-flight callback limit, JSON concurrency/
+crash-safe writes/permission/disk-full limitations, warnings и непроверенные
+OS/RID/trimming/AOT modes. Не выполнялись собственные Cobalt/generator/Enerit/
+Mithril suites, IPC/units, UI/native и performance; library→app/legacy delivery
+controls отдельного RunDeliveryChecks также не повторялись.
+Далее Enerit quality review/ENE5 baseline; движок ждёт сводки остальных модулей.
+
+## Diagnostics quality — 2026-10-15
+
+Продолжение собственного Core quality после configuration/bootstrap. Исправлены
+DiagnosticObserver и UseDiagnostics registration; existing DiagnosticsTests
+расширен7methods/10cases. App/service/diagnostics interfaces и dependencies прежние.
+
+Подтверждены две ошибки: dictionary держал completed DiagnosticListener до Dispose
+общей подписки; repeated UseDiagnostics оставлял прежние descriptors, и ResolveAll
+создавал старые subscription/factory вопреки выбранной последней конфигурации.
+Original red:3failed/0passed/0skipped (GC ownership1, повторный setup2providers).
+Baseline8cases до изменений прошёл. Новые observers удаляют завершённый source по
+identity и освобождают его handle. Reserve выполняется до Subscribe, сам Subscribe
+и освобождение handles — вне общего lock; поздний handle после completion/Dispose
+отсоединяется. Already-disposed listener с пустым handle также удаляется.
+
+Поведение Subscribe для already-disposed source сверено с
+[официальным исходником runtime10.0.0](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Diagnostics.DiagnosticSource/src/System/Diagnostics/DiagnosticListener.cs):
+подписка может вернуться без OnCompleted. Текущая проверка воспроизводит это на
+установленном runtime через полностью созданный DiagnosticListener subclass,
+закрывающийся до/после base.Subscribe; отдельно считает Dispose возвращённого handle.
+Первоначальный стенд с Dispose прямо из AllListeners.OnNext смешивал этот контракт
+с глобальным списком во время конструктора источника и заменён. Intermediate
+edge-cases log/TRX содержит также исправленную ошибку filter prefix тестового
+multi-App event; это не final passing evidence и не новый внешний блокер.
+
+Повторный UseDiagnostics удаляет прежние subscription/factory registrations до
+добавления новых, сохраняя last-call-wins settings. Prefix observation остаётся
+process-global; тесты нескольких Apps доказывают независимость cleanup, а не
+приватность событий. Factory по-прежнему владеет своими sources до Dispose.
+
+| Требование текущего этапа | Exact test name в TrueMoon.Tests.DiagnosticsTests |
+| --- | --- |
+| Завершённые источники не удерживаются живой подпиской, same-name survivor/replacement продолжают доставку | CompletedSourcesAreReleasedWhileSubscriptionRemainsAlive |
+| Completion до возврата Subscribe и already-disposed source; exactly-once handle Dispose;2cases | SourceCompletingDuringSubscribeIsReleased |
+| Повторная настройка оставляет одну subscription/factory, старые callbacks не возвращаются;2providers | RepeatedDiagnosticsSetupKeepsOnlyLastRegistration |
+| Закрытие одной App не мешает другой; собственные sources закрываются, future sources наблюдаются;2providers | DisposingOneAppKeepsOtherAppDiagnosticsActive |
+| Новые filters применяются только при discovery | NewFiltersOnlyApplyToSourcesDiscoveredAfterTheChange |
+| Dispose из callback отключает оставшиеся callbacks и будущие sources | DisposingSubscriptionInsideCallbackStopsRemainingCallbacks |
+| Параллельный discovery/completion/Dispose не оставляет активных subscriptions;128sources | ConcurrentSourceDiscoveryCompletionAndSubscriptionDisposalDetachAllSources |
+
+Применены dotnet-best-practices/code-testing-agent/finding-tests/run-tests.
+IDE execute_tool вызван: findTests отсутствует. Для двух production targets
+research/plan/status созданы вне Git в OS temp, workflow выполнен inline без
+доступного специализированного generator agent. Roslyn find-untested-sources
+выполнен один раз на bounded snapshot7diagnostic source files/1existing test file:
+paired4/unpaired3. Subscription/Configuration/Source/Factory paired с DiagnosticsTests;
+AppCreationContextExtensions/internal Observer/LoggingObserver statically unpaired
+(extension/indirect caller не содержит declaring-type token). Это static pairing,
+не execution coverage; existing public tests расширены без дублирования suite.
+
+Assertion-quality и test-gap-analysis применены при финальном review: у7newmethods
+нет assertion-free/trivial-only cases; проверены collection contents, точные counts,
+identity, inactive listeners, error guards и memory ownership. Добавлен независимый
+handle Dispose counter: GC сам по себе не доказывает освобождение handle внутри
+неукоренённого цикла. NoInlining helper/KeepAlive исключают локальный JIT root и
+раннее исчезновение владельца. Original defects killed эмпирическим red run;
+оставшиеся candidate mutations оценены по source/assertions, не выполнены.
+Bounded concurrency test не объявляет exhaustive race/stress доказательство.
+
+Команды из src; все final commands exit0:
+
+```powershell
+# Baseline до изменений:8passed/0failed/0skipped.
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --filter FullyQualifiedName~TrueMoon.Tests.DiagnosticsTests --logger 'trx;LogFileName=baseline.trx' --results-directory TestResults/CoreQuality/diagnostics-20261015
+# До production fixes: exit1,3failed/0passed/0skipped.
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --filter 'FullyQualifiedName~CompletedSourcesAreReleasedWhileSubscriptionRemainsAlive|FullyQualifiedName~RepeatedDiagnosticsSetupKeepsOnlyLastRegistration' --logger 'trx;LogFileName=red.trx' --results-directory TestResults/CoreQuality/diagnostics-20261015
+# Final narrow:18passed/0failed/0skipped.
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --no-build --filter FullyQualifiedName~TrueMoon.Tests.DiagnosticsTests --logger 'trx;LogFileName=diagnostics-debug.trx' --results-directory TestResults/CoreQuality/diagnostics-20261015
+# Полный Core:107passed/0failed/0skipped в каждой конфигурации.
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --logger 'trx;LogFileName=core-debug.trx' --results-directory TestResults/CoreQuality/diagnostics-20261015
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Release --logger 'trx;LogFileName=core-release.trx' --results-directory TestResults/CoreQuality/diagnostics-20261015
+# Solution compile:0errors/1183warnings.
+dotnet build TrueMoon.slnx -c Debug --no-incremental --no-restore --verbosity quiet
+```
+
+Windows x64/net10.0/SDK10.0.402, xUnit2.9.3/VSTest. Final2CoreTRX214passed,
+Failed0/Skipped0; diagnostics18 в каждой конфигурации входят в107, отдельный18-case
+Debug TRX не суммируется в214. Артефакты/логи в ignored
+TestResults/CoreQuality/diagnostics-20261015. Source manifests старых package или
+benchmark runs после Core изменений не считаются current. Другие module suites,
+package consumers/IPC/units/UI/native/performance не повторены.
+
+Diagnostics stage закрыт в указанном scope. Следующий этап: цельный headless proof
+configuration/diagnostics/Cobalt, normal/cancel/startup failure/shutdown/cleanup,
+затем сводка ограничений Core перед Enerit. Callback quiescence, process-specific
+event routing и новый factory release API не добавлены.
+
+## Configuration и bootstrap quality — 2026-10-15
+
+Первый собственный Core quality шаг после COB7. Прочитаны общие/local планы,
+configuration/contracts, AppBuilder и diagnostics; production fix ограничен
+ConfigurationExtensions.GetOrCreate, existing ConfigurationTests расширен.
+Новых API/providers/dependencies, смены DI provider и engine кода нет.
+
+Подтверждён defect: unqualified GetOrCreate при existing null в именованной
+секции записывал объект в default; старший null продолжал маскировать результат,
+следующий вызов возвращал другой объект. Red run:4cases,1failed/3passed/0skipped,
+exit1. Default/named variants уже проходили; исправлен именно источник записи
+при unqualified lookup. Теперь null replacement идёт в найденную секцию,
+missing unqualified — по-прежнему default, invalid вызывает FormatException.
+JSON null replacement сохраняется на диск, повторное чтение не пишет файл.
+
+Focused tests в existing suite, без создания нового test project или broad
+coverage pipeline. Применены dotnet-best-practices, code-testing-agent,
+finding-tests и run-tests; IDE findTests/execute_tool недоступен, использованы
+существующие ConfigurationTests/AppLifecycleTests. Repo overlay run-tests отсутствует.
+Сохранены repo xUnit/собственные DI contracts вместо generic skill MSTest/MS DI.
+
+| Поведение | Exact test name в TrueMoon.Tests.ConfigurationTests |
+| --- | --- |
+| Null replacement, implicit type key, priority и identity;4variants | GetOrCreateReplacesWinningNullAndRetainsIdentity |
+| Обычный unqualified Set пишет default | UnqualifiedSetKeepsDefaultTargetWhenNamedSectionMasksTheKey |
+| Invalid blocking value не заменяется и не пропускается;2variants | GetOrCreateRejectsInvalidWinningValueWithoutChangingProviders |
+| JSON persistence, repeated read без записи, нижний provider не изменён | GetOrCreatePersistsWinningJsonNullWithoutWritingDefault |
+| Configuration actions раньше registrations/factory; тот же IConfiguration в App/DI;2providers | BootstrapConfiguresValuesBeforeRegistrationsAndServiceCreation |
+| Configuration validation error identity; registrations/factory не вызваны;2providers | BootstrapConfigurationFailurePreservesCauseAndSkipsRegistrations |
+| Ни один provider не обновляется при failure, recovery и старые handles;sync/async | FailedRefreshPreservesAllProvidersAndAllowsRecovery |
+| Serialization failure сохраняет file/snapshot, retry пишет | JsonSerializationFailurePreservesFileAndSnapshotAndAllowsRetry |
+| Sharing violation сохраняет file/snapshot, retry после release handle | JsonWriteFailurePreservesSnapshotAndAllowsRetry |
+
+Добавлено16cases, ConfigurationTests11→27, Core81→97. Review assertions проверил
+identity/нижний provider/disk state/полный порядок callbacks/original exception
+и recovery; production change имеет failing-before/passing-after свидетельство.
+Concurrency гарантия GetOrCreate не добавлена; file errors не подавляются.
+
+Команды из src (stdout/stderr перенаправлялись в ignored TestResults):
+
+```powershell
+# До production fix: exit1, failed1/passed3/skipped0.
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --filter FullyQualifiedName~GetOrCreateReplacesWinningNullAndRetainsIdentity --logger 'trx;LogFileName=red.trx' --results-directory TestResults/CoreQuality/configuration-20261015
+# Финальный узкий run: exit0, passed27/failed0/skipped0.
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --no-build --filter FullyQualifiedName~TrueMoon.Tests.ConfigurationTests --logger 'trx;LogFileName=configuration-debug.trx' --results-directory TestResults/CoreQuality/configuration-20261015
+# Финальные полные Core runs: exit0, passed97/failed0/skipped0 каждый.
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --logger 'trx;LogFileName=core-debug.trx' --results-directory TestResults/CoreQuality/configuration-20261015
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Release --logger 'trx;LogFileName=core-release.trx' --results-directory TestResults/CoreQuality/configuration-20261015
+# Full solution compile: exit0, errors0/warnings1184.
+dotnet build TrueMoon.slnx -c Debug --no-incremental --no-restore --verbosity quiet
+```
+
+Windows x64/net10.0/SDK10.0.402/xUnit2.9.3/VSTest. Два final Core TRX194passed,
+Failed0/Skipped0; узкий27-case TRX отдельно. Full build выполнен до добавления
+последнего JSON GetOrCreate test; финальный test source затем собран обоими Core
+test runs. Production code после full build не менялся. Logs:
+TestResults/core-quality-{red,configuration,debug,release,build}.log;
+TRX в TestResults/CoreQuality/configuration-20261015. Red и initial24-case
+configuration run предшествуют final27-case; intermediate96-case runs заменены
+final97-case reports. Restore/build не подменяют test discovery.
+
+Package/IPC/units/UI/native/performance и другие module suites не повторялись.
+Общий build с warnings не доказывает их runtime готовность. Disk-full/permission
+injection, process-shared JSON/atomic file replacement и concurrent GetOrCreate
+не проверены. Собственный diagnostics quality и цельный новый headless proof
+остаются следующими частями Core; текущие8 diagnostics tests — regression.
+
+## Regression при Cobalt COB7 — 2026-10-15
+
+Core/Contracts production/test без изменений; Core81/81 Release, Failed0/Skipped0.
+Full nonincremental Release solution build exit0/errors0/warnings1185.
+TrueMoon App graph проверен на Cobalt/MS в normal lifetime/external cancellation/
+startup rollback/error recovery/cleanup paths. Exact source package consumer:
+12processes/120scenarios Debug/Release build/publish, включая MS analyzer opt-out;
+standard package64+3 иlibrary/app4/2constructor controls также прошли.
+[Результаты/решение](../cobalt/COMPARISON.md), [команды](../cobalt/HISTORY.md#cob7-provider-comparison--2026-10-15).
+Debug unit suites/IPC/units/UI/native не повторены. Migration отложена, существующий
+Cobalt default/DI adapter сохранены. Далее собственный Core quality review; этот
+comparison не закрывает configuration/diagnostics/Core utility criteria.
+
+## Regression при Cobalt COB5 — 2026-10-15
+
+Core/Contracts production/test code без изменений. Core81/81 Release, Failed0/
+Skipped0; Debug suites не повторены. Fixed headless App graph использует настоящий
+App.Build/Start/Stop/Dispose, workload guard проверяет lifecycle1/1 и cleanup.
+Startup/resolution/allocations измерены в Cobalt COB5, без изменения bootstrap.
+Full nonincremental Release solution build exit0/errors0/warnings1185.
+[Команды/3TRX/351passed и baseline scope](../cobalt/HISTORY.md#cob5-app-baseline--2026-10-15).
+Package consumer/IPC/units/UI/native не повторены; прежние COB6d package/Debug
+результаты не являются текущим run. Core quality roadmap сохраняется отдельно.
+
+## Regression при Cobalt COB6d — 2026-10-15
+
+Core production/test и Contracts code без изменений. Core81/81 в каждой
+Debug/Release, Failed0/Skipped0. Fresh direct/headless/provider package64/64 +3actual
+README examples, Debug/Release build/publish; opt-out expected CS0246.
+Full nonincremental Debug solution build exit0/errors0/warnings1185.
+[Команды,6TRX/702passed и module library/app consumer](../cobalt/HISTORY.md#cob6d-registration-workflow--2026-10-15).
+Собственный Core quality scope не считается завершённым этой регрессией; other
+module suites, UI/native/performance не повторены.
+
+## Regression при Cobalt COB6c — 2026-10-15
+
+Core production/test и Contracts code без изменений. Core81/81 в каждой
+Debug/Release, Failed0/Skipped0. Fresh direct/headless/provider package64/64 +3actual
+README examples, Debug/Release build/publish; opt-out expected CS0246.
+Full nonincremental Debug solution build exit0/errors0/warnings1185.
+[Команды,6TRX/644passed и independent registration consumer](../cobalt/HISTORY.md#cob6c-registration-contracts--2026-10-15).
+Собственный Core quality scope не считается завершённым этой регрессией; other
+module suites, UI/native/performance не повторены.
+
+## Regression при Cobalt COB6b — 2026-10-14
+
+Core production/test и Contracts не менялись. Core81/81 в каждой Debug/Release,
+Failed0/Skipped0. Creation/rollback/failure identity regressions прошли при новом
+Cobalt runtime guard/metadata. Fresh headless/direct/provider package64/64 +3exact
+README examples, Debug/Release build/publish; opt-out expected CS0246.
+Full nonincremental Debug solution build exit0/errors0/warnings1187.
+[Команды,6TRX/454passed и independent error consumer](../cobalt/HISTORY.md#cob6b-runtime-errors-и-recovery--2026-10-14).
+Собственный Core quality scope этой проверкой не завершается; UI/native/performance
+и остальные module suites не повторены.
+
+## Regression при Cobalt COB6a — 2026-10-14
+
+Core production/test code без изменений. Core81/81 в каждой Debug/Release,
+Failed0/Skipped0. Fresh bundled package direct/headless/provider64/64 +3delivered
+README examples, Debug/Release build/publish; opt-out expected CS0246.
+Full nonincremental Debug solution build exit0/errors0/warnings1191.
+Собственная Core quality программа не завершена этой регрессией; UI/native/
+performance и прочие module suites не повторены.
+[Команды,6TRX/360passed и package scope](../cobalt/HISTORY.md#cob6a-конструкторы-и-diagnostics--2026-10-14).
+
+## Package regression с bundled Cobalt — 2026-10-14
+
+TrueMoon package README/consumer references обновлены под bundled analyzer.
+Fresh64headless cases +3точных delivered examples прошли Debug/Release build/publish,
+negative generation control expected CS0246. Core81/81 отдельно Debug/Release,
+Failed0/Skipped0; source Core logic/tests без изменений. [Команды/границы](../cobalt/HISTORY.md#единый-пакет-и-truemoon-scope--2026-10-14).
+
+## Regression при начале качества Cobalt — 2026-10-14
+
+Core production/test code не менялся. С изменённым Cobalt generator выполнен
+unfiltered TrueMoon.Tests Debug/Release:81/81 в каждой configuration,
+Failed0/Skipped0, commands exit0, Windows x64/net10.0/SDK10.0.402.
+[Команды/артефакты/ограничения](../cobalt/HISTORY.md#cobalt-quality-и-try-helpers--2026-10-14).
+Core package/headless consumers и другие module suites этим regression не повторены.
+
 ## Ревью ядра и CORE0 baseline — 2026-10-10
 
 Запрос: посмотреть ядро TrueMoon и предложить улучшения. Прочитаны общие и локальные планы, bootstrap/lifecycle, configuration, diagnostics, Contracts и Core utilities. Cobalt runtime/generator и Microsoft DI adapter прочитаны в части app integration. Production код и тесты не изменялись; предложения ниже не являются принятыми изменениями PLAN.

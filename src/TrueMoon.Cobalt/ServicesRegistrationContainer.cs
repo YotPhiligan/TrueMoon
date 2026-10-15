@@ -33,9 +33,9 @@ public class ServicesRegistrationContainer : IServicesRegistrationContainer, ISe
     public void RegisterSingleton<TService, TImplementation>() where TImplementation : class, TService 
         => RegisterSingleton(typeof(TService), typeof(TImplementation));
 
-    public void RegisterSingleton(Type service, Type implementation) => Add(ServiceRegistration.Singleton(service, implementation));
+    public void RegisterSingleton(Type service, Type implementation) => RegisterType(service, implementation, ServiceLifetime.Singleton);
 
-    public void RegisterSingleton(Type service) => Add(ServiceRegistration.Singleton(service));
+    public void RegisterSingleton(Type service) => RegisterType(service, service, ServiceLifetime.Singleton);
 
     public void RegisterTransient<TService>(Func<IServiceResolver, TService> factory)
     {
@@ -51,9 +51,15 @@ public class ServicesRegistrationContainer : IServicesRegistrationContainer, ISe
         => RegisterTransient(typeof(TService), typeof(TImplementation));
 
     public void RegisterTransient(Type service, Type implementation) 
-        => Add(ServiceRegistration.Transient(service, implementation));
+        => RegisterType(service, implementation, ServiceLifetime.Transient);
 
-    public void RegisterTransient(Type service) => Add(ServiceRegistration.Transient(service));
+    public void RegisterTransient(Type service) => RegisterType(service, service, ServiceLifetime.Transient);
+
+    private void RegisterType(Type service, Type implementation, ServiceLifetime lifetime)
+    {
+        ServiceRegistration.ValidateTypes(service, implementation, nameof(service), nameof(implementation));
+        Add(ServiceRegistration.CreateTypeHandle(service, implementation, lifetime));
+    }
 
     public void RemoveRegistration<TService, TImplementation>() 
         where TImplementation : class, TService
@@ -78,5 +84,25 @@ public class ServicesRegistrationContainer : IServicesRegistrationContainer, ISe
         }
     }
 
-    public IReadOnlyList<ServiceRegistrationHandle> GetHandles() => _registrationHandles;
+    internal bool Contains(Type service, Type? implementation = null)
+    {
+        lock (_lock)
+            return _registrationHandles.Any(handle => handle.ServiceType == service &&
+                (implementation == null || handle.ImplementationType == implementation));
+    }
+
+    /// <summary>Returns a detached, read-only snapshot of metadata; service instances and factory delegates retain their identity.</summary>
+    public IReadOnlyList<ServiceRegistrationHandle> GetHandles()
+    {
+        lock (_lock)
+            return Array.AsReadOnly(_registrationHandles.Select(handle => new ServiceRegistrationHandle
+            {
+                ServiceType = handle.ServiceType,
+                ImplementationType = handle.ImplementationType,
+                Lifetime = handle.Lifetime,
+                Instance = handle.Instance,
+                Resolver = handle.Resolver,
+                Key = handle.Key
+            }).ToArray());
+    }
 }

@@ -172,7 +172,15 @@ public class CobaltServicesRegistrationContext : IServicesRegistrationContext
     public bool Exist<TService>() => Exist(typeof(TService));
     public bool Exist<TService, TImplementation>() where TImplementation : class, TService
         => Exist(typeof(TService), typeof(TImplementation));
-    public bool Exist(Type serviceType) => _container.GetHandles().Any(handle => handle.ServiceType == serviceType);
+    public bool Exist(Type serviceType)
+    {
+        ArgumentNullException.ThrowIfNull(serviceType);
+        return _container.Contains(serviceType);
+    }
     public bool Exist(Type serviceType, Type implementationType)
-        => _container.GetHandles().Any(handle => handle.ServiceType == serviceType && handle.ImplementationType == implementationType);
+    {
+        ArgumentNullException.ThrowIfNull(serviceType);
+        ArgumentNullException.ThrowIfNull(implementationType);
+        return _container.Contains(serviceType, implementationType);
+    }
 }

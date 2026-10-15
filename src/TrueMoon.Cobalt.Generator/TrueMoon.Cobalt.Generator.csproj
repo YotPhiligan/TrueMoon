@@ -2,22 +2,16 @@
 
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
-        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <IsPackable>false</IsPackable>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-        <Description>C# source generator for TrueMoon Cobalt service registrations. Requires the .NET 10 SDK compiler.</Description>
-        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <Description>C# source generator bundled with TrueMoon.Cobalt. Requires the .NET 10 SDK compiler.</Description>
     </PropertyGroup>
 
     <ItemGroup>
+        <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+        <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
         <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     </ItemGroup>
-
-    <ItemGroup>
-        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-        <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
-    </ItemGroup>
-
-
 
 </Project>

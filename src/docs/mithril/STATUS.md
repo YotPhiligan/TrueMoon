@@ -1,42 +1,56 @@
 # Mithril: состояние и точка продолжения
 
-Дата: **2026-10-14 — MIT5/ENE5 package portion**.
-[Контракт](PLAN.md#mit5ene5-independent-package-contract--2026-10-14),
-[команды и scope](HISTORY.md#mit5ene5-independent-package-consumer--2026-10-14),
-[runner](../../ManualTests/UnitsPackageConsumer/README.md), [общий статус](../STATUS.md).
+Последняя работа — **2026-10-15, MIT5 operational diagnostics и свежая package regression**.
+Добавлены UnitProcessDiagnostic/UnitProcessStage через существующий IEventsSource:
+run/generation/PID, effective policy/budget/delays, launch/exit/restart/terminal,
+kill/release/stop и исходные failures. Ownership/restart limits не расширены.
+[Подключение и semantics](DIAGNOSTICS.md), [контракт](PLAN.md#mit5-operational-diagnostics--2026-10-15),
+[команды/артефакты](HISTORY.md#mit5-operational-diagnostics--2026-10-15).
 
 ## Реализация и фактические проверки
 
-| Область | Изменения / scope | Запуск2026-10-14 |
-| --- | --- | --- |
-| Package | Description/самостоятельный packaged README; runtime без новых dependencies на Enerit/UI |Mithril и transitive Contracts/Core доставлены из local feed; одинаковые версии/provenance |
-| Own child delivery | Independent PackageReference App, delivered apphost/assembly/deps/runtimeconfig |108/108Debug/Release ×build/publish cases Cobalt/DI и DI без Cobalt analyzer, Completed=true |
-| Restart/lifetime | Existing MIT3/MIT4 contracts; runtime без изменений | Actual distinct PID/control generation, old pending failure без replay, limit1 exhaustion и terminal App cancellation |
-| Stop/rollback/parent exit | Owned controller/transport cleanup на installed runtime | Stop pending, failed second executable, graceful child exit0/local Stop1; before App.Dispose workers/controller drained; killed parent client не наблюдаем |
-| Mithril regression | Existing89cases | Debug89/89 и Release89/89, Failed0/Skipped0 |
-| Related suites | Source graph после pack, отдельно | Enerit126/generator114, Core81, Cobalt37/generator6 в каждой Debug/Release configuration |
-| Solution | Final non-incremental Debug | Exit0/errors0/warnings1227; UI/native не повторены |
+Windows x64/build26300/net10.0/SDK10.0.402, результаты **2026-10-15**:
 
-Windows x64/build26300/net10.0/SDK10.0.402. Source/nupkg/compiler hashes,
-metadata/provenance и generation evidence сохранены в ignored TestResults/UnitsPackages.
-Previous MIT4 source36/isolated12 и decode hardening — предыдущие отдельные runs;
-current package108 не является новым standalone stress/performance measurement.
+| Область | Scope | Результат |
+| --- | --- | --- |
+| Mithril regression | Existing lifecycle/controller/composition +4 focused diagnostic cases +throwing-sink case; exact trace assertions в existing scenarios | Debug94/94 и Release94/94, Failed0/Skipped0 |
+| Related Enerit regression | Typed/generated/App/IPC process suite после изменения shared fixture | Debug126/126 и Release126/126, Failed0/Skipped0; generator suite отдельно не повторена |
+| Own child traces |20restart +9shutdown scenarios, Debug apphost/published Release |40/40 +18/18, оба Completed=true;129restart/7lifecycle source fingerprints совпали |
+| Package composition |8fresh nupkgs из9projects, isolated feed/cache/consumers; Cobalt/DI/DI без Cobalt analyzer, Debug/Release build/publish |108/108 Completed=true;96cases с живым parent проверяют public diagnostics через App.UseDiagnostics;12parent-exit cases не наблюдают killed parent sink |
+| Delivery controls | Compiler analyzer paths/SHA, generated sources, metadata, no analyzer DLL в runtime; omitted Enerit analyzer | Expected CS0234;205source fingerprints совпали; version0.2.2.7-alpha.units.20261015125732156 |
+| Solution | Nonincremental Debug build |0errors/1193warnings; warnings не подавлены, count как у предыдущего ENE5 run |
+
+Итого4current TRX:440passed/0failed/0skipped. Core/Cobalt/generator/UI/native suites,
+performance и прочие package consumers не повторялись. Package/source traces —
+разные реальные runs, не перенос результатов между модулями.
 
 ## Ограничения
 
-MIT5 package portion проверена; **operational diagnostics ещё открыты**, полный
-MIT5 не объявляется закрытым. Framework-dependent без RID, same-build cooperative
-owned child. Main общий App graph; External launched/owned без borrowed attach,
-external executable restart отдельно не подтверждён. Default Always bounded3/delay250,
-terminal-only OnExit/stop fence и остальные MIT0–MIT4 contracts сохраняются.
+MIT5 выполнен в bounded Windows x64/net10.0 same-build/cooperative own-child scope.
+Main использует общий App graph и не получает process trace. External остаётся
+launched/owned без borrowed attach; failed external launch проверен, независимый
+external restart не подтверждён. Default Always bounded3/delay250 и terminal-only
+OnExit/stop fence сохраняются. Started подтверждает OS start, не readiness.
 
-Package acceptance не обещает other OS/compiler/RID/self-contained/single-file/
-trimming/NativeAOT, arbitrary callbacks/hooks/transports, uncooperative services,
-long resource trend/zero-leak или готовность игрового runtime. Parent-exit proof
-подтверждает child/server cleanup, не workers killed parent.
+Diagnostic observer синхронный; sink errors изолированы, blocking/reentrancy не
+обещаются. Concurrent Stop/monitor notifications могут перемежаться; Terminal —
+решение, не callback acknowledgement. Repeated Stop может дать NoProcess; reentrant
+terminal Dispose даёт TerminalCallback и пропускает self-wait. Error сохраняет
+исходный Exception и может содержать OS details. StopFailed реализован, реальные
+OS permission/reap failures не инъецировались. Это не durable audit/recovery API.
+
+Other OS/compiler/RID/self-contained/single-file/trimming/NativeAOT, arbitrary
+hooks/transports, uncooperative services и long resource trend не подтверждены.
+Parent abrupt-exit proof относится к child/server cleanup, не workers/sink убитого parent.
 
 ## Следующий конкретный шаг
 
-Общий функциональный приоритет — [Enerit IPC baseline](../enerit/STATUS.md),
-затем MIT5 operational diagnostics: policy/generation/exit/restart-failure/cleanup
-trace и reproducible configuration/commands без расширения process ownership.
+Документационная сверка2026-10-15 завершила [общую quality matrix](../QUALITY.md),
+без новых code/build/tests/process запусков. Следующий общий этап —
+[UI package/Hosting quality](../alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15).
+UI physical DPI/real loss/VRAM и внешний K7 сохраняются в [локальном статусе](../alloy/STATUS.md);
+engine этим шагом не начинается.
+Cobalt allocations и Enerit scalar CPU/allocation profile остаются отдельным
+измерительным backlog, не новыми process capabilities.
+
+Предыдущие MIT0–MIT4 и package runs2026-10-14 сохранены в [HISTORY](HISTORY.md).

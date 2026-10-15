@@ -21,6 +21,9 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
     private string? _commandPipeName;
     private int _restartCount;
     private Exception? _lastRestartError;
+    private Guid _runId;
+    private int _generation;
+    private int? _processId;
 
     /// <summary>Completion of the owned exit/restart monitor, including its terminal callback.</summary>
     public Task Completion { get { lock (_state) return _completion; } }
@@ -48,6 +51,9 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
                 _lastRestartError = null;
             }
             ValidateConfiguration();
+            _runId = Guid.NewGuid();
+            _generation = 0;
+            _processId = null;
             if (await LaunchAsync(cancellationToken).ConfigureAwait(false) is not true) return false;
             lock (_state)
             {
@@ -73,24 +79,37 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
 
     private async Task<bool?> LaunchAsync(CancellationToken token)
     {
-        var info = await GetProcessStartInfoAsync(token).ConfigureAwait(false);
-        ProcessLaunchArguments(info.ArgumentList);
-        _commandPipeName = null;
-        AddEnvironmentVariables(info);
-        token.ThrowIfCancellationRequested();
-        lock (_state)
+        _generation++;
+        _processId = null;
+        Trace(UnitProcessStage.LaunchStarting);
+        try
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            if (_stopping) throw new InvalidOperationException("The unit is stopping.");
-            var process = new Process { StartInfo = info };
-            Process = process;
-            try
+            var info = await GetProcessStartInfoAsync(token).ConfigureAwait(false);
+            ProcessLaunchArguments(info.ArgumentList);
+            _commandPipeName = null;
+            AddEnvironmentVariables(info);
+            token.ThrowIfCancellationRequested();
+            lock (_state)
             {
-                if (process.Start()) return true;
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                if (_stopping) throw new InvalidOperationException("The unit is stopping.");
+                var process = new Process { StartInfo = info };
+                Process = process;
+                try
+                {
+                    if (process.Start()) _processId = process.Id;
+                }
+                catch { process.Dispose(); Process = null; throw; }
+                if (_processId is null) { process.Dispose(); Process = null; }
             }
-            catch { process.Dispose(); Process = null; throw; }
-            process.Dispose(); Process = null;
+            if (_processId is not null) { Trace(UnitProcessStage.Started); return true; }
+            Trace(UnitProcessStage.LaunchFailed, "StartReturnedFalse");
             return false;
+        }
+        catch (Exception error)
+        {
+            Trace(UnitProcessStage.LaunchFailed, token.IsCancellationRequested ? "Cancelled" : "LaunchFailure", error: error);
+            throw;
         }
     }
 
@@ -106,6 +125,7 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
     private async Task MonitorAsync(CancellationTokenSource run)
     {
         var token = run.Token;
+        var restarting = false;
         try
         {
             while (true)
@@ -114,6 +134,8 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
                 lock (_state) { if (_stopping || Process is null) return; current = Process; }
                 await current.WaitForExitAsync(token).ConfigureAwait(false);
                 var restart = false;
+                string? terminalReason = null;
+                int? exitCode = null;
                 await _lifecycle.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
@@ -121,16 +143,22 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
                     try
                     {
                         WriteEvent($"{Configuration.Name} exited ({current.ExitCode})", "UnitProcessOnExited");
+                        exitCode = current.ExitCode;
+                        Trace(UnitProcessStage.Exited, exitCode: exitCode);
                         OnProcessExited(current.ExitCode, current.ExitTime);
-                        restart = ShouldRestart(current.ExitCode) is true && RestartCount < (Configuration.RestartLimit ?? 3);
+                        var policyAllows = ShouldRestart(current.ExitCode) is true;
+                        restart = policyAllows && RestartCount < (Configuration.RestartLimit ?? 3);
+                        terminalReason = policyAllows ? "RestartLimit" : "Policy";
                     }
                     finally
                     {
                         lock (_state) { current.Dispose(); Process = null; }
+                        Trace(UnitProcessStage.ProcessReleased, "NaturalExit", exitCode);
                     }
                 }
                 finally { _lifecycle.Release(); }
-                if (!restart) { NotifyTerminalExit(); return; }
+                if (!restart) { Trace(UnitProcessStage.Terminal, terminalReason, exitCode); NotifyTerminalExit(); return; }
+                Trace(UnitProcessStage.RestartScheduled, "Policy", exitCode);
                 await Task.Delay(Configuration.RestartDelay ?? 250, token).ConfigureAwait(false);
                 await _lifecycle.WaitAsync(token).ConfigureAwait(false);
                 try
@@ -138,9 +166,12 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
                     token.ThrowIfCancellationRequested();
                     lock (_state) { if (_stopping) return; }
                     Interlocked.Increment(ref _restartCount);
+                    restarting = true;
+                    Trace(UnitProcessStage.Restarting);
                     WriteEvent($"{Configuration.Name} restart attempt {RestartCount}/{Configuration.RestartLimit ?? 3}", "UnitProcessRestart");
                     if (await RestartAsync(token).ConfigureAwait(false) is not true)
                         throw new InvalidOperationException("Automatic unit restart did not start.");
+                    restarting = false;
                 }
                 finally { _lifecycle.Release(); }
             }
@@ -149,7 +180,9 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
         catch (Exception error)
         {
             Volatile.Write(ref _lastRestartError, error);
+            Trace(UnitProcessStage.SequenceFailed, restarting ? "RestartFailure" : "MonitorFailure", error: error);
             WriteError(error);
+            Trace(UnitProcessStage.Terminal, "Failure", error: error);
             NotifyTerminalExit();
         }
         finally
@@ -179,6 +212,28 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
     {
         // A diagnostics sink cannot prevent process ownership cleanup.
         try { EventsSource.Exception(error); } catch { }
+    }
+
+    private void Trace(UnitProcessStage stage, string? reason = null, int? exitCode = null, Exception? error = null)
+        => WriteDiagnostic(Capture(stage, reason, exitCode, error));
+
+    private UnitProcessDiagnostic? Capture(UnitProcessStage stage, string? reason, int? exitCode, Exception? error)
+    {
+        // Capture before calling a potentially lazy sink; diagnostics must not change lifecycle outcomes.
+        try
+        {
+            return new UnitProcessDiagnostic(stage, _runId, Configuration.Index, Configuration.Name,
+                _generation, _processId, Environment.ProcessId, RestartCount, Configuration.RestartPolicy ?? UnitRestartPolicy.Always,
+                Configuration.RestartLimit ?? 3, Configuration.RestartDelay ?? 250,
+                Configuration.TerminationDelay ?? 1000, reason, exitCode, error);
+        }
+        catch { return null; }
+    }
+
+    private void WriteDiagnostic(UnitProcessDiagnostic? snapshot)
+    {
+        if (snapshot is null) return;
+        try { EventsSource.Write(() => snapshot, "UnitProcess"); } catch { }
     }
 
     /// <summary>Observes each natural exit before deciding whether to restart.</summary>
@@ -231,11 +286,16 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
             completion = _completion;
         }
         await _lifecycle.WaitAsync().ConfigureAwait(false);
+        var stopped = false;
+        var outcome = "NoProcess";
+        int? exitCode = null;
         try
         {
+            Trace(UnitProcessStage.StopRequested);
             Process? process;
             lock (_state) process = Process;
-            if (process is null) return true;
+            if (process is null) { stopped = true; return true; }
+            outcome = process.HasExited ? "AlreadyExited" : "Graceful";
             if (!process.HasExited)
             {
                 using var timeout = new CancellationTokenSource(Configuration.TerminationDelay ?? 1000);
@@ -268,19 +328,27 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
                 catch (Exception error) when (error is OperationCanceledException or IOException or InvalidOperationException) { }
                 if (!process.HasExited)
                 {
+                    outcome = "Killed";
+                    Trace(UnitProcessStage.Killing, "GracefulStopIncomplete");
                     process.Kill(entireProcessTree: true);
                     using var reap = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                     await process.WaitForExitAsync(reap.Token).ConfigureAwait(false);
                 }
             }
+            exitCode = process.ExitCode;
             lock (_state) { process.Dispose(); Process = null; }
+            Trace(UnitProcessStage.ProcessReleased, outcome, exitCode);
+            stopped = true;
             return true;
         }
-        catch (Exception error) { WriteError(error); return false; }
+        catch (Exception error) { Trace(UnitProcessStage.StopFailed, error: error); WriteError(error); return false; }
         finally
         {
+            var snapshot = stopped ? Capture(UnitProcessStage.Stopped,
+                _notifying.Value ? "TerminalCallback" : outcome, exitCode, null) : null;
             _lifecycle.Release();
             if (!_notifying.Value) await completion.ConfigureAwait(false);
+            WriteDiagnostic(snapshot);
         }
     }
 

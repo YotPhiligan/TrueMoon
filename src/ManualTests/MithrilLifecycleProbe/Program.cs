@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using TrueMoon;
@@ -52,10 +53,11 @@ static async Task<int> RunChildAsync(string mode)
 internal static class Probe
 {
     internal static readonly string[] Scenarios =
-    ["graceful", "timeout", "cancel-stop", "dispose", "async-dispose", "already-exited", "same-name", "duplicate-start"];
+    ["graceful", "timeout", "cancel-stop", "dispose", "async-dispose", "already-exited", "same-name", "duplicate-start", "throwing-sink"];
 
     internal static async Task<Report> RunAsync(string scenario)
     {
+        ProbeEvents.Instance.ThrowAfterWrite = scenario == "throwing-sink";
         var configuration = new UnitConfiguration(7)
         {
             HostingPolicy = UnitHostingPolicy.ChildProcess,
@@ -139,7 +141,8 @@ internal static class Probe
         Ensure(forced ? observer.ExitCode != 0 : observer.ExitCode == 0, "Unexpected child exit code.");
         if (scenario != "already-exited") Ensure(exits == 0, "Intentional stop emitted an unexpected exit callback.");
         return new Report(scenario, Environment.ProcessId, observer.Id, 7, Environment.ProcessId,
-            observer.ExitCode, true, handle.OwnedProcess is null, graceful, true, exits, survived, stopwatch.ElapsedMilliseconds);
+            observer.ExitCode, true, handle.OwnedProcess is null, graceful, true, exits, survived, stopwatch.ElapsedMilliseconds,
+            ProbeEvents.Instance.Diagnostics.ToArray());
     }
 
     private static void Ensure(bool condition, string message)
@@ -150,7 +153,7 @@ internal static class Probe
 
 internal sealed record Report(string Scenario, int ParentPid, int ChildPid, int UnitId, int ChildParentPid,
     int ExitCode, bool ExitSeen, bool HandleReleased, bool GracefulAck, bool RepeatedStopSucceeded,
-    int ExitCallbacks, bool SentinelSurvived, long StopMilliseconds);
+    int ExitCallbacks, bool SentinelSurvived, long StopMilliseconds, UnitProcessDiagnostic[] Diagnostics);
 
 internal sealed class ObservedChild(IUnitConfiguration configuration, string mode)
     : ChildProcessUnitHandle(configuration, ProbeEvents.Instance)
@@ -174,10 +177,16 @@ internal sealed class ObservedChild(IUnitConfiguration configuration, string mod
 internal sealed class ProbeEvents : IEventsSource<UnitsController>
 {
     internal static readonly ProbeEvents Instance = new();
+    internal readonly ConcurrentQueue<UnitProcessDiagnostic> Diagnostics = new();
+    internal bool ThrowAfterWrite;
     public string Name => "MithrilProbe";
     public Activity StartActivity(string? details = null, string? category = null, string? caller = null) => new(Name);
     public void StopActivity(Activity activity) => activity.Stop();
-    public void Write(Func<object>? func, string? category = null, string? caller = null) { }
+    public void Write(Func<object>? func, string? category = null, string? caller = null)
+    {
+        if (category == "UnitProcess" && func?.Invoke() is UnitProcessDiagnostic trace) Diagnostics.Enqueue(trace);
+        if (ThrowAfterWrite) throw new InvalidOperationException("Probe diagnostic sink failure.");
+    }
 }
 
 internal sealed class ProbeLifetime : IAppLifetime

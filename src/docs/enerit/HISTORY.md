@@ -1,5 +1,92 @@
 # Enerit: история работы и проверок
 
+## ENE5 pipes performance baseline — 2026-10-15
+
+После Core quality зафиксирован workload v1: separate client/server generated
+pipes без App/DI/Mithril, scalar, bytes256/16384/65536, DTO с1024byte buffer;
+concurrency1/8 на одном connection. Runtime/generator/transport и unit tests не
+менялись. Добавлен permanent Benchmarks/TrueMoon.Enerit.Benchmarks в solution,
+без новых NuGet dependencies. [Протокол](../../Benchmarks/TrueMoon.Enerit.Benchmarks/README.md),
+[таблица/интерпретация](BASELINE.md), [принятый scope](PLAN.md#ene5-измерительный-контракт--2026-10-15).
+
+Применены dotnet-best-practices/microbenchmarking/run-tests. Для transport используется
+собственный process runner, не per-thread BDN MemoryDiagnoser: process-wide
+GC.GetTotalAllocatedBytes(true) у обоих peers. Repo xUnit2/VSTest и own contracts
+сохранены; run-tests overlay отсутствует. Новых unit tests/test projects нет.
+Предварительные fixture ошибки: неверное имя generated client исправлено на
+BaselineServiceGeneratedImplementation; normal client EOF diagnostic при teardown
+исключён из success-window error check. DTO/c8 verify и scalar/c1 full preflight
+затем прошли. Эти trials не входят в final baseline и не используются как before.
+
+Final measured run: TestResults/EneritBaseline/run-20261015-120642176,
+Started2026-10-15T12:06:42UTC/Finished12:09:06UTC, Completed=true.10verify pairs,
+30fresh measurement pairs,3samples/pair =90samples,571944measured RPC. Windows11
+x64/build26300, Ryzen9 9900X12/24, SDK10.0.402/.NET10.0.13, Release, Workstation GC/
+Interactive. Existing Ultimate Performance scheme не менялась, background/frequency
+не контролировались; другие tests/builds не запускались во время измерений.
+
+У каждого pair warmup≥1.5s,512-call pilot,3samples с calibrated512–131072calls;
+actual sample windows0.4563064–1.2943615s. Каждый ответ проверен, включая bytes/list;
+вызовы возвращают server input и client result rentals. Ошибок/reconnect нет,
+server call count равен opcount каждого sample. Client pending0/workers complete,
+оба processes exit0, stderr empty. Root runner42commands: publish/list +10verify/
+30measure.104source files,10published files,4generated sources и raw report hashes
+заморожены; final hashes и power plan совпали до Completed.
+
+Raw per-call ticks, sample opcounts/windows, process allocation deltas/GC counts
+сохранены в JSON. results.csv — median9sample metrics с throughput min/max;
+CSV numeric text следует текущей culture PowerShell, canonical numeric values
+для автоматического сравнения находятся в JSON. RTT до validation/rental return,
+batch throughput включает их и harness. Server allocation включает service output
+copies и небольшой control/batch-boundary overhead; это не transport-only/retained
+memory. Nine sample metrics образуют3independent pairs, не9launches; closed-loop
+tails не SLA/open-loop claim. Никакие цифры не являются before/after speedup.
+
+Scalar/c1: median RTT P50183.9us/P95328.7us,4895.59calls/s,client2511.71B/call,
+server3098.27B/call. c8: P50779.3us/P952062.1us,9062.26calls/s,client2214B/call,
+server1584.84B/call. Полная10case matrix/ranges находится в BASELINE, без округления
+в summary/results.csv. Intentional byte result copy объясняет основную payload-sized
+часть server allocations в echo; доли scheduler/CTS/tasks без profile не установлены.
+
+Команды из src; final commands exit0:
+
+```powershell
+pwsh -NoProfile -File Benchmarks/TrueMoon.Enerit.Benchmarks/RunBaseline.ps1
+dotnet test TrueMoon.Enerit.Tests/TrueMoon.Enerit.Tests.csproj -c Debug --logger 'trx;LogFileName=runtime-debug.trx' --results-directory TestResults/EneritBaseline/run-20261015-120642176/validation
+dotnet test TrueMoon.Enerit.Generator.Tests/TrueMoon.Enerit.Generator.Tests.csproj -c Debug --logger 'trx;LogFileName=generator-debug.trx' --results-directory TestResults/EneritBaseline/run-20261015-120642176/validation
+dotnet test TrueMoon.Enerit.Tests/TrueMoon.Enerit.Tests.csproj -c Release --logger 'trx;LogFileName=runtime-release.trx' --results-directory TestResults/EneritBaseline/run-20261015-120642176/validation
+dotnet test TrueMoon.Enerit.Generator.Tests/TrueMoon.Enerit.Generator.Tests.csproj -c Release --logger 'trx;LogFileName=generator-release.trx' --results-directory TestResults/EneritBaseline/run-20261015-120642176/validation
+dotnet build TrueMoon.slnx -c Debug --no-incremental --no-restore --verbosity quiet
+```
+
+Enerit126/generator114 в каждой Debug/Release,4TRX/480passed/0failed/0skipped.
+Full nonincremental Debug solution build0errors/1193warnings: прежние1183 плюс
+10CS8669 nullable context у нового generated benchmark. Warnings не подавлялись,
+generator template этим measurement шагом не менялся. Это отдельный quality backlog.
+Runtime suite также исполняет существующие source pipes/App process tests; отдельные
+RunPipesSmoke/App matrix scripts, fresh package108, standalone Mithril/Core/Cobalt
+suites, UI/native/MMF/other OS/RID/AOT не повторены. ENE5 package portion остаётся
+предыдущим2026-10-14 proof с собственной metadata/генератором/negative controls.
+
+Final VerifyFinal.ps1/final-audit.json:104source +4generated hashes/10binaries и
+40raw report SHA совпали; все90percentile/throughput metrics пересчитаны из raw
+ticks/windows,10aggregates/allocations совпали.4TRX,7документов/133local links/
+77anchors проверены. AST runner и scoped git diff --check прошли; intermediate
+артефакты находятся только в ignored TestResults, исходники benchmark не менялись.
+
+Измерительная часть ENE5 закрыта; general release и все future IPC capabilities
+не объявлены. Performance continuation — scalar c1/c8 allocation/CPU profile до
+изменения CTS/task/generated/transport путей, с повтором того же workload при fix.
+Общий функциональный порядок продолжается Mithril MIT5 operational diagnostics;
+baseline не создал нового correctness blocker и не требует MMF/API expansion.
+
+## Package regression с bundled Cobalt — 2026-10-14
+
+Fresh independent App/IPC/units108/108Debug/Release build/publish cases прошли
+с единым Cobalt package. Enerit generator остаётся explicit; actual path/SHA,
+generated sources и omitted-analyzer CS0234 подтверждены. Runtime/generator
+Enerit не менялись; suites126/114 не повторены. [Команды/границы](../cobalt/HISTORY.md#единый-пакет-и-truemoon-scope--2026-10-14).
+
 [Текущий статус](STATUS.md), [план](PLAN.md).
 
 ## 2026-10-10 — ENE0 baseline и inherited generated mapping

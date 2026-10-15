@@ -76,6 +76,7 @@ public class ProcessUnitHandleTests
     [InlineData("already-exited", false)]
     [InlineData("same-name", true)]
     [InlineData("duplicate-start", true)]
+    [InlineData("throwing-sink", true)]
     public async Task OwnedChild_ShutdownScenario_ReapsProcessAndReleasesHandle(string scenario, bool graceful)
     {
         var fixture = Path.Combine(AppContext.BaseDirectory, "process-fixture", "MithrilLifecycleProbe.dll");
@@ -113,6 +114,21 @@ public class ProcessUnitHandleTests
             var exitCode = root.GetProperty("ExitCode").GetInt32();
             if (scenario is "timeout" or "cancel-stop") Assert.NotEqual(0, exitCode);
             else Assert.Equal(0, exitCode);
+            var traces = root.GetProperty("Diagnostics").Deserialize<UnitProcessDiagnostic[]>()!;
+            var started = Assert.Single(traces, x => x.Stage == UnitProcessStage.Started);
+            Assert.Equal(root.GetProperty("ChildPid").GetInt32(), started.ProcessId);
+            Assert.Equal(process.Id, started.ParentProcessId);
+            Assert.Equal(1, started.Generation);
+            Assert.NotEqual(Guid.Empty, started.RunId);
+            Assert.All(traces, x => Assert.Equal(started.RunId, x.RunId));
+            var released = Assert.Single(traces, x => x.Stage == UnitProcessStage.ProcessReleased);
+            Assert.Equal(started.ProcessId, released.ProcessId);
+            Assert.Equal(exitCode, released.ExitCode);
+            Assert.Equal(scenario == "already-exited" ? "NaturalExit" : scenario is "timeout" or "cancel-stop" ? "Killed" : "Graceful", released.Reason);
+            Assert.Equal(scenario is "timeout" or "cancel-stop" ? 1 : 0, traces.Count(x => x.Stage == UnitProcessStage.Killing));
+            Assert.Equal(scenario == "already-exited" ? 1 : 0, traces.Count(x => x.Stage == UnitProcessStage.Terminal));
+            Assert.DoesNotContain(traces, x => x.Stage is UnitProcessStage.StopFailed or UnitProcessStage.SequenceFailed);
+            Assert.Equal(UnitProcessStage.Stopped, traces[^1].Stage);
         }
         finally
         {

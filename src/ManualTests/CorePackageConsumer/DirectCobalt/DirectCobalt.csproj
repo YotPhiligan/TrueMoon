@@ -11,6 +11,5 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="TrueMoon.Cobalt" Version="$(TrueMoonPackageVersion)" />
-    <PackageReference Include="TrueMoon.Cobalt.Generator" Version="$(TrueMoonPackageVersion)" PrivateAssets="all" />
   </ItemGroup>
 </Project>

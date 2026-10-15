@@ -51,5 +51,15 @@ Protected hook `Restart()` заменён на `RestartAsync(CancellationToken)`
 handle overrides должны поддерживать отмену и новый owned process. Exit hooks
 и diagnostics не являются общей гарантией произвольной пользовательской reentrancy.
 
+MIT5: report содержит `Diagnostics` — структурированные snapshots категории
+`UnitProcess`, полученные через настоящий `EventsSource<UnitsController>` и
+`DiagnosticSubscription`. RunId/generation/PID связывают launch/exit/restart/release;
+effective policy/limit/delay и terminal reason различают policy, budget и failure.
+ErrorType в JSON — безопасная проекция; исходный Exception в payload проверяется
+по reference identity. Runner сверяет counts/PID/exit и source SHA в конце.
+Детальный порядок и поля проверяет существующий xUnit `RestartProcessTests`.
+Используйте отдельный `-ResultsDirectory` для каждого сохранённого запуска.
+[Подключение и ограничения](../../docs/mithril/DIAGNOSTICS.md).
+
 [Контракт](../../docs/mithril/PLAN.md), [статус](../../docs/mithril/STATUS.md),
 [история и команды](../../docs/mithril/HISTORY.md).

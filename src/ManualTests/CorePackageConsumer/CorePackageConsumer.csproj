@@ -16,6 +16,5 @@
     <Compile Remove="DirectCobalt/**/*.cs" />
     <PackageReference Include="TrueMoon" Version="$(TrueMoonPackageVersion)" />
     <PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="$(TrueMoonPackageVersion)" />
-    <PackageReference Include="TrueMoon.Cobalt.Generator" Version="$(TrueMoonPackageVersion)" PrivateAssets="all" Condition="'$(EnableCobaltGenerator)' == 'true'" />
   </ItemGroup>
 </Project>

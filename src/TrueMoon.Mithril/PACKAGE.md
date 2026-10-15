@@ -3,7 +3,7 @@
 Alpha .NET10 App-local units and owned process lifecycle. Configure through
 TrueMoon App/AddUnit. The package depends on Contracts/Core and does not depend
 on Enerit or UI. Add Enerit and its generator explicitly when typed IPC is needed.
-For default Cobalt, reference TrueMoon.Cobalt.Generator explicitly; Microsoft DI
+For default Cobalt, its generator is bundled in TrueMoon.Cobalt; Microsoft DI
 can use TrueMoon.Extensions.DependencyInjection without the Cobalt analyzer.
 
 Main services share the App graph. ChildProcess starts the current apphost/hosted
@@ -28,3 +28,26 @@ source project. The source repository's ManualTests/UnitsPackageConsumer/RunPack
 checks isolated package delivery and own-child typed IPC/restart/rollback/parent-exit.
 Packages remain in a local feed. Other OS, arbitrary hooks/callbacks, long resource
 trends, independent external restart and uncooperative services have separate criteria.
+
+Enable diagnostics explicitly through the TrueMoon App configuration context:
+
+```csharp
+context.UseDiagnostics(d => d.OnEvent(e =>
+{
+    if (e.Category == "UnitProcess" && e.Payload is UnitProcessDiagnostic p)
+        Console.WriteLine($"{p.RunId}/{p.Generation} unit={p.UnitIndex} pid={p.ProcessId} " +
+            $"{p.Stage} reason={p.Reason} exit={p.ExitCode} error={p.Error?.Message}");
+}));
+```
+
+Use namespaces TrueMoon.Diagnostics and TrueMoon.Mithril. A RunId identifies one
+explicit start; Generation counts launch attempts (including failed preparation).
+Started means OS start, not application readiness. Snapshots carry effective policy,
+budget/delays, consumed restart attempts and owner PID. LaunchFailed/SequenceFailed
+retain the original Exception; Terminal reasons distinguish Policy/RestartLimit/Failure.
+ProcessReleased confirms wrapper disposal; Stopped follows cleanup and monitor drain,
+except TerminalCallback skips self-wait. Repeated Stop can emit NoProcess. Concurrent
+Stop notifications may interleave. Sink exceptions cannot prevent process cleanup;
+blocking/reentrant callbacks are not supported. Arguments/environment/control endpoints
+are omitted; exception messages can include OS details. MainProcess units do not emit
+this process-specific trace. These events are observations, not a durable audit or recovery protocol.

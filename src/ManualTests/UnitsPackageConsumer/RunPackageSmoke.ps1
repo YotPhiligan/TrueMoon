@@ -70,9 +70,10 @@ function Copy-Consumer([string]$Destination) {
 }
 function Verify-Assets([string]$Consumer,[bool]$Cobalt) {
     $assets=Get-Content (Join-Path $Consumer 'obj/project.assets.json') -Raw | ConvertFrom-Json -AsHashtable
+    if(@($assets.libraries.Keys | Where-Object {$_ -match '^(Microsoft.CodeAnalysis|TrueMoon.Cobalt.Generator/)'}).Count) {throw 'Build-only Roslyn or standalone Cobalt generator restored.'}
     if(@($assets.libraries.Values | Where-Object type -ne 'package').Count) {throw 'Consumer has a non-package library.'}
     if(@($assets.libraries.Keys | Where-Object {$_ -match '^(Skia|Silk\.|Topten|TrueMoon\.(Alloy|Argentis))'}).Count) {throw 'Unexpected UI/native dependency.'}
-    $local=@($assets.libraries.Keys | Where-Object {$_ -match '^TrueMoon(?:\.|/)'}); $expected=if($Cobalt){9}else{8}
+    $local=@($assets.libraries.Keys | Where-Object {$_ -match '^TrueMoon(?:\.|/)'}); $expected=8
     if($local.Count -ne $expected) {throw "Unexpected local package count $($local.Count), expected$expected"}
     foreach($library in $local) {
         if(!$library.EndsWith('/'+$PackageVersion)) {throw "Wrong version: $library"}
@@ -86,7 +87,8 @@ function Verify-Generation([string]$Consumer,[string]$Configuration,[bool]$Cobal
     foreach($id in @('TrueMoon.Enerit.Generator','TrueMoon.Cobalt.Generator')) {
         $analyzerMatches=@($analyzers | Where-Object {$_ -like "*$id.dll"}); $required=$id -eq 'TrueMoon.Enerit.Generator' -or $Cobalt
         if(!$required) {if($analyzerMatches.Count) {throw 'DI-only compiler still has Cobalt analyzer.'};continue}
-        $expected=Join-Path $cache ("$id/$PackageVersion/analyzers/dotnet/cs/$id.dll".ToLowerInvariant())
+        $packageId=if($id -eq 'TrueMoon.Cobalt.Generator') {'TrueMoon.Cobalt'} else {$id}
+        $expected=Join-Path $cache ("$packageId/$PackageVersion/analyzers/dotnet/cs/$id.dll".ToLowerInvariant())
         if($analyzerMatches.Count -ne 1 -or !$analyzerMatches[0].Equals($expected,[StringComparison]::OrdinalIgnoreCase)) {throw "Wrong compiler analyzer $id"}
         if((Get-FileHash $expected).Hash -ne $summary.AnalyzerSha256[$id]) {throw 'Compiler analyzer SHA mismatch.'}
     }
@@ -107,6 +109,7 @@ function Verify-Case($Report,[string]$Scenario,[string]$Provider,[int]$ParentPro
     if($Report.FailedRequests -ne $failures -or $Report.Checks -ne $checks) {throw 'Typed request outcomes mismatch.'}
     $observed=$Scenario -ne 'parent-exit'; $pending=if($observed){0}else{-1}
     if($Report.ClientCleanupObserved -ne $observed -or $Report.WorkersCompleted -ne $observed -or $Report.Pending -ne $pending) {throw 'Cleanup scope mismatch.'}
+    if($observed -and (!$Report.ProcessDiagnosticsChecked -or $Report.ProcessDiagnosticCount -le 0)) {throw 'Packaged unit diagnostics were not checked.'}
 }
 try {
     foreach($id in @('TrueMoon','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Extensions.DependencyInjection')) {Add-Project (Join-Path $workspace "$id/$id.csproj")}
@@ -116,8 +119,12 @@ try {
     foreach($directory in @($PSScriptRoot,(Join-Path $workspace 'ManualTests/AppUnitsPipesProbe'))) {Get-ChildItem $directory -File | ForEach-Object {[void]$inputs.Add($_.FullName)}}
     foreach($name in @('Directory.Build.props','Directory.Packages.props','NuGet.Config','global.json','../README.md')) {[void]$inputs.Add([IO.Path]::GetFullPath((Join-Path $workspace $name)))}
     $summary.SourceFiles=@($inputs | Sort-Object | ForEach-Object {@{Path=[IO.Path]::GetRelativePath($workspace,$_);Sha256=(Get-FileHash $_).Hash}})
-    foreach($project in $projects) {DotNet ('pack-'+[IO.Path]::GetFileNameWithoutExtension($project)) @('pack',$project,'--configuration','Release',"-p:Version=$PackageVersion",'--output',$feed,'--verbosity','quiet')}
-    $packages=@(Get-ChildItem $feed -Filter '*.nupkg');if($packages.Count -ne 9) {throw 'Package graph incomplete.'}
+    foreach($project in $projects) {
+        [xml]$packProject=Get-Content -LiteralPath $project -Raw
+        if($packProject.SelectSingleNode('//IsPackable')?.InnerText -eq 'false') {continue}
+        DotNet ('pack-'+[IO.Path]::GetFileNameWithoutExtension($project)) @('pack',$project,'--configuration','Release',"-p:Version=$PackageVersion",'--output',$feed,'--verbosity','quiet')
+    }
+    $packages=@(Get-ChildItem $feed -Filter '*.nupkg');if($packages.Count -ne 8) {throw 'Package graph incomplete.'}
     foreach($package in $packages) {
         $archive=[IO.Compression.ZipFile]::OpenRead($package.FullName)
         try {
@@ -131,6 +138,11 @@ try {
                 $analyzer=$archive.GetEntry("analyzers/dotnet/cs/$($metadata.id).dll")
                 if(!$analyzer -or @($archive.Entries | Where-Object {$_.FullName.StartsWith('lib/')}).Count) {throw 'Invalid analyzer package layout.'}
                 $stream=$analyzer.Open();try{$summary.AnalyzerSha256[$metadata.id]=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream))}finally{$stream.Dispose()}
+            }
+            if($metadata.id -eq 'TrueMoon.Cobalt') {
+                $analyzer=$archive.GetEntry('analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll')
+                if(!$analyzer -or !$archive.GetEntry('lib/net10.0/TrueMoon.Cobalt.dll') -or !$archive.GetEntry('buildTransitive/TrueMoon.Cobalt.targets')) {throw 'Invalid unified Cobalt package layout.'}
+                $stream=$analyzer.Open();try{$summary.AnalyzerSha256['TrueMoon.Cobalt.Generator']=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream))}finally{$stream.Dispose()}
             }
             $summary.Packages+=@{Id=$metadata.id;Version=$metadata.version;Readme=$metadata.readme;Description=$metadata.description;Sha256=(Get-FileHash $package.FullName).Hash}
         } finally {$archive.Dispose()}
@@ -171,6 +183,9 @@ try {
     DotNet 'restore-without-enerit-generator' @('restore',$project,'--configfile',(Join-Path $negative 'NuGet.Config'),'--packages',$cache,$versionProperty,'-p:EnableEneritGenerator=false','--verbosity','quiet')
     DotNet 'build-without-enerit-generator' @('build',$project,'--no-restore',$versionProperty,'-p:EnableEneritGenerator=false','--verbosity','quiet') $true
     if($summary.Cases.Count -ne 108) {throw 'Incomplete108case matrix.'}
+    foreach($source in $summary.SourceFiles) {
+        if((Get-FileHash -LiteralPath (Join-Path $workspace $source.Path)).Hash -ne $source.Sha256) {throw "Source changed: $($source.Path)"}
+    }
     $summary.Completed=$true
     Write-Host "Units package smoke:108cases and omitted Enerit analyzer control passed. $run"
 } catch {$summary.Failure=$_.ToString();throw}

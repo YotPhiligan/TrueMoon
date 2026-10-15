@@ -1,55 +1,87 @@
 # Cobalt / DI: состояние и точка продолжения
 
-Последняя package/regression работа **2026-10-14, MIT5/ENE5 package portion**:
-actual Cobalt compiler analyzer/package graph в independent App/IPC/units consumer,
-в том числе DI без Cobalt analyzer. Cobalt37/37/generator6/6 Debug/Release,
-Failed0/Skipped0; [scope/команды](HISTORY.md#package-regression-mit5ene5--2026-10-14).
-Cobalt/adapter C# logic не менялась; headless64+3/COB5 ниже не повторены.
+Документационная сверка2026-10-15: [общая quality matrix](../QUALITY.md)
+определяет следующий scope — UI package/Hosting с Cobalt и explicit fonts.
+Новых code/build/tests/package/performance запусков эта сверка не создаёт.
 
-Предыдущая regression **2026-10-14, MIT4/ENE4**: Cobalt37/37 и generator6/6
-отдельно Debug/Release, Failed0/Skipped0, SDK10.0.402; production без изменений.
-[Scope и команды](HISTORY.md#regression-при-mit4ene4--2026-10-14).
-Source App/IPC composition36cases на обоих providers проверена отдельно;
-package/headless64+3 и COB5 baseline ниже не повторены.
+Последняя интеграционная проверка **2026-10-15, Core headless quality proof**:
+на Cobalt source28 +package headless28/direct4 processes, Debug/Release build/publish.
+Проверены JSON/configuration/diagnostics, normal/cancel/start/stop/build/config
+failures и совместный startup+Dispose error с продолжением cleanup реального
+файлового ресурса. Весь общий run:52source +80package +3README, negative CS0246;
+Core107/107 Debug/Release. [Команды/границы](../core/HISTORY.md#сквозной-headless-proof--2026-10-15).
+Cobalt/runtime/generator/adapter code и собственные suites не менялись/не запускались.
+Старые COB7 graph v1/benchmarks ниже не повторялись; их full-source fingerprints
+описывают предыдущий run, а не текущие Core sources. Default/migration решение прежнее.
 
-Предыдущая package работа: **2026-10-11 — COB4/CORE5 package/analyzer consumers**.
-Actual compiler analyzer path/SHA256 и generated ModuleInitializer проверены из
-изолированного NuGet cache. Headless/direct Cobalt и оба App providers:
-**64/64 matrix processes + 3/3 packaged README examples**, Debug/Release build/publish;
-Microsoft DI также проверен без consumer generator. Отрицательная сборка без
-обязательного generator package завершилась ожидаемым CS0246.
-[План](PLAN.md), [история](HISTORY.md#cob4--core5-package-consumers--2026-10-11), [общий статус](../STATUS.md).
+Предыдущая собственная работа **2026-10-15, COB7: сравнение providers и решение о migration**.
+Один неизменённый graph v1 прошёл Cobalt и Microsoft DI через собственный TrueMoon
+API. Добавлены paired benchmarks,10functional scenarios/provider и independent
+consumer с теми же sources. [Результат и решение](COMPARISON.md),
+[контракт](PLAN.md#cob7-сравнение-providers-на-app-graph-v1--2026-10-15),
+[команды/артефакты](HISTORY.md#cob7-provider-comparison--2026-10-15).
+Runtime/Contracts/generator/adapter logic не менялась; optimization и migration нет.
 
-## Реализация и проверки
+**Решение:** сохранить Cobalt как существующий default TrueMoon, отложить массовый
+перевод explicit Microsoft DI consumers. Регистрация этого graph одинакова, Cobalt
+даёт structured errors/reference-unique cleanup, MS дешевле в горячем resolution.
+UI-specific consumers требуют собственной проверки, provider selectors сохраняются.
 
-| Область | Реализация | Текущий запуск |
+## Текущий запуск
+
+Ниже сохранены результаты предыдущего собственного COB7 run; текущая Core
+integration указана выше и не является новым performance измерением.
+
+Windows11 x64/Ryzen9 9900X/SDK10.0.402/.NET10.0.13, Release, Concurrent Workstation
+GC. BDN0.15.8, Microsoft baseline: **20Dry +20default calibrated cases +24fresh
+startup samples** (12/provider), Completed=true.127source fingerprints/mismatches0,
+36commands exit0; power plan не изменён. Scenario.Register byte-for-byte совпадает
+с COB5. Historical COB5 numbers не используются как before/after speedup.
+
+| Операция | Cobalt | Microsoft DI |
 | --- | --- | --- |
-| Runtime registration/resolution / COB1 | Отбор service+implementation+lifetime, runtime factories, missing required/optional, typed enumerable и generics | Cobalt.Tests:37passed/0failed/0skipped, discovery37 |
-| Lifetime/disposal / COB2 | Singleton concurrency, complete TypeContainer init, borrowed instances, owned factory/generated/transient values, reverse unique cleanup и error preservation | Direct regression cases в тех же37, включая concurrent и recursive disposal |
-| Generator / COB3 | Collision-free sources, Composite aliases2–8 одного instance, closed/open generic dependencies, runtime factory exclusion | Cobalt.Generator.Tests:6passed/0failed/0skipped; compilation/emit и executable generated graphs |
-| Microsoft DI adapter | Один wrapper внутри provider, provider ownership, sync/async/concurrent/reentrant disposal | AdapterRegressionTests входят в37 runtime cases; lifecycle graphs обоих providers — Core suite81/81 |
-| Core integration | AppCreate выбирает только зарегистрированную implementation; lifetime aliases shared | AppCreate Passed в текущем Core81/81 run; прежний review failure устранён |
-| Package/analyzer / COB4 | Explicit generator PackageReference, runtime/analyzer package README и isolated consumers | Analyzer совпал с packaged DLL SHA256; headless8/direct6 generated sources/configuration; 4 generation checks, 64 matrix + 3 README processes Passed. Без generator Microsoft DI работает, обязательная Cobalt generation даёт expected CS0246 |
+| Warm singleton |52.10ns /32B |14.91ns /0B |
+| Transient request |433.13ns /440B |34.17ns /184B |
+| Graph build+dispose |3.300us /11562B |1.191us /9848B |
+| App build+Start+Stop+async dispose |16.906us /72200B |19.320us /75125B |
+| First App.Build+Start median, fresh process |29.175ms |26.711ms |
 
-Текущая регрессия2026-10-11: runtime **37 passed / 0 failed / 0 skipped**, generator
-**6 passed / 0 failed / 0 skipped**, TRX total37/6. Core81/81 запущен отдельно.
-Windows x64, Debug/net10.0, SDK10.0.401, xUnit2.9.3/VSTest. Consumer matrix:
-framework-dependent Debug/Release без RID; 6 builds/6 publishes + 3 README builds
-exit0/0 warnings/0 errors. Предыдущий full solution run2026-10-10 не повторялся.
+Все20source functional scenarios прошли; package copy — **12processes/120behavior
+scenarios** Debug/Release build/publish, оба providers и MS без analyzer. Standard
+package matrix64/64 +3actual README, library/app4/4 и2expected COB001–COB006 controls
+также прошли; opt-out expected CS0246. Actual analyzer/cache/SHA/generated initializer,
+clean runtime payload и sources проверены. Packages local/unpublished.
 
-## Ограничения
+Current regression: Cobalt179/179, generator91/91, Core81/81 **Release отдельно**:
+3TRX/351passed/0failed/0skipped. Full nonincremental Release build exit0/errors0/
+warnings1185. Debug unit suites/IPC/units/UI/native не повторены.
 
-- Cobalt гарантирует reference-unique reverse cleanup с продолжением после ошибки. Microsoft DI сохраняет стандартную семантику: disposable Composite aliases могут освобождаться повторно; после provider cleanup failure дальнейший disposal зависит от Microsoft DI. Это проверенное различие, сервис должен поддерживать повторный Dispose.
-- Generator остаётся net10.0; RS1041 и прочие shared build warnings не устранены. Новые scopes/любые unsupported declarations этой работой не добавлены.
-- Generator подключается consumer явно: runtime package dependencies не доставляют
-  его автоматически. PrivateAssets=all сохраняет analyzer только на build boundary.
-- Package scope проверен на SDK10.0.401; другие compiler hosts/SDK/OS,
-  self-contained/RID/trimming/NativeAOT и performance baseline не проверены.
-  ManualTests/CobaltTest не запускался; новый bounded consumer имеет собственные результаты.
+## Готовность и ограничения
+
+- COB6a/b/c/d, COB5 и COB7 закрыты в согласованном собственном headless scope.
+  Это не общий release и не подтверждение equivalence всех DI contracts.
+- App lifecycle включает фактический cleanup каждого provider: Worker aliases
+  shared, Cobalt Dispose1/MS Dispose3. Borrowed0/owned factory1 на обоих.
+- Cold timing исключает process/CLR launch, module initializers, input creation
+  и cleanup; OS/file caches прогреты.12samples/provider дают exploratory median/
+  min/max, nearest-rank P95 равен max. Cold process-wide bytes не равны BDN bytes/op.
+- Desktop background work не контролировалось; absolute timings относятся к этой
+  машине/graph. Thread contention, other OS/SDK/RID/self-contained/trimming/AOT,
+  UI и engine workloads не измерены. Причины perf gap не профилировались.
+- Supported constructor/generic/optional/registration forms и recursion/error
+  limits — в [плане](PLAN.md) и [package README](../../TrueMoon.Cobalt/PACKAGE.md).
+  Runtime synchronous под resolver lock; scopes/reflection fallback не добавлены.
+- Generator net10.0/RS1041 и shared warnings сохраняются. NuGet analyzer bundled;
+  source consumers имеют explicit analyzer ProjectReference. Adapter поддерживается.
 
 ## Следующий конкретный шаг
 
-COB4 вместе с CORE5 проверен в указанной матрице. Следующий локальный шаг — COB5:
-зафиксировать контрольный graph/параметры и измерить startup/resolution/allocations
-обоих providers; не менять performance semantics без baseline. Общий own-child
-IPC/lifecycle сценарий остаётся задачей Mithril/Enerit.
+По общему порядку — **UI quality: свежий package/Hosting proof** на Cobalt/DI и
+explicit fonts по [локальному контракту UI](../alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15).
+Core, Enerit ENE5 и Mithril MIT5 завершили bounded проход; [общий срез](../QUALITY.md).
+
+Cobalt performance backlog перед пересмотром migration: исследовать32B warm resolve,
+96B open-generic и transient overhead на том же paired workload, затем повторить
+измерения/регрессии. Это отдельная будущая задача, не сделанная оптимизация и не
+новое обязательное условие следующего модульного прохода. Explicit UseDI consumers сохранены;
+адресная migration возможна после проверки конкретного consumer и его limits.

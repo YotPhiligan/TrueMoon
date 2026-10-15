@@ -4,6 +4,11 @@
 [План](PLAN.md), [этапы](PLAN.md#этапы-будущей-реализации),
 [общий статус](../STATUS.md).
 
+Сверка зависимостей **2026-10-15**: [quality matrix](../QUALITY.md) фиксирует bounded
+Core/Cobalt/Enerit/Mithril results и открытый UI acceptance. Следующий общий code
+scope — fresh UI package/Hosting proof; ENG0 ещё не начинается. Никаких engine
+projects/API/build/tests/native checks эта документационная сверка не создаёт.
+
 ## Текущее состояние
 
 **ENG0–ENG8 запланированы.** Новых engine/editor проектов, public API, 3D renderer,
@@ -35,6 +40,12 @@ ENG0–ENG8 по-прежнему запланированы, frame transport/ho
   требуют отдельных integration decisions. Shared RAM frames не закрывают ENE3.
 
 ## Следующий шаг при начале реализации
+
+Уточнение2026-10-14: пользователь выбрал сначала качество текущих модулей,
+начиная с Cobalt. Сводка ограничений выполнена2026-10-15; по [текущей очередности](../QUALITY.md#решение-о-порядке-работ)
+следом UI package/Hosting quality. ENG0 остаётся запланированным, без автоматического
+требования закрыть все будущие UI/DI/IPC roadmap пункты для обсуждения game scope.
+Engine/editor code и собственные checks не выполнялись.
 
 **ENG0**, затем **ENG1–ENG3**: выбрать маленький game scenario, определить session/
 control/frame contracts и построить Editor/child probe с frame pattern и

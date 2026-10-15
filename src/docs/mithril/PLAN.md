@@ -1,6 +1,6 @@
 # Mithril: план units и процессного lifecycle
 
-Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Уточнённые MIT0–MIT4 contracts записаны ниже; bounded App/IPC интеграция проверена2026-10-14, независимая поставка остаётся открыта.
+Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Уточнённые MIT0–MIT5 contracts записаны ниже; bounded App/IPC/package scope и operational diagnostics имеют отдельные датированные проверки в статусе.
 
 ## Границы
 
@@ -226,6 +226,11 @@ uncooperative handlers остаются отдельными критериям�
 ### MIT5/ENE5 independent package contract — 2026-10-14
 
 Основной детальный plan этой межмодульной поставки ведётся здесь.
+Уточнение2026-10-14 после [принятого Cobalt delivery contract](../cobalt/PLAN.md#принятый-scope-и-один-пакет--2026-10-14):
+те же9producer projects теперь дают8nupkgs, Cobalt analyzer bundled в runtime
+package и отключается EnableCobaltGenerator=false; только Enerit analyzer остаётся
+отдельной explicit PackageReference. Functional matrix/own-process scope ниже
+сохраняются; повторные108cases и delivery evidence записаны у Cobalt HISTORY.
 [Runner](../../ManualTests/UnitsPackageConsumer/README.md). Package portion
 MIT5/ENE5 проверяет тот же bounded MIT4 own-child/same-build/cooperative pipes
 contract на Windows x64/net10.0/.NET10 SDK compiler. Operational diagnostics MIT5
@@ -262,3 +267,36 @@ contract на Windows x64/net10.0/.NET10 SDK compiler. Operational diagnostics M
 RID/self-contained/single-file/trimming/NativeAOT, произвольные custom transports,
 uncooperative shutdown или production resource trend. После неё измерить IPC
 baseline, затем уточнить operational diagnostics, сохраняя эти boundaries.
+
+### MIT5 operational diagnostics — 2026-10-15
+
+Принято для quality прохода: наблюдаемость существующего bounded owned-process
+sequence через TrueMoon `IEventsSource`, без новых Microsoft DI/logging contracts,
+process ownership modes или recovery APIs. [Подключение/переходы](DIAGNOSTICS.md).
+
+- Public `UnitProcessDiagnostic`/`UnitProcessStage`, category `UnitProcess`:
+  RunId для каждого принятого explicit Start, attempt generation, unit/owner/child
+  identity, effective policy/budget/delays, consumed attempts, exit code и исходный Error.
+- Наблюдать preparation/OS start, natural exit/wrapper release, решение restart и
+  terminal policy/budget/failure, intentional Stop, kill/reap outcome и cleanup failure.
+  Started не означает service readiness; Terminal — решение, не delivery acknowledgement.
+- Snapshot фиксируется до lazy sink; initial failure остаётся caller, automatic
+  failure — тот же Exception в LastRestartError. Прежние текстовые события сохранены.
+  Sink exception/disposed source не меняют lifecycle result и не препятствуют cleanup.
+- Stop callbacks и monitor могут перемежаться; Stopped следует monitor drain, кроме
+  reentrant terminal callback (TerminalCallback без self-wait). Repeated Stop может
+  дать NoProcess. Новая sequence не подменяет captured identity старого Stop.
+- Не записывать argv/environment/control endpoints в payload. Error может включать
+  OS details. Синхронный observer не должен блокировать или reenter lifecycle.
+- Acceptance: existing 20 restart +9 shutdown cases с exact trace identity/count/order,
+  policy/limit/error/default settings, cancelled preparation/delay, forced stop и
+  throwing sink, Debug hosted/apphost и published Release. Independent package
+  App.UseDiagnostics проверяет те же public payload и Core pipeline на Cobalt/DI и
+  DI с отключённым Cobalt analyzer. Abrupt-parent-exit не обещает trace killed parent.
+
+MIT5 закрывается в этом Windows x64/net10.0 same-build/cooperative scope при текущих
+runtime regressions, published traces и fresh package composition. Other OS/RID/AOT,
+arbitrary extensions, independent external restart, long resource trend и durable
+audit/recovery остаются отдельным развитием. Следом свести качество модулей и
+оставшийся UI acceptance перед выбором ENG0; performance backlog сам по себе не
+расширяет текущий functional scope.

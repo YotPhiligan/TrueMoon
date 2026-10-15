@@ -176,6 +176,10 @@ Process isolation не гарантирует изоляцию shared GPU/driver
 
 Все этапы **запланированы**; таблица задаёт порядок, а не текущие passing results.
 
+Уточнение порядка2026-10-14 по решению пользователя: перед ENG0 довести текущие
+модули до рабочего уровня качества, начиная с Cobalt. [Общие критерии](../PLAN.md#качество-модулей-до-engineeditor--2026-10-14).
+Engine architecture/ENG0–ENG8 сохраняются; реализация ещё не начинается.
+
 | ID | Результат | Критерий завершения |
 | --- | --- | --- |
 | ENG0 | Scope и минимальные contracts | Выбраны game scenario/platform/API, политика паузы/restore, session/control/frame schema, deadlines и измеримые limits |

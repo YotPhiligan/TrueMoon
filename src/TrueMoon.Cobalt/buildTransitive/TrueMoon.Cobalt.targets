@@ -1,0 +1,11 @@
+﻿<Project>
+  <!-- Keep one matching analyzer even when a consumer still references the old
+       standalone generator package; the runtime package supplies the matching version. -->
+  <Target Name="SelectCobaltPackageAnalyzer" AfterTargets="ResolveReferences" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)%(Analyzer.Extension)' == 'TrueMoon.Cobalt.Generator.dll'" />
+      <Analyzer Include="$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..', 'analyzers', 'dotnet', 'cs', 'TrueMoon.Cobalt.Generator.dll'))"
+                Condition="'$(EnableCobaltGenerator)' != 'false'" />
+    </ItemGroup>
+  </Target>
+</Project>

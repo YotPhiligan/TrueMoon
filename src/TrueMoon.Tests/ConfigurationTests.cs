@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using TrueMoon.Configuration;
+using TrueMoon.Dependencies;
+using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
 
 namespace TrueMoon.Tests;
@@ -97,6 +99,135 @@ public class ConfigurationTests
         Assert.Same(created, configuration.GetOrCreate<Settings>());
         Assert.Same(created, configuration.GetSection()!.Get<Settings>(nameof(Settings)));
         Assert.Equal(8, configuration.Get<Settings>()!.Count);
+    }
+
+    [Theory]
+    [InlineData("default", false)]
+    [InlineData("settings", false)]
+    [InlineData("default", true)]
+    [InlineData("settings", true)]
+    public void GetOrCreateReplacesWinningNullAndRetainsIdentity(string sectionName, bool named)
+    {
+        var key = nameof(Settings);
+        var high = Section(sectionName, (key, null));
+        var fallback = new Settings { Count = 17 };
+        var low = Section("default", (key, fallback));
+        var configuration = new CommonConfiguration([new TestProvider("high", high), new TestProvider("low", low)]);
+        var requestedSection = named ? sectionName : null;
+
+        var created = configuration.GetOrCreate<Settings>(sectionName: requestedSection);
+        created.Count = 23;
+
+        Assert.Same(created, configuration.GetOrCreate<Settings>(sectionName: requestedSection));
+        Assert.Same(created, configuration.Get<Settings>(sectionName: requestedSection));
+        Assert.Same(created, high.Get<Settings>(key));
+        Assert.Equal(23, configuration.Get<Settings>(sectionName: requestedSection)!.Count);
+        Assert.Same(fallback, low.Get<Settings>(key));
+        Assert.Equal(17, fallback.Count);
+    }
+
+    [Fact]
+    public void UnqualifiedSetKeepsDefaultTargetWhenNamedSectionMasksTheKey()
+    {
+        var high = Section("settings", ("key", "high"));
+        var low = Section("default", ("key", "low"));
+        var configuration = new CommonConfiguration([new TestProvider("high", high), new TestProvider("low", low)]);
+
+        configuration.Set("key", "changed");
+
+        Assert.Equal("changed", low.Get<string>("key"));
+        Assert.Equal("high", configuration.Get<string>("key"));
+        Assert.Equal("changed", configuration.Get<string>("key", "default"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GetOrCreateRejectsInvalidWinningValueWithoutChangingProviders(bool named)
+    {
+        var key = nameof(Settings);
+        var high = Section("default", (key, "invalid"));
+        var fallback = new Settings { Count = 17 };
+        var low = Section("default", (key, fallback));
+        var configuration = new CommonConfiguration([new TestProvider("high", high), new TestProvider("low", low)]);
+
+        Assert.Throws<FormatException>(() => configuration.GetOrCreate<Settings>(sectionName: named ? "default" : null));
+
+        Assert.Equal("invalid", high.Get<string>(key));
+        Assert.Same(fallback, low.Get<Settings>(key));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BootstrapConfiguresValuesBeforeRegistrationsAndServiceCreation(bool microsoftDI)
+    {
+        var trace = new List<string>();
+        IConfiguration? configured = null;
+        IConfiguration? registered = null;
+        var builder = App.Builder(context => { if (microsoftDI) context.UseDI(); })
+            .Configuration(configuration =>
+            {
+                trace.Add("providers");
+                configuration.AddProvider(new TestProvider("custom", Section("default", ("number", "41"))));
+            })
+            .Setup(context => context
+                .Services((configuration, services) =>
+                {
+                    trace.Add("registrations");
+                    registered = configuration;
+                    var number = configuration.Get<int>("number");
+                    services.Singleton<Settings>(_ =>
+                    {
+                        trace.Add("factory");
+                        return new Settings { Count = number };
+                    });
+                })
+                .Configuration(configuration =>
+                {
+                    trace.Add("configuration");
+                    configured = configuration;
+                    configuration.Set("number", configuration.Get<int>("number") + 1);
+                }));
+
+        await using var app = builder.Build();
+        var settings = app.Services.Resolve<Settings>();
+
+        Assert.Equal(new[] { "providers", "configuration", "registrations", "factory" }, trace);
+        Assert.Same(configured, registered);
+        Assert.Same(configured, app.Configuration);
+        Assert.Same(configured, app.Services.Resolve<IConfiguration>());
+        Assert.Equal(42, settings!.Count);
+        await app.StartAsync();
+        await app.StopAsync();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BootstrapConfigurationFailurePreservesCauseAndSkipsRegistrations(bool microsoftDI)
+    {
+        var failure = new InvalidOperationException("configuration validation failed");
+        var trace = new List<string>();
+        var builder = App.Builder(context => { if (microsoftDI) context.UseDI(); })
+            .Setup(context => context
+                .Services((_, services) =>
+                {
+                    trace.Add("registrations");
+                    services.Singleton<Settings>(_ =>
+                    {
+                        trace.Add("factory");
+                        return new Settings();
+                    });
+                })
+                .Configuration(_ =>
+                {
+                    trace.Add("configuration");
+                    throw failure;
+                }));
+
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => builder.Build()));
+        Assert.Equal(new[] { "configuration" }, trace);
     }
 
     [Fact]
@@ -209,6 +340,98 @@ public class ConfigurationTests
         configuration.Refresh();
         Assert.Null(configuration.GetSection("app"));
         Assert.Single(configuration.GetSections());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FailedRefreshPreservesAllProvidersAndAllowsRecovery(bool asynchronous)
+    {
+        using var folder = new TemporaryFolder();
+        var file = Path.Combine(folder.Path, "settings.json");
+        File.WriteAllText(file, "{\"value\":5}");
+        var arguments = new[] { "-value=old" };
+        var configuration = new CommonConfiguration([
+            new CommandLineArgsProvider(() => arguments),
+            new JsonConfigurationProvider(new FixedPaths(folder.Path))]);
+        var oldArguments = configuration.GetSection("args");
+        var oldSettings = configuration.GetSection("settings");
+        arguments = ["-value=new"];
+        File.WriteAllText(file, "broken");
+
+        if (asynchronous) await Assert.ThrowsAnyAsync<JsonException>(() => configuration.RefreshAsync());
+        else Assert.ThrowsAny<JsonException>(() => configuration.Refresh());
+
+        Assert.Same(oldArguments, configuration.GetSection("args"));
+        Assert.Same(oldSettings, configuration.GetSection("settings"));
+        Assert.Equal("old", configuration.Get<string>("-value"));
+        Assert.Equal(5, configuration.Get<int>("value", "settings"));
+        File.WriteAllText(file, "{\"value\":9}");
+        if (asynchronous) await configuration.RefreshAsync();
+        else configuration.Refresh();
+        Assert.Equal("new", configuration.Get<string>("-value"));
+        Assert.Equal(9, configuration.Get<int>("value", "settings"));
+        Assert.Equal("old", oldArguments!.Get<string>("-value"));
+        Assert.Equal(5, oldSettings!.Get<int>("value"));
+    }
+
+    [Fact]
+    public void JsonSerializationFailurePreservesFileAndSnapshotAndAllowsRetry()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Path.Combine(folder.Path, "settings.json");
+        const string original = "{\"value\":5}";
+        File.WriteAllText(file, original);
+        var section = new JsonConfigurationSection(file);
+
+        Assert.Throws<ArgumentException>(() => section.Set("value", double.NaN));
+
+        Assert.Equal(original, File.ReadAllText(file));
+        Assert.Equal(5, section.Get<int>("value"));
+        section.Set("value", 9);
+        Assert.Equal(9, new JsonConfigurationSection(file).Get<int>("value"));
+    }
+
+    [Fact]
+    public void GetOrCreatePersistsWinningJsonNullWithoutWritingDefault()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Path.Combine(folder.Path, "settings.json");
+        File.WriteAllText(file, "{\"Settings\":null}");
+        var fallback = new Settings { Count = 17 };
+        var defaults = Section("default", (nameof(Settings), fallback));
+        var configuration = new CommonConfiguration([
+            new JsonConfigurationProvider(new FixedPaths(folder.Path)), new TestProvider("low", defaults)]);
+
+        var created = configuration.GetOrCreate<Settings>();
+
+        using (File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+            Assert.Same(created, configuration.GetOrCreate<Settings>());
+        Assert.Same(created, configuration.Get<Settings>());
+        Assert.Same(fallback, defaults.Get<Settings>(nameof(Settings)));
+        Assert.Equal(17, fallback.Count);
+        Assert.Equal(0, new JsonConfigurationSection(file).Get<Settings>(nameof(Settings))!.Count);
+    }
+
+    [Fact]
+    public void JsonWriteFailurePreservesSnapshotAndAllowsRetry()
+    {
+        using var folder = new TemporaryFolder();
+        var file = Path.Combine(folder.Path, "settings.json");
+        const string original = "{\"value\":5}";
+        File.WriteAllText(file, original);
+        var section = new JsonConfigurationSection(file);
+
+        using (File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            Assert.Throws<IOException>(() => section.Set("value", 9));
+            Assert.Equal(5, section.Get<int>("value"));
+            Assert.Equal(original, File.ReadAllText(file));
+        }
+
+        section.Set("value", 9);
+        Assert.Equal(9, section.Get<int>("value"));
+        Assert.Equal(9, new JsonConfigurationSection(file).Get<int>("value"));
     }
 
     private static ConfigurationSection Section(string name, params (string key, object? value)[] entries)

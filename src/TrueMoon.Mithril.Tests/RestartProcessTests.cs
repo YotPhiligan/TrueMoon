@@ -55,10 +55,80 @@ public class RestartProcessTests
             else Assert.Equal(JsonValueKind.Null, result.GetProperty("Error").ValueKind);
             if (scenario is "delay" or "default-budget-delay")
                 Assert.All(result.GetProperty("DelayMilliseconds").EnumerateArray(), delay => Assert.True(delay.GetDouble() >= (scenario == "delay" ? 95 : 245)));
+            AssertDiagnostics(result, scenario, exitCodes, restarts, callbacks);
         }
         finally
         {
             if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)); }
+        }
+    }
+
+    private static void AssertDiagnostics(JsonElement result, string scenario, int[] codes, int restarts, int callbacks)
+    {
+        var traces = result.GetProperty("Diagnostics").EnumerateArray().ToArray();
+        JsonElement[] Stage(string stage) => traces.Where(x => x.GetProperty("Stage").GetString() == stage).ToArray();
+        var runId = Assert.Single(traces.Select(x => x.GetProperty("RunId").GetGuid()).Distinct());
+        Assert.NotEqual(Guid.Empty, runId);
+        var expectedPolicy = scenario.StartsWith("never-", StringComparison.Ordinal) || scenario == "reentrant-terminal-dispose" ? "Never"
+            : scenario.StartsWith("once-", StringComparison.Ordinal) || scenario is "delay" or "controller-lifetime" ? "Once"
+            : scenario.StartsWith("oncrash-", StringComparison.Ordinal) ? "OnCrash" : "Always";
+        Assert.All(traces, trace =>
+        {
+            Assert.Equal(7, trace.GetProperty("UnitIndex").GetInt32());
+            Assert.Equal("unit7", trace.GetProperty("UnitName").GetString());
+            Assert.Equal(result.GetProperty("ParentPid").GetInt32(), trace.GetProperty("ParentProcessId").GetInt32());
+            Assert.Equal(scenario == "default-budget-delay" ? 3 : scenario == "limit-zero" ? 0 : 2, trace.GetProperty("RestartLimit").GetInt32());
+            Assert.Equal(scenario is "stop-delay" or "dispose-delay" ? 60000 : scenario == "default-budget-delay" ? 250 : scenario == "delay" ? 100 : 0,
+                trace.GetProperty("RestartDelay").GetInt32());
+            Assert.Equal(3000, trace.GetProperty("TerminationDelay").GetInt32());
+            Assert.Equal(expectedPolicy, trace.GetProperty("RestartPolicy").GetString());
+        });
+        var started = Stage("Started");
+        Assert.Equal(codes.Length, started.Length);
+        Assert.Equal(Enumerable.Range(1, codes.Length), started.Select(x => x.GetProperty("Generation").GetInt32()));
+        Assert.Equal(result.GetProperty("Pids").EnumerateArray().Select(x => x.GetInt32()), started.Select(x => x.GetProperty("ProcessId").GetInt32()));
+        Assert.Equal(Enumerable.Range(0, codes.Length), started.Select(x => x.GetProperty("RestartCount").GetInt32()));
+        Assert.Equal(started.Length, Stage("ProcessReleased").Length);
+        Assert.Equal(started.Select(x => x.GetProperty("ProcessId").GetInt32()), Stage("ProcessReleased").Select(x => x.GetProperty("ProcessId").GetInt32()));
+        Assert.Equal(codes, Stage("ProcessReleased").Select(x => x.GetProperty("ExitCode").GetInt32()));
+        Assert.Equal(restarts, Stage("Restarting").Length);
+        Assert.Equal(restarts + (scenario is "stop-delay" or "dispose-delay" ? 1 : 0), Stage("RestartScheduled").Length);
+        var stoppedChild = scenario is "stop-restarted" or "concurrent-stop";
+        Assert.Equal(codes.Take(codes.Length - (stoppedChild ? 1 : 0)), Stage("Exited").Select(x => x.GetProperty("ExitCode").GetInt32()));
+        Assert.Equal(callbacks, Stage("Terminal").Length);
+        if (callbacks == 1)
+        {
+            var expectedReason = scenario == "restart-failure" ? "Failure" : scenario is "limit-zero" or "default-budget-delay" or "oncrash-budget" or "always-normal" or "always-crash" ? "RestartLimit" : "Policy";
+            Assert.Equal(expectedReason, Stage("Terminal")[0].GetProperty("Reason").GetString());
+        }
+        var failed = Stage("LaunchFailed");
+        Assert.Equal(scenario is "restart-failure" or "stop-preparation" ? 1 : 0, failed.Length);
+        if (failed.Length == 1)
+        {
+            Assert.Equal(2, failed[0].GetProperty("Generation").GetInt32());
+            Assert.Equal(JsonValueKind.Null, failed[0].GetProperty("ProcessId").ValueKind);
+            Assert.Equal(scenario == "stop-preparation" ? "Cancelled" : "LaunchFailure", failed[0].GetProperty("Reason").GetString());
+        }
+        Assert.Equal(scenario == "restart-failure" ? 1 : 0, Stage("SequenceFailed").Length);
+        if (scenario == "restart-failure")
+        {
+            var failure = Assert.Single(Stage("SequenceFailed"));
+            Assert.Equal("RestartFailure", failure.GetProperty("Reason").GetString());
+            Assert.Equal("Win32Exception", failure.GetProperty("ErrorType").GetString());
+        }
+        Assert.Empty(Stage("StopFailed"));
+        Assert.Empty(Stage("Killing"));
+        Assert.NotEmpty(Stage("Stopped"));
+        var firstStop = Array.FindIndex(traces, x => x.GetProperty("Stage").GetString() == "StopRequested");
+        Assert.True(firstStop >= 0);
+        Assert.DoesNotContain(traces.Skip(firstStop), x => x.GetProperty("Stage").GetString() is "LaunchStarting" or "Started" or "Restarting");
+        // Each successful attempt is ordered independently of concurrent/reentrant Stop notifications.
+        foreach (var start in started)
+        {
+            var generation = start.GetProperty("Generation").GetInt32();
+            var attempt = traces.Where(x => x.GetProperty("Generation").GetInt32() == generation).Select(x => x.GetProperty("Stage").GetString()).ToArray();
+            Assert.True(Array.IndexOf(attempt, "LaunchStarting") < Array.IndexOf(attempt, "Started"));
+            Assert.True(Array.IndexOf(attempt, "Started") < Array.IndexOf(attempt, "ProcessReleased"));
         }
     }
 

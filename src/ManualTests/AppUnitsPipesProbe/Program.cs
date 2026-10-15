@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using TrueMoon;
@@ -45,12 +46,15 @@ internal static class Fixture
         Environment.SetEnvironmentVariable("TM_APP_PIPES_DIR", directory);
         Environment.SetEnvironmentVariable("TM_APP_PIPES_ENDPOINT", "app-pipes-" + Guid.NewGuid().ToString("N"));
     }
-    internal static IApp Build(string provider, string scenario)
+    internal static IApp Build(string provider, string scenario, Action<UnitProcessDiagnostic>? onProcess = null)
     {
         var builder = provider == "di" ? App.Builder(c => c.UseDI()) : App.Builder(_ => { });
         return builder.Setup(c =>
         {
-            c.UseDiagnostics();
+            c.UseDiagnostics(d => d.OnEvent(e =>
+            {
+                if (e.Category == "UnitProcess" && e.Payload is UnitProcessDiagnostic trace) onProcess?.Invoke(trace);
+            }));
             c.PipesServiceTransport(_ => Environment.GetEnvironmentVariable("TM_APP_PIPES_ENDPOINT")!);
             if (Environment.GetEnvironmentVariable("-u") is null) c.UseInvocationService<IProbeService>();
             c.AddUnit(u => u.Services(r => r.Singleton<UnitState>().Composite<ProbeService, IProbeService, IStartable, IStoppable>())
@@ -81,7 +85,8 @@ internal static class Fixture
     internal static async Task<object> RunAsync(string scenario, string provider, string directory)
     {
         if (scenario == "parent-exit") return await ParentExitAsync(provider, directory);
-        await using var app = Build(provider, scenario);
+        var diagnostics = new ConcurrentQueue<UnitProcessDiagnostic>();
+        await using var app = Build(provider, scenario, diagnostics.Enqueue);
         var service = app.Services.Resolve<IProbeService>()!;
         var client = app.Services.Resolve<IInvocationClient<IProbeService>>()!;
         var controller = app.Services.Resolve<IUnitsController>()!;
@@ -164,10 +169,27 @@ internal static class Fixture
             await app.StopAsync();
             var appCancelled = app.Services.Resolve<IAppLifetime>()!.AppCancellationToken.IsCancellationRequested;
             await app.DisposeAsync();
+            var unitTraces = diagnostics.Where(x => x.UnitIndex == 1).ToArray();
+            Check(unitTraces.Length > 0 && unitTraces.Select(x => x.RunId).Distinct().Count() == 1 && unitTraces[0].RunId != Guid.Empty,
+                "Unit diagnostic sequence identity missing.");
+            var starts = unitTraces.Where(x => x.Stage == UnitProcessStage.Started).ToArray();
+            Check(starts.Select(x => x.ProcessId).SequenceEqual(identities.Select(x => (int?)x.Pid)) &&
+                starts.Select(x => x.Generation).SequenceEqual(Enumerable.Range(1, identities.Count)), "Diagnostic PID/generation mismatch.");
+            Check(unitTraces.All(x => x.ParentProcessId == Environment.ProcessId && x.RestartLimit == 1 && x.RestartDelay == 50 && x.TerminationDelay == 3000 &&
+                x.RestartPolicy == (scenario is "restart" or "budget" ? UnitRestartPolicy.OnCrash : UnitRestartPolicy.Never)), "Diagnostic effective configuration mismatch.");
+            Check(unitTraces.Count(x => x.Stage == UnitProcessStage.ProcessReleased) == identities.Count &&
+                unitTraces.Any(x => x.Stage == UnitProcessStage.Stopped) &&
+                !unitTraces.Any(x => x.Stage is UnitProcessStage.StopFailed or UnitProcessStage.SequenceFailed), "Diagnostic cleanup mismatch.");
+            Check(unitTraces.Count(x => x.Stage == UnitProcessStage.RestartScheduled) == (scenario is "restart" or "budget" ? 1 : 0), "Diagnostic restart decision mismatch.");
+            Check(unitTraces.Count(x => x.Stage == UnitProcessStage.Terminal) == (scenario == "budget" ? 1 : 0), "Diagnostic terminal count mismatch.");
+            if (scenario == "budget") Check(unitTraces.Single(x => x.Stage == UnitProcessStage.Terminal).Reason == "RestartLimit", "Budget reason lost.");
+            if (scenario == "startup-failure") Check(diagnostics.Any(x => x.UnitIndex == 2 && x.Stage == UnitProcessStage.LaunchFailed &&
+                x.Error is System.ComponentModel.Win32Exception && x.ProcessId is null), "Failed external launch diagnostics missing.");
             return new { Scenario = scenario, Provider = provider, ParentPid = Environment.ProcessId,
                 ChildPids = identities.Select(i => i.Pid).ToArray(), ExitCodes = observers.Select(p => p.ExitCode).ToArray(),
                 Checks = checks, FailedRequests = failedRequests, Cleanup = true, Pending = 0, WorkersCompleted = true,
-                Restarts = unitHandle.RestartCount, ClientCleanupObserved = true, AppCancelled = appCancelled };
+                Restarts = unitHandle.RestartCount, ClientCleanupObserved = true, AppCancelled = appCancelled,
+                ProcessDiagnosticsChecked = true, ProcessDiagnosticCount = diagnostics.Count };
         }
         finally
         {

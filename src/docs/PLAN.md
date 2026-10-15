@@ -73,9 +73,10 @@ runtime126/126, generator114/114, Mithril89/89 в Debug/Release, fresh App36/iso
 MIT5/ENE5 package portion проверена далее2026-10-14:9nupkgs,108consumer cases,
 Cobalt/DI включая DI без Cobalt analyzer, Debug/Release build/publish;
 [контракт](mithril/PLAN.md#mit5ene5-independent-package-contract--2026-10-14).
-Ближайший общий шаг — измеренный IPC baseline до оптимизаций; operational diagnostics
-MIT5 и performance ENE5 остаются открытыми частями этапов.
-Локальный Core/Cobalt шаг — COB5 startup/resolution/allocations baseline на фиксированном graph.
+На момент package portion ближайшим шагом был измеренный IPC baseline до оптимизаций;
+На тот момент operational diagnostics MIT5 и performance ENE5 были открытыми частями;
+их отдельные результаты2026-10-15 сведены в [quality matrix](QUALITY.md).
+Текущий приоритет уточнён ниже2026-10-14: качество существующих модулей, начиная с Cobalt.
 UI owner/package5.4–5.5 и fixed-font K2/K4 проверены ранее2026-10-11:
 UI532/532, golden360/360, validation0/0; эти UI проверки текущим headless шагом не повторены.
 NVIDIA GDI defect остаётся внешним K7 блокером; поиск app-side workaround отложен
@@ -94,9 +95,76 @@ Physical DPI/4.9, real loss/VRAM и итоговый alpha этап остают
 boundaries, не меняет текущую dependency map. Repeatable unit sessions, frame
 transport и cross-process GPU ownership требуют новой реализации и проверки.
 MIT4/ENE4 завершён в bounded scope2026-10-14; текущий функциональный приоритет —
-измеренный IPC baseline после проверенной MIT5/ENE5 package portion. Выбор первого
+качество существующих модулей, начиная с Cobalt, после проверенной MIT5/ENE5 package portion. Выбор первого
 game scenario/platform/API и начало ENG0 относятся к будущему запуску работы.
 UI alpha/K1–K9/PA1–PA10 и внешний K7 блокер не отменяются.
+
+## Качество модулей до engine/editor — 2026-10-14
+
+**Текущая сводка2026-10-15:** [quality matrix](QUALITY.md) собрала bounded результаты
+Core/Cobalt/Enerit/Mithril и открытый UI acceptance. Следующий code этап —
+[UI package/Hosting quality](alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15)
+после bundled Cobalt/explicit fonts; K7/physical DPI/loss/VRAM сохраняются.
+Это документационная сверка без нового build/tests/native pass. Ниже сохранена
+датированная последовательность решений, а не список всё ещё открытых шагов.
+
+По решению пользователя сначала довести текущие модули до рабочего уровня качества,
+затем начинать движок. Первое направление — [Cobalt COB6/COB5/COB7](cobalt/PLAN.md#качество-cobalt-до-engineeditor--решение2026-10-14):
+корректность и диагностика, удобство существующего API, измерения, сравнение с
+Microsoft DI и условный переход consumers. Автоматическая миграция не назначена.
+
+Уточнение2026-10-14: выбран собственный TrueMoon API и **два Cobalt projects в
+одном consumer package**. Microsoft DI ecosystem bridge/контракты не являются
+целью; существующий adapter сохраняется. [Принятый scope/поставка](cobalt/PLAN.md#принятый-scope-и-один-пакет--2026-10-14).
+
+Уточнение2026-10-15 после [COB7 comparison](cobalt/COMPARISON.md): Cobalt COB6a–d,
+COB5 baseline и COB7 проверены в bounded headless scope. Cobalt остаётся default,
+массовая migration explicit Microsoft DI consumers отложена; adapter сохраняется.
+Далее собственный Core quality review по порядку ниже. Подтверждённый hot-path
+backlog Cobalt ведётся в его плане отдельно, UI migration требует своего proof.
+
+Уточнение2026-10-15 после [Core quality](core/PLAN.md#сквозной-headless-proof--2026-10-15):
+configuration/bootstrap, diagnostics и цельный headless source/package proof
+проверены в bounded Windows x64/net10.0 scope. Ограничения Core сохранены в его
+STATUS; новых APIs/runtime fixes финальный proof не потребовал. Следующий модуль —
+Enerit quality review и ENE5 measured IPC baseline, затем Mithril operational
+diagnostics. Это не общий выпуск и не завершение readiness остальных модулей.
+
+Уточнение2026-10-15 после [ENE5 baseline](enerit/BASELINE.md):10payload/concurrency
+cases и current Enerit runtime/generator regression проверены; измерительная часть
+ENE5 закрыта в same-build pipes scope. Старый package proof сохраняет свою дату,
+MMF/versioning/backpressure и другие режимы не объявляются готовыми. Следующий
+функциональный этап — Mithril MIT5 operational diagnostics. Enerit allocation/CPU
+profile, как и Cobalt hot-path investigation, остаётся отдельным measured backlog
+перед выбором оптимизаций, без автоматического расширения API.
+
+Рабочий уровень оценивается в заявленном scope каждого модуля:
+
+- Поддержанные API/limitations и ownership contracts понятны из примера и документации.
+- Invalid input, startup/operation failure и cancellation имеют ясную исходную
+  причину; повторные операции и cleanup соответствуют контракту.
+- Есть текущие поведенческие проверки модуля и нужной интеграции, включая errors
+  и lifecycle; успешный соседний модуль не подменяет собственные результаты.
+- Independent consumer подтверждает нужные runtime/analyzer/native assets;
+  warnings рассмотрены по причине, а не массово подавлены.
+- Performance workload и baseline зафиксированы перед оптимизацией; неподтверждённые
+  платформы, транспорты и deployment modes остаются явно ограниченными.
+
+Детальные задачи остаются у владельцев: после Cobalt — Core bootstrap/configuration/
+diagnostics, Enerit serialization/transport/errors и ENE5 measurements, Mithril
+lifecycle/operational diagnostics, Alloy/Argentis UI acceptance. Объём следующего
+прохода определяется ревью соответствующего модуля. ENE3/MMF и новые DI/UI APIs
+не становятся обязательными только ради расширения возможностей.
+UI K1–K9/PA1–PA10 и внешний K7 сохраняются; подготовка аппаратного окружения
+для physical DPI/real loss/VRAM остаётся отдельным условием проверки.
+Перед ENG0 свести достигнутый уровень и оставшиеся ограничения этих модулей;
+требование качества не означает закрытие всех будущих roadmap пунктов.
+
+Уточнение2026-10-15: [Mithril MIT5](mithril/PLAN.md#mit5-operational-diagnostics--2026-10-15)
+дополнил bounded quality проход process diagnostics и свежей independent package
+regression. Следующий этап — сводная quality matrix Core/Cobalt/Enerit/Mithril и
+оставшегося UI acceptance перед выбором ENG0. Other platform modes, долгие stress
+checks и measured allocation backlog не становятся автоматически новым functional scope.
 ## Сквозные правила
 
 - **Lifecycle и ownership:** определить владельца app, service, process, transport и graphics resources; startup failure, cancellation и shutdown имеют проверяемый результат и cleanup.

@@ -10,6 +10,50 @@
 
 Текущее состояние, доказательства и точка продолжения находятся в [STATUS.md](STATUS.md). Наличие пункта в этом документе означает требование к результату; статус реализации определяется отдельно.
 
+## Проход качества UI после headless модулей — 2026-10-15
+
+По [общей сводке качества](../QUALITY.md) следующий ограниченный scope — обновить
+5.4/5.5 independent package consumer после bundled Cobalt и explicit font catalog.
+Это уточнение очередности quality работы, не изменение архитектуры, alpha criteria,
+net10.0/xUnit, K1–K9/PA1–PA10 или решения пользователя остановить NVIDIA workaround search.
+
+Исходная сверка: существующий AlloyPackageConsumer использует только UseDI и
+backend overloads без explicit fonts. Предыдущие package16 и font golden360
+имеют отдельные runs2026-10-11; совместного нового proof нет. Runtime failure
+в этом quality шаге ещё не воспроизводился.
+
+Acceptance следующего code этапа:
+
+- Переиспользовать existing consumer: Cobalt и Microsoft DI как независимые варианты,
+  общий View/model и собственный TrueMoon registration API. Не переводить остальные
+  UI applications массово на Cobalt; adapter path и provider selectors сохранить.
+- Fresh unique local packages/feed/cache, независимые consumer build/CPM settings,
+  только PackageReference, Debug/Release ×build/publish, Windows x64/net10.0,
+  framework-dependent без RID. Producer graph учитывает IsPackable=false generator;
+  matching bundled analyzer Cobalt реально участвует в compilation, его DLL не
+  попадает в runtime output. Вариант Microsoft DI с отключённым Cobalt analyzer
+  подтверждает, что consumer не зависит от generated Cobalt graph.
+- Сохранить Raster/OpenGL/Vulkan Hosting smoke и direct renderer без Hosting/App.
+  Подключить существующий SkiaFontCatalog с лицензированными фиксированными fonts;
+  убедиться в фактической доставке fonts/license/native DLL, matching source/package/
+  compiler/generated provenance и достижимости новых overloads из пакетов.
+- Проверять реальный render/update и bounded lifecycle: startup, model/binding
+  updates, отсутствие owned sessions/subscriptions после Stop/Dispose, правильный
+  native LoadedPath. Контракт владения каждого provider сохраняется, alias disposal
+  counts не объявляются одинаковыми без проверки. Не заменять checks одним build.
+- Сохранить failure logs, case deadlines, cleanup только own launched processes,
+  fresh output directories и итоговую проверку source/nupkg/generated/native/font
+  fingerprints. Точные commands и actual case counts записать после выполнения;
+  Completed требует всей заявленной matrix, negative control учитывается отдельно.
+- Выполнить текущую UI xUnit suite и relevant Core/Cobalt regressions по фактически
+  затронутому коду. При изменении fonts/native/renderer read-only K2/K4 golden
+  повторяется с прежними fixtures/tolerances; эталоны не перезаписывать ради passing.
+
+Runtime fixes вносить только при воспроизводимом defect. Этот пакетный proof не
+объявляет снятым K7, physical DPI/loss/VRAM или final alpha, не меняет driver/GPU/
+Windows settings и не начинает engine. После него обновить сводку качества и
+выбрать следующий доступный UI/ENG0 scope с явно сохранёнными ограничениями.
+
 ## Цель и основные решения
 
 Создать гибкий UI-фреймворк с Fluent API на C# и сменяемыми бекендами, пригодный для самостоятельных Windows-приложений и встраивания в качестве GUI/HUD в Vulkan-приложение. Представления и пользовательские элементы описываются в C# классах.

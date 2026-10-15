@@ -6,6 +6,96 @@ namespace TrueMoon.Cobalt.Generator.Tests;
 
 public class GeneratorTests
 {
+    [Theory]
+    [InlineData("TrySingleton", false, false)]
+    [InlineData("TrySingleton", true, false)]
+    [InlineData("TryTransient", false, false)]
+    [InlineData("TryTransient", true, false)]
+    [InlineData("TrySingleton", false, true)]
+    [InlineData("TrySingleton", true, true)]
+    [InlineData("TryTransient", false, true)]
+    [InlineData("TryTransient", true, true)]
+    public void TryRegistrations_GenerateExecutableResolvers_WithExpectedLifetimeAndNoDuplicates(
+        string method, bool serviceMapping, bool staticCall)
+    {
+        var types = serviceMapping ? "IService, Concrete" : "Concrete";
+        var call = staticCall
+            ? $"ServicesRegistrationContextExtensions.{method}<{types}>(c)"
+            : $"c.{method}<{types}>()";
+        var result = Generate($$"""
+            using System;
+            using TrueMoon.Services;
+            public interface IService;
+            public class Concrete : IService;
+            public static class Graph {
+                public static IServiceResolver Create() => new TrueMoon.Cobalt.CobaltServiceResolverBuilder()
+                    .Build(null!, [(_, c) => { {{call}}; {{call}}; }]);
+            }
+            """);
+        Assert.Equal(2, result.Run.GeneratedTrees.Length);
+        using var stream = new MemoryStream();
+        var emit = result.Output.Emit(stream);
+        Assert.True(emit.Success, string.Join(Environment.NewLine, emit.Diagnostics));
+        var assembly = Assembly.Load(stream.ToArray());
+        var services = (TrueMoon.Services.IServiceResolver)assembly.GetType("Graph")!
+            .GetMethod("Create")!.Invoke(null, null)!;
+        using var ownership = (IDisposable)services;
+        var serviceType = assembly.GetType(serviceMapping ? "IService" : "Concrete")!;
+        var concreteType = assembly.GetType("Concrete")!;
+        var first = services.GetService(serviceType);
+        var second = services.GetService(serviceType);
+        Assert.Equal(concreteType, first?.GetType());
+        Assert.Equal(concreteType, second?.GetType());
+        if (method == "TrySingleton") Assert.Same(first, second);
+        else Assert.NotSame(first, second);
+        var items = (System.Collections.IEnumerable)services.GetService(typeof(IEnumerable<>).MakeGenericType(serviceType))!;
+        Assert.Single(items.Cast<object>());
+        if (serviceMapping) Assert.Null(services.GetService(concreteType));
+    }
+
+    [Fact]
+    public void UnrelatedTryRegistrationMethods_DoNotGenerateResolvers()
+    {
+        var result = Generate("""
+            using TrueMoon.Services;
+            public class Concrete;
+            public class Graph {
+                public IServicesRegistrationContext TrySingleton<T>(IServicesRegistrationContext context) => context;
+                public IServicesRegistrationContext TryTransient<T>(IServicesRegistrationContext context) => context;
+                public void Register(IServicesRegistrationContext context) {
+                    TrySingleton<Concrete>(context);
+                    this.TryTransient<Concrete>(context);
+                }
+            }
+            """);
+        Assert.Empty(result.Run.GeneratedTrees);
+    }
+
+    [Fact]
+    public void TryRegistration_PreservesExistingRuntimeFactory()
+    {
+        var result = Generate("""
+            using System;
+            using TrueMoon.Services;
+            public interface IService;
+            public class Concrete : IService;
+            public static class Graph {
+                public static bool Run() {
+                    var existing = new Concrete();
+                    using var ownership = (IDisposable)new TrueMoon.Cobalt.CobaltServiceResolverBuilder()
+                        .Build(null!, [(_, c) => c.Singleton<Concrete>(_ => existing).TrySingleton<Concrete>()]);
+                    var services = (IServiceResolver)ownership;
+                    return ReferenceEquals(existing, services.Resolve<Concrete>());
+                }
+            }
+            """);
+        using var stream = new MemoryStream();
+        var emit = result.Output.Emit(stream);
+        Assert.True(emit.Success, string.Join(Environment.NewLine, emit.Diagnostics));
+        var assembly = Assembly.Load(stream.ToArray());
+        Assert.Equal(true, assembly.GetType("Graph")!.GetMethod("Run")!.Invoke(null, null));
+    }
+
     private static (GeneratorDriverRunResult Run, Compilation Output) Generate(string source)
     {
         var result = TestHelper.Generate(source);

@@ -1783,3 +1783,19 @@ private/handles/VRAM were not rerun. UI K2/K4 checked on the stated configuratio
 NVIDIA K7/final alpha acceptance stay open. Next independent general task is
 CORE5/COB4 headless PackageReference consumer with both providers/analyzer delivery;
 UI remaining4.9physical/K8/VRAM/final matrix keep their existing requirements.
+
+## Сводка качества и следующий scope — 2026-10-15
+
+Документационная сверка локального UI PLAN/STATUS, общего roadmap и текущих
+AlloyPackageConsumer Program/csproj/runner показала раздельные прежние package
+и font golden proofs. Consumer выбирает только UseDI и backend setup без explicit
+SkiaFontCatalog; runner сохраняет source SHA без итогового сравнения. Новый runtime
+failure не воспроизводился. [Общая сводка](../QUALITY.md),
+[следующий bounded scope/acceptance](PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15).
+
+Следом fresh package/Hosting proof на Cobalt/DI и explicit fonts, с existing direct
+renderer boundary, analyzer/native/font provenance и bounded cleanup. K1–K9,
+PA1–PA10, net10.0/xUnit, driver/Windows settings и остановка NVIDIA workaround
+search сохранены. Full alpha/physical DPI/real loss/VRAM не объявлены закрытыми.
+Code/build/tests/pack/process/GPU/performance в этой сверке не запускались;
+проверки документов описаны в общей HISTORY, новые passing module results отсутствуют.

@@ -189,3 +189,47 @@ Package portion не означает полного ENE5: следующий о
 latency/throughput/allocations выбранного scenario до оптимизаций. Operational
 process diagnostics принадлежат MIT5; MMF ENE3, backpressure/schema/uncooperative
 shutdown и другой compiler/platform требуют собственных решений/checks.
+
+### ENE5 измерительный контракт — 2026-10-15
+
+После завершённого bounded Core quality выбран reproducible same-build pipes
+baseline. [Постоянный workload/runner](../../Benchmarks/TrueMoon.Enerit.Benchmarks/README.md)
+использует реальный generated client/handler/DTO, без App/DI/Mithril и без
+изменения runtime. Ось сравнения — размер/shape payload и concurrency; этот run
+фиксирует исходную точку для будущих before/after измерений, не speedup.
+
+10cases: scalar, byte echoes256/16384/65536 и DTO с1024byte buffer, каждый с1/8
+outstanding calls по одному connection.10verify pairs проверяют результат и
+cleanup. Затем3fresh client/server pairs на case, rotating order, warmup≥1.5s,
+pilot512calls и3calibrated batches примерно1s (minimum250ms). Все90samples
+сохраняют raw per-call Stopwatch ticks, elapsed/opcount, allocations и GC counts.
+
+RTT заканчивается после typed await до validation/return rental. Batch throughput
+включает validation/return/worker/clock overhead. Client/server allocations —
+GC.GetTotalAllocatedBytes(true) по всем потокам каждого процесса, включая service
+и небольшие harness/control/batch-boundary расходы; это не retained/native memory
+и не MemoryDiagnoser одного потока. Управляющий stdin/stdout вне client окна;
+server begin acknowledgement/end read overhead не вычитается. Report JSON/startup/
+connect/raw arrays вне измерения, принудительного GC и изменения power plan нет.
+
+Case summary — median9sample metrics, с throughput min/max; это3независимых pairs,
+а не9независимых процессов. Closed-loop tails не являются open-loop SLA. Machine
+frequency/background/OS caches не контролируются. Source/generated/published binary/
+raw-report hashes и runtime/GC/CPU/SDK фиксируются; окончательные hashes/power plan
+сверяются перед Completed. Матрица не обещает MMF/other OS/RID/AOT/package timings.
+
+Критерий завершения этой части: полный10/30pair/90sample run без invocation errors,
+current runtime/generator regression отдельно Debug/Release, датированный отчёт
+с ограничениями и выбором следующего шага. ENE5 package portion сохраняет собственную
+дату/доказательства; один baseline не завершает все будущие quality/API roadmap задачи.
+
+Проверено2026-10-15:10verification/30measurement pairs,90samples/571944RPC,
+runtime126/generator114 в каждой Debug/Release. [Числа и ограничения](BASELINE.md),
+[команды/артефакты](HISTORY.md#ene5-pipes-performance-baseline--2026-10-15).
+Измерительная часть ENE5 завершена в этом scope; optimization не выполнялась.
+Client all-thread allocation2.2–3.0KB/call и scalar/concurrency overhead требуют
+отдельного allocation/CPU profile перед оптимизацией. Это measured backlog,
+не подтверждённый correctness blocker и не автоматическое требование MMF/новых API.
+Следующий общий функциональный этап — Mithril MIT5 operational diagnostics.
+Generated nullable-context warnings CS8669 сохраняются отдельным quality backlog;
+новый benchmark проявляет10таких warnings, массового подавления нет.

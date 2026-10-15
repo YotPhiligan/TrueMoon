@@ -12,18 +12,31 @@ public sealed class ProbeState
 {
     /// <summary>Creates evidence for one bounded scenario.</summary>
     /// <param name="scenario">Normal, cancellation or fault scenario.</param>
-    public ProbeState(string scenario) { Scenario = scenario; Borrowed = new BorrowedResource(); }
+    /// <param name="workDirectory">Fresh directory owned by this scenario.</param>
+    public ProbeState(string scenario, string workDirectory)
+    {
+        Scenario = scenario;
+        Borrowed = new BorrowedResource();
+        JsonPath = Path.Combine(workDirectory, "consumer.json");
+        ResourcePath = Path.Combine(workDirectory, "owned-resource.txt");
+    }
     /// <summary>Selected fault/lifetime behavior.</summary>
     public string Scenario { get; }
     /// <summary>Caller-owned instance which the resolver must preserve.</summary>
     public BorrowedResource Borrowed { get; }
     internal readonly ConcurrentQueue<string> Trace = new();
     internal readonly ConcurrentQueue<DiagnosticEvent> Diagnostics = new();
+    internal readonly ConcurrentQueue<DiagnosticEvent> ObsoleteDiagnostics = new();
     internal readonly List<CancellationToken> ShutdownTokens = [];
     internal readonly TaskCompletionSource Started = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal readonly Exception StartError = new InvalidOperationException("consumer startup failure");
     internal readonly Exception StopError = new InvalidOperationException("consumer shutdown failure");
     internal readonly Exception BuildError = new InvalidOperationException("consumer creation failure");
+    internal readonly Exception ConfigurationError = new InvalidOperationException("consumer configuration failure");
+    internal readonly Exception CleanupError = new InvalidOperationException("consumer cleanup failure");
+    internal readonly string JsonPath, ResourcePath;
+    internal int ResourceOpens, ResourceReleases;
+    internal bool ConfigurationVerified;
     internal IEventsSource? Source;
     internal int WorkerDisposeCalls, WorkerReleases, GateDisposals, FactoryDisposals, TicketDisposals;
 }
@@ -56,8 +69,38 @@ public sealed class BorrowedResource : IDisposable
 /// <param name="state">Scenario evidence.</param>
 public sealed class OwnedFactory(ProbeState state) : IDisposable
 {
+    private readonly FileStream _resource = Open(state);
+    private int _released;
+
+    private static FileStream Open(ProbeState state)
+    {
+        var resource = new FileStream(state.ResourcePath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
+        try
+        {
+            resource.Write("owned-resource"u8);
+            resource.Flush();
+        }
+        catch { resource.Dispose(); throw; }
+        state.ResourceOpens++;
+        return resource;
+    }
+
     /// <inheritdoc />
-    public void Dispose() => state.FactoryDisposals++;
+    public void Dispose()
+    {
+        state.FactoryDisposals++;
+        if (Interlocked.Exchange(ref _released, 1) != 0) return;
+        _resource.Dispose();
+        state.ResourceReleases++;
+        if (state.Scenario == "cleanup-failure") throw state.CleanupError;
+    }
+}
+
+/// <summary>Configuration object created over a JSON null entry.</summary>
+public sealed class ConsumerOptions
+{
+    /// <summary>Nonzero default persisted by GetOrCreate.</summary>
+    public int BatchSize { get; set; } = 23;
 }
 
 /// <summary>Generated disposable transient used twice by the worker.</summary>
@@ -86,6 +129,9 @@ public sealed class Worker(ProbeState state, IAppLifetime lifetime, IServiceReso
     {
         cancellationToken.ThrowIfCancellationRequested();
         state.Trace.Enqueue("worker.Start");
+        ConsumerProbe.VerifyConfiguration(configuration, state);
+        ConsumerProbe.Require(services.ResolveAll<DiagnosticSubscription>().Count() == 1
+            && services.ResolveAll<IEventsSourceFactory>().Count() == 1, "Repeated diagnostics registrations leaked.");
         ConsumerProbe.Require(ReferenceEquals(this, services.Resolve<Worker>())
             && ReferenceEquals(this, services.Resolve<IStoppable>())
             && services.ResolveAll<IStartable>().Any(service => ReferenceEquals(this, service)), "Composite identity failed.");
@@ -95,6 +141,7 @@ public sealed class Worker(ProbeState state, IAppLifetime lifetime, IServiceReso
             && ReferenceEquals(strings, services.Resolve<IRepository<string>>()), "Generic/configuration graph failed.");
         ConsumerProbe.Require(configuration.GetName() == "package-headless", "Configuration write/read failed.");
         ConsumerProbe.Require(ReferenceEquals(services.Resolve<OwnedFactory>(), services.Resolve<OwnedFactory>()), "Factory singleton identity failed.");
+        ConsumerProbe.VerifyResourceHeld(state);
         ConsumerProbe.Require(ReferenceEquals(services.Resolve<BorrowedResource>(), state.Borrowed), "Borrowed identity failed.");
         var first = services.Resolve<Ticket>(); var second = services.Resolve<Ticket>();
         ConsumerProbe.Require(first != null && second != null && !ReferenceEquals(first, second), "Transient identity failed.");
@@ -109,6 +156,7 @@ public sealed class Worker(ProbeState state, IAppLifetime lifetime, IServiceReso
     public Task StopAsync(CancellationToken cancellationToken = default)
     {
         state.Trace.Enqueue("worker.Stop"); state.ShutdownTokens.Add(cancellationToken);
+        ConsumerProbe.VerifyResourceHeld(state);
         state.Source!.Write(() => "worker-stop", caller: "Stop");
         return Task.CompletedTask;
     }
@@ -130,7 +178,7 @@ public sealed class GateService(ProbeState state, IAppLifetime lifetime) : IStar
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
         state.Trace.Enqueue("gate.Start");
-        if (state.Scenario == "start-failure") throw state.StartError;
+        if (state.Scenario is "start-failure" or "cleanup-failure") throw state.StartError;
         state.Started.TrySetResult();
         if (state.Scenario != "cancel") lifetime.Cancel();
         return Task.CompletedTask;
@@ -144,6 +192,11 @@ public sealed class GateService(ProbeState state, IAppLifetime lifetime) : IStar
     }
     /// <inheritdoc />
     public void Dispose() => state.GateDisposals++;
+}
+
+internal sealed class ConsumerPaths(string directory) : IPathResolver
+{
+    public string ResolvePath(Paths path) => directory;
 }
 
 internal sealed class ConsumerConfigurationProvider(string value) : IConfigurationProvider

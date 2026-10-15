@@ -3,14 +3,11 @@
 Headless application bootstrap, configuration, diagnostics and cooperative
 service lifecycle. Requires .NET 10. Alpha API; this package does not require UI.
 
-The default provider is Cobalt. In an application using generated registrations,
-reference **both** `TrueMoon` and `TrueMoon.Cobalt.Generator` at matching versions.
-The generator is a separate analyzer package and is not automatically delivered
-by a runtime package dependency:
+The default provider is Cobalt. Its matching generator is bundled in the
+transitive `TrueMoon.Cobalt` package, so the application needs one reference:
 
 ```xml
 <PackageReference Include="TrueMoon" Version="YOUR_VERSION" />
-<PackageReference Include="TrueMoon.Cobalt.Generator" Version="YOUR_VERSION" PrivateAssets="all" />
 ```
 
 ```csharp
@@ -46,6 +43,7 @@ token with a 30-second timeout; services must observe cancellation themselves.
 For Microsoft DI, also reference `TrueMoon.Extensions.DependencyInjection` and
 use `App.Builder(builder => builder.UseDI())` with its namespace imported.
 Microsoft DI does not need Cobalt generation for its own consumer registrations.
+It can opt out with `<EnableCobaltGenerator>false</EnableCobaltGenerator>`.
 Configuration, diagnostics and service interfaces are in `TrueMoon.Contracts`.
 
 Source, module plans and reproducible package consumers:

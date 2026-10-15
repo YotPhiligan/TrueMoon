@@ -1,6 +1,7 @@
 # Independent Enerit / Mithril package consumer
 
-The runner packages the nine-project App/DI/IPC/units dependency graph into a unique
+The runner packages the nine-project App/DI/IPC/units dependency graph into eight
+packages in a unique
 local prerelease feed, then creates fresh consumer directories using only
 PackageReference. It copies the agreed Program.cs/Contract.cs from AppUnitsPipesProbe
 as application source, not as Compile links or ProjectReference. All app builds and
@@ -42,9 +43,11 @@ Analyzer-only packages have no lib payload; runtime outputs exclude analyzers/Ro
 
 AnalyzerEvidence.cs requires concrete generated types at compile time without
 constructing adapters. Omitting TrueMoon.Enerit.Generator must give CS0234/CS0246.
-Explicit PrivateAssets="all" analyzer references are required at the consumer.
-The default Cobalt provider also needs TrueMoon.Cobalt.Generator; Microsoft DI can
-construct the same local graph without it. UseDiagnostics and explicit local
+An explicit PrivateAssets="all" reference is required only for Enerit.Generator.
+Cobalt's generator is bundled in TrueMoon.Cobalt and attaches through the
+transitive TrueMoon package dependency. There is no separate Cobalt generator
+package. Microsoft DI is also checked with EnableCobaltGenerator=false.
+UseDiagnostics and explicit local
 Composite registrations are retained from the source fixture.
 
 Source fingerprints,package hashes/metadata,library provenance,compiler analyzer

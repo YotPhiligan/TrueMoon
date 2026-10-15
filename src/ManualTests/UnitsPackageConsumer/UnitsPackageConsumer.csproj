@@ -13,7 +13,6 @@
     <PackageReference Include="TrueMoon.Enerit" Version="$(TrueMoonPackageVersion)" />
     <PackageReference Include="TrueMoon.Mithril" Version="$(TrueMoonPackageVersion)" />
     <PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="$(TrueMoonPackageVersion)" />
-    <PackageReference Include="TrueMoon.Cobalt.Generator" Version="$(TrueMoonPackageVersion)" PrivateAssets="all" Condition="'$(EnableCobaltGenerator)' == 'true'" />
     <PackageReference Include="TrueMoon.Enerit.Generator" Version="$(TrueMoonPackageVersion)" PrivateAssets="all" Condition="'$(EnableEneritGenerator)' == 'true'" />
   </ItemGroup>
 </Project>

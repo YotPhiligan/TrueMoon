@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using TrueMoon.Diagnostics;
 using TrueMoon.Dependencies;
+using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Services;
 using Xunit;
 
@@ -9,6 +11,214 @@ namespace TrueMoon.Tests;
 
 public class DiagnosticsTests
 {
+    [Fact]
+    public void CompletedSourcesAreReleasedWhileSubscriptionRemainsAlive()
+    {
+        var name = UniqueName();
+        var received = new List<int>();
+        var configuration = new DiagnosticsConfiguration();
+        configuration.AddFilter(name);
+        configuration.AddEventListener(item => received.Add((int)item.Payload!));
+        using var subscription = new DiagnosticSubscription(configuration);
+        using var survivor = new DiagnosticListener(name);
+        var completed = Enumerable.Range(0, 12).Select(index => CreateCompletedListener(name, index)).ToArray();
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.All(completed, reference => Assert.False(reference.IsAlive));
+        Assert.True(survivor.IsEnabled());
+        survivor.Write("survivor", DiagnosticEvent.Create(42));
+        using var replacement = new DiagnosticListener(name);
+        Assert.True(replacement.IsEnabled());
+        replacement.Write("replacement", DiagnosticEvent.Create(43));
+        Assert.Equal(Enumerable.Range(0, 12).Append(42).Append(43), received);
+        GC.KeepAlive(subscription);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RepeatedDiagnosticsSetupKeepsOnlyLastRegistration(bool microsoftDI)
+    {
+        var name = UniqueName();
+        var oldEvents = new List<DiagnosticEvent>();
+        var newEvents = new List<DiagnosticEvent>();
+        await using var app = App.Builder(context => { if (microsoftDI) context.UseDI(); })
+            .Setup(context => context
+                .UseDiagnostics(configuration => configuration.Filters(name).OnEvent(item =>
+                {
+                    if (item.Name.StartsWith(name, StringComparison.Ordinal)) oldEvents.Add(item);
+                }))
+                .UseDiagnostics(configuration => configuration.Filters(name).OnEvent(item =>
+                {
+                    if (item.Name.StartsWith(name, StringComparison.Ordinal)) newEvents.Add(item);
+                })))
+            .Build();
+
+        Assert.Single(app.Services.ResolveAll<DiagnosticSubscription>());
+        var factory = Assert.Single(app.Services.ResolveAll<IEventsSourceFactory>());
+        var source = factory.Create(name);
+        source.Write(() => "last", caller: "proof");
+        Assert.Empty(oldEvents);
+        var received = Assert.Single(newEvents);
+        Assert.Equal(name + ".proof", received.Name);
+        Assert.Equal("last", received.Payload);
+        await app.DisposeAsync();
+        Assert.Throws<ObjectDisposedException>(() => source.Trace());
+        using var after = new DiagnosticListener(name);
+        Assert.False(after.IsEnabled());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DisposingOneAppKeepsOtherAppDiagnosticsActive(bool microsoftDI)
+    {
+        var name = UniqueName();
+        var firstEvents = new List<string>();
+        var secondEvents = new List<string>();
+        IApp Build(List<string> received) => App.Builder(context => { if (microsoftDI) context.UseDI(); })
+            .Setup(context => context.UseDiagnostics(configuration => configuration.Filters(name).OnEvent(item =>
+            {
+                if (item.Name.StartsWith(name, StringComparison.Ordinal)) received.Add((string)item.Payload!);
+            }))).Build();
+        await using var first = Build(firstEvents);
+        await using var second = Build(secondEvents);
+        Assert.NotSame(first.Configuration.GetDiagnosticsConfiguration(), second.Configuration.GetDiagnosticsConfiguration());
+        var firstSource = first.Services.Resolve<IEventsSourceFactory>()!.Create(name + ".first");
+        var secondSource = second.Services.Resolve<IEventsSourceFactory>()!.Create(name + ".second");
+        firstSource.Write(() => "first");
+        secondSource.Write(() => "second");
+
+        await first.DisposeAsync();
+        Assert.Throws<ObjectDisposedException>(() => firstSource.Trace());
+        secondSource.Write(() => "survivor");
+        using var future = new DiagnosticListener(name + ".future");
+        Assert.True(future.IsEnabled());
+        future.Write(name + ".future.proof", DiagnosticEvent.Create("future"));
+
+        Assert.Equal(new[] { "first", "second" }, firstEvents);
+        Assert.Equal(new[] { "first", "second", "survivor", "future" }, secondEvents);
+        await second.DisposeAsync();
+        Assert.Throws<ObjectDisposedException>(() => secondSource.Trace());
+        Assert.False(future.IsEnabled());
+        using var after = new DiagnosticListener(name + ".after");
+        Assert.False(after.IsEnabled());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SourceCompletingDuringSubscribeIsReleased(bool beforeSubscribe)
+    {
+        var name = UniqueName();
+        var received = new List<int>();
+        using var subscription = SubscribeToCompletingListener(name, beforeSubscribe, received, out var completed, out var disposal);
+        Assert.Equal(1, disposal.Count);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        Assert.False(completed.IsAlive);
+        using var replacement = new DiagnosticListener(name);
+        Assert.True(replacement.IsEnabled());
+        replacement.Write("replacement", DiagnosticEvent.Create(42));
+        Assert.Equal(new[] { 42 }, received);
+        GC.KeepAlive(subscription);
+    }
+
+    [Fact]
+    public void NewFiltersOnlyApplyToSourcesDiscoveredAfterTheChange()
+    {
+        var name = UniqueName();
+        var configuration = new DiagnosticsConfiguration();
+        var received = new List<DiagnosticEvent>();
+        configuration.AddEventListener(received.Add);
+        using var subscription = new DiagnosticSubscription(configuration);
+        using var existing = new DiagnosticListener(name);
+        Assert.False(existing.IsEnabled());
+
+        configuration.AddFilter(name);
+        using var future = new DiagnosticListener(name);
+        Assert.False(existing.IsEnabled());
+        Assert.True(future.IsEnabled());
+        existing.Write("ignored", DiagnosticEvent.Create("old"));
+        future.Write("observed", DiagnosticEvent.Create("new"));
+        var actual = Assert.Single(received);
+        Assert.Equal("observed", actual.Name);
+        Assert.Equal("new", actual.Payload);
+    }
+
+    [Fact]
+    public void DisposingSubscriptionInsideCallbackStopsRemainingCallbacks()
+    {
+        var name = UniqueName();
+        var firstEvents = new List<DiagnosticEvent>();
+        var lateEvents = new List<DiagnosticEvent>();
+        var configuration = new DiagnosticsConfiguration();
+        configuration.AddFilter(name);
+        DiagnosticSubscription? subscription = null;
+        configuration.AddEventListener(item =>
+        {
+            firstEvents.Add(item);
+            subscription!.Dispose();
+        });
+        configuration.AddEventListener(lateEvents.Add);
+        using var owned = subscription = new DiagnosticSubscription(configuration);
+        using var source = new DiagnosticListener(name);
+
+        source.Write("first", DiagnosticEvent.Create("seen"));
+        source.Write("second", DiagnosticEvent.Create("ignored"));
+
+        Assert.False(source.IsEnabled());
+        var actual = Assert.Single(firstEvents);
+        Assert.Equal("first", actual.Name);
+        Assert.Equal("seen", actual.Payload);
+        Assert.Empty(lateEvents);
+        using var future = new DiagnosticListener(name);
+        Assert.False(future.IsEnabled());
+    }
+
+    [Fact]
+    public async Task ConcurrentSourceDiscoveryCompletionAndSubscriptionDisposalDetachAllSources()
+    {
+        var name = UniqueName();
+        var configuration = new DiagnosticsConfiguration();
+        configuration.AddFilter(name);
+        using var subscription = new DiagnosticSubscription(configuration);
+        var sources = new ConcurrentBag<DiagnosticListener>();
+        var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var creators = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
+        {
+            await start.Task;
+            for (var index = 0; index < 32; index++)
+            {
+                var source = new DiagnosticListener(name);
+                sources.Add(source);
+                if (index % 2 == 0) source.Dispose();
+            }
+        })).ToArray();
+        var disposal = Task.Run(async () =>
+        {
+            await start.Task;
+            subscription.Dispose();
+        });
+        try
+        {
+            start.SetResult();
+            await Task.WhenAll(creators.Append(disposal)).WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal(128, sources.Count);
+            Assert.All(sources, source => Assert.False(source.IsEnabled()));
+            using var after = new DiagnosticListener(name);
+            Assert.False(after.IsEnabled());
+        }
+        finally
+        {
+            foreach (var source in sources) source.Dispose();
+        }
+    }
+
     [Fact]
     public void DisposingSubscriptionDetachesExistingAndFutureSources()
     {
@@ -186,6 +396,52 @@ public class DiagnosticsTests
         Assert.Throws<ObjectDisposedException>(() => source.Trace());
         using var after = new DiagnosticListener(source.Name + ".after");
         Assert.False(after.IsEnabled());
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference CreateCompletedListener(string name, int value)
+    {
+        using var source = new DiagnosticListener(name);
+        Assert.True(source.IsEnabled());
+        source.Write("completed", DiagnosticEvent.Create(value));
+        return new WeakReference(source);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static DiagnosticSubscription SubscribeToCompletingListener(string name, bool beforeSubscribe,
+        List<int> received, out WeakReference completed, out DisposalCounter disposal)
+    {
+        disposal = new DisposalCounter();
+        using var source = new CompletingListener(name, beforeSubscribe, disposal);
+        var configuration = new DiagnosticsConfiguration();
+        configuration.AddFilter(name);
+        configuration.AddEventListener(item => received.Add((int)item.Payload!));
+        var subscription = new DiagnosticSubscription(configuration);
+        Assert.False(source.IsEnabled());
+        completed = new WeakReference(source);
+        return subscription;
+    }
+
+    private sealed class CompletingListener(string name, bool beforeSubscribe, DisposalCounter disposal) : DiagnosticListener(name)
+    {
+        public override IDisposable Subscribe(IObserver<KeyValuePair<string, object?>> observer)
+        {
+            if (beforeSubscribe) Dispose();
+            var handle = base.Subscribe(observer);
+            if (!beforeSubscribe) Dispose();
+            return new TrackedSubscription(handle, disposal);
+        }
+    }
+
+    private sealed class DisposalCounter { public int Count; }
+
+    private sealed class TrackedSubscription(IDisposable handle, DisposalCounter disposal) : IDisposable
+    {
+        public void Dispose()
+        {
+            disposal.Count++;
+            handle.Dispose();
+        }
     }
 
     private static bool ContainsException(Exception actual, Exception expected)

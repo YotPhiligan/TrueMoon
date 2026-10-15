@@ -1,5 +1,12 @@
 # Mithril: история реализации и проверок
 
+## Package regression с bundled Cobalt — 2026-10-14
+
+UnitsPackageConsumer обновлён под единый Cobalt package:8nupkgs из9projects,
+bundled Cobalt analyzer/explicit Enerit analyzer. Fresh108/108Debug/Release
+build/publish cases прошли, Completed=true; existing process/cleanup contract
+сохранён. Mithril runtime/tests не менялись, suite89 не повторена. [Команды/границы](../cobalt/HISTORY.md#единый-пакет-и-truemoon-scope--2026-10-14).
+
 [План](PLAN.md), [текущий статус](STATUS.md), [общий статус](../STATUS.md).
 
 ## MIT0 own-child baseline — 2026-10-11
@@ -435,3 +442,101 @@ uncooperative shutdown не проверены. Commit/push не выполня�
 Final package run: `TestResults\UnitsPackages\run-20261014-094823275`, version `0.2.2.7-alpha.units.20261014094823288`; SourceFiles mismatches0,9nupkgs,108cases,129commands, Completed=true.
 
 Final docs validation:49Markdown documents/515local links/140heading links/0problems. Default git diff --check, new untracked source/doc whitespace/markers, runner parser and touched project XML checks passed. Artifacts ignored TestResults/UnitsPackages/links.json; module/source hashes mismatches0.
+
+## MIT5 operational diagnostics — 2026-10-15
+
+Scope: Windows x64/build26300/net10.0/SDK10.0.402, existing bounded same-build
+cooperative owned processes. Добавлены public UnitProcessDiagnostic/UnitProcessStage
+и category UnitProcess через IEventsSource, без новой зависимости Mithril на App,
+Microsoft DI или logging. [Схема и подключение](DIAGNOSTICS.md),
+[принятое решение](PLAN.md#mit5-operational-diagnostics--2026-10-15).
+
+Payload фиксирует RunId explicit start, generation launch attempt, unit/owner/child
+PID, consumed restarts, effective policy/limit/delays, stage/reason/exit/Error.
+LaunchFailed не заменяет caller error; automatic SequenceFailed содержит тот же
+Exception, что LastRestartError. Captured Stopped identity не меняется при следующем
+start. Старые текстовые категории сохранены; sink exception/disposed source изолированы.
+Callbacks остаются синхронными, arbitrary reentrancy/blocking не обещаются.
+Stop/restart ownership contract и лимиты сохранены. Аргументы/env/control endpoint
+не добавляются в payload; exception message может содержать OS details.
+
+Проверки новых assertions опираются на OS handles/PID/exit codes существующих
+fixtures. Restart fixture теперь использует настоящий EventsSource/DiagnosticSubscription
+TrueMoon, а не no-op sink. Shared AppUnitsPipesProbe проверяет public payload через
+App.UseDiagnostics; те же sources копируются independent package runner.
+Lifecycle fixture добавляет throwing-sink scenario. Unit tests отдельно проверяют
+lazy snapshot после второго Start, fresh RunId, original Exception identity,
+отменённую preparation и disposed source. По finding-tests skill выполнен findTests,
+но Rider ответил Tool not found; использованы существующие source/process suites.
+Focused code-testing-agent workflow; assertion-quality/test-gap-analysis self-review
+по .NET/xUnit guidance. Empirical mutation/coverage не запускались. Static review:
+точные PID/поколения/exit/configuration/reasons/count/order, errors identity и negative
+no-late-launch assertions ловят потерю корреляции/ошибки/defaults/cleanup. Real OS
+StopFailed/reap denial и arbitrary monitor hooks не инъецировались; соответствующая
+новая observational ветка не выдаётся за проверенную OS failure matrix.
+
+Preflight: fixture сначала не имел ProjectReference на TrueMoon для concrete diagnostics;
+добавлен только consumer reference, runtime Mithril dependency graph не изменён.
+Первая Debug assertion run:85passed/9failed — read-only ParentProcessId recomputed
+при JSON deserialization в test process. Исправлен в constructor payload; конечные
+межпроцессные assertions проверяют transmitted owner PID. Initial failure TRX сохранён
+как initial-assertion-failure.trx и не входит в passing totals.
+
+### Текущие команды и результаты
+
+Основной artifact directory: `TestResults/MithrilDiagnostics/run-20261015-175142306`.
+
+```powershell
+dotnet build TrueMoon.slnx -c Debug --no-incremental -m -v minimal
+dotnet test TrueMoon.Mithril.Tests/TrueMoon.Mithril.Tests.csproj -c Debug --logger 'trx;LogFileName=mithril-debug.trx' --results-directory TestResults/MithrilDiagnostics/run-20261015-175142306
+dotnet test TrueMoon.Mithril.Tests/TrueMoon.Mithril.Tests.csproj -c Release --logger 'trx;LogFileName=mithril-release.trx' --results-directory TestResults/MithrilDiagnostics/run-20261015-175142306
+dotnet test TrueMoon.Enerit.Tests/TrueMoon.Enerit.Tests.csproj -c Debug --logger 'trx;LogFileName=enerit-debug.trx' --results-directory TestResults/MithrilDiagnostics/run-20261015-175142306
+dotnet test TrueMoon.Enerit.Tests/TrueMoon.Enerit.Tests.csproj -c Release --logger 'trx;LogFileName=enerit-release.trx' --results-directory TestResults/MithrilDiagnostics/run-20261015-175142306
+pwsh -NoProfile -File ManualTests/MithrilRestartProbe/RunRestartSmoke.ps1 -ResultsDirectory TestResults/MithrilDiagnostics/run-20261015-175142306/restart
+pwsh -NoProfile -File ManualTests/MithrilLifecycleProbe/RunLifecycleSmoke.ps1 -ResultsDirectory TestResults/MithrilDiagnostics/run-20261015-175142306/lifecycle
+pwsh -NoProfile -File ManualTests/UnitsPackageConsumer/RunPackageSmoke.ps1
+```
+
+- Full nonincremental Debug:exit0/errors0/warnings1193. Count как у previous ENE5
+  build, включая generated benchmark CS8669; warnings не подавлялись. New payload XML
+  documented. Это build, не запуск UI/native suites.
+- Mithril:Debug94/94 и Release94/94; Enerit:Debug126/126 и Release126/126,
+  Failed0/Skipped0,4current TRX/440passed. Own Core/Cobalt/generator suites не повторены.
+- Restart:40/40 apphost cases Debug/published Release,42commands,129source SHA,
+  Completed=true. JSON содержит безопасную ErrorType projection, полный Error проверен
+  по identity внутри fixture. Lifecycle:18/18,20commands,7selected source SHA,
+  Completed=true; дополнительно exact trace assertions выполнены hosted xUnit cases.
+- Fresh independent package: `TestResults/UnitsPackages/run-20261015-125732143`,
+  version `0.2.2.7-alpha.units.20261015125732156`,9producer projects/8nupkgs,
+  128commands,205source fingerprints,108/108cases, Completed=true.96normal parent
+  cases проверяют новый public payload через App.UseDiagnostics;12abrupt-parent-exit
+  cases проверяют child/server cleanup, killed parent trace не наблюдается.
+  Cobalt/DI и DI с отключённым Cobalt analyzer, Debug/Release build/publish;
+  isolated cache/feed, compiler analyzer path/SHA/generated sources и runtime asset
+  controls сохранены. Omitted Enerit analyzer negative control — expected CS0234.
+  End-of-run source SHA comparison добавлена в package/restart/lifecycle runners;
+  packages не публиковались.
+
+| Requirement | Evidence: exact test / check |
+| --- | --- |
+| Policy/budget/defaults, restart failure, generation/PID/exit/order, no launch после Stop | RestartProcessTests.Restart_OwnedSequence_EnforcesPolicyBudgetDelayAndStop (20cases, AssertDiagnostics) |
+| Graceful/forced cleanup и throwing sink не меняют owned lifecycle | ProcessUnitHandleTests.OwnedChild_ShutdownScenario_ReapsProcessAndReleasesHandle (9cases) |
+| Fresh sequence identity, lazy snapshot и исходная ошибка caller | ProcessDiagnosticsTests.Diagnostics_FailedExplicitStarts_PreserveErrorAndUseFreshRunIdentity (2cases) |
+| Cancelled preparation без успешного launch/terminal | ProcessDiagnosticsTests.Diagnostics_CancelledPreparation_IsReportedWithoutStartedOrTerminal |
+| Disposed source не препятствует error/stop | ProcessDiagnosticsTests.Diagnostics_DisposedSource_DoesNotReplaceLaunchFailureOrPreventStop |
+| App/package public diagnostics и integration cleanup | Shared AppUnitsPipesProbe.RunAsync assertions, ProcessDiagnosticsChecked=true в96package cases |
+| Successful test execution | Четыре dotnet test команды выше:94/126 в каждой Debug/Release, exit0/440passed |
+
+MIT5 завершён только в указанном bounded scope. Other OS/RID/self-contained/single-file/
+trimming/NativeAOT, independent external restart, borrowed processes, arbitrary hooks/
+blocking callbacks, uncooperative services, long resource trends и durable audit не
+подтверждены. Performance/Core/Cobalt/generator/UI/native/new engine projects не
+выполнялись. Следующий этап — сводная quality matrix модулей и оставшегося UI
+acceptance перед выбором ENG0; measured allocation backlog сохраняется отдельно.
+
+Final QA: `VerifyFinal.ps1`/`final-audit.json` в основном artifact directory:
+341source hash checks (205package +129restart +7selected lifecycle), mismatches0;
+8nupkg hashes и28generated source hashes совпали.4current TRX подтверждены;
+10documents/151local links/80anchors без ошибок. Три изменённых PowerShell runners
+прошли parser, changed fixture csproj — XML parse; scoped git diff --check passed.
+Initial failed TRX исключён из440passing результатов. Commit/push не выполнялись.

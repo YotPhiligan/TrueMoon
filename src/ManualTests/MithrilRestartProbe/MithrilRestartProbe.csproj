@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../TrueMoon.Mithril/TrueMoon.Mithril.csproj" />
+    <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
   </ItemGroup>
 </Project>

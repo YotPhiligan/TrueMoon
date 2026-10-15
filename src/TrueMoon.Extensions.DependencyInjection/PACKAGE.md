@@ -23,8 +23,9 @@ public sealed class Worker(IAppLifetime lifetime) : IStartable, IStoppable
 ```
 
 The provider is selected at builder creation. Microsoft DI constructs these
-consumer services without `TrueMoon.Cobalt.Generator`; Cobalt applications need
-that analyzer explicitly.
+consumer services without Cobalt generation. The transitive `TrueMoon.Cobalt`
+package bundles its analyzer; Microsoft DI consumers may disable it with
+`<EnableCobaltGenerator>false</EnableCobaltGenerator>`.
 
 The application owns the provider and handles startup, cooperative cancellation,
 reverse stop/rollback and disposal. The adapter preserves Microsoft DI semantics:

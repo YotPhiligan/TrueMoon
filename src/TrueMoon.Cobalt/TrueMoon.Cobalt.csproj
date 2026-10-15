@@ -4,15 +4,29 @@
         <TargetFramework>$(TF)</TargetFramework>
         <Description>TrueMoon Cobalt generated dependency resolution, service registration and owned lifetime management. Alpha API.</Description>
         <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetCobaltAnalyzerPackageFiles</TargetsForTfmSpecificContentInPackage>
     </PropertyGroup>
     
     <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
-        <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+        <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>
       <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+      <None Update="buildTransitive\TrueMoon.Cobalt.targets" Pack="true" PackagePath="buildTransitive/TrueMoon.Cobalt.targets" />
     </ItemGroup>
+
+    <Target Name="GetCobaltAnalyzerPackageFiles">
+        <MSBuild Projects="$(MSBuildProjectDirectory)\..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj"
+                 Targets="GetTargetPath" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+            <Output TaskParameter="TargetOutputs" ItemName="_CobaltAnalyzerPackageFiles" />
+        </MSBuild>
+        <Error Condition="!Exists('%(_CobaltAnalyzerPackageFiles.Identity)')"
+               Text="Build the Cobalt generator before packing Cobalt." />
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="@(_CobaltAnalyzerPackageFiles)" PackagePath="analyzers/dotnet/cs" />
+        </ItemGroup>
+    </Target>
     
 </Project>

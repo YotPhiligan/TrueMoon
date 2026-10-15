@@ -1,8 +1,16 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
+Последняя документационная сверка — **2026-10-15, общая quality matrix**.
+[Сводка](../QUALITY.md) определяет следующий доступный scope —
+[fresh UI package/Hosting proof](PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15)
+на Cobalt/DI с explicit fonts. Исходники existing package consumer сверены: только
+UseDI, backend overloads без font catalog, нет end-of-run source SHA comparison.
+Новый runtime failure не воспроизводился; code/build/tests/package/native проверки
+не запускались. Прежние результаты и K7/K3/K8/VRAM ограничения сохранены ниже.
+
 Последняя работа с кодом и проверками — **2026-10-11, K2/K4 fixed-font golden**. Добавлены неизменяемый `SkiaFontCatalog`, перегрузки backend/Hosting для явного выбора шрифтов, лицензированные Noto Sans/Symbols и 30 эталонных PNG общей Settings сцены. Debug и опубликованный Release: **360/360 полных сравнений**, по 3 логических масштаба × 40 шагов взаимодействия; Vulkan validation — 0 ошибок и 0 предупреждений, включая завершение устройств. Исходные эталоны не изменились. UI suite — **532 passed / 0 failed / 0 skipped**, включая 44 новых случая шрифтов, Hosting и сравнения пикселей. Контрольное изменение одного пикселя обнаружено всеми 3 backend с сохранением 3 diff PNG; проверки fingerprint и запрета перезаписи эталонов завершились ожидаемыми отказами. [Метод и допуски](GOLDEN_TESTS.md), [команды и область вывода](HISTORY.md#k2k4-fixed-font-golden--2026-10-11).
 
-Incremental Debug build exit0/0warnings/0errors, Release publish exit0 с780warning entries. Шрифты/PNG/manifest доставлены в оба output; этот source consumer не является новым NuGet proof. Full solution, другие модули, WSI soak, physical DPI, real loss и VRAM не повторялись. Внешний NVIDIA K7 и остальные alpha критерии сохраняются. Ближайшая независимая общая работа — CORE5/COB4 headless package/analyzer consumer.
+Incremental Debug build exit0/0warnings/0errors, Release publish exit0 с780warning entries. Шрифты/PNG/manifest доставлены в оба output; этот source consumer не является новым NuGet proof. Full solution, другие модули, WSI soak, physical DPI, real loss и VRAM не повторялись. Внешний NVIDIA K7 и остальные alpha критерии сохраняются. На тот момент ближайшей общей работой был CORE5/COB4 headless package/analyzer consumer; текущая очередность указана ниже.
 
 Предыдущая документационная сверка **2026-10-11:** общий README/index дополнены картой UI слоёв, standalone и local package quickstart, threading/ownership и открытыми alpha ограничениями. Точный standalone C# пример скомпилирован на ранее подготовленных пакетах, exit0/0warnings/0errors; native/UI suite/package smoke заново не запускались. [Общая запись](../HISTORY.md#общий-readme-и-навигация--2026-10-11). На тот момент следующий code шаг — fixed-font goldenK2/K4.
 
@@ -144,7 +152,12 @@ Alpha K1–K9 не объявляется завершённой. Требова
 
 ## Следующий конкретный шаг
 
-**Следующая независимая общая работа — CORE5/COB4:** headless PackageReference consumer на Cobalt/Microsoft DI, generated registration/analyzer delivery, cancellation/error/diagnostics/disposal. Детальные задачи принадлежат [Core](../core/PLAN.md) и [Cobalt](../cobalt/PLAN.md). K2/K4 теперь проверены на указанной конфигурации; при изменении fonts/native/renderer повторять read-only [golden matrix](GOLDEN_TESTS.md).
+**Следующий code этап — UI quality /5.4–5.5:** свежая package/Hosting matrix после
+bundled Cobalt и explicit fonts. [Детальный scope/acceptance](PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15)
+включает Cobalt/DI, DI с отключённым Cobalt analyzer, fonts/native/analyzer provenance,
+direct renderer и bounded cleanup. Это дополнение existing consumer, не массовая
+migration UI apps. K7 не снимается. При изменении fonts/native/renderer повторять
+read-only [golden matrix](GOLDEN_TESTS.md).
 
 Для UI остаётся подготовленный physical4.9d/K3 desktop и оставшиеся OS input/chrome checks, real device/context loss/K8, VRAM evidence и полный финальный alpha проход после снятия K7. Emoji shaping/fallback не добавлены; фиксированные missing-glyph symbols не выдаются за emoji rendering.
 

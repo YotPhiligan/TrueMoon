@@ -24,6 +24,9 @@ Contracts и Core — разные независимые сборки. DI provi
 
 ## Планируемые направления
 
+Следующий этап после bounded headless quality прохода определён в
+[сводной матрице качества](QUALITY.md); это оценка scopes и evidence, не новый roadmap.
+
 - [Игровой движок и редактор](engine/PLAN.md), [статус](engine/STATUS.md):
   одна 3D-игра, Editor/Game.Runtime в разных процессах, preview frames и
   обновление игровой логики. ENG0–ENG8 запланированы; runtime/проекты ещё не созданы.
@@ -47,11 +50,11 @@ Contracts и Core — разные независимые сборки. DI provi
 
 PLAN хранит согласованные цели/контракты и критерии. STATUS отделяет наличие реализации от успешно выполненных проверок на конкретной конфигурации. HISTORY сохраняет команды, failures, эксперименты и ограничения предыдущих запусков. Сведения других модулей и прошлых запусков не переносятся в текущий passing результат.
 
-Core/DI package consumer и текущие Core81/Cobalt37/generator6 регрессии проверены
-2026-10-11; UI package/golden того же дня имеют отдельный scope и не повторены
-headless работой. Mithril MIT0 проверен отдельным run2026-10-11:14/14 Debug,
-14/14 Release, manual16/16 в Never child-handle scope. Enerit отдельный run2026-10-11: runtime71/71 и generator34/34 Debug/Release, manual12/12 same-build pipes.
-Последующий MIT1/MIT2 run: Mithril65/65 Debug/Release, App matrix28/28, fresh legacy16/16; Enerit runtime regression71/71 в каждой configuration. Следующий MIT3 проверен2026-10-12: Mithril89/89 Debug/Release, restart40/40, fresh App Never28/28 и legacy16/16. MIT4/ENE4 проверен2026-10-14: Enerit102/generator34, Mithril89, Core81, Cobalt37/generator6 в каждой Debug/Release configuration, App matrix36/36 и isolated pipes12/12. Последующий Enerit decode hardening того же дня: runtime126/126, generator114/114, Mithril89/89 отдельно Debug/Release, fresh App36/isolated12. Package portion MIT5/ENE5 проверена далее:9nupkgs,108cases,Core81/Cobalt37/generator6 также повторены Debug/Release; далее IPC performance baseline и operational diagnostics.
-Внешний NVIDIA K7, physical DPI,
-real loss/VRAM,IPC performance и дополнительные deployment/platform критерии остаются открыты. Актуальный
-порядок работ смотрите в общем и локальных STATUS.
+Сводный [рабочий уровень модулей перед движком](QUALITY.md) содержит scopes,
+датированные evidence и оставшиеся ограничения. Core/Cobalt/Enerit/Mithril имеют
+завершённый bounded quality проход; следующий этап — UI package/Hosting proof
+после текущих Cobalt/fonts изменений. UI alpha/K7/physical DPI/real loss/VRAM
+и общий release остаются открыты. Engine/editor — запланированное направление.
+Сверка2026-10-15 документационная: прежние build/tests/package/native результаты
+не считаются новым запуском. Подробная история сохраняется у владельцев и в
+[общей HISTORY](HISTORY.md), актуальная очередность — в [общем STATUS](STATUS.md).

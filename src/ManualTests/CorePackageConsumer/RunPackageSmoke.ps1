@@ -76,6 +76,7 @@ function Copy-Consumer([string] $Destination, [bool] $Direct = $false) {
 
 function Verify-Assets([string] $Consumer, [int] $ExpectedCount, [bool] $Direct = $false) {
     $assets = Get-Content -LiteralPath (Join-Path $Consumer 'obj/project.assets.json') -Raw | ConvertFrom-Json -AsHashtable
+    if (@($assets.libraries.Keys | Where-Object { $_ -match '^(Microsoft.CodeAnalysis|TrueMoon.Cobalt.Generator/)' }).Count) { throw 'Consumer restored a build-only Roslyn or standalone Cobalt generator dependency.' }
     if (@($assets.libraries.Values | Where-Object { $_.type -ne 'package' }).Count) { throw 'Consumer has a non-package library.' }
     if (@($assets.libraries.Keys | Where-Object { $_ -match '(?i)^(Silk\.|Skia|Topten|TrueMoon\.(Alloy|Argentis|Enerit|Mithril))' }).Count) { throw 'Headless consumer unexpectedly has UI/IPC/units dependencies.' }
     $local = @($assets.libraries.Keys | Where-Object { $_ -match '^TrueMoon(?:\.|/)' })
@@ -93,7 +94,7 @@ function Verify-Assets([string] $Consumer, [int] $ExpectedCount, [bool] $Direct 
 function Verify-Generation([string] $Consumer, [string] $Configuration, [bool] $Expected = $true) {
     $analyzers = @(Get-Content -LiteralPath (Join-Path $Consumer "obj/$Configuration/net10.0/resolved-analyzers.txt") | Where-Object { $_ -match 'TrueMoon.Cobalt.Generator.dll$' })
     if (-not $Expected) { if ($analyzers.Count) { throw 'Microsoft-only compilation still includes Cobalt generator.' }; return }
-    $generator = Join-Path $cache ("truemoon.cobalt.generator/$PackageVersion/analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll".ToLowerInvariant())
+    $generator = Join-Path $cache ("truemoon.cobalt/$PackageVersion/analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll".ToLowerInvariant())
     if ($analyzers.Count -ne 1 -or -not $analyzers[0].Equals($generator, [StringComparison]::OrdinalIgnoreCase)) { throw 'Compiler did not consume the isolated generator package.' }
     if ((Get-FileHash -LiteralPath $generator).Hash -ne $summary.GeneratorSha256) { throw 'Analyzer package bytes differ.' }
     $generated = @(Get-ChildItem -LiteralPath (Join-Path $Consumer "obj/generated/$Configuration") -Recurse -File -Filter '*.g.cs')
@@ -112,6 +113,8 @@ try {
     foreach ($name in @('Directory.Build.props','Directory.Packages.props','NuGet.Config','global.json')) { [void]$inputs.Add((Join-Path $workspace $name)) }
     $summary.SourceFiles = @($inputs | Sort-Object | ForEach-Object { @{ Path = [IO.Path]::GetRelativePath($workspace, $_); Sha256 = (Get-FileHash -LiteralPath $_).Hash } })
     foreach ($project in $projects) {
+        [xml] $packProject = Get-Content -LiteralPath $project -Raw
+        if ($packProject.SelectSingleNode('//IsPackable')?.InnerText -eq 'false') { continue }
         Invoke-DotNet ('pack-' + [IO.Path]::GetFileNameWithoutExtension($project)) @('pack', $project, '--configuration','Release', "-p:Version=$PackageVersion", '--output',$feed,'--verbosity','quiet')
     }
     foreach ($package in Get-ChildItem -LiteralPath $feed -Filter '*.nupkg') {
@@ -123,12 +126,14 @@ try {
             $metadata = $nuspec.SelectSingleNode('//*[local-name()="metadata"]')
             foreach ($name in @('LICENSE','icon.png',$metadata.readme)) { if (-not $archive.GetEntry($name)) { throw "Missing metadata asset $name in $($package.Name)" } }
             if ($metadata.description -eq 'Package Description') { throw 'Placeholder package description.' }
-            if ($metadata.id -eq 'TrueMoon.Cobalt.Generator') {
+            if ($metadata.id -eq 'TrueMoon.Cobalt') {
                 $analyzer = $archive.GetEntry('analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll')
-                if (-not $analyzer -or @($archive.Entries | Where-Object { $_.FullName.StartsWith('lib/') }).Count) { throw 'Invalid analyzer package layout.' }
+                if (-not $analyzer -or -not $archive.GetEntry('lib/net10.0/TrueMoon.Cobalt.dll') -or -not $archive.GetEntry('buildTransitive/TrueMoon.Cobalt.targets')) { throw 'Invalid unified Cobalt package layout.' }
                 $stream = $analyzer.Open()
                 try { $summary.GeneratorSha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) } finally { $stream.Dispose() }
             }
+            if ($metadata.id -eq 'TrueMoon.Cobalt.Generator') { throw 'The generator must be bundled, not packed separately.' }
+            if (@($nuspec.SelectNodes('//*[local-name()="dependency"]') | Where-Object { $_.id -match '^(TrueMoon.Cobalt.Generator|Microsoft.CodeAnalysis)' }).Count) { throw 'Runtime nuspec exposes a build-only dependency.' }
         } finally { $archive.Dispose() }
     }
     $summary.Generation = @(); $summary.Libraries = @()
@@ -139,7 +144,7 @@ try {
         $properties = @($versionProperty)
         if ($microsoftOnly) { $properties += @('-p:EnableCobaltGenerator=false','-p:RequireCobaltGeneration=false') }
         Invoke-DotNet "restore-$variant" (@('restore',$project,'--configfile',(Join-Path $consumer 'NuGet.Config'),'--packages',$cache,'--verbosity','quiet') + $properties)
-        $expected = if ($direct) { 3 } elseif ($microsoftOnly) { 4 } else { 5 }
+        $expected = if ($direct) { 2 } else { 4 }
         $summary.Libraries += @{ Consumer = $variant; Packages = @(Verify-Assets $consumer $expected $direct) }
         foreach ($configuration in @('Debug','Release')) {
             Invoke-DotNet "build-$variant-$configuration" (@('build',$project,'--configuration',$configuration,'--no-restore','--verbosity','quiet') + $properties)
@@ -157,7 +162,8 @@ try {
                 } else {
                     $providers = if ($microsoftOnly) { @('microsoft') } else { @('cobalt','microsoft') }
                     foreach ($provider in $providers) {
-                        foreach ($scenario in @('normal','cancel','start-failure','stop-failure','build-failure')) {
+                        foreach ($scenario in @('normal','cancel','start-failure','stop-failure','build-failure','config-failure','cleanup-failure')) {
+                            if ($scenario -eq 'cleanup-failure' -and $provider -ne 'cobalt') { continue }
                             $name = "$variant-$configuration-$($delivery.Name)-$provider-$scenario"; $reportPath = Join-Path $run "$name.json"
                             Invoke-DotNet $name @((Join-Path $delivery.Path 'HeadlessConsumer.dll'),$provider,$scenario,$reportPath) $false 30
                             $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
@@ -173,7 +179,7 @@ try {
     $project = Join-Path $negative 'CorePackageConsumer.csproj'
     Invoke-DotNet 'restore-without-generator' @('restore',$project,'--configfile',(Join-Path $negative 'NuGet.Config'),'--packages',$cache,$versionProperty,'-p:EnableCobaltGenerator=false','--verbosity','quiet')
     Invoke-DotNet 'build-without-generator' @('build',$project,'--no-restore',$versionProperty,'-p:EnableCobaltGenerator=false','--verbosity','quiet') $true
-    if ($summary.Cases.Count -ne 64) { throw 'Consumer matrix incomplete.' }
+    if ($summary.Cases.Count -ne 80) { throw 'Consumer matrix incomplete.' }
     # Compile and run the exact C# examples from the delivered package README files.
     $summary.ReadmeExamples = @()
     foreach ($id in @('TrueMoon','TrueMoon.Cobalt','TrueMoon.Extensions.DependencyInjection')) {
@@ -191,7 +197,6 @@ try {
         $snippets[0].Groups[1].Value | Set-Content -LiteralPath (Join-Path $example 'Program.cs') -Encoding utf8
         $references = if ($id -eq 'TrueMoon.Cobalt') { '<PackageReference Include="TrueMoon.Cobalt" Version="$(TrueMoonPackageVersion)" />' } else { '<PackageReference Include="TrueMoon" Version="$(TrueMoonPackageVersion)" />' }
         if ($id -eq 'TrueMoon.Extensions.DependencyInjection') { $references += '<PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="$(TrueMoonPackageVersion)" />' }
-        else { $references += '<PackageReference Include="TrueMoon.Cobalt.Generator" Version="$(TrueMoonPackageVersion)" PrivateAssets="all" />' }
         @"
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsPackable>false</IsPackable></PropertyGroup>
@@ -206,8 +211,13 @@ try {
     }
     $summary.Packages = @(Get-ChildItem -LiteralPath $feed -Filter '*.nupkg' | ForEach-Object { @{ Name = $_.Name; Sha256 = (Get-FileHash -LiteralPath $_.FullName).Hash } })
     $summary.SDK = (& dotnet --version).Trim()
+    foreach ($source in $summary.SourceFiles) {
+        if ((Get-FileHash -LiteralPath (Join-Path $workspace $source.Path)).Hash -ne $source.Sha256) {
+            throw "Source changed during package proof: $($source.Path)"
+        }
+    }
     $summary.Completed = $true
-    Write-Host "Core/Cobalt package smoke: 64 matrix + 3 delivered README processes passed; omitted-analyzer negative control passed. $run"
+    Write-Host "Core/Cobalt package smoke: 80 matrix + 3 delivered README processes passed; omitted-analyzer negative control passed. $run"
 }
 catch { $summary.Failure = $_.ToString(); throw }
 finally { $summary | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $run 'summary.json') -Encoding utf8 }

@@ -1,63 +1,76 @@
 # Core: состояние и точка продолжения
 
-Последняя package/regression работа **2026-10-14, MIT5/ENE5 package portion**:
-Core Description уточнён, Core package доставлен как transitive utility dependency
-в independent App/IPC/units consumer108cases. Core81/81 Debug/Release прошли отдельно,
-Failed0/Skipped0; [команды/scope](HISTORY.md#package-regression-mit5ene5--2026-10-14).
-Headless64+3 ниже не повторён; Core C# logic не менялась.
+Документационная сверка2026-10-15: [общая quality matrix](../QUALITY.md)
+определяет следующий scope — UI package/Hosting после текущих Core/Cobalt changes.
+Новых code/build/tests/package запусков в этой сверке нет.
 
-Предыдущая regression **2026-10-14, MIT4/ENE4**: Core81/81 отдельно Debug/Release,
-Failed0/Skipped0, SDK10.0.402. Исправлена изоляция Diagnostics build-failure test
-от событий параллельных Apps; production Core без изменений.
-[История](HISTORY.md#diagnostics-test-isolation-при-mit4--2026-10-14).
-Package64+3 ниже — предыдущий run2026-10-11, не повторён.
+Последняя работа — **2026-10-15, сквозной headless quality proof**.
+Одни consumer sources проверены через ProjectReference и независимые свежие
+PackageReference: configuration/JSON, diagnostics, App lifecycle/Cobalt и реальный
+эксклюзивный FileStream, включая cancel/start/stop/build/config/cleanup failures.
+**Согласованный bounded Core quality проход завершён** на указанной конфигурации;
+новых public APIs/runtime fixes этим этапом не потребовалось.
+[Контракт](PLAN.md#проход-качества-до-engineeditor--2026-10-15),
+[runner](../../ManualTests/CoreHeadlessProbe/README.md),
+[команды, matrix и границы](HISTORY.md#сквозной-headless-proof--2026-10-15).
 
-Предыдущая package работа: **2026-10-11 — CORE5/COB4 headless package consumer**.
-Проверены независимые PackageReference приложения на Cobalt и Microsoft DI,
-включая Microsoft DI без consumer generator. **64/64 процессов матрицы**
-Debug/Release × build/publish и **3/3 delivered README examples** прошли;
-отрицательная сборка без generator завершилась ожидаемым CS0246.
-Обновлены package descriptions и самостоятельные packaged README.
-[План](PLAN.md), [общий статус](../STATUS.md), [команды и область вывода](HISTORY.md#core5--cob4-headless-package-consumer--2026-10-11).
+**Текущие проверки:** Windows x64/net10.0, SDK10.0.402, xUnit2.9.3/VSTest.
+TrueMoon.Tests: **107 passed / 0 failed / 0 skipped в каждой Debug/Release**;
+два final TRX,214passed суммарно. Source52processes, package80 +3README, оба
+summary Completed=true;130/127source fingerprints совпали, opt-out expected CS0246.
+Full nonincremental Debug solution build exit0/errors0/warnings1183.
+Microsoft DI:6compatibility scenarios; Cobalt:7, включая startup+Dispose failure
+с сохранением обеих причин. Матрица Debug/Release × build/publish, без RID.
+
+Предыдущие этапы2026-10-15: [configuration/bootstrap](HISTORY.md#configuration-и-bootstrap-quality--2026-10-15)
+и [diagnostics](HISTORY.md#diagnostics-quality--2026-10-15). Их исправления сохраняют
+текущую regression107cases; новые unit tests в headless этапе не добавлялись.
 
 ## Реализация и проверки
 
-| Область | Реализация | Текущий запуск |
+| Область | Реализация | Проверки2026-10-15 |
 | --- | --- | --- |
-| Bootstrap/lifecycle / CORE1 | Общий runner, наблюдаемые ошибки, reverse rollback/stop, отдельный shutdown token, повторные операции, console unsubscription и owned disposal | AppLifecycleTests:23 cases; AppTests:5. AppCreate, падавший при review, Passed |
-| Lifetime | Snapshot callbacks вне lock, asynchronous wait continuations, owned/borrowed CTS, deferred disposal во время callbacks | AppLifetimeTests:12/12, включая concurrent Cancel/Dispose и внешнюю отмену borrowed source |
-| Configuration / CORE2 | Provider add/remove/priority, согласованные reads/conversion, args/env refresh, JSON read/write/snapshot, paths и GetOrCreate | ConfigurationTests:11/11 |
-| Diagnostics / CORE2 | Resolver-owned subscription/factory, individual handle cleanup, listener error isolation и snapshots | DiagnosticsTests:8/8, включая startup/build failure и observable app events |
-| Utilities / CORE4 | Scheduler drain/completion/affinity, writer guards/reference cleanup, validated memory rental ownership и IMemoryOwner | CoreUtilityTests:22/22; зависимые Enerit regression tests отдельно в его STATUS |
-| DI integration / CORE3 | Одни lifecycle graphs на Cobalt и Microsoft DI, shared lifetime aliases | Provider theory cases Passed; собственные Cobalt runtime37/37 и generator6/6 относятся к Cobalt |
-| Package / CORE5 + COB4 | Изолированный feed/cache, explicit generator, headless/direct Cobalt/Microsoft-only consumers | 64 matrix + 3 exact README processes Passed; 6 builds/6 publishes + 3 README builds exit0/0 warnings/0 errors. Configuration/diagnostics/cancellation/start/stop/build errors и owned/borrowed cleanup проверены |
+| Bootstrap/lifecycle / CORE1 | Runner, reverse rollback/stop, cooperative shutdown token, повторные операции, owned disposal | AppLifecycleTests23 + AppTests5; regression Debug/Release |
+| Lifetime | Snapshot callbacks вне lock, asynchronous wait continuations, owned/borrowed CTS | AppLifetimeTests12; regression Debug/Release |
+| Configuration / CORE2 | Приоритеты, conversion, null/invalid, args/env/JSON refresh; исправлен GetOrCreate в предыдущем этапе | ConfigurationTests27; regression Debug/Release |
+| Bootstrap/configuration | Actions до registrations/factories, единый IConfiguration у callbacks/App/DI; validation failure сохраняет cause и не начинает registrations | Две theory по Cobalt/Microsoft DI,4cases; входят в27 configuration cases |
+| Diagnostics / CORE2 | Completed source retirement, late handle cleanup, повторный setup без старых registrations, независимое освобождение Apps | DiagnosticsTests18; regression Debug/Release; текущий consumer подтверждает повторный setup/events/cleanup |
+| Utilities / CORE4 | Scheduler drain/affinity, writer guards, validated rental ownership | CoreUtilityTests22; regression Debug/Release |
+| Headless/App proof | JSON persistence/failed refresh recovery, lifecycle/errors/token identity, реальный file ownership и owned/transient/borrowed cleanup | Source52cases: Cobalt28/Microsoft24, Debug/Release build/publish |
+| Package / CORE5 + COB4 | Fresh feed/cache/version, bundled direct/transitive analyzer, opt-out и exact README examples | Package80cases +3README;4nupkgs, analyzer path/SHA/generated initializer и expected CS0246. Library→app/legacy controls не повторены |
 
-Регрессия предыдущего package run2026-10-11: TrueMoon.Tests **81 passed / 0 failed / 0 skipped**,
-TRX total81. Windows x64, Debug/net10.0, SDK10.0.401, xUnit2.9.3/VSTest.
-Cobalt37/37 и generator6/6 запущены отдельно; это не новый solution run.
-Package matrix использует framework-dependent output без RID, local version
-`0.2.2.7-alpha.headless.20261011142810069`; пакеты не опубликованы.
+JSON failure checks различают serialization error до записи и sharing violation
+при открытом read-only handle; после ошибки старое значение/файл доступны,
+после освобождения handle запись можно повторить. Failed sync/async refresh не
+публикует частично обновлённые providers; recovery и старые section handles проверены.
+Обычный Set без имени секции сохраняет default target; invalid GetOrCreate
+не изменяет providers. Это текущая regression предыдущего configuration этапа.
 
-Предыдущая non-incremental TrueMoon.slnx проверка **2026-10-10**:
-exit0/errors0/warnings1271, solution tests643passed, в том числе Core81;
-Mithril discovery0 не является passing suite. NU1506/NU1507 были устранены
-без изменения effective5.9.0 Roslyn. [Предыдущая история](HISTORY.md#исправление-проблем-ядра--2026-10-10).
+Несколько Apps наблюдают global DiagnosticListener по своим prefix filters;
+закрытие одной не отключает другую. Same-name источники независимы по identity.
+Новые filters действуют при discovery; rebinding прежних sources не добавлен.
+
+Предыдущие результаты Core81, Cobalt comparison/package proof и ранние исправления:
+[HISTORY](HISTORY.md), [Cobalt comparison](../cobalt/COMPARISON.md).
+Собственные Cobalt/Enerit/Mithril/generator suites, IPC/units, UI/native и benchmarks
+текущим проходом не запускались. Independent headless package proof повторён;
+старый benchmark graph v1 и его consumer не изменялись/не измерялись. Solution build
+не считается passing tests соседних модулей.
 
 ## Ограничения
 
-- Shutdown timeout30s кооперативный; сервис/handler, игнорирующий cancellation, способен удерживать завершение. Scheduler consumers обязаны дождаться async continuations перед его закрытием.
-- Microsoft DI имеет собственные disposal semantics для alias registrations и cleanup failures; различие описано в Cobalt PLAN. DefaultApp/Lifetime повторный Dispose поддерживают.
-- Manager-backed Memory может не иметь доступного массива через TryGetArray; partial slices/foreign/double/stale Return теперь отвергаются. Старые spans/pins после возврата использовать нельзя.
-- Disk-full/permission injection и межпроцессные JSON writes не проверялись.
-  Process/IPC integration, physical UI, Linux/macOS, другие SDK/compiler hosts,
-  RID/self-contained/trimming/single-file/NativeAOT и performance этим шагом не проверены.
-  Pack/component builds сохраняют shared warnings; чистые consumer builds не означают
-  zero-warning solution. Общий выпуск не закрыт.
+- Shutdown timeout30s кооперативный; user Task, игнорирующий cancellation, может удерживать завершение. Scheduler consumers должны дождаться своих async continuations до закрытия scheduler.
+- Microsoft DI сохраняет собственные disposal semantics для aliases и cleanup errors; текущий default — Cobalt, массовая migration отложена.
+- GetOrCreate не обещает atomic create при concurrent calls. Null replacement в JSON является синхронной записью и может выбросить файловую ошибку.
+- Sharing violation проверена; disk-full/permission injection, crash-safe/atomic file replacement и межпроцессные JSON writes не проверены. Refresh доступен на CommonConfiguration; нового reload API нет.
+- Memory из pool может быть manager-backed; partial/foreign/double/stale Return запрещён, старые spans/pins после Return использовать нельзя.
+- Linux/macOS, другие SDK/compiler hosts, RID/self-contained/trimming/single-file/NativeAOT и engine workloads не подтверждены.
+- Dispose подписки не обещает дождаться callback, уже выполняющегося на другом потоке. Bounded concurrency128sources не является exhaustive race/stress проверкой. Factory удерживает собственные sources до своего Dispose; нового release API нет.
+- Собственный headless solution build дал1183warnings; более поздний общий build указан в [общем статусе](../STATUS.md). XML/nullability/analyzer warnings и общий выпуск не закрыты.
 
 ## Следующий конкретный шаг
 
-CORE5/COB4 проверен в указанном package scope. Локально — COB5 startup/resolution/
-allocations baseline на фиксированном consumer graph, без оптимизации до измерения.
-Общий функциональный приоритет — bounded own-child MIT0/ENE2 lifecycle/IPC proof
-по планам владельцев. Выявленные ранее lifecycle/configuration/diagnostics/scheduler/
-pool defects сохраняют свои регрессии.
+По [общей сводке](../QUALITY.md) следующий этап — UI package/Hosting proof на
+текущих Core/Cobalt с explicit fonts. Детальные задачи — в [UI плане](../alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15).
+Enerit ENE5 и Mithril MIT5 завершены в собственных bounded scopes; Core не требует
+новых APIs или переписывания utilities для начала UI quality этапа.

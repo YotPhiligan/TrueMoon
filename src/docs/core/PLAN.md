@@ -48,6 +48,10 @@ CORE0 предшествует выбору fixes. CORE1 и COB1/COB2 связа
 ### CORE5 / COB4: независимый headless consumer — 2026-10-11
 
 Основной подробный сценарий этого совместного этапа ведётся здесь; Cobalt COB4
+delivery уточнён2026-10-14: [два projects/один package](../cobalt/PLAN.md#принятый-scope-и-один-пакет--2026-10-14),
+bundled direct/transitive analyzer и opt-out вместо standalone generator reference.
+Исторический2026-10-11 explicit analyzer contract ниже сохранён как описание того
+run; current consumer и повторные64+3 checks используют новую поставку. Cobalt
 ссылается на него. [Исходники и воспроизведение](../../ManualTests/CorePackageConsumer/README.md),
 [команды и результаты](HISTORY.md#core5--cob4-headless-package-consumer--2026-10-11).
 
@@ -69,6 +73,74 @@ CORE0 предшествует выбору fixes. CORE1 и COB1/COB2 связа
 не общий release, UI/process/IPC evidence, trimming/NativeAOT или other compiler hosts.
 Дальше для Core/Cobalt — COB5 startup/resolution/allocations baseline на этом graph;
 ближайший общий функциональный шаг — bounded own-child MIT0/ENE2 scenario.
+
+## Проход качества до engine/editor — 2026-10-15
+
+После Cobalt COB6/COB5/COB7 выбран собственный проход Core. Существующие
+CORE0–CORE5 и их исторические проверки сохраняются; следующий объём ограничен
+configuration/bootstrap, diagnostics и контрольным headless приложением.
+
+| Часть | Объём и критерий | Состояние |
+| --- | --- | --- |
+| Configuration/bootstrap | Приоритеты/null/invalid, GetOrCreate, неудачный refresh нескольких providers, JSON write failure/retry; configuration actions заканчиваются до registrations/factories на обоих DI providers | Проверено2026-10-15 в component/App tests; детали в HISTORY |
+| Diagnostics | Время жизни subscriptions при завершении sources, повторная настройка и независимое освобождение нескольких приложений | Проверено2026-10-15:18 diagnostics cases, Core107 Debug/Release; детали в HISTORY |
+| Сквозное приложение | Configuration + diagnostics + Cobalt, normal/cancel/startup failure/shutdown и cleanup; свести ограничения перед следующим модулем | Проверено2026-10-15:52source +80package +3README processes, JSON и реальный файловый ресурс |
+
+Уточнение GetOrCreate: existing non-null возвращается без записи, invalid вызывает
+FormatException без fallback. При existing null новый объект записывается в секцию,
+которая определила это значение; это явная операция изменения, включая запись JSON
+файла. Для отсутствующего unqualified key остаётся default section, для named —
+выбранная секция. Обычный Set без имени секции по-прежнему пишет в default.
+Это исправляет повторное создание объектов из-за маскирующего null в другой секции;
+конкурентный GetOrCreate и межпроцессная синхронизация этим контрактом не вводятся.
+
+Новые providers, typed binding/validation API, автоматический reload, file transactions,
+новые lifecycle/DI capabilities и performance optimizations в этот проход не входят.
+[Доказательства и команды](HISTORY.md#configuration-и-bootstrap-quality--2026-10-15).
+
+Уточнение diagnostics2026-10-15: завершение одного DiagnosticListener удаляет
+только его subscription по identity; существующие и новые источники с тем же
+именем продолжают работать. Subscribe/handle attachment выдерживает completion
+до возврата handle и уже закрытый source без OnCompleted. Общая подписка
+освобождает оставшиеся handles; unsubscribe допускается из event callback.
+Dispose не обещает дождаться callback, уже исполняющегося на другом потоке.
+
+Повторный UseDiagnostics заменяет прежние settings и registrations подписки/factory;
+последний вызов определяет конфигурацию, ResolveAll не создаёт старые подписки.
+Настройки разных Apps независимы, закрытие одной App не отключает другую.
+Источники DiagnosticListener остаются глобальными в процессе: каждый App получает
+все события, подходящие его prefix filters, включая источники другого App.
+Это независимость ownership, без нового app-specific event routing/privacy API.
+Filters по-прежнему применяются при discovery без rebinding старых источников;
+EventsSourceFactory сохраняет ownership своих источников до своего Dispose.
+[Diagnostics evidence](HISTORY.md#diagnostics-quality--2026-10-15).
+
+### Сквозной headless proof — 2026-10-15
+
+[Воспроизводимый runner](../../ManualTests/CoreHeadlessProbe/README.md) использует
+общие исходники consumer через ProjectReference и независимые PackageReference.
+Семь сценариев Cobalt: normal lifetime, external cancellation, startup failure,
+stop failure, build failure, configuration validation failure и startup+Dispose
+failure. Microsoft DI adapter имеет6compatibility controls без расширения его
+native Dispose-error semantics. Debug/Release × build/publish, без RID.
+
+JSON null replacement/persistence, provider priority и failed refresh/recovery
+проверяются вместе с сервисным графом. Реальный эксклюзивный FileStream остаётся
+открытым во время Start/Stop и повторно открывается после cleanup; при validation
+failure не создаётся. Ошибки сохраняют identity/token, Cobalt сохраняет обе причины
+startup/cleanup и продолжает Dispose остальных объектов. Borrowed instance остаётся
+caller-owned. Observable diagnostics/observer isolation, повторный setup без старых
+subscriptions и отсутствие доставки после shutdown проверяются в том же процессе.
+
+Согласованный bounded Core quality проход закрыт на Windows x64/net10.0; это
+подтверждение текущих contracts/component/runtime/package путей, не общий выпуск
+или доказательство engine workload. Новых public APIs и runtime fixes этим
+headless шагом не понадобилось. Ограничения в STATUS сохраняются: cooperative
+shutdown, process-global diagnostics, JSON write/reload/concurrency, other platforms/
+deployment modes, warnings и отдельные performance задачи. Далее Enerit quality
+review и ENE5 measured IPC baseline по его плану. Перед ENG0 нужна сводка остальных
+модулей; Core proof не завершает Enerit/Mithril/UI и не запускает engine.
+[Команды и результаты](HISTORY.md#сквозной-headless-proof--2026-10-15).
 
 ## Критерии готовности
 
