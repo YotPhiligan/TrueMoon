@@ -41,6 +41,18 @@ UI alpha и контрольное beta приложение имеют собс
 
 ## Порядок развития
 
+Актуальная точка2026-10-17: ENG1 supervisor и [ENG2 CPU viewport](engine/PLAN.md#eng2-cpu-frame-viewport--2026-10-17) реализованы в bounded probe scope после RichTextEditor. Следующий code шаг — ENG3 compiler/checkpoint/versioned replacement/rollback. UI hardware blockers сохраняются.
+
+Уточнение2026-10-17: по запросу пользователя перед ENG1 реализован отдельный
+UI компонент [RichTextEditor/PA7a](alloy/PLAN.md#pa7a-richtexteditor-перед-eng1--2026-10-17)
+поверх Topten.RichTextKit с options. Детальный контракт и acceptance ведутся
+только в UI плане; назначенный после него ENG1 выполнен, текущий шаг указан выше.
+Это расширение не закрывает UI alpha/PA7/beta и не создаёт engine code.
+
+По решению пользователя2026-10-17 дальнейшие улучшения редактора сохранены в
+[отдельном UI плане](alloy/RICH_TEXT_EDITOR_PLAN.md) и отложены до развития других
+функций UI-модуля. Этот backlog не меняет текущую engine очередность.
+
 | Этап | Результат | Зависимость и готовность |
 | --- | --- | --- |
 | G1. Исходное состояние | Сверенная карта проектов, scope модулей, перечень поддерживаемых конфигураций и отдельные baseline результаты build/tests | Документы созданы; проверки всех модулей ещё нужны. Каждый failure закреплён за модулем, skipped и пустая discovery не считаются passing coverage |
@@ -88,25 +100,37 @@ Physical DPI/4.9, real loss/VRAM и итоговый alpha этап остают
 По обсуждению зафиксирован [план engine/editor](engine/PLAN.md) для одной
 не очень сложной 3D-игры: Editor и Game.Runtime в разных процессах, viewport
 кадры, обновление игровой логики, сохранение editor state и standalone game.
-[Статус](engine/STATUS.md): ENG0–ENG8 запланированы, проектов/реализации и
-собственных passing checks ещё нет. Детальные contracts/tasks ведутся там.
+[Статус](engine/STATUS.md):2026-10-15 определён
+[ENG0 scope](engine/PLAN.md#eng0-принятый-scope-первого-прототипа--2026-10-15).
+ENG1 headless supervisor реализован/проверен2026-10-17; probe projects находятся
+в ManualTests, production packages ещё не введены. ENG2 CPU viewport реализован; ENG3–ENG8 запланированы;
+детальные contracts/tasks ведутся только в engine плане.
 
 Направление использует Core/Cobalt, Mithril/Enerit и Alloy как отдельные
 boundaries, не меняет текущую dependency map. Repeatable unit sessions, frame
 transport и cross-process GPU ownership требуют новой реализации и проверки.
-MIT4/ENE4 завершён в bounded scope2026-10-14; текущий функциональный приоритет —
-качество существующих модулей, начиная с Cobalt, после проверенной MIT5/ENE5 package portion. Выбор первого
-game scenario/platform/API и начало ENG0 относятся к будущему запуску работы.
+После bounded quality Core/Cobalt/Enerit/Mithril/UI пользователь2026-10-15 выбрал
+ограниченный engine prototype с открытыми UI рисками. ENG0 фиксирует demo-сцену,
+Windows/net10/OpenGL Editor, CPU frames и versioned child replacement.
+Headless ENG1 supervisor/identity/lifecycle выполнен2026-10-17;
+ENG2 CPU frames/viewport выполнен; следующий code этап — replacement в ENG3.
 UI alpha/K1–K9/PA1–PA10 и внешний K7 блокер не отменяются.
 
 ## Качество модулей до engine/editor — 2026-10-14
 
-**Текущая сводка2026-10-15:** [quality matrix](QUALITY.md) собрала bounded результаты
-Core/Cobalt/Enerit/Mithril и открытый UI acceptance. Следующий code этап —
-[UI package/Hosting quality](alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15)
-после bundled Cobalt/explicit fonts; K7/physical DPI/loss/VRAM сохраняются.
-Это документационная сверка без нового build/tests/native pass. Ниже сохранена
-датированная последовательность решений, а не список всё ещё открытых шагов.
+**Предыдущий RichTextEditor шаг2026-10-17:** [RichTextEditor/PA7a](alloy/PLAN.md#pa7a-richtexteditor-перед-eng1--2026-10-17)
+реализован перед ENG1: UI563/563 Debug/Release,6native demo cases,40fresh package
+processes и прежний golden360. [Проверки](alloy/HISTORY.md#richtexteditor--2026-10-17).
+Own headless suites этим прежним UI запуском не обновлялись; текущая точка ENG2/ENG3 указана выше.
+
+**Предыдущая сводка2026-10-15:** [quality matrix](QUALITY.md) обновлена после
+[UI package/Hosting quality](alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15):
+10fresh packages,36App +4direct processes, explicit fonts/Cobalt/DI/analyzer/native
+provenance; исправлен воспроизведённый dispatcher startup defect. UI532/Core107/
+Cobalt179/generator91 отдельно Debug/Release и read-only golden360 прошли.
+После этих отдельных runs пользователь выбрал ENG0; его scope/contracts определены
+документом; тогда следующим code шагом назначен ENG1. K7/physical DPI/loss/VRAM сохраняются;
+допуск прототипа не закрывает alpha. Ниже — датированная последовательность решений.
 
 По решению пользователя сначала довести текущие модули до рабочего уровня качества,
 затем начинать движок. Первое направление — [Cobalt COB6/COB5/COB7](cobalt/PLAN.md#качество-cobalt-до-engineeditor--решение2026-10-14):

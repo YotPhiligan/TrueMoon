@@ -1,28 +1,46 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя документационная сверка — **2026-10-15, общая quality matrix**.
-[Сводка](../QUALITY.md) определяет следующий доступный scope —
-[fresh UI package/Hosting proof](PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15)
-на Cobalt/DI с explicit fonts. Исходники existing package consumer сверены: только
-UseDI, backend overloads без font catalog, нет end-of-run source SHA comparison.
-Новый runtime failure не воспроизводился; code/build/tests/package/native проверки
-не запускались. Прежние результаты и K7/K3/K8/VRAM ограничения сохранены ниже.
+Последняя работа — **2026-10-17, ENG2 viewport image adapter**.
+Добавлен owned `SkiaImageSource.CopyBgraPixels`: tight BGRA8 premultiplied/sRGB,
+checked shape/length и независимая копия pixels. Owner-thread upload/disposal
+проверены новым engine Alloy/OpenGL окном. [UI запись](HISTORY.md#eng2-owned-pixel-image--2026-10-17),
+[точный engine scope/evidence](../engine/HISTORY.md#eng2-cpu-frame-viewport--2026-10-17).
+UI570/570 Debug/Release; два native engine viewport runs (Debug apphost/published
+Release) с actual GL pixels и cleanup. Full Debug solution1368/1368. Это отдельный
+bounded engine proof; package/golden/native RichTextEditor matrix в этом шаге
+не повторялись, K3/K7/K8/VRAM/final alpha не закрыты. Следующий общий этап ENG3.
 
-Последняя работа с кодом и проверками — **2026-10-11, K2/K4 fixed-font golden**. Добавлены неизменяемый `SkiaFontCatalog`, перегрузки backend/Hosting для явного выбора шрифтов, лицензированные Noto Sans/Symbols и 30 эталонных PNG общей Settings сцены. Debug и опубликованный Release: **360/360 полных сравнений**, по 3 логических масштаба × 40 шагов взаимодействия; Vulkan validation — 0 ошибок и 0 предупреждений, включая завершение устройств. Исходные эталоны не изменились. UI suite — **532 passed / 0 failed / 0 skipped**, включая 44 новых случая шрифтов, Hosting и сравнения пикселей. Контрольное изменение одного пикселя обнаружено всеми 3 backend с сохранением 3 diff PNG; проверки fingerprint и запрета перезаписи эталонов завершились ожидаемыми отказами. [Метод и допуски](GOLDEN_TESTS.md), [команды и область вывода](HISTORY.md#k2k4-fixed-font-golden--2026-10-11).
+Отдельный [план улучшений RichTextEditor](RICH_TEXT_EDITOR_PLAN.md) по решению
+пользователя остаётся отложенным; implementation улучшений не начиналась.
 
-Incremental Debug build exit0/0warnings/0errors, Release publish exit0 с780warning entries. Шрифты/PNG/manifest доставлены в оба output; этот source consumer не является новым NuGet proof. Full solution, другие модули, WSI soak, physical DPI, real loss и VRAM не повторялись. Внешний NVIDIA K7 и остальные alpha критерии сохраняются. На тот момент ближайшей общей работой был CORE5/COB4 headless package/analyzer consumer; текущая очередность указана ниже.
+Предыдущая UI реализация и запуски — **2026-10-17, RichTextEditor перед ENG1**.
+Реализованы immutable document/style/options, editing/selection/clipboard/history
+в Argentis и Topten.RichTextKit0.6.170 adapter в Rendering.Skia; raster/OpenGL/Vulkan
+используют один layout/painting path. [Контракт PA7a](PLAN.md#pa7a-richtexteditor-перед-eng1--2026-10-17),
+[API/options/fonts/binding](RICH_TEXT_EDITOR.md),
+[команды/failures/evidence](HISTORY.md#richtexteditor--2026-10-17).
 
-Предыдущая документационная сверка **2026-10-11:** общий README/index дополнены картой UI слоёв, standalone и local package quickstart, threading/ownership и открытыми alpha ограничениями. Точный standalone C# пример скомпилирован на ранее подготовленных пакетах, exit0/0warnings/0errors; native/UI suite/package smoke заново не запускались. [Общая запись](../HISTORY.md#общий-readme-и-навигация--2026-10-11). На тот момент следующий code шаг — fixed-font goldenK2/K4.
+Предыдущие проверки реализации2026-10-17, Windows x64/net10.0/SDK10.0.402: UI suite **563/563 отдельно
+Debug и Release**, failed/skipped0;31новый case. Demo: **6/6** Debug/published
+Release ×raster/OpenGL/Vulkan с formatting/edit/history/options/cleanup.
+Fresh **10nupkgs,36App +4direct processes** проверили rich editor и transitive
+Topten/HarfBuzz delivery, fonts/native/analyzer provenance и final fingerprints;
+negative control без analyzer — ожидаемый CS0246. Read-only прежний Settings golden
+**360/360**, validation включая teardown0errors/0warnings, fixtures unchanged.
+Nonincremental Debug solution build: **0errors/1200warnings**; это не full-solution
+test pass. Own Core/Cobalt/Enerit/Mithril suites в этом шаге не повторялись.
 
-Предыдущая code/package работа: **2026-10-11 — package/independent UI consumer5.4–5.5**. Исправлена транзитивная доставка native Skia через renderer build/buildTransitive hooks; runtime output/loader API не изменены. Независимый consumer с собственными build/CPM settings и только PackageReference прошёл12App/backend процессов, direct renderer без Hosting/App — ещё4процесса, Debug/Release ×build/publish, Windows x64/net10.0. В UI-пакеты добавлены README подключения/migration/ownership. Это проверенная подготовка поставки на указанной конфигурации, не выпуск alpha; внешний NVIDIA K7 блокер сохраняется. На тот момент следующий независимый шаг — fixed-font golden K2/K4. [Команды и границы](HISTORY.md#package-и-независимый-ui-consumer--2026-10-11).
+RichTextEditor: plain clipboard и logical grapheme navigation; IME/accessibility,
+full bidi caret affinity, HTML/RTF, lists/tables и long native-memory trend вне scope.
+RichTextKit process-wide shaper caches не объявляются очищенными при Dispose.
 
-Предыдущая диагностическая работа: **2026-10-10 — WSI stages, raw Win32 и driver screen DC**. Разделены queries/create/destroy, добавлены raw Win32/Vulkan и surface/device teardown controls. GDI trend связан с первым swapchain на новом HWND/surface; на текущем NVIDIA ICD32.0.16.1742 debugger фиксирует GetDC(NULL) и3HDC без последующего ReleaseDC в bounded lifecycle. Production ownership не изменён; безопасное app-side освобождение не установлено. K7/alpha остаются открытыми. [Команды, stack, hashes и границы вывода](HISTORY.md#wsi-stages-raw-win32-и-driver-screen-dc--2026-10-10).
+Предыдущие проверки2026-10-11: fonts/golden/package — в
+[истории](HISTORY.md#k2k4-fixed-font-golden--2026-10-11).
+K3 physical DPI, NVIDIA K7, K8 real loss, VRAM и final matrix сохраняются.
+Driver/Windows settings не менялись; workaround search не возобновлялся.
 
-Область: Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting, UI tests и consumers. [UI план](PLAN.md), [история](HISTORY.md), [общий план](../PLAN.md), [общий статус](../STATUS.md), [формат](../PLANNING.md).
-
-Предыдущие проверки поставки **2026-10-11:**11local packages/10restored TrueMoon runtime dependencies,4consumer builds и4publishes exit0/0warnings/0errors;12App/backend +4direct renderer smoke exit0. SHA-256 native DLL совпал во всех проверенных output, local source metadata и packaged README проверены. Pack логи сохраняют780warning entries, включая NU5100 native DLL и NU5128/RS1041 generator; предупреждения не подавлены, analyzer delivery не проверена. Артефакты ignored `TestResults/AlloyPackages/final-contract`; команда — [consumer README](../../ManualTests/AlloyPackageConsumer/README.md). Unit/full solution tests, validation и long resource checks в package шаге не запускались.
-
-Предыдущие diagnostic проверки **2026-10-10:** non-incremental Debug AlloyVulkanTest consumer build exit0/errors0/warnings780, Release publish exit0;18stage/raw/repeat +2thread-exit +4GPU controls и Debug/published Release Hosting regression. Windows/net10.0/SDK10.0.401. Unit tests и full solution build этим diagnostic шагом не повторялись. Предыдущая UI suite **488passed/0failed/0skipped**, solution build0errors/1271warnings — [dispatcher run](HISTORY.md#hosting-owner-dispatcher-и-vulkan-wsi-lifetime--2026-10-10); общий Core/DI baseline — [отдельный run](../core/HISTORY.md#исправление-проблем-ядра--2026-10-10).
+Область: Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting,
+UI tests и consumers. [План](PLAN.md), [история](HISTORY.md), [общий статус](../STATUS.md).
 
 ## Состояние реализации
 
@@ -30,10 +48,10 @@ Incremental Debug build exit0/0warnings/0errors, Release publish exit0 с780warn
 | --- | --- | --- |
 | Независимые слои | Argentis без Alloy/Skia/Silk, Alloy→Argentis, отдельные renderer/platform/Hosting; legacy в Hosting.Compatibility | Разделение2.1a/b проверялось в датированных запусках; legacy window не приравнивается к современному пути |
 | Дерево и динамический UI | Ownership, properties, one/two-way bindings, collections, conditional regions, retained focus/selection | Входит в последнюю UI suite; полного keyed tree reconciliation не обещается |
-| Controls/input/styles | Базовые controls, focus/capture/keyboard/wheel, themes/density, Win32 clipboard, фабрики4.8 | Settings40-step script и fixed-font full golden проверены2026-10-11; полный OS input scope открыт |
-| Rendering/HUD | Raster/OpenGL/Vulkan, borrowed raw-handle HUD, retained composition, failure/recreate, resources reuse и explicit font catalog |2026-10-11: full golden/validation прошли Debug/published Release; real loss, long VRAM/lifecycle и итоговая matrix открыты |
+| Controls/input/styles | Базовые controls, RichTextEditor/options, focus/capture/keyboard/wheel, themes/density, Win32 clipboard, фабрики4.8 |2026-10-17:UI563/563 Debug/Release; rich editor6native cases и прежний Settings golden; полный OS input scope открыт |
+| Rendering/HUD | Raster/OpenGL/Vulkan, borrowed raw-handle HUD, retained composition, failure/recreate, resources reuse, explicit font faces и RichTextKit adapter |2026-10-17: прежний full golden/validation и rich editor smoke прошли Debug/published Release; real loss, long VRAM/lifecycle и итоговая matrix открыты |
 | Windows4.9 | Appearance/custom frame/native Snap, native DPI Scale/resize/input/min-max | HWND DPI144/UiScale1.5 проверен; physical100/200%/разные DPI мониторов не проверены |
-| Consumers | AlloyTest/AlloyVulkanTest и независимый AlloyPackageConsumer; renderer native build/buildTransitive delivery, packaged README | **2026-10-11:** local NuGet feed,12App/backend +4direct renderer processes прошли Debug/Release ×build/publish. Windows x64/net10.0/framework-dependent без RID; другие deployment modes и итоговый alpha проход остаются |
+| Consumers | AlloyTest/AlloyVulkanTest, RichTextEditorTest и независимый AlloyPackageConsumer; native build/buildTransitive delivery, bundled Cobalt analyzer, explicit fonts и packaged README | **2026-10-17:**10nupkgs/36App +4direct renderer processes с rich text, Cobalt/DI/DI без analyzer, Debug/Release ×build/publish. Windows x64/net10.0/framework-dependent без RID; другие deployment modes и final alpha открыты |
 | После alpha | PA1–PA10 в UI плане | Запланировано; beta API и расширения не входят в текущий alpha проход |
 
 Наличие реализации не означает итоговую готовность этапа. Подробные изменения и точные commands/configuration находятся в HISTORY; общий solution build не является UI или full-solution test pass.
@@ -129,16 +147,16 @@ Incremental Debug build exit0/0warnings/0errors, Release publish exit0 с780warn
 
 | Критерий | Состояние на дату сверки |
 | --- | --- |
-| K1. Ядро без GPU | **2026-10-11: 532 passed / 0 failed / 0 skipped**, включая 44 случая шрифтов/Hosting/comparator и прежние owner-loop/control/callback/DPI regressions. Native CPU raster/font tests требуют bundled Skia; это UI suite, не full solution. |
-| K2. Raster и GPU | **2026-10-11:**30fixed-font raster PNG, Debug/published Release по180full-image comparisons; text/clipping/alpha/image/theme/disabled/scroll states, fingerprints и unchanged fixtures проверены. Noto Sans/Symbols/OFL доставлены; GPU/raster AA envelope и строгий raster/golden tolerance описаны в [методе](GOLDEN_TESTS.md). Проверенная конфигурация — текущий Windows x64/NVIDIA. |
+| K1. Ядро без GPU | **2026-10-17:563/563 Debug и Release, failed/skipped0.** Current UI suite; native CPU raster/font cases используют bundled Skia. Не full solution tests. |
+| K2. Raster и GPU | **2026-10-17:** read-only fixed-font Settings golden360/360 Debug/published Release, source fixtures unchanged; прежние30PNG/3scales и tolerances сохранены. Rich editor проверен отдельно6native cases, не новыми golden fixtures. Windows x64/NVIDIA, SDK10.0.402. |
 | K3. Windows и DPI | Native DPI contract реализован2026-10-09:HWND DPI144/UiScale1.5, logical resize/input/min-max, minimize/zero-size/restore и Debug/Release alpha/Snap/physical input проверены. Pure/directed100/150/200% и headless Scale-only state tests прошли. Реальные100/200%/разные DPI мониторов недоступны в текущем окружении, settings off/Aero Shake и часть physical cancel проверок впереди. |
-| K4. Одинаковое поведение бекендов | **2026-10-11:** одинаковые bounds/model/input/focus/selection/scroll/redraw на3backend×3scales×40steps в Debug/Release; по30строгих full OpenGL/Vulkan comparisons/configuration, maximum channel difference2. GPU↔raster допускает bounded AA coverage differences. Другие GPU/configurations и итоговая alpha matrix не проверены. |
+| K4. Одинаковое поведение бекендов | **2026-10-17:** общий40-step Settings script raster/OpenGL/Vulkan на3scales,180comparisons/configuration; bounds/model/input/focus/selection/scroll/redraw и full pixels прошли с прежними допусками. Rich editor demo6/6 отдельно. Final supported matrix открыта. |
 | K5. HUD-ввод и ресурсы | Shared Settings HUD2026-10-09 Debug/Release:90compositions/36draws/2sessions/5readbacks, outside passthrough/capture/focus/alpha/dynamic content, resize/minimize/restore, новая UI-сессия из модели и host-owned device проверены при native Scale1.5. Итоговый supported configuration проход остаётся. |
-| K6. Vulkan validation | **2026-10-11 golden Debug/published Release:0errors/0warnings включая teardown**, offscreen UI/readback, без WSI soak. Предыдущие Hosting/retirement/DPI/HUD checks имеют собственные даты; failed full K7 не заменён этим run. Другие physical DPI/OS/GPU configurations и final supported matrix остаются. |
+| K6. Vulkan validation | **2026-10-17 Settings golden Debug/published Release:** validation включая teardown0errors/0warnings; bounded offscreen/readback scope, без WSI soak. Rich editor window smoke не является validation run. Physical DPI/real loss/final matrix открыты. |
 | K7. Повторные сессии | Shared owner реализован. Предыдущий full240-window Debug/Release **failed**: USER26→26/GDI23→137,1680WeakReferences/retained0. Текущие raw/stage Debug/Release controls и Debug stack локализуют screen HDC allocation до NVIDIA ICD32.0.16.1742; тот же raw control на AMD сохраняет GDI5→5. Safe app-side fix не установлен; другая NVIDIA версия, full UI на AMD, private/handles/VRAM и полный финальный K7 остаются. |
 | K8. Потеря устройства | **Предыдущий controlled failure/recreate2026-10-10 Debug/published Release**: error→host, terminal stop, cleanup, новая session/tree из прежней модели на здоровом device. **Physical device/context loss**, accepted DeviceLost abandonment и lost-device teardown не индуцировались; полный K8 не закрыт. |
 | K9. Производительность | **Baseline, allocation/CPU profile и одна подтверждённая reuse оптимизация выполнены2026-10-07/08.** Shared Settings static/property/list; cached paint/FIFO16fonts, до/после24000rawframes. Static0layout/draw/Update allocations. Managed Update allocations уменьшились~120→46KB/property и~140→66KB/list. Native/VRAM/GPU timestamps не измерены; performance budget не согласован. |
-| 5.4/5.5. Подготовка поставки | **Проверено2026-10-11:** independent PackageReference consumer, transitive native assets, Debug/Release build/publish и16runtime процессов на Windows x64/net10.0/framework-dependent без RID; package README/migration/ownership есть. Alpha не выпущена. Self-contained/single-file/trimming/AOT/другие OS/architectures и итоговый supported configuration проход не проверены. |
+| 5.4/5.5. Подготовка поставки | **2026-10-17:**10fresh packages,36App Cobalt/DI/DI-without-analyzer +4direct renderer processes с RichTextEditor/Topten/HarfBuzz, fonts/OFL/native/analyzer provenance и cleanup. Debug/Release ×build/publish, Windows x64/net10.0 framework-dependent без RID. Alpha/прочие deployment modes не подтверждены. |
 
 Alpha K1–K9 не объявляется завершённой. Требования и окончательная matrix остаются в [плане](PLAN.md#воспроизводимый-итоговый-проход-alpha); readiness table содержит датированные результаты, а не запуск документационной правки.
 
@@ -146,22 +164,30 @@ Alpha K1–K9 не объявляется завершённой. Требова
 
 1. Physical100/200% и разные DPI мониторов отсутствуют в текущем проверенном окружении. Native DPI contract реализован, полный K3/4.9d не закрыт.
 2. Settings off/Aero Shake и часть physical cancel/release-outside ещё нужны. Длительный lifecycle4.9 с dispatcher failed на GDI росте Vulkan WSI при стабильном USER. Native-origin callback faults/DPI subclass error проверены2026-10-10; искусственные Chrome/GDI/RemoveWindowSubclass failures не проверены. Alt+Space без PowerToys interception — отдельная проверка. Старые opacity/legacy capture failures не объявлены исправленными текущей alpha matrix.
-3. На текущем NVIDIA ICD K7 GDI trend локализован до screen HDC allocation внутри vkCreateSwapchain; safe app-side fix не установлен, поиск workaround пока прекращён по решению пользователя. AMD raw control стабилен по GDI, но full UI configuration на AMD и другая NVIDIA версия не проверены; private/handles growth этим HDC trace не объясняется. Fixed-font full golden проверен2026-10-11; VRAM и real loss остаются; package consumer проверен2026-10-11 только на указанной deployment configuration. Shared owner устраняет прежний USER trend в предыдущем full run; raw WGL allocator отдельно не установлен.
+3. На текущем NVIDIA ICD K7 GDI trend локализован до screen HDC allocation внутри vkCreateSwapchain; safe app-side fix не установлен, поиск workaround пока прекращён по решению пользователя. AMD raw control стабилен по GDI, но full UI configuration на AMD и другая NVIDIA версия не проверены; private/handles growth этим HDC trace не объясняется. Fixed-font full golden и package consumer повторены2026-10-17 в указанном bounded scope; VRAM и real loss остаются. Shared owner устраняет прежний USER trend в предыдущем full run; raw WGL allocator отдельно не установлен.
 4. Исторический standalone Name binding mismatch остаётся без доказанной причины. Отдельный control-only TextBox defect исправлен, но текущий GLFW фильтрует WM_CHAR13 до UiInput, поэтому этот fix не объявляется объяснением старого Vulkan failure. В20повторах native input не наблюдался; новый trace различает unexpected-value от binding-out-of-sync. При повторе сохранять trace, не заменять failure retry-успехом.
 5. Core/DI failures и full solution tests учитываются в общем и соответствующих модульных статусах, а не как самостоятельные UI задачи. При влиянии на UI Hosting указывать точный integration blocker.
 
 ## Следующий конкретный шаг
 
-**Следующий code этап — UI quality /5.4–5.5:** свежая package/Hosting matrix после
-bundled Cobalt и explicit fonts. [Детальный scope/acceptance](PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15)
-включает Cobalt/DI, DI с отключённым Cobalt analyzer, fonts/native/analyzer provenance,
-direct renderer и bounded cleanup. Это дополнение existing consumer, не массовая
-migration UI apps. K7 не снимается. При изменении fonts/native/renderer повторять
-read-only [golden matrix](GOLDEN_TESTS.md).
+Улучшения RichTextEditor отложены: при возвращении к UI открыть
+[отдельный план](RICH_TEXT_EDITOR_PLAN.md) и начать с RTE0 — сверки текущих
+contracts и выбора ограниченного этапа. Эти задачи не добавлены в ENG1.
 
-Для UI остаётся подготовленный physical4.9d/K3 desktop и оставшиеся OS input/chrome checks, real device/context loss/K8, VRAM evidence и полный финальный alpha проход после снятия K7. Emoji shaping/fallback не добавлены; фиксированные missing-glyph symbols не выдаются за emoji rendering.
+**RichTextEditor/PA7a реализован и проверен2026-10-17** перед ENG1 по запросу
+пользователя; это ограниченное расширение, не закрытие PA7/beta.
+Ранее2026-10-15 пользователь выбрал ограниченный
+[ENG0 scope](../engine/PLAN.md#eng0-принятый-scope-первого-прототипа--2026-10-15)
+с открытыми UI рисками. Headless ENG1 реализован/проверен2026-10-17 в своём
+[engine scope](../engine/STATUS.md); ENG2 CPU viewport реализован в своём bounded scope; следующий общий шаг — ENG3 replacement.
+В ENG1 повторена UI Debug suite563, новые UI native/package/golden runs не выполнялись.
+Остальные PA1–PA10 и массовая provider
+migration этим решением не начинаются; physical UI acceptance требуют своего run.
+K7 не снимается; acceptance не подменяется успешными40package processes.
 
-Подготовка поставки5.4/5.5 проверена2026-10-11 на Windows x64/net10.0/framework-dependent build/publish без RID; пакеты не публиковались. Physical4.9d/K3 требует подготовленного desktop100/150/200% и разных DPI мониторов, остальная4.9matrix/real loss/VRAM также остаются. Затем — итоговый UI alpha проход; PA1/минимальный PA2 остаются после alpha.
+Для UI остаётся подготовленный physical4.9d/K3 desktop и оставшиеся OS input/chrome checks, real device/context loss/K8, VRAM evidence и полный финальный alpha проход после снятия K7. RichTextKit shaping не означает полную поддержку всех emoji; fixed-font missing-glyph symbols не выдаются за emoji rendering.
+
+Подготовка поставки5.4/5.5 повторена2026-10-17 на Windows x64/net10.0/framework-dependent build/publish без RID; пакеты не публиковались. Physical4.9d/K3 требует подготовленного desktop100/150/200% и разных DPI мониторов, остальная4.9matrix/real loss/VRAM также остаются. Затем — итоговый UI alpha проход; PA1/минимальный PA2 остаются после alpha.
 
 **Внешний K7 блокер:** дальнейший поиск app-side workaround текущего NVIDIA GDI defect пока прекращён по решению пользователя. Возврат — при supported driver/ICD решении либо отдельно согласованной и полностью проверенной alternate GPU configuration; raw AMD сравнение уже выполнено, full UI на AMD не подтверждён. После решения повторить полный240-window GL/Vulkan×appearance/chrome/minimize check в Debug/published Release и callback/shutdown regressions на финальном source с прежними warm+2/+4 limits. Private/handles growth расследовать отдельно. Пользовательские driver/Windows settings не менять без соответствующего запроса. Для standalone Name повторов включать `--smoke-trace`.
 

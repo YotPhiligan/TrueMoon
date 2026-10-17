@@ -10,6 +10,19 @@
 
 Для доставляемых шрифтов доступны `UseSkiaRaster(fonts)`, `UseSkiaOpenGL(fonts)` и `UseSkiaVulkan(fonts)`, где `fonts` — immutable `SkiaFontCatalog`. Каталог хранит snapshots; surface владеет native fonts. App доставляет font files и лицензии, Load выполняет native font validation до запуска UI. [Пример и правила fallback](../docs/alloy/GOLDEN_TESTS.md#шрифты-и-владение).
 
+Для default Cobalt регистрируйте concrete view и его зависимости в consumer через
+`app.Services(services => services.Singleton<MyModel>().Transient<MyView>())`:
+bundled analyzer видит этот constructor graph в исходниках приложения. Одного
+`UsePresentation<MyView>(...)` для генерации resolver пользовательского view
+недостаточно. Hosting создаёт свой dispatcher через явную factory и не требует
+собственного Cobalt analyzer. Полный пример обоих providers и explicit fonts —
+[package consumer](../ManualTests/AlloyPackageConsumer/README.md).
+
+RichTextEditor: multiline input, immutable rich-document binding, formatting,
+undo/redo, read-only/word wrap и отдельная toolbar composition поверх
+Topten.RichTextKit. [API и ограничения](../docs/alloy/RICH_TEXT_EDITOR.md),
+[запускаемый пример](../ManualTests/RichTextEditorTest/README.md).
+
 ## Миграция alpha API: PLAN 2.1a
 
 Связка Silk/Vulkan renderer находится в сборке и namespace `TrueMoon.Alloy.Hosting`. Для convenience API добавьте ссылку на Hosting и `using TrueMoon.Alloy.Hosting;`:

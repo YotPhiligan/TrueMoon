@@ -5,11 +5,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <RequireCobaltGeneration Condition="'$(RequireCobaltGeneration)' == ''">true</RequireCobaltGeneration>
+    <DefineConstants Condition="'$(RequireCobaltGeneration)' == 'true'">$(DefineConstants);COBALT_GENERATION</DefineConstants>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated/$(Configuration)</CompilerGeneratedFilesOutputPath>
     <TrueMoonPackageVersion Condition="'$(TrueMoonPackageVersion)' == ''">0.2.2.7-alpha</TrueMoonPackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="TrueMoon.Alloy.Hosting" Version="$(TrueMoonPackageVersion)" />
     <PackageReference Include="TrueMoon" Version="$(TrueMoonPackageVersion)" />
     <PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="$(TrueMoonPackageVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets/Fonts/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

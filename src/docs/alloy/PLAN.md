@@ -10,6 +10,42 @@
 
 Текущее состояние, доказательства и точка продолжения находятся в [STATUS.md](STATUS.md). Наличие пункта в этом документе означает требование к результату; статус реализации определяется отдельно.
 
+## PA7a: RichTextEditor перед ENG1 — 2026-10-17
+
+Дальнейшие улучшения вынесены в отдельный
+[план RichTextEditor](RICH_TEXT_EDITOR_PLAN.md). По решению пользователя2026-10-17
+они отложены до дальнейшей работы над функциями UI-модуля. Подробные задачи и
+acceptance ведутся только там. Назначенный после PA7a ENG1 выполнен2026-10-17;
+актуальный общий шаг — ENG2, [engine статус](../engine/STATUS.md).
+
+По прямому запросу пользователя перед ENG1 реализуется RichTextEditor поверх
+Topten.RichTextKit. Это отдельное ограниченное расширение текста, а не начало
+всей beta/PA1–PA10 или закрытие PA7/alpha. net10.0/xUnit и независимость Argentis
+от Skia/Alloy сохраняются. [API/options/границы](RICH_TEXT_EDITOR.md).
+
+Контракт: neutral immutable rich document/styles/options и retained control в
+Argentis; RichTextKit0.6.170 shaping/layout/hit testing/painting только в
+Rendering.Skia. Common adapter используется raster/OpenGL/Vulkan. Поддержать
+multiline input, UTF-16/grapheme selection/navigation, plain clipboard,
+formatting selection/insertion, bounded undo/redo, read-only/word-wrap/alignment,
+общие Element font/color/padding и независимый toolbar example.
+
+Acceptance: behavioral xUnit regressions editing/binding/format/history/input/
+cleanup и реальные raster pixels; Debug/published Release native smoke3backends;
+fresh independent package consumer с rich editor и direct renderer; прежние
+K2/K4 golden fixtures/tolerances не перезаписывать. Code/test/native/package
+results фиксировать отдельно. IME/accessibility, bidi caret affinity, rich clipboard,
+RTF/HTML import/export, lists/tables и long native resource trend вне этого scope.
+RichTextKit process shaper caches не объявлять очищенными при session Dispose.
+
+Результат2026-10-17: компонент реализован; UI563/563 Debug/Release,6native demo
+cases,40fresh package processes и прежний read-only Settings golden360 прошли.
+[Точные команды, failures и границы вывода](HISTORY.md#richtexteditor--2026-10-17).
+
+После этого UI запроса выполнен headless ENG1; актуальная точка продолжения —
+ENG2 CPU viewport. Само расширение PA7a engine code не создавало.
+NVIDIA K7/physical DPI/loss/VRAM/final alpha сохраняются.
+
 ## Проход качества UI после headless модулей — 2026-10-15
 
 По [общей сводке качества](../QUALITY.md) следующий ограниченный scope — обновить
@@ -53,6 +89,18 @@ Runtime fixes вносить только при воспроизводимом 
 объявляет снятым K7, physical DPI/loss/VRAM или final alpha, не меняет driver/GPU/
 Windows settings и не начинает engine. После него обновить сводку качества и
 выбрать следующий доступный UI/ENG0 scope с явно сохранёнными ограничениями.
+
+**Результат2026-10-15:** scope выполнен:10fresh nupkgs,36App +4direct processes,
+Cobalt/DI и DI без analyzer, explicit fonts/native delivery, fingerprints и
+negative analyzer control. Воспроизведён missing resolver HostedUiDispatcher;
+регистрация заменена явной factory без зависимости Hosting от Cobalt.
+Consumer явно регистрирует concrete View/model graph для source generator.
+UI532/Core107/Cobalt179/generator91 отдельно Debug/Release; read-only golden360
+с validation teardown прошли. [Команды, failures и границы](HISTORY.md#ui-packagehosting-quality--2026-10-15).
+Архитектура и критерии alpha сохранены. Следующим решением пользователя2026-10-15
+выбран [ограниченный ENG0](../engine/PLAN.md#eng0-принятый-scope-первого-прототипа--2026-10-15)
+с открытыми UI рисками; тогда назначен headless ENG1 (выполнен2026-10-17). Это допуск
+прототипа, не K3/K7/K8/VRAM/final alpha pass и не автоматическое начало PA1–PA10.
 
 ## Цель и основные решения
 
@@ -519,3 +567,14 @@ IME/accessibility, развитие trees/tables, templates/animations и аси
 ## Поддержание плана между сессиями
 
 Перед работой читать этот план и [STATUS.md](STATUS.md); для межмодульных задач также [общий план](../PLAN.md). После завершённого изменения обновлять дату сверки, статусы затронутых пунктов, результаты фактически выполненных проверок и следующий конкретный шаг. При изменении архитектурного решения фиксировать причину и затронутые критерии готовности. Длинные записи запусков хранить в [HISTORY.md](HISTORY.md), текущий статус оставлять кратким. Общие build/test/release вопросы обновлять в общем STATUS по [правилам](../PLANNING.md).
+
+## ENG2: owned pixel image adapter — 2026-10-17
+
+Для [engine CPU viewport](../engine/PLAN.md#eng2-cpu-frame-viewport--2026-10-17)
+Rendering.Skia предоставляет `SkiaImageSource.CopyBgraPixels`: positive checked
+shape/exact tight BGRA8 premultiplied/sRGB/top-left length, независимая owned copy.
+Borrowing IImageSource/Argentis.Image contract сохранён; caller владеет disposal
+после owner-thread drawing use. UI не читает mapped ring slots. Transport/readers/
+process ownership и подробные ENG2 задачи ведутся только в engine плане.
+[Результаты UI adapter](HISTORY.md#eng2-owned-pixel-image--2026-10-17).
+Это ограниченное расширение не меняет alpha blockers или отложенный RTE backlog.

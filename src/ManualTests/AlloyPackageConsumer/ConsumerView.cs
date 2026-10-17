@@ -5,7 +5,7 @@ using TrueMoon.Argentis;
 namespace AlloyPackageConsumer;
 
 /// <summary>State owned by the application, independently of the UI session.</summary>
-public sealed class ConsumerModel : INotifyPropertyChanged
+public sealed class ConsumerModel : INotifyPropertyChanged, IDisposable
 {
     private string _name = "Package consumer";
     private PropertyChangedEventHandler? _changed;
@@ -25,6 +25,16 @@ public sealed class ConsumerModel : INotifyPropertyChanged
     /// <summary>Number of live UI binding subscriptions.</summary>
     public int SubscriptionCount => _changed?.GetInvocationList().Length ?? 0;
 
+    /// <summary>Number of disposal calls made by the selected provider.</summary>
+    public int DisposeCalls { get; private set; }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        DisposeCalls++;
+        if (SubscriptionCount != 0) throw new InvalidOperationException("Model was disposed before UI bindings were released.");
+    }
+
     /// <inheritdoc />
     public event PropertyChangedEventHandler? PropertyChanged
     {
@@ -38,6 +48,7 @@ public sealed class ConsumerView : View<ConsumerModel>
 {
     private readonly ConsumerModel _model;
     private readonly TextBox _editor;
+    private readonly RichTextEditor _richEditor;
     private int _step;
 
     /// <summary>Creates the view using an application-owned model supplied by DI.</summary>
@@ -47,8 +58,9 @@ public sealed class ConsumerView : View<ConsumerModel>
         ArgumentNullException.ThrowIfNull(model);
         _model = model;
         _editor = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, state => state.Name);
+        _richEditor = new RichTextEditor { Height = 80, Text = "Rich text from NuGet" };
         Content(model, _ => VStack.Create().Padding(16).WithChildren(
-            Text.Plain("TrueMoon from NuGet"), _editor,
+            Text.Plain("TrueMoon from NuGet"), _editor, _richEditor,
             Button.Simple("Rename").OnClick(() => model.Name = "Button update")));
     }
 
@@ -65,6 +77,9 @@ public sealed class ConsumerView : View<ConsumerModel>
                 break;
             case 2:
                 _model.Name = "Model update";
+                _richEditor.Select(0, 4);
+                _richEditor.ApplyStyle(new() { Underline = true, Foreground = new(230, 80, 40) });
+                Require(_richEditor.Document.Runs[0].Style.Underline == true, "Packaged RichTextKit formatting failed.");
                 break;
             case 3:
                 Require(_editor.Value == "Model update", "Model-to-view binding failed.");
@@ -72,6 +87,7 @@ public sealed class ConsumerView : View<ConsumerModel>
                 break;
             case 4:
                 Require(_model.Name == "Editor update", "View-to-model binding failed.");
+                Require(_richEditor.Undo() && _richEditor.Text == "Rich text from NuGet", "Rich document undo failed.");
                 session.SetTheme(Theme.Light);
                 break;
             case 5:
@@ -87,7 +103,7 @@ public sealed class ConsumerView : View<ConsumerModel>
     public void VerifyClosed()
     {
         Require(_step >= 6, "Interaction sequence did not complete.");
-        Require(IsDisposed && !IsAttached && _editor.IsDisposed, "UI tree was not disposed.");
+        Require(IsDisposed && !IsAttached && _editor.IsDisposed && _richEditor.IsDisposed, "UI tree was not disposed.");
         Require(_model.SubscriptionCount == 0, "Model subscriptions survived UI disposal.");
         Require(_model.Name == "Queued update", "Application model was not preserved.");
     }

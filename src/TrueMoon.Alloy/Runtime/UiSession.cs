@@ -145,6 +145,8 @@ public sealed class UiSession : IDisposable, IInputContext
         if (Viewport.IsEmpty) return new(false, false, _focus != null);
         if (input.Kind == InputKind.KeyDown && input.Key == UiKey.Tab)
         {
+            if (_focus != null && _focus.HandleInput(input, this))
+                return new(true, _capture != null, true);
             var items = Descendants(Root).Where(e => e.Focusable && Eligible(e)).ToArray();
             if (items.Length == 0) return new(false, _capture != null, false);
             var index = Array.IndexOf(items, _focus); if (index < 0 && input.Shift) index = 0;

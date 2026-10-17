@@ -6,6 +6,245 @@
 
 Новые подробные записи добавлять датированными разделами истории, текущую сводку обновлять отдельно. Согласованные UI критерии сохраняются.
 
+## Отложенный план RichTextEditor — 2026-10-17
+
+По запросу пользователя обсуждённые улучшения сохранены в отдельном
+[RICH_TEXT_EDITOR_PLAN.md](RICH_TEXT_EDITOR_PLAN.md): RTE0 исходная сверка,
+RTE1 editing/history, RTE2 caret/viewport, RTE3 formatting/commands,
+RTE4 codec/rich clipboard, RTE5 paragraphs/search, RTE6 measurements,
+RTE7 IME/bidi/accessibility. Все этапы запланированы и отложены до дальнейшего
+развития UI. API names и использование RichTextKit TextDocument остаются
+предложениями для сверки, а не принятыми изменениями текущего API.
+
+UI PLAN/STATUS/API guide и индекс документации ссылаются на единственный детальный
+план; общий roadmap содержит ссылку без дублирования задач. Следующий code шаг
+остаётся ENG1, межмодульные блокеры и readiness не изменились. В этом шаге
+implementation/build/tests/native/package checks не выполнялись; предыдущие
+результаты2026-10-17 сохранены со своей датой.
+
+Документационная проверка:16Markdown documents, relative links/anchors,
+fences/whitespace/conflicts/NUL и наличие восьми этапов RTE0–RTE7 прошли;
+scoped git diff --check чистый с Windows CR-at-EOL policy. Существующие10staged
+entries сохранены; новый план не staged. Отчёт ignored:
+TestResults/RichTextEditor/plan-validation.json. Первый запуск вспомогательного
+checker не определил PSScriptRoot в dynamic scriptblock; после исправления
+переиспользуется только Markdown-часть проверки с явно заданным workspace.
+
+## RichTextEditor — 2026-10-17
+
+По запросу пользователя перед headless ENG1 реализован отдельный UI control
+поверх Topten.RichTextKit0.6.170. [Контракт PA7a](PLAN.md#pa7a-richtexteditor-перед-eng1--2026-10-17),
+[API/options/fonts/binding](RICH_TEXT_EDITOR.md),
+[manual demo](../../ManualTests/RichTextEditorTest/README.md).
+Это расширение не закрывает весь PA7/beta, UI alpha или engine этапы.
+
+### Реализация и ownership
+
+- Argentis: immutable RichTextDocument/Run/Style/EditorOptions, LF/valid UTF-16,
+  bindable Document/Text/Options, multiline editor, grapheme selection/navigation,
+  plain clipboard, formatting selection/insertion, bounded undo/redo, read-only,
+  wrap/alignment/tab/selection color и обычные Element font/color/padding.
+  Новые optional rich-layout/drawing capabilities не меняют базовые interfaces.
+  Argentis не получил зависимости от Skia/RichTextKit.
+- Rendering.Skia: per-paragraph TextBlock adapter с UTF-16/code-point mapping,
+  caret/visual line metrics, selection painting и одним layout для hit testing/
+  rendering. Owner-thread/surface checks; layouts освобождаются при reflow/detach/
+  dispose. Один adapter используется raster/OpenGL/Vulkan.
+- SkiaFontCatalog.LoadFaces регистрирует реальные normal/bold/italic variants;
+  прежний Load сохранён. Explicit catalogs используют snapshot bytes и U+FFFD
+  для missing glyph без system fallback. Synthetic bold из Regular не обещается.
+  RichTextKit содержит process-wide native shaper caches: adapter повторно
+  использует face identity, а не создаёт retained shaper при каждом input/session.
+  Session Dispose не объявлен очисткой глобальных third-party caches.
+- Silk key mapping дополнен; UiSession перед Tab traversal даёт focused control
+  обработать Tab. Editor вставляет4spaces при AcceptsTab; Shift+Tab/read-only
+  сохраняют traversal. Toolbar — отдельные Button/CheckBox в demo, не часть editor.
+- Independent App/package и direct-renderer consumers теперь используют rich
+  text; проверяется транзитивная доставка Topten/HarfBuzz/native assets.
+  Packaged Cobalt example уточнён до существующего App.Builder(_ => {}) API.
+
+### Фактические проверки
+
+Windows x64/net10.0/SDK10.0.402, xUnit2.9.3/VSTest, SkiaSharp4.153.1.
+Пользовательские central package версии сохранены. Own headless suites не повторялись.
+
+| Проверка | Результат | Артефакты внутри ignored TestResults |
+| --- | --- | --- |
+| UI suite Debug |563passed/0failed/0skipped;31новый RichTextEditor case | RichTextEditor/verification/ui-Debug.trx и ui-Debug.stdout.log |
+| UI suite Release |563passed/0failed/0skipped | RichTextEditor/verification/ui-Release.trx и ui-Release.stdout.log |
+| Full solution nonincremental Debug build |0errors/1200warnings, exit0; не full-solution tests | RichTextEditor/verification/solution-debug.stdout.log, summary.json |
+| Rich editor native demo |6/6:Debug и published Release ×raster/OpenGL/Vulkan; format/edit/undo/redo/options/scroll/cleanup | RichTextEditor/smoke-final/summary.json,6reports, initial/final raster PNG и process logs |
+| Independent packages |10fresh nupkgs,36App +4direct runtime processes; Cobalt/DI/DI без analyzer, Debug/Release ×build/publish без RID | AlloyPackages/richtext-20261017/summary.json; version0.2.2.7-alpha.ui.20261017144524509 |
+| Negative analyzer control |Ожидаемый build exit1/CS0246; в passing runtime count не включён | В том же package summary/logs |
+| Прежний Settings read-only golden |360/360,180/configuration; validation0errors/0warnings including teardown, source fixtures unchanged | AlloyGolden/richtext-20261017/summary.json, Debug/Release/report.json/logs/PNG |
+
+Package summary:67commands,266source fingerprints и265evidence entries; финальное
+сравнение source/package/analyzer/native/font fingerprints прошло. Пакеты не
+публиковались. Новый rich editor не добавлен в прежние Settings golden fixtures:
+он имеет отдельные real-raster pixel tests и6native demo cases.
+
+Команды из src:
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --logger "trx;LogFileName=ui-Debug.trx" --results-directory TestResults/RichTextEditor/verification --verbosity quiet
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Release --logger "trx;LogFileName=ui-Release.trx" --results-directory TestResults/RichTextEditor/verification --verbosity quiet
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet
+pwsh -NoProfile -File ManualTests/RichTextEditorTest/RunSmoke.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/RichTextEditor/smoke-final
+pwsh -NoProfile -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/AlloyPackages/richtext-20261017
+pwsh -NoProfile -File ManualTests/AlloyVulkanTest/RunSettingsGolden.ps1 -OutputDirectory E:/source/my/TrueMoon/src/TestResults/AlloyGolden/richtext-20261017 -ValidationLayerPath E:/source/my/TrueMoon/src/TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin
+```
+
+Регрессии проверяют rich runs/history/insertion style, invalid Unicode/options,
+graphemes/empty paragraphs, property observer/binding consistency, clipboard failure,
+read-only/disabled, Tab/keyboard/pointer capture/focus, reflow/wheel, real colored
+pixels/static redraw, thread/surface checks, detach/reattach/disposal и shared face
+identity across catalogs/sessions. Например:
+Formatting_ChangesOnlySelectionAndUndoRestoresRunsAndSelection,
+Options_EnterAndKeyboardFormattingUseTheSameDocumentHistory,
+WordWrapAndResize_ChangeVisualLinesWithoutChangingDocumentOrSelection,
+NativePainting_UsesRichColorsAndHasNoStaticRedraw,
+RichFontMapper_ReusesProcessShapingFaceAcrossCatalogsAndSurfaceDisposal.
+
+### Failures и границы вывода
+
+Первый focused run18passed/5failed: найден и исправлен реальный caret reveal defect
+при wrap/resize; остальные failures — ошибочные exact exception expectations,
+UTF-16 InlineData metadata и отсутствие UiSession.Update в incoming binding test.
+Следующий21passed/3failed уточнил property validator exception type. Последующий
+compile failure в test helper (Elements вместо Items) исправлен. Focused финал
+30/30; затем добавлен shared-shaper-face regression и выполнены полные563/563 в
+обеих configurations. Initial demo compile failure App.Builder() исправлен до
+App.Builder(_ => {}), финальная demo matrix6/6. Исходные logs сохранены.
+
+Initial raster PNG визуально проверен: padded multiline editor, colored text,
+italic/underline, независимые toolbar/options. Scripted input не доказывает весь
+physical keyboard/mouse/clipboard/IME путь. Полная bidi caret affinity, IME/
+accessibility, rich clipboard, RTF/HTML, lists/tables и long memory/VRAM trends
+вне scope; наличие emoji grapheme navigation не доказывает каждый emoji glyph.
+K3/K7/K8/VRAM/final alpha прежние. Следующий общий code шаг — ENG1; engine code
+и собственные engine проверки этим расширением не созданы.
+
+Документация:15Markdown files/452local links/135anchors, fences/whitespace/
+conflict/NUL checks прошли. Финальная повторная сверка266source +265evidence
+fingerprints прошла; git diff --check с Windows CR-at-EOL policy чистый,
+staged entries0. Артефакт: ignored RichTextEditor/completion.json.
+Первый вариант checker ошибочно отключил CRLF normalization без cr-at-eol и
+пометил CR в пользовательском Directory.Packages.props как trailing whitespace;
+исправлена только настройка проверки, package файл не менялся.
+Rider connection на финальном docs этапе вернул HTTP502; read-only сверка
+завершена резервным терминалом. Уже завершённые runtime checks не повторялись.
+
+## UI package/Hosting quality — 2026-10-15
+
+Выполнен согласованный5.4/5.5 scope после headless quality. Production fix:
+`UsePresentation` регистрировал HostedUiDispatcher через constructor registration,
+но Hosting не генерирует Cobalt resolvers. Новый independent Cobalt OpenGL consumer
+воспроизвёл `No generated resolver for HostedUiDispatcher` в App.Build, до GPU startup.
+Регистрация заменена `Singleton<HostedUiDispatcher>(_ => new HostedUiDispatcher())`;
+новой зависимости Hosting→Cobalt и изменений dispatcher ownership нет.
+
+Consumer явно регистрирует `Singleton<ConsumerModel>().Transient<ConsumerView>()`:
+generic UsePresentation внутри пакета сам по себе не делает concrete consumer
+constructor graph видимым source generator. Один consumer binary запускается на
+Cobalt/DI; отдельный variant компилируется с EnableCobaltGenerator=false и работает
+на DI без generated graph. Compile-time registration type, module initializer и
+consumer Model/View resolvers подтверждают фактическую compilation bundled analyzer.
+Analyzer DLL/CodeAnalysis отсутствуют в runtime output; standalone generator nupkg
+не создаётся (producer IsPackable=false учитывается).
+
+Runner сохраняет exact commands/PIDs/exit codes, stdout/stderr, case deadlines
+(pack/build/restore180s, runtime45s), завершает только own launched process trees.
+Доставляются собственные Noto Sans/Symbols и OFL; explicit SkiaFontCatalog передан
+все backend/Hosting overloads и direct renderer. Catalog Load валидирует fonts
+через native Skia до App.Build; Build проверяется на отсутствие sessions/bindings.
+Render/update, layout, two-way binding, theme/posted update, nonblank raster/PNG,
+native LoadedPath, сохранение модели и отсутствие sessions/subscriptions после
+Stop/Dispose проверены. Model singleton без aliases получает1Dispose; равенство
+alias disposal counts providers не заявляется.
+
+### Команды и итоговый package scope
+
+```powershell
+pwsh -NoProfile -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 `
+  -RunDirectory E:/source/my/TrueMoon/src/TestResults/AlloyPackages/quality-20261015-final
+```
+
+Final `summary.json`: Completed=true/Failure=null, version
+`0.2.2.7-alpha.ui.20261015171322569`,67commands,263source fingerprints и265evidence
+fingerprints. Windows NT10.0.26300.0/x64, SDK10.0.402/runtime10.0.13/net10.0,
+framework-dependent без RID. **10nupkgs**, matching producer/package runtime/analyzer
+и native hashes; isolated TrueMoon source/cache; **36App +4direct renderer processes**.
+Generated Cobalt/DI и DI-only ×Debug/Release ×build/publish ×Raster/OpenGL/Vulkan
+прошли. Direct renderer имеет только3local UI runtime packages без App/Hosting/
+Core/Contracts/platform;4raster processes прошли. Всего6successful consumer builds
+и6publishes, каждый без compiler warnings/errors. Negative control без analyzer
+и с compile-time generated reference завершился ожидаемым **CS0246/exit1**; в40runtime
+passing cases не включён. Финальные source/nupkg/copied source/generated/native/font
+hashes совпали;12raster PNG сохранены. Source code и packaged docs после final run
+не менялись; дальнейшие правки planning/status документов в producer inputs не входят.
+
+Pack logs:750warning entries (не unique defects):CS1591=687, nullable
+CS8602/03/04/18/25/29=59,CS9113=2,NU5100=1,RS1041=1. NU5100 относится к native DLL
+вне managed lib; net10 Cobalt analyzer требует .NET10 compiler. Warnings сохранены,
+NoWarn не добавлялся; общий warnings policy/release readiness этим run не закрыты.
+
+### Регрессии и read-only golden
+
+Точные args/exit codes/TRX находятся в
+`TestResults/AlloyPackages/verification-20261015-171053691/summary.json`.
+Запуск для каждого project и каждой Debug/Release configuration:
+
+```powershell
+foreach ($project in @('TrueMoon.Alloy.Tests', 'TrueMoon.Tests', 'TrueMoon.Cobalt.Tests', 'TrueMoon.Cobalt.Generator.Tests')) {
+  foreach ($configuration in @('Debug', 'Release')) {
+    dotnet test "$project/$project.csproj" --configuration $configuration `
+      --logger "trx;LogFileName=$project-$configuration.trx" `
+      --results-directory TestResults/AlloyPackages/verification-20261015-171053691 --verbosity quiet
+  }
+}
+```
+
+UI **532**, Core **107**, Cobalt runtime **179**, generator **91** passed отдельно в
+каждой configuration;8TRX/**1818passed/0failed/0skipped**, все exit0. Это выбранные
+module regressions, не full-solution tests. Production code между этим run и final
+package run не менялся; финальные дополнительные harness checks относятся к copied
+source fingerprints и raster pixels.
+
+```powershell
+pwsh -NoProfile -File ManualTests/AlloyVulkanTest/RunSettingsGolden.ps1 `
+  -OutputDirectory E:/source/my/TrueMoon/src/TestResults/AlloyGolden/quality-20261015 `
+  -ValidationLayerPath E:/source/my/TrueMoon/src/TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin
+```
+
+Debug build и Release publish/probe exit0: **360/360** full comparisons,
+180/configuration, fixtures unchanged; ValidationPassedIncludingTeardown=true в
+обоих reports. NVIDIA RTX5070Ti/OpenGL3.3/NVIDIA617.42; прежние fonts,30reference PNG,
+3logical scales,40-step Settings script и tolerances сохранены. Не physical DPI
+transitions и не WSI soak. Это отдельный source consumer proof, а не пакетный run.
+
+### Сохранённые промежуточные failures
+
+- `quality-20261015-a`: consumer build прошёл, runner ожидал неверное имя generated
+  resolver file. Проверка заменена на фактический encoded filename pattern.
+- `quality-20261015-b`: Cobalt raster прошёл; Cobalt OpenGL/App.Build воспроизвёл
+  missing HostedUiDispatcher resolver. Runtime defect исправлен explicit factory.
+- `quality-20261015-c`:36+4cases и negative control прошли после fix. Затем добавлены
+  final copied-source fingerprints/nonblank raster check и документы; final run
+  выполнен из нового feed/cache/version, старые evidence не перезаписаны.
+
+Full solution build, Enerit/Mithril suites, performance, physical DPI/K3,
+K7/lifecycle long soak, real loss/K8, VRAM и final alpha matrix здесь не выполнялись.
+NVIDIA workaround search остаётся остановлен; driver/Windows settings не менялись.
+Пакеты не публиковались. Следующий выбор — доступная UI acceptance на подготовленном
+окружении либо отдельно согласованный bounded ENG0; engine/PA1–PA10 не начинаются
+автоматически. Общая quality matrix обновлена с сохранением этих ограничений.
+
+Итоговая независимая сверка `final-verification.json`:40package processes,
+1818unit passes,360golden comparisons;263source +265evidence fingerprints совпали.
+11изменённых Markdown documents/375local links/117heading links:0issues,
+fences/conflict markers/NUL/replacement characters проверены;git diff --check
+passed, staged changes0. Это validation итоговых artifacts/docs, не новый suite run.
+
 ## Package и независимый UI consumer — 2026-10-11
 
 Выполнена подготовка поставки5.4/5.5. Новый `ManualTests/AlloyPackageConsumer` не включён в solution, имеет собственные Directory.Build.props/targets/Directory.Packages.props и только PackageReference на Hosting/App/Microsoft DI adapter. Его собственные model/view проверяют layout, двухстороннюю binding, смену theme, posted update, static raster redraw, сохранение модели, tree/subscription/session registry cleanup и App startup/shutdown/disposal. ProjectReference/compile-link library sources отсутствуют. Скрипт копирует consumer в новый ignored run, пакует source graph, проверяет local package origin в isolated cache и запускает native cases последовательно.
@@ -1799,3 +2038,20 @@ PA1–PA10, net10.0/xUnit, driver/Windows settings и остановка NVIDIA 
 search сохранены. Full alpha/physical DPI/real loss/VRAM не объявлены закрытыми.
 Code/build/tests/pack/process/GPU/performance в этой сверке не запускались;
 проверки документов описаны в общей HISTORY, новые passing module results отсутствуют.
+
+## ENG2 owned pixel image — 2026-10-17
+
+Для engine CPU viewport добавлен `SkiaImageSource.CopyBgraPixels(width,height,pixels)`:
+checked positive shape/exact tight length, BGRA8 premultiplied/sRGB/top-left,
+SKImage.FromPixelCopy владеет собственной копией. Caller может сразу переиспользовать
+buffer, UI owner освобождает image после drawing use. Argentis.Image продолжает
+заимствовать source. Новых renderer-neutral/GPU borrowing contracts не вводилось.
+
+UI570/570 Debug/Release, failed/skipped0;7новых cases в SkiaPixelImageTests:
+ownership после source clear, channels/origin/premultiplied alpha и invalid/overflow shape.
+Full Debug solution1368/1368; два native engine viewport runs на финальном source,
+OpenGL readback corners/enlarged frame+tick counters, resize/first-frame/cleanup.
+[Commands/reports/failures](../engine/HISTORY.md#eng2-cpu-frame-viewport--2026-10-17).
+Это не новый packaged image API proof: pack/package consumer/golden и RichTextEditor
+native matrix в этом шаге не запускались. K3 physical DPI/K7/K8/VRAM/final alpha
+сохраняются. RTE improvements остаются отложенными, следующий общий шаг ENG3.

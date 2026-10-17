@@ -9,6 +9,7 @@
     <ProjectReference Include="../TrueMoon.Alloy/TrueMoon.Alloy.csproj" />
     <PackageReference Include="Silk.NET.Vulkan" />
     <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="Topten.RichTextKit" />
   </ItemGroup>
   <ItemGroup>
     <!-- Keep our extension separate from the upstream native-assets package. The host resolves

@@ -32,7 +32,29 @@ public sealed class MainView : View
 
 Select `UseSkiaVulkan()` instead of `UseSkiaOpenGL()` before building the App to use Vulkan. Raster sessions use `UseAlloy(options => options.UseSkiaRaster().UseExternalHost())`, a `RasterUiTarget` and an application-owned frame loop.
 
+Cobalt is the default provider. To use it, keep the Hosting/App references, omit `UseDI()` and register the concrete consumer view with the TrueMoon registration API so the bundled Cobalt analyzer sees its constructor graph:
+
+```csharp
+await App.Builder(_ => { }).RunAsync(app =>
+{
+    app.UsePresentation<MainView>(options => options.UseSkiaOpenGL().UseSilkWindow());
+    app.Services(services => services.Transient<MainView>());
+});
+```
+
+Register the view's model/dependencies in the same `Services` configuration. The analyzer comes transitively from `TrueMoon.Cobalt`; no standalone generator package is needed. The Microsoft DI path also works with `EnableCobaltGenerator=false`.
+
+For reproducible font selection, load your licensed font files with `SkiaFontCatalog.Load(defaultFamily, files)` from `TrueMoon.Alloy.Rendering.Skia` and pass the catalog to `UseSkiaRaster(fonts)`, `UseSkiaOpenGL(fonts)` or `UseSkiaVulkan(fonts)`. Deliver those files and their license as application content with `CopyToOutputDirectory` and `CopyToPublishDirectory`. Loading validates fonts through native Skia before App startup; the renderer package does not bundle demo fonts. Unregistered font families use the catalog's default face without system font lookup.
+
 Constructors and factories can be mixed. `TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, state => state.Name)` binds an `INotifyPropertyChanged` model to an editor. Keep durable state in the model and create a fresh UI tree when recreating a session.
+
+`RichTextEditor.Create(new RichTextEditorOptions { WordWrap = true, UndoLimit = 100 })`
+provides multiline text, immutable `RichTextDocument`/`RichTextRun` styling,
+selection, plain-text clipboard, undo/redo and read-only options. Bind
+`RichTextEditor.DocumentProperty` for rich content or `TextProperty` for LF plain text.
+Use `Select(start, length)` and `ApplyStyle(new RichTextStyle { Bold = true })` for
+formatting; indices are UTF-16 grapheme boundaries. Topten.RichTextKit arrives
+transitively through Rendering.Skia. A toolbar is ordinary application composition.
 
 App configuration/Build do not create windows or graphics contexts. Standalone windows share a process owner thread; the dispatcher handles window creation, input, rendering and teardown. Use `HostedUiWindow.Post(...)` to change its session from another thread and `Close()`/App stop for shutdown. Do not operate on its UI tree or GPU context directly from a worker thread. Hosted window completion follows session/native cleanup.
 

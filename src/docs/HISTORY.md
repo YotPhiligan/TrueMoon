@@ -1,5 +1,72 @@
 # TrueMoon: история общей документации
 
+## ENG1 headless supervisor — 2026-10-17
+
+После UI RichTextEditor и сохранения его отложенного плана реализован ENG1:
+probe host/contracts/Game.Logic stub/tests, fresh owned child generations,
+Hello/scene readiness, serialized commands, timeout/cancel/crash/disconnect/parent
+exit и cleanup при живом Editor App/authoring fixture. Единственные подробные
+[contracts](engine/PLAN.md#eng1-headless-supervisor--2026-10-17) и
+[commands/failures/evidence](engine/HISTORY.md#eng1-headless-supervisor--2026-10-17)
+находятся в engine документах; проекты в ManualTests/TrueMoon.slnx folder Engine.
+
+Engine31/31 Debug/Release, native32/32 Debug apphost/published Release с20Start/Stop
+в каждом configuration. Full Debug solution tests1305/1305,8TRX/failed0/skipped0;
+nonincremental Debug build0errors/1207warnings. Release остальных suites и UI
+native/golden/package не повторялись. Следующий code шаг — ENG2 CPU ring/viewport;
+replacement ENG3, UI hardware acceptance и общий release ещё открыты.
+
+## RichTextEditor перед ENG1 — 2026-10-17
+
+По запросу пользователя перед ENG1 реализован UI RichTextEditor/options поверх
+Topten.RichTextKit с neutral Argentis contracts и Skia adapter. Единственный
+детальный [контракт PA7a](alloy/PLAN.md#pa7a-richtexteditor-перед-eng1--2026-10-17),
+[API guide](alloy/RICH_TEXT_EDITOR.md), [failures/commands/evidence](alloy/HISTORY.md#richtexteditor--2026-10-17).
+UI563/563 отдельно Debug/Release,6native demo cases,40fresh package processes и
+прежний golden360 с validation teardown прошли. Общий nonincremental Debug build:
+0errors/1200warnings; own headless suites не повторялись. Общие/UI status и quality
+matrix синхронизированы; ENG1 остаётся следующим code шагом, engine code пока нет.
+PA7/beta, UI alpha и аппаратные ограничения не закрыты.
+
+## ENG0 scope и допуск прототипа — 2026-10-15
+
+После UI package/Hosting quality пользователь одобрил ограниченный engine/editor
+prototype с открытыми UI рисками. В engine PLAN определены scope/demo, platform,
+session/control/frame v1, ownership/backpressure, checkpoint/replacement/rollback,
+deadlines и будущие acceptance cases. [Единственный детальный контракт](engine/PLAN.md#eng0-принятый-scope-первого-прототипа--2026-10-15),
+[история и проверка документации](engine/HISTORY.md#eng0-scope-и-контракты--2026-10-15).
+
+ENG0 — проектирование; ENG1–ENG8 ещё запланированы. Следующий code шаг — headless
+ENG1 supervisor/Hello/repeat/cancel/crash/cleanup. Shared CPU viewport и versioned
+Game.Logic replacement относятся к ENG2/ENG3. Новых engine projects/runtime APIs,
+build/tests/process/GPU/performance результатов нет; численные targets не измерены.
+
+Общие PLAN/STATUS/QUALITY и UI continuation синхронизированы. K3/K7/K8/VRAM/final
+alpha и остановка NVIDIA workaround search сохранены. Обычный child crash не
+объявляется изоляцией shared GPU/driver fault; driver/Windows settings не менялись.
+Предыдущие module quality passes сохраняют даты и не считаются engine evidence.
+
+## UI quality после общей матрицы — 2026-10-15
+
+Выполнен следующий scope из quality matrix: fresh UI package/Hosting proof после
+bundled Cobalt и explicit fonts. Воспроизведён и исправлен missing resolver
+HostedUiDispatcher (constructor registration→explicit factory). Existing consumer:
+10fresh nupkgs,36App Cobalt/DI/DI-without-analyzer +4direct renderer processes,
+Debug/Release ×build/publish, fonts/OFL/native/analyzer/generated provenance и
+финальные fingerprints; expected CS0246 negative control отдельно.
+[Точные commands/failures/evidence и ограничения](alloy/HISTORY.md#ui-packagehosting-quality--2026-10-15).
+
+Отдельно current UI532/Core107/Cobalt179/generator91 в каждой Debug/Release:
+8TRX/1818passed/0failed/0skipped. Read-only golden360/360, fixtures unchanged,
+validation teardown passed. Общий solution build, Enerit/Mithril/performance,
+physical DPI/real loss/VRAM/long K7/final alpha не повторялись. Пакеты не опубликованы,
+driver/Windows settings и default/adapter/migration решение сохранены.
+
+Общие PLAN/STATUS/QUALITY и UI PLAN/STATUS обновлены: package gap закрыт;
+следующий выбор — доступный UI acceptance либо отдельно согласованный bounded
+ENG0 с сохранением UI рисков. Engine/PA1–PA10 этим шагом не начинаются. Engine
+STATUS обновлён только по dependency summary; собственных engine results нет.
+
 [Общий статус](STATUS.md), [план](PLAN.md), [индекс документов](README.md), [формат ведения](PLANNING.md). Подробные implementation/test/native записи принадлежат HISTORY соответствующего модуля; эта запись не заменяет их результаты.
 
 ## Общий README и навигация — 2026-10-11
@@ -418,3 +485,18 @@ verbatim в архиве, новая текущая сводка84строки.2
 по SHA256 с начальным snapshot; K1–K9 и PA1–PA10 rows UI PLAN/STATUS не изменены
 относительно исходного tracked UI baseline. Scoped git diff --check passed.
 Это documentation validation, не новый module regression/build/native pass.
+
+## ENG2 CPU viewport — 2026-10-17
+
+[Engine scope/layout](engine/PLAN.md#eng2-cpu-frame-viewport--2026-10-17) и
+[evidence](engine/HISTORY.md#eng2-cpu-frame-viewport--2026-10-17):3slot CPU ring,
+bounded receiver и одно Alloy/OpenGL окно показывают actual child frames.
+Owned Skia BGRA image factory отдельно отражена в UI STATUS/HISTORY.
+Native34/34 Debug apphost/published Release, по20Start/Stop, resized pixels,
+EOF/deadline/native close/reap; engine87/UI570 Debug/Release, full Debug1368/1368.
+Nonincremental Debug0errors/1211warnings. Source323/binary76fingerprints
+и final staged/links/diff guard — TestResults/EngineSessions/eng2-completion.json.
+Следующий этап ENG3 compiler/checkpoint/versioned replacement/rollback;20Replace
+не выполнялись. UI hardware blockers и отложенный RTE backlog не менялись;
+новых packages, shared GPU или performance baseline нет. Full Release solution
+suite и UI package/golden/RichTextEditor native matrix не запускались.

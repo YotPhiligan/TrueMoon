@@ -29,12 +29,16 @@ Contracts и Core — разные независимые сборки. DI provi
 
 - [Игровой движок и редактор](engine/PLAN.md), [статус](engine/STATUS.md):
   одна 3D-игра, Editor/Game.Runtime в разных процессах, preview frames и
-  обновление игровой логики. ENG0–ENG8 запланированы; runtime/проекты ещё не созданы.
+  обновление игровой логики. ENG0 определён, ENG1 headless supervisor реализован
+  и проверен в ManualTests; ENG2 CPU viewport реализован, replacement и ENG3–ENG8 ещё запланированы.
+
 ## Практические входные точки
 
 - **Приложение и сервисы:** quickstart в корневом README, затем [Core lifecycle/configuration/diagnostics contracts](core/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10) и [DI ownership](cobalt/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10).
 - **Headless NuGet и generator:** [CORE5/COB4 package consumers](../ManualTests/CorePackageConsumer/README.md), [App package README](../TrueMoon/PACKAGE.md), [Cobalt](../TrueMoon.Cobalt/PACKAGE.md), [generator](../TrueMoon.Cobalt.Generator/PACKAGE.md) и [Microsoft DI adapter](../TrueMoon.Extensions.DependencyInjection/PACKAGE.md).
 - **UI и привязки:** [Hosting guide](../TrueMoon.Alloy.Hosting/README.md), [Settings example](../ManualTests/AlloyTest/README.md) и [packaged quickstart](../TrueMoon.Alloy.Hosting/PACKAGE.md).
+- **RichTextEditor:** [API/options/fonts/binding](alloy/RICH_TEXT_EDITOR.md), [запускаемый пример с toolbar](../ManualTests/RichTextEditorTest/README.md) и [отложенный план улучшений](alloy/RICH_TEXT_EDITOR_PLAN.md).
+- **Engine sessions:** [ENG1 headless probe](../ManualTests/EngineSessionProbe/README.md): fresh owned child generations, Hello/scene readiness,20Start/Stop и bounded crash/cancel/cleanup; ENG2 CPU viewport/owned pixel image и запуск окна описаны в том же guide.
 - **Renderer/native/GPU ownership:** [Rendering.Skia](../TrueMoon.Alloy.Rendering.Skia/README.md), [Vulkan interop](alloy/VULKAN-INTEROP.md), [manual probes](../ManualTests/AlloyVulkanTest/README.md) и [performance baseline](alloy/PERFORMANCE_BASELINE.md).
 - **NuGet и native assets:** [independent consumer](../ManualTests/AlloyPackageConsumer/README.md). Его проверенная конфигурация — Windows x64/net10.0/framework-dependent build/publish без RID; это не общий release proof.
 - **Фиксированные шрифты и UI screenshots:** [K2/K4 golden guide](alloy/GOLDEN_TESTS.md): font snapshots,30эталонов, pixel tolerance, Debug/Release runner и диагностические diff PNG.

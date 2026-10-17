@@ -100,3 +100,13 @@ dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --inter
 Validation layer устанавливается/извлекается отдельно; подробности toolchain, pins и предыдущих проверок находятся в [README эксперимента](../ManualTests/AlloyVulkanTest/NativeInterop/README.md). После изменения extension на диске ранее применённая копия в source checkout должна быть обновлена явно: ApplyNativeInterop намеренно отказывается перезаписывать отличающийся extension. Проще использовать новый чистый checkout pinned исходников.
 
 Независимая Vulkan-композиция добавлена в manual probe; shaders встроены в managed сборку, native DLL менять для этого не требуется. Пересборка shaders: [инструкция](../ManualTests/AlloyVulkanTest/Shaders/README.md).
+
+## CPU pixel images — ENG2 integration
+
+`SkiaImageSource.CopyBgraPixels(width, height, pixels)` создаёт owned image из
+собственной копии tightly packed top-left BGRA8 premultiplied/sRGB bytes.
+Размеры положительны, длина ровно checked(width×height×4); caller может сразу
+переиспользовать span. Изображение освобождает caller после завершения UI drawing
+use на owner thread. Argentis.Image заимствует IImageSource и не освобождает его.
+Пример bounded dynamic upload — [EngineSessionProbe](../ManualTests/EngineSessionProbe/README.md#cpu-viewport--eng2).
+Это CPU copy/upload adapter, без borrowed mapped pointers или shared GPU texture.

@@ -1,62 +1,60 @@
 # Игровой движок и редактор: состояние
 
-Дата: **2026-10-13 — документирование будущего направления**.
-[План](PLAN.md), [этапы](PLAN.md#этапы-будущей-реализации),
-[общий статус](../STATUS.md).
+Последняя работа — **2026-10-17, ENG2 CPU frame viewport**.
+[Scope/точный layout](PLAN.md#eng2-cpu-frame-viewport--2026-10-17),
+[commands/failures/evidence](HISTORY.md#eng2-cpu-frame-viewport--2026-10-17),
+[запуск окна/probe](../../ManualTests/EngineSessionProbe/README.md), [общий статус](../STATUS.md).
 
-Сверка зависимостей **2026-10-15**: [quality matrix](../QUALITY.md) фиксирует bounded
-Core/Cobalt/Enerit/Mithril results и открытый UI acceptance. Следующий общий code
-scope — fresh UI package/Hosting proof; ENG0 ещё не начинается. Никаких engine
-projects/API/build/tests/native checks эта документационная сверка не создаёт.
+**ENG0 определён; ENG1 и ENG2 реализованы в bounded Windows x64/net10.0 scope.**
+Probe host/contracts/Game.Logic/tests остаются в ManualTests. CPU ring и одно
+Alloy/OpenGL окно реализованы; production engine packages/3D/replacement ещё нет.
+Production UI дополнен owned `SkiaImageSource.CopyBgraPixels`; Enerit/Mithril/Core/
+Cobalt APIs для ENG2 не менялись. RichTextEditor improvements остаются в
+[отложенном UI плане](../alloy/RICH_TEXT_EDITOR_PLAN.md).
 
-## Текущее состояние
+Проверки2026-10-17/SDK10.0.402: engine87/87 и UI570/570 отдельно Debug/Release;
+full Debug solution1368/1368,8TRX/failed0/skipped0. Native34/34 Debug apphost/
+published framework-dependent Release без RID:32ENG1 regression cases и2viewport
+runs с14сценариями каждый, включая по20Start/Stop при одном Editor App/window.
+Nonincremental Debug build0errors/1211warnings. Это не полный Release
+solution suite и не общий UI/package/performance acceptance.
 
-**ENG0–ENG8 запланированы.** Новых engine/editor проектов, public API, 3D renderer,
-frame transport или сборки/replacement Game.Logic в этой работе не создавалось.
+## Принятый scope и собственная проверенность
 
-| Область | Зафиксированное направление | Проверки собственной реализации |
+| Область | Реализация / проверки ENG1–ENG2 | Граница вывода |
 | --- | --- | --- |
-| Editor / Game.Runtime | Разные процессы; live world в child, authoring data в Editor; viewport получает кадры | Не выполнялись |
-| Lifecycle / control | Mithril ownership + Enerit commands/events; нужна repeatable game session lifecycle | Не выполнялись; существующий App controller не является готовым session supervisor |
-| Code update | Versioned game build и child replacement; checkpoint/reset/rollback; Hot Reload позже | Не выполнялись |
-| Frame transport | CPU/shared RAM prototype, затем GPU candidate с capability/completion/lifetime checks | Не выполнялись; текущий Alloy lease внутри одного процесса |
-| 3D game | Компактная сцена определяет engine, assets/physics/audio и инструменты | Жанр, платформа, hardware/FPS и точный scope ещё не выбраны |
+| Host/lifecycle | Fresh owned Mithril child handle/generation, Never restart; Hello/scene/mode/Step/status/stop, stale/identity/timeout/cancel/crash/disconnect/heartbeat/parent exit/reap повторены | Probe-only, long resource trend не измерен |
+| Frame codec | Explicit little-endian header1024 +3slot descriptors, checked layout/shape/identity, CRC32 и frame/tick pattern; corruption/EOF/abandonment/100ms timeout terminal | Windows named MMF/mutex/event; не Enerit ENE3/MMF или shared GPU |
+| Ring/receiver | Free/Writing/Ready/Reading, latest-ready, producer drop/no overwrite Reading;2private buffers/1pending; slow UI, disposal/drain и stale display rejection | Image/native/GPU storage отдельно; VRAM trend не доказан |
+| Viewport | Actual OpenGL readback corners и enlarged frame/tick counters, BGRA/origin; first-presented readiness, resize16×16..1920×1080, zero-size/resume, live-child EOF и native WM_CLOSE | Physical DPI/minimize/driver-loss acceptance общего UI не заменяет |
+| Limits | Common startup15s включает launch/Hello/scene/surface/first presentation; deadline/cancel/fence,≤2mappings/50MiB, EOF/crash cleanup и failed-reap retry | p50/p95 diagnostics записаны без performance baseline; target30fps/60Hz не гарантия |
+| Authoring | Revision/Dirty/selection/panels и App сохраняются; Game.Logic в Editor не загружается | Нет checkpoint/restore или редактирования игровой сцены |
 
-Существующие результаты Core/DI, Enerit, Mithril и UI имеют собственный scope
-в [общем статусе](../STATUS.md); они не подтверждают engine/editor readiness.
-План не меняет общий порядок работы над framework и UI K1–K9/PA1–PA10.
-Сверка2026-10-14: MIT4/ENE4 bounded App/IPC/restart proof выполнен отдельно;
-ENG0–ENG8 по-прежнему запланированы, frame transport/hot reload не реализованы.
+## Оставшиеся границы
 
-## Ограничения и решения, требующие проверки
+- IUnitsController после Stop не возобновляется; probe использует fresh owned handle
+  и launch context через existing protected hooks. Reflection/borrowed attach нет.
+- Same-build control требует совпадающих host/contracts binaries; schema negotiation
+  Enerit не добавлена. Разные executables/standalone game относятся к поздним этапам.
+- InputBatch/focus/reset/overflow contract сохраняется в PLAN, реализация отложена
+  до engine input scope. ENG2 control buttons не означают игровых input events.
+- UI K3 physical DPI, K7 NVIDIA lifecycle, K8 real device/context loss, VRAM и final
+  alpha остаются открыты. Обычный child crash не доказывает GPU/driver isolation;
+  driver/Windows settings не менялись, workaround search не возобновлялся.
+- Physics/audio/import/generic ECS, произвольная migration и непрерывная игра при
+  replacement не обещаются этим прототипом. Runtime self guard2minutes сохраняется.
 
-- Предлагаемый baseline — Windows x64/net10.0; graphics API/platform matrix не
-  утверждены. CPU fallback/GPU sharing policy определяется в ENG0.
-- Editor остаётся запущен при обычном child failure; общий GPU/driver fault не
-  считается изолированным только благодаря process boundary.
-- C# update требует сборки/deltas; отсутствие паузы game process и восстановление
-  всего runtime state не обещаются. Snapshot migrations выбираются явно.
-- Enerit payload1MiB/same-build scope и sequential in-process Vulkan UI contracts
-  требуют отдельных integration decisions. Shared RAM frames не закрывают ENE3.
+## Следующий конкретный шаг
 
-## Следующий шаг при начале реализации
+**ENG3: versioned Game.Logic replacement.** Добавить compiler job/build-ID каталоги,
+минимальный versioned camera/interaction checkpoint, bounded stop/reap/start/restore,
+сохранение old build при compile failure и не более1rollback attempt. Проверить
+first-frame readiness после restore и20Replace cycles при одном Editor App.
+CPU transport/viewport и authoring state должны пережить replacement; старый child
+полностью reap до запуска candidate. ENG3 пока не реализован.
 
-Уточнение2026-10-14: пользователь выбрал сначала качество текущих модулей,
-начиная с Cobalt. Сводка ограничений выполнена2026-10-15; по [текущей очередности](../QUALITY.md#решение-о-порядке-работ)
-следом UI package/Hosting quality. ENG0 остаётся запланированным, без автоматического
-требования закрыть все будущие UI/DI/IPC roadmap пункты для обсуждения game scope.
-Engine/editor code и собственные checks не выполнялись.
+## Проверки документации
 
-**ENG0**, затем **ENG1–ENG3**: выбрать маленький game scenario, определить session/
-control/frame contracts и построить Editor/child probe с frame pattern и
-replacement игровой сборки. Сначала подтвердить ownership/readiness/compile failure/
-crash recovery и сохранение Editor state; затем ENG4 GPU path и ENG5 3D-сцена.
-
-## Проверки текущей документационной работы
-
-Сверены общие правила и существующие module contracts; документы добавлены в
-общий план/индекс. Проверки links/anchors/fences/whitespace и итоговый diff
-фиксируются по фактическому запуску ниже. Code/build/unit/process/GPU проверки
-не запускались; эта работа не создаёт новых passing результатов модулей.
-
-Фактически выполнено2026-10-13: 42 Markdown documents, 447 local links, 107 heading links;0problems. Проверка fences/conflict markers/NUL и git diff --check passed. Артефакты ignored TestResults/EnginePlanning. Новые files проверены отдельно на whitespace и наличие всех ENG0–ENG8.
+Сверка ENG2 links/anchors/fences/whitespace, final source/binary fingerprints и
+staged-state guard отражены в HISTORY. ENG1 проверки и прежние собственные module
+results сохранены отдельно; исторические run не выдаются за текущий acceptance.

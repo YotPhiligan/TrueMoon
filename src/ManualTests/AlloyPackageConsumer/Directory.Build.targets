@@ -1,1 +1,9 @@
-<Project />
+<Project>
+  <Target Name="VerifyIndependentAlloyConsumer" BeforeTargets="CoreCompile" DependsOnTargets="SelectCobaltPackageAnalyzer">
+    <Error Condition="'@(ProjectReference)' != ''" Text="Only PackageReference is allowed in this consumer." />
+    <WriteLinesToFile File="$(IntermediateOutputPath)resolved-analyzers.txt" Lines="@(Analyzer)" Overwrite="true" />
+    <ItemGroup>
+      <FileWrites Include="$(IntermediateOutputPath)resolved-analyzers.txt" />
+    </ItemGroup>
+  </Target>
+</Project>

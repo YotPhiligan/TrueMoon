@@ -9,6 +9,12 @@
     <Project Path="TrueMoon.Cobalt.Tests\TrueMoon.Cobalt.Tests.csproj" />
     <Project Path="TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
   </Folder>
+  <Folder Name="/Engine/">
+    <Project Path="ManualTests/Engine.Probe.Contracts/Engine.Probe.Contracts.csproj" />
+    <Project Path="ManualTests/EngineSessionProbe.Tests/EngineSessionProbe.Tests.csproj" />
+    <Project Path="ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />
+    <Project Path="ManualTests/Game.Logic/Game.Logic.csproj" />
+  </Folder>
   <Folder Name="/Items/">
     <File Path="Directory.Build.props" />
     <File Path="global.json" />

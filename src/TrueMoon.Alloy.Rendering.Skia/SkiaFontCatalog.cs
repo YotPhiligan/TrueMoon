@@ -10,6 +10,7 @@ public sealed class SkiaFontCatalog
 {
     private readonly Dictionary<string, byte[]> _faces;
     private readonly byte[] _defaultFace;
+    private readonly Dictionary<(string Family, int Weight, bool Italic), byte[]> _variants = [];
 
     private SkiaFontCatalog(Dictionary<string, byte[]> faces, string defaultFamily)
     { _faces = faces; _defaultFace = faces[defaultFamily]; }
@@ -46,9 +47,55 @@ public sealed class SkiaFontCatalog
 
     internal SKTypeface CreateTypeface(string family) => Decode(_faces.GetValueOrDefault(family, _defaultFace), family);
 
+    /// <summary>Loads explicit normal/bold/italic faces without changing the process font mapper.</summary>
+    /// <param name="defaultFamily">Registered family with a normal weight400 face.</param>
+    /// <param name="faces">Family/weight/slant file descriptors. Each family needs a normal weight400 face.</param>
+    /// <returns>Immutable snapshots, including style variants used by rich text.</returns>
+    public static SkiaFontCatalog LoadFaces(string defaultFamily, IReadOnlyList<SkiaFontFace> faces)
+    {
+        ArgumentNullException.ThrowIfNull(faces);
+        var regular = new Dictionary<string, string>(StringComparer.Ordinal);
+        var keys = new HashSet<(string, int, bool)>();
+        foreach (var face in faces)
+        {
+            ArgumentNullException.ThrowIfNull(face);
+            ArgumentException.ThrowIfNullOrWhiteSpace(face.Family);
+            ArgumentException.ThrowIfNullOrWhiteSpace(face.Path);
+            if (face.Weight is < 100 or > 900) throw new ArgumentOutOfRangeException(nameof(faces));
+            if (!keys.Add((face.Family, face.Weight, face.Italic))) throw new ArgumentException("Duplicate font face.", nameof(faces));
+            if (face.Weight == 400 && !face.Italic) regular.Add(face.Family, face.Path);
+        }
+        if (faces.Any(face => !regular.ContainsKey(face.Family))) throw new ArgumentException("Each family requires its normal weight400 face.", nameof(faces));
+        var catalog = Load(defaultFamily, regular);
+        foreach (var face in faces)
+        {
+            var bytes = File.ReadAllBytes(face.Path);
+            using var decoded = Decode(bytes, face.Path);
+            catalog._variants.Add((face.Family, face.Weight, face.Italic), bytes);
+        }
+        return catalog;
+    }
+
+    internal SKTypeface CreateTypeface(string family, int weight, bool italic)
+    {
+        if (_variants.TryGetValue((family, weight, italic), out var bytes)) return Decode(bytes, family);
+        return CreateTypeface(family);
+    }
+
+    internal string RichFaceIdentity(string family, int weight, bool italic)
+    {
+        var bytes = _variants.GetValueOrDefault((family, weight, italic)) ?? _faces.GetValueOrDefault(family, _defaultFace);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+    }
+
     private static SKTypeface Decode(byte[] bytes, string name)
     {
         using var data = SKData.CreateCopy(bytes);
         return SKTypeface.FromData(data) ?? throw new ArgumentException($"Could not decode font '{name}'.");
     }
 }
+
+/// <summary>An explicit font-family style variant supplied by the application.</summary>
+/// <param name="Family">Ordinal family alias.</param><param name="Path">Licensed font file.</param>
+/// <param name="Weight">Font weight100..900;400 is normal and700 bold.</param><param name="Italic">Italic face.</param>
+public sealed record SkiaFontFace(string Family, string Path, int Weight = 400, bool Italic = false);

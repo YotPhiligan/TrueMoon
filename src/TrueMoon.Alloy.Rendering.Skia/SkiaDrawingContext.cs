@@ -3,7 +3,7 @@ using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Rendering.Skia;
 
-internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources) : IDrawingContext, ITextLayoutService
+internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources) : IDrawingContext, ITextLayoutService, IRichTextLayoutService, IRichTextDrawingContext
 {
     private static SKRect Rect(Rect r) => new(r.X, r.Y, r.X + r.Width, r.Y + r.Height);
     private static SKColor Color(Color c) => new(c.R, c.G, c.B, c.A);
@@ -28,6 +28,19 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
         if (source is not SkiaImageSource image) throw new ArgumentException("Image must be a SkiaImageSource.", nameof(source));
         canvas.DrawImage(image.Image, Rect(destination), new SKSamplingOptions(SKFilterMode.Linear));
     }
+    public IRichTextLayout CreateRichTextLayout(RichTextDocument document, RichTextStyle defaults, float? wrapWidth, RichTextAlignment alignment)
+    {
+        resources.VerifyRichTextAccess();
+        ArgumentNullException.ThrowIfNull(document); ArgumentNullException.ThrowIfNull(defaults);
+        if (wrapWidth.HasValue && (!float.IsFinite(wrapWidth.Value) || wrapWidth.Value <= 0)) throw new ArgumentOutOfRangeException(nameof(wrapWidth));
+        if (!Enum.IsDefined(alignment)) throw new ArgumentOutOfRangeException(nameof(alignment));
+        return new SkiaRichTextLayout(document, defaults, wrapWidth, alignment, resources);
+    }
+    public void RichText(IRichTextLayout layout, float x, float y, int selectionStart, int selectionLength, Color selectionColor)
+    {
+        if (layout is not SkiaRichTextLayout skia) throw new ArgumentException("Rich text layout must use the Skia backend.", nameof(layout));
+        skia.Paint(canvas, resources, x, y, selectionStart, selectionLength, selectionColor);
+    }
 }
 
 // One owner thread and surface lifetime; no global cache or borrowed canvas/context ownership.
@@ -40,6 +53,9 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null) : IDis
     private readonly FontKey[] _order = new FontKey[FontCapacity];
     private int _next;
     private bool _disposed;
+    private SkiaRichTextFontMapper? _richFonts;
+    internal SkiaRichTextFontMapper RichFonts { get { VerifyAvailable(); return _richFonts ??= new(fonts); } }
+    internal void VerifyRichTextAccess() => VerifyAvailable();
     private readonly record struct FontKey(string Family, float Size);
     internal readonly record struct FontEntry(SKFont Font, SKFontMetrics Metrics);
 
@@ -86,7 +102,8 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null) : IDis
     {
         if (_disposed) return;
         VerifyAvailable(); _disposed = true;
-        var cleanup = _fonts.Values.Select(entry => (Action)entry.Font.Dispose).Append(_paint.Dispose).ToArray();
+        var cleanup = _fonts.Values.Select(entry => (Action)entry.Font.Dispose).Append(_paint.Dispose)
+            .Append(() => _richFonts?.Dispose()).ToArray();
         _fonts.Clear();
         UiCleanup.Complete(null, cleanup);
     }
@@ -95,6 +112,24 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null) : IDis
 public sealed class SkiaImageSource : IImageSource
 {
     internal SKImage Image { get; }
+    private SkiaImageSource(SKImage image) => Image = image;
+    /// <summary>Copies tightly packed top-left BGRA8 premultiplied sRGB pixels into an owned image.</summary>
+    /// <param name="width">Positive pixel width.</param>
+    /// <param name="height">Positive pixel height.</param>
+    /// <param name="pixels">Exactly width × height × 4 bytes; each color channel is premultiplied by alpha.</param>
+    /// <returns>An independent image owned by the caller.</returns>
+    /// <remarks>The caller may reuse its buffer when this method returns. Dispose the image after owner-thread drawing ends.</remarks>
+    public static SkiaImageSource CopyBgraPixels(int width, int height, ReadOnlySpan<byte> pixels)
+    {
+        if (width <= 0) throw new ArgumentOutOfRangeException(nameof(width));
+        if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height));
+        var stride = checked(width * 4);
+        if (pixels.Length != checked(stride * height)) throw new ArgumentException("Expected tightly packed BGRA pixels.", nameof(pixels));
+        SkiaNativeLibrary.Initialize();
+        using var colorSpace = SKColorSpace.CreateSrgb();
+        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul, colorSpace);
+        return new(SKImage.FromPixelCopy(info, pixels, stride) ?? throw new InvalidOperationException("Could not copy pixels."));
+    }
     /// <summary>Decodes an image. The creator must dispose it after UI use ends.</summary>
     public SkiaImageSource(string path) { SkiaNativeLibrary.Initialize(); Image = SKImage.FromEncodedData(path) ?? throw new ArgumentException("Could not decode image.", nameof(path)); }
     /// <inheritdoc />

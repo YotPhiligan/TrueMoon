@@ -1,5 +1,11 @@
 # TrueMoon.Alloy.Rendering.Skia
 
+RichTextEditor uses Topten.RichTextKit transitively through this renderer, with
+the same shaping/layout adapter on raster/OpenGL/Vulkan. Argentis public rich-text
+contracts remain independent of SkiaSharp. For explicit rich font variants use
+SkiaFontCatalog.LoadFaces with licensed normal400/bold700/italic files; missing
+variants use the registered normal face. Applications deliver their font files.
+
 Raster, OpenGL and Vulkan backends for Alloy/Argentis. Direct sessions do not require TrueMoon App or Silk window hosting. Current bundled native support is **Windows x64 with .NET 10**; this is an alpha API.
 
 Reference `TrueMoon.Alloy.Rendering.Skia` at the selected local/release package version. Alloy and Argentis arrive transitively. The package's build/buildTransitive hooks copy the extended Skia DLL into `truemoon-native/win-x64/libSkiaSharp.dll` beside the consuming application for both build and publish. The same delivery works through `TrueMoon.Alloy.Hosting`; no manual copy is required.
