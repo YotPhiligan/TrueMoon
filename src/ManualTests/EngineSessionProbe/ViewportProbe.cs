@@ -113,7 +113,7 @@ public static class ViewportProbe
             c.UsePresentation<ViewportView>(o =>
             {
                 o.UseSkiaOpenGL(fonts);
-                o.UseSilkWindow(w => { w.Width = 900; w.Height = 590; w.Title = "TrueMoon ENG2 viewport"; });
+                o.UseSilkWindow(w => { w.Width = 900; w.Height = 590; w.Title = "TrueMoon ENG2 viewport"; w.EnableDiagnostics = true; w.FrameMode = UiFrameMode.Continuous; });
             });
             c.Services(r => r.Singleton<Action<string>>(_ => Dispatch).Transient<ViewportView>());
         }).Build();
@@ -153,6 +153,7 @@ public static class ViewportProbe
                 if (frame != null && ReferenceEquals(session.Display, display))
                 {
                     var start = Stopwatch.GetTimestamp(); view.Canvas.Upload(display, frame);
+                    window.RequestFrame(); // Explicit redraw of dynamic pixels; Continuous supplies receiver polling.
                     uploads.Add(Stopwatch.GetElapsedTime(start).TotalMilliseconds); uploadCount++;
                 }
             }
@@ -178,23 +179,21 @@ public static class ViewportProbe
         try
         {
             await app.StartAsync(deadline.Token);
-            var closing = 0; var allowClose = 0; Task shutdown = Task.CompletedTask;
+            Task shutdown = Task.CompletedTask;
+            window.Closing += async _ =>
+            {
+                shutdown = Task.Run(async () => { await session.StopAsync(); await Task.WhenAll(command, resize); });
+                await shutdown;
+                Probe.Check(!view!.IsDisposed && !view.Canvas.IsDisposed && session.MappingCount == 0,
+                    "UI was disposed before engine shutdown drained.");
+                return true;
+            };
             window.PostWindow(host =>
             {
                 host.NativeWindow.Update += _ =>
                 {
                     if (!smoke && (host.State == UiWindowState.Minimized || host.Viewport.IsEmpty) && session.Surface is { Suspended: false } && resize.IsCompleted)
                         resize = Task.Run(() => ResizeQuietlyAsync(0, 0));
-                };
-                host.NativeWindow.Closing += () =>
-                {
-                    if (Volatile.Read(ref allowClose) != 0) return;
-                    host.NativeWindow.IsClosing = false;
-                    if (Interlocked.Exchange(ref closing, 1) == 0) shutdown = Task.Run(async () =>
-                    {
-                        try { await session.StopAsync(); await Task.WhenAll(command, resize); }
-                        finally { Volatile.Write(ref allowClose, 1); window.Close(); }
-                    });
                 };
             });
             if (smoke)
@@ -256,6 +255,12 @@ public static class ViewportProbe
             await session.StopAsync(); await Task.WhenAll(command, resize, shutdown);
             await app.StopAsync(deadline.Token);
             Probe.Check(sessions.ActiveSessionCount == 0 && view is { IsDisposed: true } && view.Canvas.IsDisposed, "UI cleanup incomplete.");
+            var diagnostics = window.Diagnostics?.Snapshot ?? throw new InvalidOperationException("UI diagnostics missing.");
+            Probe.Check(diagnostics.WindowId == window.Id && diagnostics.State == UiSessionState.Disposed
+                && diagnostics.Queue.Pending == 0 && diagnostics.Render.Completed > 0
+                && diagnostics.Measure.Completed > 0 && diagnostics.Arrange.Completed > 0
+                && diagnostics.Present.Completed == window.PresentedFrames && diagnostics.Present.Failed == 0,
+                "UI diagnostic phases, identity or cleanup state mismatch.");
             completed = true;
         }
         catch (Exception e) { failure = e; Console.Error.WriteLine(e); }
@@ -266,6 +271,7 @@ public static class ViewportProbe
             {
                 Completed = completed, Failure = failure?.ToString(), Cases = cases, PixelChecks = pixelChecks, Uploads = uploadCount,
                 Presented = window.PresentedFrames, Copy = session.CopyLatency, Upload = uploads.Report(), Frame = latency.Report(),
+                Diagnostics = window.Diagnostics?.Snapshot,
                 ProducerDropsObserved = producerDrops,
                 session.Received, session.Replaced, session.PeakMappings, session.PeakMappingBytes, Mappings = session.MappingCount,
                 ChildCount = factory.Leases.Count, ChildrenReleased = factory.Leases.All(l => l.ResourcesReleased && l.Exited.IsCompleted),

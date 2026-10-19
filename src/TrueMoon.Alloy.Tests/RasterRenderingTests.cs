@@ -342,6 +342,20 @@ public sealed class RasterRenderingTests
         Assert.Equal(new byte[] { 0, 0, 255, 255 }, Pixel(image, 20, 20));
     }
 
+    [Fact]
+    public void PendingCommandsAndFutureFrameRequests_KeepCompletedPixelsExportableUntilApplied()
+    {
+        var root = new CountingFill { Foreground = new Color(255, 0, 0) };
+        using var ui = Create(root); ui.Update();
+        ui.Post(() => root.Foreground = new Color(0, 0, 255)); ui.RequestFrame();
+        Assert.True(ui.NeedsUpdate); Assert.False(ui.NeedsRender);
+        using (var previous = ui.SnapshotRasterImage()) Assert.Equal(new byte[] { 255, 0, 0, 255 }, Pixel(previous, 20, 20));
+        ui.Update();
+        using (var updated = ui.SnapshotRasterImage()) Assert.Equal(new byte[] { 0, 0, 255, 255 }, Pixel(updated, 20, 20));
+        root.Foreground = new Color(0, 255, 0);
+        Assert.True(ui.NeedsRender); Assert.Throws<InvalidOperationException>(() => ui.SnapshotRasterImage());
+    }
+
     private sealed class ForeignTarget : UiRenderTarget;
     private sealed class OverflowFill : Element
     { protected override void DrawCore(IDrawingContext context) => context.Fill(new Rect(-100, -100, 300, 300), new Color(255, 0, 0)); }

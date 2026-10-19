@@ -10,13 +10,338 @@
 
 Текущее состояние, доказательства и точка продолжения находятся в [STATUS.md](STATUS.md). Наличие пункта в этом документе означает требование к результату; статус реализации определяется отдельно.
 
+## Дополнительный план улучшения инфраструктуры Alloy — 2026-10-18
+
+По запросу пользователя результаты [аудита2026-10-17](HISTORY.md#аудит-инфраструктуры-alloy--2026-10-17)
+включены в модульный roadmap как **INF0–INF7**. Первичное добавление было
+документационным. По следующему запросу пользователя2026-10-18 выполнен bounded
+INF0 и реализованы INF1/INF2; после минимального INF5 выполнены INF3/INF4.
+INF7 сопровождает их assembly-level checks и independent native/package consumers.
+INF6 и bounded integration runner INF7 выполнены2026-10-19; расширение INF5
+остаётся запланированным. [Реализация/собственные проверки INF1](HISTORY.md#inf0inf1-повторяемый-cleanup-registry--2026-10-18)
+отделены от исходных audit evidence; общая готовность UI этим не объявляется.
+
+Цель: UI сохраняет отзывчивость под потоком обновлений, завершает свои ресурсы
+после отказа cleanup и предоставляет приложению явное управление кадрами/закрытием.
+Scope: Argentis/Alloy runtime, Hosting, renderer/platform adapters и их проверки.
+Существующие пять слоёв, thread affinity, borrowed GPU ownership, net10.0 и xUnit
+сохраняются. Core/Cobalt/process lifecycle не переносятся в UI.
+
+Это дополнительный UI backlog. Общий следующий engine этап остаётся ENG3;
+[улучшения RichTextEditor](RICH_TEXT_EDITOR_PLAN.md) ведутся отдельно и отложены.
+INF не заменяет этапы1–5/K1–K9/PA1–PA10, не снимает physical DPI/K7/K8/VRAM
+и не возобновляет остановленный поиск NVIDIA workaround. Конкретные новые API,
+лимиты очередей и compatibility policy уточнять перед соответствующим этапом.
+
+### Этапы INF и критерии завершения
+
+| ID | Результат | Состояние | Зависимость и критерий завершения |
+| --- | --- | --- | --- |
+| INF0 | Сверка исходного состояния и границ | Выполнен2026-10-18 в bounded audit scope | Повторить два audit repro на выбранном source; описать registry/queue/frame/close contracts и зафиксировать собственный baseline. Existing tests/native results сохраняют свои даты и scope |
+| INF1 | Повторяемый cleanup registry | Реализован2026-10-18; проверки в STATUS/HISTORY | После начала Stop новые Create запрещены; failed cleanup не скрывает оставшиеся owned sessions; повторный Stop/Dispose пытается завершить их cleanup, состояние завершения означает отсутствие owned sessions. Первичная ошибка и ошибки cleanup наблюдаемы |
+| INF2 | Ограниченный dispatcher/posted work | Реализован2026-10-18; проверки в STATUS/HISTORY | После INF1: ограничить work за один Update, определить capacity/overflow policy и atomic accept/close; предоставить awaitable dispatch с cancellation/error semantics. При нагрузке очередь не растёт бесконтрольно, layout/render/input и соседние окна получают выполнение |
+| INF3 | Управление запросами кадров | Реализован2026-10-18; scope/checks в STATUS/HISTORY | После INF2 и минимальных INF5 metrics: wake/request на pending work и invalidation, idle/continuous режимы и явные update/render/present phases. Clean UI не требует постоянной presentation; expose/resize/DPI/animations/external HUD корректно возобновляют работу |
+| INF4 | Согласованное закрытие окна | Реализован2026-10-18; собственные проверки в STATUS/HISTORY | Поверх INF1/INF2: owner-safe асинхронный close request с cancel/save/drain, различение запроса закрытия и факта закрытия. Native close, API close и App Stop согласованы; фоновые работы завершаются до освобождения зависимых UI/native ресурсов |
+| INF5 | Общая диагностика UI | Минимум реализован2026-10-18; расширение запланировано | Session/window IDs, lifecycle state, queue depth/high-water/processed work, measure/arrange/render/present counters/timings и bounded snapshots. Existing Vulkan resource counters переиспользовать; diagnostics opt-in, без unbounded history и зависимости core UI от конкретного telemetry provider |
+| INF6 | Явные factories и совместимость интеграций | Реализован2026-10-19; собственные проверки в STATUS/HISTORY | Root factory overload устраняет необходимость скрытой specialization generic TView для Cobalt; Cobalt/DI сохраняются. Renderer/target/presenter compatibility описана явно вместо неявного выбора private bool flags; unsupported pair отвергается до native allocation |
+| INF7 | Проверки реальных сборок и поставки | Реализован2026-10-19 в bounded runner scope; проверки в STATUS/HISTORY | Сопровождает INF1–INF6, не откладывается до конца: новые contract checks обращаются к Hosting/Platform через ProjectReference и portable fake seams; native/package consumers отдельно проверяют compiled assemblies, analyzer/native delivery и cleanup |
+
+### INF1: registry shutdown после отказа
+
+- Воспроизвести вызов factory.Dispose из posted action во время UiSession.Update:
+  запрет disposal внутри Update сохраняется, но subsequent cleanup должен оставаться
+  возможным. Проверить partial failure с несколькими sessions и повторные Stop/Dispose.
+- Разделить запрет новых sessions, незавершённый cleanup и окончательное завершение;
+  конкретная форма состояний определяется в реализации. Не откатывать запрет Create
+  после начала shutdown и не объявлять живую session освобождённой.
+- Сохранить проверки owner thread, tree mutation/reentrancy и borrowed frame.
+  После возврата lease/выхода из Update явный retry освобождает оставшиеся sessions;
+  ошибки одного объекта не отменяют попытки cleanup остальных.
+
+Уточнение реализации2026-10-18: принятый Stop/Dispose закрывает Create до любых
+preflight checks; preflight failure сохраняет sessions для owner retry. Все
+session guards проверяются до cleanup, затем ошибки отдельных Dispose собираются
+без прекращения остальных попыток. Реентрантный cleanup возвращается к внешней
+попытке. Stop из backend/attachment callback во время создания session отклоняется
+до принятия shutdown request: неуспешный Create не забирает ownership root.
+StopAsync остаётся синхронным owner-thread cleanup без прерывания посередине;
+новый async close относится к INF4. TrueMoon.Alloy.Hosting.Tests использует реальный
+ProjectReference на Hosting, без Compile-linked production copies, и включён в
+TrueMoon.slnx. Новых native ABI/dependencies/public signatures не введено.
+
+### INF2: queue и dispatch contract
+
+Решение2026-10-18: `UiDispatchOptions` задаёт immutable `Capacity=1024` и
+`ActionsPerUpdate=64`, оба строго положительные. Прежние constructor/Create
+signatures сохранены; новые overloads принимают options после clipboard.
+Hosted factories используют defaults; отдельная Hosting configuration здесь не
+добавляется. Action budget ограничивает число начатых queued callbacks, включая
+новые self-posts в этом Update, но не время одного callback. Свободное место
+появляется при извлечении, отмене или закрытии; уже выполняемый callback не pending.
+
+`Post(Action)` принимает FIFO work или синхронно бросает InvalidOperationException
+при overflow; callback error выходит из Update, оставшиеся commands доступны
+следующему Update. `InvokeAsync(Action, CancellationToken)` с worker ставит ту же
+FIFO работу; task сообщает rejection/exception/completion. На owner callback
+выполняется сразу, обходя очередь/capacity/budget, в том числе из Update: ожидание
+своего вызова не требует следующего кадра. Это не async delegate API, task
+continuations не привязываются к owner; блокировать owner на task, ранее поставленном
+worker, нельзя. Pending task continuations выполняются асинхронно.
+
+Cancellation до извлечения удаляет команду и освобождает capacity, после начала
+callback не прерывает его и не меняет результат. Отменённый token на живой сессии
+не занимает место даже при полной очереди. Accept/cancel/close сериализованы gate.
+После успешных Dispose preflight checks очередь закрыта до owned cleanup;
+ожидающие tasks fault с ObjectDisposedException. Failed guard сохраняет очередь.
+Terminal rendering failure закрывает её с InvalidOperationException и первым
+UiRenderingException в InnerException; сам callback, бросивший UiRenderingException,
+faults свой task этой ошибкой и переводит session в terminal state. Обычная callback
+ошибка InvokeAsync fault только task, не останавливая следующие commands.
+
+Coalescing применяется явно только к latest-value PropertyBinding per attachment:
+одна pending synchronization читает актуальный source, rejected enqueue сбрасывает
+pending guard. CollectionBinding и attachment-generation guards сохранены.
+Произвольные Action не объединяются. [Проверки INF2](HISTORY.md#inf2-ограниченный-dispatcher--2026-10-18).
+
+Исходные acceptance требования сохраняются:
+
+- Выбрать измеримый action budget или time slice и отдельно предел pending work.
+  Self-posting/continuous producer не должен удерживать один Update бесконечно.
+  Для очереди задать явную реакцию на overflow; произвольные commands/input cleanup
+  не отбрасывать молча. Сохранить FIFO для принятых обычных commands.
+- Awaitable dispatch должен сообщать completion/exception/cancellation, не допускать
+  synchronous wait deadlock на UI owner и иметь определённое поведение при shutdown.
+  Post versus Dispose/fault проверять как race принятия работы и закрытия очереди.
+- Coalescing — явная политика для подходящих обновлений, например latest property
+  synchronization; не применять её ко всем Action. CollectionBinding уже coalesces:
+  сохранить его semantics и attachment-generation guards, учесть PropertyBinding.
+- Проверить flood, очередь на границе capacity, отмену до/после принятия, callback
+  error, detach/dispose и fairness нескольких окон. Это behavioral acceptance,
+  а не обещание конкретного CPU/GPU ускорения.
+
+### INF3–INF6: условия интеграции
+
+INF3 — принято2026-10-18: runtime `UiFrameMode` нейтрален к renderer/platform.
+`SilkUiWindowOptions.FrameMode=Automatic` сохраняет continuous polling при наличии
+FramePresented observers и работает on-demand без них. Явный OnDemand не включает
+polling из-за observers; Continuous задаёт его независимо от observers. Existing
+consumers не теряют heartbeat. Engine viewport явно выбирает Continuous для
+receiver polling и RequestFrame после dynamic pixel upload; event-based transport
+notifications в engine этим шагом не добавляются.
+
+`FramesPerSecond=60`, допустим1–240: лимит scheduled frame attempts на монотонном
+TimeProvider. Native refresh и input geometry update могут выполняться сразу.
+`UiSession.RequestFrame()` и `HostedUiWindow.RequestFrame()` thread-safe/coalesced,
+не занимают command capacity. Session request означает redraw на следующем Update;
+window request допускается до startup, отклоняется после Close. Request во время
+draw сохраняется до следующего кадра. Invalidation/accepted Post/InvokeAsync
+сигнализируют private host wake; произвольные user callbacks под queue gate не
+выполняются. Close/fault закрывает запросы и снимает signal, failed Dispose guards
+сохраняют live session. External host по-прежнему владеет своим loop/Update/output.
+
+OnDemand разделяет Update, draw и output: clean state не вызывает Update/present,
+native expose показывает last output без нового draw. Native resize/DPI/restore
+применяются до output. Minimized viewport считается empty; posted work при
+suspension обрабатывается, visual dirty/redraw сохраняются до resume. Skipped
+presentation повторяется с frame deadline, ошибка сохраняется без замены причины.
+Private UiFramePump имеет injectable TimeProvider для deterministic net10/xUnit
+tests; real Hosting assembly используется через ProjectReference.
+
+Shared owner выбирает minimum participant wait и будится на работу/close. Live
+windows имеют bounded OS-event polling до16ms; idle CPU/GPU reduction без замеров
+не объявляется. Startup batch32 и native commands64/iteration сохраняют fairness,
+session callbacks ограничены INF2 budget. `SilkWindowHost.Pump()`/Run сохраняют
+periodic semantics; overload `Pump(render:false)` выключает periodic DoRender,
+сохраняя native refresh. Новые resize/state callbacks активны только в manual loop.
+
+Уточнение output contract по native finding: `NeedsUpdate` включает pending FIFO/
+future frame requests, `NeedsRender` — unapplied visual dirty текущего дерева/
+viewport. Raster/OpenGL/Vulkan output guards используют NeedsRender. Пока queue
+ещё ожидает следующего bounded Update, last completed image допустим для output;
+прямое изменение tree/viewport по-прежнему запрещает export до Update. Export не
+выполняет очередь и не обещает применение ещё ожидающих model commands. Это явное
+расширение прежнего guard, необходимое для presentation при bounded queue/flood.
+[Собственные regressions/native/package/golden evidence](HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
+
+INF4 — решение2026-10-18: `HostedUiWindow.RequestCloseAsync(token)` — cancellable
+user request (`Application`), native close — тот же путь с reason `Native`.
+`Closing` содержит sequential `Func<UiCloseReason, Task<bool>>` handlers: snapshot
+на попытку, начало каждого на owner, async continuation без UI affinity. False
+прекращает user attempt; error/canceled handler оставляет окно открытым, faults
+request, сохраняется в `CloseError`, включая native request. Retry сбрасывает error.
+Concurrent requests делят попытку. Caller cancellation отменяет только его wait;
+pre-canceled request не принимается. Never-started close не вызывает handlers.
+
+`Close`/StopAsync/dispatcher App Stop остаются forced: upgrade pending attempt
+не повторяет начатые handlers, игнорирует veto, остальные получают `Shutdown`.
+Save/drain errors собираются до cleanup; одна ошибка не пропускает остальные
+handlers. Owner продолжает обслуживать UI/другие окна, bounded handler batch64.
+Native, handler и cleanup errors сохраняются вместе. Terminal native/graphics
+failure может лишить drain возможности обращаться к UI, но не разрешает освобождать
+зависимые ресурсы до уже начатого drain. Таймаут/abort чужих tasks не вводится.
+
+`IsCloseRequested` — pending attempt; true result RequestCloseAsync и `IsClosed`
+означают успешное завершение `Completion` после owner-thread native/GPU/UI cleanup.
+Faulted cleanup не объявляется successful closed. Legacy constructor `closed`
+сохраняет lifetime callback после попытки cleanup, включая failure, и явно не
+является success notification. Внутри Closing нельзя ждать собственный close/
+Completion/window или dispatcher StopAsync: cleanup зависит от возврата handler.
+После await UI mutations возвращаются через InvokeAsync/PostWindow. Producers
+останавливаются до ожидания принятых controller/compiler/game tasks. External HUD
+сохраняет собственный owner lifecycle; engine viewport использует этот close API.
+
+INF6 — решение2026-10-19: новый non-generic
+`UsePresentation(Func<IServiceResolver, Element>, Action<AlloyOptions>)` получает
+root на owner thread после готовности target, не регистрирует/не resolve-ит view.
+Cobalt и Microsoft DI сохраняются. Полностью factory-based dependency graph не
+требует generated view resolver; generic overload сохраняется с explicit consumer
+graph/analyzer для Cobalt. Factory возвращает fresh detached root без Parent.
+Null/disposed/parented/attached root отвергается; чужое дерево не disposing/detaching.
+Допустимый returned root принадлежит окну, в том числе при subsequent startup failure;
+partial objects, которые factory не вернула, остаются ответственностью factory.
+Startup/Completion сохраняют причину ошибки. Dependencies живут до UI cleanup.
+
+`UiRendererKind` вместо двух private selection flags описывает None/Custom/Raster/
+OpenGL/Vulkan. `SilkUiWindowOptions.GraphicsApi` явно выбирает target/presenter;
+null выводится из выбранного GPU renderer при UsePresentation, direct window
+сохраняет default Vulkan. Explicit mismatch отвергается до регистрации services.
+Настройки renderer/window копируются при регистрации до Build/service resolution;
+appearance/chrome immutable, callback delegates/captures не deep-clone.
+
+Известная matrix: Raster→RasterUiTarget только external; OpenGL→OpenGLUiTarget +
+OpenGL presenter; Vulkan→VulkanUiTarget + Vulkan presenter. Target guards built-in
+backends отвергают mismatch до native surface/attachment. `IUiWindowSessionFactory`
+декларирует pure SupportsWindowGraphics до native window allocation; real
+HostedUiSessionFactory предоставляет metadata известных Skia GPU pairs. Raster и
+unknown custom backend standalone не заявляются поддержанными; UseRenderer остаётся
+external-only. Для custom standalone factory одного IUiSessionFactory теперь
+недостаточно: реализовать новый explicit capability contract. Это намеренное
+ужесточение alpha preflight, existing signatures/generic path не удаляются.
+Custom declaration не доказывается пробным native allocation. External factories,
+five layers и borrowed GPU ownership сохраняются. Публичный Cobalt/DI consumer —
+[AlloyFactoryConsumer](../../ManualTests/AlloyFactoryConsumer/README.md).
+
+Минимальный INF5 — решение2026-10-18: `UiSession.EnableDiagnostics(long? windowId)`
+включает observation с текущего момента. `Id` session/window стабилен в пределах
+процесса, одинаковые числовые IDs разных domains не сравниваются без типа.
+`SilkUiWindowOptions.EnableDiagnostics` включает session collector до первого
+Update; `HostedUiWindow.Diagnostics` сохраняет его после cleanup. Existing
+constructor/Create signatures и dependency graph не меняются.
+
+`UiDiagnostics.Snapshot` — согласованная value copy под collector lock, доступная
+с любого потока и после disposal. Lifecycle Active/Suspended/Faulted/Disposing/
+Disposed, accepted viewport и nullable classification первого rendering failure
+не требуют хранения exception/tree/device/callback references. Suspended означает
+zero-size viewport; Idle отдельным lifecycle состоянием здесь не вводится.
+
+Queue имеет InitialPending/Pending/HighWater и Accepted/Started/Completed/Failed/
+Canceled/Rejected/Discarded с согласованным accept/cancel/close gate. InitialPending
+отдельно от новых Accepted; owner-inline InvokeAsync и pre-canceled requests в FIFO
+не входят. Capacity/closed rejections наблюдаемы. Команда, уже выполнявшаяся при
+Enable, и её partial Update не записываются как новые операции.
+
+Update/root measure/root arrange/surface render/host present учитываются раздельно:
+attempts/completed/failed и total/last/max CPU wall time; present имеет skipped.
+Clean/suspended Update — completed Update без фиктивных layout/render/present.
+Root invocations не означают обход всех cached descendants. Update включает
+вложенные фазы, totals не складываются. Present измеряется вокруг output, после
+Update и до FramePresented observers; Vulkan false result — skipped. External
+host может вызвать `RecordPresentation(elapsed, outcome)` на collector. Это не
+presentation command и не GPU completion/timestamps. Vulkan resource counters
+сохраняют существующий `VulkanWindowPresenter.Resources`, не дублируются.
+
+Хранятся фиксированные скаляры и пять агрегатов фаз; ring/history/samples,
+telemetry provider/events и reset/disable API не добавляются. Выключенный путь
+не читает Stopwatch и не создаёт collector; остаются process IDs, cached host
+delegate и null checks. Включённый путь добавляет collector locks, timestamps и
+копирование фиксированных value counters; overhead проверяется отдельно на
+headless idle/posted workload. CPU/GPU ускорение и idle policy не обещаются.
+[Собственные проверки/измерения](HISTORY.md#inf5-минимальная-диагностика--2026-10-18).
+
+Остаток полного INF5: window lifecycle до session creation/после failed startup,
+Hosting command-queue metrics, общая resource/diagnostic projection и exporters/
+нагрузочные contention measurements при конкретной потребности. Это не блокирует
+bounded INF3 с уже доступными session/phase/queue observations. Performance budgets,
+GPU timing/VRAM и аппаратная alpha matrix остаются самостоятельными acceptance.
+
+- Frame scheduling вводить после baseline/минимальных diagnostics. Нужны explicit
+  frame requests для dynamic image/engine viewport и отдельная возможность polling
+  или continuous rendering: текущие FramePresented consumers не должны потерять
+  источник следующих кадров. Показ неизменённого содержимого после expose/restore,
+  resize/DPI и suspended zero-size проверять отдельно от dirty redraw.
+- Close API не блокирует owner thread ожиданием controller/compiler/game tasks.
+  Проверить отказ пользователя от закрытия, failed save/drain, повторные/concurrent
+  close requests и cleanup ошибки; ошибку не маскировать успешным Closed событием.
+  Семантику native close и принудительного App Stop зафиксировать раздельно.
+- Metrics должны различать update/layout/render/present и suspended/failed state.
+  Зафиксировать overhead diagnostics и bounded storage; idle CPU/GPU выводы делать
+  только по замерам на указанной конфигурации, не по уменьшению числа callbacks.
+- Factories/capabilities не требуют смены DI provider или удаления нынешних явных
+  renderer overloads. Для нового root factory нужны Cobalt/DI source и independent
+  package checks; для presenter/target — positive/negative compatibility scenarios.
+
+### INF7: общая проверка изменений
+
+Для каждого этапа — собственные xUnit regressions на net10.0 с assertions поведения,
+отказа и cleanup; при изменении platform/Hosting контракта тестировать реальную
+production assembly, не только Compile-linked copy исходника. Portable fake surface/
+window seam не выдаётся за native proof. Existing linked tests не удалять массово:
+перенос обосновывать конкретным contract и сохранением проверяемого поведения.
+
+Relevant native сценарии выполнять bounded, с cleanup только owned процессов и
+фактическими resource counters. Изменение scheduling/close требует standalone и
+external HUD, нескольких окон, resize/suspend/resume, Debug apphost/published Release
+в supported scope. Изменение public/package API требует independent consumer;
+rendering/text изменения — existing read-only golden checks без подгонки эталонов.
+Полный UI/native/performance pass и закрытие hardware blockers остаются отдельными
+acceptance, historical results не переносить на новый source автоматически.
+
+### Последующие исследования
+
+INF7 — решение2026-10-19: tracked RunIntegration.ps1 и Integration helpers в
+[AlloyFactoryConsumer](../../ManualTests/AlloyFactoryConsumer/README.md#inf7-воспроизводимый-integration-runner)
+предоставляют Assembly/Source/Package/All profiles. Assembly — real Hosting и UI
+suites Debug/Release; Source — factory/generic/failure consumers и native
+scheduling/close/dispatcher/HUD; Package — fresh graph/isolated cache,8factory
+consumers без analyzer/view registration и проверка обязательных analyzer/native
+payloads. Все selected phases/report matrices должны завершиться; zero/failed/
+skipped discovery не passing. Native validation обязательна и process-local.
+Timeout завершает только owned process tree; logs/partial manifest сохраняются.
+
+Fresh run directory не перезаписывается. Manifest фиксирует scope, SDK, commands,
+reports, input set/source/binary/package hashes. Отдельный read-only verifier
+повторяет completeness/provenance checks, не обновляя evidence. Tracked guards
+проверяют quoting/UTF-8, failure/timeout/ownership, prerequisite rejection, TRX,
+partial matrix, source/artifact drift, source package dependency и missing payload.
+Временные scripts в TestResults не являются зависимостью runner. Producer
+bin/obj общие: один runner на checkout, source/binary drift отвергается.
+Existing linked checks не удаляются массово; при следующих contract changes
+переносить targeted проверки на actual assembly с сохранением поведения.
+Runner не объявляет новый full-solution/golden/RTE/engine/performance/hardware pass.
+
+После diagnostics и конкретного workload рассмотреть scoped image/font resources,
+асинхронную загрузку и reuse dynamic image storage с явным ownership. Выигрыш против
+нынешней owned pixel copy подтвердить замерами; shared mapped/GPU pointers не
+вводить как неявное ускорение. Dirty-subtree layout/virtualization — после baseline
+large-tree сценария и проверки measure/arrange invalidation.
+
+Для старых PropertiesBase/IView/Hosting.Compatibility описать поддерживаемую границу
+и путь миграции. Пометка legacy/obsolete, перенос либо удаление требуют отдельного
+compatibility решения и consumer checks; этот план сам по себе их не удаляет.
+
+INF0–INF4/INF6/INF7 и минимальный INF5 выполнены в указанном scope. Bounded
+инфраструктурная последовательность завершена; следующий общий шаг — **ENG3**.
+Полный INF5 остаётся частичным и расширяется при конкретном consumer/workload;
+linked checks переносить по конкретному contract, без массового удаления.
+номера INF не задают новую глобальную очередь вместо engine/RTE планов.
+
 ## PA7a: RichTextEditor перед ENG1 — 2026-10-17
 
 Дальнейшие улучшения вынесены в отдельный
 [план RichTextEditor](RICH_TEXT_EDITOR_PLAN.md). По решению пользователя2026-10-17
 они отложены до дальнейшей работы над функциями UI-модуля. Подробные задачи и
 acceptance ведутся только там. Назначенный после PA7a ENG1 выполнен2026-10-17;
-актуальный общий шаг — ENG2, [engine статус](../engine/STATUS.md).
+актуальный общий шаг — ENG3, [engine статус](../engine/STATUS.md).
 
 По прямому запросу пользователя перед ENG1 реализуется RichTextEditor поверх
 Topten.RichTextKit. Это отдельное ограниченное расширение текста, а не начало
@@ -42,8 +367,8 @@ RichTextKit process shaper caches не объявлять очищенными �
 cases,40fresh package processes и прежний read-only Settings golden360 прошли.
 [Точные команды, failures и границы вывода](HISTORY.md#richtexteditor--2026-10-17).
 
-После этого UI запроса выполнен headless ENG1; актуальная точка продолжения —
-ENG2 CPU viewport. Само расширение PA7a engine code не создавало.
+После этого UI запроса выполнены headless ENG1 и ENG2 CPU viewport;
+актуальная точка продолжения — ENG3. Само расширение PA7a engine code не создавало.
 NVIDIA K7/physical DPI/loss/VRAM/final alpha сохраняются.
 
 ## Проход качества UI после headless модулей — 2026-10-15

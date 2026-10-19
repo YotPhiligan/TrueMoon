@@ -18,7 +18,7 @@ internal sealed class UiOwnerLoop
     internal bool IsOwnerThread => ReferenceEquals(Thread.CurrentThread, _thread);
 
     internal void Schedule(Action initialize, Func<bool> tick, Action cleanup, Func<bool> closing,
-        TaskCompletionSource ready, TaskCompletionSource completion, Action? finished = null)
+        TaskCompletionSource ready, TaskCompletionSource completion, Action? finished = null, Func<int>? waitMilliseconds = null)
     {
         lock (_gate)
         {
@@ -29,7 +29,7 @@ internal sealed class UiOwnerLoop
                 try { _thread.Start(); }
                 catch { _thread = null; throw; }
             }
-            _pending.Enqueue(new Work(initialize, tick, cleanup, closing, ready, completion, finished));
+            _pending.Enqueue(new Work(initialize, tick, cleanup, closing, ready, completion, finished, waitMilliseconds));
             _wake.Set();
         }
     }
@@ -68,7 +68,9 @@ internal sealed class UiOwnerLoop
             lock (_gate) { if (_pending.Count > 0 || _stopping) continue; }
             // Sleep indefinitely without windows; bounded wait with live windows also
             // permits close/commands while rendering is suspended or rate-limited.
-            _wake.WaitOne(active.Count == 0 ? Timeout.Infinite : 1);
+            var wait = Timeout.Infinite;
+            foreach (var work in active) if (wait < 0 || work.WaitMilliseconds < wait) wait = work.WaitMilliseconds;
+            _wake.WaitOne(wait);
         }
         _completion.TrySetResult();
     }
@@ -86,6 +88,7 @@ internal sealed class UiOwnerLoop
                 work.Initialize(); work.Initialized = true; work.Ready.TrySetResult();
             }
             if (!done) done = work.Tick();
+            if (!done) work.WaitMilliseconds = Math.Max(0, work.NextWait?.Invoke() ?? 1);
         }
         catch (Exception error) { failure = error; done = true; }
         if (!done) return false;
@@ -95,6 +98,7 @@ internal sealed class UiOwnerLoop
         // before notifying consumers; callbacks/errors stay in this bounded frame.
         work.Initialize = work.Cleanup = static () => { };
         work.Tick = work.Closing = static () => true;
+        work.NextWait = null;
         var finished = work.Finished; work.Finished = null;
         var ready = work.Ready; var completion = work.Completion;
         work.Ready = work.Completion = null!;
@@ -112,12 +116,14 @@ internal sealed class UiOwnerLoop
     }
 
     private sealed class Work(Action initialize, Func<bool> tick, Action cleanup, Func<bool> closing,
-        TaskCompletionSource ready, TaskCompletionSource completion, Action? finished)
+        TaskCompletionSource ready, TaskCompletionSource completion, Action? finished, Func<int>? nextWait)
     {
         internal Action Initialize = initialize, Cleanup = cleanup;
         internal Func<bool> Tick = tick, Closing = closing;
         internal TaskCompletionSource Ready = ready, Completion = completion;
         internal Action? Finished = finished;
+        internal Func<int>? NextWait = nextWait;
+        internal int WaitMilliseconds = 1;
         internal bool Initialized;
     }
 }

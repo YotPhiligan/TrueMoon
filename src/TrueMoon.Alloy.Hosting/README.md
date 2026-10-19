@@ -10,7 +10,7 @@
 
 Для доставляемых шрифтов доступны `UseSkiaRaster(fonts)`, `UseSkiaOpenGL(fonts)` и `UseSkiaVulkan(fonts)`, где `fonts` — immutable `SkiaFontCatalog`. Каталог хранит snapshots; surface владеет native fonts. App доставляет font files и лицензии, Load выполняет native font validation до запуска UI. [Пример и правила fallback](../docs/alloy/GOLDEN_TESTS.md#шрифты-и-владение).
 
-Для default Cobalt регистрируйте concrete view и его зависимости в consumer через
+Для прежнего generic `UsePresentation<MyView>` с default Cobalt регистрируйте concrete view и его зависимости в consumer через
 `app.Services(services => services.Singleton<MyModel>().Transient<MyView>())`:
 bundled analyzer видит этот constructor graph в исходниках приложения. Одного
 `UsePresentation<MyView>(...)` для генерации resolver пользовательского view
@@ -22,6 +22,217 @@ RichTextEditor: multiline input, immutable rich-document binding, formatting,
 undo/redo, read-only/word wrap и отдельная toolbar composition поверх
 Topten.RichTextKit. [API и ограничения](../docs/alloy/RICH_TEXT_EDITOR.md),
 [запускаемый пример](../ManualTests/RichTextEditorTest/README.md).
+
+## Явная фабрика root и совместимость
+
+```csharp
+context.Services(s => s.Singleton<MyModel>(_ => new MyModel()));
+context.UsePresentation(
+    resolver => new MyView(resolver.Resolve<MyModel>()),
+    options => options.UseSkiaOpenGL().UseSilkWindow(w =>
+    {
+        w.GraphicsApi = UiWindowGraphicsApi.OpenGL;
+        w.Title = "Editor";
+    }));
+```
+
+Этот overload не регистрирует и не resolve-ит MyView как сервис. Root factory
+вызывается на shared UI owner thread при startup, после готовности target. Cobalt
+и Microsoft DI сохраняются; для полностью factory-based dependency graph не нужен
+generated resolver view. Старый generic overload сохранён с прежним требованием
+явного consumer graph для Cobalt. Root/dependency factories не вызываются при
+регистрации UI. Снимок renderer и window settings фиксируется при UsePresentation;
+мутация переданных options после регистрации не меняет выбранную интеграцию.
+Immutable appearance/chrome сохраняются, callback delegates и их captures не клонируются.
+
+Factory возвращает новый detached root без Parent. Успешно возвращённый допустимый
+root принадлежит окну; оно освобождает его при failed startup и закрытии. Null,
+disposed, parented или already-attached root отвергается с InvalidOperationException;
+чужое дерево не отсоединяется и не освобождается. Exception самой factory сохраняется
+в startup/Completion; частично созданные объекты, которые factory не вернула,
+освобождает factory. Application dependencies должны жить до window cleanup.
+
+| Renderer (`UiRendererKind`) | Session target | Standalone target/presenter |
+| --- | --- | --- |
+| Raster | RasterUiTarget | Не поддерживается; external host |
+| OpenGL | OpenGLUiTarget | UiWindowGraphicsApi.OpenGL |
+| Vulkan | VulkanUiTarget | UiWindowGraphicsApi.Vulkan |
+| Custom | Контракт custom backend | UseRenderer остаётся external-only |
+
+`AlloyOptions.Renderer` и `HostedUiSessionFactory.Renderer` описывают выбранную
+built-in интеграцию. Nullable `SilkUiWindowOptions.GraphicsApi` по умолчанию выводится
+из renderer в UsePresentation; direct HostedUiWindow по-прежнему выбирает Vulkan
+при null. Явное несовпадение отвергается при регистрации, до создания services/window.
+Неверный backend/target отвергается до native surface и attachment root.
+
+Standalone проверяет `IUiWindowSessionFactory.SupportsWindowGraphics` перед
+созданием native окна. HostedUiSessionFactory объявляет известные Skia пары;
+raster/unknown custom backend standalone не поддерживает. Custom standalone factory
+теперь должна реализовать этот metadata contract, чисто проверить API и создавать
+соответствующую surface. Одного IUiSessionFactory недостаточно: StartAsync/Completion
+fault до root/native allocation. External IUiSessionFactory и borrowed GPU ownership
+не меняются. Это проверка declared compatibility, а не обнаружение возможностей
+произвольного custom renderer через создание пробных native ресурсов.
+
+[Запускаемый Cobalt/DI consumer](../ManualTests/AlloyFactoryConsumer/README.md)
+показывает owner lifetime, snapshot, generic compatibility и root failures.
+
+Воспроизводимый [INF7 runner](../ManualTests/AlloyFactoryConsumer/README.md#inf7-воспроизводимый-integration-runner)
+объединяет real Hosting/UI suites, native source matrix и fresh NuGet consumer.
+Профили Assembly/Source/Package/All, bounded owned processes, partial manifest и
+read-only verifier не зависят от временных scripts в TestResults.
+
+## Запросы кадров и polling
+
+```csharp
+using TrueMoon.Alloy;
+using TrueMoon.Alloy.Hosting;
+
+options.UseSkiaOpenGL().UseSilkWindow(w =>
+{
+    w.FrameMode = UiFrameMode.OnDemand;
+    w.FramesPerSecond = 60;
+});
+window.RequestFrame(); // любой поток: redraw динамических pixels
+session.RequestFrame(); // direct/external: redraw в следующем host-driven Update
+```
+
+Default `Automatic`: окно без FramePresented observers работает по запросу;
+при наличии observers сохраняется прежний polling. `OnDemand` не включает polling
+из-за observers. `Continuous` явно вызывает Update/present для polling/animations,
+но чистое дерево не перерисовывается без invalidation/RequestFrame. Engine viewport
+явно выбирает Continuous для receiver polling и запрашивает redraw после upload.
+
+Frame rate1–240/default60 ограничивает scheduled attempts. Invalidation, Post/
+InvokeAsync и coalesced RequestFrame будят shared owner; requests не занимают
+command capacity. Native expose показывает сохранённый кадр без layout/draw.
+Resize/DPI/restore и native refresh могут выполняться сразу, как и layout перед
+input. Zero-size/minimized окно приостанавливает presentation; posted work всё
+равно обрабатывается, redraw сохраняется до resume. Skipped output повторяется
+не раньше следующего deadline. Request, пришедший во время draw, не теряется.
+
+Live windows проверяют OS events с bounded wait до16ms: это не обещание нулевого
+idle CPU/GPU usage. Shared wait выбирает ближайший deadline; готовая работа/close
+будят owner. Direct `SilkWindowHost.Pump()`/`Run()` сохраняют periodic behavior;
+новый `Pump(render: false)` оставляет native events/refresh, отключая только periodic
+render callback. Direct Silk loop нельзя запускать на другом потоке одновременно
+с shared Hosting owner.
+
+`NeedsUpdate` включает pending commands/future frame requests. `NeedsRender`
+описывает неприменённую visual invalidation текущего дерева/viewport. Output helpers
+проверяют NeedsRender: завершённый кадр доступен при ещё ожидающей очереди;
+после прямого изменения дерева экспорт требует Update. Queue при экспорте не
+выполняется. [INF3 proof и ограничения](../docs/alloy/HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
+
+## Диагностика сессии
+
+Диагностика выключена по умолчанию. Для direct/external host включите её на owner:
+
+```csharp
+var diagnostics = session.EnableDiagnostics();
+UiDiagnosticsSnapshot snapshot = diagnostics.Snapshot; // любой поток, в том числе после Dispose
+```
+
+Для standalone задайте `UseSilkWindow(w => w.EnableDiagnostics = true)`;
+`HostedUiWindow.Diagnostics` появляется после создания session и сохраняется после
+cleanup. `HostedUiWindow.Id`, `UiSession.Id` и snapshot SessionId/WindowId связывают
+окно с сессией в пределах процесса. Повторный Enable возвращает первый collector.
+
+Snapshot содержит current viewport и Active/Suspended/Faulted/Disposing/Disposed,
+classification первого terminal graphics failure, queue depth/high-water и
+accepted/started/completed/failed/canceled/rejected/discarded. InitialPending
+отдельно учитывает backlog на момент включения; старые операции не реконструируются.
+Owner-inline InvokeAsync не входит в queue counters. Pre-canceled requests не
+учитываются как accepted/canceled, capacity/closed rejections учитываются явно.
+
+Update, root measure, root arrange, surface render и host present имеют отдельные
+attempt/completed/failed counters и total/last/max CPU wall timings. Clean/suspended
+Update считается успешным Update, но не layout/render/present. Root measure может
+использовать retained subtree caches. Update включает вложенные фазы: складывать
+их duration нельзя. Present исключает Update и FramePresented observers; Vulkan
+false result — skipped, exception — failed. GPU completion/timestamps не измеряются.
+
+External host после своего output может вызвать
+`diagnostics.RecordPresentation(elapsed, UiPresentationOutcome.Presented)` либо
+Skipped/Failed. Это только observation: API не выполняет presentation и не меняет
+lifetime. Существующие Vulkan presenter `Resources` counters остаются отдельным
+источником GPU resource accounting.
+
+Хранятся только фиксированные агрегаты, без frame history, callbacks, tree/device
+или exception references. Snapshots — value copies; частые чтения тоже требуют
+collector lock. Выключенный путь не читает Stopwatch и не создаёт collector;
+идентификаторы и cached presentation delegate создаются при construction.
+Overhead и границы фактических проверок: [INF5 history](../docs/alloy/HISTORY.md#inf5-минимальная-диагностика--2026-10-18).
+
+## Асинхронное закрытие
+
+`await window.RequestCloseAsync(token)` возвращает `false`, если пользователь
+отменил закрытие, и `true` только после успешного owner-thread cleanup. Native
+title bar/system close использует тот же путь с `UiCloseReason.Native`; API request
+передаёт `Application`. Concurrent requests объединяются в одну попытку.
+
+`window.Closing` принимает `Func<UiCloseReason, Task<bool>>`: обработчики вызываются
+последовательно на owner thread, snapshot фиксируется при начале попытки. Каждый
+может сохранить данные, остановить producers и дождаться controller/compiler/game
+tasks. `false` прекращает user attempt; exception/canceled handler оставляет окно
+открытым и faults request. Native error доступен через `window.CloseError`; новая
+попытка сбрасывает его.
+
+`Close()`, `StopAsync` и dispatcher/App Stop — forced shutdown. Они игнорируют veto,
+но ждут handlers; upgrade уже начатой попытки не вызывает работающий handler повторно,
+а следующие получают `Shutdown`. Ошибки сохраняются, остальные handlers всё равно
+выполняются, затем выполняется cleanup и faults `Completion`. Даже failed cleanup
+не даёт `IsClosed=true`. Старый constructor callback `closed` сохраняет роль lifetime
+notification после попытки cleanup, в том числе при ошибке; это не success event.
+
+`IsCloseRequested` означает pending attempt, `Completion` — окончание shutdown,
+`IsClosed` — только его успешный результат. UI/session/native commands и другие окна
+обслуживаются во время ожидания; после cleanup новые commands отвергаются. После
+`await` handler продолжает без UI affinity: используйте `session.InvokeAsync` или
+`PostWindow` для UI/native работы. Сначала остановите источники новой фоновой работы,
+затем дождитесь уже принятых tasks. Handler не должен ждать собственные
+RequestCloseAsync/Completion/StopAsync либо StopAsync своего dispatcher: эти tasks
+зависят от его завершения. Синхронно блокировать owner thread нельзя.
+
+Cancellation вызывающего кода отменяет только его ожидание, accepted attempt
+продолжается; pre-canceled request не принимается. Never-started window закрывается
+без handlers/native allocation. Принудительный shutdown не вводит timeout и не
+обрывает чужие tasks: незавершённый handler сохраняет зависимые ресурсы живыми.
+При terminal graphics/native failure UI commands могут быть недоступны; drain
+не должен зависеть от успешного нового render. External HUD по-прежнему закрывает
+свои UI sessions и borrowed graphics в собственном owner loop.
+
+## Posted work и awaitable dispatch
+
+`UiSession.Post(Action)` принимает FIFO команды с любого потока. По умолчанию
+ожидают не более1024команд; один `Update()` начинает не более64callbacks, после
+чего выполняет layout/render и оставляет `NeedsUpdate=true`, если очередь не пуста.
+Overflow бросает `InvalidOperationException`, без удаления принятых команд.
+Ошибка Post callback выходит из Update; оставшиеся команды можно выполнить позже.
+Один медленный callback этим бюджетом не прерывается.
+
+Для наблюдаемого результата используйте с worker:
+
+```csharp
+await session.InvokeAsync(() => label.Value = "Готово", cancellationToken);
+```
+
+Task сообщает completion, callback error, cancellation или rejection. Callback
+синхронный; task continuations не получают UI affinity. На owner `InvokeAsync`
+выполняется сразу, обходя FIFO/capacity/budget; это безопасно для ожидания собственного
+вызова, но owner не должен блокироваться на task, ранее поставленном worker.
+Отмена до начала работы освобождает capacity; начатый callback выполняется до конца.
+Dispose закрывает очередь до owned cleanup и faults ожидающие tasks с
+`ObjectDisposedException`; terminal rendering failure — с `InvalidOperationException`
+и исходным `UiRenderingException` в `InnerException`. Неуспешные preflight guards
+Dispose сохраняют очередь живой. Обычная ошибка InvokeAsync callback faults только
+его task; terminal graphics error также останавливает session.
+
+Прямые constructor/Create overloads принимают immutable `UiDispatchOptions` после
+clipboard; `Capacity`/`ActionsPerUpdate` должны быть положительными. Прежние signatures
+и defaults для Hosting factories сохранены. PropertyBinding объединяет пачку source
+notifications в одно чтение последнего значения на attachment; CollectionBinding
+сохраняет свою коалесценцию. Произвольные команды не объединяются.
 
 ## Миграция alpha API: PLAN 2.1a
 
@@ -353,7 +564,7 @@ AbandonAfterDeviceLoss отвергает ContextLost/BackendFailure, чужой
 
 Device/instance/queue/loader/feature memory должны жить до освобождения всех UI contexts **даже после abandon**. Это требование [Skia GrDirectContext](https://api.skia.org/classGrDirectContext.html). Abandon(false) предотвращает backend вызовы при разрушении Skia resources. Если GL context невозможно сделать current или Vulkan completion не подтверждён, wrappers освобождаются через abandon; это не доказывает освобождение driver allocations. Host отвечает за окончательное retirement устройства. HostedUiWindow сохраняет Vulkan presenter/device, пока session удерживает lease или предыдущий этап cleanup не завершился. Неизвестный completion failure не объявляется DeviceLost автоматически.
 
-Standalone ловит ошибки внутри native callbacks, освобождает дерево/renderer → presenter/device → input/window, вызывает close callback один раз и передаёт все причины через readiness (creation failure), Completion и StopAsync. OpenGL cleanup выполняется на owner thread с current context до уничтожения окна. Vulkan presenter сохраняет presentation error при Return failure и discards lease при подтверждённом DeviceLost. Registry preflight запрещает stop с borrowed frame/чужого потока; после допустимого preflight ошибка одной сессии не мешает cleanup остальных.
+Standalone ловит ошибки внутри native callbacks, освобождает дерево/renderer → presenter/device → input/window, вызывает close callback один раз и передаёт все причины через readiness (creation failure), Completion и StopAsync. OpenGL cleanup выполняется на owner thread с current context до уничтожения окна. Vulkan presenter сохраняет presentation error при Return failure и discards lease при подтверждённом DeviceLost. Registry shutdown request запрещает новые Create; preflight не позволяет уничтожать sessions с borrowed frame или с чужого потока. После допустимого preflight ошибка одной сессии не мешает cleanup остальных. Неосвобождённые sessions остаются в registry: после выхода из Update/tree mutation, возврата frame или перехода на owner thread повторите StopAsync/Dispose. Уже disposed sessions повторно не освобождаются; ошибки каждой попытки передаются caller. Reentrant cleanup возвращается к внешней попытке. Shutdown из callback создания session отклоняется до принятия запроса, сохраняя caller ownership root при failed Create. StopAsync выполняет синхронный cleanup; cancellation не прерывает его посередине.
 
 Модель остаётся у caller. После освобождения старых controls/подписок создаётся новое дерево из прежней модели:
 

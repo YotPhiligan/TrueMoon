@@ -1,10 +1,25 @@
 # Рабочий уровень модулей перед движком
 
-Обновление **2026-10-17 после ENG2**. Engine CPU viewport/native proof,
-engine/UI Release и полный Debug solution suite выполнены заново. Общий Release
-solution suite, UI package/golden/RichTextEditor native matrix и собственные
-headless/performance proofs остальных модулей не повторялись. Документ сводит
-разные runs; детальные задачи остаются в модулях.
+Обновление **2026-10-19 после UI INF7**. Воспроизводимый runner и read-only verifier:
+UI613/Hosting79 в каждой Debug/Release,4TRX/1384passed/failed0/skipped0,
+21runner guard checks,24native processes,10fresh packages прошли. All46commands
+и standalone Assembly подтверждены; source/package Cobalt/DI×OpenGL/Vulkan×
+Debug/published Release, package analyzer отключён. Input/artifact fingerprints,
+ownership/startup errors/cleanup и required analyzer/native payloads проверены.
+[Scope/evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19).
+Нового full-solution/nonincremental build/golden/engine viewport/native RTE/
+performance запуска нет. Full Debug1490 ниже — INF6. Далее общий ENG3;
+full INF5 частичен, hardware blockers прежние.
+
+Предыдущее обновление **2026-10-18 после UI INF3**. Frame scheduling/wake/output guards:
+UI613/Hosting39 Debug/Release, повторный full Debug1450/1450; первый1449/1450
+имел Mithril readiness sharing failure, targeted20/20 и full94Mithril retry прошли.
+Fresh7packages/2headless consumers,10native processes с standalone/HUD/golden360/
+engine viewport прошли в Debug/published Release. CPU/GPU speedup не измерен.
+Full INF5 частичен; следующий UI шаг INF4. Общий Release solution, прежняя full10package/
+40consumer/RichTextEditor native matrix и собственные headless/
+performance proofs остальных модулей в этом шаге не повторялись. Предыдущие
+module results ниже сохраняют собственные даты и scopes.
 
 Позднее2026-10-15 определён ENG0 и принят допуск ограниченного prototype с UI
 рисками. Это документационное решение без нового module/engine regression run.
@@ -19,15 +34,35 @@ headless/performance proofs остальных модулей не повтор�
 | [Cobalt / DI](cobalt/STATUS.md) | COB6a–d, COB5/COB7 завершены в собственном TrueMoon API scope. Два projects/один consumer package; Cobalt остаётся default, Microsoft adapter сохранён |2026-10-15 COB7:runtime179/generator91 **Release**, source20functional scenarios и package120behavior scenarios; paired baseline. Core/MIT5 имеют отдельные более поздние integration runs. [Evidence](cobalt/HISTORY.md#cob7-provider-comparison--2026-10-15) | Массовая migration explicit UseDI отложена; warm/generic/transient allocations требуют профиля. Scopes, reflection fallback, Microsoft ecosystem bridge и UI equivalence не заявлены |
 | [Enerit](enerit/STATUS.md) | Typed same-build pipes, strict response/decode ownership, cancellation/error/reconnect и ENE5 baseline проверены; package composition с Mithril подтверждена отдельно |2026-10-15 ENE5:runtime126/generator114 Debug и Release;10cases/90samples. MIT5 позже:runtime126 Debug/Release и package108; generator/performance там не повторялись. [Baseline](enerit/BASELINE.md), [MIT5 evidence](mithril/HISTORY.md#mit5-operational-diagnostics--2026-10-15) | MMF/ENE3, schema negotiation, bounded queues/backpressure, remote handler cancellation и uncooperative shutdown не подтверждены. Frame transport ещё не реализован |
 | [Mithril](mithril/STATUS.md) | MIT0–MIT5 завершены в bounded own-child/App scope: startup/stop/restart budget/parent exit, IPC composition, operational diagnostics |2026-10-15 MIT5:94/94 Debug и Release;40restart +18shutdown apphost/published cases;108fresh package cases,96с наблюдаемой диагностикой parent. [Evidence](mithril/HISTORY.md#mit5-operational-diagnostics--2026-10-15) | Borrowed attach отсутствует; independent external restart, arbitrary hooks/uncooperative callbacks и long resource trend не доказаны. Repeatable game session supervisor — отдельная будущая работа |
-| [Alloy / Argentis](alloy/STATUS.md) | RichTextEditor/PA7a реализован на Topten.RichTextKit с neutral contracts/options; Cobalt/DI, explicit fonts/native delivery и cleanup проверены в bounded Windows x64/net10.0 scope |2026-10-17:UI563/563 отдельно Debug/Release,6native rich editor cases, прежний golden360/360 с validation teardown,10fresh nupkgs/36App +4direct с rich text и expected negative control. [Evidence](alloy/HISTORY.md#richtexteditor--2026-10-17) | IME/full bidi/rich clipboard вне PA7a. K3 physical DPI, K7 lifecycle, K8 real loss, VRAM и final supported matrix остаются; alpha частична |
+| [Alloy / Argentis](alloy/STATUS.md) | INF1–INF4/INF6/INF7/минимальный INF5; bounded work/frame/close, explicit root/compatibility и воспроизводимый runner |2026-10-19:UI613/Hosting79 Debug/Release,21runner guards,24native processes,10fresh packages. [INF7 evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19). Golden360 — INF3, RTE own matrix2026-10-17 | Full INF5 частичен. K3/K7/K8/VRAM/final matrix открыты; alpha частична; следующий общий шаг ENG3 |
 | [Engine / Editor](engine/STATUS.md) | ENG1 supervisor +ENG2 CPU ring/bounded receiver/Alloy OpenGL viewport, сохранены App/authoring state |2026-10-17:engine87/87 Debug/Release,34native cases (32ENG1 +2viewport), по20Start/Stop, actual pixels/resize/EOF/deadline/native close. [Evidence](engine/HISTORY.md#eng2-cpu-frame-viewport--2026-10-17) | ENG3 replacement/checkpoint/compiler ещё нет; packages/3D/shared GPU/long resource/performance proof не заявлены |
 
-Последний общий nonincremental Debug build — **2026-10-17, ENG2**:
-0errors/1211warnings. Full Debug1368/1368,8TRX/failed0/skipped0;
-Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI570/engine87.
-Release engine87/87 и UI570/570 отдельно; полного Release solution run нет.
-UI570 включает7новых owned pixel image cases; два native viewport runs отдельны
-от прежних UI package/golden/RichTextEditor proofs в таблице. [UI adapter evidence](alloy/HISTORY.md#eng2-owned-pixel-image--2026-10-17).
+Текущий INF7:4TRX/1384passed/failed0/skipped0 (UI613/Hosting79 Debug/Release),
+21runner guards,24native processes,10fresh packages. Full solution не повторялся.
+
+Предыдущий INF6 full Debug1490/1490: Core107/Cobalt179/generator91/Enerit126/generator114/
+Mithril94/UI613/Hosting79/engine87,9TRX/failed0/skipped0; Release UI613/Hosting79.
+Source12native processes и8independent native consumers прошли. Nonincremental
+build/golden в INF6 не повторялись.
+
+Предыдущий INF4 full Debug solution1466/1466: Core107/Cobalt179/generator91/Enerit126/
+generator114/Mithril94/UI613/Hosting55/engine87,9TRX/failed0/skipped0; Release UI613/
+Hosting55 отдельно.10manual/engine native processes и2independent native package
+consumers прошли. Nonincremental build/golden в INF4 не повторялись.
+
+Последний общий nonincremental Debug build — **2026-10-18, UI INF3**:
+0errors/1211warnings. Повторный full Debug1450/1450,9TRX/failed0/skipped0;
+Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI613/Hosting39/engine87.
+Первый full1449/1450/Mithril93/94 и targeted20/20 сохранены отдельно; passing retry
+не доказывает устранение readiness race. Release UI613/613 и Hosting39/39 отдельно;
+полного Release solution run нет. Hosting project
+проверяет реальную Hosting assembly, fake surfaces не выдаются за GPU proof.
+10native processes Debug/published Release: scheduling, legacy dispatcher, HUD,
+read-only golden360 и2ENG2 viewport; это не32case headless ENG1 run. Independent
+frame API проверен на7fresh packages/2headless cases.
+[INF3 evidence](alloy/HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
+Предыдущие2026-10-17 engine87/UI570 Release, package/golden и rich editor matrix
+сохраняют прежние scopes, не переносятся на final INF3 source автоматически.
 Warnings не подавлены; UI hardware acceptance и общий release R1–R6 не закрыты.
 
 ## Решение о порядке работ

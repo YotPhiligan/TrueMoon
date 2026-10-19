@@ -194,7 +194,7 @@ public static class OpenGLUiSessionExtensions
     private static SkiaOpenGLSurface Surface(UiSession session)
     {
         ArgumentNullException.ThrowIfNull(session); session.VerifyRendering();
-        if (session.NeedsUpdate) throw new InvalidOperationException("Update UI before using its OpenGL output.");
+        if (session.NeedsRender) throw new InvalidOperationException("Update UI before using its OpenGL output.");
         return session.Rendering as SkiaOpenGLSurface ?? throw new InvalidOperationException("Session is not using Skia OpenGL.");
     }
     /// <summary>Composites UI on the current host framebuffer without swapping or CPU copies.</summary>

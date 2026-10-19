@@ -10,6 +10,49 @@ public sealed class PropertyBindingTests
     private static UiSession Create(Element root) => new(root, new HeadlessSurface(), new UiViewport(240, 140));
 
     [Fact]
+    public void NotificationFlood_CoalescesLatestValueWithoutConsumingTheCommandQueue()
+    {
+        var source = new Model { Value = "initial" }; var text = new Text().BindText(source, x => x.Value);
+        using var ui = new UiSession(text, new HeadlessSurface(), new UiViewport(240, 140), null,
+            new UiDispatchOptions { Capacity = 2, ActionsPerUpdate = 1 });
+        ui.Update(); var reads = source.Reads; var commands = 0;
+        RunOnWorker(() => { for (var i = 0; i < 20000; i++) source.Value = $"value {i}"; });
+        ui.Post(() => commands++);
+        ui.Update(); Assert.Equal("value 19999", text.Value); Assert.Equal(reads + 1, source.Reads);
+        Assert.Equal(0, commands); Assert.True(ui.NeedsUpdate);
+        ui.Update(); Assert.Equal(1, commands); Assert.False(ui.NeedsUpdate);
+    }
+
+    [Fact]
+    public void RejectedSynchronization_CanBeRequestedAgainAfterOverflow()
+    {
+        var source = new Model { Value = "initial" }; var text = new Text().BindText(source, x => x.Value);
+        using var ui = new UiSession(text, new HeadlessSurface(), new UiViewport(240, 140), null,
+            new UiDispatchOptions { Capacity = 1, ActionsPerUpdate = 1 });
+        ui.Post(() => text.Width = 70);
+        Assert.Throws<InvalidOperationException>(() => source.Value = "rejected");
+        ui.Update(); Assert.Equal("initial", text.Value);
+        source.Value = "accepted"; ui.Update(); Assert.Equal("accepted", text.Value);
+    }
+
+    [Fact]
+    public void DelayedSynchronization_AfterTransferCannotOverwriteTheNewAttachment()
+    {
+        var source = new Model { Value = "initial" }; var text = new Text().BindText(source, x => x.Value);
+        var root = new Panel().WithChildren(text);
+        using var first = new UiSession(root, new HeadlessSurface(), new UiViewport(240, 140), null,
+            new UiDispatchOptions { Capacity = 4, ActionsPerUpdate = 1 });
+        first.Post(() => root.Width = 90); source.Value = "old queued";
+        first.Update(); Assert.Equal("initial", text.Value); Assert.True(first.NeedsUpdate);
+        root.Items.Remove(text); source.SetSilently("new attachment");
+        using var second = Create(text); var reads = source.Reads;
+        source.SetSilently("must not be read by stale work"); first.Update();
+        Assert.Equal("new attachment", text.Value); Assert.Equal(reads, source.Reads);
+        source.Value = "live notification"; second.Update(); Assert.Equal("live notification", text.Value);
+        Assert.Equal(1, source.Subscribers);
+    }
+
+    [Fact]
     public void Bind_BeforeAttach_SynchronizesOnAttachAndInvalidatesLayout()
     {
         var source = new Model { Value = "one" };

@@ -1,6 +1,74 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-17, ENG2 viewport image adapter**.
+Последняя работа — **2026-10-19, INF7**: tracked integration runner с профилями
+Assembly/Source/Package/All, bounded owned processes, fresh output directories,
+partial manifest и отдельный read-only verifier. Runner больше не зависит от
+временных scripts в TestResults. Production API и test-project wiring не менялись.
+[Запуск/профили](../../ManualTests/AlloyFactoryConsumer/README.md#inf7-воспроизводимый-integration-runner),
+[контракт](PLAN.md#inf7-общая-проверка-изменений),
+[команды/guards/evidence](HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19).
+
+Текущий All: Hosting79/UI613 Debug/Release,4TRX/1384passed/failed0/skipped0;
+8source consumers/48App cases,8native scheduling/close/dispatcher/HUD processes,
+10fresh nupkgs/8independent native consumers без analyzer/view registration.
+Всего24native processes,46commands,4required analyzer/native payloads; validation,
+ownership/registry и cleanup checks прошли в своих scopes.21runner guard checks,
+standalone Assembly и повторная read-only verification прошли.394source inputs/
+840artifact fingerprints сверены; directory/timeout/discovery/drift failures не
+превращаются в passing proof. Existing linked UI checks сохранены; Hosting guard
+требует actual ProjectReference. Нового full-solution/nonincremental build/golden/
+native RTE/engine viewport/performance запуска нет; full Debug1490 относится к INF6.
+Bounded INF0–INF4/INF6/INF7 и минимальный INF5 завершены. Далее общий ENG3;
+full INF5/RTE/K3/K7/K8/VRAM/final alpha сохраняются.
+
+Предыдущий [INF6 root factory/compatibility и full Debug1490](HISTORY.md#inf6-явные-factories-и-совместимость--2026-10-19)
+проверен2026-10-19 в указанном там scope; API/migration contract сохранён.
+
+Предыдущий [INF4 async close и engine drain](HISTORY.md#inf4-асинхронное-закрытие--2026-10-18)
+реализован и проверен2026-10-18 в своём scope; его native engine evidence исторический.
+
+Предыдущая работа — **2026-10-18, INF3**: Automatic/OnDemand/Continuous frame policy,
+coalesced thread-safe RequestFrame, monotonic cadence, work/close wake и bounded
+shared wait. Native expose использует cached output; resize/minimize/zero/resume,
+pending commands и requests во время draw сохраняются. NeedsRender отделён от
+NeedsUpdate для output под bounded queue. [Контракт](PLAN.md#inf3inf6-условия-интеграции),
+[матрица/команды/failures/evidence](HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
+
+22новых cases; UI613/613 и real Hosting39/39 Debug/Release. Повторный full Debug
+solution1450/1450,9TRX/failed0/skipped0; nonincremental build0errors/1211warnings.
+Первый full run1449/1450: независимая Mithril readiness-file sharing race; targeted20
+и повторный full94Mithril прошли, race не исправлялась и не скрыта.
+Fresh7packages/2independent consumers прошли. Debug apphost/published Release:
+новый scheduling2pairs, legacy dispatcher3pairs, external HUD90frames/36draws/
+2sessions/5readbacks, read-only golden180/config с validation включая teardown;
+два ENG2 viewport smoke с явным Continuous/RequestFrame прошли. Все10native
+processes завершились, registry/hooks/mappings0; source/binary fingerprints сверены.
+Это functional proof; idle CPU/GPU и новый BDN overhead не измерялись. Full INF5
+частичен; далее INF4. Full Release solution,32headless ENG1, прежняя full10package/
+40consumer и native RTE matrix не повторялись. ENG3/RTE/K3/K7/K8/VRAM сохраняются.
+
+Предыдущая работа — **2026-10-18, документация**: результаты аудита включены в
+[дополнительный план инфраструктуры INF0–INF7](PLAN.md#дополнительный-план-улучшения-инфраструктуры-alloy--2026-10-18).
+Зафиксированы приоритеты, зависимости, границы и acceptance registry/dispatcher/
+scheduling/close/diagnostics/factories/assembly tests. Все этапы запланированы;
+реализация не начиналась, build/tests/native/performance runs в этом шаге не было.
+Проверены Markdown links/anchors, структура и whitespace;
+[запись изменения](HISTORY.md#план-инфраструктурных-улучшений-inf0inf7--2026-10-18).
+
+Предыдущая работа — **2026-10-17, аудит инфраструктуры Alloy**.
+Воспроизведены unretryable factory cleanup после Dispose во время Update и
+выполнение20000posted actions за один Update. Предложены приоритеты registry/
+dispatcher/scheduling/close/diagnostics; production код в аудите не менялся.
+[Findings, proof и границы](HISTORY.md#аудит-инфраструктуры-alloy--2026-10-17).
+Это targeted fake-surface probes, не новый full UI/native/performance run;
+ENG3 очередность, hardware blockers и отложенный RTE backlog сохраняются.
+
+Точечная перепроверка — **2026-10-17, SkiaPixelImageTests отдельно**:
+Debug/net10.0, Passed7/Failed0/Skipped0; проверены ownership/BGRA/origin/alpha
+и6invalid shape cases. Исходники не менялись; полный UI suite/Release/native
+в этом запуске не повторялись. [Команда и TRX](HISTORY.md#skiapixelimagetests-отдельный-запуск--2026-10-17).
+
+Предыдущая реализация — **2026-10-17, ENG2 viewport image adapter**.
 Добавлен owned `SkiaImageSource.CopyBgraPixels`: tight BGRA8 premultiplied/sRGB,
 checked shape/length и независимая копия pixels. Owner-thread upload/disposal
 проверены новым engine Alloy/OpenGL окном. [UI запись](HISTORY.md#eng2-owned-pixel-image--2026-10-17),
@@ -48,6 +116,9 @@ UI tests и consumers. [План](PLAN.md), [история](HISTORY.md), [об�
 | --- | --- | --- |
 | Независимые слои | Argentis без Alloy/Skia/Silk, Alloy→Argentis, отдельные renderer/platform/Hosting; legacy в Hosting.Compatibility | Разделение2.1a/b проверялось в датированных запусках; legacy window не приравнивается к современному пути |
 | Дерево и динамический UI | Ownership, properties, one/two-way bindings, collections, conditional regions, retained focus/selection | Входит в последнюю UI suite; полного keyed tree reconciliation не обещается |
+| Session dispatch/lifecycle | Bounded FIFO1024/64, InvokeAsync/cancellation, RequestFrame/wake и explicit overflow/close; INF1 retry cleanup |2026-10-18:UI613/Hosting39 Debug/Release; scheduling/flood/output regressions. Бюджет не прерывает медленный callback |
+| Минимальный INF5 | Opt-in fixed-storage snapshots, session/window IDs, lifecycle/queue/phase counters и CPU timings; host output отдельно от Update |2026-10-18 pre-INF3:UI612/Hosting18 Debug/Release и4BDN cases. Эти overhead numbers не перенесены на INF3 source; full INF5/resource projection/Hosting queue впереди |
+| INF3 scheduling | Automatic preserves observer polling; OnDemand/Continuous, frame deadline1–240fps, cached expose, suspended work/resume и bounded native polling |2026-10-18:UI613/Hosting39 Debug/Release; GL/GL+GL/Vulkan scheduling, legacy3pairs, external HUD/golden/engine viewport Debug/published Release. Реальный idle CPU/GPU budget не измерен |
 | Controls/input/styles | Базовые controls, RichTextEditor/options, focus/capture/keyboard/wheel, themes/density, Win32 clipboard, фабрики4.8 |2026-10-17:UI563/563 Debug/Release; rich editor6native cases и прежний Settings golden; полный OS input scope открыт |
 | Rendering/HUD | Raster/OpenGL/Vulkan, borrowed raw-handle HUD, retained composition, failure/recreate, resources reuse, explicit font faces и RichTextKit adapter |2026-10-17: прежний full golden/validation и rich editor smoke прошли Debug/published Release; real loss, long VRAM/lifecycle и итоговая matrix открыты |
 | Windows4.9 | Appearance/custom frame/native Snap, native DPI Scale/resize/input/min-max | HWND DPI144/UiScale1.5 проверен; physical100/200%/разные DPI мониторов не проверены |
@@ -169,6 +240,15 @@ Alpha K1–K9 не объявляется завершённой. Требова
 5. Core/DI failures и full solution tests учитываются в общем и соответствующих модульных статусах, а не как самостоятельные UI задачи. При влиянии на UI Hosting указывать точный integration blocker.
 
 ## Следующий конкретный шаг
+
+Дополнительный [инфраструктурный backlog](PLAN.md#дополнительный-план-улучшения-инфраструктуры-alloy--2026-10-18)
+сохранён2026-10-18; **INF0–INF4/INF6/INF7 и минимальный INF5 выполнены в указанном scope**.
+Bounded инфраструктурная последовательность завершена; следующий общий шаг —
+**ENG3: compiler/checkpoint/versioned replacement/rollback**.
+Full INF5 с window startup/Hosting queue/resource projection остаётся частичным;
+его расширение требует конкретного consumer. INF7 сопровождать на real assemblies
+и native/package consumers.
+Следующий engine этап остаётся ENG3.
 
 Улучшения RichTextEditor отложены: при возвращении к UI открыть
 [отдельный план](RICH_TEXT_EDITOR_PLAN.md) и начать с RTE0 — сверки текущих

@@ -53,6 +53,20 @@ UI компонент [RichTextEditor/PA7a](alloy/PLAN.md#pa7a-richtexteditor-п
 [отдельном UI плане](alloy/RICH_TEXT_EDITOR_PLAN.md) и отложены до развития других
 функций UI-модуля. Этот backlog не меняет текущую engine очередность.
 
+По запросу пользователя2026-10-18 в UI плане сохранён дополнительный
+[инфраструктурный backlog INF0–INF7](alloy/PLAN.md#дополнительный-план-улучшения-инфраструктуры-alloy--2026-10-18):
+registry cleanup, dispatcher, scheduling/close, diagnostics и integration checks.
+По следующим запросам пользователя INF0/INF1/INF2 выполнены2026-10-18: registry
+cleanup retry, bounded dispatcher/awaitable dispatch и real assembly tests.
+Минимальный INF5 реализован следующим шагом: opt-in bounded session/phase/queue
+diagnostics; полный INF5 остаётся частичным. Детальные задачи/acceptance только в
+UI плане. INF3 scheduling и INF4 async close выполнены следующими шагами2026-10-18;
+INF6 explicit factories/compatibility и INF7 воспроизводимый integration runner
+для real assemblies/factory/package checks выполнены2026-10-19 в bounded scope.
+Следующий общий code шаг — ENG3 compiler/checkpoint/versioned replacement/rollback.
+Полный INF5 и отложенный RTE backlog сохраняются отдельно; общая UI alpha этим
+не объявляется завершённой.
+
 | Этап | Результат | Зависимость и готовность |
 | --- | --- | --- |
 | G1. Исходное состояние | Сверенная карта проектов, scope модулей, перечень поддерживаемых конфигураций и отдельные baseline результаты build/tests | Документы созданы; проверки всех модулей ещё нужны. Каждый failure закреплён за модулем, skipped и пустая discovery не считаются passing coverage |

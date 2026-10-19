@@ -126,7 +126,7 @@ public static class RasterUiSessionExtensions
     {
         ArgumentNullException.ThrowIfNull(session);
         session.VerifyRendering();
-        if (session.NeedsUpdate) throw new InvalidOperationException("Update UI before taking its raster snapshot.");
+        if (session.NeedsRender) throw new InvalidOperationException("Update UI before taking its raster snapshot.");
         return (session.Rendering as SkiaRasterSurface
             ?? throw new InvalidOperationException("Session is not using Skia raster.")).Snapshot();
     }

@@ -1,5 +1,10 @@
 # Mithril: состояние и точка продолжения
 
+Integration check2026-10-18 в UI INF3: первый full Debug run дал readiness-file
+sharing IOException в Restart_OwnedSequence (always-crash); targeted20/20 и
+повторный full Debug Mithril94/94 прошли. Код Mithril/probe не менялся, race не
+объявлена исправленной. [Failure и точные runs](HISTORY.md#readiness-file-race-при-ui-inf3--2026-10-18).
+
 Последняя работа — **2026-10-15, MIT5 operational diagnostics и свежая package regression**.
 Добавлены UnitProcessDiagnostic/UnitProcessStage через существующий IEventsSource:
 run/generation/PID, effective policy/budget/delays, launch/exit/restart/terminal,

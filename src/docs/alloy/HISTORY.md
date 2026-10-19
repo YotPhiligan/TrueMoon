@@ -6,6 +6,705 @@
 
 Новые подробные записи добавлять датированными разделами истории, текущую сводку обновлять отдельно. Согласованные UI критерии сохраняются.
 
+## INF7: воспроизводимый integration runner — 2026-10-19
+
+По запросу следующего шага временные INF6 workflows заменены воспроизводимым
+entrypoint `ManualTests/AlloyFactoryConsumer/RunIntegration.ps1`, normal tracked
+Integration/Common.ps1/Package.ps1/Verify.ps1 и Consumer.csproj.template. Нет
+substring extraction/dynamic-scriptblock imports из TestResults/другого runner.
+[Профили/requirements/запуск](../../ManualTests/AlloyFactoryConsumer/README.md#inf7-воспроизводимый-integration-runner).
+Production C#/public API/test project wiring не менялись; existing linked tests
+сохранены, новые linked copies не добавлялись. Пользовательский RichTextEditor
+edit сохранён, staging/commit/push не выполнялись.
+
+Assembly запускает real Hosting и UI suites Debug/Release, явно отклоняя zero/
+failed/skipped/inconsistent TRX. Hosting csproj должен иметь actual ProjectReference
+и не компилировать linked Hosting production copies. UI legacy linked helpers
+не выдаются за independent assembly proof. Source выполняет8factory processes/
+48App cases Cobalt/DI×OpenGL/Vulkan и8native scheduling/close/dispatcher/HUD processes.
+Package строит fresh dependency graph/feed/cache и8independent factory apphost runs
+без source ProjectReference, inherited CPM и Cobalt analyzer/view registration.
+Обязательные Cobalt analyzer/targets и Skia native/targets payloads проверяются
+отдельно: disabled-analyzer consumer сам по себе не обнаружил бы missing payload.
+
+Manifest фиксирует selected scope/phases, SDK/OS, owned PID/arguments/exit code/
+timeout/logs, reports и SHA256 input set/source/binaries/packages. Проверяется весь
+набор commands/reports; новый source file также invalidates snapshot. Native
+validation обязательна, только process-local VK_LAYER_PATH с restore в finally;
+никаких machine/driver changes. Новый output directory строго внутри
+src/TestResults/AlloyInfrastructure; existing evidence не overwrite, delete нет.
+Timeout180s/command по умолчанию завершает только owned process tree; ошибки и
+partial manifest сохраняются. `VerifyIntegration.ps1` read-only, не rebuild/repack/
+rewrite hashes; этот drift proof не является подписанной аттестацией.
+
+### Directed runner guards
+
+```powershell
+pwsh -NoProfile -File ManualTests/AlloyFactoryConsumer/TestRunner.ps1 -RunDirectory TestResults/AlloyInfrastructure/INF7-runner-checks-reviewed
+```
+
+Passedtrue,21checks без GPU/.NET test execution. [Tracked checks](../../ManualTests/AlloyFactoryConsumer/TestRunner.ps1):
+
+| Requirement | Evidence: check name |
+| --- | --- |
+| Не overwrite прошлый run / path traversal | `Existing evidence is never overwritten`, `Traversal outside output root rejected` |
+| Незавершённый/неполный scope не passing | `Incomplete manifest rejected`, `Partial command matrix rejected` |
+| Source/artifact integrity | `Unchanged fingerprint accepted`, `Artifact/source drift rejected`, `New source input invalidates snapshot` |
+| TRX nonempty/all-passed/results consistency | `TRX empty rejected`, `TRX failed rejected`, `TRX skipped rejected`, `TRX missing-results rejected`, `Real nonempty passing TRX accepted` |
+| Pure package graph и обязательные payloads | `Package assets cannot hide a source dependency`, `Missing analyzer/native archive entry rejected` |
+| Literal paths/arguments/UTF-8 | `Paths and arguments with spaces/metacharacters preserved` |
+| Nonzero exit и сохранение error/logs | `Nonzero exit fails command`, `Failed process retains exit code and logs` |
+| Bounded cleanup только owned tree | `Timeout fails and reaps owned process tree`, `Both owned timeout processes exited` |
+| Prerequisite failure до dotnet/native build | `Native prerequisite fails before dotnet/build`, `Failed preflight persists incomplete manifest with zero commands` |
+
+Первый self-test INF7-runner-checks-1 обнаружил codepage loss в controlled pwsh
+child: Ω превращалась в ?. Transport и child output явно переведены на UTF-8;
+INF7-runner-checks-2 прошёл18checks. Review добавил incomplete command matrix/new
+source input guards (20checks), затем missing payload (21checks). Не обнаруживался
+production UI defect; первоначальные failed logs сохранены.
+
+### Authoritative All proof
+
+Windows x64, PowerShell7.6.7, SDK10.0.402/runtime10.0.13, VSTest/xUnit2.9.3.
+Native validation SDK уже существовал в TestResults/VulkanInterop/tools;
+его путь передан параметром, scripts из TestResults runner не читает.
+
+```powershell
+pwsh -NoProfile -File ManualTests/AlloyFactoryConsumer/RunIntegration.ps1 -Profile All -RunDirectory TestResults/AlloyInfrastructure/INF7-reviewed -ValidationLayerPath TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin
+pwsh -NoProfile -File ManualTests/AlloyFactoryConsumer/VerifyIntegration.ps1 -RunDirectory TestResults/AlloyInfrastructure/INF7-reviewed
+```
+
+Summary Completedtrue, Assembly/Source/Package Passed,46successful commands,
+394source inputs и840artifact hashes.4TRX: Hosting79 +UI613 Debug и те же Release,
+1384passed/failed0/skipped0. Counts берутся из фактического TRX, а не hard-coded
+test-count target. Это module suites, не новый full solution run.
+
+24native apphost processes:8source consumers/48App cases;8native probes (каждая
+конфигурация scheduling2pairs, close2target backends, legacy dispatcher3pairs,
+external HUD90frames/36draws/2sessions/5readbacks);8independent factory consumers.
+Debug apphost/published Release, actual GL/Vulkan paths, native refresh, queued
+work, resize/suspend/resume, close/save/drain/error/ownership и borrowed-device
+cleanup assertions прошли. Native probes проверяют validation включая teardown,
+registry/hooks0; public factory consumers проверяют собственные session/dependency
+lifetime/registry, internal hook counters из них не объявляются прочитанными.
+
+Fresh10nupkgs version `0.2.2.7-alpha.inf7.20261019130522173`, local only. Assets —
+10matching package versions/feed, project dependencies0; собственные consumer
+Directory.Build/Packages/global.json/NuGet.Config, source mapping/fresh cache.
+Actual analyzer dumps0Cobalt generator, view service registration0. Loaded managed
+DLL и native Skia в Debug/publish совпадают с fresh archives;4required payload
+hashes сохранены и повторно сверены. Это bounded factory/package matrix, прежняя
+36App+4direct/font/RTE full package matrix не повторялась.
+
+Отдельный `-Profile Assembly -RunDirectory TestResults/AlloyInfrastructure/INF7-assembly`
+прошёл без Vulkan prerequisite:5commands/4TRX/1384passed, затем read-only verifier.
+Source/Package phase functions выполнены внутри All; verifier scope branches
+дополнительно проверены на in-memory projection фактического All evidence без
+новых native executions. Standalone Source/Package CLI отдельно не повторялись.
+Повторный All verifier после standalone Assembly подтвердил отсутствие binary drift.
+
+Предыдущие INF7-initial и INF7-final All прошли до усиления archive-payload guard;
+их evidence исторический, authoritative final source — INF7-reviewed. Не выполнялись
+новые full-solution/nonincremental build/golden/RTE/engine viewport/32headless/
+performance/hardware matrix. Read-only31golden fixtures unchanged проверены отдельно;
+старые full Debug1490/engine/Golden passing результаты не объявляются текущими.
+
+Итоговая read-only сверка `TestResults/AlloyInfrastructure/INF7-completion.json`:
+Passedtrue;10Markdown files/482local links/206anchors,6PowerShell scripts parsed,
+31golden fixture hashes unchanged. All/Assembly manifests повторно проверены;
+owned helpers завершены, git diff --check прошёл, staged0, пользовательский
+RichTextEditor diff1/1 сохранён. Это проверка evidence/документации, не новый native run.
+
+Bounded INF7 завершён. Общая alpha, full INF5 window/queue/resource projection,
+K3/K7/K8/VRAM и deferred RTE остаются; следующий общий code шаг ENG3.
+
+## INF6: явные factories и совместимость — 2026-10-19
+
+Следующий инфраструктурный шаг по запросу пользователя: non-generic
+UsePresentation(rootFactory, configure), snapshot до Build/service resolution,
+UiRendererKind и nullable GraphicsApi, IUiWindowSessionFactory preflight перед
+native allocation. [Принятый контракт](PLAN.md#inf3inf6-условия-интеграции),
+[guide/matrix/migration](../../TrueMoon.Alloy.Hosting/README.md#явная-фабрика-root-и-совместимость).
+Existing generic overload/Cobalt/DI сохранены; для fully factory-based graph view
+registration/generated resolver не требуется. Direct custom standalone factory
+теперь явно объявляет graphics capability; external IUiSessionFactory не меняется.
+Root null/disposed/parented/attached отвергается до передачи ownership; already-owned
+дерево не освобождается. Допустимый returned root очищается на owner при закрытии/
+subsequent startup failure. Layer dependencies/rendering algorithms не менялись.
+Пользовательский RichTextEditor edit сохранён, staging/commit/push не выполнялись.
+
+### Requirement / Evidence
+
+Новые portable checks — actual Hosting ProjectReference,
+`TrueMoon.Alloy.Hosting.Tests.AlloyIntegrationTests`, без linked production copies.
+Existing linked AlloyOptions font tests сохранены, массового переноса не было.
+
+| Requirement | Evidence: exact test method / consumer scenario |
+| --- | --- |
+| Known/custom renderer metadata, positive/negative standalone pairs | `Factory_DeclaresOnlySupportedStandalonePairs` (8cases) |
+| Unsupported renderer/API до root/native startup | `UnsupportedWindow_RejectsBeforeRootOrNativeStartup` (4cases) |
+| Custom standalone capability обязателен | `UndeclaredCustomWindowFactory_RejectsBeforeCallingCreate` |
+| Backend/target mismatch без native callbacks и без root ownership | `WrongTarget_RejectsBeforeHostCallbacksOrRootOwnership` (6cases) |
+| Renderer/window snapshot | `Snapshot_FreezesRendererAndEveryMutableWindowSetting`; `AlloyFactoryConsumer.Run` мутирует options сразу после UsePresentation, до Build/service resolution |
+| Explicit API mismatch до Services/root, generic и factory пути | `Registration_RejectsExplicitPresenterMismatchWithoutServicesOrRoot` (2cases) |
+| Lazy root и null argument guards | `ExplicitRootRegistration_IsLazyAndValidatesArgumentsBeforeRegistering` |
+| Invalid enum до native/services | `InvalidGraphicsEnum_IsRejectedBeforeRegistrationOrNativeStartup` |
+| Cobalt/DI, owner root start/disposal и dependency lifetime | `AlloyFactoryConsumer.Run`, scenarios `factory`/`legacy`, dependency disposal1/session registry0 |
+| Factory exception, null/disposed/parented roots | `AlloyFactoryConsumer.Run`, scenarios `throw`/`null`/`disposed`/`parented`, startup/Completion faults, caller-owned root preserved |
+| Attached root не забирается вторым окном | `AlloyFactoryConsumer.Run`, scenario `factory`: rejected duplicate window, first root alive/sessioncount1 |
+| Factory path без view registration и Cobalt analyzer | independent package `factory` scenario, Cobalt/DI×OpenGL/Vulkan×Debug/Release; analyzer dump содержит0Cobalt generator |
+
+24новых cases к предыдущим55Hosting. Focused Debug24/24 прошёл с первого test run:
+
+```powershell
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj --configuration Debug --filter FullyQualifiedName~AlloyIntegrationTests --logger trx --results-directory TestResults/AlloyInfrastructure/INF6/focused --verbosity quiet
+```
+
+IDE findTests недоступен; существующие conventions прочитаны из Hosting tests.
+В HostedUiWindowCloseTests NoSessions теперь декларирует supported graphics, чтобы
+старый rejected-dispatcher startup test продолжал проверять прежнюю ветку, а не
+случайно проходил на новом capability rejection.
+
+### Current final run
+
+Windows x64/net10.0, SDK10.0.402/runtime10.0.13, VSTest/xUnit2.9.3.
+`TestResults/AlloyInfrastructure/INF6/RunValidation.ps1`: hidden owned helper,
+child timeout180s/consumer deadline60s; existing validation SDK включён только
+process-local VK_LAYER_PATH. Machine/driver settings не менялись.
+`final/summary.json` Completedtrue,19commands,136source/178binary fingerprints.
+
+```powershell
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj --configuration Release --logger trx --results-directory TestResults/AlloyInfrastructure/INF6/final/hosting-Release --verbosity quiet
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Release --logger trx --results-directory TestResults/AlloyInfrastructure/INF6/final/ui-Release --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/AlloyInfrastructure/INF6/final/solution-Debug --verbosity quiet
+dotnet build ManualTests/AlloyFactoryConsumer/AlloyFactoryConsumer.csproj --configuration Debug --verbosity quiet
+dotnet publish ManualTests/AlloyFactoryConsumer/AlloyFactoryConsumer.csproj --configuration Release --output TestResults/AlloyInfrastructure/INF6/final/consumer-publish --verbosity quiet
+```
+
+Hosting79/79 и UI613/613 Debug/Release. Full Debug1490/1490,9TRX/failed0/skipped0:
+Core107, Cobalt179/generator91, Enerit126/generator114, Mithril94, UI613, Hosting79,
+engine87. INF3 Mithril readiness race не повторилась, fix не вносился; passing run
+не доказывает устранение race. Новый nonincremental solution build не выполнялся.
+
+Debug apphost/published Release consumer выполнялся для каждой пары Cobalt/DI ×
+OpenGL/Vulkan с mode `all` и validation:8processes/48App cases. По6cases/process,
+включая legacy generic, четыре root failure scenarios и new factory success с
+дополнительным attached-root rejection вторым окном. Settings мутируются до Build;
+native logical size/title/API, owner creation/cleanup, dependency disposal1 и
+sessions0 проверяются фактически. Source legacy path использует consumer graph/
+analyzer; factory path не регистрирует view service. Internal native hook counters
+этот public consumer не читает и не объявляет проверенными.
+
+Отдельно actual AlloyVulkanTest Debug apphost/published Release:
+`--async-close --validation --close-output <report>` и `--settings-hud --validation`.
+Это ещё4native processes, close2backend cases/config с multi-window/resize/suspend/
+resume/cancel/save/drain/cleanup failure, HUD90frames/36draws/2sessions/5readbacks/
+config с borrowed device usable после UI/App Stop. Validation including teardown,
+hooks и session registry0. Всего source/manual12native processes; package8 ниже
+считаются отдельно. Engine viewport и legacy dispatcher/scheduling отдельными
+CLI в INF6 не повторялись; их предыдущие результаты не переносятся автоматически.
+
+### Independent packages without generated view resolver
+
+`TestResults/AlloyInfrastructure/INF6/RunPackageProbe.ps1 -RunName packages-reviewed`:
+fresh10nupkgs, version `0.2.2.7-alpha.inf6.20261019112009540`, isolated feed/cache/
+source mapping и собственные Directory.Build/Packages settings; ProjectReference0,
+10matching package assets. Тот же Program.cs, mode factory; consumer csproj задаёт
+EnableCobaltGenerator=false, фактический analyzer dump Debug/Release содержит0
+TrueMoon.Cobalt.Generator.dll. Cobalt/DI ×OpenGL/Vulkan ×Debug/published Release —
+8native consumers прошли, без view registration, с registration-time snapshot,
+attached-root rejection, dependency lifetime и registry0, validation0. Loaded
+Hosting/Alloy/renderer/App DLL SHA совпадают с fresh packages.249source/10package
+fingerprints; Completedtrue. Producer version/config не менялись, пакеты локальные,
+не опубликованы. Это новая bounded factory matrix, не прежние36App+4direct/font/RTE
+package scenarios. Source consumer использует apphost, package consumer — dotnet DLL
+из Debug/published output; RID/self-contained/trimmed/AOT не проверялись.
+
+Первый `packages/` run тоже прошёл8cases, но mutation options происходила после
+window resolution. Review усилил regression до Build/service resolution; authoritative
+evidence — `packages-reviewed` и `final` с одинаковым финальным Program.cs.
+
+### Initial failures and limits
+
+Initial source build использовал internal hook counters и неверный Children.Add:
+CS0122/CS1929 исправлены в probe на public API; production из-за этого не менялся.
+Первый native `native-initial` упал на сравнении logical width260 с physical native
+size при DPI150%; исправлено на viewport/scale и отдельную affinity assertion.
+Callback failure теперь завершает probe TCS, а не ждёт deadline. `native-initial-dpi-fixed`
+прошёл factory scenario и затем упал на legacy Cobalt missing generated FactoryRoot
+resolver. Для source legacy возвращён явный consumer graph/analyzer; новый factory
+overload не изменялся. `native-initial-generator-fixed` прошёл все6cases; после review
+усилена registration-time mutation и выполнены свежие final/package runs выше.
+
+Финальная сверка `TestResults/AlloyInfrastructure/INF6/CheckCompletion.ps1`: текущие
+source/binary/package fingerprints,11TRX, source/package reports,31unchanged golden
+fixtures, Markdown links/whitespace, preserved user edit и staged0. Passedtrue:
+11Markdownfiles/472local links/197heading links. Rendering code
+в INF6 не менялся, нового golden run нет. CPU/GPU/BDN, engine viewport/32headless,
+native RTE, full Release solution и K3/K7/K8/VRAM/final alpha не проверялись.
+INF6 завершён в данном scope; следующий UI шаг INF7 — воспроизводимый integration
+runner для уже существующих real assembly/factory/package checks. Full INF5 частичен;
+engine ENG3 и deferred RTE backlog сохраняют собственную очередь.
+
+## INF4: асинхронное закрытие — 2026-10-18
+
+Реализован следующий инфраструктурный шаг по запросу пользователя. Public
+HostedUiWindow API: RequestCloseAsync, Closing, UiCloseReason, IsCloseRequested,
+IsClosed, CloseError. Contract подробно в [плане](PLAN.md#inf3inf6-условия-интеграции)
+и [Hosting guide](../../TrueMoon.Alloy.Hosting/README.md#асинхронное-закрытие).
+UiCloseCoordinator находится в real Hosting assembly; thread-safe acceptance,
+owner-only polling/handler start, bounded batch64, async continuation только будит
+owner. Native IsClosing отменяется до разрешения close. Forced shutdown ждёт save/
+drain, игнорирует veto, не повторяет уже начатый handler; все ошибки доходят до
+Completion после best-effort owner cleanup. Legacy closed callback остаётся
+lifetime notification включая failure, успешный Closed по нему не определяется.
+Engine ViewportProbe использует Closing вместо собственного native interception.
+Existing user edit RichTextEditor не менялся; коммита/push в этом шаге нет.
+
+### Requirement / Evidence
+
+Новые tests в `TrueMoon.Alloy.Hosting.Tests`, через ProjectReference без linked copies.
+Имена ниже относятся к классам UiCloseCoordinatorTests и HostedUiWindowCloseTests.
+
+| Requirement | Evidence: exact test method |
+| --- | --- |
+| Worker concurrency, один attempt | `WorkerRequests_ShareAttemptWithoutInvokingHandlersOnWorkers` |
+| Sequential owner start, save затем drain, repeat join | `ConcurrentRequests_JoinAndDrainSequentialOwnerCallbacks` |
+| Veto и новый retry | `Veto_KeepsOpenAndFreshAttemptCanApprove` |
+| Sync/async save errors, observable error и retry | `SaveFailure_IsObservableAndRetryable` (2cases) |
+| Null task и canceled handler | `NullHandlerTask_FaultsAttemptAndKeepsOpen`, `CanceledHandler_CancelsUserAttemptButForcedShutdownContinues` |
+| Upgrade к forced и veto | `ForcedUpgrade_DrainsPendingHandlerAndIgnoresVeto` |
+| Ошибки не пропускают remaining drain | `ForcedFailures_PreserveEveryErrorAfterRemainingDrain` |
+| Caller wait cancellation | `WaitCancellation_DoesNotCancelSharedAttempt` |
+| Snapshot/bounded callback batch | `HandlerBatch_IsBoundedAndSnapshotIsStable` |
+| Responsive shared owner, cleanup affinity/success/failure | `OwnerLoop_StaysResponsiveAndCompletesOnlyAfterCleanup` (2cases) |
+| Never-started lifetime/command rejection | `RequestBeforeStartup_ClosesWithoutAllocatingOrCallingHandlers` |
+| Pre-canceled public request не принимается | `PreCanceledRequest_DoesNotAcceptClose` |
+| Startup fault не превращается в successful closed | `RejectedStartup_FaultsCloseWaitAndNeverReportsClosedSuccess` |
+
+Сначала focused coordinator11/11; затем Hosting53/53 Debug. Первая попытка полного
+Hosting build остановилась на xUnit2014/CS0619 в новом pre-cancel assertion:
+исправлено на await ThrowsAnyAsync, implementation defect этим не заявляется.
+После добавления worker/null regressions итог55cases,16новых к INF3.
+Логи `TestResults/AlloyInfrastructure/INF4/focused`, `hosting-Debug.log`,
+`hosting-Debug-fixed`; authoritative final suite — ниже.
+
+### Итоговые проверки
+
+Windows x64, net10.0, SDK10.0.402/runtime10.0.13, VSTest/xUnit2.9.3.
+`TestResults/AlloyInfrastructure/INF4/RunValidation.ps1` запускался hidden owned
+helper; каждый child process bounded240s, close probe deadline60s. Vulkan layer
+из уже существующего SDK включён только process-local VK_LAYER_PATH; machine
+configuration/драйверы не менялись. `final/summary.json`: Completedtrue,13commands,
+132source и90binary fingerprints. Финальные команды:
+
+```powershell
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj --configuration Release --logger trx --results-directory TestResults/AlloyInfrastructure/INF4/final/hosting-Release --verbosity quiet
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Release --logger trx --results-directory TestResults/AlloyInfrastructure/INF4/final/ui-Release --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/AlloyInfrastructure/INF4/final/solution-Debug --verbosity quiet
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Debug --verbosity quiet
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --configuration Release --output TestResults/AlloyInfrastructure/INF4/final/publish --verbosity quiet
+```
+
+Hosting55/55 и UI613/613 в Debug/Release; full Debug1466/1466,9TRX, failed/skipped0:
+Core107, Cobalt179/generator91, Enerit126/generator114, Mithril94, UI613, Hosting55,
+engine87. INF3 Mithril readiness race здесь не повторилась, fix не вносился.
+Это текущий solution test pass; новый nonincremental solution build не выполнялся.
+
+Из Debug apphost и published Release `AlloyVulkanTest.exe` выполнены:
+
+```text
+--async-close --validation --close-output <configuration-close.json>
+--frame-scheduling --validation --scheduling-output <configuration-scheduling.json>
+--hosted-dispatcher --validation
+--settings-hud --validation
+```
+
+`AsyncCloseProbe.RunAsync`: по2target backend cases/config (GL и Vulkan с sibling
+другого backend); native WM_CLOSE veto, save error/retry, concurrent API join,
+canceled wait, оба UI обслуживаются при pending save, resize/minimize/posted work/
+restore, owner-affine cleanup, forced App Stop ждёт drain и игнорирует veto.
+Отдельный fatal command во время pending drain сохраняет root до завершения
+handler; native command + forced handler + root cleanup ошибки сохраняются вместе;
+faulted Completion никогда не IsClosed. Registry/hooks/validationmessages0.
+Initial Debug close probe прошёл до добавления fatal-command scenario; authoritative
+обе финальные конфигурации включают и этот scenario.
+
+Legacy dispatcher3pairs/config, scheduling2pairs/config и external HUD90frames/
+36draws/2sessions/5readbacks/config прошли; последний сохраняет borrowed device
+живым после UI/App Stop. Это8native manual processes, отдельный fake proof ими
+не подменяется. Rendering code в INF4 не менялся; read-only golden не повторялся,
+его предыдущие360comparisons относятся к INF3.
+
+```powershell
+./ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory TestResults/EngineSessions/inf4-native -IncludeViewport -Scenarios @()
+```
+
+Ещё2native processes (Debug apphost/published Release):14scenarios/config,
+25child launches/config и20Start/Stop, actual GL pixels, native-close drain нового
+API до root/canvas disposal, child EOF/crash/first-frame cancel/deadline,
+mappings0/UI sessions0/childrenreleased/editorpreserved. Engine manifest Completedtrue,
+332source/76binary fingerprints. Это ENG2 integration rerun, ENG3 не начинался,
+32headless ENG1 и собственный engine Release suite здесь не повторялись.
+
+### Независимая поставка
+
+`TestResults/AlloyInfrastructure/INF4/RunPackageProbe.ps1`: fresh7runtime dependency
+nupkgs, version `0.2.2.7-alpha.inf4.20261018100226980`, isolated source mapping/cache
+и собственные Directory.Build/Packages settings. Только PackageReference Hosting,
+7matching package assets, source ProjectReference0. Debug и published Release
+native Vulkan consumer прошли: native veto, public save exception/retry, pending
+concurrent/canceled wait, session.InvokeAsync во время handler, forced dispatcher
+drain/veto/remaining handlers, cleanup owner и IsClosed, registry0. Loaded Alloy/
+Hosting/Rendering.Skia DLL SHA совпадают с fresh nupkg;174source/7package hashes.
+Пакеты только локальные, не опубликованы; full10package/40consumer matrix не
+повторялась. Эти2processes отдельно от10manual/engine native processes выше.
+
+Окончательная сверка `TestResults/AlloyInfrastructure/INF4/CheckCompletion.ps1`
+проверяет manifests/fingerprints/TRX/native resource reports, Markdown links,
+whitespace и сохранение user RichTextEditor edit. Passedtrue:12Markdownfiles/
+482local links/202heading links,31golden fixtures unchanged, staged0. CPU/GPU/BDN/native RTE/VRAM/
+physical DPI/K7/K8 и full Release solution не проверялись. INF4 завершён в данном
+scope; следующий UI шаг INF6, full INF5 частичен, INF7 сопровождает изменения.
+
+## INF3: запросы кадров и scheduling — 2026-10-18
+
+После INF2/минимального INF5 реализованы frame policy Automatic/OnDemand/Continuous,
+coalesced UiSession/HostedUiWindow.RequestFrame, private work signal, monotonic
+frame cadence и minimum participant wait на shared owner. Public policy enum
+находится в нейтральном Alloy runtime. [Единственный контракт/compatibility](PLAN.md#inf3inf6-условия-интеграции),
+[API guide](../../TrueMoon.Alloy.Hosting/README.md#запросы-кадров-и-polling).
+Пять слоёв/ProjectReference graph и прежние signatures сохранены; runtime friend
+access позволяет Hosting прикрепить private non-user wake без telemetry callback API.
+
+Default Automatic сохраняет polling для existing FramePresented observers;
+OnDemand их не считает heartbeat, Continuous задаётся явно. Чистый OnDemand не
+вызывает Update/draw/present. Native expose представляет cached image; resize/
+DPI/restore могут выполняться immediately, input предварительно синхронизирует
+geometry. Minimized viewport empty; suspended queue work выполняется, dirty
+сохраняется до resume. Native Poll остаётся bounded до16ms; CPU/GPU idle usage
+здесь не измерялся. Direct Run/Pump() сохраняют periodic behavior; Pump(false)
+отключает только periodic rendering. New manual-loop resize/state callbacks
+отключены в direct Run, чтобы не добавлять nested HUD rendering.
+
+Найденное на native flood уточнение: pending queue/future frame request должны
+оставлять last completed output доступным. Добавлен NeedsRender, отличающийся от
+NeedsUpdate; raster/GL/Vulkan output helpers проверяют actual visual dirty. Прямое
+изменение дерева по-прежнему требует Update. Export не исполняет очередь. Этот
+contract явно записан в PLAN; painting/layout/fixture tolerance не изменялись.
+
+Новые **19frame-pump +2owner-scheduling +1raster =22cases**:
+
+| Требование | Evidence: точные имена tests |
+| --- | --- |
+| Idle/observer compatibility/continuous | `UiFramePumpTests.OnDemand_CleanTreeWithObserversDoesNotUpdateOrPresentUntilRequested`; `Modes_PreserveLegacyObserverPollingAndExplicitContinuousMode` (4rows); `Automatic_ObserverRemovalReturnsToIdleAndAddingObserverResumesPolling` |
+| Coalesced wake/budget/FIFO-independent frame/cadence | `UiFramePumpTests.WorkSignal_WakesOnceForFloodAndDrainsWithinTheFrameBudget`; `FrameRequests_CoalesceOutsideQueueCapacityAndRespectMonotonicCadence`; `FullQueue_DoesNotRejectAnIndependentFrameRequestOrInvalidateCompletedOutput` |
+| Draw-time request/native cached expose/suspend/resume | `UiFramePumpTests.RequestDuringDrawing_IsRetainedForTheNextFrame`; `NativeRefresh_PresentsCachedImageImmediatelyWithoutMeasureOrDraw`; `Suspended_DrainsPostedWorkOnceAndResumesWithTheRetainedRedraw` |
+| Retry/failure/fairness/detach/invalid config | `UiFramePumpTests.SkippedPresentation_RetriesAtTheNextDeadlineWithoutDrawingAgain`; `CallbackFailure_PreservesTheCauseAndPendingWorkForRetry`; `SiblingSession_ReceivesFramesWhileTheFirstContinuouslySelfPosts`; `Detach_RemovesWakeTargetWithoutClosingTheSession`; `InvalidPolicy_IsRejectedBeforeAttachingAClockOrSession` (3rows) |
+| Real owner assembly: wait wake and participant isolation | `UiOwnerSchedulingTests.Wake_InterruptsParticipantWaitAndStopDrainsOnTheSameOwner`; `DelayFailure_FaultsOnlyItsParticipantAndPreservesCleanup` |
+| Actual raster pixels and dirty-output guard | `RasterRenderingTests.PendingCommandsAndFutureFrameRequests_KeepCompletedPixelsExportableUntilApplied` — old red pixels while Post/request pending, blue after Update, direct green mutation rejects export |
+
+Clock-controlled tests используют injected TimeProvider, без real sleep/global
+clock overrides; frame-pump/owner checks относятся к реальной Hosting assembly,
+не linked copies. Existing linked UiOwnerLoop tests сохранены. Focused Hosting
+сначала38, после full-queue case39/39; runtime-focused72/72. Final UI613/613 и
+Hosting39/39 **Debug и Release**, failed/skipped0.
+
+**Failures и поправки, не скрытые финальным успехом:**
+
+- Первый Debug native scheduling failed на `Update UI before using its OpenGL
+  output`: bounded queue/future request оставляли NeedsUpdate=true при готовой
+  image. Исправлен output guard и добавлены вышеупомянутые behavioral regressions.
+- Следующий native run прошёл GL portion, но Vulkan startup остановился без
+  validation layer. Финальные processes используют прежний manifest
+  `TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin` через process-only
+  VK_LAYER_PATH; системные settings/driver не менялись.
+- Runtime test build не нашёл новый enum в linked AlloyOptions. Нейтральный enum
+  перенесён в runtime вместо копирования новых scheduler sources в tests; затем
+  runtime-focused72 прошли. После этого использованы fresh package/final binaries.
+- Первый full Debug **1449/1450**, единственный failure — Mithril93/94 readiness
+  sharing IOException. Targeted method20/20 и повторный full Debug1450/1450 прошли.
+  [Точный Mithril failure/scope](../mithril/HISTORY.md#readiness-file-race-при-ui-inf3--2026-10-18).
+  Mithril/probe code не менялся; passing retry не объявляется fix этой race.
+
+Фактические команды Windows x64/net10.0/SDK10.0.402/runtime10.0.13/xUnit2:
+
+```powershell
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj --configuration Debug --logger trx --results-directory TestResults/AlloyInfrastructure/INF3/focused2 --verbosity quiet
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --filter 'FullyQualifiedName~RasterRenderingTests|FullyQualifiedName~UiDispatchTests|FullyQualifiedName~UiDiagnosticsTests|FullyQualifiedName~UiOwnerLoopTests' --logger trx --results-directory TestResults/AlloyInfrastructure/INF3/runtime-focused2 --verbosity quiet
+& TestResults/AlloyInfrastructure/INF3/RunPackageProbe.ps1
+& TestResults/AlloyInfrastructure/INF3/RunFinal.ps1
+```
+
+RunFinal выполняет UI/Hosting Release, full solution Debug и nonincremental Debug
+build, затем build AlloyVulkanTest Debug/publish framework-dependent Release без RID.
+Для каждого apphost выполняются последовательно:
+
+```powershell
+AlloyVulkanTest.exe --frame-scheduling --validation --scheduling-output <fresh-report.json>
+AlloyVulkanTest.exe --hosted-dispatcher --validation
+AlloyVulkanTest.exe --settings-hud --validation
+AlloyVulkanTest.exe --settings-golden --validation --golden-output <fresh-directory>
+& ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory TestResults/EngineSessions/inf3-final-native -IncludeViewport -Scenarios @()
+```
+
+Final full Debug **1450/1450**:
+Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI613/Hosting39/engine87,
+9TRX/failed0/skipped0; с Release UI/Hosting final11TRX/2102passed.
+Nonincremental build **0errors/1211warnings**; warnings не подавлялись.
+
+**Independent package API:**7fresh Hosting dependency nupkgs, version
+`0.2.2.7-alpha.inf3.20261018091913737`, isolated feed/source mapping/cache и отдельные
+Directory.Build/Packages files. Debug/published Release2/2 без ProjectReference
+проверили FrameMode/FPS, RequestFrame до window startup, dynamic redraw, NeedsRender
+против NeedsUpdate, snapshots и registry0. Loaded Alloy/Hosting hashes совпали
+с fresh packages; producer source172files и7nupkg fingerprints сверены. Это не
+прежняя full10package/40consumer Cobalt/DI/fonts/analyzer native delivery matrix.
+
+**Native8AlloyVulkanTest +2engine processes =10/10**, Debug apphost/published Release:
+
+- Scheduling: по2pairs GL/GL и GL/Vulkan, OnDemand даже с observers; idle Update/
+  Render counters стабильны, периодического present нет. Posted background change
+  проверен actual GL centre pixels;1000requests coalesce; cached WM_PAINT не делает
+  новый draw. Проверены sibling refresh/context, resize, minimize/zero, suspended
+  task drain, restore,200commands versus sibling redraw, close и registry/hooks0.
+- Legacy dispatcher: GL/GL,Vulkan/Vulkan,mixed3pairs/config; shared owner, resize/
+  retained selection, native sibling refresh/context restoration, close/recreate,
+  startup/command fault isolation, separate scopes, cancel wait/close/cleanup.
+- External shared Settings HUD: по90GPU compositions/presents,36UI draws,2sessions,
+  5readbacks/config; model/list/input, scene passthrough/alpha, resize/suspend/
+  restore, registry0 и borrowed host device после UI teardown остаётся usable.
+- Read-only Settings golden:180comparisons/config, всего360; прежние31fixture
+  files unchanged, raster/GL/Vulkan current/persisted pixels и40-step model/input/
+  focus/scroll/layout checks. Validation включая teardown0errors/0warnings.
+- Engine viewport явно выбирает Continuous receiver polling и RequestFrame после
+  upload: по14scenarios/25child launches/20Start-Stop, actual GL pixels/counter,
+  resize16–1920, suspend/resume/slow UI, EOF/crash, first-frame cancel/15s deadline/
+  native close drain. Reports: disposed diagnostics, sessions0/mappings0,
+  ChildrenReleased/EditorPreserved, Present count matches host.
+
+Provenance после всех запусков:330engine/production source +85manual/fixture files,
+76engine binary +90manual binary fingerprints; golden reports дополнительно
+сверяют font/native/source/binary hashes. Игнорируемые artifacts:
+`TestResults/AlloyInfrastructure/INF3/final-checks-reviewed/summary.json`,11TRX,
+native JSON/logs/golden outputs/publish; `packages/summary.json`, `runtime-focused2/`,
+`focused2/`, `mithril-targeted/`, initial failures и `CheckCompletion.ps1`/
+`completion.json`; engine — `TestResults/EngineSessions/inf3-final-native/summary.json`.
+Первая aborted matrix сохранена в `final-checks/`, не смешана с final reviewed pass.
+
+Документы/links/anchors/whitespace/fingerprints проверены. Пользовательское изменение
+RichTextEditor.cs сохранено; staging/commit/push не выполнялись. Native checks
+functional/bounded, не idle CPU/GPU speedup или alpha acceptance. Новый BDN run не
+выполнялся; pre-INF3 overhead не переносится на текущий source. Full Release
+solution/32ENG1 headless/прежняя full package/native RTE matrix не повторялись;
+K3 physical DPI/K7/K8/VRAM/final alpha остаются. Shared owner всё ещё polls OS events,
+а один медленный callback не прерывается. Full INF5 частичен. Далее INF4 async close,
+engine ENG3 и отложенный RTE backlog сохраняются отдельно.
+
+## INF5: минимальная диагностика — 2026-10-18
+
+После INF2 выполнен минимальный diagnostics шаг перед INF3. Добавлены process-local
+`UiSession.Id`/`HostedUiWindow.Id`, opt-in `EnableDiagnostics`/window option и
+thread-safe value snapshots: lifecycle/viewport/first graphics classification,
+queue backlog/depth/high-water/outcomes, отдельные Update/root measure/root arrange/
+surface render/host present CPU aggregates. Согласованный API/scope/остаток полного
+INF5 — в [плане](PLAN.md#inf3inf6-условия-интеграции), использование — в
+[Hosting README](../../TrueMoon.Alloy.Hosting/README.md#диагностика-сессии) и package README.
+Прежние constructor/Create signatures и graph зависимостей сохранены.
+
+Collector хранит фиксированные скаляры и пять phase aggregates, без history,
+callbacks/tree/device/exception references. Queue updates находятся под прежним
+dispatcher gate и collector lock, snapshot берёт только collector lock: user
+callbacks/observers под этими locks не выполняются. Observation начинается с
+InitialPending; поздний Enable внутри callback не считает уже запущенную команду
+или partial Update. Snapshot остаётся доступным после cleanup, включая fault
+classification. Failed preflight не объявляется Disposing; terminal reporting и
+cleanup observers видят соответствующее состояние.
+
+Hosting `UiPresentationBoundary` измеряет output после Update и до FramePresented;
+его tests обращаются к реальной Hosting assembly через ProjectReference и friend
+access, без Compile-linked copy. Output result/исходная exception сохраняются;
+false=Skipped, exception=Failed. OpenGL boundary включает UI blit/SwapBuffers,
+Vulkan — существующий presenter. Boundary сама не переводит session в fault:
+это по-прежнему делает existing host exception boundary. External host может
+сообщить завершённую попытку через `RecordPresentation`; это не GPU command.
+
+Новые **16UiDiagnosticsTests +4UiPresentationBoundaryTests =20cases**:
+
+| Требование | Evidence: точные методы новых tests |
+| --- | --- |
+| Opt-in, stable IDs, initial backlog и immutable snapshot | `UiDiagnosticsTests.OptIn_PreservesIdentityAndStartsFromCurrentBacklogWithoutInventingHistory`; `Enable_RespectsOwnerLifetimeAndRejectsInvalidWindowIdentityWithoutPartialObservation` |
+| Раздельные phases, clean/render-only и zero-size/resume | `UiDiagnosticsTests.Phases_SeparateLayoutRenderCleanUpdateAndHostPresentation`; `Suspended_StillDrainsCommandsButDoesNotClaimLayoutRenderOrPresentation` |
+| Queue capacity/cancel/error/close, поздний Enable и concurrent reads | `UiDiagnosticsTests.Queue_AccountsForCapacityCancellationCallbackErrorsAndCloseWithoutChangingSemantics`; `EnableInsideCallback_DoesNotCountTheAlreadyRunningCallbackOrPartialUpdate`; `ConcurrentSnapshots_PreserveQueueAccountingWhileTheOwnerDrainsWork` |
+| Callback/layout/render failure и retry | `UiDiagnosticsTests.PostFailure_IsCountedAndRethrownWhileRemainingWorkCanBeRetried`; `LayoutFailure_ReportsTheFailingPhaseAndPreservesRetry` (2rows); `DrawFailure_DistinguishesRetryableErrorFromTerminalGraphicsFailure` (2rows) |
+| Lifetime/fault observers/late Enable/retained cause | `UiDiagnosticsTests.Disposal_GuardFailureDoesNotPretendCleanupStartedAndObserversSeeDisposingThenDisposed`; `ExternalFault_DiscardsPendingWorkBeforeNotificationAndRetainsClassificationAfterDisposal`; `LateEnable_AfterTerminalFailureReportsStateWithoutClaimingEarlierPhaseSamples` |
+| Exact external present durations/outcomes и invalid-input atomicity | `UiDiagnosticsTests.Presentation_UsesExactHostReportedDurationsAndValidatesInputWithoutChangingCounters` |
+| Реальная Hosting boundary: presented/skipped/failure/off | `UiPresentationBoundaryTests.Presentation_TracksOnlyTheOutputBoundaryAndPreservesResult` (2rows); `Presentation_ObservesFailureWithoutReplacingTheOriginalExceptionOrFaultingSessionItself`; `DiagnosticsOff_DoesNotCreateACollectorOrAlterOutputErrors` |
+
+Фактические команды Windows x64/SDK10.0.402/runtime10.0.13/net10.0/xUnit2:
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --no-build --filter 'FullyQualifiedName~UiDiagnosticsTests|FullyQualifiedName~UiDispatchTests|FullyQualifiedName~RenderingFailureTests' --logger trx --results-directory TestResults/AlloyInfrastructure/INF5/focused-final --verbosity quiet
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Release --logger trx --results-directory TestResults/AlloyInfrastructure/INF5/final-checks/ui-Release --verbosity quiet
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj --configuration Release --logger trx --results-directory TestResults/AlloyInfrastructure/INF5/final-checks/hosting-Release --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/AlloyInfrastructure/INF5/final-checks/solution-Debug --verbosity quiet
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet
+& ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory TestResults/EngineSessions/inf5-final-native -IncludeViewport -Scenarios @()
+& TestResults/AlloyInfrastructure/INF5/RunPackageProbe.ps1
+```
+
+Focused **57/57**, UI **612/612 Debug/Release**, real Hosting **18/18 Debug/Release**.
+Full Debug **1428/1428**:
+Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI612/Hosting18/engine87,
+9TRX/failed0/skipped0; final11TRX/2058passed с отдельными Release UI/Hosting.
+Nonincremental Debug build **0errors/1211warnings**; предупреждения не подавлялись.
+Первый focused54 был до трёх дополнительных lifetime/fault cases, final57 — после
+окончательного source. Initial Hosting18 и final full tests scopes разделены в logs.
+
+**Independent API package proof:** семь fresh Hosting dependency nupkgs, версия
+`0.2.2.7-alpha.inf5.20261018083803903`, isolated source mapping/cache и собственные
+Directory.Build/Packages files. Только PackageReference на Hosting, assets graph
+содержит7matching TrueMoon packages и никаких source ProjectReference; metadata
+указывает fresh local feed. Debug и framework-dependent published Release без RID
+прошли2/2 с portable fake surface: counters/IDs, suspended/fault/disposed state,
+external presentation report, retained snapshot и registry0. Loaded Alloy/Hosting
+DLL SHA совпал с содержимым fresh nupkg. Producer source169files/package hashes
+сверены; packages не публиковались. Это новый diagnostics API proof, не прежняя
+10package/40native consumer Cobalt/DI/fonts/analyzer matrix.
+
+**Native 2/2 ENG2 viewport:** diagnostics включены window option до первого Update;
+Debug apphost и published framework-dependent Release. Каждый14scenarios,
+25child launches/20Start-Stop, actual GL readback/frame counter, resize16–1920,
+zero-size/resume/slow UI, crash/live-child EOF, cancel/15s deadline/native close.
+Новая acceptance проверяет WindowId, measure/arrange/render>0, Present.Completed
+равен HostedUiWindow.PresentedFrames, Present.Failed0, State=Disposed/Queue.Pending0.
+Оба reports также подтверждают sessions0/mappings0/ChildrenReleased/EditorPreserved.
+Native327source/76binary fingerprints сверены после проверок.
+
+**Overhead:** task-scoped BenchmarkDotNet0.15.8, DefaultJob, same build on/off;
+Windows11 build26300.9711, AMD Ryzen9 9900X, .NET10.0.13 x64 RyuJIT. Dry4cases
+проверил execution/setup, затем representative Idle.Disabled DefaultJob и final
+4cases (idle и posted/layout/render fake-surface Update ×off/on). Setup/disposal,
+initial layout и cached delegates вне benchmark body, MemoryDiagnoser включён.
+Каждый benchmark возвращает результат Update; manual timing loops не добавлялись.
+
+```powershell
+dotnet add TestResults/AlloyInfrastructure/INF5/Overhead/Overhead.csproj package BenchmarkDotNet
+& TestResults/AlloyInfrastructure/INF5/RunBenchmarks.ps1 # build, Dry, representative
+dotnet TestResults/AlloyInfrastructure/INF5/Overhead/bin/Release/net10.0/Overhead.dll --filter '*' --noOverwrite --artifacts TestResults/AlloyInfrastructure/INF5/final-checks/bdn
+```
+
+| Workload | Disabled mean | Enabled mean | Enabled/disabled | Managed allocation/op |
+| --- | --- | --- | --- | --- |
+| Clean idle Update |9.530ns |60.524ns |6.35 |0B/0B |
+| Posted callback +changed width +fake layout/render |107.4ns |352.8ns |3.29 |176B/176B |
+
+Final means/error/stddev/GC columns сохранены в BDN GitHub/CSV reports; delta
+около51ns/245ns относится только к этим uncontended headless workloads. Это
+измерение opt-in overhead в новом build, не before/after INF2 comparison, реальный
+UI idle CPU, GPU time, whole-frame throughput или performance budget acceptance.
+Snapshot reads, enabled collector construction, native presentation и contention
+отдельно не benchmarked. Выключенный путь не делает timing/collector allocation;
+new process IDs/cached host delegate имеют construction cost, не включённый в BDN.
+
+Ignored evidence: `TestResults/AlloyInfrastructure/INF5/RunFinal.ps1`,
+`final-checks/summary.json` и TRX/build/BDN reports, `focused-final/`,
+`RunPackageProbe.ps1`/`packages/summary.json`, `RunBenchmarks.ps1`/`benchmarks/`,
+`CheckCompletion.ps1`/`completion.json`; native —
+`TestResults/EngineSessions/inf5-final-native/summary.json` и viewport reports.
+Проверены Markdown links/anchors/whitespace и fingerprints; staged0, пользовательское
+изменение RichTextEditor.cs сохранено. Commit/push не выполнялись.
+
+Полный INF5 остаётся частичным: window lifecycle до session creation/failed startup,
+Hosting native command queue и resource projection не инструментированы; Vulkan
+Resources counters не дублировались. Native Vulkan/validation/WSI, прежняя full
+package/golden/native RichTextEditor matrix,32ENG1 headless и full Release solution
+не повторялись. K3/K7/K8/VRAM/final alpha, engine ENG3 и отложенный RTE backlog
+сохраняются. Scheduling/close policy в этом шаге не менялась. Далее bounded INF3
+с explicit frame requests/idle-continuous policy и своим native/HUD proof.
+
+## INF2: ограниченный dispatcher — 2026-10-18
+
+Следующий согласованный UI шаг после INF1 выполнен: `UiSession` использует bounded
+FIFO очередь и action budget, появился `InvokeAsync(Action, CancellationToken)`.
+Принятые defaults/overloads/overflow/cancel/owner-inline/close semantics сохранены
+в [единственном контракте INF2](PLAN.md#inf2-queue-и-dispatch-contract), краткий API
+пример — в [Hosting README](../../TrueMoon.Alloy.Hosting/README.md#posted-work-и-awaitable-dispatch).
+Старые constructor/Create signatures сохранены. Новый options overload validates
+limits до attachment/transfer ownership; прямой Create — также до surface creation.
+
+Acceptance/cancellation/close сериализованы одним gate. Pending cancellation
+удаляет callback, освобождает capacity и не расходует Update budget. Cancellation
+registrations освобождаются вне gate; task continuations асинхронны. При закрытии
+ссылки на pending callbacks освобождаются, каждый task получает отдельную ошибку
+с нужной причиной. Failed Dispose preflight guards сохраняют рабочую очередь;
+принятый Dispose закрывает её до Root/surface cleanup. Root attachment generation
+продолжает фильтровать устаревшие Element dispatch. Terminal graphics error также
+faults session; обычная awaitable callback ошибка faults только task.
+
+PropertyBinding явно объединяет latest-value notifications per connection;
+overflow сбрасывает pending flag и сообщается source caller, позволяя повторить
+notification. CollectionBinding и two-way canonical write semantics сохранены.
+Произвольные UI commands/input cleanup не объединяются.
+
+Новые regressions: **23dispatch +3property =26cases**, все на настоящих Alloy/
+Argentis ProjectReference с portable fake surface. Матрица точных имён:
+
+| Требование | Evidence: методы в TrueMoon.Alloy.Tests |
+| --- | --- |
+| Bounded self-posting, draw и соседняя session | `UiDispatchTests.SelfPosting_LeavesTimeForRenderingAndAnotherSession`; `DefaultBudget_BoundsTheOriginalTwentyThousandActionReproduction` — первый Update64callbacks вместо прежних20000 |
+| FIFO/capacity/overflow и ownership limits | `UiDispatchTests.Capacity_RejectsOverflowAndRetainsFifoAcrossUpdates`; `InvalidLimits_DoNotTakeRootOrSurfaceOwnership` (4rows); `AwaitableOverflow_IsObservableAndDoesNotReplaceAcceptedWork` |
+| Owner-inline/nested dispatch и observable worker errors | `UiDispatchTests.OwnerDispatch_RunsImmediatelyEvenWithFullQueueAndReturnsErrorsAsTasks`; `NestedOwnerDispatch_DoesNotWaitForAnotherUpdate`; `WorkerDispatch_CompletesOnOwnerAndReportsCallbackFailureWithoutSkippingNextCommand`; `PostError_PropagatesButRemainingCommandsCanBeRetried` |
+| Cancel до/после acceptance/start, capacity/budget | `UiDispatchTests.PreCanceledDispatch_DoesNotUseCapacityEvenWhenFull`; `Cancellation_RemovesPendingCommandImmediatelyAndReleasesCapacity`; `Cancellation_AfterCallbackStartsDoesNotChangeItsResult`; `Cancellation_DoesNotConsumeUpdateBudgetOrReorderRemainingCommands` |
+| Pending tasks/owned cleanup/guard retry | `UiDispatchTests.Disposal_ClosesQueueBeforeOwnedCleanupAndSettlesPendingTasks`; `FailedDisposalGuard_DoesNotCloseDispatch` |
+| Terminal failure, owner и worker, original cause | `UiDispatchTests.TerminalCallbackFailure_FaultsSessionAndAllPendingTasks` (2rows) |
+| Producer flood/accept versus close race | `UiDispatchTests.ConcurrentProducers_RespectCapacityWithoutLosingAcceptedCommands` — 32accepted/368rejected; `ConcurrentClose_SettlesEveryDispatchWithoutExecutingIt` (Dispose/fault, по1000tasks) |
+| Property coalescing/rejected request/stale attachment | `PropertyBindingTests.NotificationFlood_CoalescesLatestValueWithoutConsumingTheCommandQueue` — 20000notifications/одно чтение; `RejectedSynchronization_CanBeRequestedAgainAfterOverflow`; `DelayedSynchronization_AfterTransferCannotOverwriteTheNewAttachment` |
+
+Фактически выполнены Windows x64/SDK10.0.402/runtime10.0.13/net10.0/xUnit2:
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --no-build --filter 'FullyQualifiedName~UiDispatchTests|FullyQualifiedName~PropertyBindingTests|FullyQualifiedName~CollectionBindingTests|FullyQualifiedName~TwoWayBindingTests|FullyQualifiedName~RenderingFailureTests' --logger trx --results-directory TestResults/AlloyInfrastructure/INF2/focused-reviewed --verbosity quiet
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Release --logger trx --results-directory TestResults/AlloyInfrastructure/INF2/final-checks-reviewed/ui-Release --verbosity quiet
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj --configuration Release --logger trx --results-directory TestResults/AlloyInfrastructure/INF2/final-checks-reviewed/hosting-Release --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/AlloyInfrastructure/INF2/final-checks-reviewed/solution-Debug --verbosity quiet
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet
+& ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory TestResults/EngineSessions/inf2-reviewed-native -IncludeViewport -Scenarios @()
+```
+
+Focused **150/150**; UI **596/596 Debug и Release**, real Hosting assembly
+**14/14 Debug/Release**. Full Debug **1408/1408**:
+Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI596/Hosting14/engine87,
+9TRX/failed0/skipped0. Release отдельно UI596/Hosting14; суммарно final11TRX/2018passed.
+Nonincremental Debug build **0errors/1211warnings**, предупреждения не подавлялись.
+
+Native **2/2 bounded ENG2 viewport smoke**: Debug apphost и published framework-
+dependent Release без RID. Каждый14scenarios/25child launches/20Start-Stop,
+actual GL readback/counter, resize16–1920, zero-size suspend/resume, slow UI,
+crash/EOF, first-frame cancel/15s deadline и native close drain. Reports:
+ActiveUiSessions0/Mappings0/ChildrenReleased=true/EditorPreserved=true;
+source fingerprints325 и binary76 сверены после всех запусков. Это functional
+integration, не idle/frame-time performance acceptance.
+
+Ignored evidence: `TestResults/AlloyInfrastructure/INF2/RunFinal.ps1`,
+`final-checks-reviewed/summary.json`, TRX/build logs, `focused-reviewed/`,
+`CheckCompletion.ps1`/`completion.json`; native reports/source/binary hashes —
+`TestResults/EngineSessions/inf2-reviewed-native/summary.json`. Первый focused
+run147cases был до трёх дополнительных regressions, последующий150cases и первый
+full/native pass предшествовали финальному исправлению повторного использования
+exception; они сохранены отдельно, final acceptance относится к reviewed paths.
+Исходная diagnostic replay с20000callbacks относится к INF0/INF1 истории;
+новый default-budget regression непосредственно проверяет64callbacks.
+
+Проверены локальные Markdown links/anchors и whitespace. Пользовательское изменение
+RichTextEditor.cs сохранено; staging/commit/push в этом шаге не выполнялись.
+Полный Release solution,32ENG1 headless native cases, packages/golden/native RTE,
+physical DPI/K7/K8/VRAM/final alpha не повторялись/не закрывались. Hosting owner-loop
+commands здесь не ограничивались, новые wake/idle/frame policies не вводились.
+Action budget не прерывает один медленный/рекурсивный owner-inline callback.
+Следующий UI шаг: минимум INF5 diagnostics, затем INF3 scheduling; engine ENG3 и
+отложенный RTE backlog сохраняются.
+
 ## Отложенный план RichTextEditor — 2026-10-17
 
 По запросу пользователя обсуждённые улучшения сохранены в отдельном
@@ -2055,3 +2754,230 @@ OpenGL readback corners/enlarged frame+tick counters, resize/first-frame/cleanup
 Это не новый packaged image API proof: pack/package consumer/golden и RichTextEditor
 native matrix в этом шаге не запускались. K3 physical DPI/K7/K8/VRAM/final alpha
 сохраняются. RTE improvements остаются отложенными, следующий общий шаг ENG3.
+
+## SkiaPixelImageTests: отдельный запуск — 2026-10-17
+
+По запросу пользователя класс запущен отдельно после commit/push26045ae.
+VSTest/xUnit2.9.3, Windows x64/.NET10.0.13; Debug/net10.0.
+Passed:7, Failed:0, Skipped:0; TRX подтверждает ровно7cases запрошенного класса:
+CopyBgraPixels_OwnsPixelsPreservesChannelsOriginAndPremultipliedAlpha и6rows
+CopyBgraPixels_RejectsInvalidShapeBeforeNativeAllocation.
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --configuration Debug --filter "FullyQualifiedName~TrueMoon.Alloy.Tests.SkiaPixelImageTests" --logger "console;verbosity=normal" --logger "trx;LogFileName=SkiaPixelImageTests.Debug.trx" --results-directory TestResults/SkiaPixelImageTests/isolated-Debug
+```
+
+Exit0; report:TestResults/SkiaPixelImageTests/isolated-Debug/SkiaPixelImageTests.Debug.trx.
+Исходники/тесты не редактировались. Compile warnings existing Argentis CS1591/CS9113
+не являются test failures. Полный UI suite/Release/native/packages/golden в этом
+точечном запуске не повторялись; прежний ENG2 scope и следующие задачи сохраняются.
+
+## Аудит инфраструктуры Alloy — 2026-10-17
+
+По запросу пользователя просмотрены project boundaries Argentis/Alloy/Rendering.Skia/
+Platform.Silk/Hosting, UiSession/owner loop, registry cleanup, backend options,
+property/collection dispatch, image lifetime, Compatibility и test wiring.
+Production APIs/код в рамках аудита не менялись; предложения не утверждают новую
+очередность вместо ENG3 и не закрывают UI alpha/K3/K7/K8/VRAM.
+
+### Подтверждённые наблюдения
+
+1. **Cleanup retry, высокий приоритет.** HostedUiSessionFactory.Dispose устанавливает
+   _stopped=true до session.Dispose. Вызов из posted action во время Update проходит
+   factory prevalidation, но UiSession.Dispose запрещает disposal во время Update.
+   Первый вызов сообщает InvalidOperationException, registry содержит1session;
+   повторный factory.Dispose возвращается по _stopped и оставляет1live session.
+   Требуется direct session.Dispose для освобождения. Это дефект восстановления
+   после запрещённого shutdown, а не предложение разрешить disposal внутри Update.
+   Основание: HostedUiSessionFactory.cs:39–41, UiSession.cs:239–249.
+2. **Нет бюджета posted work.** UiSession.Update drains queue до полного опустошения.
+   Bounded harness из20000self-posted actions выполнил все20000за один Update.
+   Неограниченный producer может задержать layout/render/input и sibling windows.
+   Это proof отсутствия batch limit, не измерение CPU/GPU performance.
+   Основание: UiSession.cs:62–65/121. Native command batch уже ограничен64, startup
+   batch32; CollectionBinding уже coalesces, PropertyBinding Changed — каждый dispatch.
+3. **Frame scheduling.** UiOwnerLoop ждёт1ms при active windows; Pump вызывает
+   DoUpdate/DoRender, HostedUiWindow.PresentFrame представляет frame после
+   SynchronizeViewport независимо от того, изменилось ли дерево. UiSession.Update
+   уже пропускает clean redraw, но это не приостанавливает presentation/polling.
+   Реальные idle CPU/GPU/power costs в этом аудите не измерялись.
+4. **Application-level close.** ENG2 probe вручную перехватывает NativeWindow.Closing,
+   откладывает close, ждёт session/controller shutdown и затем закрывает окно.
+   Это полезный lifecycle contract для Hosting: unsaved document cancel/save и async
+   drain должны иметь owner-safe API; closing и already-closed notification различны.
+5. **Extensibility/testing.** Standalone options жёстко выбирают GL/Vulkan bool flags;
+   UseRenderer сбрасывает flags и не допускается standalone Validate. UsePresentation
+   регистрирует generic TView, а Cobalt consumer требует явной concrete registration;
+   root factory overload убрал бы эту ловушку. Часть Hosting/Platform checks сейчас
+   Compile-links production source в UI test assembly; existing native/package proofs
+   сохраняют свою ценность, но assembly-level tests полезны для новых lifecycle APIs.
+
+### Приоритеты предлагаемых улучшений
+
+| Приоритет | Направление | Ограниченный первый результат |
+| --- | --- | --- |
+|1 | Retry-safe session registry | Запрет новых Create после начала Stop; повторный cleanup оставшихся sessions после failed attempt; stopped только при отсутствии owned sessions, исходная ошибка наблюдаема |
+|2 | Dispatcher/posted work | Бюджет actions или time slice на Update, явная policy переполнения, atomic accept/close, InvokeAsync/cancellation, optional keyed coalescing без silent drop произвольных commands |
+|3 | Frame scheduling | RequestFrame/wake на invalidation и pending work, idle/continuous режимы, отдельные Update/Render/Present cadence; сохранить expose/resize/animations/external HUD и существующие FramePresented consumers |
+|4 | Hosting close/root factories | RequestCloseAsync с cancel/save/drain, safe owner callbacks, explicit root factory без скрытой Cobalt-specialization зависимости |
+|5 | Unified diagnostics | Session/window IDs, pending depth/high-water/processed work, measure/arrange/render/present timings и lifecycle state; bounded opt-in snapshots; existing Vulkan counters не дублировать |
+|6 | Реальные assembly tests | Hosting/Platform project references для новых contract checks, portable fake surfaces/window seams, отдельные native/package suites; не считать linked source единственным delivery proof |
+|Позже | Backend/resources/legacy | Explicit presenter/target compatibility, scoped image/font resources и dynamic image reuse после baseline; обозначить границу старой PropertiesBase/IView/Compatibility API без удаления совместимости в этом аудите |
+
+Dirty-subtree layout/virtualization рассматривать после diagnostics и реального
+large-tree workload: сейчас Layout invalidation делает Root.Measure/Arrange;
+выигрыш и корректность partial layout не измерялись. Boundaries проектов удачны:
+Argentis не зависит от graphics/platform, Alloy зависит только от Argentis;
+перестройка этих пяти проектов не требуется для первых двух исправлений.
+
+### Проверка и границы
+
+Временный ignored harness TestResults/AlloyInfrastructureAudit/Audit.csproj с
+ProjectReference на реальную TrueMoon.Alloy.Hosting; fake backend/surface, без native
+окна/Skia/GPU. Команда:
+
+```powershell
+dotnet run --project TestResults/AlloyInfrastructureAudit/Audit.csproj --verbosity quiet
+```
+
+Final exit0; log TestResults/AlloyInfrastructureAudit/factory-retry.log:
+Reproduced=true, AfterFailure1/AfterRetry1/SessionDisposedAfterRetry=false,
+AfterManualCleanup0; PostedActionsInOneUpdate20000/NoBatchLimitObserved=true.
+После наблюдения session освобождена напрямую. Initial harness ошибочно ожидал
+AggregateException; UiCleanup при единственной ошибке сохраняет исходный
+InvalidOperationException — assertion harness уточнён, production не менялся.
+
+Это два targeted probes, не запуск xUnit suite или новый UI native/performance pass.
+Предыдущая отдельная SkiaPixelImageTests Debug7/7 и ENG2 evidence сохраняют свои scopes.
+Предлагаемый следующий UI fix — factory cleanup retry, затем dispatcher budget;
+общая очередность engine/RTE backlog остаётся отдельным решением пользователя.
+
+## План инфраструктурных улучшений INF0–INF7 — 2026-10-18
+
+По прямому запросу пользователя [аудит2026-10-17](#аудит-инфраструктуры-alloy--2026-10-17)
+переведён из предложений в сохранённый дополнительный
+[UI roadmap](PLAN.md#дополнительный-план-улучшения-инфраструктуры-alloy--2026-10-18).
+Детальные задачи/acceptance ведутся в существующем docs/alloy/PLAN.md, отдельный
+дублирующий план не создавался. INF0 — свежая сверка, INF1 — retry-safe registry,
+INF2 — bounded dispatch, INF3 — frame scheduling, INF4 — async close, INF5 —
+bounded diagnostics, INF6 — root factories/integration compatibility,
+INF7 — real assembly/package/native checks по затронутому contract.
+
+Первый UI порядок INF0→INF1→INF2. INF7 сопровождает изменения с первого этапа,
+минимальный INF5 нужен до INF3. Queue limits, API names и compatibility policy
+уточняются перед реализацией, не объявлены уже согласованным public API.
+Поздние image/font reuse, dirty-subtree/virtualization и legacy boundary записаны
+как исследования с измерениями/consumer checks, без обещания performance gain
+или удаления Compatibility. Слои/net10.0/xUnit/owner-thread/borrowed GPU contracts,
+этапы1–5/K1–K9/PA1–PA10 сохранены. ENG3 остаётся общим следующим engine этапом,
+RTE backlog отдельно отложен; NVIDIA workaround search не возобновляется.
+
+Обновлены UI STATUS и одна ссылка в общем PLAN; исправлены устаревшие текущие
+ENG2 pointers в PA7a вводной UI плана на реализованный ENG2/следующий ENG3.
+Production/test code в этом шаге не редактировался. Предыдущая независимая правка
+RichTextEditor.cs и незакоммиченные audit/test записи сохранены.
+Все INF этапы имеют статус запланировано; новых build/xUnit/native/performance
+запусков нет. Проверки этого шага: local links/heading anchors, fences,
+whitespace/conflicts/NUL, INF identifiers/acceptance и scoped git diff --check.
+Artifact ignored TestResults/AlloyInfrastructurePlanning/verification.json.
+
+## INF0/INF1: повторяемый cleanup registry — 2026-10-18
+
+По запросу пользователя начат рекомендуемый UI этап INF0→INF1.
+[Contract/acceptance](PLAN.md#inf1-registry-shutdown-после-отказа), [статус](STATUS.md).
+Первоначальные audit/planning records выше сохранены с исходными датами.
+
+### INF0 и изменение поведения
+
+До правки повторён ignored TestResults/AlloyInfrastructureAudit/Audit.csproj:
+cleanup Reproduced=true/AfterFailure1/AfterRetry1, manual release0;
+self-posting20000actions прошли за один Update. Собственный baseline scope — эти
+два targeted fake-surface probes и сверка contracts, не performance baseline.
+Log TestResults/AlloyInfrastructureAudit/inf0-baseline.log, exit0.
+
+HostedUiSessionFactory теперь разделяет shutdown requested и активную попытку
+cleanup. Первый принятый Stop/Dispose закрывает новые Create даже при failed
+preflight; owner/borrow guards проверяются до destruction sessions. После Update/
+tree mutation/возврата lease или на owner thread retry пытается закрыть оставшихся.
+Ошибки отдельных Dispose не отменяют остальных попыток; UiCleanup сохраняет
+исходную единственную ошибку либо aggregates causes. Завершённые sessions удаляются
+через existing Disposed registry hook и повторно не освобождаются. Реентрантный
+cleanup возвращается к внешней попытке; finally всегда снимает attempt guard.
+
+Shutdown во время backend/attachment callback создания session отклоняется до
+принятия request. Это сохраняет IUiSessionFactory contract root ownership on success:
+failed Create не уничтожает caller root; constructor rollback очищает только
+созданные renderer resources. StopAsync остаётся synchronous owner cleanup,
+не прерываемым cancellation token посередине; async close — будущий INF4.
+Новых public signatures/native ABI/package dependencies нет.
+
+### Real assembly regression project
+
+Создан TrueMoon.Alloy.Hosting.Tests: net10.0/xUnit2.9.3/VSTest, central package versions,
+один ProjectReference на production Hosting. Зарегистрирован в точном TrueMoon.slnx
+через dotnet sln add; dotnet sln TrueMoon.slnx list подтвердил регистрацию.
+Existing UI tests намеренно сохраняют neutral/source-linked Hosting helpers;
+их проекты/исходники не мигрировались массово. Новый project проверяет реальный
+factory/UiSession с portable fake renderer, без HWND/Skia/GPU allocation.
+Это частичное выполнение INF7 для INF1, не завершение всего INF7.
+
+IDE findTests через execute_tool вернул Tool not found; fallback сверил existing
+UI/engine tests и соседние ownership conventions. Focused code-testing workflow —
+один factory class, без sub-agents. Перед fix новый
+Dispose_DuringUpdateCanBeRetriedAfterUpdateEnds упал:1failed/0passed,
+artifact TestResults/AlloyInfrastructure/INF1/red. На финальном source14cases passed.
+
+| Requirement | Exact evidence: HostedUiSessionFactoryTests |
+| --- | --- |
+| Guarded Update failure и owner retry, Create fence | Dispose_DuringUpdateCanBeRetriedAfterUpdateEnds |
+| Продолжение cleanup других sessions/без double-dispose | Dispose_PartialFailureCleansOtherSessionsAndRetryOnlyCleansRemaining (2rows) |
+| Несколько live sessions, aggregate errors и progress2→1→0 | Dispose_MultipleBusySessionsPreserveErrorsAndMakeProgressAcrossRetries |
+| Borrowed preflight не уничтожает ни одну session | StopAsync_BorrowedFramePreflightRetainsAllSessionsUntilOwnerRetries |
+| Wrong-thread отказ и последующий owner retry | Dispose_ForeignThreadFailureRetainsOwnershipAndOwnerCanRetry |
+| Tree mutation guard и retry после завершения изменения | Dispose_TreeMutationGuardRetainsSessionUntilMutationCompletes |
+| Реентрантный cleanup не повторяет disposal | Dispose_ReentrantCleanupReturnsToOuterAttemptWithoutRepeatingDisposal |
+| Первичные root/renderer error objects наблюдаемы | Dispose_PreservesCleanupCausesAndDoesNotRepeatAlreadyDisposedSessions |
+| Preflight cause сохраняется, guard recovery допускает retry | Dispose_PreflightExceptionIsPreservedAndRetryAfterGuardRecoveryWorks |
+| Empty/repeated Stop закрывает создание без allocations | StopAsync_EmptyRegistryRejectsNewCreationAndRemainsIdempotent |
+| Независимый session.Dispose не останавливает factory | SessionDisposal_RemovesRegistryEntryWithoutStoppingFactory |
+| Failed Create сохраняет root caller ownership | Create_ReentrantStopIsRejectedWithoutTakingRootOwnership (2rows) |
+
+Exact commands Windows x64/SDK10.0.402/.NET10.0.13:
+
+```powershell
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj --configuration Debug --logger trx --results-directory TestResults/AlloyInfrastructure/INF1/focused-final --verbosity quiet
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj --configuration Release --logger trx --results-directory TestResults/AlloyInfrastructure/INF1/final-checks/hosting-Release --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/AlloyInfrastructure/INF1/final-checks/solution-Debug --verbosity quiet
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet
+& ./ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory ./TestResults/EngineSessions/inf1-final-native -IncludeViewport -Scenarios @()
+```
+
+Focused Hosting Debug14/14 и Release14/14, failed/skipped0. Exact solution entry
+point discovered новый project: full Debug1382/1382,9TRX/failed0/skipped0;
+Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI570/Hosting14/engine87.
+Nonincremental Debug build0errors/1211warnings, warnings не подавлены.
+Final helper TestResults/AlloyInfrastructure/INF1/RunFinal.ps1:3dotnet commands exit0
+и2native viewport cases; summary final-checks/summary.json Completed=true,
+10TRX/1396passed суммарно (full Debug +Hosting Release, не1396unique tests).
+
+### Bounded native и исходный detector после fix
+
+TestResults/EngineSessions/inf1-final-native/summary.json Completed=true:
+2/2 Debug apphost/published framework-dependent Release viewport runs,14scenarios
+и25child launches каждый, по20Start/Stop, resize/slow UI/actual GL corners+counter
+pixels, live-child EOF, deadline/cancel/native close. PixelChecks48Debug/47Release,
+children released, UI sessions0/mappings0, Editor state сохранён. Source323/binary76
+fingerprints сохранены. Это только два viewport runs:32ENG1 headless scenarios,
+Vulkan/physical DPI/K7/loss/VRAM/full alpha/golden/packages в этом шаге не повторялись.
+
+После fix исходный audit detector сообщает Reproduced=false/AfterRetry0/
+SessionDisposedAfterRetry=true. Его exit1 ожидаем: программа возвращает0 только
+при наличии старого дефекта. Postfix log TestResults/AlloyInfrastructure/INF1/postfix-audit.log.
+Его второй record остаётся PostedActionsInOneUpdate20000: INF2 ещё не реализован.
+Новый code/testing acceptance — отдельные passing xUnit/native reports выше.
+
+Следующий инфраструктурный UI этап INF2; общий engine шаг ENG3, отложенный RTE
+backlog и hardware blockers сохраняются. Существующая пользовательская style-правка
+RichTextEditor.cs не изменялась. Commit/push не выполнялись.
+Final documentation/provenance/wiring guard — ignored
+TestResults/AlloyInfrastructure/INF1/completion.json.

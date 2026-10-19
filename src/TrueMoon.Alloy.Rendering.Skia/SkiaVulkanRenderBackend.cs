@@ -137,7 +137,7 @@ public static class VulkanUiSessionExtensions
     public static VulkanTextureLease AcquireVulkanTexture(this UiSession session)
     {
         session.VerifyRendering();
-        if (session.NeedsUpdate) throw new InvalidOperationException("Update UI before acquiring its texture.");
+        if (session.NeedsRender) throw new InvalidOperationException("Update UI before acquiring its texture.");
         try { return (session.Rendering as SkiaVulkanSurface ?? throw new InvalidOperationException("Session is not using Skia Vulkan.")).AcquireTexture(); }
         catch (UiRenderingException error) { session.ReportRenderingFailure(error); throw; }
     }

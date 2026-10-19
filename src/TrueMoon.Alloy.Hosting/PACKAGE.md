@@ -1,6 +1,51 @@
 # TrueMoon.Alloy.Hosting
 
+Explicit root factory: `context.UsePresentation(resolver => new MyView(resolver.Resolve<MyModel>()), configure)`
+creates the root on the UI owner after the target is ready. Register dependencies
+explicitly; the view is not registered/resolved as a service and a factory-based
+Cobalt graph needs no generated view resolver. The generic overload remains.
+Renderer/window settings are snapshotted during registration. Return a fresh,
+detached root; null/disposed/parented/attached roots fault startup without disposing
+another owner's tree. Factory exceptions remain observable through Completion.
+
+`UiRendererKind` exposes the selected built-in integration. Raster accepts RasterUiTarget
+for external sessions; OpenGL/OpenGLUiTarget and Vulkan/VulkanUiTarget use matching
+`UiWindowGraphicsApi` target/presenter pairs. Null window GraphicsApi infers the selected
+renderer in UsePresentation; direct HostedUiWindow still defaults to Vulkan.
+An explicit mismatch fails before registration/native allocation. Standalone custom
+session factories must implement `IUiWindowSessionFactory` and declare compatible
+graphics before window allocation; HostedUiSessionFactory does this for built-in
+Skia GPU renderers. Custom external IUiSessionFactory remains supported.
+
+Asynchronous close: `RequestCloseAsync(token)` joins a cancellable user attempt and
+returns true only after successful cleanup, false on veto. `Closing` handlers
+(`Func<UiCloseReason, Task<bool>>`) start sequentially on the owner and may save/drain
+asynchronously; marshal UI work after await. Native close uses the same path.
+`Close`, `StopAsync` and App Stop ignore vetoes while awaiting every handler;
+errors fault `Completion` after cleanup and never set `IsClosed`. `IsCloseRequested`
+describes pending work, `CloseError` retains handler errors including native ones.
+Caller cancellation affects only its wait. Do not await window/dispatcher shutdown
+from a Closing handler or block the owner. The legacy constructor `closed` callback
+runs after a cleanup attempt including failure; use Completion for success.
+
+Frame scheduling: `SilkUiWindowOptions.FrameMode` defaults to `UiFrameMode.Automatic`
+(on-demand without FramePresented observers, compatibility polling with observers).
+Choose `OnDemand` or `Continuous` explicitly; `FramesPerSecond` is1–240/default60.
+`HostedUiWindow.RequestFrame()` and `UiSession.RequestFrame()` coalesce dynamic
+redraw requests without command capacity. Native expose may present cached pixels;
+minimized/zero-sized windows retain redraw until resume. Live windows still poll
+OS events with a bounded wait. `NeedsRender` guards output freshness independently
+of pending commands/future requests included in `NeedsUpdate`.
+
 Optional App integration for Alloy/Argentis UI: standalone OpenGL/Vulkan windows or sessions in an external host. Current native delivery supports **Windows x64 and .NET 10**. This is an alpha API; preparation of local packages does not establish release readiness.
+
+Diagnostics are opt-in: use `session.EnableDiagnostics()` for direct/external sessions,
+or `UseSilkWindow(w => w.EnableDiagnostics = true)` for standalone windows.
+`HostedUiWindow.Diagnostics` remains available after cleanup. Its thread-safe
+`Snapshot` contains session/window IDs, lifetime/viewport, queue outcomes and separate
+Update/measure/arrange/render/present CPU timing aggregates. Storage is fixed, with no
+frame history. Update includes nested phases; presentation acceptance is not GPU
+completion. External hosts can report output through `RecordPresentation`.
 
 For an application using the Microsoft DI adapter, reference these packages at the same version:
 

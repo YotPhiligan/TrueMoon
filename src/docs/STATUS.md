@@ -1,18 +1,38 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-17, ENG2 CPU viewport**.
-[Scope/layout](engine/PLAN.md#eng2-cpu-frame-viewport--2026-10-17),
-[commands/evidence](engine/HISTORY.md#eng2-cpu-frame-viewport--2026-10-17),
-[engine статус](engine/STATUS.md), [quality matrix](QUALITY.md), [общий план](PLAN.md).
-Probe-only CPU ring/receiver и одно Alloy/OpenGL окно отображают кадры owned child;
-UI получил owned BGRA pixel image factory. Authoring state и Editor App сохраняются.
+Последняя работа — **2026-10-19, UI INF7**: воспроизводимый integration runner
+Assembly/Source/Package/All и отдельный read-only verifier. Production API прежний.
+[Запуск](../ManualTests/AlloyFactoryConsumer/README.md#inf7-воспроизводимый-integration-runner),
+[контракт/evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19).
+UI613/Hosting79 в каждой Debug/Release,4TRX/1384passed/failed0/skipped0;
+21runner guard checks,24native processes и10fresh packages прошли. Source/package
+проверены на Cobalt/DI×OpenGL/Vulkan×Debug/published Release; package graph без
+Cobalt analyzer/view registration. Standalone Assembly и повторный verifier прошли.
+Нового full-solution/nonincremental build/golden/engine viewport/native RTE/
+performance запуска нет; full Debug1490 относится к предыдущему INF6.
+Bounded INF0–INF4/INF6/INF7 и минимальный INF5 завершены; далее общий ENG3.
+Full INF5 частичен, RTE/K3/K7/K8/VRAM сохраняются.
 
-Engine87/87 и UI570/570 Debug/Release; full Debug1368/1368,8TRX/failed0/skipped0.
-Native34/34 Debug apphost/published Release:32ENG1 regressions +2viewport runs,
-включая по20Start/Stop, actual GL pixels, resize/EOF/deadline/native close cleanup.
-Build0errors/1211warnings. Следующий code этап ENG3 versioned replacement;
-checkpoint/compiler/20Replace ещё не реализованы. UI hardware blockers, общий release
-и [отложенный RTE backlog](alloy/RICH_TEXT_EDITOR_PLAN.md) сохраняются.
+Предыдущая работа — **2026-10-18, UI INF3**: on-demand/continuous scheduling,
+RequestFrame/work wake, cached expose, suspended work/resume и bounded shared wait.
+[Contract/roadmap](alloy/PLAN.md#inf3inf6-условия-интеграции),
+[commands/failures/evidence](alloy/HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
+UI613/613 и Hosting39/39 Debug/Release; повторный full Debug1450/1450,9TRX/failed0/skipped0.
+Первый full1449/1450 упал на независимой Mithril readiness sharing race; targeted20
+и full94Mithril retry прошли, race не исправлялась. Build0errors/1211warnings.
+Fresh7packages/2independent runs и10native processes Debug/published Release:
+scheduling/legacy multi-window, external HUD, read-only golden360 и2ENG2 viewport
+прошли с validation/cleanup в своих scopes. CPU/GPU speedup не измерен.
+Далее UI INF4, full INF5 частичен. Full Release solution,32headless ENG1,
+прежняя full10package/40consumer и native RTE matrix не повторялись. Engine ENG3,
+[отложенный RTE backlog](alloy/RICH_TEXT_EDITOR_PLAN.md) и K3/K7/K8/VRAM сохраняются.
+
+Предыдущий engine собственный этап2026-10-17 — ENG2 CPU viewport;
+[scope/layout](engine/PLAN.md#eng2-cpu-frame-viewport--2026-10-17),
+[commands/evidence](engine/HISTORY.md#eng2-cpu-frame-viewport--2026-10-17).
+Engine87/87 и UI570/570 Debug/Release,34native cases и прежний full Debug1368
+относятся к тому запуску; общий [quality summary](QUALITY.md) различает scopes.
+
 ## Состояние модулей
 
 | Модуль | Предыдущий собственный результат и область вывода | Продолжение |
@@ -21,7 +41,7 @@ checkpoint/compiler/20Replace ещё не реализованы. UI hardware bl
 | [Cobalt / DI](cobalt/STATUS.md) |2026-10-15 COB7:runtime179/generator91 Release, paired App comparison и independent consumers; два projects/один package | Default Cobalt/adapter сохранены; массовая UseDI migration отложена. UI получает свой proof, allocation backlog отдельно |
 | [Enerit](enerit/STATUS.md) |2026-10-15 ENE5:runtime126/generator114 Debug/Release,10cases/90samples. Позднее MIT5 повторил runtime126 Debug/Release/package108 | Same-build pipes scope; MMF/schema/backpressure/engine frames не подтверждены |
 | [Mithril](mithril/STATUS.md) |2026-10-15 MIT5:94/94 Debug и Release,40restart +18shutdown,108fresh package cases; diagnostics проверены в96cases с живым parent | Bounded own-child/cooperative scope; game session supervisor и external restart не объявлены готовыми |
-| [Alloy / Argentis](alloy/STATUS.md) |2026-10-17:RichTextEditor/options реализован; UI563/563 Debug/Release,6native demo cases, прежний golden360/360 с validation teardown;10fresh nupkgs/36App +4direct с rich text | PA7a bounded scope; IME/full bidi/rich clipboard вне реализации. K3/K7/K8/VRAM/final matrix открыты; physical UI acceptance отдельно |
+| [Alloy / Argentis](alloy/STATUS.md) |2026-10-19:INF1–INF4/INF6/INF7/минимальный INF5; UI613/Hosting79 Debug/Release,21runner guards,24native processes,10fresh packages. [INF7 evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19); golden360 — INF3 | Bounded infrastructure завершена; далее общий ENG3. Full INF5 частичен; PA7a bounded scope, K3/K7/K8/VRAM/final matrix открыты |
 | [Engine / Editor](engine/STATUS.md) |2026-10-17:ENG1/ENG2 CPU ring/OpenGL viewport; engine87/UI570 Debug/Release,34native cases, по20Start/Stop, actual pixels/resize/EOF/deadline/cleanup | ENG3 compiler/checkpoint/versioned replacement/rollback; probe-only, packages/3D/long resource/performance proof ещё нет |
 
 Подробные counts/configuration/commands и ошибки остаются у владельцев. Эта таблица
@@ -40,12 +60,34 @@ checkpoint/compiler/20Replace ещё не реализованы. UI hardware bl
 
 ## Общие проверки — датированные сведения
 
-Последний общий build — **2026-10-17, ENG2**, nonincremental Debug:
-**0errors/1211warnings**. Full Debug solution1368/1368:
-Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI570/engine87,
-8TRX/failed0/skipped0. Отдельно Release engine87 и UI570; полный Release solution
-не выполнялся. UI golden/package/RichTextEditor native matrix этим run не повторены.
-[Команды и логи](engine/HISTORY.md#eng2-cpu-frame-viewport--2026-10-17).
+Текущий **2026-10-19, INF7**: UI613/Hosting79 в каждой Debug/Release,
+4TRX/1384passed/failed0/skipped0;21runner guards,24native processes,10fresh packages.
+All46commands и отдельный Assembly прошли, evidence/fingerprints перепроверены.
+Own suites остальных модулей и full solution в этом шаге не запускались.
+[Команды/evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19).
+
+Предыдущий **2026-10-19, INF6**: full Debug1490/1490,9TRX/failed0/skipped0:
+Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI613/Hosting79/engine87.
+Release UI613/Hosting79 отдельно; source12native processes и8independent native
+package consumers прошли. Новый nonincremental build/golden не запускались.
+[Команды/evidence](alloy/HISTORY.md#inf6-явные-factories-и-совместимость--2026-10-19).
+
+Предыдущий **2026-10-18, INF4**: full Debug1466/1466,9TRX/failed0/skipped0:
+Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI613/Hosting55/engine87.
+Отдельно Release UI613/Hosting55,10manual/engine native processes и2independent
+native package consumers прошли. Nonincremental build в INF4 не запускался;
+предыдущий такой build и golden ниже относятся к INF3.
+[Команды/evidence](alloy/HISTORY.md#inf4-асинхронное-закрытие--2026-10-18).
+
+Последний общий build — **2026-10-18, INF3**, nonincremental Debug:
+**0errors/1211warnings**. Повторный full Debug solution1450/1450:
+Core107/Cobalt179/generator91/Enerit126/generator114/Mithril94/UI613/Hosting39/engine87,
+9TRX/failed0/skipped0. Отдельно Release UI613/Hosting39; полный Release solution
+не выполнялся. Первый full1449/1450/Mithril93/94, затем targeted20/20 и полный
+повтор прошли; [исходный failure не скрыт](mithril/HISTORY.md#readiness-file-race-при-ui-inf3--2026-10-18).
+10native processes включают scheduling/HUD/golden и2ENG2 viewport; это не
+32ENG1 headless/новый own performance proof остальных модулей.
+[Команды и логи](alloy/HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
 
 Предыдущий MIT5 этап2026-10-15: Mithril94/Enerit126 в каждой Debug/Release:
 4TRX/440passed/0failed/0skipped;40restart +18shutdown +108package cases прошли.
@@ -80,8 +122,9 @@ generator91 в каждой Debug/Release),40package runtime processes и360gold
 
 ## Следующий конкретный шаг
 
-1. ENG1/ENG2 реализованы и проверены в bounded probe scope.
-   Следующий code шаг — [ENG3](engine/STATUS.md#следующий-конкретный-шаг):
+1. UI INF0–INF4/INF6/INF7 и минимальный INF5 завершены в указанном scope.
+   Full INF5 частичен. ENG1/ENG2 сохраняют bounded proof.
+   Следующий общий code шаг — [ENG3](engine/STATUS.md#следующий-конкретный-шаг):
    compiler/build-ID каталоги, checkpoint и versioned replacement/rollback,
    затем20Replace cycles при одном живом Editor App.
    UI K3/K7/K8/VRAM/full alpha сохраняются; PA1–PA10 автоматически не начинаются.

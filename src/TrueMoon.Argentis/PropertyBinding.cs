@@ -74,6 +74,7 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
     private sealed class Connection(PropertyBinding<TSource, TValue> binding) : IDisposable
     {
         private int _active = 1;
+        private int _pending;
         private bool _subscribed;
         private bool _busy;
         private bool _writingSource;
@@ -136,11 +137,15 @@ internal sealed class PropertyBinding<TSource, TValue> : IDisposable where TSour
         {
             if (!Active || (!string.IsNullOrEmpty(args.PropertyName) && args.PropertyName != binding._sourceProperty)) return;
             if (Environment.CurrentManagedThreadId == _ownerThread && _writingSource) return;
-            try { _dispatch(Synchronize); }
+            // Read the latest source value once for a burst, without merging ordinary UI commands.
+            if (Interlocked.Exchange(ref _pending, 1) != 0) return;
+            try { _dispatch(() => { Interlocked.Exchange(ref _pending, 0); Synchronize(); }); }
             catch (ObjectDisposedException) when (Volatile.Read(ref _active) == 0 || !binding._element.IsAttached || binding._element.IsDisposed)
             {
+                Interlocked.Exchange(ref _pending, 0);
                 // A notification already in flight can outlive its source subscription/session.
             }
+            catch { Interlocked.Exchange(ref _pending, 0); throw; }
         }
 
         public void Dispose()

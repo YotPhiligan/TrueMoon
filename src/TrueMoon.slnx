@@ -32,6 +32,7 @@
     <Project Path="ManualTests\AlloyTest\AlloyTest.csproj" />
     <Project Path="ManualTests\CobaltTest\CobaltTest.csproj" />
   </Folder>
+  <Project Path="TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj" />
   <Project Path="TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
   <Project Path="TrueMoon.Alloy.Platform.Silk/TrueMoon.Alloy.Platform.Silk.csproj" />
   <Project Path="TrueMoon.Alloy.Rendering.Skia/TrueMoon.Alloy.Rendering.Skia.csproj" />

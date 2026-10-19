@@ -1,5 +1,30 @@
 # Mithril: история реализации и проверок
 
+## Readiness-file race при UI INF3 — 2026-10-18
+
+Первый full Debug solution в UI INF3:1450total/1449passed/1failed, Mithril93/94.
+`RestartProcessTests.Restart_OwnedSequence_EnforcesPolicyBudgetDelayAndStop`
+(`always-crash`, exitCodes23/23/23, restarts2, callbacks1) получил child Exit1:
+IOException sharing violation при `ReadyAsync` чтении `ready-2.json`,
+ManualTests/MithrilRestartProbe/Program.cs:178. Helper ждёт File.Exists, затем
+однократно ReadAllTextAsync; наличие файла не гарантирует завершение writer.
+Последнее объяснение — вывод по исходнику/stack, без нового runtime fix.
+
+Точечная перепроверка того же метода без rebuild:20/20 Debug, failed/skipped0:
+
+```powershell
+dotnet test TrueMoon.Mithril.Tests/TrueMoon.Mithril.Tests.csproj --configuration Debug --no-build --filter 'FullyQualifiedName~Restart_OwnedSequence_EnforcesPolicyBudgetDelayAndStop' --logger trx --results-directory TestResults/AlloyInfrastructure/INF3/mithril-targeted --verbosity quiet
+```
+
+Следующий full Debug solution прошёл1450/1450, включая Mithril94/94. Первый
+failure сохранён в `TestResults/AlloyInfrastructure/INF3/final-checks/solution-Debug`,
+успешный повтор — `final-checks-reviewed/solution-Debug`; подробные UI/native
+[commands/evidence](../alloy/HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
+Исходники Mithril/RestartProbe и production policy/ownership не менялись;
+Mithril Release и own native/package matrix в этом UI шаге не повторялись.
+Passing retry не означает устранение readiness publication/read race. Отдельное
+исследование helper reliability остаётся перед будущим расширением acceptance.
+
 ## Package regression с bundled Cobalt — 2026-10-14
 
 UnitsPackageConsumer обновлён под единый Cobalt package:8nupkgs из9projects,

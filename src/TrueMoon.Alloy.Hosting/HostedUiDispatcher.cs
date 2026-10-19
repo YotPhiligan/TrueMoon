@@ -26,7 +26,7 @@ public sealed class HostedUiDispatcher : IStoppable, IAsyncDisposable
             try
             {
                 Owner.Schedule(initialize, tick, cleanup, closing, ready, completion,
-                    () => { lock (_gate) _windows.Remove(window); });
+                    () => { lock (_gate) _windows.Remove(window); }, window.WaitMilliseconds);
             }
             catch { _windows.Remove(window); throw; }
         }

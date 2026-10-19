@@ -35,6 +35,8 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     private readonly WindowCallbackBoundary _callbacks;
     private readonly Action<double>? _renderHandler;
     private readonly Action<bool>? _focusHandler;
+    private readonly Action<Vector2D<int>>? _resizeHandler;
+    private readonly Action<WindowState>? _stateHandler;
     private bool _manualLoop;
     /// <summary>The native graphics window. Windows client/position coordinates are physical pixels; use Viewport and Resize for UI coordinates.</summary>
     public IWindow NativeWindow { get; }
@@ -60,7 +62,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
         {
             VerifyWindowAccess();
             using var awareness = _dpi != null ? new Win32WindowDpi.AwarenessScope() : default;
-            var size = NativeWindow.FramebufferSize;
+            var size = NativeWindow.WindowState == WindowState.Minimized ? new Vector2D<int>(0, 0) : NativeWindow.FramebufferSize;
             var logical = NativeWindow.Size;
             return new UiViewport(Math.Max(0, size.X), Math.Max(0, size.Y),
                 _dpi?.PixelScale.Scale ?? (logical.X > 0 && size.X > 0 ? (float)size.X / logical.X : 1));
@@ -158,6 +160,10 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
             _focusHandler = focused => _callbacks.Execute(() => { if (!focused) Input?.Invoke(new UiInput(InputKind.FocusLost)); });
             NativeWindow.Render += _renderHandler;
             NativeWindow.FocusChanged += _focusHandler;
+            _resizeHandler = _ => { if (_manualLoop) _callbacks.Execute(render); };
+            _stateHandler = _ => { if (_manualLoop) _callbacks.Execute(render); };
+            NativeWindow.FramebufferResize += _resizeHandler;
+            NativeWindow.StateChanged += _stateHandler;
             foreach (var mouse in _input.Mice)
             {
                 mouse.MouseMove += (_, p) => _callbacks.Execute(() => PointerInput(InputKind.PointerMove, p.X, p.Y));
@@ -315,7 +321,12 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     /// <summary>Processes one owner-loop iteration without resetting or disposing the window.</summary>
     /// <returns>True when the window requests closure.</returns>
     /// <remarks>Event processing can invoke callbacks for other windows on this owner thread.</remarks>
-    public bool Pump()
+    public bool Pump() => Pump(render: true);
+    /// <summary>Processes events and native updates, optionally invoking Silk's periodic render callback.
+    /// Native refresh/resize/state callbacks remain active when periodic rendering is disabled.</summary>
+    /// <param name="render">Whether to request Silk's periodic rendering phase.</param>
+    /// <returns>True when the native window requests closure.</returns>
+    public bool Pump(bool render)
     {
         VerifyWindowAccess();
         using var awareness = _dpi != null ? new Win32WindowDpi.AwarenessScope() : default;
@@ -324,7 +335,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
         VerifyWindowAccess();
         DispatchPendingWindowInput();
         if (!NativeWindow.IsClosing) NativeWindow.DoUpdate();
-        if (!NativeWindow.IsClosing) NativeWindow.DoRender();
+        if (render && !NativeWindow.IsClosing) NativeWindow.DoRender();
         VerifyWindowAccess();
         return NativeWindow.IsClosing;
     }
@@ -343,6 +354,8 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
         // GLFW's platform may retain its last disposed native window. Its managed events must not root this host.
         if (_renderHandler != null) NativeWindow.Render -= _renderHandler;
         if (_focusHandler != null) NativeWindow.FocusChanged -= _focusHandler;
+        if (_resizeHandler != null) NativeWindow.FramebufferResize -= _resizeHandler;
+        if (_stateHandler != null) NativeWindow.StateChanged -= _stateHandler;
         if (_dpi != null) _dpi.RefreshRequested = null;
     }
 }

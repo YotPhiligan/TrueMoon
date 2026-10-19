@@ -289,7 +289,7 @@ public sealed class RichTextEditor : Element
     {
         VerifyAccess();
         if (!IsEffectivelyEnabled) return false;
-        if (input.Kind == InputKind.PointerDown && input.Button == 0)
+        if (input is { Kind: InputKind.PointerDown, Button: 0 })
         {
             context.Focus(this); context.Capture(this); _dragging = true;
             try { Move(Hit(input), input.Shift); }

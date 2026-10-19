@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableCobaltGenerator>false</EnableCobaltGenerator>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TrueMoon.Alloy.Hosting" Version="__VERSION__" />
+    <PackageReference Include="TrueMoon" Version="__VERSION__" />
+    <PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="__VERSION__" />
+  </ItemGroup>
+  <Target Name="CaptureAnalyzers" AfterTargets="SelectCobaltPackageAnalyzer" BeforeTargets="CoreCompile">
+    <WriteLinesToFile File="$(IntermediateOutputPath)resolved-analyzers.txt" Lines="@(Analyzer)" Overwrite="true" />
+  </Target>
+</Project>

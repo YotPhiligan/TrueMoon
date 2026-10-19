@@ -1,6 +1,23 @@
 # Игровой движок и редактор: состояние
 
-Последняя работа — **2026-10-17, ENG2 CPU frame viewport**.
+UI integration check — **2026-10-18, INF4**: ViewportProbe использует HostedUiWindow
+Closing для stop/drain engine tasks вместо ручного NativeWindow.Closing interception.
+Перед возвратом handler проверяет UI/canvas живыми и mappings0. Debug apphost и
+published Release smoke прошли, по14scenarios/25child launches/20StartStop, actual
+GL pixels, native-close-before-UI-disposal, sessions/mappings0/childrenreleased.
+Engine87/87 Debug в full solution1466/1466; own Release suite/32headless не повторялись.
+[Команды/evidence](../alloy/HISTORY.md#inf4-асинхронное-закрытие--2026-10-18).
+Это UI integration rerun; ENG3 не начинался, scope ENG2 не расширен.
+
+Предыдущий UI integration check — **2026-10-18, INF3**: ViewportProbe явно выбирает Continuous
+для receiver polling и RequestFrame после dynamic upload; session diagnostics
+проверяют IDs/phases/Disposed/Pending0 и actual presentation count. Два ENG2 smoke
+Debug apphost/published Release прошли с actual GL pixels и cleanup. Engine87Debug
+повторён в full solution; engine Release/32headless native cases не повторялись.
+[Единственные подробные команды/evidence UI](../alloy/HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
+Это instrumentation consumer, ENG3 не начинался и scope ENG2 не расширен.
+
+Последний собственный engine этап — **2026-10-17, ENG2 CPU frame viewport**.
 [Scope/точный layout](PLAN.md#eng2-cpu-frame-viewport--2026-10-17),
 [commands/failures/evidence](HISTORY.md#eng2-cpu-frame-viewport--2026-10-17),
 [запуск окна/probe](../../ManualTests/EngineSessionProbe/README.md), [общий статус](../STATUS.md).

@@ -1,19 +1,40 @@
-using System.Collections.Concurrent;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy;
 
-/// <summary>Owns one retained UI tree and render surface. All operations except Post run on its creator thread.</summary>
+/// <summary>Owns one retained UI tree and render surface. Post, InvokeAsync and RequestFrame accept calls from any thread.</summary>
 public sealed class UiSession : IDisposable, IInputContext
 {
+    private static long _nextId;
+    private volatile UiDiagnostics? _diagnostics;
     private readonly int _thread = Environment.CurrentManagedThreadId;
-    private readonly ConcurrentQueue<Action> _posted = new();
+    private readonly UiDispatcher _posted;
     private readonly IUiClipboard? _clipboard;
     private Element? _focus, _capture, _hover;
     private Invalidation _dirty = Invalidation.Tree | Invalidation.Layout | Invalidation.Render;
     private volatile bool _disposed;
     private bool _updating, _disposing, _reportingFailure;
     private volatile UiRenderingException? _renderingFailure;
+    /// <summary>Stable identity within this process; independent of diagnostics being enabled.</summary>
+    public long Id { get; } = Interlocked.Increment(ref _nextId);
+    /// <summary>Optional fixed-storage diagnostics. Null until explicitly enabled; retained after disposal.</summary>
+    public UiDiagnostics? Diagnostics => _diagnostics;
+    /// <summary>Enables observation from now on, including the current queue backlog. Repeated calls return the first collector.</summary>
+    /// <param name="windowId">Optional positive host window identity; captured only on the first call.</param>
+    /// <returns>The collector, whose snapshots remain readable on any thread after disposal.</returns>
+    public UiDiagnostics EnableDiagnostics(long? windowId = null)
+    {
+        VerifyAccess();
+        if (windowId is <= 0) throw new ArgumentOutOfRangeException(nameof(windowId));
+        if (_diagnostics != null) return _diagnostics;
+        var diagnostics = new UiDiagnostics(Id, windowId);
+        SetDiagnosticState(diagnostics);
+        _posted.EnableDiagnostics(diagnostics); _diagnostics = diagnostics;
+        return diagnostics;
+    }
+    private void SetDiagnosticState(UiDiagnostics? diagnostics) => diagnostics?.State(
+        _disposed ? UiSessionState.Disposed : _disposing ? UiSessionState.Disposing : IsFaulted ? UiSessionState.Faulted : Viewport.IsEmpty ? UiSessionState.Suspended : UiSessionState.Active,
+        Viewport, _renderingFailure?.Kind);
     /// <summary>The tree owned and disposed by this session.</summary>
     public Element Root { get; }
     /// <summary>The surface owned by this session; backend extensions can acquire its output.</summary>
@@ -21,7 +42,12 @@ public sealed class UiSession : IDisposable, IInputContext
     /// <summary>Current framebuffer size and DPI scale.</summary>
     public UiViewport Viewport { get; private set; }
     /// <summary>Whether a frame/layout update is needed.</summary>
-    public bool NeedsUpdate => _dirty != 0 || !_posted.IsEmpty;
+    public bool NeedsUpdate => _dirty != 0 || _posted.HasPending;
+    /// <summary>Whether the tree/viewport has unapplied visual invalidation. Queued commands and requests
+    /// for future frames leave the last completed output usable until they are applied by Update.</summary>
+    public bool NeedsRender => _dirty != 0;
+    /// <summary>Immutable dispatch limits selected when this session was created.</summary>
+    public UiDispatchOptions DispatchOptions { get; }
     /// <summary>Whether the session has released its resources.</summary>
     public bool IsDisposed => _disposed;
     /// <summary>The first terminal rendering failure, retained after disposal.</summary>
@@ -37,8 +63,14 @@ public sealed class UiSession : IDisposable, IInputContext
 
     /// <summary>Attaches an unattached root. Ownership transfers only when construction succeeds.</summary>
     public UiSession(Element root, IUiRenderSurface rendering, UiViewport viewport, IUiClipboard? clipboard = null)
+        : this(root, rendering, viewport, clipboard, new UiDispatchOptions()) { }
+
+    /// <summary>Attaches an unattached root with explicit dispatch limits. Ownership transfers only on success.</summary>
+    public UiSession(Element root, IUiRenderSurface rendering, UiViewport viewport, IUiClipboard? clipboard, UiDispatchOptions dispatchOptions)
     {
         ArgumentNullException.ThrowIfNull(root); ArgumentNullException.ThrowIfNull(rendering); viewport.Validate();
+        ArgumentNullException.ThrowIfNull(dispatchOptions); dispatchOptions.Validate();
+        DispatchOptions = dispatchOptions; _posted = new UiDispatcher(dispatchOptions);
         if (root.Parent != null || root.IsAttached || root.IsDisposed) throw new ArgumentException("Root is already owned or disposed.", nameof(root));
         Root = root; Rendering = rendering; Viewport = viewport; _clipboard = clipboard;
         try { Root.Attach(VerifyAccess, Post, ElementDetaching); }
@@ -52,17 +84,43 @@ public sealed class UiSession : IDisposable, IInputContext
     }
     /// <summary>Creates a session directly without App/DI. The session owns its root and created surface.</summary>
     public static UiSession Create(Element root, IRenderBackend backend, UiRenderTarget target, UiViewport viewport, IUiClipboard? clipboard = null)
+        => Create(root, backend, target, viewport, clipboard, new UiDispatchOptions());
+
+    /// <summary>Creates a directly owned session with explicit dispatch limits, without App/DI.</summary>
+    public static UiSession Create(Element root, IRenderBackend backend, UiRenderTarget target, UiViewport viewport, IUiClipboard? clipboard, UiDispatchOptions dispatchOptions)
     {
         ArgumentNullException.ThrowIfNull(backend);
+        ArgumentNullException.ThrowIfNull(dispatchOptions); dispatchOptions.Validate();
         var surface = backend.CreateSurface(target, viewport);
-        try { return new UiSession(root, surface, viewport, clipboard); }
+        try { return new UiSession(root, surface, viewport, clipboard, dispatchOptions); }
         catch (Exception error) { UiCleanup.Complete(error, surface.Dispose); throw; }
     }
-    /// <summary>Queues work for the next Update on the creator thread.</summary>
+    /// <summary>Queues synchronous work in FIFO order. Capacity/lifetime errors throw immediately;
+    /// callback errors propagate from Update. Remaining commands wait for a later Update when its budget is exhausted.</summary>
     public void Post(Action action)
     {
-        ArgumentNullException.ThrowIfNull(action); ObjectDisposedException.ThrowIf(_disposed, this);
-        ThrowIfFaulted(); _posted.Enqueue(action);
+        ArgumentNullException.ThrowIfNull(action); _posted.Post(action);
+    }
+    /// <summary>Coalesces a render request without consuming command capacity. Safe on any thread;
+    /// the next Update redraws dynamic content even when the tree has not changed. A suspended
+    /// session retains invalidation until it has a nonempty viewport. Closed/faulted sessions reject requests.</summary>
+    public void RequestFrame() => _posted.RequestFrame();
+    internal void SetUpdateSignal(Action? signal) => _posted.SetUpdateSignal(signal);
+    /// <summary>Runs a synchronous callback immediately on the owner, or queues it from another thread.
+    /// The returned task observes completion, rejection and callback errors. Cancellation removes pending
+    /// work but cannot interrupt a started callback. Owner execution bypasses the queue and its budget.
+    /// Await from workers; blocking the owner on work previously queued by a worker is unsupported.
+    /// Async callbacks and marshaling of task continuations are not provided.</summary>
+    public Task InvokeAsync(Action action, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        try { return _posted.InvokeAsync(action, cancellationToken, Environment.CurrentManagedThreadId == _thread); }
+        catch (UiRenderingException error)
+        {
+            try { ReportRenderingFailure(error); }
+            catch (Exception reportingError) { return Task.FromException(reportingError); }
+            return Task.FromException(error);
+        }
     }
     /// <summary>Checks thread affinity and session lifetime, including during fault cleanup.</summary>
     public void VerifyAccess()
@@ -85,9 +143,10 @@ public sealed class UiSession : IDisposable, IInputContext
         VerifyAccess(); ArgumentNullException.ThrowIfNull(failure);
         if (_renderingFailure != null) return false;
         _renderingFailure = failure; _reportingFailure = true;
+        SetDiagnosticState(_diagnostics);
         try
         {
-            while (_posted.TryDequeue(out _)) { }
+            _posted.Close(failure);
             var errors = new List<Exception>();
             try { CancelInput(); } catch (Exception error) { errors.Add(error); }
             finally { _focus = null; _capture = null; _hover = null; }
@@ -99,7 +158,7 @@ public sealed class UiSession : IDisposable, IInputContext
         }
         finally { _reportingFailure = false; }
     }
-    private void Invalidated(Invalidation reason) { VerifyAccess(); _dirty |= reason | Invalidation.Render; }
+    private void Invalidated(Invalidation reason) { VerifyAccess(); _dirty |= reason | Invalidation.Render; _posted.SignalUpdate(); }
     /// <summary>Changes viewport; rejects resize while the host has borrowed the current frame.</summary>
     public void Resize(UiViewport viewport)
     {
@@ -107,6 +166,7 @@ public sealed class UiSession : IDisposable, IInputContext
         try { Rendering.VerifyAvailable(); Rendering.Resize(viewport); }
         catch (UiRenderingException error) { ReportRenderingFailure(error); throw; }
         Viewport = viewport; Invalidated(Invalidation.Layout);
+        SetDiagnosticState(_diagnostics);
     }
     /// <summary>Applies a theme to the tree.</summary>
     public void SetTheme(Theme theme) { VerifyRendering(); ArgumentNullException.ThrowIfNull(theme); Root.ApplyTheme(theme); }
@@ -115,27 +175,49 @@ public sealed class UiSession : IDisposable, IInputContext
     {
         VerifyRendering(); if (_updating) throw new InvalidOperationException("UI Update cannot be reentrant.");
         _updating = true;
+        var diagnostics = _diagnostics;
+        var started = diagnostics?.Begin(UiPhase.Update) ?? 0;
+        var completed = false;
         try
         {
             Rendering.VerifyAvailable();
-            while (_posted.TryDequeue(out var action)) action();
+            _posted.Drain();
+            if (_posted.TakeFrameRequest()) _dirty |= Invalidation.Render;
             VerifyRendering();
             ClearDetachedInput();
-            if (Viewport.IsEmpty || _dirty == 0) return false;
+            if (Viewport.IsEmpty || _dirty == 0) { completed = true; return false; }
             var work = _dirty; _dirty = 0;
             try
             {
                 if ((work & (Invalidation.Layout | Invalidation.Tree)) != 0)
                 {
                     var logical = new Size(Viewport.Width / Viewport.Scale, Viewport.Height / Viewport.Scale);
-                    Root.Measure(logical, Rendering.TextLayout); Root.Arrange(new Rect(0, 0, logical.Width, logical.Height));
+                    Layout(logical, diagnostics);
                 }
-                VerifyRendering(); Rendering.Render(Root, Viewport); return true;
+                VerifyRendering(); Draw(diagnostics); completed = true; return true;
             }
             catch { _dirty |= work; throw; }
         }
         catch (UiRenderingException error) { ReportRenderingFailure(error); throw; }
-        finally { _updating = false; }
+        finally { _updating = false; diagnostics?.End(UiPhase.Update, started, completed); }
+    }
+    private void Layout(Size logical, UiDiagnostics? diagnostics)
+    {
+        var started = diagnostics?.Begin(UiPhase.Measure) ?? 0;
+        try { Root.Measure(logical, Rendering.TextLayout); }
+        catch { diagnostics?.End(UiPhase.Measure, started, false); throw; }
+        diagnostics?.End(UiPhase.Measure, started, true);
+        started = diagnostics?.Begin(UiPhase.Arrange) ?? 0;
+        try { Root.Arrange(new Rect(0, 0, logical.Width, logical.Height)); }
+        catch { diagnostics?.End(UiPhase.Arrange, started, false); throw; }
+        diagnostics?.End(UiPhase.Arrange, started, true);
+    }
+    private void Draw(UiDiagnostics? diagnostics)
+    {
+        var started = diagnostics?.Begin(UiPhase.Render) ?? 0;
+        try { Rendering.Render(Root, Viewport); }
+        catch { diagnostics?.End(UiPhase.Render, started, false); throw; }
+        diagnostics?.End(UiPhase.Render, started, true);
     }
     /// <summary>Routes input from the host in logical coordinates and reports consumption/capture.</summary>
     public UiInputResult HandleInput(UiInput input)
@@ -242,11 +324,14 @@ public sealed class UiSession : IDisposable, IInputContext
         if (_disposing || _reportingFailure) throw new InvalidOperationException("UI session disposal cannot be reentrant or occur during failure notification.");
         if (!Root.IsDisposed) Root.VerifyTreeAccess();
         _disposing = true;
+        SetDiagnosticState(_diagnostics);
+        _posted.Close();
         var errors = new List<Exception>();
         void Release(Action action) { try { action(); } catch (Exception error) { errors.Add(error); } }
         Release(CancelInput); Root.Invalidated -= Invalidated;
         Release(Root.Dispose); Release(Rendering.Dispose);
-        _disposed = true; _disposing = false; while (_posted.TryDequeue(out _)) { }
+        _disposed = true; _disposing = false;
+        SetDiagnosticState(_diagnostics);
         var handlers = Disposed; Disposed = null; ClipboardFailed = null; RenderingFailed = null;
         if (handlers != null) foreach (Action<UiSession> handler in handlers.GetInvocationList()) Release(() => handler(this));
         if (errors.Count != 0) throw new AggregateException("UI session cleanup failed.", errors);

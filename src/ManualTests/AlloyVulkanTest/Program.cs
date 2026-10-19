@@ -19,6 +19,8 @@ SkiaNativeLibrary.Initialize(nativePathIndex >= 0 ? args[nativePathIndex + 1] : 
 Console.WriteLine($"Native Skia: {SkiaNativeLibrary.LoadedPath}");
 if (args.Contains("--window-shared-loop-control")) { WindowSharedLoopProbe.Run(args); return; }
 if (args.Contains("--hosted-dispatcher")) { await HostedDispatcherProbe.RunAsync(args.Contains("--validation")); return; }
+if (args.Contains("--frame-scheduling")) { await FrameSchedulingProbe.RunAsync(args); return; }
+if (args.Contains("--async-close")) { await AsyncCloseProbe.RunAsync(args); return; }
 if (args.Contains("--window-callback-failure")) { await WindowCallbackProbe.RunAsync(args); return; }
 if (args.Contains("--window-lifecycle-soak")) { await WindowLifecycleProbe.RunAsync(args); return; }
 if (args.Contains("--window-dpi")) { WindowDpiProbe.Run(args); return; }

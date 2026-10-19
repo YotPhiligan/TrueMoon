@@ -1,5 +1,22 @@
 # Cobalt / DI: состояние и точка продолжения
 
+UI integration check — **2026-10-19, INF7**: tracked runner повторил Cobalt/DI
+source factory/legacy и independent package graphs на OpenGL/Vulkan в Debug и
+published Release. По24source App cases и4package native runs/provider прошли;
+package analyzer dump пустой, dependency disposal и source/artifact hashes сверены.
+Own Cobalt/generator/adapter code и suites не менялись/не запускались.
+[Команды/границы proof](../alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19).
+
+Предыдущий UI integration check — **2026-10-19, INF6**: explicit root factory не регистрирует
+view service и не требует generated view resolver для factory-based graph.
+Cobalt и Microsoft DI проверены на OpenGL/Vulkan, Debug apphost/published Release:
+по24source App cases и4independent package native runs/provider; package analyzer
+отключён и dump проверен. Source legacy generic graph/analyzer сохранён отдельно.
+Dependency lifetime/disposal, owner root, snapshot и startup failures прошли.
+Cobalt179/generator91 Debug в прежнем full solution1490/1490; own Release suites/
+performance не повторялись, runtime/generator/adapter code не менялся.
+[Точные команды/границы UI proof](../alloy/HISTORY.md#inf6-явные-factories-и-совместимость--2026-10-19).
+
 Документационная сверка2026-10-15: [общая quality matrix](../QUALITY.md)
 определяет следующий scope — UI package/Hosting с Cobalt и explicit fonts.
 Новых code/build/tests/package/performance запусков эта сверка не создаёт.

@@ -1,5 +1,90 @@
 # TrueMoon: история общей документации
 
+## UI INF7 integration runner — 2026-10-19
+
+Сохранён воспроизводимый runner Assembly/Source/Package/All с bounded owned
+processes, fresh evidence, строгими TRX/package/native assertions и read-only
+verifier. Production API и project wiring прежние. All:46commands,4TRX/1384passed
+(UI613/Hosting79 Debug/Release),24native processes,10fresh nupkgs и4required
+analyzer/native payloads;21guard checks и standalone Assembly прошли.
+394source inputs/840artifact fingerprints сверены. Новый full solution не
+запускался;1490 относится к INF6. Bounded INF0–INF4/INF6/INF7 и минимальный INF5
+завершены; далее ENG3. Full INF5/RTE/hardware backlog сохраняются.
+[Контракт/команды/failures/evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19).
+
+## UI INF6 explicit root factories — 2026-10-19
+
+Новый UsePresentation(rootFactory, configure) без hidden view registration, snapshot
+до Build и explicit renderer/target/presenter preflight. Cobalt/DI/generic overload
+сохранены; custom standalone factory теперь декларирует IUiWindowSessionFactory.
+Full Debug1490/1490,9TRX/failed0/skipped0; UI613/Hosting79 Debug/Release. Source
+8native consumers/48App cases +4close/HUD processes и10fresh packages/8independent
+native consumers без Cobalt analyzer прошли. Source/binary/package hashes сверены.
+Следующий UI шаг INF7 runner; full INF5 частичен, ENG3/RTE/hardware backlog прежний.
+Новый nonincremental build/golden/engine viewport/performance не запускались.
+[Contract/matrix/commands/failures/evidence](alloy/HISTORY.md#inf6-явные-factories-и-совместимость--2026-10-19).
+
+## UI INF4 async close — 2026-10-18
+
+Owner-safe RequestCloseAsync/Closing: cancel/save/drain, concurrent join, native
+requests и forced App Stop, observable errors и cleanup-before-success. Engine
+viewport переведён на этот API. Full Debug1466/1466,9TRX/failed0/skipped0;
+UI613/Hosting55 Debug/Release. Fresh7packages/2native consumers и10manual/engine
+native processes Debug/published Release прошли. Следующий UI этап INF6, full INF5
+частичен; ENG3/RTE/hardware backlog сохраняется. Новый nonincremental build/golden/
+performance в INF4 не выполнялся. [Полные команды/матрица/evidence](alloy/HISTORY.md#inf4-асинхронное-закрытие--2026-10-18).
+
+## UI INF3 frame scheduling — 2026-10-18
+
+Добавлены Automatic/OnDemand/Continuous, coalesced RequestFrame/work wake,
+monotonic cadence, bounded shared wait и cached native expose. Output freshness
+отделён от pending queue/future requests через NeedsRender.
+[Contract](alloy/PLAN.md#inf3inf6-условия-интеграции),
+[commands/failures/provenance](alloy/HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18)
+ведутся в UI документации. Следующий UI этап INF4; full INF5 частичен.
+
+Final UI613/Hosting39 Debug/Release; повторный full Debug1450/1450,
+9TRX/failed0/skipped0. Первый1449/1450 имел Mithril readiness sharing failure;
+targeted20 и full94 retry прошли, race не исправлялась. Build0errors/1211warnings.
+Fresh7packages/2independent consumers,10native processes с scheduling/legacy multi-
+window/HUD/golden360/engine viewport прошли Debug apphost/published Release.
+Fixture hashes неизменны, validation/cleanup прошли в своих scopes. Это не
+CPU/GPU speedup, full Release solution/32ENG1 headless/full10package/40consumer/
+native RTE matrix и не закрытие UI hardware blockers. Engine ENG3/RTE backlog
+сохранены; Mithril failure и engine integration отдельно отражены в module statuses.
+
+## Минимальный UI INF5 — 2026-10-18
+
+После INF2 добавлена opt-in fixed-storage diagnostics для session/queue/phases и
+host presentation. Единственный [контракт/остаток INF5](alloy/PLAN.md#inf3inf6-условия-интеграции)
+и [команды/evidence/overhead](alloy/HISTORY.md#inf5-минимальная-диагностика--2026-10-18)
+ведутся в UI документации. Общий PLAN/STATUS/QUALITY обновлены; engine STATUS
+отражает instrumentation существующего viewport probe, без начала ENG3.
+
+UI612/Hosting18 Debug/Release; full Debug1428/1428,9TRX/failed0/skipped0;
+nonincremental Debug build0errors/1211warnings. Два bounded ENG2 viewport smoke
+с diagnostics прошли Debug apphost/published Release. Семь fresh local packages
+и independent headless consumer2cases проверили новое public API; это не прежняя
+full10package/40consumer native matrix. BDN4cases измерили on/off overhead без
+обещания UI/GPU speedup. Full INF5 частичен; далее INF3, engine ENG3/RTE/K3/K7/K8/VRAM
+остаются в своих scopes. Full Release solution/32ENG1 headless/golden/native RTE/
+Vulkan matrix в этом шаге не повторялись.
+
+## UI INF2 dispatcher — 2026-10-18
+
+После INF1 реализован bounded session dispatcher, observable awaitable dispatch
+и latest-value PropertyBinding coalescing. Единственные подробные
+[contract/acceptance](alloy/PLAN.md#inf2-queue-и-dispatch-contract) и
+[команды/evidence](alloy/HISTORY.md#inf2-ограниченный-dispatcher--2026-10-18) находятся
+в UI документации. Общий PLAN/STATUS/QUALITY обновлены без дублирования tasks.
+
+UI596/596 и Hosting14/14 Debug/Release; full Debug solution1408/1408,
+9TRX/failed0/skipped0. Nonincremental Debug build0errors/1211warnings.
+Два bounded ENG2 viewport smoke Debug apphost/published Release прошли с actual
+pixels и cleanup. Это не full Release solution/packages/golden/32headless native
+ENG1 run и не UI hardware/performance acceptance. Следующий инфраструктурный UI
+шаг — минимум INF5 перед INF3; engine ENG3 и отложенный RTE backlog сохраняются.
+
 ## ENG1 headless supervisor — 2026-10-17
 
 После UI RichTextEditor и сохранения его отложенного плана реализован ENG1:
@@ -500,3 +585,19 @@ Nonincremental Debug0errors/1211warnings. Source323/binary76fingerprints
 не выполнялись. UI hardware blockers и отложенный RTE backlog не менялись;
 новых packages, shared GPU или performance baseline нет. Full Release solution
 suite и UI package/golden/RichTextEditor native matrix не запускались.
+
+## UI INF0/INF1 registry cleanup — 2026-10-18
+
+После сохранения дополнительного INF roadmap пользователь выбрал рекомендуемый
+UI шаг INF0→INF1. Исправлен repeat cleanup HostedUiSessionFactory после Update/
+borrowed/owner/tree guard failure, Creation fence и causes preservation сохранены.
+[Подробный contract/evidence](alloy/HISTORY.md#inf0inf1-повторяемый-cleanup-registry--2026-10-18).
+Новый TrueMoon.Alloy.Hosting.Tests с production ProjectReference добавлен в
+TrueMoon.slnx, source-linked UI tests не заменялись.14/14 Debug/Release;
+full Debug solution1382/1382,9TRX/failed0/skipped0, nonincremental Debug build
+0errors/1211warnings. Два bounded ENG2 OpenGL viewport runs Debug apphost/published
+Release прошли: по25child launches/20Start-Stop, sessions0/mappings0/child cleanup.
+Это не повтор32ENG1 headless cases, full Release solution, package/golden/RTE native
+matrix, performance/VRAM или hardware acceptance. Следующий UI этап INF2,
+engine продолжение ENG3 и отложенный RTE backlog сохраняются.
+Новых пакетов/ABI/production dependencies нет, commit/push не выполнялись.
