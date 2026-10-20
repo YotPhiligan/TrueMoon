@@ -4,5 +4,5 @@
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
-  <ItemGroup><ProjectReference Include="../Engine.Probe.Contracts/Engine.Probe.Contracts.csproj" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../../TrueMoon.Aether/TrueMoon.Aether.csproj" /></ItemGroup>
 </Project>

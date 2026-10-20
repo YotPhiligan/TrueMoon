@@ -1,4 +1,60 @@
-# Игровой движок и редактор: состояние
+# TrueMoon.Aether: состояние движка и редактора
+
+Последняя работа — **2026-10-19, реализация подключения через App**. Публичный
+UseAether валидирует и фиксирует options; AetherHost владеет Supervisor/Frames,
+App Stop/rollback/disposal выполняют drain и child cleanup. Startup не запускает
+игру автоматически. Concurrent shutdown разделяет completion; failed cleanup
+наблюдаем и допускает явный retry. Headless/viewport examples переведены на модуль.
+Правило такого подключения функциональных модулей закреплено в
+[AGENTS.md](../../AGENTS.md#подключение-модулей-к-app) и общем плане.
+[API/пример](../../TrueMoon.Aether/README.md#подключение-к-app),
+[проверки и границы](HISTORY.md#app-integration-реализация--2026-10-19).
+
+Aether115/115 Debug и Release; full Debug1518/1518,9TRX/failed0/skipped0.
+Native36/36 Debug apphost/published Release:34headless и2viewport с actual GL
+pixels, по20Start/Stop и child/mapping cleanup. Свежие9nupkgs и4независимых
+package consumers проверили App integration на Cobalt/DI. Nonincremental Debug
+build:0errors/1507warnings, без предупреждений в новых integration tests.
+Aether наследует IsPackable=true; локальная package delivery проверена, публичной
+публикации не было. ENG3a остаётся следующим code шагом.
+
+Предшествующий read-only [аудит App integration](HISTORY.md#проверка-app-integration--2026-10-19)
+описывает состояние до реализации. Deferred-preview metadata audit ниже относится
+к прежнему input set с IsPackable=false.
+
+Предыдущий package metadata check — **2026-10-19**: Aether получил самостоятельный PACKAGE.md,
+тематические tags и общие project/repository/license/icon metadata. Explicit local
+preview pack/nuspec/payload checks прошли; default IsPackable=false сохранён,
+NuGet delivery не включена. Own unit/native checks в этом metadata шаге не повторялись.
+[Общие команды/evidence](../HISTORY.md#nuget-package-metadata--2026-10-19).
+
+Предыдущая работа — **2026-10-19, выделение TrueMoon.Aether**. Одна engine library
+объединила contracts, supervisor/protocol, control adapters/native child bridge и
+CPU ring/receiver/FrameSession. Namespaces TrueMoon.Aether/TrueMoon.Aether.Contracts;
+отдельный Engine.Probe.Contracts project удалён. TrueMoon.Aether.Tests использует
+прямой ProjectReference на модуль, без dependency на executable/linked source copies.
+Пример Editor/Game.Runtime и отдельная Game.Logic DLL остались consumers.
+[Архитектура](PLAN.md#truemoonaether-одна-engine-assembly--2026-10-19),
+[README](../../TrueMoon.Aether/README.md),
+[команды/evidence](HISTORY.md#truemoonaether--2026-10-19).
+
+Aether87/87 отдельно Debug/Release; full Debug solution1490/1490,9TRX,
+failed0/skipped0. Native34/34 Debug apphost/published Release:32headless и2viewport
+с actual GL pixels, по20Start/Stop, generation/identity/errors/cleanup. Source339/
+binary76 fingerprints сохранены. UI613/Hosting79 Debug — часть full solution;
+own Release UI/golden/RTE/пакеты/performance/hardware matrix не повторялись.
+На дату выделения модуль был IsPackable=false; теперь true, API экспериментальный.
+ENG3 по-прежнему не реализован.
+Следующий code подэтап — ENG3a в Aether; UI/3D/release ограничения прежние.
+
+Предыдущая работа — **2026-10-19, сверка плана после UI INF7**. Очередность ENG3
+сохранена; [декомпозиция ENG3a–d и вопросы до code](PLAN.md#eng3-уточнение-плана-перед-реализацией--2026-10-19)
+сверены с loader/identity, protocol/supervisor и first-frame path. Уточнены
+артефакты на generation, restore-before-present, recoverable checkpoint error,
+cancellation/fences и необходимость распределить общий deadline. Это документация:
+runtime/production code не менялся, build/tests/native/performance не запускались.
+ENG3 не реализован; прежние ENG1/ENG2 passing результаты не обновлены.
+[Findings/границы сверки](HISTORY.md#сверка-плана-после-ui-inf7--2026-10-19).
 
 UI integration check — **2026-10-18, INF4**: ViewportProbe использует HostedUiWindow
 Closing для stop/drain engine tasks вместо ручного NativeWindow.Closing interception.
@@ -23,7 +79,8 @@ Debug apphost/published Release прошли с actual GL pixels и cleanup. Eng
 [запуск окна/probe](../../ManualTests/EngineSessionProbe/README.md), [общий статус](../STATUS.md).
 
 **ENG0 определён; ENG1 и ENG2 реализованы в bounded Windows x64/net10.0 scope.**
-Probe host/contracts/Game.Logic/tests остаются в ManualTests. CPU ring и одно
+С2026-10-19 engine implementation/contracts и tests находятся в Aether/Aether.Tests;
+host/Game.Logic остаются в ManualTests. CPU ring и одно
 Alloy/OpenGL окно реализованы; production engine packages/3D/replacement ещё нет.
 Production UI дополнен owned `SkiaImageSource.CopyBgraPixels`; Enerit/Mithril/Core/
 Cobalt APIs для ENG2 не менялись. RichTextEditor improvements остаются в
@@ -63,7 +120,14 @@ solution suite и не общий UI/package/performance acceptance.
 
 ## Следующий конкретный шаг
 
-**ENG3: versioned Game.Logic replacement.** Добавить compiler job/build-ID каталоги,
+**ENG3a: compiler job и immutable build artifact.** Сначала зафиксировать descriptor/
+dependency set/child-only loader и правила build cancel/timeout/stale completion,
+затем реализовать сборку и выбор build на generation без перезаписи active host.
+Compile failure сохраняет рабочую session и authoring state; Editor не загружает
+Game.Logic. После этого ENG3b checkpoint, ENG3c transaction/rollback и ENG3d proof
+по [детальному плану](PLAN.md#eng3-уточнение-плана-перед-реализацией--2026-10-19).
+
+Полный **ENG3: versioned Game.Logic replacement** включает compiler job/build-ID каталоги,
 минимальный versioned camera/interaction checkpoint, bounded stop/reap/start/restore,
 сохранение old build при compile failure и не более1rollback attempt. Проверить
 first-frame readiness после restore и20Replace cycles при одном Editor App.

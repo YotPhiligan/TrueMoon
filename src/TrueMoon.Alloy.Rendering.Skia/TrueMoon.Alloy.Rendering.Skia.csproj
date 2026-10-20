@@ -4,6 +4,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>Raster, OpenGL and Vulkan rendering for Alloy with bundled extended Skia for Windows x64. Alpha API.</Description>
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);ui;skiasharp;opengl;vulkan;text</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Alloy/TrueMoon.Alloy.csproj" />

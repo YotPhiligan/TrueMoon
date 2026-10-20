@@ -1,6 +1,48 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-19, UI INF7**: воспроизводимый integration runner
+Последняя проверка — **2026-10-19, аудит App entry points остальных модулей**.
+Enerit/Mithril/Alloy.Hosting имеют публичные extensions; Cobalt встроен в App,
+UseDI выбирает provider на builder. Utilities/contracts/UI layers/generators
+сохраняют собственные границы, пропущенных functional entry points не найдено.
+Focused Debug: Core46/Enerit13/Mithril9/Hosting38,106passed/failed0/skipped0,
+4TRX; runtime code не менялся. Это отдельная проверка, без нового full solution/
+Release/native/package запуска. [Таблица API и команды](HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
+Следующий общий code шаг — ENG3a.
+
+Последняя работа — **2026-10-19, Aether App integration**. UseAether/AetherHost
+связывают engine services, options и cleanup с App; headless/viewport examples
+используют эту точку подключения. Общее правило закреплено в
+[AGENTS.md](../AGENTS.md#подключение-модулей-к-app).
+Aether115/115 Debug/Release, full Debug1518/1518/9TRX/failed0/skipped0,
+36native cases и4consumers из9fresh packages прошли. Aether IsPackable=true;
+публикации не было, ENG3/replacement не реализован.
+[Единственные подробные команды/evidence](engine/HISTORY.md#app-integration-реализация--2026-10-19).
+Следующий общий code шаг — ENG3a; UI hardware/release ограничения сохраняются.
+
+Предыдущая работа — **2026-10-19, NuGet metadata audit**. Проверены44projects:
+13packable libraries/analyzer и подготовленный Aether с IsPackable=false.
+Дополнены описания/tags/собственные package README; repository/project metadata и
+asset paths централизованы.14локальных archives (13ready +1deferred preview)
+проверены по nuspec и payload hashes, без публикации и новых unit/native runs.
+[Проверка](../eng/Check-PackageMetadata.ps1),
+[scope/evidence](HISTORY.md#nuget-package-metadata--2026-10-19).
+Следующий engine code шаг остаётся ENG3a; общий release не объявлен готовым.
+
+Предыдущая работа — **2026-10-19, TrueMoon.Aether**: engine implementation/contracts
+объединены в одну сборку с TrueMoon префиксом; tests — TrueMoon.Aether.Tests.
+Editor/Game.Runtime и Game.Logic остались отдельными consumers. Aether87/87
+Debug/Release, full Debug1490/1490/9TRX/failed0/skipped0 и34native cases прошли.
+Новый module не зависит от UI/Game.Logic, остаётся experimental/IsPackable=false.
+[Границы/команды/evidence](engine/HISTORY.md#truemoonaether--2026-10-19).
+Следующий code шаг — ENG3a в Aether; compiler/replacement ещё не реализованы.
+
+Предыдущая работа — **2026-10-19, сверка плана после INF7**. Очередность ENG3
+сохранена, [детализация ENG3a–d](engine/PLAN.md#eng3-уточнение-плана-перед-реализацией--2026-10-19)
+связана с фактическими loader/protocol/frame paths; исправлен устаревший ENG1
+в отложенном RTE плане. Следующий конкретный code шаг — ENG3a compiler/artifact.
+Это документационная работа без новых build/tests/native/performance результатов.
+
+Последняя реализация — **2026-10-19, UI INF7**: воспроизводимый integration runner
 Assembly/Source/Package/All и отдельный read-only verifier. Production API прежний.
 [Запуск](../ManualTests/AlloyFactoryConsumer/README.md#inf7-воспроизводимый-integration-runner),
 [контракт/evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19).
@@ -42,7 +84,7 @@ Engine87/87 и UI570/570 Debug/Release,34native cases и прежний full Deb
 | [Enerit](enerit/STATUS.md) |2026-10-15 ENE5:runtime126/generator114 Debug/Release,10cases/90samples. Позднее MIT5 повторил runtime126 Debug/Release/package108 | Same-build pipes scope; MMF/schema/backpressure/engine frames не подтверждены |
 | [Mithril](mithril/STATUS.md) |2026-10-15 MIT5:94/94 Debug и Release,40restart +18shutdown,108fresh package cases; diagnostics проверены в96cases с живым parent | Bounded own-child/cooperative scope; game session supervisor и external restart не объявлены готовыми |
 | [Alloy / Argentis](alloy/STATUS.md) |2026-10-19:INF1–INF4/INF6/INF7/минимальный INF5; UI613/Hosting79 Debug/Release,21runner guards,24native processes,10fresh packages. [INF7 evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19); golden360 — INF3 | Bounded infrastructure завершена; далее общий ENG3. Full INF5 частичен; PA7a bounded scope, K3/K7/K8/VRAM/final matrix открыты |
-| [Engine / Editor](engine/STATUS.md) |2026-10-17:ENG1/ENG2 CPU ring/OpenGL viewport; engine87/UI570 Debug/Release,34native cases, по20Start/Stop, actual pixels/resize/EOF/deadline/cleanup | ENG3 compiler/checkpoint/versioned replacement/rollback; probe-only, packages/3D/long resource/performance proof ещё нет |
+| [Aether / Engine](engine/STATUS.md) |2026-10-19:UseAether/App-owned host; Aether115/115 Debug/Release, full Debug1518,36native cases и4independent consumers из9fresh packages; по20Start/Stop и actual GL pixels/cleanup | ENG3a compiler/artifact, затем checkpoint/replacement; API experimental, публикации/3D readiness нет |
 
 Подробные counts/configuration/commands и ошибки остаются у владельцев. Эта таблица
 сводит разные предыдущие runs и не является одним full-solution regression pass.
@@ -60,7 +102,21 @@ Engine87/87 и UI570/570 Debug/Release,34native cases и прежний full Deb
 
 ## Общие проверки — датированные сведения
 
-Текущий **2026-10-19, INF7**: UI613/Hosting79 в каждой Debug/Release,
+Последний full solution test run — **2026-10-19, Aether App integration**:
+full Debug1518/1518,9TRX/failed0/skipped0; Aether115/115 Debug/Release,
+36native cases и4independent consumers из9fresh packages.
+Nonincremental Debug build0errors/1507warnings.
+[Команды/evidence](engine/HISTORY.md#app-integration-реализация--2026-10-19).
+Последующий App entry-point audit повторил только focused106Debug tests.
+
+Предыдущий solution test run — **2026-10-19, Aether extraction**: Aether87/87 Debug/Release,
+full Debug1490/1490,9TRX/failed0/skipped0: Core107/Cobalt179/generator91/Enerit126/
+generator114/Mithril94/UI613/Hosting79/Aether87. Native34/34 Debug apphost/published
+Release; по20Start/Stop, actual pixels и cleanup. Новый nonincremental build,
+full Release solution, package/golden/RTE/performance/hardware matrix не выполнялись.
+[Команды/evidence](engine/HISTORY.md#truemoonaether--2026-10-19).
+
+Предыдущий **2026-10-19, INF7**: UI613/Hosting79 в каждой Debug/Release,
 4TRX/1384passed/failed0/skipped0;21runner guards,24native processes,10fresh packages.
 All46commands и отдельный Assembly прошли, evidence/fingerprints перепроверены.
 Own suites остальных модулей и full solution в этом шаге не запускались.
@@ -124,8 +180,9 @@ generator91 в каждой Debug/Release),40package runtime processes и360gold
 
 1. UI INF0–INF4/INF6/INF7 и минимальный INF5 завершены в указанном scope.
    Full INF5 частичен. ENG1/ENG2 сохраняют bounded proof.
-   Следующий общий code шаг — [ENG3](engine/STATUS.md#следующий-конкретный-шаг):
-   compiler/build-ID каталоги, checkpoint и versioned replacement/rollback,
+   Следующий общий code шаг — [ENG3a](engine/STATUS.md#следующий-конкретный-шаг):
+   compiler job/immutable artifact и выбор build на каждый generation; далее
+   checkpoint и versioned replacement/rollback,
    затем20Replace cycles при одном живом Editor App.
    UI K3/K7/K8/VRAM/full alpha сохраняются; PA1–PA10 автоматически не начинаются.
 2. K7 workaround search остаётся остановлен по решению пользователя. Supported fix

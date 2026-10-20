@@ -1,5 +1,18 @@
 # Enerit: состояние и точка продолжения
 
+App entry-point audit — **2026-10-19**: UseInvocationService/ListenInvocationService
+и PipesServiceTransport регистрируют proxy/handler/factories и transport lifecycle.
+Focused Debug AppInvocationRegistrationTests:13passed/failed0/skipped0, Cobalt/DI,
+включая реальное named-pipe connection в одном процессе. Runtime code не менялся;
+own full/Release/generator/cross-process/package/performance suites не повторялись.
+[Общая таблица API и команды](../HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
+
+Package metadata check — **2026-10-19**: Enerit и отдельный Enerit.Generator
+унаследовали repository/project metadata и получили тематические tags. Release
+pack/nuspec/README/license/icon и actual analyzer DLL payload проверены; package
+ownership не менялся. Own unit/IPC/performance consumers в этом metadata шаге
+не повторялись. [Общие команды/evidence](../HISTORY.md#nuget-package-metadata--2026-10-19).
+
 Последняя связанная проверка — **2026-10-15, Mithril MIT5 diagnostics/package**.
 Shared App/units/IPC fixture проверяет UnitProcessDiagnostic через App.UseDiagnostics;
 Enerit126/126 Debug и126/126 Release, Failed0/Skipped0; fresh package108/108,

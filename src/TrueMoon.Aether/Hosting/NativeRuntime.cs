@@ -1,21 +1,23 @@
-using System.Collections.ObjectModel;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Engine.Probe.Contracts;
-using TrueMoon.Generated.EngineSessionProbe;
+using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
+using TrueMoon.Generated.TrueMoon.Aether;
 using TrueMoon.Mithril;
 using TrueMoon.Mithril.Units;
 
-namespace EngineSessionProbe;
+namespace TrueMoon.Aether.Hosting;
 
 public static class BuildIdentity
 {
-    public static string HostId => Manifest([typeof(BuildIdentity).Assembly.Location, typeof(SessionIdentity).Assembly.Location,
+    public static string HostId => Manifest([Assembly.GetEntryAssembly()!.Location, typeof(SessionIdentity).Assembly.Location,
         typeof(PipesInvocationClient<>).Assembly.Location, typeof(ChildProcessUnitHandle).Assembly.Location]);
     // Editor fingerprints bytes without loading Game.Logic into its CLR. Only the
     // child creates/resolves game types; a future replacement must not pin a DLL in Editor.
@@ -27,6 +29,8 @@ public static class BuildIdentity
 
 public sealed class NativeRuntimeFactory : IRuntimeFactory
 {
+    /// <summary>Process-local bootstrap passed to an owned game runtime.</summary>
+    public const string BootstrapKey = "TM_ENGINE_BOOTSTRAP";
     public ConcurrentQueue<UnitProcessDiagnostic> Diagnostics { get; } = new();
     public List<NativeRuntimeLease> Leases { get; } = [];
     public IRuntimeLease Create(SessionLaunch launch)
@@ -38,7 +42,7 @@ public sealed class NativeRuntimeFactory : IRuntimeFactory
 
 internal sealed class EngineChild(SessionLaunch launch, Action<object> observe) : ChildProcessUnitHandle(
     new UnitConfiguration(1) { RestartPolicy = UnitRestartPolicy.Never, RestartLimit = 0, IsControlAppLifetime = false, TerminationDelay = 3000 },
-    new ProbeEvents<EngineChild>(observe))
+    new AetherEvents<EngineChild>(observe))
 {
     internal Process? OwnedProcess => Process;
     protected override async Task<ProcessStartInfo> GetProcessStartInfoAsync(CancellationToken cancellationToken = default)
@@ -52,7 +56,7 @@ internal sealed class EngineChild(SessionLaunch launch, Action<object> observe) 
     protected override void AddEnvironmentVariables(ProcessStartInfo info)
     {
         base.AddEnvironmentVariables(info);
-        info.Environment[RuntimeHost.BootstrapKey] = JsonSerializer.Serialize(launch);
+        info.Environment[NativeRuntimeFactory.BootstrapKey] = JsonSerializer.Serialize(launch);
         if (launch.Behavior is "ignore-stop" or "hang-stop") info.Environment.Remove(UnitParentProcessEventsHandler.ControlPipeKey);
     }
 }
@@ -76,7 +80,7 @@ public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> obse
         ProcessId = process.Id;
         // Drain immediately so even a verbose/failing runtime cannot block on a full pipe.
         _stdout = process.StandardOutput.ReadToEndAsync(); _stderr = process.StandardError.ReadToEndAsync();
-        _client = new(new ProbeEvents<PipesInvocationClient<IEngineControl>>(), launch.Endpoint);
+        _client = new(new AetherEvents<PipesInvocationClient<IEngineControl>>(), launch.Endpoint);
         _service = new EngineControlGeneratedImplementation(new BoundedControlClient(_client));
     }
     public async Task<ControlReply> SendAsync(ControlRequest request, CancellationToken token)

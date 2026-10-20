@@ -2,6 +2,279 @@
 
 [Текущий статус](STATUS.md), [единственный детальный план](PLAN.md).
 
+## App integration: реализация — 2026-10-19
+
+По запросу «давай реализуем» после аудита добавлены публичные UseAether и
+AetherOptions; AetherHost предоставляет App-owned Supervisor/Frames. Options
+валидируются и копируются при configuration, report path становится абсолютным.
+RuntimeFactory получает App resolver и создаёт свежий provider-owned instance;
+конфликт с отдельной регистрацией factory/повторный UseAether отклоняется до
+создания factory. Aether использует существующие TrueMoon.Contracts, без новой
+зависимости на concrete bootstrap, UI или Game.Logic.
+
+Non-disposable lifetime aliases участвуют в IStartable/IStoppable; единственный
+disposable host владеет sessions/frames. App startup готовит host без запуска игры.
+App Stop закрывает admission до drain, завершает readers и reap child; sync/async
+provider disposal и startup rollback используют тот же cleanup. Concurrent calls
+разделяют completion; ошибка наблюдаема, явный Dispose retry допустим. Даже при
+ошибке frame cleanup выполняется попытка supervisor cleanup. Borrowed Supervisor/
+Frames не зарегистрированы отдельными DI aliases; factory освобождается provider
+после host. App Stop terminal, повторные игровые Play/Stop используют session API.
+
+Headless/viewport examples используют UseAether; ручной SupervisorShutdown удалён.
+Viewport сохраняет UI close/drain порядок. NativeRuntimeFactory требует child-role
+bootstrap и matching Game.Logic DLL в executable consumer; UseAether не создаёт
+entry point. Новый native app-stop начинает реальную сессию, останавливает App,
+проверяет reap/release и отказ новой generation.
+
+По требованию «вот такие модули должны подключатся через App» правило закреплено
+в [AGENTS.md](../../AGENTS.md#подключение-модулей-к-app) и
+[общем плане](../PLAN.md#подключение-функциональных-модулей-через-app--2026-10-19).
+Utilities/contracts без собственного lifecycle не требуют фиктивной регистрации.
+
+### Требования и integration tests
+
+Новая AppIntegrationTests:11methods/28cases, оба provider Cobalt/Microsoft DI,
+существующие87cases сохранены. Прямые ProjectReferences тестов на App и DI adapter
+добавлены без executable references; framework xUnit2.9.3/VSTest сохранён.
+
+| Требование / поведение | Точное имя теста |
+| --- | --- |
+| «давай реализуем»: options snapshot, explicit start, App stop и однократное ownership | Registration_SnapshotsOptions_AndAppStopOwnsExplicitSession |
+| Disposal без App.Start, sync/async | DisposeWithoutAppStart_ReapsResolvedHost_ExactlyOnce |
+| Failed startup rollback | FailedStartup_RollsBackPreviouslyStartedAetherLifetime |
+| Изоляция двух App | IndependentApps_HaveIndependentHostsAndShutdown |
+| Повторная registration/factory conflict | DuplicateRegistrationOrFactoryConflict_FailsBeforeFactoryCreation |
+| Concurrent shutdown и fence новой generation | ConcurrentShutdown_JoinsCleanup_AndRejectsNewGeneration |
+| Наблюдаемый cleanup failure/retry | FailedCleanup_IsObservable_AndCanBeRetriedBeforeProviderDisposal |
+| Реальные CPU MMF/receiver/producer drain | AppStop_DrainsFrameWorkersAndMappings |
+| Invalid options во время configuration | InvalidOptions_AreRejectedDuringConfiguration |
+| Null context/configure | NullArguments_AreRejectedBeforeConfiguration |
+| Null factory result при startup | NullFactoryResult_IsAnObservableStartupFailure |
+
+IDE findTests недоступен (Tool not found); использован существующий явно связанный
+TrueMoon.Aether.Tests. Тестовые controlled leases проверяют exact disposal counts,
+ошибки и ordering; MMF case использует настоящий producer/receiver без UI/GPU.
+
+### Фактически выполненные проверки
+
+Windows x64/net10.0, SDK10.0.402/runtime10.0.13. Финальный source set:
+`TestResults/AetherApp/runtime-clean/summary.json`, Completed=true,4commands exit0.
+
+```powershell
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet -m
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Release --logger 'trx;LogFileName=results.trx' --results-directory TestResults/AetherApp/runtime-clean/tests-Release --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/AetherApp/runtime-clean/solution-Debug --verbosity quiet
+pwsh -NoProfile -File ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory TestResults/EngineSessions/aether-app-clean-20261019 -IncludeViewport
+```
+
+Nonincremental build:0errors/1507warnings; новых integration test warnings нет.
+Aether115/115 Release и115/115 Debug в full solution. Full Debug1518/1518,9TRX,
+failed0/skipped0: Core107, Cobalt179/generator91, Enerit126/generator114,
+Mithril94, UI613, Hosting79, Aether115.
+
+Native summary Completed=true:36/36, по17headless +1viewport на Debug apphost и
+published framework-dependent Release без RID. Каждый viewport:14cases/25child
+launches/20StartStop, actual GL pixels, native-close-before-UI-disposal,
+mappings/sessions0/childrenreleased, Game.Logic не загружена в Editor.
+349source/76binary fingerprints проверены после запуска.
+
+Отдельный package slice: `TestResults/AetherApp/final/summary.json`, version
+`0.2.2.7-alpha.aetherapp.20261019154515219`.9fresh packages: Contracts/Core/Cobalt/
+TrueMoon/Extensions.DependencyInjection/Enerit.Generator/Enerit/Mithril/Aether.
+Все9pack + consumer build/publish +4consumer commands exit0. Independent consumer
+имеет только PackageReferences, отдельные build props/targets/CPM/global.json/
+NuGet.Config/cache; consumer graph из8TrueMoon packages точной версии (Enerit
+generator — private build dependency, отдельно упакован), metadata source
+свежий feed, project dependencies отсутствуют. Cobalt analyzer отключён. Debug
+apphost/published Release ×Cobalt/DI проверили явные Start/Step, App.Stop cleanup,
+factory/lease disposal1 и поздний start rejection; loaded DLL hashes совпали с
+`lib/net10.0/TrueMoon.Aether.dll` свежего nupkg. Все4processes Passed=true.
+
+Combined package manifest честно сохраняет Completed=false: после успешного
+package slice первый full build выявил missing using TrueMoon.Dependencies в
+ViewportProbe. Исправлен example import, затем весь runtime scope повторён отдельно.
+Ранее initial test compile выявил missing TrueMoon.Services import в AetherOptions;
+он исправлен до package proof. Последние test nullable warnings устранены явными
+Assert.IsType для Resolve results. Промежуточные logs сохранены; package library
+code после pack не менялся. `TestResults/AetherApp/completion.json` проверяет
+финальные TRX/native/source/binary/package graph/hashes/links/namespaces отдельно
+от неуспешного раннего combined manifest.
+
+Финальный verifier Passed=true:15Markdown files/560local links/234anchors,
+18C# files с namespace по реальному пути, diff whitespace/staged guard прошли.
+Все6собственных фоновых helpers завершились; staged entries0, commit/push в этом
+шаге не выполнялись. Предшествующие uncommitted extraction/metadata изменения
+сохранены. Финальные native fingerprints относятся к исходникам после nullable fix.
+
+### Границы и продолжение
+
+Aether наследует IsPackable=true после снятия пользователем прежнего ограничения;
+его локальная package delivery теперь проверена. Публичной публикации не было.
+API экспериментальный, default native bootstrap application-specific. ENG3a
+compiler/artifact остаётся следующим шагом; compiler/checkpoint/replacement/3D
+не реализованы. Core/UI production code не менялся. Own Release UI/golden/RTE,
+полный Release solution, performance/long resource/hardware matrix не повторялись.
+K3/K7/K8/VRAM/final alpha открыты; driver/Windows settings не менялись.
+
+## Проверка App integration — 2026-10-19
+
+По запросу пользователя проверено наличие встроенной точки подключения Aether
+к TrueMoon.App. В9handwritten C# sources модуля отсутствуют App configuration
+extension, UseAether, IStartable/IStoppable adapters и ссылки на App.Builder.
+Это статическая проверка исходников/project graph; новых build/unit/native/
+package/performance запусков нет, implementation не выполнялась.
+
+- [SessionSupervisor](../../TrueMoon.Aether/Sessions/SessionSupervisor.cs) —
+  IAsyncDisposable с явными Start/Stop/control operations; не регистрирует себя
+  в App lifecycle. [FrameSession](../../TrueMoon.Aether/Frames/FrameSession.cs)
+  аналогично требует отдельного consumer ownership/Stop/drain.
+- [Headless example](../../ManualTests/EngineSessionProbe/Program.cs) создаёт
+  supervisor вручную, регистрирует private SupervisorShutdown как IStoppable и
+  хранит authoring fixture в App. Это локальная composition, не API Aether package.
+- [Viewport example](../../ManualTests/EngineSessionProbe/ViewportProbe.cs)
+  отдельно создаёт supervisor/FrameSession, подключает Alloy через UsePresentation
+  и вручную drains engine tasks/frames при Closing до UI disposal.
+- [Child RuntimeHost](../../ManualTests/EngineSessionProbe/RuntimeHost.cs)
+  самостоятельно строит App, parent monitor, game/protocol/producer и Enerit server.
+  Он не является общим extension подключения Aether к App.
+- [IAppConfigurationContext](../../TrueMoon.Contracts/IAppConfigurationContext.cs)
+  уже доступен через существующий TrueMoon.Contracts ProjectReference Aether.
+  Для module extension зависимость на concrete TrueMoon bootstrap не требуется.
+  Существующие примеры аналогичного registration pattern —
+  [Mithril AddUnit](../../TrueMoon.Mithril/AppCreationContextExtensions.cs) и
+  [Enerit UseInvocationService](../../TrueMoon.Enerit/AppCreationContextExtensions.cs).
+
+Рекомендация: отдельный UseAether registration contract на IAppConfigurationContext,
+options/factories и явный lifecycle adapter с определённым ownership/stop/drain/
+dispose. Запуск игровой сессии оставить явной операцией; UI выбирает consumer.
+Consumer должен получать зарегистрированный supervisor через resolver. При
+реализации проверить App Stop/Dispose/startup failure, отсутствие живых owned
+children/readers и repeated configuration/DI ownership. Это предложение, публичный
+API/реализация в данном audit не добавлялись; ENG3a план не подменён.
+
+Сохранены параллельные пользовательские изменения: namespaces уже соответствуют
+подпапкам, в Aether csproj сняты IsPackable=false/GenerateDocumentationFile=false.
+Current package eligibility наследуется true из общих props; исторические
+metadata/native test fingerprints из предыдущих runs этим audit не обновлялись.
+Изменены только engine STATUS/HISTORY/PLAN. Docs links/anchors/whitespace проверены
+отдельно; пользовательские code/project изменения не переписывались.
+
+## TrueMoon.Aether — 2026-10-19
+
+По запросу пользователя выделен единый engine module с принятым именем
+**TrueMoon.Aether**. Одна library assembly объединяет прежние Engine.Probe.Contracts
+и реализацию sessions/protocol/CPU frame transport/native child bridge из
+EngineSessionProbe. Namespace implementation — TrueMoon.Aether, contracts —
+TrueMoon.Aether.Contracts. Файлы физически перемещены, Compile-linked copies нет.
+Framework net10.0, API экспериментальный, IsPackable=false.
+[Принятые границы](PLAN.md#truemoonaether-одна-engine-assembly--2026-10-19),
+[README](../../TrueMoon.Aether/README.md).
+
+Aether references только TrueMoon.Contracts/Enerit/Mithril и Enerit generator;
+нет dependencies на Game.Logic/Alloy/Skia/Silk. Contracts остаются DTO/domain-only
+на уровне типов, но теперь находятся в одной assembly с implementation. Editor и
+Game.Runtime по-прежнему разные процессы одного example executable; App startup,
+конкретная game factory, FaultControl/Records и Alloy viewport остаются example
+composition. Game.Logic — отдельная DLL, иначе нарушилось бы требование ENG3
+обновлять игровую часть независимо от host. Новых production common-module APIs нет.
+
+TrueMoon.Aether.Tests физически заменил прежний EngineSessionProbe.Tests;
+существующие3test files/87cases сохранены с новым namespace и generated adapter
+namespace. Direct ProjectReference на Aether и Game.Logic, без executable reference.
+Единственный Probe.WaitAsync вызов заменён локальным helper с тем же bounded polling;
+assertions не переписывались. Пакеты/xUnit/SDK/TFM остались repository conventions.
+IDE findTests недоступен; тесты найдены в существующем явном test project.
+
+NativeRuntimeFactory bootstrap key больше не зависит от executable RuntimeHost;
+BuildIdentity.HostId использует entry host +Aether/Enerit/Mithril binaries.
+Это сохраняет same-build handshake после переноса contracts в module assembly.
+GameBuildId пока вычисляется из AppContext.BaseDirectory/Game.Logic.dll; выбор
+versioned artifact и checkpoint/replacement остаются ENG3a–d.
+
+TrueMoon.slnx теперь содержит Aether/Aether.Tests в folder Aether, example/game —
+в Engine; старые Contracts/test project entries удалены. Exact `dotnet sln
+TrueMoon.slnx list` подтвердил обе новые регистрации. RunProbe source roots включают
+Aether/Aether.Tests; Debug/Release publication доставляет новую assembly.
+README/общая карта/active status обновлены; link targets на перемещённые sources
+исправлены. Исторические команды/результаты старых namespaces ниже сохранены.
+
+### Фактически выполненные проверки
+
+Windows x64, SDK10.0.402/runtime10.0.13, VSTest/xUnit2.9.3. Exact commands:
+
+```powershell
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --logger "trx;LogFileName=results.trx" --results-directory TestResults/AetherExtraction/tests-Debug --verbosity quiet
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Release --logger "trx;LogFileName=results.trx" --results-directory TestResults/AetherExtraction/tests-Release --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/AetherExtraction/solution-Debug --verbosity quiet
+pwsh -NoProfile -File ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory TestResults/EngineSessions/aether-20261019 -IncludeViewport
+```
+
+Aether: Passed87/Failed0/Skipped0 в каждой Debug/Release. Full Debug solution:
+Passed1490/Failed0/Skipped0,9TRX: Core107/Cobalt179/generator91/Enerit126/generator114/
+Mithril94/UI613/Hosting79/Aether87. Это новый solution test run и discovery нового
+test project через реальный entry point; не новый nonincremental build или full
+Release solution. Generated Enerit nullable/compiler warnings не скрывались;
+их policy/исправление не входят в перемещение assembly.
+
+Native summary Completedtrue,34/34: по16headless scenarios и1viewport/configuration,
+Debug apphost/published framework-dependent Release без RID. Headless повторяет
+по20Start/Stop при одном App, identity/stale replies, startup/command timeout/cancel,
+crash/disconnect/heartbeat, owned forced stop/parent exit/reap и authoring fixture.
+Viewport — по14scenarios/25child launches, ещё по20Start/Stop при одном App/window,
+actual GL pixels/BGRA/origin/counters, resize/zero/resume/slow UI, live-child EOF,
+first-frame cancel/deadline и native close/drain-before-UI-disposal. Reports:
+ChildrenReleasedtrue/Mappings0/ActiveUiSessions0/GameLogicLoadedInEditorfalse.
+Source339/binary76 fingerprints сохранены; итоговая сверка evidence отдельно в
+ignored `TestResults/AetherExtraction/completion.json`.
+
+Итоговая сверка прошла: actual Aether test container обнаружен через solution,
+test/native DLL hashes совпадают в обеих конфигурациях, старой Contracts assembly
+нет в runtime deps graph.34report fingerprints сохранены;12file moves без source
+дубликатов и завершение owned helper processes проверены. Документация:
+14Markdown files/561local links/229anchors, git diff --check прошёл, staged0.
+
+Own Release UI/golden/RTE/package/performance/physical hardware matrix не повторялись.
+Новая assembly не означает готовность ENG3/3D/standalone game/поставки; UI K3/K7/K8/
+VRAM/final alpha прежние. Предыдущая документальная сверка ниже остаётся отдельной.
+Следующий code шаг — ENG3a внутри Aether с сохранением game DLL/host boundaries.
+
+## Сверка плана после UI INF7 — 2026-10-19
+
+По запросу пользователя проверить общий план сопоставлены общий/UI/engine roadmap,
+отложенный RTE backlog и текущие probe sources. На начало сверки main/origin/main
+совпадали на `29d9f79860418f86e8e2fca938aafc7fef5e6072`, worktree был clean.
+Это review/документация: code/project files не менялись, build/tests/native/
+performance/новой проверки runtime evidence не выполнялось.
+
+Вывод: следующий общий этап ENG3 сохраняется; full INF5/RTE развиваются по
+потребности UI, hardware alpha остаётся открытой. В
+[ENG3 плане](PLAN.md#eng3-уточнение-плана-перед-реализацией--2026-10-19) добавлены
+подэтапы compiler/artifact → checkpoint → replacement/rollback → integration proof.
+Новых production API, packages, 3D/input/Hot Reload задач не назначено.
+
+| Наблюдение по code/плану | Что уточнено в execution plan |
+| --- | --- |
+| [Host csproj](../../ManualTests/EngineSessionProbe/EngineSessionProbe.csproj) прямо ссылается на Game.Logic, [RuntimeHost](../../ManualTests/EngineSessionProbe/RuntimeHost.cs) создаёт ProbeGame | Выбранный artifact/loader/dependency set и canonical contracts должны быть определены до ENG3a; Editor DLL не загружает |
+| [BuildIdentity](../../TrueMoon.Aether/Hosting/NativeRuntime.cs) читает Game.Logic из AppContext.BaseDirectory, [supervisor](../../TrueMoon.Aether/Sessions/SessionSupervisor.cs) хранит fixed game ID | Build descriptor/manifest выбирается на generation, включая rollback; compiler staging отдельно от immutable build-ID directory |
+| [IGameSession/control](../../TrueMoon.Aether/Contracts/Control.cs) не имеют capture/restore; [ProbeGame](../../ManualTests/Game.Logic/ProbeGame.cs) хранит только минимальный stub | ENG3b вводит ограниченный versioned checkpoint и проверку non-default state; полной object-graph migration нет |
+| [FrameSession.StartAsync](../../TrueMoon.Aether/Frames/FrameSession.cs) уже configure/wait first-present | Candidate publication после restore; первый default-state кадр не считается readiness replacement |
+| CommandAsync на любую ошибку вызывает cleanup; [RuntimeProtocol](../../TrueMoon.Aether/Runtime/RuntimeProtocol.cs) не ack sequence при exception | Нужен отдельный nonterminal checkpoint rejection; обещание old paused/Resume нельзя вывести из нынешней transport-fault policy |
+| ENG0 требует1game child, а общий раздел допускал подготовку двух сессий | Для ENG3 явно оставлен sequential stop/reap/start; overlap требует нового решения |
+| Build120s/Replace45s заданы без распределения общего budget; runtime self guard120s | Перед реализацией определить monotonic budget/rollback reserve/cleanup и совместимый safety guard. Принятые численные deadlines этой сверкой не изменены |
+
+Дополнены вопросы cancellation до/после destructive boundary, late build result,
+Stop/новый Start/document revision и Editor close; partial logs/hash/pid/mapping
+proof должен принадлежать engine runner. Прежний UI INF7 не становится ENG3 proof.
+Исправлены устаревший next ENG1 в RTE плане, InputBatch приписанный ENG2 и
+непомеченные исторические формулировки ENG0/ENG1. Общий STATUS/PLAN и UI STATUS
+синхронизированы, подробные ENG3 задачи сохранены только в engine PLAN.
+
+Проверка документации прошла:11Markdown files/463local links/204heading anchors,
+fences/NUL/conflicts/whitespace, git diff --check и ограничение diff Markdown файлами.
+Результат — ignored `TestResults/PlanningFormat/review-20261019.json`; новых runtime результатов
+эта проверка не создаёт. ENG3 не начат; следующий code подэтап ENG3a.
+
 ## ENG1 headless supervisor — 2026-10-17
 
 После RichTextEditor/PA7a и сохранения отложенного RTE backlog пользователь

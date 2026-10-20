@@ -1,11 +1,15 @@
-# Игровой движок и редактор на TrueMoon: план
+# TrueMoon.Aether: план игрового движка и редактора
 
 Зафиксировано **2026-10-13** по обсуждению будущего кастомного движка для одной
-не очень сложной 3D-игры. Обновление2026-10-17: **ENG0 определён;
+не очень сложной 3D-игры. Сверка плана2026-10-19: **ENG0 определён;
 ENG1 headless supervisor и ENG2 CPU viewport реализованы в bounded probe scope;
 ENG3–ENG8 запланированы**.
 [Статус направления](STATUS.md), [общий план](../PLAN.md),
 [правила ведения](../PLANNING.md).
+
+После UI INF7 и выделения модуля TrueMoon.Aether следующий этап остаётся ENG3; его
+[декомпозиция и вопросы до реализации](#eng3-уточнение-плана-перед-реализацией--2026-10-19)
+сверены с ENG1/ENG2 code. Эта сверка не является новым implementation/test run.
 
 ## Цель и заданные требования
 
@@ -26,12 +30,65 @@ ENG3–ENG8 запланированы**.
 не задаёт. Порядок развития framework остаётся в общем плане; bounded MIT4/ENE4 results могут стать
 основой игрового прототипа. Детальные engine/editor задачи ведутся только здесь.
 
+## TrueMoon.Aether: одна engine assembly — 2026-10-19
+
+По запросу пользователя engine implementation перенесён из ManualTests в
+`TrueMoon.Aether/TrueMoon.Aether.csproj`, assembly `TrueMoon.Aether.dll`, net10.0.
+Это экспериментальный модуль; выделение сборки не означает реализацию ENG3 или
+готовность NuGet/3D/Hot Reload. [README](../../TrueMoon.Aether/README.md),
+[проверки переноса](HISTORY.md#truemoonaether--2026-10-19).
+
+| Часть | Текущее размещение |
+| --- | --- |
+| Engine contracts и implementation | Одна TrueMoon.Aether assembly: namespace TrueMoon.Aether.Contracts, supervisor/protocol, bounded control adapters, native child bridge, CPU ring/receiver/FrameSession |
+| Engine tests | TrueMoon.Aether.Tests, direct ProjectReference на Aether; не executable reference/linked production copies |
+| Editor/Game.Runtime composition | ManualTests/EngineSessionProbe: entry roles, concrete game factory, App lifetime, Alloy viewport и native fault scenarios |
+| Игровая логика | ManualTests/Game.Logic: отдельная DLL с IGameSession implementation; не часть engine library |
+
+Contracts не содержат transport/UI/native types; отдельная Contracts assembly
+больше не требуется. Aether использует TrueMoon.Contracts/Enerit/Mithril и generator,
+не зависит от Alloy/Argentis/Skia/Silk или Game.Logic. Пример подключает UI явно.
+Файлы перемещены, не Compile-linked. Старый Engine.Probe.Contracts project и
+EngineSessionProbe.Tests project заменены Aether/Aether.Tests в TrueMoon.slnx.
+Ранние записи ENG0–ENG2 ниже описывают размещение на дату реализации.
+
+Game.Logic остаётся отдельной: независимая замена игровой DLL при стабильном
+engine/host contract является требованием ENG3. Один модуль не объединяет CLR
+процессы Editor и runtime, tests и исполняемый пример. ENG3a реализуется в Aether;
+application-specific composition и проверочные сценарии остаются consumers.
+Assembly API экспериментальный; в текущем рабочем csproj IsPackable наследуется
+true из общих props. Историческое ограничение false при выделении снято;
+публичная публикация остаётся отдельным шагом; independent package consumers
+проверены при App integration, без объявления production readiness.
+
+После [аудита](HISTORY.md#проверка-app-integration--2026-10-19) по запросу пользователя
+реализован UseAether extension на IAppConfigurationContext. AetherOptions валидируются
+и фиксируются при registration; identity/report directory/deadlines/observer/factory
+не перечитываются из mutable options. RuntimeFactory callback создаёт свежий
+App-owned instance, может использовать resolver для dependencies; отдельная
+регистрация IRuntimeFactory и повторный UseAether отвергаются.
+
+AetherHost — единственный App-owned disposable владелец Supervisor/Frames;
+эти borrowed свойства не регистрируются отдельными disposable aliases. Runtime
+factory имеет собственную единственную provider registration. Non-disposable
+lifecycle adapter реализует IStartable/IStoppable: startup готовит модуль без
+автоматического child launch, Stop permanently fences new starts, drains frames
+и завершает supervisor/child. Concurrent shutdown join, failed cleanup наблюдаем
+и допускает явный host Dispose retry. Sync/async provider disposal и startup
+rollback также освобождают host; ошибки одного cleanup не отменяют попытку другого.
+
+Headless/viewport examples используют UseAether; manual SupervisorShutdown удалён.
+Игровая сессия запускается явно, UI/native child-role bootstrap выбирает consumer.
+Новая dependency Aether на concrete App/bootstrap не нужна: contracts уже находятся
+в TrueMoon.Contracts. Подробные [tests/native/package evidence](HISTORY.md#app-integration-реализация--2026-10-19)
+отдельны от прежнего audit. ENG3a compiler/artifact остаётся следующим engine code шагом.
+
 ## ENG0: принятый scope первого прототипа — 2026-10-15
 
 По решению пользователя после UI package/Hosting quality начинается ENG0.
 Зафиксирован ограниченный прототип «Editor запускает игру, показывает кадр и
-переживает замену/сбой child». Это проектирование: engine code и собственных
-build/test/process/GPU результатов пока нет. Численные limits ниже — требования
+переживает замену/сбой child». На дату ENG0 это было проектирование без engine code
+и собственных build/test/process/GPU результатов. Численные limits ниже — требования
 предстоящих проверок, а не измеренная производительность.
 
 ### Сцена, платформа и границы
@@ -263,9 +320,10 @@ Stop отменяет локальный wait и ставит fence на queued/
 не выполняется. Crash/disconnect/timeout дают Faulted с фазой и причиной; owned
 cleanup обязателен. CleanupFailed блокирует launch до успешного явного retry cleanup.
 
-Game.Logic пока минимальный fixed-tick stub без frames/checkpoint/restore.
-Поддержаны Hello, LoadScene, SetMode, Step, GetStatus, Stop; InputBatch/surface и
-frame transport относятся к ENG2, compiler/versioned replacement — к ENG3.
+На завершении ENG1 Game.Logic — минимальный fixed-tick stub без frames/checkpoint/restore.
+Поддержаны Hello, LoadScene, SetMode, Step, GetStatus, Stop; surface и frame transport
+добавлены ENG2. InputBatch остаётся отдельной будущей engine input задачей;
+compiler/versioned replacement и checkpoint/restore относятся к ENG3.
 Число60Hz в stub — target timer, не измеренная performance guarantee.
 Контракт полного Game.Logic checkpoint/restore из ENG0 остаётся требованием ENG3.
 
@@ -295,9 +353,11 @@ parent exit и authoring fixture. Полный Debug solution test entry point �
 ## Границы и владельцы
 
 Новая часть: игровой цикл, world/scene, камеры, 3D renderer, assets, интеграция
-физики/звука, редактор и процессная связь viewport. Названия и границы сборок
-Engine, Editor, Game.Runtime, Game.Logic и общих Contracts пока концептуальные;
-csproj, versioning и публичные interfaces определяются при начале этапа.
+физики/звука, редактор и процессная связь viewport. Engine implementation и contracts
+теперь объединены в TrueMoon.Aether. Editor/Game.Runtime остаются ролями отдельного
+примерного executable, Game.Logic — отдельной игровой DLL. Production Editor/
+standalone delivery и versioning уточняются в своих этапах; текущая
+экспериментальная сборка не закрывает их.
 
 | Направление | Ответственность |
 | --- | --- |
@@ -381,9 +441,10 @@ launch после Stop/failed Start и не поддерживает nonempty la
 2. При compile failure показать diagnostics и сохранить предыдущую рабочую
    игровую версию. Загруженные DLL не перезаписываются новым build.
 3. На границе tick получить поддерживаемый checkpoint/snapshot с version/schema.
-4. Остановить старую сессию и запустить candidate, либо подготовить обе сессии
-   с явным memory budget. Вариант переключения выбирается проверками.
-5. Выполнить readiness и согласование transport, применить snapshot/migration.
+4. Полностью остановить/reap старую сессию и запустить candidate. Для ENG3 принят
+   только один game child; overlapping sessions потребуют отдельного решения.
+5. Применить поддержанный snapshot, согласовать transport и подтвердить первый
+   presented frame восстановленного состояния. Произвольная migration не обещается.
 6. Показать кадры нового generation; retire прежние ресурсы после их использования.
 7. При candidate failure оставить Editor usable, сохранить исходную причину и
    обеспечить явный возврат к последней рабочей версии или исходной сцене.
@@ -398,6 +459,81 @@ launch после Stop/failed Start и не поддерживает nonempty la
 альтернативное исследование: unloading cooperative, references/threads/callbacks
 могут удерживать старые assemblies. Оба механизма не являются предусловием
 первого работающего editor/runtime прототипа.
+
+## ENG3: уточнение плана перед реализацией — 2026-10-19
+
+Документальная сверка после завершения UI INF7. ENG3 не реализован; результаты
+ENG1/ENG2 и INF7 имеют прежние даты/scopes. Порядок остаётся ENG3 → ENG4,
+без обязательного расширения INF5/RTE, без production engine packages/Hot Reload.
+Ниже декомпозиция существующего ENG3; она не добавляет новый игровой renderer/input.
+[Findings и ссылки на code](HISTORY.md#сверка-плана-после-ui-inf7--2026-10-19).
+
+### Подэтапы и наблюдаемый результат
+
+| ID | Работа | Критерий перехода дальше |
+| --- | --- | --- |
+| ENG3a | Compiler job, immutable build artifact и выбор GameBuild на каждый launch | Candidate собирается без пересборки/перезаписи активного host. Manifest/hashes и разрешённые dependencies проверены; child загружает выбранную DLL, Editor её не загружает. Compile failure/cancel/timeout сохраняют действующую session/build/document |
+| ENG3b | Минимальный checkpoint/restore contract | На tick boundary фиксируются version/host/scene/revision/tick, camera transform и interaction flag. Payload ограничен64KiB; invalid/mismatched snapshot не применяется частично. Состояние восстанавливается до первого показываемого кадра candidate |
+| ENG3c | Serialized Replace и однократный rollback | Pause/capture → stop/reap → start/restore/first-present → прежний mode. Новые generation/identity, один game child; failed cleanup блокирует launch. Candidate failure сохраняет исходную ошибку и допускает не более1rollback; rollback failure оставляет usable Editor/Faulted |
+| ENG3d | Интеграция команд Editor и воспроизводимый proof | В Debug apphost и published Release по20Replace при одном Editor App/window. Поведение/pixels меняются между builds, checkpoint и authoring state сохраняются; compile/candidate/rollback/cancel/close/cleanup failures проверены отдельно. Повторены релевантные ENG1/ENG2 regressions |
+
+ENG3a — следующий конкретный code подэтап. Production Core/Cobalt/Enerit/Mithril/UI
+API не расширяются заранее; общая проблема модуля при обнаружении получает свою задачу.
+
+### Что уточнить до реализации соответствующего подэтапа
+
+1. **Artifact/loader boundary (ENG3a).** Нынешние direct ProjectReference и
+   `new ProbeGame()` не выбирают versioned DLL; supervisor хранит fixed GameBuildId,
+   BuildIdentity читает DLL из AppContext.BaseDirectory. Нужен validated descriptor
+   выбранного build на каждый generation, включая rollback. Build job сначала пишет
+   в собственный staging directory, build-ID определяется по готовому manifest;
+   неполный output не становится candidate. Определить разрешённый dependency set
+   и единый contract assembly; не создавать второй несовместимый экземпляр contracts.
+   Active/last-known-good artifacts неизменяемы и не удаляются до успешного reap.
+2. **Publication/compatibility (ENG3b).** Текущий FrameSession.StartAsync уже ждёт
+   first-present. Для Replace restore должен предшествовать разрешению публикации
+   candidate frames; первоначальный default-state кадр не считается restored readiness.
+   Проверяемую version/scene/revision совместимость определить до остановки старого
+   child. Отказ внутри candidate restore относится к rollback. Reset-from-document
+   остаётся явным выбором; миграция произвольного object graph не входит в ENG3.
+3. **Recoverable checkpoint failure (ENG3b).** Сейчас любой CommandAsync error
+   вызывает FailAsync/cleanup, а RuntimeProtocol не подтверждает command sequence
+   при exception. Это не даёт обещанного Resume после отказа CaptureCheckpoint.
+   До кода определить подтверждённый nonterminal отказ checkpoint отдельно от
+   transport/protocol fault с неизвестным исходом; проверить sequence, heartbeat,
+   сохранность paused old child и возможность Resume. Не обещать recovery после
+   произвольного RPC timeout без отдельного согласования с fault policy ENG1.
+4. **Races и cancellation (ENG3a/ENG3c).** Build job не держит session gate120s.
+   Его результат связан с job/source revision и ожидаемым session/generation/build;
+   завершившаяся после Stop/нового Start/правки документа сборка не применяет себя
+   автоматически к другой сессии. До остановки old runtime отмена сохраняет его;
+   после остановки отдельно определить recovery и обязательный owned cleanup.
+   Editor close ставит fence, отменяет compiler и drains workers/child/readers до UI
+   disposal; поздний build/rollback не запускает новый child после close.
+5. **Единый deadline (ENG3a/ENG3c).** Сохранены build120s и replace45s из ENG0.
+   Local maxima startup15s/command2s/stop3+5s нельзя независимо суммировать для
+   candidate и rollback. До кода записать распределение общего monotonic budget,
+   резерв rollback и правила cleanup при исчерпании deadline; timeout не означает
+   успешный reap. Runtime self guard2minutes тоже сверить: он не должен прерывать
+   допустимый build120s при живом Editor. Изменение принятого общего лимита требует
+   явной записи решения, эта сверка численные limits не меняет.
+
+### Proof и границы вывода
+
+До запуска зафиксировать сценарии, counts/deadlines и cleanup assertions. Нужны
+различимые builds A/B, фактический loaded path/hash в child и отсутствие Game.Logic
+в Editor CLR; одних changed manifest/цвета toolbar недостаточно. Для checkpoint —
+non-default state до Replace и восстановленный tick/state/pixels после него,
+отдельно Playing/Paused, mismatch и explicit reset. Authoring revision/Dirty/
+selection/panels и живой Editor App/window сохраняются при failure.
+
+Matrix включает compile error/timeout/cancel, missing/tampered artifact, snapshot
+reject/capture error, candidate startup/restore/first-frame failure, rollback failure,
+Stop/close во время build/replace, stale completion и failed reap/retry. Задачи и
+результаты отражаются в engine STATUS/HISTORY; source/binary/native/report hashes,
+partial logs, owned child/compiler completion и mappings0 проверяются явно.
+INF7 UI runner не подменяет ENG3 proof; engine runner расширяется в своём scope.
+Package/standalone/3D/shared GPU/long performance остаются ENG4–ENG8.
 
 ## Команды и передача кадров
 

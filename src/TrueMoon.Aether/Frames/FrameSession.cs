@@ -1,6 +1,7 @@
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Sessions;
 
-namespace EngineSessionProbe;
+namespace TrueMoon.Aether.Frames;
 
 public sealed record FrameDisplay(FrameSurface Surface, FrameReceiver Receiver, TaskCompletionSource Presented);
 

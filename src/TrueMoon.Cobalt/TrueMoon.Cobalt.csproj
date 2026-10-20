@@ -4,6 +4,7 @@
         <TargetFramework>$(TF)</TargetFramework>
         <Description>TrueMoon Cobalt generated dependency resolution, service registration and owned lifetime management. Alpha API.</Description>
         <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <PackageTags>$(PackageTags);dependency-injection;source-generator</PackageTags>
         <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetCobaltAnalyzerPackageFiles</TargetsForTfmSpecificContentInPackage>
     </PropertyGroup>
     

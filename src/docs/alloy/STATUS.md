@@ -1,6 +1,42 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-19, INF7**: tracked integration runner с профилями
+App entry-point audit — **2026-10-19**: UseAlloy/UsePresentation находятся в
+Alloy.Hosting; Argentis/Alloy/renderer/platform остаются самостоятельными слоями.
+Focused Debug AlloyIntegrationTests/HostedUiSessionFactoryTests:38passed/failed0/
+skipped0. UI code не менялся; full UI/Release/native GPU/package/golden/RTE/
+performance/hardware matrix не повторялись. K3/K7/K8/VRAM/final alpha прежние.
+[Общая таблица API и команды](../HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
+
+Integration regression — **2026-10-19, Aether App integration**: viewport example
+получает Supervisor/Frames из AetherHost, сохраняет UI close/drain порядок.
+Полный Debug повторил UI613/Hosting79; Debug apphost/published Release viewport
+прошли с actual GL pixels, по20Start/Stop, native-close-before-UI-disposal и
+mappings/sessions0/childrenreleased. UI production code не менялся. Own Release
+UI/golden/RTE/package/performance/hardware matrix не повторялись; K3/K7/K8/VRAM
+и final alpha остаются открыты.
+[Единственные подробные engine команды/evidence](../engine/HISTORY.md#app-integration-реализация--2026-10-19).
+
+Package metadata check — **2026-10-19**: Argentis/Alloy/Silk получили descriptions
+и собственные PACKAGE.md; все5UI packages — тематические tags и общие repository/
+project metadata. Release pack/nuspec/README/license/icon/XML и Skia native/targets
+payloads проверены. UI runtime code, own unit/native/golden/RTE/hardware matrix
+в этом metadata шаге не менялись/не повторялись.
+[Общие команды/evidence](../HISTORY.md#nuget-package-metadata--2026-10-19).
+
+Последняя интеграционная проверка — **2026-10-19, выделение TrueMoon.Aether**:
+пример EngineSessionProbe теперь использует engine library. Full Debug solution
+повторил UI613/Hosting79; два native OpenGL viewport runs Debug/published Release
+прошли с actual pixels, по20Start/Stop, native-close drain и cleanup. UI production
+code не менялся; own Release UI/golden/RTE/package/hardware matrix не повторялись.
+[Единственные подробные engine команды/evidence](../engine/HISTORY.md#truemoonaether--2026-10-19).
+
+Предыдущая работа — **2026-10-19, документальная сверка roadmap**: исправлена
+устаревшая ссылка на ENG1 в отложенном RTE плане. Bounded INF завершён;
+следующий общий шаг ENG3a в [engine плане](../engine/PLAN.md#eng3-уточнение-плана-перед-реализацией--2026-10-19).
+RTE/full INF5 остаются отложенными по потребности UI; K3/K7/K8/VRAM/final alpha
+не закрыты. Новых code/build/tests/native/performance runs в этой сверке нет.
+
+Последняя реализация — **2026-10-19, INF7**: tracked integration runner с профилями
 Assembly/Source/Package/All, bounded owned processes, fresh output directories,
 partial manifest и отдельный read-only verifier. Runner больше не зависит от
 временных scripts в TestResults. Production API и test-project wiring не менялись.

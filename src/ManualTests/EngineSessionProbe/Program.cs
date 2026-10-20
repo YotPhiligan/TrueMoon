@@ -1,9 +1,12 @@
+using TrueMoon.Aether;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
 using EngineSessionProbe;
 using TrueMoon;
+using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Dependencies;
 using TrueMoon.Mithril;
 
@@ -30,16 +33,22 @@ namespace EngineSessionProbe
         public List<string> Panels { get; set; } = ["scene", "inspector", "unsaved-note"];
         public SceneSnapshot Snapshot() => new("demo-room", Revision, [new() { Id = "switch", X = 1, Interactive = true }]);
     }
-    internal sealed class SupervisorShutdown(SessionSupervisor supervisor) : IStoppable
-    { public Task StopAsync(CancellationToken cancellationToken = default) => supervisor.StopAsync(); }
-
     public static class Probe
     {
         public static readonly string[] Scenarios = ["repeat", "stale", "bad-hello", "bad-scene", "startup-timeout", "startup-cancel",
-            "command-timeout", "command-cancel", "stop-pending", "crash", "disconnect", "heartbeat", "forced-stop", "hang-stop", "launch-failure", "parent-exit"];
-        private static IApp CreateApp(SessionSupervisor supervisor, AuthoringState authoring) => App.Builder(_ => { })
-            .Setup(c => c.Services(r => r.Singleton<AuthoringState>(_ => authoring)
-                .Singleton<IStoppable>(_ => new SupervisorShutdown(supervisor)))).Build();
+            "command-timeout", "command-cancel", "stop-pending", "crash", "disconnect", "heartbeat", "forced-stop", "hang-stop", "launch-failure", "parent-exit", "app-stop"];
+        private static IApp CreateApp(NativeRuntimeFactory factory, AuthoringState authoring, string directory,
+            SessionDeadlines? deadlines = null, Action<SessionStatus>? trace = null) => App.Builder(_ => { })
+            .Setup(c =>
+            {
+                c.UseAether(o =>
+                {
+                    o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.GameId;
+                    o.ReportDirectory = directory; o.Deadlines = deadlines ?? new();
+                    o.StatusChanged = trace; o.RuntimeFactory = _ => factory;
+                });
+                c.Services(r => r.Singleton<AuthoringState>(_ => authoring));
+            }).Build();
 
         public static async Task<object> RunAsync(string scenario, string directory)
         {
@@ -48,10 +57,11 @@ namespace EngineSessionProbe
             var factory = new NativeRuntimeFactory(); var state = new AuthoringState();
             var before = JsonSerializer.Serialize(state); var trace = new List<object>();
             var deadlines = scenario == "startup-timeout" ? new SessionDeadlines { Startup = TimeSpan.FromSeconds(1) } : new SessionDeadlines();
-            await using var supervisor = new SessionSupervisor(factory, BuildIdentity.HostId, BuildIdentity.GameId, directory, deadlines,
+            await using var app = CreateApp(factory, state, directory, deadlines,
                 s => { lock (trace) trace.Add(new { State = s.State.ToString(), Generation = s.Identity?.Generation, Pid = s.ProcessId,
                     s.HelloAccepted, s.SceneLoaded, s.Tick, Phase = s.Failure?.Phase, Error = s.Failure?.Cause.ToString(), CleanupError = s.Failure?.CleanupError?.ToString() }); });
-            await using var app = CreateApp(supervisor, state); await app.StartAsync();
+            await app.StartAsync();
+            var supervisor = app.Services.Resolve<AetherHost>()!.Supervisor;
             var lifetime = app.Services.Resolve<IAppLifetime>()!;
             var failures = 0;
             try
@@ -72,6 +82,14 @@ namespace EngineSessionProbe
                         await supervisor.StopAsync(); Check(supervisor.Status.State == SessionState.Stopped, "Stop did not complete.");
                         Check(!lifetime.AppCancellationToken.IsCancellationRequested, "Child exit cancelled Editor App.");
                     }
+                }
+                else if (scenario == "app-stop")
+                {
+                    await supervisor.StartAsync(state.Snapshot());
+                    await app.StopAsync();
+                    Check(factory.Leases.All(l => l.Reaped && l.ResourcesReleased), "App Stop retained an owned child.");
+                    Check(await FailureAsync(supervisor.StartAsync(state.Snapshot())) is ObjectDisposedException,
+                        "App Stop allowed a new engine generation.");
                 }
                 else if (scenario is "bad-hello" or "bad-scene" or "startup-timeout" or "startup-cancel" or "launch-failure")
                 {
@@ -151,8 +169,8 @@ namespace EngineSessionProbe
         public static async Task<int> RunParentAsync(string directory)
         {
             var factory = new NativeRuntimeFactory(); var state = new AuthoringState();
-            await using var supervisor = new SessionSupervisor(factory, BuildIdentity.HostId, BuildIdentity.GameId, directory);
-            await using var app = CreateApp(supervisor, state); await app.StartAsync();
+            await using var app = CreateApp(factory, state, directory); await app.StartAsync();
+            var supervisor = app.Services.Resolve<AetherHost>()!.Supervisor;
             await supervisor.StartAsync(state.Snapshot());
             Check(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "Game.Logic"), "Parent Editor loaded Game.Logic.");
             Records.Write(directory, "parent-ready.json", new { ParentPid = Environment.ProcessId, ChildPid = supervisor.Status.ProcessId });

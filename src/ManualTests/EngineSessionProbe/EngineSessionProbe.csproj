@@ -7,14 +7,13 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Engine.Probe.Contracts/Engine.Probe.Contracts.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether/TrueMoon.Aether.csproj" />
     <ProjectReference Include="../Game.Logic/Game.Logic.csproj" />
     <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
     <ProjectReference Include="../../TrueMoon.Mithril/TrueMoon.Mithril.csproj" />
     <ProjectReference Include="../../TrueMoon.Enerit/TrueMoon.Enerit.csproj" />
     <ProjectReference Include="../../TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
     <ProjectReference Include="../../TrueMoon.Cobalt.Generator/TrueMoon.Cobalt.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="../../TrueMoon.Enerit.Generator/TrueMoon.Enerit.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="../AlloyTest/Assets/Fonts/NotoSans-Regular.ttf" Link="Assets/Fonts/NotoSans-Regular.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

@@ -1,11 +1,15 @@
+using TrueMoon.Aether;
 using System.Buffers;
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
 using Game.Logic;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO;
-using TrueMoon.Generated.EngineSessionProbe;
+using TrueMoon.Generated.TrueMoon.Aether;
 using Xunit;
 
-namespace EngineSessionProbe.Tests;
+namespace TrueMoon.Aether.Tests;
 
 public sealed class SessionSupervisorTests
 {
@@ -151,7 +155,7 @@ public sealed class SessionSupervisorTests
     {
         var factory = new Factory(); await using var supervisor = Create(factory); await supervisor.StartAsync(Scene());
         factory.Leases[0].Exit.TrySetResult();
-        await Probe.WaitAsync(() => factory.Leases[0].ResourcesReleased, TimeSpan.FromSeconds(3));
+        await TestWait.UntilAsync(() => factory.Leases[0].ResourcesReleased, TimeSpan.FromSeconds(3));
         Assert.Equal(SessionState.Faulted, supervisor.Status.State); Assert.Equal("ProcessExit", supervisor.Status.Failure!.Phase);
         Assert.IsType<IOException>(supervisor.Status.Failure.Cause);
         await supervisor.StartAsync(Scene()); Assert.Equal(2UL, supervisor.Status.Identity!.Generation);

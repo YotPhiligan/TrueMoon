@@ -4,6 +4,7 @@
         <TargetFramework>$(TF)</TargetFramework>
         <Description>Microsoft.Extensions.DependencyInjection adapter for TrueMoon application and service contracts. Alpha API.</Description>
         <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <PackageTags>$(PackageTags);dependency-injection;microsoft-di;adapter</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

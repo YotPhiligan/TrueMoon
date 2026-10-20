@@ -6,6 +6,35 @@
 
 Новые подробные записи добавлять датированными разделами истории, текущую сводку обновлять отдельно. Согласованные UI критерии сохраняются.
 
+## Aether App lifecycle regression — 2026-10-19
+
+Viewport example переведён на UseAether и App-owned AetherHost.Supervisor/Frames.
+UI close/drain порядок сохранён, UI production code не менялся. Полный Debug
+повторил UI613/Hosting79;2native viewport runs Debug apphost/published Release
+прошли с actual GL pixels,14cases/25children/20StartStop каждый, native close
+до UI disposal и mappings/sessions0/childrenreleased. Own Release UI/golden/RTE/
+UI package/performance/hardware matrix не повторялись; K3/K7/K8/VRAM/final alpha
+прежние. [Подробные команды/evidence принадлежат engine](../engine/HISTORY.md#app-integration-реализация--2026-10-19).
+
+## Интеграция TrueMoon.Aether — 2026-10-19
+
+Engine implementation/contracts выделены в Aether; Alloy viewport остался в
+отдельном example consumer. UI production code не менялся. В full Debug1490
+повторены UI613/Hosting79, два native viewport runs Debug apphost/published Release
+прошли с actual GL pixels, native-close-before-UI-disposal и mappings/sessions0.
+Own Release UI/golden/RTE/package/performance/hardware matrix не повторялись;
+K3/K7/K8/VRAM/final alpha прежние. Подробные
+[команды/results/evidence принадлежат engine](../engine/HISTORY.md#truemoonaether--2026-10-19).
+
+## Сверка очередности после INF7 — 2026-10-19
+
+Проверка общего плана: bounded INF завершён, full INF5 и RTE backlog остаются
+по потребности UI, аппаратные alpha acceptance прежние. В отложенном
+RICH_TEXT_EDITOR_PLAN исправлено устаревшее указание next ENG1; текущий шаг —
+ENG3a. Подробные [findings и execution plan принадлежат engine](../engine/HISTORY.md#сверка-плана-после-ui-inf7--2026-10-19).
+Production/test/project code не менялся, новых build/tests/native/performance runs
+нет; прежний INF7 evidence ниже не является новым runtime run этой сверки.
+
 ## INF7: воспроизводимый integration runner — 2026-10-19
 
 По запросу следующего шага временные INF6 workflows заменены воспроизводимым

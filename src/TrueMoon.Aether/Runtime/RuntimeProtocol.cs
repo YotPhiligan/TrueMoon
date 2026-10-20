@@ -1,6 +1,6 @@
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
 
-namespace EngineSessionProbe;
+namespace TrueMoon.Aether.Runtime;
 
 public sealed class RuntimeProtocol(SessionIdentity identity, IGameSession game, int processId, Action<FrameSurface>? configureSurface = null, Func<long>? droppedFrames = null) : IEngineControl
 {

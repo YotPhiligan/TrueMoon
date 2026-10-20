@@ -2,10 +2,16 @@
   <PropertyGroup>
     <TargetFramework>$(TF)</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Windows x64 Silk.NET window, input and OpenGL/Vulkan presentation integration for TrueMoon Alloy. Alpha API.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);ui;windowing;silknet;opengl;vulkan</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Alloy/TrueMoon.Alloy.csproj" />
     <PackageReference Include="Silk.NET" />
     <PackageReference Include="Silk.NET.Vulkan.Extensions.EXT" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
   </ItemGroup>
 </Project>

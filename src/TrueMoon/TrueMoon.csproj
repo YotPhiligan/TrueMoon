@@ -4,6 +4,7 @@
         <TargetFramework>$(TF)</TargetFramework>
         <Description>TrueMoon headless application bootstrap, configuration, diagnostics and cooperative lifecycle. Alpha API.</Description>
         <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <PackageTags>$(PackageTags);application;bootstrap;lifecycle;configuration</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

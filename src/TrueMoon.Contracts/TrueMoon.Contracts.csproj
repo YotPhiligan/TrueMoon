@@ -5,6 +5,7 @@
     <RootNamespace>TrueMoon</RootNamespace>
     <Description>Shared TrueMoon application lifecycle, configuration, diagnostics and service registration contracts. Alpha API.</Description>
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);contracts;lifecycle;configuration</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

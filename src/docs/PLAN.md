@@ -23,6 +23,7 @@ UI alpha и контрольное beta приложение имеют собс
 | Enerit | TrueMoon.Enerit, Enerit.Generator: invocation client/server, IPC transports, serialization и generated service adapters | [Enerit](enerit/PLAN.md) |
 | Mithril | TrueMoon.Mithril: units, hosting/startup/lifetime/restart policies, процессные handles | [Mithril](mithril/PLAN.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: retained UI, renderer, окно/input, standalone и external HUD | [UI](alloy/PLAN.md) |
+| Aether / Engine | TrueMoon.Aether: engine contracts, session supervisor, control/native child bridge и CPU frame transport; Editor/Runtime и Game.Logic — отдельные consumers | [Aether](engine/PLAN.md) |
 
 Тестовые проекты, generators и ManualTests относятся к своим направлениям. Они не образуют отдельный продуктовый roadmap. Общие CI/build/package задачи остаются на уровне этого документа.
 
@@ -35,13 +36,43 @@ UI alpha и контрольное beta приложение имеют собс
 - Enerit использует Contracts, Core и свой generator. Mithril использует Contracts/Core; прямой ProjectReference Mithril→Enerit отсутствует. Их взаимодействие проверяется как composition приложения.
 - Argentis не имеет ProjectReference; Alloy использует Argentis. Rendering.Skia и Platform.Silk используют Alloy. Alloy.Hosting связывает эти интеграции и общие Contracts/Core.
 
+Уточнение2026-10-19 по запросу пользователя: engine implementation/contracts
+вынесены в одну assembly **TrueMoon.Aether**, с dependencies на Contracts/Enerit/
+Mithril и Enerit generator; UI/Game.Logic references отсутствуют. Прежний
+Engine.Probe.Contracts project объединён с модулем, tests перенесены в
+TrueMoon.Aether.Tests. [Границы модуля](engine/PLAN.md#truemoonaether-одна-engine-assembly--2026-10-19).
+
 Сохранять отсутствие зависимости общего bootstrap/DI/IPC/units от UI и графических пакетов. Контракты интеграции не должны требовать конкретного renderer, DI provider или IPC transport без явного выбора. Генератор относится к своему модулю; доставка analyzer в package проверяется отдельно от работы через ProjectReference.
 
 Изменение этой карты фиксировать здесь и в локальном плане, не выполняя перестройку зависимостей ради нового формата документации. Вопросы будущего API и версионирования протоколов решаются в соответствующих этапах.
 
+### Подключение функциональных модулей через App — 2026-10-19
+
+По запросу пользователя закреплено в [правилах репозитория](../AGENTS.md):
+модули с сервисами/configuration/background work/owned resources предоставляют
+публичное расширение IAppConfigurationContext и штатно подключаются через
+App.Builder.Setup/App.Build/App.RunAsync. Extension валидирует/snapshots options,
+регистрирует App-local services и определяет start/stop/drain/dispose ownership,
+включая startup/cleanup failures и duplicate registration. Disposable aliases
+не должны создавать несколько владельцев ресурса. Один ManualTests example
+не заменяет такую module entry point; low-level utilities/contracts сохраняют
+независимое использование и не требуют фиктивного UseX.
+
+App contracts находятся в TrueMoon.Contracts; concrete bootstrap/UI/provider
+добавлять в dependencies только по необходимости. Aether реализует этот путь
+через [UseAether/AetherHost](../TrueMoon.Aether/README.md#подключение-к-app),
+без новых общих Core/DI/lifecycle APIs. Явный запуск/остановка игровых сессий
+отделён от App startup и terminal App shutdown.
+
+Аудит остальных модулей2026-10-19 подтвердил существующие Enerit/Mithril/Hosting
+entry points, встроенный Cobalt и выбор DI через App.Builder. Отдельные utilities,
+UI слои и generators не требуют фиктивного UseX; UI подключается через Hosting.
+[Таблица API, focused checks и границы](HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
+Пропущенных functional module entry points не найдено, очередность не меняется.
+
 ## Порядок развития
 
-Актуальная точка2026-10-17: ENG1 supervisor и [ENG2 CPU viewport](engine/PLAN.md#eng2-cpu-frame-viewport--2026-10-17) реализованы в bounded probe scope после RichTextEditor. Следующий code шаг — ENG3 compiler/checkpoint/versioned replacement/rollback. UI hardware blockers сохраняются.
+Актуальная точка2026-10-19: ENG1 supervisor и [ENG2 CPU viewport](engine/PLAN.md#eng2-cpu-frame-viewport--2026-10-17) перенесены в модуль TrueMoon.Aether; дополнительный bounded UI INF завершён. Следующий code шаг — [ENG3a compiler/artifact](engine/PLAN.md#eng3-уточнение-плана-перед-реализацией--2026-10-19) в Aether, затем checkpoint/versioned replacement/rollback. UI hardware blockers сохраняются. Собственные результаты переноса отделены от прежней документальной сверки и датированных module proofs.
 
 Уточнение2026-10-17: по запросу пользователя перед ENG1 реализован отдельный
 UI компонент [RichTextEditor/PA7a](alloy/PLAN.md#pa7a-richtexteditor-перед-eng1--2026-10-17)
@@ -211,6 +242,28 @@ checks и measured allocation backlog не становятся автомати
 - **Generators:** сохранять runtime/generated contracts, проверять диагностику ошибок и поставку analyzer в отдельном consumer.
 - **Производительность:** измерять контрольный сценарий перед оптимизацией. UI K9 остаётся локальным baseline; его результат не переносится на IPC/DI/process startup.
 - **Совместимость:** breaking changes и migration notes фиксировать у владельца API; объединённый release описывает их вместе. Сейчас общая версия0.2.2.7-alpha задаётся [Directory.Build.props](../Directory.Build.props), отдельные версии модулей не вводятся этой реорганизацией.
+
+## Метаданные NuGet-пакетов — 2026-10-19
+
+Общие Authors/Company/Product/version/copyright, project/repository URLs,
+repository type, license/icon и базовые tags наследуются из Directory.Build.props.
+Asset paths привязаны к MSBuildThisFileDirectory, а не к глубине project directory.
+PackageId/version используют штатные SDK defaults; не требуется дублировать их
+в каждом csproj. Каждый предназначенный для поставки проект задаёт meaningful
+Description, тематические tags и собственный PACKAGE.md с явным включением в nupkg.
+Runtime/generator package ownership сохраняется в планах модулей.
+
+Сейчас13projects имеют IsPackable=true. Aether имеет подготовленные metadata,
+но IsPackable=false до решения о поставке. Cobalt.Generator поставляется внутри
+Cobalt, отдельным пакетом не объявляется; Enerit.Generator — отдельный analyzer
+package. Tests/benchmarks/manual applications не являются package candidates.
+
+[Check-PackageMetadata.ps1](../eng/Check-PackageMetadata.ps1) проверяет вычисленные
+MSBuild properties всех repository projects. `-Pack` дополнительно собирает ready
+packages и explicit Aether preview в отдельные directories, сверяет nuspec/README/
+license/icon/XML/analyzer/native payloads и hashes. Existing evidence не overwrite;
+обычный IsPackable флаг deferred проекта не меняется. Это не NuGet push и не замена
+runtime/consumer/native/release acceptance R1–R6.
 
 ## Общие критерии выпуска
 

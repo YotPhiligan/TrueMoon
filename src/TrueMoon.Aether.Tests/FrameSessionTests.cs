@@ -1,8 +1,12 @@
-using Engine.Probe.Contracts;
+using TrueMoon.Aether;
+using TrueMoon.Aether.Contracts;
 using Game.Logic;
+using TrueMoon.Aether.Frames;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Sessions;
 using Xunit;
 
-namespace EngineSessionProbe.Tests;
+namespace TrueMoon.Aether.Tests;
 
 public sealed class FrameSessionTests
 {

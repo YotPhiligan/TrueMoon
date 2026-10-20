@@ -1,5 +1,183 @@
 # TrueMoon: история общей документации
 
+## Аудит точек подключения модулей к App — 2026-10-19
+
+После реализации UseAether по запросу пользователя проверены остальные модули:
+публичные App extensions, реальные service/lifecycle registrations, project graph
+и существующие focused integration tests. Проверены15активных library/analyzer
+projects верхнего уровня, включая уже подключённый Aether. Test/executable projects
+не являются самостоятельными функциональными модулями. TrueMoon.Magnesium —
+пустая папка без csproj/исходников и записи в solution, отдельного модуля сейчас нет.
+
+| Модуль / сборки | Публичная точка / способ подключения | Что подключает |
+| --- | --- | --- |
+| TrueMoon bootstrap | App.Builder(...).Setup(...), App.Build(...), App.RunAsync(...) | App-local configuration/resolver/lifecycle; встроенная основа приложения |
+| Diagnostics в TrueMoon | [UseDiagnostics](../TrueMoon/Diagnostics/AppCreationContextExtensions.cs) | Diagnostics configuration, provider-owned subscription/factory; повторная регистрация заменяет настройки |
+| TrueMoon.Cobalt | [AppBuilderConfigurationContext.GetServiceResolverBuilder](../TrueMoon/AppBuilderConfigurationContext.cs) | Default CobaltServiceResolverBuilder; дополнительный UseCobalt для обычного App не требуется |
+| TrueMoon.Extensions.DependencyInjection | [UseDI](../TrueMoon.Extensions.DependencyInjection/AppCreationContextExtensions.cs) | Выбор provider через IAppBuilderConfigurationContext при App.Builder, до Setup/service resolution |
+| TrueMoon.Enerit | [UseInvocationService / ListenInvocationService](../TrueMoon.Enerit/AppCreationContextExtensions.cs), [PipesServiceTransport](../TrueMoon.Enerit/IO/Pipes/EneriteConfigurationContextExtensions.cs) | Generated proxy/handler, client/server/factories; non-disposable IStartable/IStoppable adapters запускают/останавливают transport |
+| TrueMoon.Mithril | [AddUnit](../TrueMoon.Mithril/AppCreationContextExtensions.cs) | App-local unit declarations/snapshots, UnitsController и lifecycle; child selection/parent monitor, main-process composition |
+| Alloy UI через TrueMoon.Alloy.Hosting | [UseAlloy / UsePresentation](../TrueMoon.Alloy.Hosting/AppConfigurationExtensions.cs) | Renderer/session factory для external host либо standalone window/dispatcher с IStartable/IStoppable |
+| TrueMoon.Aether | [UseAether](../TrueMoon.Aether/AppConfigurationExtensions.cs) | App-owned host/supervisor/frames; собственная реализация и proof описаны в engine history |
+
+UseDI — настройка bootstrap provider, поэтому принимает IAppBuilderConfigurationContext,
+а функциональные extensions работают на IAppConfigurationContext. Это два этапа
+одного App builder, а не отсутствующая module registration. Общая configuration
+доступна через IAppBuilder.Configuration и IAppConfigurationContext.Configuration.
+
+Отдельные UseX не требуются у TrueMoon.Contracts/Core (contracts/utilities),
+Argentis/Alloy/Rendering.Skia/Platform.Silk (UI слои с явной optional интеграцией
+через Hosting) и Cobalt.Generator/Enerit.Generator (compile-time analyzers).
+Compatibility.UsePresentation находится в отдельном legacy namespace и не
+заменяет современный explicit renderer/host API. Закомментированный Enerit MMF
+prototype не учитывался как рабочая точка подключения.
+
+Пропущенных публичных точек подключения действующих функциональных модулей не
+найдено; runtime code/API/project graph менять не потребовалось. При чтении
+проверены options/registration и lifecycle paths. Это не полный повторный audit
+всех cleanup/error/ownership контрактов или доказательство общего release.
+
+### Фактически выполненные проверки
+
+Windows x64/net10.0/SDK10.0.402, xUnit2.9.3/VSTest. Использованы существующие тесты,
+без новых test cases/packages. Четыре команды exit0;4TRX, Passed:106, Failed:0,
+Skipped:0. Core46, Enerit13, Mithril9, Alloy.Hosting38. Filtered test names
+проверены по каждому TRX; пустая discovery не засчитывалась.
+
+```powershell
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj --configuration Debug --filter 'FullyQualifiedName~TrueMoon.Tests.AppLifecycleTests|FullyQualifiedName~TrueMoon.Tests.DiagnosticsTests|FullyQualifiedName~TrueMoon.Tests.AppTests' --logger 'trx;LogFileName=results.trx' --results-directory TestResults/AppModuleAudit/20261019/Core --verbosity quiet
+dotnet test TrueMoon.Enerit.Tests/TrueMoon.Enerit.Tests.csproj --configuration Debug --filter 'FullyQualifiedName~AppInvocationRegistrationTests' --logger 'trx;LogFileName=results.trx' --results-directory TestResults/AppModuleAudit/20261019/Enerit --verbosity quiet
+dotnet test TrueMoon.Mithril.Tests/TrueMoon.Mithril.Tests.csproj --configuration Debug --filter 'FullyQualifiedName~UnitCompositionTests' --logger 'trx;LogFileName=results.trx' --results-directory TestResults/AppModuleAudit/20261019/Mithril --verbosity quiet
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj --configuration Debug --filter 'FullyQualifiedName~AlloyIntegrationTests|FullyQualifiedName~HostedUiSessionFactoryTests' --logger 'trx;LogFileName=results.trx' --results-directory TestResults/AppModuleAudit/20261019/Alloy --verbosity quiet
+```
+
+Core tests повторили App startup/rollback/stop/dispose и diagnostics на обоих
+providers. Enerit — App-local/idempotent proxy/listener lifetime и реальное
+соединение named pipes в одном процессе на Cobalt/DI. Mithril — repeated Build
+isolation, main/child configuration selection и local lifecycle на Cobalt/DI.
+Alloy — registration/validation/snapshot и session-factory cleanup guards;
+native window/GPU и реальный standalone App window этим запуском не проверялись.
+
+Артефакты: `TestResults/AppModuleAudit/20261019/summary.json`, Completed=true,
+stdout/stderr и4TRX;463source/project/build-input SHA256 совпали до/после запуска.
+Это текущие focused Debug results; full solution/Release, собственные Cobalt/
+generator suites, child-process/restart/native GPU/package/performance матрицы
+не повторялись. Прежний полный Debug1518 и Aether115/36native относятся к
+предыдущей реализации App integration. Общая очередность ENG3a и UI ограничения
+K3/K7/K8/VRAM/final alpha не менялись.
+
+## Aether App integration — 2026-10-19
+
+По запросу пользователя реализован UseAether/AetherHost: options/services и
+owned session/frame cleanup подключены к App lifecycle. В AGENTS.md и общем
+плане закреплено правило подключения функциональных модулей через App contracts.
+Utilities/contracts без lifecycle не требуют фиктивного UseX. Headless/viewport
+examples используют публичную регистрацию модуля. Core/UI production API прежние.
+
+Aether115/115 Debug/Release; full Debug1518/1518/9TRX/failed0/skipped0;
+nonincremental Debug build0errors/1507warnings.36native cases Debug/published
+Release включают новый app-stop и2viewport с actual pixels/20StartStop/cleanup.
+9fresh packages и4independent Cobalt/DI consumers проверили App integration.
+Aether IsPackable=true; прежний13+1deferred metadata audit ниже исторический,
+полная metadata matrix всех44projects в этом шаге не повторялась. Публикации нет.
+[Единственные подробные команды, тесты, failures и fingerprint evidence](engine/HISTORY.md#app-integration-реализация--2026-10-19).
+Следующий общий code шаг — ENG3a; UI аппаратные/release ограничения сохраняются.
+
+## NuGet package metadata — 2026-10-19
+
+По запросу пользователя проверены metadata всех проектов, предназначенных для
+NuGet-поставки, включая подготовку будущего Aether package. Сохранены uncommitted
+перенос Aether и предшествующая сверка ENG3 плана. Runtime C#/API/test code в этом
+metadata шаге не менялся. Новых unit/native/consumer/performance запусков нет;
+прошлые Aether1490/34native и UI INF7 не объявляются результатами этого audit.
+
+### Findings и исправления
+
+- Description отсутствовал у Argentis/Alloy/Platform.Silk. Добавлены собственные
+  descriptions и тематические tags всем13packable projects плюс deferred Aether.
+- Core/Argentis/Alloy/Silk выбирали общий repository README. Добавлены собственные
+  PACKAGE.md с явными PackageReadmeFile/None Pack. Aether также получил standalone
+  package README; IsPackable=false сохранён, обычная поставка не включена.
+- Общие PackageProjectUrl/RepositoryUrl/RepositoryType теперь заданы в
+  Directory.Build.props; Authors/Company/Product/version/copyright/license/icon
+  унаследованы. PackageId и version используют SDK defaults, лишние одинаковые
+  значения по csproj не копируются. Базовые tags отражают TrueMoon/.NET/modules,
+  специальные tags добавляются в владельце проекта.
+- Shared license/icon/fallback README Includes привязаны к MSBuildThisFileDirectory,
+  поэтому не зависят от глубины project directory. Существующая MIT license не
+  изменялась. PackageReference/project dependency и generator ownership сохранены.
+
+### Inventory и actual package proof
+
+| Направление | Intended packages | Статус |
+| --- | --- | --- |
+| Core | TrueMoon, TrueMoon.Contracts, TrueMoon.Core |3packable |
+| Cobalt / DI | TrueMoon.Cobalt, TrueMoon.Extensions.DependencyInjection |2packable; Cobalt.Generator остаётся embedded analyzer, не отдельный package |
+| Enerit | TrueMoon.Enerit, TrueMoon.Enerit.Generator |2packable, generator — отдельный analyzer package |
+| Mithril | TrueMoon.Mithril |1packable |
+| UI | TrueMoon.Argentis, TrueMoon.Alloy, TrueMoon.Alloy.Platform.Silk, TrueMoon.Alloy.Rendering.Skia, TrueMoon.Alloy.Hosting |5packable |
+| Aether | TrueMoon.Aether |1deferred; metadata подготовлены, default IsPackable=false |
+
+Всего44repository projects с учётом untracked Aether/Aether.Tests и удаления старых
+Contracts/test projects:13packable,1deferred,30excluded tests/manual/benchmarks/
+embedded generator. Evaluated properties берутся из MSBuild, не только XML csproj.
+
+Добавлен tracked [eng/Check-PackageMetadata.ps1](../eng/Check-PackageMetadata.ps1).
+По умолчанию проверяет metadata; `-Pack` создаёт fresh local nupkgs в packages/
+deferred-preview scopes. Проверяет ID/version/authors/company/product/description/
+copyright/tags/project/repository/license/icon/readme, отсутствие placeholder
+Description и наличие локального PACKAGE.md. Пакеты сверяются по actual nuspec,
+README/license/icon bytes, managed DLL/XML и Cobalt/Enerit analyzer/Skia native/
+buildTransitive payloads.99metadata input hashes защищают run от изменения файлов;
+58owned dotnet commands имеют timeout/exit/logs, partial manifest сохраняется.
+Existing RunDirectory не overwrite, только owned process tree cleanup, NuGet push нет.
+
+```powershell
+pwsh -NoProfile -File eng/Check-PackageMetadata.ps1 -Pack -RunDirectory TestResults/PackageMetadata/completion-20261019
+```
+
+Completedtrue,44projects/14intended/14archives:13regular и1Aether preview,
+version0.2.2.7-alpha. Metadata и required payload assertions прошли. Aether preview
+явно использует command-local IsPackable=true, не меняет project default. Пакеты
+созданы в ignored TestResults/PackageMetadata/completion-20261019, не опубликованы.
+
+Первый review-20261019 остановился на verifier bug: wildcard TrueMoon.Alloy.*
+выбирал также Hosting/Skia/Silk archives. Исправлен exact ID+version filename;
+reviewed и final runs прошли. Completion run выполнен после whitespace cleanup
+XML и усиления проверки XML/license/icon bytes; это authoritative final input set.
+Существующие compiler/generator warnings не подавлялись, API warnings policy этим
+audit не менялась. Archive proof не заменяет independent runtime consumers/тесты.
+
+Итоговые docs links/anchors/whitespace и read-only archive/input fingerprint checks
+сохраняются отдельно в ignored TestResults/PackageMetadata/completion-check.json.
+Passedtrue:39Markdown files/741local links/314anchors;99metadata inputs,
+14archives/73payload hashes сверены повторно. Aether default nonpackable,
+owned helpers завершены, staged0, git diff --check прошёл.
+Общие правила добавлены в PLAN/R4, статусы всех затронутых направлений ссылаются
+сюда. Следующий engine code шаг остаётся ENG3a; metadata не закрывает ENG3/release/
+hardware blockers.
+
+## TrueMoon.Aether — 2026-10-19
+
+По запросу пользователя engine implementation/contracts вынесены в одну сборку
+TrueMoon.Aether, tests — TrueMoon.Aether.Tests с direct ProjectReference. UI/game/
+executable composition остаются отдельными consumers. Updated solution/map/namespaces,
+без изменения общего Core/DI/IPC/units/UI API. Aether87/87 Debug/Release,
+full Debug1490/1490/9TRX/failed0/skipped0 и34native cases прошли. Детальные
+[решения/команды/evidence](engine/HISTORY.md#truemoonaether--2026-10-19) ведутся у engine.
+Следующий этап ENG3a в Aether; experimental assembly не является release/packages/3D proof.
+
+## Сверка плана после UI INF7 — 2026-10-19
+
+Общий/UI/engine roadmap сопоставлен с текущим probe code. Очередность ENG3
+сохранена; следующий конкретный code подэтап ENG3a compiler/artifact, затем
+checkpoint/replacement/rollback/integration proof. Уточнения loader/identity,
+restore-before-present, recoverable checkpoint failure, cancellation и общего
+deadline ведутся только в [engine плане](engine/PLAN.md#eng3-уточнение-плана-перед-реализацией--2026-10-19).
+Исправлены устаревшие ENG1/InputBatch/overlapping sessions формулировки; INF5/RTE
+и hardware blockers не отменены. Это документация без новых build/tests/native/
+performance результатов. [Findings/проверка](engine/HISTORY.md#сверка-плана-после-ui-inf7--2026-10-19).
+
 ## UI INF7 integration runner — 2026-10-19
 
 Сохранён воспроизводимый runner Assembly/Source/Package/All с bounded owned

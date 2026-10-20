@@ -2,6 +2,12 @@
 
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
+        <Description>Backend-independent retained UI controls, property bindings, layout and input contracts for TrueMoon Alloy. Alpha API.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <PackageTags>$(PackageTags);ui;controls;bindings;layout</PackageTags>
     </PropertyGroup>
 
+    <ItemGroup>
+        <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+    </ItemGroup>
 </Project>

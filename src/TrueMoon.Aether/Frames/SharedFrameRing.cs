@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
 
-namespace EngineSessionProbe;
+namespace TrueMoon.Aether.Frames;
 
 // One producer and one receiver. Dispose only after their workers have drained.
 public sealed class SharedFrameRing : IDisposable

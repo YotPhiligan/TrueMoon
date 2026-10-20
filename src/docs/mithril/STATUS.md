@@ -1,5 +1,16 @@
 # Mithril: состояние и точка продолжения
 
+App entry-point audit — **2026-10-19**: AddUnit связывает App-local unit definitions,
+configuration selection и UnitsController/parent-monitor lifecycle. Focused Debug
+UnitCompositionTests:9passed/failed0/skipped0 на Cobalt/DI. Runtime code не менялся;
+own full/Release/process/restart/package/performance matrix не повторялись.
+[Общая таблица API и команды](../HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
+
+Package metadata check — **2026-10-19**: тематические tags и общие project/
+repository metadata; Release pack/nuspec/README/license/icon payloads проверены.
+Runtime code, own unit/process/restart/performance checks в этом metadata шаге
+не менялись/не повторялись. [Общие команды/evidence](../HISTORY.md#nuget-package-metadata--2026-10-19).
+
 Integration check2026-10-18 в UI INF3: первый full Debug run дал readiness-file
 sharing IOException в Restart_OwnedSequence (always-crash); targeted20/20 и
 повторный full Debug Mithril94/94 прошли. Код Mithril/probe не менялся, race не

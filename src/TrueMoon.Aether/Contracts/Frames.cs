@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace Engine.Probe.Contracts;
+namespace TrueMoon.Aether.Contracts;
 
 public sealed class SurfaceConfiguration
 {

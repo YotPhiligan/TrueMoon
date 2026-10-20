@@ -1,4 +1,4 @@
-# EngineSessionProbe — ENG1 / ENG2
+# EngineSessionProbe — пример TrueMoon.Aether (ENG1 / ENG2)
 
 Headless Windows x64/net10.0 prototype: один executable с ролями Editor и
 Game.Runtime, Cobalt App, fresh owned Mithril ChildProcessUnitHandle на каждый
@@ -10,17 +10,23 @@ launch и generated Enerit same-build pipes. ENG2 добавляет одно Al
 
 ## Проекты и ownership
 
-- Engine.Probe.Contracts: domain identity, validated scene snapshot, mutable wire
-  DTOs и IEngineControl. Без Mithril/Enerit/Alloy/Skia references.
+- [TrueMoon.Aether](../../TrueMoon.Aether/README.md): одна engine assembly с
+  contracts, supervisor, runtime protocol, native child adapter и CPU frame transport.
+  Namespace contracts не содержит Mithril/Enerit/Alloy/Skia типов; сама библиотека
+  использует Enerit/Mithril и не зависит от UI.
 - Game.Logic: отдельная DLL с минимальным IGameSession stub, fixed tick counter
   и pattern color. Checkpoint/restore/versioned replacement относятся к ENG3.
-- EngineSessionProbe: supervisor, child/bootstrap/runtime, transport adapter и
-  bounded native scenarios. Эти типы пока не production engine API/packages.
-- EngineSessionProbe.Tests: xUnit supervisor/protocol/codec checks с fake leases;
-  зарегистрирован вместе с probe projects в TrueMoon.slnx, папка Engine.
+- EngineSessionProbe: executable composition Editor/Game.Runtime, конкретная
+  Game.Logic factory, Alloy viewport и bounded native/fault scenarios.
+- TrueMoon.Aether.Tests: перенесённые xUnit supervisor/protocol/codec checks с
+  fake leases и прямой ссылкой на Aether. Solution folder Aether; примеры — Engine.
 
 Editor App сохраняется между Start/Stop, владеет authoring fixture с revision,
-Dirty/selection/panels и shutdown hook supervisor. Runtime world не записывается
+Dirty/selection/panels и engine host, подключённым через UseAether. Supervisor/
+Frames получаются из App resolver через AetherHost; отдельного manual shutdown
+adapter и внешних await using для них нет. Повторные session Stop не завершают App;
+App Stop permanently closes engine admission и drains/освобождает module resources.
+Сценарий app-stop проверяет этот путь с живым native child. Runtime world не записывается
 обратно в authoring state. Начальная готовность требует OS start, Hello и
 подтверждения загруженной сцены/Paused; эти отметки видны отдельно в trace.
 
@@ -46,7 +52,7 @@ ENG2 добавляет ConfigureSurface/SurfaceGeneration acknowledgement и fr
 diagnostics. InputBatch/checkpoints/replacement ещё не реализованы.
 
 Каждый reply проверяется по identity/versions/nonce, sequence, operation/PID и
-применённым mode/revision/tick. HostContractId — SHA256 manifest host, contracts,
+применённым mode/revision/tick. HostContractId — SHA256 manifest entry host, Aether,
 Enerit и Mithril binaries; GameBuildId — SHA256 manifest Game.Logic.dll.
 Child независимо сверяет bootstrap с собственными binaries до открытия RPC.
 Hello не добавляет schema negotiation; это локальная same-user/same-build модель.

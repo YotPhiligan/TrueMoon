@@ -4,6 +4,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>Optional TrueMoon Alloy App integration and Windows x64 standalone OpenGL/Vulkan hosting. Alpha API.</Description>
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);ui;hosting;windowing;lifecycle</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Silk.NET" />

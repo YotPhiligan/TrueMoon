@@ -1,4 +1,4 @@
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
 
 namespace Game.Logic;
 

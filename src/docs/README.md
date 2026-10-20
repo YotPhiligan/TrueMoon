@@ -9,6 +9,7 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 | [Общий план](PLAN.md) | Цели, границы модулей, зависимости, сквозные сценарии и критерии выпуска |
 | [Общий статус](STATUS.md) | Текущая сводка, подтверждённые проверки, блокеры и ближайшие действия |
 | [Формат планирования](PLANNING.md) | Правила ведения PLAN/STATUS/HISTORY и разделения общей и модульной работы |
+| [Проверка package metadata](../eng/Check-PackageMetadata.ps1) | Вычисленные MSBuild properties всех проектов; с `-Pack` — локальные nupkg/nuspec и README/license/icon/analyzer/native payloads |
 
 ## Модули
 
@@ -19,12 +20,15 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 | Enerit | TrueMoon.Enerit и Enerit.Generator: invocation, serialization и IPC transports | [План](enerit/PLAN.md), [статус](enerit/STATUS.md), [история](enerit/HISTORY.md) |
 | Mithril | TrueMoon.Mithril: units, process handles и startup/hosting/lifetime/restart policies | [План](mithril/PLAN.md), [статус](mithril/STATUS.md), [история](mithril/HISTORY.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: controls/tree/bindings/layout/input, UI sessions, rendering, окна и HUD | [План](alloy/PLAN.md), [статус](alloy/STATUS.md), [история](alloy/HISTORY.md) |
+| Aether / Engine | TrueMoon.Aether: engine contracts, sessions/control, owned child bridge и CPU frame transport; отдельные example/game/test consumers | [README](../TrueMoon.Aether/README.md), [план](engine/PLAN.md), [статус](engine/STATUS.md), [история](engine/HISTORY.md) |
 
 Contracts и Core — разные независимые сборки. DI provider выбирается на builder boundary; IPC, units и UI подключаются по потребности приложения. UI runtime не требует App или конкретного backend; Hosting является опциональной интеграцией. Подробная карта фактических зависимостей хранится в общем плане.
 
-## Планируемые направления
+## Игровой модуль Aether и дальнейшее развитие
 
-Следующий этап после bounded headless quality прохода определён в
+Engine implementation/contracts теперь объединены в [TrueMoon.Aether](../TrueMoon.Aether/README.md).
+Существующий Editor/Game.Runtime пример и игровая DLL остаются отдельными consumers,
+тесты находятся в TrueMoon.Aether.Tests. Следующий этап после bounded quality прохода определён в
 [сводной матрице качества](QUALITY.md); это оценка scopes и evidence, не новый roadmap.
 
 - [Игровой движок и редактор](engine/PLAN.md), [статус](engine/STATUS.md):

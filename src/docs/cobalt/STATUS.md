@@ -1,5 +1,18 @@
 # Cobalt / DI: состояние и точка продолжения
 
+App entry-point audit — **2026-10-19**: Cobalt выбран default App builder;
+UseDI переключает provider через IAppBuilderConfigurationContext. Отдельный
+UseCobalt не требуется, generators — compile-time integration. Focused Core46,
+Enerit13 и Mithril9 включают оба providers; own Cobalt/generator suites и package/
+performance matrix не повторялись, runtime code не менялся.
+[Общая таблица API и команды](../HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
+
+Package metadata check — **2026-10-19**: Cobalt/DI adapter получили тематические
+tags и общие project/repository metadata. Release pack/nuspec/README/license/icon
+и bundled Cobalt analyzer/targets payloads проверены; Cobalt.Generator остаётся
+непакуемой отдельной сборкой внутри Cobalt package. Own unit/native/performance
+checks в этом шаге не повторялись. [Общие evidence](../HISTORY.md#nuget-package-metadata--2026-10-19).
+
 UI integration check — **2026-10-19, INF7**: tracked runner повторил Cobalt/DI
 source factory/legacy и independent package graphs на OpenGL/Vulkan в Debug и
 published Release. По24source App cases и4package native runs/provider прошли;

@@ -3,10 +3,16 @@
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Description>Retained UI sessions, bounded dispatch, frame scheduling and rendering contracts for TrueMoon Argentis trees. Alpha API.</Description>
+        <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <PackageTags>$(PackageTags);ui;rendering;sessions;dispatcher</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Argentis\TrueMoon.Argentis.csproj" />
     </ItemGroup>
-    
+
+    <ItemGroup>
+        <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+    </ItemGroup>
 </Project>

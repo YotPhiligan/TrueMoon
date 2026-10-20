@@ -4,17 +4,20 @@
     <Authors>yotphiligan</Authors>
     <Company>TrueMoon</Company>
     <Product>TrueMoon Framework</Product>
-    <PackageTags>Desktop</PackageTags>
+    <PackageTags>TrueMoon;dotnet;modular</PackageTags>
     <Copyright>Copyright © yotphiligan 2026</Copyright>
+    <PackageProjectUrl Condition="'$(PackageProjectUrl)' == ''">https://github.com/YotPhiligan/TrueMoon</PackageProjectUrl>
+    <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/YotPhiligan/TrueMoon.git</RepositoryUrl>
+    <RepositoryType Condition="'$(RepositoryType)' == ''">git</RepositoryType>
 
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
-    
+
     <LangVersion>latest</LangVersion>
     <DebugType>embedded</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    
+
     <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TieredPGO>true</TieredPGO>
@@ -23,15 +26,15 @@
     <Nullable>enable</Nullable>
 
     <IsPackable>true</IsPackable>
-    
+
     <TF>net10.0</TF>
     <TestsTF>net10.0</TestsTF>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false"/>
-    <None Include="..\..\materials\icon.png" Pack="true" PackagePath="\" Visible="false"/>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false"/>
+    <None Include="$(MSBuildThisFileDirectory)..\LICENSE" Pack="true" PackagePath="" Visible="false"/>
+    <None Include="$(MSBuildThisFileDirectory)..\materials\icon.png" Pack="true" PackagePath="\" Visible="false"/>
+    <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="\" Visible="false"/>
   </ItemGroup>
-  
+
 </Project>

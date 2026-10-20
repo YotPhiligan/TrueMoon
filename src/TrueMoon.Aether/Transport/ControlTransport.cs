@@ -1,13 +1,12 @@
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
 using TrueMoon.Diagnostics;
 using TrueMoon.Enerit.IO;
 
-namespace EngineSessionProbe;
+namespace TrueMoon.Aether.Transport;
 
-public sealed class ProbeEvents<T>(Action<object>? observe = null) : IEventsSource<T>
+public sealed class AetherEvents<T>(Action<object>? observe = null) : IEventsSource<T>
 {
     public string Name => typeof(T).Name;
     public Activity StartActivity(string? details = null, string? category = null, string? caller = null) => new Activity(Name).Start();

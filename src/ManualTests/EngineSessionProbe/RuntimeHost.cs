@@ -1,11 +1,17 @@
+using TrueMoon.Aether;
 using System.Text.Json;
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
 using Game.Logic;
 using TrueMoon;
+using TrueMoon.Aether.Frames;
+using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Transport;
 using TrueMoon.Dependencies;
 using TrueMoon.Configuration;
 using TrueMoon.Enerit.IO.Pipes;
-using TrueMoon.Generated.EngineSessionProbe;
+using TrueMoon.Generated.TrueMoon.Aether;
 using TrueMoon.Mithril;
 using TrueMoon.Mithril.Units;
 
@@ -13,7 +19,7 @@ namespace EngineSessionProbe;
 
 public static class RuntimeHost
 {
-    public const string BootstrapKey = "TM_ENGINE_BOOTSTRAP";
+    public const string BootstrapKey = NativeRuntimeFactory.BootstrapKey;
     public static async Task<int> RunAsync()
     {
         var text = Environment.GetEnvironmentVariable(BootstrapKey) ?? throw new InvalidDataException("Missing bootstrap.");
@@ -29,7 +35,7 @@ public static class RuntimeHost
         await app.StartAsync(boundedLifetime.Token);
         var lifetime = app.Services.Resolve<IAppLifetime>()!;
         await using var parent = new UnitParentProcessEventsHandler(app.Services.Resolve<IConfiguration>()!, lifetime,
-            new ProbeEvents<UnitParentProcessEventsHandler>());
+            new AetherEvents<UnitParentProcessEventsHandler>());
         parent.StartListen(parentId);
         using var end = CancellationTokenSource.CreateLinkedTokenSource(lifetime.AppCancellationToken, boundedLifetime.Token);
         using var game = new ProbeGame();
@@ -38,12 +44,12 @@ public static class RuntimeHost
         PipesInvocationServer<IEngineControl>? server = null;
         var control = new FaultControl(protocol, launch, () => { server?.Dispose(); server = null; }, frames.Dispose, end.Token);
         var handler = new BoundedControlHandler(new EngineControlInvocationServerHandler(control,
-            new ProbeEvents<EngineControlInvocationServerHandler>()));
+            new AetherEvents<EngineControlInvocationServerHandler>()));
         Task tick = Task.CompletedTask, input = Task.CompletedTask, frameWork = Task.CompletedTask;
         try
         {
             Records.Write(launch.ReportDirectory, $"launched-{launch.Identity.Generation}.json", new { Pid = Environment.ProcessId, Parent = parentId });
-            if (launch.Behavior != "no-server") server = new(new ProbeEvents<PipesInvocationServer<IEngineControl>>(), handler, launch.Endpoint);
+            if (launch.Behavior != "no-server") server = new(new AetherEvents<PipesInvocationServer<IEngineControl>>(), handler, launch.Endpoint);
             tick = TickAsync(protocol, end.Token);
             frameWork = launch.Behavior == "no-frames" ? Task.Delay(Timeout.InfiniteTimeSpan, end.Token) : frames.RunAsync(protocol, end.Token);
             _ = frameWork.ContinueWith(t => { Console.Error.WriteLine(t.Exception); end.Cancel(); }, CancellationToken.None,

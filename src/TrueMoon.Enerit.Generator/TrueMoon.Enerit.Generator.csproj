@@ -4,20 +4,21 @@
         <TargetFramework>$(TF)</TargetFramework>
         <Description>Source generator for TrueMoon Enerit typed clients, handlers and payload codecs. Requires the .NET 10 SDK compiler.</Description>
         <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <PackageTags>$(PackageTags);ipc;source-generator;roslyn;analyzer</PackageTags>
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     </PropertyGroup>
-    
+
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     </ItemGroup>
-    
+
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
-    
-    
-    
+
+
+
     <ItemGroup><None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" /></ItemGroup>
 </Project>

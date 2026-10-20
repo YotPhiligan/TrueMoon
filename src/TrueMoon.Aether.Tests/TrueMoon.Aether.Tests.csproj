@@ -11,6 +11,9 @@
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\EngineSessionProbe\EngineSessionProbe.csproj" />
+    <ProjectReference Include="../TrueMoon.Aether/TrueMoon.Aether.csproj" />
+    <ProjectReference Include="../ManualTests/Game.Logic/Game.Logic.csproj" />
+    <ProjectReference Include="..\TrueMoon\TrueMoon.csproj" />
+    <ProjectReference Include="..\TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj" />
   </ItemGroup>
 </Project>

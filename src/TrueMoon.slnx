@@ -1,4 +1,16 @@
 <Solution>
+  <Folder Name="/Aether/">
+    <Project Path="TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj" />
+    <Project Path="TrueMoon.Aether/TrueMoon.Aether.csproj" />
+  </Folder>
+  <Folder Name="/Alloy/">
+    <Project Path="TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj" />
+    <Project Path="TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
+    <Project Path="TrueMoon.Alloy.Platform.Silk/TrueMoon.Alloy.Platform.Silk.csproj" />
+    <Project Path="TrueMoon.Alloy.Rendering.Skia/TrueMoon.Alloy.Rendering.Skia.csproj" />
+    <Project Path="TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj" />
+    <Project Path="TrueMoon.Alloy\TrueMoon.Alloy.csproj" />
+  </Folder>
   <Folder Name="/Benchmarks/">
     <Project Path="Benchmarks/TrueMoon.Cobalt.Benchmarks/TrueMoon.Cobalt.Benchmarks.csproj" />
     <Project Path="Benchmarks/TrueMoon.Enerit.Benchmarks/TrueMoon.Enerit.Benchmarks.csproj" />
@@ -10,8 +22,6 @@
     <Project Path="TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
   </Folder>
   <Folder Name="/Engine/">
-    <Project Path="ManualTests/Engine.Probe.Contracts/Engine.Probe.Contracts.csproj" />
-    <Project Path="ManualTests/EngineSessionProbe.Tests/EngineSessionProbe.Tests.csproj" />
     <Project Path="ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />
     <Project Path="ManualTests/Game.Logic/Game.Logic.csproj" />
   </Folder>
@@ -32,12 +42,6 @@
     <Project Path="ManualTests\AlloyTest\AlloyTest.csproj" />
     <Project Path="ManualTests\CobaltTest\CobaltTest.csproj" />
   </Folder>
-  <Project Path="TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj" />
-  <Project Path="TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
-  <Project Path="TrueMoon.Alloy.Platform.Silk/TrueMoon.Alloy.Platform.Silk.csproj" />
-  <Project Path="TrueMoon.Alloy.Rendering.Skia/TrueMoon.Alloy.Rendering.Skia.csproj" />
-  <Project Path="TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj" />
-  <Project Path="TrueMoon.Alloy\TrueMoon.Alloy.csproj" />
   <Project Path="TrueMoon.Argentis/TrueMoon.Argentis.csproj" />
   <Project Path="TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
   <Project Path="TrueMoon.Core\TrueMoon.Core.csproj" />

@@ -1,6 +1,6 @@
-namespace Engine.Probe.Contracts;
+namespace TrueMoon.Aether.Contracts;
 
-// Probe-only contracts. Mutable wire DTOs are decoded into validated snapshots
+// Experimental engine contracts. Mutable wire DTOs are decoded into validated snapshots
 // before application; no transport, process, UI or graphics types cross this boundary.
 public interface IEngineControl
 {

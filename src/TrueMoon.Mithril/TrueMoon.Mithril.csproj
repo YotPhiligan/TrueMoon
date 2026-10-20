@@ -4,6 +4,7 @@
         <TargetFramework>$(TF)</TargetFramework>
         <Description>TrueMoon App-local units, owned child process lifecycle and bounded restart policies. Alpha API.</Description>
         <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <PackageTags>$(PackageTags);processes;units;lifecycle</PackageTags>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 

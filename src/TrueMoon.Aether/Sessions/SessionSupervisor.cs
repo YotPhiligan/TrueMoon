@@ -1,8 +1,8 @@
-using Engine.Probe.Contracts;
-using System.Security.Cryptography;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using TrueMoon.Aether.Contracts;
 
-namespace EngineSessionProbe;
+namespace TrueMoon.Aether.Sessions;
 
 public enum SessionState { Stopped, Starting, Paused, Playing, Stopping, Faulted, CleanupFailed }
 public sealed record SessionFailure(string Phase, Exception Cause, Exception? CleanupError = null);
@@ -278,10 +278,11 @@ public sealed class SessionSupervisor : IAsyncDisposable
     }
     public async ValueTask DisposeAsync()
     {
-        Interlocked.Exchange(ref _closing, 1);
+        CloseAdmission();
         await StopAsync().ConfigureAwait(false);
         _disposed = true; _work?.Dispose(); _work = null;
     }
+    internal void CloseAdmission() => Interlocked.Exchange(ref _closing, 1);
     private void CancelWork()
     {
         try { _work?.Cancel(); }

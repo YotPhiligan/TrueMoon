@@ -1,13 +1,18 @@
+using TrueMoon.Aether;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
 using SkiaSharp;
 using TrueMoon;
+using TrueMoon.Aether.Frames;
+using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Alloy;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
+using TrueMoon.Dependencies;
 
 namespace EngineSessionProbe;
 
@@ -65,8 +70,8 @@ public static class ViewportProbe
         var directory = reportDirectory ?? Path.Combine(Path.GetTempPath(), "tm-viewport-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         var factory = new NativeRuntimeFactory(); var authoring = new AuthoringState(); var before = JsonSerializer.Serialize(authoring);
-        await using var supervisor = new SessionSupervisor(factory, BuildIdentity.HostId, BuildIdentity.GameId, directory);
-        await using var session = new FrameSession(supervisor);
+        SessionSupervisor supervisor = null!;
+        FrameSession session = null!;
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(smoke ? 180 : 3600));
         var uploads = new LatencySamples(); var latency = new LatencySamples(); var cases = new List<string>();
         (ulong Child, ulong Surface, ulong Frame)? lastPresentation = null;
@@ -110,6 +115,11 @@ public static class ViewportProbe
         { ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "NotoSans-Regular.ttf") });
         await using var app = App.Builder(_ => { }).Setup(c =>
         {
+            c.UseAether(o =>
+            {
+                o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.GameId;
+                o.ReportDirectory = directory; o.RuntimeFactory = _ => factory;
+            });
             c.UsePresentation<ViewportView>(o =>
             {
                 o.UseSkiaOpenGL(fonts);
@@ -117,6 +127,8 @@ public static class ViewportProbe
             });
             c.Services(r => r.Singleton<Action<string>>(_ => Dispatch).Transient<ViewportView>());
         }).Build();
+        var engine = app.Services.Resolve<AetherHost>()!;
+        supervisor = engine.Supervisor; session = engine.Frames;
         var window = (HostedUiWindow)app.Services.GetService(typeof(HostedUiWindow))!;
         var sessions = (HostedUiSessionFactory)app.Services.GetService(typeof(HostedUiSessionFactory))!;
         ViewportView? view = null; Exception? failure = null; var completed = false; var screenshot = false;

@@ -1,5 +1,24 @@
 # Core: состояние и точка продолжения
 
+App entry-point audit — **2026-10-19**: bootstrap/configuration и UseDiagnostics
+подключены к App; Contracts/Core utilities не требуют отдельного UseX.
+Focused Debug AppTests/AppLifecycleTests/DiagnosticsTests:46passed/failed0/skipped0.
+Runtime code не менялся; прочие Core suites/Release/consumers не повторялись.
+[Общая таблица API и команды](../HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
+
+Integration regression — **2026-10-19, UseAether**: Core production API не менялся.
+Полный Debug повторил Core107/107; новые Aether integration tests и независимые
+package consumers проверили App startup/stop/rollback и sync/async disposal на
+Cobalt и Microsoft DI. Это engine integration scope; прежние Core Release/source/
+package матрицы ниже не повторялись.
+[Подробные команды/evidence](../engine/HISTORY.md#app-integration-реализация--2026-10-19).
+
+Package metadata check — **2026-10-19**: TrueMoon/Contracts/Core наследуют общие
+project/repository/license/icon metadata; Core получил собственный PACKAGE.md.
+Release pack и nuspec/payload checks прошли в общей matrix; runtime code и own
+unit/native consumers не менялись/не запускались в этом metadata шаге.
+[Общие команды/evidence](../HISTORY.md#nuget-package-metadata--2026-10-19).
+
 Документационная сверка2026-10-15: [общая quality matrix](../QUALITY.md)
 определяет следующий scope — UI package/Hosting после текущих Core/Cobalt changes.
 Новых code/build/tests/package запусков в этой сверке нет.

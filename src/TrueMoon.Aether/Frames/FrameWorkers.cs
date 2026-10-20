@@ -1,7 +1,8 @@
 using System.Diagnostics;
-using Engine.Probe.Contracts;
+using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Runtime;
 
-namespace EngineSessionProbe;
+namespace TrueMoon.Aether.Frames;
 
 public sealed class FrameProducer : IDisposable
 {

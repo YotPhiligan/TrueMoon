@@ -4,6 +4,7 @@
         <TargetFramework>$(TF)</TargetFramework>
         <Description>Same-build typed invocation over named pipes, generated service integration and validated payload ownership. Alpha API.</Description>
         <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+        <PackageTags>$(PackageTags);ipc;named-pipes;serialization</PackageTags>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
