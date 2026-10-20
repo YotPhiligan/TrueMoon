@@ -4,5 +4,11 @@
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
-  <ItemGroup><ProjectReference Include="../../TrueMoon.Aether/TrueMoon.Aether.csproj" /></ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../TrueMoon.Aether/TrueMoon.Aether.csproj" Condition="'$(AetherContractPath)' == ''" />
+    <Reference Include="TrueMoon.Aether" Condition="'$(AetherContractPath)' != ''">
+      <HintPath>$(AetherContractPath)</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
 </Project>

@@ -2,9 +2,122 @@
 
 Архив создан2026-10-09 при разделении общего и модульных планов. [Текущий статус](STATUS.md), [UI план](PLAN.md), [общий статус](../STATUS.md).
 
+## ENG4d2 ordinary GPU Editor — 2026-10-20
+
+UI production APIs не менялись. ManualTests ViewportView/Canvas и App binding
+подключают GpuViewportTransport к общим GameEditor commands. Owner callback copies
+texture в независимый Skia image, ticket хранится рядом, actual FramePresented
+подтверждает только текущую presentation. CPU default/legacy API остаются. Viewport
+availability/transport caption использует neutral surface; Start ждёт GL ready.
+Background transport failure виден пользователю; cleanup удерживает borrowed UI
+owner до завершения. Native ordinary GPU proof повторяет selected A/B DLL/
+20Replace/checkpoint/rollback/cancel/close pipeline в одном App/window,53children.
+Imported ReadPixels0,47devices/141slots balanced, core/sync validation0/0, resources/
+handles/mappings/UI sessions0. Full Debug1898/1898 повторяет UI615/Hosting79;
+UI615 Release отдельно. Package consumers проверяют managed transport contracts
+и transitive Skia native delivery, не actual GPU rendering из nupkg. Команды,
+окончательный snapshot и точные limits —
+[engine HISTORY](../engine/HISTORY.md#eng4d2-ordinary-gpu-gameeditor--2026-10-20).
+Далее ENG4e measured reference baseline; полноценный 3D renderer, golden/RTE/VRAM/
+performance/hardware/final alpha не подтверждены. K7 workaround/driver settings
+не менялись. Прежние результаты ниже сохраняют собственные scopes.
+
+## ENG4d retained GPU image bridge — 2026-10-20
+
+Rendering.Skia получил `SkiaOpenGLSurface.CopyTexture` без зависимости от Aether:
+borrowed RGBA8/premul/stored-sRGB/top-left texture → независимый retained GPU
+SKImage. Last source use submitted до return/throw, source не adopted и pixels не
+читаются. Image требует исходный Skia surface/context owner для drawing/dispose
+до UI teardown; drawing adapter отклоняет raster/foreign context. Size получает
+image один раз, failed owner dispose сохраняет image для retry, disposed use
+отклоняется. Existing CPU pixel copy/decoder API остаётся.
+
+UI615/615 Debug/Release, Hosting79 Debug в full Debug1858/1858. После review
+`ImageContextGuard_RejectsRasterOrForeignSurfaceAndAcceptsOrigin` проверяет сам
+SkiaDrawingContext.Image и actual successful red pixel, чтобы removal draw guard
+не проходил через отдельный helper-only test. Solution Debug/UI Release повторены.
+`ImageOwnerFailure_RetainsImageForDisposeRetryAndThenRejectsUse` проверяет cause,
+живой native wrapper при failure, retry/idempotence и use-after-dispose.
+
+Reference viewport per Debug/published Release:17checks/14captures/20GPU copies/
+6children. Independent PNG decoder rechecked3,051,552interior canvas pixels при
+actual150% DPI: alpha/background/stored sRGB/origin/bilinear/clipping. Imported
+ReadPixels0. Retained image переживает reuse/resize/suspend/Stop/crash; return во
+время source use отвергается. WM_CLOSE drains App GPU imports до UI disposal.
+Core/sync validation0/0; resources/handles/UI sessions0. Проверяется retained UI
+surface после actual presentation, не OS compositor/physical display. GPU producer
+source extents16²/64×32/320×180; это не performance/VRAM/zero-copy proof.
+
+Fresh12packages/4Cobalt+DI consumers проверили Aether+Skia APIs, exact managed
+DLL identity и transitive native payload. GPU native rendering шёл через source
+Debug/published Release, не package consumer; full own UI package/native/golden/
+RTE/performance/hardware matrix не повторялся. K3/K7/K8/VRAM/final alpha прежние.
+Commands, reports и failed initial100%-DPI reference —
+[engine HISTORY](../engine/HISTORY.md#eng4d-gpu-viewport-bridge--2026-10-20).
+Ordinary CPU GameEditor остаётся default; следующий shared code шаг ENG4d2.
+
 Ниже целиком сохранён прежний STATUS со всеми датированными запусками, решениями, failures, commands, tables и историческим VCS контекстом. Это снимок перед реорганизацией; его формулировки «сейчас» и «следующий шаг» относятся к указанным датам. Актуальная точка продолжения находится в STATUS. Общие build/другие module failures учитываются в общем и соответствующих локальных статусах; архив не является новым passing run.
 
 Новые подробные записи добавлять датированными разделами истории, текущую сводку обновлять отдельно. Согласованные UI критерии сохраняются.
+
+## ENG4a actual GL capabilities — 2026-10-20
+
+Existing Alloy/OpenGL owner context read-only UUID/driver/extensions/procedures/
+RGBA8/tiling/fence-polling queries сопоставлены с App-owned Vulkan child. RTX5070Ti
+eligibility допускает следующий import-probe; CPU selected/ImportTested=false.
+UI production APIs прежние. Full Debug повторил UI613/Hosting79; native old+new
+cases Debug/published Release прошли, новые cases по1reaped child/instance destroyed/
+mappings/UI sessions0/authoring preserved. [Подробные tests/commands/raw evidence](../engine/HISTORY.md#eng4a-gpu-capabilities-и-transport-decision--2026-10-20).
+Actual GPU imports/pixels/completion, own Release UI/golden/RTE/UI packages/
+performance/hardware не повторялись; K3/K7/K8/VRAM/final alpha прежние. Далее ENG4b,
+drivers/Windows settings не менялись, K7 workaround search не возобновлялся.
+
+## ENG3d Editor commands и replacement proof — 2026-10-20
+
+Viewport example использует AetherHost.Editor commands/immutable context; UI
+production API прежние. Full Debug повторил UI613/Hosting79. Debug apphost и
+published Release: classic viewport по17cases/27children/20StartStop; отдельный
+editor-proof по20A/B Replace при одном App/window,20failure cases,775actual GL
+pixel checks,53children/maxlive1/allreaped/released. Проверены body colors,
+DLL hashes, полный restored checkpoint/first tick и новый Step, native close при
+held replacement/compiler до UI disposal, authoring unchanged, sessions/mappings0.
+[Единственные подробные engine tests/команды/evidence](../engine/HISTORY.md#eng3d-команды-editor-и-20replace-proof--2026-10-20).
+ENG3 завершён в bounded CPU scope, далее общий ENG4a capabilities/transport decision.
+Own Release UI/golden/RTE/UI packages/performance/hardware не повторялись;
+K3/K7/K8/VRAM/final alpha и отложенный RichTextEditor backlog сохраняются.
+
+## ENG3c replacement first-present regression — 2026-10-20
+
+ViewportProbe использует AetherHost.Replacement для selected artifact и сравнивает
+полный checkpoint/tick после actual GL first-present. UI production API прежние.
+Debug apphost/published Release: по17cases/27game children/20StartStop,
+137/135pixel checks, compiler/child drain до UI disposal, mappings/sessions0.
+Full Debug повторил UI613/Hosting79; own Release UI/golden/RTE/UI packages/
+performance/hardware matrix не повторялись. K3/K7/K8/VRAM/final alpha остаются
+открытыми; далее общий ENG3d Editor commands/20Replace proof.
+[Подробные commands/failures/fingerprints принадлежат engine](../engine/HISTORY.md#eng3c-serialized-replace-и-rollback--2026-10-20).
+
+## ENG3b restored first-present regression — 2026-10-20
+
+ViewportProbe после Step/capture/Stop запускает checkpoint restore на fresh
+generation и подтверждает сохранённые tick/camera/interaction после actual GL
+first-present.2runs Debug apphost/published Release: по16cases/26game children/
+20StartStop,86/84pixel checks, compiler/child cleanup до UI disposal и mappings/
+sessions0. Full Debug повторил UI613/Hosting79. UI production code не менялся;
+own Release UI/golden/RTE/UI packages/performance/hardware matrix не повторялись.
+K3/K7/K8/VRAM/final alpha остаются открыты; следующий общий шаг ENG3c.
+[Подробные commands, failures и fingerprints принадлежат engine](../engine/HISTORY.md#eng3b-checkpoint-и-startup-restore--2026-10-20).
+
+## ENG3a compiler close regression — 2026-10-20
+
+ViewportProbe Closing вызывает terminal AetherHost.DisposeAsync до UI disposal.
+Новый smoke case при живой game session запускает held compiler и native close;
+проверяет отмену build task и reap compiler/PowerShell worker до освобождения
+canvas/window. UI production code не менялся.2runs Debug apphost/published Release:
+по15cases/25game children/20StartStop, actual OpenGL pixels, mappings/sessions0.
+Full Debug повторил UI613/Hosting79; own Release UI/golden/RTE/UI package/
+performance/hardware matrix не повторялись. K3/K7/K8/VRAM/final alpha открыты.
+[Подробные commands, failures и fingerprints принадлежат engine](../engine/HISTORY.md#eng3a-compiler-artifacts-и-child-loader--2026-10-20).
 
 ## Aether App lifecycle regression — 2026-10-19
 
@@ -3010,3 +3123,43 @@ backlog и hardware blockers сохраняются. Существующая п
 RichTextEditor.cs не изменялась. Commit/push не выполнялись.
 Final documentation/provenance/wiring guard — ignored
 TestResults/AlloyInfrastructure/INF1/completion.json.
+
+## ENG4b: borrowed GL owner и live import cleanup — 2026-10-20
+
+Engine one-frame probe добавлен в Aether, UI production APIs не менялись.
+App owns GPU resources; GL callbacks/context заимствованы из существующего окна.
+Native WM_CLOSE с actual live imports ждёт GPU cleanup до view/window disposal.
+Обычный CPU viewport и20Replace Editor proof повторены в Debug/published Release:
+classic17cases/27children/145и141pixel checks; Editor20cycles/20failure cases/
+53children/777и783pixel checks, MaxLive1. Новый import run:14checks/8children,
+3whole-image roundtrips/923904pixels,7cooperative producer teardown reports,
+core/synchronization validation errors0/warnings0, local NT/GPU/UI resources0.
+
+Full Debug: UI613/Hosting79 passing (всего1769,9TRX). Это engine regression;
+own UI Release/golden/RTE/UI packages/performance/hardware acceptance не повторялись.
+K3/K7/K8/VRAM/final alpha и отложенный RTE backlog прежние. Validation layer
+извлечён локально, drivers/Windows settings не менялись, K7 workaround search
+не возобновлялся. Следующий общий code шаг ENG4c slots/surface lifecycle;
+ordinary GPU viewport/compositing остаётся ENG4d. Точные commands/raw evidence:
+[engine HISTORY](../engine/HISTORY.md#eng4b-one-frame-import-и-retirement--2026-10-20).
+
+## ENG4c: GPU slots/surface lifecycle regression — 2026-10-20
+
+UI production API не менялся. Aether App owns3persistent slots/shared device и
+borrowed GL owner;21checks/80frames/12children в Debug и published Release
+проверяют reuse/resize/queued resize/suspend/Stop/crash/restart/retry и WM_CLOSE с
+accepted pending Produce/live import.9cooperative teardown reports/configuration:
+15devices/45slots created/released, core/sync validation errors0/warnings0,
+parent GPU/NT/UI resources0.3deliberate crashes имеют owned reap без native
+cooperative teardown claim. Ordinary viewport остаётся CPU; далее ENG4d actual
+GPU presentation/compositing/first-present.
+
+Full Debug UI613/Hosting79 passing; всего1847/9TRX/failed0/skipped0.
+Old classic viewport17cases/27children/140и145pixel checks, Editor20cycles/
+20failure cases/53children/779и788pixel checks, MaxLive1. Existing Editor deadline
+helper публиковал PID marker до закрытия writer; sharing violation воспроизведена,
+helper исправлен на write-temp/close/atomic Move, вся native matrix повторена.
+Final50aggregate cases/52commands/exit0,394source/76binary fingerprints.
+Own UI Release/golden/RTE/UI packages/performance/hardware не повторялись;
+K3/K7/K8/VRAM/final alpha и RTE backlog прежние. Drivers/Windows settings прежние,
+K7 workaround search не возобновлялся. [Exact evidence](../engine/HISTORY.md#eng4c-reusable-slots-и-surface-lifecycle--2026-10-20).

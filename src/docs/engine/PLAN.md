@@ -1,15 +1,18 @@
 # TrueMoon.Aether: план игрового движка и редактора
 
 Зафиксировано **2026-10-13** по обсуждению будущего кастомного движка для одной
-не очень сложной 3D-игры. Сверка плана2026-10-19: **ENG0 определён;
+не очень сложной 3D-игры. Состояние2026-10-20: **ENG0 определён;
 ENG1 headless supervisor и ENG2 CPU viewport реализованы в bounded probe scope;
-ENG3–ENG8 запланированы**.
+ENG3a compiler/artifacts, ENG3b checkpoint/restore, ENG3c Replace/rollback
+и ENG3d Editor commands/20Replace proof реализованы2026-10-20; ENG4a/b/c, ENG4d bridge/ENG4d2 ordinary GPU Editor проверены в bounded scope;
+ENG4e baseline и ENG5–ENG8 запланированы**.
 [Статус направления](STATUS.md), [общий план](../PLAN.md),
 [правила ведения](../PLANNING.md).
 
-После UI INF7 и выделения модуля TrueMoon.Aether следующий этап остаётся ENG3; его
-[декомпозиция и вопросы до реализации](#eng3-уточнение-плана-перед-реализацией--2026-10-19)
-сверены с ENG1/ENG2 code. Эта сверка не является новым implementation/test run.
+После UI INF7, выделения TrueMoon.Aether, ENG3 и ENG4a–d2 следующий этап —
+ENG4e: сопоставимый CPU/GPU viewport baseline до 3D renderer. Прежняя
+[декомпозиция ENG3](#eng3-уточнение-плана-перед-реализацией--2026-10-19) сохраняет
+исходный checklist; фактические результаты ведутся в HISTORY/STATUS.
 
 ## Цель и заданные требования
 
@@ -81,7 +84,8 @@ Headless/viewport examples используют UseAether; manual SupervisorShut
 Игровая сессия запускается явно, UI/native child-role bootstrap выбирает consumer.
 Новая dependency Aether на concrete App/bootstrap не нужна: contracts уже находятся
 в TrueMoon.Contracts. Подробные [tests/native/package evidence](HISTORY.md#app-integration-реализация--2026-10-19)
-отдельны от прежнего audit. ENG3a compiler/artifact остаётся следующим engine code шагом.
+отдельны от прежнего audit. На дату App integration следующим был ENG3a;
+его [контракт2026-10-20](#eng3a-принятые-контракты--2026-10-20) реализован следующим шагом.
 
 ## ENG0: принятый scope первого прототипа — 2026-10-15
 
@@ -462,7 +466,7 @@ launch после Stop/failed Start и не поддерживает nonempty la
 
 ## ENG3: уточнение плана перед реализацией — 2026-10-19
 
-Документальная сверка после завершения UI INF7. ENG3 не реализован; результаты
+Документальная сверка после завершения UI INF7. На дату сверки ENG3 не реализован; результаты
 ENG1/ENG2 и INF7 имеют прежние даты/scopes. Порядок остаётся ENG3 → ENG4,
 без обязательного расширения INF5/RTE, без production engine packages/Hot Reload.
 Ниже декомпозиция существующего ENG3; она не добавляет новый игровой renderer/input.
@@ -477,10 +481,176 @@ ENG1/ENG2 и INF7 имеют прежние даты/scopes. Порядок ос
 | ENG3c | Serialized Replace и однократный rollback | Pause/capture → stop/reap → start/restore/first-present → прежний mode. Новые generation/identity, один game child; failed cleanup блокирует launch. Candidate failure сохраняет исходную ошибку и допускает не более1rollback; rollback failure оставляет usable Editor/Faulted |
 | ENG3d | Интеграция команд Editor и воспроизводимый proof | В Debug apphost и published Release по20Replace при одном Editor App/window. Поведение/pixels меняются между builds, checkpoint и authoring state сохраняются; compile/candidate/rollback/cancel/close/cleanup failures проверены отдельно. Повторены релевантные ENG1/ENG2 regressions |
 
-ENG3a — следующий конкретный code подэтап. Production Core/Cobalt/Enerit/Mithril/UI
-API не расширяются заранее; общая проблема модуля при обнаружении получает свою задачу.
+ENG3a–d/ENG4a–d2 реализованы2026-10-20; следующий code этап — ENG4e measured baseline.
+Production Core/Cobalt/Enerit/Mithril/UI APIs заранее не расширяются; общая проблема
+модуля при обнаружении получает свою задачу.
+
+### ENG3a: принятые контракты — 2026-10-20
+
+По согласованному порядку сначала зафиксирована исходная точка dc64b63, затем
+реализованы compiler/artifact/child loader в TrueMoon.Aether. Checkpoint/Replace/
+rollback и UI команды replacement не входят в ENG3a.
+
+- `Builds.GameBuildRequest`: trusted local SDK net10.0 csproj, entry DLL/type,
+  SourceRevision и explicit private DLL names; request/options snapshots. Project
+  потребляет frozen AetherContractPath как Reference/Private=false; ProjectReference
+  builds и shared build servers отключены. Compile outputs/obj идут в owned job.
+- `GameBuildArtifact`: schema1/net10.0, HostContractId, SHA256 общей Aether assembly,
+  entry DLL/type, SourceRevision, sorted file names/lengths/SHA256. Hash manifest
+  задаёт directory/BuildId. Manifest≤64KiB,1..16flat managed DLL,≤64MiB/file и
+  ≤128MiB total; paths/links/duplicates/extra payload/framework/Aether copies и
+  undeclared managed references отвергаются. Полный candidate публикуется atomic
+  directory move, active artifacts автоматически не удаляются/не перезаписываются.
+- `GameBuildCompiler`: один owned job/App, отдельный от session gate;120s maximum
+  build budget (options могут уменьшить). Cancel/timeout/failure reaps compiler
+  tree, сохраняет bounded stdout/stderr (по1Mi characters) и удаляет staging/work.
+  Timeout отличается от caller/close cancellation. Failed cleanup удерживает
+  ownership и блокирует новый job до явного successful disposal retry.
+- `AetherHost.Builds` — borrowed App-owned compiler, не отдельный disposable alias.
+  App Stop закрывает compiler/session admission и независимо drains build/frames/
+  supervisor; viewport Closing выполняет terminal engine cleanup до UI disposal.
+- Completion только возвращает artifact с SourceRevision, без auto-apply. Caller
+  сопоставляет revision с текущими исходниками и явно выбирает следующий Start.
+  Stop во время build не запрещает получить candidate, но completion не запускает
+  новую game generation. Supervisor/Frames принимают artifact на каждый launch;
+  existing session сначала полностью Stop/reap. Legacy fixed build path сохранён.
+- Native lease pins все artifact files до successful child reap. Runtime bootstrap
+  несёт directory/expected BuildId; child повторно проверяет manifest/contract/hash,
+  GameBuildLoader создаёт IGameSession в отдельном AssemblyLoadContext, sharing
+  только loaded Aether contract и framework. Private dependencies — только manifest;
+  native game dependencies/assets вне scope. Editor читает metadata/bytes без load.
+  Это trusted-local dependency policy, не security sandbox; unload cooperative,
+  окончательная runtime resource boundary — process exit.
+- Self guard примера явно изменён с абсолютных2minutes на2minutes без успешного
+  control request. Heartbeat живого Editor продлевает его, поэтому build120s не
+  прерывает old session. Parent monitor и startup/command/heartbeat limits прежние.
+  Replace45s/rollback budget относится к ENG3c и этим шагом не реализован.
+
+[Публичный пример](../../TrueMoon.Aether/README.md#сборка-и-выбор-игровой-версии--eng3a),
+[тесты/команды/границы](HISTORY.md#eng3a-compiler-artifacts-и-child-loader--2026-10-20).
+
+### ENG3b: принятые контракты — 2026-10-20
+
+Минимальный checkpoint реализован в Aether.Contracts без новой bootstrap/UI
+dependency. Optional `ICheckpointGameSession` сохраняет возможность запуска игр,
+реализующих только IGameSession; capture/restore такой игры возвращает Unsupported.
+
+- Snapshot v1: host SHA256, source-build SHA256, scene ID/revision, UInt64 tick,
+  camera XYZ + pitch/yaw/roll в radians и interaction bool. Capture выполняется
+  в Paused под runtime gate на tick boundary и не меняет игру. Camera finite,
+  scene1..128 UTF16 characters со strict UTF8, revision≥0. Игра применяет Restore
+  атомарно после полной проверки; expected rejection не меняет состояние.
+- Canonical little-endian TMCK: magic/version@0/4, host/build32bytes@8/40,
+  scene UTF8 length UInt16@72, revision Int64@74, tick UInt64@82,6float32@90..113,
+  flag@114, scene@115 и SHA256 последних32bytes. Fixed147bytes + scene1..512bytes;
+  общий accepted payload≤64KiB, без trailing bytes. Codec проверяет схему,
+  integrity/length/UTF8/finite values и поля до вызова game restore. Это integrity,
+  не аутентификация недоверенного кода; same-user trusted-local scope сохраняется.
+- GameCheckpoint.ValidateFor проверяет host/scene/revision до остановки старого
+  child и создания нового generation. Source build — provenance; новая совместимая
+  сборка может отличаться. Generic object graph/schema migration не добавлены.
+- CaptureCheckpoint/RestoreCheckpoint — новые same-build generated control commands.
+  Captured/Restored/Unsupported/CaptureRejected/RestoreRejected подтверждают sequence.
+  Только валидированный explicit capture rejection сохраняет paused child,
+  heartbeat и Resume. Неподтверждённое исключение, timeout/disconnect, mutation или
+  malformed acknowledgement сохраняют ENG1 Faulted/cleanup policy.
+- Restore доступен только при fresh startup с SessionLaunch.RequireRestore:
+  Hello → LoadScene → RestoreCheckpoint → SetMode(Paused) → ConfigureSurface →
+  first-present. Pending restore блокирует tick/mode/surface/frame production.
+  Runtime проверяет полное recaptured state после применения. Failed candidate
+  restore очищается и не объявляется ready. Startup15s включает restore/first-present.
+- Supervisor/Frames.StartAsync overloads принимают checkpoint с fixed или выбранным
+  artifact. Start без checkpoint явно reset из документа. Live in-place restore и
+  автоматический Stop/Replace/rollback не добавлены. Stop/close отменяют pending
+  restore и drains child/frames по прежним ownership/fence rules.
+
+[Публичный пример](../../TrueMoon.Aether/README.md#checkpoint-и-восстановление--eng3b),
+[тесты/native evidence](HISTORY.md#eng3b-checkpoint-и-startup-restore--2026-10-20).
+Следующий ENG3c должен объединить эти primitives в serialized Replace с общим45s
+monotonic budget/резервом однократного rollback и восстановлением прежнего mode.
+
+### ENG3c: принятые контракты — 2026-10-20
+
+App-owned `AetherHost.Replacement.ReplaceAsync(request)` объединяет primitives ENG3a/b.
+Request фиксирует candidate artifact, expected current session identity, immutable
+scene и актуальную expected source revision. До Pause/Stop проверяются identity,
+source revision, scene ID/revision, manifest/host/dependencies; оба managed artifacts
+удерживаются pins до завершения transaction. Fixed old build поддержан отдельно.
+
+- Общая reservation Supervisor/Frames запрещает конкурирующие Start/Step/mode/
+  capture/Resize и вторую Replace. Начатые раньше операции сначала drains. Stop и
+  terminal App close отменяют reservation до ожидания gates; поздний rollback или
+  candidate не создаёт child. Heartbeat/frame fault monitoring остаются активными.
+- Default monotonic total45s начинается при принятии reservation. Forward window18s
+  включает preflight/Pause/capture/old stop/reap/candidate startup/first-present/
+  возврат прежнего mode. Остальные27s зарезервированы для candidate cleanup≤10s,
+  rollback startup/first-present≤15s и mode≤2s. Каждый wait получает оставшийся
+  budget; local maxima не суммируются независимо. Options могут уменьшить бюджеты:
+  Total≤45s, Forward≤18s, Cleanup≤10s, все положительны, Forward+Cleanup<Total.
+- До destructive Stop подтверждённый capture rejection/локальная отмена сохраняют
+  old process; прежний mode восстанавливается при здоровом канале. Unknown command
+  outcome сохраняет Faulted/cleanup policy. Snapshot совместим с exact scene revision.
+- После old reap candidate failure допускает не более одного запуска прежнего
+  artifact/fixed build с тем же snapshot, fresh generation/nonce и first-present,
+  затем прежний mode. Исходная candidate error остаётся InnerException результата
+  ошибки, recovery error хранится отдельно. Rollback failure не вызывает новый retry.
+- Caller cancellation после Stop также пытается восстановить old build в оставшемся
+  budget; caller token не отменяет recovery. Explicit Stop/close отменяют и recovery,
+  не возобновляют игру. Ошибка transaction содержит phase/rollback outcome и cause.
+- Истёкший deadline не означает reap. Незавершённый owned cleanup task и lease
+  удерживаются в CleanupFailed, новый launch запрещён до явного успешного Stop retry.
+  Late cleanup наблюдаем, сам не запускает игру и не снимает failure. App drain
+  ждёт завершения accepted Replace перед освобождением зависимых engine resources.
+
+Это ENG3c scope. Команды UI,20Replace cycles и полный failure/pixel proof относятся
+к следующему ENG3d; отдельные native/viewport regression cases проверяются уже здесь.
+[Публичный API](../../TrueMoon.Aether/README.md#замена-игровой-сборки--eng3c),
+[точные tests/команды/evidence](HISTORY.md#eng3c-serialized-replace-и-rollback--2026-10-20).
+Visible surface и headless поддержаны; suspended surface отвергается до Pause.
+Caller задаёт актуальную source-input revision и expected identity; UI отменяет
+запрос при смене selection/document. Автоматическая подписка на editor model в Aether
+не вводится. Уже начатый Resize завершается до принятия reservation; ожидающий
+Replace, superseded by Stop/close, не принимается и не запускает child.
+
+### ENG3d: принятые контракты — 2026-10-20
+
+`AetherHost.Editor` — App-owned UI-independent controller Build/Select/Start/Replace/
+Play/Pause/Step/Cancel/Stop. Immutable context фиксирует build request/source revision,
+scene snapshot и selection ID; каждое SetContext меняет editor version, отменяет
+текущую работу и снимает candidate. Build completion также проверяет исходную
+session identity: поздний artifact не становится выбором для другой session.
+Select готового artifact — явная команда. Replace не совмещён с автоматическим build.
+
+Cancel завершает текущую операцию с обычной recovery policy ENG3c; Stop инвалидирует
+выбор и немедленно fences runtime/recovery, затем drains command/compiler. Close
+permanently closes admission; App drains Editor до disposal зависимых ресурсов.
+UI показывает operation/source/active/candidate и полную исходную/recovery error.
+Scene/Dirty/selection/panels автора не меняются при симуляции и failure.
+
+Native proof в Debug apphost и published Release: один Editor App/Alloy OpenGL
+window,20последовательных A/B Replace в Paused/Playing, фактические selected DLL
+path/hash, dynamic body color в GPU pixels, restored first-frame tick и полный
+camera/interaction checkpoint из runtime diagnostics. Отдельный Step после restore
+проверяет новое поведение игры. UI/session/window identity и authoring сохраняются.
+Существующий viewport smoke и headless matrix остаются regression runs.
+
+Failure cases: compile error/deadline/cancel, missing/tampered artifact, capture
+reject/unknown outcome, candidate Hello/restore/first-frame failure, rollback failure,
+Stop/close во время build/replace, stale completion и failed cleanup/retry. Последний
+случай использует явно обозначенную injected lease Stop failure с реальным owned
+child, без заявления о воспроизведении OS kill failure. Proof уменьшает compiler/
+replacement deadlines в допустимых limits; default ENG3c отдельно повторяется.
+Runner выделяет отдельный editor-proof process на конфигурацию, deadline300s для
+всего proof; individual build/Replace limits сохраняются. Драйверы/Windows settings
+не меняются, UI hardware/release/performance и ENG4–ENG8 остаются отдельными.
+
+Реализация и фактические проверки ENG3d завершены; [tests/commands/evidence](HISTORY.md#eng3d-команды-editor-и-20replace-proof--2026-10-20).
 
 ### Что уточнить до реализации соответствующего подэтапа
+
+Ниже вопросы исходной сверки2026-10-19. Artifact/loader и build cancellation
+решены ENG3a выше, checkpoint/recovery — ENG3b; transaction budget/fences — ENG3c.
+Editor context/proof — ENG3d. Вопросы ниже сохранены как исходный checklist; текущая точка — ENG4e.
 
 1. **Artifact/loader boundary (ENG3a).** Нынешние direct ProjectReference и
    `new ProbeGame()` не выбирают versioned DLL; supervisor хранит fixed GameBuildId,
@@ -536,6 +706,139 @@ INF7 UI runner не подменяет ENG3 proof; engine runner расширя�
 Package/standalone/3D/shared GPU/long performance остаются ENG4–ENG8.
 
 ## Команды и передача кадров
+
+### ENG4a: capabilities и transport decision — 2026-10-20
+
+Первый подэтап ENG4 проверяет только eligibility следующего import-probe. Pure
+contracts/decision находятся в Aether/Gpu без UI/native dependencies; transient
+collectors — в существующем EngineSessionProbe. GPU resources/handles не создаются,
+transport не переключается автоматически. Unsupported/invalid evidence оставляет
+CPU path с явным reason. Actual import/pixels/completion ещё не проверены.
+
+Windows x64 profile v1: Vulkan1.1 producer, одна graphics-capable physical device,
+совпадение ненулевых deviceUUID и driverUUID с единственным GL device. Query именно
+R8G8B8A8_UNORM/2D/optimal/single sample, usage ColorAttachment|Sampled|TransferSrc|
+TransferDst; max extent/resource size покрывают запрошенный viewport в16..1920×16..1080. OPAQUE_WIN32 NT
+memory/semaphore export и compatible handle bits обязательны; DedicatedOnly
+сохраняется в результате, Importable Vulkan диагностируется без требования, поскольку
+importer — OpenGL. GL требует memory_object/semaphore +обе win32 extensions,
+все используемые entry points, RGBA8 support/optimal tiling и fence polling.
+OS bitness/version/session identity/profile errors не превращаются в GPU readiness.
+
+Native command запускает App-owned runtime с read-only Vulkan instance/physical
+queries, получает correlated diagnostics и сравнивает с текущим Alloy OpenGL
+context на UI owner. Это local prototype evidence, не расширение control wire v1.
+Schema1 и full SessionIdentity проверяются до capability decision; production
+capability exchange/OS handle transfer вводятся ENG4b отдельным contract.
+Debug apphost/published Release сохраняют raw query results/extensions/UUIDs,
+typed decision/reasons, cleanup/process и source/binary fingerprints.
+
+ENG4b должен сначала доказать dedicated image import и CPU-reference pixels.
+OPAQUE_WIN32 handles дублируются только в owned peer, recipient closes свою копию
+по правилам API; descriptor несёт session/surface/slot generations, format/color/
+alpha/origin, allocation size/offset и dedicated flag. Producer выполняет layout/
+queue release и сигнализирует ready binary semaphore. Editor не ставит GPU wait
+на ещё не подтверждённый signal: отдельное CPU-visible fence completion/notification
+предшествует enqueue wait, identity/generation перепроверяются. GL completion
+polling и return semaphore не позволяют переиспользовать slot до завершения UI use.
+ImportAck/Ready/Release/Retire имеют bounded deadlines, disconnect/crash/cancel
+fence, retained ownership при unconfirmed GPU use и явный unavailable outcome.
+Точный bounded wait/device-loss cleanup требует executable proof ENG4b–d; наличие
+extensions не доказывает отсутствие GPU hang/driver isolation. Следующие шаги:
+ENG4b one-frame import/completion/pixels; ENG4c slots/resize/stop/restart/crash;
+ENG4d integration/actual first-present/replacement и resource/validation checks.
+UI K3/K7/K8/VRAM/final alpha, drivers/Windows settings и остановка K7 workaround
+search сохраняются. CPU-only режим остаётся рабочим до отдельного выбора GPU path.
+
+ENG4a реализован/проверен; reference допускает ENG4b import-probe, CPU selected.
+[Результаты/границы](HISTORY.md#eng4a-gpu-capabilities-и-transport-decision--2026-10-20).
+
+Нормативные основания сверены2026-10-20:
+[Vulkan ID properties](https://docs.vulkan.org/refpages/latest/refpages/source/VkPhysicalDeviceIDProperties.html),
+[external image tuple](https://docs.vulkan.org/refpages/latest/refpages/source/VkPhysicalDeviceExternalImageFormatInfo.html),
+[GL memory/semaphore/tiling/wait semantics](https://registry.khronos.org/OpenGL/extensions/EXT/EXT_external_objects.txt),
+[Win32 import/NT handle ownership](https://registry.khronos.org/OpenGL/extensions/EXT/EXT_external_objects_win32.txt).
+
+### ENG4b: one-frame import contract — 2026-10-20
+
+Implementation находится в единственной TrueMoon.Aether assembly: GpuResourceHost
+на AetherHost.Gpu owns connections/producer/imports и closes admission/drains до
+обычного session shutdown. App startup не создаёт GPU. Low-level resources доступны
+через этот owner, UI context/resolver/owner dispatch заимствованы и живут дольше
+cleanup. Failed cleanup сохраняет resource/error для explicit retry. Добавляется
+существующий Silk.NET.Vulkan2.23.0 dependency; UI/Skia references в Aether нет.
+
+Отдельный same-build probe pipe (CurrentUserOnly, bounded64KiB frames, strict
+session/surface/frame/slot/schema/sequence) не меняет control/frame wire v1.
+Offer содержит RGBA8_UNORM/sRGB/premultiplied/top-left profile, dedicated offset0
+allocation≤64MiB, exact adapter/driver и3различных NT handle tokens. Editor pulls
+duplicates только через owned NativeRuntimeLease process handle; OpenProcess/PID
+attach/inheritance не используются. GL не получает ownership NT handle: originals
+и duplicates освобождаются каждым владельцем, imports держат native references.
+
+Один Vulkan optimal image и staging upload формируют asymmetric RGBA reference
+с alpha/channel/origin markers; это transport proof без3D renderer. ImportAck
+предшествует Produce. Queue-family release в EXTERNAL/layout GENERAL и ready
+binary semaphore включены в submission с fence. Ready reply требует observed
+CPU fence completion; только после него GL wait/readback. GL signal return +fence
+poll timeout0 завершают use, Release требует CPU-observed GL completion. Vulkan
+acquire/return wait ставится только после этого подтверждения; fence/Retire
+предшествуют освобождению. Нет DeviceWaitIdle/glFinish; fence waits на UI заменены
+polling с timeout0. Диагностический ReadPixels синхронен и не является production
+presentation/performance path; stored sRGB/premultiplied bytes проверяются без
+утверждения о window compositing/color conversion.
+
+Probe проверяет actual whole-image pixels, validation/errors, return completion,
+failed import/descriptor/stale/early phase, cancel/timeout/crash до ready и cleanup,
+native close с live imports. Неизвестный GPU outcome сохраняет ownership; process
+guard не обещает прервать driver hang. Peer death до Ready запрещает enqueue wait;
+после submitted use cleanup требует local GPU completion. Slots/resize/restart/
+обычный viewport integration остаются ENG4c/d, GPU transport не включается default.
+Debug apphost/published Release и прежний regression сохраняют отдельные reports.
+
+ENG4b реализован/проверен2026-10-20 в one-frame scope:3whole-image roundtrips,
+14transfer/failure/cleanup checks на каждой configuration, core/synchronization validation
+errors0/warnings0. [Точные результаты и границы](HISTORY.md#eng4b-one-frame-import-и-retirement--2026-10-20).
+Следующий шаг ENG4c: bounded reusable slots, surface/slot generations и retirement
+перед reuse, resize/suspend/Stop/restart/crash со stale completions. Обычный
+viewport/GPU presentation переключается только после отдельного ENG4d proof.
+
+### ENG4c: reusable slots и surface lifecycle — 2026-10-20
+
+Отдельный explicit surface API в AetherHost.Gpu сохраняет ENG4b/v1. Surface protocol2
+использует3persistent slots с одним Vulkan instance/device/queue. Каждый slot имеет
+dedicated allocation и пару reusable binary semaphores; SurfaceGeneration меняется
+при configure/zero-size/resume, FrameId — per-slot monotonic reuse generation.
+Полный session/surface/slot/frame/version stamp проверяется до native use/wait.
+Повторное Produce запрещено до CPU-observed GL return и Vulkan retirement fence.
+Разрешены3outstanding Ready frames; channel commands сериализованы и bounded,
+не создают unbounded queue. Изменяющийся RGBA pattern доказывает отсутствие stale pixels.
+
+App owns surface session/producer work; GL context borrowed. Один active GPU
+surface session на App, failed cleanup блокирует новый до explicit retry.
+Configure fences новые Produce, drains Ready/read-complete slots, освобождает GL
+imports, подтверждает detach/exporter cleanup и только затем создаёт fresh surface.
+0×0 suspends без allocations; partial-zero/invalid extent отклоняются до I/O.
+Stop/cancel/unknown command outcome permanently fence connection, drain accepted
+work и local GPU use; failed cleanup retains ownership. Runtime exit fences late
+operations; restart требует нового owned lease/full session identity. Surface Stop
+освобождает GPU ownership, runtime Stop/reap остаётся у Supervisor; App closes GPU
+до child/UI. Resize coalescing/ordinary viewport presentation относится к ENG4d.
+
+Native proof проверяет reuse всех slots, bounded outstanding frames, resize с
+Ready slots, suspend/resume, stale completions, Stop/cancel/deadline/crash/restart
+и WM_CLOSE. Core/synchronization validation включает teardown. Device-loss/driver
+hang не получают hard deadline от managed token; ordinary viewport CPU default,
+K3/K7/K8/VRAM/final alpha и запрет K7 workaround search сохраняются.
+
+ENG4c реализован/проверен2026-10-20 в diagnostic readback scope:21checks/80frames
+на configuration,3persistent slots/shared device, resize/queued resize/suspend,
+cleanup retry, cancel/deadline/crash/restart/WM_CLOSE. Core/sync validation
+errors0/warnings0; [результаты и границы](HISTORY.md#eng4c-reusable-slots-и-surface-lifecycle--2026-10-20).
+Первый ENG4d bridge реализует borrowed texture/use lifetime и GPU copy в retained
+UI image; actual draw/first-present/compositing проверяются отдельно от diagnostic
+readback. Обычный GameEditor GPU transport/selected DLL/checkpoint replacement
+подключён в ENG4d2; CPU path сохраняется самостоятельным default режимом.
 
 Control transport передаёт load scene/asset version, input batches, resize/DPI,
 pause/resume/step, параметры объектов, inspection DTO, checkpoints и diagnostics.
@@ -594,8 +897,8 @@ ENG1 и ENG2 proof выполнены2026-10-17; следующий code эта�
 | ENG0 | Scope и минимальные contracts — определены2026-10-15 | Demo-сцена, Windows/net10/OpenGL+CPU prototype, identity/control/frame v1, pause/checkpoint/rollback и limits записаны выше; code/protocol verification ещё нет |
 | ENG1 | Headless Editor/child skeleton и supervisor — реализован/проверен2026-10-17 | Hello/scene readiness,20Start/Stop/configuration, generations/stale replies/cancel/timeouts/crash/disconnect/parent exit, owned cleanup при живом Editor; Game.Logic replacement отдельно ENG3 |
 | ENG2 | CPU frame viewport — реализован/проверен2026-10-17 | Детерминированный pattern/counter из child виден в Editor; bounded ring, корректные generations/resize/slow receiver/EOF и resource cleanup |
-| ENG3 | Сборка и replacement Game.Logic | Смена поведения через новую игровую DLL без restart Editor; compile failure сохраняет рабочую версию; checkpoint/reset и rollback candidate проверены |
-| ENG4 | Vulkan shared GPU prototype | Capability handshake, корректные imports/completion/layout, resize/restart/crash и bounded waits; pixels сравнимы с CPU reference, поддержка явно указана |
+| ENG3 | Сборка и replacement Game.Logic — реализован/проверен2026-10-20 | Смена поведения через новую игровую DLL без restart Editor; compile failure сохраняет рабочую версию; checkpoint/reset и rollback candidate проверены |
+| ENG4 | Vulkan shared GPU prototype — ENG4a–d2 проверены; ENG4e baseline далее | Ordinary GPU Editor Build/Replace/checkpoint/first-present/lifecycle подтверждены на reference; measured latency/resources до 3D ещё требуются |
 | ENG5 | Небольшая играбельная 3D-сцена | Model/camera/light/material, управление и нужные collisions, Alloy HUD/pause; level load/unload и standalone launch воспроизводимы |
 | ENG6 | Hot Reload исследование | Зафиксирован supported edit набор/state behavior, unsupported edits переводятся в проверенный replacement; ALC только по подтверждённой потребности |
 | ENG7 | Минимальные инструменты и доставка | Scene/asset editing, inspector/logs/input routing и standalone consumer работают в выбранном package/publish scope |
@@ -646,6 +949,50 @@ passing evidence собственной реализации:
 - [Microsoft: cooperative assembly unloading](https://learn.microsoft.com/en-us/dotnet/standard/assembly/unloadability).
 - [Khronos: external memory и synchronization](https://docs.vulkan.org/guide/latest/extensions/external.html).
 - [Khronos: compatible Vulkan external memory handle types](https://docs.vulkan.org/refpages/latest/refpages/source/VkExternalMemoryHandleTypeFlagBits.html).
+
+## ENG4d: GPU viewport bridge — 2026-10-20
+
+Первый проверяемый результат ENG4d — callback-scoped borrowed GL texture и
+независимое retained GPU image в Skia. Aether не зависит от UI; consumer вызывает
+UseTextureAsync на ready stamp. Callback синхронно submits все uses, включая
+exception path; native name нельзя сохранять. После callback Aether signals return,
+polls GL fence, затем explicit ReturnAsync retires slot. GPU completion и actual
+FramePresented — разные события. UI image живёт на исходном surface/context owner
+до замены/dispose и позволяет вернуть imported slot до следующей UI перерисовки.
+Это одна GPU copy на кадр, не zero-copy presentation и не CPU readback delivery.
+
+Reference proof выбирается явно `--gpu-viewport`: whole viewport pixels с background,
+premultiplied alpha/stored sRGB/top-left, scaling/clipping, first actual presentation,
+retained image после slot reuse/resize/suspend, runtime-generation replacement,
+Stop/crash/cleanup. Diagnostic readback применяется только для проверки результата.
+Ordinary CPU GameEditor остаётся default; подключение GPU transport к его
+Build/Replace/checkpoint/first-present pipeline выполнено в ENG4d2 после
+этого bridge proof. Успех reference proof не закрывает ENG4 в целом.
+
+ENG4d2 acceptance: consumer-neutral viewport transport/presentation contract
+в Aether, явный CPU/GPU selection и runtime GPU producer; Start/Build/Replace/
+checkpoint/rollback сохраняют authoring и принимают first-present только актуального
+stamp. Проверить selected Game.Logic DLL/state behavior в одном App/window, оба
+transport modes, resize/cancel/Stop/close и safe resource drain. Новую engine
+assembly или UI dependency в Aether не вводить. [Текущий proof](HISTORY.md#eng4d-gpu-viewport-bridge--2026-10-20).
+
+ENG4d2 concrete contract2026-10-20: FrameSession сохраняет общий serialized
+Start/Resize/Stop/first-present lifecycle и optional App-owned IGameViewportTransport
+connection. ViewportSurface не содержит memory/native handles; ViewportFrame ticket
+принадлежит одной ViewportPresentation, latest issued ticket подтверждается через
+FrameSession после actual UI FramePresented. Старый CPU API сохраняется. Connection
+drain предшествует child Stop; failed cleanup сохраняет connection и блокирует
+новый Start до retry. Strategy factory задаётся в UseAether options; default CPU,
+GPU selection explicit, без автоматического переключения при fault.
+
+GpuViewportTransport borrows App GPU owner/GL callbacks, pumps ProduceFrame →
+owner GPU copy → Return. Первый frame pinned до first-present; resize останавливает
+только pump admission и drains accepted use, Stop cancels/fences connection. Runtime
+GPU provider возвращает RGBA reference pattern + metadata из атомарного capture
+loaded/restored selected game tick/color. Пока это CPU-generated pattern/Vulkan
+staging; полноценный 3D renderer относится к ENG5. Pixels не передаются в pipe и не
+читаются из imported texture для доставки. Ordinary Editor использует тот же View/
+commands с explicit GPU mode и независимой retained UI image.
 
 ## ENG2: CPU frame viewport — 2026-10-17
 
@@ -715,3 +1062,17 @@ resize coalesces150ms; zero-size suspends production, heartbeat продолжа
 engine input; он не входит в результаты ENG2. ENG3 остаётся compiler/checkpoint/
 versioned DLL replacement/rollback. UI K3/K7/K8/VRAM/final alpha не закрываются
 этим bounded engine proof, target30fps/60Hz не становится performance guarantee.
+
+## ENG4e: CPU/GPU viewport baseline перед 3D — следующий шаг
+
+На той же Windows x64/reference configuration измерить оба явных transport modes
+с одинаковыми game pattern, extent/tick/frame cadence и сценариями Start/resize/
+Replace/Stop в одном Editor window. Сначала записать warmup/repetitions/measurement
+interval и выбранные budgets; затем p50/p95 production/copy/import/retained-copy/
+actual-present latency, received/presented/dropped frames, CPU allocations и
+доступные process/GPU counters. Отсутствующие counters отмечать unavailable, а не0.
+Сохранить raw samples и воспроизводимые Debug/published Release commands. Сравнение
+reference CPU-generated/Vulkan-staging pattern не объявляет производительность
+будущего 3D renderer. Оптимизации выбирать только после измерений. Long VRAM trend,
+physical DPI/driver loss/final UI acceptance и K7 остаются отдельными открытыми
+проверками; driver/Windows settings не менять. Далее ENG5 renderer/input/3D scene.

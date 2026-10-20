@@ -30,6 +30,17 @@ The loader automatically uses the bundled DLL for all three backends. `SkiaNativ
 
 OpenGL/Vulkan targets borrow an application-owned context/device. Keep that host alive until UI disposal. Vulkan texture leases must be explicitly returned with their final image layout, and resize/dispose while borrowed is rejected. For App/standalone windows use the optional `TrueMoon.Alloy.Hosting` package.
 
+`SkiaOpenGLSurface.CopyTexture(texture, width, height)` copies a borrowed
+GL_TEXTURE_2D RGBA8 premultiplied stored-sRGB/top-left texture into a caller-owned
+GPU `SkiaImageSource`. Synchronize external production before calling; the method
+submits its last source use before returning, including exceptional returns. It
+does not take source ownership, wait for GPU completion, read pixels or acknowledge
+presentation. The independent copy survives source reuse/destruction. Draw and
+dispose it on its original Skia surface/context owner before that surface closes;
+raster/foreign-surface drawing and use after disposal are rejected. Keep retained
+images bounded by replacing/disposing the previous image on the owner. This is
+one GPU copy per image, not zero-copy or a measured performance guarantee.
+
 Migration: raw Vulkan descriptors remain in Rendering.Skia; Silk-specific factories and window presenter types moved to Hosting. Output/native loader paths are unchanged by the transitive package fix. Rebuild alpha consumers after updating assembly references/imports.
 
 Package smoke covers framework-dependent Windows x64 build/publish using .NET 10. Other OS/architectures, single-file, trimming, NativeAOT and self-contained deployment remain unverified. Repeated Vulkan window creation on the current tested NVIDIA ICD has an unresolved GDI resource blocker; package/native delivery is not evidence of full alpha readiness.

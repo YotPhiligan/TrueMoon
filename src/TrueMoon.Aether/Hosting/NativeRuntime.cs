@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Builds;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
@@ -63,10 +64,17 @@ internal sealed class EngineChild(SessionLaunch launch, Action<object> observe) 
 
 public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> observe) : IRuntimeLease
 {
+    /// <summary>Identity fixed when this owned process lease was created.</summary>
+    public SessionIdentity Identity => launch.Identity;
+    internal string GpuEndpoint => launch.Endpoint + "-gpu";
+    internal Microsoft.Win32.SafeHandles.SafeProcessHandle GpuProcessHandle =>
+        !ResourcesReleased && !Exited.IsCompleted ? _child.OwnedProcess?.SafeHandle ?? throw new IOException("Missing owned GPU runtime process.")
+            : throw new IOException("GPU runtime is no longer alive.");
     private readonly EngineChild _child = new(launch, observe);
     private PipesInvocationClient<IEngineControl>? _client;
     private IEngineControl? _service;
     private Task<string>? _stdout, _stderr;
+    private IDisposable? _buildPin;
     public int ProcessId { get; private set; }
     public Task Exited => _child.Completion;
     public bool ResourcesReleased { get; private set; }
@@ -75,6 +83,8 @@ public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> obse
     public string StandardOutput { get; private set; } = "";
     public async Task LaunchAsync(CancellationToken token)
     {
+        if (launch.Build != null)
+            _buildPin = GameBuildArtifact.Open(launch.Build.DirectoryPath, launch.Identity.HostContractId, launch.Identity.GameBuildId).Pin();
         if (await _child.StartAsync(token).ConfigureAwait(false) != true) throw new IOException("Owned child did not start.");
         var process = _child.OwnedProcess ?? throw new IOException("Missing owned process.");
         ProcessId = process.Id;
@@ -102,6 +112,7 @@ public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> obse
         if (_stdout != null) StandardOutput = await _stdout.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
         if (_stderr != null) StandardError = await _stderr.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
         await _child.DisposeAsync().ConfigureAwait(false);
+        _buildPin?.Dispose(); _buildPin = null;
         ResourcesReleased = true;
     }
     public ValueTask DisposeAsync() => new(StopAsync());

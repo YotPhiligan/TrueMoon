@@ -3,7 +3,13 @@ param(
     [string]$RunDirectory,
     [string[]]$Configurations = @('Debug', 'Release'),
     [switch]$IncludeViewport,
-    [string[]]$Scenarios = @('repeat','stale','bad-hello','bad-scene','startup-timeout','startup-cancel','command-timeout','command-cancel','stop-pending','crash','disconnect','heartbeat','forced-stop','hang-stop','launch-failure','parent-exit','app-stop')
+    [switch]$IncludeGpuCapabilities,
+    [switch]$IncludeGpuImport,
+    [switch]$IncludeGpuSurface,
+    [switch]$IncludeGpuViewport,
+    [switch]$IncludeEditorGpu,
+    [string]$GpuValidationLayerDirectory,
+    [string[]]$Scenarios = @('repeat','stale','bad-hello','bad-scene','startup-timeout','startup-cancel','command-timeout','command-cancel','stop-pending','crash','disconnect','heartbeat','forced-stop','hang-stop','launch-failure','parent-exit','app-stop','build-artifacts','checkpoint','replacement')
 )
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -13,9 +19,17 @@ if (!$run.StartsWith([IO.Path]::GetFullPath($resultsRoot) + [IO.Path]::Directory
 if (Test-Path -LiteralPath $run) { throw 'Use a fresh RunDirectory.' }
 [IO.Directory]::CreateDirectory($run) | Out-Null
 $summary = [ordered]@{ Completed = $false; RunDirectory = $run; Commands = @(); Cases = @(); SourceFiles = @(); Binaries = @(); Failure = $null }
+if ($GpuValidationLayerDirectory) {
+    $env:VK_LAYER_PATH = [IO.Path]::GetFullPath($GpuValidationLayerDirectory)
+    $summary.GpuValidation = @(foreach ($name in @('VkLayer_khronos_validation.dll','VkLayer_khronos_validation.json')) {
+        $file = Get-Item -LiteralPath (Join-Path $env:VK_LAYER_PATH $name) -ErrorAction Stop
+        [ordered]@{ Path = $file.FullName; Sha256 = (Get-FileHash -LiteralPath $file.FullName).Hash }
+    })
+    $env:TRUEMOON_GPU_VALIDATION = '1'
+}
 function Sources {
     $roots = @('TrueMoon.Aether','TrueMoon.Aether.Tests','ManualTests/EngineSessionProbe','ManualTests/Game.Logic','TrueMoon','TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon.Cobalt.Generator','TrueMoon.Extensions.DependencyInjection','TrueMoon.Enerit','TrueMoon.Enerit.Generator','TrueMoon.Mithril')
-    if ($IncludeViewport) { $roots += @('TrueMoon.Argentis','TrueMoon.Alloy','TrueMoon.Alloy.Hosting','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Rendering.Skia','ManualTests/AlloyTest/Assets/Fonts') }
+    if ($IncludeViewport -or $IncludeGpuCapabilities -or $IncludeGpuImport -or $IncludeGpuSurface -or $IncludeGpuViewport -or $IncludeEditorGpu) { $roots += @('TrueMoon.Argentis','TrueMoon.Alloy','TrueMoon.Alloy.Hosting','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Rendering.Skia','ManualTests/AlloyTest/Assets/Fonts') }
     $files = @('Directory.Build.props','Directory.Packages.props','global.json') | ForEach-Object { Get-Item (Join-Path $workspace $_) }
     $files += foreach ($root in $roots) { Get-ChildItem (Join-Path $workspace $root) -Recurse -File | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.Extension -in '.cs','.csproj','.ps1','.props','.targets','.dll','.json','.ttf','.txt' } }
     @($files | Sort-Object FullName | ForEach-Object { [ordered]@{ Path = [IO.Path]::GetRelativePath($workspace, $_.FullName); Sha256 = (Get-FileHash $_.FullName -Algorithm SHA256).Hash } })
@@ -50,13 +64,55 @@ try {
         }
         else { throw 'Only Debug apphost and published Release are defined.' }
         $summary.Binaries += @(Get-ChildItem $binaryDirectory -File | Where-Object { $_.Extension -in '.dll','.exe','.json' } | ForEach-Object { [ordered]@{ Configuration = $configuration; Path = $_.FullName; Sha256 = (Get-FileHash $_.FullName).Hash } })
-        if ($IncludeViewport) {
+        if ($IncludeViewport -or $IncludeGpuCapabilities -or $IncludeGpuImport -or $IncludeGpuSurface -or $IncludeGpuViewport -or $IncludeEditorGpu) {
             $summary.Binaries += @(Get-ChildItem (Join-Path $binaryDirectory 'Assets/Fonts'),(Join-Path $binaryDirectory 'truemoon-native') -Recurse -File | ForEach-Object { [ordered]@{ Configuration = $configuration; Path = $_.FullName; Sha256 = (Get-FileHash $_.FullName).Hash } })
+        }
+        if ($IncludeGpuCapabilities) {
+            $name = "$configuration-gpu-capabilities"; $caseDirectory = Join-Path $run $name
+            Invoke-Owned $name (Join-Path $binaryDirectory 'EngineSessionProbe.exe') @('--gpu-capabilities',$caseDirectory) 60
+            $report = Get-Content (Join-Path $caseDirectory 'gpu-report.json') -Raw | ConvertFrom-Json
+            if (!$report.Completed -or !$report.CpuTransportSelected -or $report.ImportTested -or !$report.EditorPreserved -or $report.Mappings -ne 0 -or $report.ActiveUiSessions -ne 0 -or $report.Children.Count -ne 1 -or @($report.Children | Where-Object { !$_.Reaped -or !$_.ResourcesReleased }).Count) { throw "$name report incomplete." }
+            $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'gpu-capabilities'; Report = "$name/gpu-report.json"; Passed = $true }
+        }
+        if ($IncludeGpuImport) {
+            $name = "$configuration-gpu-import"; $caseDirectory = Join-Path $run $name
+            Invoke-Owned $name (Join-Path $binaryDirectory 'EngineSessionProbe.exe') @('--gpu-import',$caseDirectory) 200
+            $report = Get-Content (Join-Path $caseDirectory 'gpu-import-report.json') -Raw | ConvertFrom-Json
+            if (!$report.Completed -or $report.Cases.Count -ne 14 -or !$report.EditorPreserved -or !$report.CpuViewportDefault -or $report.Resources -ne 0 -or $report.Handles -ne 0 -or $report.ActiveUiSessions -ne 0 -or $report.Children.Count -ne 8 -or @($report.Children | Where-Object { !$_.Reaped -or !$_.ResourcesReleased }).Count) { throw "$name report incomplete." }
+            $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'gpu-import'; Report = "$name/gpu-import-report.json"; Passed = $true; ValidationRequested = $report.ValidationRequested }
+        }
+        if ($IncludeGpuSurface) {
+            $name = "$configuration-gpu-surface"; $caseDirectory = Join-Path $run $name
+            Invoke-Owned $name (Join-Path $binaryDirectory 'EngineSessionProbe.exe') @('--gpu-surface',$caseDirectory) 200
+            $report = Get-Content (Join-Path $caseDirectory 'gpu-surface-report.json') -Raw | ConvertFrom-Json
+            if (!$report.Completed -or $report.Cases.Count -ne 21 -or $report.Frames.Count -ne 80 -or !$report.EditorPreserved -or !$report.CpuViewportDefault -or $report.Resources -ne 0 -or $report.Handles -ne 0 -or $report.ActiveUiSessions -ne 0 -or $report.Children.Count -ne 12 -or @($report.Children | Where-Object { !$_.Reaped -or !$_.ResourcesReleased }).Count) { throw "$name report incomplete." }
+            $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'gpu-surface'; Report = "$name/gpu-surface-report.json"; Passed = $true; ValidationRequested = $report.ValidationRequested }
+        }
+        if ($IncludeGpuViewport) {
+            $name = "$configuration-gpu-viewport"; $caseDirectory = Join-Path $run $name
+            Invoke-Owned $name (Join-Path $binaryDirectory 'EngineSessionProbe.exe') @('--gpu-viewport',$caseDirectory) 180
+            $report = Get-Content (Join-Path $caseDirectory 'gpu-viewport-report.json') -Raw | ConvertFrom-Json
+            if (!$report.Completed -or $report.Cases.Count -ne 17 -or $report.Captures.Count -ne 14 -or $report.Copies -ne 20 -or $report.ImportReadbacks -ne 0 -or !$report.EditorPreserved -or !$report.CpuViewportDefault -or $report.Resources -ne 0 -or $report.Handles -ne 0 -or $report.ActiveUiSessions -ne 0 -or $report.Children.Count -ne 6 -or @($report.Children | Where-Object { !$_.Reaped -or !$_.ResourcesReleased }).Count) { throw "$name report incomplete." }
+            $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'gpu-viewport'; Report = "$name/gpu-viewport-report.json"; Passed = $true; ValidationRequested = $report.ValidationRequested }
+        }
+        if ($IncludeEditorGpu) {
+            $name = "$configuration-editor-gpu"; $caseDirectory = Join-Path $run $name
+            Invoke-Owned $name (Join-Path $binaryDirectory 'EngineSessionProbe.exe') @('--editor-gpu-proof',$caseDirectory) 330
+            $report = Get-Content (Join-Path $caseDirectory 'editor-report.json') -Raw | ConvertFrom-Json
+            if (!$report.Completed -or $report.Transport -ne 'Gpu' -or $report.ImportReadbacks -ne 0 -or $report.GpuResources -ne 0 -or $report.GpuHandles -ne 0 -or $report.GpuCopies -lt 20 -or $report.Cycles.Count -ne 20 -or !$report.ChildrenReleased -or $report.Mappings -ne 0 -or $report.ActiveUiSessions -ne 0 -or !$report.EditorPreserved -or $report.GameLoadedInEditor -or $report.PixelChecks -lt 20 -or $report.MaxLive -ne 1) { throw "$name report incomplete." }
+            $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'editor-gpu'; Report = "$name/editor-report.json"; Passed = $true }
+        }
+        if ($IncludeViewport) {
             $name = "$configuration-viewport"; $caseDirectory = Join-Path $run $name
             Invoke-Owned $name (Join-Path $binaryDirectory 'EngineSessionProbe.exe') @('--viewport',$caseDirectory) 180
             $report = Get-Content (Join-Path $caseDirectory 'viewport-report.json') -Raw | ConvertFrom-Json
             if (!$report.Completed -or !$report.ChildrenReleased -or $report.Mappings -ne 0 -or $report.ActiveUiSessions -ne 0 -or $report.PixelChecks -lt 20 -or $report.Copy.Samples -eq 0) { throw "$name report incomplete." }
             $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'viewport'; Report = "$name/viewport-report.json"; Passed = $true }
+            $name = "$configuration-editor-proof"; $caseDirectory = Join-Path $run $name
+            Invoke-Owned $name (Join-Path $binaryDirectory 'EngineSessionProbe.exe') @('--editor-proof',$caseDirectory) 300
+            $report = Get-Content (Join-Path $caseDirectory 'editor-report.json') -Raw | ConvertFrom-Json
+            if (!$report.Completed -or $report.Cycles.Count -ne 20 -or !$report.ChildrenReleased -or $report.Mappings -ne 0 -or $report.ActiveUiSessions -ne 0 -or !$report.EditorPreserved -or $report.GameLoadedInEditor -or $report.PixelChecks -lt 20 -or $report.MaxLive -ne 1) { throw "$name report incomplete." }
+            $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'editor-proof'; Report = "$name/editor-report.json"; Passed = $true }
         }
         foreach ($scenario in $Scenarios) {
             $name = "$configuration-$scenario"; $caseDirectory = Join-Path $run $name

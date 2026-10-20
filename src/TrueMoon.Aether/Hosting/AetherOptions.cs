@@ -1,6 +1,8 @@
 using TrueMoon.Aether.Contracts;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Services;
+using TrueMoon.Aether.Frames;
+using TrueMoon.Aether.Gpu;
 
 namespace TrueMoon.Aether.Hosting;
 
@@ -13,10 +15,20 @@ public sealed class AetherOptions
     public string GameBuildId { get; set; } = "";
     /// <summary>Gets or sets the report directory, resolved during registration.</summary>
     public string ReportDirectory { get; set; } = "";
+    /// <summary>Gets or sets the artifact/job root; null uses the report directory's builds subdirectory.</summary>
+    public string? BuildDirectory { get; set; }
+    /// <summary>Gets or sets the compiler budget, greater than zero and at most 120 seconds.</summary>
+    public TimeSpan BuildTimeout { get; set; } = TimeSpan.FromSeconds(120);
     /// <summary>Gets or sets bounded command, startup and heartbeat deadlines.</summary>
     public SessionDeadlines Deadlines { get; set; } = new();
+    /// <summary>Gets or sets the snapshotted replacement/recovery limits, with total at most 45 seconds.</summary>
+    public ReplacementDeadlines ReplacementDeadlines { get; set; } = new();
     /// <summary>Gets or sets an optional session status observer.</summary>
     public Action<SessionStatus>? StatusChanged { get; set; }
+    /// <summary>Optional App-owned viewport strategy factory. Null selects built-in CPU transport.</summary>
+    /// <remarks>Keep allocation lazy until Connect. The strategy borrows the supplied GPU owner; FrameSession owns
+    /// its connections and any disposable strategy. Do not register disposable aliases. UI/context callbacks remain borrowed.</remarks>
+    public Func<GpuResourceHost, IGameViewportTransport>? ViewportTransport { get; set; }
     /// <summary>Gets or sets a factory creating a fresh App-owned runtime factory.</summary>
     /// <remarks>Dependencies may be resolved from the supplied resolver. Do not return
     /// a borrowed or separately registered disposable factory: the App provider owns the result.</remarks>
@@ -26,14 +38,20 @@ public sealed class AetherOptions
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ReportDirectory);
         ArgumentNullException.ThrowIfNull(Deadlines);
+        ArgumentNullException.ThrowIfNull(ReplacementDeadlines);
         ArgumentNullException.ThrowIfNull(RuntimeFactory);
         new SessionIdentity(Guid.NewGuid(), 1, HostContractId, GameBuildId, new string('0', 64)).Validate();
         Deadlines.Validate();
+        ReplacementDeadlines.Validate();
+        if (BuildTimeout <= TimeSpan.Zero || BuildTimeout > TimeSpan.FromSeconds(120)) throw new ArgumentOutOfRangeException(nameof(BuildTimeout));
+        if (BuildDirectory != null) ArgumentException.ThrowIfNullOrWhiteSpace(BuildDirectory);
         return new()
         {
             HostContractId = HostContractId, GameBuildId = GameBuildId,
             ReportDirectory = Path.GetFullPath(ReportDirectory), Deadlines = Deadlines with { },
-            StatusChanged = StatusChanged, RuntimeFactory = RuntimeFactory
+            ReplacementDeadlines = ReplacementDeadlines with { },
+            BuildDirectory = Path.GetFullPath(BuildDirectory ?? Path.Combine(ReportDirectory, "builds")), BuildTimeout = BuildTimeout,
+            StatusChanged = StatusChanged, RuntimeFactory = RuntimeFactory, ViewportTransport = ViewportTransport
         };
     }
 }

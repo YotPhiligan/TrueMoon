@@ -1,12 +1,13 @@
 using TrueMoon.Aether.Contracts;
 using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Builds;
 
 namespace TrueMoon.Aether.Frames;
 
 public sealed record FrameDisplay(FrameSurface Surface, FrameReceiver Receiver, TaskCompletionSource Presented);
 
 // Owns local readers/mappings; SessionSupervisor continues to own the child/RPC.
-public sealed class FrameSession(SessionSupervisor supervisor) : IAsyncDisposable
+public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTransport? transport = null) : IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<SharedFrameRing> _rings = [];
@@ -17,8 +18,15 @@ public sealed class FrameSession(SessionSupervisor supervisor) : IAsyncDisposabl
     private CancellationTokenSource _work = new();
     private FrameDisplay? _display;
     private FrameSurface? _surface;
+    private ViewportPresentation? _presentation;
+    private IGameViewportConnection? _connection;
+    private bool _transportReleased;
     private ulong _surfaceGeneration, _lastPresented, _lastReceived;
     private Task _watch = Task.CompletedTask;
+    private Task? _dispose;
+    private Exception? _transportError;
+    /// <summary>Retained delivery/cleanup failure, including background errors; cleared by the next admitted Start.</summary>
+    public Exception? TransportError => Volatile.Read(ref _transportError);
     public FrameDisplay? Display
     {
         get
@@ -28,6 +36,20 @@ public sealed class FrameSession(SessionSupervisor supervisor) : IAsyncDisposabl
         }
     }
     public SessionSupervisor Supervisor => supervisor;
+    /// <summary>Selected transport. CPU remains the default when no strategy was configured.</summary>
+    public ViewportTransportKind TransportKind => transport?.Kind ?? ViewportTransportKind.Cpu;
+    /// <summary>Current transport-independent presentation; hidden after runtime exit or identity change.</summary>
+    public ViewportPresentation? Presentation
+    {
+        get
+        {
+            var value = Volatile.Read(ref _presentation); var status = supervisor.Status;
+            return status.State is SessionState.Paused or SessionState.Playing && value?.Surface.Identity == status.Identity ? value : null;
+        }
+    }
+    /// <summary>Acknowledges a ticket only after the consumer's actual UI draw/presentation on the active surface.</summary>
+    public bool Presented(ViewportFrame frame)
+    { var active = Presentation; return active != null && ReferenceEquals(frame?.Presentation, active) && active.Presented(frame); }
     public FrameSurface? Surface => supervisor.Status.State is SessionState.Paused or SessionState.Playing ? Volatile.Read(ref _surface) : null;
     public int MappingCount => _rings.Count;
     public int PeakMappings { get; private set; }
@@ -35,7 +57,45 @@ public sealed class FrameSession(SessionSupervisor supervisor) : IAsyncDisposabl
     public LatencyReport CopyLatency => _copies.Report();
     public long Received { get; private set; }
     public long Replaced { get; private set; }
-    public async Task StartAsync(SceneSnapshot scene, int width, int height, string behavior = "normal", CancellationToken token = default)
+    public Task StartAsync(SceneSnapshot scene, int width, int height, string behavior = "normal", CancellationToken token = default)
+        => StartCoreAsync(scene, null, null, width, height, behavior, token);
+
+    /// <summary>Starts a selected artifact and waits for its acknowledged first presentation.</summary>
+    public Task StartAsync(SceneSnapshot scene, GameBuildArtifact build, int width, int height, string behavior = "normal", CancellationToken token = default)
+    { ArgumentNullException.ThrowIfNull(build); return StartCoreAsync(scene, build, null, width, height, behavior, token); }
+
+    /// <summary>Restores a fresh fixed-build runtime before configuring a surface or accepting its first frame.</summary>
+    public Task StartAsync(SceneSnapshot scene, GameCheckpoint checkpoint, int width, int height, string behavior = "normal", CancellationToken token = default)
+    { ArgumentNullException.ThrowIfNull(checkpoint); return StartCoreAsync(scene, null, checkpoint, width, height, behavior, token); }
+
+    /// <summary>Restores a compatible selected artifact before surface/first-presentation readiness.</summary>
+    public Task StartAsync(SceneSnapshot scene, GameBuildArtifact build, GameCheckpoint checkpoint, int width, int height, string behavior = "normal", CancellationToken token = default)
+    { ArgumentNullException.ThrowIfNull(build); ArgumentNullException.ThrowIfNull(checkpoint); return StartCoreAsync(scene, build, checkpoint, width, height, behavior, token); }
+
+    internal Task StartForReplacementAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint checkpoint, int width, int height,
+        string behavior, ReplacementAdmission.Lease owner, CancellationToken token)
+        => StartCoreAsync(scene, build, checkpoint, width, height, behavior, token, owner);
+    internal async Task<ReplacementAdmission.Lease> ReserveReplacementAsync(ReplacementDeadlines deadlines, CancellationToken token)
+    {
+        var frameFence = Volatile.Read(ref _fence); var controlFence = supervisor.StopVersion;
+        await _gate.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_closing, this); supervisor.EnsureReplacementOpen();
+            if (frameFence != Volatile.Read(ref _fence) || controlFence != supervisor.StopVersion)
+                throw new OperationCanceledException("Queued replacement superseded by Stop.");
+            return supervisor.Admission.Begin(deadlines);
+        }
+        finally { _gate.Release(); }
+    }
+    internal async Task<ViewportSurface?> SurfaceForReplacementAsync(ReplacementAdmission.Lease owner, CancellationToken token)
+    {
+        await _gate.WaitAsync(token).ConfigureAwait(false);
+        try { supervisor.Admission.Check(owner); return Presentation?.Surface; }
+        finally { _gate.Release(); }
+    }
+    private async Task StartCoreAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, int width, int height, string behavior,
+        CancellationToken token, ReplacementAdmission.Lease? owner = null)
     {
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
@@ -44,18 +104,28 @@ public sealed class FrameSession(SessionSupervisor supervisor) : IAsyncDisposabl
             lock (_workGate)
             {
                 ObjectDisposedException.ThrowIf(_closing, this);
+                supervisor.Admission.Check(owner);
                 if (fence != _fence) throw new OperationCanceledException("Frame start superseded by Stop.");
-                if (_rings.Count != 0 || Display != null || supervisor.Status.State is not (SessionState.Stopped or SessionState.Faulted))
+                if (_rings.Count != 0 || _connection != null || Display != null || supervisor.Status.State is not (SessionState.Stopped or SessionState.Faulted))
                     throw new InvalidOperationException("Stop/reap the previous surface first.");
                 _work.Dispose(); _work = new();
             }
             _lastPresented = 0; _lastReceived = 0;
+            Volatile.Write(ref _transportError, null);
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token, _work.Token);
             deadline.CancelAfter(TimeSpan.FromSeconds(15));
             try
             {
-                await supervisor.StartAsync(scene, behavior, deadline.Token).ConfigureAwait(false);
-                await ConfigureCoreAsync(width, height, deadline.Token).ConfigureAwait(false);
+                if (owner != null)
+                    await supervisor.StartForReplacementAsync(scene, build, checkpoint!, behavior, owner, deadline.Token).ConfigureAwait(false);
+                else if (build == null)
+                {
+                    if (checkpoint == null) await supervisor.StartAsync(scene, behavior, deadline.Token).ConfigureAwait(false);
+                    else await supervisor.StartAsync(scene, checkpoint, behavior, deadline.Token).ConfigureAwait(false);
+                }
+                else if (checkpoint == null) await supervisor.StartAsync(scene, build, behavior, deadline.Token).ConfigureAwait(false);
+                else await supervisor.StartAsync(scene, build, checkpoint, behavior, deadline.Token).ConfigureAwait(false);
+                await ConfigureCoreAsync(width, height, deadline.Token, owner).ConfigureAwait(false);
             }
             catch (Exception e) { await FaultCoreAsync("FirstFrame", e).ConfigureAwait(false); throw; }
         }
@@ -67,6 +137,7 @@ public sealed class FrameSession(SessionSupervisor supervisor) : IAsyncDisposabl
         await _gate.WaitAsync(token).ConfigureAwait(false);
         try
         {
+            supervisor.Admission.Check(null);
             if (fence != Volatile.Read(ref _fence)) throw new OperationCanceledException("Resize superseded by Stop.");
             if (supervisor.Status.State is not (SessionState.Paused or SessionState.Playing)) throw new InvalidOperationException("No active runtime to resize.");
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token, _work.Token);
@@ -84,9 +155,23 @@ public sealed class FrameSession(SessionSupervisor supervisor) : IAsyncDisposabl
         _lastReceived = Math.Max(_lastReceived, old.Receiver.LastFrameId);
         Received += old.Receiver.Received; Replaced += old.Receiver.Replaced;
     }
-    private async Task ConfigureCoreAsync(int width, int height, CancellationToken token)
+    private async Task ConfigureCoreAsync(int width, int height, CancellationToken token, ReplacementAdmission.Lease? owner = null)
     {
         var identity = supervisor.Status.Identity ?? throw new InvalidOperationException("No runtime.");
+        Interlocked.Exchange(ref _presentation, null)?.Close();
+        if (transport != null)
+        {
+            var viewport = new ViewportSurface(identity, checked(++_surfaceGeneration), width, height, TransportKind); viewport.Validate();
+            _connection ??= await transport.ConnectAsync(supervisor.ActiveRuntime ?? throw new InvalidOperationException("No owned runtime."), token).ConfigureAwait(false);
+            var presentation = new ViewportPresentation(viewport); Volatile.Write(ref _presentation, presentation);
+            await _connection.ConfigureAsync(presentation, token).ConfigureAwait(false);
+            if (!viewport.Suspended)
+            {
+                _watch = WatchTransportAsync(presentation, _connection.Completion, _work.Token);
+                await presentation.FirstPresented.WaitAsync(token).ConfigureAwait(false);
+            }
+            return;
+        }
         var surface = FrameSurface.Create(identity, checked(++_surfaceGeneration), width, height);
         // Free old private copies BEFORE allocating the replacement's two copies.
         await DrainReceiverAsync().ConfigureAwait(false);
@@ -97,13 +182,16 @@ public sealed class FrameSession(SessionSupervisor supervisor) : IAsyncDisposabl
             PeakMappings = Math.Max(PeakMappings, _rings.Count);
             PeakMappingBytes = Math.Max(PeakMappingBytes, _rings.Sum(r => r.Surface.MappingBytes));
         }
-        await supervisor.ConfigureSurfaceAsync(surface, token).ConfigureAwait(false);
+        if (owner == null) await supervisor.ConfigureSurfaceAsync(surface, token).ConfigureAwait(false);
+        else await supervisor.SurfaceForReplacementAsync(surface, owner, token).ConfigureAwait(false);
         Volatile.Write(ref _surface, surface);
         // Ack proves old producer detached; the local receiver already drained.
         foreach (var old in _rings.Where(r => r != ring).ToArray()) { old.Dispose(); _rings.Remove(old); }
-        if (ring == null) return;
+        if (ring == null)
+        { Volatile.Write(ref _presentation, new(new(identity, surface.Generation, width, height, ViewportTransportKind.Cpu))); return; }
         var receiver = new FrameReceiver(ring, Math.Max(Volatile.Read(ref _lastPresented), _lastReceived), _copies);
         var display = new FrameDisplay(surface, receiver, new(TaskCreationOptions.RunContinuationsAsynchronously));
+        Volatile.Write(ref _presentation, new(new(identity, surface.Generation, width, height, ViewportTransportKind.Cpu), display.Presented));
         Volatile.Write(ref _display, display);
         _watch = WatchAsync(display, _work.Token);
         await receiver.FirstFrame.WaitAsync(token).ConfigureAwait(false);
@@ -140,29 +228,89 @@ public sealed class FrameSession(SessionSupervisor supervisor) : IAsyncDisposabl
     }
     private async Task FaultCoreAsync(string phase, Exception error)
     {
+        Volatile.Write(ref _transportError, error);
+        Interlocked.Exchange(ref _presentation, null)?.Close(error);
         _work.Cancel(); await DrainReceiverAsync().ConfigureAwait(false);
         Volatile.Write(ref _surface, null);
+        try { await DrainConnectionAsync().ConfigureAwait(false); }
+        catch (Exception cleanup)
+        {
+            var failure = new AggregateException("Viewport failed and its connection remains owned until cleanup retry.", error, cleanup);
+            Volatile.Write(ref _transportError, failure); throw failure;
+        }
         if (supervisor.Status.Identity is { } identity) await supervisor.ReportFrameFaultAsync(identity, phase, error).ConfigureAwait(false);
         // Retain mappings if ownership/reap remains uncertain; retry Stop must finish it.
         if (supervisor.Status.State != SessionState.CleanupFailed) CloseRings();
     }
+    internal async Task DrainReplacementFailureAsync(Exception error, CancellationToken token)
+    {
+        await _gate.WaitAsync(token).ConfigureAwait(false);
+        try { await FaultCoreAsync("Replacement", error).ConfigureAwait(false); }
+        finally { _gate.Release(); }
+    }
     private void CloseRings() { foreach (var ring in _rings) ring.Dispose(); _rings.Clear(); }
-    public async Task StopAsync()
+    private async Task DrainConnectionAsync()
+    { if (_connection != null) { await _connection.DisposeAsync().ConfigureAwait(false); _connection = null; } }
+    private async Task WatchTransportAsync(ViewportPresentation presentation, Task completion, CancellationToken token)
+    {
+        try { await completion.ConfigureAwait(false); if (!token.IsCancellationRequested) throw new IOException("Viewport delivery ended unexpectedly."); }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error)
+        {
+            presentation.Close(error);
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (!token.IsCancellationRequested && ReferenceEquals(Volatile.Read(ref _presentation), presentation))
+                    try { await FaultCoreAsync("FrameTransport", error).ConfigureAwait(false); }
+                    catch (Exception cleanup) { Volatile.Write(ref _transportError, cleanup); } // Ownership remains retained; explicit Stop retries it.
+            }
+            finally { _gate.Release(); }
+        }
+    }
+    public Task StopAsync() { supervisor.Admission.Interrupt(); return StopCoreAsync(); }
+    internal Task StopForReplacementAsync(CancellationToken token) => StopCoreAsync(token);
+    private async Task StopCoreAsync(CancellationToken token = default)
     {
         lock (_workGate) { Interlocked.Increment(ref _fence); _work.Cancel(); }
-        await _gate.WaitAsync().ConfigureAwait(false);
+        Interlocked.Exchange(ref _presentation, null)?.Close();
+        await _gate.WaitAsync(token).ConfigureAwait(false);
         Task watch;
         try
         {
             watch = _watch; await DrainReceiverAsync().ConfigureAwait(false); Volatile.Write(ref _surface, null);
-            await supervisor.StopAsync().ConfigureAwait(false); CloseRings();
+            await DrainConnectionAsync().ConfigureAwait(false);
+            await supervisor.StopForReplacementAsync(token).ConfigureAwait(false); CloseRings();
         }
         finally { _gate.Release(); }
         await watch.ConfigureAwait(false);
     }
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        lock (_workGate) _closing = true;
+        TaskCompletionSource completion;
+        lock (_workGate)
+        {
+            _closing = true;
+            if (_dispose is { IsCompletedSuccessfully: true } or { IsCompleted: false }) return new(_dispose);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously); _dispose = completion.Task;
+        }
+        _ = DisposeCoreAsync(); return new(completion.Task);
+        async Task DisposeCoreAsync()
+        {
+            try { await DisposeOwnedAsync().ConfigureAwait(false); completion.TrySetResult(); }
+            catch (Exception error) { completion.TrySetException(error); }
+        }
+    }
+    private async Task DisposeOwnedAsync()
+    {
+        supervisor.Admission.Interrupt();
+        await supervisor.Admission.DrainAsync().ConfigureAwait(false);
         await StopAsync().ConfigureAwait(false);
+        if (!_transportReleased)
+        {
+            if (transport is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+            else if (transport is IDisposable disposable) disposable.Dispose();
+            _transportReleased = true;
+        }
     }
 }

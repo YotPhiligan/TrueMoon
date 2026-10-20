@@ -1,5 +1,43 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
+Последняя работа — **2026-10-20, ENG4d2 GPU GameEditor integration**. UI production
+APIs прежние; обычный ManualTests Editor View использует explicit GPU transport,
+retained Skia image и neutral first-present ticket. CPU mode/default сохранён.
+Start ждёт borrowed GL binding ready, availability использует neutral surface;
+background transport errors доступны в статусе. Engine lifecycle drains до UI.
+UI615/615 Debug/Release, Hosting79 Debug; full Debug1898/1898. Свежие package
+consumers проверяют managed transport API/App ownership и Skia native delivery.
+Debug/published Release: per GPU Editor20Replace/20failures/53children; validation0/0, imported readback0,47devices/141slots balanced. GPU copies815/800, pixel checks791/783.
+[Engine evidence/границы](../engine/HISTORY.md#eng4d2-ordinary-gpu-gameeditor--2026-10-20).
+Далее ENG4e CPU/GPU baseline до 3D. Golden/RTE/full own UI package/native/performance/
+hardware matrix не повторялись; K3/K7/K8/VRAM/final alpha прежние.
+
+Предыдущая работа — **2026-10-20, ENG4d retained GPU image bridge**:
+`SkiaOpenGLSurface.CopyTexture` копирует borrowed RGBA8 premul/stored-sRGB/top-left
+texture в независимое GPU image и submits source use до return/throw. Image draw/
+dispose требует исходный surface/context owner; raster/foreign draw отвергается.
+Actual reference viewport Debug/published Release:17checks/14captures/
+3,051,552independently checked interior-canvas pixels при150% DPI, imported
+readback0; validation0errors/0warnings, resources/handles/UI sessions0.
+UI615/615 Debug/Release; full Debug1858/1858 повторён после draw-path test review,
+Hosting79 Debug. Fresh Rendering.Skia package API/native delivery проверен в4App
+consumers вместе с Aether. Это не полный собственный UI package/native matrix.
+[Команды и границы](../engine/HISTORY.md#eng4d-gpu-viewport-bridge--2026-10-20),
+[UI запись](HISTORY.md#eng4d-retained-gpu-image-bridge--2026-10-20).
+Далее ENG4d2 ordinary GameEditor GPU transport; CPU default сохранён. Golden/RTE/
+performance/hardware/final alpha не повторялись; K3/K7/K8/VRAM прежние.
+
+Предыдущая engine regression — **2026-10-20, ENG4c**: reusable GPU slots/surface lifecycle,
+resize/queued resize/suspend/Stop/crash/restart/retry проверены в Debug/published
+Release.21checks/80frames/12children в surface run; core/sync validation0/0,
+GPU resources/NT handles/UI sessions0. Native WM_CLOSE drains pending Produce и
+live imports до borrowed UI owner disposal. UI production APIs прежние, viewport
+CPU default. Old Editor proof получил atomic worker marker fix; final run passing.
+Full Debug повторил UI613/Hosting79. Далее ENG4d. Own Release UI/golden/RTE/UI package/performance/
+hardware не повторялись; K3/K7/K8/VRAM/final alpha и отложенный RTE backlog прежние.
+[Подробные engine команды/evidence](../engine/HISTORY.md#eng4c-reusable-slots-и-surface-lifecycle--2026-10-20).
+Предыдущие regressions сохранены в [HISTORY](HISTORY.md).
+
 App entry-point audit — **2026-10-19**: UseAlloy/UsePresentation находятся в
 Alloy.Hosting; Argentis/Alloy/renderer/platform остаются самостоятельными слоями.
 Focused Debug AlloyIntegrationTests/HostedUiSessionFactoryTests:38passed/failed0/
@@ -279,12 +317,12 @@ Alpha K1–K9 не объявляется завершённой. Требова
 
 Дополнительный [инфраструктурный backlog](PLAN.md#дополнительный-план-улучшения-инфраструктуры-alloy--2026-10-18)
 сохранён2026-10-18; **INF0–INF4/INF6/INF7 и минимальный INF5 выполнены в указанном scope**.
-Bounded инфраструктурная последовательность завершена; следующий общий шаг —
-**ENG3: compiler/checkpoint/versioned replacement/rollback**.
+Bounded инфраструктурная последовательность и ENG3 завершены; следующий общий шаг —
+**ENG4d: actual GPU viewport/presentation**; ENG4a/b/c проверены.
 Full INF5 с window startup/Hosting queue/resource projection остаётся частичным;
 его расширение требует конкретного consumer. INF7 сопровождать на real assemblies
 и native/package consumers.
-Следующий engine этап остаётся ENG3.
+Точка продолжения engine ведётся в его STATUS.
 
 Улучшения RichTextEditor отложены: при возвращении к UI открыть
 [отдельный план](RICH_TEXT_EDITOR_PLAN.md) и начать с RTE0 — сверки текущих
@@ -295,7 +333,7 @@ contracts и выбора ограниченного этапа. Эти зада
 Ранее2026-10-15 пользователь выбрал ограниченный
 [ENG0 scope](../engine/PLAN.md#eng0-принятый-scope-первого-прототипа--2026-10-15)
 с открытыми UI рисками. Headless ENG1 реализован/проверен2026-10-17 в своём
-[engine scope](../engine/STATUS.md); ENG2 CPU viewport реализован в своём bounded scope; следующий общий шаг — ENG3 replacement.
+[engine scope](../engine/STATUS.md); ENG2 CPU viewport, ENG3 и ENG4a/b/c реализованы в bounded scope; актуальный общий шаг — ENG4e (см. engine STATUS).
 В ENG1 повторена UI Debug suite563, новые UI native/package/golden runs не выполнялись.
 Остальные PA1–PA10 и массовая provider
 migration этим решением не начинаются; physical UI acceptance требуют своего run.

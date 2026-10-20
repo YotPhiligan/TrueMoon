@@ -1,53 +1,13 @@
 # Рабочий уровень модулей перед движком
 
-App integration **2026-10-19**: Aether подключается через UseAether с App-owned
-host/lifecycle и явным запуском игры. Aether115/115 Debug/Release; полный Debug
-solution1518/1518,9TRX/failed0/skipped0;36native cases и4independent Cobalt/DI
-consumers из9fresh packages прошли. Nonincremental Debug build0errors/1507warnings.
-Package delivery Aether проверена локально, IsPackable=true; публикации/ENG3/3D
-readiness нет. UI613/Hosting79 повторены в полном Debug; own Release UI/golden/
-RTE/performance/hardware matrix не повторялись.
-[Точные команды и границы](engine/HISTORY.md#app-integration-реализация--2026-10-19).
-
-Metadata audit **2026-10-19**: вычисленные MSBuild metadata всех44projects,
-13packable packages и1explicit deferred Aether preview проверены по nuspec и
-README/license/icon/XML/analyzer/native payloads. Runtime API/code и own unit/native/
-performance matrix в этом metadata шаге не менялись/не повторялись. Это дополняет
-packaging evidence, не закрывает общий release или module readiness.
-[Команды/scope](HISTORY.md#nuget-package-metadata--2026-10-19).
-
-Обновление **2026-10-19 после выделения TrueMoon.Aether**. Engine implementation и
-contracts объединены в одной experimental assembly; тесты перенесены с прямой
-ссылкой на модуль. Aether87/87 Debug/Release, full Debug1490/1490/9TRX/failed0/
-skipped0 и34native cases прошли. Editor/Runtime composition и Game.Logic — отдельные
-consumers; UI/Game.Logic dependencies у Aether отсутствуют. ENG3/packages/3D/
-performance readiness не добавлены. [Scope/evidence](engine/HISTORY.md#truemoonaether--2026-10-19).
-
-Обновление **2026-10-19 после UI INF7**. Воспроизводимый runner и read-only verifier:
-UI613/Hosting79 в каждой Debug/Release,4TRX/1384passed/failed0/skipped0,
-21runner guard checks,24native processes,10fresh packages прошли. All46commands
-и standalone Assembly подтверждены; source/package Cobalt/DI×OpenGL/Vulkan×
-Debug/published Release, package analyzer отключён. Input/artifact fingerprints,
-ownership/startup errors/cleanup и required analyzer/native payloads проверены.
-[Scope/evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19).
-Нового full-solution/nonincremental build/golden/engine viewport/native RTE/
-performance запуска нет. Full Debug1490 ниже — INF6. Далее общий ENG3;
-full INF5 частичен, hardware blockers прежние.
-
-Предыдущее обновление **2026-10-18 после UI INF3**. Frame scheduling/wake/output guards:
-UI613/Hosting39 Debug/Release, повторный full Debug1450/1450; первый1449/1450
-имел Mithril readiness sharing failure, targeted20/20 и full94Mithril retry прошли.
-Fresh7packages/2headless consumers,10native processes с standalone/HUD/golden360/
-engine viewport прошли в Debug/published Release. CPU/GPU speedup не измерен.
-Full INF5 частичен; следующий UI шаг INF4. Общий Release solution, прежняя full10package/
-40consumer/RichTextEditor native matrix и собственные headless/
-performance proofs остальных модулей в этом шаге не повторялись. Предыдущие
-module results ниже сохраняют собственные даты и scopes.
-
-Позднее2026-10-15 определён ENG0 и принят допуск ограниченного prototype с UI
-рисками. Это документационное решение без нового module/engine regression run.
-
-[Общий план](PLAN.md), [текущий статус](STATUS.md), [история сверки](HISTORY.md#матрица-качества-модулей--2026-10-15).
+ENG4d2 **2026-10-20**: общий CPU/GPU presentation contract и ordinary GPU Editor
+selected DLL/Build/Replace/checkpoint/rollback/actual first-present. CPU default.
+Aether493/493 и UI615/615 Debug/Release; full Debug1898/1898/9TRX/failed0/skipped0;
+build0errors/1499warnings; fresh12packages/4consumers. 54native cases/56commands,406source/76binary fingerprints; per GPU Editor20Replace/53children, validation0/0/imported readback0.
+[Evidence/границы](engine/HISTORY.md#eng4d2-ordinary-gpu-gameeditor--2026-10-20).
+Далее ENG4e measured CPU/GPU baseline. Reference pattern CPU-generated/Vulkan
+staging, не полноценный 3D renderer. 3D/performance/
+VRAM/UI hardware acceptance открыты. [План](PLAN.md), [статус](STATUS.md).
 
 ## Матрица
 
@@ -57,12 +17,13 @@ module results ниже сохраняют собственные даты и sc
 | [Cobalt / DI](cobalt/STATUS.md) | COB6a–d, COB5/COB7 завершены в собственном TrueMoon API scope. Два projects/один consumer package; Cobalt остаётся default, Microsoft adapter сохранён |2026-10-15 COB7:runtime179/generator91 **Release**, source20functional scenarios и package120behavior scenarios; paired baseline. Core/MIT5 имеют отдельные более поздние integration runs. [Evidence](cobalt/HISTORY.md#cob7-provider-comparison--2026-10-15) | Массовая migration explicit UseDI отложена; warm/generic/transient allocations требуют профиля. Scopes, reflection fallback, Microsoft ecosystem bridge и UI equivalence не заявлены |
 | [Enerit](enerit/STATUS.md) | Typed same-build pipes, strict response/decode ownership, cancellation/error/reconnect и ENE5 baseline проверены; package composition с Mithril подтверждена отдельно |2026-10-15 ENE5:runtime126/generator114 Debug и Release;10cases/90samples. MIT5 позже:runtime126 Debug/Release и package108; generator/performance там не повторялись. [Baseline](enerit/BASELINE.md), [MIT5 evidence](mithril/HISTORY.md#mit5-operational-diagnostics--2026-10-15) | MMF/ENE3, schema negotiation, bounded queues/backpressure, remote handler cancellation и uncooperative shutdown не подтверждены. Frame transport ещё не реализован |
 | [Mithril](mithril/STATUS.md) | MIT0–MIT5 завершены в bounded own-child/App scope: startup/stop/restart budget/parent exit, IPC composition, operational diagnostics |2026-10-15 MIT5:94/94 Debug и Release;40restart +18shutdown apphost/published cases;108fresh package cases,96с наблюдаемой диагностикой parent. [Evidence](mithril/HISTORY.md#mit5-operational-diagnostics--2026-10-15) | Borrowed attach отсутствует; independent external restart, arbitrary hooks/uncooperative callbacks и long resource trend не доказаны. Repeatable game session supervisor — отдельная будущая работа |
-| [Alloy / Argentis](alloy/STATUS.md) | INF1–INF4/INF6/INF7/минимальный INF5; bounded work/frame/close, explicit root/compatibility и воспроизводимый runner |2026-10-19:UI613/Hosting79 Debug/Release,21runner guards,24native processes,10fresh packages. [INF7 evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19). Golden360 — INF3, RTE own matrix2026-10-17 | Full INF5 частичен. K3/K7/K8/VRAM/final matrix открыты; alpha частична; следующий общий шаг ENG3 |
-| [Aether / Engine](engine/STATUS.md) | Одна experimental engine assembly: ENG1 supervisor +ENG2 CPU ring/control/native bridge; example UI/Game.Logic отдельно |2026-10-19:Aether87/87 Debug/Release, full Debug1490,34native cases (32headless +2viewport), по20Start/Stop, actual pixels/resize/EOF/deadline/native close. [Evidence](engine/HISTORY.md#truemoonaether--2026-10-19) | ENG3a compiler/artifact далее; packages/3D/shared GPU/long resource/performance proof не заявлены |
+| [Alloy / Argentis](alloy/STATUS.md) | INF1–INF4/INF6/INF7/минимальный INF5; bounded work/frame/close, explicit root/compatibility и воспроизводимый runner |2026-10-19:UI613/Hosting79 Debug/Release,21runner guards,24native processes,10fresh packages. [INF7 evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19). Golden360 — INF3, RTE own matrix2026-10-17 | Full INF5 частичен. K3/K7/K8/VRAM/final matrix открыты; alpha частична; следующий общий шаг ENG4e baseline |
+| [Aether / Engine](engine/STATUS.md) | Одна experimental assembly: supervisor/CPU+GPU viewport/builds/checkpoint/Replace/Editor, App-owned GPU lifecycle; UI/Game.Logic отдельно |2026-10-20:Aether493 Debug/Release, full Debug1898,54native cases и fresh package contracts в [evidence](engine/HISTORY.md#eng4d2-ordinary-gpu-gameeditor--2026-10-20) | ENG4e measured CPU/GPU baseline далее; 3D/long resource/performance proof не заявлены |
 
-Последний solution test run — Aether extraction: Aether87/87 Debug/Release, full Debug1490/1490,
-9TRX/failed0/skipped0;34native cases Debug/published Release. Full Release solution,
-новый nonincremental build/package/golden/RTE/performance не выполнялись.
+Последний solution test run — ENG4c: Aether444/366 Debug/Release, full Debug1847/1847,
+9TRX/failed0/skipped0;50native cases, nonincremental Debug0errors/1499warnings.
+Fresh Aether App packages проверены; full Release solution/UI packages/golden/RTE/
+performance/hardware не повторялись.
 
 Предыдущий INF7:4TRX/1384passed/failed0/skipped0 (UI613/Hosting79 Debug/Release),
 21runner guards,24native processes,10fresh packages. Full solution не повторялся.
@@ -103,7 +64,7 @@ Warnings не подавлены; UI hardware acceptance и общий release R
    [ENG0 scope](engine/PLAN.md#eng0-принятый-scope-первого-прототипа--2026-10-15).
    Он определён документом; запрошенный перед ENG1 RichTextEditor/PA7a реализован
    и проверен2026-10-17. Затем выполнен ENG1 headless supervisor;
-   ENG2 CPU ring/viewport выполнен; следующий code этап — ENG3 replacement.
+   ENG2 CPU ring/viewport, ENG3 replacement/Editor и ENG4a/b/c выполнены; далее ENG4d actual GPU viewport.
    K3/K7/K8/VRAM/final UI alpha сохраняются; engine readiness и вся beta не заявляются.
 3. Cobalt hot-path allocation и Enerit scalar CPU/allocation profiles остаются
    отдельным измерительным backlog. Оптимизацию выбирать по профилю; новые DI/IPC

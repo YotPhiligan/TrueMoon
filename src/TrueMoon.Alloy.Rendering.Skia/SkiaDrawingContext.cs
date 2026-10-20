@@ -26,6 +26,7 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
     public void Image(IImageSource source, Rect destination)
     {
         if (source is not SkiaImageSource image) throw new ArgumentException("Image must be a SkiaImageSource.", nameof(source));
+        image.VerifyContext(resources.GpuOwner);
         canvas.DrawImage(image.Image, Rect(destination), new SKSamplingOptions(SKFilterMode.Linear));
     }
     public IRichTextLayout CreateRichTextLayout(RichTextDocument document, RichTextStyle defaults, float? wrapWidth, RichTextAlignment alignment)
@@ -44,8 +45,9 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
 }
 
 // One owner thread and surface lifetime; no global cache or borrowed canvas/context ownership.
-internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null) : IDisposable
+internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object? gpuOwner = null) : IDisposable
 {
+    internal object? GpuOwner => gpuOwner;
     private const int FontCapacity = 16;
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private readonly SKPaint _paint = new() { IsAntialias = true };
@@ -111,8 +113,15 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null) : IDis
 /// <summary>An owned decoded image for the Skia drawing adapter.</summary>
 public sealed class SkiaImageSource : IImageSource
 {
-    internal SKImage Image { get; }
-    private SkiaImageSource(SKImage image) => Image = image;
+    private readonly SKImage _image;
+    private readonly object? _gpuOwner;
+    private readonly Action? _verify;
+    private bool _disposed;
+    internal SKImage Image { get { ObjectDisposedException.ThrowIf(_disposed, this); _verify?.Invoke(); return _image; } }
+    internal SkiaImageSource(SKImage image, object? gpuOwner = null, Action? verify = null)
+    { _image = image; _gpuOwner = gpuOwner; _verify = verify; }
+    internal void VerifyContext(object? current)
+    { if (_gpuOwner != null && !ReferenceEquals(_gpuOwner, current)) throw new InvalidOperationException("GPU image requires its originating Skia OpenGL surface."); }
     /// <summary>Copies tightly packed top-left BGRA8 premultiplied sRGB pixels into an owned image.</summary>
     /// <param name="width">Positive pixel width.</param>
     /// <param name="height">Positive pixel height.</param>
@@ -131,9 +140,9 @@ public sealed class SkiaImageSource : IImageSource
         return new(SKImage.FromPixelCopy(info, pixels, stride) ?? throw new InvalidOperationException("Could not copy pixels."));
     }
     /// <summary>Decodes an image. The creator must dispose it after UI use ends.</summary>
-    public SkiaImageSource(string path) { SkiaNativeLibrary.Initialize(); Image = SKImage.FromEncodedData(path) ?? throw new ArgumentException("Could not decode image.", nameof(path)); }
+    public SkiaImageSource(string path) { SkiaNativeLibrary.Initialize(); _image = SKImage.FromEncodedData(path) ?? throw new ArgumentException("Could not decode image.", nameof(path)); }
     /// <inheritdoc />
-    public Size Size => new(Image.Width, Image.Height);
+    public Size Size { get { var image = Image; return new(image.Width, image.Height); } }
     /// <inheritdoc />
-    public void Dispose() => Image.Dispose();
+    public void Dispose() { if (_disposed) return; _verify?.Invoke(); _image.Dispose(); _disposed = true; }
 }

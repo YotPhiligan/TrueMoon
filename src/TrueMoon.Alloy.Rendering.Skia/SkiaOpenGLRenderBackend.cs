@@ -76,7 +76,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
                 _measurement = SKSurface.Create(new SKImageInfo(1, 1)) ?? throw new InvalidOperationException("Could not create text service surface.");
                 try
                 {
-                    _drawingResources = new SkiaDrawingResources(fonts);
+                    _drawingResources = new SkiaDrawingResources(fonts, _context);
                     TextLayout = new SkiaDrawingContext(_measurement.Canvas, _drawingResources);
                     Resize(viewport);
                 }
@@ -140,6 +140,47 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
         VerifyContext();
         if (!_hasFrame || _surface == null) throw new InvalidOperationException("Render a nonempty viewport before using its OpenGL output.");
         _context.ResetContext();
+    }
+    /// <summary>Copies a borrowed RGBA8 premultiplied stored-sRGB, top-left GL_TEXTURE_2D into an independent GPU image.</summary>
+    /// <param name="texture">Nonzero texture name in this surface's current GL context.</param>
+    /// <param name="width">Positive texture width in pixels.</param>
+    /// <param name="height">Positive texture height in pixels.</param>
+    /// <returns>Caller-owned image. Draw and dispose it on this owner before this surface/context is destroyed.</returns>
+    /// <remarks>Call outside Render after external synchronization. Submits the last source use before returning,
+    /// including exceptional returns. Does not wait for GPU completion, take source ownership, read pixels or acknowledge presentation.</remarks>
+    public SkiaImageSource CopyTexture(uint texture, int width, int height)
+    {
+        VerifyAvailable(); VerifyContext();
+        if (texture == 0) throw new ArgumentOutOfRangeException(nameof(texture));
+        if (width <= 0 || width > _context.MaxTextureSize) throw new ArgumentOutOfRangeException(nameof(width));
+        if (height <= 0 || height > _context.MaxTextureSize) throw new ArgumentOutOfRangeException(nameof(height));
+        _context.ResetContext();
+        using var colorSpace = SKColorSpace.CreateSrgb();
+        using var backend = new GRBackendTexture(width, height, false, new GRGlTextureInfo(0x0de1, texture, 0x8058));
+        using var source = SKImage.FromTexture(_context, backend, GRSurfaceOrigin.TopLeft, SKColorType.Rgba8888, SKAlphaType.Premul, colorSpace)
+            ?? throw new NotSupportedException("Could not borrow the OpenGL texture.");
+        using var destination = SKSurface.Create(_context, false, new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul, colorSpace))
+            ?? throw new NotSupportedException("Could not allocate the retained GPU image.");
+        SKImage? image = null;
+        try
+        {
+            using var paint = new SKPaint { BlendMode = SKBlendMode.Src };
+            destination.Canvas.DrawImage(source, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest), paint);
+            image = destination.Snapshot();
+        }
+        finally
+        {
+            try { _context.Flush(true, false); }
+            catch { image?.Dispose(); throw; }
+        }
+        if (image == null || !image.IsTextureBacked) { image?.Dispose(); throw new InvalidOperationException("Expected a retained GPU image."); }
+        return new(image, _context, VerifyImageAccess);
+    }
+    private void VerifyImageAccess()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (Environment.CurrentManagedThreadId != _thread) throw new InvalidOperationException("GPU image requires its GL owner thread.");
+        VerifyContext();
     }
     /// <summary>Composites the retained UI on a borrowed RGBA8 framebuffer of the session's pixel size, entirely on the GPU.</summary>
     /// <param name="framebuffer">Host-owned destination FBO; zero selects the window's default framebuffer.</param>

@@ -42,6 +42,11 @@ Mithril и Enerit generator; UI/Game.Logic references отсутствуют. П
 Engine.Probe.Contracts project объединён с модулем, tests перенесены в
 TrueMoon.Aether.Tests. [Границы модуля](engine/PLAN.md#truemoonaether-одна-engine-assembly--2026-10-19).
 
+ENG4b2026-10-20 добавляет Aether→Silk.NET.Vulkan2.23.0 для явного Windows x64
+shared-image probe; App startup остаётся lazy. GPU resources принадлежат
+AetherHost.Gpu, borrowed UI/GL owner живёт до их cleanup. UI/Skia/Game.Logic
+dependencies в engine assembly не добавлены.
+
 Сохранять отсутствие зависимости общего bootstrap/DI/IPC/units от UI и графических пакетов. Контракты интеграции не должны требовать конкретного renderer, DI provider или IPC transport без явного выбора. Генератор относится к своему модулю; доставка analyzer в package проверяется отдельно от работы через ProjectReference.
 
 Изменение этой карты фиксировать здесь и в локальном плане, не выполняя перестройку зависимостей ради нового формата документации. Вопросы будущего API и версионирования протоколов решаются в соответствующих этапах.
@@ -72,7 +77,14 @@ UI слои и generators не требуют фиктивного UseX; UI по
 
 ## Порядок развития
 
-Актуальная точка2026-10-19: ENG1 supervisor и [ENG2 CPU viewport](engine/PLAN.md#eng2-cpu-frame-viewport--2026-10-17) перенесены в модуль TrueMoon.Aether; дополнительный bounded UI INF завершён. Следующий code шаг — [ENG3a compiler/artifact](engine/PLAN.md#eng3-уточнение-плана-перед-реализацией--2026-10-19) в Aether, затем checkpoint/versioned replacement/rollback. UI hardware blockers сохраняются. Собственные результаты переноса отделены от прежней документальной сверки и датированных module proofs.
+Актуальная точка2026-10-20: ENG1–ENG3/ENG4a/b/c реализованы в TrueMoon.Aether;
+ENG4d borrowed texture/retained GPU copy bridge проверен в actual reference viewport.
+Lifetime, premul/stored sRGB/origin, scale/clipping и presentation проверены отдельно
+от imported readback. [Контракт](engine/PLAN.md#eng4d-gpu-viewport-bridge--2026-10-20).
+ENG4d2 подключил ordinary GameEditor GPU transport/selected DLL/Build/Replace/
+checkpoint/first-present pipeline, сохранив CPU default. Следующий code шаг —
+ENG4e: сопоставимый measured CPU/GPU baseline до 3D renderer.
+ENG4 в целом и UI hardware/release readiness открыты.
 
 Уточнение2026-10-17: по запросу пользователя перед ENG1 реализован отдельный
 UI компонент [RichTextEditor/PA7a](alloy/PLAN.md#pa7a-richtexteditor-перед-eng1--2026-10-17)
@@ -94,7 +106,8 @@ diagnostics; полный INF5 остаётся частичным. Деталь
 UI плане. INF3 scheduling и INF4 async close выполнены следующими шагами2026-10-18;
 INF6 explicit factories/compatibility и INF7 воспроизводимый integration runner
 для real assemblies/factory/package checks выполнены2026-10-19 в bounded scope.
-Следующий общий code шаг — ENG3 compiler/checkpoint/versioned replacement/rollback.
+ENG3/ENG4a–c и ENG4d reference viewport bridge завершены в bounded scope;
+ENG4d2 ordinary GameEditor GPU transport выполнен; следующий общий code шаг — ENG4e baseline.
 Полный INF5 и отложенный RTE backlog сохраняются отдельно; общая UI alpha этим
 не объявляется завершённой.
 

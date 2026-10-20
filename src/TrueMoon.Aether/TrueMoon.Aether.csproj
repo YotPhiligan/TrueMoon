@@ -2,11 +2,13 @@
   <PropertyGroup>
     <TargetFramework>$(TF)</TargetFramework>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-    <Description>Experimental TrueMoon game engine module: session lifecycle, control contracts and CPU frame transport.</Description>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Experimental TrueMoon game engine module: session lifecycle, control contracts, CPU frame transport and a Windows Vulkan/OpenGL shared-image probe.</Description>
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     <PackageTags>$(PackageTags);game-engine;sessions;ipc;frames</PackageTags>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Silk.NET.Vulkan" />
     <ProjectReference Include="../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
     <ProjectReference Include="../TrueMoon.Enerit/TrueMoon.Enerit.csproj" />
     <ProjectReference Include="../TrueMoon.Mithril/TrueMoon.Mithril.csproj" />

@@ -31,7 +31,8 @@ public sealed class FrameProducer : IDisposable
         while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
         {
             // Never take the protocol gate while holding the producer gate.
-            var (tick, color) = protocol.CaptureFrame();
+            if (!protocol.TryCaptureFrame(out var frame)) continue;
+            var (tick, color) = frame;
             lock (_gate) _ring?.WritePattern(checked(++_frame), tick, color, _row);
         }
     }

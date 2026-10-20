@@ -15,6 +15,15 @@ try
     if (args is ["--runtime"]) return await RuntimeHost.RunAsync();
     if (args is ["--parent-wait", var parentDirectory]) return await Probe.RunParentAsync(parentDirectory);
     if (args is ["--viewport"] or ["--viewport", _]) return await ViewportProbe.RunAsync(args.Length == 2 ? Path.GetFullPath(args[1]) : null);
+    if (args is ["--viewport-project", var project]) return await ViewportProbe.RunAsync(null, project);
+    if (args is ["--viewport-gpu"]) return await ViewportProbe.RunAsync(null, gpu: true);
+    if (args is ["--viewport-gpu-project", var gpuProject]) return await ViewportProbe.RunAsync(null, gpuProject, gpu: true);
+    if (args is ["--editor-proof", var proofDirectory]) return await EditorViewportProbe.RunAsync(Path.GetFullPath(proofDirectory));
+    if (args is ["--editor-gpu-proof", var gpuProofDirectory]) return await EditorViewportProbe.RunAsync(Path.GetFullPath(gpuProofDirectory), gpu: true);
+    if (args is ["--gpu-capabilities", var gpuDirectory]) return await GpuCapabilityProbe.RunAsync(Path.GetFullPath(gpuDirectory));
+    if (args is ["--gpu-import", var importDirectory]) return await GpuImportProbe.RunAsync(Path.GetFullPath(importDirectory));
+    if (args is ["--gpu-surface", var surfaceDirectory]) return await GpuSurfaceProbe.RunAsync(Path.GetFullPath(surfaceDirectory));
+    if (args is ["--gpu-viewport", var viewportDirectory]) return await GpuViewportProbe.RunAsync(Path.GetFullPath(viewportDirectory));
     if (args is not [var scenario, var directory] || !Probe.Scenarios.Contains(scenario))
     { Console.WriteLine("EngineSessionProbe <scenario> <report-directory>"); return 2; }
     var result = await Probe.RunAsync(scenario, Path.GetFullPath(directory));
@@ -36,7 +45,7 @@ namespace EngineSessionProbe
     public static class Probe
     {
         public static readonly string[] Scenarios = ["repeat", "stale", "bad-hello", "bad-scene", "startup-timeout", "startup-cancel",
-            "command-timeout", "command-cancel", "stop-pending", "crash", "disconnect", "heartbeat", "forced-stop", "hang-stop", "launch-failure", "parent-exit", "app-stop"];
+            "command-timeout", "command-cancel", "stop-pending", "crash", "disconnect", "heartbeat", "forced-stop", "hang-stop", "launch-failure", "parent-exit", "app-stop", "build-artifacts", "checkpoint", "replacement"];
         private static IApp CreateApp(NativeRuntimeFactory factory, AuthoringState authoring, string directory,
             SessionDeadlines? deadlines = null, Action<SessionStatus>? trace = null) => App.Builder(_ => { })
             .Setup(c =>
@@ -54,6 +63,9 @@ namespace EngineSessionProbe
         {
             Directory.CreateDirectory(directory);
             if (scenario == "parent-exit") return await ParentExitAsync(directory);
+            if (scenario == "build-artifacts") return await BuildProbe.RunAsync(directory);
+            if (scenario == "checkpoint") return await CheckpointProbe.RunAsync(directory);
+            if (scenario == "replacement") return await ReplacementProbe.RunAsync(directory);
             var factory = new NativeRuntimeFactory(); var state = new AuthoringState();
             var before = JsonSerializer.Serialize(state); var trace = new List<object>();
             var deadlines = scenario == "startup-timeout" ? new SessionDeadlines { Startup = TimeSpan.FromSeconds(1) } : new SessionDeadlines();

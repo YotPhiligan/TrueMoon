@@ -1,5 +1,153 @@
 # TrueMoon: история общей документации
 
+## ENG4d2 ordinary GPU GameEditor — 2026-10-20
+
+App option выбирает CPU(default)/GPU strategy; FrameSession сохраняет общий
+Start/resize/Stop/first-present, GameEditor/Replacement — selected DLL/checkpoint/
+rollback. Neutral surface/ticket не содержат native/mapping handles. Runtime GPU
+metadata происходит из loaded/restored selected game; reference pixels пока
+CPU-generated/Vulkan staging. UI production APIs прежние, engine одна Aether
+assembly без UI dependency. Full Debug1898/1898/9TRX/failed0/skipped0, Aether493 и
+UI615 Debug/Release, build0errors/1499warnings; fresh12packages/4App consumers.
+Final54native cases/56commands/406source/76binary fingerprints; ordinary GPU Editor20Replace/20failure cases/53children per configuration, validation0/0,47devices/141slots balanced, imported readback0.
+[Точные commands/evidence/limits и промежуточные ошибки](engine/HISTORY.md#eng4d2-ordinary-gpu-gameeditor--2026-10-20).
+Далее ENG4e measured CPU/GPU baseline перед ENG5/3D. K3/K7/K8/VRAM/final alpha,
+driver/Windows settings и остановка K7 workaround search прежние.
+
+## ENG4d GPU viewport bridge — 2026-10-20
+
+В Aether добавлен owner callback loan, в Rendering.Skia — независимая retained
+GPU image copy. Reference actual viewport проверяет premul/stored sRGB/origin,
+scale/clipping, presentation и image lifetime без imported readback delivery.
+Ordinary GameEditor остаётся CPU; следующая точка ENG4d2 selected DLL/Build/Replace/
+checkpoint GPU transport. Engine assembly одна; UI dependency в Aether не добавлена.
+
+Full Debug1858/1858/9TRX/failed0/skipped0; Aether453 и UI615 Debug/Release.
+Build0errors/1499warnings;52native cases/54commands,398source/76binary hashes;
+fresh12packages/4consumers. GPU viewport per config17checks/14captures/3,051,552pixels,
+20GPU copies/6reaped children, imported ReadPixels0, core/sync validation0/0.
+Точные commands/reports, interim failures и ограничения —
+[engine HISTORY](engine/HISTORY.md#eng4d-gpu-viewport-bridge--2026-10-20).
+UI K3/K7/K8/VRAM/final alpha сохраняются; drivers/Windows settings не менялись.
+
+## ENG4c reusable GPU surfaces — 2026-10-20
+
+Aether App-owned surface session/channel2:3persistent slots/shared Vulkan device,
+retirement перед reuse, resize/queued resize/suspend, Stop/cancel/deadline/crash/
+restart и failed cleanup/retry. Ordinary viewport CPU default; далее ENG4d actual
+GPU viewport/presentation/compositing. Все engine реализации в одной assembly,
+новых dependencies/UI references нет.
+
+Aether444/444 Debug/Release; full Debug1847/1847/9TRX/failed0/skipped0.
+50native cases/52commands/exit0,394source/76binary fingerprints, build0errors/
+1499warnings; fresh9packages/4Cobalt+DI consumers. Каждый surface run21checks/
+80frames/12reaped children,9cooperative reports с15devices/45slots created/released,
+validation core/sync errors0/warnings0. Остатки parent GPU/NT/UI0;3crash children
+имеют owned reap без cooperative teardown claim. Old Editor held-worker marker
+исправлен на atomic publication после воспроизведённой sharing violation; final
+matrix повторена на fresh snapshot. [Commands/evidence/границы](engine/HISTORY.md#eng4c-reusable-slots-и-surface-lifecycle--2026-10-20).
+Full Release solution/UI packages/golden/RTE/performance/hardware не повторялись;
+K3/K7/K8/VRAM/final alpha прежние, drivers/Windows settings не менялись.
+
+## ENG4b one-frame GPU import — 2026-10-20
+
+TrueMoon.Aether получил App-owned lazy GPU resources, dedicated Vulkan image/
+binary semaphores, owned-process NT duplication, GL import и строгий ready/return/
+retirement channel. Debug/published Release:14checks/import run,3whole-image
+roundtrips,8reaped children, core/sync validation errors0/warnings0, остатки0.
+Ordinary viewport CPU default; следующий ENG4c bounded slots/surface lifecycle.
+
+Aether366/366 Debug/Release; full Debug1769/1769/9TRX/failed0/skipped0;
+48native cases/50commands,388source/76binary fingerprints, build0errors/
+1499warnings. Fresh9packages/4Cobalt+DI consumers подтверждают delivery/lazy
+ownership; Aether→Silk.NET.Vulkan2.23.0, UI references нет. Детали/commands/
+границы — [engine HISTORY](engine/HISTORY.md#eng4b-one-frame-import-и-retirement--2026-10-20).
+Full Release solution/UI packages/golden/RTE/performance/hardware не повторялись.
+UI K3/K7/K8/VRAM/final alpha прежние; drivers/Windows settings не менялись.
+
+## ENG4a GPU capability decision — 2026-10-20
+
+Pure Aether GPU snapshots/decision и App-owned child/current GL context probe
+проверены. RTX5070Ti UUID/driver/exact image/handle/semaphore/GL requirements
+допускают ENG4b import-probe; CPU selected/ImportTested=false, ENG4 в целом открыт.
+Aether316/316 Debug/Release; full Debug1719/1719/9TRX/failed0/skipped0;
+nonincremental0errors/1499warnings.46native cases/48commands/exit0,
+377source/76binary hashes; новые cases по1reaped child/instance destroyed/
+mappings/UI sessions0/authoring preserved. Actual import/shared GPU/3D/package/
+performance и UI hardware acceptance не доказаны queries, drivers/settings прежние.
+[Подробные tests/raw queries/команды/evidence](engine/HISTORY.md#eng4a-gpu-capabilities-и-transport-decision--2026-10-20).
+
+## ENG3d Editor commands и proof — 2026-10-20
+
+AetherHost.Editor добавляет UI-independent App-owned commands, immutable authoring
+context/source/selection version и stale-result fences. Viewport имеет Build/
+Replace/Cancel/Refresh controls; Stop/App close drains accepted work до UI disposal.
+ENG3a–d завершены в bounded Windows/.NET10 CPU scope, следующий ENG4a capabilities/
+transport decision. Core/Enerit/Mithril/UI production APIs прежние.
+
+Aether254/254 Debug/Release, full Debug1657/1657/9TRX/failed0/skipped0;
+nonincremental Debug0errors/1499warnings.44native cases/46commands/exit0,
+372source/76binary hashes. Каждый Debug/published Release Editor proof:
+20A/B Replace/20failure cases/775actual GL checks/53children/maxlive1/allreleased,
+state/first tick/selected Step и authoring сохранены. Classic viewport по17cases/
+27children/20StartStop; mappings/UI sessions0. UI hardware/package/performance
+acceptance не расширен. [Единственные подробные tests/failures/команды/evidence](engine/HISTORY.md#eng3d-команды-editor-и-20replace-proof--2026-10-20).
+
+## ENG3c serialized Replace и rollback — 2026-10-20
+
+AetherHost.Replacement объединяет capture/old stop/reap/selected restore/first-present
+и прежний mode, один rollback, shared command reservation и global45s budget.
+Stop/App close fences late starts; unconfirmed cleanup сохраняет task/lease для
+явного retry. Original/recovery errors наблюдаемы отдельно. Shared Core/Enerit/
+Mithril/UI production APIs прежние, новых package dependencies нет.
+
+Aether231/231 Debug/Release, full Debug1634/1634/9TRX/failed0/skipped0;
+nonincremental Debug build0errors/1499warnings.42native cases Debug/published
+Release прошли: по8replacement children/max live1, actual A→B DLL/hash/state/CPU,
+rollback и Stop inside held restore; по17viewport cases/27children/20StartStop,
+actual GL first-present и cleanup.368source/76binary fingerprints.
+[Единственные подробные tests/failures/команды/evidence](engine/HISTORY.md#eng3c-serialized-replace-и-rollback--2026-10-20).
+Следующий ENG3d — Editor commands/20Replace acceptance при одном App/window.
+Новые package consumers/full Release solution/performance/hardware не проверялись.
+
+## ENG3b checkpoint и startup restore — 2026-10-20
+
+В Aether реализованы optional checkpoint capability, immutable bounded TMCK v1
+snapshot, paused observational capture с подтверждённым nonterminal отказом и
+fresh startup restore до surface/first-present. Поддержан selected-build restore,
+host/scene/revision preflight и explicit reset без checkpoint. Unknown outcome
+сохраняет fault/cleanup policy; Stop во время restore не публикует кадры.
+Общие production Core/Enerit/Mithril/UI APIs/dependencies прежние.
+
+Aether184/184 Debug/Release, full Debug1587/1587/9TRX/failed0/skipped0;
+nonincremental Debug build0errors/1499warnings.40native cases в Debug apphost/
+published Release, по16viewport cases/26children/20StartStop, actual restored
+GL first-present, compiler/child close cleanup и mappings/sessions0. Source362/
+binary76 fingerprints сохранены. [Единственные подробные tests/команды/evidence](engine/HISTORY.md#eng3b-checkpoint-и-startup-restore--2026-10-20).
+Следующий ENG3c объединяет primitives в Replace/однократный rollback с общим45s
+deadline; ENG3d proof и общий UI hardware/release остаются открытыми. Package
+consumer нового API/full Release solution/performance matrix не повторялись.
+
+## ENG3a compiler и immutable game builds — 2026-10-20
+
+По принятому пользователем порядку накопленные extraction/App/package/rules/docs
+изменения зафиксированы dc64b63. Затем в Aether реализованы immutable manifest/
+artifact, owned compiler job и выбранный child-only loader; SourceRevision/build
+completion не применяются автоматически к текущей сессии. App/viewport Closing
+отменяет/reaps compiler параллельно с engine cleanup, до UI disposal. Общие
+Core/Cobalt/Enerit/Mithril/UI production APIs для ENG3a не расширялись.
+
+Aether139/139 Debug/Release; full Debug1542/1542,9TRX/failed0/skipped0;
+nonincremental Debug build0errors/1508warnings.38native cases прошли, включая
+2A/B build probes с actual child DLL path/hash/color/CPU pixels и2viewport со
+held compiler/native close.356source/76binary fingerprints сверены.
+[Единственные подробные contracts, commands, test matrix и границы](engine/HISTORY.md#eng3a-compiler-artifacts-и-child-loader--2026-10-20).
+
+ENG3a завершён в bounded trusted-local managed/net10.0/Windows x64 scope;
+следующий шаг — ENG3b checkpoint/restore, затем ENG3c transaction/rollback.
+Пакеты/full Release solution/performance/long resource/hardware matrix этим
+шагом не повторялись; общий release/UI alpha не объявлены готовыми.
+
 ## Аудит точек подключения модулей к App — 2026-10-19
 
 После реализации UseAether по запросу пользователя проверены остальные модули:

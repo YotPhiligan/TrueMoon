@@ -27,7 +27,7 @@ Scope: Argentis/Alloy runtime, Hosting, renderer/platform adapters и их пр�
 Существующие пять слоёв, thread affinity, borrowed GPU ownership, net10.0 и xUnit
 сохраняются. Core/Cobalt/process lifecycle не переносятся в UI.
 
-Это дополнительный UI backlog. Общий следующий engine этап остаётся ENG3;
+Это дополнительный UI backlog. Общая engine точка продолжения — в [его STATUS](../engine/STATUS.md);
 [улучшения RichTextEditor](RICH_TEXT_EDITOR_PLAN.md) ведутся отдельно и отложены.
 INF не заменяет этапы1–5/K1–K9/PA1–PA10, не снимает physical DPI/K7/K8/VRAM
 и не возобновляет остановленный поиск NVIDIA workaround. Конкретные новые API,
@@ -903,3 +903,15 @@ Borrowing IImageSource/Argentis.Image contract сохранён; caller влад
 process ownership и подробные ENG2 задачи ведутся только в engine плане.
 [Результаты UI adapter](HISTORY.md#eng2-owned-pixel-image--2026-10-17).
 Это ограниченное расширение не меняет alpha blockers или отложенный RTE backlog.
+
+## ENG4d: retained GPU image bridge — 2026-10-20
+
+Rendering.Skia предоставляет `SkiaOpenGLSurface.CopyTexture`: borrowed RGBA8
+premultiplied stored-sRGB/top-left GL texture копируется в независимый GPU image,
+last source use submitted до return/throw. Caller владеет image на исходном
+surface/context owner до UI teardown; raster/foreign drawing context отвергается.
+Engine transport/process ownership остаётся в Aether, без UI dependency в нём.
+Подробный контракт/acceptance ведётся только в
+[engine плане](../engine/PLAN.md#eng4d-gpu-viewport-bridge--2026-10-20).
+Reference viewport proof не закрывает ordinary GameEditor GPU integration,
+zero-copy/performance или K3/K7/K8/VRAM/final UI acceptance.

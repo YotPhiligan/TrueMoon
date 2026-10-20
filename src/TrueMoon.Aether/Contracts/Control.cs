@@ -7,7 +7,14 @@ public interface IEngineControl
     Task<ControlReply> SendAsync(ControlRequest request, CancellationToken cancellationToken = default);
 }
 
-public enum CommandKind { Hello = 1, LoadScene, SetMode, Step, GetStatus, Stop, ConfigureSurface }
+public enum CommandKind
+{
+    Hello = 1, LoadScene, SetMode, Step, GetStatus, Stop, ConfigureSurface,
+    /// <summary>Observational capture at a paused tick boundary.</summary>
+    CaptureCheckpoint,
+    /// <summary>Restore on a fresh runtime before mode/surface readiness.</summary>
+    RestoreCheckpoint
+}
 
 public sealed record SessionIdentity(Guid SessionId, ulong Generation, string HostContractId,
     string GameBuildId, string Nonce, int ControlVersion = 1, int FrameVersion = 1, int SnapshotVersion = 1)
@@ -40,6 +47,8 @@ public sealed class ControlRequest
     public List<SceneEntity>? Entities { get; set; }
     public bool Playing { get; set; }
     public SurfaceConfiguration? Surface { get; set; }
+    /// <summary>Bounded encoded snapshot, used only for startup restore.</summary>
+    public byte[]? Checkpoint { get; set; }
 
     public SessionIdentity Identity() => new(Guid.Parse(SessionId), unchecked((ulong)Generation), HostContractId, GameBuildId,
         Nonce, ControlVersion, FrameVersion, SnapshotVersion);
@@ -62,6 +71,10 @@ public sealed class ControlReply
     public int ProcessId { get; set; }
     public long SurfaceGeneration { get; set; }
     public long DroppedFrames { get; set; }
+    /// <summary>Explicit checkpoint acknowledgement; runtime Phase still describes the current mode.</summary>
+    public int CheckpointOutcome { get; set; }
+    /// <summary>Detached encoded snapshot for a successful capture.</summary>
+    public byte[]? Checkpoint { get; set; }
 }
 
 public sealed class SceneEntity
