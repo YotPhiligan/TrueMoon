@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Silk.NET.Maths;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Platform.Silk;
 using TrueMoon.Argentis;
 using ProbeWindow = AlloyVulkanTest.WindowTransparencyProbe.ProbeWindow;

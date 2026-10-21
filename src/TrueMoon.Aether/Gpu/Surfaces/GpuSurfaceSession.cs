@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using TrueMoon.Aether.Gpu.OpenGl;
 using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Frames;
 
 namespace TrueMoon.Aether.Gpu.Surfaces;
 
@@ -80,7 +81,10 @@ public sealed class GpuSurfaceSession : IGpuResource
             if (width == 0) return;
             var surface = reply.Offer ?? throw new InvalidDataException("Missing reusable GPU allocation set.");
             surface.Validate(_runtime.Identity, _adapter, generation, width, height);
-            _imports = new(surface, _context); await _context.Invoke(() => _imports.Initialize(_runtime)).ConfigureAwait(false);
+            _imports = new(surface, _context);
+            var measured = FrameTrace.Log.Begin();
+            await _context.Invoke(() => _imports.Initialize(_runtime)).ConfigureAwait(false);
+            FrameTrace.Log.Complete("import", _runtime.Identity, generation, 0, measured);
             await ExchangeAsync(new(0, "Imported", _runtime.Identity, generation), "Imported", linked.Token).ConfigureAwait(false);
             _ledger = new(_runtime.Identity, generation); _ledger.Imported(); _surface = surface; Guard();
         }

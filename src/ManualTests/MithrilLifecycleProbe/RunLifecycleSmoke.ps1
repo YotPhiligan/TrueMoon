@@ -8,7 +8,7 @@ if (!$resultRoot.StartsWith($srcRoot + [IO.Path]::DirectorySeparatorChar, [Strin
     throw 'ResultsDirectory must be inside the source workspace.'
 }
 [IO.Directory]::CreateDirectory($resultRoot) | Out-Null
-$scenarios = @('graceful', 'timeout', 'cancel-stop', 'dispose', 'async-dispose', 'already-exited', 'same-name', 'duplicate-start', 'throwing-sink')
+$scenarios = @('graceful', 'timeout', 'cancel-stop', 'dispose', 'async-dispose', 'already-exited', 'same-name', 'duplicate-start', 'throwing-sink', 'closed-stdin')
 $project = Join-Path $PSScriptRoot 'MithrilLifecycleProbe.csproj'
 $cases = [Collections.Generic.List[object]]::new()
 $summary = [ordered]@{
@@ -80,7 +80,7 @@ try {
             Write-Host "$configuration/$scenario passed (child $($report.ChildPid), exit $($report.ExitCode))"
         }
     }
-    if ($cases.Count -ne 18) { throw 'Incomplete lifecycle matrix.' }
+    if ($cases.Count -ne 2 * $scenarios.Count) { throw 'Incomplete lifecycle matrix.' }
     foreach ($relative in $summary.SourceSha256.Keys) {
         if ((Get-FileHash -LiteralPath (Join-Path $srcRoot $relative) -Algorithm SHA256).Hash -ne $summary.SourceSha256[$relative]) { throw "Source changed: $relative" }
     }

@@ -1,6 +1,6 @@
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Owns one retained UI tree and render surface. Post, InvokeAsync and RequestFrame accept calls from any thread.</summary>
 public sealed class UiSession : IDisposable, IInputContext

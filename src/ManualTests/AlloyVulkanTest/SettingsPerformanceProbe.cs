@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using AlloyTest;
 using Silk.NET.OpenGL;
 using Silk.NET.Vulkan;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Platform.Silk;
 using TrueMoon.Alloy.Rendering.Skia;

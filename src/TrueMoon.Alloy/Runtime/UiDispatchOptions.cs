@@ -1,4 +1,4 @@
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Independent limits for pending commands and commands executed in one Update.</summary>
 public sealed record UiDispatchOptions

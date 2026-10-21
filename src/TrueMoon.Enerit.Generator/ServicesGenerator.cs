@@ -3,8 +3,6 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using TrueMoon.Enerit.Generator.Extensions;
-using TrueMoon.Enerit.Generator.Utils;
 
 namespace TrueMoon.Enerit.Generator;
 

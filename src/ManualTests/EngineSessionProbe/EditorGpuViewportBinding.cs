@@ -1,12 +1,11 @@
 using System.Runtime.InteropServices;
-using TrueMoon.Aether.Contracts;
 using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Gpu;
 using TrueMoon.Aether.Gpu.OpenGl;
 using TrueMoon.Aether.Gpu.Surfaces;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Sessions;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 
@@ -27,6 +26,7 @@ internal sealed class EditorGpuViewportBinding(Func<IRuntimeLease, NativeRuntime
     private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal Task Ready => _ready.Task;
     internal int Copies { get; private set; }
+    internal GpuAdapterId Adapter => _adapter;
     internal int ImportReadbacks => Volatile.Read(ref _importReadbacks);
     internal IGameViewportTransport CreateTransport(GpuResourceHost gpu) => new GpuViewportTransport(gpu, () => (_adapter, _context), Consume, native);
     internal void Observe(UiSession ui) => _ui = ui;

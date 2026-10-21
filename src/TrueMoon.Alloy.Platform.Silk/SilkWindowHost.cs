@@ -1,4 +1,5 @@
-﻿using Silk.NET.Input;
+using TrueMoon.Alloy.Runtime;
+using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 using TrueMoon.Argentis;
@@ -263,7 +264,8 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
             Key.Left => UiKey.Left, Key.Right => UiKey.Right, Key.Home => UiKey.Home, Key.End => UiKey.End,
             Key.Backspace => UiKey.Backspace, Key.Delete => UiKey.Delete, Key.A => UiKey.A, Key.C => UiKey.C,
             Key.V => UiKey.V, Key.X => UiKey.X, Key.Up => UiKey.Up, Key.Down => UiKey.Down,
-            Key.Z => UiKey.Z, Key.Y => UiKey.Y, Key.B => UiKey.B, Key.I => UiKey.I, Key.U => UiKey.U, _ => UiKey.None
+            Key.Z => UiKey.Z, Key.Y => UiKey.Y, Key.B => UiKey.B, Key.I => UiKey.I, Key.U => UiKey.U,
+            Key.W => UiKey.W, Key.S => UiKey.S, Key.D => UiKey.D, Key.E => UiKey.E, _ => UiKey.None
         };
         Input?.Invoke(new UiInput(kind, Key: uiKey,
             Shift: keyboard.IsKeyPressed(Key.ShiftLeft) || keyboard.IsKeyPressed(Key.ShiftRight),

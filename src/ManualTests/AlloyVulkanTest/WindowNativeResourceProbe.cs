@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Platform.Silk;
 using TrueMoon.Alloy.Rendering.Skia;

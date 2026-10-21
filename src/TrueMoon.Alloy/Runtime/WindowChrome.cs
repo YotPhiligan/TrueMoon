@@ -1,6 +1,6 @@
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Immutable settings for a custom frame on an undecorated Windows window.</summary>
 public sealed record WindowChromeOptions

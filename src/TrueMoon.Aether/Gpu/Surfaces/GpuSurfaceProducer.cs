@@ -1,5 +1,5 @@
 using System.IO.Pipes;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Gpu.Vulkan;
 
@@ -65,10 +65,12 @@ internal static class GpuSurfaceProducer
                         if (stamp.SurfaceGeneration != generation || previous.Phase != "Idle" || stamp.FrameId != checked((previous.Stamp?.FrameId ?? 0) + 1)) throw new InvalidDataException("Stale/busy slot use.");
                         if (ledger.Begin(stamp.Slot) != stamp) throw new InvalidDataException("Slot reservation mismatch.");
                         var extent = surface!.Offer.Slots[stamp.Slot];
+                        var measured = FrameTrace.Log.Begin();
                         var data = frameProvider?.Invoke(stamp, extent.Width, extent.Height);
                         if (frameProvider != null && data == null) throw new InvalidDataException("Runtime frame provider returned null.");
                         data?.Validate(stamp, extent.Width, extent.Height);
-                        var ready = await surface.ProduceAsync(stamp, end, data?.Pixels).ConfigureAwait(false); ledger.Produced(ready);
+                        var ready = await surface.ProduceAsync(stamp, end, data?.Pixels, data?.Scene).ConfigureAwait(false); ledger.Produced(ready);
+                        FrameTrace.Log.Complete("production", launch.Identity, generation, GpuFrameData.FrameNumber(stamp), measured);
                         reply = new(sequence, "Ready", launch.Identity, generation, Completion: ready, Metadata: data?.Metadata); break;
                     case "Return":
                         RequireGeneration(); var complete = request.Completion ?? throw new InvalidDataException("Missing slot return."); ledger!.RemoteReturn(complete);
@@ -133,7 +135,7 @@ internal sealed class VulkanSurface(SessionIdentity identity, ulong generation, 
         }
         finally { _gate.Release(); }
     }
-    internal Task<GpuFrameCompletion> ProduceAsync(GpuFrameStamp stamp, CancellationToken token, byte[]? pixels = null) => ExecuteAsync(() => _slots[stamp.Slot].ProduceSlotAsync(stamp, token, pixels), token);
+    internal Task<GpuFrameCompletion> ProduceAsync(GpuFrameStamp stamp, CancellationToken token, byte[]? pixels = null, Rendering.PrimitiveScene? scene = null) => ExecuteAsync(() => _slots[stamp.Slot].ProduceSlotAsync(stamp, token, pixels, scene), token);
     internal Task<GpuFrameCompletion> RetireAsync(GpuFrameCompletion completion, CancellationToken token) => ExecuteAsync(() => _slots[completion.Stamp.Slot].RetireAsync(completion, token), token);
     private async Task<GpuFrameCompletion> ExecuteAsync(Func<Task<GpuFrameCompletion>> body, CancellationToken token)
     {

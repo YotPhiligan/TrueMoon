@@ -1,5 +1,51 @@
 # Mithril: история реализации и проверок
 
+## Graceful wait после ошибки доставки exit — 2026-10-21
+
+ENG4e CPU/GPU measurements выявили преждевременный kill первого GPU child при
+Replace: child принял stdin exit, закрыл control pipe и продолжал cleanup/flush.
+В ProcessUnitHandle.StopAsync доставка через оба канала и WaitForExitAsync были
+в одном try. IOException/InvalidOperationException доставки пропускал оставшееся
+graceful ожидание; Killing мог происходить уже за~0.5s при прежнем3s deadline.
+Это гонка shutdown, не доказательство driver hang. При первом harness варианте
+терялся и raw capture. Measurement worker теперь сохраняется до App teardown.
+
+Минимальное исправление: best-effort delivery отделена от ожидания exit.
+После ошибки канала ожидать оставшийся тот же linked deadline; timeout/cancellation
+по-прежнему приводит к owned Kill/reap. Budgets, restart/ownership и public API не
+расширены. [Уточнение MIT0](PLAN.md#mit0-own-child-контракт--2026-10-11).
+
+Регрессия использует существующий MithrilLifecycleProbe: parent закрывает stdin,
+child получает EOF и завершает1s cleanup с exit0. Старый код немедленно убивал
+child, новый сохраняет graceful exit без Killing/неожиданного callback.
+
+| Требование | Evidence |
+| --- | --- |
+| Ошибка delivery не сокращает оставшийся budget | `ProcessUnitHandleTests.OwnedChild_ShutdownScenario_ReapsProcessAndReleasesHandle("closed-stdin", false)`: red9passed/1failed, green10passed/0failed; новые assertions используют существующие exit0/Graceful/no Killing/handle release checks |
+| Timeout/pre-cancelled Stop продолжают kill/reap, остальные scenarios сохранены | Та же focused theory10cases; native20cases —10Debug apphost +10published Release |
+| Связанные App/IPC/engine contracts | Full solution Debug1907/1907 и Release1907/1907: Mithril95/Enerit126/Aether501, failed0/skipped0; прочие counts в engine HISTORY |
+
+```powershell
+dotnet test TrueMoon.Mithril.Tests/TrueMoon.Mithril.Tests.csproj --configuration Debug --filter FullyQualifiedName~OwnedChild_ShutdownScenario_ReapsProcessAndReleasesHandle --logger trx --results-directory TestResults/ViewportBaseline/development/mithril-green --verbosity quiet
+./ManualTests/MithrilLifecycleProbe/RunLifecycleSmoke.ps1 -ResultsDirectory TestResults/ViewportBaseline/mithril-verified-20261021
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/ViewportBaseline/development/verified-Debug --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory TestResults/ViewportBaseline/development/verified-Release --verbosity quiet
+```
+
+Raw red/green TRX/logs: `TestResults/ViewportBaseline/development/mithril-red` и
+`mithril-green`; native `TestResults/ViewportBaseline/mithril-verified-20261021`.
+Первый native wrapper выполнил20cases, но сохранил Completed=false из-за прежнего
+hardcoded expected18; runner считает2×scenario count, fresh repeat Completed=true.
+Свежий independent units consumer после fix:108/108cases,8packages/9projects,
+128commands/206source fingerprints, Cobalt/DI/DI без Cobalt analyzer,
+Debug/Release build/publish; omitted Enerit analyzer даёт expectedCS0234.
+Version`0.2.2.7-alpha.units.20261021094727716`, evidence
+`TestResults/UnitsPackages/eng4e-20261021/summary.json`, Completed=true.
+Это прежний App/IPC/restart package scope, не новый package closed-stdin scenario.
+Own standalone restart matrix/external process permissions/other OS отдельно
+не повторены. Полная ENG4e measurement matrix
+имеет собственный scope/results в [engine HISTORY](../engine/HISTORY.md).
+
 ## Readiness-file race при UI INF3 — 2026-10-18
 
 Первый full Debug solution в UI INF3:1450total/1449passed/1failed, Mithril93/94.

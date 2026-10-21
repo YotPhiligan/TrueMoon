@@ -1,6 +1,6 @@
 using AlloyTest;
 using TrueMoon;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Argentis;
 using TrueMoon.Diagnostics;

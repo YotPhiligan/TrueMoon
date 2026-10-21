@@ -1,3 +1,5 @@
+using TrueMoon.Alloy.Runtime;
+
 namespace TrueMoon.Alloy.Hosting;
 
 // Native-free frame policy used by the real window; requests can arrive on any thread.

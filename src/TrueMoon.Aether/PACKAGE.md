@@ -1,8 +1,8 @@
 # TrueMoon.Aether
 
 Experimental TrueMoon game-engine module: session lifecycle, control contracts,
-owned game processes, bounded CPU frame transport and an explicit Vulkan/OpenGL
-one-frame shared-image probe. Current prototype scope:
+owned game processes, checkpoint replacement, bounded CPU/GPU frame transport and
+an explicit Vulkan/OpenGL viewport with a first depth-tested primitive renderer. Current prototype scope:
 Windows x64 and .NET 10.
 
 The repository project is packable. The API remains experimental/alpha;
@@ -26,10 +26,36 @@ role/bootstrap handler, as provided by the repository's EngineSessionProbe examp
 The registration extension does not generate an executable entry point.
 
 The single Aether assembly contains `TrueMoon.Aether` and
-`TrueMoon.Aether.Contracts`. It uses TrueMoon Contracts/Enerit/Mithril without
+`TrueMoon.Aether.Sessions`, `.Scenes`, `.Transport`, `.Frames`, `.Checkpoints`, `.Rendering` and `.Input`.
+It uses TrueMoon Contracts/Enerit/Mithril without
 depending on UI, Skia or a particular game DLL. Silk.NET.Vulkan 2.23.0 supports
-the opt-in Windows x64 GPU probe; native GPU startup remains explicit. The application supplies
+the opt-in Windows x64 GPU path; native GPU startup remains explicit. The application supplies
 Editor/Runtime entry points and its `IGameSession` implementation.
+
+`Rendering.IRenderGameSession` is an optional observational capability. Capture it
+through `RuntimeProtocol.CaptureRenderFrame` at a serialized simulation boundary,
+then create `Gpu.Surfaces.GpuFrameData.FromScene` in the runtime frame provider.
+The scene currently describes one cube, a perspective camera and an opaque RGB
+material. Vulkan draws directly into the exported image with a slot-local depth
+buffer; GLSL/SPIR-V are embedded, with no runtime shader compiler dependency.
+The default reference pattern and CPU viewport remain available. Room/HUD,
+asset import and general scene rendering are later stages.
+
+`Input.IInputGameSession` optionally receives `GameInputTick` at each fixed
+1/60-second tick/Step. Send a validated `GameInputState` through the App-owned
+`host.Supervisor.SendInputAsync(expectedIdentity, state)`. An Accepted outcome
+stages input; it does not advance simulation. Unsupported is explicit and keeps
+legacy sessions working. Held movement has a12-tick lease; look/action pulses
+are consumed once. `FirstPersonCamera.Step` provides normalized XZ movement and
+bounded pitch/yaw. Pause/Stop/restore clear transient input. Runtime adapters
+call `RuntimeProtocol.ResetInput` on GPU surface/focus changes; the example wires
+Configure/Detach automatically. Input itself is never checkpoint state.
+
+Control wire is version2 (input fields/outcome); frame and TMCK checkpoint schemas
+remain version1. Rebuild matching host/game artifacts; version1 control peers
+are rejected, and old host fingerprints remain incompatible. The engine has no
+UI dependency. The example owns a bounded30Hz sender, focus/pointer routing and
+its drain before App/UI teardown; raw/locked OS mouse input is not supplied.
 
 Game logic remains a separate assembly. CPU frame transport and session control
 and explicit immutable game-build compilation/selection are implemented. Use

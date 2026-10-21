@@ -1,1 +1,3 @@
-﻿public interface IService2;
+namespace CobaltTest;
+
+public interface IService2;

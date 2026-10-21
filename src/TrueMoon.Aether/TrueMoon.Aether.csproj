@@ -3,7 +3,7 @@
     <TargetFramework>$(TF)</TargetFramework>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Description>Experimental TrueMoon game engine module: session lifecycle, control contracts, CPU frame transport and a Windows Vulkan/OpenGL shared-image probe.</Description>
+    <Description>Experimental TrueMoon game engine module: session lifecycle, checkpoint replacement, CPU/GPU viewport transport and a Windows Vulkan primitive renderer.</Description>
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     <PackageTags>$(PackageTags);game-engine;sessions;ipc;frames</PackageTags>
   </PropertyGroup>
@@ -16,5 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+    <EmbeddedResource Include="Gpu/Vulkan/Shaders/*.spv" />
   </ItemGroup>
 </Project>

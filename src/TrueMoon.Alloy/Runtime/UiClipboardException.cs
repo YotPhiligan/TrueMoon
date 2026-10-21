@@ -1,4 +1,4 @@
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>The clipboard operation that could not complete.</summary>
 public enum UiClipboardOperation

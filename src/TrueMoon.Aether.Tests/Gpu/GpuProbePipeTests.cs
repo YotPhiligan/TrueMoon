@@ -3,9 +3,8 @@ using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
 using TrueMoon.Aether;
-using TrueMoon.Aether.Contracts;
-using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Hosting;
 using TrueMoon.Dependencies;
 using Xunit;
 

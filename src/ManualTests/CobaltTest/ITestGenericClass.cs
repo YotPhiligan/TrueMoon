@@ -1,1 +1,3 @@
-﻿public interface ITestGenericClass<T>;
+namespace CobaltTest;
+
+public interface ITestGenericClass<T>;

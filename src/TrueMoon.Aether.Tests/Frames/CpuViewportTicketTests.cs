@@ -1,8 +1,9 @@
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Tests.Replacements;
 using Xunit;
+
 namespace TrueMoon.Aether.Tests.Frames;
 public sealed class CpuViewportTicketTests
 {

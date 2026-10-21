@@ -6,7 +6,7 @@
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <RootNamespace>TrueMoon.Titanium.Tests</RootNamespace>
+        <RootNamespace>TrueMoon.Mithril.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 
 namespace AlloyVulkanTest;
 

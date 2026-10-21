@@ -1,12 +1,13 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Services;
+using AlloyFactoryConsumer;
 
 if (args.Length < 4) throw new ArgumentException("Expected provider, opengl/vulkan, factory/all, report path, optional --validation.");
 var provider = args[0]; var graphics = args[1]; var mode = args[2];
@@ -135,9 +136,13 @@ async Task<object> Run(string scenario)
 static async Task<Exception?> Observe(Func<Task> action) { try { await action(); return null; } catch (Exception error) { return error; } }
 static IEnumerable<Exception> Flatten(Exception error) => error is AggregateException aggregate ? aggregate.InnerExceptions.SelectMany(Flatten) : [error];
 static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-sealed class Marker : IDisposable { internal int Disposals; public void Dispose() => Disposals++; }
-sealed class FactoryRoot : Panel
+
+namespace AlloyFactoryConsumer
 {
-    public FactoryRoot(Marker marker) { if (marker.Disposals != 0) throw new ObjectDisposedException(nameof(Marker)); Background = new Color(27, 61, 95); }
+    sealed class Marker : IDisposable { internal int Disposals; public void Dispose() => Disposals++; }
+    sealed class FactoryRoot : Panel
+    {
+        public FactoryRoot(Marker marker) { if (marker.Disposals != 0) throw new ObjectDisposedException(nameof(Marker)); Background = new Color(27, 61, 95); }
+    }
+    sealed class Cleanup(Action action) : IDisposable { public void Dispose() => action(); }
 }
-sealed class Cleanup(Action action) : IDisposable { public void Dispose() => action(); }

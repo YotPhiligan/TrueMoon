@@ -4,10 +4,10 @@ using System.Security;
 using TrueMoon;
 using TrueMoon.Aether;
 using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Contracts;
 using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Hosting;
 using TrueMoon.Dependencies;
 
 namespace EngineSessionProbe;
@@ -98,7 +98,9 @@ public static class BuildProbe
             <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
             """);
         var source = color == "invalid C#" ? color : $$"""
-            using TrueMoon.Aether.Contracts;
+            using TrueMoon.Aether.Frames;
+            using TrueMoon.Aether.Scenes;
+            using TrueMoon.Aether.Sessions;
             namespace Game.Candidate;
             public sealed class Game : IGameSession {
                 public ulong TickNumber { get; private set; }

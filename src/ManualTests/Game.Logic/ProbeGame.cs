@@ -1,9 +1,10 @@
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Scenes;
 
 namespace Game.Logic;
 
 // Minimal ENG1/ENG3b demo state; no generic scene migration or replacement transaction.
-public sealed class ProbeGame : ICheckpointGameSession
+public sealed class ProbeGame : ICheckpointGameSession, TrueMoon.Aether.Rendering.IRenderGameSession
 {
     private SceneSnapshot? _scene;
     private bool _disposed;
@@ -32,6 +33,12 @@ public sealed class ProbeGame : ICheckpointGameSession
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_scene == null) throw new InvalidOperationException("No scene loaded.");
         return new(TickNumber, _camera, _interaction);
+    }
+    public TrueMoon.Aether.Rendering.PrimitiveScene CaptureRenderScene()
+    {
+        var state = CaptureCheckpoint();
+        return new(state.Camera, 0.45f, new System.Numerics.Vector3((PatternColor >> 16 & 255) / 255f,
+            (PatternColor >> 8 & 255) / 255f, (PatternColor & 255) / 255f));
     }
     public void RestoreCheckpoint(GameCheckpointState state)
     {

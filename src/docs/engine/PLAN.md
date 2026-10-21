@@ -1,16 +1,20 @@
 # TrueMoon.Aether: план игрового движка и редактора
 
 Зафиксировано **2026-10-13** по обсуждению будущего кастомного движка для одной
-не очень сложной 3D-игры. Состояние2026-10-20: **ENG0 определён;
+не очень сложной 3D-игры. Состояние2026-10-21: **ENG0 определён;
 ENG1 headless supervisor и ENG2 CPU viewport реализованы в bounded probe scope;
 ENG3a compiler/artifacts, ENG3b checkpoint/restore, ENG3c Replace/rollback
 и ENG3d Editor commands/20Replace proof реализованы2026-10-20; ENG4a/b/c, ENG4d bridge/ENG4d2 ordinary GPU Editor проверены в bounded scope;
-ENG4e baseline и ENG5–ENG8 запланированы**.
+ENG4e measured CPU/GPU baseline получен2026-10-21; ENG5a первый Vulkan3D renderer
+и ENG5b gameplay input/camera реализованы/проверены2026-10-21;
+остальной ENG5 и ENG6–ENG8 запланированы**.
 [Статус направления](STATUS.md), [общий план](../PLAN.md),
 [правила ведения](../PLANNING.md).
 
-После UI INF7, выделения TrueMoon.Aether, ENG3 и ENG4a–d2 следующий этап —
-ENG4e: сопоставимый CPU/GPU viewport baseline до 3D renderer. Прежняя
+После UI INF7, выделения TrueMoon.Aether, ENG3/ENG4a–e и первого renderer ENG5a
+и ENG5b input/camera следующий этап — ENG5c: комната/interaction/HUD. ENG4e сохраняет
+CPU Debug budget breaches и allocation debt reference GPU staging path;
+измерения не подтверждают performance будущего3D. Прежняя
 [декомпозиция ENG3](#eng3-уточнение-плана-перед-реализацией--2026-10-19) сохраняет
 исходный checklist; фактические результаты ведутся в HISTORY/STATUS.
 
@@ -43,7 +47,7 @@ ENG4e: сопоставимый CPU/GPU viewport baseline до 3D renderer. Пр
 
 | Часть | Текущее размещение |
 | --- | --- |
-| Engine contracts и implementation | Одна TrueMoon.Aether assembly: namespace TrueMoon.Aether.Contracts, supervisor/protocol, bounded control adapters, native child bridge, CPU ring/receiver/FrameSession |
+| Engine contracts и implementation | Одна TrueMoon.Aether assembly: Sessions/Scenes/Transport/Frames/Checkpoints, supervisor/protocol, bounded control adapters, native child bridge, CPU ring/receiver/FrameSession |
 | Engine tests | TrueMoon.Aether.Tests, direct ProjectReference на Aether; не executable reference/linked production copies |
 | Editor/Game.Runtime composition | ManualTests/EngineSessionProbe: entry roles, concrete game factory, App lifetime, Alloy viewport и native fault scenarios |
 | Игровая логика | ManualTests/Game.Logic: отдельная DLL с IGameSession implementation; не часть engine library |
@@ -53,6 +57,12 @@ Contracts не содержат transport/UI/native types; отдельная Co
 не зависит от Alloy/Argentis/Skia/Silk или Game.Logic. Пример подключает UI явно.
 Файлы перемещены, не Compile-linked. Старый Engine.Probe.Contracts project и
 EngineSessionProbe.Tests project заменены Aether/Aether.Tests в TrueMoon.slnx.
+
+Уточнение2026-10-21: общая папка/namespace Aether.Contracts устранена. Engine
+contracts размещены по назначению рядом с реализацией в Sessions, Scenes,
+Transport, Frames и Checkpoints; они остаются в одной Aether assembly. Это
+изменяет public namespace относительно прежней alpha, consumers обновлены вместе
+с модулем. Общий TrueMoon.Contracts не получает engine-specific types.
 Ранние записи ENG0–ENG2 ниже описывают размещение на дату реализации.
 
 Game.Logic остаётся отдельной: независимая замена игровой DLL при стабильном
@@ -171,7 +181,7 @@ Mithril, выделить задачу в его плане; готовност�
 
 Identity v1: SessionId(Guid), SessionGeneration(UInt64), HostContractId(строка
 SHA256 стабильных host/contracts binaries), GameBuildId(строка SHA256 manifest),
-ControlVersion=1, FrameVersion=1, SnapshotVersion=1.
+ControlVersion=2 (ENG5b input wire,2026-10-21), FrameVersion=1, SnapshotVersion=1.
 SessionId принадлежит открытой Editor session; generation увеличивается при каждом
 запуске/rollback child и не используется повторно. PID — только ownership/diagnostics.
 SurfaceGeneration(UInt64) отдельно увеличивается при новой frame allocation/resize.
@@ -481,7 +491,8 @@ ENG1/ENG2 и INF7 имеют прежние даты/scopes. Порядок ос
 | ENG3c | Serialized Replace и однократный rollback | Pause/capture → stop/reap → start/restore/first-present → прежний mode. Новые generation/identity, один game child; failed cleanup блокирует launch. Candidate failure сохраняет исходную ошибку и допускает не более1rollback; rollback failure оставляет usable Editor/Faulted |
 | ENG3d | Интеграция команд Editor и воспроизводимый proof | В Debug apphost и published Release по20Replace при одном Editor App/window. Поведение/pixels меняются между builds, checkpoint и authoring state сохраняются; compile/candidate/rollback/cancel/close/cleanup failures проверены отдельно. Повторены релевантные ENG1/ENG2 regressions |
 
-ENG3a–d/ENG4a–d2 реализованы2026-10-20; следующий code этап — ENG4e measured baseline.
+ENG3a–d/ENG4a–d2 реализованы2026-10-20; ENG4e baseline получен2026-10-21,
+следующий функциональный этап — ENG5.
 Production Core/Cobalt/Enerit/Mithril/UI APIs заранее не расширяются; общая проблема
 модуля при обнаружении получает свою задачу.
 
@@ -650,7 +661,7 @@ Runner выделяет отдельный editor-proof process на конфи�
 
 Ниже вопросы исходной сверки2026-10-19. Artifact/loader и build cancellation
 решены ENG3a выше, checkpoint/recovery — ENG3b; transaction budget/fences — ENG3c.
-Editor context/proof — ENG3d. Вопросы ниже сохранены как исходный checklist; текущая точка — ENG4e.
+Editor context/proof — ENG3d. Вопросы ниже сохранены как исходный checklist; текущая точка — ENG5.
 
 1. **Artifact/loader boundary (ENG3a).** Нынешние direct ProjectReference и
    `new ProbeGame()` не выбирают versioned DLL; supervisor хранит fixed GameBuildId,
@@ -898,8 +909,8 @@ ENG1 и ENG2 proof выполнены2026-10-17; следующий code эта�
 | ENG1 | Headless Editor/child skeleton и supervisor — реализован/проверен2026-10-17 | Hello/scene readiness,20Start/Stop/configuration, generations/stale replies/cancel/timeouts/crash/disconnect/parent exit, owned cleanup при живом Editor; Game.Logic replacement отдельно ENG3 |
 | ENG2 | CPU frame viewport — реализован/проверен2026-10-17 | Детерминированный pattern/counter из child виден в Editor; bounded ring, корректные generations/resize/slow receiver/EOF и resource cleanup |
 | ENG3 | Сборка и replacement Game.Logic — реализован/проверен2026-10-20 | Смена поведения через новую игровую DLL без restart Editor; compile failure сохраняет рабочую версию; checkpoint/reset и rollback candidate проверены |
-| ENG4 | Vulkan shared GPU prototype — ENG4a–d2 проверены; ENG4e baseline далее | Ordinary GPU Editor Build/Replace/checkpoint/first-present/lifecycle подтверждены на reference; measured latency/resources до 3D ещё требуются |
-| ENG5 | Небольшая играбельная 3D-сцена | Model/camera/light/material, управление и нужные collisions, Alloy HUD/pause; level load/unload и standalone launch воспроизводимы |
+| ENG4 | Vulkan shared GPU prototype — ENG4a–d2 проверены; ENG4e baseline получен2026-10-21 | Ordinary GPU Editor Build/Replace/checkpoint/first-present/lifecycle и measured CPU/GPU reference path подтверждены; Debug CPU budget breaches/temporary staging allocations сохранены, hardware/final acceptance открыты |
+| ENG5 | Небольшая играбельная 3D-сцена — ENG5a renderer и ENG5b input/camera проверены2026-10-21 | Далее ENG5c комната/пол/примитивы, осмысленный interaction, переключатель цвета/света, нужные collisions и Alloy HUD/pause; level load/unload и standalone launch воспроизводимы |
 | ENG6 | Hot Reload исследование | Зафиксирован supported edit набор/state behavior, unsupported edits переводятся в проверенный replacement; ALC только по подтверждённой потребности |
 | ENG7 | Минимальные инструменты и доставка | Scene/asset editing, inspector/logs/input routing и standalone consumer работают в выбранном package/publish scope |
 | ENG8 | Финальные robustness/performance checks | Frame time/latency/allocations/resource trends измерены на фиксированной сцене; reload/resize/crash/cancel/close проходят в объявленных limits |
@@ -1063,7 +1074,12 @@ engine input; он не входит в результаты ENG2. ENG3 оста
 versioned DLL replacement/rollback. UI K3/K7/K8/VRAM/final alpha не закрываются
 этим bounded engine proof, target30fps/60Hz не становится performance guarantee.
 
-## ENG4e: CPU/GPU viewport baseline перед 3D — следующий шаг
+## ENG4e: CPU/GPU viewport baseline перед 3D — 2026-10-21
+
+**Выполнен в reference scope2026-10-21:**12cases/36intervals, Debug/published
+Release ×CPU/GPU ×3повтора. [Метрики, raw evidence, failures и ограничения](HISTORY.md#eng4e-cpugpu-baseline--2026-10-21).
+Advisory budgets не подгонялись: Debug CPU1280×720 имеет2FPS и6latency breaches;
+Release budgets выполнены. Это measured baseline, не performance guarantee.
 
 На той же Windows x64/reference configuration измерить оба явных transport modes
 с одинаковыми game pattern, extent/tick/frame cadence и сценариями Start/resize/
@@ -1076,3 +1092,89 @@ reference CPU-generated/Vulkan-staging pattern не объявляет прои�
 будущего 3D renderer. Оптимизации выбирать только после измерений. Long VRAM trend,
 physical DPI/driver loss/final UI acceptance и K7 остаются отдельными открытыми
 проверками; driver/Windows settings не менять. Далее ENG5 renderer/input/3D scene.
+
+### ENG4e: протокол измерений — 2026-10-21
+
+До первого полного запуска зафиксирован workload: одна App/Editor/window на case,
+явный CPU или GPU transport, одинаковая DLL Game.Logic/FramePattern/color.
+Start640×360 → Resize1280×720 → Replace1280×720 → Stop; A/B artifacts отличаются
+revision/manifest identity при одинаковых DLL bytes. Simulation60Hz, production30Hz,
+UI continuous60Hz; cadence является target, фактический throughput измеряется.
+На каждом из трёх участков после pixel verification —2s warmup и5s measurement.
+Три повтора каждого mode отдельно Debug apphost/published Release; порядок пар
+чередуется CPU/GPU и GPU/CPU. Native validation выключена только в measurement
+процессах; correctness runs с validation имеют отдельные результаты.
+
+Предварительные advisory budgets: presented≥24fps, production-start→actual-present
+p95≤100ms, Editor managed allocation≤32MiB/s, runtime≤256MiB/s,
+каждая операция Start/Resize/Replace/Stop≤15s. Нарушение фиксируется в отчёте;
+Completed означает полноту experiment/ownership cleanup, а не прохождение budgets.
+Бюджеты не изменять задним числом по полученным результатам.
+
+Opt-in EventSource хранится в bounded capture каждого процесса. Raw QPC samples
+связываются по session/runtime generation/surface generation/frame number;
+повторная presentation одного frame не увеличивает throughput. Общий latency
+начинается до production у обоих modes: прежние wire ProducedTimestamp имеют
+разную границу CPU/GPU и напрямую для сравнения не используются. CPU production
+включает pattern/CRC/MMF write, CPU copy — MMF read/CRC; GPU production — CPU
+pattern и Vulkan staging/observed ready, retained-copy — CPU submission независимого
+Skia image, gpu-use — owner queue/callback/observed GL fence. Import — отдельная
+configuration latency. GPU execution timestamps/physical-display latency этим
+не измеряются. Instrumentation/polling overhead включён в CPU/allocations.
+
+Process counters каждые200ms: cumulative managed allocations, CPU time,
+private/working-set bytes, handles, GC collections; rates имеют собственные
+sample interval endpoints. GPU timestamp/utilization/VRAM counters без provider
+явно unavailable. Raw data, commands, environment, source/binary hashes и полный
+report сохраняет `ManualTests/EngineSessionProbe/RunViewportBaseline.ps1`.
+Короткие1s smoke до matrix проверяют инструмент, не являются baseline.
+
+### Продолжение после ENG4e
+
+Уточнение2026-10-21, **ENG5b**: optional `IInputGameSession` получает input только
+на fixed tick (60Hz/Step), commands не меняют camera/game state. Новый control
+wire v2 добавляет bounded input state/ack; frame/checkpoint versions прежние.
+WASD — движение по XZ, нормализация диагонали, mouse delta — yaw/pitch с clamp,
+E — одно действие на rising edge (пока toggle demo color при наличии interactive
+entity). Click по fitted viewport захватывает focus/pointer; Escape возвращает
+focus Editor. Потеря focus/capture, Pause, resize/suspend, Stop и смена runtime
+сбрасывают held/look/actions. OS cursor lock/raw mouse не входят в этот этап:
+движение мыши использует logical deltas существующего UI pointer capture.
+Отдельная CameraGame сохраняет reference ProbeGame и его старые сценарии.
+
+Input transient, не checkpoint state. В packet нет caller dt/world pose; server
+ограничивает flags/look и lease12fixed ticks (200ms) без повторного refresh.
+Один UI sender,30Hz, ограниченный coalescing buffer, без task/queue на event.
+Перед exchange проверяется exact ожидаемая runtime identity: старый packet не
+переадресуется новому child после Replace. При reset не replay held input;
+новая capture требует click. App host остаётся owner lifecycle; sample sender
+drains до host/UI teardown. Unsupported optional input capability возвращает
+явный ack, не разрушает working legacy runtime.
+Acceptance: unit math/bounds/edge/lease/paused/restore/stale identity и Enerit
+roundtrip; native actual UI routing + GPU pixels/камера/E/Escape/focus/resize/
+Replace без stuck input, Debug/published Release с validation/cleanup; interactive
+sample с работающими Editor commands. Комната/HUD/collisions — далее ENG5c.
+
+Уточнение2026-10-21: первый ограниченный подэтап **ENG5a** — настоящий Vulkan
+draw куба с depth buffer, perspective camera и простым opaque материалом в
+существующем App-owned GPU viewport. Immutable render snapshot захватывается
+под тем же lock, что simulation/checkpoint; это optional capability Game.Logic,
+старый CPU/reference workload остаётся доступным. Пиксели3D не генерируются CPU.
+Renderer/depth/pipeline принадлежат surface slots и освобождаются до device.
+Проверки: геометрия/камера/материал, resize/suspend/resume, checkpoint Replace,
+Debug/published Release с core/sync validation и нулевым live ownership после stop.
+WASD/mouse/E/Escape, комната/HUD и standalone остаются ENG5b/ENG7; ENG5a не
+объявляет весь ENG5 выполненным. Новый input wire contract будет уточнён в ENG5b.
+
+Первый renderer contract/настоящий3D frame реализован в ENG5a.
+Input contract/camera control реализованы в ENG5b; следующий этап — ENG5c.
+Далее развить согласованную небольшую комнату/HUD/управление
+и отдельный standalone сценарий по ENG5/ENG7. Сохранить CPU default/явный GPU выбор,
+App ownership, checkpoint/Replace, surface generations и cleanup.
+
+Measured backlog: CPU generation/CRC/copy и callback cadence в Debug1280×720,
+новый RGBA buffer на frame в reference GPU producer (~107MiB/s allocation).
+Для оптимизаций воспроизводить этот baseline до/после; при переходе к настоящему
+GPU renderer сначала заменить workload и повторить измерения, не переносить
+reference timings на3D. VRAM/utilization providers, long resource trend,
+physical DPI/loss/K7/final alpha остаются отдельными задачами.

@@ -2,7 +2,9 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Game.Logic;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Transport;
 using TrueMoon.Generated.TrueMoon.Aether;
 using Xunit;
 

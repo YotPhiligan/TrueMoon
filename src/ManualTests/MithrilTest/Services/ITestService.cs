@@ -1,4 +1,4 @@
-﻿using MithrilTest.Models;
+using MithrilTest;
 
 namespace MithrilTest.Services;
 

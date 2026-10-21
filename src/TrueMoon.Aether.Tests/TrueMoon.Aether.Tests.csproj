@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Aether/TrueMoon.Aether.csproj" />
     <ProjectReference Include="../ManualTests/Game.Logic/Game.Logic.csproj" />
+    <ProjectReference Include="../ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />
     <ProjectReference Include="..\TrueMoon\TrueMoon.csproj" />
     <ProjectReference Include="..\TrueMoon.Extensions.DependencyInjection\TrueMoon.Extensions.DependencyInjection.csproj" />
   </ItemGroup>

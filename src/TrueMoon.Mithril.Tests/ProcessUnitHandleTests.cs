@@ -77,6 +77,7 @@ public class ProcessUnitHandleTests
     [InlineData("same-name", true)]
     [InlineData("duplicate-start", true)]
     [InlineData("throwing-sink", true)]
+    [InlineData("closed-stdin", false)]
     public async Task OwnedChild_ShutdownScenario_ReapsProcessAndReleasesHandle(string scenario, bool graceful)
     {
         var fixture = Path.Combine(AppContext.BaseDirectory, "process-fixture", "MithrilLifecycleProbe.dll");

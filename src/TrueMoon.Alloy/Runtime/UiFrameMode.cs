@@ -1,4 +1,4 @@
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Controls hosted frame polling independently of tree invalidation.</summary>
 public enum UiFrameMode

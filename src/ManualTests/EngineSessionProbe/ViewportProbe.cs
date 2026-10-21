@@ -2,15 +2,14 @@ using TrueMoon.Aether;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Frames;
 using SkiaSharp;
 using TrueMoon;
-using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Builds;
 using TrueMoon.Aether.Sessions;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
@@ -20,6 +19,13 @@ namespace EngineSessionProbe;
 
 public sealed class ViewportCanvas : Element
 {
+    /// <summary>Fits the image without distorting the renderer's projection.</summary>
+    public bool PreserveAspectRatio { get; set; }
+    internal Rect ImageBounds { get; private set; }
+    internal SceneViewportInput? GameplayInput { get; set; }
+    public override bool Focusable => GameplayInput != null;
+    public override bool HandleInput(UiInput input, IInputContext context) => GameplayInput?.Handle(input, context) ?? false;
+    public override void OnInputCancelled() => GameplayInput?.Cancel();
     private readonly int _owner = Environment.CurrentManagedThreadId;
     private SkiaImageSource? _image;
     private (FrameDisplay Display, FrameMetadata Metadata)? _imageFrame;
@@ -45,7 +51,16 @@ public sealed class ViewportCanvas : Element
     {
         context.Fill(Bounds, new(15, 19, 28));
         var visible = _gpuFrame == null || _gpuCurrent!();
-        if (_image != null && visible) context.Image(_image, Bounds);
+        var imageBounds = Bounds;
+        var width = _gpuFrame?.Presentation.Surface.Width ?? _imageFrame?.Display.Surface.Width ?? 0;
+        var height = _gpuFrame?.Presentation.Surface.Height ?? _imageFrame?.Display.Surface.Height ?? 0;
+        if (PreserveAspectRatio && width > 0 && height > 0)
+        {
+            var scale = Math.Min(Bounds.Width / width, Bounds.Height / height);
+            imageBounds = new(Bounds.X + (Bounds.Width - width * scale) / 2, Bounds.Y + (Bounds.Height - height * scale) / 2, width * scale, height * scale);
+        }
+        ImageBounds = imageBounds;
+        if (_image != null && visible) context.Image(_image, imageBounds);
         Drawn = _imageFrame; DrawnViewport = visible ? _gpuFrame : null;
     }
     public override void Dispose()
@@ -58,16 +73,18 @@ public sealed class ViewportCanvas : Element
 
 public sealed class ViewportView : View
 {
+    public Button PauseButton { get; }
     public ViewportCanvas Canvas { get; } = new() { Height = 420 };
     public Text Status { get; } = Text.Plain("Runtime stopped");
     public ViewportView(Action<string> command)
     {
+        PauseButton = Button.Simple("Pause").OnClick(() => command("pause"));
         Content(() => VStack.Create().Padding(12).WithChildren(
             Text.Plain("TrueMoon — Editor / child process viewport"),
             HStack.Create().WithChildren(
                 Button.Simple("Start").OnClick(() => command("start")),
                 Button.Simple("Play").OnClick(() => command("play")),
-                Button.Simple("Pause").OnClick(() => command("pause")),
+                PauseButton,
                 Button.Simple("Step").OnClick(() => command("step")),
                 Button.Simple("Stop").OnClick(() => command("stop"))),
             HStack.Create().WithChildren(
@@ -87,7 +104,7 @@ public static class ViewportProbe
         var directory = reportDirectory ?? Path.Combine(Path.GetTempPath(), "tm-viewport-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         var factory = new NativeRuntimeFactory(); var authoring = new AuthoringState(); var before = JsonSerializer.Serialize(authoring);
-        var gpuBinding = gpu ? new EditorGpuViewportBinding(runtime => factory.Leases.Single(l => l.ProcessId == runtime.ProcessId)) : null;
+        var gpuBinding = gpu ? new EditorGpuViewportBinding(runtime => (NativeRuntimeLease)runtime) : null;
         SessionSupervisor supervisor = null!;
         FrameSession session = null!;
         GameEditor editor = null!;

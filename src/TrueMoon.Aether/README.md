@@ -12,7 +12,10 @@ contracts игровой сессии, supervisor, control protocol, CPU frame t
 
 | Область | Назначение |
 | --- | --- |
-| `TrueMoon.Aether.Contracts` | Session identity, scene snapshots, `IGameSession`, control DTOs и frame codec |
+| `TrueMoon.Aether.Sessions` | Session identity, `IGameSession` и session lifecycle |
+| `TrueMoon.Aether.Scenes` | Scene snapshots и entities |
+| `TrueMoon.Aether.Transport` | Control DTOs, `IEngineControl` и adapters |
+| `TrueMoon.Aether.Checkpoints` | Checkpoint state, capability, outcomes и codec |
 | `SessionSupervisor` / `RuntimeProtocol` | Serialized commands, readiness, generations, heartbeat, stop/reap и observable failures |
 | `SharedFrameRing` / `FrameProducer` / `FrameReceiver` | Bounded Windows shared-memory transport, validated frames и latest-frame receiver |
 | `FrameSession` | Surface generations, first-present readiness, resize, drain и frame ownership |
@@ -29,8 +32,8 @@ Contracts/Enerit/Mithril и Silk.NET.Vulkan2.23.0; зависимостей на
 <ProjectReference Include="../TrueMoon.Aether/TrueMoon.Aether.csproj" />
 ```
 
-Основные namespaces — `TrueMoon.Aether` (App extension), `TrueMoon.Aether.Contracts`,
-`TrueMoon.Aether.Hosting`, `TrueMoon.Aether.Sessions` и `TrueMoon.Aether.Frames`.
+Основные namespaces — `TrueMoon.Aether` (App extension), `TrueMoon.Aether.Hosting`,
+`TrueMoon.Aether.Sessions`, `.Scenes`, `.Transport`, `.Checkpoints` и `.Frames`.
 Editor владеет supervisor и receiver; child владеет игровой сессией и producer.
 Host executable выбирает роли и создаёт конкретную реализацию `IGameSession`.
 Готовый образец такой composition находится в `ManualTests/EngineSessionProbe`.
@@ -44,9 +47,19 @@ host/contracts является целью ENG3. Исполняемый прим
 
 ENG1/ENG2 реализуют session lifecycle и CPU viewport; ENG3a добавляет compiler jobs
 и явный выбор immutable game artifact, ENG3b — минимальный checkpoint/restore,
-ENG3c — serialized Replace с однократным rollback. Editor commands/20Replace proof,
-3D renderer, shared GPU transport и Hot Reload относятся
-к последующим этапам. UI OpenGL viewport живёт в примере и подключает Alloy явно.
+ENG3c — serialized Replace с однократным rollback, ENG3d — Editor commands/20Replace proof.
+ENG4 добавляет shared GPU transport, ENG5a — первый Vulkan3D draw (куб,
+perspective camera, depth buffer и простой opaque material). Снимок сцены —
+optional `Rendering.IRenderGameSession`; `RuntimeProtocol.CaptureRenderFrame`
+захватывает его и tick под simulation/checkpoint lock. `GpuFrameData.FromScene`
+передаёт draw workload без CPU pixel buffer в существующий App-owned producer.
+ENG5b добавляет optional `Input.IInputGameSession`, bounded `GameInputState` и
+`Supervisor.SendInputAsync(expectedIdentity, state)`: input staged на command,
+applied на fixed tick/Step. Камера/interaction сохраняются checkpoint, held/look/
+actions transient; Pause/Stop/restore/host surface reset очищают input. Control
+wire v2 требует rebuild matching host/game; frame/TMCK schemas остаются v1.
+Комната, HUD и Hot Reload остаются дальнейшими этапами.
+UI OpenGL viewport живёт в примере и подключает Alloy явно.
 Новый namespace не добавляет поддержку других платформ или release readiness.
 
 Типы пока экспериментальные; проект packable, публикация NuGet отдельно.
@@ -59,7 +72,8 @@ cleanup. Failed reap блокирует следующий launch до успе�
 ```csharp
 using TrueMoon;
 using TrueMoon.Aether;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Dependencies;
 

@@ -295,7 +295,7 @@ try {
 "@ | Set-Content -LiteralPath (Join-Path $direct 'DirectRenderer.csproj') -Encoding utf8
     @'
 using AlloyPackageConsumer;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 var hashes = ConsumerFonts.Fingerprints();

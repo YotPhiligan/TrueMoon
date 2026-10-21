@@ -1,4 +1,3 @@
-using TrueMoon.Aether.Contracts;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Services;
 using TrueMoon.Aether.Frames;

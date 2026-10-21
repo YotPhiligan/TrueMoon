@@ -51,7 +51,8 @@ public sealed class GameBuildFixture : IAsyncLifetime
     public GameBuildArtifact CopyA() => GameBuildArtifact.Publish(A.DirectoryPath, Path.Combine(Root, "copy-" + Guid.NewGuid().ToString("N")),
         Hash, A.EntryAssembly, A.EntryType, A.SourceRevision, ["Game.Private.dll"]);
     public static string Source(string color) => $$"""
-        using TrueMoon.Aether.Contracts;
+        using TrueMoon.Aether.Scenes;
+        using TrueMoon.Aether.Sessions;
         namespace Game.Candidate;
         public sealed class Game : IGameSession
         {

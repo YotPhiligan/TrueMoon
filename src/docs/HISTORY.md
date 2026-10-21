@@ -1,5 +1,356 @@
 # TrueMoon: история общей документации
 
+## Исправление структуры проектов — 2026-10-21
+
+По запросу пользователя исправлены замечания [исходного аудита](#аудит-размещения-типов-и-namespace--2026-10-21).
+Все 44 проекта охвачены изменениями или проверкой; после разделения Control.cs
+получилось 597 авторских C#-файлов вместо 590. Структурная проверка после переносов:
+namespace mismatch0, global-type violations0, технические папки0, parse errors0,
+orphaned sources0. Top-level statements сохранены, явно объявленные типы из
+таких программ получили namespace своего проекта.
+
+### Размещение и изменения public API
+
+| Прежнее размещение / namespace | Текущее размещение / namespace |
+| --- | --- |
+| Aether.Contracts: IGameSession, SessionIdentity | Aether/Sessions, `TrueMoon.Aether.Sessions` |
+| Aether.Contracts: SceneEntity, SceneSnapshot | Aether/Scenes, `TrueMoon.Aether.Scenes` |
+| Aether.Contracts: IEngineControl, CommandKind, ControlRequest, ControlReply | Aether/Transport, `TrueMoon.Aether.Transport` |
+| Aether.Contracts: frame types/codec/pattern | Aether/Frames/Frames.cs, `TrueMoon.Aether.Frames` |
+| Aether.Contracts: checkpoint types/capability/outcomes/codec | Aether/Checkpoints, `TrueMoon.Aether.Checkpoints` |
+| Alloy/Runtime с namespace TrueMoon.Alloy | `TrueMoon.Alloy.Runtime`, по реальной папке |
+| Contracts/Exceptions/AppCreationException, TrueMoon.Exceptions | Корень Contracts, `TrueMoon.AppCreationException` |
+| Contracts/Configuration/UnitsConfigurationExtensions | Корень Mithril, `TrueMoon.Mithril.UnitsConfigurationExtensions` |
+| Enerit.Generator/Extensions и Utils | Корень generator, `TrueMoon.Enerit.Generator` |
+| MithrilTest/Models/TestPoco.cs | Корень примера, `MithrilTest` |
+
+IGameSession и остальные engine contracts остаются в одной Aether assembly.
+Общая TrueMoon.Contracts сохраняет межмодульные contracts/base models/interfaces
+без зависимости на реализации модулей. Units helper относится к module-specific
+units configuration и теперь поставляется Mithril, который уже использует общий
+IConfiguration. Его аргументы `-u`/`-p` и поведение не изменены.
+
+У Mithril.Tests RootNamespace исправлен на TrueMoon.Mithril.Tests. У shared
+CorePackageConsumer/CoreHeadlessProbe явно задан Headless.Consumer, у DirectCobalt —
+Direct.Consumer, у Enerit benchmark — EneritBaseline. Эти значения сохраняют
+намеренные shared consumer namespaces и имена исполняемых сборок, согласуя их
+с правилом RootNamespace. 17файлов с global types получили namespace; ссылки
+Cobalt/Enerit generator и примеры обновлены вместе с ними.
+
+Изменены namespace публичных alpha API и assembly units helper: внешним
+consumers нужны соответствующие using/qualified-name changes и пересборка.
+Совместимые копии API в старых технических папках не оставлены. Обновлены C#
+raw-source fixtures, package template, текущие README/PACKAGE и source links;
+исторические записи ниже сохраняют прежнее состояние, их ссылки ведут к новым
+исходникам. Логика production runtime, wire layout и версии протоколов не менялись;
+отдельно исправлена обнаруженная во время проверки ошибка sample GPU binding.
+Сравнение 26 650 C#-литералов до/после (с нормализацией перенесённых namespace
+в C# samples) не выявило неожиданных изменений, включая raw strings.
+
+### Выполненные managed проверки
+
+```powershell
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental -m --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --no-build --no-restore --logger trx --results-directory TestResults/StructureFix/tests-Debug-final2 --verbosity quiet
+dotnet build TrueMoon.slnx --configuration Release --no-incremental -m --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Release --no-build --no-restore --logger trx --results-directory TestResults/StructureFix/tests-Release-final2 --verbosity quiet
+```
+
+Каждая сборка: errors0/warnings1499. Каждая test configuration: **Passed: 1898,
+Failed: 0, Skipped: 0**,9TRX: Core107/Cobalt179/generator91/Enerit126/generator114/
+Mithril94/UI615/Hosting79/Aether493. RichTextEditorTest, находящийся вне solution,
+отдельно собран в Release; source CoreHeadlessProbe отдельно собран в Debug и
+Release с `--no-dependencies`, используя уже проверенные project references.
+Первые промежуточные builds выявили недостающие Runtime
+imports из дочерних Alloy namespaces, затем29duplicate usings; они исправлены
+перед окончательными managed runs. Новых product test cases не добавлено.
+
+### Consumer проверки
+
+Последовательный wrapper `TestResults/StructureFix/ValidateConsumers.ps1` сохраняет
+точные команды/exit codes в consumer-summary.json и отдельные stdout/stderr logs.
+Core/units/UI package runners используют свежие версии, отдельные feeds/caches и
+проверяют generated adapters/consumer graphs; публикация пакетов не выполнялась.
+
+- `ManualTests/CorePackageConsumer/RunPackageSmoke.ps1`:80cases и3package README
+  examples, выход0; `TestResults/CorePackages/structure-20261021/summary.json`.
+- `ManualTests/UnitsPackageConsumer/RunPackageSmoke.ps1`:108cases, выход0;
+  `TestResults/UnitsPackages/structure-20261021/summary.json`.
+- `ManualTests/AlloyFactoryConsumer/RunIntegration.ps1`, profiles Source/Package:
+  16source и8package native processes на Cobalt/DI × OpenGL/Vulkan × Debug/published
+  Release; собственные runner/source/artifact checks прошли. Отчёты —
+  `TestResults/AlloyInfrastructure/structure-{source,package}-20261021/summary.json`.
+- `ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1`:36cases и4direct
+  consumer cases; `TestResults/AlloyPackages/structure-20261021/summary.json`.
+- `TestResults/StructureFix/ValidateAetherPackage.ps1`:12fresh packages и4App
+  consumers (Cobalt/DI × Debug/published Release), managed GPU API/ownership и
+  Skia native delivery. Независимая сверка payload hashes/nuspec/assets прошла;
+  `aether-package/summary.json` и `aether-package-verified.json`.
+
+### Найденная ошибка native composition и промежуточные runs
+
+Первый run `TestResults/EngineSessions/structure-20261021` остановился после
+14passing cases: Release GPU Editor прошёл20Replace, затем assertion ошибки
+candidate/rollback завершил run. Само исходное исключение до assertion не было
+записано. RecordFailureAsync теперь сохраняет ошибку, RecoveryError, flags и
+editor-error identity до проверки; условия assertions не ослаблены. Два отдельных
+Release GPU повтора в `TestResults/StructureFix/native-diagnostic` прошли20Replace/
+20failure cases/53reaped children каждый; это не заменило общий повтор.
+
+Второй общий run `TestResults/EngineSessions/structure-final-20261021` подтвердил
+конкретную причину: `Single(l => l.ProcessId == runtime.ProcessId)` искал lease
+среди всей истории запусков, а Windows повторно выдал PID58800. Две записи
+дали `Sequence contains more than one matching element` при подключении GPU.
+Первый failed report также содержит повторный PID58404, но его исходный
+RecoveryError не был сохранён, поэтому точную причину первого assertion отдельно
+не утверждаем. Оба failed runs сохранены с исходными logs и cleanup reports.
+
+В EditorViewportProbe fault decorator теперь хранит и возвращает конкретный
+NativeRuntimeLease, а ViewportProbe передаёт текущий native lease напрямую.
+История/PID не используются для выбора процесса; владение и borrowed handle
+остались прежними. Это устраняет подтверждённый механизм PID-reuse отказа.
+После исправления повторены full solution Debug/Release builds/tests, указанные
+выше. Package consumers от этого sample-only изменения не зависят и не повторялись.
+
+### Итоговый native run и окончательная сверка
+
+После исправления PID lookup выполнен `TestResults/StructureFix/ValidateNativeVerified.ps1`:
+`ManualTests/EngineSessionProbe/RunProbe.ps1` с Scenarios=build-artifacts/checkpoint/
+replacement, IncludeViewport/IncludeGpuCapabilities/IncludeGpuImport/IncludeGpuSurface/
+IncludeGpuViewport/IncludeEditorGpu, Debug и published Release. Validation layer
+из прежнего локального TestResults/ENG4b передан только принадлежащему runner
+process tree. Никакие system/driver settings не менялись.
+
+`TestResults/EngineSessions/structure-verified-20261021/summary.json`: Completed=true,
+**20cases/22commands**,413source/76binary fingerprints. CPU и GPU Editor в каждой
+конфигурации прошли20Replace/20failure cases/53reaped children/MaxLive1. UI sessions,
+CPU mappings, parent GPU resources/handles0; GPU imported readbacks0. Исходный
+native scope54cases ENG4d2 целиком не повторялся: этот targeted run проверяет
+затронутые game artifacts/checkpoint/replace и CPU/GPU consumers.
+
+Финальный Roslyn audit повторён после всех C# changes:44projects/88evaluations/
+597files, namespace/category/parse/orphan violations0. Повторная literal review:
+26 650 значений до/после без неожиданных различий. Project/source fingerprints,
+TRX, native/editor reports, consumer summaries, Markdown links/anchors и diff
+проверяются независимо в `TestResults/StructureFix/VerifyFinal.ps1`; результат
+хранится в completion.json. Независимая сверка прошла:597source и44project hashes,
+413native source/76binary hashes,18TRX,587локальных ссылок/249anchors;
+`git diff --check` без ошибок. Failed промежуточные runs не переименованы в passing.
+Аппаратные UI K3/K7/K8/VRAM/final alpha ограничения сохраняются; drivers/Windows
+settings не менялись, поиск K7 workaround не возобновлялся. Функциональный
+следующий шаг остаётся ENG4e — сопоставимый measured CPU/GPU baseline до 3D.
+
+## Аудит размещения типов и namespace — 2026-10-21
+
+Это исходный снимок до [исправлений](#исправление-структуры-проектов--2026-10-21).
+Counts и замечания ниже сохраняют результат первоначальной проверки.
+
+По запросу пользователя проверены все **44 C# проекта** репозитория, в том числе
+7 проектов вне TrueMoon.slnx (в solution 37). Проверены 590 авторских C#-файлов,
+включая тесты, генераторы, benchmarks и ManualTests. TrueMoon.Magnesium не содержит
+авторских исходников/проекта и отдельной проверенной сборкой не считается.
+
+Метод: список файлов git, 88 вычислений MSBuild properties/Compile items для
+Debug/Release, затем Roslyn C# syntax trees с соответствующими defines.
+Вызовы `dotnet msbuild` использовали `-getProperty` и `-getItem` без build targets.
+RootNamespace и Compile membership одинаковы в обеих конфигурациях. Все 590 файлов
+принадлежат проектам и включены в Compile; ошибок разбора 0. Это синтаксический
+аудит, не сборка продукта. 24 linked inclusions в 3 проектах проверены по реальному проекту-владельцу файла;
+виртуальный Link путь не считается его новым namespace. Raw strings с C# samples
+в generator tests не считаются объявлениями, generated bin/obj sources исключены.
+Top-level statements допустимы; явно объявленные global types учитываются отдельно.
+Инструмент проверки собран через SDK Roslyn assemblies без
+внешних PackageReference. Product build/test/native/pack в этом аудите не запускались.
+
+Локальные evidence: `TestResults/StructureAudit/{evaluations.json,sources.json,audit.json}`,
+Collect.ps1, tool/Program.cs, WriteReport.ps1. audit.json хранит все файлы/types/
+namespace, source/project SHA256, baseline commit и ручную классификацию папок.
+Эти ignored evidence не входят в поставку. Проверка от baseline784996a,
+при существующих документационных изменениях правила; production sources не менялись.
+
+### Назначение TrueMoon.Contracts
+
+Общий пакет контрактов, базовых моделей и интерфейсов для взаимодействия модулей,
+включая App/service/configuration/diagnostics API. Это не каталог всех интерфейсов
+TrueMoon: engine/game/frame, UI и IPC-specific contracts остаются у своих модулей.
+34 исходных файла соответствуют RootNamespace=`TrueMoon` и папкам; отличающееся имя
+пакета TrueMoon.Contracts не является namespace нарушением. ProjectReference0,
+PackageReference 0; папки Configuration/Diagnostics/Services/Dependencies имеют
+функциональное назначение. ConfigurableBase и небольшие helpers не считаются
+нарушением только из-за наличия реализации: они поддерживают общий API.
+
+Два замечания разного рода: Exceptions/AppCreationException — техническая
+группировка по виду типа (ниже); Configuration/UnitsConfigurationExtensions —
+кандидат на перенос ответственности в Mithril. Helper задаёт `-u`/`-p`, определяет
+processing unit и читает parent id; текущие authored callers — только Mithril.
+Это смысловой вопрос публичного API, а не namespace ошибка и не основание
+автоматически переносить все типы с одним текущим consumer. При исправлении
+нужно определить целевое module API и совместимость extension methods/constants.
+
+### Реестр всех проектов
+
+«Namespace» — число файлов с несовпадением либо явно объявленными global types.
+«Папки» — число файлов, нуждающихся в смысловой перегруппировке по ручному review.
+Нулевые значения означают отсутствие замечаний в этом structural scope, не новую
+готовность/runtime regression. У CoreHeadlessProbe собственных файлов0, но3linked.
+
+| Проект | Собственные C#files | Namespace | Папки | Linked inclusions |
+| --- | ---: | ---: | ---: | ---: |
+| [TrueMoon.Cobalt.Benchmarks](../Benchmarks/TrueMoon.Cobalt.Benchmarks/TrueMoon.Cobalt.Benchmarks.csproj) | 8 | 0 | 0 | 0 |
+| [TrueMoon.Enerit.Benchmarks](../Benchmarks/TrueMoon.Enerit.Benchmarks/TrueMoon.Enerit.Benchmarks.csproj) | 3 | 2 | 0 | 0 |
+| [AlloyFactoryConsumer](../ManualTests/AlloyFactoryConsumer/AlloyFactoryConsumer.csproj) | 1 | 1 | 0 | 0 |
+| [AlloyPackageConsumer](../ManualTests/AlloyPackageConsumer/AlloyPackageConsumer.csproj) | 3 | 0 | 0 | 0 |
+| [AlloyTest](../ManualTests/AlloyTest/AlloyTest.csproj) | 13 | 0 | 0 | 0 |
+| [AlloyVulkanTest](../ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj) | 35 | 1 | 0 | 7 |
+| [AppUnitsPipesProbe](../ManualTests/AppUnitsPipesProbe/AppUnitsPipesProbe.csproj) | 2 | 1 | 0 | 0 |
+| [CobaltTest](../ManualTests/CobaltTest/CobaltTest.csproj) | 10 | 9 | 0 | 0 |
+| [CoreHeadlessProbe](../ManualTests/CoreHeadlessProbe/CoreHeadlessProbe.csproj) | 0 | 0 | 0 | 3 |
+| [CorePackageConsumer](../ManualTests/CorePackageConsumer/CorePackageConsumer.csproj) | 3 | 2 | 0 | 0 |
+| [DirectCobalt](../ManualTests/CorePackageConsumer/DirectCobalt/DirectCobalt.csproj) | 2 | 1 | 0 | 0 |
+| [EneritPipesProbe](../ManualTests/EneritPipesProbe/EneritPipesProbe.csproj) | 2 | 1 | 0 | 0 |
+| [EngineSessionProbe](../ManualTests/EngineSessionProbe/EngineSessionProbe.csproj) | 13 | 0 | 0 | 0 |
+| [Game.Logic](../ManualTests/Game.Logic/Game.Logic.csproj) | 1 | 0 | 0 | 0 |
+| [MithrilCompositionProbe](../ManualTests/MithrilCompositionProbe/MithrilCompositionProbe.csproj) | 1 | 1 | 0 | 0 |
+| [MithrilLifecycleProbe](../ManualTests/MithrilLifecycleProbe/MithrilLifecycleProbe.csproj) | 1 | 1 | 0 | 0 |
+| [MithrilRestartProbe](../ManualTests/MithrilRestartProbe/MithrilRestartProbe.csproj) | 1 | 1 | 0 | 0 |
+| [MithrilTest](../ManualTests/MithrilTest/MithrilTest.csproj) | 5 | 0 | 1 | 0 |
+| [RichTextEditorTest](../ManualTests/RichTextEditorTest/RichTextEditorTest.csproj) | 2 | 0 | 0 | 0 |
+| [UnitsPackageConsumer](../ManualTests/UnitsPackageConsumer/UnitsPackageConsumer.csproj) | 1 | 1 | 0 | 0 |
+| [TrueMoon.Aether.Tests](../TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj) | 23 | 0 | 0 | 0 |
+| [TrueMoon.Aether](../TrueMoon.Aether/TrueMoon.Aether.csproj) | 42 | 0 | 4 | 0 |
+| [TrueMoon.Alloy.Hosting.Tests](../TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj) | 7 | 0 | 0 | 0 |
+| [TrueMoon.Alloy.Hosting](../TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj) | 47 | 0 | 0 | 0 |
+| [TrueMoon.Alloy.Platform.Silk](../TrueMoon.Alloy.Platform.Silk/TrueMoon.Alloy.Platform.Silk.csproj) | 10 | 0 | 0 | 0 |
+| [TrueMoon.Alloy.Rendering.Skia](../TrueMoon.Alloy.Rendering.Skia/TrueMoon.Alloy.Rendering.Skia.csproj) | 10 | 0 | 0 | 0 |
+| [TrueMoon.Alloy.Tests](../TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj) | 33 | 0 | 0 | 14 |
+| [TrueMoon.Alloy](../TrueMoon.Alloy/TrueMoon.Alloy.csproj) | 13 | 12 | 0 | 0 |
+| [TrueMoon.Argentis](../TrueMoon.Argentis/TrueMoon.Argentis.csproj) | 48 | 0 | 0 | 0 |
+| [TrueMoon.Cobalt.Generator.Tests](../TrueMoon.Cobalt.Generator.Tests/TrueMoon.Cobalt.Generator.Tests.csproj) | 4 | 0 | 0 | 0 |
+| [TrueMoon.Cobalt.Generator](../TrueMoon.Cobalt.Generator/TrueMoon.Cobalt.Generator.csproj) | 5 | 0 | 0 | 0 |
+| [TrueMoon.Cobalt.Tests](../TrueMoon.Cobalt.Tests/TrueMoon.Cobalt.Tests.csproj) | 26 | 0 | 0 | 0 |
+| [TrueMoon.Cobalt](../TrueMoon.Cobalt/TrueMoon.Cobalt.csproj) | 26 | 0 | 0 | 0 |
+| [TrueMoon.Contracts](../TrueMoon.Contracts/TrueMoon.Contracts.csproj) | 34 | 0 | 1 | 0 |
+| [TrueMoon.Core](../TrueMoon.Core/TrueMoon.Core.csproj) | 5 | 0 | 0 | 0 |
+| [TrueMoon.Enerit.Generator.Tests](../TrueMoon.Enerit.Generator.Tests/TrueMoon.Enerit.Generator.Tests.csproj) | 9 | 0 | 0 | 0 |
+| [TrueMoon.Enerit.Generator](../TrueMoon.Enerit.Generator/TrueMoon.Enerit.Generator.csproj) | 12 | 0 | 6 | 0 |
+| [TrueMoon.Enerit.Tests](../TrueMoon.Enerit.Tests/TrueMoon.Enerit.Tests.csproj) | 21 | 0 | 0 | 0 |
+| [TrueMoon.Enerit](../TrueMoon.Enerit/TrueMoon.Enerit.csproj) | 35 | 0 | 0 | 0 |
+| [TrueMoon.Extensions.DependencyInjection](../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj) | 4 | 0 | 0 | 0 |
+| [TrueMoon.Mithril.Tests](../TrueMoon.Mithril.Tests/TrueMoon.Mithril.Tests.csproj) | 9 | 8 | 0 | 0 |
+| [TrueMoon.Mithril](../TrueMoon.Mithril/TrueMoon.Mithril.csproj) | 19 | 0 | 0 | 0 |
+| [TrueMoon.Tests](../TrueMoon.Tests/TrueMoon.Tests.csproj) | 13 | 0 | 0 | 0 |
+| [TrueMoon](../TrueMoon/TrueMoon.csproj) | 28 | 0 | 0 | 0 |
+
+### Namespace замечания: 42 файла в 14 проектах
+
+25 файлов имеют явно указанный namespace, отличный от ожидаемого, ещё 17 содержат
+явно объявленные типы в global namespace. Генерируемый compiler Program для
+top-level statements не считается авторским global type. 548 остальных файлов
+не имеют namespace замечаний; синтаксический анализ не проверяет emitted code.
+
+| Файл | Объявленный namespace | Ожидаемый по текущему RootNamespace/пути |
+| --- | --- | --- |
+| [Benchmarks/TrueMoon.Enerit.Benchmarks/Contract.cs](../Benchmarks/TrueMoon.Enerit.Benchmarks/Contract.cs) | `EneritBaseline` | `TrueMoon.Enerit.Benchmarks` |
+| [Benchmarks/TrueMoon.Enerit.Benchmarks/Measurement.cs](../Benchmarks/TrueMoon.Enerit.Benchmarks/Measurement.cs) | `EneritBaseline` | `TrueMoon.Enerit.Benchmarks` |
+| [ManualTests/AlloyFactoryConsumer/Program.cs](../ManualTests/AlloyFactoryConsumer/Program.cs) | (global) | `AlloyFactoryConsumer` |
+| [ManualTests/AlloyVulkanTest/AsyncCloseProbe.cs](../ManualTests/AlloyVulkanTest/AsyncCloseProbe.cs) | (global) | `AlloyVulkanTest` |
+| [ManualTests/AppUnitsPipesProbe/Program.cs](../ManualTests/AppUnitsPipesProbe/Program.cs) | (global) | `AppUnitsPipesProbe` |
+| [ManualTests/CobaltTest/IMainTestClass.cs](../ManualTests/CobaltTest/IMainTestClass.cs) | (global) | `CobaltTest` |
+| [ManualTests/CobaltTest/IService1.cs](../ManualTests/CobaltTest/IService1.cs) | (global) | `CobaltTest` |
+| [ManualTests/CobaltTest/IService2.cs](../ManualTests/CobaltTest/IService2.cs) | (global) | `CobaltTest` |
+| [ManualTests/CobaltTest/IServiceTest2.cs](../ManualTests/CobaltTest/IServiceTest2.cs) | (global) | `CobaltTest` |
+| [ManualTests/CobaltTest/ITestGenericClass.cs](../ManualTests/CobaltTest/ITestGenericClass.cs) | (global) | `CobaltTest` |
+| [ManualTests/CobaltTest/MainTestClass.cs](../ManualTests/CobaltTest/MainTestClass.cs) | (global) | `CobaltTest` |
+| [ManualTests/CobaltTest/Service1.cs](../ManualTests/CobaltTest/Service1.cs) | (global) | `CobaltTest` |
+| [ManualTests/CobaltTest/Service2.cs](../ManualTests/CobaltTest/Service2.cs) | (global) | `CobaltTest` |
+| [ManualTests/CobaltTest/TestGenericClass.cs](../ManualTests/CobaltTest/TestGenericClass.cs) | (global) | `CobaltTest` |
+| [ManualTests/CorePackageConsumer/ConsumerProbe.cs](../ManualTests/CorePackageConsumer/ConsumerProbe.cs) | `Headless.Consumer` | `CorePackageConsumer` |
+| [ManualTests/CorePackageConsumer/Graph.cs](../ManualTests/CorePackageConsumer/Graph.cs) | `Headless.Consumer` | `CorePackageConsumer` |
+| [ManualTests/CorePackageConsumer/DirectCobalt/Graph.cs](../ManualTests/CorePackageConsumer/DirectCobalt/Graph.cs) | `Direct.Consumer` | `DirectCobalt` |
+| [ManualTests/EneritPipesProbe/Program.cs](../ManualTests/EneritPipesProbe/Program.cs) | (global) | `EneritPipesProbe` |
+| [ManualTests/MithrilCompositionProbe/Program.cs](../ManualTests/MithrilCompositionProbe/Program.cs) | (global) | `MithrilCompositionProbe` |
+| [ManualTests/MithrilLifecycleProbe/Program.cs](../ManualTests/MithrilLifecycleProbe/Program.cs) | (global) | `MithrilLifecycleProbe` |
+| [ManualTests/MithrilRestartProbe/Program.cs](../ManualTests/MithrilRestartProbe/Program.cs) | (global) | `MithrilRestartProbe` |
+| [ManualTests/UnitsPackageConsumer/AnalyzerEvidence.cs](../ManualTests/UnitsPackageConsumer/AnalyzerEvidence.cs) | (global) | `UnitsPackageConsumer` |
+| [TrueMoon.Alloy/Runtime/IUiSessionFactory.cs](../TrueMoon.Alloy/Runtime/IUiSessionFactory.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/Rendering.cs](../TrueMoon.Alloy/Runtime/Rendering.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/UiCleanup.cs](../TrueMoon.Alloy/Runtime/UiCleanup.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/UiClipboardException.cs](../TrueMoon.Alloy/Runtime/UiClipboardException.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/UiDiagnostics.cs](../TrueMoon.Alloy/Runtime/UiDiagnostics.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/UiDispatcher.cs](../TrueMoon.Alloy/Runtime/UiDispatcher.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/UiDispatchOptions.cs](../TrueMoon.Alloy/Runtime/UiDispatchOptions.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/UiFrameMode.cs](../TrueMoon.Alloy/Runtime/UiFrameMode.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/UiRenderingException.cs](../TrueMoon.Alloy/Runtime/UiRenderingException.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/UiSession.cs](../TrueMoon.Alloy/Runtime/UiSession.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/WindowAppearance.cs](../TrueMoon.Alloy/Runtime/WindowAppearance.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Alloy/Runtime/WindowChrome.cs](../TrueMoon.Alloy/Runtime/WindowChrome.cs) | `TrueMoon.Alloy` | `TrueMoon.Alloy.Runtime` |
+| [TrueMoon.Mithril.Tests/CompositionProcessTests.cs](../TrueMoon.Mithril.Tests/CompositionProcessTests.cs) | `TrueMoon.Mithril.Tests` | `TrueMoon.Titanium.Tests` |
+| [TrueMoon.Mithril.Tests/ProcessDiagnosticsTests.cs](../TrueMoon.Mithril.Tests/ProcessDiagnosticsTests.cs) | `TrueMoon.Mithril.Tests` | `TrueMoon.Titanium.Tests` |
+| [TrueMoon.Mithril.Tests/ProcessUnitHandleTests.cs](../TrueMoon.Mithril.Tests/ProcessUnitHandleTests.cs) | `TrueMoon.Mithril.Tests` | `TrueMoon.Titanium.Tests` |
+| [TrueMoon.Mithril.Tests/RestartProcessTests.cs](../TrueMoon.Mithril.Tests/RestartProcessTests.cs) | `TrueMoon.Mithril.Tests` | `TrueMoon.Titanium.Tests` |
+| [TrueMoon.Mithril.Tests/TestSupport.cs](../TrueMoon.Mithril.Tests/TestSupport.cs) | `TrueMoon.Mithril.Tests` | `TrueMoon.Titanium.Tests` |
+| [TrueMoon.Mithril.Tests/UnitCompositionTests.cs](../TrueMoon.Mithril.Tests/UnitCompositionTests.cs) | `TrueMoon.Mithril.Tests` | `TrueMoon.Titanium.Tests` |
+| [TrueMoon.Mithril.Tests/UnitParentProcessEventsHandlerTests.cs](../TrueMoon.Mithril.Tests/UnitParentProcessEventsHandlerTests.cs) | `TrueMoon.Mithril.Tests` | `TrueMoon.Titanium.Tests` |
+| [TrueMoon.Mithril.Tests/UnitsControllerTests.cs](../TrueMoon.Mithril.Tests/UnitsControllerTests.cs) | `TrueMoon.Mithril.Tests` | `TrueMoon.Titanium.Tests` |
+
+У Mithril.Tests первопричина — устаревший csproj RootNamespace
+`TrueMoon.Titanium.Tests`:8файлов уже объявлены в TrueMoon.Mithril.Tests.
+Исправлять следует RootNamespace, а не переименовывать тесты в Titanium.
+Alloy/Runtime12files сейчас объявлены в TrueMoon.Alloy; реальная Runtime
+подсистема должна отражаться в namespace. Это изменение public API: вместе
+обновляются consumers, aliases, docs и генерация. Для shared consumer samples
+Headless.Consumer/Direct.Consumer допустимо явно задать подходящий RootNamespace;
+решение должно сохранять согласованность реального пути и linked compilation.
+
+### Технические группы: 5 папок, 12 файлов в 4 проектах
+
+Здесь namespace уже соответствуют текущим папкам; замечание относится к самим
+категориям. Группировка по Contracts/Models/Exceptions/Extensions/Utils не
+показывает назначения типов. Целевые имена категорий ниже — рекомендации,
+а не выполненные переносы или новые обязательные проекты.
+
+| Папка | Файлы | Причина и направление исправления |
+| --- | --- | --- |
+| `TrueMoon.Aether/Contracts` | [Control.cs](../TrueMoon.Aether/Transport/IEngineControl.cs), [Frames.cs](../TrueMoon.Aether/Frames/Frames.cs), [GameCheckpoint.cs](../TrueMoon.Aether/Checkpoints/GameCheckpoint.cs), [GameCheckpointCodec.cs](../TrueMoon.Aether/Checkpoints/GameCheckpointCodec.cs) | Control.cs смешивает session/game/control/scene contracts; Frames.cs содержит frame types; GameCheckpoint.cs и GameCheckpointCodec.cs относятся к checkpoint state/codec. Распределить по Frames, Sessions, checkpoint/control подсистемам; общие для Aether типы без категории — в корень Aether. Не переносить engine-only API в TrueMoon.Contracts. |
+| `TrueMoon.Contracts/Exceptions` | [AppCreationException.cs](../TrueMoon.Contracts/AppCreationException.cs) | Единственный AppCreationException сгруппирован по виду типа. Перенести в корень общего проекта либо вместе с реальной App категорией; учесть публичный namespace TrueMoon.Exceptions. |
+| `TrueMoon.Enerit.Generator/Extensions` | [GenerationContextExtensions.cs](../TrueMoon.Enerit.Generator/GenerationContextExtensions.cs), [SourceHandleExtensions.cs](../TrueMoon.Enerit.Generator/SourceHandleExtensions.cs), [SourceHandleSerializationExtensions.cs](../TrueMoon.Enerit.Generator/SourceHandleSerializationExtensions.cs), [SymbolExtensions.cs](../TrueMoon.Enerit.Generator/SymbolExtensions.cs) | Четыре файла объединены формой extension methods; содержат обработку symbols и генерацию методов/сериализации. Группировать по назначению генерации/сериализации/symbol analysis либо размещать в корне generator, рядом с GenerationContext/SourceHandle. |
+| `TrueMoon.Enerit.Generator/Utils` | [GenerationUtils.cs](../TrueMoon.Enerit.Generator/GenerationUtils.cs), [WellKnownTypes.cs](../TrueMoon.Enerit.Generator/WellKnownTypes.cs) | GenerationUtils и WellKnownTypes скрывают конкретную работу с Roslyn type symbols под общей технической категорией. Расположить рядом с относящимися к ним типами или в смысловой категории обработки symbols; namespace должен следовать новому пути. |
+| `ManualTests/MithrilTest/Models` | [TestPoco.cs](../ManualTests/MithrilTest/TestPoco.cs) | TestPoco.cs содержит набор тестовых DTO, records, enums и тестовый класс, объединённых видом типов. Для текущего небольшого примера — корень MithrilTest; отдельную категорию вводить только по конкретному сценарию. |
+
+### Рекомендуемый порядок исправления
+
+1. Исправить stale RootNamespace у Mithril.Tests;8замечаний устраняются одной
+   настройкой без переименования существующих C#namespace.
+2. Привести12Alloy/Runtime namespace к фактической подсистеме с обновлением
+   source/package consumers, partial/aliases и module checks.
+3. Перегруппировать4Aether/Contracts files по назначению, разбивая смешанные
+   файлы при необходимости; публичные engine contracts остаются в Aether.
+4. Разобрать AppCreationException и units helper в Contracts/Core/Mithril scope,
+   сохранив независимость общей сборки и явно определив API compatibility.
+5. Перегруппировать6generator helper files Enerit и согласовать benchmark root
+   namespace; повторить generator output/consumer проверки после изменений.
+6. Согласовать namespace20manual-consumer files и расположение MithrilTest Models;
+   для linked/shared examples учитывать обе компиляции и source-generation fixtures.
+
+Массовые переносы/namespace/API changes в этом аудите не выполнялись. Детальный
+реестр ведётся здесь, module STATUS ссылаются на него. Функциональный engine
+маршрут ENG4e и аппаратные/release ограничения не меняются. Следующий шаг по
+этому review — пункт1, затем более широкий public API scope пункта2.
+
+Завершающая сверка: SHA256 всех 590 C#-файлов и 44 проектов совпали с audit
+snapshot; в 13 изменённых Markdown проверены 466 локальных ссылок и 201 anchor.
+`git diff --check` прошёл. Результат — `TestResults/StructureAudit/verification.json`.
+
+## Размещение типов по назначению — 2026-10-21
+
+По запросу пользователя в AGENTS.md закреплено: типы без отдельной предметной
+или функциональной категории размещаются в корне проекта. Подпапки группируют
+связанные типы по назначению; вид типа (класс, DTO, модель, интерфейс) или статус
+контракта сам по себе не требует Contracts/Models/DTOs/Interfaces. Namespace
+соответствует фактическому пути. Отдельный TrueMoon.Contracts сохраняется.
+Общий PLAN ссылается на правило, STATUS отделяет эту документационную правку от
+проверок ENG4d2. Исходники/API не менялись; build/test/native не запускались.
+
 ## ENG4d2 ordinary GPU GameEditor — 2026-10-20
 
 App option выбирает CPU(default)/GPU strategy; FrameSession сохраняет общий

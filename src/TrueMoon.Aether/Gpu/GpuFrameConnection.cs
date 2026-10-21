@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Hosting;
 
 namespace TrueMoon.Aether.Gpu;

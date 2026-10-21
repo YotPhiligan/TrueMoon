@@ -70,13 +70,23 @@ public sealed class GpuViewportTransport : IGameViewportTransport
                 using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1d / 30)); var slot = 0;
                 while (!stop.IsCancellationRequested && !_end.IsCancellationRequested)
                 {
+                    var requested = FrameTrace.Log.Begin();
                     var produced = await session.ProduceFrameAsync(slot, _end.Token).ConfigureAwait(false);
                     var metadata = produced.Metadata ?? throw new InvalidDataException("Runtime omitted GPU simulation metadata.");
+                    var stamp = produced.Completion.Stamp;
+                    FrameTrace.Log.Complete("receive", stamp.Identity, stamp.SurfaceGeneration, metadata.FrameId, requested);
+                    var use = FrameTrace.Log.Begin();
                     var completion = await session.UseTextureAsync(produced.Completion, texture =>
                     {
                         // Resize may close the old presentation while an accepted frame is still in flight.
-                        if (!stop.IsCancellationRequested && presentation.TryIssue(metadata) is { } frame) consume(new(texture, frame));
+                        if (!stop.IsCancellationRequested && presentation.TryIssue(metadata) is { } frame)
+                        {
+                            var retained = FrameTrace.Log.Begin();
+                            consume(new(texture, frame));
+                            FrameTrace.Log.Complete("retained-copy", stamp.Identity, stamp.SurfaceGeneration, metadata.FrameId, retained);
+                        }
                     }, _end.Token).ConfigureAwait(false);
+                    FrameTrace.Log.Complete("gpu-use", stamp.Identity, stamp.SurfaceGeneration, metadata.FrameId, use);
                     await session.ReturnAsync(completion, _end.Token).ConfigureAwait(false);
                     await presentation.FirstPresented.WaitAsync(stop).ConfigureAwait(false);
                     slot = (slot + 1) % 3;

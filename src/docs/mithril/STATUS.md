@@ -1,5 +1,22 @@
 # Mithril: состояние и точка продолжения
 
+Последняя работа — **2026-10-21, graceful wait при ошибке доставки exit**.
+В StopAsync исправлена гонка stdin/control pipe: ошибка доставки больше не
+пропускает оставшийся graceful budget; timeout/cancellation/owned kill/reap
+сохраняются. Новая delayed EOF regression подтверждена red/green; native20cases
+Debug/published Release прошли. Mithril95/95 и full solution1907/1907 отдельно
+Debug/Release, failed0/skipped0. Fresh units package matrix108/108cases прошла:
+8nupkgs/128commands/206source fingerprints, Cobalt/DI, Debug/Release build/publish,
+expected missing Enerit analyzerCS0234. Own standalone restart matrix не повторена.
+[Причина, точные команды и ограничения](HISTORY.md#graceful-wait-после-ошибки-доставки-exit--2026-10-21).
+
+Исправление структуры — **2026-10-21**: RootNamespace тестов исправлен на
+TrueMoon.Mithril.Tests; TestPoco.cs размещён в корне MithrilTest, namespaces
+manual/integration consumers согласованы. Module-specific UnitsConfigurationExtensions
+находится в Mithril вместо Contracts. Mithril94/94 Debug/Release и свежая package
+матрица108cases прошли; native children из затронутых editor scenarios освобождены.
+[Миграция и точные команды](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
+
 App entry-point audit — **2026-10-19**: AddUnit связывает App-local unit definitions,
 configuration selection и UnitsController/parent-monitor lifecycle. Focused Debug
 UnitCompositionTests:9passed/failed0/skipped0 на Cobalt/DI. Runtime code не менялся;
@@ -61,11 +78,11 @@ Parent abrupt-exit proof относится к child/server cleanup, не worker
 
 ## Следующий конкретный шаг
 
-Документационная сверка2026-10-15 завершила [общую quality matrix](../QUALITY.md),
-без новых code/build/tests/process запусков. Следующий общий этап —
-[UI package/Hosting quality](../alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15).
+Следующий общий шаг ведётся в [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг).
+Graceful delivery fix выполнен как необходимая регрессия ENG4e; новые process
+capabilities и расширение restart/ownership scope этим не начинаются.
 UI physical DPI/real loss/VRAM и внешний K7 сохраняются в [локальном статусе](../alloy/STATUS.md);
-engine этим шагом не начинается.
+bounded engine consumers имеют собственные проверки в engine STATUS.
 Cobalt allocations и Enerit scalar CPU/allocation profile остаются отдельным
 измерительным backlog, не новыми process capabilities.
 

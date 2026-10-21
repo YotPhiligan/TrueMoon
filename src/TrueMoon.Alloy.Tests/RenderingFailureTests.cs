@@ -1,3 +1,4 @@
+using TrueMoon.Alloy.Runtime;
 using AlloyTest;
 using TrueMoon.Argentis;
 using Xunit;

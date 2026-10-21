@@ -323,8 +323,11 @@ public abstract class ProcessUnitHandle : UnitHandleBase, IDisposable, IAsyncDis
                             catch (Exception error) when (error is OperationCanceledException or IOException) { }
                         }
                     }
-                    await process.WaitForExitAsync(graceful.Token).ConfigureAwait(false);
                 }
+                catch (Exception error) when (error is OperationCanceledException or IOException or InvalidOperationException) { }
+                // Either delivery channel may close after the other already requested shutdown.
+                // A delivery failure does not consume the remaining graceful cleanup budget.
+                try { await process.WaitForExitAsync(graceful.Token).ConfigureAwait(false); }
                 catch (Exception error) when (error is OperationCanceledException or IOException or InvalidOperationException) { }
                 if (!process.HasExited)
                 {

@@ -1,1 +1,3 @@
-﻿public interface IMainTestClass;
+namespace CobaltTest;
+
+public interface IMainTestClass;

@@ -1,6 +1,6 @@
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Creates UI sessions after their external graphics target becomes ready.</summary>
 public interface IUiSessionFactory

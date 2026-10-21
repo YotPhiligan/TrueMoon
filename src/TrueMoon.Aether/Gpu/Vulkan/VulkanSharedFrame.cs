@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Gpu.Interop;
 using Buffer = Silk.NET.Vulkan.Buffer;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
@@ -34,6 +34,7 @@ public sealed class VulkanSharedFrame : IGpuResource
     private Fence _fence;
     private CommandPool _pool;
     private CommandBuffer _command;
+    private VulkanPrimitiveRenderer? _renderer;
     private GpuNtHandle? _memoryHandle, _readyHandle, _returnHandle;
     private GpuFrameOffer? _offer;
     private bool _submitted, _produced, _retired;
@@ -65,7 +66,8 @@ public sealed class VulkanSharedFrame : IGpuResource
     private unsafe void Initialize()
     {
         if (!OperatingSystem.IsWindows() || !Environment.Is64BitProcess) throw new PlatformNotSupportedException("GPU import profile requires Windows x64.");
-        _identity.Validate(); _ = GpuReferencePattern.Create(_width, _height);
+        _identity.Validate(); Surfaces.GpuSurfaceOffer.ValidateExtent(_width, _height);
+        if (_width == 0) throw new ArgumentOutOfRangeException(nameof(_width));
         if (_deviceOwner == null)
         {
         _vk = Vk.GetApi(); var app = new ApplicationInfo { SType = StructureType.ApplicationInfo, ApiVersion = Vk.Version11 };
@@ -132,15 +134,6 @@ public sealed class VulkanSharedFrame : IGpuResource
         var export = new ExportMemoryAllocateInfo { SType = StructureType.ExportMemoryAllocateInfo, PNext = &dedicated, HandleTypes = ExternalMemoryHandleTypeFlags.OpaqueWin32Bit };
         var allocation = new MemoryAllocateInfo { SType = StructureType.MemoryAllocateInfo, PNext = &export, AllocationSize = requirements.Size, MemoryTypeIndex = MemoryType(requirements.MemoryTypeBits, MemoryPropertyFlags.DeviceLocalBit) };
         Check(_vk.AllocateMemory(_device, in allocation, null, out _memory), "AllocateMemory image"); Check(_vk.BindImageMemory(_device, _image, _memory, 0), "BindImageMemory");
-        var pixels = GpuReferencePattern.Create(_width, _height);
-        var bufferInfo = new BufferCreateInfo { SType = StructureType.BufferCreateInfo, Size = (ulong)pixels.Length, Usage = BufferUsageFlags.TransferSrcBit, SharingMode = SharingMode.Exclusive };
-        Check(_vk.CreateBuffer(_device, in bufferInfo, null, out _staging), "CreateBuffer");
-        _vk.GetBufferMemoryRequirements(_device, _staging, out var bufferRequirements);
-        var stagingAllocation = new MemoryAllocateInfo { SType = StructureType.MemoryAllocateInfo, AllocationSize = bufferRequirements.Size,
-            MemoryTypeIndex = MemoryType(bufferRequirements.MemoryTypeBits, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit) };
-        Check(_vk.AllocateMemory(_device, in stagingAllocation, null, out _stagingMemory), "AllocateMemory staging"); Check(_vk.BindBufferMemory(_device, _staging, _stagingMemory, 0), "BindBufferMemory");
-        void* mapped = null; Check(_vk.MapMemory(_device, _stagingMemory, 0, (ulong)pixels.Length, 0, &mapped), "MapMemory");
-        try { pixels.CopyTo(new Span<byte>(mapped, pixels.Length)); } finally { _vk.UnmapMemory(_device, _stagingMemory); }
         var semaphoreExport = new ExportSemaphoreCreateInfo { SType = StructureType.ExportSemaphoreCreateInfo, HandleTypes = ExternalSemaphoreHandleTypeFlags.OpaqueWin32Bit };
         var semaphoreInfo = new SemaphoreCreateInfo { SType = StructureType.SemaphoreCreateInfo, PNext = &semaphoreExport };
         Check(_vk.CreateSemaphore(_device, in semaphoreInfo, null, out _ready), "CreateSemaphore ready"); Check(_vk.CreateSemaphore(_device, in semaphoreInfo, null, out _returned), "CreateSemaphore return");
@@ -152,6 +145,17 @@ public sealed class VulkanSharedFrame : IGpuResource
         _memoryHandle = ExportMemory(); _readyHandle = ExportSemaphore(_ready); _returnHandle = ExportSemaphore(_returned);
         _offer = new(_stamp, _adapter, _width, _height, requirements.Size, _memoryHandle.Token, _readyHandle.Token, _returnHandle.Token);
         _offer.Validate(_identity, _adapter, _reusable);
+    }
+    private unsafe void EnsureStaging()
+    {
+        if (_staging.Handle != 0) return;
+        var size = checked(_width * _height * 4);
+        var bufferInfo = new BufferCreateInfo { SType = StructureType.BufferCreateInfo, Size = (ulong)size, Usage = BufferUsageFlags.TransferSrcBit, SharingMode = SharingMode.Exclusive };
+        Check(_vk!.CreateBuffer(_device, in bufferInfo, null, out _staging), "CreateBuffer");
+        _vk.GetBufferMemoryRequirements(_device, _staging, out var bufferRequirements);
+        var stagingAllocation = new MemoryAllocateInfo { SType = StructureType.MemoryAllocateInfo, AllocationSize = bufferRequirements.Size,
+            MemoryTypeIndex = MemoryType(bufferRequirements.MemoryTypeBits, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit) };
+        Check(_vk.AllocateMemory(_device, in stagingAllocation, null, out _stagingMemory), "AllocateMemory staging"); Check(_vk.BindBufferMemory(_device, _staging, _stagingMemory, 0), "BindBufferMemory");
     }
     private unsafe uint MemoryType(uint bits, MemoryPropertyFlags flags)
     {
@@ -177,10 +181,10 @@ public sealed class VulkanSharedFrame : IGpuResource
     public async Task<GpuFrameCompletion> ProduceAsync(CancellationToken token = default)
     {
         await _gate.WaitAsync(token).ConfigureAwait(false);
-        try { EnsureOpen(); if (_produced || _offer == null) throw new InvalidOperationException("Producer is not in initial state."); Submit(false); await FenceAsync(token).ConfigureAwait(false); _produced = true; return new(Offer.Stamp, true); }
+        try { EnsureOpen(); if (_produced || _offer == null) throw new InvalidOperationException("Producer is not in initial state."); UploadReference(GpuReferencePattern.Create(_width, _height)); Submit(false); await FenceAsync(token).ConfigureAwait(false); _produced = true; return new(Offer.Stamp, true); }
         finally { _gate.Release(); }
     }
-    internal async Task<GpuFrameCompletion> ProduceSlotAsync(GpuFrameStamp stamp, CancellationToken token, byte[]? pixels = null)
+    internal async Task<GpuFrameCompletion> ProduceSlotAsync(GpuFrameStamp stamp, CancellationToken token, byte[]? pixels = null, Rendering.PrimitiveScene? scene = null)
     {
         await _gate.WaitAsync(token).ConfigureAwait(false);
         try
@@ -188,14 +192,21 @@ public sealed class VulkanSharedFrame : IGpuResource
             EnsureOpen(); Surfaces.GpuSlotLedger.ValidateStamp(stamp, _identity);
             if (!_reusable || _submitted || (_produced && !_retired) || stamp.Slot != Offer.Stamp.Slot || stamp.SurfaceGeneration != Offer.Stamp.SurfaceGeneration ||
                 stamp.FrameId != (_produced ? checked(_stamp.FrameId + 1) : 1)) throw new InvalidOperationException("GPU slot cannot be reused before retirement.");
-            if (pixels != null && pixels.Length != checked(_width * _height * 4)) throw new InvalidDataException("Invalid GPU upload shape.");
-            _stamp = stamp; UploadReference(pixels); Submit(false); await FenceAsync(token).ConfigureAwait(false);
+            if (scene != null && pixels is { Length: > 0 } || scene == null && pixels != null && pixels.Length != checked(_width * _height * 4)) throw new InvalidDataException("Invalid GPU workload shape.");
+            scene?.CreateTransform(_width, _height);
+            if (scene != null && _renderer == null)
+            {
+                var renderer = new VulkanPrimitiveRenderer(_vk!, _physical, _device, _image, _width, _height);
+                try { renderer.Initialize(); _renderer = renderer; } catch { renderer.Dispose(); throw; }
+            }
+            _stamp = stamp; if (scene == null) UploadReference(pixels); Submit(false, scene); await FenceAsync(token).ConfigureAwait(false);
             _produced = true; _retired = false; return new(stamp, true);
         }
         finally { _gate.Release(); }
     }
     private unsafe void UploadReference(byte[]? supplied = null)
     {
+        EnsureStaging();
         var pixels = supplied ?? GpuReferencePattern.Create(_width, _height, _stamp); void* mapped = null;
         Check(_vk!.MapMemory(_device, _stagingMemory, 0, (ulong)pixels.Length, 0, &mapped), "MapMemory reused staging");
         try { pixels.CopyTo(new Span<byte>(mapped, pixels.Length)); } finally { _vk.UnmapMemory(_device, _stagingMemory); }
@@ -211,23 +222,29 @@ public sealed class VulkanSharedFrame : IGpuResource
         }
         finally { _gate.Release(); }
     }
-    private unsafe void Submit(bool returned)
+    private unsafe void Submit(bool returned, Rendering.PrimitiveScene? scene = null)
     {
         Check(_vk!.ResetFences(_device, 1, in _fence), "ResetFences"); Check(_vk.ResetCommandBuffer(_command, 0), "ResetCommandBuffer");
         var begin = new CommandBufferBeginInfo { SType = StructureType.CommandBufferBeginInfo, Flags = CommandBufferUsageFlags.OneTimeSubmitBit };
         Check(_vk.BeginCommandBuffer(_command, in begin), "BeginCommandBuffer");
         var barrier = new ImageMemoryBarrier { SType = StructureType.ImageMemoryBarrier, Image = _image,
             SubresourceRange = new(ImageAspectFlags.ColorBit, 0, 1, 0, 1), OldLayout = returned || _produced ? ImageLayout.General : ImageLayout.Undefined,
-            NewLayout = returned ? ImageLayout.General : ImageLayout.TransferDstOptimal, SrcQueueFamilyIndex = returned ? Vk.QueueFamilyExternal : Vk.QueueFamilyIgnored,
-            DstQueueFamilyIndex = returned ? _family : Vk.QueueFamilyIgnored, DstAccessMask = returned ? AccessFlags.MemoryReadBit : AccessFlags.TransferWriteBit };
-        _vk.CmdPipelineBarrier(_command, PipelineStageFlags.TopOfPipeBit, returned ? PipelineStageFlags.AllCommandsBit : PipelineStageFlags.TransferBit, 0, 0, null, 0, null, 1, &barrier);
+            NewLayout = returned ? ImageLayout.General : scene == null ? ImageLayout.TransferDstOptimal : ImageLayout.ColorAttachmentOptimal, SrcQueueFamilyIndex = returned ? Vk.QueueFamilyExternal : Vk.QueueFamilyIgnored,
+            DstQueueFamilyIndex = returned ? _family : Vk.QueueFamilyIgnored, DstAccessMask = returned ? AccessFlags.MemoryReadBit : scene == null ? AccessFlags.TransferWriteBit : AccessFlags.ColorAttachmentWriteBit };
+        var writeStage = scene == null ? PipelineStageFlags.TransferBit : PipelineStageFlags.ColorAttachmentOutputBit;
+        _vk.CmdPipelineBarrier(_command, PipelineStageFlags.TopOfPipeBit, returned ? PipelineStageFlags.AllCommandsBit : writeStage, 0, 0, null, 0, null, 1, &barrier);
         if (!returned)
         {
-            var copy = new BufferImageCopy { ImageSubresource = new(ImageAspectFlags.ColorBit, 0, 0, 1), ImageExtent = new((uint)_width, (uint)_height, 1) };
-            _vk.CmdCopyBufferToImage(_command, _staging, _image, ImageLayout.TransferDstOptimal, 1, &copy);
-            barrier.OldLayout = ImageLayout.TransferDstOptimal; barrier.NewLayout = ImageLayout.General; barrier.SrcAccessMask = AccessFlags.TransferWriteBit; barrier.DstAccessMask = 0;
+            if (scene == null)
+            {
+                var copy = new BufferImageCopy { ImageSubresource = new(ImageAspectFlags.ColorBit, 0, 0, 1), ImageExtent = new((uint)_width, (uint)_height, 1) };
+                _vk.CmdCopyBufferToImage(_command, _staging, _image, ImageLayout.TransferDstOptimal, 1, &copy);
+            }
+            else _renderer!.Draw(_command, scene);
+            barrier.OldLayout = scene == null ? ImageLayout.TransferDstOptimal : ImageLayout.ColorAttachmentOptimal; barrier.NewLayout = ImageLayout.General;
+            barrier.SrcAccessMask = scene == null ? AccessFlags.TransferWriteBit : AccessFlags.ColorAttachmentWriteBit; barrier.DstAccessMask = 0;
             barrier.SrcQueueFamilyIndex = _family; barrier.DstQueueFamilyIndex = Vk.QueueFamilyExternal;
-            _vk.CmdPipelineBarrier(_command, PipelineStageFlags.TransferBit, PipelineStageFlags.BottomOfPipeBit, 0, 0, null, 0, null, 1, &barrier);
+            _vk.CmdPipelineBarrier(_command, writeStage, PipelineStageFlags.BottomOfPipeBit, 0, 0, null, 0, null, 1, &barrier);
         }
         Check(_vk.EndCommandBuffer(_command), "EndCommandBuffer");
         var command = _command; var ready = _ready; var wait = _returned; var stage = PipelineStageFlags.AllCommandsBit;
@@ -262,6 +279,7 @@ public sealed class VulkanSharedFrame : IGpuResource
         if (_device.Handle != 0)
         {
             if (_pool.Handle != 0) _vk!.DestroyCommandPool(_device, _pool, null);
+            _renderer?.Dispose(); _renderer = null;
             if (_fence.Handle != 0) _vk!.DestroyFence(_device, _fence, null);
             if (_returned.Handle != 0) _vk!.DestroySemaphore(_device, _returned, null);
             if (_ready.Handle != 0) _vk!.DestroySemaphore(_device, _ready, null);

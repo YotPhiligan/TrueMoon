@@ -1,14 +1,15 @@
 using TrueMoon.Aether;
 using System.Text.Json;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Transport;
 using TrueMoon.Aether.Builds;
 using Game.Logic;
 using TrueMoon;
 using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Runtime;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
 using TrueMoon.Aether.Gpu.Surfaces;
 using TrueMoon.Dependencies;
 using TrueMoon.Configuration;
@@ -16,6 +17,7 @@ using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Generated.TrueMoon.Aether;
 using TrueMoon.Mithril;
 using TrueMoon.Mithril.Units;
+using EngineSessionProbe.Measurements;
 
 namespace EngineSessionProbe;
 
@@ -28,6 +30,7 @@ public static class RuntimeHost
         if (text.Length > 16384) throw new InvalidDataException("Oversized bootstrap.");
         var launch = JsonSerializer.Deserialize<SessionLaunch>(text) ?? throw new InvalidDataException("Invalid bootstrap.");
         launch.Identity.Validate();
+        using var baseline = Environment.GetEnvironmentVariable(BaselineCapture.EnvironmentKey) == "1" ? new BaselineCapture() : null;
         if (launch.Identity.HostContractId != BuildIdentity.HostId || launch.Build == null && launch.Identity.GameBuildId != BuildIdentity.GameId ||
             launch.Build != null && launch.Build.BuildId != launch.Identity.GameBuildId ||
             !launch.Endpoint.StartsWith("engine-", StringComparison.Ordinal) || launch.Endpoint.Length > 100)
@@ -88,14 +91,23 @@ public static class RuntimeHost
                 if (operation == "Produce" && launch.Behavior == "gpu-import-hold") await Task.Delay(Timeout.InfiniteTimeSpan, cancellation);
             }, validation: Environment.GetEnvironmentVariable("TRUEMOON_GPU_VALIDATION") == "1");
             else gpuWork = app.Services.Resolve<AetherHost>()!.Gpu.RunSurfaceProducerAsync(launch, end.Token,
-                beforeOperation: async (operation, cancellation) => { if (operation == "Produce" && launch.Behavior == "no-frames") await Task.Delay(Timeout.InfiniteTimeSpan, cancellation); },
+                beforeOperation: async (operation, cancellation) =>
+                {
+                    if (operation is "Configure" or "Detach") protocol.ResetInput();
+                    if (operation == "Produce" && launch.Behavior == "no-frames") await Task.Delay(Timeout.InfiniteTimeSpan, cancellation);
+                },
                 validation: Environment.GetEnvironmentVariable("TRUEMOON_GPU_VALIDATION") == "1",
                 frameProvider: (stamp, width, height) =>
                 {
+                    if (launch.Behavior == "scene-3d")
+                    {
+                        var scene = protocol.CaptureRenderFrame();
+                        return GpuFrameData.FromScene(stamp, scene.Tick, scene.Scene);
+                    }
                     var captured = protocol.CaptureFrame();
                     return GpuFrameData.GamePattern(stamp, width, height, captured.Tick, captured.Color);
                 });
-            Records.Write(launch.ReportDirectory, $"launched-{launch.Identity.Generation}.json", new { Pid = Environment.ProcessId, Parent = parentId });
+            Records.Write(launch.ReportDirectory, $"launched-{launch.Identity.Generation}.json", new { Pid = Environment.ProcessId, Parent = parentId, BaselineEnabled = baseline != null });
             if (launch.Behavior != "no-server") server = new(new AetherEvents<PipesInvocationServer<IEngineControl>>(), handler, launch.Endpoint);
             tick = TickAsync(protocol, end.Token);
             frameWork = launch.Behavior == "no-frames" ? Task.Delay(Timeout.InfiniteTimeSpan, end.Token) : frames.RunAsync(protocol, end.Token);
@@ -110,6 +122,8 @@ public static class RuntimeHost
             end.Cancel(); server?.Dispose();
             try { await Task.WhenAll(tick, input, frameWork); } catch (OperationCanceledException) when (end.IsCancellationRequested) { }
             try { await gpuWork; } catch (Exception error) { if (gpuRole) Records.Write(launch.ReportDirectory, $"gpu-error-{launch.Identity.Generation}.json", new { Error = error.ToString() }); }
+            // The measurement worker belongs to this runtime: drain and persist it before App teardown.
+            if (baseline != null) await baseline.SaveAsync(launch.ReportDirectory, $"baseline-runtime-{launch.Identity.Generation}.json");
             await parent.StopAsync(); await parent.Completion;
             await app.StopAsync();
             {

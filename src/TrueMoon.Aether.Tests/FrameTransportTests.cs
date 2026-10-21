@@ -4,8 +4,9 @@ using System.Buffers;
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.Versioning;
-using TrueMoon.Aether.Contracts;
 using TrueMoon.Aether.Frames;
+using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Transport;
 using TrueMoon.Generated.TrueMoon.Aether;
 using Xunit;
 

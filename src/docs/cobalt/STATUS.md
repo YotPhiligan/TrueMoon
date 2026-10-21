@@ -1,5 +1,12 @@
 # Cobalt / DI: состояние и точка продолжения
 
+Исправление структуры — **2026-10-21**:9global-type files ManualTests/CobaltTest
+получили namespace CobaltTest; entry point и generated references согласованы.
+Runtime179/generator91 Debug/Release прошли в общем solution run. Свежие Core
+80cases/3README, units108cases и UI source/package consumers подтвердили оба
+providers и generation в своих scopes. Собственный runtime API не менялся.
+[Миграция и точные команды](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
+
 App entry-point audit — **2026-10-19**: Cobalt выбран default App builder;
 UseDI переключает provider через IAppBuilderConfigurationContext. Отдельный
 UseCobalt не требуется, generators — compile-time integration. Focused Core46,

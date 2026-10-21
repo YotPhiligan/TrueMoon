@@ -2,17 +2,23 @@ using TrueMoon.Aether;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Scenes;
 using EngineSessionProbe;
 using TrueMoon;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Dependencies;
 using TrueMoon.Mithril;
+using EngineSessionProbe.Measurements;
 
 try
 {
     if (args is ["--runtime"]) return await RuntimeHost.RunAsync();
+    if (args is ["--scene"]) return await SceneInputProbe.RunAsync(null);
+    if (args is ["--input-proof", var inputDirectory]) return await SceneInputProbe.RunAsync(Path.GetFullPath(inputDirectory));
+    if (args is ["--scene-proof", var sceneDirectory]) return await SceneViewportProbe.RunAsync(Path.GetFullPath(sceneDirectory));
+    if (args is ["--viewport-baseline", var mode, var baselineDirectory, var warmup, var interval])
+        return await ViewportBaseline.RunAsync(Path.GetFullPath(baselineDirectory), mode, int.Parse(warmup), int.Parse(interval));
     if (args is ["--parent-wait", var parentDirectory]) return await Probe.RunParentAsync(parentDirectory);
     if (args is ["--viewport"] or ["--viewport", _]) return await ViewportProbe.RunAsync(args.Length == 2 ? Path.GetFullPath(args[1]) : null);
     if (args is ["--viewport-project", var project]) return await ViewportProbe.RunAsync(null, project);

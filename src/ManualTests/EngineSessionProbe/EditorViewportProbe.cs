@@ -7,13 +7,14 @@ using SkiaSharp;
 using TrueMoon;
 using TrueMoon.Aether;
 using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Contracts;
-using TrueMoon.Aether.Editing;
+using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Frames;
+using TrueMoon.Aether.Transport;
+using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Alloy.Hosting;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Dependencies;
 
@@ -27,7 +28,7 @@ public static class EditorViewportProbe
         Directory.CreateDirectory(directory);
         using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(300)); var token = limit.Token;
         var factory = new FaultFactory(); var authoring = new AuthoringState(); var before = JsonSerializer.Serialize(authoring);
-        var gpuBinding = gpu ? new EditorGpuViewportBinding(runtime => factory.Inner.Leases.Single(l => l.ProcessId == runtime.ProcessId)) : null;
+        var gpuBinding = gpu ? new EditorGpuViewportBinding(runtime => ((FaultLease)runtime).Inner) : null;
         var colors = new ConcurrentDictionary<string, uint>(); var firstFrames = new ConcurrentDictionary<ulong, FrameMetadata>();
         var cycles = new List<object>(); var failures = new List<object>(); var commands = new List<string>();
         AetherHost host = null!; ViewportView? view = null; Task uiCommand = Task.CompletedTask;
@@ -145,8 +146,13 @@ public static class EditorViewportProbe
             async Task RecordFailureAsync(string kind, Func<Task> action, Action<Exception> validate)
             {
                 Exception? error = null; try { await action(); } catch (Exception e) { error = e; }
-                Probe.Check(error != null, kind + " unexpectedly succeeded."); validate(error!);
-                failures.Add(new { Case = kind, Error = error!.ToString(), State = host.Supervisor.Status.State.ToString(), Children = factory.Inner.Leases.Count });
+                Probe.Check(error != null, kind + " unexpectedly succeeded.");
+                failures.Add(new { Case = kind, Error = error!.ToString(), State = host.Supervisor.Status.State.ToString(), Children = factory.Inner.Leases.Count,
+                    RollbackAttempted = (error as GameReplacementException)?.RollbackAttempted,
+                    RollbackSucceeded = (error as GameReplacementException)?.RollbackSucceeded,
+                    RecoveryError = (error as GameReplacementException)?.RecoveryError?.ToString(),
+                    EditorErrorMatches = ReferenceEquals(host.Editor.Status.Error, error) });
+                validate(error!);
             }
             await ResetAsync(); var sessionId = host.Supervisor.Status.Identity!.SessionId;
             if (gpu)
@@ -304,11 +310,12 @@ public static class EditorViewportProbe
         public IRuntimeLease Create(SessionLaunch launch)
         {
             if (Next.TryDequeue(out var behavior)) launch = launch with { Behavior = behavior };
-            Last = new(Inner.Create(launch)); MaxLive = Math.Max(MaxLive, Inner.Leases.Count(l => !l.ResourcesReleased)); return Last;
+            Last = new((NativeRuntimeLease)Inner.Create(launch)); MaxLive = Math.Max(MaxLive, Inner.Leases.Count(l => !l.ResourcesReleased)); return Last;
         }
     }
-    private sealed class FaultLease(IRuntimeLease inner) : IRuntimeLease
+    private sealed class FaultLease(NativeRuntimeLease inner) : IRuntimeLease
     {
+        internal NativeRuntimeLease Inner => inner;
         internal bool FailNextStop;
         public int ProcessId => inner.ProcessId; public Task Exited => inner.Exited; public bool ResourcesReleased => inner.ResourcesReleased;
         public Task LaunchAsync(CancellationToken token) => inner.LaunchAsync(token);

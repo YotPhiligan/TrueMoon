@@ -1,3 +1,5 @@
+namespace UnitsPackageConsumer;
+
 // Compile-time package analyzer evidence; the probe still obtains adapters through App services.
 internal static class AnalyzerEvidence
 {

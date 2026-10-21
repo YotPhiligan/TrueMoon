@@ -1,3 +1,5 @@
+using TrueMoon.Aether.Sessions;
+
 namespace TrueMoon.Aether.Builds;
 
 /// <summary>Inputs for one explicit trusted-local game project build. Dependencies are flat managed DLL file names.</summary>

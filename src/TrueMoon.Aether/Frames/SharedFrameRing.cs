@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Frames;
 
 namespace TrueMoon.Aether.Frames;
 
@@ -73,6 +73,7 @@ public sealed class SharedFrameRing : IDisposable
     public bool WritePattern(ulong frame, ulong tick, uint color, byte[] row)
     {
         if (frame == 0 || row.Length != Surface.Stride) throw new ArgumentException("Invalid frame/row.");
+        var measured = FrameTrace.Log.Begin();
         var slot = Metadata(h =>
         {
             if (FrameCodec.Ended(h)) throw new EndOfStreamException("Frame producer detached.");
@@ -80,7 +81,7 @@ public sealed class SharedFrameRing : IDisposable
                 if (FrameCodec.State(h, i) == FrameSlotState.Free) { FrameCodec.SetState(h, i, FrameSlotState.Writing); return i; }
             return -1;
         });
-        if (slot < 0) { Dropped++; return false; }
+        if (slot < 0) { Dropped++; FrameTrace.Log.Complete("producer-drop", Surface.Identity, Surface.Generation, frame, measured); return false; }
         var timestamp = Stopwatch.GetTimestamp(); var crc = uint.MaxValue;
         for (var y = 0; y < Surface.Height; y++)
         {
@@ -92,7 +93,7 @@ public sealed class SharedFrameRing : IDisposable
             if (FrameCodec.State(h, slot) != FrameSlotState.Writing) throw new InvalidDataException("Lost Writing slot.");
             FrameCodec.WriteSlot(h, Surface, new(slot, frame, tick, ~crc, timestamp), FrameSlotState.Ready);
         });
-        Ready.Set(); return true;
+        Ready.Set(); FrameTrace.Log.Complete("production", Surface.Identity, Surface.Generation, frame, measured); return true;
     }
     public FrameMetadata? CopyLatest(byte[] destination, ulong after)
     {

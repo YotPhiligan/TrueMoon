@@ -8,7 +8,7 @@ dotnet test TrueMoon.Mithril.Tests/TrueMoon.Mithril.Tests.csproj --logger "trx;L
 ```
 
 The runner builds Debug and publishes framework-dependent Release without a RID,
-then executes nine cases through each apphost (18 total). Logs, source SHA256, commands,
+then executes ten cases through each apphost (20 total). Logs, source SHA256, commands,
 PID/identity, exit codes and a `Completed` report are written to ignored
 `TestResults/MithrilBaseline/manual`. Each process has a timeout; the runner only
 kills its own probe tree. A child also has a 15-second deadline.
@@ -27,6 +27,7 @@ well as unit identity, observed exit, released handle and repeat cleanup.
 | `same-name` | Starting an empty controller preserves another owned test instance with the same executable name |
 | `duplicate-start` | A second start is rejected without replacing or leaking the first child |
 | `throwing-sink` | A diagnostic sink throws after every write; owned child still exits gracefully and its handle is released |
+| `closed-stdin` | Parent closes its command stream; child drains for1second after EOF and exits0 within the unchanged graceful deadline, without Killing |
 
 Reports include `UnitProcessDiagnostic` snapshots: launch PID/run/generation,
 natural exit versus intentional stop, forced kill, wrapper release and completed

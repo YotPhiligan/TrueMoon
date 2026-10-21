@@ -2,6 +2,406 @@
 
 [Текущий статус](STATUS.md), [единственный детальный план](PLAN.md).
 
+## ENG5b: gameplay input и камера — 2026-10-21
+
+Запрос: «теперь давай приступим к следующему шагу»; точкой продолжения был ENG5b.
+Реализованы `Input.GameInputState`, `GameInputTick`, optional `IInputGameSession`,
+fixed-tick accumulator и `FirstPersonCamera`. `Supervisor.SendInputAsync` на
+App-owned host проверяет exact ожидаемую identity внутри command gate; очередь
+старого runtime не переадресуется новому. Accepted означает staging без Tick;
+Unsupported не fault legacy game. Control wire v2 добавляет flags/capture/look/
+interaction pulse/outcome; frame/TMCK schemas v1 прежние. Старый control v1 и
+старые host fingerprints несовместимы; matching host/game надо пересобрать.
+
+Input bounded: movement flags0..15, packet look±0.5rad, accumulated look±1rad,
+не-finite/unknown flags/non-neutral release отвергаются до mutation. E pulse
+сохраняет быстрый down/up, UI repeat фильтруется, несколько pulses до tick
+coalesced в одно действие. Look/action consumed один раз, held lease12fixed
+ticks без refresh (200ms при continuous60Hz, не wall-clock timeout в Paused).
+Pause/mode/Stop/restore очищают input. CPU ConfigureSurface очищает accumulator;
+GPU runtime adapter вызывает `ResetInput` при Configure/Detach. Reset не меняет
+game/checkpoint state. Transient input не переносится в checkpoint/Replace.
+
+`CameraGame` отдельно от legacy ProbeGame: XZ движение3units/s, diagonal
+нормализована, look влияет на yaw/pitch, pitch ограничен, yaw wrapped. Сохраняет
+camera/tick/interaction; E пока переключает demo material при наличии interactive
+entity. Distance/raycast/collisions/комната/HUD остаются ENG5c.
+
+В sample `--scene`: реальные GameEditor Start/Build/Play/Pause/Step/Stop/Replace/
+Refresh/Cancel, click внутри fitted viewport, WASD/mouse/E и Escape → Editor.
+Argentis keys W/S/D/E добавлены в конец enum, Silk mapping дополнен. Один30Hz
+sender, bounded coalescing buffer, task на UI input event не создаётся.
+Focus/capture loss, mode/resize/suspend/Stop/Replace сбрасывают state; capture
+требует нового click. Sender использует capture epoch и не применяет stale
+cleanup к новой capture; App composition drains его до Aether/GPU/UI teardown.
+OS cursor lock/raw mouse отсутствуют; logical pointer deltas не дают unlimited
+вращение у края OS window.
+
+### Requirement | Evidence
+
+42новых xUnit cases в `TrueMoon.Aether.Tests.Input`:
+
+| Requirement | Evidence |
+| --- | --- |
+| Bounded packet/tick, exact valid boundaries, reject-before-mutation | `GameInputTests.State_ValidatesNeutralAndExactLookBoundaries`, `State_RejectsMalformedPacketsBeforeMutation`, `Tick_RejectsInvalidFlagsAndLook` |
+| Consume look/E once, held lease12ticks, refresh/release/reset | `Accumulator_CoalescesLookAndActionsOnceAndExpiresAfterTwelveTicks`, `Accumulator_RefreshExtendsLeaseReleaseClearsPendingAndInvalidPacketDoesNotRefresh`, `GameInputProtocolTests.PlayingLease_ExpiresWithoutRefreshAndFreshPacketResumesMovement`, `HostReset_DropsHeldLookAndActionWithoutChangingCheckpointState` |
+| Fixed speed/diagonal/opposites/yaw/pitch and camera checkpoint | `Camera_UsesFixedSpeedAndOppositeKeysCancel`, `Camera_NormalizesDiagonalAndTurnsMovementWithYaw`, `Camera_ClampsPitchWrapsYawAndRejectsInvalidPose`, `CameraGame_CheckpointRetainsPoseInteractionAndNeutralTicksStayStill` |
+| Quick E/repeat, bounded mouse and clear UI state | `UiBuffer_PreservesQuickEKeyRepeatAndConsumesLookOnce`, `UiBuffer_BoundsMouseIgnoresInvalidCoordinatesAndResetDropsAllTransientState` |
+| Ready/Paused/Step/mode/restore/Stop and optional capability | `Input_RequiresHelloAndLoadedScene`, `Input_StagesWhilePausedAndAppliesOnceAtStepThenReleaseClears`, `ModeChangeAndStop_ClearInputBeforeFutureTicks`, `RestoreReadinessAndOldSequence_RejectInputWithoutMutatingGame`, `UnsupportedInput_IsExplicitAndLegacyGameContinues` |
+| Wire v2 floats/flags/action/outcome, reject v1 | `ControlV2_RoundTripsInputFlagsLookActionAndOutcomeAndRejectsV1` |
+| Queued stale identity, local validation, Stop preemption, malformed ack | `Supervisor_FencesInputQueuedDuringNewRuntimeStartupWithoutFaultingIt`, `Supervisor_InvalidLocalInputAndPreCancelledWaitDoNotTouchRuntime`, `Stop_PreemptsPendingInputAndNoOldRequestReachesRestartedRuntime`, `Supervisor_RejectsMalformedInputAcknowledgementAndCleansOwnedRuntime` |
+| Focused clean run | `dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --no-build --filter FullyQualifiedName~TrueMoon.Aether.Tests.Input --logger trx --results-directory TestResults/ENG5b/focused-42 --verbosity quiet`: Passed42, Failed0, Skipped0 |
+| Full managed regression | `dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/ENG5b/final-Debug --verbosity quiet` и аналогично `Release`/`final-Release`: в каждой configuration Passed1968, Failed0, Skipped0,9TRX |
+
+В каждом full run: Core107/Cobalt179/generator91/Enerit126/generator114/Mithril95/
+UI615/Hosting79/Aether562. Это test builds, не новый nonincremental/performance
+baseline. Source/assertion review добавил readiness/playing lease/host reset/
+unknown ack/Stop-in-flight checks. Assertion outcomes включают exact transforms,
+state/mode/tick/resource/command side effects, exceptions и wire fields; static
+mutation reasoning, не выполненный mutation score/coverage. IDE `findTests`
+недоступен; Roslyn parse-only pairing подтвердил пять target source files с
+новыми tests (interface/CLI native paths не равны line coverage). Broad working
+artifacts в OS Temp, вне Git; framework/packages не менялись.
+
+### Native input proof и ограничения
+
+`--input-proof` вызывает настоящий private Silk KeyInput callback через reflection
+для WASD/E/Escape (не OS messages), остальные normalized events — через реальный
+UiSession в GPU окне.15cases: letterbox click не захватывает input; paused staging observational;
+WASD/look/quick E на Step; held movement без повторного look/E; Escape/Editor focus;
+Editor keys не двигают camera; staged input очищен при focus/capture loss;
+resize/suspend; opposite WASD проверяет Silk mapping; camera/tick/interaction Replace;
+old input не направляется новому runtime; held/pending E сброшены после Replace;
+30Hz sender в Playing; Pause button neutral; сохранение Editor/authoring ownership.
+5PNG фиксируют initial, moved/interacted, resize, replacement material и Playing→Pause.
+Checkpoint assertions отделены от GPU pixels; imported ReadPixels0.
+
+Полная matrix с первоначальным14-case input proof:
+
+```powershell
+./ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/EngineSessions/eng5b-20261021 -IncludeInput -IncludeScene -IncludeViewport -IncludeGpuImport -IncludeGpuSurface -IncludeGpuViewport -IncludeEditorGpu -GpuValidationLayerDirectory E:/source/my/TrueMoon/src/TestResults/ENG4b/validation-layer/Bin
+```
+
+Completed=true: **56cases/58commands**, Debug apphost и published Release:
+по20headless control/lifecycle/build/checkpoint/replacement, CPU viewport/Editor,
+GPU import/surface/viewport/ordinary Editor, ENG5a scene и ENG5b input.
+440source/76binary fingerprints. После этого усилен только probe harness:
+Silk keyboard callback вместо прямого UiKey, opposite keys, staged focus/capture
+loss и staged suspend. Production библиотеки не менялись; отдельный final run:
+
+```powershell
+./ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/EngineSessions/eng5b-keymap-20261021 -IncludeInput -GpuValidationLayerDirectory E:/source/my/TrueMoon/src/TestResults/ENG4b/validation-layer/Bin -Scenarios @()
+```
+
+**2cases/4commands/440source/76binary fingerprints**, в каждом15input cases/
+5PNG/2cooperative children/22Silk key callbacks; sender packets81Debug/80Release.
+Это correctness counts, не performance metric. Full run Debug binaries и два
+исходника старого harness сохранены в `frozen-Debug`/`frozen-input-proof` внутри
+первого run; Release binaries в исходном publish folder.31published library DLLs
+(кроме EngineSessionProbe.dll) идентичны SHA256 между двумя runs.
+Validation errors/warnings0, sender completed, imports ReadPixels0, final owned
+GPU resources/handles/mappings/UI sessions0. Intentional fault/kill cases полной
+matrix не объявлены normal cooperative exits; такое требование относится к
+двум normal input children в каждой configuration.
+
+Локальный `dotnet pack <project>/<project>.csproj --configuration Release --no-build --no-restore --output TestResults/ENG5b/packages --verbosity quiet`
+прошёл для TrueMoon.Aether, TrueMoon.Argentis и TrueMoon.Alloy.Platform.Silk.
+`TestResults/ENG5b/package-report.json`: все3DLL внутри nupkg совпали SHA256 с
+final published proof. Это payload check, не package drawing consumer/publication.
+Независимая `TestResults/ENG5b/VerifyCompletion.ps1` Passed=true: обе managed
+матрицы, сохранённые full440source/76binary и final440source/76binary inputs,
+31library,10final input PNG hashes и3packages совпали. Исторический full run не
+подменяется final harness; оба набора evidence сохранены раздельно.
+Финальная документационная сверка:26изменённых Markdown, локальные links/anchors
+проверены без ошибок; `git diff --check` с `core.whitespace=cr-at-eol` прошёл.
+9новых namespaced C# files соответствуют путям; ещё1AssemblyInfo содержит только
+assembly attribute. Это scoped audit новых файлов, не повторная проверка всех
+проектов. Test-agent research/plan/status находятся только в OS Temp.
+
+Первые development runs: `eng5b-dev-1` отвергнут из-за exact background RGBA8
+сравнения; приведён к уже принятому±2 quantization допуску из ENG5a, aspect и
+opacity assertions сохранены. `eng5b-dev-2` Debug input14cases/5PNG прошёл.
+Первая test compilation указала на xUnit async Throws; исправлено на awaited
+ThrowsAsync. Ни skipped tests, ни weakened mode/tick/ownership checks не добавлены.
+
+Физические клавиатура/мышь/OS focus и raw cursor profile не автоматизированы;
+native proof подтверждает normalized UiSession routing на actual GPU output.
+3D performance/VRAM/loss/golden/RTE/full UI alpha и K3/K7/K8 остаются вне scope,
+K7 workaround search не возобновлён. Следующий функциональный этап — ENG5c:
+комната/пол/несколько примитивов, осмысленный interaction и Alloy HUD/pause.
+
+## ENG5a: первый Vulkan 3D frame — 2026-10-21
+
+Реализован ограниченный первый renderer в одной сборке TrueMoon.Aether.
+`Rendering.IRenderGameSession` предоставляет immutable `PrimitiveScene`: один
+unit cube, camera pose из checkpoint, rotation, RGB material, FOV/near/far.
+`RuntimeProtocol.CaptureRenderFrame` захватывает scene и tick под общим lock с
+commands/simulation/checkpoint; startup restore gate и stopping запрещают capture.
+Capability optional; прежний IGameSession/CPU/reference pattern сохранён.
+
+`GpuFrameData.FromScene` передаёт immutable draw workload и точный frame/tick;
+Pixels пуст. Vulkan graphics pipeline, embedded SPIR-V, 36 vertices без vertex
+buffer, D32 depth test/write и80-byte push constants рисуют непосредственно в
+exportable RGBA8 image. Scene color — stored-sRGB с фиксированной интенсивностью
+граней; это простой opaque material, не PBR/linear-light освещение.
+Right-handed world, +Y up, -Z camera forward, Euler radians, depth [0,1]; Y
+projection flipped для top-left image. Перед recording валидируются параметры
+и representable matrix. Reference staging buffer теперь создаётся лениво;
+3D не создаёт CPU pixel/staging allocation. Pipeline/framebuffer/depth/views
+принадлежат slot, cleanup идёт после fence и до image/device. Существующие
+external queue ownership barriers, semaphores,3slot ledger и surface generations
+сохранены; UI владеет retained copy на своём thread/context.
+
+`--scene-proof` использует обычные App/UseAether/Editor/Build/Replace и GPU
+transport. Game.Logic остаётся только в child. Пять PNG/pixel assertions:
+`01-cube` (bright front, darker back submitted later — depth oracle),
+`02-camera` (3Step, projected centroid сдвигается влево), `03-resize`800×450,
+`04-resume`320×240 после0×0, `05-replace-material` (новая DLL/color,
+сохранены tick3/camera/Paused). Окно/root/authoring прежние, teardown GPU до UI.
+Readback только после UI presentation для assertions; imported texture delivery
+не вызывает ReadPixels. В scene proof включён aspect fit Canvas с проверкой
+соотношения сторон image/render target; reference examples сохраняют прежний
+режим. Readback assertions используют fitted image bounds.
+RunProbe включает `-IncludeScene`, fingerprint GLSL/SPIR-V,
+проверку PNG SHA256 и неизменности source/binary inputs.
+
+### Requirement | Evidence
+
+Новые focused xUnit проверки находятся в
+`TrueMoon.Aether.Tests.Rendering.PrimitiveSceneTests`:
+
+| Requirement | Evidence |
+| --- | --- |
+| Perspective, top-left Y, aspect, near/far Vulkan depth | `Transform_ProjectsCenterUpAspectAndVulkanNearFarPlanes` |
+| Camera pose и model rotation влияют на projection | `Transform_UsesCameraPoseAndCubeRotation` |
+| Invalid camera/FOV/clip/material, zero extent/overflow отвергаются | `Validate_RejectsInvalidCameraProjectionOrMaterial` (13 partitions); `Transform_RejectsSuspendedExtentAndUnrepresentableCamera` |
+| GPU-only workload, точный tick/frame/slot и запрет mixed pixels/scene | `SceneFrame_ProducesExactMetadataWithoutCpuPixelsAndRejectsMixedWorkloads` |
+| Capture не advances tick, совпадает с checkpoint camera, loaded/stop gate | `RenderCapture_RequiresReadinessCapturesCheckpointCameraAndRejectsStop` |
+| Restore gate и optional capability | `RenderCapture_RejectsPendingRestoreAndUnsupportedCapability` |
+| Focused validation | `dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --filter FullyQualifiedName~PrimitiveSceneTests --logger trx --results-directory TestResults/ENG5a/managed-focused-green --verbosity quiet`: Passed19, Failed0, Skipped0 |
+| Full managed regression | `dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/ENG5a/final-Debug --verbosity quiet` и аналогично `Release`/`final-Release`: в каждой конфигурации Passed1926, Failed0, Skipped0,9TRX |
+
+В каждом full run: Core107, Cobalt179, generator91, Enerit126, generator114,
+Mithril95, UI615, Hosting79, Aether520. Это test builds, не новый nonincremental
+build/performance acceptance. IDE `findTests` вернул Tool not found; использованы
+исходники соседних tests. Первый focused run:18passed/1failed из-за ожидаемого
+exception type для16×0; production правильно бросал ArgumentOutOfRangeException,
+исправлен test. Результат сохранён в `TestResults/ENG5a/managed-focused`.
+
+### Итоговая native/package проверка
+
+```powershell
+./ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/EngineSessions/eng5a-20261021-3 -IncludeScene -IncludeGpuImport -IncludeGpuSurface -IncludeGpuViewport -IncludeEditorGpu -GpuValidationLayerDirectory E:/source/my/TrueMoon/src/TestResults/ENG4b/validation-layer/Bin -Scenarios @('repeat')
+```
+
+Completed=true: **12cases/14commands**, Debug apphost + published Release,
+430source/76binary fingerprints, source/binary inputs неизменны. В каждой
+конфигурации scene5PNG/2children; старые one-frame import14cases/8children,
+surface21cases/80frames/12children, viewport17cases/14captures/20copies/6children,
+ordinary GPU Editor20Replace/20failure recoveries/53children и repeat20Start/Stop.
+Fault cases старых probes намеренно завершают часть процессов принудительно;
+только два normal scene children в каждой конфигурации требуют cooperative exit0.
+Core/sync validation ошибок/предупреждений0; imports ReadPixels0. Все reports
+подтвердили scoped cleanup. В scene runtime1 освободил3surfaces/9slots/3devices,
+runtime2 —1surface/3slots/1device; live resources/handles/mappings/UI sessions0.
+
+Scene assertions сохранены как `01-cube`, `02-camera`, `03-resize`, `04-resume`,
+`05-replace-material` и SHA256 в `Debug-scene/scene-report.json` и
+`Release-scene/scene-report.json`. Centroid front material смещается влево
+после3Step и сохраняется при Replace (допуск0.005). PNG относятся
+к final UI surface, не physical display/OS compositor color proof.
+
+Локальный `dotnet pack TrueMoon.Aether/TrueMoon.Aether.csproj --configuration Release --no-build --no-restore --output TestResults/ENG5a/package --verbosity quiet`
+прошёл. `package-report.json` подтвердил: DLL в
+`TrueMoon.Aether.0.2.2.7-alpha.nupkg` совпадает SHA256 с DLL native published
+Release proof (`5D5D41FB9EBF8327F110B745BA938EA7D673985C44A291820D9F1692E3ECBE6D`),
+включая embedded shaders. Это payload/pack check, не отдельный package drawing
+consumer и не публикация. shader compile + spirv-val Vulkan1.1 прошли для обоих
+модулей; обычный build/publish не требует compiler.
+
+Независимая итоговая сверка `TestResults/ENG5a/VerifyCompletion.ps1` прошла:
+`completion.json` Passed=true,9TRX/1926passed в каждой configuration,
+430source/76binary/10PNG SHA256 совпали, package payload прежний.
+`CheckDocs.ps1`:26изменённых Markdown,716локальных links/313anchors, errors0.
+`git -c core.safecrlf=false -c core.whitespace=cr-at-eol diff --check` прошёл;
+4новых C# files проверены на namespace/path correspondence, violations0.
+Это focused проверка новых files, не новый полный structural audit репозитория.
+
+### Эксперименты и границы
+
+Первый Debug proof `TestResults/EngineSessions/eng5a-dev-1` прошёл. Следующий
+`eng5a-20261021` отвергнут: диагностическое обновление Status в FramePresented
+инвалидировало UI до ReadbackOpenGLImage. Capture перенесён на следующий кадр
+через PostWindow; не ослаблен dirty-output guard. В отвергнутом run один child
+вышел с освобождёнными ресурсами, core/sync errors/warnings0; этот run не passing.
+Матрица `eng5a-20261021-2` прошла до финального исправления aspect fit;
+финальная source freeze/матрица — `eng5a-20261021-3`, без растягивания3D image.
+
+Полный ENG5 не завершён. Далее ENG5b: input capture/routing WASD/mouse/E/Escape,
+camera control на fixed tick и checkpoint/Replace; затем комната/пол/примитивы,
+переключатель света/цвета и Alloy HUD/pause. ENG7 standalone отдельно. Текущий
+ProbeGame всё ещё демонстрирует движение camera через Step reference simulation.
+3D performance/VRAM/hardware loss не измерены; ENG4e reference timings сюда не
+переносятся. PA8a/RTE/K3/K7/K8/final alpha остаются прежними, K7 search остановлен.
+
+## ENG4e CPU/GPU baseline — 2026-10-21
+
+Реализован [отдельный runner](../../ManualTests/EngineSessionProbe/RunViewportBaseline.ps1)
+поверх обычных App/Editor/FrameSession transports. Opt-in internal EventSource
+`TrueMoon-Aether-Frames` измеряет production, CPU read/copy/CRC, GPU import,
+produce round-trip, retained submission и owner/use/fence. Без listener история
+не хранится. CLI capture bounded:100000stage records/4096process snapshots;
+overflow/EventSource errors/mismatched QPC frequency делают experiment неполным.
+UI sample добавляет distinct actual FramePresented. CPU/GPU разные wire timestamps
+не используются как одинаковая граница production: latency связывается с traced
+start по session/runtime generation/surface generation/frame number. Frames,
+начатые в warmup, в measured production cohort не входят. Повторная presentation
+одного frame дедуплицируется; percentiles используют все samples интервала.
+
+[Протокол и advisory budgets](PLAN.md#eng4e-протокол-измерений--2026-10-21)
+записаны до полного запуска. Workload: одинаковая Game.Logic DLL/FramePattern/color,
+artifacts двух revisions/manifest identities; один App/window на case,
+Start640×360 → Resize1280×720 → Replace1280×720 → Stop. Simulation60Hz/
+producer30Hz/UI60Hz targets; verification readback перед2s warmup и5s measurement.
+По3повтора каждого mode/configuration, чередование CPU/GPU и GPU/CPU. JSON пишется
+после измерений;200ms process polling/EventSource overhead включён в counters.
+Дочерний capture worker drains/persists до App teardown.
+
+Финальный experiment: **12/12cases,36intervals,24cooperative children,36pixel
+verifications**,15commands,421source/94binary fingerprints; Completed=true.
+Windows x64/build26300/SDK10.0.402/net10.0,24logical processors/QPC10MHz.
+GPU adapter UUID `D69A207DD3EC6D8F5F325359A59FA086`, driver UUID
+`8B2ED3A7D66651B8AD47BB85416B871B`; environment сохраняет NVIDIA RTX5070Ti
+driver32.0.16.1742 и AMD Radeon32.0.21042.62. GPU transport использует eligible
+GL adapter identity; driver/Windows settings не менялись. Validation layers
+выключены только в measurement processes, correctness validation выполняется
+отдельно. Нет imported ReadPixels, owned GPU resources/handles/mappings/UI sessions
+после каждого case —0; Game.Logic в Editor не загружен.
+
+```powershell
+./ManualTests/EngineSessionProbe/RunViewportBaseline.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/ViewportBaseline/eng4e-20261021-3
+```
+
+Raw/commands/environment/fingerprints: `TestResults/ViewportBaseline/eng4e-20261021-3/summary.json`;
+полная36строчная [таблица результатов](../../TestResults/ViewportBaseline/eng4e-20261021-3/REPORT.md).
+Каждый case содержит experiment.json, baseline-report.json и3raw captures.
+Всего **37766stage records**; measured cohorts **5244produced/5244received/
+5182presented**, unreceived0/unpresented62. Последнее — produced frames без
+distinct actual acknowledgement, включая границы resize/Replace/Stop; эта метрика
+не объясняет единственную причину потери. Producer dropped attempts0 означает
+отсутствие ring no-free-slot drops; пропущенные timer ticks не подсчитываются.
+Unreceived/unpresented пересекаются, складывать их нельзя. FPS ниже — throughput
+acknowledged production cohort за measured interval, не частота повторных redraw.
+
+### Сводка трёх повторов
+
+Задержки вms; p50/p95/production/retained — **медианы соответствующих per-run
+percentiles**, не pooled percentile. FPS: медиана [min–max]; allocation — медиана
+runtime managed MiB/s по фактическим inner polling intervals. Полные editor/runtime
+CPU cores, allocations, handles, private/working-set peaks и GC deltas находятся
+в raw/per-case report. Process private bytes не являются VRAM.
+
+| Configuration | Mode | Участок | FPS [min–max] | Produce→present p50/p95 | Production p95 | Retained submit p95 | Runtime MiB/s |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Debug | CPU |640×360 |30.19 [27.57–30.20] |41.00/49.38 |11.32 |0.26 |0.100 |
+| Debug | CPU |resize1280×720 |24.80 [12.51–25.20] |89.99/105.95 |47.16 |0.69 |0.089 |
+| Debug | CPU |Replace1280×720 |25.00 [23.39–26.60] |90.84/104.83 |46.96 |0.72 |0.087 |
+| Debug | GPU |640×360 |30.20 [30.13–30.39] |13.73/22.21 |4.91 |0.64 |27.039 |
+| Debug | GPU |resize1280×720 |30.20 [30.19–30.36] |21.39/30.14 |13.41 |0.74 |106.707 |
+| Debug | GPU |Replace1280×720 |30.20 [29.74–30.20] |20.42/29.58 |13.08 |0.61 |107.401 |
+| Release | CPU |640×360 |29.98 [29.37–30.00] |49.54/64.79 |2.55 |0.07 |0.100 |
+| Release | CPU |resize1280×720 |29.99 [29.93–30.33] |50.34/65.42 |8.87 |0.65 |0.104 |
+| Release | CPU |Replace1280×720 |29.92 [29.51–29.99] |51.91/66.24 |8.91 |1.10 |0.097 |
+| Release | GPU |640×360 |30.19 [29.79–30.20] |12.70/21.35 |4.77 |0.70 |27.203 |
+| Release | GPU |resize1280×720 |30.20 [29.73–30.33] |15.71/21.49 |5.80 |0.67 |106.701 |
+| Release | GPU |Replace1280×720 |30.00 [28.36–30.20] |17.50/33.13 |5.78 |0.71 |106.673 |
+
+Advisory breaches: **2/36intervals FPS<24 и6/36 latency p95>100ms**, все — Debug
+CPU1280×720; outlier12.51fps сохранён. В Release и GPU intervals эти budgets
+выполнены. Editor/runtime allocations не превысили32/256MiB/s; все48lifecycle
+операций уложились в15s. Completed не означает все budgets met или30fps guarantee.
+GPU runtime allocation~107MiB/s при1280×720 согласуется с new RGBA byte[] на каждый
+FramePattern в GpuFrameData.GamePattern; это вывод по measured rate и исходнику,
+не attribution profile. Этот reference path всё ещё CPU-generated/Vulkan staging,
+а не performance будущего3D renderer/zero-copy. Нужные оптимизации выбирать по
+реальному workload; временный pattern не становится minimum hardware promise.
+
+### Проверки и первоначальные failures
+
+Новые focused xUnit cases:8/8. В составе финального solution run Aether501/501,
+Mithril95/95; UI615/Hosting79/Core107/Cobalt179/generator91/Enerit126/generator114.
+**Debug1907/1907 и Release1907/1907, по9TRX, failed0/skipped0**. Это incremental
+dotnet test builds; nonincremental build/golden/RTE/full hardware matrix здесь
+не повторены. XML warnings backlog не подавлялся.
+
+| Требование | Точный тест |
+| --- | --- |
+| Runtime/surface identities, warmup exclusion, distinct presented/cohort accounting | `BaselineAnalysisTests.Analyze_JoinsSurfaceAndRuntimeGenerations_DeduplicatesPresentsAndExcludesWarmup` |
+| Foreign session и unavailable вместо0 | `BaselineAnalysisTests.Analyze_GpuReceivesUseExactSessionIdentity_AbsentResourcesRemainUnavailable` |
+| Mismatched clocks/overflow/broken capture отвергаются | `BaselineAnalysisTests.Analyze_RejectsClockMismatchAndIncompleteCaptures` |
+| Все samples, nearest-rank и empty/null | `BaselineAnalysisTests.Summarize_UsesAllSamplesAndNearestRank_EmptyIsUnavailable` |
+| Negative/NaN/infinity не становятся latency | `BaselineAnalysisTests.Summarize_RejectsInvalidLatency` (3cases) |
+| Actual opt-in payload/identity/timestamp соответствует runtime pattern | `FrameTraceTests.GamePattern_OptInTraceMatchesExactFrameAndEnclosesProductionTimestamp` |
+
+```powershell
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --filter "FullyQualifiedName~BaselineAnalysisTests|FullyQualifiedName~FrameTraceTests" --logger trx --results-directory TestResults/ViewportBaseline/development/focused-tests-final --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/ViewportBaseline/development/verified-Debug --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory TestResults/ViewportBaseline/development/verified-Release --verbosity quiet
+```
+
+До финальной матрицы short CPU прошёл; short GPU/первый full GPU иногда терял
+первый child capture. После переноса flush перед App Stop второй experiment дошёл
+до11/12accepted cases: последний Release GPU имел полный raw data, но был rejected
+из-за Killing первого child. Найдена/исправлена
+[гонка Mithril delivery/graceful wait](../mithril/HISTORY.md#graceful-wait-после-ошибки-доставки-exit--2026-10-21):
+закрытие control pipe после принятого stdin exit пропускало graceful wait.
+Budget3s не увеличен; deterministic red/green и native20shutdown cases прошли.
+Предыдущие `eng4e-20261021-1/-2` остаются Completed=false; passing части не
+переносятся в финальный proof. В финальном -3 все24children exit0/no Killing.
+
+Ранний full Debug1906run дал Enerit restart IOException sharing violation при
+чтении ready-2.json. Отдельная AppUnitsProcessTests theory18/18 и последующие
+full Debug/Release прошли; unrelated readiness helper не менялся, race не объявлена
+исправленной. Первая trace unit fixture содержала Version4 вместо Version2 GPU
+stamp; исправлен только тестовый input,8/8после этого прошли.
+
+GPU query/utilization/VRAM counters — unavailable, CPU durations не GPU timings.
+Long resource trends, physical DPI/device loss, K7/final alpha и publication
+остаются открытыми. Остановленный NVIDIA workaround search не возобновлялся.
+Следующий функциональный этап — ENG5: минимальный3D renderer в существующий
+viewport, с отдельным workload/baseline; CPU Debug debt/temporary staging allocation
+сохранены как measured backlog, без автоматической смены default transport.
+
+### Отдельная correctness и package regression
+
+После measurement выполнен `RunProbe.ps1`: **6/6cases,8commands,421source/
+76binary fingerprints**, Debug apphost/published Release. Actual GPU viewport,
+ordinary GPU Editor и repeat lifecycle; core/sync validation0errors/0warnings.
+Per Editor20Replace/20failure cases/53children, retained copies829Debug/813Release,
+imported readbacks0, owned GPU handles/resources/mappings/UI sessions0. Эти checks
+не добавляются к performance samples и не заменяют полный UI/hardware acceptance.
+
+```powershell
+./ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/EngineSessions/eng4e-correctness-20261021 -IncludeGpuViewport -IncludeEditorGpu -GpuValidationLayerDirectory E:/source/my/TrueMoon/src/TestResults/ENG4b/validation-layer/Bin -Scenarios @('repeat')
+./ManualTests/UnitsPackageConsumer/RunPackageSmoke.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/UnitsPackages/eng4e-20261021
+```
+
+Fresh units consumer: **108/108cases,8nupkgs/9projects,128commands/206source
+fingerprints**, Completed=true, version`0.2.2.7-alpha.units.20261021094727716`.
+Cobalt/DI/DI без Cobalt analyzer, Debug/Release build/publish; expected omitted
+Enerit analyzer failureCS0234. Это delivery/App/IPC regression исправленного
+Mithril, не Aether GPU package drawing proof. Пакеты локальные, не публиковались.
+
+Итоговая integrity проверка `TestResults/ViewportBaseline/development/VerifyFinal.ps1`
+независимо пересчитала cohort counts/p50/p95/FPS по всем36intervals/37766raw records.
+Текущие1048source и170binary hash checks совпали;36raw capture hashes сохранены
+в `completion.json`, Passed=true. Exact TRX totals проверены отдельно — по1907
+passed/failed0/skipped0 в Debug/Release. Документационные проверки не создают
+новых passing code/native runs.
+Проверки документации:25изменённых Markdown files,711локальных ссылок/309якорей,
+ошибок0; `git diff --check` прошёл. Scope включает сохранённые изменения предыдущих
+шагов в текущем checkout; этот счётчик не является числом новых файлов ENG4e.
+
 ## ENG4d2 ordinary GPU GameEditor — 2026-10-20
 
 Запрос «давай приступим к следующему шагу» реализован как следующий принятый ENG4d2.
@@ -1322,7 +1722,7 @@ performance/новой проверки runtime evidence не выполняло
 | --- | --- |
 | [Host csproj](../../ManualTests/EngineSessionProbe/EngineSessionProbe.csproj) прямо ссылается на Game.Logic, [RuntimeHost](../../ManualTests/EngineSessionProbe/RuntimeHost.cs) создаёт ProbeGame | Выбранный artifact/loader/dependency set и canonical contracts должны быть определены до ENG3a; Editor DLL не загружает |
 | [BuildIdentity](../../TrueMoon.Aether/Hosting/NativeRuntime.cs) читает Game.Logic из AppContext.BaseDirectory, [supervisor](../../TrueMoon.Aether/Sessions/SessionSupervisor.cs) хранит fixed game ID | Build descriptor/manifest выбирается на generation, включая rollback; compiler staging отдельно от immutable build-ID directory |
-| [IGameSession/control](../../TrueMoon.Aether/Contracts/Control.cs) не имеют capture/restore; [ProbeGame](../../ManualTests/Game.Logic/ProbeGame.cs) хранит только минимальный stub | ENG3b вводит ограниченный versioned checkpoint и проверку non-default state; полной object-graph migration нет |
+| [IGameSession/control](../../TrueMoon.Aether/Transport/IEngineControl.cs) не имеют capture/restore; [ProbeGame](../../ManualTests/Game.Logic/ProbeGame.cs) хранит только минимальный stub | ENG3b вводит ограниченный versioned checkpoint и проверку non-default state; полной object-graph migration нет |
 | [FrameSession.StartAsync](../../TrueMoon.Aether/Frames/FrameSession.cs) уже configure/wait first-present | Candidate publication после restore; первый default-state кадр не считается readiness replacement |
 | CommandAsync на любую ошибку вызывает cleanup; [RuntimeProtocol](../../TrueMoon.Aether/Runtime/RuntimeProtocol.cs) не ack sequence при exception | Нужен отдельный nonterminal checkpoint rejection; обещание old paused/Resume нельзя вывести из нынешней transport-fault policy |
 | ENG0 требует1game child, а общий раздел допускал подготовку двух сессий | Для ENG3 явно оставлен sequential stop/reap/start; overlap требует нового решения |

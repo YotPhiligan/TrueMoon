@@ -60,12 +60,18 @@ MIT0 выполнен в этом scope; MIT1–MIT5 не объявляются
   сохраняет исходное исключение и освобождает `Process`; controller удаляет
   неуспешный handle. Повторный start активного handle отвергается.
 - Stop посылает `qe`, flush и ждёт exit до `TerminationDelay` (default1000ms).
-  Timeout/отмена graceful wait/закрытый stdin приводят к проверке exit и, если
+  Timeout/отмена graceful wait приводят к проверке exit и, если
   child жив, к `Kill(entireProcessTree:true)` только owned tree с ожиданием
   максимум5s. Cancellation stop сокращает graceful ожидание, cleanup продолжается.
   `true` означает exit наблюдён и `Process` освобождён; ошибка cleanup
   диагностируется и возвращает `false`, handle остаётся доступен для повторной
   попытки.
+- Уточнение2026-10-21 по ENG4e: ошибка доставки exit через stdin/control pipe
+  не отменяет оставшийся graceful budget. Второй канал мог уже инициировать
+  cooperative cleanup; после delivery IOException/InvalidOperationException
+  дождаться exit до прежнего deadline и только затем применять owned kill/reap.
+  Pre-cancelled/истёкший deadline по-прежнему сокращает ожидание; лимиты не увеличены.
+  Regression — delayed EOF cleanup при закрытом parent stdin, exit0 без Killing.
 - Stop до старта/после exit/повторный stop успешны. Sync/async disposal сначала
   запрещает start, затем останавливает owned child; повторный disposal допустим.
   Cleanup failure при disposal — исключение, а не молчаливый успех.

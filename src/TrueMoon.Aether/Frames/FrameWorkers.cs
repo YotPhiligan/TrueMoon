@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Runtime;
 
 namespace TrueMoon.Aether.Frames;
@@ -92,6 +92,7 @@ public sealed class FrameReceiver : IAsyncDisposable
                         else
                         {
                             var elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+                            FrameTrace.Log.Complete("copy", _ring.Surface.Identity, _ring.Surface.Generation, frame.FrameId, start);
                             _copies.Add(elapsed); _aggregateCopies?.Add(elapsed);
                             if (_pending >= 0) { _states[_pending] = 0; _replaced++; }
                             _last = frame.FrameId; _received++; _metadata[index] = frame;

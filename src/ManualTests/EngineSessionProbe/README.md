@@ -1,4 +1,74 @@
-# EngineSessionProbe — пример TrueMoon.Aether (ENG1–ENG4b)
+# EngineSessionProbe — пример TrueMoon.Aether (ENG1–ENG5b)
+
+## ENG5b: управляемая камера и ввод
+
+```powershell
+dotnet run --project ManualTests/EngineSessionProbe/EngineSessionProbe.csproj -- --scene
+```
+
+Запускается `Game.Logic.CameraGame` через App/Build/Editor и GPU transport.
+Нажмите Play, затем кликните по изображению viewport: WASD движет камеру по XZ,
+мышь поворачивает её (logical deltas,0.0025rad/unit), E переключает demo color
+при наличии interactive entity. Escape возвращает pointer/focus Editor.
+Pointer capture не блокирует OS cursor; для полного вращения нужен дальнейший
+raw/relative input профиль. Комната/collisions/raycast/HUD пока не реализованы.
+Start/Play/Pause/Step/Stop/Build/Replace/Refresh/Cancel используют обычный GameEditor.
+Нажатия E coalesced по rising edge, быстрый down/up не теряется, repeat не повторяет
+действие. Sender один,30Hz, без task на event; accepted input применяется только
+на fixed tick. Pause/focus loss/resize/suspend/Stop/Replace очищают transient state;
+для нового capture нужен click. Camera/interaction переживают checkpoint Replace.
+Reference ProbeGame/CPU examples сохраняют прежнее поведение.
+
+Control protocol теперь v2; host/game пересобираются совместно. Frame/TMCK v1
+сохранены. Input watchdog —12fixed ticks (200ms при непрерывных60Hz), не wall-clock
+timeout в Paused. Unsupported input capability возвращается отдельно от mode.
+
+`--input-proof <fresh-directory>` вызывает настоящий keyboard callback Silk
+для WASD/E/Escape и normalized UiSession pointer/focus events в GPU-окне:
+15cases,5PNG, камера/checkpoint/color/Replace,
+input sender drain и cooperative child cleanup. Это не physical keyboard/mouse
+или OS focus automation. Пример воспроизводимого runner из `src`:
+
+```powershell
+./ManualTests/EngineSessionProbe/RunProbe.ps1 `
+  -RunDirectory E:/source/my/TrueMoon/src/TestResults/EngineSessions/eng5b-local `
+  -IncludeInput `
+  -GpuValidationLayerDirectory E:/source/my/TrueMoon/src/TestResults/ENG4b/validation-layer/Bin `
+  -Scenarios @()
+```
+
+## ENG5a: первый Vulkan3D frame
+
+`--scene-proof <fresh-directory>` выполняет bounded proof через обычные
+App/UseAether/Editor/GPU viewport. Куб рисуется Vulkan pipeline с depth buffer,
+perspective camera и простым opaque материалом из выбранной Game.Logic.dll.
+CPU pixel buffer отсутствует. Проверяются front/back occlusion, clear/opacity,
+aspect fit (Canvas сохраняет пропорции render target),
+смещение camera после3Step, resize800×450, suspend/resume320×240 и Replace
+на новый material с сохранением tick3/camera/Paused. Сохраняются5PNG и JSON;
+пиксельный readback выполняется только для assertions после UI presentation.
+Import bridge не читает pixels обратно на CPU.
+
+Воспроизводимый Debug/published Release запуск из `src`:
+
+```powershell
+./ManualTests/EngineSessionProbe/RunProbe.ps1 `
+  -RunDirectory E:/source/my/TrueMoon/src/TestResults/EngineSessions/eng5a-local `
+  -IncludeScene `
+  -GpuValidationLayerDirectory E:/source/my/TrueMoon/src/TestResults/ENG4b/validation-layer/Bin `
+  -Scenarios @()
+```
+
+Нужны Windows x64 и совместимые Vulkan/OpenGL external-memory profiles; путь к
+validation layer можно заменить локальным SDK. Runner сохраняет exact commands,
+shader/source/binary SHA256, проверяет5PNG hashes и неизменность inputs после
+run. Успех требует cooperative child exit0, zero live resources/handles/mappings/
+UI sessions и core/sync errors/warnings0. Это первый renderer proof; gameplay
+WASD/mouse/E/Escape проверяются отдельным ENG5b proof выше; комната/HUD и3D
+performance baseline остаются последующими этапами.
+Shader sources и команда пересборки: [Shaders](../../TrueMoon.Aether/Gpu/Vulkan/Shaders/README.md).
+
+## Предыдущие этапы
 
 Headless Windows x64/net10.0 prototype: один executable с ролями Editor и
 Game.Runtime, Cobalt App, fresh owned Mithril ChildProcessUnitHandle на каждый
@@ -426,3 +496,52 @@ Report содержит Transport/GpuCopies/ImportReadbacks. GPU mode прове
 retained UI pixels; package consumers отдельно проверяют managed transport API.
 Native proof budget300s/runner330s; driver hang/physical display/VRAM/performance
 не получают passing результата из этих pixel/lifecycle checks.
+
+## ENG4e: измеренный CPU/GPU viewport baseline
+
+```powershell
+# Полный experiment: Debug apphost и published Release,3повтора обоих modes.
+pwsh -NoProfile -File ManualTests/EngineSessionProbe/RunViewportBaseline.ps1
+
+# Короткая проверка самого инструмента; результаты не считать полным baseline.
+pwsh -NoProfile -File ManualTests/EngineSessionProbe/RunViewportBaseline.ps1 -Configurations Debug -Repetitions 1 -WarmupSeconds 1 -MeasurementSeconds 1
+```
+
+RunDirectory должен быть новым каталогом внутри `TestResults/ViewportBaseline`.
+Runner сначала сохраняет protocol/settings, затем собирает Debug/publishes Release
+и последовательно запускает CPU/GPU, чередуя порядок пар между повторами.
+Каждый процесс использует один App/Editor/window: Start640×360, Resize1280×720,
+Replace1280×720, Stop. A/B artifacts имеют разные revisions/build identities,
+но одинаковые DLL bytes и pattern/color; compilation вынесена из measured path.
+Целевые cadence: simulation60Hz, producer30Hz, continuous UI60Hz. Каждый участок
+проверяет реальные retained pixels, прогревается2s и измеряется5s. Pixel readback
+и запись JSON не входят в measured interval. Native validation выключена только
+для measurement processes; validation correctness checks запускаются отдельно.
+
+Raw `baseline-editor.json` и `baseline-runtime-{generation}.json` содержат bounded
+opt-in EventSource stages и cumulative process counters каждые200ms. Они включают
+instrumentation overhead. Один frame идентифицируется session/runtime/surface/frame;
+повторная presentation не увеличивает FPS. CPU/GPU wire ProducedTimestamp относятся
+к разным моментам, поэтому общий latency рассчитывается от traced production start
+до фактического FramePresented. Это CPU-observed path, не physical-display latency.
+CPU production включает generation/CRC/MMF write; CPU copy — read/CRC. GPU production
+включает CPU generation/Vulkan staging/ready fence; retained-copy измеряет submission
+независимого Skia image, gpu-use — owner queue/use/observed GL fence. Import timings
+учитываются отдельно как configuration cost. GPU query/utilization/VRAM без sampler
+обозначены unavailable; private bytes не являются VRAM.
+
+`baseline-report.json`: p50/p95/max всех samples интервала, production cohort
+produced/received/distinct presented, producer-dropped attempts и unreceived/
+unpresented (пересекающиеся величины), Start/Resize/Replace/Stop timings,
+allocation rates, CPU cores, private/working-set bytes, handles и GC collections.
+Resource deltas имеют точные границы внутреннего polling interval. Отсутствующие
+timings имеют Samples0/null, а не измеренное значение0. `REPORT.md` сводит всю
+матрицу; `summary.json` сохраняет exact commands, environment/driver metadata и
+source/binary hashes, отклоняет overflow/broken traces/source changes/missing
+children/failed cleanup. Завершённость experiment отделена от advisory budgets:
+≥24fps, latency p95≤100ms, Editor/runtime allocation≤32/256MiB/s и lifecycle≤15s.
+Budgets записаны до запуска и не подгоняются под результат.
+
+Сравнение относится к reference CPU-generated/Vulkan-staging workload. 3D renderer,
+long resource trend/VRAM, physical DPI/loss и K7/final UI acceptance остаются
+отдельными задачами; driver/Windows settings этим инструментом не меняются.

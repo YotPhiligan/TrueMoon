@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
-using TrueMoon.Exceptions;
+using TrueMoon;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Services;
 using Xunit;

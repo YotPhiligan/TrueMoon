@@ -1,6 +1,60 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-20, ENG4d2 GPU GameEditor integration**. UI production
+Последняя интеграционная работа — **2026-10-21, ENG5b gameplay input**:
+Argentis UiKey дополнен W/S/D/E с сохранением старых enum values; Silk mapping
+дополнен. Sample viewport реализует focus/pointer capture, coalescing и30Hz sender,
+Escape/FocusLost/capture transfer/resize/suspend/Replace сбрасывают input до teardown.
+Full Debug/Release1968/1968 в каждой configuration, UI615/Hosting79.
+Engine native regression56/56; отдельный Debug/published Release proof по15cases/
+5PNG проходит через Silk key callback и реальный UiSession/GPU output; validation0/0,
+zero ownership/imported ReadPixels0. Local Argentis/Platform.Silk pack payload
+совпал с published proof; package rendering consumer не запускался.
+Это не OS keyboard/mouse injection/physical focus acceptance и не raw cursor lock.
+Own full UI/golden/RTE/performance/hardware matrix не повторена.
+[Подробный scope и evidence](../engine/HISTORY.md#eng5b-gameplay-input-и-камера--2026-10-21).
+Далее ENG5c комната/HUD; PA8a/RTE и K3/K7/K8/VRAM/final alpha прежние.
+
+Предыдущая интеграционная работа — **2026-10-21, ENG5a Vulkan3D viewport**:
+UI production код не менялся. Новый scene proof использует существующие
+App/ViewportView/GPU transport/retained Skia copy: Debug/published Release,
+по5PNG с depth/material/camera, resize/suspend/resume и checkpoint Replace.
+Core/sync validation0/0; owned resources/handles/mappings/UI sessions0,
+imported ReadPixels0. Full solution Debug/Release1926/1926 в каждой конфигурации,
+UI615/Hosting79. Own full UI package/native/golden/RTE/hardware acceptance
+этим не повторён. [Evidence и scope](../engine/HISTORY.md#eng5a-первый-vulkan-3d-frame--2026-10-21).
+Отдельная engine native matrix12/12: scene и прежние GPU import/surface/viewport/
+ordinary Editor/repeat, Debug/published Release; UI production код прежний.
+Далее ENG5b input/camera; PA8a/RTE/K3/K7/K8/VRAM/final alpha сохраняются.
+
+Предыдущая интеграционная работа — **2026-10-21, ENG4e viewport baseline**:
+UI production код не менялся. Новый native consumer использует существующий
+ViewportView/Skia retained images:12CPU/GPU cases/36intervals,3pixel checks на case,
+zero owned resources после teardown. UI615/Hosting79 Debug/Release в full
+solution1907/1907. Отдельный6-case GPU correctness run с validation0/0 прошёл;
+собственный full UI package/native/golden/RTE/hardware acceptance этим не повторён.
+[Метрики/ограничения и Mithril fix](../engine/HISTORY.md#eng4e-cpugpu-baseline--2026-10-21).
+Далее общий ENG5; PA8a/RTE запланированы, K3/K7/K8/VRAM/final alpha открыты.
+
+Документационная работа — **2026-10-21, планирование оформления UI**: в
+[PA8a](PLAN.md#pa8a-дефолтный-стиль-контролов-и-оформление-окна--2026-10-21)
+сохранены минималистичный цветной стиль с прямыми углами, тема/состояния контролов,
+бордер и заголовок borderless-окна, кнопки minimize/maximize/restore/close и нижний
+resize grip. Состояние — запланировано; при выборе направления начать с PA8a0
+(визуальная спецификация и сверка API). На момент планирования приоритетом был ENG4e.
+Изменены только планы/статус; code/build/test/native проверки не выполнялись,
+прежние результаты ниже сохраняют свои даты и scope.
+Проверки документации:3файла,150локальных ссылок/86якорей, ошибок0;
+`git diff --check` для этих документов прошёл.
+
+Исправление структуры — **2026-10-21**:12Runtime files используют namespace
+TrueMoon.Alloy.Runtime. Imports, qualified references, package templates, README
+и manual consumer namespaces обновлены. UI615/615 и Hosting79/79 Debug/Release;
+UI source16/package8 native runs, дополнительная package matrix36+4cases прошли.
+Native engine CPU/GPU editor consumers проверены в Debug/published Release.
+Public namespace изменён; внешним consumers нужны новые using и пересборка.
+K3/K7/K8/VRAM/final alpha остаются открытыми. [Команды, промежуточный отказ и границы](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
+
+Предыдущая работа над реализацией — **2026-10-20, ENG4d2 GPU GameEditor integration**. UI production
 APIs прежние; обычный ManualTests Editor View использует explicit GPU transport,
 retained Skia image и neutral first-present ticket. CPU mode/default сохранён.
 Start ждёт borrowed GL binding ready, availability использует neutral surface;
@@ -317,8 +371,8 @@ Alpha K1–K9 не объявляется завершённой. Требова
 
 Дополнительный [инфраструктурный backlog](PLAN.md#дополнительный-план-улучшения-инфраструктуры-alloy--2026-10-18)
 сохранён2026-10-18; **INF0–INF4/INF6/INF7 и минимальный INF5 выполнены в указанном scope**.
-Bounded инфраструктурная последовательность и ENG3 завершены; следующий общий шаг —
-**ENG4d: actual GPU viewport/presentation**; ENG4a/b/c проверены.
+Bounded инфраструктурная последовательность и ENG3/ENG4a–e завершены в указанном
+scope; ENG5a renderer и ENG5b input/camera проверены, следующий общий шаг — **ENG5c комната/HUD**.
 Full INF5 с window startup/Hosting queue/resource projection остаётся частичным;
 его расширение требует конкретного consumer. INF7 сопровождать на real assemblies
 и native/package consumers.
@@ -328,12 +382,16 @@ Full INF5 с window startup/Hosting queue/resource projection остаётся �
 [отдельный план](RICH_TEXT_EDITOR_PLAN.md) и начать с RTE0 — сверки текущих
 contracts и выбора ограниченного этапа. Эти задачи не добавлены в ENG1.
 
+Оформление контролов и окна запланировано отдельно в
+[PA8a](PLAN.md#pa8a-дефолтный-стиль-контролов-и-оформление-окна--2026-10-21).
+Начальный шаг при возвращении к этому направлению — PA8a0; реализация ещё не начата.
+
 **RichTextEditor/PA7a реализован и проверен2026-10-17** перед ENG1 по запросу
 пользователя; это ограниченное расширение, не закрытие PA7/beta.
 Ранее2026-10-15 пользователь выбрал ограниченный
 [ENG0 scope](../engine/PLAN.md#eng0-принятый-scope-первого-прототипа--2026-10-15)
 с открытыми UI рисками. Headless ENG1 реализован/проверен2026-10-17 в своём
-[engine scope](../engine/STATUS.md); ENG2 CPU viewport, ENG3 и ENG4a/b/c реализованы в bounded scope; актуальный общий шаг — ENG4e (см. engine STATUS).
+[engine scope](../engine/STATUS.md); ENG2 CPU viewport, ENG3/ENG4a–e и ENG5a/b выполнены в bounded scope; актуальный общий шаг — ENG5c (см. engine STATUS).
 В ENG1 повторена UI Debug suite563, новые UI native/package/golden runs не выполнялись.
 Остальные PA1–PA10 и массовая provider
 migration этим решением не начинаются; physical UI acceptance требуют своего run.

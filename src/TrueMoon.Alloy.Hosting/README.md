@@ -85,7 +85,7 @@ read-only verifier не зависят от временных scripts в TestRe
 ## Запросы кадров и polling
 
 ```csharp
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 
 options.UseSkiaOpenGL().UseSilkWindow(w =>
@@ -287,7 +287,7 @@ Windows per-pixel adapter инициализирует DWM redirection surface �
 
 ```csharp
 using TrueMoon;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 
@@ -321,7 +321,7 @@ finally
 Подключение без App/DI также поддерживается:
 
 ```csharp
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 
@@ -582,7 +582,7 @@ replacement.Update();
 
 ```csharp
 using TrueMoon;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 
@@ -616,7 +616,7 @@ SilkWindowHost сохраняет native window/context после возвра�
 ```csharp
 using System.IO;
 using TrueMoon;
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 
@@ -647,7 +647,7 @@ data.SaveTo(output);
 Silk-хост создавать не требуется. Передайте уже существующие dispatchable Vulkan handles как `nint`:
 
 ```csharp
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 
 var host = new VulkanHostContext(

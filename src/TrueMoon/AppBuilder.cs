@@ -1,6 +1,6 @@
-﻿using TrueMoon.Configuration;
+using TrueMoon.Configuration;
 using TrueMoon.Diagnostics;
-using TrueMoon.Exceptions;
+using TrueMoon;
 using TrueMoon.Services;
 
 namespace TrueMoon;

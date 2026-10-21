@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Sessions;
 
 namespace TrueMoon.Aether.Frames;

@@ -1,5 +1,5 @@
 using Silk.NET.Vulkan;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Gpu;
 
 namespace EngineSessionProbe;

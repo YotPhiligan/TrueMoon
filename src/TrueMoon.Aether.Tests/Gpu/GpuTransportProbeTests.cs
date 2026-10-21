@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Gpu;
 using Xunit;
 

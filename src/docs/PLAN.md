@@ -23,7 +23,7 @@ UI alpha и контрольное beta приложение имеют собс
 | Enerit | TrueMoon.Enerit, Enerit.Generator: invocation client/server, IPC transports, serialization и generated service adapters | [Enerit](enerit/PLAN.md) |
 | Mithril | TrueMoon.Mithril: units, hosting/startup/lifetime/restart policies, процессные handles | [Mithril](mithril/PLAN.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: retained UI, renderer, окно/input, standalone и external HUD | [UI](alloy/PLAN.md) |
-| Aether / Engine | TrueMoon.Aether: engine contracts, session supervisor, control/native child bridge и CPU frame transport; Editor/Runtime и Game.Logic — отдельные consumers | [Aether](engine/PLAN.md) |
+| Aether / Engine | TrueMoon.Aether: engine contracts, session supervisor, control/native child bridge, CPU/GPU viewport, builds/checkpoint/Replace; Editor/Runtime и Game.Logic — отдельные consumers | [Aether](engine/PLAN.md) |
 
 Тестовые проекты, generators и ManualTests относятся к своим направлениям. Они не образуют отдельный продуктовый roadmap. Общие CI/build/package задачи остаются на уровне этого документа.
 
@@ -75,15 +75,38 @@ UI слои и generators не требуют фиктивного UseX; UI по
 [Таблица API, focused checks и границы](HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
 Пропущенных functional module entry points не найдено, очередность не меняется.
 
+### Размещение типов внутри проекта — 2026-10-21
+
+По запросу пользователя в [правилах репозитория](../AGENTS.md#пространства-имён-и-структура-файлов)
+закреплена группировка по предметному или функциональному назначению. Типы без
+такой категории размещаются в корне проекта; вид типа сам по себе не требует
+папок Contracts/Models/DTOs/Interfaces. Namespace следует фактическому пути.
+Решение касается структуры внутри проектов. TrueMoon.Contracts — общий пакет
+контрактов, базовых моделей и интерфейсов для взаимодействия модулей, включая
+App; module-specific типы остаются у своего владельца. Общая сборка не получает
+dependencies на реализации модулей или providers.
+
+Исходный аудит2026-10-21 выявил42namespace замечания и12файлов в5технических
+папках. По следующему запросу пользователя все замечания исправлены:44проекта,
+597C#files, namespace/category violations0. [Миграция public API и проверки](HISTORY.md#исправление-структуры-проектов--2026-10-21).
+Исходный реестр сохранён в HISTORY как датированный снимок, а не текущий backlog.
+Одна engine assembly, shared contracts и функциональный маршрут ENG4e сохранены.
+
 ## Порядок развития
 
-Актуальная точка2026-10-20: ENG1–ENG3/ENG4a/b/c реализованы в TrueMoon.Aether;
+Актуальная точка2026-10-21: ENG1–ENG3/ENG4a/b/c реализованы в TrueMoon.Aether;
 ENG4d borrowed texture/retained GPU copy bridge проверен в actual reference viewport.
 Lifetime, premul/stored sRGB/origin, scale/clipping и presentation проверены отдельно
 от imported readback. [Контракт](engine/PLAN.md#eng4d-gpu-viewport-bridge--2026-10-20).
 ENG4d2 подключил ordinary GameEditor GPU transport/selected DLL/Build/Replace/
-checkpoint/first-present pipeline, сохранив CPU default. Следующий code шаг —
-ENG4e: сопоставимый measured CPU/GPU baseline до 3D renderer.
+checkpoint/first-present pipeline, сохранив CPU default. ENG4e measured CPU/GPU
+baseline получен2026-10-21:12cases/36intervals; найден/исправлен Mithril graceful
+delivery race. [Метрики/ограничения](engine/HISTORY.md#eng4e-cpugpu-baseline--2026-10-21).
+ENG5a реализует первый depth-tested Vulkan3D primitive/camera/material в текущем
+App-owned GPU viewport; [контракт и проверки](engine/HISTORY.md#eng5a-первый-vulkan-3d-frame--2026-10-21).
+ENG5b input/camera routing выполнен; [контракт/evidence](engine/HISTORY.md#eng5b-gameplay-input-и-камера--2026-10-21).
+Следующий функциональный шаг — ENG5c: комната/interaction/HUD;
+CPU Debug budget breaches/reference staging allocations остаются measured backlog.
 ENG4 в целом и UI hardware/release readiness открыты.
 
 Уточнение2026-10-17: по запросу пользователя перед ENG1 реализован отдельный
@@ -107,9 +130,17 @@ UI плане. INF3 scheduling и INF4 async close выполнены следу
 INF6 explicit factories/compatibility и INF7 воспроизводимый integration runner
 для real assemblies/factory/package checks выполнены2026-10-19 в bounded scope.
 ENG3/ENG4a–c и ENG4d reference viewport bridge завершены в bounded scope;
-ENG4d2 ordinary GameEditor GPU transport выполнен; следующий общий code шаг — ENG4e baseline.
+ENG4d2 ordinary GameEditor GPU transport выполнен; ENG4e baseline получен,
+следующий общий функциональный шаг — ENG5.
 Полный INF5 и отложенный RTE backlog сохраняются отдельно; общая UI alpha этим
 не объявляется завершённой.
+
+По запросу пользователя2026-10-21 добавлен отдельный UI этап
+[PA8a: дефолтный стиль контролов и оформление окна](alloy/PLAN.md#pa8a-дефолтный-стиль-контролов-и-оформление-окна--2026-10-21):
+минималистичное цветное оформление с прямыми углами и готовые borderless window
+widgets. Подробные решения, подэтапы и acceptance ведутся только в UI плане.
+Это запланированное направление; engine очередность развивается отдельно,
+её текущая точка указана в начале этого раздела.
 
 | Этап | Результат | Зависимость и готовность |
 | --- | --- | --- |

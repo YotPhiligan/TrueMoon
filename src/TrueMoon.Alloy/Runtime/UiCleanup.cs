@@ -1,4 +1,4 @@
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Runs owner-thread cleanup completely while preserving the operation error ahead of cleanup errors.</summary>
 public static class UiCleanup

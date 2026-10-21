@@ -1,1 +1,3 @@
-﻿public class TestGenericClass<T> : ITestGenericClass<T>;
+namespace CobaltTest;
+
+public class TestGenericClass<T> : ITestGenericClass<T>;

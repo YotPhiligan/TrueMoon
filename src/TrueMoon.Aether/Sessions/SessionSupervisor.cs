@@ -1,7 +1,12 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
-using TrueMoon.Aether.Contracts;
+using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Frames;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Transport;
 using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Input;
 
 namespace TrueMoon.Aether.Sessions;
 
@@ -186,10 +191,21 @@ public sealed class SessionSupervisor : IAsyncDisposable
             throw new InvalidDataException("Stale/mismatched runtime reply identity, sequence, operation or PID.");
         if (kind is not (CommandKind.CaptureCheckpoint or CommandKind.RestoreCheckpoint) &&
             (reply.CheckpointOutcome != 0 || reply.Checkpoint is { Length: > 0 })) throw new InvalidDataException("Unexpected checkpoint response.");
+        if (kind != CommandKind.SetInput && reply.InputOutcome != 0) throw new InvalidDataException("Unexpected input response.");
     }
 
     public Task<ControlReply> GetStatusAsync(CancellationToken token = default) => CommandAsync(CommandKind.GetStatus, null, token);
     public Task<ControlReply> StepAsync(CancellationToken token = default) => CommandAsync(CommandKind.Step, null, token);
+    /// <summary>Stages transient input only on the exact expected runtime. Acceptance does not advance simulation.</summary>
+    /// <param name="identity">Captured runtime identity; never silently retargeted after replacement.</param>
+    /// <param name="input">Validated bounded input.</param><param name="token">Cancellation token.</param>
+    /// <returns>Accepted/Unsupported input outcome and the observed simulation tick.</returns>
+    public Task<ControlReply> SendInputAsync(SessionIdentity identity, GameInputState input, CancellationToken token = default)
+    {
+        ArgumentNullException.ThrowIfNull(identity); identity.Validate(); input.Validate();
+        return CommandAsync(CommandKind.SetInput, r =>
+        { r.InputCaptured = input.Captured; r.InputButtons = (int)input.Buttons; r.InputYaw = input.Yaw; r.InputPitch = input.Pitch; r.InputInteract = input.InteractPressed; }, token, expectedIdentity: identity);
+    }
     /// <summary>Captures a paused tick boundary. Only a validated explicit rejection leaves the session ready.</summary>
     public async Task<GameCheckpoint> CaptureCheckpointAsync(CancellationToken token = default)
     {
@@ -226,7 +242,7 @@ public sealed class SessionSupervisor : IAsyncDisposable
     internal Task<ControlReply> SurfaceForReplacementAsync(FrameSurface surface, ReplacementAdmission.Lease owner, CancellationToken token)
         => CommandAsync(CommandKind.ConfigureSurface, r => r.Surface = surface.ToWire(), token, surfaceGeneration: surface.Generation, owner: owner);
     private async Task<ControlReply> CommandAsync(CommandKind kind, Action<ControlRequest>? configure, CancellationToken token, bool? expectedPlaying = null,
-        ulong? surfaceGeneration = null, ReplacementAdmission.Lease? owner = null)
+        ulong? surfaceGeneration = null, ReplacementAdmission.Lease? owner = null, SessionIdentity? expectedIdentity = null)
     {
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
@@ -234,6 +250,7 @@ public sealed class SessionSupervisor : IAsyncDisposable
         {
             ObjectDisposedException.ThrowIf(_disposed || Volatile.Read(ref _closing) != 0, this);
             Admission.Check(owner);
+            if (expectedIdentity != null && Status.Identity != expectedIdentity) throw new OperationCanceledException("Input belongs to an earlier runtime.");
             if (fence != Volatile.Read(ref _fence)) throw new OperationCanceledException("Command superseded by Stop.");
             if (Status.State is not (SessionState.Paused or SessionState.Playing)) throw new InvalidOperationException("Runtime is not Ready.");
             if (kind == CommandKind.Step && Status.State != SessionState.Paused) throw new InvalidOperationException("Step requires Paused.");
@@ -244,6 +261,9 @@ public sealed class SessionSupervisor : IAsyncDisposable
             try
             {
                 var reply = await ExchangeAsync(kind, configure, deadline.Token).ConfigureAwait(false);
+                if (kind == CommandKind.SetInput && (reply.InputOutcome is not ((int)GameInputOutcome.Accepted) and not ((int)GameInputOutcome.Unsupported) ||
+                    reply.Phase != Status.State.ToString() || Status.State == SessionState.Paused && unchecked((ulong)reply.Tick) != Status.Tick))
+                    throw new InvalidDataException("Input acknowledgement changed paused tick/mode or omitted its outcome.");
                 if (kind == CommandKind.CaptureCheckpoint)
                 {
                     if (reply.Phase != "Paused" || reply.Revision != Status.SceneRevision || unchecked((ulong)reply.Tick) != Status.Tick)

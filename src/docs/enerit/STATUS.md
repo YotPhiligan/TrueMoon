@@ -1,5 +1,12 @@
 # Enerit: состояние и точка продолжения
 
+Исправление структуры — **2026-10-21**:6файлов из Extensions/Utils размещены
+в корне generator с namespace TrueMoon.Enerit.Generator. Benchmark явно задаёт
+RootNamespace=EneritBaseline; global types EneritPipesProbe получили namespace.
+Runtime126/generator114 Debug/Release, units package108cases и native engine
+control/checkpoint/replace consumers прошли. Protocol layout не менялся;
+performance baseline не повторялся. [Миграция и команды](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
+
 App entry-point audit — **2026-10-19**: UseInvocationService/ListenInvocationService
 и PipesServiceTransport регистрируют proxy/handler/factories и transport lifecycle.
 Focused Debug AppInvocationRegistrationTests:13passed/failed0/skipped0, Cobalt/DI,

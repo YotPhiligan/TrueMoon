@@ -1,6 +1,6 @@
 using System.Runtime.ExceptionServices;
 using TrueMoon.Dependencies;
-using TrueMoon.Exceptions;
+using TrueMoon;
 
 namespace TrueMoon;
 

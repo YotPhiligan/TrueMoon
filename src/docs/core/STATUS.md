@@ -1,5 +1,13 @@
 # Core: состояние и точка продолжения
 
+Исправление структуры — **2026-10-21**: AppCreationException находится в корне
+Contracts/namespace TrueMoon; UnitsConfigurationExtensions перенесён в Mithril.
+Роль общей сборки contracts/base models/interfaces сохранена, новых dependencies
+нет. Shared consumer RootNamespace заданы явно. Core107/107 Debug/Release;
+свежие package consumers80cases и3README examples прошли. Public namespace/assembly
+изменения требуют обновления using и пересборки внешних consumers.
+[Миграция и точные команды](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
+
 App entry-point audit — **2026-10-19**: bootstrap/configuration и UseDiagnostics
 подключены к App; Contracts/Core utilities не требуют отдельного UseX.
 Focused Debug AppTests/AppLifecycleTests/DiagnosticsTests:46passed/failed0/skipped0.

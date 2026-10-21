@@ -1,4 +1,3 @@
-
 namespace TrueMoon.Tests.Services;
 
 public class LifeTimeExecutor(IAppLifetime lifetime) : IStartable, IStoppable, IDisposable

@@ -1,4 +1,4 @@
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Mutually exclusive desktop window composition modes.</summary>
 public enum WindowTransparencyMode

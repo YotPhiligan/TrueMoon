@@ -11,7 +11,7 @@ Raster, OpenGL and Vulkan backends for Alloy/Argentis. Direct sessions do not re
 Reference `TrueMoon.Alloy.Rendering.Skia` at the selected local/release package version. Alloy and Argentis arrive transitively. The package's build/buildTransitive hooks copy the extended Skia DLL into `truemoon-native/win-x64/libSkiaSharp.dll` beside the consuming application for both build and publish. The same delivery works through `TrueMoon.Alloy.Hosting`; no manual copy is required.
 
 ```csharp
-using TrueMoon.Alloy;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 

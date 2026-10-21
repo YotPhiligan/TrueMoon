@@ -1,7 +1,9 @@
 # TrueMoon.Contracts
 
-Shared .NET 10 application, service registration, configuration and diagnostics
-interfaces. Alpha API. The package has no dependency on a DI provider, UI,
+Shared .NET 10 contracts, base models and interfaces for interoperability between
+TrueMoon modules. Application, service registration, configuration and diagnostics
+contracts are part of this shared API. Module-specific types belong to their
+respective modules. Alpha API. The package has no dependency on a DI provider, UI,
 graphics, IPC or process-host implementation.
 
 Contracts include `IApp`, `IAppLifetime`, `IStartable`, `IStoppable`,

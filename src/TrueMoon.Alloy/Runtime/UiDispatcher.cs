@@ -1,4 +1,4 @@
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 internal sealed class UiDispatcher(UiDispatchOptions options)
 {

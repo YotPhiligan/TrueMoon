@@ -1,6 +1,6 @@
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Framebuffer pixels and the number of pixels per logical UI unit.</summary>
 public readonly record struct UiViewport(int Width, int Height, float Scale = 1)

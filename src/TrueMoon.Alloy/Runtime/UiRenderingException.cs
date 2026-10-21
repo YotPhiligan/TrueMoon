@@ -1,4 +1,4 @@
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>The confirmed terminal rendering failure category.</summary>
 public enum UiRenderingFailureKind

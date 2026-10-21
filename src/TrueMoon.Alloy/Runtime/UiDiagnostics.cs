@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace TrueMoon.Alloy;
+namespace TrueMoon.Alloy.Runtime;
 
 /// <summary>Session lifetime, independent of whether a clean frame needs drawing.</summary>
 public enum UiSessionState
