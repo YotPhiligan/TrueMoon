@@ -2,6 +2,103 @@
 
 Архив создан2026-10-09 при разделении общего и модульных планов. [Текущий статус](STATUS.md), [UI план](PLAN.md), [общий статус](../STATUS.md).
 
+## UIA1 View, ViewModel и typed styles — 2026-10-22
+
+По запросу пользователя подход закреплён в AGENTS.md и реализован в Argentis и
+Aether.Editor. View<TData> сохраняет Fluent-композицию/явные bindings; данные могут
+быть обычными, observable ViewModel не требует framework base class. В Argentis
+добавлены IViewStyle<TView>, IViewStyleBuilder<TView>, ViewStyleRule и typed
+ViewStyleRole<TElement>. WithViewStyle применяет/заменяет/снимает view layer;
+WithRole возвращает конкретный тип элемента. Root/Part/Role правила задаются в
+порядке precedence; role token использует reference identity, не имя.
+
+Контракт: local/binding → direct element Style → view style → Theme → default.
+Каждый View, включая root вложенного View, является отдельной границей. Part
+выбирает живой элемент уже собранного текущего View, roles покрывают будущие
+элементы. Adopt/orphan обновляют cached layer. Новые правила не выполняются на
+обычных кадрах/Get; theme callbacks вычисляются перед commit. Configure/invalid
+part/value failures сохраняют предыдущий слой/Theme. Theme validation выполняется
+также до adoption, чтобы nested View не оставлял частично изменённое ownership.
+Builder/rules замораживаются после Configure. Observer failures сообщаются после
+commit. Style definitions не хранят View; per-view scope хранит выбранные части.
+
+EditorView теперь View<EditorViewModel> с Fluent tree и typed bindings. В
+EditorViewStyle вынесены padding/spacing/fonts/colors/heights/action tones;
+динамические property rows/entities используют роли. EditorViewModel реализует
+INotifyPropertyChanged и хранит presentation strings/selection/availability,
+guarded actions; controls/themes/container dependencies отсутствуют. Workspace
+и EditorCommands заимствуются. View снимает свои subscriptions, ViewModel отдельно
+принадлежит App. Constructor rollback освобождает unpublished tree, сохраняя
+original cause и aggregate original+cleanup failures. Root создаётся DI-injected
+IFactory на owner thread; Cobalt default и Microsoft DI tests сохранены.
+
+### Проверки
+
+Output root `TestResults/ViewStyles-20261022-214241`, pointer
+`TestResults/view-style-current.txt` (далее `$viewRun`), SDK10.0.402/net10.0/xUnit/
+VSTest/Windows x64. Добавлены28cases в19methods: view styles18, VM6, factory4;
+existing EditorScreen tests мигрированы без удаления проверок поведения.
+
+| Требование | Прямая проверка |
+| --- | --- |
+| Typed root/parts/roles, scope и порядок | ViewStyleTests.StyleScopes_TypedRootPartsAndRolesRespectBoundaryAndDefinitionOrder |
+| Приоритеты/replace/remove | StylePriority_LocalThenDirectThenViewThenThemeThenDefault; StyleReplacementAndRemoval_ClearAllOldSetters |
+| Dynamic controls/transfer | DynamicRoleControls_UseNearestStyleAndClearOldScopeAfterTransfer |
+| Theme без потери tree/focus/selection/scroll | ThemeChange_RecomputesWithoutRebuildingOrLosingFocusSelectionAndScroll |
+| Invalid selectors/Configure/values/whole-tree failures | InvalidParts_RejectBeforeChangingAnyEffectiveValues; ConfigureOrThemeFailure_RetainsPreviousStyleAndSettledFrame; FailedThemeChange_KeepsPreviousThemeAndEffectiveValuesAcrossTheTree |
+| Failed adoption/immutable builder | FailedAdoption_ValidatesNestedViewThemeBeforeTransferringOwnership; CompletedStyleDeclaration_CannotMutateRulesOrAddPartsAfterApplication |
+| Optional Data и explicit bindings | TypedView_OptionalDataSupportsFluentBindingsWithoutOwningTheModel |
+| Model notifications и commands | EditorViewModelTests.Selection_PublishesChangedNamesAndRowsWithoutRepeatedNotifications; Refresh_PublishesOnlyChangedStatusErrorAndAvailabilityValues; Execute_RejectsUnavailableCommandsAndForwardsAllowedActions |
+| Model stop/borrowed ownership/UI-independent API | StopAsync_ForwardsShutdownAndWaitsForAcceptedCommand; Dispose_DisconnectsModelAndPreservesBorrowedWorkspaceAndCommands; ModelSurface_HasNoControlThemeOrContainerDependencies |
+| View input/theme/borrowed disposal | EditorScreenTests.HierarchyInput_UpdatesReadOnlyGridAndThemePreservesSelectionAndFocus; Disposal_UnsubscribesModelAndKeepsBorrowedWorkspaceAndModelUsable |
+| DI constructor failure ownership | DiFactory_BorrowsSharedModelAndStyleWhileSessionsOwnIndependentViews; FactoryFailure_DisposesUnpublishedViewAndPreservesBorrowedModelAndErrors — Cobalt/Microsoft DI и original/cleanup causes |
+
+```powershell
+$viewRun = Get-Content TestResults/view-style-current.txt
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental -m "-bl:$viewRun/nonincremental-debug-{}.binlog"
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory "$viewRun/full-debug" "-bl:$viewRun/full-debug-{}.binlog"
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory "$viewRun/full-release" "-bl:$viewRun/full-release-{}.binlog"
+dotnet publish TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj --configuration Release --output "$viewRun/publish" "-bl:$viewRun/editor-publish-{}.binlog"
+```
+
+Все exit0. Nonincremental build0errors/1520warnings (не warning-free build).
+Full Debug/Release: **2321/2321/configuration**,10TRX/configuration, failed0/skipped0:
+Core117/Cobalt179/generator91/Enerit126/generator114/Mithril99/UI661/Hosting85/
+Aether800/Editor49. Адресные Debug UI661/Editor49 также прошли. Assertion-quality/
+gap review завершены; отмеченный constructor rollback gap закрыт regression.
+Editor tests получили reference на существующий DI adapter только для проверки
+обоих providers. UI owner-thread tests завершают UI work до asynchronous awaits.
+
+Итоговый Debug apphost запущен из isolated copy последнего build, published Release
+из publish: RunNative.ps1 с --smoke fresh directory --validation, VK_LAYER_PATH
+только в собственном process tree. Оба exit0; каждый8commands/3PNG/9material pixel
+checks/2reaped children, zero UI sessions/mappings/GPU resources/handles,
+ViewDisposed=true. Все4runtime reports: validation enabled,0errors/0warnings,
+devices/surfaces/slots created=released, LiveSlots/OpenHandles0. Dark PNG визуально
+сверен; native assertions проверяют реальный viewport/input/selection/Replace/close.
+Initial pre-final Debug smoke также прошёл, но не заменяет final evidence.
+
+Fresh package proof: ValidatePackages.ps1/VerifyPackages.ps1, output
+`view-style-packages`, версия`0.2.2.7-alpha.viewstyle.20261022165426831`.
+14fresh packages/20commands/4Cobalt+DI consumer runs, все exit0: Debug build и
+Release publish, только PackageReference, собственные feed/cache/source mapping.
+Actual typed styles/root/part/roles, theme values, future controls, style removal,
+retained data/tree/focus и caller-owned factory results выполнялись в каждом
+consumer; ViewStyleContract=true у4records. Повторены прежние Aether/viewport/
+GPU/lease ownership и actual Aether/Skia/native payload hashes/immutable packages.
+Packages не публиковались. README Argentis/Hosting/Editor обновлены до pack.
+
+VerifyFinal.ps1 повторно сверил tests/native/package JSON и source/docs paths,
+записал verification.json:6projects/177C#sources/170namespace declarations,
+нарушений0;25documents/674local links/missing targets0; git diff --check exit0.
+Это path-link/source namespace scope, не полный аудит historical anchors.
+Не повторялись полный Settings golden/RTE, physical
+DPI/input, device loss/VRAM/K3/K7/K8/final alpha, performance/allocations и все
+независимые module consumer matrices. Автоматический DataContext rebind отсутствует:
+смена публичного DataContext сама не перенаправляет explicit bindings; модель
+созданного EditorView стабильна. CSS cascade/templates/animations/mass migration
+и ENG7 property editing остаются за пределами UIA1.
+
 ## PA8a дефолтный квадратный стиль — 2026-10-22
 
 По запросу пользователя реализован согласованный PA8a0–2 и автоматический scope

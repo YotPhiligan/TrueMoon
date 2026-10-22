@@ -7,6 +7,7 @@ using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Transport;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Scenes;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
@@ -104,6 +105,79 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
         var path = Path.Combine(artifact.DirectoryPath, artifact.EntryAssembly); File.Move(path, path + ".retired");
         Assert.True(File.Exists(path + ".retired"));
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExplicitGameEntry_InjectsBorrowedRuntimeServiceIntoCallerOwnedSessions(bool di)
+    {
+        var artifact = await BuildFactoryGame("injected-" + di, "new Game(services!.Resolve<SceneResolutionService>())");
+        var app = App.Builder(c => { if (di) c.UseDI(); }).Setup(c => c.UseAether(o =>
+        {
+            o.HostContractId = o.GameBuildId = GameBuildFixture.Hash;
+            o.ReportDirectory = fixture.Root; o.RuntimeFactory = _ => new LoadedFactory();
+        })).Build();
+        var service = Assert.IsType<SceneResolutionService>(app.Services.Resolve<SceneResolutionService>());
+        var factory = app.Services.Resolve<IFactory<GameBuildLoader, GameBuildReference>>()!;
+        using var first = factory.Create(new(artifact.DirectoryPath, artifact.BuildId));
+        using var second = factory.Create(new(artifact.DirectoryPath, artifact.BuildId));
+        var firstSession = first.Session; var secondSession = second.Session;
+        Assert.NotSame(firstSession, secondSession);
+        Assert.Empty(firstSession.GetType().GetConstructors());
+        Assert.Same(service, firstSession.GetType().GetProperty("Services")!.GetValue(firstSession));
+        Assert.Same(service, secondSession.GetType().GetProperty("Services")!.GetValue(secondSession));
+        firstSession.Load(new("first", 19, [])); secondSession.Load(new("second", 23, []));
+        await app.DisposeAsync();
+        Assert.Equal(19, firstSession.Revision); Assert.Equal(23, secondSession.Revision);
+        firstSession.Tick(); secondSession.Tick();
+        Assert.Equal(1ul, firstSession.TickNumber); Assert.Equal(1ul, secondSession.TickNumber);
+        first.Dispose(); Assert.Equal(-1, firstSession.Revision); Assert.Equal(23, secondSession.Revision);
+        second.Dispose(); Assert.Equal(-1, secondSession.Revision);
+        Assert.Throws<ObjectDisposedException>(() => first.Session);
+        Assert.Throws<ObjectDisposedException>(() => second.Session);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExplicitGameEntry_PropagatesOriginalInjectedFailureAndReleasesPins(bool di)
+    {
+        var artifact = await BuildFactoryGame("throwing-" + di, "throw services!.Resolve<Exception>()");
+        var expected = new IOException("game entry creation failed");
+        await using var app = App.Builder(c => { if (di) c.UseDI(); }).Setup(c =>
+        {
+            c.Services(services => services.Singleton<Exception>(_ => expected));
+            c.UseAether(o => { o.HostContractId = o.GameBuildId = GameBuildFixture.Hash;
+                o.ReportDirectory = fixture.Root; o.RuntimeFactory = _ => new LoadedFactory(); });
+        }).Build();
+        var factory = app.Services.Resolve<IFactory<GameBuildLoader, GameBuildReference>>()!;
+        Assert.Same(expected, Assert.Throws<IOException>(() => factory.Create(new(artifact.DirectoryPath, artifact.BuildId))));
+        AssertArtifactPinsReleased(artifact);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SelectedGameFactoryFailure_ReleasesPinsAndPreservesTypeAndError(bool nullResult)
+    {
+        var artifact = fixture.CopyA(); var expected = new IOException("injected game factory failed");
+        Type? selected = null; var calls = 0;
+        var factory = new Factory<IGameSession, Type>(type =>
+        {
+            selected = type; calls++;
+            if (nullResult) return null!;
+            throw expected;
+        });
+        if (nullResult)
+            Assert.Equal("Game session factory returned null.", Assert.Throws<InvalidDataException>(() =>
+                GameBuildLoader.Load(new(artifact.DirectoryPath, artifact.BuildId), GameBuildFixture.Hash, factory)).Message);
+        else Assert.Same(expected, Assert.Throws<IOException>(() =>
+            GameBuildLoader.Load(new(artifact.DirectoryPath, artifact.BuildId), GameBuildFixture.Hash, factory)));
+        Assert.Equal(1, calls); Assert.Equal(artifact.EntryType, selected!.FullName);
+        Assert.Contains(typeof(IGameSession), selected.GetInterfaces());
+        Assert.NotSame(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(selected.Assembly));
+        AssertArtifactPinsReleased(artifact);
+    }
     [Fact]
     public async Task CompilerFailure_PreservesDiagnosticsDoesNotPublishAndCanRetry()
     {
@@ -193,6 +267,27 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
     [InlineData(0)] [InlineData(121)]
     public void Compiler_RejectsInvalidBudgetBeforeAnyProcess(int seconds)
         => Assert.Throws<ArgumentOutOfRangeException>(() => new GameBuildCompiler(GameBuildFixture.Hash, fixture.Root, TimeSpan.FromSeconds(seconds)));
+
+    private async Task<GameBuildArtifact> BuildFactoryGame(string directory, string creation)
+    {
+        var source = GameBuildFixture.Source("0xff123456u")
+            .Replace("=> new Game();", "=> " + creation + ";")
+            .Replace("public ulong TickNumber", """
+                private Game(TrueMoon.Aether.Scenes.SceneResolutionService services) { Services = services; }
+                public TrueMoon.Aether.Scenes.SceneResolutionService Services { get; }
+                public ulong TickNumber
+                """);
+        var project = fixture.Project(directory, "Game.Candidate", source);
+        await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, Path.Combine(fixture.Root, directory + "-artifacts"));
+        return await compiler.BuildAsync(new(project, "Game.Candidate.dll", "Game.Candidate.Game", 1));
+    }
+
+    private static void AssertArtifactPinsReleased(GameBuildArtifact artifact)
+    {
+        var path = Path.Combine(artifact.DirectoryPath, artifact.EntryAssembly);
+        File.Move(path, path + ".retired");
+        Assert.True(File.Exists(path + ".retired")); Assert.False(File.Exists(path));
+    }
 
     private static void AssertExited(int pid)
     {

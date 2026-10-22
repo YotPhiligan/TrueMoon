@@ -24,18 +24,24 @@ UI alpha и контрольное beta приложение имеют собс
 | Mithril | TrueMoon.Mithril: units, hosting/startup/lifetime/restart policies, процессные handles | [Mithril](mithril/PLAN.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: retained UI, renderer, окно/input, standalone и external HUD | [UI](alloy/PLAN.md) |
 | Aether / Engine | TrueMoon.Aether: engine contracts, session supervisor, control/native child bridge, CPU/GPU viewport, builds/checkpoint/Replace; Editor/Runtime и Game.Logic — отдельные consumers | [Aether](engine/PLAN.md) |
-| Editor application | TrueMoon.Editor: App composition, основной экран, scene selection/read-only inspector и runtime viewport; TrueMoon.Editor.Tests проверяет приложение | [ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
+| Aether Editor | Приложение модуля Aether: TrueMoon.Aether.Editor, App composition, основной экран, scene selection/read-only inspector и runtime viewport; TrueMoon.Aether.Editor.Tests проверяет приложение | [ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
 
 Тестовые проекты, generators и ManualTests относятся к своим направлениям. Они не образуют отдельный продуктовый roadmap. Общие CI/build/package задачи остаются на уровне этого документа.
 
 ## Архитектура и зависимости
+
+UI authoring2026-10-22: в AGENTS закреплены Fluent View<TData>, отдельные optional
+Data/ViewModel и typed IViewStyle<TView>. Реализация/критерии находятся в
+[UIA1](alloy/PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22), первый
+production consumer — Aether.Editor. DI/owner-thread factory route сохранён;
+новых межмодульных dependencies это изменение не добавляет.
 
 Фактические ProjectReference, сверенные2026-10-09:
 
 - Contracts и Core не имеют ProjectReference на другие модули. Общие app/service contracts находятся в Contracts, utilities — в Core.
 - TrueMoon использует Contracts, Cobalt и Cobalt.Generator. Cobalt использует Contracts и собственный generator; Extensions.DependencyInjection использует Contracts.
 - Enerit использует Contracts, Core и свой generator. Mithril использует Contracts/Core; прямой ProjectReference Mithril→Enerit отсутствует. Их взаимодействие проверяется как composition приложения.
-- Argentis не имеет ProjectReference; Alloy использует Argentis. Rendering.Skia и Platform.Silk используют Alloy. Alloy.Hosting связывает эти интеграции и общие Contracts/Core.
+- Argentis не имеет ProjectReference; Alloy использует Argentis и (с2026-10-22) provider-neutral Contracts для общего IFactory UI sessions. Rendering.Skia и Platform.Silk используют Alloy. Alloy.Hosting связывает эти интеграции и общие Contracts/Core.
 
 Уточнение2026-10-19 по запросу пользователя: engine implementation/contracts
 вынесены в одну assembly **TrueMoon.Aether**, с dependencies на Contracts/Enerit/
@@ -53,6 +59,12 @@ dependencies в engine assembly не добавлены.
 Изменение этой карты фиксировать здесь и в локальном плане, не выполняя перестройку зависимостей ради нового формата документации. Вопросы будущего API и версионирования протоколов решаются в соответствующих этапах.
 
 ### Подключение функциональных модулей через App — 2026-10-19
+
+Уточнение2026-10-22: унификация Aether/Editor и зависимостей реализована в
+[DI1–DI4](engine/PLAN.md#приведение-к-правилу-cobaltifactory). Contracts содержит
+IFactory<T,TArguments>/Factory adapters и non-owning AppServiceLifecycle; App
+использует default Cobalt. Enerit/Mithril/Alloy сохраняют независимость от DI provider.
+Полная миграция остальных consumers не назначена.
 
 По запросу пользователя закреплено в [правилах репозитория](../AGENTS.md):
 модули с сервисами/configuration/background work/owned resources предоставляют
@@ -93,6 +105,23 @@ dependencies на реализации модулей или providers.
 Исходный реестр сохранён в HISTORY как датированный снимок, а не текущий backlog.
 Одна engine assembly, shared contracts и функциональный маршрут ENG4e сохранены.
 
+### DI и фабрики систем и сервисов — 2026-10-22
+
+По решению пользователя в [правилах ИИ-агентов](../AGENTS.md#di-и-создание-систем-и-сервисов)
+закреплены Cobalt как штатный контейнер, constructor injection и внедрённые
+IFactory для динамического создания систем/сервисных объектов. Прямой Resolve
+сосредоточен в composition root и инфраструктуре фабрик/DI; ownership результата
+фабрики определяется явно. Общие contracts остаются независимыми от provider.
+[Подробные границы и применение](cobalt/PLAN.md#организация-систем-и-сервисов-через-di-и-ifactory--2026-10-22)
+ведутся в Cobalt плане. Это документационное решение; аудит и массовая миграция
+consumers не выполнены, порядок функциональных работ и готовность прежние.
+
+Следующий запрос пользователя2026-10-22 переименовал редактор в
+TrueMoon.Aether.Editor/Tests и назначил аудит Aether по этому правилу. Аудит
+показал частичное соответствие; ручной service graph и game activation требуют
+[DI1–DI4 в engine плане](engine/PLAN.md#переименование-редактора-и-аудит-di--2026-10-22).
+Переименование проверено managed/native runs; исправление DI ещё не выполнено.
+
 ## Порядок развития
 
 Актуальная точка2026-10-21: ENG1–ENG3/ENG4a/b/c реализованы в TrueMoon.Aether;
@@ -109,7 +138,7 @@ ENG5b input/camera routing выполнен; [контракт/evidence](engine/
 ARCH1a.1/2 immutable model, scene aggregate/resolver и projection реализованы2026-10-22;
 ENG5c.1 scene consumer/комната и ENG5c.2 reach/raycast/interaction реализованы;
 по запросу пользователя2026-10-22 после UI стиля реализован
-[ENG7a основной экран TrueMoon.Editor](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22).
+[ENG7a основной экран TrueMoon.Aether.Editor](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22).
 Это отдельное UI application, не новая engine assembly; authoring grid editing,
 tree/input/persistence продолжаются отдельно, property grid пока read-only.
 Gameplay продолжение — [ENG5c.3: collisions камеры](engine/PLAN.md#eng5c3-следующий-шаг-collisions-камеры), затем HUD;

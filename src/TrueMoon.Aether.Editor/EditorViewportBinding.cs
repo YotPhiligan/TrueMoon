@@ -7,10 +7,10 @@ using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 
-namespace TrueMoon.Editor;
+namespace TrueMoon.Aether.Editor;
 
 // Borrows the UI owner/context; Aether owns imports/transport, EditorViewport owns retained Skia copies.
-internal sealed class EditorViewportBinding
+internal sealed class EditorViewportBinding : IFactory<IGameViewportTransport, GpuResourceHost>
 {
     private HostedUiWindow _window = null!;
     private AetherHost _engine = null!;
@@ -22,7 +22,7 @@ internal sealed class EditorViewportBinding
     private int _owner;
     private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal Task Ready => _ready.Task;
-    internal IGameViewportTransport CreateTransport(GpuResourceHost gpu) => new GpuViewportTransport(gpu, () => (_adapter, _context), Consume, runtime => (NativeRuntimeLease)runtime);
+    public IGameViewportTransport Create(GpuResourceHost gpu) => new GpuViewportTransport(gpu, () => (_adapter, _context), Consume, runtime => (NativeRuntimeLease)runtime);
     internal void Observe(UiSession ui, EditorView view) { _ui = ui; _view = view; }
     private void Consume(GpuViewportImage source)
     {

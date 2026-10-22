@@ -1,13 +1,13 @@
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Editor;
+namespace TrueMoon.Aether.Editor;
 
 /// <summary>A clipped two-column inspector row; values are selectable read-only fields.</summary>
 public sealed class PropertyRow : ElementList
 {
     public PropertyRow(string name, string value)
     {
-        Height = 36; Add(new Text(name) { FontSize = 14, Padding = new Thickness(8) });
+        Add(Text.Plain(name).WithRole(EditorView.PropertyNameRole));
         Add(new TextBox { Value = value, IsReadOnly = true, MinWidth = 0, AccessibleName = name });
     }
     protected override Size MeasureCore(Size available, ITextLayoutService text)

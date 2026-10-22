@@ -1,13 +1,37 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя интеграция — **2026-10-22, ENG7a TrueMoon.Editor**: новое отдельное App
-application использует стандартную рамку, controls и GPU viewport bridge. Toolbar,
-scene selection/read-only inspector/theme/resize/close работают. UI production код
-не менялся. Full solution Debug/Release2253/configuration,10TRX/failed0/skipped0;
-UI643/Hosting79 и отдельные Editor39. Native Editor Debug/published Release: по3PNG,
-8commands,2reaped runtime children, validation0/0 и zero owned resources.
-[Приложение](../../TrueMoon.Editor/README.md), [evidence и границы](../engine/HISTORY.md#eng7a-основной-экран-редактора--2026-10-22).
-Собственный golden/package/physical UI acceptance на этом этапе не повторялся.
+Последняя работа — **2026-10-22, UIA1 View/Data/ViewModel и typed styles**.
+Правила AGENTS и Argentis API задают Fluent View<TData>, optional plain Data либо
+observable ViewModel и IViewStyle<TView>. Root/typed Part/typed Role scoped rules,
+приоритет local/binding→direct Style→view style→Theme→default, replace/remove и
+dynamic adopt/orphan реализованы. Nested View — отдельная граница, включая root.
+Theme callbacks валидируются до commit/adoption; failures сохраняют прежнее
+состояние. Обычные кадры не выполняют style callbacks. Editor использует отдельные
+EditorViewModel/EditorViewStyle, explicit bindings и DI factory с constructor rollback.
+[Контракт](PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22),
+[точные tests/commands/native/packages](HISTORY.md#uia1-view-viewmodel-и-typed-styles--2026-10-22).
+
+Current UI661/661, Hosting85/85 и Editor49/49 Debug/Release; full solution2321/2321
+в каждой конфигурации,10TRX/failed0/skipped0.28новых cases и assertion/gap review.
+Nonincremental Debug build0errors/1520warnings, Release publish exit0. Native
+Debug/published Release: каждый8commands/3PNG/2reaped children, validation0/0,
+zero owned resources. Fresh14packages/20commands/4Cobalt+DI consumers прошли,
+включая фактический typed style API без source references. Packages не публиковались.
+Проверки не повторяют полный golden/RTE/performance/hardware/K3/K7/K8/VRAM/final
+alpha. DataContext остаётся explicit: его смена не перенаправляет ранее заданные
+bindings автоматически. CSS cascade/templates/animations/mass migration отдельно.
+
+Предыдущая интеграция — **2026-10-22, общие фабрики Aether/Hosting**:
+Alloy зависит от provider-neutral Contracts; IUiSessionFactory реализует общий
+typed factory через UiSessionCreation и сохраняет прежний Create. Hosting добавляет
+UsePresentationFactory<TView>, borrowed session facade и non-owning lifecycle
+adapters. Owner-thread/root/window/session ownership сохранены. Architectural
+allowlist разрешает только Argentis/Contracts/BCL; concrete DI/renderers запрещены.
+UI643/643 и Hosting85/85 Debug/Release (+6bridge cases), отдельные Aether.Editor39/39
+и full solution2293/configuration прошли. Release publish и native Editor evidence
+приведены в [истории](../engine/HISTORY.md#единые-фабрики-и-di--2026-10-22).
+Golden/physical UI acceptance, K3/K7/K8/VRAM/final alpha этим не повторены.
+
 Предыдущая работа — **2026-10-22, PA8a дефолтный квадратный стиль**:
 Dark/Light semantic tokens, action tones, inside border/focus/error/read-only
 markers, square icons/slider/check/progress и интерактивный scrollbar реализованы.

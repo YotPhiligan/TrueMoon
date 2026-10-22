@@ -1,5 +1,21 @@
 # Cobalt / DI: состояние и точка продолжения
 
+Интеграция потребителя — **2026-10-22, Aether DI1–DI4**:
+owned service graphs Editor/runtime переведены на injected factories и App-local
+registrations; общие Factory/typed IFactory/lifecycle adapters находятся в Contracts.
+Cobalt runtime/generator/adapter API прежние. Полный solution повторил runtime179/
+generator91 Debug/Release; новые consumer cases проверяют оба providers, ownership,
+factory overrides и failure cleanup. Собственные allocation/performance baseline
+не повторялись. [Решения](../engine/PLAN.md#приведение-к-правилу-cobaltifactory),
+[команды/ограничения](../engine/HISTORY.md#единые-фабрики-и-di--2026-10-22).
+
+Документационное решение — **2026-10-22**: в AGENTS.md закреплены Cobalt,
+constructor injection и внедрённые IFactory для создания систем/сервисов;
+границы Resolve, lifetime и ownership описаны в [плане](PLAN.md#организация-систем-и-сервисов-через-di-и-ifactory--2026-10-22).
+Runtime/API не менялись, аудит consumers и build/tests/package/performance
+не запускались. Применять при следующих адресных изменениях; массовая UseDI
+migration, новые factory APIs/scopes и изменение очередности не назначены.
+
 Исправление структуры — **2026-10-21**:9global-type files ManualTests/CobaltTest
 получили namespace CobaltTest; entry point и generated references согласованы.
 Runtime179/generator91 Debug/Release прошли в общем solution run. Свежие Core

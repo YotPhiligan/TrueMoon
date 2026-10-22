@@ -11,6 +11,10 @@ public static class SceneResolver
     /// <returns>Complete immutable authoring snapshot.</returns>
     /// <exception cref="SceneResolutionException">A catalog, parent graph or entity is invalid.</exception>
     public static ResolvedSceneSnapshot Resolve(SceneDocument scene, CancellationToken cancellationToken = default)
+        => Resolve(scene, new Factory<EntityResolver, SceneDocument>(document =>
+            new(document.Definitions.OrderBy(d => d.Id.Value), document.Schemas.OrderBy(s => s.TypeId.Value).ThenBy(s => s.Version))), cancellationToken);
+
+    internal static ResolvedSceneSnapshot Resolve(SceneDocument scene, IFactory<EntityResolver, SceneDocument> resolvers, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(scene); cancellationToken.ThrowIfCancellationRequested();
         var path = ScenePath(scene.Id);
@@ -25,7 +29,7 @@ public static class SceneResolver
         EntityResolver resolver;
         try
         {
-            resolver = new(scene.Definitions.OrderBy(d => d.Id.Value), scene.Schemas.OrderBy(s => s.TypeId.Value).ThenBy(s => s.Version));
+            resolver = resolvers.Create(scene);
         }
         catch (EntityResolutionException error)
         {

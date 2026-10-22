@@ -7,8 +7,9 @@ using TrueMoon.Aether.Scenes;
 namespace Game.Logic;
 
 /// <summary>ENG5b game: input-driven camera and rising-edge demo interaction, independent of the reference pattern session.</summary>
-public sealed class CameraGame : ICheckpointGameSession, IRenderGameSession, IInputGameSession
+public sealed class CameraGame : ICheckpointGameSession, IRenderGameSession, IInputGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
 {
+    public static global::TrueMoon.Aether.Sessions.IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new CameraGame();
     private SceneSnapshot? _scene;
     private CameraTransform _camera = new(0, 1, 3, 0, 0, 0);
     private bool _interaction, _interactive, _disposed;

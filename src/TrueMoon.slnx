@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/Aether/">
+    <Project Path="TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj" />
+    <Project Path="TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj" />
     <Project Path="TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj" />
     <Project Path="TrueMoon.Aether/TrueMoon.Aether.csproj" />
   </Folder>
@@ -20,10 +22,6 @@
     <Project Path="TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" />
     <Project Path="TrueMoon.Cobalt.Tests\TrueMoon.Cobalt.Tests.csproj" />
     <Project Path="TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
-  </Folder>
-  <Folder Name="/Editor/">
-    <Project Path="TrueMoon.Editor.Tests/TrueMoon.Editor.Tests.csproj" />
-    <Project Path="TrueMoon.Editor/TrueMoon.Editor.csproj" />
   </Folder>
   <Folder Name="/Engine/">
     <Project Path="ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />

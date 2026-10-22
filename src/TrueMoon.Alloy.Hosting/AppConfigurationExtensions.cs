@@ -42,14 +42,22 @@ public static class AppConfigurationExtensions
         RegisterWindow(app, options, rootFactory);
         return app;
     }
+    /// <summary>Registers a window whose owner-thread root is created by an injected factory.</summary>
+    /// <typeparam name="TView">Root element.</typeparam>
+    /// <param name="app">Application configuration.</param><param name="configure">Window and renderer settings.</param>
+    /// <returns>The application configuration.</returns>
+    public static IAppConfigurationContext UsePresentationFactory<TView>(this IAppConfigurationContext app,
+        Action<AlloyOptions> configure) where TView : Element
+        => UsePresentation(app, resolver => resolver.Resolve<IFactory<TView>>().Create()
+            ?? throw new InvalidOperationException("Root factory returned null."), configure);
     private static void RegisterWindow(IAppConfigurationContext app, AlloyOptions options, Func<IServiceResolver, Element> rootFactory)
     {
         app.Services(services => services.Singleton<HostedUiDispatcher>(_ => new HostedUiDispatcher())
             .Singleton<HostedUiWindow>(resolver => new HostedUiWindow(options.Window!, resolver.Resolve<IUiSessionFactory>(),
                 () => rootFactory(resolver), () => resolver.Resolve<IAppLifetime>().Cancel(), resolver.Resolve<HostedUiDispatcher>()))
-            .Singleton<IStartable>(resolver => resolver.Resolve<HostedUiWindow>())
-            .Singleton<IStoppable>(resolver => resolver.Resolve<HostedUiWindow>())
-            .Singleton<IStoppable>(resolver => resolver.Resolve<HostedUiDispatcher>()));
+            .Singleton<IStartable>(resolver => new AppServiceLifecycle(startable: resolver.Resolve<HostedUiWindow>()))
+            .Singleton<IStoppable>(resolver => new AppServiceLifecycle(stoppable: resolver.Resolve<HostedUiWindow>()))
+            .Singleton<IStoppable>(resolver => new AppServiceLifecycle(stoppable: resolver.Resolve<HostedUiDispatcher>())));
     }
     private static AlloyOptions Configure(Action<AlloyOptions> configure, bool presentation)
     {
@@ -65,8 +73,13 @@ public static class AppConfigurationExtensions
             if (services.Exist<IUiSessionFactory>()) throw new InvalidOperationException("Alloy is already registered in this App.");
             services.Singleton<IRenderBackend>(_ => options.BackendFactory!())
                 .Singleton<HostedUiSessionFactory>(resolver => new HostedUiSessionFactory(resolver.Resolve<IRenderBackend>()))
-                .Singleton<IUiSessionFactory>(resolver => resolver.Resolve<HostedUiSessionFactory>());
-            if (options.ExternalHost) services.Singleton<IStoppable>(resolver => resolver.Resolve<HostedUiSessionFactory>());
+                .Singleton<IUiSessionFactory>(resolver => new BorrowedUiSessionFactory(resolver.Resolve<HostedUiSessionFactory>()));
+            services.Singleton<IFactory<UiSession, UiSessionCreation>>(resolver =>
+            {
+                var factory = (IFactory<UiSession, UiSessionCreation>)resolver.Resolve<IUiSessionFactory>();
+                return new Factory<UiSession, UiSessionCreation>(factory.Create);
+            });
+            if (options.ExternalHost) services.Singleton<IStoppable>(resolver => new AppServiceLifecycle(stoppable: resolver.Resolve<HostedUiSessionFactory>()));
         });
     }
 }

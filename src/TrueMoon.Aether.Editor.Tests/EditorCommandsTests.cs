@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Xunit;
 
-namespace TrueMoon.Editor.Tests;
+namespace TrueMoon.Aether.Editor.Tests;
 
 public sealed class EditorCommandsTests
 {

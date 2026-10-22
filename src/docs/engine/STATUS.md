@@ -1,21 +1,44 @@
 # TrueMoon.Aether: состояние движка и редактора
 
-Последняя работа — **2026-10-22, ENG7a основной экран TrueMoon.Editor**.
-Отдельное application подключает Aether и Alloy через App: стандартная borderless
-рамка, toolbar, список объектов, живой3D viewport, read-only property grid и status.
-GameEditor commands/owned separate runtime process/checkpoint Replace работают;
-UI selection/theme/resize сохраняются, close ждёт Stop/drain. Engine implementation
-и протоколы не менялись; RuntimeProtocol/rendering/process ownership остаются в Aether.
-[Запуск и границы](../../TrueMoon.Editor/README.md), [scope](PLAN.md#eng7a-основной-экран-редактора--2026-10-22),
-[evidence](HISTORY.md#eng7a-основной-экран-редактора--2026-10-22).
+Последняя работа — **2026-10-22, UIA1 в Aether.Editor**:
+Fluent EditorView<EditorViewModel>, отдельный IViewStyle<EditorView>, observable
+UI-independent model и DI factory реализованы. Theme/selection/commands сохраняют
+поведение; model/style заимствуются View, App owns model; failed constructor
+освобождает unpublished tree. Общий контракт принадлежит
+[UIA1](../alloy/PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22),
+[evidence](../alloy/HISTORY.md#uia1-view-viewmodel-и-typed-styles--2026-10-22).
+Текущий полный Debug/Release2321/2321, Aether800/Editor49, failed0/skipped0.
+Nonincremental Debug build0errors, Release publish/native оба exit0: каждый
+8commands/3PNG/2reaped children, Vulkan0errors/0warnings и zero owned resources.
+Fresh14packages/4consumers повторили UI styles и bounded engine ownership.
+Engine protocol/lifecycle production код этим шагом не менялся. Inspector editing,
+World/edit/MCP, ENG5c.3 collisions/HUD и performance scope остаются прежними.
 
-Текущий run:39новых Editor xUnit cases; nonincremental Debug build и full solution
-**2253/2253 Debug и2253/2253 Release**,10TRX/configuration, failed/skipped0;
-Aether780/UI643/Hosting79/Editor39. Новый Editor native Debug/published Release:
-по8actual UI commands,3PNG/9material pixel checks,2reaped child processes,
-Vulkan core/sync0errors/0warnings включая teardown, zero UI/mappings/GPU resources/
-handles. Предыдущая engine native60-case matrix не повторялась.
+Предыдущая работа — **2026-10-22, единые фабрики и DI**.
+DI1–DI4 реализованы в Aether/Aether.Editor и затронутых dependency paths:
+injected child factories/explicit AetherHost dependencies, App-registered Editor
+graph, UseAetherRuntime/AetherRuntimeHost, typed runtime/viewport/pipe/receiver/game
+factories и SceneResolutionService. Общие factory/lifecycle contracts остаются
+provider-neutral. Borrowed aliases не создают дополнительных disposable owners.
+[Архитектура/миграция](PLAN.md#приведение-к-правилу-cobaltifactory),
+[команды и область проверок](HISTORY.md#единые-фабрики-и-di--2026-10-22).
 
+Полный solution **2293/2293 Debug и2293/2293 Release**, по10TRX, failed0/skipped0.
+Core117/Cobalt179/generator91/Enerit126/generator114/Mithril99/UI643/Hosting85/
+Aether800/Aether.Editor39. Добавлены40cases: typed/legacy factories, ownership,
+aggregate rollback, game entry DI/errors/pins, runtime registration, handles и UI
+bridge. Microsoft DI compatibility повторена вместе с default Cobalt.
+Release publish прошёл. Итоговые Debug/published Release native runs: каждый
+8commands/3PNG/2reaped children, validation0/0 и zero owned resources. Fresh14packages/
+20commands/4Cobalt+DI consumer runs прошли; payload hashes и isolated restore
+проверены.257sources/235namespace declarations и413local links без замечаний.
+Итоговый native/package evidence — в HISTORY.
+
+Игровой entry теперь реализует IGameSessionEntry static Create(IServiceResolver?),
+передавая runtime dependencies в constructor. Activator fallback отсутствует.
+External game projects добавляют non-copying TrueMoonContractsPath reference;
+HostId/ContractHash включают Aether и Contracts. Host/runtime/game и старые
+artifacts необходимо пересобрать вместе. Wire versions прежние.
 Inspector пока показывает authoring SceneSnapshot и read-only во всех режимах;
 список плоский, render surface960x540, camera/gameplay input в новом приложении
 ещё не подключены. Это ограниченный ENG7a, не полный toolset/World edit/MCP.
@@ -72,6 +95,10 @@ Frames.TransportError; успешный Stop retry не воспроизводи
   final alpha прежние; driver/Windows settings/K7 workaround policy не менялись.
 
 ## Следующий конкретный шаг
+
+DI1–DI4 реализованы и проверены в указанном scope. Следующая функциональная
+работа — ENG7 inspector editing или ENG5c.3 collisions по выбранному направлению.
+Массовая миграция остальных независимых consumers фреймворка не назначена.
 
 ENG7a основной экран реализован в ограниченном scope. Следующий локальный UI
 этап — authoring inspector editing через согласованные SceneDocument/Entity API,

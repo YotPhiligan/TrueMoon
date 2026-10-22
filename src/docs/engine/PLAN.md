@@ -106,6 +106,80 @@ Headless/viewport examples используют UseAether; manual SupervisorShut
 отдельны от прежнего audit. На дату App integration следующим был ENG3a;
 его [контракт2026-10-20](#eng3a-принятые-контракты--2026-10-20) реализован следующим шагом.
 
+## Переименование редактора и аудит DI — 2026-10-22
+
+Следующее изменение2026-10-22: UI authoring Aether.Editor использует
+EditorViewModel/EditorViewStyle и Fluent View<EditorViewModel> через DI.
+Детальный контракт/этапы принадлежат [UIA1 в UI плане](../alloy/PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22),
+[проверки](../alloy/HISTORY.md#uia1-view-viewmodel-и-typed-styles--2026-10-22).
+Это реорганизация UI state/appearance, без реализации inspector editing/runtime
+World или изменения engine protocol; DI1–DI4 ownership сохраняется.
+
+По запросу пользователя редактор относится к Aether: application и tests
+переименованы в `TrueMoon.Aether.Editor` и `TrueMoon.Aether.Editor.Tests`, включая
+каталоги/csproj/default assembly names/namespaces/ProjectReference/CLI. В точном
+`TrueMoon.slnx` оба находятся в `/Aether/`; отдельная группа `/Editor/` устранена.
+Это отдельные application/test assemblies модуля, не перенос UI в engine library.
+Исторические названия ниже и в HISTORY описывают предыдущие runs; текущие ссылки
+и инструкции запуска используют новые имена.
+
+Проверка по [правилу Cobalt/IFactory](../../AGENTS.md#di-и-создание-систем-и-сервисов)
+охватывает production Aether и обе process branches редактора. Результат:
+**частичное соответствие; полное соответствие не подтверждено**. App использует
+default Cobalt, но это ещё не означает, что весь внутренний граф получен через DI.
+
+| Область | Подтверждённое замечание |
+| --- | --- |
+| [AetherHost](../../TrueMoon.Aether/Hosting/AetherHost.cs) | Конструктор создаёт Supervisor/FrameSession/GameBuildCompiler/GameReplacement/GameEditor, property initializer создаёт GpuResourceHost. Зависимости агрегата собираются вручную вне DI registration factory или внедрённой IFactory |
+| [Runtime factory](../../TrueMoon.Aether/Sessions/SessionSupervisor.cs), [options](../../TrueMoon.Aether/Hosting/AetherOptions.cs) | IRuntimeFactory внедрён, но не реализует общий IFactory; viewport выбран через Func. Factory-based ownership уже есть, унификация контрактов ещё не выполнена |
+| [GameBuildLoader](../../TrueMoon.Aether/Runtime/GameBuildLoader.cs) | Игровой IGameSession создаётся через Activator.CreateInstance; DI/IFactory не участвует, constructor dependencies игрового entry point получить нельзя |
+| [Editor composition](../../TrueMoon.Aether.Editor/EditorApplication.cs), [runtime composition](../../TrueMoon.Aether.Editor/RuntimeEntryPoint.cs) | Workspace/binding/runtime factory/commands и runtime protocol/frame producer/IPC services создаются вручную. Часть зависимостей захватывается callbacks вместо регистрации в графе App |
+| [SceneResolver](../../TrueMoon.Aether/Scenes/SceneResolver.cs) | Статический pipeline вручную создаёт EntityResolver с каталогами. Для применения правила к authoring services нужна явная factory/service boundary; документы и immutable results остаются данными |
+
+Правильные существующие границы сохраняются: UseAether snapshots options,
+registers App-local runtime factory/host/lifecycle, запрещает duplicate registration.
+Прямой IServiceResolver/Resolve найден в registration callbacks и process bootstrap,
+не в прикладных системах; EntityResolver.Resolve не является DI resolution.
+GameEditor/GameReplacement получают зависимости через конструкторы. Disposable
+children host не зарегистрированы как отдельные owned aliases; low-level GPU/pipe/
+mapping resources внутри владельцев и обычные DTO/UI elements сами по себе
+не считаются нарушением. GPU resource creation требует проверки роли фабрики,
+а не механической регистрации каждого handle в контейнере.
+
+### Приведение к правилу Cobalt/IFactory
+
+Исходный аудит выше сохранён как снимок до исправлений. По следующему запросу
+пользователя2026-10-22 реализованы DI1–DI4; подробности и текущие проверки —
+в [HISTORY](HISTORY.md#единые-фабрики-и-di--2026-10-22).
+
+| ID | Исходный объём и критерий, выполненный2026-10-22 |
+| --- | --- |
+| DI1 | Выделить создание owned service aggregate AetherHost в DI/внедрённые IFactory и передавать зависимости явно. Сохранить единственного владельца, stop/drain order, startup rollback, cleanup retry и отсутствие disposable aliases на обоих providers |
+| DI2 | Подключить Editor workspace/binding/commands и runtime services через App-local registrations/factories. View/window/session остаются у своих владельцев, UI context живёт до drain; root factory получает dependencies из DI |
+| DI3 | Определить IFactory-based activation для runtime leases, viewport strategies и выбранного game entry, с типизированными launch arguments. Учесть artifact pin/AssemblyLoadContext, generated registration и constructor dependencies без нового reflection fallback или удержания child instances в Editor |
+| DI4 | Выделить authoring resolver service/factory без DI для каждого immutable document/component/value; проверить source/package graphs, constructor injection, borrowed/owned disposal, startup failure и native Editor/child cleanup |
+
+Результат2026-10-22: DI1 — AetherHostFactory и injected child factories с reverse
+rollback; DI2 — App registrations Editor и UseAetherRuntime/AetherRuntimeHost;
+DI3 — общий IFactory<T,TArguments>, typed runtime/viewport/pipe/loader factories и
+IGameSessionEntry static Create с runtime DI; DI4 — SceneResolutionService с
+document-specific resolver factory, а также factory bridges Enerit/Mithril/Alloy.
+Borrowed service/lifecycle facades предотвращают duplicate provider disposal.
+
+Shared factory/lifecycle contracts находятся в provider-neutral Contracts.
+Фабрики переопределяются предварительной registration; factory products принадлежат
+вызывающему aggregate, container ownership возникает только при явной регистрации.
+Данные, UI elements и native handles создаются владельцами. Независимые low-level
+adapters сохраняются; массовая миграция остальных consumers не назначена.
+
+Миграция игровых проектов: реализовать IGameSessionEntry static Create, добавить
+non-copying TrueMoonContractsPath reference наряду с AetherContractPath. HostId и
+ContractHash учитывают обе общие assembly; старые artifacts пересобираются вместе
+с host/runtime. Game instances принадлежат loader, зависимости App заимствуются.
+Constructor reflection fallback отсутствует, collectible types не кешируются.
+Wire versions и функциональный ENG5c/ENG7 backlog сохраняются.
+[Текущие проверки переименования и исходные locations](HISTORY.md#переименование-редактора-и-аудит-di--2026-10-22).
+
 ## ENG0: принятый scope первого прототипа — 2026-10-15
 
 По решению пользователя после UI package/Hosting quality начинается ENG0.
@@ -1605,7 +1679,7 @@ physical DPI/loss/K7/final alpha остаются отдельными зада�
 редактора; ENG5c.3 collisions и остальные engine задачи сохраняют свою точку
 продолжения. Это ограниченный UI этап ENG7, не завершение всего toolset.
 
-- Отдельное application `TrueMoon.Editor` (net10.0, IsPackable=false), default
+- Отдельное application `TrueMoon.Aether.Editor` (net10.0, IsPackable=false), default
   custom WindowFrame Alloy: borderless, minimize/maximize/restore/close/grip,
   Dark/Light и стандартные квадратные controls.
 - Toolbar сверху: Build/Start/Play/Pause/Step/Stop/Replace/Cancel через существующий
@@ -1628,10 +1702,10 @@ physical DPI/loss/K7/final alpha остаются отдельными зада�
   поставляется позже. Render surface960x540 вписывается в resizable central region.
 
 Acceptance: exact command availability/selection/properties/layout/readonly/theme/
-ownership tests в TrueMoon.Editor.Tests (xUnit); Debug/published Release native
+ownership tests в TrueMoon.Aether.Editor.Tests (xUnit); Debug/published Release native
 smoke с3D pixels, distinct runtime PID, actual UI commands/checkpoint Replace,
 selection/resize/theme/close/drain и zero resources; Vulkan validation включая
 runtime teardown. Проверки DPI1/1.5/2 logical layout отделять от physical monitors.
 Первый screen не закрывает K3/K7/K8/VRAM/final alpha, full World edit/MCP и
-performance. [Приложение/запуск/границы](../../TrueMoon.Editor/README.md),
+performance. [Приложение/запуск/границы](../../TrueMoon.Aether.Editor/README.md),
 [фактические результаты](HISTORY.md#eng7a-основной-экран-редактора--2026-10-22).

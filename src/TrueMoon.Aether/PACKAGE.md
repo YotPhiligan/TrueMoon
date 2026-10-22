@@ -70,6 +70,14 @@ The default native runtime factory expects an executable with the matching child
 role/bootstrap handler, as provided by the repository's EngineSessionProbe example.
 The registration extension does not generate an executable entry point.
 
+Services are created through injected `IFactory<T>` / `IFactory<T, TArguments>`.
+Register overrides before `UseAether`; the host owns its factory-created children.
+In a selected-build child App, call `UseAetherRuntime(launch, parentId)` after
+`UseAether`, then run the resolved `Runtime.AetherRuntimeHost`. It owns the game,
+parent listener, workers and IPC server, borrowing App/GPU services.
+Inject `Scenes.SceneResolutionService` for authoring resolution through its
+document-specific `EntityResolver` factory.
+
 The single Aether assembly contains `TrueMoon.Aether` and
 `TrueMoon.Aether.Sessions`, `.Scenes`, `.Transport`, `.Frames`, `.Checkpoints`, `.Rendering` and `.Input`.
 It uses TrueMoon Contracts/Enerit/Mithril without
@@ -107,12 +115,19 @@ Game logic remains a separate assembly. CPU frame transport and session control
 and explicit immutable game-build compilation/selection are implemented. Use
 `host.Builds.BuildAsync(new GameBuildRequest(project, entryDll, entryType, revision))`
 to compile a trusted local net10.0 library consuming the non-copying MSBuild
-`AetherContractPath` reference. Then explicitly stop/reap the old session and start
+`AetherContractPath` and `TrueMoonContractsPath` references. Then explicitly stop/reap the old session and start
 the returned artifact through Supervisor or Frames. Build completion never replaces
 the active game. Host options include BuildDirectory and BuildTimeout (maximum120s).
 Private managed dependencies must be declared; native game dependencies are outside
 this scope. Build failures retain diagnostics; App shutdown cancels/reaps the owned
-compiler. Only the child loads game code, with a shared Aether contract assembly.
+compiler. Only the child loads game code, sharing Aether and TrueMoon.Contracts.
+The selected type implements `IGameSession` and `Runtime.IGameSessionEntry`, whose
+static `Create(IServiceResolver? services)` explicitly creates a caller-owned game
+with constructor dependencies from runtime DI. No constructor reflection fallback
+is used. Standalone loading passes null or accepts an explicit game factory.
+Migration2026-10-22: add this entry factory and the Contracts reference; rebuild
+host/runtime/game together. HostId and artifact ContractHash cover both shared
+assemblies, so previous artifacts must be rebuilt.
 
 Optional `ICheckpointGameSession` supplies a minimal v1 tick/camera/interaction
 snapshot. Pause then call `Supervisor.CaptureCheckpointAsync`; preflight

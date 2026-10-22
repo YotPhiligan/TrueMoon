@@ -14,6 +14,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     private bool _disposing;
     internal bool ChangingTree { get; set; }
     private Style? _style;
+    private Style? _viewStyle;
+    private HashSet<object>? _viewStyleRoles;
     private Thickness _margin;
     private float _minWidth, _minHeight, _maxWidth = float.PositiveInfinity, _maxHeight = float.PositiveInfinity;
     private LayoutAlignment _horizontal = LayoutAlignment.Stretch, _vertical = LayoutAlignment.Stretch;
@@ -107,11 +109,12 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <summary>Raised after the entire subtree attachment changes. Queue follow-up tree mutations through the host.</summary>
     public event Action? AttachmentChanged;
 
-    /// <summary>Gets a local, styled, themed, or default value in that order.</summary>
+    /// <summary>Gets a local, element-styled, view-styled, themed, or default value in that order.</summary>
     public T Get<T>(UiProperty<T> property)
     {
         if (_values.TryGetValue(property, out var value)) return (T)value!;
         if (_style != null && _style.TryGet(property, out T styled)) return styled;
+        if (_viewStyle != null && _viewStyle.TryGet(property, out T viewStyled)) return viewStyled;
         if (ReferenceEquals(property, UiProperties.Background)) return (T)(object)ThemeBackground;
         if (ReferenceEquals(property, UiProperties.Foreground)) return (T)(object)ThemeForeground;
         if (ReferenceEquals(property, UiProperties.CornerRadius)) return (T)(object)Theme.CornerRadius;
@@ -246,6 +249,10 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         for (Element? node = this; node != null; node = node.Parent)
             if (ReferenceEquals(node, child)) throw new InvalidOperationException("An element cannot contain itself or an ancestor.");
         child.ValidateUnattachedSubtree();
+        // Validate theme-derived rules before a container commits ownership changes.
+        var inheritedOwner = FindStyleOwner();
+        foreach (var node in child.Subtree())
+            (node.FindStyleOwner() ?? inheritedOwner)?.ViewStyleScope?.Resolve(node, Theme);
     }
     private void ValidateUnattachedSubtree()
     {
@@ -263,6 +270,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     internal void Orphan(Element child, TreeChange change)
     {
         child.Parent = null;
+        child.RefreshViewStyles();
         child.DetachCore(change);
         change.Schedule(() => Invalidate(Invalidation.Tree | Invalidation.Layout));
     }
@@ -346,8 +354,30 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     private void ApplyThemeCore(Theme theme, TreeChange change)
     {
         var nodes = Subtree().ToArray();
-        foreach (var node in nodes) node.Theme = theme;
+        var styles = nodes.Select(node => node.FindStyleOwner()?.ViewStyleScope?.Resolve(node, theme)).ToArray();
+        for (var i = 0; i < nodes.Length; i++) { nodes[i].Theme = theme; nodes[i]._viewStyle = styles[i]; }
         foreach (var node in nodes.Reverse()) change.Schedule(() => node.Invalidate(Invalidation.Layout));
+    }
+    internal View? FindStyleOwner()
+    {
+        for (Element? node = this; node != null; node = node.Parent)
+            if (node is View view) return view;
+        return null;
+    }
+    internal void SetViewStyleValue(Style? style) => _viewStyle = style;
+    internal bool HasViewStyleRole(object role) => _viewStyleRoles?.Contains(role) == true;
+    internal void AddViewStyleRole(object role)
+    {
+        VerifyAccess();
+        if (!(_viewStyleRoles ??= []).Add(role)) return;
+        _viewStyle = FindStyleOwner()?.ViewStyleScope?.Resolve(this, Theme);
+        Invalidate(Invalidation.Layout | Invalidation.Render);
+    }
+    private void RefreshViewStyles()
+    {
+        var nodes = Subtree().ToArray();
+        var styles = nodes.Select(node => node.FindStyleOwner()?.ViewStyleScope?.Resolve(node, node.Theme)).ToArray();
+        for (var i = 0; i < nodes.Length; i++) nodes[i]._viewStyle = styles[i];
     }
     /// <summary>Measures the subtree within a logical size constraint.</summary>
     public void Measure(Size available, ITextLayoutService text)

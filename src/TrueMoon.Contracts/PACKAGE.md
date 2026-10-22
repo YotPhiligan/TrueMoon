@@ -18,6 +18,14 @@ provider packages define their service/disposal semantics. Referencing this
 contracts package alone does not supply application bootstrap or generated
 construction code.
 
+`IFactory<T>` and `IFactory<T, TArguments>` describe explicit service creation.
+`Factory<T>` / `Factory<T, TArguments>` adapt registered construction callbacks.
+Products belong to their caller unless explicitly registered as owned services;
+the adapters do not dispose products. Typed factories require arguments and
+validate calls through the legacy generic factory interface.
+`AppServiceLifecycle` forwards start/stop without owning or disposing its target,
+so lifecycle aliases do not duplicate provider ownership.
+
 Use matching versions of TrueMoon modules. The current package consumer checks
 net10.0 with the .NET 10 SDK on Windows; other configurations and a full framework
 release are not implied by that bounded result.

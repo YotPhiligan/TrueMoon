@@ -18,7 +18,7 @@ namespace TrueMoon.Aether.Hosting;
 public static class BuildIdentity
 {
     public static string HostId => Manifest([Assembly.GetEntryAssembly()!.Location, typeof(SessionIdentity).Assembly.Location,
-        typeof(PipesInvocationClient<>).Assembly.Location, typeof(ChildProcessUnitHandle).Assembly.Location]);
+        typeof(IFactory<>).Assembly.Location, typeof(PipesInvocationClient<>).Assembly.Location, typeof(ChildProcessUnitHandle).Assembly.Location]);
     // Editor fingerprints bytes without loading Game.Logic into its CLR. Only the
     // child creates/resolves game types; a future replacement must not pin a DLL in Editor.
     public static string GameId => Manifest([Path.Combine(AppContext.BaseDirectory, "Game.Logic.dll")]);
@@ -29,13 +29,20 @@ public static class BuildIdentity
 
 public sealed class NativeRuntimeFactory : IRuntimeFactory
 {
+    private readonly IFactory<PipesInvocationClient<IEngineControl>, string> _clients;
+    /// <summary>Creates the standalone native factory with default diagnostics.</summary>
+    public NativeRuntimeFactory() : this(new PipesInvocationClientFactory<IEngineControl>(new AetherEvents<PipesInvocationClient<IEngineControl>>())) { }
+    /// <summary>Creates leases with an injected endpoint client factory. The lease owns each client.</summary>
+    /// <param name="clients">Borrowed client factory.</param>
+    public NativeRuntimeFactory(IFactory<PipesInvocationClient<IEngineControl>, string> clients)
+    { ArgumentNullException.ThrowIfNull(clients); _clients = clients; }
     /// <summary>Process-local bootstrap passed to an owned game runtime.</summary>
     public const string BootstrapKey = "TM_ENGINE_BOOTSTRAP";
     public ConcurrentQueue<UnitProcessDiagnostic> Diagnostics { get; } = new();
     public List<NativeRuntimeLease> Leases { get; } = [];
     public IRuntimeLease Create(SessionLaunch launch)
     {
-        var lease = new NativeRuntimeLease(launch, item => { if (item is UnitProcessDiagnostic value) Diagnostics.Enqueue(value); });
+        var lease = new NativeRuntimeLease(launch, item => { if (item is UnitProcessDiagnostic value) Diagnostics.Enqueue(value); }, _clients);
         Leases.Add(lease); return lease;
     }
 }
@@ -61,7 +68,8 @@ internal sealed class EngineChild(SessionLaunch launch, Action<object> observe) 
     }
 }
 
-public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> observe) : IRuntimeLease
+public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> observe,
+    IFactory<PipesInvocationClient<IEngineControl>, string>? clients = null) : IRuntimeLease
 {
     /// <summary>Identity fixed when this owned process lease was created.</summary>
     public SessionIdentity Identity => launch.Identity;
@@ -89,7 +97,7 @@ public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> obse
         ProcessId = process.Id;
         // Drain immediately so even a verbose/failing runtime cannot block on a full pipe.
         _stdout = process.StandardOutput.ReadToEndAsync(); _stderr = process.StandardError.ReadToEndAsync();
-        _client = new(new AetherEvents<PipesInvocationClient<IEngineControl>>(), launch.Endpoint);
+        _client = (clients ?? new PipesInvocationClientFactory<IEngineControl>(new AetherEvents<PipesInvocationClient<IEngineControl>>())).Create(launch.Endpoint);
         _service = new EngineControlGeneratedImplementation(new BoundedControlClient(_client));
     }
     public async Task<ControlReply> SendAsync(ControlRequest request, CancellationToken token)

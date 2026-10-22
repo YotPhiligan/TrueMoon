@@ -23,7 +23,7 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 | Mithril | TrueMoon.Mithril: units, process handles и startup/hosting/lifetime/restart policies | [План](mithril/PLAN.md), [статус](mithril/STATUS.md), [история](mithril/HISTORY.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: controls/tree/bindings/layout/input, UI sessions, rendering, окна и HUD | [План](alloy/PLAN.md), [статус](alloy/STATUS.md), [стандартный стиль](alloy/DEFAULT_STYLE.md), [история](alloy/HISTORY.md) |
 | Aether / Engine | TrueMoon.Aether: engine contracts, sessions/control, owned child bridge и CPU frame transport; отдельные example/game/test consumers | [README](../TrueMoon.Aether/README.md), [план](engine/PLAN.md), [статус](engine/STATUS.md), [история](engine/HISTORY.md) |
-| Editor application | TrueMoon.Editor: standalone основной экран со стандартной рамкой, центральным viewport, inspector и App-owned game commands | [Запуск](../TrueMoon.Editor/README.md), [ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
+| Aether Editor | Приложение модуля Aether, TrueMoon.Aether.Editor: standalone основной экран со стандартной рамкой, центральным viewport, inspector и App-owned game commands | [Запуск](../TrueMoon.Aether.Editor/README.md), [ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
 
 Contracts и Core — разные независимые сборки. DI provider выбирается на builder boundary; IPC, units и UI подключаются по потребности приложения. UI runtime не требует App или конкретного backend; Hosting является опциональной интеграцией. Подробная карта фактических зависимостей хранится в общем плане.
 

@@ -9,8 +9,9 @@ using TrueMoon.Aether.Scenes;
 namespace Game.Logic;
 
 /// <summary>Authored room with fixed-tick camera, occluded reach queries and checkpointed per-object switches.</summary>
-public sealed class RoomGame : ICheckpointGameSession, IRenderGameSession, IInputGameSession
+public sealed class RoomGame : ICheckpointGameSession, IRenderGameSession, IInputGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
 {
+    public static global::TrueMoon.Aether.Sessions.IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new RoomGame();
     private SceneSnapshot? _scene;
     private ImmutableArray<InteractionBody> _bodies = [];
     private GameObjectStates _objects = GameObjectStates.Empty;

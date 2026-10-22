@@ -1,5 +1,13 @@
 # Enerit: состояние и точка продолжения
 
+Текущая реализация — **2026-10-22, factory integration Aether**:
+типизированные pipes client/server factories реализуют IFactory; App invocation
+products резолвятся через общий factory adapter. Wire/generator semantics прежние.
+Runtime126/126 и generator114/114 Debug/Release в полном solution; реальные
+App+units+pipes scenarios на Cobalt/DI повторены после migration probes на explicit
+owner registration. [Команды/ограничения](../engine/HISTORY.md#единые-фабрики-и-di--2026-10-22).
+ENE5 performance/MMF и полная собственная package matrix не повторялись.
+
 Исправление структуры — **2026-10-21**:6файлов из Extensions/Utils размещены
 в корне generator с namespace TrueMoon.Enerit.Generator. Benchmark явно задаёт
 RootNamespace=EneritBaseline; global types EneritPipesProbe получили namespace.

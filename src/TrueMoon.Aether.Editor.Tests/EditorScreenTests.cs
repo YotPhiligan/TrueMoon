@@ -1,10 +1,11 @@
+using System.Collections.Concurrent;
 using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
 
-namespace TrueMoon.Editor.Tests;
+namespace TrueMoon.Aether.Editor.Tests;
 
 public sealed class EditorScreenTests
 {
@@ -38,7 +39,7 @@ public sealed class EditorScreenTests
     [Fact]
     public void HierarchyInput_UpdatesReadOnlyGridAndThemePreservesSelectionAndFocus()
     {
-        var workspace = new EditorWorkspace(EditorScene.Demo()); var view = new EditorView(workspace);
+        var workspace = new EditorWorkspace(EditorScene.Demo()); using var model = Model(workspace); var view = new EditorView(model, new EditorViewStyle());
         using var ui = Create(view); ui.Update(); Click(ui, view.Entities["green-cube"]); ui.Update();
         Assert.Equal("green-cube", workspace.SelectedId); Assert.Equal(ControlTone.Accent, view.Entities["green-cube"].Tone); Assert.Equal(ControlTone.Neutral, view.Entities["red-cube"].Tone);
         var field = Descendants(view).OfType<TextBox>().Single(x => x.AccessibleName == "X"); Assert.True(field.IsReadOnly); Assert.Equal("1.5", field.Value);
@@ -48,31 +49,39 @@ public sealed class EditorScreenTests
         workspace.Select("switch"); ui.Update(); Assert.True(field.IsDisposed); Assert.Equal("0", Descendants(view).OfType<TextBox>().Single(x => x.AccessibleName == "X").Value);
     }
     [Fact]
-    public void CommandButtons_DispatchOnlyEnabledCommandsAndBusyStateCanStopOrCancel()
+    public async Task CommandButtons_DispatchOnlyEnabledCommandsAndBusyStateCanStopOrCancel()
     {
-        var workspace = new EditorWorkspace(EditorScene.Demo()); var view = new EditorView(workspace); var commands = new List<EditorCommand>(); view.CommandRequested += commands.Add;
-        using var ui = Create(view); ui.Update(); Click(ui, view.Commands[EditorCommand.Start]); Assert.Empty(commands);
-        Click(ui, view.Commands[EditorCommand.Build]); Assert.Equal(new[] { EditorCommand.Build }, commands);
-        workspace.Refresh(new(SessionState.Paused), EditorWorkspaceTests.Status(GameEditorOperation.Build, false)); view.Refresh(); ui.Update();
-        Assert.False(view.Commands[EditorCommand.Play].IsEnabled); Assert.True(view.Commands[EditorCommand.Cancel].IsEnabled);
-        Click(ui, view.Commands[EditorCommand.Play]); Click(ui, view.Commands[EditorCommand.Stop]); Click(ui, view.Commands[EditorCommand.Cancel]);
-        Assert.Equal(new[] { EditorCommand.Build, EditorCommand.Stop, EditorCommand.Cancel }, commands);
+        var workspace = new EditorWorkspace(EditorScene.Demo()); var commands = new ConcurrentQueue<EditorCommand>();
+        var dispatcher = new EditorCommands((command, _) => { commands.Enqueue(command); return Task.CompletedTask; }, CancellationToken.None);
+        using var model = new EditorViewModel(workspace, dispatcher); var view = new EditorView(model, new EditorViewStyle());
+        using (var ui = Create(view))
+        {
+            ui.Update(); Click(ui, view.Commands[EditorCommand.Start]); Assert.Empty(commands);
+            Click(ui, view.Commands[EditorCommand.Build]);
+            model.Refresh(new(SessionState.Paused), EditorWorkspaceTests.Status(GameEditorOperation.Build, false)); ui.Update();
+            Assert.False(view.Commands[EditorCommand.Play].IsEnabled); Assert.True(view.Commands[EditorCommand.Cancel].IsEnabled);
+            Click(ui, view.Commands[EditorCommand.Play]); Click(ui, view.Commands[EditorCommand.Stop]); Click(ui, view.Commands[EditorCommand.Cancel]);
+        }
+        await dispatcher.Pending;
+        Assert.Equal(new[] { EditorCommand.Build, EditorCommand.Stop, EditorCommand.Cancel }.Order(), commands.Order());
     }
     [Theory] [InlineData(1f)] [InlineData(1.5f)] [InlineData(2f)]
     public void DefaultFrame_LayoutUsesLogicalUnitsAndSettlesWithoutRedraw(float scale)
     {
-        var view = new EditorView(new(EditorScene.Demo())); var frame = WindowFrame.CreateDefault("Editor", view); frame.ApplyWindowState(new(true, false, true, true, true));
+        using var model = Model(); var view = new EditorView(model, new EditorViewStyle()); var frame = WindowFrame.CreateDefault("Editor", view); frame.ApplyWindowState(new(true, false, true, true, true));
         using var ui = new UiSession(frame, new Surface(), new UiViewport((int)(1280 * scale), (int)(800 * scale), scale));
         ui.Update(); Assert.Equal(new Rect(1, 37, 1278, 746), view.Bounds); Assert.Equal(0, view.CornerRadius); Assert.True(view.Canvas.Bounds.Width > 700); Assert.True(view.Canvas.Bounds.Height > 600);
         Assert.True(view.Canvas.Bounds.Y > view.Bounds.Y + 52); Assert.True(view.Canvas.Bounds.X + view.Canvas.Bounds.Width < view.Bounds.X + view.Bounds.Width - 280);
-        view.Refresh(); Assert.False(ui.Update());
+        model.Refresh(new(SessionState.Stopped), EditorWorkspaceTests.Status(GameEditorOperation.Idle, false)); Assert.False(ui.Update());
     }
     [Fact]
-    public void Disposal_UnsubscribesWorkspaceAndKeepsTheSharedSceneUsable()
+    public void Disposal_UnsubscribesModelAndKeepsBorrowedWorkspaceAndModelUsable()
     {
-        var workspace = new EditorWorkspace(EditorScene.Demo()); var view = new EditorView(workspace); using (var ui = Create(view)) ui.Update();
-        Assert.True(view.IsDisposed); workspace.Select("green-cube"); Assert.Equal("green-cube", workspace.SelectedId); Assert.Equal(7, workspace.EntityCount);
+        var workspace = new EditorWorkspace(EditorScene.Demo()); using var model = Model(workspace); var view = new EditorView(model, new EditorViewStyle()); using (var ui = Create(view)) ui.Update();
+        Assert.True(view.IsDisposed); model.Select("green-cube"); Assert.Equal("green-cube", workspace.SelectedId); Assert.Equal("green-cube", model.SelectedId); Assert.Equal(7, workspace.EntityCount);
     }
+    private static EditorViewModel Model(EditorWorkspace? workspace = null) => new(workspace ?? new(EditorScene.Demo()),
+        new EditorCommands((_, _) => Task.CompletedTask, CancellationToken.None));
     private static UiSession Create(Element root) => new(root, new Surface(), new UiViewport(1280, 800));
     private static IEnumerable<Element> Descendants(Element root) { foreach (var child in root.Children) { yield return child; foreach (var next in Descendants(child)) yield return next; } }
     private static void Click(UiSession ui, Button button) { var b = button.Bounds; ui.HandleInput(new(InputKind.PointerDown, b.X + 8, b.Y + 8)); ui.HandleInput(new(InputKind.PointerUp, b.X + 8, b.Y + 8)); }

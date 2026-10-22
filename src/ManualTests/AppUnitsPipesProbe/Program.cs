@@ -80,7 +80,7 @@ namespace AppUnitsPipesProbe
             await app.Services.Resolve<IAppLifetimeHandler>()!.WaitAsync(timeout.Token);
             await app.StopAsync();
             CheckServer(app.Services.Resolve<IInvocationServer<IProbeService>>()!);
-            var listener = app.Services.ResolveAll<IStartable>().OfType<UnitParentProcessEventsHandler>().Single();
+            var listener = app.Services.Resolve<UnitParentProcessEventsHandler>()!;
             await listener.Completion.WaitAsync(TimeSpan.FromSeconds(5));
             return 0;
         }
@@ -98,7 +98,7 @@ namespace AppUnitsPipesProbe
             {
                 if (scenario == "startup-failure") await controller.SpawnUnitAsync(1); else await app.StartAsync();
                 var first = await ObserveAsync(directory, 1, observers, identities);
-                var unitHandle = (TrueMoon.Mithril.Units.ProcessUnitHandle)((System.Collections.IDictionary)typeof(UnitsController).GetField("_unitHandles", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(controller)!)[1]!;
+                var unitHandle = (TrueMoon.Mithril.Units.ProcessUnitHandle)((System.Collections.IDictionary)typeof(UnitsController).GetField("_unitHandles", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(app.Services.Resolve<UnitsController>())!)[1]!;
                 await ConnectAsync(client);
                 checks += await InspectAsync(service, first, 42, "Луна 🌙");
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
@@ -166,7 +166,7 @@ namespace AppUnitsPipesProbe
                     await CheckStoppedAsync(directory, identities[^1]);
                 }
                 if (scenario is "restart" or "budget") Check(!File.Exists(Path.Combine(directory, "ready-3.json")), "Budget exceeded.");
-                CheckClient(client); CheckController(controller);
+                CheckClient(client); CheckController(app.Services.Resolve<UnitsController>()!);
                 Check(unitHandle.Completion.IsCompletedSuccessfully && unitHandle.RestartCount == (scenario is "restart" or "budget" ? 1 : 0), "Restart monitor/budget mismatch.");
                 await app.StopAsync();
                 var appCancelled = app.Services.Resolve<IAppLifetime>()!.AppCancellationToken.IsCancellationRequested;
@@ -238,7 +238,7 @@ namespace AppUnitsPipesProbe
             Check(((Task)type.GetField("_listener", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(server)!).IsCompletedSuccessfully, "Server listener incomplete.");
             Check(((TmTaskScheduler)type.GetField("_taskScheduler", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(server)!).Completion.IsCompletedSuccessfully, "Server worker incomplete.");
         }
-        private static void CheckController(IUnitsController controller)
+        private static void CheckController(UnitsController controller)
             => Check(((System.Collections.IDictionary)typeof(UnitsController).GetField("_unitHandles", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(controller)!).Count == 0, "Controller retains handles.");
         private static async Task<object> ParentExitAsync(string provider, string directory)
         {

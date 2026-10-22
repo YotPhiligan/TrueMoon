@@ -1,6 +1,12 @@
 # Рабочий уровень модулей перед движком
 
-Editor ENG7a **2026-10-22**: новый desktop TrueMoon.Editor/Tests,39новых xUnit cases,
+Переименование/DI аудит **2026-10-22**: TrueMoon.Aether.Editor/Tests относятся к
+Aether; full solution повторил2253/2253 Debug/Release,10TRX/configuration,
+failed/skipped0, native Debug/published Release повторены. DI соответствие частичное,
+[замечания DI1–DI4](engine/PLAN.md#переименование-редактора-и-аудит-di--2026-10-22)
+открыты. [Текущие команды/границы](engine/HISTORY.md#переименование-редактора-и-аудит-di--2026-10-22).
+
+Предыдущий Editor ENG7a **2026-10-22**: новый desktop TrueMoon.Aether.Editor/Tests,39новых xUnit cases,
 full Debug/Release2253/configuration,10TRX/failed0/skipped0. Native UI proof
 Debug/published Release: по8commands/3PNG/9material pixels/2reaped runtime children,
 core/sync validation0/0 и zero owned resources. Published WinExe apphost проверен

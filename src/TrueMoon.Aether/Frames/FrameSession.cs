@@ -9,7 +9,8 @@ namespace TrueMoon.Aether.Frames;
 public sealed record FrameDisplay(FrameSurface Surface, FrameReceiver Receiver, TaskCompletionSource Presented);
 
 // Owns local readers/mappings; SessionSupervisor continues to own the child/RPC.
-public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTransport? transport = null) : IAsyncDisposable
+public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTransport? transport = null,
+    IFactory<FrameReceiver, (SharedFrameRing Ring, ulong After, LatencySamples Samples)>? receivers = null) : IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<SharedFrameRing> _rings = [];
@@ -191,7 +192,8 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
         foreach (var old in _rings.Where(r => r != ring).ToArray()) { old.Dispose(); _rings.Remove(old); }
         if (ring == null)
         { Volatile.Write(ref _presentation, new(new(identity, surface.Generation, width, height, ViewportTransportKind.Cpu))); return; }
-        var receiver = new FrameReceiver(ring, Math.Max(Volatile.Read(ref _lastPresented), _lastReceived), _copies);
+        var receiver = (receivers ?? new Factory<FrameReceiver, (SharedFrameRing Ring, ulong After, LatencySamples Samples)>(args =>
+            new(args.Ring, args.After, args.Samples))).Create((ring, Math.Max(Volatile.Read(ref _lastPresented), _lastReceived), _copies));
         var display = new FrameDisplay(surface, receiver, new(TaskCreationOptions.RunContinuationsAsynchronously));
         Volatile.Write(ref _presentation, new(new(identity, surface.Generation, width, height, ViewportTransportKind.Cpu), display.Presented));
         Volatile.Write(ref _display, display);

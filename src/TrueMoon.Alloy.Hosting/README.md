@@ -339,6 +339,61 @@ using var ui = UiSession.Create(hudRoot, new SkiaVulkanRenderBackend(),
 
 ## Создание контролов и Fluent-разметка
 
+### View, Data/ViewModel и отдельный стиль
+
+Штатная схема2026-10-22: View<TData> описывает Fluent-композицию и bindings,
+Data/ViewModel хранит данные/состояние/команды, IViewStyle<TView> объявляет оформление.
+Обычным данным не нужен базовый ViewModel; для существующих Bind/BindTwoWay источник
+реализует INotifyPropertyChanged. ViewModel не использует controls/theme/renderer.
+
+```csharp
+public sealed record ProfileData(string Caption);
+
+public sealed class ProfileView : View<ProfileData>
+{
+    public static ViewStyleRole<Button> ActionRole { get; } = new("Action");
+    public Text Header { get; }
+
+    public ProfileView(ProfileData data, IViewStyle<ProfileView> style)
+    {
+        Header = Text.Plain(data.Caption);
+        Content(data, _ => VStack.Create().WithChildren(
+            Header, Button.Simple("Действие").WithRole(ActionRole)));
+        this.WithViewStyle(style);
+    }
+}
+
+public sealed class ProfileViewStyle : IViewStyle<ProfileView>
+{
+    public void Configure(IViewStyleBuilder<ProfileView> styles)
+    {
+        styles.Root().Padding(12).Background(theme => theme.Surface);
+        styles.Part(view => view.Header).FontSize(18);
+        styles.Role(ProfileView.ActionRole).Tone(ControlTone.Accent);
+    }
+}
+```
+
+Регистрируйте model/style и IFactory<ProfileView> через App DI; вызывайте
+UsePresentationFactory<ProfileView>. Factory создаёт root на owner thread, окно
+владеет успешно созданным View; model/style заимствуются. При failed construction
+фабрика/constructor освобождает созданные элементы и подписки, сохраняя original
+failure и отдельно cleanup errors. Сложный пример — TrueMoon.Aether.Editor.
+
+WithViewStyle заменяет/снимает слой, не пересоздавая дерево. Приоритет:
+local/binding → direct Style → view style → Theme → default. Последнее совпавшее
+правило выигрывает внутри view layer. Theme-dependent Set выполняется до commit;
+validation failure сохраняет прежние значения, observer failure приходит после
+commit. Builders/rules заморожены после Configure; style services не хранят View.
+Part выбирает стабильный живой элемент в пределах текущего View; вложенный View
+включая его root является отдельной границей. Для новых строк/контролов используйте
+typed Role; токены совпадают по reference identity, а не по диагностическому имени.
+Adopt/orphan обновляют style layer. Focus/selection/scroll/data bindings сохраняются
+при смене стиля/темы. Автоматический DataContext rebind/глобальный CSS cascade сюда
+не входят.
+
+### Конструкторы и фабрики контролов
+
 Согласованный подход (2026-10-06): публичные конструкторы и статические фабрики на типах контролов — два равноправных способа создания элементов. Их можно смешивать в одной разметке. Фабрики упрощают запись; последующие Fluent-вызовы настраивают тот же конкретный элемент.
 
 Фабрики доступны с 2026-10-07. Пример использует существующие `Button.Simple(...)`, `Text.Plain(...)`, `new` и Fluent helpers. Методы Apply/Cancel принадлежат пользовательскому View.

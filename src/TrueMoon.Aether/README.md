@@ -256,6 +256,26 @@ Start после этого запрещён. Ошибки cleanup наблюд�
 явный retry после отказа. UI выбирает приложение и drains своё work до освобождения
 зависимых canvas/native resources. Headless и viewport examples используют UseAether.
 
+### Создание сервисов и runtime через DI
+
+`UseAether` регистрирует `IFactory<T>` и типизированные `IFactory<T, TArguments>`:
+supervisor, GPU host, frames/receivers, compiler, replacement/editor, runtime leases,
+game loader и authoring resolver. `AetherHost` получает готовые зависимости явно;
+фабрики можно зарегистрировать перед `UseAether`, чтобы заменить штатное создание.
+Результаты дочерних фабрик принадлежат aggregate host. Ошибка создания освобождает
+уже полученные ресурсы в обратном порядке.
+
+В child App после `UseAether` вызовите `UseAetherRuntime(launch, parentId)`.
+Он фиксирует launch и регистрирует `AetherRuntimeHost` с фабриками parent listener,
+game loader, frame producer, protocol и Enerit server. `RunAsync` запускает work;
+shutdown drains workers до освобождения игры. Runtime host заимствует App/GPU
+services. Повторное подключение отвергается.
+
+Authoring-системы получают `SceneResolutionService` через constructor injection;
+он использует `IFactory<EntityResolver, SceneDocument>`. Статический
+`SceneResolver.Resolve` остаётся независимой точкой для low-level применения.
+Документы, значения, UI elements и native handles не становятся DI services.
+
 ## Сборка и выбор игровой версии — ENG3a
 
 После UseAether получите AetherHost. Его `Builds` работает независимо от текущей
@@ -279,11 +299,16 @@ Caller сопоставляет SourceRevision с актуальными изм�
 поздний результат сборки сам не возобновляет остановленную игру.
 
 Game project — доверенная локальная net10.0 library; он должен использовать
-переданный compiler свойством MSBuild `AetherContractPath` как non-copying reference:
+переданные compiler свойства MSBuild `AetherContractPath` и `TrueMoonContractsPath`
+как non-copying references:
 
 ```xml
 <Reference Include="TrueMoon.Aether">
   <HintPath>$(AetherContractPath)</HintPath>
+  <Private>false</Private>
+</Reference>
+<Reference Include="TrueMoon.Contracts">
+  <HintPath>$(TrueMoonContractsPath)</HintPath>
   <Private>false</Private>
 </Reference>
 ```
@@ -312,10 +337,25 @@ compiler/child/readers до освобождения UI. Артефакт pinned
 
 Child-role handler для выбранного SessionLaunch.Build вызывает GameBuildLoader.Load,
 использует его Session и освобождает loader после workers. Loader допускает только
-declared private assemblies, framework и один общий Aether contract. Контексты имеют
+declared private assemblies, framework и общие Aether/TrueMoon.Contracts assemblies. Контексты имеют
 [отдельную область типов, а unload кооперативен](https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/understanding-assemblyloadcontext);
 окончательная граница освобождения native runtime — завершение дочернего процесса.
 Legacy fixed GameBuildId launch сохранён для существующих consumers.
+
+Выбранный entry type реализует `IGameSession` и `Runtime.IGameSessionEntry`:
+
+```csharp
+public static IGameSession Create(TrueMoon.Services.IServiceResolver? services)
+    => new MyGame(services!.Resolve<IMyGameDependency>());
+```
+
+Это factory boundary внутри игровой сборки: зависимости передаются в constructor,
+игра принадлежит loader, runtime services заимствуются. Low-level `Load` без App
+передаёт null; можно явно передать свою `IFactory<IGameSession, Type>`.
+Constructor reflection/Activator fallback отсутствует. Не храните runtime resolver
+или collectible game types в static caches. **Миграция2026-10-22:** добавьте entry
+factory и Contracts reference, пересоберите Editor/runtime/game вместе: HostId и
+artifact ContractHash теперь учитывают обе общие assembly, старые artifacts несовместимы.
 
 ## Checkpoint и восстановление — ENG3b
 

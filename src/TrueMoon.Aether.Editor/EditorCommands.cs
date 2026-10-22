@@ -1,6 +1,6 @@
 using TrueMoon.Aether.Editing;
 
-namespace TrueMoon.Editor;
+namespace TrueMoon.Aether.Editor;
 
 /// <summary>Tracks every asynchronous UI command; Stop/Cancel interrupt accepted work and close drains it.</summary>
 public sealed class EditorCommands

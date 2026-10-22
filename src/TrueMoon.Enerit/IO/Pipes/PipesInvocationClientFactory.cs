@@ -17,3 +17,17 @@ public class PipesInvocationClientFactory : IInvocationClientFactory
     
     public IInvocationClient<T> Create<T>() => new PipesInvocationClient<T>(_eventsSourceFactory.Create<PipesInvocationClient<T>>(), _endpoint is null ? typeof(T).FullName! : _endpoint(typeof(T)));
 }
+
+/// <summary>Creates caller-owned clients for explicit endpoints from injected diagnostics.</summary>
+/// <typeparam name="TService">Invocation contract.</typeparam>
+/// <param name="events">Borrowed diagnostic source.</param>
+public sealed class PipesInvocationClientFactory<TService>(IEventsSource<PipesInvocationClient<TService>> events)
+    : IFactory<PipesInvocationClient<TService>, string>
+{
+    /// <inheritdoc />
+    public PipesInvocationClient<TService> Create(string arguments)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(arguments);
+        return new(events, arguments);
+    }
+}

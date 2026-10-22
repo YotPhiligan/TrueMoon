@@ -69,7 +69,8 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         foreach (var argument in new[] { "build", request.ProjectPath, "--configuration", "Release", "--framework", "net10.0",
             "--output", output, "--artifacts-path", work, "--verbosity", "quiet", "--disable-build-servers",
             "-property:BuildProjectReferences=false", "-property:UseSharedCompilation=false", "-nodeReuse:false",
-            "-property:AetherContractPath=" + typeof(IGameSession).Assembly.Location }) info.ArgumentList.Add(argument);
+            "-property:AetherContractPath=" + typeof(IGameSession).Assembly.Location,
+            "-property:TrueMoonContractsPath=" + typeof(IFactory<>).Assembly.Location }) info.ArgumentList.Add(argument);
         try
         {
             end.Token.ThrowIfCancellationRequested();

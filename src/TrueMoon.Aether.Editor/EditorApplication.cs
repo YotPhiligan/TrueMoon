@@ -7,8 +7,9 @@ using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
+using TrueMoon.Aether.Sessions;
 
-namespace TrueMoon.Editor;
+namespace TrueMoon.Aether.Editor;
 
 internal static class EditorApplication
 {
@@ -20,20 +21,27 @@ internal static class EditorApplication
         project = Path.GetFullPath(project); if (!File.Exists(project)) throw new FileNotFoundException("Game project not found. Use --project <game.csproj>.", project);
         if (smoke != null && Directory.Exists(smoke)) throw new IOException("Use a new smoke directory.");
         var directory = Path.GetFullPath(smoke ?? Path.Combine(Path.GetTempPath(), "TrueMoon", "Editor", Guid.NewGuid().ToString("N"))); Directory.CreateDirectory(directory);
-        var workspace = new EditorWorkspace(EditorScene.Demo()); var binding = new EditorViewportBinding();
-        var runtimeFactory = new NativeRuntimeFactory();
         var fonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string> { ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets/Fonts/NotoSans-Regular.ttf") });
         using var end = new CancellationTokenSource();
         await using var app = App.Build(context =>
         {
+            context.Services(services => services
+                .Singleton<EditorWorkspace>(_ => new(EditorScene.Demo()))
+                .Singleton<EditorViewportBinding>(_ => new())
+                .Singleton<IViewStyle<EditorView>>(_ => new EditorViewStyle())
+                .Singleton<EditorViewModel>(resolver => new(resolver.Resolve<EditorWorkspace>(), resolver.Resolve<EditorCommands>()))
+                .Singleton<IFactory<EditorView>>(resolver =>
+                    new Factory<EditorView>(() => new(resolver.Resolve<EditorViewModel>(), resolver.Resolve<IViewStyle<EditorView>>())))
+                .Singleton<EditorCommands>(resolver => new(resolver.Resolve<AetherHost>().Editor,
+                    resolver.Resolve<EditorViewportBinding>().Ready, end.Token)));
             context.UseAether(options =>
             {
                 options.HostContractId = BuildIdentity.HostId; options.GameBuildId = new('0', 64); options.ReportDirectory = directory;
-                options.RuntimeFactory = _ => runtimeFactory; options.ViewportTransport = binding.CreateTransport;
+                options.ViewportTransportFactory = resolver => resolver.Resolve<EditorViewportBinding>();
             });
-            context.UsePresentation(_ => new EditorView(workspace), options => options.UseSkiaOpenGL(fonts).UseSilkWindow(window =>
+            context.UsePresentationFactory<EditorView>(options => options.UseSkiaOpenGL(fonts).UseSilkWindow(window =>
             {
-                window.Width = 1280; window.Height = 800; window.Title = "TrueMoon Editor · " + Path.GetFileNameWithoutExtension(project);
+                window.Width = 1280; window.Height = 800; window.Title = "TrueMoon Aether Editor · " + Path.GetFileNameWithoutExtension(project);
                 window.Appearance = new WindowAppearance { Decorated = false };
                 window.Chrome = new WindowChromeOptions { NativeDrag = true, NativeSnapLayouts = true, MinimumSize = new Size(1100, 700) };
                 window.FrameMode = UiFrameMode.Continuous;
@@ -41,17 +49,21 @@ internal static class EditorApplication
         });
         var engine = app.Services.Resolve<AetherHost>()!; var window = app.Services.Resolve<HostedUiWindow>()!;
         var sessions = app.Services.Resolve<HostedUiSessionFactory>()!;
+        var workspace = app.Services.Resolve<EditorWorkspace>();
+        var binding = app.Services.Resolve<EditorViewportBinding>();
+        var runtimeFactory = (NativeRuntimeFactory)app.Services.Resolve<IRuntimeFactory>();
         engine.Editor.SetContext(new(new(project, Value("--assembly") ?? "Game.Logic.dll", Value("--entry") ?? "Game.Logic.RoomGame", workspace.Scene.Revision), workspace.Scene, workspace.SelectedId ?? ""));
-        var commands = new EditorCommands(engine.Editor, binding.Ready, end.Token);
+        var commands = app.Services.Resolve<EditorCommands>();
+        var model = app.Services.Resolve<EditorViewModel>();
         var first = new TaskCompletionSource<UiSession>(TaskCreationOptions.RunContinuationsAsynchronously);
         EditorView? view = null;
         window.FramePresented += ui =>
         {
             var current = (EditorView)((WindowFrame)ui.Root).Children[1];
-            if (view == null) { view = current; current.CommandRequested += commands.Execute; }
+            view ??= current;
             binding.Observe(ui, current);
             if (current.Canvas.DrawnFrame is { } frame) engine.Frames.Presented(frame);
-            workspace.Refresh(engine.Supervisor.Status, engine.Editor.Status, commands.Error ?? engine.Frames.TransportError); current.Refresh(); first.TrySetResult(ui);
+            model.Refresh(engine.Supervisor.Status, engine.Editor.Status, commands.Error ?? engine.Frames.TransportError); first.TrySetResult(ui);
         };
         window.Closing += async _ => { await commands.StopAsync(); return true; };
         try

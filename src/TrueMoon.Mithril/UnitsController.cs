@@ -10,6 +10,7 @@ public class UnitsController : IUnitsController, IStartable, IStoppable, IDispos
     private readonly IEventsSource<UnitsController> _eventsSource;
     private readonly IAppLifetime _appLifetime;
     private readonly IReadOnlyList<IUnitConfiguration> _unitConfigurations;
+    private readonly IFactory<IUnitHandle, IUnitConfiguration> _handles;
     private readonly Dictionary<int, IUnitHandle> _unitHandles = [];
     private readonly SemaphoreSlim _lifecycle = new(1, 1);
     private readonly object _disposalGate = new();
@@ -24,14 +25,16 @@ public class UnitsController : IUnitsController, IStartable, IStoppable, IDispos
     /// <param name="eventsSource">Diagnostics.</param>
     /// <param name="appLifetime">Lifetime optionally cancelled by natural unit exit.</param>
     /// <param name="configurations">App-local units; omitted means no units.</param>
+    /// <param name="handles">Borrowed handle factory; each result is owned by this controller.</param>
     public UnitsController(IEventsSource<UnitsController> eventsSource, IAppLifetime appLifetime,
-        IReadOnlyList<IUnitConfiguration>? configurations = null)
+        IReadOnlyList<IUnitConfiguration>? configurations = null, IFactory<IUnitHandle, IUnitConfiguration>? handles = null)
     {
         ArgumentNullException.ThrowIfNull(eventsSource);
         ArgumentNullException.ThrowIfNull(appLifetime);
         _eventsSource = eventsSource;
         _appLifetime = appLifetime;
         _unitConfigurations = UnitConfigurationSnapshot.Create(configurations ?? []);
+        _handles = handles ?? new UnitHandleFactory(eventsSource);
     }
 
     /// <inheritdoc />
@@ -112,13 +115,7 @@ public class UnitsController : IUnitsController, IStartable, IStoppable, IDispos
     /// <summary>Creates the runtime handle for a configured hosting mode.</summary>
     /// <param name="configuration">The controller's validated configuration snapshot.</param>
     /// <returns>A new owned unit handle.</returns>
-    protected virtual IUnitHandle CreateHandle(IUnitConfiguration configuration) => configuration.HostingPolicy switch
-    {
-        UnitHostingPolicy.ChildProcess => new ChildProcessUnitHandle(configuration, _eventsSource),
-        UnitHostingPolicy.MainProcess => new MainProcessUnitHandle(configuration, _eventsSource),
-        UnitHostingPolicy.External => new ExternalUnitHandle(configuration, _eventsSource),
-        _ => throw new ArgumentException("Unknown unit hosting mode.")
-    };
+    protected virtual IUnitHandle CreateHandle(IUnitConfiguration configuration) => _handles.Create(configuration);
 
     /// <inheritdoc />
     public async Task StopAsync(CancellationToken cancellationToken = default)

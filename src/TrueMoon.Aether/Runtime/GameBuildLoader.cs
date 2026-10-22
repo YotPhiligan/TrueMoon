@@ -13,7 +13,7 @@ public sealed class GameBuildLoader : IDisposable
     private readonly IDisposable _pin;
     private IGameSession? _session;
     private bool _disposed;
-    private GameBuildLoader(GameBuildArtifact artifact)
+    private GameBuildLoader(GameBuildArtifact artifact, IFactory<IGameSession, Type> sessions)
     {
         Artifact = artifact; _pin = artifact.Pin(); _context = new(artifact);
         try
@@ -22,7 +22,7 @@ public sealed class GameBuildLoader : IDisposable
             var type = assembly.GetType(artifact.EntryType, throwOnError: true)!;
             if (!type.IsVisible || type.IsAbstract || !typeof(IGameSession).IsAssignableFrom(type))
                 throw new InvalidDataException("Game entry must implement the shared IGameSession contract.");
-            _session = (IGameSession)(Activator.CreateInstance(type) ?? throw new InvalidDataException("Game entry construction returned null."));
+            _session = sessions.Create(type) ?? throw new InvalidDataException("Game session factory returned null.");
             LoadedAssemblyPath = assembly.Location;
         }
         catch { _context.Unload(); _context = null; _pin.Dispose(); throw; }
@@ -34,10 +34,13 @@ public sealed class GameBuildLoader : IDisposable
     /// <summary>Gets the actual loaded entry assembly path for provenance diagnostics.</summary>
     public string LoadedAssemblyPath { get; }
     /// <summary>Validates and loads a selected artifact. Call only inside the game child.</summary>
-    public static GameBuildLoader Load(GameBuildReference build, string hostContractId)
+    /// <param name="build">Selected immutable artifact.</param><param name="hostContractId">Expected host identity.</param>
+    /// <param name="sessions">Runtime factory; null uses the explicit game entry factory without App services.</param>
+    /// <returns>An owner for the game, collectible load context and artifact pin.</returns>
+    public static GameBuildLoader Load(GameBuildReference build, string hostContractId, IFactory<IGameSession, Type>? sessions = null)
     {
         ArgumentNullException.ThrowIfNull(build);
-        return new(GameBuildArtifact.Open(build.DirectoryPath, hostContractId, build.BuildId));
+        return new(GameBuildArtifact.Open(build.DirectoryPath, hostContractId, build.BuildId), sessions ?? new GameSessionFactory(null));
     }
     /// <summary>Disposes the game, requests cooperative context unload and releases artifact pins.</summary>
     public void Dispose()
@@ -51,6 +54,7 @@ public sealed class GameBuildLoader : IDisposable
         protected override Assembly? Load(AssemblyName name)
         {
             if (name.Name == typeof(IGameSession).Assembly.GetName().Name) return typeof(IGameSession).Assembly;
+            if (name.Name == typeof(IFactory<>).Assembly.GetName().Name) return typeof(IFactory<>).Assembly;
             var file = artifact.Files.SingleOrDefault(f => string.Equals(Path.GetFileNameWithoutExtension(f), name.Name, StringComparison.OrdinalIgnoreCase));
             if (file != null) return LoadFromAssemblyPath(Path.Combine(artifact.DirectoryPath, file));
             if (name.Name != null && GameBuildArtifact.FrameworkNames.Contains(name.Name)) return null;

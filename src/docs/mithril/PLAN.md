@@ -14,6 +14,13 @@ App lifecycle/configuration принадлежат [Core](../core/PLAN.md), invo
 
 ## Архитектура и решения
 
+Уточнение2026-10-22: [Aether DI1–DI4](../engine/PLAN.md#приведение-к-правилу-cobaltifactory)
+вводит injected IFactory<IUnitHandle,IUnitConfiguration> и штатный UnitHandleFactory.
+UnitsController передаёт snapshot configuration фабрике и остаётся владельцем handles;
+protected CreateHandle сохраняет extensibility. App controller/parent factories
+зарегистрированы явно. Borrowed IUnitsController facade и AppServiceLifecycle
+отделяют aliases от disposable owner. Process policies/budgets прежние.
+
 Сохранять IUnitsController, IUnitConfiguration и IUnitHandle boundaries, явные policy values и configuration через Contracts. Runtime зависит от Contracts/Core, не от UI.
 
 Определить semantics Start/Spawn/Stop/disposal, startup cancellation/failure, identity конфигурации/handle и допустимого restart. Разделить owned child и borrowed/external process: действия с чужими процессами не выводятся из общего app shutdown. Правила restart limits/delay и exit во время stop согласовать до реализации гарантий.

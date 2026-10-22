@@ -20,6 +20,12 @@ public sealed class Style
         value = default!;
         return false;
     }
+    internal Style Overlay(Style other)
+    {
+        var values = new Dictionary<object, object?>(_values);
+        foreach (var pair in other._values) values[pair.Key] = pair.Value;
+        return new(values);
+    }
 }
 
 /// <summary>Application-wide colors, typography, and control spacing.</summary>

@@ -14,14 +14,11 @@ public sealed class AetherHost : IDisposable, IAsyncDisposable
     private readonly Lock _gate = new();
     private Task? _dispose;
 
-    internal AetherHost(IRuntimeFactory factory, AetherOptions options)
+    internal AetherHost(SessionSupervisor supervisor, FrameSession frames, GameBuildCompiler builds,
+        GameReplacement replacement, GameEditor editor, GpuResourceHost gpu)
     {
-        Supervisor = new(factory, options.HostContractId, options.GameBuildId,
-            options.ReportDirectory, options.Deadlines, options.StatusChanged);
-        Frames = new(Supervisor, options.ViewportTransport?.Invoke(Gpu) ?? (options.ViewportTransport == null ? null : throw new InvalidOperationException("Viewport factory returned null.")));
-        Builds = new(options.HostContractId, options.BuildDirectory!, options.BuildTimeout);
-        Replacement = new(Supervisor, Frames, options.ReplacementDeadlines);
-        Editor = new(Supervisor, Frames, Builds, Replacement, options.HostContractId);
+        Supervisor = supervisor; Frames = frames; Builds = builds;
+        Replacement = replacement; Editor = editor; Gpu = gpu;
     }
 
     /// <summary>Gets the borrowed App-owned session controller. Start is an explicit operation.</summary>
@@ -35,7 +32,7 @@ public sealed class AetherHost : IDisposable, IAsyncDisposable
     /// <summary>Gets the borrowed App-owned Editor command and selected-build controller.</summary>
     public GameEditor Editor { get; }
     /// <summary>Gets the borrowed App-owned lazy GPU resource owner; ordinary sessions remain on CPU frames.</summary>
-    public GpuResourceHost Gpu { get; } = new();
+    public GpuResourceHost Gpu { get; }
 
     internal void EnsureOpen()
     {

@@ -2,6 +2,8 @@ using TrueMoon.Aether.Sessions;
 using TrueMoon.Services;
 using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Gpu;
+using TrueMoon.Aether.Transport;
+using TrueMoon.Enerit.IO.Pipes;
 
 namespace TrueMoon.Aether.Hosting;
 
@@ -28,10 +30,14 @@ public sealed class AetherOptions
     /// <remarks>Keep allocation lazy until Connect. The strategy borrows the supplied GPU owner; FrameSession owns
     /// its connections and any disposable strategy. Do not register disposable aliases. UI/context callbacks remain borrowed.</remarks>
     public Func<GpuResourceHost, IGameViewportTransport>? ViewportTransport { get; set; }
+    /// <summary>Creates the App-local viewport factory. Its results belong to FrameSession.</summary>
+    /// <remarks>Choose this or ViewportTransport. The factory may borrow application services.</remarks>
+    public Func<IServiceResolver, IFactory<IGameViewportTransport, GpuResourceHost>>? ViewportTransportFactory { get; set; }
     /// <summary>Gets or sets a factory creating a fresh App-owned runtime factory.</summary>
     /// <remarks>Dependencies may be resolved from the supplied resolver. Do not return
     /// a borrowed or separately registered disposable factory: the App provider owns the result.</remarks>
-    public Func<IServiceResolver, IRuntimeFactory> RuntimeFactory { get; set; } = static _ => new NativeRuntimeFactory();
+    public Func<IServiceResolver, IRuntimeFactory> RuntimeFactory { get; set; } = static resolver =>
+        new NativeRuntimeFactory(resolver.Resolve<IFactory<PipesInvocationClient<IEngineControl>, string>>());
 
     internal AetherOptions Snapshot()
     {
@@ -39,6 +45,8 @@ public sealed class AetherOptions
         ArgumentNullException.ThrowIfNull(Deadlines);
         ArgumentNullException.ThrowIfNull(ReplacementDeadlines);
         ArgumentNullException.ThrowIfNull(RuntimeFactory);
+        if (ViewportTransport != null && ViewportTransportFactory != null)
+            throw new ArgumentException("Configure one viewport transport factory.");
         new SessionIdentity(Guid.NewGuid(), 1, HostContractId, GameBuildId, new string('0', 64)).Validate();
         Deadlines.Validate();
         ReplacementDeadlines.Validate();
@@ -50,7 +58,8 @@ public sealed class AetherOptions
             ReportDirectory = Path.GetFullPath(ReportDirectory), Deadlines = Deadlines with { },
             ReplacementDeadlines = ReplacementDeadlines with { },
             BuildDirectory = Path.GetFullPath(BuildDirectory ?? Path.Combine(ReportDirectory, "builds")), BuildTimeout = BuildTimeout,
-            StatusChanged = StatusChanged, RuntimeFactory = RuntimeFactory, ViewportTransport = ViewportTransport
+            StatusChanged = StatusChanged, RuntimeFactory = RuntimeFactory, ViewportTransport = ViewportTransport,
+            ViewportTransportFactory = ViewportTransportFactory
         };
     }
 }

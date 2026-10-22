@@ -4,7 +4,7 @@ using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
 using Xunit;
 
-namespace TrueMoon.Editor.Tests;
+namespace TrueMoon.Aether.Editor.Tests;
 
 public sealed class EditorWorkspaceTests
 {

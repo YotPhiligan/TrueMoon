@@ -6,6 +6,53 @@ namespace TrueMoon.Alloy.Hosting.Tests;
 
 public sealed class HostedUiSessionFactoryTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CommonFactoryBridge_PreservesCreationArgumentsAndSessionOwnership(bool genericBridge)
+    {
+        var backend = new Backend(); using var factory = new HostedUiSessionFactory(backend);
+        using var root = Text.Plain("typed session");
+        var target = new Target(); var viewport = new UiViewport(320, 240, 1.5f);
+        var clipboard = new Clipboard();
+        IFactory<UiSession, UiSessionCreation> typed = factory;
+        var arguments = new UiSessionCreation(root, target, viewport, clipboard);
+        using var session = genericBridge ? ((IFactory<UiSession>)typed).Create<object>(arguments)! : typed.Create(arguments);
+        Assert.Same(root, session.Root); Assert.True(root.IsAttached);
+        Assert.Same(target, backend.LastTarget); Assert.Equal(viewport, backend.LastViewport); Assert.Equal(viewport, session.Viewport);
+        session.SetClipboardText("through bridge");
+        Assert.Equal("through bridge", session.GetClipboardText()); Assert.Equal(2, clipboard.Accesses);
+        Assert.Equal(1, factory.ActiveSessionCount); Assert.Equal(0, Assert.Single(backend.Surfaces).Disposals);
+        session.Dispose();
+        Assert.True(root.IsDisposed); Assert.Equal(0, factory.ActiveSessionCount); Assert.Equal(1, backend.Surfaces[0].Disposals);
+        factory.Dispose();
+        Assert.Equal(1, backend.Surfaces[0].Disposals); Assert.Equal(0, clipboard.Disposals);
+        clipboard.Dispose(); Assert.Equal(1, clipboard.Disposals);
+    }
+
+    [Theory]
+    [InlineData("typed-null")]
+    [InlineData("generic-null")]
+    [InlineData("mismatch")]
+    [InlineData("no-arguments")]
+    public void CommonFactoryBridge_InvalidArgumentsDoNotTakeRootOwnership(string invalid)
+    {
+        var backend = new Backend(); using var factory = new HostedUiSessionFactory(backend);
+        using var root = Text.Plain("unowned");
+        IFactory<UiSession, UiSessionCreation> typed = factory;
+        IFactory<UiSession> bridge = typed;
+        switch (invalid)
+        {
+            case "typed-null": Assert.Equal("arguments", Assert.Throws<ArgumentNullException>(() => typed.Create(null!)).ParamName); break;
+            case "generic-null": Assert.Equal("arguments", Assert.Throws<ArgumentNullException>(() => bridge.Create<UiSessionCreation>(null)).ParamName); break;
+            case "mismatch": Assert.Equal("data", Assert.Throws<ArgumentException>(() => bridge.Create("wrong arguments")).ParamName); break;
+            default: Assert.Throws<InvalidOperationException>(() => bridge.Create()); break;
+        }
+        Assert.False(root.IsAttached); Assert.False(root.IsDisposed); Assert.Empty(backend.Surfaces); Assert.Equal(0, factory.ActiveSessionCount);
+        using var session = typed.Create(new(root, new Target(), new(100, 100)));
+        Assert.Same(root, session.Root); Assert.True(root.IsAttached); Assert.Equal(1, factory.ActiveSessionCount);
+    }
+
     [Fact]
     public void Dispose_DuringUpdateCanBeRetriedAfterUpdateEnds()
     {
@@ -227,8 +274,10 @@ public sealed class HostedUiSessionFactoryTests
     {
         public List<Surface> Surfaces { get; } = [];
         public Action? BeforeCreate { get; set; }
+        public UiRenderTarget? LastTarget { get; private set; }
+        public UiViewport LastViewport { get; private set; }
         public IUiRenderSurface CreateSurface(UiRenderTarget target, UiViewport viewport)
-        { BeforeCreate?.Invoke(); var surface = new Surface(); Surfaces.Add(surface); return surface; }
+        { BeforeCreate?.Invoke(); LastTarget = target; LastViewport = viewport; var surface = new Surface(); Surfaces.Add(surface); return surface; }
     }
     private sealed class Surface : IUiRenderSurface
     {
@@ -249,4 +298,12 @@ public sealed class HostedUiSessionFactoryTests
     { public Size Measure(string text, float fontSize, string fontFamily) => new(10, 10); }
     private sealed class Cleanup(Action dispose) : IDisposable
     { public void Dispose() => dispose(); }
+    private sealed class Clipboard : IUiClipboard, IDisposable
+    {
+        private string? _text;
+        public int Accesses, Disposals;
+        public string? GetText() { Accesses++; return _text; }
+        public void SetText(string text) { Accesses++; _text = text; }
+        public void Dispose() => Disposals++;
+    }
 }

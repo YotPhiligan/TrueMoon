@@ -12,6 +12,55 @@
 
 ## Дополнительный план улучшения инфраструктуры Alloy — 2026-10-18
 
+### UIA1: View, Data/ViewModel и scoped styles — 2026-10-22
+
+По запросу пользователя реализована штатная модель авторинга: `View<TData>` с
+Fluent-композицией, отдельные optional Data/ViewModel и `IViewStyle<TView>`.
+Argentis предоставляет provider-neutral style contracts/builders; Alloy сохраняет
+retained tree, attachment/binding/thread ownership. Первый production consumer —
+Aether.Editor: EditorViewModel/EditorViewStyle, DI-created owner-thread View.
+Правило закреплено в AGENTS; новые public типы находятся в корне Argentis согласно
+назначению и namespace. Общий детальный UIA1 план ведётся здесь, engine ссылается.
+
+Контракты: Root и typed Part выбирают стабильные части текущего View; typed Role
+покрывает существующие/будущие элементы, совпадает по identity token. Ближайший View
+является строгой границей, включая корень вложенного View. Последнее совпавшее
+правило выигрывает в пределах view layer; local/binding → direct Style → view style
+→ Theme → default. WithViewStyle заменяет/снимает слой; старые значения не остаются.
+Тематические значения вычисляются до commit. Declaration/value failures сохраняют
+предыдущий слой/Theme, observer failures наблюдаемы после commit. Immutable
+declarations переиспользуются, per-view builders замораживаются после Configure.
+
+ViewModel хранит UI-independent state/actions/validation; обычным данным не нужен
+обязательный base class. View подключает bindings и визуальное представление
+состояния, владеет подписками и элементами. DI factories/styles/модели заимствуются
+окном/деревом по lifetime. Style не удерживает live View и не запускает команды.
+Theme/style обновляются без rebuild; dynamic roles пересчитываются при adopt/orphan.
+
+| Этап | Критерий |
+| --- | --- |
+| UIA1a | Typed contracts/root/part/roles, precedence/order/replace/remove/scope/guards с direct tests |
+| UIA1b | Theme switch и dynamic transfer без утраты tree/input/selection/scroll/bindings; failed value atomicity |
+| UIA1c | EditorViewModel/Style и Fluent View через DI; notifications/commands/ownership tested без renderer |
+| UIA1d | Debug/Release suites, native Editor/published proof, fresh packaged API consumer и docs/agent rules |
+
+UIA1a–d выполнены2026-10-22 в указанном scope: UI661/Editor49, full2321/2321
+Debug/Release, nonincremental Debug build, native Debug/published Release и fresh
+14packages/4consumer proof. Датированные команды/ограничения — в HISTORY/STATUS.
+
+Полный CSS cascade, selector language, implicit DataContext rebinding, templates,
+animations и массовая migration consumers сохраняют собственные будущие задачи.
+Фактические passing результаты отдельно в STATUS/HISTORY; UIA1 не закрывает
+physical DPI/K3/K7/K8/VRAM/final alpha или ENG7 property editing.
+
+Решение2026-10-22: [Aether DI1–DI4](../engine/PLAN.md#приведение-к-правилу-cobaltifactory)
+добавляет Alloy→Contracts для IUiSessionFactory : IFactory<UiSession,UiSessionCreation>.
+Существующий четырёхаргументный Create сохранён через default interface bridge.
+Hosting предоставляет UsePresentationFactory<TView>: injected root factory вызывается
+на UI owner thread, окно владеет root. Borrowed session factory/lifecycle facades
+не дублируют provider disposal owned window/dispatcher/session registry. Renderer,
+targets и UI thread affinity прежние; конкретного DI provider в Alloy нет.
+
 По запросу пользователя результаты [аудита2026-10-17](HISTORY.md#аудит-инфраструктуры-alloy--2026-10-17)
 включены в модульный roadmap как **INF0–INF7**. Первичное добавление было
 документационным. По следующему запросу пользователя2026-10-18 выполнен bounded
@@ -697,7 +746,7 @@ AlloyTest показывает все заявленные control types, PNG32�
 - **4.3. Редактирование текста.** Разделить клавиши и текстовый ввод; поддержать латиницу, кириллицу, выделение и clipboard в `TextBox`. Согласованное уточнение 2026-10-07: Windows Get/Set используют единый Win32 путь с borrowed HWND. Get возвращает null только при отсутствии текстового формата; borrowed HGLOBAL не освобождается, lock/clipboard закрываются в finally. Set готовит UTF-16 GMEM_MOVEABLE до Open, владеет памятью до успешного SetClipboardData, затем передаёт её Windows; при отказе до передачи освобождает draft. Close failure после публикации не возвращает владение. Set заменяет содержимое clipboard текстом, откат прежних форматов после EmptyClipboard не обещается. Open допускает десять retry waits по10ms только при error5, operation/cleanup errors сохраняются. Operational errors оборачиваются в UiClipboardException с Read/Write и original cause; UiSession.HandleInput сообщает ClipboardFailed и сохраняет сессию. Прямой Get/Set, programming errors и ошибки notification handlers продолжают бросать исключения. TextBox изменяет value при Cut только после успешной записи. Clipboard доступен на owner thread до Dispose; null/embedded NUL отвергаются до native записи. GLFW error callback не меняется; другие платформы сохраняют Silk путь. Native copy/cut/paste smoke запускается только при точном заменяемом fixture `Alloy clipboard smoke fixture v1`; сохраняет/восстанавливает текст, не произвольные форматы. Controlled clipboard smoke проверяет окно/редактор отдельно от обмена с ОС. Фактические результаты и блокеры — в STATUS. Новых packages или изменения renderer ABI нет.
 - **4.4. Совместная работа HUD и игры.** Возвращать хосту результат обработки события и состояние захвата мыши/клавиатуры.
 - **4.5. Тема и состояния.** Добавить тему с цветами, типографикой и отступами, а также состояния hover, pressed, focused и disabled.
-- **4.6. Приоритеты значений.** Локальное значение свойства имеет приоритет над стилем, стиль — над темой и значением по умолчанию.
+- **4.6. Приоритеты значений.** С уточнением UIA1 от2026-10-22: local/binding → direct Style элемента → scoped стиль View → Theme → значение по умолчанию. Снятие слоя возвращает значение следующего уровня без перестройки дерева.
 - **4.7. Пользовательские виджеты.** Поддержать создание виджета композицией элементов либо собственным рисованием через `IDrawingContext`.
 - **4.8. Статические фабрики контролов.** Добавить фабрики на типах контролов Argentis для удобной Fluent-разметки, сохранив публичные конструкторы и возможность смешивать оба способа создания. Начальные согласованные имена — `Button.Simple(string text = "")` и `Text.Plain(string value = "")`. Фабрика обычного контрола создаёт экземпляр с теми же значениями по умолчанию и текущим оформлением темы, что соответствующий конструктор; `Plain` обозначает обычный текст без обработки разметки. Для остальных контролов подобрать понятные имена при их реализации; если отдельного варианта нет, использовать `Create(...)` (например, `TextBox.Create()`, `VStack.Create()`). Имена дополнительных вариантов связывать с явно определённым внешним видом или поведением.
 
@@ -932,7 +981,7 @@ checks, затем native Debug/published Release и fresh package consumer по
 
 ### Архитектурные ориентиры
 
-Интеграция2026-10-22: [TrueMoon.Editor](../../TrueMoon.Editor/README.md) использует
+Интеграция2026-10-22: [TrueMoon.Aether.Editor](../../TrueMoon.Aether.Editor/README.md) использует
 PA8a default frame/style для основного экрана, central viewport и read-only grid.
 Детальные задачи и acceptance приложения принадлежат
 [ENG7a](../engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22);

@@ -2,7 +2,7 @@ using TrueMoon.Aether.Frames;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Editor;
+namespace TrueMoon.Aether.Editor;
 
 public sealed class EditorViewport : Element
 {

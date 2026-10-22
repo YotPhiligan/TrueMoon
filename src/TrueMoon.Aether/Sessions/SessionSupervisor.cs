@@ -42,13 +42,13 @@ public interface IRuntimeLease : IAsyncDisposable
     Task<ControlReply> SendAsync(ControlRequest request, CancellationToken token);
     Task StopAsync(CancellationToken gracefulDeadline = default);
 }
-public interface IRuntimeFactory { IRuntimeLease Create(SessionLaunch launch); }
+public interface IRuntimeFactory : IFactory<IRuntimeLease, SessionLaunch> { }
 
 // All remote work is serialized. Stop cancels the current local wait before
 // entering the gate; a cancelled/expired command is never replayed.
 public sealed class SessionSupervisor : IAsyncDisposable
 {
-    private readonly IRuntimeFactory _factory;
+    private readonly IFactory<IRuntimeLease, SessionLaunch> _factory;
     private readonly SessionDeadlines _deadlines;
     private readonly string _hostId, _gameId, _directory;
     private string _sceneId = "";
@@ -71,7 +71,7 @@ public sealed class SessionSupervisor : IAsyncDisposable
     private bool _disposed;
     public SessionStatus Status => Volatile.Read(ref _status);
 
-    public SessionSupervisor(IRuntimeFactory factory, string hostId, string gameId, string directory,
+    public SessionSupervisor(IFactory<IRuntimeLease, SessionLaunch> factory, string hostId, string gameId, string directory,
         SessionDeadlines? deadlines = null, Action<SessionStatus>? trace = null)
     {
         ArgumentNullException.ThrowIfNull(factory); ArgumentException.ThrowIfNullOrWhiteSpace(directory);

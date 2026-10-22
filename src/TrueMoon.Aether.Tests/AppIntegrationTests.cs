@@ -1,5 +1,9 @@
 using Game.Logic;
+using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Editing;
+using TrueMoon.Aether.Gpu;
 using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Tests.Scenes;
 using TrueMoon.Aether.Transport;
 using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Hosting;
@@ -214,6 +218,184 @@ public sealed class AppIntegrationTests
         var error = await Record.ExceptionAsync(() => app.StartAsync());
         Assert.NotNull(error); Assert.Contains("Aether runtime factory returned null", error.ToString());
         await app.DisposeAsync();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RegisteredCompilerFactory_SuppliesHostDependencyAndTransfersOwnership(bool di)
+    {
+        await using var compiler = new GameBuildCompiler(Hash, Path.Combine(Path.GetTempPath(), "aether-injected-builds"));
+        var calls = 0;
+        var app = Builder(di).Setup(c =>
+        {
+            c.Services(services => services.Singleton<IFactory<GameBuildCompiler>>(_ =>
+                new global::TrueMoon.Factory<GameBuildCompiler>(() => { calls++; return compiler; })));
+            c.UseAether(o => Configure(o, new Factory()));
+        }).Build();
+        var host = app.Services.Resolve<AetherHost>()!;
+        Assert.Same(compiler, host.Builds); Assert.Equal(1, calls);
+        Assert.Same(host, app.Services.Resolve<AetherHost>()); Assert.Equal(1, calls);
+        await app.DisposeAsync();
+        AssertCompilerClosed(compiler);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task HostFactoryFailure_RollsBackAllAcquiredDependenciesAndPreservesCleanupErrors(bool di, bool cleanupFailure)
+    {
+        var expected = new IOException("replacement factory failed");
+        var cleanup = new IOException("GPU rollback failed");
+        var resource = new RollbackResource(cleanupFailure ? cleanup : null);
+        var transport = new RollbackTransport();
+        SessionSupervisor supervisor = null!; GpuResourceHost gpu = null!; FrameSession frames = null!;
+        await using var compiler = new GameBuildCompiler(Hash, Path.Combine(Path.GetTempPath(), "aether-rollback-builds"));
+        var app = Builder(di).Setup(c =>
+        {
+            c.Services(services => services
+                .Singleton<IFactory<SessionSupervisor>>(_ => new global::TrueMoon.Factory<SessionSupervisor>(() =>
+                    supervisor = new(new Factory(), Hash, Hash, "aether-app-tests")))
+                .Singleton<IFactory<GpuResourceHost>>(_ => new global::TrueMoon.Factory<GpuResourceHost>(() =>
+                { gpu = new(); gpu.Own(resource); return gpu; }))
+                .Singleton<IFactory<FrameSession, (SessionSupervisor, GpuResourceHost)>>(_ =>
+                    new global::TrueMoon.Factory<FrameSession, (SessionSupervisor Supervisor, GpuResourceHost Gpu)>(args => frames = new(args.Supervisor, transport)))
+                .Singleton<IFactory<GameBuildCompiler>>(_ => new global::TrueMoon.Factory<GameBuildCompiler>(() => compiler))
+                .Singleton<IFactory<GameReplacement, (SessionSupervisor, FrameSession)>>(_ =>
+                    new global::TrueMoon.Factory<GameReplacement, (SessionSupervisor, FrameSession)>(_ => throw expected)));
+            c.UseAether(o => Configure(o, new Factory()));
+        }).Build();
+        var factory = app.Services.Resolve<IFactory<AetherHost>>()!;
+        if (cleanupFailure)
+        {
+            var error = Assert.Throws<AggregateException>(() => factory.Create());
+            Assert.Collection(error.InnerExceptions, error => Assert.Same(expected, error), error => Assert.Same(cleanup, error));
+            Assert.Same(cleanup, gpu.CleanupError);
+        }
+        else Assert.Same(expected, Assert.Throws<IOException>(() => factory.Create()));
+        AssertCompilerClosed(compiler);
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => frames.StartAsync(Scene(), 32, 16));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => supervisor.StartAsync(Scene()));
+        Assert.Equal(1, resource.Disposals); Assert.Equal(1, transport.Disposals); Assert.Equal(0, transport.Connections);
+        await app.DisposeAsync();
+        Assert.Equal(1, resource.Disposals); Assert.Equal(1, transport.Disposals);
+        await gpu.DisposeAsync();
+        Assert.True(resource.IsReleased); Assert.Null(gpu.CleanupError);
+        Assert.Equal(cleanupFailure ? 2 : 1, resource.Disposals);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AuthoringResolution_UsesInjectedCatalogFactoryForEveryRevision(bool di)
+    {
+        var documents = new List<SceneDocument>(); var resolvers = new List<EntityResolver>();
+        await using var app = Builder(di).Setup(c =>
+        {
+            c.Services(services => services.Singleton<IFactory<EntityResolver, SceneDocument>>(_ =>
+                new global::TrueMoon.Factory<EntityResolver, SceneDocument>(document =>
+                {
+                    documents.Add(document);
+                    var resolver = ModelFixture.Resolver(ModelFixture.Base("factory-" + document.Revision));
+                    resolvers.Add(resolver); return resolver;
+                })));
+            c.UseAether(o => Configure(o, new Factory()));
+        }).Build();
+        var service = app.Services.Resolve<SceneResolutionService>()!;
+        var first = SceneFixture.Document([new(ModelFixture.First, ModelFixture.Door)], revision: 7);
+        var second = new SceneDocument(first.Id, 8, first.Entities, first.Definitions, first.Schemas);
+        var before = service.Resolve(first); var after = service.Resolve(second);
+        Assert.Collection(documents, document => Assert.Same(first, document), document => Assert.Same(second, document));
+        Assert.Equal(2, resolvers.Count); Assert.NotSame(resolvers[0], resolvers[1]);
+        Assert.Equal("factory-7", ModelFixture.Property(before.Entities[ModelFixture.First], ModelFixture.Appearance, "label").Value.GetString());
+        Assert.Equal("factory-8", ModelFixture.Property(after.Entities[ModelFixture.First], ModelFixture.Appearance, "label").Value.GetString());
+        Assert.Equal(7, before.Revision); Assert.Equal(8, after.Revision);
+        using var canceled = new CancellationTokenSource(); canceled.Cancel();
+        Assert.Equal(canceled.Token, Assert.Throws<OperationCanceledException>(() => service.Resolve(second, canceled.Token)).CancellationToken);
+        Assert.Equal(2, documents.Count);
+        Assert.Equal("factory-7", ModelFixture.Property(before.Entities[ModelFixture.First], ModelFixture.Appearance, "label").Value.GetString());
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void RuntimeRegistration_RequiresAetherAndRejectsDuplicatesBeforeCreatingServices(bool di, bool duplicate)
+    {
+        var calls = 0; var launch = RuntimeLaunch();
+        var builder = Builder(di).Setup(c =>
+        {
+            c.Services(services => services.Singleton<IFactory<AetherRuntimeHost, SessionLaunch>>(_ =>
+                new global::TrueMoon.Factory<AetherRuntimeHost, SessionLaunch>(_ => { calls++; throw new IOException("must remain lazy"); })));
+            if (duplicate) c.UseAether(o => Configure(o, new Factory()));
+            c.UseAetherRuntime(launch, int.MaxValue);
+            if (duplicate) c.UseAetherRuntime(launch, int.MaxValue);
+        });
+        Assert.Equal(duplicate ? "The runtime is already registered." : "Call UseAether before UseAetherRuntime.",
+            Assert.Throws<InvalidOperationException>(() => builder.Build()).Message);
+        Assert.Equal(0, calls);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RuntimeRegistration_UsesInjectedFactoryWithNormalizedLaunchSnapshot(bool di)
+    {
+        var launch = RuntimeLaunch(); var expected = new IOException("injected runtime factory");
+        SessionLaunch? received = null; var calls = 0;
+        await using var app = Builder(di).Setup(c =>
+        {
+            c.Services(services => services.Singleton<IFactory<AetherRuntimeHost, SessionLaunch>>(_ =>
+                new global::TrueMoon.Factory<AetherRuntimeHost, SessionLaunch>(snapshot =>
+                { received = snapshot; calls++; throw expected; })));
+            c.UseAether(o => Configure(o, new Factory()));
+            c.UseAetherRuntime(launch, int.MaxValue);
+        }).Build();
+        Assert.Equal(0, calls);
+        Assert.Same(expected, Assert.Throws<IOException>(() => app.Services.Resolve<AetherRuntimeHost>()));
+        Assert.Equal(1, calls);
+        Assert.NotSame(launch, received);
+        Assert.Equal(launch with { ReportDirectory = Path.GetFullPath(launch.ReportDirectory) }, received);
+        Assert.Equal("aether-runtime-tests", launch.ReportDirectory);
+    }
+
+    private static SessionLaunch RuntimeLaunch() => new(new(Guid.NewGuid(), 1, Hash, Hash, Hash),
+        "engine-" + Guid.NewGuid().ToString("N"), "aether-runtime-tests", Build: new("unused-build", Hash));
+
+    private static void AssertCompilerClosed(GameBuildCompiler compiler)
+    {
+        var project = Path.Combine(Path.GetTempPath(), "aether-closed-" + Guid.NewGuid().ToString("N") + ".csproj");
+        File.WriteAllText(project, "<Project />");
+        try
+        {
+            using var canceled = new CancellationTokenSource(); canceled.Cancel();
+            Assert.Throws<ObjectDisposedException>(() => { _ = compiler.BuildAsync(new(project, "Game.dll", "Game.Entry", 0), canceled.Token); });
+        }
+        finally { File.Delete(project); }
+    }
+
+    private sealed class RollbackResource(Exception? failure) : IGpuResource
+    {
+        public int Disposals { get; private set; }
+        public bool IsReleased { get; private set; }
+        public ValueTask DisposeAsync()
+        {
+            Disposals++;
+            if (Disposals == 1 && failure != null) return ValueTask.FromException(failure);
+            IsReleased = true; return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class RollbackTransport : IGameViewportTransport, IDisposable
+    {
+        public int Connections, Disposals;
+        public ViewportTransportKind Kind => ViewportTransportKind.Gpu;
+        public Task<IGameViewportConnection> ConnectAsync(IRuntimeLease runtime, CancellationToken token)
+        { Connections++; throw new InvalidOperationException("Rollback must not launch a viewport connection."); }
+        public void Dispose() => Disposals++;
     }
 
     private sealed class FailingStartup(AetherHost host, Exception error) : IStartable

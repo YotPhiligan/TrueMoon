@@ -1,32 +1,33 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-22, ENG7a основной экран TrueMoon.Editor** по запросу
-пользователя: отдельное App application, стандартная borderless рамка Alloy,
-central3D viewport, scene selection/read-only inspector и рабочие Aether commands.
-[Приложение](../TrueMoon.Editor/README.md), [scope](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22),
-[результаты](engine/HISTORY.md#eng7a-основной-экран-редактора--2026-10-22).
+Последняя работа — **2026-10-22, UIA1 View/Data/ViewModel и отдельные typed styles**.
+Подход закреплён в AGENTS; Argentis предоставляет IViewStyle<TView>, scoped
+root/part/roles и retained theme/style updates. Aether.Editor использует отдельные
+EditorViewModel/EditorViewStyle, Fluent tree/bindings и owner-thread DI factory.
+Cobalt default, Microsoft DI compatibility и DI1–DI4 ownership сохранены.
+[Контракт](alloy/PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22),
+[tests/commands/границы](alloy/HISTORY.md#uia1-view-viewmodel-и-typed-styles--2026-10-22).
 
-Текущий full solution: **2253/2253 Debug и2253/2253 Release**,10TRX/configuration,
-failed/skipped0. Editor39/Aether780/UI643/Hosting79. Editor Debug/published Release
-native: по8commands/3PNG/2reaped runtime children, Vulkan validation0/0 и zero owned
-resources. Предыдущие PA8a golden/packages и engine native60 не повторялись.
-UI/property editing, tree/picking/input и project persistence остаются следующими
-ENG7 задачами; engine gameplay продолжение — ENG5c.3 collisions, затем HUD.
-Physical DPI/K3/K7/K8/VRAM/final alpha прежние. Предыдущие сводки сохранены в HISTORY.
+Текущий full solution: **2321/2321 Debug и2321/2321 Release**,10TRX/configuration,
+failed/skipped0; добавлены28cases. Nonincremental Debug build0errors/1520warnings.
+Release publish/native Editor Debug и published Release прошли: по8commands/3PNG/
+2reaped children, validation0/0 и zero owned resources. Fresh14packages/20commands/
+4Cobalt+DI consumers проверили реальный styles API и engine ownership. Physical
+DPI/K3/K7/K8/VRAM/final alpha, полный golden/performance scope этим не закрываются.
 
 ## Состояние модулей
 
-| Модуль | Предыдущий собственный результат и область вывода | Продолжение |
+| Модуль | Текущий результат и область вывода | Продолжение |
 | --- | --- | --- |
-| [Core](core/STATUS.md) |2026-10-15:107/107 Debug и Release,52source +80package +3README; bounded configuration/bootstrap/diagnostics/lifecycle proof | Новых Core API для UI quality не требуется; cooperative shutdown и platform limits сохраняются |
-| [Cobalt / DI](cobalt/STATUS.md) |2026-10-15 COB7:runtime179/generator91 Release, paired App comparison и independent consumers; два projects/один package | Default Cobalt/adapter сохранены; массовая UseDI migration отложена. UI получает свой proof, allocation backlog отдельно |
-| [Enerit](enerit/STATUS.md) |2026-10-15 ENE5:runtime126/generator114 Debug/Release,10cases/90samples. Позднее MIT5 повторил runtime126 Debug/Release/package108 | Same-build pipes scope; MMF/schema/backpressure/engine frames не подтверждены |
-| [Mithril](mithril/STATUS.md) |2026-10-21:95/95 Debug/Release, graceful delivery race red/green,20native shutdown и108fresh package cases; own standalone restart matrix отдельно не повторена | Прежний bounded own-child/cooperative scope, budgets не увеличены; external restart не объявлен готовым |
-| [Alloy / Argentis](alloy/STATUS.md) |2026-10-22:ENG7a Editor consumer; UI643/Hosting79/Editor39 Debug/Release и native default-frame app. UI production код прежний | PA8a автоматический scope выполнен; current Editor39 отдельно от UI643. Physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
-| [Aether / Engine](engine/STATUS.md) |2026-10-22:ENG7a standalone Editor UI/viewport/commands/readonly inspector, Aether780/Editor39 Debug/Release, новый native app proof | Далее ENG7 authoring property editing/tree/input; gameplay точка ENG5c.3 collisions. Full World/edit/MCP/performance открыты |
+| [Core](core/STATUS.md) |2026-10-22:Contracts typed factories/adapters и borrowed lifecycle; Core117/117 Debug/Release | Provider-neutral contracts, cooperative/platform limits прежние |
+| [Cobalt / DI](cobalt/STATUS.md) |2026-10-22:runtime179/generator91 Debug/Release; Aether consumer factory/ownership tests на обоих providers | Runtime/generator/adapter API прежние; performance/allocation backlog отдельно |
+| [Enerit](enerit/STATUS.md) |2026-10-22:typed pipes/common factory registrations; runtime126/generator114 Debug/Release, реальные App+units+pipes | Same-build pipes scope, ENE5/MMF/schema/backpressure отдельно |
+| [Mithril](mithril/STATUS.md) |2026-10-22:injected handle factory/borrowed aliases,99/99 Debug/Release, composition/process checks | Own-child budgets/policies прежние; standalone restart matrix отдельно |
+| [Alloy / Argentis](alloy/STATUS.md) |2026-10-22:UIA1 typed view styles/VM; UI661/Hosting85/Editor49 Debug/Release, native и fresh packages | Explicit bindings/retained tree; physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
+| [Aether / Engine](engine/STATUS.md) |2026-10-22:UIA1 Editor model/style/DI factory; Aether800/Editor49 Debug/Release, native и package consumers | Engine contracts прежние; ENG7 editing/ENG5c.3 collisions, World/edit/MCP/performance открыты |
 
-Подробные counts/configuration/commands и ошибки остаются у владельцев. Эта таблица
-сводит разные предыдущие runs и не является одним full-solution regression pass.
+Подробные counts/configuration/commands и ошибки остаются у владельцев. Текущий
+общий run указан ниже; отдельные historical/package/performance scopes не смешиваются.
 
 ## Общие этапы
 
@@ -41,11 +42,13 @@ Physical DPI/K3/K7/K8/VRAM/final alpha прежние. Предыдущие св
 
 ## Общие проверки — датированные сведения
 
-Последний full solution run — **2026-10-22, ARCH1a.2**:
-Debug2098/2098 иRelease2098/2098, по9TRX, failed0/skipped0: Core107/Cobalt179/
-generator91/Enerit126/generator114/Mithril95/UI615/Hosting79/Aether692.
-Incremental dotnet test builds; nonincremental build не повторён.
-[Точные current commands/evidence](engine/HISTORY.md#arch1a2-агрегат-сцены-и-адаптер--2026-10-22).
+Последний full solution run — **2026-10-22, UIA1 view authoring**:
+Debug2321/2321 иRelease2321/2321, по10TRX, failed0/skipped0: Core117/Cobalt179/
+generator91/Enerit126/generator114/Mithril99/UI661/Hosting85/Aether800/Editor49.
+Nonincremental Debug build0errors/1520warnings; Release publish, native Debug/
+published Release и fresh bounded package proof прошли.
+[Точные команды/evidence/failures](alloy/HISTORY.md#uia1-view-viewmodel-и-typed-styles--2026-10-22).
+
 Предыдущие reference performance12cases, GPU validation6 и Mithril native20 —
 отдельные [ENG4e scopes/failures](engine/HISTORY.md#eng4e-cpugpu-baseline--2026-10-21).
 Прежние nonincremental0errors/1499warnings и fresh structural consumers находятся
@@ -55,6 +58,9 @@ Golden/RTE/full UI performance/hardware/release acceptance не повторял
 
 ## Общие блокеры и неопределённости
 
+- Aether DI1–DI4 закрыты в проверенном consumer/dependency scope; внешние games
+  должны добавить explicit entry factory/Contracts reference и пересобрать artifacts.
+  Массовая миграция всех independent consumers и полная framework readiness не заявлены.
 - UI package/Hosting/fonts gap закрыт2026-10-15; fresh40process proof не закрывает
   physical/final UI acceptance. Cobalt concrete View/model registrations обязательны
   для consumer source generation; автоматическая массовая UseDI migration не назначена.

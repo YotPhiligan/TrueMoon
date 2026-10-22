@@ -3,7 +3,7 @@ using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
 
-namespace TrueMoon.Editor;
+namespace TrueMoon.Aether.Editor;
 
 /// <summary>UI-owned scene selection and immutable runtime presentation; mutations still go through Aether commands.</summary>
 public sealed class EditorWorkspace

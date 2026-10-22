@@ -73,7 +73,7 @@ namespace MithrilCompositionProbe
             await app.StartAsync(deadline.Token);
             await app.Services.Resolve<IAppLifetimeHandler>()!.WaitAsync(deadline.Token);
             await app.StopAsync();
-            var listener = app.Services.ResolveAll<IStartable>().OfType<UnitParentProcessEventsHandler>().Single();
+            var listener = app.Services.Resolve<UnitParentProcessEventsHandler>()!;
             await listener.Completion.WaitAsync(TimeSpan.FromSeconds(5));
             return 0;
         }
@@ -83,6 +83,7 @@ namespace MithrilCompositionProbe
             if (scenario == "parent-exit") return await ParentExitAsync(provider, directory);
             await using var app = Build(scenario, provider);
             var controller = app.Services.Resolve<IUnitsController>()!;
+            var owner = app.Services.Resolve<UnitsController>()!;
             if (scenario == "main")
             {
                 await app.StartAsync();
@@ -91,7 +92,7 @@ namespace MithrilCompositionProbe
                 Check(app.Configuration.Get<string>("local-marker") == "configured", "Local configuration was not applied.");
                 await app.StopAsync();
                 Check(service.Stops == 1, "Local unit was not stopped exactly once.");
-                AssertControllerEmpty(controller!);
+                AssertControllerEmpty(owner);
                 return Report(scenario, provider, Environment.ProcessId, 0, true, true);
             }
             if (scenario is "startup-failure" or "cancel-start") await controller.SpawnUnitAsync(1);
@@ -127,7 +128,7 @@ namespace MithrilCompositionProbe
             var stopped = JsonSerializer.Deserialize<Stopped>(await File.ReadAllTextAsync(Path.Combine(directory, "stopped.json")))!;
             Check(stopped.Pid == ready.Pid && stopped.Stops == 1, "Child App shutdown did not stop its service exactly once.");
             if (scenario != "cancel-start") await app.StopAsync();
-            AssertControllerEmpty(controller!);
+            AssertControllerEmpty(owner);
             return Report(scenario, provider, child.Id, child.ExitCode, true, true);
         }
 
@@ -178,7 +179,7 @@ namespace MithrilCompositionProbe
         private static object Report(string scenario, string provider, int childPid, int exitCode, bool cleanup, bool stopped)
             => new { Scenario = scenario, Provider = provider, ParentPid = Environment.ProcessId, ChildPid = childPid, ExitCode = exitCode, Cleanup = cleanup, ServiceStopped = stopped, SameProcess = scenario == "main" };
         private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-        private static void AssertControllerEmpty(IUnitsController controller)
+        private static void AssertControllerEmpty(UnitsController controller)
         {
             var handles = (System.Collections.IDictionary)typeof(UnitsController).GetField("_unitHandles", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(controller)!;
             Check(handles.Count == 0, "Controller retained owned unit handles after cleanup.");

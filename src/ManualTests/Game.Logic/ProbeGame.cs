@@ -4,8 +4,9 @@ using TrueMoon.Aether.Scenes;
 namespace Game.Logic;
 
 // Minimal ENG1/ENG3b demo state; no generic scene migration or replacement transaction.
-public sealed class ProbeGame : ICheckpointGameSession, TrueMoon.Aether.Rendering.IRenderGameSession
+public sealed class ProbeGame : ICheckpointGameSession, TrueMoon.Aether.Rendering.IRenderGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
 {
+    public static global::TrueMoon.Aether.Sessions.IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new ProbeGame();
     private SceneSnapshot? _scene;
     private bool _disposed;
     private CameraTransform _camera = new(0, 1, 3, 0, 0, 0);

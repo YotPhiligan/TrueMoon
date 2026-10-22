@@ -1,14 +1,16 @@
-# TrueMoon.Editor
+# TrueMoon.Aether.Editor
 
 Первый основной экран редактора: стандартное borderless оформление Alloy,
 панель управления, список объектов сцены слева, живой3D viewport в центре,
 таблица свойств выбранного объекта справа и строка состояния снизу. Desktop WinExe
 не открывает дополнительную консоль. Dark/Light
 переключаются кнопкой «Тема». Это desktop application, `IsPackable=false`;
-движок остаётся в единственной сборке `TrueMoon.Aether`.
+движок остаётся в единственной сборке `TrueMoon.Aether`. Редактор и его tests
+относятся к модулю Aether; прежние имена `TrueMoon.Editor`/`TrueMoon.Editor.Tests`
+заменены на `TrueMoon.Aether.Editor`/`TrueMoon.Aether.Editor.Tests`.
 
 ```powershell
-dotnet run --project TrueMoon.Editor
+dotnet run --project TrueMoon.Aether.Editor
 ```
 
 В source checkout автоматически выбран `ManualTests/Game.Logic/Game.Logic.csproj`
@@ -21,11 +23,12 @@ dotnet run --project TrueMoon.Editor
 Для другого проекта:
 
 ```powershell
-dotnet run --project TrueMoon.Editor -- `
+dotnet run --project TrueMoon.Aether.Editor -- `
   --project E:/games/MyGame/MyGame.csproj --assembly MyGame.dll --entry MyGame.Session
 ```
 
-Выбранный тип должен реализовывать Aether game/render/checkpoint contracts и
+Выбранный тип должен реализовывать Aether game/render/checkpoint contracts,
+`Runtime.IGameSessionEntry.Create(IServiceResolver?)` и
 принимать демонстрационную SceneSnapshot. Поддержка project/scene files, asset
 browser и сохранения пользовательской сцены относится к следующему toolset.
 
@@ -48,7 +51,17 @@ browser и сохранения пользовательской сцены от
 
 ## App и ownership
 
-Application использует `UseAether` и `UsePresentation` из `App.Build`. UI не
+UI разделён на EditorWorkspace (данные/scene selection), EditorViewModel
+(INotifyPropertyChanged, строки состояния, доступность и guarded commands),
+EditorView (View<EditorViewModel>, Fluent-композиция/bindings) и EditorViewStyle
+(IViewStyle<EditorView>, typed parts/roles/theme values). Все сервисы/style/model
+получаются из DI, IFactory<EditorView> создаёт root на owner thread. View заимствует
+model, снимает собственные subscriptions и освобождает элементы при Dispose или
+ошибке construction. Model заимствует workspace/commands и отдельно принадлежит App.
+Selection меняет inspector rows адресно; runtime snapshots обновляют bindings без
+rebuild. Смена темы/стиля сохраняет input/focus/selection/viewport instances.
+
+Application использует `UseAether` и `UsePresentationFactory<EditorView>` из `App.Build`. UI не
 ссылается на test/probe executables и не загружает Game.Logic в свой CLR.
 `GameBuildLoader`, RuntimeProtocol, producer, supervisor, Mithril process ownership
 и Enerit IPC находятся в Aether. Здесь находятся composition и UI adapters.
@@ -64,12 +77,20 @@ Stop/drain до освобождения borrowed GL context. Неуспешны
 возможность повторить завершение. Viewport владеет частной retained Skia copy;
 Aether владеет transport/imports, окно/context остаются у Alloy.Hosting.
 
+App использует Cobalt по умолчанию. Workspace/binding/commands регистрируются в DI;
+`IFactory<EditorView>` создаёт UI root на owner thread. Binding реализует
+`IFactory<IGameViewportTransport, GpuResourceHost>`. Child branch подключает
+`UseAetherRuntime`, а выбранная игра создаётся явной entry factory с runtime DI.
+Borrowed lifecycle/service facades не освобождают owned targets повторно.
+[Решения и границы DI1–DI4](../docs/engine/PLAN.md#приведение-к-правилу-cobaltifactory),
+[миграция игровых сборок](../TrueMoon.Aether/README.md#сборка-и-выбор-игровой-версии--eng3a).
+
 ## Проверки и published запуск
 
 ```powershell
-dotnet test TrueMoon.Editor.Tests/TrueMoon.Editor.Tests.csproj
-dotnet publish TrueMoon.Editor --configuration Release --output TestResults/EditorScreen/publish
-dotnet TestResults/EditorScreen/publish/TrueMoon.Editor.dll --project ManualTests/Game.Logic/Game.Logic.csproj
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj
+dotnet publish TrueMoon.Aether.Editor --configuration Release --output TestResults/EditorScreen/publish
+dotnet TestResults/EditorScreen/publish/TrueMoon.Aether.Editor.dll --project ManualTests/Game.Logic/Game.Logic.csproj
 ```
 
 `--light` выбирает светлую тему при старте. `--help` выводит CLI. Направленный smoke
@@ -77,7 +98,7 @@ dotnet TestResults/EditorScreen/publish/TrueMoon.Editor.dll --project ManualTest
 
 ```powershell
 $env:VK_LAYER_PATH = '<validation-layer-directory>'
-dotnet run --project TrueMoon.Editor -- --smoke TestResults/EditorScreen/fresh --validation
+dotnet run --project TrueMoon.Aether.Editor -- --smoke TestResults/EditorScreen/fresh --validation
 ```
 
 Используйте новый output directory. Smoke создаёт3PNG, interaction/report JSON и

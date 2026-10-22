@@ -1,6 +1,6 @@
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Editor;
+namespace TrueMoon.Aether.Editor;
 
 /// <summary>Fixed tool/status rows and proportional scene/viewport/inspector columns; no native handles.</summary>
 public sealed class EditorLayout : ElementList

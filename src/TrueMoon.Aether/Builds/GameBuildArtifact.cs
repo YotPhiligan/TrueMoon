@@ -26,11 +26,12 @@ public sealed class GameBuildArtifact
     public long SourceRevision => _manifest.SourceRevision;
     /// <summary>Gets the managed entry DLL file name.</summary>
     public string EntryAssembly => _manifest.EntryAssembly;
-    /// <summary>Gets the public, parameterless IGameSession implementation type name.</summary>
+    /// <summary>Gets the public IGameSession/IGameSessionEntry implementation type name.</summary>
     public string EntryType => _manifest.EntryType;
     /// <summary>Gets a copy of the declared managed files.</summary>
     public IReadOnlyList<string> Files => Array.AsReadOnly(_manifest.Files.Select(f => f.Name).ToArray());
-    internal static string ContractHash => HashFile(typeof(IGameSession).Assembly.Location);
+    internal static string ContractHash => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+        HashFile(typeof(IGameSession).Assembly.Location) + ":" + HashFile(typeof(IFactory<>).Assembly.Location))));
     internal static readonly HashSet<string> FrameworkNames = System.IO.Directory.EnumerateFiles(
         Path.GetDirectoryName(typeof(object).Assembly.Location)!, "*.dll").Select(Path.GetFileNameWithoutExtension).ToHashSet(StringComparer.OrdinalIgnoreCase)!;
 
@@ -106,7 +107,8 @@ public sealed class GameBuildArtifact
         if (names.Length is < 1 or > 16 || names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Length ||
             names.Any(n => string.IsNullOrWhiteSpace(n) || n.Length > 128 || n.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
                 n.Contains('/') || n.Contains('\\') || !n.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
-                FrameworkNames.Contains(Path.GetFileNameWithoutExtension(n)) || n.Equals("TrueMoon.Aether.dll", StringComparison.OrdinalIgnoreCase)))
+                FrameworkNames.Contains(Path.GetFileNameWithoutExtension(n)) || n.Equals("TrueMoon.Aether.dll", StringComparison.OrdinalIgnoreCase) ||
+                n.Equals("TrueMoon.Contracts.dll", StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException("Declare 1..16 distinct private managed DLL names; framework/Aether copies are forbidden.");
     }
     private static void ValidateManifest(string directory, Manifest manifest)
@@ -131,7 +133,7 @@ public sealed class GameBuildArtifact
             foreach (var reference in metadata.AssemblyReferences)
             {
                 var name = metadata.GetString(metadata.GetAssemblyReference(reference).Name);
-                if (name != "TrueMoon.Aether" && !FrameworkNames.Contains(name) && !allowed.Contains(name))
+                if (name != "TrueMoon.Aether" && name != "TrueMoon.Contracts" && !FrameworkNames.Contains(name) && !allowed.Contains(name))
                     throw new InvalidDataException("Undeclared game dependency: " + name);
             }
         }

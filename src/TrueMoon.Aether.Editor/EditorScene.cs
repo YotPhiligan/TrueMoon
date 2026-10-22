@@ -2,7 +2,7 @@ using System.Numerics;
 using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Editor;
+namespace TrueMoon.Aether.Editor;
 
 public static class EditorScene
 {

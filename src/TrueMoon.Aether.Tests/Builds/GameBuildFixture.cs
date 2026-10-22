@@ -32,7 +32,7 @@ public sealed class GameBuildFixture : IAsyncLifetime
         File.WriteAllText(project, $"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup><TargetFramework>net10.0</TargetFramework><AssemblyName>{assembly}</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
-              <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference>{references}</ItemGroup>
+              <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference>{references}</ItemGroup>
               {target}
             </Project>
             """);
@@ -54,8 +54,9 @@ public sealed class GameBuildFixture : IAsyncLifetime
         using TrueMoon.Aether.Scenes;
         using TrueMoon.Aether.Sessions;
         namespace Game.Candidate;
-        public sealed class Game : IGameSession
+        public sealed class Game : IGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
         {
+            public static IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new Game();
             public ulong TickNumber { get; private set; }
             public long Revision { get; private set; } = -1;
             public uint PatternColor => {{color}};

@@ -50,7 +50,7 @@ public static class RuntimeHost
             new AetherEvents<UnitParentProcessEventsHandler>());
         parent.StartListen(parentId);
         using var end = CancellationTokenSource.CreateLinkedTokenSource(lifetime.AppCancellationToken, boundedLifetime.Token);
-        using var loaded = launch.Build == null ? null : GameBuildLoader.Load(launch.Build, launch.Identity.HostContractId);
+        using var loaded = launch.Build == null ? null : app.Services.Resolve<IFactory<GameBuildLoader, GameBuildReference>>().Create(launch.Build);
         using var legacyGame = loaded == null ? new ProbeGame() : null;
         var game = loaded?.Session ?? legacyGame!;
         if (launch.Behavior is "capture-reject" or "restore-reject") game = new CheckpointFaultGame(game, launch.Behavior);

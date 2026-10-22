@@ -1,5 +1,20 @@
 # Core: состояние и точка продолжения
 
+Текущая реализация — **2026-10-22, общие фабрики/lifecycle adapters**:
+IFactory<T,TArguments>, Factory adapters и non-owning AppServiceLifecycle добавлены
+в Contracts без provider/module dependencies. Legacy IFactory<T> сохранён.
+Core117/117 Debug/Release (10новых cases), включая обе DI реализации и exactly-once
+product ownership. Подробности в [Aether DI evidence](../engine/HISTORY.md#единые-фабрики-и-di--2026-10-22).
+Прежняя Core delivery matrix не повторялась целиком; свежие bounded package checks
+этого изменения перечислены там же.
+
+Документационное решение — **2026-10-22**: правила ИИ-агентов закрепляют сборку
+систем/сервисов через Cobalt и внедрённые IFactory, constructor injection и явное
+владение результатами фабрик. App остаётся точкой composition/lifecycle, общие
+contracts независимы от provider. [Границы решения](../cobalt/PLAN.md#организация-систем-и-сервисов-через-di-и-ifactory--2026-10-22).
+Код/API не менялись; аудит consumers и build/tests не запускались. Следующие
+адресные изменения следуют правилу, прежние readiness и порядок работ сохраняются.
+
 Исправление структуры — **2026-10-21**: AppCreationException находится в корне
 Contracts/namespace TrueMoon; UnitsConfigurationExtensions перенесён в Mithril.
 Роль общей сборки contracts/base models/interfaces сохранена, новых dependencies

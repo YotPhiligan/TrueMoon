@@ -14,6 +14,13 @@ TrueMoon.Enerit, Enerit.Generator, Enerit.Tests и Enerit.Generator.Tests. Invoc
 
 ## Архитектура и решения
 
+Уточнение2026-10-22: [Aether DI1–DI4](../engine/PLAN.md#приведение-к-правилу-cobaltifactory)
+добавляет типизированные PipesInvocationClientFactory<T>/PipesInvocationServerFactory<T>
+с IFactory<TProduct,TArguments>. App invocation registrations получают products
+через общий IFactory поверх прежнего transport-specific factory. Wire и generated
+handlers прежние; caller владеет динамическими products, зарегистрированные App
+transports сохраняют lifecycle.
+
 Сохранять IInvocationClient/IInvocationServer, factories/handlers и ISerializer boundaries. Runtime использует Contracts/Core и свой generator. Transport choice остаётся явным, generated adapters должны соответствовать runtime framing/serialization.
 
 До утверждения production readiness определить framing/size limits, method mapping, совместимость payload, cancellation/timeout/disconnect semantics и владение буферами/каналами. Чтение существующих interfaces не означает, что эти гарантии уже выполнены. Pipes и memory-mapped реализации не объявляются равно проверенными.

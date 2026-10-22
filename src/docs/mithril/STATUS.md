@@ -1,5 +1,15 @@
 # Mithril: состояние и точка продолжения
 
+Текущая реализация — **2026-10-22, фабрики и единственный owner**:
+UnitsController injects IFactory<IUnitHandle,IUnitConfiguration>; штатный
+UnitHandleFactory выбирает hosting mode. Controller/parent создаются через App
+factories; borrowed IUnitsController и non-disposable lifecycle adapters исключают
+duplicate ownership. Public consumers должны обращаться к concrete registration
+для диагностической inspection, а не приводить alias к implementation.
+Mithril99/99 Debug/Release (+4cases) и реальные composition/process/pipe tests
+прошли на обоих providers. Process budgets/policies прежние. Own standalone restart
+matrix отдельно не повторялась. [Evidence](../engine/HISTORY.md#единые-фабрики-и-di--2026-10-22).
+
 Последняя работа — **2026-10-21, graceful wait при ошибке доставки exit**.
 В StopAsync исправлена гонка stdin/control pipe: ошибка доставки больше не
 пропускает оставшийся graceful budget; timeout/cancellation/owned kill/reap

@@ -20,6 +20,33 @@ runtime пути согласованы; runtime и generator поставляю
 
 Зафиксировать реально поддержанные lifetimes, factory/instance ownership, разрешение нескольких регистраций и generics. Возможности разных providers не объявлять идентичными заранее; различия описать и проверить. Новые scopes или автоматическую container migration этот roadmap не вводит.
 
+### Организация систем и сервисов через DI и IFactory — 2026-10-22
+
+По решению пользователя зафиксировано [правило для ИИ-агентов](../../AGENTS.md#di-и-создание-систем-и-сервисов):
+
+- Cobalt собирает граф систем и сервисов; модули регистрируют их через публичные
+  App extensions. Зависимости передаются через конструкторы, прямой Resolve
+  остаётся в composition root и инфраструктуре фабрик/DI adapters.
+- Отложенное, повторное и параметризованное создание выполняется через внедрённые
+  `IFactory<T>`. Саму фабрику предоставляет DI; new сервисов допустим внутри фабрики
+  или registration factory. DTO/values/messages/collections/UI elements не требуют
+  отдельной DI registration. Hot loops используют уже полученные зависимости.
+- Lifetime и единственный владелец каждого результата определяются явно, включая
+  failed creation/cleanup и оконные/сессионные ресурсы. IFactory.Create сам по себе
+  не означает container ownership; результат фабрики и factory registration
+  являются разными границами владения. Disposable aliases не добавляют владельцев.
+- Общие IServiceResolver/registration/IFactory contracts остаются в Contracts;
+  module-specific factories — в модуле. Повсеместные references на Cobalt runtime
+  не нужны. Новые typed factory interfaces, scopes и async activation этим решением
+  не вводятся; параметры создания выражаются типизированными аргументами/options.
+
+Правило действует для нового кода и адресной переработки. Microsoft DI adapter
+и provider-specific regression coverage сохраняются; предыдущая отсрочка массовой
+migration explicit UseDI consumers не отменена. При адресном применении сверять
+generation/registration, lifetime и start/stop/disposal затронутого графа.
+Фиксация правила не является аудитом существующих consumers или новой проверкой
+реализации; порядок функциональных работ и readiness не меняются.
+
 ### Принятые контракты исправления ревью — 2026-10-10
 
 Основание: исправление Core integration и выявленных resolver/generator дефектов. [Проверки и ограничения](HISTORY.md).

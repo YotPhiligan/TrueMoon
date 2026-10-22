@@ -10,7 +10,7 @@ using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Editor;
+namespace TrueMoon.Aether.Editor;
 
 // Directed input targets only this application's tree. No global pointer/keyboard or Windows settings changes.
 internal static class EditorSmoke

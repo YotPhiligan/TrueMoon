@@ -10,5 +10,9 @@
       <HintPath>$(AetherContractPath)</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="TrueMoon.Contracts" Condition="'$(AetherContractPath)' != ''">
+      <HintPath>$(TrueMoonContractsPath)</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 </Project>

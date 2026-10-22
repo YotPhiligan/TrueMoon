@@ -3,6 +3,7 @@ using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 using TrueMoon.Services;
+using TrueMoon.Mithril.Units;
 
 namespace TrueMoon.Mithril;
 
@@ -53,10 +54,11 @@ public static class AppCreationContextExtensions
                 if (!int.TryParse(parent, out var parentId) || parentId <= 0 || parentId == Environment.ProcessId)
                     throw new ArgumentException("Invalid parent process id.");
                 context.Services(r => r
-                    .Singleton<UnitParentProcessEventsHandler>(resolver => new UnitParentProcessEventsHandler(configuration,
-                        resolver.Resolve<IAppLifetime>(), resolver.Resolve<IEventsSource<UnitParentProcessEventsHandler>>()))
-                    .Singleton<IStartable>(resolver => resolver.Resolve<UnitParentProcessEventsHandler>())
-                    .Singleton<IStoppable>(resolver => resolver.Resolve<UnitParentProcessEventsHandler>()));
+                    .Singleton<IFactory<UnitParentProcessEventsHandler>>(resolver => new Factory<UnitParentProcessEventsHandler>(() =>
+                        new(configuration, resolver.Resolve<IAppLifetime>(), resolver.Resolve<IEventsSource<UnitParentProcessEventsHandler>>())))
+                    .Singleton<UnitParentProcessEventsHandler>(resolver => resolver.Resolve<IFactory<UnitParentProcessEventsHandler>>().Create()!)
+                    .Singleton<IStartable>(resolver => new AppServiceLifecycle(startable: resolver.Resolve<UnitParentProcessEventsHandler>()))
+                    .Singleton<IStoppable>(resolver => new AppServiceLifecycle(stoppable: resolver.Resolve<UnitParentProcessEventsHandler>())));
             }
             return;
         }
@@ -66,11 +68,18 @@ public static class AppCreationContextExtensions
         context.Services(r =>
         {
             r.Instance<IReadOnlyList<IUnitConfiguration>>(snapshots);
-            if (!r.Exist<IUnitsController>()) r
-                .Singleton<UnitsController>(resolver => new UnitsController(resolver.Resolve<IEventsSource<UnitsController>>(), resolver.Resolve<IAppLifetime>(), snapshots))
-                .Singleton<IUnitsController>(resolver => resolver.Resolve<UnitsController>())
-                .Singleton<IStartable>(resolver => resolver.Resolve<UnitsController>())
-                .Singleton<IStoppable>(resolver => resolver.Resolve<UnitsController>());
+            if (!r.Exist<IUnitsController>())
+            {
+                if (!r.Exist<IFactory<IUnitHandle, IUnitConfiguration>>())
+                    r.Singleton<IFactory<IUnitHandle, IUnitConfiguration>>(resolver => new UnitHandleFactory(resolver.Resolve<IEventsSource<UnitsController>>()));
+                r.Singleton<IFactory<UnitsController>>(resolver => new Factory<UnitsController>(() =>
+                    new(resolver.Resolve<IEventsSource<UnitsController>>(), resolver.Resolve<IAppLifetime>(), snapshots,
+                        resolver.Resolve<IFactory<IUnitHandle, IUnitConfiguration>>())))
+                .Singleton<UnitsController>(resolver => resolver.Resolve<IFactory<UnitsController>>().Create()!)
+                .Singleton<IUnitsController>(resolver => new BorrowedUnitsController(resolver.Resolve<UnitsController>()))
+                .Singleton<IStartable>(resolver => new AppServiceLifecycle(startable: resolver.Resolve<UnitsController>()))
+                .Singleton<IStoppable>(resolver => new AppServiceLifecycle(stoppable: resolver.Resolve<UnitsController>()));
+            }
         });
     }
 

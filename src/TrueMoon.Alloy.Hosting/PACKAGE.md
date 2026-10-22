@@ -15,6 +15,10 @@ Explicit root factory: `context.UsePresentation(resolver => new MyView(resolver.
 creates the root on the UI owner after the target is ready. Register dependencies
 explicitly; the view is not registered/resolved as a service and a factory-based
 Cobalt graph needs no generated view resolver. The generic overload remains.
+For an injected factory, register `IFactory<MyView>` and call
+`UsePresentationFactory<MyView>(configure)`. It creates each root on the UI owner
+thread and transfers ownership to the window. Session/lifecycle interface facades
+borrow their target, avoiding multiple provider-owned disposable aliases.
 Renderer/window settings are snapshotted during registration. Return a fresh,
 detached root; null/disposed/parented/attached roots fault startup without disposing
 another owner's tree. Factory exceptions remain observable through Completion.

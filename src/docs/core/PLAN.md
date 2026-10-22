@@ -14,6 +14,13 @@ DI resolver и generators относятся к [Cobalt](../cobalt/PLAN.md), IPC
 
 ## Архитектура и решения
 
+Решение2026-10-22 в рамках [Aether DI1–DI4](../engine/PLAN.md#приведение-к-правилу-cobaltifactory):
+Contracts расширяет IFactory<T> типизированным IFactory<T,TArguments> и Factory
+adapters без владения результатами. Legacy Create/Create<TData> сохранены; typed
+factory требует корректные arguments. AppServiceLifecycle forwards start/stop,
+не реализуя disposal целевого сервиса: DI aliases не создают дополнительных owners.
+Новых зависимостей общей сборки на providers/modules нет.
+
 Уточнение2026-10-21: TrueMoon.Contracts — общий пакет контрактов, базовых моделей
 и интерфейсов для взаимодействия модулей; App contracts — часть этого назначения.
 Специфичные для отдельного модуля типы остаются в своём модуле. Общая сборка

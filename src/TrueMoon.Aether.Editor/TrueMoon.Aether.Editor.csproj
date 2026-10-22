@@ -5,7 +5,7 @@
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Description>TrueMoon desktop editor application.</Description>
+    <Description>TrueMoon Aether desktop editor application.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../TrueMoon/TrueMoon.csproj" />

@@ -13,7 +13,9 @@ public static class AppCreationContextExtensions
             InvocationServiceStorage.Shared.ConfigureService<T>(r);
             if (!r.Exist<IInvocationClient<T>>())
             {
-                r.Singleton<IInvocationClient<T>>(p => p.Resolve<IInvocationClientFactory>().Create<T>());
+                if (!r.Exist<IFactory<IInvocationClient<T>>>())
+                    r.Singleton<IFactory<IInvocationClient<T>>>(p => new Factory<IInvocationClient<T>>(() => p.Resolve<IInvocationClientFactory>().Create<T>()));
+                r.Singleton<IInvocationClient<T>>(p => p.Resolve<IFactory<IInvocationClient<T>>>().Create()!);
                 r.Singleton<InvocationTransportLifetime<IInvocationClient<T>>>(p => new(p.Resolve<IInvocationClient<T>>()));
                 r.Singleton<IStartable>(p => p.Resolve<InvocationTransportLifetime<IInvocationClient<T>>>());
                 r.Singleton<IStoppable>(p => p.Resolve<InvocationTransportLifetime<IInvocationClient<T>>>());
@@ -30,7 +32,9 @@ public static class AppCreationContextExtensions
             if (!r.Exist<IInvocationServerHandler<T>>()) InvocationServiceStorage.Shared.ConfigureHandler<T>(r);
             if (!r.Exist<IInvocationServer<T>>())
             {
-                r.Singleton<IInvocationServer<T>>(p => p.Resolve<IInvocationServerFactory>().Create<T>());
+                if (!r.Exist<IFactory<IInvocationServer<T>>>())
+                    r.Singleton<IFactory<IInvocationServer<T>>>(p => new Factory<IInvocationServer<T>>(() => p.Resolve<IInvocationServerFactory>().Create<T>()));
+                r.Singleton<IInvocationServer<T>>(p => p.Resolve<IFactory<IInvocationServer<T>>>().Create()!);
                 r.Singleton<InvocationTransportLifetime<IInvocationServer<T>>>(p => new(p.Resolve<IInvocationServer<T>>()));
                 r.Singleton<IStartable>(p => p.Resolve<InvocationTransportLifetime<IInvocationServer<T>>>());
                 r.Singleton<IStoppable>(p => p.Resolve<InvocationTransportLifetime<IInvocationServer<T>>>());

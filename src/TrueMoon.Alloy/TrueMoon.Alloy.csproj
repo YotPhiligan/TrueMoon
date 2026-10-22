@@ -13,6 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
         <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
     </ItemGroup>
 </Project>

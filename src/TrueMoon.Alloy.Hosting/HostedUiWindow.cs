@@ -336,7 +336,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
                 _defaultFrame = new(frame, window, () => { _ = RequestCloseAsync(); });
                 _defaultFrame.Synchronize(window.IsFocused);
             }
-            var session = _sessions.Create(root, target, window.Viewport, window);
+            var session = ((IFactory<UiSession, UiSessionCreation>)_sessions).Create(new(root, target, window.Viewport, window));
             if (_options.EnableDiagnostics) _diagnostics = session.EnableDiagnostics(Id);
             return session;
         }

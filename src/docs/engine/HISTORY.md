@@ -2,6 +2,192 @@
 
 [Текущий статус](STATUS.md), [единственный детальный план](PLAN.md).
 
+## Единые фабрики и DI — 2026-10-22
+
+По следующему запросу пользователя после аудита реализованы DI1–DI4 в Aether,
+Aether.Editor и используемых путях Enerit/Mithril/Alloy. Default Cobalt и Microsoft
+DI adapter сохранены; runtime/generator Cobalt не менялись. Новые общие
+IFactory<T,TArguments>, Factory adapters и AppServiceLifecycle находятся в Contracts,
+без dependency на provider. Типизированные factories сохраняют legacy bridge;
+аргументы проверяются до callback, ошибки callback не оборачиваются.
+
+AetherHostFactory получает дочерние factories через DI, передаёт готовые
+зависимости host и откатывает частичное создание в обратном порядке, сохраняя
+original/cleanup causes. Aggregate остаётся единственным владельцем. App options
+поддерживают typed viewport factory; runtime leases и CPU receivers также создаются
+через IFactory. SceneResolutionService использует внедрённую catalog factory на
+каждую revision; standalone SceneResolver adapter сохранён.
+
+Editor workspace/binding/commands и owner-thread root factory регистрируются в App.
+UseAetherRuntime после UseAether фиксирует launch, допускает factory overrides и
+создаёт owned graph parent/game/producer/protocol/IPC. AetherRuntimeHost borrows
+App/GPU, закрывает admission, отменяет/drains workers и освобождает игру после
+завершения работы. Failed cleanup наблюдаем/retryable; aliases не владеют target.
+Enerit имеет generic pipes factories/common App factory adapters. Mithril injects
+UnitHandleFactory и snapshots; IUnitsController/lifecycle aliases — borrowed facades.
+Alloy→Contracts добавлен для typed session bridge; Hosting предоставляет
+UsePresentationFactory и non-owning service/lifecycle facades.
+
+Game loader использует IFactory<IGameSession,Type>; штатный game entry реализует
+IGameSessionEntry.static Create(IServiceResolver?), явно создаёт игру с constructor
+dependencies, не используя Activator/constructor reflection fallback. Runtime
+services заимствуются, game/context/artifact pin принадлежат loader. Generic static
+dispatch не кеширует collectible types. Shared Aether и Contracts исключены из
+private dependencies. HostId/ContractHash учитывают обе assembly. **Миграция:**
+добавить entry factory и non-copying TrueMoonContractsPath reference наряду с
+AetherContractPath; host/runtime/game и прежние artifacts пересобрать вместе.
+Wire versions прежние. Manual game/project/compiler fixtures обновлены.
+
+### Проверки и артефакты
+
+Текущий output root: `TestResults/AetherDI-20261022-204227` (далее `$diDir`).
+SDK10.0.402/net10.0/Windows x64. Все MSBuild commands сохранены с уникальными
+binlogs; transient artifacts исключены из version control.
+
+```powershell
+$diDir = Get-Content TestResults/aether-di-current.txt
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory "$diDir/debug-verified" "-bl:$diDir/debug-verified-{}.binlog"
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory "$diDir/release-verified" "-bl:$diDir/release-verified-{}.binlog"
+dotnet publish TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj --configuration Release --output "$diDir/publish" "-bl:$diDir/editor-publish-{}.binlog"
+```
+
+Оба full runs exit0: **2293/2293/configuration**, по10TRX, failed0/skipped0.
+Core117/Cobalt179/generator91/Enerit126/generator114/Mithril99/UI643/Hosting85/
+Aether800/Aether.Editor39. Publish exit0. Добавлены40cases в17methods; read-only
+assertion/gap review привёл к двум усилениям: реальный non-null runtime service и
+независимый disposal counter frame-owned transport. Точные requirements/evidence:
+
+| Требование | Проверка |
+| --- | --- |
+| Factory products caller-owned, typed/legacy/null/error contracts | FactoryTests.RegisteredAdapters_CreateSeparateCallerOwnedResults и typed bridge/argument/failure cases |
+| Единственный disposable owner при lifecycle aliases | FactoryTests.BorrowedLifecycleAliases_ForwardAppCallsAndDisposeOwnerExactlyOnce |
+| Injection и rollback aggregate с original+cleanup causes | AppIntegrationTests.RegisteredCompilerFactory_SuppliesHostDependencyAndTransfersOwnership; HostFactoryFailure_RollsBackAllAcquiredDependenciesAndPreservesCleanupErrors |
+| Runtime precondition/duplicate/snapshot/overrides | RuntimeRegistration_RequiresAetherAndRejectsDuplicatesBeforeCreatingServices; RuntimeRegistration_UsesInjectedFactoryWithNormalizedLaunchSnapshot |
+| Authoring factory на каждую revision | AuthoringResolution_UsesInjectedCatalogFactoryForEveryRevision |
+| Game entry runtime DI/errors/pins | GameBuildTests.ExplicitGameEntry_InjectsBorrowedRuntimeServiceIntoCallerOwnedSessions; ExplicitGameEntry_PropagatesOriginalInjectedFailureAndReleasesPins; SelectedGameFactoryFailure_ReleasesPinsAndPreservesTypeAndError |
+| Handle configuration snapshot/ownership/failure | UnitCompositionTests.InjectedHandleFactory_UsesSnapshotsAndControllerOwnsEveryResult |
+| UI argument/clipboard/root/session ownership | HostedUiSessionFactoryTests.CommonFactoryBridge_PreservesCreationArgumentsAndSessionOwnership; CommonFactoryBridge_InvalidArgumentsDoNotTakeRootOwnership |
+| Provider-neutral Alloy dependency boundary | CoreBoundaryTests.Alloy_AssemblyReferences_ContainOnlySharedContractsArgentisAndBcl |
+
+Итоговые source Debug apphost и published Release запускались RunNative.ps1 с
+`--smoke <fresh-directory> --validation`, VK_LAYER_PATH только в собственном
+process tree. `native-debug-final`/`native-release-final`: оба exit0, каждый
+8commands/3PNG/9material pixel checks/2reaped runtime children; zero UI sessions,
+mappings/GPU resources/handles, disposed view. Каждый из4runtime reports:
+Vulkan core/sync0errors/0warnings,1device/1surface/3slots created=released,
+LiveSlots/OpenHandles0. Game.Logic пересобиралась compiler с обеими shared refs.
+
+Первый full Debug выявил старые probe assumptions: reflection над implementation
+через borrowed IUnitsController и поиск concrete parent среди lifecycle aliases;
+Alloy allowlist ещё запрещал новую согласованную Contracts dependency. Probes
+получают concrete owner из DI для inspection, интерфейсные calls сохранены;
+boundary test требует Contracts и запрещает любые concrete providers/renderers.
+Следующий run оставил2cancel-start failures из-за Resolve после disposed provider;
+owner теперь фиксируется до disposal. Итоговый Debug выше прошёл целиком.
+Первый native helper сам создал directory, которое smoke обязан создавать свежим;
+helper исправлен, subsequent actual runs exit0. Эти failures сохранены в logs,
+не скрыты passing итогом. Первичные compile issues typed handler/nullable bridge/
+namespace исправлены до final runs.
+
+Fresh isolated package matrix: `ValidatePackageFinal.ps1`/`VerifyPackageFinal.ps1`,
+output `aether-package-final`, версия`0.2.2.7-alpha.aetherdi.20261022162035190`.
+**14fresh nupkgs/20commands/4consumer runs**, все exit0: build Debug, publish Release,
+каждый binary на Cobalt и Microsoft DI. Собственные feed/cache и packageSourceMapping
+исключают подмену TrueMoon локальным историческим package. Consumer имеет только
+PackageReference, использует typed viewport factory, проверяет common UI factory API,
+runtime/lease/GPU/viewport exactly-once ownership, terminal admission и zero mappings.
+Nuspec Vulkan2.23.0, actual Aether/Skia/native payload hashes и package immutability
+проверены. Первая матрица также прошла, затем финальная повторена после обновления
+packaged Alloy/Hosting README. Пакеты не публиковались.
+
+`VerifyFinal.ps1` повторно сверил все20TRX/2native runs/4runtime reports/package
+summary и записал `verification.json`. Source namespace check:7production projects,
+257C#sources/235namespace declarations, нарушений0.22изменённых documents,
+413local links, missing targets0; `git diff --check` exit0. Это path-link проверка,
+не полный аудит всех исторических anchors. Полный source/structural matrix всего
+репозитория и nonincremental build отдельно не повторялись.
+
+Эти проверки не повторяют performance/allocations, golden/RTE, physical DPI,
+device loss/VRAM, K3/K7/K8/final alpha, полный engine native60 или все independent
+consumer matrices. Функциональные ENG5c/ENG7/World/edit/MCP backlog остаются.
+
+## Переименование редактора и аудит DI — 2026-10-22
+
+По запросу пользователя переименованы TrueMoon.Editor/Tests в
+TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.Tests: каталоги/csproj, default assembly
+names, namespaces, ProjectReference, CLI help, README и текущие документационные
+ссылки. В точном TrueMoon.slnx оба проекта находятся в `/Aether/`; отдельная группа
+`/Editor/` устранена. Listing проверен сразу после изменения. Window title теперь
+TrueMoon Aether Editor. Исторические имена в предыдущей записи ниже сохранены;
+её ссылка на README обновлена. Внешним consumers нужны новые using/references
+и пересборка. UI остаётся отдельным application, engine library не получает UI.
+
+Аудит production Aether и обеих process branches редактора показал **частичное
+соответствие** правилу Cobalt/IFactory. Activation/lifetime contracts не менялись;
+аудит не считается исправлением. [Замечания и единственный план DI1–DI4](PLAN.md#переименование-редактора-и-аудит-di--2026-10-22):
+
+- AetherHost.cs:17–38 вручную создаёт Supervisor/Frames/Builds/Replacement/Editor/
+  Gpu. Нужны зависимости/внедрённые factories при сохранении единственного владельца,
+  stop/drain order и cleanup retry; disposable aliases добавлять нельзя.
+- SessionSupervisor.cs:45/AetherOptions.cs:30–34 используют IRuntimeFactory/Func;
+  общий IFactory<T> в production Aether/Editor не используется. Runtime factory
+  уже внедрён, но унификация контрактов ещё не выполнена.
+- GameBuildLoader.cs:25 создаёт IGameSession через Activator, без constructor DI.
+  Требуется factory activation внутри child/artifact/AssemblyLoadContext boundary,
+  без загрузки Game.Logic в Editor и без нового reflection fallback.
+- EditorApplication.cs:23–45/RuntimeEntryPoint.cs:34–41 вручную собирают workspace/
+  binding/commands и runtime protocol/frame producer/IPC. Captured dependencies
+  не становятся DI services лишь из-за UsePresentation root callback.
+- SceneResolver.cs:25–28 создаёт EntityResolver внутри статического authoring
+  pipeline; для системного использования нужна service/factory boundary.
+
+Существующие правильные границы: default Cobalt в App, snapshots/duplicate guards
+UseAether, constructor dependencies GameEditor/GameReplacement, отсутствие owned
+disposable aliases. IServiceResolver/DI Resolve ограничен registrations и process
+bootstrap; EntityResolver.Resolve — доменный алгоритм, не service locator. DTO,
+UI elements и low-level resources внутри их владельцев сами по себе допустимы.
+
+### Проверки переименования
+
+Windows x64/SDK10.0.402, net10.0/xUnit2.9.3/VSTest; ignored evidence:
+`TestResults/AetherEditorRename-20261022-195846/`.
+
+```powershell
+dotnet sln TrueMoon.slnx list
+$run = 'TestResults/AetherEditorRename-20261022-195846'
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory "$run/debug" "-bl:$run/debug-{}.binlog" --verbosity minimal
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory "$run/release" "-bl:$run/release-{}.binlog" --verbosity minimal
+dotnet publish TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj --configuration Release --output "$run/publish" "-bl:$run/publish-{}.binlog" --verbosity minimal
+```
+
+Каждый test run: **Passed:2253, Failed:0, Skipped:0**,10complete TRX:
+Core107/Cobalt179/generator91/Enerit126/generator114/Mithril95/UI643/Hosting79/
+Aether780/Aether.Editor39. Новая test assembly обнаружена как
+truemoon.aether.editor.tests.dll. Release runner/publish exit0; отдельные binlogs
+Debug/Release/publish, stdout/stderr и release.exitcode сохранены. Nonincremental
+build и independent package matrix не повторялись.
+
+Direct Debug и published Release apphost `TrueMoon.Aether.Editor.exe` с
+`--smoke <fresh-dir> --validation`: `native-final-Debug`/`native-final-Release`,
+оба exit0/Passed=true. В каждом8UI commands/3PNG/9material pixel assertions,
+selection/theme/resize, Build/Start/Play/Pause/Step/Build/Replace/Stop,
+2separate reaped runtime children, view disposed/UI sessions/mappings/GPU resources/
+handles0. Runtime reports подтверждают enabled core/sync validation0errors/
+0warnings including teardown. VK_LAYER_PATH только для собственного process tree:
+existing `TestResults/ENG4b/validation-layer/Bin`; Windows/driver settings прежние.
+
+Первый helper ошибочно трактовал недоступный ExitCode у Start-Process как failure,
+хотя Debug smoke report прошёл. Исходные logs/report сохранены; final helper
+использует Diagnostics.Process/redirected streams и сохраняет фактический код.
+Оба final runs повторены, exit0; helper failure не считается product regression.
+
+Структурная проверка четырёх Aether projects:135C# sources/133namespace declarations,
+нарушений0; все ProjectReference paths существуют, editor projects ровно по одному
+в `/Aether/`, старого namespace в исходниках нет. Hashes/locations сохранены в
+`structure-and-sources.json`. Passing tests/native подтверждают переименование,
+но не устранение замечаний DI1–DI4. Physical DPI/K3/K7/K8/VRAM/performance/release
+ограничения сохраняются. Итоговые whitespace/doc link checks выполнены отдельно.
+
 ## ENG7a: основной экран редактора — 2026-10-22
 
 Запрос: «давай теперь возможно сделаем основной экран редактора? я думаю это
@@ -32,7 +218,7 @@ owns transport/imports, borrowed GL context удерживается до succes
 GL UUID query повторяет существующий read-only contract и проверяет owner/context/
 процедуры/число устройств/error; native buffer16bytes, Windows x64.
 
-[Запуск и ограничения](../../TrueMoon.Editor/README.md),
+[Запуск и ограничения](../../TrueMoon.Aether.Editor/README.md),
 [единственный подробный scope/acceptance](PLAN.md#eng7a-основной-экран-редактора--2026-10-22).
 Инспектор пока authoring SceneSnapshot и read-only во всех режимах. Список плоский,
 render surface960×540 с aspect-preserving layout. Editor camera/gameplay input,
@@ -109,7 +295,7 @@ DPI/OS input/K3/K7/K8/VRAM/final alpha остаются открытыми; NVID
 immutable GameObjectStates/GameObjectState и явный TMCK2 codec/profile.
 Game.Logic.RoomGame использует bounded reach4, actual affine geometry/occlusion
 и независимые переключатели объектов. Изменённый цвет наблюдаем в GPU frame,
-editor authoring snapshot/geometry не меняются. [Контракт/следующий шаг](PLAN.md#eng5c2-следующий-шаг-reachraycast-и-interaction),
+editor authoring snapshot/geometry не меняются. [Контракт/следующий шаг](PLAN.md#eng5c2-reachraycast-и-interaction--2026-10-22),
 [публичный профиль](../../TrueMoon.Aether/README.md#reach-и-состояния-объектов).
 
 Ray query — до64distinct opaque bodies, finite reach(0,1000], inclusive boundary;
@@ -238,7 +424,7 @@ RenderPrimitive/ScenePrimitive и bounded multi-draw PrimitiveScene. SceneSnapsh
 копирует optional primitive payload; control identity переведена с2на3.
 Frame1/TMCK1 прежние. Matching Editor/Runtime/Aether/Game.Logic пересобираются,
 v1/v2 identity отклоняется; fallback нет. Старый cube constructor и CPU default
-сохранены. [Контракт и следующий шаг](PLAN.md#eng5c1-следующий-шаг-scene-consumers-и-несколько-примитивов),
+сохранены. [Контракт и следующий шаг](PLAN.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22),
 [публичный профиль](../../TrueMoon.Aether/README.md#стандартные-компоненты-и-комната).
 
 Built-in schemas v1 задают persistent role GUIDs, exact defaults/dependencies и
@@ -2599,7 +2785,7 @@ stable-ID switches, restore валидирует exact loaded set до atomic co
 Control3/frame1 прежние, Snapshot2 требует rebuild matching binaries, TMCK1 отвергается.
 52новых cases; focused102/102, nonincremental Debug build прошёл; full Debug/Release
 2186/2186/configuration,9TRX/failed0/skipped0; Aether780/UI615/Hosting79/Mithril95.
-[Контракт](PLAN.md#eng5c2-следующий-шаг-reachraycast-и-interaction),
+[Контракт](PLAN.md#eng5c2-reachraycast-и-interaction--2026-10-22),
 [Requirement/evidence/команды](HISTORY.md#eng5c2-reachraycast-и-interaction--2026-10-22).
 Найдена/исправлена diagnostic JSON constructor-binding regression immutable
 object state; отдельный тест проверяет roundtrip и duplicate-ID rejection.
@@ -2633,12 +2819,12 @@ resources/handles/mappings/UI sessions0, imported ReadPixels0. Local Aether pack
 прошёл, DLL совпала SHA256 с managed Release/published proof; package drawing
 consumer не запускался. Все42pending C#namespace/whitespace checks прошли.
 36новых cases; full Debug/Release2134/2134/configuration,9TRX/failed0/skipped0,
-Aether728/UI615/Hosting79/Mithril95. [Контракт](PLAN.md#eng5c1-следующий-шаг-scene-consumers-и-несколько-примитивов),
+Aether728/UI615/Hosting79/Mithril95. [Контракт](PLAN.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22),
 [Requirement/evidence/команды](HISTORY.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22).
 Отчёты: `TestResults/ENG5c1/managed-summary.json`, `package-check.json`,
 `namespaces-check.json`, `docs-check.json`, `completion.json`;
 native — `TestResults/EngineSessions/eng5c1-final/summary.json`.
-На этапе ENG5c.1 далее планировался [ENG5c.2](PLAN.md#eng5c2-следующий-шаг-reachraycast-и-interaction): bounded
+На этапе ENG5c.1 далее планировался [ENG5c.2](PLAN.md#eng5c2-reachraycast-и-interaction--2026-10-22): bounded
 reach/raycast target, наблюдаемое interaction и versioned object state/checkpoint;
 затем нужные collisions/HUD. Full world snapshot/runtime editing/MCP остаются
 ARCH1c/d/ENG7; performance/raw OS input/прежние UI hardware/release блокеры открыты.
