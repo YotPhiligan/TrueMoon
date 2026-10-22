@@ -20,6 +20,7 @@ public sealed class SceneSnapshot
     private static SceneEntity Clone(SceneEntity value)
     {
         ArgumentNullException.ThrowIfNull(value);
-        return new() { Id = value.Id, X = value.X, Y = value.Y, Z = value.Z, Interactive = value.Interactive };
+        return new() { Id = value.Id, X = value.X, Y = value.Y, Z = value.Z, Interactive = value.Interactive,
+            Primitive = value.Primitive == null ? null : Rendering.ScenePrimitive.FromPrimitive(value.Primitive.ToPrimitive()) };
     }
 }

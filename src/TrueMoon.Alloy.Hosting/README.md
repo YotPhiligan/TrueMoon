@@ -1,5 +1,13 @@
 # Подключение Alloy к TrueMoon App
 
+Стандартное оформление — квадратные контролы с Dark/Light темами, semantic action
+colors, focus/error/read-only states. [API, палитра и галерея](../docs/alloy/DEFAULT_STYLE.md).
+При `Appearance.Decorated=false` и явно заданном `Chrome` host добавляет стандартный
+WindowFrame с minimize/maximize/restore/close и resize grip. `TitleBarFactory`
+имеет приоритет; `UseDefaultWindowFrame=false` отключает автоматическую композицию.
+Обычные окна сохраняют системное оформление. Close кнопка использует cancellable
+App close coordinator, включая asynchronous save/drain.
+
 Проект предоставляет единый модуль регистрации UI. Настройка выполняется до `Build()` и не создаёт окно или GPU-контекст. Целевая платформа — `net10.0`; поставляемая native Skia для Vulkan/OpenGL/raster пока проверена на Windows x64.
 
 ## Подключение через NuGet

@@ -96,7 +96,7 @@ public sealed class WindowChromeTests
         Assert.Same(owner, child.Parent); Assert.Null(other.Parent);
     }
     [Theory]
-    [InlineData(-1)] [InlineData(4)]
+    [InlineData(-1)] [InlineData(5)]
     public void Role_RejectsUnknownValues(int value)
     {
         using var element = new SizedElement();

@@ -113,6 +113,8 @@ namespace TrueMoon.Alloy.Hosting
         public WindowChromeOptions? Chrome { get; set; }
         /// <summary>Creates Argentis title-bar content on the window owner thread. The window commands remain host-owned.</summary>
         public Func<IWindowCommands, TrueMoon.Argentis.Element>? TitleBarFactory { get; set; }
+        /// <summary>Uses the built-in square border/titlebar/grip when Chrome is enabled and no TitleBarFactory is supplied.</summary>
+        public bool UseDefaultWindowFrame { get; set; } = true;
         internal void ValidateChrome()
         {
             if (Chrome != null)
@@ -132,7 +134,7 @@ namespace TrueMoon.Alloy.Hosting
         {
             GraphicsApi = GraphicsApi, Width = Width, Height = Height, Title = Title,
             EnableDiagnostics = EnableDiagnostics, FrameMode = FrameMode, FramesPerSecond = FramesPerSecond,
-            Appearance = Appearance, Chrome = Chrome, TitleBarFactory = TitleBarFactory, ValidationMessage = ValidationMessage
+            Appearance = Appearance, Chrome = Chrome, TitleBarFactory = TitleBarFactory, UseDefaultWindowFrame = UseDefaultWindowFrame, ValidationMessage = ValidationMessage
         };
     }
 }

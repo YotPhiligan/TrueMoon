@@ -16,6 +16,14 @@ public sealed class TextBox : Element
     private ITextLayoutService? _text;
     /// <summary>Creates a text editor.</summary>
     public TextBox() { MinWidth = 160; }
+    /// <summary>Whether text is selectable/copyable without user edits.</summary>
+    public static readonly UiProperty<bool> IsReadOnlyProperty = new("IsReadOnly", false);
+    /// <summary>Preserves selection/navigation/copy while rejecting text, cut, paste and delete.</summary>
+    public bool IsReadOnly { get => Get(IsReadOnlyProperty); set => Set(IsReadOnlyProperty, value); }
+    /// <inheritdoc />
+    protected override Color ThemeBackground => !IsEffectivelyEnabled ? Theme.ControlDisabled : IsReadOnly ? Theme.ReadOnly : Theme.Input;
+    /// <inheritdoc />
+    protected override float ThemeBorderWidth => Theme.BorderWidth;
     /// <inheritdoc />
     protected override Thickness ThemePadding => Theme.EditorPadding;
     /// <inheritdoc />
@@ -61,7 +69,7 @@ public sealed class TextBox : Element
     protected override void DrawCore(IDrawingContext context)
     {
         ClampSelection();
-        context.Fill(Bounds, Theme.Control, 4);
+        if (IsReadOnly) context.Fill(new Rect(Bounds.X + Bounds.Width - 4, Bounds.Y + 4, 2, Math.Max(0, Bounds.Height - 8)), Theme.Border);
         var area = Bounds.Deflate(Padding);
         var caretX = MeasurePrefix(_caret);
         _scrollX = Math.Clamp(_scrollX, Math.Max(0, caretX - area.Width + 2), Math.Max(0, caretX));
@@ -90,7 +98,7 @@ public sealed class TextBox : Element
             Move(positions.MinBy(i => Math.Abs(MeasurePrefix(i) - x)), input.Shift);
             return true;
         }
-        if (input.Kind == InputKind.Text && !string.IsNullOrEmpty(input.Text))
+        if (!IsReadOnly && input.Kind == InputKind.Text && !string.IsNullOrEmpty(input.Text))
         {
             var text = string.Concat(input.Text.Where(c => !char.IsControl(c)));
             if (text.Length == 0) return false;
@@ -105,9 +113,10 @@ public sealed class TextBox : Element
                 case UiKey.A: _anchor = 0; _caret = Value.Length; Invalidate(); return true;
                 case UiKey.C: if (SelectionLength > 0) context.SetClipboardText(Value.Substring(SelectionStart, SelectionLength)); return true;
                 case UiKey.X:
+                    if (IsReadOnly) return true;
                     if (SelectionLength > 0) { context.SetClipboardText(Value.Substring(SelectionStart, SelectionLength)); ReplaceSelection(""); }
                     return true;
-                case UiKey.V: var value = context.GetClipboardText(); if (value != null) ReplaceSelection(value); return true;
+                case UiKey.V: if (IsReadOnly) return true; var value = context.GetClipboardText(); if (value != null) ReplaceSelection(value); return true;
             }
         }
         switch (input.Key)
@@ -117,9 +126,11 @@ public sealed class TextBox : Element
             case UiKey.Home: Move(0, input.Shift); return true;
             case UiKey.End: Move(Value.Length, input.Shift); return true;
             case UiKey.Backspace:
+                if (IsReadOnly) return true;
                 if (SelectionLength == 0) _anchor = Previous(_caret);
                 ReplaceSelection(""); return true;
             case UiKey.Delete:
+                if (IsReadOnly) return true;
                 if (SelectionLength == 0) _anchor = Next(_caret);
                 ReplaceSelection(""); return true;
             default: return false;

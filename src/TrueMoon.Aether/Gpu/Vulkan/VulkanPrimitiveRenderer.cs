@@ -98,7 +98,15 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
 
     internal void Draw(CommandBuffer command, PrimitiveScene scene)
     {
-        var constants = new Constants(scene.CreateTransform(width, height), new(scene.Color, 1));
+        var viewProjection = scene.CreateViewProjection(width, height);
+        var primitives = scene.Primitives;
+        Span<Constants> draws = stackalloc Constants[primitives.Length];
+        for (var i = 0; i < primitives.Length; i++)
+        {
+            var transform = primitives[i].World * viewProjection;
+            RenderPrimitive.ValidateMatrix(transform);
+            draws[i] = new(transform, new(primitives[i].Color, 1));
+        }
         var clears = stackalloc ClearValue[2];
         clears[0].Color = new ClearColorValue(0.04f, 0.06f, 0.10f, 1);
         clears[1].DepthStencil = new ClearDepthStencilValue(1, 0);
@@ -106,8 +114,12 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
             RenderArea = new(default, new((uint)width, (uint)height)), ClearValueCount = 2, PClearValues = clears };
         vk.CmdBeginRenderPass(command, in begin, SubpassContents.Inline);
         vk.CmdBindPipeline(command, PipelineBindPoint.Graphics, _pipeline);
-        vk.CmdPushConstants(command, _layout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, 80, &constants);
-        vk.CmdDraw(command, 36, 1, 0, 0);
+        foreach (var draw in draws)
+        {
+            var constants = draw;
+            vk.CmdPushConstants(command, _layout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, 80, &constants);
+            vk.CmdDraw(command, 36, 1, 0, 0);
+        }
         vk.CmdEndRenderPass(command);
     }
 

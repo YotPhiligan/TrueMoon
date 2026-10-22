@@ -24,6 +24,7 @@ UI alpha и контрольное beta приложение имеют собс
 | Mithril | TrueMoon.Mithril: units, hosting/startup/lifetime/restart policies, процессные handles | [Mithril](mithril/PLAN.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: retained UI, renderer, окно/input, standalone и external HUD | [UI](alloy/PLAN.md) |
 | Aether / Engine | TrueMoon.Aether: engine contracts, session supervisor, control/native child bridge, CPU/GPU viewport, builds/checkpoint/Replace; Editor/Runtime и Game.Logic — отдельные consumers | [Aether](engine/PLAN.md) |
+| Editor application | TrueMoon.Editor: App composition, основной экран, scene selection/read-only inspector и runtime viewport; TrueMoon.Editor.Tests проверяет приложение | [ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
 
 Тестовые проекты, generators и ManualTests относятся к своим направлениям. Они не образуют отдельный продуктовый roadmap. Общие CI/build/package задачи остаются на уровне этого документа.
 
@@ -105,9 +106,24 @@ delivery race. [Метрики/ограничения](engine/HISTORY.md#eng4e-c
 ENG5a реализует первый depth-tested Vulkan3D primitive/camera/material в текущем
 App-owned GPU viewport; [контракт и проверки](engine/HISTORY.md#eng5a-первый-vulkan-3d-frame--2026-10-21).
 ENG5b input/camera routing выполнен; [контракт/evidence](engine/HISTORY.md#eng5b-gameplay-input-и-камера--2026-10-21).
-Следующий функциональный шаг — ENG5c: комната/interaction/HUD;
+ARCH1a.1/2 immutable model, scene aggregate/resolver и projection реализованы2026-10-22;
+ENG5c.1 scene consumer/комната и ENG5c.2 reach/raycast/interaction реализованы;
+по запросу пользователя2026-10-22 после UI стиля реализован
+[ENG7a основной экран TrueMoon.Editor](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22).
+Это отдельное UI application, не новая engine assembly; authoring grid editing,
+tree/input/persistence продолжаются отдельно, property grid пока read-only.
+Gameplay продолжение — [ENG5c.3: collisions камеры](engine/PLAN.md#eng5c3-следующий-шаг-collisions-камеры), затем HUD;
 CPU Debug budget breaches/reference staging allocations остаются measured backlog.
 ENG4 в целом и UI hardware/release readiness открыты.
+
+2026-10-22 согласованы [ARCH1: модель мира и API Aether](engine/PLAN.md#arch1-entity-components-и-api--2026-10-22):
+Entity/Components с наследованием, authoring/runtime API, readonly Play с явной
+snapshot edit transaction и локальные агенты через MCP adapter. Уточнён
+двухпроцессный Editor/Runtime: Aether координирует запуск через Mithril, команды/
+input/state передаются через Enerit IPC, frames — отдельным transport. ARCH1a.1/2
+выполнены, ENG5c.1 подключил static runtime/renderer scene consumer; toolset развивается
+в ENG7. Детали/acceptance ведутся только в engine плане. Dependency graph прежний;
+ARCH1a.1/2 проверены managed suites, остальные архитектурные возможности запланированы.
 
 Уточнение2026-10-17: по запросу пользователя перед ENG1 реализован отдельный
 UI компонент [RichTextEditor/PA7a](alloy/PLAN.md#pa7a-richtexteditor-перед-eng1--2026-10-17)
@@ -139,8 +155,11 @@ ENG4d2 ordinary GameEditor GPU transport выполнен; ENG4e baseline пол
 [PA8a: дефолтный стиль контролов и оформление окна](alloy/PLAN.md#pa8a-дефолтный-стиль-контролов-и-оформление-окна--2026-10-21):
 минималистичное цветное оформление с прямыми углами и готовые borderless window
 widgets. Подробные решения, подэтапы и acceptance ведутся только в UI плане.
-Это запланированное направление; engine очередность развивается отдельно,
-её текущая точка указана в начале этого раздела.
+По запросу пользователя2026-10-22 PA8a0–2 реализованы, автоматическая часть PA8a3
+проверена: Dark/Light style, стандартная рамка, gallery/native/golden/packages.
+Physical DPI/OS acceptance остаётся открытым. Engine очередность развивается
+отдельно: следующий шаг ENG5c.3 collisions камеры. [API](alloy/DEFAULT_STYLE.md),
+[текущий UI статус](alloy/STATUS.md).
 
 | Этап | Результат | Зависимость и готовность |
 | --- | --- | --- |

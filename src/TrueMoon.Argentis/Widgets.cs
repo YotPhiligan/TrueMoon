@@ -14,6 +14,12 @@ public sealed class CheckBox : Button
     public CheckBox(string text = "") : base(text) { }
     /// <inheritdoc />
     protected override Thickness ThemePadding => Theme.ButtonPadding with { Left = Theme.ButtonPadding.Left + 24 };
+    /// <inheritdoc />
+    protected override float ThemeBorderWidth => 0;
+    /// <inheritdoc />
+    protected override Color ThemeForeground => Theme.Foreground;
+    /// <inheritdoc />
+    protected override Color ThemeBackground => IsEffectivelyEnabled && IsHovered ? Theme.ControlHover : Color.Transparent;
     /// <summary>The current value.</summary>
     public bool IsChecked { get => Get(IsCheckedProperty); set => Set(IsCheckedProperty, value); }
     /// <inheritdoc />
@@ -24,14 +30,18 @@ public sealed class CheckBox : Button
         base.DrawCore(context);
         var box = new Rect(Bounds.X + 10, Bounds.Y + (Bounds.Height - 16) / 2, 16, 16);
         var color = IsEffectivelyEnabled ? Theme.Accent : Theme.Disabled;
-        context.Stroke(box, color, 2, 2);
-        if (IsChecked) context.Fill(box.Deflate(new Thickness(4)), color);
+        if (IsChecked) { context.Fill(box, color); UiSymbols.Draw(context, UiSymbol.Check, box.Deflate(new Thickness(3)), Theme.OnAccent); }
+        else context.Stroke(box.Deflate(new Thickness(.5f)), IsEffectivelyEnabled ? Theme.Border : Theme.Disabled, 1);
     }
 }
 
 /// <summary>A horizontal progress indicator in the inclusive range zero to one.</summary>
 public class ProgressBar : Element
 {
+    /// <inheritdoc />
+    protected override Color ThemeBackground => IsEffectivelyEnabled ? Theme.Control : Theme.ControlDisabled;
+    /// <inheritdoc />
+    protected override float ThemeBorderWidth => Theme.BorderWidth;
     /// <summary>Creates a new ProgressBar with its constructor defaults.</summary>
     /// <returns>A new independent ProgressBar for Fluent configuration.</returns>
     public static ProgressBar Create() => new();
@@ -45,14 +55,29 @@ public class ProgressBar : Element
     /// <inheritdoc />
     protected override void DrawCore(IDrawingContext context)
     {
-        context.Fill(Bounds, Theme.Control, 4);
-        context.Fill(Bounds with { Width = Bounds.Width * Value }, IsEffectivelyEnabled ? Theme.Accent : Theme.Disabled, 4);
+        var area = Bounds.Deflate(new Thickness(BorderWidth));
+        context.Fill(area with { Width = area.Width * Value }, IsEffectivelyEnabled ? Theme.Accent : Theme.Disabled, CornerRadius);
     }
 }
 
 /// <summary>A normalized slider supporting dragging and arrow keys.</summary>
 public sealed class Slider : ProgressBar
 {
+    /// <inheritdoc />
+    protected override float ThemeBorderWidth => 0;
+    /// <inheritdoc />
+    protected override Color ThemeBackground => Color.Transparent;
+    /// <inheritdoc />
+    protected override void DrawCore(IDrawingContext context)
+    {
+        var track = new Rect(Bounds.X + 8, Bounds.Y + (Bounds.Height - 4) / 2, Math.Max(0, Bounds.Width - 16), 4);
+        var color = IsEffectivelyEnabled ? Theme.Accent : Theme.Disabled;
+        context.Fill(track, Theme.Border);
+        context.Fill(track with { Width = track.Width * Value }, color);
+        var thumb = new Rect(track.X + track.Width * Value - 7, Bounds.Y + (Bounds.Height - 16) / 2, 14, 16);
+        context.Fill(thumb, _dragging ? Theme.ControlPressed : IsHovered ? Theme.ControlHover : Theme.Control);
+        context.Stroke(thumb.Deflate(new Thickness(.5f)), color, 1);
+    }
     /// <summary>Creates a new Slider with its constructor defaults.</summary>
     /// <returns>A new independent Slider for Fluent configuration.</returns>
     public new static Slider Create() => new();

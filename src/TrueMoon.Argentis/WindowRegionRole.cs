@@ -10,5 +10,7 @@ public enum WindowRegionRole
     /// <summary>Excludes this subtree from window dragging, including disabled controls.</summary>
     Client,
     /// <summary>Identifies an enabled maximize/restore button for optional native Snap Layouts. Click remains a UI action.</summary>
-    Maximize
+    Maximize,
+    /// <summary>Visible bottom-right grip; native sizing is allowed only for normal resizable windows.</summary>
+    ResizeBottomRight
 }

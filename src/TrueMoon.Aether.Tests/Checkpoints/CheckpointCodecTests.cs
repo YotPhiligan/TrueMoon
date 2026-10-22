@@ -21,7 +21,7 @@ public sealed class CheckpointCodecTests
     {
         var original = Snapshot(tick); var bytes = GameCheckpointCodec.Encode(original);
         Assert.Equal("TMCK", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
-        Assert.Equal(1, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4)));
+        Assert.Equal(2, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4)));
         Assert.Equal(tick, BinaryPrimitives.ReadUInt64LittleEndian(bytes.AsSpan(82)));
         var decoded = GameCheckpointCodec.Decode(bytes);
         Assert.Equal(original.State, decoded.State); Assert.Equal(original.HostContractId, decoded.HostContractId);
@@ -49,7 +49,7 @@ public sealed class CheckpointCodecTests
         switch (invalid)
         {
             case "magic": bytes[0] ^= 1; break;
-            case "version": BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), 2); break;
+            case "version": BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), 1); break;
             case "checksum": bytes[^1] ^= 1; rehash = false; break;
             case "flag": bytes[114] = 2; break;
             case "nan": BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(90), float.NaN); break;

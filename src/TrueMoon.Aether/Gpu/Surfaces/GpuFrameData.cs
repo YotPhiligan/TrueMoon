@@ -23,7 +23,7 @@ public sealed record GpuFrameData(byte[] Pixels, FrameMetadata Metadata)
     public void Validate(GpuFrameStamp stamp, int width, int height)
     {
         ArgumentNullException.ThrowIfNull(stamp); GpuSlotLedger.ValidateStamp(stamp, stamp.Identity); GpuSurfaceOffer.ValidateExtent(width, height);
-        Scene?.CreateTransform(width, height);
+        Scene?.CreateViewProjection(width, height);
         if (width == 0 || Pixels == null || Pixels.Length != (Scene == null ? checked(width * height * 4) : 0) || Metadata == null ||
             Metadata.Slot != stamp.Slot || Metadata.FrameId != FrameNumber(stamp) || Metadata.ProducedTimestamp <= 0)
             throw new InvalidDataException("GPU frame pixels/metadata do not match the produced slot.");

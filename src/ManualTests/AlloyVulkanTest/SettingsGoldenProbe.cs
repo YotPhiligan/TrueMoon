@@ -85,7 +85,7 @@ internal sealed class SettingsGoldenProbe
         }
         var record = args.Contains("--record-golden");
         if (record && !args.Contains("--golden-fixtures")) throw new ArgumentException("Recording requires an explicit new --golden-fixtures directory.");
-        var probe = new SettingsGoldenProbe(Value("--golden-fixtures", Path.Combine(AppContext.BaseDirectory, "Golden/Settings")),
+        var probe = new SettingsGoldenProbe(Value("--golden-fixtures", Path.Combine(AppContext.BaseDirectory, "Golden/SettingsSquare")),
             Value("--golden-output", Path.Combine("TestResults/AlloyGolden", DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff", CultureInfo.InvariantCulture))), record);
         Exception? failure = null;
         try

@@ -179,6 +179,81 @@ internal static partial class WindowChromeProbe
             Console.WriteLine($"Hosted {(openGL ? "OpenGL" : "Vulkan")} title-factory failure cleanup passed; original error, disposed root, registry/hooks zero.");
         }
     }
+    internal static async Task RunDefaultAsync(bool validation)
+    {
+        var cases = 0;
+        foreach (var openGL in new[] { true, false })
+        foreach (var resizable in new[] { false, true })
+        {
+            var messages = 0;
+            using var sessions = new HostedUiSessionFactory(openGL ? new SkiaOpenGLRenderBackend() : new SkiaVulkanRenderBackend());
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30)); var token = timeout.Token;
+            var options = new SilkUiWindowOptions { Width = 980, Height = 780, OpenGL = openGL, Title = "TrueMoon default style",
+                Appearance = new WindowAppearance { Decorated = false },
+                Chrome = new WindowChromeOptions { NativeDrag = true, NativeSnapLayouts = resizable, Resizable = resizable },
+                ValidationMessage = validation ? message => { Interlocked.Increment(ref messages); Console.Error.WriteLine(message); } : null };
+            var gallery = new AlloyTest.DefaultStyleGallery();
+            await using var window = new HostedUiWindow(options, sessions, () => gallery);
+            var ready = new TaskCompletionSource<UiSession>(TaskCreationOptions.RunContinuationsAsynchronously);
+            window.FramePresented += ui => ready.TrySetResult(ui);
+            var closeCalls = 0; var save = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var saving = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            window.Closing += async reason =>
+            {
+                Require(reason == UiCloseReason.Application, "Default close bypassed the application coordinator.");
+                if (++closeCalls == 1) return false;
+                saving.TrySetResult(); return await save.Task;
+            };
+            await window.StartAsync(token); var ui = await ready.Task.WaitAsync(token);
+            var frame = (WindowFrame)ui.Root; var title = frame.DefaultTitleBar ?? throw new InvalidOperationException("Default title missing.");
+            await OnOwner(window, host =>
+            {
+                Require(title.MinimizeButton.IsEnabled && title.MaximizeButton.IsEnabled == resizable && frame.ResizeGrip!.IsVisible == resizable, "Default capabilities mismatch.");
+                var hwnd = host.NativeWindow.Native!.Win32!.Value.Hwnd;
+                CheckHit(hwnd, 20, 15, 2);
+                CheckHit(hwnd, (int)title.CloseButton.Bounds.X + 15, 15, 1);
+                CheckHit(hwnd, (int)title.MaximizeButton.Bounds.X + 15, 15, resizable ? 9 : 1);
+                var grip = frame.ResizeGrip!.Bounds;
+                if (resizable) CheckHit(hwnd, (int)grip.X + 6, (int)grip.Y + 6, 17);
+                Click(title.MinimizeButton);
+                Require(host.State == UiWindowState.Minimized, "Default minimize failed."); host.Restore();
+            }, token);
+            if (resizable)
+            {
+                await OnOwner(window, _ => Click(title.MaximizeButton), token); await WaitState(UiWindowState.Maximized);
+                await OnOwner(window, host =>
+                {
+                    Require(title.MaximizeButton.Symbol == UiSymbol.Restore && !frame.ResizeGrip!.IsVisible, "Maximized visual state incorrect.");
+                    var viewport = host.Viewport; CheckHit(host.NativeWindow.Native!.Win32!.Value.Hwnd, (int)(viewport.Width / viewport.Scale) - 9, (int)(viewport.Height / viewport.Scale) - 9, 1);
+                    Click(title.MaximizeButton);
+                }, token);
+                await WaitState(UiWindowState.Normal);
+            }
+            await OnOwner(window, _ => Click(title.CloseButton), token);
+            while (Volatile.Read(ref closeCalls) < 1 || window.IsCloseRequested) await Task.Delay(10, token);
+            Require(!window.Completion.IsCompleted && !gallery.IsDisposed, "Default close ignored veto.");
+            await OnOwner(window, _ => Click(title.CloseButton), token); await saving.Task.WaitAsync(token);
+            Require(!window.Completion.IsCompleted && !gallery.IsDisposed, "Default close skipped asynchronous save/drain.");
+            save.SetResult(true); await window.Completion.WaitAsync(token);
+            Require(gallery.IsDisposed && frame.IsDisposed && sessions.ActiveSessionCount == 0 && Win32WindowChrome.ActiveHooks == 0 && messages == 0, "Default frame retained resources or validation messages.");
+            Console.WriteLine($"Default style native {(openGL ? "OpenGL" : "Vulkan")}, resizable={resizable}: commands, caption/client/Snap/grip, maximize/restore, close veto/save/drain, zero hooks/registry/validation passed."); cases++;
+            async Task WaitState(UiWindowState expected)
+            {
+                var observed = false;
+                while (!observed)
+                {
+                    await OnOwner(window, host => observed = host.State == expected && title.State.Maximized == (expected == UiWindowState.Maximized), token);
+                    if (!observed) await Task.Delay(10, token);
+                }
+            }
+            void Click(Button button)
+            {
+                var b = button.Bounds; ui.HandleInput(new UiInput(InputKind.PointerDown, b.X + b.Width / 2, b.Y + b.Height / 2));
+                ui.HandleInput(new UiInput(InputKind.PointerUp, b.X + b.Width / 2, b.Y + b.Height / 2));
+            }
+        }
+        Console.WriteLine($"Default style native proof: {cases}/4 windows passed.");
+    }
     private static async Task OnOwner(HostedUiWindow window, Action<SilkWindowHost> operation, CancellationToken token)
     {
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

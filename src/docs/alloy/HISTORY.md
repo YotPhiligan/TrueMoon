@@ -2,6 +2,107 @@
 
 Архив создан2026-10-09 при разделении общего и модульных планов. [Текущий статус](STATUS.md), [UI план](PLAN.md), [общий статус](../STATUS.md).
 
+## PA8a дефолтный квадратный стиль — 2026-10-22
+
+По запросу пользователя реализован согласованный PA8a0–2 и автоматический scope
+PA8a3. [Палитра, размеры, контракты и команды галереи](DEFAULT_STYLE.md).
+Argentis содержит semantic Theme tokens, local/style/theme overrides, action tones,
+inside border/focus/error/read-only markers, square check/slider/progress/icons,
+scrollbar с pointer capture/cancellation. Theme switch сохраняет editor selection,
+focus, values и scroll. Button constructors/factories используют одну тему.
+
+WindowFrame.CreateDefault/WindowTitleBar/WindowResizeGrip остаются в Argentis.
+DefaultWindowFrameBinding находится в Alloy.Runtime, автоматическая композиция —
+в Hosting, native grip/focus — в Platform.Silk. App путь и system-decorated default
+сохранены; explicit Chrome включает стандартную рамку, TitleBarFactory имеет
+приоритет, UseDefaultWindowFrame=false оставляет caller root. Кнопка close проходит
+через cancellable asynchronous close coordinator. Fixed/maximized capability,
+caption/client/Snap/grip regions и отсутствие перекрытия content проверены.
+
+Skia квадратный stroke рисуется четырьмя неперекрывающимися полосами с прежней
+centered geometry; rounded override сохраняет round-rect. Это устранило отличия
+сглаживания тонкого бордера между CPU/GPU. Отмеченный checkbox рисует одну solid
+поверхность вместо наложения fill/stroke на одном краю. Tolerances не увеличены.
+
+Текущие managed проверки, Windows x64/SDK10.0.402:
+
+| Проект | Debug | Release |
+| --- | ---: | ---: |
+| Alloy / Hosting |643 /79|643 /79|
+| Aether |780|780|
+| Mithril / Core |95 /107|95 /107|
+| Cobalt / Generator |179 /91|179 /91|
+| Enerit / Generator |126 /114|126 /114|
+| Всего,9TRX |2214|2214|
+
+Failed0/skipped0 в обеих конфигурациях.28новых cases:25DefaultStyleTests и3raster
+border cases. Существующие assertions геометрии scroll viewport/progress/slider,
+disabled drawing, enum endpoint и pressed color обновлены на точные новые
+ожидания. Assertions не заменялись на presence-only проверки.
+
+| Требование | Проверка |
+| --- | --- |
+| Общие square defaults, factories, overrides | `DefaultStyleTests.SquareDefaults_ApplyToConstructorsFactoriesAndEditors`, `Appearance_LocalStyleThemePriorityAndClearAreStableAcrossThemeChanges`, `InvalidAppearance_RejectsBeforeMutation` |
+| Контраст action text normal/hover/pressed | `DefaultStyleTests.EnabledText_ContrastRemainsAtLeastFourPointFiveAcrossActionStates` —8cases, ratio≥4.5 |
+| Форма focus/error и полупрозрачный border | `DefaultStyleTests.FocusAndError_UseInsideSquareOutlineAndStructuralErrorMarker`, `RasterRenderingTests.SquareBorder_StaysInsideBoundsAndPaintsTranslucentCornersOnce` —exact bounds/colors/RGBA на3scales |
+| Readonly без изменения selection/clipboard | `DefaultStyleTests.ReadOnly_RejectsMutationWithoutTouchingSelectionOrClipboard` —Backspace/Delete/CtrlX/CtrlV, Unicode, copy/navigation |
+| Theme state / idle | `DefaultStyleTests.ThemeSwitch_PreservesFocusSelectionValuesAndScrollAndReturnsToIdle` |
+| Scroll capture / secondary / hide / cancel | `DefaultStyleTests.Scrollbar_DragClampsIgnoresSecondaryButtonAndCancellationStopsGesture`, `HiddenScrollbar_CancelsCapturedDragBeforeChangingOffset` |
+| Capabilities/commands/regions/content/idle | `DefaultStyleTests.DefaultFrame_CommandsCapabilitiesRegionsAndIdleFollowObservedWindow` —fixed/resizable; native proof отдельно |
+
+Команды и evidence:
+
+- `dotnet build TrueMoon.slnx --configuration Debug --no-incremental -m --verbosity quiet`:
+  `TestResults/PA8a/build-debug-current.log`, exit0. Existing warnings сохранены.
+- `dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/PA8a/tests-debug-current --verbosity quiet`
+  и аналог Release в `tests-release-final`; `TestResults/PA8a/test-summary.json`.
+- Новый golden record `TestResults/PA8a/golden-record-final/report.json`:90GPU/current
+  comparisons, validation0/0. После визуального просмотра Dark/Light/compact/scale
+  кадров30PNG+manifest скопированы в `Golden/SettingsSquare`. Прежний Settings
+  baseline сохранён; format/tolerances2/edge radius1/edge24 прежние.
+- `RunSettingsGolden.ps1 -OutputDirectory TestResults/PA8a/golden-verify -ValidationLayerPath TestResults/ENG4b/validation-layer/Bin`:
+  normal180comparisons/configuration, всего360; current raster/golden, GL/Vulkan,
+  current backend comparisons,40steps ×3synthetic scales; validation0/0 включая
+  teardown. `summary.json` Passed=true, fixtures unchanged.
+- `--style-gallery --style-output <fresh>` и `--default-frame --validation`:
+  `TestResults/PA8a/native-current-summary.json`, Passed=true. Debug и published
+  Release из golden-verify/publish: по6gallery PNG и4native окна OpenGL/Vulkan ×
+  fixed/resizable. Commands, caption/client/Snap/grip hit-test, max/restore,
+  close veto и asynchronous save/drain, zero registry/hooks/validation messages.
+  Финальные Dark100%/Light150% PNG просмотрены; весь набор имеет6файлов/configuration.
+- `AlloyFactoryConsumer/RunIntegration.ps1 -Profile Source`:
+  `TestResults/AlloyInfrastructure/pa8a-source-20261022/summary.json`, Completed=true,
+ 16cases/21commands.8source App Cobalt/DI ×GL/Vulkan ×Debug/published Release и
+ 8Scheduling/Close/Dispatcher/HUD native runs. Read-only VerifyIntegration прошёл.
+- `AlloyPackageConsumer/RunPackageSmoke.ps1 -RunDirectory TestResults/AlloyPackages/pa8a-20261022`:
+  Completed=true,10nupkgs,36App+4direct renderer cases, omitted-analyzer negative
+  control, native/fonts/analyzer/source fingerprints. Version
+  `0.2.2.7-alpha.ui.20261022115217348`. Packaged consumer проверяет новый appearance
+  API и default frame, переключение темы/состояние; native cases используют рамку.
+  Build/publish Debug/Release, Cobalt/DI/DI без consumer analyzer, raster/GL/Vulkan.
+  Пакеты не публиковались.
+
+Промежуточные отказы сохранены: первая сборка3CS1061 из-за отсутствия
+NativeWindow.IsFocused исправлена cached GLFW focus/events. Первая UI suite:
+596passed/19failed из615 — точные ожидания прежнего оформления; после обновления
+615passed. Первый новый test build отверг отсутствующий Color.White; использован
+явный RGB. Golden `golden-record` failed4comparisons/22outliers суммарно, после
+square bands `golden-record-bands` failed2comparisons/2outliers. После удаления
+двойного checkbox edge final record и normal verification прошли без ослабления
+допусков. Эти failed directories не считаются passing результатами.
+
+Physical multi-monitor DPI/OS input, real device/context loss, VRAM/K7/full alpha,
+новые beta controls и расширенный RTE backlog не закрыты. NVIDIA workaround не
+возобновлялся. Engine native/3D/performance matrix на этапе PA8a не повторялась.
+Следующая engine точка — ENG5c.3 collisions камеры, затем HUD; UI implementation
+не переносилась в Aether.
+
+Финальные checks:83pending C# файла (включая прежнюю engine работу), namespace
+errors0; локальные ссылки/anchors изменённых Markdown и whitespace diff прошли.
+`TestResults/PA8a/completion.json` Passed=true. Test-generation research/plan,
+Roslyn pairing и assertion/gap review сохранены в temporary PA8a scratch;
+измеренная coverage/mutation score не заявляется.
+
 ## ENG4d2 ordinary GPU Editor — 2026-10-20
 
 UI production APIs не менялись. ManualTests ViewportView/Canvas и App binding
@@ -3163,3 +3264,269 @@ Final50aggregate cases/52commands/exit0,394source/76binary fingerprints.
 Own UI Release/golden/RTE/UI packages/performance/hardware не повторялись;
 K3/K7/K8/VRAM/final alpha и RTE backlog прежние. Drivers/Windows settings прежние,
 K7 workaround search не возобновлялся. [Exact evidence](../engine/HISTORY.md#eng4c-reusable-slots-и-surface-lifecycle--2026-10-20).
+
+## Сводки до PA8a — 2026-10-22
+
+Последняя интеграционная работа — **2026-10-22, ENG5c.2 object interaction**:
+UI production код не менялся. RoomGame меняет цвет только выбранного объекта,
+App/Editor/IPC/GPU/retained UI pipeline и прежний input sender сохранены.
+Full solution Debug/Release2186/configuration, UI615/Hosting79, failed0/skipped0.
+[Scope/evidence](../engine/HISTORY.md#eng5c2-reachraycast-и-interaction--2026-10-22).
+Новый interaction proof Debug/published Release: по10cases/9PNG, visible target
+toggle/Replace/off/occlusion/disabled; core/sync0/0, zero ownership/imported readback.
+Local pack только Aether; UI package drawing consumer не запускался.
+Fresh full engine native60/60cases прошёл, включая прежние CPU/GPU/Editor/input/
+Replace/failure regressions после исправления diagnostic JSON state deserialization.
+Собственная full UI/golden/RTE/hardware/performance matrix не повторялась;
+PA8a/RTE/K3/K7/K8/VRAM/final alpha прежние. Далее engine collisions, затем HUD.
+
+Предыдущая интеграционная работа — **2026-10-22, ENG5c.1 authoring-комната**:
+UI production код не менялся. App/ViewportView/Skia retained GPU image/input sender
+используются новым `--room` consumer с несколькими примитивами из отдельного
+runtime. Full solution Debug/Release2134/2134/configuration, UI615/Hosting79,
+failed0/skipped0. [Scope/evidence](../engine/HISTORY.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22).
+Engine native58/58cases Debug/published Release: room по5PNG, прежние CPU/GPU/
+input/Editor Replace/failure regressions, core/sync0/0, zero resources/handles/
+mappings/UI sessions/imported ReadPixels. Local pack только Aether; отдельный
+UI package drawing consumer не запускался.
+Own full UI/golden/RTE/hardware/performance matrix этим не повторяется;
+PA8a/RTE/K3/K7/K8/VRAM/final alpha прежние. Далее engine ENG5c.2 reach/interaction,
+затем нужные collisions/Alloy HUD.
+
+Предыдущая интеграционная работа — **2026-10-21, ENG5b gameplay input**:
+Argentis UiKey дополнен W/S/D/E с сохранением старых enum values; Silk mapping
+дополнен. Sample viewport реализует focus/pointer capture, coalescing и30Hz sender,
+Escape/FocusLost/capture transfer/resize/suspend/Replace сбрасывают input до teardown.
+Full Debug/Release1968/1968 в каждой configuration, UI615/Hosting79.
+Engine native regression56/56; отдельный Debug/published Release proof по15cases/
+5PNG проходит через Silk key callback и реальный UiSession/GPU output; validation0/0,
+zero ownership/imported ReadPixels0. Local Argentis/Platform.Silk pack payload
+совпал с published proof; package rendering consumer не запускался.
+Это не OS keyboard/mouse injection/physical focus acceptance и не raw cursor lock.
+Own full UI/golden/RTE/performance/hardware matrix не повторена.
+[Подробный scope и evidence](../engine/HISTORY.md#eng5b-gameplay-input-и-камера--2026-10-21).
+Далее ENG5c комната/HUD; PA8a/RTE и K3/K7/K8/VRAM/final alpha прежние.
+
+Предыдущая интеграционная работа — **2026-10-21, ENG5a Vulkan3D viewport**:
+UI production код не менялся. Новый scene proof использует существующие
+App/ViewportView/GPU transport/retained Skia copy: Debug/published Release,
+по5PNG с depth/material/camera, resize/suspend/resume и checkpoint Replace.
+Core/sync validation0/0; owned resources/handles/mappings/UI sessions0,
+imported ReadPixels0. Full solution Debug/Release1926/1926 в каждой конфигурации,
+UI615/Hosting79. Own full UI package/native/golden/RTE/hardware acceptance
+этим не повторён. [Evidence и scope](../engine/HISTORY.md#eng5a-первый-vulkan-3d-frame--2026-10-21).
+Отдельная engine native matrix12/12: scene и прежние GPU import/surface/viewport/
+ordinary Editor/repeat, Debug/published Release; UI production код прежний.
+Далее ENG5b input/camera; PA8a/RTE/K3/K7/K8/VRAM/final alpha сохраняются.
+
+Предыдущая интеграционная работа — **2026-10-21, ENG4e viewport baseline**:
+UI production код не менялся. Новый native consumer использует существующий
+ViewportView/Skia retained images:12CPU/GPU cases/36intervals,3pixel checks на case,
+zero owned resources после teardown. UI615/Hosting79 Debug/Release в full
+solution1907/1907. Отдельный6-case GPU correctness run с validation0/0 прошёл;
+собственный full UI package/native/golden/RTE/hardware acceptance этим не повторён.
+[Метрики/ограничения и Mithril fix](../engine/HISTORY.md#eng4e-cpugpu-baseline--2026-10-21).
+Далее общий ENG5; PA8a/RTE запланированы, K3/K7/K8/VRAM/final alpha открыты.
+
+Документационная работа — **2026-10-21, планирование оформления UI**: в
+[PA8a](PLAN.md#pa8a-дефолтный-стиль-контролов-и-оформление-окна--2026-10-21)
+сохранены минималистичный цветной стиль с прямыми углами, тема/состояния контролов,
+бордер и заголовок borderless-окна, кнопки minimize/maximize/restore/close и нижний
+resize grip. Состояние — запланировано; при выборе направления начать с PA8a0
+(визуальная спецификация и сверка API). На момент планирования приоритетом был ENG4e.
+Изменены только планы/статус; code/build/test/native проверки не выполнялись,
+прежние результаты ниже сохраняют свои даты и scope.
+Проверки документации:3файла,150локальных ссылок/86якорей, ошибок0;
+`git diff --check` для этих документов прошёл.
+
+Исправление структуры — **2026-10-21**:12Runtime files используют namespace
+TrueMoon.Alloy.Runtime. Imports, qualified references, package templates, README
+и manual consumer namespaces обновлены. UI615/615 и Hosting79/79 Debug/Release;
+UI source16/package8 native runs, дополнительная package matrix36+4cases прошли.
+Native engine CPU/GPU editor consumers проверены в Debug/published Release.
+Public namespace изменён; внешним consumers нужны новые using и пересборка.
+K3/K7/K8/VRAM/final alpha остаются открытыми. [Команды, промежуточный отказ и границы](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
+
+Предыдущая работа над реализацией — **2026-10-20, ENG4d2 GPU GameEditor integration**. UI production
+APIs прежние; обычный ManualTests Editor View использует explicit GPU transport,
+retained Skia image и neutral first-present ticket. CPU mode/default сохранён.
+Start ждёт borrowed GL binding ready, availability использует neutral surface;
+background transport errors доступны в статусе. Engine lifecycle drains до UI.
+UI615/615 Debug/Release, Hosting79 Debug; full Debug1898/1898. Свежие package
+consumers проверяют managed transport API/App ownership и Skia native delivery.
+Debug/published Release: per GPU Editor20Replace/20failures/53children; validation0/0, imported readback0,47devices/141slots balanced. GPU copies815/800, pixel checks791/783.
+[Engine evidence/границы](../engine/HISTORY.md#eng4d2-ordinary-gpu-gameeditor--2026-10-20).
+Далее ENG4e CPU/GPU baseline до 3D. Golden/RTE/full own UI package/native/performance/
+hardware matrix не повторялись; K3/K7/K8/VRAM/final alpha прежние.
+
+Предыдущая работа — **2026-10-20, ENG4d retained GPU image bridge**:
+`SkiaOpenGLSurface.CopyTexture` копирует borrowed RGBA8 premul/stored-sRGB/top-left
+texture в независимое GPU image и submits source use до return/throw. Image draw/
+dispose требует исходный surface/context owner; raster/foreign draw отвергается.
+Actual reference viewport Debug/published Release:17checks/14captures/
+3,051,552independently checked interior-canvas pixels при150% DPI, imported
+readback0; validation0errors/0warnings, resources/handles/UI sessions0.
+UI615/615 Debug/Release; full Debug1858/1858 повторён после draw-path test review,
+Hosting79 Debug. Fresh Rendering.Skia package API/native delivery проверен в4App
+consumers вместе с Aether. Это не полный собственный UI package/native matrix.
+[Команды и границы](../engine/HISTORY.md#eng4d-gpu-viewport-bridge--2026-10-20),
+[UI запись](HISTORY.md#eng4d-retained-gpu-image-bridge--2026-10-20).
+Далее ENG4d2 ordinary GameEditor GPU transport; CPU default сохранён. Golden/RTE/
+performance/hardware/final alpha не повторялись; K3/K7/K8/VRAM прежние.
+
+Предыдущая engine regression — **2026-10-20, ENG4c**: reusable GPU slots/surface lifecycle,
+resize/queued resize/suspend/Stop/crash/restart/retry проверены в Debug/published
+Release.21checks/80frames/12children в surface run; core/sync validation0/0,
+GPU resources/NT handles/UI sessions0. Native WM_CLOSE drains pending Produce и
+live imports до borrowed UI owner disposal. UI production APIs прежние, viewport
+CPU default. Old Editor proof получил atomic worker marker fix; final run passing.
+Full Debug повторил UI613/Hosting79. Далее ENG4d. Own Release UI/golden/RTE/UI package/performance/
+hardware не повторялись; K3/K7/K8/VRAM/final alpha и отложенный RTE backlog прежние.
+[Подробные engine команды/evidence](../engine/HISTORY.md#eng4c-reusable-slots-и-surface-lifecycle--2026-10-20).
+Предыдущие regressions сохранены в [HISTORY](HISTORY.md).
+
+App entry-point audit — **2026-10-19**: UseAlloy/UsePresentation находятся в
+Alloy.Hosting; Argentis/Alloy/renderer/platform остаются самостоятельными слоями.
+Focused Debug AlloyIntegrationTests/HostedUiSessionFactoryTests:38passed/failed0/
+skipped0. UI code не менялся; full UI/Release/native GPU/package/golden/RTE/
+performance/hardware matrix не повторялись. K3/K7/K8/VRAM/final alpha прежние.
+[Общая таблица API и команды](../HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
+
+Integration regression — **2026-10-19, Aether App integration**: viewport example
+получает Supervisor/Frames из AetherHost, сохраняет UI close/drain порядок.
+Полный Debug повторил UI613/Hosting79; Debug apphost/published Release viewport
+прошли с actual GL pixels, по20Start/Stop, native-close-before-UI-disposal и
+mappings/sessions0/childrenreleased. UI production code не менялся. Own Release
+UI/golden/RTE/package/performance/hardware matrix не повторялись; K3/K7/K8/VRAM
+и final alpha остаются открыты.
+[Единственные подробные engine команды/evidence](../engine/HISTORY.md#app-integration-реализация--2026-10-19).
+
+Package metadata check — **2026-10-19**: Argentis/Alloy/Silk получили descriptions
+и собственные PACKAGE.md; все5UI packages — тематические tags и общие repository/
+project metadata. Release pack/nuspec/README/license/icon/XML и Skia native/targets
+payloads проверены. UI runtime code, own unit/native/golden/RTE/hardware matrix
+в этом metadata шаге не менялись/не повторялись.
+[Общие команды/evidence](../HISTORY.md#nuget-package-metadata--2026-10-19).
+
+Последняя интеграционная проверка — **2026-10-19, выделение TrueMoon.Aether**:
+пример EngineSessionProbe теперь использует engine library. Full Debug solution
+повторил UI613/Hosting79; два native OpenGL viewport runs Debug/published Release
+прошли с actual pixels, по20Start/Stop, native-close drain и cleanup. UI production
+code не менялся; own Release UI/golden/RTE/package/hardware matrix не повторялись.
+[Единственные подробные engine команды/evidence](../engine/HISTORY.md#truemoonaether--2026-10-19).
+
+Предыдущая работа — **2026-10-19, документальная сверка roadmap**: исправлена
+устаревшая ссылка на ENG1 в отложенном RTE плане. Bounded INF завершён;
+следующий общий шаг ENG3a в [engine плане](../engine/PLAN.md#eng3-уточнение-плана-перед-реализацией--2026-10-19).
+RTE/full INF5 остаются отложенными по потребности UI; K3/K7/K8/VRAM/final alpha
+не закрыты. Новых code/build/tests/native/performance runs в этой сверке нет.
+
+Последняя реализация — **2026-10-19, INF7**: tracked integration runner с профилями
+Assembly/Source/Package/All, bounded owned processes, fresh output directories,
+partial manifest и отдельный read-only verifier. Runner больше не зависит от
+временных scripts в TestResults. Production API и test-project wiring не менялись.
+[Запуск/профили](../../ManualTests/AlloyFactoryConsumer/README.md#inf7-воспроизводимый-integration-runner),
+[контракт](PLAN.md#inf7-общая-проверка-изменений),
+[команды/guards/evidence](HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19).
+
+Текущий All: Hosting79/UI613 Debug/Release,4TRX/1384passed/failed0/skipped0;
+8source consumers/48App cases,8native scheduling/close/dispatcher/HUD processes,
+10fresh nupkgs/8independent native consumers без analyzer/view registration.
+Всего24native processes,46commands,4required analyzer/native payloads; validation,
+ownership/registry и cleanup checks прошли в своих scopes.21runner guard checks,
+standalone Assembly и повторная read-only verification прошли.394source inputs/
+840artifact fingerprints сверены; directory/timeout/discovery/drift failures не
+превращаются в passing proof. Existing linked UI checks сохранены; Hosting guard
+требует actual ProjectReference. Нового full-solution/nonincremental build/golden/
+native RTE/engine viewport/performance запуска нет; full Debug1490 относится к INF6.
+Bounded INF0–INF4/INF6/INF7 и минимальный INF5 завершены. Далее общий ENG3;
+full INF5/RTE/K3/K7/K8/VRAM/final alpha сохраняются.
+
+Предыдущий [INF6 root factory/compatibility и full Debug1490](HISTORY.md#inf6-явные-factories-и-совместимость--2026-10-19)
+проверен2026-10-19 в указанном там scope; API/migration contract сохранён.
+
+Предыдущий [INF4 async close и engine drain](HISTORY.md#inf4-асинхронное-закрытие--2026-10-18)
+реализован и проверен2026-10-18 в своём scope; его native engine evidence исторический.
+
+Предыдущая работа — **2026-10-18, INF3**: Automatic/OnDemand/Continuous frame policy,
+coalesced thread-safe RequestFrame, monotonic cadence, work/close wake и bounded
+shared wait. Native expose использует cached output; resize/minimize/zero/resume,
+pending commands и requests во время draw сохраняются. NeedsRender отделён от
+NeedsUpdate для output под bounded queue. [Контракт](PLAN.md#inf3inf6-условия-интеграции),
+[матрица/команды/failures/evidence](HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
+
+22новых cases; UI613/613 и real Hosting39/39 Debug/Release. Повторный full Debug
+solution1450/1450,9TRX/failed0/skipped0; nonincremental build0errors/1211warnings.
+Первый full run1449/1450: независимая Mithril readiness-file sharing race; targeted20
+и повторный full94Mithril прошли, race не исправлялась и не скрыта.
+Fresh7packages/2independent consumers прошли. Debug apphost/published Release:
+новый scheduling2pairs, legacy dispatcher3pairs, external HUD90frames/36draws/
+2sessions/5readbacks, read-only golden180/config с validation включая teardown;
+два ENG2 viewport smoke с явным Continuous/RequestFrame прошли. Все10native
+processes завершились, registry/hooks/mappings0; source/binary fingerprints сверены.
+Это functional proof; idle CPU/GPU и новый BDN overhead не измерялись. Full INF5
+частичен; далее INF4. Full Release solution,32headless ENG1, прежняя full10package/
+40consumer и native RTE matrix не повторялись. ENG3/RTE/K3/K7/K8/VRAM сохраняются.
+
+Предыдущая работа — **2026-10-18, документация**: результаты аудита включены в
+[дополнительный план инфраструктуры INF0–INF7](PLAN.md#дополнительный-план-улучшения-инфраструктуры-alloy--2026-10-18).
+Зафиксированы приоритеты, зависимости, границы и acceptance registry/dispatcher/
+scheduling/close/diagnostics/factories/assembly tests. Все этапы запланированы;
+реализация не начиналась, build/tests/native/performance runs в этом шаге не было.
+Проверены Markdown links/anchors, структура и whitespace;
+[запись изменения](HISTORY.md#план-инфраструктурных-улучшений-inf0inf7--2026-10-18).
+
+Предыдущая работа — **2026-10-17, аудит инфраструктуры Alloy**.
+Воспроизведены unretryable factory cleanup после Dispose во время Update и
+выполнение20000posted actions за один Update. Предложены приоритеты registry/
+dispatcher/scheduling/close/diagnostics; production код в аудите не менялся.
+[Findings, proof и границы](HISTORY.md#аудит-инфраструктуры-alloy--2026-10-17).
+Это targeted fake-surface probes, не новый full UI/native/performance run;
+ENG3 очередность, hardware blockers и отложенный RTE backlog сохраняются.
+
+Точечная перепроверка — **2026-10-17, SkiaPixelImageTests отдельно**:
+Debug/net10.0, Passed7/Failed0/Skipped0; проверены ownership/BGRA/origin/alpha
+и6invalid shape cases. Исходники не менялись; полный UI suite/Release/native
+в этом запуске не повторялись. [Команда и TRX](HISTORY.md#skiapixelimagetests-отдельный-запуск--2026-10-17).
+
+Предыдущая реализация — **2026-10-17, ENG2 viewport image adapter**.
+Добавлен owned `SkiaImageSource.CopyBgraPixels`: tight BGRA8 premultiplied/sRGB,
+checked shape/length и независимая копия pixels. Owner-thread upload/disposal
+проверены новым engine Alloy/OpenGL окном. [UI запись](HISTORY.md#eng2-owned-pixel-image--2026-10-17),
+[точный engine scope/evidence](../engine/HISTORY.md#eng2-cpu-frame-viewport--2026-10-17).
+UI570/570 Debug/Release; два native engine viewport runs (Debug apphost/published
+Release) с actual GL pixels и cleanup. Full Debug solution1368/1368. Это отдельный
+bounded engine proof; package/golden/native RichTextEditor matrix в этом шаге
+не повторялись, K3/K7/K8/VRAM/final alpha не закрыты. Следующий общий этап ENG3.
+
+Отдельный [план улучшений RichTextEditor](RICH_TEXT_EDITOR_PLAN.md) по решению
+пользователя остаётся отложенным; implementation улучшений не начиналась.
+
+Предыдущая UI реализация и запуски — **2026-10-17, RichTextEditor перед ENG1**.
+Реализованы immutable document/style/options, editing/selection/clipboard/history
+в Argentis и Topten.RichTextKit0.6.170 adapter в Rendering.Skia; raster/OpenGL/Vulkan
+используют один layout/painting path. [Контракт PA7a](PLAN.md#pa7a-richtexteditor-перед-eng1--2026-10-17),
+[API/options/fonts/binding](RICH_TEXT_EDITOR.md),
+[команды/failures/evidence](HISTORY.md#richtexteditor--2026-10-17).
+
+Предыдущие проверки реализации2026-10-17, Windows x64/net10.0/SDK10.0.402: UI suite **563/563 отдельно
+Debug и Release**, failed/skipped0;31новый case. Demo: **6/6** Debug/published
+Release ×raster/OpenGL/Vulkan с formatting/edit/history/options/cleanup.
+Fresh **10nupkgs,36App +4direct processes** проверили rich editor и transitive
+Topten/HarfBuzz delivery, fonts/native/analyzer provenance и final fingerprints;
+negative control без analyzer — ожидаемый CS0246. Read-only прежний Settings golden
+**360/360**, validation включая teardown0errors/0warnings, fixtures unchanged.
+Nonincremental Debug solution build: **0errors/1200warnings**; это не full-solution
+test pass. Own Core/Cobalt/Enerit/Mithril suites в этом шаге не повторялись.
+
+RichTextEditor: plain clipboard и logical grapheme navigation; IME/accessibility,
+full bidi caret affinity, HTML/RTF, lists/tables и long native-memory trend вне scope.
+RichTextKit process-wide shaper caches не объявляются очищенными при Dispose.
+
+Предыдущие проверки2026-10-11: fonts/golden/package — в
+[истории](HISTORY.md#k2k4-fixed-font-golden--2026-10-11).
+K3 physical DPI, NVIDIA K7, K8 real loss, VRAM и final matrix сохраняются.
+Driver/Windows settings не менялись; workaround search не возобновлялся.
+
+Область: Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting,
+UI tests и consumers. [План](PLAN.md), [история](HISTORY.md), [общий статус](../STATUS.md).

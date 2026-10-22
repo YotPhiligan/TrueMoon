@@ -1,4 +1,52 @@
-# EngineSessionProbe — пример TrueMoon.Aether (ENG1–ENG5b)
+# EngineSessionProbe — пример TrueMoon.Aether (ENG1–ENG5c.2)
+
+## ENG5c.2: reach/raycast и переключатели объектов
+
+Запустите `--room`, нажмите Play и кликните viewport. WASD/mouse приблизьтесь к
+кубу и наведитесь на него; E меняет его цвет на жёлтый в пределах4world units от
+камеры до поверхности. Повторное нажатие возвращает authored color. Ближайшая
+opaque geometry блокирует цель, даже если Interaction отключён. Удержание E
+не повторяет действие. Camera/tick и полный набор per-object switches переживают
+Pause/Replace в TMCK2. Geometry/authoring data не редактируются.
+
+`--interaction-proof <fresh-directory>` или runner `-IncludeInteraction` проверяет
+10сценариев и9PNG на configuration: вне reach/подход, только nearest target,
+однократный pulse, resize/suspend, Replace и input reset, возврат цвета,
+заслонённую и отключённую цели. Четыре owned children, core/sync validation и
+полный cleanup проверяются в Debug apphost/published Release. Отдельный прежний
+input proof проходит через настоящий Silk keyboard callback; это не физический OS input.
+Control3/Frame1/Snapshot2 требуют совместного rebuild; TMCK1 отклоняется.
+
+## ENG5c.1: authoring-комната и несколько примитивов
+
+```powershell
+dotnet run --project ManualTests/EngineSessionProbe/EngineSessionProbe.csproj -- --room
+```
+
+Editor строит `RoomScene` через SceneDocument/SceneResolver/PrimitiveSceneAdapter;
+отдельный child загружает `Game.Logic.RoomGame`. Семь кубов образуют пол, три стены
+и три цветных объекта. Синий объект наследует rotation/scale группы. World-матрицы
+и материалы передаются через control v3, а GPU frame transport остаётся прежним.
+Play и click в viewport включают WASD/mouse; Escape освобождает capture.
+Это статичная геометрия в рамках scene revision; TMCK2 сохраняет camera/tick/
+interaction и object switches, геометрия повторно загружается при Replace.
+Collisions и игровой HUD — следующие этапы.
+Control v1/v2 отклоняются, rebuild Editor/Runtime/Aether/Game.Logic обязателен.
+
+`--room-proof <fresh-directory>` проверяет три независимых center/material samples,
+границы pixel counts, пол/стену/occlusion, fixed-tick camera, resize/suspend/resume,
+Replace и supported checkpoint state. Пять PNG hashes, source/binary fingerprints,
+validation/ownership cleanup фиксируются runner:
+
+```powershell
+./ManualTests/EngineSessionProbe/RunProbe.ps1 `
+  -RunDirectory TestResults/EngineSessions/my-room-run `
+  -Scenarios @() -IncludeRoom `
+  -GpuValidationLayerDirectory <validation-layer-Bin>
+```
+
+Debug apphost и published Release проверяются отдельно. Readback применяется
+к итоговому UI screenshot для assertions, imported GPU texture не читается на CPU.
 
 ## ENG5b: управляемая камера и ввод
 
@@ -11,7 +59,7 @@ dotnet run --project ManualTests/EngineSessionProbe/EngineSessionProbe.csproj --
 мышь поворачивает её (logical deltas,0.0025rad/unit), E переключает demo color
 при наличии interactive entity. Escape возвращает pointer/focus Editor.
 Pointer capture не блокирует OS cursor; для полного вращения нужен дальнейший
-raw/relative input профиль. Комната/collisions/raycast/HUD пока не реализованы.
+raw/relative input профиль. Комната доступна через `--room`; collisions/raycast/HUD пока не реализованы.
 Start/Play/Pause/Step/Stop/Build/Replace/Refresh/Cancel используют обычный GameEditor.
 Нажатия E coalesced по rising edge, быстрый down/up не теряется, repeat не повторяет
 действие. Sender один,30Hz, без task на event; accepted input применяется только
@@ -19,8 +67,8 @@ Start/Play/Pause/Step/Stop/Build/Replace/Refresh/Cancel используют о�
 для нового capture нужен click. Camera/interaction переживают checkpoint Replace.
 Reference ProbeGame/CPU examples сохраняют прежнее поведение.
 
-Control protocol теперь v2; host/game пересобираются совместно. Frame/TMCK v1
-сохранены. Input watchdog —12fixed ticks (200ms при непрерывных60Hz), не wall-clock
+Control protocol v3, Frame1/TMCK2; host/game пересобираются совместно.
+Input watchdog —12fixed ticks (200ms при непрерывных60Hz), не wall-clock
 timeout в Paused. Unsupported input capability возвращается отдельно от mode.
 
 `--input-proof <fresh-directory>` вызывает настоящий keyboard callback Silk

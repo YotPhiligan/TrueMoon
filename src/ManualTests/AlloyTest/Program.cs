@@ -18,6 +18,21 @@ if (args.Contains("--window-lifetime"))
     return;
 }
 
+if (args.Contains("--style-gallery"))
+{
+    await App.Builder(t => t.UseDI()).RunAsync(context => context.UsePresentation<DefaultStyleGallery>(options =>
+    {
+        if (args.Contains("--vulkan")) options.UseSkiaVulkan(); else options.UseSkiaOpenGL();
+        options.UseSilkWindow(window =>
+        {
+            window.Width = 980; window.Height = 780; window.Title = "TrueMoon — UI Gallery";
+            window.Appearance = new WindowAppearance { Decorated = false };
+            window.Chrome = new WindowChromeOptions { NativeDrag = true, NativeSnapLayouts = true, MinimumSize = new Size(960, 740) };
+        });
+    }));
+    return;
+}
+
 var clipboardSmoke = args.Contains("--smoke-clipboard");
 var clipboardFailureSmoke = args.Contains("--smoke-clipboard-failure");
 var traceIndex = Array.IndexOf(args, "--smoke-trace");

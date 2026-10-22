@@ -13,7 +13,7 @@ contracts игровой сессии, supervisor, control protocol, CPU frame t
 | Область | Назначение |
 | --- | --- |
 | `TrueMoon.Aether.Sessions` | Session identity, `IGameSession` и session lifecycle |
-| `TrueMoon.Aether.Scenes` | Scene snapshots и entities |
+| `TrueMoon.Aether.Scenes` | Immutable authoring/scene aggregates, inheritance/parent graph resolution и явная проекция в существующий SceneSnapshot |
 | `TrueMoon.Aether.Transport` | Control DTOs, `IEngineControl` и adapters |
 | `TrueMoon.Aether.Checkpoints` | Checkpoint state, capability, outcomes и codec |
 | `SessionSupervisor` / `RuntimeProtocol` | Serialized commands, readiness, generations, heartbeat, stop/reap и observable failures |
@@ -27,6 +27,156 @@ Contracts/Enerit/Mithril и Silk.NET.Vulkan2.23.0; зависимостей на
 создаёт control client/server adapters при сборке самого Aether.
 
 ## Подключение
+
+### Authoring: шаблоны, варианты и экземпляры
+
+`Scenes.EntityDefinition` описывает template или variant с одной основой;
+`EntityInstance` задаёт отдельный ID, scene parent и локальный `EntityPatch`.
+`ComponentSchema` задаёт exact version, типы/nullable/defaults свойств, multiplicity
+и required component types. CLR/game types для инспекции не загружаются.
+
+```csharp
+using TrueMoon.Aether.Scenes;
+
+var appearanceType = new ComponentTypeId(Guid.NewGuid());
+var appearance = new ComponentId(Guid.NewGuid());
+var doorId = new EntityDefinitionId(Guid.NewGuid());
+var redDoorId = new EntityDefinitionId(Guid.NewGuid());
+var schema = new ComponentSchema(appearanceType, 1,
+    [new("color", PropertyValueKind.String, PropertyValue.From("white"))]);
+var door = new EntityDefinition(doorId,
+    new(addedComponents: [new(appearance, appearanceType, 1)]));
+var redDoor = new EntityDefinition(redDoorId,
+    new(propertyOverrides: [new(appearance, "color", PropertyValue.From("red"))]), doorId);
+var resolver = new EntityResolver([door, redDoor], [schema]);
+var entity = resolver.Resolve(new EntityInstance(new EntityId(Guid.NewGuid()), redDoorId));
+var color = entity.Components[appearance].Properties["color"];
+// color.Value.GetString() == "red"; color.Source.DefinitionId == redDoorId
+```
+
+IDs создаются один раз и сохраняются в authoring данных. Вариант переопределяет
+только нужные свойства, добавляет occurrences или скрывает inherited components.
+`RestoredComponents` явно возвращает скрытый компонент с inherited values;
+`WithoutComponentRemoval` снимает только локальную маску. `WithoutPropertyOverride`
+создаёт новый patch без локального override, сохраняя остальные изменения.
+Значение null/default остаётся явным override, отсутствие override наследует.
+
+Resolver копирует catalogs, не мутирует inputs и возвращает immutable result с
+value/presence provenance. Он проверяет graph, exact schemas, property types,
+final multiplicity и dependencies; ошибка содержит `EntityResolutionException.Code`
+и ID-based `Path`. Один resolver можно использовать для независимых instances.
+Depth limit64definitions; property IDs ordinal ASCII1..128, values — null/bool/
+Int64/finite double/string≤4096UTF16. Автоматических numeric conversions нет.
+
+Это in-memory authoring model ARCH1a.1/2. Disk/wire serialization нового aggregate,
+полный Runtime snapshot, live editing и MCP пока запланированы. Stateless model
+используется напрямую; lifecycle сервисов движка подключается через App ниже.
+
+### Агрегат сцены и совместимый snapshot
+
+`SceneDocument` фиксирует `SceneId`, неотрицательную document revision и immutable
+catalogs instances/definitions/schemas. `SceneResolver.Resolve(document, token)`
+проверяет duplicate IDs, missing/cyclic parent, catalogs и все entities, затем
+возвращает один `ResolvedSceneSnapshot`. Ошибка не публикует частичный результат;
+в `SceneResolutionException` доступны Code/Path/EntityId и исходная InnerException.
+
+```csharp
+var parentId = new EntityId(Guid.NewGuid());
+var childId = new EntityId(Guid.NewGuid());
+var document = new SceneDocument(new SceneId(Guid.NewGuid()), 7,
+    [new(parentId, doorId), new(childId, redDoorId, parentId: parentId)],
+    [door, redDoor], [schema]);
+var scene = SceneResolver.Resolve(document);
+var parentFirstOrder = scene.HierarchyOrder;
+```
+
+HierarchyOrder — preorder с родителем перед детьми, roots/siblings отсортированы
+по Guid. Children содержит каждый entity, включая пустые children у leaves.
+DefinitionRevisions фиксирует только referenced inheritance chains, ComponentSchemas
+— exact versions visible компонентов. Scene revision не является simulation tick.
+Parent graph проверяется итеративно; depth limit64 относится только к inheritance.
+
+`SceneSnapshotAdapter.Project(scene, projector, token)` создаёт прежний
+`SceneSnapshot` для существующего game/control consumer. Projector получает
+`(ResolvedSceneSnapshot, ResolvedEntity)` и возвращает `SceneEntityProjection`
+с world-space XYZ и Interactive. Семантика компонентов и вычисление world pose
+задаются явно потребителем. Adapter сохраняет canonical GUID IDs/revision,
+проверяет finite coordinates и прежний limit64entities до первого callback.
+Hierarchy/definitions/provenance остаются в authoring snapshot; callback может
+использовать их для своей projection policy. При failure/cancel результата нет;
+внешние side effects callback принадлежат вызывающей стороне.
+
+Такой snapshot принимает IGameSession.Load. Для стандартных примитивов используйте
+`PrimitiveSceneAdapter.Project(scene, token)`: он интерпретирует `BuiltInComponents.Schemas`
+и передаёт world-матрицы/цвета вместе с canonical IDs и scene revision.
+
+### Стандартные компоненты и комната
+
+| Роль v1 | Постоянный ComponentTypeId | Свойства / defaults |
+| --- | --- | --- |
+| Transform | `6fc9fce0-9547-42f5-b4df-f05f306f1001` | Number x/y/z/pitch/yaw/roll=0, sx/sy/sz=1 |
+| Appearance | `6fc9fce0-9547-42f5-b4df-f05f306f1002` | Number r/g/b=1; opaque unit cube |
+| Interaction | `6fc9fce0-9547-42f5-b4df-f05f306f1003` | Boolean enabled=true; eligibility only |
+
+Appearance/Interaction требуют Transform. Все роли single-occurrence; schema v1
+проверяется целиком, включая defaults/dependencies. Иной version или переопределение
+schema под тем же ID требует явной миграции. Неизвестные роли остаются authoring-only.
+Нет Appearance — нет draw; нет Transform у группы — local identity.
+
+Правая система координат, +Y вверх, forward -Z. Локальная матрица row-vector:
+`Scale * Rotation(Quaternion.CreateFromYawPitchRoll) * Translation`, углы в радианах;
+`world = local * parentWorld`. Матрицы не раскладываются обратно в SRT, shear
+сохраняется. Scale строго положительный; nonfinite/singular/overflow отклоняются.
+Материалы stored-sRGB [0,1], без текстур и физического lighting.
+
+`SceneEntity.Primitive` — optional deep-owned `Rendering.ScenePrimitive`:16 row-major
+floats и RGB. `Rendering.RenderPrimitive` — immutable world-space cube.
+`new PrimitiveScene(camera, primitives)` фиксирует до64draws, пустой список рисует
+фон. Старый constructor `(camera, rotation, color)` сохраняет куб в (0,1,0).
+Renderer выполняет draws в одном depth-tested pass на slot-owned surface.
+
+**Миграция control v2 → v3:** Editor/Runtime/Aether/game DLL пересобираются совместно;
+v1/v2 control identity отклоняется, wire fallback отсутствует. Текущий профиль —
+Control3/Frame1/Snapshot2 (TMCK2). Комната имеет статичную geometry в пределах scene
+revision: checkpoint содержит camera/tick/interaction и per-object switches,
+геометрия повторно загружается из того же SceneSnapshot. При изменении
+scene data или её definitions требуется новая scene revision; полный runtime world
+snapshot и live edits ещё не реализованы. Поле SnapshotVersion относится к TMCK.
+
+Пример `ManualTests/EngineSessionProbe --room` строит authoring room с полом,
+стенами, тремя объектами и transformed parent, загружает отдельный `Game.Logic.RoomGame`
+в child и использует прежние App/input/Replace. Collisions и HUD — далее.
+
+### Reach и состояния объектов
+
+`Interactions.PrimitiveRaycast.Cast(bodies, camera, maximumDistance)` проверяет до64
+opaque `InteractionBody` на forward-ray камеры. Reach finite в(0,1000], граница
+включена. Точное пересечение inverse-transformed unit cube сохраняет rotation,
+неравномерный scale/shear и world-space distance. Origin внутри/на поверхности
+даёт distance0. Ближайшее opaque тело блокирует луч даже при Interactive=false;
+одинаковая distance предпочитает blocker, затем ordinal entity ID. No hit → null.
+
+`Game.Logic.RoomGame` использует reach4. На fixed tick камера сначала получает
+input, затем один E pulse переключает только найденную eligible цель. Активный
+объект жёлтый; следующий pulse возвращает authored RGB. Другие объекты независимы,
+editor authoring snapshot не меняется. Удержание E не создаёт повторные pulses.
+
+**TMCK1 → TMCK2:** encoder/decoder и SessionIdentity.SnapshotVersion теперь2;
+формат1/future versions отклоняются. Matching binaries пересобираются вместе.
+`GameCheckpointState.Objects` — immutable `GameObjectStates`, до64unique valid
+entity IDs, ordinal sorted, с Boolean Active и value equality. Codec переносит
+полный набор: count(UInt16), для каждого UTF8length(UInt16)/ID/flag(byte), затем
+общий SHA256. Base offsets camera/tick сохранены, FixedBytes149. Invalid count,
+UTF8/order/duplicates/flags/trailing data отклоняются. Поле Interaction в RoomGame
+равно Any(Active); старые ProbeGame/CameraGame используют empty Objects.
+
+Room restore проверяет exact loaded eligible-ID set и aggregate flag до commit
+camera/tick/objects; несовпадение даёт RestoreRejected без mutation. Runtime держит
+readiness/frame fence до успешного startup restore. Transient input не входит в
+checkpoint. Это ограниченное game-owned состояние, не полный runtime World и не
+API редактирования Play; default editor tools остаются read-only.
+
+### ProjectReference
 
 ```xml
 <ProjectReference Include="../TrueMoon.Aether/TrueMoon.Aether.csproj" />
@@ -57,8 +207,10 @@ ENG5b добавляет optional `Input.IInputGameSession`, bounded `GameInputS
 `Supervisor.SendInputAsync(expectedIdentity, state)`: input staged на command,
 applied на fixed tick/Step. Камера/interaction сохраняются checkpoint, held/look/
 actions transient; Pause/Stop/restore/host surface reset очищают input. Control
-wire v2 требует rebuild matching host/game; frame/TMCK schemas остаются v1.
-Комната, HUD и Hot Reload остаются дальнейшими этапами.
+wire теперь v3 (ENG5c.1 scene primitives), требует rebuild matching host/game;
+frame schema остаётся v1, TMCK теперь v2. ENG5c.1 добавляет authoring комнату,
+ENG5c.2 — reach/occlusion и checkpointed per-object interaction;
+collisions, HUD и Hot Reload остаются дальнейшими этапами.
 UI OpenGL viewport живёт в примере и подключает Alloy явно.
 Новый namespace не добавляет поддержку других платформ или release readiness.
 

@@ -14,6 +14,14 @@ public class Button : Text
     /// <inheritdoc />
     protected override Thickness ThemePadding => Theme.ButtonPadding;
     /// <inheritdoc />
+    protected override float ThemeBorderWidth => Theme.BorderWidth;
+    /// <inheritdoc />
+    protected override Color ThemeForeground => Tone == ControlTone.Neutral ? Theme.Foreground : Theme.OnAccent;
+    /// <inheritdoc />
+    protected override Color ThemeBackground => !IsEffectivelyEnabled ? Theme.ControlDisabled : Tone == ControlTone.Neutral
+        ? _pressed ? Theme.ControlPressed : IsHovered ? Theme.ControlHover : Theme.Control
+        : Theme.Mix(Theme.ActionColor(Tone), _pressed ? new Color(0, 0, 0) : new Color(255, 255, 255), _pressed ? .16f : IsHovered ? .08f : 0);
+    /// <inheritdoc />
     public override bool Focusable => true;
     /// <summary>Raised once per completed activation.</summary>
     public event Action? Click;
@@ -24,8 +32,6 @@ public class Button : Text
     /// <inheritdoc />
     protected override void DrawCore(IDrawingContext context)
     {
-        context.Fill(Bounds, _pressed ? Theme.Accent : Theme.Control, 4);
-        if (IsHovered && IsEffectivelyEnabled) context.Stroke(Bounds.Deflate(new Thickness(1)), Theme.Accent, 1, 4);
         base.DrawCore(context);
     }
     /// <inheritdoc />

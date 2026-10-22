@@ -6,6 +6,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../AlloyTest/DefaultStyleGallery.cs" Link="DefaultStyleGallery.cs" />
     <ProjectReference Include="../../TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
     <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
     <ProjectReference Include="../../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
@@ -26,6 +27,6 @@
     <Compile Include="../AlloyTest/SettingsFormSmoke.cs" Link="Settings/SettingsFormSmoke.cs" />
     <Content Include="../AlloyTest/Assets/alloy-mark.png" Link="Assets/alloy-mark.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../AlloyTest/Assets/Fonts/*" Link="Assets/Fonts/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="Golden/Settings/*.png;Golden/Settings/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Golden/Settings/*.png;Golden/Settings/*.json;Golden/SettingsSquare/*.png;Golden/SettingsSquare/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

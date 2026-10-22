@@ -1,5 +1,50 @@
 # TrueMoon.Aether
 
+`Scenes.EntityDefinition`, `EntityInstance`, `EntityPatch` and `EntityResolver`
+provide immutable in-memory authoring with single-base variants, property overrides,
+component additions/removals/restorations and value provenance. Exact `ComponentSchema`
+contracts expose defaults, nullability, multiplicity and dependencies without loading
+game assemblies. Values support null, Boolean, Int64, finite double and bounded strings;
+numeric kinds are distinct. Resolver errors expose stable codes and ID-based paths.
+`SceneDocument` freezes a scene revision and its catalogs. `SceneResolver.Resolve`
+validates entity identities, scene parents/cycles and all effective entities before
+returning one immutable `ResolvedSceneSnapshot`, with deterministic parent-first
+order and referenced definition/schema versions. `SceneResolutionException` retains
+the scene/entity path and original authoring cause.
+`SceneSnapshotAdapter.Project` explicitly maps the result to the existing
+`SceneSnapshot`: the caller supplies world-space XYZ/interaction, while the adapter
+preserves canonical IDs/revision and enforces finite values and the64-entity limit.
+No partial result is returned on failure/cancellation. Persistence, full runtime
+snapshots, live editing and MCP are later stages.
+
+`BuiltInComponents.Schemas` supplies stable v1 Transform/Appearance/Interaction roles.
+`PrimitiveSceneAdapter.Project` maps them to control-v3 scene data: up to64entities,
+optional opaque cubes with immutable world matrices and stored-sRGB colors. Local
+row-vector transforms are Scale * yaw/pitch/roll Rotation * Translation;
+world = local * parentWorld, retaining shear. Positive scales and exact built-in
+schemas are required. Missing Appearance means no draw; groups without Transform
+use identity. Interaction is eligibility, not reach/raycast behavior.
+`new Rendering.PrimitiveScene(camera, primitives)` freezes up to64draws; empty draws
+clear the background. The original single-cube constructor remains available.
+Control v1/v2 identities are rejected: rebuild matching Editor/Runtime/Aether/game
+DLLs together. Frame1 remains current; SnapshotVersion is2 (TMCK2), with v1 rejected.
+Static geometry reloads from the same scene revision; checkpoint retains tick/camera/
+interaction and a bounded stable-ID object switch set. Any authoring data
+change must advance the scene revision. Full world restore/live edits remain planned.
+
+`Interactions.PrimitiveRaycast.Cast` finds the closest opaque affine cube along
+the camera's forward ray, preserving shear and world-space distances. Up to64distinct
+bodies, finite reach(0,1000], inclusive boundary; ineligible/disabled bodies occlude.
+Distance ties prefer blockers then ordinal IDs. Inside/on-surface distance is zero.
+The repository RoomGame uses reach4 and one E pulse to toggle the selected cube's
+material, preserving independent per-object state through Replace.
+`GameCheckpointState.Objects` contains immutable `GameObjectStates`: up to64sorted
+unique valid entity IDs and Boolean Active flags, with value equality. TMCK2 carries
+the full set with strict UTF8/count/order/flag/length/checksum validation. RoomGame
+validates the exact loaded eligible-ID set before atomic camera/tick/state commit;
+unsupported object states are rejected by ProbeGame/CameraGame. Editor authoring
+data remain unchanged. This does not provide full World snapshots or live editing.
+
 Experimental TrueMoon game-engine module: session lifecycle, control contracts,
 owned game processes, checkpoint replacement, bounded CPU/GPU frame transport and
 an explicit Vulkan/OpenGL viewport with a first depth-tested primitive renderer. Current prototype scope:
@@ -35,10 +80,11 @@ Editor/Runtime entry points and its `IGameSession` implementation.
 `Rendering.IRenderGameSession` is an optional observational capability. Capture it
 through `RuntimeProtocol.CaptureRenderFrame` at a serialized simulation boundary,
 then create `Gpu.Surfaces.GpuFrameData.FromScene` in the runtime frame provider.
-The scene currently describes one cube, a perspective camera and an opaque RGB
+The scene describes up to64world-space cubes, a perspective camera and opaque RGB
 material. Vulkan draws directly into the exported image with a slot-local depth
 buffer; GLSL/SPIR-V are embedded, with no runtime shader compiler dependency.
-The default reference pattern and CPU viewport remain available. Room/HUD,
+The default reference pattern and CPU viewport remain available. A static authored
+room and reach/raycast interaction are available in the repository's `--room` sample. Collisions/HUD,
 asset import and general scene rendering are later stages.
 
 `Input.IInputGameSession` optionally receives `GameInputTick` at each fixed
@@ -51,8 +97,8 @@ bounded pitch/yaw. Pause/Stop/restore clear transient input. Runtime adapters
 call `RuntimeProtocol.ResetInput` on GPU surface/focus changes; the example wires
 Configure/Detach automatically. Input itself is never checkpoint state.
 
-Control wire is version2 (input fields/outcome); frame and TMCK checkpoint schemas
-remain version1. Rebuild matching host/game artifacts; version1 control peers
+Control wire is version3 (input and primitive payload); frame schema is1, TMCK schema2.
+Rebuild matching host/game artifacts; version1/version2 control and snapshot1 peers
 are rejected, and old host fingerprints remain incompatible. The engine has no
 UI dependency. The example owns a bounded30Hz sender, focus/pointer routing and
 its drain before App/UI teardown; raw/locked OS mouse input is not supplied.
@@ -76,7 +122,7 @@ session with `StartAsync(scene, artifact, checkpoint)` on Supervisor, or
 readiness. The child handler must pass `SessionLaunch.RequireRestore` to
 RuntimeProtocol; restore completes before surface/frame publication. Start without
 a checkpoint explicitly resets from the document. Source build may differ; host,
-scene and revision must match. TMCK v1 codec validates integrity and bounded data.
+scene and revision must match. TMCK v2 codec validates integrity and bounded data.
 Capture must be observational and game restore atomic. Confirmed capture rejection
 keeps the paused session usable; unknown transport/callback outcomes fault and
 clean up.

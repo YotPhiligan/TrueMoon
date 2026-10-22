@@ -2,6 +2,546 @@
 
 [Текущий статус](STATUS.md), [единственный детальный план](PLAN.md).
 
+## ENG7a: основной экран редактора — 2026-10-22
+
+Запрос: «давай теперь возможно сделаем основной экран редактора? я думаю это
+должно быть окно без системного оформления с нашим стандартным стилем + в центре
+вьюпорт, и грид со свойствами и кнопками управлениями».
+
+Созданы **TrueMoon.Editor** (desktop WinExe/net10.0/IsPackable=false) и отдельный
+**TrueMoon.Editor.Tests** (xUnit). Оба зарегистрированы в точном TrueMoon.slnx;
+`dotnet sln TrueMoon.slnx list` проверен сразу после wiring и в финале. В engine
+assembly ничего не переносилось и новая engine сборка не создана.
+
+Application использует App.UseAether + UsePresentation explicit root factory:
+default custom WindowFrame, toolbar, список7demo объектов слева, живой3D viewport
+по центру, read-only two-column property inspector справа и state/error presentation.
+Выбор обновляет ID/XYZ/interactive/geometry/RGB и сохраняется при theme/Stop/Replace.
+Build/Start/Play/Pause/Step/Stop/Replace/Cancel используют существующий GameEditor.
+Stop/Cancel допускаются поверх pending command, close fences admission и ждёт
+Stop/drain; после failed cleanup admission открывается для retry. UI events не
+блокируются на IPC/compiler. WinExe не открывает дополнительную консоль.
+
+NativeRuntimeFactory запускает отдельный процесс того же application binary с
+`--runtime`. RuntimeEntryPoint — application composition существующих
+RuntimeProtocol/GameBuildLoader/FrameProducer/GpuResourceHost/Enerit/Mithril;
+game code загружается только в child. References на ManualTests executable нет.
+В source checkout входным примером является внешний Game.Logic.csproj/RoomGame;
+другой project/assembly/type задаются CLI. UI owns retained Skia copies, Aether
+owns transport/imports, borrowed GL context удерживается до successful drain.
+GL UUID query повторяет существующий read-only contract и проверяет owner/context/
+процедуры/число устройств/error; native buffer16bytes, Windows x64.
+
+[Запуск и ограничения](../../TrueMoon.Editor/README.md),
+[единственный подробный scope/acceptance](PLAN.md#eng7a-основной-экран-редактора--2026-10-22).
+Инспектор пока authoring SceneSnapshot и read-only во всех режимах. Список плоский,
+render surface960×540 с aspect-preserving layout. Editor camera/gameplay input,
+editable components/project persistence/tree/picking/gizmos/docking и полноценный
+runtime World snapshot/edit/MCP — последующие этапы. Отдельная runtime executable
+не поставлена; process isolation обеспечена отдельным `--runtime` процессом.
+
+### Текущие проверки ENG7a
+
+Windows x64/SDK10.0.402.39новых xUnit cases: workspace state/selection/properties/
+error precedence, command serialization/interruption/close/retry/cancellation,
+layout/readonly/theme/disposal и default frame на logical DPI1/1.5/2.
+
+| Требование | Evidence |
+| --- | --- |
+| «окно без системного оформления с нашим стандартным стилем» | `EditorScreenTests.DefaultFrame_LayoutUsesLogicalUnitsAndSettlesWithoutRedraw`; native apphost screenshots/default frame, direct WinExe startup |
+| «в центре вьюпорт» | `EditorScreenTests.ShellGeometry_ReservesToolbarInspectorAndStatusAroundCentralViewport`, `ShellGeometry_SmallBoundsStayFiniteNonnegativeAndClipped`; `EditorSmoke.RunAsync`9independent material pixels/configuration из child3D frame |
+| «грид со свойствами и кнопками управлениями» | `EditorScreenTests.HierarchyInput_UpdatesReadOnlyGridAndThemePreservesSelectionAndFocus`, `CommandButtons_DispatchOnlyEnabledCommandsAndBusyStateCanStopOrCancel`; native UI selection and8commands/configuration |
+| State/candidate availability | `EditorWorkspaceTests.CommandAvailability_FollowsAcknowledgedRuntimeAndCandidate`13literal expected command sets, `ClosedEditor_DisablesEveryCommandAndInvalidEnumIsRejected` |
+| Empty/invalid/snapshot/format/error behavior | `EditorWorkspaceTests.EmptyScene_HasNoSelectionOrRowsAndRejectsUnknownEntity`, `Selection_ChangesInspectorOnceAndInvalidSelectionPreservesIt`, `Inspector_UsesImmutableAuthoringSnapshotAndInvariantNumbers`, `Refresh_ReportsActualPidTickAndErrorPriorityWithoutResettingSelection`, `Refresh_ErrorFallbackKeepsBuildAndRuntimeFailuresVisible` |
+| Pending command/close/retry | `EditorCommandsTests.PendingWork_RejectsAnotherNormalCommandButAllowsInterrupt`, `Close_FencesNewWorkAndWaitsForAcceptedCommandAfterStop`, `FailedClose_ReopensAdmissionForCleanupRetry`, `Failure_IsObservedAndNextAcceptedCommandClearsIt`, `Cancellation_IsObservedWithoutAUserError`, `NormalCommand_ReceivesLifetimeAndInvalidCommandsNeverReachTheApi` |
+| Ownership/cleanup | `EditorScreenTests.InvalidShellChildren_AreRejectedBeforeAdoption`, `Disposal_UnsubscribesWorkspaceAndKeepsTheSharedSceneUsable`; native runtime/UI/mappings/GPU resources/handles0, reaped children |
+
+- `dotnet build TrueMoon.slnx --configuration Debug --no-incremental -m --verbosity quiet`:
+  `TestResults/EditorScreen/build-desktop-final.log`, exit0. Existing repository
+  warnings сохранены; новый Editor project ранее собран без warnings/errors.
+- `dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/EditorScreen/tests-desktop-debug --verbosity quiet`
+  и аналог Release в `tests-desktop-release`: **2253passed/configuration**,
+ 10TRX/failed0/skipped0. Editor39/Aether780/UI643/Hosting79/Mithril95/Core107/
+  Cobalt179/generator91/Enerit126/generator114. New project discovery не нулевая.
+- Direct Debug WinExe apphost и published Release WinExe apphost с
+  `--smoke <fresh-dir> --validation`, VK_LAYER_PATH из existing ENG4b validation
+  layer. Reports: `TestResults/EditorScreen/native-apphost-Debug/report.json` и
+  `native-apphost-Release/report.json`. Оба Passed=true:8actual commands
+  (Build,Start,Play,Pause,Step,Build,Replace,Stop),3PNG,9material pixel assertions,
+  selection, same UI root/window, theme/resize, preserved paused tick/selection,
+  close/drain;2children/configuration имеют отдельные PID и reaped/released.
+- Runtime cleanup JSON для каждой generation: validation requested/enabled,
+  **core/sync0errors/0warnings including teardown**,1device created/released,
+ 3slots created/released, live slots/resources/handles0. Parent report:
+  UI sessions/mappings/GPU resources/handles0, view disposed. Published
+  deployment — framework-dependent Windows x64; NuGet publication не выполнялась.
+- PNG Dark/Light и resized просмотрены. После просмотра укорочено имя blue cube,
+  label «Интерактивен» уменьшен до font14 и footer переведён на русские состояния;
+  финальные apphost screenshots используют эти изменения.
+
+Промежуточные попытки сохранены: initial scaffold build отверг отсутствующий
+ещё не созданный EditorSmoke; следующий build поймал ошибочный overload локального
+Until и missing readback namespace. После исправления build прошёл. Native
+`native-initial` failed из-за диагностического readback внутри UiSession.Invoke
+во время Update; захват перенесён в stable FramePresented boundary. `native-second`
+прошёл без validation. Затем final Debug/published Release и оба direct WinExe
+apphost запуска повторены с enabled validation, все прошли. Failed попытки не
+считаются passing evidence; защиту renderer не ослабляли.
+
+Assertion/gap review: независимые literal command sets, exact Rect/values/colors/
+selection/caret/offset/ownership, task gates вместо sleeps в unit tests. Добавлены
+error fallback и failed-close retry cases по найденным gaps. Roslyn source pairing
+запущен один раз перед тестами; это static pairing, не measured coverage. Research/
+plan/status сохранены только в temporary testagent directory. Mutation/coverage
+score не заявлен.
+
+Предыдущие engine native60cases, UI golden/package/RTE/performance/hardware
+матрицы этим запуском не повторены. ENG5c.3 collisions, full toolset, physical
+DPI/OS input/K3/K7/K8/VRAM/final alpha остаются открытыми; NVIDIA workaround не
+возобновлялся. Следующий локальный editor этап — authoring property editing
+через согласованные Entity/Scene API с validation/undo; Play readonly сохраняется
+до snapshot transactions.
+
+## ENG5c.2: reach/raycast и interaction — 2026-10-22
+
+Запрос: «давай приступим к следующему шагу»; точка продолжения — ENG5c.2.
+В Aether добавлены stateless PrimitiveRaycast/InteractionBody/InteractionHit,
+immutable GameObjectStates/GameObjectState и явный TMCK2 codec/profile.
+Game.Logic.RoomGame использует bounded reach4, actual affine geometry/occlusion
+и независимые переключатели объектов. Изменённый цвет наблюдаем в GPU frame,
+editor authoring snapshot/geometry не меняются. [Контракт/следующий шаг](PLAN.md#eng5c2-следующий-шаг-reachraycast-и-interaction),
+[публичный профиль](../../TrueMoon.Aether/README.md#reach-и-состояния-объектов).
+
+Ray query — до64distinct opaque bodies, finite reach(0,1000], inclusive boundary;
+inverse-transformed unit-box slabs сохраняют world distance, rotation/nonuniform
+scale/shear. Local direction не нормализуется, near-parallel не заменяется zero.
+Closest surface блокирует цель даже при Interactive=false; exact ties предпочитают
+blocker, затем ordinal ID. Inside/on-surface distance0. E применяется после camera
+input на fixed tick, только eligible hit меняет Boolean switch/материал. Active
+RGB(1,.8,.1), повторное нажатие возвращает исходный RGB; остальные объекты независимы.
+
+SnapshotVersion=2, control3/frame1 прежние. TMCK1/future schemas отвергаются;
+matching Editor/Runtime/Aether/Game.Logic требуют rebuild. Base offsets через
+scene ID сохранены; appended UInt16count и ordinal UTF8length/ID/flag records,
+общий SHA256, FixedBytes149/max64KiB. До64unique IDs, строгие count/length/UTF8/
+canonical order/flag/trailing checks. GameObjectStates deep-copies и даёт value
+equality через capture/codec/restore. RoomGame проверяет exact loaded eligible-ID
+set и Interaction=Any(Active) до atomic commit camera/tick/objects. Legacy demos
+ProbeGame/CameraGame отвергают nonempty Objects без mutation. Runtime readiness
+остаётся fenced при RestoreRejected, input transient и не входит в checkpoint.
+Это минимальный game-owned switch checkpoint, не full World snapshot/live editing.
+
+52новых xUnit cases: PrimitiveRaycastTests16, ObjectCheckpointTests24,
+RoomInteractionTests12. Первые итерации тестов: compile failure из-за пропущенных
+required GameInputTick arguments; после исправления96pass/1fail — invalid surrogate
+в InlineData нормализовался metadata. Runtime-created surrogate проверяет нужную
+ошибку; focused97/97, после gap review101/101. Production expectations не ослаблены.
+
+Full nonincremental Debug build прошёл; первый full solution Debug2185/2185 и
+Release2185/2185, по9TRX/failed0/skipped0: Aether779, UI615, Hosting79, Mithril95,
+Core107, Cobalt179/generator91, Enerit126/generator114. Прежние/generated CS1591
+warnings не подавлялись. Coverage/mutation percentages не измерены.
+
+| Requirement | Evidence: exact xUnit methods |
+| --- | --- |
+| «ограниченный запрос взаимодействия из камеры» / «явной максимальной дистанцией» | `PrimitiveRaycastTests.ExactReach_IsInclusiveWithAdjacentFloatingPointBoundaries`; `EmptyMissParallelAndBehind_DoNotInventTargets`; `BodyCount_IsBounded` |
+| «ближайшему eligible объекту» / «occlusion policy» | `NearestSurface_WinsRegardlessOfEnumerationAndOpaqueDisabledBodyBlocksTarget`; `Ties_PreferBlockerThenOrdinalIdIndependentlyOfInputOrder`; `InsideOrOnSurface_HitsAtZeroAndDoesNotSeeThroughBody` |
+| Actual affine geometry | `AffineBoxes_KeepWorldDistanceAndRejectFalsePositiveWorldAabbHits`; `NearParallelAndPitchedRays_KeepSmallNonzeroDirectionAndCameraOrientation` |
+| «E действует только на найденную цель и даёт наблюдаемый результат» | `RoomInteractionTests.Interact_ChangesOnlyNearestTargetMaterialAndKeepsIndependentObjectStates` |
+| «вне reach, заслонённую/отключённую цель» | `UnreachableOccludedDisabledAndMissedTargets_DoNotToggleAnything` (4cases) |
+| «input rising edge» / «восстановление состояния» | `RuntimePulseAndFreshRestore_PreserveCompleteObjectStateAndDoNotReplayInput` |
+| «атомарность capture/restore/Replace» | `InvalidObjectSetRestore_IsRejectedBeforeAnyCameraTickOrStateMutation` (3); `RuntimeWrongObjectSet_IsRejectedWithoutMutationAndKeepsFramesFenced`; `InvalidCameraAndTickOverflow_LeaveCompleteRoomStateUnchanged`; `LegacyGames_RejectPerObjectStateWithoutPartialRestore` |
+| «versioned checkpoint» | `ObjectCheckpointTests.CountAndUtf8Boundaries_RoundTripCompleteDetachedState` (0/1/64/65); `RehashedMalformedObjectSectionsAndOldSchemas_AreRejected` (12); `States_AreCanonicalCopiedAndValueEqualAcrossIndependentCaptures`; `SnapshotNegotiation_RequiresV2WhileControlAndFrameRemainCurrent` |
+| Diagnostic JSON compatibility | `ObjectCheckpointTests.DiagnosticJson_RoundTripsValidatedStateWithoutWeakeningImmutability`: complete state/value equality, detached storage, duplicate-ID rejection |
+
+```powershell
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --filter 'FullyQualifiedName~Interactions|FullyQualifiedName~ObjectCheckpointTests|FullyQualifiedName~CheckpointCodecTests|FullyQualifiedName~RoomSceneTests|FullyQualifiedName~GameInputProtocolTests' --logger trx --results-directory TestResults/ENG5c2/focused-reviewed --verbosity quiet
+dotnet build TrueMoon.slnx --configuration Debug --no-incremental --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --no-build --logger trx --results-directory TestResults/ENG5c2/final-Debug --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory TestResults/ENG5c2/final-Release --verbosity quiet
+```
+
+Research/plan/status и Roslyn pairing — OS temp `truemoon-eng5c2-testagent-20261022`.
+Dedicated generator/IDE findTests недоступны по предыдущей проверке; применены
+inline Research→Plan→Implement, deterministic static pairing и direct code reads.
+Whole-src pairing включает historical TestResults copies и не является coverage.
+Assertion/gap review добавил near-parallel, count-zero trailing, object-set runtime
+fence и tick-overflow/camera atomicity cases; clean focused101/101 подтвердил их.
+
+Первая полная native-матрица `TestResults/EngineSessions/eng5c2-final` остановилась
+на Debug-editor-gpu: старый diagnostic JSON consumer десериализует GameCheckpointState,
+а IEnumerable constructor parameter GameObjectStates не соответствует ImmutableArray
+property type для System.Text.Json. Предшествующие interaction/room/scene/input/
+GPU import/surface/viewport cases прошли; весь запуск не считается passing.
+Добавлен private JsonConstructor с exact ImmutableArray binding, делегирующий тому
+же validation/copy path; публичный mutator не добавлен. Новая JSON regression
+проверяет complete state roundtrip и сохранение duplicate-ID validation.
+Focused после fix102/102, повторные полные проверки имеют отдельные свежие reports.
+
+После JSON fix full Debug2186/2186 иRelease2186/2186,9TRX/configuration,
+failed0/skipped0; Aether780, остальные project counts прежние. Последние passing
+TRX — `TestResults/ENG5c2/final-Debug-jsonfix` и `final-Release-jsonfix`;
+`managed-summary.json` ссылается только на эти18TRX. Итоговые команды:
+
+```powershell
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/ENG5c2/final-Debug-jsonfix --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory TestResults/ENG5c2/final-Release-jsonfix --verbosity quiet
+./ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory TestResults/EngineSessions/eng5c2-final-jsonfix -IncludeViewport -IncludeGpuImport -IncludeGpuSurface -IncludeGpuViewport -IncludeEditorGpu -IncludeScene -IncludeInput -IncludeRoom -IncludeInteraction -GpuValidationLayerDirectory E:/source/my/TrueMoon/src/TestResults/ENG4b/validation-layer/Bin
+```
+
+Новый native interaction proof прошёл в Debug apphost и published Release:
+по10cases/9PNG/4owned children, все cooperative/reaped/released. PNG assertions
+проверяют три independent world centers/material colors, bounded pixel counts,
+floor/back wall/occlusion; active blue child становится yellow, после Replace
+цвет/флаг сохраняются, второй pulse возвращает authored blue. Отдельные сцены
+revision8/9 проверяют noninteractive blocker перед target и disabled target.
+80fixed ticks перемещают камеру сZ6кZ2; reach/outside, one-shot E, resize/suspend/
+resume320×240, exact complete checkpoint state и transient-input reset проверены.
+Core/sync validation errors/warnings0/0, resources/handles/mappings/UI sessions0,
+imported ReadPixels0; readback только итогового UI screenshot для assertions.
+Новый proof подаёт pulses через обычный Supervisor API; прежний input proof отдельно
+использует настоящий Silk keyboard callback. Physical OS input/raw cursor не заявлены.
+Визуально просмотрен active-object PNG, geometry/цвета соответствуют fixture.
+
+Local `TrueMoon.Aether.0.2.2.7-alpha.nupkg` создан из final Release без rebuild;
+DLL SHA256 совпал с managed и native published proof:
+`3A31E2CA99389209923F15DBB907037879C10CDE1BAB31D873E42EDC5C8143F1`.
+Команда: `dotnet pack TrueMoon.Aether/TrueMoon.Aether.csproj --configuration Release --no-build --no-restore --output TestResults/ENG5c2/packages --verbosity quiet`.
+Отдельный package drawing consumer/публикация не выполнялись. Все52pending C#files
+прошли namespace/whitespace checks, scratch artifacts в Git0. Reports —
+`TestResults/ENG5c2/managed-summary.json`, `package-check.json`, `namespaces-check.json`,
+`docs-check.json`, `native-interaction-summary.json`, `completion.json`.
+
+Финальная полная native-матрица после JSON fix:
+`TestResults/EngineSessions/eng5c2-final-jsonfix/summary.json`, **Completed=true,
+60/60cases,62commands,478source/76binary fingerprints**; hashes неизменны на
+протяжении run. Per configuration20headless и10UI/GPU cases: новый interaction,
+прежние room/cube/input, CPU viewport/Editor, GPU import/surface/viewport/ordinary
+Editor и checkpoint/Replace/failure regressions. Ordinary GPU Editor снова прошёл
+20Replace/20failures после JSON fix; старые requirements не ослаблялись.
+Passing CPU/GPU engine integration не подменяет full UI/golden/RTE/hardware,
+package drawing или3D performance. Предыдущий interrupted native run сохранён
+с исходной причиной и не включён в passing counts.
+
+Completion report Passed=true: managed2186/configuration, native60cases, новый
+interaction18PNG, namespace52files; documentation10Markdown/284links/189anchors,
+errors0. Scratch остается вне Git. ENG5c.2 выполнен в заявленном scope;
+далее ENG5c.3 collisions камеры, затем target/HUD/pause. Full World snapshot/edit/
+MCP/standalone/raw cursor и прежние hardware/release gates открыты. Commit/push
+пользователь этим шагом не запрашивал.
+
+## ENG5c.1: scene consumers и несколько примитивов — 2026-10-22
+
+Запрос: «давай приступим к следующему шагу»; текущая точка продолжения — ENG5c.1.
+В одной Aether assembly добавлены BuiltInComponents/PrimitiveSceneAdapter,
+RenderPrimitive/ScenePrimitive и bounded multi-draw PrimitiveScene. SceneSnapshot
+копирует optional primitive payload; control identity переведена с2на3.
+Frame1/TMCK1 прежние. Matching Editor/Runtime/Aether/Game.Logic пересобираются,
+v1/v2 identity отклоняется; fallback нет. Старый cube constructor и CPU default
+сохранены. [Контракт и следующий шаг](PLAN.md#eng5c1-следующий-шаг-scene-consumers-и-несколько-примитивов),
+[публичный профиль](../../TrueMoon.Aether/README.md#стандартные-компоненты-и-комната).
+
+Built-in schemas v1 задают persistent role GUIDs, exact defaults/dependencies и
+single occurrence. Transform local S*R*T, world local*parentWorld, quaternion
+yaw/pitch/roll radians; shear сохраняется без decomposing SRT. Positive scale,
+finite/nonsingular matrices и stored-sRGB RGB[0,1] проверяются до публикации.
+Неизвестные роли authoring-only; no Appearance=no draw, no Transform group=identity.
+Source scene revision обязана изменяться вместе с authoring data/definitions.
+Wire primitive —16row-major floats+RGB, deep-copy на ingress/egress; до64entities.
+Immutable frame — до64draws, включая empty list. Vulkan loop сохраняет pass/depth/
+slot lifetime и shader/SPV; CPU pixels/staging для scene renderer не добавлены.
+
+`Game.Logic.RoomGame` — отдельная DLL, static room geometry reload той же revision,
+fixed-tick camera и checkpointed demo interaction. TMCK1 не объявляется full-world
+snapshot. `--room` подключён к прежнему App/Editor/input sender; `--room-proof`
+использует обычный separate child/IPC/imported GPU/retained UI path. RoomScene
+создаёт пол, три стены, три объекта и parent group через authoring resolver;
+синий child наследует90°rotation и2xscale. Reach/raycast/collisions/HUD — ENG5c.2+.
+
+Managed evidence2026-10-22:36новых cases (BuiltInSceneTests22, RoomSceneTests14),
+обновлён input codec regression control-v3. Первый focused Debug68/68, затем
+full solution Debug2134/2134 иRelease2134/2134, по9TRX/failed0/skipped0:
+Aether728, UI615, Hosting79, Mithril95, Core107, Cobalt179/generator91,
+Enerit126/generator114. Existing CS1591 warnings в прежних/generated APIs не
+подавлялись. Assertions/gap review выполнен, coverage/mutation metrics не измерены.
+
+| Requirement | Evidence: точные xUnit methods |
+| --- | --- |
+| «минимальные стабильные component roles/schema IDs» | `BuiltInSceneTests.StableRoles_DefaultsAndDependenciesAreExplicit`; `BuiltInSchemaChanges_RequireExplicitMigration` (4cases) |
+| «parent transforms определены и проверены» | `BuiltInSceneTests.ParentScaleRotationTranslation_ComposesInOrderAndRetainsShear`: world center(22,6,-2), dot=-6; `WorldMultiplicationOverflow_IsRejectedEvenWhenLocalTransformsAreFinite` |
+| «позиции/материалы из scene data» | `VariantOverridesAndComponentRemoval_DriveActualDrawAndInteractionData`; `InteractionEnabledAndBoundaryColors_AreNotReplacedByDefaults` (2); `MissingRoles_AreIdentityGroupsAndNonRenderingMarkers` |
+| Atomic invalid input/cancel и bounded snapshot | `InvalidGeometryOrMaterial_FailsAtomicallyWithEntityPath` (7); `RuntimeBound_IsExplicitAndAuthoringRemainsUnbounded` (0/64/65); `CancellationAndRepeatedProjection_DoNotPublishSharedMutablePayloads` |
+| Wire ownership/version | `RoomSceneTests.Snapshot_DeepCopiesWirePayloadOnBothIngressAndEgress`; `MalformedWirePrimitive_IsRejectedBeforePublication` (7); `ControlV3_RoundTripsWorldMatrixColorAndNeutralGroupWithoutAliasing`; `GameInputProtocolTests.ControlV3_RoundTripsInputFlagsLookActionAndOutcomeAndRejectsOlderVersions` |
+| Multiple primitives/legacy compatibility | `RoomSceneTests.ExplicitDrawList_IsBoundedAndCopiedWhileLegacyCubeRemainsCompatible` (0/64/65), прежние `PrimitiveSceneTests` |
+| «scene revision/checkpoint/Replace» | `RoomSceneTests.RuntimeRoom_UsesAuthoredDrawsAndRetainsOnlySupportedCheckpointStateAcrossFreshLoad`; `InvalidLoad_DoesNotConsumeSequenceOrMutateGameAndChangedSceneRevisionRejectsRestore` |
+
+Команды и артефакты:
+
+```powershell
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --filter 'FullyQualifiedName~BuiltInSceneTests|FullyQualifiedName~RoomSceneTests|FullyQualifiedName~PrimitiveSceneTests|FullyQualifiedName~GameInputProtocolTests' --logger trx --results-directory TestResults/ENG5c1/focused-initial --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/ENG5c1/final-Debug --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory TestResults/ENG5c1/final-Release --verbosity quiet
+```
+
+`TestResults/ENG5c1/managed-summary.json` содержит18TRX paths/counts. Research/plan/
+status и Roslyn pairing сохранены в OS temp `truemoon-eng5c1-testagent-20261022`;
+dedicated testing-generator tool недоступен, pipeline выполнен inline. Rider
+findTests недоступен по предыдущей проверке, использованы static pairing и direct
+source/test reads. Scan whole src включает исторические TestResults copies и
+не является coverage report. Проверены независимые expected coordinates/colors,
+ошибки/code/path/cause, неизменность состояния, границы и исключение staged input
+из checkpoint. Scratch не добавлен в Git.
+
+Native evidence2026-10-22: первый scoped Debug room run прошёл с5PNG.
+После final code review выполнена свежая полная матрица
+`TestResults/EngineSessions/eng5c1-final/summary.json`: **Completed=true,58/58cases,
+60commands,473source/76binary fingerprints**, source/binary hashes неизменны
+на протяжении verification. Debug apphost и published Release отдельно.
+
+```powershell
+./ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory TestResults/EngineSessions/eng5c1-final -IncludeViewport -IncludeGpuImport -IncludeGpuSurface -IncludeGpuViewport -IncludeEditorGpu -IncludeScene -IncludeInput -IncludeRoom -GpuValidationLayerDirectory E:/source/my/TrueMoon/src/TestResults/ENG4b/validation-layer/Bin
+dotnet pack TrueMoon.Aether/TrueMoon.Aether.csproj --configuration Release --no-build --no-restore --output TestResults/ENG5c1/packages --verbosity quiet
+```
+
+Per configuration:20headless scenarios и9UI/GPU cases. Сохранены старые cube/input,
+CPU viewport/Editor, GPU import/surface/viewport/ordinary Editor и replacement/
+failure regressions. Новый room proof имеет5PNG, три hard-coded world centers/
+material colors, bounded material pixel counts, floor/back wall samples и depth
+occlusion (стена draw после объектов). Камера сдвинута на .15 за3fixed ticks;
+resize800×450, suspend0/resume320×240, Replacegeneration2 сохраняет exact
+camera/tick/interaction/Paused и положение/цвета сцены. Синий parented object
+проверяет реальный перенос world matrix через generated IPC codec. Визуально
+просмотрен первый PNG: три объекта и комната отображаются корректно.
+
+GPU core/sync validation errors/warnings0/0; runtime cleanup reports и local
+assertions проверили resources/handles/mappings/UI sessions0. Imported texture
+ReadPixels0; PNG assertions используют readback итогового UI OpenGL screenshot.
+В room по2owned child/configuration, все cooperative/reaped/released; game DLL
+не загружена в Editor. Прежний input proof по15cases/5PNG/configuration, ordinary
+GPU Editor по20Replace/20failures; это scoped engine integration, не вся UI
+native/golden/RTE/hardware matrix и не physical OS keyboard/mouse acceptance.
+
+Local `TrueMoon.Aether.0.2.2.7-alpha.nupkg` создан. DLL SHA256 совпадает с managed
+Release и published native proof:
+`5CEDCB47A36E50FCCD458078CA80B0B217C1FB987FF0B9979374C02EB0FF1659`.
+`TestResults/ENG5c1/package-check.json` содержит payload/entries. Отдельный
+package drawing consumer и публикация не выполнялись. Все42pending C#files
+(включая24предыдущих этапов) прошли namespace/whitespace checks.
+Итоговые reports: `managed-summary.json`, `namespaces-check.json`, `docs-check.json`,
+`completion.json` в `TestResults/ENG5c1`. Required shaders/SPV не менялись.
+
+ENG5c.1 выполнен в заявленном scope. Далее ENG5c.2 reach/raycast/interaction
+с явным versioned object-state checkpoint до mutable gameplay. Full world snapshot,
+runtime edits/MCP, collisions/HUD/standalone,3D performance/raw cursor и прежние
+hardware/release блокеры остаются открытыми. Коммит/пуш этим шагом не запрошены.
+
+## ARCH1a.2: агрегат сцены и адаптер — 2026-10-22
+
+Запрос: «давай к следующему шагу»; точка продолжения — ARCH1a.2. Добавлены
+SceneId/SceneDocument, SceneResolver/ResolvedSceneSnapshot, structured scene errors
+и explicit SceneSnapshotAdapter/SceneEntityProjection в той же Aether assembly,
+namespace Scenes. Это stateless in-memory API, без нового UseX или UI dependencies.
+Profile и следующий ENG5c.1 ведутся в [PLAN](PLAN.md#реализация-arch1a2--2026-10-22),
+публичная инструкция — [README](../../TrueMoon.Aether/README.md#агрегат-сцены-и-совместимый-snapshot).
+
+SceneDocument фиксирует nonempty GUID scene ID, revision≥0 и frozen catalogs.
+Whole-scene resolver проверяет duplicate entities/catalogs, parent presence/cycles
+и every effective entity через существующий EntityResolver. Traversal/graph
+итеративны; roots/siblings сортируются по Guid, preorder даёт parent-before-child.
+Immutable snapshot публикуется только после полного успеха; referenced definition
+revisions и exact schemas visible компонентов согласованы с тем же document.
+Unused catalog graphs не разрешаются, duplicate catalog identities всё же invalid.
+Revision — authoring version, не tick; полного simulation checkpoint здесь нет.
+
+Projection получает source snapshot/entity и явно задаёт world XYZ/Interactive.
+Adapter сохраняет canonical GUID IDs/revision и старый limit64entities, проверяет
+finite floats, не публикует partial result при error/cancel. Parent/definition
+metadata остаются в source; world transform composition и внешние эффекты callback
+определяет consumer. Legacy64limit не накладывается на сам authoring aggregate.
+OCE передаётся без wrapping; остальные projector failures сохраняют original cause
+и failing scene/entity path. Старые SceneSnapshot/control/frame/TMCK не изменены.
+
+Первый focused run:51passed/1failed из52новых cases. Ошибка assertion при сравнении
+двух ImmutableArray с одинаковым содержимым исправлена явным AsEnumerable comparison;
+проверки точного order/children/values сохранены. После этого scene suite130/130
+и финальные solution runs ниже прошли. Production logic после первого focused
+run не менялась. Требованиям соответствуют следующие tests в
+`TrueMoon.Aether.Tests.Scenes`:
+
+| Requirement | Evidence |
+| --- | --- |
+| «проверить уникальность EntityId» | `SceneResolverTests.DuplicateEntityIds_AreRejectedBeforeResolvingEitherInstance`: exact code/path/EntityId |
+| «существование parent и отсутствие parent cycles» | `SceneResolverTests.ParentGraph_RejectsMissingParentWithStablePathAndEntityIdentity`, `ParentGraph_RejectsCyclesIncludingTailsEnteringACycle`; self-parent — `LocalContracts_RejectInvalidInputsBeforeSceneResolution` |
+| «несколько instances, independent inheritance и parent hierarchy» | `SceneResolverTests.Forest_ResolvesInheritanceIndependentlyFromParentsAndPinsReferencedVersions`: five entities, roots/children/preorder, independent template values/provenance |
+| «Контракт scene revision/definition versions» | `SceneResolverTests.RevisionMetadata_PinsUsedDefinitionsAndCoexistingExactSchemaVersions`: long.MaxValue document revision, referenced definitions, simultaneous v1/v2 schemas; `EmptyAndSingletonScenes_ReturnCompleteHierarchyAndOnlyUsedMetadata` covers revision0/1 |
+| «atomic failed resolution» | `SceneResolverTests.EntityFailure_IsAtomicAndRetainsInstanceAndOriginalDefinitionCause`: later entity failure, no published result, earlier snapshot/source unchanged, subsequent valid resolution |
+| «immutable aggregate» | `SceneResolverTests.FrozenDocument_RemainsConsistentAfterAllCallerCatalogsAreMutated`, `CancelledAndParallelResolutions_DoNotChangeSharedDocumentOrOtherSnapshots` |
+| Deterministic parent-first order and independent error categories | `SceneResolverTests.DeclarationOrder_DoesNotChangeHierarchyOrResolvedValues`, `InheritanceAndSchemaFailures_AreNotConfusedWithAValidSceneParentGraph`, `CatalogErrors_RetainOriginalCategoryAndScenePathEvenForEmptyScenes` |
+| Deep hierarchy without recursive traversal | `SceneResolverTests.DeepHierarchy_UsesIterativeTraversalAndDoesNotInheritDefinitionDepthBound`:4096entities, reverse-ID parent chain, exact order/leaves |
+| «явную адаптацию минимальных component данных к текущим scene/game consumers» | `SceneSnapshotAdapterTests.Projection_PreservesCanonicalIdsRevisionOrderAndExplicitWorldSpacePolicy`: world X6/7 for child/grandchild, exact IDs/revision/order, mutable copy isolation; `Projection_RemainsLoadableByExistingGameAndCheckpointContract`: ProbeGame Load/ticks/interaction checkpoint and reset |
+| Legacy entity/float bounds | `SceneSnapshotAdapterTests.ExistingEntityLimit_IsCheckedBeforeAnyProjectionAndDoesNotLimitAuthoringScenes`:0/1/63/64/65 and no callback at65; `NonFiniteWorldCoordinates_ReportEntityAndOriginalValidationCause`: all XYZ/NaN/±infinity; `FiniteCoordinateBoundariesAndNullContracts_AreExplicit` |
+| Projection failure/cancel atomicity | `SceneSnapshotAdapterTests.ProjectorFailure_PreservesOriginalCauseAndPublishesNoPartialResult`, `Cancellation_BeforeOrDuringProjectionNeverPublishesOrCallsLaterEntities`: pre/first/last callback; `ProjectorCancellation_IsNotWrappedAsAnAuthoringFailure` |
+
+Успешные команды:
+
+```powershell
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --filter FullyQualifiedName~TrueMoon.Aether.Tests.Scenes --logger trx --results-directory TestResults/ARCH1a2/focused-scenes --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/ARCH1a2/final-Debug --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory TestResults/ARCH1a2/final-Release --verbosity quiet
+```
+
+Focused scenes130/130 (78previous +52new). Full Debug/Release:
+**Passed:2098, Failed:0, Skipped:0** в каждой configuration,9TRX/configuration.
+Counts: Core107/Cobalt179/generator91/Enerit126/generator114/Mithril95/UI615/
+Hosting79/Aether692. Final TRX включают все52новых и130scene cases/configuration;
+отчёт — `TestResults/ARCH1a2/managed-summary.json`.
+
+Review assertions проверил exact collections/metadata и errors/cause/paths,
+secondary state после failure, input copy isolation, independent graphs и
+before/at/after limits. Статические mutation candidates: пропуск parent/cycle
+validation, изменение order, потеря used-version pruning, shared mutable catalogs,
+частичное завершение projection/пропущенный cancellation check и off-by-one64
+нарушили бы named assertions. Mutants/line coverage не запускались, score не
+заявляется. Roslyn pairing выполнен один раз до реализации; whole-root counts
+включают historical TestResults copies и не являются production coverage.
+Research/plan/status workflow сохранён в OS temp вне Git; IDE findTests отсутствует.
+
+Это managed source proof. Native/GPU/package checks не повторены, interactive
+sample остаётся прежней fixture. Auto world transforms, full runtime snapshot/edit,
+aggregate persistence/transport codec и MCP не объявлены готовыми. Следующий
+ENG5c.1 — минимальные component roles и подключение scene data к runtime/renderer
+нескольких примитивов с отдельным native pixel/validation/lifecycle proof.
+
+Финальная проверка: 8 Markdown,204локальные ссылки/122anchors, ошибок0;
+24pending C# files (7production+2test новых этого этапа) — namespace/whitespace0issues.
+Tracked C# contracts без изменений, scratch artifacts в Git0. Итоговый
+`TestResults/ARCH1a2/completion.json` сверяет9TRX/configuration,2098passed,
+692Aether/130scene/52новых cases и текущие documentation/source checks.
+
+## ARCH1a.1: immutable модель и resolver — 2026-10-22
+
+Запрос: «давай приступим к работе» после назначения ARCH1a.1. В одной Aether
+assembly, namespace Scenes, реализованы immutable authoring contracts: GUID IDs,
+definitions/variants/instances, component schemas/data, patches/scalar values,
+EntityResolver и immutable result с property/presence provenance. Новые классы
+не требуют App extension: это stateless utilities, без owned resources.
+Точный [profile и границы](PLAN.md#реализация-arch1a1--2026-10-22) записан в PLAN;
+публичный пример — [README](../../TrueMoon.Aether/README.md#authoring-шаблоны-варианты-и-экземпляры).
+
+Контракт первого profile: одна base definition, отдельный scene parent,64definitions
+в chain; exact schema version, ordinal ASCII property IDs1..128, null/bool/Int64/
+finite double/string≤4096UTF16, без numeric coercion. Значения по умолчанию схемы
+имеют отдельный provenance flag. Remove маскирует occurrence, restore возвращает
+hidden state; reset снимает только локальный override/mask. Occurrence IDs не
+переиспользуются в цепочке. Final visible set проверяет multiplicity/dependencies.
+Errors содержат code/path; невалидная instance не мешает разрешению другой.
+
+Сначала focused run дал72passed/2failed: ImmutableDictionary builder принимал
+duplicate property ID с тем же value/object. Добавлены явные duplicate checks
+в ComponentSchema и AuthoringValidation.Values. Focused74/74 после исправления
+прошёл; при review добавлены ещё4cases (version zero/negative и сохранение всех
+patch operations после reset), всего78новых. Финальное уточнение ordinal test
+проверяет разные explicit data values для `A`/`a`, не только schema defaults.
+Все последующие финальные проверки выполнены после этого уточнения.
+
+Все method names ниже относятся к `TrueMoon.Aether.Tests.Scenes`.
+
+| Requirement | Evidence |
+| --- | --- |
+| «сущности могут наследоваться», «только 1 какое-то изменение в родительской» | `EntityResolverTests.DoorVariant_TwoInstances_ResolveIndependentValuesAndOrigins`: color red, inherited label/x/defaults, отдельные parent/definition и origin revision |
+| «изменение свойств и добавление\удаление компонентов» | `EntityResolverTests.Components_AddRemoveRestoreAndResetMasks_PreserveValuesAndPresenceOrigins`: variant addition + mask, instance restore + color override, source и presence source |
+| «Door → RedDoor → два instances сцены» | `EntityResolverTests.DoorVariant_TwoInstances_ResolveIndependentValuesAndOrigins`: independent transforms/color, IDs и повторное разрешение без утечки изменений |
+| «property override/reset/null/default» | `EntityResolverTests.PropertyReset_DistinguishesMissingNullAndExplicitDefaultAndRetainsOtherChanges`, `AuthoringModelTests.NullableSchema_ResolvesNullDefaultAndAcceptsExplicitNonNullValue` |
+| «base updates» | `EntityResolverTests.BaseRevision_UpdatesInheritedValuesWithoutOverwritingLocalOverridesOrOldResults` |
+| «add/remove/reinstate components» и сохранение остальных changes | `EntityResolverTests.Components_AddRemoveRestoreAndResetMasks_PreserveValuesAndPresenceOrigins`, `AuthoringModelTests.PatchResets_PreserveUnrelatedAddRemoveRestoreAndPropertyChanges` |
+| «cycles/missing base», «duplicate IDs/type conflicts» | `EntityResolverTests.InvalidDefinitionGraphs_ReportIdsAndDoNotTraverseSceneParents`, `InvalidChanges_ReportExactCodeAndTargetWithoutPoisoningResolver`, `Catalogs_RejectDuplicateDefinitionsAndExactSchemaVersionsWithPaths` |
+| «component multiplicity/dependencies» | `EntityResolverTests.Multiplicity_IsTypeBasedAndPermitsIndependentOccurrencesOnlyWhenDeclared`, `FinalDependencies_AllowRestorationButRejectMissingRequiredTypes` |
+| «provenance и неизменность исходных данных» | `AuthoringModelTests.Collections_AreFrozenTransitivelyBeforeCallerMutatesEveryInputCollection`, `EntityResolverTests.Catalogs_AreSnapshottedAndRepeatedParallelResolutionsDoNotShareMutableState` и DoorVariant test |
+| «schema/version и допустимые значения» | `EntityResolverTests.SchemaVersions_AreExactAndUnknownSchemasAndInvalidInitialValuesAreRejected`, `AuthoringModelTests.ScalarValues_PreserveKindsBoundariesAndRejectCrossKindReads`, `ScalarNumbers_RejectNonFiniteValues`, `PropertySchemas_RejectInvalidKindsAndDefaults` |
+| ID/key/version/depth bounds и typed errors | `AuthoringModelTests.Identifiers_RejectEmptyAndDefaultIdsAtEveryModelBoundary`, `PropertyIds_KeepOrdinalCaseAndEnforceExactLengthBoundary`, `AuthoringInputs_RejectInvalidLocalContractsBeforeResolution`, `EntityResolverTests.InheritanceDepth_EnforcesExactBoundWithoutRecursion`, `InvalidDefinitionValues_ReportDefinitionPathWithoutPoisoningOtherInstances` |
+
+Команды, завершившиеся успешно:
+
+```powershell
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --filter FullyQualifiedName~TrueMoon.Aether.Tests.Scenes --logger trx --results-directory TestResults/ARCH1a1/focused-green --verbosity quiet
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --logger trx --results-directory TestResults/ARCH1a1/aether-Debug --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Debug --logger trx --results-directory TestResults/ARCH1a1/final-Debug --verbosity quiet
+dotnet test TrueMoon.slnx --configuration Release --logger trx --results-directory TestResults/ARCH1a1/final-Release --verbosity quiet
+```
+
+Focused-green74/74 — промежуточный run; module Debug640/640. Финальные solution
+Debug иRelease: по9TRX/configuration, **Passed:2046, Failed:0, Skipped:0**.
+Counts: Core107/Cobalt179/generator91/Enerit126/generator114/Mithril95/UI615/
+Hosting79/Aether640; все78новых cases включены в каждый final run.
+Managed evidence: `TestResults/ARCH1a1/managed-summary.json` и final TRX directories.
+
+Test-quality review проверил named requirements, exact error code/path, inherited
+и local provenance, secondary state после failures/reset, null/default differences,
+boundary neighbors и immutable collections. Исправлена слабая проверка, создававшая
+новый fixture вместо наблюдения результата; final assertion проверяет отсутствие
+Extra на последующем valid result. Review статический: mutation score и line
+coverage не измерялись. IDE findTests отсутствует; Roslyn pairing выполнен один раз,
+обнаружил existing SceneSnapshot tests. Его общие counts включают исторические
+TestResults copies и не объявляются аудитом production sources. Research/plan/status
+test workflow сохранены в OS temp вне stageable repository content.
+
+Изменения не трогают прежние SceneEntity/SceneSnapshot, RPC/control/frame/TMCK,
+runtime simulation/input/renderer. Native/GPU/package checks этим шагом не
+повторялись. Полный snapshot, live editing, MCP, persistence и parent graph aggregate
+не объявляются готовыми. Далее ARCH1a.2 scene aggregate и адаптация для ENG5c.
+
+Финальные checks: 8 Markdown, 197 локальных ссылок и 115 anchors, ошибок0;
+15новых C# файлов/namespace violations0; tracked diff и new-file whitespace
+проверены. `TestResults/ARCH1a1/completion.json` сверяет managed counts, все78новых
+cases в каждом final TRX set, namespaces и отсутствие scratch artifacts в Git.
+
+## Editor/Runtime: процессы и первый шаг — 2026-10-22
+
+Пользователь подтвердил два процесса: owned Runtime запускается модулем,
+редактор с UI работает отдельно; команды/input передаются через IPC. Затем
+попросил внести решение в планы и определить начало работ. Существующее разделение
+в PLAN сохранено и уточнено: Aether supervisor → Mithril launch/stop/reap,
+Enerit control/input/state, отдельный RAM/GPU frame transport, readonly query,
+runtime-owned snapshot и те же API для CLI/агентов. Уточнены input admission/reset
+и recovery неизвестного результата edit после disconnect. Текущие probe роли
+одного executable уже работают в разных процессах; production executables — ENG7.
+
+Первым назначен [ARCH1a.1](PLAN.md#arch1a1-первый-шаг-модель-и-разрешение-наследования):
+immutable definitions/variants/instances и pure effective entity resolver с
+provenance. Контрольный пример Door → RedDoor → два независимых instances;
+критерии покрывают overrides/reset, component add/remove, invalid graphs и
+immutability. Затем минимальная интеграция модели в scene data/ENG5c; полный
+authoring/runtime edit/MCP toolset развивается отдельно в ARCH1b–d/ENG7.
+Общие PLAN/STATUS и module STATUS синхронизированы. Изменена документация;
+новых code/build/test/native/package результатов нет.
+
+Проверены 6 изменённых Markdown-файлов, 184 локальные ссылки и 107 anchors; ошибок нет;
+`git -c core.safecrlf=false -c core.whitespace=cr-at-eol diff --check` прошёл.
+Отдельный отчёт: `TestResults/ArchitectureProcesses-20261022/docs-check.json`;
+предыдущая проверка ARCH1 сохранена отдельно.
+
+## ARCH1: согласование модели мира и API — 2026-10-22
+
+По обсуждению пользователь подтвердил Entity + Components и наследование данных:
+варианты переопределяют свойства, добавляют и удаляют компоненты. Для Play выбран
+readonly просмотр по умолчанию; явное редактирование ставит Runtime на паузу,
+сохраняет согласованный snapshot, применяет изменения и возвращает прежний режим.
+Принят первый локальный профиль агентов с MCP adapter поверх общих API.
+
+В [PLAN](PLAN.md#arch1-entity-components-и-api--2026-10-22) записаны владельцы данных,
+различие scene hierarchy/base definition, API для authoring/runtime, rollback,
+границы полного snapshot и ARCH1a–d acceptance. При failed restore продолжение
+частично изменённой симуляции запрещено. Перенос Play edits в документ явный;
+TMCK v1 не расширен и не объявлен полным snapshot. Одна Aether assembly и App
+integration сохранены; функциональный следующий шаг ENG5c учитывает модель ARCH1a,
+полный toolset развивается в ENG7. Build/test/native/package checks не запускались;
+предыдущие результаты2026-10-21 сохраняют свои scope и дату.
+
+Проверены5изменённых Markdown,156локальных ссылок и88anchors, ошибок0;
+`git -c core.safecrlf=false -c core.whitespace=cr-at-eol diff --check` прошёл.
+Отдельный отчёт: `TestResults/Architecture-20261022/docs-check.json`;
+исторические отчёты ENG5b не перезаписывались.
+
 ## ENG5b: gameplay input и камера — 2026-10-21
 
 Запрос: «теперь давай приступим к следующему шагу»; точкой продолжения был ENG5b.
@@ -2048,3 +2588,159 @@ fences/whitespace/conflicts/NUL и scoped/full git diff --check passed.
 4engine projects/production test reference в solution проверены. Existing10staged
 entries сохранены; новые engine/ENG2 test files не staged. Артефакт:
 `TestResults/EngineSessions/eng2-completion.json`. Ни один новый package не публиковался.
+
+## Сводки до ENG7a — 2026-10-22
+
+Последняя работа — **2026-10-22, ENG5c.2: reach/raycast и per-object interaction**.
+Actual affine cube raycast, nearest/opaque occlusion, inclusive reach и deterministic
+ties реализованы в Aether. RoomGame использует reach4 и E pulse для переключения
+только выбранного объекта, с возвратом authored RGB. TMCK2 переносит immutable
+stable-ID switches, restore валидирует exact loaded set до atomic commit.
+Control3/frame1 прежние, Snapshot2 требует rebuild matching binaries, TMCK1 отвергается.
+52новых cases; focused102/102, nonincremental Debug build прошёл; full Debug/Release
+2186/2186/configuration,9TRX/failed0/skipped0; Aether780/UI615/Hosting79/Mithril95.
+[Контракт](PLAN.md#eng5c2-следующий-шаг-reachraycast-и-interaction),
+[Requirement/evidence/команды](HISTORY.md#eng5c2-reachraycast-и-interaction--2026-10-22).
+Найдена/исправлена diagnostic JSON constructor-binding regression immutable
+object state; отдельный тест проверяет roundtrip и duplicate-ID rejection.
+Новый native interaction proof Debug/published Release: по10cases/9PNG/4children,
+core/sync0/0, resources/handles/mappings/UI sessions/imported ReadPixels0.
+Local Aether pack/payload совпал SHA256 с final managed/native Release;
+package drawing consumer не запускался. Все52pending C#namespace/whitespace checks прошли.
+Итоговая fresh native matrix после JSON fix60/60cases/62commands,
+478source/76binary fingerprints: новые interaction и прежние CPU/GPU/input/
+Editor Replace/failure regressions прошли в Debug/published Release.
+Summary — `TestResults/EngineSessions/eng5c2-final-jsonfix/summary.json`.
+Completion Passed=true; docs10Markdown/284links/189anchors/errors0.
+Reports: `TestResults/ENG5c2/managed-summary.json`, `docs-check.json`,
+`namespaces-check.json`, `completion.json`; full TRX — `final-*-jsonfix`.
+Далее [ENG5c.3](PLAN.md#eng5c3-следующий-шаг-collisions-камеры): минимальный объём
+камеры/игрока и fixed-tick collisions, затем target/HUD/pause. Full World snapshot,
+runtime edits/MCP, raw OS input/3D performance и прежние hardware/release gates открыты.
+
+Предыдущая работа — **2026-10-22, ENG5c.1: scene consumers и несколько примитивов**.
+Stable v1 Transform/Appearance/Interaction schemas, explicit local*parentWorld
+projection, deep-owned control-v3 primitive payload и immutable multi-draw snapshot
+реализованы. Vulkan рисует пол/стены/три объекта комнаты в прежний App-owned GPU
+viewport; separate Game.Logic.RoomGame получает authoring data через IPC.
+`--room` использует прежний fixed-tick input/Editor/Replace. Control v1/v2 отклоняются,
+matching binaries требуют rebuild; frame1/TMCK1 прежние. Геометрия статична в
+пределах scene revision, checkpoint только camera/tick/interaction.
+Fresh native matrix58/58cases/60commands,473source/76binary fingerprints:
+Debug apphost/published Release, новая комната и прежние CPU/GPU/input/Replace/
+failure regressions прошли. Room по5PNG/configuration, core/sync validation0/0,
+resources/handles/mappings/UI sessions0, imported ReadPixels0. Local Aether pack
+прошёл, DLL совпала SHA256 с managed Release/published proof; package drawing
+consumer не запускался. Все42pending C#namespace/whitespace checks прошли.
+36новых cases; full Debug/Release2134/2134/configuration,9TRX/failed0/skipped0,
+Aether728/UI615/Hosting79/Mithril95. [Контракт](PLAN.md#eng5c1-следующий-шаг-scene-consumers-и-несколько-примитивов),
+[Requirement/evidence/команды](HISTORY.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22).
+Отчёты: `TestResults/ENG5c1/managed-summary.json`, `package-check.json`,
+`namespaces-check.json`, `docs-check.json`, `completion.json`;
+native — `TestResults/EngineSessions/eng5c1-final/summary.json`.
+На этапе ENG5c.1 далее планировался [ENG5c.2](PLAN.md#eng5c2-следующий-шаг-reachraycast-и-interaction): bounded
+reach/raycast target, наблюдаемое interaction и versioned object state/checkpoint;
+затем нужные collisions/HUD. Full world snapshot/runtime editing/MCP остаются
+ARCH1c/d/ENG7; performance/raw OS input/прежние UI hardware/release блокеры открыты.
+
+Предыдущая работа — **2026-10-22, ARCH1a.2: scene aggregate/resolver и compatibility adapter**.
+SceneDocument фиксирует revision/catalogs, SceneResolver проверяет instance IDs,
+parent graph и все entities и публикует immutable ResolvedSceneSnapshot с
+parent-first order и exact referenced definition/schema versions. Errors сохраняют
+scene/entity path и original cause. SceneSnapshotAdapter задаёт explicit world-space
+projection в прежний SceneSnapshot с canonical IDs/revision и limit64entities.
+52новых xUnit cases, scene suite130/130. Full Debug/Release2098/2098/configuration,
+9TRX/failed0/skipped0; Aether692/UI615/Hosting79/Mithril95.
+[Контракт](PLAN.md#реализация-arch1a2--2026-10-22),
+[Requirement/evidence/команды](HISTORY.md#arch1a2-агрегат-сцены-и-адаптер--2026-10-22).
+ProbeGame.Load/tick/checkpoint совместимость проверена. Native/GPU/package checks
+не повторялись; прежние SceneSnapshot/control/frame/TMCK и интерактивный sample
+не изменены. Полный runtime snapshot/edit и MCP запланированы.
+На этапе ARCH1a.2 далее планировался ENG5c.1.
+Документация: 8 Markdown, 204 локальные ссылки/122anchors, ошибок0. Все24pending
+C# файла (9этого этапа) прошли namespace/whitespace checks; scratch artifacts в Git0.
+Отчёты: `TestResults/ARCH1a2/managed-summary.json`, `docs-check.json`, `completion.json`.
+
+Предыдущая реализация — **2026-10-22, ARCH1a.1**: immutable definitions/variants/
+instances, components/schema/patches и EntityResolver;78новых cases. Full Debug/
+Release2046/2046/configuration, Aether640. [Scope/evidence](HISTORY.md#arch1a1-immutable-модель-и-resolver--2026-10-22).
+
+Предыдущая работа над реализацией — **2026-10-21, ENG5b gameplay input/camera**:
+control v2, optional IInputGameSession, bounded staging/lease и fixed-tick camera,
+отдельная CameraGame, interactive `--scene` с WASD/mouse/E/Escape. Input transient;
+camera/tick/interaction сохраняются при checkpoint Replace. App-owned supervisor
+проверяет exact identity внутри gate; stale input не retargeted. Один30Hz sender
+drains до host/UI; Pause/focus/capture/resize/suspend/Stop/restore сбрасывают input.
+Argentis W/S/D/E и Silk mapping дополнены. Raw mouse/cursor lock отсутствуют.
+42новых xUnit cases; full Debug1968/1968 иRelease1968/1968,9TRX/configuration,
+failed0/skipped0: Aether562/UI615/Hosting79/Mithril95.
+Native control/CPU/GPU/3D/input regression56/56cases/58commands; усиленный input
+proof2/2 (Debug/published Release), по15cases/5PNG с реальным Silk key callback.
+Validation0/0, imported ReadPixels0, resources/handles/mappings/UI sessions0,
+sender завершён. После full matrix изменён только proof harness; library DLLs
+сверены между полным и усиленным run. Local packs Aether/Argentis/Platform.Silk
+прошли, DLL payload сверены с published proof; отдельный package drawing не запускался.
+[Контракт, exact tests/commands, provenance и ограничения](HISTORY.md#eng5b-gameplay-input-и-камера--2026-10-21).
+На момент ENG5b следующим был ENG5c комната/interaction/HUD; весь ENG5 ещё частичен.
+
+Предыдущая работа — **2026-10-21, ENG5a: первый Vulkan3D renderer**.
+Optional immutable scene snapshot под simulation/checkpoint lock, perspective
+camera, cube, opaque material и slot-owned depth/pipeline реализованы в одной
+TrueMoon.Aether. Vulkan рисует в exportable image без CPU pixels/staging; обычный
+App/Editor/GPU transport и default CPU/reference путь сохранены.
+Debug и published Release 3D proof: по5PNG assertions (depth/material/camera,
+resize/suspend/resume/checkpoint Replace), core/sync errors/warnings0,
+resources/handles/mappings/UI sessions0, imported ReadPixels0.
+Итоговая native matrix12/12cases/14commands,430source/76binary hashes: новые
+scene и прежние import/surface/viewport/ordinary GPU Editor/repeat прошли.
+Local pack прошёл; DLL package совпадает SHA256 с native published proof.
+Новые focused tests19/19; full solution Debug1926/1926 иRelease1926/1926,
+по9TRX/failed0/skipped0: Aether520, UI615, Hosting79, Mithril95.
+Это source apphost/published3D proof; package GPU drawing и3D performance не
+подтверждены. [Контракт, команды, failures и evidence](HISTORY.md#eng5a-первый-vulkan-3d-frame--2026-10-21).
+ENG5a завершает первый renderer, весь ENG5 остаётся частичным; далее ENG5b input/camera.
+
+Предыдущая работа — **2026-10-21, ENG4e CPU/GPU baseline**. Реализованы opt-in
+stage timings, bounded raw/process captures и воспроизводимый runner.
+Финальная матрица12/12cases/36intervals/24cooperative children/36pixel checks,
+15commands/421source/94binary fingerprints, Completed=true. Release1280×720:
+медиана per-run p95 CPU65–66ms/GPU21–33ms; GPU reference allocation~107MiB/s.
+Debug CPU:2FPS/6latency advisory breaches, включая12.51fps outlier; budgets прежние.
+Raw QPC stages37766, cohorts5244produced/received и5182presented. Local GPU
+resources/handles/mappings/UI sessions0; imported ReadPixels0. Это reference
+CPU-generated/Vulkan-staging workload, не3D/VRAM/physical-display performance.
+
+Найден/исправлен Mithril exit-delivery/graceful-wait race с red/green regression;
+native20shutdown cases прошли. Full solution Debug1907/1907 иRelease1907/1907,
+по9TRX/failed0/skipped0: Aether501/UI615/Hosting79/Mithril95, остальные counts
+сохранены. Отдельный GPU correctness run:6cases/8commands, Debug/published Release,
+core/sync validation0/0; per ordinary GPU Editor20Replace/20failures/53children,
+retained copies829/813, imported readback0. Nonincremental build/golden/RTE/full
+UI/hardware/VRAM matrix этим не повторены. [Подробные результаты, исходные failures,
+команды и ограничения](HISTORY.md#eng4e-cpugpu-baseline--2026-10-21).
+Fresh units packages108/108cases/8nupkgs проверили доставку Mithril fix; это не
+Aether GPU package drawing. Независимый replay36intervals/raw37766records и
+1048source/170binary hashes прошёл (`TestResults/ViewportBaseline/development/completion.json`).
+
+Исправление структуры — **2026-10-21**: Aether.Contracts устранён;21тип размещён
+по назначению в Sessions/Scenes/Transport/Frames/Checkpoints, engine assembly одна.
+Все Aether/test/example namespace соответствуют путям. Aether493/493 Debug/Release;
+общий solution1898/1898 в каждой конфигурации. Fresh12packages/4App consumers и
+итоговая targeted native matrix20cases (Debug/published Release) прошли.
+Native checks выявили PID reuse: GPU adapter искал lease по PID в истории.
+Оба viewport examples теперь получают текущий owned NativeRuntimeLease напрямую,
+а fault decorator раскрывает конкретный inner lease. Probe сохраняет исходную
+ошибку до assertion; условия проверок сохранены. Итоговый run включает CPU/GPU
+20Replace/20failures proofs. [Команды/границы/миграция](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
+
+Предыдущая работа над реализацией — **2026-10-20, ENG4d2 ordinary GPU GameEditor**. UseAether options
+выбирают lazy App-owned IGameViewportTransport; default CPU. FrameSession сохраняет
+общий Start/Resize/Stop/first-present lifecycle, GameEditor/GameReplacement —
+selected DLL/checkpoint/rollback. ViewportSurface не содержит native/mapping handles;
+ViewportFrame ticket подтверждается только для актуальной presentation.
+GpuViewportTransport копирует borrowed texture в независимый UI image, returns
+slot после observed GL completion и удерживает первый image до actual first-present.
+Aether остаётся одной assembly без UI dependency.
+[Контракт](PLAN.md#eng4d-gpu-viewport-bridge--2026-10-20),
+[API](../../TrueMoon.Aether/README.md#выбор-transport-в-gameeditor--eng4d2),
+[evidence](HISTORY.md#eng4d2-ordinary-gpu-gameeditor--2026-10-20).

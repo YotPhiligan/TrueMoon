@@ -21,6 +21,10 @@
     <Project Path="TrueMoon.Cobalt.Tests\TrueMoon.Cobalt.Tests.csproj" />
     <Project Path="TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
   </Folder>
+  <Folder Name="/Editor/">
+    <Project Path="TrueMoon.Editor.Tests/TrueMoon.Editor.Tests.csproj" />
+    <Project Path="TrueMoon.Editor/TrueMoon.Editor.csproj" />
+  </Folder>
   <Folder Name="/Engine/">
     <Project Path="ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />
     <Project Path="ManualTests/Game.Logic/Game.Logic.csproj" />

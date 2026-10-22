@@ -10,6 +10,8 @@ param(
     [switch]$IncludeEditorGpu,
     [switch]$IncludeScene,
     [switch]$IncludeInput,
+    [switch]$IncludeRoom,
+    [switch]$IncludeInteraction,
     [string]$GpuValidationLayerDirectory,
     [string[]]$Scenarios = @('repeat','stale','bad-hello','bad-scene','startup-timeout','startup-cancel','command-timeout','command-cancel','stop-pending','crash','disconnect','heartbeat','forced-stop','hang-stop','launch-failure','parent-exit','app-stop','build-artifacts','checkpoint','replacement')
 )
@@ -31,7 +33,7 @@ if ($GpuValidationLayerDirectory) {
 }
 function Sources {
     $roots = @('TrueMoon.Aether','TrueMoon.Aether.Tests','ManualTests/EngineSessionProbe','ManualTests/Game.Logic','TrueMoon','TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon.Cobalt.Generator','TrueMoon.Extensions.DependencyInjection','TrueMoon.Enerit','TrueMoon.Enerit.Generator','TrueMoon.Mithril')
-    if ($IncludeViewport -or $IncludeGpuCapabilities -or $IncludeGpuImport -or $IncludeGpuSurface -or $IncludeGpuViewport -or $IncludeEditorGpu -or $IncludeScene -or $IncludeInput) { $roots += @('TrueMoon.Argentis','TrueMoon.Alloy','TrueMoon.Alloy.Hosting','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Rendering.Skia','ManualTests/AlloyTest/Assets/Fonts') }
+    if ($IncludeViewport -or $IncludeGpuCapabilities -or $IncludeGpuImport -or $IncludeGpuSurface -or $IncludeGpuViewport -or $IncludeEditorGpu -or $IncludeScene -or $IncludeInput -or $IncludeRoom -or $IncludeInteraction) { $roots += @('TrueMoon.Argentis','TrueMoon.Alloy','TrueMoon.Alloy.Hosting','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Rendering.Skia','ManualTests/AlloyTest/Assets/Fonts') }
     $files = @('Directory.Build.props','Directory.Packages.props','global.json') | ForEach-Object { Get-Item (Join-Path $workspace $_) }
     $files += foreach ($root in $roots) { Get-ChildItem (Join-Path $workspace $root) -Recurse -File | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.Extension -in '.cs','.csproj','.ps1','.props','.targets','.dll','.json','.ttf','.txt','.vert','.frag','.spv' } }
     @($files | Sort-Object FullName | ForEach-Object { [ordered]@{ Path = [IO.Path]::GetRelativePath($workspace, $_.FullName); Sha256 = (Get-FileHash $_.FullName -Algorithm SHA256).Hash } })
@@ -66,7 +68,7 @@ try {
         }
         else { throw 'Only Debug apphost and published Release are defined.' }
         $summary.Binaries += @(Get-ChildItem $binaryDirectory -File | Where-Object { $_.Extension -in '.dll','.exe','.json' } | ForEach-Object { [ordered]@{ Configuration = $configuration; Path = $_.FullName; Sha256 = (Get-FileHash $_.FullName).Hash } })
-        if ($IncludeViewport -or $IncludeGpuCapabilities -or $IncludeGpuImport -or $IncludeGpuSurface -or $IncludeGpuViewport -or $IncludeEditorGpu -or $IncludeScene -or $IncludeInput) {
+        if ($IncludeViewport -or $IncludeGpuCapabilities -or $IncludeGpuImport -or $IncludeGpuSurface -or $IncludeGpuViewport -or $IncludeEditorGpu -or $IncludeScene -or $IncludeInput -or $IncludeRoom -or $IncludeInteraction) {
             $summary.Binaries += @(Get-ChildItem (Join-Path $binaryDirectory 'Assets/Fonts'),(Join-Path $binaryDirectory 'truemoon-native') -Recurse -File | ForEach-Object { [ordered]@{ Configuration = $configuration; Path = $_.FullName; Sha256 = (Get-FileHash $_.FullName).Hash } })
         }
         if ($IncludeGpuCapabilities) {
@@ -75,6 +77,28 @@ try {
             $report = Get-Content (Join-Path $caseDirectory 'gpu-report.json') -Raw | ConvertFrom-Json
             if (!$report.Completed -or !$report.CpuTransportSelected -or $report.ImportTested -or !$report.EditorPreserved -or $report.Mappings -ne 0 -or $report.ActiveUiSessions -ne 0 -or $report.Children.Count -ne 1 -or @($report.Children | Where-Object { !$_.Reaped -or !$_.ResourcesReleased }).Count) { throw "$name report incomplete." }
             $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'gpu-capabilities'; Report = "$name/gpu-report.json"; Passed = $true }
+        }
+        if ($IncludeInteraction) {
+            $name = "$configuration-interaction"; $caseDirectory = Join-Path $run $name
+            Invoke-Owned $name (Join-Path $binaryDirectory 'EngineSessionProbe.exe') @('--interaction-proof',$caseDirectory) 200
+            $report = Get-Content (Join-Path $caseDirectory 'interaction-report.json') -Raw | ConvertFrom-Json
+            if (!$report.Passed -or $report.Cases.Count -ne 10 -or $report.Captures.Count -ne 9 -or $report.ImportReadbacks -ne 0 -or $report.Resources -ne 0 -or $report.Handles -ne 0 -or $report.Mappings -ne 0 -or $report.UiSessions -ne 0 -or $report.Children.Count -ne 4 -or @($report.Children | Where-Object { !$_.Reaped -or !$_.ResourcesReleased }).Count) { throw "$name report incomplete." }
+            foreach ($capture in $report.Captures) {
+                if ($capture.ObjectPixels.Count -ne 3 -or @($capture.ObjectPixels | Where-Object { $_ -le 20 -or $_ -ge 1500 }).Count) { throw "$name object pixel proof incomplete." }
+                if ((Get-FileHash -LiteralPath (Join-Path $caseDirectory $capture.Image)).Hash -cne $capture.Sha256) { throw "$name image fingerprint mismatch." }
+            }
+            $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'interaction'; Report = "$name/interaction-report.json"; Passed = $true; ValidationRequested = $report.ValidationRequested }
+        }
+        if ($IncludeRoom) {
+            $name = "$configuration-room"; $caseDirectory = Join-Path $run $name
+            Invoke-Owned $name (Join-Path $binaryDirectory 'EngineSessionProbe.exe') @('--room-proof',$caseDirectory) 200
+            $report = Get-Content (Join-Path $caseDirectory 'room-report.json') -Raw | ConvertFrom-Json
+            if (!$report.Passed -or $report.Captures.Count -ne 5 -or $report.ImportReadbacks -ne 0 -or $report.Resources -ne 0 -or $report.Handles -ne 0 -or $report.Mappings -ne 0 -or $report.UiSessions -ne 0 -or $report.Children.Count -ne 2 -or @($report.Children | Where-Object { !$_.Reaped -or !$_.ResourcesReleased }).Count) { throw "$name report incomplete." }
+            foreach ($capture in $report.Captures) {
+                if ($capture.ObjectPixels.Count -ne 3 -or @($capture.ObjectPixels | Where-Object { $_ -le 20 -or $_ -ge 1500 }).Count) { throw "$name object pixel proof incomplete." }
+                if ((Get-FileHash -LiteralPath (Join-Path $caseDirectory $capture.Image)).Hash -cne $capture.Sha256) { throw "$name image fingerprint mismatch." }
+            }
+            $summary.Cases += [ordered]@{ Configuration = $configuration; Scenario = 'room'; Report = "$name/room-report.json"; Passed = $true; ValidationRequested = $report.ValidationRequested }
         }
         if ($IncludeScene) {
             $name = "$configuration-scene"; $caseDirectory = Join-Path $run $name

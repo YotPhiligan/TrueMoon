@@ -1,5 +1,16 @@
 # TrueMoon.Alloy.Hosting
 
+Controls use the square Dark/Light style by default. `Button.Tone` selects
+Neutral/Accent/Positive/Danger; `HasError`, `TextBox.IsReadOnly`, inside borders
+and keyboard focus share semantic theme tokens. `session.SetTheme(Theme.Light)`
+preserves editor/selection/scroll state. Local properties override Style, then Theme.
+For the built-in window frame, set `window.Appearance = new WindowAppearance
+{ Decorated = false }` and `window.Chrome = new WindowChromeOptions { NativeDrag =
+true }`. The host composes the title, window buttons and resize grip; normal windows
+keep system decorations. `TitleBarFactory` overrides this composition;
+`UseDefaultWindowFrame=false` leaves a caller-composed root untouched. Default close
+uses the existing cancellable asynchronous close coordinator.
+
 Explicit root factory: `context.UsePresentation(resolver => new MyView(resolver.Resolve<MyModel>()), configure)`
 creates the root on the UI owner after the target is ready. Register dependencies
 explicitly; the view is not registered/resolved as a service and a factory-based

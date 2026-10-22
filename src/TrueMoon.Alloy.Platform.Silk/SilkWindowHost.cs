@@ -20,6 +20,9 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     public bool SupportsCustomFrame => _chrome != null;
     /// <inheritdoc />
     public WindowChromeCapabilities ChromeCapabilities { get; } = new(false, false, false);
+    private bool _focused;
+    /// <summary>Observed native focus on the window owner thread.</summary>
+    public bool IsFocused { get { VerifyWindowAccess(); return _focused; } }
     /// <inheritdoc />
     public UiWindowState State
     {
@@ -139,6 +142,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
                 var transparent = _glfw.GetWindowAttrib((global::Silk.NET.GLFW.WindowHandle*)glfwHandle,
                     global::Silk.NET.GLFW.WindowAttributeGetter.TransparentFramebuffer);
                 AppearanceCapabilities = new(transparent, OperatingSystem.IsWindows());
+                _focused = _glfw.GetWindowAttrib((global::Silk.NET.GLFW.WindowHandle*)glfwHandle, global::Silk.NET.GLFW.WindowAttributeGetter.Focused);
                 global::Silk.NET.GLFW.Glfw.ThrowExceptions();
             }
             if (appearance.Transparency == WindowTransparencyMode.PerPixel)
@@ -158,7 +162,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
             Action render = () => RenderRequested?.Invoke();
             _renderHandler = _ => _callbacks.Execute(render);
             if (_dpi != null) _dpi.RefreshRequested = () => { if (_manualLoop) _callbacks.Execute(render); };
-            _focusHandler = focused => _callbacks.Execute(() => { if (!focused) Input?.Invoke(new UiInput(InputKind.FocusLost)); });
+            _focusHandler = focused => _callbacks.Execute(() => { _focused = focused; if (!focused) Input?.Invoke(new UiInput(InputKind.FocusLost)); render(); });
             NativeWindow.Render += _renderHandler;
             NativeWindow.FocusChanged += _focusHandler;
             _resizeHandler = _ => { if (_manualLoop) _callbacks.Execute(render); };

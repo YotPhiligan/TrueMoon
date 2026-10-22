@@ -15,6 +15,9 @@ try
 {
     if (args is ["--runtime"]) return await RuntimeHost.RunAsync();
     if (args is ["--scene"]) return await SceneInputProbe.RunAsync(null);
+    if (args is ["--room"]) return await SceneInputProbe.RunAsync(null, room: true);
+    if (args is ["--interaction-proof", var interactionDirectory]) return await RoomViewportProbe.RunAsync(Path.GetFullPath(interactionDirectory), interactionProof: true);
+    if (args is ["--room-proof", var roomDirectory]) return await RoomViewportProbe.RunAsync(Path.GetFullPath(roomDirectory));
     if (args is ["--input-proof", var inputDirectory]) return await SceneInputProbe.RunAsync(Path.GetFullPath(inputDirectory));
     if (args is ["--scene-proof", var sceneDirectory]) return await SceneViewportProbe.RunAsync(Path.GetFullPath(sceneDirectory));
     if (args is ["--viewport-baseline", var mode, var baselineDirectory, var warmup, var interval])

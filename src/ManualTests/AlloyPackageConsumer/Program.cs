@@ -5,6 +5,7 @@ using TrueMoon;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
+using TrueMoon.Argentis;
 using TrueMoon.Cobalt;
 using TrueMoon.Extensions.DependencyInjection;
 
@@ -55,7 +56,9 @@ try
                 {
                     window.Title = $"TrueMoon NuGet — {provider}/{backend}";
                     window.Width = 480;
-                    window.Height = 260;
+                    window.Height = 300;
+                    window.Appearance = new WindowAppearance { Decorated = false };
+                    window.Chrome = new WindowChromeOptions { NativeDrag = true, NativeSnapLayouts = true };
                 });
             });
         // Concrete registration gives the package analyzer the consumer's view constructor graph.
@@ -99,7 +102,7 @@ try
             ConsumerView? view = null;
             window.FramePresented += ui =>
             {
-                view = (ConsumerView)ui.Root;
+                view = (ConsumerView)((WindowFrame)ui.Root).Children[1];
                 view.VerifyFrame(ui);
                 if (window.PresentedFrames >= 20) window.Close();
             };

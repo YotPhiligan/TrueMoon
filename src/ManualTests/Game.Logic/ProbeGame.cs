@@ -43,6 +43,7 @@ public sealed class ProbeGame : ICheckpointGameSession, TrueMoon.Aether.Renderin
     public void RestoreCheckpoint(GameCheckpointState state)
     {
         ObjectDisposedException.ThrowIf(_disposed, this); ArgumentNullException.ThrowIfNull(state); state.Validate();
+        if (!state.Objects.Entries.IsEmpty) throw new CheckpointRejectedException(CheckpointOutcome.RestoreRejected);
         if (_scene == null) throw new InvalidOperationException("No scene loaded.");
         // All validation precedes this non-throwing primitive-field commit.
         TickNumber = state.Tick; _camera = state.Camera; _interaction = state.Interaction;

@@ -15,7 +15,23 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
     public void Fill(Rect rectangle, Color color, float radius = 0)
     { var paint = resources.Paint(Color(color), SKPaintStyle.Fill); canvas.DrawRoundRect(Rect(rectangle), radius, radius, paint); }
     public void Stroke(Rect rectangle, Color color, float width = 1, float radius = 0)
-    { var paint = resources.Paint(Color(color), SKPaintStyle.Stroke, width); canvas.DrawRoundRect(Rect(rectangle), radius, radius, paint); }
+    {
+        if (radius == 0 && width > 0 && rectangle.Width >= width && rectangle.Height >= width)
+        {
+            // Four non-overlapping bands avoid backend-dependent hairline joins on square outlines.
+            // The public stroke remains centered; its callers can inset it to keep the border inside.
+            var half = width / 2; var x = rectangle.X - half; var y = rectangle.Y - half;
+            var right = rectangle.X + rectangle.Width + half; var bottom = rectangle.Y + rectangle.Height + half;
+            var paint = resources.Paint(Color(color), SKPaintStyle.Fill);
+            canvas.DrawRect(new SKRect(x, y, right, y + width), paint);
+            canvas.DrawRect(new SKRect(x, bottom - width, right, bottom), paint);
+            canvas.DrawRect(new SKRect(x, y + width, x + width, bottom - width), paint);
+            canvas.DrawRect(new SKRect(right - width, y + width, right, bottom - width), paint);
+            return;
+        }
+        var outline = resources.Paint(Color(color), SKPaintStyle.Stroke, width);
+        canvas.DrawRoundRect(Rect(rectangle), radius, radius, outline);
+    }
     public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily)
     {
         var entry = resources.Font(fontFamily, fontSize);

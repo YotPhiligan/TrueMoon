@@ -110,9 +110,10 @@ public sealed class GameInputProtocolTests
         await p.SendAsync(ControlRequest.Create(id, 4, CommandKind.Step)); Assert.Equal(1UL, game.TickNumber); Assert.Equal(.125f, game.CaptureCheckpoint().Camera.X);
     }
     [Fact]
-    public void ControlV2_RoundTripsInputFlagsLookActionAndOutcomeAndRejectsV1()
+    public void ControlV3_RoundTripsInputFlagsLookActionAndOutcomeAndRejectsOlderVersions()
     {
-        var id = Identity; id.Validate(); Assert.Equal(2, id.ControlVersion);
+        var id = Identity; id.Validate(); Assert.Equal(3, id.ControlVersion);
+        Assert.Throws<InvalidDataException>(() => (id with { ControlVersion = 2 }).Validate());
         Assert.Throws<InvalidDataException>(() => (id with { ControlVersion = 1 }).Validate());
         var request = Input(id, 17, new(true, GameButtons.Forward | GameButtons.Left, -.25f, .5f, true));
         var bytes = new ArrayBufferWriter<byte>(); request.Serialize(bytes); var offset = 0; var decoded = new ControlRequest().Deserialize(bytes.WrittenSpan, ref offset);

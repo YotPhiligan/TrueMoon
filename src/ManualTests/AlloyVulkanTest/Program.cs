@@ -17,6 +17,13 @@ if (nativePathIndex >= 0 && nativePathIndex + 1 == args.Length)
     throw new ArgumentException("--native-skia requires a DLL path.");
 SkiaNativeLibrary.Initialize(nativePathIndex >= 0 ? args[nativePathIndex + 1] : null);
 Console.WriteLine($"Native Skia: {SkiaNativeLibrary.LoadedPath}");
+if (args.Contains("--style-gallery"))
+{
+    var index = Array.IndexOf(args, "--style-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--style-output requires a fresh directory.");
+    DefaultStyleProbe.Run(args[index + 1]); return;
+}
+if (args.Contains("--default-frame")) { await WindowChromeProbe.RunDefaultAsync(args.Contains("--validation")); return; }
 if (args.Contains("--window-shared-loop-control")) { WindowSharedLoopProbe.Run(args); return; }
 if (args.Contains("--hosted-dispatcher")) { await HostedDispatcherProbe.RunAsync(args.Contains("--validation")); return; }
 if (args.Contains("--frame-scheduling")) { await FrameSchedulingProbe.RunAsync(args); return; }

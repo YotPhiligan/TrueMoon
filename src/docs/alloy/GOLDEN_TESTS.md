@@ -115,9 +115,13 @@ dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -- `
   --golden-output TestResults/AlloyGolden/new-record
 ```
 
-Затем визуально проверить кандидаты, их provenance и diff metrics, явно заменить
-файлы `ManualTests/AlloyVulkanTest/Golden/Settings` и выполнить normal Debug/Release
-run. Normal verification никогда автоматически не записывает baseline.
+Затем визуально проверить кандидаты, их provenance и diff metrics, сохранить
+согласованную серию в отдельном каталоге и выполнить normal Debug/Release run.
+С2026-10-22 текущий baseline — `ManualTests/AlloyVulkanTest/Golden/SettingsSquare`:
+30кадров квадратного стиля PA8a. Прежний `Golden/Settings` сохранён без изменений
+как историческая серия и не используется по умолчанию с новым стилем. Формат
+manifest и tolerances прежние; recording90 comparisons не заменяет normal360.
+Normal verification никогда автоматически не записывает baseline.
 Несовпадение font/native/asset/PNG fingerprint отвергается до GPU запуска;
 source hash сохраняется как provenance, но не блокирует проверку нового кода.
 

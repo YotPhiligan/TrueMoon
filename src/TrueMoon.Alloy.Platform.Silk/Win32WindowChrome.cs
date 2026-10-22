@@ -154,6 +154,7 @@ internal sealed partial class Win32WindowChrome : IDisposable
         // An old layout must not expose stale caption regions during resize.
         if (width != _width || height != _height || CurrentScale().Scale != _scale) return 1;
         var role = _regions.HitTest(point.X / _scale, point.Y / _scale);
+        if (role == WindowRegionRole.ResizeBottomRight && _options.Resizable && IsZoomed(_window) == 0) return 17;
         if (_options.NativeSnapLayouts && role == WindowRegionRole.Maximize) return 9;
         return _options.NativeDrag && role == WindowRegionRole.Caption ? 2 : 1;
     }

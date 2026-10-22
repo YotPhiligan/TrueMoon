@@ -9,6 +9,21 @@ namespace TrueMoon.Alloy.Tests;
 
 public sealed class RasterRenderingTests
 {
+    [Theory]
+    [InlineData(1f)] [InlineData(1.5f)] [InlineData(2f)]
+    public void SquareBorder_StaysInsideBoundsAndPaintsTranslucentCornersOnce(float scale)
+    {
+        var root = new Panel(); root.Add(new Border { Width = 40, Height = 30, Margin = new Thickness(10),
+            HorizontalAlignment = LayoutAlignment.Start, VerticalAlignment = LayoutAlignment.Start,
+            BorderWidth = 4, BorderColor = new Color(200, 100, 50, 128) });
+        using var ui = Create(root, new UiViewport((int)(120 * scale), (int)(80 * scale), scale)); ui.Update();
+        using var image = ui.SnapshotRasterImage();
+        Assert.Equal(new byte[] { 100, 50, 25, 128 }, Pixel(image, (int)(11 * scale), (int)(11 * scale)));
+        Assert.Equal(new byte[] { 100, 50, 25, 128 }, Pixel(image, (int)(49 * scale), (int)(39 * scale)));
+        Assert.Equal(new byte[] { 0, 0, 0, 0 }, Pixel(image, (int)(30 * scale), (int)(25 * scale)));
+        Assert.Equal(new byte[] { 0, 0, 0, 0 }, Pixel(image, (int)(9 * scale), (int)(9 * scale)));
+    }
+
     private static UiSession Create(Element root, UiViewport? viewport = null) => UiSession.Create(
         root, new SkiaRasterRenderBackend(), new RasterUiTarget(), viewport ?? new UiViewport(120, 80));
 
@@ -294,7 +309,7 @@ public sealed class RasterRenderingTests
         color = Theme.Light.Control;
         Assert.Equal(new byte[] { color.R, color.G, color.B, color.A }, Pixel(light, 74, 20));
         ui.HandleInput(new UiInput(InputKind.PointerDown, 10, 10)); ui.Update();
-        using var pressed = ui.SnapshotRasterImage(); color = Theme.Light.Accent;
+        using var pressed = ui.SnapshotRasterImage(); color = Theme.Light.ControlPressed;
         Assert.Equal(new byte[] { color.R, color.G, color.B, color.A }, Pixel(pressed, 74, 20));
         ui.HandleInput(new UiInput(InputKind.FocusLost)); ui.Update();
         Assert.False(button.IsPressed); Assert.False(button.IsFocused);

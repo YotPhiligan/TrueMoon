@@ -32,6 +32,7 @@ public sealed class CameraGame : ICheckpointGameSession, IRenderGameSession, IIn
     public void RestoreCheckpoint(GameCheckpointState state)
     {
         RequireScene(); ArgumentNullException.ThrowIfNull(state); state.Validate();
+        if (!state.Objects.Entries.IsEmpty) throw new CheckpointRejectedException(CheckpointOutcome.RestoreRejected);
         TickNumber = state.Tick; _camera = state.Camera; _interaction = state.Interaction;
     }
     public PrimitiveScene CaptureRenderScene()

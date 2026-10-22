@@ -1,84 +1,26 @@
 # TrueMoon.Aether: состояние движка и редактора
 
-Последняя работа — **2026-10-21, ENG5b gameplay input/camera**:
-control v2, optional IInputGameSession, bounded staging/lease и fixed-tick camera,
-отдельная CameraGame, interactive `--scene` с WASD/mouse/E/Escape. Input transient;
-camera/tick/interaction сохраняются при checkpoint Replace. App-owned supervisor
-проверяет exact identity внутри gate; stale input не retargeted. Один30Hz sender
-drains до host/UI; Pause/focus/capture/resize/suspend/Stop/restore сбрасывают input.
-Argentis W/S/D/E и Silk mapping дополнены. Raw mouse/cursor lock отсутствуют.
-42новых xUnit cases; full Debug1968/1968 иRelease1968/1968,9TRX/configuration,
-failed0/skipped0: Aether562/UI615/Hosting79/Mithril95.
-Native control/CPU/GPU/3D/input regression56/56cases/58commands; усиленный input
-proof2/2 (Debug/published Release), по15cases/5PNG с реальным Silk key callback.
-Validation0/0, imported ReadPixels0, resources/handles/mappings/UI sessions0,
-sender завершён. После full matrix изменён только proof harness; library DLLs
-сверены между полным и усиленным run. Local packs Aether/Argentis/Platform.Silk
-прошли, DLL payload сверены с published proof; отдельный package drawing не запускался.
-[Контракт, exact tests/commands, provenance и ограничения](HISTORY.md#eng5b-gameplay-input-и-камера--2026-10-21).
-Далее ENG5c комната/interaction/HUD; весь ENG5 ещё частичен.
+Последняя работа — **2026-10-22, ENG7a основной экран TrueMoon.Editor**.
+Отдельное application подключает Aether и Alloy через App: стандартная borderless
+рамка, toolbar, список объектов, живой3D viewport, read-only property grid и status.
+GameEditor commands/owned separate runtime process/checkpoint Replace работают;
+UI selection/theme/resize сохраняются, close ждёт Stop/drain. Engine implementation
+и протоколы не менялись; RuntimeProtocol/rendering/process ownership остаются в Aether.
+[Запуск и границы](../../TrueMoon.Editor/README.md), [scope](PLAN.md#eng7a-основной-экран-редактора--2026-10-22),
+[evidence](HISTORY.md#eng7a-основной-экран-редактора--2026-10-22).
 
-Предыдущая работа — **2026-10-21, ENG5a: первый Vulkan3D renderer**.
-Optional immutable scene snapshot под simulation/checkpoint lock, perspective
-camera, cube, opaque material и slot-owned depth/pipeline реализованы в одной
-TrueMoon.Aether. Vulkan рисует в exportable image без CPU pixels/staging; обычный
-App/Editor/GPU transport и default CPU/reference путь сохранены.
-Debug и published Release 3D proof: по5PNG assertions (depth/material/camera,
-resize/suspend/resume/checkpoint Replace), core/sync errors/warnings0,
-resources/handles/mappings/UI sessions0, imported ReadPixels0.
-Итоговая native matrix12/12cases/14commands,430source/76binary hashes: новые
-scene и прежние import/surface/viewport/ordinary GPU Editor/repeat прошли.
-Local pack прошёл; DLL package совпадает SHA256 с native published proof.
-Новые focused tests19/19; full solution Debug1926/1926 иRelease1926/1926,
-по9TRX/failed0/skipped0: Aether520, UI615, Hosting79, Mithril95.
-Это source apphost/published3D proof; package GPU drawing и3D performance не
-подтверждены. [Контракт, команды, failures и evidence](HISTORY.md#eng5a-первый-vulkan-3d-frame--2026-10-21).
-ENG5a завершает первый renderer, весь ENG5 остаётся частичным; далее ENG5b input/camera.
+Текущий run:39новых Editor xUnit cases; nonincremental Debug build и full solution
+**2253/2253 Debug и2253/2253 Release**,10TRX/configuration, failed/skipped0;
+Aether780/UI643/Hosting79/Editor39. Новый Editor native Debug/published Release:
+по8actual UI commands,3PNG/9material pixel checks,2reaped child processes,
+Vulkan core/sync0errors/0warnings включая teardown, zero UI/mappings/GPU resources/
+handles. Предыдущая engine native60-case matrix не повторялась.
 
-Предыдущая работа — **2026-10-21, ENG4e CPU/GPU baseline**. Реализованы opt-in
-stage timings, bounded raw/process captures и воспроизводимый runner.
-Финальная матрица12/12cases/36intervals/24cooperative children/36pixel checks,
-15commands/421source/94binary fingerprints, Completed=true. Release1280×720:
-медиана per-run p95 CPU65–66ms/GPU21–33ms; GPU reference allocation~107MiB/s.
-Debug CPU:2FPS/6latency advisory breaches, включая12.51fps outlier; budgets прежние.
-Raw QPC stages37766, cohorts5244produced/received и5182presented. Local GPU
-resources/handles/mappings/UI sessions0; imported ReadPixels0. Это reference
-CPU-generated/Vulkan-staging workload, не3D/VRAM/physical-display performance.
-
-Найден/исправлен Mithril exit-delivery/graceful-wait race с red/green regression;
-native20shutdown cases прошли. Full solution Debug1907/1907 иRelease1907/1907,
-по9TRX/failed0/skipped0: Aether501/UI615/Hosting79/Mithril95, остальные counts
-сохранены. Отдельный GPU correctness run:6cases/8commands, Debug/published Release,
-core/sync validation0/0; per ordinary GPU Editor20Replace/20failures/53children,
-retained copies829/813, imported readback0. Nonincremental build/golden/RTE/full
-UI/hardware/VRAM matrix этим не повторены. [Подробные результаты, исходные failures,
-команды и ограничения](HISTORY.md#eng4e-cpugpu-baseline--2026-10-21).
-Fresh units packages108/108cases/8nupkgs проверили доставку Mithril fix; это не
-Aether GPU package drawing. Независимый replay36intervals/raw37766records и
-1048source/170binary hashes прошёл (`TestResults/ViewportBaseline/development/completion.json`).
-
-Исправление структуры — **2026-10-21**: Aether.Contracts устранён;21тип размещён
-по назначению в Sessions/Scenes/Transport/Frames/Checkpoints, engine assembly одна.
-Все Aether/test/example namespace соответствуют путям. Aether493/493 Debug/Release;
-общий solution1898/1898 в каждой конфигурации. Fresh12packages/4App consumers и
-итоговая targeted native matrix20cases (Debug/published Release) прошли.
-Native checks выявили PID reuse: GPU adapter искал lease по PID в истории.
-Оба viewport examples теперь получают текущий owned NativeRuntimeLease напрямую,
-а fault decorator раскрывает конкретный inner lease. Probe сохраняет исходную
-ошибку до assertion; условия проверок сохранены. Итоговый run включает CPU/GPU
-20Replace/20failures proofs. [Команды/границы/миграция](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
-
-Предыдущая работа над реализацией — **2026-10-20, ENG4d2 ordinary GPU GameEditor**. UseAether options
-выбирают lazy App-owned IGameViewportTransport; default CPU. FrameSession сохраняет
-общий Start/Resize/Stop/first-present lifecycle, GameEditor/GameReplacement —
-selected DLL/checkpoint/rollback. ViewportSurface не содержит native/mapping handles;
-ViewportFrame ticket подтверждается только для актуальной presentation.
-GpuViewportTransport копирует borrowed texture в независимый UI image, returns
-slot после observed GL completion и удерживает первый image до actual first-present.
-Aether остаётся одной assembly без UI dependency.
-[Контракт](PLAN.md#eng4d-gpu-viewport-bridge--2026-10-20),
-[API](../../TrueMoon.Aether/README.md#выбор-transport-в-gameeditor--eng4d2),
-[evidence](HISTORY.md#eng4d2-ordinary-gpu-gameeditor--2026-10-20).
+Inspector пока показывает authoring SceneSnapshot и read-only во всех режимах;
+список плоский, render surface960x540, camera/gameplay input в новом приложении
+ещё не подключены. Это ограниченный ENG7a, не полный toolset/World edit/MCP.
+Предыдущие подробные сводки сохранены в HISTORY; их датированные результаты
+не считаются текущими проверками нового приложения.
 
 ## Предыдущие проверки ENG4d2 — 2026-10-20
 
@@ -131,14 +73,14 @@ Frames.TransportError; успешный Stop retry не воспроизводи
 
 ## Следующий конкретный шаг
 
-**ENG5c: небольшая комната и HUD.** Развить renderer snapshot в комнату/пол/
-несколько примитивов, осмысленный interaction (reach/raycast), переключатель
-цвета/света, нужные collisions и Alloy HUD/pause. Сохранить ENG5b fixed-tick input,
-camera/checkpoint/Replace, App ownership и surface lifecycle. Raw/locked mouse
-profile и physical input acceptance остаются отдельным уточнением.
-Standalone launch — отдельный ENG7 scope.
-[Переход после baseline](PLAN.md#продолжение-после-eng4e).
-CPU Debug generation/CRC/cadence и reference GPU frame buffer allocation —
-measured backlog. Их оптимизации требуют до/после этого workload; timings
-будущего3D измерять отдельно. GPU query/utilization/VRAM остаются unavailable.
-UI PA8a/RTE backlog и K3/K7/K8/VRAM/final alpha не закрыты; K7 search остановлен.
+ENG7a основной экран реализован в ограниченном scope. Следующий локальный UI
+этап — authoring inspector editing через согласованные SceneDocument/Entity API,
+с валидацией/undo и сохранением; во время Play сохранить read-only до ARCH1c/d
+snapshot edit transaction. Затем picking/tree/input и project persistence по ENG7.
+
+При возврате к gameplay продолжить
+[ENG5c.3 collisions камеры](PLAN.md#eng5c3-следующий-шаг-collisions-камеры), затем HUD.
+ARCH1a.1/2 и ENG5c.1/2 выполнены; full runtime World/edit/MCP, raw input,
+3D performance и CPU Debug/reference allocation backlog сохраняются.
+PA8a реализован в автоматическом scope; physical UI acceptance/K3/K7/K8/VRAM/final
+alpha этим экраном не закрыты, поиск NVIDIA workaround остаётся остановленным.

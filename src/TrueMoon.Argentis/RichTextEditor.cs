@@ -66,6 +66,10 @@ public sealed class RichTextEditor : Element
     public override bool Focusable => true;
     /// <inheritdoc />
     protected override Thickness ThemePadding => Theme.EditorPadding;
+    /// <inheritdoc />
+    protected override Color ThemeBackground => !IsEffectivelyEnabled ? Theme.ControlDisabled : Options.IsReadOnly ? Theme.ReadOnly : Theme.Input;
+    /// <inheritdoc />
+    protected override float ThemeBorderWidth => Theme.BorderWidth;
 
     /// <inheritdoc />
     protected override void OnPropertyChanged(object property)
@@ -246,7 +250,7 @@ public sealed class RichTextEditor : Element
         EnsureLayout(Bounds.Deflate(Padding).Width, _service);
         if (_revealCaret) { RevealCaret(); _revealCaret = false; }
         if (context is not IRichTextDrawingContext rich) throw new NotSupportedException("RichTextEditor requires an IRichTextDrawingContext backend.");
-        context.Fill(Bounds, Theme.Control, 4);
+        if (Options.IsReadOnly) context.Fill(new Rect(Bounds.X + Bounds.Width - 4, Bounds.Y + 4, 2, Math.Max(0, Bounds.Height - 8)), Theme.Border);
         var area = Bounds.Deflate(Padding);
         context.Save();
         try

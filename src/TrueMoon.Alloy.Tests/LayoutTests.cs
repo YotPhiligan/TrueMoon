@@ -104,8 +104,8 @@ public sealed class LayoutTests
 
         Assert.Equal(250, scroll.Extent);
         Assert.Equal(170, scroll.Offset);
-        Assert.Equal(new Rect(10, -150, 100, 250), child.Bounds);
-        Assert.Equal(new Size(40, 80), scroll.DesiredSize);
+        Assert.Equal(new Rect(10, -150, 90, 250), child.Bounds);
+        Assert.Equal(new Size(50, 80), scroll.DesiredSize);
 
         scroll.SetContent(null);
         scroll.Measure(new Size(100, 80), TextLayout);

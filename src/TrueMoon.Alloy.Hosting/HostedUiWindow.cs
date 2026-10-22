@@ -30,6 +30,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
     private VulkanDevice? _device;
     private VulkanWindowPresenter? _presenter;
     private UiSession? _session;
+    private DefaultWindowFrameBinding? _defaultFrame;
     private Exception? _failure;
     private bool _rendering;
     private readonly ConcurrentQueue<Action<SilkWindowHost>> _commands = new();
@@ -314,7 +315,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
                 },
                 () => window?.Dispose(), () => _closed?.Invoke());
         }
-        finally { _close.Finish(); _window = null; _session = null; _presenter = null; _device = null; }
+        finally { _close.Finish(); _defaultFrame = null; _window = null; _session = null; _presenter = null; _device = null; }
     }
     private UiSession CreateSession(UiRenderTarget target, SilkWindowHost window)
     {
@@ -328,6 +329,12 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
             {
                 title = _options.TitleBarFactory(window) ?? throw new InvalidOperationException("TitleBarFactory returned null.");
                 root = new WindowFrame(title, root);
+            }
+            else if (_options.Chrome != null && _options.UseDefaultWindowFrame)
+            {
+                var frame = WindowFrame.CreateDefault(_options.Title, root); root = frame;
+                _defaultFrame = new(frame, window, () => { _ = RequestCloseAsync(); });
+                _defaultFrame.Synchronize(window.IsFocused);
             }
             var session = _sessions.Create(root, target, window.Viewport, window);
             if (_options.EnableDiagnostics) _diagnostics = session.EnableDiagnostics(Id);
@@ -359,6 +366,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
     private void SynchronizeViewport()
     {
         var window = _window!; var session = _session!;
+        _defaultFrame?.Synchronize(window.IsFocused);
         var viewport = window.Viewport;
         if (viewport != session.Viewport) session.Resize(viewport);
         var updated = session.NeedsUpdate && session.Update();
@@ -387,6 +395,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
     {
         var window = _window!; var session = _session!;
         if (session.IsDisposed) return;
+        _defaultFrame?.Synchronize(window.IsFocused);
         window.VerifyWindowAccess();
         var viewport = window.Viewport;
         if (viewport != session.Viewport) session.Resize(viewport);

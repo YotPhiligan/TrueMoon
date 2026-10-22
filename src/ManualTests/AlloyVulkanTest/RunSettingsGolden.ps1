@@ -14,7 +14,7 @@ if (Test-Path -LiteralPath $output) { throw 'Use a new OutputDirectory.' }
 if ($ValidationLayerPath -and -not (Test-Path -LiteralPath (Join-Path $ValidationLayerPath 'VkLayer_khronos_validation.json'))) { throw 'ValidationLayerPath must contain VkLayer_khronos_validation.json.' }
 New-Item -ItemType Directory -Path $output | Out-Null
 $project = Join-Path $PSScriptRoot 'AlloyVulkanTest.csproj'
-$fixtures = Join-Path $PSScriptRoot 'Golden/Settings'
+$fixtures = Join-Path $PSScriptRoot 'Golden/SettingsSquare'
 $fixtureBefore = @(Get-ChildItem -LiteralPath $fixtures -File | Sort-Object Name | ForEach-Object { $_.Name + '=' + (Get-FileHash -LiteralPath $_.FullName).Hash })
 $summary = [ordered]@{ Passed = $false; CreatedUtc = [DateTime]::UtcNow; SDK = (& dotnet --version); Runs = @(); Error = $null }
 function Invoke-Build([string] $name, [string[]] $arguments) {

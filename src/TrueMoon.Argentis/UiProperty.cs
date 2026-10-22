@@ -22,6 +22,18 @@ public sealed class UiProperty<T>(string name, T defaultValue, Invalidation affe
 /// <summary>Properties shared by the standard widgets.</summary>
 public static class UiProperties
 {
+    /// <summary>Semantic control color.</summary>
+    public static readonly UiProperty<ControlTone> Tone = new("Tone", ControlTone.Neutral, validate: Enum.IsDefined);
+    /// <summary>Visual error state, including an outline and a structural marker.</summary>
+    public static readonly UiProperty<bool> HasError = new("HasError", false);
+    /// <summary>Accessible semantic name; no operating-system accessibility bridge is implied.</summary>
+    public static readonly UiProperty<string> AccessibleName = new("AccessibleName", "", validate: value => value != null);
+    /// <summary>Explicit corner radius; local/style values override the theme.</summary>
+    public static readonly UiProperty<float> CornerRadius = new("CornerRadius", 0, validate: value => float.IsFinite(value) && value >= 0 && value <= 64);
+    /// <summary>Explicit inside outline width; zero hides the normal outline.</summary>
+    public static readonly UiProperty<float> BorderWidth = new("BorderWidth", 0, Invalidation.Layout, value => float.IsFinite(value) && value >= 0 && value <= 16);
+    /// <summary>Explicit outline color.</summary>
+    public static readonly UiProperty<Color> BorderColor = new("BorderColor", Color.Transparent);
     /// <summary>Custom title-bar role; independent of any native window API.</summary>
     public static readonly UiProperty<WindowRegionRole> WindowRegion = new("WindowRegion", WindowRegionRole.Inherit,
         Invalidation.Tree, value => Enum.IsDefined(value));

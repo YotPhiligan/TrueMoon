@@ -1,22 +1,31 @@
 # TrueMoon.Aether: план игрового движка и редактора
 
 Зафиксировано **2026-10-13** по обсуждению будущего кастомного движка для одной
-не очень сложной 3D-игры. Состояние2026-10-21: **ENG0 определён;
+не очень сложной 3D-игры. Состояние2026-10-22: **ENG0 определён;
 ENG1 headless supervisor и ENG2 CPU viewport реализованы в bounded probe scope;
 ENG3a compiler/artifacts, ENG3b checkpoint/restore, ENG3c Replace/rollback
 и ENG3d Editor commands/20Replace proof реализованы2026-10-20; ENG4a/b/c, ENG4d bridge/ENG4d2 ordinary GPU Editor проверены в bounded scope;
 ENG4e measured CPU/GPU baseline получен2026-10-21; ENG5a первый Vulkan3D renderer
 и ENG5b gameplay input/camera реализованы/проверены2026-10-21;
-остальной ENG5 и ENG6–ENG8 запланированы**.
+ARCH1a.1/2 immutable authoring model, scene aggregate/resolver и compatibility adapter реализованы2026-10-22;
+ENG5c.1/2 runtime scene consumer/комната и reach/interaction реализованы2026-10-22;
+остальной ARCH1, ENG5 и ENG6–ENG8 запланированы**.
 [Статус направления](STATUS.md), [общий план](../PLAN.md),
 [правила ведения](../PLANNING.md).
 
-После UI INF7, выделения TrueMoon.Aether, ENG3/ENG4a–e и первого renderer ENG5a
-и ENG5b input/camera следующий этап — ENG5c: комната/interaction/HUD. ENG4e сохраняет
+После UI INF7, выделения TrueMoon.Aether, ENG3/ENG4a–e, renderer ENG5a и input ENG5b
+ENG5c.1 подключает scene consumers и несколько примитивов;
+ENG5c.2 добавляет reach/raycast и per-object interaction;
+ближайший шаг — [ENG5c.3, collisions камеры](#eng5c3-следующий-шаг-collisions-камеры), затем HUD. ENG4e сохраняет
 CPU Debug budget breaches и allocation debt reference GPU staging path;
 измерения не подтверждают performance будущего3D. Прежняя
 [декомпозиция ENG3](#eng3-уточнение-плана-перед-реализацией--2026-10-19) сохраняет
 исходный checklist; фактические результаты ведутся в HISTORY/STATUS.
+
+2026-10-22 согласовано развитие модели мира, наследования сущностей, API и
+редактирования Play через snapshot; локальные ИИ-агенты подключаются через MCP
+adapter. [Решения и декомпозиция ARCH1](#arch1-entity-components-и-api--2026-10-22)
+выполняются по подэтапам: ARCH1a.1/2 реализованы; runtime world/tooling пока запланированы.
 
 ## Цель и заданные требования
 
@@ -181,7 +190,12 @@ Mithril, выделить задачу в его плане; готовност�
 
 Identity v1: SessionId(Guid), SessionGeneration(UInt64), HostContractId(строка
 SHA256 стабильных host/contracts binaries), GameBuildId(строка SHA256 manifest),
-ControlVersion=2 (ENG5b input wire,2026-10-21), FrameVersion=1, SnapshotVersion=1.
+ControlVersion=3 (ENG5c.1 primitive payload,2026-10-22), FrameVersion=1,
+SnapshotVersion=2 (ENG5c.2 per-object switches,2026-10-22).
+Control v1/v2 не принимаются: matching Editor/Runtime/Aether/game DLLs требуют
+совместного rebuild; автоматического wire fallback нет. SnapshotVersion — TMCK,
+не версия authoring aggregate. TMCK2 переносит camera/tick/interaction и stable-ID
+object switch set; TMCK1/future schemas отклоняются без implicit migration.
 SessionId принадлежит открытой Editor session; generation увеличивается при каждом
 запуске/rollback child и не используется повторно. PID — только ownership/diagnostics.
 SurfaceGeneration(UInt64) отдельно увеличивается при новой frame allocation/resize.
@@ -392,13 +406,19 @@ render graph и распределённая симуляция не назна�
 
 ```mermaid
 flowchart LR
-    E["Editor: Alloy, документы, сцены, assets"]
-    R["Game.Runtime: engine, simulation, 3D rendering"]
-    L["Game.Logic: версия игровой сборки"]
-    E -->|"Mithril: запуск, замена, остановка"| R
-    E <-->|"Enerit: команды, события, диагностика"| R
+    subgraph EP["Процесс Editor"]
+        E["Alloy UI, документы и инструменты"]
+        A["Aether: supervisor и IPC client"]
+        E <--> A
+    end
+    subgraph RP["Процесс Runtime"]
+        R["Runtime host: world, simulation, renderer"]
+        L["Game.Logic: версия игровой сборки"]
+        R -->|"Загрузка и выполнение"| L
+    end
+    A -->|"Mithril: запуск, остановка, reap"| R
+    A <-->|"Enerit IPC: команды, input, состояние"| R
     R -->|"Frame transport: RAM или GPU"| E
-    R -->|"Загрузка игровой версии"| L
 ```
 
 Editor владеет своим окном, UI, authoring documents и приёмником кадров.
@@ -417,6 +437,405 @@ viewport resize и input доступны в обоих режимах по со
 В standalone-mode runtime создаёт своё окно/presentation. Симуляция использует
 фиксированный шаг, renderer получает подготовленное состояние сцены. Потоки,
 частоты и необходимость нескольких frames in flight выбираются после baseline.
+
+## ARCH1: Entity, Components и API — 2026-10-22
+
+Принято по обсуждению с пользователем2026-10-22. Runtime, игровой API, API
+редактирования/управления, Editor, Game.Logic, content pipeline и Player являются
+логическими частями архитектуры. Engine implementation/contracts сохраняются
+в одной TrueMoon.Aether assembly; Editor UI и игровые consumers подключают её
+через App. Новые проекты или зависимости этой записью не создаются.
+
+### Процессы, запуск и IPC
+
+Уточнено пользователем2026-10-22: Editor-mode использует отдельный процесс
+редактора с UI и отдельный owned процесс Runtime. Aether — библиотека в этих
+процессах; Mithril выполняет launch/stop/reap, дополнительный процесс-посредник
+для запуска не требуется. Editor App подключает модуль через UseAether;
+App startup подготавливает сервисы, игровая сессия запускается явной командой.
+
+Aether supervisor в Editor координирует создание свежего child, Hello/readiness,
+scene/surface, Stop и Replace. Runtime host загружает Game.Logic, владеет live
+World, simulation и producer/render resources. Editor сохраняет UI/documents
+при обычном child crash/Stop/Replace. App shutdown drains операции и освобождает
+owned child/resources; parent exit обнаруживается Runtime. Arbitrary GPU/driver
+fault isolation не обещается существующим own-process proof.
+
+| Логический поток | Содержание и требования |
+| --- | --- |
+| Управление через Enerit IPC | LoadScene, Play/Pause/Step, queries, edit/snapshot, Stop/Replace coordination; typed DTO, versions, operation result, session/generation и revision checks |
+| Input через IPC | Editor focus/capture и viewport mapping, bounded/coalesced packets, release/reset; Runtime потребляет staged input на fixed tick, получение пакета не продвигает мир |
+| Наблюдение через IPC | Readonly state, диагностика, результаты и progress jobs; ограниченные объёмы и наблюдаемые disconnect/stale results |
+| Отдельный frame transport | Pixels в shared RAM или shared GPU resources; IPC несёт descriptors/notifications, pixels не передаются в control payload |
+
+Это разделение потоков данных, а не требование отдельного pipe/thread для каждого.
+Admission/queues должны исключать starvation Pause/Stop input-трафиком; при
+disconnect/focus loss или смене generation transient input не остаётся зажатым.
+Command handler в Runtime проверяет и применяет изменения на tick boundary.
+Snapshot захватывается самим Runtime после подтверждённой паузы; Editor не читает
+изменяемую память другого процесса. Неизвестный результат edit после disconnect
+требует recovery по identity/operation, без слепого повторного apply/resume.
+
+Editor API выполняет authoring операции локально в своём сервисе; runtime target
+передаётся через supervisor/IPC. CLI и MCP adapter используют те же операции,
+включая headless authoring profile; собственный обход lifecycle/валидации им не
+нужен. В standalone Player использует тот же Runtime с собственным presentation.
+Текущий probe уже выполняет Editor/Runtime роли одного executable в разных
+процессах. Раздельные production Editor/Player executables относятся к ENG7;
+контракт двух процессов не требует их немедленного выделения.
+
+### Модель мира и наследование
+
+- World содержит Entity с устойчивыми IDs, Components и отдельной parent/child
+  иерархией сцены. Начальная модель следует потребностям игры; generic ECS не
+  является обязательным требованием.
+- Наследование данных задаётся шаблоном, его вариантом и экземпляром сцены.
+  Вариант имеет одну основу; цепочки разрешены, циклы запрещены. Scene parent
+  определяет иерархию/локальную transform, base definition — наследование данных.
+  Это независимые связи; наследование C# классов не заменяет эту модель.
+- Вариант/экземпляр хранит ссылку на основу, overrides свойств, добавленные
+  компоненты и явные исключения удалённых унаследованных компонентов. Компоненты
+  имеют устойчивые IDs; адресация не зависит от позиции в списке.
+- Изменения основы распространяются на значения без override. Локальное значение
+  сохраняется; reset override восстанавливает наследование. Explicit null/default
+  отличается от отсутствующего override. Удаление унаследованного компонента
+  и сброс локального исключения — разные операции.
+- Inspector показывает effective value и источник значения. Удалённая/недоступная
+  основа, несовместимая schema или нарушение зависимостей компонентов дают
+  диагностируемую ошибку, без молчаливого удаления локальных данных.
+- Authoring document и live World раздельны. Runtime получает разрешённый snapshot
+  с версиями definitions/assets; изменение шаблона не переписывает работающий
+  World в обход операции редактирования.
+
+### API и владельцы изменений
+
+Игровой API внутри Runtime предоставляет создание/удаление объектов, изменение
+компонентов, input и доступ к подсистемам. Game.Logic и системы обновляют World
+через этот API на согласованном шаге; IPC в обычном tick path не требуется.
+Runtime остаётся владельцем мутаций World и выдаёт renderer подготовленный
+снимок. Simulation имеет fixed tick, presentation/render cadence независима.
+
+API редактирования работает с документами сцен, definitions, assets и исходниками;
+Runtime API — с конкретной сессией, её состоянием и рабочим миром. Editor UI, CLI
+и агенты используют общие операции этих API. UI не обходит валидацию прямой
+записью в backing model; сервисы authoring доступны без открытого окна.
+
+Команды задают target (authoring или runtime), устойчивые entity/component IDs,
+ожидаемую revision и operation ID; runtime target дополнительно fenced по
+session/generation. Authoring revision, live world revision и tick различаются.
+Нужны queries, схемы свойств/компонентов, bounded atomic batches, undo/redo
+документа, conflict results, история автора изменений и события completion.
+Повтор operation ID не должен повторно применять уже завершённую мутацию;
+срок хранения результата и поведение после reconnect/restart определить в contract.
+
+Редактирование кода использует workspace/build/Replace API: изменяются исходники,
+готовится новый Game.Logic artifact, затем выполняется проверенный replacement.
+Совместимость schema/state и migration проверяются явно. Изменение кода и обычная
+транзакция свойств World имеют разные contracts и не смешиваются автоматически.
+
+### Play: readonly и транзакция редактирования
+
+Обычный просмотр Play — readonly. Query/inspector/viewport не останавливают
+симуляцию и не предоставляют прямые mutable references. Изменение live World
+требует явной операции редактирования, общей для Editor и API/агента:
+
+1. Проверить права, identity, expected revision и поддержку snapshot участников;
+   сериализовать доступ к edit transaction. Предварительно проверить batch.
+2. Поставить Runtime на паузу на безопасной tick boundary, согласовать jobs и
+   захватить полный согласованный snapshot поддержанного World/подсистем.
+3. Подготовить изменения/ресурсы, проверить компоненты, ссылки и схемы. Применить
+   batch атомарно, опубликовать новую world revision и результат операции.
+4. После успешного commit продолжить симуляцию, если до операции был Playing.
+   Исходный Paused остаётся Paused. Время редактирования не вызывает catch-up ticks;
+   transient input очищается и не воспроизводится после resume.
+5. При ошибке/cancel восстановить исходный snapshot до возобновления. Если исходное
+   состояние подтверждённо восстановлено, вернуть прежний режим. Неизвестный outcome
+   или failed restore оставляет Paused/Faulted с явной диагностикой и recovery;
+   продолжение из частично изменённого состояния запрещено. Stop/закрытие App
+   отменяет операцию и исключает последующий автоматический resume.
+
+Результат относится к runtime target. Authoring document остаётся самостоятельным:
+перенос поддержанных изменений из Play в документ/шаблон — отдельная явная команда
+с preview diff, проверкой revision и undo/redo. Runtime-generated объекты и transient
+поля не сохраняются в документ без определённого правила преобразования.
+
+Полный snapshot — версионированное логическое состояние: объекты/компоненты,
+связи, игровой state, tick/время, RNG и состояния участвующих подсистем по их
+snapshot contracts. Новая подсистема должна определить capture/restore и границу
+согласованности до допуска к edit transaction. Необратимые внешние эффекты не входят
+в атомарный batch. GPU/OS handles и CLR references не сериализуются: ресурсы
+восстанавливаются по проверенным IDs/версиям с явным ownership.
+
+Текущий TMCK v1 содержит только tick/camera/interaction и не является таким
+snapshot. Перед реализацией требуются schema/version/limits, правила migration,
+resource preparation и проверка restore. Существующие64KiB wire/checkpoint bounds
+не отменяются молча: larger state требует отдельного bounded transport contract.
+Участник без нужного snapshot support делает edit недоступным с явной причиной;
+в рамках объявленного профиля сохраняются все необходимые состояния участников.
+
+### Локальные агенты и MCP adapter
+
+Первый профиль — локальные агенты, подключённые к общему API через MCP adapter.
+Runtime и authoring services не зависят от конкретной модели или поставщика ИИ;
+MCP переводит tools/resources в операции API. Core API независим от транспорта;
+удалённый доступ оставлен последующим профилем, без открытия network endpoint
+в первой реализации. Adapter/сервисы с lifetime подключаются через App.
+
+Доступны discovery возможностей/схем, queries проекта/сцен/объектов, изменение
+документа/шаблона, runtime editing по контракту выше, build/Play/Pause/Step/Replace,
+логи, состояние jobs и viewport capture. Неподдержанные операции объявляются
+через capabilities. Для длительных jobs нужны operation status, cancellation и
+наблюдаемый terminal result; доступ к authoring сохраняется без Editor UI.
+Права разделяют чтение, authoring edits, runtime control и изменение кода;
+actor/operation/revision фиксируются в истории. Агент использует ту же валидацию,
+конфликты и edit transaction, что и пользователь, без отдельного обходного пути.
+
+### Декомпозиция и критерии ARCH1
+
+ARCH1a.1/2 реализованы/проверены2026-10-22; ARCH1a в целом частичен, остальные
+подэтапы запланированы. Успешные ENG3/ENG5b checks не являются их proof.
+
+| ID | Результат и зависимости | Критерий завершения |
+| --- | --- | --- |
+| ARCH1a | Частично: ARCH1a.1/2 immutable model, scene aggregate/resolver и projection проверены; ENG5c.1 static runtime consumer добавлен | IDs/schema/inheritance, overrides, parent graph, versioned resolved authoring snapshot и primitive projection реализованы; live runtime world/full snapshot ещё нужны |
+| ARCH1b | Общий authoring/query API поверх ARCH1a | UI и headless client используют одинаковые команды; atomic batch, undo/redo, revision conflict, duplicate operation и schemas/history проверены |
+| ARCH1c | Полный snapshot и runtime edit поверх ARCH1a/b | Readonly default; Playing/Paused success, cancel/error rollback, unsupported participant, failed restore, stale generation, concurrent Stop и input/time reset проверены; данные вне snapshot не объявлены сохранёнными |
+| ARCH1d | Локальный MCP adapter поверх общих API; runtime edits требуют ARCH1c | Агент обнаруживает schemas/capabilities, читает и меняет сцену без UI, получает job/result/conflict, использует те же права/transactions; cleanup через App проверен |
+
+Порядок уточнён2026-10-22: ARCH1a.1/2 и минимальная runtime/renderer
+интеграция scene data ENG5c.1 и reach/interaction ENG5c.2 выполнены; далее collisions ENG5c.3. Полный toolset ARCH1b–d
+развивается вместе с ENG7; новый контракт не закрывает ENG5/ENG7 или прежние
+UI/hardware ограничения.
+Первый profile schema IDs/multiplicity/dependencies зафиксирован ниже. Для
+оставшихся этапов уточнить disk/wire storage, вложенные варианты/коллекции,
+snapshot participants/bounds и lifecycle MCP adapter. Эти implementation details
+не меняют согласованную модель выше.
+
+### ARCH1a.1: первый шаг, модель и разрешение наследования
+
+Первый code этап — минимальные immutable authoring contracts и чистый resolver
+effective entity. Текущий SceneEntity содержит только Id/XYZ/Interactive;
+SceneSnapshot — ограниченный snapshot этого probe. Поэтому сначала определить
+доменную модель, затем подключать её к существующим consumers с явной миграцией.
+
+Результат подэтапа:
+
+1. Устойчивые entity/component/definition IDs; definitions с optional base,
+   варианты и instances с property overrides, добавленными компонентами и
+   исключениями удалённых inherited компонентов. Согласовать schema/version
+   свойств и допустимые значения, правила component multiplicity/dependencies.
+   Base definition и scene parent представлены разными связями.
+2. Resolver из immutable входов получает effective components/properties и их
+   provenance. Один и тот же набор входов даёт одинаковый результат; ошибки
+   имеют IDs/path и не меняют входные данные. Query model пригодна для inspector
+   и будущего API, без загрузки Game.Logic в процесс Editor.
+3. Воспроизводимый пример Door → RedDoor → два instances сцены: вариант меняет
+   одно свойство, экземпляры имеют собственные transforms/overrides. Проверки
+   подтверждают наследование, add/remove/reset компонента и независимость instances.
+
+Готовность: автоматические проверки покрывают override/reset и explicit
+null/default, изменения основы, цепочку вариантов, component add/remove/reinstate,
+duplicate IDs/type conflicts, циклы/недоступную основу, независимость scene hierarchy,
+provenance и неизменность исходных данных. Точный формат хранения, supported
+property types и multiplicity фиксируются в этом же модульном плане при реализации.
+
+Начальный scope — модель и её поведение. Следующий результат ARCH1a — validated
+scene/world snapshot и адаптация потребителей для ENG5c с проверкой существующих
+scene/control/checkpoint contracts. Full runtime snapshot/edit transaction и
+MCP adapter остаются ARCH1c/d с отдельными acceptance и проверками.
+
+#### Реализация ARCH1a.1 — 2026-10-22
+
+В `TrueMoon.Aether.Scenes` добавлены immutable definitions/instances/patches,
+typed GUID IDs, component data/schema, scalar PropertyValue и EntityResolver.
+Variants представлены EntityDefinition с BaseDefinitionId; scene parent —
+отдельная ссылка EntityInstance.ParentId. Resolver держит frozen catalogs,
+строит base-to-instance chain и independent immutable result с source definition
+revision/instance, schema-default flag и component presence provenance.
+
+Первый in-memory profile: component schema version≥1, property IDs ordinal
+ASCII1..128 (`A-Z/a-z/0-9/._-`), null/bool/Int64/finite double/string≤4096UTF16.
+Null/default и отсутствие override различны, implicit numeric coercion отсутствует.
+AllowMultiple по умолчанию false; dependencies проверяются на итоговом visible
+наборе. Несколько exact schema versions могут сосуществовать без implicit migration.
+
+В каждом слое применяются add/remove/restore/property overrides; конфликтующие
+structural operations и duplicate IDs/addresses запрещены. Remove скрывает
+occurrence с сохранением inherited state; restore возвращает его с отдельным
+presence source. Повторное использование скрытого ID для add запрещено.
+WithoutPropertyOverride/WithoutComponentRemoval возвращают новый patch и
+сохраняют остальные изменения; сброс локальной маски не отменяет маску предка.
+
+Depth bound64definitions; graph/schema/property/component failures имеют code/path.
+Catalog duplicate identities отклоняются при создании, остальные graph/data ошибки
+проверяются для разрешаемой instance; другой valid instance остаётся доступным.
+Parent self-reference запрещён локально, cross-entity parent graph — ARCH1a.2.
+Storage первого этапа — immutable in-memory graph; disk/wire codec отдельно,
+прежние SceneEntity/SceneSnapshot/control/TMCK не изменены. Stateless utilities
+не требуют фиктивного UseX; engine-owned resources по-прежнему подключаются через App.
+
+Новые78xUnit cases прошли; full Debug/Release2046/2046/configuration, Aether640.
+[Requirement/evidence и команды](HISTORY.md#arch1a1-immutable-модель-и-resolver--2026-10-22).
+Эти результаты не проверяют native/GPU/package drawing, полный snapshot или MCP.
+
+### ARCH1a.2: следующий шаг, агрегат сцены
+
+**Реализован/проверен2026-10-22** в scope ниже. Изначальный checklist сохранён.
+
+Объединить immutable instances/definition/schema catalogs в scene aggregate:
+проверить уникальность EntityId, существование parent и отсутствие parent cycles,
+разрешить все instances и получить согласованный resolved scene snapshot.
+Snapshot сцены описывает authoring данные, не заменяет полный simulation checkpoint.
+Контракт scene revision/definition versions и диагностику определить до интеграции.
+
+Затем задать явную адаптацию минимальных component данных к текущим scene/game
+consumers для ENG5c; изменения control/checkpoint schemas выполнять только при
+явной versioned миграции. Проверки: несколько instances, independent inheritance
+и parent hierarchy, missing/cyclic parent, duplicate IDs, atomic failed resolution,
+immutable aggregate и прежние scene/control/checkpoint regressions. Полный runtime
+edit и агентский adapter сохраняют собственные ARCH1c/d acceptance.
+
+#### Реализация ARCH1a.2 — 2026-10-22
+
+SceneDocument фиксирует SceneId (непустой GUID), document revision≥0 и frozen
+catalogs instances/definitions/schemas. SceneResolver проверяет duplicate entity IDs,
+catalog conflicts, missing/cyclic parents и effective entities через EntityResolver.
+Проверка graph и parent-first traversal итеративны; public HierarchyOrder — preorder,
+root/sibling order задан Guid comparison. Inheritance и scene parent независимы.
+
+ResolvedSceneSnapshot публикуется только после полного успеха: immutable entities,
+roots/children/order, source revision, referenced definition revisions и exact
+visible-component schemas. Unused definitions не попадают в version metadata;
+их inheritance graphs проверяются при использовании, как в ARCH1a.1. Catalog
+duplicate identities отклоняются даже для пустой сцены. Новый scene snapshot —
+authoring data, не simulation/checkpoint snapshot. Concurrent resolution не делит
+изменяемое состояние; cancellation проверяется между операциями и перед return.
+
+SceneResolutionException содержит code/path, failing EntityId и original cause.
+SceneSnapshotAdapter.Project преобразует whole resolved snapshot в прежний
+SceneSnapshot с canonical GUID strings/revision. Local projector получает snapshot
+и entity и явно возвращает world-space XYZ/Interactive; семантика component roles
+и вычисление transforms не угадываются. Legacy limit64entities проверяется до
+callbacks, invalid coordinates/projector errors не дают partial result. Cancellation
+сохраняет OperationCanceledException; внешние эффекты callbacks — caller-owned.
+Сам authoring aggregate не ограничен64entities; deep4096parent chain проверен.
+
+52новых xUnit cases; все scene tests130/130. Full Debug/Release2098/2098/configuration,
+9TRX/failed0/skipped0, Aether692. [Requirement/evidence и команды](HISTORY.md#arch1a2-агрегат-сцены-и-адаптер--2026-10-22).
+Проверен direct ProbeGame.Load/tick/checkpoint consumer; native/GPU/package
+checks не повторялись. Старые SceneSnapshot/control/frame/TMCK contracts и
+интерактивный sample не изменены. Публичный профиль и [пример](../../TrueMoon.Aether/README.md#агрегат-сцены-и-совместимый-snapshot)
+не объявляют disk/wire codec aggregate, runtime editing или MCP готовыми.
+
+<a id="eng5c1-следующий-шаг-scene-consumers-и-несколько-примитивов"></a>
+
+### ENG5c.1: scene consumers и несколько примитивов — 2026-10-22
+
+Определить минимальные стабильные component roles/schema IDs для Transform,
+primitive appearance и interaction. Подключить authoring/resolved scene к runtime
+consumer с явной world-transform policy и frame snapshot нескольких примитивов;
+развить первый Vulkan draw в пол/стены/несколько объектов комнаты. Сохранить
+App ownership, fixed-tick input, scene revision/checkpoint/Replace и GPU surface
+lifecycle. Изменения wire/checkpoint выполнять только с явной versioned миграцией.
+
+Критерий: позиции/материалы нескольких объектов наблюдаемы из scene data, parent
+transforms определены и проверены, прежние input/resize/suspend/Replace/failure
+regressions проходят; managed contracts и native Debug/published Release pixels/
+validation/cleanup имеют отдельные evidence. Осмысленный reach/raycast/collisions
+и Alloy HUD/pause развиваются оставшейся частью ENG5c; текущий aggregate их не
+подтверждает. Full runtime snapshot/live editing/MCP остаются ARCH1c/d/ENG7.
+
+Реализация2026-10-22: `BuiltInComponents.Schemas` задаёт single-occurrence v1 roles
+Transform (`...1001`), Appearance (`...1002`), Interaction (`...1003`), полный prefix
+`6fc9fce0-9547-42f5-b4df-f05f306f`. Exact defaults/kinds/nullability/dependencies
+проверяются consumer; неявного изменения schema под стабильным ID нет.
+Transform Number x/y/z/pitch/yaw/roll=0, sx/sy/sz=1, positive scale; Appearance
+Number r/g/b=1, opaque origin-centered unit cube; Interaction Boolean enabled=true
+означает eligibility. Appearance/Interaction требуют Transform. Неизвестные роли
+не исполняются; no Appearance=no draw, no Transform у группы=identity.
+
+`PrimitiveSceneAdapter` вычисляет row-vector local `S*R*T` с
+Quaternion.CreateFromYawPitchRoll; `world=local*parentWorld` сохраняет shear.
+Правая система,+Y вверх,-Z forward. Nonfinite/singular/overflow и RGB вне[0,1]
+отклоняются до публикации. Limit64entities сохраняется только для runtime snapshot.
+`SceneEntity.Primitive` переносит16row-major floats+RGB; SceneSnapshot копирует DTO
+и массив при ingress/egress. Control v3 — явная breaking migration; frame1/TMCK1
+не меняются. Scene revision обязана меняться вместе с geometry/definitions.
+
+`PrimitiveScene(camera, primitives)` фиксирует до64immutable RenderPrimitive,
+пустой список очищает фон; прежний constructor сохраняет compatibility cube.
+Vulkan выполняет несколько draws в одном depth-tested pass/существующий export
+image; slot depth/pipeline/ownership и shader/SPV прежние. `Game.Logic.RoomGame`
+в отдельной DLL получает статичную комнату через обычный App/Editor/control и
+прежний input. `--room` использует 30Hz sender, `--room-proof` проверяет pixels/
+resize/suspend/Replace. Геометрия reload из той же scene revision, checkpoint
+только camera/tick/interaction; это не full runtime world restore.
+
+Проверки2026-10-22:36новых cases, full Debug/Release2134/configuration,
+Aether728; native58/58cases Debug/published Release, новая room pixel matrix
+и прежние input/resize/suspend/Replace/failures, core/sync0/0/zero ownership.
+Local pack/payload SHA совпал с published proof; package drawing отдельно не
+проверялся. [Точные requirements/evidence/команды](HISTORY.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22).
+
+<a id="eng5c2-следующий-шаг-reachraycast-и-interaction"></a>
+
+### ENG5c.2: reach/raycast и interaction — 2026-10-22
+
+Добавить ограниченный запрос взаимодействия из камеры к ближайшему eligible
+объекту с явной максимальной дистанцией и occlusion policy; E действует только
+на найденную цель и даёт наблюдаемый результат. Определить минимальное mutable
+состояние объектов и его versioned checkpoint до изменения gameplay: сохранить
+атомарность capture/restore/Replace и default read-only Play для editor tools.
+Проверить target selection, вне reach, заслонённую/отключённую цель, input rising
+edge и восстановление состояния managed/native Debug/published Release.
+После этого — необходимые collisions и Alloy HUD/pause; не закрывать весь ENG5
+раньше воспроизводимых level load/unload и standalone ENG7.
+
+Реализация2026-10-22: stateless `Interactions.PrimitiveRaycast` проверяет до64
+distinct opaque InteractionBody на forward ray камеры. Reach finite(0,1000],
+граница inclusive; inverse affine unit-box slabs сохраняют world distance, rotation,
+nonuniform scale/shear. Local direction не нормализуется. Origin внутри/на body
+даёт distance0. Ближайшее тело occludes независимо от Interactive; равная distance
+предпочитает disabled/ineligible blocker, затем ordinal ID. Hit содержит ID,
+world distance и eligibility; miss=null. Невалидные/непредставимые данные отклоняются.
+
+RoomGame применяет input к камере, затем E pulse с reach4 переключает только
+nearest eligible object: active stored-sRGB(1,.8,.1), повторный pulse — authored RGB.
+Состояния независимы, геометрия и editor authoring snapshot не меняются.
+RoomScene normal включает3interactive objects; отдельные proof fixtures с revision8/9
+подтверждают disabled blocker перед target и disabled target без rear target.
+
+TMCK2: прежние offsets через scene ID сохранены, затем UInt16 object count и
+для каждого ordinal ID UInt16 UTF8length/ID/Boolean byte, общий SHA256 в конце.
+FixedBytes149, max payload64KiB; до64unique IDs (1..128UTF16, strict UTF8≤512bytes).
+GameObjectStates копирует/сортирует immutable entries и обеспечивает value equality
+между capture/codec/restore. Noncanonical order/duplicates/count/flags/UTF8/trailing
+data отвергаются. GameCheckpointState.Objects по умолчанию Empty; RoomGame
+проверяет exact eligible-ID set и Interaction=Any(Active) до atomic commit.
+ProbeGame/CameraGame отвергают nonempty Objects без mutation. SnapshotVersion2
+требует rebuild matching binaries; control3/frame1 прежние, TMCK1 отвергается.
+Это ограниченный gameplay checkpoint, не full runtime World/Play edit/MCP.
+
+`--interaction-proof`/runner IncludeInteraction используют обычный App/Editor/
+Enerit/GPU pipeline:10cases/9PNG, approach/toggle/resize/suspend/Replace/off и
+occluded/disabled scenes,4owned children. Прежний room proof5PNG и UI input proof
+с Silk callback сохраняются. Точные команды/results ведутся в HISTORY/STATUS.
+
+Проверки2026-10-22:52новых cases, final full Debug/Release2186/configuration,
+Aether780. Fresh native60/60cases Debug/published Release, interaction18PNG,
+core/sync0/0/zero ownership; найденная JSON compatibility regression исправлена
+и вся матрица повторена. Local pack/payload SHA совпал с final proof, package
+drawing отдельно не запускался. [Requirements/evidence](HISTORY.md#eng5c2-reachraycast-и-interaction--2026-10-22).
+
+### ENG5c.3: следующий шаг, collisions камеры
+
+Определить минимальный camera/player volume и движение со столкновениями с
+opaque scene geometry: fixed-tick sweep/slide, предсказуемые границы, отсутствие
+tunneling и корректный старт у/внутри препятствия. Сохранить raycast/interaction,
+камера и нужное dynamic state должны входить в versioned checkpoint до изменения
+gameplay. Проверить стены/углы/diagonal movement/большой шаг и Replace managed/
+native Debug/published Release. Затем Alloy HUD с target/reach/состоянием и pause;
+raw cursor и full World/edit/MCP остаются отдельными задачами.
 
 ## Управление игровой сессией
 
@@ -910,9 +1329,9 @@ ENG1 и ENG2 proof выполнены2026-10-17; следующий code эта�
 | ENG2 | CPU frame viewport — реализован/проверен2026-10-17 | Детерминированный pattern/counter из child виден в Editor; bounded ring, корректные generations/resize/slow receiver/EOF и resource cleanup |
 | ENG3 | Сборка и replacement Game.Logic — реализован/проверен2026-10-20 | Смена поведения через новую игровую DLL без restart Editor; compile failure сохраняет рабочую версию; checkpoint/reset и rollback candidate проверены |
 | ENG4 | Vulkan shared GPU prototype — ENG4a–d2 проверены; ENG4e baseline получен2026-10-21 | Ordinary GPU Editor Build/Replace/checkpoint/first-present/lifecycle и measured CPU/GPU reference path подтверждены; Debug CPU budget breaches/temporary staging allocations сохранены, hardware/final acceptance открыты |
-| ENG5 | Небольшая играбельная 3D-сцена — ENG5a renderer и ENG5b input/camera проверены2026-10-21 | Далее ENG5c комната/пол/примитивы, осмысленный interaction, переключатель цвета/света, нужные collisions и Alloy HUD/pause; level load/unload и standalone launch воспроизводимы |
+| ENG5 | Небольшая играбельная 3D-сцена — ENG5a/b/c.1/2 room/reach/interaction реализованы | Далее ENG5c.3 collisions камеры, затем Alloy HUD/pause; level load/unload и standalone launch ещё нужны |
 | ENG6 | Hot Reload исследование | Зафиксирован supported edit набор/state behavior, unsupported edits переводятся в проверенный replacement; ALC только по подтверждённой потребности |
-| ENG7 | Минимальные инструменты и доставка | Scene/asset editing, inspector/logs/input routing и standalone consumer работают в выбранном package/publish scope |
+| ENG7 | Минимальные инструменты и доставка — ENG7a основной экран выделен2026-10-22 | ENG7a: standalone UI shell/viewport/read-only inspector/commands; scene/asset editing, logs/input routing и остальная доставка сохраняют свои следующие этапы |
 | ENG8 | Финальные robustness/performance checks | Frame time/latency/allocations/resource trends измерены на фиксированной сцене; reload/resize/crash/cancel/close проходят в объявленных limits |
 
 ENG4 может быть заменён проверенным transport для выбранной платформы после
@@ -1167,7 +1586,8 @@ WASD/mouse/E/Escape, комната/HUD и standalone остаются ENG5b/ENG
 объявляет весь ENG5 выполненным. Новый input wire contract будет уточнён в ENG5b.
 
 Первый renderer contract/настоящий3D frame реализован в ENG5a.
-Input contract/camera control реализованы в ENG5b; следующий этап — ENG5c.
+Input contract/camera control реализованы в ENG5b. Порядок уточнён2026-10-22:
+ARCH1a.1/2 и ENG5c.1/2 выполнены; далее [ENG5c.3](#eng5c3-следующий-шаг-collisions-камеры).
 Далее развить согласованную небольшую комнату/HUD/управление
 и отдельный standalone сценарий по ENG5/ENG7. Сохранить CPU default/явный GPU выбор,
 App ownership, checkpoint/Replace, surface generations и cleanup.
@@ -1178,3 +1598,40 @@ Measured backlog: CPU generation/CRC/copy и callback cadence в Debug1280×720,
 GPU renderer сначала заменить workload и повторить измерения, не переносить
 reference timings на3D. VRAM/utilization providers, long resource trend,
 physical DPI/loss/K7/final alpha остаются отдельными задачами.
+
+## ENG7a: основной экран редактора — 2026-10-22
+
+По запросу пользователя после PA8a приоритетно реализовать первый основной экран
+редактора; ENG5c.3 collisions и остальные engine задачи сохраняют свою точку
+продолжения. Это ограниченный UI этап ENG7, не завершение всего toolset.
+
+- Отдельное application `TrueMoon.Editor` (net10.0, IsPackable=false), default
+  custom WindowFrame Alloy: borderless, minimize/maximize/restore/close/grip,
+  Dark/Light и стандартные квадратные controls.
+- Toolbar сверху: Build/Start/Play/Pause/Step/Stop/Replace/Cancel через существующий
+  App-owned GameEditor. UI не блокируется IPC/compiler, команды отключены по
+  acknowledged runtime state/candidate/operation. Stop/Cancel прерывают pending
+  work; close прекращает admission и ждёт drain до освобождения borrowed context.
+- Список объектов слева, живой runtime viewport в центре, read-only property grid
+  справа и status/error presentation. Выбор сохраняется при pause/replace/stop и
+  смене темы. Inspector пока читает authoring SceneSnapshot, не full runtime World.
+- Первый dataset — demo room,7объектов; properties ID/XYZ/interactive/geometry/RGB.
+  Список плоский, без притворной tree inheritance. Editable scene/asset/project
+  persistence, runtime snapshot transactions, picking/gizmos/docking/logging и
+  editor camera/gameplay input выделяются в последующие ENG7b/ARCH1c/d задачи.
+- Нет references на ManualTests executable. Source checkout использует Game.Logic
+  как внешний пример входного проекта; game assembly загружается только в child.
+  RuntimeProtocol/rendering/IPC/process lifecycle остаются в Aether, UI composition
+  и adapters — в приложении. Новый engine assembly не создаётся.
+- Current-executable NativeRuntimeFactory запускает отдельный процесс `--runtime`;
+  это два процесса при одном application binary. Отдельная runtime executable
+  поставляется позже. Render surface960x540 вписывается в resizable central region.
+
+Acceptance: exact command availability/selection/properties/layout/readonly/theme/
+ownership tests в TrueMoon.Editor.Tests (xUnit); Debug/published Release native
+smoke с3D pixels, distinct runtime PID, actual UI commands/checkpoint Replace,
+selection/resize/theme/close/drain и zero resources; Vulkan validation включая
+runtime teardown. Проверки DPI1/1.5/2 logical layout отделять от physical monitors.
+Первый screen не закрывает K3/K7/K8/VRAM/final alpha, full World edit/MCP и
+performance. [Приложение/запуск/границы](../../TrueMoon.Editor/README.md),
+[фактические результаты](HISTORY.md#eng7a-основной-экран-редактора--2026-10-22).

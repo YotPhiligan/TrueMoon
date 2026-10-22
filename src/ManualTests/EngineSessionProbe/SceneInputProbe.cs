@@ -22,7 +22,7 @@ namespace EngineSessionProbe;
 
 internal static class SceneInputProbe
 {
-    internal static async Task<int> RunAsync(string? reportDirectory)
+    internal static async Task<int> RunAsync(string? reportDirectory, bool room = false)
     {
         var proof = reportDirectory != null;
         var directory = reportDirectory ?? Path.Combine(Path.GetTempPath(), "tm-scene-input-" + Guid.NewGuid().ToString("N"));
@@ -67,7 +67,7 @@ internal static class SceneInputProbe
             c.UseAether(o => { o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.GameId; o.ReportDirectory = directory; o.RuntimeFactory = _ => factory; o.ViewportTransport = binding.CreateTransport; });
             c.UsePresentation<ViewportView>(o =>
             {
-                o.UseSkiaOpenGL(fonts); o.UseSilkWindow(w => { w.Width = 1000; w.Height = 760; w.Title = "TrueMoon ENG5b — Play, click viewport, WASD/mouse/E, Escape"; w.FrameMode = UiFrameMode.Continuous; });
+                o.UseSkiaOpenGL(fonts); o.UseSilkWindow(w => { w.Width = 1000; w.Height = 760; w.Title = room ? "TrueMoon ENG5c — Room, WASD/mouse, Escape" : "TrueMoon ENG5b — Play, click viewport, WASD/mouse/E, Escape"; w.FrameMode = UiFrameMode.Continuous; });
             });
             c.Services(r => r.Transient<ViewportView>(_ => { var result = new ViewportView(Dispatch); result.Canvas.PreserveAspectRatio = true; return result; }));
         });
@@ -155,8 +155,8 @@ internal static class SceneInputProbe
             await Owner(() => { input = new(host, window, view); view.Canvas.GameplayInput = input; }); sender = input.RunAsync(inputEnd.Token);
             window.Closing += async _ => { await DrainInput(); await host.DisposeAsync(); Probe.Check(!view.IsDisposed && host.Gpu.ResourceCount == 0, "Input/UI closed before GPU drain."); return true; };
             var source = File.ReadAllText(Path.Combine(CheckpointProbe.FindWorkspace(), "ManualTests/Game.Logic/CameraGame.cs"));
-            var a = proof ? Project("a", source, 1) : new GameBuildRequest(Path.Combine(CheckpointProbe.FindWorkspace(), "ManualTests/Game.Logic/Game.Logic.csproj"), "Game.Logic.dll", "Game.Logic.CameraGame", 1);
-            GameEditorContext Context(GameBuildRequest build) => new(build, authoring.Snapshot(), authoring.Selection);
+            var a = proof ? Project("a", source, 1) : new GameBuildRequest(Path.Combine(CheckpointProbe.FindWorkspace(), "ManualTests/Game.Logic/Game.Logic.csproj"), "Game.Logic.dll", room ? "Game.Logic.RoomGame" : "Game.Logic.CameraGame", 1);
+            GameEditorContext Context(GameBuildRequest build) => new(build, room ? RoomScene.Snapshot() : authoring.Snapshot(), authoring.Selection);
             host.Editor.SetContext(Context(a)); await host.Editor.BuildAsync(token); await host.Editor.StartAsync(640, 360, token);
             if (!proof) { await window.Completion.WaitAsync(token); passed = true; }
             else

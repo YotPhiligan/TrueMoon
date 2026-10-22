@@ -21,8 +21,10 @@ public readonly record struct CameraTransform(float X, float Y, float Z, float P
 /// <param name="Interaction">Demo interaction flag.</param>
 public sealed record GameCheckpointState(ulong Tick, CameraTransform Camera, bool Interaction)
 {
+    /// <summary>Complete game-defined per-entity switch states in schema v2; empty for legacy demo games.</summary>
+    public GameObjectStates Objects { get; init; } = GameObjectStates.Empty;
     /// <summary>Validates all state before restore.</summary>
-    public void Validate() => Camera.Validate();
+    public void Validate() { Camera.Validate(); if (Objects == null) throw new InvalidDataException("Missing game object states."); }
 }
 
 /// <summary>Optional checkpoint capability. Existing IGameSession implementations remain valid without it.</summary>
@@ -36,11 +38,11 @@ public interface ICheckpointGameSession : IGameSession
     void RestoreCheckpoint(GameCheckpointState state);
 }
 
-/// <summary>Version-one portable envelope. Source build is provenance; a compatible new build may restore it.</summary>
+/// <summary>Version-two portable envelope. Source build is provenance; a compatible new build may restore it.</summary>
 public sealed class GameCheckpoint
 {
     /// <summary>The current minimal snapshot schema.</summary>
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
     /// <summary>Gets the snapshot schema.</summary>
     public int Version => CurrentVersion;
     /// <summary>Gets the compatible host contract SHA256.</summary>
@@ -53,7 +55,7 @@ public sealed class GameCheckpoint
     public long SceneRevision { get; }
     /// <summary>Gets immutable game state.</summary>
     public GameCheckpointState State { get; }
-    /// <summary>Validates and freezes a version-one envelope.</summary>
+    /// <summary>Validates and freezes a version-two envelope.</summary>
     public GameCheckpoint(string hostContractId, string sourceGameBuildId, string sceneId, long sceneRevision, GameCheckpointState state)
     {
         if (!IsHash(hostContractId) || !IsHash(sourceGameBuildId)) throw new InvalidDataException("Checkpoint requires SHA256 host/build identity.");

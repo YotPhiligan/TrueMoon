@@ -64,6 +64,24 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     public Thickness Padding { get => Get(UiProperties.Padding); set => Set(UiProperties.Padding, value); }
     /// <summary>The control's theme padding when no local or style value is present.</summary>
     protected virtual Thickness ThemePadding => default;
+    /// <summary>Background when no local/style value is supplied.</summary>
+    protected virtual Color ThemeBackground => Color.Transparent;
+    /// <summary>Foreground when no local/style value is supplied.</summary>
+    protected virtual Color ThemeForeground => Theme.Foreground;
+    /// <summary>Inside outline width when no local/style value is supplied.</summary>
+    protected virtual float ThemeBorderWidth => 0;
+    /// <summary>Semantic action tone.</summary>
+    public ControlTone Tone { get => Get(UiProperties.Tone); set => Set(UiProperties.Tone, value); }
+    /// <summary>Visual error state; has both a color and a left-edge marker.</summary>
+    public bool HasError { get => Get(UiProperties.HasError); set => Set(UiProperties.HasError, value); }
+    /// <summary>Semantic name for icon-only controls and future accessibility adapters.</summary>
+    public string AccessibleName { get => Get(UiProperties.AccessibleName); set => Set(UiProperties.AccessibleName, value); }
+    /// <summary>Effective corner radius.</summary>
+    public float CornerRadius { get => Get(UiProperties.CornerRadius); set => Set(UiProperties.CornerRadius, value); }
+    /// <summary>Effective inside outline width.</summary>
+    public float BorderWidth { get => Get(UiProperties.BorderWidth); set => Set(UiProperties.BorderWidth, value); }
+    /// <summary>Effective normal outline color.</summary>
+    public Color BorderColor { get => Get(UiProperties.BorderColor); set => Set(UiProperties.BorderColor, value); }
     /// <summary>Horizontal placement within the parent slot.</summary>
     public LayoutAlignment HorizontalAlignment { get => _horizontal; set { VerifyAccess(); _horizontal = value; Invalidate(Invalidation.Layout); } }
     /// <summary>Vertical placement within the parent slot.</summary>
@@ -94,7 +112,11 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     {
         if (_values.TryGetValue(property, out var value)) return (T)value!;
         if (_style != null && _style.TryGet(property, out T styled)) return styled;
-        if (ReferenceEquals(property, UiProperties.Foreground)) return (T)(object)Theme.Foreground;
+        if (ReferenceEquals(property, UiProperties.Background)) return (T)(object)ThemeBackground;
+        if (ReferenceEquals(property, UiProperties.Foreground)) return (T)(object)ThemeForeground;
+        if (ReferenceEquals(property, UiProperties.CornerRadius)) return (T)(object)Theme.CornerRadius;
+        if (ReferenceEquals(property, UiProperties.BorderWidth)) return (T)(object)ThemeBorderWidth;
+        if (ReferenceEquals(property, UiProperties.BorderColor)) return (T)(object)(HasError ? Theme.Error : Theme.Border);
         if (ReferenceEquals(property, UiProperties.FontSize)) return (T)(object)Theme.FontSize;
         if (ReferenceEquals(property, UiProperties.FontFamily)) return (T)(object)Theme.FontFamily;
         if (ReferenceEquals(property, UiProperties.Padding)) return (T)(object)ThemePadding;
@@ -361,7 +383,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         try
         {
             context.Clip(Bounds);
-            if (Background.A != 0) context.Fill(Bounds, Background);
+            if (Background.A != 0) context.Fill(Bounds, Background, CornerRadius);
             DrawCore(context);
             var childClip = ChildClipBounds;
             if (Children.Count != 0 && childClip != Bounds)
@@ -371,7 +393,9 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
                 finally { context.Restore(); }
             }
             else foreach (var child in Children) child.Draw(context);
-            if (IsFocused) context.Stroke(Bounds.Deflate(new Thickness(1)), Theme.Accent, 2, 3);
+            if (BorderWidth > 0) context.Stroke(Bounds.Deflate(new Thickness(BorderWidth / 2)), BorderColor, BorderWidth, CornerRadius);
+            if (HasError) context.Fill(new Rect(Bounds.X, Bounds.Y, Math.Min(3, Bounds.Width), Bounds.Height), Theme.Error);
+            if (IsFocused && IsEffectivelyEnabled) context.Stroke(Bounds.Deflate(new Thickness(2)), Theme.Focus, 2, CornerRadius);
         }
         finally { context.Restore(); }
     }

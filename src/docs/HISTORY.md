@@ -1278,3 +1278,117 @@ Release прошли: по25child launches/20Start-Stop, sessions0/mappings0/chi
 matrix, performance/VRAM или hardware acceptance. Следующий UI этап INF2,
 engine продолжение ENG3 и отложенный RTE backlog сохраняются.
 Новых пакетов/ABI/production dependencies нет, commit/push не выполнялись.
+
+## Сводки до UI PA8a — 2026-10-22
+
+Последняя работа — **2026-10-22, Aether ENG5c.2 reach/raycast/interaction**:
+nearest affine geometry query, opaque occlusion и independent object switches,
+TMCK2 atomic state restore реализованы. Control3/Frame1/Snapshot2 требуют rebuild;
+full World/edit не заявлен.52новых cases, full Debug/Release2186/configuration,
+9TRX/failed0/skipped0; Aether780/UI615/Hosting79/Mithril95.
+Fresh native60/60cases/62commands Debug/published Release: interaction18PNG,
+прежние CPU/GPU/input/Editor/Replace/failures; core/sync0/0/zero ownership.
+Diagnostic JSON compatibility regression исправлена, полная матрица повторена.
+Local Aether pack/DLL SHA совпал с final managed/native proof; package drawing
+не запускался. Completion report Passed=true.
+[Контракт/evidence](engine/HISTORY.md#eng5c2-reachraycast-и-interaction--2026-10-22).
+Следующий шаг — [ENG5c.3 collisions камеры](engine/PLAN.md#eng5c3-следующий-шаг-collisions-камеры),
+затем HUD; MCP/full snapshot/edit/raw input/3D performance/hardware gates открыты.
+
+Предыдущая работа — **2026-10-22, Aether ENG5c.1 scene consumers/multiple primitives**:
+standard v1 component roles, parent world transforms и статичная authoring-комната
+подключены к отдельному runtime/многопримитивному Vulkan renderer через IPC.
+Control v3 требует совместного rebuild, frame1/TMCK1 прежние; full world restore
+не заявлен. 36новых cases; full Debug/Release2134/2134/configuration,
+9TRX/failed0/skipped0; Aether728/UI615/Hosting79/Mithril95.
+Fresh native58/58cases Debug/published Release, room по5PNG и прежние CPU/GPU/
+input/Replace/failures; core/sync0/0, zero owned resources/imported readback.
+Local Aether pack/DLL payload hash прошли; package drawing consumer не запускался.
+[Контракт/evidence](engine/HISTORY.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22).
+На этапе ENG5c.1 следующий шаг — [ENG5c.2 reach/raycast/interaction](engine/PLAN.md#eng5c2-следующий-шаг-reachraycast-и-interaction),
+затем collisions/HUD. Full runtime snapshot/edit, MCP,3D performance и прежние
+hardware/release блокеры остаются открытыми.
+
+Предыдущая работа — **2026-10-22, Aether ARCH1a.2 scene aggregate и adapter**:
+immutable SceneDocument/ResolvedSceneSnapshot, parent graph, version metadata и
+explicit projection в прежний SceneSnapshot реализованы;52новых cases, scene suite130.
+Full Debug/Release2098/2098/configuration,9TRX/failed0/skipped0; Aether692/UI615/Hosting79/Mithril95.
+[Контракт/evidence/границы](engine/HISTORY.md#arch1a2-агрегат-сцены-и-адаптер--2026-10-22).
+Прежние control/frame/TMCK schemas и интерактивный sample не изменены;
+native/GPU/package checks на этапе ARCH1a.2 не повторялись. Тогда следующим был [ENG5c.1](engine/PLAN.md#eng5c1-следующий-шаг-scene-consumers-и-несколько-примитивов):
+component roles, runtime scene consumer и несколько примитивов. Общий tooling API,
+full runtime snapshot/edit и MCP запланированы; прежние release блокеры сохранены.
+
+Предыдущая работа — **2026-10-22, ARCH1a.1**: immutable model/EntityResolver,
+78новых cases; full Debug/Release2046/2046/configuration, Aether640.
+[Scope/evidence](engine/HISTORY.md#arch1a1-immutable-модель-и-resolver--2026-10-22).
+
+Предыдущая работа над реализацией — **2026-10-21, ENG5b input/camera**: control wire v2,
+optional fixed-tick gameplay input, camera/checkpoint/Replace и интерактивный
+GPU sample `--scene`. UI keys/mapping дополнены. Full Debug/Release1968/1968
+в каждой configuration,9TRX/failed0/skipped0; Aether562/UI615/Hosting79/Mithril95.
+Полная native regression56/56 и отдельный усиленный input proof2/2 по15cases/5PNG,
+validation0/0/zero ownership. Три local packs/payload совпали с published DLLs;
+отдельный package drawing не запускался. [Scope/commands/provenance](engine/HISTORY.md#eng5b-gameplay-input-и-камера--2026-10-21).
+На момент ENG5b далее планировался ENG5c. Raw cursor/physical input/3D performance
+и прежние UI hardware/release ограничения остаются открытыми.
+
+Предыдущая работа — **2026-10-21, ENG5a Vulkan3D primitive renderer**:
+immutable scene/camera/material, depth-tested cube в App-owned GPU viewport,
+без CPU pixels/staging. Debug/published Release: по5PNG assertions, resize/
+suspend/resume/checkpoint Replace, validation0/0 и zero owned resources после
+teardown. Full solution Debug1926/1926 иRelease1926/1926, по9TRX/failed0/skipped0;
+Aether520/UI615/Hosting79/Mithril95. [Контракт, commands и scope](engine/HISTORY.md#eng5a-первый-vulkan-3d-frame--2026-10-21).
+Native matrix12/12cases/14commands,430source/76binary hashes; local Aether pack
+и payload SHA256 check прошли, отдельный package drawing consumer не запускался.
+Далее ENG5b input/camera; весь ENG5 и3D performance ещё открыты.
+
+Предыдущая работа — **2026-10-21, ENG4e и Mithril graceful-stop fix**:
+CPU/GPU baseline12cases/36intervals/24cooperative children,421source/94binary
+fingerprints; raw captures и frozen budgets сохранены. Release1280×720 median
+per-run p95: CPU65–66ms/GPU21–33ms; reference GPU allocation~107MiB/s.
+Debug CPU имеет2FPS/6latency advisory breaches, budgets не ослаблены.
+Исправлена гонка error delivery/remaining graceful wait; red/green и native20
+Mithril shutdown cases прошли. Отдельный GPU validation run6cases прошёл.
+Свежие units packages:108/108cases/8nupkgs; expected analyzer negative control.
+Full solution Debug1907/1907 иRelease1907/1907, failed0/skipped0, по9TRX.
+[Метрики, команды, failures и ограничения](engine/HISTORY.md#eng4e-cpugpu-baseline--2026-10-21).
+Следующий функциональный шаг — ENG5; UI PA8a/RTE и прежние hardware/release
+ограничения сохраняются. Reference timings не доказывают будущий3D performance.
+
+Предыдущая работа — **2026-10-21, исправление структуры проектов**:44проекта/
+597C#files, namespace/category violations0. Типы сгруппированы по назначению,
+публичные namespace и consumers обновлены; общий Contracts остаётся независимым.
+Full Debug/Release1898/1898 в каждой конфигурации, failed0/skipped0; build0errors/
+1499warnings. Fresh Core80+3README/units108/UI16source+8package и36+4smoke/Aether4
+App consumers прошли. Итоговая targeted native engine matrix20cases прошла;
+выявленный lookup исторических leases по повторно использованному PID исправлен
+на прямую ссылку текущего owned lease. [Миграция, команды, повторы и ограничения](HISTORY.md#исправление-структуры-проектов--2026-10-21).
+На момент этой работы следующим был ENG4e; прежние UI hardware/release ограничения
+сохраняются. Native probe теперь сохраняет исходные причины до assertion.
+
+Предыдущая работа над реализацией — **2026-10-20, ENG4d2 ordinary GPU GameEditor**. Общий
+transport/presentation contract подключён к Start/selected DLL/Build/Replace/
+checkpoint/rollback; explicit GPU сохраняет обычный View/commands, CPU default.
+Aether493/493 Debug/Release; UI615/615 Debug/Release; full Debug1898/1898,9TRX/
+failed0/skipped0. Build0errors/1499warnings; fresh12packages/4App consumers.
+Native54cases/56commands,406source/76binary fingerprints; per GPU Editor20Replace/20failures/53children, validation0/0, imported readback0.
+[Команды/границы](engine/HISTORY.md#eng4d2-ordinary-gpu-gameeditor--2026-10-20).
+Далее ENG4e measured CPU/GPU baseline перед 3D. K3/K7/K8/VRAM/final alpha
+сохраняются; drivers/Windows settings/K7 stop policy прежние.
+
+## Сводка PA8a перед ENG7a — 2026-10-22
+
+Последняя работа — **2026-10-22, UI PA8a дефолтный квадратный стиль** по запросу
+пользователя: Dark/Light controls, focus/error/read-only/disabled states,
+scrollbar и стандартное borderless оформление через App/Hosting реализованы.
+[API и галерея](alloy/DEFAULT_STYLE.md), [результаты/ограничения](alloy/STATUS.md),
+[подробный журнал](alloy/HISTORY.md#pa8a-дефолтный-квадратный-стиль--2026-10-22).
+
+Текущий full solution run: **2214/2214 Debug и2214/2214 Release**,9TRX в каждой
+конфигурации, failed/skipped0; UI643/Hosting79/Aether780. UI golden360, новая рамка
+8native cases, source integration16 и fresh packages36App+4direct прошли.
+Это UI проверка; прежний engine native60/60 не повторялся. PA8a0–2 и automatic
+PA8a3 выполнены, physical DPI/OS input/K3/K7/K8/VRAM/final alpha остаются открытыми.
+Engine точка продолжения — ENG5c.3 collisions камеры, затем HUD. Предыдущие сводки
+[сохранены в HISTORY](HISTORY.md#сводки-до-ui-pa8a--2026-10-22).

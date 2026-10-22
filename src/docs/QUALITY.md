@@ -1,12 +1,68 @@
 # Рабочий уровень модулей перед движком
 
+Editor ENG7a **2026-10-22**: новый desktop TrueMoon.Editor/Tests,39новых xUnit cases,
+full Debug/Release2253/configuration,10TRX/failed0/skipped0. Native UI proof
+Debug/published Release: по8commands/3PNG/9material pixels/2reaped runtime children,
+core/sync validation0/0 и zero owned resources. Published WinExe apphost проверен
+напрямую. Engine/UI production modules не менялись; прежние engine native60,
+Alloy golden/package/performance/hardware матрицы не повторялись.
+[Requirement/evidence](engine/HISTORY.md#eng7a-основной-экран-редактора--2026-10-22).
+
+UI PA8a **2026-10-22**: дефолтный квадратный стиль Dark/Light и standard custom
+frame реализованы.28новых xUnit cases; nonincremental Debug build, full Debug и
+Release2214/configuration,9TRX/failed0/skipped0; UI643/Hosting79/Aether780.
+SettingsSquare360full-frame comparisons,8default-frame native cases,
+16source integration и10fresh packages/36App+4direct renderer cases прошли.
+12gallery PNG synthetic100/150/200% просмотрены выборочно; прежние golden fixtures
+и tolerances сохранены. Physical DPI/OS input/K3/K7/K8/VRAM/final alpha открыты.
+Engine native/3D/performance matrix на этом UI этапе не повторялась.
+[Requirement/evidence и промежуточные отказы](alloy/HISTORY.md#pa8a-дефолтный-квадратный-стиль--2026-10-22).
+
+ENG5c.2 **2026-10-22**: nearest affine raycast/reach/opaque occlusion,
+per-object switches/materials и explicit TMCK2 atomic restore.52новых cases,
+focused102/102; nonincremental Debug build и full Debug/Release2186/configuration
+прошли,9TRX/failed0/skipped0; Aether780.
+Fresh full native60/60cases/62commands,478source/76binary fingerprints после
+JSON compatibility fix. Debug/published Release interaction по10cases/9PNG,
+прежние CPU/GPU/Editor/input/Replace/failures; core/sync0/0/zero ownership.
+Local Aether pack/DLL SHA совпал с final proof; package drawing не запускался.
+[Requirement/evidence](engine/HISTORY.md#eng5c2-reachraycast-и-interaction--2026-10-22).
+Далее ENG5c.3 collisions камеры, затем HUD; full World/edit/MCP/raw input/3D perf
+и прежние hardware/release gates остаются открытыми.
+
+ENG5c.1 **2026-10-22**: built-in schemas и explicit parent world transforms,
+control-v3 primitive payload и static authoring room в отдельном runtime.
+36новых cases; full Debug/Release2134/2134/configuration,9TRX/failed0/skipped0,
+Aether728. Fresh native58/58cases/60commands,473source/76binary hashes:
+Debug/published Release room по5PNG и прежние CPU/GPU/input/Replace/failures;
+core/sync0/0, zero ownership/imported readback. Local Aether pack и DLL hash
+совпали с published proof; package drawing не запускался.
+[Requirement/evidence/границы](engine/HISTORY.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22).
+Далее ENG5c.2 reach/raycast/interaction; full world snapshot/edit/MCP, raw OS input,
+3D performance и прежние UI hardware/release gates остаются открытыми.
+
+ARCH1a.2 **2026-10-22**: immutable scene aggregate, parent graph/versioned snapshot
+и explicit projection к существующему game consumer;52новых cases, scene suite130.
+Full Debug/Release2098/2098/configuration,9TRX/failed0/skipped0; Aether692.
+[Requirement/evidence](engine/HISTORY.md#arch1a2-агрегат-сцены-и-адаптер--2026-10-22).
+На этапе ARCH1a.2 native/GPU/package checks не повторялись; wire/frame/TMCK прежние. Тогда далее ENG5c.1
+runtime scene/multiple primitives; full snapshot/edit/MCP и release ограничения открыты.
+
+ARCH1a.1 **2026-10-22**: immutable authoring model/resolver,78новых xUnit cases.
+Full Debug/Release2046/2046/configuration,9TRX/failed0/skipped0; Aether640.
+Прежние control/frame/TMCK не изменены; native/GPU/package checks не повторялись.
+[Requirement/evidence](engine/HISTORY.md#arch1a1-immutable-модель-и-resolver--2026-10-22).
+На момент ARCH1a.1 далее планировался ARCH1a.2; runtime editing,
+full snapshot/MCP и прежние hardware/release/performance ограничения открыты.
+
 ENG5b **2026-10-21**: control v2, optional gameplay input/camera на fixed tick,
 capture/reset/identity fencing и interactive GPU sample. Full Debug/Release1968/1968,
 9TRX/configuration/failed0/skipped0; Aether562. Native regression56/56 и отдельный
 усиленный input proof2/2 по15cases/5PNG; validation0/0/zero ownership. Local
 Aether/Argentis/Platform.Silk payload сверены с published proof, package drawing
 consumer не запускался. [Evidence/границы](engine/HISTORY.md#eng5b-gameplay-input-и-камера--2026-10-21).
-Далее ENG5c комната/interaction/HUD; raw/physical input и3D perf остаются открытыми.
+Порядок уточнён2026-10-22: ARCH1a.1/2 и ENG5c.1 выполнены, далее ENG5c.2;
+raw/physical input и3D perf остаются открытыми.
 
 ENG5a **2026-10-21**: первый Vulkan3D cube/camera/material/depth в существующем
 App-owned GPU viewport. Debug/published Release: по5PNG assertions, resize/
@@ -43,9 +99,9 @@ VRAM/UI hardware acceptance открыты. [План](PLAN.md), [статус](
 | [Enerit](enerit/STATUS.md) | Typed same-build pipes, strict response/decode ownership, cancellation/error/reconnect и ENE5 baseline проверены; package composition с Mithril подтверждена отдельно |2026-10-15 ENE5:runtime126/generator114 Debug и Release;10cases/90samples. MIT5 позже:runtime126 Debug/Release и package108; generator/performance там не повторялись. [Baseline](enerit/BASELINE.md), [MIT5 evidence](mithril/HISTORY.md#mit5-operational-diagnostics--2026-10-15) | MMF/ENE3, schema negotiation, bounded queues/backpressure, remote handler cancellation и uncooperative shutdown не подтверждены. Frame transport ещё не реализован |
 | [Mithril](mithril/STATUS.md) | MIT0–MIT5 bounded own-child/App scope; исправлена гонка delivery/graceful wait без расширения budgets |2026-10-21:95/95 Debug/Release, native20shutdown,108fresh package cases; [red/green и evidence](mithril/HISTORY.md#graceful-wait-после-ошибки-доставки-exit--2026-10-21). Standalone restart matrix имеет прежний scope | Borrowed attach отсутствует; independent external restart, arbitrary hooks/uncooperative callbacks и long resource trend не доказаны |
 | [Alloy / Argentis](alloy/STATUS.md) | INF1–INF4/INF6/INF7/минимальный INF5; bounded work/frame/close, explicit root/compatibility и воспроизводимый runner |2026-10-21:UI615/Hosting79 Debug/Release, bounded engine measurements/validation отдельно. [INF7 evidence](alloy/HISTORY.md#inf7-воспроизводимый-integration-runner--2026-10-19)/golden/RTE имеют свои прежние scopes | Full INF5 частичен. K3/K7/K8/VRAM/final matrix открыты; PA8a/RTE запланированы, далее общий ENG5 |
-| [Aether / Engine](engine/STATUS.md) | Одна experimental assembly, App-owned lifecycle, ENG5a renderer/ENG5b input/camera |2026-10-21:Aether562 Debug/Release, full solution1968/1968 в каждой configuration; [evidence](engine/HISTORY.md#eng5b-gameplay-input-и-камера--2026-10-21) | Далее ENG5c;3D performance и CPU Debug/reference staging debt, VRAM/hardware acceptance открыты |
+| [Aether / Engine](engine/STATUS.md) | Одна experimental assembly, App-owned lifecycle, ENG5a/b/c.1/2 room/reach/interaction и authoring ARCH1a.1/2 |2026-10-22:Aether780 Debug/Release, full2186/configuration; native60cases/core-sync0/0, local pack/payload; [evidence](engine/HISTORY.md#eng5c2-reachraycast-и-interaction--2026-10-22) | Далее ENG5c.3 collisions камеры/HUD; full snapshot/MCP,3D performance и CPU Debug/reference staging debt, VRAM/hardware acceptance открыты |
 
-Последний solution test run — ENG5b2026-10-21: Aether562/Mithril95,
+Предыдущий solution test run — ENG5b2026-10-21: Aether562/Mithril95,
 full Debug1968/1968 иRelease1968/1968, по9TRX/failed0/skipped0. Nonincremental
 build/full UI packages/golden/RTE/hardware не повторялись; ENG4e performance
 относится только к reference workload, GPU query/utilization/VRAM unavailable.

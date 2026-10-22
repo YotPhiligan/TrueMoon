@@ -87,14 +87,14 @@ public sealed class ControlInteractionTests
 
     [Theory]
     [InlineData(0f, 0f)]
-    [InlineData(.5f, 100f)]
-    [InlineData(1f, 200f)]
+    [InlineData(.5f, 99f)]
+    [InlineData(1f, 198f)]
     public void ProgressBar_DrawsExactNormalizedExtentAndDoesNotTakeKeyboardFocus(float value, float width)
     {
         using var progress = new ProgressBar { Value = value, Width = 200, Height = 20 };
         progress.Measure(new Size(240, 140), new FixedTextLayout()); progress.Arrange(new Rect(10, 15, 200, 20)); var drawing = new Drawing(); progress.Draw(drawing);
         Assert.False(progress.Focusable); Assert.Equal(2, drawing.Fills.Count); Assert.Equal(new Rect(10, 15, 200, 20), drawing.Fills[0].Bounds);
-        Assert.Equal(new Rect(10, 15, width, 20), drawing.Fills[1].Bounds); Assert.Equal(Theme.Dark.Control, drawing.Fills[0].Color); Assert.Equal(Theme.Dark.Accent, drawing.Fills[1].Color);
+        Assert.Equal(new Rect(11, 16, width, 18), drawing.Fills[1].Bounds); Assert.Equal(Theme.Dark.Control, drawing.Fills[0].Color); Assert.Equal(Theme.Dark.Accent, drawing.Fills[1].Color);
         Assert.Equal(drawing.Saves, drawing.Restores);
     }
 
@@ -120,10 +120,10 @@ public sealed class ControlInteractionTests
         var root = new VStack { IsEnabled = false }.WithChildren(check, progress, slider, new Text("label")); using var ui = Create(root); ui.Update();
         var drawing = new Drawing(); root.Draw(drawing);
         Assert.All(drawing.Texts, text => Assert.Equal(Theme.Dark.Disabled, text.Color));
-        Assert.Contains(drawing.Fills, fill => fill.Bounds.Width == 8 && fill.Bounds.Height == 8 && fill.Color == Theme.Dark.Disabled);
-        Assert.Contains(drawing.Strokes, stroke => stroke.Bounds.Width == 16 && stroke.Color == Theme.Dark.Disabled);
-        Assert.Contains(drawing.Fills, fill => fill.Bounds == progress.Bounds with { Width = progress.Bounds.Width / 2 } && fill.Color == Theme.Dark.Disabled);
-        Assert.Contains(drawing.Fills, fill => fill.Bounds == slider.Bounds with { Width = slider.Bounds.Width / 2 } && fill.Color == Theme.Dark.Disabled);
+        Assert.Contains(drawing.Fills, fill => fill.Bounds.Width == 16 && fill.Bounds.Height == 16 && fill.Color == Theme.Dark.Disabled);
+        Assert.Contains(drawing.Strokes, stroke => stroke.Bounds.Width == 13 && stroke.Color == Theme.Dark.Disabled);
+        Assert.Contains(drawing.Fills, fill => fill.Bounds == new Rect(progress.Bounds.X + 1, progress.Bounds.Y + 1, (progress.Bounds.Width - 2) / 2, progress.Bounds.Height - 2) && fill.Color == Theme.Dark.Disabled);
+        Assert.Contains(drawing.Fills, fill => fill.Bounds == new Rect(slider.Bounds.X + 8, slider.Bounds.Y + 12, (slider.Bounds.Width - 16) / 2, 4) && fill.Color == Theme.Dark.Disabled);
     }
 
     [Fact]
@@ -238,7 +238,7 @@ public sealed class ControlInteractionTests
     public void BringIntoView_UsesPaddedViewportMinimalDeltaAndExtentClamp(float y, float height, float expectedOffset)
     {
         var scroll = new ScrollViewer { Padding = new Thickness(10) }.Content(new SizedElement(100, 500)); using var ui = Create(scroll); ui.Update(); scroll.Offset = 100; ui.Update();
-        Assert.Equal(new Rect(10, 10, 220, 120), scroll.ChildClipBounds);
+        Assert.Equal(new Rect(10, 10, 210, 120), scroll.ChildClipBounds);
         scroll.BringIntoView(new Rect(10, y, 20, height)); Assert.Equal(expectedOffset, scroll.Offset); ui.Update();
         Assert.Equal(expectedOffset, scroll.Offset); Assert.Equal(500, scroll.Extent);
     }
@@ -265,7 +265,7 @@ public sealed class ControlInteractionTests
         var outer = new ScrollViewer().Content(new VStack().WithChildren(new SizedElement(100, 150), inner, new SizedElement(100, 150)));
         using var ui = Create(outer); ui.Update(); Assert.Equal(300, last.Bounds.Y);
         ui.Focus(last); Assert.Equal(110, inner.Offset); Assert.Equal(90, outer.Offset); ui.Update();
-        Assert.True(last.IsFocused); Assert.Equal(new Rect(0, 100, 240, 40), last.Bounds);
+        Assert.True(last.IsFocused); Assert.Equal(new Rect(0, 100, 220, 40), last.Bounds);
         Assert.True(inner.ChildClipBounds.Contains(last.Bounds.X, last.Bounds.Y)); Assert.True(outer.ChildClipBounds.Contains(last.Bounds.X, last.Bounds.Y));
         ui.Focus(first); ui.Update(); Assert.True(first.IsFocused); Assert.False(last.IsFocused); Assert.Equal(0, inner.Offset); Assert.Equal(90, outer.Offset); Assert.Equal(60, first.Bounds.Y);
     }

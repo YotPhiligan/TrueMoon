@@ -61,7 +61,7 @@ public sealed class ConsumerView : View<ConsumerModel>
         _richEditor = new RichTextEditor { Height = 80, Text = "Rich text from NuGet" };
         Content(model, _ => VStack.Create().Padding(16).WithChildren(
             Text.Plain("TrueMoon from NuGet"), _editor, _richEditor,
-            Button.Simple("Rename").OnClick(() => model.Name = "Button update")));
+            Button.Simple("Rename").Configure(button => button.Tone = ControlTone.Accent).OnClick(() => model.Name = "Button update")));
     }
 
     /// <summary>Exercises binding, layout, theme and queued changes on the UI owner thread.</summary>
@@ -74,6 +74,12 @@ public sealed class ConsumerView : View<ConsumerModel>
                 Require(_editor.Value == "Package consumer", "Initial binding failed.");
                 Require(_editor.Bounds.Width > 0 && _editor.Bounds.Height > 0, "Editor was not laid out.");
                 Require(_model.SubscriptionCount > 0, "Binding did not subscribe to the model.");
+                Require(_editor.CornerRadius == 0 && _editor.BorderWidth == 1 && _richEditor.Background == Theme.Dark.Input, "Packaged default appearance missing.");
+                using (var frame = WindowFrame.CreateDefault("Package frame", new Panel()))
+                {
+                    frame.ApplyWindowState(new(true, false, true, true, true));
+                    Require(frame.DefaultTitleBar!.CloseButton.Symbol == UiSymbol.Close && frame.ResizeGrip!.IsVisible, "Packaged default frame API missing.");
+                }
                 break;
             case 2:
                 _model.Name = "Model update";
@@ -95,6 +101,8 @@ public sealed class ConsumerView : View<ConsumerModel>
                 break;
             case 6:
                 Require(_editor.Value == "Queued update", "Queued change did not reach the view.");
+                Require(_editor.Background == Theme.Light.Input && _editor.Value == "Queued update", "Packaged theme switch lost editor state.");
+                if (session.Root is WindowFrame windowFrame) Require(windowFrame.DefaultTitleBar != null, "Native package consumer did not use the default frame.");
                 break;
         }
     }
