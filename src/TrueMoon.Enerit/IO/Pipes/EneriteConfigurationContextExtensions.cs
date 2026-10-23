@@ -5,7 +5,11 @@ namespace TrueMoon.Enerit.IO.Pipes;
 public static class EneriteConfigurationContextExtensions
 {
     public static IAppConfigurationContext PipesServiceTransport(this IAppConfigurationContext context)
-        => Configure(context, null);
+        => Configure(context, null, new PipesTransportOptions());
+
+    /// <summary>Uses finite resource limits for App-owned pipes transports. Values are copied during configuration.</summary>
+    public static IAppConfigurationContext PipesServiceTransport(this IAppConfigurationContext context, PipesTransportOptions options)
+        => Configure(context, null, options);
 
     /// <summary>Uses an app-selected endpoint for each service; both peers must agree.</summary>
     /// <param name="context">The App configuration context.</param>
@@ -14,15 +18,24 @@ public static class EneriteConfigurationContextExtensions
     public static IAppConfigurationContext PipesServiceTransport(this IAppConfigurationContext context, Func<Type, string> endpoint)
     {
         ArgumentNullException.ThrowIfNull(endpoint);
-        return Configure(context, endpoint);
+        return Configure(context, endpoint, new PipesTransportOptions());
     }
 
-    private static IAppConfigurationContext Configure(IAppConfigurationContext context, Func<Type, string>? endpoint)
+    /// <summary>Uses explicit endpoints and copied finite resource limits for this App.</summary>
+    public static IAppConfigurationContext PipesServiceTransport(this IAppConfigurationContext context, Func<Type, string> endpoint, PipesTransportOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        return Configure(context, endpoint, options);
+    }
+
+    private static IAppConfigurationContext Configure(IAppConfigurationContext context, Func<Type, string>? endpoint, PipesTransportOptions options)
     {
         ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(options);
+        var snapshot = options.Snapshot();
         context.Services(r => r.RemoveAll<IInvocationClientFactory>().RemoveAll<IInvocationServerFactory>()
-            .Singleton<IInvocationClientFactory>(p => new PipesInvocationClientFactory(p.Resolve<IEventsSourceFactory>(), endpoint))
-            .Singleton<IInvocationServerFactory>(p => new PipesInvocationServerFactory(p.Resolve<IEventsSourceFactory>(), p.Resolve<IInvocationServerHandlerResolver>(), endpoint))
+            .Singleton<IInvocationClientFactory>(p => new PipesInvocationClientFactory(p.Resolve<IEventsSourceFactory>(), endpoint, snapshot))
+            .Singleton<IInvocationServerFactory>(p => new PipesInvocationServerFactory(p.Resolve<IEventsSourceFactory>(), p.Resolve<IInvocationServerHandlerResolver>(), endpoint, snapshot))
             .Transient<IInvocationServerHandlerResolver>(p => new InvocationServerHandlerResolver(p)));
         return context;
     }

@@ -1,5 +1,25 @@
 # Enerit: состояние и точка продолжения
 
+Последняя работа — **2026-10-23, первый ENE6a/MIT6a implementation slice**.
+Finite client admission/wait queue и shared server count/request-byte/connection
+limits реализованы через copied PipesTransportOptions, factories и App registration.
+Sent local cancellation удерживает capacity до late reply/disconnect и local
+writer/decode cleanup; rejected work не вызывает handler. Async Stop/Completion
+сохраняет ownership при cancelled wait и ошибках cancellation callbacks; App
+передаёт shutdown token до final disposal. Wire/generated mapping прежние.
+[Контракт](PLAN.md#ene6a-и-mit6a-первый-контракт--2026-10-23).
+
+Текущий Enerit **166/166 Debug и166/166 Release**, generator114/114 в каждой
+конфигурации; failed0/skipped0. Full solution2361/configuration, по10TRX, build
+Debug0errors/1522warnings. Детерминированный queued-writer CTS test подтвердил
+RED→GREEN; все scheduled paths теперь используют заранее captured token value.
+Source/published **44/44** и fresh independent package **132/132** прошли:
+Cobalt/DI и DI без Cobalt analyzer,8nupkgs/152commands, expected omitted Enerit
+analyzer CS0234. Final summaries Completed=true в
+TestResults/EneritAdmission-20261023/final3. [Команды и границы](HISTORY.md#ene6a-finite-admission-и-наблюдаемая-остановка--2026-10-23).
+ENE6a и async-stop часть ENE6b проверены в первом bounded профиле; ENE6c/d,
+remote cancel, long trends и MMF не реализованы. Срез не закрывает весь MIT6a.
+
 Текущая реализация — **2026-10-22, factory integration Aether**:
 типизированные pipes client/server factories реализуют IFactory; App invocation
 products резолвятся через общий factory adapter. Wire/generator semantics прежние.
@@ -82,8 +102,11 @@ omitted-analyzer CS0234. Свежая package matrix текущим baseline н�
 - Strict response/decode ownership сохраняется: failed nested decode возвращает
   whole rentals; successful response принадлежит caller, decoded input — service
   от entry даже при throw. Public DTO prefix/manual callback contracts прежние.
-- Queues не ограничены, shutdown кооперативный; ignoring cancellation handler может
-  удерживать Dispose. Long stress/resource trend/backpressure не подтверждены.
+- В pipes finite admission реализован; запросы в Core scheduler ограничены
+  transport gate, общий scheduler не переписан. Logical request-byte budget
+  не равен process heap/rental-cache budget. In-process shutdown кооперативный:
+  ignoring cancellation handler удерживает Completion/Dispose и dependencies;
+  отмена Stop wait не бросает drain. Long stress/resource trends не подтверждены.
 - Closed-loop latency не open-loop SLA; allocations включают service/harness/control
   и небольшие batch-boundary расходы, не native/retained memory. Startup/connect,
   App/DI/restart/failure-path performance, exact wire bandwidth и engine frames не измерены.
@@ -92,10 +115,11 @@ omitted-analyzer CS0234. Свежая package matrix текущим baseline н�
 
 ## Следующий конкретный шаг
 
-Сверка2026-10-15 завершила [общую quality matrix](../QUALITY.md); новых runtime/
-generator/tests/performance запусков она не создаёт. Следующий общий этап —
-[UI package/Hosting quality](../alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15),
-[MIT5 diagnostics](../mithril/STATUS.md) выполнен в bounded scope.
+Первый ENE6a/MIT6a срез завершён в указанном scope. Далее локальный ARCH1b/ED1a
+и интеграция preview по engine плану с явным выбором limits и lifecycle ownership;
+ENE6c/d развивать перед расширением contracts/приёмкой нагрузки.
+Полный fault matrix MIT6a и trends MIT6c не выводятся из этого среза;
+remote cancel/replay не обещать существующим API.
 Enerit performance backlog: scalar c1/c8 allocation/CPU profile до выбора изменений,
 затем тот же frozen workload для сравнения. Baseline не выявил нового correctness
 blocker; он не требует автоматической реализации MMF/новых IPC APIs. Перед общим

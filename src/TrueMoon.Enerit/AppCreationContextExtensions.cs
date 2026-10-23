@@ -51,8 +51,9 @@ internal sealed class InvocationTransportLifetime<TTransport>(TTransport transpo
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
+        // Pipes owns its ongoing drain even if App stops waiting; do not bypass the caller's shutdown token.
+        if (transport is IStoppable stoppable) await stoppable.StopAsync(cancellationToken).ConfigureAwait(false);
         if (transport is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync().ConfigureAwait(false);
         else if (transport is IDisposable disposable) disposable.Dispose();
-        else if (transport is IStoppable stoppable) await stoppable.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 }

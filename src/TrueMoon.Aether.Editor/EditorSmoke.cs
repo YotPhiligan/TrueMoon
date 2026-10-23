@@ -102,7 +102,7 @@ internal static class EditorSmoke
         File.WriteAllText(Path.Combine(directory, "report.json"), JsonSerializer.Serialize(new { Passed = true, UiSessions = sessions.ActiveSessionCount, Mappings = engine.Frames.MappingCount, GpuResources = engine.Gpu.ResourceCount,
             GpuHandles = engine.Gpu.OpenHandleCount, Children = factory.Leases.Count, Reaped = factory.Leases.All(x => x.Reaped), ViewDisposed = view.IsDisposed,
             ValidationRequested = Environment.GetEnvironmentVariable("TRUEMOON_GPU_VALIDATION") == "1", ValidationErrors = 0, ValidationWarnings = 0 }, new JsonSerializerOptions { WriteIndented = true }));
-        Console.WriteLine("Editor screen proof passed: live 3D, hierarchy/inspector, standard frame, commands/replace, theme/resize, close/drain and zero ownership.");
+        Console.WriteLine("Editor screen proof passed: interaction, close/drain and zero ownership.");
     }
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

@@ -14,10 +14,10 @@ pwsh -NoProfile -File ManualTests/AppUnitsPipesProbe/RunAppUnitsSmoke.ps1
 ```
 
 The runner builds Debug and publishes framework-dependent Release without RID,
-then launches 9 scenarios × 2 providers × 2 configurations = 36 owned probes.
+then launches 11 scenarios × 2 providers × 2 configurations = 44 owned probes.
 The recorded configuration is Windows x64/net10.0, SDK10.0.402. Outputs, commands,
 source SHA256 and fresh case directories are under ignored
-`TestResults/AppUnitsPipes/manual`; `Completed=true` requires all 36 cases.
+`TestResults/AppUnitsPipes/manual`; `Completed=true` requires all 44 cases.
 ResultsDirectory must remain inside the source workspace. Per-case deadline40s;
 build/publish60s; failure cleanup kills/reaps only the launched owned process tree.
 
@@ -32,6 +32,14 @@ build/publish60s; failure cleanup kills/reaps only the launched owned process tr
 | stop-pending | App.Stop cancels cooperative handler, faults pending caller, gracefully stops child |
 | startup-failure | Spawn delayed first unit, resolve/call client, then missing second executable; rollback cleans first child and client workers before App.Dispose |
 | parent-exit | Supervisor kills parent only during pending RPC; production parent monitor stops child/server and local service exactly once |
+| saturated-stop | Two active RPC handlers and one queued call; independent Mithril control reaches the loaded child, cooperative server drains and owned child exits0 |
+| saturated-kill | Same saturated IPC with an ignoring-cancellation handler; owner delivers control then kills/reaps the child within existing budgets, without claiming managed handler cleanup |
+
+The two load cases use copied finite PipesTransportOptions. They assert overload
+before dispatch, exact control/PID identity with two handlers still active,
+pending/queued0 and client/monitor Completion. Ready JSON is atomically published;
+opening it tolerates only Windows sharing/lock violations within the 8-second
+readiness budget. JSON/identity/IPC errors are not retried.
 
 The parent chooses a unique pipe endpoint and passes it to the child through its
 inherited environment. Both call `UseDiagnostics()` and

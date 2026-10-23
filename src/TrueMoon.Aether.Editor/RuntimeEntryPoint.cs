@@ -16,7 +16,10 @@ internal static class RuntimeEntryPoint
         if (text.Length > 16384) throw new InvalidDataException("Oversized runtime bootstrap.");
         var launch = JsonSerializer.Deserialize<SessionLaunch>(text) ?? throw new InvalidDataException("Invalid runtime bootstrap.");
         launch.Identity.Validate();
-        if (launch.Identity.HostContractId != BuildIdentity.HostId || launch.Build == null || launch.Build.BuildId != launch.Identity.GameBuildId ||
+        var preview = launch.Role == RuntimeRole.EditPreview;
+        if (launch.Identity.HostContractId != BuildIdentity.HostId ||
+            (preview ? launch.Build != null || launch.RequireRestore || launch.Identity.GameBuildId != BuildIdentity.PreviewId
+                : launch.Role != RuntimeRole.Game || launch.Build == null || launch.Build.BuildId != launch.Identity.GameBuildId) ||
             !launch.Endpoint.StartsWith("engine-", StringComparison.Ordinal) || launch.Endpoint.Length > 100)
             throw new InvalidDataException("Runtime requires a matching selected game build.");
         var parentId = int.Parse(Environment.GetEnvironmentVariable("-p") ?? throw new InvalidDataException("Missing runtime parent."));
@@ -24,7 +27,8 @@ internal static class RuntimeEntryPoint
         {
             context.UseAether(options =>
             { options.HostContractId = launch.Identity.HostContractId; options.GameBuildId = launch.Identity.GameBuildId; options.ReportDirectory = launch.ReportDirectory; });
-            context.UseAetherRuntime(launch, parentId);
+            if (preview) context.UseAetherPreviewRuntime(launch, parentId);
+            else context.UseAetherRuntime(launch, parentId);
         });
         await app.StartAsync();
         var runtime = app.Services.Resolve<AetherRuntimeHost>();

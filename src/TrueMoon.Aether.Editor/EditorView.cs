@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Linq.Expressions;
+using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor;
@@ -29,10 +30,12 @@ public sealed class EditorView : View<EditorViewModel>
     public Text ViewportTitle { get; } = Text.Plain("VIEWPORT · Предпросмотр сцены");
     public ContentControl ViewportFrame { get; }
     public EditorViewport Canvas { get; } = new();
+    /// <summary>Gets the nested project-document view owned by this tree, when configured.</summary>
+    public EditorDocumentView? Documents { get; }
     public IReadOnlyDictionary<EditorCommand, Button> Commands => _commands;
     public IReadOnlyDictionary<string, Button> Entities => _entities;
 
-    public EditorView(EditorViewModel model, IViewStyle<EditorView> style)
+    public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents = null)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(style);
@@ -40,6 +43,8 @@ public sealed class EditorView : View<EditorViewModel>
         {
             _model = model;
             DataContext = model;
+            Documents = documents?.Create();
+            if (documents != null && Documents == null) throw new InvalidOperationException("Document view factory returned null.");
             Selection = Text.Plain().BindText(model, x => x.SelectedName);
             Status = Text.Plain().BindText(model, x => x.StatusText);
             Error = Text.Plain().BindText(model, x => x.ErrorText);
@@ -53,18 +58,13 @@ public sealed class EditorView : View<EditorViewModel>
             AddCommand(EditorCommand.Replace, "Применить сборку", x => x.CanReplace);
             AddCommand(EditorCommand.Cancel, "Отмена", x => x.CanCancel);
             Toolbar.Add(Button.Simple("Тема").OnClick(ToggleTheme));
-            foreach (var id in model.EntityIds)
-            {
-                var button = Button.Simple(EditorScene.Name(id)).WithRole(EntityButtonRole)
-                    .SetValue(UiProperties.AccessibleName, id).OnClick(() => model.Select(id));
-                _entities.Add(id, button);
-                EntityList.Add(button);
-            }
+            UpdateEntities();
 
             var hierarchy = Pane("СЦЕНА", SceneTitle, ScrollViewer.Create().Content(EntityList));
             ViewportFrame = ContentControl.Create().Content(new ViewportLayout(Canvas, ViewportTitle));
             var inspector = Pane("ИНСПЕКТОР", Selection, InspectorHint, PropertiesPanel, Error);
-            Content(model, _ => new EditorLayout(Toolbar, hierarchy, ViewportFrame, inspector, Status));
+            Element tools = Documents == null ? Toolbar : VStack.Create().WithChildren(Toolbar, Documents);
+            Content(model, _ => new EditorLayout(tools, hierarchy, ViewportFrame, inspector, Status));
             UpdateSelection();
             UpdateProperties();
             this.WithViewStyle(style);
@@ -84,6 +84,7 @@ public sealed class EditorView : View<EditorViewModel>
             try
             {
                 Dispose();
+                if (Documents is { IsDisposed: false, Parent: null }) Documents.Dispose();
             }
             catch (Exception cleanup)
             {
@@ -100,8 +101,38 @@ public sealed class EditorView : View<EditorViewModel>
 
     private void ModelChanged(object? sender, PropertyChangedEventArgs change)
     {
+        if (change.PropertyName == nameof(EditorViewModel.Scene)) Dispatch(() => SceneTitle.Value = _model.Scene.Id);
+        if (change.PropertyName == nameof(EditorViewModel.EntityIds)) Dispatch(UpdateEntities);
         if (change.PropertyName == nameof(EditorViewModel.SelectedId)) Dispatch(UpdateSelection);
         if (change.PropertyName == nameof(EditorViewModel.Properties)) Dispatch(UpdateProperties);
+    }
+
+    /// <inheritdoc />
+    public override bool HandleInput(UiInput input, IInputContext context) => Documents?.HandleShortcut(input) == true;
+
+    private void UpdateEntities()
+    {
+        VerifyAccess();
+        var ids = _model.EntityIds;
+        var wanted = ids.ToHashSet(StringComparer.Ordinal);
+        foreach (var id in _entities.Keys.Where(id => !wanted.Contains(id)).ToArray())
+        {
+            var old = _entities[id]; EntityList.Items.Remove(old); old.Dispose(); _entities.Remove(id);
+        }
+        foreach (var id in ids)
+        {
+            if (_entities.ContainsKey(id)) continue;
+            var button = Button.Simple(EditorScene.Name(id)).WithRole(EntityButtonRole)
+                .SetValue(UiProperties.AccessibleName, id).OnClick(() => _model.Select(id));
+            _entities.Add(id, button); EntityList.Add(button);
+        }
+        for (var index = 0; index < ids.Count; index++)
+        {
+            var button = _entities[ids[index]];
+            if (ReferenceEquals(EntityList.Children[index], button)) continue;
+            EntityList.Items.Remove(button); EntityList.Items.Insert(index, button);
+        }
+        UpdateSelection();
     }
 
     private void UpdateSelection()

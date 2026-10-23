@@ -1,10 +1,25 @@
 # Рабочий уровень модулей перед движком
 
-Переименование/DI аудит **2026-10-22**: TrueMoon.Aether.Editor/Tests относятся к
+Актуальная сверка **2026-10-23**: Core/Cobalt и ENE5/MIT5 завершили свой bounded
+проход; повторять весь этот цикл до локального authoring API Aether не требуется.
+DI1–DI4 и UIA1 реализованы/проверены2026-10-22; прежний rename-аудит ниже — история,
+его открытые DI замечания не являются текущим статусом. Последний выполненный
+общий run и точные границы находятся в [STATUS](STATUS.md), новых запусков сегодня нет.
+Перед частым Runtime preview предложены [ENE6a/b и MIT6a](PLAN.md#сверка-основы-перед-aether--2026-10-23):
+admission/resource bounds и stop/drain/owned kill/reap под нагрузкой. Подробные
+критерии — у владельцев; остальные записи ниже сохраняют свои даты/scope.
+
+Следующим запросом2026-10-23 первый ENE6a/MIT6a срез реализован: finite pipes
+admission и observable async stop/Completion, own-child saturated stop/kill proof.
+Текущий full solution2361/2361 Debug/Release; source/published/package evidence
+и ограничения — в [общем STATUS](STATUS.md) и локальных Enerit/Mithril STATUS.
+Это не закрывает весь fault matrix, long trends, hardware/UI или release scope.
+
+Прежний аудит переименования и DI **2026-10-22**: TrueMoon.Aether.Editor/Tests относятся к
 Aether; full solution повторил2253/2253 Debug/Release,10TRX/configuration,
 failed/skipped0, native Debug/published Release повторены. DI соответствие частичное,
 [замечания DI1–DI4](engine/PLAN.md#переименование-редактора-и-аудит-di--2026-10-22)
-открыты. [Текущие команды/границы](engine/HISTORY.md#переименование-редактора-и-аудит-di--2026-10-22).
+на момент этого аудита были открыты. [Команды/границы прежнего запуска](engine/HISTORY.md#переименование-редактора-и-аудит-di--2026-10-22).
 
 Предыдущий Editor ENG7a **2026-10-22**: новый desktop TrueMoon.Aether.Editor/Tests,39новых xUnit cases,
 full Debug/Release2253/configuration,10TRX/failed0/skipped0. Native UI proof

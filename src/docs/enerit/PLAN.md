@@ -14,6 +14,19 @@ TrueMoon.Enerit, Enerit.Generator, Enerit.Tests и Enerit.Generator.Tests. Invoc
 
 ## Архитектура и решения
 
+Решение2026-10-23: **Enerit выбран как IPC модуль Aether.Editor↔Runtime**.
+Управление, input, queries, operation results/progress/errors и frame descriptors/
+notifications используют typed invocation и generated adapters; текущая основа —
+same-build named pipes. Подробные engine contracts и порядок authoring/preview
+ведутся в [Aether](../engine/PLAN.md#ipc-editor-и-runtime-enerit--2026-10-23),
+прикладные задачи — в [Editor ED1–ED8](../engine/EDITOR_PLAN.md).
+Pixels/shared GPU images передаются отдельным frame transport; Mithril владеет
+launch/stop/reap процессов. Локальный authoring API работает без IPC. Enerit не
+получает зависимость от Editor/UI или ответственность за scene mutations.
+Новые preview/edit invocation contracts ещё запланированы: DTO/limits, fencing,
+cancellation/disconnect и wire compatibility проверяются отдельно; решение о
+выборе IPC не расширяет текущий readiness или поддержку transport/OS.
+
 Уточнение2026-10-22: [Aether DI1–DI4](../engine/PLAN.md#приведение-к-правилу-cobaltifactory)
 добавляет типизированные PipesInvocationClientFactory<T>/PipesInvocationServerFactory<T>
 с IFactory<TProduct,TArguments>. App invocation registrations получают products
@@ -99,6 +112,7 @@ ENE1/ENE2 выполнены как этот bounded baseline; общая produc
 | ENE3 | Второй transport и сопоставление capabilities | Общий сценарий повторён, transport-specific limits/failures и ownership задокументированы; неподтверждённый режим остаётся experimental |
 | ENE4 | Совместный scenario с Mithril | Unit выполняет invocation, отказывает/завершается, согласованный client/server cleanup и дальнейшее поведение воспроизводятся |
 | ENE5 | Package consumer и baseline | Generator/runtime/transport доставлены независимому consumer; измерены latency/throughput/allocations выбранного сценария до оптимизаций |
+| ENE6 | Частично: finite admission и async stop первого ENE6a/MIT6a профиля реализованы/проверены2026-10-23 | Остальные compatibility/diagnostics, полный fault/load matrix и scope расширяются по подэтапам ниже |
 
 Начать ENE2 с transport, подтвердившего ENE0; не назначать его успешным только из-за наличия реализации. ENE4 зависит от MIT1–MIT3 и согласованной boundary между channel lifecycle и restart process.
 
@@ -113,6 +127,84 @@ ENE1/ENE2 выполнены как этот bounded baseline; общая produc
 ## После первой рабочей проверки
 
 Развивать payload compatibility, diagnostics и throughput по реальному consumer. Reconnection/backpressure и новые transports требуют отдельного contract proposal; сетевой RPC этим планом не обещается.
+
+### ENE6: интерактивный consumer Aether — ревью 2026-10-23
+
+Это предложения по результатам чтения планов и исходников, не утверждённые новые
+API или passing proof. Минимальный локальный authoring API Aether не зависит от
+этого этапа. Перед частыми preview/input запросами уточнить и проверить ENE6a/b;
+ENE6c нужен перед расширением совместимых service contracts, ENE6d — для приёмки
+нагрузки. Текущая same-build pipes основа остаётся допустимой в прежних bounds.
+У Aether уже есть command deadlines с передачей CancellationToken в Enerit;
+сначала проверить достаточность этой композиции. Новый timeout/options API не
+вводить, если нужный budget надёжно задаётся существующим токеном.
+
+| ID | Предлагаемая задача | Критерий и границы |
+| --- | --- | --- |
+| ENE6a | Ограничить admission и ресурсы | Явные options для client pending, server in-flight/queued work, bytes и connections; ожидание слота отменяется/deadline-aware, overload имеет наблюдаемый результат. Admission не должен оставлять неограниченные rentals за ограниченной очередью. Под нагрузкой Stop/control не голодают; конкретную изоляцию/резерв выбрать в composition Aether без универсального priority framework |
+| ENE6b | Deadlines, отмена и async stop/drain | Настраиваемый request/connect budget вместо единственного50s default; определить начало budget, cancellation до send/после send и late response. Local timeout не означает rollback или остановку remote handler. Закрыть admission, fault pending, прервать IO и наблюдать handler drain; согласовать с MIT6a, не освобождать dependencies исполняющегося handler. Нельзя обещать принудительный обрыв in-process Task |
+| ENE6c | Fail-fast совместимость peers | Минимальный generated contract fingerprint/manifest и protocol version до business dispatch: несовпадение methods/DTO/generator policy отвергается явно, без вызова неверного handler. Решение о handshake/framing и миграции принять отдельно; это exact-match same-build защита, не обещание cross-version interoperability. Aether Hello/session fencing сохраняется как отдельный domain contract |
+| ENE6d | Операционная наблюдаемость IPC | Connection/request correlation, method, duration, queue/pending/in-flight/bytes, local timeout/late response/reconnect/overload/error counters через существующие diagnostics. Не писать payload; observer failures не меняют transport outcome. Domain conflict/validation возвращаются typed Aether result, transport failure и неизвестный remote outcome различаются |
+
+Исходная сверка: PipesInvocationClient хранит неограниченный pending map,
+CheckConnectedAsync опрашивает IsConnected с Task.Delay(1), timeout50s задан в
+InvokeAsync; PipesSignalServerConnection накапливает handler tasks и их request
+rentals, Dispose синхронно ждёт Task.WhenAll. Используемый TmTaskScheduler имеет
+unbounded channel. Это подтверждённые свойства кода, а не новый измеренный leak/
+deadlock. Limits/admission добавлять на границе Enerit; общий scheduler Core не
+переписывать автоматически. Awaitable connection signal и сокращение dedicated
+threads рассматривать после CPU/allocation profile существующего ENE5 workload.
+
+Общий fault/load acceptance ведётся в [MIT6a](../mithril/PLAN.md#mit6-укрепление-процессов-и-ipc--ревью-2026-10-23).
+Проверить sustained overload, cancellation во время admission/write/handler,
+disconnect с pending, slow/nonreading peer, malformed/mismatched peer и Stop;
+фиксировать upper bounds ресурсов и outcome, а не только число успешных calls.
+Remote per-request cancellation — отдельный возможный wire contract: потребитель
+не должен выводить его наличие из параметра CancellationToken. Transparent replay
+мутаций не вводится; operation identity/revision/recovery принадлежат Aether.
+
+ENE3/MMF, network RPC, streaming framework, canonical cross-architecture codecs и
+новые OS не являются prerequisites первого preview. ENE5 CPU/allocation profile
+остаётся отдельным измерительным шагом до оптимизаций.
+
+### ENE6a и MIT6a: первый контракт — 2026-10-23
+
+Пользователь поручил приступить к следующему шагу. Первый implementation slice
+ограничен finite pipes admission, наблюдаемым async stop и own-child load/stop
+proof. Wire21-byte header, payload1MiB, generated mapping и same-build requirement
+сохраняются; ENE6c/d, MMF и новая priority/streaming платформа не входят в срез.
+
+- PipesTransportOptions валидируются и копируются при App configuration/factory/
+  transport construction. Defaults: MaxPendingRequests64, MaxQueuedRequests64,
+  MaxConcurrentRequests64, MaxBufferedRequestBytes4MiB, MaxConnections4 (1..64),
+  RequestTimeout50s (>0, до24h). Caller cancellation/deadline может быть короче.
+- Client admission ограничивает принятые calls и waiters до сериализации.
+  Очередь ожидания отменяема, превышение даёт PipesInvocationOverloadedException
+  до вызова payload writer. Budget включает admission/connect/send/response.
+  Slot остаётся owned до writer cleanup, remote reply/disconnect и окончания
+  local decode/Invoke. Sent local cancel не освобождает remote capacity и не
+  посылает cancel frame; LateResponse сохраняется. Partial write cancellation
+  закрывает текущий channel, replay отсутствует.
+- Server admission общий для connections: read/queued/handler/response-write
+  count и сумма логических request payload bytes. Отказ перед payload rental/
+  handler entry; rejected frame дренируется одним4KiB scratch на connection и
+  получает bounded status1 ENERIT_OVERLOADED. Control framing не меняется.
+  Counts не являются process heap budget и не включают service-owned decoded
+  objects или pool cache. Accepted/waiting/draining connections также ограничены.
+- StopAsync закрывает admission и IO, завершает pending и наблюдает фактический
+  drain. Cancelling caller wait не отменяет ownership: Completion остаётся
+  незавершённым, borrowed dependencies живут до его исхода. Callback cancellation
+  errors сохраняются после cleanup; один failed callback не пропускает drain.
+  Decode-callback self-dispose только запрашивает stop и не ждёт самого себя.
+  App передаёт shutdown token в IStoppable до успешной final disposal.
+- Stop/control isolation первого профиля обеспечивается отдельным lifecycle
+  pipe Mithril; доменный overload не обещает произвольные IPC priority lanes.
+  Cooperative child drains; uncooperative child завершается владельцем через
+  существующие graceful/kill/reap budgets. In-process Task не объявляется
+  прерванным по timeout. Полный acceptance и границы — у MIT6a.
+
+Реализация и фактически завершённые source/published/package проверки ведутся в
+[STATUS](STATUS.md); эта запись не заменяет результаты и не закрывает ENE6 целиком.
 
 ### ENE4 App registration и lifecycle — 2026-10-14
 
@@ -137,8 +229,9 @@ listener. Use сохраняет existing local registration и не созда�
 Повторный вызов idempotent. Owned transports участвуют в App Start/Stop rollback;
 собственные предварительно зарегистрированные transports сохраняют ownership.
 
-Следующий локальный шаг до ENE5: строгая validation response payload до возврата
-результата и cleanup nested ReadBytes rentals при частично неуспешном decode.
+На момент ENE4 следующим локальным шагом до ENE5 была строгая validation response
+payload и cleanup nested ReadBytes rentals при частично неуспешном decode;
+они реализованы следующим этапом2026-10-14 ниже, не остаются текущим backlog.
 Backpressure, uncooperative shutdown и schema/version negotiation требуют
 отдельного решения; это не обещание production readiness после ENE4.
 

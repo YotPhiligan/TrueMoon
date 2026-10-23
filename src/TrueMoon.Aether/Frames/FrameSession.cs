@@ -63,6 +63,9 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
     public Task StartAsync(SceneSnapshot scene, int width, int height, string behavior = "normal", CancellationToken token = default)
         => StartCoreAsync(scene, null, null, width, height, behavior, token);
 
+    internal Task StartPreviewAsync(SceneSnapshot scene, int width, int height, CancellationToken token)
+        => StartCoreAsync(scene, null, null, width, height, "normal", token, role: RuntimeRole.EditPreview);
+
     /// <summary>Starts a selected artifact and waits for its acknowledged first presentation.</summary>
     public Task StartAsync(SceneSnapshot scene, GameBuildArtifact build, int width, int height, string behavior = "normal", CancellationToken token = default)
     { ArgumentNullException.ThrowIfNull(build); return StartCoreAsync(scene, build, null, width, height, behavior, token); }
@@ -98,7 +101,7 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
         finally { _gate.Release(); }
     }
     private async Task StartCoreAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, int width, int height, string behavior,
-        CancellationToken token, ReplacementAdmission.Lease? owner = null)
+        CancellationToken token, ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game)
     {
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
@@ -119,7 +122,9 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
             deadline.CancelAfter(TimeSpan.FromSeconds(15));
             try
             {
-                if (owner != null)
+                if (role == RuntimeRole.EditPreview)
+                    await supervisor.StartPreviewAsync(scene, deadline.Token).ConfigureAwait(false);
+                else if (owner != null)
                     await supervisor.StartForReplacementAsync(scene, build, checkpoint!, behavior, owner, deadline.Token).ConfigureAwait(false);
                 else if (build == null)
                 {

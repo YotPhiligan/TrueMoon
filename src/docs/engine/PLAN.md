@@ -1,7 +1,7 @@
 # TrueMoon.Aether: план игрового движка и редактора
 
 Зафиксировано **2026-10-13** по обсуждению будущего кастомного движка для одной
-не очень сложной 3D-игры. Состояние2026-10-22: **ENG0 определён;
+не очень сложной 3D-игры. Состояние2026-10-23: **ENG0 определён;
 ENG1 headless supervisor и ENG2 CPU viewport реализованы в bounded probe scope;
 ENG3a compiler/artifacts, ENG3b checkpoint/restore, ENG3c Replace/rollback
 и ENG3d Editor commands/20Replace proof реализованы2026-10-20; ENG4a/b/c, ENG4d bridge/ENG4d2 ordinary GPU Editor проверены в bounded scope;
@@ -9,14 +9,29 @@ ENG4e measured CPU/GPU baseline получен2026-10-21; ENG5a первый Vul
 и ENG5b gameplay input/camera реализованы/проверены2026-10-21;
 ARCH1a.1/2 immutable authoring model, scene aggregate/resolver и compatibility adapter реализованы2026-10-22;
 ENG5c.1/2 runtime scene consumer/комната и reach/interaction реализованы2026-10-22;
+ARCH1b.1 локальный Transform/query/history API и первый независимый GPU Edit preview проверены2026-10-23;
 остальной ARCH1, ENG5 и ENG6–ENG8 запланированы**.
 [Статус направления](STATUS.md), [общий план](../PLAN.md),
 [правила ведения](../PLANNING.md).
 
+План приложения **TrueMoon.Aether.Editor** согласован2026-10-22:
+[EDITOR_PLAN.md](EDITOR_PLAN.md) — единственный подробный checklist ED1–ED8 для
+перехода от стенда к рабочему инструменту. Первый срез: открыть сцену → изменить
+Transform → увидеть Edit preview → Undo/Redo → сохранить → повторно открыть.
+Уточнение2026-10-23: сначала общие contracts и минимальный ARCH1b с headless
+проверками, затем Edit preview и подключение редактируемого UI; первые engine API/preview
+реализованы. ED1a project description/ProjectSession и ED2a document/persistence
+API реализованы в первых profiles. ED2b подключает document UI commands/close
+policy; далее Transform/Undo/preview integration. Полный движок не является предварительным условием.
+IPC Editor↔Runtime — Enerit; frame transport отдельный.
+Engine/ARCH1 contracts ведутся здесь, общие UI capabilities — в UI плане.
+ED1a и ED2 document profile реализованы, остальной ED1–ED8 scope открыт;
+ENG7a/UIA1 и прежние passing результаты не означают их готовности.
+
 После UI INF7, выделения TrueMoon.Aether, ENG3/ENG4a–e, renderer ENG5a и input ENG5b
 ENG5c.1 подключает scene consumers и несколько примитивов;
 ENG5c.2 добавляет reach/raycast и per-object interaction;
-ближайший шаг — [ENG5c.3, collisions камеры](#eng5c3-следующий-шаг-collisions-камеры), затем HUD. ENG4e сохраняет
+при возврате к gameplay следующий шаг — [ENG5c.3, collisions камеры](#eng5c3-следующий-шаг-collisions-камеры), затем HUD. Прикладной маршрут редактора указан выше. ENG4e сохраняет
 CPU Debug budget breaches и allocation debt reference GPU staging path;
 измерения не подтверждают performance будущего3D. Прежняя
 [декомпозиция ENG3](#eng3-уточнение-плана-перед-реализацией--2026-10-19) сохраняет
@@ -44,7 +59,8 @@ adapter. [Решения и декомпозиция ARCH1](#arch1-entity-compon
 Документ сохраняет исследования, принятые contracts и маршрут. Реализация и
 фактические проверки отражаются отдельно в STATUS/HISTORY; сроков этот план
 не задаёт. Порядок развития framework остаётся в общем плане; bounded MIT4/ENE4 results могут стать
-основой игрового прототипа. Детальные engine/editor задачи ведутся только здесь.
+основой игрового прототипа. Детальные engine contracts ведутся здесь; задачи
+приложения Editor — в [единственном прикладном подплане](EDITOR_PLAN.md).
 
 ## TrueMoon.Aether: одна engine assembly — 2026-10-19
 
@@ -666,24 +682,192 @@ actor/operation/revision фиксируются в истории. Агент и
 
 ### Декомпозиция и критерии ARCH1
 
-ARCH1a.1/2 реализованы/проверены2026-10-22; ARCH1a в целом частичен, остальные
-подэтапы запланированы. Успешные ENG3/ENG5b checks не являются их proof.
+ARCH1a.1/2 реализованы/проверены2026-10-22; ARCH1a в целом частичен.
+Первый локальный ARCH1b.1 реализован/проверен2026-10-23; остальные подэтапы запланированы.
+Успешные ENG3/ENG5b checks не являются их proof.
 
 | ID | Результат и зависимости | Критерий завершения |
 | --- | --- | --- |
 | ARCH1a | Частично: ARCH1a.1/2 immutable model, scene aggregate/resolver и projection проверены; ENG5c.1 static runtime consumer добавлен | IDs/schema/inheritance, overrides, parent graph, versioned resolved authoring snapshot и primitive projection реализованы; live runtime world/full snapshot ещё нужны |
-| ARCH1b | Общий authoring/query API поверх ARCH1a | UI и headless client используют одинаковые команды; atomic batch, undo/redo, revision conflict, duplicate operation и schemas/history проверены |
+| ARCH1b | Частично: первый локальный Transform/query/history срез ARCH1b.1; остальные authoring операции запланированы | UI и headless client используют одинаковые команды; atomic batch, undo/redo, revision conflict, duplicate operation и schemas/history проверены |
 | ARCH1c | Полный snapshot и runtime edit поверх ARCH1a/b | Readonly default; Playing/Paused success, cancel/error rollback, unsupported participant, failed restore, stale generation, concurrent Stop и input/time reset проверены; данные вне snapshot не объявлены сохранёнными |
 | ARCH1d | Локальный MCP adapter поверх общих API; runtime edits требуют ARCH1c | Агент обнаруживает schemas/capabilities, читает и меняет сцену без UI, получает job/result/conflict, использует те же права/transactions; cleanup через App проверен |
 
-Порядок уточнён2026-10-22: ARCH1a.1/2 и минимальная runtime/renderer
-интеграция scene data ENG5c.1 и reach/interaction ENG5c.2 выполнены; далее collisions ENG5c.3. Полный toolset ARCH1b–d
+Порядок уточнён2026-10-23: для приложения Editor первый минимальный ARCH1b.1
+выполнен; следующий engine шаг — Edit preview по границам ниже; ED1a выполняется параллельно. ARCH1a.1/2,
+интеграция scene data ENG5c.1 и reach/interaction ENG5c.2 выполнены; при возврате
+к gameplay далее collisions ENG5c.3. Полный toolset ARCH1b–d
 развивается вместе с ENG7; новый контракт не закрывает ENG5/ENG7 или прежние
 UI/hardware ограничения.
 Первый profile schema IDs/multiplicity/dependencies зафиксирован ниже. Для
 оставшихся этапов уточнить disk/wire storage, вложенные варианты/коллекции,
 snapshot participants/bounds и lifecycle MCP adapter. Эти implementation details
 не меняют согласованную модель выше.
+
+### Основа API перед редактируемым UI — 2026-10-23
+
+Сверка базовых модулей2026-10-23: текущих Core/Cobalt/factory contracts достаточно
+для локальных шагов1–3 ниже. Первый finite admission/async stop и loaded-child
+control профиль [ENE6a/b и MIT6a](../PLAN.md#сверка-основы-перед-aether--2026-10-23)
+проверен; перед частыми preview/input RPC шага4 выбрать limits и подтвердить
+domain lifecycle. Полный fault matrix/trends остаётся отдельным, не требование
+закончить весь roadmap foundations.
+Текущие Aether64KiB payload bounds, command deadlines, Hello/heartbeat и fencing
+сохраняются; они не являются общей гарантией queue/in-flight bounds Enerit.
+
+По обсуждению с пользователем минимальные общие API и системы Aether реализуются
+перед их подключением к редактируемому UI. Завершение всего ARCH1a/b, generic
+World/ECS, physics/audio или runtime edit ARCH1c не требуется для первого среза.
+Подробные задачи приложения остаются в [ED1–ED8](EDITOR_PLAN.md).
+
+Порядок реализации и критерии:
+
+1. Уточнить contracts проекта/сцены: identity, versioned SceneDocument, document
+   revision, queries и ownership сессии. Использовать существующие immutable
+   ARCH1a.1/2 и resolver. ED1a project description/ProjectSession может идти
+   параллельно; прикладные пути/toolchain/settings принадлежат Editor.
+2. Реализовать минимальный ARCH1b: чтение сцены и изменение Transform по устойчивым
+   entity/component IDs с expected revision и operation ID. Валидировать значение,
+   применимость и resolved result до публикации; mutation/history/Undo/Redo имеют
+   одного владельца authoring session. Определить bounded history, redo policy,
+   atomic commit и поведение повторного operation ID в пределах сессии.
+3. Проверить этот API headless до подключения inspector/tools: успешная мутация,
+   validation/revision conflict, повтор operation, error/cancel до commit без
+   частичного изменения, Undo/Redo и атомарность поддержанных batches. Явно
+   определить точку commit: поздний cancel не маскирует уже применённый результат.
+   Сервисы подключаются через App/Cobalt/IFactory с явным session ownership;
+   authoring service не зависит от UI, темы, renderer или запущенного Runtime.
+4. Реализовать минимальный независимый Edit preview: принимает текущий resolved
+   документ и его revision, работает без ручного Build/Play и Game.Logic. Для
+   первого Transform достаточно существующей scene→render projection; полный
+   live World не требуется. Установить связь document revision с runtime
+   session/generation и presented frame, ошибки/замену/cancel и cleanup.
+5. После headless authoring и preview proof подключить минимальные ED3–ED5:
+   inspector/tools вызывают тот же API, UI не владеет второй реализацией mutations
+   или undo history. Срез проверяет Transform → preview → Undo/Redo → Save/reopen.
+
+Authoring API изменяет документ локально; Runtime API управляет отдельной живой
+сессией. Play не записывает состояние обратно в документ автоматически.
+Полные live snapshot/edit transactions остаются ARCH1c, MCP — ARCH1d; их будущие
+возможности не объявляются реализованными минимальным authoring/preview срезом.
+
+### ARCH1b.1: локальная Transform authoring session — 2026-10-23
+
+По следующему запросу пользователя выбран законченный первый API/headless срез
+шагов1–3 выше. Он использует SceneDocument/SceneResolver ARCH1a.1/2, не вводит
+новый World/ECS или общий command framework. Реализован/проверен:87новых cases,
+full Debug/Release2448/2448 в каждой configuration. Точные проверки/границы — в
+[HISTORY](HISTORY.md#arch1b1-headless-transform-authoring-и-история--2026-10-23).
+
+- Публичный UseAetherAuthoring подключается независимо от UseAether и совместим
+  с ним в любом порядке. App фиксирует limits и регистрирует stateless resolution
+  и IFactory<ISceneAuthoringSession,SceneDocument>. Нужен один вызов регистрации.
+  App startup не открывает session/runtime/IPC/window/device. Consumer владеет
+  product и Dispose до App, dependencies заимствуются; factory не удерживает products.
+- Сессия — единственный serialized владелец document/history/receipts. Read выдаёт
+  согласованные immutable Document/Resolved, ContentRevision и Undo/Redo counts.
+  SceneId сохраняется; Document.Revision увеличивается на Apply, Undo и Redo.
+  ContentRevision восстанавливает session-local content checkpoint при Undo/Redo.
+- Apply принимает frozen TransformEditBatch с operation GUID, actor и expected
+  revision. Entity/component occurrence IDs устойчивы; поддержан только visible
+  built-in Transform v1. Все9свойств заменяются instance overrides; catalogs,
+  parents, структурные patches и данные других компонентов сохраняются.
+- До единой публикации проверяются revision, targets/duplicates, finite float/
+  positive scales, shared scene resolution, exact Transform schema и nonsingular
+  parent-composed world matrices. Нет authoring limit64entities или material
+  validation renderer. Неожиданный preparation failure и cancel до commit не
+  оставляют частичных content/history/receipts. После commit cancel не меняет успех.
+- Combined Undo/Redo history ограничена MaxHistoryEntries (default100,0..1024).
+  0отключает историю; новый successful Apply, включая равные значения, создаёт
+  transaction и очищает Redo. Batch limit default64,1..4096, constructor ceiling4096.
+- Terminal success/reject receipts хранятся до Dispose с MaxOperations(default4096,
+  1..65536), без старых документов. Exact ID+intent/actor/revision/payload возвращает
+  исходную квитанцию даже после новых commits/Undo/cancel. Иной payload конфликтует.
+  При заполнении journal новые IDs отклоняются, записи не вытесняются: слепого
+  повторного apply нет. Cancel/unexpected failure до commit не фиксирует receipt.
+  Гарантия ограничена этой сессией, не переживает close/restart/reconnect автоматически.
+
+Критерии этого подэтапа: headless read/success, local/inherited Transform и patch
+preservation, atomic invalid batch/failed resolution, precommit cancellation,
+revision conflict/concurrency, exact/changed duplicate, bounded history/redo,
+operation journal capacity, Dispose/failed Create и App options/duplicate/both
+providers/composition. Команды и фактические результаты — у evidence, не в checklist.
+
+Следом — независимый Edit preview по шагу4, параллельно ED1a project/session.
+ED1/ED2 persistence, UI inspector/tools, create/delete/reparent, generic property/
+reset edits, полный audit/discovery/completion API и runtime edits остаются
+отдельными задачами. ARCH1b целиком и первый Editor save/reopen срез не закрыты.
+
+### Edit preview: первый engine profile — 2026-10-23
+
+Следующий запрос пользователя реализует шаг4 после ARCH1b.1. Общий engine API,
+bootstrap и native acceptance находятся в Aether; прикладное подключение к
+редактору остаётся [ED5](EDITOR_PLAN.md#ed5-edit-preview-и-инструменты-viewport).
+Это минимальный статический preview, не runtime World editing или новый renderer.
+
+- AetherHost владеет ScenePreview через injected IFactory<ScenePreview,FrameSession>.
+  Контроллер заимствует Frames/Supervisor/Gpu; один viewport owner используется
+  последовательно для game или preview. Неиспользованный preview не останавливает
+  игру. Active/unclean game нужно явно остановить до Show; factory rollback и App
+  close включают preview stop/drain до освобождения GPU/frame dependencies.
+- ShowAsync принимает immutable ResolvedSceneSnapshot и положительный extent.
+  PrimitiveSceneAdapter проверяет весь bounded render snapshot до остановки
+  рабочего preview. Первый profile — explicit Windows x64 Vulkan/OpenGL GPU;
+  existing CPU pattern transport отклоняется до изменения состояния.
+- Обновление — full snapshot replacement: старые connection/child drain/reap,
+  новая generation, Hello/LoadScene через bounded Enerit, затем existing GPU
+  frame transport и actual first-present. Build/Play/game project не нужны.
+  Профиль не обещает частые incremental updates; latency/trends измеряются отдельно.
+- RuntimeRole.EditPreview явно хранится в SessionLaunch bootstrap. PreviewId
+  основан на Aether/profile, не Game.Logic.dll. UseAetherPreviewRuntime допускает
+  только этот role/identity, Build=null и RequireRestore=false; shared runtime
+  host owns встроенный PreviewGameSession вместо GameBuildLoader. Camera(0,1,6),
+  tick0; Play/Step/input запрещены. Ordinary selected game role/loader сохранены.
+- ScenePreviewDocument связывает SceneId/Revision с полной runtime identity.
+  Describe и Presented проверяют current generation/surface и revision; исходный
+  ticket хранится рядом с image. LastPresented — только фактически показанный
+  кадр; старый ticket нельзя объявить новой revision. Show завершается после
+  первого Presented, текущий Document скрыт до readiness. Resize поддерживает
+  suspend0x0/resume и новое actual first-present; native bounds16..1920×16..1080.
+- Show/Resize допускают одну операцию, concurrent calls fail-fast без очереди.
+  Stale lower revision того же SceneId отклоняется; Stop сбрасывает границу для
+  новой authoring session. Stop/Dispose fencing исключает late readiness/frame
+  publish. Cancel/start/delivery/cleanup failures сохраняют исходную ошибку и
+  ownership до drain/retry. Preview не меняет authoring document/history.
+- Native proof выявил штатное GPU peer-close как ошибку producer. Исправлено
+  только wire boundary: clean EOF до header и точные Win32 broken-pipe HRESULT
+ 109/232/233 завершают producer с обязательным native cleanup. Partial header/
+  payload, invalid data, callback/native/cleanup errors остаются failures;
+  client ReadMessage остаётся strict. Broad IOException suppression не вводится.
+
+Критерии первого engine profile: headless immutable consumer/role, revision и
+actual-presentation fencing, preflight preservation, replacement/Undo/Redo,
+cancel/failure/retry/ownership, both DI providers и precision peer-close regressions;
+native Transform→pixels→Undo/Redo, resize/suspend/resume и close с pending start
+в Debug и published Release вне repo без Game.Logic.dll. Существующий game Editor
+native workflow повторяется как regression. Фактические scopes/команды — в
+[HISTORY](HISTORY.md#edit-preview-независимый-engine-profile--2026-10-23).
+
+ED1a project/session и ED2a/b document/persistence/UI commands реализованы.
+Следующий прикладной шаг — Transform inspector/Undo/Redo и подключение общего
+authoring/preview к normal Editor; project/runtime workflow развивается в ED1/ED6.
+Первый ED1–ED5 save/reopen сценарий, camera/picking/navigation, incremental live
+preview и полный runtime edit остаются открытыми. Новые Core/DI/IPC contracts,
+общие UI capabilities и протоколы frame/control этим этапом не создаются.
+
+### IPC Editor и Runtime: Enerit — 2026-10-23
+
+По решению пользователя **TrueMoon.Enerit — штатный IPC модуль Editor↔Runtime**:
+типизированные invocation contracts и generated adapters для управления, input,
+queries, operation results/progress/errors и frame descriptors/notifications.
+Текущая основа — same-build named pipes; новые preview/edit методы требуют своих
+bounded DTO, fencing, cancellation/disconnect semantics и совместимости с
+существующими wire versions/limits. Выбор модуля не означает готовность этих методов.
+
+Pixels/shared GPU images передаются отдельным существующим frame transport,
+а не payload управляющего IPC. Mithril сохраняет запуск/stop/reap процессов;
+локальные authoring операции не требуют IPC. Границы Enerit и transport readiness
+ведутся в [плане IPC](../enerit/PLAN.md); новый параллельный RPC stack не вводится.
 
 ### ARCH1a.1: первый шаг, модель и разрешение наследования
 
@@ -1405,7 +1589,7 @@ ENG1 и ENG2 proof выполнены2026-10-17; следующий code эта�
 | ENG4 | Vulkan shared GPU prototype — ENG4a–d2 проверены; ENG4e baseline получен2026-10-21 | Ordinary GPU Editor Build/Replace/checkpoint/first-present/lifecycle и measured CPU/GPU reference path подтверждены; Debug CPU budget breaches/temporary staging allocations сохранены, hardware/final acceptance открыты |
 | ENG5 | Небольшая играбельная 3D-сцена — ENG5a/b/c.1/2 room/reach/interaction реализованы | Далее ENG5c.3 collisions камеры, затем Alloy HUD/pause; level load/unload и standalone launch ещё нужны |
 | ENG6 | Hot Reload исследование | Зафиксирован supported edit набор/state behavior, unsupported edits переводятся в проверенный replacement; ALC только по подтверждённой потребности |
-| ENG7 | Минимальные инструменты и доставка — ENG7a основной экран выделен2026-10-22 | ENG7a: standalone UI shell/viewport/read-only inspector/commands; scene/asset editing, logs/input routing и остальная доставка сохраняют свои следующие этапы |
+| ENG7 | Рабочее приложение редактора и доставка; ENG7a/UIA1 — существующая основа | [ED1–ED8](EDITOR_PLAN.md): project/documents/editing/preview/workflow/extensions/reliability. Первый Transform/Undo/save/preview срез; scene/asset/runtime возможности не объявляются реализованными наличием shell |
 | ENG8 | Финальные robustness/performance checks | Frame time/latency/allocations/resource trends измерены на фиксированной сцене; reload/resize/crash/cancel/close проходят в объявленных limits |
 
 ENG4 может быть заменён проверенным transport для выбранной платформы после
@@ -1675,6 +1859,10 @@ physical DPI/loss/K7/final alpha остаются отдельными зада�
 
 ## ENG7a: основной экран редактора — 2026-10-22
 
+Этот исторический bounded этап остаётся реализованной основой. Дальнейшие
+прикладные задачи и acceptance развёрнуты в [ED1–ED8](EDITOR_PLAN.md), без
+дублирования checklist в общем engine плане.
+
 По запросу пользователя после PA8a приоритетно реализовать первый основной экран
 редактора; ENG5c.3 collisions и остальные engine задачи сохраняют свою точку
 продолжения. Это ограниченный UI этап ENG7, не завершение всего toolset.
@@ -1692,7 +1880,7 @@ physical DPI/loss/K7/final alpha остаются отдельными зада�
 - Первый dataset — demo room,7объектов; properties ID/XYZ/interactive/geometry/RGB.
   Список плоский, без притворной tree inheritance. Editable scene/asset/project
   persistence, runtime snapshot transactions, picking/gizmos/docking/logging и
-  editor camera/gameplay input выделяются в последующие ENG7b/ARCH1c/d задачи.
+  editor camera/gameplay input ведутся по ED1–ED8 и общим ARCH1c/d contracts.
 - Нет references на ManualTests executable. Source checkout использует Game.Logic
   как внешний пример входного проекта; game assembly загружается только в child.
   RuntimeProtocol/rendering/IPC/process lifecycle остаются в Aether, UI composition

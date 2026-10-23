@@ -9,6 +9,13 @@ public sealed class EditorViewport : Element
     private SkiaImageSource? _image;
     private ViewportFrame? _frame;
     private Func<bool>? _current;
+    private string _emptyText = "Соберите проект и запустите сцену";
+    /// <summary>Gets/sets the empty viewport explanation without changing frame ownership.</summary>
+    public string EmptyText
+    {
+        get => _emptyText;
+        set { VerifyAccess(); ArgumentNullException.ThrowIfNull(value); if (_emptyText != value) { _emptyText = value; Invalidate(); } }
+    }
     public EditorViewport() => Own(new ImageLifetime(this));
     public ViewportFrame? DrawnFrame { get; private set; }
     public Rect ImageBounds { get; private set; }
@@ -30,7 +37,7 @@ public sealed class EditorViewport : Element
         var line = new Color(28, 37, 52);
         for (var x = Bounds.X; x < Bounds.X + Bounds.Width; x += 32) context.Fill(new(x, Bounds.Y, 1, Bounds.Height), line);
         for (var y = Bounds.Y; y < Bounds.Y + Bounds.Height; y += 32) context.Fill(new(Bounds.X, y, Bounds.Width, 1), line);
-        context.Text("Соберите проект и запустите сцену", Bounds.X + 24, Bounds.Y + Math.Max(16, Bounds.Height / 2 - 12), new(142, 154, 170), 16, FontFamily);
+        context.Text(EmptyText, Bounds.X + 24, Bounds.Y + Math.Max(16, Bounds.Height / 2 - 12), new(142, 154, 170), 16, FontFamily);
     }
     private sealed class ImageLifetime(EditorViewport owner) : IDisposable
     { public void Dispose() { owner._image?.Dispose(); owner._image = null; owner._frame = null; owner._current = null; owner.DrawnFrame = null; } }

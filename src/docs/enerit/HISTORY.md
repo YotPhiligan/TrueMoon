@@ -1,5 +1,126 @@
 # Enerit: история работы и проверок
 
+## ENE6a: finite admission и наблюдаемая остановка — 2026-10-23
+
+Финальная проверка выявила queued-writer ownership defect: scheduled lambda
+читала linked CTS.Token после завершения Invoke и Dispose источника. Исключение
+возникало до SendAsync/finally, slot не освобождался. Детерминированный
+Client_StopDrainsWriterQueuedAfterItsCallerCancellationSourceWasDisposed
+блокирует оба writer workers, ставит третий call в очередь и завершает callers
+до запуска третьего writer. RED exit1 показал ObjectDisposedException из
+CancellationTokenSource.get_Token в lambda; после capture requestToken значением
+в admission/connect/send/registration GREEN1/1,25ms. Logs/TRX:
+TestResults/EneritAdmission-20261023/cts-red и cts-green. Предшествующий зависший
+full Debug прерван только в собственном helper tree; он не считается pass.
+Отдельно Close fence client admission теперь атомарен с admission gate;
+10×16 concurrent Invoke/Stop — bounded stress, не детерминированное доказательство
+этого interleaving. Последующие final проверки находятся в final3, прежние
+pre-fix результаты не переносятся на окончательный код.
+
+В published fixture возникла sharing violation при открытии ready-2.json после
+атомарной публикации; причина transient OS lock не установлена. Records.ReadTextAsync
+ждёт file readiness и повторяет только Win32 sharing/lock errors32/33 в пределах
+прежних8s. JSON deserialize/identity и IPC outcomes не повторяются и не подавляются.
+Первый отказ сохранён в TestResults/AppUnitsPipes/ene6-20261023-092815635;
+окончательная source/published/package проверка выполняется заново.
+
+По следующему запросу пользователя реализован первый ENE6a/MIT6a contract:
+PipesTransportOptions с validation/copy в App и generic/nongeneric factories;
+client pending64/queued64, server requests64/bytes4MiB/connections4 и local budget50s
+по умолчанию. Client ждёт bounded admission до serialization; excess завершается
+PipesInvocationOverloadedException. Server общий gate резервирует slots/логические
+payload bytes до rental и держит их через response-write cleanup; rejected frame
+дренируется4KiB scratch и отвечает status1 ENERIT_OVERLOADED без handler entry.
+Existing21-byte framing,1MiB wire cap, mapping и same-build compatibility прежние.
+
+Sent local cancellation не освобождает слот до remote reply/disconnect, окончания
+writer и local decode/Invoke. Это устраняет обход bounds через cancellation и
+раннее освобождение при заблокированных callbacks. Частичный cancelled write
+закрывает текущий stream, stale writer не переходит на новый connection, replay
+отсутствует. Прежние LateResponse и sent-call ObjectDisposed при Stop сохранены.
+Ожидание admission/connect/send/response учитывает caller/local timeout.
+
+StopAsync/IAsyncDisposable/Completion client/server/connection закрывают admission,
+прерывают IO и ждут фактические writers/handlers. Cancelled Stop wait сохраняет
+ownership, decode self-dispose не ждёт сам себя. Cleanup запускается асинхронно,
+blocking/throwing cancellation callback не блокирует сам вход в StopAsync и не
+позволяет пропустить handler drain. App lifetime forwardит stop token, а disposal
+идёт после успешного stop. New scopes/remote cancel/priority framework не введены.
+
+Broad testing workflow использовал dotnet-best-practices, code-testing-agent,
+finding-tests/run-tests и quality review. IDE findTests недоступен; Roslyn static
+pairing выполнен один раз, research/plan/status находятся в OS-temp, не в git.
+Initial regressions выявили ожидаемое старое предположение о снятии pending при
+local cancel; test теперь проверяет retained capacity и drain. Утраченный при
+рефакторинге LateResponse и точный ObjectDisposed исход восстановлены production
+fixes, их прежние assertions сохранены. Process oracle усилен до active2 при
+получении независимого Mithril control; EndOfStreamException принимается как
+наблюдённый IOException subtype, timeout не маскируется.
+
+Окончательные результаты на Windows x64/net10.0 сохранены отдельно от failed/
+pre-fix attempts в **TestResults/EneritAdmission-20261023/final3**:
+
+| Проверка | Текущий результат |
+| --- | --- |
+| Nonincremental Debug solution build | Exit0/errors0/warnings1522; warnings не подавлены |
+| Full solution Debug и Release | По2361/2361,10TRX/configuration, failed0/skipped0;40новых cases |
+| Enerit/runtime generator и Mithril | Runtime166/generator114/Mithril99 в каждой конфигурации |
+| Source/published App+units+pipes |44/44,46commands, Completed=true;11scenarios×2providers×Debug/published Release |
+| Fresh PackageReference consumers |132/132,8nupkgs/152commands/213source fingerprints, Completed=true; Cobalt/DI/DI без Cobalt analyzer |
+| Negative analyzer control | Omitted Enerit analyzer даёт expected CS0234/exit1, без ручного proxy fallback |
+
+Команды: `dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug`;
+`dotnet test TrueMoon.slnx --no-build --no-restore -c Debug`;
+`dotnet test TrueMoon.slnx --no-restore -c Release`. В final3 к test добавлены
+TRX/results directory и blame-hang60s; команды/exit codes находятся в
+solution-summary.json. Consumer команды:
+`pwsh -NoProfile -File ManualTests/AppUnitsPipesProbe/RunAppUnitsSmoke.ps1 -ResultsDirectory TestResults/AppUnitsPipes/ene6-20261023-093321145`
+и `pwsh -NoProfile -File ManualTests/UnitsPackageConsumer/RunPackageSmoke.ps1 -RunDirectory E:/source/my/TrueMoon/src/TestResults/UnitsPackages/ene6-20261023-093321145`.
+Consumer-summary.json указывает обе Completed=true матрицы; version
+0.2.2.7-alpha.units.20261023093351968, producer/source/analyzer fingerprints
+проверяются runner. Public PACKAGE и оба fixture README обновлены.
+Итоговый verification.json в final3 подтверждает188manual/213package source
+fingerprints без изменений после proof,24documents/800local links/49added anchors
+без missing targets/anchors, namespaces новых файлов и git diff --check.
+
+| Требование первого контракта | Точный test evidence |
+| --- | --- |
+| Options/IFactory/DI snapshot | Factories_SnapshotClientAndServerLimitsBeforeCreatingOwnedProducts; PipesOptions_AppRegistrationSnapshotsLimitsBeforeFactoryResolution; PipesOptions_AppServerFactoryPreservesConfiguredGlobalAdmissionLimit |
+| Bounded pending/wait и no serialization для rejected/expired | Client_BoundedQueueCancelsBeforeSerializationAndRejectsExcessWithoutSending; Client_AdmissionDeadlineExpiresWithoutSerializingOrReleasingSentRequest |
+| Sent cancellation, writer/decode ownership и partial write | Client_SentCancellationHoldsCapacityUntilLateReplyOrDisconnect; Client_DisconnectDuringSerializationHoldsSlotUntilWriterCleanup; Client_ResponseDecoderHoldsSlotUntilRentalAndCallbackAreReleased; Client_CancellationDuringPartialWriteAbortsConnectionWithoutReplay |
+| Shared server count/bytes/connections и recovery | Server_SharedRequestAndByteBudgetsRejectBeforeHandlerAndRecover; Server_ConnectionBudgetIncludesListenerAndRecoversAfterDisconnect |
+| Cancelled wait, blocked writer/callback и final drain | Server_CancelledStopWaitStillOwnsHandlerDrainAndAccounting; Server_StopInterruptsResponseWriterWhenPeerDoesNotRead; Server_BlockingOrThrowingCancellationCallbackCannotAbandonOwnedDrain; TransportLifecycle_ForwardsStopWaitTokenAndDisposesOnlyAfterOwnedDrain |
+| Queued CTS cleanup и self-dispose | Client_StopDrainsWriterQueuedAfterItsCallerCancellationSourceWasDisposed; Client_DisposeInsideResponseDecoderDrainsAfterCallbackWithoutSelfDeadlock |
+| Saturated IPC, independent stop, cooperative/kill/reap | AppUnits_SaturatedPipes_StopUsesIndependentControlAndReapsOwnedChild,4cases Cobalt/DI; дополнительно published и package matrix |
+
+Tests принадлежат PipesAdmissionTests/AppInvocationRegistrationTests/
+AppUnitsProcessTests в TrueMoon.Enerit.Tests. Source checks не заменяют standalone
+Mithril restart, native Editor viewport, performance или hardware acceptance;
+ENE6c/d, remote cancel, full MIT6a fault matrix и long trends остаются открытыми.
+[Текущая сводка](STATUS.md),
+[детальный межмодульный контракт](../mithril/PLAN.md#mit6a-первый-load-stop-профиль--2026-10-23).
+
+## ENE6, ревью перед интерактивным preview — 2026-10-23
+
+По запросу пользователя сверены plan/status и pipes client/server/connection,
+generated dispatch и scheduler paths. Unbounded pending/queues,50s default/local
+cancellation и blocking Dispose handler drain подтверждены чтением, не новым
+fault/load запуском. Предложены ENE6a–d: admission/limits, budget/async shutdown,
+exact-match compatibility и diagnostics; детали и приоритет — в
+[плане](PLAN.md#ene6-интерактивный-consumer-aether--ревью-2026-10-23).
+Локальный authoring Aether не блокируется. Исправлен устаревший UI next step.
+Код/wire/API не менялись, build/tests/performance не запускались; [общая запись](../HISTORY.md#сверка-основы-и-улучшения-ipcпроцессов--2026-10-23).
+
+## IPC для Aether Editor и Runtime — 2026-10-23
+
+По запросу пользователя Enerit закреплён как IPC модуль Editor↔Runtime:
+typed invocation/generated adapters для control/input/query/results и descriptors.
+Shared RAM/GPU frame payload остаётся отдельным transport, launch/stop/reap —
+у Mithril, authoring service Aether доступен локально без IPC/UI. Текущая база —
+same-build named pipes; новые preview/edit contracts остаются запланированными.
+[Общее решение](../engine/PLAN.md#ipc-editor-и-runtime-enerit--2026-10-23).
+Изменена документация; code/wire не менялись, build/tests не запускались.
+
 ## ENE5 pipes performance baseline — 2026-10-15
 
 После Core quality зафиксирован workload v1: separate client/server generated

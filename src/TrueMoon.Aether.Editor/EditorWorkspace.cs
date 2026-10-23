@@ -1,6 +1,7 @@
 using System.Globalization;
 using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Scenes.Authoring;
 using TrueMoon.Aether.Sessions;
 
 namespace TrueMoon.Aether.Editor;
@@ -9,14 +10,19 @@ namespace TrueMoon.Aether.Editor;
 public sealed class EditorWorkspace
 {
     private readonly SceneEntity[] _entities;
+    private readonly SceneSnapshot _initialScene;
+    private SceneAuthoringState? _document;
     private string? _selected;
-    public EditorWorkspace(SceneSnapshot scene)
+    public EditorWorkspace(SceneSnapshot scene, bool hasProject = true)
     {
-        ArgumentNullException.ThrowIfNull(scene); Scene = scene; _entities = scene.CopyEntities().ToArray(); _selected = _entities.FirstOrDefault()?.Id;
+        ArgumentNullException.ThrowIfNull(scene); Scene = _initialScene = scene; HasProject = hasProject; _entities = scene.CopyEntities().ToArray(); _selected = _entities.FirstOrDefault()?.Id;
     }
-    public SceneSnapshot Scene { get; }
-    public int EntityCount => _entities.Length;
-    public IReadOnlyList<string> EntityIds => Array.AsReadOnly(_entities.Select(x => x.Id).ToArray());
+    public SceneSnapshot Scene { get; private set; }
+    /// <summary>Gets whether build/game actions have an explicitly selected project.</summary>
+    public bool HasProject { get; }
+    public int EntityCount => _document?.Document.Entities.Length ?? _entities.Length;
+    public IReadOnlyList<string> EntityIds => _document == null ? Array.AsReadOnly(_entities.Select(x => x.Id).ToArray()) :
+        _document.Resolved.HierarchyOrder.Select(id => id.Value.ToString("D")).ToArray();
     public string? SelectedId => _selected;
     public SessionState State { get; private set; } = SessionState.Stopped;
     public GameEditorOperation Operation { get; private set; }
@@ -26,10 +32,22 @@ public sealed class EditorWorkspace
     public ulong Tick { get; private set; }
     public int? ProcessId { get; private set; }
     public event Action? SelectionChanged;
+    /// <summary>Raised on the UI owner when the authoring document identity/content changes.</summary>
+    public event Action? SceneChanged;
+    /// <summary>Displays immutable authoring content without projecting into the legacy 64-entity runtime format.</summary>
+    /// <param name="document">Current project-owned state, or null to return to the original workspace.</param>
+    public void SetDocument(SceneAuthoringState? document)
+    {
+        if (ReferenceEquals(_document?.Document, document?.Document)) return;
+        _document = document;
+        Scene = document == null ? _initialScene : new(document.Document.Id.Value.ToString("D"), document.Document.Revision, []);
+        if (_selected == null || !EntityIds.Contains(_selected)) _selected = EntityIds.FirstOrDefault();
+        SceneChanged?.Invoke(); SelectionChanged?.Invoke();
+    }
     public void Select(string id)
     {
         ArgumentNullException.ThrowIfNull(id);
-        if (!_entities.Any(x => x.Id == id)) throw new ArgumentException("Entity is not in this scene.", nameof(id));
+        if (!EntityIds.Contains(id)) throw new ArgumentException("Entity is not in this scene.", nameof(id));
         if (_selected == id) return; _selected = id; SelectionChanged?.Invoke();
     }
     public void Refresh(SessionStatus runtime, GameEditorStatus editor, Exception? commandError = null)
@@ -43,7 +61,7 @@ public sealed class EditorWorkspace
     public bool CanExecute(EditorCommand command)
     {
         if (!Enum.IsDefined(command)) throw new ArgumentOutOfRangeException(nameof(command));
-        if (Closed) return false;
+        if (Closed || !HasProject) return false;
         var idle = Operation == GameEditorOperation.Idle;
         return command switch
         {
@@ -60,6 +78,25 @@ public sealed class EditorWorkspace
     }
     public IReadOnlyList<KeyValuePair<string, string>> Properties()
     {
+        if (_document != null)
+        {
+            if (!Guid.TryParse(_selected, out var selected) || !_document.Resolved.Entities.TryGetValue(new(selected), out var item)) return [];
+            var values = new List<KeyValuePair<string, string>>
+            {
+                new("ID", item.Id.Value.ToString("D")), new("Родитель", item.ParentId?.Value.ToString("D") ?? "—"),
+                new("Определение", item.DefinitionId.Value.ToString("D"))
+            };
+            foreach (var component in item.Components.Values.OrderBy(x => x.TypeId.Value).ThenBy(x => x.Id.Value))
+            {
+                var role = component.TypeId == BuiltInComponents.TransformId ? "Transform" :
+                    component.TypeId == BuiltInComponents.AppearanceId ? "Appearance" :
+                    component.TypeId == BuiltInComponents.InteractionId ? "Interaction" : component.TypeId.Value.ToString("D");
+                values.Add(new(role, component.Id.Value.ToString("D")));
+                foreach (var property in component.Properties.OrderBy(x => x.Key, StringComparer.Ordinal))
+                    values.Add(new(property.Key, Format(property.Value.Value)));
+            }
+            return values.AsReadOnly();
+        }
         var entity = _entities.FirstOrDefault(x => x.Id == _selected); if (entity == null) return [];
         static string N(float x) => x.ToString("0.###", CultureInfo.InvariantCulture);
         var rows = new List<KeyValuePair<string, string>> { new("ID", entity.Id), new("X", N(entity.X)), new("Y", N(entity.Y)), new("Z", N(entity.Z)),
@@ -67,4 +104,12 @@ public sealed class EditorWorkspace
         if (entity.Primitive is { } p) { rows.Add(new("Красный", N(p.Red))); rows.Add(new("Зелёный", N(p.Green))); rows.Add(new("Синий", N(p.Blue))); }
         return rows.AsReadOnly();
     }
+    private static string Format(PropertyValue value) => value.Kind switch
+    {
+        PropertyValueKind.Null => "null", PropertyValueKind.Boolean => value.GetBoolean() ? "true" : "false",
+        PropertyValueKind.Integer => value.GetInteger().ToString(CultureInfo.InvariantCulture),
+        PropertyValueKind.Number => value.GetNumber().ToString("R", CultureInfo.InvariantCulture),
+        _ => "\"" + System.Text.Json.JsonEncodedText.Encode(value.GetString(),
+            System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping).ToString() + "\""
+    };
 }

@@ -18,8 +18,17 @@ public sealed record SessionStatus(SessionState State, SessionIdentity? Identity
 /// <param name="Identity">Expected runtime identity.</param><param name="Endpoint">Private control endpoint.</param>
 /// <param name="ReportDirectory">Runtime diagnostics destination.</param><param name="Behavior">Probe behavior selector.</param>
 /// <param name="Build">Optional selected game artifact.</param><param name="RequireRestore">Requires restore before any readiness/frame publication.</param>
+/// <param name="Role">Explicit game or built-in Edit preview role; preview forbids artifact/restore.</param>
 public sealed record SessionLaunch(SessionIdentity Identity, string Endpoint, string ReportDirectory, string Behavior = "normal",
-    GameBuildReference? Build = null, bool RequireRestore = false);
+    GameBuildReference? Build = null, bool RequireRestore = false, RuntimeRole Role = RuntimeRole.Game);
+/// <summary>Explicit child role. Edit preview uses only the built-in Aether scene consumer.</summary>
+public enum RuntimeRole
+{
+    /// <summary>Existing fixed/selected game runtime.</summary>
+    Game,
+    /// <summary>Static authoring preview; no game artifact or restore is allowed.</summary>
+    EditPreview
+}
 public sealed record SessionDeadlines
 {
     public TimeSpan Startup { get; init; } = TimeSpan.FromSeconds(15);
@@ -70,6 +79,7 @@ public sealed class SessionSupervisor : IAsyncDisposable
     private int _fence, _closing;
     private bool _disposed;
     public SessionStatus Status => Volatile.Read(ref _status);
+    internal RuntimeRole ActiveRole { get; private set; }
 
     public SessionSupervisor(IFactory<IRuntimeLease, SessionLaunch> factory, string hostId, string gameId, string directory,
         SessionDeadlines? deadlines = null, Action<SessionStatus>? trace = null)
@@ -88,6 +98,9 @@ public sealed class SessionSupervisor : IAsyncDisposable
     public Task StartAsync(SceneSnapshot scene, string behavior = "normal", CancellationToken token = default)
         => StartCoreAsync(scene, null, null, behavior, token);
 
+    internal Task StartPreviewAsync(SceneSnapshot scene, CancellationToken token)
+        => StartCoreAsync(scene, null, null, "normal", token, role: RuntimeRole.EditPreview);
+
     /// <summary>Explicitly starts a validated artifact on a fresh generation. Build completion never calls this automatically.</summary>
     public Task StartAsync(SceneSnapshot scene, GameBuildArtifact build, string behavior = "normal", CancellationToken token = default)
     { ArgumentNullException.ThrowIfNull(build); return StartCoreAsync(scene, build, null, behavior, token); }
@@ -104,7 +117,7 @@ public sealed class SessionSupervisor : IAsyncDisposable
         ReplacementAdmission.Lease owner, CancellationToken token) => StartCoreAsync(scene, build, checkpoint, behavior, token, owner);
 
     private async Task StartCoreAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, string behavior, CancellationToken token,
-        ReplacementAdmission.Lease? owner = null)
+        ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game)
     {
         ArgumentNullException.ThrowIfNull(scene);
         checkpoint?.ValidateFor(_hostId, scene);
@@ -118,7 +131,9 @@ public sealed class SessionSupervisor : IAsyncDisposable
             if (fence != Volatile.Read(ref _fence)) throw new OperationCanceledException("Start superseded by Stop.");
             if (_lease != null) throw new InvalidOperationException("Stop/reap the previous runtime before Start.");
             if (build != null) GameBuildArtifact.Open(build.DirectoryPath, _hostId, build.BuildId);
-            var identity = new SessionIdentity(_sessionId, checked(++_generation), _hostId, build?.BuildId ?? _gameId,
+            ActiveRole = role;
+            var identity = new SessionIdentity(_sessionId, checked(++_generation), _hostId,
+                role == RuntimeRole.EditPreview ? Hosting.BuildIdentity.PreviewId : build?.BuildId ?? _gameId,
                 Convert.ToHexString(RandomNumberGenerator.GetBytes(32)));
             _work?.Dispose(); _work = new(); _sequence = 0;
             Publish(new(SessionState.Starting, identity));
@@ -127,7 +142,7 @@ public sealed class SessionSupervisor : IAsyncDisposable
                 using var startup = CancellationTokenSource.CreateLinkedTokenSource(token, _work.Token);
                 startup.CancelAfter(_deadlines.Startup);
                 _lease = _factory.Create(new(identity, $"engine-{Guid.NewGuid():N}", _directory, behavior,
-                    build == null ? null : new(build.DirectoryPath, build.BuildId), checkpoint != null));
+                    build == null ? null : new(build.DirectoryPath, build.BuildId), checkpoint != null, role));
                 await _lease.LaunchAsync(startup.Token).ConfigureAwait(false);
                 Publish(Status with { ProcessId = _lease.ProcessId });
                 phase = "Hello";

@@ -20,5 +20,5 @@ public static class EditorScene
         => new() { Id = id, X = x, Y = y, Z = z, Interactive = interactive,
             Primitive = ScenePrimitive.FromPrimitive(new(Matrix4x4.CreateScale(sx, sy, sz) * Matrix4x4.CreateTranslation(x, y, z), color)) };
     public static string Name(string id) => id switch
-    { "red-cube" => "Красный куб", "green-cube" => "Зелёный куб", "switch" => "Синий куб", "floor" => "Пол", "back-wall" => "Задняя стена", "left-wall" => "Левая стена", "right-wall" => "Правая стена", _ => id };
+    { "red-cube" => "Красный куб", "green-cube" => "Зелёный куб", "switch" => "Синий куб", "floor" => "Пол", "back-wall" => "Задняя стена", "left-wall" => "Левая стена", "right-wall" => "Правая стена", _ => Guid.TryParse(id, out var guid) ? guid.ToString("D")[..8] + "…" + guid.ToString("D")[^8..] : id };
 }

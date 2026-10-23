@@ -9,6 +9,7 @@ using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
+using TrueMoon.Aether.Preview;
 
 namespace TrueMoon.Aether;
 
@@ -44,9 +45,7 @@ public static class AppConfigurationExtensions
             Register<GameBuildLoader, GameBuildReference>(services, resolver =>
                 new Factory<GameBuildLoader, GameBuildReference>(build => GameBuildLoader.Load(build,
                     snapshot.HostContractId, resolver.Resolve<IFactory<IGameSession, Type>>())));
-            Register<EntityResolver, SceneDocument>(services, _ => new Factory<EntityResolver, SceneDocument>(scene =>
-                new(scene.Definitions.OrderBy(d => d.Id.Value), scene.Schemas.OrderBy(s => s.TypeId.Value).ThenBy(s => s.Version))));
-            services.Singleton<SceneResolutionService>(resolver => new(resolver.Resolve<IFactory<EntityResolver, SceneDocument>>()));
+            RegisterSceneResolution(services);
             if (snapshot.ViewportTransportFactory != null)
                 Register<IGameViewportTransport, GpuResourceHost>(services, snapshot.ViewportTransportFactory);
             else if (snapshot.ViewportTransport != null)
@@ -66,6 +65,7 @@ public static class AppConfigurationExtensions
             });
             Register<GameBuildCompiler>(services, _ => new Factory<GameBuildCompiler>(() =>
                 new(snapshot.HostContractId, snapshot.BuildDirectory!, snapshot.BuildTimeout)));
+            Register<ScenePreview, FrameSession>(services, _ => new Factory<ScenePreview, FrameSession>(frames => new(frames)));
             Register<GameReplacement, (SessionSupervisor Supervisor, FrameSession Frames)>(services, _ =>
                 new Factory<GameReplacement, (SessionSupervisor Supervisor, FrameSession Frames)>(args =>
                     new(args.Supervisor, args.Frames, snapshot.ReplacementDeadlines)));
@@ -77,13 +77,22 @@ public static class AppConfigurationExtensions
                 resolver.Resolve<IFactory<FrameSession, (SessionSupervisor, GpuResourceHost)>>(),
                 resolver.Resolve<IFactory<GameBuildCompiler>>(),
                 resolver.Resolve<IFactory<GameReplacement, (SessionSupervisor, FrameSession)>>(),
-                resolver.Resolve<IFactory<GameEditor, (SessionSupervisor, FrameSession, GameBuildCompiler, GameReplacement)>>()));
+                resolver.Resolve<IFactory<GameEditor, (SessionSupervisor, FrameSession, GameBuildCompiler, GameReplacement)>>(),
+                resolver.Resolve<IFactory<ScenePreview, FrameSession>>()));
             services.Singleton<AetherHost>(resolver => resolver.Resolve<IFactory<AetherHost>>().Create()!)
                 .Singleton<AetherAppLifetime>(resolver => new AetherAppLifetime(resolver.Resolve<AetherHost>()))
                 .Singleton<IStartable>(resolver => resolver.Resolve<AetherAppLifetime>())
                 .Singleton<IStoppable>(resolver => resolver.Resolve<AetherAppLifetime>());
         });
         return context;
+    }
+
+    internal static void RegisterSceneResolution(IServicesRegistrationContext services)
+    {
+        Register<EntityResolver, SceneDocument>(services, _ => new Factory<EntityResolver, SceneDocument>(scene =>
+            new(scene.Definitions.OrderBy(d => d.Id.Value), scene.Schemas.OrderBy(s => s.TypeId.Value).ThenBy(s => s.Version))));
+        if (!services.Exist<SceneResolutionService>())
+            services.Singleton<SceneResolutionService>(resolver => new(resolver.Resolve<IFactory<EntityResolver, SceneDocument>>()));
     }
 
     private static void Register<T>(IServicesRegistrationContext services, Func<IServiceResolver, IFactory<T>> factory)

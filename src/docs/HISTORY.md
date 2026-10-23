@@ -1,5 +1,181 @@
 # TrueMoon: история общей документации
 
+## ED2b: документы в UI Editor — 2026-10-23
+
+App/Cobalt/IFactory подключают New/Open/Save/SaveAs/Close и document-aware native
+Exit. Inline Save/Discard/Cancel, owner-thread ViewModel/typed View/Style,
+dirty/errors/path drafts, actual IO drain/forced upgrade и callback-failure retry
+реализованы. Raw authoring properties читаются без legacy64 projection; inspector
+ещё read-only, preview не подключён к normal UI. Project picker/runtime switch
+остаются ED1/ED4/ED6. [Контракт и точные tests](engine/HISTORY.md#ed2b-документы-в-обычном-ui--2026-10-23).
+
+74новых cases; full2878/2878 Debug и Release по10TRX/failed0/skipped0,
+Editor358/Aether1008, UI661/Hosting85. Nonincremental build0errors/1531warnings.
+Source/published app вне repo: documents по19UI actions/4PNG/5saved files,
+Save/reopen/conflict/recovery/failed Exit Save/Cancel/Discard. Вся native matrix
+8cases/18PNG/4reaped children, validation0/0 и zero UI/GPU owners;10headless cases
+отдельно,19consumer commands всего с6ожидаемыми negative exits. Source242/Editor45/
+binary8 fingerprints и PNG проверяются; TestResults/DocumentsUi-20261023/verification.json.
+Новых engine/wire/UI-library APIs/dependencies нет; fresh package, physical/
+performance/golden scopes не повторялись. Далее Transform inspector/Undo/Redo
+и independent preview; ED2 single-project document profile завершён, весь ED1–ED8 нет.
+
+## ED2a: document/persistence API Editor — 2026-10-23
+
+Versioned .aetherscene codec/store и owned document/authoring session подключены
+через App/Cobalt/IFactory. Atomic Load/Save/SaveAs, dirty по ContentRevision,
+captured save, Undo checkpoint, SHA256 conflict guard и document Save/Discard/Cancel
+API реализованы. Project dirty/busy guard и cleanup retry сохраняют ownership;
+общая UI Close/Switch/Exit транзакция остаётся открытой. Новых engine/wire/UI-library
+dependencies нет. Детали и exact requirement matrix —
+[в истории Aether](engine/HISTORY.md#ed2a-документ-сцены-и-persistence--2026-10-23).
+
+143новых cases, full2804/2804 Debug и Release по10TRX/failed0/skipped0;
+Core117/Cobalt179/generator91/Enerit166/generator114/Mithril99/UI661/Hosting85/
+Aether1008/Editor284. Nonincremental build0errors/1531warnings.
+Source Debug/published Release вне repo:10headless и6native cases/10PNG/4reaped
+children, Vulkan0/0 и zero owned UI/GPU resources.17commands включая6ожидаемых
+negative exits.229solution source/39Editor source/8binary hashes проверены;
+TestResults/Documents-20261023/verification.json. Published scene check read-only,
+Save/reopen/atomic failure — direct filesystem tests. Fresh packages и аппаратные/
+performance/golden gates не повторялись. Далее document UI commands/close policy,
+затем Transform/Undo/preview; первые4ED2 пункта закрыты, остальные ED1–ED8 открыты.
+
+## ED1a: проект и сессия Editor — 2026-10-23
+
+UseAetherEditorProjects предоставляет App/Cobalt/IFactory project/session layer,
+strict versioned .aetherproj и selected SDK preflight без окна/engine/build.
+Failed/cancelled Open сохраняет active, Close fences/drains; ownership и Microsoft
+DI проверены. Normal launch больше не ищет checkout/demo; .aetherproj/--check-project
+работают по explicit path, legacy csproj/game workflow сохраняется. Детали:
+[контракт ED1a](engine/EDITOR_PLAN.md#ed1a-первый-projectsession-profile--2026-10-23),
+[requirement/tests/commands/evidence](engine/HISTORY.md#ed1a-projectsession-и-запуск-вне-repository--2026-10-23).
+
+Final full2661/2661 Debug и2661/2661 Release,10TRX/configuration,failed/skipped0,
+Aether1008/Editor141;92новых cases. Nonincremental Debug0errors/1531warnings.
+216source hashes; final source/published6native cases/10PNG/4reaped children,
+4headless SDK/invalid-global.json cases,11commands/32Editor source/8binary hashes.
+Published app/project/CWD вне repository без demo DLL. Workspace profiles не
+стартуют compiler/child; legacy workflow повторён с Vulkan validation0/0.
+Во всехnative случаях project/UI/GPU ownership освобождён.
+Evidence TestResults/Projects-20261023/verification.json; initial passes до
+последней UI placeholder correction сохранены отдельно.
+
+Engine/runtime/wire/UI-library APIs/dependencies не менялись; packages/golden/
+performance/hardware acceptance не повторялись. ED1 имеет3completed metadata/
+startup tasks, общая document/runtime switch transaction остаётся открытой.
+Следом ED2 scene format/document/load/save/reopen, затем authoring/preview UI.
+Новых общих Core/Cobalt prerequisites нет; publication/commit не выполнялись.
+
+## Независимый Edit preview Aether — 2026-10-23
+
+После ARCH1b.1 реализован первый GPU Edit preview: resolved document/revision
+передаётся через существующий Enerit control built-in paused render child,
+Mithril сохраняет process ownership. Build/Play/Game.Logic не требуются; App/
+Cobalt/IFactory управляют созданием и lifetime. Preview готов только после actual
+presented ticket; replacement, resize/suspend/resume, cancel/Stop/cleanup retry
+проверены. Engine profile не подключён к ordinary Editor UI; следом ED1a project/
+session, документы/save/reopen и UI integration. Детали/requirement map:
+[engine HISTORY](engine/HISTORY.md#edit-preview-независимый-engine-profile--2026-10-23).
+
+Фактически выполнены nonincremental Debug build0errors/1542warnings и full solution
+**2569/2569 Debug и2569/2569 Release**,10TRX/configuration, failed/skipped0:
+Core117/Cobalt179/generator91/Enerit166/generator114/Mithril99/UI661/Hosting85/
+Aether1008/Editor49.121новыйcase, final focused134/134 с13existing GPU pipe cases.
+Native preview Debug/published Release: по6PNG/5reaped children; published вне repo
+без Game.Logic.dll. Старый Editor workflow Debug/published Release: по8commands/
+3PNG/2reaped children. Все4cases validation0/0 и zero owned resources.
+Normal peer disconnect defect GPU producer воспроизведён native и исправлен
+точно на wire read/write; partial messages и arbitrary IO failures остаются faults.
+
+Fresh package-only consumers8/8 (Debug/Release × build/publish × Cobalt/MS DI):
+9nupkgs/22commands, isolated version0.2.2.7-alpha.preview.20261023110622747.
+Это managed API/ownership proof; native drawing доказан отдельно.188solution/
+140native/301package source hashes, retained failures/exact commands и итоговый
+verification.json — в TestResults/EditPreview-20261023. Новых межмодульных
+dependencies/assembly/protocol versions нет; пакеты не публиковались.
+ED1–ED8/полный authoring/World/edit/MCP и hardware/final UI scope не закрыты.
+
+## ARCH1b.1: локальное authoring API Aether — 2026-10-23
+
+По запросу «давай следующий шаг» реализован минимальный общий scene query/
+Transform/history API без UI и Runtime. UseAetherAuthoring/IFactory предоставляют
+caller-owned sessions, shared resolver и finite limits; atomic batches, revision/
+operation identity, cancel/error и Undo/Redo используют одного owner. Новых
+assembly/межмодульных dependencies нет. Детали и requirement/test map ведутся
+у [Aether](engine/HISTORY.md#arch1b1-headless-transform-authoring-и-история--2026-10-23).
+
+Фактически выполнен nonincremental Debug build:0errors/1522warnings. Full solution
+**2448/2448 Debug и2448/2448 Release**,10TRX/configuration, failed0/skipped0:
+Core117/Cobalt179/generator91/Enerit166/generator114/Mithril99/UI661/Hosting85/
+Aether887/Editor49.87новых headless cases, strict focused run87/87. Evidence:
+TestResults/Authoring-20261023/solution/summary.json; текущие Aether production/test
+source hashes139зафиксированы и проверены после runs. Fresh package proof8/8:
+Debug/Release × build/publish × Cobalt/Microsoft DI,9nupkgs/22commands,299producer
+source hashes, isolated local feed/cache. Package final Completed=true:
+TestResults/Authoring-20261023/package-20261023-102244573/summary.json.
+Markdown/namespace/diff и aggregate evidence — TestResults/Authoring-20261023/verification.json.
+Native viewport, physical UI и performance
+не повторялись. Первый ENE6a/MIT6a source/published44/package132 остаётся предыдущим
+профилем, не новым результатом этого изменения.
+
+Следующий engine шаг — независимый Edit preview через Enerit; ED1a project/session
+параллельно. ED1/ED2 storage и прикладной Transform/preview/save/reopen срез ещё
+нужны; full ARCH1b, runtime World/edit/MCP и прежние hardware ограничения открыты.
+
+## Первый ENE6a/MIT6a implementation slice — 2026-10-23
+
+По запросу приступить к следующему шагу реализованы finite pipes admission/
+options через DI/IFactory и observable Stop/Completion. При cancellation сохраняется
+ownership до фактического writer/handler/decode drain; process Stop использует
+отдельный Mithril lifecycle pipe, не насыщенный domain RPC. Mithril/Core/Cobalt
+runtime API не менялись, wire/generator mapping/same-build scope сохранены.
+Queued-writer CTS lifetime defect подтверждён детерминированным RED/GREEN и
+исправлен capture токена значением. Ready-file sharing violation в fixture
+обрабатывается bounded retry только Win32 errors32/33; JSON/IPC не повторяются.
+
+Окончательный final3 full solution2361/2361 Debug/Release,10TRX/configuration,
+failed0/skipped0;40новых cases. Nonincremental Debug build0errors/1522warnings.
+Source/published44/44 и fresh independent package132/132,8nupkgs/152commands,
+expected omitted Enerit analyzer CS0234, Completed=true. Предыдущие failed/pre-fix
+runs сохранены и не считаются passing финального кода. [Все команды, tests и границы](enerit/HISTORY.md#ene6a-finite-admission-и-наблюдаемая-остановка--2026-10-23),
+[process acceptance](mithril/HISTORY.md#mit6a-saturated-ipc-и-независимый-process-stop--2026-10-23).
+
+Native Editor viewport, performance, physical UI/hardware, полный fault matrix
+и long resource trends не повторены/не закрыты. Первый bounded prerequisite
+готов; локальный ARCH1b/headless и ED1a остаются следующим engine/application шагом.
+
+## Сверка основы и улучшения IPC/процессов — 2026-10-23
+
+По запросу пользователя проверены общие и Core/Cobalt/Enerit/Mithril/Aether планы/
+статусы, quality matrix и ключевые transport/process integration paths. Чтение
+исходников подтвердило unbounded pending map и scheduler queues Enerit,50s default
+timeout, local-only request cancellation и synchronous handler drain в Dispose.
+Это свойства текущего кода, не воспроизведённые новые leaks/deadlocks. Aether уже
+передаёт command deadlines, ограничивает control payload64KiB и имеет Hello/
+heartbeat/session fencing; Mithril уже имеет bounded restart, stop fence и kill/
+reap owned process. Parent observer запрашивает App cancel; abrupt parent death
+с uncooperative child и длительные resource trends отдельного proof не имеют.
+Aether NativeRuntimeLease читает stdout/stderr через ReadToEndAsync: pipe дренируется,
+но retained text до завершения процесса не ограничен.
+
+Вывод: локальный ARCH1b/headless и ED1a могут продолжаться без нового полного
+Core/Cobalt quality прохода. До частого Runtime preview предложены ENE6a/b и MIT6a:
+точечный contract/admission/resource bounds и совместный stop/drain/kill/reap
+fault/load proof. ENE6c/d — fail-fast совместимость и IPC diagnostics; MIT6b/c —
+наблюдаемость по потребителю, bounded logs, parent-death/resource acceptance.
+Новые транспорты/OS, расширенный restart и оптимизации после CPU/allocation profile
+не блокируют первый срез. Публичные API и новые гарантии ещё не утверждены.
+Единый детальный межмодульный acceptance ведётся у Mithril; [порядок и ссылки](PLAN.md#сверка-основы-перед-aether--2026-10-23).
+
+Исправлены устаревшие current next steps Core/Cobalt/Enerit и открытый DI статус
+в quality matrix; исторические даты/counts сохранены. Изменена документация,
+production code/API не менялись, build/tests/native/packages/performance не
+запускались. Проверка links/added anchors/whitespace сохраняется в
+TestResults/FoundationReview-20261023/verification.json; её scope — документация.
+Итог:21documents/782local links/38added anchors, missing targets/anchors0;
+ED1–ED8/40unchecked tasks сохранены, source changes0, git diff --check прошёл.
+
 ## Исправление структуры проектов — 2026-10-21
 
 По запросу пользователя исправлены замечания [исходного аудита](#аудит-размещения-типов-и-namespace--2026-10-21).

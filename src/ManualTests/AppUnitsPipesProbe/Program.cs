@@ -30,7 +30,7 @@ try
         return 0;
     }
     if (args is not [var scenario, var provider, var directory] || !Fixture.Scenarios.Contains(scenario)) return 2;
-    Fixture.EnvironmentFor(provider, directory);
+    Fixture.EnvironmentFor(provider, directory, scenario);
     Console.WriteLine("RESULT " + JsonSerializer.Serialize(await Fixture.RunAsync(scenario, provider, directory)));
     return 0;
 }
@@ -40,24 +40,34 @@ namespace AppUnitsPipesProbe
 {
     internal static class Fixture
     {
-        internal static readonly string[] Scenarios = ["payload", "concurrent", "cancel-request", "remote-error", "restart", "budget", "stop-pending", "startup-failure", "parent-exit"];
-        internal static void EnvironmentFor(string provider, string directory)
+        internal static readonly string[] Scenarios = ["payload", "concurrent", "cancel-request", "remote-error", "restart", "budget", "stop-pending", "startup-failure", "parent-exit", "saturated-stop", "saturated-kill"];
+        internal static void EnvironmentFor(string provider, string directory, string scenario = "parent-exit")
         {
             Directory.CreateDirectory(directory);
             Environment.SetEnvironmentVariable("TM_APP_PIPES_PROVIDER", provider);
             Environment.SetEnvironmentVariable("TM_APP_PIPES_DIR", directory);
             Environment.SetEnvironmentVariable("TM_APP_PIPES_ENDPOINT", "app-pipes-" + Guid.NewGuid().ToString("N"));
+            Environment.SetEnvironmentVariable("TM_APP_PIPES_SCENARIO", scenario);
         }
-        internal static IApp Build(string provider, string scenario, Action<UnitProcessDiagnostic>? onProcess = null)
+        internal static IApp Build(string provider, string scenario, Action<UnitProcessDiagnostic>? onProcess = null, Action? onControl = null)
         {
+            var saturated = Environment.GetEnvironmentVariable("TM_APP_PIPES_SCENARIO") is "saturated-stop" or "saturated-kill";
             var builder = provider == "di" ? App.Builder(c => c.UseDI()) : App.Builder(_ => { });
             return builder.Setup(c =>
             {
                 c.UseDiagnostics(d => d.OnEvent(e =>
                 {
                     if (e.Category == "UnitProcess" && e.Payload is UnitProcessDiagnostic trace) onProcess?.Invoke(trace);
+                    if (saturated && Environment.GetEnvironmentVariable("-u") is not null && e.Payload is "exit requested")
+                        onControl?.Invoke();
                 }));
-                c.PipesServiceTransport(_ => Environment.GetEnvironmentVariable("TM_APP_PIPES_ENDPOINT")!);
+                if (saturated)
+                    c.PipesServiceTransport(_ => Environment.GetEnvironmentVariable("TM_APP_PIPES_ENDPOINT")!, new PipesTransportOptions
+                    {
+                        MaxPendingRequests = 2, MaxQueuedRequests = 1, MaxConcurrentRequests = 2,
+                        MaxBufferedRequestBytes = 1024, MaxConnections = 2, RequestTimeout = TimeSpan.FromSeconds(30)
+                    });
+                else c.PipesServiceTransport(_ => Environment.GetEnvironmentVariable("TM_APP_PIPES_ENDPOINT")!);
                 if (Environment.GetEnvironmentVariable("-u") is null) c.UseInvocationService<IProbeService>();
                 c.AddUnit(u => u.Services(r => r.Singleton<UnitState>().Composite<ProbeService, IProbeService, IStartable, IStoppable>())
                     .ListenInvocationService<IProbeService, ProbeService>(),
@@ -74,12 +84,25 @@ namespace AppUnitsPipesProbe
         internal static async Task<int> ChildAsync()
         {
             var provider = Environment.GetEnvironmentVariable("TM_APP_PIPES_PROVIDER")!;
-            await using var app = Build(provider, "child");
+            UnitState state = null!;
+            await using var app = Build(provider, "child", onControl: () =>
+                Records.Write(Path.Combine(state.Directory, "control-requested.json"),
+                    new { Pid = Environment.ProcessId, ActiveHandlers = Volatile.Read(ref state.ActiveHolds) }));
+            state = app.Services.Resolve<UnitState>()!;
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             await app.StartAsync(timeout.Token);
             await app.Services.Resolve<IAppLifetimeHandler>()!.WaitAsync(timeout.Token);
+            if (state.Scenario is "saturated-stop" or "saturated-kill")
+                Records.Write(Path.Combine(state.Directory, "control-stop.json"), new { Pid = Environment.ProcessId, EnteredHandlers = state.Holds });
             await app.StopAsync();
-            CheckServer(app.Services.Resolve<IInvocationServer<IProbeService>>()!);
+            var server = (PipesInvocationServer<IProbeService>)app.Services.Resolve<IInvocationServer<IProbeService>>()!;
+            CheckServer(server);
+            if (state.Scenario is "saturated-stop" or "saturated-kill")
+                Records.Write(Path.Combine(state.Directory, "server-stopped.json"), new
+                {
+                    Pid = Environment.ProcessId, server.ActiveRequestCount, server.BufferedRequestBytes,
+                    server.ConnectionCount, WorkersCompleted = server.Completion.IsCompletedSuccessfully
+                });
             var listener = app.Services.Resolve<UnitParentProcessEventsHandler>()!;
             await listener.Completion.WaitAsync(TimeSpan.FromSeconds(5));
             return 0;
@@ -87,6 +110,7 @@ namespace AppUnitsPipesProbe
         internal static async Task<object> RunAsync(string scenario, string provider, string directory)
         {
             if (scenario == "parent-exit") return await ParentExitAsync(provider, directory);
+            if (scenario is "saturated-stop" or "saturated-kill") return await SaturatedStopAsync(scenario, provider, directory);
             var diagnostics = new ConcurrentQueue<UnitProcessDiagnostic>();
             await using var app = Build(provider, scenario, diagnostics.Enqueue);
             var service = app.Services.Resolve<IProbeService>()!;
@@ -199,6 +223,140 @@ namespace AppUnitsPipesProbe
                 { if (!observer.HasExited) { observer.Kill(entireProcessTree: true); await observer.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)); } observer.Dispose(); }
             }
         }
+        private static async Task<object> SaturatedStopAsync(string scenario, string provider, string directory)
+        {
+            var diagnostics = new ConcurrentQueue<UnitProcessDiagnostic>();
+            await using var app = Build(provider, scenario, diagnostics.Enqueue);
+            var observers = new List<Process>(); var identities = new List<Ready>();
+            try
+            {
+                await app.StartAsync();
+                var ready = await ObserveAsync(directory, 1, observers, identities);
+                var child = observers.Single();
+                var service = app.Services.Resolve<IProbeService>()!;
+                var client = (PipesInvocationClient<IProbeService>)app.Services.Resolve<IInvocationClient<IProbeService>>()!;
+                var controller = app.Services.Resolve<UnitsController>()!;
+                var handles = (System.Collections.IDictionary)typeof(UnitsController).GetField("_unitHandles", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(controller)!;
+                var handle = (TrueMoon.Mithril.Units.ProcessUnitHandle)handles[1]!;
+                Check(!string.IsNullOrWhiteSpace(ready.ControlEndpoint) && ready.ControlEndpoint != ready.Endpoint && ready.ControlEndpoint != "tm_" + ready.Endpoint,
+                    "Lifecycle control shares the saturated domain endpoint.");
+                await ConnectAsync(client);
+                var first = service.HoldAsync();
+                var second = service.HoldAsync();
+                for (var invocation = 1; invocation <= 2; invocation++)
+                {
+                    var path = Path.Combine(directory, $"waiting-1-{invocation}.json");
+                    await Records.WaitAsync(path);
+                    using var entered = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+                    Check(entered.RootElement.GetProperty("Pid").GetInt32() == ready.Pid &&
+                        entered.RootElement.GetProperty("Invocation").GetInt32() == invocation, "Load handler belongs to another child.");
+                }
+                var queued = service.HoldAsync();
+                using (var admissionTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(8)))
+                    while (client.QueuedRequestCount != 1) await Task.Delay(10, admissionTimeout.Token);
+                var pendingBefore = client.PendingRequestCount; var queuedBefore = client.QueuedRequestCount;
+                Check(pendingBefore == 2 && queuedBefore == 1, "Client load did not fill admission and queue.");
+                var overload = await FailureAsync(service.InspectAsync(-1, "must-not-run"));
+                Check(overload is PipesInvocationOverloadedException, "Excess request did not fail at bounded client admission.");
+
+                var elapsed = Stopwatch.StartNew();
+                // Keep domain IPC open until Mithril has delivered control and reaped its loaded child.
+                await controller.StopAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                await app.StopAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                elapsed.Stop();
+                var failures = new List<Exception>();
+                foreach (var request in new Task[] { first, second, queued })
+                {
+                    var error = await FailureAsync(request);
+                    Check(error is IOException or ObjectDisposedException or OperationCanceledException,
+                        "Stopping a saturated client hid, retried or timed out a request.");
+                    failures.Add(error);
+                }
+                await child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+                await client.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+                CheckClient(client); CheckController(controller);
+                Check(handle.Completion.IsCompletedSuccessfully && handle.RestartCount == 0 && handle.LastRestartError is null,
+                    "Owned exit monitor did not drain cleanly.");
+                var ownedProcess = typeof(TrueMoon.Mithril.Units.ProcessUnitHandle).GetField("Process", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(handle);
+                Check(ownedProcess is null, "Owned process wrapper was not released after reap.");
+                Check(!File.Exists(Path.Combine(directory, "waiting-1-3.json")) && !File.Exists(Path.Combine(directory, "ready-2.json")),
+                    "Queued work dispatched during stop or a stopped child restarted.");
+                using var controlRequest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "control-requested.json")));
+                using var controlStop = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "control-stop.json")));
+                Check(controlRequest.RootElement.GetProperty("Pid").GetInt32() == ready.Pid &&
+                    controlRequest.RootElement.GetProperty("ActiveHandlers").GetInt32() == 2 &&
+                    controlStop.RootElement.GetProperty("Pid").GetInt32() == ready.Pid &&
+                    controlStop.RootElement.GetProperty("EnteredHandlers").GetInt32() == 2,
+                    "Independent lifecycle control did not reach the loaded child.");
+                var traces = diagnostics.Where(x => x.UnitIndex == 1).ToArray();
+                var released = traces.Single(x => x.Stage == UnitProcessStage.ProcessReleased);
+                var killed = scenario == "saturated-kill";
+                Check(released.ProcessId == ready.Pid && released.ExitCode == child.ExitCode &&
+                    released.Reason == (killed ? "Killed" : "Graceful"), "Wrong process release outcome.");
+                Check(traces.Count(x => x.Stage == UnitProcessStage.Killing) == (killed ? 1 : 0) &&
+                    traces.Where(x => x.Stage == UnitProcessStage.Killing).All(x => x.ProcessId == ready.Pid), "Forced termination decision mismatch.");
+                Check(traces.Any(x => x.Stage == UnitProcessStage.StopRequested && x.ProcessId == ready.Pid) &&
+                    traces.Any(x => x.Stage == UnitProcessStage.Stopped && x.ProcessId == ready.Pid) &&
+                    !traces.Any(x => x.Stage is UnitProcessStage.StopFailed or UnitProcessStage.SequenceFailed or UnitProcessStage.RestartScheduled),
+                    "Saturated shutdown diagnostics contain an ownership failure.");
+                Check(traces.All(x => x.ParentProcessId == Environment.ProcessId && x.TerminationDelay == 3000), "Owned process identity or graceful budget changed.");
+                var handlersDrained = 0;
+                for (var invocation = 1; invocation <= 2; invocation++)
+                {
+                    var path = Path.Combine(directory, $"handler-left-1-{invocation}.json");
+                    if (killed) Check(!File.Exists(path), "Uncooperative handler unexpectedly drained.");
+                    else
+                    {
+                        using var left = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+                        Check(left.RootElement.GetProperty("Pid").GetInt32() == ready.Pid &&
+                            left.RootElement.GetProperty("Invocation").GetInt32() == invocation &&
+                            left.RootElement.GetProperty("Cancelled").GetBoolean(), "Cooperative handler did not observe shutdown cancellation.");
+                        handlersDrained++;
+                    }
+                }
+                var serverDrained = File.Exists(Path.Combine(directory, "server-stopped.json"));
+                if (killed)
+                    Check(child.ExitCode != 0 && !serverDrained, "Uncooperative child escaped forced termination.");
+                else
+                {
+                    Check(child.ExitCode == 0 && serverDrained, "Cooperative child did not complete transport drain.");
+                    await CheckStoppedAsync(directory, ready);
+                    using var stopped = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "server-stopped.json")));
+                    Check(stopped.RootElement.GetProperty("Pid").GetInt32() == ready.Pid &&
+                        stopped.RootElement.GetProperty("ActiveRequestCount").GetInt32() == 0 &&
+                        stopped.RootElement.GetProperty("BufferedRequestBytes").GetInt64() == 0 &&
+                        stopped.RootElement.GetProperty("ConnectionCount").GetInt32() == 0 &&
+                        stopped.RootElement.GetProperty("WorkersCompleted").GetBoolean(), "Cooperative server resources remain live.");
+                }
+                Check(elapsed.Elapsed < TimeSpan.FromSeconds(10), "IPC drain prevented bounded process stop.");
+                await app.StopAsync().WaitAsync(TimeSpan.FromSeconds(5));
+                return new
+                {
+                    Scenario = scenario, Provider = provider, ParentPid = Environment.ProcessId,
+                    ChildPids = new[] { ready.Pid }, ExitCodes = new[] { child.ExitCode },
+                    PendingBefore = pendingBefore, QueuedBefore = queuedBefore,
+                    OverloadError = overload.GetType().Name, RequestErrors = failures.Select(x => x.GetType().Name).ToArray(),
+                    FailedRequests = failures.Count, Pending = client.PendingRequestCount, Queued = client.QueuedRequestCount,
+                    WorkersCompleted = client.Completion.IsCompletedSuccessfully, ClientCleanupObserved = true,
+                    Cleanup = ownedProcess is null && handles.Count == 0, Restarts = handle.RestartCount,
+                    AppCancelled = app.Services.Resolve<IAppLifetime>()!.AppCancellationToken.IsCancellationRequested,
+                    ControlEndpoint = ready.ControlEndpoint, DomainEndpoint = ready.Endpoint, ControlObservedPid = ready.Pid,
+                    EnteredHandlers = 2, ActiveHandlersAtControl = controlRequest.RootElement.GetProperty("ActiveHandlers").GetInt32(),
+                    HandlersDrained = handlersDrained, ServerDrained = serverDrained,
+                    KillCount = traces.Count(x => x.Stage == UnitProcessStage.Killing), ReleaseOutcome = released.Reason,
+                    ReleasedPid = released.ProcessId, MonitorCompleted = handle.Completion.IsCompletedSuccessfully,
+                    TerminationDelay = 3000, StopMilliseconds = elapsed.ElapsedMilliseconds
+                };
+            }
+            finally
+            {
+                foreach (var observer in observers)
+                {
+                    if (!observer.HasExited) { observer.Kill(entireProcessTree: true); await observer.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)); }
+                    observer.Dispose();
+                }
+            }
+        }
         private static async Task<Ready> ObserveAsync(string directory, int generation, List<Process> observers, List<Ready> identities)
         {
             var ready = await Records.ReadyAsync(directory, generation);
@@ -225,18 +383,15 @@ namespace AppUnitsPipesProbe
         }
         private static void CheckClient(IInvocationClient<IProbeService> client)
         {
-            var type = typeof(PipesInvocationClient<IProbeService>);
-            var pending = type.GetField("_responses", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(client)!;
-            Check((int)pending.GetType().GetProperty("Count")!.GetValue(pending)! == 0, "Pending map not empty after App.Stop.");
-            foreach (var name in new[] { "_listenTaskScheduler", "_taskScheduler" })
-                Check(((TmTaskScheduler)type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(client)!).Completion.IsCompletedSuccessfully, "Client workers live after App.Stop.");
+            var pipes = (PipesInvocationClient<IProbeService>)client;
+            Check(pipes.PendingRequestCount == 0 && pipes.QueuedRequestCount == 0, "Client admission not empty after App.Stop.");
+            Check(pipes.Completion.IsCompletedSuccessfully, "Client workers live after App.Stop.");
         }
         private static void CheckServer(IInvocationServer<IProbeService> server)
         {
-            var type = typeof(PipesInvocationServer<IProbeService>);
-            Check((bool)type.GetField("_disposed", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(server)!, "Server live after App.Stop.");
-            Check(((Task)type.GetField("_listener", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(server)!).IsCompletedSuccessfully, "Server listener incomplete.");
-            Check(((TmTaskScheduler)type.GetField("_taskScheduler", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(server)!).Completion.IsCompletedSuccessfully, "Server worker incomplete.");
+            var pipes = (PipesInvocationServer<IProbeService>)server;
+            Check(pipes.ActiveRequestCount == 0 && pipes.BufferedRequestBytes == 0 && pipes.ConnectionCount == 0, "Server resources live after App.Stop.");
+            Check(pipes.Completion.IsCompletedSuccessfully, "Server workers incomplete.");
         }
         private static void CheckController(UnitsController controller)
             => Check(((System.Collections.IDictionary)typeof(UnitsController).GetField("_unitHandles", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(controller)!).Count == 0, "Controller retains handles.");

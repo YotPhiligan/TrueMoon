@@ -1,5 +1,48 @@
 # Mithril: история реализации и проверок
 
+## MIT6a: saturated IPC и независимый process stop — 2026-10-23
+
+По запросу приступить к следующему шагу реализован
+[первый load-stop профиль](PLAN.md#mit6a-первый-load-stop-профиль--2026-10-23)
+в существующих AppUnitsPipesProbe и process tests. Limits/async stop реализованы
+в Enerit; Mithril runtime, public API, readiness/restart policies не менялись.
+
+Сценарии saturated-stop/saturated-kill сначала занимают pending2 и bounded queue1,
+подтверждают excess overload до handler и выполняют unit stop через независимый
+control pipe, пока active handlers2. Cooperative child подтверждает handler/server
+drain и exit0; uncooperative child — kill/reap, exact PID/nonzero exit, no restart
+и client/monitor completion. Kill не объявляется исполнением managed finally.
+Прежний App.Stop-first сценарий остаётся регрессией, но не используется как
+доказательство control delivery под нагрузкой: он мог сначала отменить RPC.
+
+Manual runner расширен36→44 Debug apphost/published Release scenarios;
+independent packages108→132 cases (11scenarios×2config×2delivery×3provider).
+Новые validators сохраняют exact PID/control endpoint, active2-at-control,
+graceful3s/reap5s budgets,10s combined oracle, pending/queue0, outcomes и
+нулевой restart. EndOfStreamException принимается как IOException subtype;
+неожиданные timeout/errors не скрываются. Final commands/evidence размещаются в
+TestResults/EneritAdmission-20261023/final3. Итог: full solution2361/2361 Debug/
+Release, Mithril99/configuration, failed0/skipped0; source/published44/44 и fresh
+package132/132,8nupkgs/152commands/213source fingerprints, оба Completed=true.
+Final consumer paths: TestResults/AppUnitsPipes/ene6-20261023-093321145 и
+TestResults/UnitsPackages/ene6-20261023-093321145; omitted-analyzer CS0234 ожидаем.
+
+Полный standalone restart matrix, OS permission/reap failure injection,
+parent-death containment, other OS и long resource trends этим не закрываются.
+Общая transport ownership/review история — [Enerit](../enerit/HISTORY.md#ene6a-finite-admission-и-наблюдаемая-остановка--2026-10-23).
+
+## MIT6, ревью process и IPC composition — 2026-10-23
+
+Сверены plan/status, ProcessUnitHandle и parent observer, Aether native lease/
+supervisor. Existing restart/stop fence/owned kill-reap сохраняются; OS start,
+IPC connect и Aether Ready различаются. Предложены MIT6a–d: общий Enerit fault/
+load shutdown contract, status по реальному consumer, resource/parent-death/log
+retention acceptance и отложенные restart возможности. Подробные tasks ведутся
+в [плане](PLAN.md#mit6-укрепление-процессов-и-ipc--ревью-2026-10-23),
+границы очередности — в [общей записи](../HISTORY.md#сверка-основы-и-улучшения-ipcпроцессов--2026-10-23).
+Код/API не менялись, build/tests/native/packages не запускались. Новые guarantees
+или failures uncooperative shutdown этим чтением не подтверждены.
+
 ## Graceful wait после ошибки доставки exit — 2026-10-21
 
 ENG4e CPU/GPU measurements выявили преждевременный kill первого GPU child при

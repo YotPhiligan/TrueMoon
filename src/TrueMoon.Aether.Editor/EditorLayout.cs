@@ -16,7 +16,8 @@ public sealed class EditorLayout : ElementList
     { foreach (var child in Children) child.Measure(available, text); return new(1100, 680); }
     protected override void ArrangeCore(Rect area)
     {
-        var toolbar = Math.Min(52, area.Height); var footer = Math.Min(30, Math.Max(0, area.Height - toolbar));
+        var toolbar = Math.Min(Math.Max(52, Children[0].DesiredSize.Height), area.Height);
+        var footer = Math.Min(30, Math.Max(0, area.Height - toolbar));
         Children[0].Arrange(new(area.X, area.Y, area.Width, toolbar));
         Children[4].Arrange(new(area.X, area.Y + area.Height - footer, area.Width, footer));
         var height = Math.Max(0, area.Height - toolbar - footer); var gap = Math.Min(6, area.Width / 6);

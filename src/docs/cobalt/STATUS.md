@@ -1,5 +1,17 @@
 # Cobalt / DI: состояние и точка продолжения
 
+Связанная проверка — **2026-10-23, ENE6a/MIT6a integration**: runtime179/179 и
+generator91/91 Debug/Release в полном solution2361/configuration; App options/
+factory/lifecycle и fresh package132 проверяют оба providers, включая DI без
+Cobalt analyzer. Runtime/generator/adapter API не менялись; allocation/performance
+baseline не повторён. [Команды и scope](../enerit/HISTORY.md#ene6a-finite-admission-и-наблюдаемая-остановка--2026-10-23).
+
+Последняя работа — **2026-10-23, сверка предпосылок Aether**.
+Повторный полный DI quality проход перед локальным authoring API не требуется:
+текущие регистрации/lifetime/IFactory достаточны в проверенном scope. Allocation
+backlog и новые scopes не становятся engine blockers. [Общая сверка](../PLAN.md#сверка-основы-перед-aether--2026-10-23).
+Код/API не менялись, build/tests/performance/consumers не запускались.
+
 Интеграция потребителя — **2026-10-22, Aether DI1–DI4**:
 owned service graphs Editor/runtime переведены на injected factories и App-local
 registrations; общие Factory/typed IFactory/lifecycle adapters находятся в Contracts.
@@ -129,9 +141,10 @@ warnings1185. Debug unit suites/IPC/units/UI/native не повторены.
 
 ## Следующий конкретный шаг
 
-По общему порядку — **UI quality: свежий package/Hosting proof** на Cobalt/DI и
-explicit fonts по [локальному контракту UI](../alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15).
-Core, Enerit ENE5 и Mithril MIT5 завершили bounded проход; [общий срез](../QUALITY.md).
+Актуальный общий порядок — минимальный ARCH1b/headless и параллельный ED1a;
+перед частым preview предложен точечный Enerit/Mithril quality шаг. Прежний UI
+package/Hosting проход выполнен в своём scope и не является текущим prerequisite.
+[Сверка зависимости](../PLAN.md#сверка-основы-перед-aether--2026-10-23).
 
 Cobalt performance backlog перед пересмотром migration: исследовать32B warm resolve,
 96B open-generic и transient overhead на том же paired workload, затем повторить

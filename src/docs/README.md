@@ -23,7 +23,7 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 | Mithril | TrueMoon.Mithril: units, process handles и startup/hosting/lifetime/restart policies | [План](mithril/PLAN.md), [статус](mithril/STATUS.md), [история](mithril/HISTORY.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: controls/tree/bindings/layout/input, UI sessions, rendering, окна и HUD | [План](alloy/PLAN.md), [статус](alloy/STATUS.md), [стандартный стиль](alloy/DEFAULT_STYLE.md), [история](alloy/HISTORY.md) |
 | Aether / Engine | TrueMoon.Aether: engine contracts, sessions/control, owned child bridge и CPU frame transport; отдельные example/game/test consumers | [README](../TrueMoon.Aether/README.md), [план](engine/PLAN.md), [статус](engine/STATUS.md), [история](engine/HISTORY.md) |
-| Aether Editor | Приложение модуля Aether, TrueMoon.Aether.Editor: standalone основной экран со стандартной рамкой, центральным viewport, inspector и App-owned game commands | [Запуск](../TrueMoon.Aether.Editor/README.md), [ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
+| Aether Editor | Приложение модуля Aether, TrueMoon.Aether.Editor: существующий экран/viewport и план перехода к рабочему project/scene editor | [Запуск](../TrueMoon.Aether.Editor/README.md), [план приложения ED1–ED8](engine/EDITOR_PLAN.md), [основа ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
 
 Contracts и Core — разные независимые сборки. DI provider выбирается на builder boundary; IPC, units и UI подключаются по потребности приложения. UI runtime не требует App или конкретного backend; Hosting является опциональной интеграцией. Подробная карта фактических зависимостей хранится в общем плане.
 
@@ -34,10 +34,12 @@ Engine implementation/contracts теперь объединены в [TrueMoon.A
 тесты находятся в TrueMoon.Aether.Tests. Следующий этап после bounded quality прохода определён в
 [сводной матрице качества](QUALITY.md); это оценка scopes и evidence, не новый roadmap.
 
-- [Игровой движок и редактор](engine/PLAN.md), [статус](engine/STATUS.md):
-  одна 3D-игра, Editor/Game.Runtime в разных процессах, preview frames и
-  обновление игровой логики. ENG0 определён, ENG1 headless supervisor реализован
-  и проверен в ManualTests; ENG2 CPU viewport реализован, replacement и ENG3–ENG8 ещё запланированы.
+- [Игровой движок](engine/PLAN.md), [статус](engine/STATUS.md): одна 3D-игра,
+  Editor/Runtime в разных процессах, frames и обновление игровой логики; датированные
+  реализации и ограничения находятся в STATUS/HISTORY.
+- [Приложение редактора ED1–ED8](engine/EDITOR_PLAN.md): переход от существующей
+  ENG7a/UIA1 основы к project/document editor, Edit preview, undo и расширениям.
+  Первый срез — Open → Transform → preview → Undo/Redo → Save → reopen.
 
 ## Практические входные точки
 

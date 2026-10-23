@@ -1,5 +1,12 @@
 # TrueMoon.Aether.Editor
 
+[План развития рабочего приложения](../docs/engine/EDITOR_PLAN.md) задаёт ED1–ED8:
+project/documents/editing/preview/workflow/extensions/reliability. Первый сквозной
+срез — открыть сцену, изменить Transform, увидеть Edit preview, Undo/Redo,
+сохранить и повторно открыть. ED1a project/session и ED2a document/persistence API
+реализованы; ED2b подключает документы к обычному UI. Transform editing и Edit
+preview ещё требуют интеграции.
+
 Первый основной экран редактора: стандартное borderless оформление Alloy,
 панель управления, список объектов сцены слева, живой3D viewport в центре,
 таблица свойств выбранного объекта справа и строка состояния снизу. Desktop WinExe
@@ -13,14 +20,16 @@
 dotnet run --project TrueMoon.Aether.Editor
 ```
 
-В source checkout автоматически выбран `ManualTests/Game.Logic/Game.Logic.csproj`
-и `Game.Logic.RoomGame`. Нажмите **«Собрать» → «Запустить»**: приложение собирает
+Без аргументов открывается пустая рабочая область с отключёнными игровыми
+командами. Приложение не ищет demo или repository root. Для прежней демонстрации
+явно укажите `--project ManualTests/Game.Logic/Game.Logic.csproj`.
+Нажмите **«Собрать» → «Запустить»**: приложение собирает
 внешнюю Game.Logic, запускает отдельный runtime в Pause и показывает комнату.
 Затем доступны Play/Пауза/Шаг/Стоп. Новая сборка во время работы готовит candidate;
 «Применить сборку» использует существующий checkpoint/Replace и сохраняет состояние.
 Ошибки возвращаются в инспектор; занятые/недоступные действия отключены.
 
-Для другого проекта:
+Для существующего игрового csproj сохранён explicit legacy запуск:
 
 ```powershell
 dotnet run --project TrueMoon.Aether.Editor -- `
@@ -29,17 +38,214 @@ dotnet run --project TrueMoon.Aether.Editor -- `
 
 Выбранный тип должен реализовывать Aether game/render/checkpoint contracts,
 `Runtime.IGameSessionEntry.Create(IServiceResolver?)` и
-принимать демонстрационную SceneSnapshot. Поддержка project/scene files, asset
-browser и сохранения пользовательской сцены относится к следующему toolset.
+принимать демонстрационную SceneSnapshot. Этот legacy путь сохраняет прежнюю demo
+сцену; обычный `.aetherproj` открывается с пустой сценой, доступной для New/Open.
+
+## Проект и сессия ED1a
+
+Обычный запуск: `TrueMoon.Aether.Editor.exe --project E:/games/MyGame/MyGame.aetherproj`.
+Проверка без окна: `TrueMoon.Aether.Editor.exe --check-project E:/games/MyGame/MyGame.aetherproj`.
+Второй вариант выводит JSON с project/SDK identity и результатом закрытия сессии;
+ошибка завершает процесс с ненулевым кодом. SDK preflight запускает только
+`dotnet --version` из каталога игры, учитывает `global.json` и требует SDK10+.
+MSBuild, compiler и runtime при открытии не запускаются; совместимость самой игры
+проверяется отдельной сборкой.
+
+Пример `.aetherproj`:
+
+```json
+{
+  "formatVersion": 1,
+  "id": "bd4bb877-de43-4819-a422-df8259e38daf",
+  "name": "My Game",
+  "gameProject": "Game/MyGame.csproj",
+  "entryAssembly": "MyGame.dll",
+  "entryType": "MyGame.Session",
+  "scenesRoot": "Scenes",
+  "contentRoot": "Content"
+}
+```
+
+UTF8, optional BOM, максимум64KiB вместе с BOM. Неизвестные/повторные поля и
+неподдержанная версия отклоняются. ID устойчивый и непустой; Name≤128,
+relative paths/entryType≤512, entryAssembly≤128. Пути разрешаются относительно
+manifest directory, нормализуются и не могут лексически выйти из неё; csproj и
+оба корня должны существовать. Это trusted-local profile, не sandbox для links.
+Scene files и project/user preferences имеют отдельные владельцы; recent projects,
+theme/layout и machine-specific settings в manifest не сохраняются.
+
+`UseAetherEditorProjects()` подключает API без окна/engine/native startup.
+`EditorProjects.OpenAsync/CreateAsync/CloseAsync` управляют одним active project;
+`IFactory<ProjectSession, ProjectSessionArguments>` создаёт owned products.
+Create сначала проверяет существующий игровой проект/корни/SDK и атомарно
+публикует новый manifest без overwrite. Шаблоны игры и project wizard ещё не введены.
+
+```csharp
+await using var app = App.Build(context => context.UseAetherEditorProjects());
+await app.StartAsync();
+var projects = app.Services.Resolve<EditorProjects>()!;
+var session = await projects.OpenAsync(@"E:\games\MyGame\MyGame.aetherproj");
+var request = session.CreateBuildRequest(sourceRevision: 0);
+await projects.CloseAsync();
+```
+
+Для примера нужны `using TrueMoon.Aether.Editor;`,
+`using TrueMoon.Aether.Editor.Projects;` и `using TrueMoon.Dependencies;`.
+Session заимствуется потребителями; owner закрывает её при successful switch,
+Close и App shutdown. Ошибка/cancel подготовки сохраняют прежнюю active session.
+Concurrent Open/Create отклоняется; Close отменяет и ждёт accepted work, исключая
+late publish. После Close сервис можно использовать снова; App shutdown закрывает
+admission окончательно. Если отмена пришла после atomic manifest write, валидный
+новый файл остаётся, но cancelled candidate не становится active.
+Для тестов/интеграций store/toolchain/factory можно зарегистрировать до UseX;
+они заимствуются coordinator и принадлежат DI согласно их регистрации.
+
+Открытие `.aetherproj` пока выбирает project/build identity, но не загружает сцену:
+ED2a предоставляет document loading/save/reopen API, ED2b — панель документов и
+Save/Discard/Cancel. Выбор другого проекта через UI, общие меню/диалоги и runtime
+coordination развиваются в ED1/ED4/ED6. Engine Edit preview доступен отдельно.
+
+## Документ сцены ED2a
+
+Подключение без окна, compiler и game activation:
+
+```csharp
+await using var app = App.Build(context =>
+{
+    context.UseAetherAuthoring();
+    context.UseAetherEditorDocuments();
+    context.UseAetherEditorProjects();
+});
+await app.StartAsync();
+var projects = app.Services.Resolve<EditorProjects>()!; // composition root
+var project = await projects.OpenAsync(@"E:\games\MyGame\MyGame.aetherproj");
+var documents = project.Documents!; // borrowed; owned by ProjectSession
+await documents.LoadAsync("Main.aetherscene"); // relative to scenesRoot
+var state = documents.Read();
+await documents.SaveAsync();
+if (await documents.CloseAsync(DocumentCloseChoice.Cancel))
+    await projects.CloseAsync();
+```
+
+Дополнительно нужны `using TrueMoon.Aether;` и
+`using TrueMoon.Aether.Editor.Documents;`. Порядок UseX существенен: authoring до
+documents, documents до projects. Регистрация только UseAetherEditorProjects
+сохраняет metadata-only поведение. Store и typed
+`IFactory<SceneDocumentSession, ResolvedProject>` можно заменить до UseDocuments;
+products принадлежат вызывающему коду либо ProjectSession, borrowed aliases не
+становятся владельцами. Document session владеет engine authoring session,
+заимствует store/factory и не освобождает их самостоятельно.
+
+Минимальный `.aetherscene`:
+
+```json
+{
+  "formatVersion": 1,
+  "id": "15d92d9a-65fa-43e1-ad84-17a489e0e26a",
+  "revision": 0,
+  "entities": [],
+  "definitions": [],
+  "schemas": []
+}
+```
+
+Сохраняется исходный authoring document со stable IDs, parent/base links,
+definition/instance patches, masks/restores и schemas. Resolved scene, runtime
+и Undo history в файл не входят. Значения имеют явный kind: `null`, `boolean`,
+`integer` (Int64), `number` (finite Double), `string`; отсутствие свойства
+отличается от explicit null/default. UTF8 optional BOM,≤4MiB включая BOM,
+JSON depth32, строгие required/unknown/duplicate/case-sensitive fields. Version1
+не мигрирует неизвестные версии автоматически. Полные collection limits и
+[контракт формата](../docs/engine/EDITOR_PLAN.md#ed2a-documentpersistence-api--2026-10-23).
+
+NewAsync создаёт unsaved document; LoadAsync готовит/валидирует candidate до
+смены текущего. Apply/Undo/Redo вызывают общий engine API; committed state и
+history имеют одного владельца. Dirty сравнивает ContentRevision с saved
+checkpoint, поэтому Undo к сохранённому содержимому снимает dirty при новой
+Document.Revision. Save пишет захваченный immutable snapshot; следующие edits
+разрешены и остаются dirty. Failed/cancelled SaveAs сохраняет path/checkpoint.
+
+Paths разрешаются внутри scenesRoot и требуют существующего родительского
+каталога. Store использует временный файл рядом и atomic rename/replace;
+SaveAs в другой путь — create-only. Save текущего файла проверяет SHA256 ранее
+наблюдавшихся bytes, включая whitespace/BOM: внешний change/delete даёт
+SceneFileConflictException, следует reopen либо выбрать новый SaveAs path.
+Постоянный пустой `.write-lock` sidecar согласует cooperating writers через
+exclusive handle; после закрытия handle ownership не остаётся. Profile trusted
+local/optimistic: произвольный внешний rename между проверкой и replace,
+filesystem links и power-loss durability не покрываются этим контрактом.
+
+CloseAsync принимает Save/Discard/Cancel (default Cancel), optional SaveAs path
+для untitled документа. Cancel сохраняет dirty document; failed Save также
+оставляет его доступным. Close/Dispose действительно ждут accepted IO даже при
+игнорировании cancellation; cleanup fault удерживает products для retry.
+Project Close/Switch отклоняет dirty/busy document. Обычный переход сначала
+разрешает document policy; terminal App/owner Dispose явно выполняет forced
+discard/drain и не является пользовательским Save dialog.
+
+Проверка чтения/валидации без окна, сборки и записи файла:
+
+```powershell
+TrueMoon.Aether.Editor.exe --project E:/games/MyGame/MyGame.aetherproj --check-scene Main.aetherscene
+```
+
+JSON содержит identity/revision/catalog counts, roundtrip bytes, dirty и результаты
+закрытия owners. Требуется явный `.aetherproj`; путь сцены relative к scenesRoot
+либо абсолютный внутри него. Unsupported version/traversal/malformed input дают
+ненулевой exit. Этот headless preflight остаётся read-only.
+
+## Работа с документом в UI ED2b
+
+Запустите редактор с явным `--project MyGame.aetherproj`. В панели «Сцена»:
+
+- **Новая** создаёт пустую несохранённую сцену с новым stable ID.
+- **Открыть** читает указанный .aetherscene; путь абсолютный внутри scenesRoot
+  либо относительный к нему. Корень проекта показан под строкой состояния документа.
+- **Сохранить** пишет выбранный файл; для новой сцены использует путь из поля.
+- **Сохранить как** публикует новый файл без overwrite другого существующего файла.
+- **Закрыть** освобождает документ, сохраняя проект и окно.
+
+Ctrl+S, Ctrl+Shift+S и Ctrl+W в редакторе вызывают те же операции, что кнопки;
+кнопки доступны через Tab/Enter. Поле пути — draft следующего Open/SaveAs;
+завершение фоновой операции не заменяет введённый текст. Выбранный файл и dirty
+маркер `*` показаны отдельно. Errors сохраняют документ/путь и допускают retry;
+после внешнего изменения файла используйте повторное Open либо другой SaveAs.
+
+При New/Open/Close/выходе с unsaved content появляется отдельный inline блок
+**Сохранить / Не сохранять / Отмена**. Для untitled документа у него отдельное
+поле пути сохранения. Без выбора transition не завершается; Esc/Отмена сохраняют
+текущий документ. Ошибка Save при выходе оставляет окно открытым. Фокус сначала
+переходит на безопасную «Отмена», затем возвращается в сохранившийся control либо
+поле пути после actual IO drain. Это inline decision, общий modal overlay/menu
+runtime в UI-библиотеку не добавлен. Forced App shutdown отменяет решения и
+drains работу, затем явно discard; пользовательский native close остаётся vetoable.
+
+Список и readonly inspector показывают raw authoring IDs/parent/definition и
+resolved component properties, включая неизвестные schemas; runtime 64-entity
+projection для этого не используется. Строки показаны с кавычками и escaping
+control characters, integer/number/null сохраняют смысл. Сохранение/смена темы
+не перестраивают shell, viewport, поле пути или неизменившиеся entity controls.
+
+Операции документов выполняются только при stopped/idle runtime/compiler.
+Во время IO/decision и при открытом authoring document игровые действия
+заблокированы: привязка scene document к Edit preview/Build/Play — следующий срез.
+В этом шаге нет editable Transform, Undo/Redo UI, project picker и file browser;
+explicit legacy .csproj сохраняет прежний игровой workflow.
+
+Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smoke-documents`.
+Только для disposable fixture с Rich.aetherscene/Unsupported.aetherscene; сценарий
+пишет новые scene files в scenesRoot, проверяет реальные controls/shortcuts/native
+close, Save/reopen/conflict/recovery и сохраняет PNG/JSON. Обычный запуск такой
+сценарий не выполняет.
 
 ## Границы первого экрана
 
-- Инспектор показывает **authoring-свойства текущего снимка сцены**: ID, позицию,
-  интерактивность, геометрию и RGB. Значения можно выделять/копировать. Пока он
+- Инспектор показывает readonly authoring component properties, либо прежние
+  XYZ/interaction/geometry/RGB в legacy demo. Значения можно выделять/копировать. Пока он
   read-only и в Stop, и в Play; редактирование компонентов и runtime snapshot/edit
   transaction не реализованы этим экраном.
 - Список объектов пока плоский. Tree view с parent/variant inheritance,
-  picking/gizmos/docking и project persistence остаются отдельными этапами.
+  picking/gizmos/docking остаются отдельными этапами.
 - Viewport отображает реальную игру из child process через existing shared GPU
   transport. Размер render surface960×540, изображение вписывается без искажения;
   resize окна меняет layout. Editor camera navigation/gameplay input в этом

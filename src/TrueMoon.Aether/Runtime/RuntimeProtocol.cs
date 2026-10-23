@@ -11,8 +11,9 @@ namespace TrueMoon.Aether.Runtime;
 /// <param name="identity">Expected runtime identity.</param><param name="game">Borrowed game session.</param>
 /// <param name="processId">Owned runtime PID.</param><param name="configureSurface">Optional frame-producer configuration.</param>
 /// <param name="droppedFrames">Optional producer diagnostics.</param><param name="requireRestore">Blocks readiness until startup restore succeeds.</param>
+/// <param name="role">Edit preview disallows gameplay mode, Step and input commands.</param>
 public sealed class RuntimeProtocol(SessionIdentity identity, IGameSession game, int processId, Action<FrameSurface>? configureSurface = null,
-    Func<long>? droppedFrames = null, bool requireRestore = false) : IEngineControl
+    Func<long>? droppedFrames = null, bool requireRestore = false, RuntimeRole role = RuntimeRole.Game) : IEngineControl
 {
     private readonly object _gate = new();
     private ulong _sequence;
@@ -33,6 +34,8 @@ public sealed class RuntimeProtocol(SessionIdentity identity, IGameSession game,
             if (!Enum.IsDefined((CommandKind)request.Kind)) throw new InvalidDataException("Unknown control operation.");
             if (_stopping) throw new InvalidOperationException("Runtime is stopping.");
             var kind = (CommandKind)request.Kind;
+            if (role == RuntimeRole.EditPreview && (kind == CommandKind.Step || kind == CommandKind.SetInput || kind == CommandKind.SetMode && request.Playing))
+                throw new InvalidOperationException("Edit preview has no gameplay simulation or input.");
             if (!_hello && kind != CommandKind.Hello) throw new InvalidOperationException("Hello required.");
             var checkpointOutcome = CheckpointOutcome.None; byte[]? checkpoint = null;
             var inputOutcome = GameInputOutcome.None;

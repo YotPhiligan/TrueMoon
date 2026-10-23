@@ -24,17 +24,68 @@ UI alpha и контрольное beta приложение имеют собс
 | Mithril | TrueMoon.Mithril: units, hosting/startup/lifetime/restart policies, процессные handles | [Mithril](mithril/PLAN.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: retained UI, renderer, окно/input, standalone и external HUD | [UI](alloy/PLAN.md) |
 | Aether / Engine | TrueMoon.Aether: engine contracts, session supervisor, control/native child bridge, CPU/GPU viewport, builds/checkpoint/Replace; Editor/Runtime и Game.Logic — отдельные consumers | [Aether](engine/PLAN.md) |
-| Aether Editor | Приложение модуля Aether: TrueMoon.Aether.Editor, App composition, основной экран, scene selection/read-only inspector и runtime viewport; TrueMoon.Aether.Editor.Tests проверяет приложение | [ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
+| Aether Editor | Приложение модуля Aether: TrueMoon.Aether.Editor; текущая ENG7a/UIA1 основа развивается в project/document editor с preview и расширениями | [План приложения ED1–ED8](engine/EDITOR_PLAN.md), [основа ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
 
 Тестовые проекты, generators и ManualTests относятся к своим направлениям. Они не образуют отдельный продуктовый roadmap. Общие CI/build/package задачи остаются на уровне этого документа.
 
 ## Архитектура и зависимости
+
+Решение2026-10-22: [план приложения Aether.Editor](engine/EDITOR_PLAN.md) задаёт
+единый прикладной маршрут ED1–ED8 и первый Transform/preview/Undo/save/reopen срез.
+Уточнение2026-10-23: [минимальный ARCH1b и headless proof](engine/PLAN.md#основа-api-перед-редактируемым-ui--2026-10-23)
+предшествуют Edit preview и редактируемому inspector/tools; ED1a project/session
+выполняется параллельно. Полный World/ECS/runtime edit не нужен для первого среза.
+[Enerit выбран для IPC Editor↔Runtime](engine/PLAN.md#ipc-editor-и-runtime-enerit--2026-10-23),
+frame payload остаётся в отдельном shared RAM/GPU transport, процессы — у Mithril.
+Общие overlays/forms/tree/commands — UI dependencies. Минимальные authoring API
+и независимый engine preview реализованы2026-10-23; ED1a project/session и
+ED2a/b document persistence и UI commands/close policy также готовы. Далее
+Transform inspector/Undo/Redo и подключение independent preview к обычному UI.
+Новых assembly dependencies нет.
 
 UI authoring2026-10-22: в AGENTS закреплены Fluent View<TData>, отдельные optional
 Data/ViewModel и typed IViewStyle<TView>. Реализация/критерии находятся в
 [UIA1](alloy/PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22), первый
 production consumer — Aether.Editor. DI/owner-thread factory route сохранён;
 новых межмодульных dependencies это изменение не добавляет.
+
+### Сверка основы перед Aether — 2026-10-23
+
+Ревью планов и исходников не выявило нового обязательного полного прохода Core/
+Cobalt перед локальным authoring API. Их bounded quality/lifecycle/factory scope
+уже выполнен; allocation backlog, новые DI scopes и общий scheduler redesign не
+становятся prerequisites ARCH1b. Исторические passing результаты не повторялись.
+
+| Когда | Предлагаемая зависимость | Владелец деталей |
+| --- | --- | --- |
+| Локальный authoring/editor | ARCH1b.1/preview/ED1a/ED2a/b реализованы; далее Transform inspector/Undo/Redo/preview. Текущих App/Cobalt/IFactory contracts достаточно | [Editor](engine/EDITOR_PLAN.md#ed2b-document-commands-и-ui--2026-10-23) |
+| До частых preview/input RPC | Уточнить/проверить admission/resource bounds Enerit и общий stop/drain/kill/reap сценарий; изменять код только по необходимому contract/failure proof | [ENE6a/b](enerit/PLAN.md#ene6-интерактивный-consumer-aether--ревью-2026-10-23), [MIT6a](mithril/PLAN.md#mit6-укрепление-процессов-и-ipc--ревью-2026-10-23) |
+| При расширении IPC contracts | Fail-fast совместимость peers, correlation/overload/latency diagnostics; same-build exact-match достаточно первого профиля | ENE6c/d |
+| Перед рабочей поставкой | Длительные resource trends, abrupt parent death с uncooperative child, bounded log retention и фактические platform/package scenarios | MIT6b/c и ED8 |
+| По измерениям/потребителю | CPU/allocation profile Cobalt/Enerit, дополнительные restart policies, MMF и другие OS/transports | Собственные планы модулей |
+
+ENE6/MIT6 — предложения этого ревью, ещё не реализация или утверждённые публичные
+API. Сначала ограниченный contract и воспроизводимый fault/load scenario; нельзя
+объявлять готовыми непроверенные bounds. Частый preview — отдельная интеграционная
+граница, а не повод останавливать всю headless работу над движком. Readiness/
+heartbeat/session recovery уже есть в Aether; Mithril их не дублирует, Enerit не
+получает scene mutations или UI зависимости. Frames сохраняют отдельный transport.
+
+Следующим запросом2026-10-23 пользователь поручил приступить к работе: выбран
+[первый ENE6a/MIT6a контракт](enerit/PLAN.md#ene6a-и-mit6a-первый-контракт--2026-10-23)
+с finite admission, async stop/Completion и own-child saturated-stop/kill proof.
+Детали реализации/проверок — в локальных STATUS; остальные ENE6/MIT6 предложения
+не становятся автоматически завершёнными или обязательными API.
+
+Последующие шаги2026-10-23: первый локальный
+[ARCH1b.1 Transform/query/history API](engine/PLAN.md#arch1b1-локальная-transform-authoring-session--2026-10-23)
+и [независимый engine Edit preview](engine/PLAN.md#edit-preview-первый-engine-profile--2026-10-23)
+реализованы/проверены через App/Cobalt/IFactory и Microsoft DI. Preview использует
+Enerit/Mithril и GPU transport без Build/Play/Game.Logic; normal Editor UI ещё
+не подключён. Новых межмодульных dependencies/assembly не добавлено.
+ED1a project/session и ED2a/b documents/save/reopen/UI commands/Save-Discard-Cancel
+реализованы следующими шагами; далее Transform/Undo/preview integration.
+Полный ARCH1b/ED1–ED8 этими engine API срезами не закрыты.
 
 Фактические ProjectReference, сверенные2026-10-09:
 
@@ -120,7 +171,9 @@ consumers не выполнены, порядок функциональных �
 TrueMoon.Aether.Editor/Tests и назначил аудит Aether по этому правилу. Аудит
 показал частичное соответствие; ручной service graph и game activation требуют
 [DI1–DI4 в engine плане](engine/PLAN.md#переименование-редактора-и-аудит-di--2026-10-22).
-Переименование проверено managed/native runs; исправление DI ещё не выполнено.
+Переименование проверено managed/native runs; на момент аудита DI требовал fixes.
+Последующим шагом DI1–DI4 реализованы и проверены2026-10-22; текущая сводка и
+ограничения — в [engine STATUS](engine/STATUS.md), прежний аудит сохранён в HISTORY.
 
 ## Порядок развития
 

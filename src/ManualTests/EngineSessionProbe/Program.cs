@@ -13,7 +13,9 @@ using EngineSessionProbe.Measurements;
 
 try
 {
-    if (args is ["--runtime"]) return await RuntimeHost.RunAsync();
+    if (args is ["--runtime"])
+        return PreviewRuntimeEntry.IsPreview() ? await PreviewRuntimeEntry.RunAsync() : await RuntimeHost.RunAsync();
+    if (args is ["--edit-preview-proof", var previewDirectory]) return await EditPreviewProbe.RunAsync(Path.GetFullPath(previewDirectory));
     if (args is ["--scene"]) return await SceneInputProbe.RunAsync(null);
     if (args is ["--room"]) return await SceneInputProbe.RunAsync(null, room: true);
     if (args is ["--interaction-proof", var interactionDirectory]) return await RoomViewportProbe.RunAsync(Path.GetFullPath(interactionDirectory), interactionProof: true);

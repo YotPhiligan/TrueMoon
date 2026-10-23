@@ -3,6 +3,7 @@ using TrueMoon.Aether.Builds;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Gpu;
+using TrueMoon.Aether.Preview;
 
 namespace TrueMoon.Aether.Hosting;
 
@@ -15,10 +16,10 @@ public sealed class AetherHost : IDisposable, IAsyncDisposable
     private Task? _dispose;
 
     internal AetherHost(SessionSupervisor supervisor, FrameSession frames, GameBuildCompiler builds,
-        GameReplacement replacement, GameEditor editor, GpuResourceHost gpu)
+        GameReplacement replacement, GameEditor editor, GpuResourceHost gpu, ScenePreview preview)
     {
         Supervisor = supervisor; Frames = frames; Builds = builds;
-        Replacement = replacement; Editor = editor; Gpu = gpu;
+        Replacement = replacement; Editor = editor; Gpu = gpu; Preview = preview;
     }
 
     /// <summary>Gets the borrowed App-owned session controller. Start is an explicit operation.</summary>
@@ -33,6 +34,8 @@ public sealed class AetherHost : IDisposable, IAsyncDisposable
     public GameEditor Editor { get; }
     /// <summary>Gets the borrowed App-owned lazy GPU resource owner; ordinary sessions remain on CPU frames.</summary>
     public GpuResourceHost Gpu { get; }
+    /// <summary>Gets the borrowed App-owned static Edit preview controller; it never builds or loads Game.Logic.</summary>
+    public ScenePreview Preview { get; }
 
     internal void EnsureOpen()
     {
@@ -52,6 +55,7 @@ public sealed class AetherHost : IDisposable, IAsyncDisposable
             if (_dispose is { IsCompletedSuccessfully: true } or { IsCompleted: false }) return new(_dispose);
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             _dispose = completion.Task;
+            Preview.CloseAdmission();
             Supervisor.CloseAdmission();
             Builds.CloseAdmission();
             Editor.CloseAdmission();
@@ -65,6 +69,8 @@ public sealed class AetherHost : IDisposable, IAsyncDisposable
     {
         List<Exception> errors = [];
         var buildCleanup = Builds.DisposeAsync().AsTask();
+        try { await Preview.DisposeAsync().ConfigureAwait(false); }
+        catch (Exception error) { errors.Add(error); }
         try { await Gpu.DisposeAsync().ConfigureAwait(false); }
         catch (Exception error) { errors.Add(error); }
         try { await Editor.StopAsync().ConfigureAwait(false); }

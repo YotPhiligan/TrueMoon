@@ -1,5 +1,18 @@
 # Mithril: состояние и точка продолжения
 
+Последняя работа — **2026-10-23, первый MIT6a load-stop профиль**.
+AppUnitsPipesProbe расширен saturated-stop/saturated-kill: pending2/queued1,
+overload до dispatch, независимый Mithril control при active2 domain handlers,
+cooperative drain либо bounded owned kill/reap, exact PID/diagnostic outcome и
+zero client counters/Completion. Production changes находятся в Enerit;
+Mithril runtime/API, restart policies и ownership modes не менялись.
+[Контракт и границы](PLAN.md#mit6a-первый-load-stop-профиль--2026-10-23).
+Текущий Mithril99/99 Debug/Release в full solution2361/configuration, failed0/
+skipped0. Новый source/published профиль **44/44**, fresh package **132/132** на
+Cobalt/DI/DI без Cobalt analyzer,8nupkgs; Completed=true. [Команды/evidence](HISTORY.md#mit6a-saturated-ipc-и-независимый-process-stop--2026-10-23).
+MIT6a fault matrix в целом, parent-death containment и long trends MIT6c остаются
+открытыми; локальный authoring не блокируется. Native Editor viewport не повторялся.
+
 Текущая реализация — **2026-10-22, фабрики и единственный owner**:
 UnitsController injects IFactory<IUnitHandle,IUnitConfiguration>; штатный
 UnitHandleFactory выбирает hosting mode. Controller/parent создаются через App
@@ -89,8 +102,13 @@ Parent abrupt-exit proof относится к child/server cleanup, не worker
 ## Следующий конкретный шаг
 
 Следующий общий шаг ведётся в [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг).
-Graceful delivery fix выполнен как необходимая регрессия ENG4e; новые process
-capabilities и расширение restart/ownership scope этим не начинаются.
+Использовать проверенный первый MIT6a профиль при preview integration;
+минимальный ARCH1b/headless и ED1a могут продолжаться. Полный fault matrix,
+real OS reap/permission failures и MIT6c containment/trends остаются отдельными.
+Не дублировать Aether Hello/heartbeat/recovery в Mithril и не включать второй
+автоматический restart поверх Aether replacement. Graceful delivery fix выполнен
+как регрессия ENG4e; у MIT6 проверен только первый load-stop профиль, остальные
+предложения не расширяют текущие гарантии автоматически.
 UI physical DPI/real loss/VRAM и внешний K7 сохраняются в [локальном статусе](../alloy/STATUS.md);
 bounded engine consumers имеют собственные проверки в engine STATUS.
 Cobalt allocations и Enerit scalar CPU/allocation profile остаются отдельным

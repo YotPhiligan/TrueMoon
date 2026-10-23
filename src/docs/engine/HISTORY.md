@@ -1,6 +1,629 @@
 # Engine / Editor: история решений и проверок
 
-[Текущий статус](STATUS.md), [единственный детальный план](PLAN.md).
+[Текущий статус](STATUS.md), [план движка](PLAN.md), [подплан приложения Editor](EDITOR_PLAN.md).
+
+## ED2b: документы в обычном UI — 2026-10-23
+
+[Document UI profile](EDITOR_PLAN.md#ed2b-document-commands-и-ui--2026-10-23)
+подключает существующий ED2a API: New/Open/Save/SaveAs/Close, dirty/activity/errors,
+inline Save/Discard/Cancel и native window Exit. Нормальный запуск с .aetherproj
+показывает панель путей/actions; проекты по-прежнему выбираются явно через CLI.
+Doc transitions доступны только при stopped/idle runtime/compiler; открытый
+authoring document блокирует stale game commands до preview/ED6 integration.
+Игровой legacy .csproj workflow проверяется отдельно.
+
+EditorDocumentCommands имеет fail-fast single admission, shared exit completion,
+tracked accepted task и user decision, не хранит controls. Open сначала передаёт
+candidate validation нижнему API: даже выбранный Discard не теряет старую сцену
+при malformed target. Save failure при Exit возвращает false и сохраняет окно/
+unsaved content. Cancel и forced upgrade реально drains IO, не ждут новое решение.
+Throwing cancellation callbacks превращаются в наблюдаемую ошибку после drain;
+terminal cleanup допускает retry. Project/session/store заимствуются; их ownership
+сохраняется у прежних App/project owners, без disposable aliases.
+
+EditorDocumentViewModel копирует snapshots и сообщает binding updates на owner
+thread; background completion не мутирует UI. Path draft для Open/SaveAs и отдельный
+first-save draft для decision сохраняются независимо от completion. Nested typed
+View/Style создаётся injected IFactory на UI thread, parent owns product. Стабильные
+controls, bindings и собственный scoped style не требуют полного rebuild.
+Ctrl+S/Shift+S/W и buttons идут в одни commands; Esc отменяет decision. Safe focus
+переходит на Cancel, возвращается к live control/path после IO. Решение inline,
+generic PA3 overlays/modality/menu infrastructure не добавлена.
+
+Workspace показывает raw authoring hierarchy IDs и resolved readonly properties
+без 64-entity runtime projection. Граничный тест использует130entities без truncation.
+String values показаны в кавычках с escaped control characters: первый UI test
+выявил, что исходная multiline string ломала single-line TextBox.Value; formatter
+исправлен, regression выполняет реальный UiSession.Update. Full IDs доступны в
+inspector, подписи Guid сокращены с различимыми окончаниями. Пустой authoring
+viewport сообщает, что preview пока недоступен; не предлагает заблокированный Build.
+
+### Прямые tests и quality review
+
+42methods/74новых cases в DocumentsUi: coordinator decisions/admission/drain,
+real filesystem conflict/reopen, owner-thread model, retained view/styles/focus/
+shortcuts/dispose, shell/raw properties, both DI providers и launch parser.
+Research/plan/status и pairing inventory хранятся в OS temp вне Git. Static pairing
+не является line/branch coverage; production mutations не применялись.
+Assertion/gap review добавил older captured Save + newer edits + Exit decision,
+externally accepted document IO admission, prompt keyboard intent и ctor guards.
+Первые test-authoring empty snapshot assertions исправлены (Content=null внутри
+действующей session, а не отсутствие owner). Это не production failure.
+
+| Требование | Exact evidence в TrueMoon.Aether.Editor.Tests.DocumentsUi |
+| --- | --- |
+| Реальные Save/reopen/path/stamp/conflict/recovery | NewSaveAsOpenAndSave_UseCurrentPathStampAndPreservePersistedRawScene; CommandsWithRealStore_SaveReopenAndExternalConflictPreserveFileAndRecoverBySaveAs |
+| New/Open/Close/Exit Save/Discard/Cancel | DirtyTransition_CancelRetainsIdentityContentAndAllowsRetry; DirtyTransition_DiscardReleasesOriginalWithoutSavingAndCommitsIntendedTarget; DirtyTransition_SavePersistsOriginalBeforeReplacementOrExitUsingCorrectTarget |
+| Failed Save veto и invalid Open с Discard | FailedDecisionSave_VetoesTransitionKeepsDirtyOriginalAndCanRetryIntent; DirtyOpenDiscard_InvalidCandidateDoesNotDiscardCurrentContentOrSaveIt |
+| Ignored IO / late completion / shared Exit | RequestExit_DrainsIgnoredSaveBeforeStoppingRuntimeAndConcurrentRequestsShareCompletion; Exit_AfterIgnoredSaveOfOlderSnapshotStillRequiresDecisionForNewerEdits |
+| Throwing cancellation / forced upgrade / retry | Exit_CallbackFailureReturnsTrackedDrainRetainsOwnerAndSupportsExplicitRetry; ExitCancelAndForcedUpgrade_SharePendingCloseAndNeverWaitForAnotherUserDecision |
+| Fresh runtime guards / owner notifications | RuntimeBlocking_UsesFreshCoordinatorAdmissionBeforeNextPresentationRefresh; Refresh_PublishesChangesOnOwnerOnlyAndWorkerCompletionCannotNotifyBindings |
+| Inline choices / keyboard / focus | InlineDecision_UsesSeparateSaveDraftAndSafeCancelFocusThenRestoresPriorInput; KeyboardDuringDecision_SaveUsesPromptPathAndCloseCannotReplaceAcceptedIntent |
+| Retained tree/path/style/subscriptions | ThemeStyleAndRefresh_PreserveTreePathDraftFocusAndSelection; ViewDisposal_DetachesBindingsAndDoesNotDisposeBorrowedModelOrCommands |
+| Raw readonly shell и оба providers | ShellRefresh_UpdatesOnlyAuthoringPartsKeepsHeaderAndSelectionAndBlocksLegacyCommands; BothProviders_ResolveSharedModelStyleAndCoordinatorWhileUiOwnsIndependentFactoryProducts |
+
+Final focused command:
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore --configuration Debug --filter FullyQualifiedName~TrueMoon.Aether.Editor.Tests.DocumentsUi. --logger trx --results-directory TestResults/DocumentsUi-20261023/narrow-final --verbosity quiet
+```
+
+74/74 passed, failed/skipped0. TRX:
+TestResults/DocumentsUi-20261023/narrow-final/MEGA6_PH-DEV_2026-10-23_20_14_32_net10.0.trx.
+После финальной UI text/label правки те же74case повторяются в обоих final full runs.
+
+### Итоговая source/published проверка
+
+TestResults/DocumentsUi-20261023/VerifySolutionCurrent.ps1:
+nonincremental Debug solution build0errors/1531warnings; Debug и Release
+**2878/2878** каждый,10TRX/configuration, failed/skipped0. Core117/Cobalt179/
+generator91/Enerit166/generator114/Mithril99/UI661/Hosting85/Aether1008/Editor358.
+Debug test --no-build после build; Release test собирает актуальный source,
+blame-hang60s.242source fingerprints неизменны до/после. Final data:
+TestResults/DocumentsUi-20261023/solution-current/summary.json.
+
+Дополнительный footer regression добавляет concrete model.StatusText и
+bound view.Status.Value assertions в ShellRefresh_UpdatesOnlyAuthoringPartsKeepsHeaderAndSelectionAndBlocksLegacyCommands:
+1/1passed, TestResults/DocumentsUi-20261023/footer-regression/
+MEGA6_PH-DEV_2026-10-23_20_25_53_net10.0.trx. Native capture readiness усилен:
+ждёт согласованных workspace count/model text/bound text, затем сохраняет эти
+значения вместе с PNG. Final snapshots корректно показывают2/0/0/2entities;
+предыдущий resized capture до этого ожидания показывал несогласованный footer.
+Из этого промежуточного PNG production defect не выводится; final unit/native
+данные совпадают, общий renderer/binding API не менялся.
+
+VerifyConsumers.ps1: **consumers-153002186/summary.json Completed=true**.
+Source Debug и published Release app/project/CWD вне repository, без shipped
+Game.Logic.19commands: publish1/headless10/native8;6exit1 ожидаемы для missing SDK,
+unsupported version и scene-root escape, остальные exit0.
+Document UI в каждой delivery:19directed actions/4PNG/5actual saved files,
+native close и real controls/keyboard. Проверены selection/raw properties,
+SaveAs/reopen/stable IDs, external SHA256 conflict + recovery, invalid first Save,
+New/Open Save/Discard/Cancel, invalid Open с Discard, failed Exit Save и Cancel
+с прежним window/document, successful final Exit с exact saved SceneId.
+Original fixture bytes неизменны; compiler/game children0, notifications только
+на UI owner thread. Dark/Light,1100×700 resized и безопасный decision focus
+визуально сверены. Saved files: Copied/Recovered/New/BeforeOpen/Exit.aetherscene.
+
+Empty/project/legacy/documents —8native cases/18PNG,4game children reaped;
+legacy по8commands/3PNG/2children. Validation0errors/0warnings, UI sessions/
+mappings/GPU resources/handles0, selected project owners closed.45Editor source/
+8binary fingerprints и PNG проверяются aggregate script. Итог:
+TestResults/DocumentsUi-20261023/verification.json; logs/TRX/JSON рядом.
+
+Первый consumer attempt остановился до запуска documents profile: helper неверно
+вставил чтение documents.json перед процессом. Script исправлен уникальным
+line-anchored match; это tooling failure, не приложение. Предварительные passing
+solution/native runs до text/label и footer-capture правок сохранены отдельно;
+актуальные fingerprints и результаты берутся только из указанных final runs.
+
+ED2 single-project document profile закрыт, ED1 project/runtime transaction и
+ED3–ED8 не закрыты. Нет editable Transform/Undo/Redo/preview integration, project
+picker/file browser и generic modal/menu system. Runtime/engine/wire/UI-library
+APIs/dependencies прежние; Editor non-packable. Fresh packages, independent
+preview drawing, golden/RTE/full performance/physical input/loss/VRAM/K7 не
+повторялись. Следующий срез — Transform inspector/Undo/Redo и independent preview.
+
+## ED2a: документ сцены и persistence — 2026-10-23
+
+Реализован [document/persistence profile](EDITOR_PLAN.md#ed2a-documentpersistence-api--2026-10-23).
+SceneFileCodec строго сохраняет raw SceneDocument/catalogs/patches/IDs и tagged
+scalar values, валидирует через owned engine factory product. JSON formatVersion1,
+UTF8 optional BOM≤4MiB/depth32, finite collection limits; unknown/duplicate members,
+invalid graph/scalar/version и превышение Encode/Decode bounds отклоняются.
+Новых engine/wire/UI-library contracts/dependencies нет.
+
+UseAetherAuthoring → UseAetherEditorDocuments → UseAetherEditorProjects создаёт
+App-local shared codec/store/factories и owned ProjectSession→SceneDocumentSession→
+ISceneAuthoringSession. Metadata-only UseProjects совместим. Editor не дублирует
+committed state/history: dirty определяется saved ContentRevision, Undo/Redo
+вызваны через engine API. Save captures immutable snapshot и оставляет новые edits
+dirty. SaveAs failure/cancel не меняет выбранные path/stamp/checkpoint.
+Close Save/Discard/Cancel fences/drains accepted IO, terminal Dispose явно forced
+discard; custom store, игнорирующий token, не освобождается раньше завершения.
+Project switch/Close блокируют dirty/busy document и атомарно закрывают clean
+admission. Failed/rejected candidate cleanup завершается наблюдаемой ошибкой,
+retained products остаются для retry; borrowed dependencies имеют одного App owner.
+
+Json store пишет temp рядом, затем atomic rename/replace. SaveAs другого файла
+create-only; существующий выбранный файл проверяется по SHA256 наблюдавшихся bytes.
+Persistent .write-lock exclusive handle согласует cooperating writers. Проверены
+change с тем же timestamp, missing target, locked commit failure, temp cleanup,
+точные fingerprints, повтор после ошибки. Profile optimistic/trusted local:
+arbitrary external rename между check/replace, filesystem links и power-loss
+durability не являются гарантиями. Store API не обещает filesystem CAS.
+
+### Требования и прямые тесты
+
+Новый набор —58методов/143case: codec67/store12/document35/DI21/CLI8.
+Assertion/gap review проверил concrete output/state/failure/ownership assertions;
+production mutations не применялись. Дополнены independent Encode overflow,
+CloseSave после edits во время старого save и rejected project cleanup completion.
+При раннем чтении codec добавлена cancellation check после factory validation;
+первые test-authoring failures исправлены до final narrow run, production defects
+по ним не выводились. Research/plan/review/matrix находятся в OS temp вне Git.
+
+| Требование | Exact test evidence в TrueMoon.Aether.Editor.Tests.Documents |
+| --- | --- |
+| Raw catalogs/inheritance/masks/restores/parents/scalar kinds | RoundTrip_PreservesRawCatalogsInheritanceMasksRestorationParentsAndExactTaggedScalars |
+| Strict format и независимые Encode bounds | Decode_RejectsUnknownDuplicateMissingAndWrongCaseMembersAtEveryStructuredLevel; Encode_RejectsOversizedLocalCollectionsEvenWhenTheEngineCanResolveTheirContent |
+| Conflict без timestamp и atomic failure | Replace_ExternalContentChangeWithIdenticalTimestampIsConflictAndRetryRequiresNewObservedStamp; Replace_FailedAtomicCommitPreservesOriginalAndCleansPreparedTemporaryForRetry |
+| Dirty по content checkpoint / Undo / reload | NewSaveEditUndoRedoAndReload_UseContentCheckpointRatherThanMonotonicDocumentRevision |
+| Captured save и следующий snapshot при Close Save | Save_CapturesImmutableSnapshotAllowsEditsAndDoesNotMarkNewerContentClean; CloseSave_AfterEditDuringPendingSavePersistsTheNewerSnapshotBeforeReleasingDocument |
+| Ignored cancellation / late completion / ownership | CloseDiscard_CancelsAndDrainsIgnoredLoadBeforeDisposingActiveAndNeverSelectsLateCandidate; Dispose_FencesAndDrainsIgnoredSaveWithoutLateCheckpointOrDoubleRelease |
+| Cobalt/MS DI, dirty/busy project guard, App drain | ProjectOwnedDocuments_BlockDirtySwitchAndNormalCloseUntilExplicitSaveOrDiscard; ProjectTransition_RefusesCleanDocumentWithAcceptedIoThenFencesOldOwnerAtSuccessfulSwitch; AppStop_ForceDiscardsDirtyDocumentsButDrainsAcceptedSaveBeforeBorrowedStoreDisposal |
+| Rejected candidate cleanup / retry | ProjectCandidateCleanupFailure_CompletesRejectedOpenAndRetainsOwnedCandidateUntilCloseRetry |
+| Explicit headless scene path | CheckScene_PreservesScenesRelativePathAndExplicitManifestWithoutSelectingLegacyRuntime |
+
+Final narrow command:
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore --configuration Debug --filter FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Documents. --logger trx --results-directory TestResults/Documents-20261023/narrow-final --verbosity quiet
+```
+
+143/143 passed, failed/skipped0. TRX:
+TestResults/Documents-20261023/narrow-final/MEGA6_PH-DEV_2026-10-23_18_09_21_net10.0.trx.
+
+### Full solution и опубликованное приложение
+
+TestResults/Documents-20261023/VerifySolution.ps1: nonincremental Debug solution
+build0errors/1531warnings; full Debug и Release **2804/2804** каждый,10TRX/config,
+failed/skipped0. Core117/Cobalt179/generator91/Enerit166/generator114/Mithril99/
+UI661/Hosting85/Aether1008/Editor284. Debug test --no-build после full build;
+Release test собирает актуальную конфигурацию, blame-hang60s.229source fingerprints
+проверены до/после, включая все новые tests и Editor production files.
+
+TestResults/Documents-20261023/VerifyConsumers.ps1:
+consumers-131340219/summary.json Completed=true. Source Debug и published Release
+app/project/CWD вне repository; shipped Game.Logic отсутствует.17commands:
+publish1, headless10, native6. Шесть exit1 ожидаемы: missing SDK, unsupported scene
+version и path traversal в каждой delivery; остальные exit0.
+Rich scene содержит2entities/3definitions/1schema, stable IDs/revision12,
+inheritance/remove/restore/parent links, long/number/Boolean/Unicode/null values.
+--check-scene load→encode сохраняет исходный SHA256, GameLoaded=false,
+SessionClosed/DocumentClosed/ActiveCleared=true, IsDirty=false. Невалидный XML
+game csproj доказывает отсутствие MSBuild evaluation при project open.
+
+Native empty/project/legacy:6cases/10PNG, workspace без compiler/child, legacy
+по8commands/3PNG/2reaped children. Vulkan validation0/0, UI sessions/mappings/
+GPU resources/handles0, selected project owner closed.39Editor source/8binary
+fingerprints и все PNG перепроверены. Aggregate:
+TestResults/Documents-20261023/verification.json; scripts/logs/TRX сохранены рядом.
+
+Published scene check read-only; atomic writes/Save/reopen проверены direct
+real-filesystem tests, а не опубликованным оконным Save workflow. Normal Editor
+UI пока не вызывает Load/Save/authoring/preview, остаётся read-only. Четыре ED2
+задачи закрыты; общий UI Save/Discard/Cancel и runtime switch/close ещё открыты.
+Fresh package runs не нужны для non-packable Editor; engine packages, independent
+preview drawing, golden/RTE/full performance/physical UI/real loss/VRAM не повторены.
+Следующий срез — document commands/close policy в UI, затем Transform/Undo/preview.
+
+## ED1a: project/session и запуск вне repository — 2026-10-23
+
+Реализован [первый project/session profile](EDITOR_PLAN.md#ed1a-первый-projectsession-profile--2026-10-23).
+UseAetherEditorProjects подключает независимые от UI/engine App-local store,
+SDK preflight, typed session factory и одного App-owned EditorProjects. Products
+принадлежат coordinator; borrowed store/toolchain/factory освобождаются своим DI
+owner после Stop/drain. Lifecycle aliases non-disposable, duplicate attachment
+отклоняется до activation. Cobalt default и Microsoft DI сохранены.
+
+Manifest .aetherproj schema1 — strict UTF8 JSON с optional BOM, stable project ID,
+game csproj/entry и relative scene/content roots. Максимум64KiB вместе с BOM;
+неизвестные/повторные/case-mismatched поля, invalid version/metadata/paths и missing
+files/roots отклоняются. Resolve использует manifest directory, не CWD; это
+trusted-local lexical containment, не security sandbox поверх filesystem links.
+Create работает с существующим игровым csproj/roots: после SDK preflight пишет
+temporary file и atomic rename без overwrite. При cancel после file publication
+валидный manifest остаётся на диске, cancelled candidate не становится active.
+
+SDK preflight выполняет owned dotnet --version из game directory, учитывает
+global.json, требует SDK10+ и не оценивает MSBuild/entry. Deadline15s отменяет
+ожидание и kill/reap/drain probe; совместимость игры проверяется explicit Build.
+ProjectSession хранит metadata/SDK identity и формирует GameBuildRequest.
+Open/Create fail-fast при concurrent transition. Failed/cancelled candidate не
+заменяет active; Close cancels/drains accepted work до закрытия active, reusable
+после успешного Close; App shutdown закрывает admission окончательно. Late
+completion от игнорирующей token зависимости не публикуется.
+
+CLI: без аргументов пустая workspace; --project .aetherproj выбирает project/build
+identity без demo и без загрузки scene document. --check-project запускает тот же
+App/Cobalt API без окна и выводит JSON preflight/cleanup. Explicit --project
+game.csproj сохраняет legacy demo/game smoke. Search repository/demo defaults удалён.
+Редактор по-прежнему Fluent View/Data/Style; новые store/toolchain API — реальные
+IO/process boundaries, generic framework/plugin/scopes не введены.
+
+### Requirement / test evidence
+
+Новых92case/35методов: Store40, coordinator15, registration10, launch23, session4.
+Только6новых test files в TrueMoon.Aether.Editor.Tests/Projects; старые tests не менялись.
+
+| Требование ED1a | Точные tests |
+| --- | --- |
+| Versioned portable manifest и canonical paths | `Resolve_NormalizesContainedPathsAndNameWithoutChangingPortableInput`; `WriteNew_RoundTripsStrictPortableMetadataAndLeavesNoTemporaryFiles` |
+| Strict schema, required fields и finite bytes/text bounds | `Read_RejectsInvalidJsonShapeOrStrictMemberContract`; `Read_RequiresEveryVersionOneMemberInsteadOfAcceptingDeserializerDefaults`; `Read_EnforcesUtf8ByteLimitIncludingExactMaximum`; `Resolve_PreservesLastAllowedTextLengthAndRejectsFirstExcess` |
+| Optional BOM считается в64KiB | `Read_AcceptsUtf8BomAtByteLimitButCountsItWhenRejectingFirstExcessByte` |
+| Relative containment и missing files/roots | `Resolve_RejectsEachEscapingOrRootedPath`; `Resolve_RequiresExistingGameAndRootsWithoutCreatingThem` |
+| Atomic new manifest без overwrite/temp leaks | `WriteNew_ExistingFileIsPreservedAndTemporaryOutputIsRemoved`; `WriteNew_RevalidatesInputAndRecomputesAbsolutePathsBeforeWriting` |
+| Create preflight/write до active commit | `Create_PublishesManifestBeforeChangingActiveAndOwnsUnpublishedCandidate` |
+| Failed/cancelled candidate сохраняет active/original error | `FailedCandidate_PreservesActiveAndOriginalErrorThenAllowsRetry`; `Cancellation_IgnoredByDependencyStillPreventsLateCandidatePublication` |
+| Switch closes previous product, borrows dependencies | `Open_CommitsValidatedFactoryProductThenClosesOnlyPreviousSession`; `Dispose_ClosesAdmissionImmediatelyAndDrainsUnpublishedFactoryProduct` |
+| Close fences/drains ignored cancellation, затем можно reopen | `Close_FencesAndDrainsIgnoredCancellationBeforeClosingActiveAndCanReopen`; `Close_ObservesCancellationCallbackFailureAndStillDrainsOwnedWork` |
+| App lifecycle/providers/overrides, без двойного ownership | `App_PreservesInjectedStoreToolchainAndFactoryAndDisposesEachDependencyOnce`; `App_StopClosesAdmissionAndDrainsPendingOpenBeforeDisposingBorrowedDependencies` |
+| Empty launch без implicit demo, guarded game commands | `EmptyLaunch_SelectsNoImplicitDemoAndNoProjectWorkspaceDisablesEveryCommand`; `WorkspaceSmoke_AllowsEmptyOrManifestWorkspaceWithoutSelectingLegacyGame` |
+| SDK guards и explicit build mapping | `DefaultToolchain_PreCancelledAndMissingProjectDoNotStartAnSdkProbe`; `BuildRequest_MapsCanonicalProjectAndEntryWithoutOwningBorrowedMetadata` |
+
+Final focused command, exit0, Passed92/Failed0/Skipped0:
+
+~~~powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c Debug --filter FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Projects. --logger trx --results-directory TestResults/ED1a-20261023/narrow
+~~~
+
+TRX MEGA6_PH-DEV_2026-10-23_17_23_38_net10.0.trx. Первый run90cases дал87pass/3fail:
+oracle ошибочно требовал exact JsonException вместо JsonReaderException subtype;
+исправлен только assertion на assignable JsonException. Затем90/90, после optional
+BOM и invalid DLL basename partitions final92/92. Source compile corrections:
+missing Resolve/ReadbackOpenGLImage using и shadowed presentation-options lambda;
+устранены до passing runs. Это не production behavioral RED.
+
+260assertion sites: точные metadata/paths, original exceptions, ownership counts,
+candidate ordering, forced race gates и immutable input. Quality review Strong;
+actual mutation/coverage не заявлены. finding-tests IDE tool недоступен (Tool not
+found). Один static pairing attempt остановлен NETSDK1004 на file-app cache
+assets; installs/повторов/claims об отсутствии тестов не было. Research/plan/status
+хранятся в OS temp TrueMoon-ED1a-tests-4bba6a9376ee44df814edb49c7889edc, не в Git.
+
+### Full source, native и published validation
+
+Final full solution2661/2661 Debug и2661/2661 Release,10TRX/configuration,
+failed/skipped0: Core117/Cobalt179/generator91/Enerit166/generator114/Mithril99/
+UI661/Hosting85/Aether1008/Editor141. Nonincremental Debug0errors/1531warnings.
+Current source hashes216; evidence:
+TestResults/Projects-20261023/solution-final/summary.json, Completed=true.
+Initial solution2661/config и initial consumers-122603087 также passed; после
+визуальной проверки заменён внутренний project GUID в пустой scene label на
+«Сцена не открыта»/«Проект не открыт», поэтому final runs выполнены заново.
+
+~~~powershell
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v minimal
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug --blame-hang --blame-hang-timeout 60s --logger trx --results-directory TestResults/Projects-20261023/solution-final/Debug
+dotnet test TrueMoon.slnx --no-restore -c Release --blame-hang --blame-hang-timeout 60s --logger trx --results-directory TestResults/Projects-20261023/solution-final/Release
+~~~
+
+VerifyConsumers.ps1 сохраняет exact executable/arguments/cwd/exit codes и
+process-local validation paths. Final native summary:
+TestResults/Projects-20261023/consumers-123338696/summary.json.
+11commands:1Release publish,4headless и6native cases. Published executable,
+fonts/native assets и пользовательский project находятся в отдельном OS temp
+вне repository, без Game.Logic.dll. Оба app deliveries запускаются с outside CWD.
+
+- Headless Debug/published Release успешно читают один manifest с намеренно
+  невалидным XML csproj: это доказывает отсутствие MSBuild evaluation/build при
+  Open. SDK identity видна в JSON, selected session закрыта/active очищен,
+  game assembly не загружена. Затем local global.json с999.0.100/rollForward:disable
+  даёт ожидаемый exit1 и понятную SDK/PATH/global.json диагностику.4cases total;
+  environment PATH/system SDK/registry не менялись.
+- Empty workspace и .aetherproj workspace Debug/published Release:4native cases,
+  по1PNG,0entities/0compiler/0game children; Build доступен только с project,
+  остальные game actions недоступны. Standard-frame close закрывает project owner
+  и UI; UI sessions/mappings/GPU resources/handles0.
+- Legacy game workflow Debug/published Release: каждый8commands/3PNG/2reaped
+  children, Build→Start→Play→Pause→Step→Build→Replace→Stop, selection/theme/resize
+  и native close сохранены. Vulkan validation enabled0errors/0warnings и zero
+  owned resources. Workspace cases не заявляют Vulkan validation, child там нет.
+- Всего6native cases/10PNG/4reaped game children;32Editor source и8binary hashes
+  сверены. PNG inspected для project workspace; показывается empty scene.
+  Путь manifest/game/scenes/content и process profiles проверены независимо от repo CWD.
+
+Итог TestResults/Projects-20261023/verification.json содержит source/binary/PNG
+hashes,20TRX,focused92,local links/namespaces/checklist. Engine/runtime/wire и
+production UI-library APIs не менялись; Editor IsPackable=false. Fresh packages,
+independent preview drawing, full golden/RTE/performance/VRAM/physical UI и
+hardware/final alpha gates этим шагом не повторялись. Packages не публиковались.
+K7 workaround search/Windows/driver policy прежние.
+
+Следом ED2 scene schema/document owner/Load/Save/SaveAs/dirty checkpoint и
+Save/Discard/Cancel. Общий document/runtime switch/close transaction остаётся
+открытым ED1 пунктом; интерфейс Open/menus — ED4, preview/game coordination — ED6.
+Create пока оборачивает существующую игру; scaffold/wizard/user preferences позже.
+
+## Edit preview: независимый engine profile — 2026-10-23
+
+Следующий шаг после ARCH1b.1 — отдельный Edit preview без компиляции/игры.
+[Контракт и пределы](PLAN.md#edit-preview-первый-engine-profile--2026-10-23).
+AetherHost owns ScenePreview через injected IFactory<ScenePreview,FrameSession>;
+Preview заимствует Frames. RuntimeRole.EditPreview выбирает PreviewId из Aether
+assembly, built-in PreviewGameSession и тот же App runtime host. GameBuildLoader
+при этом не создаётся, Game.Logic не читается/не загружается. Game entry/selected
+build workflow сохраняется, unknown/несогласованный role/bootstrap отклоняется.
+Новых assembly/protocol versions/DI scopes/IPC методов не добавлено.
+
+ShowAsync сначала валидирует extent/transport/projection/revision/ownership.
+Уже активная game session требует явного Stop. После preflight прежний owned
+preview проходит drain/reap, новая generation получает immutable primitive scene.
+Камера фиксирована, tick0; gameplay input/Step/Play отклоняются. Readiness —
+фактический presented ticket exact runtime/surface/document revision. Describe/
+Presented не переименовывают старый frame. Transform/Undo/Redo требуют явного
+ShowAsync нового resolved snapshot. Resize/suspend/resume сохраняют document,
+положительный resize снова ждёт presented ticket. Stop/Dispose fence и закрывают
+admission до ожидания inflight work; original+cleanup causes доступны, retry
+сохраняет ownership. Неиспользованный Preview не останавливает game workflow.
+
+Это GPU-only Windows x64/OpenGL UI/Vulkan child profile, bounds16..1920×16..1080.
+CPU reference pattern не представляет сцену и отклоняется до смены session.
+Каждая revision заменяет child; incremental World/live edit не вводятся.
+Normal Editor UI пока не подключён: native proof использует существующий
+ViewportView fixture, Editor runtime bootstrap лишь научился маршрутизировать role.
+
+### Requirement / test evidence
+
+Новых121case: PreviewGameSession9, registration/ownership51, ScenePreview25,
+GPU shutdown36. Оба providers включены там, где проверяется App graph.
+Ни один существующий test не изменён.
+
+| Требование | Точные тесты |
+| --- | --- |
+| Immutable render scene, transforms/materials, fixed camera/tick | `Load_CopiesPrimitiveTransformsMaterialsAndKeepsEarlierRenderSnapshots`; `Load_MaximumPrimitiveScenePreservesEveryOrderedPrimitive` |
+| Revision привязана к actual presented ticket; authoring не меняется | `Show_BindsRevisionToBuiltInRuntimeAndActualPresentedTicketWithoutChangingAuthoring` |
+| Transform/Undo/refresh заменяют children после reap, stale frame не retag | `Show_TransformUndoAndRefreshReplaceChildrenAfterReapAndNeverRetagOldFrames` |
+| Preflight сохраняет рабочий preview | `Show_InvalidProjectionPreservesWorkingChildAndPresentation` |
+| Cancellation до viewport allocation; разрешён retry | `Show_CancelledDuringSceneLoadReapsBeforeAnyViewportAllocationAndAllowsRetry` |
+| Cleanup failure удерживает child до explicit Stop retry | `Show_FailedDeliveryCleanupRetainsChildUntilExplicitSuccessfulStopRetry` |
+| Stop fences ignored-cancellation configure/presentation до фактического drain | `Stop_FencesLateConfigureAndPresentationUntilActualInflightShowHasDrained` |
+| Borrowed Frames/game workflow остаётся рабочим | `Dispose_ClosesPreviewAdmissionButLeavesBorrowedFramesUsableForGameWorkflow`; `Show_DoesNotTakeOverOrStopAnExplicitGameSession` |
+| Runtime factory не активирует loader; host rollback/borrowed dependencies | `RuntimeHost_UsesInjectedPreviewProductWithoutCreatingGameLoaderAndOwnsOnlyProduct`; `AetherHost_FailedLaterActivationRollsBackOwnedPreviewAndTransportWithoutStartingChildren` |
+| Обычный Game role сохраняет Step/Play | `Protocol_DefaultGameRoleRetainsStepAndPlayBehavior` |
+| Clean EOF только перед полным header; partial frame — fault | `BoundaryRead_CleanEofIsNullWhileStrictReadStillRejectsEofAndCancellation`; `BoundaryRead_TruncatedHeaderIsNeverCleanShutdown`; `BoundaryRead_TruncatedPayloadIsNeverCleanShutdown` |
+| Malformed length/JSON и null JSON не трактуются как EOF | `BoundaryRead_InvalidLengthRemainsAProtocolFailure`; `BoundaryRead_MalformedOrUnmappedJsonRemainsAJsonFailure`; `BoundaryRead_NullJsonIsNotAnEndOfStreamMarker` |
+| Только exact Win32 pipe-closed HRESULT; callback IO fault не подавляется | `PeerClosedFilter_AcceptsOnlyExactWin32PipeClosureHResults`; `Producer_CallbackIoFailureAlwaysFaultsWithOriginalIdentityRatherThanBecomingPeerShutdown` |
+| Реальный suspended named pipe disconnect даёт successful worker и zero resources | `Producer_SuspendedClientDisconnectCompletesNormallyAndReleasesAllOwnedWork` |
+
+Assertions используют exact scene/revision/identity/ticket, distinct matrices/colors,
+original exception identity и resource ownership counts; races управляются gates,
+bounded waits означают failure при timeout. Static assertion/gap review выполнен;
+empirical mutation run не заявлен. finding-tests tool был недоступен, применены
+existing sources и одно static Roslyn pairing исследование; это не coverage report.
+
+### Команды и текущий full source run
+
+Из src выполнены (exact invocation records и binlogs рядом с evidence):
+
+~~~powershell
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --filter 'FullyQualifiedName~TrueMoon.Aether.Tests.Preview.|FullyQualifiedName~TrueMoon.Aether.Tests.Gpu.GpuSurfacePipeTests' --logger trx --results-directory TestResults/EditPreview-20261023/shutdown-narrow '-bl:TestResults/EditPreview-20261023/shutdown-narrow-{}.binlog'
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v minimal
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug --blame-hang --blame-hang-timeout 60s --logger trx --results-directory TestResults/EditPreview-20261023/solution/Debug
+dotnet test TrueMoon.slnx --no-restore -c Release --blame-hang --blame-hang-timeout 60s --logger trx --results-directory TestResults/EditPreview-20261023/solution/Release
+~~~
+
+Final focused134/134 =121новыйcase +13существующих GpuSurfacePipe cases,
+failed/skipped0, exit0; TRX shutdown-narrow/MEGA6_PH-DEV_2026-10-23_15_57_59_net10.0.trx.
+Предыдущий focused85/85 сохранён в narrow-final; сначала82case, затем добавлены
+host rollback на обоих providers и early cancellation. Начальная compile ошибка
+fixture (legacy IFactory.Create<TData> bridge) исправлена в новых tests; production
+RED этим не заявлен.
+
+Nonincremental Debug build0errors/1542warnings. Full solution **2569/2569 Debug и
+2569/2569 Release**,10TRX/configuration, failed/skipped0:
+Core117/Cobalt179/generator91/Enerit166/generator114/Mithril99/UI661/Hosting85/
+Aether1008/Editor49. Solution helper VerifySolution.ps1, summary.json,
+20TRX/build logs и188source hashes — в TestResults/EditPreview-20261023/solution.
+Warnings не подавлялись; результат не объявляет warning-free build.
+
+### Native drawing и defect/failure history
+
+Текущий final evidence: TestResults/EditPreview-20261023/consumers-110233808/
+summary.json, Completed=true, Failure=null,6commands/4native cases/140source hashes.
+VerifyConsumers.ps1 сохраняет exact exe/arguments/cwd/exit и process-local validation
+environment, timeout/owned-child handling. Два publish commands, четыре app runs:
+
+- Preview Debug apphost и published Release: по6PNG/5cooperatively reaped children.
+  Revisions7→8→9→10, Transform x−1→+1, Undo→−1, Redo→+1; actual GL readback red
+  centroid .41439→.59→.41439→.59. Затем resize800×450, suspend0×0,
+  resume320×240, stale tickets/lower revision и close при pending first-present.
+  Оригинальные640×360 screenshots/scene authoring сохранены, tick0, compiler не
+  запускался, Game.Logic не загружался. Published app скопирован в OS temp вне
+  repository без Game.Logic.*; report.NoGameFile=true.
+- Runtime role1/buildnull/restorefalse проверены в пяти child reports каждого run.
+  Vulkan validation enabled0errors/0warnings; created/released devices/surfaces/
+  slots совпадают. Child stderr пуст, owned resources/handles/mappings/UI sessions0,
+  imported image readback для delivery отсутствует.
+- Прежний Editor Debug/published Release smoke: каждый8commands/3PNG/2reaped
+  children, validation0/0 и zero owned resources. Это регрессия прежнего game
+  workflow; она не заявляет integration нового preview в ordinary Editor UI.
+
+Native debugging preserved in native-debug-*:
+104558927 не прошёл из-за отсутствующего VK_LAYER_PATH; исправлен только environment
+дочернего процесса с существующим TestResults/ENG4b/validation-layer/Bin.
+104744243 и105027162 получили6PNG/5reaped children/zero resources, но child stderr
+зафиксировал broken pipe на Retired reply и EndOfStream на следующем wire read.
+Это actual RED: normal parent disconnect faulted producer и давал child exit1.
+
+GpuWire получил отдельное nullable boundary read API: null только EOF до первого
+байта четырёхбайтового header; strict ReadMessageAsync не изменил EOF semantics. Producer
+нормально завершает read/write при exact HRESULT 0x8007006D/0x800700E8/0x800700E9,
+не подавляя arbitrary IO/callback/native/protocol/cleanup errors. DestroySurface
+остаётся в finally. Run105416402 прошёл после исправления, но его binary предшествует
+final facility-prefix tightening; текущим proof считается только consumers run
+после final full rebuild выше.
+
+Consumers helper сначала искал cleanup.json вместо report.json; затем resume
+упёрся в повторный Assets copy. Исправлены только helper paths/idempotent resume,
+проверены прежние source hashes и сохранены только complete exit0 reports; недостающий
+editor-published-Release и package proof выполнены. FailureHistory и stdout logs
+сохранены, предыдущие failures не переписаны в passing results.
+
+### Fresh packages и границы вывода
+
+VerifyPackage.ps1 + PackageProgram.cs.txt выполнили22commands и8/8cases:
+Debug/Release × build/publish × Cobalt/Microsoft DI. Version
+0.2.2.7-alpha.preview.20261023110622747,9fresh nupkgs из10producer projects
+(Cobalt generator входит в Cobalt);301source hashes.8runtime TrueMoon libraries
+и build-only Enerit.Generator проверены в isolated feed/cache, consumer не имеет
+ProjectReference. Actual UseAetherAuthoring + UseAether + Host.Preview используют
+Apply/Show/stale ticket/Undo/Redo/suspend/resume/Stop,4owned runtime leases и
+zero compiler activation; fake GPU presenter/runtime — managed API/composition
+proof. Native drawing относится к отдельным apphost/published runs, не к package
+consumer. Summary Completed=true:
+TestResults/EditPreview-20261023/package-20261023-110622714/summary.json.
+Итоговая read-only сверка source hashes/package payloads/docs/checklist —
+TestResults/EditPreview-20261023/verification.json. Публикации не было.
+
+ED1–ED8 checklist остаётся8stages/40unchecked tasks. Следом ED1a project/session
+и ED2 document/save/reopen, затем подключение готовых authoring/preview к ordinary
+Editor UI; ED5 tools/camera/picking ещё предстоят. Полный World/live edit/MCP,
+golden/RTE/performance/VRAM/hardware/physical UI и alpha criteria этим не закрыты.
+Windows/driver settings не менялись; поиск K7 workaround остаётся остановленным.
+
+## ARCH1b.1: headless Transform authoring и история — 2026-10-23
+
+По запросу «давай следующий шаг» реализован первый локальный API срез
+[ARCH1b.1](PLAN.md#arch1b1-локальная-transform-authoring-session--2026-10-23).
+UseAetherAuthoring регистрирует shared resolution и typed IFactory; отдельная
+ISceneAuthoringSession владеет immutable document, resolved state, bounded
+Undo/Redo и non-evicting terminal receipts. Ни окна, ни запущенный Runtime для
+редактирования не нужны. UseAether сохраняет существующий graph; scene resolution
+registration вынесена в общий helper для композиции в любом порядке.
+
+Atomic Transform batches адресуют entity/component IDs, используют expected
+revision/operation GUID/actor, проверяют local values, exact schema и полностью
+resolved parent-composed transforms до single commit. Старые query snapshots,
+catalogs и unrelated patches сохраняются. Undo/Redo увеличивают document revision
+и восстанавливают ContentRevision. Limits/redo/duplicate/cancel/Dispose contract
+подробно зафиксирован в PLAN и README/PACKAGE, а не продублирован в UI.
+
+| Требование первого среза | Прямое evidence, namespace TrueMoon.Aether.Tests.Scenes.Authoring |
+| --- | --- |
+| Чтение и атомарное изменение всех9свойств по ID, immutable snapshots и unrelated data | SceneAuthoringSessionTests.Apply_PublishesCoherentNinePropertyBatchByStableIdsWithoutMutatingEarlierSnapshots; Apply_InstanceAddedTransformRetainsAddedDataAndRestoredComponentPresence |
+| Invalid2nd target/duplicate/hidden/unsupported и invalid numbers/scales не публикуют часть batch | SceneAuthoringSessionTests.Apply_InvalidSecondTargetRejectsEntireBatchBeforeResolution; Apply_InvalidTransformRejectsWithoutPartialPublish |
+| Exact schema, весь parent graph и float singular/overflow проверяются до commit | SceneAuthoringSessionTests.Resolution_ExactTransformSchemaRejectsFailedCreationWithoutPoisoningLaterValidEditing; Apply_WholeHierarchyValidationRejectsLocallyFiniteOverflowAtomically; Apply_FinitePositiveScalesWithSingularFloatDeterminantRejectAtomically |
+| Cancel Apply/Undo/Redo до commit и unexpected failure не меняют content/history/receipt; retry безопасен | SceneAuthoringSessionTests.Cancellation_DuringCandidatePreparationPublishesNothingAndSameIdCanBeRetried; Preparation_UnexpectedFailurePreservesExceptionIdentityStateAndRetryableOperationId; Cancellation_PreCancelledNewIntentHasNoReceiptAndLateCancellationCannotUndoCommit |
+| Revision conflict/concurrent requests и exact/changed operation ID | SceneAuthoringSessionTests.ConcurrentSameRevision_OneAtomicBatchWinsAndOneConflicts; Operations_RevisionConflictIsCachedAndDoesNotBecomeSuccessAfterStateCatchesUp; Operations_ExactRetryReturnsOriginalReceiptButChangedIntentConflicts |
+| Bounded history, monotonic revision, restored checkpoint, new edit clears redo и zero-history profile | AuthoringHistoryTests.History_BoundsCombinedUndoRedoAndRestoresContentWithMonotonicDocumentRevisions; History_NoOpApplyIsTransactionAndClearsRedoWhileZeroLimitDisablesHistory; Revision_AtLongMaximumRejectsWithoutWrappingOrChangingContent |
+| Journal at capacity сохраняет прежние success/error receipts; Undo/Redo retries не повторяют мутацию | AuthoringHistoryTests.Ledger_AtCapacityRejectsNewIdsWithoutEvictingSuccessOrErrorReceipts; Ledger_ExpectedEmptyHistoryErrorConsumesReceiptButCancellationDoesNot; History_ExactUndoRedoReceiptsAreStableAcrossLaterEditsAndCancelledRetries |
+| Limits и frozen request boundaries, independent/closed products, failed creation и borrowed ownership | AuthoringContractsTests.Batch_FreezesCallerOrderAndAcceptsExact4096Boundary; Operation_RejectsInvalidIdentityRevisionAndActor; AuthoringFactoryRegistrationTests.Factory_CopiesEveryOptionBeforeCallerMutationAndProductsHaveIndependentOperationBudgets; Factory_ProductsHaveIndependentHistoryAndSnapshotsAndCloseWithoutDisposingBorrowedResolution; Factory_InvalidInitialScenePublishesNoSessionAndAllowsLaterValidCreation |
+| App options snapshot/duplicate/lazy startup и Cobalt+Microsoft DI, UseAether в любом порядке | AuthoringFactoryRegistrationTests.App_CopiesAllAuthoringOptionsDuringConfigurationBeforeFactoryResolution; App_DuplicateOrExistingSessionFactoryFailsBeforeActivatingServices; App_AuthoringAloneProvidesSingletonFactoryAndIndependentSessionsWithoutStart; App_AetherCompositionInEitherOrderSharesInjectedResolutionWithoutCreatingRuntime |
+| Authoring не связан с preview limit64/material policy | SceneAuthoringSessionTests.Apply_HeadlessAuthoringDoesNotImposePreviewEntityOrMaterialBounds |
+
+Focused final run: **Passed:87, Failed:0, Skipped:0**, exit0:
+
+```powershell
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --configuration Debug --filter FullyQualifiedName~TrueMoon.Aether.Tests.Scenes.Authoring. --logger trx --results-directory TestResults/ARCH1b-20261023/narrow-clean '-bl:TestResults/ARCH1b-20261023/narrow-clean-{}.binlog'
+```
+
+TRX: TestResults/ARCH1b-20261023/narrow-clean/MEGA6_PH-DEV_2026-10-23_15_17_57_net10.0.trx.
+Первый prefix run130содержал84новых cases и46старых AuthoringModelTests; после
+review добавлены3прямые проверки, final87 использует строгий namespace filter.
+Промежуточный exact-schema test намеренно подменял каталог injected resolver
+вопреки SceneDocument: это ошибочный collaborator oracle, не поддержанный contract.
+Оставлен корректный failed initial schema/Create и subsequent valid editing proof;
+провал87run(86pass/1fail) не выдаётся за production defect или passing evidence.
+IDE findTests недоступен; использованы repository tests и один bounded Roslyn
+pairing scan. Static pairing не означает coverage; coverage/performance не измерялись.
+
+Финальный nonincremental Debug solution build: exit0,0errors/1522warnings.
+Full Debug **2448/2448** иRelease **2448/2448**,10TRX/configuration, failed0/skipped0:
+Core117/Cobalt179/generator91/Enerit166/generator114/Mithril99/UI661/Hosting85/
+Aether887/Editor49.139Aether production/test source fingerprints не изменились
+во время проверки. Команды helper TestResults/Authoring-20261023/VerifySolution.ps1:
+
+```powershell
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v minimal
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug --blame-hang --blame-hang-timeout 60s --logger trx --results-directory TestResults/Authoring-20261023/solution/Debug
+dotnet test TrueMoon.slnx --no-restore -c Release --blame-hang --blame-hang-timeout 60s --logger trx --results-directory TestResults/Authoring-20261023/solution/Release
+```
+
+Fresh package proof: **8/8** = Debug/Release × build/publish × Cobalt/Microsoft DI.
+Созданы9nupkgs из10producer projects, isolated feed/cache и8runtime TrueMoon
+package dependencies; Enerit.Generator нужен producer, не transitive runtime
+consumer. Version0.2.2.7-alpha.authoring.20261023102244607;22commands,299source
+fingerprints, только PackageReference без ProjectReference. Consumer реально
+выполняет Apply/conflict/duplicate/Undo/Redo/Dispose и App start/stop без runtime.
+Final Completed=true:
+TestResults/Authoring-20261023/package-20261023-102244573/summary.json.
+Helper: TestResults/Authoring-20261023/VerifyPackage.ps1; ничего не публиковалось.
+
+Два предварительных package runs сохранены: package-20261023-102016044 остановился
+на неверном helper ожидании9runtime libraries вместо8 (build-only generator);
+package-20261023-102117026 — CS1061 из-за пропущенного using TrueMoon.Dependencies
+в consumer example. Исправлены проверочный helper и README/example, production
+API не менялся. Passing evidence — только указанный final fresh run.
+Финальная сверка:9Markdown documents/498local links/260anchors без ошибок,
+11new source namespaces соответствуют путям, git diff HEAD --check прошёл.
+ED1–ED8/40unchecked tasks сохранены.139solution и299package fingerprints совпали
+с текущими исходниками;32сравнения deployed DLL с lib/net10.0 payload из nupkgs
+прошли. Aggregate Completed=true: TestResults/Authoring-20261023/verification.json.
+
+Native viewport и physical UI этим API срезом не изменялись/не повторялись.
+ARCH1b в целом, ED1/ED2 persistence, editable UI, независимый preview и live World
+не завершены. Следующий engine шаг — Edit preview, ED1a project/session параллельно.
+
+## API перед UI и выбор Enerit IPC — 2026-10-23
+
+По обсуждению с пользователем уточнён порядок первого рабочего среза Editor:
+общие project/scene contracts → минимальный ARCH1b scene query/Transform mutation/
+history/Undo/Redo → headless validation/conflict/duplicate/cancel/atomicity proof →
+независимый Edit preview → подключение editable inspector/tools. ED1a project/
+session выполняется параллельно. Полный generic World/ECS и live editing ARCH1c
+не являются предварительным условием. Authoring/history имеют общего владельца
+в Aether, Editor не создаёт вторую mutation/history реализацию; Play автоматически
+не записывает изменения обратно в документ.
+
+Enerit явно выбран для IPC Editor↔Runtime: typed invocation/generated adapters,
+same-build named pipes как текущая основа, control/input/query/results/progress/
+errors и frame descriptors. Pixels/shared GPU images остаются отдельным frame
+transport; launch/stop/reap — у Mithril. Новые preview/edit invocation contracts
+запланированы, wire versions/limits и transport readiness этим не расширяются.
+
+Синхронизированы engine/editor, Enerit, общие и UI планы/статусы. Изменена только
+документация; production code/API не менялись, build/tests/native/packages не
+запускались. Проверены14documents/428local links/16added anchors: missing targets/
+anchors0, ED1–ED8/40unchecked tasks сохранены, source changes0, git diff --check
+прошёл. Evidence: TestResults/AetherApiPlan-20261023/verification.json.
+Предыдущие passing результаты сохраняют свои даты и область вывода.
+
+## План рабочего приложения Editor — 2026-10-22
+
+По согласованному обсуждению создан EDITOR_PLAN.md в направлении Aether.
+ED1–ED8 охватывают project/session, document persistence, общие authoring operations
+и undo, панели/inspector/commands, Edit preview/tools, game workflow, extensions и
+recovery/delivery. Первый цельный срез: Open scene → Transform edit → preview →
+Undo/Redo → Save → reopen. Следующий конкретный шаг — ED1a project description и
+ProjectSession; gameplay collisions сохраняют отдельную точку продолжения.
+
+Зафиксированы функциональная организация кода, единый owner документа/history,
+View/ViewModel/style и App/DI factory lifetime, различие UI commands/authoring
+mutations, draft/commit/cancel и отдельные authoring/runtime states. Editor
+extensions и custom UI controls имеют разные границы; интерфейсы вводятся по
+первым потребителям, dynamic plugin loader/полная замена Element не обязательны.
+
+Engine PLAN, общий PLAN/STATUS, UI PLAN/STATUS, индекс документации, README Editor
+и AGENTS ссылаются на один прикладной checklist. Общие authoring contracts остаются
+в ARCH1, controls/runtime UI — у Alloy/Argentis. Это документационная работа:
+production code и public API не менялись, build/tests/native/packages не запускались;
+предыдущие passing результаты сохраняют дату и область вывода. Проверяются
+markdown links/anchors и git diff whitespace. Итоговая сверка:
+11documents/374local links/5added anchors, missing targets/anchors0;
+ED1–ED8 и40unchecked tasks присутствуют, неожиданных source changes0,
+git diff --check exit0. Evidence: TestResults/EditorPlan-20261022/verification.json.
 
 ## Единые фабрики и DI — 2026-10-22
 

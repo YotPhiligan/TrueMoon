@@ -22,6 +22,9 @@ public static class BuildIdentity
     // Editor fingerprints bytes without loading Game.Logic into its CLR. Only the
     // child creates/resolves game types; a future replacement must not pin a DLL in Editor.
     public static string GameId => Manifest([Path.Combine(AppContext.BaseDirectory, "Game.Logic.dll")]);
+    /// <summary>Same-engine built-in preview identity; does not inspect a game DLL or source checkout.</summary>
+    public static string PreviewId => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+        "TrueMoon.Aether.EditPreview.v1\n" + Manifest([typeof(SessionIdentity).Assembly.Location]))));
     private static string Manifest(IEnumerable<string> files)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", files.OrderBy(Path.GetFileName, StringComparer.Ordinal)
             .Select(path => Path.GetFileName(path) + ":" + Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))))))));

@@ -8,7 +8,7 @@ if (!$resultRoot.StartsWith($srcRoot + [IO.Path]::DirectorySeparatorChar, [Strin
     throw 'ResultsDirectory must be inside the source workspace.'
 }
 [IO.Directory]::CreateDirectory($resultRoot) | Out-Null
-$scenarios = @('payload','concurrent','cancel-request','remote-error','restart','budget','stop-pending','startup-failure','parent-exit')
+$scenarios = @('payload','concurrent','cancel-request','remote-error','restart','budget','stop-pending','startup-failure','parent-exit','saturated-stop','saturated-kill')
 $project = Join-Path $PSScriptRoot 'AppUnitsPipesProbe.csproj'
 $cases = [Collections.Generic.List[object]]::new()
 $summary = [ordered]@{
@@ -78,12 +78,29 @@ try {
                 if ($report.Scenario -ne $scenario -or $report.Provider -ne $provider -or !$report.Cleanup) { throw 'Invalid composition result.' }
                 if ($report.ClientCleanupObserved -ne ($scenario -ne 'parent-exit') -or $report.WorkersCompleted -ne ($scenario -ne 'parent-exit')) { throw 'Cleanup scope mismatch.' }
                 if ($report.AppCancelled -ne ($scenario -eq 'budget')) { throw 'App lifetime mismatch.' }
+                if ($scenario -in @('saturated-stop', 'saturated-kill')) {
+                    $killed = $scenario -eq 'saturated-kill'
+                    if ($report.PendingBefore -ne 2 -or $report.QueuedBefore -ne 1 -or $report.FailedRequests -ne 3 -or
+                        $report.Pending -ne 0 -or $report.Queued -ne 0 -or $report.Restarts -ne 0) { throw 'Saturated admission cleanup mismatch.' }
+                    if ($report.OverloadError -ne 'PipesInvocationOverloadedException' -or $report.RequestErrors.Count -ne 3 -or
+                        @($report.RequestErrors | Where-Object { $_ -notin @('IOException', 'EndOfStreamException', 'ObjectDisposedException', 'OperationCanceledException', 'TaskCanceledException') }).Count -ne 0) { throw 'Saturated request failure mismatch.' }
+                    if ($report.ChildPids.Count -ne 1 -or $report.ControlObservedPid -ne $report.ChildPids[0] -or
+                        $report.ReleasedPid -ne $report.ChildPids[0] -or !$report.MonitorCompleted -or $report.EnteredHandlers -ne 2 -or
+                        $report.ActiveHandlersAtControl -ne 2) { throw 'Loaded child identity/monitor mismatch.' }
+                    if ([string]::IsNullOrWhiteSpace($report.ControlEndpoint) -or $report.ControlEndpoint -eq $report.DomainEndpoint -or
+                        $report.ControlEndpoint -eq ('tm_' + $report.DomainEndpoint)) { throw 'Lifecycle control endpoint is not independent.' }
+                    if (($report.ExitCodes[0] -ne 0) -ne $killed -or $report.ServerDrained -eq $killed -or
+                        $report.HandlersDrained -ne $(if ($killed) { 0 } else { 2 }) -or
+                        $report.KillCount -ne $(if ($killed) { 1 } else { 0 }) -or
+                        $report.ReleaseOutcome -ne $(if ($killed) { 'Killed' } else { 'Graceful' })) { throw 'Loaded child shutdown outcome mismatch.' }
+                    if ($report.TerminationDelay -ne 3000 -or $report.StopMilliseconds -ge 10000) { throw 'Loaded child stop exceeded its budget.' }
+                }
                 $report | Add-Member -NotePropertyName Configuration -NotePropertyValue $configuration
                 $cases.Add($report); Write-Host "$configuration/$provider/$scenario passed"
             }
         }
     }
-    if ($cases.Count -ne 36) { throw 'Incomplete composition matrix.' }
+    if ($cases.Count -ne 44) { throw 'Incomplete composition matrix.' }
     $summary.Completed = $true
 }
 finally { $summary | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $resultRoot 'summary.json') -Encoding utf8 }

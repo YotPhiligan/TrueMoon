@@ -152,7 +152,7 @@ public class UtilityLifetimeTests
     }
 
     [Fact]
-    public async Task ClientCancellationRemovesPendingResponseRegistration()
+    public async Task ClientCancellationRetainsSentCapacityUntilDisconnect()
     {
         var name = $"tm_{typeof(ResponseClientMarker).FullName}";
         using var stream = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
@@ -165,6 +165,10 @@ public class UtilityLifetimeTests
         await Task.Run(() => stream.GetRequestHeader()).WaitAsync(Timeout);
         requestCancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => resultTask.WaitAsync(Timeout));
+        Assert.Equal(1, client.PendingRequestCount);
+        stream.Dispose();
+        using var disconnected = new CancellationTokenSource(Timeout);
+        while (client.PendingRequestCount != 0) await Task.Delay(10, disconnected.Token);
         AssertNoPendingResponses(client);
     }
 

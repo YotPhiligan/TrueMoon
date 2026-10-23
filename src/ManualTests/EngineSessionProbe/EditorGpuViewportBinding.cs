@@ -12,7 +12,7 @@ using TrueMoon.Alloy.Rendering.Skia;
 namespace EngineSessionProbe;
 
 // Application composition only: Aether owns transport/imports, the Canvas owns each retained Skia image.
-internal sealed class EditorGpuViewportBinding(Func<IRuntimeLease, NativeRuntimeLease> native)
+internal sealed class EditorGpuViewportBinding(Func<IRuntimeLease, NativeRuntimeLease> native, Func<string>? gameIdentity = null)
 {
     private HostedUiWindow _window = null!;
     private AetherHost _host = null!;
@@ -49,7 +49,7 @@ internal sealed class EditorGpuViewportBinding(Func<IRuntimeLease, NativeRuntime
                 _thread = Environment.CurrentManagedThreadId; var gl = w.NativeWindow.GLContext!; _current = gl.MakeCurrent; _current();
                 nint Resolve(string name) { var address = gl.TryGetProcAddress(name, out var pointer) ? pointer : 0; return name == "glReadPixels" ? TraceReadPixels(address) : address; }
                 _context = new(Resolve, _current, Owner);
-                var profile = GpuCapabilityCollector.OpenGl(new(Guid.NewGuid(), 1, BuildIdentity.HostId, BuildIdentity.GameId, new('A', 64)), Resolve).Capabilities;
+                var profile = GpuCapabilityCollector.OpenGl(new(Guid.NewGuid(), 1, BuildIdentity.HostId, gameIdentity?.Invoke() ?? BuildIdentity.GameId, new('A', 64)), Resolve).Capabilities;
                 Probe.Check(profile.Error == null && profile.Devices.Count == 1 && profile.Features is { RequiredProcedures: true, OptimalTiling: true }, "Editor GPU profile unavailable.");
                 _adapter = profile.Devices[0]; ready.TrySetResult();
             }

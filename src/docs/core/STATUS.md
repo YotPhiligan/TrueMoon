@@ -1,5 +1,18 @@
 # Core: состояние и точка продолжения
 
+Связанная проверка — **2026-10-23, ENE6a/MIT6a integration**: Core117/117
+Debug/Release в текущем полном solution2361/configuration; new App/IPC lifecycle
+scenarios и fresh package132 прошли на Cobalt/DI. Core runtime/API не менялись;
+собственная headless delivery/performance матрица повторно не запускалась.
+[Команды и scope](../enerit/HISTORY.md#ene6a-finite-admission-и-наблюдаемая-остановка--2026-10-23).
+
+Последняя работа — **2026-10-23, сверка предпосылок Aether по планам и исходникам**.
+Новых Core blockers для локального ARCH1b не выявлено; текущие App/factory/lifecycle
+contracts достаточны в прежнем bounded scope. Неограниченный scheduler сам по себе
+не требует переписывания Core: admission для IPC предложен на границе Enerit.
+[Общая сверка и зависимости](../PLAN.md#сверка-основы-перед-aether--2026-10-23).
+Код не менялся, build/tests/consumers не запускались; прежние ограничения сохраняются.
+
 Текущая реализация — **2026-10-22, общие фабрики/lifecycle adapters**:
 IFactory<T,TArguments>, Factory adapters и non-owning AppServiceLifecycle добавлены
 в Contracts без provider/module dependencies. Legacy IFactory<T> сохранён.
@@ -112,7 +125,8 @@ JSON failure checks различают serialization error до записи и 
 
 ## Следующий конкретный шаг
 
-По [общей сводке](../QUALITY.md) следующий этап — UI package/Hosting proof на
-текущих Core/Cobalt с explicit fonts. Детальные задачи — в [UI плане](../alloy/PLAN.md#проход-качества-ui-после-headless-модулей--2026-10-15).
-Enerit ENE5 и Mithril MIT5 завершены в собственных bounded scopes; Core не требует
-новых APIs или переписывания utilities для начала UI quality этапа.
+Актуальный маршрут — [минимальный authoring API Aether](../engine/PLAN.md#основа-api-перед-редактируемым-ui--2026-10-23)
+и параллельный ED1a. Прежний UI package/Hosting quality проход завершён в своём
+scope, не остаётся текущим prerequisite. Новые общие Core APIs/utilities вводить
+только по потребителю; IPC admission/limits и process cleanup развиваются у
+Enerit/Mithril. Общий release/platform scope и перечисленные ограничения открыты.

@@ -37,7 +37,10 @@ internal static class GpuSurfaceProducer
             launch.Identity.Validate(); await pipe.WaitForConnectionAsync(end).ConfigureAwait(false);
             while (true)
             {
-                var request = await GpuWire.ReadMessageAsync<GpuSurfaceMessage>(pipe, end).ConfigureAwait(false);
+                GpuSurfaceMessage? request;
+                try { request = await GpuWire.ReadMessageOrEndAsync<GpuSurfaceMessage>(pipe, end).ConfigureAwait(false); }
+                catch (IOException error) when (GpuWire.IsPeerClosed(error)) { break; }
+                if (request == null) break;
                 if (request.Identity != launch.Identity || request.Sequence != checked(++sequence)) throw new InvalidDataException("Surface request identity/sequence mismatch.");
                 if (beforeOperation != null) await beforeOperation(request.Kind, end).ConfigureAwait(false);
                 GpuSurfaceMessage reply;
@@ -81,7 +84,8 @@ internal static class GpuSurfaceProducer
                         await DestroySurface().ConfigureAwait(false); reply = new(sequence, "Detached", launch.Identity, generation); break;
                     default: throw new InvalidDataException("Unknown surface operation.");
                 }
-                await GpuWire.WriteMessageAsync(pipe, reply, end).ConfigureAwait(false);
+                try { await GpuWire.WriteMessageAsync(pipe, reply, end).ConfigureAwait(false); }
+                catch (IOException error) when (GpuWire.IsPeerClosed(error)) { break; }
                 void RequireGeneration()
                 { if (surface == null || ledger == null || request.Generation != generation) throw new InvalidDataException("Missing/stale surface generation."); }
             }

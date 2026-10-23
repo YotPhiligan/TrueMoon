@@ -12,6 +12,28 @@
 
 ## Дополнительный план улучшения инфраструктуры Alloy — 2026-10-18
 
+### Поддержка рабочего приложения Aether.Editor — 2026-10-22
+
+Уточнение2026-10-23: редактируемые inspector/tools подключаются после
+[минимального authoring API, headless proof и Edit preview Aether](../engine/PLAN.md#основа-api-перед-редактируемым-ui--2026-10-23).
+ED1a project/session идёт параллельно; IPC Editor↔Runtime использует Enerit,
+не становится новым UI transport. Полный движок и весь UI beta не являются
+предварительным условием первого среза.
+
+Согласован [прикладной план ED1–ED8](../engine/EDITOR_PLAN.md). Здесь остаются
+общие UI capabilities и их acceptance; прикладной checklist не дублируется.
+ED4 использует overlays/dialogs, command/menu/shortcut, tree/selection и forms
+conversion/validation/commit/cancel. ED5 нуждается в input/focus/capture и viewport
+tool integration. ED7 проверяет custom widgets через Element и backend-independent
+drawing/input contracts, а также конкретные capability interfaces по потребителям.
+
+IEditorCommand/panel/property-editor/tool contracts принадлежат приложению;
+пользовательские UI controls — Argentis/Alloy. Сам IButton не заменяет Element:
+переход runtime на полностью интерфейсное дерево не назначен. Начать с минимальных
+capabilities, необходимых первому Transform/preview/Undo/save срезу, сохраняя UIA1,
+net10.0/xUnit/ownership и существующие PA/K критерии. Это документационное
+планирование без новых code/API или текущих passing результатов.
+
 ### UIA1: View, Data/ViewModel и scoped styles — 2026-10-22
 
 По запросу пользователя реализована штатная модель авторинга: `View<TData>` с

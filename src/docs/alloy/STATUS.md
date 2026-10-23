@@ -1,6 +1,64 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-22, UIA1 View/Data/ViewModel и typed styles**.
+Последняя интеграционная проверка — **2026-10-23, ED2b document UI Editor**.
+Nested View/Data/Style + typed DI factories подключают path/actions/dirty/errors и
+inline Save/Discard/Cancel. Общие UI-library APIs и PA3 overlay runtime не менялись.
+Owner-thread notifications, stable tree/path/focus/style, detach/dispose и оба DI
+providers проверены; readonly authoring properties не используют legacy64 projection.
+74новых cases; full2878/configuration Debug/Release,10TRX/failed0/skipped0,
+включая UI661/Hosting85/Editor358. Source Debug/published Release:8native cases/
+18PNG/4reaped children; documents по19actions/4PNG/5saved files, legacy по8commands/
+3PNG/2children. Validation0/0, UI sessions/mappings/GPU resources/handles0.
+10headless scene/SDK cases отдельно. [Exact evidence](../engine/HISTORY.md#ed2b-документы-в-обычном-ui--2026-10-23).
+Следом Transform inspector/Undo/Redo/preview. Fresh packages/golden/RTE/full
+performance/physical UI/K3/K7/K8/VRAM/final alpha не повторены.
+
+Предыдущая интеграционная проверка — **2026-10-23, ED2a document/persistence Editor**.
+Общие UI APIs прежние. Bootstrap подключает document factories; window Close
+сначала разрешает document policy, затем drains runtime commands. Normal UI пока
+не вызывает Load/Save/edit APIs. Source Debug/published Release empty/project/
+legacy:6native cases/10PNG/4reaped children, Vulkan0/0, UI sessions/mappings/GPU
+resources/handles0. Full2804/configuration Debug/Release,10TRX/failed0/skipped0,
+включая UI661/Hosting85/Editor284;10headless scene/SDK cases отдельно.
+[Evidence/границы](../engine/HISTORY.md#ed2a-документ-сцены-и-persistence--2026-10-23).
+Далее document UI commands/Save-Discard-Cancel, затем Transform/Undo/preview.
+Fresh packages/golden/RTE/full performance/physical UI/K3/K7/K8/VRAM/final alpha
+не повторялись. Общие controls/layout/input остаются в UI плане.
+
+Предыдущая интеграционная проверка — **2026-10-23, ED1a project/session Editor**.
+Общие UI APIs не менялись. Normal launch без demo, explicit .aetherproj и legacy
+game workflow проверены в Debug/published Release:6native cases/10PNG; workspace
+runs без compiler/child, legacy по2reaped children/3PNG, Vulkan0/0.
+Все UI/project owners закрыты, mappings/GPU resources/handles/UI sessions0.
+Current full2661/configuration Debug/Release включает UI661/Hosting85/Editor141,
+failed/skipped0,10TRX/configuration. Published app/project вне repo;4headless SDK
+cases проверены отдельно. [Evidence/границы](../engine/HISTORY.md#ed1a-projectsession-и-запуск-вне-repository--2026-10-23).
+Scene documents/editable inspector/preview integration ещё нужны; следующий ED2.
+Golden/RTE/full performance/physical UI/K3/K7/K8/VRAM/final alpha не повторялись.
+
+Предыдущая интеграционная проверка — **2026-10-23, независимый Edit preview Aether**.
+Общие production UI APIs не менялись. Native fixture использует прежний ViewportView:
+preview Debug/published Release по6PNG/5reaped children; старый ordinary Editor
+workflow по8commands/3PNG/2reaped children. Все4cases validation0/0, zero owned
+resources; новый preview ещё не подключён к ordinary Editor UI.
+Current full solution2569/2569 Debug/Release включает UI661/Hosting85/Editor49,
+failed/skipped0,10TRX/configuration. Engine managed packages проверены отдельно;
+новый full UI package/golden/performance/physical acceptance не заявлен.
+[Exact evidence, failures и границы](../engine/HISTORY.md#edit-preview-независимый-engine-profile--2026-10-23).
+Следом ED1a project/session и documents, затем подключение editable inspector к
+готовым authoring/preview APIs; общие controls/input возможности остаются в UI плане.
+
+Предыдущее планирование — **2026-10-23, уточнение порядка UI-зависимостей Editor**.
+[ED1–ED8](../engine/EDITOR_PLAN.md) задают прикладные задачи; UI план остаётся
+владельцем общих overlays/forms/tree/commands/input/focus и custom controls.
+Поддержка первого Transform/preview/Undo/save среза вводится по реальным
+потребителям: editable UI подключается после общего authoring API, headless proof
+и Edit preview Aether; ED1a идёт параллельно. IPC Editor↔Runtime — Enerit.
+Интерфейсы Editor extensions и generic widget capabilities имеют
+разные границы; полная замена Element интерфейсным деревом не назначена.
+Изменены только документы; build/tests/native/packages не запускались.
+
+Последняя реализация — **2026-10-22, UIA1 View/Data/ViewModel и typed styles**.
 Правила AGENTS и Argentis API задают Fluent View<TData>, optional plain Data либо
 observable ViewModel и IViewStyle<TView>. Root/typed Part/typed Role scoped rules,
 приоритет local/binding→direct Style→view style→Theme→default, replace/remove и
@@ -11,7 +69,7 @@ EditorViewModel/EditorViewStyle, explicit bindings и DI factory с constructor 
 [Контракт](PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22),
 [точные tests/commands/native/packages](HISTORY.md#uia1-view-viewmodel-и-typed-styles--2026-10-22).
 
-Current UI661/661, Hosting85/85 и Editor49/49 Debug/Release; full solution2321/2321
+Предыдущий UIA1 run: UI661/661, Hosting85/85 и Editor49/49 Debug/Release; full solution2321/2321
 в каждой конфигурации,10TRX/failed0/skipped0.28новых cases и assertion/gap review.
 Nonincremental Debug build0errors/1520warnings, Release publish exit0. Native
 Debug/published Release: каждый8commands/3PNG/2reaped children, validation0/0,
@@ -181,6 +239,11 @@ Alpha K1–K9 не объявляется завершённой. Требова
 5. Core/DI failures и full solution tests учитываются в общем и соответствующих модульных статусах, а не как самостоятельные UI задачи. При влиянии на UI Hosting указывать точный integration blocker.
 
 ## Следующий конкретный шаг
+
+При работе над приложением использовать [первый срез и порядок API → preview → UI](../engine/EDITOR_PLAN.md#первый-сквозной-срез);
+ED1a project/session выполняется параллельно engine foundation.
+Общие UI capabilities для ED4/ED5/ED7 развивать здесь по конкретному consumer;
+готовность приложения не требует заранее закончить весь UI beta backlog.
 
 PA8a0–2 и автоматическая часть PA8a3 выполнены. Для дальнейшей UI приёмки нужны
 physical100/150/200%/разные DPI мониторов и оставшиеся OS input/chrome checks,

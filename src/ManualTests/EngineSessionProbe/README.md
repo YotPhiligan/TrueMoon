@@ -1,5 +1,17 @@
 # EngineSessionProbe — пример TrueMoon.Aether (ENG1–ENG5c.2)
 
+## Независимый Edit preview
+
+`EngineSessionProbe --edit-preview-proof <new-directory>` использует
+UseAetherAuthoring и host.Preview: committed Transform → pixels → Undo/Redo,
+точные revision/runtime/surface stamps, resize/suspend/resume и закрытие окна
+с pending first-present. Build/Play/game project не вызываются; встроенный child
+не загружает Game.Logic. Профиль — существующий Windows x64 Vulkan/OpenGL GPU
+viewport с fixed camera; camera/tools и normal Editor UI не входят.
+Для validation задайте process-local TRUEMOON_GPU_VALIDATION=1 и VK_LAYER_PATH
+на существующий SDK Bin. Результаты: preview-report.json,6PNG и runtime cleanup
+reports. Published proof отдельно выполняется из копии без Game.Logic.dll и вне repo cwd.
+
 ## ENG5c.2: reach/raycast и переключатели объектов
 
 Запустите `--room`, нажмите Play и кликните viewport. WASD/mouse приблизьтесь к

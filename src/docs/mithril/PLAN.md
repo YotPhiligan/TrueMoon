@@ -35,6 +35,7 @@ protected CreateHandle сохраняет extensibility. App controller/parent f
 | MIT3 | Restart и отказ процесса | Normal/crash exits, policy selection и остановка во время restart воспроизводимы; нет непредусмотренного повторного запуска или неконтролируемого restart loop |
 | MIT4 | Интеграция с Enerit/Core | Own child unit выполняет IPC, при exit/failure канал и процесс закрываются по контрактам, app shutdown согласован |
 | MIT5 | Consumer и operational diagnostics | Published/package consumer запускает/останавливает own child; policy/error/exit diagnostics и commands/configuration воспроизводимы |
+| MIT6 | Частично: первый MIT6a saturated-stop/kill профиль проверен2026-10-23; runtime API прежние | Полный fault matrix, status по потребителю и resource/parent-death scope остаются задачами ниже |
 
 MIT0 не закрывается успешным build пустого test project. MIT1–MIT3 проверять на собственных тестовых процессах с bounded временем и cleanup. Системные службы/чужие приложения не используются как тестовые units.
 
@@ -47,6 +48,72 @@ MIT0 не закрывается успешным build пустого test proj
 - Полный process/IPC scenario подтверждён на заявленной OS/configuration; неподдержанные режимы отмечены отдельно.
 
 ## После первой рабочей проверки
+
+### MIT6: укрепление процессов и IPC — ревью 2026-10-23
+
+Предложения основаны на чтении кода/планов; конкретные API и новые гарантии требуют
+контракта перед реализацией. MIT0–MIT5 сохраняют проверенный Windows x64/net10.0
+own-child/cooperative scope. Mithril управляет OS process/exit/restart/reap; Enerit
+— каналом и invocation. Ready/Hello, heartbeat, game session/generation и выбор
+восстановления состояния уже принадлежат Aether, не дублируются в Mithril.
+У engine child уже RestartPolicy.Never: replacement/recovery координирует Aether;
+не включать поверх него независимый automatic restart без отдельного решения.
+
+| ID | Предлагаемая задача | Критерий и границы |
+| --- | --- | --- |
+| MIT6a | Общий Enerit/Mithril stop/drain и fault/load acceptance перед интерактивным preview | Одна согласованная последовательность: закрыть приём операций/зафиксировать session fence, отменить IO/pending, запросить cooperative shutdown, дождаться в пределах graceful budget, затем kill/reap owned process при необходимости и освободить transport/resources после подтверждённого завершения. Ожидание drain не должно блокировать переход к kill. Все фазы расходуют согласованный общий budget, cleanup failure наблюдаем и owner сохраняется для retry |
+| MIT6b | Наблюдаемое состояние процесса для consumer | Проверить достаточность существующих UnitProcessDiagnostic/Completion. Если реальный consumer требует чтение через injected contract, добавить минимальный readonly snapshot/terminal completion без downcast; не навязывать новый generic lifecycle/state-machine framework. OS Started, IPC Connected и Aether Ready — разные события; PID не заменяет run/generation identity |
+| MIT6c | Длительные сессии, parent death и ограниченные diagnostics | Повторные start/stop/crash/restart с pending IPC, handle/thread/process trends и точными own-PID outcomes. Проверить abrupt parent exit с child, не завершающимся кооперативно; существующий observer лишь запрашивает App cancellation. При необходимости отдельно спроектировать OS-level containment. У владельца redirected stdout/stderr обеспечить постоянное чтение с bounded retention и явным overflow/truncation, не держать весь log в памяти |
+| MIT6d | Расширение restart/hosting по реальному сценарию | Exponential backoff/jitter/reset-after-stability, независимый external restart и новые hosting modes вводятся только при потребителе и новых tests. Текущие bounded limit3/delay250 и Never для Aether не менять ради списка возможностей; borrowed attach не смешивать с owned cleanup |
+
+MIT6a — единый детальный межмодульный acceptance, Enerit ссылается на него из ENE6.
+Отдельно зафиксировать доставку Stop до разрыва нужного control channel либо
+через независимый Mithril lifecycle channel; закрытие admission не должно
+запрещать сам shutdown. Domain save/snapshot перед Stop остаётся у Aether.
+Нужны slow/nonreading peer, overload и pending calls при Stop, cooperative и
+ignoring-cancellation handler в отдельном own child, crash/disconnect, stop во
+время restart preparation/delay, repeated/concurrent cleanup и failed reap.
+Проверять terminal outcomes, отсутствие replay/новой generation после fence,
+возврат buffers и завершение owned tasks; Debug/published Release и затронутые
+independent Cobalt/DI package consumers. Новые результаты не выводятся из старых
+36/108-case матриц. Начать с контракта и воспроизводимого сценария, затем fixes.
+
+В in-process/Main режиме uncooperative Task нельзя объявить завершённым по одному
+timeout: dependencies остаются owned до реального завершения. Тот же предел есть
+у user launch preparation, удерживающей lifecycle gate. Parent-death containment
+и long resource trends — отдельная приёмка перед рабочей поставкой, не условие
+локального headless authoring. Domain preview/frame lifecycle остаётся в Aether.
+
+### MIT6a: первый load-stop профиль — 2026-10-23
+
+По запросу приступить к работе выбран первый ограниченный срез с
+[finite admission/async stop Enerit](../enerit/PLAN.md#ene6a-и-mit6a-первый-контракт--2026-10-23).
+Использовать существующие AppUnitsPipesProbe, controller и отдельный Mithril
+control endpoint; новое Mithril runtime API или второй readiness supervisor
+для этого proof не нужны.
+
+Два дополнительных сценария saturated-stop/saturated-kill на Cobalt/Microsoft DI:
+запустить один owned child, занять два server handlers и client pending slots,
+поставить один call в bounded wait queue и подтвердить reject следующего до
+dispatch. Запросить stop owned unit через независимый lifecycle pipe, пока
+доменные handlers активны; затем завершить App/client cleanup. Проверить exact
+PID, control receipt, elapsed budget, terminal process diagnostics, no restart,
+pending/queued0 и monitor/client Completion. Cooperative child выходит0 и
+подтверждает server/handler drain. Ignoring-cancellation child получает kill/reap;
+его managed finally/server drain после kill не объявляется выполненным.
+
+Повторить Debug и published Release, затем fresh independent PackageReference
+matrix с обоими providers и DI без Cobalt analyzer. Прежние9сценариев сохраняются;
+расширенный runner содержит11×2config×2delivery×3provider =132cases. Каждое число
+становится результатом только после текущего Completed=true в STATUS/HISTORY.
+Общий budget этого профиля учитывает существующий3s graceful и bounded5s reap,
+внешний10s oracle; arbitrary blocking launch preparation/in-process callbacks
+по-прежнему кооперативны. Slow/malformed peers и stop callbacks дополнительно
+проверяются напрямую в Enerit.
+
+Срез не закрывает весь MIT6a fault matrix, real OS permission/reap failures,
+parent-death containment или long resource trends MIT6c. Эти случаи остаются
+отдельными criteria и не выводятся из successful saturated-stop/reap.
 
 ### MIT0 own-child контракт — 2026-10-11
 

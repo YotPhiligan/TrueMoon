@@ -19,19 +19,22 @@ be prerelease. Outputs are ignored, previous evidence preserved. Packages remain
 local and are not published. Every launched build/process has a deadline and only
 its own process tree is killed/reaped on failure.
 
-Expected matrix:9scenarios ×Debug/Release ×build/publish ×(Cobalt and Microsoft DI
-with both generators, plus Microsoft DI without Cobalt analyzer) =108cases.
+Expected matrix:11scenarios ×Debug/Release ×build/publish ×(Cobalt and Microsoft DI
+with both generators, plus Microsoft DI without Cobalt analyzer) =132cases.
 Scenarios:payload,32concurrent,local cancellation,remote error,child crash/reconnect,
-restart budget exhaustion,Stop with pending RPC,startup rollback,parent abrupt exit.
-The final summary requires all108cases and a missing Enerit analyzer compile failure.
+restart budget exhaustion,Stop with pending RPC,startup rollback,parent abrupt exit,
+saturated-stop and saturated-kill through the independent process control endpoint.
+The final summary requires all132cases and a missing Enerit analyzer compile failure.
 
 Apphost runs parent and selected own child from the delivered output. Framework-
 dependent publish has no RID. The complete output includes apphost,assembly,deps,
 runtimeconfig and dependencies. Both endpoints use the same packaged runtime/generator
 and service sources. Child generations/exit codes/typed checks, App lifetime, pending
 map/workers/controller cleanup are checked; killed parent client cleanup remains
-unobservable, reported false/Pending=-1. Cooperative handlers and Windows x64/net10.0
-are the bounded target. No cross-version/MMF/stress/uncooperative readiness follows.
+unobservable, reported false/Pending=-1. The Windows x64/net10.0 profile includes
+cooperative drain and owned kill/reap of an uncooperative child. Kill does not
+prove managed finally execution. No cross-version/MMF/long resource trend or
+general in-process uncooperative shutdown guarantee follows.
 
 The consumer has its own Directory.Build.props/targets/Directory.Packages.props
 boundary and NuGet.Config source mapping. TrueMoon packages must come from the local
@@ -51,7 +54,7 @@ UseDiagnostics and explicit local
 Composite registrations are retained from the source fixture.
 
 Source fingerprints,package hashes/metadata,library provenance,compiler analyzer
-paths/generated-source hashes,commands and108result records are saved in summary.json.
+paths/generated-source hashes,commands and132result records are saved in summary.json.
 [Acceptance owner](../../docs/mithril/PLAN.md), [status](../../docs/mithril/STATUS.md).
 ENE5 performance baseline and MIT5 operational diagnostics remain separate tasks;
 this runner does not measure latency/throughput/allocations.

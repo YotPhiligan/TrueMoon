@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.IO.Pipes;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 using TrueMoon.Enerit.IO;
@@ -101,6 +102,95 @@ public class AppInvocationRegistrationTests
         Assert.Equal("pipeName", Assert.ThrowsAny<ArgumentException>(() => clients.Create<IMarker>()).ParamName);
         Assert.Equal("pipeName", Assert.ThrowsAny<ArgumentException>(() => servers.Create<IMarker>()).ParamName);
     }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PipesOptions_AppRegistrationSnapshotsLimitsBeforeFactoryResolution(bool di)
+    {
+        Metadata();
+        var endpoint = "app-options-" + Guid.NewGuid().ToString("N");
+        using var peer = new NamedPipeServerStream("tm_" + endpoint, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        var options = new PipesTransportOptions { MaxPendingRequests = 1, MaxQueuedRequests = 0 };
+        await using var app = Builder(di).Setup(c => c.UseDiagnostics().PipesServiceTransport(_ => endpoint, options).UseInvocationService<IMarker>()).Build();
+        options.MaxPendingRequests = options.MaxQueuedRequests = 99;
+        var client = Assert.IsType<PipesInvocationClient<IMarker>>(app.Services.Resolve<IInvocationClient<IMarker>>());
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        await peer.WaitForConnectionAsync(deadline.Token);
+        var pending = client.InvokeAsync(1, null, deadline.Token);
+        var (id, method, length) = await Task.Run(peer.GetRequestHeader).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(1, method); Assert.Equal(0, length);
+        var serialized = 0;
+        await Assert.ThrowsAsync<PipesInvocationOverloadedException>(() => client.InvokeAsync(2, _ => serialized++, deadline.Token));
+        Assert.Equal(0, serialized); Assert.Equal(1, client.PendingRequestCount); Assert.Equal(0, client.QueuedRequestCount);
+        using var response = new ArrayPoolBufferWriter<byte>();
+        SerializationUtils.Write(id, response); SerializationUtils.Write((byte)0, response); SerializationUtils.Write(0, response);
+        await peer.WriteAsync(response.WrittenMemory, deadline.Token);
+        await pending.WaitAsync(TimeSpan.FromSeconds(5));
+        await app.StopAsync();
+        Assert.True(client.Completion.IsCompletedSuccessfully); Assert.Equal(0, client.PendingRequestCount);
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PipesOptions_InvalidConfigurationFailsAtRegistrationOnBothProviders(bool di)
+    {
+        var options = new PipesTransportOptions { MaxQueuedRequests = -1 };
+        Assert.Throws<ArgumentOutOfRangeException>(() => Builder(di).Setup(c => c.PipesServiceTransport(options)).Build());
+        Assert.Throws<ArgumentOutOfRangeException>(() => Builder(di).Setup(c => c.PipesServiceTransport(_ => "invalid", options)).Build());
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PipesOptions_AppServerFactoryPreservesConfiguredGlobalAdmissionLimit(bool di)
+    {
+        var endpoint = "app-server-options-" + Guid.NewGuid().ToString("N");
+        var handler = new GatedMarkerHandler();
+        var options = new PipesTransportOptions { MaxConcurrentRequests = 1 };
+        await using var app = Builder(di).Setup(c => c.UseDiagnostics().PipesServiceTransport(_ => endpoint, options)
+            .Services(r => r.Instance<IMarker>(new Local()).Instance<IInvocationServerHandler<IMarker>>(handler))
+            .ListenInvocationService<IMarker, Local>()).Build();
+        options.MaxConcurrentRequests = 99;
+        var server = Assert.IsType<PipesInvocationServer<IMarker>>(app.Services.Resolve<IInvocationServer<IMarker>>());
+        var events = app.Services.Resolve<IEventsSourceFactory>()!;
+        await using var first = new PipesInvocationClient<IMarker>(events.Create<PipesInvocationClient<IMarker>>(), endpoint);
+        await using var second = new PipesInvocationClient<IMarker>(events.Create<PipesInvocationClient<IMarker>>(), endpoint);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        try
+        {
+            var pending = first.InvokeAsync(1, null, deadline.Token);
+            await handler.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var error = await Assert.ThrowsAsync<InvocationException>(() => second.InvokeAsync(2, null, deadline.Token));
+            Assert.Contains("ENERIT_OVERLOADED", error.Message);
+            Assert.Equal(1, handler.Calls); Assert.Equal(1, server.ActiveRequestCount);
+            handler.Release.TrySetResult();
+            await pending.WaitAsync(TimeSpan.FromSeconds(5));
+            while (server.ActiveRequestCount != 0) await Task.Delay(10, deadline.Token);
+            await second.InvokeAsync(3, null, deadline.Token).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(2, handler.Calls);
+        }
+        finally { handler.Release.TrySetResult(); }
+        await app.StopAsync();
+        Assert.True(server.Completion.IsCompletedSuccessfully); Assert.Equal(0, server.ActiveRequestCount);
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TransportLifecycle_ForwardsStopWaitTokenAndDisposesOnlyAfterOwnedDrain(bool di)
+    {
+        Metadata();
+        var factory = new DrainClientFactory();
+        await using var app = Builder(di).Setup(c => c.Services(r => r.Instance<IInvocationClientFactory>(factory)).UseInvocationService<IMarker>()).Build();
+        var client = Assert.IsType<DrainClient<IMarker>>(app.Services.Resolve<IInvocationClient<IMarker>>());
+        var lifetime = Assert.Single(app.Services.ResolveAll<IStoppable>());
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => lifetime.StopAsync(cancelled.Token));
+        Assert.Equal(cancelled.Token, Assert.Single(client.Tokens));
+        Assert.Equal(0, client.Disposals); Assert.False(client.Drained.Task.IsCompleted);
+        client.Drained.TrySetResult();
+        await lifetime.StopAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(1, client.Disposals);
+        Assert.Equal(CancellationToken.None, client.Tokens[1]);
+    }
     public interface IMarker { Task<int> PingAsync(CancellationToken cancellationToken = default); }
     private sealed class Proxy(IInvocationClient<IMarker> client) : IMarker
     { internal IInvocationClient<IMarker> Client => client; public Task<int> PingAsync(CancellationToken cancellationToken = default) => Task.FromResult(7); }
@@ -119,6 +209,28 @@ public class AppInvocationRegistrationTests
         internal T Service => service;
         public Task<(bool, Exception?)> HandleAsync(byte method, ReadOnlyMemory<byte> readMemory, IBufferWriter<byte> writer, CancellationToken token = default)
             => Task.FromResult<(bool, Exception?)>((true, null));
+    }
+    private sealed class GatedMarkerHandler : IInvocationServerHandler<IMarker>
+    {
+        internal int Calls;
+        internal readonly TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal readonly TaskCompletionSource Release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public async Task<(bool, Exception?)> HandleAsync(byte method, ReadOnlyMemory<byte> memory, IBufferWriter<byte> writer, CancellationToken token = default)
+        { Interlocked.Increment(ref Calls); Entered.TrySetResult(); await Release.Task; return (true, null); }
+    }
+    private sealed class DrainClientFactory : IInvocationClientFactory
+    { public IInvocationClient<T> Create<T>() => new DrainClient<T>(); }
+    private sealed class DrainClient<T> : IInvocationClient<T>, IStoppable, IAsyncDisposable
+    {
+        internal readonly TaskCompletionSource Drained = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal readonly List<CancellationToken> Tokens = [];
+        internal int Disposals;
+        public Task StopAsync(CancellationToken token = default) { Tokens.Add(token); return Drained.Task.WaitAsync(token); }
+        public ValueTask DisposeAsync() { Disposals++; return ValueTask.CompletedTask; }
+        public Task<TResult> InvokeAsync<TResult>(byte code, Action<IBufferWriter<byte>>? action, Func<ReadOnlyMemory<byte>, TResult> func, CancellationToken token = default) => throw new NotSupportedException();
+        public Task InvokeAsync(byte code, Action<IBufferWriter<byte>>? action, CancellationToken token = default) => throw new NotSupportedException();
+        public TResult Invoke<TResult>(byte code, Action<IBufferWriter<byte>>? action, Func<ReadOnlyMemory<byte>, TResult> func) => throw new NotSupportedException();
+        public void Invoke(byte code, Action<IBufferWriter<byte>>? action) => throw new NotSupportedException();
     }
     private sealed class Server<T> : IInvocationServer<T>, IAsyncDisposable
     {

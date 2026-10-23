@@ -15,7 +15,7 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
 {
     private readonly AetherHost _engine;
     private readonly UnitParentProcessEventsHandler _parent;
-    private readonly GameBuildLoader _loaded;
+    private readonly IDisposable _game;
     private readonly FrameProducer _frames;
     private readonly RuntimeProtocol _protocol;
     private readonly PipesInvocationServer<IEngineControl> _server;
@@ -29,10 +29,10 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
     private bool _serverReleased, _parentReleased, _framesReleased, _gameReleased;
 
     internal AetherRuntimeHost(AetherHost engine, IAppLifetime lifetime, UnitParentProcessEventsHandler parent,
-        GameBuildLoader loaded, FrameProducer frames, RuntimeProtocol protocol, PipesInvocationServer<IEngineControl> server,
+        IDisposable game, FrameProducer frames, RuntimeProtocol protocol, PipesInvocationServer<IEngineControl> server,
         SessionLaunch launch, int parentId)
     {
-        _engine = engine; _parent = parent; _loaded = loaded; _frames = frames; _protocol = protocol;
+        _engine = engine; _parent = parent; _game = game; _frames = frames; _protocol = protocol;
         _server = server; _launch = launch; _parentId = parentId;
         _end = CancellationTokenSource.CreateLinkedTokenSource(lifetime.AppCancellationToken);
     }
@@ -109,7 +109,7 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
             catch (Exception error) { errors.Add(error); }
         }
         if (!_framesReleased) Try(() => { _frames.Dispose(); _framesReleased = true; });
-        if (!_gameReleased) Try(() => { _loaded.Dispose(); _gameReleased = true; });
+        if (!_gameReleased) Try(() => { _game.Dispose(); _gameReleased = true; });
         if (errors.Count == 0) _end.Dispose();
         if (errors.Count == 0) completion.TrySetResult();
         else completion.TrySetException(errors.Count == 1 ? errors[0] : new AggregateException(errors));

@@ -6,13 +6,15 @@ using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Mithril;
+using TrueMoon.Aether.Preview;
 
 namespace TrueMoon.Aether.Runtime;
 
 internal sealed class RuntimeHostFactory(AetherHost engine, IAppLifetime lifetime, int parentId,
     IFactory<UnitParentProcessEventsHandler> parents, IFactory<GameBuildLoader, GameBuildReference> games,
     IFactory<FrameProducer> frames, IFactory<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)> protocols,
-    IFactory<PipesInvocationServer<IEngineControl>, (SessionLaunch Launch, RuntimeProtocol Protocol)> servers)
+    IFactory<PipesInvocationServer<IEngineControl>, (SessionLaunch Launch, RuntimeProtocol Protocol)> servers,
+    IFactory<PreviewGameSession>? previews = null)
     : IFactory<AetherRuntimeHost, SessionLaunch>
 {
     public AetherRuntimeHost Create(SessionLaunch arguments)
@@ -21,9 +23,18 @@ internal sealed class RuntimeHostFactory(AetherHost engine, IAppLifetime lifetim
         try
         {
             var parent = Own(parents.Create()!);
-            var game = Own(games.Create(arguments.Build!));
+            IDisposable game; IGameSession session;
+            if (arguments.Role == RuntimeRole.EditPreview)
+            {
+                var preview = Own(previews?.Create() ?? throw new InvalidOperationException("Missing preview session factory."));
+                game = preview; session = preview;
+            }
+            else
+            {
+                var loaded = Own(games.Create(arguments.Build!)); game = loaded; session = loaded.Session;
+            }
             var frame = Own(frames.Create()!);
-            var protocol = protocols.Create((arguments, game.Session, frame));
+            var protocol = protocols.Create((arguments, session, frame));
             var server = Own(servers.Create((arguments, protocol)));
             return new(engine, lifetime, parent, game, frame, protocol, server, arguments, parentId);
         }

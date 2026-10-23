@@ -17,6 +17,60 @@ preserves canonical IDs/revision and enforces finite values and the64-entity lim
 No partial result is returned on failure/cancellation. Persistence, full runtime
 snapshots, live editing and MCP are later stages.
 
+For local editing call `UseAetherAuthoring(...)` on App configuration, independently
+of `UseAether`. Inject `IFactory<ISceneAuthoringSession, SceneDocument>` from
+`TrueMoon.Aether.Scenes.Authoring`. Create validates the initial scene and returns
+a caller-owned IDisposable session; close it before its borrowed App dependencies.
+App startup creates no sessions, windows, devices, IPC endpoints or game processes.
+Options are copied at configuration/factory creation; repeated registration fails.
+
+`Read()` returns the committed document, resolved scene and history availability.
+`Apply(new TransformEditBatch(new AuthoringOperation(id, expectedRevision, actor),
+edits))` atomically replaces all nine local built-in v1 Transform properties by
+stable entity/component occurrence IDs, preserving other data. Schema resolution,
+finite float/positive-scale and parent-composed nonsingular transforms are checked
+before publication. Authoring does not impose the preview's64-entity/material limits.
+`Undo(operation)`/`Redo(operation)` restore exact content with increasing document
+Revision; ContentRevision restores the session-local content checkpoint. Fresh
+Apply clears Redo. MaxHistoryEntries defaults100 (0..1024, combined Undo/Redo),
+MaxBatchEdits64 (1..4096), MaxOperations4096 (1..65536).
+
+Commands return typed error/revision/path receipts. Exact duplicate operation IDs
+return the original receipt; a different intent/actor/revision/payload conflicts.
+Terminal receipts, including expected rejection, are retained until Dispose without
+retaining old documents. At MaxOperations new IDs are rejected instead of evicting
+and risking replay. Cancellation/unexpected failure before the single commit
+publishes neither content/history nor receipt; cancellation after commit cannot
+hide success. Receipt identity is session-local and does not survive restart.
+Create/delete/reparent, generic property edits, persistence, UI and Edit preview
+remain subsequent steps; runtime World and saved authoring are separate.
+
+An App-owned `AetherHost.Preview` provides the first independent Edit preview.
+Configure the existing explicit GPU viewport strategy, then call
+`ShowAsync(resolvedScene, width, height, token)`. Projection is validated before
+stopping an existing child; accepted updates drain/reap and start a fresh built-in
+runtime generation. No game project, compiler, Play or Game.Logic DLL is used.
+The child calls `UseAetherPreviewRuntime` with `RuntimeRole.EditPreview`,
+`BuildIdentity.PreviewId`, no build and no restore. Its static scene consumer
+uses a fixed camera(0,1,6) and tick0; gameplay/Step/input are rejected.
+
+Keep each `ViewportFrame` with the displayed image and call
+`host.Preview.Presented(frame)` only after actual presentation, including while
+ShowAsync awaits its first frame. Document/LastPresented/Describe bind the exact
+authoring revision to the runtime generation and surface. Stale/foreign/closed
+tickets cannot acknowledge new content. Resize supports0x0 suspend and positive
+16..1920 by16..1080 extents; Show requires a positive extent. The initial profile
+requires GPU; CPU pattern frames are not presented as scene preview.
+
+One update/resize is admitted at a time. Stop fences pending work and retains
+cleanup ownership until drain; failed cleanup can be retried. Dispose closes
+preview admission without separately disposing borrowed Frames. Explicitly stop
+the current mode before switching between game and preview. Transform/Undo/Redo
+remain local authoring operations; the caller forwards their resolved snapshot.
+First profile uses full child replacement per update, not incremental/live World
+editing. Main Editor UI integration, project/storage and camera/tools remain later
+steps. Existing control/frame wire versions and same-build fencing are preserved.
+
 `BuiltInComponents.Schemas` supplies stable v1 Transform/Appearance/Interaction roles.
 `PrimitiveSceneAdapter.Project` maps them to control-v3 scene data: up to64entities,
 optional opaque cubes with immutable world matrices and stored-sRGB colors. Local

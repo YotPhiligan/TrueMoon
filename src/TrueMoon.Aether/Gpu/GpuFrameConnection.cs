@@ -119,7 +119,24 @@ internal static class GpuWire
         => await ReadMessageAsync<GpuWireMessage>(stream, token).ConfigureAwait(false);
     internal static async Task<T> ReadMessageAsync<T>(Stream stream, CancellationToken token) where T : class
     {
-        var header = new byte[4]; await stream.ReadExactlyAsync(header, token).ConfigureAwait(false); var length = BinaryPrimitives.ReadInt32LittleEndian(header);
+        var header = new byte[4]; await stream.ReadExactlyAsync(header, token).ConfigureAwait(false);
+        return await ReadPayloadAsync<T>(stream, header, token).ConfigureAwait(false);
+    }
+    // Producer boundary: a peer may close after its final command. A partial frame is never a clean end.
+    internal static async Task<T?> ReadMessageOrEndAsync<T>(Stream stream, CancellationToken token) where T : class
+    {
+        var header = new byte[4]; var count = await stream.ReadAsync(header, token).ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
+        if (count == 0) return null;
+        await stream.ReadExactlyAsync(header.AsMemory(count), token).ConfigureAwait(false);
+        return await ReadPayloadAsync<T>(stream, header, token).ConfigureAwait(false);
+    }
+    // Only OS pipe endpoint closure at a wire read/write is terminal; arbitrary I/O/native failures stay observable.
+    internal static bool IsPeerClosed(IOException error) => (error.HResult & 0xffff0000) == 0x80070000 &&
+        (error.HResult & 0xffff) is 109 or 232 or 233;
+    private static async Task<T> ReadPayloadAsync<T>(Stream stream, byte[] header, CancellationToken token) where T : class
+    {
+        var length = BinaryPrimitives.ReadInt32LittleEndian(header);
         if (length is <= 0 or > 65536) throw new InvalidDataException("Invalid GPU message length.");
         var bytes = new byte[length]; await stream.ReadExactlyAsync(bytes, token).ConfigureAwait(false);
         return JsonSerializer.Deserialize<T>(bytes, Json) ?? throw new InvalidDataException("Missing GPU message.");

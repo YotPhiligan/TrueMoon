@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
@@ -10,6 +11,7 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly EditorWorkspace _workspace;
     private readonly EditorCommands _commands;
+    private readonly EditorDocumentViewModel? _documents;
     private bool _disposed;
     private string? _selectedId;
     private string _selectedName = "", _statusText = "", _errorText = "";
@@ -17,13 +19,15 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
     private IReadOnlyList<KeyValuePair<string, string>> _properties = [];
 
     /// <summary>Creates a model borrowing App-owned workspace and command services.</summary>
-    public EditorViewModel(EditorWorkspace workspace, EditorCommands commands)
+    public EditorViewModel(EditorWorkspace workspace, EditorCommands commands, EditorDocumentViewModel? documents = null)
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(commands);
         _workspace = workspace;
         _commands = commands;
+        _documents = documents;
         _workspace.SelectionChanged += SelectionChanged;
+        _workspace.SceneChanged += SceneChanged;
         SelectionChanged();
         RefreshState();
     }
@@ -55,13 +59,15 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
     public void Execute(EditorCommand command)
     {
         VerifyOpen();
-        if (_workspace.CanExecute(command)) _commands.Execute(command);
+        if (_workspace.CanExecute(command) && _documents?.BlocksRuntime != true) _commands.Execute(command);
     }
 
     /// <summary>Accepts snapshots on the presentation owner thread and publishes changed values.</summary>
     public void Refresh(SessionStatus runtime, GameEditorStatus editor, Exception? commandError = null)
     {
         VerifyOpen();
+        _documents?.Refresh();
+        if (_documents != null) _workspace.SetDocument(_documents.Document?.Content);
         _workspace.Refresh(runtime, editor, commandError);
         RefreshState();
     }
@@ -75,14 +81,15 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
 
     private void RefreshState()
     {
-        Update(ref _canBuild, _workspace.CanExecute(EditorCommand.Build), nameof(CanBuild));
-        Update(ref _canStart, _workspace.CanExecute(EditorCommand.Start), nameof(CanStart));
-        Update(ref _canPlay, _workspace.CanExecute(EditorCommand.Play), nameof(CanPlay));
-        Update(ref _canPause, _workspace.CanExecute(EditorCommand.Pause), nameof(CanPause));
-        Update(ref _canStep, _workspace.CanExecute(EditorCommand.Step), nameof(CanStep));
-        Update(ref _canStop, _workspace.CanExecute(EditorCommand.Stop), nameof(CanStop));
-        Update(ref _canReplace, _workspace.CanExecute(EditorCommand.Replace), nameof(CanReplace));
-        Update(ref _canCancel, _workspace.CanExecute(EditorCommand.Cancel), nameof(CanCancel));
+        var allowed = _documents?.BlocksRuntime != true;
+        Update(ref _canBuild, allowed && _workspace.CanExecute(EditorCommand.Build), nameof(CanBuild));
+        Update(ref _canStart, allowed && _workspace.CanExecute(EditorCommand.Start), nameof(CanStart));
+        Update(ref _canPlay, allowed && _workspace.CanExecute(EditorCommand.Play), nameof(CanPlay));
+        Update(ref _canPause, allowed && _workspace.CanExecute(EditorCommand.Pause), nameof(CanPause));
+        Update(ref _canStep, allowed && _workspace.CanExecute(EditorCommand.Step), nameof(CanStep));
+        Update(ref _canStop, allowed && _workspace.CanExecute(EditorCommand.Stop), nameof(CanStop));
+        Update(ref _canReplace, allowed && _workspace.CanExecute(EditorCommand.Replace), nameof(CanReplace));
+        Update(ref _canCancel, allowed && _workspace.CanExecute(EditorCommand.Cancel), nameof(CanCancel));
         var state = _workspace.State switch
         {
             SessionState.Stopped => "Остановлен", SessionState.Starting => "Запуск", SessionState.Paused => "Пауза",
@@ -110,6 +117,14 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
         PropertyChanged?.Invoke(this, new(nameof(Properties)));
     }
 
+    private void SceneChanged()
+    {
+        if (_disposed) return;
+        PropertyChanged?.Invoke(this, new(nameof(Scene)));
+        PropertyChanged?.Invoke(this, new(nameof(EntityIds)));
+        PropertyChanged?.Invoke(this, new(nameof(EntityCount)));
+    }
+
     private void Update<T>(ref T field, T value, string property)
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return;
@@ -125,6 +140,7 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed) return;
         _disposed = true;
         _workspace.SelectionChanged -= SelectionChanged;
+        _workspace.SceneChanged -= SceneChanged;
         PropertyChanged = null;
     }
 }

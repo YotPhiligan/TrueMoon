@@ -6,245 +6,340 @@ using TrueMoon.Threading;
 
 namespace TrueMoon.Enerit.IO.Pipes;
 
-public class PipesSignalServerConnection : PipeConectionHandler
+public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAsyncDisposable
 {
     private readonly IEventsSource _eventsSource;
     private readonly IInvocationServerHandler _handler;
     private readonly TmTaskScheduler _listenTaskScheduler;
     private readonly TmTaskScheduler _execTaskScheduler;
     private readonly CancellationTokenSource _cts = new();
+    private readonly CancellationToken _token;
+    private readonly PipesServerAdmission _admission;
     private readonly ConcurrentDictionary<Task, byte> _invocations = new();
     private readonly object _lifecycleGate = new();
+    private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private CancellationTokenRegistration _externalCancellation;
-    private bool _started;
-    private int _disposed;
+    private Task _start = Task.CompletedTask, _listener = Task.CompletedTask;
+    private Task? _stop;
+    private bool _started, _disposed;
     public event EventHandler? Disconnected;
 
-    public PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler) : base(name, false)
+    public PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler)
+        : this(name, eventsSource, handler, new PipesTransportOptions()) { }
+
+    /// <summary>Creates a caller-owned connection with validated, copied resource limits.</summary>
+    public PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler, PipesTransportOptions options)
+        : this(name, eventsSource, handler, new PipesServerAdmission((options ?? throw new ArgumentNullException(nameof(options))).Snapshot())) { }
+
+    internal PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler, PipesServerAdmission admission) : base(name, false)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(eventsSource);
+        ArgumentNullException.ThrowIfNull(handler);
         _eventsSource = eventsSource;
         _handler = handler;
+        _admission = admission;
+        _token = _cts.Token;
         _listenTaskScheduler = new TmTaskScheduler($"{Name}_listen", 1);
         _execTaskScheduler = new TmTaskScheduler($"{Name}_exec", 8);
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken = default)
+    /// <summary>Admitted requests, including reads, queued handlers and response writes.</summary>
+    public int ActiveRequestCount => _admission.Requests;
+    /// <summary>Admitted request payload bytes until final cleanup.</summary>
+    public long BufferedRequestBytes => _admission.Bytes;
+    /// <summary>Completes only after requested stop and actual handler/IO drain.</summary>
+    public Task Completion => _completion.Task;
+
+    public Task StartAsync(CancellationToken cancellationToken = default)
     {
-        CancellationToken token;
         lock (_lifecycleGate)
         {
-            ObjectDisposedException.ThrowIf(_disposed != 0, this);
-            if (_started) { throw new InvalidOperationException("Connection has already been started."); }
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_started) throw new InvalidOperationException("Connection has already been started.");
             _started = true;
-            _externalCancellation = cancellationToken.Register(static source => ((CancellationTokenSource)source!).Cancel(), _cts);
-            token = _cts.Token;
+            _externalCancellation = cancellationToken.Register(static state => ((PipesSignalServerConnection)state!).CancelIO(), this);
+            return _start = StartCoreAsync();
         }
-        await ConnectAsync(token).ConfigureAwait(false);
-        _eventsSource.Write(() => "Connected");
-        _ = Task.Factory.StartNew(() => Listen(token), token, TaskCreationOptions.LongRunning, _listenTaskScheduler);
+    }
+
+    private async Task StartCoreAsync()
+    {
+        await ConnectAsync(_token).ConfigureAwait(false);
+        lock (_lifecycleGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _eventsSource.Write(() => "Connected");
+            _listener = Task.Factory.StartNew(() => Listen(_token), CancellationToken.None, TaskCreationOptions.LongRunning, _listenTaskScheduler);
+        }
     }
 
     private void Listen(CancellationToken token)
     {
+        Span<byte> scratch = stackalloc byte[4096];
         try
         {
+            var stream = PipeStream;
             while (!token.IsCancellationRequested)
             {
-                var (guid, method, len) = PipeStream.GetRequestHeader();
-                if (guid == Guid.Empty)
+                var (guid, method, length) = stream.GetRequestHeader();
+                if (guid == Guid.Empty) { NotifyDisconnected(); return; }
+                bool admitted;
+                lock (_lifecycleGate)
                 {
-                    _eventsSource.Write(() => "empty guid");
-                    NotifyDisconnected();
-                    return;
+                    if (_disposed) return;
+                    admitted = _admission.TryEnter(length);
+                }
+                if (!admitted)
+                {
+                    // Never rent the rejected payload. One fixed scratch buffer per connection drains framing.
+                    var remaining = length;
+                    while (remaining > 0)
+                    {
+                        var chunk = Math.Min(remaining, scratch.Length);
+                        stream.ReadExactly(scratch[..chunk]); remaining -= chunk;
+                    }
+                    WriteResponseAsync(guid, default, new PipesInvocationOverloadedException(), token).GetAwaiter().GetResult();
+                    continue;
                 }
                 Memory<byte> memory = default;
+                var transferred = false;
                 try
                 {
-                    if (len > 0)
-                    {
-                        memory = MemoryPoolUtils.Create(len);
-                        PipeStream.ReadFullBuffer(memory);
-                    }
+                    if (length > 0) { memory = MemoryPoolUtils.Create(length); stream.ReadFullBuffer(memory); }
                     var requestMemory = memory;
-                    // Do not cancel the task before it can run its buffer-return finally block.
-                    var task = Task.Factory.StartNew(() => InvokeAsync(guid, method, requestMemory, token),
+                    var task = Task.Factory.StartNew(() => InvokeAsync(guid, method, requestMemory, length, token),
                         CancellationToken.None, TaskCreationOptions.PreferFairness, _execTaskScheduler).Unwrap();
                     _invocations.TryAdd(task, 0);
-                    _ = task.ContinueWith(completed => _invocations.TryRemove(completed, out _),
-                        CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-                    memory = default; // The invocation now owns the request memory.
+                    _ = task.ContinueWith(t => _invocations.TryRemove(t, out _), CancellationToken.None,
+                        TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    memory = default;
+                    transferred = true;
                 }
-                finally { memory.TryReturn(); }
+                finally
+                {
+                    memory.TryReturn();
+                    if (!transferred) _admission.Release(length);
+                }
             }
         }
         catch (Exception error)
         {
-            if (!token.IsCancellationRequested)
-            {
-                _eventsSource.Exception(error);
-                NotifyDisconnected();
-            }
+            if (!token.IsCancellationRequested) { _eventsSource.Exception(error); NotifyDisconnected(); }
         }
     }
 
-    private async Task InvokeAsync(Guid guid, byte method, Memory<byte> memory, CancellationToken token)
+    private async Task InvokeAsync(Guid guid, byte method, Memory<byte> memory, int length, CancellationToken token)
     {
         try
         {
             using var writer = new ArrayPoolBufferWriter<byte>(128);
-            bool isSuccess;
+            bool success;
             Exception? exception;
             try
             {
-                (isSuccess, exception) = await _handler.HandleAsync(method, memory, writer, token).ConfigureAwait(false);
-                if (isSuccess) PipesProtocol.ValidatePayloadLength(writer.WrittenCount);
+                token.ThrowIfCancellationRequested();
+                (success, exception) = await _handler.HandleAsync(method, memory, writer, token).ConfigureAwait(false);
+                if (success) PipesProtocol.ValidatePayloadLength(writer.WrittenCount);
             }
-            catch (Exception error) { (isSuccess, exception) = (false, error); }
-            {
-                using var resultWriter = new ArrayPoolBufferWriter<byte>(128);
-                byte status = isSuccess ? (byte)0 : (byte)1;
-                SerializationUtils.Write(guid, resultWriter);
-                SerializationUtils.Write(status, resultWriter);
-                if (isSuccess)
-                {
-                    SerializationUtils.Write(writer.WrittenCount, resultWriter);
-                    resultWriter.Write(writer.WrittenSpan);
-                }
-                else
-                {
-                    var bytes = Encoding.UTF8.GetBytes($"{exception}");
-                    if (bytes.Length > PipesProtocol.MaxPayloadLength)
-                        bytes = Encoding.UTF8.GetBytes("Remote error exceeded the pipes payload limit.");
-                    SerializationUtils.Write(bytes.Length, resultWriter);
-                    resultWriter.Write(bytes);
-                }
-                WriteFrame(resultWriter.WrittenSpan);
-            }
+            catch (Exception error) { (success, exception) = (false, error); }
+            await WriteResponseAsync(guid, success ? writer.WrittenMemory : default,
+                success ? null : exception ?? new InvocationException("Remote invocation failed."), token).ConfigureAwait(false);
         }
         catch (Exception error)
         {
-            if (!token.IsCancellationRequested)
-            {
-                _eventsSource.Exception(error);
-                NotifyDisconnected();
-            }
+            if (!token.IsCancellationRequested) { _eventsSource.Exception(error); NotifyDisconnected(); }
         }
-        finally { memory.TryReturn(); }
+        finally
+        {
+            memory.TryReturn();
+            _admission.Release(length);
+        }
+    }
+
+    private async Task WriteResponseAsync(Guid guid, ReadOnlyMemory<byte> payload, Exception? error, CancellationToken token)
+    {
+        using var writer = new ArrayPoolBufferWriter<byte>(128);
+        SerializationUtils.Write(guid, writer);
+        SerializationUtils.Write(error is null ? (byte)0 : (byte)1, writer);
+        if (error is not null)
+        {
+            var bytes = Encoding.UTF8.GetBytes($"{error}");
+            if (bytes.Length > PipesProtocol.MaxPayloadLength) bytes = Encoding.UTF8.GetBytes("Remote error exceeded the pipes payload limit.");
+            payload = bytes;
+        }
+        SerializationUtils.Write(payload.Length, writer);
+        writer.Write(payload.Span);
+        await WriteFrameAsync(writer.WrittenMemory, token).ConfigureAwait(false);
     }
 
     private void NotifyDisconnected() =>
         ThreadPool.QueueUserWorkItem(_ => Disconnected?.Invoke(this, EventArgs.Empty));
 
-    public override void Dispose()
+    private void CancelIO()
     {
-        lock (_lifecycleGate)
-        {
-            if (Interlocked.Exchange(ref _disposed, 1) != 0) { return; }
-        }
-        _externalCancellation.Dispose();
-        _cts.Cancel();
-        base.Dispose();
-        _listenTaskScheduler.Dispose();
-        // Async handlers may still need the scheduler for their own awaited continuations.
-        Task.WhenAll(_invocations.Keys).GetAwaiter().GetResult();
-        _execTaskScheduler.Dispose();
-        _cts.Dispose();
+        try { _cts.Cancel(); }
+        finally { base.Dispose(); }
     }
+
+    /// <summary>Stops admission and IO. Cancelling the wait preserves ownership until Completion actually drains.</summary>
+    public Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        Task stop;
+        lock (_lifecycleGate) { _disposed = true; stop = _stop ??= Task.Run(StopCoreAsync); }
+        return cancellationToken.CanBeCanceled ? stop.WaitAsync(cancellationToken) : stop;
+    }
+
+    private async Task StopCoreAsync()
+    {
+        try
+        {
+            List<Exception> errors = [];
+            try { CancelIO(); } catch (Exception error) { errors.Add(error); }
+            try { _externalCancellation.Dispose(); } catch (Exception error) { errors.Add(error); }
+            try { await _start.ConfigureAwait(false); }
+            catch (Exception) when (_token.IsCancellationRequested) { }
+            try { await _listener.ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
+            try { await Task.WhenAll(_invocations.Keys).ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
+            _listenTaskScheduler.Dispose();
+            _execTaskScheduler.Dispose();
+            _cts.Dispose();
+            if (errors.Count > 0) throw new AggregateException(errors);
+            _completion.TrySetResult();
+        }
+        catch (Exception error) { _completion.TrySetException(error); throw; }
+    }
+
+    public override void Dispose() => StopAsync().GetAwaiter().GetResult();
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync() => await StopAsync().ConfigureAwait(false);
 }
 
-public class PipesInvocationServer<T> : IInvocationServer<T>, IDisposable
+public class PipesInvocationServer<T> : IInvocationServer<T>, IStoppable, IDisposable, IAsyncDisposable
 {
     private readonly IEventsSource<PipesInvocationServer<T>> _eventsSource;
     private readonly IInvocationServerHandler<T> _handler;
-    private readonly CancellationTokenSource _cts;
+    private readonly CancellationTokenSource _cts = new();
+    private readonly CancellationToken _token;
     private readonly TmTaskScheduler _taskScheduler;
     private readonly List<PipesSignalServerConnection> _connections = [];
     private readonly Lock _sync = new();
+    private readonly SemaphoreSlim _connectionSlots;
+    private readonly PipesServerAdmission _admission;
     private readonly Task _listener;
+    private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private Task? _stop;
     private bool _disposed;
-    private readonly string _pipeName;
 
     public PipesInvocationServer(IEventsSource<PipesInvocationServer<T>> eventsSource, IInvocationServerHandler<T> handler)
         : this(eventsSource, handler, typeof(T).FullName!) { }
 
-    /// <summary>Creates a server for an explicitly scoped endpoint.</summary>
-    /// <param name="eventsSource">Diagnostics source.</param>
-    /// <param name="handler">Invocation handler.</param>
-    /// <param name="pipeName">Endpoint name without the transport's tm_ prefix; both peers must agree.</param>
+    /// <summary>Creates a server with finite default resource limits.</summary>
     public PipesInvocationServer(IEventsSource<PipesInvocationServer<T>> eventsSource, IInvocationServerHandler<T> handler, string pipeName)
+        : this(eventsSource, handler, pipeName, new PipesTransportOptions()) { }
+
+    /// <summary>Creates a caller-owned server; handler and diagnostics remain borrowed until actual stop completion.</summary>
+    public PipesInvocationServer(IEventsSource<PipesInvocationServer<T>> eventsSource, IInvocationServerHandler<T> handler,
+        string pipeName, PipesTransportOptions options)
     {
         ArgumentNullException.ThrowIfNull(eventsSource);
         ArgumentNullException.ThrowIfNull(handler);
         ArgumentException.ThrowIfNullOrWhiteSpace(pipeName);
-        _pipeName = pipeName;
+        ArgumentNullException.ThrowIfNull(options);
+        var limits = options.Snapshot();
+        Id = pipeName;
         _eventsSource = eventsSource;
         _handler = handler;
+        _admission = new(limits);
+        _connectionSlots = new(limits.MaxConnections, limits.MaxConnections);
+        _token = _cts.Token;
         _taskScheduler = new TmTaskScheduler($"{Id}_exec", 2);
-        _cts = new CancellationTokenSource();
-        _listener = StartListening(_cts.Token);
+        _listener = Task.Factory.StartNew(ListenAsync, CancellationToken.None, TaskCreationOptions.LongRunning, _taskScheduler).Unwrap();
     }
 
-    private Task StartListening(CancellationToken token) => Task.Factory.StartNew(async () =>
+    public string Id { get; }
+    /// <summary>Shared admitted request count across connections.</summary>
+    public int ActiveRequestCount => _admission.Requests;
+    /// <summary>Shared request payload bytes until response/handler cleanup.</summary>
+    public long BufferedRequestBytes => _admission.Bytes;
+    /// <summary>Owned connections, including the instance awaiting connection and connections still draining.</summary>
+    public int ConnectionCount { get { lock (_sync) return _connections.Count; } }
+    /// <summary>Completes only after requested stop and all owned connections/handlers actually drain.</summary>
+    public Task Completion => _completion.Task;
+
+    private async Task ListenAsync()
     {
-        while (!token.IsCancellationRequested)
+        try
         {
-            PipesSignalServerConnection? item = null;
-            try
+            while (!_token.IsCancellationRequested)
             {
-                lock (_sync)
+                await _connectionSlots.WaitAsync(_token).ConfigureAwait(false);
+                PipesSignalServerConnection? item = null;
+                try
                 {
-                    if (_disposed) { return; }
-                    _eventsSource.Write(() => $"new connection - {_connections.Count}");
-                    item = new PipesSignalServerConnection(Id, _eventsSource, _handler);
-                    item.Disconnected += ItemOnDisconnected;
-                    _connections.Add(item);
+                    lock (_sync)
+                    {
+                        if (_disposed) { _connectionSlots.Release(); return; }
+                        item = new PipesSignalServerConnection(Id, _eventsSource, _handler, _admission);
+                        item.Disconnected += ItemOnDisconnected;
+                        _connections.Add(item);
+                    }
+                    await item.StartAsync(_token).ConfigureAwait(false);
                 }
-                await item.StartAsync(token).ConfigureAwait(false);
-            }
-            catch (Exception error)
-            {
-                if (item is not null)
+                catch (Exception error)
                 {
-                    lock (_sync) { _connections.Remove(item); }
-                    item.Disconnected -= ItemOnDisconnected;
-                    item.Dispose();
+                    if (item is null) _connectionSlots.Release();
+                    else await RetireAsync(item).ConfigureAwait(false);
+                    if (!_token.IsCancellationRequested) _eventsSource.Exception(error);
                 }
-                if (!token.IsCancellationRequested) { _eventsSource.Exception(error); }
             }
         }
-    }, token, TaskCreationOptions.LongRunning, _taskScheduler).Unwrap();
+        catch (OperationCanceledException) when (_token.IsCancellationRequested) { }
+    }
 
     private void ItemOnDisconnected(object? sender, EventArgs args)
     {
-        if (sender is not PipesSignalServerConnection item) { return; }
-        lock (_sync) { _connections.Remove(item); }
-        item.Disconnected -= ItemOnDisconnected;
-        item.Dispose();
+        if (sender is PipesSignalServerConnection item) _ = RetireAsync(item);
     }
 
-    public string Id => _pipeName;
-
-    public void Dispose()
+    private async Task RetireAsync(PipesSignalServerConnection item)
     {
-        PipesSignalServerConnection[] connections;
-        lock (_sync)
-        {
-            if (_disposed) { return; }
-            _disposed = true;
-            connections = _connections.ToArray();
-            _connections.Clear();
-        }
-        _cts.Cancel();
-        foreach (var connection in connections)
-        {
-            connection.Disconnected -= ItemOnDisconnected;
-            connection.Dispose();
-        }
-        try { _listener.GetAwaiter().GetResult(); }
-        catch (OperationCanceledException) when (_cts.IsCancellationRequested) { }
-        _taskScheduler.Dispose();
-        _cts.Dispose();
+        item.Disconnected -= ItemOnDisconnected;
+        try { await item.StopAsync().ConfigureAwait(false); }
+        catch (Exception error) { _eventsSource.Exception(error); return; }
+        lock (_sync) { if (_connections.Remove(item)) _connectionSlots.Release(); }
     }
 
+    /// <summary>Closes admission and begins every connection's stop before waiting for handler drain.</summary>
+    public Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        Task stop;
+        lock (_sync) { _disposed = true; _admission.Close(); stop = _stop ??= Task.Run(StopCoreAsync); }
+        return cancellationToken.CanBeCanceled ? stop.WaitAsync(cancellationToken) : stop;
+    }
+
+    private async Task StopCoreAsync()
+    {
+        try
+        {
+            List<Exception> errors = [];
+            try { _cts.Cancel(); } catch (Exception error) { errors.Add(error); }
+            PipesSignalServerConnection[] connections;
+            lock (_sync) connections = _connections.ToArray();
+            var stops = connections.Select(c => c.StopAsync()).ToArray();
+            try { await _listener.ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
+            try { await Task.WhenAll(stops).ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
+            lock (_sync) _connections.Clear();
+            _taskScheduler.Dispose();
+            _cts.Dispose();
+            if (errors.Count > 0) throw new AggregateException(errors);
+            _completion.TrySetResult();
+        }
+        catch (Exception error) { _completion.TrySetException(error); throw; }
+    }
+
+    public void Dispose() => StopAsync().GetAwaiter().GetResult();
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync() => await StopAsync().ConfigureAwait(false);
     public Task StartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

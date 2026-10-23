@@ -14,6 +14,8 @@ contracts игровой сессии, supervisor, control protocol, CPU frame t
 | --- | --- |
 | `TrueMoon.Aether.Sessions` | Session identity, `IGameSession` и session lifecycle |
 | `TrueMoon.Aether.Scenes` | Immutable authoring/scene aggregates, inheritance/parent graph resolution и явная проекция в существующий SceneSnapshot |
+| `TrueMoon.Aether.Scenes.Authoring` | Caller-owned document session, atomic Transform batches, revision/operation receipts и bounded Undo/Redo без Runtime/UI |
+| `TrueMoon.Aether.Preview` | Built-in static scene consumer и revision-bound Edit preview через existing supervisor/GPU viewport |
 | `TrueMoon.Aether.Transport` | Control DTOs, `IEngineControl` и adapters |
 | `TrueMoon.Aether.Checkpoints` | Checkpoint state, capability, outcomes и codec |
 | `SessionSupervisor` / `RuntimeProtocol` | Serialized commands, readiness, generations, heartbeat, stop/reap и observable failures |
@@ -109,6 +111,140 @@ Hierarchy/definitions/provenance остаются в authoring snapshot; callbac
 Такой snapshot принимает IGameSession.Load. Для стандартных примитивов используйте
 `PrimitiveSceneAdapter.Project(scene, token)`: он интерпретирует `BuiltInComponents.Schemas`
 и передаёт world-матрицы/цвета вместе с canonical IDs и scene revision.
+
+### Локальное редактирование без UI и Runtime
+
+Подключите `UseAetherAuthoring()` в App. Он регистрирует общий resolver и
+`IFactory<ISceneAuthoringSession, SceneDocument>`; `UseAether()` можно добавить
+в любом порядке, если нужен runtime. Authoring не требует его configuration,
+запуска процесса, IPC, окна или native device.
+
+```csharp
+using TrueMoon;
+using TrueMoon.Aether;
+using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Dependencies;
+
+await using var app = App.Builder(_ => { }).Setup(c => c.UseAetherAuthoring(o =>
+{
+    o.MaxHistoryEntries = 100;
+    o.MaxBatchEdits = 64;
+    o.MaxOperations = 4096;
+})).Build();
+
+// Resolution остаётся в composition root. Прикладной consumer получает factory в constructor.
+var sessions = app.Services.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>();
+var editableEntityId = new EntityId(Guid.NewGuid());
+var transformId = new ComponentId(Guid.NewGuid());
+var editableDefinition = new EntityDefinition(new(Guid.NewGuid()),
+    new(addedComponents: [new(transformId, BuiltInComponents.TransformId, 1)]));
+var editableDocument = new SceneDocument(new(Guid.NewGuid()), 0,
+    [new(editableEntityId, editableDefinition.Id)], [editableDefinition], BuiltInComponents.Schemas);
+using var session = sessions.Create(editableDocument);
+var before = session.Read();
+var target = before.Resolved.Entities[editableEntityId].Components.Values
+    .Single(component => component.TypeId == BuiltInComponents.TransformId);
+var edit = new TransformEditBatch(new(Guid.NewGuid(), before.Document.Revision, "user"),
+    [new(editableEntityId, target.Id, new TransformValue(2, 0, 0))]);
+var result = session.Apply(edit);
+if (result.Succeeded)
+{
+    var undo = session.Undo(new(Guid.NewGuid(), result.Revision, "user"));
+    var redo = session.Redo(new(Guid.NewGuid(), undo.Revision, "user"));
+}
+```
+
+Factory snapshots limits. Каждая Create сначала полностью валидирует initial
+document, затем возвращает независимую сессию. Consumer владеет product и
+закрывает его до App; контейнер не удерживает/не освобождает созданные сессии,
+сессия не освобождает заимствованный stateless resolver. Повторное подключение
+authoring отклоняется; startup не создаёт сессий или фоновых задач.
+
+Apply адресует visible built-in v1 Transform по entity/component occurrence ID.
+Все девять свойств становятся instance overrides; definitions, parent links,
+структурные patches и другие компоненты сохраняются. Кандидат проходит общий
+resolver, exact Transform schema и finite/nonsingular parent-composed validation
+до единой публикации. Authoring не наследует preview limit64entities или material
+policy. Сохранять старые immutable query snapshots безопасно.
+
+Document.Revision растёт на каждый successful Apply/Undo/Redo. ContentRevision
+восстанавливает identity содержимого при Undo/Redo и подходит для session-local
+saved checkpoint. Новый Apply, включая равные значения, создаёт transaction и
+очищает Redo. Combined Undo/Redo bound — MaxHistoryEntries;0отключает историю.
+Значения по умолчанию100/64/4096; допустимые пределы1024/4096/65536 соответственно.
+
+Операции возвращают typed error/revision/path. Ожидаемая revision проверяется
+перед подготовкой, batch применяется целиком. Сессия сериализует concurrent
+requests. Cancel до commit и неожиданный preparation failure не публикуют данные
+или receipt; retry того же ID безопасен. После commit cancel не маскирует успех.
+Exact duplicate возвращает исходную small receipt даже после Undo/других edits;
+изменение intent/actor/revision/payload с тем же ID даёт OperationIdConflict.
+Terminal success/reject receipts хранятся до Dispose; при MaxOperations новые
+IDs отклоняются, старые не вытесняются. Квитанции не удерживают старые документы.
+Receipt identity не переживает закрытие/restart сессии; автоматического replay нет.
+
+Этот первый ARCH1b срез не включает create/delete/reparent, generic property
+editing/reset overrides, disk codec, UI inspector, Edit preview или live World.
+Сохранение документов/проектов остаётся ED1/ED2; Play не меняет authoring автоматически.
+
+### Независимый Edit preview
+
+На App с `UseAether(...)` доступен `host.Preview`. Подключите explicit GPU viewport
+через существующий ViewportTransportFactory; CPU pattern transport не рисует
+примитивную сцену и для первого preview profile отклоняется до замены старого
+preview. AetherHost владеет контроллером, он заимствует Frames/Supervisor/Gpu.
+Регистрация и App startup не открывают preview или game process.
+
+```csharp
+// authoring — caller-owned session, host — App-owned AetherHost с GPU viewport.
+var snapshot = authoring.Read().Resolved;
+var shown = await host.Preview.ShowAsync(snapshot, 640, 360, token);
+// Consumer сохраняет ViewportFrame с image и после фактического показа вызывает:
+// host.Preview.Presented(drawnFrame);
+// Этот callback должен работать уже во время ShowAsync: тот ждёт first-present.
+await host.Preview.ResizeAsync(0, 0, token);       // suspend
+await host.Preview.ResizeAsync(800, 450, token);   // resume и новое подтверждение
+await host.Preview.StopAsync();                   // repeatable; не закрывает App
+```
+
+`ScenePreviewDocument` связывает SceneId/Revision с полной SessionIdentity.
+`Describe(frame)` возвращает исходный stamp только для живой generation/surface;
+`Presented(frame)` проверяет exact latest ticket, а `LastPresented` хранит реально
+показанный кадр. Старый кадр после replacement/resize/Stop/crash не становится
+кадром новой revision. Во время первого показа Document ещё null;0x0сохраняет
+runtime/document, но снимает presentation. Show требует положительный extent,
+Resize поддерживает0x0; остальные bounds —16..1920 ×16..1080.
+
+Перед заменой projection/schema/material/limit64 проверяются локально. Ошибка
+preflight сохраняет рабочий child. Первый profile обновляет документ через
+stop/drain/reap → новую generation → bounded Enerit LoadScene → GPU first-present.
+Это full snapshot replacement, не live World edit и не частый incremental update.
+Transform/Undo/Redo вызывают тот же Show с текущей authoring revision; preview не
+меняет документ/history. Нижняя revision того же SceneId отклоняется до Stop;
+Stop сбрасывает эту session-local границу. Concurrent Show/Resize отклоняется,
+новых неограниченных очередей нет. Cancel/error и Stop исключают late readiness;
+cleanup error сохраняет ownership для явного Stop retry.
+
+Preview и Play используют один viewport owner: сначала явно остановите текущий
+режим. Preview не захватывает активную/неочищенную game session; неиспользованный
+Preview.Stop/Dispose не останавливает игру. Отдельный orchestration в Editor и
+автоматическое переключение Edit/Play остаются прикладными задачами.
+
+Child bootstrap проверяет `SessionLaunch.Role`. Для EditPreview вызывайте
+`UseAetherPreviewRuntime(launch, parentId)` после UseAether: нужен Build=null,
+RequireRestore=false и GameBuildId=BuildIdentity.PreviewId. Этот ID считается
+из Aether/profile и не читает Game.Logic.dll. PreviewGameSession рисует projected
+primitives с фиксированной камерой(0,1,6), tick0; Play/Step/input не поддержаны.
+Обычный selected game использует прежний UseAetherRuntime с Role.Game и artifact.
+Core control остаётся Enerit, pixels — existing shared GPU transport, child — Mithril.
+
+Полный native proof: `EngineSessionProbe --edit-preview-proof <new-directory>`.
+Он использует прежний viewport fixture и проверяет actual pixels/revision,
+Transform/Undo/Redo, resize/suspend/resume и native close с pending first-present.
+Нормальный Editor UI пока не подключён к этому API; project/session, inspector,
+camera/picking и storage остаются ED1–ED5. Editor/runtime/game artifacts после
+изменения Aether пересобираются вместе; same-build fingerprint fencing сохраняется.
 
 ### Стандартные компоненты и комната
 

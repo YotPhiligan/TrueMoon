@@ -97,13 +97,38 @@ function Verify-Generation([string]$Consumer,[string]$Configuration,[bool]$Cobal
     if($Cobalt -and !@($files | Where-Object Name -eq 'CobaltResolversRegistration.g.cs').Count) {throw 'Missing Cobalt registration sources.'}
     $summary.Generation+=@{Consumer=[IO.Path]::GetRelativePath($run,$Consumer);Configuration=$Configuration;Analyzers=$analyzers;Sources=@($files | ForEach-Object {@{Path=[IO.Path]::GetRelativePath($run,$_.FullName);Sha256=(Get-FileHash $_.FullName).Hash}})}
 }
+function Verify-SaturatedCase($Report,[string]$Scenario) {
+    foreach($field in @('Scenario','Provider','ParentPid','ChildPids','ExitCodes','PendingBefore','QueuedBefore','OverloadError','RequestErrors',
+        'FailedRequests','Pending','Queued','WorkersCompleted','ClientCleanupObserved','Cleanup','Restarts','AppCancelled',
+        'ControlEndpoint','DomainEndpoint','ControlObservedPid','EnteredHandlers','ActiveHandlersAtControl','HandlersDrained',
+        'ServerDrained','KillCount','ReleaseOutcome','ReleasedPid','MonitorCompleted','TerminationDelay','StopMilliseconds')) {
+        if(!$Report.PSObject.Properties[$field]) {throw "Missing saturated result field $field"}
+    }
+    $killed=$Scenario -eq 'saturated-kill'; $childId=$Report.ChildPids[0]
+    if($Report.PendingBefore -ne 2 -or $Report.QueuedBefore -ne 1 -or $Report.OverloadError -ne 'PipesInvocationOverloadedException') {throw 'Packaged client admission/overload mismatch.'}
+    if($Report.FailedRequests -ne 3 -or $Report.RequestErrors.Count -ne 3 -or
+        @($Report.RequestErrors | Where-Object {$_ -notin @('IOException','EndOfStreamException','ObjectDisposedException','OperationCanceledException','TaskCanceledException')}).Count) {throw 'Packaged saturated pending request outcomes mismatch.'}
+    if($Report.Pending -ne 0 -or $Report.Queued -ne 0 -or $Report.Restarts -ne 0) {throw 'Packaged saturated admission/restart cleanup mismatch.'}
+    foreach($field in @('WorkersCompleted','ClientCleanupObserved','Cleanup','MonitorCompleted')) {
+        if($Report.$field -isnot [bool] -or !$Report.$field) {throw "Packaged saturated ownership incomplete: $field"}
+    }
+    if($Report.AppCancelled -isnot [bool] -or $Report.AppCancelled) {throw 'Saturated owned stop cancelled the parent App lifetime.'}
+    if($childId -le 0 -or $Report.ControlObservedPid -ne $childId -or $Report.ReleasedPid -ne $childId) {throw 'Packaged loaded child PID/reap mismatch.'}
+    if([string]::IsNullOrWhiteSpace($Report.DomainEndpoint) -or [string]::IsNullOrWhiteSpace($Report.ControlEndpoint) -or
+        $Report.ControlEndpoint -eq $Report.DomainEndpoint -or $Report.ControlEndpoint -eq ('tm_'+$Report.DomainEndpoint)) {throw 'Packaged lifecycle control did not use an independent endpoint.'}
+    if($Report.EnteredHandlers -ne 2 -or $Report.ActiveHandlersAtControl -ne 2) {throw 'Packaged lifecycle control did not reach two active handlers.'}
+    if($Report.HandlersDrained -ne $(if($killed){0}else{2}) -or $Report.ServerDrained -isnot [bool] -or $Report.ServerDrained -eq $killed -or
+        $Report.KillCount -ne $(if($killed){1}else{0}) -or $Report.ReleaseOutcome -ne $(if($killed){'Killed'}else{'Graceful'})) {throw 'Packaged cooperative/forced shutdown outcome mismatch.'}
+    if($Report.TerminationDelay -ne 3000 -or $Report.StopMilliseconds -lt 0 -or $Report.StopMilliseconds -ge 10000) {throw 'Packaged loaded stop exceeded its configured regression budget.'}
+}
 function Verify-Case($Report,[string]$Scenario,[string]$Provider,[int]$ParentProcessId) {
     if($Report.Scenario -ne $Scenario -or $Report.Provider -ne $Provider -or $Report.ParentPid -ne $ParentProcessId -or !$Report.Cleanup) {throw 'Invalid process identity/result.'}
     $restarted=$Scenario -in @('restart','budget'); $expected=if($restarted){2}else{1}
     if($Report.ChildPids.Count -ne $expected -or @($Report.ChildPids | Sort-Object -Unique).Count -ne $expected -or $Report.ChildPids -contains $ParentProcessId -or $Report.ExitCodes.Count -ne $expected) {throw 'Invalid owned child generations.'}
     if($restarted -and $Report.ExitCodes[0] -eq 0) {throw 'Expected initial crash exit.'}
-    if($Scenario -eq 'budget') {if($Report.ExitCodes[-1] -eq 0) {throw 'Expected budget crash exit.'}} elseif($Report.ExitCodes[-1] -ne 0) {throw 'Expected cooperative final child exit0.'}
+    if($Scenario -in @('budget','saturated-kill')) {if($Report.ExitCodes[-1] -eq 0) {throw 'Expected crash/forced child exit.'}} elseif($Report.ExitCodes[-1] -ne 0) {throw 'Expected cooperative final child exit0.'}
     if($Report.Restarts -ne [int]$restarted -or $Report.AppCancelled -ne ($Scenario -eq 'budget')) {throw 'Wrong restart budget/App lifetime.'}
+    if($Scenario -in @('saturated-stop','saturated-kill')) {Verify-SaturatedCase $Report $Scenario;return}
     $failures=if($Scenario -in @('restart','budget','stop-pending')){1}else{0}
     $checks=switch($Scenario){'payload'{3};'remote-error'{3};'concurrent'{33};'cancel-request'{2};'restart'{2};'budget'{2};default{1}}
     if($Report.FailedRequests -ne $failures -or $Report.Checks -ne $checks) {throw 'Typed request outcomes mismatch.'}
@@ -164,7 +189,7 @@ try {
                 $exe=Join-Path $delivery.Path $(if($IsWindows){'UnitsPackageConsumer.exe'}else{'UnitsPackageConsumer'})
                 $providers=if($cobalt){@('cobalt','di')}else{@('di')}
                 foreach($provider in $providers) {
-                    foreach($scenario in @('payload','concurrent','cancel-request','remote-error','restart','budget','stop-pending','startup-failure','parent-exit')) {
+                    foreach($scenario in @('payload','concurrent','cancel-request','remote-error','restart','budget','stop-pending','startup-failure','parent-exit','saturated-stop','saturated-kill')) {
                         $name="$variant-$configuration-$($delivery.Name)-$provider-$scenario";$directory=Join-Path $run ("cases/$name-"+[Guid]::NewGuid().ToString('N'))
                         $result=Invoke-Owned $name $exe @($scenario,$provider,$directory) 40
                         if($result.Error) {throw 'Consumer stderr was not empty.'}
@@ -182,11 +207,11 @@ try {
     $negative=Join-Path $run 'without-enerit-generator';Copy-Consumer $negative;$project=Join-Path $negative 'UnitsPackageConsumer.csproj'
     DotNet 'restore-without-enerit-generator' @('restore',$project,'--configfile',(Join-Path $negative 'NuGet.Config'),'--packages',$cache,$versionProperty,'-p:EnableEneritGenerator=false','--verbosity','quiet')
     DotNet 'build-without-enerit-generator' @('build',$project,'--no-restore',$versionProperty,'-p:EnableEneritGenerator=false','--verbosity','quiet') $true
-    if($summary.Cases.Count -ne 108) {throw 'Incomplete108case matrix.'}
+    if($summary.Cases.Count -ne 132) {throw 'Incomplete132case matrix.'}
     foreach($source in $summary.SourceFiles) {
         if((Get-FileHash -LiteralPath (Join-Path $workspace $source.Path)).Hash -ne $source.Sha256) {throw "Source changed: $($source.Path)"}
     }
     $summary.Completed=$true
-    Write-Host "Units package smoke:108cases and omitted Enerit analyzer control passed. $run"
+    Write-Host "Units package smoke:132cases and omitted Enerit analyzer control passed. $run"
 } catch {$summary.Failure=$_.ToString();throw}
 finally {$summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $run 'summary.json') -Encoding utf8}
