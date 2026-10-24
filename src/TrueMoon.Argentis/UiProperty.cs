@@ -47,6 +47,8 @@ public static class UiProperties
     public static readonly UiProperty<float> Spacing = new("Spacing", 0, Invalidation.Layout, v => float.IsFinite(v) && v >= 0);
     /// <summary>Background fill.</summary>
     public static readonly UiProperty<Color> Background = new("Background", Color.Transparent);
+    /// <summary>Optional frosted material drawn before background, foreground and children.</summary>
+    public static readonly UiProperty<BackdropMaterial?> Backdrop = new("Backdrop", null);
     /// <summary>Text and foreground color.</summary>
     public static readonly UiProperty<Color> Foreground = new("Foreground", new Color(235, 237, 242));
     /// <summary>Font size in logical pixels.</summary>

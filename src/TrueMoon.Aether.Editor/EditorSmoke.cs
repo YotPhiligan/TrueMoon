@@ -21,7 +21,11 @@ internal static class EditorSmoke
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3)); var token = timeout.Token;
         var captures = new List<string>(); var executed = new List<string>(); var windowId = window.Id;
         await Click(EditorCommand.Build); Require(engine.Editor.Status.Candidate != null, "Build did not prepare a candidate.");
-        await Click(EditorCommand.Start); Require(engine.Supervisor.Status.State == SessionState.Paused && engine.Supervisor.Status.ProcessId != Environment.ProcessId, "Runtime is not a separate paused process.");
+        await UntilAsync(async () => { var available = false; await ui.InvokeAsync(() => available = view.Header!.RunButton.IsEnabled); return available; });
+        await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, view.Header!.RunButton)).WaitAsync(token);
+        await commands.Pending.WaitAsync(token); Require(engine.Supervisor.Status.State == SessionState.Playing, "Title-bar Run did not start simulation.");
+        executed.Add("Run"); await Click(EditorCommand.Pause);
+        Require(engine.Supervisor.Status.State == SessionState.Paused && engine.Supervisor.Status.ProcessId != Environment.ProcessId, "Runtime is not a separate paused process.");
         await Capture("editor-dark.png");
         await ui.InvokeAsync(() => { var button = view.Entities["green-cube"]; InputClick(button); Require(workspace.SelectedId == "green-cube", "Hierarchy selection failed."); Require(workspace.Properties().Single(x => x.Key == "X").Value == "1.5", "Inspector did not show the selected entity."); }).WaitAsync(token);
         await Click(EditorCommand.Play); await Until(() => engine.Supervisor.Status.Tick >= 2);
@@ -49,7 +53,10 @@ internal static class EditorSmoke
         async Task Click(EditorCommand command)
         {
             await UntilAsync(async () => { var available = false; await ui.InvokeAsync(() => available = view.Commands[command].IsEnabled); return available; });
-            await ui.InvokeAsync(() => InputClick(view.Commands[command])).WaitAsync(token);
+            if (command is EditorCommand.Play or EditorCommand.Pause or EditorCommand.Stop)
+                await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, command switch
+                { EditorCommand.Play => view.Header!.RunButton, EditorCommand.Pause => view.Header!.PauseButton, _ => view.Header!.StopButton })).WaitAsync(token);
+            else await EditorHeaderSmoke.ClickActionAsync(ui, view, command is EditorCommand.Build or EditorCommand.Replace or EditorCommand.Cancel ? "project" : "simulation", "runtime." + command, token);
             await commands.Pending.WaitAsync(token); if (commands.Error != null) throw new InvalidOperationException("UI command failed: " + command, commands.Error);
             executed.Add(command.ToString());
         }

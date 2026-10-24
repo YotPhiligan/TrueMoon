@@ -10,6 +10,13 @@ App lifecycle/configuration принадлежат [Core](../core/PLAN.md), invo
 
 ## Цель
 
+Quality follow-up2026-10-23: `MithrilRestartProbe.Fixture.ReadyAsync` должен
+наблюдать только полностью опубликованный ready JSON. В общем Debug прогоне
+чтение ready-4.json после File.Exists получило sharing IOException; runtime/API
+не менялись. Предусмотреть atomic publication либо bounded retry чтения,
+проверить deterministic overlap/partial file без потери deadline, identity и
+reap assertions. [Наблюдение/evidence](HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+
 Приложение запускает собственные units в заявленных hosting режимах, наблюдает exit/failure, применяет согласованные startup/restart policies и завершается без оставшихся принадлежащих ему процессов/handles. External process ownership описывается отдельно.
 
 ## Архитектура и решения

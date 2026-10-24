@@ -33,15 +33,29 @@ UI alpha и контрольное beta приложение имеют собс
 Решение2026-10-22: [план приложения Aether.Editor](engine/EDITOR_PLAN.md) задаёт
 единый прикладной маршрут ED1–ED8 и первый Transform/preview/Undo/save/reopen срез.
 Уточнение2026-10-23: [минимальный ARCH1b и headless proof](engine/PLAN.md#основа-api-перед-редактируемым-ui--2026-10-23)
-предшествуют Edit preview и редактируемому inspector/tools; ED1a project/session
-выполняется параллельно. Полный World/ECS/runtime edit не нужен для первого среза.
+предшествовали Edit preview и редактируемому inspector/tools; ED1a project/session
+выполнен в своём scope. Полный World/ECS/runtime edit не нужен для первого среза.
 [Enerit выбран для IPC Editor↔Runtime](engine/PLAN.md#ipc-editor-и-runtime-enerit--2026-10-23),
 frame payload остаётся в отдельном shared RAM/GPU transport, процессы — у Mithril.
 Общие overlays/forms/tree/commands — UI dependencies. Минимальные authoring API
 и независимый engine preview реализованы2026-10-23; ED1a project/session и
 ED2a/b document persistence и UI commands/close policy также готовы. Далее
-Transform inspector/Undo/Redo и подключение independent preview к обычному UI.
+ED3a подключил Transform inspector/Undo/Redo и independent preview к обычному UI.
 Новых assembly dependencies нет.
+
+Порядок после сверки планов2026-10-23: первый edit/save/preview цикл
+на существующем ARCH1b.1 выполнен; далее минимальные create/delete общего authoring API,
+чтобы New был пригоден для работы; затем project picker/switch и ED1/ED6 workflow.
+Детали и критерии ведутся только в [ED3 и первом срезе](engine/EDITOR_PLAN.md#ed3-общие-операции-редактирования-и-undoredo).
+UI развивается по этим consumers. Core/Cobalt поддерживаются адресно; ENE6c/d и
+полный MIT6a/c — следующие задачи надёжности до рабочей поставки, hardware UI
+acceptance остаётся отдельной. Ранние датированные маршруты ниже — история;
+текущая точка продолжения находится в STATUS и модульных STATUS.
+
+UI приоритет2026-10-23 выполнен в bounded scope —
+[компактный Editor header ED4a](engine/EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23)
+на общих menus/overlays/transitions UI; теперь возвращаемся к create/delete.
+Детали дизайна и tasks ведутся у владельцев, прежние проверки не считаются новым proof.
 
 UI authoring2026-10-22: в AGENTS закреплены Fluent View<TData>, отдельные optional
 Data/ViewModel и typed IViewStyle<TView>. Реализация/критерии находятся в
@@ -58,8 +72,8 @@ Cobalt перед локальным authoring API. Их bounded quality/lifecyc
 
 | Когда | Предлагаемая зависимость | Владелец деталей |
 | --- | --- | --- |
-| Локальный authoring/editor | ARCH1b.1/preview/ED1a/ED2a/b реализованы; далее Transform inspector/Undo/Redo/preview. Текущих App/Cobalt/IFactory contracts достаточно | [Editor](engine/EDITOR_PLAN.md#ed2b-document-commands-и-ui--2026-10-23) |
-| До частых preview/input RPC | Уточнить/проверить admission/resource bounds Enerit и общий stop/drain/kill/reap сценарий; изменять код только по необходимому contract/failure proof | [ENE6a/b](enerit/PLAN.md#ene6-интерактивный-consumer-aether--ревью-2026-10-23), [MIT6a](mithril/PLAN.md#mit6-укрепление-процессов-и-ipc--ревью-2026-10-23) |
+| Локальный authoring/editor | ARCH1b.1/preview/ED1a/ED2a/b и ED3a реализованы; далее create/delete через общий authoring API/history. Текущих App/Cobalt/IFactory contracts достаточно | [Editor](engine/EDITOR_PLAN.md#ed3-общие-операции-редактирования-и-undoredo) |
+| Интеграция preview/input RPC | Использовать первый проверенный finite admission/async stop/owned kill/reap профиль; оставшийся fault matrix проверять адресно по consumer | [ENE6a/b](enerit/PLAN.md#ene6-интерактивный-consumer-aether--ревью-2026-10-23), [MIT6a](mithril/PLAN.md#mit6-укрепление-процессов-и-ipc--ревью-2026-10-23) |
 | При расширении IPC contracts | Fail-fast совместимость peers, correlation/overload/latency diagnostics; same-build exact-match достаточно первого профиля | ENE6c/d |
 | Перед рабочей поставкой | Длительные resource trends, abrupt parent death с uncooperative child, bounded log retention и фактические platform/package scenarios | MIT6b/c и ED8 |
 | По измерениям/потребителю | CPU/allocation profile Cobalt/Enerit, дополнительные restart policies, MMF и другие OS/transports | Собственные планы модулей |

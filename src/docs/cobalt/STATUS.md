@@ -141,8 +141,8 @@ warnings1185. Debug unit suites/IPC/units/UI/native не повторены.
 
 ## Следующий конкретный шаг
 
-Актуальный общий порядок — минимальный ARCH1b/headless и параллельный ED1a;
-перед частым preview предложен точечный Enerit/Mithril quality шаг. Прежний UI
+Актуальный общий порядок — [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг).
+ARCH1b.1, ED1a и первый ENE6a/MIT6a срез выполнены в своих границах. Прежний UI
 package/Hosting проход выполнен в своём scope и не является текущим prerequisite.
 [Сверка зависимости](../PLAN.md#сверка-основы-перед-aether--2026-10-23).
 

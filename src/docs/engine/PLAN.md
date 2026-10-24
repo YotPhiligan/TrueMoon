@@ -11,6 +11,10 @@ ARCH1a.1/2 immutable authoring model, scene aggregate/resolver и compatibility 
 ENG5c.1/2 runtime scene consumer/комната и reach/interaction реализованы2026-10-22;
 ARCH1b.1 локальный Transform/query/history API и первый независимый GPU Edit preview проверены2026-10-23;
 остальной ARCH1, ENG5 и ENG6–ENG8 запланированы**.
+[Текущий прикладной маршрут: ED3a и затем create/delete](EDITOR_PLAN.md#ed3-общие-операции-редактирования-и-undoredo).
+ED1a/ED2a/b и Transform/history/preview consumer реализованы; exact проверки и
+точка продолжения ведутся в STATUS. Датированные «следующие шаги» ниже сохраняют
+контекст своего этапа и не заменяют актуальный статус.
 [Статус направления](STATUS.md), [общий план](../PLAN.md),
 [правила ведения](../PLANNING.md).
 
@@ -24,6 +28,16 @@ Transform → увидеть Edit preview → Undo/Redo → сохранить �
 API реализованы в первых profiles. ED2b подключает document UI commands/close
 policy; далее Transform/Undo/preview integration. Полный движок не является предварительным условием.
 IPC Editor↔Runtime — Enerit; frame transport отдельный.
+
+Наблюдение2026-10-23 из ED4a integration: старый CPU `FrameReceiver` test
+`Receiver_TwoBuffersKeepLatestWhileUiLeaseStaysUnchangedAndDrain` получил null из
+`TakeLatest` после `Received >= 5`. Evidence:
+`TestResults/MenuHeader-20261023/solution-181603083/Debug/` и `test-Debug.log`.
+Отдельная ENG2 quality задача: deterministic reproduction worker/pending/UI race,
+затем исправление с сохранением two-buffer ownership, неизменности выданной lease,
+latest frame и drain. Возможная причина по исходникам — claim pending buffer до
+проверки нового frame; это source inference, не доказанный диагноз. ED4a не меняет
+CPU transport; повторный passing сам по себе не означает исправление этого race.
 Engine/ARCH1 contracts ведутся здесь, общие UI capabilities — в UI плане.
 ED1a и ED2 document profile реализованы, остальной ED1–ED8 scope открыт;
 ENG7a/UIA1 и прежние passing результаты не означают их готовности.
@@ -694,7 +708,9 @@ ARCH1a.1/2 реализованы/проверены2026-10-22; ARCH1a в цел
 | ARCH1d | Локальный MCP adapter поверх общих API; runtime edits требуют ARCH1c | Агент обнаруживает schemas/capabilities, читает и меняет сцену без UI, получает job/result/conflict, использует те же права/transactions; cleanup через App проверен |
 
 Порядок уточнён2026-10-23: для приложения Editor первый минимальный ARCH1b.1
-выполнен; следующий engine шаг — Edit preview по границам ниже; ED1a выполняется параллельно. ARCH1a.1/2,
+выполнен; независимый Edit preview и ED1a также реализованы в своих границах.
+Прикладной consumer Transform/history/preview ведётся в ED3a, дальнейшие create/delete
+остаются частью ARCH1b/ED3. ARCH1a.1/2,
 интеграция scene data ENG5c.1 и reach/interaction ENG5c.2 выполнены; при возврате
 к gameplay далее collisions ENG5c.3. Полный toolset ARCH1b–d
 развивается вместе с ENG7; новый контракт не закрывает ENG5/ENG7 или прежние

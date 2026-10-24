@@ -1,5 +1,212 @@
 # Alloy / Argentis: история работ и проверок
 
+## PA4b: StatusBar и ED4b Editor — 2026-10-24
+
+По согласованному дизайну добавлен общий StatusBar/IStatusBar в Argentis:
+primary/action, ordered secondary и details. Список частей фиксируется при
+создании; distinct/live/unowned validation предшествует adoption. Secondary
+скрываются owned slots, child visibility bindings сохраняются. Более ранние
+secondary уступают место более поздним. Details/action имеют приоритет, bounds
+конечны/неотрицательны, hidden input/Tab исключены. Расширение восстанавливает те
+же экземпляры. Focus hidden descendant возвращается на details на owner frame;
+detach/dispose отменяют deferred focus, не создают постоянных idle frames.
+Новые UiSymbol.Info/Warning/Busy/Objects/Preview используют геометрию.
+
+Editor footer:28logical px, text12, icons14, targets24, top border и right24 под
+resize grip. Слева краткий semantic status и доступная Cancel текущей операции,
+справа objects/preview/details. Цвет дополняет иконку/текст, Tick/PID/full error
+вынесены в подробности. Документ/decision/game operation/preview busy/error имеют
+явный приоритет. Активный independent preview показывает «Редактирование сцены»;
+его runtime/Tick/PID помечены Runtime Edit Preview в подробностях, game pause
+остаётся отдельным состоянием. Фиктивных progress/counters нет.
+
+Типизированные EditorStatusBarViewModel/View/Style и popup factories зарегистрированы
+публичным UseAetherEditorStatusBar через App/Cobalt. Model заимствует прежние
+runtime/document/Transform models; окно владеет View, OverlayHost — popup, App —
+models/styles. Controls создаёт View; нет service locator/per-frame resolution.
+Production UseEditing(previewInStatusBar:true) скрывает старые inspector preview
+actions/status; standalone compatibility сохранена. Popup использует прежний
+committed preview coordinator, а Cancel — существующих owners. Отмена при
+busy preview drains его owner; active idle preview останавливается своей кнопкой.
+Ошибки нормализованы в LF для readonly selectable RichTextEditor. Esc/Tab/outside/
+FocusLost закрывают popup, one-click переключение footer segments сохранено.
+Theme/refresh сохраняют controls/selection/focus, overflow закрывает только
+принадлежащий скрытому trigger popup, не крадёт фокус replacement popup.
+
+Проверки: Windows x64, SDK10.0.402, net10.0, xUnit2/VSTest.
+
+| Требование | Exact checks |
+| --- | --- |
+| «текст поменьше», «добавить иконок» | EditorStatusBarViewTests.CompactSegments_Use28PixelBar12PixelText14PixelSymbolsAndRetainIdentityAcrossThemes |
+| «вынести какие-то кнопки туда» | CancellationSegment_TracksBusyOperationAndInvokesExistingCommand; PreviewPopup_StartAndStopUseSharedCommittedPreviewAndKeepThePopupAndFocus |
+| Runtime/ошибки/настоящий preview | RuntimeSnapshot_MapsSemanticStatusAndRetainsExactTickPidAndEntityCount; DocumentError_PreservesFullRuntimeAndDocumentDiagnosticsAndClearsOnRecovery; ActiveEditPreview_ReportsEditingRatherThanGameSimulationAndRetainsErrorPriorityAndRuntimeDetails |
+| Document/game/preview cancellation | PendingDocumentSave_TakesStatusAndCancellationPriorityOverGame; GameCancellation_InvokesExistingCancelExactlyOnceAndIdleCancellationIsInert; BusyPreview_CancelDrainsItsOwnerAndDoesNotCancelRuntime |
+| Narrow/overflow/input | SecondaryFit_AtExactWidthKeepsAllAndOnePixelLessCollapsesLowestPriority; OverflowCollapse_PreservesChildVisibilityAndExcludesItFromTabUntilExpanded |
+| Focus/detach/replacement | OpenPreviewPopup_WhenItsTriggerOverflowsClosesAndReturnsFocusToDetails; PendingOverflowFocus_DoesNotStealFocusFromAReplacementPopup; DetachingDuringPopupOverflow_CancelsDeferredFocusWithoutDisposingBorrowedModel |
+| Theme/full error/read-only | ErrorPopup_NormalizesCrLfAndRetainsDiagnosticSelectionFocusAndIdentityAcrossThemeChanges |
+| Cobalt/MS DI/ownership/failed factory cleanup | BothProviders_FactoriesBorrowSharedModelsAndStylesWhileConsumersOwnIndependentProducts; FactoryStyleFailure_DisposesUnpublishedProductPreservesErrorsAndBorrowedModels |
+
+80новых случаев: StatusBar20, Editor60. Итоговые related UI759/Hosting98/Editor527
+**Debug1384/1384 и Release1384/1384**,6TRX,failed/skipped0. Два прежних expectations
+обновлены под footer28 и structured runtime notifications с точными/no-op checks.
+Первый related прогон обнаружил именно эти2устаревших ожидания; они не скрыты.
+Новые regression checks выявили deferred focus при detach и сохранение original
+factory error при cleanup failure; production исправлен, regression passing.
+Первый native proof подсветил неверную подпись game pause у Edit Preview; добавлены
+4случая и native assertion, итоговый прогон повторён на исправленном исходнике.
+
+Команды и исходные отчёты:
+
+    pwsh -NoProfile -File TestResults/StatusBar-20261024/VerifyFinal.ps1
+    pwsh -NoProfile -File TestResults/StatusBar-20261024/FinalizeEvidence.ps1
+
+VerifyUi запускает три связанных test projects в Debug/Release с isolated artifacts,
+уникальными TRX/log/binlog. VerifyFinal затем выполняет nonincremental Debug build
+TrueMoon.slnx:0errors/1532warnings. VerifyNative строит Editor Debug/Release,
+публикует framework-dependent Release и запускает6cases вне repo:
+empty/legacy/Transform × source Debug/published Release.68PNG/12reaped children,
+validation errors/warnings0/0; UI sessions/mappings/GPU resources/handles0,
+View disposed и child reap. В каждом case5header+4status PNG; empty добавляет1,
+legacy3,Transform3. Реальные footer start/stop, committed revision/pixel checks,
+Undo/Redo/Save/reopen без game compilation; invalid game csproj fixture не строился.
+Header commands/keyboard/theme/dismissal сохранены. Dark/Light/details/Preview/
+Transform screenshots просмотрены; popup над footer, inspector preview скрыт.
+Это directed input собственного UiSession, не physical mouse/keyboard acceptance.
+
+Evidence: TestResults/StatusBar-20261024/verification.json содержит exact commands,
+TRX counters/test methods, source/binary/PNG hashes, native/status/header/cleanup
+reports и документационные checks. Источники/бинарники проверены после native runs.
+
+Границы: full solution tests, Aether/headless probes, fresh packages, physical
+DPI/OS input, performance/golden/HUD/native Vulkan effect matrix/VRAM/final alpha
+не повторены. Прежние CPU FrameReceiver TakeLatest null и Mithril ready JSON
+file-sharing race не исправлялись этим UI срезом. Нет новых базовых prerequisite;
+следующий прикладной шаг — minimal create/delete общего API/history и UI consumer.
+[Дизайн Editor](../engine/EDITOR_PLAN.md#ed4b-компактная-строка-состояния--2026-10-24).
+
+## PA8b: матовые поверхности — 2026-10-24
+
+По запросу «матовую полупрозрачность для задников меню и в целом такой механизм»
+добавлены immutable BackdropMaterial (sigma0..64logical, tint alpha, opaque fallback),
+UiProperties.Backdrop/Element.Backdrop, WithBackdrop и ViewStyleRule.Backdrop.
+Local/element style/view style/theme/default precedence прежний. Material рисуется
+до обычного Background и foreground/children. Для эффекта обычный Background
+должен быть прозрачным; фокус, layout и input semantics не меняются.
+
+Optional IBackdropDrawingContext не расширяет обязательный IDrawingContext.
+Unsupported context рисует fallback. Skia snapshot берётся с текущего surface до
+отрисовки foreground; область capture — current visible clip+halo3sigma, ограничена
+surface. Gaussian sigma масштабируется в device pixels, rounded clip и translate
+учитываются. Snapshot заменяет исходные pixels через Src, затем tint SourceOver:
+полупрозрачный исходный фон не смешивается сам с собой второй раз. Draw-local
+snapshot/filter/paint освобождаются using; GPU path не вызывает ReadPixels/CPU blur.
+Нет предыдущего-frame cache, дополнительных кадров, timers или фоновых задач.
+Sigma0 и opaque tint не требуют capture. Other transforms возвращают fallback.
+У render/text adapter нет нового App lifecycle; существующий owner surface
+заимствуется только на время draw. Vulkan сохраняет публичный Draw(Action<SKCanvas>),
+общая реализация получает surface через internal draw lease.
+
+В меню Theme.MenuBackdrop задаёт Dark sigma12/tint#12161E A176 и Light
+sigma12/tint#F2F5FA A192; null возвращает opaque Surface. MenuItem idle/disabled
+прозрачны, hover/pressed и focus outline прежние. Повторная смена темы сохраняет
+popup/focus/команды. Editor не добавляет второй effect или renderer service.
+
+Проверки, SDK10.0.402/net10.0/xUnit2/VSTest/Windows x64:
+
+| Требование | Exact checks |
+| --- | --- |
+| Матовый фон, чёткий foreground, kernel вне clip | BackdropRenderingTests.FrostedPanel_BlursEarlierContentAndKeepsForegroundSharp (scale1/1.5/2) |
+| Alpha, rounded clip, свежий frame, paint order | FrostedPanel_ReplacesSampledAlphaInsteadOfBlendingTheBackdropTwice; RoundedBackdrop_ClipsBlurAndTintAndDoesNotReuseThePreviousFrame; NestedBackdrops_SampleEarlierMaterialsInPaintOrder |
+| Общий material/Fluent/styles/fallback | TintOnlyOrOpaqueMaterial_DoesNotRequireASamplingSurface (2cases); UnsupportedSampling_PaintsOpaqueFallbackBeforeForeground; SkiaWithoutSurfaceOrUnsupportedTransform_ReturnsFalseWithoutPainting; Material_RejectsUnboundedOrInvalidBlur (4cases); Material_RequiresOpaqueFallbackAndSupportsStyleOverrideRemoval |
+| Меню и Theme без потери popup/focus | MenuInteractionTests.MenuBackdrop_FollowsThemeWithoutReplacingPopupOrFocusAndCanBeDisabled |
+
+16новыхcases (Backdrop15, menu1). Narrow44/44,failed/skipped0:
+TestResults/Backdrop-20261024/narrow-195958793/backdrop.trx. Команда:
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --artifacts-path TestResults/Backdrop-20261024/artifacts -c Debug --filter 'FullyQualifiedName~BackdropRenderingTests|FullyQualifiedName~MenuInteractionTests' --logger 'trx;LogFileName=backdrop.trx' --results-directory <narrow-run> /bl:<narrow-run>/tests.binlog -v minimal
+```
+
+Финальные related unfiltered Debug/Release: UI739 + Hosting98 + Editor467 =1304
+в каждой конфигурации,failed/skipped0,6TRX в managed-200023773. VerifyUi.ps1 выполняет
+для каждого из трёх проектов dotnet test <project>/<project>.csproj с тем же
+--artifacts-path, -c <configuration>, --logger trx, --results-directory <run> и
+unique /bl:<run>/<project>-<configuration>.binlog. Это не full solution/Aether run.
+
+Native-200054605: source Debug/published Release, external cwd, empty/legacy
+profiles ×2:4cases/28PNG/4reaped children. Все header/hover/disclosure/keyboard/
+theme/tooltip/FocusLost proofs успешны. Empty без compiler/child, legacy по9
+прежних игровых команд/2children. ViewDisposed/Reaped=true; UI sessions/mappings/
+GPU resources/handles0, Vulkan child validation errors/warnings0 во всех cases.
+File/View screenshots source/published просмотрены. OpenGL PNG показывает material,
+а не fallback: например, File point(520,325)=15,20,30 при underlying10,15,26;
+(400,275)=17,22,31 при том же underlying, opaque fallback18,22,30.
+Kernel sampled grid/text behind menu; foreground glyphs/focus outline остаются чёткими.
+
+VerifyFinal.ps1 последовательно запускает VerifyUi.ps1 и VerifyNative.ps1.
+Native script собирает Editor Debug/Release --no-restore, публикует Release
+--no-build --no-restore --self-contained false вне repo, затем --smoke <case>
+--validation, для legacy --project <absolute Game.Logic.csproj>. Все build/test/
+publish имеют unique binlogs; stdout/stderr и header/cleanup JSON сохранены.
+Пользовательские Editor/Debugger процессы и обычный bin не затронуты.
+Aggregate TestResults/Backdrop-20261024/verification.json связывает TRX/native
+commands/reports и source/binary/PNG hashes; renderer source/binary fingerprints
+дополнительно сняты после native run. Current code соответствует проверенным builds.
+
+Ранний compile выявил отсутствие SKCanvas.BaseLayerSize в закреплённом SkiaSharp;
+использован root DeviceClipBounds, зафиксированный при создании контекста до
+Element clips. Первые narrow запуски имели одну неверную pixel assertion при150%:
+контрольная точка попадала на default Border outline. Тест изолировал material
+через BorderWidth0, production blur ради прохождения assertions не менялся.
+Финальные narrow/related/native выше выполнены после коррекции.
+
+Vulkan adapter подключён и компилируется, но отдельный native Vulkan/HUD material
+proof не выполнялся. Full solution, Aether/headless и остальные native document/
+Transform/exit workflows, packages, golden/performance/VRAM/physical/full alpha
+не повторены. Прежние CPU receiver/Mithril fixture issues этим не исправлены.
+Не заявлены OS desktop blur/window transparency, arbitrary canvas layers/transforms,
+saturation/noise/effect graph/cache. Следующий прикладной шаг — create/delete.
+
+API сверены с первичными источниками:
+[SKSurface.Snapshot](https://learn.microsoft.com/en-us/dotnet/api/skiasharp.sksurface?view=skiasharp),
+[SKImageFilter.CreateBlur](https://learn.microsoft.com/en-us/dotnet/api/skiasharp.skimagefilter.createblur?view=skiasharp-3.119).
+
+## ED4a: знак TrueMoon и анимированное раскрытие — 2026-10-24
+
+MenuBar использует общий reveal для поворота ⋮→⋯; click/Enter/Space открывает первую
+группу после transition, повторный click закрывает. Esc/Tab/outside/FocusLost/detach
+отменяют pending open, IInputContext не удерживается между кадрами. More сохраняет
+hit area, hover/pressed/focus состояния без обычного бордера. F10/heading navigation
+прежние. Добавлен геометрический UiSymbol.TrueMoon с прозрачным вырезом; Editor
+выбирает Accent через typed ViewStyle и сохраняет Caption region.
+
+UI11/Editor2 новыхcases. Текущие UI723/Hosting98/Editor467 Debug/Release =1288/config,
+6TRX/failed0/skipped0. Source Debug/published Release вне repo:4native cases/28PNG/
+4reaped children, validation0/0 и UI sessions/mappings/GPU resources/handles0.
+После визуальной коррекции AA seams рисунка весь related/native scope повторён;
+финальные collapsed/File PNG просмотрены. Full solution/headless/прочие native
+profiles/packages/physical/golden/performance/loss/VRAM/final alpha не повторялись;
+прежние отдельные CPU receiver/Mithril fixture failures не объявлены исправленными.
+[Контракт](PLAN.md#pa3apa4apa8b-меню-и-компактный-анимированный-заголовок--2026-10-23),
+[точные тесты, команды, отчёты и границы](../engine/HISTORY.md#ed4a-знак-truemoon-и-анимированное-раскрытие--2026-10-24).
+Evidence: TestResults/HeaderBrand-20261024/verification.json.
+
+## ED4a: компактный заголовок и меню — 2026-10-23
+
+Общие menus/commands/overlays/frame transitions и default title header hook реализованы
+в bounded PA3a/PA4a/PA8b scope. Первый consumer — Editor через View/Data/Style и
+App/Cobalt/IFactory. UI51+Hosting13 новых cases; UI712/Hosting98 Debug/Release.
+Editor41 новых cases, related1275/configuration.10native/header proofs,64PNG,
+12reaped children, validation0/0 и zero owned resources;10headless cases отдельно.
+[Контракт](PLAN.md#pa3apa4apa8b-меню-и-компактный-анимированный-заголовок--2026-10-23),
+[реализация, команды, evidence и все failures](../engine/HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+
+Последний full Debug3048/3049 с Mithril ready-file fixture race; последний
+Release3049/3049. Прежний CPU FrameReceiver null также записан отдельной задачей.
+Passing related UI не означает общий green solution. Nonincremental build0errors/
+1532warnings. Related source/native proof не закрывает PA3 modal stack, fresh
+packages/HUD/physical DPI/drag/Snap/golden/performance/loss/VRAM/final alpha.
+
 Архив создан2026-10-09 при разделении общего и модульных планов. [Текущий статус](STATUS.md), [UI план](PLAN.md), [общий статус](../STATUS.md).
 
 ## UIA1 View, ViewModel и typed styles — 2026-10-22

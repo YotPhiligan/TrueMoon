@@ -146,11 +146,12 @@ ENE6c нужен перед расширением совместимых servic
 | ENE6c | Fail-fast совместимость peers | Минимальный generated contract fingerprint/manifest и protocol version до business dispatch: несовпадение methods/DTO/generator policy отвергается явно, без вызова неверного handler. Решение о handshake/framing и миграции принять отдельно; это exact-match same-build защита, не обещание cross-version interoperability. Aether Hello/session fencing сохраняется как отдельный domain contract |
 | ENE6d | Операционная наблюдаемость IPC | Connection/request correlation, method, duration, queue/pending/in-flight/bytes, local timeout/late response/reconnect/overload/error counters через существующие diagnostics. Не писать payload; observer failures не меняют transport outcome. Domain conflict/validation возвращаются typed Aether result, transport failure и неизвестный remote outcome различаются |
 
-Исходная сверка: PipesInvocationClient хранит неограниченный pending map,
+Историческая исходная сверка до ENE6a/MIT6a: PipesInvocationClient хранил неограниченный pending map,
 CheckConnectedAsync опрашивает IsConnected с Task.Delay(1), timeout50s задан в
 InvokeAsync; PipesSignalServerConnection накапливает handler tasks и их request
 rentals, Dispose синхронно ждёт Task.WhenAll. Используемый TmTaskScheduler имеет
-unbounded channel. Это подтверждённые свойства кода, а не новый измеренный leak/
+unbounded channel. Это свойства исходного профиля до первого среза ниже, а не текущая
+гарантия отсутствия bounds и не новый измеренный leak/
 deadlock. Limits/admission добавлять на границе Enerit; общий scheduler Core не
 переписывать автоматически. Awaitable connection signal и сокращение dedicated
 threads рассматривать после CPU/allocation profile существующего ENE5 workload.

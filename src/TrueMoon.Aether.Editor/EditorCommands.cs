@@ -11,6 +11,7 @@ public sealed class EditorCommands
     private Task _pending = Task.CompletedTask;
     private Exception? _error;
     private bool _closing;
+    private CancellationTokenSource? _simulationRun;
     public EditorCommands(GameEditor editor, Task ready, CancellationToken lifetime) : this(Dispatch(editor, ready), lifetime) { }
     public EditorCommands(Func<EditorCommand, CancellationToken, Task> dispatch, CancellationToken lifetime)
     { ArgumentNullException.ThrowIfNull(dispatch); _dispatch = dispatch; _lifetime = lifetime; }
@@ -24,6 +25,7 @@ public sealed class EditorCommands
             if (_closing) return;
             if (command is EditorCommand.Stop or EditorCommand.Cancel)
             {
+                _simulationRun?.Cancel();
                 var pending = _pending;
                 _pending = Run(async () => { await _dispatch(command, CancellationToken.None); await pending; }); return;
             }
@@ -32,10 +34,31 @@ public sealed class EditorCommands
             _pending = Run(() => _dispatch(command, _lifetime));
         }
     }
+    /// <summary>Admits start-then-play as one tracked gesture, or resumes an already paused runtime.</summary>
+    /// <param name="start">Whether a stopped runtime must first be created.</param>
+    public void RunSimulation(bool start)
+    {
+        lock (_gate)
+        {
+            if (_closing || !_pending.IsCompleted) return;
+            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
+            _simulationRun = cancellation; _error = null;
+            _pending = Run(async () =>
+            {
+                try
+                {
+                    if (start) await _dispatch(EditorCommand.Start, cancellation.Token).ConfigureAwait(false);
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    await _dispatch(EditorCommand.Play, cancellation.Token).ConfigureAwait(false);
+                }
+                finally { lock (_gate) { _simulationRun = null; cancellation.Dispose(); } }
+            });
+        }
+    }
     private Task Run(Func<Task> action) => Task.Run(async () => { try { await action(); } catch (OperationCanceledException) { } catch (Exception error) { lock (_gate) _error = error; } });
     public async Task StopAsync()
     {
-        Task pending; lock (_gate) { _closing = true; pending = _pending; }
+        Task pending; lock (_gate) { _closing = true; _simulationRun?.Cancel(); pending = _pending; }
         try { await _dispatch(EditorCommand.Stop, CancellationToken.None).ConfigureAwait(false); await pending.ConfigureAwait(false); }
         catch { lock (_gate) _closing = false; throw; }
     }

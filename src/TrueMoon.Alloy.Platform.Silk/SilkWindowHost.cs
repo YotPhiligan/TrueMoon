@@ -269,7 +269,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
             Key.Backspace => UiKey.Backspace, Key.Delete => UiKey.Delete, Key.A => UiKey.A, Key.C => UiKey.C,
             Key.V => UiKey.V, Key.X => UiKey.X, Key.Up => UiKey.Up, Key.Down => UiKey.Down,
             Key.Z => UiKey.Z, Key.Y => UiKey.Y, Key.B => UiKey.B, Key.I => UiKey.I, Key.U => UiKey.U,
-            Key.W => UiKey.W, Key.S => UiKey.S, Key.D => UiKey.D, Key.E => UiKey.E, _ => UiKey.None
+            Key.W => UiKey.W, Key.S => UiKey.S, Key.D => UiKey.D, Key.E => UiKey.E, Key.F10 => UiKey.F10, _ => UiKey.None
         };
         Input?.Invoke(new UiInput(kind, Key: uiKey,
             Shift: keyboard.IsKeyPressed(Key.ShiftLeft) || keyboard.IsKeyPressed(Key.ShiftRight),

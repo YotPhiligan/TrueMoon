@@ -37,7 +37,8 @@ public sealed class EditorDocumentView : View<EditorDocumentViewModel>
 
     /// <summary>Creates the view on its UI owner thread. Parent/window owns the product.</summary>
     /// <param name="model">Borrowed UI model.</param><param name="style">Borrowed appearance declaration.</param>
-    public EditorDocumentView(EditorDocumentViewModel model, IViewStyle<EditorDocumentView> style)
+    /// <param name="compactHeader">Hides standalone actions when the window provides their shared menu commands.</param>
+    public EditorDocumentView(EditorDocumentViewModel model, IViewStyle<EditorDocumentView> style, bool compactHeader = false)
     {
         ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(style);
         _model = model;
@@ -58,6 +59,7 @@ public sealed class EditorDocumentView : View<EditorDocumentViewModel>
             Add(DocumentCommand.SaveAs, "Сохранить как", x => x.CanSaveAs);
             Add(DocumentCommand.Close, "Закрыть", x => x.CanClose);
             Actions.Add(Button.Simple("Отмена").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel));
+            if (compactHeader) foreach (var button in Actions.Children.OfType<Button>()) button.IsVisible = false;
             SaveChoice = Button.Simple("Сохранить").OnClick(() => model.Choose(DocumentCloseChoice.Save));
             DiscardChoice = Button.Simple("Не сохранять").OnClick(() => model.Choose(DocumentCloseChoice.Discard));
             CancelChoice = Button.Simple("Отмена").OnClick(() => model.Choose(DocumentCloseChoice.Cancel));

@@ -4,6 +4,7 @@ using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
@@ -25,6 +26,7 @@ internal static class EditorApplication
         var directory = Path.GetFullPath(smoke ?? Path.Combine(Path.GetTempPath(), "TrueMoon", "Editor", Guid.NewGuid().ToString("N"))); Directory.CreateDirectory(directory);
         var fonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string> { ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets/Fonts/NotoSans-Regular.ttf") });
         using var end = new CancellationTokenSource();
+        IFactory<EditorHeaderView, EditorHeaderArguments>? headerFactory = null;
         await using var app = App.Build(context =>
         {
             context.UseAetherAuthoring(); context.UseAetherEditorDocuments();
@@ -37,23 +39,38 @@ internal static class EditorApplication
                     return new(scene, hasProject: selected != null || options.LegacyProject);
                 })
                 .Singleton<EditorViewportBinding>(_ => new())
+                .Singleton<EditorPreview>(resolver =>
+                {
+                    var host = resolver.Resolve<AetherHost>()!; var viewport = resolver.Resolve<EditorViewportBinding>()!;
+                    return new(async (scene, token) =>
+                    {
+                        await viewport.Ready.WaitAsync(token).ConfigureAwait(false);
+                        return await host.Preview.ShowAsync(scene, 640, 360, token).ConfigureAwait(false);
+                    }, host.Preview.StopAsync);
+                })
                 .Singleton<IViewStyle<EditorView>>(_ => new EditorViewStyle())
                 .Singleton<EditorDocumentCommands>(resolver =>
                 {
                     var engine = resolver.Resolve<AetherHost>()!; var commands = resolver.Resolve<EditorCommands>()!;
+                    var preview = resolver.Resolve<EditorPreview>()!;
                     return new(resolver.Resolve<EditorProjects>()!, () => commands.Pending.IsCompleted &&
-                        engine.Supervisor.Status.State == SessionState.Stopped && engine.Editor.Status.Operation == Editing.GameEditorOperation.Idle,
-                        commands.StopAsync, end.Token);
+                        (engine.Supervisor.Status.State == SessionState.Stopped || preview.Read().Active) &&
+                        engine.Editor.Status.Operation == GameEditorOperation.Idle,
+                        commands.StopAsync, end.Token, preview.StopAsync);
                 })
                 .Singleton<EditorDocumentViewModel>(resolver => new(resolver.Resolve<EditorDocumentCommands>()!))
                 .Singleton<IViewStyle<EditorDocumentView>>(_ => new EditorDocumentViewStyle())
                 .Singleton<IFactory<EditorDocumentView>>(resolver => new Factory<EditorDocumentView>(() =>
-                    new(resolver.Resolve<EditorDocumentViewModel>()!, resolver.Resolve<IViewStyle<EditorDocumentView>>()!)))
-                .Singleton<EditorViewModel>(resolver => new(resolver.Resolve<EditorWorkspace>(), resolver.Resolve<EditorCommands>(), resolver.Resolve<EditorDocumentViewModel>()))
+                    new(resolver.Resolve<EditorDocumentViewModel>()!, resolver.Resolve<IViewStyle<EditorDocumentView>>()!, compactHeader: true)))
+                .Singleton<EditorViewModel>(resolver => new(resolver.Resolve<EditorWorkspace>(), resolver.Resolve<EditorCommands>(), resolver.Resolve<EditorDocumentViewModel>(), resolver.Resolve<EditorTransformViewModel>()))
                 .Singleton<IFactory<EditorView>>(resolver =>
-                    new Factory<EditorView>(() => new(resolver.Resolve<EditorViewModel>(), resolver.Resolve<IViewStyle<EditorView>>(), resolver.Resolve<IFactory<EditorDocumentView>>())))
+                    new Factory<EditorView>(() => new(resolver.Resolve<EditorViewModel>(), resolver.Resolve<IViewStyle<EditorView>>(), resolver.Resolve<IFactory<EditorDocumentView>>(), resolver.Resolve<IFactory<EditorTransformView>>(), compactHeader: true,
+                        resolver.Resolve<IFactory<EditorStatusBarView, EditorStatusBarArguments>>())))
                 .Singleton<EditorCommands>(resolver => new(resolver.Resolve<AetherHost>().Editor,
                     resolver.Resolve<EditorViewportBinding>().Ready, end.Token)));
+            context.UseAetherEditorEditing(previewInStatusBar: true);
+            context.UseAetherEditorHeader();
+            context.UseAetherEditorStatusBar();
             context.UseAether(options =>
             {
                 options.HostContractId = BuildIdentity.HostId; options.GameBuildId = new('0', 64); options.ReportDirectory = directory;
@@ -66,8 +83,16 @@ internal static class EditorApplication
                 window.Appearance = new WindowAppearance { Decorated = false };
                 window.Chrome = new WindowChromeOptions { NativeDrag = true, NativeSnapLayouts = true, MinimumSize = new Size(1100, 700) };
                 window.FrameMode = UiFrameMode.Continuous;
+                window.ConfigureDefaultTitleBar = (title, content, requestClose) =>
+                {
+                    var editor = (EditorView)content;
+                    var header = headerFactory!.Create(new(editor.Overlays, title.Title, requestClose));
+                    try { title.SetHeader(header); editor.Header = header; }
+                    catch { if (header.Parent == null && !header.IsDisposed) header.Dispose(); throw; }
+                };
             }));
         });
+        headerFactory = app.Services.Resolve<IFactory<EditorHeaderView, EditorHeaderArguments>>()!;
         var projects = app.Services.Resolve<EditorProjects>()!;
         var selectedProject = options.ProjectPath != null && !options.LegacyProject
             ? await projects.OpenAsync(options.ProjectPath) : null;
@@ -90,10 +115,13 @@ internal static class EditorApplication
             var current = (EditorView)((WindowFrame)ui.Root).Children[1];
             view ??= current;
             binding.Observe(ui, current);
-            if (current.Canvas.DrawnFrame is { } frame) engine.Frames.Presented(frame);
+            if (current.Canvas.DrawnFrame is { } frame)
+            {
+                if (!engine.Preview.Presented(frame)) engine.Frames.Presented(frame);
+            }
             model.Refresh(engine.Supervisor.Status, engine.Editor.Status, commands.Error ?? engine.Frames.TransportError);
             current.Canvas.EmptyText = selectedProject?.Documents?.Read().Content == null
-                ? "Соберите проект и запустите сцену" : "Предпросмотр сцены пока недоступен";
+                ? "Соберите проект и запустите сцену" : "Откройте Edit Preview в строке состояния";
             current.Documents?.SynchronizeFocus(ui); first.TrySetResult(ui);
         };
         window.Closing += async reason =>
@@ -109,7 +137,13 @@ internal static class EditorApplication
             if (build != null) await binding.InitializeAsync(window, engine, startup.Token);
             if (smoke != null)
             {
-                if (options.DocumentSmoke) await EditorDocumentSmoke.RunAsync(directory, window, ui, view!, workspace,
+                using var headerDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                await EditorHeaderSmoke.VerifyAsync(directory, window, ui, view!, headerDeadline.Token);
+                using var statusDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                await EditorStatusBarSmoke.VerifyAsync(directory, window, ui, view!, statusDeadline.Token);
+                if (options.TransformSmoke) await EditorTransformSmoke.RunAsync(directory, window, ui, view!, workspace,
+                    documents, selectedProject!.Documents!, app.Services.Resolve<ISceneDocumentStore>()!, app.Services.Resolve<EditorPreview>()!, engine, runtimeFactory);
+                else if (options.DocumentSmoke) await EditorDocumentSmoke.RunAsync(directory, window, ui, view!, workspace,
                     documents, selectedProject!.Documents!, app.Services.Resolve<ISceneDocumentStore>()!, engine, runtimeFactory);
                 else if (options.LegacyProject) await EditorSmoke.RunAsync(directory, window, ui, view!, workspace, commands, engine, runtimeFactory);
                 else await EditorWorkspaceSmoke.RunAsync(directory, window, ui, view!, workspace, engine, runtimeFactory);

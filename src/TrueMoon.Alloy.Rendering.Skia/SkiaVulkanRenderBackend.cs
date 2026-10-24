@@ -108,10 +108,11 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface
         VerifyAvailable();
         VerifyContext("Render");
         if (_surface == null) return;
-        _surface.Draw(canvas =>
+        _surface.DrawSurface(surface =>
         {
+            var canvas = surface.Canvas;
             canvas.Clear(SKColors.Transparent); canvas.Save();
-            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources)); }
+            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources, surface)); }
             finally { canvas.Restore(); }
         });
     }

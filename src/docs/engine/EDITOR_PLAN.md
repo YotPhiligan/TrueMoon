@@ -369,6 +369,20 @@ game workflow сохраняется. Editable Transform/Undo/Redo и preview е
 
 ## ED3. Общие операции редактирования и Undo/Redo
 
+Приоритет после ED2b (сверка2026-10-23): сначала подключить существующий
+ARCH1b.1 к минимальному Transform inspector и Undo/Redo, затем independent Edit
+preview к committed revision. Поля сохраняют draft до явного commit/cancel;
+invalid/stale ввод не меняет history, один commit — одна transaction.
+Preview обновляется после commit/history, а не после каждого символа; допускается
+только одно выполняемое и одно последнее ожидающее обновление. Его текущий лимит
+64 entities и child replacement сообщаются явно; ошибка сохраняет документ.
+New пока создаёт пустую сцену: следующий отдельный срез — минимальные create/delete
+через общий authoring API/history. Полный World/ECS для этих шагов не требуется.
+После первого edit/save/preview цикла — project picker/switch и ED1/ED6 workflow;
+общие UI capabilities добавляются по конкретному consumer, без предварительной
+docking/plugin платформы. ENE6c/d и оставшиеся MIT6a/c остаются отдельными этапами
+надёжности до рабочей поставки; первый ENE6a/MIT6a proof их не закрывает.
+
 - [ ] Подключить UI-independent authoring operations ARCH1b: create/delete entity,
   update properties/components и parent relationships с общими validators/resolver.
 - [ ] Использовать stable IDs, expected revision и operation identity по engine
@@ -384,6 +398,114 @@ game workflow сохраняется. Editable Transform/Undo/Redo и preview е
 Готовность: UI/headless дают одинаковые данные и diagnostics; invalid/stale/cancelled
 operation не оставляет частично изменённую сцену. Undo/Redo восстанавливает документ
 и его dirty status; один подтверждённый edit gesture даёт одну history transaction.
+
+### ED3a. Transform/history/preview в UI — 2026-10-23
+
+Минимальный consumer существующего ARCH1b.1, без новых engine/wire contracts.
+EditorTransformView/Data/Style имеет девять стабильных полей XYZ, pitch/yaw/roll
+в радианах, scale XYZ. Явный Apply/Ctrl+Enter — одна atomic history transaction;
+Cancel/Esc не меняет committed content. Числа invariant, finite Float и scale>0;
+итоговые validators/resolver остаются общими. Ошибка сохраняет draft/history.
+Смена выбранного entity отбрасывает его draft; внешняя смена той же document
+revision/content сохраняет draft с conflict до явного Cancel. Undo/Redo недоступны
+при draft; в TextBox Ctrl+Z не перехватывается как команда сцены. Вне поля
+Ctrl+Z/Shift+Z/Y и кнопки используют общую history/saved checkpoint.
+
+EditorPreview заимствует engine operations, сериализует один выполняемый и один
+последний ожидающий committed snapshot. Старт/retry явный; после Apply/Undo/Redo
+обновления автоматические. Ошибка не создаёт retry на каждом UI frame, прежняя
+presentation не получает новую revision. Stop/New/Open/Close/Exit fence/drain
+accepted preview work; Cancel close decision сохраняет preview. Cleanup failure
+наблюдаем и допускает retry. View products owned родителем; model/style/coordinator
+получаются через App/Cobalt/IFactory, без второй scene/history и service locator.
+
+Текущий preview profile — fixed camera,640×360, Windows x64 OpenGL UI/Vulkan child,
+до64entities, child replacement на обновление. Authoring document не обрезается.
+Подтверждение среза требует реального edit/preview/Undo/Redo/save/reopen и cleanup;
+точные результаты — в STATUS/HISTORY. Создание/удаление объектов и прочие ED3/ED4/
+ED5 задачи остаются открытыми, весь ARCH1b этим consumer не закрывается.
+
+### ED4a. Компактная верхняя панель — 2026-10-23
+
+Реализован bounded header/menu срез2026-10-23; уточнение дизайна со знаком TrueMoon
+и вращением точек реализовано2026-10-24. Текущие related UI1288/configuration
+Debug/Release и4native profiles успешны. Full solution в уточнении не запускался;
+прежний Mithril fixture failure остаётся открытым.
+[Текущие проверки](HISTORY.md#ed4a-знак-truemoon-и-анимированное-раскрытие--2026-10-24),
+[первоначальный срез и его границы](HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+Полный ED4 и hardware gates этим не закрыты; следующий прикладной шаг — create/delete.
+
+Дополнение2026-10-24: dropdown меню используют общий матовый материал
+[PA8b](../alloy/PLAN.md#pa8b-матовые-поверхности--2026-10-24): blur текущего окна
+и theme tint, foreground остаётся чётким, unsupported renderer использует opaque
+fallback. Editor не вводит собственный capture/blur сервис; материал — UI value,
+ViewModel/команды/DI ownership прежние. Настройка через Theme/typed styles,
+`MenuBackdrop = null` отключает эффект. Срез проверен raster и Editor OpenGL;
+прозрачность OS окна и native Vulkan effect acceptance остаются вне среза.
+
+По запросу пользователя временный UI приоритет перед create/delete. Одна строка
+заголовка: `[TrueMoon icon][⋮] TrueMoon Aether · Project [▶][⏸][■] [—][□][×]`. Hover раскрывает
+`Файл / Правка / Вид / Проект / Симуляция` и плавно сдвигает название вправо;
+simulation/window actions неподвижны, длинное название сокращается. Кнопка меню доступна
+по click/keyboard; меню держится при hover/focus/open popup, light dismiss/Esc/
+FocusLost закрывают. Небольшая задержка предотвращает случайное схлопывание.
+
+Уточнение2026-10-24: слева фиксированный геометрический знак TrueMoon — полумесяц
+со звездой20px в области28px, цвет Accent текущей темы. Он не получает фокус и
+сохраняет Caption region. Сразу после него постоянная кнопка32px без обычного
+бордера: точки поворачиваются из ⋮ в ⋯ вместе с reveal180мс и обратно. Размер,
+hit area и положение кнопки не меняются. Hover раскрывает только названия групп;
+click либо Enter/Space на кнопке закрепляет раскрытие и после завершения анимации
+сразу открывает «Файл», фокусируя первый доступный пункт без выполнения команды.
+Повторное нажатие закрывает меню и возвращает фокус кнопке. Esc/Tab/outside click/
+FocusLost/detach отменяют отложенное открытие; после отмены popup не появляется.
+F10 по-прежнему сразу раскрывает headings для клавиатурного выбора. Нулевая
+длительность открывает меню без дополнительного жеста. Отрисовка не зависит от
+glyph font или bitmap asset; смена темы не пересоздаёт UI-дерево. Фон hover/pressed
+и focus indicator сохраняются. Раскрытие сдвигает только название, знак и кнопки
+симуляции/окна остаются на месте. Геометрия и отмена проверяются deterministic
+tests, desktop source/published proof отдельно; physical DPI acceptance остаётся открыт.
+
+Большую runtime toolbar убрать; существующие file/edit/build/runtime/theme
+actions разместить в меню, запуск/продолжение, pause и stop — icon buttons в
+заголовке. Runtime semantics/availability используют существующий coordinator,
+stop/cancel остаются наблюдаемыми и drainable. Preview и игровая симуляция не
+смешиваются. Menu доступно без проекта, недоступные domain actions disabled.
+Path draft и unsaved decision сохраняются; общие file picker/project wizard не
+добавляются скрытым условием этого шага. New/Open/Save/Close shortcuts сохраняются.
+
+View/Data/Style и UI-owner factories — через App/Cobalt/IFactory. Общие Menu/
+Overlay/animation/icon contracts реализуются в [PA3a/PA4a/PA8b UI](../alloy/PLAN.md#pa3apa4apa8b-меню-и-компактный-анимированный-заголовок--2026-10-23).
+Сначала общая основа и deterministic tests, затем Editor integration/native proof:
+hover/click/key/focus, animations/reversal/idle, actual menu actions, runtime
+start/pause/stop, narrow window/DPI logical layout, drag/Snap region metadata,
+theme/retained tree и stop/exit cleanup. Hardware-only gates остаются открытыми.
+После завершения возвращаемся к minimal create/delete общего authoring API/history.
+
+### ED4b. Компактная строка состояния — 2026-10-24
+
+Дизайн согласован пользователем и реализован2026-10-24. Следом возвращаемся
+к create/delete. Высота28logical pixels, текст12, иконки14, interactive target24,
+тонкий верхний разделитель и спокойная theme surface. Слева короткий статус с
+иконкой/цветом/текстом; рядом отмена только текущей отменяемой операции. Справа
+число объектов, Edit Preview и сведения. Tick/PID/full error доступны в подробностях.
+Edit Preview переносится из инспектора в собственную матовую панель над статусбаром:
+start/retry/stop и actual revision; игровые controls остаются в заголовке.
+
+На малых ширинах secondary segments уходят в сведения; primary status и cancel
+сохраняют приоритет. Popups используют общий OverlayHost/backdrop, Esc/outside/
+FocusLost/focus restoration, keyboard и enabled actions. Ошибка различима иконкой,
+цветом и текстом. Новых fake progress percentages/diagnostic counters нет.
+
+EditorStatusBarView/Data/Style и UI-owner IFactory через App/Cobalt; родитель
+владеет View, модель/стиль заимствуются. Structured state вместо разбора StatusText,
+retained tree/focus/theme, отсутствие resolution на frame и dispose subscriptions.
+Общий StatusBar/overflow contract принадлежит UI. Проверки: states/cancel/errors,
+narrow geometry и hidden input, popup ownership/theme/dismissal, both DI providers,
+реальный preview start/stop/Save/reopen и source/published native screenshots.
+
+Проверено: UI759/Hosting98/Editor527 Debug/Release =1384/configuration;6native
+cases/68PNG/12reaped children. [Evidence/границы](HISTORY.md#ed4b-компактная-строка-состояния--2026-10-24).
 
 ## ED4. Рабочие панели и инспектор
 
@@ -502,7 +624,9 @@ paths/toolchain validation; **ED2a** — scene format/document owner/atomic pers
 dirty/history checkpoint и close policy API. Оба профиля проверяются вне repo и
 сохраняют active content при failed/cancelled подготовке.
 ED2b подключает document open/save/close commands и явный Save/Discard/Cancel
-к обычному UI. Следующий срез — Transform/Undo/Redo/preview. Остальные
+к обычному UI. **ED3a** подключил Transform/Undo/Redo/preview и проверил весь первый
+сценарий source Debug/published Release; exact evidence в STATUS/HISTORY. Далее
+минимальные create/delete общего authoring API/history и их UI commands. Остальные
 ED2/ED3 и минимальные ED4/ED5 доводят весь сценарий; очередное
 UI-only demo не подменяет его acceptance. Завершать весь движок заранее не нужно.
 

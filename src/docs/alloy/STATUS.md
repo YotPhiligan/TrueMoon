@@ -1,6 +1,93 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя интеграционная проверка — **2026-10-23, ED2b document UI Editor**.
+Последняя работа — **2026-10-24, PA4b компактный StatusBar и ED4b Editor**.
+Общий StatusBar/IStatusBar сохраняет child bindings/ownership, скрывает secondary
+slots по приоритету, исключает их из input/Tab и возвращает focus на details.
+Editor:28/12/14/24logical, semantic icons/status/cancel, entity count, details и
+Edit Preview popup над footer; прежние inspector preview controls скрыты.
+Typed View/Data/Style, App/Cobalt/IFactory, оба DI providers и cleanup проверены.
+
+80новых cases; текущие UI759/Hosting98/Editor527 Debug/Release =1384/configuration,
+failed/skipped0,6TRX. Nonincremental Debug solution build:0errors/1532warnings.
+Source Debug/published Release вне repo:6native empty/legacy/Transform cases,
+68PNG/12reaped children,validation0/0 и zero UI/mapping/GPU ownership.
+Dark/Light/details/Preview/Transform PNG просмотрены. Evidence:
+TestResults/StatusBar-20261024/verification.json;
+[контракт](PLAN.md#pa4b-statusbar--2026-10-24),
+[точные тесты и границы](HISTORY.md#pa4b-statusbar-и-ed4b-editor--2026-10-24).
+Full solution tests/Aether/headless/packages/physical/performance/final alpha
+не повторены; прежние CPU receiver/Mithril fixture failures открыты.
+Далее create/delete consumer; новые базовые prerequisites не добавлены.
+
+Предыдущая работа — **2026-10-24, PA8b матовые поверхности и dropdown Editor**.
+BackdropMaterial/Element.Backdrop/typed styles/Fluent и optional renderer capability
+реализованы. Skia размывает предыдущий paint текущего frame, затем накладывает tint;
+foreground остаётся чётким. Capture ограничен clip+halo/surface, ресурсы draw-local,
+новых idle кадров нет. MenuBackdrop Dark/Light/null и opaque fallback подключены.
+Rasters scale1/1.5/2, alpha/clip/paint order/fresh frame/fallback/theme retention
+проверены. Текущие UI739/Hosting98/Editor467 Debug/Release =1304/configuration,
+16новыхcases,failed/skipped0. Narrow44/44;4native source Debug/published Release
+cases вне repo,28PNG/4reaped children, validation0/0 и zero owned UI/GPU/mappings.
+Финальные File/View screenshots просмотрены. Evidence:
+TestResults/Backdrop-20261024/verification.json;
+[контракт](PLAN.md#pa8b-матовые-поверхности--2026-10-24),
+[точные тесты и границы](HISTORY.md#pa8b-матовые-поверхности--2026-10-24).
+Vulkan adapter компилируется с общим кодом; native Vulkan/HUD effect matrix,
+performance/VRAM/physical/final alpha не повторены. Full solution/Aether/headless
+не запускались; прежние CPU receiver/Mithril fixture issues открыты. Далее
+create/delete consumer; OS window backdrop/effect graph/cache отдельно.
+
+Предыдущая работа — **2026-10-24, знак TrueMoon и анимированная кнопка меню ED4a**.
+MenuBar поворачивает точки ⋮→⋯ на общем reveal; click/Enter/Space после раскрытия
+открывает первую группу, повторный click закрывает. Esc/Tab/outside/FocusLost/
+detach отменяют pending open. Hover и F10 сохраняют выбор headings; hit bounds
+неподвижны, idle кадры прекращаются. Геометрический UiSymbol.TrueMoon с прозрачным
+вырезом используется в fixed brand части Editor View/Style.
+
+Текущие UI723/Hosting98/Editor467 Debug/Release =1288/configuration,13новыхcases,
+failed/skipped0. Source Debug/published Release вне repo:4native cases,28PNG,
+4reaped children, validation0/0 и UI sessions/mappings/GPU resources/handles0.
+Финальные collapsed/File screenshots просмотрены. Evidence:
+TestResults/HeaderBrand-20261024/verification.json;
+[контракт](PLAN.md#pa3apa4apa8b-меню-и-компактный-анимированный-заголовок--2026-10-23),
+[точные проверки](../engine/HISTORY.md#ed4a-знак-truemoon-и-анимированное-раскрытие--2026-10-24).
+Full solution/headless/остальные native profiles в этом уточнении не повторялись;
+прежние CPU receiver/Mithril fixture failures не объявлены исправленными.
+Далее capabilities для create/delete consumer; modal stack/long-menu scroll,
+packages/HUD/physical/golden/performance/loss/VRAM/final alpha остаются открытыми.
+
+Предыдущая работа — **2026-10-23, PA3a/PA4a/PA8b и ED4a menu/header**.
+Общие IMenu/MenuBar/MenuItem, IUiCommand, OverlayHost и frame-driven reversible
+ScalarTransition реализованы; default title header hook сохраняет native actions
+и region metadata. Owner-thread clock/input observers, idle/detach/dispose,
+focus/disabled/tooltip/theme/keyboard и типизированные DI factories проверены.
+UI712/Hosting98/Editor465 Debug/Release =1275related/configuration,105новыхcases.
+Source Debug/published Release:10native/header workflows,64PNG/12reaped children,
+validation0/0 и zero UI/mapping/GPU ownership.10headless cases отдельно.
+Последний full Debug3048/3049 с Mithril ready-file fixture failure; Release3049/3049.
+Ранний CPU FrameReceiver null также записан отдельно; общий green не заявлен.
+[Контракт](PLAN.md#pa3apa4apa8b-меню-и-компактный-анимированный-заголовок--2026-10-23),
+[точные проверки/failures/границы](../engine/HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+Далее UI capabilities добавлять по следующему authoring consumer create/delete;
+modal stack/long-menu scroll, packages/HUD/physical/golden/performance/loss/VRAM/
+final alpha остаются открытыми.
+
+Предыдущая интеграционная проверка — **2026-10-23, ED3a Transform/history/preview UI Editor**.
+Nested Transform View/Data/Style, stable two-way numeric drafts, field validation,
+shortcuts и scoped compact-input padding подключены без новых UI-library APIs.
+Theme/refresh/commit сохраняют поля/focus/selection; stable Refresh не создаёт лишних
+notifications. App/Cobalt/IFactory и Microsoft DI ownership проверены.
+66новых cases; full2944/configuration Debug/Release,10TRX/failed0/skipped0,
+включая UI661/Hosting85/Editor424. Source Debug/published Release: Transform workflow
+по3PNG/4reaped preview children; actual revision/pixel checks, Save/reopen, validation0/0
+и UI sessions/mappings/GPU resources/handles0. PNG обеих deliveries просмотрены.
+Прежние empty/project/legacy/documents workflows повторены; текущий общий native
+scope —10cases/24PNG/12reaped children. Headless scene/SDK10cases отдельно.
+[Exact evidence](../engine/HISTORY.md#ed3a-transformhistorypreview-в-ui--2026-10-23).
+Далее минимальные create/delete общего authoring API и их UI commands. Fresh packages/
+golden/RTE/full performance/physical UI/K3/K7/K8/VRAM/final alpha не повторены.
+
+Предыдущая интеграционная проверка — **2026-10-23, ED2b document UI Editor**.
 Nested View/Data/Style + typed DI factories подключают path/actions/dirty/errors и
 inline Save/Discard/Cancel. Общие UI-library APIs и PA3 overlay runtime не менялись.
 Owner-thread notifications, stable tree/path/focus/style, detach/dispose и оба DI
@@ -241,7 +328,7 @@ Alpha K1–K9 не объявляется завершённой. Требова
 ## Следующий конкретный шаг
 
 При работе над приложением использовать [первый срез и порядок API → preview → UI](../engine/EDITOR_PLAN.md#первый-сквозной-срез);
-ED1a project/session выполняется параллельно engine foundation.
+ARCH1b.1, ED1a, ED2a/b и ED3a выполнены в своих границах; ближайший consumer — create/delete UI commands общего authoring API.
 Общие UI capabilities для ED4/ED5/ED7 развивать здесь по конкретному consumer;
 готовность приложения не требует заранее закончить весь UI beta backlog.
 

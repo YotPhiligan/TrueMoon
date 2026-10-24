@@ -1,5 +1,39 @@
 # TrueMoon: история общей документации
 
+## ED4a: компактный заголовок и меню — 2026-10-23
+
+По запросу пользователя дизайн/план и приоритет ED4a зафиксированы и реализованы.
+Общие menu/command/overlay/transition contracts остаются в UI плане; Editor
+подключает scoped Header View/Style через App/Cobalt/typed factory. После этого
+среза следующий прикладной шаг снова minimal create/delete authoring API/history.
+
+105 новых cases, related UI712/Hosting98/Editor465 Debug/Release. Native source
+Debug/published Release:10header/application profiles,64PNG,12reaped children,
+validation0/0 и zero UI/mapping/GPU ownership.10headless cases отдельно.
+Последний full Debug3048/3049: MithrilRestartProbe ready-file IOException;
+последний Release3049/3049, skipped0. Ранний FrameReceiver null и этот fixture
+race внесены в engine/Mithril планы; runtime этих модулей не менялся. Предыдущий
+full3049/3049 Debug/Release не отменяет последний Debug failure.
+[Детали и exact evidence](engine/HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+
+## Сверка планов и ED3a Transform/history/preview — 2026-10-23
+
+Согласован порядок: первый редактируемый Open/Transform/Preview/Undo/Save/reopen
+цикл → минимальные create/delete общего authoring API/history → project picker/
+switch и ED1/ED6 workflow. Устаревшие «следующие шаги» базовых модулей исправлены;
+исторические QUALITY/ENE6 записи отделены от текущего scope. Новый Core/Cobalt
+quality цикл не prerequisite; ENE6c/d и оставшийся MIT6a/c остаются отдельными.
+
+ED3a реализовал первый цикл через существующий engine API, nested View/Data/Style
+и App/Cobalt/IFactory. Atomic drafts/history, validation/conflicts, bounded preview
+updates и child cleanup проверены. [Детали, requirement matrix и exact evidence](engine/HISTORY.md#ed3a-transformhistorypreview-в-ui--2026-10-23).
+66новых cases; final full2944/2944 Debug и Release,10TRX/configuration,failed/skipped0;
+nonincremental build0errors/1531warnings. Source Debug/published Release: текущие
+10native cases/24PNG/12reaped children и10headless scene/SDK cases; validation0/0,
+UI sessions/mappings/GPU resources/handles0. Source/binary fingerprints проверены.
+Fresh packages и physical/loss/VRAM scope не повторялись. Evidence —
+TestResults/TransformUi-20261023/verification.json.
+
 ## ED2b: документы в UI Editor — 2026-10-23
 
 App/Cobalt/IFactory подключают New/Open/Save/SaveAs/Close и document-aware native
@@ -1481,7 +1515,7 @@ Fresh native58/58cases Debug/published Release, room по5PNG и прежние 
 input/Replace/failures; core/sync0/0, zero owned resources/imported readback.
 Local Aether pack/DLL payload hash прошли; package drawing consumer не запускался.
 [Контракт/evidence](engine/HISTORY.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22).
-На этапе ENG5c.1 следующий шаг — [ENG5c.2 reach/raycast/interaction](engine/PLAN.md#eng5c2-следующий-шаг-reachraycast-и-interaction),
+На этапе ENG5c.1 следующий шаг — [ENG5c.2 reach/raycast/interaction](engine/PLAN.md#eng5c2-reachraycast-и-interaction--2026-10-22),
 затем collisions/HUD. Full runtime snapshot/edit, MCP,3D performance и прежние
 hardware/release блокеры остаются открытыми.
 
@@ -1491,7 +1525,7 @@ explicit projection в прежний SceneSnapshot реализованы;52н�
 Full Debug/Release2098/2098/configuration,9TRX/failed0/skipped0; Aether692/UI615/Hosting79/Mithril95.
 [Контракт/evidence/границы](engine/HISTORY.md#arch1a2-агрегат-сцены-и-адаптер--2026-10-22).
 Прежние control/frame/TMCK schemas и интерактивный sample не изменены;
-native/GPU/package checks на этапе ARCH1a.2 не повторялись. Тогда следующим был [ENG5c.1](engine/PLAN.md#eng5c1-следующий-шаг-scene-consumers-и-несколько-примитивов):
+native/GPU/package checks на этапе ARCH1a.2 не повторялись. Тогда следующим был [ENG5c.1](engine/PLAN.md#eng5c1-scene-consumers-и-несколько-примитивов--2026-10-22):
 component roles, runtime scene consumer и несколько примитивов. Общий tooling API,
 full runtime snapshot/edit и MCP запланированы; прежние release блокеры сохранены.
 

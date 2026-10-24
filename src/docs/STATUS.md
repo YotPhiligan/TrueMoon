@@ -1,29 +1,65 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-23, ED2b документы в обычном UI Editor**.
-App/Cobalt/IFactory подключают New/Open/Save/SaveAs/Close, dirty/errors/path drafts
-и inline Save/Discard/Cancel. Failed Save vetoes native Exit; background IO,
-decisions, forced shutdown/callback failures и cleanup retry отслеживаются.
-Owner-thread ViewModel и nested View/Style сохраняют tree/path/focus; readonly
-authoring properties не ограничены legacy64 projection. Cobalt и Microsoft DI
-проверены. [Контракт](engine/EDITOR_PLAN.md#ed2b-document-commands-и-ui--2026-10-23),
-[tests/commands/evidence](engine/HISTORY.md#ed2b-документы-в-обычном-ui--2026-10-23).
+Последняя работа — **2026-10-24, ED4b строка состояния и PA4b StatusBar**.
+Компактные status/icons/cancel, details и Edit Preview в footer; общая responsive
+UI capability и typed View/Data/Style/App/Cobalt factories. Текущие связанные
+UI759/Hosting98/Editor527 Debug/Release =1384/configuration,failed/skipped0.
+Nonincremental Debug solution build0errors/1532warnings.6native source/published
+empty/legacy/Transform cases,68PNG/12reaped children,validation0/0 и zero owned
+UI/GPU/mappings. Full solution tests/Aether/headless не повторялись; прежние
+CPU receiver/Mithril fixture failures остаются открытыми.
+[План](engine/EDITOR_PLAN.md#ed4b-компактная-строка-состояния--2026-10-24),
+[проверки](alloy/HISTORY.md#pa4b-statusbar-и-ed4b-editor--2026-10-24).
+Evidence: TestResults/StatusBar-20261024/verification.json. Далее minimal create/delete
+общего API/history, затем UI и project/runtime workflow; порядок прежний.
 
-Final full solution **2878/2878 Debug и2878/2878 Release**,10TRX/configuration,
-failed/skipped0; Aether1008/Editor358,74новыхcase. Nonincremental Debug build:
-0errors/1531warnings. Source Debug/published Release:10headless cases,8native cases/
-18PNG/4reaped game children. Document UI по19actions/4PNG/5actual saved files:
-Save/reopen/conflict/recovery и close decisions. App/project/CWD вне repo без demo DLL.
-Project/document/UI/GPU cleanup подтверждён;242source/45Editor source/8binary hashes.
-Evidence: TestResults/DocumentsUi-20261023/verification.json.
-Fresh packages, physical/performance/golden scopes этим шагом не повторялись.
+Предыдущая работа — **2026-10-24, общий матовый backdrop и меню Editor**.
+Общий UI material подключён к dropdown меню; theme tint/blur/fallback без новых
+Editor services. Текущие UI739/Hosting98/Editor467 Debug/Release =1304/configuration,
+failed/skipped0;4native source/published cases,28PNG/4reaped children,validation0/0
+и zero owned UI/GPU/mappings. Full solution/Aether/headless в этом срезе не
+повторялись. [Контракт](alloy/PLAN.md#pa8b-матовые-поверхности--2026-10-24),
+[проверки/границы](alloy/HISTORY.md#pa8b-матовые-поверхности--2026-10-24).
+Evidence: TestResults/Backdrop-20261024/verification.json. Порядок работ прежний:
+minimal create/delete общего API/history, затем UI и project/runtime workflow.
 
-ARCH1b.1, independent engine Edit preview, ED1a и ED2a/b documents реализованы.
-Далее **минимальный Transform inspector/Undo/Redo и independent preview в UI**.
-Полный ARCH1b и ED1–ED8 остаются
-открытыми; UI document/runtime Switch/Close/Exit ещё требует общей транзакции.
-Полный World/ECS и новый Core/Cobalt quality цикл не prerequisites первого среза.
-IPC — Enerit, frames — отдельный transport, процессы — Mithril.
+Предыдущая работа — **2026-10-24, ED4a знак TrueMoon и анимированная кнопка меню**.
+Знак и кнопка фиксированы слева; точки ⋮→⋯ поворачиваются вместе с раскрытием,
+одно нажатие после анимации открывает «Файл», повторное закрывает. Отмена во время
+раскрытия исключает late popup. Header сохраняет View/Style/App/Cobalt/IFactory.
+Текущие UI723/Hosting98/Editor467 Debug/Release =1288/configuration,failed/skipped0;
+4native source Debug/published Release cases вне repo,28PNG/4reaped children,
+validation0/0 и zero UI/mapping/GPU ownership. Full solution/Aether/headless в этом
+уточнении не повторялись; прежние CPU receiver/Mithril fixture failures открыты.
+[План](engine/EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23),
+[проверки](engine/HISTORY.md#ed4a-знак-truemoon-и-анимированное-раскрытие--2026-10-24).
+Evidence: TestResults/HeaderBrand-20261024/verification.json.
+
+Предыдущая работа — **2026-10-23, ED4a компактный заголовок и меню Editor**.
+Дизайн/план зафиксирован, Menu/Command/Overlay/frame transitions реализованы в UI;
+Header View/Style через App/Cobalt/typed factory. Большие command rows скрыты,
+⋯ раскрывает пять меню, title сдвигается, ▶/пауза/стоп и оконные actions неподвижны.
+File/history/build/runtime/theme actions, shortcuts и unsaved exit policy сохранены.
+[План](engine/EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23),
+[проверки и границы](engine/HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+
+105новыхcases; related UI712/Hosting98/Editor465 Debug/Release =1275/configuration,
+failed/skipped0. Source Debug/published Release вне repo:10native/header cases,
+64PNG/12reaped children, validation0/0 и UI sessions/mappings/GPU resources/handles0.
+10headless scene/SDK cases отдельно. Evidence:
+TestResults/MenuHeader-20261023/verification.json; source/binary fingerprints проверены.
+
+Последний full Debug **3048/3049**: MithrilRestartProbe ready-file sharing IOException;
+последний Release **3049/3049**,10TRX/configuration, skipped0. Nonincremental build
+0errors/1532warnings. Ранний CPU FrameReceiver null и fixture race записаны в
+engine/Mithril планы; исправление этих прежних путей данным UI срезом не заявлено.
+Предыдущий full3049/3049 Debug/Release не отменяет последний Debug failure.
+Fresh packages/physical/performance/golden/full alpha не повторены.
+
+Далее minimal create/delete общего authoring API/history и их UI commands, затем
+project picker/switch и ED1/ED6 workflow. Общие engine/UI границы прежние; full
+World/ECS и новый Core/Cobalt quality цикл не prerequisites. IPC — Enerit,
+frames — отдельный transport, процессы — Mithril.
 
 ## Состояние модулей
 
@@ -32,9 +68,9 @@ IPC — Enerit, frames — отдельный transport, процессы — Mi
 | [Core](core/STATUS.md) | Typed factories/adapters; текущий full117/117 Debug/Release | Provider-neutral contracts, cooperative/platform limits прежние |
 | [Cobalt / DI](cobalt/STATUS.md) | Текущий179/generator91 Debug/Release; document/project ownership на Cobalt/MS DI | API прежние; performance/allocation backlog отдельно |
 | [Enerit](enerit/STATUS.md) | Текущий166/generator114 Debug/Release; прежние finite admission/stop published44/package132 | ENE6c/d, MMF, trends отдельно |
-| [Mithril](mithril/STATUS.md) | Текущий99/99 Debug/Release; legacy Editor child reap повторён; saturated-stop/kill ранее | Полный fault matrix, parent-death/resource/log bounds отдельно |
-| [Alloy / Argentis](alloy/STATUS.md) | Текущий UI661/Hosting85/Editor358 Debug/Release; document View/Data/Style и native integration | General UI APIs прежние; physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
-| [Aether / Engine](engine/STATUS.md) | ARCH1b.1/preview/ED1a/ED2a/b; текущий Aether1008/Editor358 Debug/Release | Transform inspector/Undo/preview; project/runtime workflow и full World/edit/MCP/performance отдельно |
+| [Mithril](mithril/STATUS.md) | Последний98/99 Debug: ready-file fixture race;99/99 Release; Editor child reap повторён | Ready JSON publication/read stability; full fault matrix/containment отдельно |
+| [Alloy / Argentis](alloy/STATUS.md) | 2026-10-24 UI759/Hosting98/Editor527 Debug/Release; compact StatusBar/preview/header native proof | Bounded menu/material APIs реализованы; native Vulkan effects/physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
+| [Aether / Engine](engine/STATUS.md) | ARCH1b.1/preview/ED1a/ED2a/b/ED3a/ED4a/b; текущий Editor527 Debug/Release; Aether1008 — предыдущий2026-10-23 | Create/delete общего API/UI; CPU receiver race follow-up; project/runtime workflow отдельно |
 
 Подробные contracts/commands/failures ведутся у владельцев. Historical packages,
 performance и аппаратные проверки не становятся частью текущего full solution.
@@ -47,12 +83,12 @@ performance и аппаратные проверки не становятся �
 | G2. Core и DI | Bounded headless source/package proof завершён; UI package wiring проверен2026-10-15 в своём scope |
 | G3. IPC и units | Same-build own-child/App/pipes/restart/package и ENE5/MIT5 проверены в локальных scopes |
 | G4. UI alpha | Частично; K7 failed, остальные аппаратные/final acceptance ограничения сохранены |
-| G5. Сквозные приложения | Runtime/preview/project/document APIs и document UI проверены; Transform editing/preview integration и общий project/runtime switch ещё в плане |
+| G5. Сквозные приложения | Runtime/preview/project/documents/Transform/menu UI проверены; общий project/runtime switch открыт |
 | G6. Общая поставка | R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе readiness не подтверждает |
 
 ## Общие проверки — датированные сведения
 
-Текущий full — **2026-10-23, ED2b**:2878/2878 в каждой конфигурации,10TRX,
+Предыдущий full — **2026-10-23, ED2b**:2878/2878 в каждой конфигурации,10TRX,
 failed/skipped0: Core117/Cobalt179/generator91/Enerit166/generator114/Mithril99/
 UI661/Hosting85/Aether1008/Editor358. Build0errors/1531warnings.
 74новых focused cases; native/headless outside-repo scope:
@@ -66,10 +102,10 @@ drawing, golden/RTE/full performance/physical UI и real loss/VRAM не повт
 
 ## Общие блокеры и неопределённости
 
-- Normal Editor .aetherproj выбирается через CLI; document UI New/Open/Save/Close
-  реализован. Inspector read-only, preview/game actions при открытом документе
-  заблокированы до следующей integration. Project picker/switch, Transform edits,
-  preview/ED6 workflow ещё нужны. Templates/wizard/recent/preferences в плане.
+- Normal Editor .aetherproj выбирается через CLI; document UI и первый Transform/
+  Undo/Redo/Edit preview цикл реализованы. New пока пустой, create/delete authoring
+  operations, project picker/switch и Build/Play/ED6 workflow ещё нужны.
+  Остальные component properties readonly; templates/wizard/recent/preferences в плане.
 - Scene store optimistic/trusted local: cooperating writers согласованы sidecar;
   arbitrary external rename между hash check/replace, links и power-loss durability
   не гарантируются. Terminal Dispose forced discard требует user close policy заранее.
@@ -91,10 +127,9 @@ drawing, golden/RTE/full performance/physical UI и real loss/VRAM не повт
 
 ## Следующий конкретный шаг
 
-1. Подключить [Transform inspector/Undo/Redo и preview](engine/EDITOR_PLAN.md#первый-сквозной-срез):
-   draft/commit/cancel, numeric validation, один edit gesture/history transaction,
-   dirty checkpoint и exact committed revision в independent preview. При возврате к gameplay — ENG5c.3
-   collisions камеры, затем HUD.
+1. Реализовать [минимальные create/delete через общий authoring API/history](engine/EDITOR_PLAN.md#ed3-общие-операции-редактирования-и-undoredo)
+   и UI commands, чтобы New был пригоден для работы. Затем project picker/switch и
+   ED1/ED6 document/build/play workflow. При возврате к gameplay — ENG5c.3 collisions камеры, затем HUD.
 2. UI physical DPI/OS input, loss/K8, VRAM и final alpha требуют собственных runs.
    K7 workaround search остановлен; Windows/driver settings без запроса не менять.
 3. Full INF5, RTE backlog, Cobalt allocation и Enerit scalar investigation

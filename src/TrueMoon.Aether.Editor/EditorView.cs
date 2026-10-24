@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Linq.Expressions;
 using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor;
@@ -32,10 +33,25 @@ public sealed class EditorView : View<EditorViewModel>
     public EditorViewport Canvas { get; } = new();
     /// <summary>Gets the nested project-document view owned by this tree, when configured.</summary>
     public EditorDocumentView? Documents { get; }
+    /// <summary>Gets the nested Transform form owned by this tree.</summary>
+    public EditorTransformView? Transform { get; }
     public IReadOnlyDictionary<EditorCommand, Button> Commands => _commands;
     public IReadOnlyDictionary<string, Button> Entities => _entities;
+    /// <summary>Owns document-area popups; the title header borrows this host in the same window tree.</summary>
+    public OverlayHost Overlays { get; }
+    /// <summary>Borrowed window-owned compact header, when configured by the application.</summary>
+    public EditorHeaderView? Header { get; internal set; }
+    /// <summary>Parent-owned compact footer, when configured.</summary>
+    public EditorStatusBarView? StatusBar { get; }
 
-    public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents = null)
+    public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents = null,
+        IFactory<EditorTransformView>? transform = null, bool compactHeader = false)
+        : this(model, style, documents, transform, compactHeader, null) { }
+
+    /// <summary>Creates a retained editor and its optional factory-owned status footer.</summary>
+    public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents,
+        IFactory<EditorTransformView>? transform, bool compactHeader,
+        IFactory<EditorStatusBarView, EditorStatusBarArguments>? statusBar)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(style);
@@ -43,10 +59,20 @@ public sealed class EditorView : View<EditorViewModel>
         {
             _model = model;
             DataContext = model;
+            var shell = Panel.Create();
+            Overlays = new(shell);
+            Content(model, _ => Overlays);
+            StatusBar = statusBar?.Create(new(Overlays));
+            if (statusBar != null && StatusBar == null) throw new InvalidOperationException("Status bar factory returned null.");
+            Status = StatusBar?.SummaryButton ?? Text.Plain().BindText(model, x => x.StatusText);
+            var footer = StatusBar ?? (Element)Status;
+            shell.Add(footer);
             Documents = documents?.Create();
             if (documents != null && Documents == null) throw new InvalidOperationException("Document view factory returned null.");
+            Transform = transform?.Create();
+            if (transform != null && Transform == null) throw new InvalidOperationException("Transform view factory returned null.");
+            if (Transform != null) InspectorHint.Value = "Transform · Ctrl+Enter — применить";
             Selection = Text.Plain().BindText(model, x => x.SelectedName);
-            Status = Text.Plain().BindText(model, x => x.StatusText);
             Error = Text.Plain().BindText(model, x => x.ErrorText);
             SceneTitle = Text.Plain(model.Scene.Id);
             AddCommand(EditorCommand.Build, "Собрать", x => x.CanBuild);
@@ -58,13 +84,17 @@ public sealed class EditorView : View<EditorViewModel>
             AddCommand(EditorCommand.Replace, "Применить сборку", x => x.CanReplace);
             AddCommand(EditorCommand.Cancel, "Отмена", x => x.CanCancel);
             Toolbar.Add(Button.Simple("Тема").OnClick(ToggleTheme));
+            Toolbar.IsVisible = !compactHeader;
             UpdateEntities();
 
             var hierarchy = Pane("СЦЕНА", SceneTitle, ScrollViewer.Create().Content(EntityList));
             ViewportFrame = ContentControl.Create().Content(new ViewportLayout(Canvas, ViewportTitle));
-            var inspector = Pane("ИНСПЕКТОР", Selection, InspectorHint, PropertiesPanel, Error);
+            var inspector = Transform == null ? Pane("ИНСПЕКТОР", Selection, InspectorHint, PropertiesPanel, Error) :
+                Pane("ИНСПЕКТОР", ScrollViewer.Create().Content(VStack.Create().WithRole(PaneItemsRole)
+                    .WithChildren(Selection, InspectorHint, Transform, PropertiesPanel, Error)));
             Element tools = Documents == null ? Toolbar : VStack.Create().WithChildren(Toolbar, Documents);
-            Content(model, _ => new EditorLayout(tools, hierarchy, ViewportFrame, inspector, Status));
+            shell.Items.Remove(footer);
+            shell.Add(new EditorLayout(tools, hierarchy, ViewportFrame, inspector, footer));
             UpdateSelection();
             UpdateProperties();
             this.WithViewStyle(style);
@@ -85,6 +115,8 @@ public sealed class EditorView : View<EditorViewModel>
             {
                 Dispose();
                 if (Documents is { IsDisposed: false, Parent: null }) Documents.Dispose();
+                if (Transform is { IsDisposed: false, Parent: null }) Transform.Dispose();
+                if (StatusBar is { IsDisposed: false, Parent: null }) StatusBar.Dispose();
             }
             catch (Exception cleanup)
             {
@@ -108,7 +140,7 @@ public sealed class EditorView : View<EditorViewModel>
     }
 
     /// <inheritdoc />
-    public override bool HandleInput(UiInput input, IInputContext context) => Documents?.HandleShortcut(input) == true;
+    public override bool HandleInput(UiInput input, IInputContext context) => Documents?.HandleShortcut(input) == true || Transform?.HandleShortcut(input) == true;
 
     private void UpdateEntities()
     {

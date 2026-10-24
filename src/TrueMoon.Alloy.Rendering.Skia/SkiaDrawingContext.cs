@@ -4,8 +4,10 @@ using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Rendering.Skia;
 
-internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources) : IDrawingContext, ITextLayoutService, IRichTextLayoutService, IRichTextDrawingContext
+internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources, SKSurface? surface = null) : IDrawingContext, ITextLayoutService, IRichTextLayoutService, IRichTextDrawingContext, IBackdropDrawingContext
 {
+    // Contexts are created at the surface's root clip, before Element.Draw narrows it.
+    private readonly SKRectI _surfaceBounds = canvas.DeviceClipBounds;
     private static SKRect Rect(Rect r) => new(r.X, r.Y, r.X + r.Width, r.Y + r.Height);
     private static SKColor Color(Color c) => new(c.R, c.G, c.B, c.A);
     public void Save() => canvas.Save();
@@ -45,6 +47,52 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
         if (source is not SkiaImageSource image) throw new ArgumentException("Image must be a SkiaImageSource.", nameof(source));
         image.VerifyContext(resources.GpuOwner);
         canvas.DrawImage(image.Image, Rect(destination), new SKSamplingOptions(SKFilterMode.Linear));
+    }
+    public bool TryDrawBackdrop(Rect rectangle, BackdropMaterial material, float cornerRadius)
+    {
+        resources.VerifyRichTextAccess();
+        ArgumentNullException.ThrowIfNull(material);
+        if (!float.IsFinite(rectangle.X) || !float.IsFinite(rectangle.Y) || !float.IsFinite(rectangle.Width) ||
+            !float.IsFinite(rectangle.Height) || rectangle.Width < 0 || rectangle.Height < 0 ||
+            !float.IsFinite(cornerRadius) || cornerRadius < 0)
+            throw new ArgumentOutOfRangeException(nameof(rectangle));
+        if (rectangle.Width == 0 || rectangle.Height == 0) return true;
+        // Tint-only and opaque materials require no snapshot or intermediate texture.
+        if (material.BlurSigma == 0 || material.Tint.A == 255)
+        { Fill(rectangle, material.Tint, cornerRadius); return true; }
+        if (surface == null) return false;
+        var matrix = canvas.TotalMatrix;
+        // UI drawing exposes scale/translation. Other transforms use the explicit fallback.
+        if (matrix.SkewX != 0 || matrix.SkewY != 0 || matrix.Persp0 != 0 || matrix.Persp1 != 0 || matrix.Persp2 != 1)
+            return false;
+        var sigmaX = material.BlurSigma * Math.Abs(matrix.ScaleX);
+        var sigmaY = material.BlurSigma * Math.Abs(matrix.ScaleY);
+        var area = matrix.MapRect(Rect(rectangle));
+        var clip = canvas.DeviceClipBounds;
+        area = SKRect.Intersect(area, new(clip.Left, clip.Top, clip.Right, clip.Bottom));
+        if (area.IsEmpty) return true;
+        // Capture the visible area plus the blur kernel halo, bounded by the current surface.
+        area.Inflate(3 * sigmaX, 3 * sigmaY);
+        var pixels = new SKRectI(Math.Max(_surfaceBounds.Left, (int)MathF.Floor(area.Left)), Math.Max(_surfaceBounds.Top, (int)MathF.Floor(area.Top)),
+            Math.Min(_surfaceBounds.Right, (int)MathF.Ceiling(area.Right)), Math.Min(_surfaceBounds.Bottom, (int)MathF.Ceiling(area.Bottom)));
+        if (pixels.IsEmpty) return true;
+        using var image = surface.Snapshot(pixels);
+        if (image == null) return false;
+        using var filter = SKImageFilter.CreateBlur(sigmaX, sigmaY, SKShaderTileMode.Clamp);
+        if (filter == null) return false;
+        using var paint = new SKPaint { ImageFilter = filter, BlendMode = SKBlendMode.Src };
+        canvas.Save();
+        try
+        {
+            using var rounded = new SKRoundRect(Rect(rectangle), cornerRadius, cornerRadius);
+            canvas.ClipRoundRect(rounded, SKClipOperation.Intersect, true);
+            canvas.ResetMatrix();
+            // Replace earlier pixels, avoiding a second alpha blend of a translucent backdrop.
+            canvas.DrawImage(image, pixels.Left, pixels.Top, new SKSamplingOptions(SKFilterMode.Nearest), paint);
+        }
+        finally { canvas.Restore(); }
+        Fill(rectangle, material.Tint, cornerRadius);
+        return true;
     }
     public IRichTextLayout CreateRichTextLayout(RichTextDocument document, RichTextStyle defaults, float? wrapWidth, RichTextAlignment alignment)
     {

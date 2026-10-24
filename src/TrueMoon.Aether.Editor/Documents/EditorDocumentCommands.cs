@@ -1,5 +1,6 @@
 ﻿using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Scenes.Authoring;
 
 namespace TrueMoon.Aether.Editor.Documents;
 
@@ -12,6 +13,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     private readonly EditorProjects _projects;
     private readonly Func<bool> _canTransition;
     private readonly Func<Task> _stopRuntime;
+    private readonly Func<Task> _stopPreview;
     private readonly CancellationToken _lifetime;
     private Task _pending = Task.CompletedTask;
     private Task<bool>? _exit;
@@ -28,11 +30,13 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     /// <param name="canTransition">True only while runtime/compiler command work is stopped and idle.</param>
     /// <param name="stopRuntime">Closes runtime command admission and drains work before successful exit.</param>
     /// <param name="lifetime">Application cancellation.</param>
+    /// <param name="stopPreview">Optional borrowed preview fence/drain before document replacement, close and exit.</param>
     public EditorDocumentCommands(EditorProjects projects, Func<bool> canTransition, Func<Task> stopRuntime,
-        CancellationToken lifetime = default)
+        CancellationToken lifetime = default, Func<Task>? stopPreview = null)
     {
         ArgumentNullException.ThrowIfNull(projects); ArgumentNullException.ThrowIfNull(canTransition); ArgumentNullException.ThrowIfNull(stopRuntime);
         _projects = projects; _canTransition = canTransition; _stopRuntime = stopRuntime; _lifetime = lifetime;
+        _stopPreview = stopPreview ?? (() => Task.CompletedTask);
     }
 
     /// <summary>Gets actual completion of the last accepted UI action, including a pending decision.</summary>
@@ -93,6 +97,9 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
                     (choice, saveAs) = await DecideAsync(token).ConfigureAwait(false);
                 if (choice == DocumentCloseChoice.Cancel && document.Read().IsDirty &&
                     command is DocumentCommand.New or DocumentCommand.Open or DocumentCommand.Close) return;
+                if (command is DocumentCommand.New or DocumentCommand.Open or DocumentCommand.Close)
+                    await _stopPreview().ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
                 switch (command)
                 {
                     case DocumentCommand.New:
@@ -119,6 +126,30 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             }
         });
         return true;
+    }
+
+    /// <summary>Commits a Transform gesture through the active document under the same admission gate as file transitions.</summary>
+    /// <param name="expected">Exact captured document; a replaced document cannot receive an old draft.</param>
+    /// <param name="batch">Engine operation and expected revision.</param><returns>Engine receipt.</returns>
+    public SceneAuthoringResult Apply(SceneDocument expected, TransformEditBatch batch)
+    { ArgumentNullException.ThrowIfNull(batch); return Edit(expected, document => document.Apply(batch, _lifetime)); }
+    /// <summary>Uses the active document's shared history.</summary>
+    /// <param name="expected">Exact captured document.</param><param name="operation">Engine identity/revision.</param><returns>Engine receipt.</returns>
+    public SceneAuthoringResult Undo(SceneDocument expected, AuthoringOperation operation)
+    { ArgumentNullException.ThrowIfNull(operation); return Edit(expected, document => document.Undo(operation, _lifetime)); }
+    /// <summary>Uses the active document's shared redo branch.</summary>
+    /// <param name="expected">Exact captured document.</param><param name="operation">Engine identity/revision.</param><returns>Engine receipt.</returns>
+    public SceneAuthoringResult Redo(SceneDocument expected, AuthoringOperation operation)
+    { ArgumentNullException.ThrowIfNull(operation); return Edit(expected, document => document.Redo(operation, _lifetime)); }
+    private SceneAuthoringResult Edit(SceneDocument expected, Func<SceneDocumentSession, SceneAuthoringResult> action)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        lock (_gate)
+        {
+            if (!Available(DocumentCommand.Save)) throw new InvalidOperationException("Finish the current document/runtime transition before editing.");
+            var document = _projects.Active!.Documents!;
+            return document.Edit(expected, action);
+        }
     }
 
     private async Task<(DocumentCloseChoice Choice, string? Path)> DecideAsync(CancellationToken token)
@@ -202,6 +233,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
                     (choice, path) = await DecideAsync(CancellationToken.None).ConfigureAwait(false);
                 if (_closed) choice = DocumentCloseChoice.Discard;
                 if (choice == DocumentCloseChoice.Cancel) return;
+                await _stopPreview().ConfigureAwait(false);
                 if (document != null && !await document.CloseAsync(choice, path).ConfigureAwait(false)) return;
                 await _stopRuntime().ConfigureAwait(false); success = true;
             }

@@ -11,6 +11,11 @@ public sealed class UiSession : IDisposable, IInputContext
     private readonly UiDispatcher _posted;
     private readonly IUiClipboard? _clipboard;
     private Element? _focus, _capture, _hover;
+    private readonly TimeProvider _time;
+    private long _lastTime;
+    private bool _participantsDirty = true;
+    private IUiFrameParticipant[] _participants = [];
+    private IUiInputObserver[] _inputObservers = [];
     private Invalidation _dirty = Invalidation.Tree | Invalidation.Layout | Invalidation.Render;
     private volatile bool _disposed;
     private bool _updating, _disposing, _reportingFailure;
@@ -42,7 +47,7 @@ public sealed class UiSession : IDisposable, IInputContext
     /// <summary>Current framebuffer size and DPI scale.</summary>
     public UiViewport Viewport { get; private set; }
     /// <summary>Whether a frame/layout update is needed.</summary>
-    public bool NeedsUpdate => _dirty != 0 || _posted.HasPending;
+    public bool NeedsUpdate => _dirty != 0 || _posted.HasPending || _participants.Any(p => p is Element element && Eligible(element) && p.NeedsFrame);
     /// <summary>Whether the tree/viewport has unapplied visual invalidation. Queued commands and requests
     /// for future frames leave the last completed output usable until they are applied by Update.</summary>
     public bool NeedsRender => _dirty != 0;
@@ -67,12 +72,17 @@ public sealed class UiSession : IDisposable, IInputContext
 
     /// <summary>Attaches an unattached root with explicit dispatch limits. Ownership transfers only on success.</summary>
     public UiSession(Element root, IUiRenderSurface rendering, UiViewport viewport, IUiClipboard? clipboard, UiDispatchOptions dispatchOptions)
+        : this(root, rendering, viewport, clipboard, dispatchOptions, null) { }
+
+    /// <summary>Attaches an unattached root with explicit dispatch limits and a borrowed monotonic frame clock.</summary>
+    public UiSession(Element root, IUiRenderSurface rendering, UiViewport viewport, IUiClipboard? clipboard, UiDispatchOptions dispatchOptions, TimeProvider? timeProvider)
     {
         ArgumentNullException.ThrowIfNull(root); ArgumentNullException.ThrowIfNull(rendering); viewport.Validate();
         ArgumentNullException.ThrowIfNull(dispatchOptions); dispatchOptions.Validate();
         DispatchOptions = dispatchOptions; _posted = new UiDispatcher(dispatchOptions);
         if (root.Parent != null || root.IsAttached || root.IsDisposed) throw new ArgumentException("Root is already owned or disposed.", nameof(root));
         Root = root; Rendering = rendering; Viewport = viewport; _clipboard = clipboard;
+        _time = timeProvider ?? TimeProvider.System; _lastTime = _time.GetTimestamp();
         try { Root.Attach(VerifyAccess, Post, ElementDetaching); }
         catch (Exception attachError)
         {
@@ -158,7 +168,20 @@ public sealed class UiSession : IDisposable, IInputContext
         }
         finally { _reportingFailure = false; }
     }
-    private void Invalidated(Invalidation reason) { VerifyAccess(); _dirty |= reason | Invalidation.Render; _posted.SignalUpdate(); }
+    private void Invalidated(Invalidation reason) { VerifyAccess(); if ((reason & Invalidation.Tree) != 0) _participantsDirty = true; _dirty |= reason | Invalidation.Render; _posted.SignalUpdate(); }
+    private void RefreshParticipants()
+    {
+        if (!_participantsDirty) return;
+        var nodes = Descendants(Root).ToArray();
+        _participants = nodes.OfType<IUiFrameParticipant>().ToArray();
+        _inputObservers = nodes.OfType<IUiInputObserver>().OrderByDescending(p => p.InputPriority).ToArray(); _participantsDirty = false;
+    }
+    private void AdvanceParticipants()
+    {
+        RefreshParticipants(); var now = _time.GetTimestamp(); var elapsed = _time.GetElapsedTime(_lastTime, now); _lastTime = now;
+        foreach (var participant in _participants)
+            if (participant is Element element && Eligible(element) && participant.NeedsFrame) participant.AdvanceFrame(elapsed, this);
+    }
     /// <summary>Changes viewport; rejects resize while the host has borrowed the current frame.</summary>
     public void Resize(UiViewport viewport)
     {
@@ -185,6 +208,7 @@ public sealed class UiSession : IDisposable, IInputContext
             if (_posted.TakeFrameRequest()) _dirty |= Invalidation.Render;
             VerifyRendering();
             ClearDetachedInput();
+            AdvanceParticipants();
             if (Viewport.IsEmpty || _dirty == 0) { completed = true; return false; }
             var work = _dirty; _dirty = 0;
             try
@@ -223,6 +247,10 @@ public sealed class UiSession : IDisposable, IInputContext
     public UiInputResult HandleInput(UiInput input)
     {
         VerifyRendering(); ClearDetachedInput();
+        AdvanceParticipants();
+        foreach (var observer in _inputObservers)
+            if (observer is Element element && Eligible(element) && observer.PreviewInput(input, this))
+                return new(true, _capture != null, _focus != null);
         if (input.Kind == InputKind.FocusLost) { CancelInput(); return new(false, false, false); }
         if (Viewport.IsEmpty) return new(false, false, _focus != null);
         if (input.Kind == InputKind.KeyDown && input.Key == UiKey.Tab)
@@ -331,6 +359,7 @@ public sealed class UiSession : IDisposable, IInputContext
         Release(CancelInput); Root.Invalidated -= Invalidated;
         Release(Root.Dispose); Release(Rendering.Dispose);
         _disposed = true; _disposing = false;
+        _participants = []; _inputObservers = [];
         SetDiagnosticState(_diagnostics);
         var handlers = Disposed; Disposed = null; ClipboardFailed = null; RenderingFailed = null;
         if (handlers != null) foreach (Action<UiSession> handler in handlers.GetInvocationList()) Release(() => handler(this));

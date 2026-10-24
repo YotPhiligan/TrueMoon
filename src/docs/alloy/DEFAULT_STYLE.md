@@ -9,6 +9,28 @@
 
 ## Тема и состояния
 
+С2026-10-24 dropdown меню используют `Theme.MenuBackdrop`: Gaussian sigma12logical
+pixels, Dark tint `#12161E/B0`, Light tint `#F2F5FA/C0`, opaque fallback того же
+цвета. `MenuBackdrop = null` возвращает сплошной `Surface`. Idle/disabled rows
+не закрывают material, hover/pressed и focus outline сохраняются.
+
+Материал можно назначить любому элементу через `WithBackdrop(...)`,
+`Element.Backdrop`, `Style.With(UiProperties.Backdrop, ...)` или
+`IViewStyle` → `rule.Backdrop(theme => theme.MenuBackdrop)`. Обычный `Background`
+рисуется поверх материала: оставляйте его прозрачным для видимого эффекта.
+Например, оформление части View:
+
+```csharp
+styles.Part(view => view.Surface)
+    .Background(Color.Transparent)
+    .Backdrop(theme => theme.MenuBackdrop);
+```
+
+Размывается уже нарисованный фон текущего окна, foreground/children остаются
+чёткими. Полупрозрачность OS окна/desktop этим API не включается. Контекст без
+поддержки backdrop получает непрозрачный fallback; sigma0 означает tint без blur.
+[Контракт и границы](PLAN.md#pa8b-матовые-поверхности--2026-10-24).
+
 | Назначение | Dark | Light |
 | --- | --- | --- |
 | Surface / Control | `#12161E` / `#202834` | `#F2F5FA` / `#FFFFFF` |
@@ -63,6 +85,22 @@ corners. Rounded overrides сохраняют прежний Skia round-rect п�
 `AccessibleName` — метаданные контрола; системный accessibility bridge этим API
 не реализован. У собственных контролов приложение задаёт подходящие цвета текста
 поверх самостоятельно нарисованных поверхностей.
+
+## Компактная строка состояния
+
+Общий `StatusBar` располагает primary, action, упорядоченные secondary и details.
+При нехватке ширины сначала скрываются более ранние secondary; visibility самих
+контролов и binding сохраняются. Скрытые сегменты исключаются из Tab/input,
+расширение возвращает те же экземпляры. Перенос данных/команд в details обеспечивает
+View приложения. Фокус скрытого сегмента возвращается на details на owner frame.
+
+Editor использует высоту28, текст12, геометрические иконки14 и targets24.
+Фон — `Control`, верхний разделитель — `Border`; справа24единицы оставлены под
+native resize grip. Ready использует Foreground, Busy/Running — Accent,
+Paused/Waiting — Focus, Error — Error. Цвет дополняет текст и иконку состояния.
+Всплывающие подробности и Edit Preview используют `Theme.MenuBackdrop` с opaque
+fallback; появляются над footer и сохраняют дерево/фокус/выделение при смене темы.
+[Общий контракт](PLAN.md#pa4b-statusbar--2026-10-24).
 
 ## Стандартная рамка окна
 

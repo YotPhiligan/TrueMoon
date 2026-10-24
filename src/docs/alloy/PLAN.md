@@ -925,6 +925,94 @@ Windows per-pixel adapter использует SetWindowSubclass, сохраня
 | PA9. Vulkan/HUD | Отдельная ветка по реальной интеграции с движком | Асинхронный обмен кадрами, несколько frames-in-flight и явные completion tokens с новым контрактом владения ресурсами. |
 | PA10. Производительность | По измерениям PA1 и последующих сценариев | Виртуализация, кеширование текста, уменьшение повторного layout и рисования; для каждого изменения профиль, baseline до/после и проверки корректности. |
 
+### PA3a/PA4a/PA8b. Меню и компактный анимированный заголовок — 2026-10-23
+
+Минимальный профиль ниже реализован2026-10-23 и проверен Editor consumer;
+уточнение disclosure и знак TrueMoon реализованы2026-10-24.
+[Текущие проверки](HISTORY.md#ed4a-знак-truemoon-и-анимированное-раскрытие--2026-10-24).
+[Evidence и границы](HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23);
+полные PA3/PA4/PA8, modal stack и hardware acceptance остаются открытыми.
+
+Согласованный consumer — [ED4a Editor](../engine/EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23).
+Общие controls/contracts принадлежат UI, прикладные commands/layout — Editor.
+
+1. PA3a: nonmodal OverlayHost с одним активным popup, размещением в пределах
+   viewport/переворотом у края, paint/hit testing поверх content, light dismiss,
+   Esc/FocusLost и возвратом живого focus target. Popup принадлежит host до Close;
+   Close/dispose снимает bindings/capture и не удерживает owner. Detach самого host
+   скрывает popup, снимает borrowed owner/focus references; retained popup/tree
+   принадлежит caller до Close/reattach/dispose. Detach owner при живом host закрывает
+   popup на следующем owner frame. Tooltip
+   не получает фокус и не перехватывает clicks. Full dialogs/modal stack — отдельно.
+2. PA4a: MenuBar/MenuItem и интерфейс меню, shared command contract с availability,
+   icon/text/shortcut, disabled и keyboard navigation (F10, arrows, Enter, Esc).
+   Click heading открывает dropdown; hover переключает headings уже открытого меню.
+   More остаётся в дереве: hover раскрывает headings; click/Enter/Space раскрывает
+   их и открывает первую группу после transition. Повторный click закрывает,
+   Esc/Tab/outside/FocusLost/detach отменяют pending open. Первый доступный пункт
+   получает фокус без выполнения команды; F10 сохраняет выбор heading.
+   Кнопки/меню/shortcuts вызывают одну операцию; async lifetime остаётся у command owner.
+3. PA8b: owner-thread frame participation с monotonic time и небольшой числовой
+   transition. Reveal180ms, close delay240ms, reversible easing без скачка;
+   duration0 — immediate/reduced-motion route. Нет фонового Task/timer на control,
+   idle frame requests прекращаются, detach/dispose прекращает работу. Те же reveal
+   progress и owner frame поворачивают три точки ⋮→⋯ и открывают первую группу;
+   отложенная операция не удерживает IInputContext. Hit bounds More неподвижны;
+   обычного бордера нет, hover/pressed/focus состояния сохраняются.
+4. Дополнить геометрические UiSymbols (More/Play/Pause/Stop/file/edit/build/theme/TrueMoon),
+   сохранить accessible names, tooltip и disabled/hover/pressed/focus состояния.
+5. WindowTitleBar получает owned custom header content внутри caption area;
+   штатные minimize/maximize/close и native drag/double-click/Snap сохраняются.
+   Interactive subtrees — Client, caption — Caption, overlaps исключены на small widths.
+
+Проверки: deterministic frame time/reversal/idle/dispose; overlays bounds/keyboard/
+outside click/focus restoration, disabled commands, client/caption region maps,
+both DI providers и failed creation cleanup. Standalone raster/native и Editor
+source/published proof фиксируются отдельно. Этот bounded slice не закрывает все
+PA3/PA4/PA8 или physical DPI/real loss/K7/VRAM acceptance.
+
+#### PA8b: матовые поверхности — 2026-10-24
+
+По запросу пользователя общий механизм реализован в Argentis/Skia; первый consumer —
+dropdown меню Editor. BackdropMaterial — immutable value (Gaussian sigma0..64 logical
+pixels, tint с alpha, opaque fallback), Element.Backdrop/UiProperties.Backdrop —
+typed property с обычным style precedence. Доступны WithBackdrop и ViewStyleRule.Backdrop.
+Фон рисуется до обычного Background, foreground и children; непрозрачный Background
+может закрыть эффект. Материал не меняет layout, focus, input или ownership.
+
+IBackdropDrawingContext — optional capability без изменения IDrawingContext.
+Unsupported backend рисует opaque fallback; null отключает material. Skia берёт
+только уже нарисованное в текущем surface/frame, включая earlier materials;
+capture ограничен видимой областью с halo3sigma и размерами поверхности.
+Scale/translation/clip/rounded bounds учитываются. Snapshot/filter/paint живут
+только во время draw; CPU ReadPixels для эффекта не используется. Sigma0/opaque
+tint обходятся без snapshot. Дополнительных frame requests/timers нет; изменение
+фона обновляет материал при обычном render invalidation без кеша прошлого кадра.
+
+Theme.MenuBackdrop задаёт Dark/Light tint; null возвращает opaque Surface. Обычные
+и disabled menu rows прозрачны, hover/pressed и focus indicator остаются различимы.
+Проверены raster pixels при scale1/1.5/2 и Editor OpenGL native source/published.
+Vulkan adapter подключён к той же реализации и компилируется; отдельная native
+Vulkan/HUD effect matrix и performance/VRAM acceptance этим не заявлены. Desktop
+за окном, OS acrylic/Mica, arbitrary canvas transforms/layers, saturation/noise,
+общая effect graph и blur cache не входят в этот срез.
+[Проверки и ограничения](HISTORY.md#pa8b-матовые-поверхности--2026-10-24).
+
+#### PA4b: StatusBar — 2026-10-24
+
+Согласованный consumer — ED4b Editor. Общий StatusBar и IStatusBar capability
+размещают primary/action, ordered collapsible secondary items и details trigger.
+Приоритет essential controls, secondary скрываются целыми с exclusion из input/
+Tab; overflow доступен потребителю. Child visibility/bindings не переписывать,
+скрывать owned slots. Сужение/расширение сохраняет элементы и состояние, возвращает
+фокус на details при скрытии focused slot. Bounds конечны и не перекрываются.
+Нет registry/plugins/docking framework; список частей фиксируется при создании.
+Иконки backend-independent, popup behaviour остаётся общим OverlayHost contract.
+
+Реализовано2026-10-24.20новых layout cases; related UI759/Hosting98/Editor527
+Debug/Release =1384/configuration,6native Editor cases/68PNG/12reaped children.
+[Точные проверки и границы](HISTORY.md#pa4b-statusbar-и-ed4b-editor--2026-10-24).
+
 ### PA8a: дефолтный стиль контролов и оформление окна — 2026-10-21
 
 По запросу пользователя запланировать единое оформление Alloy/Argentis:

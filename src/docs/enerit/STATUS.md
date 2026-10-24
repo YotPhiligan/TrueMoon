@@ -115,8 +115,8 @@ omitted-analyzer CS0234. Свежая package matrix текущим baseline н�
 
 ## Следующий конкретный шаг
 
-Первый ENE6a/MIT6a срез завершён в указанном scope. Далее локальный ARCH1b/ED1a
-и интеграция preview по engine плану с явным выбором limits и lifecycle ownership;
+Первый ENE6a/MIT6a срез, ARCH1b.1 и ED1a завершены в указанном scope. Далее
+прикладные задачи [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг) с явными preview limits и lifecycle ownership;
 ENE6c/d развивать перед расширением contracts/приёмкой нагрузки.
 Полный fault matrix MIT6a и trends MIT6c не выводятся из этого среза;
 remote cancel/replay не обещать существующим API.

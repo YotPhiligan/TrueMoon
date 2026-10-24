@@ -158,6 +158,19 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     public SceneAuthoringResult Redo(AuthoringOperation operation, CancellationToken cancellationToken = default)
     { lock (_gate) { VerifyEditable(); return Current.Redo(operation, cancellationToken); } }
 
+    // Keep document identity validation and the UI mutation under the same owner gate:
+    // a direct/headless replacement must not slip between the check and Apply/Undo/Redo.
+    internal SceneAuthoringResult Edit(SceneDocument expected, Func<SceneDocumentSession, SceneAuthoringResult> action)
+    {
+        lock (_gate)
+        {
+            VerifyEditable();
+            if (!ReferenceEquals(Current.Read().Document, expected))
+                throw new InvalidOperationException("The document changed; cancel the draft and reload it.");
+            return action(this);
+        }
+    }
+
     private async Task<bool> AllowTransitionAsync(DocumentCloseChoice choice, string? saveAs, CancellationToken token)
     {
         if (!Read().IsDirty) return true;

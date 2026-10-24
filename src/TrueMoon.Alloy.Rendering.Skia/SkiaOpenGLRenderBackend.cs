@@ -129,7 +129,7 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
         {
             _context.ResetContext();
             var canvas = _surface.Canvas; canvas.Clear(SKColors.Transparent); canvas.Save();
-            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources)); }
+            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources, _surface)); }
             finally { canvas.Restore(); }
             _context.Flush(); VerifyContext(); _hasFrame = true;
         }

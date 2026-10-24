@@ -40,10 +40,14 @@ public sealed class VulkanInteropSurface : IDisposable
 
     /// <summary>Draws while no texture lease is outstanding.</summary>
     public void Draw(Action<SKCanvas> draw)
+        => DrawSurface(surface => draw(surface.Canvas));
+
+    // Internal adapter receives the borrowed surface only during its existing owner-thread draw lease.
+    internal void DrawSurface(Action<SKSurface> draw)
     {
         VerifyAvailable();
         _drawing = true;
-        try { draw(_surface.Canvas); }
+        try { draw(_surface); }
         finally { _drawing = false; }
     }
 

@@ -34,18 +34,28 @@ public sealed class EditorViewModelTests
         var editor = EditorWorkspaceTests.Status(GameEditorOperation.Idle, true);
         var failure = new IOException("command failed");
         model.Refresh(runtime, editor, failure);
-        Assert.Equal(new[] { nameof(EditorViewModel.CanPlay), nameof(EditorViewModel.CanStep), nameof(EditorViewModel.CanStop),
+        Assert.Equal(new[] { nameof(EditorViewModel.RuntimeState), nameof(EditorViewModel.Tick), nameof(EditorViewModel.ProcessId),
+            nameof(EditorViewModel.CanPlay), nameof(EditorViewModel.CanRun), nameof(EditorViewModel.CanStep), nameof(EditorViewModel.CanStop),
             nameof(EditorViewModel.CanReplace), nameof(EditorViewModel.StatusText), nameof(EditorViewModel.ErrorText) }, notifications);
-        Assert.True(model.CanBuild); Assert.False(model.CanStart); Assert.True(model.CanPlay); Assert.False(model.CanPause);
+        Assert.Equal(SessionState.Paused, model.RuntimeState); Assert.Equal(17UL, model.Tick); Assert.Equal(1234, model.ProcessId);
+        Assert.Equal(GameEditorOperation.Idle, model.Operation);
+        Assert.True(model.CanBuild); Assert.False(model.CanStart); Assert.True(model.CanPlay); Assert.True(model.CanRun); Assert.False(model.CanPause);
         Assert.True(model.CanStep); Assert.True(model.CanStop); Assert.True(model.CanReplace); Assert.False(model.CanCancel);
         Assert.Equal("  Пауза   ·   Готово   ·   Tick 17   ·   Runtime PID 1234   ·   7 объектов", model.StatusText);
         Assert.Equal("Ошибка: command failed", model.ErrorText);
         notifications.Clear(); model.Refresh(runtime, editor, failure); Assert.Empty(notifications);
         model.Refresh(runtime, EditorWorkspaceTests.Status(GameEditorOperation.Build, true), new OperationCanceledException());
+        Assert.Equal(new[] { nameof(EditorViewModel.Operation), nameof(EditorViewModel.CanBuild), nameof(EditorViewModel.CanPlay),
+            nameof(EditorViewModel.CanRun), nameof(EditorViewModel.CanStep), nameof(EditorViewModel.CanReplace), nameof(EditorViewModel.CanCancel),
+            nameof(EditorViewModel.StatusText), nameof(EditorViewModel.ErrorText) }, notifications);
+        Assert.Equal(GameEditorOperation.Build, model.Operation);
         Assert.False(model.CanBuild); Assert.False(model.CanPlay); Assert.False(model.CanStep); Assert.False(model.CanReplace);
         Assert.True(model.CanStop); Assert.True(model.CanCancel); Assert.Equal("", model.ErrorText);
         Assert.Equal("  Пауза   ·   Сборка   ·   Tick 17   ·   Runtime PID 1234   ·   7 объектов", model.StatusText);
         Assert.DoesNotContain(nameof(EditorViewModel.SelectedId), notifications); Assert.DoesNotContain(nameof(EditorViewModel.Properties), notifications);
+        notifications.Clear();
+        model.Refresh(runtime, EditorWorkspaceTests.Status(GameEditorOperation.Build, true), new OperationCanceledException());
+        Assert.Empty(notifications);
     }
 
     [Fact]

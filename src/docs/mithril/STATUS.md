@@ -1,13 +1,22 @@
 # Mithril: состояние и точка продолжения
 
-Последняя работа — **2026-10-23, первый MIT6a load-stop профиль**.
+Последняя проверка — **2026-10-23, ED4a integration**. Runtime/API не менялись.
+Последний Mithril Debug98/99: default-budget-delay restart probe получил IOException
+на ready-4.json в Fixture.ReadyAsync; предыдущая existence проверка не гарантирует
+окончание публикации. Последний Release99/99. Общий solution Debug3048/3049,
+Release3049/3049; предыдущие99/99 не означают исправление fixture race.
+Следующий quality шаг — безопасная публикация/чтение ready JSON с deterministic
+overlap proof, сохраняя bounded deadline, identity и reap assertions.
+[Evidence/границы](HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+Это отдельная проверочная задача; MIT6a/c и authoring порядок не заменяются.
+Предыдущая реализация — **2026-10-23, первый MIT6a load-stop профиль**.
 AppUnitsPipesProbe расширен saturated-stop/saturated-kill: pending2/queued1,
 overload до dispatch, независимый Mithril control при active2 domain handlers,
 cooperative drain либо bounded owned kill/reap, exact PID/diagnostic outcome и
 zero client counters/Completion. Production changes находятся в Enerit;
 Mithril runtime/API, restart policies и ownership modes не менялись.
 [Контракт и границы](PLAN.md#mit6a-первый-load-stop-профиль--2026-10-23).
-Текущий Mithril99/99 Debug/Release в full solution2361/configuration, failed0/
+В предыдущем MIT6a проходе Mithril99/99 Debug/Release в full solution2361/configuration, failed0/
 skipped0. Новый source/published профиль **44/44**, fresh package **132/132** на
 Cobalt/DI/DI без Cobalt analyzer,8nupkgs; Completed=true. [Команды/evidence](HISTORY.md#mit6a-saturated-ipc-и-независимый-process-stop--2026-10-23).
 MIT6a fault matrix в целом, parent-death containment и long trends MIT6c остаются
@@ -103,7 +112,7 @@ Parent abrupt-exit proof относится к child/server cleanup, не worker
 
 Следующий общий шаг ведётся в [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг).
 Использовать проверенный первый MIT6a профиль при preview integration;
-минимальный ARCH1b/headless и ED1a могут продолжаться. Полный fault matrix,
+ARCH1b.1 и ED1a уже выполнены в своих границах. Полный fault matrix,
 real OS reap/permission failures и MIT6c containment/trends остаются отдельными.
 Не дублировать Aether Hello/heartbeat/recovery в Mithril и не включать второй
 автоматический restart поверх Aether replacement. Graceful delivery fix выполнен

@@ -41,13 +41,7 @@ internal static class EditorWorkspaceSmoke
         window.RequestFrame();
         try { await presented.Task.WaitAsync(deadline.Token); }
         finally { window.FramePresented -= Capture; }
-        await ui.InvokeAsync(() =>
-        {
-            var button = ((WindowFrame)ui.Root).DefaultTitleBar!.CloseButton;
-            var bounds = button.Bounds;
-            ui.HandleInput(new(InputKind.PointerDown, bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2));
-            ui.HandleInput(new(InputKind.PointerUp, bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2));
-        }).WaitAsync(deadline.Token);
+        await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "file.exit", deadline.Token);
         await window.Completion.WaitAsync(deadline.Token);
         File.WriteAllText(Path.Combine(directory, "workspace.json"), JsonSerializer.Serialize(new
         {

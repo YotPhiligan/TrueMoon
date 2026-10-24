@@ -1,5 +1,17 @@
 # Mithril: история реализации и проверок
 
+## ED4a: компактный заголовок и меню — 2026-10-23
+
+Наблюдение общего UI integration run: в solution-183128349 full Debug Mithril98/99,
+RestartProcessTests.Restart_OwnedSequence_EnforcesPolicyBudgetDelayAndStop,
+default-budget-delay, ready-4.json. Fixture.ReadyAsync проверяет File.Exists,
+затем File.ReadAllTextAsync; чтение попало на sharing lock публикации и получило
+IOException. Это наблюдение fixture, изменение runtime/API не выполнялось.
+Последний Release99/99; прежние passing full не отменяют Debug failure.
+Evidence: TestResults/MenuHeader-20261023/solution-183128349/test-Debug.log,
+aggregate verification.json; follow-up — безопасная публикация/чтение ready JSON
+с deterministic overlap proof и прежними identity/deadline/reap checks.
+
 ## MIT6a: saturated IPC и независимый process stop — 2026-10-23
 
 По запросу приступить к следующему шагу реализован

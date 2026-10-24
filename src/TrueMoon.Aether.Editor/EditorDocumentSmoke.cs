@@ -25,6 +25,7 @@ internal static class EditorDocumentSmoke
         var source = Path.Combine(root, "Rich.aetherscene");
         var originalHash = Hash(source);
         var captures = new List<string>(); var actions = new List<string>(); var threads = new HashSet<int>();
+        var closeRequests = 0;
         var presentations = new List<object>();
         var windowId = window.Id; var owner = 0;
         await ui.InvokeAsync(() => { owner = Environment.CurrentManagedThreadId; model.PropertyChanged += Observe; }).WaitAsync(token);
@@ -134,7 +135,7 @@ internal static class EditorDocumentSmoke
         async Task Begin(DocumentCommand command)
         {
             await Until(() => panel.Commands[command].IsEnabled);
-            await ui.InvokeAsync(() => InputClick(panel.Commands[command])).WaitAsync(token); actions.Add(command.ToString());
+            await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document." + command, token); actions.Add(command.ToString());
         }
         async Task Click(DocumentCommand command, bool failure = false)
         {
@@ -146,7 +147,14 @@ internal static class EditorDocumentSmoke
         async Task Decision() => await Until(() => commands.Read().AwaitingDecision && panel.Decision.IsVisible && panel.CancelChoice.IsFocused);
         async Task NativeClose()
         {
-            await ui.InvokeAsync(() => InputClick(((WindowFrame)ui.Root).DefaultTitleBar!.CloseButton)).WaitAsync(token); actions.Add("NativeClose");
+            if (closeRequests++ == 0)
+            {
+                await ui.InvokeAsync(() => InputClick(((WindowFrame)ui.Root).DefaultTitleBar!.CloseButton)).WaitAsync(token); actions.Add("NativeClose");
+            }
+            else
+            {
+                await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "file.exit", token); actions.Add("MenuExit");
+            }
         }
         async Task Shortcut(UiKey key)
         {

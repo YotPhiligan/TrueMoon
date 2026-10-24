@@ -15,10 +15,10 @@ public sealed class EditorScreenTests
         using var layout = new EditorLayout(new Box(), new Box(), new Box(), new Box(), new Box());
         layout.Measure(new(1280, 720), new TextLayout()); layout.Arrange(new(0, 0, 1280, 720));
         Assert.Equal(new Rect(0, 0, 1280, 52), layout.Children[0].Bounds);
-        Assert.Equal(new Rect(0, 52, 224, 638), layout.Children[1].Bounds);
-        Assert.Equal(new Rect(230, 52, 752, 638), layout.Children[2].Bounds);
-        Assert.Equal(new Rect(988, 52, 292, 638), layout.Children[3].Bounds);
-        Assert.Equal(new Rect(0, 690, 1280, 30), layout.Children[4].Bounds);
+        Assert.Equal(new Rect(0, 52, 224, 640), layout.Children[1].Bounds);
+        Assert.Equal(new Rect(230, 52, 752, 640), layout.Children[2].Bounds);
+        Assert.Equal(new Rect(988, 52, 292, 640), layout.Children[3].Bounds);
+        Assert.Equal(new Rect(0, 692, 1280, 28), layout.Children[4].Bounds);
     }
     [Theory] [InlineData(0f, 0f)] [InlineData(3f, 20f)] [InlineData(1100f, 700f)]
     public void ShellGeometry_SmallBoundsStayFiniteNonnegativeAndClipped(float width, float height)

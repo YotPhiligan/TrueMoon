@@ -50,6 +50,10 @@ public sealed class EditorDocumentViewModel : INotifyPropertyChanged, IDisposabl
     public bool CanClose => _canClose;
     /// <summary>Gets whether cancellable work is pending.</summary>
     public bool CanCancel => _canCancel;
+    /// <summary>Whether a document operation or close decision is pending.</summary>
+    public bool IsBusy => _state?.Busy == true;
+    /// <summary>Current document action, if any.</summary>
+    public DocumentCommand? Operation => _state?.Operation;
     /// <summary>Reads fresh admission state before a game action, including work accepted since the last UI refresh.</summary>
     public bool BlocksRuntime
     {
@@ -63,6 +67,8 @@ public sealed class EditorDocumentViewModel : INotifyPropertyChanged, IDisposabl
     {
         VerifyOwner();
         var next = _commands.Read(); var previous = _state; _state = next;
+        if (previous?.Busy != next.Busy) Notify(nameof(IsBusy));
+        if (previous?.Operation != next.Operation) Notify(nameof(Operation));
         if (previous?.Document != next.Document) Notify(nameof(Document));
         Update(ref _canNew, _commands.CanExecute(DocumentCommand.New), nameof(CanNew));
         var wasEditable = CanEditPath;

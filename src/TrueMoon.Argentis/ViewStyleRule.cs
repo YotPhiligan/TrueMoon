@@ -69,6 +69,11 @@ public sealed class ViewStyleRule
 
     /// <summary>Declares a background derived from the current theme.</summary>
     public ViewStyleRule Background(Func<Theme, Color> value) => Set(UiProperties.Background, value);
+    /// <summary>Declares an optional background material.</summary>
+    public ViewStyleRule Backdrop(BackdropMaterial? value) => Set(UiProperties.Backdrop, value);
+
+    /// <summary>Declares a material derived from the current theme.</summary>
+    public ViewStyleRule Backdrop(Func<Theme, BackdropMaterial?> value) => Set(UiProperties.Backdrop, value);
 
     /// <summary>Declares a foreground color.</summary>
     public ViewStyleRule Foreground(Color value) => Set(UiProperties.Foreground, value);

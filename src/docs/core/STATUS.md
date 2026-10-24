@@ -125,8 +125,8 @@ JSON failure checks различают serialization error до записи и 
 
 ## Следующий конкретный шаг
 
-Актуальный маршрут — [минимальный authoring API Aether](../engine/PLAN.md#основа-api-перед-редактируемым-ui--2026-10-23)
-и параллельный ED1a. Прежний UI package/Hosting quality проход завершён в своём
+Актуальный прикладной маршрут — [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг).
+ARCH1b.1 и ED1a выполнены в своих границах. Прежний UI package/Hosting quality проход завершён в своём
 scope, не остаётся текущим prerequisite. Новые общие Core APIs/utilities вводить
 только по потребителю; IPC admission/limits и process cleanup развиваются у
 Enerit/Mithril. Общий release/platform scope и перечисленные ограничения открыты.

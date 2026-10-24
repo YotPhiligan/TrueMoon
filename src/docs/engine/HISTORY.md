@@ -1,6 +1,339 @@
 # Engine / Editor: история решений и проверок
 
+## ED4b: компактная строка состояния — 2026-10-24
+
+Согласованный дизайн реализован:28logical footer,12text/14icons/24targets,
+primary semantic status/cancel слева и objects/Edit Preview/details справа.
+Tick/PID/full selectable error доступны в матовом popup над панелью.
+Edit Preview actions перенесены из production inspector в footer; прежний
+coordinator/committed history/lifecycle сохранён, game controls остались в header.
+Активный preview обозначен «Редактирование сцены», без смешения с game pause.
+Responsive overflow, keyboard/focus/dismissal/theme и retained tree проверены.
+View/Data/Style и typed factories подключены к App/Cobalt; ownership явный,
+Cobalt/MS DI/failed factory cleanup/detach проверены.
+
+80новых cases; итог UI759/Hosting98/Editor527 Debug/Release =1384/configuration,
+failed/skipped0. Nonincremental Debug solution build0errors/1532warnings.
+Source Debug/published Release вне repo:6native empty/legacy/Transform cases,
+68PNG/12reaped children,validation0/0 и zero UI/mapping/GPU ownership.
+Footer start/stop с реальным preview, actual revisions/pixels, Undo/Redo/Save/reopen
+и прежний header workflow прошли; compiler для preview fixture не запускался.
+Dark/Light/details/Preview/Transform PNG просмотрены. Источники/binaries/PNG hashes
+и exact TRX/commands: TestResults/StatusBar-20261024/verification.json.
+
+[Общий механизм, точные тесты, исправления и границы](../alloy/HISTORY.md#pa4b-statusbar-и-ed4b-editor--2026-10-24),
+[дизайн](EDITOR_PLAN.md#ed4b-компактная-строка-состояния--2026-10-24).
+Full solution tests/Aether/headless/packages/physical/performance не повторены.
+Прежние CPU receiver/Mithril fixture issues открыты. Следом minimal create/delete
+общего authoring API/history и UI commands; межмодульный порядок прежний.
+
+## ED4a: матовый фон меню — 2026-10-24
+
+Dropdown меню Editor используют общий материал Argentis/Skia: blur уже нарисованного
+фона текущего окна + theme tint, foreground/children чёткие. Theme.MenuBackdrop
+Dark/Light/null, fallback и обычный style precedence сохранены. Idle/disabled menu
+rows прозрачны; команды/availability/focus/retained popup и App/Cobalt/IFactory
+ownership прежние. Отдельного прикладного blur service или OS window transparency нет.
+
+Текущие related UI739/Hosting98/Editor467 Debug/Release =1304/configuration,failed/
+skipped0,6TRX. Narrow44/44,16новыхcases в UI. Source Debug/published Release вне repo:
+4native empty/legacy cases,28PNG/4reaped children; header, simulation9commands,
+theme/keyboard/FocusLost и cleanup успешны. Validation0/0, UI sessions/mappings/
+GPU resources/handles0, view disposed/children reaped. File/View PNG просмотрены;
+pixel samples отличают backdrop от opaque fallback. Источники и binary/PNG hashes,
+commands/отчёты — TestResults/Backdrop-20261024/verification.json.
+
+[Общий контракт](../alloy/PLAN.md#pa8b-матовые-поверхности--2026-10-24),
+[точные тесты/команды/исправленные assertions и ограничения](../alloy/HISTORY.md#pa8b-матовые-поверхности--2026-10-24).
+Native Vulkan/HUD effect proof, performance/physical/full alpha, full solution/
+Aether/headless/остальные native profiles не повторены. Прежние CPU receiver и
+Mithril fixture issues остаются отдельными; следующий шаг — create/delete общего API.
+
+## ED4a: знак TrueMoon и анимированное раскрытие — 2026-10-24
+
+По согласованному уточнению слева добавлен fixed TrueMoon crescent/star, затем
+постоянная More кнопка без обычного бордера. Hover раскрывает headings; точки
+вращаются ⋮→⋯ на том же ScalarTransition180мс. Caption сдвигается, brand/More hit
+bounds и simulation/window actions остаются неподвижными. Hover/pressed/focus
+состояния сохранены. Один click либо Enter/Space раскрывает headings и после
+анимации открывает первую группу «Файл». Первый enabled пункт получает фокус,
+команда при открытии не выполняется. Повторный click закрывает и возвращает фокус
+More; Esc/Tab/outside/FocusLost/detach отменяют pending open без позднего popup.
+F10 сохраняет прежний выбор heading; duration0 не требует дополнительного жеста.
+
+MenuBar исполняет pending open на owner frame, не удерживает IInputContext между
+кадрами и не добавляет Task/timer. Idle/detach прекращают работу. UiSymbol.TrueMoon
+добавлен в конец enum, прежние значения сохранены; вырез полумесяца прозрачный,
+не закрашивается цветом предполагаемого фона. BrandMark — owned UI element внутри
+EditorHeaderView, nonfocusable Caption region,28px area/20px symbol. Accent задаёт
+EditorHeaderViewStyle. Новый сервис/DI API не нужен; существующие App/Cobalt/
+IFactory/ownership contracts сохранены. Theme/hover не пересоздают дерево.
+
+Прямые regression checks в существующих xUnit suites (имена методов точные):
+
+| Требование пользователя | Проверка поведения |
+| --- | --- |
+| «добавить иконку» | EditorHeaderViewTests.BrandMark_PrecedesMenuAndKeepsCaptionRegionAcrossThemes; MenuChromeTests.TrueMoonSymbol_PaintsCrescentAndLeavesTheCutoutTransparent |
+| «3 точки вертикально», «3 точки горизонтально» | MenuInteractionTests.DisclosureDots_RotateWithRevealAndReverseWithoutMovingTheButton:0/90/180мс, reversal, геометрия точек, fixed bounds и idle |
+| «откроется сразу же первоей меню» | MenuInteractionTests.DisclosureClick_RevealsThenOpensFirstMenuWithoutExecutingAction; EditorHeaderViewTests.DisclosureClick_OpensFileAfterRevealAndReturnsFocusOnClose:179/180мс, первый enabled item, no execution, повторный click/focus |
+| Отмена/клавиатура/zero motion | DismissDuringDisclosure_CancelsPendingFirstMenu (5cases); DetachingDuringDisclosure_CancelsFirstMenuOnReattach; DisclosureKeyboardActivation_OpensFirstWithoutExecutingItsFocusedItem (Enter/Space); DisclosureClick_ZeroMotionOpensFirstWithoutExtraGesture |
+
+13новыхcases: UI11, Editor2. SDK10.0.402/net10.0/xUnit2/VSTest/Windows x64.
+Финальные unfiltered related tests: UI723 + Hosting98 + Editor467 =1288 в каждой
+Debug/Release, failed/skipped0,6TRX. Отчёты/unique binlogs/exit logs находятся в
+TestResults/HeaderBrand-20261024/managed-193341761. Это текущие related проверки,
+не full solution; Aether/Mithril/Enerit suites в данном уточнении не запускались.
+
+Команда для каждой конфигурации и каждого из трёх указанных test projects:
+
+```powershell
+dotnet test <project>/<project>.csproj --artifacts-path TestResults/HeaderBrand-20261024/artifacts -c <Debug|Release> --logger 'trx;LogFileName=<project>-<configuration>.trx' --results-directory <managed-run> /bl:<managed-run>/<project>-<configuration>.binlog -v minimal
+```
+
+VerifyUi.ps1 сохраняет counters в summary.json; VerifyNative.ps1 собирает Editor
+Debug/Release с --no-restore/тем же artifacts-path и отдельными build binlogs,
+публикует Release --no-build --no-restore --self-contained false в fresh OS temp.
+Исходные bin/Debug и пользовательские Editor/Debugger процессы не изменялись.
+App запущен из external cwd с --smoke <case> --validation, legacy дополнительно
+получает --project <absolute ManualTests/Game.Logic/Game.Logic.csproj>. Только
+process-local Vulkan validation layer; изменения OS/драйвера не требуются.
+
+Финальный native run: TestResults/HeaderBrand-20261024/native-193402807:
+
+| Delivery/profile | Header proof | PNG | Reaped children |
+| --- | --- | --- | --- |
+| source Debug / empty | passed,5header captures | 6 | 0 |
+| source Debug / legacy | passed,5header captures | 8 | 2 |
+| published Release / empty | passed,5header captures | 6 | 0 |
+| published Release / legacy | passed,5header captures | 8 | 2 |
+
+Всего4cases/28PNG/4children. В каждом header.json: BrandMark,
+DisclosureOpensFirst, DisclosureToggle, hover/caption shift/fixed simulation,
+keyboard/theme/tooltip/FocusLost=true. Empty без compiler/children; legacy по9
+прежних команд, включая start/pause/resume/step/replace/stop. ViewDisposed/Reaped=true,
+UI sessions/mappings/GPU resources/handles0, validation errors/warnings0 во всех
+cases. Финальные empty-Debug/header-collapsed.png и
+empty-published-Release/header-file-menu.png просмотрены: знак, обе ориентации
+точек, caption и первый dropdown соответствуют дизайну. Native smoke содержит
+directed input, не заменяет physical DPI/drag/Snap acceptance.
+
+Aggregate evidence TestResults/HeaderBrand-20261024/verification.json связывает
+6TRX, native header/cleanup reports и команды, source/binary/PNG SHA256. Содержимое
+проверено повторно после финального запуска. VerifyFinal.ps1 последовательно
+выполнил VerifyUi.ps1 и VerifyNative.ps1; stdout final.log, stderr final.err пустой.
+
+Предварительные narrow-192439038 и managed-192724095/native-192939427 прошли,
+но относятся к предыдущему варианту рисунка. На его PNG обнаружены горизонтальные
+AA seams полумесяца; перекрытие соседних полос исправило рисунок, после чего
+выполнены финальные managed/native проверки выше. Ранний черновой launcher выбирал
+обычный старый bin; он исключён из текущего proof, scripts используют явный
+isolated artifacts path. Passing предварительных запусков не подменяет финальные.
+
+Full solution, headless manifest/SDK/scene, остальные project/documents/Transform/
+exit workflows, fresh packages, golden/performance/HUD/physical/loss/VRAM/full alpha
+в этом уточнении не повторены. Последние full результаты2026-10-23 и отдельные
+CPU FrameReceiver/Mithril ready-file failures остаются историей и открытыми
+quality tasks. Следующий прикладной шаг — minimal create/delete общего authoring
+API/history, затем UI; уточнение header не меняет порядок остальных этапов.
+
+## ED4a: компактный заголовок и меню — 2026-10-23
+
+Зафиксирован и реализован дизайн: ⋯ раскрывает «Файл / Правка / Вид / Проект /
+Симуляция» за180мс, название сдвигается; ▶/пауза/стоп и стандартные оконные
+кнопки неподвижны. Leave grace240мс, click pin, F10/arrows/Enter/Esc/Tab,
+outside dismiss и FocusLost. Длинный caption сокращается, fixed buttons имеют
+геометрические иконки и delayed tooltip500мс, включая disabled state.
+
+Общая основа Argentis/Alloy: IMenu, MenuBar/MenuItem, IUiCommand/DelegateUiCommand,
+OverlayHost (один nonmodal popup), ScalarTransition и owner-thread
+IUiFrameParticipant/IUiInputObserver. UiSession использует monotonic TimeProvider,
+не начисляет idle новому transition, обрабатывает приоритет owner перед popup host,
+не удерживает кадры hidden/detached participants. Пятиаргументный constructor
+UiSession сохранён для binary compatibility. Popup размещается/обрезается в
+host viewport. Menu owner detach очищается на следующем update; detach самого
+host скрывает popup, снимает borrowed references и сохраняет retained tree до
+Close/reattach/dispose. Modal stack, long-menu scrolling и generic dialogs не заявлены.
+
+WindowTitleBar.SetHeader принимает owned content; стандартные minimize/maximize/
+close и Snap role остаются у default frame. Hosting hook ConfigureDefaultTitleBar
+создаёт header на UI owner и передаёт vetoable/drainable close callback. Неподходящие
+frame combinations отвергаются до allocation. Callback-throw native rollback
+отдельно не проверялся; существующий host rollback не заменялся test-only seam.
+
+EditorHeaderView/Style и typed IFactory<EditorHeaderView,EditorHeaderArguments>
+подключены через UseAetherEditorHeader/App/Cobalt. Window владеет View, presentation
+и style borrowed. Body владеет OverlayHost; header заимствует его в той же session.
+Production compact mode скрывает прежние action rows; standalone constructor
+сохраняет прежние controls для совместимости. Поле пути, dirty/errors и inline
+Save/Discard/Cancel сохранены. File/Undo/Redo/build/runtime/theme actions перенесены
+в меню; document picker/project switch не добавлялись.
+
+▶ использует один tracked start→play gesture либо resume; Stop/Cancel/close
+отменяют gesture, запрещают late Play и drains accepted work. Открытый authoring
+document по-прежнему блокирует game actions до ED6; Edit Preview остаётся отдельным.
+Header routing сохраняет S/Shift+S/W/Z/Shift+Z/Y/Esc/Ctrl+Enter после возврата фокуса
+на ⋯. Modified Enter обрабатывается до обычной Button activation; body TextBox
+history keys не перехватываются header.
+
+Проверки:
+- 105 новых cases: UI51, Hosting13, Editor41. Related Debug/Release:
+  UI712 + Hosting98 + Editor465 =1275/configuration, failed/skipped0.
+  Deterministic reveal/reversal/zero-motion/idle, exact close/tooltip boundaries,
+  disabled admission, retained theme/focus/tree, dispose/subscription cleanup,
+  overlays, keyboard/pointer gestures, fixed chrome bounds/regions, both DI providers,
+  shared history/file actions и controlled start/stop/cancel/drain.
+- Последний nonincremental Debug build0errors/1532warnings.
+  Последний full Debug3048/3049: MithrilRestartProbe ReadyAsync получил IOException
+  при чтении ready-4.json одновременно с публикацией; UI/Editor и Aether прошли.
+  Последний full Release3049/3049,10TRX/configuration, skipped0.
+  До финального harness admission-wait изменения был full3049/3049 в обеих
+  конфигурациях; это предыдущий запуск, он не отменяет последний Debug failure.
+- Ранний full Debug3042/3043 до shortcut regressions: старый FrameReceiver test
+  TakeLatest вернул null после Received>=5. Позднее Aether1008/1008 в обеих
+  конфигурациях; production CPU transport не менялся и race не объявлен исправленным.
+  Отдельные ENG2/Mithril quality tasks внесены в планы.
+- Source Debug и published Release вне repo:10native cases (empty/project/legacy/
+  documents/Transform ×2),10header proofs,64PNG и12reaped children. Header
+  hover/caption shift/fixed icons/menu/theme/keyboard/tooltip/FocusLost проверены
+  directed input; actual Build→Run/Pause/resume/Step/Replace/Stop, file menu actions,
+  native close и Menu Exit с Save/Discard/Cancel/failed Save выполнены.
+  Transform revisions/pixels/Save/reopen и cleanup повторены. По всем cases
+  UI sessions/mappings/GPU resources/handles0, validation errors/warnings0.
+  Ещё10headless manifest/SDK/scene cases отдельно. PNG source/published header,
+  light runtime и Transform просмотрены.
+- Общий evidence TestResults/MenuHeader-20261023/verification.json:
+  UiScopePassed=true, FullLatestDebugPassed=false; source/binary SHA256,
+  PNG hashes, per-project reports и ссылки на immutable runs.
+  Debug: solution-183128349; Release: release-183338362.
+  Native: regressions/consumers-184542662,
+  native-Debug-184631157, native-published-Release-184637466.
+  Предыдущий passing full: solution-182420183; ранний CPU failure:
+  solution-181603083. Unique binlogs/TRX/exits сохранены.
+- Проверки используют --artifacts-path TestResults/MenuHeader-20261023/artifacts:
+  обычный bin/Debug удерживается пользовательским Editor/Debugger, их не завершали.
+  VerifySolution.ps1 запускает nonincremental build и VSTest Debug/Release с
+  --blame-hang-timeout60s/--logger trx и unique /bl; VerifyRelease.ps1 фиксирует
+  последний Release run. VerifyRegressions.ps1 публикует --no-build --no-restore
+  Release вне repo, затем запускает external-cwd headless/native profiles.
+  VerifyNative.ps1 отдельно проверяет Transform в каждой delivery.
+  Aggregate.ps1 проверяет10header JSON/64PNG/12children,1275related tests и hashes.
+
+Финальные related tests после compatibility overload: related-184236954/summary.json.
+Последний повторный native до driver fix: consumers-184300613, empty-Debug timeout;
+он не включён в passing proof. Final source/binary fingerprints проверены заново.
+
+Исправленные проверки/границы: первоначальный smoke нажимал ▶ до owner refresh
+CanRun после Build — добавлено ожидание enabled state. Header smoke получал deadline
+между theme/F10 и при ожидании tooltip; причина отдельно не установлена. Driver
+теперь удерживает injected hover на owner polls и повторяет F10 после потери
+раскрытия. Это directed profile; physical input не заявлен. Exact delays и FocusLost
+отдельно проверены fake-clock tests. Ранний
+Transform Debug запуск ошибочно выбрал обычный старый bin: исключён из нового
+proof; финальный native-Debug-184631157 использует isolated artifacts и содержит
+header.json/7PNG. Эти неуспехи не скрываются passing итогами.
+Fresh NuGet packages, HUD/Vulkan UI control matrix, physical DPI/drag/Snap,
+golden/performance/loss/VRAM/full alpha не повторены. Следом minimal create/delete
+через общий authoring API/history; test stability follow-ups остаются отдельными.
+
 [Текущий статус](STATUS.md), [план движка](PLAN.md), [подплан приложения Editor](EDITOR_PLAN.md).
+
+## ED3a: Transform/history/preview в UI — 2026-10-23
+
+Сверка планов исправила устаревшие указания ARCH1b.1/ED1a как будущей работы и
+смешение document Close/Exit с ещё открытой project/runtime transaction. Принят
+порядок: первый edit/save/preview цикл → минимальные create/delete общего API →
+project picker/switch и ED1/ED6 workflow. Core/Cobalt не требуют нового полного
+quality prerequisite; ENE6c/d и оставшийся MIT6a/c остаются отдельными задачами.
+Исторические результаты QUALITY/ENE6 baseline помечены по их scope.
+
+[ED3a](EDITOR_PLAN.md#ed3a-transformhistorypreview-в-ui--2026-10-23) подключил
+существующий ARCH1b.1 к девяти retained numeric полям, atomic Apply/Ctrl+Enter,
+Cancel/Esc и Undo/Redo. Invariant Float-representable values и positive scale
+проверяются локально, общий engine проверяет итоговые матрицы/scene. Draft хранится
+отдельно от committed content; selection change отбрасывает его, внешнее изменение
+той же сцены сохраняет conflict до явного Cancel. File/history mutations имеют
+общую admission и проверяют document identity под owner gate; UI не держит второй
+history. Dirty следует saved ContentRevision. При draft history отключена; вне
+полей Ctrl+Z/Shift+Z/Y используют общие actions, внутри TextBox их не перехватывают.
+Общий text undo этим шагом не добавлен.
+
+EditorPreview заимствует show/stop engine boundaries, хранит одно выполняемое и
+одно последнее ожидающее обновление. Explicit start/retry, auto update после
+commit/Undo/Redo; ввод текста не вызывает child replacement. Exact presentation
+receipt проверяется; старый кадр не помечается новой revision. Ошибка сохраняет
+document/history и не даёт auto retry на каждом frame. Stop и document transitions
+fence/cancel/drain child work, cleanup error наблюдаем и допускает retry. Cancel
+close decision не останавливает preview. App/Cobalt/IFactory регистрируют model,
+style и UI-owner products; dependencies borrowed, aliases не удваивают dispose.
+
+### Проверки и найденные регрессии
+
+Добавлены66cases в8files Editing. Assert/gap review без production mutations;
+direct tests затрагивают model, preview, guarded commands, view/shell, codec,
+both-provider composition и CLI. Новый bounded набор66/66 Debug; весь Editor424/424
+Debug/Release. Финальный full solution **2944/2944 Debug и2944/2944 Release**,
+10TRX/configuration, failed/skipped0. Core117/Cobalt179/generator91/Enerit166/
+generator114/Mithril99/UI661/Hosting85/Aether1008/Editor424. Nonincremental Debug
+build:0errors/1531warnings, прежние warnings не подавлялись.
+
+| Поведение | Прямая проверка |
+| --- | --- |
+| Девять полей, atomic commit/history | `Selection_LoadsNineStableFieldsAndAtomicCommitUsesOneSharedHistoryEntry` |
+| Невалидные числа/scale без частичной мутации | `InvalidField_ReportsLocalErrorAndNeverCommitsPartialBatch` |
+| Draft/conflict/cancel и dirty checkpoint | `Refresh_PreservesDraftAndExternalRevisionRequiresExplicitCancelBeforeCommit`, `UndoRedo_UsesSavedContentCheckpointAndDraftCommandsCannotDiscardText` |
+| Live game/IO/exit admission | `BusySaveAndExitDecision_BlockMutationWithoutLosingDraft`, `ApplyAndHistory_RecheckLiveRuntimeAdmissionAndPreserveDraftUntilRuntimeBecomesIdle` |
+| Exact revision и последняя ожидающая сцена | `WrongSceneOrRevisionAcknowledgement_IsRejectedWithoutInventingPresentedState`, `BusyPreview_KeepsCurrentAndOnlyNewestWaitingSnapshotWithoutRetaggingPresentedFrame` |
+| Failure/cancel/drain/retry | `PreviewFailureAndRetry_PreserveCommittedDocumentHistoryAndUncommittedDraft`, `Stop_CancelsDropsWaitingAndDrainsIgnoredCancellationBeforeSharedCleanupThenAllowsRestart`, `StopCleanupFailure_IsObservedAndRetryPerformsActualCleanupBeforeClearingError` |
+| Реальный UI input, stable tree/style/focus | `ShellSelectionAndNormalizedKeyboardInput_EditSharedDocumentRetainFormAndPreserveFocusedTextShortcutOwnership`, `RefreshAndThemeStyleChange_PreserveDraftTreeFocusSelectionAndInputIdentity` |
+| DI/factory/cleanup | `BothProviders_ShareModelAndBorrowedDependenciesWhileFactoryCreatesIndependentUiOwnedViews`, `StyleFailure_DisposesUnpublishedFormAndBindingsWithoutOwningBorrowedModelOrDocument` |
+| Save/reopen всех значений и CLI scope | `TransformCommit_SaveCloseAndReopenWithRealCodecPreserveAllNineValuesAndClearHistoryAtNewSession`, `TransformSmoke_RejectsMissingFixtureOutputLegacyAndMixedAcceptanceScopes` |
+
+Первые tests выявили неподдержанный selector expression в Visible binding: заменён
+прямым HasError. Native capture выявил unconditional ErrorText notification каждый
+frame: теперь уведомления только при изменении; regression требует0model/field
+notifications и ui.Update=false при stable Refresh. PNG review выявил clipping
+цифр при default padding в компактном TextBox: scoped padding4/2/4/2 исправлен и
+проверен тестом/PNG. Pixel proof использует публичную PreviewGameSession.Camera,
+а не камеру legacy demo. Ранний проход, изменённый во время style fix, не считается
+финальным: окончательный run имеет неизменные source fingerprints.
+
+Source Debug/published Release вне repo с deliberately invalid game csproj: по
+одному Transform workflow,3PNG/4children. Actual revisions8/9/10 и reopen10,
+позиция/цвет куба проверены pixel checks; source fixture unchanged, compiler0,
+notifications только на UI owner, stable fields/canvas/selection. Stop и document
+Close reaped children; final UI sessions/mappings/GPU resources/handles0,
+Vulkan validation0errors/0warnings. PNG обеих deliveries просмотрены.
+
+Также повторены empty/project/legacy/documents на source Debug/published Release:
+8native cases/18PNG/4legacy children и10headless scene/SDK cases,19consumer commands
+с6expected negative exits. В сумме текущий native scope — **10cases/24PNG/12reaped
+children**. Прежний document workflow: по19actions/4PNG/5saved files на delivery;
+legacy: по8commands/3PNG/2children. Физические DPI/loss/VRAM и fresh packages не
+повторялись, весь hardware/release scope этими окнами не закрывается.
+
+### Команды, evidence и продолжение
+
+Финальный orchestrator: TestResults/TransformUi-20261023/VerifyFinal.ps1.
+Полная сборка: `dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v minimal /bl:<unique.binlog>`.
+Tests: `dotnet test TrueMoon.slnx --no-restore -c Debug --no-build --blame-hang --blame-hang-timeout 60s --logger trx --results-directory <Debug> /bl:<unique.binlog>`;
+Release — та же команда с `-c Release`, без `--no-build`. Все завершены с exit0.
+Publish: `dotnet publish TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj --no-build --no-restore -c Release --self-contained false -o <outside-app> /bl:<unique.binlog>`.
+Native: `<editor.exe> --project <outside-fixture.aetherproj> --smoke <fresh-output> --smoke-transform --validation`.
+VerifyNative.ps1 сохраняет generated fixture, CWD/delivery/source/binary hashes,
+PNG, runtime/project cleanup и JSON receipts. VerifyRegressions.ps1 фиксирует
+прежние headless/native consumers и их actual arguments/exits.
+
+Агрегат: **TestResults/TransformUi-20261023/verification.json**; final solution —
+solution-165319129, native-Debug-165441567 и native-published-Release-165446134;
+regressions/consumers-165623415/summary.json. Narrow TRX/logs скопированы в focused;
+все MSBuild invocations имеют отдельный binlog. Новых engine/wire/assembly contracts
+не введено, package/publication readiness не объявляется.
+
+Первый сквозной цикл закрыт в этом bounded profile. Далее create/delete через
+общий authoring API/history, затем UI New→Add→edit→delete/Undo→Save/reopen; после
+него ED1/ED6 project/runtime workflow. Preview всё ещё fixed-camera640×360,
+до64entities и с child replacement. Полный World/ECS, live edit/MCP, docking/plugins,
+MMF/performance и hardware gates сохраняют отдельные задачи.
 
 ## ED2b: документы в обычном UI — 2026-10-23
 

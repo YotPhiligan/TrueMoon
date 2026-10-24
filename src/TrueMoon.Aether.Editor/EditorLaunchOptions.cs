@@ -10,8 +10,9 @@
 /// <param name="Validation">Request process-local graphics validation.</param>
 /// <param name="CheckScenePath">Scene preflight within the explicitly selected project's scenes root.</param>
 /// <param name="DocumentSmoke">Run directed document UI acceptance against the explicit project fixture.</param>
+/// <param name="TransformSmoke">Run directed Transform/history/preview acceptance against the explicit project fixture.</param>
 public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProjectPath, string? SmokeDirectory,
-    string? EntryAssembly, string? EntryType, bool Light, bool Validation, string? CheckScenePath = null, bool DocumentSmoke = false)
+    string? EntryAssembly, string? EntryType, bool Light, bool Validation, string? CheckScenePath = null, bool DocumentSmoke = false, bool TransformSmoke = false)
 {
     /// <summary>Gets whether a legacy game csproj was explicitly selected.</summary>
     public bool LegacyProject => ProjectPath?.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase) == true;
@@ -26,10 +27,10 @@ public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProje
         for (var index = 0; index < arguments.Length; index++)
         {
             var name = arguments[index];
-            if (name is not ("--project" or "--check-project" or "--check-scene" or "--smoke" or "--smoke-documents" or "--assembly" or "--entry" or "--light" or "--validation"))
+            if (name is not ("--project" or "--check-project" or "--check-scene" or "--smoke" or "--smoke-documents" or "--smoke-transform" or "--assembly" or "--entry" or "--light" or "--validation"))
                 throw new ArgumentException($"Unknown editor argument '{name}'. Use --help.");
             if (!values.TryAdd(name, null)) throw new ArgumentException($"Duplicate editor argument '{name}'.");
-            if (name is "--light" or "--validation" or "--smoke-documents") continue;
+            if (name is "--light" or "--validation" or "--smoke-documents" or "--smoke-transform") continue;
             if (++index == arguments.Length || string.IsNullOrWhiteSpace(arguments[index]) ||
                 arguments[index].StartsWith("--", StringComparison.Ordinal))
                 throw new ArgumentException($"{name} requires a value.");
@@ -38,7 +39,7 @@ public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProje
         string? Value(string name) => values.GetValueOrDefault(name);
         string? FullPath(string name) => Value(name) is { } path ? Path.GetFullPath(path) : null;
         var result = new EditorLaunchOptions(FullPath("--project"), FullPath("--check-project"), FullPath("--smoke"),
-            Value("--assembly"), Value("--entry"), values.ContainsKey("--light"), values.ContainsKey("--validation"), Value("--check-scene"), values.ContainsKey("--smoke-documents"));
+            Value("--assembly"), Value("--entry"), values.ContainsKey("--light"), values.ContainsKey("--validation"), Value("--check-scene"), values.ContainsKey("--smoke-documents"), values.ContainsKey("--smoke-transform"));
         if (result.ProjectPath != null && !result.LegacyProject && !result.ProjectPath.EndsWith(".aetherproj", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("--project requires a .aetherproj manifest or explicit legacy .csproj.");
         if (result.CheckProjectPath != null && (!result.CheckProjectPath.EndsWith(".aetherproj", StringComparison.OrdinalIgnoreCase) ||
@@ -52,6 +53,9 @@ public sealed record EditorLaunchOptions(string? ProjectPath, string? CheckProje
         if (result.DocumentSmoke && (result.SmokeDirectory == null || result.ProjectPath == null || result.LegacyProject ||
             result.CheckProjectPath != null || result.CheckScenePath != null))
             throw new ArgumentException("--smoke-documents requires --smoke fresh-directory and --project fixture.aetherproj.");
+        if (result.TransformSmoke && (result.DocumentSmoke || result.SmokeDirectory == null || result.ProjectPath == null || result.LegacyProject ||
+            result.CheckProjectPath != null || result.CheckScenePath != null))
+            throw new ArgumentException("--smoke-transform requires --smoke fresh-directory and --project fixture.aetherproj, without other smoke profiles.");
         return result;
     }
 }

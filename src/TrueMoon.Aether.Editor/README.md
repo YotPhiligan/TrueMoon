@@ -4,14 +4,14 @@
 project/documents/editing/preview/workflow/extensions/reliability. Первый сквозной
 срез — открыть сцену, изменить Transform, увидеть Edit preview, Undo/Redo,
 сохранить и повторно открыть. ED1a project/session и ED2a document/persistence API
-реализованы; ED2b подключает документы к обычному UI. Transform editing и Edit
-preview ещё требуют интеграции.
+реализованы; ED2b подключает документы к обычному UI. Первый Transform inspector,
+Undo/Redo и independent Edit preview подключены к общему authoring API.
 
 Первый основной экран редактора: стандартное borderless оформление Alloy,
-панель управления, список объектов сцены слева, живой3D viewport в центре,
+компактный заголовок с меню и симуляцией, список объектов сцены слева, живой3D viewport в центре,
 таблица свойств выбранного объекта справа и строка состояния снизу. Desktop WinExe
 не открывает дополнительную консоль. Dark/Light
-переключаются кнопкой «Тема». Это desktop application, `IsPackable=false`;
+переключаются через «Вид → Сменить тему». Это desktop application, `IsPackable=false`;
 движок остаётся в единственной сборке `TrueMoon.Aether`. Редактор и его tests
 относятся к модулю Aether; прежние имена `TrueMoon.Editor`/`TrueMoon.Editor.Tests`
 заменены на `TrueMoon.Aether.Editor`/`TrueMoon.Aether.Editor.Tests`.
@@ -23,9 +23,10 @@ dotnet run --project TrueMoon.Aether.Editor
 Без аргументов открывается пустая рабочая область с отключёнными игровыми
 командами. Приложение не ищет demo или repository root. Для прежней демонстрации
 явно укажите `--project ManualTests/Game.Logic/Game.Logic.csproj`.
-Нажмите **«Собрать» → «Запустить»**: приложение собирает
-внешнюю Game.Logic, запускает отдельный runtime в Pause и показывает комнату.
-Затем доступны Play/Пауза/Шаг/Стоп. Новая сборка во время работы готовит candidate;
+Нажмите **«Проект → Собрать проект»**, затем **▶**: приложение собирает
+внешнюю Game.Logic, запускает отдельный runtime и включает симуляцию комнаты.
+«Симуляция → Запустить на паузе» сохраняет отдельный запуск в Pause.
+Затем доступны ▶/Пауза/Шаг/Стоп. Новая сборка во время работы готовит candidate;
 «Применить сборку» использует существующий checkpoint/Replace и сохраняет состояние.
 Ошибки возвращаются в инспектор; занятые/недоступные действия отключены.
 
@@ -40,6 +41,54 @@ dotnet run --project TrueMoon.Aether.Editor -- `
 `Runtime.IGameSessionEntry.Create(IServiceResolver?)` и
 принимать демонстрационную SceneSnapshot. Этот legacy путь сохраняет прежнюю demo
 сцену; обычный `.aetherproj` открывается с пустой сценой, доступной для New/Open.
+
+## Компактная верхняя панель
+
+Слева находится знак TrueMoon, затем постоянная кнопка меню без обычной рамки.
+Её точки плавно поворачиваются **⋮ → ⋯** вместе с раскрытием за180мс. Наведение
+показывает «Файл / Правка / Вид / Проект / Симуляция»; заголовок проекта сдвигается,
+знак и кнопки симуляции остаются на месте. После ухода мыши есть задержка240мс.
+Одно нажатие на кнопку раскрывает панель и сразу открывает «Файл» после анимации;
+повторное закрывает. Enter/Space на кнопке работают так же. **F10** открывает
+клавиатурную навигацию, стрелки выбирают меню и пункты, Enter выполняет действие.
+Esc, click снаружи или потеря фокуса закрывают меню. Tab возвращает обычную навигацию.
+Отмена во время раскрытия исключает последующее открытие «Файл».
+Пункты меню и иконки используют общее состояние доступности и те же команды.
+Выпадающие меню имеют матовый полупрозрачный фон: содержимое окна за ними
+размывается, текст и иконки остаются чёткими. Dark/Light выбирают tint через
+`Theme.MenuBackdrop`; null отключает эффект. Общий механизм `Element.Backdrop`
+доступен другим панелям через стили/Fluent, без зависимости ViewModel от renderer.
+Наведение на ▶/паузу/стоп показывает подсказку, в том числе для отключённой кнопки.
+
+«Файл» содержит New/Open/Save/SaveAs/Close и Выход. Путь для Open/SaveAs вводится
+в прежнее поле «Сцена»; выбор файла и project picker будут отдельным этапом.
+Несохранённые изменения по-прежнему требуют Save/Discard/Cancel, включая Выход
+из меню. «Правка» использует общую Transform Undo/Redo history. Независимый Edit
+Preview перенесён в строку состояния: кнопки заголовка управляют игровой симуляцией.
+
+Header View/Style создаёт UI-owner `IFactory<EditorHeaderView, EditorHeaderArguments>`
+из `UseAetherEditorHeader()`. Окно владеет View; модели и стиль заимствуются из App.
+Общие `MenuBar`, `OverlayHost`, `IUiCommand` и frame-driven `ScalarTransition`
+находятся в Argentis/Alloy. Стандартные minimize/maximize/close, caption drag и
+Snap metadata сохраняются через default window frame.
+
+## Строка состояния ED4b
+
+Нижняя панель высотой28логических единиц использует текст12 и геометрические
+иконки14. Слева — краткое состояние редактора; при отменяемой операции рядом
+появляется «Отмена». Справа — число объектов, Edit Preview и кнопка подробностей.
+Tick/PID, текущая операция, ревизия preview и полная выбираемая диагностика
+открываются над панелью в матовом popup. Ошибка имеет отдельную иконку и цвет.
+
+Нажмите Edit Preview для запуска/остановки просмотра committed сцены. Эти действия
+используют прежний preview coordinator; из production inspector они убраны.
+При уменьшении окна второстепенные сегменты скрываются, а их данные и команды
+остаются доступны через подробности. Esc, Tab, внешний click и потеря фокуса
+закрывают popup; при смене темы существующие элементы и выделение сохраняются.
+
+`UseAetherEditorStatusBar()` регистрирует data/style и типизированные фабрики через
+App/Cobalt. Окно владеет View, OverlayHost — popup; общие модели заимствуются.
+Общий layout `StatusBar`/`IStatusBar` находится в Argentis, без зависимости от Editor.
 
 ## Проект и сессия ED1a
 
@@ -103,7 +152,7 @@ admission окончательно. Если отмена пришла посл�
 Открытие `.aetherproj` пока выбирает project/build identity, но не загружает сцену:
 ED2a предоставляет document loading/save/reopen API, ED2b — панель документов и
 Save/Discard/Cancel. Выбор другого проекта через UI, общие меню/диалоги и runtime
-coordination развиваются в ED1/ED4/ED6. Engine Edit preview доступен отдельно.
+coordination развиваются в ED1/ED4/ED6. Edit Preview открытого документа доступен в строке состояния.
 
 ## Документ сцены ED2a
 
@@ -226,10 +275,10 @@ projection для этого не используется. Строки пок�
 control characters, integer/number/null сохраняют смысл. Сохранение/смена темы
 не перестраивают shell, viewport, поле пути или неизменившиеся entity controls.
 
-Операции документов выполняются только при stopped/idle runtime/compiler.
+Операции документов выполняются при stopped/idle runtime/compiler либо в Edit preview.
 Во время IO/decision и при открытом authoring document игровые действия
-заблокированы: привязка scene document к Edit preview/Build/Play — следующий срез.
-В этом шаге нет editable Transform, Undo/Redo UI, project picker и file browser;
+заблокированы: привязка scene document к Build/Play остаётся ED6.
+Project picker и file browser ещё не реализованы;
 explicit legacy .csproj сохраняет прежний игровой workflow.
 
 Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smoke-documents`.
@@ -238,16 +287,50 @@ Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smo
 close, Save/reopen/conflict/recovery и сохраняет PNG/JSON. Обычный запуск такой
 сценарий не выполняет.
 
+## Transform, Undo/Redo и Edit preview
+
+Откройте сцену с built-in v1 Transform и выберите объект слева. Inspector показывает
+девять полей: XYZ, Pitch/Yaw/Roll в радианах и Scale XYZ. Формат чисел — с точкой,
+допускается экспонента. NaN/Infinity, значения вне Float и неположительный либо
+округляющийся в ноль масштаб отклоняются рядом с полем. Engine дополнительно
+проверяет итоговую сцену/мировые матрицы; отказ сохраняет черновик и документ.
+
+**Применить / Ctrl+Enter** подтверждает все поля одной atomic history transaction;
+**Отменить / Esc** возвращает последнюю committed версию. Черновик сохраняется при
+обновлении экрана и смене темы. Выбор другого объекта отбрасывает неподтверждённый
+черновик; изменение той же сцены извне сохраняет его, показывает conflict и требует
+явной отмены/повтора. Undo/Redo недоступны, пока есть черновик. Кнопки Undo/Redo и
+Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y вне полей вызывают общую engine history; внутри
+TextBox Ctrl+Z не перехватывается как команда сцены. Dirty учитывает saved checkpoint.
+
+**Edit Preview → Preview** в строке состояния включает независимый просмотр
+committed сцены без Build/Play/Game.Logic.
+После Apply/Undo/Redo он обновляется автоматически. Статус различает ревизию
+документа и последнего реально показанного кадра. Один запрос выполняется, из
+ожидающих сохраняется только последний; набор текста не запускает preview.
+**Стоп** отменяет обновление и ждёт drain/reap. Open/New/Close/Exit останавливают
+preview до смены документа; Cancel решения оставляет прежнюю сцену и preview.
+Ошибка preview не откатывает правку и не удаляет history; повтор — кнопкой Preview.
+
+Текущий профиль: Windows x64, OpenGL UI/Vulkan child, фиксированная камера,
+surface640×360, до64entities и новый child при обновлении ревизии. Лимит относится
+к preview: большие authoring документы не обрезаются и доступны для сохранения.
+Создание/удаление объектов, live runtime edits, gizmos и camera navigation —
+следующие задачи; New пока создаёт пустую сцену.
+
+Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smoke-transform`.
+Только для disposable fixture с Transform.aetherscene: ввод/валидация/темы,
+Apply/Preview/Undo/Redo, pixel checks, Save/Close/reopen и child/resource cleanup.
+
 ## Границы первого экрана
 
-- Инспектор показывает readonly authoring component properties, либо прежние
-  XYZ/interaction/geometry/RGB в legacy demo. Значения можно выделять/копировать. Пока он
-  read-only и в Stop, и в Play; редактирование компонентов и runtime snapshot/edit
-  transaction не реализованы этим экраном.
+- Инспектор редактирует built-in Transform открытого authoring документа; прочие
+  component properties и legacy demo остаются readonly. Значения можно выделять/
+  копировать. Generic component editors и live runtime edit transaction ещё нужны.
 - Список объектов пока плоский. Tree view с parent/variant inheritance,
   picking/gizmos/docking остаются отдельными этапами.
 - Viewport отображает реальную игру из child process через existing shared GPU
-  transport. Размер render surface960×540, изображение вписывается без искажения;
+  transport. Размер legacy render surface960×540, Edit preview640×360; изображение вписывается без искажения;
   resize окна меняет layout. Editor camera navigation/gameplay input в этом
   приложении ещё не подключены; прежние input consumers сохранены отдельно.
 - Текущий GPU путь — Windows x64, OpenGL UI + Vulkan runtime, совместимые UUID и
@@ -256,6 +339,13 @@ close, Save/reopen/conflict/recovery и сохраняет PNG/JSON. Обычн�
   сохраняют собственные критерии.
 
 ## App и ownership
+
+`UseAetherEditorEditing()` регистрирует shared EditorTransformViewModel, scoped
+IViewStyle и `IFactory<EditorTransformView>` после настройки EditorDocumentCommands
+и EditorPreview в composition root. Preview заимствует явные engine show/stop
+operations; App владеет координатором и model/style, окно/родитель — View product.
+Dispose View снимает bindings, не освобождая document/model/engine. Accepted preview
+work отслеживается и drains до освобождения engine; failed cleanup допускает retry.
 
 UI разделён на EditorWorkspace (данные/scene selection), EditorViewModel
 (INotifyPropertyChanged, строки состояния, доступность и guarded commands),
@@ -307,8 +397,10 @@ $env:VK_LAYER_PATH = '<validation-layer-directory>'
 dotnet run --project TrueMoon.Aether.Editor -- --smoke TestResults/EditorScreen/fresh --validation
 ```
 
-Используйте новый output directory. Smoke создаёт3PNG, interaction/report JSON и
-runtime cleanup/validation reports. Проверяются selection/inspector, separate PID,
+Используйте новый output directory. Каждый smoke сохраняет5PNG заголовка и4PNG
+строки состояния, header/status JSON и runtime cleanup/validation reports.
+Профиль добавляет свои interaction JSON/PNG: empty —1PNG, legacy —3PNG,
+Transform —3PNG. Проверяются selection/inspector, separate PID,
 Build/Start/Play/Pause/Step/Replace/Stop, theme/resize, та же UI tree/window,
 close/drain и zero owned resources. Это native correctness proof, не performance
 или physical DPI acceptance. Подробности — [план](../docs/engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22),

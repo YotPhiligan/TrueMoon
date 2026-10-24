@@ -68,6 +68,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     protected virtual Thickness ThemePadding => default;
     /// <summary>Background when no local/style value is supplied.</summary>
     protected virtual Color ThemeBackground => Color.Transparent;
+    /// <summary>Optional background material when no local or styled value is supplied.</summary>
+    protected virtual BackdropMaterial? ThemeBackdrop => null;
     /// <summary>Foreground when no local/style value is supplied.</summary>
     protected virtual Color ThemeForeground => Theme.Foreground;
     /// <summary>Inside outline width when no local/style value is supplied.</summary>
@@ -98,6 +100,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     public Color Foreground { get => Get(UiProperties.Foreground); set => Set(UiProperties.Foreground, value); }
     /// <summary>The background fill.</summary>
     public Color Background { get => Get(UiProperties.Background); set => Set(UiProperties.Background, value); }
+    /// <summary>Optional backdrop material, painted before the ordinary background fill.</summary>
+    public BackdropMaterial? Backdrop { get => Get(UiProperties.Backdrop); set => Set(UiProperties.Backdrop, value); }
     /// <summary>Font size.</summary>
     public float FontSize { get => Get(UiProperties.FontSize); set => Set(UiProperties.FontSize, value); }
     /// <summary>Font family.</summary>
@@ -116,6 +120,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (_style != null && _style.TryGet(property, out T styled)) return styled;
         if (_viewStyle != null && _viewStyle.TryGet(property, out T viewStyled)) return viewStyled;
         if (ReferenceEquals(property, UiProperties.Background)) return (T)(object)ThemeBackground;
+        if (ReferenceEquals(property, UiProperties.Backdrop)) return (T)(object?)ThemeBackdrop!;
         if (ReferenceEquals(property, UiProperties.Foreground)) return (T)(object)ThemeForeground;
         if (ReferenceEquals(property, UiProperties.CornerRadius)) return (T)(object)Theme.CornerRadius;
         if (ReferenceEquals(property, UiProperties.BorderWidth)) return (T)(object)ThemeBorderWidth;
@@ -413,6 +418,9 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         try
         {
             context.Clip(Bounds);
+            if (Backdrop is { } material &&
+                (context is not IBackdropDrawingContext backdrop || !backdrop.TryDrawBackdrop(Bounds, material, CornerRadius)))
+                context.Fill(Bounds, material.Fallback, CornerRadius);
             if (Background.A != 0) context.Fill(Bounds, Background, CornerRadius);
             DrawCore(context);
             var childClip = ChildClipBounds;

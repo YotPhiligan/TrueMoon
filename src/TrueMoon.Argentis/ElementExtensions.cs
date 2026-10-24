@@ -51,6 +51,9 @@ public static class ElementExtensions
     public static T Width<T>(this T element, float width) where T : Element { element.Width = width; return element; }
     /// <summary>Sets a fixed height.</summary>
     public static T Height<T>(this T element, float height) where T : Element { element.Height = height; return element; }
+    /// <summary>Sets a reusable background material; null removes the effect. Background should be transparent to expose it.</summary>
+    public static T WithBackdrop<T>(this T element, BackdropMaterial? material) where T : Element
+    { element.Backdrop = material; return element; }
     /// <summary>Sets a typed property.</summary>
     public static T SetValue<T, TValue>(this T element, UiProperty<TValue> property, TValue value) where T : Element { element.Set(property, value); return element; }
     /// <summary>Binds a typed UI property to one directly selected source property until element disposal.</summary>

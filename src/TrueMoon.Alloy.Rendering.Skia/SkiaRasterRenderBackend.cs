@@ -91,7 +91,7 @@ public sealed class SkiaRasterSurface : IUiRenderSurface
             var canvas = _surface.Canvas;
             canvas.Clear(SKColors.Transparent);
             canvas.Save();
-            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources)); }
+            try { canvas.Scale(viewport.Scale); root.Draw(new SkiaDrawingContext(canvas, _drawingResources, _surface)); }
             finally { canvas.Restore(); }
             _hasFrame = true;
         }

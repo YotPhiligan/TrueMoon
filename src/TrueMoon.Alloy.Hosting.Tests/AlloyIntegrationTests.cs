@@ -85,6 +85,70 @@ public sealed class AlloyIntegrationTests
         Assert.Equal(UiWindowGraphicsApi.OpenGL, snapshot.Window.GraphicsApi);
     }
 
+    [Fact]
+    public void Snapshot_FreezesDefaultTitleBarHookAndItsFrameSelection()
+    {
+        Action<WindowTitleBar, Element, Action> configure = (_, _, _) => throw new Exception("Configuration must stay lazy");
+        var original = new AlloyOptions().UseSkiaOpenGL().UseSilkWindow(w =>
+        {
+            w.Appearance = new WindowAppearance { Decorated = false };
+            w.Chrome = new WindowChromeOptions(); w.ConfigureDefaultTitleBar = configure;
+        });
+        var snapshot = original.Snapshot(); snapshot.Validate(true);
+        original.Window!.ConfigureDefaultTitleBar = (_, _, _) => { };
+        original.Window.UseDefaultWindowFrame = false;
+        original.Window.TitleBarFactory = _ => throw new Exception("Replacement factory must stay lazy");
+        original.Window.Chrome = null;
+        Assert.NotSame(original.Window, snapshot.Window);
+        Assert.Same(configure, snapshot.Window!.ConfigureDefaultTitleBar);
+        Assert.True(snapshot.Window.UseDefaultWindowFrame); Assert.Null(snapshot.Window.TitleBarFactory);
+        Assert.NotNull(snapshot.Window.Chrome); Assert.False(snapshot.Window.Appearance.Decorated);
+        snapshot.Validate(true);
+    }
+
+    [Theory]
+    [InlineData("no-chrome", false)]
+    [InlineData("custom-factory", false)]
+    [InlineData("no-default-frame", false)]
+    [InlineData("no-chrome", true)]
+    [InlineData("custom-factory", true)]
+    [InlineData("no-default-frame", true)]
+    public void DefaultTitleBarHook_RejectsIncompatibleFramesBeforeRegistration(string configuration, bool generic)
+    {
+        var app = new Context(); var roots = 0; var hooks = 0; var titles = 0;
+        Action<AlloyOptions> configure = options => options.UseSkiaOpenGL().UseSilkWindow(w =>
+            ConfigureFrame(w, configuration, (_, _, _) => hooks++, _ => { titles++; return new Panel(); }));
+        var error = Assert.Throws<ArgumentException>(() =>
+        {
+            if (generic) app.UsePresentation<Panel>(configure);
+            else app.UsePresentation(_ => { roots++; return new Panel(); }, configure);
+        });
+        Assert.Contains("default custom frame", error.Message);
+        Assert.Empty(app.Registrations); Assert.Equal(0, roots); Assert.Equal(0, hooks); Assert.Equal(0, titles);
+    }
+
+    [Theory]
+    [InlineData("no-chrome", false)]
+    [InlineData("custom-factory", false)]
+    [InlineData("no-default-frame", false)]
+    [InlineData("no-chrome", true)]
+    [InlineData("custom-factory", true)]
+    [InlineData("no-default-frame", true)]
+    public void WindowConstructor_OnlyRejectsIncompatibleFramesWhenDefaultTitleBarHookIsPresent(string configuration, bool hasHook)
+    {
+        var roots = 0; var hooks = 0; var titles = 0; var options = new SilkUiWindowOptions();
+        ConfigureFrame(options, configuration, hasHook ? (_, _, _) => hooks++ : null,
+            _ => { titles++; return new Panel(); });
+        HostedUiWindow Create() => new(options, new UnknownFactory(), () => { roots++; return new Panel(); });
+        if (hasHook) Assert.Throws<ArgumentException>(Create);
+        else
+        {
+            var window = Create();
+            Assert.False(window.Completion.IsCompleted); window.Close(); Assert.True(window.IsClosed);
+        }
+        Assert.Equal(0, roots); Assert.Equal(0, hooks); Assert.Equal(0, titles);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -127,6 +191,19 @@ public sealed class AlloyIntegrationTests
         UiRendererKind.Raster => new SkiaRasterRenderBackend(), UiRendererKind.OpenGL => new SkiaOpenGLRenderBackend(),
         UiRendererKind.Vulkan => new SkiaVulkanRenderBackend(), _ => new CustomBackend()
     };
+    private static void ConfigureFrame(SilkUiWindowOptions options, string configuration,
+        Action<WindowTitleBar, Element, Action>? hook, Func<IWindowCommands, Element> customFactory)
+    {
+        options.Appearance = new WindowAppearance { Decorated = false };
+        options.Chrome = new WindowChromeOptions(); options.ConfigureDefaultTitleBar = hook;
+        switch (configuration)
+        {
+            case "no-chrome": options.Chrome = null; break;
+            case "custom-factory": options.TitleBarFactory = customFactory; break;
+            case "no-default-frame": options.UseDefaultWindowFrame = false; break;
+            default: throw new ArgumentOutOfRangeException(nameof(configuration));
+        }
+    }
     private sealed class CustomBackend : IRenderBackend
     { public IUiRenderSurface CreateSurface(UiRenderTarget target, UiViewport viewport) => throw new Exception("Unexpected native allocation"); }
     private sealed class UnknownFactory : IUiSessionFactory

@@ -1,7 +1,7 @@
 namespace TrueMoon.Argentis;
 
 /// <summary>A square, keyboard-focusable button with a geometric icon and semantic name.</summary>
-public sealed class IconButton : Button
+public class IconButton : Button
 {
     /// <summary>Current geometric symbol.</summary>
     public static readonly UiProperty<UiSymbol> SymbolProperty = new("Symbol", UiSymbol.Close, validate: Enum.IsDefined);
