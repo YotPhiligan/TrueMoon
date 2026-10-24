@@ -119,17 +119,37 @@ public sealed class DefaultStyleTests
         Assert.Equal(WindowRegionRole.Caption, WindowRegionMap.Create(root).HitTest(20, 15));
         Assert.Equal(WindowRegionRole.Client, WindowRegionMap.Create(root).HitTest(title.CloseButton.Bounds.X + 10, 15));
         Assert.Equal(resizable ? WindowRegionRole.ResizeBottomRight : WindowRegionRole.Client, WindowRegionMap.Create(root).HitTest(232, 131));
-        Assert.True(content.Bounds.Y >= 37); Assert.True(content.Bounds.Y + content.Bounds.Height <= (resizable ? 123 : 139));
+        Assert.Equal(new Rect(1, 37, 238, 102), content.Bounds);
         Click(title.MinimizeButton); Assert.Equal(UiWindowState.Minimized, commands.State); commands.Restore();
         if (resizable)
         {
             Click(title.MaximizeButton); binding.Synchronize(true); ui.Update(); Assert.Equal(UiSymbol.Restore, title.MaximizeButton.Symbol); Assert.False(root.ResizeGrip.IsVisible);
+            Assert.Equal(new Rect(1, 37, 238, 102), content.Bounds);
+            Assert.Equal(WindowRegionRole.Client, WindowRegionMap.Create(root).HitTest(232, 131));
             Click(title.MaximizeButton); binding.Synchronize(true); ui.Update(); Assert.Equal(UiWindowState.Normal, commands.State); Assert.True(root.ResizeGrip.IsVisible);
+            Assert.Equal(new Rect(1, 37, 238, 102), content.Bounds);
         }
         Click(title.CloseButton); Assert.Equal(1, closes); Assert.Equal(0, commands.Closes);
         binding.Synchronize(false); ui.Update(); Assert.Equal(Theme.Dark.Surface, title.Background); Assert.Equal("Content", content.Value);
         binding.Synchronize(false); Assert.False(ui.Update());
         void Click(Button button) { var b = button.Bounds; ui.HandleInput(new UiInput(InputKind.PointerDown, b.X + 8, b.Y + 8)); ui.HandleInput(new UiInput(InputKind.PointerUp, b.X + 8, b.Y + 8)); }
+    }
+
+    [Fact]
+    public void DefaultFrame_ResizeGripOverlaysContentWithoutAddingMeasuredHeight()
+    {
+        using var frame = WindowFrame.CreateDefault("Window", new SizedElement(100, 80));
+        frame.ApplyWindowState(new(true, false, true, true, true));
+        frame.Measure(new(400, 240), new FixedTextLayout());
+        Assert.Equal(118, frame.DesiredSize.Height);
+        frame.Arrange(new(10, 20, 400, 240));
+        Assert.Equal(new Rect(11, 57, 398, 202), frame.Children[1].Bounds);
+        Assert.Equal(new Rect(393, 243, 16, 16), frame.ResizeGrip!.Bounds);
+        frame.ApplyWindowState(new(true, true, true, true, true));
+        frame.Measure(new(400, 240), new FixedTextLayout()); frame.Arrange(new(10, 20, 400, 240));
+        Assert.Equal(118, frame.DesiredSize.Height);
+        Assert.Equal(new Rect(11, 57, 398, 202), frame.Children[1].Bounds);
+        Assert.Equal(default, frame.ResizeGrip.Bounds);
     }
 
     [Fact]

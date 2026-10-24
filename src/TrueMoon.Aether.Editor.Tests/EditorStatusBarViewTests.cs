@@ -12,6 +12,38 @@ namespace TrueMoon.Aether.Editor.Tests;
 
 public sealed class EditorStatusBarViewTests
 {
+    [Theory]
+    [InlineData(1f)] [InlineData(1.5f)] [InlineData(2f)]
+    public void DefaultFrame_StatusBarReachesBottomBorderWithoutExtraRowAndKeepsResizeGripClear(float scale)
+    {
+        using var test = new StatusFixture();
+        var frame = WindowFrame.CreateDefault("Editor", test.Overlays);
+        frame.ApplyWindowState(new(true, false, true, true, true));
+        using var ui = new UiSession(frame, new Surface(), new((int)(1280 * scale), (int)(800 * scale), scale));
+        ui.Update(); ui.Update();
+        var bar = test.View.Bar; var details = test.View.DetailsButton;
+        Assert.Equal(new Rect(1, 771, 1278, 28), test.View.Bounds);
+        Assert.Equal(test.View.Bounds, bar.Bounds);
+        Assert.Equal(new Rect(1263, 783, 16, 16), frame.ResizeGrip!.Bounds);
+        Assert.True(details.Bounds.X + details.Bounds.Width <= frame.ResizeGrip.Bounds.X);
+        var regions = WindowRegionMap.Create(frame);
+        Assert.Equal(WindowRegionRole.ResizeBottomRight, regions.HitTest(1271, 791));
+        Assert.Equal(WindowRegionRole.Client, regions.HitTest(1262, 791));
+        Assert.Equal(WindowRegionRole.Client, regions.HitTest(details.Bounds.X + 12, details.Bounds.Y + 12));
+        frame.ApplyWindowState(new(true, true, true, true, true)); ui.Update();
+        Assert.Equal(new Rect(1, 771, 1278, 28), test.View.Bounds);
+        Assert.False(frame.ResizeGrip.IsVisible);
+        Assert.Equal(WindowRegionRole.Client, WindowRegionMap.Create(frame).HitTest(1271, 791));
+        frame.ApplyWindowState(new(true, false, true, true, true));
+        ui.Resize(new((int)(1280 * scale), (int)(640 * scale), scale)); ui.SetTheme(Theme.Light); ui.Update(); ui.Update();
+        Assert.Equal(new Rect(1, 611, 1278, 28), test.View.Bounds);
+        Assert.Equal(test.View.Bounds, bar.Bounds);
+        Assert.Equal(new Rect(1263, 623, 16, 16), frame.ResizeGrip.Bounds);
+        Assert.Same(bar, test.View.Bar); Assert.Same(details, test.View.DetailsButton);
+        Assert.True(details.Bounds.X + details.Bounds.Width <= frame.ResizeGrip.Bounds.X);
+        Assert.False(ui.Update());
+    }
+
     [Fact]
     public void CompactSegments_Use28PixelBar12PixelText14PixelSymbolsAndRetainIdentityAcrossThemes()
     {

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Argentis;
@@ -13,7 +13,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
 {
     private readonly OverlayHost _overlays;
     private readonly EditorDocumentViewModel _documentModel;
-    private readonly EditorTransformViewModel _transformModel;
+    private readonly EditorInspectorViewModel _transformModel;
     private readonly IUiCommand _undo, _redo;
     private readonly List<DelegateUiCommand> _commands = [];
     private IconButton? _hint;
@@ -46,7 +46,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     /// <param name="transform">Shared editing/history presentation.</param><param name="style">Scoped appearance.</param>
     /// <param name="arguments">Window-specific popup host, caption and coordinated close callback.</param>
     public EditorHeaderView(EditorViewModel model, EditorDocumentViewModel documents,
-        EditorTransformViewModel transform, IViewStyle<EditorHeaderView> style, EditorHeaderArguments arguments)
+        EditorInspectorViewModel transform, IViewStyle<EditorHeaderView> style, EditorHeaderArguments arguments)
     {
         ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(documents);
         ArgumentNullException.ThrowIfNull(transform); ArgumentNullException.ThrowIfNull(style);

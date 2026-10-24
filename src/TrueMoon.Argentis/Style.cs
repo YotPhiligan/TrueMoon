@@ -48,6 +48,8 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
     public Color ReadOnly { get; init; } = new(27, 34, 45);
     /// <summary>Frosted menu surface; null selects the ordinary opaque Surface fill.</summary>
     public BackdropMaterial? MenuBackdrop { get; init; } = new(12, new(18, 22, 30, 176), new(18, 22, 30));
+    /// <summary>Frosted persistent panel surface; null lets a consumer select its opaque Surface fill.</summary>
+    public BackdropMaterial? PanelBackdrop { get; init; } = new(8, new(18, 22, 30, 208), new(18, 22, 30));
     /// <summary>Keyboard focus outline; also distinguished by its two-pixel shape.</summary>
     public Color Focus { get; init; } = new(255, 201, 92);
     /// <summary>Error outline/marker color.</summary>
@@ -76,7 +78,8 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
         Border = new(114, 128, 147), ControlHover = new(226, 235, 247), ControlPressed = new(202, 220, 241),
         ControlDisabled = new(226, 231, 239), Input = new(255, 255, 255), ReadOnly = new(233, 238, 245),
         Focus = new(142, 72, 0), Error = new(174, 30, 51),
-        MenuBackdrop = new(12, new(242, 245, 250, 192), new(242, 245, 250))
+        MenuBackdrop = new(12, new(242, 245, 250, 192), new(242, 245, 250)),
+        PanelBackdrop = new(8, new(242, 245, 250, 216), new(242, 245, 250))
     };
 
     internal Color ActionColor(ControlTone tone) => tone switch { ControlTone.Accent => Accent, ControlTone.Positive => Positive, ControlTone.Danger => Danger, _ => Control };

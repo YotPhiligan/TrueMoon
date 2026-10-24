@@ -100,6 +100,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     public Color Foreground { get => Get(UiProperties.Foreground); set => Set(UiProperties.Foreground, value); }
     /// <summary>The background fill.</summary>
     public Color Background { get => Get(UiProperties.Background); set => Set(UiProperties.Background, value); }
+    /// <summary>Opacity applied once to this element and all its children; does not change input admission.</summary>
+    public float Opacity { get => Get(UiProperties.Opacity); set => Set(UiProperties.Opacity, value); }
     /// <summary>Optional backdrop material, painted before the ordinary background fill.</summary>
     public BackdropMaterial? Backdrop { get => Get(UiProperties.Backdrop); set => Set(UiProperties.Backdrop, value); }
     /// <summary>Font size.</summary>
@@ -413,29 +415,39 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <summary>Draws this subtree with balanced clipping state.</summary>
     public void Draw(IDrawingContext context)
     {
-        if (!IsVisible || Bounds.Width <= 0 || Bounds.Height <= 0) return;
+        if (!IsVisible || Opacity == 0 || Bounds.Width <= 0 || Bounds.Height <= 0) return;
         context.Save();
         try
         {
             context.Clip(Bounds);
-            if (Backdrop is { } material &&
-                (context is not IBackdropDrawingContext backdrop || !backdrop.TryDrawBackdrop(Bounds, material, CornerRadius)))
-                context.Fill(Bounds, material.Fallback, CornerRadius);
-            if (Background.A != 0) context.Fill(Bounds, Background, CornerRadius);
-            DrawCore(context);
-            var childClip = ChildClipBounds;
-            if (Children.Count != 0 && childClip != Bounds)
+            if (Opacity < 1 && context is IOpacityDrawingContext composite)
             {
-                context.Save();
-                try { context.Clip(childClip); foreach (var child in Children) child.Draw(context); }
+                composite.SaveOpacity(Bounds, Opacity);
+                try { DrawContents(context); }
                 finally { context.Restore(); }
             }
-            else foreach (var child in Children) child.Draw(context);
-            if (BorderWidth > 0) context.Stroke(Bounds.Deflate(new Thickness(BorderWidth / 2)), BorderColor, BorderWidth, CornerRadius);
-            if (HasError) context.Fill(new Rect(Bounds.X, Bounds.Y, Math.Min(3, Bounds.Width), Bounds.Height), Theme.Error);
-            if (IsFocused && IsEffectivelyEnabled) context.Stroke(Bounds.Deflate(new Thickness(2)), Theme.Focus, 2, CornerRadius);
+            else DrawContents(context);
         }
         finally { context.Restore(); }
+    }
+    private void DrawContents(IDrawingContext context)
+    {
+        if (Backdrop is { } material &&
+            (context is not IBackdropDrawingContext backdrop || !backdrop.TryDrawBackdrop(Bounds, material, CornerRadius)))
+            context.Fill(Bounds, material.Fallback, CornerRadius);
+        if (Background.A != 0) context.Fill(Bounds, Background, CornerRadius);
+        DrawCore(context);
+        var childClip = ChildClipBounds;
+        if (Children.Count != 0 && childClip != Bounds)
+        {
+            context.Save();
+            try { context.Clip(childClip); foreach (var child in Children) child.Draw(context); }
+            finally { context.Restore(); }
+        }
+        else foreach (var child in Children) child.Draw(context);
+        if (BorderWidth > 0) context.Stroke(Bounds.Deflate(new Thickness(BorderWidth / 2)), BorderColor, BorderWidth, CornerRadius);
+        if (HasError) context.Fill(new Rect(Bounds.X, Bounds.Y, Math.Min(3, Bounds.Width), Bounds.Height), Theme.Error);
+        if (IsFocused && IsEffectivelyEnabled) context.Stroke(Bounds.Deflate(new Thickness(2)), Theme.Focus, 2, CornerRadius);
     }
     /// <summary>Draws custom content before children.</summary>
     protected virtual void DrawCore(IDrawingContext context) { }

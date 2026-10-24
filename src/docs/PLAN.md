@@ -43,10 +43,15 @@ ED2a/b document persistence и UI commands/close policy также готовы.
 ED3a подключил Transform inspector/Undo/Redo и independent preview к обычному UI.
 Новых assembly dependencies нет.
 
-Порядок после сверки планов2026-10-23: первый edit/save/preview цикл
-на существующем ARCH1b.1 выполнен; далее минимальные create/delete общего authoring API,
-чтобы New был пригоден для работы; затем project picker/switch и ED1/ED6 workflow.
-Детали и критерии ведутся только в [ED3 и первом срезе](engine/EDITOR_PLAN.md#ed3-общие-операции-редактирования-и-undoredo).
+Уточнение приоритета по запросу пользователя2026-10-24: после первого
+edit/save/preview цикла развиваем [обозреватель ED4c](engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24).
+Общий TreeView — в Argentis, смена родителя — минимальное расширение общего
+authoring API/history. Следующее уточнение пользователя2026-10-24 —
+[динамический Inspector ED4d](engine/EDITOR_PLAN.md#ed4d-динамический-инспектор-компонентов--начат-2026-10-24):
+schema-driven поля и компоненты через общий authoring API, реализованы2026-10-24
+с проверками history/save/preview. Затем сохраняемые имена и порядок соседей, create/delete
+общего API с UI, чтобы New был пригоден для работы; после — project picker/switch
+и ED1/ED6 workflow. Детали и критерии ведутся в прикладном плане редактора.
 UI развивается по этим consumers. Core/Cobalt поддерживаются адресно; ENE6c/d и
 полный MIT6a/c — следующие задачи надёжности до рабочей поставки, hardware UI
 acceptance остаётся отдельной. Ранние датированные маршруты ниже — история;

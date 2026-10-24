@@ -1,6 +1,75 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-24, PA4b компактный StatusBar и ED4b Editor**.
+Последняя работа — **2026-10-24, ED4e group opacity и panel material**.
+Argentis Element.Opacity/UiProperties.Opacity0..1 — render-only; optional
+IOpacityDrawingContext применяет alpha ко всему subtree. Skia SaveLayer/Restore
+балансируются, unsupported backend рисует fractional opacity opaque, zero не рисует.
+Theme.PanelBackdrop отделён от menu; Editor использует content-height островки
+над full viewport, shadow/fade/slide и прежний OverlayHost выше панелей.
+67новыхcases (UI41/Editor26), narrow103/103. Related UI842/Hosting98/Editor699
+Debug/Release =1639/configuration,3278всего,failed/skipped0; nonincremental Debug
+solution build0errors/1532warnings.12native cases/158PNG/16reaped children,
+validation0/0 и zero owned UI/GPU/mappings; итоговые PNG просмотрены.
+[Проверки и границы](HISTORY.md#pa8b1-group-opacity-и-островки-editor--2026-10-24).
+Evidence: TestResults/Islands-20261024/verification.json. Aether/full solution tests,
+packages/physical/performance/VRAM/final alpha не повторены, прежние gates открыты.
+
+Предыдущая работа — **2026-10-24, ED4d.1 icon actions и conditional inspector**.
+Argentis UiSymbol расширен Add/Delete с сохранением прежних enum values.
+Editor использует IconButton26/reset24, semantic names и общий OverlayHost для
+Tooltip500мс/disabled/focus/opaque-theme/lifecycle; пустая колонка не резервируется.
+Текущие UI801/Hosting98/Editor673 Debug/Release =1572/configuration,3144всего,
+failed/skipped0;25новыхEditorcases, narrow181/181. Nonincremental Debug solution
+build0errors/1532warnings;12native cases/152PNG/16reaped children,validation0/0
+и zero owned UI/GPU/mappings. Финальные Dark/Light/hidden/Tooltip PNG просмотрены.
+[Проверки и границы](HISTORY.md#ed4d1-иконки-и-условный-inspector--2026-10-24).
+Evidence: TestResults/InspectorChrome-20261024/verification.json. Aether/full solution
+tests/packages/physical/performance/final alpha не повторены; прежние gates открыты.
+Далее consumer ED4c.2 names/order; создание — ED4c.3.
+
+Предыдущая работа — **2026-10-24, ED4d Inspector consumer существующих controls**.
+Retained schema-driven View/Data/Style использует CheckBox/TextBox/RichTextEditor,
+ScrollViewer и typed dynamic roles. Generic UI contracts не расширялись; изменения
+документа/компонентов остаются в Aether. Responsive scalar rows и null label,
+two-way bindings, multiline shortcuts, theme/focus retention и parent ownership проверены.
+Текущие UI801/Hosting98/Editor648 Debug/Release,failed/skipped0; Aether1142 отдельно:
+2689/configuration,5378всего.163новых engine/editor cases. Nonincremental Debug
+solution build0errors/1532warnings;12native source/published cases,146PNG/
+16reaped children,validation0/0 и zero owned UI/GPU/mappings. Финальные PNG просмотрены.
+[Проверки и границы](HISTORY.md#ed4d-inspector-consumer--2026-10-24).
+Evidence: TestResults/Inspector-20261024/verification.json. Следующий consumer —
+ED4c.2 names/order. Full solution tests/packages/physical/performance/final alpha
+не повторены; прежние hardware/quality gates остаются открытыми.
+
+Предыдущая работа — **2026-10-24, PA4c TreeView и ED4c.1**.
+Общий TreeView/ITreeView: frozen forest до4096items, geometric icons, retained
+expansion/selection, keyboard/reveal, clipped drawing и parent move requests.
+Capture отменяется при смене snapshot, Esc/FocusLost/disable/detach; предметные
+данные меняет consumer через общий authoring API. Editor использует отдельный
+View/Data/Style и App/Cobalt factory; root style не обходит nested View.
+UI801/Hosting98/Editor577 Debug/Release,failed/skipped0; Aether1050 отдельно,
+всего2526/configuration.130новых cases включая41TreeView/47Editor/42engine.
+Nonincremental Debug solution build0errors/1532warnings.10native source/published
+cases,118PNG/14reaped children,validation0/0 и zero owned UI/GPU/mappings.
+[Контракт](PLAN.md#pa4c-treeview--начат-2026-10-24),
+[проверки и границы](HISTORY.md#pa4c-treeview-и-ed4c1--2026-10-24).
+Evidence: TestResults/Hierarchy-20261024/verification.json. Следующий consumer —
+rename/reorder ED4c.2 после persistent engine metadata. Full solution tests/packages/
+physical/performance/final alpha не повторены; прежние hardware/quality gates открыты.
+
+Предыдущая работа — **2026-10-24, PA4b выравнивание StatusBar по нижнему краю**.
+WindowFrame больше не выделяет нижнюю строку16 под resize grip: виджет лежит
+поверх правого нижнего угла content. StatusBar28 доходит до внутреннего бордера,
+справа24 защищают actions; measure/arrange и maximize/restore согласованы.
+Narrow57/57; текущие UI760/Hosting98/Editor530 Debug/Release =1388/configuration,
+failed/skipped0.2native empty cases source Debug/published Release,20PNG,
+zero owned UI/GPU/mappings; Dark/Light PNG просмотрены.
+[Проверки и границы](HISTORY.md#pa4b-выравнивание-statusbar-по-нижней-границе--2026-10-24).
+Evidence: TestResults/StatusBarAlignment-20261024/verification.json.
+Full solution/headless/игровые native profiles/physical input не повторены;
+прежние межмодульные failures открыты, далее create/delete consumer.
+
+Предыдущая работа — **2026-10-24, PA4b компактный StatusBar и ED4b Editor**.
 Общий StatusBar/IStatusBar сохраняет child bindings/ownership, скрывает secondary
 slots по приоритету, исключает их из input/Tab и возвращает focus на details.
 Editor:28/12/14/24logical, semantic icons/status/cancel, entity count, details и
@@ -328,7 +397,9 @@ Alpha K1–K9 не объявляется завершённой. Требова
 ## Следующий конкретный шаг
 
 При работе над приложением использовать [первый срез и порядок API → preview → UI](../engine/EDITOR_PLAN.md#первый-сквозной-срез);
-ARCH1b.1, ED1a, ED2a/b и ED3a выполнены в своих границах; ближайший consumer — create/delete UI commands общего authoring API.
+ARCH1b.1, ED1a, ED2a/b, ED3a и ED4c.1 выполнены в своих границах; ближайший
+consumer — rename/reorder ED4c.2 после persistent engine metadata, затем
+create/delete UI commands общего authoring API.
 Общие UI capabilities для ED4/ED5/ED7 развивать здесь по конкретному consumer;
 готовность приложения не требует заранее закончить весь UI beta backlog.
 

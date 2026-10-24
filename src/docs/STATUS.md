@@ -1,6 +1,55 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-24, ED4b строка состояния и PA4b StatusBar**.
+Последняя работа — **2026-10-24, ED4e островки над viewport**.
+Editor использует матовые панели поверх полной рабочей области сцены, group
+opacity/PanelBackdrop в общей UI-библиотеке, retained context/fade без resize.
+Related UI842/Hosting98/Editor699 Debug/Release:3278passed/0failed/0skipped,
+67новыхcases; nonincremental Debug solution build0errors/1532warnings.
+12native cases/158PNG/16reaped children,validation0/0 и zero owned UI/GPU/mappings.
+[Результаты](engine/HISTORY.md#ed4e-островки-поверх-viewport--2026-10-24).
+Evidence: TestResults/Islands-20261024/verification.json. Aether/full solution tests,
+прочие модули/packages/physical/performance не повторены. Порядок engine работ и
+межмодульные блокеры прежние: ED4c.2 names/order, ED4c.3 create/delete, workflow.
+
+Предыдущая работа — **2026-10-24, ED4d.1 компактный контекстный Inspector**.
+Иконки/Tooltip и скрытие колонки без выбора подключены к существующим UI controls;
+engine authoring API не менялся. Related UI801/Hosting98/Editor673 Debug/Release:
+3144passed/0failed/0skipped,25новыхcases; nonincremental Debug solution build0errors.
+12native cases/152PNG/16reaped children,validation0/0 и zero owned UI/GPU/mappings.
+[Результаты](engine/HISTORY.md#ed4d1-компактные-действия-и-контекст-инспектора--2026-10-24).
+Evidence: TestResults/InspectorChrome-20261024/verification.json. Aether/full solution
+tests/прочие модули не повторены; прежние quality/hardware gates открыты.
+Порядок прежний: ED4c.2 names/order, ED4c.3 create/delete/duplicate, project/workflow.
+
+Предыдущая работа — **2026-10-24, ED4d динамический Inspector и component authoring**.
+Схемы компонентов определяют фактические редакторы свойств; Add/Remove/Restore,
+reset/provenance, history/save/preview используют общий engine API. Runtime World
+не является prerequisite; live runtime edit остаётся отдельным этапом.
+Текущие Aether1142/UI801/Hosting98/Editor648 Debug/Release =2689/configuration,
+5378всего,failed/skipped0;163новыхcases. Nonincremental Debug solution build:
+0errors/1532warnings.12native cases/146PNG/16reaped children,validation0/0,
+zero owned UI/GPU/mappings. Full solution tests/прочие модули/packages/physical/
+performance не повторены; прежние CPU receiver/Mithril issues открыты.
+[План](engine/EDITOR_PLAN.md#ed4d-динамический-инспектор-компонентов--начат-2026-10-24),
+[проверки](engine/HISTORY.md#ed4d-динамический-инспектор-компонентов--2026-10-24).
+Evidence: TestResults/Inspector-20261024/verification.json. Далее ED4c.2 имена/
+порядок соседей, ED4c.3 create/delete/duplicate, затем project/runtime workflow.
+Новых базовых prerequisites нет.
+
+Предыдущая работа — **2026-10-24, ED4c.1 обозреватель и PA4c TreeView**.
+Первый срез дерева/иконок/выбора/переноса и общий Reparent API/history реализованы.
+Текущие Aether1050/UI801/Hosting98/Editor577 Debug/Release =2526/configuration,
+failed/skipped0;130новых cases. Nonincremental Debug solution build0errors/1532warnings.
+10native source Debug/published Release cases,118PNG/14reaped children,
+validation0/0 и zero owned UI/GPU/mappings. Full solution tests/прочие модули/
+packages/physical/performance не повторены; прежние CPU receiver/Mithril issues открыты.
+[План](engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24),
+[проверки](engine/HISTORY.md#ed4c1-дерево-сущностей-и-reparent--2026-10-24).
+Evidence: TestResults/Hierarchy-20261024/verification.json. По запросу пользователя
+приоритет — ED4c.2 сохраняемые имена/порядок, затем ED4c.3 create/delete/duplicate;
+дальше project/runtime workflow. Базовые prerequisites не добавлены.
+
+Предыдущая работа — **2026-10-24, ED4b строка состояния и PA4b StatusBar**.
 Компактные status/icons/cancel, details и Edit Preview в footer; общая responsive
 UI capability и typed View/Data/Style/App/Cobalt factories. Текущие связанные
 UI759/Hosting98/Editor527 Debug/Release =1384/configuration,failed/skipped0.
@@ -56,8 +105,9 @@ engine/Mithril планы; исправление этих прежних пут
 Предыдущий full3049/3049 Debug/Release не отменяет последний Debug failure.
 Fresh packages/physical/performance/golden/full alpha не повторены.
 
-Далее minimal create/delete общего authoring API/history и их UI commands, затем
-project picker/switch и ED1/ED6 workflow. Общие engine/UI границы прежние; full
+Текущий маршрут: ED4c.2 сохраняемые имена/порядок, затем ED4c.3 create/delete
+общего authoring API/history и их UI commands; после — project picker/switch
+и ED1/ED6 workflow. Общие engine/UI границы прежние; full
 World/ECS и новый Core/Cobalt quality цикл не prerequisites. IPC — Enerit,
 frames — отдельный transport, процессы — Mithril.
 
@@ -69,8 +119,8 @@ frames — отдельный transport, процессы — Mithril.
 | [Cobalt / DI](cobalt/STATUS.md) | Текущий179/generator91 Debug/Release; document/project ownership на Cobalt/MS DI | API прежние; performance/allocation backlog отдельно |
 | [Enerit](enerit/STATUS.md) | Текущий166/generator114 Debug/Release; прежние finite admission/stop published44/package132 | ENE6c/d, MMF, trends отдельно |
 | [Mithril](mithril/STATUS.md) | Последний98/99 Debug: ready-file fixture race;99/99 Release; Editor child reap повторён | Ready JSON publication/read stability; full fault matrix/containment отдельно |
-| [Alloy / Argentis](alloy/STATUS.md) | 2026-10-24 UI759/Hosting98/Editor527 Debug/Release; compact StatusBar/preview/header native proof | Bounded menu/material APIs реализованы; native Vulkan effects/physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
-| [Aether / Engine](engine/STATUS.md) | ARCH1b.1/preview/ED1a/ED2a/b/ED3a/ED4a/b; текущий Editor527 Debug/Release; Aether1008 — предыдущий2026-10-23 | Create/delete общего API/UI; CPU receiver race follow-up; project/runtime workflow отдельно |
+| [Alloy / Argentis](alloy/STATUS.md) | 2026-10-24 UI801/Hosting98/Editor577 Debug/Release; TreeView/header/status/preview native proof | Rename/reorder consumer; physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
+| [Aether / Engine](engine/STATUS.md) | ARCH1b.1/preview/ED1a/ED2a/b/ED3a/ED4a/b/c.1; текущие Aether1050/Editor577 Debug/Release | ED4c.2 имена/порядок, ED4c.3 create/delete; CPU receiver follow-up и project/runtime workflow отдельно |
 
 Подробные contracts/commands/failures ведутся у владельцев. Historical packages,
 performance и аппаратные проверки не становятся частью текущего full solution.
@@ -127,8 +177,9 @@ drawing, golden/RTE/full performance/physical UI и real loss/VRAM не повт
 
 ## Следующий конкретный шаг
 
-1. Реализовать [минимальные create/delete через общий authoring API/history](engine/EDITOR_PLAN.md#ed3-общие-операции-редактирования-и-undoredo)
-   и UI commands, чтобы New был пригоден для работы. Затем project picker/switch и
+1. Продолжить [ED4c.2 имена и порядок соседей](engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24)
+   через общие engine metadata/history, затем UI rename/reorder. Следом ED4c.3
+   create/delete/duplicate, чтобы New был пригоден для работы. Затем project picker/switch и
    ED1/ED6 document/build/play workflow. При возврате к gameplay — ENG5c.3 collisions камеры, затем HUD.
 2. UI physical DPI/OS input, loss/K8, VRAM и final alpha требуют собственных runs.
    K7 workaround search остановлен; Windows/driver settings без запроса не менять.

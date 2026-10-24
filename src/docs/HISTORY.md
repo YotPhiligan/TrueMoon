@@ -1,5 +1,16 @@
 # TrueMoon: история общей документации
 
+## ED4d: динамический Inspector и component authoring — 2026-10-24
+
+По запросу пользователя уточнён приоритет после ED4c.1: schema-driven inspector
+составляет редакторы по фактическим компонентам сущности. Общий ComponentEditBatch
+использует прежние scene revision/receipts/resolver/history/save/preview; runtime
+World не добавляет предварительный этап. Authoring-срез реализован и проверен:
+163новыхcases,4related suites Debug/Release5378passed,12native cases/146PNG/
+16reaped children. Full solution test green не заявлен, старые quality issues открыты.
+Детали/commands/границы — [engine HISTORY](engine/HISTORY.md#ed4d-динамический-инспектор-компонентов--2026-10-24).
+Далее ED4c.2 persistent names/order, ED4c.3 create/delete/duplicate, project/workflow.
+
 ## ED4a: компактный заголовок и меню — 2026-10-23
 
 По запросу пользователя дизайн/план и приоритет ED4a зафиксированы и реализованы.

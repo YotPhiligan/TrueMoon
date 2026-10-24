@@ -998,6 +998,25 @@ Vulkan/HUD effect matrix и performance/VRAM acceptance этим не заявл
 общая effect graph и blur cache не входят в этот срез.
 [Проверки и ограничения](HISTORY.md#pa8b-матовые-поверхности--2026-10-24).
 
+#### PA8b.1: group opacity и panel material — 2026-10-24
+
+Consumer ED4e Editor использует отдельный `Theme.PanelBackdrop` для закреплённых
+островков поверх сцены; MenuBackdrop остаётся независимым. Null отключает эффект
+и consumer рисует opaque Surface. `UiProperties.Opacity`/`Element.Opacity` — конечное
+значение0..1 с render invalidation, без изменения layout/input eligibility.
+Нулевая opacity пропускает draw; единица сохраняет обычный путь. Дробная opacity
+применяется один раз к composited subtree через optional `IOpacityDrawingContext`;
+каждый успешный SaveOpacity балансируется Restore, включая ошибки и nested groups.
+Skia реализует transient SaveLayer/paint без retained ресурсов. Backend без
+capability рисует дробную opacity непрозрачно; нулевая остаётся скрытой.
+
+Input/visibility admission при закрытии принадлежит consumer: opacity сама по себе
+не отключает hit testing, focus или frame participation. Editor отключает child,
+оставляя wrapper участником160мс перехода. Acceptance включает raster overlap,
+nested groups/images/backdrop, invalid bounds/alpha, style/theme precedence,
+balanced state и native OpenGL Editor. Общая effect graph, render cache и
+performance/VRAM/physical matrix остаются за рамками этого среза.
+
 #### PA4b: StatusBar — 2026-10-24
 
 Согласованный consumer — ED4b Editor. Общий StatusBar и IStatusBar capability
@@ -1012,6 +1031,35 @@ Tab; overflow доступен потребителю. Child visibility/bindings
 Реализовано2026-10-24.20новых layout cases; related UI759/Hosting98/Editor527
 Debug/Release =1384/configuration,6native Editor cases/68PNG/12reaped children.
 [Точные проверки и границы](HISTORY.md#pa4b-statusbar-и-ed4b-editor--2026-10-24).
+
+Уточнение разметки2026-10-24: стандартный WindowFrame не резервирует отдельную
+нижнюю строку под resize grip. Grip16×16 рисуется поверх правого нижнего угла
+content; контент и StatusBar доходят до внутренней нижней границы рамки.
+Показ/скрытие grip при maximize/fixed-size не меняет доступную высоту content.
+Интерактивные controls оставляют место в углу; Editor уже резервирует справа24.
+Это заменяет прежнее решение об отдельной нижней строке в default frame.
+
+#### PA4c: TreeView — начат 2026-10-24
+
+Consumer — [ED4c.1 обозреватель сущностей](../engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24).
+Общий TreeView/ITreeView принимает frozen forest с stable string IDs, parent links,
+labels и геометрическими icons. Один выбранный узел, retained expansion, keyboard
+navigation, clipped row drawing и ScrollViewer reveal; parent move requests через
+drag/drop и keyboard. Контрол не меняет предметные данные и не владеет моделями.
+Проверки graph/duplicate/missing/cycle предшествуют замене; максимум4096items в
+первом bounded profile. Поддерживаются rejection self/descendant/same-parent и
+cancel capture при Esc/FocusLost/disable/detach/new snapshot. Нет фоновых timers,
+resolution на кадр или полного пересоздания row-controls при обновлении.
+Порядок row siblings следует входным данным. Reorder/rename/multiselect/typeahead,
+drag autoexpand/autoscroll и полная virtualization — следующие consumer-driven
+расширения, их готовность данным первым срезом не заявляется.
+
+Первый bounded TreeView реализован2026-10-24; editor использует общий контрол,
+свой стиль и DI-created View. Прямые TreeView tests и native consumer проверяют
+иконки/глубину/clip/выбор/раскрытие/перенос/capture/сохранение дерева при theme.
+[Текущие проверки](STATUS.md), [точная область и команды](HISTORY.md#pa4c-treeview-и-ed4c1--2026-10-24).
+Следующие rename/reorder capabilities добавляются по ED4c.2 после persistent
+engine metadata, без UI-only изменений предметного дерева.
 
 ### PA8a: дефолтный стиль контролов и оформление окна — 2026-10-21
 

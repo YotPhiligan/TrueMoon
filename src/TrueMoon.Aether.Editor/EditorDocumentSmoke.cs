@@ -34,12 +34,12 @@ internal static class EditorDocumentSmoke
             await PathDraft("Rich.aetherscene"); await Click(DocumentCommand.Open);
             var scene = document.Read().Content!.Document; var ids = workspace.EntityIds.ToArray();
             Require(ids.Length == 2 && document.Read().IsDirty == false, "Scene was not loaded into the actual workspace.");
-            await Until(() => view.Entities.Count == 2);
-            await ui.InvokeAsync(() => InputClick(view.Entities[ids[1]])).WaitAsync(token);
+            await Until(() => (view.Hierarchy?.Tree.Items.Count ?? view.Entities.Count) == 2);
+            await EditorHierarchySmoke.ClickItemAsync(ui, view, ids[1], token);
             Require(workspace.SelectedId == ids[1] && workspace.Properties().Any(x => x.Key == "count" && x.Value == "0"), "Raw authoring selection/properties were not presented.");
             Require(view.Commands.All(x => !x.Value.IsEnabled), "Document context must not run a stale game snapshot.");
             await Capture("documents-open-dark.png", 2);
-            var pathControl = panel.PathInput; var canvas = view.Canvas; var firstEntity = view.Entities[ids[0]];
+            var pathControl = panel.PathInput; var canvas = view.Canvas; var firstEntity = (Element?)view.Hierarchy?.Tree ?? view.Entities[ids[0]];
             await PathDraft("Copied.aetherscene"); await Click(DocumentCommand.SaveAs);
             Require(File.Exists(Path.Combine(root, "Copied.aetherscene")) && Hash(source) == originalHash, "SaveAs damaged the source or did not publish.");
             File.AppendAllText(Path.Combine(root, "Copied.aetherscene"), " ");
@@ -51,9 +51,9 @@ internal static class EditorDocumentSmoke
             await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = "Noto Sans" })).WaitAsync(token);
             await Until(() => panel.Theme.Surface == Theme.Light.Surface);
             Require(ReferenceEquals(panel.PathInput, pathControl) && ReferenceEquals(canvas, view.Canvas) &&
-                ReferenceEquals(firstEntity, view.Entities[ids[0]]) && model.PathDraft == "Recovered.aetherscene", "Save/theme rebuilt the tree or lost path draft.");
+                ReferenceEquals(firstEntity, (Element?)view.Hierarchy?.Tree ?? view.Entities[ids[0]]) && model.PathDraft == "Recovered.aetherscene", "Save/theme rebuilt the tree or lost path draft.");
             await Click(DocumentCommand.Close);
-            await Until(() => view.Entities.Count == 0);
+            await Until(() => (view.Hierarchy?.Tree.Items.Count ?? view.Entities.Count) == 0);
             await PathDraft("Recovered.aetherscene"); await Click(DocumentCommand.Open);
             Require(document.Read().Content!.Document.Id == scene.Id && workspace.EntityIds.SequenceEqual(ids), "Reopen changed stable scene/entity identity.");
 
@@ -182,15 +182,24 @@ internal static class EditorDocumentSmoke
             {
                 if (current.NeedsUpdate) return;
                 var shell = (EditorViewModel)view.DataContext!;
-                if (workspace.EntityCount != expectedEntities || shell.StatusText != view.Status.Value ||
-                    !view.Status.Value.EndsWith($" {expectedEntities} объектов", StringComparison.Ordinal)) return;
+                var status = view.StatusBar?.DataContext as EditorStatusBarViewModel;
+                var count = $"{expectedEntities} объектов";
+                if (workspace.EntityCount != expectedEntities) return;
+                if (status != null)
+                {
+                    if (status.Summary != view.Status.Value || status.EntityText != count ||
+                        ((Text)view.StatusBar!.Entities).Value != count) return;
+                }
+                else if (shell.StatusText != view.Status.Value ||
+                    !view.Status.Value.EndsWith(" " + count, StringComparison.Ordinal)) return;
                 window.FramePresented -= Presented;
                 try
                 {
                     Require(ReferenceEquals(view.Documents, panel) && !view.IsDisposed, "Document UI recreated the shell.");
                     using var image = current.ReadbackOpenGLImage(); using var data = image.Encode(SKEncodedImageFormat.Png, 100);
                     using var output = File.Create(Path.Combine(directory, name)); data.SaveTo(output); captures.Add(name); completion.TrySetResult();
-                    presentations.Add(new { Name = name, workspace.EntityCount, shell.StatusText, BoundStatus = view.Status.Value });
+                    presentations.Add(new { Name = name, workspace.EntityCount, shell.StatusText,
+                        BoundStatus = view.Status.Value, BoundEntityCount = status?.EntityText });
                 }
                 catch (Exception error) { completion.TrySetException(error); }
             }

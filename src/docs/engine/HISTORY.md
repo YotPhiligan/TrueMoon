@@ -1,5 +1,324 @@
 # Engine / Editor: история решений и проверок
 
+## ED4e: островки поверх viewport — 2026-10-24
+
+По согласованному дизайну EditorLayout сначала рисует viewport во всей рабочей
+области, затем закреплённые обозреватель/инспектор. Видимый отступ16, radius8,
+тонкая граница и shadow внутри8px gutter; размеры wrapper264/336 ограничиваются
+доступной шириной без пересечения. Высота следует содержимому до предела, ScrollViewer
+сохраняется. Убран служебный заголовок VIEWPORT. Parent-owned EditorIsland использует
+ScalarTransition160мс, group opacity и slide8px; closing сразу запрещает ввод child,
+wrapper продолжает frame participation до скрытия. Detach завершает переход.
+Начальное IsOpen выставляется из модели до attach, исключая пустой инспектор на старте.
+Темы и hide/show сохраняют retained View/fields/drafts/focus/scroll согласно контексту.
+PanelBackdrop использует существующий blur/tint/fallback; fields остаются чёткими.
+View/Data/Style scopes и App/Cobalt/IFactory ownership сохранены; новых сервисов нет.
+
+Текущие проверки:67новыхcases (Editor26/UI41), narrow103passed; related UI842,
+Hosting98, Editor699 в каждой Debug/Release, всего3278passed/0failed/0skipped.
+Nonincremental Debug solution build0errors/1532warnings.12native source Debug/
+published Release cases вне checkout,158PNG,16reaped children; validation0errors/
+0warnings и zero owned UI sessions/mappings/GPU resources/handles. Все прежние
+game/document/Transform/hierarchy/inspector сценарии повторены; actual preview
+проверен по pixels/revision, Dark/Light/null material — по retained controls и bounds.
+Нативный helper теперь ждёт layout после раскрытия/прокрутки дерева перед pointer click.
+Первый полный native запуск был прерван без summary; следующий выявил этот stale
+coordinate в documents fixture; финальный12/12 — native-142613712.
+Итоговые Dark/Light/opaque preview PNG просмотрены, поля и текст чёткие.
+
+Evidence: `TestResults/Islands-20261024/verification.json`; managed-140938913,
+narrow-190757052, solution-build-final и native-142613712 содержат TRX/binlogs/
+commands/PNG/JSON/source и binary hashes. Generated bin/obj находятся в C OS TEMP
+из-за ограниченного свободного места E:. Tests quality/pseudo-mutation review
+статический; coverage и mutation execution не заявлены. Aether/full solution tests,
+packages, physical DPI, Vulkan/HUD effect matrix, performance/VRAM не повторены.
+Свободные drag/resize/docking остаются отдельным UX этапом; engine очередь прежняя.
+
+## ED4d.1: компактные действия и контекст инспектора — 2026-10-24
+
+По скриншоту заменены текстовые actions: одна строка Apply/Cancel/Undo/Redo/Add,
+26×26, reset24×24, Delete рядом с component disclosure. Геометрические Add/Delete
+добавлены в конец UiSymbol, старые значения сохранены. Schema choices остаются
+подписанными, у Restore видимое имя occurrence рядом с иконкой. Scoped style
+задаёт размеры; accessible names содержат назначение и shortcuts.
+
+Inspector использует прежний OverlayHost: Tooltip через500мс, включая disabled,
+без смены focus, с непрозрачным Theme.Control и текстом12. Геометрия/clip/selection/
+input/scroll/hide/detach/dispose отменяют hint; transient ancestor subscriptions
+и host.Closed очищаются. Чужой popup не заменяется. Idle frames после delay нет.
+
+EditorViewModel.IsInspectorVisible следует выбранной сущности; вся retained область
+InspectorPanel скрывается, EditorLayout отдаёт viewport колонку и gap. ClearSelection
+не меняет документ/history; draft переключаемой сущности отбрасывается по прежней
+policy. Снятый выбор сохраняется при новой revision той же сцены. Escape в Tree
+сначала отменяет drag; следующий bubble снимает selection. View/Form/Scroll/actions
+остаются прежними, динамические property sections после нового выбора актуальны.
+Будущее создание — ED4c.3: показ по контексту создаваемой сущности; фиктивная форма
+без entity ID или незавершённый creation API не добавлены.
+
+### Текущие проверки
+
+25новыхcases/14methods:16icons/Tooltip и9selection/layout. Narrow181/181,
+0failed/0skipped/exit0, `TestResults/InspectorIcons-20261024/narrow-130857356/`:
+command.json, inspector-icons.trx/binlog/stdout/exit.txt. Включены156existingcases.
+Manual clock доказывает499мс без popup и500мс с popup; Dark/Light live switch
+сохраняет тот же непрозрачный popup. Assertion-quality/static test-gap-analysis
+проверены; executed mutations/coverage percentage не заявлены.
+
+| Требование пользователя | Точный тест |
+| --- | --- |
+| «небольшие кнопки с иконками» | `IconActions_UseCompactSemanticSymbolsWhileSchemaChoicesAndRemovedComponentNamesRemainVisible` |
+| «Tooltip при наведении» | `Tooltip_DisabledIconAppearsAtExact500MillisecondsWithoutStealingFocusOrKeepingIdleFrames` |
+| «не отображать панель инспектора если ничего не выбрано» | `Shell_ClearSelectionReclaimsColumnAndRestoresSameInspectorChromeWithoutCommittingDraftOrRetainingFocus` |
+| Возврат после hide и lifecycle | `Tooltip_InputOrContextChangeDisposesOwnedHintWithoutPublishingAnEdit`,8вариантов; `Tooltip_DetachClosesPopupAndReattachmentRequiresFreshHoverWithoutOwningHostOrModel` |
+
+Related suites **UI801/Hosting98/Editor673** в Debug/Release =1572/configuration,
+**3144passed/0failed/0skipped**,6TRX в `TestResults/InspectorChrome-20261024/managed-131042124`.
+SDK10.0.402/net10.0/xUnit2/VSTest. Commands `dotnet test <project>/<project>.csproj
+--artifacts-path TestResults/InspectorChrome-20261024/artifacts -c <Debug|Release>
+--logger "trx;LogFileName=<name>.trx" --results-directory <run> /bl:<run>/<name>.binlog
+-v minimal`. Точные driver scripts — VerifyFinal.ps1/VerifyFinish.ps1, ignored.
+
+Полная nonincremental Debug solution build сначала остановилась на disk-full при
+копировании Skia PDB (`solution-build-131108180`), не на C# ошибке. Удалены только
+ignored artifacts предыдущего неудачного narrow-130533692, отчёты/исходники сохранены.
+Повторный build с `--artifacts-path <unique OS TEMP>` на C: завершился exit0,
+**0errors/1532warnings**, `solution-build-131434548`; path сохранён в summary.json.
+Passing tests не перезапускались из-за ошибки копирования.
+
+Native final `native-131440978/summary.json`: **12/12** source Debug/published Release
+вне repo, empty/legacy/documents/Transform/hierarchy/inspector. **152PNG/16reaped children**,
+validation0errors/0warnings; UI sessions/mappings/GPU resources/handles0. В каждом
+header5/status4 captures с BottomAligned/ResizeGripClear. Inspector8captures:
+empty hidden, disabled Tooltip, Esc hidden-with-scene, icon sections, typed draft,
+dependency error, empty entity Add и real actual-presented preview. Source/binary/
+PNG hashes сохранены и повторно сверены. Финальные Dark Tooltip/Light component/
+hidden viewport screenshots просмотрены; прежние authoring/save/history/preview,
+legacy и document workflows прошли в обеих поставках.
+
+Промежуточный native-130050236 не дошёл до окна: acceptance использовал private
+header Move/Until helpers; сделаны internal для reuse. Preflight native-130311570
+прошёл до финальных visual/lifecycle fixes. Первый narrow177/178 обнаружил stale
+hint после hide: popup удалён, delay state оставался и мешал свежему hover. Добавлен
+cleanup ancestor visibility/host.Closed; новый narrow181/181 включает регрессию.
+Прозрачный фон Tooltip найден на PNG и исправлен до final build/native.
+
+Evidence: `TestResults/InspectorChrome-20261024/verification.json`. Docs/anchors/
+namespaces/diff whitespace проверены. Aether/full solution tests/прочие модули/
+packages/physical DPI/input/performance/VRAM/final alpha не повторены; исторические
+CPU receiver/Mithril races не объявлены исправленными. Далее ED4c.2/3 по плану.
+
+## ED4d: динамический инспектор компонентов — 2026-10-24
+
+По запросу пользователя inspector строит только фактические effective компоненты
+и свойства выбранной сущности по exact schema version. Boolean/Int64/finite Number/
+multiline String и explicit nullable, наследование/default/локальный источник,
+reset, Add/Remove/Restore подключены к общему authoring документу. У пустой сущности
+нет искусственных Transform полей. Unknown type отображается по ID с generic
+scalar editors. Component ID и property key используются в мутациях, подписи — нет.
+
+`ComponentEditBatch` расширяет ту же ISceneAuthoringSession: Set/Reset properties,
+Add/Remove/Restore/ResetRemoval components, expected revision, operation journal,
+one atomic publication/history entry, cancellation и общий resolver. Exact kinds,
+nullable, dependency/multiplicity, built-in Transform validity проверяются до commit.
+Remove local occurrence удаляет addition, inherited — маскирует, очищая instance
+property overrides; Undo возвращает прежний patch. Reset локального addition
+очищает и override, и исходное explicit data property, возвращая schema default.
+Restore и property edits допустимы совместно. Catalogs/definitions неизменны;
+существующий JSON v1 сохраняет patches, новый формат не введён.
+
+`EditorInspectorViewModel` — единый owner drafts/history/preview gates для header,
+hierarchy/status. Прежний Transform View factory заимствует этот state, compatibility
+TransformViewModel оставлен для прямых consumers без второго DI owner. App/Cobalt
+регистрирует model/style/IFactory; родитель владеет созданным View, dependencies
+borrowed. Поля/секции кешируются по ID/key, обычный refresh/theme сохраняет controls,
+focus/selection/scroll. Scalar row отдаёт input оставшуюся ширину; String полноширинный.
+Ctrl+Enter/Esc обрабатывает inspector, Ctrl+Z внутри text editor остаётся его undo.
+External commit/replaced document сохраняет draft с conflict; stale structural action
+отклоняется. IO/runtime/draft/close gates общие. Legacy runtime — readonly.
+
+### Текущие проверки
+
+Windows x64, SDK10.0.402/net10.0/xUnit2/VSTest. **163новыхcases:92engine+71Editor**;
+ещё38существующих DI cases адресно мигрированы. Narrow engine92/92 и Editor109/109
+без failed/skipped, exact commands/TRX/binlog/stdout/exit0 в
+`TestResults/Inspector-20261024/narrow-engine-102423665/` и
+`narrow-editor-103718742/`. Assertion-quality и static pseudo-mutation review проверены;
+executed mutation score/coverage percentage не заявлены. Найденные gaps закрыты
+проверками boundary key128, Restore+Reset и неизменности нетронутого CRLF текста.
+
+| Требование пользователя | Evidence: точный test method |
+| --- | --- |
+| «динамическое представление свойства выделенной сущности» | `Selection_ProjectsOnlyEffectiveComponentsWithExactSchemasKindsAndProvenance` |
+| «показываем редакторы и свойства если они есть у сущности» | `SchemaEditors_UseCheckboxTextAndMultilineControlsAndRemoveSectionsAbsentFromSelection` |
+| «отображение и редактирование компонентов (ECS)» | `SchemaChoices_AddCorrectOccurrenceAndApplyScopedStylesToNewDynamicEditors`; `TypedInputs_CommitBooleanNullIntegerAndMultilineTextAsOneTransactionThroughButtons` |
+| Общий history/tree и один inspector | `Shell_SelectionGenericDraftAndHierarchyMovesShareHistoryAndUseOnlyOneInspector` |
+| Stale action / same-ID document replacement | `StructuralAction_HeadlessCommitOrSameIdentityReplacementRejectsStaleActionUntilFreshAttempt` |
+| DI/ownership | `BothProviders_ShareGenericModelAndCustomStyleWhileFactoriesCreateIndependentParentOwnedInspectors` |
+
+Полные связанные suites: **Aether1142/UI801/Hosting98/Editor648** в Debug и Release,
+**2689/configuration,5378всего,failed/skipped0**. Debug первые3 — `managed-105536563`,
+финальный Editor Debug и все4Release — `managed-105853556`. Production этих первых3
+между проверками не менялся. Commands — `VerifyFinal.ps1`/`VerifyFinish.ps1` в ignored
+`TestResults/Inspector-20261024`: `dotnet test <project>/<project>.csproj
+--artifacts-path TestResults/Inspector-20261024/artifacts -c <Debug|Release>
+--logger "trx;LogFileName=<name>.trx" --results-directory <run> /bl:<run>/<name>.binlog
+-v minimal`. Финальный nonincremental `dotnet build TrueMoon.slnx` с тем же artifacts
+path, `-c Debug --no-incremental -v minimal /bl:<run>/build.binlog` — exit0,
+**0errors/1532warnings**, `solution-build-105946391`. Это4test projects, не full suite.
+
+### Native acceptance и границы
+
+`native-105956351/summary.json`: **12/12** fresh processes, source Debug и published
+framework-dependent Release вне repo: empty/legacy/documents/Transform/hierarchy/
+inspector. **146PNG/16reaped children**, validation0errors/0warnings, UI sessions/
+mappings/GPU resources/handles0. В каждом header5/status4 captures, BottomAligned/
+ResizeGripClear. Source/binary/PNG hashes сохранены и повторно сверены.
+
+Inspector обеих поставок: actual typed controls/input, nullable empty-string/null,
+Int64.MaxValue, multiline Cyrillic/surrogate-pair text, single transaction Undo/Redo,
+reset default7, dependency rejection без частичной публикации, inherited Remove/
+Restore, Add к пустой сущности без Transform, SaveAs/Close/reopen с exact IDs и clean
+history. Footer запускает реальный preview committed revision; actual presented
+stamp и pixels красного куба проверены. Compiler не запускается, fixture source
+не изменён, child drained/reaped. Финальные dark/light/empty/component-error/preview,
+legacy и documents PNG просмотрены; null label spacing исправлен до final run.
+Glyph coverage используемого font не расширялась: emoji хранится точно, на PNG может
+использовать missing glyph. Physical OS input/DPI этим directed UiSession run не доказаны.
+
+Промежуточные attempts сохранены и не засчитаны: native-104411704 — конфликт типов
+параметра Delivery в evidence runner, native-104737874 — status smoke ожидал старый
+Transform View. Исправлены runner и acceptance null guard. native-105120575 прошёл
+Inspector Debug preflight. Первый полный Editor Debug647/648 ожидал текст Transform
+в hierarchy hint; после перехода к любым property drafts assertion адресно обновлён,
+повторный final648/648 в обеих конфигурациях. UI test helpers передают multiline
+через Enter events и ждут deferred binding drain; production ввод не подменён.
+
+Evidence: `TestResults/Inspector-20261024/verification.json`, exact commands/TRX/
+binlogs/JSON/PNG и scripts ignored. Docs/local links/anchors/new namespaces/diff
+whitespace проверены. Full solution tests/прочие модули/NuGet consumers/physical/
+performance/VRAM/final alpha не повторены. Старые CPU FrameReceiver/Mithril ready-file
+races не объявлены исправленными. Runtime ECS World/storage/scheduler, custom editor
+providers, template editing и live runtime transaction не входят в этот срез.
+Далее ED4c.2 persistent names/order, затем ED4c.3 create/delete/duplicate.
+
+## ED4c.1: дерево сущностей и Reparent — 2026-10-24
+
+Первый срез по запросу «показ иконок, возможность перемещать и редактировать дерево
+и объекты». Общий `TreeView/ITreeView` в Argentis принимает frozen forest, рисует
+геометрические Entity/Cube/Interaction и disclosure, поддерживает expansion,
+selection, keyboard/reveal/scroll и parent move requests. View/Data/Style Editor
+зарегистрированы через App/Cobalt/`IFactory<EditorHierarchyView>`; App владеет
+model/style, родитель — созданным View. Подписки снимаются, borrowed зависимости
+не освобождаются View. Существующие constructor consumers/legacy flat list сохранены.
+
+`ReparentBatch` расширяет ту же ISceneAuthoringSession, expected revision, receipt
+journal, cancellation, atomic resolver validation и Undo/Redo. Новый parent
+сохраняет local component values/Transform и definition inheritance; мировое
+положение может измениться. Self/cycles/missing targets/duplicates/stale intent
+отвергаются без частичной публикации. ParentId уже входит в scene JSON v1, новый
+UI-only формат не введён. Guid order сохраняется. Rename/sibling order и
+create/delete/duplicate остаются ED4c.2/3.
+
+Editor переносит на сущность или в пустую область дерева/«В корень»; Ctrl+Left/Right
+выполняют outdent/indent. Общий выбор обновляет Transform inspector, история
+смешивает parent и Transform edits, Save/reopen и committed Edit Preview используют
+прежних owners. IO/runtime/exit/Transform draft/conflict закрывают admission.
+Каждый committed snapshot отменяет drag. Дополнительно исправлен stale gesture:
+Move фиксирует ожидаемый document до Refresh и отклоняет unseen headless commit
+или замену документа с теми же IDs. Диагностика read-only, доступна для копирования.
+Workspace кеширует семантические nodes; root style не обходит nested View.
+
+### Текущие автоматические проверки
+
+Windows x64, SDK10.0.402/net10.0/xUnit2/VSTest. Новые71test methods/130cases:
+engine42, TreeView41, Editor47. Исходные изолированные Debug команды/TRX/log/binlog:
+`TestResults/Hierarchy-20261024/narrow-135848457/`, финальные
+`engine-reparent-final.trx`, `treeview-draw-final.trx`, `editor-hierarchy-stale.trx`;
+все130passed/0failed/0skipped. Проверка assertions и plausible caller-visible
+mutations закрыла gaps receipt source comparison, exact cancellation exception,
+direct Draw icon routing, equal SetItems gesture cancellation и stale document.
+Mutation execution/coverage percentages не заявлены.
+
+| Requirement | Evidence: точный test method |
+| --- | --- |
+| «показ иконок» | `Draw_DisclosureAndPerItemIconsUseDeclaredSymbolsAndHierarchyDepth` |
+| «возможность перемещать» | `PointerDrag_ParentAndBlankRootDropsPublishRequestsWithoutChangingItems` |
+| «редактировать дерево и объекты» | `Shell_TreeSelectionTransformCommitParentMoveAndKeyboardHistoryShareOneRetainedDocument` |
+| Сохранение local Transform и общий history | `History_TransformAndReparentUseOneUndoRedoStackAndRestoreContentCheckpoints` |
+| Stale headless commit / same-ID replacement | `Move_HeadlessCommitOrSameIdentityDocumentReplacementRejectsStaleGestureUntilFreshAttempt`, оба варианта |
+| DI и product ownership | `BothProviders_ShareModelAndCustomStyleWhileFactoriesCreateIndependentParentOwnedTrees` |
+
+Полные связанные test projects Debug/Release: Aether1050, UI801, Hosting98,
+Editor577 = **2526/configuration,5052cases**, failed/skipped0. Это четыре проекта,
+не full solution tests. `managed-091444455` содержит8TRX; после финальной правки
+UI-подсказки Editor577/configuration повторён в `finish-092447200`,2TRX.
+Остальные production исходники между этими проверками не менялись.
+
+Команды воспроизводятся `VerifyFinal.ps1` и `VerifyFinish.ps1` в ignored
+`TestResults/Hierarchy-20261024/`: `dotnet test <project>/<project>.csproj
+--artifacts-path TestResults/Hierarchy-20261024/artifacts -c <Debug|Release>
+--logger "trx;LogFileName=<project>-<configuration>.trx" --results-directory <run>
+/bl:<run>/<name>.binlog -v minimal`. Все commands завершились exit0.
+Финальный `dotnet build TrueMoon.slnx --artifacts-path
+TestResults/Hierarchy-20261024/artifacts --no-incremental -c Debug -v minimal
+/bl:<finish>/solution-build.binlog`: exit0,0errors/1532warnings. Native runner
+отдельно собирает Editor Debug/Release и framework-dependent Release publish.
+
+### Native acceptance и границы
+
+Финальный `native-092503209/summary.json`: **10/10** source Debug/published Release
+processes вне repo: empty, legacy game, documents, Transform, hierarchy.
+Всего118PNG/14reaped children; каждый report: UI sessions/mappings/GPU resources/
+handles0, validation0errors/0warnings. Header5/status4 captures в каждом процессе,
+включая BottomAligned/ResizeGripClear. Source/binary/PNG fingerprints сохранены
+и сверены. Финальные dark hierarchy, published light preview, legacy light и
+authoring documents PNG просмотрены; glyph-подсказка исправлена на Ctrl+Left/Right.
+
+Hierarchy в обеих поставках: реальный pointer selection/drag, local Changes и
+definition identity сохранены, один history entry, collapse/reveal, Ctrl+Z/Y,
+retained theme/inspector, SaveAs/Close/Open и persisted ParentId с пустым ephemeral
+history. «В корень» и Undo возвращают clean saved checkpoint. Footer запускает
+реальный Edit Preview, actual presented revision и пиксели parented cube проверены;
+один child drained/reaped, compiler не запущен, исходная fixture не изменена.
+Старые document/Transform/legacy сценарии адаптированы к общему дереву.
+
+Промежуточные native attempts не засчитаны: `native-090921771` остановился в
+старом header menu wait; `native-091619401` — document Capture, ожидавший старую
+длинную строку status; `native-091931087` — отложенный focus assertion header.
+Document Capture теперь проверяет typed summary и отдельный bound entity count.
+Header driver ждёт action нужной группы и повторяет только открытие dismissed
+popup, никогда application command; focus после close проверяется в том же
+owner callback, до дальнейших native FocusLost. После этих исправлений
+`native-092055591` прошёл10/10; финальная glyph-правка повторена в указанном
+`native-092503209`. Это улучшение directed driver, не доказательство причины
+любых исторических физических input failures.
+
+Evidence: `TestResults/Hierarchy-20261024/verification.json`, TRX/log/binlog/JSON/
+PNG и scripts ignored. Общие plans/status/README/default style, ссылки/anchors,
+namespaces новых файлов и diff whitespace проверены отдельно. Не запускались
+full solution tests/новые NuGet consumers/physical DPI-input/performance/VRAM/
+Vulkan UI effect matrix/final alpha. Старые CPU FrameReceiver и Mithril ready-file
+race не объявлены исправленными; K7 workaround search не возобновлялся.
+
+## ED4b: выравнивание статусбара — 2026-10-24
+
+По скриншоту убрана пустая нижняя строка16logical: default WindowFrame больше
+не резервирует высоту под grip, рисуя его поверх правого нижнего угла content.
+StatusBar28 доходит до внутреннего бордера; его View/Bar bounds совпадают.
+Правый отступ24 сохраняет доступность details рядом с grip16; DI/preview/actions
+и retained View/Data/Style не менялись.
+
+Narrow57/57; UI760/Hosting98/Editor530 Debug/Release =1388/configuration,
+failed/skipped0.2native empty cases source Debug/published Release вне repo,
+20PNG,zero owned UI/GPU/mappings,View disposed,compiler/children не запускались.
+Dark/Light PNG просмотрены. Resize/scale1/1.5/2/maximize/restore/theme/idle и
+region metadata проверены регрессией; native smoke подтверждает bottom alignment.
+[Причина, exact tests/commands и границы](../alloy/HISTORY.md#pa4b-выравнивание-statusbar-по-нижней-границе--2026-10-24).
+Evidence: TestResults/StatusBarAlignment-20261024/verification.json.
+Full solution/Aether/headless/legacy/Transform native/physical input не повторены.
+Прежние CPU receiver/Mithril fixture issues и порядок работ не изменены.
+
 ## ED4b: компактная строка состояния — 2026-10-24
 
 Согласованный дизайн реализован:28logical footer,12text/14icons/24targets,

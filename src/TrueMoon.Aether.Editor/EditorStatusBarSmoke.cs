@@ -18,8 +18,16 @@ internal static class EditorStatusBarSmoke
         await ui.InvokeAsync(() =>
         {
             Require(footer.Bounds.Height == 28 && footer.SummaryButton.FontSize == 12, "Compact status dimensions changed.");
+            var frame = (WindowFrame)ui.Root;
+            var client = frame.Bounds.Deflate(frame.Padding);
+            Require(footer.Bounds.Y + footer.Bounds.Height == client.Y + client.Height && footer.Bar.Bounds == footer.Bounds,
+                "Status bar has an extra bottom row or unused container height.");
+            Require(frame.ResizeGrip is not { IsVisible: true } grip ||
+                footer.DetailsButton.Bounds.X + footer.DetailsButton.Bounds.Width <= grip.Bounds.X,
+                "Resize grip overlaps the status actions.");
             Require(footer.DetailsButton.Bounds.Width == 24 && footer.DetailsButton.Bounds.Height == 24, "Details target changed.");
-            Require(!view.Transform!.PreviewActions.IsVisible && !view.Transform.PreviewStatus.IsVisible, "Legacy inspector Preview remains visible.");
+            Require(view.Transform == null || !view.Transform.PreviewActions.IsVisible && !view.Transform.PreviewStatus.IsVisible,
+                "Legacy inspector Preview remains visible.");
             Require(!footer.SummaryButton.Value.Contains("Tick") && !footer.SummaryButton.Value.Contains("PID"), "Diagnostics leaked into the primary status.");
         }).WaitAsync(token);
         await Capture("status-bar.png");
@@ -69,7 +77,8 @@ internal static class EditorStatusBarSmoke
         await Until(() => !ui.NeedsUpdate);
         File.WriteAllText(Path.Combine(directory, "status.json"), JsonSerializer.Serialize(new
         {
-            Passed = true, Compact = true, Details = true, Preview = true, ThemeRetention = true,
+            Passed = true, Compact = true, BottomAligned = true, ResizeGripClear = true,
+            Details = true, Preview = true, ThemeRetention = true,
             Dismissal = true, InspectorPreviewHidden = true, Captures = captures
         }, new JsonSerializerOptions { WriteIndented = true }));
 

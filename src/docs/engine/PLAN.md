@@ -816,6 +816,31 @@ reset edits, полный audit/discovery/completion API и runtime edits ост
 
 ### Edit preview: первый engine profile — 2026-10-23
 
+Уточнение приоритета2026-10-24: для [ED4c.1](EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24)
+реализован следующий минимальный ARCH1b срез — atomic ReparentBatch через ту же
+ISceneAuthoringSession, receipt journal, revision и Undo/Redo, что Transform edits.
+Сохраняются local component values и definition inheritance; candidate graph и
+composed transforms проверяются общим resolver до единой публикации. Missing/
+self/cyclic parents, stale/duplicate intent и cancellation не допускают частичной
+мутации. JSON v1 уже хранит ParentId, отдельный UI-only формат не требуется.
+Persistent rename/sibling order и create/delete следуют в ED4c.2/3 с собственными
+contracts/compatibility; текущий Guid order не меняется неявно.
+
+Уточнение приоритета2026-10-24 после дерева: [ED4d динамический inspector](EDITOR_PLAN.md#ed4d-динамический-инспектор-компонентов--начат-2026-10-24)
+расширяет тот же ARCH1b минимальным ComponentEditBatch для scalar Set/Reset и
+component Add/Remove/Restore/ResetRemoval. Общие exact schemas/resolution,
+revision/receipts/history сохраняются; definitions не мутируются. Данные уже
+представимы в scene JSON v1. ECS authoring не требует заранее вводить runtime
+World/storage/scheduler; live runtime и игровые системы данным срезом не меняются.
+
+Реализовано2026-10-24: общий `EditComponents` публикует frozen batch атомарно,
+Set меняет только указанные поля; Reset убирает instance override и исходное явное
+значение локально добавленного компонента. Restore+Reset допустимы в одной batch.
+Remove очищает property overrides occurrence, Undo возвращает весь patch.
+Общий resolver проверяет exact kinds/nullability, multiplicity/requiredTypes и
+built-in Transform; ошибки не меняют committed state или history. Результаты —
+[ED4d HISTORY](HISTORY.md#ed4d-динамический-инспектор-компонентов--2026-10-24).
+
 Следующий запрос пользователя реализует шаг4 после ARCH1b.1. Общий engine API,
 bootstrap и native acceptance находятся в Aether; прикладное подключение к
 редактору остаётся [ED5](EDITOR_PLAN.md#ed5-edit-preview-и-инструменты-viewport).

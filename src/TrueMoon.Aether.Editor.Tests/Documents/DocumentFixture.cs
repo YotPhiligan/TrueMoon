@@ -115,6 +115,8 @@ internal static class DocumentData
         public Action? BeforeDispose { get; set; }
         public SceneAuthoringState Read() { BeforeRead?.Invoke(); return inner.Read(); }
         public SceneAuthoringResult Apply(TransformEditBatch batch, CancellationToken cancellationToken = default) => inner.Apply(batch, cancellationToken);
+        public SceneAuthoringResult Reparent(ReparentBatch batch, CancellationToken cancellationToken = default) => inner.Reparent(batch, cancellationToken);
+        public SceneAuthoringResult EditComponents(ComponentEditBatch batch, CancellationToken cancellationToken = default) => inner.EditComponents(batch, cancellationToken);
         public SceneAuthoringResult Undo(AuthoringOperation operation, CancellationToken cancellationToken = default) => inner.Undo(operation, cancellationToken);
         public SceneAuthoringResult Redo(AuthoringOperation operation, CancellationToken cancellationToken = default) => inner.Redo(operation, cancellationToken);
         public void Dispose() { Disposals++; BeforeDispose?.Invoke(); inner.Dispose(); }

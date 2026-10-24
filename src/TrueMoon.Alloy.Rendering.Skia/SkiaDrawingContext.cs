@@ -4,7 +4,7 @@ using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Rendering.Skia;
 
-internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources, SKSurface? surface = null) : IDrawingContext, ITextLayoutService, IRichTextLayoutService, IRichTextDrawingContext, IBackdropDrawingContext
+internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources, SKSurface? surface = null) : IDrawingContext, ITextLayoutService, IRichTextLayoutService, IRichTextDrawingContext, IBackdropDrawingContext, IOpacityDrawingContext
 {
     // Contexts are created at the surface's root clip, before Element.Draw narrows it.
     private readonly SKRectI _surfaceBounds = canvas.DeviceClipBounds;
@@ -14,6 +14,15 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
     public void Restore() => canvas.Restore();
     public void Clip(Rect rectangle) => canvas.ClipRect(Rect(rectangle));
     public void Translate(float x, float y) => canvas.Translate(x, y);
+    public void SaveOpacity(Rect bounds, float opacity)
+    {
+        resources.VerifyRichTextAccess();
+        if (!float.IsFinite(bounds.X) || !float.IsFinite(bounds.Y) || !float.IsFinite(bounds.Width) || !float.IsFinite(bounds.Height) || bounds.Width < 0 || bounds.Height < 0)
+            throw new ArgumentOutOfRangeException(nameof(bounds));
+        if (!float.IsFinite(opacity) || opacity < 0 || opacity > 1) throw new ArgumentOutOfRangeException(nameof(opacity));
+        using var paint = new SKPaint { Color = new SKColor(255, 255, 255, (byte)MathF.Round(opacity * 255)) };
+        canvas.SaveLayer(Rect(bounds), paint);
+    }
     public void Fill(Rect rectangle, Color color, float radius = 0)
     { var paint = resources.Paint(Color(color), SKPaintStyle.Fill); canvas.DrawRoundRect(Rect(rectangle), radius, radius, paint); }
     public void Stroke(Rect rectangle, Color color, float width = 1, float radius = 0)

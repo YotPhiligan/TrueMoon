@@ -37,7 +37,8 @@ internal static class EditorHeaderSmoke
         }).WaitAsync(token);
         await Capture("header-expanded.png");
         await ui.InvokeAsync(() => Click(ui, header.Menu.Headings["view"])).WaitAsync(token);
-        await UntilAsync(ui, () => view.Overlays.Popup != null && !ui.NeedsUpdate, token);
+        await UntilAsync(ui, () => header.Menu.IsMenuOpen && view.Overlays.Popup!.Children.OfType<MenuItem>().Any(item => item.ActionId == "view.theme") && !ui.NeedsRender, token,
+            () => HoldGroup(ui, header.Menu, view.Overlays, "view"));
         await Capture("header-menu.png");
         var oldSurface = header.Theme.Surface;
         await ClickActionAsync(ui, view, "view", "view.theme", token);
@@ -55,10 +56,13 @@ internal static class EditorHeaderSmoke
             Require(header.BrandIcon.Bounds == brand && header.Menu.MoreButton.Bounds == disclosure, "Click moved the brand or disclosure.");
         }).WaitAsync(token);
         await Capture("header-file-menu.png");
-        await ui.InvokeAsync(() => Click(ui, header.Menu.MoreButton)).WaitAsync(token);
+        await ui.InvokeAsync(() =>
+        {
+            Click(ui, header.Menu.MoreButton);
+            Require(header.Menu.MoreButton.IsFocused && view.Overlays.Popup == null,
+                "Second disclosure click must close File and retain a focus target.");
+        }).WaitAsync(token);
         await UntilAsync(ui, () => header.Menu.RevealProgress == 0 && !ui.NeedsUpdate, token);
-        await ui.InvokeAsync(() => Require(header.Menu.MoreButton.IsFocused && view.Overlays.Popup == null,
-            "Second disclosure click must close File and retain a focus target.")).WaitAsync(token);
         await ui.InvokeAsync(() =>
         {
             ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F10));
@@ -109,7 +113,8 @@ internal static class EditorHeaderSmoke
         await UntilAsync(ui, () => menu.RevealProgress == 1 && !ui.NeedsRender, token,
             () => { if (!menu.IsExpanded) ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F10)); });
         await ui.InvokeAsync(() => Click(ui, menu.Headings[group])).WaitAsync(token);
-        await UntilAsync(ui, () => view.Overlays.Popup != null && !ui.NeedsRender, token);
+        await UntilAsync(ui, () => menu.IsMenuOpen && view.Overlays.Popup!.Children.OfType<MenuItem>().Any(item => item.ActionId == action) && !ui.NeedsRender, token,
+            () => HoldGroup(ui, menu, view.Overlays, group));
         await ui.InvokeAsync(() =>
         {
             var item = view.Overlays.Popup!.Children.OfType<MenuItem>().Single(row => row.ActionId == action);
@@ -117,7 +122,15 @@ internal static class EditorHeaderSmoke
             Click(ui, item);
         }).WaitAsync(token);
     }
-    private static async Task UntilAsync(UiSession ui, Func<bool> condition, CancellationToken token, Action? holdInput = null)
+    // Native focus changes can legitimately dismiss an owned popup between directed gestures.
+    // Retry only opening this group; never repeat an application command.
+    private static void HoldGroup(UiSession ui, MenuBar menu, OverlayHost overlays, string group)
+    {
+        if (overlays.Popup != null) return;
+        if (!menu.IsExpanded) ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F10));
+        if (menu.RevealProgress == 1) Click(ui, menu.Headings[group]);
+    }
+    internal static async Task UntilAsync(UiSession ui, Func<bool> condition, CancellationToken token, Action? holdInput = null)
     {
         while (true)
         {
@@ -125,7 +138,7 @@ internal static class EditorHeaderSmoke
             if (ready) return; await Task.Delay(10, token);
         }
     }
-    private static void Move(UiSession ui, Element element) => ui.HandleInput(new(InputKind.PointerMove,
+    internal static void Move(UiSession ui, Element element) => ui.HandleInput(new(InputKind.PointerMove,
         element.Bounds.X + element.Bounds.Width / 2, element.Bounds.Y + element.Bounds.Height / 2));
     internal static void Click(UiSession ui, Element element)
     {

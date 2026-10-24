@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Aether.Editing;
@@ -14,13 +14,13 @@ public sealed class EditorStatusBarViewModel : INotifyPropertyChanged, IDisposab
 {
     private readonly EditorViewModel _editor;
     private readonly EditorDocumentViewModel _documents;
-    private readonly EditorTransformViewModel _transform;
+    private readonly EditorInspectorViewModel _transform;
     private bool _disposed;
     private string _summary = "", _entities = "", _runtime = "", _operation = "", _preview = "", _previewDetails = "", _error = "";
     private EditorStatusKind _kind;
     private bool _canCancel, _canPreview, _canStopPreview;
     /// <summary>Creates presentation without taking ownership of the injected models.</summary>
-    public EditorStatusBarViewModel(EditorViewModel editor, EditorDocumentViewModel documents, EditorTransformViewModel transform)
+    public EditorStatusBarViewModel(EditorViewModel editor, EditorDocumentViewModel documents, EditorInspectorViewModel transform)
     {
         ArgumentNullException.ThrowIfNull(editor); ArgumentNullException.ThrowIfNull(documents); ArgumentNullException.ThrowIfNull(transform);
         _editor = editor; _documents = documents; _transform = transform;

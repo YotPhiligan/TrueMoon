@@ -3,6 +3,7 @@ using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Scenes.Authoring;
 using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Editor.Hierarchy;
 
 namespace TrueMoon.Aether.Editor;
 
@@ -13,16 +14,20 @@ public sealed class EditorWorkspace
     private readonly SceneSnapshot _initialScene;
     private SceneAuthoringState? _document;
     private string? _selected;
+    private IReadOnlyList<HierarchyItem> _hierarchy = [];
+    private IReadOnlyList<string> _entityIds = [];
     public EditorWorkspace(SceneSnapshot scene, bool hasProject = true)
     {
-        ArgumentNullException.ThrowIfNull(scene); Scene = _initialScene = scene; HasProject = hasProject; _entities = scene.CopyEntities().ToArray(); _selected = _entities.FirstOrDefault()?.Id;
+        ArgumentNullException.ThrowIfNull(scene); Scene = _initialScene = scene; HasProject = hasProject; _entities = scene.CopyEntities().ToArray();
+        UpdateHierarchy(); _selected = _entityIds.FirstOrDefault();
     }
     public SceneSnapshot Scene { get; private set; }
     /// <summary>Gets whether build/game actions have an explicitly selected project.</summary>
     public bool HasProject { get; }
     public int EntityCount => _document?.Document.Entities.Length ?? _entities.Length;
-    public IReadOnlyList<string> EntityIds => _document == null ? Array.AsReadOnly(_entities.Select(x => x.Id).ToArray()) :
-        _document.Resolved.HierarchyOrder.Select(id => id.Value.ToString("D")).ToArray();
+    public IReadOnlyList<string> EntityIds => _entityIds;
+    /// <summary>Gets stable immutable parent/name/role data for the current scene revision.</summary>
+    public IReadOnlyList<HierarchyItem> HierarchyItems => _hierarchy;
     public string? SelectedId => _selected;
     public SessionState State { get; private set; } = SessionState.Stopped;
     public GameEditorOperation Operation { get; private set; }
@@ -39,16 +44,37 @@ public sealed class EditorWorkspace
     public void SetDocument(SceneAuthoringState? document)
     {
         if (ReferenceEquals(_document?.Document, document?.Document)) return;
+        var previousScene = Scene.Id;
         _document = document;
         Scene = document == null ? _initialScene : new(document.Document.Id.Value.ToString("D"), document.Document.Revision, []);
-        if (_selected == null || !EntityIds.Contains(_selected)) _selected = EntityIds.FirstOrDefault();
+        UpdateHierarchy();
+        if (previousScene != Scene.Id || _selected != null && !EntityIds.Contains(_selected)) _selected = EntityIds.FirstOrDefault();
         SceneChanged?.Invoke(); SelectionChanged?.Invoke();
+    }
+    private void UpdateHierarchy()
+    {
+        _hierarchy = Array.AsReadOnly(_document == null ? _entities.Select(entity => new HierarchyItem(entity.Id, null, EditorScene.Name(entity.Id),
+            entity.Interactive ? HierarchyItemKind.Interactive : entity.Primitive != null ? HierarchyItemKind.Renderable : HierarchyItemKind.Entity)).ToArray() :
+            _document.Resolved.HierarchyOrder.Select(id =>
+            {
+                var entity = _document.Resolved.Entities[id]; var key = id.Value.ToString("D");
+                var kind = entity.Components.Values.Any(c => c.TypeId == BuiltInComponents.InteractionId) ? HierarchyItemKind.Interactive :
+                    entity.Components.Values.Any(c => c.TypeId == BuiltInComponents.AppearanceId) ? HierarchyItemKind.Renderable : HierarchyItemKind.Entity;
+                return new HierarchyItem(key, entity.ParentId?.Value.ToString("D"), EditorScene.Name(key), kind);
+            }).ToArray());
+        _entityIds = Array.AsReadOnly(_hierarchy.Select(item => item.Id).ToArray());
     }
     public void Select(string id)
     {
         ArgumentNullException.ThrowIfNull(id);
         if (!EntityIds.Contains(id)) throw new ArgumentException("Entity is not in this scene.", nameof(id));
         if (_selected == id) return; _selected = id; SelectionChanged?.Invoke();
+    }
+    /// <summary>Clears inspection while retaining the scene and all entities.</summary>
+    public void ClearSelection()
+    {
+        if (_selected == null) return;
+        _selected = null; SelectionChanged?.Invoke();
     }
     public void Refresh(SessionStatus runtime, GameEditorStatus editor, Exception? commandError = null)
     {

@@ -147,6 +147,16 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     /// <returns>The original engine receipt.</returns>
     public SceneAuthoringResult Apply(TransformEditBatch batch, CancellationToken cancellationToken = default)
     { lock (_gate) { VerifyEditable(); return Current.Apply(batch, cancellationToken); } }
+    /// <summary>Changes scene parents through the same engine session and history as Transform edits.</summary>
+    /// <param name="batch">Atomic parent changes.</param><param name="cancellationToken">Before-commit cancellation.</param>
+    /// <returns>Engine receipt.</returns>
+    public SceneAuthoringResult Reparent(ReparentBatch batch, CancellationToken cancellationToken = default)
+    { lock (_gate) { VerifyEditable(); return Current.Reparent(batch, cancellationToken); } }
+    /// <summary>Edits component values and presence through the shared engine history.</summary>
+    /// <param name="batch">Atomic scalar and presence changes.</param><param name="cancellationToken">Before-commit cancellation.</param>
+    /// <returns>The engine receipt.</returns>
+    public SceneAuthoringResult EditComponents(ComponentEditBatch batch, CancellationToken cancellationToken = default)
+    { lock (_gate) { VerifyEditable(); return Current.EditComponents(batch, cancellationToken); } }
     /// <summary>Restores prior content using the existing engine history.</summary>
     /// <param name="operation">Engine operation identity.</param><param name="cancellationToken">Before-commit cancellation.</param>
     /// <returns>Engine receipt.</returns>

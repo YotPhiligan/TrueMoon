@@ -507,7 +507,47 @@ narrow geometry и hidden input, popup ownership/theme/dismissal, both DI provid
 Проверено: UI759/Hosting98/Editor527 Debug/Release =1384/configuration;6native
 cases/68PNG/12reaped children. [Evidence/границы](HISTORY.md#ed4b-компактная-строка-состояния--2026-10-24).
 
+Уточнение разметки2026-10-24: StatusBar высотой28 доходит до внутреннего нижнего
+бордера окна без пустой полосы. Общая рамка размещает resize grip16 поверх
+правого нижнего угла; имеющийся отступ справа24 защищает footer actions.
+Высота и положение footer согласованы при resize, maximize/restore и смене темы.
+
 ## ED4. Рабочие панели и инспектор
+
+### ED4c. Обозреватель сущностей — начат 2026-10-24
+
+По запросу пользователя следующий UI срез — настоящее дерево вместо плоского
+списка: иконки, parent/child связи, раскрытие, выбор и синхронизация с инспектором.
+Общий TreeView/ITreeView принадлежит Argentis; прикладные View/Data/Style и
+типизированная фабрика — Editor. Изменения документа идут через общий authoring
+API/history, с expected revision и проверкой актуального document owner.
+
+1. **ED4c.1 — реализован 2026-10-24.** Иконки обычной/renderable/interactive сущности,
+   раскрытие ветвей, один выбор, клавиатура и scroll reveal. Перенос на сущность
+   меняет родителя, перенос в пустую область/«В корень» снимает родителя;
+   Ctrl+←/→ дают keyboard outdent/indent. Общая engine Reparent transaction
+   сохраняет локальный Transform и inheritance; запрещает self/cycles/missing
+   targets, stale revision и правки во время IO/runtime/Transform draft.
+   Undo/Redo, dirty/save/reopen и committed Edit Preview используют прежних owners.
+2. **ED4c.2 — имена и порядок.** Сначала persistent engine metadata/формат и
+   операции history: имя экземпляра и sibling order, совместимое чтение старых
+   сцен. Затем inline rename (F2/Enter/Esc), before/after drop и клавиши перестановки.
+   Нельзя хранить эти правки только в UI или подменять устойчивый ID именем.
+3. **ED4c.3 — операции объектов.** Общий create/delete/duplicate с явной политикой
+   descendants/references и один UI gesture = одна transaction. Поиск, контекстное
+   меню и согласованные команды добавляются к тому же обозревателю.
+4. **Дальше по workload.** Multiselect/batch moves, autoscroll/autoexpand при drag,
+   virtualization, camera/world-preserving reparent и расширяемые icon providers.
+
+Первый срез сохраняет Guid order родителей/соседей, не обещает rename/reorder.
+Данные/состояние не содержат controls/тему; UI хранит только expansion/gesture/focus.
+Theme/refresh сохраняют дерево/выбор/scroll; смена snapshot/detach/FocusLost/Esc
+отменяет незавершённый drag. Иконки геометрические, чужие OS данные не принимаются.
+Проверки: прямые engine/TreeView/Editor/DI tests и native перенос→Undo/Redo→Save/reopen.
+Текущие результаты и ограничения — в [STATUS](STATUS.md), точные команды —
+в [HISTORY](HISTORY.md#ed4c1-дерево-сущностей-и-reparent--2026-10-24).
+Следующий конкретный шаг — ED4c.2: сохраняемые имена/порядок через общие engine
+contracts/history, затем UI rename/reorder; ED4c.3 остаётся открытым.
 
 - [ ] Иерархия сцены отражает реальные parent relationships: выбор, раскрытие,
   поиск и синхронизация с inspector; размер/virtualization проверяются на заданном workload.
@@ -524,6 +564,84 @@ cases/68PNG/12reaped children. [Evidence/границы](HISTORY.md#ed4b-ком�
 keyboard/focus/selection/scroll сохраняются при точечных обновлениях и смене темы.
 Удаление выбранного объекта, закрытие панели и ошибки редактора свойства не оставляют
 живых subscriptions или действий над уже закрытым документом.
+
+### ED4d. Динамический инспектор компонентов — начат 2026-10-24
+
+Реализован2026-10-24: retained `EditorInspectorView`/Data/Style, schema-driven
+scalar/null/multiline editors, provenance/reset, Add/Remove/Restore и общий
+`ComponentEditBatch`/history/Save/reopen/preview. Подробные фактические проверки —
+в [HISTORY](HISTORY.md#ed4d-динамический-инспектор-компонентов--2026-10-24).
+Этот authoring-срез не закрывает полный ED4 или runtime ECS.
+
+Уточнение UX2026-10-24 по скриншоту: основные действия — icon-only targets26
+(reset24), геометрические символы и semantic names; Apply/Cancel/Undo/Redo/Add
+собраны в одну строку, Delete рядом с заголовком компонента. Tooltip появляется
+через500мс, в том числе у недоступных действий, не меняет focus и закрывается
+при вводе/уходе/scroll/смене контекста. Используется существующий OverlayHost.
+Schema choices и подписи скрытых компонентов остаются текстом, чтобы различать цели.
+Без selected entity инспектор целиком скрыт; viewport постоянно занимает всю рабочую область (уточнение ED4e ниже);
+Esc в обозревателе сначала отменяет drag, затем снимает выбор. Сам View остаётся
+parent-owned и возвращается при выборе. В ED4c.3 создание открывает inspection
+созданной сущности; отдельный UI до появления entity ID требует явного creation
+context тогда, а не пустого инспектора при обычном запуске приложения.
+
+Приоритет по запросу пользователя после ED4c.1: inspector строит секции только
+существующих компонентов выбранной сущности, поля — по точной component/property
+schema. Поддержать Boolean, Int64, finite Number, многострочный String и explicit
+null для nullable; неизвестные типы не выдавать за Transform. Показывать provenance
+и reset instance override к inherited/schema default. Устойчивые адреса —
+EntityId/ComponentId/property key; визуальное имя не участвует в мутациях.
+
+Сначала общий atomic ComponentEditBatch в существующей ISceneAuthoringSession:
+Set/Reset property и Add/Remove/Restore/ResetRemoval component. Одна transaction,
+expected revision, receipt journal, общие resolver/schema/dependency/multiplicity
+checks и Undo/Redo. Локальное удаление убирает occurrence, унаследованное — маскирует;
+удаление очищает instance property overrides этого occurrence, Undo восстанавливает
+весь прежний patch. Definition catalogs не меняются. JSON v1 уже хранит эти данные.
+
+Единый Inspector ViewModel владеет property drafts и прежними history/preview gates;
+header/status/hierarchy используют тот же state. Во время draft/conflict нельзя
+менять состав компонентов или родителя; external revision сохраняет draft и
+требует явного cancel. Selection change переключает draft на текущую сущность.
+Смена темы/обычный refresh сохраняют поля/фокус/выделение/scroll; структурные правки
+меняют только затронутые секции. View/Data/Style и IFactory через App/Cobalt.
+Generic редакторы выбираются по scalar kind; новый custom UI editor provider,
+runtime World/ECS storage/scheduler, изменение templates и live runtime editing
+не prerequisites и не входят в этот authoring-срез. Legacy runtime остаётся read-only.
+
+Acceptance: direct engine tests + typed model/UI/DI tests; selection → scalar/null/
+multiline edits → Apply → Undo/Redo → component Add/Remove/Restore → Save/reopen →
+actual Edit Preview. Отдельно stale document, no-Transform/empty entity, dependency
+failure, boundaries, retained UI/theme и ownership. Текущая готовность — в STATUS;
+ED4c.2/3 сохраняются следующими этапами после этого уточнения приоритета.
+
+### ED4e. Панели-островки поверх viewport — 2026-10-24
+
+Согласованная компоновка: viewport постоянно занимает всю рабочую область между
+верхними controls и status bar. Обозреватель закреплён слева, контекстный инспектор
+справа поверх сцены; появление инспектора не меняет viewport/camera framing.
+Видимый отступ16logical pixels, скругление8, тонкая граница и мягкая локальная тень.
+Высота следует содержимому до доступного предела, длинные панели прокручиваются;
+в узком окне ширины ограничиваются без пересечения островков.
+
+Отдельный `Theme.PanelBackdrop` использует общий backdrop механизм: размывается
+ранее нарисованная сцена, foreground/fields остаются чёткими. Dark/Light заданы
+темой; null возвращает непрозрачный Surface, неподдерживающий backend — material
+fallback. Родительский стиль не обходит внутренности вложенных View.
+
+Parent-owned `EditorIsland` применяет fade/slide8px за160мс через существующий
+frame clock и общую group opacity. Closing сразу запрещает ввод в содержимое;
+завершение скрывает островок, detach завершает переход без фонового таймера.
+Начальное состояние без selection скрыто сразу. Переоткрытие не пересоздаёт View.
+Панель перехватывает ввод внутри своих bounds, свободная сцена доступна снаружи;
+общий OverlayHost сохраняет menu/Tooltip выше островков.
+
+Первый срез — закреплённые островки. Свободные drag/resize/docking, скрытие
+обозревателя отдельной командой и выбор качества blur требуют отдельного UX/задачи.
+Acceptance: bounds/paint/input/narrow/theme/retention/interrupt/detach tests,
+raster group compositing и native source Debug/published Release с actual preview,
+Dark/Light/null material и проверкой прежних document/hierarchy/history сценариев.
+Это не physical DPI, VRAM или performance acceptance и не завершение ED4/ED5.
 
 ## ED5. Edit preview и инструменты viewport
 

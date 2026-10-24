@@ -13,6 +13,16 @@ public interface ISceneAuthoringSession : IDisposable
     /// <returns>Terminal receipt. Exact duplicates return their original receipt even after later edits/cancellation.
     /// Changed payload with an existing ID is rejected. Cancelled/unexpected preparation failures retain no receipt.</returns>
     SceneAuthoringResult Apply(TransformEditBatch batch, CancellationToken cancellationToken = default);
+    /// <summary>Commits atomic scene parent changes, preserving local Transforms and definition inheritance.</summary>
+    /// <param name="batch">Frozen identity, expected revision and parent changes.</param>
+    /// <param name="cancellationToken">Before-commit cancellation.</param>
+    /// <returns>Shared journal receipt; invalid parent graphs leave content and history unchanged.</returns>
+    SceneAuthoringResult Reparent(ReparentBatch batch, CancellationToken cancellationToken = default);
+    /// <summary>Atomically edits scalar overrides and component presence using exact schemas and shared history.</summary>
+    /// <param name="batch">Frozen instance edits; definitions remain unchanged.</param>
+    /// <param name="cancellationToken">Cancellation checked before the single commit point.</param>
+    /// <returns>Idempotent receipt; invalid schemas, dependencies or values leave content/history unchanged.</returns>
+    SceneAuthoringResult EditComponents(ComponentEditBatch batch, CancellationToken cancellationToken = default);
     /// <summary>Restores the previous content with a new, monotonically increasing document revision.</summary>
     /// <param name="operation">New operation identity and expected current revision.</param>
     /// <param name="cancellationToken">Cancellation before commit.</param>

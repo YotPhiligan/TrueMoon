@@ -1,5 +1,177 @@
 # Alloy / Argentis: история работ и проверок
 
+## PA8b.1: group opacity и островки Editor — 2026-10-24
+
+Добавлены Element.Opacity/UiProperties.Opacity с finite0..1 validation и только
+render invalidation, optional IOpacityDrawingContext.SaveOpacity/обычный Restore.
+Skia применяет alpha один раз ко всему subtree через transient SaveLayer/paint,
+сохраняя баланс при nested groups и throwing child. Zero subtree не рисуется,
+без capability fractional opacity рисуется opaque. Opacity не меняет layout/input.
+Отдельный Theme.PanelBackdrop: sigma8logical, Dark tint#12161E/D0,
+Light#F2F5FA/D8, opaque fallback; null consumer использует Surface.
+Editor ED4e — anchored content-height islands над viewport, parent-owned shadow/
+fade/slide без фоновых timers; nested View scope/retention сохранены.
+
+41новый UI и26Editor cases. Narrow103/103; полные related UI842/Hosting98/
+Editor699 Debug/Release =3278passed/0failed/0skipped. Nonincremental Debug solution
+build0errors/1532warnings.12native source Debug/published Release cases,158PNG,
+16reaped children,validation0/0 и zero owned UI/GPU/mappings. Raster tests покрывают
+overlap/image/nested groups/backdrop/current frame/sharp foreground при scale1/1.5/2;
+только прямой .5-alpha remainder oracle допускает±1byte квантования, endpoints exact.
+Native OpenGL actual preview Dark/Light/null material и geometry/retained fields
+проверены; итоговые PNG просмотрены. Полная evidence matrix —
+`TestResults/Islands-20261024/verification.json`; engine consumer/history
+[ED4e](../engine/HISTORY.md#ed4e-островки-поверх-viewport--2026-10-24).
+Aether/full solution tests/packages/physical DPI/Vulkan HUD/performance/VRAM/
+final alpha не повторены. Общее effect graph/cache и свободный docking не добавлены.
+
+## ED4d.1: иконки и условный Inspector — 2026-10-24
+
+UiSymbol.Add/Delete добавлены в конец enum; существующий IconButton и OverlayHost
+используются consumer Inspector. Actions26/reset24, semantic names, delayed500мс
+Tooltip с opaque Theme.Control в обеих темах, focus/input/clip/lifecycle и отсутствие
+idle кадров проверены. Это прикладной hint consumer; новый global Tooltip service
+или DI lifetime не введён. EditorLayout отдаёт скрытую колонку/gap viewport.
+
+Текущие related UI801/Hosting98/Editor673 Debug/Release:3144passed,failed/skipped0;
+25новыхEditorcases, narrow181/181. Nonincremental Debug solution build0errors/
+1532warnings после переноса generated output в OS TEMP из-за заполненного E:.
+12native cases/152PNG/16reaped children,validation0/0 и zero owned UI/GPU/mappings.
+Финальные Dark Tooltip/Light component/hidden PNG просмотрены. Подробные commands,
+attempts и [requirement matrix](../engine/HISTORY.md#ed4d1-компактные-действия-и-контекст-инспектора--2026-10-24).
+Evidence: `TestResults/InspectorChrome-20261024/verification.json`. Aether/full solution
+tests/packages/physical/performance/final alpha не повторены; прежние gates открыты.
+
+## ED4d: Inspector consumer — 2026-10-24
+
+Новый Editor inspector использует существующие CheckBox/TextBox/RichTextEditor,
+ScrollViewer, typed bindings и dynamic style roles. Retained section/property identity
+и parent-owned View; model/style/typed factory регистрируются через App/Cobalt.
+Generic UI contracts не расширялись. Dynamic editors и common authoring APIs —
+в Aether/Editor; [прикладной контракт](../engine/EDITOR_PLAN.md#ed4d-динамический-инспектор-компонентов--начат-2026-10-24).
+
+Scoped style: inputs12/height26, label11/width58, reset10/width42, null10/width60
+с left padding32, multiline12/height70, metadata10/errors11. Scalar row выделяет
+input оставшуюся ширину; theme/refresh сохраняют controls/focus/selection/scroll.
+Ctrl+Enter/Esc маршрутизируются из multiline editor, его text undo не перехватывается.
+
+Текущие полные связанные UI801/Hosting98/Editor648 Debug/Release, Aether1142 отдельно:
+2689/configuration,5378всего,failed/skipped0. Новые163cases относятся к engine/editor.
+Nonincremental Debug solution build:0errors/1532warnings.12native source Debug/
+published Release cases вне repo,146PNG/16reaped children,validation0/0 и zero owned
+UI/GPU/mappings. Header/status/Transform/hierarchy/documents/legacy regressions
+прошли. Финальные dark/light/empty/diagnostic/preview и legacy/documents PNG просмотрены.
+Null label spacing исправлен до final run. Existing font glyph coverage не расширялась.
+
+Точные commands/paths/attempts/requirement matrix и границы —
+[engine HISTORY](../engine/HISTORY.md#ed4d-динамический-инспектор-компонентов--2026-10-24).
+Evidence: `TestResults/Inspector-20261024/verification.json`. Full solution tests/
+packages/physical input/DPI/performance/VRAM/final alpha не повторены; прежние
+hardware/quality gates сохраняются. Следующий consumer — ED4c.2 names/order.
+
+## PA4c: TreeView и ED4c.1 — 2026-10-24
+
+Общий `TreeView/ITreeView` реализован под первый editor hierarchy consumer.
+Frozen TreeItem forest до4096items: stable ID, ParentId, text, UiSymbol. Валидация
+duplicate/missing/cycle/labels предшествует замене; контрол не меняет предметный
+граф. Один retained Element рисует только строки внутри viewport/ancestor clip.
+Expansion/selection сохраняются для surviving IDs; Select раскрывает ancestors
+и выполняет ScrollViewer reveal после layout. Up/Down/Home/End/Left/Right/
+Enter/Space, parent move drag/drop, Ctrl+Left/Right и blank root drop поддержаны.
+Self/descendant/same-parent/outside clipped viewport drop не публикуются.
+Esc/FocusLost/disable/detach/геометрия/new snapshot отменяют capture; равный SetItems
+тоже отменяет жест, но без лишнего invalidation в idle. Новых timers нет.
+
+Entity/Cube/Interaction/ChevronRight/ChevronDown дописаны в UiSymbol с сохранением
+старых enum values; Draw использует геометрию. Editor style: text12/row24/indent16/
+icons14/padding8, selectable read-only diagnostics. View/Data/Style и factory
+в Editor, domain reparent/history — Aether. Parent root style использует semantic
+roles только для legacy частей, не нарушает style scope вложенного hierarchy View.
+Full virtualization, rename/reorder/multiselect/typeahead, drag autoexpand/autoscroll
+и world-preserving move оставлены следующим consumers.
+
+### Текущие проверки
+
+Narrow `treeview-draw-final.trx`:41cases/0failed/0skipped. Иконки и disclosure
+доказаны непосредственно `Draw_DisclosureAndPerItemIconsUseDeclaredSymbolsAndHierarchyDepth`;
+`PointerDrag_ParentAndBlankRootDropsPublishRequestsWithoutChangingItems` проверяет
+request без UI-only mutation. Unit cases покрывают frozen validation, deep graph,
+keyboard/reveal/scroll, selection/theme retention, capture cancellation, clipped
+draw и dispose. Это часть71новых methods/130cases engine+UI+Editor.
+
+Текущие полные связанные suites Debug/Release: **UI801/Hosting98/Editor577**,
+failed/skipped0; engine1050 отдельно. Всего2526/configuration/8TRX. После последней
+правки текстовой подсказки Editor577/configuration повторён отдельно,2TRX.
+Финальный nonincremental Debug solution build:0errors/1532warnings.
+SDK10.0.402/net10.0/xUnit2/VSTest; commands/reports и [подробный consumer proof](../engine/HISTORY.md#ed4c1-дерево-сущностей-и-reparent--2026-10-24)
+не означают новый full solution test baseline.
+
+Native final `TestResults/Hierarchy-20261024/native-092503209/summary.json`:
+source Debug/published Release вне repo, **10cases/118PNG/14reaped children**,
+empty/legacy/documents/Transform/hierarchy. Во всех reports0owned UI sessions/
+mappings/GPU resources/handles и validation0/0, Header5/status4 captures,
+BottomAligned/ResizeGripClear. Hierarchy pointer drag/collapse/reveal, keyboard
+history, Save/reopen, retained Dark/Light tree/inspector и real parented preview
+прошли. Dark hierarchy/published light preview/legacy/documents PNG просмотрены.
+Подсказка использует Ctrl+Left/Right, чтобы не зависеть от наличия arrow glyphs.
+
+Промежуточные driver failures сохранены и не засчитаны: старые header wait/focus
+assertion и document Capture со старым status format. Исправлены ожидания driver,
+source consumer не ослаблен; final10cases повторены после последней source правки.
+Подробности/точные paths/команды — в engine HISTORY. Evidence:
+`TestResults/Hierarchy-20261024/verification.json`; TRX/log/binlog/JSON/PNG,
+source/binary fingerprints и scripts ignored. Планы/статусы/default style/README,
+local links/anchors/namespaces/whitespace проверены отдельно.
+
+Full solution tests/прочие модули/packages/physical DPI-input/performance/VRAM/
+Vulkan UI material matrix/final alpha не повторены. Предыдущие hardware/quality
+ограничения сохраняются; поиск OS/driver workaround не выполнялся. Следующий
+consumer — ED4c.2 rename/reorder после persistent engine metadata/history.
+
+## PA4b: выравнивание StatusBar по нижней границе — 2026-10-24
+
+По скриншоту пользователя подтверждена пустая полоса под статусбаром: default
+WindowFrame вычитал DesiredSize.Height resize grip из content и добавлял его
+к измеренной высоте. Это была отдельная строка16logical, а не лишний padding
+самого StatusBar. Предыдущее решение default frame изменено явно в PLAN/DEFAULT_STYLE.
+
+WindowFrame теперь измеряет и размещает content до внутреннего нижнего бордера.
+Grip размещается поверх правого нижнего угла, ограничен доступными шириной и
+высотой content, рисуется последним и сохраняет native ResizeBottomRight region.
+Показ/скрытие grip не резервирует высоту; отдельный footer/API или компенсирующий
+отрицательный отступ не добавлены. Editor StatusBar уже резервирует справа24,
+поэтому details и preview не пересекаются с grip16. View/Data/Style/DI прежние.
+
+Регрессия сначала воспроизведена на прежнем production:8ожидаемых failures,
+включая footer Y755 вместо771 и measured height134 вместо118. После исправления
+узкий прогон: **Passed:57,Failed:0,Skipped:0**, exit0. Exact checks:
+
+| Требование | Тест |
+| --- | --- |
+| Нет лишней высоты контейнера/нижней строки | DefaultStyleTests.DefaultFrame_ResizeGripOverlaysContentWithoutAddingMeasuredHeight |
+| StatusBar и Bar совпадают по bounds и доходят до бордера, grip не перекрывает details | EditorStatusBarViewTests.DefaultFrame_StatusBarReachesBottomBorderWithoutExtraRowAndKeepsResizeGripClear (scale1/1.5/2; resize/maximize/restore/theme/idle и native regions) |
+| Согласованные capabilities и legacy shell | DefaultFrame_CommandsCapabilitiesRegionsAndIdleFollowObservedWindow; DefaultFrame_LayoutUsesLogicalUnitsAndSettlesWithoutRedraw |
+
+Итоговые related: UI760/Hosting98/Editor530 — **Debug1388/1388,Release1388/1388**,
+6TRX,failed/skipped0,4новыхcases. Команды с isolated artifacts/log/binlog/TRX:
+
+    pwsh -NoProfile -File TestResults/StatusBarAlignment-20261024/VerifyNarrow.ps1
+    pwsh -NoProfile -File TestResults/StatusBarAlignment-20261024/VerifyFinal.ps1
+
+Native:2empty cases source Debug/published framework-dependent Release вне repo,
+20PNG; header/status popup/theme/dismissal и cleanup passing. Status smoke теперь
+проверяет footer bottom == inner frame bottom, Bar bounds == View bounds и отсутствие
+пересечения details/grip. UI sessions/mappings/GPU resources/handles0,View disposed;
+compiler/children не запускались. Dark source и Light published PNG просмотрены:
+под footer нет пустой полосы, popup остаётся над footer. Input directed в owned
+UiSession; physical OS drag/DPI acceptance этим запуском не подтверждается.
+
+Evidence: TestResults/StatusBarAlignment-20261024/verification.json — exact counters,
+methods/commands, source/binary/PNG hashes, native reports и doc checks. SDK10.0.402,
+net10.0,xUnit2/VSTest. Full solution build/tests,Aether/headless,legacy/Transform
+native workflows,packages/performance/golden/VRAM/final alpha не повторены.
+Прежние CPU receiver/Mithril fixture failures открыты; следующий шаг прежний.
+
 ## PA4b: StatusBar и ED4b Editor — 2026-10-24
 
 По согласованному дизайну добавлен общий StatusBar/IStatusBar в Argentis:

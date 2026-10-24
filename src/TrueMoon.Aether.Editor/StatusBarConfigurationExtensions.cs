@@ -1,4 +1,4 @@
-﻿using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
@@ -18,9 +18,9 @@ public static class StatusBarConfigurationExtensions
             if (services.Exist<EditorStatusBarViewModel>() || services.Exist<IFactory<EditorStatusBarView, EditorStatusBarArguments>>() ||
                 services.Exist<IFactory<EditorStatusPopupView, EditorStatusPopupArguments>>())
                 throw new InvalidOperationException("Editor status bar is already registered.");
-            if (!services.Exist<EditorViewModel>() || !services.Exist<EditorDocumentViewModel>() || !services.Exist<EditorTransformViewModel>())
+            if (!services.Exist<EditorViewModel>() || !services.Exist<EditorDocumentViewModel>() || !services.Exist<EditorInspectorViewModel>())
                 throw new InvalidOperationException("Configure editor presentation and editing before the status bar.");
-            services.Singleton<EditorStatusBarViewModel>(r => new(r.Resolve<EditorViewModel>()!, r.Resolve<EditorDocumentViewModel>()!, r.Resolve<EditorTransformViewModel>()!));
+            services.Singleton<EditorStatusBarViewModel>(r => new(r.Resolve<EditorViewModel>()!, r.Resolve<EditorDocumentViewModel>()!, r.Resolve<EditorInspectorViewModel>()!));
             if (!services.Exist<IViewStyle<EditorStatusBarView>>()) services.Singleton<IViewStyle<EditorStatusBarView>>(_ => new EditorStatusBarViewStyle());
             if (!services.Exist<IViewStyle<EditorStatusPopupView>>()) services.Singleton<IViewStyle<EditorStatusPopupView>>(_ => new EditorStatusPopupViewStyle());
             services.Singleton<IFactory<EditorStatusPopupView, EditorStatusPopupArguments>>(r => new Factory<EditorStatusPopupView, EditorStatusPopupArguments>(args =>

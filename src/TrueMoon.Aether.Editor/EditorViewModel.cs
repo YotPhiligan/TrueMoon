@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
+using TrueMoon.Aether.Editor.Hierarchy;
 using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
@@ -13,7 +14,8 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
     private readonly EditorWorkspace _workspace;
     private readonly EditorCommands _commands;
     private readonly EditorDocumentViewModel? _documents;
-    private readonly EditorTransformViewModel? _transform;
+    private readonly EditorInspectorViewModel? _transform;
+    private readonly EditorHierarchyViewModel? _hierarchy;
     private bool _disposed;
     private string? _selectedId;
     private string _selectedName = "", _statusText = "", _errorText = "";
@@ -26,7 +28,7 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
 
     /// <summary>Creates a model borrowing App-owned workspace and command services.</summary>
     public EditorViewModel(EditorWorkspace workspace, EditorCommands commands, EditorDocumentViewModel? documents = null,
-        EditorTransformViewModel? transform = null)
+        EditorInspectorViewModel? transform = null, EditorHierarchyViewModel? hierarchy = null)
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(commands);
@@ -34,6 +36,7 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
         _commands = commands;
         _documents = documents;
         _transform = transform;
+        _hierarchy = hierarchy;
         _workspace.SelectionChanged += SelectionChanged;
         _workspace.SceneChanged += SceneChanged;
         SelectionChanged();
@@ -44,6 +47,8 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<string> EntityIds => _workspace.EntityIds;
     public int EntityCount => _workspace.EntityCount;
     public string? SelectedId => _selectedId;
+    /// <summary>Shows entity properties only while there is a selected entity context.</summary>
+    public bool IsInspectorVisible => _selectedId != null;
     public string SelectedName => _selectedName;
     public string StatusText => _statusText;
     public string ErrorText => _errorText;
@@ -75,6 +80,16 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
         VerifyOpen();
         _workspace.Select(id);
         _transform?.Refresh(_workspace.SelectedId);
+        _hierarchy?.Refresh();
+    }
+
+    /// <summary>Ends entity inspection and discards the uncommitted selection draft.</summary>
+    public void ClearSelection()
+    {
+        VerifyOpen();
+        _workspace.ClearSelection();
+        _transform?.Refresh(null);
+        _hierarchy?.Refresh();
     }
 
     public void Execute(EditorCommand command)
@@ -100,6 +115,7 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
         _transform?.Refresh(_workspace.SelectedId);
         _workspace.Refresh(runtime, editor, commandError);
         RefreshState();
+        _hierarchy?.Refresh();
     }
 
     /// <summary>Closes command admission and drains accepted asynchronous work.</summary>
@@ -145,7 +161,9 @@ public sealed class EditorViewModel : INotifyPropertyChanged, IDisposable
     private void SelectionChanged()
     {
         if (_disposed) return;
+        var visible = IsInspectorVisible;
         Update(ref _selectedId, _workspace.SelectedId, nameof(SelectedId));
+        if (visible != IsInspectorVisible) PropertyChanged?.Invoke(this, new(nameof(IsInspectorVisible)));
         Update(ref _selectedName,
             _workspace.SelectedId == null ? "Нет объектов" : EditorScene.Name(_workspace.SelectedId),
             nameof(SelectedName));

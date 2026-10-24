@@ -8,8 +8,8 @@ project/documents/editing/preview/workflow/extensions/reliability. Первый 
 Undo/Redo и independent Edit preview подключены к общему authoring API.
 
 Первый основной экран редактора: стандартное borderless оформление Alloy,
-компактный заголовок с меню и симуляцией, список объектов сцены слева, живой3D viewport в центре,
-таблица свойств выбранного объекта справа и строка состояния снизу. Desktop WinExe
+компактный заголовок с меню и симуляцией, дерево сущностей слева, живой3D viewport в центре,
+динамический инспектор компонентов справа и строка состояния снизу. Desktop WinExe
 не открывает дополнительную консоль. Dark/Light
 переключаются через «Вид → Сменить тему». Это desktop application, `IsPackable=false`;
 движок остаётся в единственной сборке `TrueMoon.Aether`. Редактор и его tests
@@ -42,6 +42,33 @@ dotnet run --project TrueMoon.Aether.Editor -- `
 принимать демонстрационную SceneSnapshot. Этот legacy путь сохраняет прежнюю demo
 сцену; обычный `.aetherproj` открывается с пустой сценой, доступной для New/Open.
 
+## Обозреватель сущностей
+
+Слева показана иерархия сцены с геометрическими иконками сущности, отображаемого
+объекта и интерактивного объекта. Стрелка сворачивает/раскрывает ветвь; выбор строки
+обновляет общий inspector. Up/Down/Home/End выбирают строки, Left/Right сворачивают
+и раскрывают ветви, Enter/Space переключают раскрытие. Выбранный узел раскрывает
+предков и прокручивается в видимую область.
+
+Для смены родителя перетащите строку на другую сущность. Перенос на пустую область
+дерева или кнопка **«В корень»** убирают родителя. Ctrl+Right помещает узел под
+предыдущего соседа, Ctrl+Left выносит на уровень выше. Циклы и перенос в самого
+себя отклоняются. Сохраняется **локальный Transform**: мировое положение может
+измениться вслед за новым родителем. Это одна операция общего authoring API с
+Undo/Redo, dirty state, Save/reopen и обновлением Edit Preview.
+
+Перенос доступен для открытого authoring-документа, когда нет операции с файлом,
+игрового runtime и незавершённой правки свойств/conflict. Устаревший жест после
+смены документа отклоняется; повторите его на обновлённом дереве. Ошибки можно
+выделить и скопировать. Legacy game scene пока доступна только для просмотра.
+
+Это первый этап [ED4c](../docs/engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24).
+Следующие этапы добавят сохраняемые имена, порядок соседей, создание/удаление и
+дублирование. Сейчас authoring-имя выводится из ID, порядок соседей задаёт resolver;
+перетаскивание меняет родителя. Множественный выбор и автоматическая прокрутка при
+drag также остаются в плане. Общий `TreeView`/`ITreeView` находится в Argentis,
+прикладные View/Data/Style и typed factory — в Editor, без зависимости модели от UI.
+
 ## Компактная верхняя панель
 
 Слева находится знак TrueMoon, затем постоянная кнопка меню без обычной рамки.
@@ -63,7 +90,7 @@ Esc, click снаружи или потеря фокуса закрывают м
 «Файл» содержит New/Open/Save/SaveAs/Close и Выход. Путь для Open/SaveAs вводится
 в прежнее поле «Сцена»; выбор файла и project picker будут отдельным этапом.
 Несохранённые изменения по-прежнему требуют Save/Discard/Cancel, включая Выход
-из меню. «Правка» использует общую Transform Undo/Redo history. Независимый Edit
+из меню. «Правка» использует общую authoring Undo/Redo history. Независимый Edit
 Preview перенесён в строку состояния: кнопки заголовка управляют игровой симуляцией.
 
 Header View/Style создаёт UI-owner `IFactory<EditorHeaderView, EditorHeaderArguments>`
@@ -287,6 +314,53 @@ Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smo
 close, Save/reopen/conflict/recovery и сохраняет PNG/JSON. Обычный запуск такой
 сценарий не выполняет.
 
+## Динамический инспектор компонентов
+
+Обозреватель слева и инспектор справа размещены матовыми островками поверх сцены.
+Viewport постоянно занимает всю рабочую область: выбор сущности не меняет его
+размеры. Панели имеют отступ16, скругление8, границу и мягкую тень; высота следует
+содержимому до доступного предела, длинное содержимое прокручивается.
+`Theme.PanelBackdrop` задаёт материал обеих тем; null включает непрозрачный Surface.
+Инспектор появляется при выборе сущности с fade/slide за160мс и скрывается без выбора.
+Островки пока закреплены по сторонам; свободное перемещение/resize — отдельный этап.
+Esc в обозревателе снимает выбор (во время drag сначала отменяет перенос).
+Apply/Cancel/Undo/Redo/Add представлены квадратными иконками в одной строке,
+удаление — возле заголовка компонента, сброс — возле свойства. Наведите мышь на
+иконку на500мс для Tooltip с названием действия и сочетанием клавиш; у недоступной
+команды подсказка также работает. Названия вариантов добавления остаются текстом.
+
+Выберите сущность в дереве: инспектор показывает только её эффективные компоненты
+и свойства точной версии схемы. У сущности без Transform соответствующих полей нет.
+Секции можно сворачивать. Boolean редактируется переключателем, Integer — полем
+Int64, Number — полем с десятичной точкой, String — многострочным текстом. Для
+nullable-свойств переключатель `null` отличает отсутствие значения от пустой строки.
+Неизвестный component type показывается по ID; его scalar-свойства доступны по схеме.
+
+Под полем указан источник: локальное значение, наследуемое определение или default
+схемы. «Сброс» подготавливает возврат к inherited/default; «Применить» подтверждает
+все изменённые поля одним действием истории. Для локально добавленного компонента
+сброс убирает также явно заданное начальное значение свойства. Нетронутый текст
+сохраняется без перезаписи исходных переводов строк.
+
+«Добавить компонент» предлагает схемы документа с учётом multiplicity и зависимостей.
+Новый occurrence получает собственный ID. «Удалить» убирает локальный компонент или
+маскирует наследуемый; instance-переопределения удалённого occurrence очищаются.
+«Восстановить» возвращает наследуемый компонент; Undo возвращает весь прежний patch.
+Удаление обязательной зависимости отклоняется без частичного изменения сцены.
+Операции входят в общую историю со свойствами и переносами дерева, сохраняются в
+scene JSON v1 и доступны headless через `ISceneAuthoringSession.EditComponents`.
+
+Во время draft/conflict структурные действия отключены. IO, runtime и смена
+документа используют общие admission gates. Темы и обычное обновление сохраняют
+поля, выделение, фокус и прокрутку; добавление/удаление меняет затронутые секции.
+Это редактирование authoring-компонентов. Live legacy runtime доступен для чтения;
+runtime World/storage/scheduler и custom property-editor providers — отдельные этапы.
+
+Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smoke-inspector`.
+Только disposable fixture с `Inspector.aetherscene`: scalar/null/multiline ввод,
+component actions, зависимость, reset, theme retention, shared history, Save/reopen
+и фактически показанный Edit Preview, PNG/JSON и cleanup дочернего процесса.
+
 ## Transform, Undo/Redo и Edit preview
 
 Откройте сцену с built-in v1 Transform и выберите объект слева. Inspector показывает
@@ -295,13 +369,13 @@ close, Save/reopen/conflict/recovery и сохраняет PNG/JSON. Обычн�
 округляющийся в ноль масштаб отклоняются рядом с полем. Engine дополнительно
 проверяет итоговую сцену/мировые матрицы; отказ сохраняет черновик и документ.
 
-**Применить / Ctrl+Enter** подтверждает все поля одной atomic history transaction;
+**Применить / Ctrl+Enter** подтверждает изменённые поля одной atomic history transaction;
 **Отменить / Esc** возвращает последнюю committed версию. Черновик сохраняется при
 обновлении экрана и смене темы. Выбор другого объекта отбрасывает неподтверждённый
 черновик; изменение той же сцены извне сохраняет его, показывает conflict и требует
 явной отмены/повтора. Undo/Redo недоступны, пока есть черновик. Кнопки Undo/Redo и
 Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y вне полей вызывают общую engine history; внутри
-TextBox Ctrl+Z не перехватывается как команда сцены. Dirty учитывает saved checkpoint.
+TextBox/RichTextEditor Ctrl+Z не перехватывается как команда сцены. Dirty учитывает saved checkpoint.
 
 **Edit Preview → Preview** в строке состояния включает независимый просмотр
 committed сцены без Build/Play/Game.Logic.
@@ -324,11 +398,10 @@ Apply/Preview/Undo/Redo, pixel checks, Save/Close/reopen и child/resource clean
 
 ## Границы первого экрана
 
-- Инспектор редактирует built-in Transform открытого authoring документа; прочие
-  component properties и legacy demo остаются readonly. Значения можно выделять/
-  копировать. Generic component editors и live runtime edit transaction ещё нужны.
-- Список объектов пока плоский. Tree view с parent/variant inheritance,
-  picking/gizmos/docking остаются отдельными этапами.
+- Инспектор редактирует scalar-свойства и состав компонентов authoring документа.
+  Legacy runtime остаётся readonly; live runtime edit transaction ещё нужна.
+- Дерево поддерживает parent/child, иконки, выбор и перенос. Сохраняемые имена и
+  порядок соседей, create/delete/duplicate, picking/gizmos/docking — следующие этапы.
 - Viewport отображает реальную игру из child process через existing shared GPU
   transport. Размер legacy render surface960×540, Edit preview640×360; изображение вписывается без искажения;
   resize окна меняет layout. Editor camera navigation/gameplay input в этом
@@ -340,12 +413,15 @@ Apply/Preview/Undo/Redo, pixel checks, Save/Close/reopen и child/resource clean
 
 ## App и ownership
 
-`UseAetherEditorEditing()` регистрирует shared EditorTransformViewModel, scoped
-IViewStyle и `IFactory<EditorTransformView>` после настройки EditorDocumentCommands
+`UseAetherEditorEditing()` регистрирует shared `EditorInspectorViewModel`, scoped
+`IViewStyle<EditorInspectorView>` и `IFactory<EditorInspectorView>` после настройки EditorDocumentCommands
 и EditorPreview в composition root. Preview заимствует явные engine show/stop
 operations; App владеет координатором и model/style, окно/родитель — View product.
 Dispose View снимает bindings, не освобождая document/model/engine. Accepted preview
 work отслеживается и drains до освобождения engine; failed cleanup допускает retry.
+Header, hierarchy и status используют ту же модель и историю. Прежний
+`EditorTransformView` factory сохранён для существующих consumers и заимствует
+общую модель; compatibility `EditorTransformViewModel` не является вторым DI owner.
 
 UI разделён на EditorWorkspace (данные/scene selection), EditorViewModel
 (INotifyPropertyChanged, строки состояния, доступность и guarded commands),

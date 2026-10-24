@@ -58,22 +58,24 @@ public sealed class WindowFrame : Element
     {
         var title = Children[0]; var content = Children[1];
         title.Measure(available, text);
-        _grip?.Measure(available, text); var footer = _grip?.DesiredSize.Height ?? 0;
-        content.Measure(new Size(available.Width, Math.Max(0, available.Height - title.DesiredSize.Height - footer)), text);
-        return new(Math.Max(title.DesiredSize.Width, content.DesiredSize.Width), title.DesiredSize.Height + content.DesiredSize.Height + footer);
+        _grip?.Measure(available, text);
+        content.Measure(new Size(available.Width, Math.Max(0, available.Height - title.DesiredSize.Height)), text);
+        return new(Math.Max(title.DesiredSize.Width, content.DesiredSize.Width), title.DesiredSize.Height + content.DesiredSize.Height);
     }
     /// <inheritdoc />
     protected override void ArrangeCore(Rect area)
     {
         var height = Math.Min(area.Height, Children[0].DesiredSize.Height);
         Children[0].Arrange(new Rect(area.X, area.Y, area.Width, height));
-        var footer = Math.Min(Math.Max(0, area.Height - height), _grip?.DesiredSize.Height ?? 0);
-        Children[1].Arrange(new Rect(area.X, area.Y + height, area.Width, Math.Max(0, area.Height - height - footer)));
-        _grip?.Arrange(new Rect(area.X + Math.Max(0, area.Width - 16), area.Y + area.Height - footer, Math.Min(16, area.Width), footer));
+        var contentHeight = Math.Max(0, area.Height - height);
+        Children[1].Arrange(new Rect(area.X, area.Y + height, area.Width, contentHeight));
+        var gripWidth = Math.Min(area.Width, _grip?.DesiredSize.Width ?? 0);
+        var gripHeight = Math.Min(contentHeight, _grip?.DesiredSize.Height ?? 0);
+        _grip?.Arrange(new Rect(area.X + area.Width - gripWidth, area.Y + area.Height - gripHeight, gripWidth, gripHeight));
     }
 }
 
-/// <summary>Non-focusable native resize region, separate from content and the invisible edge thickness.</summary>
+/// <summary>Non-focusable native resize region over the content's bottom-right corner, independent of edge thickness.</summary>
 public sealed class WindowResizeGrip : Element
 {
     /// <summary>Creates the bottom-right grip, initially hidden until the host declares sizing support.</summary>

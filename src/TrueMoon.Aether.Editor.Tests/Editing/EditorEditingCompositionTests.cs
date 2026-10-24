@@ -24,10 +24,10 @@ public sealed class EditorEditingCompositionTests
                 .Singleton<EditorPreview>(_ => preview).Singleton<IViewStyle<EditorTransformView>>(_ => style));
             context.UseAetherEditorEditing();
         }).Build();
-        var model = app.Services.Resolve<EditorTransformViewModel>()!; model.Refresh(DocumentData.Child.Value.ToString());
+        var model = app.Services.Resolve<EditorInspectorViewModel>()!; model.Refresh(DocumentData.Child.Value.ToString());
         var factory = app.Services.Resolve<IFactory<EditorTransformView>>()!;
         var first = Assert.IsType<EditorTransformView>(factory.Create()); var second = Assert.IsType<EditorTransformView>(factory.Create()); using var ui1 = DocumentUiFixture.Ui(first); using var ui2 = DocumentUiFixture.Ui(second); ui1.Update(); ui2.Update();
-        Assert.Same(model, app.Services.Resolve<EditorTransformViewModel>()); Assert.Same(factory, app.Services.Resolve<IFactory<EditorTransformView>>());
+        Assert.Same(model, app.Services.Resolve<EditorInspectorViewModel>()); Assert.Same(factory, app.Services.Resolve<IFactory<EditorTransformView>>());
         Assert.Same(owner.Commands, app.Services.Resolve<EditorDocumentCommands>()); Assert.Same(preview, app.Services.Resolve<EditorPreview>()); Assert.Same(style, app.Services.Resolve<IViewStyle<EditorTransformView>>());
         Assert.Same(model, first.DataContext); Assert.Same(model, second.DataContext); Assert.NotSame(first, second); Assert.NotSame(first.Fields["x"], second.Fields["x"]); Assert.Equal(2, style.Configurations);
         model.Fields[0].Value = "67"; ui1.Update(); ui2.Update(); Assert.Equal("67", first.Fields["x"].Value); Assert.Equal("67", second.Fields["x"].Value);

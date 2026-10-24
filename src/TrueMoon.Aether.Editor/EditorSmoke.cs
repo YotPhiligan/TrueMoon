@@ -27,7 +27,7 @@ internal static class EditorSmoke
         executed.Add("Run"); await Click(EditorCommand.Pause);
         Require(engine.Supervisor.Status.State == SessionState.Paused && engine.Supervisor.Status.ProcessId != Environment.ProcessId, "Runtime is not a separate paused process.");
         await Capture("editor-dark.png");
-        await ui.InvokeAsync(() => { var button = view.Entities["green-cube"]; InputClick(button); Require(workspace.SelectedId == "green-cube", "Hierarchy selection failed."); Require(workspace.Properties().Single(x => x.Key == "X").Value == "1.5", "Inspector did not show the selected entity."); }).WaitAsync(token);
+        await ui.InvokeAsync(() => { EditorHierarchySmoke.ClickItem(ui, view, "green-cube"); Require(workspace.SelectedId == "green-cube", "Hierarchy selection failed."); Require(workspace.Properties().Single(x => x.Key == "X").Value == "1.5", "Inspector did not show the selected entity."); }).WaitAsync(token);
         await Click(EditorCommand.Play); await Until(() => engine.Supervisor.Status.Tick >= 2);
         await Click(EditorCommand.Pause); var tick = engine.Supervisor.Status.Tick;
         await Click(EditorCommand.Step); Require(engine.Supervisor.Status.Tick == tick + 1, "Step did not advance exactly one paused tick.");

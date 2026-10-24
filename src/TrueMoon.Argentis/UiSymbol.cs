@@ -50,7 +50,21 @@ public enum UiSymbol
     /// <summary>Scene objects.</summary>
     Objects,
     /// <summary>Preview eye.</summary>
-    Preview
+    Preview,
+    /// <summary>Generic scene occurrence.</summary>
+    Entity,
+    /// <summary>Renderable cube.</summary>
+    Cube,
+    /// <summary>Interactive occurrence marker.</summary>
+    Interaction,
+    /// <summary>Collapsed branch.</summary>
+    ChevronRight,
+    /// <summary>Expanded branch.</summary>
+    ChevronDown,
+    /// <summary>Add a new item.</summary>
+    Add,
+    /// <summary>Delete an item.</summary>
+    Delete
 }
 
 /// <summary>Draws a tiny geometric icon using backend-independent rectangles.</summary>
@@ -95,6 +109,13 @@ public static class UiSymbols
             case UiSymbol.Busy: Dot(2, 1, 8); Dot(2, 10, 8); for (var i = 0; i < 4; i++) { Dot(2 + i, 2 + i); Dot(9 - i, 2 + i); Dot(2 + i, 9 - i); Dot(9 - i, 9 - i); } break;
             case UiSymbol.Objects: Box(1, 1, 4, 4); Box(7, 1, 4, 4); Box(4, 7, 4, 4); break;
             case UiSymbol.Preview: for (var i = 0; i < 5; i++) { Dot(1 + i, 5 - i / 2); Dot(1 + i, 6 + i / 2); Dot(10 - i, 5 - i / 2); Dot(10 - i, 6 + i / 2); } Dot(5, 4, 2, 4); break;
+            case UiSymbol.Entity: Box(2, 2, 8, 8); Dot(5, 5, 2, 2); break;
+            case UiSymbol.Cube: Box(1, 4, 7, 7); Box(4, 1, 7, 7); for (var i = 0; i < 4; i++) { Dot(1 + i, 4 - i); Dot(8 + i, 11 - i); } break;
+            case UiSymbol.Interaction: Box(1, 1, 10, 10); Dot(5, 3, 2, 6); Dot(3, 5, 6, 2); break;
+            case UiSymbol.ChevronRight: for (var i = 0; i < 4; i++) { Dot(4 + i, 2 + i, 1.5f, 1.5f); Dot(4 + i, 8 - i, 1.5f, 1.5f); } break;
+            case UiSymbol.ChevronDown: for (var i = 0; i < 4; i++) { Dot(2 + i, 4 + i, 1.5f, 1.5f); Dot(8 - i, 4 + i, 1.5f, 1.5f); } break;
+            case UiSymbol.Add: Dot(5, 1, 2, 10); Dot(1, 5, 10, 2); break;
+            case UiSymbol.Delete: Dot(1, 2, 10); Box(3, 1, 6, 1); Box(2, 3, 8, 8); Dot(4, 5, 1, 4); Dot(7, 5, 1, 4); break;
             case UiSymbol.TrueMoon:
                 // Fill the crescent itself; the cutout stays transparent on every theme/background.
                 for (var row = 0; row < 20; row++)

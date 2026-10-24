@@ -5,6 +5,7 @@ using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
+using TrueMoon.Aether.Editor.Hierarchy;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
@@ -62,13 +63,15 @@ internal static class EditorApplication
                 .Singleton<IViewStyle<EditorDocumentView>>(_ => new EditorDocumentViewStyle())
                 .Singleton<IFactory<EditorDocumentView>>(resolver => new Factory<EditorDocumentView>(() =>
                     new(resolver.Resolve<EditorDocumentViewModel>()!, resolver.Resolve<IViewStyle<EditorDocumentView>>()!, compactHeader: true)))
-                .Singleton<EditorViewModel>(resolver => new(resolver.Resolve<EditorWorkspace>(), resolver.Resolve<EditorCommands>(), resolver.Resolve<EditorDocumentViewModel>(), resolver.Resolve<EditorTransformViewModel>()))
+                .Singleton<EditorViewModel>(resolver => new(resolver.Resolve<EditorWorkspace>(), resolver.Resolve<EditorCommands>(), resolver.Resolve<EditorDocumentViewModel>(), resolver.Resolve<EditorInspectorViewModel>(), resolver.Resolve<EditorHierarchyViewModel>()))
                 .Singleton<IFactory<EditorView>>(resolver =>
-                    new Factory<EditorView>(() => new(resolver.Resolve<EditorViewModel>(), resolver.Resolve<IViewStyle<EditorView>>(), resolver.Resolve<IFactory<EditorDocumentView>>(), resolver.Resolve<IFactory<EditorTransformView>>(), compactHeader: true,
-                        resolver.Resolve<IFactory<EditorStatusBarView, EditorStatusBarArguments>>())))
+                    new Factory<EditorView>(() => new(resolver.Resolve<EditorViewModel>(), resolver.Resolve<IViewStyle<EditorView>>(), resolver.Resolve<IFactory<EditorDocumentView>>(), null, compactHeader: true,
+                        resolver.Resolve<IFactory<EditorStatusBarView, EditorStatusBarArguments>>(), resolver.Resolve<IFactory<EditorHierarchyView>>(),
+                        options.LegacyProject ? null : resolver.Resolve<IFactory<EditorInspectorView>>())))
                 .Singleton<EditorCommands>(resolver => new(resolver.Resolve<AetherHost>().Editor,
                     resolver.Resolve<EditorViewportBinding>().Ready, end.Token)));
             context.UseAetherEditorEditing(previewInStatusBar: true);
+            context.UseAetherEditorHierarchy();
             context.UseAetherEditorHeader();
             context.UseAetherEditorStatusBar();
             context.UseAether(options =>
@@ -141,7 +144,11 @@ internal static class EditorApplication
                 await EditorHeaderSmoke.VerifyAsync(directory, window, ui, view!, headerDeadline.Token);
                 using var statusDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                 await EditorStatusBarSmoke.VerifyAsync(directory, window, ui, view!, statusDeadline.Token);
-                if (options.TransformSmoke) await EditorTransformSmoke.RunAsync(directory, window, ui, view!, workspace,
+                if (options.InspectorSmoke) await EditorInspectorSmoke.RunAsync(directory, window, ui, view!, workspace,
+                    documents, selectedProject!.Documents!, app.Services.Resolve<ISceneDocumentStore>()!, app.Services.Resolve<EditorPreview>()!, engine, runtimeFactory);
+                else if (options.HierarchySmoke) await EditorHierarchySmoke.RunAsync(directory, window, ui, view!, workspace,
+                    documents, selectedProject!.Documents!, app.Services.Resolve<ISceneDocumentStore>()!, app.Services.Resolve<EditorPreview>()!, engine, runtimeFactory);
+                else if (options.TransformSmoke) await EditorTransformSmoke.RunAsync(directory, window, ui, view!, workspace,
                     documents, selectedProject!.Documents!, app.Services.Resolve<ISceneDocumentStore>()!, app.Services.Resolve<EditorPreview>()!, engine, runtimeFactory);
                 else if (options.DocumentSmoke) await EditorDocumentSmoke.RunAsync(directory, window, ui, view!, workspace,
                     documents, selectedProject!.Documents!, app.Services.Resolve<ISceneDocumentStore>()!, engine, runtimeFactory);

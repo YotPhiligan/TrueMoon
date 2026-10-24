@@ -22,6 +22,8 @@ public sealed class UiProperty<T>(string name, T defaultValue, Invalidation affe
 /// <summary>Properties shared by the standard widgets.</summary>
 public static class UiProperties
 {
+    /// <summary>Opacity of the whole rendered subtree; does not change layout or input admission.</summary>
+    public static readonly UiProperty<float> Opacity = new("Opacity", 1f, Invalidation.Render, v => float.IsFinite(v) && v >= 0 && v <= 1);
     /// <summary>Semantic control color.</summary>
     public static readonly UiProperty<ControlTone> Tone = new("Tone", ControlTone.Neutral, validate: Enum.IsDefined);
     /// <summary>Visual error state, including an outline and a structural marker.</summary>

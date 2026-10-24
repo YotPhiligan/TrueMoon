@@ -133,6 +133,15 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     /// <param name="batch">Engine operation and expected revision.</param><returns>Engine receipt.</returns>
     public SceneAuthoringResult Apply(SceneDocument expected, TransformEditBatch batch)
     { ArgumentNullException.ThrowIfNull(batch); return Edit(expected, document => document.Apply(batch, _lifetime)); }
+    /// <summary>Changes scene parents under the same admission and document-identity gate as all edits.</summary>
+    /// <param name="expected">Captured document identity.</param><param name="batch">Revision and atomic changes.</param><returns>Engine receipt.</returns>
+    public SceneAuthoringResult Reparent(SceneDocument expected, ReparentBatch batch)
+    { ArgumentNullException.ThrowIfNull(batch); return Edit(expected, document => document.Reparent(batch, _lifetime)); }
+    /// <summary>Edits components under the shared admission and exact-document identity gate.</summary>
+    /// <param name="expected">Captured document instance.</param><param name="batch">Atomic component edits.</param>
+    /// <returns>The engine receipt.</returns>
+    public SceneAuthoringResult EditComponents(SceneDocument expected, ComponentEditBatch batch)
+    { ArgumentNullException.ThrowIfNull(batch); return Edit(expected, document => document.EditComponents(batch, _lifetime)); }
     /// <summary>Uses the active document's shared history.</summary>
     /// <param name="expected">Exact captured document.</param><param name="operation">Engine identity/revision.</param><returns>Engine receipt.</returns>
     public SceneAuthoringResult Undo(SceneDocument expected, AuthoringOperation operation)

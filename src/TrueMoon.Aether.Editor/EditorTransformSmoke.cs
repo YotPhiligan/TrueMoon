@@ -22,8 +22,8 @@ internal static class EditorTransformSmoke
         EditorPreview preview, AetherHost engine, NativeRuntimeFactory runtime)
     {
         using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(3)); var token = deadline.Token;
-        var panel = view.Transform ?? throw new InvalidOperationException("Missing Transform form.");
-        var model = (EditorTransformViewModel)panel.DataContext!;
+        var panel = view.Inspector ?? throw new InvalidOperationException("Missing schema-driven inspector.");
+        var model = (EditorInspectorViewModel)panel.DataContext!;
         var documents = view.Documents!; var documentModel = (EditorDocumentViewModel)documents.DataContext!;
         var captures = new List<string>(); var revisions = new List<long>(); var owners = new HashSet<int>();
         var source = Path.Combine(commands.Read().ScenesDirectory!, "Transform.aetherscene");
@@ -33,15 +33,17 @@ internal static class EditorTransformSmoke
         try
         {
             await Doc(DocumentCommand.Open, "Transform.aetherscene");
-            await Until(() => panel.Fields["x"].IsEnabled);
+            await Until(() => panel.Properties.Values.Any(p => p.Property.Key == "x" && p.Input.IsEnabled));
+            var fields = panel.Properties.Values.Where(p => p.Property is TransformField)
+                .ToDictionary(p => p.Property.Key, p => (TextBox)p.Input);
             var original = document.Read().Content!; var selected = workspace.SelectedId;
-            var input = panel.Fields["x"]; var root = panel.Form;
+            var input = fields["x"]; var root = panel.Form;
             await Set(input, "NaN");
             await Until(() => !panel.Apply.IsEnabled && model.Fields[0].Error.Length != 0);
             Require(document.Read().Content!.Document.Revision == original.Document.Revision && !document.Read().IsDirty, "Invalid draft committed.");
             await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = "Noto Sans" })).WaitAsync(token);
             await Until(() => panel.Theme.Surface == Theme.Light.Surface);
-            Require(ReferenceEquals(input, panel.Fields["x"]) && ReferenceEquals(root, panel.Form) && input.Value == "NaN", "Theme rebuilt fields or discarded draft.");
+            Require(ReferenceEquals(input, panel.Properties.Values.Single(p => p.Property.Key == "x").Input) && ReferenceEquals(root, panel.Form) && input.Value == "NaN", "Theme rebuilt fields or discarded draft.");
             await Click(panel.Cancel); await Until(() => input.Value == "-1.5");
             await Set(input, "1.5");
             await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter, Control: true))).WaitAsync(token);
@@ -50,13 +52,13 @@ internal static class EditorTransformSmoke
             await PreviewAction(start: true); await Preview(); await Capture("transform-edited.png", 1.5f);
             await Click(panel.Undo); await Until(() => !document.Read().IsDirty); await Preview(); await Capture("transform-undo.png", -1.5f);
             await Click(panel.Redo); await Until(() => document.Read().IsDirty); await Preview(); await Capture("transform-redo.png", 1.5f);
-            Require(ReferenceEquals(input, panel.Fields["x"]) && ReferenceEquals(root, panel.Form) && workspace.SelectedId == selected, "Committed refresh rebuilt the editable tree or selection.");
+            Require(ReferenceEquals(input, panel.Properties.Values.Single(p => p.Property.Key == "x").Input) && ReferenceEquals(root, panel.Form) && workspace.SelectedId == selected, "Committed refresh rebuilt the editable tree or selection.");
             await Doc(DocumentCommand.SaveAs, "Edited.aetherscene");
             var currentSource = await File.ReadAllBytesAsync(source, token);
             Require(!document.Read().IsDirty && sourceBytes.SequenceEqual(currentSource), "Save changed source fixture or lost checkpoint.");
             await Doc(DocumentCommand.Close); Require(runtime.Leases.All(x => x.Reaped && x.ResourcesReleased), "Document close retained a preview child.");
             await Doc(DocumentCommand.Open, "Edited.aetherscene");
-            await Until(() => panel.Fields["x"].Value == "1.5");
+            await Until(() => panel.Properties.Values.Any(p => p.Property.Key == "x" && ((TextBox)p.Input).Value == "1.5"));
             Require(X() == 1.5 && document.Read().Content!.UndoCount == 0 && !document.Read().IsDirty, "Reopen did not persist Transform or retained ephemeral history.");
             var saved = await store.ReadAsync(document.Read().Path!, token);
             Require(saved.Document.Id == original.Document.Id, "Save/reopen changed scene identity.");

@@ -1,11 +1,11 @@
-﻿using TrueMoon.Argentis;
+using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor.Editing;
 
 /// <summary>Retained numeric Transform form; borrows its UI model/style and never owns authoring sessions.</summary>
-public sealed class EditorTransformView : View<EditorTransformViewModel>
+public sealed class EditorTransformView : View<EditorInspectorViewModel>
 {
-    private readonly EditorTransformViewModel _model;
+    private readonly EditorInspectorViewModel _model;
     private readonly Dictionary<string, TextBox> _fields = [];
     /// <summary>Gets numeric field containers for scoped styling.</summary>
     public static ViewStyleRole<HStack> FieldRole { get; } = new("TransformField");
@@ -43,11 +43,11 @@ public sealed class EditorTransformView : View<EditorTransformViewModel>
     public Text PreviewStatus { get; }
     /// <summary>Builds the stable form on the UI owner thread.</summary>
     /// <param name="model">Borrowed model.</param><param name="style">Borrowed scoped style.</param>
-    public EditorTransformView(EditorTransformViewModel model, IViewStyle<EditorTransformView> style)
+    public EditorTransformView(EditorInspectorViewModel model, IViewStyle<EditorTransformView> style)
         : this(model, style, true) { }
 
     /// <summary>Creates the form with optional legacy inline preview controls.</summary>
-    public EditorTransformView(EditorTransformViewModel model, IViewStyle<EditorTransformView> style, bool showPreviewControls)
+    public EditorTransformView(EditorInspectorViewModel model, IViewStyle<EditorTransformView> style, bool showPreviewControls)
     {
         ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(style); _model = model;
         try

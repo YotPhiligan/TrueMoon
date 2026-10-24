@@ -31,6 +31,13 @@ styles.Part(view => view.Surface)
 поддержки backdrop получает непрозрачный fallback; sigma0 означает tint без blur.
 [Контракт и границы](PLAN.md#pa8b-матовые-поверхности--2026-10-24).
 
+Для островков Editor используется отдельный `Theme.PanelBackdrop`: sigma8logical,
+Dark tint `#12161E/D0`, Light tint `#F2F5FA/D8`, opaque fallback того же цвета.
+Null возвращает Surface. Панели имеют radius8, тонкую границу и локальную тень;
+поля ввода сохраняют непрозрачный фон. `Element.Opacity`0..1 изменяет прозрачность
+всего subtree одним compositing layer, не меняя layout/input; при закрытии consumer
+отдельно отключает ввод. [Контракт](PLAN.md#pa8b1-group-opacity-и-panel-material--2026-10-24).
+
 | Назначение | Dark | Light |
 | --- | --- | --- |
 | Surface / Control | `#12161E` / `#202834` | `#F2F5FA` / `#FFFFFF` |
@@ -86,6 +93,37 @@ corners. Rounded overrides сохраняют прежний Skia round-rect п�
 не реализован. У собственных контролов приложение задаёт подходящие цвета текста
 поверх самостоятельно нарисованных поверхностей.
 
+## Дерево сущностей
+
+`TreeView` рисует строки одним retained-элементом, сохраняя identity узлов по ID.
+Иконки `Entity`, `Cube`, `Interaction`, `ChevronRight` и `ChevronDown` геометрические
+и не зависят от шрифта. Disclosure и иконка имеют размер14; тема задаёт цвета
+текста, выделения, hover и фокуса. Обрезка длинной подписи сохраняет Unicode-пары,
+отрисовка ограничивается видимыми строками и clip родительского ScrollViewer.
+
+Editor hierarchy style использует текст12, строку24, отступ уровня16, border1
+и padding8. Заголовок13, caption11, подсказка10 и кнопка «В корень» высотой24.
+Ошибки выводятся отдельным read-only полем11 с выделением/копированием. View имеет
+собственную область оформления; родительский стиль не обходит его внутреннее дерево.
+Смена темы сохраняет выбор, раскрытие и экземпляры дерева/инспектора.
+[Контракт PA4c](PLAN.md#pa4c-treeview--начат-2026-10-24).
+
+## Динамический инспектор Editor
+
+`EditorInspectorView` имеет собственный `IViewStyle`, включая динамические роли.
+Секции компонентов используют Control/Border, border1/padding6, spacing4, заголовок13
+высотой26. Scalar inputs — текст12/высота26, label11/ширина58; reset icon24×24,
+nullable10/ширина60 с padding32 слева под checkbox. Числовое поле занимает остаток
+ширины строки, чтобы reset/null оставались внутри узкой панели. String использует
+полноширинный многострочный RichTextEditor высотой70. Provenance10 и ошибки11.
+Основные иконки26×26 в одной строке, Delete рядом с disclosure. Символы Add/Delete
+геометрические; Apply использует Accent. Tooltip использует текст12/padding7,
+delay500мс и общий OverlayHost без захвата focus, включая disabled actions.
+При пустом выборе вся колонка скрывается; viewport получает освободившуюся ширину.
+Обычное обновление и смена темы сохраняют контролы;
+родительский стиль не входит во внутреннее дерево inspector.
+[Прикладной контракт ED4d](../engine/EDITOR_PLAN.md#ed4d-динамический-инспектор-компонентов--начат-2026-10-24).
+
 ## Компактная строка состояния
 
 Общий `StatusBar` располагает primary, action, упорядоченные secondary и details.
@@ -132,8 +170,11 @@ Namespaces: `TrueMoon.Argentis`, `TrueMoon.Alloy.Runtime`,
 не добавил второй заголовок.
 
 `WindowFrame.CreateDefault(title, content)` создаёт border1, title bar36,
-квадратные buttons32 и grip16 в отдельной нижней строке. Content не перекрывается
-грипом. `WindowTitleBar.Icon` заимствует изображение, его освобождает вызывающая
+квадратные buttons32 и grip16 поверх правого нижнего угла content. Отдельной
+нижней строки под grip нет: content доходит до внутренней границы рамки, его
+высота не меняется при показе/скрытии grip. Интерактивные элементы в этом углу
+должны оставлять место под квадрат16×16; Editor StatusBar уже резервирует справа24.
+`WindowTitleBar.Icon` заимствует изображение, его освобождает вызывающая
 сторона. `DefaultWindowFrameBinding` один раз связывает кнопки с borrowed
 `IWindowCommands`; UI tree освобождается раньше окна. В HostedUiWindow связь
 создаётся автоматически, close проходит через `RequestCloseAsync`, включая veto,

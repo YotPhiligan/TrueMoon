@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Linq.Expressions;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
+using TrueMoon.Aether.Editor.Hierarchy;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor;
@@ -10,10 +11,16 @@ namespace TrueMoon.Aether.Editor;
 public sealed class EditorView : View<EditorViewModel>
 {
     public static ViewStyleRole<Border> PaneRole { get; } = new("Pane");
+    /// <summary>Persistent floating panel surfaces; separate from ordinary content sections.</summary>
+    public static ViewStyleRole<Border> IslandSurfaceRole { get; } = new("IslandSurface");
+    /// <summary>Shadow gutters of the anchored island hosts.</summary>
+    public static ViewStyleRole<EditorIsland> IslandRole { get; } = new("Island");
     public static ViewStyleRole<VStack> PaneContentRole { get; } = new("PaneContent");
     public static ViewStyleRole<VStack> PaneItemsRole { get; } = new("PaneItems");
     public static ViewStyleRole<Text> PaneTitleRole { get; } = new("PaneTitle");
     public static ViewStyleRole<Button> EntityButtonRole { get; } = new("EntityButton");
+    public static ViewStyleRole<VStack> EntityListRole { get; } = new("LegacyEntityList");
+    public static ViewStyleRole<Text> SceneCaptionRole { get; } = new("LegacySceneCaption");
     public static ViewStyleRole<PropertyRow> PropertyRowRole { get; } = new("PropertyRow");
     public static ViewStyleRole<Text> PropertyNameRole { get; } = new("PropertyName");
     public static ViewStyleRole<VStack> PropertyRowsRole { get; } = new("PropertyRows");
@@ -21,7 +28,7 @@ public sealed class EditorView : View<EditorViewModel>
     private readonly Dictionary<EditorCommand, Button> _commands = [];
     private readonly Dictionary<string, Button> _entities = new(StringComparer.Ordinal);
     public HStack Toolbar { get; } = HStack.Create();
-    public VStack EntityList { get; } = VStack.Create();
+    public VStack EntityList { get; } = VStack.Create().WithRole(EntityListRole);
     public ContentControl PropertiesPanel { get; } = ContentControl.Create();
     public Text Selection { get; }
     public Text Status { get; }
@@ -35,6 +42,14 @@ public sealed class EditorView : View<EditorViewModel>
     public EditorDocumentView? Documents { get; }
     /// <summary>Gets the nested Transform form owned by this tree.</summary>
     public EditorTransformView? Transform { get; }
+    /// <summary>Gets the schema-driven inspector owned by this tree.</summary>
+    public EditorInspectorView? Inspector { get; }
+    /// <summary>Retained inspector island above the full-area viewport.</summary>
+    public Element InspectorPanel { get; }
+    /// <summary>Owned reveal/shadow host for the tree.</summary>
+    public EditorIsland HierarchyIsland { get; }
+    /// <summary>Owned reveal/shadow host for contextual inspection.</summary>
+    public EditorIsland InspectorIsland { get; }
     public IReadOnlyDictionary<EditorCommand, Button> Commands => _commands;
     public IReadOnlyDictionary<string, Button> Entities => _entities;
     /// <summary>Owns document-area popups; the title header borrows this host in the same window tree.</summary>
@@ -43,6 +58,8 @@ public sealed class EditorView : View<EditorViewModel>
     public EditorHeaderView? Header { get; internal set; }
     /// <summary>Parent-owned compact footer, when configured.</summary>
     public EditorStatusBarView? StatusBar { get; }
+    /// <summary>Parent-owned hierarchy, or null for the legacy flat-list constructor.</summary>
+    public EditorHierarchyView? Hierarchy { get; }
 
     public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents = null,
         IFactory<EditorTransformView>? transform = null, bool compactHeader = false)
@@ -52,6 +69,19 @@ public sealed class EditorView : View<EditorViewModel>
     public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents,
         IFactory<EditorTransformView>? transform, bool compactHeader,
         IFactory<EditorStatusBarView, EditorStatusBarArguments>? statusBar)
+        : this(model, style, documents, transform, compactHeader, statusBar, null) { }
+
+    /// <summary>Creates an editor with an optional parent-owned hierarchical explorer.</summary>
+    public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents,
+        IFactory<EditorTransformView>? transform, bool compactHeader,
+        IFactory<EditorStatusBarView, EditorStatusBarArguments>? statusBar, IFactory<EditorHierarchyView>? hierarchy)
+        : this(model, style, documents, transform, compactHeader, statusBar, hierarchy, null) { }
+
+    /// <summary>Creates the editor with a schema-driven inspector instead of the original fixed form.</summary>
+    public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents,
+        IFactory<EditorTransformView>? transform, bool compactHeader,
+        IFactory<EditorStatusBarView, EditorStatusBarArguments>? statusBar, IFactory<EditorHierarchyView>? hierarchy,
+        IFactory<EditorInspectorView>? inspector)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(style);
@@ -69,12 +99,17 @@ public sealed class EditorView : View<EditorViewModel>
             shell.Add(footer);
             Documents = documents?.Create();
             if (documents != null && Documents == null) throw new InvalidOperationException("Document view factory returned null.");
-            Transform = transform?.Create();
-            if (transform != null && Transform == null) throw new InvalidOperationException("Transform view factory returned null.");
+            Inspector = inspector?.Create();
+            if (inspector != null && Inspector == null) throw new InvalidOperationException("Inspector factory returned null.");
+            Transform = Inspector == null ? transform?.Create() : null;
+            if (Inspector == null && transform != null && Transform == null) throw new InvalidOperationException("Transform view factory returned null.");
+            Hierarchy = hierarchy?.Create();
+            if (hierarchy != null && Hierarchy == null) throw new InvalidOperationException("Hierarchy view factory returned null.");
+            if (Hierarchy != null) EntityList.Dispose();
             if (Transform != null) InspectorHint.Value = "Transform · Ctrl+Enter — применить";
             Selection = Text.Plain().BindText(model, x => x.SelectedName);
             Error = Text.Plain().BindText(model, x => x.ErrorText);
-            SceneTitle = Text.Plain(model.Scene.Id);
+            SceneTitle = Hierarchy?.Caption ?? Text.Plain(model.Scene.Id).WithRole(SceneCaptionRole);
             AddCommand(EditorCommand.Build, "Собрать", x => x.CanBuild);
             AddCommand(EditorCommand.Start, "Запустить", x => x.CanStart);
             AddCommand(EditorCommand.Play, "Play", x => x.CanPlay);
@@ -87,14 +122,25 @@ public sealed class EditorView : View<EditorViewModel>
             Toolbar.IsVisible = !compactHeader;
             UpdateEntities();
 
-            var hierarchy = Pane("СЦЕНА", SceneTitle, ScrollViewer.Create().Content(EntityList));
+            var hierarchyPanel = (Element?)Hierarchy ?? Pane("СЦЕНА", SceneTitle, ScrollViewer.Create().Content(EntityList));
+            if (hierarchyPanel is Border legacyPane) legacyPane.WithRole(IslandSurfaceRole);
+            HierarchyIsland = new EditorIsland(hierarchyPanel).WithRole(IslandRole);
             ViewportFrame = ContentControl.Create().Content(new ViewportLayout(Canvas, ViewportTitle));
-            var inspector = Transform == null ? Pane("ИНСПЕКТОР", Selection, InspectorHint, PropertiesPanel, Error) :
+            ViewportTitle.IsVisible = false;
+            InspectorHint.IsVisible = Inspector == null;
+            PropertiesPanel.IsVisible = Inspector == null;
+            var inspectorSurface = Inspector != null ? Border.Create().WithRole(PaneRole).Content(
+                new InspectorLayout(Text.Plain("ИНСПЕКТОР").WithRole(PaneTitleRole), Selection, InspectorHint, Inspector, PropertiesPanel, Error)) :
+                Transform == null ? Pane("ИНСПЕКТОР", Selection, InspectorHint, PropertiesPanel, Error) :
                 Pane("ИНСПЕКТОР", ScrollViewer.Create().Content(VStack.Create().WithRole(PaneItemsRole)
                     .WithChildren(Selection, InspectorHint, Transform, PropertiesPanel, Error)));
+            inspectorSurface.WithRole(IslandSurfaceRole);
+            InspectorIsland = new EditorIsland(inspectorSurface, fromRight: true) { IsOpen = model.IsInspectorVisible }.WithRole(IslandRole)
+                .Bind(EditorIsland.IsOpenProperty, model, x => x.IsInspectorVisible);
+            InspectorPanel = InspectorIsland;
             Element tools = Documents == null ? Toolbar : VStack.Create().WithChildren(Toolbar, Documents);
             shell.Items.Remove(footer);
-            shell.Add(new EditorLayout(tools, hierarchy, ViewportFrame, inspector, footer));
+            shell.Add(new EditorLayout(tools, HierarchyIsland, ViewportFrame, InspectorIsland, footer));
             UpdateSelection();
             UpdateProperties();
             this.WithViewStyle(style);
@@ -117,6 +163,10 @@ public sealed class EditorView : View<EditorViewModel>
                 if (Documents is { IsDisposed: false, Parent: null }) Documents.Dispose();
                 if (Transform is { IsDisposed: false, Parent: null }) Transform.Dispose();
                 if (StatusBar is { IsDisposed: false, Parent: null }) StatusBar.Dispose();
+                if (Hierarchy is { IsDisposed: false, Parent: null }) Hierarchy.Dispose();
+                if (Inspector is { IsDisposed: false, Parent: null }) Inspector.Dispose();
+                if (HierarchyIsland is { IsDisposed: false, Parent: null }) HierarchyIsland.Dispose();
+                if (InspectorIsland is { IsDisposed: false, Parent: null }) InspectorIsland.Dispose();
             }
             catch (Exception cleanup)
             {
@@ -133,18 +183,20 @@ public sealed class EditorView : View<EditorViewModel>
 
     private void ModelChanged(object? sender, PropertyChangedEventArgs change)
     {
-        if (change.PropertyName == nameof(EditorViewModel.Scene)) Dispatch(() => SceneTitle.Value = _model.Scene.Id);
+        if (change.PropertyName == nameof(EditorViewModel.Scene) && Hierarchy == null) Dispatch(() => SceneTitle.Value = _model.Scene.Id);
         if (change.PropertyName == nameof(EditorViewModel.EntityIds)) Dispatch(UpdateEntities);
         if (change.PropertyName == nameof(EditorViewModel.SelectedId)) Dispatch(UpdateSelection);
         if (change.PropertyName == nameof(EditorViewModel.Properties)) Dispatch(UpdateProperties);
     }
 
     /// <inheritdoc />
-    public override bool HandleInput(UiInput input, IInputContext context) => Documents?.HandleShortcut(input) == true || Transform?.HandleShortcut(input) == true;
+    public override bool HandleInput(UiInput input, IInputContext context) => Documents?.HandleShortcut(input) == true ||
+        Inspector?.HandleShortcut(input) == true || Transform?.HandleShortcut(input) == true;
 
     private void UpdateEntities()
     {
         VerifyAccess();
+        if (Hierarchy != null) return;
         var ids = _model.EntityIds;
         var wanted = ids.ToHashSet(StringComparer.Ordinal);
         foreach (var id in _entities.Keys.Where(id => !wanted.Contains(id)).ToArray())
@@ -177,6 +229,7 @@ public sealed class EditorView : View<EditorViewModel>
     private void UpdateProperties()
     {
         VerifyAccess();
+        if (Inspector != null) return;
         var rows = VStack.Create().WithRole(PropertyRowsRole);
         foreach (var row in _model.Properties) rows.Add(new PropertyRow(row.Key, row.Value).WithRole(PropertyRowRole));
         var old = PropertiesPanel.Child;
@@ -199,6 +252,38 @@ public sealed class EditorView : View<EditorViewModel>
         public void Dispose() => model.PropertyChanged -= callback;
     }
 
+    private sealed class InspectorLayout : ElementList
+    {
+        public InspectorLayout(params Element[] parts) { foreach (var part in parts) Add(part); }
+        protected override Size MeasureCore(Size available, ITextLayoutService text)
+        {
+            var fixedHeight = 0f;
+            for (var i = 0; i < 3; i++)
+            {
+                Children[i].Measure(available, text);
+                if (Children[i].IsVisible) fixedHeight += Children[i].DesiredSize.Height + 6;
+            }
+            Children[5].Measure(available, text);
+            var error = (Text)Children[5]; var errorHeight = error.Value.Length == 0 ? 0 : Math.Min(60, error.DesiredSize.Height);
+            Children[3].Measure(new(available.Width, Math.Max(0, available.Height - fixedHeight - errorHeight)), text);
+            Children[4].Measure(default, text);
+            return new(Math.Min(280, available.Width), Math.Min(available.Height, fixedHeight + Children[3].DesiredSize.Height + errorHeight));
+        }
+        protected override void ArrangeCore(Rect area)
+        {
+            var y = area.Y; var bottom = area.Y + area.Height;
+            for (var i = 0; i < 3; i++)
+            {
+                var part = Children[i]; var height = part.IsVisible ? Math.Min(part.DesiredSize.Height, Math.Max(0, bottom - y)) : 0;
+                part.Arrange(new(area.X, y, area.Width, height)); if (height > 0) y += height + 6;
+            }
+            var error = (Text)Children[5]; var errorHeight = error.Value.Length == 0 ? 0 : Math.Min(60, error.DesiredSize.Height);
+            Children[3].Arrange(new(area.X, y, area.Width, Math.Max(0, bottom - y - errorHeight)));
+            Children[4].Arrange(new(area.X, bottom, 0, 0));
+            error.Arrange(new(area.X, bottom - errorHeight, area.Width, errorHeight));
+        }
+    }
+
     private sealed class ViewportLayout : ElementList
     {
         public ViewportLayout(Element canvas, Element title)
@@ -215,7 +300,7 @@ public sealed class EditorView : View<EditorViewModel>
 
         protected override void ArrangeCore(Rect area)
         {
-            var requested = float.IsNaN(Children[1].Height) ? Children[1].DesiredSize.Height : Children[1].Height;
+            var requested = !Children[1].IsVisible ? 0 : float.IsNaN(Children[1].Height) ? Children[1].DesiredSize.Height : Children[1].Height;
             var height = Math.Min(requested, area.Height);
             Children[1].Arrange(new(area.X, area.Y, area.Width, height));
             Children[0].Arrange(new(area.X, area.Y + height, area.Width, Math.Max(0, area.Height - height)));

@@ -1,4 +1,4 @@
-﻿using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -50,7 +50,7 @@ public sealed class EditorHeaderConfigurationTests
     [Theory]
     [InlineData(nameof(EditorViewModel))]
     [InlineData(nameof(EditorDocumentViewModel))]
-    [InlineData(nameof(EditorTransformViewModel))]
+    [InlineData(nameof(EditorInspectorViewModel))]
     public void Registration_RejectsEachMissingPresentationBoundary(string missing)
     {
         using var source = new HeaderFixture();
@@ -93,7 +93,7 @@ public sealed class EditorHeaderConfigurationTests
     {
         if (missing != nameof(EditorViewModel)) services.Singleton<EditorViewModel>(_ => source.Model);
         if (missing != nameof(EditorDocumentViewModel)) services.Singleton<EditorDocumentViewModel>(_ => source.Documents);
-        if (missing != nameof(EditorTransformViewModel)) services.Singleton<EditorTransformViewModel>(_ => source.Transform);
+        if (missing != nameof(EditorInspectorViewModel)) services.Singleton<EditorInspectorViewModel>(_ => source.Transform);
     });
     private sealed class CountingStyle : IViewStyle<EditorHeaderView>
     { public int Configurations; public void Configure(IViewStyleBuilder<EditorHeaderView> styles) { Configurations++; new EditorHeaderViewStyle().Configure(styles); } }

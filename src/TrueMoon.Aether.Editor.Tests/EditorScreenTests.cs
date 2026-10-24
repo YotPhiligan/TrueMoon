@@ -10,15 +10,16 @@ namespace TrueMoon.Aether.Editor.Tests;
 public sealed class EditorScreenTests
 {
     [Fact]
-    public void ShellGeometry_ReservesToolbarInspectorAndStatusAroundCentralViewport()
+    public void ShellGeometry_FillsBodyWithViewportAndPaintsAnchoredIslandsAboveIt()
     {
         using var layout = new EditorLayout(new Box(), new Box(), new Box(), new Box(), new Box());
         layout.Measure(new(1280, 720), new TextLayout()); layout.Arrange(new(0, 0, 1280, 720));
-        Assert.Equal(new Rect(0, 0, 1280, 52), layout.Children[0].Bounds);
-        Assert.Equal(new Rect(0, 52, 224, 640), layout.Children[1].Bounds);
-        Assert.Equal(new Rect(230, 52, 752, 640), layout.Children[2].Bounds);
-        Assert.Equal(new Rect(988, 52, 292, 640), layout.Children[3].Bounds);
-        Assert.Equal(new Rect(0, 692, 1280, 28), layout.Children[4].Bounds);
+        Assert.Equal(new Rect(0, 0, 1280, 52), layout.Toolbar.Bounds);
+        Assert.Equal(new Rect(0, 52, 1280, 640), layout.Viewport.Bounds);
+        Assert.Equal(new Rect(8, 60, 264, 10), layout.Hierarchy.Bounds);
+        Assert.Equal(new Rect(936, 60, 336, 10), layout.Inspector.Bounds);
+        Assert.Equal(new Rect(0, 692, 1280, 28), layout.Status.Bounds);
+        Assert.Equal(new[] { layout.Toolbar, layout.Viewport, layout.Hierarchy, layout.Inspector, layout.Status }, layout.Children);
     }
     [Theory] [InlineData(0f, 0f)] [InlineData(3f, 20f)] [InlineData(1100f, 700f)]
     public void ShellGeometry_SmallBoundsStayFiniteNonnegativeAndClipped(float width, float height)
@@ -70,8 +71,10 @@ public sealed class EditorScreenTests
     {
         using var model = Model(); var view = new EditorView(model, new EditorViewStyle()); var frame = WindowFrame.CreateDefault("Editor", view); frame.ApplyWindowState(new(true, false, true, true, true));
         using var ui = new UiSession(frame, new Surface(), new UiViewport((int)(1280 * scale), (int)(800 * scale), scale));
-        ui.Update(); Assert.Equal(new Rect(1, 37, 1278, 746), view.Bounds); Assert.Equal(0, view.CornerRadius); Assert.True(view.Canvas.Bounds.Width > 700); Assert.True(view.Canvas.Bounds.Height > 600);
-        Assert.True(view.Canvas.Bounds.Y > view.Bounds.Y + 52); Assert.True(view.Canvas.Bounds.X + view.Canvas.Bounds.Width < view.Bounds.X + view.Bounds.Width - 280);
+        ui.Update(); Assert.Equal(new Rect(1, 37, 1278, 762), view.Bounds); Assert.Equal(0, view.CornerRadius); Assert.True(view.Canvas.Bounds.Width > 700); Assert.True(view.Canvas.Bounds.Height > 600);
+        Assert.Equal(new Rect(1, 89, 1278, 682), view.ViewportFrame.Bounds);
+        Assert.Equal(new Rect(2, 90, 1276, 680), view.Canvas.Bounds);
+        Assert.False(view.ViewportTitle.IsVisible);
         model.Refresh(new(SessionState.Stopped), EditorWorkspaceTests.Status(GameEditorOperation.Idle, false)); Assert.False(ui.Update());
     }
     [Fact]
