@@ -12,6 +12,9 @@ public sealed class EditorDocumentViewModel : INotifyPropertyChanged, IDisposabl
     private EditorDocumentCommandState? _state;
     private string _title = "Сцена не открыта", _root = "Проект не открыт", _error = "", _decision = "";
     private bool _canNew, _canOpen, _canSave, _canSaveAs, _canClose, _canCancel, _awaiting, _needsSavePath;
+    private DocumentCommand? _pathRequest;
+    private string? _dismissedError;
+    private bool _canConfirmPath;
 
     /// <summary>Creates a model borrowing the App-owned coordinator. The first owner operation establishes the UI thread.</summary>
     /// <param name="commands">Tracked document actions.</param>
@@ -30,6 +33,19 @@ public sealed class EditorDocumentViewModel : INotifyPropertyChanged, IDisposabl
     public string ScenesRoot => _root;
     /// <summary>Gets an actionable error without dropping path drafts or document content.</summary>
     public string ErrorText => _error;
+    /// <summary>Action awaiting an explicit Open/Save path confirmation; no IO has started.</summary>
+    public DocumentCommand? PathRequest => _pathRequest;
+    /// <summary>Whether the retained path editor is requested.</summary>
+    public bool IsPathPromptOpen => _pathRequest != null;
+    /// <summary>Whether contextual document tools need to be shown above the scene.</summary>
+    public bool IsToolsVisible => IsPathPromptOpen || AwaitingDecision || (_error.Length != 0 && _dismissedError != _error);
+    /// <summary>Heading of the requested path operation.</summary>
+    public string PathPromptText => _pathRequest is DocumentCommand.Open ? "Открыть сцену" :
+        _pathRequest != null ? "Сохранить сцену как" : AwaitingDecision ? "Несохранённые изменения" : _error.Length != 0 ? "Ошибка операции" : Title;
+    /// <summary>Fresh admission for the requested path action.</summary>
+    public bool CanConfirmPath => _canConfirmPath;
+    /// <summary>Whether the tools can be dismissed without answering an unsaved-changes decision.</summary>
+    public bool CanDismissTools => !AwaitingDecision && !IsPathPromptOpen;
     /// <summary>Gets the explanation of the pending transition.</summary>
     public string DecisionText => _decision;
     /// <summary>Gets whether an explicit Save/Discard/Cancel decision is pending.</summary>
@@ -57,7 +73,7 @@ public sealed class EditorDocumentViewModel : INotifyPropertyChanged, IDisposabl
     /// <summary>Reads fresh admission state before a game action, including work accepted since the last UI refresh.</summary>
     public bool BlocksRuntime
     {
-        get { var state = _commands.Read(); return state.Busy || state.Exiting || state.Closed || state.Document?.Content != null; }
+        get { var state = _commands.Read(); return IsPathPromptOpen || state.Busy || state.Exiting || state.Closed || state.Document?.Content != null; }
     }
     /// <inheritdoc />
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -66,6 +82,7 @@ public sealed class EditorDocumentViewModel : INotifyPropertyChanged, IDisposabl
     public void Refresh()
     {
         VerifyOwner();
+        var toolsVisible = IsToolsVisible; var confirm = CanConfirmPath; var dismiss = CanDismissTools; var promptText = PathPromptText;
         var next = _commands.Read(); var previous = _state; _state = next;
         if (previous?.Busy != next.Busy) Notify(nameof(IsBusy));
         if (previous?.Operation != next.Operation) Notify(nameof(Operation));
@@ -87,9 +104,53 @@ public sealed class EditorDocumentViewModel : INotifyPropertyChanged, IDisposabl
             next.Operation == DocumentCommand.Open ? " · Загрузка…" : " · Выполняется…" : "";
         Update(ref _title, file + (next.Document?.IsDirty == true ? " *" : "") + activity, nameof(Title));
         Update(ref _root, next.ScenesDirectory ?? "Проект не открыт", nameof(ScenesRoot));
+        if (next.Error == null) _dismissedError = null;
         Update(ref _error, next.Error == null ? "" : "Ошибка: " + next.Error.Message, nameof(ErrorText));
         var target = next.Operation switch { DocumentCommand.Open => "открытием другой сцены", DocumentCommand.New => "созданием сцены", DocumentCommand.Exit => "выходом", _ => "закрытием сцены" };
         Update(ref _decision, "Сохранить изменения перед " + target + "?", nameof(DecisionText));
+        if (toolsVisible != IsToolsVisible) Notify(nameof(IsToolsVisible));
+        _canConfirmPath = _pathRequest is { } pathCommand && _commands.CanExecute(pathCommand);
+        if (confirm != CanConfirmPath) Notify(nameof(CanConfirmPath));
+        if (dismiss != CanDismissTools) Notify(nameof(CanDismissTools));
+        if (promptText != PathPromptText) Notify(nameof(PathPromptText));
+    }
+
+    /// <summary>Requests a UI action, collecting paths before Open, SaveAs or a first Save.</summary>
+    /// <param name="command">New/Open/Save/SaveAs/Close action.</param>
+    public void Request(DocumentCommand command)
+    {
+        VerifyOwner();
+        if (command is not (DocumentCommand.New or DocumentCommand.Open or DocumentCommand.Save or DocumentCommand.SaveAs or DocumentCommand.Close))
+            throw new ArgumentOutOfRangeException(nameof(command));
+        if (!_commands.CanExecute(command)) return;
+        if (command is DocumentCommand.Open or DocumentCommand.SaveAs || command == DocumentCommand.Save && Document?.Path == null)
+        {
+            _dismissedError = null; SetPathRequest(command); return;
+        }
+        Execute(command);
+    }
+    /// <summary>Starts the requested operation using the retained path draft and fresh admission.</summary>
+    public void ConfirmPath()
+    {
+        VerifyOwner();
+        if (_pathRequest is not { } command || !_commands.CanExecute(command)) return;
+        SetPathRequest(null); Execute(command);
+    }
+    /// <summary>Dismisses path tools or a displayed error without changing the document or its history.</summary>
+    public void CancelPath()
+    {
+        VerifyOwner(); _dismissedError = _error; SetPathRequest(null);
+    }
+    private void SetPathRequest(DocumentCommand? command)
+    {
+        var previous = _pathRequest; _pathRequest = command;
+        _canConfirmPath = command is { } requested && _commands.CanExecute(requested);
+        if (previous != command)
+        {
+            Notify(nameof(PathRequest)); Notify(nameof(IsPathPromptOpen)); Notify(nameof(PathPromptText)); Notify(nameof(CanConfirmPath));
+            Notify(nameof(CanDismissTools));
+        }
+        Notify(nameof(IsToolsVisible));
     }
 
     /// <summary>Invokes the shared action using the current path draft.</summary>

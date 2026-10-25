@@ -4,12 +4,21 @@ using TrueMoon.Argentis;
 namespace TrueMoon.Aether.Editor.Documents;
 
 /// <summary>Retained document path/actions and an inline Save/Discard/Cancel decision, borrowing model/style.</summary>
-public sealed class EditorDocumentView : View<EditorDocumentViewModel>
+public sealed class EditorDocumentView : View<EditorDocumentViewModel>, IUiInputObserver
 {
     private readonly EditorDocumentViewModel _model;
     private readonly Dictionary<DocumentCommand, Button> _commands = [];
     private bool _shown;
     private Element? _previousFocus;
+    private bool _toolsShown, _pathShown;
+    /// <summary>Whether idle tools collapse into the window header instead of reserving a document toolbar.</summary>
+    public bool CompactHeader { get; }
+    /// <summary>Confirms the path requested by the shared File menu.</summary>
+    public Button ConfirmPath { get; }
+    /// <summary>Dismisses the path prompt without starting file work.</summary>
+    public Button CancelPath { get; }
+    /// <summary>Dismisses displayed diagnostics while keeping the document and path draft.</summary>
+    public Button DismissTools { get; }
     /// <summary>Gets the path/action row.</summary>
     public HStack Actions { get; } = HStack.Create();
     /// <summary>Gets the Open/SaveAs path editor.</summary>
@@ -42,6 +51,7 @@ public sealed class EditorDocumentView : View<EditorDocumentViewModel>
     {
         ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(style);
         _model = model;
+        CompactHeader = compactHeader;
         try
         {
             model.Refresh(); DataContext = model;
@@ -49,7 +59,7 @@ public sealed class EditorDocumentView : View<EditorDocumentViewModel>
                 .Bind(UiProperties.Enabled, model, x => x.CanEditPath).SetValue(UiProperties.AccessibleName, "Путь сцены");
             SavePathInput = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.SavePathDraft)
                 .SetValue(UiProperties.AccessibleName, "Сохранить новую сцену как");
-            Title = Text.Plain().BindText(model, x => x.Title);
+            Title = compactHeader ? Text.Plain().BindText(model, x => x.PathPromptText) : Text.Plain().BindText(model, x => x.Title);
             ScenesRoot = Text.Plain().BindText(model, x => x.ScenesRoot);
             Error = Text.Plain().BindText(model, x => x.ErrorText);
             Actions.Add(Text.Plain("Сцена:")); Actions.Add(PathInput);
@@ -59,7 +69,20 @@ public sealed class EditorDocumentView : View<EditorDocumentViewModel>
             Add(DocumentCommand.SaveAs, "Сохранить как", x => x.CanSaveAs);
             Add(DocumentCommand.Close, "Закрыть", x => x.CanClose);
             Actions.Add(Button.Simple("Отмена").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel));
-            if (compactHeader) foreach (var button in Actions.Children.OfType<Button>()) button.IsVisible = false;
+            ConfirmPath = Button.Simple("Продолжить").Bind(UiProperties.Enabled, model, x => x.CanConfirmPath).OnClick(model.ConfirmPath);
+            CancelPath = Button.Simple("Отмена").OnClick(model.CancelPath);
+            DismissTools = Button.Simple("Закрыть").OnClick(model.CancelPath);
+            if (compactHeader)
+            {
+                foreach (var button in Actions.Children.OfType<Button>()) button.IsVisible = false;
+                Actions.Children[0].IsVisible = false;
+                DismissTools.Bind(UiProperties.Visible, model, x => x.CanDismissTools);
+                Actions.Add(ConfirmPath); Actions.Add(CancelPath);
+                Actions.Bind(UiProperties.Visible, model, x => x.IsPathPromptOpen);
+                IsVisible = model.IsToolsVisible;
+                this.Bind(UiProperties.Visible, model, x => x.IsToolsVisible);
+            }
+            else { ConfirmPath.IsVisible = CancelPath.IsVisible = DismissTools.IsVisible = false; }
             SaveChoice = Button.Simple("Сохранить").OnClick(() => model.Choose(DocumentCloseChoice.Save));
             DiscardChoice = Button.Simple("Не сохранять").OnClick(() => model.Choose(DocumentCloseChoice.Discard));
             CancelChoice = Button.Simple("Отмена").OnClick(() => model.Choose(DocumentCloseChoice.Cancel));
@@ -68,7 +91,10 @@ public sealed class EditorDocumentView : View<EditorDocumentViewModel>
                 .Bind(UiProperties.Visible, model, x => x.NeedsSavePath);
             Decision = Border.Create().Bind(UiProperties.Visible, model, x => x.AwaitingDecision).Content(
                 VStack.Create().WithChildren(Text.Plain().BindText(model, x => x.DecisionText), firstSave, Choices));
-            Content(model, _ => VStack.Create().WithChildren(Actions, Title, ScenesRoot, Error, Decision));
+            Content(model, _ => compactHeader
+                ? VStack.Create().WithChildren(Title, Actions, ScenesRoot, Error, Decision, DismissTools)
+                : VStack.Create().WithChildren(Actions, Title, ScenesRoot, Error, Decision, DismissTools));
+            if (!compactHeader) { Own(ConfirmPath); Own(CancelPath); }
             this.WithViewStyle(style);
             void Add(DocumentCommand command, string label, Expression<Func<EditorDocumentViewModel, bool>> enabled)
             {
@@ -89,11 +115,18 @@ public sealed class EditorDocumentView : View<EditorDocumentViewModel>
     {
         VerifyAccess();
         if (input.Kind != InputKind.KeyDown) return false;
-        if (input.Key == UiKey.Escape && _model.AwaitingDecision) { _model.Choose(DocumentCloseChoice.Cancel); return true; }
+        if (CompactHeader && _model.IsPathPromptOpen && input.Key == UiKey.Enter && !input.Control)
+        { _model.ConfirmPath(); return true; }
+        if (input.Key == UiKey.Escape)
+        {
+            if (_model.AwaitingDecision) { _model.Choose(DocumentCloseChoice.Cancel); return true; }
+            if (CompactHeader && _model.IsToolsVisible) { _model.CancelPath(); return true; }
+        }
         if (!input.Control) return false;
         if (input.Key == UiKey.S)
         {
             if (_model.AwaitingDecision) _model.Choose(DocumentCloseChoice.Save);
+            else if (CompactHeader) _model.Request(input.Shift ? DocumentCommand.SaveAs : DocumentCommand.Save);
             else _model.Execute(input.Shift ? DocumentCommand.SaveAs : DocumentCommand.Save);
             return true;
         }
@@ -103,12 +136,39 @@ public sealed class EditorDocumentView : View<EditorDocumentViewModel>
 
     /// <inheritdoc />
     public override bool HandleInput(UiInput input, IInputContext context) => HandleShortcut(input);
+    /// <inheritdoc />
+    public bool PreviewInput(UiInput input, IInputContext context)
+    {
+        if (!CompactHeader || !_model.IsToolsVisible || !IsVisible) return false;
+        if (input.Kind == InputKind.KeyDown && input.Key == UiKey.Escape) return HandleShortcut(input);
+        if (input.Kind == InputKind.PointerDown && !Bounds.Contains(input.X, input.Y))
+        {
+            if (!_model.AwaitingDecision) _model.CancelPath();
+            return true;
+        }
+        return false;
+    }
 
     /// <summary>Moves focus to safe Cancel after bindings show a decision and restores live prior focus on completion.</summary>
     /// <param name="context">Borrowed current session's focus service, used only for this call.</param>
     public void SynchronizeFocus(IInputContext context)
     {
         VerifyAccess(); ArgumentNullException.ThrowIfNull(context);
+        if (CompactHeader)
+        {
+            if (IsVisible != _model.IsToolsVisible) return;
+            Element root = this; while (root.Parent != null) root = root.Parent;
+            if (_model.IsToolsVisible && !_toolsShown) { _previousFocus = FindFocus(root); _toolsShown = true; }
+            if (_model.AwaitingDecision && !_shown && Decision.IsVisible) { context.Focus(CancelChoice); _shown = true; _pathShown = false; }
+            else if (_model.IsPathPromptOpen && !_pathShown && Actions.IsVisible) { context.Focus(PathInput); _pathShown = true; _shown = false; }
+            else if (!_model.IsToolsVisible && _toolsShown)
+            {
+                var target = _previousFocus; _previousFocus = null; _toolsShown = _pathShown = _shown = false;
+                try { if (target is { IsDisposed: false, IsAttached: true, IsEffectivelyEnabled: true, IsVisible: true, Focusable: true }) context.Focus(target); }
+                catch (ArgumentException) { /* A previous target may now have a hidden ancestor. */ }
+            }
+            return;
+        }
         if (Decision.IsVisible != _model.AwaitingDecision) return; // Wait for queued bindings; never focus hidden controls.
         if (_model.AwaitingDecision && !_shown) { _shown = true; context.Focus(CancelChoice); }
         else if (!_model.AwaitingDecision && _shown)

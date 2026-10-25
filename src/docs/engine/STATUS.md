@@ -1,6 +1,19 @@
 # TrueMoon.Aether: состояние движка и редактора
 
-Последняя работа — **2026-10-24, ED4e островки поверх viewport**.
+Последняя работа — **2026-10-25, ED4f.2 системная граница окна**.
+Editor включает UseSystemAccentBorder: Windows accent, theme fallback при отсутствии
+цвета, RGB60% при inactive и focus transition160мс. Style/local BorderColor имеет
+приоритет; cached цвет обновляется по native notifications без чтения на frame.
+15новыхcases, narrow67/67. Related UI893/Hosting114/Editor741 Debug/Release:
+1748/configuration,3496всего,failed/skipped0. Nonincremental Debug solution build
+0errors/1532warnings.12native cases/206PNG/16reaped children,validation0/0 и zero
+owned UI/GPU/mappings; actual active/inactive border pixels проверены, PNG просмотрены.
+[Проверки и границы](HISTORY.md#ed4f2-системная-граница-окна--2026-10-25).
+Evidence: TestResults/AccentBorder-20261024/verification.json. Aether/full solution
+tests/packages/physical/performance не повторены. Реальная смена Windows accent
+не выполнялась; очередь ED4c.2 names/order → ED4c.3 create/delete прежняя.
+
+Предыдущая работа — **2026-10-24, ED4e островки поверх viewport**.
 Обозреватель/инспектор закреплены над полной рабочей областью сцены; отступ16,
 скругление8, мягкая тень, content height/scroll и независимый Theme.PanelBackdrop.
 Контекстный инспектор сохраняет View и появляется/скрывается за160мс без resize

@@ -84,6 +84,8 @@ internal static class EditorApplication
                 window.Width = 1280; window.Height = 800; window.Title = "TrueMoon Aether Editor · " +
                     (options.ProjectPath == null ? "No project" : Path.GetFileNameWithoutExtension(options.ProjectPath));
                 window.Appearance = new WindowAppearance { Decorated = false };
+                window.TitleBarOverContent = true;
+                window.UseSystemAccentBorder = true;
                 window.Chrome = new WindowChromeOptions { NativeDrag = true, NativeSnapLayouts = true, MinimumSize = new Size(1100, 700) };
                 window.FrameMode = UiFrameMode.Continuous;
                 window.ConfigureDefaultTitleBar = (title, content, requestClose) =>
@@ -115,7 +117,7 @@ internal static class EditorApplication
         EditorView? view = null;
         window.FramePresented += ui =>
         {
-            var current = (EditorView)((WindowFrame)ui.Root).Children[1];
+            var current = (EditorView)((WindowFrame)ui.Root).Content;
             view ??= current;
             binding.Observe(ui, current);
             if (current.Canvas.DrawnFrame is { } frame)
@@ -142,6 +144,8 @@ internal static class EditorApplication
             {
                 using var headerDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                 await EditorHeaderSmoke.VerifyAsync(directory, window, ui, view!, headerDeadline.Token);
+                using var borderDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                await EditorBorderSmoke.VerifyAsync(directory, window, ui, view!, borderDeadline.Token);
                 using var statusDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                 await EditorStatusBarSmoke.VerifyAsync(directory, window, ui, view!, statusDeadline.Token);
                 if (options.InspectorSmoke) await EditorInspectorSmoke.RunAsync(directory, window, ui, view!, workspace,

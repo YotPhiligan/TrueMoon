@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Argentis;
@@ -9,14 +10,15 @@ namespace TrueMoon.Aether.Editor;
 public sealed record EditorHeaderArguments(OverlayHost Overlays, string Title, Action RequestClose);
 
 /// <summary>Retained compact title content, borrowing presentation models and owning controls/subscriptions.</summary>
-public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipant, IUiInputObserver
+public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipant, IUiInputObserver, IWindowHeaderActivity
 {
     private readonly OverlayHost _overlays;
     private readonly EditorDocumentViewModel _documentModel;
     private readonly EditorInspectorViewModel _transformModel;
     private readonly IUiCommand _undo, _redo;
+    private readonly string _baseTitle;
     private readonly List<DelegateUiCommand> _commands = [];
-    private IconButton? _hint;
+    private Element? _hint;
     private TimeSpan _hintRemaining;
     private readonly Dictionary<EditorCommand, IUiCommand> _runtime = [];
     private readonly Dictionary<DocumentCommand, IUiCommand> _documents = [];
@@ -40,6 +42,8 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     public IReadOnlyDictionary<DocumentCommand, IUiCommand> DocumentCommands => _documents;
     /// <inheritdoc />
     public bool NeedsFrame => _hintRemaining > TimeSpan.Zero;
+    /// <inheritdoc />
+    public bool KeepsTitleBarActive => Menu.IsExpanded || Menu.IsMenuOpen || ReferenceEquals(_overlays.PopupOwner, this);
 
     /// <summary>Creates controls on the UI owner. Window owns this view; injected models/style remain borrowed.</summary>
     /// <param name="model">Runtime presentation.</param><param name="documents">Document presentation.</param>
@@ -53,6 +57,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
         ArgumentNullException.ThrowIfNull(arguments); ArgumentNullException.ThrowIfNull(arguments.Overlays);
         ArgumentNullException.ThrowIfNull(arguments.Title); ArgumentNullException.ThrowIfNull(arguments.RequestClose);
         _overlays = arguments.Overlays;
+        _baseTitle = arguments.Title;
         _documentModel = documents; _transformModel = transform;
         try
         {
@@ -71,7 +76,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
             foreach (var command in new[] { DocumentCommand.New, DocumentCommand.Open, DocumentCommand.Save, DocumentCommand.SaveAs, DocumentCommand.Close })
             {
                 var value = command;
-                _documents.Add(value, Command(() => documents.Execute(value), () => value switch
+                _documents.Add(value, Command(() => documents.Request(value), () => value switch
                 {
                     DocumentCommand.New => documents.CanNew, DocumentCommand.Open => documents.CanOpen,
                     DocumentCommand.Save => documents.CanSave, DocumentCommand.SaveAs => documents.CanSaveAs,
@@ -117,6 +122,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
             ]);
             BrandIcon = new BrandMark();
             Caption = new CaptionText(arguments.Title);
+            UpdateCaption();
             RunButton = Bind(new(UiSymbol.Play, "Запустить / продолжить симуляцию"), RunCommand);
             PauseButton = Bind(new(UiSymbol.Pause, "Пауза симуляции"), _runtime[EditorCommand.Pause]);
             StopButton = Bind(new(UiSymbol.Stop, "Остановить симуляцию"), _runtime[EditorCommand.Stop]);
@@ -154,9 +160,14 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     private void Watch(INotifyPropertyChanged model)
     {
         void Changed(object? sender, PropertyChangedEventArgs args) => Dispatch(() =>
-        { foreach (var command in _commands) command.Refresh(); });
+        { foreach (var command in _commands) command.Refresh(); UpdateCaption(); });
         model.PropertyChanged += Changed;
         Own(new Subscription(() => model.PropertyChanged -= Changed));
+    }
+    private void UpdateCaption()
+    {
+        Caption.Value = _baseTitle + (_documentModel.Document?.Content == null ? "" : " · " + _documentModel.Title);
+        Caption.AccessibleName = Caption.Value + "\n" + (_documentModel.Document?.Path ?? _documentModel.ScenesRoot);
     }
     private void ToggleTheme()
     {
@@ -190,7 +201,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     {
         if (input.Kind == InputKind.PointerMove)
         {
-            var hint = new[] { RunButton, PauseButton, StopButton }.FirstOrDefault(b => b.Bounds.Contains(input.X, input.Y));
+            var hint = new Element[] { RunButton, PauseButton, StopButton, Caption }.FirstOrDefault(b => b.Bounds.Contains(input.X, input.Y));
             if (!ReferenceEquals(hint, _hint))
             {
                 CloseHint(); _hint = hint;
@@ -212,7 +223,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
         _hintRemaining = TimeSpan.Zero;
         if (_hint == null || Menu.IsMenuOpen || _overlays.Popup != null) return;
         var text = _hint.AccessibleName + (_hint.IsEnabled ? "" : " · сейчас недоступно");
-        var popup = new Border { Padding = new(7), BorderWidth = 1 }.Content(Text.Plain(text));
+        var popup = new HeaderHintSurface().Content(new HeaderHintText(text));
         try { _overlays.Open(this, popup, _hint.Bounds, context, tooltip: true); }
         catch { if (popup.Parent == null && !popup.IsDisposed) popup.Dispose(); throw; }
     }
@@ -223,6 +234,42 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     }
     private void Detached() { if (!IsAttached) { _hintRemaining = TimeSpan.Zero; _hint = null; } }
     private sealed class Subscription(Action release) : IDisposable { public void Dispose() => release(); }
+
+    private sealed class HeaderHintSurface : Border
+    {
+        public HeaderHintSurface() { Padding = new(7); BorderWidth = 1; CornerRadius = 4; }
+        protected override Color ThemeBackground => Theme.MenuBackdrop == null ? Theme.Surface : Color.Transparent;
+        protected override BackdropMaterial? ThemeBackdrop => Theme.MenuBackdrop;
+    }
+    private sealed class HeaderHintText(string value) : Text(value)
+    {
+        private readonly List<string> _lines = [];
+        private float _lineHeight;
+        protected override Size MeasureCore(Size available, ITextLayoutService text)
+        {
+            var width = Math.Min(560, available.Width); var widest = 0f;
+            _lineHeight = Math.Max(FontSize, text.Measure("Mg", FontSize, FontFamily).Height) + 2;
+            _lines.Clear();
+            foreach (var paragraph in Value.Replace("\r", "").Split('\n'))
+            {
+                var line = ""; var elements = StringInfo.GetTextElementEnumerator(paragraph);
+                while (elements.MoveNext())
+                {
+                    var next = elements.GetTextElement();
+                    if (line.Length != 0 && text.Measure(line + next, FontSize, FontFamily).Width > width)
+                    { _lines.Add(line); widest = Math.Max(widest, text.Measure(line, FontSize, FontFamily).Width); line = next; }
+                    else line += next;
+                }
+                _lines.Add(line); widest = Math.Max(widest, text.Measure(line, FontSize, FontFamily).Width);
+            }
+            return new(Math.Min(width, widest), _lines.Count * _lineHeight);
+        }
+        protected override void DrawCore(IDrawingContext context)
+        {
+            var y = Bounds.Y;
+            foreach (var line in _lines) { context.Text(line, Bounds.X, y, Foreground, FontSize, FontFamily); y += _lineHeight; }
+        }
+    }
 
     private sealed class BrandMark : Element
     {

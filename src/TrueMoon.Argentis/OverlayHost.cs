@@ -7,6 +7,12 @@ public sealed class OverlayHost : ElementList, IUiInputObserver, IUiFramePartici
     private IInputContext? _context;
     private Rect _anchor;
     private bool _tooltip;
+    /// <summary>Space reserved from popup placement, without reducing the main content area.</summary>
+    public static readonly UiProperty<Thickness> PopupInsetsProperty = new("PopupInsets", default, Invalidation.Layout,
+        value => float.IsFinite(value.Left) && float.IsFinite(value.Top) && float.IsFinite(value.Right) && float.IsFinite(value.Bottom) &&
+            value.Left >= 0 && value.Top >= 0 && value.Right >= 0 && value.Bottom >= 0);
+    /// <summary>Insets restricting popup placement, for example beneath overlaid window chrome.</summary>
+    public Thickness PopupInsets { get => Get(PopupInsetsProperty); set => Set(PopupInsetsProperty, value); }
     /// <summary>Creates a host and adopts fresh content.</summary>
     /// <param name="content">Unowned main content.</param>
     public OverlayHost(Element content) { ArgumentNullException.ThrowIfNull(content); Add(content); AttachmentChanged += Attachment; }
@@ -79,13 +85,17 @@ public sealed class OverlayHost : ElementList, IUiInputObserver, IUiFramePartici
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
-        Content.Measure(available, text); _popup?.Measure(available, text); return Content.DesiredSize;
+        Content.Measure(available, text);
+        _popup?.Measure(new(Math.Max(0, available.Width - PopupInsets.Left - PopupInsets.Right), Math.Max(0, available.Height - PopupInsets.Top - PopupInsets.Bottom)), text);
+        return Content.DesiredSize;
     }
     /// <inheritdoc />
     protected override void ArrangeCore(Rect area)
     {
         Content.Arrange(area);
         if (_popup == null) return;
+        var left = Math.Min(area.Width, PopupInsets.Left); var top = Math.Min(area.Height, PopupInsets.Top);
+        area = new(area.X + left, area.Y + top, Math.Max(0, area.Width - left - PopupInsets.Right), Math.Max(0, area.Height - top - PopupInsets.Bottom));
         var width = Math.Min(area.Width, _popup.DesiredSize.Width); var height = Math.Min(area.Height, _popup.DesiredSize.Height);
         var x = Math.Clamp(_anchor.X, area.X, Math.Max(area.X, area.X + area.Width - width));
         var below = _anchor.Y + _anchor.Height;

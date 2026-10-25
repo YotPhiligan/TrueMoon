@@ -67,9 +67,17 @@ public sealed class EditorStatusBarViewTests
             Assert.InRange(fill.Bounds.Y, area.Y + (area.Height - 14) / 2, area.Y + (area.Height + 14) / 2);
         });
         Assert.Equal(area.X + 20, text.X);
+        ui.HandleInput(new(InputKind.PointerMove, summary.Bounds.X + 5, summary.Bounds.Y + 5)); test.Settle(ui);
+        var hovered = new RecordingDrawing(); summary.Draw(hovered);
+        var highlight = Assert.Single(hovered.Fills, fill => fill.Color == summary.Theme.ControlHover);
+        Assert.Equal(summary.Bounds.X, highlight.Bounds.X);
+        Assert.True(highlight.Bounds.Width < summary.Bounds.Width);
+        Assert.True(highlight.Bounds.Width >= area.X - summary.Bounds.X + 20 + test.Model.Summary.Length * 6);
+        ui.HandleInput(new(InputKind.PointerMove, 100, 100)); test.Settle(ui);
         ui.SetTheme(Theme.Light); ui.Update();
         Assert.Same(summary, view.SummaryButton); Assert.Same(preview, view.PreviewButton); Assert.Same(entities, view.Entities);
-        Assert.Equal(Theme.Light.Control, view.Background); Assert.Equal(Theme.Light.Foreground, summary.Foreground);
+        Assert.Equal(Color.Transparent, view.Background); Assert.Equal(Theme.Light.Foreground, summary.Foreground);
+        Assert.True(view.Bar.OverlayContent); Assert.Equal(0, view.Bar.Backdrop!.BlurSigma);
         Assert.Equal(12, summary.FontSize); Assert.False(ui.Update());
     }
 
@@ -111,6 +119,7 @@ public sealed class EditorStatusBarViewTests
         Assert.Null(test.Overlays.Popup); Assert.True(popup.IsDisposed);
         if (dismissal is "escape" or "outside") Assert.True(test.View.DetailsButton.IsFocused);
         if (dismissal == "tab") Assert.True(test.BodyButton.IsFocused);
+        test.Settle(ui);
         Assert.Empty(test.Source.RuntimeCalls); Assert.False(ui.NeedsUpdate);
     }
 
@@ -206,7 +215,7 @@ public sealed class EditorStatusBarViewTests
         Assert.Contains(test.View.PreviewButton, test.View.Bar.OverflowedItems);
         Assert.Null(test.Overlays.Popup); Assert.True(popup.IsDisposed); Assert.True(test.View.DetailsButton.IsFocused);
         Assert.False(test.View.NeedsFrame); Assert.False(test.Source.Preview.Read().Active); Assert.Empty(test.Source.RuntimeCalls);
-        ui.Update(); Assert.False(ui.NeedsUpdate);
+        test.Settle(ui); Assert.False(ui.NeedsUpdate);
     }
 
     [Fact]
@@ -268,8 +277,57 @@ public sealed class EditorStatusBarViewTests
         source.Refresh(SessionState.Playing); ui.Update(); Assert.Equal("Симуляция", view.SummaryButton.Value);
     }
 
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void BusyAndError_RetainMaterialWithoutHoverAndReleaseWhenReadyWithoutChangingFocus(bool error)
+    {
+        using var test = new StatusFixture(); using var ui = test.Ui(); ui.Update(); ui.Focus(test.BodyButton);
+        var bounds = test.View.Bounds; var summary = test.View.SummaryButton;
+        test.Source.Model.Refresh(new(error ? SessionState.Faulted : SessionState.Stopped),
+            EditorWorkspaceTests.Status(error ? GameEditorOperation.Idle : GameEditorOperation.Build, false),
+            error ? new IOException("status failure") : null);
+        test.Settle(ui);
+        Assert.True(test.View.Bar.KeepBackdropVisible); Assert.Equal(1, test.View.Bar.OverlayReveal);
+        Assert.Equal(test.View.Theme.PanelBackdrop, test.View.Bar.Backdrop);
+        Assert.Equal(error ? EditorStatusKind.Error : EditorStatusKind.Busy, test.Model.Kind);
+        Assert.Equal(error ? test.View.Theme.Error : test.View.Theme.Accent, summary.Foreground);
+        Assert.True(test.BodyButton.IsFocused); Assert.False(test.View.DetailsButton.IsFocused);
+        Assert.Equal(bounds, test.View.Bounds); Assert.False(ui.NeedsUpdate);
+        test.Source.Refresh(SessionState.Stopped); test.Settle(ui);
+        Assert.False(test.View.Bar.KeepBackdropVisible); Assert.Equal(0, test.View.Bar.OverlayReveal);
+        Assert.Equal(bounds, test.View.Bounds); Assert.Same(summary, test.View.SummaryButton);
+        Assert.True(test.BodyButton.IsFocused); Assert.Empty(test.Source.RuntimeCalls); Assert.False(ui.NeedsUpdate);
+    }
+
+    [Fact]
+    public void DetailsPopup_HoldsMaterialWhilePointerIsInSceneAndReleasesAfterFocusReturnsToScene()
+    {
+        using var test = new StatusFixture(openDocument: true); using var ui = test.Ui(); ui.Update();
+        var bar = test.View.Bar; var bounds = test.BodyButton.Bounds;
+        DocumentUiFixture.Click(ui, test.View.PreviewButton); test.Settle(ui);
+        var popup = Assert.IsType<EditorStatusPopupView>(test.Overlays.Popup);
+        ui.HandleInput(new(InputKind.PointerMove, 600, 200)); test.Settle(ui);
+        Assert.Equal(1, bar.OverlayReveal); Assert.True(bar.KeepBackdropVisible);
+        Assert.Same(popup, test.Overlays.Popup); Assert.True(popup.StartPreview.IsFocused);
+        Assert.False(test.View.DetailsButton.IsFocused); Assert.Equal(bounds, test.BodyButton.Bounds);
+        test.Overlays.Close(false); ui.Focus(test.BodyButton); test.Settle(ui);
+        Assert.True(popup.IsDisposed); Assert.Null(test.Overlays.Popup);
+        Assert.False(bar.KeepBackdropVisible); Assert.Equal(0, bar.OverlayReveal);
+        Assert.Equal(bounds, test.BodyButton.Bounds); Assert.True(test.BodyButton.IsFocused);
+        Assert.False(test.Source.Preview.Read().Active); Assert.Empty(test.Source.RuntimeCalls); Assert.False(ui.NeedsUpdate);
+    }
+
+    private sealed class ManualTime : TimeProvider
+    {
+        private long _ticks;
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+        public override long GetTimestamp() => _ticks;
+        public void Advance() => _ticks += TimeSpan.FromMilliseconds(160).Ticks;
+    }
+
     private sealed class StatusFixture : IDisposable
     {
+        private ManualTime Time { get; } = new();
         public HeaderFixture Source { get; }
         public EditorStatusBarViewModel Model { get; }
         public EditorStatusBarView View { get; }
@@ -288,7 +346,8 @@ public sealed class EditorStatusBarViewTests
         }
         public UiSession Ui(int width = 1280, bool raster = false) => raster ?
             UiSession.Create(Overlays, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(width, 800)) :
-            new(Overlays, new Surface(), new(width, 800));
+            new(Overlays, new Surface(), new(width, 800), null, new UiDispatchOptions(), Time);
+        public void Settle(UiSession ui) { ui.Update(); Time.Advance(); ui.Update(); ui.Update(); }
         public void Dispose() { Overlays.Dispose(); Model.Dispose(); Source.Dispose(); }
     }
     private sealed class Surface : IUiRenderSurface

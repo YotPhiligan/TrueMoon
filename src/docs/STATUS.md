@@ -1,6 +1,17 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-24, ED4e островки над viewport**.
+Последняя работа — **2026-10-25, ED4f.2 системный акцент границы окна**.
+Windows cached accent/fallback подключён через общий host contract; Editor включает
+рамку с inactive dimming160мс и приоритетом явного style/local цвета.
+Related UI893/Hosting114/Editor741 Debug/Release:3496passed/0failed/0skipped,
+15новыхcases; nonincremental Debug solution build0errors/1532warnings.
+12native cases/206PNG/16reaped children,validation0/0 и zero owned UI/GPU/mappings.
+[Результаты](engine/HISTORY.md#ed4f2-системная-граница-окна--2026-10-25).
+Evidence: TestResults/AccentBorder-20261024/verification.json. Aether/full solution
+tests/прочие модули/packages/physical/performance не повторены; Windows settings
+не менялись. Порядок прежний: ED4c.2 → ED4c.3 → project/runtime workflow.
+
+Предыдущая работа — **2026-10-24, ED4e островки над viewport**.
 Editor использует матовые панели поверх полной рабочей области сцены, group
 opacity/PanelBackdrop в общей UI-библиотеке, retained context/fade без resize.
 Related UI842/Hosting98/Editor699 Debug/Release:3278passed/0failed/0skipped,

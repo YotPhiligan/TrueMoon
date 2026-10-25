@@ -7,8 +7,20 @@ namespace TrueMoon.Argentis;
 public sealed record WindowFrameState(bool Active, bool Maximized, bool CanMinimize, bool CanMaximize, bool CanResize);
 
 /// <summary>Default square title bar with caption, optional borrowed icon and standard window actions.</summary>
-public sealed class WindowTitleBar : ElementList
+public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputObserver
 {
+    private readonly ScalarTransition _overlay = new();
+    private bool _pointerInside, _overlayTarget;
+    /// <summary>Uses a translucent, hover-activated backdrop over full-area content.</summary>
+    public static readonly UiProperty<bool> OverlayContentProperty = new("OverlayContent", false, Invalidation.Render);
+    /// <summary>Whether this bar is painted over content rather than reserving a separate strip.</summary>
+    public bool OverlayContent { get => Get(OverlayContentProperty); set => Set(OverlayContentProperty, value); }
+    /// <summary>Current background reveal progress; text, icons and hit regions remain unchanged.</summary>
+    public float OverlayReveal => _overlay.Value;
+    private bool OverlayActive => OverlayContent && (_pointerInside || _state.Active &&
+        (FocusWithin(this) || _header is IWindowHeaderActivity { KeepsTitleBarActive: true }));
+    /// <inheritdoc />
+    public bool NeedsFrame => OverlayContent && (_overlay.IsRunning || OverlayActive != _overlayTarget);
     private string _title;
     private IImageSource? _icon;
     private bool _stateApplied;
@@ -23,6 +35,7 @@ public sealed class WindowTitleBar : ElementList
         MaximizeButton = new(UiSymbol.Maximize, "Maximize window") { BorderWidth = 0, WindowRegion = WindowRegionRole.Maximize };
         CloseButton = new(UiSymbol.Close, "Close window") { BorderWidth = 0, Tone = ControlTone.Danger };
         Add(MinimizeButton); Add(MaximizeButton); Add(CloseButton); ApplyState(_state);
+        AttachmentChanged += Attachment;
     }
     /// <summary>Minimize action, disabled until supported by the host.</summary>
     public IconButton MinimizeButton { get; }
@@ -57,12 +70,50 @@ public sealed class WindowTitleBar : ElementList
         VerifyAccess(); ArgumentNullException.ThrowIfNull(state);
         if (_stateApplied && _state == state) return;
         _stateApplied = true;
+        if (!state.Active) _pointerInside = false;
         _state = state; MinimizeButton.IsEnabled = state.CanMinimize; MaximizeButton.IsEnabled = state.CanMaximize;
         MaximizeButton.Symbol = state.Maximized ? UiSymbol.Restore : UiSymbol.Maximize;
         MaximizeButton.AccessibleName = state.Maximized ? "Restore window" : "Maximize window"; Invalidate();
     }
     /// <inheritdoc />
-    protected override Color ThemeBackground => _state.Active ? Theme.Control : Theme.Surface;
+    protected override Color ThemeBackground => OverlayContent ? Theme.PanelBackdrop == null ? Theme.Surface : Color.Transparent : _state.Active ? Theme.Control : Theme.Surface;
+    /// <inheritdoc />
+    protected override BackdropMaterial? ThemeBackdrop => OverlayContent && Theme.PanelBackdrop is { } material
+        ? new(material.BlurSigma * OverlayReveal, material.Tint with { A = (byte)MathF.Round(Math.Min(72, (int)material.Tint.A) + (material.Tint.A - Math.Min(72, (int)material.Tint.A)) * OverlayReveal) }, material.Fallback)
+        : null;
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(object property)
+    {
+        base.OnPropertyChanged(property);
+        if (ReferenceEquals(property, OverlayContentProperty)) UpdateOverlay();
+    }
+    /// <inheritdoc />
+    public bool PreviewInput(UiInput input, IInputContext context)
+    {
+        if (input.Kind == InputKind.PointerMove) _pointerInside = Bounds.Contains(input.X, input.Y);
+        else if (input.Kind == InputKind.FocusLost) _pointerInside = false;
+        UpdateOverlay(); return false;
+    }
+    private void UpdateOverlay()
+    {
+        var target = OverlayActive;
+        if (target == _overlayTarget) return;
+        _overlayTarget = target;
+        _overlay.MoveTo(_overlayTarget ? 1 : 0, IsAttached && OverlayContent ? TimeSpan.FromMilliseconds(160) : TimeSpan.Zero);
+        Invalidate();
+    }
+    /// <inheritdoc />
+    public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
+    {
+        VerifyAccess(); if (OverlayActive != _overlayTarget) UpdateOverlay();
+        if (_overlay.Advance(elapsed)) Invalidate();
+    }
+    private static bool FocusWithin(Element element) => element.IsFocused || element.Children.Any(FocusWithin);
+    private void Attachment()
+    {
+        if (IsAttached) return;
+        _pointerInside = _overlayTarget = false; _overlay.MoveTo(0, TimeSpan.Zero);
+    }
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     { foreach (var child in Children) child.Measure(available, text); return new(160, 36); }
@@ -89,6 +140,12 @@ public sealed class WindowTitleBar : ElementList
             }
         }
         finally { context.Restore(); }
-        context.Fill(new(Bounds.X, Bounds.Y + Bounds.Height - 1, Bounds.Width, 1), _state.Active ? Theme.Accent : Theme.Border);
+        context.Fill(new(Bounds.X, Bounds.Y + Bounds.Height - 1, Bounds.Width, 1), OverlayContent ? Theme.Border with { A = (byte)MathF.Round(40 + 100 * OverlayReveal) } : _state.Active ? Theme.Accent : Theme.Border);
+    }
+    /// <inheritdoc />
+    public override void Dispose()
+    {
+        if (IsDisposed) return;
+        AttachmentChanged -= Attachment; _overlay.MoveTo(0, TimeSpan.Zero); base.Dispose();
     }
 }

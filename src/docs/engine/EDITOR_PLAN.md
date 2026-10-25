@@ -643,6 +643,80 @@ raster group compositing и native source Debug/published Release с actual prev
 Dark/Light/null material и проверкой прежних document/hierarchy/history сценариев.
 Это не physical DPI, VRAM или performance acceptance и не завершение ED4/ED5.
 
+### ED4f. Viewport под оконным chrome — 2026-10-24
+
+Реализовано в описанных границах; текущие проверки и ограничения — в
+[истории](HISTORY.md#ed4f-viewport-под-оконным-chrome--2026-10-24).
+
+По запросу пользователя убрать постоянную область path/title/scenes-root над сценой.
+Viewport занимает всю клиентскую поверхность, включая пространство под title bar и
+status bar; hover, menu reveal и document prompts не меняют его bounds/camera framing.
+Островки остаются ниже caption с прежним видимым отступом16; footer28 накладывается
+снизу. Рамка/resize grip и Caption/Client/Maximize native metadata сохраняются.
+
+Общий опциональный `WindowFrame.TitleBarOverContent` рисует content первым,
+title bar следующим. Default layout других consumers прежний; Hosting options
+фиксируются при App composition. Header foreground и hit targets постоянны.
+Idle backdrop имеет слабый tint без blur; hover проявляет PanelBackdrop за160мс.
+Focus/menu в активном окне удерживают подложку, hover работает и в неактивном окне;
+detach завершает переход, повторные одинаковые pointer events не создают idle work.
+`PanelBackdrop = null` возвращает непрозрачную поверхность.
+
+В caption компактно добавляются имя сцены, dirty marker и activity; полный путь
+доступен по Tooltip с переносом длинных Unicode paths. Open/SaveAs/first Save сначала открывают retained path prompt
+над viewport, затем требуют явного подтверждения. До него IO не начинается.
+Save/Discard/Cancel и actionable errors используют ту же contextual поверхность;
+idle tools скрыты и не резервируют высоту. Drafts/controls/borrowed services и
+общая document/history/preview admission сохраняются. Ctrl+S/W действуют даже
+после клика по сцене без focused control; text editor shortcuts остаются scoped.
+
+`OverlayHost.PopupInsets` оставляет меню/Tooltip ниже caption без сдвига content.
+View/Data/Style, Cobalt/IFactory и UI-owner lifecycle прежние; native OS file picker,
+project wizard, docking и изменение engine frame transport не prerequisites.
+Acceptance: default/overlay/narrow/logical DPI geometry, paint/hit/native regions,
+background transition/reversal/idle/inactive-hover, foreground sharpness, path
+confirm/cancel/error/retry/unsaved/focus, root shortcuts, retained theme switch;
+native source Debug/published Release с actual scene, hover/idle/path Tooltip и
+document prompt, прежними game/history/save/preview и zero ownership cleanup.
+Physical DPI/OS snap hardware, performance/VRAM и полный ED4/ED5 остаются открытыми.
+
+### ED4f.1. Прозрачный статус-бар — 2026-10-24
+
+Реализовано и проверено в указанном scope;
+[актуальные результаты и границы](HISTORY.md#ed4f1-прозрачный-статус-бар--2026-10-24).
+
+По согласованному продолжению ED4f нижняя панель также накладывается на сцену:
+height28, текст12/иконки14/targets24 и отступ справа24 сохраняются. Idle фон —
+слабый tint без blur; hover/focus проявляют PanelBackdrop за160мс. Анимируется
+только подложка, scene bounds/camera и foreground не меняются. Null material
+возвращает opaque Surface, Theme/controls/focus сохраняются.
+
+Слева прежний компактный status и отмена текущей операции; справа count/Preview/
+details, на узком окне прежний overflow. Ошибки и busy/waiting удерживают материал
+без наведения; открытые собственные подробности удерживают его, пока focus находится
+в popup. Кадры backdrop не переводят focus на details. Повторный settled pointer
+не создаёт idle work, detach/dispose отменяют анимацию. Details/диагностика по клику
+используют прежний OverlayHost и общие команды, без нового popup/lifecycle сервиса.
+Общий opt-in StatusBar.OverlayContent/KeepBackdropVisible ведётся в UI плане.
+
+Acceptance:160мс/reversal/idle/focus/important state/popup/teardown, sharp foreground
+при реальном backdrop, неизменная full-area geometry/resize grip, themes/null
+fallback и native source Debug/published Release idle/hover поверх actual scene.
+
+### ED4f.2. Системная граница главного окна — 2026-10-24
+
+Реализовано25октября; [актуальные проверки и границы](HISTORY.md#ed4f2-системная-граница-окна--2026-10-25).
+
+Editor включает общий UseSystemAccentBorder в App composition. Активная граница
+использует системный Windows accent, inactive — RGB60% с переходом160мс. При
+недоступном цвете возвращается текущий Theme.Border; явный BorderColor в style/local
+имеет приоритет. Изменения системного оформления обновляют cached цвет без restart.
+Размер/толщина рамки, полный viewport, title/status islands, controls и document/
+runtime state сохраняются. Получение цвета и native notifications принадлежат
+platform/host, ViewModel не зависит от Windows. Shared contracts/acceptance — PA8b.4
+UI плана; native Editor proof проверяет actual active/inactive border pixels,
+owned HWND messages и cleanup без изменения настроек ОС.
+
 ## ED5. Edit preview и инструменты viewport
 
 Первый [engine preview profile](PLAN.md#edit-preview-первый-engine-profile--2026-10-23)

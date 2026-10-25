@@ -38,6 +38,15 @@ Null возвращает Surface. Панели имеют radius8, тонкую
 всего subtree одним compositing layer, не меняя layout/input; при закрытии consumer
 отдельно отключает ввод. [Контракт](PLAN.md#pa8b1-group-opacity-и-panel-material--2026-10-24).
 
+Для заголовка поверх сцены включают `WindowFrame.TitleBarOverContent` или одноимённую
+Hosting option. Idle фон имеет tint alpha≤72/sigma0; hover проявляет PanelBackdrop
+за160мс, focus/menu удерживают его в активном окне. Текст/иконки и hit targets
+сохраняются. `PanelBackdrop = null` возвращает opaque Surface. Content и footer
+не сдвигаются; обычная рамка сохраняет отдельную строку title bar.
+Editor оставляет popup inset36 сверху; path Tooltip использует MenuBackdrop,
+padding7/radius4 и текст шириной≤560logical с переносом Unicode graphemes.
+[Контракт](PLAN.md#pa8b2-оконный-заголовок-поверх-content--2026-10-24).
+
 | Назначение | Dark | Light |
 | --- | --- | --- |
 | Surface / Control | `#12161E` / `#202834` | `#F2F5FA` / `#FFFFFF` |
@@ -133,12 +142,16 @@ delay500мс и общий OverlayHost без захвата focus, включа
 View приложения. Фокус скрытого сегмента возвращается на details на owner frame.
 
 Editor использует высоту28, текст12, геометрические иконки14 и targets24.
-Фон — `Control`, верхний разделитель — `Border`; справа24единицы оставлены под
+Editor рисует статус-бар поверх сцены: слабый idle tint/sigma0 и PanelBackdrop
+при hover/focus с переходом160мс; foreground остаётся чётким. Ошибки, busy/waiting и
+открытые собственные подробности удерживают матовую подложку. Null material даёт
+opaque Surface. Верхний разделитель проявляется с фоном; справа24единицы оставлены под
 native resize grip. Ready использует Foreground, Busy/Running — Accent,
 Paused/Waiting — Focus, Error — Error. Цвет дополняет текст и иконку состояния.
 Всплывающие подробности и Edit Preview используют `Theme.MenuBackdrop` с opaque
 fallback; появляются над footer и сохраняют дерево/фокус/выделение при смене темы.
 [Общий контракт](PLAN.md#pa4b-statusbar--2026-10-24).
+[Контракт прозрачной подложки](PLAN.md#pa8b3-статус-бар-поверх-content--2026-10-24).
 
 ## Стандартная рамка окна
 
@@ -187,6 +200,13 @@ Caption остаётся native drag/system menu region, enabled maximize — na
 region. Толщина невидимой resize-границы по умолчанию6 не связана с visual border1.
 Угловой виджет использует native bottom-right hit-test. UI команды и drag/resize
 проверяются на owner thread.
+
+`UseSystemAccentBorder=true` в Hosting options/default WindowFrame включает
+системный accent outline. В Editor режим включён. Null accent возвращает текущий
+Theme.Border; inactive RGB —60% от выбранного цвета с переходом160мс. Width/padding
+и foreground не меняются. Явный BorderColor local/style имеет приоритет; default
+opt-out сохраняет обычную рамку. Cached цвет обновляется Windows adapter по native
+уведомлениям оформления. [Контракт](PLAN.md#pa8b4-системный-акцент-границы-окна--2026-10-24).
 
 ## Галерея и проверки
 

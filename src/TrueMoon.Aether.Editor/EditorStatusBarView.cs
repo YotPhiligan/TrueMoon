@@ -26,15 +26,22 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
     /// <summary>Shared adaptive UI layout.</summary>
     public StatusBar Bar { get; }
     /// <inheritdoc />
-    public bool NeedsFrame => _restoreDetailsFocus;
+    public bool NeedsFrame => _restoreDetailsFocus || IsAttached && Bar.KeepBackdropVisible != KeepsBackdropVisible;
+    private bool OwnsPopup => ReferenceEquals(_overlays.PopupOwner, SummaryButton) ||
+        ReferenceEquals(_overlays.PopupOwner, PreviewButton) || ReferenceEquals(_overlays.PopupOwner, DetailsButton);
+    private bool KeepsBackdropVisible => _model.HasError || _model.Kind is EditorStatusKind.Busy or EditorStatusKind.Error or EditorStatusKind.Waiting || OwnsPopup;
     /// <inheritdoc />
     public int InputPriority => 10;
     /// <inheritdoc />
     public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
     {
-        _restoreDetailsFocus = false;
-        if (ReferenceEquals(_overlays.PopupOwner, PreviewButton)) _overlays.Close(false);
-        if (_overlays.Popup == null) context.Focus(DetailsButton);
+        if (_restoreDetailsFocus)
+        {
+            _restoreDetailsFocus = false;
+            if (ReferenceEquals(_overlays.PopupOwner, PreviewButton)) _overlays.Close(false);
+            if (_overlays.Popup == null) context.Focus(DetailsButton);
+        }
+        Bar.KeepBackdropVisible = KeepsBackdropVisible;
     }
     /// <summary>Creates a parent-owned view on its UI owner thread.</summary>
     public EditorStatusBarView(EditorStatusBarViewModel model, IViewStyle<EditorStatusBarView> style,
@@ -74,7 +81,7 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
         }
     }
     private void Changed(object? sender, PropertyChangedEventArgs args)
-    { if (args.PropertyName == nameof(EditorStatusBarViewModel.Kind)) Dispatch(UpdateKind); }
+    { if (args.PropertyName is nameof(EditorStatusBarViewModel.Kind) or nameof(EditorStatusBarViewModel.HasError)) Dispatch(UpdateKind); }
     private void UpdateKind()
     {
         ((SegmentButton)SummaryButton).Symbol = _model.Kind switch
@@ -83,19 +90,20 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
             EditorStatusKind.Paused => UiSymbol.Pause, EditorStatusKind.Running => UiSymbol.Play, _ => UiSymbol.Check
         };
         ((SegmentButton)SummaryButton).Kind = _model.Kind;
+        Bar.KeepBackdropVisible = KeepsBackdropVisible;
     }
     private void Open(IInputContext context, Element trigger, bool preview)
     {
-        if (ReferenceEquals(_overlays.PopupOwner, trigger)) { _overlays.Close(); return; }
+        if (ReferenceEquals(_overlays.PopupOwner, trigger)) { _overlays.Close(); Bar.KeepBackdropVisible = KeepsBackdropVisible; return; }
         var popup = _popups.Create(new(preview)) ?? throw new InvalidOperationException("Status popup factory returned null.");
         var anchor = new Rect(trigger.Bounds.X, Bounds.Y, trigger.Bounds.Width, Bounds.Height);
-        try { _overlays.Open(trigger, popup, anchor, context, trigger); popup.FocusFirst(context); }
+        try { _overlays.Open(trigger, popup, anchor, context, trigger); popup.FocusFirst(context); Bar.KeepBackdropVisible = KeepsBackdropVisible; }
         catch { if (popup.Parent == null && !popup.IsDisposed) popup.Dispose(); throw; }
     }
     /// <inheritdoc />
     public bool PreviewInput(UiInput input, IInputContext context)
     {
-        if (_overlays.PopupOwner is not { } owner || !ReferenceEquals(owner, SummaryButton) && !ReferenceEquals(owner, PreviewButton) && !ReferenceEquals(owner, DetailsButton)) return false;
+        if (!OwnsPopup || _overlays.PopupOwner is not { } owner) return false;
         if (input.Kind == InputKind.KeyDown && input.Key == UiKey.Tab) _overlays.Close();
         else if (input.Kind == InputKind.PointerDown && Bounds.Contains(input.X, input.Y) && !owner.Bounds.Contains(input.X, input.Y))
             _overlays.Close(false);
@@ -130,11 +138,19 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
         protected override Color ThemeForeground => EditorStatusBarViewStyle.StatusColor(Theme, _kind);
         protected override float ThemeBorderWidth => 0;
         protected override Thickness ThemePadding => new(4, 2, 4, 2);
-        protected override Color ThemeBackground => IsPressed ? Theme.ControlPressed : IsHovered ? Theme.ControlHover : Color.Transparent;
+        protected override Color ThemeBackground => Color.Transparent;
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         { _text = text; var size = base.MeasureCore(available, text); return new(size.Width + 20, Math.Max(14, size.Height)); }
         private ITextLayoutService? _text;
-        protected override void DrawCore(IDrawingContext context) => DrawSegment(context, this, Symbol, Value, _text);
+        protected override void DrawCore(IDrawingContext context)
+        {
+            if (IsHovered || IsPressed)
+            {
+                var width = Math.Min(Bounds.Width, (_text?.Measure(Value, FontSize, FontFamily).Width ?? 0) + 20 + Padding.Left + Padding.Right);
+                context.Fill(new(Bounds.X, Bounds.Y, width, Bounds.Height), IsPressed ? Theme.ControlPressed : Theme.ControlHover);
+            }
+            DrawSegment(context, this, Symbol, Value, _text);
+        }
         public override bool HandleInput(UiInput input, IInputContext context)
         { _context = context; try { return base.HandleInput(input, context); } finally { _context = null; } }
         protected override void Activate() => _action(_context!, this);

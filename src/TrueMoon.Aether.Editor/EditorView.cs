@@ -8,7 +8,7 @@ using TrueMoon.Argentis;
 namespace TrueMoon.Aether.Editor;
 
 /// <summary>Fluent editor composition borrowing its presentation model and style declaration.</summary>
-public sealed class EditorView : View<EditorViewModel>
+public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
 {
     public static ViewStyleRole<Border> PaneRole { get; } = new("Pane");
     /// <summary>Persistent floating panel surfaces; separate from ordinary content sections.</summary>
@@ -91,6 +91,7 @@ public sealed class EditorView : View<EditorViewModel>
             DataContext = model;
             var shell = Panel.Create();
             Overlays = new(shell);
+            if (compactHeader) Overlays.PopupInsets = new(0, 36, 0, 0);
             Content(model, _ => Overlays);
             StatusBar = statusBar?.Create(new(Overlays));
             if (statusBar != null && StatusBar == null) throw new InvalidOperationException("Status bar factory returned null.");
@@ -140,7 +141,7 @@ public sealed class EditorView : View<EditorViewModel>
             InspectorPanel = InspectorIsland;
             Element tools = Documents == null ? Toolbar : VStack.Create().WithChildren(Toolbar, Documents);
             shell.Items.Remove(footer);
-            shell.Add(new EditorLayout(tools, HierarchyIsland, ViewportFrame, InspectorIsland, footer));
+            shell.Add(new EditorLayout(tools, HierarchyIsland, ViewportFrame, InspectorIsland, footer, overlayChrome: compactHeader));
             UpdateSelection();
             UpdateProperties();
             this.WithViewStyle(style);
@@ -192,6 +193,13 @@ public sealed class EditorView : View<EditorViewModel>
     /// <inheritdoc />
     public override bool HandleInput(UiInput input, IInputContext context) => Documents?.HandleShortcut(input) == true ||
         Inspector?.HandleShortcut(input) == true || Transform?.HandleShortcut(input) == true;
+    /// <summary>Routes document shortcuts even when an exposed scene has no focused UI element.</summary>
+    public bool PreviewInput(UiInput input, IInputContext context)
+    {
+        if (Documents == null || input.Kind != InputKind.KeyDown || !input.Control || input.Key is not (UiKey.S or UiKey.W)) return false;
+        Header?.Menu.CloseMenu();
+        return Documents.HandleShortcut(input);
+    }
 
     private void UpdateEntities()
     {

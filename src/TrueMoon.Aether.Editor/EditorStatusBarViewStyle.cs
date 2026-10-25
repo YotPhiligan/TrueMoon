@@ -8,8 +8,8 @@ public sealed class EditorStatusBarViewStyle : IViewStyle<EditorStatusBarView>
     /// <inheritdoc />
     public void Configure(IViewStyleBuilder<EditorStatusBarView> styles)
     {
-        styles.Root().Height(28).Background(theme => theme.Control);
-        styles.Part(view => view.Bar).Padding(new Thickness(8, 0, 24, 0));
+        styles.Root().Height(28).Background(Color.Transparent);
+        styles.Part(view => view.Bar).Padding(new Thickness(8, 0, 24, 0)).Set(StatusBar.OverlayContentProperty, true);
         styles.Part(view => view.SummaryButton).FontSize(12);
         styles.Part(view => view.CancelButton).FontSize(12);
         styles.Part(view => view.Entities).FontSize(12).Foreground(theme => theme.Disabled);

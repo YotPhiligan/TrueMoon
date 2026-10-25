@@ -10,8 +10,21 @@ public interface IStatusBar
 }
 
 /// <summary>One primary message/action, ordered optional segments, and an always-reserved details trigger.</summary>
-public sealed class StatusBar : ElementList, IStatusBar, IUiFrameParticipant
+public sealed class StatusBar : ElementList, IStatusBar, IUiFrameParticipant, IUiInputObserver
 {
+    private readonly ScalarTransition _overlay = new();
+    private bool _pointerInside, _overlayTarget;
+    /// <summary>Uses a translucent idle surface and reveals the panel material on hover or keyboard focus.</summary>
+    public static readonly UiProperty<bool> OverlayContentProperty = new("OverlayContent", false, Invalidation.Render);
+    /// <summary>Keeps the panel material visible for important status or an externally owned details popup.</summary>
+    public static readonly UiProperty<bool> KeepBackdropVisibleProperty = new("KeepBackdropVisible", false, Invalidation.Render);
+    /// <summary>Whether this bar is painted over scene content. Ordinary status bars retain their appearance.</summary>
+    public bool OverlayContent { get => Get(OverlayContentProperty); set => Set(OverlayContentProperty, value); }
+    /// <summary>Whether important state or a details presenter requires the full panel material.</summary>
+    public bool KeepBackdropVisible { get => Get(KeepBackdropVisibleProperty); set => Set(KeepBackdropVisibleProperty, value); }
+    /// <summary>Current background reveal; foreground and hit targets remain fully visible.</summary>
+    public float OverlayReveal => _overlay.Value;
+    private bool OverlayActive => IsAttached && OverlayContent && (KeepBackdropVisible || _pointerInside || FocusWithin(this));
     private readonly Element _primary, _action, _details;
     private readonly ContentControl[] _secondary;
     private IReadOnlyList<Element> _overflow = Array.Empty<Element>();
@@ -39,14 +52,50 @@ public sealed class StatusBar : ElementList, IStatusBar, IUiFrameParticipant
     /// <inheritdoc />
     public event Action? OverflowChanged;
     /// <inheritdoc />
-    public bool NeedsFrame => _returnFocus;
+    public bool NeedsFrame => _returnFocus || IsAttached && OverlayContent && (_overlay.IsRunning || OverlayActive != _overlayTarget);
     /// <inheritdoc />
     public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
     {
-        _returnFocus = false;
-        if (_details.IsVisible && _details.IsEffectivelyEnabled && _details.Focusable) context.Focus(_details);
+        if (_returnFocus)
+        {
+            _returnFocus = false;
+            if (_details.IsVisible && _details.IsEffectivelyEnabled && _details.Focusable) context.Focus(_details);
+        }
+        UpdateOverlay();
+        if (_overlay.Advance(elapsed)) Invalidate();
     }
-    private void Attached() { if (!IsAttached) _returnFocus = false; }
+    private void Attached()
+    {
+        if (IsAttached) return;
+        _returnFocus = _pointerInside = _overlayTarget = false; _overlay.MoveTo(0, TimeSpan.Zero);
+    }
+    /// <inheritdoc />
+    public bool PreviewInput(UiInput input, IInputContext context)
+    {
+        if (input.Kind == InputKind.PointerMove) _pointerInside = Bounds.Contains(input.X, input.Y);
+        else if (input.Kind == InputKind.FocusLost) _pointerInside = false;
+        UpdateOverlay(); return false;
+    }
+    private void UpdateOverlay()
+    {
+        var target = OverlayActive;
+        if (target == _overlayTarget) return;
+        _overlayTarget = target;
+        _overlay.MoveTo(target ? 1 : 0, IsAttached && OverlayContent ? TimeSpan.FromMilliseconds(160) : TimeSpan.Zero);
+        Invalidate();
+    }
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(object property)
+    {
+        base.OnPropertyChanged(property);
+        if (ReferenceEquals(property, OverlayContentProperty) || ReferenceEquals(property, KeepBackdropVisibleProperty)) UpdateOverlay();
+    }
+    /// <inheritdoc />
+    protected override Color ThemeBackground => OverlayContent && Theme.PanelBackdrop == null ? Theme.Surface : Color.Transparent;
+    /// <inheritdoc />
+    protected override BackdropMaterial? ThemeBackdrop => OverlayContent && Theme.PanelBackdrop is { } material
+        ? new(material.BlurSigma * OverlayReveal, material.Tint with { A = (byte)MathF.Round(Math.Min(72, (int)material.Tint.A) + (material.Tint.A - Math.Min(72, (int)material.Tint.A)) * OverlayReveal) }, material.Fallback)
+        : null;
     /// <inheritdoc />
     protected override Thickness ThemePadding => new(8, 0, 8, 0);
     /// <inheritdoc />
@@ -100,8 +149,9 @@ public sealed class StatusBar : ElementList, IStatusBar, IUiFrameParticipant
     }
     private static bool FocusWithin(Element element) => element.IsFocused || element.Children.Any(FocusWithin);
     /// <inheritdoc />
-    protected override void DrawCore(IDrawingContext context) => context.Fill(new(Bounds.X, Bounds.Y, Bounds.Width, Math.Min(1, Bounds.Height)), Theme.Border);
+    protected override void DrawCore(IDrawingContext context) => context.Fill(new(Bounds.X, Bounds.Y, Bounds.Width, Math.Min(1, Bounds.Height)),
+        OverlayContent ? Theme.Border with { A = (byte)MathF.Round(40 + 100 * OverlayReveal) } : Theme.Border);
     /// <inheritdoc />
     public override void Dispose()
-    { try { base.Dispose(); } finally { if (IsDisposed) { AttachmentChanged -= Attached; _returnFocus = false; _overflow = Array.Empty<Element>(); OverflowChanged = null; } } }
+    { try { base.Dispose(); } finally { if (IsDisposed) { AttachmentChanged -= Attached; _returnFocus = _pointerInside = _overlayTarget = false; _overlay.MoveTo(0, TimeSpan.Zero); _overflow = Array.Empty<Element>(); OverflowChanged = null; } } }
 }

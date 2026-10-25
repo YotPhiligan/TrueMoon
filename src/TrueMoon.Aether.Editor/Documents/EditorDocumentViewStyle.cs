@@ -8,7 +8,9 @@ public sealed class EditorDocumentViewStyle : IViewStyle<EditorDocumentView>
     /// <inheritdoc />
     public void Configure(IViewStyleBuilder<EditorDocumentView> styles)
     {
-        styles.Root().Padding(new Thickness(10, 0, 10, 8)).FontSize(13);
+        styles.Root().Padding(10).FontSize(13).BorderWidth(1).Set(UiProperties.CornerRadius, 8f)
+            .Set(UiProperties.Backdrop, theme => theme.PanelBackdrop)
+            .Background(theme => theme.PanelBackdrop == null ? theme.Surface : Color.Transparent);
         styles.Part(view => view.Actions).Spacing(6);
         styles.Part(view => view.PathInput).Set(UiProperties.Width, 260f);
         styles.Part(view => view.SavePathInput).Set(UiProperties.Width, 360f);

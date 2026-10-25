@@ -1017,6 +1017,78 @@ nested groups/images/backdrop, invalid bounds/alpha, style/theme precedence,
 balanced state и native OpenGL Editor. Общая effect graph, render cache и
 performance/VRAM/physical matrix остаются за рамками этого среза.
 
+#### PA8b.2: оконный заголовок поверх content — 2026-10-24
+
+Consumer ED4f использует opt-in `WindowFrame.TitleBarOverContent` и одноимённую
+snapshot/validated Hosting option. Stable Content/TitleBar properties не зависят
+от Children paint order. Default frame продолжает резервировать caption height;
+overlay frame сначала рисует полное content, затем title и resize grip. Сохраняются
+Caption/Client/Maximize hit regions и host-owned close/minimize/maximize actions.
+
+Windows NC caption move/leave должен доходить до logical UiInput даже при
+выключенном NativeSnapLayouts. Hook сохраняет default native dispatch для
+drag/doubleclick/system commands; owned-HWND probe дополняет UiSession proof,
+physical input/Snap matrix остаётся отдельной приёмкой.
+
+WindowTitleBar.OverlayContent использует frame-driven160мс ScalarTransition только
+для backdrop: idle tint alpha≤72/sigma0, hover до theme PanelBackdrop. Foreground/
+bounds не меняются. `IWindowHeaderActivity.KeepsTitleBarActive` удерживает фон при
+custom menu/focus; inactive hover поддерживается, native FocusLost очищает pointer.
+Повторные события без смены target не инвалидируют render. Detach/dispose завершают
+переход без timers. Null material — opaque Surface; unsupported backdrop — fallback.
+
+OverlayHost.PopupInsets ограничивает measure/place popup внутри safe area,
+оставляя основное content полным; значения finite/nonnegative, tiny bounds clamped.
+Editor хранит document prompts как contextual retained View в своём layout;
+общий OverlayHost остаётся владельцем transient menus/Tooltip выше островков.
+Критерии: direct frame/title/placement/hosting tests плюс consumer native OpenGL.
+Это не desktop transparency, новый scene transport, general modal stack или
+physical/performance/VRAM acceptance. Детальные document tasks — в Editor плане.
+
+#### PA8b.3: статус-бар поверх content — 2026-10-24
+
+Реализовано; [актуальные проверки и границы](HISTORY.md#pa8b3-статус-бар-поверх-content--2026-10-24).
+
+Consumer ED4f.1 включает StatusBar.OverlayContent: idle tint alpha≤72/sigma0,
+hover/keyboard focus → Theme.PanelBackdrop за160мс. KeepBackdropVisible — явный
+сигнал consumer для важных состояний или popup с focus вне самого бара. Общий
+контрол не знает document/runtime semantics. Foreground/Opacity/layout/hit targets
+не меняются; тонкий верхний separator проявляется вместе с подложкой. Null material
+даёт Surface, unsupported renderer использует opaque fallback.
+
+Frame-driven ScalarTransition без timers, unchanged target без invalidate, detach/
+dispose отменяют переход. Анимационные frames не запускают overflow focus return:
+он выполняется только по собственному pending flag. Default OverlayContent=false
+сохраняет прежний контрол и overflow/input/ownership. Высоту/положение над полным
+viewport задаёт consumer. Проверки: deterministic transitions/focus/idle, raster
+backdrop/sharp foreground, theme/null и Editor native actual-scene idle/hover.
+
+#### PA8b.4: системный акцент границы окна — 2026-10-24
+
+Реализовано25октября; [проверки и границы](HISTORY.md#pa8b4-системный-акцент-границы--2026-10-25).
+
+По согласованному дизайну opt-in WindowFrame.UseSystemAccentBorder и одноимённая
+Hosting option выбирают cached IWindowSystemColors.AccentColor; null возвращает
+Theme.Border. По потере native focus RGB умножается на0.6 с reversible переходом
+160мс; alpha/толщина/geometry/foreground прежние. Local/binding/element/view styles
+для BorderColor сохраняют штатный приоритет. Default opt-out других consumers
+сохраняет прежнюю рамку; unsupported host использует theme fallback.
+
+Windows adapter читает именно UISettings.GetColorValue(UIColorType.Accent),
+используя документированный IUISettings3 ABI. HSTRING/COM refs/apartment временные,
+освобождаются на читающем owner thread. Ошибки активации/HRESULT/API availability
+дают null и не блокируют startup. WM_SETTINGCHANGE/WM_THEMECHANGED/
+WM_DWMCOLORIZATIONCOLORCHANGED помечают dirty cache; refresh и render request
+выполняются после event pump вне WndProc. Polling/native read на frame отсутствует.
+Опциональная capability остаётся в Alloy, platform code не входит в Argentis.
+Существующий App/Cobalt/IFactory путь создания окна/ownership сохраняется.
+
+Acceptance: accent/update/failure/fallback/recovery, active/inactive160мс/reversal/
+idle/detach/opt-out, explicit style precedence, immutable options/early validation,
+native Windows source Debug/published Release с actual border pixels и owned-HWND
+color/focus notifications. Personalization OS не менять для автоматического proof;
+реальная пользовательская смена акцента и physical input остаются отдельными checks.
+
 #### PA4b: StatusBar — 2026-10-24
 
 Согласованный consumer — ED4b Editor. Общий StatusBar и IStatusBar capability

@@ -160,6 +160,8 @@ public sealed class EditorHeaderViewTests
         var file = test.Header.Menu.Groups.Single(group => group.Id == "file");
         Assert.Same(test.Header.DocumentCommands[DocumentCommand.Open], file.Actions.Single(action => action.Id == "document.Open").Command);
         test.Header.Menu.OpenGroup("file", ui); ui.Update(); DocumentUiFixture.Click(ui, test.Row("document.Open"));
+        Assert.Equal(DocumentCommand.Open, test.Documents.PathRequest); Assert.Empty(test.Owner.Store.Reads);
+        test.Documents.ConfirmPath();
         test.Owner.Complete(); test.Refresh(SessionState.Stopped, candidate: true); ui.Update();
         Assert.Equal(test.Owner.Files.ScenePath, Assert.Single(test.Owner.Store.Reads));
         Assert.NotNull(test.Documents.Document!.Content); Assert.False(test.Header.RunButton.IsEnabled);
@@ -213,7 +215,9 @@ public sealed class EditorHeaderViewTests
         test.Documents.PathDraft = "copy.aetherscene";
         test.Header.Menu.OpenGroup("view", ui); ui.Update(); DocumentUiFixture.Click(ui, test.Row("view.theme")); ui.Update();
         Assert.True(test.Header.Menu.MoreButton.IsFocused);
-        Shortcut(ui, UiKey.S, saveAs); test.Owner.Complete(); test.Documents.Refresh(); ui.Update();
+        Shortcut(ui, UiKey.S, saveAs);
+        if (saveAs) { Assert.Equal(DocumentCommand.SaveAs, test.Documents.PathRequest); Assert.Empty(test.Owner.Store.Writes); test.Documents.ConfirmPath(); }
+        test.Owner.Complete(); test.Documents.Refresh(); ui.Update();
         var saved = Assert.Single(test.Owner.Store.Writes);
         Assert.Equal(saveAs ? Path.Combine(test.Owner.Files.Project.ScenesDirectory, "copy.aetherscene") : test.Owner.Files.ScenePath, saved.Path);
         Assert.Equal(8, saved.Document.Revision); Assert.False(test.Owner.Document.Read().IsDirty);

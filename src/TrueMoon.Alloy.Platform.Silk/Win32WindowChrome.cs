@@ -27,6 +27,7 @@ internal sealed partial class Win32WindowChrome : IDisposable
     private int _width, _height;
     private readonly Queue<UiInput> _input = new();
     private bool _maxPressed;
+    private bool _systemColorsChanged;
     internal static int ActiveHooks;
     private sealed class BorrowedWindow : SafeHandleZeroOrMinusOneIsInvalid
     {
@@ -89,6 +90,10 @@ internal sealed partial class Win32WindowChrome : IDisposable
         _failure?.Throw();
     }
     internal bool TryDequeueInput(out UiInput input) => _input.TryDequeue(out input);
+    internal bool TakeSystemColorsChanged()
+    {
+        Verify(); var changed = _systemColorsChanged; _systemColorsChanged = false; return changed;
+    }
     private static nint Dispatch(nint hwnd, uint message, nuint wparam, nint lparam, nuint id, nuint data)
     {
         Win32WindowChrome? owner = null;
@@ -100,6 +105,8 @@ internal sealed partial class Win32WindowChrome : IDisposable
                 if (message == NcDestroy) owner.Detach();
                 else if (owner._failure == null)
                 {
+                    // Refresh outside WndProc, after the event pump. Never activate WinRT or call UI here.
+                    if (message is 0x1A or 0x31A or 0x320) owner._systemColorsChanged = true;
                     if (message == NcCalcSize && wparam != 0) return 0; // Full-client layout; retain standard non-layout frame metrics.
                     if (message == 0x2E0) owner.InvalidateRegions();
                     if (message == NcHitTest) return owner.HitTest(lparam);
@@ -178,7 +185,19 @@ internal sealed partial class Win32WindowChrome : IDisposable
             }
             return false;
         }
-        if (!_options.NativeSnapLayouts) return false;
+        // Caption motion is non-client input too. Forward hover without consuming native dragging/double-click.
+        if (message == 0xA0 && wparam == 2) // WM_NCMOUSEMOVE / HTCAPTION
+        {
+            QueueInput(InputKind.PointerMove, PackedPoint(lparam), true);
+            var track = new TrackMouse { Size = (uint)Marshal.SizeOf<TrackMouse>(), Flags = 0x12, Window = _window.DangerousGetHandle() };
+            if (TrackMouseEvent(ref track) == 0) throw new Win32Exception(Marshal.GetLastPInvokeError());
+            return false;
+        }
+        if (!_options.NativeSnapLayouts)
+        {
+            if (message == 0x2A2 && !_maxPressed) _input.Enqueue(new UiInput(InputKind.PointerMove, -1, -1));
+            return false;
+        }
         // DWM needs non-client hover/leave to show and dismiss its own Snap UI.
         if (message is 0xA0 or 0x2A2)
         {

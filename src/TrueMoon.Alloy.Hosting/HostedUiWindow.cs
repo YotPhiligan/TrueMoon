@@ -333,7 +333,9 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
             else if (_options.Chrome != null && _options.UseDefaultWindowFrame)
             {
                 var frame = WindowFrame.CreateDefault(_options.Title, root); root = frame;
-                _options.ConfigureDefaultTitleBar?.Invoke(frame.DefaultTitleBar!, frame.Children[1], () => { _ = RequestCloseAsync(); });
+                frame.TitleBarOverContent = _options.TitleBarOverContent;
+                frame.UseSystemAccentBorder = _options.UseSystemAccentBorder;
+                _options.ConfigureDefaultTitleBar?.Invoke(frame.DefaultTitleBar!, frame.Content, () => { _ = RequestCloseAsync(); });
                 _defaultFrame = new(frame, window, () => { _ = RequestCloseAsync(); });
                 _defaultFrame.Synchronize(window.IsFocused);
             }

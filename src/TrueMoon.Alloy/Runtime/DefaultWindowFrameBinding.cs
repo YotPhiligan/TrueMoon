@@ -24,6 +24,7 @@ public sealed class DefaultWindowFrameBinding
     public void Synchronize(bool active)
     {
         _frame.VerifyAccess();
+        _frame.SystemAccentColor = (_commands as IWindowSystemColors)?.AccentColor;
         var chrome = _commands as IWindowChromeHost;
         var supported = chrome?.ChromeCapabilities.CustomFrame == true;
         var resizable = supported && chrome!.Chrome?.Resizable == true && chrome.ChromeCapabilities.NativeResize;

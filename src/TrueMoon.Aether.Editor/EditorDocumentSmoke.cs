@@ -25,6 +25,7 @@ internal static class EditorDocumentSmoke
         var source = Path.Combine(root, "Rich.aetherscene");
         var originalHash = Hash(source);
         var captures = new List<string>(); var actions = new List<string>(); var threads = new HashSet<int>();
+        var pathCaptured = false;
         var closeRequests = 0;
         var presentations = new List<object>();
         var windowId = window.Id; var owner = 0;
@@ -123,8 +124,12 @@ internal static class EditorDocumentSmoke
         void Observe(object? sender, System.ComponentModel.PropertyChangedEventArgs change) => threads.Add(Environment.CurrentManagedThreadId);
         async Task PathDraft(string value)
         {
-            await Until(() => panel.PathInput.IsEnabled);
+            await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Open", token, confirmPath: false);
+            await Until(() => panel.IsVisible && panel.Actions.IsVisible && panel.PathInput.IsEnabled && !ui.NeedsUpdate);
             await ui.InvokeAsync(() => SetText(panel.PathInput, value)).WaitAsync(token);
+            if (!pathCaptured) { await Capture("documents-path-prompt.png", 0); pathCaptured = true; }
+            await ui.InvokeAsync(() => InputClick(panel.CancelPath)).WaitAsync(token);
+            await Until(() => !panel.IsVisible && !ui.NeedsUpdate);
         }
         void SetText(TextBox target, string value)
         {
@@ -159,6 +164,7 @@ internal static class EditorDocumentSmoke
         async Task Shortcut(UiKey key)
         {
             await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: key, Control: true))).WaitAsync(token);
+            await EditorHeaderSmoke.ConfirmDocumentPathAsync(ui, view, token);
             actions.Add("Ctrl+" + key); await commands.Pending.WaitAsync(token); await Until(() => !commands.Read().Busy);
         }
         async Task Until(Func<bool> condition)

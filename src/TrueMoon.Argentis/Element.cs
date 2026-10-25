@@ -74,6 +74,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     protected virtual Color ThemeForeground => Theme.Foreground;
     /// <summary>Inside outline width when no local/style value is supplied.</summary>
     protected virtual float ThemeBorderWidth => 0;
+    /// <summary>Outline color when no local, element style or view style value is supplied.</summary>
+    protected virtual Color ThemeBorderColor => HasError ? Theme.Error : Theme.Border;
     /// <summary>Semantic action tone.</summary>
     public ControlTone Tone { get => Get(UiProperties.Tone); set => Set(UiProperties.Tone, value); }
     /// <summary>Visual error state; has both a color and a left-edge marker.</summary>
@@ -126,7 +128,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (ReferenceEquals(property, UiProperties.Foreground)) return (T)(object)ThemeForeground;
         if (ReferenceEquals(property, UiProperties.CornerRadius)) return (T)(object)Theme.CornerRadius;
         if (ReferenceEquals(property, UiProperties.BorderWidth)) return (T)(object)ThemeBorderWidth;
-        if (ReferenceEquals(property, UiProperties.BorderColor)) return (T)(object)(HasError ? Theme.Error : Theme.Border);
+        if (ReferenceEquals(property, UiProperties.BorderColor)) return (T)(object)ThemeBorderColor;
         if (ReferenceEquals(property, UiProperties.FontSize)) return (T)(object)Theme.FontSize;
         if (ReferenceEquals(property, UiProperties.FontFamily)) return (T)(object)Theme.FontFamily;
         if (ReferenceEquals(property, UiProperties.Padding)) return (T)(object)ThemePadding;

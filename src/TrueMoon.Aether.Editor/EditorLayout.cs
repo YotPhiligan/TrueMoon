@@ -2,12 +2,12 @@ using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor;
 
-/// <summary>Fixed chrome and a full-body viewport, with anchored content-height islands painted above it.</summary>
+/// <summary>A scene surface with anchored islands and optional chrome painted over the full client area.</summary>
 public sealed class EditorLayout : ElementList
 {
-    /// <summary>Top application/document controls.</summary>
+    /// <summary>Standalone toolbar, or contextual document tools in overlay mode.</summary>
     public Element Toolbar { get; }
-    /// <summary>Full work-area viewport, drawn below both islands.</summary>
+    /// <summary>Scene surface painted below chrome and islands.</summary>
     public Element Viewport { get; }
     /// <summary>Left entity island.</summary>
     public Element Hierarchy { get; }
@@ -15,24 +15,33 @@ public sealed class EditorLayout : ElementList
     public Element Inspector { get; }
     /// <summary>Bottom status row.</summary>
     public Element Status { get; }
-    /// <summary>Adopts distinct fresh UI regions; the caller retains ownership if validation fails.</summary>
-    /// <param name="toolbar">Top chrome.</param><param name="hierarchy">Left island.</param><param name="viewport">Scene surface.</param>
-    /// <param name="inspector">Right island.</param><param name="status">Bottom chrome.</param>
-    public EditorLayout(Element toolbar, Element hierarchy, Element viewport, Element inspector, Element status)
+    /// <summary>Whether the viewport extends behind window chrome and the status row.</summary>
+    public bool OverlayChrome { get; }
+    /// <summary>Logical title-bar space kept clear of tools and islands, without reducing the viewport.</summary>
+    public float ChromeInset { get; }
+    /// <summary>Adopts distinct fresh regions. Default composition retains standalone toolbar layout.</summary>
+    /// <param name="toolbar">Toolbar or retained contextual tools.</param><param name="hierarchy">Left island.</param>
+    /// <param name="viewport">Scene surface.</param><param name="inspector">Right island.</param><param name="status">Footer.</param>
+    /// <param name="overlayChrome">Whether chrome overlays a full-area scene.</param><param name="chromeInset">Logical title-bar height in overlay mode.</param>
+    public EditorLayout(Element toolbar, Element hierarchy, Element viewport, Element inspector, Element status, bool overlayChrome = false, float chromeInset = 36)
     {
-        Element[] children = [toolbar, viewport, hierarchy, inspector, status];
+        if (!float.IsFinite(chromeInset) || chromeInset < 0) throw new ArgumentOutOfRangeException(nameof(chromeInset));
+        Element[] children = overlayChrome ? [viewport, hierarchy, inspector, status, toolbar] : [toolbar, viewport, hierarchy, inspector, status];
         if (children.Any(x => x == null)) throw new ArgumentNullException(nameof(toolbar), "All shell regions are required.");
         if (children.Distinct().Count() != 5 || children.Any(x => x.Parent != null || x.IsAttached || x.IsDisposed)) throw new ArgumentException("Shell regions must be distinct, live and unowned.");
         Toolbar = toolbar; Hierarchy = hierarchy; Viewport = viewport; Inspector = inspector; Status = status;
+        OverlayChrome = overlayChrome; ChromeInset = chromeInset;
         try { foreach (var child in children) Add(child); } catch { Dispose(); throw; }
     }
+    private float Top(float height) => Math.Min(OverlayChrome ? ChromeInset : Math.Max(52, Toolbar.DesiredSize.Height), height);
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
-        Toolbar.Measure(available, text); Status.Measure(available, text);
-        var top = Math.Min(Math.Max(52, Toolbar.DesiredSize.Height), available.Height);
-        var height = Math.Max(0, available.Height - top - Math.Min(28, Math.Max(0, available.Height - top)));
-        Viewport.Measure(new(available.Width, height), text);
+        Toolbar.Measure(OverlayChrome ? new(Math.Min(640, available.Width), Math.Max(0, available.Height - ChromeInset - 44)) : available, text);
+        Status.Measure(available, text);
+        var top = Top(available.Height); var footer = Math.Min(28, Math.Max(0, available.Height - top));
+        var height = Math.Max(0, available.Height - top - footer);
+        Viewport.Measure(OverlayChrome ? available : new(available.Width, height), text);
         var inset = Math.Min(8, Math.Min(available.Width, height) / 2);
         var width = Math.Max(0, available.Width - inset * 2); var panelHeight = Math.Max(0, height - inset * 2);
         var gap = Math.Min(12, width); var budget = Math.Max(0, width - (Inspector.IsVisible && Hierarchy.IsVisible ? gap : 0));
@@ -44,12 +53,10 @@ public sealed class EditorLayout : ElementList
     /// <inheritdoc />
     protected override void ArrangeCore(Rect area)
     {
-        var toolbar = Math.Min(Math.Max(52, Toolbar.DesiredSize.Height), area.Height);
-        var footer = Math.Min(28, Math.Max(0, area.Height - toolbar));
-        Toolbar.Arrange(new(area.X, area.Y, area.Width, toolbar));
+        var top = Top(area.Height); var footer = Math.Min(28, Math.Max(0, area.Height - top));
         Status.Arrange(new(area.X, area.Y + area.Height - footer, area.Width, footer));
-        var height = Math.Max(0, area.Height - toolbar - footer); var y = area.Y + toolbar;
-        Viewport.Arrange(new(area.X, y, area.Width, height));
+        var height = Math.Max(0, area.Height - top - footer); var y = area.Y + top;
+        Viewport.Arrange(OverlayChrome ? area : new(area.X, y, area.Width, height));
         var inset = Math.Min(8, Math.Min(area.Width, height) / 2);
         var width = Math.Max(0, area.Width - inset * 2); var panelHeight = Math.Max(0, height - inset * 2);
         var gap = Math.Min(12, width); var budget = Math.Max(0, width - (Inspector.IsVisible && Hierarchy.IsVisible ? gap : 0));
@@ -57,6 +64,12 @@ public sealed class EditorLayout : ElementList
         var right = Inspector.IsVisible ? Math.Min(336, budget - left) : 0;
         Hierarchy.Arrange(new(area.X + inset, y + inset, left, Math.Min(panelHeight, Hierarchy.DesiredSize.Height)));
         Inspector.Arrange(new(area.X + area.Width - inset - right, y + inset, right, Math.Min(panelHeight, Inspector.DesiredSize.Height)));
+        if (OverlayChrome)
+        {
+            var toolsWidth = Math.Min(640, Math.Max(0, area.Width - inset * 2));
+            Toolbar.Arrange(new(area.X + (area.Width - toolsWidth) / 2, y + inset, toolsWidth, Math.Min(panelHeight, Toolbar.DesiredSize.Height)));
+        }
+        else Toolbar.Arrange(new(area.X, area.Y, area.Width, top));
     }
     /// <inheritdoc />
     protected override Color ThemeBackground => Theme.Surface;

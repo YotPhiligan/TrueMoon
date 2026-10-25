@@ -14,10 +14,14 @@ internal static class EditorStatusBarSmoke
     {
         var footer = view.StatusBar ?? throw new InvalidOperationException("Status bar was not composed.");
         var captures = new List<string>();
+        await ui.InvokeAsync(() => { ui.Focus(view.Hierarchy!.Tree); EditorHeaderSmoke.Move(ui, view.Canvas); }).WaitAsync(token);
         await Until(() => !ui.NeedsUpdate);
+        var viewport = view.Canvas.Bounds;
         await ui.InvokeAsync(() =>
         {
             Require(footer.Bounds.Height == 28 && footer.SummaryButton.FontSize == 12, "Compact status dimensions changed.");
+            Require(footer.Bar.OverlayContent && footer.Background == Color.Transparent && footer.Bar.OverlayReveal == 0 &&
+                footer.Bar.Backdrop is { BlurSigma: 0 }, "Idle status bar did not reveal the scene underneath.");
             var frame = (WindowFrame)ui.Root;
             var client = frame.Bounds.Deflate(frame.Padding);
             Require(footer.Bounds.Y + footer.Bounds.Height == client.Y + client.Height && footer.Bar.Bounds == footer.Bounds,
@@ -31,6 +35,11 @@ internal static class EditorStatusBarSmoke
             Require(!footer.SummaryButton.Value.Contains("Tick") && !footer.SummaryButton.Value.Contains("PID"), "Diagnostics leaked into the primary status.");
         }).WaitAsync(token);
         await Capture("status-bar.png");
+        await ui.InvokeAsync(() => EditorHeaderSmoke.Move(ui, footer.Bar)).WaitAsync(token);
+        await Until(() => footer.Bar.OverlayReveal == 1 && !ui.NeedsUpdate);
+        Require(view.Canvas.Bounds == viewport && footer.Bar.Backdrop == footer.Theme.PanelBackdrop &&
+            footer.Bar.Opacity == 1 && footer.SummaryButton.Opacity == 1, "Status hover reframed the scene or faded its controls.");
+        await Capture("status-hover.png");
         await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, footer.DetailsButton)).WaitAsync(token);
         await Until(() => view.Overlays.Popup is EditorStatusPopupView && !ui.NeedsUpdate);
         EditorStatusPopupView popup = null!;
@@ -40,7 +49,10 @@ internal static class EditorStatusBarSmoke
             Require(ReferenceEquals(view.Overlays.PopupOwner, footer.DetailsButton), "Details owner changed.");
             Require(popup.Bounds.Y + popup.Bounds.Height <= footer.Bounds.Y, "Bottom popup did not open above the footer.");
             Require(ReferenceEquals(popup.DataContext, footer.DataContext) && popup.Backdrop != null, "Popup lost borrowed data or material.");
+            EditorHeaderSmoke.Move(ui, view.Canvas);
         }).WaitAsync(token);
+        await Until(() => footer.Bar.KeepBackdropVisible && footer.Bar.OverlayReveal == 1 && !ui.NeedsUpdate);
+        Require(ReferenceEquals(view.Overlays.Popup, popup), "Backdrop frames dismissed the details or stole popup focus.");
         await Capture("status-details.png");
         var theme = footer.Theme;
         await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = theme.FontFamily })).WaitAsync(token);
@@ -78,6 +90,7 @@ internal static class EditorStatusBarSmoke
         File.WriteAllText(Path.Combine(directory, "status.json"), JsonSerializer.Serialize(new
         {
             Passed = true, Compact = true, BottomAligned = true, ResizeGripClear = true,
+            OverlayBackdrop = true, HoverWithoutReframe = true, PopupHoldsBackdrop = true,
             Details = true, Preview = true, ThemeRetention = true,
             Dismissal = true, InspectorPreviewHidden = true, Captures = captures
         }, new JsonSerializerOptions { WriteIndented = true }));

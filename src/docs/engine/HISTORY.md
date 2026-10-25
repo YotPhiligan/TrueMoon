@@ -1,5 +1,163 @@
 # Engine / Editor: история решений и проверок
 
+## ED4f.2: системная граница окна — 2026-10-25
+
+Согласованный24октября дизайн реализован и завершён25октября: главное окно включает
+общую Hosting option UseSystemAccentBorder. System accent берётся из cached host
+capability IWindowSystemColors, отсутствие цвета возвращает текущий Theme.Border.
+Inactive RGB составляет60% выбранного цвета, focus transition160мс обратим; alpha/
+толщина/viewport/foreground прежние. Explicit BorderColor local/style имеет приоритет.
+Generic Windows/API и WinRT resources находятся в Platform.Silk; App/Cobalt/IFactory
+путь и единственный window owner прежние. Default frames других consumers opt-out.
+
+UISettings.GetColorValue(UIColorType.Accent) вызывается через проверенный по Windows
+SDK10.0.26100.0 IUISettings3 ABI. Используются временные SafeHandle HSTRING/COM refs,
+balanced RoInitialize(MTA/STA)/RoUninitialize; неуспех/API absence даёт null.
+Native WM_SETTINGCHANGE/WM_THEMECHANGED/WM_DWMCOLORIZATIONCOLORCHANGED только ставят
+dirty flag. Чтение и render request происходят после event pump вне WndProc, не
+на каждом кадре. Аргумент цвета сообщения не принимается за текущий Windows accent.
+
+Текущие проверки в TestResults/AccentBorder-20261024 (имя evidence-root сохранено
+со времени начала задачи; завершение по локальной дате25октября):
+
+- 15новых xUnit cases/8methods: UI7, Hosting8. Narrow51+16=67passed/0failed/0skipped:
+  narrow-185021842, RunNarrow.ps1. Проверены accent/update/null/recovery, unsupported
+  host, RGB60%/159–160мс/reversal/detach/idle/opt-out, theme/style/local precedence,
+  immutable snapshot и ранняя validation до регистрации/activation.
+- Related UI893/Hosting114/Editor741 в каждой Debug/Release:1748/configuration,
+  3496passed/0failed/0skipped. TRX/log/binlog: managed-185909752. Все15новых cases
+  отдельно найдены в обеих конфигурациях; тесты вручную перечитаны на силу assertions.
+- Последний nonincremental Debug solution build0errors/1532warnings:
+  solution-build-185934385/build.log и build.binlog. Ранее CS9191 указывал на
+  эквивалентный ref/in argument; заменён на in, полный проход повторён.
+- 12native source Debug/published Release cases: native-185940301/summary.json,
+  206PNG/16reaped children,validation0errors/0warnings и zero owned UI sessions/
+  mappings/GPU resources/handles. Новый border.json проверяет настоящий UISettings
+  accent, refresh/render после directed WM_THEMECHANGED, owned HWND focus messages,
+  неизменный viewport и actual border pixels с RGB tolerance1. На этой Windows
+  active #04827D → inactive #024E4B. Финальные active/inactive PNG просмотрены.
+
+Directed сообщения отправляются только собственному HWND на owner thread; исходное
+наблюдаемое состояние восстановлено. Global SetFocus/cursor/Windows personalization
+не меняются. Реальная пользовательская смена системного accent и физическая смена
+фокуса не заменяются этим proof. Native HRESULT/loader errors не fault-injected;
+null-provider fallback/recovery проверен напрямую, native cleanup/ABI проверены в
+указанном supported desktop scope. Общая alpha/K7/K8/VRAM не закрыта.
+
+Итог и свежие source/binary/PNG/test SHA256:
+TestResults/AccentBorder-20261024/verification.json. Предыдущий native-185439428
+прошёл12cases до правки ref/in и не считается итоговым binary proof. Первый narrow
+не компилировался из-за test syntax/неподдерживаемого Select; исправлен через
+реальные keyboard selection gestures, final passing narrow указан выше.
+Aether/full solution tests/прочие модули/packages/performance не повторены.
+Следующий engine шаг прежний: ED4c.2 names/order → ED4c.3 create/delete.
+
+## ED4f.1: прозрачный статус-бар — 2026-10-24
+
+По согласованному продолжению ED4f нижняя панель28 остаётся поверх полного viewport,
+idle фон имеет слабый tint/sigma0; hover/keyboard focus проявляют PanelBackdrop
+за160мс. Foreground и размеры/положение сцены не меняются. Ошибки, busy/waiting и
+собственные details/Preview popup удерживают подложку. Смена темы/null fallback,
+overflow, отступ24 под resize grip16 и прежние команды/данные/IFactory/ownership сохранены.
+Оформление opt-in задаётся в EditorStatusBarViewStyle; presentation не знает тему.
+Подсветка гибкой summary button ограничена иконкой/текстом вместо всей ширины.
+
+Общий StatusBar.OverlayContent/KeepBackdropVisible принадлежит UI. В обоих frame
+participants focus return выполняется только при собственном pending overflow,
+поэтому animation frames не забирают focus из сцены или popup. Нет timers, resolution
+на кадр или новых сервисов; detach/disable/dispose завершают переход.
+
+Текущие проверки:
+
+- 10новых cases/7methods: shared UI7, Editor3. Узкий запуск27+66=93passed,
+  failed/skipped0: TestResults/StatusOverlay-20261024/narrow-180739181, RunNarrow.ps1.
+  Проверены159/160мс, reversal/idle/focus/activity/teardown, Dark/Light/null и raster
+  blur/sharp foreground; actual editor busy/error/ready и popup owner/focus.
+- Related UI886/Hosting106 Debug/Release: managed-180831425. Финальные Editor741
+  Debug и741 Release: editor-final-181252516. Итого1733/configuration,3466passed/
+  0failed/0skipped; все10новых cases найдены в обеих конфигурациях. TRX/log/binlog
+  лежат в этих папках TestResults/StatusOverlay-20261024.
+- Последний nonincremental Debug solution build0errors/1532warnings:
+  editor-final-181252516/build.log и build.binlog. Предыдущий build1533warnings
+  содержал новый xUnit2031; test-only запись Assert.Single исправлена, Editor и
+  solution повторены. Runtime source/binary hashes после этого совпадают с native.
+- 12native source Debug/published Release cases: native-180910307/summary.json,
+  182PNG/16reaped children,validation0errors/0warnings, zero owned UI sessions/
+  mappings/GPU resources/handles. Footer idle/hover поверх actual scene, Light
+  popup и opaque fallback просмотрены. Native-180005688 прерван после11cases без
+  финального inspector Release teardown report; он исключён из итогового passing.
+
+Итог и актуальные SHA256: TestResults/StatusOverlay-20261024/verification.json.
+Focused assertion/gap review выполнен без empirical mutation/coverage metrics.
+Outputs в C OS TEMP, evidence в ignored TestResults; OS/driver settings не менялись.
+Aether/full solution tests/packages/physical DPI/input/performance/VRAM не повторены.
+Fixed-camera640×360 transport/aspect-fit letterboxing прежние; alpha/K7/K8 и
+CPU FrameReceiver/Mithril quality issues остаются открытыми. Очередь ED4c.2 → ED4c.3.
+
+## ED4f: viewport под оконным chrome — 2026-10-24
+
+По согласованному дизайну удалена постоянная полоса scene path/title/root. Editor
+включает общий WindowFrame.TitleBarOverContent через Hosting composition; viewport
+занимает внутреннюю клиентскую область под caption36 и footer28. Островки остаются
+ниже caption с видимым отступом16. Hover/menu/path prompts не меняют scene bounds;
+frame.Content используется вместо предположения о Children[1]. Default consumers
+сохраняют прежний layout. View/Data/Style, App/Cobalt/IFactory и borrowed ownership
+сохранены; новых service locator/scopes/services не добавлено.
+
+В caption добавлены scene name/dirty/activity, полный путь доступен через Tooltip.
+Tooltip ограничен560logical по тексту, переносит явные переводы строк и длинные
+Unicode paths по grapheme boundaries; использует MenuBackdrop и opaque fallback.
+Title backdrop меняется за160мс от слабого tint/sigma0 к PanelBackdrop без fade
+foreground; hover работает в inactive окне, focus/menu удерживают active фон.
+PopupInsets оставляет transient меню/Tooltip ниже caption без сдвига content.
+Win32 передаёт HTCAPTION move/leave в UI, сохраняя native default dispatch.
+
+Open/SaveAs/first Save открывают retained contextual path prompt без IO до явного
+подтверждения. Path draft, controls и return focus сохраняются; Escape/outside click
+отменяют запрос. Pending Save/Discard/Cancel не теряется при outside click; errors
+можно закрыть и повторить, в том числе с тем же текстом. Обычный named Save остаётся
+прямым. Hidden tools не резервируют высоту. Ctrl+S/W маршрутизируются root observer
+даже без focused control; прочие text-editing shortcuts остаются scoped. Runtime/
+preview admission, общий document/history и terminal close policy прежние.
+
+Текущие проверки после финального Tooltip fix:
+
+- 84новых xUnit cases/45methods в7files: UI37, Hosting8, Editor39. Narrow TRX и
+  research/plan/assertion/static-gap review сохранены в OS TEMP
+  TrueMoon-OverlayTests-845332f1c973409b841c1614f7915999. В итоговых TRX отдельно
+  проверено присутствие всех84cases в Debug и Release; empirical mutation/coverage
+  metrics не заявляются.
+- Related full UI879/Hosting106/Editor738 Debug и столько же Release:
+  1723/configuration,3446passed/0failed/0skipped. TRX/log/binlog:
+  TestResults/OverlayChrome-20261024/managed-160136478.
+- Nonincremental Debug TrueMoon.slnx build:0errors/1532warnings. Log/binlog:
+  TestResults/OverlayChrome-20261024/solution-build-160200516. Outputs в уникальном
+  C OS TEMP из-за малого свободного места E; настройки SDK/driver/OS не менялись.
+- 12native source Debug/published Release profiles: empty, legacy, documents,
+  transform, hierarchy, inspector.166PNG,16reaped children,validation0errors/0warnings,
+  zero owned UI sessions/mappings/GPU resources/handles после teardown. Report:
+  TestResults/OverlayChrome-20261024/native-160207207/summary.json. Source/binary/PNG
+  SHA256 сверены; финальные idle/hover/Tooltip/path prompt и темы просмотрены.
+- Новый owned-HWND probe проверяет WM_NCHITTEST=HTCAPTION и доставку координат
+  WM_NCMOUSEMOVE до UI, затем owner-driven160мс переход и leave. Глобальный cursor/
+  focus не перемещается; actual timed transition отдельно проверен UiSession и
+  unit clock. Это directed native bridge proof, не physical Snap/drag acceptance.
+
+В ранних попытках native held-hover не успокаивался из-за повторной render
+invalidation; unchanged-target guard исправлен и закреплён двумя active/inactive
+cases. Скорректирована inactive-hover admission. Native caption probe отделён от
+положения реального курсора, а auto-confirm smoke helper ограничен document actions
+после обнаруженного обращения к disposed UiSession при Exit. Первые green12native
+не приняты как итог Tooltip: визуальная проверка выявила single-line path/CRLF glyph;
+после wrapping добавлен Unicode regression и полный проход повторён. Эти попытки
+сохранены в TestResults/OverlayChrome-20261024, финальным считается только run выше.
+
+Итог: TestResults/OverlayChrome-20261024/verification.json. Aether/full solution
+tests/прочие модули/packages/physical/performance/VRAM не повторены. Frame transport,
+fixed-camera640×360 preview и его aspect-fit letterboxing прежние. Alpha/K7/K8 и
+прежние CPU FrameReceiver/Mithril quality issues не закрыты. Следующий шаг ED4c.2
+names/order, затем ED4c.3 create/delete; полный ED4/ED5 остаётся открытым.
+
 ## ED4e: островки поверх viewport — 2026-10-24
 
 По согласованному дизайну EditorLayout сначала рисует viewport во всей рабочей

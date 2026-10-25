@@ -1,5 +1,42 @@
 # TrueMoon: история общей документации
 
+## ED4f.2: системный акцент границы окна — 2026-10-25
+
+По согласованному24октября дизайну Editor включает platform accent/fallback для
+рамки и inactive RGB60% с переходом160мс. Общие contracts/ownership — PA8b.4 UI;
+прикладной consumer — ED4f.2. Текущие UI893/Hosting114/Editor741 Debug/Release:
+3496passed/0failed/0skipped,15новыхcases. Последний nonincremental Debug solution
+build0errors/1532warnings.12native cases/206PNG/16reaped children,validation0/0 и
+zero owned UI/GPU/mappings. Evidence: TestResults/AccentBorder-20261024/verification.json;
+[детали и ограничения](engine/HISTORY.md#ed4f2-системная-граница-окна--2026-10-25).
+OS settings не менялись. Aether/full solution tests/packages/physical/performance
+не повторены; межмодульные блокеры и порядок ED4c.2 → ED4c.3 прежние.
+
+## ED4f.1: прозрачный статус-бар — 2026-10-24
+
+По согласованному продолжению ED4f статус-бар использует матовую hover/focus
+подложку над полным viewport; important state и собственный popup удерживают фон.
+Общая capability ведётся как PA8b.3, прикладной consumer — ED4f.1. Очередь и блокеры
+прежние. Related UI886/Hosting106/Editor741 Debug/Release:3466passed/0failed/0skipped,
+10новыхcases; последний nonincremental Debug solution build0errors/1532warnings.
+12native cases/182PNG/16reaped children,validation0/0 и zero owned UI/GPU/mappings.
+Evidence: TestResults/StatusOverlay-20261024/verification.json;
+[детали и ограничения](engine/HISTORY.md#ed4f1-прозрачный-статус-бар--2026-10-24).
+Aether/full solution tests/прочие модули/packages/physical/performance не повторены.
+
+## ED4f: полная рабочая область редактора — 2026-10-24
+
+По запросу пользователя Editor viewport расширен под title/status bar, постоянная
+scene-path область заменена caption/Tooltip и contextual document prompts. Общий
+WindowFrame/Hosting opt-in и OverlayHost safe insets ведутся в UI плане; прикладные
+задачи — в ED4f. Порядок engine задач и межмодульные prerequisites не изменены.
+Текущие related UI879/Hosting106/Editor738 Debug/Release:3446passed/0failed/0skipped,
+84новыхcases; nonincremental Debug solution build0errors/1532warnings.12native
+cases/166PNG/16reaped children,validation0/0 и zero owned UI/GPU/mappings.
+Evidence: TestResults/OverlayChrome-20261024/verification.json;
+[детали и границы](engine/HISTORY.md#ed4f-viewport-под-оконным-chrome--2026-10-24).
+Aether/full solution tests/прочие модули/packages/physical/performance не повторены.
+
 ## ED4d: динамический Inspector и component authoring — 2026-10-24
 
 По запросу пользователя уточнён приоритет после ED4c.1: schema-driven inspector

@@ -115,6 +115,10 @@ namespace TrueMoon.Alloy.Hosting
         public Func<IWindowCommands, TrueMoon.Argentis.Element>? TitleBarFactory { get; set; }
         /// <summary>Uses the built-in square border/titlebar/grip when Chrome is enabled and no TitleBarFactory is supplied.</summary>
         public bool UseDefaultWindowFrame { get; set; } = true;
+        /// <summary>Paints the default title bar over full-area content instead of reserving a strip.</summary>
+        public bool TitleBarOverContent { get; set; }
+        /// <summary>Uses the cached platform accent for the default frame border, with theme fallback and inactive dimming.</summary>
+        public bool UseSystemAccentBorder { get; set; }
         /// <summary>Configures the fresh default title bar on the UI owner. Supplied header products become frame-owned;
         /// the close callback uses the host's vetoable/drainable close coordinator.</summary>
         public Action<TrueMoon.Argentis.WindowTitleBar, TrueMoon.Argentis.Element, Action>? ConfigureDefaultTitleBar { get; set; }
@@ -128,6 +132,10 @@ namespace TrueMoon.Alloy.Hosting
             if (TitleBarFactory != null && Chrome == null) throw new ArgumentException("TitleBarFactory requires custom Chrome.");
             if (ConfigureDefaultTitleBar != null && (Chrome == null || TitleBarFactory != null || !UseDefaultWindowFrame))
                 throw new ArgumentException("ConfigureDefaultTitleBar requires the default custom frame.");
+            if (TitleBarOverContent && (Chrome == null || TitleBarFactory != null || !UseDefaultWindowFrame))
+                throw new ArgumentException("TitleBarOverContent requires the default custom frame.");
+            if (UseSystemAccentBorder && (Chrome == null || TitleBarFactory != null || !UseDefaultWindowFrame))
+                throw new ArgumentException("UseSystemAccentBorder requires the default custom frame.");
         }
         /// <summary>Optional sink that requires Vulkan core/synchronization validation.</summary>
         public Action<string>? ValidationMessage { get; set; }
@@ -140,7 +148,8 @@ namespace TrueMoon.Alloy.Hosting
             GraphicsApi = GraphicsApi, Width = Width, Height = Height, Title = Title,
             EnableDiagnostics = EnableDiagnostics, FrameMode = FrameMode, FramesPerSecond = FramesPerSecond,
             Appearance = Appearance, Chrome = Chrome, TitleBarFactory = TitleBarFactory, UseDefaultWindowFrame = UseDefaultWindowFrame,
-            ConfigureDefaultTitleBar = ConfigureDefaultTitleBar, ValidationMessage = ValidationMessage
+            ConfigureDefaultTitleBar = ConfigureDefaultTitleBar, TitleBarOverContent = TitleBarOverContent,
+            UseSystemAccentBorder = UseSystemAccentBorder, ValidationMessage = ValidationMessage
         };
     }
 }

@@ -1,6 +1,20 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-24, ED4e group opacity и panel material**.
+Последняя работа — **2026-10-25, PA8b.4 системный акцент границы / ED4f.2**.
+Опциональный IWindowSystemColors передаёт cached accent в WindowFrame; Windows
+читает UISettings3 через transient owned HSTRING/COM/apartment и обновляет cache
+вне WndProc по color/theme/settings notifications. UseSystemAccentBorder opt-in:
+accent → Theme.Border fallback, RGB60% inactive за160мс; style/local имеет приоритет.
+7новых UI/8Hosting cases, narrow67/67. Related UI893/Hosting114/Editor741 Debug/Release:
+3496passed/0failed/0skipped. Nonincremental Debug solution build0errors/1532warnings.
+12native source Debug/published Release cases,206PNG/16reaped children,
+validation0/0 и zero owned UI/GPU/mappings; actual border pixels/PNG проверены.
+[Проверки и границы](HISTORY.md#pa8b4-системный-акцент-границы--2026-10-25).
+Evidence: TestResults/AccentBorder-20261024/verification.json. Aether/full solution
+tests/packages/physical/performance/VRAM/final alpha не повторены; реальные Windows
+personalization settings не менялись. Прежние gates и очередь ED4c.2 → ED4c.3 остаются.
+
+Предыдущая работа — **2026-10-24, ED4e group opacity и panel material**.
 Argentis Element.Opacity/UiProperties.Opacity0..1 — render-only; optional
 IOpacityDrawingContext применяет alpha ко всему subtree. Skia SaveLayer/Restore
 балансируются, unsupported backend рисует fractional opacity opaque, zero не рисует.

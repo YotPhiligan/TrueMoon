@@ -69,7 +69,7 @@ internal static class EditorSmoke
                 window.FramePresented -= Presented;
                 try
                 {
-                Require(ReferenceEquals(((WindowFrame)ui.Root).Children[1], view), "Editor view was recreated.");
+                Require(ReferenceEquals(((WindowFrame)ui.Root).Content, view), "Editor view was recreated.");
                 using var image = ui.ReadbackOpenGLImage(); using var bitmap = SKBitmap.FromImage(image);
                 var bounds = view.Canvas.ImageBounds; var scale = ui.Viewport.Scale;
                 Require(Math.Abs(bounds.Width / bounds.Height - 16d / 9) < .001, "Viewport distorted the image.");

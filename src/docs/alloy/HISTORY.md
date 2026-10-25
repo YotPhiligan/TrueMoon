@@ -1,5 +1,93 @@
 # Alloy / Argentis: история работ и проверок
 
+## PA8b.4: системный акцент границы — 2026-10-25
+
+Общие WindowFrame.UseSystemAccentBorder/SystemAccentColor, IWindowSystemColors и
+Hosting opt-in связывают cached platform accent с рамкой. Null возвращает Theme.Border,
+inactive RGB60% за160мс; explicit style/local BorderColor имеет приоритет. Новый
+Element.ThemeBorderColor сохраняет прежнюю default/error palette остальных controls.
+Default frame opt-out, unchanged state не создаёт frames; detach/dispose останавливают
+transition. Layout/foreground/native hit regions остаются прежними.
+
+Platform.Silk читает UISettings3 Accent на owner thread с transient HSTRING/COM refs
+и balanced apartment init. HRESULT/API failure даёт null. Native color/theme/settings
+messages ставят dirty flag; cache refresh/render вне WndProc, без per-frame native read.
+Общий contract не требует Windows-specific TFM/новых пакетов. App/Cobalt window factory
+и существующий ownership не менялись. Editor включает опцию в composition root.
+
+15новых cases (UI7/Hosting8), narrow67/67. Текущие UI893/Hosting114/Editor741 Debug/
+Release:3496passed/0failed/0skipped; nonincremental Debug solution build0errors/
+1532warnings.12native cases/206PNG/16reaped children,validation0/0 и zero owned
+UI/GPU/mappings; actual border pixels и active/inactive PNG проверены.
+Evidence: TestResults/AccentBorder-20261024/verification.json.
+[Точные TRX/binlogs/ABI/ownership/границы](../engine/HISTORY.md#ed4f2-системная-граница-окна--2026-10-25).
+Реальные OS personalization settings не менялись; HRESULT failure не индуцировался,
+fallback/recovery проверены через nullable host. Packages/full solution tests/physical/
+performance/VRAM/final alpha не повторены. Очередь ED4c.2 → ED4c.3 сохраняется.
+
+## PA8b.3: статус-бар поверх content — 2026-10-24
+
+Опциональные StatusBar.OverlayContent/KeepBackdropVisible используют render-only
+ScalarTransition160мс: idle tint alpha≤72/sigma0 → PanelBackdrop при hover/focus
+или consumer signal. Foreground/geometry/input/overflow прежние. Detach/disable/
+dispose сбрасывают переход, repeated settled input не инвалидирует render. Focus
+return теперь выполняется только при pending overflow, отдельно от animation frames.
+Default opt-out сохраняет прежний контрол; null material — opaque Surface.
+
+7новых UI cases проверяют159/160мс/idle/reversal/focus/activity/teardown, темы/null,
+raster blur и sharp foreground при scale1/1.5. Editor добавил3cases важных состояний
+и popup с focus вне бара. Узкий запуск93/93; related UI886/Hosting106/Editor741
+Debug/Release:3466passed/0failed/0skipped. Последний nonincremental Debug solution
+build0errors/1532warnings.12native cases/182PNG/16reaped children,validation0/0 и
+zero owned UI/GPU/mappings; финальные idle/hover/Light/null PNG просмотрены.
+Evidence: TestResults/StatusOverlay-20261024/verification.json; TRX/binlogs/точные
+границы и исключённый interrupted run — в
+[engine истории](../engine/HISTORY.md#ed4f1-прозрачный-статус-бар--2026-10-24).
+
+App/Cobalt/IFactory и прежняя caption integration сохранены. Aether/full solution
+tests/packages/physical/performance/VRAM/final alpha не повторены; OS/driver settings
+не менялись. Следующий consumer прежний: ED4c.2 names/order → ED4c.3 create/delete.
+
+## PA8b.2: заголовок поверх content — 2026-10-24
+
+Общий opt-in WindowFrame.TitleBarOverContent и validated/snapshot Hosting option
+сохраняют default layout; overlay content занимает полный client rect, затем
+рисуются title и grip. Stable Content/TitleBar не зависят от Children paint order.
+WindowTitleBar использует render-only OverlayContent и frame-driven ScalarTransition
+160мс для backdrop: idle tint alpha≤72/sigma0 → Theme.PanelBackdrop. Foreground,
+hit regions и scene framing не меняются. IWindowHeaderActivity сообщает custom
+menu state, active focus/menu удерживают фон, inactive pointer hover поддержан.
+Повторные одинаковые события не инвалидируют settled scene; detach/dispose сбрасывают
+переход без timers. Null material возвращает Surface, unsupported renderer — fallback.
+
+OverlayHost.PopupInsets имеет finite/nonnegative validation; measure/place popup
+ограничены clamped safe area, content сохраняет полную геометрию. Editor использует
+inset36 для меню/Tooltip, retained document prompts принадлежат своему View/layout.
+Windows hook передаёт WM_NCMOUSEMOVE/HTCAPTION и leave в логические UiInput coordinates
+даже при выключенном NativeSnapLayouts; default dispatch и native drag/doubleclick/
+Snap regions сохранены. Используются прежние owner/thread/native signatures.
+
+Текущий итог после Tooltip visual fix: UI879/Hosting106/Editor738 в каждой из Debug
+и Release,3446passed/0failed/0skipped;84новыхcases, из них UI37/Hosting8. Related
+TRX/binlog: TestResults/OverlayChrome-20261024/managed-160136478. Nonincremental
+Debug solution build0errors/1532warnings: solution-build-160200516 того же root.
+12native source/published cases,166PNG/16reaped children,validation0/0 и zero owned
+UI/GPU/mappings: native-160207207/summary.json. Финальные PNG просмотрены, hashes
+source/binary/PNG актуальны. Evidence: TestResults/OverlayChrome-20261024/verification.json.
+
+Регрессии проверяют stable ownership/default geometry, paint/input/native regions,
+160мс/reversal/menu/focus/inactive/detach, отсутствие idle work, отдельный frosted
+background при чётком foreground, tiny/narrow/logical DPI и popup safe area.
+Owned-HWND probe доставляет caption NC events без глобального cursor/focus, затем
+продвигает160мс на owner; это native routing proof, не physical input matrix.
+Ранние nonsettling hover/inactive/Exit-smoke failures исправлены, описаны в
+[engine истории](../engine/HISTORY.md#ed4f-viewport-под-оконным-chrome--2026-10-24).
+Детальные прикладные document/Tooltip задачи остаются у Editor.
+
+Aether/full solution tests/packages/physical DPI/OS input/VRAM/performance/final
+alpha не повторены. Общая alpha/K7/K8 не объявлена завершённой; настройки OS/driver
+не менялись. Следующий прикладной consumer прежний: ED4c.2 names/order → ED4c.3.
+
 ## PA8b.1: group opacity и островки Editor — 2026-10-24
 
 Добавлены Element.Opacity/UiProperties.Opacity с finite0..1 validation и только

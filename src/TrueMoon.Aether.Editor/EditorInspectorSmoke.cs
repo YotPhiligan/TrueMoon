@@ -156,7 +156,7 @@ internal static class EditorInspectorSmoke
                     var tree = view.HierarchyIsland.Child!; var inspector = view.InspectorIsland.Child!;
                     Require(view.Canvas.Bounds == viewport && view.InspectorIsland.Reveal == 1 &&
                         tree.Bounds.X - view.ViewportFrame.Bounds.X == 16 &&
-                        tree.Bounds.Y - view.ViewportFrame.Bounds.Y == 16 &&
+                        tree.Bounds.Y - view.ViewportFrame.Bounds.Y == 52 &&
                         view.ViewportFrame.Bounds.X + view.ViewportFrame.Bounds.Width - inspector.Bounds.X - inspector.Bounds.Width == 16 &&
                         tree.Bounds.Height < view.ViewportFrame.Bounds.Height / 2 &&
                         inspector.Bounds.Height < view.ViewportFrame.Bounds.Height && tree.CornerRadius == 8 && inspector.CornerRadius == 8,
@@ -169,6 +169,36 @@ internal static class EditorInspectorSmoke
                 }).WaitAsync(token);
                 await Capture(name, true);
             }
+            var titleBar = ((WindowFrame)ui.Root).DefaultTitleBar!;
+            await ui.InvokeAsync(() =>
+            {
+                ui.SetTheme(Theme.Dark with { FontFamily = panel.Theme.FontFamily });
+                ui.Focus(view.Hierarchy!.Tree); EditorHeaderSmoke.Move(ui, view.Canvas);
+            }).WaitAsync(token);
+            await Until(() => titleBar.OverlayReveal == 0 && !ui.NeedsUpdate);
+            Require(view.Canvas.Bounds == viewport && view.Canvas.Bounds.Y < titleBar.Bounds.Y + titleBar.Bounds.Height,
+                "Idle chrome changed the full-area preview.");
+            await Capture("viewport-chrome-idle.png", true);
+            await ui.InvokeAsync(() => EditorHeaderSmoke.Move(ui, view.Header!.BrandIcon)).WaitAsync(token);
+            await Until(() => titleBar.OverlayReveal == 1 && !ui.NeedsUpdate);
+            Require(view.Canvas.Bounds == viewport, "Hover reframed the scene.");
+            await Capture("viewport-chrome-hover.png", true);
+            await ui.InvokeAsync(() => EditorHeaderSmoke.Move(ui, view.Header!.Caption)).WaitAsync(token);
+            await EditorHeaderSmoke.UntilAsync(ui, () => ReferenceEquals(view.Overlays.PopupOwner, view.Header) && !ui.NeedsUpdate, token,
+                () => EditorHeaderSmoke.Move(ui, view.Header!.Caption));
+            Require(view.Overlays.Popup is Border { Child: Text captionHint } && captionHint.Value.Contains(document.Read().Path!),
+                "Caption Tooltip did not show the full scene path.");
+            await Capture("viewport-caption-tooltip.png", true);
+            await ui.InvokeAsync(() => EditorHeaderSmoke.Move(ui, view.Canvas)).WaitAsync(token);
+            var footer = view.StatusBar!;
+            await Until(() => footer.Bar.OverlayReveal == 0 && titleBar.OverlayReveal == 0 && !ui.NeedsUpdate);
+            Require(view.Canvas.Bounds == viewport, "Idle status bar changed the full-area preview.");
+            await Capture("viewport-status-idle.png", true);
+            await ui.InvokeAsync(() => EditorHeaderSmoke.Move(ui, footer.Bar)).WaitAsync(token);
+            await Until(() => footer.Bar.OverlayReveal == 1 && !ui.NeedsUpdate);
+            Require(view.Canvas.Bounds == viewport && footer.Bar.Backdrop == footer.Theme.PanelBackdrop && footer.SummaryButton.Opacity == 1,
+                "Status hover reframed the scene or faded its foreground.");
+            await Capture("viewport-status-hover.png", true);
             await Doc(DocumentCommand.Close);
             Require(runtime.Leases.Count == 1 && runtime.Leases.All(c => c.Reaped && c.ResourcesReleased) && engine.Builds.ProcessId == null,
                 "Inspector preview retained a child or started a compiler.");
@@ -183,6 +213,7 @@ internal static class EditorInspectorSmoke
                 ResetProvenance = true, SharedHistory = true, DependencyRejection = true, SaveReopen = true, ThemeRetention = true,
                 IconActions = true, Tooltips = true, ContextVisibility = true,
                 FloatingIslands = true, StableViewport = true, PanelThemesAndOpaqueFallback = true,
+                FullAreaViewport = true, HeaderHoverWithoutReframe = true, CaptionPathTooltip = true, StatusHoverWithoutReframe = true,
                 Children = runtime.Leases.Count, CompilerStarted = false, SourceUnchanged = true, OwnerThread = owner, NotificationThreads = owners.ToArray()
             }, new JsonSerializerOptions { WriteIndented = true }));
         }

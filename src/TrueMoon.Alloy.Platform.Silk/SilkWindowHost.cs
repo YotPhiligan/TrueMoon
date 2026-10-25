@@ -7,13 +7,16 @@ using TrueMoon.Argentis;
 namespace TrueMoon.Alloy.Platform.Silk;
 
 /// <summary>A standalone graphics window and normalized input adapter. Create/run/dispose on one thread.</summary>
-public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, IWindowSystemMenu, IUiClipboard
+public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, IWindowSystemMenu, IUiClipboard, IWindowSystemColors
 {
     private readonly global::Silk.NET.Input.IInputContext _input;
     private readonly Win32Clipboard? _windowsClipboard;
     private readonly Win32TransparentFramebuffer? _transparency;
     private readonly Win32WindowChrome? _chrome;
     private readonly Win32WindowDpi? _dpi;
+    private Color? _accentColor;
+    /// <inheritdoc />
+    public Color? AccentColor { get { VerifyWindowAccess(); return _accentColor; } }
     /// <summary>Requested custom frame settings, or null for the original GLFW frame behavior.</summary>
     public WindowChromeOptions? Chrome { get; }
     /// <summary>Whether this window has the Windows custom frame adapter installed.</summary>
@@ -133,6 +136,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
             {
                 _chrome = new Win32WindowChrome(NativeWindow.Native?.Win32?.Hwnd
                     ?? throw new NotSupportedException("Custom chrome requires a Windows HWND."), chrome);
+                _accentColor = Win32AccentColors.TryRead();
                 ChromeCapabilities = new(true, true, true)
                 { SnapLayouts = OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000), SystemMenu = chrome.SystemMenu };
             }
@@ -197,6 +201,11 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
     public void DispatchPendingWindowInput()
     {
         VerifyWindowAccess();
+        if (_chrome?.TakeSystemColorsChanged() == true)
+        {
+            _accentColor = Win32AccentColors.TryRead();
+            RenderRequested?.Invoke();
+        }
         while (_chrome != null && _chrome.TryDequeueInput(out var input)) Input?.Invoke(input);
     }
     /// <inheritdoc />
