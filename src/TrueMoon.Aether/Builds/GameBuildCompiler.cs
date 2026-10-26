@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using TrueMoon.Aether.Sessions;
+using TrueMoon.Diagnostics;
+using System.Text.Json;
 
 namespace TrueMoon.Aether.Builds;
 
@@ -15,18 +17,48 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     private Task? _dispose;
     private OwnedJob? _owned;
     private bool _closed;
+    private readonly IEventsSource? _events;
+    private readonly IDiagnosticTelemetry? _telemetry;
+    private readonly BuildDiagnosticStore _diagnostics;
+    private ProcessOutputCapture? _stdout, _stderr;
+    /// <summary>Last best-effort retention pass. Active, unrecognized and incomplete directories are preserved.</summary>
+    public GameBuildRetentionStatus? RetentionStatus { get; private set; }
+    /// <summary>Live bounded compiler stdout tail, file loss and error counters.</summary>
+    public ProcessOutputSnapshot? StandardOutputStatus => _stdout?.Read();
+    /// <summary>Live bounded compiler stderr tail, file loss and error counters.</summary>
+    public ProcessOutputSnapshot? StandardErrorStatus => _stderr?.Read();
     /// <summary>Creates a compiler with a dedicated artifact root and a maximum 120-second build budget.</summary>
     public GameBuildCompiler(string hostContractId, string artifactRoot, TimeSpan? timeout = null)
+        : this(hostContractId, artifactRoot, timeout, null) { }
+
+    /// <summary>Creates a compiler borrowing an injected diagnostic source.</summary>
+    /// <param name="hostContractId">Frozen host identity.</param><param name="artifactRoot">Owned artifact root.</param>
+    /// <param name="timeout">Compiler deadline.</param><param name="events">Borrowed diagnostics.</param>
+    public GameBuildCompiler(string hostContractId, string artifactRoot, TimeSpan? timeout, IEventsSource? events)
+        : this(hostContractId, artifactRoot, timeout, events, null) { }
+
+    /// <summary>Creates a compiler with snapshotted completed-job retention limits.</summary>
+    /// <param name="hostContractId">Frozen host identity.</param><param name="artifactRoot">Owned artifact root.</param>
+    /// <param name="timeout">Compiler deadline.</param><param name="events">Borrowed diagnostics.</param>
+    /// <param name="retention">Limits copied before resource creation; null selects the defaults.</param>
+    public GameBuildCompiler(string hostContractId, string artifactRoot, TimeSpan? timeout, IEventsSource? events,
+        GameBuildRetentionOptions? retention)
+        : this(hostContractId, artifactRoot, timeout, events, retention, null) { }
+
+    /// <summary>Creates a compiler borrowing App-owned events and operation telemetry.</summary>
+    public GameBuildCompiler(string hostContractId, string artifactRoot, TimeSpan? timeout, IEventsSource? events,
+        GameBuildRetentionOptions? retention, IDiagnosticTelemetry? telemetry)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(artifactRoot);
         new SessionIdentity(Guid.NewGuid(), 1, hostContractId, hostContractId, hostContractId).Validate();
         _timeout = timeout ?? TimeSpan.FromSeconds(120);
         if (_timeout <= TimeSpan.Zero || _timeout > TimeSpan.FromSeconds(120)) throw new ArgumentOutOfRangeException(nameof(timeout));
-        _root = Path.GetFullPath(artifactRoot); _hostId = hostContractId;
+        _root = Path.GetFullPath(artifactRoot); _hostId = hostContractId; _events = events; _telemetry = telemetry;
+        _diagnostics = new(_root, retention ?? new());
     }
     /// <summary>Gets the current owned compiler PID, or null after reap.</summary>
     public int? ProcessId { get { lock (_gate) return _owned?.Process?.Id; } }
-    /// <summary>Gets the last job directory containing persistent compiler diagnostics.</summary>
+    /// <summary>Gets the last job directory; completed diagnostics remain subject to the root's retention policy.</summary>
     public string? DiagnosticsDirectory { get; private set; }
     /// <summary>Builds a candidate into owned staging, using the currently loaded Aether DLL as the frozen contract.</summary>
     /// <remarks>The project must consume AetherContractPath. ProjectReference builds and shared build servers are disabled.</remarks>
@@ -52,18 +84,45 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     }
     private async Task CompleteAsync(GameBuildRequest request, CancellationToken caller, TaskCompletionSource<GameBuildArtifact> completion)
     {
-        try { completion.TrySetResult(await RunAsync(request, caller).ConfigureAwait(false)); }
-        catch (OperationCanceledException) { completion.TrySetCanceled(caller.IsCancellationRequested ? caller : _closing.Token); }
-        catch (Exception error) { completion.TrySetException(error); }
+        using var operation = AetherDiagnosticEvents.Start(_telemetry, "Aether.Build", () =>
+            new Dictionary<string, string?> { ["SourceRevision"] = request.SourceRevision.ToString(System.Globalization.CultureInfo.InvariantCulture) });
+        try
+        {
+            var result = await RunAsync(request, caller).ConfigureAwait(false);
+            Emit("Build.Completed", DiagnosticLevel.Information);
+            operation?.Complete(); operation?.Dispose();
+            completion.TrySetResult(result);
+        }
+        catch (OperationCanceledException)
+        {
+            Emit("Build.Cancelled", DiagnosticLevel.Warning);
+            operation?.Complete(DiagnosticOperationOutcome.Cancelled); operation?.Dispose();
+            completion.TrySetCanceled(caller.IsCancellationRequested ? caller : _closing.Token);
+        }
+        catch (Exception error)
+        {
+            Emit("Build.Failed", DiagnosticLevel.Error, error);
+            operation?.Complete(DiagnosticOperationOutcome.Failed, error); operation?.Dispose(); completion.TrySetException(error);
+        }
+        void Emit(string name, DiagnosticLevel level, Exception? error = null)
+            => AetherDiagnosticEvents.Emit(_events, level, name switch { "Build.Completed" => 1201, "Build.Cancelled" => 1202, _ => 1203 }, name, "Game build operation", () =>
+                new Dictionary<string, string?> { ["SourceRevision"] = request.SourceRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["JobId"] = DiagnosticsDirectory is null ? null : Path.GetFileName(DiagnosticsDirectory) }, error);
     }
     private async Task<GameBuildArtifact> RunAsync(GameBuildRequest request, CancellationToken caller)
     {
         using var timeout = new CancellationTokenSource(_timeout);
         using var end = CancellationTokenSource.CreateLinkedTokenSource(caller, _closing.Token, timeout.Token);
-        var job = Path.Combine(_root, "jobs", Guid.NewGuid().ToString("N")); Directory.CreateDirectory(job);
+        DiagnosticsDirectory = null; _stdout = null; _stderr = null;
+        // Directory maintenance can inspect previous jobs; keep it off the caller/UI thread.
+        var lease = await Task.Run(_diagnostics.Begin).ConfigureAwait(false);
+        var job = lease.Directory;
         DiagnosticsDirectory = job;
+        var owned = new OwnedJob(lease); lock (_gate) _owned = owned;
+        AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Information, 1200, "Build.Starting", "Game build operation", () =>
+            new Dictionary<string, string?> { ["SourceRevision"] = request.SourceRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["JobId"] = Path.GetFileName(job) });
         var output = Path.Combine(job, "output"); var work = Path.Combine(job, "work");
-        var owned = new OwnedJob(job); lock (_gate) _owned = owned;
         var info = new ProcessStartInfo("dotnet") { WorkingDirectory = Path.GetDirectoryName(request.ProjectPath)!,
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in new[] { "build", request.ProjectPath, "--configuration", "Release", "--framework", "net10.0",
@@ -73,11 +132,13 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
             "-property:TrueMoonContractsPath=" + typeof(IFactory<>).Assembly.Location }) info.ArgumentList.Add(argument);
         try
         {
+            UpdateRetention(job);
             end.Token.ThrowIfCancellationRequested();
             var process = Process.Start(info) ?? throw new IOException("Compiler process did not start.");
             lock (_gate) owned.Process = process;
-            owned.Stdout = DrainAsync(process.StandardOutput, Path.Combine(job, "build.stdout.log"));
-            owned.Stderr = DrainAsync(process.StandardError, Path.Combine(job, "build.stderr.log"));
+            _stdout = new ProcessOutputCapture(process.StandardOutput, filePath: Path.Combine(job, "build.stdout.log"));
+            _stderr = new ProcessOutputCapture(process.StandardError, filePath: Path.Combine(job, "build.stderr.log"));
+            owned.Stdout = _stdout.Completion; owned.Stderr = _stderr.Completion;
             await process.WaitForExitAsync(end.Token).ConfigureAwait(false);
             end.Token.ThrowIfCancellationRequested();
             if (process.ExitCode != 0) throw new GameBuildException("Game compilation failed.", process.ExitCode, job);
@@ -91,28 +152,61 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         { throw new TimeoutException("Game build exceeded its compiler deadline.", error); }
         finally { await CleanupAsync(owned).ConfigureAwait(false); }
     }
-    private static async Task DrainAsync(StreamReader reader, string path)
-    {
-        await using var writer = new StreamWriter(path); var buffer = new char[4096]; var remaining = 1024 * 1024;
-        int count;
-        while ((count = await reader.ReadAsync(buffer).ConfigureAwait(false)) != 0)
-        {
-            var keep = Math.Min(count, remaining);
-            if (keep != 0) { await writer.WriteAsync(buffer.AsMemory(0, keep)).ConfigureAwait(false); remaining -= keep; }
-        }
-    }
     private async Task CleanupAsync(OwnedJob owned)
     {
         if (owned.Process is { } process)
         {
             await ReapAsync(process).ConfigureAwait(false);
             await Task.WhenAll(owned.Stdout, owned.Stderr).WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            // Capture failures/truncation remain observable independently of the compiler's exit outcome.
+            try
+            {
+                File.WriteAllText(Path.Combine(owned.Directory, "build.output.json"), JsonSerializer.Serialize(new
+                    { StandardOutput = StandardOutputStatus, StandardError = StandardErrorStatus }));
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Warning, 1204, "Build.DiagnosticsWriteFailed",
+                    "Could not persist build output status", () => new Dictionary<string, string?>(), error);
+            }
             lock (_gate) owned.Process = null;
             process.Dispose();
         }
         GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "output"), owned.Directory);
         GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "work"), owned.Directory);
+        Exception? completionError = null;
+        try { owned.Diagnostics.Complete(DateTimeOffset.UtcNow); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            completionError = error;
+            AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Warning, 1204, "Build.DiagnosticsWriteFailed",
+                "Could not complete build diagnostics ownership metadata", () => new Dictionary<string, string?>(), error);
+        }
+        UpdateRetention(owned.Directory, completionError);
         lock (_gate) { if (_owned == owned) _owned = null; }
+    }
+    private void UpdateRetention(string currentJob, Exception? completionError = null)
+    {
+        var status = _diagnostics.Sweep(DateTimeOffset.UtcNow, currentJob);
+        if (completionError != null)
+        {
+            var summary = completionError.GetType().Name + ": " + completionError.Message;
+            status = status with { Failures = status.Failures + 1, LastError = summary.Length <= 1024 ? summary : summary[..1024] };
+        }
+        RetentionStatus = status;
+        if (status.Failures == 0 && !status.IsOverBudget && !status.MaintenanceBusy) return;
+        AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Warning, 1205, "Build.RetentionLimited",
+            "Build diagnostics retention could not satisfy all limits", () => new Dictionary<string, string?>
+            {
+                ["JobId"] = Path.GetFileName(currentJob),
+                ["RetainedJobs"] = status.RetainedJobs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["RetainedBytes"] = status.RetainedBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["ActiveJobs"] = status.ActiveJobs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["SkippedDirectories"] = status.SkippedDirectories.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["Failures"] = status.Failures.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["IsOverBudget"] = status.IsOverBudget.ToString(), ["MaintenanceBusy"] = status.MaintenanceBusy.ToString(),
+                ["Error"] = status.LastError
+            });
     }
     private static async Task ReapAsync(Process process)
     {
@@ -139,9 +233,10 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     }
     /// <summary>Synchronously completes the same owned cleanup.</summary>
     public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
-    private sealed class OwnedJob(string directory)
+    private sealed class OwnedJob(BuildDiagnosticStore.Job diagnostics)
     {
-        internal readonly string Directory = directory;
+        internal readonly BuildDiagnosticStore.Job Diagnostics = diagnostics;
+        internal string Directory => Diagnostics.Directory;
         internal Process? Process;
         internal Task Stdout = Task.CompletedTask, Stderr = Task.CompletedTask;
     }

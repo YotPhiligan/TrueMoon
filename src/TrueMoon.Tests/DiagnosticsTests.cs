@@ -380,14 +380,16 @@ public class DiagnosticsTests
     [Fact]
     public async Task AppDiagnosticsAreObservedAndDisposedEvenWhenAListenerThrows()
     {
+        var name = UniqueName();
         var received = new ConcurrentBag<DiagnosticEvent>();
         await using var app = App.Build(context => context.UseDiagnostics(configuration => configuration
+            .Filters(name)
             .OnEvent(_ => throw new InvalidOperationException("listener failed"))
             .OnEvent(received.Add)));
         await app.StartAsync();
         await app.StopAsync();
         var factory = app.Services.Resolve<IEventsSourceFactory>()!;
-        var source = factory.Create("TrueMoon.DiagnosticsTests." + Guid.NewGuid().ToString("N"));
+        var source = factory.Create(name);
         source.Trace(caller: "proof");
         Assert.Contains(received, item => item.Name == source.Name + ".proof");
         Assert.Contains(received, item => item.Name.StartsWith("TrueMoon.DefaultApp", StringComparison.Ordinal));

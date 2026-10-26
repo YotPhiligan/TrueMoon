@@ -1,6 +1,6 @@
 namespace TrueMoon.Enerit.IO.Pipes;
 
-internal sealed class PipesClientAdmission(PipesTransportOptions options)
+internal sealed class PipesClientAdmission(PipesTransportOptions options, PipesMetrics? metrics = null)
 {
     private readonly object _gate = new();
     private readonly SemaphoreSlim _slots = new(options.MaxPendingRequests, options.MaxPendingRequests);
@@ -19,10 +19,10 @@ internal sealed class PipesClientAdmission(PipesTransportOptions options)
             ObjectDisposedException.ThrowIf(_closed, this);
             if (_slots.Wait(0))
             {
-                ResetDrained(); _pending++; return;
+                ResetDrained(); _pending++; metrics?.Client(_pending, _queued); return;
             }
-            if (_queued == options.MaxQueuedRequests) throw new PipesInvocationOverloadedException();
-            ResetDrained(); _queued++;
+            if (_queued == options.MaxQueuedRequests) { metrics?.RejectClient(); throw new PipesInvocationOverloadedException(); }
+            ResetDrained(); _queued++; metrics?.Client(_pending, _queued);
         }
         var entered = false;
         try { await _slots.WaitAsync(token).ConfigureAwait(false); entered = true; }
@@ -32,6 +32,7 @@ internal sealed class PipesClientAdmission(PipesTransportOptions options)
             {
                 _queued--;
                 if (entered) _pending++;
+                metrics?.Client(_pending, _queued);
                 SignalDrained();
             }
         }
@@ -39,7 +40,7 @@ internal sealed class PipesClientAdmission(PipesTransportOptions options)
 
     internal void Release()
     {
-        lock (_gate) { _pending--; _slots.Release(); SignalDrained(); }
+        lock (_gate) { _pending--; metrics?.Client(_pending, _queued); _slots.Release(); SignalDrained(); }
     }
     internal void Close() { lock (_gate) _closed = true; }
     private void ResetDrained()
@@ -49,7 +50,7 @@ internal sealed class PipesClientAdmission(PipesTransportOptions options)
     { var result = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); result.SetResult(); return result; }
 }
 
-internal sealed class PipesServerAdmission(PipesTransportOptions options)
+internal sealed class PipesServerAdmission(PipesTransportOptions options, PipesMetrics? metrics = null)
 {
     private readonly object _gate = new();
     private int _requests;
@@ -61,11 +62,13 @@ internal sealed class PipesServerAdmission(PipesTransportOptions options)
     {
         lock (_gate)
         {
-            if (_closed || _requests == options.MaxConcurrentRequests || length > options.MaxBufferedRequestBytes - _bytes) return false;
-            _requests++; _bytes += length; return true;
+            if (_closed) return false;
+            if (_requests == options.MaxConcurrentRequests) { metrics?.RejectServer(false); return false; }
+            if (length > options.MaxBufferedRequestBytes - _bytes) { metrics?.RejectServer(true); return false; }
+            _requests++; _bytes += length; metrics?.Server(_requests, _bytes); return true;
         }
     }
     internal void Release(int length)
-    { lock (_gate) { _requests--; _bytes -= length; } }
+    { lock (_gate) { _requests--; _bytes -= length; metrics?.Server(_requests, _bytes); } }
     internal void Close() { lock (_gate) _closed = true; }
 }

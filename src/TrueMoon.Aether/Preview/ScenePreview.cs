@@ -2,6 +2,7 @@
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
+using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether.Preview;
 
@@ -19,6 +20,8 @@ public sealed record ScenePreviewFrame(ScenePreviewDocument Document, ViewportFr
 public sealed class ScenePreview : IAsyncDisposable
 {
     private readonly FrameSession _frames;
+    private readonly IEventsSource? _events;
+    private readonly IDiagnosticTelemetry? _telemetry;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly object _stateGate = new();
     private CancellationTokenSource? _work;
@@ -32,7 +35,11 @@ public sealed class ScenePreview : IAsyncDisposable
 
     /// <summary>Creates a controller over borrowed frames. Do not run game/preview commands concurrently on this owner.</summary>
     /// <param name="frames">App-owned frame/process graph, shared with explicit game workflow.</param>
-    public ScenePreview(FrameSession frames) { ArgumentNullException.ThrowIfNull(frames); _frames = frames; }
+    public ScenePreview(FrameSession frames) : this(frames, null, null) { }
+
+    /// <summary>Creates a controller borrowing frame resources and App-owned diagnostics.</summary>
+    public ScenePreview(FrameSession frames, IEventsSource? events, IDiagnosticTelemetry? telemetry)
+    { ArgumentNullException.ThrowIfNull(frames); _frames = frames; _events = events; _telemetry = telemetry; }
 
     /// <summary>Gets the ready preview document; null after stop, exit, replacement or a pending first presentation.</summary>
     public ScenePreviewDocument? Document
@@ -50,7 +57,15 @@ public sealed class ScenePreview : IAsyncDisposable
     /// <param name="width">Physical width,16..1920.</param><param name="height">Physical height,16..1080.</param>
     /// <param name="token">Cancellation before readiness; cleanup always retains ownership until drained.</param>
     /// <returns>The exact document/runtime stamp after first presentation.</returns>
-    public async Task<ScenePreviewDocument> ShowAsync(ResolvedSceneSnapshot scene, int width, int height, CancellationToken token = default)
+    public Task<ScenePreviewDocument> ShowAsync(ResolvedSceneSnapshot scene, int width, int height, CancellationToken token = default)
+        => AetherDiagnosticEvents.ObserveAsync(_events, _telemetry, "Preview.Show", 1400, () =>
+        {
+            var properties = Context();
+            properties["RequestedSceneRevision"] = scene?.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return properties;
+        }, () => ShowCoreAsync(scene, width, height, token));
+
+    private async Task<ScenePreviewDocument> ShowCoreAsync(ResolvedSceneSnapshot scene, int width, int height, CancellationToken token)
     {
         ArgumentNullException.ThrowIfNull(scene);
         var fence = BeginPreflight(); ValidateSize(width, height, false);
@@ -97,7 +112,16 @@ public sealed class ScenePreview : IAsyncDisposable
     /// <summary>Resizes the active preview, or suspends with0x0. Resume waits for actual presentation on the new surface.</summary>
     /// <param name="width">Physical width or zero when suspended.</param><param name="height">Physical height or zero when suspended.</param>
     /// <param name="token">Cancellation before resize readiness.</param><returns>Completion after new-surface readiness.</returns>
-    public async Task ResizeAsync(int width, int height, CancellationToken token = default)
+    public Task ResizeAsync(int width, int height, CancellationToken token = default)
+        => AetherDiagnosticEvents.ObserveAsync(_events, _telemetry, "Preview.Resize", 1410, () =>
+        {
+            var properties = Context();
+            properties["Width"] = width.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            properties["Height"] = height.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return properties;
+        }, () => ResizeCoreAsync(width, height, token));
+
+    private async Task ResizeCoreAsync(int width, int height, CancellationToken token)
     {
         var fence = BeginPreflight(); ValidateSize(width, height, true);
         if (!await _gate.WaitAsync(0, token).ConfigureAwait(false)) throw new InvalidOperationException("A preview update is already in progress.");
@@ -159,7 +183,14 @@ public sealed class ScenePreview : IAsyncDisposable
             _fence++; _document = null; _target = null; _presented = null;
             try { _work?.Cancel(); } catch (Exception error) { cancellation = error; }
         }
-        return StopCoreAsync(cancellation);
+        return AetherDiagnosticEvents.ObserveAsync(_events, _telemetry, "Preview.Stop", 1420, Context, () => StopCoreAsync(cancellation));
+    }
+    private Dictionary<string, string?> Context()
+    {
+        var properties = AetherDiagnosticEvents.Context(_frames.Supervisor.Status);
+        properties["SurfaceGeneration"] = _frames.Presentation?.Surface.Generation.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        properties["Transport"] = _frames.TransportKind.ToString();
+        return properties;
     }
     private async Task StopCoreAsync(Exception? cancellation)
     {

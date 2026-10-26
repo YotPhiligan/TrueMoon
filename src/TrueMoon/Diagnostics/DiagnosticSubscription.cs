@@ -8,10 +8,15 @@ public class DiagnosticSubscription : IDisposable
     private readonly DiagnosticObserver _observer;
     private IDisposable? _allListeners;
 
-    public DiagnosticSubscription(DiagnosticsConfiguration configuration)
+    public DiagnosticSubscription(DiagnosticsConfiguration configuration) : this(configuration, null) { }
+
+    /// <summary>Creates a bridge borrowing an App-owned asynchronous pipeline.</summary>
+    /// <param name="configuration">Legacy listeners and discovery filters.</param>
+    /// <param name="pipeline">Optional borrowed pipeline; disposed by its separate owner after this bridge.</param>
+    public DiagnosticSubscription(DiagnosticsConfiguration configuration, DiagnosticPipeline? pipeline)
     {
         ArgumentNullException.ThrowIfNull(configuration);
-        _observer = new DiagnosticObserver(configuration);
+        _observer = new DiagnosticObserver(configuration, pipeline);
         try { _allListeners = DiagnosticListener.AllListeners.Subscribe(_observer); }
         catch
         {

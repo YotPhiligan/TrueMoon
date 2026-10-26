@@ -3,6 +3,7 @@ using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Builds;
+using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether.Frames;
 
@@ -12,6 +13,14 @@ public sealed record FrameDisplay(FrameSurface Surface, FrameReceiver Receiver, 
 public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTransport? transport = null,
     IFactory<FrameReceiver, (SharedFrameRing Ring, ulong After, LatencySamples Samples)>? receivers = null) : IAsyncDisposable
 {
+    private readonly IEventsSource? _events;
+    private readonly IDiagnosticTelemetry? _telemetry;
+    /// <summary>Creates a frame owner borrowing App diagnostics; ownership of session and transport is unchanged.</summary>
+    public FrameSession(SessionSupervisor supervisor, IGameViewportTransport? transport,
+        IFactory<FrameReceiver, (SharedFrameRing Ring, ulong After, LatencySamples Samples)>? receivers,
+        IEventsSource? events, IDiagnosticTelemetry? telemetry) : this(supervisor, transport, receivers)
+    { _events = events; _telemetry = telemetry; }
+
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<SharedFrameRing> _rings = [];
     private readonly LatencySamples _copies = new();
@@ -236,6 +245,32 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
         }
     }
     private async Task FaultCoreAsync(string phase, Exception error)
+    {
+        var status = supervisor.Status;
+        var generation = Presentation?.Surface.Generation;
+        IReadOnlyDictionary<string, string?> Properties()
+        {
+            var properties = AetherDiagnosticEvents.Context(status);
+            properties["Phase"] = phase;
+            properties["SurfaceGeneration"] = generation?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            properties["Transport"] = TransportKind.ToString();
+            return properties;
+        }
+        using var operation = AetherDiagnosticEvents.Start(_telemetry, "Aether.FrameFault", Properties);
+        operation?.Complete(DiagnosticOperationOutcome.Failed, error);
+        AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Error, 1500, "Frame.Fault", "Viewport delivery failed", Properties, error);
+        try
+        {
+            await DrainFaultCoreAsync(phase, error).ConfigureAwait(false);
+            AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Information, 1501, "Frame.FaultDrained", "Viewport fault drained", Properties);
+        }
+        catch (Exception cleanup)
+        {
+            AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Error, 1503, "Frame.FaultCleanupFailed", "Viewport fault cleanup failed", Properties, cleanup);
+            throw;
+        }
+    }
+    private async Task DrainFaultCoreAsync(string phase, Exception error)
     {
         Volatile.Write(ref _transportError, error);
         Interlocked.Exchange(ref _presentation, null)?.Close(error);

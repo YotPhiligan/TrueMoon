@@ -8,11 +8,18 @@ public sealed class DiagnosticsConfiguration : ConfigurableBase, IDiagnosticsCon
     private readonly Lock _lock = new();
     private readonly List<Action<DiagnosticEvent>> _listeners = [];
     private readonly List<string> _filters = [];
+    private Action<DiagnosticEvent>[] _listenerSnapshot = [];
+
+    internal Action<DiagnosticEvent>[] ListenerSnapshot => Volatile.Read(ref _listenerSnapshot);
 
     public void AddEventListener(Action<DiagnosticEvent> action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        lock (_lock) _listeners.Add(action);
+        lock (_lock)
+        {
+            _listeners.Add(action);
+            Volatile.Write(ref _listenerSnapshot, _listeners.ToArray());
+        }
     }
 
     public IReadOnlyList<Action<DiagnosticEvent>> Listeners

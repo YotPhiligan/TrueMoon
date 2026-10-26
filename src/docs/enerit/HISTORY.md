@@ -1,5 +1,224 @@
 # Enerit: история работы и проверок
 
+## ENE6d.2: метрики ресурсов и перегрузки — 2026-10-26
+
+Продолжение «давай следующий шаг»: process-wide Meter TrueMoon.Enerit.Pipes и
+PipesTransportOptions.MetricsEnabled=true. [Контракт](PLAN.md#ene6d2-агрегированные-метрики-ресурсов--2026-10-26),
+[полные имена/units/limits](DIAGNOSTICS.md#метрики-ресурсов).
+Core telemetry API, trace/wire/service mapping и dependencies не менялись.
+Options копируются штатным App/generic/nongeneric путём; новая регистрация сервиса
+или MEL не нужны. Core operation MetricsEnabled управляет своим Meter отдельно.
+
+Пять ObservableUpDownCounter читают aggregate current pending/queued client work,
+server requests/request payload bytes/connections. ObservableCounter rejected
+сохраняет cumulative totals при завершении продуктов. Tags отсутствуют у state;
+rejections имеют только side/reason: client/queue_full,server/requests,server/bytes.
+Приоритет count refusal над bytes фиксирован. Cancel/timeout/closed gate/malformed
+frame не увеличивают overload. Admission refusal считается до drain/error response.
+Нет service/method/request/endpoint/error dimensions или payload logs.
+
+Existing admission gate обновляет numeric cell при реальном переходе state.
+Client pending держится до remote reply/disconnect и local writer/decode cleanup,
+даже после local cancellation. Server count/bytes держатся через response-write
+cleanup. Shared admission имеет одну cell на server; shared connections не добавляют
+второй учёт requests/bytes. Generic connection count включает accepting/draining;
+direct connection имеет1owned instance уже до Start. Late observer видит state
+без необходимости получать предыдущие delta events.
+
+Process registry содержит только numeric cells, не transport/handler/Activity или
+delegates. Удаление после фактического successful cleanup до Completion; cancelled
+Stop wait/failed cleanup регистрацию не снимают. Значения failed owner могут уже
+быть0 согласно завершившимся фазам cleanup. Repeated failed Stop сохраняет прежний
+fault и ownership, нового retry contract не введено. Meter/totals process lifetime.
+Constructor failure удаляет новую cell. MetricsEnabled=false исключает owner
+из state и новых overload totals, не сбрасывая общие прежние totals.
+
+Producers только обновляют числа. Observable measurement callbacks вызываются
+observer collection, не admission/Invoke/Stop; callbacks не выполняются под gates.
+Instrument discovery exceptions изолированы. Collection даёт отдельные snapshots,
+не coherent transaction. Bytes — логические outer request payloads, не heap/pool/
+service DTO/response buffers/wire bandwidth. Нового performance claim нет.
+
+Broad code-testing workflow применён к admission/client/server/metrics composition:
+research/plan/status и pairing в OS-temp, Rider findTests недоступен, существующие
+admission/trace suites использованы как conventions. Новый PipesMetricsTests имеет
+13методов/33cases в DisableParallelization collection. Failed direct Stop вынесен
+в отдельный existing EneritPipesProbe process scenario metrics-failed-stop, чтобы
+его retained numeric cell не загрязняла parent aggregates. Fixture dependencies,
+Contract.cs и прежние test suites не менялись. Первый compile failed artifact
+agent-first-1793038926191 сохранён: test target-typed new() был неоднозначен с friend
+internal overload; явный PipesTransportOptions устранил test authoring error.
+Production fixes после initial implementation не потребовались.
+
+| Требование | Точное доказательство в PipesMetricsTests |
+| --- | --- |
+| Late observer/sum/removal/cumulative totals | ObservableCells_AreEmptyWithoutOwnersSumLateSubscriptionsAndKeepThreeCumulativeRejectionSeries; ConcurrentClients_SumIndependentLiveOwnersAndRemoveOnlyTheDrainedContribution |
+| Client queue/pending/reject before serialization/cancel/timeout/drain | ClientQueue_PullsCurrentCountsRejectsBeforeSerializationAndRemovesWaitersOnEveryExit; ClientLocalCancellation_KeepsPendingUntilLateReplyOrDisconnect; ClientCancelledStopWait_RetainsBlockedWriterPendingUntilActualDrain |
+| Shared count/byte bounds и fixed reasons | SharedServer_ReportsExactCountAndByteBoundsOnceAcrossConnectionsWithCountReasonPrecedence; ClosedAdmission_DoesNotTurnShutdownIntoAnOverloadRejection |
+| Connections/direct/shared/failed ownership | GenericServer_IncludesWaitingAndRetiringConnectionsUntilCancelledStopActuallyDrains; DirectConnection_ContributesOneOwnerBeforeStartAndZeroAfterSuccessfulStop; OwnProcesses_FailedDirectStopRetainsConnectionMetricWithoutPollutingParentProcess |
+| Options snapshot/обе DI/independent Core setting | FactoriesAndApp_CopyAggregateOptionBeforeResolvingProductsWhileRpcStillWorks; AggregateOption_IsIndependentFromCoreOperationMetricOption |
+| No producer callbacks, slow/throw/reentry | ObserverCallbacks_RunOnlyOnPullAndCannotBlockOrReplaceTransportBusiness |
+
+Полные names/types/units/tags/ровно3rejection series проверяет shared observer при
+каждом pull. [Exact fully qualified matrix и commands](../../TestResults/DiagnosticsIpcMetrics-20261026-1/test-matrix.md),
+[assertions/gaps review](../../TestResults/DiagnosticsIpcMetrics-20261026-1/test-quality.md).
+Review Strong:85direct Assert sites/44helper calls,0assertion-free/trivial-only;
+static mutation/gap analysis без фактических production mutations/coverage claims.
+Numeric-only registry, removal calls после cleanup и failed-generic zero-cell
+retention дополнительно проверены по исходникам; fresh-process discovery faults
+проверены статически, measurement faults — поведением. Root перечитал assertions.
+
+Финальные проверки Windows x64/net10.0, SDK10.0.403 после source freeze:
+
+| Область | Debug | Release |
+| --- | --- | --- |
+| Solution build | Nonincremental0errors/1530warnings | Incremental0errors/627warnings |
+| Core |314/314|314/314|
+| Cobalt / generator |179/179 +91/91|179/179 +91/91|
+| Enerit / generator |291/291 +114/114|291/291 +114/114|
+| Mithril |99/99|99/99|
+| UI / Hosting |893/893 +114/114|893/893 +114/114|
+| Aether / Editor |1218/1218 +741/741|1218/1218 +741/741|
+| Full solution |4054/4054|4054/4054|
+| Новые cases этого среза |33/33|33/33|
+
+Failed/skipped0 в каждой конфигурации. Narrow33/33 и combined291/291 Debug exit0;
+artifact prefixes agent-complete-1793039128212 и agent-combined-1793039196405.
+Early base16/16 после test compile correction также сохранён, не заменяет финальные
+full results. Все команды ниже exit0, output сохранён в .log с тем же basename:
+
+```powershell
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v:quiet -m -bl:TestResults/DiagnosticsIpcMetrics-20261026-1/build-Debug.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug -v:minimal --logger trx --results-directory TestResults/DiagnosticsIpcMetrics-20261026-1/Debug -bl:TestResults/DiagnosticsIpcMetrics-20261026-1/tests-Debug.binlog
+dotnet build TrueMoon.slnx --no-restore -c Release -v:quiet -m -bl:TestResults/DiagnosticsIpcMetrics-20261026-1/build-Release.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Release -v:minimal --logger trx --results-directory TestResults/DiagnosticsIpcMetrics-20261026-1/Release -bl:TestResults/DiagnosticsIpcMetrics-20261026-1/tests-Release.binlog
+```
+
+[Verification](../../TestResults/DiagnosticsIpcMetrics-20261026-1/verification.json):
+23TRX/9binlogs,995source fingerprints/20test binary hashes, source changes0,
+AllFinalTestsPassed=true. Прежний ENE6d.1 Release CPU FrameReceiver failure не
+повторился в этом запуске; transport/test не менялись, ENG2 follow-up открыт.
+Historical Mithril ready-file race также не объявлен исправленным. Old failures
+не затёрты и не подменены сегодняшними passing результатами.
+
+Существующие source process suites и новый isolated failed Stop process прошли.
+Отдельные manual published/native/GPU/package/performance/long trends не повторены.
+Resource Meter включён стандартными Aether options, нового native consumer proof
+не добавлено. Далее timeout/reconnect/error counters, queue-wait duration и отдельный
+bounded child delivery; это не general ENE6c negotiation или весь ENE6d acceptance.
+
+## ENE6d.1: trace context через pipes — 2026-10-26
+
+По запросу «давай следующий шаг» реализован первый bounded ENE6d/ENE6c профиль.
+[Wire, подключение, flags, события и ownership](DIAGNOSTICS.md),
+[согласованный контракт](PLAN.md#ene6d1-bounded-trace-header-и-ene6c-compatibility--2026-10-26).
+IDiagnosticTelemetry получает explicit ActivityKind/ActivityContext overload с
+default interface fallback. Старый overload/default literal совместимы; parent
+в новом overload передаётся явно, null означает current async flow.
+
+PipesTransportOptions копирует два false-default flags: PropagateTraceContext и
+CaptureRequestEvents. Локальные Enerit.Pipes.Client/Server operation count/duration
+работают независимо от detailed events; metric tags только operation/outcome.
+Client контекст фиксируется до admission/write queue. Server не наследует случайный
+construction/listener context; accepted IDs/flags сохраняются для nested Enerit
+call даже без server Activity (sampling None/no listener). Carrier очищается на
+missing/invalid/disabled incoming boundary и восстанавливается после handler;
+второй request на том же connection не наследует предыдущие IDs.
+
+Legacy request/response framing21bytes сохранён по умолчанию. Opt-in request51bytes
+использует length=-2/version1 и только trace16/span8/Recorded flag; service payload
+и его1MiB limit прежние. Unknown marker/version/length и truncated header закрывают
+connection до handler/rental, version проверяется до ожидания остальных bytes.
+Well-framed invalid trace/span/flags отбрасывает только metadata. Старый reader
+отвергает marker; fallback/replay нет. General ENE6c handshake, tracestate/baggage,
+remote cancel и mixed-version support не заявлены.
+
+App/generic/standalone factories заимствуют telemetry, products сохраняют прежних
+owners. Sent local cancel заканчивает span, удерживает capacity до actual response/
+disconnect и cleanup. Pending хранит только fixed context values, не Activity или
+Exception. LateResponse legacy сохранён, opt-in2104 содержит исходные IDs в properties.
+Client events2100–2104/server2200–2203 не пишут payload или endpoint/nonce.
+Diagnostics callback failures изолированы. Aether включает propagation на обеих
+control factories; detailed request events выключены. Same-build HostId уже включает
+Enerit assembly. Production generator/method mapping не менялись.
+
+Broad testing workflow: dotnet-best-practices/code-testing-agent, existing tests
+discovery и одно Roslyn pairing663sources/263tests; implementation-specific suggested
+GeneratorTests placement заменён runtime pipes category. Research/plan/status в OS-temp;
+[переносимая полная matrix](../../TestResults/DiagnosticsIpc-20261026-1/test-matrix.md)
+и [assertion/gaps review](../../TestResults/DiagnosticsIpc-20261026-1/test-quality.md).
+Новые100cases = Core6 + Enerit92 (codec48/trace15/lifecycle28/process1) + Aether2.
+33new/changed method bodies,351static assertion sites; review Strong в объявленном
+scope. Root отдельно сверил wire/multi-hop/cancel/App/Aether/process assertions.
+
+| Требование | Точное доказательство |
+| --- | --- |
+| Parent/kind/API compatibility | DiagnosticTelemetryTests.ExplicitRemoteParent_UsesRequestedKindInsteadOfAmbientParentAndRestoresCurrent; InterfaceKindOverload_ForwardsToExistingOldOnlyImplementationWithoutEvaluatingProperties; OldOperationOverload_DefaultLiteralRemainsUnambiguousAndUsesInternalKind |
+| Default wire interoperability | PipesTraceTests.DefaultTransportOptions_KeepLegacyPeerCompatibleEvenWithSampledAmbientClientTracing |
+| App, обе DI, snapshot и privacy | PipesTraceTests.AppFactories_PropagateAsyncClientServerTreeAndSnapshotOptionsOnBothResolvers |
+| Writer queue и caller context | PipesTraceLifecycleTests.QueuedWriters_UseEachInvocationContextCapturedBeforeScheduling |
+| Multi-hop без fallback Activity/утечки | PipesTraceLifecycleTests.UnsampledMiddleHop_ForwardsAcceptedRemoteContextOnlyWithinThatInvocation,4cases |
+| Local cancel/timeout/late IDs и capacity | PipesTraceLifecycleTests.LocalCancellationAndTimeout_EndScopeButKeepCapacityAndOriginalLateResponseCorrelation |
+| Malformed/legacy peer и no replay | PipesTraceLifecycleTests.MalformedTraceFrame_FaultsConnectionBeforeHandlerDispatch; LegacyReader_RejectsOptInFrameWithoutDispatchOrReplay |
+| Throwing diagnostics/blocked bounded sink | PipesTraceLifecycleTests.ThrowingDiagnostics_DoNotReplaceBusinessResultOrOwnBorrowedTelemetry; BlockedBoundedSink_DropsDiagnosticsWithoutBlockingTransportProducers |
+| Actual generated proxy в другом процессе | PipesProcessTests.OwnProcesses_GeneratedPipesContract_CleansPendingWorkersAndChild("trace",8): exact parent/client/server IDs/kinds/remote/flags/PID и reaped child |
+| Aether штатные factories | AetherPipesTraceTests.AppGenericEngineControlFactories_PropagateTraceWithoutActivatingEngineOrRuntime,2DI cases |
+
+Ранний codec run44/46 выявил production defect: CreateFromBytes с нулевыми IDs
+не эквивалентен default struct при сравнении. Reader/Writer теперь проверяют zero
+wire bytes явно; финальный codec48/48. Early lifecycle22/24 использовал слишком
+узкий exact IOException assertion; исправлено на subtype-aware ThrowsAny для
+наблюдаемого EndOfStreamException. Combined97 первоначально выявил две test isolation
+ошибки global DiagnosticListener: assertions теперь выбирают собственный RequestId.
+После gap review добавлен legacy-default case; финальный Enerit narrow98/98.
+Failed/pre-fix artifacts сохранены с agent-codec/agent-lifecycle/agent-enerit prefixes.
+
+Финальные проверки **Windows x64/net10.0, SDK10.0.403**, после test freeze:
+
+| Область | Debug | Release |
+| --- | --- | --- |
+| Solution build | Nonincremental0errors/1530warnings | Incremental0errors/1300warnings |
+| Core |314/314|314/314|
+| Cobalt / generator |179/179 +91/91|179/179 +91/91|
+| Enerit / generator |258/258 +114/114|258/258 +114/114|
+| Mithril |99/99|99/99|
+| UI / Hosting |893/893 +114/114|893/893 +114/114|
+| Aether / Editor |1218/1218 +741/741|1217/1218 +741/741|
+| Full solution |4021/4021,failed/skipped0|4020/4021,failed1/skipped0|
+| Новые cases этого среза |100/100|100/100|
+
+Release failure — прежний
+TrueMoon.Aether.Tests.FrameTransportTests.Receiver_TwoBuffersKeepLatestWhileUiLeaseStaysUnchangedAndDrain,
+Assert.NotNull на строке177: TakeLatest null после Received>=5. CPU production/test
+этим срезом не менялись; тот же symptom уже записан в ENG2 с2026-10-23.
+Source inference: worker может claim pending buffer до проверки наличия нового
+frame; это не deterministic diagnosis. Повтор для получения green не выполнялся.
+[Engine follow-up](../engine/STATUS.md#следующий-конкретный-шаг) сохраняется;
+общий green не заявлен. Historical Mithril ready-file race не объявлен исправленным.
+
+Полные команды (logs тем же basename, output перенаправлен в .log):
+
+```powershell
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v:quiet -m -bl:TestResults/DiagnosticsIpc-20261026-1/build-Debug.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug -v:minimal --logger trx --results-directory TestResults/DiagnosticsIpc-20261026-1/Debug -bl:TestResults/DiagnosticsIpc-20261026-1/tests-Debug.binlog
+dotnet build TrueMoon.slnx --no-restore -c Release -v:quiet -m -bl:TestResults/DiagnosticsIpc-20261026-1/build-Release.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Release -v:minimal --logger trx --results-directory TestResults/DiagnosticsIpc-20261026-1/Release -bl:TestResults/DiagnosticsIpc-20261026-1/tests-Release.binlog
+```
+
+Release test exit1, остальные full commands exit0. Narrow успешные commands:
+[точные filters/TRX/binlog paths](../../TestResults/DiagnosticsIpc-20261026-1/test-matrix.md#final-successful-commands),
+Core62/62, Enerit98/98 (включая6old process cases), Aether2/2.
+[Verification](../../TestResults/DiagnosticsIpc-20261026-1/verification.json):
+30TRX/15binlogs,993source fingerprints,20test binary hashes, source changes0;
+AllFinalTestsPassed=false, новые cases100/100 в обеих конфигурациях.
+Verify.ps1 сохраняет отчёт и возвращает exit1 при общем failed result.
+
+Actual source child/process scenarios выполнялись обоими full suites. Отдельные
+manual published/native/GPU/package/performance/long-load runs не запускались;
+same-build tests не являются general ENE6c negotiation или release acceptance.
+ENE6d остаётся частичным: следующий срез — bounded queue/pending/bytes/overload
+aggregates и error classification, затем изолированный child-log delivery.
+
 ## ENE6a: finite admission и наблюдаемая остановка — 2026-10-23
 
 Финальная проверка выявила queued-writer ownership defect: scheduled lambda

@@ -761,6 +761,45 @@ readonly/snapshot transaction contracts ARCH1c, а не прямые измен�
 ошибки дают понятное восстановление. Доступность действий соответствует реальному
 состоянию, UI не блокируется compiler/IPC и сохраняет unsaved document.
 
+### ED6a. Консоль диагностики — 2026-10-25
+
+Инфраструктурное дополнение26октября: Core emergency worker и managed JSONL runs
+подключены к Editor/runtime. Обычный parent Editor использует постоянный root
+между запусками; smoke/runtime хранят runs в своём report scope.
+[Настройки и границы](../core/DIAGNOSTICS.md#хранение-jsonl-между-запусками).
+UI console/filter/copy задачи ниже остаются открытыми.
+
+Согласовано пользователем, запланировано; общий pipeline —
+[CORE6](../core/PLAN.md#core6-структурированная-диагностика--2026-10-25),
+engine context/process capture — [ENG8a](PLAN.md#eng8a-диагностика-сессий-и-процессного-вывода--2026-10-25).
+Editor — consumer ограниченной истории, без собственного конкурирующего logger.
+
+Первый infrastructure consumer реализован2026-10-25: EditorApplication и runtime
+включают общий bounded JSONL pipeline в report directory/diagnostics. View console
+и export UI ещё не реализованы; их checklist ниже не закрыт этим подключением.
+
+- [ ] Объединённый просмотр Editor/Runtime/Build/IPC/graphics с фильтрами по
+  source/level/event/session/generation/runtime role; текстовый поиск, clear view,
+  pause/resume auto-scroll и группировка повторов со счётчиком. Очистка View не
+  удаляет persistent diagnostics без отдельного явного действия.
+- [ ] Показывать timestamp, source, EventName/message, exception/stack и bounded
+  properties; различать raw stdout/stderr и structured events, указывать loss/
+  truncation/sink health. После crash/Replace история прежней generation доступна
+  и не смешивается с текущим domain state.
+- [ ] Compiler diagnostics дают file/line/column и переход через определённый editor
+  hook; классификацию не выводить только из stdout/stderr. Связь с build job/artifact
+  сохраняется при compile failure и при последующем успешном Build.
+- [ ] Diagnostics View<TData>, отдельные Data/ViewModel/IViewStyle и UI-owner factory
+  через App/Cobalt; получать bounded batches на UI thread, не вызывать контролы
+  из producer callback. Ограничить retained rows/bytes и update budget; сохранить
+  focus/selection/scroll при обновлении/filter/theme. При Dispose снять подписки,
+  borrowed App-owned pipeline не освобождать. Нужные общие controls принадлежат UI плану.
+
+Acceptance: сообщения из child видны во время работы, фильтры/grouping/inspect/copy
+и compiler navigation работают; flood/slow UI/повторные открытия панели и crash/
+Replace не блокируют команды и не растят память/подписки. Проверки Data и native
+UI выделяются отдельно, исторический shell proof не закрывает эту задачу.
+
 ## ED7. Проверенная расширяемость
 
 - [ ] Уточнить минимальные public contracts из первых потребителей, ограничить
@@ -796,6 +835,20 @@ App-local, dependencies внедрены; не требуется global locator
 Готовность: основной сценарий пройден на поставляемом приложении, recovery и
 failures проверены, данные сохраняются, незавершённая работа наблюдаема. Общая
 готовность framework/release не выводится из одного редактора.
+
+### ED8a. Экспорт диагностического отчёта — 2026-10-25
+
+- [ ] Явная команда экспорта bounded report: последние structured/raw события с
+  session/generation/build correlation, loss/truncation/sink health, версии
+  приложения/контрактов, OS/backend/device и effective diagnostic configuration.
+  Framework storage/schema определяет CORE6, engine context — ENG8a; здесь только
+  пользовательский сбор/выбор назначения и feedback/cancellation.
+- [ ] Ограничить размер/время экспорта; исключить nonce/environment/control endpoints
+  и произвольное содержимое проекта, определить обработку личных путей/exception
+  text. Partial/unavailable данные обозначать явно, unsaved document не изменять.
+- [ ] Проверить normal/crashed runtime, rotated/truncated history, write failure и
+  cancellation, published app вне checkout. Экспорт после crash использует имеющиеся
+  данные и не обещает восстановить потерянный хвост async queue.
 
 ## Первый сквозной срез
 

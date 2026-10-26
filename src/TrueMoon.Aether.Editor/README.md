@@ -16,6 +16,15 @@ Undo/Redo и independent Edit preview подключены к общему autho
 относятся к модулю Aether; прежние имена `TrueMoon.Editor`/`TrueMoon.Editor.Tests`
 заменены на `TrueMoon.Aether.Editor`/`TrueMoon.Aether.Editor.Tests`.
 
+JSONL диагностика обычного Editor хранится в
+`%TEMP%/TrueMoon/Diagnostics/Editor/<run-guid>`, с общими лимитами закрытых
+запусков8/32MiB/7суток. Smoke сохраняет логи внутри своего report directory,
+Runtime — в `report/diagnostics/runtime/<run-guid>` с теми же лимитами на корень.
+Active runs и неизвестные каталоги защищены; последний созданный closed run
+сохраняется даже сверх лимита. Общие reports, build artifacts и raw stdout/stderr
+имеют отдельные правила хранения.
+[Настройки, аварийный канал и ownership](../docs/core/DIAGNOSTICS.md).
+
 ```powershell
 dotnet run --project TrueMoon.Aether.Editor
 ```

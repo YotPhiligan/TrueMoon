@@ -1,6 +1,32 @@
 # Enerit: состояние и точка продолжения
 
-Последняя работа — **2026-10-23, первый ENE6a/MIT6a implementation slice**.
+Последняя работа — **2026-10-26, ENE6d.2 метрики ресурсов и перегрузки**.
+Process-wide Meter TrueMoon.Enerit.Pipes показывает pending/queued клиента,
+server requests/request bytes/connections и cumulative admission refusals.
+Пять state instruments без tags; overload только3фиксированные side/reason.
+Copied MetricsEnabled=true независим от Core operation metrics/tracing/events.
+Shared server учитывается один раз; cancelled Stop wait сохраняет numeric state.
+Callbacks выполняются при observer collection, не в admission/Invoke.
+[API/limits](DIAGNOSTICS.md#метрики-ресурсов),
+[план](PLAN.md#ene6d2-агрегированные-метрики-ресурсов--2026-10-26).
+
+Новые33Enerit cases, final narrow33/33 и combined291/291. Полные Enerit291/291,
+generator114/114 Debug/Release, failed/skipped0. Full solution4054/4054 в каждой
+конфигурации: Core314, Aether1218, Editor741. Builds0errors:
+Debug nonincremental1530warnings, Release incremental627warnings, SDK10.0.403.
+[Матрица/команды](HISTORY.md#ene6d2-метрики-ресурсов-и-перегрузки--2026-10-26),
+[evidence](../../TestResults/DiagnosticsIpcMetrics-20261026-1/verification.json).
+Isolated real process подтверждает retained connection после failed Stop без
+загрязнения parent aggregates. Published/GPU/package/performance не повторялись.
+Предыдущий Aether CPU receiver Release failure не повторился; его исправление
+и устранение исторического Mithril race не заявляются.
+
+ENE6d остаётся частичным: далее timeout/reconnect/error counters и queue-wait
+duration, затем отдельная bounded child-log delivery. Полный ENE6c negotiation,
+remote cancel, MMF и long trends открыты. Прежний [trace header профиль](HISTORY.md#ene6d1-trace-context-через-pipes--2026-10-26)
+сохраняет opt-in propagation и legacy default framing; MEL не добавлен.
+
+Предыдущая работа — **2026-10-23, первый ENE6a/MIT6a implementation slice**.
 Finite client admission/wait queue и shared server count/request-byte/connection
 limits реализованы через copied PipesTransportOptions, factories и App registration.
 Sent local cancellation удерживает capacity до late reply/disconnect и local
@@ -9,7 +35,7 @@ writer/decode cleanup; rejected work не вызывает handler. Async Stop/C
 передаёт shutdown token до final disposal. Wire/generated mapping прежние.
 [Контракт](PLAN.md#ene6a-и-mit6a-первый-контракт--2026-10-23).
 
-Текущий Enerit **166/166 Debug и166/166 Release**, generator114/114 в каждой
+Предыдущая проверка2026-10-23: Enerit **166/166 Debug и166/166 Release**, generator114/114 в каждой
 конфигурации; failed0/skipped0. Full solution2361/configuration, по10TRX, build
 Debug0errors/1522warnings. Детерминированный queued-writer CTS test подтвердил
 RED→GREEN; все scheduled paths теперь используют заранее captured token value.
@@ -17,8 +43,9 @@ Source/published **44/44** и fresh independent package **132/132** прошли
 Cobalt/DI и DI без Cobalt analyzer,8nupkgs/152commands, expected omitted Enerit
 analyzer CS0234. Final summaries Completed=true в
 TestResults/EneritAdmission-20261023/final3. [Команды и границы](HISTORY.md#ene6a-finite-admission-и-наблюдаемая-остановка--2026-10-23).
-ENE6a и async-stop часть ENE6b проверены в первом bounded профиле; ENE6c/d,
-remote cancel, long trends и MMF не реализованы. Срез не закрывает весь MIT6a.
+ENE6a и async-stop часть ENE6b проверены в первом bounded профиле; на дату этого
+предыдущего среза ENE6c/d, remote cancel, long trends и MMF не были реализованы.
+Срез не закрывает весь MIT6a.
 
 Текущая реализация — **2026-10-22, factory integration Aether**:
 типизированные pipes client/server factories реализуют IFactory; App invocation
@@ -116,8 +143,10 @@ omitted-analyzer CS0234. Свежая package matrix текущим baseline н�
 ## Следующий конкретный шаг
 
 Первый ENE6a/MIT6a срез, ARCH1b.1 и ED1a завершены в указанном scope. Далее
-прикладные задачи [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг) с явными preview limits и lifecycle ownership;
-ENE6c/d развивать перед расширением contracts/приёмкой нагрузки.
+прикладные задачи [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг) с явными preview limits и lifecycle ownership.
+Ближайший diagnostics срез — ENE6d timeout/reconnect/error counters и queue-wait
+duration с фиксированными dimensions; затем отдельный bounded child-log канал
+без starvation control. ENE6c negotiation развивать перед расширением contracts.
 Полный fault matrix MIT6a и trends MIT6c не выводятся из этого среза;
 remote cancel/replay не обещать существующим API.
 Enerit performance backlog: scalar c1/c8 allocation/CPU profile до выбора изменений,

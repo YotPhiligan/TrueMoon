@@ -4,6 +4,8 @@ using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Gpu;
 using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
+using TrueMoon.Diagnostics;
+using TrueMoon.Aether.Builds;
 
 namespace TrueMoon.Aether.Hosting;
 
@@ -20,6 +22,8 @@ public sealed class AetherOptions
     public string? BuildDirectory { get; set; }
     /// <summary>Gets or sets the compiler budget, greater than zero and at most 120 seconds.</summary>
     public TimeSpan BuildTimeout { get; set; } = TimeSpan.FromSeconds(120);
+    /// <summary>Completed build-job count, total bytes and age limits, snapshotted during App setup.</summary>
+    public GameBuildRetentionOptions BuildRetention { get; set; } = new();
     /// <summary>Gets or sets bounded command, startup and heartbeat deadlines.</summary>
     public SessionDeadlines Deadlines { get; set; } = new();
     /// <summary>Gets or sets the snapshotted replacement/recovery limits, with total at most 45 seconds.</summary>
@@ -37,7 +41,8 @@ public sealed class AetherOptions
     /// <remarks>Dependencies may be resolved from the supplied resolver. Do not return
     /// a borrowed or separately registered disposable factory: the App provider owns the result.</remarks>
     public Func<IServiceResolver, IRuntimeFactory> RuntimeFactory { get; set; } = static resolver =>
-        new NativeRuntimeFactory(resolver.Resolve<IFactory<PipesInvocationClient<IEngineControl>, string>>());
+        new NativeRuntimeFactory(resolver.Resolve<IFactory<PipesInvocationClient<IEngineControl>, string>>(),
+            resolver.Resolve<IEventsSource<NativeRuntimeFactory>>());
 
     internal AetherOptions Snapshot()
     {
@@ -45,6 +50,8 @@ public sealed class AetherOptions
         ArgumentNullException.ThrowIfNull(Deadlines);
         ArgumentNullException.ThrowIfNull(ReplacementDeadlines);
         ArgumentNullException.ThrowIfNull(RuntimeFactory);
+        ArgumentNullException.ThrowIfNull(BuildRetention);
+        var buildRetention = BuildRetention.Snapshot();
         if (ViewportTransport != null && ViewportTransportFactory != null)
             throw new ArgumentException("Configure one viewport transport factory.");
         new SessionIdentity(Guid.NewGuid(), 1, HostContractId, GameBuildId, new string('0', 64)).Validate();
@@ -58,6 +65,7 @@ public sealed class AetherOptions
             ReportDirectory = Path.GetFullPath(ReportDirectory), Deadlines = Deadlines with { },
             ReplacementDeadlines = ReplacementDeadlines with { },
             BuildDirectory = Path.GetFullPath(BuildDirectory ?? Path.Combine(ReportDirectory, "builds")), BuildTimeout = BuildTimeout,
+            BuildRetention = buildRetention,
             StatusChanged = StatusChanged, RuntimeFactory = RuntimeFactory, ViewportTransport = ViewportTransport,
             ViewportTransportFactory = ViewportTransportFactory
         };

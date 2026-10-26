@@ -56,7 +56,7 @@ namespace EngineSessionProbe
     public static class Probe
     {
         public static readonly string[] Scenarios = ["repeat", "stale", "bad-hello", "bad-scene", "startup-timeout", "startup-cancel",
-            "command-timeout", "command-cancel", "stop-pending", "crash", "disconnect", "heartbeat", "forced-stop", "hang-stop", "launch-failure", "parent-exit", "app-stop", "build-artifacts", "checkpoint", "replacement"];
+            "command-timeout", "command-cancel", "stop-pending", "crash", "disconnect", "heartbeat", "forced-stop", "hang-stop", "launch-failure", "parent-exit", "app-stop", "build-artifacts", "checkpoint", "replacement", "diagnostics"];
         private static IApp CreateApp(NativeRuntimeFactory factory, AuthoringState authoring, string directory,
             SessionDeadlines? deadlines = null, Action<SessionStatus>? trace = null) => App.Builder(_ => { })
             .Setup(c =>
@@ -77,6 +77,7 @@ namespace EngineSessionProbe
             if (scenario == "build-artifacts") return await BuildProbe.RunAsync(directory);
             if (scenario == "checkpoint") return await CheckpointProbe.RunAsync(directory);
             if (scenario == "replacement") return await ReplacementProbe.RunAsync(directory);
+            if (scenario == "diagnostics") return await DiagnosticsProbe.RunAsync(directory);
             var factory = new NativeRuntimeFactory(); var state = new AuthoringState();
             var before = JsonSerializer.Serialize(state); var trace = new List<object>();
             var deadlines = scenario == "startup-timeout" ? new SessionDeadlines { Startup = TimeSpan.FromSeconds(1) } : new SessionDeadlines();
@@ -242,7 +243,7 @@ namespace EngineSessionProbe
             using var limit = new CancellationTokenSource(timeout);
             while (!condition()) await Task.Delay(10, limit.Token);
         }
-        private static async Task<Exception> FailureAsync(Task task)
+        internal static async Task<Exception> FailureAsync(Task task)
         {
             try { await task.WaitAsync(TimeSpan.FromSeconds(25)); }
             catch (Exception error) when (error is not TimeoutException) { return error; }

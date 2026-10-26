@@ -8,6 +8,91 @@ contracts игровой сессии, supervisor, control protocol, CPU frame t
 [План](../docs/engine/PLAN.md), [статус и ограничения](../docs/engine/STATUS.md),
 [пример Editor/Game.Runtime](../ManualTests/EngineSessionProbe/README.md).
 
+## Диагностика
+
+UseAether подключает session/process/build/Replace/preview/frame-fault события к injected IEventsSource;
+общий bounded pipeline включается через App.UseDiagnostics(options).
+[Подключение, budgets и ownership](../docs/core/DIAGNOSTICS.md).
+Editor включает managed JSONL в %TEMP%/TrueMoon/Diagnostics/Editor;
+smoke — в report directory/diagnostics/editor, Runtime — в
+report directory/diagnostics/runtime. Каждый logger получает GUID run;
+closed runs по умолчанию ограничены8/32MiB/7суток, active отдельно.
+ApplicationId
+общего pipeline — collector identity; SessionId/Generation/GameBuildId/RunId
+передаются отдельными properties. Nonce/control endpoint не включаются.
+
+Build, Replace, Preview.Show/Resize/Stop и FrameFault используют injected
+IDiagnosticTelemetry: ActivitySource/Meter **TrueMoon**, операции `Aether.Build`,
+`Aether.Replace`, `Aether.Preview.Show`, `Aether.Preview.Resize`,
+`Aether.Preview.Stop`, `Aether.FrameFault`. Нужен стандартный listener/exporter;
+без него новые scopes не создаются. Count/duration имеют только operation/outcome
+tags; session/build/generation остаются в traces/events.
+[Sampling, limits и lifetime](../docs/core/DIAGNOSTICS.md#трассы-и-метрики-операций).
+
+| События | IDs | Смысл |
+| --- | --- | --- |
+| Build.Starting/Completed/Cancelled/Failed |1200–1203| Compiler вместе с reap/drain/cleanup |
+| Replace.Starting/Completed/Cancelled/Failed |1300–1303| Полная transaction, включая recovery; terminal error — original cause |
+| Replace.RecoveryStarting/RecoveryCompleted/RecoveryResult |1304–1306| Phase и rollback flags, отдельная recovery error |
+| Preview.Show.Starting/Completed/Cancelled/Failed |1400–1403| Completed только после acknowledged first-present |
+| Preview.Resize.Starting/Completed/Cancelled/Failed |1410–1413| Suspend или готовность новой поверхности |
+| Preview.Stop.Starting/Completed/Cancelled/Failed |1420–1423| Fencing и cleanup preview owner |
+| Frame.Fault/FaultDrained/FaultCleanupFailed |1500/1501/1503| Исходные identity/phase/surface generation до очистки; отдельный cleanup error |
+
+Replace terminal event содержит Phase/RollbackAttempted/RollbackSucceeded и
+RecoveryErrorType; failed Replace остаётся Failed даже при успешном rollback.
+FrameFault operation всегда Failed, включая успешный drain. Preview preflight
+rejection наблюдаем без изменения работающего preview. Presented callbacks
+не создают events/scopes на каждый кадр. Старые standalone constructors работают
+без telemetry; UseAether передаёт borrowed diagnostics через штатные factories.
+С26октября UseAether/UseAetherRuntime включают [Enerit trace propagation](../docs/enerit/DIAGNOSTICS.md)
+на обеих control peers: Client/Server spans связывают host и child. Detailed request
+events выключены; service payload и generated mapping прежние. Same-build HostId
+включает Enerit assembly, поэтому host/child пересобираются вместе. Standalone старые
+constructors сохраняют legacy options; кастомные factories выбирают propagation явно.
+Aggregate frame metrics и live Editor console остаются следующими срезами.
+
+NativeRuntimeLease.StandardOutput/StandardError теперь возвращают live tails
+до32KiChars, StandardOutputStatus/StandardErrorStatus — counters и file failures.
+Оба потока вычитываются постоянно, в том числе без newline и после переполнения.
+ReportDirectory/runtime-output содержит четыре rotating slots на поток, каждый
+до1MiB UTF8. Файлы могут иметь пропуски при file-queue overload; loss отражён в status.
+Factory хранит до256process diagnostics и64последних leases для inspection;
+реальным owner каждой lease остаётся supervisor.
+
+Compiler сохраняет bounded build.stdout.log/build.stderr.log и build.output.json
+с live-tail/loss/error snapshots после drain; прежний DiagnosticsDirectory/exit
+code contract сохранён. UseAether фиксирует options.BuildRetention
+(GameBuildRetentionOptions): по умолчанию 16 завершённых jobs, 64 MiB всех их
+файлов вместе с marker и 7 суток от завершения cleanup. Значения должны быть >0.
+Перед запуском и после reap/drain/очистки staging удаляются старейшие собственные
+jobs сверх count/bytes/age; равенство лимиту допускается. Последний завершённый
+job в корне сохраняется даже сверх лимита, включая неудачную сборку.
+DiagnosticsDirectory может быть удалён последующими сборками в том же корне.
+
+RetentionStatus сообщает RetainedJobs/RetainedBytes, ActiveJobs/SkippedDirectories,
+DeletedJobs, Failures/LastError, IsOverBudget и MaintenanceBusy за последний pass.
+Build.RetentionLimited (Warning1205) содержит JobId и counters; retention failure
+не заменяет compiler result/exception. Exclusive marker защищает активный job;
+отдельная root lease согласует очистку разных compiler instances без ожидания.
+После освобождения заблокированного файла следующий job повторит cleanup.
+
+Очистка нерекурсивная, только completed GUID jobs с versioned ownership marker
+и известными плоскими diagnostics files. Опубликованные игровые artifacts,
+legacy unmarked jobs, incomplete/abandoned staging, неизвестные entries и links
+сохраняются; active/skipped каталоги не входят в completed count/byte budget.
+Общий размер artifact root и разных Editor runs этим не ограничен.
+Core managed JSONL отдельно ограничивает закрытые logger runs внутри своего
+постоянного корня; общие report directories с artifacts/raw output остаются вне
+этого budget. Старые непомеченные JSONL каталоги автоматически не мигрируются.
+Обслуживание выполняется при сборках, фонового age-таймера нет. Root/path checks
+рассчитаны на trusted-local cooperating writers; произвольная внешняя подмена
+пути между проверкой и удалением не поддерживается.
+[Проверки и границы retention](../docs/engine/HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26).
+
+Raw stdout/stderr не определяет автоматически event severity. Консоль Editor,
+экспорт, полноценные operation traces/metrics и IPC trace propagation ещё в плане.
+
 ## Состав
 
 | Область | Назначение |

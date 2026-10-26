@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using TrueMoon.Diagnostics;
 using TrueMoon.Threading;
@@ -15,6 +16,11 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
     private readonly CancellationTokenSource _cts = new();
     private readonly CancellationToken _token;
     private readonly PipesServerAdmission _admission;
+    private readonly PipesTransportOptions _options;
+    private readonly IDiagnosticTelemetry? _telemetry;
+    private readonly PipesMetrics? _metrics;
+    private readonly Guid _connectionId = Guid.NewGuid();
+    private readonly string _serviceName;
     private readonly ConcurrentDictionary<Task, byte> _invocations = new();
     private readonly object _lifecycleGate = new();
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -29,19 +35,42 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
 
     /// <summary>Creates a caller-owned connection with validated, copied resource limits.</summary>
     public PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler, PipesTransportOptions options)
-        : this(name, eventsSource, handler, new PipesServerAdmission((options ?? throw new ArgumentNullException(nameof(options))).Snapshot())) { }
+        : this(name, eventsSource, handler, options, null) { }
 
-    internal PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler, PipesServerAdmission admission) : base(name, false)
+    /// <summary>Creates a connection borrowing diagnostics; the caller retains ownership until actual stop.</summary>
+    public PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler,
+        PipesTransportOptions options, IDiagnosticTelemetry? telemetry)
+        : this(name, eventsSource, handler, options, null, telemetry) { }
+
+    internal PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler, PipesServerAdmission admission)
+        : this(name, eventsSource, handler, new PipesTransportOptions(), admission, null) { }
+
+    internal PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler,
+        PipesServerAdmission admission, PipesTransportOptions options, IDiagnosticTelemetry? telemetry, string? serviceName = null)
+        : this(name, eventsSource, handler, options, admission, telemetry, serviceName) { }
+
+    private PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler,
+        PipesTransportOptions options, PipesServerAdmission? admission, IDiagnosticTelemetry? telemetry, string? serviceName = null) : base(name, false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(eventsSource);
         ArgumentNullException.ThrowIfNull(handler);
         _eventsSource = eventsSource;
         _handler = handler;
-        _admission = admission;
+        _options = (options ?? throw new ArgumentNullException(nameof(options))).Snapshot();
+        _telemetry = telemetry;
+        _serviceName = serviceName ?? handler.GetType().FullName!;
         _token = _cts.Token;
-        _listenTaskScheduler = new TmTaskScheduler($"{Name}_listen", 1);
-        _execTaskScheduler = new TmTaskScheduler($"{Name}_exec", 8);
+        // Shared server admission owns its one numeric cell; a direct connection owns a separate cell.
+        _metrics = admission == null && _options.MetricsEnabled ? new PipesMetrics() : null;
+        try
+        {
+            _admission = admission ?? new(_options, _metrics);
+            _metrics?.Connections(1);
+            _listenTaskScheduler = new TmTaskScheduler($"{Name}_listen", 1);
+            _execTaskScheduler = new TmTaskScheduler($"{Name}_exec", 8);
+        }
+        catch { _metrics?.Dispose(); throw; }
     }
 
     /// <summary>Admitted requests, including reads, queued handlers and response writes.</summary>
@@ -69,20 +98,23 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
         lock (_lifecycleGate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            _eventsSource.Write(() => "Connected");
+            PipesDiagnostics.Legacy(() => _eventsSource.Write(() => "Connected"));
             _listener = Task.Factory.StartNew(() => Listen(_token), CancellationToken.None, TaskCreationOptions.LongRunning, _listenTaskScheduler);
         }
     }
 
     private void Listen(CancellationToken token)
     {
+        Activity.Current = null;
+        PipesDiagnostics.RemoteContext = null;
         Span<byte> scratch = stackalloc byte[4096];
         try
         {
             var stream = PipeStream;
             while (!token.IsCancellationRequested)
             {
-                var (guid, method, length) = stream.GetRequestHeader();
+                var header = PipesRequestHeader.Read(stream);
+                var (guid, method, length) = (header.Id, header.Method, header.Length);
                 if (guid == Guid.Empty) { NotifyDisconnected(); return; }
                 bool admitted;
                 lock (_lifecycleGate)
@@ -99,7 +131,7 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
                         var chunk = Math.Min(remaining, scratch.Length);
                         stream.ReadExactly(scratch[..chunk]); remaining -= chunk;
                     }
-                    WriteResponseAsync(guid, default, new PipesInvocationOverloadedException(), token).GetAwaiter().GetResult();
+                    InvokeAsync(header, default, token, false).GetAwaiter().GetResult();
                     continue;
                 }
                 Memory<byte> memory = default;
@@ -108,7 +140,7 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
                 {
                     if (length > 0) { memory = MemoryPoolUtils.Create(length); stream.ReadFullBuffer(memory); }
                     var requestMemory = memory;
-                    var task = Task.Factory.StartNew(() => InvokeAsync(guid, method, requestMemory, length, token),
+                    var task = Task.Factory.StartNew(() => InvokeAsync(header, requestMemory, token),
                         CancellationToken.None, TaskCreationOptions.PreferFairness, _execTaskScheduler).Unwrap();
                     _invocations.TryAdd(task, 0);
                     _ = task.ContinueWith(t => _invocations.TryRemove(t, out _), CancellationToken.None,
@@ -125,35 +157,66 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
         }
         catch (Exception error)
         {
-            if (!token.IsCancellationRequested) { _eventsSource.Exception(error); NotifyDisconnected(); }
+            if (!token.IsCancellationRequested) { PipesDiagnostics.Legacy(() => _eventsSource.Exception(error)); NotifyDisconnected(); }
         }
     }
 
-    private async Task InvokeAsync(Guid guid, byte method, Memory<byte> memory, int length, CancellationToken token)
+    private async Task InvokeAsync(PipesRequestHeader header, Memory<byte> memory, CancellationToken token, bool admitted = true)
     {
+        // Each request starts in a clean flow. Listener/construction context is never a remote parent.
+        var inherited = Activity.Current;
+        var inheritedContext = PipesDiagnostics.RemoteContext;
+        Activity.Current = null;
+        var parent = _options.PropagateTraceContext ? header.Context : null;
+        PipesDiagnostics.RemoteContext = parent;
+        IReadOnlyDictionary<string, string?> Properties()
+        {
+            var properties = PipesDiagnostics.Properties(_serviceName, header.Id, _connectionId, header.Method, true);
+            properties["TraceContext"] = !_options.PropagateTraceContext ? "Disabled" :
+                header.InvalidContext ? "Invalid" : parent.HasValue ? "Remote" : "Missing";
+            properties["ParentTraceId"] = parent?.TraceId.ToHexString();
+            properties["ParentSpanId"] = parent?.SpanId.ToHexString();
+            return properties;
+        }
+        using var operation = PipesDiagnostics.Start(_telemetry, "Enerit.Pipes.Server", ActivityKind.Server, parent, Properties);
+        PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, 2200, "Pipes.Server.Starting", Properties);
+        Exception? failure = null;
         try
         {
             using var writer = new ArrayPoolBufferWriter<byte>(128);
-            bool success;
-            Exception? exception;
+            var success = false;
             try
             {
                 token.ThrowIfCancellationRequested();
-                (success, exception) = await _handler.HandleAsync(method, memory, writer, token).ConfigureAwait(false);
-                if (success) PipesProtocol.ValidatePayloadLength(writer.WrittenCount);
+                if (!admitted) failure = new PipesInvocationOverloadedException();
+                else
+                {
+                    (success, failure) = await _handler.HandleAsync(header.Method, memory, writer, token).ConfigureAwait(false);
+                    if (success) { PipesProtocol.ValidatePayloadLength(writer.WrittenCount); failure = null; }
+                    else failure ??= new InvocationException("Remote invocation failed.");
+                }
             }
-            catch (Exception error) { (success, exception) = (false, error); }
-            await WriteResponseAsync(guid, success ? writer.WrittenMemory : default,
-                success ? null : exception ?? new InvocationException("Remote invocation failed."), token).ConfigureAwait(false);
+            catch (Exception error) { (success, failure) = (false, error); }
+            await WriteResponseAsync(header.Id, success ? writer.WrittenMemory : default,
+                success ? null : failure, token).ConfigureAwait(false);
         }
         catch (Exception error)
         {
-            if (!token.IsCancellationRequested) { _eventsSource.Exception(error); NotifyDisconnected(); }
+            failure = error;
+            if (!token.IsCancellationRequested) { PipesDiagnostics.Legacy(() => _eventsSource.Exception(error)); NotifyDisconnected(); }
         }
         finally
         {
             memory.TryReturn();
-            _admission.Release(length);
+            if (admitted) _admission.Release(header.Length);
+            var cancelled = failure is OperationCanceledException;
+            operation?.Complete(failure == null ? DiagnosticOperationOutcome.Succeeded : cancelled ?
+                DiagnosticOperationOutcome.Cancelled : DiagnosticOperationOutcome.Failed, failure);
+            PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, failure == null ? 2201 : cancelled ? 2202 : 2203,
+                failure == null ? "Pipes.Server.Completed" : cancelled ? "Pipes.Server.Cancelled" : "Pipes.Server.Failed", Properties, failure);
+            operation?.Dispose();
+            Activity.Current = inherited;
+            PipesDiagnostics.RemoteContext = inheritedContext;
         }
     }
 
@@ -205,6 +268,8 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
             _execTaskScheduler.Dispose();
             _cts.Dispose();
             if (errors.Count > 0) throw new AggregateException(errors);
+            _metrics?.Connections(0);
+            _metrics?.Dispose();
             _completion.TrySetResult();
         }
         catch (Exception error) { _completion.TrySetException(error); throw; }
@@ -226,6 +291,9 @@ public class PipesInvocationServer<T> : IInvocationServer<T>, IStoppable, IDispo
     private readonly Lock _sync = new();
     private readonly SemaphoreSlim _connectionSlots;
     private readonly PipesServerAdmission _admission;
+    private readonly PipesTransportOptions _options;
+    private readonly IDiagnosticTelemetry? _telemetry;
+    private readonly PipesMetrics? _metrics;
     private readonly Task _listener;
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Task? _stop;
@@ -241,20 +309,31 @@ public class PipesInvocationServer<T> : IInvocationServer<T>, IStoppable, IDispo
     /// <summary>Creates a caller-owned server; handler and diagnostics remain borrowed until actual stop completion.</summary>
     public PipesInvocationServer(IEventsSource<PipesInvocationServer<T>> eventsSource, IInvocationServerHandler<T> handler,
         string pipeName, PipesTransportOptions options)
+        : this(eventsSource, handler, pipeName, options, null) { }
+
+    /// <summary>Creates a server borrowing operation telemetry; accepted handlers remain owned through stop completion.</summary>
+    public PipesInvocationServer(IEventsSource<PipesInvocationServer<T>> eventsSource, IInvocationServerHandler<T> handler,
+        string pipeName, PipesTransportOptions options, IDiagnosticTelemetry? telemetry)
     {
         ArgumentNullException.ThrowIfNull(eventsSource);
         ArgumentNullException.ThrowIfNull(handler);
         ArgumentException.ThrowIfNullOrWhiteSpace(pipeName);
         ArgumentNullException.ThrowIfNull(options);
         var limits = options.Snapshot();
+        _options = limits; _telemetry = telemetry;
         Id = pipeName;
         _eventsSource = eventsSource;
         _handler = handler;
-        _admission = new(limits);
-        _connectionSlots = new(limits.MaxConnections, limits.MaxConnections);
-        _token = _cts.Token;
-        _taskScheduler = new TmTaskScheduler($"{Id}_exec", 2);
-        _listener = Task.Factory.StartNew(ListenAsync, CancellationToken.None, TaskCreationOptions.LongRunning, _taskScheduler).Unwrap();
+        _metrics = limits.MetricsEnabled ? new PipesMetrics() : null;
+        try
+        {
+            _admission = new(limits, _metrics);
+            _connectionSlots = new(limits.MaxConnections, limits.MaxConnections);
+            _token = _cts.Token;
+            _taskScheduler = new TmTaskScheduler($"{Id}_exec", 2);
+            _listener = Task.Factory.StartNew(ListenAsync, CancellationToken.None, TaskCreationOptions.LongRunning, _taskScheduler).Unwrap();
+        }
+        catch { _metrics?.Dispose(); throw; }
     }
 
     public string Id { get; }
@@ -280,9 +359,10 @@ public class PipesInvocationServer<T> : IInvocationServer<T>, IStoppable, IDispo
                     lock (_sync)
                     {
                         if (_disposed) { _connectionSlots.Release(); return; }
-                        item = new PipesSignalServerConnection(Id, _eventsSource, _handler, _admission);
+                        item = new PipesSignalServerConnection(Id, _eventsSource, _handler, _admission, _options, _telemetry, typeof(T).FullName);
                         item.Disconnected += ItemOnDisconnected;
                         _connections.Add(item);
+                        _metrics?.Connections(_connections.Count);
                     }
                     await item.StartAsync(_token).ConfigureAwait(false);
                 }
@@ -290,7 +370,7 @@ public class PipesInvocationServer<T> : IInvocationServer<T>, IStoppable, IDispo
                 {
                     if (item is null) _connectionSlots.Release();
                     else await RetireAsync(item).ConfigureAwait(false);
-                    if (!_token.IsCancellationRequested) _eventsSource.Exception(error);
+                    if (!_token.IsCancellationRequested) PipesDiagnostics.Legacy(() => _eventsSource.Exception(error));
                 }
             }
         }
@@ -306,8 +386,11 @@ public class PipesInvocationServer<T> : IInvocationServer<T>, IStoppable, IDispo
     {
         item.Disconnected -= ItemOnDisconnected;
         try { await item.StopAsync().ConfigureAwait(false); }
-        catch (Exception error) { _eventsSource.Exception(error); return; }
-        lock (_sync) { if (_connections.Remove(item)) _connectionSlots.Release(); }
+        catch (Exception error) { PipesDiagnostics.Legacy(() => _eventsSource.Exception(error)); return; }
+        lock (_sync)
+        {
+            if (_connections.Remove(item)) { _metrics?.Connections(_connections.Count); _connectionSlots.Release(); }
+        }
     }
 
     /// <summary>Closes admission and begins every connection's stop before waiting for handler drain.</summary>
@@ -329,10 +412,11 @@ public class PipesInvocationServer<T> : IInvocationServer<T>, IStoppable, IDispo
             var stops = connections.Select(c => c.StopAsync()).ToArray();
             try { await _listener.ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
             try { await Task.WhenAll(stops).ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
-            lock (_sync) _connections.Clear();
+            lock (_sync) { _connections.Clear(); _metrics?.Connections(0); }
             _taskScheduler.Dispose();
             _cts.Dispose();
             if (errors.Count > 0) throw new AggregateException(errors);
+            _metrics?.Dispose();
             _completion.TrySetResult();
         }
         catch (Exception error) { _completion.TrySetException(error); throw; }

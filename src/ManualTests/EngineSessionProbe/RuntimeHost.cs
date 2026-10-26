@@ -108,6 +108,17 @@ public static class RuntimeHost
                     return GpuFrameData.GamePattern(stamp, width, height, captured.Tick, captured.Color);
                 });
             Records.Write(launch.ReportDirectory, $"launched-{launch.Identity.Generation}.json", new { Pid = Environment.ProcessId, Parent = parentId, BaselineEnabled = baseline != null });
+            if (launch.Behavior == "diagnostics-output")
+            {
+                async Task FloodAsync(TextWriter writer, char fill, string suffix)
+                {
+                    var block = new string(fill, 16384);
+                    for (var index = 0; index < 129; index++) await writer.WriteAsync(block);
+                    await writer.WriteAsync(suffix); await writer.FlushAsync();
+                }
+                await Task.WhenAll(FloodAsync(Console.Out, 'O', "stdout-tail"), FloodAsync(Console.Error, 'E', "stderr-tail"));
+                Records.Write(launch.ReportDirectory, $"output-ready-{launch.Identity.Generation}.json", new { Pid = Environment.ProcessId });
+            }
             if (launch.Behavior != "no-server") server = new(new AetherEvents<PipesInvocationServer<IEngineControl>>(), handler, launch.Endpoint);
             tick = TickAsync(protocol, end.Token);
             frameWork = launch.Behavior == "no-frames" ? Task.Delay(Timeout.InfiniteTimeSpan, end.Token) : frames.RunAsync(protocol, end.Token);

@@ -46,5 +46,48 @@ Microsoft DI does not need Cobalt generation for its own consumer registrations.
 It can opt out with `<EnableCobaltGenerator>false</EnableCobaltGenerator>`.
 Configuration, diagnostics and service interfaces are in `TrueMoon.Contracts`.
 
+Bounded structured diagnostics can be enabled explicitly:
+
+```csharp
+context.UseDiagnostics(new DiagnosticPipelineOptions
+{
+    JsonDirectory = Path.Combine(Path.GetTempPath(), "TrueMoon", "MyAppDiagnostics"),
+    JsonUseRunDirectories = true
+});
+```
+
+Inject IEventsSource<T> and use Write(DiagnosticLevel.Information, 2001,
+"Worker.Started", "Worker started"). Named properties are created lazily and
+copied into bounded immutable records. DiagnosticPipeline.Read() exposes recent
+history; Health() exposes per-sink loss/failure counters. Source/event levels
+can be changed without recreating sources. Independent output queues prevent
+slow sinks from blocking producers. App disposal drains accepted events with a
+finite budget; a disposal timeout preserves ownership for an explicit retry.
+Legacy OnEvent callbacks remain synchronous. No Microsoft logging adapter is required.
+
+Inject IDiagnosticTelemetry for named operation scopes. ActivitySource and Meter
+use the name TrueMoon and require standard .NET listeners; no exporter is installed.
+StartOperation returns null when unobserved and evaluates properties only for
+sampled traces requesting all data. Complete selects Succeeded/Failed/Cancelled;
+Dispose publishes duration and count once, or Incomplete when Complete was omitted.
+Metrics have only operation/outcome tags, with 64 distinct names per owner by default.
+DiagnosticPipelineOptions.Telemetry copies sampling enable flags and name/property
+limits during setup. Observer failures are isolated and counted by DiagnosticTelemetry.Read().
+The App owns telemetry; active scopes retain instrumentation until their disposal.
+
+Managed JSON output creates one owned GUID directory per sink lifetime. Closed
+runs default to 8 directories / 32 MiB / 7 days, configured through JsonRetention.
+Active and unrecognized directories are preserved; the newest closed run is
+protected even over budget. JsonDirectory exposes the actual run path and
+JsonRetentionStatus reports maintenance failures or an unsatisfied budget.
+The default flat directory mode and four-argument JsonDiagnosticSink remain available.
+
+Emergency output uses a separate worker and borrowed Console.Error by default:
+8 pending reports, 16 total attempts, 1024 characters per report. Configure
+Emergency or disable it. Reports contain internal stages/types, without event
+payloads or exception messages. EmergencyStatus exposes loss/writer failures;
+writer failures never report themselves. Flush/disposal include this channel
+within the shutdown budget, and never dispose a borrowed writer.
+
 Source, module plans and reproducible package consumers:
 [TrueMoon repository](https://github.com/YotPhiligan/TrueMoon).

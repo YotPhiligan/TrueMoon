@@ -68,6 +68,38 @@ Data/ViewModel и typed IViewStyle<TView>. Реализация/критерии
 production consumer — Aether.Editor. DI/owner-thread factory route сохранён;
 новых межмодульных dependencies это изменение не добавляет.
 
+### Единая структурированная диагностика — 2026-10-25
+
+По решению пользователя развивать собственный TrueMoon API: структурированные
+события и уровни, ограниченный асинхронный pipeline/retention, operation traces,
+metrics, общую историю Editor/Runtime и диагностический отчёт.
+Microsoft.Extensions.Logging и его адаптер пока не требуются. Первый bounded
+Core/Aether профиль реализован и проверен2026-10-25; полный roadmap остаётся частичным.
+26октября добавлен [ENG8a.2 retention завершённых build jobs](engine/PLAN.md#retention-диагностики-сборок-eng8a2--2026-10-26);
+Следующим срезом того же26октября добавлены [Core emergency и managed JSONL runs](core/PLAN.md#emergency-и-managed-jsonl-runs--2026-10-26):
+конечный fallback и count/bytes/age закрытых logger runs.
+Следующий профиль26октября добавляет [операции CORE6d](core/PLAN.md#операции-core6d--2026-10-26)
+и [Aether ENG8a.1/3](engine/PLAN.md#операции-eng8a13--2026-10-26): sampled traces,
+bounded operation metrics, Replace/recovery, preview и frame-fault events.
+Следующий срез26октября добавляет [ENE6d.1 IPC trace context](enerit/PLAN.md#ene6d1-bounded-trace-header-и-ene6c-compatibility--2026-10-26):
+bounded optional header, Client/Server correlation и штатный Aether consumer.
+Следующий [ENE6d.2 resource meter](enerit/PLAN.md#ene6d2-агрегированные-метрики-ресурсов--2026-10-26)
+показывает process aggregate queue/pending/server requests/bytes/connections и
+фиксированные overload counters; measurement callbacks выполняет observer.
+Далее timeout/reconnect/error classification, queue-wait и domain/frame aggregates,
+затем bounded child delivery и console/export; полный diagnostics roadmap частичен.
+
+Детали у владельцев: [Core CORE6](core/PLAN.md#core6-структурированная-диагностика--2026-10-25)
+— schema/API/pipeline/sinks/lifecycle и typed generation;
+[Enerit ENE6d](enerit/PLAN.md#ene6d-корреляция-и-диагностика--2026-10-25) — IPC context;
+[Mithril MIT6c](mithril/PLAN.md#mit6c-диагностика-и-захват-process-output--уточнение-2026-10-25)
+— process acceptance; [Aether ENG8a](engine/PLAN.md#eng8a-диагностика-сессий-и-процессного-вывода--2026-10-25)
+— engine events и stdout/stderr capture;
+[Editor ED6a/ED8a](engine/EDITOR_PLAN.md#ed6a-консоль-диагностики--2026-10-25) — консоль/экспорт.
+Первый diagnostics срез: CORE6a–c + ENG8a.1/2, headless overload/failure/stop proof,
+затем расширение traces/metrics и UI. Текущая очередь authoring/editor работ и
+прежние quality/hardware gates сохраняются; полный generator не prerequisite.
+
 ### Сверка основы перед Aether — 2026-10-23
 
 Ревью планов и исходников не выявило нового обязательного полного прохода Core/

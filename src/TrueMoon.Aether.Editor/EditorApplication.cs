@@ -13,6 +13,7 @@ using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
 using TrueMoon.Aether.Sessions;
+using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether.Editor;
 
@@ -30,6 +31,13 @@ internal static class EditorApplication
         IFactory<EditorHeaderView, EditorHeaderArguments>? headerFactory = null;
         await using var app = App.Build(context =>
         {
+            context.UseDiagnostics(new DiagnosticPipelineOptions
+            {
+                JsonDirectory = smoke == null
+                    ? Path.Combine(Path.GetTempPath(), "TrueMoon", "Diagnostics", "Editor")
+                    : Path.Combine(directory, "diagnostics", "editor"),
+                JsonUseRunDirectories = true
+            });
             context.UseAetherAuthoring(); context.UseAetherEditorDocuments();
             context.UseAetherEditorProjects();
             context.Services(services => services

@@ -49,6 +49,7 @@ public class AppBuilder : IAppBuilder
             .Instance(configuration)
             .Composite<DefaultAppLifetime,IAppLifetimeHandler,IAppLifetime>()
             .Singleton(typeof(IEventsSource<>),typeof(EventsSource<>))
+            .Singleton<IDiagnosticTelemetry>(_ => new DiagnosticTelemetry())
         );
         
         foreach (var action in _configureActions)

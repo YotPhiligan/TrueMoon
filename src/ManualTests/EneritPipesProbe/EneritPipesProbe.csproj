@@ -7,6 +7,7 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
     <ProjectReference Include="../../TrueMoon.Enerit/TrueMoon.Enerit.csproj" />
     <ProjectReference Include="../../TrueMoon.Mithril/TrueMoon.Mithril.csproj" />
     <ProjectReference Include="../../TrueMoon.Enerit.Generator/TrueMoon.Enerit.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />

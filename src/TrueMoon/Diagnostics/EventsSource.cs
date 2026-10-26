@@ -8,6 +8,13 @@ public class EventsSource : IEventsSource, IDisposable
     private readonly DiagnosticListener _source;
     private int _disposed;
     public string Name { get; }
+
+    /// <inheritdoc />
+    public bool IsEnabled(DiagnosticLevel level, string? eventName = null)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        return Enum.IsDefined(level) && _source.IsEnabled(eventName ?? Name, level, null);
+    }
     
     public EventsSource(string name)
     {

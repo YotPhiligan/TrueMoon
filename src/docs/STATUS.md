@@ -1,6 +1,33 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-25, ED4f.2 системный акцент границы окна**.
+Последняя работа — **2026-10-26, ENE6d.2 метрики ресурсов Enerit**.
+Meter TrueMoon.Enerit.Pipes агрегирует client pending/queued, server requests/bytes/
+connections и3фиксированные overload серии. Late observer видит current state;
+callbacks не выполняются из admission/Invoke. Copied MetricsEnabled управляет этим
+Meter отдельно от Core operation metrics. Shared admission не дублирует учёт.
+[Контракт и проверки](enerit/HISTORY.md#ene6d2-метрики-ресурсов-и-перегрузки--2026-10-26),
+[руководство](enerit/DIAGNOSTICS.md#метрики-ресурсов).
+
+Новые33cases прошли в обеих конфигурациях. Full Debug4054/4054 и Release4054/4054,
+failed/skipped0. Enerit291/generator114, Core314, Aether1218, Editor741 в каждой
+конфигурации. Builds0errors: Debug nonincremental1530warnings,
+Release incremental627warnings; SDK10.0.403.
+[Evidence](../TestResults/DiagnosticsIpcMetrics-20261026-1/verification.json).
+Isolated source process проверяет failed Stop/retained ownership; прежние source
+process suites также прошли. Published/GPU/package/performance runs не повторены.
+Прежний CPU FrameReceiver failure текущим запуском не воспроизведён; он и Mithril
+ready-file race остаются отдельными quality follow-ups.
+
+Далее IPC timeout/reconnect/error classification и queue-wait duration, затем
+command/frame aggregates и bounded child delivery/Editor console/export.
+Bootstrap/App-private routing, generator и общий quota report/artifact roots
+частичны. Authoring очередь и прежние quality gates сохраняются.
+Предыдущие [IPC trace context](enerit/HISTORY.md#ene6d1-trace-context-через-pipes--2026-10-26),
+[Core/Aether operations](core/HISTORY.md#операции-и-трассы-диагностики--2026-10-26),
+[build retention](engine/HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26),
+[emergency/managed runs](core/HISTORY.md#emergency-и-managed-jsonl-runs--2026-10-26).
+
+Предыдущая работа — **2026-10-25, ED4f.2 системный акцент границы окна**.
 Windows cached accent/fallback подключён через общий host contract; Editor включает
 рамку с inactive dimming160мс и приоритетом явного style/local цвета.
 Related UI893/Hosting114/Editor741 Debug/Release:3496passed/0failed/0skipped,
@@ -126,12 +153,12 @@ frames — отдельный transport, процессы — Mithril.
 
 | Модуль | Текущий результат и область вывода | Продолжение |
 | --- | --- | --- |
-| [Core](core/STATUS.md) | Typed factories/adapters; текущий full117/117 Debug/Release | Provider-neutral contracts, cooperative/platform limits прежние |
+| [Core](core/STATUS.md) | CORE6 bounded pipeline/capture/emergency/operations + explicit parent/kind; current314/314 Debug/Release | IPC/domain/aggregate telemetry, bootstrap/App-private/generation/performance; прежние cooperative/platform limits |
 | [Cobalt / DI](cobalt/STATUS.md) | Текущий179/generator91 Debug/Release; document/project ownership на Cobalt/MS DI | API прежние; performance/allocation backlog отдельно |
-| [Enerit](enerit/STATUS.md) | Текущий166/generator114 Debug/Release; прежние finite admission/stop published44/package132 | ENE6c/d, MMF, trends отдельно |
-| [Mithril](mithril/STATUS.md) | Последний98/99 Debug: ready-file fixture race;99/99 Release; Editor child reap повторён | Ready JSON publication/read stability; full fault matrix/containment отдельно |
-| [Alloy / Argentis](alloy/STATUS.md) | 2026-10-24 UI801/Hosting98/Editor577 Debug/Release; TreeView/header/status/preview native proof | Rename/reorder consumer; physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
-| [Aether / Engine](engine/STATUS.md) | ARCH1b.1/preview/ED1a/ED2a/b/ED3a/ED4a/b/c.1; текущие Aether1050/Editor577 Debug/Release | ED4c.2 имена/порядок, ED4c.3 create/delete; CPU receiver follow-up и project/runtime workflow отдельно |
+| [Enerit](enerit/STATUS.md) | ENE6d.1 trace header + ENE6d.2 process resource/overload metrics; current291/generator114 Debug/Release; прежние published/package proof отдельно | Timeout/reconnect/error metrics, queue-wait и bounded child delivery; ENE6c/MMF/trends отдельно |
+| [Mithril](mithril/STATUS.md) | Current99/99 Debug/Release; исторический ready-file sharing race26октября не исправлялся в ENE6d.2 | Ready JSON publication/read stability; full fault matrix/containment отдельно |
+| [Alloy / Argentis](alloy/STATUS.md) | Current managed full UI893/Hosting114 Debug/Release; предыдущие native proofs сохраняют свои даты | Rename/reorder consumer; physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
+| [Aether / Engine](engine/STATUS.md) | ENG8a telemetry + control IPC propagation; current Aether1218/1218 и Editor741/741 Debug/Release; прежний CPU receiver failure не исправлен | Command/frame metrics, ED6a console/export и ED4c.2/3/workflow; ENG2 race открыт |
 
 Подробные contracts/commands/failures ведутся у владельцев. Historical packages,
 performance и аппаратные проверки не становятся частью текущего full solution.
@@ -188,13 +215,15 @@ drawing, golden/RTE/full performance/physical UI и real loss/VRAM не повт
 
 ## Следующий конкретный шаг
 
-1. Продолжить [ED4c.2 имена и порядок соседей](engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24)
+1. В активном diagnostics направлении — [ENE6d timeout/reconnect/error metrics и queue-wait](enerit/PLAN.md#ene6d-корреляция-и-диагностика--2026-10-25),
+   затем command/frame aggregates и bounded child delivery/ED6a/ED8a console/export.
+2. Продолжить [ED4c.2 имена и порядок соседей](engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24)
    через общие engine metadata/history, затем UI rename/reorder. Следом ED4c.3
    create/delete/duplicate, чтобы New был пригоден для работы. Затем project picker/switch и
    ED1/ED6 document/build/play workflow. При возврате к gameplay — ENG5c.3 collisions камеры, затем HUD.
-2. UI physical DPI/OS input, loss/K8, VRAM и final alpha требуют собственных runs.
+3. UI physical DPI/OS input, loss/K8, VRAM и final alpha требуют собственных runs.
    K7 workaround search остановлен; Windows/driver settings без запроса не менять.
-3. Full INF5, RTE backlog, Cobalt allocation и Enerit scalar investigation
+4. Full INF5, RTE backlog, Cobalt allocation и Enerit scalar investigation
    сохраняют отдельные планы.
 
 История реорганизации планов и предыдущих сводок — в [HISTORY](HISTORY.md).

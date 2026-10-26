@@ -38,6 +38,9 @@ IPC Editor↔Runtime — Enerit; frame transport отдельный.
 latest frame и drain. Возможная причина по исходникам — claim pending buffer до
 проверки нового frame; это source inference, не доказанный диагноз. ED4a не меняет
 CPU transport; повторный passing сам по себе не означает исправление этого race.
+Повторное наблюдение2026-10-26 в ENE6d.1 full Release: тот же test/null на строке177,
+Aether1217/1218, solution4020/4021. Debug4021/4021 и новые100cases не закрывают этот
+ENG2 follow-up; CPU production/test не менялись. [Текущая запись](HISTORY.md#ipc-trace-context-в-control-factories--2026-10-26).
 Engine/ARCH1 contracts ведутся здесь, общие UI capabilities — в UI плане.
 ED1a и ED2 document profile реализованы, остальной ED1–ED8 scope открыт;
 ENG7a/UIA1 и прежние passing результаты не означают их готовности.
@@ -1609,6 +1612,142 @@ borrowed handles внутри процесса, последовательная
 Cross-process frames и async frames in flight являются новым контрактом.
 Process isolation не гарантирует изоляцию shared GPU/driver faults.
 
+## ENG8a: диагностика сессий и процессного вывода — 2026-10-25
+
+Согласовано пользователем как развитие framework/engine logging. Общие event schema,
+pipeline/sinks/lifecycle и typed generation ведутся только в
+[Core CORE6](../core/PLAN.md#core6-структурированная-диагностика--2026-10-25).
+Здесь — engine producers, session correlation и захват внешнего process output;
+консоль редактора — в [ED6a](EDITOR_PLAN.md#ed6a-консоль-диагностики--2026-10-25),
+экспорт — в [ED8a](EDITOR_PLAN.md#ed8a-экспорт-диагностического-отчёта--2026-10-25).
+Microsoft.Extensions.Logging и его адаптер пока не требуются. Первый профиль
+ENG8a.1/2 реализован частично ниже; оставшийся этап делается до финального ENG8 acceptance.
+
+### Контекст и подключения
+
+- Подключить Aether producers через App/Cobalt и injected IEventsSource/фабрики
+  общего pipeline вместо разрозненных AetherEvents callbacks. Определить category,
+  event IDs/levels и mapping SessionStatus/UnitProcessDiagnostic без второго
+  источника domain state. Логи не подменяют typed results/errors/state contracts.
+- События связывать App/process identity, SessionId/Generation, runtime role,
+  GameBuildId, operation/command/request correlation и trace context. Scene revision,
+  tick/frame/surface identity добавлять там, где они объясняют событие. Не писать
+  launch nonce, environment/argv, control endpoints и scene/game payloads целиком.
+- Охват первого consumer: Build/Start/Stop/Play/Replace/rollback, IPC timeout/
+  disconnect/overload, runtime crash/cleanup и frame transport faults. Renderer/
+  device/validation diagnostics подключать к тем же событиям по мере адресной
+  интеграции; frame time/latency/drops агрегировать в metrics, verbose capture ограничен.
+- Trace context через IPC принадлежит [Enerit ENE6d](../enerit/PLAN.md#ene6d-корреляция-и-диагностика--2026-10-25),
+  process run/generation/exit/kill/reap — Mithril MIT5/MIT6. В Aether фиксируется
+  соответствие process run и engine session; PID не заменяет session/generation.
+  Диагностический traffic имеет собственные bounds и не задерживает Stop/input;
+  способ доставки и version/compatibility contract выбрать до изменения wire.
+
+### Захват stdout/stderr и retention
+
+Исходная сверка2026-10-25 до первого профиля: EngineChild включает RedirectStandardOutput/Error,
+NativeRuntimeLease сразу начинает два ReadToEndAsync и сохраняет полные строки
+StandardOutput/StandardError при StopAsync. Чтение предотвращает заполнение pipe,
+но накопление в памяти не ограничено и live history в Editor отсутствует.
+GameBuildCompiler читает оба потока непрерывно и сохраняет первые1 048 576char
+каждого в build.stdout.log/build.stderr.log; остаток вычитывает без сохранения.
+Это лимит символов, не UTF8 bytes; truncation явно не помечена, общий бюджет jobs
+и ротация отсутствуют. SDK preflight Editor отдельно сохраняет первые4096char
+каждого потока, продолжая чтение. Это чтение исходников, не новый runtime proof.
+
+- [ ] ENG8a.1: подключить события engine/Build/process/IPC к CORE6; зафиксировать
+  context и время жизни session resources без удержания старых leases до App exit.
+- [ ] ENG8a.2: заменить full-memory runtime capture на постоянное чтение обоих
+  потоков с bounded tail/ring и ограниченными файлами; согласовать общий capture
+  policy для build output с сохранением DiagnosticsDirectory/exit code. Ограничить
+  размер chunk/строки, память, disk bytes/job count/age; показать truncation/drop
+  и sink failure. При исчерпании retention чтение продолжается. Не ждать newline:
+  child может писать одну неограниченную строку или зависнуть без закрытия потока.
+- [ ] ENG8a.3: подключить operation traces/metrics и bounded live diagnostic delivery
+  из child; raw stdout/stderr сохранить как fallback для ранних/внешних сообщений.
+  Raw output не считать автоматически structured event или надёжным уровнем Error
+  только по выбору stderr. Не дублировать один structured event при импорте вывода.
+- [ ] ENG8a.4: headless overload/failure/stop proof вместе с CORE6/ENE6d/MIT6c:
+  verbose child пишет одновременно в оба потока, длинные сообщения без newline,
+  early launch/IPC failure, abrupt exit, Replace и late events старой generation,
+  slow/broken sink и EOF/drain timeout. Проверить budgets, исходную причину отказа,
+  loss counters, отсутствие starvation control и освобождение process/reader/file
+  ownership. Жёсткое завершение может терять buffered хвост; outcome не объявлять
+  полным при timeout/truncation. Long trends MIT6c остаются самостоятельным proof.
+
+Первый срез: CORE6a–c + ENG8a.1/2, чтобы headless launch → output flood → failure →
+stop давал связанную ограниченную историю. Затем ENG8a.3/4 и Editor ED6a/ED8a;
+полный typed generator не prerequisite. Добавление roadmap не меняет текущую
+очередь ED4c.2 → ED4c.3 → project/runtime workflow и прежние hardware/quality gates.
+
+### Первый профиль ENG8a.1/2 — 2026-10-25
+
+UseAether/UseAetherRuntime используют App-injected sources для session, process,
+compiler и pipes; Session.StateChanged/Runtime.Process/Build.* имеют stable IDs,
+session/generation/build/run/job context и отдельный Error без nonce/endpoint.
+Editor и runtime включают общий JSONL pipeline. Typed state/results остаются
+авторитетными; protocol/wire не менялись и cross-process trace context ещё не передаётся.
+
+NativeRuntimeLease предоставляет live bounded tails/status и8fixed rotating
+stdout/stderr files≤1MiB каждый; process factory inspection ограничен256diagnostics/
+64leases без передачи actual ownership от supervisor. Compiler использует тот же
+continuous capture, UTF8 byte cap и build.output.json с loss/error counters после
+drain. [API и ограничения](../../TrueMoon.Aether/README.md#диагностика).
+
+Проверены7новыхmodule cases и полные Aether1149/Editor741 Debug/Release в общем
+solution3725/configuration. Headless diagnostics: Debug и опубликованный Release
+из OS temp вне checkout, по6verbose children, >2MiChars/stream, tail/file limits,
+slot reuse, Step/Stop, launch failure phase/correlation и reap;12started children
+освобождены. [Команды/evidence](HISTORY.md#единая-диагностика-первый-профиль--2026-10-25).
+
+ENG8a.1/2 в целом остаются частичными: дополнительные Replace/preview/frame event
+coverage ещё нужны; budget/age завершённых build jobs добавлен ниже. ENG8a.3, полный fault/long-load
+matrix, IPC trace propagation, metrics, UI console и report export не реализованы.
+Hardware/golden/performance/package readiness этим headless proof не подтверждается.
+
+### Retention диагностики сборок ENG8a.2 — 2026-10-26
+
+UseAether фиксирует GameBuildRetentionOptions; default 16 completed jobs / 64 MiB
+всех их файлов с ownership marker / 7 суток от completion UTC. До compiler launch
+и после reap/drain/staging cleanup — best-effort sweep по старейшим jobs.
+Exact count/bytes/age equality сохраняется. Последний completed job и явно
+защищённый текущий job сохраняются даже сверх лимитов; это отражено в status.
+Активный job удерживает exclusive marker; cleaners согласованы root lease.
+RetentionStatus/Warning1205 с JobId показывают failure/busy/overbudget без замены
+успешного результата или исходной ошибки компиляции.
+
+Удаляются только versioned completed flat owned GUID jobs, нерекурсивно, с
+reparse ancestry/entry checks. Artifacts, active/legacy/incomplete/unknown jobs
+сохраняются и не входят в completed diagnostics budget; это не total artifact-root
+или Editor-runs cleanup. Age обслуживается при сборках, без фонового таймера.
+Произвольная hostile external path replacement вне trusted-local scope.
+[API](../../TrueMoon.Aether/README.md#диагностика),
+[42cases, полный Debug/Release и границы](HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26).
+
+Следующий consumer срез26октября использует [Core emergency/managed runs](../core/PLAN.md#emergency-и-managed-jsonl-runs--2026-10-26):
+parent Editor JSONL root постоянный в %TEMP%/TrueMoon/Diagnostics/Editor, smoke
+остаётся в report directory; Runtime использует report/diagnostics/runtime.
+Каждый sink имеет свой GUID run и closed-run quota. Это не cleanup всего
+Editor report root: raw output, published artifacts и старые непомеченные
+каталоги имеют отдельный ownership и сохраняются.
+
+### Операции ENG8a.1/3 — 2026-10-26
+
+UseAether внедряет borrowed IDiagnosticTelemetry и events в compiler, replacement,
+preview и frame owner. Build, Replace, Preview.Show/Resize/Stop получают operation
+traces и count/duration через Core. Replace публикует original cause/phase,
+rollback attempted/succeeded и отдельные recovery failures. Preview.Completed
+следует за фактическим first-present; Frame.Fault сохраняет исходные identity/
+surface generation до drain, cleanup failure имеет отдельное событие.
+Per-frame Presented callbacks не создают logs/scopes. Старые standalone constructors
+сохранены; consumers не владеют внедрённым telemetry.
+Следующий срез26октября включает [ENE6d.1](../enerit/PLAN.md#ene6d1-bounded-trace-header-и-ene6c-compatibility--2026-10-26):
+обе штатные control factories opt-in передают context, связывая host/child spans;
+генератор и payload unchanged, same-build HostId включает Enerit assembly.
+ENG8a.1/3 остаются частичными: дополнительные Start/Stop/Play/command
+producers, aggregate frame/queue/latency metrics и Editor live delivery/export
+следуют отдельными срезами. [API](../../TrueMoon.Aether/README.md#диагностика).
+
 ## Этапы будущей реализации
 
 ENG0 **определён документом2026-10-15**; ENG1 проверен2026-10-17 в headless scope;
@@ -1631,7 +1770,7 @@ ENG1 и ENG2 proof выполнены2026-10-17; следующий code эта�
 | ENG5 | Небольшая играбельная 3D-сцена — ENG5a/b/c.1/2 room/reach/interaction реализованы | Далее ENG5c.3 collisions камеры, затем Alloy HUD/pause; level load/unload и standalone launch ещё нужны |
 | ENG6 | Hot Reload исследование | Зафиксирован supported edit набор/state behavior, unsupported edits переводятся в проверенный replacement; ALC только по подтверждённой потребности |
 | ENG7 | Рабочее приложение редактора и доставка; ENG7a/UIA1 — существующая основа | [ED1–ED8](EDITOR_PLAN.md): project/documents/editing/preview/workflow/extensions/reliability. Первый Transform/Undo/save/preview срез; scene/asset/runtime возможности не объявляются реализованными наличием shell |
-| ENG8 | Финальные robustness/performance checks | Frame time/latency/allocations/resource trends измерены на фиксированной сцене; reload/resize/crash/cancel/close проходят в объявленных limits |
+| ENG8 | Финальные robustness/performance checks; [ENG8a diagnostics](#eng8a-диагностика-сессий-и-процессного-вывода--2026-10-25) разрабатывается отдельным ранним срезом | Frame time/latency/allocations/resource trends измерены на фиксированной сцене; reload/resize/crash/cancel/close и diagnostic overload/retention проходят в объявленных limits |
 
 ENG4 может быть заменён проверенным transport для выбранной платформы после
 явной записи решения. Производительный GPU path не является условием ENG1–ENG3.

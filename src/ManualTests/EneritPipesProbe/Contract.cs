@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using TrueMoon;
 
 namespace EneritPipesProbe;
@@ -14,6 +15,7 @@ public interface IProbeService
     Task AckAsync(bool fail, CancellationToken cancellationToken = default);
     void AckSync(bool fail);
     Task<int> PingAsync(int value, CancellationToken cancellationToken = default);
+    Task<string> TraceAsync(CancellationToken cancellationToken = default);
 }
 
 public class Payload
@@ -78,4 +80,14 @@ internal sealed class ProbeService : IProbeService
         if (fail) throw new InvalidOperationException("remote-sync-failure");
     }
     public Task<int> PingAsync(int value, CancellationToken cancellationToken = default) => Task.FromResult(value + 1);
+    public async Task<string> TraceAsync(CancellationToken cancellationToken = default)
+    {
+        var before = Activity.Current;
+        await Task.Yield();
+        var activity = Activity.Current ?? throw new InvalidOperationException("Missing server activity.");
+        if (!ReferenceEquals(before, activity)) throw new InvalidOperationException("Server activity did not survive await.");
+        return string.Join('|', activity.TraceId.ToHexString(), activity.SpanId.ToHexString(), activity.ParentSpanId.ToHexString(),
+            activity.Kind, activity.HasRemoteParent, (int)activity.ActivityTraceFlags, Environment.ProcessId,
+            activity.TraceStateString ?? "-", activity.Baggage.Count());
+    }
 }

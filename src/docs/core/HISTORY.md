@@ -1,6 +1,237 @@
 # Core: история проверок и ревью
 
+## Explicit parent и kind для IPC — 2026-10-26
+
+IDiagnosticTelemetry/DiagnosticTelemetry получили StartOperation(name,kind,parent,properties)
+для Client/Server spans с explicit remote parent. Old overload использует Internal
+и current flow. Parent argument обязателен, null выбирает current flow; default literal
+в старом двухаргументном вызове не стал неоднозначным. Default interface implementation
+вызывает старый API custom owner без принудительного вычисления properties.
+Invalid ActivityKind отклоняется до observer/property callbacks. Bounded sampling,
+метрики, callback isolation и deferred ownership release сохраняются.
+
+Новые6cases в DiagnosticTelemetryTests: ExplicitRemoteParent_UsesRequestedKindInsteadOfAmbientParentAndRestoresCurrent(2),
+InvalidActivityKind_IsRejectedBeforePropertiesOrObservers(2),
+InterfaceKindOverload_ForwardsToExistingOldOnlyImplementationWithoutEvaluatingProperties(1),
+OldOperationOverload_DefaultLiteralRemainsUnambiguousAndUsesInternalKind(1).
+Final narrow62/62, full Core314/314 Debug/Release. Full solution Debug4021/4021,
+Release4020/4021 из-за прежнего Aether CPU receiver failure; общий green не заявлен.
+Builds0errors, Debug nonincremental1530warnings/Release incremental1300warnings,
+SDK10.0.403. [Общая matrix/команды/ошибки](../enerit/HISTORY.md#ene6d1-trace-context-через-pipes--2026-10-26),
+[evidence](../../TestResults/DiagnosticsIpc-20261026-1/verification.json).
+Source fingerprints993/test binaries20, source changes0. Native/published/GPU/
+package/performance проверки не повторены. CORE6 остаётся частичным.
+
+## Операции и трассы диагностики — 2026-10-26
+
+Продолжение запроса «давай следующий шаг»: первый CORE6d профиль и engine consumer.
+Contracts определяет IDiagnosticTelemetry/IDiagnosticOperation/DiagnosticOperationOutcome;
+TrueMoon владеет ActivitySource/Meter с именем TrueMoon. Опции копируются до resources.
+Базовый App лениво регистрирует единственный interface owner; UseDiagnostics заменяет его.
+[API, sampling, численные limits и lifetime](DIAGNOSTICS.md#трассы-и-метрики-операций).
+
+Метрики truemoon.operation.count и truemoon.operation.duration (секунды) имеют только
+operation/outcome tags. Registry64имени (предел256), trace properties16×256,
+имя/ключ128; sampling None/PropagationData не вычисляет custom properties.
+Первый Complete фиксирует outcome, Dispose публикует once; без Complete — Incomplete.
+Observer/property failures и sync reentry изолированы, status содержит счётчики.
+Закрытый owner сохраняет source/meter до Dispose последнего active scope.
+Exception objects не удерживаются, error.type ограничен; внешних exporters/MEL нет.
+
+| Требование | Точное поведенческое доказательство в DiagnosticTelemetryTests |
+| --- | --- |
+| Unobserved/disabled/sampling и lazy properties | NoConsumers_ReturnsNullWithoutEvaluatingPropertiesOrRejectingWork; EnableFlags_IndependentlyControlTraceAndMetricConsumers; Sampling_ControlsScopeAndLazyPropertiesWithoutCountingConsumerRejection; AllDataProperties_BoundInspectedEntriesClipSurrogatesAndPreserveReservedMetadata |
+| Async parent и TraceId/SpanId событий | NestedAsyncOperations_RestoreCurrentAndCorrelateDiagnosticRecords |
+| Counter/duration/outcomes и bounded dimensions | OperationOutcome_FirstCompleteWinsAndRepeatedDisposePublishesExactlyOnce; MetricsOnly_UsesNoActivityOrPropertiesAndNeverAddsHighCardinalityTags; NameCardinality_RejectsNewNamesAtLimitButContinuesKnownOperations |
+| Options snapshot и границы | Options_AreCopiedBeforeCallerMutatesFlagsAndEveryLimit; InvalidBudgets_AreRejectedBeforeAppCreatesAnySink; BudgetBounds_AcceptFirstAndLastValidValues |
+| Нет удержания Exception/payload | Completion_RetainsOnlyExceptionTypeWhileScopeIsStillActive |
+| Listener faults/construction/reentry | ThrowingCallbacks_AreCountedAndRestoreParentWithoutBreakingCaller; ReentrantCallbacks_RejectNestedWorkWithoutRecursingOrCorruptingOuterScope; Constructor_ContainsInstrumentPublishedFailuresAndLeavesTracingUsable; Constructor_ContainsShouldListenFailureAndKeepsMetricsUsableWithoutActivitySource |
+| Default App, обе DI, lifecycle и повторный setup | DefaultAppRegistration_ProvidesUsableTelemetryWithoutExplicitDiagnostics; AppRegistration_HasOneInterfaceOwnerAndDefersReleaseForActiveScope; AppRepeatedSetup_ReplacesTelemetryAndCopiesNestedOptionsForBothResolvers; CloseWhileActive_FencesAdmissionAndDefersInstrumentationReleaseUntilLastScope |
+
+[Тестовый source](../../TrueMoon.Tests/DiagnosticTelemetryTests.cs).
+Новые56Core cases; финальный Core308/308 Debug/Release.
+[Aether matrix](../engine/HISTORY.md#операции-и-трассы-диагностики--2026-10-26) имеет25новых cases.
+Полный solution **3921/3921 Debug и3921/3921 Release**, failed/skipped0:
+Core308, Cobalt179/generator91, Enerit166/generator114, Mithril99,
+UI893/Hosting114, Aether1216/Editor741 в каждой конфигурации.
+
+SDK10.0.403. Финальный Debug build nonincremental0errors/1530warnings;
+Release incremental0errors/1300warnings. Разница warnings отражает scope rebuild.
+Команды из src, каждое MSBuild invocation имеет отдельный binlog:
+
+```powershell
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v:quiet -m -bl:TestResults/DiagnosticsTelemetry-20261026-1/build-Debug.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug -v:minimal --logger trx --results-directory TestResults/DiagnosticsTelemetry-20261026-1/Debug -bl:TestResults/DiagnosticsTelemetry-20261026-1/tests-Debug.binlog
+dotnet build TrueMoon.slnx --no-restore -c Release -v:quiet -m -bl:TestResults/DiagnosticsTelemetry-20261026-1/build-Release.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Release -v:minimal --logger trx --results-directory TestResults/DiagnosticsTelemetry-20261026-1/Release -bl:TestResults/DiagnosticsTelemetry-20261026-1/tests-Release.binlog
+```
+
+Первый compile attempt имел3CS0200 из-за readonly return type preview context;
+исправлен Dictionary return type. Initial full Debug до default registration:
+3831passed/88failed из3919; все88 — IDiagnosticTelemetry отсутствовал в базовом App
+без UseDiagnostics. Исправлен AppBuilder graph, добавлены2regression cases обеих DI.
+Следующие Core narrow56/56 и полный Aether1216/1216 Debug прошли, затем приведённые
+выше full Debug/Release. Failed artifacts сохранены в build-initial/Debug-initial;
+это не скрытый повтор для получения green результата.
+
+[Verification](../../TestResults/DiagnosticsTelemetry-20261026-1/verification.json):
+34TRX,12binlogs,986source hashes,20test binary hashes, source changes во время
+финальной проверки0. Narrow artifact prefixes agent-core-default-1793034022970
+и agent-aether-full-1793034043722. Intermediate test-agent state сохранён в OS temp,
+в git changes его нет. Assertions/gaps review не выявил оставшихся обязательных
+fixes в объявленном scope; root повторно прочитал новые assertions.
+Документационная проверка:87relative links/anchors разрешены,4ссылки на ранее
+недоступный diagnostics artifact от25октября отмечены historical unavailable;
+новых missing targets/anchors0. git diff --check HEAD прошёл.
+
+Manual native/published/GPU/package/performance checks не повторялись.
+Исторические Mithril ready-file/CPU receiver races этим passing run не исправлены.
+CORE6d частичен: ENE6d IPC trace propagation, дополнительные domain/frame aggregate
+metrics, live Editor console/export, bootstrap/private routing/generation и release gates
+остаются отдельными задачами.
+
+## Emergency и managed JSONL runs — 2026-10-26
+
+Продолжен CORE6c: независимый finite emergency worker и opt-in run directories
+под постоянным JSONL root. [API/defaults/ownership](DIAGNOSTICS.md).
+DiagnosticEmergencyOptions: enabled, borrowed Console.Error, queue8 включая
+in-flight,16attempts на pipeline, report≤1024chars с LF. Snapshot содержит только
+App/Stage/Sink/type/sequence; без payload/exception objects/messages. Writer
+failure не вызывает Report; reentry ограничен общим lifetime budget. Health
+отделяет rejected queue attempts от последующих Suppressed.
+
+Managed JSONL: JsonUseRunDirectories + copied JsonRetention, default8closed runs /
+32MiB /7суток от creation UTC. Lazy GUID directory, exclusive versioned marker
+до закрытия файлов, root maintenance lease, oldest-first pruning, строгие
+границы с разрешённым equality, newest/explicit protection и observable
+overbudget. Только известные плоские marker/events files удаляются нерекурсивно;
+active, legacy/unknown/unsafe directories остаются отдельно. Crash освобождает
+lease, распознанный run доступен следующему sweep. Flat API/старый4arg constructor
+сохранены. Failed maintenance не подменяет успешную запись; status и emergency
+показывают проблему. Никакого общего quota report/artifact roots не заявлено.
+
+Normal sink cleanup запускается off caller, включая синхронную часть DisposeAsync.
+Normal cleanup затем emergency drain используют один ShutdownTimeout; rollback
+всех уже приобретённых sinks идёт параллельно и также имеет один deadline.
+Timeout не освобождает исполняющееся IO и borrowed writer. Background cleanup
+остаётся до завершения; direct pipeline disposal допускает retry. До создания
+самого pipeline bootstrap capture этим срезом не реализован.
+
+| Требование | Evidence: точное имя теста |
+| --- | --- |
+| Ограниченные metadata, control sanitization, LF и отсутствие exception retention | EmergencyReport_UsesOnlyBoundedMetadataAndOneLiteralNewline; EmergencyReport_DoesNotRetainExceptionWhileWriterIsBlocked |
+| Queue включает executing, lifetime attempts/drop/suppression различаются | EmergencyReport_CountsExecutingQueueAndDroppedAttemptsBeforeLifetimeSuppression |
+| Writer failure/borrowed lifetime и finite reentry | EmergencyWriterFailure_CountsTypeWithoutMessageOrRecursiveReportsAndKeepsWriterBorrowed; EmergencyWriterReentry_IsFiniteAndNeverWaitsOnItsOwnWorker |
+| Normal/capture/overflow failures без payload | Pipeline_ReportsWriteAndDisposeFailuresWithoutPayloadOrExceptionMessage; Pipeline_CaptureFailureUsesEmergencyWithoutPublishingPartialRecord; Pipeline_ReportsOnlyErrorAndCriticalQueueLossWhileNormalSinkIsBlocked |
+| Producer/healthy sink независимы от blocked emergency IO | BlockedEmergencyWriter_DoesNotBlockProducersOrHealthySink |
+| Flush/timeout/retry/off-caller cleanup/common rollback | PipelineFlush_WaitsForEmergencyReportProducedAfterNormalFence; PipelineShutdownTimeout_RetainsBlockedOwnerAndAllowsRetry; PipelineDispose_SynchronousSinkCleanupRunsOffCallerAndTimeoutKeepsOwnership; ConstructorRollback_UsesOneTimeoutAndRetainsConcurrentCleanupUntilReleased |
+| Startup error, disabled и validation до IO | PipelineConstructionFailure_DrainsStartupReportAndReleasesOwnedSinkOnly; Pipeline_EmergencyDisabledDoesNotWriteOrChangeNormalFailureHandling; InvalidEmergencyBudgets_AreRejectedEvenWhenDisabledBeforeSinkCreation |
+| Closed runs count/bytes/age и equality | Sweep_CountLimitDeletesOldestByCreationInsteadOfDirectoryMtime; Sweep_ByteBudgetIncludesMarkerAndRetainsExactEquality; Sweep_AgeExpiresOnlyStrictlyAfterCreationLimit |
+| Active/protected/unknown/reparse ownership | Sweep_ProtectsActiveRunAcrossStoreInstancesUntilItsLeaseCloses; Sweep_ProtectsNewestAndExplicitJobAndReportsUnsatisfiedBudget; Sweep_PreservesUnknownIncompleteAndNonflatDirectoriesWhilePruningOwnedJobs; Sweep_RejectsReparseAncestryAndEntriesWithoutTouchingTargets |
+| Maintenance lease/failure/retry и legacy safety | Sweep_MaintenanceContentionPreservesJobsAndRecoversWithoutBlocking; Sweep_DeleteFailurePreservesOwnershipContinuesAndRetriesAfterHandleRelease; Sweep_PreservesLegacyFlatFilesAndUnrelatedDirectories |
+| Managed sink lazy/independent and prefix validation | ManagedJsonSink_CreatesLazyIndependentRunsAndRetainsOnlyNewestClosedRun; UnusedJsonSink_DisposeDoesNotCreateOutput; ManagedJsonSink_RejectsPrefixesOutsideOwnedWhitelistBeforeIo |
+| Retention failure/overbudget до emergency closure | Pipeline_RetentionMaintenanceFailurePreservesRecordAndReportsEmergencyThenRecovers; PipelineDispose_ReportsProtectedOversizedRunBeforeClosingEmergencyOutput |
+| App Cobalt/MS DI фиксирует nested options и ownership | AppManagedDiagnostics_CopiesNestedOptionsForBothResolvers |
+
+Новые73cases: Emergency22, RunRetention41, ManagedPipeline10. Narrow134/134 с
+прежними61pipeline/legacy cases. Полный Core252/252 Debug/Release. Финальные
+solution3840/3840 Debug и3840/3840 Release, failed/skipped0; Aether1191/Editor741,
+Cobalt179/generator91, Enerit166/generator114, Mithril99, UI893/Hosting114.
+SDK10.0.403, Windows x64/net10.0. Debug nonincremental build0errors/1530warnings;
+Release incremental0errors/302warnings (разный rebuild scope, не warning cleanup).
+Evidence: [verification](../../TestResults/DiagnosticsCore-20261026-1/verification.json),
+30TRX включают initial/final runs,6unique binlogs,978source и20tested binary hashes.
+
+Первый полный Debug был3838/3840:73новыхcases прошли, но legacy
+AppDiagnosticsAreObservedAndDisposedEvenWhenAListenerThrows использовал
+TrueMoon-prefixed probe, на который подписывался параллельный App с default filter.
+Тест исправлен на UniqueName()/Filters(name) вне общего префикса; lifecycle
+assertions сохранены, production global routing/совместимость не менялись.
+После этой правки отдельный Core252/252 и новый full Debug3840/3840 прошли.
+
+В том же initial Debug повторился прежний MithrilRestartProbe ready-1.json sharing
+IOException, scenario concurrent-stop. Mithril production/fixture не менялись;
+последующие99/99 Debug/Release не означают исправление race. Initial failures
+и exact errors сохранены в verification и initial Debug TRX/log; исходный run
+не подменён passing повтором.
+
+```powershell
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v:quiet -m -bl:TestResults/DiagnosticsCore-20261026-1/build-Debug-final.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug -v:minimal --logger trx --results-directory TestResults/DiagnosticsCore-20261026-1/Debug-final -bl:TestResults/DiagnosticsCore-20261026-1/tests-Debug-final.binlog
+dotnet build TrueMoon.slnx --no-restore -c Release -v:quiet -m -bl:TestResults/DiagnosticsCore-20261026-1/build-Release.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Release -v:minimal --logger trx --results-directory TestResults/DiagnosticsCore-20261026-1/Release -bl:TestResults/DiagnosticsCore-20261026-1/tests-Release.binlog
+```
+
+Parent Editor переключён на постоянный %TEMP%/TrueMoon/Diagnostics/Editor root;
+smoke остаётся в report/diagnostics/editor, Runtime использует общий
+report/diagnostics/runtime. Каждый logger владеет отдельным managed run.
+Отдельные native/published/UI/GPU/hardware/package/performance acceptance не
+повторены; source wiring compiled и managed Editor741/regressions прошли.
+Общие reports/artifacts/raw output не становятся owned Core quota.
+Далее CORE6d spans/metrics и engine producers/ENE6d IPC context; UI console/export,
+App-private routing, bootstrap-before-pipeline capture, generator и измерения
+allocations/throughput сохраняют самостоятельные задачи.
+
 [План](PLAN.md), [текущий статус](STATUS.md), [общий статус](../STATUS.md).
+
+## Структурированная диагностика: первый профиль — 2026-10-25
+
+По запросу приступить к согласованным улучшениям реализован первый CORE6a–c профиль.
+Own contracts DiagnosticLevel/Message/Record, lazy structured Write/IsEnabled,
+frozen bounded snapshots, live source/event gates, per-sink levels, independent
+bounded workers, memory ring, console/JSONL, health и bounded disposal с retry.
+Legacy synchronous OnEvent/process-global subscription semantics сохранены.
+[API, budgets и ownership](DIAGNOSTICS.md).
+
+Core primitive ProcessOutputCapture читает borrowed TextReader независимо от
+file writer, не ожидает newline, хранит bounded live tail и фиксирует file loss/
+errors. UTF8 file limit учитывает bytes, а не characters. Source namespaces
+соответствуют RootNamespace/пути; новых packages/providers/scopes нет.
+
+| Поведение | Конкретная проверка |
+| --- | --- |
+| Lazy/live source/event/sink filters | SourceAndEventFilters_UseLongestPrefixSnapshotAndLiveChangesBeforeLazyProperties; SinkLevelFilters_AreIndependentSnapshotsAndDoNotFilterMemoryHistory |
+| Immutable/clipped snapshots и Activity IDs | StructuredRecord_CopiesAndBoundsPropertiesMessagesAndExceptionsWithoutSplittingSurrogates; StructuredRecord_CapturesCollectorProcessUtcAndActivity |
+| Queue count/bytes/in-flight и error reserve | BoundedSink_ReservesErrorSlotsAndCountsExecutingWrites; BoundedSink_RejectsByteOverflowAtExactBudgetAndRecoversAfterDrain |
+| Slow/failing sink isolation | SlowAndFailingSinks_AreIndependentAndFailureDoesNotStopLaterWrites |
+| Memory eviction/byte boundary и flush fence | MemoryRing_EnforcesExactByteBudgetAndRejectsOversizedRecord; FlushAsync_WaitsOnlyForWritesAcceptedBeforeItsCall |
+| Shutdown/failed cleanup ownership | DisposeTimeout_ClosesAdmissionAndRetainsSinkOwnershipUntilRetry; SinkDisposeFailure_IsObservableAndRetryReleasesExactlyOnce |
+| App setup/cleanup на Cobalt и Microsoft DI | RepeatedAppSetup_CreatesOnlyReplacementPipelineAndSink; AppDispose_DrainsStopAndServiceCleanupEventsBeforeDisposingSinks |
+| JSONL ownership/rotation/reopen | JsonSink_ReopenShrinksOwnedSlotsAndKeepsOtherNamesAndPrefixes; JsonSink_ExclusiveOwnerRejectsConcurrentWriterAndReleasesLeaseOnDispose |
+| Continuous raw capture/borrowed reader | TwoCaptures_ExposeLiveIndependentTailsBeforeEofAndBorrowReaders |
+| UTF8/file failure не останавливает drainage | FileCapture_RespectsUtf8ByteBudgetAcrossSplitSurrogateChunks; FileFailure_IsObservableAndDoesNotStopReadingOrTailRetention |
+
+Все новые assertions просмотрены, broad research/plan/status находятся в OS temp,
+не в stageable repository content. Finding-tests provider отсутствовал (Tool
+findTests not found); применён разрешённый source/search fallback и Roslyn pairing.
+Во время narrow review обнаружен обход legacy Subscribe override при новом
+predicate overload: legacy path возвращён,18existing diagnostics cases прошли.
+Новых production fixes за пределами diagnostics/capture не заявлено.
+
+Проверки Windows x64/net10.0/SDK10.0.402:
+
+- Final focused Core80/80:43pipeline +19capture +18legacy; Aether7/7 отдельно.
+- Full Core179/179 Debug и179/179 Release:62новых +117прежних cases.
+- Full solution3725/3725 в каждой конфигурации, failed/skipped0,20TRX total.
+- Nonincremental Debug build и Release build:0errors/1530warnings каждый.
+- Current native consumer: Debug + published Release вне checkout, по6verbose
+  children/stream bounds и launch failure; source/binary fingerprints сохранены
+  в [общем evidence](../../TestResults/Diagnostics-20261025-1792916778832/verification.json).
+
+Команды (каждая build/test/publish команда имела отдельный binlog):
+
+```powershell
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v:quiet -m -bl:TestResults/Diagnostics-20261025-1792916778832/final-build-Debug.binlog
+dotnet build TrueMoon.slnx --no-restore -c Release -v:quiet -m -bl:TestResults/Diagnostics-20261025-1792916778832/final-build-Release.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug -v:minimal --logger trx --results-directory TestResults/Diagnostics-20261025-1792916778832/Debug -bl:TestResults/Diagnostics-20261025-1792916778832/solution-tests-Debug.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Release -v:minimal --logger trx --results-directory TestResults/Diagnostics-20261025-1792916778832/Release -bl:TestResults/Diagnostics-20261025-1792916778832/solution-tests-Release.binlog
+```
+
+CORE6 в целом частичный: source-private App routing, bootstrap-before-resolver,
+age/total directories retention, independent emergency output, operation spans/
+metrics/IPC propagation и generator впереди. Fresh NuGet consumers, performance/
+allocations, physical/golden/GPU loss/VRAM не повторены. Existing provider-specific
+ownership и cooperative shutdown limits сохранены.
 
 ## Сквозной headless proof — 2026-10-15
 

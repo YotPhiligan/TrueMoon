@@ -4,6 +4,7 @@ using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Dependencies;
+using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether.Editor;
 
@@ -25,6 +26,11 @@ internal static class RuntimeEntryPoint
         var parentId = int.Parse(Environment.GetEnvironmentVariable("-p") ?? throw new InvalidDataException("Missing runtime parent."));
         await using var app = App.Build(context =>
         {
+            context.UseDiagnostics(new DiagnosticPipelineOptions
+            {
+                JsonDirectory = Path.Combine(launch.ReportDirectory, "diagnostics", "runtime"),
+                JsonUseRunDirectories = true
+            });
             context.UseAether(options =>
             { options.HostContractId = launch.Identity.HostContractId; options.GameBuildId = launch.Identity.GameBuildId; options.ReportDirectory = launch.ReportDirectory; });
             if (preview) context.UseAetherPreviewRuntime(launch, parentId);

@@ -12,6 +12,7 @@ public class PipesProcessTests
     [InlineData("disconnect", 3)]
     [InlineData("client-dispose", 3)]
     [InlineData("server-rebind", 3)]
+    [InlineData("trace", 8)]
     public async Task OwnProcesses_GeneratedPipesContract_CleansPendingWorkersAndChild(string scenario, int checks)
     {
         var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
@@ -40,6 +41,21 @@ public class PipesProcessTests
             Assert.True(result.GetProperty("ChildExited").GetBoolean());
             Assert.Equal(0, result.GetProperty("ChildExitCode").GetInt32());
             Assert.True(result.GetProperty("HandleReleased").GetBoolean());
+            if (scenario == "trace")
+            {
+                var trace = result.GetProperty("TraceEvidence");
+                var traceId = trace.GetProperty("ParentTraceId").GetString();
+                Assert.Equal(32, traceId!.Length); Assert.NotEqual(new string('0', 32), traceId);
+                Assert.Equal(traceId, trace.GetProperty("ClientTraceId").GetString()); Assert.Equal(traceId, trace.GetProperty("ServerTraceId").GetString());
+                Assert.Equal(trace.GetProperty("ParentSpanId").GetString(), trace.GetProperty("ClientParentSpanId").GetString());
+                Assert.Equal(trace.GetProperty("ClientSpanId").GetString(), trace.GetProperty("ServerParentSpanId").GetString());
+                Assert.NotEqual(trace.GetProperty("ClientSpanId").GetString(), trace.GetProperty("ServerSpanId").GetString());
+                Assert.Equal("Server", trace.GetProperty("ServerKind").GetString()); Assert.Equal("True", trace.GetProperty("RemoteParent").GetString());
+                Assert.Equal(trace.GetProperty("ClientFlags").GetInt32(), trace.GetProperty("ServerFlags").GetInt32());
+                Assert.Equal(result.GetProperty("ChildPid").GetInt32(), trace.GetProperty("ServerPid").GetInt32());
+                Assert.Equal("-", trace.GetProperty("TraceState").GetString()); Assert.Equal(0, trace.GetProperty("BaggageCount").GetInt32());
+                Assert.Equal(1, result.GetProperty("Connections").GetInt32());
+            }
             if (scenario == "server-rebind") Assert.True(result.GetProperty("Connections").GetInt32() >= 2);
             if (scenario == "cancellation")
             {

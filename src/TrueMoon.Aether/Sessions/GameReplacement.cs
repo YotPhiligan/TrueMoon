@@ -2,6 +2,7 @@ using TrueMoon.Aether.Builds;
 using TrueMoon.Aether.Checkpoints;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Frames;
+using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether.Sessions;
 
@@ -11,21 +12,40 @@ public sealed class GameReplacement
     private readonly SessionSupervisor _supervisor;
     private readonly FrameSession _frames;
     private readonly ReplacementDeadlines _deadlines;
+    private readonly IEventsSource? _events;
+    private readonly IDiagnosticTelemetry? _telemetry;
     /// <summary>Creates a controller; the caller continues owning supervisor and frames.</summary>
     /// <param name="supervisor">Borrowed process/control owner.</param><param name="frames">Its borrowed frame session.</param>
     /// <param name="deadlines">Optional immutable limits; defaults total45s/forward18s/cleanup10s.</param>
     public GameReplacement(SessionSupervisor supervisor, FrameSession frames, ReplacementDeadlines? deadlines = null)
+        : this(supervisor, frames, deadlines, null, null) { }
+
+    /// <summary>Creates a controller borrowing diagnostics as well as session resources.</summary>
+    public GameReplacement(SessionSupervisor supervisor, FrameSession frames, ReplacementDeadlines? deadlines,
+        IEventsSource? events, IDiagnosticTelemetry? telemetry)
     {
         ArgumentNullException.ThrowIfNull(supervisor); ArgumentNullException.ThrowIfNull(frames);
         if (!ReferenceEquals(frames.Supervisor, supervisor)) throw new ArgumentException("Frames belong to another supervisor.", nameof(frames));
         _supervisor = supervisor; _frames = frames; _deadlines = (deadlines ?? new()) with { }; _deadlines.Validate();
+        _events = events; _telemetry = telemetry;
     }
     /// <summary>Captures a paused tick boundary, reaps the old child and restores the candidate before returning the previous mode.</summary>
     /// <remarks>Expected identity/source/scene preflight precedes Pause. Caller cancellation after old Stop may recover the old build;
     /// explicit Stop/App close always prevent recovery launch. A failed accepted transaction throws GameReplacementException with the original cause.</remarks>
     /// <param name="request">Frozen candidate and current editor selection.</param><param name="token">Caller cancellation; cleanup remains owned.</param>
     /// <returns>Ready candidate identity and the checkpoint used for restore.</returns>
-    public async Task<GameReplacementResult> ReplaceAsync(GameReplacementRequest request, CancellationToken token = default)
+    public Task<GameReplacementResult> ReplaceAsync(GameReplacementRequest request, CancellationToken token = default)
+        => AetherDiagnosticEvents.ObserveAsync(_events, _telemetry, "Replace", 1300, () =>
+        {
+            var properties = AetherDiagnosticEvents.Context(_supervisor.Status);
+            properties["ExpectedGeneration"] = request?.ExpectedIdentity?.Generation.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            properties["ExpectedSessionId"] = request?.ExpectedIdentity?.SessionId.ToString("D");
+            properties["ExpectedGameBuildId"] = request?.ExpectedIdentity?.GameBuildId;
+            properties["CandidateBuildId"] = request?.Candidate?.BuildId;
+            return properties;
+        }, () => ReplaceCoreAsync(request, token));
+
+    private async Task<GameReplacementResult> ReplaceCoreAsync(GameReplacementRequest request, CancellationToken token)
     {
         ArgumentNullException.ThrowIfNull(request); ArgumentNullException.ThrowIfNull(request.Candidate);
         ArgumentNullException.ThrowIfNull(request.ExpectedIdentity); ArgumentNullException.ThrowIfNull(request.Scene);
@@ -106,10 +126,12 @@ public sealed class GameReplacement
                     if (!owner.Interrupted.IsCancellationRequested && !owner.Total.IsCancellationRequested && checkpoint != null && old != null)
                     {
                         _supervisor.Admission.Check(owner); rollbackAttempted = true;
+                        Recovery("Replace.RecoveryStarting", 1304);
                         using var recovery = CancellationTokenSource.CreateLinkedTokenSource(owner.Total.Token, owner.Interrupted.Token);
                         await StartAsync(old.Value.Scene, old.Value.Build, checkpoint, surface, old.Value.Behavior, owner, recovery.Token).ConfigureAwait(false);
                         if (wasPlaying) await SetModeAsync(true, owner, recovery.Token).ConfigureAwait(false);
                         _supervisor.Admission.Check(owner); rollbackSucceeded = true;
+                        Recovery("Replace.RecoveryCompleted", 1305);
                     }
                 }
             }
@@ -129,9 +151,21 @@ public sealed class GameReplacement
                     catch (Exception drain) { recoveryError = new AggregateException(error, drain); }
                 }
             }
+            Recovery("Replace.RecoveryResult", 1306, recoveryError);
             throw new GameReplacementException(phase, cause, rollbackAttempted, rollbackSucceeded, recoveryError);
         }
         finally { oldPin?.Dispose(); candidatePin?.Dispose(); }
+        void Recovery(string name, int id, Exception? error = null)
+            => AetherDiagnosticEvents.Emit(_events, error == null ? DiagnosticLevel.Information : DiagnosticLevel.Error,
+                id, name, "Replacement recovery state", () =>
+                {
+                    var properties = AetherDiagnosticEvents.Context(_supervisor.Status);
+                    properties["Phase"] = phase;
+                    properties["RollbackAttempted"] = rollbackAttempted.ToString();
+                    properties["RollbackSucceeded"] = rollbackSucceeded.ToString();
+                    properties["CandidateBuildId"] = request.Candidate.BuildId;
+                    return properties;
+                }, error);
     }
     private async Task SetModeAsync(bool playing, ReplacementAdmission.Lease owner, CancellationToken token)
     {

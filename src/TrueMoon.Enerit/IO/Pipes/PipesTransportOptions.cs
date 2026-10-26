@@ -15,6 +15,14 @@ public sealed class PipesTransportOptions
     public int MaxConnections { get; set; } = 4;
     /// <summary>Local budget covering admission, connection, send and response. Remote execution is not rolled back.</summary>
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(50);
+    /// <summary>Writes the versioned 51-byte request header when a valid W3C context exists, and accepts its remote parent.
+    /// Off by default for legacy peers. New receivers always parse the bounded extension.</summary>
+    public bool PropagateTraceContext { get; set; }
+    /// <summary>Emits detailed per-request events. Off by default; traces and operation metrics are independent.</summary>
+    public bool CaptureRequestEvents { get; set; }
+    /// <summary>Includes this owner's resource state and overloads in the process-wide TrueMoon.Enerit.Pipes meter.
+    /// On by default; independent of Core operation telemetry and request events. Options are copied by each owner.</summary>
+    public bool MetricsEnabled { get; set; } = true;
 
     internal PipesTransportOptions Snapshot()
     {

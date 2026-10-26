@@ -10,6 +10,7 @@ using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Aether.Preview;
+using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether;
 
@@ -33,13 +34,22 @@ public static class AppConfigurationExtensions
                 throw new InvalidOperationException("Aether is already registered. Configure its runtime factory through UseAether.");
             services.Singleton<IRuntimeFactory>(resolver => snapshot.RuntimeFactory(resolver)
                     ?? throw new InvalidOperationException("Aether runtime factory returned null."));
-            Register<PipesInvocationClient<IEngineControl>, string>(services, _ =>
-                new PipesInvocationClientFactory<IEngineControl>(new AetherEvents<PipesInvocationClient<IEngineControl>>()));
+            Register<PipesInvocationClient<IEngineControl>, string>(services, resolver =>
+                new PipesInvocationClientFactory<IEngineControl>(resolver.Resolve<IEventsSource<PipesInvocationClient<IEngineControl>>>(),
+                    new PipesTransportOptions { PropagateTraceContext = true }, resolver.Resolve<IDiagnosticTelemetry>()));
             Register<IRuntimeLease, SessionLaunch>(services, resolver =>
                 new Factory<IRuntimeLease, SessionLaunch>(resolver.Resolve<IRuntimeFactory>().Create));
-            Register<SessionSupervisor>(services, resolver => new Factory<SessionSupervisor>(() =>
-                new(resolver.Resolve<IFactory<IRuntimeLease, SessionLaunch>>(), snapshot.HostContractId,
-                    snapshot.GameBuildId, snapshot.ReportDirectory, snapshot.Deadlines, snapshot.StatusChanged)));
+            Register<SessionSupervisor>(services, resolver =>
+            {
+                var leases = resolver.Resolve<IFactory<IRuntimeLease, SessionLaunch>>();
+                var events = resolver.Resolve<IEventsSource<SessionSupervisor>>();
+                return new Factory<SessionSupervisor>(() => new(leases, snapshot.HostContractId,
+                    snapshot.GameBuildId, snapshot.ReportDirectory, snapshot.Deadlines, status =>
+                    {
+                        AetherDiagnosticEvents.Session(events, status);
+                        snapshot.StatusChanged?.Invoke(status);
+                    }));
+            });
             Register<GpuResourceHost>(services, _ => new Factory<GpuResourceHost>(() => new()));
             Register<IGameSession, Type>(services, resolver => new GameSessionFactory(resolver));
             Register<GameBuildLoader, GameBuildReference>(services, resolver =>
@@ -59,16 +69,32 @@ public static class AppConfigurationExtensions
             {
                 var transport = viewport ? resolver.Resolve<IFactory<IGameViewportTransport, GpuResourceHost>>() : null;
                 var receivers = resolver.Resolve<IFactory<FrameReceiver, (SharedFrameRing, ulong, LatencySamples)>>();
+                var events = resolver.Resolve<IEventsSource<FrameSession>>();
+                var telemetry = resolver.Resolve<IDiagnosticTelemetry>();
                 return new Factory<FrameSession, (SessionSupervisor Supervisor, GpuResourceHost Gpu)>(args =>
                     new(args.Supervisor, transport == null ? null : transport.Create(args.Gpu)
-                        ?? throw new InvalidOperationException("Viewport factory returned null."), receivers));
+                        ?? throw new InvalidOperationException("Viewport factory returned null."), receivers, events, telemetry));
             });
-            Register<GameBuildCompiler>(services, _ => new Factory<GameBuildCompiler>(() =>
-                new(snapshot.HostContractId, snapshot.BuildDirectory!, snapshot.BuildTimeout)));
-            Register<ScenePreview, FrameSession>(services, _ => new Factory<ScenePreview, FrameSession>(frames => new(frames)));
-            Register<GameReplacement, (SessionSupervisor Supervisor, FrameSession Frames)>(services, _ =>
-                new Factory<GameReplacement, (SessionSupervisor Supervisor, FrameSession Frames)>(args =>
-                    new(args.Supervisor, args.Frames, snapshot.ReplacementDeadlines)));
+            Register<GameBuildCompiler>(services, resolver =>
+            {
+                var events = resolver.Resolve<IEventsSource<GameBuildCompiler>>();
+                var telemetry = resolver.Resolve<IDiagnosticTelemetry>();
+                return new Factory<GameBuildCompiler>(() => new(snapshot.HostContractId,
+                    snapshot.BuildDirectory!, snapshot.BuildTimeout, events, snapshot.BuildRetention, telemetry));
+            });
+            Register<ScenePreview, FrameSession>(services, resolver =>
+            {
+                var events = resolver.Resolve<IEventsSource<ScenePreview>>();
+                var telemetry = resolver.Resolve<IDiagnosticTelemetry>();
+                return new Factory<ScenePreview, FrameSession>(frames => new(frames, events, telemetry));
+            });
+            Register<GameReplacement, (SessionSupervisor Supervisor, FrameSession Frames)>(services, resolver =>
+            {
+                var events = resolver.Resolve<IEventsSource<GameReplacement>>();
+                var telemetry = resolver.Resolve<IDiagnosticTelemetry>();
+                return new Factory<GameReplacement, (SessionSupervisor Supervisor, FrameSession Frames)>(args =>
+                    new(args.Supervisor, args.Frames, snapshot.ReplacementDeadlines, events, telemetry));
+            });
             Register<GameEditor, (SessionSupervisor Supervisor, FrameSession Frames, GameBuildCompiler Builds, GameReplacement Replacement)>(services, _ =>
                 new Factory<GameEditor, (SessionSupervisor Supervisor, FrameSession Frames, GameBuildCompiler Builds, GameReplacement Replacement)>(args =>
                     new(args.Supervisor, args.Frames, args.Builds, args.Replacement, snapshot.HostContractId)));

@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using TrueMoon.Diagnostics;
@@ -17,6 +18,9 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
     private readonly Dictionary<Guid, Request> _responses = [];
     private readonly ConcurrentDictionary<Task, byte> _writes = new();
     private readonly PipesTransportOptions _options;
+    private readonly IDiagnosticTelemetry? _telemetry;
+    private readonly PipesMetrics? _metrics;
+    private readonly Guid _clientId = Guid.NewGuid();
     private readonly PipesClientAdmission _admission;
     private readonly Task _listener;
     private readonly TaskCompletionSource _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -25,10 +29,12 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
     private bool _disposed;
     private volatile bool _connected;
 
-    private sealed class Request(Guid id, PipeStream stream)
+    private sealed class Request(Guid id, PipeStream stream, byte method, ActivityContext? context)
     {
         internal readonly Guid Id = id;
         internal readonly PipeStream Stream = stream;
+        internal readonly byte Method = method;
+        internal readonly ActivityContext? Context = context;
         internal readonly TaskCompletionSource<ReadOnlyMemory<byte>> Response = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal bool Sent, WriteFinished, RemoteFinished, LocalFinished, Released;
     }
@@ -43,18 +49,29 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
     /// <summary>Creates a caller-owned client; options are validated and copied before any IO starts.</summary>
     /// <param name="eventsSource">Borrowed diagnostics.</param><param name="pipeName">Endpoint without tm_ prefix.</param>
     /// <param name="options">Resource and local request limits.</param>
-    public PipesInvocationClient(IEventsSource<PipesInvocationClient<T>> eventsSource, string pipeName, PipesTransportOptions options) : base(pipeName)
+    public PipesInvocationClient(IEventsSource<PipesInvocationClient<T>> eventsSource, string pipeName, PipesTransportOptions options)
+        : this(eventsSource, pipeName, options, null) { }
+
+    /// <summary>Creates a client borrowing operation telemetry; the caller owns the client until actual stop completion.</summary>
+    public PipesInvocationClient(IEventsSource<PipesInvocationClient<T>> eventsSource, string pipeName, PipesTransportOptions options,
+        IDiagnosticTelemetry? telemetry) : base(pipeName)
     {
         ArgumentNullException.ThrowIfNull(eventsSource);
         ArgumentException.ThrowIfNullOrWhiteSpace(pipeName);
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Snapshot();
         _eventsSource = eventsSource;
-        _admission = new(_options);
-        _listenTaskScheduler = new TmTaskScheduler($"{Name}_listen", 1);
-        _taskScheduler = new TmTaskScheduler($"{Name}_write", 2);
-        _token = _cts.Token;
-        _listener = Task.Factory.StartNew(ListenAsync, CancellationToken.None, TaskCreationOptions.LongRunning, _listenTaskScheduler).Unwrap();
+        _telemetry = telemetry;
+        _metrics = _options.MetricsEnabled ? new PipesMetrics() : null;
+        try
+        {
+            _admission = new(_options, _metrics);
+            _listenTaskScheduler = new TmTaskScheduler($"{Name}_listen", 1);
+            _taskScheduler = new TmTaskScheduler($"{Name}_write", 2);
+            _token = _cts.Token;
+            _listener = Task.Factory.StartNew(ListenAsync, CancellationToken.None, TaskCreationOptions.LongRunning, _listenTaskScheduler).Unwrap();
+        }
+        catch { _metrics?.Dispose(); throw; }
     }
 
     public bool IsConnected => _connected;
@@ -67,6 +84,9 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
 
     private async Task ListenAsync()
     {
+        // A connection loop must not inherit the operation that happened to construct its owner.
+        Activity.Current = null;
+        PipesDiagnostics.RemoteContext = null;
         while (!_token.IsCancellationRequested)
         {
             PipeStream? stream = null;
@@ -79,7 +99,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                     if (_disposed) return;
                     _connected = true;
                 }
-                _eventsSource.Write(() => "Connected");
+                PipesDiagnostics.Legacy(() => _eventsSource.Write(() => "Connected"));
                 while (!_token.IsCancellationRequested)
                 {
                     var (guid, status, length) = stream.GetResponseHeader();
@@ -90,11 +110,13 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                         if (length > 0) { memory = MemoryPoolUtils.Create(length); stream.ReadFullBuffer(memory); }
                         var error = status == 1 ? PipesProtocol.DecodeError(memory.Span) : null;
                         var late = false;
+                        Request? pending;
                         lock (_responses)
                         {
-                            if (!_responses.Remove(guid, out var request)) late = true;
+                            if (!_responses.Remove(guid, out pending)) late = true;
                             else
                             {
+                                var request = pending;
                                 request.RemoteFinished = true;
                                 if (status == 1) late = !request.Response.TrySetException(new InvocationException(error!));
                                 else if (request.Response.TrySetResult(memory)) memory = default;
@@ -102,7 +124,17 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                                 ReleaseIfFinished(request);
                             }
                         }
-                        if (late) _eventsSource.Write(() => $"Discarded late response {guid}", "LateResponse");
+                        if (late)
+                        {
+                            PipesDiagnostics.Legacy(() => _eventsSource.Write(() => $"Discarded late response {guid}", "LateResponse"));
+                            PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, 2104, "Pipes.Client.LateResponse", () =>
+                            {
+                                var properties = PipesDiagnostics.Properties(typeof(T).FullName!, guid, _clientId, pending?.Method ?? 0, false);
+                                properties["RequestTraceId"] = pending?.Context?.TraceId.ToHexString();
+                                properties["RequestSpanId"] = pending?.Context?.SpanId.ToHexString();
+                                return properties;
+                            });
+                        }
                     }
                     finally { memory.TryReturn(); }
                 }
@@ -158,45 +190,66 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
     {
         ArgumentNullException.ThrowIfNull(func);
         lock (_responses) ObjectDisposedException.ThrowIf(_disposed, this);
-        using var timeout = new CancellationTokenSource(_options.RequestTimeout);
-        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken, _token);
-        // Queued writers outlive the caller's using scope: capture the token value before scheduling.
-        var requestToken = cancellation.Token;
-        await _admission.EnterAsync(requestToken).ConfigureAwait(false);
-        var ownsSlot = true;
-        Request? request = null;
+        var requestId = Guid.NewGuid();
+        IReadOnlyDictionary<string, string?> Properties() => PipesDiagnostics.Properties(typeof(T).FullName!, requestId, _clientId, methodCode, false);
+        using var operation = PipesDiagnostics.Start(_telemetry, "Enerit.Pipes.Client", ActivityKind.Client,
+            Activity.Current == null ? PipesDiagnostics.RemoteContext : null, Properties);
+        // Capture before admission/scheduling; writer threads never infer a parent from their own async context.
+        var context = PipesDiagnostics.CurrentContext();
+        PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, 2100, "Pipes.Client.Starting", Properties);
         try
         {
-            await CheckConnectedAsync(requestToken).ConfigureAwait(false);
-            lock (_responses)
+            using var timeout = new CancellationTokenSource(_options.RequestTimeout);
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken, _token);
+            var requestToken = cancellation.Token;
+            await _admission.EnterAsync(requestToken).ConfigureAwait(false);
+            var ownsSlot = true;
+            Request? request = null;
+            TResult result;
+            try
             {
-                ObjectDisposedException.ThrowIf(_disposed, this);
-                if (!_connected) throw new IOException("Invocation connection closed before admission.");
-                request = new(Guid.NewGuid(), PipeStream);
-                _responses.Add(request.Id, request);
-                try
+                await CheckConnectedAsync(requestToken).ConfigureAwait(false);
+                lock (_responses)
                 {
-                    var write = Task.Factory.StartNew(() => SendAsync(request, methodCode, action, requestToken),
-                        CancellationToken.None, TaskCreationOptions.PreferFairness, _taskScheduler).Unwrap();
-                    _writes.TryAdd(write, 0);
-                    _ = write.ContinueWith(t => _writes.TryRemove(t, out _), CancellationToken.None,
-                        TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-                    ownsSlot = false;
+                    ObjectDisposedException.ThrowIf(_disposed, this);
+                    if (!_connected) throw new IOException("Invocation connection closed before admission.");
+                    request = new(requestId, PipeStream, methodCode, context);
+                    _responses.Add(request.Id, request);
+                    try
+                    {
+                        var write = Task.Factory.StartNew(() => SendAsync(request, methodCode, action, requestToken),
+                            CancellationToken.None, TaskCreationOptions.PreferFairness, _taskScheduler).Unwrap();
+                        _writes.TryAdd(write, 0);
+                        _ = write.ContinueWith(t => _writes.TryRemove(t, out _), CancellationToken.None,
+                            TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                        ownsSlot = false;
+                    }
+                    catch { _responses.Remove(request.Id); throw; }
                 }
-                catch { _responses.Remove(request.Id); throw; }
+                var registration = requestToken.Register(() => request.Response.TrySetCanceled(requestToken));
+                _ = request.Response.Task.ContinueWith(_ => registration.Dispose(), CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                var memory = await request.Response.Task.ConfigureAwait(false);
+                var previous = _decoding.Value;
+                try { _decoding.Value = true; result = func(memory); }
+                finally { _decoding.Value = previous; memory.TryReturn(); }
             }
-            var registration = requestToken.Register(() => request.Response.TrySetCanceled(requestToken));
-            _ = request.Response.Task.ContinueWith(_ => registration.Dispose(), CancellationToken.None,
-                TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-            var memory = await request.Response.Task.ConfigureAwait(false);
-            var previous = _decoding.Value;
-            try { _decoding.Value = true; return func(memory); }
-            finally { _decoding.Value = previous; memory.TryReturn(); }
+            finally
+            {
+                if (ownsSlot) _admission.Release();
+                else lock (_responses) { request!.LocalFinished = true; ReleaseIfFinished(request); }
+            }
+            operation?.Complete();
+            PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, 2101, "Pipes.Client.Completed", Properties);
+            return result;
         }
-        finally
+        catch (Exception error)
         {
-            if (ownsSlot) _admission.Release();
-            else lock (_responses) { request!.LocalFinished = true; ReleaseIfFinished(request); }
+            var cancelled = error is OperationCanceledException;
+            operation?.Complete(cancelled ? DiagnosticOperationOutcome.Cancelled : DiagnosticOperationOutcome.Failed, error);
+            PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, cancelled ? 2102 : 2103,
+                cancelled ? "Pipes.Client.Cancelled" : "Pipes.Client.Failed", Properties, error);
+            throw;
         }
     }
 
@@ -207,10 +260,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         {
             token.ThrowIfCancellationRequested();
             using var writer = new ArrayPoolBufferWriter<byte>();
-            SerializationUtils.Write(request.Id, writer);
-            SerializationUtils.Write(method, writer);
-            var lengthPosition = writer.WrittenCount;
-            SerializationUtils.Write(0, writer);
+            var lengthPosition = PipesRequestHeader.Write(writer, request.Id, method, _options.PropagateTraceContext ? request.Context : null);
             action?.Invoke(writer);
             var length = writer.WrittenCount - lengthPosition - sizeof(int);
             PipesProtocol.ValidatePayloadLength(length);
@@ -265,6 +315,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
             _listenTaskScheduler.Dispose();
             _taskScheduler.Dispose();
             _cts.Dispose();
+            _metrics?.Dispose();
             _completion.TrySetResult();
         }
         catch (Exception error) { _completion.TrySetException(error); throw; }

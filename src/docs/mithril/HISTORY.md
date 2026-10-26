@@ -1,5 +1,15 @@
 # Mithril: история реализации и проверок
 
+## Ready-file race: повторное наблюдение — 2026-10-26
+
+В initial full Debug Core diagnostics run Mithril98/99: scenario concurrent-stop,
+Restart_OwnedSequence_EnforcesPolicyBudgetDelayAndStop, ready-1.json sharing
+IOException в MithrilRestartProbe.Fixture.ReadyAsync line181 после File.Exists.
+Mithril production/fixture не менялись. Последующие full Debug99/99 и Release99/99
+не являются исправлением этого race; follow-up из плана сохраняется.
+[Initial/final TRX и error](../../TestResults/DiagnosticsCore-20261026-1/verification.json),
+[общие команды/scope](../core/HISTORY.md#emergency-и-managed-jsonl-runs--2026-10-26).
+
 ## ED4a: компактный заголовок и меню — 2026-10-23
 
 Наблюдение общего UI integration run: в solution-183128349 full Debug Mithril98/99,

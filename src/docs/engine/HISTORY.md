@@ -1,5 +1,215 @@
 # Engine / Editor: история решений и проверок
 
+## IPC trace context в control factories — 2026-10-26
+
+UseAether и UseAetherRuntime (включая PreviewRuntime) внедряют borrowed telemetry и
+PropagateTraceContext=true в штатные generic pipes client/server factories.
+CaptureRequestEvents сохраняет false; standalone прежних signatures оставляет
+legacy defaults. Factory override и App lifecycle/ownership сохраняются.
+Same-build HostId уже включает Enerit assembly; generator/service payload прежние.
+[API](../../TrueMoon.Aether/README.md#диагностика),
+[wire и compatibility](../enerit/DIAGNOSTICS.md).
+
+Две новые cases
+AetherPipesTraceTests.AppGenericEngineControlFactories_PropagateTraceWithoutActivatingEngineOrRuntime
+на Cobalt/MS DI создают App и реальные localpipe products через штатные factories.
+Точные root/client/server IDs/kinds/remote parent, Current через await, scopes и
+borrowed/App-owned lifetime проверены. Guard factories подтверждают отсутствие
+активации host/runtime/frame/GPU/child; это не native engine process proof.
+
+Final narrow2/2; Aether1218/1218 Debug и1217/1218 Release, Editor741/741 в обеих
+конфигурациях. Release повторил прежний ENG2
+FrameTransportTests.Receiver_TwoBuffersKeepLatestWhileUiLeaseStaysUnchangedAndDrain:
+null из TakeLatest, Assert.NotNull line177 после Received>=5. CPU receiver и его тест
+этим срезом не менялись. Claim pending до CopyLatest остаётся source inference;
+нужен deterministic reproduction и отдельный ownership fix. Повтор для green не
+делался; этот failure не скрыт за успешными100новыми cases или Debug4021/4021.
+Release full4020/4021, failed1/skipped0. Builds0errors:
+Debug nonincremental1530warnings, Release incremental1300warnings, SDK10.0.403.
+[Полная matrix/команды](../enerit/HISTORY.md#ene6d1-trace-context-через-pipes--2026-10-26),
+[evidence](../../TestResults/DiagnosticsIpc-20261026-1/verification.json).
+
+Отдельный source Enerit generated-proxy/child trace proof выполнен full suites;
+native Aether/published/GPU/package/performance acceptance не повторялись.
+ENG8a частичен: далее IPC/command/frame aggregates, bounded child delivery и
+ED6a/ED8a console/export. ED4c.2 → ED4c.3/workflow и прежние hardware gates прежние.
+
+## Операции и трассы диагностики — 2026-10-26
+
+Продолжение «давай следующий шаг»: первый ENG8a.1/3 operation consumer поверх
+[Core CORE6d](../core/HISTORY.md#операции-и-трассы-диагностики--2026-10-26).
+UseAether передаёт borrowed events/telemetry через существующие factories,
+старые standalone constructors сохранены. Новых DI aliases/owners нет.
+
+Build scope включает reap/drain/cleanup, terminal log и measurement предшествуют
+TCS completion. Replace scope включает recovery; terminal log сохраняет original
+cause, phase, rollback flags и отдельный RecoveryErrorType. RecoveryResult имеет
+отдельный error snapshot. Failed Replace остаётся Failed при successful rollback.
+Preview.Show/Resize ждут acknowledged first-present; Stop scopes включают cleanup.
+FrameFault всегда Failed и фиксирует старые identity/surface до drain, отдельный
+FaultCleanupFailed сохраняет обе причины. Presented callbacks не добавляют logs/scopes.
+[Схема событий и IDs](../../TrueMoon.Aether/README.md#диагностика).
+
+| Требование | Точное доказательство в AetherTelemetryTests |
+| --- | --- |
+| Реальный compiler success/failure/cancel и terminal before TCS | Build_EndsCorrelatedScopeBeforeReturningResultFailureOrCancellation |
+| Replace success/cancel/expected identity | Replace_SuccessAndPreflightCancellationPreserveExpectedIdentityAndOperationOutcome |
+| Original/recovery причины, successful/failed rollback и correlation | Replace_RecoveryFieldsAndDistinctCausesRemainCorrelatedToOriginalFailure |
+| Preview first-present/resize/stop, обе DI, отсутствие per-frame logs | Preview_ShowResizeAndStopCompleteOnlyAfterActualPresentationAndDoNotLogEveryFrame |
+| Preview error/cancel и cleanup retry | Preview_FailureAndCancellationKeepOriginalOutcomeAndCloseTheOperation; PreviewStop_CleanupFailureIsReportedAndRetainedUntilSuccessfulRetry |
+| Frame fault до/после presentation, metadata до drain и cleanup failure | FrameFault_CapturesPreDrainIdentitySurfaceAndOriginalFailedOutcome |
+| Ошибающиеся injected diagnostics не меняют результат/exception | InjectedTelemetryFailure_DoesNotReplaceBusinessResultOrOriginalException; SafeOperation_OnlyCompletesAndDisposesBorrowedScopeOnce |
+
+[Тестовый source](../../TrueMoon.Aether.Tests/AetherTelemetryTests.cs).
+Новые25Aether cases; narrow32/32 включает прежние7diagnostics cases.
+После найденной full-suite default-App registration regression Core добавил2cases,
+Core narrow56/56 и полный Aether Debug1216/1216 прошли. Финальный full solution:
+**3921/3921 Debug и3921/3921 Release**, failed/skipped0; Aether1216,
+Editor741, Core308 в каждой конфигурации. SDK10.0.403, builds0errors:
+Debug nonincremental1530warnings, Release incremental1300warnings.
+[Все команды/initial failures](../core/HISTORY.md#операции-и-трассы-диагностики--2026-10-26),
+[verification](../../TestResults/DiagnosticsTelemetry-20261026-1/verification.json)
+содержат34TRX/12binlogs и hashes. Нового native/published/GPU/package/performance
+proof нет; текущие passing не закрывают прежние races или hardware acceptance.
+
+ENG8a остаётся частичным: следующий срез — ENE6d IPC propagation, затем
+Start/Stop/Play/command producers, frame/queue/latency aggregates и live delivery/
+Editor console/export. Authoring очередь ED4c.2 → ED4c.3/workflow не изменена.
+
+## Managed logger runs в Editor и Runtime — 2026-10-26
+
+EditorApplication включает Core managed JSONL: normal root
+%TEMP%/TrueMoon/Diagnostics/Editor, smoke report/diagnostics/editor.
+RuntimeEntryPoint использует report/diagnostics/runtime, новый GUID run на
+logger lifetime; quotas/leases/emergency принадлежат Core.
+Reports/artifacts/raw output и legacy непомеченные каталоги отдельно.
+Source wiring compiled; managed Aether1191 и Editor741 Debug/Release прошли,
+Core252/full solution3840/configuration в финальных runs, failed/skipped0.
+Initial Debug повторил Mithril race и Core test-isolation defect; последний
+исправлен только в тесте. Новый manual native/published/GPU/performance/package
+proof не запускался. [Матрица и команды](../core/HISTORY.md#emergency-и-managed-jsonl-runs--2026-10-26).
+
+## Диагностика сборок: ограничение хранения — 2026-10-26
+
+Продолжение ENG8a.2: GameBuildRetentionOptions фиксируется при UseAether setup и
+при low-level создании GameBuildCompiler. Default — 16 завершённых jobs, 64 MiB
+суммарно с ownership marker и 7 суток от завершения cleanup. Опубликованные
+content-addressed игровые artifacts не входят в этот budget и не удаляются.
+
+Перед запуском компилятора и после reap/drain/удаления work/output выполняется
+best-effort sweep. Новые GUID jobs получают versioned .build-diagnostics marker;
+эксклюзивная lease удерживается до окончания cleanup. Общая .retention.lock
+согласует cleaners разных экземпляров/процессов без ожидания занятой lease.
+Завершённые каталоги сортируются по completion UTC и ordinal имени при равенстве;
+удаляются старейшие сверх count/bytes/age. Равенство лимиту допускается.
+
+Последний завершённый job в корне и явно защищённый текущий job сохраняются,
+даже если лимит невозможно выполнить. RetentionStatus сообщает retained bytes/
+jobs, active/skipped/deleted, failures, bounded LastError, IsOverBudget и
+MaintenanceBusy. Warning Build.RetentionLimited/1205 содержит JobId и counters;
+сбой retention не подменяет успешный result или исходный GameBuildException.
+
+Удаление строго нерекурсивное: только GUID job с корректным completed marker и
+плоским набором build.stdout.log/build.stderr.log/build.output.json. Root/jobs/
+job ancestry и entries проверяются на reparse points. Legacy unmarked jobs,
+незавершённые/повреждённые markers, неизвестные файлы и abandoned staging после
+crash сохраняются и отражаются отдельно. Поэтому это budget управляемых
+завершённых diagnostics, а не обещание общего размера artifact root.
+После блокировки файла marker сохраняется; следующий sweep повторяет cleanup.
+Обслуживание запускается при сборках, фонового таймера нет; hostile внешняя
+подмена путей между проверкой и удалением вне trusted-local/cooperating scope.
+
+| Требование | Evidence: точное имя теста |
+| --- | --- |
+| Count и порядок по завершению, стабильное равенство дат | Sweep_CountLimitDeletesOldestByCompletionInsteadOfDirectoryMtime; Sweep_EqualCompletionTimesUseOrdinalDirectoryTieBreaker |
+| Суммарные bytes с marker: меньше/равно/больше границы | Sweep_ByteBudgetIncludesMarkerAndRetainsExactEquality |
+| Age строго сверх лимита, нормализация UTC | Sweep_AgeExpiresOnlyStrictlyAfterCompletionLimit |
+| Newest/explicit protection и недостижимый count/bytes/age budget | Sweep_ProtectsNewestAndExplicitJobAndReportsUnsatisfiedBudget |
+| Active job защищён от другого store, затем становится eligible | Sweep_ProtectsActiveJobAcrossStoreInstancesUntilItCompletes |
+| Root contention без ожидания и retry | Sweep_MaintenanceContentionPreservesJobsAndRecoversWithoutBlocking; Sweep_MaintenanceFailureIsObservableAndCanBeRetried |
+| Неизвестные/legacy/incomplete/nested jobs и artifacts сохранены | Sweep_PreservesUnknownIncompleteAndNonflatDirectoriesWhilePruningOwnedJobs; Sweep_NeverInspectsOrDeletesPublishedArtifactsOutsideJobs |
+| Reparse root/jobs/job/entry не затрагивает eligible external archive | Sweep_RejectsReparseAncestryAndEntriesWithoutTouchingTargets |
+| Failed delete сохраняет ownership, остальные jobs очищаются, retry проходит | Sweep_DeleteFailurePreservesOwnershipContinuesAndRetriesAfterHandleRelease |
+| Options копируются, невалидные limits отклонены до IO | Store_CopiesAllRetentionLimitsBeforeCallerMutatesOptions; InvalidRetentionLimits_AreRejectedBeforeCreatingDirectories |
+| App Cobalt/MS DI: success → failure сохраняет последний job и game artifact | AppBuildRetention_SnapshotsOptionsRetainsLatestFailureAndPreservesPublishedArtifact |
+| Retention failure не заменяет success/compiler error, Warning1205 связан с JobId | Compiler_RetentionDeleteFailureDoesNotReplaceSuccessOrOriginalBuildError |
+| Пустой store не создаёт архив | Sweep_EmptyStoreDoesNotCreateArchiveOrReportLoss |
+
+Добавлены 42 cases (38 unit + 4 actual compiler/App), узкий Debug42/42.
+Полные Aether1191/1191 и Editor741/741 в Debug/Release; всего solution3767/3767
+в каждой конфигурации, failed/skipped0, 20TRX. Build Debug nonincremental и
+Release incremental: 0errors/1530warnings каждый. SDK10.0.403, Windows x64/net10.0.
+Source fingerprints968, tested binary fingerprints20 и 4 binlogs сохранены в
+[verification.json](../../TestResults/DiagnosticsRetention-20261026-1/verification.json).
+Исторический TestResults/Diagnostics-20261025-1792916778832 в текущем workspace
+отсутствует; прежние ссылки сохраняют исходные пути. Его native/published
+результаты ниже являются исторической записью, а не проверкой этого запуска.
+
+```powershell
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v:quiet -m -bl:TestResults/DiagnosticsRetention-20261026-1/build-Debug.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug -v:minimal --logger trx --results-directory TestResults/DiagnosticsRetention-20261026-1/Debug -bl:TestResults/DiagnosticsRetention-20261026-1/tests-Debug.binlog
+dotnet build TrueMoon.slnx --no-restore -c Release -v:quiet -m -bl:TestResults/DiagnosticsRetention-20261026-1/build-Release.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Release -v:minimal --logger trx --results-directory TestResults/DiagnosticsRetention-20261026-1/Release -bl:TestResults/DiagnosticsRetention-20261026-1/tests-Release.binlog
+```
+
+Это новые managed/SDK-process проверки; отдельный manual native/published/UI/
+hardware/package/performance run в этом срезе не выполнялся. Исторические
+Mithril ready-file и CPU FrameReceiver races не объявлены исправленными.
+ENG8a.1/2 и CORE6 остаются частичными. Далее — Core emergency output и age/total
+directories/runs retention, дополнительные engine events, затем traces/metrics/
+IPC context и ED6a/ED8a console/export; очередь authoring/editor не менялась.
+
+## Единая диагностика: первый профиль — 2026-10-25
+
+Первый consumer CORE6 и ENG8a.1/2: UseAether/UseAetherRuntime используют injected
+sources; session/process/build events имеют stable IDs, context и exception
+snapshots. EditorApplication и runtime подключают App-owned JSONL pipeline.
+Protocol/wire/session authority не менялись; Microsoft.Extensions.Logging не добавлен.
+
+Runtime stdout/stderr — live32KiChar tails и четыре fixed file slots на поток,
+каждый≤1MiB UTF8. Process diagnostics inspection≤256records/64leases, supervisor
+остаётся owner. Compiler использует общий ProcessOutputCapture и build.output.json
+с loss/error status; прежний exit code/DiagnosticsDirectory сохранён.
+[API](../../TrueMoon.Aether/README.md#диагностика),
+[CORE6 contracts/limitations](../core/DIAGNOSTICS.md).
+
+| Требование | Evidence |
+| --- | --- |
+| State/scene/tick/generation correlation + legacy callback | SessionTransitions_AreCorrelatedAndPreserveConfiguredObserver, Cobalt/DI |
+| Исходная launch error и Error/Phase metadata | SessionLaunchFailure_PreservesOriginalCauseAndPublishesErrorWithSessionIdentity, Cobalt/DI |
+| Build job events + drained raw metadata | AppCompiler_ReportsSuccessfulJobAndPersistsDrainedOutputStatus, Cobalt/DI |
+| Compile failure сохраняет logs/status/cause | AppCompiler_ReportsCompilerFailureAndRetainsTextAndOutputMetadata |
+| Реальный own child/двойной flood/retention/cleanup | EngineSessionProbe diagnostics:6generations, each2 113 547chars/stream без newline, live tails≤32768chars,8files≤1MiB, Step/Stop, затем launch-failure, structured108records/written108/no sink losses и reap |
+
+Новые Aether7cases прошли отдельно и в полных Aether1149/1149 Debug/Release;
+Editor741/741 в каждой конфигурации. Full solution3725/3725 Debug и3725/3725 Release,
+failed/skipped0,20TRX. Build0errors/1530warnings, Debug nonincremental.
+Результаты Core/Cobalt/Enerit/Mithril/UI сохраняют собственные assembly counts
+в [verification.json](../../TestResults/Diagnostics-20261025-1792916778832/verification.json).
+
+Canonical process proof: current Debug apphost и published Release, скопированный
+в свежий OS temp и запущенный с working directory там же; по6started children,
+12reaped total, плюс по1expected launch failure без child. Дополнительный published
+Release run внутри evidence тоже прошёл. До копирования опубликован один current
+artifact; top-level payload hashes копии совпали. Source/binary fingerprints и
+outside location записаны в verification.json/outside-location.json.
+
+```powershell
+dotnet publish ManualTests/EngineSessionProbe/EngineSessionProbe.csproj --no-restore -c Release -o TestResults/Diagnostics-20261025-1792916778832/publish -v:quiet -bl:TestResults/Diagnostics-20261025-1792916778832/publish-Release.binlog
+./ManualTests/EngineSessionProbe/bin/Debug/net10.0/EngineSessionProbe.exe diagnostics TestResults/Diagnostics-20261025-1792916778832/native-final-Debug
+```
+
+Published executable выполнялся в OS temp; exact directories и captured report
+указаны в [location](../../TestResults/Diagnostics-20261025-1792916778832/outside-location.json) и
+[native report](../../TestResults/Diagnostics-20261025-1792916778832/native-outside-Release/diagnostics.json).
+Общие build/test команды — в [Core history](../core/HISTORY.md#структурированная-диагностика-первый-профиль--2026-10-25).
+
+Remaining: build jobs total/age retention, additional Replace/preview/frame event
+coverage, cross-process trace context, spans/metrics, UI console/export и full
+fault/long-load acceptance. Предыдущие Mithril ready-file/CPU receiver races не
+объявлены исправленными новым passing run. Packages/physical/golden/hardware loss/
+VRAM/performance/long trends не повторены; alpha readiness не закрыта.
+
 ## ED4f.2: системная граница окна — 2026-10-25
 
 Согласованный24октября дизайн реализован и завершён25октября: главное окно включает

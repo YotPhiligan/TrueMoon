@@ -91,6 +91,24 @@ timeout: dependencies остаются owned до реального завер�
 и long resource trends — отдельная приёмка перед рабочей поставкой, не условие
 локального headless authoring. Domain preview/frame lifecycle остаётся в Aether.
 
+### MIT6c: диагностика и захват process output — уточнение 2026-10-25
+
+Пользователь согласовал развитие логирования; bounded capture/retention остаётся
+запланированной частью MIT6c. Общий pipeline —
+[CORE6](../core/PLAN.md#core6-структурированная-диагностика--2026-10-25),
+подробная задача текущего владельца redirected engine/build stdout/stderr —
+[Aether ENG8a.2](../engine/PLAN.md#eng8a-диагностика-сессий-и-процессного-вывода--2026-10-25).
+Mithril сохраняет UnitProcessDiagnostic run/generation/exit/kill/reap semantics;
+их mapping на engine session принадлежит Aether. Автоматический перенос захвата
+в Mithril или расширение hosting/restart API этим решением не назначены.
+
+В process acceptance включить simultaneous stdout/stderr flood, вывод без newline,
+early failure/abrupt exit/kill, retained-output overflow и EOF/drain timeout.
+Оба потока вычитываются постоянно даже после исчерпания storage; проверить, что
+диагностика не мешает stop/kill/reap, loss/truncation видны, reader/file ownership
+завершается либо сохраняется для явного cleanup retry. Long-session resource trends
+и parent-death containment остаются отдельными незавершёнными частями MIT6c.
+
 ### MIT6a: первый load-stop профиль — 2026-10-23
 
 По запросу приступить к работе выбран первый ограниченный срез с

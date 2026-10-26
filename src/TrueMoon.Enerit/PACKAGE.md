@@ -55,7 +55,34 @@ response or disconnect and local send/decode cleanup. Cancelling a partial write
 closes that connection; a partially written frame is never replayed. The existing
 LateResponse diagnostic is preserved.
 
-Client, server and standalone connection expose `StopAsync`, `Completion` and
+App factories borrow IDiagnosticTelemetry for Enerit.Pipes.Client/Server operation
+traces and count/duration metrics. Listen to ActivitySource/Meter TrueMoon; metric
+dimensions are only operation/outcome. PropagateTraceContext is opt-in (false by
+default) and transfers a fixed W3C trace/span/Recorded context before the unchanged
+service payload. Legacy requests remain 21 bytes of header; traced requests use a
+versioned 51-byte header. New readers accept both; old readers reject traced requests
+before dispatch. Update both peers together; no fallback or replay is performed.
+Malformed trace IDs are ignored without changing dispatch; malformed/unsupported
+header framing closes the connection. Baggage/tracestate and payload logs are excluded.
+
+CaptureRequestEvents is independently opt-in. Request/client/connection IDs remain
+in traces/events, never metric dimensions. Local cancellation still retains sent
+capacity; late response metadata contains the original request trace/span IDs without
+retaining an Activity. Constructors/factories keep their former signatures and add
+overloads borrowing telemetry; only the application owns that dependency.
+
+The process-wide `TrueMoon.Enerit.Pipes` meter provides observable resource instruments that
+report admitted/queued client calls, active server requests, logical request bytes
+and owned connections. `truemoon.enerit.pipes.rejected` is cumulative and has only
+three side/reason combinations: client/queue_full, server/requests, server/bytes.
+Other resource instruments have no tags. `PipesTransportOptions.MetricsEnabled`
+defaults to true and is copied with the limits; it is independent of Core operation
+metrics. Observers collect current state, including work admitted before discovery;
+measurement callbacks never run in admission/Invoke. Successful drain removes
+numeric owner state; cancelling a Stop wait retains it. No transport/handler or
+payload is retained by the metric registry. Overload totals live until process exit.
+
+Client, server and standalone connection expose `StopAsync`, `Completion` and implement
 `IAsyncDisposable`. Stop fences admission, interrupts IO and drains owned work.
 Cancelling the Stop wait does not abandon that drain: keep borrowed handler
 dependencies alive until Completion finishes. Disposal from the client's own

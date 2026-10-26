@@ -10,6 +10,7 @@ using TrueMoon.Generated.TrueMoon.Aether;
 using TrueMoon.Mithril;
 using TrueMoon.Services;
 using TrueMoon.Aether.Preview;
+using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether;
 
@@ -56,19 +57,20 @@ public static class RuntimeConfigurationExtensions
                 Register<PreviewGameSession>(services, _ => new Factory<PreviewGameSession>(() => new()));
             Register<FrameProducer>(services, _ => new Factory<FrameProducer>(() => new()));
             Register<UnitParentProcessEventsHandler>(services, resolver => new Factory<UnitParentProcessEventsHandler>(() =>
-                    new(resolver.Resolve<IConfiguration>(), resolver.Resolve<IAppLifetime>(), new AetherEvents<UnitParentProcessEventsHandler>())));
+                    new(resolver.Resolve<IConfiguration>(), resolver.Resolve<IAppLifetime>(), resolver.Resolve<IEventsSource<UnitParentProcessEventsHandler>>())));
             Register<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)>(services, _ =>
                     new Factory<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)>(args =>
                         new(args.Launch.Identity, args.Game, Environment.ProcessId, args.Frames.Configure, () => args.Frames.Dropped,
                             args.Launch.RequireRestore, args.Launch.Role)));
-            Register<PipesInvocationServer<IEngineControl>, PipesInvocationServerArguments<IEngineControl>>(services, _ =>
-                    new PipesInvocationServerFactory<IEngineControl>(new AetherEvents<PipesInvocationServer<IEngineControl>>()));
+            Register<PipesInvocationServer<IEngineControl>, PipesInvocationServerArguments<IEngineControl>>(services, resolver =>
+                    new PipesInvocationServerFactory<IEngineControl>(resolver.Resolve<IEventsSource<PipesInvocationServer<IEngineControl>>>(),
+                        new PipesTransportOptions { PropagateTraceContext = true }, resolver.Resolve<IDiagnosticTelemetry>()));
             Register<PipesInvocationServer<IEngineControl>, (SessionLaunch Launch, RuntimeProtocol Protocol)>(services, resolver =>
                 {
                     var pipes = resolver.Resolve<IFactory<PipesInvocationServer<IEngineControl>, PipesInvocationServerArguments<IEngineControl>>>();
                     return new Factory<PipesInvocationServer<IEngineControl>, (SessionLaunch Launch, RuntimeProtocol Protocol)>(args =>
                         pipes.Create(new(args.Launch.Endpoint, new BoundedControlHandler(new EngineControlInvocationServerHandler(
-                            args.Protocol, new AetherEvents<EngineControlInvocationServerHandler>())))));
+                            args.Protocol, resolver.Resolve<IEventsSource<EngineControlInvocationServerHandler>>())))));
                 });
             Register<AetherRuntimeHost, SessionLaunch>(services, resolver => new RuntimeHostFactory(
                     resolver.Resolve<AetherHost>(), resolver.Resolve<IAppLifetime>(), parentId,

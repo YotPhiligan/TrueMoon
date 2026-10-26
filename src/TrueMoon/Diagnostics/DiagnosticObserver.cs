@@ -9,11 +9,13 @@ internal sealed class DiagnosticObserver : IObserver<DiagnosticListener>, IDispo
     private readonly LoggingObserver _loggingObserver;
     private readonly Dictionary<DiagnosticListener, SourceSubscription> _subscriptions = new();
     private bool _disposed;
+    private readonly DiagnosticPipeline? _pipeline;
 
-    public DiagnosticObserver(DiagnosticsConfiguration configuration)
+    public DiagnosticObserver(DiagnosticsConfiguration configuration, DiagnosticPipeline? pipeline = null)
     {
         _configuration = configuration;
-        _loggingObserver = new LoggingObserver(configuration);
+        _pipeline = pipeline;
+        _loggingObserver = new LoggingObserver(configuration, pipeline);
     }
 
     public void OnNext(DiagnosticListener value)
@@ -29,7 +31,10 @@ internal sealed class DiagnosticObserver : IObserver<DiagnosticListener>, IDispo
         }
         try
         {
-            subscription.Attach(value.Subscribe(subscription));
+            // Preserve virtual legacy Subscribe dispatch, including third-party listener completion hooks.
+            subscription.Attach(_pipeline is null ? value.Subscribe(subscription) :
+                value.Subscribe(subscription, (eventName, context, _) => context is not DiagnosticLevel level ||
+                    _configuration.ListenerSnapshot.Length != 0 || _pipeline.IsEnabled(level, value.Name, eventName)));
             // A listener disposed before Subscribe can return an empty handle without OnCompleted.
             if (!value.IsEnabled()) Remove(value, subscription);
         }
@@ -83,7 +88,7 @@ internal sealed class DiagnosticObserver : IObserver<DiagnosticListener>, IDispo
 
         public void OnNext(KeyValuePair<string, object?> value)
         {
-            if (Volatile.Read(ref _stopped) == 0) observer.OnNext(value);
+            if (Volatile.Read(ref _stopped) == 0) observer.OnNext(source.Name, value);
         }
 
         public void OnCompleted() => owner.Remove(source, this);

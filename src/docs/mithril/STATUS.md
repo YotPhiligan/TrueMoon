@@ -1,6 +1,22 @@
 # Mithril: состояние и точка продолжения
 
-Последняя проверка — **2026-10-23, ED4a integration**. Runtime/API не менялись.
+Последняя проверка — **2026-10-26, общий Core diagnostics run**.
+Initial Debug98/99: concurrent-stop получил sharing IOException на ready-1.json
+в MithrilRestartProbe.Fixture.ReadyAsync. После отдельной правки Core test
+isolation full Debug99/99 и Release99/99 прошли; Mithril production/fixture
+не менялись, passing повтор не закрывает race. [Подробности](HISTORY.md#ready-file-race-повторное-наблюдение--2026-10-26).
+Текущий quality шаг — atomic ready publication либо bounded read retry с
+deterministic overlap proof и прежними deadline/identity/reap assertions.
+
+Последняя работа — **2026-10-25, уточнение MIT6c diagnostics roadmap**.
+[MIT6c](PLAN.md#mit6c-диагностика-и-захват-process-output--уточнение-2026-10-25) связывает
+process acceptance с Core CORE6 и Aether ENG8a capture: continuous stdout/stderr
+drain, bounded retention, overflow/EOF/failure outcomes и reader ownership при stop.
+Реализация захвата остаётся задачей владельца Aether; Mithril API не расширен.
+Изменены только планы/статусы; process/build/tests/packages не запускались. Следующий
+quality шаг ready-file fixture и открытые long trends/parent-death MIT6c сохранены.
+
+Предыдущая проверка — **2026-10-23, ED4a integration**. Runtime/API не менялись.
 Последний Mithril Debug98/99: default-budget-delay restart probe получил IOException
 на ready-4.json в Fixture.ReadyAsync; предыдущая existence проверка не гарантирует
 окончание публикации. Последний Release99/99. Общий solution Debug3048/3049,

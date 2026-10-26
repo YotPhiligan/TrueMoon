@@ -34,8 +34,8 @@ public static class EneriteConfigurationContextExtensions
         ArgumentNullException.ThrowIfNull(options);
         var snapshot = options.Snapshot();
         context.Services(r => r.RemoveAll<IInvocationClientFactory>().RemoveAll<IInvocationServerFactory>()
-            .Singleton<IInvocationClientFactory>(p => new PipesInvocationClientFactory(p.Resolve<IEventsSourceFactory>(), endpoint, snapshot))
-            .Singleton<IInvocationServerFactory>(p => new PipesInvocationServerFactory(p.Resolve<IEventsSourceFactory>(), p.Resolve<IInvocationServerHandlerResolver>(), endpoint, snapshot))
+            .Singleton<IInvocationClientFactory>(p => new PipesInvocationClientFactory(p.Resolve<IEventsSourceFactory>(), endpoint, snapshot, p.Resolve<IDiagnosticTelemetry>()))
+            .Singleton<IInvocationServerFactory>(p => new PipesInvocationServerFactory(p.Resolve<IEventsSourceFactory>(), p.Resolve<IInvocationServerHandlerResolver>(), endpoint, snapshot, p.Resolve<IDiagnosticTelemetry>()))
             .Transient<IInvocationServerHandlerResolver>(p => new InvocationServerHandlerResolver(p)));
         return context;
     }

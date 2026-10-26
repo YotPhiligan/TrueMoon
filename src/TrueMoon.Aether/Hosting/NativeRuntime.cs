@@ -11,6 +11,7 @@ using TrueMoon.Aether.Builds;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Generated.TrueMoon.Aether;
 using TrueMoon.Mithril;
+using TrueMoon.Diagnostics;
 using TrueMoon.Mithril.Units;
 
 namespace TrueMoon.Aether.Hosting;
@@ -33,20 +34,36 @@ public static class BuildIdentity
 public sealed class NativeRuntimeFactory : IRuntimeFactory
 {
     private readonly IFactory<PipesInvocationClient<IEngineControl>, string> _clients;
+    private readonly IEventsSource<NativeRuntimeFactory>? _events;
     /// <summary>Creates the standalone native factory with default diagnostics.</summary>
     public NativeRuntimeFactory() : this(new PipesInvocationClientFactory<IEngineControl>(new AetherEvents<PipesInvocationClient<IEngineControl>>())) { }
     /// <summary>Creates leases with an injected endpoint client factory. The lease owns each client.</summary>
     /// <param name="clients">Borrowed client factory.</param>
     public NativeRuntimeFactory(IFactory<PipesInvocationClient<IEngineControl>, string> clients)
-    { ArgumentNullException.ThrowIfNull(clients); _clients = clients; }
+        : this(clients, null) { }
+    /// <summary>Creates leases borrowing the endpoint factory and the App-owned diagnostic source.</summary>
+    /// <param name="clients">Borrowed endpoint client factory.</param>
+    /// <param name="events">Borrowed diagnostic source.</param>
+    public NativeRuntimeFactory(IFactory<PipesInvocationClient<IEngineControl>, string> clients,
+        IEventsSource<NativeRuntimeFactory>? events)
+    { ArgumentNullException.ThrowIfNull(clients); _clients = clients; _events = events; }
     /// <summary>Process-local bootstrap passed to an owned game runtime.</summary>
     public const string BootstrapKey = "TM_ENGINE_BOOTSTRAP";
     public ConcurrentQueue<UnitProcessDiagnostic> Diagnostics { get; } = new();
     public List<NativeRuntimeLease> Leases { get; } = [];
     public IRuntimeLease Create(SessionLaunch launch)
     {
-        var lease = new NativeRuntimeLease(launch, item => { if (item is UnitProcessDiagnostic value) Diagnostics.Enqueue(value); }, _clients);
-        Leases.Add(lease); return lease;
+        var lease = new NativeRuntimeLease(launch, item =>
+        {
+            if (item is not UnitProcessDiagnostic value) return;
+            Diagnostics.Enqueue(value);
+            while (Diagnostics.Count > 256) Diagnostics.TryDequeue(out _);
+            AetherDiagnosticEvents.Process(_events, launch, value);
+        }, _clients);
+        Leases.Add(lease);
+        // This is bounded diagnostic tracking; the supervisor retains actual lease ownership.
+        if (Leases.Count > 64) Leases.RemoveAt(0);
+        return lease;
     }
 }
 
@@ -83,14 +100,20 @@ public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> obse
     private readonly EngineChild _child = new(launch, observe);
     private PipesInvocationClient<IEngineControl>? _client;
     private IEngineControl? _service;
-    private Task<string>? _stdout, _stderr;
+    private ProcessOutputCapture? _stdout, _stderr;
     private IDisposable? _buildPin;
     public int ProcessId { get; private set; }
     public Task Exited => _child.Completion;
     public bool ResourcesReleased { get; private set; }
     public bool Reaped { get; private set; }
-    public string StandardError { get; private set; } = "";
-    public string StandardOutput { get; private set; } = "";
+    /// <summary>Bounded live tail of stderr; stream choice does not determine event severity.</summary>
+    public string StandardError => StandardErrorStatus?.Text ?? "";
+    /// <summary>Bounded live tail of stdout, available before process exit.</summary>
+    public string StandardOutput => StandardOutputStatus?.Text ?? "";
+    /// <summary>Live stderr capture counters, including file failure and truncation.</summary>
+    public ProcessOutputSnapshot? StandardErrorStatus => _stderr?.Read();
+    /// <summary>Live stdout capture counters, including file failure and truncation.</summary>
+    public ProcessOutputSnapshot? StandardOutputStatus => _stdout?.Read();
     public async Task LaunchAsync(CancellationToken token)
     {
         if (launch.Build != null)
@@ -99,7 +122,11 @@ public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> obse
         var process = _child.OwnedProcess ?? throw new IOException("Missing owned process.");
         ProcessId = process.Id;
         // Drain immediately so even a verbose/failing runtime cannot block on a full pipe.
-        _stdout = process.StandardOutput.ReadToEndAsync(); _stderr = process.StandardError.ReadToEndAsync();
+        // Four fixed slots per stream bound normal-session disk retention to eight 1MiB files.
+        var slot = (launch.Identity.Generation % 4).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var outputRoot = Path.Combine(launch.ReportDirectory, "runtime-output");
+        _stdout = new ProcessOutputCapture(process.StandardOutput, filePath: Path.Combine(outputRoot, "runtime-" + slot + ".stdout.log"));
+        _stderr = new ProcessOutputCapture(process.StandardError, filePath: Path.Combine(outputRoot, "runtime-" + slot + ".stderr.log"));
         _client = (clients ?? new PipesInvocationClientFactory<IEngineControl>(new AetherEvents<PipesInvocationClient<IEngineControl>>())).Create(launch.Endpoint);
         _service = new EngineControlGeneratedImplementation(new BoundedControlClient(_client));
     }
@@ -119,8 +146,8 @@ public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> obse
         _client?.Dispose(); _client = null; _service = null;
         if (await _child.StopAsync(gracefulDeadline).ConfigureAwait(false) != true) throw new IOException("Owned process kill/reap failed.");
         await _child.Completion.ConfigureAwait(false); Reaped = true;
-        if (_stdout != null) StandardOutput = await _stdout.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-        if (_stderr != null) StandardError = await _stderr.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        await Task.WhenAll(_stdout?.Completion ?? Task.CompletedTask, _stderr?.Completion ?? Task.CompletedTask)
+            .WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
         await _child.DisposeAsync().ConfigureAwait(false);
         _buildPin?.Dispose(); _buildPin = null;
         ResourcesReleased = true;

@@ -168,6 +168,103 @@ ENE3/MMF, network RPC, streaming framework, canonical cross-architecture codecs 
 новые OS не являются prerequisites первого preview. ENE5 CPU/allocation profile
 остаётся отдельным измерительным шагом до оптимизаций.
 
+### ENE6d: корреляция и диагностика — 2026-10-25
+
+Согласовано пользователем в рамках общей системы логирования; первый bounded
+trace profile реализован26октября ниже, полный ENE6d остаётся частичным.
+Event schema/pipeline/sinks определяет
+[Core CORE6](../core/PLAN.md#core6-структурированная-диагностика--2026-10-25),
+а domain session/build context и доставка child logs —
+[Aether ENG8a](../engine/PLAN.md#eng8a-диагностика-сессий-и-процессного-вывода--2026-10-25).
+
+- Передавать operation trace context через process boundary явно: ограниченные
+  metadata, parent/client/server activity correlation, connection/request identity.
+  Проверить async flow, malformed/missing/disabled context и late responses.
+  Формат/versioning/совместимость согласовать с ENE6c до изменения wire/generator;
+  trace metadata не определяют authorization, dispatch или domain outcome.
+- Emission использует общий injected diagnostics API; slow/throwing/overflowing
+  sink не блокирует transport или управление. Не писать request/response payloads.
+  Частые duration/queue/pending/bytes/error показатели агрегировать через metrics,
+  подробные request events включать bounded capture. Request IDs не metric dimensions.
+- Для child log delivery согласовать с Aether отдельные capacity/byte/rate budgets
+  и способ изоляции от Stop/input до реализации. Flood diagnostics не голодает
+  control, ошибки/потери видны; новый универсальный priority/transport API не вводится
+  автоматически. Microsoft.Extensions.Logging/адаптер пока не требуются.
+
+### ENE6d.1: bounded trace header и ENE6c compatibility — 2026-10-26
+
+Первый срез передаёт W3C trace/span IDs и Recorded flag, создаёт Client/Server
+операции через borrowed IDiagnosticTelemetry. Имена metrics фиксированы
+Enerit.Pipes.Client/Server, tags только operation/outcome; request/client/connection
+IDs остаются в traces/events. CaptureRequestEvents=false по умолчанию; detailed
+events включаются отдельно. Legacy diagnostics callback failures изолированы.
+
+PropagateTraceContext=false по умолчанию сохраняет legacy21-byte request header.
+При opt-in и валидном ambient/client context length=-2 обозначает trace extension
+version1: version(byte),flags(byte),TraceId16,SpanId8,actual length(Int32), всего51bytes.
+Payload limit1MiB и byte admission считают только service payload; headers ограничены
+фиксированным размером. Нет variable strings, tracestate, baggage или payload logs.
+
+Новый reader принимает21/51bytes. Invalid trace/span/flags игнорируются как metadata,
+без изменения handler/dispatch. Unknown version/marker, invalid payload length и
+truncated header закрывают connection до handler/rental; unknown version проверяется
+сразу после version byte. Старый reader отвергает отрицательный marker до dispatch;
+автоматического fallback/replay нет. Responses сохраняют21-byte header.
+Это additive same-build profile и минимальный ENE6c contract, не общий handshake,
+service schema fingerprint negotiation или mixed-version compatibility guarantee.
+
+Client context фиксируется до admission/write queue, server очищает случайный
+inherited context и использует explicit remote parent. Missing/disabled/unsampled
+context не создаёт fallback Activity. Accepted remote IDs/flags сохраняются во
+внутреннем async carrier для nested Enerit calls без server Activity; missing/
+invalid/disabled boundary очищает carrier, cleanup восстанавливает его после handler.
+Carrier не удерживает Activity/payload и не заменяет общий distributed propagator.
+Cancelled client scope заканчивается локально;
+pending capacity остаётся owned до позднего response/disconnect. Для late response
+сохраняются только bounded IDs/context values, не Activity/Exception; подробное
+событие содержит RequestTraceId/RequestSpanId без искусственного повторного span.
+Core overload имеет default interface fallback для прежних custom implementations;
+точные Client/Server kind/remote-parent semantics предоставляет обновлённый Core owner.
+
+App factories получают telemetry из resolver; standalone constructors прежних signatures
+сохранены. Aether явно включает propagation на обеих control peers через штатные
+factories; same-build identity включает Enerit assembly. Генератор/service payload
+mapping не меняются. Следом — queue/pending/bytes metrics, handler/transport error
+классификация и отдельный bounded child-log delivery contract с Aether.
+
+### ENE6d.2: агрегированные метрики ресурсов — 2026-10-26
+
+Следующий согласованный срез реализует queue/pending/request-byte/overload metrics
+поверх существующих admission gates; общий Core API и wire не расширяются.
+Process-wide Meter TrueMoon.Enerit.Pipes владеет шестью фиксированными instruments:
+пять ObservableUpDownCounter текущих client.pending/client.queued/server.requests/
+server.request.bytes/server.connections и ObservableCounter rejected.
+Полные имена/units и подключение — в [руководстве](DIAGNOSTICS.md#метрики-ресурсов).
+State instruments не имеют tags; rejected использует только side/reason и три
+комбинации client/queue_full,server/requests,server/bytes. Count refusal имеет
+приоритет над byte refusal; closed/cancel/malformed не считаются overload.
+
+PipesTransportOptions.MetricsEnabled=true по умолчанию копируется штатными
+App/generic/nongeneric factories и products. Опция независима от Core operation
+MetricsEnabled, tracing и detailed events. Disabled owner не входит в агрегаты.
+Current state доступен позднему observer, totals отказов живут до process exit.
+Каждый enabled admission owner хранит только numeric cell; registry не содержит
+transport/handler/delegates. Shared server имеет одну cell, direct connection —
+собственную. Удаление только после успешного фактического cleanup до Completion;
+cancelled Stop wait/failed cleanup сохраняют state. Существующая pending ownership
+после local cancel и server response-write byte retention не меняются.
+
+Producers обновляют только числа, без пользовательских callbacks из admission.
+Observable collection даёт отдельные snapshots, не coherent snapshot всех owners.
+Setup/discovery exceptions изолированы, measurement callback выполняется только
+в consumer collection. Нет per-request logs/extra Activity и не обещается heap/
+wire-bandwidth измерение. Числа connections включают accepting/draining instances.
+Прямые проверки lifecycle, late observer, shared ownership, exact bounds,
+cancel/overload, opt-out/options snapshot и observer faults выполнены в первом
+bounded профиле; [результаты и ограничения](HISTORY.md#ene6d2-метрики-ресурсов-и-перегрузки--2026-10-26).
+Далее timeout/reconnect/error classification и queue-wait duration, затем отдельный
+bounded child-log delivery contract. ENE6d целиком остаётся частичным.
+
 ### ENE6a и MIT6a: первый контракт — 2026-10-23
 
 Пользователь поручил приступить к следующему шагу. Первый implementation slice

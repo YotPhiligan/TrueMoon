@@ -7,7 +7,8 @@ public static class PipesProtocol
 {
     private static readonly UTF8Encoding ErrorEncoding = new(false, true);
 
-    /// <summary>Maximum request, success or error payload size, excluding the 21-byte header.</summary>
+    /// <summary>Maximum request, success or error payload size, excluding the 21-byte legacy header
+    /// or optional 51-byte trace request header. Responses always use 21 bytes.</summary>
     public const int MaxPayloadLength = 1024 * 1024;
 
     internal static string DecodeError(ReadOnlySpan<byte> payload)
