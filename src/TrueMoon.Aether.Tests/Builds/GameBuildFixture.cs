@@ -11,6 +11,7 @@ public sealed class GameBuildFixture : IAsyncLifetime
     public GameBuildArtifact A { get; private set; } = null!;
     public GameBuildArtifact B { get; private set; } = null!;
     public string ProjectA { get; private set; } = "";
+    internal bool PreserveArtifacts { get; set; }
     public async Task InitializeAsync()
     {
         Directory.CreateDirectory(Root);
@@ -67,7 +68,7 @@ public sealed class GameBuildFixture : IAsyncLifetime
         """;
     public Task DisposeAsync()
     {
-        if (B == null) return Task.CompletedTask; // Preserve failed fixture compiler diagnostics.
+        if (B == null || PreserveArtifacts) return Task.CompletedTask; // Preserve failed fixture compiler diagnostics.
         // These direct loader tests run in a long-lived test host. Production pins
         // last until child reap; here allow collectible contexts to release CLR mappings.
         GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();

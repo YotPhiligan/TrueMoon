@@ -9,7 +9,9 @@ TrueMoon.Aether.Editor — library/NuGet package, подключаемый к ex
 Переход [ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) предшествует
 новым ED features. ARCH2a/b shared scene persistence и Editor library/App
 integration и ARCH2c explicit runtime launch/bootstrap/identity реализованы;
-ARCH2d/e открыты. Executable consumers — AetherEditorHost и отдельный AetherRuntimeHost.
+ARCH2d hosts/resources проверены source/published headless; GUI/GPU acceptance и
+ARCH2e independent NuGet открыты. Минимальные executable consumers — Examples/
+AetherEditor и AetherRuntimeHost; directed smoke workflows — AetherEditorHost.
 **ED1a project/session и ED2a/b documents реализованы2026-10-23;
 прикладные ED1–ED8 остаются частично открытыми**. Наличие плана не означает
 реализации перечисленных возможностей.
@@ -179,7 +181,7 @@ backend-independent contracts. Общие реализации и acceptance в�
 
 | Этап | Результат | Зависимости |
 | --- | --- | --- |
-| [ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) | Aether/Editor packages, App integration и executable hosts; ARCH2a/b выполнены, c–e открыты | Текущие engine/Editor contracts; подробные этапы и acceptance только в engine плане |
+| [ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) | ARCH2a–c реализованы; d hosts/resources проверены headless, GUI/native acceptance открыта; далее e.1/2 independent NuGet | Текущие engine/Editor contracts; подробные этапы и acceptance только в engine плане, e.3 GUI/GPU отложен после BSOD |
 | ED1 | Проект и рабочая сессия | App/DI/lifecycle; текущий UIA1 |
 | ED2 | Документы и сохранение | ED1; immutable authoring model |
 | ED3 | Общие операции редактирования и Undo/Redo | ED2; минимальный ARCH1b и его headless proof до подключения edit UI |
@@ -192,8 +194,13 @@ backend-independent contracts. Общие реализации и acceptance в�
 Это порядок пользовательских результатов. Нужные интерфейсы, cleanup и regression
 tests вводятся вместе с соответствующей функциональностью, не откладываются до
 ED7/ED8. Единичный generic UI control не требует завершить весь UI beta roadmap.
-Уточнение2026-10-27: ARCH2a–c реализованы, далее ARCH2d/e с сохранением функционала;
-managed Release CPU race и legacy build/Replace fixture failures сохраняются в STATUS. Затем
+Сверка2026-10-28: ARCH2a–c реализованы, ARCH2d hosts/resources проверены в
+source/published headless scope; следующий доступный шаг —
+[ARCH2e.1/2 independent NuGet](PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28).
+GUI/GPU acceptance ARCH2d/e остаётся открытой. ENG2 CPU race, legacy Build/Replace,
+MSB3030 staging paths и forwarding test follow-ups закрыты в своих scopes;
+датированные TRX и ограничения — в STATUS/HISTORY, новых runs в сверке нет.
+После полного ARCH2 —
 ED6a → ED8a console/export в подключаемом Editor, ED4c.2 → ED4c.3,
 project picker/switch и ED1/ED6 workflow. Gameplay ENG5c.3 и hardware gates прежние.
 

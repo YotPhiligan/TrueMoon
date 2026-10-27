@@ -1,5 +1,745 @@
 # Engine / Editor: история решений и проверок
 
+## Сверка рабочего дерева и архив STATUS — 2026-10-28
+
+Сопоставлены рабочие source/test/example изменения с ARCH2d, ENG2/ENG3 и
+ENG8a.3/ENE6d.4, связанным Mithril fixture quality fix. ARCH2a–c входят в HEAD
+af03ca3; independent package proof не найден. Последняя очередь уточнена до
+ARCH2e.1/2 package headless, затем native proof после подготовки окружения;
+полный ARCH2 предшествует новым ED features. Декомпозиция e.1–3 добавлена в PLAN
+без сокращения acceptance. Код/контракты не менялись, новых build/tests/process/
+GPU/package runs нет. Прочитаны сохранённые TRX и verification summaries:
+Aether1543/Editor763 от28октября, Mithril111 от27октября Debug/Release.
+Длинные датированные абзацы STATUS перенесены ниже без удаления исходных failures.
+
+### Снимок прежней сводки
+
+Ниже сохранено содержимое STATUS до сверки. Указания «следующий шаг»,
+«текущий» и открытые failures относятся к датам соответствующих записей;
+актуальная очередь и закрытия находятся в STATUS и PLAN. Это архив,
+не новые результаты запуска. Относительные ссылки сохранены.
+
+Последняя работа — **2026-10-28, ARCH2d hosts/resources verification**.
+Тонкие Examples/AetherEditor и Examples/AetherRuntimeHost отделены от smoke host;
+font/OFL принадлежат примеру, styles/themes — managed assemblies, SPIR-V — Aether,
+native assets — renderer/platform. Добавлен VerifyExampleHosts с fresh publish вне
+workspace, offline metadata/hash checks и запуском из unrelated working directory.
+Source Debug/published Release:18resource hashes,16CLI checks и independent runtime
+DLL/apphost **4/4**,11source inputs/changes0. Editor **763/763 Debug и763/763 Release**,
+failed/skipped0. [Команды и точный scope](HISTORY.md#arch2d-hosts-и-доставка-ресурсов--2026-10-28).
+Nonincremental solution Debug build0errors/1541warnings.
+Ресурсный/headless срез ARCH2d проверен; окно/GPU/font rendering не запускались,
+BSOD/validation/hardware gates прежние. Далее ARCH2e independent NuGet consumer;
+общая GUI/native acceptance ARCH2 остаётся открытой. Aether/full solution tests
+и прежние21-scenario source/published matrix этим шагом не повторялись.
+
+Предыдущая работа — **2026-10-28, diagnostic forwarding test fix**.
+Управляемый поздний ACK воспроизвёл10s timeout ожидания Accepted после Unconfirmed.
+Codec/Unicode/secret-key checks отделены от транспорта; два real-pipe cases проверяют
+bounded payload, Unconfirmed1/Lost2/Accepted0, отсутствие replay и drain с ответом
+до/после Stop. Runtime и реальные500ms request/2s shutdown budgets не менялись.
+Focused44/44 Debug; full Aether **1543/1543 Debug и1543/1543 Release**, failed/skipped0.
+Nonincremental solution Debug build0errors/1541warnings.
+[Причина test defect, команды и RED→GREEN](HISTORY.md#diagnostic-forwarding-bounded-outcomes--2026-10-28).
+Quality follow-up закрыт для ошибочного ожидания; точный источник задержки прежнего
+Debug run не восстановить из его TRX без sender snapshot. Editor/full solution tests,
+отдельные published/native matrices, NuGet/GPU/performance не повторены; далее ARCH2d/e.
+
+Предыдущая работа — **2026-10-27, compiler staging path fix**.
+MSB3030 был ложным missing-file от native MSBuild Copy при существующей DLL на
+длинном path/LongPathsEnabled0. Single-project job теперь исключает лишний
+project-name segment в SDK artifacts layout; GUID ownership/cleanup прежние.
+Новый deep-job test подтвердил RED1→GREEN. Full Aether **1541/1541 Debug и1541/1541
+Release** в исходном TEMP, failed/skipped0; OS/TEMP settings не менялись.
+Headless compiler/checkpoint/Replace/App-stop **4/4source Debug и4/4published Release**,
+458source hashes/changes0. Nonincremental Debug build0errors/1541warnings.
+[Причина, binlogs и exact scope](HISTORY.md#eng3-compiler-staging-paths--2026-10-27).
+MSB3030 follow-up закрыт в этом scope. Initial forwarding serialization timeout
+не повторился, но deterministic fix не выполнен. Editor/full solution tests,
+NuGet/GPU/performance не повторены; ARCH2d/e и BSOD ограничения прежние.
+
+Предыдущая работа — **2026-10-27, миграция Build/Replace fixtures**.
+Generated games используют IGameSessionEntry.Create и non-copying Contracts reference;
+loader/DI/session guards прежние. Новые process regressions подтвердили RED2→GREEN2.
+Headless **21/21 source Debug и21/21 fresh published Release**,458source hashes/changes0.
+Full Aether **1540/1540 Debug и1540/1540 Release** при compact process-local TEMP;
+failed/skipped0. Solution nonincremental Debug build0errors/1541warnings.
+[Причина, команды, TEMP profiles и все failures](HISTORY.md#eng3-buildreplace-fixture-migration--2026-10-27).
+Исходный redirected TEMP: Debug1534/1540 (6fail), Release1535/1540 (5fail), skipped0.
+Пять повторяемых compiler failures — MSB3030 missing intermediate; compact TEMP
+устраняет наблюдение, runtime/OS settings не менялись, причина требует отдельного
+разбора. Initial Debug forwarding serialization timeout также не исправлялся.
+Legacy fixture follow-up закрыт в указанном scope. Editor/full solution tests,
+NuGet/GPU/physical/performance не повторены; ARCH2d/e и BSOD ограничения прежние.
+
+Связанное закрытие quality blocker — **2026-10-27, Mithril ready-file read race**.
+Оба composition/restart probes получили bounded retry под прежним8s deadline.
+Mithril111/111 Debug/Release и published composition14/restart20 прошли;
+[точный scope](../mithril/HISTORY.md#ready-json-bounded-read-retry--2026-10-27).
+Aether/Editor suites этим шагом не повторены. Следующий quality шаг — legacy
+Build/Replace fixtures; ARCH2d/e и BSOD/GPU ограничения прежние.
+
+Предыдущая работа — **2026-10-27, ENG2 CPU FrameReceiver pending-buffer race**.
+Worker резервирует private buffer только после выбора нового shared frame;
+empty/stale poll и EOF сохраняют pending frame. Два buffers, UI lease и drain
+сохранены; ring IO/CRC не выполняются под UI gate. Новый deterministic regression
+подтвердил RED(null) → GREEN, добавлен ring reservation/Ready retention test.
+CPU transport/session и Frames managed tests: **94/94 Debug и94/94 Release**,
+failed/skipped0; solution nonincremental Debug build0errors/1541warnings.
+[Причина, exact commands и scope](HISTORY.md#eng2-сохранение-pending-cpu-frame-при-пустом-poll--2026-10-27).
+ENG2 follow-up закрыт в этом scope; full module/solution tests, process/package/
+GPU/performance не повторены. Mithril ready-file и legacy Build/Replace fixtures открыты.
+
+Предыдущая сверка планов — **2026-10-27, документация и чтение исходников**.
+ARCH2a–c реализованы, d начат без завершённой acceptance, e открыт. Таблица
+Editor и общая очередь синхронизированы; Reparent и schema-driven component edits
+подтверждены исходниками. Build/tests/process/GPU/package runs не выполнялись;
+результаты ниже сохраняют даты и scope, quality failures не закрыты.
+
+Ранее прерванная работа — **2026-10-27, ARCH2d hosts/resources, BSOD Windows**.
+Добавлен минимальный Examples/AetherEditor с явным standalone runtime и собственными
+Noto Sans/OFL assets; AetherRuntimeHost перенесён в Examples, test/solution references
+обновлены. Directed smokes остаются в ManualTests/AetherEditorHost; font link больше
+не зависит от AlloyTest. Темы — managed code, SPIR-V — embedded Aether resources,
+native delivery остаётся у Rendering.Skia/Platform.Silk. Общие library API не менялись.
+Solution Debug/Release builds завершились с0errors/1541warnings в каждой конфигурации.
+ARCH2d regression/publish/native проверки не завершены: результатов нового Verify нет.
+BSOD0xA и предыдущие системные crashes исследуются отдельно; причина и связь с проектом
+не установлены. Сбор журналов — TestResults/BSOD-20261027; запуск GPU проверок отложен
+до разбора. ARCH2d не закрыт, ARCH2e не начат; прежние quality/hardware limits сохранены.
+
+Предыдущая работа — **2026-10-27, ARCH2c explicit runtime launch/bootstrap/identity**.
+NativeRuntimeLaunch задаёт immutable executable/arguments/working directory;
+RuntimeBootstrap проверяет bounded payload и actual host/runtime/shared binaries
+до child App. Нет implicit current-exe/--runtime; совместимый профиль задаётся явно.
+Отдельный AetherRuntimeHost использует bootstrap/Aether без Editor/UI.
+[API/migration](../../TrueMoon.Aether/PACKAGE.md),
+[контракт и история проверок](HISTORY.md#arch2c-explicit-runtime-launch-bootstrap-и-identity--2026-10-27).
+
+На дату ARCH2c Aether **1536/1536 Debug,1535/1536 Release**, Editor **763/763** в каждой
+конфигурации, skipped0. Новых189cases; они прошли в обеих конфигурациях.
+Единственный managed failure — прежний CPU FrameReceiver test, Assert.NotNull
+в FrameTransportTests.cs:177; повтор для green не делался. Solution builds Debug/
+Release0errors; full solution tests и GPU/display/package/performance не повторены.
+Source Debug и published Release independent runtime DLL/apphost —4/4, с отдельными
+entry/directories, preview без game/UI, selected-game artifact и отказами до readiness.
+Расширенные process probes42/46: по19/21 same-exe в каждой поставке и4independent.
+Legacy build-artifacts fixture не реализует IGameSessionEntry, replacement fixture
+не ссылается на Contracts (CS0234/CS0012); production contracts не ослаблялись.
+Checkpoint/diagnostics, faults/cancellation/kill/reap/parent-exit прошли в обеих поставках.
+[Evidence](../../TestResults/ARCH2c-20261027/verification.json):1035source hashes,
+changes0. Исторический Mithril Release failure не перепроверялся.
+Следующий шаг — ARCH2d hosts/resources, затем ARCH2e independent NuGet/native proof;
+CPU race и legacy fixtures требуют отдельных quality fixes, общего green нет.
+
+Предыдущая работа — **2026-10-27, ARCH2b Editor library/App integration**.
+Editor теперь Library/IsPackable=true без зависимости на concrete TrueMoon bootstrap.
+UseAetherEditor копирует options и подключает engine/project/document services,
+models/styles и parent-owned View factories; EditorSession согласует startup,
+presentation и close/drain. UseAetherEditorWindow предоставляет стандартный
+Windows/OpenGL host adapter. App не вложенный, fonts/runtime/CLI выбирает consumer.
+Main/CLI/runtime branch и smoke checks перенесены в ManualTests/AetherEditorHost.
+[API/migration/ownership](../../TrueMoon.Aether.Editor/PACKAGE.md),
+[подробные проверки](HISTORY.md#arch2b-editor-library-и-app-integration--2026-10-27).
+
+Текущие Editor763/763 и Aether1347/1347 отдельно Debug/Release, failed/skipped0;
+20новых composition cases включают обе DI реализации, options/duplicates,
+UI ownership/failure cleanup/retry и custom viewport без standalone-window wait.
+Source Debug и published Release empty/Transform workflows: 4functional processes,
+8reaped children, UI sessions/mappings/GPU resources/handles0. PNG просмотрены.
+Transform/preview/Undo/Redo/Save/reopen прошёл в обеих поставках.
+Первый preview с --validation завершился ErrorLayerNotPresent; финальный GPU proof
+без validation, нулевые validation counters не являются validation acceptance.
+Solution Debug/Release builds0errors; local Editor pack/metadata inspection успешны,
+independent NuGet consumption/полный ARCH2e не выполнялись.
+[Evidence](../../TestResults/AetherPackages-ARCH2b-20261027-1/verification.json).
+Full solution tests, legacy Build/Play/Replace и physical/performance проверки
+не повторены; прежние CPU receiver/Mithril ready-file follow-ups открыты.
+Следующий шаг — ARCH2c explicit runtime bootstrap/launch/identity, затем d/e.
+
+Предыдущая работа — **2026-10-27, ARCH2a shared scene persistence**.
+SceneFileCodec/ISceneDocumentStore/JsonSceneDocumentStore и SceneFile/SceneFileStamp/
+SceneFileConflictException перенесены из Editor.Documents в Aether.Scenes.
+Публичный UseAetherScenePersistence подключает lazy/idempotent defaults через App,
+сохраняет overrides; Editor document registration делегирует ему persistence.
+Editor сохраняет project/document owner, dirty/close UX и команды.
+[Карта типов, ownership и migration](PACKAGE_BOUNDARIES.md),
+[подробные проверки](HISTORY.md#arch2a-scene-persistence-в-aether--2026-10-27).
+
+Aether1347/1347 и Editor743/743 Debug/Release; narrow engine9/9 и Editor102/102.
+Новые9headless cases; Editor cooperation cases обновлены, net+2Editor cases.
+Full Debug4296/4296; Release4295/4296, failed1/skipped0:
+неизменённый MithrilCompositionProbe.ReadyAsync получил sharing IOException
+на ready.json (composition/cobalt). Общего green нет; повтор для green не делался.
+Builds0errors/1546warnings в каждой конфигурации: Debug nonincremental/Release
+incremental, SDK10.0.403. [Evidence](../../TestResults/AetherPackages-ARCH2a-20261027-1/verification.json).
+Source hashes1024/changes0,20test-binary hashes. Native/GPU/published/package/
+performance acceptance не повторены; исторический CPU FrameReceiver follow-up открыт.
+
+На дату ARCH2a Editor ещё WinExe/IsPackable=false. Aggregate UseAetherEditor,
+library conversion, explicit runtime executable/bootstrap/identity, hosts/resources
+и independent NuGet proof остаются ARCH2b–e. [План](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27).
+После перехода — ED6a/ED8a, ED4c.2/3 и project/build/play workflow.
+
+Предыдущая реализация и проверка — **2026-10-27, ENG8a.3/ENE6d.4 child diagnostic delivery**.
+Штатные App factories передают bounded structured logs по отдельному Enerit
+endpoint; options копируются в launch, receiver живёт до reap/raw drain.
+Host сохраняет Origin/PID/time/trace и добавляет authoritative session context.
+Known loss и unknown ACK outcome различаются; replay нет. Local JSONL и raw
+stdout/stderr продолжают работать независимо.
+[Контракт/API](DIAGNOSTICS_DELIVERY.md),
+[матрица/команды и неуспешные попытки](HISTORY.md#child-diagnostic-delivery--2026-10-27).
+
+Новые120Aether cases плюс59Core. Aether1338/1338, Editor741/741, full solution
+4285/4285 Debug/Release, failed/skipped0. Builds0errors:
+Debug nonincremental1546warnings, Release incremental1316warnings, SDK10.0.403.
+[Evidence](../../TestResults/DiagnosticsDelivery-20261027-1/verification.json).
+Source proof:3real Preview children одной session,99control commands при log flood,
+slow/broken host sinks, bounded local JSONL/raw, все processes reaped/resources released.
+Это не gameplay/input/GPU/display/published/package/performance acceptance.
+
+Короткий ordinary fixture cleanup deadline исправлен в тесте; production budgets
+не менялись. Прежний CPU FrameReceiver failure не повторился, ENG2 follow-up открыт;
+Mithril ready-file race также не объявлен исправленным.
+После ARCH2 — ED6a/ED8a console/export, затем command/frame metrics. Authoring очередь
+ED4c.2 → ED4c.3/workflow и прежние hardware gates сохраняются.
+Предыдущие [IPC traces](HISTORY.md#ipc-trace-context-в-control-factories--2026-10-26),
+[operations](HISTORY.md#операции-и-трассы-диагностики--2026-10-26),
+[build retention](HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26)
+и [managed runs](HISTORY.md#managed-logger-runs-в-editor-и-runtime--2026-10-26)
+сохраняют отдельные budgets; общего artifact quota нет.
+
+Предыдущая работа — **2026-10-25, ED4f.2 системная граница окна**.
+Editor включает UseSystemAccentBorder: Windows accent, theme fallback при отсутствии
+цвета, RGB60% при inactive и focus transition160мс. Style/local BorderColor имеет
+приоритет; cached цвет обновляется по native notifications без чтения на frame.
+15новыхcases, narrow67/67. Related UI893/Hosting114/Editor741 Debug/Release:
+1748/configuration,3496всего,failed/skipped0. Nonincremental Debug solution build
+0errors/1532warnings.12native cases/206PNG/16reaped children,validation0/0 и zero
+owned UI/GPU/mappings; actual active/inactive border pixels проверены, PNG просмотрены.
+[Проверки и границы](HISTORY.md#ed4f2-системная-граница-окна--2026-10-25).
+Evidence: TestResults/AccentBorder-20261024/verification.json. Aether/full solution
+tests/packages/physical/performance не повторены. Реальная смена Windows accent
+не выполнялась; очередь ED4c.2 names/order → ED4c.3 create/delete прежняя.
+
+Предыдущая работа — **2026-10-24, ED4e островки поверх viewport**.
+Обозреватель/инспектор закреплены над полной рабочей областью сцены; отступ16,
+скругление8, мягкая тень, content height/scroll и независимый Theme.PanelBackdrop.
+Контекстный инспектор сохраняет View и появляется/скрывается за160мс без resize
+viewport; closing сразу закрывает ввод. Dark/Light/null fallback проверены.
+67новыхcases; narrow103/103. Related UI842/Hosting98/Editor699 Debug/Release:
+1639/configuration,3278всего,failed/skipped0. Nonincremental Debug solution build
+0errors/1532warnings.12native cases/158PNG/16reaped children,validation0/0 и zero
+owned UI/GPU/mappings; финальные native PNG просмотрены.
+[Проверки и границы](HISTORY.md#ed4e-островки-поверх-viewport--2026-10-24).
+Evidence: TestResults/Islands-20261024/verification.json. Aether/full solution tests,
+packages/physical/performance не повторены. Свободные drag/resize/docking отдельно.
+Следующий engine шаг прежний: ED4c.2 names/order, затем ED4c.3 create/delete.
+
+Предыдущая работа — **2026-10-24, ED4d.1 компактные действия и контекст инспектора**.
+Иконки26/reset24, Tooltip500мс (включая disabled), непрозрачный фон обеих тем;
+без выбора скрыта вся колонка, ширина передана viewport. Esc в обозревателе
+отменяет drag, затем снимает выбор; повторный выбор сохраняет View/chrome.
+25новыхcases, narrow181/181. Текущие UI801/Hosting98/Editor673 Debug/Release:
+1572/configuration,3144всего,failed/skipped0. Nonincremental Debug solution build
+0errors/1532warnings.12native cases/152PNG/16reaped children,validation0/0,
+zero owned UI/GPU/mappings; финальные PNG просмотрены.
+[Проверки и границы](HISTORY.md#ed4d1-компактные-действия-и-контекст-инспектора--2026-10-24).
+Evidence: TestResults/InspectorChrome-20261024/verification.json. Aether/full solution
+tests/прочие модули/packages/physical/performance в этом уточнении не повторены.
+Далее ED4c.2 имена/порядок, ED4c.3 create/delete/duplicate и контекст создания;
+прежние CPU receiver/Mithril issues остаются открытыми.
+
+Предыдущая работа — **2026-10-24, ED4d динамический инспектор компонентов**.
+Schema-driven секции только фактических компонентов: Boolean/Int64/Number/String,
+nullable, provenance/reset, Add/Remove/Restore; единые drafts/history/preview gates.
+Общий ComponentEditBatch использует прежние revision/receipts/resolver/Undo/Redo и
+scene JSON v1; definition catalogs не мутируются. Retained View/Data/Style,
+App/Cobalt/IFactory и compatibility consumers проверены. Live legacy — read-only.
+163новыхcases; текущие Aether1142/UI801/Hosting98/Editor648 Debug/Release
+=2689/configuration,5378всего,failed/skipped0. Nonincremental Debug solution build:
+0errors/1532warnings.12native source Debug/published Release cases,146PNG,
+16reaped children,validation0/0 и zero owned UI/GPU/mappings. Финальные PNG просмотрены.
+[Проверки и границы](HISTORY.md#ed4d-динамический-инспектор-компонентов--2026-10-24).
+Evidence: TestResults/Inspector-20261024/verification.json. Следом ED4c.2 имена/
+порядок, затем ED4c.3 create/delete/duplicate. Runtime ECS World и custom editor
+providers остаются отдельными задачами. Full solution tests/прочие модули/packages/
+physical/performance не повторены; прежние CPU receiver/Mithril issues открыты.
+
+Предыдущая работа — **2026-10-24, ED4c.1 дерево сущностей и Reparent**.
+Общий TreeView с иконками/раскрытием/выбором, переносом мышью и клавиатурой;
+Editor View/Data/Style и App/Cobalt/typed factory. Смена родителя сохраняет local
+Transform/inheritance, использует общий atomic authoring API/history, revision,
+Save/reopen и Edit Preview. IO/runtime/Transform draft и устаревшие жесты закрыты.
+130новых cases; текущие Aether1050/UI801/Hosting98/Editor577 Debug/Release
+=2526/configuration,failed/skipped0. Nonincremental Debug solution build:
+0errors/1532warnings.10native source Debug/published Release cases,118PNG,
+14reaped children,validation0/0 и zero owned UI/GPU/mappings. PNG просмотрены.
+[Точные проверки и границы](HISTORY.md#ed4c1-дерево-сущностей-и-reparent--2026-10-24).
+Evidence: TestResults/Hierarchy-20261024/verification.json.
+Следом ED4c.2 — сохраняемые имена/порядок соседей, затем ED4c.3 create/delete/duplicate.
+Full solution tests/packages/physical/performance не повторены; прежние CPU receiver/
+Mithril fixture issues открыты. Первый срез не включает rename/reorder/multiselect.
+
+Предыдущая работа — **2026-10-24, ED4b выравнивание статусбара**.
+Удалена пустая полоса16 под footer: общий WindowFrame размещает grip16 поверх
+правого нижнего угла. StatusBar28 и его контейнер имеют одну высоту, нижний край
+совпадает с внутренним бордером; details не перекрывается grip. Resize, scale1/1.5/2,
+maximize/restore/theme/idle проверены. UI760/Hosting98/Editor530 Debug/Release
+=1388/configuration,failed/skipped0; narrow57/57.2native empty cases source Debug/
+published Release,20PNG,zero owned resources; Dark/Light screenshots просмотрены.
+[Проверки и границы](HISTORY.md#ed4b-выравнивание-статусбара--2026-10-24).
+Evidence: TestResults/StatusBarAlignment-20261024/verification.json.
+Full solution/headless/игровые native profiles/physical input не повторены;
+прежние CPU receiver/Mithril fixture issues открыты. Следом create/delete.
+
+Предыдущая работа — **2026-10-24, ED4b компактная строка состояния**.
+Краткий status с иконкой и контекстной отменой слева; справа objects/Edit Preview/
+details. Tick/PID, actual preview revision и выбираемые ошибки — в матовом popup.
+Edit Preview start/retry/stop перенесены из production inspector в footer;
+активный preview показывает «Редактирование сцены», игровые actions — в header.
+Responsive overflow/focus/theme/dismissal, retained View/Data/Style и
+App/Cobalt/typed factories с обоими DI providers проверены.
+
+Текущие UI759/Hosting98/Editor527 Debug/Release =1384/configuration,80новыхcases,
+failed/skipped0. Nonincremental Debug solution build0errors/1532warnings.
+Source Debug/published Release вне repo:6native empty/legacy/Transform cases,
+68PNG/12reaped children; preview через footer, Undo/Redo/Save/reopen, header
+regressions,validation0/0 и zero UI/mapping/GPU ownership. PNG просмотрены.
+[План](EDITOR_PLAN.md#ed4b-компактная-строка-состояния--2026-10-24),
+[проверки/границы](HISTORY.md#ed4b-компактная-строка-состояния--2026-10-24).
+Evidence: TestResults/StatusBar-20261024/verification.json.
+Full solution tests/Aether/headless/packages/physical/performance не повторены;
+прежние CPU receiver/Mithril fixture issues открыты. Следом create/delete.
+
+Предыдущая работа — **2026-10-24, матовый фон dropdown меню ED4a**.
+Editor использует общий BackdropMaterial/Theme.MenuBackdrop из Argentis/Skia:
+blur фона текущего окна + tint, текст/иконки чёткие. Dark/Light/null, fallback,
+retained popup/focus и прежние команды сохранены, новый прикладной сервис не нужен.
+Текущие UI739/Hosting98/Editor467 Debug/Release =1304/configuration,failed/skipped0.
+4native cases source Debug/published Release вне repo,28PNG/4reaped children,
+validation0/0 и UI sessions/mappings/GPU resources/handles0. File/View PNG
+просмотрены, full solution/Aether/headless/прочие native profiles не повторялись.
+[Результаты](HISTORY.md#ed4a-матовый-фон-меню--2026-10-24),
+[общий механизм и границы](../alloy/PLAN.md#pa8b-матовые-поверхности--2026-10-24).
+Evidence: TestResults/Backdrop-20261024/verification.json. Следом create/delete;
+прежние CPU receiver/Mithril fixture issues и hardware gates остаются открытыми.
+
+Предыдущая работа — **2026-10-24, ED4a знак TrueMoon и анимированная кнопка меню**.
+Слева фиксированный знак TrueMoon, после него кнопка без обычной рамки. Точки
+поворачиваются ⋮→⋯ вместе с раскрытием; hover показывает группы, click/Enter/Space
+после анимации открывает «Файл». Повторный click закрывает, отмена/detach исключают
+late popup. Знак, hit area кнопки и simulation/window actions неподвижны;
+caption сдвигается. Retained View/Style, App/Cobalt/IFactory и ownership прежние.
+[Дизайн/план](EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23),
+[проверки и границы](HISTORY.md#ed4a-знак-truemoon-и-анимированное-раскрытие--2026-10-24).
+
+Текущие UI723/Hosting98/Editor467 Debug/Release:1288/configuration,13новыхcases,
+failed/skipped0. Source Debug/published Release вне repo:4native cases/28PNG/
+4reaped children; brand/disclosure/hover/keyboard/theme/tooltip/FocusLost и legacy
+game commands, validation0/0 и UI sessions/mappings/GPU resources/handles0.
+Финальные collapsed/File screenshots просмотрены. Evidence:
+TestResults/HeaderBrand-20261024/verification.json. Full solution/Aether/headless/
+остальные native profiles не повторены; прежние CPU FrameReceiver и Mithril
+fixture failures не объявлены исправленными. Далее create/delete общего API/history.
+
+Предыдущая работа — **2026-10-23, ED4a компактный заголовок и меню**.
+⋯ раскрывает пять menu groups с анимацией180мс/leave grace240мс; название сдвигается,
+▶/пауза/стоп и стандартные оконные кнопки неподвижны. Общие Menu/Command/Overlay/
+frame transition contracts — в Alloy/Argentis. Header View/Style и UI-owner typed
+factory подключены через App/Cobalt; окно владеет View, модели/style borrowed.
+File/edit/build/simulation/theme используют общие availability/actions. ▶ —
+tracked start→play/resume, stop/cancel/close исключают late Play и drains work.
+Header shortcuts, path draft, unsaved decision и независимый Edit Preview сохранены.
+[Дизайн/план](EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23),
+[руководство](../../TrueMoon.Aether.Editor/README.md#компактная-верхняя-панель),
+[все проверки и границы](HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+
+Related UI712/Hosting98/Editor465 Debug/Release:1275/configuration,105новыхcases,
+failed/skipped0. Source Debug/published Release вне repo:10native/header cases,
+64PNG/12reaped children; real menu/icon/document/Transform/preview/exit workflows,
+validation0/0 и UI sessions/mappings/GPU resources/handles0.10headless cases отдельно.
+Последний full Debug3048/3049 (Mithril ready-file fixture IOException), Release3049/3049;
+Aether1008/1008 и related UI прошли. Nonincremental build0errors/1532warnings.
+Evidence: TestResults/MenuHeader-20261023/verification.json. Общий green не заявлен.
+Ранний CPU FrameReceiver null сохранён отдельной ENG2 quality задачей; повторные
+passing не означают его исправление. Fresh packages/physical/full alpha не повторены.
+
+Предыдущий ED3a Open→Transform→Preview→Undo/Redo→Save→reopen реализован и повторён
+в новых native workflows. Atomic drafts/history, finite/positive validation,
+conflict и latest-only preview coordinator остаются прежними;
+[подробности ED3a](HISTORY.md#ed3a-transformhistorypreview-в-ui--2026-10-23).
+
+## ARCH2d: hosts и доставка ресурсов — 2026-10-28
+
+Завершён ресурсный/headless срез ARCH2d, прерванный27октября системным BSOD.
+Тонкий [Examples/AetherEditor](../../Examples/AetherEditor/README.md) содержит только
+Main/CLI, host paths и App composition с UseAetherEditor/UseAetherEditorWindow.
+Он явно выбирает отдельный runtime apphost, не содержит --runtime child branch,
+demo/SDK/game defaults и smoke implementations. Guard проверяет Windows и именно
+Architecture.X64, а не произвольный64-bit процесс. [AetherRuntimeHost](../../Examples/AetherRuntimeHost/README.md)
+использует bootstrap/Aether без Editor/UI; owned runtime Main/report остаётся в host.
+Directed workflows, прежний CLI и explicit same-exe профиль — в
+[ManualTests/AetherEditorHost](../../ManualTests/AetherEditorHost/README.md).
+Solution/test references используют новый runtime path.
+
+Owners ресурсов:
+
+- Noto Sans Regular/OFL — собственные Assets/Fonts примера, CopyToOutput/Publish.
+  Smoke host ссылается на этот owner, не на AlloyTest. Editor module заимствует
+  переданный host font catalog и не ищет шрифты в source checkout.
+- EditorViewStyle/Theme находятся в managed owning assemblies; внешних theme files нет.
+- Два SPIR-V shaders embedded в Aether; runtime shader compiler/source lookup не нужен.
+- Extended Skia поступает из Rendering.Skia в truemoon-native/win-x64, upstream
+  Skia/HarfBuzz/GLFW — из существующего renderer/platform dependency closure.
+  Vulkan/OpenGL driver/loader остаётся установленным platform prerequisite.
+
+Добавлен [VerifyExampleHosts.ps1](../../ManualTests/EngineSessionProbe/VerifyExampleHosts.ps1).
+Он создаёт новый deployment вне source workspace, сохраняет все artifacts/logs,
+build/publish binlogs, expected/actual exit codes и before/after hashes11inputs.
+PowerShell verifier читает PE metadata и embedded bytes без загрузки UI/native
+DLLs. Проверяются `.deps.json` closures (нет game/probe/executable dependencies у
+examples, runtime без Editor/UI), exact font/OFL/native hashes, managed style/theme
+types, SPIR-V magic/bytes и одинаковый Aether в editor/runtime deployment.
+В child process удаляется inherited TM_ENGINE_BOOTSTRAP; invalid runtime startup
+отказывает до App. CLI assertions проверяют конкретное сообщение, а не только exit1.
+Внешние processes owned verifier, имеют deadline и tree kill/drain при timeout.
+
+| Проверка | Фактический результат |
+| --- | --- |
+| Build source Debug editor/runtime/probe | 3/3 |
+| Fresh publish Release editor/runtime/probe вне workspace | 3/3 |
+| Resource hashes/embedded bytes | 18/18 в двух profiles; managed type/closure checks также прошли |
+| CLI help/5editor rejections/2runtime rejections | 16/16 source/published, exact messages/exit codes |
+| Independent runtime DLL/apphost | 4/4: source Debug2 и published Release2 |
+| Full managed Editor Debug | passed763/failed0/skipped0 |
+| Full managed Editor Release | passed763/failed0/skipped0 |
+| Full solution nonincremental Debug build | errors0/warnings1541 |
+| Before/after selected source/resource inputs | 11/11 unchanged, changes0 |
+
+Все CLI/proof процессы запущены из unrelated external working directory. Published
+closures находятся в новом external temp deployment, source binaries — в build
+output. Каждый independent runtime proof включает2preview generations и selected
+game artifact, identity/startup rejection/cancellation/immediate-exit cases и actual
+reap/resource cleanup; parent не загружает игру, runtime не загружает Editor/UI,
+GPU resources/handles0. Это existing headless proof, не новая GUI acceptance.
+Compiler/SDK/game startup отсутствуют при empty editor registration; Cobalt/MS DI,
+View ownership, project/document startup/close/rollback проверены existing managed
+Editor suite, без изменения library APIs.
+
+Команды для повтора из src (verifier создаёт fresh external deployment):
+
+```powershell
+pwsh -NoProfile -File ManualTests/EngineSessionProbe/VerifyExampleHosts.ps1
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --results-directory 'TestResults/ARCH2d-20261028-1/editor-Debug' --logger 'trx;LogFileName=editor.trx' --verbosity quiet '-bl:TestResults/ARCH2d-20261028-1/editor-Debug-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --results-directory 'TestResults/ARCH2d-20261028-1/editor-Release' --logger 'trx;LogFileName=editor.trx' --verbosity quiet '-bl:TestResults/ARCH2d-20261028-1/editor-Release-{}.binlog'
+dotnet build TrueMoon.slnx -c Debug --no-incremental -m --verbosity quiet '-bl:TestResults/ARCH2d-20261028-1/solution-Debug-{}.binlog'
+```
+
+Фактический verifier запуск через текущий PowerShell вызвал script с новым
+RunDirectory; exact command arguments всех6 SDK,16 CLI и4proof процессов сохранены
+в [verification.json](../../TestResults/ARCH2d-20261028-1/verification.json).
+[Console log](../../TestResults/ARCH2d-20261028-1/deployment-verified.log),
+[Debug TRX](../../TestResults/ARCH2d-20261028-1/editor-Debug/editor.trx),
+[Release TRX](../../TestResults/ARCH2d-20261028-1/editor-Release/editor.trx),
+[solution log](../../TestResults/ARCH2d-20261028-1/solution-Debug.log).
+Evidence содержит absolute deployment/report paths и4headless proof reports;
+внешние deployment files сохранены. Первые два development runs verifier также
+прошли, финальный run дополнительно проверяет точные CLI errors/fault cleanup.
+
+GUI/window startup, native Skia/GLFW loading, font decoding/rendering и GPU preview
+не выполнялись. После BSOD причина/связь с проектом не установлены, GPU пауза и
+Vulkan validation prerequisite сохраняются. Resource hashes не доказывают ABI,
+driver/GPU correctness или полный Open→Transform→preview→Undo→Save/reopen cycle.
+ARCH2d implementation/resource/headless scope проверен; общая GUI/native acceptance
+ARCH2 остаётся открытой. Далее доступный шаг — ARCH2e fresh independent NuGet
+consumer; ProjectReference publish не заменяет этот proof. Aether/full solution
+tests, прежние21-scenario source/published matrices, performance/K3/K7/K8/VRAM не
+повторялись. Editor/scene/project contracts и формат не менялись, OS/driver settings
+не менялись, публикации NuGet не было.
+
+## Diagnostic forwarding: bounded outcomes — 2026-10-28
+
+Закрыт test-quality follow-up для
+SerializationBounds_ClipSafelyRemoveSecretKeysAndKeepFreeText. Прежний test
+проверял clipping через реальный transport и ждал только Accepted==1. При
+истечении500ms exchange budget sender учитывает record как Unconfirmed, сохраняет
+продвинутый source cursor и не делает replay. Даже полученный позднее valid ACK
+не превращает такой исход в Accepted: десятисекундное ожидание уже невыполнимо.
+Это test defect; production contracts/options/код не менялись.
+
+Исходный [Debug TRX](../../TestResults/CompiledGameFixtures-20261027-1/full-Debug/aether.trx)
+содержит TaskCanceledException из UntilAsync после10s, но не final sender health
+или transport timing. Конкретный источник задержки/финальный исход того run
+ретроспективно не установлен; CPU load, cold connection или late ACK ему не
+приписываются как доказанный факт. Новое воспроизведение проверяет конкретный
+допустимый исход, при котором прежний assertion заведомо недостижим.
+
+Controlled RED: server принимает исходный bounded record и удерживает ACK за
+TaskCompletionSource barrier. Test ждёт Unconfirmed1 и проверяет Accepted0/Lost0,
+отпускает ACK, дожидается PendingRequestCount0 и выполняет прежний Until(Accepted1).
+Он падает с тем же TaskCanceledException через10s. [Reproduction source](../../TestResults/DiagnosticForwarding-20261027-1/red/ChildDiagnosticForwarderTests.cs)
+и [RED TRX](../../TestResults/DiagnosticForwarding-20261027-1/red/delayed-original-wait.trx)
+сохранены; это intentional failed run до исправления test.
+
+Изменения:
+
+- [ChildDiagnosticLimitsTests](../../TrueMoon.Aether.Tests/Diagnostics/ChildDiagnosticLimitsTests.cs):
+  SerializationBounds_ClipSafelyRemoveSecretKeysAndKeepFreeText теперь синхронно
+  проверяет Bound → JSON packet → Decode: exact string limits, surrogate-safe
+  clipping, удаление case-insensitive Nonce/Endpoint keys, сохранение свободного
+  текста и IsTruncated. Добавлены assertions неизменности исходной записи.
+- [ChildDiagnosticForwarderTests](../../TrueMoon.Aether.Tests/Diagnostics/ChildDiagnosticForwarderTests.cs):
+  DelayedAck_KeepsBoundedPayloadUnconfirmedAndDrainsWithoutReplay(replyAfterStop:
+  false/true) проверяет payload, действительно отправленный worker через generated
+  codec/реальные pipes. Пустой reader позволяет сначала дождаться connection;
+  затем исходный oversized record публикуется и ACK удерживается до actual timeout.
+  Request500ms/shutdown2s остаются прежними, fixed sleep вместо barrier нет.
+  Pending1 сохраняется после локального timeout; следующие2records становятся
+  Lost2. Ответ до Stop либо после Stop не вызывает replay/переход в Accepted.
+  Final Accepted0/Rejected0/Unconfirmed1/Lost2/Failures1, Closed/DrainComplete/
+  Released=true, pending0, успешный client Completion; borrowed reader/factory
+  не освобождены sender. Late service gate снимается в finally.
+- [ChildDiagnosticFixture](../../TrueMoon.Aether.Tests/Diagnostics/ChildDiagnosticFixture.cs)
+  хранит общий input record для обоих видов проверки.
+- [Delivery guide](DIAGNOSTICS_DELIVERY.md) явно поясняет late ACK и возможность
+  DrainComplete вместе с Unconfirmed/Lost.
+
+Существующие Polling_BatchesInOrderCountsInitialAndInternalSourceGapsAndSuppressesImportedRows
+и BlockedBorrowedReader_TimesOutOnlyTheStopWaitThenReleasesOnRetry проверяют
+Accepted/порядок и cancelled/timed-out Stop wait/ownership retry; они прошли вместе
+с новыми cases. Новые factory APIs, test seams и изменение Enerit не понадобились.
+
+| Проверка | Результат |
+| --- | --- |
+| Старое ожидание с controlled late ACK, Debug | RED: failed1/passed0/skipped0 |
+| Forwarder + limits, Debug | GREEN: passed44/failed0/skipped0 |
+| Full Aether Debug | passed1543/failed0/skipped0 |
+| Full Aether Release | passed1543/failed0/skipped0 |
+| Solution Debug, nonincremental | errors0/warnings1541 |
+
+Команды из корня src, каждый MSBuild invocation получил отдельный binlog:
+
+```powershell
+# RED: reproduction source сохранён до финального изменения tests.
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug --filter 'FullyQualifiedName~ChildDiagnosticForwarderTests.SerializationBounds_ClipSafelyRemoveSecretKeysAndKeepFreeText' --results-directory 'TestResults/DiagnosticForwarding-20261027-1/red' --logger 'trx;LogFileName=delayed-original-wait.trx' --verbosity quiet '-bl:TestResults/DiagnosticForwarding-20261027-1/red-{}.binlog'
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug --filter 'FullyQualifiedName~ChildDiagnosticForwarderTests|FullyQualifiedName~ChildDiagnosticLimitsTests' --results-directory 'TestResults/DiagnosticForwarding-20261027-1/focused-Debug' --logger 'trx;LogFileName=diagnostics.trx' --verbosity quiet '-bl:TestResults/DiagnosticForwarding-20261027-1/focused-Debug-{}.binlog'
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug --no-build --results-directory 'TestResults/DiagnosticForwarding-20261027-1/full-Debug' --logger 'trx;LogFileName=aether.trx' --verbosity quiet '-bl:TestResults/DiagnosticForwarding-20261027-1/full-Debug-{}.binlog'
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Release --results-directory 'TestResults/DiagnosticForwarding-20261027-1/full-Release' --logger 'trx;LogFileName=aether.trx' --verbosity quiet '-bl:TestResults/DiagnosticForwarding-20261027-1/full-Release-{}.binlog'
+dotnet build TrueMoon.slnx -c Debug --no-incremental -m --verbosity quiet '-bl:TestResults/DiagnosticForwarding-20261027-1/solution-Debug-{}.binlog'
+```
+
+[Verification summary](../../TestResults/DiagnosticForwarding-20261027-1/verification.json),
+[focused TRX](../../TestResults/DiagnosticForwarding-20261027-1/focused-Debug/diagnostics.trx),
+[Debug TRX](../../TestResults/DiagnosticForwarding-20261027-1/full-Debug/aether.trx),
+[Release TRX](../../TestResults/DiagnosticForwarding-20261027-1/full-Release/aether.trx),
+[solution log](../../TestResults/DiagnosticForwarding-20261027-1/solution-Debug.log).
+Каталог evidence начат27октября, завершение/обновление статуса —28октября по
+Asia/Yekaterinburg. TEMP/OS settings не менялись. Full Aether включает существующие
+headless process tests; отдельные source/published native matrices этого шага
+не запускались. Editor/full solution tests, independent NuGet, GPU/display/
+validation/performance не повторены; BSOD/hardware gates прежние. Далее ARCH2d/e.
+
+## ENG3: compiler staging paths — 2026-10-27
+
+Закрыт MSB3030 follow-up из предыдущего full run. Вопреки сообщению Copy DLL не
+исчезала: standalone reproduction сохранил настоящую Game.Candidate.dll5120bytes,
+которую .NET FileInfo/Exists видел по265-character path. Native file-state check
+MSBuild Copy на этом же пути возвращал отсутствие файла при LongPathsEnabled0.
+
+Reproduction повторяет compiler command/refs в сохранённом OS-temp workspace:
+first короткий job exit0; repeat-deep и fresh-deep exit1/MSB3030, но DLL существует.
+Fresh failure исключил повторную компиляцию/cache как необходимый trigger.
+[Reproducer](../../TestResults/CompilerIsolation-20261027-1/Reproduce.ps1),
+[commands/files](../../TestResults/CompilerIsolation-20261027-1/repro-summary.json).
+
+Binlog MCP недоступен; execution binlog replay через dotnet msbuild подтвердил
+успешный Csc, затем failing CopyFilesToOutputDirectory/Copy, SourceFiles=существующая
+DLL, SkipUnchangedFiles=true. SDK10.0.403/MSBuild18.9.15 пишет отдельные restore и
+build binlogs; анализ использует build events, не restore-only log.
+[Task-level replay](../../TestResults/CompilerIsolation-20261027-1/build-replay.log).
+ILSpy exact-node inspection установленного Microsoft.Build.Tasks.Core.dll,
+Microsoft.Build.Tasks.FileState (token33554520), показал GetFileAttributesEx в
+FileDirInfo и FileExists=false при сохранённом IO exception. Assembly SHA и policy
+сохранены в evidence. Registry/OS settings не менялись.
+
+Fix: GameBuildCompiler передаёт IncludeProjectNameInArtifactsPaths=false. Один
+explicit net10.0 project уже изолирован unique job GUID; output/work ownership,
+frozen references, выключенные ProjectReference builds/shared servers и cleanup
+прежние. SDK убирает лишний project-name segment: воспроизводимый intermediate
+path265→250, Copy и artifact publication проходят. Новых APIs/scopes/storage owners
+нет; произвольно длинные paths и ProjectReference graph acceptance не заявляются.
+Extended-path prefix вариант дал SDK import MSB4019 и не применяется.
+
+Новая regression Compiler_DeepOwnedJobsBuildAndLoadSameProjectTwiceWithoutChangingFirstArtifact
+создаёт owned root с прежним265-character intermediate path, дважды компилирует тот
+же project с private DLL и revisions101/102. Проверяет разные jobs/build IDs/ALCs,
+неизменные bytes/state первого pinned artifact, state/private behavior второго,
+compiler reap, retained diagnostics и отсутствие work/output после cleanup.
+На прежнем compiler RED1/MSB3030; после fix GREEN. Fixture сохраняет artifacts
+при failure этой regression вместо удаления diagnostics; passing cleanup прежний.
+
+Windows x64/SDK10.0.403/net10.0/xUnit2.9.3/VSTest; исходный redirected TEMP сохранён,
+LongPathsEnabled0 до/после. [Exact commands, TRX, source/binary SHA и SDK inspection](../../TestResults/CompilerIsolation-20261027-1/verification.json).
+
+| Проверка | Результат |
+| --- | --- |
+| Новая deep-job regression, Release до fix | Passed0/Failed1/Skipped0, expected RED; [TRX](../../TestResults/CompilerIsolation-20261027-1/red/red.trx) |
+| Deep-job + прежние compiler consumers, Release после fix | Passed8/Failed0/Skipped0; [TRX](../../TestResults/CompilerIsolation-20261027-1/green-Release/green.trx) |
+| Full Aether, исходный TEMP, Debug | Passed1541/Failed0/Skipped0; [TRX](../../TestResults/CompilerIsolation-20261027-1/full-Debug/aether.trx) |
+| Full Aether, исходный TEMP, Release | Passed1541/Failed0/Skipped0; [TRX](../../TestResults/CompilerIsolation-20261027-1/full-Release/aether.trx) |
+| Solution nonincremental Debug build | Exit0/errors0/warnings1541; [log](../../TestResults/CompilerIsolation-20261027-1/solution-Debug.log) |
+| Compiler/checkpoint/Replace/App-stop headless, source Debug + fresh published Release |4/4 +4/4; [summary](../../TestResults/EngineSessions/compiler-isolation-20261027-1/summary.json), Completed=true,458source hashes/changes0 |
+
+Full commands: dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj
+-c Debug/Release --no-build с отдельными TRX/results-directory/binlog. RunProbe
+использует -Scenarios build-artifacts,checkpoint,replacement,app-stop и сохраняет
+build/publish commands. GPU/viewport/editor flags не заданы. Native matrix проверяет
+selected artifact/frame provenance, state/checkpoint/rollback, Stop fences,
+compiler tree kill/reap и released mappings/child resources.
+
+Compiler path follow-up закрыт в проверенном single-project scope. Исходные
+failures1534/1540 Debug и1535/1540 Release сохраняют прежнюю запись; compact TEMP
+больше не требуется для текущего full run. Initial diagnostic forwarding timeout
+в этом run не повторился, но его deterministic fix не выполнялся и follow-up открыт.
+Editor/full solution tests, полная21-scenario process matrix, independent NuGet,
+GPU/display/validation/performance не повторены. ARCH2d/e и BSOD/hardware gates прежние.
+
+## ENG3: Build/Replace fixture migration — 2026-10-27
+
+Закрыты две legacy fixture ошибки, сохранённые в ARCH2c. BuildProbe.Project
+генерировал IGameSession без обязательного IGameSessionEntry: child loader завершался
+до Hello acknowledgement. Generated game теперь реализует static Create с borrowed
+IServiceResolver и caller-owned Game. Generated projects BuildProbe/ReplacementProbe
+добавляют non-copying TrueMoon.Contracts reference через TrueMoonContractsPath наряду
+с AetherContractPath. Replacement variants уже содержали entry из ProbeGame, но
+теряли Contracts reference и получали CS0234/CS0012.
+
+GameBuildCompiler, GameSessionFactory/loader, App/DI contracts, session/nonce/build
+identity и protocol guards не менялись. Один owner, frame drain и child reap прежние.
+RunProbe получил отдельные unique binlogs у своих build/publish invocations.
+
+Добавлен NativeRuntimeProcessTests.CompiledGameFixtures_PreserveSelectedBuildCheckpointRollbackAndCleanup
+с двумя scenarios. Процессы действительно компилируют и загружают selected games;
+дополнительно к внутренним probe assertions проверяются:
+
+- build-artifacts:2build IDs, revisions10/13, colors A/B, generations2/3, byte SHA,
+  отсутствие copied Aether/Contracts DLLs, сохранение session при compile failure,
+  отсутствие late launch после Stop, compiler reap и3released child leases;
+- replacement:4builds/revisions7/8/9/10, checkpoint и first-frame tick/color,
+  selected build/fresh generation, MaxLive1, успешный однократный rollback при
+  candidate rejection, original/recovery errors при failed rollback, Stop fence,
+  zero mappings и8reaped/released leases. Authoring state/parent CLR сохраняются.
+
+На исходных fixtures новый test получил RED2: entry rejection в child и compiler
+CS0234/CS0012 в replacement. После migration тот же test GREEN2; assertions/guards
+не ослаблялись. Логи failed processes сохранены в TestResults/CompiledGameFixtures.
+
+Windows x64/SDK10.0.403/net10.0/xUnit2.9.3/VSTest.
+[Все команды, TRX, исходные failures, TEMP profiles и source/binary SHA](../../TestResults/CompiledGameFixtures-20261027-1/verification.json).
+
+| Проверка | Результат |
+| --- | --- |
+| Новый process regression, Release до fix | Passed0/Failed2/Skipped0, expected RED; [TRX](../../TestResults/CompiledGameFixtures-20261027-1/red/red.trx) |
+| Тот же regression, Release после fix | Passed2/Failed0/Skipped0; [TRX](../../TestResults/CompiledGameFixtures-20261027-1/green-Release/green.trx) |
+| Solution nonincremental Debug build | Exit0/errors0/warnings1541; [log](../../TestResults/CompiledGameFixtures-20261027-1/solution-Debug.log) |
+| Full Aether, исходный redirected TEMP, Debug | Passed1534/Failed6/Skipped0; [TRX](../../TestResults/CompiledGameFixtures-20261027-1/full-Debug/aether.trx) |
+| Full Aether, тот же TEMP, Release | Passed1535/Failed5/Skipped0; [TRX](../../TestResults/CompiledGameFixtures-20261027-1/full-Release/aether.trx) |
+| Full Aether, compact process-local TEMP, Debug | Passed1540/Failed0/Skipped0; [TRX](../../TestResults/CompiledGameFixtures-20261027-1/compact-Debug/aether.trx) |
+| Full Aether, тот же compact TEMP, Release | Passed1540/Failed0/Skipped0; [TRX](../../TestResults/CompiledGameFixtures-20261027-1/compact-Release/aether.trx) |
+| Source Debug apphost + fresh published Release headless matrix |21/21 +21/21, [summary](../../TestResults/EngineSessions/compiled-game-20261027-1/summary.json), Completed=true,458source hashes/changes0 |
+
+Full suite запускается dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj
+-c Debug/Release --no-build с отдельными results-directory/TRX/binlog в evidence.
+Headless RunProbe запускается с21scenario из Probe.Scenarios, включая diagnostics;
+GPU/viewport/editor flags выключены.42cases подтверждают repeat20generations,
+stale/invalid peers, startup/command cancel/timeouts, crash/disconnect/heartbeat,
+forced/hung stop, parent-exit/App close, compiler/selected builds, checkpoint,
+Replace/rollback и output diagnostics. Exact literal scenario list сохранён в evidence.
+
+### Дополнительные full-suite failures и TEMP profile
+
+Первый full Debug сохранил5compiler failures в AetherDiagnosticsTests (Cobalt/DI),
+AetherTelemetryTests success (Cobalt/DI) и GameEditorTests.Build_PublishesCandidateWithoutLaunchingOrChangingRunningWorld.
+Runtime compiler stdout терялся при fixture cleanup; диагностический повтор только
+двух AppCompiler cases сохранил [MSB3030 stdout](../../TestResults/CompiledGameFixtures-20261027-1/observed-f8cd343abaf44de585ce92a5bede3263.log):
+missing work/obj/Game.Candidate/release/Game.Candidate.dll, один из paths265characters.
+Повтор под исходным TEMP опять Failed2. Первый укороченный TEMP внутри run directory
+тоже Failed2; более компактный TestResults/t дал Passed2 без source changes.
+
+Final compact runs задают TEMP=TMP=<src>/TestResults/t только дочернему process
+environment. Пустой Directory.Build.props в этом ignored каталоге сохраняет
+отсутствие repository props у generated fixture projects, как в исходном OS temp.
+Постоянные OS settings и runtime compiler не менялись. Зависимость от профиля
+TEMP подтверждена, точная SDK/filesystem причина MSB3030 и поддержка длинных paths
+остаются отдельным quality follow-up; compact passing не означает их исправление.
+
+Шестой initial Debug failure — ChildDiagnosticForwarderTests.SerializationBounds_ClipSafelyRemoveSecretKeysAndKeepFreeText:
+UntilAsync ожидал Accepted1 и завершился TaskCanceledException. Release/default и
+оба compact runs прошли, но deterministic fix не выполнен; timeout остаётся
+отдельным follow-up. Повторы для диагностики/изменённой конфигурации не переписывают
+исходные failures как green. ENG2 CPU receiver regression прошёл в обоих full profiles.
+
+Editor/full solution tests, independent NuGet consumers, GPU/display/validation/
+performance acceptance не повторены. Legacy Build/Replace follow-up закрыт в
+указанном source/published scope; ARCH2d/e и BSOD/hardware ограничения сохранены.
+
+## ENG2: сохранение pending CPU frame при пустом poll — 2026-10-27
+
+Исправлена гонка FrameReceiver: при удерживаемой UI lease второй буфер был
+pending. Worker переводил его в worker/free и увеличивал Replaced до проверки,
+есть ли новый shared frame. Пустой poll или EOF оставлял TakeLatest без последнего
+кадра; Received при этом уже подтверждал его получение.
+
+SharedFrameRing получил internal lazy destination reservation: сначала validation
+и выбор newer Ready slot, затем короткий callback резервирует private buffer под
+receiver gate. Metadata IO, pixel copy и CRC выполняются вне receiver gate. Если
+UI успел занять оба буфера, slot остаётся Ready для следующего poll. Пустые/stale
+polls и EOF не изымают pending storage. Сохраняются ровно2private pixel buffers,
+один pending frame, неизменность UI lease, bounded latest-frame replacement,
+observable Completion и ожидание UI leases при Dispose. Public API/wire/layout/
+App/DI ownership не менялись; новых factories/scopes нет.
+
+Regression tests в FrameTransportTests:
+
+- Receiver_EofRetainsPendingFrameWhileUiLeaseIsHeldAndDrains удерживает first UI
+  lease, получает второй pending frame, затем ждёт EOF Completion. Это гарантирует
+  следующий worker scan без timed sleep. Проверяет frame2/tick20/CRC, неизменные
+  first pixels, Received2/Replaced0 и незавершённый Dispose до возврата lease.
+- Ring_CopyLatestReservesBufferOnlyForNewFrameAndRetainsReadyWhenUnavailable
+  проверяет отсутствие reservation на empty/stale poll, сохранение Ready при
+  недоступном буфере и последующее получение того же frame/tick/CRC.
+- Прежний Receiver_TwoBuffersKeepLatestWhileUiLeaseStaysUnchangedAndDrain сохранён;
+  добавлен await using для cleanup receiver даже при failed assertion.
+
+Первый новый receiver test на неизменённом production code получил RED:
+Assert.IsType<FrameLease> получил null. После исправления GREEN с теми же
+assertions; polling/retry-to-green или ослабления прежнего теста нет.
+
+Windows x64/SDK10.0.403/net10.0/xUnit2.9.3/VSTest.
+[Evidence, exact commands, source/binary hashes и5binlogs](../../TestResults/FrameReceiver-20261027-1/verification.json).
+
+| Проверка | Результат |
+| --- | --- |
+| Новый receiver regression, Release до fix | Passed0/Failed1/Skipped0, expected RED; [TRX](../../TestResults/FrameReceiver-20261027-1/red/red.trx) |
+| FrameTransportTests, Release после fix | Passed52/Failed0/Skipped0; [TRX](../../TestResults/FrameReceiver-20261027-1/green-Release/green.trx) |
+| CPU transport/session и Frames managed contracts, Debug | Passed94/Failed0/Skipped0; [TRX](../../TestResults/FrameReceiver-20261027-1/cpu-Debug/cpu.trx) |
+| Тот же scope, Release | Passed94/Failed0/Skipped0; [TRX](../../TestResults/FrameReceiver-20261027-1/cpu-Release/cpu.trx) |
+| Solution build Debug --no-incremental -m | Exit0/errors0/warnings1541; [log](../../TestResults/FrameReceiver-20261027-1/solution-Debug.log) |
+
+Final scope filter: FullyQualifiedName~TrueMoon.Aether.Tests.FrameTransportTests
+OR FullyQualifiedName~TrueMoon.Aether.Tests.FrameSessionTests
+OR FullyQualifiedName~TrueMoon.Aether.Tests.Frames. Exact runnable commands with
+TRX/results-directory/binlog flags сохранены в evidence. Smokes используют
+in-process runtime/transport fixtures и named CPU mappings, не native GPU/window.
+
+ENG2 pending-buffer follow-up закрыт в указанном deterministic/narrow scope.
+Полные Aether/Editor/solution tests, source/published process probes, NuGet/native/
+GPU/physical/performance acceptance не повторены. Прежний общий full Release
+failure не переписан как green; Mithril ready-file race, legacy Build/Replace
+fixtures, BSOD investigation и ARCH2d/e остаются открытыми. Следующий quality
+шаг — безопасная ready JSON publication/read у Mithril, затем legacy fixtures.
+
 ## ARCH2c: explicit runtime launch, bootstrap и identity — 2026-10-27
 
 Реализован отдельный native launch contract без зависимости runtime на Editor.

@@ -25,9 +25,12 @@
   </Folder>
   <Folder Name="/Engine/">
     <Project Path="ManualTests/AetherEditorHost/AetherEditorHost.csproj" />
-    <Project Path="ManualTests/AetherRuntimeHost/AetherRuntimeHost.csproj" />
     <Project Path="ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />
     <Project Path="ManualTests/Game.Logic/Game.Logic.csproj" />
+  </Folder>
+  <Folder Name="/Examples/">
+    <Project Path="Examples/AetherEditor/AetherEditor.csproj" />
+    <Project Path="Examples/AetherRuntimeHost/AetherRuntimeHost.csproj" />
   </Folder>
   <Folder Name="/Items/">
     <File Path="Directory.Build.props" />

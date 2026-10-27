@@ -10,6 +10,99 @@ namespace TrueMoon.Aether.Tests;
 [SupportedOSPlatform("windows")]
 public sealed class NativeRuntimeProcessTests
 {
+    /// <summary>Builds real game candidates and checks selected activation, replacement recovery and owned cleanup.</summary>
+    /// <param name="scenario">Selects the compiled build or replacement fixture.</param>
+    /// <returns>Completes after the compiler and every owned runtime have exited.</returns>
+    [Theory]
+    [InlineData("build-artifacts")]
+    [InlineData("replacement")]
+    public async Task CompiledGameFixtures_PreserveSelectedBuildCheckpointRollbackAndCleanup(string scenario)
+    {
+        var workspace = EngineSessionProbe.CheckpointProbe.FindWorkspace();
+        var directory = Path.Combine(workspace, "TestResults", "CompiledGameFixtures", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var info = new ProcessStartInfo(DotnetExecutable())
+        {
+            WorkingDirectory = workspace, UseShellExecute = false, CreateNoWindow = true,
+            RedirectStandardOutput = true, RedirectStandardError = true
+        };
+        info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "EngineSessionProbe.dll"));
+        info.ArgumentList.Add(scenario); info.ArgumentList.Add(directory);
+        using var process = new Process { StartInfo = info };
+        Assert.True(process.Start());
+        var stdout = process.StandardOutput.ReadToEndAsync(); var stderr = process.StandardError.ReadToEndAsync();
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(130));
+            Assert.True(process.ExitCode == 0, $"{scenario} exit {process.ExitCode}: {await stderr}\nArtifacts: {directory}");
+            Assert.Empty(await stderr);
+            using var report = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "report.json")));
+            var result = report.RootElement;
+            Assert.True(result.GetProperty("Passed").GetBoolean());
+            Assert.Equal(scenario, result.GetProperty("Scenario").GetString());
+            Assert.True(result.GetProperty("EditorPreserved").GetBoolean());
+            Assert.False(result.GetProperty("GameLoadedInEditor").GetBoolean());
+            Assert.Equal(0, result.GetProperty("Mappings").GetInt32());
+            var leases = result.GetProperty("Leases").EnumerateArray().ToArray();
+            Assert.Equal(scenario == "build-artifacts" ? 3 : 8, leases.Length);
+            Assert.Equal(leases.Length, leases.Select(lease => lease.GetProperty("ProcessId").GetInt32()).Distinct().Count());
+            Assert.All(leases, lease =>
+            {
+                AssertReleased(lease);
+                Assert.True(lease.GetProperty("ProcessId").GetInt32() > 0);
+                Assert.NotEqual(process.Id, lease.GetProperty("ProcessId").GetInt32());
+            });
+            var builds = result.GetProperty("Builds").EnumerateArray().ToArray();
+            Assert.Equal(builds.Length, builds.Select(build => build.GetProperty("BuildId").GetString()).Distinct().Count());
+            if (scenario == "build-artifacts")
+            {
+                Assert.True(result.GetProperty("CompilerReaped").GetBoolean());
+                Assert.True(result.GetProperty("CompileFailurePreservedSession").GetBoolean());
+                Assert.True(result.GetProperty("StaleCompletionDidNotLaunch").GetBoolean());
+                Assert.True(result.GetProperty("HostUnchanged").GetBoolean());
+                Assert.Equal(new long[] { 10, 13 }, builds.Select(build => build.GetProperty("SourceRevision").GetInt64()));
+                Assert.Equal(new uint[] { 0xff2080c0, 0xffc06020 }, builds.Select(build => build.GetProperty("Color").GetUInt32()));
+                Assert.Equal(new ulong[] { 2, 3 }, builds.Select(build => build.GetProperty("Generation").GetUInt64()));
+                Assert.All(builds, build =>
+                {
+                    var path = build.GetProperty("Path").GetString()!;
+                    Assert.Equal("Game.Candidate.dll", Path.GetFileName(path));
+                    Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))), build.GetProperty("Sha256").GetString());
+                    Assert.False(File.Exists(Path.Combine(Path.GetDirectoryName(path)!, "TrueMoon.Aether.dll")));
+                    Assert.False(File.Exists(Path.Combine(Path.GetDirectoryName(path)!, "TrueMoon.Contracts.dll")));
+                });
+            }
+            else
+            {
+                Assert.Equal(new long[] { 7, 8, 9, 10 }, builds.Select(build => build.GetProperty("SourceRevision").GetInt64()));
+                Assert.Equal(1, result.GetProperty("MaxLive").GetInt32());
+                Assert.True(result.GetProperty("StopFenced").GetBoolean());
+                var applied = result.GetProperty("Applied");
+                Assert.Equal(builds[1].GetProperty("BuildId").GetString(), applied.GetProperty("Identity").GetProperty("GameBuildId").GetString());
+                Assert.Equal(2ul, applied.GetProperty("Identity").GetProperty("Generation").GetUInt64());
+                var state = result.GetProperty("State").GetProperty("State");
+                Assert.Equal(JsonSerializer.Serialize(state), JsonSerializer.Serialize(applied.GetProperty("Checkpoint").GetProperty("State")));
+                Assert.Equal(state.GetProperty("Tick").GetUInt64(), result.GetProperty("FirstFrame").GetProperty("Tick").GetUInt64());
+                Assert.Equal(0xffc06020u, result.GetProperty("FirstFrame").GetProperty("Color").GetUInt32());
+                var candidateFailure = result.GetProperty("CandidateFailure");
+                Assert.True(candidateFailure.GetProperty("RollbackAttempted").GetBoolean());
+                Assert.True(candidateFailure.GetProperty("RollbackSucceeded").GetBoolean());
+                Assert.Equal("CheckpointRejectedException", candidateFailure.GetProperty("Cause").GetString());
+                var rollbackFailure = result.GetProperty("RollbackFailure");
+                Assert.True(rollbackFailure.GetProperty("RollbackAttempted").GetBoolean());
+                Assert.False(rollbackFailure.GetProperty("RollbackSucceeded").GetBoolean());
+                Assert.Equal("CheckpointRejectedException", rollbackFailure.GetProperty("Cause").GetString());
+                Assert.Equal("CheckpointRejectedException", rollbackFailure.GetProperty("Recovery").GetString());
+            }
+        }
+        finally
+        {
+            if (!process.HasExited) { process.Kill(entireProcessTree: true); await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10)); }
+            await File.WriteAllTextAsync(Path.Combine(directory, "parent.stdout.log"), await stdout.WaitAsync(TimeSpan.FromSeconds(10)));
+            await File.WriteAllTextAsync(Path.Combine(directory, "parent.stderr.log"), await stderr.WaitAsync(TimeSpan.FromSeconds(10)));
+        }
+    }
+
     /// <summary>Exercises the same headless independent-runtime proof through dotnet DLL and Windows apphost commands.</summary>
     /// <param name="extension">Selects a managed DLL command or its executable apphost.</param>
     /// <returns>Completes after every owned proof process has exited and its reports have been checked.</returns>

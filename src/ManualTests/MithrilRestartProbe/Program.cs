@@ -9,6 +9,21 @@ using TrueMoon.Mithril;
 using TrueMoon.Mithril.Units;
 using MithrilRestartProbe;
 
+if (args is ["--read-ready", var readDirectory, var cancelAfterText])
+{
+    if (!int.TryParse(cancelAfterText, out var cancelAfter) || cancelAfter < 0) return 2;
+    using var cancellation = new CancellationTokenSource();
+    if (cancelAfter > 0) cancellation.CancelAfter(cancelAfter);
+    try
+    {
+        var reported = false;
+        var ready = await Fixture.ReadyAsync(readDirectory, 1, cancellation.Token, () =>
+        { if (!reported) { reported = true; Console.WriteLine("RETRY"); } });
+        Console.WriteLine("RESULT " + JsonSerializer.Serialize(ready));
+        return 0;
+    }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args is ["--child", var childDirectory, var generation])
     return await Fixture.ChildAsync(childDirectory, int.Parse(generation));
 if (args is not [var scenario, var directory] || !Fixture.Cases.ContainsKey(scenario)) return 2;
@@ -173,15 +188,29 @@ namespace MithrilRestartProbe
                 { if (!observer.HasExited) { observer.Kill(entireProcessTree: true); await observer.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)); } observer.Dispose(); }
             }
         }
-        private static async Task<Identity> ReadyAsync(string directory, int generation)
+        internal static async Task<Identity> ReadyAsync(string directory, int generation, CancellationToken token = default, Action? onRetry = null)
         {
             var path = Path.Combine(directory, $"ready-{generation}.json");
-            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-            while (!File.Exists(path)) await Task.Delay(10, deadline.Token);
-            return JsonSerializer.Deserialize<Identity>(await File.ReadAllTextAsync(path))!;
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+            deadline.CancelAfter(TimeSpan.FromSeconds(8));
+            while (true)
+            {
+                deadline.Token.ThrowIfCancellationRequested();
+                try
+                {
+                    var json = await File.ReadAllTextAsync(path, deadline.Token);
+                    return JsonSerializer.Deserialize<Identity>(json) ?? throw new InvalidDataException("Ready JSON must contain an identity.");
+                }
+                catch (IOException error) when (error is FileNotFoundException || (error.HResult & 0xffff) is 32 or 33)
+                {
+                    // Atomic publication does not rule out transient Windows sharing/lock conflicts.
+                    onRetry?.Invoke();
+                    await Task.Delay(10, deadline.Token);
+                }
+            }
         }
         private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
-        private sealed record Identity(int Pid, int Unit, int Parent, string Endpoint);
+        internal sealed record Identity(int Pid, int Unit, int Parent, string Endpoint);
 
         private sealed class ObservedHandle(IUnitConfiguration config, string directory, IEventsSource events) : ChildProcessUnitHandle(config, events)
         {

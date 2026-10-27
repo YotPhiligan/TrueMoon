@@ -101,7 +101,15 @@ public sealed class SharedFrameRing : IDisposable
         try { return CopyLatestCore(destination, after); }
         catch (Exception e) { lock (_local) _failure ??= e; throw; }
     }
-    private FrameMetadata? CopyLatestCore(byte[] destination, ulong after)
+    // Reserve private storage only after selecting a newer shared frame. The callback runs
+    // under the metadata lock and must only claim storage, never copy pixels or wait for IO.
+    internal FrameMetadata? CopyLatest(ulong after, Func<byte[]?> acquireDestination)
+    {
+        ArgumentNullException.ThrowIfNull(acquireDestination);
+        try { return CopyLatestCore(null, after, acquireDestination); }
+        catch (Exception e) { lock (_local) _failure ??= e; throw; }
+    }
+    private FrameMetadata? CopyLatestCore(byte[]? destination, ulong after, Func<byte[]?>? acquireDestination = null)
     {
         var selected = Metadata(h =>
         {
@@ -114,6 +122,14 @@ public sealed class SharedFrameRing : IDisposable
                     if (m.ProducedTimestamp > Stopwatch.GetTimestamp()) throw new InvalidDataException("Frame timestamp is in the future.");
                     if (m.FrameId > after && (latest == null || m.FrameId > latest.FrameId)) latest = m;
                 }
+            if (latest != null && acquireDestination != null)
+            {
+                destination = acquireDestination();
+                // The UI may have acquired both buffers since the receiver's availability check.
+                // Keep the shared frame Ready until private storage becomes available.
+                if (destination == null) return null;
+                if (destination.Length != Surface.PixelBytes) throw new ArgumentException("Invalid frame buffer.", nameof(acquireDestination));
+            }
             for (var i = 0; i < FrameCodec.SlotCount; i++)
                 if (FrameCodec.State(h, i) == FrameSlotState.Ready && i != latest?.Slot)
                 { FrameCodec.SetState(h, i, FrameSlotState.Free); Superseded++; }
@@ -121,11 +137,12 @@ public sealed class SharedFrameRing : IDisposable
             return latest;
         });
         if (selected == null) return null;
+        var pixels = destination!;
         try
         {
-            if (_view.ReadArray(FrameCodec.PixelsOffset(Surface, selected.Slot), destination, 0, destination.Length) != destination.Length)
+            if (_view.ReadArray(FrameCodec.PixelsOffset(Surface, selected.Slot), pixels, 0, pixels.Length) != pixels.Length)
                 throw new EndOfStreamException("Incomplete frame copy.");
-            if (FramePattern.Checksum(destination) != selected.Checksum) throw new InvalidDataException("Frame CRC mismatch.");
+            if (FramePattern.Checksum(pixels) != selected.Checksum) throw new InvalidDataException("Frame CRC mismatch.");
             return selected;
         }
         finally

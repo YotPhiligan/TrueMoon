@@ -142,21 +142,58 @@ public class ChildDiagnosticForwarderTests
         Assert.Single(remote.Nonempty); Assert.Equal(2, sender.Read().Lost); Assert.Equal(1, sender.Read().Unconfirmed); Assert.True(sender.Read().Released);
     }
 
-    [Fact]
-    public async Task SerializationBounds_ClipSafelyRemoveSecretKeysAndKeepFreeText()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DelayedAck_KeepsBoundedPayloadUnconfirmedAndDrainsWithoutReplay(bool replyAfterStop)
     {
         var options = Options(); options.MaxBatchBytes = 65536; var launch = Launch(options); var reader = new DeliveryReader();
-        reader.Add(Record() with
+        var app = Guid.NewGuid(); var entered = Signal(); var release = Signal(); var replied = Signal();
+        await using var remote = new DeliveryRemote(launch, async (packet, _) =>
         {
-            Source = new('S', 130), MessageTemplate = new string('x', 2047) + "😀tail", ExceptionStackTrace = new('e', 5000),
-            Properties = new Dictionary<string, string?> { ["nOnCe"] = launch.Identity.Nonce, ["ENDPOINT"] = launch.Endpoint, ["safe"] = launch.Endpoint, ["unicode"] = new string('v', 127) + "😀" }
+            if (packet.RecordCount != 0) { entered.TrySetResult(); await release.Task; replied.TrySetResult(); }
+            return new() { Accepted = packet.RecordCount, LastSequence = packet.RecordCount == 0 ? 0 : 1 };
         });
-        await using var remote = new DeliveryRemote(launch); await using var sender = new ChildDiagnosticForwarder(launch, reader, new DeliveryClients(options));
-        await UntilAsync(() => sender.Read().Accepted == 1); await sender.StopAsync();
-        var row = Assert.Single(JsonSerializer.Deserialize<DiagnosticRecord[]>(Assert.Single(remote.Nonempty).Payload)!);
-        Assert.Equal(new string('S', 128), row.Source); Assert.Equal(new string('x', 2047), row.MessageTemplate); Assert.Equal(4096, row.ExceptionStackTrace!.Length);
-        Assert.False(row.Properties.ContainsKey("nOnCe")); Assert.False(row.Properties.ContainsKey("ENDPOINT")); Assert.Equal(launch.Endpoint, row.Properties["safe"]);
-        Assert.Equal(new string('v', 127), row.Properties["unicode"]); Assert.True(row.IsTruncated);
+        var clients = new DeliveryClients(options);
+        await using var sender = new ChildDiagnosticForwarder(launch, reader, clients);
+        try
+        {
+            // Connect before publishing data; this test delays the acknowledgement, not startup.
+            await UntilAsync(() => clients.Product!.IsConnected);
+            reader.Add(SerializationRecord(launch) with { ApplicationId = app });
+            await entered.Task.WaitAsync(Deadline);
+            var row = Assert.Single(JsonSerializer.Deserialize<DiagnosticRecord[]>(Assert.Single(remote.Nonempty).Payload)!);
+            Assert.Equal(new string('S', 128), row.Source); Assert.Equal(new string('x', 2047), row.MessageTemplate);
+            Assert.Equal(4096, row.ExceptionStackTrace!.Length); Assert.Equal(new string('v', 127), row.Properties["unicode"]);
+            Assert.Equal(new Dictionary<string, string?> { ["safe"] = launch.Endpoint, ["unicode"] = new string('v', 127) }, row.Properties);
+            Assert.True(row.IsTruncated);
+
+            // Keep the reply behind a barrier until the real 500ms request budget has expired.
+            await UntilAsync(() => sender.Read().Unconfirmed == 1);
+            Assert.Equal(1, clients.Product!.PendingRequestCount);
+            reader.Add(Record(2, app), Record(3, app));
+            await UntilAsync(() => sender.Read().Lost == 2);
+            Assert.Single(remote.Nonempty);
+            var pending = sender.Read();
+            Assert.Equal(0, pending.Accepted); Assert.Equal(0, pending.Rejected); Assert.Equal(1, pending.Failures);
+            Assert.Equal(typeof(TaskCanceledException).FullName, pending.LastFailureType);
+
+            if (!replyAfterStop)
+            {
+                release.TrySetResult();
+                await replied.Task.WaitAsync(Deadline);
+                await UntilAsync(() => clients.Product.PendingRequestCount == 0);
+            }
+            await sender.StopAsync();
+            release.TrySetResult(); await replied.Task.WaitAsync(Deadline);
+            var status = sender.Read();
+            Assert.Equal(0, status.Accepted); Assert.Equal(0, status.Rejected); Assert.Equal(1, status.Unconfirmed);
+            Assert.Equal(2, status.Lost); Assert.Equal(1, status.Failures);
+            Assert.True(status.Closed); Assert.True(status.DrainComplete); Assert.True(status.Released);
+            Assert.Equal(0, clients.Product.PendingRequestCount); Assert.True(clients.Product.Completion.IsCompletedSuccessfully);
+            Assert.Single(remote.Nonempty); Assert.Equal(0, reader.Disposals); Assert.Equal(0, clients.Disposals);
+        }
+        finally { release.TrySetResult(); }
     }
 
     [Fact]

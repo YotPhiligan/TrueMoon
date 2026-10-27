@@ -1,8 +1,11 @@
 # AetherEditorHost
 
-Executable consumer of `TrueMoon.Aether.Editor`. Main/CLI, App composition,
+Directed acceptance consumer of `TrueMoon.Aether.Editor`. Main/CLI, App composition,
 diagnostics paths, process environment and directed smoke checks live here.
 The reusable package owns View/Data/styles and its App registrations.
+
+The minimal application host and independent runtime are in [Examples](../../Examples/README.md).
+This test host keeps its legacy CLI, demo and smoke scenarios for regressions.
 
 ```powershell
 dotnet run --project ManualTests/AetherEditorHost
@@ -22,8 +25,8 @@ and `HostedUiWindow.Completion`, then drains App. See the
 [module API](../../TrueMoon.Aether.Editor/PACKAGE.md) and
 [screen/command guide](../../TrueMoon.Aether.Editor/README.md).
 
-This consumer explicitly retains the compatible same-executable profile until
-the host/resources stage. Its UseAetherEditor configureEngine sets:
+This acceptance consumer explicitly retains the compatible same-executable
+profile for its legacy smoke scenarios. Its UseAetherEditor configureEngine sets:
 
 ```csharp
 engine.RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime");
@@ -38,7 +41,7 @@ game or built-in preview with `.ParentProcessId`. Main/App composition, diagnost
 and reporting remain here, not in the library.
 
 ARCH2c also supports a separate runtime without Editor/UI dependencies:
-[AetherRuntimeHost](../AetherRuntimeHost/README.md). A consuming host can configure
+[AetherRuntimeHost](../../Examples/AetherRuntimeHost/README.md). A consuming host can configure
 `engine.RuntimeLaunch = new NativeRuntimeLaunch(absRuntimeExe, absRuntimeDll)` and
 `engine.HostContractId = BuildIdentity.ForRuntime(absRuntimeDll)` instead. For dotnet,
 use its absolute executable and explicit `[absRuntimeDll, .. runtimeArguments]`.
@@ -53,8 +56,9 @@ must not mutate in place during a session. A different pair invalidates old game
 artifacts/checkpoints: rebuild games. Scene/project formats are unchanged.
 [Bootstrap Version1/bounds and unchanged wire versions](../../TrueMoon.Aether/PACKAGE.md).
 
-The example currently copies its fonts from AlloyTest; complete asset/example
-delivery remains ARCH2d, independent NuGet/published acceptance remains ARCH2e.
+This test host links the licensed font owned by Examples/AetherEditor at build
+time; the font and OFL are copied beside its executable for build/publish.
+No AlloyTest lookup remains. Independent NuGet acceptance remains ARCH2e.
 Do not infer that matrix from source ProjectReference/process checks or the example's
 explicit same-executable profile. No new published result is claimed here.
 

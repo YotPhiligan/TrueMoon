@@ -61,7 +61,8 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     /// <summary>Gets the last job directory; completed diagnostics remain subject to the root's retention policy.</summary>
     public string? DiagnosticsDirectory { get; private set; }
     /// <summary>Builds a candidate into owned staging, using the currently loaded Aether DLL as the frozen contract.</summary>
-    /// <remarks>The project must consume AetherContractPath. ProjectReference builds and shared build servers are disabled.</remarks>
+    /// <remarks>The project must consume AetherContractPath. ProjectReference builds and shared build servers are disabled.
+    /// Each single-project job owns its artifact paths, so intermediate paths omit the redundant project-name segment.</remarks>
     public Task<GameBuildArtifact> BuildAsync(GameBuildRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -127,6 +128,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in new[] { "build", request.ProjectPath, "--configuration", "Release", "--framework", "net10.0",
             "--output", output, "--artifacts-path", work, "--verbosity", "quiet", "--disable-build-servers",
+            "-property:IncludeProjectNameInArtifactsPaths=false",
             "-property:BuildProjectReferences=false", "-property:UseSharedCompilation=false", "-nodeReuse:false",
             "-property:AetherContractPath=" + typeof(IGameSession).Assembly.Location,
             "-property:TrueMoonContractsPath=" + typeof(IFactory<>).Assembly.Location }) info.ArgumentList.Add(argument);

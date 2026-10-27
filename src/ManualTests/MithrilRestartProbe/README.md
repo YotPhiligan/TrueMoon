@@ -37,6 +37,12 @@ control endpoint проверяются для каждой generation. Посл
 monitor completion, отсутствие current Process и повторный Stop. Report materializes
 exit codes до освобождения observers; deferred enumeration не используется.
 
+Ready reader повторяет только missing-file и Windows sharing/lock conflicts в
+едином8s deadline, включающем IO и retry delay; malformed/null JSON остаётся ошибкой.
+Directed режим `--read-ready <directory> <cancelAfterMilliseconds>` читает readiness
+generation1 для ReadyFileProcessTests: `RETRY` подтверждает transient read failure,
+0сохраняет обычный budget, положительное значение задаёт дополнительную раннюю отмену.
+
 `RestartLimit` — nonnegative maximum automatic attempts на один explicit Start
 (default3, initial launch не считается); не сбрасывается успешным restart.
 `RestartDelay` — nonnegative milliseconds до каждой automatic attempt (default250).

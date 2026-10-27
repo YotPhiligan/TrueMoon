@@ -24,6 +24,11 @@ internal static class ChildDiagnosticFixture
     internal static DiagnosticRecord Record(long sequence = 1, Guid? application = null) => new(Timestamp, sequence, application ?? Guid.NewGuid(), Environment.ProcessId,
         "Child.Source", DiagnosticLevel.Warning, 701, "Child.Event", "record " + sequence, new Dictionary<string, string?>(),
         typeof(IOException).FullName, "child error", "child stack", "00112233445566778899aabbccddeeff", "0123456789abcdef", "Caller", false);
+    internal static DiagnosticRecord SerializationRecord(SessionLaunch launch) => Record() with
+    {
+        Source = new('S', 130), MessageTemplate = new string('x', 2047) + "😀tail", ExceptionStackTrace = new('e', 5000),
+        Properties = new Dictionary<string, string?> { ["nOnCe"] = launch.Identity.Nonce, ["ENDPOINT"] = launch.Endpoint, ["safe"] = launch.Endpoint, ["unicode"] = new string('v', 127) + "😀" }
+    };
     internal static DiagnosticDeliveryPacket Packet(SessionLaunch launch, Guid application, long packet = 1, params DiagnosticRecord[] records) => new()
     {
         SessionId = launch.Identity.SessionId, Generation = unchecked((long)launch.Identity.Generation), HostContractId = launch.Identity.HostContractId,

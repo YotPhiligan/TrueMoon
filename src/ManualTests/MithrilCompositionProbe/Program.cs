@@ -10,6 +10,21 @@ using TrueMoon.Mithril;
 using TrueMoon.Services;
 using MithrilCompositionProbe;
 
+if (args is ["--read-ready", var readDirectory, var cancelAfterText])
+{
+    if (!int.TryParse(cancelAfterText, out var cancelAfter) || cancelAfter < 0) return 2;
+    using var cancellation = new CancellationTokenSource();
+    if (cancelAfter > 0) cancellation.CancelAfter(cancelAfter);
+    try
+    {
+        var reported = false;
+        var ready = await Fixture.ReadyAsync(readDirectory, cancellation.Token, () =>
+        { if (!reported) { reported = true; Console.WriteLine("RETRY"); } });
+        Console.WriteLine("RESULT " + JsonSerializer.Serialize(ready));
+        return 0;
+    }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args is ["--idle"])
 {
     Console.WriteLine("READY");
@@ -166,10 +181,26 @@ namespace MithrilCompositionProbe
             foreach (var arg in args) info.ArgumentList.Add(arg);
             return Process.Start(info)!;
         }
-        internal static async Task<Ready> ReadyAsync(string directory)
+        internal static async Task<Ready> ReadyAsync(string directory, CancellationToken token = default, Action? onRetry = null)
         {
-            var path = Path.Combine(directory, "ready.json"); await WaitFileAsync(path);
-            return JsonSerializer.Deserialize<Ready>(await File.ReadAllTextAsync(path))!;
+            var path = Path.Combine(directory, "ready.json");
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+            deadline.CancelAfter(TimeSpan.FromSeconds(8));
+            while (true)
+            {
+                deadline.Token.ThrowIfCancellationRequested();
+                try
+                {
+                    var json = await File.ReadAllTextAsync(path, deadline.Token);
+                    return JsonSerializer.Deserialize<Ready>(json) ?? throw new InvalidDataException("Ready JSON must contain an identity.");
+                }
+                catch (IOException error) when (error is FileNotFoundException || (error.HResult & 0xffff) is 32 or 33)
+                {
+                    // Atomic publication does not rule out transient Windows sharing/lock conflicts.
+                    onRetry?.Invoke();
+                    await Task.Delay(10, deadline.Token);
+                }
+            }
         }
         private static async Task WaitFileAsync(string path)
         {

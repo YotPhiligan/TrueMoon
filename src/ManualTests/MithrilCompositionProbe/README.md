@@ -29,6 +29,13 @@ Runner строит Debug, публикует Release и выполняет 28 �
 только созданные процессы. У каждого случая новый каталог, поэтому прежний
 readiness не принимается за текущий.
 
+Reader использует единый deadline8s для ожидания публикации и чтения: повторяет
+только missing-file и Windows sharing/lock conflicts, с token у IO и retry delay.
+Malformed/null JSON завершается ошибкой. Directed режим
+`--read-ready <directory> <cancelAfterMilliseconds>` проверяется ReadyFileProcessTests:
+`RETRY` подтверждает первую transient ошибку,0сохраняет обычный8s budget,
+положительное значение дополнительно задаёт раннюю отмену.
+
 В ignored `TestResults/MithrilComposition/manual/summary.json` сохраняются UTC,
 SDK/OS/architecture, команды, exit codes, результаты и SHA256 runtime/fixture
 sources. Логи build/publish/stdout/stderr находятся рядом. `Completed=true`

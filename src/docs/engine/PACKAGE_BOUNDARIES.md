@@ -1,4 +1,4 @@
-﻿# Границы пакетов Aether и Editor
+# Границы пакетов Aether и Editor
 
 ARCH2a–c,2026-10-27. [Этапы и критерии ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27),
 [текущие проверки](STATUS.md). Эта карта описывает размещение и ownership;
@@ -29,14 +29,15 @@ validation и file IO доступны через Aether без открытия
 | View/Data/ViewModel/IViewStyle, header/status/popups/property controls | Reusable Editor package layer; UI products принадлежат parent/window, dependencies borrowed; создание на UI owner thread |
 | EditorViewport/Binding и EditorPreview | Adapters между UI presentation и Aether preview/frame contracts остаются в Editor |
 | Configuration extensions | Editor registrations остаются в Editor; общий codec/store регистрируются Aether extension. Aggregate UseAetherEditor и optional UseAetherEditorWindow реализованы в ARCH2b |
-| Program/EditorApplication/EditorLaunchOptions/ProjectEntryPoint и smoke checks | Перенесены в ManualTests/AetherEditorHost, namespace TrueMoon.ManualTests.AetherEditorHost; пакет не зависит от executable. Оставшаяся demo/asset cleanup — ARCH2d |
+| Program/EditorApplication/EditorLaunchOptions/ProjectEntryPoint и smoke checks | Directed consumers остаются в ManualTests/AetherEditorHost; минимальный Main/CLI/App host — Examples/AetherEditor с собственными font/OFL assets. Пакет не зависит от executable |
 | RuntimeEntryPoint/EngineChild/BuildIdentity | Main/App.Build/diagnostics/report остаются в executable hosts. Aether.Hosting предоставляет explicit NativeRuntimeLaunch, shared RuntimeBootstrap и counterpart fingerprint; runtime implementation/owned process coordination остаются в Aether (ARCH2c) |
 
 Editor теперь Library/IsPackable=true, refs — Contracts/Aether/Alloy.Hosting без
 concrete TrueMoon bootstrap. PACKAGE.md включён в local NuGet; entry point и
 executable payload отсутствуют. Explicit runtime launch/bootstrap/identity реализованы
-в ARCH2c; полная host/asset delivery и fresh independent NuGet/published acceptance
-остаются ARCH2d/e.
+в ARCH2c; owners и source/published resource/headless проверки —
+[Examples](../../Examples/README.md). GUI/native acceptance и fresh independent
+NuGet consumption остаются открытыми.
 
 ## Editor App integration ARCH2b
 
@@ -64,7 +65,7 @@ transport не ожидается готовность стандартного 
 CLI EditorLaunchOptions больше не входит в Editor public package API. Existing
 consumer запускает AetherEditorHost.exe или собственный Main; прежний --runtime
 branch явно выбран через CurrentProcess("--runtime") и остаётся совместимым профилем
-до host/resources stage, не implicit требованием к consuming exe. Команды и ownership —
+для directed smoke workflows, не implicit требованием к consuming exe. Команды и ownership —
 в [README host](../../ManualTests/AetherEditorHost/README.md), reusable API —
 в [PACKAGE.md](../../TrueMoon.Aether.Editor/PACKAGE.md).
 
@@ -102,14 +103,17 @@ built-in preview; legacy Game.Logic probe и pre-dispatch classification явн�
 включают allowLegacyGame:true. Child-only App launcher не нужен. Parser/validation
 общие, но Main/App.Build/diagnostics/report остаются в consumer, не в library.
 
-[ManualTests/AetherRuntimeHost](../../ManualTests/AetherRuntimeHost/README.md) — отдельный
-runtime без Editor/UI dependencies. Existing AetherEditorHost пока явно использует
-same-exe профиль до resources stage. Новый EngineSessionProbe CLI
+[Examples/AetherRuntimeHost](../../Examples/AetherRuntimeHost/README.md) — отдельный
+runtime без Editor/UI dependencies. Минимальный Examples/AetherEditor выбирает
+этот apphost явно; directed AetherEditorHost сохраняет same-exe smoke профиль.
+EngineSessionProbe CLI
 `dotnet <EngineSessionProbe.dll> --runtime-launch-proof <runtime dll/exe path> <fresh report dir>`
 проверен отдельно source Debug и published Release, DLL/apphost4/4.
 [Evidence и ограничения расширенной matrix](../../TestResults/ARCH2c-20261027/verification.json).
-Этот headless process scope не доказывает asset delivery, GPU/presentation или
-independent NuGet acceptance; ARCH2d/e остаются открытыми. [API](../../TrueMoon.Aether/PACKAGE.md),
+Этот прежний ARCH2c headless process scope не доказывает asset delivery,
+GPU/presentation или independent NuGet acceptance. Ресурсный/headless proof ARCH2d
+добавлен2026-10-28 в [Examples guide](../../Examples/README.md); GUI/GPU и ARCH2e
+independent NuGet остаются открытыми. [API](../../TrueMoon.Aether/PACKAGE.md),
 [proof scope/CLI](../../ManualTests/EngineSessionProbe/README.md#arch2c-explicit-runtime-launch-и-independent-process-proof).
 
 ## Подключение scene persistence без Editor

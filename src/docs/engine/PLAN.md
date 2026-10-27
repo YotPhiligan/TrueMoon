@@ -1,7 +1,7 @@
 # TrueMoon.Aether: план игрового движка и редактора
 
 Зафиксировано **2026-10-13** по обсуждению будущего кастомного движка для одной
-не очень сложной 3D-игры. Состояние2026-10-23: **ENG0 определён;
+не очень сложной 3D-игры. Исторический срез2026-10-23: **ENG0 определён;
 ENG1 headless supervisor и ENG2 CPU viewport реализованы в bounded probe scope;
 ENG3a compiler/artifacts, ENG3b checkpoint/restore, ENG3c Replace/rollback
 и ENG3d Editor commands/20Replace proof реализованы2026-10-20; ENG4a/b/c, ENG4d bridge/ENG4d2 ordinary GPU Editor проверены в bounded scope;
@@ -27,8 +27,9 @@ Transform → увидеть Edit preview → Undo/Redo → сохранить �
 Уточнение2026-10-23: сначала общие contracts и минимальный ARCH1b с headless
 проверками, затем Edit preview и подключение редактируемого UI; первые engine API/preview
 реализованы. ED1a project description/ProjectSession и ED2a document/persistence
-API реализованы в первых profiles. ED2b подключает document UI commands/close
-policy; далее Transform/Undo/preview integration. Полный движок не является предварительным условием.
+API реализованы в первых profiles. ED2b document UI commands/close policy и
+ED3a Transform/Undo/preview integration также реализованы; следующий доступный
+шаг — ARCH2e.1/2. Полный движок не является предварительным условием.
 IPC Editor↔Runtime — Enerit; frame transport отдельный.
 
 Наблюдение2026-10-23 из ED4a integration: старый CPU `FrameReceiver` test
@@ -43,6 +44,12 @@ CPU transport; повторный passing сам по себе не означа
 Повторное наблюдение2026-10-26 в ENE6d.1 full Release: тот же test/null на строке177,
 Aether1217/1218, solution4020/4021. Debug4021/4021 и новые100cases не закрывают этот
 ENG2 follow-up; CPU production/test не менялись. [Текущая запись](HISTORY.md#ipc-trace-context-в-control-factories--2026-10-26).
+Исправление2026-10-27: ранний claim pending buffer подтверждён deterministic
+RED regression; lazy reservation после выбора newer shared frame устраняет потерю
+на empty/stale poll и EOF. Два private buffers, UI lease и drain сохранены.
+ENG2 follow-up закрыт в narrow scope:94/94 CPU/session/Frames tests Debug/Release,
+solution nonincremental Debug build0errors/1541warnings; полный solution test run
+не повторён. [Контракт исправления и evidence](HISTORY.md#eng2-сохранение-pending-cpu-frame-при-пустом-poll--2026-10-27).
 Engine/ARCH1 contracts ведутся здесь, общие UI capabilities — в UI плане.
 ED1a и ED2 document profile реализованы, остальной ED1–ED8 scope открыт;
 ENG7a/UIA1 и прежние passing результаты не означают их готовности.
@@ -70,18 +77,48 @@ adapter. [Решения и декомпозиция ARCH1](#arch1-entity-compon
 или тонкий поставляемый пример. Этот раздел — единственное место подробной
 декомпозиции перехода; ED1–ED8 продолжаются в EDITOR_PLAN.md после него.
 
-**Статус2026-10-27:** ARCH2a–c реализованы: shared scene persistence, Editor
+**Статус2026-10-28:** ARCH2a–c реализованы: shared scene persistence, Editor
 library/App integration и explicit runtime executable/bootstrap/identity.
 [Инвентаризация типов, API и ownership](PACKAGE_BOUNDARIES.md).
-Main/CLI/smokes остаются в AetherEditorHost, отдельный AetherRuntimeHost зависит
-только от bootstrap/Aether. NativeRuntimeLaunch задаёт command/arguments/working directory;
+Минимальные Main/CLI/App composition находятся в Examples/AetherEditor и
+Examples/AetherRuntimeHost; directed smokes — в ManualTests/AetherEditorHost.
+Runtime host зависит только от bootstrap/Aether. NativeRuntimeLaunch задаёт command/arguments/working directory;
 EngineChild больше не выбирает current executable и не добавляет --runtime.
 Same-exe — явный совместимый профиль CurrentProcess("--runtime").
-Source Debug/published Release headless independent runtime проверен DLL/apphost;
-общий managed Release не green из-за прежнего CPU receiver race, legacy build/Replace
-probes имеют устаревшие fixtures. [Точный scope и failures](STATUS.md).
-ARCH2d/e остаются открыты: hosts/resources, fonts без ManualTests и independent
-NuGet/native acceptance. Прежний functional GPU proof был без Vulkan validation layer.
+Source Debug/published Release headless independent runtime проверен DLL/apphost.
+Build/Replace fixtures мигрированы2026-10-27 на IGameSessionEntry/Contracts:
+RED2→GREEN2, прежний headless21/21source Debug и21/21published Release.
+Compiler MSB3030 исправлен2026-10-27 через job-isolated artifacts layout;
+Full Aether1541/1541 Debug/Release проверен в исходном TEMP при LongPathsEnabled0,
+новый compiler/checkpoint/Replace/App-stop headless8/8. Forwarding test follow-up
+закрыт2026-10-28 controlled late-ACK proof и разделением codec/transport checks;
+конкретный источник задержки исторического run неизвестен.
+[Точный scope и failures](STATUS.md), [история migration](HISTORY.md#eng3-buildreplace-fixture-migration--2026-10-27).
+ARCH2d реализован в source/build/published ресурсном и headless scope: тонкие
+Examples hosts, собственные font/OFL, managed themes/styles, embedded shaders и
+native payloads проверяет VerifyExampleHosts. GUI/GPU acceptance остаётся на
+паузе после BSOD; ARCH2e independent NuGet ещё открыт. Прежний functional GPU
+proof был без Vulkan validation layer.
+
+### Fixture quality follow-ups — 2026-10-27
+
+Наблюдения full run после Build/Replace migration ведутся здесь; это отдельные
+test/build quality задачи, не новые runtime contracts или закрытая acceptance.
+
+- **Повторная компиляция и TEMP profile — исправлено2026-10-27.** DLL существовала,
+  MSBuild native Copy file-state check не распознавал длинный path при Windows
+  LongPathsEnabled0. Каждый single-project job использует SDK artifacts layout
+  без лишнего project-name segment, сохраняя собственный GUID-root/work/output.
+  Inner binlogs, fresh/repeat reproduction и RED→GREEN deep-job regression сохранены;
+  full1541/1541 Debug/Release и headless8/8 прошли в исходном TEMP. Arbitrary long
+  paths/new graph support не обещаются. [Контракт/evidence](HISTORY.md#eng3-compiler-staging-paths--2026-10-27).
+- **Diagnostic forwarding serialization test — исправлено2026-10-28.** Прежний
+  test ждал только Accepted, хотя bounded exchange может закончиться Unconfirmed
+  без replay. Controlled late ACK воспроизвёл прежний10s timeout. Serialization
+  проверяется отдельно через codec; реальные pipes проверяют bounded payload,
+  Unconfirmed/Lost и drain с ACK до/после Stop. Runtime/budgets не менялись.
+  Исходный TRX не содержит final sender health: конкретная причина задержки в
+  историческом Debug run неизвестна. [Причина test defect и evidence](HISTORY.md#diagnostic-forwarding-bounded-outcomes--2026-10-28).
 
 ### Принятые границы ARCH2
 
@@ -108,15 +145,16 @@ Editor зависит от Aether и нужных Alloy/Argentis/Hosting contrac
 
 ### Подключение и ownership ARCH2
 
-Планируемая публичная точка — UseAetherEditor(...) на IAppConfigurationContext.
+Реализованная в ARCH2b публичная точка — UseAetherEditor(...) на IAppConfigurationContext.
 Она копирует/валидирует options, регистрирует Cobalt services, models/styles и
 IFactory products и согласует их с App lifecycle. Существующие UseAether,
 UseAetherAuthoring и runtime registration paths сохраняют свои назначения.
 Новые общие App contracts вводятся только при доказанной необходимости; concrete
 App.Build/Run и CLI не переносятся в Aether с новой bootstrap dependency.
 
-Нужны стандартный Editor View/window integration и создание Editor View для
-пользовательского host. Window/backend выбирает host в поддержанном профиле;
+Стандартный window adapter UseAetherEditorWindow и factory создания Editor View
+для пользовательского host реализованы в ARCH2b; independent package acceptance
+остаётся в ARCH2e. Window/backend выбирает host в поддержанном профиле;
 редактор не создаёт собственный вложенный App. Registration не открывает окно,
 не запускает игру/SDK/compiler и не создаёт GPU resources. UI products создаются
 на owner thread; окно/родитель владеет View, App/project — сервисами/tasks, borrowed
@@ -150,16 +188,35 @@ RuntimeBootstrap выполняет общую validation до App; Main/App.Bui
 
 | ID | Задача | Проверяемый результат |
 | --- | --- | --- |
-| ARCH2a | Реализовано2026-10-27: общие scene files/публичная headless persistence и карта границ Editor | SceneFileCodec/store/results/conflict в Aether.Scenes; UseAetherScenePersistence через App, Editor делегирует persistence. [Inventory/ownership/migration](PACKAGE_BOUNDARIES.md); Aether1347/Editor743 Debug/Release, общий Release имеет отдельный Mithril ready-file failure |
+| ARCH2a | Реализовано2026-10-27: общие scene files/публичная headless persistence и карта границ Editor | SceneFileCodec/store/results/conflict в Aether.Scenes; UseAetherScenePersistence через App, Editor делегирует persistence. [Inventory/ownership/migration](PACKAGE_BOUNDARIES.md); датированные module/full results и последующий Mithril fix — в STATUS/HISTORY |
 | ARCH2b | Реализовано2026-10-27: Editor library/packable module | Main/CLI/runtime branch/smokes в AetherEditorHost; metadata/PACKAGE.md, UseAetherEditor/options/factories/lifecycle и стандартная window integration. 20новых cases, Editor763/Aether1347 Debug/Release; source/published functional native proof. Vulkan validation profile требует отсутствующий layer; полный package proof остаётся ARCH2e |
-| ARCH2c | Реализовано2026-10-27: explicit runtime bootstrap и launch identity | NativeRuntimeLaunch/RuntimeBootstrap/paired fingerprint, отдельный AetherRuntimeHost без Editor/UI; source Debug/published Release DLL/apphost4/4. Aether1536/1536 Debug,1535/1536 Release (прежний CPU receiver race), Editor763/763 обе; legacy build/Replace fixture failures отдельно |
-| ARCH2d | Вынести тонкие executable consumers и ресурсы | Host example содержит Main/composition, runtime host использует Aether; smoke/probes не попадают в reusable API. Шрифты/лицензии/темы/шейдеры и native assets доставлены владельцем либо явно настраиваются host, без путей в ManualTests/source checkout |
-| ARCH2e | Проверить NuGet consumption и повторить затронутую acceptance | Fresh packages и отдельное решение без repo ProjectReference/linked source открывают Editor и запускают Aether runtime. Source Debug/published Release, headless/both-DI и native scenarios проверяются раздельно; supported configuration и ограничения документированы |
+| ARCH2c | Реализовано2026-10-27: explicit runtime bootstrap и launch identity | NativeRuntimeLaunch/RuntimeBootstrap/paired fingerprint, отдельный AetherRuntimeHost без Editor/UI; source Debug/published Release DLL/apphost4/4. Последующие ENG2/Build/Replace fixes и текущие module results — в STATUS; исходные failures сохранены в HISTORY |
+| ARCH2d | Реализовано; проверен ресурсный/headless scope2026-10-28, GUI/GPU acceptance открыта | Examples/AetherEditor и Examples/AetherRuntimeHost: Main/composition в host, smoke/probes отдельно; собственный font/OFL, managed themes/styles, embedded shaders/native payloads без ManualTests lookup. VerifyExampleHosts: fresh published closure вне workspace, hashes/PE metadata,16CLI checks, independent runtime DLL/apphost4/4 source/published. Editor763/763 Debug/Release. Окно/GPU не запускались из-за BSOD; критерии native acceptance сохраняются. [Текущий scope](STATUS.md) |
+| ARCH2e | Открыт: independent NuGet consumer; следующий доступный шаг e.1/2 | Fresh packages и отдельное решение без repo ProjectReference/linked source открывают Editor и запускают Aether runtime. Build/publish/headless/both-DI/resources и native scenarios проверяются раздельно; декомпозиция ниже. GUI/GPU часть отложена после BSOD, полный этап не закрыт |
 
 Порядок: ARCH2a → ARCH2b/c → ARCH2d → ARCH2e. Этот переход предшествует новым
 ED6a/ED8a console/export и ED4c.2/3 features; существующее поведение сохраняется
 регрессиями. Полный World/ECS/ARCH1c, генератор событий, новые DI scopes, MMF и
 общий UI beta не становятся prerequisites переноса.
+
+### ARCH2e: независимый NuGet consumer — декомпозиция 2026-10-28
+
+Уточнение по сверке рабочего дерева: ARCH2d resource/headless proof позволяет
+начать package checks без запуска окна/GPU. Состав acceptance не сокращается;
+GUI/native proof ARCH2d и e.3 остаётся открытым до отдельного разбора BSOD и
+подготовки Vulkan validation environment. ProjectReference examples — исходник
+composition для consumer, их успешный publish не является NuGet proof.
+
+| Подэтап | Следующая работа | Критерий результата |
+| --- | --- | --- |
+| ARCH2e.1 | Собрать fresh packages и отдельное решение с Editor/runtime consumers вне checkout | Isolated feed/cache и PackageReference; без repo ProjectReference, linked source и ManualTests lookup. Cobalt/Enerit analyzers, dependency closure, metadata, host-owned fonts/OFL, managed styles/themes, embedded shaders и native files доставлены в Debug build/Release publish. Version/source/package/resource hashes и точные команды сохранены; NuGet push не требуется |
+| ARCH2e.2 | Выполнить доступный package headless/App/DI proof | Общие scene persistence и Editor registration/View ownership через публичные extensions/factories на Cobalt и существующем Microsoft DI adapter; independent runtime DLL/apphost, bootstrap/identity rejection, selected game, Build/Replace/checkpoint/Stop и diagnostic delivery/capture проверены в затронутом scope. Отдельные results для build/publish, ownership/drain/reap и отсутствия Editor/UI/game в чужом CLR; окно/GPU не нужны этому proof |
+| ARCH2e.3 | После подготовки окружения повторить GUI/native acceptance для новых hosts и packages | Standard window и parent-owned View в отдельных consumers; Open → Transform → preview → Undo/Redo → Save/reopen, failed/cancelled startup/close и runtime crash сохраняют документ. Font/native loading, validation и actual UI/GPU cleanup подтверждены вне checkout. Source Debug и published Release результаты разделены; прежние K3/K7/K8/VRAM ограничения сохраняются |
+
+После e.1/2 возможен статус «package build/headless проверен», но ARCH2 целиком
+остаётся частичным до native proof и остальных критериев ниже. Новые ED features
+продолжаются после полного перехода; новых World/ECS/DI scope contracts для этого
+шага не требуется.
 
 ### Критерии завершения ARCH2
 

@@ -221,6 +221,48 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
         await app.DisposeAsync();
     }
     [Fact]
+    public async Task Compiler_DeepOwnedJobsBuildAndLoadSameProjectTwiceWithoutChangingFirstArtifact()
+    {
+        var root = Path.Combine(fixture.Root, "deep");
+        var legacyIntermediate = Path.Combine(root, "jobs", new string('0', 32), "work", "obj", "Game.Candidate", "release", "Game.Candidate.dll");
+        root += new string('p', Math.Max(1, 265 - legacyIntermediate.Length));
+        var passed = false;
+        await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, root);
+        try
+        {
+            var first = await compiler.BuildAsync(new(fixture.ProjectA, fixture.A.EntryAssembly, fixture.A.EntryType, 101, ["Game.Private.dll"]));
+            var firstJob = compiler.DiagnosticsDirectory!;
+            using var loadedFirst = GameBuildLoader.Load(new(first.DirectoryPath, first.BuildId), GameBuildFixture.Hash);
+            loadedFirst.Session.Load(new("deep-job", 17, [])); loadedFirst.Session.Tick();
+            var firstBytes = File.ReadAllBytes(loadedFirst.LoadedAssemblyPath);
+
+            var second = await compiler.BuildAsync(new(fixture.ProjectA, fixture.A.EntryAssembly, fixture.A.EntryType, 102, ["Game.Private.dll"]));
+            var secondJob = compiler.DiagnosticsDirectory!;
+            using var loadedSecond = GameBuildLoader.Load(new(second.DirectoryPath, second.BuildId), GameBuildFixture.Hash);
+            loadedSecond.Session.Load(new("second-job", 18, []));
+
+            Assert.Equal(101, first.SourceRevision); Assert.Equal(102, second.SourceRevision);
+            Assert.NotEqual(first.BuildId, second.BuildId); Assert.NotEqual(firstJob, secondJob);
+            Assert.NotSame(loadedFirst.Session.GetType().Assembly, loadedSecond.Session.GetType().Assembly);
+            Assert.Equal(firstBytes, File.ReadAllBytes(loadedFirst.LoadedAssemblyPath));
+            Assert.Equal(17, loadedFirst.Session.Revision); Assert.Equal(1ul, loadedFirst.Session.TickNumber);
+            Assert.Equal(18, loadedSecond.Session.Revision); Assert.Equal(0ul, loadedSecond.Session.TickNumber);
+            Assert.Equal(0xff2080c0u, loadedFirst.Session.PatternColor); Assert.Equal(0xff2080c0u, loadedSecond.Session.PatternColor);
+            Assert.Equal(new[] { "Game.Candidate.dll", "Game.Private.dll" }, second.Files);
+            Assert.Null(compiler.ProcessId);
+            foreach (var job in new[] { firstJob, secondJob })
+            {
+                Assert.StartsWith(Path.Combine(root, "jobs") + Path.DirectorySeparatorChar, job);
+                Assert.True(File.Exists(Path.Combine(job, "build.output.json")));
+                Assert.False(Directory.Exists(Path.Combine(job, "output")));
+                Assert.False(Directory.Exists(Path.Combine(job, "work")));
+            }
+            passed = true;
+        }
+        finally { if (!passed) fixture.PreserveArtifacts = true; }
+    }
+
+    [Fact]
     public async Task Compiler_SnapshotsDependenciesAndLeavesCandidateSelectionExplicit()
     {
         await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, Path.Combine(fixture.Root, "snapshot"));

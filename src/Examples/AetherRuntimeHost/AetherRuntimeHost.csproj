@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>TrueMoon.ManualTests.AetherRuntimeHost</RootNamespace>
+    <RootNamespace>TrueMoon.Examples.AetherRuntimeHost</RootNamespace>
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <Description>Independent headless Aether selected-game and edit-preview runtime host.</Description>

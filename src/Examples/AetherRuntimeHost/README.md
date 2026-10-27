@@ -1,12 +1,16 @@
 # AetherRuntimeHost
 
-Independent `net10.0` executable using only TrueMoon bootstrap and Aether project
+Standalone example `net10.0` executable using only TrueMoon bootstrap and Aether project
 references. It validates `RuntimeBootstrap.ReadEnvironment()` before creating an
 App, runs a selected game artifact or built-in EditPreview, and writes
 `runtime-{generation}.json` after stop/drain. The completion record includes actual
 entry/counterpart paths, loaded assembly flags and GPU resource/handle counts.
 There is no Editor/UI dependency, legacy fixed-game fallback, smoke mode or fault
 implementation in this host.
+
+Build/publish it alongside the minimal editor using the [example guide](../README.md).
+The runtime has no font/theme lookup; primitive SPIR-V is embedded in Aether and
+the installed Vulkan driver/loader is needed only for the GPU profile.
 
 The parent supplies `TM_ENGINE_BOOTSTRAP` and the Mithril parent/control environment.
 Invoke either the apphost with no arguments or an absolute dotnet executable with

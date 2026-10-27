@@ -1,5 +1,298 @@
 # TrueMoon: история общей документации
 
+## Сверка рабочего дерева и архив STATUS — 2026-10-28
+
+Документационный QA:20документов/707локальных ссылок/425якорей, ошибок0;
+53source fingerprints совпали,6сохранённых TRX подтверждены.
+[Отчёт](../TestResults/PlanningReview-20261028/verification.json).
+Новых build/tests/process/GPU/package runs нет.
+
+Рабочее дерево сопоставлено с общим и модульными планами. Основной diff —
+ARCH2d hosts/resources и quality follow-ups ENG2/ENG3/Mithril/diagnostic forwarding;
+ARCH2a–c уже в HEAD af03ca3. Устранены устаревшие текущие указания начинать ARCH2c/d
+и повторно закрывать уже исправленные fixtures. Очередь и открытая native acceptance
+согласованы между общим, engine, Editor, Mithril и UI документами. Подробная
+декомпозиция ARCH2e.1–3 находится только в engine PLAN. Новых build/tests/process/
+GPU/package runs нет; сохранённые TRX и verification summaries сверены отдельно.
+Прежние длинные записи общего STATUS перенесены ниже; их даты/исходные failures
+не пересчитаны в новые passing results.
+
+### Снимок прежней сводки
+
+Ниже сохранено содержимое STATUS до сверки. Указания «следующий шаг»,
+«текущий» и открытые failures относятся к датам соответствующих записей;
+актуальная очередь и закрытия находятся в STATUS и PLAN. Это архив,
+не новые результаты запуска. Относительные ссылки сохранены.
+
+Последняя работа — **2026-10-28, ARCH2d hosts/resources**.
+Ресурсный/headless срез завершён: тонкие Examples hosts и font/OFL без ManualTests,
+fresh published closures вне workspace, managed metadata и18resource hashes,
+16CLI checks, independent runtime DLL/apphost4/4 source Debug/published Release.
+Editor763/763 Debug/Release, failed/skipped0;11source inputs/changes0.
+Solution nonincremental Debug build0errors/1541warnings.
+[Команды, evidence и границы](engine/HISTORY.md#arch2d-hosts-и-доставка-ресурсов--2026-10-28).
+Окно/GPU/font rendering, NuGet consumer и общая native acceptance не проверялись;
+BSOD/hardware/validation gates прежние. Следующий доступный шаг — ARCH2e.
+Aether/full solution tests и прежняя21-scenario process matrix не повторены.
+
+Предыдущая работа — **2026-10-28, diagnostic forwarding test fix**.
+Неверное ожидание Accepted после Unconfirmed воспроизведено управляемым late ACK;
+codec checks отделены от real-pipe outcome/drain tests. Runtime/budgets прежние.
+Focused44/44 Debug; full Aether1543/1543 Debug/Release, failed/skipped0;
+solution nonincremental Debug build0errors/1541warnings.
+[Причина, RED→GREEN, команды и scope](engine/HISTORY.md#diagnostic-forwarding-bounded-outcomes--2026-10-28).
+Test-quality follow-up закрыт; точная причина задержки старого Debug run неизвестна.
+Editor/full solution tests, отдельные published/native matrices, NuGet/GPU/performance
+не повторены. Следующий шаг — ARCH2d/e; BSOD/hardware gates прежние.
+
+Предыдущая работа — **2026-10-27, исправление compiler MSB3030**.
+DLL существовала; native MSBuild Copy не распознавал длинный staging path при
+LongPathsEnabled0. Job-isolated single-project layout сокращает paths без смены
+TEMP/OS settings. Deep-job regression RED1→GREEN; Full Aether1541/1541 Debug/Release,
+failed/skipped0, в исходном TEMP. Compiler/checkpoint/Replace/App-stop headless8/8,
+source changes0; solution nonincremental Debug build0errors/1541warnings.
+[Точная причина, binlogs и scope](engine/HISTORY.md#eng3-compiler-staging-paths--2026-10-27).
+Initial forwarding timeout остаётся отдельным follow-up. Editor/full solution tests,
+NuGet/GPU/performance не повторены; ARCH2d/e и hardware/BSOD gates прежние.
+
+Предыдущая работа — **2026-10-27, Build/Replace fixture migration и headless proof**.
+IGameSessionEntry/Contracts migration подтверждена RED2→GREEN2; loader/identity
+guards прежние. Headless21/21source Debug и21/21published Release, source changes0.
+Full Aether1540/1540 Debug/Release при compact process-local TEMP, failed/skipped0.
+Исходный redirected TEMP: Debug1534/1540 (6fail), Release1535/1540 (5fail) —
+MSB3030 missing intermediate в5compiler cases и единичный Debug forwarding timeout;
+они сохранены как отдельные follow-ups, исправления не заявлены.
+Solution nonincremental Debug build0errors/1541warnings. Editor/full solution tests,
+NuGet/GPU/performance не повторены. [Точные профили и evidence](engine/HISTORY.md#eng3-buildreplace-fixture-migration--2026-10-27).
+
+Предыдущая работа — **2026-10-27, Mithril ready-file read race**.
+Bounded missing/sharing/lock retry сохраняет общий8s deadline и identity/reap checks;
+новый process regression подтвердил RED2 → GREEN. Полный Mithril111/111 Debug и
+111/111 Release, failed/skipped0; fresh published Release composition14/14 на
+Cobalt/DI иrestart20/20. Solution nonincremental Debug build0errors/1541warnings.
+[Причина, команды и scope](mithril/HISTORY.md#ready-json-bounded-read-retry--2026-10-27).
+Mithril runtime/API не менялись. Full solution/Aether/Editor tests, NuGet/GPU/
+performance не повторены; следующий quality шаг — legacy Aether Build/Replace fixtures.
+
+Предыдущая работа — **2026-10-27, исправление ENG2 CPU FrameReceiver race**.
+Lazy buffer reservation сохраняет pending frame при empty/stale poll и EOF;
+новый regression подтвердил RED(null) → GREEN. CPU transport/session/Frames
+scope94/94 Debug и94/94 Release, failed/skipped0; solution nonincremental Debug
+build0errors/1541warnings. [Причина и точная область проверок](engine/HISTORY.md#eng2-сохранение-pending-cpu-frame-при-пустом-poll--2026-10-27).
+Full module/solution tests, process/package/GPU/performance не повторены;
+Mithril ready-file и legacy Build/Replace fixtures остаются quality задачами.
+
+Предыдущая сверка планов — **2026-10-27, документация и чтение исходников**.
+Сверена прежняя очередь ARCH2d/e → ED6a/ED8a → ED4c.2/3 → project/workflow;
+исправлены устаревшие статусы ARCH2c, Inspector и Reparent. Проверены17документов
+планирования:579локальных ссылок и385якорей, отсутствующих целей нет. Сборка,
+тесты, process/GPU/package runs в этой сверке не выполнялись; прежние failures открыты.
+
+Незавершённая работа — **2026-10-27, ARCH2d hosts/resources, прервана BSOD Windows**.
+Минимальный Editor host и standalone runtime находятся в Examples; host-owned font/OFL
+больше не берутся из AlloyTest. Solution Debug/Release builds0errors/1541warnings,
+новых завершённых regression/publish/native runs нет. Причина BSOD0xA и связь с проектом
+исследуются; GPU проверки отложены. ARCH2d/e остаются открытыми. [Точный scope](engine/STATUS.md).
+
+Предыдущая работа — **2026-10-27, ARCH2c explicit runtime launch/bootstrap/identity**.
+Aether задаёт native command явно; общий bounded bootstrap проверяет actual entry
+и точную пару host/runtime/shared binaries. AetherRuntimeHost не зависит от Editor/UI.
+Current Aether1536/1536 Debug,1535/1536 Release (прежний CPU FrameReceiver race),
+Editor763/763 Debug/Release, skipped0; новых189cases прошли в обеих конфигурациях.
+Solution builds0errors, full solution tests не повторены. Source Debug/published
+Release independent runtime DLL/apphost4/4; расширенные headless process probes42/46.
+Legacy build/Replace fixtures failed: нет IGameSessionEntry либо Contracts reference;
+они не переписаны, API guards не ослаблены. Общего green нет, повтор для green не делался.
+GPU/native presentation/packages не повторены, прежний Mithril failure остаётся.
+[Evidence](../TestResults/ARCH2c-20261027/verification.json),
+[детали и ограничения](engine/HISTORY.md#arch2c-explicit-runtime-launch-bootstrap-и-identity--2026-10-27).
+Далее ARCH2d hosts/resources, затем ARCH2e independent NuGet/native acceptance.
+
+Предыдущая работа — **2026-10-27, ARCH2b Editor library/App integration**.
+Editor стал packable library с UseAetherEditor/options/View factories и
+стандартной оконной интеграцией; Main/CLI/runtime branch/smokes находятся в
+ManualTests/AetherEditorHost. App/DI ownership и прежний Transform workflow сохранены.
+Текущие Editor763/Aether1347 Debug/Release, failed/skipped0; 20новых cases.
+Source/published functional native workflows прошли с8reaped children и zero owned
+UI/GPU resources. Vulkan validation profile остановился на ErrorLayerNotPresent;
+финальные GPU workflows без validation. Local Editor pack/metadata проверены;
+independent NuGet proof и полный ARCH2e открыты. Solution Debug/Release builds0errors,
+full solution tests не повторены; прежний Mithril Release failure не объявлен исправленным.
+[API и ownership](../TrueMoon.Aether.Editor/PACKAGE.md),
+[подробные проверки](engine/HISTORY.md#arch2b-editor-library-и-app-integration--2026-10-27).
+Следующий шаг — ARCH2c explicit runtime launch/bootstrap/identity, затем hosts/assets
+и independent NuGet consumer; console/export и authoring очередь идут после ARCH2.
+
+Предыдущая работа — **2026-10-27, реализация ARCH2a scene persistence в Aether**.
+Общие scene codec/store/results/conflict перенесены из Editor в Aether.Scenes;
+UseAetherScenePersistence предоставляет headless App integration, Editor заимствует
+его services и сохраняет свои document/project sessions и UI workflow.
+[Границы и migration](engine/PACKAGE_BOUNDARIES.md),
+[результаты](engine/HISTORY.md#arch2a-scene-persistence-в-aether--2026-10-27).
+На дату ARCH2a Editor пока WinExe; следующими назначены ARCH2b–e, затем console/export
+и authoring features. Это не завершение package/host перехода.
+
+Aether1347/1347, Editor743/743 Debug/Release. Full Debug4296/4296, Release4295/4296:
+один sharing IOException в Mithril composition/cobalt ReadyAsync на ready.json,
+skipped0. Общего green нет; failure сохранён, повтор для green не делался.
+Builds0errors/1546warnings в обеих конфигурациях, SDK10.0.403.
+[Evidence](../TestResults/AetherPackages-ARCH2a-20261027-1/verification.json).
+Source changes0 по1024hashes,20test-binary hashes. Native/GPU/published/package/
+performance acceptance не повторены; CPU FrameReceiver и ready-file quality
+follow-ups остаются открытыми.
+
+Предыдущая реализация и проверка — **2026-10-27, ENG8a.3/ENE6d.4 bounded child diagnostic delivery**.
+Core предоставляет bounded history/import views; Aether App factories связывают
+child с host через отдельный Enerit endpoint. Import сохраняет child origin/PID/
+time/trace, назначает host sequence и authoritative session/build context.
+Есть byte/count/rate/deadline limits, loss/unconfirmed/cleanup health; control
+admission и local JSONL/raw capture независимы.
+[Контракт/API](engine/DIAGNOSTICS_DELIVERY.md),
+[результаты и история ошибок](engine/HISTORY.md#child-diagnostic-delivery--2026-10-27).
+
+Новые179cases прошли в обеих конфигурациях. Full solution4285/4285 Debug и4285/4285
+Release, failed/skipped0: Core373, Aether1338, Editor741, Enerit343/generator114.
+Builds0errors: Debug nonincremental1546warnings, Release incremental1316warnings,
+SDK10.0.403. [Evidence](../TestResults/DiagnosticsDelivery-20261027-1/verification.json).
+Source/binary hashes проверены, source changes0; пользовательский Microsoft DI10.0.14
+сохранён.3actual Preview children/99control commands, log flood, slow/broken sinks,
+bounded JSONL/raw и reap/release проверены. GPU/display/published/package/performance
+acceptance не повторены. Неуспешные попытки сохранены; две проблемы изоляции/
+cleanup deadline новых тестов исправлены в тестах.
+Прежние CPU FrameReceiver/Mithril ready-file races не объявлены исправленными.
+
+После ARCH2 следующий diagnostics шаг — ED6a/ED8a bounded Editor console/export, затем
+command/frame aggregates. Bootstrap/App-private routing, generator и общий artifact
+quota частичны. Authoring очередь и quality gates сохраняются.
+Предыдущие [IPC outcome/wait](enerit/HISTORY.md#ene6d3-исходы-ipc-и-ожидание-admission--2026-10-27),
+[resource metrics](enerit/HISTORY.md#ene6d2-метрики-ресурсов-и-перегрузки--2026-10-26),
+[operations](core/HISTORY.md#операции-и-трассы-диагностики--2026-10-26)
+и [build retention](engine/HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26)
+сохраняют свои scope и budgets.
+
+Предыдущая работа — **2026-10-25, ED4f.2 системный акцент границы окна**.
+Windows cached accent/fallback подключён через общий host contract; Editor включает
+рамку с inactive dimming160мс и приоритетом явного style/local цвета.
+Related UI893/Hosting114/Editor741 Debug/Release:3496passed/0failed/0skipped,
+15новыхcases; nonincremental Debug solution build0errors/1532warnings.
+12native cases/206PNG/16reaped children,validation0/0 и zero owned UI/GPU/mappings.
+[Результаты](engine/HISTORY.md#ed4f2-системная-граница-окна--2026-10-25).
+Evidence: TestResults/AccentBorder-20261024/verification.json. Aether/full solution
+tests/прочие модули/packages/physical/performance не повторены; Windows settings
+не менялись. Порядок прежний: ED4c.2 → ED4c.3 → project/runtime workflow.
+
+Предыдущая работа — **2026-10-24, ED4e островки над viewport**.
+Editor использует матовые панели поверх полной рабочей области сцены, group
+opacity/PanelBackdrop в общей UI-библиотеке, retained context/fade без resize.
+Related UI842/Hosting98/Editor699 Debug/Release:3278passed/0failed/0skipped,
+67новыхcases; nonincremental Debug solution build0errors/1532warnings.
+12native cases/158PNG/16reaped children,validation0/0 и zero owned UI/GPU/mappings.
+[Результаты](engine/HISTORY.md#ed4e-островки-поверх-viewport--2026-10-24).
+Evidence: TestResults/Islands-20261024/verification.json. Aether/full solution tests,
+прочие модули/packages/physical/performance не повторены. Порядок engine работ и
+межмодульные блокеры прежние: ED4c.2 names/order, ED4c.3 create/delete, workflow.
+
+Предыдущая работа — **2026-10-24, ED4d.1 компактный контекстный Inspector**.
+Иконки/Tooltip и скрытие колонки без выбора подключены к существующим UI controls;
+engine authoring API не менялся. Related UI801/Hosting98/Editor673 Debug/Release:
+3144passed/0failed/0skipped,25новыхcases; nonincremental Debug solution build0errors.
+12native cases/152PNG/16reaped children,validation0/0 и zero owned UI/GPU/mappings.
+[Результаты](engine/HISTORY.md#ed4d1-компактные-действия-и-контекст-инспектора--2026-10-24).
+Evidence: TestResults/InspectorChrome-20261024/verification.json. Aether/full solution
+tests/прочие модули не повторены; прежние quality/hardware gates открыты.
+Порядок прежний: ED4c.2 names/order, ED4c.3 create/delete/duplicate, project/workflow.
+
+Предыдущая работа — **2026-10-24, ED4d динамический Inspector и component authoring**.
+Схемы компонентов определяют фактические редакторы свойств; Add/Remove/Restore,
+reset/provenance, history/save/preview используют общий engine API. Runtime World
+не является prerequisite; live runtime edit остаётся отдельным этапом.
+Текущие Aether1142/UI801/Hosting98/Editor648 Debug/Release =2689/configuration,
+5378всего,failed/skipped0;163новыхcases. Nonincremental Debug solution build:
+0errors/1532warnings.12native cases/146PNG/16reaped children,validation0/0,
+zero owned UI/GPU/mappings. Full solution tests/прочие модули/packages/physical/
+performance не повторены; прежние CPU receiver/Mithril issues открыты.
+[План](engine/EDITOR_PLAN.md#ed4d-динамический-инспектор-компонентов--начат-2026-10-24),
+[проверки](engine/HISTORY.md#ed4d-динамический-инспектор-компонентов--2026-10-24).
+Evidence: TestResults/Inspector-20261024/verification.json. Далее ED4c.2 имена/
+порядок соседей, ED4c.3 create/delete/duplicate, затем project/runtime workflow.
+Новых базовых prerequisites нет.
+
+Предыдущая работа — **2026-10-24, ED4c.1 обозреватель и PA4c TreeView**.
+Первый срез дерева/иконок/выбора/переноса и общий Reparent API/history реализованы.
+Текущие Aether1050/UI801/Hosting98/Editor577 Debug/Release =2526/configuration,
+failed/skipped0;130новых cases. Nonincremental Debug solution build0errors/1532warnings.
+10native source Debug/published Release cases,118PNG/14reaped children,
+validation0/0 и zero owned UI/GPU/mappings. Full solution tests/прочие модули/
+packages/physical/performance не повторены; прежние CPU receiver/Mithril issues открыты.
+[План](engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24),
+[проверки](engine/HISTORY.md#ed4c1-дерево-сущностей-и-reparent--2026-10-24).
+Evidence: TestResults/Hierarchy-20261024/verification.json. По запросу пользователя
+приоритет — ED4c.2 сохраняемые имена/порядок, затем ED4c.3 create/delete/duplicate;
+дальше project/runtime workflow. Базовые prerequisites не добавлены.
+
+Предыдущая работа — **2026-10-24, ED4b строка состояния и PA4b StatusBar**.
+Компактные status/icons/cancel, details и Edit Preview в footer; общая responsive
+UI capability и typed View/Data/Style/App/Cobalt factories. Текущие связанные
+UI759/Hosting98/Editor527 Debug/Release =1384/configuration,failed/skipped0.
+Nonincremental Debug solution build0errors/1532warnings.6native source/published
+empty/legacy/Transform cases,68PNG/12reaped children,validation0/0 и zero owned
+UI/GPU/mappings. Full solution tests/Aether/headless не повторялись; прежние
+CPU receiver/Mithril fixture failures остаются открытыми.
+[План](engine/EDITOR_PLAN.md#ed4b-компактная-строка-состояния--2026-10-24),
+[проверки](alloy/HISTORY.md#pa4b-statusbar-и-ed4b-editor--2026-10-24).
+Evidence: TestResults/StatusBar-20261024/verification.json. Далее minimal create/delete
+общего API/history, затем UI и project/runtime workflow; порядок прежний.
+
+Предыдущая работа — **2026-10-24, общий матовый backdrop и меню Editor**.
+Общий UI material подключён к dropdown меню; theme tint/blur/fallback без новых
+Editor services. Текущие UI739/Hosting98/Editor467 Debug/Release =1304/configuration,
+failed/skipped0;4native source/published cases,28PNG/4reaped children,validation0/0
+и zero owned UI/GPU/mappings. Full solution/Aether/headless в этом срезе не
+повторялись. [Контракт](alloy/PLAN.md#pa8b-матовые-поверхности--2026-10-24),
+[проверки/границы](alloy/HISTORY.md#pa8b-матовые-поверхности--2026-10-24).
+Evidence: TestResults/Backdrop-20261024/verification.json. Порядок работ прежний:
+minimal create/delete общего API/history, затем UI и project/runtime workflow.
+
+Предыдущая работа — **2026-10-24, ED4a знак TrueMoon и анимированная кнопка меню**.
+Знак и кнопка фиксированы слева; точки ⋮→⋯ поворачиваются вместе с раскрытием,
+одно нажатие после анимации открывает «Файл», повторное закрывает. Отмена во время
+раскрытия исключает late popup. Header сохраняет View/Style/App/Cobalt/IFactory.
+Текущие UI723/Hosting98/Editor467 Debug/Release =1288/configuration,failed/skipped0;
+4native source Debug/published Release cases вне repo,28PNG/4reaped children,
+validation0/0 и zero UI/mapping/GPU ownership. Full solution/Aether/headless в этом
+уточнении не повторялись; прежние CPU receiver/Mithril fixture failures открыты.
+[План](engine/EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23),
+[проверки](engine/HISTORY.md#ed4a-знак-truemoon-и-анимированное-раскрытие--2026-10-24).
+Evidence: TestResults/HeaderBrand-20261024/verification.json.
+
+Предыдущая работа — **2026-10-23, ED4a компактный заголовок и меню Editor**.
+Дизайн/план зафиксирован, Menu/Command/Overlay/frame transitions реализованы в UI;
+Header View/Style через App/Cobalt/typed factory. Большие command rows скрыты,
+⋯ раскрывает пять меню, title сдвигается, ▶/пауза/стоп и оконные actions неподвижны.
+File/history/build/runtime/theme actions, shortcuts и unsaved exit policy сохранены.
+[План](engine/EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23),
+[проверки и границы](engine/HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+
+105новыхcases; related UI712/Hosting98/Editor465 Debug/Release =1275/configuration,
+failed/skipped0. Source Debug/published Release вне repo:10native/header cases,
+64PNG/12reaped children, validation0/0 и UI sessions/mappings/GPU resources/handles0.
+10headless scene/SDK cases отдельно. Evidence:
+TestResults/MenuHeader-20261023/verification.json; source/binary fingerprints проверены.
+
+На дату прежнего ED4a full Debug **3048/3049**: MithrilRestartProbe ready-file sharing IOException;
+Release **3049/3049**,10TRX/configuration, skipped0. Nonincremental build
+0errors/1532warnings. Ранний CPU FrameReceiver null и fixture race записаны в
+engine/Mithril планы; исправление этих прежних путей данным UI срезом не заявлено.
+Предыдущий full3049/3049 Debug/Release не отменяет последний Debug failure.
+Fresh packages/physical/performance/golden/full alpha не повторены.
+
+Текущий маршрут: ARCH2 package/host transition, затем ED6a/ED8a console/export;
+далее ED4c.2 сохраняемые имена/порядок, затем ED4c.3 create/delete
+общего authoring API/history и их UI commands; после — project picker/switch
+и ED1/ED6 workflow. Общие engine/UI границы прежние; full
+World/ECS и новый Core/Cobalt quality цикл не prerequisites. IPC — Enerit,
+frames — отдельный transport, процессы — Mithril.
+
 ## ED4f.2: системный акцент границы окна — 2026-10-25
 
 По согласованному24октября дизайну Editor включает platform accent/fallback для

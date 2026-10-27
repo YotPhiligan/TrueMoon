@@ -1,5 +1,194 @@
 # Mithril: история реализации и проверок
 
+## Сверка рабочего дерева и архив STATUS — 2026-10-28
+
+Сверены bounded retry обоих probes и12cases ReadyFileProcessTests; ready-file
+quality follow-up остаётся закрытым в проверенном Windows fixture scope. Полный
+MIT6 не закрыт, runtime/API не менялись. Текущий общий следующий шаг исправлен
+с legacy Build/Replace fixtures на ARCH2e.1/2 independent NuGet; legacy fixtures
+уже исправлены с отдельным Aether proof. Прочитаны full TRX от27октября:
+Mithril111/111 Debug/Release, failed/skipped0. Новых запусков нет. Старые сводки,
+failures и тогдашние следующие шаги сохранены ниже как датированный архив.
+
+### Снимок прежней сводки
+
+Ниже сохранено содержимое STATUS до сверки. Указания «следующий шаг»,
+«текущий» и открытые failures относятся к датам соответствующих записей;
+актуальная очередь и закрытия находятся в STATUS и PLAN. Это архив,
+не новые результаты запуска. Относительные ссылки сохранены.
+
+Последняя работа — **2026-10-27, bounded ready-file read retry в обоих probes**.
+Публикация temp+Move сохранена; reader повторяет missing-file и sharing/lock errors
+в едином8s deadline с token у IO/delay. Malformed/null JSON не повторяется.
+Directed process proof подтвердил RED2 → GREEN;12новых cases проверяют locked
+partial publication, missing file, раннюю отмену, исходный deadline и invalid JSON.
+Полный Mithril **111/111 Debug и111/111 Release**, failed/skipped0; fresh published
+Release **composition14/14 на Cobalt/DI иrestart20/20**, ownership/identity/reap checks
+сохранены. Solution nonincremental Debug build0errors/1541warnings.
+[Причина, команды и evidence](HISTORY.md#ready-json-bounded-read-retry--2026-10-27).
+Ready-file follow-up закрыт в этом scope. Runtime/API не менялись; full solution/
+Aether/Editor tests, NuGet/GPU/performance и полный MIT6 acceptance не повторены.
+
+Предыдущая связанная проверка — **2026-10-27, ARCH2a full run**.
+Mithril99/99 Debug,98/99 Release, skipped0. Composition/cobalt probe получил
+sharing IOException при ReadAllTextAsync ready.json в Fixture.ReadyAsync line172.
+Source/fixture не менялись, исправления и повторного green нет.
+[Подробности](HISTORY.md#composition-ready-json-sharing-failure--2026-10-27).
+Текущий quality шаг охватывает безопасную ready publication/read в composition
+и restart probes с deterministic overlap и прежними deadline/identity/reap checks.
+
+Предыдущая проверка — **2026-10-26, общий Core diagnostics run**.
+Initial Debug98/99: concurrent-stop получил sharing IOException на ready-1.json
+в MithrilRestartProbe.Fixture.ReadyAsync. После отдельной правки Core test
+isolation full Debug99/99 и Release99/99 прошли; Mithril production/fixture
+не менялись, passing повтор не закрывает race. [Подробности](HISTORY.md#ready-file-race-повторное-наблюдение--2026-10-26).
+Текущий quality шаг — atomic ready publication либо bounded read retry с
+deterministic overlap proof и прежними deadline/identity/reap assertions.
+
+Последняя работа — **2026-10-25, уточнение MIT6c diagnostics roadmap**.
+[MIT6c](PLAN.md#mit6c-диагностика-и-захват-process-output--уточнение-2026-10-25) связывает
+process acceptance с Core CORE6 и Aether ENG8a capture: continuous stdout/stderr
+drain, bounded retention, overflow/EOF/failure outcomes и reader ownership при stop.
+Реализация захвата остаётся задачей владельца Aether; Mithril API не расширен.
+Изменены только планы/статусы; process/build/tests/packages не запускались. Следующий
+quality шаг ready-file fixture и открытые long trends/parent-death MIT6c сохранены.
+
+Предыдущая проверка — **2026-10-23, ED4a integration**. Runtime/API не менялись.
+Последний Mithril Debug98/99: default-budget-delay restart probe получил IOException
+на ready-4.json в Fixture.ReadyAsync; предыдущая existence проверка не гарантирует
+окончание публикации. Последний Release99/99. Общий solution Debug3048/3049,
+Release3049/3049; предыдущие99/99 не означают исправление fixture race.
+Следующий quality шаг — безопасная публикация/чтение ready JSON с deterministic
+overlap proof, сохраняя bounded deadline, identity и reap assertions.
+[Evidence/границы](HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
+Это отдельная проверочная задача; MIT6a/c и authoring порядок не заменяются.
+Предыдущая реализация — **2026-10-23, первый MIT6a load-stop профиль**.
+AppUnitsPipesProbe расширен saturated-stop/saturated-kill: pending2/queued1,
+overload до dispatch, независимый Mithril control при active2 domain handlers,
+cooperative drain либо bounded owned kill/reap, exact PID/diagnostic outcome и
+zero client counters/Completion. Production changes находятся в Enerit;
+Mithril runtime/API, restart policies и ownership modes не менялись.
+[Контракт и границы](PLAN.md#mit6a-первый-load-stop-профиль--2026-10-23).
+В предыдущем MIT6a проходе Mithril99/99 Debug/Release в full solution2361/configuration, failed0/
+skipped0. Новый source/published профиль **44/44**, fresh package **132/132** на
+Cobalt/DI/DI без Cobalt analyzer,8nupkgs; Completed=true. [Команды/evidence](HISTORY.md#mit6a-saturated-ipc-и-независимый-process-stop--2026-10-23).
+MIT6a fault matrix в целом, parent-death containment и long trends MIT6c остаются
+открытыми; локальный authoring не блокируется. Native Editor viewport не повторялся.
+
+Текущая реализация — **2026-10-22, фабрики и единственный owner**:
+UnitsController injects IFactory<IUnitHandle,IUnitConfiguration>; штатный
+UnitHandleFactory выбирает hosting mode. Controller/parent создаются через App
+factories; borrowed IUnitsController и non-disposable lifecycle adapters исключают
+duplicate ownership. Public consumers должны обращаться к concrete registration
+для диагностической inspection, а не приводить alias к implementation.
+Mithril99/99 Debug/Release (+4cases) и реальные composition/process/pipe tests
+прошли на обоих providers. Process budgets/policies прежние. Own standalone restart
+matrix отдельно не повторялась. [Evidence](../engine/HISTORY.md#единые-фабрики-и-di--2026-10-22).
+
+Последняя работа — **2026-10-21, graceful wait при ошибке доставки exit**.
+В StopAsync исправлена гонка stdin/control pipe: ошибка доставки больше не
+пропускает оставшийся graceful budget; timeout/cancellation/owned kill/reap
+сохраняются. Новая delayed EOF regression подтверждена red/green; native20cases
+Debug/published Release прошли. Mithril95/95 и full solution1907/1907 отдельно
+Debug/Release, failed0/skipped0. Fresh units package matrix108/108cases прошла:
+8nupkgs/128commands/206source fingerprints, Cobalt/DI, Debug/Release build/publish,
+expected missing Enerit analyzerCS0234. Own standalone restart matrix не повторена.
+[Причина, точные команды и ограничения](HISTORY.md#graceful-wait-после-ошибки-доставки-exit--2026-10-21).
+
+Исправление структуры — **2026-10-21**: RootNamespace тестов исправлен на
+TrueMoon.Mithril.Tests; TestPoco.cs размещён в корне MithrilTest, namespaces
+manual/integration consumers согласованы. Module-specific UnitsConfigurationExtensions
+находится в Mithril вместо Contracts. Mithril94/94 Debug/Release и свежая package
+матрица108cases прошли; native children из затронутых editor scenarios освобождены.
+[Миграция и точные команды](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
+
+App entry-point audit — **2026-10-19**: AddUnit связывает App-local unit definitions,
+configuration selection и UnitsController/parent-monitor lifecycle. Focused Debug
+UnitCompositionTests:9passed/failed0/skipped0 на Cobalt/DI. Runtime code не менялся;
+own full/Release/process/restart/package/performance matrix не повторялись.
+[Общая таблица API и команды](../HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
+
+Package metadata check — **2026-10-19**: тематические tags и общие project/
+repository metadata; Release pack/nuspec/README/license/icon payloads проверены.
+Runtime code, own unit/process/restart/performance checks в этом metadata шаге
+не менялись/не повторялись. [Общие команды/evidence](../HISTORY.md#nuget-package-metadata--2026-10-19).
+
+Integration check2026-10-18 в UI INF3: первый full Debug run дал readiness-file
+sharing IOException в Restart_OwnedSequence (always-crash); targeted20/20 и
+повторный full Debug Mithril94/94 прошли. Код Mithril/probe не менялся, race не
+объявлена исправленной. [Failure и точные runs](HISTORY.md#readiness-file-race-при-ui-inf3--2026-10-18).
+
+Последняя работа — **2026-10-15, MIT5 operational diagnostics и свежая package regression**.
+Добавлены UnitProcessDiagnostic/UnitProcessStage через существующий IEventsSource:
+run/generation/PID, effective policy/budget/delays, launch/exit/restart/terminal,
+kill/release/stop и исходные failures. Ownership/restart limits не расширены.
+[Подключение и semantics](DIAGNOSTICS.md), [контракт](PLAN.md#mit5-operational-diagnostics--2026-10-15),
+[команды/артефакты](HISTORY.md#mit5-operational-diagnostics--2026-10-15).
+
+## Ready JSON: bounded read retry — 2026-10-27
+
+Закрыт ready-file quality follow-up в MithrilCompositionProbe и MithrilRestartProbe.
+Оба writer уже использовали temp-file + Move; публикация не менялась. Reader после
+File.Exists выполнял один ReadAllTextAsync без cancellation token и мог получить
+sharing IOException даже после появления final path.
+
+ReadyAsync теперь имеет один linked deadline8s на весь цикл: чтение отсутствующего
+файла повторяется, IOException с Win32 sharing/lock codes32/33 повторяется через10ms.
+Token передаётся в IO и delay; budget не пересоздаётся на каждой попытке.
+Другие IO errors и malformed JSON не маскируются; JSON null явно отвергается как
+InvalidDataException до использования identity. PID/unit/parent/provider/endpoint
+проверки, restart/stop budgets и owned process observers/reap assertions сохранены.
+Mithril runtime, публичные contracts/API, App/DI/lifetime/restart policy не менялись.
+
+Добавлен directed CLI --read-ready для обоих fixture executables: callback из
+реального retry path пишет единственный RETRY; необязательная ранняя отмена задаётся
+миллисекундами,0оставляет исходный8s deadline. Для restart mode читается generation1.
+Это test-only процессный путь без создания App/units; обычные scenarios прежние.
+
+Новые ReadyFileProcessTests выполняются против настоящих fixture processes:
+
+- ReadyRead_SharingViolationWaitsForCompleteJsonAndPreservesIdentity: отдельный
+  writer держит FileShare.None с половиной JSON до получения RETRY. Затем дописывает
+  и закрывает файл; reader получает полный PID/parent/unit/provider/endpoint.
+- ReadyRead_MissingPublicationWaitsThenReadsPublishedIdentity: после подтверждённой
+  missing-file попытки публикуется готовый JSON через temp + Move.
+- ReadyRead_SharingRetriesHonorCallerCancellation: writer остаётся открытым,
+  caller cancellation600ms завершает retries, а не возвращает identity.
+- ReadyRead_SharingRetriesDoNotExtendEightSecondDeadline: без внешней отмены writer
+  остаётся открытым весь исходный8s budget; reader завершается cancellation, retries
+  не продлевают deadline. Assert range7–12s после первого retry и bounded process reap.
+- ReadyRead_InvalidPublishedJsonFailsWithoutRetry: malformed `{` и `null` завершаются
+  соответствующей ошибкой без RETRY/RESULT.
+
+Всего12cases: каждый сценарий проверяет оба probes, malformed/null дают4cases.
+Sharing regression на исходном алгоритме чтения с directed entry получил RED в
+обоих probes с точной IOException, затем GREEN без ослабления assertions.
+
+Windows x64/SDK10.0.403/net10.0/xUnit2.9.3/VSTest.
+[Exact commands, TRX names, source/binary SHA и7binlogs](../../TestResults/MithrilReady-20261027-1/verification.json).
+
+| Проверка | Результат |
+| --- | --- |
+| Новый sharing regression, Release до fix | Passed0/Failed2/Skipped0, expected RED; [TRX](../../TestResults/MithrilReady-20261027-1/red/red.trx) |
+| Новые ready-read cases, Release после fix | Passed12/Failed0/Skipped0; [TRX](../../TestResults/MithrilReady-20261027-1/green-Release/green.trx) |
+| Полный Mithril Debug | Passed111/Failed0/Skipped0; [TRX](../../TestResults/MithrilReady-20261027-1/full-Debug/mithril.trx) |
+| Полный Mithril Release | Passed111/Failed0/Skipped0; [TRX](../../TestResults/MithrilReady-20261027-1/full-Release/mithril.trx) |
+| Fresh published Release composition/restart |14/14 composition на Cobalt/DI и20/20restart; [summary](../../TestResults/MithrilReady-20261027-1/published-summary.json), Completed=true/source changes0 |
+| Solution nonincremental Debug build | Exit0/errors0/warnings1541; [log](../../TestResults/MithrilReady-20261027-1/solution-Debug.log) |
+
+Full test command: dotnet test TrueMoon.Mithril.Tests/TrueMoon.Mithril.Tests.csproj
+-c Debug/Release --no-build, с отдельными TRX/results-directory/binlog flags в
+evidence. [Published runner](../../TestResults/MithrilReady-20261027-1/VerifyPublished.ps1)
+создаёт fresh framework-dependent deployments без RID и запускает apphosts.
+Reports сверяют owned PID, effective identity, exit outcomes, monitor completion,
+generation/restart diagnostics и cleanup; runtime assertions не менялись.
+
+Результат закрывает указанный Windows fixture read race. Полные solution/Aether/
+Editor tests, независимые NuGet consumers, GPU/physical/performance и полный
+MIT6 fault/containment/trends acceptance не запускались. Исторические full failures
+сохранены; новый passing Mithril не превращает их в общий solution green.
+Следующий общий quality шаг — legacy Aether Build/Replace fixtures, затем ARCH2d/e.
+
 ## Composition ready JSON: sharing failure — 2026-10-27
 
 Связанный ARCH2a full run: Mithril99/99 Debug,98/99 Release, skipped0.

@@ -3,12 +3,15 @@
 Подключаемая библиотека/NuGet-пакет редактора, net10.0. Публичный вход —
 `UseAetherEditor(configureEngine, configureEditor)`; optional стандартное окно —
 `UseAetherEditorWindow(fonts, configureWindow)`. [API, ownership и quickstart](PACKAGE.md).
-Main/CLI/App composition/runtime branch/smoke checks находятся в отдельном
-[AetherEditorHost](../ManualTests/AetherEditorHost/README.md). Host предоставляет
+Main/CLI/App composition находятся в тонком
+[AetherEditor](../Examples/AetherEditor/README.md); directed smoke checks и явный
+same-exe runtime profile — в [AetherEditorHost](../ManualTests/AetherEditorHost/README.md).
+Host предоставляет
 fonts и runtime configuration; пакет не создаёт вложенный App и не открывает
 native resources при регистрации. ARCH2c предоставляет explicit runtime launch,
-bootstrap и pair identity; ARCH2d assets и ARCH2e independent NuGet/published matrix
-ещё открыты. Local pack не означает готовность поставки.
+bootstrap и pair identity. [Examples guide](../Examples/README.md) описывает owners
+ресурсов и source/published headless verifier; GUI/native acceptance и ARCH2e
+independent NuGet ещё открыты. Local pack не означает готовность поставки.
 
 [План развития рабочего приложения](../docs/engine/EDITOR_PLAN.md) задаёт ED1–ED8:
 project/documents/editing/preview/workflow/extensions/reliability. Первый сквозной
@@ -507,12 +510,12 @@ native/private-dependency hash. Deployment не меняют in place во вр�
 Новая pair identity требует rebuild game artifacts и исключает старые checkpoints;
 scene/project formats и control3/frame1/snapshot2 остаются прежними.
 
-[Отдельный AetherRuntimeHost](../ManualTests/AetherRuntimeHost/README.md) не зависит от
+[Отдельный AetherRuntimeHost](../Examples/AetherRuntimeHost/README.md) не зависит от
 Editor/UI. Child вызывает `RuntimeBootstrap.ReadEnvironment()` до App construction,
 затем UseAether и runtime/preview registration; Main остаётся в executable.
 [Bootstrap Version1/limits и runtime API](../TrueMoon.Aether/PACKAGE.md).
 
-Текущий AetherEditorHost до host/resources stage **явно** выбирает
+Directed smoke consumer AetherEditorHost **явно** выбирает
 `NativeRuntimeLaunch.CurrentProcess("--runtime")` и прежний `BuildIdentity.HostId`:
 это совместимый same-executable профиль с отдельным child process, не скрытое
 требование к произвольному consuming exe. Его runtime branch не создаёт окно/Skia
@@ -541,8 +544,10 @@ dotnet TestResults/EditorScreen/publish/AetherEditorHost.dll --project ManualTes
 ```
 
 Это команды для отдельного запуска, не утверждение о текущем published результате
-ARCH2c. Source Debug и published Release runtime-launch proof проверяются отдельно;
-ARCH2d/e assets/independent NuGet/published matrix не закрыты.
+ARCH2c. Source Debug и published Release resource/runtime-launch proof выполняет
+[VerifyExampleHosts](../ManualTests/EngineSessionProbe/VerifyExampleHosts.ps1);
+он не открывает окно и не выполняет GPU smoke workflows. Independent NuGet и
+GUI/native acceptance остаются открытыми.
 
 `--light` выбирает светлую тему при старте. `--help` выводит CLI. Направленный smoke
 работает только со своим окном и проверяет реальные game commands/pixels:

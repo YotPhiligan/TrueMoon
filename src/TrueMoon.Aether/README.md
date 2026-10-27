@@ -7,7 +7,7 @@ contracts игровой сессии, supervisor, control protocol, CPU frame t
 
 [План](../docs/engine/PLAN.md), [статус и ограничения](../docs/engine/STATUS.md),
 [пример Editor/Game.Runtime](../ManualTests/EngineSessionProbe/README.md),
-[отдельный runtime без Editor/UI](../ManualTests/AetherRuntimeHost/README.md).
+[отдельный runtime без Editor/UI](../Examples/AetherRuntimeHost/README.md).
 
 ## Scene files без Editor
 
@@ -86,6 +86,13 @@ code contract сохранён. UseAether фиксирует options.BuildRetent
 jobs сверх count/bytes/age; равенство лимиту допускается. Последний завершённый
 job в корне сохраняется даже сверх лимита, включая неудачную сборку.
 DiagnosticsDirectory может быть удалён последующими сборками в том же корне.
+
+Каждый compiler job сохраняет SDK output/intermediate в своих `output`/`work`
+каталогах. Поскольку это isolated single-project build, artifacts layout не
+добавляет повторное имя проекта: `IncludeProjectNameInArtifactsPaths=false`.
+Это сокращает staging paths и устраняет наблюдавшийся Windows/MSBuild Copy failure
+при длинном TEMP и выключенных OS long paths. Общие OS/SDK path limits сохраняются;
+изменять глобальный TEMP или Windows settings для проверенного профиля не требуется.
 
 RetentionStatus сообщает RetainedJobs/RetainedBytes, ActiveJobs/SkippedDirectories,
 DeletedJobs, Failures/LastError, IsOverBudget и MaintenanceBusy за последний pass.
@@ -535,7 +542,7 @@ native/private dependencies. Deployment нельзя изменять in place �
 Смена pair identity делает старые game artifacts/checkpoints несовместимыми: игры
 нужно пересобрать для новой пары. Scene/project file formats не меняются.
 
-[ManualTests/AetherRuntimeHost](../ManualTests/AetherRuntimeHost/README.md) — отдельный
+[Examples/AetherRuntimeHost](../Examples/AetherRuntimeHost/README.md) — отдельный
 пример без Editor/UI dependencies, с selected-game и built-in preview ролями.
 Main/CLI/App composition остаются в executable, не в Aether. Existing Editor example
 пока явно выбирает same-exe профиль до host/resources stage. ARCH2d assets и ARCH2e

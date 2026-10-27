@@ -8,7 +8,7 @@ Parent UseAether paths со штатной factory задают `RuntimeLaunch` 
 Это совместимый same-executable профиль, сохраняющий прежний `BuildIdentity.HostId`;
 произвольный exe не получает implicit `--runtime` или runtime handler.
 
-Для отдельного [AetherRuntimeHost](../AetherRuntimeHost/README.md), без Editor/UI
+Для отдельного [AetherRuntimeHost](../../Examples/AetherRuntimeHost/README.md), без Editor/UI
 references, parent задаёт абсолютные paths:
 
 ```csharp
@@ -42,9 +42,14 @@ compiler/Replace, parent-exit или independent NuGet acceptance.
 
 2026-10-27 CLI прошёл отдельно на source Debug и published Release: по2формы,
 DLL/dotnet и apphost, всего4/4. [Текущие evidence и failures расширенной matrix](../../TestResults/ARCH2c-20261027/verification.json).
-Extended same-exe scenarios —19/21в каждой поставке: устаревшие build-artifacts/
-replacement fixtures остаются failing, checkpoint/diagnostics/lifecycle проходят.
-Это не общий green. Исторический RunProbe не заменяет новые запуски;
+На дату ARCH2c extended same-exe scenarios были19/21в каждой поставке из-за
+устаревших build-artifacts/replacement fixtures. Миграция2026-10-27 добавила
+IGameSessionEntry.Create и non-copying TrueMoon.Contracts reference в generated
+games; loader/identity guards прежние. Новая headless matrix —21/21 source Debug
+и21/21published Release, включая diagnostics, без GPU flags.
+[Результаты, команды и ограничения full suite](../../docs/engine/HISTORY.md#eng3-buildreplace-fixture-migration--2026-10-27).
+RunProbe сохраняет отдельные build/publish binlogs; для21cases diagnostics
+передаётся через -Scenarios дополнительно к20default scenarios.
 ARCH2d assets и полная ARCH2e NuGet/native matrix остаются открытыми.
 
 Общий `RuntimeBootstrap.ReadEnvironment()` заменяет consumer JSON parsing/validation.

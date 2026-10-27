@@ -17,6 +17,20 @@ Quality follow-up2026-10-23: `MithrilRestartProbe.Fixture.ReadyAsync` долже
 проверить deterministic overlap/partial file без потери deadline, identity и
 reap assertions. [Наблюдение/evidence](HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
 
+Исправлено2026-10-27 в обоих composition/restart probes: публикация уже была
+atomic, reader получил bounded retry только missing-file/sharing/lock conflicts
+под единым8s deadline, включая IO и delay. Malformed/null JSON остаётся ошибкой;
+runtime/API и process identity/stop/reap assertions прежние. Deterministic sharing
+RED2 → GREEN;12новых cases, полный Mithril111/111 Debug/Release и fresh published
+composition14/restart20 прошли. [Контракт исправления и точный scope](HISTORY.md#ready-json-bounded-read-retry--2026-10-27).
+Это fixture quality fix, не закрытие полного MIT6 или общей release matrix.
+
+Сверка2026-10-28: ready-file follow-up закрыт; Mithril runtime/API в рабочем diff
+не меняются. Следующий доступный межмодульный шаг —
+[ARCH2e.1/2 independent NuGet consumer](../engine/PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28).
+Полные MIT6a/c fault/containment/trends остаются открытыми. Тесты в документационной
+сверке не повторялись; предыдущие результаты сохраняют дату27октября.
+
 Приложение запускает собственные units в заявленных hosting режимах, наблюдает exit/failure, применяет согласованные startup/restart policies и завершается без оставшихся принадлежащих ему процессов/handles. External process ownership описывается отдельно.
 
 ## Архитектура и решения

@@ -95,14 +95,15 @@ public static class BuildProbe
         var path = Path.Combine(root, "Game.Candidate.csproj");
         File.WriteAllText(path, """
             <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
-            <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
+            <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
             """);
         var source = color == "invalid C#" ? color : $$"""
             using TrueMoon.Aether.Frames;
             using TrueMoon.Aether.Scenes;
             using TrueMoon.Aether.Sessions;
             namespace Game.Candidate;
-            public sealed class Game : IGameSession {
+            public sealed class Game : IGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry {
+                public static IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new Game();
                 public ulong TickNumber { get; private set; }
                 public long Revision { get; private set; }
                 public uint PatternColor => {{color}};

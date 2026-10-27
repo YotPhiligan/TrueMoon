@@ -119,6 +119,36 @@ public sealed class FrameTransportTests
         Assert.Null(editor.CopyLatest(pixels, 5));
     }
     [Fact]
+    public void Ring_CopyLatestReservesBufferOnlyForNewFrameAndRetainsReadyWhenUnavailable()
+    {
+        var surface = Surface();
+        using var ring = SharedFrameRing.Create(surface);
+        var reservations = 0;
+        byte[]? Unavailable() { reservations++; return null; }
+        Assert.Null(ring.CopyLatest(0, Unavailable));
+        Assert.Equal(0, reservations);
+
+        var row = new byte[surface.Stride];
+        Assert.True(ring.WritePattern(1, 10, 0xff2080c0, row));
+        Assert.Null(ring.CopyLatest(0, Unavailable));
+        Assert.Equal(1, reservations);
+        Assert.Equal(0, ring.Superseded);
+
+        var pixels = new byte[surface.PixelBytes];
+        var frame = Assert.IsType<FrameMetadata>(ring.CopyLatest(0, () => { reservations++; return pixels; }));
+        Assert.Equal(1UL, frame.FrameId);
+        Assert.Equal(10UL, frame.Tick);
+        Assert.Equal(frame.Checksum, FramePattern.Checksum(pixels));
+        Assert.Equal(2, reservations);
+        Assert.Null(ring.CopyLatest(1, Unavailable));
+        Assert.Equal(2, reservations);
+
+        Assert.True(ring.WritePattern(1, 10, 0xff2080c0, row));
+        Assert.Null(ring.CopyLatest(1, Unavailable));
+        Assert.Equal(2, reservations);
+        Assert.Equal(1, ring.Superseded);
+    }
+    [Fact]
     public void Ring_ReadingSlotIsNeverOverwrittenAndStaleReadyIsDiscarded()
     {
         var s = Surface(); using var editor = SharedFrameRing.Create(s); using var child = SharedFrameRing.Open(s);
@@ -167,7 +197,7 @@ public sealed class FrameTransportTests
     [Fact]
     public async Task Receiver_TwoBuffersKeepLatestWhileUiLeaseStaysUnchangedAndDrain()
     {
-        var s = Surface(); using var ring = SharedFrameRing.Create(s); var receiver = new FrameReceiver(ring);
+        var s = Surface(); using var ring = SharedFrameRing.Create(s); await using var receiver = new FrameReceiver(ring);
         var row = new byte[s.Stride]; ring.WritePattern(1, 0, 0xff2080c0, row);
         await receiver.FirstFrame.WaitAsync(TimeSpan.FromSeconds(3));
         using var first = receiver.TakeLatest()!; Assert.NotNull(first); var saved = first.Pixels.ToArray();
@@ -177,6 +207,40 @@ public sealed class FrameTransportTests
         using (var latest = receiver.TakeLatest()) { Assert.NotNull(latest); Assert.Equal(5UL, latest.Metadata.FrameId); Assert.Equal(latest.Metadata.Checksum, FramePattern.Checksum(latest.Pixels)); }
         var draining = receiver.DisposeAsync().AsTask(); Assert.False(draining.IsCompleted);
         first.Dispose(); await draining.WaitAsync(TimeSpan.FromSeconds(3)); await receiver.DisposeAsync(); Assert.Null(receiver.TakeLatest());
+        Assert.Throws<ObjectDisposedException>(() => first.Pixels.ToArray());
+    }
+    [Fact]
+    public async Task Receiver_EofRetainsPendingFrameWhileUiLeaseIsHeldAndDrains()
+    {
+        var surface = Surface();
+        using var ring = SharedFrameRing.Create(surface);
+        await using var receiver = new FrameReceiver(ring);
+        var row = new byte[surface.Stride];
+        Assert.True(ring.WritePattern(1, 10, 0xff2080c0, row));
+        await receiver.FirstFrame.WaitAsync(TimeSpan.FromSeconds(3));
+        using var first = Assert.IsType<FrameLease>(receiver.TakeLatest());
+        var saved = first.Pixels.ToArray();
+
+        Assert.True(ring.WritePattern(2, 20, 0xff2080c0, row));
+        await UntilAsync(() => receiver.Received == 2);
+        // Completion proves the worker performed its next scan, without relying on a delay.
+        ring.End();
+        await Assert.ThrowsAsync<EndOfStreamException>(() => receiver.Completion.WaitAsync(TimeSpan.FromSeconds(3)));
+
+        Assert.Equal(saved, first.Pixels.ToArray());
+        using (var latest = Assert.IsType<FrameLease>(receiver.TakeLatest()))
+        {
+            Assert.Equal(2UL, latest.Metadata.FrameId);
+            Assert.Equal(20UL, latest.Metadata.Tick);
+            Assert.Equal(latest.Metadata.Checksum, FramePattern.Checksum(latest.Pixels));
+        }
+        Assert.Equal(2, receiver.Received);
+        Assert.Equal(0, receiver.Replaced);
+        var draining = receiver.DisposeAsync().AsTask();
+        Assert.False(draining.IsCompleted);
+        first.Dispose();
+        await draining.WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.Null(receiver.TakeLatest());
         Assert.Throws<ObjectDisposedException>(() => first.Pixels.ToArray());
     }
     [Fact]

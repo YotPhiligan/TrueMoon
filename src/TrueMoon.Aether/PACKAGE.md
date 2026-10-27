@@ -164,7 +164,7 @@ A host implementing its own child branch may explicitly use
 `NativeRuntimeLaunch.CurrentProcess("--runtime")` with `BuildIdentity.HostId`.
 This compatible same-executable profile preserves the previous HostId; it does
 not make an arbitrary consuming executable a runtime. The separate repository
-example is `ManualTests/AetherRuntimeHost`, without Editor/UI dependencies.
+example is `Examples/AetherRuntimeHost`, without Editor/UI dependencies.
 
 `BuildIdentity.ForRuntime(runtimeDll)` fingerprints role-labelled host/runtime
 managed entries plus exact shared Aether/Contracts/Enerit/Mithril binaries. It

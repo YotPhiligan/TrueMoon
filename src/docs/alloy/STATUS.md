@@ -1,5 +1,25 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
+Последняя связанная сверка — **2026-10-28, рабочий diff и планы Aether**.
+ARCH2d hosts/resources проверены в resource/headless scope; следующий доступный
+шаг — [ARCH2e.1/2 independent NuGet](../engine/PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28).
+GUI/native acceptance ARCH2d/e остаётся открытой, GPU runs отложены после BSOD.
+UI code/API и критерии K/PA/INF не менялись. В этой сверке build/tests/native/
+package/performance runs не выполнялись; результаты ниже сохраняют свои даты.
+
+Связанная проверка — **2026-10-28, ARCH2d engine consumer**.
+Тонкие examples и доставка font/OFL/managed styles/themes/shaders/native files
+проверены source Debug/published Release без окна/GPU; Editor763/763 Debug/Release.
+Код/API UI не менялись, собственные UI suites не повторены. Fonts не загружаются
+из AlloyTest; native payload ownership остаётся у renderer/platform.
+[Точный scope и следующая NuGet проверка](../engine/STATUS.md).
+GUI/GPU acceptance отложена после BSOD; прежние K/PA/INF/hardware gates сохранены.
+
+Связанная сверка планов — **2026-10-27, документация**.
+ARCH2a–c реализованы; ARCH2d hosts/resources начат, его acceptance не завершена.
+Текущие очередь и пауза GPU runs после BSOD — в [engine STATUS](../engine/STATUS.md).
+Код и API UI не менялись; build/tests/native/package/performance проверки в этой сверке не запускались.
+
 Последняя связанная работа — **2026-10-27, ARCH2b Editor library/App integration**.
 Editor стал library/packable module; UseAetherEditorWindow использует прежний
 Alloy.Hosting API, reusable View создаётся parent-owned factory. Executable
@@ -10,7 +30,7 @@ UI library API/code не менялись; текущие Editor763/Aether1347 D
 native consumer workflows принадлежат engine scope. Собственные UI suites этим
 шагом не повторены. Functional native GPU runs без Vulkan validation:
 ErrorLayerNotPresent сохранён как неуспешная попытка; прежние K/PA/INF и hardware
-blockers сохраняются. Следующий общий consumer шаг — ARCH2c explicit runtime;
+blockers сохраняются. На дату ARCH2b следующим consumer шагом был ARCH2c explicit runtime;
 UI rename/reorder и physical acceptance остаются в своей очереди.
 
 Предыдущая реализация и проверка — **2026-10-25, PA8b.4 системный акцент границы / ED4f.2**.
@@ -424,7 +444,8 @@ Alpha K1–K9 не объявляется завершённой. Требова
 ## Следующий конкретный шаг
 
 При работе над приложением использовать [первый срез и порядок API → preview → UI](../engine/EDITOR_PLAN.md#первый-сквозной-срез);
-текущий первый приоритет — ARCH2 package/host transition. После него ED6a/ED8a
+текущий доступный шаг — ARCH2e.1/2 package build/publish/headless/App/DI/resources,
+затем GUI/native proof после подготовки окружения. После полного ARCH2 — ED6a/ED8a
 console/export, затем authoring очередь ниже; UI capabilities добавляются по consumer.
 ARCH1b.1, ED1a, ED2a/b, ED3a и ED4c.1 выполнены в своих границах; authoring
 consumer после перехода и console — rename/reorder ED4c.2 после persistent engine metadata, затем

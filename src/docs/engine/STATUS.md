@@ -1,266 +1,67 @@
 # TrueMoon.Aether: состояние движка и редактора
 
-Последняя работа — **2026-10-27, ARCH2c explicit runtime launch/bootstrap/identity**.
-NativeRuntimeLaunch задаёт immutable executable/arguments/working directory;
-RuntimeBootstrap проверяет bounded payload и actual host/runtime/shared binaries
-до child App. Нет implicit current-exe/--runtime; совместимый профиль задаётся явно.
-Отдельный AetherRuntimeHost использует bootstrap/Aether без Editor/UI.
-[API/migration](../../TrueMoon.Aether/PACKAGE.md),
-[контракт и история проверок](HISTORY.md#arch2c-explicit-runtime-launch-bootstrap-и-identity--2026-10-27).
+Последняя работа — **2026-10-28, сверка рабочего diff, планов и сохранённых evidence**.
+Новых build/tests/process/GPU/package runs в этой сверке нет. Проверены исходники,
+TRX counters и verification summaries; предыдущие результаты сохраняют свои даты
+и scope. Накопленные сводки с исходными failures и прежней очередью перенесены в
+[HISTORY](HISTORY.md#сверка-рабочего-дерева-и-архив-status--2026-10-28).
 
-Текущие Aether **1536/1536 Debug,1535/1536 Release**, Editor **763/763** в каждой
-конфигурации, skipped0. Новых189cases; они прошли в обеих конфигурациях.
-Единственный managed failure — прежний CPU FrameReceiver test, Assert.NotNull
-в FrameTransportTests.cs:177; повтор для green не делался. Solution builds Debug/
-Release0errors; full solution tests и GPU/display/package/performance не повторены.
-Source Debug и published Release independent runtime DLL/apphost —4/4, с отдельными
-entry/directories, preview без game/UI, selected-game artifact и отказами до readiness.
-Расширенные process probes42/46: по19/21 same-exe в каждой поставке и4independent.
-Legacy build-artifacts fixture не реализует IGameSessionEntry, replacement fixture
-не ссылается на Contracts (CS0234/CS0012); production contracts не ослаблялись.
-Checkpoint/diagnostics, faults/cancellation/kill/reap/parent-exit прошли в обеих поставках.
-[Evidence](../../TestResults/ARCH2c-20261027/verification.json):1035source hashes,
-changes0. Исторический Mithril Release failure не перепроверялся.
-Следующий шаг — ARCH2d hosts/resources, затем ARCH2e independent NuGet/native proof;
-CPU race и legacy fixtures требуют отдельных quality fixes, общего green нет.
+QA этой сверки:20документов/707локальных ссылок/425якорей, ошибок0;
+53source fingerprints совпали,6сохранённых TRX подтверждены.
+[Отчёт](../../TestResults/PlanningReview-20261028/verification.json).
 
-Предыдущая работа — **2026-10-27, ARCH2b Editor library/App integration**.
-Editor теперь Library/IsPackable=true без зависимости на concrete TrueMoon bootstrap.
-UseAetherEditor копирует options и подключает engine/project/document services,
-models/styles и parent-owned View factories; EditorSession согласует startup,
-presentation и close/drain. UseAetherEditorWindow предоставляет стандартный
-Windows/OpenGL host adapter. App не вложенный, fonts/runtime/CLI выбирает consumer.
-Main/CLI/runtime branch и smoke checks перенесены в ManualTests/AetherEditorHost.
-[API/migration/ownership](../../TrueMoon.Aether.Editor/PACKAGE.md),
-[подробные проверки](HISTORY.md#arch2b-editor-library-и-app-integration--2026-10-27).
+## Реализация и связь с планом
 
-Текущие Editor763/763 и Aether1347/1347 отдельно Debug/Release, failed/skipped0;
-20новых composition cases включают обе DI реализации, options/duplicates,
-UI ownership/failure cleanup/retry и custom viewport без standalone-window wait.
-Source Debug и published Release empty/Transform workflows: 4functional processes,
-8reaped children, UI sessions/mappings/GPU resources/handles0. PNG просмотрены.
-Transform/preview/Undo/Redo/Save/reopen прошёл в обеих поставках.
-Первый preview с --validation завершился ErrorLayerNotPresent; финальный GPU proof
-без validation, нулевые validation counters не являются validation acceptance.
-Solution Debug/Release builds0errors; local Editor pack/metadata inspection успешны,
-independent NuGet consumption/полный ARCH2e не выполнялись.
-[Evidence](../../TestResults/AetherPackages-ARCH2b-20261027-1/verification.json).
-Full solution tests, legacy Build/Play/Replace и physical/performance проверки
-не повторены; прежние CPU receiver/Mithril ready-file follow-ups открыты.
-Следующий шаг — ARCH2c explicit runtime bootstrap/launch/identity, затем d/e.
+ARCH2a–c уже входят в базовый commit `af03ca3`; текущий незакоммиченный diff
+продолжает ARCH2d и закрывает отдельные quality follow-ups. Engine/Editor остаются
+library/packable modules, App/DI/lifecycle и единственный owner сохраняются.
 
-Предыдущая работа — **2026-10-27, ARCH2a shared scene persistence**.
-SceneFileCodec/ISceneDocumentStore/JsonSceneDocumentStore и SceneFile/SceneFileStamp/
-SceneFileConflictException перенесены из Editor.Documents в Aether.Scenes.
-Публичный UseAetherScenePersistence подключает lazy/idempotent defaults через App,
-сохраняет overrides; Editor document registration делегирует ему persistence.
-Editor сохраняет project/document owner, dirty/close UX и команды.
-[Карта типов, ownership и migration](PACKAGE_BOUNDARIES.md),
-[подробные проверки](HISTORY.md#arch2a-scene-persistence-в-aether--2026-10-27).
+| Изменения рабочего дерева | Этап и текущее состояние |
+| --- | --- |
+| Examples/AetherEditor, перенос AetherRuntimeHost из ManualTests в Examples, solution/test references, host-owned fonts/OFL, VerifyExampleHosts | ARCH2d реализован и проверен source/published в resource/headless scope. GUI/native acceptance открыта; independent NuGet ещё не проверен |
+| FrameWorkers/SharedFrameRing и FrameTransportTests | ENG2 pending CPU frame больше не теряется при empty/stale poll и EOF; lazy reservation сохраняет два private buffers, UI lease и drain. Follow-up закрыт в проверенном CPU scope |
+| BuildProbe/ReplacementProbe и NativeRuntimeProcessTests | ENG3 fixtures мигрированы на IGameSessionEntry/Contracts без ослабления production guards; build/selected artifact/checkpoint/rollback/cleanup follow-up закрыт |
+| GameBuildCompiler/GameBuildRequest, deep-job regression | ENG3 single-project staging сокращает intermediate path при неизменной GUID isolation. MSB3030 follow-up закрыт в проверенном TEMP/LongPathsEnabled0 profile; arbitrary long paths не обещаются |
+| ChildDiagnosticFixture/ForwarderTests/LimitsTests и delivery guide | ENG8a.3/ENE6d.4 test-quality fix: codec clipping отдельно от real-pipe bounded outcomes. Поздний ACK не переводит уже Unconfirmed в Accepted; runtime и budgets прежние |
+| Mithril composition/restart probes и ReadyFileProcessTests | Связанный fixture quality fix закрыт в [Mithril STATUS](../mithril/STATUS.md); runtime/API Mithril и полный MIT6 этим не меняются |
 
-Aether1347/1347 и Editor743/743 Debug/Release; narrow engine9/9 и Editor102/102.
-Новые9headless cases; Editor cooperation cases обновлены, net+2Editor cases.
-Full Debug4296/4296; Release4295/4296, failed1/skipped0:
-неизменённый MithrilCompositionProbe.ReadyAsync получил sharing IOException
-на ready.json (composition/cobalt). Общего green нет; повтор для green не делался.
-Builds0errors/1546warnings в каждой конфигурации: Debug nonincremental/Release
-incremental, SDK10.0.403. [Evidence](../../TestResults/AetherPackages-ARCH2a-20261027-1/verification.json).
-Source hashes1024/changes0,20test-binary hashes. Native/GPU/published/package/
-performance acceptance не повторены; исторический CPU FrameReceiver follow-up открыт.
+Публичные границы/owners — [PACKAGE_BOUNDARIES](PACKAGE_BOUNDARIES.md).
+Минимальные hosts — Examples/AetherEditor и Examples/AetherRuntimeHost;
+directed workflows и explicit same-exe runtime — ManualTests/AetherEditorHost.
 
-На дату ARCH2a Editor ещё WinExe/IsPackable=false. Aggregate UseAetherEditor,
-library conversion, explicit runtime executable/bootstrap/identity, hosts/resources
-и independent NuGet proof остаются ARCH2b–e. [План](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27).
-После перехода — ED6a/ED8a, ED4c.2/3 и project/build/play workflow.
+## Последние датированные проверки
 
-Предыдущая реализация и проверка — **2026-10-27, ENG8a.3/ENE6d.4 child diagnostic delivery**.
-Штатные App factories передают bounded structured logs по отдельному Enerit
-endpoint; options копируются в launch, receiver живёт до reap/raw drain.
-Host сохраняет Origin/PID/time/trace и добавляет authoritative session context.
-Known loss и unknown ACK outcome различаются; replay нет. Local JSONL и raw
-stdout/stderr продолжают работать независимо.
-[Контракт/API](DIAGNOSTICS_DELIVERY.md),
-[матрица/команды и неуспешные попытки](HISTORY.md#child-diagnostic-delivery--2026-10-27).
+Это сохранённые запуски, сверенные с artifacts, а не новый test run.
 
-Новые120Aether cases плюс59Core. Aether1338/1338, Editor741/741, full solution
-4285/4285 Debug/Release, failed/skipped0. Builds0errors:
-Debug nonincremental1546warnings, Release incremental1316warnings, SDK10.0.403.
-[Evidence](../../TestResults/DiagnosticsDelivery-20261027-1/verification.json).
-Source proof:3real Preview children одной session,99control commands при log flood,
-slow/broken host sinks, bounded local JSONL/raw, все processes reaped/resources released.
-Это не gameplay/input/GPU/display/published/package/performance acceptance.
+| Дата / профиль | Фактический результат | Evidence и границы |
+| --- | --- | --- |
+| 2026-10-28, Aether Debug/Release | 1543/1543 в каждой конфигурации, failed/skipped0 | [Forwarding fix](HISTORY.md#diagnostic-forwarding-bounded-outcomes--2026-10-28), focused44/44 Debug; full module включает headless processes, отдельная published/native matrix не повторена |
+| 2026-10-28, Editor Debug/Release | 763/763 в каждой конфигурации, failed/skipped0 | [ARCH2d](HISTORY.md#arch2d-hosts-и-доставка-ресурсов--2026-10-28); Cobalt/MS DI, options, factory/View ownership и startup/close, без окна/GPU |
+| 2026-10-28, ARCH2d source Debug/published Release | 18resource hashes,16CLI checks, independent runtime DLL/apphost4/4;11source inputs unchanged | [Verification](../../TestResults/ARCH2d-20261028-1/verification.json); fresh external deployment/unrelated cwd. PE/resource checks не доказывают native/font loading/rendering |
+| 2026-10-28, solution nonincremental Debug build | 0errors/1541warnings | [Build log](../../TestResults/ARCH2d-20261028-1/solution-Debug.log); это build, полный solution test run не повторён |
+| 2026-10-27, ENG3 source Debug/published Release | Headless21/21 +21/21 после fixture migration; позднее compiler/checkpoint/Replace/App-stop4/4 +4/4 | [Migration](HISTORY.md#eng3-buildreplace-fixture-migration--2026-10-27), [staging fix](HISTORY.md#eng3-compiler-staging-paths--2026-10-27); последние8cases не являются повтором всей21-scenario matrix |
+| 2026-10-27, ENG2 CPU/session/Frames Debug/Release | 94/94 в каждой конфигурации, deterministic RED→GREEN | [Pending frame fix](HISTORY.md#eng2-сохранение-pending-cpu-frame-при-пустом-poll--2026-10-27); hardware/GPU acceptance не входит |
+| 2026-10-27, Mithril Debug/Release и fresh published Release | 111/111 в каждой конфигурации; composition14/restart20 | [Отдельный owner и scope](../mithril/STATUS.md) |
 
-Короткий ordinary fixture cleanup deadline исправлен в тесте; production budgets
-не менялись. Прежний CPU FrameReceiver failure не повторился, ENG2 follow-up открыт;
-Mithril ready-file race также не объявлен исправленным.
-После ARCH2 — ED6a/ED8a console/export, затем command/frame metrics. Authoring очередь
-ED4c.2 → ED4c.3/workflow и прежние hardware gates сохраняются.
-Предыдущие [IPC traces](HISTORY.md#ipc-trace-context-в-control-factories--2026-10-26),
-[operations](HISTORY.md#операции-и-трассы-диагностики--2026-10-26),
-[build retention](HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26)
-и [managed runs](HISTORY.md#managed-logger-runs-в-editor-и-runtime--2026-10-26)
-сохраняют отдельные budgets; общего artifact quota нет.
+ENG2, legacy Build/Replace, compiler MSB3030 и ошибочное ожидание forwarding
+Accepted закрыты соответствующими regressions. Конкретный источник задержки
+исходного forwarding run из старого TRX не установлен. Исходные failed runs и
+compact/default TEMP profiles сохранены в HISTORY; passing другого модуля
+не превращает прежний full solution failure в новый общий green.
 
-Предыдущая работа — **2026-10-25, ED4f.2 системная граница окна**.
-Editor включает UseSystemAccentBorder: Windows accent, theme fallback при отсутствии
-цвета, RGB60% при inactive и focus transition160мс. Style/local BorderColor имеет
-приоритет; cached цвет обновляется по native notifications без чтения на frame.
-15новыхcases, narrow67/67. Related UI893/Hosting114/Editor741 Debug/Release:
-1748/configuration,3496всего,failed/skipped0. Nonincremental Debug solution build
-0errors/1532warnings.12native cases/206PNG/16reaped children,validation0/0 и zero
-owned UI/GPU/mappings; actual active/inactive border pixels проверены, PNG просмотрены.
-[Проверки и границы](HISTORY.md#ed4f2-системная-граница-окна--2026-10-25).
-Evidence: TestResults/AccentBorder-20261024/verification.json. Aether/full solution
-tests/packages/physical/performance не повторены. Реальная смена Windows accent
-не выполнялась; очередь ED4c.2 names/order → ED4c.3 create/delete прежняя.
+## Открытая acceptance и ограничения
 
-Предыдущая работа — **2026-10-24, ED4e островки поверх viewport**.
-Обозреватель/инспектор закреплены над полной рабочей областью сцены; отступ16,
-скругление8, мягкая тень, content height/scroll и независимый Theme.PanelBackdrop.
-Контекстный инспектор сохраняет View и появляется/скрывается за160мс без resize
-viewport; closing сразу закрывает ввод. Dark/Light/null fallback проверены.
-67новыхcases; narrow103/103. Related UI842/Hosting98/Editor699 Debug/Release:
-1639/configuration,3278всего,failed/skipped0. Nonincremental Debug solution build
-0errors/1532warnings.12native cases/158PNG/16reaped children,validation0/0 и zero
-owned UI/GPU/mappings; финальные native PNG просмотрены.
-[Проверки и границы](HISTORY.md#ed4e-островки-поверх-viewport--2026-10-24).
-Evidence: TestResults/Islands-20261024/verification.json. Aether/full solution tests,
-packages/physical/performance не повторены. Свободные drag/resize/docking отдельно.
-Следующий engine шаг прежний: ED4c.2 names/order, затем ED4c.3 create/delete.
-
-Предыдущая работа — **2026-10-24, ED4d.1 компактные действия и контекст инспектора**.
-Иконки26/reset24, Tooltip500мс (включая disabled), непрозрачный фон обеих тем;
-без выбора скрыта вся колонка, ширина передана viewport. Esc в обозревателе
-отменяет drag, затем снимает выбор; повторный выбор сохраняет View/chrome.
-25новыхcases, narrow181/181. Текущие UI801/Hosting98/Editor673 Debug/Release:
-1572/configuration,3144всего,failed/skipped0. Nonincremental Debug solution build
-0errors/1532warnings.12native cases/152PNG/16reaped children,validation0/0,
-zero owned UI/GPU/mappings; финальные PNG просмотрены.
-[Проверки и границы](HISTORY.md#ed4d1-компактные-действия-и-контекст-инспектора--2026-10-24).
-Evidence: TestResults/InspectorChrome-20261024/verification.json. Aether/full solution
-tests/прочие модули/packages/physical/performance в этом уточнении не повторены.
-Далее ED4c.2 имена/порядок, ED4c.3 create/delete/duplicate и контекст создания;
-прежние CPU receiver/Mithril issues остаются открытыми.
-
-Предыдущая работа — **2026-10-24, ED4d динамический инспектор компонентов**.
-Schema-driven секции только фактических компонентов: Boolean/Int64/Number/String,
-nullable, provenance/reset, Add/Remove/Restore; единые drafts/history/preview gates.
-Общий ComponentEditBatch использует прежние revision/receipts/resolver/Undo/Redo и
-scene JSON v1; definition catalogs не мутируются. Retained View/Data/Style,
-App/Cobalt/IFactory и compatibility consumers проверены. Live legacy — read-only.
-163новыхcases; текущие Aether1142/UI801/Hosting98/Editor648 Debug/Release
-=2689/configuration,5378всего,failed/skipped0. Nonincremental Debug solution build:
-0errors/1532warnings.12native source Debug/published Release cases,146PNG,
-16reaped children,validation0/0 и zero owned UI/GPU/mappings. Финальные PNG просмотрены.
-[Проверки и границы](HISTORY.md#ed4d-динамический-инспектор-компонентов--2026-10-24).
-Evidence: TestResults/Inspector-20261024/verification.json. Следом ED4c.2 имена/
-порядок, затем ED4c.3 create/delete/duplicate. Runtime ECS World и custom editor
-providers остаются отдельными задачами. Full solution tests/прочие модули/packages/
-physical/performance не повторены; прежние CPU receiver/Mithril issues открыты.
-
-Предыдущая работа — **2026-10-24, ED4c.1 дерево сущностей и Reparent**.
-Общий TreeView с иконками/раскрытием/выбором, переносом мышью и клавиатурой;
-Editor View/Data/Style и App/Cobalt/typed factory. Смена родителя сохраняет local
-Transform/inheritance, использует общий atomic authoring API/history, revision,
-Save/reopen и Edit Preview. IO/runtime/Transform draft и устаревшие жесты закрыты.
-130новых cases; текущие Aether1050/UI801/Hosting98/Editor577 Debug/Release
-=2526/configuration,failed/skipped0. Nonincremental Debug solution build:
-0errors/1532warnings.10native source Debug/published Release cases,118PNG,
-14reaped children,validation0/0 и zero owned UI/GPU/mappings. PNG просмотрены.
-[Точные проверки и границы](HISTORY.md#ed4c1-дерево-сущностей-и-reparent--2026-10-24).
-Evidence: TestResults/Hierarchy-20261024/verification.json.
-Следом ED4c.2 — сохраняемые имена/порядок соседей, затем ED4c.3 create/delete/duplicate.
-Full solution tests/packages/physical/performance не повторены; прежние CPU receiver/
-Mithril fixture issues открыты. Первый срез не включает rename/reorder/multiselect.
-
-Предыдущая работа — **2026-10-24, ED4b выравнивание статусбара**.
-Удалена пустая полоса16 под footer: общий WindowFrame размещает grip16 поверх
-правого нижнего угла. StatusBar28 и его контейнер имеют одну высоту, нижний край
-совпадает с внутренним бордером; details не перекрывается grip. Resize, scale1/1.5/2,
-maximize/restore/theme/idle проверены. UI760/Hosting98/Editor530 Debug/Release
-=1388/configuration,failed/skipped0; narrow57/57.2native empty cases source Debug/
-published Release,20PNG,zero owned resources; Dark/Light screenshots просмотрены.
-[Проверки и границы](HISTORY.md#ed4b-выравнивание-статусбара--2026-10-24).
-Evidence: TestResults/StatusBarAlignment-20261024/verification.json.
-Full solution/headless/игровые native profiles/physical input не повторены;
-прежние CPU receiver/Mithril fixture issues открыты. Следом create/delete.
-
-Предыдущая работа — **2026-10-24, ED4b компактная строка состояния**.
-Краткий status с иконкой и контекстной отменой слева; справа objects/Edit Preview/
-details. Tick/PID, actual preview revision и выбираемые ошибки — в матовом popup.
-Edit Preview start/retry/stop перенесены из production inspector в footer;
-активный preview показывает «Редактирование сцены», игровые actions — в header.
-Responsive overflow/focus/theme/dismissal, retained View/Data/Style и
-App/Cobalt/typed factories с обоими DI providers проверены.
-
-Текущие UI759/Hosting98/Editor527 Debug/Release =1384/configuration,80новыхcases,
-failed/skipped0. Nonincremental Debug solution build0errors/1532warnings.
-Source Debug/published Release вне repo:6native empty/legacy/Transform cases,
-68PNG/12reaped children; preview через footer, Undo/Redo/Save/reopen, header
-regressions,validation0/0 и zero UI/mapping/GPU ownership. PNG просмотрены.
-[План](EDITOR_PLAN.md#ed4b-компактная-строка-состояния--2026-10-24),
-[проверки/границы](HISTORY.md#ed4b-компактная-строка-состояния--2026-10-24).
-Evidence: TestResults/StatusBar-20261024/verification.json.
-Full solution tests/Aether/headless/packages/physical/performance не повторены;
-прежние CPU receiver/Mithril fixture issues открыты. Следом create/delete.
-
-Предыдущая работа — **2026-10-24, матовый фон dropdown меню ED4a**.
-Editor использует общий BackdropMaterial/Theme.MenuBackdrop из Argentis/Skia:
-blur фона текущего окна + tint, текст/иконки чёткие. Dark/Light/null, fallback,
-retained popup/focus и прежние команды сохранены, новый прикладной сервис не нужен.
-Текущие UI739/Hosting98/Editor467 Debug/Release =1304/configuration,failed/skipped0.
-4native cases source Debug/published Release вне repo,28PNG/4reaped children,
-validation0/0 и UI sessions/mappings/GPU resources/handles0. File/View PNG
-просмотрены, full solution/Aether/headless/прочие native profiles не повторялись.
-[Результаты](HISTORY.md#ed4a-матовый-фон-меню--2026-10-24),
-[общий механизм и границы](../alloy/PLAN.md#pa8b-матовые-поверхности--2026-10-24).
-Evidence: TestResults/Backdrop-20261024/verification.json. Следом create/delete;
-прежние CPU receiver/Mithril fixture issues и hardware gates остаются открытыми.
-
-Предыдущая работа — **2026-10-24, ED4a знак TrueMoon и анимированная кнопка меню**.
-Слева фиксированный знак TrueMoon, после него кнопка без обычной рамки. Точки
-поворачиваются ⋮→⋯ вместе с раскрытием; hover показывает группы, click/Enter/Space
-после анимации открывает «Файл». Повторный click закрывает, отмена/detach исключают
-late popup. Знак, hit area кнопки и simulation/window actions неподвижны;
-caption сдвигается. Retained View/Style, App/Cobalt/IFactory и ownership прежние.
-[Дизайн/план](EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23),
-[проверки и границы](HISTORY.md#ed4a-знак-truemoon-и-анимированное-раскрытие--2026-10-24).
-
-Текущие UI723/Hosting98/Editor467 Debug/Release:1288/configuration,13новыхcases,
-failed/skipped0. Source Debug/published Release вне repo:4native cases/28PNG/
-4reaped children; brand/disclosure/hover/keyboard/theme/tooltip/FocusLost и legacy
-game commands, validation0/0 и UI sessions/mappings/GPU resources/handles0.
-Финальные collapsed/File screenshots просмотрены. Evidence:
-TestResults/HeaderBrand-20261024/verification.json. Full solution/Aether/headless/
-остальные native profiles не повторены; прежние CPU FrameReceiver и Mithril
-fixture failures не объявлены исправленными. Далее create/delete общего API/history.
-
-Предыдущая работа — **2026-10-23, ED4a компактный заголовок и меню**.
-⋯ раскрывает пять menu groups с анимацией180мс/leave grace240мс; название сдвигается,
-▶/пауза/стоп и стандартные оконные кнопки неподвижны. Общие Menu/Command/Overlay/
-frame transition contracts — в Alloy/Argentis. Header View/Style и UI-owner typed
-factory подключены через App/Cobalt; окно владеет View, модели/style borrowed.
-File/edit/build/simulation/theme используют общие availability/actions. ▶ —
-tracked start→play/resume, stop/cancel/close исключают late Play и drains work.
-Header shortcuts, path draft, unsaved decision и независимый Edit Preview сохранены.
-[Дизайн/план](EDITOR_PLAN.md#ed4a-компактная-верхняя-панель--2026-10-23),
-[руководство](../../TrueMoon.Aether.Editor/README.md#компактная-верхняя-панель),
-[все проверки и границы](HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
-
-Related UI712/Hosting98/Editor465 Debug/Release:1275/configuration,105новыхcases,
-failed/skipped0. Source Debug/published Release вне repo:10native/header cases,
-64PNG/12reaped children; real menu/icon/document/Transform/preview/exit workflows,
-validation0/0 и UI sessions/mappings/GPU resources/handles0.10headless cases отдельно.
-Последний full Debug3048/3049 (Mithril ready-file fixture IOException), Release3049/3049;
-Aether1008/1008 и related UI прошли. Nonincremental build0errors/1532warnings.
-Evidence: TestResults/MenuHeader-20261023/verification.json. Общий green не заявлен.
-Ранний CPU FrameReceiver null сохранён отдельной ENG2 quality задачей; повторные
-passing не означают его исправление. Fresh packages/physical/full alpha не повторены.
-
-Предыдущий ED3a Open→Transform→Preview→Undo/Redo→Save→reopen реализован и повторён
-в новых native workflows. Atomic drafts/history, finite/positive validation,
-conflict и latest-only preview coordinator остаются прежними;
-[подробности ED3a](HISTORY.md#ed3a-transformhistorypreview-в-ui--2026-10-23).
+- ARCH2e independent NuGet consumer ещё не выполнен. ProjectReference build/publish
+  и local pack/metadata не доказывают независимую поставку.
+- ARCH2d GUI/window/font/native loading и общая GUI/GPU acceptance ARCH2 открыты.
+  GPU runs отложены после BSOD; причина и связь с проектом не установлены.
+  Vulkan validation environment нужно восстановить; прежний functional ARCH2b
+  proof выполнен без validation после ErrorLayerNotPresent.
+- Новый общий full solution Debug/Release test run после quality fixes не выполнен.
+  Последний сводный ARCH2a run от27октября: Debug4296/4296, Release4295/4296,
+  failed1 в Mithril ready-file; последующий Mithril fix имеет отдельный proof.
+- Physical DPI/K3/K7/K8/VRAM/final alpha и long resource/performance trends открыты.
+  K7 workaround search остановлен по решению пользователя; публикации NuGet не было.
 
 ## Границы приложения и engine
 
@@ -274,7 +75,8 @@ arbitrary external rename, links sandbox и power-loss durability не гара�
 Document actions доступны при stopped/idle game/compiler или Edit preview; preview
 останавливается до document replacement/close. Open document по-прежнему блокирует
 Build/Play/Replace до ED6 identity/workflow integration. New создаёт пустую сцену.
-Create/delete/reparent/generic mutations и полный ARCH1b открыты. Общая project/runtime
+Reparent и schema-driven component edits реализованы в ED4c.1/ED4d; имена/порядок,
+create/delete/duplicate и остальной ARCH1b открыты. Общая project/runtime
 Switch/Close transaction остаётся ED1/ED6; ED2 document Close/Switch/window Exit profile
 выполнен. Terminal shutdown forced discard/drain; native user close vetoable.
 
@@ -288,13 +90,18 @@ K8/VRAM/final alpha открыты; NVIDIA workaround search остановле�
 
 ## Следующий конкретный шаг
 
-Первый шаг — ARCH2d: завершить тонкие hosts/resources и доставку fonts/licenses/
-themes/shaders/native assets без source-checkout/ManualTests зависимостей.
+Следующий доступный шаг — [ARCH2e.1/2](PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28):
+fresh packages/isolated feed и отдельное решение вне checkout, затем independent
+NuGet build/publish/headless/App/DI/resource profile. ARCH2d тонкие hosts и
+доставка fonts/licenses/themes/shaders/native payloads проверены в source/published
+headless scope выше, без source-checkout/ManualTests lookup в consumers.
 ARCH2a–c реализованы; карта existing типов/owners — PACKAGE_BOUNDARIES.md.
-AetherEditorHost пока явно выбирает совместимый CurrentProcess("--runtime");
-отдельный AetherRuntimeHost и independent process proof уже существуют.
-Затем ARCH2e — independent NuGet package proof и затронутая native acceptance,
-включая восстановление Vulkan validation environment.
+Минимальные hosts — Examples/AetherEditor и Examples/AetherRuntimeHost; directed
+smokes остаются в ManualTests/AetherEditorHost с explicit same-executable runtime.
+GUI/GPU regression и затронутая native acceptance остаются открытыми; GPU runs
+отложены до отдельного разбора BSOD, причина и связь с проектом пока не установлены.
+Полный ARCH2 требует также native/window proof вне checkout и восстановления
+Vulkan validation environment; headless passing не заменяет эти критерии.
 Сохранить scene/project compatibility, headless Aether и существующий функционал;
 новые console/authoring UI features идут после перехода.
 
@@ -310,8 +117,12 @@ authoring history; затем inline rename и before/after reorder в суще�
 удалить/Undo → Save/reopen. Сначала headless atomic/revision/identity/validation proof;
 не создавать UI-only мутаций или второй history.
 Детали — [ED4c](EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24).
-CPU FrameReceiver test снова failed в текущем Release (ENG2 follow-up).
-Legacy BuildProbe/ReplacementProbe fixtures требуют IGameSessionEntry/Contracts
-migration; source и published failures сохранены, повтор для green не делался.
-Mithril fixture ready-file race — отдельная quality задача. Полный World/ECS не prerequisite.
+ENG2 CPU FrameReceiver и legacy Build/Replace follow-ups проверены новыми full
+Aether runs и headless source/published matrix выше; исходные failures сохранены.
+Mithril ready-file race закрыт отдельными module/published proofs. Diagnostic
+forwarding test follow-up закрыт2026-10-28 codec/late-ACK regressions и full runs
+выше; конкретный источник задержки initial Debug run из старого TRX неизвестен.
+MSB3030 закрыт новым staging layout, inner binlogs и default-TEMP full runs выше;
+произвольно длинные paths вне проверенного профиля не обещаются. Общая очередь
+остаётся ARCH2e.1/2 → GUI/native proof ARCH2d/e; полный World/ECS не prerequisite.
 После create/delete — project picker/switch и ED1/ED6 document/build/play workflow.

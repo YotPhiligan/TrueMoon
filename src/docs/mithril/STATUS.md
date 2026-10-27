@@ -1,117 +1,32 @@
 # Mithril: состояние и точка продолжения
 
-Последняя связанная проверка — **2026-10-27, ARCH2a full run**.
-Mithril99/99 Debug,98/99 Release, skipped0. Composition/cobalt probe получил
-sharing IOException при ReadAllTextAsync ready.json в Fixture.ReadyAsync line172.
-Source/fixture не менялись, исправления и повторного green нет.
-[Подробности](HISTORY.md#composition-ready-json-sharing-failure--2026-10-27).
-Текущий quality шаг охватывает безопасную ready publication/read в composition
-и restart probes с deterministic overlap и прежними deadline/identity/reap checks.
+Последняя работа — **2026-10-28, сверка diff и планов, без новых запусков**.
+В рабочем дереве меняются только composition/restart probes и их regression tests;
+Mithril runtime/API, restart policies и process ownership прежние.
 
-Предыдущая проверка — **2026-10-26, общий Core diagnostics run**.
-Initial Debug98/99: concurrent-stop получил sharing IOException на ready-1.json
-в MithrilRestartProbe.Fixture.ReadyAsync. После отдельной правки Core test
-isolation full Debug99/99 и Release99/99 прошли; Mithril production/fixture
-не менялись, passing повтор не закрывает race. [Подробности](HISTORY.md#ready-file-race-повторное-наблюдение--2026-10-26).
-Текущий quality шаг — atomic ready publication либо bounded read retry с
-deterministic overlap proof и прежними deadline/identity/reap assertions.
-
-Последняя работа — **2026-10-25, уточнение MIT6c diagnostics roadmap**.
-[MIT6c](PLAN.md#mit6c-диагностика-и-захват-process-output--уточнение-2026-10-25) связывает
-process acceptance с Core CORE6 и Aether ENG8a capture: continuous stdout/stderr
-drain, bounded retention, overflow/EOF/failure outcomes и reader ownership при stop.
-Реализация захвата остаётся задачей владельца Aether; Mithril API не расширен.
-Изменены только планы/статусы; process/build/tests/packages не запускались. Следующий
-quality шаг ready-file fixture и открытые long trends/parent-death MIT6c сохранены.
-
-Предыдущая проверка — **2026-10-23, ED4a integration**. Runtime/API не менялись.
-Последний Mithril Debug98/99: default-budget-delay restart probe получил IOException
-на ready-4.json в Fixture.ReadyAsync; предыдущая existence проверка не гарантирует
-окончание публикации. Последний Release99/99. Общий solution Debug3048/3049,
-Release3049/3049; предыдущие99/99 не означают исправление fixture race.
-Следующий quality шаг — безопасная публикация/чтение ready JSON с deterministic
-overlap proof, сохраняя bounded deadline, identity и reap assertions.
-[Evidence/границы](HISTORY.md#ed4a-компактный-заголовок-и-меню--2026-10-23).
-Это отдельная проверочная задача; MIT6a/c и authoring порядок не заменяются.
-Предыдущая реализация — **2026-10-23, первый MIT6a load-stop профиль**.
-AppUnitsPipesProbe расширен saturated-stop/saturated-kill: pending2/queued1,
-overload до dispatch, независимый Mithril control при active2 domain handlers,
-cooperative drain либо bounded owned kill/reap, exact PID/diagnostic outcome и
-zero client counters/Completion. Production changes находятся в Enerit;
-Mithril runtime/API, restart policies и ownership modes не менялись.
-[Контракт и границы](PLAN.md#mit6a-первый-load-stop-профиль--2026-10-23).
-В предыдущем MIT6a проходе Mithril99/99 Debug/Release в full solution2361/configuration, failed0/
-skipped0. Новый source/published профиль **44/44**, fresh package **132/132** на
-Cobalt/DI/DI без Cobalt analyzer,8nupkgs; Completed=true. [Команды/evidence](HISTORY.md#mit6a-saturated-ipc-и-независимый-process-stop--2026-10-23).
-MIT6a fault matrix в целом, parent-death containment и long trends MIT6c остаются
-открытыми; локальный authoring не блокируется. Native Editor viewport не повторялся.
-
-Текущая реализация — **2026-10-22, фабрики и единственный owner**:
-UnitsController injects IFactory<IUnitHandle,IUnitConfiguration>; штатный
-UnitHandleFactory выбирает hosting mode. Controller/parent создаются через App
-factories; borrowed IUnitsController и non-disposable lifecycle adapters исключают
-duplicate ownership. Public consumers должны обращаться к concrete registration
-для диагностической inspection, а не приводить alias к implementation.
-Mithril99/99 Debug/Release (+4cases) и реальные composition/process/pipe tests
-прошли на обоих providers. Process budgets/policies прежние. Own standalone restart
-matrix отдельно не повторялась. [Evidence](../engine/HISTORY.md#единые-фабрики-и-di--2026-10-22).
-
-Последняя работа — **2026-10-21, graceful wait при ошибке доставки exit**.
-В StopAsync исправлена гонка stdin/control pipe: ошибка доставки больше не
-пропускает оставшийся graceful budget; timeout/cancellation/owned kill/reap
-сохраняются. Новая delayed EOF regression подтверждена red/green; native20cases
-Debug/published Release прошли. Mithril95/95 и full solution1907/1907 отдельно
-Debug/Release, failed0/skipped0. Fresh units package matrix108/108cases прошла:
-8nupkgs/128commands/206source fingerprints, Cobalt/DI, Debug/Release build/publish,
-expected missing Enerit analyzerCS0234. Own standalone restart matrix не повторена.
-[Причина, точные команды и ограничения](HISTORY.md#graceful-wait-после-ошибки-доставки-exit--2026-10-21).
-
-Исправление структуры — **2026-10-21**: RootNamespace тестов исправлен на
-TrueMoon.Mithril.Tests; TestPoco.cs размещён в корне MithrilTest, namespaces
-manual/integration consumers согласованы. Module-specific UnitsConfigurationExtensions
-находится в Mithril вместо Contracts. Mithril94/94 Debug/Release и свежая package
-матрица108cases прошли; native children из затронутых editor scenarios освобождены.
-[Миграция и точные команды](../HISTORY.md#исправление-структуры-проектов--2026-10-21).
-
-App entry-point audit — **2026-10-19**: AddUnit связывает App-local unit definitions,
-configuration selection и UnitsController/parent-monitor lifecycle. Focused Debug
-UnitCompositionTests:9passed/failed0/skipped0 на Cobalt/DI. Runtime code не менялся;
-own full/Release/process/restart/package/performance matrix не повторялись.
-[Общая таблица API и команды](../HISTORY.md#аудит-точек-подключения-модулей-к-app--2026-10-19).
-
-Package metadata check — **2026-10-19**: тематические tags и общие project/
-repository metadata; Release pack/nuspec/README/license/icon payloads проверены.
-Runtime code, own unit/process/restart/performance checks в этом metadata шаге
-не менялись/не повторялись. [Общие команды/evidence](../HISTORY.md#nuget-package-metadata--2026-10-19).
-
-Integration check2026-10-18 в UI INF3: первый full Debug run дал readiness-file
-sharing IOException в Restart_OwnedSequence (always-crash); targeted20/20 и
-повторный full Debug Mithril94/94 прошли. Код Mithril/probe не менялся, race не
-объявлена исправленной. [Failure и точные runs](HISTORY.md#readiness-file-race-при-ui-inf3--2026-10-18).
-
-Последняя работа — **2026-10-15, MIT5 operational diagnostics и свежая package regression**.
-Добавлены UnitProcessDiagnostic/UnitProcessStage через существующий IEventsSource:
-run/generation/PID, effective policy/budget/delays, launch/exit/restart/terminal,
-kill/release/stop и исходные failures. Ownership/restart limits не расширены.
-[Подключение и semantics](DIAGNOSTICS.md), [контракт](PLAN.md#mit5-operational-diagnostics--2026-10-15),
-[команды/артефакты](HISTORY.md#mit5-operational-diagnostics--2026-10-15).
+Ready-file follow-up исправлен27октября: reader повторяет missing-file и Windows
+sharing/lock conflicts в едином8s deadline с cancellation у IO/delay. Публикация
+temp+Move и identity/reap assertions сохранены; malformed/null JSON даёт ошибку.
+Directed RED2→GREEN и12новых cases подтверждены сохранёнными artifacts.
+[Причина и точные команды](HISTORY.md#ready-json-bounded-read-retry--2026-10-27).
+Накопленные предыдущие сводки — в [HISTORY](HISTORY.md#сверка-рабочего-дерева-и-архив-status--2026-10-28).
 
 ## Реализация и фактические проверки
 
-Windows x64/build26300/net10.0/SDK10.0.402, результаты **2026-10-15**:
+Последние module/fixture runs — **2026-10-27**, Windows x64/net10.0,
+SDK10.0.403/xUnit2.9.3/VSTest. Это сохранённые результаты, не запуск этой сверки.
 
-| Область | Scope | Результат |
+| Проверка | Фактический результат | Evidence |
 | --- | --- | --- |
-| Mithril regression | Existing lifecycle/controller/composition +4 focused diagnostic cases +throwing-sink case; exact trace assertions в existing scenarios | Debug94/94 и Release94/94, Failed0/Skipped0 |
-| Related Enerit regression | Typed/generated/App/IPC process suite после изменения shared fixture | Debug126/126 и Release126/126, Failed0/Skipped0; generator suite отдельно не повторена |
-| Own child traces |20restart +9shutdown scenarios, Debug apphost/published Release |40/40 +18/18, оба Completed=true;129restart/7lifecycle source fingerprints совпали |
-| Package composition |8fresh nupkgs из9projects, isolated feed/cache/consumers; Cobalt/DI/DI без Cobalt analyzer, Debug/Release build/publish |108/108 Completed=true;96cases с живым parent проверяют public diagnostics через App.UseDiagnostics;12parent-exit cases не наблюдают killed parent sink |
-| Delivery controls | Compiler analyzer paths/SHA, generated sources, metadata, no analyzer DLL в runtime; omitted Enerit analyzer | Expected CS0234;205source fingerprints совпали; version0.2.2.7-alpha.units.20261015125732156 |
-| Solution | Nonincremental Debug build |0errors/1193warnings; warnings не подавлены, count как у предыдущего ENE5 run |
+| Полный Mithril Debug/Release | 111/111 в каждой конфигурации, failed/skipped0 | [Debug TRX](../../TestResults/MithrilReady-20261027-1/full-Debug/mithril.trx), [Release TRX](../../TestResults/MithrilReady-20261027-1/full-Release/mithril.trx) |
+| Ready-file regression | RED2sharing failures → GREEN12cases | [Контракт/evidence](HISTORY.md#ready-json-bounded-read-retry--2026-10-27) |
+| Fresh published Release | Composition14/14 на Cobalt/DI иrestart20/20; Completed=true, source changes0 | [Summary](../../TestResults/MithrilReady-20261027-1/published-summary.json) |
+| Связанный nonincremental solution Debug build | 0errors/1541warnings | [Log](../../TestResults/MithrilReady-20261027-1/solution-Debug.log); это build, не full solution tests |
 
-Итого4current TRX:440passed/0failed/0skipped. Core/Cobalt/generator/UI/native suites,
-performance и прочие package consumers не повторялись. Package/source traces —
-разные реальные runs, не перенос результатов между модулями.
+Исторический MIT5 diagnostics/package proof от15октября: Mithril94/94 и
+Enerit126/126 Debug/Release, restart40/lifecycle18 и package108/108. Он сохраняет
+собственные дату и scope, [команды и limitations](HISTORY.md#mit5-operational-diagnostics--2026-10-15).
+Fresh NuGet/полный MIT6/performance этим fixture fix не повторены.
 
 ## Ограничения
 
@@ -134,6 +49,10 @@ Parent abrupt-exit proof относится к child/server cleanup, не worker
 
 ## Следующий конкретный шаг
 
+Ready-file quality follow-up закрыт. Legacy Aether Build/Replace fixtures и
+compiler follow-ups также закрыты отдельными engine proofs. Следующий доступный
+общий шаг — ARCH2e.1/2 independent NuGet build/publish/headless/App/DI/resources;
+GUI/native acceptance остаётся открытой и GPU runs отложены после BSOD.
 Следующий общий шаг ведётся в [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг).
 Использовать проверенный первый MIT6a профиль при preview integration;
 ARCH1b.1 и ED1a уже выполнены в своих границах. Полный fault matrix,

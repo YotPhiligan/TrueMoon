@@ -74,22 +74,29 @@ public sealed class FrameReceiver : IAsyncDisposable
         try
         {
             WaitHandle[] waits = [_ring.Ready, _end.Token.WaitHandle];
-            while (!_end.IsCancellationRequested)
+            var index = -1;
+            Func<byte[]?> acquireBuffer = () =>
             {
-                int index;
                 lock (_gate)
                 {
+                    if (_end.IsCancellationRequested) return null;
                     index = Array.IndexOf(_states, 0);
                     if (index < 0 && _pending >= 0) { index = _pending; _pending = -1; _replaced++; }
-                    if (index >= 0) _states[index] = 1;
+                    if (index < 0) return null;
+                    _states[index] = 1;
+                    return _buffers[index];
                 }
-                if (index >= 0)
+            };
+            while (!_end.IsCancellationRequested)
+            {
+                bool canReceive;
+                lock (_gate) canReceive = _pending >= 0 || Array.IndexOf(_states, 0) >= 0;
+                if (canReceive)
                 {
-                    var start = Stopwatch.GetTimestamp(); var frame = _ring.CopyLatest(_buffers[index], _last);
-                    lock (_gate)
+                    var start = Stopwatch.GetTimestamp(); var frame = _ring.CopyLatest(_last, acquireBuffer);
+                    if (frame != null)
                     {
-                        if (frame == null) _states[index] = 0;
-                        else
+                        lock (_gate)
                         {
                             var elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
                             FrameTrace.Log.Complete("copy", _ring.Surface.Identity, _ring.Surface.Generation, frame.FrameId, start);

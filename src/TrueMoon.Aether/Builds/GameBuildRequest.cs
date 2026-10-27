@@ -5,7 +5,7 @@ namespace TrueMoon.Aether.Builds;
 /// <summary>Inputs for one explicit trusted-local game project build. Dependencies are flat managed DLL file names.</summary>
 /// <param name="ProjectPath">SDK-style net10.0 library consuming the AetherContractPath MSBuild property.</param>
 /// <param name="EntryAssembly">Produced game DLL name.</param>
-/// <param name="EntryType">Public IGameSession implementation with a parameterless constructor.</param>
+/// <param name="EntryType">Public IGameSession implementation providing the IGameSessionEntry activation factory.</param>
 /// <param name="SourceRevision">Caller revision; build completion never changes the running session automatically.</param>
 /// <param name="Dependencies">Explicit private managed DLLs; no native/assets/framework/contract copies.</param>
 public sealed record GameBuildRequest(string ProjectPath, string EntryAssembly, string EntryType, long SourceRevision,

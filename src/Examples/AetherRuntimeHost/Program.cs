@@ -8,7 +8,7 @@ using TrueMoon.Aether.Sessions;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 
-namespace TrueMoon.ManualTests.AetherRuntimeHost;
+namespace TrueMoon.Examples.AetherRuntimeHost;
 
 internal static class Program
 {

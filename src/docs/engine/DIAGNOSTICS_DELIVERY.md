@@ -84,6 +84,12 @@ ChildDiagnosticStatus разделяет:
   обработка конечного source cursor до отмены. DrainComplete не обещает отсутствие
   известных drops или успешную доставку всех records.
 
+Поздний ACK не переводит уже учтённый Unconfirmed в Accepted: локальный exchange
+завершён, replay отсутствует. Это относится к ответам как до Stop, так и после
+закрытия клиента. Ожидать Accepted для каждого отправленного batch нельзя;
+проверка serialization должна быть независима от исхода ограниченного по времени
+exchange. DrainComplete может сочетаться с Unconfirmed и Lost.
+
 NativeRuntimeLease.ChildDiagnosticsStatus сохраняет final receiver snapshot после
 reap/cleanup. AetherRuntimeHost.ChildDiagnosticsStatus и runtime cleanup report
 содержат sender health. Без связи последний child status может не попасть в host;

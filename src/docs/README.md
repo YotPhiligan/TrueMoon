@@ -45,7 +45,7 @@ Engine implementation/contracts теперь объединены в [TrueMoon.A
 ## Практические входные точки
 
 - **Диагностика:** [Core pipeline, JSONL и операции](core/DIAGNOSTICS.md), [Enerit traces/metrics](enerit/DIAGNOSTICS.md) и [bounded child → host delivery](engine/DIAGNOSTICS_DELIVERY.md).
-- **Engine/Editor packages:** [карта типов, scene-persistence/runtime API и ownership ARCH2a–c](engine/PACKAGE_BOUNDARIES.md), [Editor App API](../TrueMoon.Aether.Editor/PACKAGE.md), [отдельный runtime host](../ManualTests/AetherRuntimeHost/README.md); hosts/resources/package acceptance продолжается в ARCH2d/e.
+- **Engine/Editor packages:** [карта типов, scene-persistence/runtime API и ownership ARCH2a–c](engine/PACKAGE_BOUNDARIES.md), [Editor App API](../TrueMoon.Aether.Editor/PACKAGE.md), [отдельный runtime host](../Examples/AetherRuntimeHost/README.md); hosts/resources/package acceptance продолжается в ARCH2d/e.
 - **Приложение и сервисы:** quickstart в корневом README, затем [Core lifecycle/configuration/diagnostics contracts](core/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10) и [DI ownership](cobalt/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10).
 - **Headless NuGet и generator:** [CORE5/COB4 package consumers](../ManualTests/CorePackageConsumer/README.md), [App package README](../TrueMoon/PACKAGE.md), [Cobalt](../TrueMoon.Cobalt/PACKAGE.md), [generator](../TrueMoon.Cobalt.Generator/PACKAGE.md) и [Microsoft DI adapter](../TrueMoon.Extensions.DependencyInjection/PACKAGE.md).
 - **UI и привязки:** [Hosting guide](../TrueMoon.Alloy.Hosting/README.md), [Settings example](../ManualTests/AlloyTest/README.md) и [packaged quickstart](../TrueMoon.Alloy.Hosting/PACKAGE.md).

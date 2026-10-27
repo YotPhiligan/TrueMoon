@@ -12,6 +12,22 @@ namespace TrueMoon.Aether.Tests.Diagnostics;
 public class ChildDiagnosticLimitsTests
 {
     [Fact]
+    public void SerializationBounds_ClipSafelyRemoveSecretKeysAndKeepFreeText()
+    {
+        var options = Options(); options.MaxBatchBytes = 65536; var launch = Launch(options);
+        var input = SerializationRecord(launch);
+        var packet = Packet(launch, input.ApplicationId, 1, ChildDiagnosticCodec.Bound(input));
+        var row = Assert.Single(ChildDiagnosticCodec.Decode(packet, options));
+        Assert.Equal(new string('S', 128), row.Source); Assert.Equal(new string('x', 2047), row.MessageTemplate);
+        Assert.Equal(4096, row.ExceptionStackTrace!.Length); Assert.Equal(new string('v', 127), row.Properties["unicode"]);
+        Assert.Equal(new Dictionary<string, string?> { ["safe"] = launch.Endpoint, ["unicode"] = new string('v', 127) }, row.Properties);
+        Assert.True(row.IsTruncated);
+        Assert.Equal(130, input.Source.Length); Assert.EndsWith("😀tail", input.MessageTemplate);
+        Assert.Equal(5000, input.ExceptionStackTrace!.Length); Assert.Equal(launch.Identity.Nonce, input.Properties["nOnCe"]);
+        Assert.Equal(launch.Endpoint, input.Properties["ENDPOINT"]); Assert.False(input.IsTruncated);
+    }
+
+    [Fact]
     public void DedicatedTransportLimits_DisableFeedbackAndBoundBothDirections()
     {
         var options = Options(); var limits = ChildDiagnosticFactories.Limits(options);

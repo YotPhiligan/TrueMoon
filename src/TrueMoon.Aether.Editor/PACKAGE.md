@@ -69,7 +69,7 @@ ARCH2c provides explicit launch, shared `RuntimeBootstrap.ReadEnvironment()` and
 pair identity. The child executable configures UseAether from `.Launch`, registers
 UseAetherRuntime or UseAetherPreviewRuntime with `.ParentProcessId`, then runs the
 App-owned runtime host. Main/App composition, diagnostics and reports remain in
-the executable. `ManualTests/AetherRuntimeHost` is a separate example without
+the executable. `Examples/AetherRuntimeHost` is a separate example without
 Editor/UI dependencies.
 
 `BuildIdentity.ForRuntime` covers labelled host/runtime entries plus exact shared
@@ -80,9 +80,13 @@ Different pair identities invalidate old game artifacts/checkpoints; rebuild gam
 Scene/project formats and control3/frame1/snapshot2 are unchanged. See the
 [Aether runtime contract](../TrueMoon.Aether/PACKAGE.md) for bootstrap bounds.
 
-The in-repository AetherEditorHost explicitly selects
+The directed smoke consumer AetherEditorHost explicitly selects
 `NativeRuntimeLaunch.CurrentProcess("--runtime")` with the previous `BuildIdentity.HostId`
-as a compatible same-executable profile until the host/resources stage. Installing
-this package never makes an arbitrary executable a runtime. Complete asset delivery
-(ARCH2d), independent NuGet and the published acceptance matrix (ARCH2e) remain open;
-source process tests do not establish published results. No NuGet publication is implied.
+as a compatible same-executable profile. The minimal
+[AetherEditor example](../Examples/AetherEditor/README.md) selects a separately
+deployed runtime and owns its font/OFL payload. Themes/styles are managed code;
+SPIR-V is embedded in Aether, and rendering/platform modules supply native assets.
+The package performs no repository or ManualTests font lookup. Installing it never
+makes an arbitrary executable a runtime. See the [deployment verifier](../Examples/README.md#verify-deployment-without-opening-a-window)
+for source/published resource and headless checks; GUI/native acceptance and
+independent NuGet consumption remain open. No NuGet publication is implied.

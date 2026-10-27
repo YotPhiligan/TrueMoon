@@ -14,9 +14,15 @@
 
 UI alpha и контрольное beta приложение имеют собственные критерии. Готовность UI не означает готовность всех модулей TrueMoon; обратное тоже не следует из общего build.
 
-Текущий приоритет2026-10-27 —
+Текущий приоритет2026-10-28 —
 [ARCH2: Aether/Editor packages и executable hosts](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27).
-ARCH2a–c реализованы; ARCH2d/e предшествуют новым Editor features. Текущие проверки и открытые quality failures — в STATUS.
+ARCH2a–c реализованы; ARCH2d hosts/resources проверены source/published headless,
+его GUI/GPU acceptance отложена после BSOD. Следующий доступный шаг —
+[ARCH2e.1/2 independent NuGet consumer](engine/PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28):
+fresh packages, отдельное решение и build/publish/headless/App/DI/resource proof.
+Полный ARCH2, включая native acceptance, предшествует новым Editor features.
+Quality follow-ups ENG2/ENG3, Mithril ready-file и diagnostic forwarding закрыты
+в своих проверенных scopes; общая release matrix не повторена. Точные даты — в STATUS.
 
 ## Карта модулей
 
@@ -28,7 +34,7 @@ ARCH2a–c реализованы; ARCH2d/e предшествуют новым 
 | Mithril | TrueMoon.Mithril: units, hosting/startup/lifetime/restart policies, процессные handles | [Mithril](mithril/PLAN.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: retained UI, renderer, окно/input, standalone и external HUD | [UI](alloy/PLAN.md) |
 | Aether / Engine | TrueMoon.Aether: library/package общего engine/components/authoring/runtime, sessions/control/frames/builds/checkpoint/Replace; отдельные executable/game consumers | [Aether](engine/PLAN.md), [ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) |
-| Aether Editor | TrueMoon.Aether.Editor — подключаемая library/package с View/Data/styles, commands и прикладными services; App integration и explicit runtime реализованы в ARCH2b/c, hosts/assets/independent package proof открыты | [Подключаемый Editor ED1–ED8](engine/EDITOR_PLAN.md), [package/host переход ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) |
+| Aether Editor | TrueMoon.Aether.Editor — подключаемая library/package с View/Data/styles, commands и прикладными services; ARCH2a–c реализованы, ARCH2d hosts/assets проверены headless; independent NuGet и GUI/native acceptance открыты | [Подключаемый Editor ED1–ED8](engine/EDITOR_PLAN.md), [package/host переход ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) |
 
 Тестовые проекты, generators и ManualTests относятся к своим направлениям. Они не образуют отдельный продуктовый roadmap. Общие CI/build/package задачи остаются на уровне этого документа.
 
@@ -90,8 +96,10 @@ ARCH2b превратил Editor в library/packable module с App/View/window i
 entry points/smoke consumer — AetherEditorHost. ARCH2c добавил explicit runtime
 command/bootstrap и точную identity пары host/runtime; отдельный AetherRuntimeHost
 работает без Editor/UI. Source Debug/published Release headless DLL/apphost
-проверены отдельно от GPU/package acceptance; Release CPU race и legacy probe
-fixtures failures сохраняются. Следующие шаги — ARCH2d/e;
+проверены отдельно от GPU/package acceptance; CPU race, legacy fixture и compiler
+follow-ups закрыты своими проверками в STATUS. ARCH2d hosts/resources проверены
+в resource/headless scope2026-10-28, GUI/GPU acceptance остаётся на паузе после BSOD.
+Следующий доступный шаг — ARCH2e.1/2 independent NuGet consumer;
 отдельные результаты и ограничения проверок находятся в STATUS. Весь ARCH2 предшествует
 console/export и новым authoring UI features. После него —
 ED6a/ED8a, ED4c.2/3 и project/build/play workflow; оставшиеся Core/DI/IPC/UI roadmaps
@@ -261,7 +269,16 @@ TrueMoon.Aether.Editor/Tests и назначил аудит Aether по этом
 
 ## Порядок развития
 
-Актуальная точка2026-10-21: ENG1–ENG3/ENG4a/b/c реализованы в TrueMoon.Aether;
+Актуальный порядок2026-10-28: ARCH2d реализован и проверен в resource/headless scope;
+далее ARCH2e.1/2 independent NuGet build/publish/headless/App/DI/resource proof.
+GUI/GPU acceptance ARCH2d/e остаётся открытой до отдельного разбора BSOD и подготовки
+validation environment; доступный headless шаг её не отменяет. После полного ARCH2 —
+ED6a/ED8a console/export, ED4c.2 имена/порядок,
+ED4c.3 create/delete/duplicate и project picker/switch с ED1/ED6 workflow.
+Незавершённые проверки после BSOD и scopes закрытых quality fixes — в [STATUS](STATUS.md).
+Датированные маршруты ниже сохраняют историю решений и не заменяют эту очередь.
+
+Историческая точка2026-10-21: ENG1–ENG3/ENG4a/b/c реализованы в TrueMoon.Aether;
 ENG4d borrowed texture/retained GPU copy bridge проверен в actual reference viewport.
 Lifetime, premul/stored sRGB/origin, scale/clipping и presentation проверены отдельно
 от imported readback. [Контракт](engine/PLAN.md#eng4d-gpu-viewport-bridge--2026-10-20).
@@ -338,7 +355,7 @@ Physical DPI/OS acceptance остаётся открытым. Engine очере�
 
 G1–G6 — общий roadmap, а не новые UI требования. За исключением выполненной документальной карты в G1, готовность этих этапов требует отдельных запусков. Даты выпуска и новые публичные API этим планом не назначаются.
 
-Актуальный порядок, сверка2026-10-11: CORE5/COB4 independent headless package/analyzer
+Исторический порядок, сверка2026-10-11: CORE5/COB4 independent headless package/analyzer
 consumer проверен на Windows x64/net10.0/SDK10.0.401 — 64 matrix + 3 delivered README
 processes, Debug/Release build/publish без RID; текущие Core81/Cobalt37/generator6
 регрессии прошли. [Детальный сценарий у Core](core/PLAN.md#core5--cob4-независимый-headless-consumer--2026-10-11).
@@ -362,7 +379,7 @@ Cobalt/DI включая DI без Cobalt analyzer, Debug/Release build/publish;
 На момент package portion ближайшим шагом был измеренный IPC baseline до оптимизаций;
 На тот момент operational diagnostics MIT5 и performance ENE5 были открытыми частями;
 их отдельные результаты2026-10-15 сведены в [quality matrix](QUALITY.md).
-Текущий приоритет уточнён ниже2026-10-14: качество существующих модулей, начиная с Cobalt.
+Исторический приоритет2026-10-14 уточнён ниже: качество существующих модулей, начиная с Cobalt.
 UI owner/package5.4–5.5 и fixed-font K2/K4 проверены ранее2026-10-11:
 UI532/532, golden360/360, validation0/0; эти UI проверки текущим headless шагом не повторены.
 NVIDIA GDI defect остаётся внешним K7 блокером; поиск app-side workaround отложен

@@ -59,12 +59,12 @@ try {
     $summary.SourceFiles = Sources
     foreach ($configuration in $Configurations) {
         if ($configuration -eq 'Debug') {
-            Invoke-Owned 'build-Debug' 'dotnet' @('build',(Join-Path $PSScriptRoot 'EngineSessionProbe.csproj'),'--configuration','Debug','--verbosity','quiet') 180
+            Invoke-Owned 'build-Debug' 'dotnet' @('build',(Join-Path $PSScriptRoot 'EngineSessionProbe.csproj'),'--configuration','Debug','--verbosity','quiet',"-bl:$(Join-Path $run 'build-Debug-{}.binlog')") 180
             $binaryDirectory = Join-Path $PSScriptRoot 'bin/Debug/net10.0'
         }
         elseif ($configuration -eq 'Release') {
             $binaryDirectory = Join-Path $run 'publish'
-            Invoke-Owned 'publish-Release' 'dotnet' @('publish',(Join-Path $PSScriptRoot 'EngineSessionProbe.csproj'),'--configuration','Release','--output',$binaryDirectory,'--verbosity','quiet') 180
+            Invoke-Owned 'publish-Release' 'dotnet' @('publish',(Join-Path $PSScriptRoot 'EngineSessionProbe.csproj'),'--configuration','Release','--output',$binaryDirectory,'--verbosity','quiet',"-bl:$(Join-Path $run 'publish-Release-{}.binlog')") 180
         }
         else { throw 'Only Debug apphost and published Release are defined.' }
         $summary.Binaries += @(Get-ChildItem $binaryDirectory -File | Where-Object { $_.Extension -in '.dll','.exe','.json' } | ForEach-Object { [ordered]@{ Configuration = $configuration; Path = $_.FullName; Sha256 = (Get-FileHash $_.FullName).Hash } })
