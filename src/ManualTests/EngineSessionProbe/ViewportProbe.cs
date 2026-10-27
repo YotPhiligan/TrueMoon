@@ -103,7 +103,7 @@ public static class ViewportProbe
         var smoke = reportDirectory != null;
         var directory = reportDirectory ?? Path.Combine(Path.GetTempPath(), "tm-viewport-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
-        var factory = new NativeRuntimeFactory(); var authoring = new AuthoringState(); var before = JsonSerializer.Serialize(authoring);
+        var factory = new NativeRuntimeFactory(NativeRuntimeLaunch.CurrentProcess("--runtime")); var authoring = new AuthoringState(); var before = JsonSerializer.Serialize(authoring);
         var gpuBinding = gpu ? new EditorGpuViewportBinding(runtime => (NativeRuntimeLease)runtime) : null;
         SessionSupervisor supervisor = null!;
         FrameSession session = null!;

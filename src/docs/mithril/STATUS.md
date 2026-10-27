@@ -1,6 +1,14 @@
 # Mithril: состояние и точка продолжения
 
-Последняя проверка — **2026-10-26, общий Core diagnostics run**.
+Последняя связанная проверка — **2026-10-27, ARCH2a full run**.
+Mithril99/99 Debug,98/99 Release, skipped0. Composition/cobalt probe получил
+sharing IOException при ReadAllTextAsync ready.json в Fixture.ReadyAsync line172.
+Source/fixture не менялись, исправления и повторного green нет.
+[Подробности](HISTORY.md#composition-ready-json-sharing-failure--2026-10-27).
+Текущий quality шаг охватывает безопасную ready publication/read в composition
+и restart probes с deterministic overlap и прежними deadline/identity/reap checks.
+
+Предыдущая проверка — **2026-10-26, общий Core diagnostics run**.
 Initial Debug98/99: concurrent-stop получил sharing IOException на ready-1.json
 в MithrilRestartProbe.Fixture.ReadyAsync. После отдельной правки Core test
 isolation full Debug99/99 и Release99/99 прошли; Mithril production/fixture

@@ -1,4 +1,5 @@
-﻿namespace TrueMoon.Aether.Editor;
+using TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 /// <summary>Explicit application launch inputs. An empty launch opens a workspace without selecting a demo project.</summary>
 /// <param name="ProjectPath">Absolute .aetherproj, or an explicitly selected legacy game csproj.</param>

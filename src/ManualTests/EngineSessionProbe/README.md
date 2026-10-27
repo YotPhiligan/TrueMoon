@@ -1,5 +1,60 @@
 # EngineSessionProbe — пример TrueMoon.Aether (ENG1–ENG5c.2)
 
+## ARCH2c: explicit runtime launch и independent process proof
+
+Native factories задают launcher явно, включая wrapper `Inner` factories:
+`new NativeRuntimeFactory(NativeRuntimeLaunch.CurrentProcess("--runtime"))`.
+Parent UseAether paths со штатной factory задают `RuntimeLaunch` тем же descriptor.
+Это совместимый same-executable профиль, сохраняющий прежний `BuildIdentity.HostId`;
+произвольный exe не получает implicit `--runtime` или runtime handler.
+
+Для отдельного [AetherRuntimeHost](../AetherRuntimeHost/README.md), без Editor/UI
+references, parent задаёт абсолютные paths:
+
+```csharp
+engine.RuntimeLaunch = new NativeRuntimeLaunch(absRuntimeExe, absRuntimeDll);
+engine.HostContractId = BuildIdentity.ForRuntime(absRuntimeDll);
+```
+
+Для dotnet используйте `new NativeRuntimeLaunch(absDotnetExe, absRuntimeDll,
+[absRuntimeDll, .. runtimeArguments])`: DLL и arguments явные, без shell parsing.
+Null RuntimeLaunch сохраняет registration/headless/custom RuntimeFactory paths;
+default native Start без descriptor выдаёт configuration error.
+
+Новый CLI после отдельной сборки outputs:
+
+```powershell
+dotnet path/to/EngineSessionProbe.dll --runtime-launch-proof E:/runtime/AetherRuntimeHost.dll E:/reports/fresh-runtime-proof
+```
+
+Синтаксис: `dotnet <EngineSessionProbe.dll> --runtime-launch-proof <runtime dll/exe path>
+<fresh report dir>`. Для DLL parent должен запускаться через dotnet: proof использует
+его absolute Environment.ProcessPath, не PATH lookup. Передача AetherRuntimeHost.exe
+выбирает apphost и соседнюю одноимённую DLL. Report directory должен быть новым.
+
+Сценарий проверяет два independent preview children, selected-game child,
+host/child fingerprint rejection, actual runtime entry mismatch, startup cancellation,
+immediate exit, reap/release и explicit same-executable preview regression. Он
+публикует уже собранную Game.Logic.dll как selected artifact, не запускает compiler,
+window, frame surface или GPU. Результаты сохраняются в runtime-launch-report.json,
+per-generation runtime reports, diagnostics и failure artifacts. Это не GPU/display,
+compiler/Replace, parent-exit или independent NuGet acceptance.
+
+2026-10-27 CLI прошёл отдельно на source Debug и published Release: по2формы,
+DLL/dotnet и apphost, всего4/4. [Текущие evidence и failures расширенной matrix](../../TestResults/ARCH2c-20261027/verification.json).
+Extended same-exe scenarios —19/21в каждой поставке: устаревшие build-artifacts/
+replacement fixtures остаются failing, checkpoint/diagnostics/lifecycle проходят.
+Это не общий green. Исторический RunProbe не заменяет новые запуски;
+ARCH2d assets и полная ARCH2e NuGet/native matrix остаются открытыми.
+
+Общий `RuntimeBootstrap.ReadEnvironment()` заменяет consumer JSON parsing/validation.
+RuntimeHost явно использует allowLegacyGame:true ради behavior faults и legacy
+Game.Logic; IsPreview/IsChild тоже включают legacy при классификации, чтобы не
+блокировать dispatch. PreviewRuntimeEntry/ChildDiagnosticDeliveryProbe и отдельный
+runtime host используют strict parse перед UseAether и runtime/preview registration.
+Child-only App не настраивает launcher; Main/App.Build/diagnostics/report остаются
+в consumer. [Identity, bootstrap bounds и trust contract](../../TrueMoon.Aether/PACKAGE.md).
+
 ## ENG8a.3: child diagnostic delivery
 
 После build запустите `EngineSessionProbe --child-diagnostics-proof <new-directory>`.
@@ -164,6 +219,9 @@ launch и generated Enerit same-build pipes. ENG2 добавляет одно Al
   Transactional replacement/rollback доступны через AetherHost.Replacement.
 - EngineSessionProbe: executable composition Editor/Game.Runtime, конкретная
   Game.Logic factory, Alloy viewport и bounded native/fault scenarios.
+- AetherRuntimeHost: отдельный executable с TrueMoon bootstrap/Aether references,
+  без Editor/UI dependencies; strict selected-game/preview bootstrap, без legacy
+  fixture и fault implementation. Native runtime-launch proof выбирает его явно.
 - TrueMoon.Aether.Tests: перенесённые xUnit supervisor/protocol/codec checks с
   fake leases и прямой ссылкой на Aether. Solution folder Aether; примеры — Engine.
 
@@ -199,9 +257,16 @@ diagnostics. ENG3b добавляет capture/startup restore, ENG3c — Replace
 InputBatch остаётся следующим отдельным направлением.
 
 Каждый reply проверяется по identity/versions/nonce, sequence, operation/PID и
-применённым mode/revision/tick. HostContractId — SHA256 manifest entry host, Aether,
-Enerit и Mithril binaries; GameBuildId — SHA256 manifest Game.Logic.dll.
-Child независимо сверяет bootstrap с собственными binaries до открытия RPC.
+применённым mode/revision/tick. Для separate runtime HostContractId — role-labelled
+host/runtime pair fingerprint с exact shared Aether/Contracts/Enerit/Mithril;
+проверяются оба entry directories и actual managed entry на parent/child sides.
+Явный same-exe профиль сохраняет прежний HostId manifest. Legacy GameBuildId —
+SHA256 manifest Game.Logic.dll. Bootstrap counterpart Version1, JSON≤16384characters,
+depth32; control3/frame1/snapshot2 и session fencing не меняются.
+Это trusted-local compatibility, не auth boundary и не полный native/private hash.
+Deployment нельзя менять in place во время session. Другая pair identity делает
+старые artifacts/checkpoints несовместимыми: rebuild games; scene/project formats
+остаются прежними. Child проверяет bootstrap до открытия RPC.
 
 ENG3a добавляет SessionLaunch.Build: GameBuildId берётся из immutable manifest,
 выбранный каталог/entry DLL и contract hash проверяются в Editor и child. Только

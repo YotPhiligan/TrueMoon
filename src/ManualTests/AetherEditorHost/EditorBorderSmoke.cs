@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+using TrueMoon.Aether.Editor;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon.Alloy.Hosting;
@@ -6,7 +7,7 @@ using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 // Directed HWND notifications only; never calls SetFocus, moves the cursor or changes OS personalization.
 internal static partial class EditorBorderSmoke

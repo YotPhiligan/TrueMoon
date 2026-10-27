@@ -340,11 +340,58 @@ public sealed class AppIntegrationTests
     }
 
     [Theory]
+    [InlineData(false, null)]
+    [InlineData(true, null)]
+    [InlineData(false, "")]
+    [InlineData(true, "")]
+    [InlineData(false, " ")]
+    [InlineData(true, " ")]
+    [InlineData(false, "relative-build")]
+    [InlineData(true, "relative-build")]
+    [InlineData(false, "../build")]
+    [InlineData(true, "../build")]
+    [InlineData(false, "\0")]
+    [InlineData(true, "\0")]
+    public void RuntimeRegistration_RejectsMalformedArtifactPathBeforeGraphActivation(bool di, string? directory)
+    {
+        if (directory == "\0") directory = Path.Combine(Path.GetTempPath(), "invalid\0build");
+        var launch = RuntimeLaunch();
+        launch = launch with { Build = launch.Build! with { DirectoryPath = directory! } };
+        var activations = 0; var creations = 0;
+        var builder = Builder(di).Setup(context =>
+        {
+            context.Services(services => services.Singleton<IFactory<AetherRuntimeHost, SessionLaunch>>(_ =>
+            {
+                activations++;
+                return new global::TrueMoon.Factory<AetherRuntimeHost, SessionLaunch>(_ =>
+                { creations++; throw new IOException("Malformed launch must not activate a runtime."); });
+            }));
+            context.UseAether(options =>
+            {
+                options.HostContractId = Hash; options.GameBuildId = Hash; options.ReportDirectory = "aether-runtime-tests";
+                options.RuntimeFactory = _ => { activations++; throw new IOException("Malformed launch must not activate the engine graph."); };
+            });
+            context.UseAetherRuntime(launch, int.MaxValue);
+        });
+
+        var error = Assert.Throws<InvalidDataException>(() => builder.Build());
+
+        Assert.Contains("artifact", error.Message);
+        Assert.Equal(0, activations);
+        Assert.Equal(0, creations);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task RuntimeRegistration_UsesInjectedFactoryWithNormalizedLaunchSnapshot(bool di)
     {
         var launch = RuntimeLaunch(); var expected = new IOException("injected runtime factory");
+        var directory = Path.Combine(Path.GetTempPath(), "aether-runtime-artifact-" + Guid.NewGuid().ToString("N"), "staging", "..", "selected");
+        var build = launch.Build! with { DirectoryPath = directory };
+        launch = launch with { Build = build };
+        var normalizedBuild = build with { DirectoryPath = Path.GetFullPath(directory) };
+        Assert.False(Directory.Exists(normalizedBuild.DirectoryPath));
         SessionLaunch? received = null; var calls = 0;
         await using var app = Builder(di).Setup(c =>
         {
@@ -357,13 +404,18 @@ public sealed class AppIntegrationTests
         Assert.Equal(0, calls);
         Assert.Same(expected, Assert.Throws<IOException>(() => app.Services.Resolve<AetherRuntimeHost>()));
         Assert.Equal(1, calls);
-        Assert.NotSame(launch, received);
-        Assert.Equal(launch with { ReportDirectory = Path.GetFullPath(launch.ReportDirectory) }, received);
+        var snapshot = Assert.IsType<SessionLaunch>(received);
+        Assert.NotSame(launch, snapshot);
+        Assert.Equal(launch with { ReportDirectory = Path.GetFullPath(launch.ReportDirectory), Build = normalizedBuild }, snapshot);
+        Assert.NotSame(build, snapshot.Build);
+        Assert.Same(build, launch.Build);
+        Assert.Equal(directory, build.DirectoryPath);
         Assert.Equal("aether-runtime-tests", launch.ReportDirectory);
+        Assert.False(Directory.Exists(normalizedBuild.DirectoryPath));
     }
 
     private static SessionLaunch RuntimeLaunch() => new(new(Guid.NewGuid(), 1, Hash, Hash, Hash),
-        "engine-" + Guid.NewGuid().ToString("N"), "aether-runtime-tests", Build: new("unused-build", Hash));
+        "engine-" + Guid.NewGuid().ToString("N"), "aether-runtime-tests", Build: new(Path.GetFullPath("unused-build"), Hash));
 
     private static void AssertCompilerClosed(GameBuildCompiler compiler)
     {

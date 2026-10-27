@@ -1,4 +1,4 @@
-﻿namespace TrueMoon.Aether.Editor.Documents;
+﻿namespace TrueMoon.Aether.Scenes;
 
 /// <summary>Saving would replace a file that was not the last observed version.</summary>
 public sealed class SceneFileConflictException : IOException

@@ -1,10 +1,12 @@
-﻿using System.Text.Json;
+using TrueMoon.Aether.Editor;
+using TrueMoon.Aether.Scenes;
+using System.Text.Json;
 using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether;
 using TrueMoon.Dependencies;
 
-namespace TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 internal static class ProjectEntryPoint
 {

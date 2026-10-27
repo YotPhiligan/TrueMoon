@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Scenes.Authoring;
 using Xunit;

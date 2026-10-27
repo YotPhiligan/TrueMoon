@@ -1,14 +1,4 @@
-﻿using TrueMoon.Aether.Scenes;
-
-namespace TrueMoon.Aether.Editor.Documents;
-
-/// <summary>Content identity of the exact observed UTF8 file bytes.</summary>
-/// <param name="Sha256">SHA256 digest, independent of timestamps.</param>
-public sealed record SceneFileStamp(string Sha256);
-
-/// <summary>A completely decoded file and the identity used to protect its next save.</summary>
-/// <param name="Document">Validated authoring data.</param><param name="Stamp">Exact observed bytes.</param>
-public sealed record SceneFile(SceneDocument Document, SceneFileStamp Stamp);
+﻿namespace TrueMoon.Aether.Scenes;
 
 /// <summary>Scene persistence boundary. A null expected stamp means create-only, never blind overwrite.</summary>
 public interface ISceneDocumentStore

@@ -1,11 +1,12 @@
-﻿using System.Text.Json;
+using TrueMoon.Aether.Editor;
+using System.Text.Json;
 using SkiaSharp;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 // Directed acceptance only drives this owned UI tree; no global/native input injection.
 internal static class EditorStatusBarSmoke

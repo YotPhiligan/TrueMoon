@@ -6,7 +6,18 @@ contracts игровой сессии, supervisor, control protocol, CPU frame t
 Текущая реализация рассчитана на Windows x64 и .NET 10.
 
 [План](../docs/engine/PLAN.md), [статус и ограничения](../docs/engine/STATUS.md),
-[пример Editor/Game.Runtime](../ManualTests/EngineSessionProbe/README.md).
+[пример Editor/Game.Runtime](../ManualTests/EngineSessionProbe/README.md),
+[отдельный runtime без Editor/UI](../ManualTests/AetherRuntimeHost/README.md).
+
+## Scene files без Editor
+
+UseAetherAuthoring().UseAetherScenePersistence() подключает общие
+SceneFileCodec/ISceneDocumentStore/JsonSceneDocumentStore из TrueMoon.Aether.Scenes.
+Registration не открывает files/authoring sessions/runtime/UI; defaults ленивые,
+existing overrides сохраняются и повторное подключение persistence idempotent.
+SceneDocumentSession и Save/Discard/Cancel UX остаются в Editor.
+[Подключение, ownership и migration прежнего Editor namespace](../docs/engine/PACKAGE_BOUNDARIES.md).
+FormatVersion1 и file conflict/cancellation/atomic-publication contracts сохранены.
 
 ## Диагностика
 
@@ -461,6 +472,7 @@ await using var app = App.Build(context => context.UseAether(options =>
     options.HostContractId = BuildIdentity.HostId;
     options.GameBuildId = BuildIdentity.GameId;
     options.ReportDirectory = "engine-reports";
+    options.RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime");
 }));
 await app.StartAsync();
 var engine = app.Services.Resolve<AetherHost>();
@@ -469,9 +481,11 @@ await engine.Supervisor.StopAsync();
 await app.StopAsync();
 ```
 
-Этот native пример требует entry executable с child-role/bootstrap handler,
-как в EngineSessionProbe, и matching Game.Logic.dll. Сам UseAether регистрирует
-App-owned services/lifecycle, не генерирует runtime entry point и не запускает игру.
+Это явно выбранный совместимый same-executable/legacy профиль: entry executable
+реализует `--runtime` handler, как EngineSessionProbe, и содержит matching Game.Logic.dll.
+`CurrentProcess("--runtime")` сохраняет прежний `BuildIdentity.HostId`, но не добавляет
+runtime branch произвольному executable. Сам UseAether регистрирует App-owned
+services/lifecycle, не генерирует runtime entry point и не запускает игру.
 Свой IRuntimeFactory задаётся через options.RuntimeFactory; callback должен вернуть
 новый App-owned instance, а зависимости может получать из resolver. Factory/host
 имеют одну регистрацию владельца; raw Supervisor/Frames не регистрируются aliases.
@@ -483,6 +497,52 @@ Start после этого запрещён. Ошибки cleanup наблюд�
 явный retry после отказа. UI выбирает приложение и drains своё work до освобождения
 зависимых canvas/native resources. Headless и viewport examples используют UseAether.
 
+### Explicit runtime launch и identity — ARCH2c
+
+Для отдельного managed runtime в parent composition root задайте абсолютные пути:
+
+```csharp
+context.UseAether(engine =>
+{
+    engine.RuntimeLaunch = new NativeRuntimeLaunch(absRuntimeExe, absRuntimeDll);
+    engine.HostContractId = BuildIdentity.ForRuntime(absRuntimeDll);
+    engine.GameBuildId = new string('0', 64); // До выбора game artifact.
+    engine.ReportDirectory = reportDirectory;
+});
+```
+
+`absRuntimeExe` — apphost, `absRuntimeDll` — его managed entry assembly. Вариант через
+абсолютный dotnet executable: `new NativeRuntimeLaunch(absDotnetExe, absRuntimeDll,
+[absRuntimeDll, .. runtimeArguments])`. DLL и все arguments задаются явно, без shell
+parsing и implicit `--runtime`. Descriptor immutable, копирует arguments; default
+working directory — каталог runtime DLL. Standalone native factory создаётся как
+`new NativeRuntimeFactory(runtimeLaunch)`.
+
+`RuntimeLaunch` nullable: без descriptor registration, App startup, headless/common
+services и custom `RuntimeFactory` работают. Попытка default native Start выдаёт
+configuration error с требованием настроить `AetherOptions.RuntimeLaunch` либо явную
+native factory. Child-only App descriptor не нужен.
+
+`BuildIdentity.ForRuntime` учитывает role-labelled host/runtime managed entries и
+exact shared Aether/Contracts/Enerit/Mithril binaries. Shared файлы проверяются в
+обоих entry directories; parent launch и child bootstrap сверяют actual managed entry.
+Для явно настроенного same-executable варианта остаётся прежний `BuildIdentity.HostId`.
+Native counterpart identity имеет Version1; bootstrap JSON ограничен16384characters
+и depth32. Control3/frame1/snapshot2 и session/nonce/generation fences не изменены.
+
+Это trusted-local compatibility check, не authentication boundary и не полный hash
+native/private dependencies. Deployment нельзя изменять in place во время session.
+Смена pair identity делает старые game artifacts/checkpoints несовместимыми: игры
+нужно пересобрать для новой пары. Scene/project file formats не меняются.
+
+[ManualTests/AetherRuntimeHost](../ManualTests/AetherRuntimeHost/README.md) — отдельный
+пример без Editor/UI dependencies, с selected-game и built-in preview ролями.
+Main/CLI/App composition остаются в executable, не в Aether. Existing Editor example
+пока явно выбирает same-exe профиль до host/resources stage. ARCH2d assets и ARCH2e
+independent NuGet/published matrix не закрыты; новый
+[`--runtime-launch-proof`](../ManualTests/EngineSessionProbe/README.md#arch2c-explicit-runtime-launch-и-independent-process-proof)
+нужно отдельно запускать на source Debug и published Release, без переноса результатов.
+
 ### Создание сервисов и runtime через DI
 
 `UseAether` регистрирует `IFactory<T>` и типизированные `IFactory<T, TArguments>`:
@@ -492,11 +552,40 @@ game loader и authoring resolver. `AetherHost` получает готовые 
 Результаты дочерних фабрик принадлежат aggregate host. Ошибка создания освобождает
 уже полученные ресурсы в обратном порядке.
 
-В child App после `UseAether` вызовите `UseAetherRuntime(launch, parentId)`.
-Он фиксирует launch и регистрирует `AetherRuntimeHost` с фабриками parent listener,
-game loader, frame producer, protocol и Enerit server. `RunAsync` запускает work;
-shutdown drains workers до освобождения игры. Runtime host заимствует App/GPU
-services. Повторное подключение отвергается.
+В executable child сначала прочитайте validated bootstrap, затем создайте App:
+
+```csharp
+var bootstrap = RuntimeBootstrap.ReadEnvironment();
+var launch = bootstrap.Launch;
+await using var runtimeApp = App.Build(context =>
+{
+    context.UseAether(options =>
+    {
+        options.HostContractId = launch.Identity.HostContractId;
+        options.GameBuildId = launch.Identity.GameBuildId;
+        options.ReportDirectory = launch.ReportDirectory;
+        options.ChildDiagnostics = launch.DiagnosticDelivery ?? new() { Enabled = false };
+    });
+    if (launch.Role == RuntimeRole.EditPreview)
+        context.UseAetherPreviewRuntime(launch, bootstrap.ParentProcessId);
+    else context.UseAetherRuntime(launch, bootstrap.ParentProcessId);
+});
+await runtimeApp.StartAsync();
+var runtime = runtimeApp.Services.Resolve<TrueMoon.Aether.Runtime.AetherRuntimeHost>();
+try { await runtime.RunAsync(); }
+finally { await runtime.DisposeAsync(); await runtimeApp.StopAsync(); }
+```
+
+`ReadEnvironment()` проверяет bounded JSON, role/identity/endpoint, parent PID и own
+binary fingerprint до App construction. Strict profile принимает selected game
+либо preview; только legacy Game.Logic probes явно включают `allowLegacyGame: true`,
+включая IsPreview/IsChild classification до legacy dispatch. Общий parser заменяет
+consumer deserialize/duplicate validation; Main, diagnostics и reports остаются у host.
+
+Runtime registration фиксирует launch и регистрирует `AetherRuntimeHost` с фабриками
+parent listener, game loader, frame producer, protocol и Enerit server. `RunAsync`
+запускает work; shutdown drains workers до освобождения игры. Runtime host заимствует
+App/GPU services. Повторное подключение отвергается.
 
 Authoring-системы получают `SceneResolutionService` через constructor injection;
 он использует `IFactory<EntityResolver, SceneDocument>`. Статический
@@ -595,7 +684,7 @@ flag. Capture должен только читать состояние; Restore
 ```csharp
 await engine.Supervisor.SetPlayingAsync(false);
 var checkpoint = await engine.Supervisor.CaptureCheckpointAsync(cancellationToken);
-checkpoint.ValidateFor(BuildIdentity.HostId, scene); // До остановки прежней игры.
+checkpoint.ValidateFor(engine.Supervisor.Status.Identity!.HostContractId, scene); // До Stop; configured pair identity.
 await engine.Supervisor.StopAsync();
 await engine.Supervisor.StartAsync(scene, candidate, checkpoint, token: cancellationToken);
 ```

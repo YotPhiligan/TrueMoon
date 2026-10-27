@@ -17,7 +17,7 @@ public static class ReplacementProbe
 {
     public static async Task<object> RunAsync(string directory)
     {
-        var factory = new NativeRuntimeFactory(); var authoring = new AuthoringState(); var before = JsonSerializer.Serialize(authoring); var maxLive = 0;
+        var factory = new NativeRuntimeFactory(NativeRuntimeLaunch.CurrentProcess("--runtime")); var authoring = new AuthoringState(); var before = JsonSerializer.Serialize(authoring); var maxLive = 0;
         await using var app = App.Build(c => c.UseAether(o =>
         {
             o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.GameId; o.ReportDirectory = directory; o.RuntimeFactory = _ => factory;

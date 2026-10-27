@@ -1,3 +1,4 @@
+using TrueMoon.ManualTests.AetherEditorHost;
 using TrueMoon.Aether.Editing;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;

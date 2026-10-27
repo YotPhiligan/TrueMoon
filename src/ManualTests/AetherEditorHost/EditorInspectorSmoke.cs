@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+using TrueMoon.Aether.Editor;
+using System.Text.Json;
 using SkiaSharp;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
@@ -9,7 +10,7 @@ using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 // Directed acceptance in one owned window and disposable project; no global input/settings.
 internal static class EditorInspectorSmoke

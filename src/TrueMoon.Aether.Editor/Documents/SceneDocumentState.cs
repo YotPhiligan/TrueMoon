@@ -1,4 +1,5 @@
-﻿using TrueMoon.Aether.Scenes.Authoring;
+﻿using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Scenes.Authoring;
 
 namespace TrueMoon.Aether.Editor.Documents;
 

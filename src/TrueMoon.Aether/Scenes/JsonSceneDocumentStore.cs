@@ -1,7 +1,6 @@
 ﻿using System.Security.Cryptography;
-using TrueMoon.Aether.Scenes;
 
-namespace TrueMoon.Aether.Editor.Documents;
+namespace TrueMoon.Aether.Scenes;
 
 /// <summary>Bounded scene files with same-directory atomic publication and optimistic content-conflict detection.</summary>
 /// <remarks>A persistent .write-lock sidecar serializes cooperating TrueMoon writers. Fingerprints are checked immediately before

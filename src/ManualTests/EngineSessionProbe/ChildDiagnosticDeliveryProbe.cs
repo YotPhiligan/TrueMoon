@@ -17,9 +17,7 @@ internal static class ChildDiagnosticDeliveryProbe
 {
     private const string Behavior = "child-diagnostic-delivery";
     private const string Source = "TrueMoon.ChildDeliveryProbe";
-    private static SessionLaunch Bootstrap() => JsonSerializer.Deserialize<SessionLaunch>(Environment.GetEnvironmentVariable(NativeRuntimeFactory.BootstrapKey)
-        ?? throw new InvalidDataException("Missing delivery bootstrap.")) ?? throw new InvalidDataException("Invalid delivery bootstrap.");
-    internal static bool IsChild() => Bootstrap().Behavior == Behavior;
+    internal static bool IsChild() => RuntimeBootstrap.ReadEnvironment(allowLegacyGame: true).Launch.Behavior == Behavior;
     private static ChildDiagnosticDeliveryOptions Limits() => new()
     {
         MaxBatchRecords = 4, MaxBatchBytes = 8192, RecordsPerSecond = 32, BytesPerSecond = 64 * 1024,
@@ -34,8 +32,8 @@ internal static class ChildDiagnosticDeliveryProbe
     };
     internal static async Task<int> RunChildAsync()
     {
-        var launch = Bootstrap(); var started = DateTimeOffset.UtcNow;
-        var parentId = int.Parse(Environment.GetEnvironmentVariable("-p") ?? throw new InvalidDataException("Missing parent."));
+        var bootstrap = RuntimeBootstrap.ReadEnvironment();
+        var launch = bootstrap.Launch; var parentId = bootstrap.ParentProcessId; var started = DateTimeOffset.UtcNow;
         await using var app = App.Build(c =>
         {
             c.UseDiagnostics(Pipeline(Path.Combine(launch.ReportDirectory, "child-local", launch.Identity.Generation.ToString())));
@@ -93,7 +91,11 @@ internal static class ChildDiagnosticDeliveryProbe
         await using var app = App.Build(c =>
         {
             c.UseDiagnostics(options);
-            c.UseAether(o => { o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.PreviewId; o.ReportDirectory = directory; o.ChildDiagnostics = Limits(); });
+            c.UseAether(o =>
+            {
+                o.HostContractId = BuildIdentity.HostId; o.GameBuildId = BuildIdentity.PreviewId; o.ReportDirectory = directory; o.ChildDiagnostics = Limits();
+                o.RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime");
+            });
         });
         await app.StartAsync();
         var pipeline = app.Services.Resolve<DiagnosticPipeline>()!;

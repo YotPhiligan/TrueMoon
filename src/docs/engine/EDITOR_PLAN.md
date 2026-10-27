@@ -1,9 +1,16 @@
-# TrueMoon.Aether.Editor: план рабочего приложения
+# TrueMoon.Aether.Editor: план подключаемого редактора
 
 Согласовано с пользователем **2026-10-22** после обсуждения перехода от стенда и
 proof of concept к приложению для повседневной работы. Это прикладной подплан
 направления Aether, развивающий ENG7; отдельного функционального модуля или новой
-сборки этим документом не создаётся. **ED1a project/session и ED2a/b documents реализованы2026-10-23;
+engine assembly этим документом не создаётся. **Решение2026-10-27:** целевой
+TrueMoon.Aether.Editor — library/NuGet package, подключаемый к executable host
+пользовательского решения; Main/CLI/App composition остаются в host.
+Переход [ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) предшествует
+новым ED features. ARCH2a/b shared scene persistence и Editor library/App
+integration и ARCH2c explicit runtime launch/bootstrap/identity реализованы;
+ARCH2d/e открыты. Executable consumers — AetherEditorHost и отдельный AetherRuntimeHost.
+**ED1a project/session и ED2a/b documents реализованы2026-10-23;
 прикладные ED1–ED8 остаются частично открытыми**. Наличие плана не означает
 реализации перечисленных возможностей.
 
@@ -21,9 +28,12 @@ HISTORY с точной областью проверок.
 
 Пользователь создаёт или открывает собственный проект, редактирует сцену,
 видит результат, отменяет изменения, сохраняет и повторно открывает документ,
-запускает игру и получает понятную диагностику ошибок. Приложение работает из
-опубликованной поставки вне source checkout и не требует редактировать исходники
-редактора для выбора игры или добавления панели/команды.
+запускает игру и получает понятную диагностику ошибок. Пользователь подключает
+пакеты Aether/Editor в своё исполняемое приложение через публичную App integration.
+Опубликованный host работает вне source checkout; для выбора игры, встраивания
+Editor View или добавления панели/команды не требуется менять исходники редактора.
+Стандартный executable-пример подтверждает подключение, но не является dependency
+пакета. Подробные package/runtime/ownership критерии принадлежат ARCH2.
 
 Основной сценарий:
 
@@ -60,7 +70,8 @@ preview и контрактов расширения shell. Runtime viewport п�
 После фиксации плана реализованы минимальный ARCH1b.1 Transform/query/history API,
 независимый engine Edit preview, ED1a project/session и ED2a/b documents ниже.
 Обычный Editor UI загружает/сохраняет документы; Transform/history/preview APIs
-ещё не подключены к редактируемому inspector.
+подключены к редактируемому inspector в ED3a. Это результаты прежнего WinExe
+профиля, они не означают, что ARCH2 library/package transition выполнен.
 
 ## Архитектура и ограничения сложности
 
@@ -72,13 +83,22 @@ preview и контрактов расширения shell. Runtime viewport п�
 | Data/ViewModel | Данные и состояние экрана, validation presentation, availability и вызов прикладных операций; без controls/theme/renderer/native handles |
 | `IViewStyle<TView>` / `Theme` | Scoped appearance и общие visual tokens; без изменения документа или выполнения команд |
 | Прикладные сервисы Editor | Project/document sessions, сохранение, координация команд/задач, selection, панели и tools |
-| Общий authoring API Aether | Валидированные операции над SceneDocument/entities/components, revisions, atomic batches и undo/history по ARCH1b; доступен без UI |
+| Общий authoring API Aether | Engine model, общие scene formats/validation/resolution, операции над entities/components, revisions, atomic batches и undo/history по ARCH1b; доступен без UI |
 | Runtime Aether | Preview/игровая сессия, simulation/rendering, IPC/frame production; отдельный процесс и собственное состояние |
+| Исполняемый host | Main/CLI/App composition, выбор поддержанного window/backend/resources и explicit runtime launch; подключает пакеты, не содержит reusable Editor/engine implementation |
 | Argentis/Alloy и интеграции | Контролы, composition/layout/input/focus, overlays, sessions/rendering/platform; общие UI возможности принадлежат UI плану |
 
 У документа один владелец committed state, revision и history. ViewModel не
 поддерживает вторую независимо изменяемую сцену. Поля инспектора могут хранить
 draft до commit/cancel, но не обходят authoring API прямыми mutable references.
+Editor library содержит не только View: её прикладные services/Data/styles/commands
+остаются вместе с UI consumers. Общие engine операции и форматы доступны из Aether;
+размещение existing типов и migration зафиксированы в
+[ARCH2a карте](PACKAGE_BOUNDARIES.md), без папок по виду типа. SceneFileCodec/store и
+file DTOs перенесены в Aether.Scenes; Editor document owner/close policy не перемещены.
+Планируемый UseAetherEditor(...) предоставляет module registrations и фабрики;
+Window/parent владеет созданным View, App/project — сервисами и задачами. Backend
+и standalone/embedded host setup выбирает потребитель в поддержанной конфигурации.
 Authoring document, resolved snapshot, live World revision и simulation tick
 остаются различными понятиями.
 
@@ -159,6 +179,7 @@ backend-independent contracts. Общие реализации и acceptance в�
 
 | Этап | Результат | Зависимости |
 | --- | --- | --- |
+| [ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) | Aether/Editor packages, App integration и executable hosts; ARCH2a/b выполнены, c–e открыты | Текущие engine/Editor contracts; подробные этапы и acceptance только в engine плане |
 | ED1 | Проект и рабочая сессия | App/DI/lifecycle; текущий UIA1 |
 | ED2 | Документы и сохранение | ED1; immutable authoring model |
 | ED3 | Общие операции редактирования и Undo/Redo | ED2; минимальный ARCH1b и его headless proof до подключения edit UI |
@@ -171,6 +192,10 @@ backend-independent contracts. Общие реализации и acceptance в�
 Это порядок пользовательских результатов. Нужные интерфейсы, cleanup и regression
 tests вводятся вместе с соответствующей функциональностью, не откладываются до
 ED7/ED8. Единичный generic UI control не требует завершить весь UI beta roadmap.
+Уточнение2026-10-27: ARCH2a–c реализованы, далее ARCH2d/e с сохранением функционала;
+managed Release CPU race и legacy build/Replace fixture failures сохраняются в STATUS. Затем
+ED6a → ED8a console/export в подключаемом Editor, ED4c.2 → ED4c.3,
+project picker/switch и ED1/ED6 workflow. Gameplay ENG5c.3 и hardware gates прежние.
 
 Уточнение2026-10-23: [общая основа API Aether](PLAN.md#основа-api-перед-редактируемым-ui--2026-10-23)
 предшествует редактируемым inspector/tools: contracts → минимальный ARCH1b →
@@ -193,6 +218,9 @@ pipes. Новый preview protocol проектируется с явными li
 Pixels/shared GPU images остаются в отдельном frame transport. Mithril владеет
 запуском/stop/reap процесса; локальный authoring service работает без IPC и окна.
 Play не изменяет сохранённую сцену автоматически.
+Runtime-host bootstrap/explicit executable и pair identity реализованы в ARCH2c;
+current-executable --runtime остаётся только явным совместимым профилем.
+Runtime не зависит от Editor package; hosts/assets/package acceptance продолжаются в ARCH2d/e.
 
 ## ED1. Проект и рабочая сессия
 
@@ -825,8 +853,9 @@ App-local, dependencies внедрены; не требуется global locator
   missing assets/toolchain и failed/cancelled project switching.
 - [ ] Прогнать повторные Open/Close, panel/tool transitions, build/preview/game crashes,
   cancel и native close при pending tasks; проверить resource/subscription trends.
-- [ ] Проверить опубликованный app вне repository, доставку native/fonts/assets,
-  project/scene compatibility и diagnostics без development-only путей.
+- [ ] Проверить опубликованный consuming host и независимое решение с NuGet packages
+  вне repository, доставку native/fonts/assets, project/scene compatibility и
+  diagnostics без development-only путей; package boundary acceptance — ARCH2e.
 - [ ] Зафиксировать supported OS/RID/backend и измеряемые responsiveness/resource
   budgets; собственные проверки UI K3/K7/K8/VRAM не заменять коротким smoke.
 - [ ] Подготовить короткий пользовательский guide и воспроизводимый acceptance

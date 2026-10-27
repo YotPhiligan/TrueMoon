@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+using TrueMoon.Aether.Editor;
+using System.Text.Json;
 using SkiaSharp;
 using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Hosting;
@@ -8,7 +9,7 @@ using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 internal static class EditorWorkspaceSmoke
 {

@@ -24,6 +24,8 @@ public sealed record SessionLaunch(SessionIdentity Identity, string Endpoint, st
 {
     /// <summary>Optional copied limits for the separate diagnostic lane; null preserves legacy local-only capture.</summary>
     public TrueMoon.Aether.Diagnostics.ChildDiagnosticDeliveryOptions? DiagnosticDelivery { get; init; }
+    /// <summary>Exact native bootstrap counterpart paths, assigned by the native lease factory; not part of control/frame wire DTOs.</summary>
+    public TrueMoon.Aether.Hosting.RuntimeLaunchIdentity? RuntimeIdentity { get; init; }
 }
 /// <summary>Explicit child role. Edit preview uses only the built-in Aether scene consumer.</summary>
 public enum RuntimeRole

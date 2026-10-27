@@ -25,6 +25,7 @@ internal static class DiagnosticsProbe
             {
                 options.HostContractId = BuildIdentity.HostId; options.GameBuildId = BuildIdentity.GameId;
                 options.ReportDirectory = directory;
+                options.RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime");
             });
         });
         await app.StartAsync();

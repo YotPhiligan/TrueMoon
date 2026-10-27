@@ -12,28 +12,37 @@ namespace TrueMoon.Aether.Editor;
 // Borrows the UI owner/context; Aether owns imports/transport, EditorViewport owns retained Skia copies.
 internal sealed class EditorViewportBinding : IFactory<IGameViewportTransport, GpuResourceHost>
 {
+    private readonly bool _enabled;
+    internal EditorViewportBinding(bool enabled = true) => _enabled = enabled;
     private HostedUiWindow _window = null!;
     private AetherHost _engine = null!;
-    private UiSession _ui = null!;
-    private EditorView _view = null!;
+    private WeakReference<UiSession>? _ui;
+    private WeakReference<EditorView>? _view;
     private GpuOpenGlContext _context = null!;
     private GpuAdapterId _adapter = null!;
     private Action _current = null!;
     private int _owner;
     private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    internal Task Ready => _ready.Task;
+    internal Task Ready => _enabled ? _ready.Task : Task.CompletedTask;
     public IGameViewportTransport Create(GpuResourceHost gpu) => new GpuViewportTransport(gpu, () => (_adapter, _context), Consume, runtime => (NativeRuntimeLease)runtime);
-    internal void Observe(UiSession ui, EditorView view) { _ui = ui; _view = view; }
+    internal void Observe(UiSession ui, EditorView view)
+    {
+        if (_ui == null) _ui = new(ui); else _ui.SetTarget(ui);
+        if (_view == null) _view = new(view); else _view.SetTarget(view);
+    }
+    internal void Forget() { _ui = null; _view = null; }
     private void Consume(GpuViewportImage source)
     {
         if (!ReferenceEquals(_engine.Frames.Presentation, source.Frame.Presentation)) return;
-        var image = ((SkiaOpenGLSurface)_ui.Rendering).CopyTexture(source.Texture.Name, source.Texture.Width, source.Texture.Height);
-        try { _view.Canvas.Upload(image, source.Frame, () => ReferenceEquals(_engine.Frames.Presentation, source.Frame.Presentation)); }
+        if (_ui == null || !_ui.TryGetTarget(out var ui) || _view == null || !_view.TryGetTarget(out var view) || view.IsDisposed) return;
+        var image = ((SkiaOpenGLSurface)ui.Rendering).CopyTexture(source.Texture.Name, source.Texture.Width, source.Texture.Height);
+        try { view.Canvas.Upload(image, source.Frame, () => ReferenceEquals(_engine.Frames.Presentation, source.Frame.Presentation)); }
         catch { image.Dispose(); throw; }
         _window.RequestFrame();
     }
     internal async Task InitializeAsync(HostedUiWindow window, AetherHost engine, CancellationToken token)
     {
+        if (!_enabled) return;
         _window = window; _engine = engine;
         window.PostWindow(host =>
         {

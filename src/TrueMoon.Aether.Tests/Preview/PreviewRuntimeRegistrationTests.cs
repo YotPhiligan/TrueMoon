@@ -291,7 +291,7 @@ public sealed class PreviewRuntimeRegistrationTests
     private static SessionLaunch Launch() => new(new(Guid.NewGuid(), 1, Hash, BuildIdentity.PreviewId, new('B', 64)),
         "engine-preview-" + Guid.NewGuid().ToString("N"), "preview-runtime-tests", Role: RuntimeRole.EditPreview);
     private static SessionLaunch GameLaunch() => new(new(Guid.NewGuid(), 1, Hash, Hash, new('B', 64)),
-        "engine-game-" + Guid.NewGuid().ToString("N"), "game-runtime-tests", Build: new("unused-game", Hash));
+        "engine-game-" + Guid.NewGuid().ToString("N"), "game-runtime-tests", Build: new(Path.GetFullPath("unused-game"), Hash));
     private sealed class PreviewFactory : IFactory<PreviewGameSession>, IDisposable
     {
         public List<PreviewGameSession> Products { get; } = [];

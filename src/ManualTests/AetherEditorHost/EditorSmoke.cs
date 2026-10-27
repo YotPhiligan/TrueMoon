@@ -1,3 +1,4 @@
+using TrueMoon.Aether.Editor;
 using System.Numerics;
 using System.Text.Json;
 using SkiaSharp;
@@ -10,7 +11,7 @@ using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 // Directed input targets only this application's tree. No global pointer/keyboard or Windows settings changes.
 internal static class EditorSmoke

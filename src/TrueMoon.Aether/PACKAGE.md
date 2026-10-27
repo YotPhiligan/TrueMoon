@@ -14,8 +14,18 @@ the scene/entity path and original authoring cause.
 `SceneSnapshotAdapter.Project` explicitly maps the result to the existing
 `SceneSnapshot`: the caller supplies world-space XYZ/interaction, while the adapter
 preserves canonical IDs/revision and enforces finite values and the64-entity limit.
-No partial result is returned on failure/cancellation. Persistence, full runtime
-snapshots, live editing and MCP are later stages.
+No partial result is returned on failure/cancellation. Full runtime snapshots,
+live editing and MCP are later stages.
+
+For headless scene files call `UseAetherAuthoring().UseAetherScenePersistence()`.
+`TrueMoon.Aether.Scenes` now owns `SceneFileCodec`, `ISceneDocumentStore`,
+`JsonSceneDocumentStore`, `SceneFile`, `SceneFileStamp` and `SceneFileConflictException`.
+These alpha APIs moved from `TrueMoon.Aether.Editor.Documents`; update imports.
+Version1 scene bytes/limits remain compatible. Persistence registration is lazy and
+idempotent, preserving custom codec/store registrations; borrowed authoring is required.
+The store uses bounded reads, SHA256 byte identities, create-only new writes and
+cooperative atomic replacement. Editor project/document sessions and close UX remain
+Editor responsibilities. The Aether package has no Editor reference.
 
 For local editing call `UseAetherAuthoring(...)` on App configuration, independently
 of `UseAether`. Inject `IFactory<ISceneAuthoringSession, SceneDocument>` from
@@ -120,15 +130,69 @@ repeatable Play/Stop while App remains running. Do not separately register or
 dispose the borrowed supervisor/frame session. Cleanup failures remain observable
 and an explicit host Dispose retry is supported.
 
-The default native runtime factory expects an executable with the matching child
-role/bootstrap handler, as provided by the repository's EngineSessionProbe example.
-The registration extension does not generate an executable entry point.
+**Explicit native runtime launch (ARCH2c).** The default native factory never
+selects the current executable or adds `--runtime` implicitly. In the parent App:
+
+```csharp
+using TrueMoon.Aether;
+using TrueMoon.Aether.Hosting;
+
+context.UseAether(engine =>
+{
+    engine.RuntimeLaunch = new NativeRuntimeLaunch(absRuntimeExe, absRuntimeDll);
+    engine.HostContractId = BuildIdentity.ForRuntime(absRuntimeDll);
+    engine.GameBuildId = new string('0', 64); // Build/select a game artifact before game Start.
+    engine.ReportDirectory = reportDirectory;
+});
+```
+
+Both paths must be absolute: the executable is the apphost and the DLL is its
+managed runtime entry. For dotnet, explicitly include the DLL and any runtime
+arguments: `new NativeRuntimeLaunch(absDotnetExe, absRuntimeDll,
+[absRuntimeDll, .. runtimeArguments])`. Arguments are copied as individual values,
+without shell parsing; the immutable descriptor defaults its working directory to
+the runtime DLL directory. No process is started during configuration.
+
+`AetherOptions.RuntimeLaunch` is nullable. Without a descriptor, registration,
+App startup and headless/common services still work; default native Start fails
+with a clear configuration error asking for `AetherOptions.RuntimeLaunch` or an
+explicit native runtime factory. Custom `RuntimeFactory` remains supported without
+a descriptor unless that factory itself needs one. Standalone native creation is
+`new NativeRuntimeFactory(runtimeLaunch)`.
+
+A host implementing its own child branch may explicitly use
+`NativeRuntimeLaunch.CurrentProcess("--runtime")` with `BuildIdentity.HostId`.
+This compatible same-executable profile preserves the previous HostId; it does
+not make an arbitrary consuming executable a runtime. The separate repository
+example is `ManualTests/AetherRuntimeHost`, without Editor/UI dependencies.
+
+`BuildIdentity.ForRuntime(runtimeDll)` fingerprints role-labelled host/runtime
+managed entries plus exact shared Aether/Contracts/Enerit/Mithril binaries. It
+checks the shared binaries in both entry directories; parent launch and child
+bootstrap also verify their actual managed entry. Native counterpart identity
+Version1 is carried in `RuntimeLaunchIdentity`; bootstrap JSON is bounded to
+16384 characters and depth32. Control3/frame1/snapshot2 and session/nonce/generation
+fencing are unchanged.
+
+This is a trusted-local compatibility check, not an authentication boundary or a
+complete native/private-dependency hash. Do not mutate either deployment in place
+during a session. A different pair identity invalidates previous game artifacts
+and checkpoints: rebuild games for the new pair. Scene/project formats do not
+change. ARCH2d asset delivery and ARCH2e independent NuGet/published acceptance
+remain open; source process checks do not establish that matrix.
 
 Services are created through injected `IFactory<T>` / `IFactory<T, TArguments>`.
 Register overrides before `UseAether`; the host owns its factory-created children.
-In a selected-build child App, call `UseAetherRuntime(launch, parentId)` after
-`UseAether`, then run the resolved `Runtime.AetherRuntimeHost`. It owns the game,
-parent listener, workers and IPC server, borrowing App/GPU services.
+In the child executable call `RuntimeBootstrap.ReadEnvironment()` before App
+construction. Configure `UseAether` from its `.Launch` identities/report directory
+and `DiagnosticDelivery`, then call `UseAetherRuntime(launch, bootstrap.ParentProcessId)`
+or `UseAetherPreviewRuntime` for `RuntimeRole.EditPreview`. The parser requires a
+selected game artifact or valid built-in preview; only the explicit legacy probe
+profile uses `allowLegacyGame: true`. No RuntimeLaunch is needed in a child-only App.
+Start the App and run the resolved `Runtime.AetherRuntimeHost`. It owns the game,
+parent listener, workers and IPC server, borrowing App/GPU services. Main/CLI,
+App construction, diagnostics and reporting remain consumer responsibilities;
+the library supplies no concrete Main.
 When both Apps enable the bounded Core diagnostics pipeline, the default native
 factory and runtime host also own a separate child-log receiver/forwarder pair.
 `AetherOptions.ChildDiagnostics` controls copied record/byte/rate/deadline limits;

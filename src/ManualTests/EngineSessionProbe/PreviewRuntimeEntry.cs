@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using TrueMoon;
+﻿using TrueMoon;
 using TrueMoon.Aether;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Runtime;
@@ -11,18 +10,11 @@ namespace EngineSessionProbe;
 // Kept out of the legacy game fixture method so JIT never resolves Game.Logic for this child.
 internal static class PreviewRuntimeEntry
 {
-    private static SessionLaunch Read()
-    {
-        var text = Environment.GetEnvironmentVariable(NativeRuntimeFactory.BootstrapKey) ?? throw new InvalidDataException("Missing preview bootstrap.");
-        if (text.Length > 16384) throw new InvalidDataException("Oversized preview bootstrap.");
-        return JsonSerializer.Deserialize<SessionLaunch>(text) ?? throw new InvalidDataException("Invalid preview bootstrap.");
-    }
-    internal static bool IsPreview() => Read().Role == RuntimeRole.EditPreview;
+    internal static bool IsPreview() => RuntimeBootstrap.ReadEnvironment(allowLegacyGame: true).Launch.Role == RuntimeRole.EditPreview;
     internal static async Task<int> RunAsync()
     {
-        var launch = Read();
-        if (launch.Identity.HostContractId != BuildIdentity.HostId) throw new InvalidDataException("Preview host mismatch.");
-        var parentId = int.Parse(Environment.GetEnvironmentVariable("-p") ?? throw new InvalidDataException("Missing preview parent."));
+        var bootstrap = RuntimeBootstrap.ReadEnvironment();
+        var launch = bootstrap.Launch; var parentId = bootstrap.ParentProcessId;
         await using var app = App.Build(context =>
         {
             context.UseAether(options =>

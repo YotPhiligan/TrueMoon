@@ -11,13 +11,14 @@ namespace TrueMoon.Aether.Editor.Tests.Documents;
 public sealed class DocumentRegistrationTests
 {
     [Theory]
-    [InlineData(false)] [InlineData(true)]
-    public async Task App_DefaultCodecAndStoreAreSharedWhileDocumentFactoryProductsRemainCallerOwned(bool di)
+    [InlineData(false, false)] [InlineData(true, false)] [InlineData(false, true)] [InlineData(true, true)]
+    public async Task App_DefaultCodecAndStoreAreSharedWhileDocumentFactoryProductsRemainCallerOwned(bool di, bool persistenceFirst)
     {
         using var files = new DocumentFiles();
         var app = Builder(di).Setup(context =>
         {
-            context.UseAetherAuthoring(); Assert.Same(context, context.UseAetherEditorDocuments());
+            context.UseAetherAuthoring(); if (persistenceFirst) context.UseAetherScenePersistence();
+            Assert.Same(context, context.UseAetherEditorDocuments());
         }).Build();
         SceneDocumentSession? first = null, second = null;
         try
@@ -69,7 +70,6 @@ public sealed class DocumentRegistrationTests
     [Theory]
     [InlineData(false, "missing")] [InlineData(true, "missing")]
     [InlineData(false, "duplicate")] [InlineData(true, "duplicate")]
-    [InlineData(false, "existing-codec")] [InlineData(true, "existing-codec")]
     public void App_RejectsMissingAuthoringAndDuplicateAttachmentBeforeAnyServiceActivation(bool di, string kind)
     {
         var activations = 0;
@@ -77,12 +77,33 @@ public sealed class DocumentRegistrationTests
         {
             context.Services(services => services.Singleton<ISceneDocumentStore>(_ => { activations++; throw new IOException("stay lazy"); }));
             if (kind != "missing") context.UseAetherAuthoring();
-            if (kind == "existing-codec") context.Services(services => services.Singleton<SceneFileCodec>(_ => { activations++; throw new IOException("stay lazy"); }));
             context.UseAetherEditorDocuments(); if (kind == "duplicate") context.UseAetherEditorDocuments();
         });
         var error = Assert.Throws<InvalidOperationException>(() => builder.Build());
         Assert.Equal(kind == "missing" ? "Call UseAetherAuthoring before UseAetherEditorDocuments." : "Editor documents are already registered.", error.Message);
         Assert.Equal(0, activations);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task App_ExistingCodecIsReusedAndDefaultStoreUsesItsBorrowedValidationFactory(bool di)
+    {
+        using var files = new DocumentFiles(); var sessions = new DocumentData.Sessions(); var codecActivations = 0;
+        await using var app = Builder(di).Setup(context =>
+        {
+            context.Services(services => services.Singleton<IFactory<ISceneAuthoringSession, SceneDocument>>(_ => sessions)
+                .Singleton<SceneFileCodec>(resolver => { codecActivations++; return new(resolver.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!); }));
+            context.UseAetherEditorDocuments();
+        }).Build();
+        await app.StartAsync(); Assert.Equal(0, codecActivations); Assert.Empty(sessions.Products);
+        var codec = Assert.Single(app.Services.ResolveAll<SceneFileCodec>());
+        var store = Assert.IsType<JsonSceneDocumentStore>(app.Services.Resolve<ISceneDocumentStore>());
+        Assert.Equal(1, codecActivations); Assert.Same(codec, app.Services.Resolve<SceneFileCodec>());
+        var path = Path.Combine(files.Project.ScenesDirectory, "engine-override.aetherscene");
+        var stamp = await store.WriteAsync(path, DocumentData.Scene(), null); var loaded = await store.ReadAsync(path);
+        Assert.Equal(stamp, loaded.Stamp); DocumentData.AssertScene(loaded.Document);
+        Assert.Equal(2, sessions.Products.Count); Assert.All(sessions.Products, product => Assert.Equal(1, product.Disposals));
+        Assert.Equal(0, sessions.Disposals); await app.DisposeAsync(); Assert.Equal(1, sessions.Disposals);
     }
 
     [Theory]

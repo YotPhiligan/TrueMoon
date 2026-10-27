@@ -1,6 +1,12 @@
 # Enerit: состояние и точка продолжения
 
-Последняя связанная работа — **2026-10-27, ENE6d.4 отдельный child diagnostic lane**.
+Связанное планирование — **2026-10-27, ARCH2 package/host transition**.
+Explicit runtime launch/bootstrap и согласование fingerprint при разных executable
+hosts ведутся у [Aether](../engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27).
+Generic IPC negotiation/framing этим решением не расширяются. Code/API не менялись,
+build/tests не запускались; ARCH2 предшествует следующим Editor diagnostics features.
+
+Предыдущая связанная реализация и проверка — **2026-10-27, ENE6d.4 отдельный child diagnostic lane**.
 Aether использует existing typed invocation с отдельным endpoint,72KiB wire cap,
 one request/connection, copied batch/rate/deadline limits и выключенной telemetry
 самой delivery lane. Control не делит admission с logs; generic framing/generator
@@ -142,7 +148,7 @@ omitted-analyzer CS0234. Свежая package matrix текущим baseline н�
 
 Первый ENE6a/MIT6a срез, ARCH1b.1 и ED1a завершены в указанном scope. Далее
 прикладные задачи [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг) с явными preview limits и lifecycle ownership.
-Ближайший diagnostics consumer — Editor console/export поверх готового отдельного
+После ARCH2 ближайший diagnostics consumer — Editor console/export поверх готового отдельного
 child-log канала; затем domain/frame aggregates. Queue distribution остаётся отдельной задачей.
 ENE6c negotiation развивать перед расширением contracts.
 Полный fault matrix MIT6a и trends MIT6c не выводятся из этого среза;

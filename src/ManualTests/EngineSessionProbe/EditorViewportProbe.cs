@@ -305,7 +305,7 @@ public static class EditorViewportProbe
     }
     private sealed class FaultFactory : IRuntimeFactory
     {
-        internal NativeRuntimeFactory Inner { get; } = new(); internal ConcurrentQueue<string> Next { get; } = new();
+        internal NativeRuntimeFactory Inner { get; } = new(NativeRuntimeLaunch.CurrentProcess("--runtime")); internal ConcurrentQueue<string> Next { get; } = new();
         internal FaultLease? Last; internal int MaxLive;
         public IRuntimeLease Create(SessionLaunch launch)
         {

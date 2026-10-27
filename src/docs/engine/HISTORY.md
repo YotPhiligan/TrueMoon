@@ -1,5 +1,307 @@
 # Engine / Editor: история решений и проверок
 
+## ARCH2c: explicit runtime launch, bootstrap и identity — 2026-10-27
+
+Реализован отдельный native launch contract без зависимости runtime на Editor.
+NativeRuntimeLaunch — immutable executable/runtime managed entry/arguments/working
+folder; аргументы копируются и передаются через ArgumentList, implicit --runtime и
+выбор current process удалены. EngineChild использует ProcessUnitHandle, сохраняя
+Mithril RestartPolicy.Never, parent/control environment и sole ownership stop/kill/reap.
+AetherOptions.RuntimeLaunch передаётся штатному native factory через App/DI;
+без descriptor headless registration работает, попытка native launch даёт понятную
+configuration error. Custom RuntimeFactory не требует native configuration.
+CurrentProcess("--runtime") — явный совместимый same-exe профиль; все затронутые
+EngineSessionProbe и AetherEditorHost consumers его настраивают явно.
+
+BuildIdentity.ForRuntime связывает role-labelled host/runtime managed entry bytes
+и точные shared Aether/Contracts/Enerit/Mithril bytes. Обе deployment директории
+проверяются относительно actual loaded shared assemblies; parent проверяет свой
+entry до spawn, child — собственный entry и counterpart до App. Same-exe сохраняет
+прежний HostId, separate pair не сводится к исключению entry assembly из hash.
+RuntimeLaunchIdentity Version1 передаётся только в native SessionLaunch bootstrap;
+Control3/Frame1/Snapshot2, session/generation/nonce/Hello/PID fences не менялись.
+Директории не входят в content identity, но counterpart paths обязательны и absolute.
+Проверка trusted-local, не authentication и не complete deployment/native fingerprint;
+in-place binary replacement во время сессии не поддерживается. Новый pair требует
+rebuild game artifacts; прежние checkpoints несовместимы. Scene/project compatibility сохранена.
+
+RuntimeBootstrap содержит общие read/parse/validate/encode, JSON<=16384characters и
+depth32, parent/endpoint/role/version validation, normalized absolute report/artifact
+paths и copied diagnostics options. Strict game требует selected artifact; только
+явный legacy probe profile допускает matching fixed Game.Logic. Bootstrap validation
+не создаёт App/resources. Прямой runtime registration также отвергает malformed
+artifact paths и проверяет native identity при её наличии; synthetic low-level
+registrations не привязаны к testhost binary. Same-exe path equality согласована
+с Windows case-insensitive filesystem semantics.
+
+ManualTests/AetherRuntimeHost — отдельный Main/App composition с references только
+на TrueMoon bootstrap/Aether. Он запускает built-in preview или selected-game,
+пишет completion metadata/resources и не загружает Editor/UI. RuntimeLaunchProbe
+и process tests проверяют реальные разные entries/directories, DLL/dotnet и apphost,
+в том числе перенесённый runtime closure без UI/Game payload в каталоге с пробелами.
+Game artifact публикуется из уже собранных bytes без SDK/compiler и загружается
+только child. Дополнительно проверяются parent preflight mismatch, child-side
+fingerprint/actual-entry rejection с обходом preflight, startup cancellation,
+immediate exit и explicit same-exe regression. Никакая GPU surface не запрашивается.
+
+### Текущие проверки и ограничения
+
+Evidence: [verification.json](../../TestResults/ARCH2c-20261027/verification.json),
+[bounded runner](../../TestResults/ARCH2c-20261027/Verify.ps1).
+Windows x64/SDK10.0.403/net10.0/xUnit/VSTest; source code/project hashes1035,
+изменений0. [SDK/runtime environment](../../TestResults/ARCH2c-20261027/dotnet-info.log).
+Новых189test cases; все189прошли в обеих конфигурациях.
+
+| Проверка | Текущий результат |
+| --- | --- |
+| Solution build Debug/Release --no-restore | Exit0 в обеих; warnings остаются, это не full-solution test run |
+| Aether full Debug |1536/1536, failed/skipped0 |
+| Aether full Release |1535/1536, failed1/skipped0: прежний CPU FrameTransportTests.Receiver_TwoBuffersKeepLatestWhileUiLeaseStaysUnchangedAndDrain, Assert.NotNull на line177 |
+| Editor full Debug/Release |763/763 отдельно в каждой, failed/skipped0 |
+| Publish Release parent/runtime | Exit0, отдельные deployment directories |
+| Independent process proof |4/4: source Debug и published Release, каждый dotnet DLL/apphost |
+| Extended same-exe process matrix |19/21 source и19/21 published; failures ниже |
+
+Команды build/test/publish и literal arguments сохранены в verification.json.
+Independent CLI: EngineSessionProbe --runtime-launch-proof <absolute runtime DLL/EXE>
+<fresh report directory>. В каждом из4runs:2preview generations,1selected-game,
+5negative/configuration cases и1explicit same-exe preview; все owned children reaped,
+completion resources/handles0. DLL proof parent запускается через dotnet, apphost
+proof — через parent.exe. В xUnit обе runtime формы дополнительно stage-ятся по
+собственному dependency manifest без Editor/UI/Game files. Source/published proof
+не заменяет NuGet consumer или GPU/presentation acceptance.
+
+Extended matrix42/46вместе с4independent runs; успешны repeat20generations, stale,
+bad-Hello/scene, startup/command cancellation/deadlines, stop-pending, crash,
+disconnect, heartbeat, forced/hung stop, launch failure, parent-exit, App stop,
+checkpoint restore и stdout/stderr/structured diagnostics в обеих поставках.
+Два legacy scenario failed в каждой поставке:
+
+- **build-artifacts:** unchanged generated BuildProbe.Project game implements only
+  IGameSession, без обязательного IGameSessionEntry. Child loader корректно отвергает
+  его; parent получает IOException до Hello acknowledgement. Новый independent
+  selected-game proof использует правильный entry contract и проходит.
+- **replacement:** unchanged generated project не ссылается на TrueMoon.Contracts;
+  исходник игры использует TrueMoon.Services/IServiceResolver. Compiler возвращает
+  CS0234/CS0012 до runtime Replace. Production contracts/loader не ослаблялись.
+
+CPU Release failure и эти4fixture failures сохранены без retry-to-green. Поэтому
+Completed=true в evidence означает завершение matrix, а AllTestsPassed=false и
+AllProbesPassed=false сохраняют реальные quality blockers. Full solution tests,
+Mithril ready-file race, GPU/validation/physical UI/VRAM/performance/NuGet checks
+не повторены. Прежние результаты имеют прежние даты.
+
+До финальной matrix выявлены недостающие using/TryResolve в новых tests и4старых
+synthetic preview fixtures с relative build paths после tightening validation.
+Исправлены только test imports/access и absolute fixture inputs; ранний failed TRX
+сохранён как first-aether-debug-failed.trx. Guards не отключались. PowerShell runner
+переведён на .NET SHA256 вместо недоступного Get-FileHash; validation commands
+возобновлялись без повторного исполнения уже завершённых tests/probes.
+
+ARCH2c реализован и проверен в указанном native/headless scope, не объявляет общего
+green. Следующий шаг — ARCH2d hosts/resources, затем ARCH2e fresh independent NuGet
+consumer/native acceptance. CPU receiver и legacy fixtures — отдельные quality
+fixes. Console/export и новые authoring UI features остаются после всего ARCH2.
+
+## ARCH2b: Editor library и App integration — 2026-10-27
+
+TrueMoon.Aether.Editor переведён в Library/IsPackable=true с Description/tags и
+собственным PACKAGE.md. Concrete bootstrap reference TrueMoon заменён на Contracts;
+NuGet dependencies — Aether, Alloy.Hosting, Contracts. Пакет содержит Editor DLL,
+PACKAGE.md/license/icon/README, без exe/runtimeconfig/font payload. Local pack
+успешен; независимый package consumer не выполнялся и остаётся ARCH2e.
+
+UseAetherEditor(configureEngine, configureEditor) собирает engine/authoring/
+documents/projects и models/styles/typed factories. Initial ProjectPath фиксируется
+на setup и открывается при startup. Duplicate aggregate/existing engine/project
+graph отклоняются; custom stores/styles/root model/root factory сохраняются.
+Никаких window/native/SDK/compiler/game действий при регистрации; empty startup
+не открывает проект. Custom viewport не ждёт default window readiness.
+
+EditorSession получает явные constructor dependencies, обновляет borrowed View
+через Present на owner thread и согласует RequestClose/terminal Stop. DI владеет
+services/models/tasks; project — document/authoring; parent/window — View. Lifecycle
+aliases не disposable. Failed startup сохраняет причину и выполняет rollback;
+factory failure освобождает unpublished tree; cleanup failure наблюдаем и retryable.
+Viewport bridge хранит weak references на UI. UseAetherEditorWindow(fonts, configure)
+заимствует host-selected font catalog, подключает Header/close policy. App startup
+ждёт first presentation/viewport readiness; rollback явно останавливает окно,
+даже когда ошибка возникает после native creation. Adapter cancel/drain освобождает
+свои subscriptions/initialization work без второго владельца View/engine.
+
+Program/EditorApplication/EditorLaunchOptions/ProjectEntryPoint/RuntimeEntryPoint
+и smoke checks перенесены в ManualTests/AetherEditorHost (собственный RootNamespace).
+Host использует публичные extensions; CLI regression tests ссылаются на host,
+остальные tests продолжают использовать package assembly. Legacy --runtime и
+entry-assembly fingerprint пока прежние: explicit runtime — ARCH2c. Host fonts
+пока копируются из AlloyTest, завершение ресурсов/примеров — ARCH2d. Demo helper
+не реорганизован этим шагом. Scene/project format compatibility не менялась.
+
+**Фактически выполненные проверки:** SDK10.0.403, net10.0, xUnit2/VSTest.
+Editor **763/763** Debug и Release, Aether **1347/1347** Debug и Release,
+failed/skipped0. Новых20cases в AetherEditorCompositionTests; Cobalt и Microsoft DI
+проверены отдельно через Theory. Финальные incremental solution builds Debug/Release:
+0errors,0/175warnings; предыдущие промежуточные231/649warnings сохранены в своих logs.
+Окончательные Editor builds/tests после readiness уточнения успешны. Publish Release и local pack финального
+кода успешны. Full solution tests не запускались; прежний Mithril ready-file
+Release failure и CPU FrameReceiver follow-up не считаются исправленными.
+
+| Requirement | Evidence: методы AetherEditorCompositionTests |
+| --- | --- |
+| Lazy setup/startup и sole service disposal | EmptyApp_RegistrationAndStartupDoNotOpenProjectCreateViewOrLaunchRuntime |
+| Parent-owned independent View, styles, owner thread, recreation | ViewFactory_ParentOwnsIndependentViewsAndAppPreservesInjectedStyle |
+| Options snapshot, initial project, document save/Cancel/close | ProjectStartup_CopiesOptionsAndUsesSharedDocumentSaveAndClosePolicy |
+| Startup rollback и original error | ProjectStartupFailure_RollsBackEngineAndProjectsAndPreservesOriginalError |
+| Unpublished tree cleanup и borrowed model retry | FactoryFailure_DisposesUnpublishedTreeAndCanRetryWithSameBorrowedModels |
+| Invalid options и duplicate attachment | InvalidOptions_AreRejectedBeforeEngineConfiguration; DuplicateOrPreexistingEngine_RejectsAmbiguousOwnership |
+| Observable cleanup failure/retry | CleanupFailure_RemainsObservableAndCanRetryBeforeAppDisposal |
+| Custom transport без default-window wait | CustomViewport_DoesNotWaitForStandardWindowToStartPreview |
+| Library boundary без bootstrap/CLI/smoke types | LibraryArtifact_HasNoEntryPointBootstrapDependencyOrExecutableProbeTypes |
+
+Основные команды (каждая с собственным binlog/log/TRX в evidence):
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug -bl:TestResults/AetherPackages-ARCH2b-20261027-1/editor-debug-final.binlog --logger "trx;LogFileName=editor-debug-final.trx" --results-directory TestResults/AetherPackages-ARCH2b-20261027-1
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release -bl:TestResults/AetherPackages-ARCH2b-20261027-1/editor-release-final.binlog --logger "trx;LogFileName=editor-release-final.trx" --results-directory TestResults/AetherPackages-ARCH2b-20261027-1
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug -bl:TestResults/AetherPackages-ARCH2b-20261027-1/aether-debug.binlog --logger "trx;LogFileName=aether-debug.trx" --results-directory TestResults/AetherPackages-ARCH2b-20261027-1
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Release -bl:TestResults/AetherPackages-ARCH2b-20261027-1/aether-release.binlog --logger "trx;LogFileName=aether-release.trx" --results-directory TestResults/AetherPackages-ARCH2b-20261027-1
+dotnet publish ManualTests/AetherEditorHost/AetherEditorHost.csproj -c Release --no-build -o TestResults/AetherPackages-ARCH2b-20261027-1/publish-final -bl:TestResults/AetherPackages-ARCH2b-20261027-1/publish-final.binlog
+dotnet pack TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj -c Release --no-build -o TestResults/AetherPackages-ARCH2b-20261027-1/packages-verified -bl:TestResults/AetherPackages-ARCH2b-20261027-1/pack-verified.binlog
+```
+
+Финальные native directories — native-{empty,transform}-{debug,release}-v2:
+**4/4functional processes**, source Debug/published Release, Release cwd вне repo.
+Empty не создаёт game/compiler; Transform проходит invalid draft, theme retention,
+actual preview pixels/ack, Undo/Redo, SaveAs/Close/reopen и clean saved checkpoint.
+**8children drained/reaped**, каждый report: UI sessions/mappings/GPU resources/
+handles0, ViewDisposed=true. Preview notifications остаются на UI owner, compiler
+не запускается; source scene bytes не изменены. PNG прочитаны и визуально проверены.
+
+Первый native preview с --validation остановился на **ErrorLayerNotPresent**:
+в текущем окружении validation layer не найден, прежнего ignored tooling по
+документированному пути нет. SDK/driver/settings не устанавливались и не менялись.
+Финальные functional GPU runs **без validation**; нулевые validation counters
+не доказывают validation acceptance. Это ограничение сохранено для ARCH2e.
+Ранний empty --validation проверил только UI без Vulkan child и не закрывает его.
+
+Неуспешные первые build attempts (using/relative namespace после переноса, затем
+опечатка Choose в новом тесте) сохранены. Новый project/UI test сначала использовал
+fake text backend без rich text; заменён на существующий InspectorFixture CPU
+renderer. Ни один такой attempt не засчитан passing. Предварительные native runs
+до readiness уточнения также отделены от финальных v2 artifacts.
+
+Evidence: [verification.json](../../TestResults/AetherPackages-ARCH2b-20261027-1/verification.json),
+TRX/logs/binlogs, final package inspection и SHA256 source/binary/artifact manifests.
+NuGet publication, независимое NuGet решение, legacy Build/Play/Replace, physical
+DPI/input, loss/VRAM, performance и full alpha не проверялись. Следующий шаг —
+ARCH2c; ARCH2d/e и прежние ED6a/ED8a → ED4c.2/3/workflow остаются открыты.
+
+## ARCH2a: scene persistence в Aether — 2026-10-27
+
+Начало реализации согласованного package/host перехода. Статическая инвентаризация
+engine/Editor типов, refs и ownership записана в [карте границ](PACKAGE_BOUNDARIES.md).
+SceneFileCodec, ISceneDocumentStore, JsonSceneDocumentStore, SceneFile,
+SceneFileStamp и SceneFileConflictException перенесены из Editor.Documents в
+Aether.Scenes. DTOs имеют отдельные semantic files; namespace соответствует пути.
+Production code не linked/duplicated, Aether не получил зависимости на Editor/UI/
+concrete bootstrap. FormatVersion1, deterministic UTF8, bounds, SHA256 exact-byte
+stamps, create-only/atomic replace/cooperative write-lock/cancellation contracts
+не менялись. Public alpha namespace migration описан в guide/package README.
+
+UseAetherScenePersistence регистрирует lazy shared codec/store через App после
+borrowed authoring factory; repeated attachment idempotent, overrides сохраняются.
+UseAetherEditorDocuments делегирует общую persistence registration, оставляет
+Editor-owned document factory и отдельный private repeat-registration marker.
+Можно подключить engine persistence до Editor; custom codec теперь переиспользуется.
+Editor project/document/dirty/close/selection/workspace/View responsibilities
+сохраняются. Aggregate UseAetherEditor, WinExe→library, hosts/bootstrap/identity/
+resources и independent NuGet acceptance ещё не реализованы (ARCH2b–e).
+
+IDE findTests недоступен; один Roslyn parse-only pairing run выявил existing codec/
+store/document tests. Analyzer build binlog сохранён, repository под pairing не
+собирался. Существующие behavioral tests используют новые engine types; namespace
+imports обновлены у Editor consumers/smokes/tests. Новая focused suite —
+ScenePersistenceRegistrationTests в Aether.Tests без reference на Editor executable.
+
+| Требование ARCH2a | Точное доказательство |
+| --- | --- |
+| Shared API работает без Editor; scene bytes/stamps/replace/conflict корректны на обеих DI | ScenePersistenceRegistrationTests.App_DefaultPersistenceSharesServicesAndRoundTripsIndependentEngineDocuments (2cases): непустая scene, raw Transform value, byte hash, independent read, revision replacement, stale-stamp conflict без изменения последнего файла |
+| Lazy/idempotent defaults, existing overrides и один App owner | App_ExistingOverridesRemainLazyAndHaveOneAppOwnerAcrossRepeatedAttachment (2); App_DefaultServicesDoNotCreateAuthoringProductsOrFilesDuringStartup (2) |
+| Required authoring/null context validation до activation | App_MissingAuthoringFailsBeforeActivatingPersistenceOverrides (2); NullContext_IsRejectedBeforeRegistration (1) |
+| Editor reuse общего persistence и caller-owned documents | DocumentRegistrationTests.App_DefaultCodecAndStoreAreSharedWhileDocumentFactoryProductsRemainCallerOwned (4cases, standalone/engine-first × bothDI); App_ExistingCodecIsReusedAndDefaultStoreUsesItsBorrowedValidationFactory (2) |
+| Старые format/IO/error bounds сохраняются | SceneFileCodecTests17methods и JsonSceneDocumentStoreTests11methods; соответствующие migration/import changes без ослабления assertions. Combined codec/store/registration102/102 |
+
+Inline assertion review: реальные file bytes/hash/revisions/values, exact conflict
+outcome и сохранение нового файла; defaults/overrides проверены через one shared
+registration, no-activation и exactly-once disposal counters. Обычные registration
+guards/record properties не подменены mock-only presence assertions. No production
+mutations/coverage collection; это не formal branch/coverage или performance proof.
+
+Narrow Debug engine9/9 и Editor102/102, exit0:
+```powershell
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --no-restore -c Debug --filter 'FullyQualifiedName~TrueMoon.Aether.Tests.Scenes.ScenePersistenceRegistrationTests' --logger 'trx;LogFileName=narrow-engine-1.trx' --results-directory TestResults/AetherPackages-ARCH2a-20261027-1 -bl:TestResults/AetherPackages-ARCH2a-20261027-1/narrow-engine-1.binlog
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c Debug --filter 'FullyQualifiedName~SceneFileCodecTests|FullyQualifiedName~JsonSceneDocumentStoreTests|FullyQualifiedName~DocumentRegistrationTests' --logger 'trx;LogFileName=narrow-editor-1.trx' --results-directory TestResults/AetherPackages-ARCH2a-20261027-1 -bl:TestResults/AetherPackages-ARCH2a-20261027-1/narrow-editor-1.binlog
+```
+
+Final source validation SDK10.0.403/net10.0/xUnit2.9.3/VSTest:
+Debug nonincremental и Release incremental builds0errors/1546warnings каждый.
+Aether1347/1347 (+9), Editor743/743 (net+2) в каждой конфигурации; Core373,
+Cobalt179/generator91, Enerit343/generator114, UI893/Hosting114 также прошли обе.
+Mithril99/99 Debug,98/99 Release. Full **Debug4296/4296, Release4295/4296**,
+failed1/skipped0. Общего green нет, повтор для green не делался.
+Release CompositionProcessTests.AppUnits_OwnedProcessesAndLocalHosting_CleanupOnBothProviders
+(composition,cobalt) получил sharing IOException в неизменённом
+MithrilCompositionProbe.Fixture.ReadyAsync line172 на ready.json.
+[Отдельная Mithril запись](../mithril/HISTORY.md#composition-ready-json-sharing-failure--2026-10-27).
+
+Точные four-step build/test arguments находятся в validation-steps.json,
+TRX/log/binlogs сохранены. [Machine evidence](../../TestResults/AetherPackages-ARCH2a-20261027-1/verification.json):
+1024source hashes/changes0,20test-binary hashes,22TRX/7binlogs включая analyzer.
+Новых native/GPU/published/package/performance runs нет; предыдущие platform и
+FrameReceiver/ready-file quality follow-ups не закрыты. Дальше ARCH2b library/
+App integration, согласованно с ARCH2c explicit runtime host.
+
+## Пакетная архитектура ARCH2 — 2026-10-27
+
+Пользователь согласовал развитие TrueMoon как инфраструктурного framework и
+подключаемых пакетов: Aether содержит основной engine/components/runtime,
+Editor становится library/package с View/Data/styles/commands и прикладными
+sessions/workspace. Main/CLI/App composition и выбор host принадлежат consuming
+executable; отдельный game/runtime consumer может использовать Aether без Editor.
+Подробные этапы/решения/acceptance находятся только в
+[ARCH2a–e](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27), ED1–ED8 сохраняют
+пользовательские цели и становятся развитием подключаемого редактора.
+
+До записи решения прочитаны общие PLAN/STATUS/PLANNING, engine/Editor/UI plans и
+statuses, текущие csproj/Program/EditorApplication/RuntimeEntryPoint/NativeRuntime.
+Наблюдения: Aether уже library/packable; Editor WinExe/IsPackable=false, тот же
+executable dispatches --runtime; EngineChild добавляет этот argument; HostId
+fingerprint включает entry assembly; Editor font content ссылается на ManualTests.
+Эти связи — задачи перехода, не исправленные текущей документационной работой.
+Устаревшая запись общего package плана о deferred Aether уточнена по current source;
+свежие MSBuild metadata/pack проверки не выполнялись.
+
+Согласованы App/Cobalt registrations через планируемый UseAetherEditor, explicit
+View factories/owners и standard/embedded host use. Общие engine formats/operations
+доступны headless; Editor прикладные services не перемещаются массово в Aether.
+Concrete App.Build/Run остаётся в executable; у Aether не появляется bootstrap/UI
+dependency. Нужны explicit runtime executable/args и согласованный counterpart
+identity contract, с сохранением same-build/session/nonce/generation fences.
+Package resources/лицензии и independent NuGet consumer не зависят от source checkout.
+
+Очередь изменена: ARCH2a APIs/ownership → ARCH2b/c library/runtime boundary →
+ARCH2d hosts/resources → ARCH2e fresh package/source/published acceptance;
+затем ED6a/ED8a console/export, ED4c.2/3 и project/build/play workflow. Общий
+World/ECS/generator/MMF/UI beta не prerequisites; hardware/quality blockers и
+предыдущие limits сохраняются.
+
+Изменены только планы/статусы/навигация. Code/API/csproj не менялись; build/tests/
+pack/publish/native не запускались. Предыдущие4285/4285 Debug/Release относятся к
+child diagnostic delivery и не подтверждают ещё не реализованный ARCH2.
+Документационная проверка:12Markdown files, local links/anchors, balanced fences
+и git diff --check HEAD; вне docs изменений нет.
+[Отчёт и hashes документов](../../TestResults/EditorPackagesPlan-20261027-1/verification.json).
+
 ## Child diagnostic delivery — 2026-10-27
 
 ENG8a.3/ENE6d.4 после outcome/wait metrics: child poll-читает bounded Core ring,

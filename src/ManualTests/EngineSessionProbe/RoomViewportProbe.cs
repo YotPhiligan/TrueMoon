@@ -234,7 +234,7 @@ internal static class RoomViewportProbe
     { internal TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously); }
     private sealed class SceneFactory : IRuntimeFactory
     {
-        internal NativeRuntimeFactory Inner { get; } = new();
+        internal NativeRuntimeFactory Inner { get; } = new(NativeRuntimeLaunch.CurrentProcess("--runtime"));
         public IRuntimeLease Create(SessionLaunch launch) => Inner.Create(launch with { Behavior = "scene-3d" });
     }
 }

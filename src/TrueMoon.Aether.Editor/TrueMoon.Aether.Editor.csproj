@@ -1,19 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>$(TF)</TargetFramework>
-    <IsPackable>false</IsPackable>
+    <IsPackable>true</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Description>TrueMoon Aether desktop editor application.</Description>
+    <Description>Reusable TrueMoon Aether editor module: views, project/document coordination and App window integration.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);aether;editor;ui;authoring</PackageTags>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../TrueMoon/TrueMoon.csproj" />
+    <ProjectReference Include="../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
     <ProjectReference Include="../TrueMoon.Aether/TrueMoon.Aether.csproj" />
     <ProjectReference Include="../TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="../ManualTests/AlloyTest/Assets/Fonts/NotoSans-Regular.ttf" Link="Assets/Fonts/NotoSans-Regular.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="../ManualTests/AlloyTest/Assets/Fonts/OFL.txt" Link="Assets/Fonts/OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
   </ItemGroup>
 </Project>

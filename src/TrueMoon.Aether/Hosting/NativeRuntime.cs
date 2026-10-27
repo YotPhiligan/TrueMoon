@@ -1,10 +1,7 @@
 using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
+
 using System.Diagnostics;
-using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
+
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Transport;
 using TrueMoon.Aether.Builds;
@@ -17,20 +14,6 @@ using TrueMoon.Aether.Diagnostics;
 
 namespace TrueMoon.Aether.Hosting;
 
-public static class BuildIdentity
-{
-    public static string HostId => Manifest([Assembly.GetEntryAssembly()!.Location, typeof(SessionIdentity).Assembly.Location,
-        typeof(IFactory<>).Assembly.Location, typeof(PipesInvocationClient<>).Assembly.Location, typeof(ChildProcessUnitHandle).Assembly.Location]);
-    // Editor fingerprints bytes without loading Game.Logic into its CLR. Only the
-    // child creates/resolves game types; a future replacement must not pin a DLL in Editor.
-    public static string GameId => Manifest([Path.Combine(AppContext.BaseDirectory, "Game.Logic.dll")]);
-    /// <summary>Same-engine built-in preview identity; does not inspect a game DLL or source checkout.</summary>
-    public static string PreviewId => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-        "TrueMoon.Aether.EditPreview.v1\n" + Manifest([typeof(SessionIdentity).Assembly.Location]))));
-    private static string Manifest(IEnumerable<string> files)
-        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", files.OrderBy(Path.GetFileName, StringComparer.Ordinal)
-            .Select(path => Path.GetFileName(path) + ":" + Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))))))));
-}
 
 public sealed class NativeRuntimeFactory : IRuntimeFactory
 {
@@ -38,6 +21,12 @@ public sealed class NativeRuntimeFactory : IRuntimeFactory
     private readonly IEventsSource<NativeRuntimeFactory>? _events;
     private readonly IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? _diagnostics;
     private readonly ChildDiagnosticDeliveryOptions _deliveryOptions;
+    private readonly NativeRuntimeLaunch? _runtime;
+    /// <summary>Creates a standalone factory with an explicit runtime command; leases own all process resources.</summary>
+    /// <param name="runtime">Immutable command including its managed entry assembly.</param>
+    public NativeRuntimeFactory(NativeRuntimeLaunch runtime)
+        : this(new PipesInvocationClientFactory<IEngineControl>(new AetherEvents<PipesInvocationClient<IEngineControl>>()), null, null, null,
+            runtime ?? throw new ArgumentNullException(nameof(runtime))) { }
     /// <summary>Creates the standalone native factory with default diagnostics.</summary>
     public NativeRuntimeFactory() : this(new PipesInvocationClientFactory<IEngineControl>(new AetherEvents<PipesInvocationClient<IEngineControl>>())) { }
     /// <summary>Creates leases with an injected endpoint client factory. The lease owns each client.</summary>
@@ -53,11 +42,12 @@ public sealed class NativeRuntimeFactory : IRuntimeFactory
     /// <summary>Creates leases borrowing an optional host receiver factory; products belong to each lease.</summary>
     /// <param name="clients">Control clients.</param><param name="events">Process events.</param>
     /// <param name="diagnostics">Optional receiver factory.</param><param name="options">Copied lane limits.</param>
+    /// <param name="runtime">Explicit runtime command; null allows configuration without children but rejects launch.</param>
     public NativeRuntimeFactory(IFactory<PipesInvocationClient<IEngineControl>, string> clients,
         IEventsSource<NativeRuntimeFactory>? events, IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? diagnostics,
-        ChildDiagnosticDeliveryOptions? options = null)
+        ChildDiagnosticDeliveryOptions? options = null, NativeRuntimeLaunch? runtime = null)
     {
-        ArgumentNullException.ThrowIfNull(clients); _clients = clients; _events = events; _diagnostics = diagnostics;
+        ArgumentNullException.ThrowIfNull(clients); _clients = clients; _events = events; _diagnostics = diagnostics; _runtime = runtime;
         _deliveryOptions = (options ?? new()).Snapshot();
     }
     /// <summary>Process-local bootstrap passed to an owned game runtime.</summary>
@@ -73,7 +63,7 @@ public sealed class NativeRuntimeFactory : IRuntimeFactory
             Diagnostics.Enqueue(value);
             while (Diagnostics.Count > 256) Diagnostics.TryDequeue(out _);
             AetherDiagnosticEvents.Process(_events, launch, value);
-        }, _clients, _diagnostics);
+        }, _clients, _diagnostics, _runtime);
         Leases.Add(lease);
         // This is bounded diagnostic tracking; the supervisor retains actual lease ownership.
         if (Leases.Count > 64) Leases.RemoveAt(0);
@@ -81,23 +71,25 @@ public sealed class NativeRuntimeFactory : IRuntimeFactory
     }
 }
 
-internal sealed class EngineChild(SessionLaunch launch, Action<object> observe) : ChildProcessUnitHandle(
+internal sealed class EngineChild(SessionLaunch launch, Action<object> observe, NativeRuntimeLaunch? runtime) : ProcessUnitHandle(
     new UnitConfiguration(1) { RestartPolicy = UnitRestartPolicy.Never, RestartLimit = 0, IsControlAppLifetime = false, TerminationDelay = 3000 },
     new AetherEvents<EngineChild>(observe))
 {
     internal Process? OwnedProcess => Process;
-    protected override async Task<ProcessStartInfo> GetProcessStartInfoAsync(CancellationToken cancellationToken = default)
+    protected override Task<ProcessStartInfo> GetProcessStartInfoAsync(CancellationToken cancellationToken = default)
     {
-        var info = await base.GetProcessStartInfoAsync(cancellationToken).ConfigureAwait(false);
-        info.RedirectStandardOutput = true; info.RedirectStandardError = true;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (runtime == null) throw new InvalidOperationException("Configure AetherOptions.RuntimeLaunch or an explicit native runtime factory before starting a child.");
+        BuildIdentity.ValidateHost(launch);
+        var info = runtime.StartInfo();
         if (launch.Behavior == "launch-failure") info.FileName = Path.Combine(AppContext.BaseDirectory, "missing-engine-owned.exe");
-        return info;
+        return Task.FromResult(info);
     }
-    protected override void ProcessLaunchArguments(Collection<string> arguments) => arguments.Add("--runtime");
     protected override void AddEnvironmentVariables(ProcessStartInfo info)
     {
         base.AddEnvironmentVariables(info);
-        info.Environment[NativeRuntimeFactory.BootstrapKey] = JsonSerializer.Serialize(launch);
+        info.Environment[NativeRuntimeFactory.BootstrapKey] = RuntimeBootstrap.Encode(launch,
+            allowLegacyGame: launch.RuntimeIdentity is { } identity && BuildIdentity.SamePath(identity.HostAssemblyPath, identity.RuntimeAssemblyPath));
         if (launch.Behavior is "ignore-stop" or "hang-stop") info.Environment.Remove(UnitParentProcessEventsHandler.ControlPipeKey);
     }
 }
@@ -114,12 +106,17 @@ public sealed class NativeRuntimeLease : IRuntimeLease
     /// <summary>Creates a lease owning an optional generation-scoped receiver through process reap.</summary>
     /// <param name="launch">Launch and copied lane limits.</param><param name="observe">Process observer.</param>
     /// <param name="clients">Borrowed control factory.</param><param name="diagnostics">Borrowed receiver factory.</param>
+    /// <param name="runtime">Explicit immutable runtime command; null rejects native launch.</param>
     public NativeRuntimeLease(SessionLaunch launch, Action<object> observe, IFactory<PipesInvocationClient<IEngineControl>, string>? clients,
-        IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? diagnostics)
+        IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? diagnostics, NativeRuntimeLaunch? runtime = null)
     {
         ArgumentNullException.ThrowIfNull(launch); ArgumentNullException.ThrowIfNull(observe);
-        this.launch = launch with { DiagnosticDelivery = launch.DiagnosticDelivery?.Snapshot() };
-        this.clients = clients; _diagnostics = diagnostics; _child = new(this.launch, observe);
+        this.launch = launch with
+        {
+            DiagnosticDelivery = launch.DiagnosticDelivery?.Snapshot(),
+            RuntimeIdentity = runtime == null ? launch.RuntimeIdentity : BuildIdentity.CurrentLaunchIdentity(runtime.RuntimeAssemblyPath)
+        };
+        this.clients = clients; _diagnostics = diagnostics; _child = new(this.launch, observe, runtime);
     }
     /// <summary>Identity fixed when this owned process lease was created.</summary>
     public SessionIdentity Identity => launch.Identity;

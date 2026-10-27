@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography;
+using TrueMoon.Aether.Editor;
+using TrueMoon.Aether.Scenes;
+using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon.Aether.Editor.Documents;
@@ -9,7 +11,7 @@ using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 // Directed input stays inside this app's tree; fixtures live in a disposable external project.
 internal static class EditorDocumentSmoke

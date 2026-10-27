@@ -42,7 +42,7 @@ internal static class ViewportBaseline
         using var capture = new BaselineCapture(); var gpu = mode == "gpu";
         var previousEnvironment = Environment.GetEnvironmentVariable(BaselineCapture.EnvironmentKey);
         Environment.SetEnvironmentVariable(BaselineCapture.EnvironmentKey, "1");
-        var factory = new NativeRuntimeFactory(); var authoring = new AuthoringState();
+        var factory = new NativeRuntimeFactory(NativeRuntimeLaunch.CurrentProcess("--runtime")); var authoring = new AuthoringState();
         var authoringBefore = JsonSerializer.Serialize(authoring);
         var binding = gpu ? new EditorGpuViewportBinding(runtime => (NativeRuntimeLease)runtime) : null;
         var windows = new List<MeasurementWindow>(); var operations = new List<OperationSample>();

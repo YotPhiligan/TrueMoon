@@ -24,6 +24,8 @@
     <Project Path="TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
   </Folder>
   <Folder Name="/Engine/">
+    <Project Path="ManualTests/AetherEditorHost/AetherEditorHost.csproj" />
+    <Project Path="ManualTests/AetherRuntimeHost/AetherRuntimeHost.csproj" />
     <Project Path="ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />
     <Project Path="ManualTests/Game.Logic/Game.Logic.csproj" />
   </Folder>

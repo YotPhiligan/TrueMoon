@@ -14,6 +14,10 @@
 
 UI alpha и контрольное beta приложение имеют собственные критерии. Готовность UI не означает готовность всех модулей TrueMoon; обратное тоже не следует из общего build.
 
+Текущий приоритет2026-10-27 —
+[ARCH2: Aether/Editor packages и executable hosts](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27).
+ARCH2a–c реализованы; ARCH2d/e предшествуют новым Editor features. Текущие проверки и открытые quality failures — в STATUS.
+
 ## Карта модулей
 
 | Направление | Проекты и ответственность | План |
@@ -23,8 +27,8 @@ UI alpha и контрольное beta приложение имеют собс
 | Enerit | TrueMoon.Enerit, Enerit.Generator: invocation client/server, IPC transports, serialization и generated service adapters | [Enerit](enerit/PLAN.md) |
 | Mithril | TrueMoon.Mithril: units, hosting/startup/lifetime/restart policies, процессные handles | [Mithril](mithril/PLAN.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: retained UI, renderer, окно/input, standalone и external HUD | [UI](alloy/PLAN.md) |
-| Aether / Engine | TrueMoon.Aether: engine contracts, session supervisor, control/native child bridge, CPU/GPU viewport, builds/checkpoint/Replace; Editor/Runtime и Game.Logic — отдельные consumers | [Aether](engine/PLAN.md) |
-| Aether Editor | Приложение модуля Aether: TrueMoon.Aether.Editor; текущая ENG7a/UIA1 основа развивается в project/document editor с preview и расширениями | [План приложения ED1–ED8](engine/EDITOR_PLAN.md), [основа ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
+| Aether / Engine | TrueMoon.Aether: library/package общего engine/components/authoring/runtime, sessions/control/frames/builds/checkpoint/Replace; отдельные executable/game consumers | [Aether](engine/PLAN.md), [ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) |
+| Aether Editor | TrueMoon.Aether.Editor — подключаемая library/package с View/Data/styles, commands и прикладными services; App integration и explicit runtime реализованы в ARCH2b/c, hosts/assets/independent package proof открыты | [Подключаемый Editor ED1–ED8](engine/EDITOR_PLAN.md), [package/host переход ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) |
 
 Тестовые проекты, generators и ManualTests относятся к своим направлениям. Они не образуют отдельный продуктовый roadmap. Общие CI/build/package задачи остаются на уровне этого документа.
 
@@ -67,6 +71,31 @@ Data/ViewModel и typed IViewStyle<TView>. Реализация/критерии
 [UIA1](alloy/PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22), первый
 production consumer — Aether.Editor. DI/owner-thread factory route сохранён;
 новых межмодульных dependencies это изменение не добавляет.
+
+### Aether и Editor как подключаемые пакеты — 2026-10-27
+
+По решению пользователя TrueMoon.Aether содержит основной функционал движка,
+компоненты и runtime; TrueMoon.Aether.Editor становится library/NuGet package
+с UI/View, Data/ViewModel/styles и прикладными services редактора. Пользовательский
+executable либо тонкий пример владеет Main/CLI/App composition и выбором host.
+Editor зависит от Aether; runtime/game consumer использует Aether без Editor.
+Общие engine APIs доступны headless; пользовательская игра остаётся отдельной.
+
+Подробный переход и acceptance — только в
+[ARCH2a–e](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27): общие API/
+ownership, Editor library/App integration, explicit runtime executable/bootstrap/
+identity, тонкие hosts/resources, independent NuGet consumption.
+ARCH2a вынес shared scene persistence в Aether и определил карту owners;
+ARCH2b превратил Editor в library/packable module с App/View/window integration,
+entry points/smoke consumer — AetherEditorHost. ARCH2c добавил explicit runtime
+command/bootstrap и точную identity пары host/runtime; отдельный AetherRuntimeHost
+работает без Editor/UI. Source Debug/published Release headless DLL/apphost
+проверены отдельно от GPU/package acceptance; Release CPU race и legacy probe
+fixtures failures сохраняются. Следующие шаги — ARCH2d/e;
+отдельные результаты и ограничения проверок находятся в STATUS. Весь ARCH2 предшествует
+console/export и новым authoring UI features. После него —
+ED6a/ED8a, ED4c.2/3 и project/build/play workflow; оставшиеся Core/DI/IPC/UI roadmaps
+не становятся обязательными prerequisites и не считаются завершёнными.
 
 ### Единая структурированная диагностика — 2026-10-25
 
@@ -453,10 +482,12 @@ PackageId/version используют штатные SDK defaults; не тре�
 Description, тематические tags и собственный PACKAGE.md с явным включением в nupkg.
 Runtime/generator package ownership сохраняется в планах модулей.
 
-Сейчас13projects имеют IsPackable=true. Aether имеет подготовленные metadata,
-но IsPackable=false до решения о поставке. Cobalt.Generator поставляется внутри
-Cobalt, отдельным пакетом не объявляется; Enerit.Generator — отдельный analyzer
-package. Tests/benchmarks/manual applications не являются package candidates.
+Исторический срез2026-10-19 фиксировал13packable projects и deferred Aether.
+В текущем source Aether и Editor — library/IsPackable=true; Editor получил
+metadata/PACKAGE.md и local pack proof в ARCH2b, explicit runtime/headless process
+proof — в ARCH2c. Independent NuGet/asset/full native acceptance остаётся ARCH2d/e. Cobalt.Generator поставляется внутри Cobalt,
+отдельным пакетом не объявляется; Enerit.Generator — отдельный analyzer package.
+Tests/benchmarks/executable examples не становятся framework package candidates.
 
 [Check-PackageMetadata.ps1](../eng/Check-PackageMetadata.ps1) проверяет вычисленные
 MSBuild properties всех repository projects. `-Pack` дополнительно собирает ready

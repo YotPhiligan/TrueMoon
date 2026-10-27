@@ -23,7 +23,7 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 | Mithril | TrueMoon.Mithril: units, process handles и startup/hosting/lifetime/restart policies | [План](mithril/PLAN.md), [статус](mithril/STATUS.md), [история](mithril/HISTORY.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: controls/tree/bindings/layout/input, UI sessions, rendering, окна и HUD | [План](alloy/PLAN.md), [статус](alloy/STATUS.md), [стандартный стиль](alloy/DEFAULT_STYLE.md), [история](alloy/HISTORY.md) |
 | Aether / Engine | TrueMoon.Aether: engine contracts, sessions/control, owned child bridge и CPU frame transport; отдельные example/game/test consumers | [README](../TrueMoon.Aether/README.md), [план](engine/PLAN.md), [статус](engine/STATUS.md), [история](engine/HISTORY.md) |
-| Aether Editor | Приложение модуля Aether, TrueMoon.Aether.Editor: существующий экран/viewport и план перехода к рабочему project/scene editor | [Запуск](../TrueMoon.Aether.Editor/README.md), [план приложения ED1–ED8](engine/EDITOR_PLAN.md), [основа ENG7a](engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22) |
+| Aether Editor | TrueMoon.Aether.Editor — library/NuGet package с UI/View, прикладными services и App integration; runtime/assets/independent package acceptance открыты | [API и host](../TrueMoon.Aether.Editor/README.md), [пакетный переход ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27), [ED1–ED8](engine/EDITOR_PLAN.md) |
 
 Contracts и Core — разные независимые сборки. DI provider выбирается на builder boundary; IPC, units и UI подключаются по потребности приложения. UI runtime не требует App или конкретного backend; Hosting является опциональной интеграцией. Подробная карта фактических зависимостей хранится в общем плане.
 
@@ -37,13 +37,15 @@ Engine implementation/contracts теперь объединены в [TrueMoon.A
 - [Игровой движок](engine/PLAN.md), [статус](engine/STATUS.md): одна 3D-игра,
   Editor/Runtime в разных процессах, frames и обновление игровой логики; датированные
   реализации и ограничения находятся в STATUS/HISTORY.
-- [Приложение редактора ED1–ED8](engine/EDITOR_PLAN.md): переход от существующей
-  ENG7a/UIA1 основы к project/document editor, Edit preview, undo и расширениям.
+- [Подключаемый редактор ED1–ED8](engine/EDITOR_PLAN.md): после
+  [ARCH2 package/host перехода](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27)
+  существующая ENG7a/UIA1 основа развивается в project/document editor, preview, undo и расширения.
   Первый срез — Open → Transform → preview → Undo/Redo → Save → reopen.
 
 ## Практические входные точки
 
 - **Диагностика:** [Core pipeline, JSONL и операции](core/DIAGNOSTICS.md), [Enerit traces/metrics](enerit/DIAGNOSTICS.md) и [bounded child → host delivery](engine/DIAGNOSTICS_DELIVERY.md).
+- **Engine/Editor packages:** [карта типов, scene-persistence/runtime API и ownership ARCH2a–c](engine/PACKAGE_BOUNDARIES.md), [Editor App API](../TrueMoon.Aether.Editor/PACKAGE.md), [отдельный runtime host](../ManualTests/AetherRuntimeHost/README.md); hosts/resources/package acceptance продолжается в ARCH2d/e.
 - **Приложение и сервисы:** quickstart в корневом README, затем [Core lifecycle/configuration/diagnostics contracts](core/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10) и [DI ownership](cobalt/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10).
 - **Headless NuGet и generator:** [CORE5/COB4 package consumers](../ManualTests/CorePackageConsumer/README.md), [App package README](../TrueMoon/PACKAGE.md), [Cobalt](../TrueMoon.Cobalt/PACKAGE.md), [generator](../TrueMoon.Cobalt.Generator/PACKAGE.md) и [Microsoft DI adapter](../TrueMoon.Extensions.DependencyInjection/PACKAGE.md).
 - **UI и привязки:** [Hosting guide](../TrueMoon.Alloy.Hosting/README.md), [Settings example](../ManualTests/AlloyTest/README.md) и [packaged quickstart](../TrueMoon.Alloy.Hosting/PACKAGE.md).

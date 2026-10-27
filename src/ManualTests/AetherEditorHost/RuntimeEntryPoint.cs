@@ -1,3 +1,4 @@
+using TrueMoon.Aether.Editor;
 using System.Text.Json;
 using TrueMoon.Aether;
 using TrueMoon.Aether.Hosting;
@@ -6,24 +7,16 @@ using TrueMoon.Aether.Sessions;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 
-namespace TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 // Process bootstrap only. RuntimeProtocol, game loading, transport, rendering and ownership stay in Aether.
 internal static class RuntimeEntryPoint
 {
     internal static async Task RunAsync()
     {
-        var text = Environment.GetEnvironmentVariable(NativeRuntimeFactory.BootstrapKey) ?? throw new InvalidDataException("Missing runtime bootstrap.");
-        if (text.Length > 16384) throw new InvalidDataException("Oversized runtime bootstrap.");
-        var launch = JsonSerializer.Deserialize<SessionLaunch>(text) ?? throw new InvalidDataException("Invalid runtime bootstrap.");
-        launch.Identity.Validate();
+        var bootstrap = RuntimeBootstrap.ReadEnvironment();
+        var launch = bootstrap.Launch; var parentId = bootstrap.ParentProcessId;
         var preview = launch.Role == RuntimeRole.EditPreview;
-        if (launch.Identity.HostContractId != BuildIdentity.HostId ||
-            (preview ? launch.Build != null || launch.RequireRestore || launch.Identity.GameBuildId != BuildIdentity.PreviewId
-                : launch.Role != RuntimeRole.Game || launch.Build == null || launch.Build.BuildId != launch.Identity.GameBuildId) ||
-            !launch.Endpoint.StartsWith("engine-", StringComparison.Ordinal) || launch.Endpoint.Length > 100)
-            throw new InvalidDataException("Runtime requires a matching selected game build.");
-        var parentId = int.Parse(Environment.GetEnvironmentVariable("-p") ?? throw new InvalidDataException("Missing runtime parent."));
         await using var app = App.Build(context =>
         {
             context.UseDiagnostics(new DiagnosticPipelineOptions
@@ -40,7 +33,7 @@ internal static class RuntimeEntryPoint
             else context.UseAetherRuntime(launch, parentId);
         });
         await app.StartAsync();
-        var runtime = app.Services.Resolve<AetherRuntimeHost>();
+        var runtime = app.Services.Resolve<AetherRuntimeHost>()!;
         var engine = app.Services.Resolve<AetherHost>()!;
         try { await runtime.RunAsync(); }
         finally

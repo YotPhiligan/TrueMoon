@@ -1,5 +1,23 @@
 # Mithril: история реализации и проверок
 
+## Composition ready JSON: sharing failure — 2026-10-27
+
+Связанный ARCH2a full run: Mithril99/99 Debug,98/99 Release, skipped0.
+Release CompositionProcessTests.AppUnits_OwnedProcessesAndLocalHosting_CleanupOnBothProviders
+(scenario=composition,provider=cobalt) получил Exit1/sharing IOException на
+composition-results/12a981853f2141b1ae916eaf3ec6bdc8/ready.json.
+Stack: MithrilCompositionProbe.Fixture.ReadyAsync line172 → RunAsync line100/132 →
+Program line38; test CompositionProcessTests line27/43. Source/fixture Mithril этим
+срезом не менялись. Это наблюдение в composition probe дополнительно к прежним
+restart ready-file failures; отдельный фикс не выполнен, повтор для green не делался.
+
+Full Debug4296/4296, Release4295/4296; affected Aether1347/Editor743 прошли обе
+конфигурации. [Команды/границы](../engine/HISTORY.md#arch2a-scene-persistence-в-aether--2026-10-27),
+[TRX/log/binlog и failure](../../TestResults/AetherPackages-ARCH2a-20261027-1/verification.json).
+Следующий quality шаг — безопасная публикация/чтение ready JSON в composition
+и restart fixtures с deterministic overlap proof, сохраняя deadline/identity/reap
+assertions. Production fix/общий green, full fault matrix и containment не заявлены.
+
 ## Ready-file race: повторное наблюдение — 2026-10-26
 
 В initial full Debug Core diagnostics run Mithril98/99: scenario concurrent-stop,

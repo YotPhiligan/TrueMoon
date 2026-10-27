@@ -1,6 +1,19 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-25, PA8b.4 системный акцент границы / ED4f.2**.
+Последняя связанная работа — **2026-10-27, ARCH2b Editor library/App integration**.
+Editor стал library/packable module; UseAetherEditorWindow использует прежний
+Alloy.Hosting API, reusable View создаётся parent-owned factory. Executable
+consumer — ManualTests/AetherEditorHost. Общие UI capabilities остаются здесь,
+оставшийся runtime/assets/package transition и подробные критерии — в
+[ARCH2](../engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27).
+UI library API/code не менялись; текущие Editor763/Aether1347 Debug/Release и
+native consumer workflows принадлежат engine scope. Собственные UI suites этим
+шагом не повторены. Functional native GPU runs без Vulkan validation:
+ErrorLayerNotPresent сохранён как неуспешная попытка; прежние K/PA/INF и hardware
+blockers сохраняются. Следующий общий consumer шаг — ARCH2c explicit runtime;
+UI rename/reorder и physical acceptance остаются в своей очереди.
+
+Предыдущая реализация и проверка — **2026-10-25, PA8b.4 системный акцент границы / ED4f.2**.
 Опциональный IWindowSystemColors передаёт cached accent в WindowFrame; Windows
 читает UISettings3 через transient owned HSTRING/COM/apartment и обновляет cache
 вне WndProc по color/theme/settings notifications. UseSystemAccentBorder opt-in:
@@ -411,8 +424,10 @@ Alpha K1–K9 не объявляется завершённой. Требова
 ## Следующий конкретный шаг
 
 При работе над приложением использовать [первый срез и порядок API → preview → UI](../engine/EDITOR_PLAN.md#первый-сквозной-срез);
-ARCH1b.1, ED1a, ED2a/b, ED3a и ED4c.1 выполнены в своих границах; ближайший
-consumer — rename/reorder ED4c.2 после persistent engine metadata, затем
+текущий первый приоритет — ARCH2 package/host transition. После него ED6a/ED8a
+console/export, затем authoring очередь ниже; UI capabilities добавляются по consumer.
+ARCH1b.1, ED1a, ED2a/b, ED3a и ED4c.1 выполнены в своих границах; authoring
+consumer после перехода и console — rename/reorder ED4c.2 после persistent engine metadata, затем
 create/delete UI commands общего authoring API.
 Общие UI capabilities для ED4/ED5/ED7 развивать здесь по конкретному consumer;
 готовность приложения не требует заранее закончить весь UI beta backlog.

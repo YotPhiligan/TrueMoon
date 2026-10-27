@@ -33,6 +33,7 @@ public static class AppConfigurationExtensions
         {
             if (services.Exist<AetherHost>() || services.Exist<IRuntimeFactory>() || services.Exist<AetherAppLifetime>())
                 throw new InvalidOperationException("Aether is already registered. Configure its runtime factory through UseAether.");
+            if (snapshot.RuntimeLaunch != null) services.Singleton<NativeRuntimeLaunch>(_ => snapshot.RuntimeLaunch);
             services.Singleton<IRuntimeFactory>(resolver => snapshot.RuntimeFactory(resolver)
                     ?? throw new InvalidOperationException("Aether runtime factory returned null."));
             services.Singleton<ChildDiagnosticConfiguration>(_ => new(snapshot.ChildDiagnostics));

@@ -1,5 +1,15 @@
 # TrueMoon.Aether.Editor
 
+Подключаемая библиотека/NuGet-пакет редактора, net10.0. Публичный вход —
+`UseAetherEditor(configureEngine, configureEditor)`; optional стандартное окно —
+`UseAetherEditorWindow(fonts, configureWindow)`. [API, ownership и quickstart](PACKAGE.md).
+Main/CLI/App composition/runtime branch/smoke checks находятся в отдельном
+[AetherEditorHost](../ManualTests/AetherEditorHost/README.md). Host предоставляет
+fonts и runtime configuration; пакет не создаёт вложенный App и не открывает
+native resources при регистрации. ARCH2c предоставляет explicit runtime launch,
+bootstrap и pair identity; ARCH2d assets и ARCH2e independent NuGet/published matrix
+ещё открыты. Local pack не означает готовность поставки.
+
 [План развития рабочего приложения](../docs/engine/EDITOR_PLAN.md) задаёт ED1–ED8:
 project/documents/editing/preview/workflow/extensions/reliability. Первый сквозной
 срез — открыть сцену, изменить Transform, увидеть Edit preview, Undo/Redo,
@@ -9,9 +19,9 @@ Undo/Redo и independent Edit preview подключены к общему autho
 
 Первый основной экран редактора: стандартное borderless оформление Alloy,
 компактный заголовок с меню и симуляцией, дерево сущностей слева, живой3D viewport в центре,
-динамический инспектор компонентов справа и строка состояния снизу. Desktop WinExe
+динамический инспектор компонентов справа и строка состояния снизу. Desktop host WinExe
 не открывает дополнительную консоль. Dark/Light
-переключаются через «Вид → Сменить тему». Это desktop application, `IsPackable=false`;
+переключаются через «Вид → Сменить тему». Editor — library, `IsPackable=true`;
 движок остаётся в единственной сборке `TrueMoon.Aether`. Редактор и его tests
 относятся к модулю Aether; прежние имена `TrueMoon.Editor`/`TrueMoon.Editor.Tests`
 заменены на `TrueMoon.Aether.Editor`/`TrueMoon.Aether.Editor.Tests`.
@@ -26,7 +36,7 @@ Active runs и неизвестные каталоги защищены; пос�
 [Настройки, аварийный канал и ownership](../docs/core/DIAGNOSTICS.md).
 
 ```powershell
-dotnet run --project TrueMoon.Aether.Editor
+dotnet run --project ManualTests/AetherEditorHost
 ```
 
 Без аргументов открывается пустая рабочая область с отключёнными игровыми
@@ -42,7 +52,7 @@ dotnet run --project TrueMoon.Aether.Editor
 Для существующего игрового csproj сохранён explicit legacy запуск:
 
 ```powershell
-dotnet run --project TrueMoon.Aether.Editor -- `
+dotnet run --project ManualTests/AetherEditorHost -- `
   --project E:/games/MyGame/MyGame.csproj --assembly MyGame.dll --entry MyGame.Session
 ```
 
@@ -152,8 +162,8 @@ App/Cobalt. Окно владеет View, OverlayHost — popup; общие мо
 
 ## Проект и сессия ED1a
 
-Обычный запуск: `TrueMoon.Aether.Editor.exe --project E:/games/MyGame/MyGame.aetherproj`.
-Проверка без окна: `TrueMoon.Aether.Editor.exe --check-project E:/games/MyGame/MyGame.aetherproj`.
+Обычный запуск: `AetherEditorHost.exe --project E:/games/MyGame/MyGame.aetherproj`.
+Проверка без окна: `AetherEditorHost.exe --check-project E:/games/MyGame/MyGame.aetherproj`.
 Второй вариант выводит JSON с project/SDK identity и результатом закрытия сессии;
 ошибка завершает процесс с ненулевым кодом. SDK preflight запускает только
 `dotnet --version` из каталога игры, учитывает `global.json` и требует SDK10+.
@@ -216,6 +226,12 @@ coordination развиваются в ED1/ED4/ED6. Edit Preview открыто�
 
 ## Документ сцены ED2a
 
+ARCH2a2026-10-27 перенёс SceneFileCodec/ISceneDocumentStore/JsonSceneDocumentStore и
+SceneFile/SceneFileStamp/SceneFileConflictException в TrueMoon.Aether.Scenes.
+UseAetherEditorDocuments подключает общую UseAetherScenePersistence и сохраняет
+existing codec/store overrides; SceneDocumentSession/commands/close policy остаются
+в Editor. FormatVersion1 не изменён. [Карта границ и migration](../docs/engine/PACKAGE_BOUNDARIES.md).
+
 Подключение без окна, compiler и game activation:
 
 ```csharp
@@ -237,7 +253,8 @@ if (await documents.CloseAsync(DocumentCloseChoice.Cancel))
 ```
 
 Дополнительно нужны `using TrueMoon.Aether;` и
-`using TrueMoon.Aether.Editor.Documents;`. Порядок UseX существенен: authoring до
+`using TrueMoon.Aether.Editor.Documents;`; для общих file APIs —
+`using TrueMoon.Aether.Scenes;`. Порядок UseX существенен: authoring до
 documents, documents до projects. Регистрация только UseAetherEditorProjects
 сохраняет metadata-only поведение. Store и typed
 `IFactory<SceneDocumentSession, ResolvedProject>` можно заменить до UseDocuments;
@@ -295,7 +312,7 @@ discard/drain и не является пользовательским Save dia
 Проверка чтения/валидации без окна, сборки и записи файла:
 
 ```powershell
-TrueMoon.Aether.Editor.exe --project E:/games/MyGame/MyGame.aetherproj --check-scene Main.aetherscene
+AetherEditorHost.exe --project E:/games/MyGame/MyGame.aetherproj --check-scene Main.aetherscene
 ```
 
 JSON содержит identity/revision/catalog counts, roundtrip bytes, dirty и результаты
@@ -472,10 +489,34 @@ Application использует `UseAether` и `UsePresentationFactory<EditorVi
 `GameBuildLoader`, RuntimeProtocol, producer, supervisor, Mithril process ownership
 и Enerit IPC находятся в Aether. Здесь находятся composition и UI adapters.
 
-Существующий NativeRuntimeFactory запускает **отдельный процесс того же
-executable с `--runtime`**. Runtime branch не создаёт окно/Skia session и загружает
-только выбранную игровую сборку. Отдельная поставляемая runtime executable —
-последующая задача, не изменение process isolation этого экрана.
+NativeRuntimeFactory не выбирает consuming executable и не добавляет `--runtime`
+неявно. Для отдельного runtime задайте в configureEngine абсолютные пути:
+
+```csharp
+engine.RuntimeLaunch = new NativeRuntimeLaunch(absRuntimeExe, absRuntimeDll);
+engine.HostContractId = BuildIdentity.ForRuntime(absRuntimeDll);
+```
+
+Типы находятся в `TrueMoon.Aether.Hosting`. Для dotnet descriptor принимает
+`absDotnetExe`, `absRuntimeDll` и явные `[absRuntimeDll, .. runtimeArguments]`.
+Null RuntimeLaunch допускает registration/headless/custom RuntimeFactory, но default
+native Start завершится понятной configuration error. Pair fingerprint включает
+labelled host/runtime entries и exact shared Aether/Contracts/Enerit/Mithril, с
+проверкой обоих каталогов и actual entry; это не authentication boundary и не полный
+native/private-dependency hash. Deployment не меняют in place во время session.
+Новая pair identity требует rebuild game artifacts и исключает старые checkpoints;
+scene/project formats и control3/frame1/snapshot2 остаются прежними.
+
+[Отдельный AetherRuntimeHost](../ManualTests/AetherRuntimeHost/README.md) не зависит от
+Editor/UI. Child вызывает `RuntimeBootstrap.ReadEnvironment()` до App construction,
+затем UseAether и runtime/preview registration; Main остаётся в executable.
+[Bootstrap Version1/limits и runtime API](../TrueMoon.Aether/PACKAGE.md).
+
+Текущий AetherEditorHost до host/resources stage **явно** выбирает
+`NativeRuntimeLaunch.CurrentProcess("--runtime")` и прежний `BuildIdentity.HostId`:
+это совместимый same-executable профиль с отдельным child process, не скрытое
+требование к произвольному consuming exe. Его runtime branch не создаёт окно/Skia
+session и загружает только выбранную игровую сборку либо built-in preview.
 
 UI events не ждут IPC/compiler: EditorCommands отслеживает asynchronous work,
 Stop/Cancel могут прервать pending command. Close прекращает admission и ждёт
@@ -495,16 +536,20 @@ Borrowed lifecycle/service facades не освобождают owned targets п�
 
 ```powershell
 dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj
-dotnet publish TrueMoon.Aether.Editor --configuration Release --output TestResults/EditorScreen/publish
-dotnet TestResults/EditorScreen/publish/TrueMoon.Aether.Editor.dll --project ManualTests/Game.Logic/Game.Logic.csproj
+dotnet publish ManualTests/AetherEditorHost --configuration Release --output TestResults/EditorScreen/publish
+dotnet TestResults/EditorScreen/publish/AetherEditorHost.dll --project ManualTests/Game.Logic/Game.Logic.csproj
 ```
+
+Это команды для отдельного запуска, не утверждение о текущем published результате
+ARCH2c. Source Debug и published Release runtime-launch proof проверяются отдельно;
+ARCH2d/e assets/independent NuGet/published matrix не закрыты.
 
 `--light` выбирает светлую тему при старте. `--help` выводит CLI. Направленный smoke
 работает только со своим окном и проверяет реальные game commands/pixels:
 
 ```powershell
 $env:VK_LAYER_PATH = '<validation-layer-directory>'
-dotnet run --project TrueMoon.Aether.Editor -- --smoke TestResults/EditorScreen/fresh --validation
+dotnet run --project ManualTests/AetherEditorHost -- --smoke TestResults/EditorScreen/fresh --validation
 ```
 
 Используйте новый output directory. Каждый smoke сохраняет5PNG заголовка,2PNG

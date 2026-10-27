@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Editor;
+using TrueMoon.ManualTests.AetherEditorHost;
 
 try
 {

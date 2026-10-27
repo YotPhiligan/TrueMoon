@@ -1,8 +1,7 @@
 ﻿using System.Text.Json;
-using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Scenes.Authoring;
 
-namespace TrueMoon.Aether.Editor.Documents;
+namespace TrueMoon.Aether.Scenes;
 
 /// <summary>Strict version-1 authoring JSON. Persists catalogs and local patches, never resolved/runtime state or history.</summary>
 /// <param name="authoring">Borrowed validation factory; temporary products are disposed before returning.</param>

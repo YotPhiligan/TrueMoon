@@ -14,6 +14,13 @@
 
 ### Поддержка рабочего приложения Aether.Editor — 2026-10-22
 
+Решение2026-10-27: целевой TrueMoon.Aether.Editor — library/package, executable
+host подключает reusable View и выбирает поддержанный window/backend/resources.
+ARCH2b уже перевёл Editor в library/App module; оставшийся переход и acceptance ведутся в
+[ARCH2](../engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) до новых ED features.
+Editor panels/styles/commands остаются в Editor; общие controls/input/layout —
+здесь. Изменение формы поставки не закрывает и не расширяет K/PA/INF критерии.
+
 Уточнение2026-10-23: редактируемые inspector/tools подключаются после
 [минимального authoring API, headless proof и Edit preview Aether](../engine/PLAN.md#основа-api-перед-редактируемым-ui--2026-10-23).
 ED1a project/session идёт параллельно; IPC Editor↔Runtime использует Enerit,
@@ -27,7 +34,7 @@ conversion/validation/commit/cancel. ED5 нуждается в input/focus/captu
 tool integration. ED7 проверяет custom widgets через Element и backend-independent
 drawing/input contracts, а также конкретные capability interfaces по потребителям.
 
-IEditorCommand/panel/property-editor/tool contracts принадлежат приложению;
+IEditorCommand/panel/property-editor/tool contracts принадлежат пакету Editor;
 пользовательские UI controls — Argentis/Alloy. Сам IButton не заменяет Element:
 переход runtime на полностью интерфейсное дерево не назначен. Начать с минимальных
 capabilities, необходимых первому Transform/preview/Undo/save срезу, сохраняя UIA1,

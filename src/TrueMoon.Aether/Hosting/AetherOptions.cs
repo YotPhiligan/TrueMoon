@@ -40,6 +40,8 @@ public sealed class AetherOptions
     /// <summary>Creates the App-local viewport factory. Its results belong to FrameSession.</summary>
     /// <remarks>Choose this or ViewportTransport. The factory may borrow application services.</remarks>
     public Func<IServiceResolver, IFactory<IGameViewportTransport, GpuResourceHost>>? ViewportTransportFactory { get; set; }
+    /// <summary>Explicit immutable native runtime command. Null permits headless/common services but native Start fails without a custom factory.</summary>
+    public NativeRuntimeLaunch? RuntimeLaunch { get; set; }
     /// <summary>Gets or sets a factory creating a fresh App-owned runtime factory.</summary>
     /// <remarks>Dependencies may be resolved from the supplied resolver. Do not return
     /// a borrowed or separately registered disposable factory: the App provider owns the result.</remarks>
@@ -47,7 +49,7 @@ public sealed class AetherOptions
         new NativeRuntimeFactory(resolver.Resolve<IFactory<PipesInvocationClient<IEngineControl>, string>>(),
             resolver.Resolve<IEventsSource<NativeRuntimeFactory>>(),
             resolver.TryResolve<IDiagnosticRecordImporter>() == null ? null : resolver.Resolve<IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>>(),
-            resolver.Resolve<ChildDiagnosticConfiguration>().Copy());
+            resolver.Resolve<ChildDiagnosticConfiguration>().Copy(), resolver.TryResolve<NativeRuntimeLaunch>());
 
     internal AetherOptions Snapshot()
     {
@@ -73,7 +75,7 @@ public sealed class AetherOptions
             ReplacementDeadlines = ReplacementDeadlines with { },
             BuildDirectory = Path.GetFullPath(BuildDirectory ?? Path.Combine(ReportDirectory, "builds")), BuildTimeout = BuildTimeout,
             BuildRetention = buildRetention, ChildDiagnostics = childDiagnostics,
-            StatusChanged = StatusChanged, RuntimeFactory = RuntimeFactory, ViewportTransport = ViewportTransport,
+            StatusChanged = StatusChanged, RuntimeFactory = RuntimeFactory, RuntimeLaunch = RuntimeLaunch, ViewportTransport = ViewportTransport,
             ViewportTransportFactory = ViewportTransportFactory
         };
     }

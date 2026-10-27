@@ -1,5 +1,16 @@
 # Alloy / Argentis: история работ и проверок
 
+## Подключаемый Editor: решение ARCH2 — 2026-10-27
+
+Согласован переход TrueMoon.Aether.Editor из WinExe в library/NuGet package;
+host подключает reusable View и настраивает поддержанный window/backend/resources.
+Подробные шаги/acceptance находятся в
+[engine ARCH2](../engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27).
+UI PLAN/STATUS уточняют роль consumer и порядок ARCH2 → console/export → authoring,
+общие controls/input/layout и K/PA/INF критерии сохраняются у UI. Изменены только
+документы; code/API/build/tests/native/package checks не запускались. Прежние
+passing результаты сохраняют свои даты; новая library integration ещё не реализована.
+
 ## PA8b.4: системный акцент границы — 2026-10-25
 
 Общие WindowFrame.UseSystemAccentBorder/SystemAccentColor, IWindowSystemColors и

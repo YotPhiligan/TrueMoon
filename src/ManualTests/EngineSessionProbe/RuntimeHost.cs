@@ -21,21 +21,18 @@ using EngineSessionProbe.Measurements;
 
 namespace EngineSessionProbe;
 
+/// <summary>Runs the probe's fault-injecting game runtime, including the legacy Game.Logic fixture.</summary>
 public static class RuntimeHost
 {
+    /// <summary>The environment key carrying the runtime launch descriptor.</summary>
     public const string BootstrapKey = NativeRuntimeFactory.BootstrapKey;
+    /// <summary>Reads the validated bootstrap and runs the child until stop, parent exit or the probe deadline.</summary>
+    /// <returns>Zero after the runtime and its owned resources have stopped.</returns>
     public static async Task<int> RunAsync()
     {
-        var text = Environment.GetEnvironmentVariable(BootstrapKey) ?? throw new InvalidDataException("Missing bootstrap.");
-        if (text.Length > 16384) throw new InvalidDataException("Oversized bootstrap.");
-        var launch = JsonSerializer.Deserialize<SessionLaunch>(text) ?? throw new InvalidDataException("Invalid bootstrap.");
-        launch.Identity.Validate();
+        var bootstrap = RuntimeBootstrap.ReadEnvironment(allowLegacyGame: true);
+        var launch = bootstrap.Launch; var parentId = bootstrap.ParentProcessId;
         using var baseline = Environment.GetEnvironmentVariable(BaselineCapture.EnvironmentKey) == "1" ? new BaselineCapture() : null;
-        if (launch.Identity.HostContractId != BuildIdentity.HostId || launch.Build == null && launch.Identity.GameBuildId != BuildIdentity.GameId ||
-            launch.Build != null && launch.Build.BuildId != launch.Identity.GameBuildId ||
-            !launch.Endpoint.StartsWith("engine-", StringComparison.Ordinal) || launch.Endpoint.Length > 100)
-            throw new InvalidDataException("Bootstrap build/endpoint mismatch.");
-        var parentId = int.Parse(Environment.GetEnvironmentVariable("-p") ?? throw new InvalidDataException("Missing parent."));
         var surfaceRole = launch.Behavior.StartsWith("gpu-surface", StringComparison.Ordinal);
         var gpuRole = surfaceRole || launch.Behavior.StartsWith("gpu-import", StringComparison.Ordinal);
         await using var app = App.Builder(_ => { }).Setup(c =>

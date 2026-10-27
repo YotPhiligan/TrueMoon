@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+using TrueMoon.Aether.Editor;
+using System.Numerics;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon.Aether.Preview;
@@ -12,7 +13,7 @@ using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 
-namespace TrueMoon.Aether.Editor;
+namespace TrueMoon.ManualTests.AetherEditorHost;
 
 // Directed acceptance uses only the current app tree and a disposable external project; never global input/settings.
 internal static class EditorTransformSmoke

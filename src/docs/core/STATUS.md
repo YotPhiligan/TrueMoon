@@ -1,6 +1,11 @@
 # Core: состояние и точка продолжения
 
-Последняя работа — **2026-10-27, bounded history reader/importer для child logs**.
+Связанное планирование — **2026-10-27, ARCH2 пакетный Editor/host**.
+Текущих App/IFactory contracts достаточно для начала; новые Core APIs не назначены.
+Порядок работ изменён: [ARCH2](../engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27)
+предшествует console/export. Core code/API не менялись; build/tests не запускались.
+
+Предыдущая реализация и проверка — **2026-10-27, bounded history reader/importer для child logs**.
 UseDiagnostics(pipeline) предоставляет borrowed nondisposable reader/importer views;
 импорт назначает host identity/sequence, сохраняет child Origin/PID/time/trace,
 применяет прежние filters/budgets и не re-emits global listeners.
@@ -17,7 +22,7 @@ Release incremental1316warnings, SDK10.0.403.
 Aether отдельно проверил3actual Preview children и control/log isolation;
 published/GPU/package/performance acceptance не повторены.
 
-CORE6 остаётся частичным: далее Editor console/export и domain/frame metrics.
+CORE6 остаётся частичным: после ARCH2 — Editor console/export и domain/frame metrics.
 Bootstrap-before-pipeline, App-private routing, generator и общий quota report/
 artifact roots отдельны. [Child transport](../engine/DIAGNOSTICS_DELIVERY.md)
 принадлежит Aether; предыдущие [operations/telemetry](HISTORY.md#операции-и-трассы-диагностики--2026-10-26),
@@ -149,7 +154,9 @@ JSON failure checks различают serialization error до записи и 
 
 ## Следующий конкретный шаг
 
-Для текущего diagnostics направления — Editor console/export через Core reader,
+Сначала общий ARCH2 package/host transition; concrete App composition остаётся
+в executable, module registrations используют существующие общие contracts.
+После ARCH2 для diagnostics направления — Editor console/export через Core reader,
 затем domain/frame metrics поверх CORE6d и готовой child delivery lane.
 App-private routing и
 bootstrap capture требуют самостоятельного контракта; общий quota report roots

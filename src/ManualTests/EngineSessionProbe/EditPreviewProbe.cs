@@ -40,6 +40,7 @@ internal static class EditPreviewProbe
             context.UseAether(options =>
             {
                 options.HostContractId = BuildIdentity.HostId; options.GameBuildId = BuildIdentity.PreviewId; options.ReportDirectory = directory;
+                options.RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime");
                 options.ViewportTransportFactory = resolver => new Factory<IGameViewportTransport, GpuResourceHost>(resolver.Resolve<EditorGpuViewportBinding>().CreateTransport);
             });
             context.UsePresentationFactory<ViewportView>(options =>

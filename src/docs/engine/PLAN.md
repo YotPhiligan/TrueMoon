@@ -11,14 +11,16 @@ ARCH1a.1/2 immutable authoring model, scene aggregate/resolver и compatibility 
 ENG5c.1/2 runtime scene consumer/комната и reach/interaction реализованы2026-10-22;
 ARCH1b.1 локальный Transform/query/history API и первый независимый GPU Edit preview проверены2026-10-23;
 остальной ARCH1, ENG5 и ENG6–ENG8 запланированы**.
-[Текущий прикладной маршрут: ED3a и затем create/delete](EDITOR_PLAN.md#ed3-общие-операции-редактирования-и-undoredo).
+[Текущий приоритет: ARCH2, Aether и Editor как подключаемые пакеты](#arch2-aether-и-editor-как-пакеты--2026-10-27).
+После перехода — ED6a/ED8a console/export и дальнейший authoring маршрут ED4c.2/3.
 ED1a/ED2a/b и Transform/history/preview consumer реализованы; exact проверки и
 точка продолжения ведутся в STATUS. Датированные «следующие шаги» ниже сохраняют
 контекст своего этапа и не заменяют актуальный статус.
 [Статус направления](STATUS.md), [общий план](../PLAN.md),
 [правила ведения](../PLANNING.md).
 
-План приложения **TrueMoon.Aether.Editor** согласован2026-10-22:
+Прикладной план **TrueMoon.Aether.Editor** согласован2026-10-22;
+решение2026-10-27 меняет целевую роль Editor на библиотеку/NuGet-пакет:
 [EDITOR_PLAN.md](EDITOR_PLAN.md) — единственный подробный checklist ED1–ED8 для
 перехода от стенда к рабочему инструменту. Первый срез: открыть сцену → изменить
 Transform → увидеть Edit preview → Undo/Redo → сохранить → повторно открыть.
@@ -58,6 +60,128 @@ CPU Debug budget breaches и allocation debt reference GPU staging path;
 редактирования Play через snapshot; локальные ИИ-агенты подключаются через MCP
 adapter. [Решения и декомпозиция ARCH1](#arch1-entity-components-и-api--2026-10-22)
 выполняются по подэтапам: ARCH1a.1/2 реализованы; runtime world/tooling пока запланированы.
+
+## ARCH2: Aether и Editor как пакеты — 2026-10-27
+
+Согласовано с пользователем: TrueMoon развивается как инфраструктурный framework
+и набор пакетов для подключения к пользовательским решениям. TrueMoon.Aether
+содержит основной функционал движка; TrueMoon.Aether.Editor становится библиотекой
+и NuGet-пакетом редактора. Executable — отдельный composition host пользователя
+или тонкий поставляемый пример. Этот раздел — единственное место подробной
+декомпозиции перехода; ED1–ED8 продолжаются в EDITOR_PLAN.md после него.
+
+**Статус2026-10-27:** ARCH2a–c реализованы: shared scene persistence, Editor
+library/App integration и explicit runtime executable/bootstrap/identity.
+[Инвентаризация типов, API и ownership](PACKAGE_BOUNDARIES.md).
+Main/CLI/smokes остаются в AetherEditorHost, отдельный AetherRuntimeHost зависит
+только от bootstrap/Aether. NativeRuntimeLaunch задаёт command/arguments/working directory;
+EngineChild больше не выбирает current executable и не добавляет --runtime.
+Same-exe — явный совместимый профиль CurrentProcess("--runtime").
+Source Debug/published Release headless independent runtime проверен DLL/apphost;
+общий managed Release не green из-за прежнего CPU receiver race, legacy build/Replace
+probes имеют устаревшие fixtures. [Точный scope и failures](STATUS.md).
+ARCH2d/e остаются открыты: hosts/resources, fonts без ManualTests и independent
+NuGet/native acceptance. Прежний functional GPU proof был без Vulkan validation layer.
+
+### Принятые границы ARCH2
+
+| Часть | Целевая ответственность |
+| --- | --- |
+| TrueMoon.Aether | Entities/components, authoring model и общие scene formats/validation/resolution, mutations/revisions/history, runtime/simulation/rendering, preview, builds/checkpoints/Replace, sessions/IPC/process coordination |
+| TrueMoon.Aether.Editor | View/Data/ViewModel/IViewStyle, панели/inspector/hierarchy/viewport adapters, UI-команды, selection/workspace/layout, прикладные project/document sessions и координация пользовательских действий |
+| Исполняемый host | Main/CLI/environment, App composition/start/run, выбор поддержанного backend/window/fonts/paths и настройки runtime launch; smoke/probe code остаётся в исполняемых проверочных consumers |
+| Пользовательская игра | Собственные компоненты/системы/контент и game entry; игровой код не включается в пакеты движка или редактора и не загружается в Editor CLR |
+
+Editor зависит от Aether и нужных Alloy/Argentis/Hosting contracts; Aether не
+получает зависимость на Editor/UI. Runtime/game host может использовать Aether
+без Editor package. Существующий Vulkan профиль не становится автоматически
+универсальным по OS/backend. Новые engine Contracts/Runtime/Editor.Core сборки
+ради самого переноса не вводятся; Aether сохраняет одну engine assembly.
+
+Общие форматы/операции документа доступны headless и принадлежат Aether; открытые
+документы, draft/selection/dirty presentation, Save/Discard/Cancel UX и workspace
+принадлежат Editor. Единственный committed state/revision/history owner сохраняется.
+Размещение каждого existing типа определяется назначением, не массовым переносом
+всех non-View классов в Aether. Публичные namespace/API изменения сопровождаются
+обновлением consumers и migration notes; compatibility scene/project files не
+меняется без отдельного versioned решения.
+
+### Подключение и ownership ARCH2
+
+Планируемая публичная точка — UseAetherEditor(...) на IAppConfigurationContext.
+Она копирует/валидирует options, регистрирует Cobalt services, models/styles и
+IFactory products и согласует их с App lifecycle. Существующие UseAether,
+UseAetherAuthoring и runtime registration paths сохраняют свои назначения.
+Новые общие App contracts вводятся только при доказанной необходимости; concrete
+App.Build/Run и CLI не переносятся в Aether с новой bootstrap dependency.
+
+Нужны стандартный Editor View/window integration и создание Editor View для
+пользовательского host. Window/backend выбирает host в поддержанном профиле;
+редактор не создаёт собственный вложенный App. Registration не открывает окно,
+не запускает игру/SDK/compiler и не создаёт GPU resources. UI products создаются
+на owner thread; окно/родитель владеет View, App/project — сервисами/tasks, borrowed
+dependencies не освобождаются aliases. Failed creation/startup/stop/drain/dispose
+сохраняют существующий один owner и observable cleanup/retry contract.
+
+Runtime launch задаётся явно executable/arguments/options через injected factory;
+работа Editor не требует скрытой поддержки --runtime в произвольном consuming exe.
+Отдельный runtime host подключает Aether без Editor. Same-executable runtime branch
+допускается как явно настроенный совместимый вариант. Общие bootstrap parsing/
+validation/registration находятся в Aether, process Main/App composition — в host.
+Exact host/runtime/game identities и capabilities сохраняются: entry-assembly
+fingerprint и проверка counterpart artifacts пересматриваются согласованно,
+без удаления same-build/version/session/nonce/generation fences. Mixed-version
+negotiation этим переносом не вводится.
+
+Решение ARCH2c2026-10-27: HostContractId связывает role-labelled host/runtime entry
+bytes и точные shared Aether/Contracts/Enerit/Mithril binaries. Обе deployment
+директории и собственный actual entry проверяются без загрузки counterpart/game
+в parent CLR; unchanged same-exe сохраняет прежний HostId. RuntimeLaunchIdentity
+Version1 передаёт absolute counterpart paths в bounded bootstrap (16384characters,
+depth32), не добавляя поля в control/frame wire. Control3/Frame1/Snapshot2,
+PID/Hello/nonce/session/generation fences прежние. Это trusted-local compatibility,
+не authentication и не complete native/private dependency fingerprint; in-place
+mutation deployment во время сессии не поддерживается. Новый pair требует rebuild
+игровых artifacts; прежние checkpoints несовместимы. Scene/project format не меняется. Без descriptor
+общие/headless services работают, default native Start даёт configuration error.
+RuntimeBootstrap выполняет общую validation до App; Main/App.Build принадлежат host.
+
+### Этапы ARCH2
+
+| ID | Задача | Проверяемый результат |
+| --- | --- | --- |
+| ARCH2a | Реализовано2026-10-27: общие scene files/публичная headless persistence и карта границ Editor | SceneFileCodec/store/results/conflict в Aether.Scenes; UseAetherScenePersistence через App, Editor делегирует persistence. [Inventory/ownership/migration](PACKAGE_BOUNDARIES.md); Aether1347/Editor743 Debug/Release, общий Release имеет отдельный Mithril ready-file failure |
+| ARCH2b | Реализовано2026-10-27: Editor library/packable module | Main/CLI/runtime branch/smokes в AetherEditorHost; metadata/PACKAGE.md, UseAetherEditor/options/factories/lifecycle и стандартная window integration. 20новых cases, Editor763/Aether1347 Debug/Release; source/published functional native proof. Vulkan validation profile требует отсутствующий layer; полный package proof остаётся ARCH2e |
+| ARCH2c | Реализовано2026-10-27: explicit runtime bootstrap и launch identity | NativeRuntimeLaunch/RuntimeBootstrap/paired fingerprint, отдельный AetherRuntimeHost без Editor/UI; source Debug/published Release DLL/apphost4/4. Aether1536/1536 Debug,1535/1536 Release (прежний CPU receiver race), Editor763/763 обе; legacy build/Replace fixture failures отдельно |
+| ARCH2d | Вынести тонкие executable consumers и ресурсы | Host example содержит Main/composition, runtime host использует Aether; smoke/probes не попадают в reusable API. Шрифты/лицензии/темы/шейдеры и native assets доставлены владельцем либо явно настраиваются host, без путей в ManualTests/source checkout |
+| ARCH2e | Проверить NuGet consumption и повторить затронутую acceptance | Fresh packages и отдельное решение без repo ProjectReference/linked source открывают Editor и запускают Aether runtime. Source Debug/published Release, headless/both-DI и native scenarios проверяются раздельно; supported configuration и ограничения документированы |
+
+Порядок: ARCH2a → ARCH2b/c → ARCH2d → ARCH2e. Этот переход предшествует новым
+ED6a/ED8a console/export и ED4c.2/3 features; существующее поведение сохраняется
+регрессиями. Полный World/ECS/ARCH1c, генератор событий, новые DI scopes, MMF и
+общий UI beta не становятся prerequisites переноса.
+
+### Критерии завершения ARCH2
+
+- Aether и Editor — independently consumable assemblies/packages; executable
+  consumers не становятся dependencies пакетов. Aether headless/runtime не
+  требует Editor/UI; выбранные platform/backend ограничения указаны явно.
+- Пользовательский App подключает модули через публичные extensions/factories,
+  настраивает View/host/runtime launch без правки исходников framework.
+- Standard hosted window и Editor View внутри пользовательского UI проверены
+  отдельными consuming scenarios: owner thread, parent/window ownership,
+  detach/close и повторное создание без удержания View общими services.
+- Fresh independent NuGet consumer build/publish/run вне checkout подтверждает
+  references/analyzers/native/font/resource payloads; assets не берутся из ManualTests.
+- Сохраняется рабочий Open → Transform → preview → Undo/Redo → Save/reopen;
+  Build/Play/Replace/Stop и log delivery/raw capture проходят затронутые regression
+  scenarios. Failed/cancelled startup/close и crashed runtime не теряют документ.
+- Проверены sole ownership, UI thread affinity, borrowed aliases, late-result
+  fencing, actual stop/drain/reap и retry после cleanup failure. Source/package/
+  native результаты фиксируются отдельно, historical passing не переносится.
+- README/quickstart, package metadata, migration notes, supported OS/RID/backend
+  и точные команды соответствуют новым artifacts. NuGet publication — отдельный
+  шаг; ARCH2 не закрывает K3/K7/K8/VRAM, long trends или весь ED8/R1–R6.
 
 ## Цель и заданные требования
 
@@ -166,7 +290,7 @@ default Cobalt, но это ещё не означает, что весь вну
 | [AetherHost](../../TrueMoon.Aether/Hosting/AetherHost.cs) | Конструктор создаёт Supervisor/FrameSession/GameBuildCompiler/GameReplacement/GameEditor, property initializer создаёт GpuResourceHost. Зависимости агрегата собираются вручную вне DI registration factory или внедрённой IFactory |
 | [Runtime factory](../../TrueMoon.Aether/Sessions/SessionSupervisor.cs), [options](../../TrueMoon.Aether/Hosting/AetherOptions.cs) | IRuntimeFactory внедрён, но не реализует общий IFactory; viewport выбран через Func. Factory-based ownership уже есть, унификация контрактов ещё не выполнена |
 | [GameBuildLoader](../../TrueMoon.Aether/Runtime/GameBuildLoader.cs) | Игровой IGameSession создаётся через Activator.CreateInstance; DI/IFactory не участвует, constructor dependencies игрового entry point получить нельзя |
-| [Editor composition](../../TrueMoon.Aether.Editor/EditorApplication.cs), [runtime composition](../../TrueMoon.Aether.Editor/RuntimeEntryPoint.cs) | Workspace/binding/runtime factory/commands и runtime protocol/frame producer/IPC services создаются вручную. Часть зависимостей захватывается callbacks вместо регистрации в графе App |
+| [Editor composition](../../ManualTests/AetherEditorHost/EditorApplication.cs), [runtime composition](../../ManualTests/AetherEditorHost/RuntimeEntryPoint.cs) | Workspace/binding/runtime factory/commands и runtime protocol/frame producer/IPC services создаются вручную. Часть зависимостей захватывается callbacks вместо регистрации в графе App |
 | [SceneResolver](../../TrueMoon.Aether/Scenes/SceneResolver.cs) | Статический pipeline вручную создаёт EntityResolver с каталогами. Для применения правила к authoring services нужна явная factory/service boundary; документы и immutable results остаются данными |
 
 Правильные существующие границы сохраняются: UseAether snapshots options,
@@ -2110,6 +2234,10 @@ physical DPI/loss/K7/final alpha остаются отдельными зада�
 Этот исторический bounded этап остаётся реализованной основой. Дальнейшие
 прикладные задачи и acceptance развёрнуты в [ED1–ED8](EDITOR_PLAN.md), без
 дублирования checklist в общем engine плане.
+Исторический WinExe/IsPackable=false и current-executable launch ниже описывают
+профиль2026-10-22; целевая поставка заменена решением
+[ARCH2](#arch2-aether-и-editor-как-пакеты--2026-10-27): library/App переход уже реализован,
+runtime/assets/independent package acceptance остаются открыты.
 
 По запросу пользователя после PA8a приоритетно реализовать первый основной экран
 редактора; ENG5c.3 collisions и остальные engine задачи сохраняют свою точку

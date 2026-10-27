@@ -16,6 +16,8 @@ try
     if (args is ["--runtime"])
         return ChildDiagnosticDeliveryProbe.IsChild() ? await ChildDiagnosticDeliveryProbe.RunChildAsync()
             : PreviewRuntimeEntry.IsPreview() ? await PreviewRuntimeEntry.RunAsync() : await RuntimeHost.RunAsync();
+    if (args is ["--runtime-launch-proof", var runtimePath, var runtimeLaunchDirectory])
+        return await RuntimeLaunchProbe.RunAsync(Path.GetFullPath(runtimePath), Path.GetFullPath(runtimeLaunchDirectory));
     if (args is ["--child-diagnostics-proof", var deliveryDirectory]) return await ChildDiagnosticDeliveryProbe.RunAsync(Path.GetFullPath(deliveryDirectory));
     if (args is ["--edit-preview-proof", var previewDirectory]) return await EditPreviewProbe.RunAsync(Path.GetFullPath(previewDirectory));
     if (args is ["--scene"]) return await SceneInputProbe.RunAsync(null);
@@ -80,7 +82,7 @@ namespace EngineSessionProbe
             if (scenario == "checkpoint") return await CheckpointProbe.RunAsync(directory);
             if (scenario == "replacement") return await ReplacementProbe.RunAsync(directory);
             if (scenario == "diagnostics") return await DiagnosticsProbe.RunAsync(directory);
-            var factory = new NativeRuntimeFactory(); var state = new AuthoringState();
+            var factory = new NativeRuntimeFactory(NativeRuntimeLaunch.CurrentProcess("--runtime")); var state = new AuthoringState();
             var before = JsonSerializer.Serialize(state); var trace = new List<object>();
             var deadlines = scenario == "startup-timeout" ? new SessionDeadlines { Startup = TimeSpan.FromSeconds(1) } : new SessionDeadlines();
             await using var app = CreateApp(factory, state, directory, deadlines,
@@ -194,7 +196,7 @@ namespace EngineSessionProbe
         }
         public static async Task<int> RunParentAsync(string directory)
         {
-            var factory = new NativeRuntimeFactory(); var state = new AuthoringState();
+            var factory = new NativeRuntimeFactory(NativeRuntimeLaunch.CurrentProcess("--runtime")); var state = new AuthoringState();
             await using var app = CreateApp(factory, state, directory); await app.StartAsync();
             var supervisor = app.Services.Resolve<AetherHost>()!.Supervisor;
             await supervisor.StartAsync(state.Snapshot());

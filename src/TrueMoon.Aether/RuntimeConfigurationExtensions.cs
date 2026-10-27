@@ -21,6 +21,7 @@ public static class RuntimeConfigurationExtensions
     /// <summary>Registers caller-independent runtime factories and one App-owned runtime host.</summary>
     /// <param name="context">App configuration with UseAether.</param><param name="launch">Validated child launch.</param>
     /// <param name="parentId">Owned parent process id.</param><returns>The same configuration.</returns>
+    /// <exception cref="InvalidDataException">The selected game artifact directory is missing, relative or malformed.</exception>
     public static IAppConfigurationContext UseAetherRuntime(this IAppConfigurationContext context, SessionLaunch launch, int parentId)
     {
         ArgumentNullException.ThrowIfNull(context); ArgumentNullException.ThrowIfNull(launch);
@@ -44,6 +45,17 @@ public static class RuntimeConfigurationExtensions
     private static IAppConfigurationContext RegisterRuntime(IAppConfigurationContext context, SessionLaunch launch, int parentId)
     {
         launch.Identity.Validate();
+        if (launch.Build is { } build)
+        {
+            if (string.IsNullOrWhiteSpace(build.DirectoryPath) || !Path.IsPathFullyQualified(build.DirectoryPath) || build.DirectoryPath.Contains('\0'))
+                throw new InvalidDataException("Runtime game artifact directory must be an absolute path without NUL.");
+            try { launch = launch with { Build = build with { DirectoryPath = Path.GetFullPath(build.DirectoryPath) } }; }
+            catch (Exception error) when (error is ArgumentException or NotSupportedException or IOException)
+            {
+                throw new InvalidDataException("Invalid runtime game artifact directory.", error);
+            }
+        }
+        if (launch.RuntimeIdentity != null) BuildIdentity.ValidateRuntime(launch);
         launch = launch with { DiagnosticDelivery = launch.DiagnosticDelivery?.Snapshot() };
         if (parentId <= 0 || parentId == Environment.ProcessId) throw new ArgumentOutOfRangeException(nameof(parentId));
         if (launch.Build != null && launch.Build.BuildId != launch.Identity.GameBuildId || string.IsNullOrWhiteSpace(launch.Endpoint) ||
