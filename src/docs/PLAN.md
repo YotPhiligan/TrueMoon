@@ -86,8 +86,12 @@ bounded optional header, Client/Server correlation и штатный Aether cons
 Следующий [ENE6d.2 resource meter](enerit/PLAN.md#ene6d2-агрегированные-метрики-ресурсов--2026-10-26)
 показывает process aggregate queue/pending/server requests/bytes/connections и
 фиксированные overload counters; measurement callbacks выполняет observer.
-Далее timeout/reconnect/error classification, queue-wait и domain/frame aggregates,
-затем bounded child delivery и console/export; полный diagnostics roadmap частичен.
+Профиль27октября [ENE6d.3](enerit/PLAN.md#ene6d3-исходы-ipc-и-ожидание-admission--2026-10-27)
+добавляет fixed request/connection failure classes, reconnect/late counters и
+pull-only queue wait count/sum. [Child delivery ENG8a.3/ENE6d.4](engine/PLAN.md#child-diagnostic-delivery-eng8a3--ene6d4--2026-10-27)
+использует separate bounded endpoint и Core history/import views, без replay и
+shared control queue. Далее bounded Editor console/export, затем domain/frame aggregates;
+полный diagnostics roadmap остаётся частичным.
 
 Детали у владельцев: [Core CORE6](core/PLAN.md#core6-структурированная-диагностика--2026-10-25)
 — schema/API/pipeline/sinks/lifecycle и typed generation;

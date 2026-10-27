@@ -1,7 +1,8 @@
 ﻿# Диагностика вызовов Enerit pipes
 
-Профили ENE6d.1/2 от2026-10-26. [Trace contract](PLAN.md#ene6d1-bounded-trace-header-и-ene6c-compatibility--2026-10-26),
+Профили ENE6d.1/2 от2026-10-26 и ENE6d.3 от2026-10-27. [Trace contract](PLAN.md#ene6d1-bounded-trace-header-и-ene6c-compatibility--2026-10-26),
 [resource metrics](PLAN.md#ene6d2-агрегированные-метрики-ресурсов--2026-10-26),
+[исходы и ожидание](PLAN.md#ene6d3-исходы-ipc-и-ожидание-admission--2026-10-27),
 [текущие проверки](STATUS.md), [Core API](../core/DIAGNOSTICS.md#трассы-и-метрики-операций).
 
 ## Подключение
@@ -79,8 +80,67 @@ connection уже до Start. После успешного drain cell удал�
 значения (они могут уже быть0). Meter и накопительные overload totals живут до
 завершения процесса. MetricsEnabled=false исключает owner из state и totals.
 Это не измерение heap/pool cache, service-owned DTO/response buffers или wire bytes.
-Queue-wait histograms, timeout/reconnect/error classification и child delivery —
-следующие профили; operation duration уже есть в Core.
+Operation duration уже есть в Core; следующие instruments добавляют причины
+отказов и отдельное время ожидания admission.
+
+## Исходы, reconnect и время ожидания
+
+Тот же Meter TrueMoon.Enerit.Pipes добавляет7instruments. Они также управляются
+copied MetricsEnabled, не требуют trace/event listeners и работают как cumulative
+observable counters: поздний observer получает totals, закрытие продукта их не
+сбрасывает. Producers обновляют только числа; callback вызывается при collection.
+
+| Instrument | Тип / unit | Tags и смысл |
+| --- | --- | --- |
+|truemoon.enerit.pipes.client.failures|ObservableCounter<long> / {request}|reason: один завершившийся failed instrumented Invoke|
+|truemoon.enerit.pipes.server.failures|ObservableCounter<long> / {request}|reason: первый failure начатой server operation|
+|truemoon.enerit.pipes.connection.failures|ObservableCounter<long> / {connection}|side=client/server, reason=protocol/transport/other|
+|truemoon.enerit.pipes.client.reconnects|ObservableCounter<long> / {connection}|Без tags: успешные connections после первой для данного client|
+|truemoon.enerit.pipes.client.late_responses|ObservableCounter<long> / {response}|Без tags: validated response без ожидающего caller, включая unknown/duplicate Guid|
+|truemoon.enerit.pipes.client.queue.wait.count|ObservableCounter<long> / {request}|outcome=admitted/cancelled/stopped: завершённые queue waits|
+|truemoon.enerit.pipes.client.queue.wait.duration|ObservableCounter<double> / s|Те же3outcome: суммарное время queue waits, не histogram|
+
+Client reason имеет ровно9значений: timeout, cancelled, stopped, overload, serialize,
+decode, remote, transport, other. Реальный OperationCanceledException со связанными
+tokens классифицируется в порядке local Stop → caller cancellation → request
+timeout. Таймер не переименовывает IOException/remote/decoder error. Callback OCE
+без отменённого linked origin остаётся serialize/decode. Код фиксирует источник
+результата TCS, а не анализирует строку remote error. Начальные null/disposed guards
+до старта instrumentation не увеличивают failures. Counter обновлён до completion
+самого Invoke Task; Stop.Completion не подменяет ожидание всех caller tasks.
+
+Server reason имеет ровно6значений: handler, cancelled, stopped, overload, encode,
+response. False/throw handler — handler (или cancelled при OCE без local stop),
+oversized successful response — encode, настоящий admission refusal — overload.
+Overload exception, выброшенный самим handler, остаётся handler. Success с
+сопутствующим error не считается failure согласно прежнему handler contract.
+Первый класс запроса сохраняется, даже если запись ответа затем отказала.
+Отдельный connection counter фиксирует delivery/framing failure; складывать
+request failures и connection failures как уникальные неуспешные calls нельзя.
+
+InvalidDataException в connection path — protocol, IOException/ObjectDisposed —
+transport, остальные — other. Client считает failed listener cycle; server first
+fault fence считает connection instance один раз при конкурирующих read/write
+ошибках. Local Stop не считается connection failure. Remote EOF может быть и
+намеренным закрытием peer: без stop-frame определить его намерение невозможно.
+Malformed header/незавершённый payload учитываются на уровне connection до handler.
+Remote handler error даёт server handler/cancelled и client remote; это не protocol
+failure и не подтверждение rollback remote работы. Initial connect и failed retry
+attempts не увеличивают reconnects. Late response не создаёт второй failed Invoke.
+
+Wait начинается только после принятия caller в admission queue и заканчивается
+при выходе из ожидания слота. Immediate admission, full-queue refusal, pre-cancel
+и closed guard не дают sample. Полученный slot — admitted, иначе закрытый gate
+в момент cleanup — stopped, остальные отмены (включая timeout) — cancelled.
+Stopwatch даёт monotonic elapsed; count/time записываются до admission drain signal.
+Для среднего по окну используйте delta(duration)/delta(count) соответствующего
+outcome при ненулевом delta(count). Это не полное Invoke duration или p95;
+individual samples/histogram и неограниченные event buffers не создаются.
+Отдельные счётчики/серии читаются раздельно, общего coherent snapshot нет.
+
+Всего13instruments и37фиксированных measurement series:34long/3double. Старые5state
+и3overload series сохранены; новых endpoint/service/exception-text/ID dimensions нет.
+Bounded child-log delivery остаётся следующим отдельным контрактом.
 
 ## Wire и совместимость
 
@@ -158,5 +218,5 @@ Payloads и endpoint/nonce не записываются. Лимиты strings/p
 Aether включает propagation на обеих control peers через UseAether/UseAetherRuntime
 factories, detailed request events оставляет выключенными. Same-build HostId включает
 Enerit assembly; child/host/game пересобираются совместно. Resource metrics выше
-включены стандартными options. Дополнительные IPC Start/Stop/latency/error показатели
+включены стандартными options. Дополнительные IPC Start/Stop/latency показатели
 и bounded child-log delivery остаются отдельными задачами.

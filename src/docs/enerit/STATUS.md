@@ -1,30 +1,28 @@
 # Enerit: состояние и точка продолжения
 
-Последняя работа — **2026-10-26, ENE6d.2 метрики ресурсов и перегрузки**.
-Process-wide Meter TrueMoon.Enerit.Pipes показывает pending/queued клиента,
-server requests/request bytes/connections и cumulative admission refusals.
-Пять state instruments без tags; overload только3фиксированные side/reason.
-Copied MetricsEnabled=true независим от Core operation metrics/tracing/events.
-Shared server учитывается один раз; cancelled Stop wait сохраняет numeric state.
-Callbacks выполняются при observer collection, не в admission/Invoke.
-[API/limits](DIAGNOSTICS.md#метрики-ресурсов),
-[план](PLAN.md#ene6d2-агрегированные-метрики-ресурсов--2026-10-26).
+Последняя связанная работа — **2026-10-27, ENE6d.4 отдельный child diagnostic lane**.
+Aether использует existing typed invocation с отдельным endpoint,72KiB wire cap,
+one request/connection, copied batch/rate/deadline limits и выключенной telemetry
+самой delivery lane. Control не делит admission с logs; generic framing/generator
+не расширялись. [Domain contract](../engine/DIAGNOSTICS_DELIVERY.md),
+[связанные проверки](HISTORY.md#ene6d4-отдельный-child-log-канал--2026-10-27).
 
-Новые33Enerit cases, final narrow33/33 и combined291/291. Полные Enerit291/291,
-generator114/114 Debug/Release, failed/skipped0. Full solution4054/4054 в каждой
-конфигурации: Core314, Aether1218, Editor741. Builds0errors:
-Debug nonincremental1530warnings, Release incremental627warnings, SDK10.0.403.
-[Матрица/команды](HISTORY.md#ene6d2-метрики-ресурсов-и-перегрузки--2026-10-26),
-[evidence](../../TestResults/DiagnosticsIpcMetrics-20261026-1/verification.json).
-Isolated real process подтверждает retained connection после failed Stop без
-загрязнения parent aggregates. Published/GPU/package/performance не повторялись.
-Предыдущий Aether CPU receiver Release failure не повторился; его исправление
-и устранение исторического Mithril race не заявляются.
+Текущие Enerit343/343 и generator114/114 Debug/Release, failed/skipped0.
+Full solution4285/4285 в каждой конфигурации; Core373/Aether1338/Editor741.
+Builds0errors: Debug nonincremental1546warnings, Release incremental1316warnings,
+SDK10.0.403. [Evidence](../../TestResults/DiagnosticsDelivery-20261027-1/verification.json).
+3actual Preview children подтвердили independent control/log flood/reap; это
+Aether consumer proof, не весь ENE6c/long-load/platform/package acceptance.
+Пользовательский Microsoft DI10.0.14 сохранён; historical FrameReceiver/Mithril races открыты.
 
-ENE6d остаётся частичным: далее timeout/reconnect/error counters и queue-wait
-duration, затем отдельная bounded child-log delivery. Полный ENE6c negotiation,
-remote cancel, MMF и long trends открыты. Прежний [trace header профиль](HISTORY.md#ene6d1-trace-context-через-pipes--2026-10-26)
-сохраняет opt-in propagation и legacy default framing; MEL не добавлен.
+Предыдущий собственный срез — ENE6d.3 outcome/wait metrics:13instruments/
+37bounded series, pull-only callbacks, fixed failure classes, reconnect/late и
+queue wait count/seconds. Его52newcases и ENE6d.2 resource profile прошли текущие
+full suites. [Schema](DIAGNOSTICS.md#исходы-reconnect-и-время-ожидания),
+[история](HISTORY.md#ene6d3-исходы-ipc-и-ожидание-admission--2026-10-27).
+ENE6d частичен: далее Editor console/export, domain/frame aggregates и queue
+distribution; ENE6c negotiation, remote cancel, MMF и long trends отдельны.
+MEL не добавлен; прежние trace/resource/telemetry flags сохраняются.
 
 Предыдущая работа — **2026-10-23, первый ENE6a/MIT6a implementation slice**.
 Finite client admission/wait queue и shared server count/request-byte/connection
@@ -144,9 +142,9 @@ omitted-analyzer CS0234. Свежая package matrix текущим baseline н�
 
 Первый ENE6a/MIT6a срез, ARCH1b.1 и ED1a завершены в указанном scope. Далее
 прикладные задачи [engine STATUS](../engine/STATUS.md#следующий-конкретный-шаг) с явными preview limits и lifecycle ownership.
-Ближайший diagnostics срез — ENE6d timeout/reconnect/error counters и queue-wait
-duration с фиксированными dimensions; затем отдельный bounded child-log канал
-без starvation control. ENE6c negotiation развивать перед расширением contracts.
+Ближайший diagnostics consumer — Editor console/export поверх готового отдельного
+child-log канала; затем domain/frame aggregates. Queue distribution остаётся отдельной задачей.
+ENE6c negotiation развивать перед расширением contracts.
 Полный fault matrix MIT6a и trends MIT6c не выводятся из этого среза;
 remote cancel/replay не обещать существующим API.
 Enerit performance backlog: scalar c1/c8 allocation/CPU profile до выбора изменений,

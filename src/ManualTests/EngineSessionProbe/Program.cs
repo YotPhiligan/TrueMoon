@@ -14,7 +14,9 @@ using EngineSessionProbe.Measurements;
 try
 {
     if (args is ["--runtime"])
-        return PreviewRuntimeEntry.IsPreview() ? await PreviewRuntimeEntry.RunAsync() : await RuntimeHost.RunAsync();
+        return ChildDiagnosticDeliveryProbe.IsChild() ? await ChildDiagnosticDeliveryProbe.RunChildAsync()
+            : PreviewRuntimeEntry.IsPreview() ? await PreviewRuntimeEntry.RunAsync() : await RuntimeHost.RunAsync();
+    if (args is ["--child-diagnostics-proof", var deliveryDirectory]) return await ChildDiagnosticDeliveryProbe.RunAsync(Path.GetFullPath(deliveryDirectory));
     if (args is ["--edit-preview-proof", var previewDirectory]) return await EditPreviewProbe.RunAsync(Path.GetFullPath(previewDirectory));
     if (args is ["--scene"]) return await SceneInputProbe.RunAsync(null);
     if (args is ["--room"]) return await SceneInputProbe.RunAsync(null, room: true);

@@ -13,6 +13,7 @@ using TrueMoon.Generated.TrueMoon.Aether;
 using TrueMoon.Mithril;
 using TrueMoon.Diagnostics;
 using TrueMoon.Mithril.Units;
+using TrueMoon.Aether.Diagnostics;
 
 namespace TrueMoon.Aether.Hosting;
 
@@ -35,6 +36,8 @@ public sealed class NativeRuntimeFactory : IRuntimeFactory
 {
     private readonly IFactory<PipesInvocationClient<IEngineControl>, string> _clients;
     private readonly IEventsSource<NativeRuntimeFactory>? _events;
+    private readonly IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? _diagnostics;
+    private readonly ChildDiagnosticDeliveryOptions _deliveryOptions;
     /// <summary>Creates the standalone native factory with default diagnostics.</summary>
     public NativeRuntimeFactory() : this(new PipesInvocationClientFactory<IEngineControl>(new AetherEvents<PipesInvocationClient<IEngineControl>>())) { }
     /// <summary>Creates leases with an injected endpoint client factory. The lease owns each client.</summary>
@@ -46,20 +49,31 @@ public sealed class NativeRuntimeFactory : IRuntimeFactory
     /// <param name="events">Borrowed diagnostic source.</param>
     public NativeRuntimeFactory(IFactory<PipesInvocationClient<IEngineControl>, string> clients,
         IEventsSource<NativeRuntimeFactory>? events)
-    { ArgumentNullException.ThrowIfNull(clients); _clients = clients; _events = events; }
+        : this(clients, events, null, null) { }
+    /// <summary>Creates leases borrowing an optional host receiver factory; products belong to each lease.</summary>
+    /// <param name="clients">Control clients.</param><param name="events">Process events.</param>
+    /// <param name="diagnostics">Optional receiver factory.</param><param name="options">Copied lane limits.</param>
+    public NativeRuntimeFactory(IFactory<PipesInvocationClient<IEngineControl>, string> clients,
+        IEventsSource<NativeRuntimeFactory>? events, IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? diagnostics,
+        ChildDiagnosticDeliveryOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(clients); _clients = clients; _events = events; _diagnostics = diagnostics;
+        _deliveryOptions = (options ?? new()).Snapshot();
+    }
     /// <summary>Process-local bootstrap passed to an owned game runtime.</summary>
     public const string BootstrapKey = "TM_ENGINE_BOOTSTRAP";
     public ConcurrentQueue<UnitProcessDiagnostic> Diagnostics { get; } = new();
     public List<NativeRuntimeLease> Leases { get; } = [];
     public IRuntimeLease Create(SessionLaunch launch)
     {
+        launch = launch with { DiagnosticDelivery = _diagnostics != null && _deliveryOptions.Enabled ? _deliveryOptions.Snapshot() : null };
         var lease = new NativeRuntimeLease(launch, item =>
         {
             if (item is not UnitProcessDiagnostic value) return;
             Diagnostics.Enqueue(value);
             while (Diagnostics.Count > 256) Diagnostics.TryDequeue(out _);
             AetherDiagnosticEvents.Process(_events, launch, value);
-        }, _clients);
+        }, _clients, _diagnostics);
         Leases.Add(lease);
         // This is bounded diagnostic tracking; the supervisor retains actual lease ownership.
         if (Leases.Count > 64) Leases.RemoveAt(0);
@@ -88,16 +102,36 @@ internal sealed class EngineChild(SessionLaunch launch, Action<object> observe) 
     }
 }
 
-public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> observe,
-    IFactory<PipesInvocationClient<IEngineControl>, string>? clients = null) : IRuntimeLease
+public sealed class NativeRuntimeLease : IRuntimeLease
 {
+    private readonly SessionLaunch launch;
+    private readonly IFactory<PipesInvocationClient<IEngineControl>, string>? clients;
+    private readonly IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? _diagnostics;
+    /// <summary>Creates a caller-owned lease with legacy local-only capture.</summary>
+    /// <param name="launch">Launch.</param><param name="observe">Process observer.</param><param name="clients">Borrowed control factory.</param>
+    public NativeRuntimeLease(SessionLaunch launch, Action<object> observe, IFactory<PipesInvocationClient<IEngineControl>, string>? clients = null)
+        : this(launch, observe, clients, null) { }
+    /// <summary>Creates a lease owning an optional generation-scoped receiver through process reap.</summary>
+    /// <param name="launch">Launch and copied lane limits.</param><param name="observe">Process observer.</param>
+    /// <param name="clients">Borrowed control factory.</param><param name="diagnostics">Borrowed receiver factory.</param>
+    public NativeRuntimeLease(SessionLaunch launch, Action<object> observe, IFactory<PipesInvocationClient<IEngineControl>, string>? clients,
+        IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? diagnostics)
+    {
+        ArgumentNullException.ThrowIfNull(launch); ArgumentNullException.ThrowIfNull(observe);
+        this.launch = launch with { DiagnosticDelivery = launch.DiagnosticDelivery?.Snapshot() };
+        this.clients = clients; _diagnostics = diagnostics; _child = new(this.launch, observe);
+    }
     /// <summary>Identity fixed when this owned process lease was created.</summary>
     public SessionIdentity Identity => launch.Identity;
     internal string GpuEndpoint => launch.Endpoint + "-gpu";
     internal Microsoft.Win32.SafeHandles.SafeProcessHandle GpuProcessHandle =>
         !ResourcesReleased && !Exited.IsCompleted ? _child.OwnedProcess?.SafeHandle ?? throw new IOException("Missing owned GPU runtime process.")
             : throw new IOException("GPU runtime is no longer alive.");
-    private readonly EngineChild _child = new(launch, observe);
+    private readonly EngineChild _child;
+    private ChildDiagnosticReceiver? _diagnosticReceiver;
+    private ChildDiagnosticStatus? _diagnosticStatus;
+    /// <summary>Live or final independent receiver health; null for legacy local-only capture.</summary>
+    public ChildDiagnosticStatus? ChildDiagnosticsStatus => _diagnosticReceiver?.Read() ?? _diagnosticStatus;
     private PipesInvocationClient<IEngineControl>? _client;
     private IEngineControl? _service;
     private ProcessOutputCapture? _stdout, _stderr;
@@ -127,6 +161,15 @@ public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> obse
         var outputRoot = Path.Combine(launch.ReportDirectory, "runtime-output");
         _stdout = new ProcessOutputCapture(process.StandardOutput, filePath: Path.Combine(outputRoot, "runtime-" + slot + ".stdout.log"));
         _stderr = new ProcessOutputCapture(process.StandardError, filePath: Path.Combine(outputRoot, "runtime-" + slot + ".stderr.log"));
+        if (_diagnostics != null && launch.DiagnosticDelivery?.Enabled == true)
+        {
+            try { _diagnosticReceiver = _diagnostics.Create(new(launch, ProcessId)); }
+            catch (Exception error)
+            {
+                var name = error.GetType().FullName; if (name?.Length > 256) name = name[..256];
+                _diagnosticStatus = new(true, true, true, false, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, name);
+            }
+        }
         _client = (clients ?? new PipesInvocationClientFactory<IEngineControl>(new AetherEvents<PipesInvocationClient<IEngineControl>>())).Create(launch.Endpoint);
         _service = new EngineControlGeneratedImplementation(new BoundedControlClient(_client));
     }
@@ -148,6 +191,11 @@ public sealed class NativeRuntimeLease(SessionLaunch launch, Action<object> obse
         await _child.Completion.ConfigureAwait(false); Reaped = true;
         await Task.WhenAll(_stdout?.Completion ?? Task.CompletedTask, _stderr?.Completion ?? Task.CompletedTask)
             .WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        if (_diagnosticReceiver != null)
+        {
+            await _diagnosticReceiver.StopAsync().ConfigureAwait(false);
+            _diagnosticStatus = _diagnosticReceiver.Read(); _diagnosticReceiver = null;
+        }
         await _child.DisposeAsync().ConfigureAwait(false);
         _buildPin?.Dispose(); _buildPin = null;
         ResourcesReleased = true;

@@ -20,7 +20,7 @@ public sealed class PipesTransportOptions
     public bool PropagateTraceContext { get; set; }
     /// <summary>Emits detailed per-request events. Off by default; traces and operation metrics are independent.</summary>
     public bool CaptureRequestEvents { get; set; }
-    /// <summary>Includes this owner's resource state and overloads in the process-wide TrueMoon.Enerit.Pipes meter.
+    /// <summary>Includes this owner's resource state, failure/reconnect counters and queue wait totals in the process-wide TrueMoon.Enerit.Pipes meter.
     /// On by default; independent of Core operation telemetry and request events. Options are copied by each owner.</summary>
     public bool MetricsEnabled { get; set; } = true;
 

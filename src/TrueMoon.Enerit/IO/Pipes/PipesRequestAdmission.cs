@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace TrueMoon.Enerit.IO.Pipes;
 
 internal sealed class PipesClientAdmission(PipesTransportOptions options, PipesMetrics? metrics = null)
@@ -14,6 +16,7 @@ internal sealed class PipesClientAdmission(PipesTransportOptions options, PipesM
     internal async Task EnterAsync(CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        long waitStarted = 0;
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_closed, this);
@@ -23,6 +26,7 @@ internal sealed class PipesClientAdmission(PipesTransportOptions options, PipesM
             }
             if (_queued == options.MaxQueuedRequests) { metrics?.RejectClient(); throw new PipesInvocationOverloadedException(); }
             ResetDrained(); _queued++; metrics?.Client(_pending, _queued);
+            if (metrics != null) waitStarted = Stopwatch.GetTimestamp();
         }
         var entered = false;
         try { await _slots.WaitAsync(token).ConfigureAwait(false); entered = true; }
@@ -33,6 +37,8 @@ internal sealed class PipesClientAdmission(PipesTransportOptions options, PipesM
                 _queued--;
                 if (entered) _pending++;
                 metrics?.Client(_pending, _queued);
+                metrics?.QueueWait(Stopwatch.GetElapsedTime(waitStarted), entered ? PipesQueueWaitOutcome.Admitted :
+                    _closed ? PipesQueueWaitOutcome.Stopped : PipesQueueWaitOutcome.Cancelled);
                 SignalDrained();
             }
         }
@@ -52,6 +58,7 @@ internal sealed class PipesClientAdmission(PipesTransportOptions options, PipesM
 
 internal sealed class PipesServerAdmission(PipesTransportOptions options, PipesMetrics? metrics = null)
 {
+    internal PipesMetrics? Metrics => metrics;
     private readonly object _gate = new();
     private int _requests;
     private long _bytes;

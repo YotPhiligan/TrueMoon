@@ -1748,6 +1748,74 @@ ENG8a.1/3 остаются частичными: дополнительные St
 producers, aggregate frame/queue/latency metrics и Editor live delivery/export
 следуют отдельными срезами. [API](../../TrueMoon.Aether/README.md#диагностика).
 
+### Child diagnostic delivery ENG8a.3 / ENE6d.4 — 2026-10-27
+
+Следующий срез после ENE6d.3: отдельный same-build diagnostic endpoint
+controlEndpoint + -diag. Pixel/control/Mithril endpoints не используются для logs.
+Через existing Enerit invocation передаётся version1 identity envelope и bounded
+JSON array Core DiagnosticRecord. Новый общий priority/streaming transport API
+не вводится. Domain contract и подробная задача находятся здесь; у Enerit остаются
+framing/admission, у Core — snapshots/history/import/sinks, у Mithril — reap.
+
+Численные defaults ChildDiagnosticDeliveryOptions: batch16records/32KiB JSON
+(hard32/64KiB),128records/s и256KiB/s с1024byte conservative envelope cost,
+poll50ms, request250ms, public shutdown wait1s. Bytes/s должен покрывать batch+1024.
+Hard configuration bounds: records/s≤4096,bytes/s≤4MiB,poll10ms..1s,
+request20ms..2s,shutdown50ms..5s. Стандартные DI pipe factories используют
+wire cap72KiB,1connection,1request,0queued; diagnostic tracing/events/metrics
+отключены на самом delivery lane во избежание feedback. Standalone custom
+transport factories обязаны предоставить соответствующие resource limits.
+
+Sender читает borrowed Core ring через IDiagnosticRecordReader.ReadAfter:
+cursor0 захватывает ещё доступный startup prefix; missing sequence slots считаются
+Lost. One in-flight packet, без индивидуальной неограниченной очереди. При occupied
+remote slot новые records становятся known local loss даже с low-level factory
+более широкой capacity. Собственный per-call CTS гарантирует copied request budget.
+Переполнение rate/size дропает данные с counters, сеть/timeout/malformed ACK даёт
+Unconfirmed: запись могла быть импортирована, но подтверждение неизвестно.
+Replay отсутствует. Поля сообщений/props дополнительно clip/freeze; Nonce/Endpoint
+props исключаются. Free text не считается автоматически очищенным от secret data.
+
+Receiver проверяет exact SessionId/Generation/Nonce/host/game/role/owned PID,
+binds one child appid, monotonic packet/record sequences, version/count/depth/bytes.
+Все rows проверяются до первого import; malformed JSON расходует rate budget
+до parse. Foreign/stale/duplicate/oversized/rate отказ не меняет domain state.
+Importer false/throw отражается rejected records; partial acceptance подтверждается,
+последовательность consumed, повторный import отсутствует. ACK status/count/last
+sequence проверяются sender. Никакой network exception text/nonce/endpoint не
+попадает в health: только bounded error type и numeric snapshots.
+
+Core importer re-bounds/freezes запись и authoritative host context, сохраняет
+child timestamp/PID/trace/span/exception strings, назначает local host sequence/appid
+и DiagnosticOrigin(child appid/sequence). Импорт не re-emits DiagnosticListener;
+Origin!=null не forwardится снова. Host filters, ring, sink queues/retention общие.
+UseDiagnostics(pipeline) регистрирует nondisposable reader/importer views; Aether
+не получает dependency на конкретный bootstrap/pipeline implementation.
+
+UseAether копирует options и регистрирует factories. Default NativeRuntimeFactory
+включает bootstrap lane только при наличии host importer. Lease создаёт receiver
+после получения owned PID и удерживает до child reap/raw-output drain; затем
+реально закрывает transport. Receiver timeout/cancelled wait сохраняет ownership.
+UseAetherRuntime/PreviewRuntime создаёт sender через RuntimeHostFactory: runtime
+владеет результатом, source/client factories заимствованы. Отсутствующий reader,
+null/disabled launch config дают no-op без IO. Legacy low-level signatures сохранены.
+
+Stop sender фиксирует конечный cursor, половину shutdown budget отдаёт log drain,
+затем отменяет exchange и закрывает actual client. DrainComplete=false отличает
+обрезанный tail; known loss и unconfirmed раздельны. Blocking custom reader/importer
+не объявляется прерванным по timeout: actual cleanup остаётся owned для retry.
+Control/game resources останавливаются до optional sender cleanup. Диагностика
+не служит источником session/game state. Local JSONL и continuous raw stdout/stderr
+capture сохраняются; raw output не импортируется вторично и stderr не задаёт severity.
+
+Готовность первого профиля требует direct Core import tests, codec/options/identity/
+rate/capacity/duplicate/ACK tests, both-DI ownership/rollback, blocked/broken consumer
+и actual headless child flood + control/stop/reap. GPU/native display, mixed-version
+negotiation, abrupt parent containment и long trends остаются отдельными acceptance.
+Статус/команды/evidence — в STATUS/HISTORY; полный ENG8a/ENE6d не закрывается.
+Первый профиль реализован и проверен27октября:
+[direct/both-DI/3-child proof и full Debug/Release](HISTORY.md#child-diagnostic-delivery--2026-10-27).
+
 ## Этапы будущей реализации
 
 ENG0 **определён документом2026-10-15**; ENG1 проверен2026-10-17 в headless scope;

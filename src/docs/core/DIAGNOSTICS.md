@@ -68,8 +68,9 @@ exception type/message/stack, Caller и Activity TraceId/SpanId на момен�
 process-global: подходящие источники других Apps могут наблюдаться по прежним
 discovery filters. Это не App-private routing и не remote producer identity.
 Sequence задаёт порядок в collector; UTC и sequence разных процессов не являются
-общими causal clocks. ActivitySource spans, IPC propagation и Meter metrics —
-следующие этапы CORE6d/ENE6d.
+общими causal clocks. Для imported child records Origin хранит исходные
+ApplicationId/Sequence, а ProcessId и UTC остаются emitting process values.
+Операции, IPC propagation и Meter описаны ниже и в [Enerit API](../enerit/DIAGNOSTICS.md).
 
 Live `MinimumLevel`, `SetSourceMinimumLevel` и `SetEventEnabled` действуют для
 существующих источников. Для source rules побеждает самый длинный ordinal prefix,
@@ -237,6 +238,31 @@ owner для выбора observer по reference; освобождать их �
 продолжать работу. Ошибки публикации instruments учитываются в Failures.
 Dispose закрывает новые операции, а source/meter сохраняются до Dispose последнего
 активного scope. Все scopes потребителя должны завершаться до его App shutdown.
+
+## Чтение и импорт bounded history
+
+Opt-in UseDiagnostics(options) регистрирует IDiagnosticRecordReader и
+IDiagnosticRecordImporter как borrowed nondisposable views одного App-owned
+pipeline. Legacy overload без pipeline их не предоставляет. Повторная конфигурация
+заменяет registrations; разрешение aliases не создаёт дополнительных owners.
+
+LatestSequence включает unavailable capture slots. ReadAfter(afterSequence,
+maximumCount) возвращает independent oldest-first snapshot оставшихся records
+после exclusive cursor; cursor неотрицательный, maximumCount от1до1024. Eviction
+может оставить gaps. Это pull API без callbacks на emitter thread.
+
+TryImport(record, context) назначает host ApplicationId/Sequence и Origin с
+исходными identity/sequence. Timestamp, emitting PID, trace/span и exception strings
+сохраняются с локальными clipping/property budgets; malformed trace/span очищаются
+вместе. Context properties копируются первыми и имеют приоритет при collisions.
+Импорт применяет live source/event filters и обычные memory/sink limits, не вызывает
+DiagnosticListener. Accepted означает collector admission; sinks и ring всё ещё
+могут терять records согласно своим budgets. Records с Origin уже заданным,
+некорректной identity/sequence/PID/level отклоняются; closed pipeline считает LateWrites.
+
+Reader/importer сами не создают transport. Aether подключает их через отдельную
+[child → host delivery lane](../engine/DIAGNOSTICS_DELIVERY.md), сохраняя child
+JSONL и raw stdout/stderr. Это не меняет process-global routing обычных listeners.
 
 ## Завершение и ошибки
 

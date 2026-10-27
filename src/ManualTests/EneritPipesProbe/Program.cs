@@ -321,11 +321,13 @@ namespace EneritPipesProbe
     internal sealed class ProbeResourceMetrics : IDisposable
     {
         private const string Prefix = "truemoon.enerit.pipes.";
+        private static readonly HashSet<string> ResourceInstruments = new(StringComparer.Ordinal)
+        { Prefix + "client.pending", Prefix + "client.queued", Prefix + "server.requests", Prefix + "server.request.bytes", Prefix + "server.connections" };
         private readonly MeterListener _listener;
         private readonly Dictionary<string, long> _values = new();
         internal ProbeResourceMetrics()
         {
-            _listener = new() { InstrumentPublished = (instrument, listener) => { if (instrument.Meter.Name == "TrueMoon.Enerit.Pipes") listener.EnableMeasurementEvents(instrument); } };
+            _listener = new() { InstrumentPublished = (instrument, listener) => { if (instrument.Meter.Name == "TrueMoon.Enerit.Pipes" && ResourceInstruments.Contains(instrument.Name)) listener.EnableMeasurementEvents(instrument); } };
             _listener.SetMeasurementEventCallback<long>((instrument, value, _, _) => { if (instrument.Name != Prefix + "rejected") _values[instrument.Name[Prefix.Length..]] = value; }); _listener.Start();
         }
         internal Dictionary<string, long> Read() { _values.Clear(); _listener.RecordObservableInstruments(); return new(_values); }

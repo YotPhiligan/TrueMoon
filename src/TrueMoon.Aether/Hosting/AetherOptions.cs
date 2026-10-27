@@ -6,6 +6,7 @@ using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Diagnostics;
 using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Diagnostics;
 
 namespace TrueMoon.Aether.Hosting;
 
@@ -24,6 +25,8 @@ public sealed class AetherOptions
     public TimeSpan BuildTimeout { get; set; } = TimeSpan.FromSeconds(120);
     /// <summary>Completed build-job count, total bytes and age limits, snapshotted during App setup.</summary>
     public GameBuildRetentionOptions BuildRetention { get; set; } = new();
+    /// <summary>Independent child diagnostic lane limits, copied during registration.</summary>
+    public ChildDiagnosticDeliveryOptions ChildDiagnostics { get; set; } = new();
     /// <summary>Gets or sets bounded command, startup and heartbeat deadlines.</summary>
     public SessionDeadlines Deadlines { get; set; } = new();
     /// <summary>Gets or sets the snapshotted replacement/recovery limits, with total at most 45 seconds.</summary>
@@ -42,7 +45,9 @@ public sealed class AetherOptions
     /// a borrowed or separately registered disposable factory: the App provider owns the result.</remarks>
     public Func<IServiceResolver, IRuntimeFactory> RuntimeFactory { get; set; } = static resolver =>
         new NativeRuntimeFactory(resolver.Resolve<IFactory<PipesInvocationClient<IEngineControl>, string>>(),
-            resolver.Resolve<IEventsSource<NativeRuntimeFactory>>());
+            resolver.Resolve<IEventsSource<NativeRuntimeFactory>>(),
+            resolver.TryResolve<IDiagnosticRecordImporter>() == null ? null : resolver.Resolve<IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>>(),
+            resolver.Resolve<ChildDiagnosticConfiguration>().Copy());
 
     internal AetherOptions Snapshot()
     {
@@ -51,7 +56,9 @@ public sealed class AetherOptions
         ArgumentNullException.ThrowIfNull(ReplacementDeadlines);
         ArgumentNullException.ThrowIfNull(RuntimeFactory);
         ArgumentNullException.ThrowIfNull(BuildRetention);
+        ArgumentNullException.ThrowIfNull(ChildDiagnostics);
         var buildRetention = BuildRetention.Snapshot();
+        var childDiagnostics = ChildDiagnostics.Snapshot();
         if (ViewportTransport != null && ViewportTransportFactory != null)
             throw new ArgumentException("Configure one viewport transport factory.");
         new SessionIdentity(Guid.NewGuid(), 1, HostContractId, GameBuildId, new string('0', 64)).Validate();
@@ -65,7 +72,7 @@ public sealed class AetherOptions
             ReportDirectory = Path.GetFullPath(ReportDirectory), Deadlines = Deadlines with { },
             ReplacementDeadlines = ReplacementDeadlines with { },
             BuildDirectory = Path.GetFullPath(BuildDirectory ?? Path.Combine(ReportDirectory, "builds")), BuildTimeout = BuildTimeout,
-            BuildRetention = buildRetention,
+            BuildRetention = buildRetention, ChildDiagnostics = childDiagnostics,
             StatusChanged = StatusChanged, RuntimeFactory = RuntimeFactory, ViewportTransport = ViewportTransport,
             ViewportTransportFactory = ViewportTransportFactory
         };

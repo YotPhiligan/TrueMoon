@@ -22,4 +22,8 @@ public sealed record DiagnosticRecord(DateTimeOffset TimestampUtc, long Sequence
     int ProcessId, string Source, DiagnosticLevel Level, int EventId, string EventName,
     string MessageTemplate, IReadOnlyDictionary<string, string?> Properties,
     string? ExceptionType, string? ExceptionMessage, string? ExceptionStackTrace,
-    string? TraceId, string? SpanId, string? Caller, bool IsTruncated);
+    string? TraceId, string? SpanId, string? Caller, bool IsTruncated)
+{
+    /// <summary>Original collector identity for an imported record; null for local capture.</summary>
+    public DiagnosticOrigin? Origin { get; init; }
+}

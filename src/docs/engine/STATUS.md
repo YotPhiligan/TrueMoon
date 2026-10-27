@@ -1,37 +1,32 @@
 # TrueMoon.Aether: состояние движка и редактора
 
-Связанная проверка — **2026-10-26, ENE6d.2 resource metrics**: Aether1218/1218,
-Editor741/741 и full solution4054/4054 Debug/Release, failed/skipped0. Engine code
-в этом срезе не менялся; стандартные pipes options включают новый resource Meter.
-Прежний CPU FrameReceiver failure не повторился и остаётся ENG2 follow-up.
-Нового native/GPU/published/package/performance proof нет.
-[Команды/границы](../enerit/HISTORY.md#ene6d2-метрики-ресурсов-и-перегрузки--2026-10-26).
+Последняя работа — **2026-10-27, ENG8a.3/ENE6d.4 child diagnostic delivery**.
+Штатные App factories передают bounded structured logs по отдельному Enerit
+endpoint; options копируются в launch, receiver живёт до reap/raw drain.
+Host сохраняет Origin/PID/time/trace и добавляет authoritative session context.
+Known loss и unknown ACK outcome различаются; replay нет. Local JSONL и raw
+stdout/stderr продолжают работать независимо.
+[Контракт/API](DIAGNOSTICS_DELIVERY.md),
+[матрица/команды и неуспешные попытки](HISTORY.md#child-diagnostic-delivery--2026-10-27).
 
-Последняя работа — **2026-10-26, IPC trace context в control factories**.
-UseAether и UseAetherRuntime/PreviewRuntime передают borrowed Core telemetry и
-включают propagation на штатных generic pipes peers. Root → client → remote server
-проверен на Cobalt/MS DI без активации host/runtime/GPU; detailed request events
-по умолчанию выключены. Same-build HostId уже включает Enerit assembly.
-[API](../../TrueMoon.Aether/README.md#диагностика),
-[проверки](HISTORY.md#ipc-trace-context-в-control-factories--2026-10-26).
+Новые120Aether cases плюс59Core. Aether1338/1338, Editor741/741, full solution
+4285/4285 Debug/Release, failed/skipped0. Builds0errors:
+Debug nonincremental1546warnings, Release incremental1316warnings, SDK10.0.403.
+[Evidence](../../TestResults/DiagnosticsDelivery-20261027-1/verification.json).
+Source proof:3real Preview children одной session,99control commands при log flood,
+slow/broken host sinks, bounded local JSONL/raw, все processes reaped/resources released.
+Это не gameplay/input/GPU/display/published/package/performance acceptance.
 
-Новые2Aether cases; Aether1218/1218 Debug,1217/1218 Release. В Release воспроизведён
-прежний Receiver_TwoBuffersKeepLatestWhileUiLeaseStaysUnchangedAndDrain: null из
-TakeLatest после Received>=5. ENG2 follow-up открыт; CPU transport этим срезом
-не менялся. Editor741/741 и Core314/314 в обеих конфигурациях.
-Full Debug4021/4021, Release4020/4021; общего green нет. Builds0errors:
-Debug nonincremental1530warnings, Release incremental1300warnings, SDK10.0.403.
-[Evidence](../../TestResults/DiagnosticsIpc-20261026-1/verification.json).
-Source IPC child proof выполнен; отдельные native/GPU/published/package/performance
-проверки не повторены.
-
-Далее IPC queue/pending/bytes/overload aggregates, command/frame metrics и ED6a/ED8a
-console/export. Authoring очередь ED4c.2 → ED4c.3 и прежние acceptance gates прежние.
-Предыдущие [operation producers](HISTORY.md#операции-и-трассы-диагностики--2026-10-26),
-[build jobs](HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26),
-[logger runs](HISTORY.md#managed-logger-runs-в-editor-и-runtime--2026-10-26) и
-[первый capture профиль](HISTORY.md#единая-диагностика-первый-профиль--2026-10-25)
-сохраняют отдельные budgets. Общего quota всех report/artifact roots нет.
+Короткий ordinary fixture cleanup deadline исправлен в тесте; production budgets
+не менялись. Прежний CPU FrameReceiver failure не повторился, ENG2 follow-up открыт;
+Mithril ready-file race также не объявлен исправленным.
+Далее ED6a/ED8a console/export, затем command/frame metrics. Authoring очередь
+ED4c.2 → ED4c.3/workflow и прежние hardware gates сохраняются.
+Предыдущие [IPC traces](HISTORY.md#ipc-trace-context-в-control-factories--2026-10-26),
+[operations](HISTORY.md#операции-и-трассы-диагностики--2026-10-26),
+[build retention](HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26)
+и [managed runs](HISTORY.md#managed-logger-runs-в-editor-и-runtime--2026-10-26)
+сохраняют отдельные budgets; общего artifact quota нет.
 
 Предыдущая работа — **2026-10-25, ED4f.2 системная граница окна**.
 Editor включает UseSystemAccentBorder: Windows accent, theme fallback при отсутствии
@@ -220,8 +215,10 @@ K8/VRAM/final alpha открыты; NVIDIA workaround search остановле�
 
 ## Следующий конкретный шаг
 
-В текущем diagnostics направлении — ENE6d timeout/reconnect/error counters и
-queue-wait, затем command/frame metrics и live delivery в Editor поверх bounded Core pipeline.
+В текущем diagnostics направлении — ED6a/ED8a bounded console/export в Editor
+поверх Core reader и child delivery: retained rows, фильтры source/level/session,
+явные loss indicators и bounded export без rebuilding View tree. Затем command/frame
+metrics; UI/data/style/IFactory ownership остаётся штатным для Editor.
 Следующая authoring задача по прежней очереди:
 
 ED4c.2: сохраняемые имена и порядок соседей через общие engine metadata/формат и

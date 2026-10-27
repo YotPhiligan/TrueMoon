@@ -286,6 +286,22 @@ Editor использует постоянный parent logger root между �
 managed root в report directory, отдельно от artifacts/raw output.
 [Проверки и оставшиеся границы](HISTORY.md#emergency-и-managed-jsonl-runs--2026-10-26).
 
+### Bounded history reader/importer для child delivery — 2026-10-27
+
+Contracts добавляет IDiagnosticRecordReader (LatestSequence/ReadAfter) и
+IDiagnosticRecordImporter.TryImport. Pipeline предоставляет nondisposable views
+через UseDiagnostics(pipeline), чтобы Cobalt/MS DI aliases не освобождали owner
+повторно. Legacy UseDiagnostics снимает views вместе с pipeline settings.
+DiagnosticRecord получает additive init Origin(child collector appid/sequence),
+его прежний positional constructor не меняется. Импорт назначает host sequence/
+appid, сохраняет emitting PID/time/trace/exception strings, refreeze/clip и current
+filter/queue policies. Authoritative context копируется первым в том же property
+budget. Already-imported/self/invalid origins отвергаются, global events не
+re-emit; read snapshots ограничены1..1024 и не передают ownership.
+Domain transport/child identity остаётся в
+[Aether](../engine/PLAN.md#child-diagnostic-delivery-eng8a3--ene6d4--2026-10-27).
+[Реализация и проверки27октября](HISTORY.md#чтение-и-импорт-child-diagnostics--2026-10-27).
+
 ## Критерии готовности
 
 - Известный набор тестов действительно обнаружен и пройден, skipped/failed указаны; tests existence не считается passing результатом.

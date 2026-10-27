@@ -129,11 +129,18 @@ Register overrides before `UseAether`; the host owns its factory-created childre
 In a selected-build child App, call `UseAetherRuntime(launch, parentId)` after
 `UseAether`, then run the resolved `Runtime.AetherRuntimeHost`. It owns the game,
 parent listener, workers and IPC server, borrowing App/GPU services.
+When both Apps enable the bounded Core diagnostics pipeline, the default native
+factory and runtime host also own a separate child-log receiver/forwarder pair.
+`AetherOptions.ChildDiagnostics` controls copied record/byte/rate/deadline limits;
+`SessionLaunch.DiagnosticDelivery` carries the per-generation settings. The lane
+preserves origin/PID/trace and exposes loss/unconfirmed/cleanup health without
+sharing control admission. Local JSONL and continuous stdout/stderr remain fallback.
+See [delivery configuration and ownership](../docs/engine/DIAGNOSTICS_DELIVERY.md).
 Inject `Scenes.SceneResolutionService` for authoring resolution through its
 document-specific `EntityResolver` factory.
 
 The single Aether assembly contains `TrueMoon.Aether` and
-`TrueMoon.Aether.Sessions`, `.Scenes`, `.Transport`, `.Frames`, `.Checkpoints`, `.Rendering` and `.Input`.
+`TrueMoon.Aether.Sessions`, `.Scenes`, `.Transport`, `.Frames`, `.Checkpoints`, `.Rendering`, `.Input` and `.Diagnostics`.
 It uses TrueMoon Contracts/Enerit/Mithril without
 depending on UI, Skia or a particular game DLL. Silk.NET.Vulkan 2.23.0 supports
 the opt-in Windows x64 GPU path; native GPU startup remains explicit. The application supplies

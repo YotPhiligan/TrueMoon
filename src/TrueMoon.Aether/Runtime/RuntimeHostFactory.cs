@@ -7,6 +7,7 @@ using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Mithril;
 using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Diagnostics;
 
 namespace TrueMoon.Aether.Runtime;
 
@@ -14,7 +15,7 @@ internal sealed class RuntimeHostFactory(AetherHost engine, IAppLifetime lifetim
     IFactory<UnitParentProcessEventsHandler> parents, IFactory<GameBuildLoader, GameBuildReference> games,
     IFactory<FrameProducer> frames, IFactory<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)> protocols,
     IFactory<PipesInvocationServer<IEngineControl>, (SessionLaunch Launch, RuntimeProtocol Protocol)> servers,
-    IFactory<PreviewGameSession>? previews = null)
+    IFactory<PreviewGameSession>? previews = null, IFactory<ChildDiagnosticForwarder, SessionLaunch>? diagnostics = null)
     : IFactory<AetherRuntimeHost, SessionLaunch>
 {
     public AetherRuntimeHost Create(SessionLaunch arguments)
@@ -36,7 +37,8 @@ internal sealed class RuntimeHostFactory(AetherHost engine, IAppLifetime lifetim
             var frame = Own(frames.Create()!);
             var protocol = protocols.Create((arguments, session, frame));
             var server = Own(servers.Create((arguments, protocol)));
-            return new(engine, lifetime, parent, game, frame, protocol, server, arguments, parentId);
+            var delivery = diagnostics == null ? null : Own(diagnostics.Create(arguments));
+            return new(engine, lifetime, parent, game, frame, protocol, server, arguments, parentId, delivery);
         }
         catch (Exception original)
         {

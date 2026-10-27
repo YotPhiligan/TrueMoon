@@ -1,5 +1,20 @@
 # EngineSessionProbe — пример TrueMoon.Aether (ENG1–ENG5c.2)
 
+## ENG8a.3: child diagnostic delivery
+
+После build запустите `EngineSessionProbe --child-diagnostics-proof <new-directory>`.
+Headless сценарий создаёт3Preview children одной session через штатные App factories;
+каждый выполняет33control commands, одновременно выдавая structured log flood и
+raw stdout/stderr. Host использует bounded Core pipeline со slow/throwing sinks.
+Проверяются child origin/PID/time/trace, loss counters, local JSONL/raw limits и
+actual process reap/resource release. Game.Logic, окно и GPU surface не запускаются.
+Preview использует GetStatus/SetMode(false), Step для этой роли не разрешён.
+
+Результаты: delivery-report.json, delivery-child-1/2/3.json, host/child JSONL и
+runtime-output. Этот source proof также входит в ChildDiagnosticProcessTests;
+он не заменяет published/package/GPU/performance acceptance.
+[Подключение, budgets и ownership](../../docs/engine/DIAGNOSTICS_DELIVERY.md).
+
 ## Независимый Edit preview
 
 `EngineSessionProbe --edit-preview-proof <new-directory>` использует

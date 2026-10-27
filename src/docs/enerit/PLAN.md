@@ -265,6 +265,52 @@ bounded профиле; [результаты и ограничения](HISTORY
 Далее timeout/reconnect/error classification и queue-wait duration, затем отдельный
 bounded child-log delivery contract. ENE6d целиком остаётся частичным.
 
+### ENE6d.3: исходы IPC и ожидание admission — 2026-10-27
+
+По следующему запросу пользователя добавляются fixed request/connection failure
+classes, local timeout/late response/successful reconnect counters и queue wait.
+Общий Core API, wire, cancellation/ownership и method mapping сохраняются.
+Meter TrueMoon.Enerit.Pipes расширен до13instruments/37fixed series; names/units/
+reason precedence и connection/request различия ведутся в единственном
+[руководстве](DIAGNOSTICS.md#исходы-reconnect-и-время-ожидания).
+
+Решение: сохранить pull-only collection предыдущего профиля. Queue wait даёт
+ObservableCounter count и cumulative duration seconds по admitted/cancelled/stopped,
+не синхронный Histogram.Record из producer. Это позволяет получить mean по окну,
+не даёт p95/distribution и не хранит individual samples. Immediate/rejected callers
+не считаются ожидавшими queue. Метрики обновляются до admission drain signal.
+Observer failures/slow callbacks не вызываются из Invoke/admission/Stop.
+
+Client failure публикуется once при завершении instrumented Invoke; linked OCE
+имеет priority Stop/caller/timeout, реальные callback/remote/transport ошибки не
+переименовываются поздним timer. Server сохраняет первый request failure class,
+response delivery failure учитывает отдельный connection counter. Shared server
+заимствует одну numeric cell для всех connections; first-fault fence не допускает
+повторного connection count при competing read/write faults. Local Stop исключён,
+remote EOF учитывается как transport без предположения о намерениях peer.
+Reconnect означает только последующий successful connection, late response
+совпадает с прежним validated discard path и не создаёт новый request failure.
+
+Прямые queue/cancel/timeout/rebind/malformed/handler/response proofs,
+counter cardinality/metadata, options/обе DI, observer isolation и regression
+прежнего resource profile выполнены в первом bounded профиле.
+[Проверки и ограничения](HISTORY.md#ene6d3-исходы-ipc-и-ожидание-admission--2026-10-27).
+Далее bounded child-log delivery совместно с Aether и оставшиеся domain/frame
+aggregates/UI console/export. Полный ENE6d/ENE6c/long-load acceptance не закрывается.
+
+### ENE6d.4: отдельный child diagnostic lane — 2026-10-27
+
+Для Aether выбран отдельный same-build endpoint, existing typed invocation,
+raw72KiB/one in-flight/one connection и собственные batch/rate/time budgets.
+Не расширяются общие wire framing, method negotiation или scheduler priority API.
+Diagnostic events/telemetry/metrics этой lane выключены; source logs остаются
+в Core bounded ring/JSONL, raw capture не парсится. При flood control endpoint
+не делит queue/IO с logs. Актуальный domain/lifecycle/identity/ACK/loss contract
+ведётся только в [Aether ENG8a.3](../engine/PLAN.md#child-diagnostic-delivery-eng8a3--ene6d4--2026-10-27).
+Core shared reader/importer не зависят от Enerit. Прямые и cross-process проверки
+не заменяют ENE6c, arbitrary-peer security или long-load acceptance.
+[Реализация и фактические проверки27октября](HISTORY.md#ene6d4-отдельный-child-log-канал--2026-10-27).
+
 ### ENE6a и MIT6a: первый контракт — 2026-10-23
 
 Пользователь поручил приступить к следующему шагу. Первый implementation slice

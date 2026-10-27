@@ -324,6 +324,8 @@ public sealed class PipesMetricsTests
     private sealed class MetricsObserver : IDisposable
     {
         private const string Prefix = "truemoon.enerit.pipes.";
+        private static readonly HashSet<string> ResourceInstruments = new(StringComparer.Ordinal)
+        { Prefix + "client.pending", Prefix + "client.queued", Prefix + "server.requests", Prefix + "server.request.bytes", Prefix + "server.connections", Prefix + "rejected" };
         private readonly MeterListener _listener;
         private readonly ConcurrentQueue<MetricValue> _values = new();
         internal readonly ConcurrentQueue<Instrument> Instruments = new();
@@ -331,7 +333,7 @@ public sealed class PipesMetricsTests
         internal MetricsObserver()
         {
             using (new PipesMetrics()) { } // Publish the process meter before subscribing, including the empty-owner case.
-            _listener = new() { InstrumentPublished = (instrument, listener) => { if (instrument.Meter.Name == "TrueMoon.Enerit.Pipes") { Instruments.Enqueue(instrument); listener.EnableMeasurementEvents(instrument); } } };
+            _listener = new() { InstrumentPublished = (instrument, listener) => { if (instrument.Meter.Name == "TrueMoon.Enerit.Pipes" && ResourceInstruments.Contains(instrument.Name)) { Instruments.Enqueue(instrument); listener.EnableMeasurementEvents(instrument); } } };
             _listener.SetMeasurementEventCallback<long>((instrument, value, tags, _) => { _values.Enqueue(new(instrument, value, tags.ToArray())); OnMeasurement?.Invoke(); }); _listener.Start();
         }
         internal MetricsSnapshot Read()

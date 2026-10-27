@@ -19,6 +19,7 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
     private readonly PipesTransportOptions _options;
     private readonly IDiagnosticTelemetry? _telemetry;
     private readonly PipesMetrics? _metrics;
+    private readonly PipesMetrics? _requestMetrics;
     private readonly Guid _connectionId = Guid.NewGuid();
     private readonly string _serviceName;
     private readonly ConcurrentDictionary<Task, byte> _invocations = new();
@@ -27,7 +28,7 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
     private CancellationTokenRegistration _externalCancellation;
     private Task _start = Task.CompletedTask, _listener = Task.CompletedTask;
     private Task? _stop;
-    private bool _started, _disposed;
+    private bool _started, _disposed, _connectionFaultRecorded;
     public event EventHandler? Disconnected;
 
     public PipesSignalServerConnection(string name, IEventsSource eventsSource, IInvocationServerHandler handler)
@@ -65,6 +66,7 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
         _metrics = admission == null && _options.MetricsEnabled ? new PipesMetrics() : null;
         try
         {
+            _requestMetrics = admission?.Metrics ?? _metrics;
             _admission = admission ?? new(_options, _metrics);
             _metrics?.Connections(1);
             _listenTaskScheduler = new TmTaskScheduler($"{Name}_listen", 1);
@@ -94,13 +96,17 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
 
     private async Task StartCoreAsync()
     {
-        await ConnectAsync(_token).ConfigureAwait(false);
-        lock (_lifecycleGate)
+        try
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            PipesDiagnostics.Legacy(() => _eventsSource.Write(() => "Connected"));
-            _listener = Task.Factory.StartNew(() => Listen(_token), CancellationToken.None, TaskCreationOptions.LongRunning, _listenTaskScheduler);
+            await ConnectAsync(_token).ConfigureAwait(false);
+            lock (_lifecycleGate)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                PipesDiagnostics.Legacy(() => _eventsSource.Write(() => "Connected"));
+                _listener = Task.Factory.StartNew(() => Listen(_token), CancellationToken.None, TaskCreationOptions.LongRunning, _listenTaskScheduler);
+            }
         }
+        catch (Exception error) { RecordConnectionFailure(error); throw; }
     }
 
     private void Listen(CancellationToken token)
@@ -157,6 +163,7 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
         }
         catch (Exception error)
         {
+            RecordConnectionFailure(error);
             if (!token.IsCancellationRequested) { PipesDiagnostics.Legacy(() => _eventsSource.Exception(error)); NotifyDisconnected(); }
         }
     }
@@ -181,34 +188,48 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
         using var operation = PipesDiagnostics.Start(_telemetry, "Enerit.Pipes.Server", ActivityKind.Server, parent, Properties);
         PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, 2200, "Pipes.Server.Starting", Properties);
         Exception? failure = null;
+        PipesServerFailure? firstFailure = null;
         try
         {
             using var writer = new ArrayPoolBufferWriter<byte>(128);
             var success = false;
+            var encoding = false;
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (!admitted) failure = new PipesInvocationOverloadedException();
+                if (!admitted) { failure = new PipesInvocationOverloadedException(); firstFailure = PipesServerFailure.Overload; }
                 else
                 {
                     (success, failure) = await _handler.HandleAsync(header.Method, memory, writer, token).ConfigureAwait(false);
-                    if (success) { PipesProtocol.ValidatePayloadLength(writer.WrittenCount); failure = null; }
-                    else failure ??= new InvocationException("Remote invocation failed.");
+                    if (success) { encoding = true; PipesProtocol.ValidatePayloadLength(writer.WrittenCount); failure = null; }
+                    else
+                    {
+                        failure ??= new InvocationException("Remote invocation failed.");
+                        firstFailure = RequestFailure(failure, PipesServerFailure.Handler);
+                    }
                 }
             }
-            catch (Exception error) { (success, failure) = (false, error); }
+            catch (Exception error)
+            {
+                (success, failure) = (false, error);
+                firstFailure = RequestFailure(error, encoding ? PipesServerFailure.Encode : PipesServerFailure.Handler);
+            }
             await WriteResponseAsync(header.Id, success ? writer.WrittenMemory : default,
                 success ? null : failure, token).ConfigureAwait(false);
         }
         catch (Exception error)
         {
             failure = error;
+            firstFailure ??= token.IsCancellationRequested && error is OperationCanceledException or IOException or ObjectDisposedException
+                ? PipesServerFailure.Stopped : PipesServerFailure.Response;
+            RecordConnectionFailure(error);
             if (!token.IsCancellationRequested) { PipesDiagnostics.Legacy(() => _eventsSource.Exception(error)); NotifyDisconnected(); }
         }
         finally
         {
             memory.TryReturn();
             if (admitted) _admission.Release(header.Length);
+            if (firstFailure is { } reason) _requestMetrics?.ServerFailure(reason);
             var cancelled = failure is OperationCanceledException;
             operation?.Complete(failure == null ? DiagnosticOperationOutcome.Succeeded : cancelled ?
                 DiagnosticOperationOutcome.Cancelled : DiagnosticOperationOutcome.Failed, failure);
@@ -217,6 +238,19 @@ public class PipesSignalServerConnection : PipeConectionHandler, IStoppable, IAs
             operation?.Dispose();
             Activity.Current = inherited;
             PipesDiagnostics.RemoteContext = inheritedContext;
+        }
+    }
+
+    private PipesServerFailure RequestFailure(Exception error, PipesServerFailure phase)
+        => error is OperationCanceledException ? (_token.IsCancellationRequested ? PipesServerFailure.Stopped : PipesServerFailure.Cancelled) : phase;
+
+    private void RecordConnectionFailure(Exception error)
+    {
+        lock (_lifecycleGate)
+        {
+            if (_disposed || _token.IsCancellationRequested || _connectionFaultRecorded) return;
+            _connectionFaultRecorded = true;
+            _requestMetrics?.ConnectionFailure(true, error);
         }
     }
 

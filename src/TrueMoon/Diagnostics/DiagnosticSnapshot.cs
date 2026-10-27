@@ -39,6 +39,48 @@ internal static class DiagnosticSnapshot
             Bound(message.Caller, options.MaxNameChars), truncated);
     }
 
+    internal static DiagnosticRecord Import(DiagnosticRecord record, IReadOnlyDictionary<string, string?>? context,
+        Guid appId, long sequence, DiagnosticPipelineOptions options)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(record.Source);
+        ArgumentNullException.ThrowIfNull(record.EventName);
+        ArgumentNullException.ThrowIfNull(record.MessageTemplate);
+        ArgumentNullException.ThrowIfNull(record.Properties);
+        var truncated = record.IsTruncated;
+        string? Bound(string? value, int limit)
+        {
+            if (value is null || value.Length <= limit) return value;
+            truncated = true;
+            var count = limit > 0 && char.IsHighSurrogate(value[limit - 1]) ? limit - 1 : limit;
+            return value[..count];
+        }
+        var properties = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var inspected = 0;
+        void Copy(IReadOnlyDictionary<string, string?> values)
+        {
+            foreach (var pair in values)
+            {
+                if (inspected++ >= options.MaxProperties) { truncated = true; break; }
+                if (string.IsNullOrWhiteSpace(pair.Key)) { truncated = true; continue; }
+                if (!properties.TryAdd(Bound(pair.Key, options.MaxNameChars)!, Bound(pair.Value, options.MaxPropertyChars))) truncated = true;
+            }
+        }
+        if (context != null) Copy(context);
+        Copy(record.Properties);
+        var trace = record.TraceId; var span = record.SpanId;
+        static bool Valid(string? value, int length) => value is not null && value.Length == length &&
+            value.All(char.IsAsciiHexDigit) && value.Any(c => c != '0');
+        if (trace != null || span != null)
+            if (!Valid(trace, 32) || !Valid(span, 16)) { trace = span = null; truncated = true; }
+        return new(record.TimestampUtc.ToUniversalTime(), sequence, appId, record.ProcessId,
+            Bound(record.Source, options.MaxNameChars)!, record.Level, record.EventId,
+            Bound(record.EventName, options.MaxNameChars)!, Bound(record.MessageTemplate, options.MaxMessageChars)!,
+            properties.ToFrozenDictionary(StringComparer.Ordinal), Bound(record.ExceptionType, options.MaxNameChars),
+            Bound(record.ExceptionMessage, options.MaxExceptionChars), Bound(record.ExceptionStackTrace, options.MaxExceptionChars),
+            trace, span, Bound(record.Caller, options.MaxNameChars), truncated)
+        { Origin = new(record.ApplicationId, record.Sequence) };
+    }
+
     internal static DiagnosticMessage Legacy(DiagnosticEvent value)
     {
         if (value.Payload is DiagnosticMessage structured) return structured;
@@ -67,6 +109,6 @@ internal static class DiagnosticSnapshot
             (value.ExceptionStackTrace?.Length ?? 0) + (value.Caller?.Length ?? 0) + 64;
         foreach (var pair in value.Properties) chars += pair.Key.Length + (pair.Value?.Length ?? 0) + 32;
         // Conservative payload/accounting estimate; all retained strings are bounded independently.
-        return 512 + chars * 2;
+        return 512 + chars * 2 + (value.Origin == null ? 0 : 32);
     }
 }

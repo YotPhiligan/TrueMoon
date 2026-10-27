@@ -1,31 +1,33 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-26, ENE6d.2 метрики ресурсов Enerit**.
-Meter TrueMoon.Enerit.Pipes агрегирует client pending/queued, server requests/bytes/
-connections и3фиксированные overload серии. Late observer видит current state;
-callbacks не выполняются из admission/Invoke. Copied MetricsEnabled управляет этим
-Meter отдельно от Core operation metrics. Shared admission не дублирует учёт.
-[Контракт и проверки](enerit/HISTORY.md#ene6d2-метрики-ресурсов-и-перегрузки--2026-10-26),
-[руководство](enerit/DIAGNOSTICS.md#метрики-ресурсов).
+Последняя работа — **2026-10-27, ENG8a.3/ENE6d.4 bounded child diagnostic delivery**.
+Core предоставляет bounded history/import views; Aether App factories связывают
+child с host через отдельный Enerit endpoint. Import сохраняет child origin/PID/
+time/trace, назначает host sequence и authoritative session/build context.
+Есть byte/count/rate/deadline limits, loss/unconfirmed/cleanup health; control
+admission и local JSONL/raw capture независимы.
+[Контракт/API](engine/DIAGNOSTICS_DELIVERY.md),
+[результаты и история ошибок](engine/HISTORY.md#child-diagnostic-delivery--2026-10-27).
 
-Новые33cases прошли в обеих конфигурациях. Full Debug4054/4054 и Release4054/4054,
-failed/skipped0. Enerit291/generator114, Core314, Aether1218, Editor741 в каждой
-конфигурации. Builds0errors: Debug nonincremental1530warnings,
-Release incremental627warnings; SDK10.0.403.
-[Evidence](../TestResults/DiagnosticsIpcMetrics-20261026-1/verification.json).
-Isolated source process проверяет failed Stop/retained ownership; прежние source
-process suites также прошли. Published/GPU/package/performance runs не повторены.
-Прежний CPU FrameReceiver failure текущим запуском не воспроизведён; он и Mithril
-ready-file race остаются отдельными quality follow-ups.
+Новые179cases прошли в обеих конфигурациях. Full solution4285/4285 Debug и4285/4285
+Release, failed/skipped0: Core373, Aether1338, Editor741, Enerit343/generator114.
+Builds0errors: Debug nonincremental1546warnings, Release incremental1316warnings,
+SDK10.0.403. [Evidence](../TestResults/DiagnosticsDelivery-20261027-1/verification.json).
+Source/binary hashes проверены, source changes0; пользовательский Microsoft DI10.0.14
+сохранён.3actual Preview children/99control commands, log flood, slow/broken sinks,
+bounded JSONL/raw и reap/release проверены. GPU/display/published/package/performance
+acceptance не повторены. Неуспешные попытки сохранены; две проблемы изоляции/
+cleanup deadline новых тестов исправлены в тестах.
+Прежние CPU FrameReceiver/Mithril ready-file races не объявлены исправленными.
 
-Далее IPC timeout/reconnect/error classification и queue-wait duration, затем
-command/frame aggregates и bounded child delivery/Editor console/export.
-Bootstrap/App-private routing, generator и общий quota report/artifact roots
-частичны. Authoring очередь и прежние quality gates сохраняются.
-Предыдущие [IPC trace context](enerit/HISTORY.md#ene6d1-trace-context-через-pipes--2026-10-26),
-[Core/Aether operations](core/HISTORY.md#операции-и-трассы-диагностики--2026-10-26),
-[build retention](engine/HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26),
-[emergency/managed runs](core/HISTORY.md#emergency-и-managed-jsonl-runs--2026-10-26).
+Следующий diagnostics шаг — ED6a/ED8a bounded Editor console/export, затем
+command/frame aggregates. Bootstrap/App-private routing, generator и общий artifact
+quota частичны. Authoring очередь и quality gates сохраняются.
+Предыдущие [IPC outcome/wait](enerit/HISTORY.md#ene6d3-исходы-ipc-и-ожидание-admission--2026-10-27),
+[resource metrics](enerit/HISTORY.md#ene6d2-метрики-ресурсов-и-перегрузки--2026-10-26),
+[operations](core/HISTORY.md#операции-и-трассы-диагностики--2026-10-26)
+и [build retention](engine/HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26)
+сохраняют свои scope и budgets.
 
 Предыдущая работа — **2026-10-25, ED4f.2 системный акцент границы окна**.
 Windows cached accent/fallback подключён через общий host contract; Editor включает
@@ -153,12 +155,12 @@ frames — отдельный transport, процессы — Mithril.
 
 | Модуль | Текущий результат и область вывода | Продолжение |
 | --- | --- | --- |
-| [Core](core/STATUS.md) | CORE6 bounded pipeline/capture/emergency/operations + explicit parent/kind; current314/314 Debug/Release | IPC/domain/aggregate telemetry, bootstrap/App-private/generation/performance; прежние cooperative/platform limits |
+| [Core](core/STATUS.md) | CORE6 bounded pipeline/capture/emergency/operations + history/import views; current373/373 Debug/Release | Domain/aggregate telemetry, bootstrap/App-private/generation/performance; прежние cooperative/platform limits |
 | [Cobalt / DI](cobalt/STATUS.md) | Текущий179/generator91 Debug/Release; document/project ownership на Cobalt/MS DI | API прежние; performance/allocation backlog отдельно |
-| [Enerit](enerit/STATUS.md) | ENE6d.1 trace header + ENE6d.2 process resource/overload metrics; current291/generator114 Debug/Release; прежние published/package proof отдельно | Timeout/reconnect/error metrics, queue-wait и bounded child delivery; ENE6c/MMF/trends отдельно |
-| [Mithril](mithril/STATUS.md) | Current99/99 Debug/Release; исторический ready-file sharing race26октября не исправлялся в ENE6d.2 | Ready JSON publication/read stability; full fault matrix/containment отдельно |
+| [Enerit](enerit/STATUS.md) | ENE6d.1–3 metrics/traces и отдельный Aether child lane; current343/generator114 Debug/Release; прежний package proof отдельно | Queue distribution; ENE6c/MMF/trends и расширенная platform/package matrix отдельно |
+| [Mithril](mithril/STATUS.md) | Current99/99 Debug/Release; исторический ready-file sharing race26октября не исправлялся в этом срезе | Ready JSON publication/read stability; full fault matrix/containment отдельно |
 | [Alloy / Argentis](alloy/STATUS.md) | Current managed full UI893/Hosting114 Debug/Release; предыдущие native proofs сохраняют свои даты | Rename/reorder consumer; physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
-| [Aether / Engine](engine/STATUS.md) | ENG8a telemetry + control IPC propagation; current Aether1218/1218 и Editor741/741 Debug/Release; прежний CPU receiver failure не исправлен | Command/frame metrics, ED6a console/export и ED4c.2/3/workflow; ENG2 race открыт |
+| [Aether / Engine](engine/STATUS.md) | ENG8a telemetry/propagation и bounded child logs; current Aether1338/1338 и Editor741/741 Debug/Release; прежний CPU receiver failure не исправлен | ED6a/ED8a console/export, command/frame metrics и ED4c.2/3/workflow; ENG2 race открыт |
 
 Подробные contracts/commands/failures ведутся у владельцев. Historical packages,
 performance и аппаратные проверки не становятся частью текущего full solution.
@@ -215,8 +217,9 @@ drawing, golden/RTE/full performance/physical UI и real loss/VRAM не повт
 
 ## Следующий конкретный шаг
 
-1. В активном diagnostics направлении — [ENE6d timeout/reconnect/error metrics и queue-wait](enerit/PLAN.md#ene6d-корреляция-и-диагностика--2026-10-25),
-   затем command/frame aggregates и bounded child delivery/ED6a/ED8a console/export.
+1. В активном diagnostics направлении — ED6a/ED8a bounded console/export поверх
+   [готовой child delivery lane](engine/DIAGNOSTICS_DELIVERY.md), затем command/frame
+   aggregates. App-private routing и общий artifact quota требуют отдельных контрактов.
 2. Продолжить [ED4c.2 имена и порядок соседей](engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24)
    через общие engine metadata/history, затем UI rename/reorder. Следом ED4c.3
    create/delete/duplicate, чтобы New был пригоден для работы. Затем project picker/switch и

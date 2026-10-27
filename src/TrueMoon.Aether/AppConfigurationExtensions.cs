@@ -11,6 +11,7 @@ using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Aether.Preview;
 using TrueMoon.Diagnostics;
+using TrueMoon.Aether.Diagnostics;
 
 namespace TrueMoon.Aether;
 
@@ -34,6 +35,18 @@ public static class AppConfigurationExtensions
                 throw new InvalidOperationException("Aether is already registered. Configure its runtime factory through UseAether.");
             services.Singleton<IRuntimeFactory>(resolver => snapshot.RuntimeFactory(resolver)
                     ?? throw new InvalidOperationException("Aether runtime factory returned null."));
+            services.Singleton<ChildDiagnosticConfiguration>(_ => new(snapshot.ChildDiagnostics));
+            Register<PipesInvocationClient<IChildDiagnosticDelivery>, string>(services, _ =>
+                new PipesInvocationClientFactory<IChildDiagnosticDelivery>(new AetherEvents<PipesInvocationClient<IChildDiagnosticDelivery>>(),
+                    ChildDiagnosticFactories.Limits(snapshot.ChildDiagnostics)));
+            Register<PipesInvocationServer<IChildDiagnosticDelivery>, PipesInvocationServerArguments<IChildDiagnosticDelivery>>(services, _ =>
+                new PipesInvocationServerFactory<IChildDiagnosticDelivery>(new AetherEvents<PipesInvocationServer<IChildDiagnosticDelivery>>(),
+                    ChildDiagnosticFactories.Limits(snapshot.ChildDiagnostics)));
+            Register<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>(services, resolver => new ChildDiagnosticReceiverFactory(
+                resolver.TryResolve<IDiagnosticRecordImporter>(),
+                resolver.Resolve<IFactory<PipesInvocationServer<IChildDiagnosticDelivery>, PipesInvocationServerArguments<IChildDiagnosticDelivery>>>()));
+            Register<ChildDiagnosticForwarder, SessionLaunch>(services, resolver => new ChildDiagnosticForwarderFactory(
+                resolver.TryResolve<IDiagnosticRecordReader>(), resolver.Resolve<IFactory<PipesInvocationClient<IChildDiagnosticDelivery>, string>>()));
             Register<PipesInvocationClient<IEngineControl>, string>(services, resolver =>
                 new PipesInvocationClientFactory<IEngineControl>(resolver.Resolve<IEventsSource<PipesInvocationClient<IEngineControl>>>(),
                     new PipesTransportOptions { PropagateTraceContext = true }, resolver.Resolve<IDiagnosticTelemetry>()));

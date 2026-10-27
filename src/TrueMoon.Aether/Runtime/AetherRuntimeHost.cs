@@ -6,6 +6,7 @@ using TrueMoon.Aether.Transport;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Mithril;
 using TrueMoon.Mithril.Units;
+using TrueMoon.Aether.Diagnostics;
 
 namespace TrueMoon.Aether.Runtime;
 
@@ -21,19 +22,22 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
     private readonly PipesInvocationServer<IEngineControl> _server;
     private readonly SessionLaunch _launch;
     private readonly int _parentId;
+    private readonly ChildDiagnosticForwarder? _diagnostics;
     private readonly CancellationTokenSource _end;
     private readonly Lock _gate = new();
     private Task[] _workers = [];
     private Task? _dispose;
     private bool _running;
-    private bool _serverReleased, _parentReleased, _framesReleased, _gameReleased;
+    private bool _serverReleased, _parentReleased, _framesReleased, _gameReleased, _diagnosticsReleased;
+    /// <summary>Optional child forwarding health, independent of control/game outcome.</summary>
+    public ChildDiagnosticStatus? ChildDiagnosticsStatus => _diagnostics?.Read();
 
     internal AetherRuntimeHost(AetherHost engine, IAppLifetime lifetime, UnitParentProcessEventsHandler parent,
         IDisposable game, FrameProducer frames, RuntimeProtocol protocol, PipesInvocationServer<IEngineControl> server,
-        SessionLaunch launch, int parentId)
+        SessionLaunch launch, int parentId, ChildDiagnosticForwarder? diagnostics = null)
     {
         _engine = engine; _parent = parent; _game = game; _frames = frames; _protocol = protocol;
-        _server = server; _launch = launch; _parentId = parentId;
+        _server = server; _launch = launch; _parentId = parentId; _diagnostics = diagnostics;
         _end = CancellationTokenSource.CreateLinkedTokenSource(lifetime.AppCancellationToken);
     }
 
@@ -110,6 +114,11 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
         }
         if (!_framesReleased) Try(() => { _frames.Dispose(); _framesReleased = true; });
         if (!_gameReleased) Try(() => { _game.Dispose(); _gameReleased = true; });
+        if (!_diagnosticsReleased)
+        {
+            try { if (_diagnostics != null) await _diagnostics.StopAsync().ConfigureAwait(false); _diagnosticsReleased = true; }
+            catch (Exception error) { errors.Add(error); }
+        }
         if (errors.Count == 0) _end.Dispose();
         if (errors.Count == 0) completion.TrySetResult();
         else completion.TrySetException(errors.Count == 1 ? errors[0] : new AggregateException(errors));

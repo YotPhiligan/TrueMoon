@@ -1,5 +1,50 @@
 # Core: история проверок и ревью
 
+## Чтение и импорт child diagnostics — 2026-10-27
+
+Contracts добавляет IDiagnosticRecordReader/Importer и DiagnosticOrigin; старый
+DiagnosticRecord positional constructor сохранён. UseDiagnostics(pipeline)
+регистрирует nondisposable borrowed access views, один owner pipeline для Cobalt
+и MS DI. Повторный setup/legacy overload заменяет views без создания discarded sinks.
+[API/семантика](DIAGNOSTICS.md#чтение-и-импорт-bounded-history),
+[transport owner](../engine/DIAGNOSTICS_DELIVERY.md).
+
+ReadAfter — exclusive cursor, oldest-first independent bounded snapshot1..1024.
+LatestSequence включает unavailable slots. Import назначает host appid/sequence
+и origin child appid/sequence, сохраняет PID/UTC/trace/exception strings через
+local clipping/refreeze. Authoritative context копируется первым; live filters,
+ring и sink queues остаются общими. Self/invalid/recursive origins отвергаются;
+импорт не публикует global DiagnosticListener event.
+
+Новые18methods/59cases:
+[Requirement | Evidence matrix](../../TestResults/DiagnosticsDelivery-20261027-1/tests-core-matrix.md),
+[assertion/gap review](../../TestResults/DiagnosticsDelivery-20261027-1/tests-core-quality.md).
+
+| Требование | DiagnosticImportTests |
+| --- | --- |
+| Cursor/bounds/eviction и independent snapshot | ReadAfter_UsesExclusiveHostCursorAndOldestFirstBoundedOrder; ReadAfter_MaximumPageAndEvictionKeepEarlierSnapshotsIndependent; ReadAfter_InvalidBoundsThrowWithoutChangingHistory |
+| Refreeze/context priority/origin/trace и clipping | TryImport_RefreezesClippedAuthoritativeContextAndPreservesChildCorrelation; TryImport_PropertyBudgetPrioritizesContextAtAndBelowExactBoundary; TryImport_TracePairIsPreservedOrClearedTogether |
+| Invalid/recursive/closed/sink budgets, no global replay | TryImport_InvalidIdentityOrRecursiveOriginRejectsBeforeAdmission; TryImport_DoesNotReemitToGlobalListenersOrFeedAnotherCollector; TryImport_UsesReservedBoundedSinkQueueAndClosedLateWriteAccounting; TryImport_MemoryAndSinkByteLimitsAcceptExactBoundaryAndRejectOneByteBelow |
+| Both-DI replacement и exactly-once pipeline ownership | AppRegistration_ReplacementProvidesOneBorrowedAccessAndDrainsOwnedPipeline; AppRegistration_DefaultOrLegacyHasNoDeliveryAccessAndNeverCreatesDiscardedPipeline |
+
+Initial narrow59/59. Whole-Core RED372/373 выявил неверное абсолютное ожидание
+пустого collector в App-test: Expected0 Actual2, DiagnosticImportTests line395,
+parallel Apps публиковали process-global TrueMoon events. Fix только в тесте:
+уникальная imported provenance, sink barrier только для своей записи, relative
+cursor и exact closed-history/disposal checks. Global routing не менялся.
+Rebuilt whole-Core GREEN373/373; RED/GREEN artifacts core-full-debug-repro-1.*
+и core-full-debug-fixed-1.* сохранены в evidence directory.
+
+Final Core373/373 Debug/Release, failed/skipped0; все59newcases passed.
+Full solution4285/4285 в каждой конфигурации, обе сборки0errors:
+Debug nonincremental1546warnings/Release incremental1316warnings, SDK10.0.403.
+[Общая matrix/команды/границы](../engine/HISTORY.md#child-diagnostic-delivery--2026-10-27),
+[evidence](../../TestResults/DiagnosticsDelivery-20261027-1/verification.json).
+Source hashes1020/changes0, test binaries20, user DI10.0.14 SHA unchanged.
+Aether source3-child proof относится к transport consumer; GPU/published/package/
+performance acceptance не повторён. CORE6 остаётся частичным.
+
+
 ## Explicit parent и kind для IPC — 2026-10-26
 
 IDiagnosticTelemetry/DiagnosticTelemetry получили StartOperation(name,kind,parent,properties)

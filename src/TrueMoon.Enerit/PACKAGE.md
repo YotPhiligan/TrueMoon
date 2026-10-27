@@ -82,6 +82,14 @@ measurement callbacks never run in admission/Invoke. Successful drain removes
 numeric owner state; cancelling a Stop wait retains it. No transport/handler or
 payload is retained by the metric registry. Overload totals live until process exit.
 
+The same meter adds fixed client/server/connection failure classes, validated late
+responses and successful reconnect counts. Client local timeout is a distinct failure
+reason; caller cancellation and local Stop remain separate. Remote errors are not
+classified by their text. Queue wait count and cumulative seconds use only
+admitted/cancelled/stopped outcomes; delta(seconds)/delta(count) gives the interval
+mean. These are observable counters, so measurements do not call observers on
+producer threads. No per-sample history or percentile histogram is retained.
+
 Client, server and standalone connection expose `StopAsync`, `Completion` and implement
 `IAsyncDisposable`. Stop fences admission, interrupts IO and drains owned work.
 Cancelling the Stop wait does not abandon that drain: keep borrowed handler

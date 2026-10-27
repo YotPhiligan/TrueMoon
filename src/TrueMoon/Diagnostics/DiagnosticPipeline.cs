@@ -138,13 +138,54 @@ public sealed class DiagnosticPipeline : IDisposable, IAsyncDisposable
             try { record = DiagnosticSnapshot.Create(source, message, ApplicationId, ++_sequence, _options); }
             catch (Exception error) { _captureFailures++; _emergency?.Report("Capture", source, error); return; }
             var bytes = DiagnosticSnapshot.Size(record);
-            while (_memory.Count != 0 && (_memory.Count >= _options.MemoryCapacity || bytes > _options.MemoryByteCapacity - _memoryBytes))
-            { _memoryBytes -= _memory.Dequeue().Bytes; _evicted++; }
-            if (bytes <= _options.MemoryByteCapacity) { _memory.Enqueue((record, bytes)); _memoryBytes += bytes; }
-            else _evicted++;
-            foreach (var worker in _workers)
-                if (!_options.SinkMinimumLevels.TryGetValue(worker.Name, out var threshold) || record.Level >= threshold)
-                    worker.Offer(record, bytes);
+            Retain(record, bytes);
+        }
+    }
+
+    private void Retain(DiagnosticRecord record, long bytes)
+    {
+        while (_memory.Count != 0 && (_memory.Count >= _options.MemoryCapacity || bytes > _options.MemoryByteCapacity - _memoryBytes))
+        { _memoryBytes -= _memory.Dequeue().Bytes; _evicted++; }
+        if (bytes <= _options.MemoryByteCapacity) { _memory.Enqueue((record, bytes)); _memoryBytes += bytes; }
+        else _evicted++;
+        foreach (var worker in _workers)
+            if (!_options.SinkMinimumLevels.TryGetValue(worker.Name, out var threshold) || record.Level >= threshold)
+                worker.Offer(record, bytes);
+    }
+
+    /// <summary>Latest collector-local sequence, including unavailable capture slots.</summary>
+    public long LatestSequence { get { lock (_gate) return _sequence; } }
+
+    /// <summary>Returns an independent oldest-first bounded snapshot after a collector-local cursor.</summary>
+    /// <param name="afterSequence">Exclusive nonnegative cursor.</param><param name="maximumCount">From 1 through 1024.</param>
+    /// <returns>Frozen records still retained in the memory ring.</returns>
+    public IReadOnlyList<DiagnosticRecord> ReadAfter(long afterSequence, int maximumCount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(afterSequence);
+        if (maximumCount is < 1 or > 1024) throw new ArgumentOutOfRangeException(nameof(maximumCount));
+        lock (_gate) return _memory.Where(item => item.Record.Sequence > afterSequence).Take(maximumCount).Select(item => item.Record).ToArray();
+    }
+
+    /// <summary>Admits a remote snapshot through the local bounds, filtering, history and sink queues without global re-emission.</summary>
+    /// <param name="record">Remote local-origin record.</param><param name="context">Authoritative properties copied before remote properties.</param>
+    /// <returns>Whether admitted; output loss remains observable through normal pipeline health.</returns>
+    public bool TryImport(DiagnosticRecord record, IReadOnlyDictionary<string, string?>? context = null)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        lock (_gate)
+        {
+            if (_closed) { _lateWrites++; return false; }
+            if (record.Origin != null || record.ApplicationId == Guid.Empty || record.ApplicationId == ApplicationId ||
+                record.Sequence <= 0 || record.ProcessId <= 0 || !Enum.IsDefined(record.Level))
+            { _captureFailures++; return false; }
+            if (!IsEnabled(record.Level, record.Source, record.EventName)) return false;
+            try
+            {
+                var imported = DiagnosticSnapshot.Import(record, context, ApplicationId, ++_sequence, _options);
+                Retain(imported, DiagnosticSnapshot.Size(imported));
+                return true;
+            }
+            catch (Exception error) { _captureFailures++; _emergency?.Report("Import", record.Source ?? "remote", error); return false; }
         }
     }
 

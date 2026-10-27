@@ -50,6 +50,12 @@ rejection наблюдаем без изменения работающего pr
 events выключены; service payload и generated mapping прежние. Same-build HostId
 включает Enerit assembly, поэтому host/child пересобираются вместе. Standalone старые
 constructors сохраняют legacy options; кастомные factories выбирают propagation явно.
+С27октября штатный App graph также передаёт bounded structured child logs в host
+по отдельному Enerit endpoint. ChildDiagnostics options копируются в SessionLaunch;
+нужны Core reader/importer в соответствующих Apps. Host сохраняет child origin/PID/
+timestamp/trace и добавляет authoritative session/generation/build properties.
+Limits, loss/unconfirmed counters и lifecycle описаны в
+[руководстве child → host](../docs/engine/DIAGNOSTICS_DELIVERY.md).
 Aggregate frame metrics и live Editor console остаются следующими срезами.
 
 NativeRuntimeLease.StandardOutput/StandardError теперь возвращают live tails

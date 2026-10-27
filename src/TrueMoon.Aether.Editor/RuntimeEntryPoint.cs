@@ -32,7 +32,10 @@ internal static class RuntimeEntryPoint
                 JsonUseRunDirectories = true
             });
             context.UseAether(options =>
-            { options.HostContractId = launch.Identity.HostContractId; options.GameBuildId = launch.Identity.GameBuildId; options.ReportDirectory = launch.ReportDirectory; });
+            {
+                options.HostContractId = launch.Identity.HostContractId; options.GameBuildId = launch.Identity.GameBuildId; options.ReportDirectory = launch.ReportDirectory;
+                options.ChildDiagnostics = launch.DiagnosticDelivery ?? new() { Enabled = false };
+            });
             if (preview) context.UseAetherPreviewRuntime(launch, parentId);
             else context.UseAetherRuntime(launch, parentId);
         });
@@ -44,7 +47,8 @@ internal static class RuntimeEntryPoint
         {
             await runtime.DisposeAsync(); await app.StopAsync();
             File.WriteAllText(Path.Combine(launch.ReportDirectory, $"runtime-{launch.Identity.Generation}.json"), JsonSerializer.Serialize(new
-            { Pid = Environment.ProcessId, Validation = engine.Gpu.LastSurfaceProducer, Resources = engine.Gpu.ResourceCount, Handles = engine.Gpu.OpenHandleCount }));
+            { Pid = Environment.ProcessId, Validation = engine.Gpu.LastSurfaceProducer, Resources = engine.Gpu.ResourceCount, Handles = engine.Gpu.OpenHandleCount,
+                ChildDiagnostics = runtime.ChildDiagnosticsStatus }));
         }
     }
 }

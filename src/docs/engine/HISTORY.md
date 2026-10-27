@@ -1,5 +1,101 @@
 # Engine / Editor: история решений и проверок
 
+## Child diagnostic delivery — 2026-10-27
+
+ENG8a.3/ENE6d.4 после outcome/wait metrics: child poll-читает bounded Core ring,
+отправляет один batch по отдельному typed Enerit endpoint, host импортирует в
+обычные ring/sinks. Pixel/control/Mithril queues не используются для logs.
+[Согласованный контракт](PLAN.md#child-diagnostic-delivery-eng8a3--ene6d4--2026-10-27),
+[подключение/API/budgets](DIAGNOSTICS_DELIVERY.md).
+
+Shared Contracts добавляет reader/importer и additive Origin без изменения старого
+DiagnosticRecord constructor. Aether зависит от contracts, без новой зависимости
+на TrueMoon bootstrap. Copied launch options и App/Cobalt factories задают delivery
+products; low-level старые constructors остаются local-only. Lease владеет receiver
+до child reap/raw drain, runtime владеет sender после game/control cleanup.
+Cancelled/timeout wait сохраняет actual cleanup owner для retry.
+
+Version/count/depth/size и все rows проверяются до import; exact session/generation/
+nonce/host/game/role/PID fences, bound child appid и monotonic sequences не дают
+смешивать generations. UInt64 generation переносится exact bits существующим
+Int64 scalar: первый build с UInt64 дал TME001; выбран additive DTO long, generator
+не менялся. Host назначает собственные appid/sequence и authoritative context,
+сохраняет child origin/PID/time/trace. Import не re-emits DiagnosticListener;
+sender подавляет Origin records, сама lane не публикует events/traces/metrics.
+
+Known gap/size/rate/pending drops считаются Lost, unknown ACK outcome — Unconfirmed;
+replay отсутствует. Sender имеет собственный per-call CTS и PendingRequestCount
+guard даже с custom factory50s/64slots. ACK проверяет status/count/exact last payload
+sequence. Rate учитывает JSON+1024bytes до parse, включая malformed body.
+Stop фиксирует конечный source cursor; принудительная отмена tail видна в
+DrainComplete. Local JSONL и continuous stdout/stderr сохраняются независимо.
+
+Новые120Aether cases/38methods и59Core cases/18methods; всего179.
+[Полная Requirement | Evidence matrix](../../TestResults/DiagnosticsDelivery-20261027-1/tests-matrix.md),
+[quality/gap review](../../TestResults/DiagnosticsDelivery-20261027-1/tests-quality.md),
+[Core matrix](../../TestResults/DiagnosticsDelivery-20261027-1/tests-core-matrix.md).
+
+| Требование | Точные тесты, TrueMoon.Aether.Tests.Diagnostics |
+| --- | --- |
+| Whole-packet validation, identities и monotonic fences | ChildDiagnosticReceiverTests.InvalidRow_RejectsTheWholePacketBeforeEvenTheEarlierValidRowIsImported; ForeignGenerationIdentity_IsRejectedBeforeImportAndDoesNotBindTheApplication; ApplicationPacketAndRecordFences_RejectStaleDuplicatesWhileLossHeartbeatsRemainMonotonic |
+| Missing/malformed ACK без replay, own deadline и finite capacity | ChildDiagnosticForwarderTests.MalformedAck_MakesBatchUnconfirmedAndNeverReplaysIt; OwnRequestDeadlineAndPendingGuard_BoundAnInjectedClientWithLargeCapacityAndTimeout |
+| Count/byte/rate/codec boundaries и no feedback | ChildDiagnosticLimitsTests.ReceiverWireBounds_AllowExactSizesAndNeverPublishOversizedResponse; RateBudget_IncludesEnvelopeAcceptsExactBoundaryAndRecoversInANewWindow; ChildDiagnosticForwarderTests.SerializationBounds_ClipSafelyRemoveSecretKeysAndKeepFreeText |
+| Both DI, ownership/rollback/cleanup и independent control | ChildDiagnosticFactoriesTests.AppFactories_ExchangeUsingOptionalCoreAccessAndCopiedOptionsWithCallerOwnedProducts; RuntimeHost_OwnsSenderAndDrainsItAfterPreviewGameCleanup; RuntimeHost_DeliveryFactoryFailureRollsBackGameAndControlWithoutChangingCause; BlockedDiagnosticImporter_DoesNotBlockIndependentControlConnection |
+| Finite drain и timeout не освобождает чужой/исполняющийся ресурс | ChildDiagnosticForwarderTests.StopCapturesOneFiniteTargetAndDoesNotChaseNewerReaderRecords; BlockedBorrowedReader_TimesOutOnlyTheStopWaitThenReleasesOnRetry; ChildDiagnosticReceiverTests.BlockedImporter_RejectsConcurrentPacketsAndPreservesOwnedTransportAcrossTimeoutAndCancelledStopWait |
+| Actual source child flood/control/JSONL/raw/reap | ChildDiagnosticProcessTests.ThreeActualGenerations_ForwardProvenanceAndLossWhileControlAndLocalFilesSurviveFloodAndBrokenSinks |
+
+Source proof использует реальные NativeRuntimeFactory, public UseAetherPreviewRuntime
+и RuntimeHostFactory:3Preview children одной session, разные PID/appid,33control
+commands на generation (Hello/LoadScene/GetStatus/SetMode(false)/Stop), slow sink
+drops и throwing sink failures. Preview не поддерживает Step, game artifact/input/
+GPU surface не открываются. На сохранённом отдельном запуске receiver принял12rows
+на generation; host bounded history сохраняет4, child reported loss1741/1224/1237.
+Все3child reaped, lease/receiver released.29raw/report/JSONL files:
+[process evidence](../../TestResults/DiagnosticsDelivery-20261027-1/process-agent-debug/delivery-report.json).
+Final full suites также выполняют этот process test в Debug/Release.
+
+Непрошедшие попытки сохранены:
+- Initial build: TME001 UInt64 и отсутствующие generated types, исправлен DTO scalar.
+- Sender initial24/25: cold pipe не успевал к20ms barrier; обычный test budget500ms
+  против injected50s сохраняет проверку own deadline/pending guard.
+- Fixture compile: неверный TryResolve на IServiceProvider заменён GetService.
+- DI116/118: неверное ожидание Completion unstarted Mithril handle убрано;
+  PID/no-receiver/caller ownership остаются проверены.
+- Process118/119: existing synchronous Console.In segment в RunAsync откладывал flood
+  до Stop; fixture запускает runtime worker через Task.Run. Production не менялся.
+- Первый full attempt прерван PowerShell NativeCommandError при stderr xUnit.
+  Скрипт теперь собирает stdout/stderr до exitcode, attempt1 сохранён. Whole-Core RED
+ 372/373 подтвердил process-global event interference; App test изолирует свой origin
+  и relative cursor, сохраняя normal routing. Whole-Core rebuilt GREEN373/373.
+- Второй full Debug4283/4285:2InvalidRow cases прошли assertions, но Dispose timeout
+  ordinary fixture200ms. Test-only deadline2s, специальные50ms timeout cases и
+  min/max boundaries сохранены. Targeted23/23 и wholeAether1338/1338 прошли до
+  окончательного full. Failed attempt2/10TRX/log/binlog/source hashes сохранён.
+
+Final validation SDK10.0.403, xUnit/VSTest, net10.0:
+Debug nonincremental build0errors/1546warnings; Release incremental0errors/1316warnings.
+Core373, Cobalt179/generator91, Enerit343/generator114, Mithril99,
+UI893/Hosting114, Aether1338, Editor741 — **4285/4285 в каждой конфигурации**,
+failed/skipped0. Все179newcases passed в обеих конфигурациях.
+[Machine verification](../../TestResults/DiagnosticsDelivery-20261027-1/verification.json):
+1020source hashes, source changes0,20test-binary hashes,44TRX/24binlogs включая
+неуспешные попытки. Pre-existing Microsoft DI10.0.14 сохранён по SHA256.
+
+Команды финального профиля (точные arguments — validation-steps.json):
+```powershell
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v:quiet -m -bl:TestResults/DiagnosticsDelivery-20261027-1/build-Debug.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug -v:minimal --logger trx --results-directory TestResults/DiagnosticsDelivery-20261027-1/Debug -bl:TestResults/DiagnosticsDelivery-20261027-1/tests-Debug.binlog
+dotnet build TrueMoon.slnx --no-restore -c Release -v:quiet -m -bl:TestResults/DiagnosticsDelivery-20261027-1/build-Release.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Release -v:minimal --logger trx --results-directory TestResults/DiagnosticsDelivery-20261027-1/Release -bl:TestResults/DiagnosticsDelivery-20261027-1/tests-Release.binlog
+```
+
+Это первый bounded profile, не весь ENG8a/ENE6d/ENE6c. GPU/display, gameplay/input,
+published/package, arbitrary parent containment, long trends/performance не
+повторены. Исторические CPU FrameReceiver и Mithril ready-file races не исправлялись.
+Следующий diagnostics consumer — ED6a/ED8a bounded console/export, затем command/
+frame metrics; authoring ED4c.2 → ED4c.3/workflow и hardware gates прежние.
+
+
 ## IPC trace context в control factories — 2026-10-26
 
 UseAether и UseAetherRuntime (включая PreviewRuntime) внедряют borrowed telemetry и

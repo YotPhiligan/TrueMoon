@@ -11,6 +11,7 @@ using TrueMoon.Mithril;
 using TrueMoon.Services;
 using TrueMoon.Aether.Preview;
 using TrueMoon.Diagnostics;
+using TrueMoon.Aether.Diagnostics;
 
 namespace TrueMoon.Aether;
 
@@ -43,6 +44,7 @@ public static class RuntimeConfigurationExtensions
     private static IAppConfigurationContext RegisterRuntime(IAppConfigurationContext context, SessionLaunch launch, int parentId)
     {
         launch.Identity.Validate();
+        launch = launch with { DiagnosticDelivery = launch.DiagnosticDelivery?.Snapshot() };
         if (parentId <= 0 || parentId == Environment.ProcessId) throw new ArgumentOutOfRangeException(nameof(parentId));
         if (launch.Build != null && launch.Build.BuildId != launch.Identity.GameBuildId || string.IsNullOrWhiteSpace(launch.Endpoint) ||
             !launch.Endpoint.StartsWith("engine-", StringComparison.Ordinal) || launch.Endpoint.Length > 100)
@@ -78,7 +80,8 @@ public static class RuntimeConfigurationExtensions
                     resolver.Resolve<IFactory<FrameProducer>>(),
                     resolver.Resolve<IFactory<RuntimeProtocol, (SessionLaunch, IGameSession, FrameProducer)>>(),
                     resolver.Resolve<IFactory<PipesInvocationServer<IEngineControl>, (SessionLaunch, RuntimeProtocol)>>(),
-                    launch.Role == RuntimeRole.EditPreview ? resolver.Resolve<IFactory<PreviewGameSession>>() : null));
+                    launch.Role == RuntimeRole.EditPreview ? resolver.Resolve<IFactory<PreviewGameSession>>() : null,
+                    resolver.Resolve<IFactory<ChildDiagnosticForwarder, SessionLaunch>>()));
             services.Singleton<AetherRuntimeHost>(resolver => resolver.Resolve<IFactory<AetherRuntimeHost, SessionLaunch>>().Create(launch));
         });
         return context;

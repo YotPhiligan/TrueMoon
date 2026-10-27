@@ -20,7 +20,11 @@ public sealed record SessionStatus(SessionState State, SessionIdentity? Identity
 /// <param name="Build">Optional selected game artifact.</param><param name="RequireRestore">Requires restore before any readiness/frame publication.</param>
 /// <param name="Role">Explicit game or built-in Edit preview role; preview forbids artifact/restore.</param>
 public sealed record SessionLaunch(SessionIdentity Identity, string Endpoint, string ReportDirectory, string Behavior = "normal",
-    GameBuildReference? Build = null, bool RequireRestore = false, RuntimeRole Role = RuntimeRole.Game);
+    GameBuildReference? Build = null, bool RequireRestore = false, RuntimeRole Role = RuntimeRole.Game)
+{
+    /// <summary>Optional copied limits for the separate diagnostic lane; null preserves legacy local-only capture.</summary>
+    public TrueMoon.Aether.Diagnostics.ChildDiagnosticDeliveryOptions? DiagnosticDelivery { get; init; }
+}
 /// <summary>Explicit child role. Edit preview uses only the built-in Aether scene consumer.</summary>
 public enum RuntimeRole
 {

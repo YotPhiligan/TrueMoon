@@ -1,32 +1,28 @@
 # Core: состояние и точка продолжения
 
-Связанная проверка — **2026-10-26, ENE6d.2 resource metrics**: Core314/314 и full
-solution4054/4054 Debug/Release, failed/skipped0. Core runtime/API в этом срезе
-не менялись; Enerit MetricsEnabled независим от Core operation setting.
-[Матрица/команды и ограничения](../enerit/HISTORY.md#ene6d2-метрики-ресурсов-и-перегрузки--2026-10-26).
+Последняя работа — **2026-10-27, bounded history reader/importer для child logs**.
+UseDiagnostics(pipeline) предоставляет borrowed nondisposable reader/importer views;
+импорт назначает host identity/sequence, сохраняет child Origin/PID/time/trace,
+применяет прежние filters/budgets и не re-emits global listeners.
+Legacy overload остаётся без delivery views.
+[API](DIAGNOSTICS.md#чтение-и-импорт-bounded-history),
+[подробные проверки](HISTORY.md#чтение-и-импорт-child-diagnostics--2026-10-27).
 
-Последняя работа — **2026-10-26, explicit parent/kind для Enerit IPC**.
-IDiagnosticTelemetry получил overload с ActivityKind и explicit ActivityContext;
-старый API/default literal и old-only implementors совместимы. Третий parent
-argument обязателен (null выбирает current flow). Bounded Core names/properties,
-sampling, metrics и ownership прежние. [API](DIAGNOSTICS.md#трассы-и-метрики-операций).
+Новые59cases; Core373/373 Debug/Release, failed/skipped0. Full solution4285/4285
+в каждой конфигурации; builds0errors, Debug nonincremental1546warnings,
+Release incremental1316warnings, SDK10.0.403.
+[Evidence](../../TestResults/DiagnosticsDelivery-20261027-1/verification.json).
+Ошибка изоляции нового App-теста в общем запуске исправлена в тесте; global routing
+не менялся. Исторические CPU FrameReceiver/Mithril races остаются открытыми.
+Aether отдельно проверил3actual Preview children и control/log isolation;
+published/GPU/package/performance acceptance не повторены.
 
-Новые6Core cases, narrow62/62; полный Core314/314 Debug/Release, failed/skipped0.
-Solution Debug4021/4021; Release4020/4021 из-за прежнего CPU receiver test Aether.
-Builds0errors: Debug nonincremental1530warnings, Release incremental1300warnings,
-SDK10.0.403. [Проверки](HISTORY.md#explicit-parent-и-kind-для-ipc--2026-10-26),
-[evidence](../../TestResults/DiagnosticsIpc-20261026-1/verification.json).
-Published/GPU/package/performance proof не повторён. Исторические races не исправлялись.
-
-CORE6 остаётся частичным: далее IPC/domain/aggregate metrics и bounded child-log
-delivery; bootstrap-before-pipeline, App-private routing, UI console/export,
-generator и общий quota report/artifact roots отдельны. Structured pipeline/capture,
-emergency fallback и managed JSONL retention сохраняют прежние budgets.
-Предыдущий operation профиль и default-App registration:
-[история](HISTORY.md#операции-и-трассы-диагностики--2026-10-26).
-Другие diagnostics срезы: [первый профиль](HISTORY.md#структурированная-диагностика-первый-профиль--2026-10-25),
-[emergency/runs](HISTORY.md#emergency-и-managed-jsonl-runs--2026-10-26),
-[engine job retention](../engine/HISTORY.md#диагностика-сборок-ограничение-хранения--2026-10-26).
+CORE6 остаётся частичным: далее Editor console/export и domain/frame metrics.
+Bootstrap-before-pipeline, App-private routing, generator и общий quota report/
+artifact roots отдельны. [Child transport](../engine/DIAGNOSTICS_DELIVERY.md)
+принадлежит Aether; предыдущие [operations/telemetry](HISTORY.md#операции-и-трассы-диагностики--2026-10-26),
+[explicit parent/kind](HISTORY.md#explicit-parent-и-kind-для-ipc--2026-10-26)
+и JSONL/emergency budgets сохранены.
 
 Связанная проверка — **2026-10-23, ENE6a/MIT6a integration**: Core117/117
 Debug/Release в текущем полном solution2361/configuration; new App/IPC lifecycle
@@ -153,8 +149,8 @@ JSON failure checks различают serialization error до записи и 
 
 ## Следующий конкретный шаг
 
-Для текущего diagnostics направления — ENE6d timeout/reconnect/error counters
-и queue-wait, затем domain/frame metrics и bounded child-log delivery поверх CORE6d.
+Для текущего diagnostics направления — Editor console/export через Core reader,
+затем domain/frame metrics поверх CORE6d и готовой child delivery lane.
 App-private routing и
 bootstrap capture требуют самостоятельного контракта; общий quota report roots
 не выводится из JSONL retention.

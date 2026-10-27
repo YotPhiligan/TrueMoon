@@ -35,6 +35,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         internal readonly PipeStream Stream = stream;
         internal readonly byte Method = method;
         internal readonly ActivityContext? Context = context;
+        internal PipesClientFailure? FailureOrigin;
         internal readonly TaskCompletionSource<ReadOnlyMemory<byte>> Response = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal bool Sent, WriteFinished, RemoteFinished, LocalFinished, Released;
     }
@@ -87,6 +88,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         // A connection loop must not inherit the operation that happened to construct its owner.
         Activity.Current = null;
         PipesDiagnostics.RemoteContext = null;
+        var connectedOnce = false;
         while (!_token.IsCancellationRequested)
         {
             PipeStream? stream = null;
@@ -98,6 +100,8 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                 {
                     if (_disposed) return;
                     _connected = true;
+                    if (connectedOnce) _metrics?.Reconnected();
+                    connectedOnce = true;
                 }
                 PipesDiagnostics.Legacy(() => _eventsSource.Write(() => "Connected"));
                 while (!_token.IsCancellationRequested)
@@ -118,7 +122,11 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                             {
                                 var request = pending;
                                 request.RemoteFinished = true;
-                                if (status == 1) late = !request.Response.TrySetException(new InvocationException(error!));
+                                if (status == 1)
+                                {
+                                    if (!request.Response.Task.IsCompleted) request.FailureOrigin = PipesClientFailure.Remote;
+                                    late = !request.Response.TrySetException(new InvocationException(error!));
+                                }
                                 else if (request.Response.TrySetResult(memory)) memory = default;
                                 else late = true;
                                 ReleaseIfFinished(request);
@@ -126,6 +134,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                         }
                         if (late)
                         {
+                            _metrics?.LateResponse();
                             PipesDiagnostics.Legacy(() => _eventsSource.Write(() => $"Discarded late response {guid}", "LateResponse"));
                             PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, 2104, "Pipes.Client.LateResponse", () =>
                             {
@@ -144,6 +153,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                 lock (_responses)
                 {
                     _connected = false;
+                    if (!_disposed && !_token.IsCancellationRequested) _metrics?.ConnectionFailure(false, error);
                     FailPending(error, stream);
                 }
                 Reset(stream);
@@ -170,6 +180,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         {
             _responses.Remove(request.Id);
             request.RemoteFinished = true;
+            if (!request.Response.Task.IsCompleted) request.FailureOrigin = PipesClientFailure.Transport;
             request.Response.TrySetException(error);
             ReleaseIfFinished(request);
         }
@@ -197,14 +208,15 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         // Capture before admission/scheduling; writer threads never infer a parent from their own async context.
         var context = PipesDiagnostics.CurrentContext();
         PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, 2100, "Pipes.Client.Starting", Properties);
+        using var timeout = new CancellationTokenSource(_options.RequestTimeout);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken, _token);
+        Request? request = null;
+        var decodingResponse = false;
         try
         {
-            using var timeout = new CancellationTokenSource(_options.RequestTimeout);
-            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken, _token);
             var requestToken = cancellation.Token;
             await _admission.EnterAsync(requestToken).ConfigureAwait(false);
             var ownsSlot = true;
-            Request? request = null;
             TResult result;
             try
             {
@@ -231,7 +243,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
                     TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                 var memory = await request.Response.Task.ConfigureAwait(false);
                 var previous = _decoding.Value;
-                try { _decoding.Value = true; result = func(memory); }
+                try { _decoding.Value = true; decodingResponse = true; result = func(memory); }
                 finally { _decoding.Value = previous; memory.TryReturn(); }
             }
             finally
@@ -245,6 +257,10 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
         }
         catch (Exception error)
         {
+            lock (_responses)
+                _metrics?.ClientFailure(PipesMetrics.ClassifyClientFailure(error, _disposed || _token.IsCancellationRequested,
+                    cancellationToken.IsCancellationRequested, timeout.IsCancellationRequested,
+                    decodingResponse ? PipesClientFailure.Decode : request?.FailureOrigin));
             var cancelled = error is OperationCanceledException;
             operation?.Complete(cancelled ? DiagnosticOperationOutcome.Cancelled : DiagnosticOperationOutcome.Failed, error);
             PipesDiagnostics.Emit(_eventsSource, _options.CaptureRequestEvents, cancelled ? 2102 : 2103,
@@ -256,6 +272,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
     private async Task SendAsync(Request request, byte method, Action<IBufferWriter<byte>>? action, CancellationToken token)
     {
         var success = false;
+        var origin = PipesClientFailure.Serialize;
         try
         {
             token.ThrowIfCancellationRequested();
@@ -265,6 +282,7 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
             var length = writer.WrittenCount - lengthPosition - sizeof(int);
             PipesProtocol.ValidatePayloadLength(length);
             MemoryMarshal.Write(writer.WrittenSpanWritable.Slice(lengthPosition, sizeof(int)), in length);
+            origin = PipesClientFailure.Transport;
             await WriteFrameAsync(writer.WrittenMemory, token, request.Stream, () =>
             {
                 lock (_responses)
@@ -276,7 +294,14 @@ public class PipesInvocationClient<T> : PipeConectionHandler, IInvocationClient<
             }).ConfigureAwait(false);
             success = true;
         }
-        catch (Exception error) { request.Response.TrySetException(error); }
+        catch (Exception error)
+        {
+            lock (_responses)
+            {
+                if (!request.Response.Task.IsCompleted) request.FailureOrigin = origin;
+                request.Response.TrySetException(error);
+            }
+        }
         finally
         {
             lock (_responses)

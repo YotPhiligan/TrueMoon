@@ -1,5 +1,131 @@
 # Enerit: история работы и проверок
 
+## ENE6d.4 отдельный child-log канал — 2026-10-27
+
+Aether реализует отдельный typed diagnostic endpoint поверх existing Enerit
+invocation:72KiB wire cap,1request/connection,0queue, copied batch/rate/time limits.
+Telemetry самой lane выключена; control endpoint имеет независимые admission/IO.
+Общие Enerit framing/generator/priority APIs этим срезом не расширяются.
+Подробная задача/проверки находятся у
+[Aether](../engine/HISTORY.md#child-diagnostic-delivery--2026-10-27),
+[API](../engine/DIAGNOSTICS_DELIVERY.md).
+
+Source proof:3real Preview children/99control commands при log flood, slow/broken
+host sinks, local JSONL/raw caps и actual reap/release. Это bounded consumer proof,
+не полный ENE6c/remote-cancel/long-trend/platform/package acceptance.
+
+Текущие Enerit343/343, generator114/114 Debug/Release; full4285/4285 в каждой
+конфигурации, failed/skipped0. Build0errors, Debug nonincremental1546warnings/
+Release incremental1316warnings, SDK10.0.403.
+[Evidence](../../TestResults/DiagnosticsDelivery-20261027-1/verification.json).
+Pre-existing user DI10.0.14 сохранён; исторические FrameReceiver/Mithril races
+открыты. ENE6d.1–3 tests прошли в текущих full suites; их detailed schemas и
+ограничения остаются в предыдущих записях.
+
+## ENE6d.3: исходы IPC и ожидание admission — 2026-10-27
+
+Следующий implementation slice после resource Meter: фиксированные classes failed
+Invoke/server operation/connection, validated late responses, successful reconnects
+и отдельное время admission queue. [Контракт](PLAN.md#ene6d3-исходы-ipc-и-ожидание-admission--2026-10-27),
+[schema/units/precedence](DIAGNOSTICS.md#исходы-reconnect-и-время-ожидания).
+Всего13observable instruments/37fixed series. Все новые показатели управляются
+скопированным MetricsEnabled; Core telemetry API, wire и factories прежние.
+
+Queue хранит cumulative count и integer elapsed ticks, отдаваемые как seconds;
+outcome admitted/cancelled/stopped. Immediate/refused/pre-cancelled/closed guard
+не создают wait sample. Wait заканчивается при выходе из ожидания слота, до
+всего Invoke. Обновление до admission drain signal, без producer callbacks.
+Решение count/sum вместо Histogram.Record сохраняет pull-only; mean по окну
+доступен, p95 и individual samples не обещаются. Разные counters/series не дают
+общий coherent snapshot.
+
+Client фиксирует источник результата TCS перед publication, не переименовывает
+remote/serialize/decode error поздним timer и не разбирает remote text. Для реально
+наблюдаемого OCE linked cancellation priority: Stop → caller → timeout.
+Server сохраняет первый класс request failure; ошибка отправки ответа отдельно
+учитывается как connection failure. Shared connections заимствуют numeric cell
+admission, не создавая второй resource owner. Server first-fault fence объединяет
+competing Start/read/response-write faults в один connection count. Local Stop
+исключён; remote EOF остаётся transport, его намерение без stop-frame неизвестно.
+Неудачные reconnect attempts/initial connection не считаются успешным reconnect.
+Late response совпадает с прежним discard path и не даёт второй failed Invoke.
+
+До работы уже существовала пользовательская правка Directory.Packages.props:
+Microsoft.Extensions.DependencyInjection10.0.13→10.0.14. Она не изменялась данным
+срезом. Initial restore exit0, assets10.0.14 подтверждены; initial Enerit build
+exit0/errors0/warnings322. Перед финальной проверкой зафиксированы актуальные
+source fingerprints; package file совпадает с исходным SHA256 после проверки.
+
+Broad testing workflow: research/plan/status/pairing в OS-temp, ранее применённые
+dotnet-best-practices/code-testing-agent и assertions/gaps review; Rider findTests
+недоступен, conventions взяты из соседних admission/resource suites. Новый
+PipesOutcomeMetricsTests использует ту же nonparallel collection,18methods/52cases.
+Старый PipesMetricsTests и metrics-failed-stop fixture получили только additive
+resource instrument filter: прежние6instruments/8measurements проверяются прежними
+assertions, новый reader проверяет весь catalog13/37. Иных production dependencies,
+wire/codegen/Contracts/Core изменений нет.
+
+| Требование | Точное доказательство в PipesOutcomeMetricsTests |
+| --- | --- |
+| Queue count/time, cancel/timeout/stop, immediate/refused и close/acquire race | QueueWait_RecordsOnlyTheAcceptedWaitExitAndNotTheRemainingInvocationLifetime; Admission_OnlyActualWaitersCreateSamplesAndAcquiredSlotWinsClosedGateRace |
+| Client token classes и callback phase/original exception | ClientLocalFailure_EndsOnceWithItsTokenReasonAndRetainsSentCapacityUntilRemoteOrOwnedCleanup; CallbackFailures_KeepExactExceptionAndPhaseEvenWhenTheExceptionResemblesAnotherFailure; ClientClassifier_PinsCancellationPriorityPhaseOriginsAndUnclassifiedFallbackWithoutMessageParsing |
+| TCS winner и late serializer loser | WinningRemoteOrTransportFailure_IsNotReplacedOrCountedAgainByALateSerializerFailure |
+| Validated late/unknown/duplicate и reconnect success-only | ValidatedUnknownDuplicateAndPostCancelResponses_CountOncePerFrameWithoutChangingRequestFailures; ReconnectCounter_ExcludesInitialConnectionWaitingAttemptsAndLocalStopButCountsLaterSuccess |
+| Request vs connection/framing errors | MalformedResponseOrEof_SeparatesPhysicalConnectionReasonFromThePendingRequestTransportFailure; DirectServerStartFailure_UsesOtherConnectionReasonOnceAndNoRequestOutcome |
+| Server return/throw/OCE/null/encode/response и first-fault fence | ServerTerminalOutcome_PreservesHandlerEncodeAndRemoteReasonsWithoutParsingExceptionText; ResponseWriteFailure_RetainsFirstRequestReasonAndOnePhysicalConnectionFailure; FirstProtocolConnectionFault_IsNotCountedAgainWhenAResponseWriteAlsoFails |
+| Shared admission vs thrown handler overload и local stop | SharedAdmissionRefusal_AndHandlerFailureHaveDifferentReasonsAndAreCountedOnlyOnceAcrossConnections; LocalServerStop_RecordsStoppedRequestAndSuppressesItsOwnConnectionFailure |
+| Opt-out/copied options/обе DI и consumer-only callbacks | DisabledMetricSnapshots_ExcludeFailuresWaitsLateResponsesAndReconnectsAcrossFactoriesAndBothAppResolvers; OutcomeObservers_RemainPullOnlyWhileQueueWaitAndFailureProducersContinueNormally |
+| Все names/types/units/tags/series и lifetime totals | FullCatalog_UsesThirteenObservableInstrumentsThirtySevenBoundedMeasurementsAndLifetimeTotals |
+
+[Полная FQ matrix/counts/commands](../../TestResults/DiagnosticsIpcOutcomes-20261027-1/test-matrix.md),
+[quality review](../../TestResults/DiagnosticsIpcOutcomes-20261027-1/test-quality.md).
+Review Strong:103direct Assert sites/55shared helper calls,0assertion-free/trivial-only;
+remaining mandatory gaps не выявлены. Root перечитал callback, queue, TCS winner,
+physical first-fault и opt-out assertions. Static mutation analysis без изменения
+production/coverage collection; эти проверки не объявлены exhaustive race proof.
+
+Early narrow53/53 (new20/old33) прошёл. Physical run75/76 выявил только test assertion,
+ожидавший lowercase payload в encode text; assertion теперь проверяет исходный
+InvalidDataException, без зависимости от casing. Synthetic cumulative3.75seconds
+delta имеет precision7 (100ns tick), чтобы различие floating rounding baseline
+не создавало flake. Final gap review добавил acquired-slot/closed-gate race в
+existing case и2returned-handler partitions OCE/null. Новых production fixes
+после initial implementation не потребовалось. Failed/pre-fix artifact сохранён.
+
+Финальные Windows x64/net10.0 проверки, SDK10.0.403 после source freeze:
+
+| Область | Debug | Release |
+| --- | --- | --- |
+| Solution build | Nonincremental0errors/1530warnings | Incremental0errors/1530warnings |
+| Core |314/314|314/314|
+| Cobalt / generator |179/179 +91/91|179/179 +91/91|
+| Enerit / generator |343/343 +114/114|343/343 +114/114|
+| Mithril |99/99|99/99|
+| UI / Hosting |893/893 +114/114|893/893 +114/114|
+| Aether / Editor |1218/1218 +741/741|1218/1218 +741/741|
+| Full solution |4106/4106|4106/4106|
+| Новые cases этого среза |52/52|52/52|
+
+Failed/skipped0. Final narrow85/85 включает прежние33resource cases, combined
+Enerit343/343 Debug exit0; prefixes agent-final-1793086868534 и agent-combined-1793086878183.
+Source process suites выполнялись. Full команды exit0, logs тем же basename:
+
+```powershell
+dotnet restore TrueMoon.slnx -v:quiet -bl:TestResults/DiagnosticsIpcOutcomes-20261027-1/restore-initial.binlog
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -v:quiet -m -bl:TestResults/DiagnosticsIpcOutcomes-20261027-1/build-Debug.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Debug -v:minimal --logger trx --results-directory TestResults/DiagnosticsIpcOutcomes-20261027-1/Debug -bl:TestResults/DiagnosticsIpcOutcomes-20261027-1/tests-Debug.binlog
+dotnet build TrueMoon.slnx --no-restore -c Release -v:quiet -m -bl:TestResults/DiagnosticsIpcOutcomes-20261027-1/build-Release.binlog
+dotnet test TrueMoon.slnx --no-build --no-restore -c Release -v:minimal --logger trx --results-directory TestResults/DiagnosticsIpcOutcomes-20261027-1/Release -bl:TestResults/DiagnosticsIpcOutcomes-20261027-1/tests-Release.binlog
+```
+
+[Verification](../../TestResults/DiagnosticsIpcOutcomes-20261027-1/verification.json):
+25TRX/11binlogs,996source fingerprints/20test binary hashes, source changes0,
+AllFinalTestsPassed=true, pre-existing user package SHA unchanged=true.
+CPU FrameReceiver и Mithril ready-file races не воспроизведены текущим full,
+их исправление не заявлено. Отдельные published/native/GPU/package/performance/
+long-load проверки не повторены. Следующий diagnostics шаг — bounded child delivery
+с Aether, затем domain/frame aggregates и UI console/export; ENE6d остаётся частичным.
+
 ## ENE6d.2: метрики ресурсов и перегрузки — 2026-10-26
 
 Продолжение «давай следующий шаг»: process-wide Meter TrueMoon.Enerit.Pipes и
