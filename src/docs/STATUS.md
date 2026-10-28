@@ -1,6 +1,16 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-28, сверка рабочего diff и актуализация планов**.
+Последняя работа — **2026-10-28, обновление SkiaSharp/native4.154.0 по запросу пользователя**.
+Новая extended DLL собрана из pinned source; Vulkan copy/return/redraw и GPU
+composition прошли source Debug/published Release с core/sync validation0/0.
+ABI/ownership сохраняются; build recipe и Raster probe исправлены. UI893/Hosting114/
+Editor763 прошли отдельно Debug/Release,6TRX/3540passed/failed0/skipped0.
+Nonincremental solution Debug build0errors/1541warnings; renderer nupkg payload/
+dependency проверены. [Точный scope](alloy/HISTORY.md#skiasharp-41540-и-vulkan-interop--2026-10-28).
+Это targeted native quality pass; independent NuGet ARCH2e, полный Editor GUI/
+WSI/K7/physical/VRAM и full solution tests не закрыты. Далее ARCH2e.1/2.
+
+Предыдущая работа — **2026-10-28, сверка рабочего diff и актуализация планов**.
 ARCH2a–c уже входят в HEAD `af03ca3`. Текущие изменения продолжают ARCH2d:
 тонкие Examples hosts/resources и перенос runtime; отдельно исправляют ENG2 CPU
 frame race, ENG3 build/Replace fixtures и staging paths, Mithril ready-file reader

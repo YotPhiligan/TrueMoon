@@ -1,5 +1,106 @@
 # Alloy / Argentis: история работ и проверок
 
+## SkiaSharp 4.154.0 и Vulkan interop — 2026-10-28
+
+По запросу пользователя обновлён SkiaSharp4.153.1 → **4.154.0**, последний stable
+в [официальном NuGet index](https://api.nuget.org/v3-flatcontainer/skiasharp/index.json)
+на момент проверки. Source tag v4.154.0 и gitlink проверены через upstream Git/API:
+
+| Вход | Revision / SHA-256 |
+| --- | --- |
+| SkiaSharp | 8771a4343c7ca2e5edf18f79a3b7b23c77fff60d |
+| Skia | 993e88f35c9d107669824cf5575c002964e4b087 |
+| Новая extended win-x64 DLL | AAC2943459738978422DAC15F5A44A5813887448D4AFFB373110099FBC91DB1F |
+| Прежняя extended4.153.1 DLL, negative control | 96525E8EFC1E3BB4B9C64000307D4D11C378FEDAEEB7C1E62D518EF84CDD1ABE |
+
+Directory.Packages.props обновлён централизованно. Новая libSkiaSharp.dll собрана
+из pinned sources с прежним truemoon_vk_interop.inc/h; C ABI v1, descriptor48bytes,
+SafeHandle, same-queue acquire/return, mutable layout tracking и ownership не менялись.
+DLL/build.json заменены вместе; native binary остаётся в Git у Rendering.Skia.
+
+Подтверждён исходный отказ: managed4.154 со старой DLL возвращает exit2 до создания
+device — native153.0 не входит в поддержанный интервал[154.0,155.0). Version gate
+сохранён. Stock native4.154 тоже возвращает exit2 из-за отсутствия TrueMoon exports.
+После source build расширенная154.x проходит официальный version gate и ABI gate.
+
+Build recipe исправлен: новый upstream .gitmodules больше не объявляет
+externals/depot_tools. BuildNativeInterop всегда получает externals/skia и
+добавляет depot_tools только для объявляющих его source pins. Новый4.154 pin
+добавлен рядом с прежними; неизвестные revisions/install mismatches отвергаются.
+MSVC14.44.35207/SDK10.0.26100.0, Spectre x64, Ninja1.13.2 и Python3.13.15;
+Cake Vulkan=true/Direct3D=false, native build1533steps/exit0. Upstream LNK4199
+для отсутствующих D3D delay imports сохранены; zero native warnings не заявляются.
+
+Обычный Git clone/lazy blob fetch зависал. Для exact Skia commit получен официальный
+codeload archive (SHA256 B76C139F9ACB04589C4350FA0F4E2E024ACCA25EF41CDD013CC6F55FB466B6BF),
+worktree всех tracked files сверено с pinned Git tree через update-index и
+`git --no-lazy-fetch diff --exit-code --quiet` до применения extension. Git revisions
+не подменялись, official prebuilt DLL вместо source build не использовалась.
+Interrupted download logs сохранены отдельно от успешного native build.
+
+Validation layer1.4.363.0 извлечён локально из официального LunarG SDK archive:
+SHA25694A82D378F7A5E3E54C9DB7D2FB7016AF136E14AC0A18DBF0F2F67A36352D141,
+Authenticode Valid. Installer не запускался; VK_LAYER_PATH задан только процессам
+проверок. Текущая конфигурация: Windows x64/build26300, .NET SDK10.0.403,
+NVIDIA RTX5070Ti/driver32.0.16.2101. Это отличается от прежнего K7 ICD32.0.16.1742;
+passing offscreen checks не доказывает исправление WSI/GDI trend или BSOD.
+
+| Проверка | Текущий результат |
+| --- | --- |
+| ABI preflight | Source Debug и published Release: exit0 |
+| External VkImage copy/readback, return/layout/redraw |18readbacks/profile,2contexts/3sizes/3frames; оба exit0 |
+| Independent Vulkan graphics composition |36compositions/18leases/profile; оба exit0 |
+| Исходный Skia Vulkan smoke |12compositions/profile; оба exit0 |
+| Vulkan core/synchronization validation |0errors/0warnings во всех перечисленных GPU runs, включая teardown |
+| Raster App/MS DI, snapshot/input/retained redraw/stop | Debug/Release exit0, PNG сохранены |
+| Raster/OpenGL/Vulkan parity | Один View/3viewports/scales1/1.5/2, layout/input/selected RGBA и retained redraw; Debug/Release exit0, validation0/0 |
+| Старый native153.x и stock native154.x | По2expected exit2/profile; соответствующие version/exports messages проверены |
+| Полный Alloy.Tests | Debug893/893, Release893/893, failed/skipped0 |
+| Полный Alloy.Hosting.Tests | Debug114/114, Release114/114, failed/skipped0 |
+| Полный Aether.Editor.Tests | Debug763/763, Release763/763, failed/skipped0 |
+| Solution nonincremental Debug build | Exit0/errors0/warnings1541 |
+| Renderer Release pack | Native payload hash совпал с новой DLL; nuspec требует SkiaSharp4.154.0 |
+
+Итого6current TRX: **3540passed/0failed/0skipped**. Это три отдельных suites в двух
+конфигурациях, не full solution test run.26owned SDK/probe commands сохранены в
+summary; каждый MSBuild build/test/publish/pack имеет отдельный binlog. Проверены
+8source inputs before/after, changes0; native source/provenance выше отдельно.
+
+Дополнительно исправлен существующий RasterProbe InvalidCastException:
+IUiSessionFactory alias теперь является BorrowedUiSessionFactory, а probe приводил
+его к HostedUiSessionFactory. Создание остаётся через публичный interface; registry
+inspection получает concrete registration из composition root. Sole App owner,
+Stop/tree cleanup и snapshot-after-dispose assertions сохранены. Это fixture fix,
+не Skia API regression. [Исходный failed run](../../TestResults/SkiaUpgrade-20261028/initial-verification-raster-failure.json)
+сохранён, затем raster прошёл в обеих поставках. Аналогичные source downcasts ещё
+есть в legacy OpenGL App/raw-host/SettingsHud probes; эти workflows этим шагом
+не объявлены проверенными и требуют отдельного fixture cleanup.
+
+Основной evidence: [verification.json](../../TestResults/SkiaUpgrade-20261028/verification.json),
+[runner с exact arguments](../../TestResults/SkiaUpgrade-20261028/VerifyUpgrade.ps1),
+[backend/solution runner](../../TestResults/SkiaUpgrade-20261028/VerifyExtra.ps1),
+[успешный source build](../../TestResults/SkiaUpgrade-20261028/native-build-3.log),
+[solution log](../../TestResults/SkiaUpgrade-20261028/solution-Debug.stdout.log).
+Финальный documentation QA:23Markdown/739local links/437anchors, ошибок0;
+8проверенных source inputs и native SHA совпадают. Отчёт —
+`TestResults/SkiaUpgrade-20261028/docs-check.json`.
+Команды GPU proof после build/publish, с VK_LAYER_PATH на извлечённый layer:
+
+```powershell
+$probe = 'ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll'
+dotnet $probe --interop-check
+dotnet $probe --interop --validation
+dotnet $probe --interop-compose --validation
+dotnet $probe --validation
+dotnet $probe --backend-compare --validation
+```
+
+Runtime libraries/ABI/ownership не расширены. Полный Editor Open/Transform/preview/
+Undo/save/reopen, window/WSI soak/K7, physical DPI, real loss/VRAM, golden360,
+performance и independent NuGet consumers не повторялись. Local renderer pack
+не закрывает ARCH2e.1/2; targeted GPU update по новому запросу не закрывает ARCH2d/e
+GUI acceptance, прежние hardware/BSOD ограничения остаются у владельцев.
+
 ## Подключаемый Editor: решение ARCH2 — 2026-10-27
 
 Согласован переход TrueMoon.Aether.Editor из WinExe в library/NuGet package;

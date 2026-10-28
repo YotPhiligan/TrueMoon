@@ -1,8 +1,8 @@
 {
-  "skiaSharpVersion": "4.153.1",
-  "skiaSharpRevision": "4783f51448f9b070dda4f87b83e941c9599e466e",
-  "skiaRevision": "45afab4f1f0921f3feb97f58cf89b136fffa85e6",
+  "skiaSharpVersion": "4.154.0",
+  "skiaSharpRevision": "8771a4343c7ca2e5edf18f79a3b7b23c77fff60d",
+  "skiaRevision": "993e88f35c9d107669824cf5575c002964e4b087",
   "interopAbi": 1,
   "runtimeIdentifier": "win-x64",
-  "sha256": "96525E8EFC1E3BB4B9C64000307D4D11C378FEDAEEB7C1E62D518EF84CDD1ABE"
+  "sha256": "AAC2943459738978422DAC15F5A44A5813887448D4AFFB373110099FBC91DB1F"
 }

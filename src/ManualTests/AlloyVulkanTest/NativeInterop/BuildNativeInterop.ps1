@@ -73,7 +73,12 @@ try {
     [Environment]::SetEnvironmentVariable($gitConfigKeyName, 'core.longpaths')
     [Environment]::SetEnvironmentVariable($gitConfigValueName, 'true')
     # Fetch source dependencies, not prebuilt natives: those cannot contain this extension.
-    & git submodule update --init --depth 1 externals/skia externals/depot_tools
+    # SkiaSharp 4.154 removed the depot_tools gitlink; retain it only for older pins.
+    $submodulePaths = @(& git config --file .gitmodules --get-regexp '\.path$' | ForEach-Object { ($_ -split '\s+', 2)[1] })
+    if ($LASTEXITCODE -ne 0) { throw 'Could not read the pinned submodule paths.' }
+    $requiredSubmodules = @('externals/skia')
+    if ($submodulePaths -contains 'externals/depot_tools') { $requiredSubmodules += 'externals/depot_tools' }
+    & git submodule update --init --depth 1 -- $requiredSubmodules
     if ($LASTEXITCODE -ne 0) { throw 'Submodule initialization failed.' }
     & (Join-Path $PSScriptRoot 'ApplyNativeInterop.ps1') -SkiaSourcePath (Join-Path $root 'externals/skia')
     & dotnet tool restore

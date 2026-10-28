@@ -1,5 +1,27 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
+Последняя работа — **2026-10-28, SkiaSharp4.154.0 и пересборка native interop**.
+Managed/native версия обновлена согласованно, DLL/build.json и SourcePins заменены;
+новый upstream больше не требует depot_tools, recipe учитывает .gitmodules.
+C ABI v1/48bytes, extension source и ownership прежние. Raster smoke исправлен:
+interface alias используется для Create, concrete registration — для registry inspection.
+
+Source Debug/published Release прошли ABI,18VkImage readbacks,36GPU compositions
+и12Skia compositions в каждом profile; core/sync validation0errors/0warnings после
+teardown. Raster App/MS DI и raster/OpenGL/Vulkan comparison также прошли обе;
+старый native153.x и stock154.x без exports отвергаются expected exit2.
+Текущие tests: **UI893/893, Hosting114/114, Editor763/763 отдельно Debug/Release**,
+6TRX/3540passed/failed0/skipped0. Solution nonincremental Debug build0errors/1541warnings.
+Renderer Release nupkg содержит новую DLL с совпавшим hash и SkiaSharp4.154.0 dependency.
+[Причины, exact commands, failures и evidence](HISTORY.md#skiasharp-41540-и-vulkan-interop--2026-10-28).
+
+GPU: RTX5070Ti/driver32.0.16.2101, Windows26300/SDK10.0.403, локальный validation1.4.363.
+Этот targeted проход выполнен по новому запросу; Editor GUI/WSI/K7/physical/VRAM,
+golden/performance и independent NuGet не повторены. Полная ARCH2d/e native
+acceptance остаётся открытой, следующий доступный этап — ARCH2e.1/2. Legacy manual
+OpenGL App/raw-host/SettingsHud probes ещё имеют alias downcasts; их полный workflow
+не считается проверенным новым backend comparison.
+
 Последняя связанная сверка — **2026-10-28, рабочий diff и планы Aether**.
 ARCH2d hosts/resources проверены в resource/headless scope; следующий доступный
 шаг — [ARCH2e.1/2 independent NuGet](../engine/PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28).
@@ -437,7 +459,7 @@ Alpha K1–K9 не объявляется завершённой. Требова
 
 1. Physical100/200% и разные DPI мониторов отсутствуют в текущем проверенном окружении. Native DPI contract реализован, полный K3/4.9d не закрыт.
 2. Settings off/Aero Shake и часть physical cancel/release-outside ещё нужны. Длительный lifecycle4.9 с dispatcher failed на GDI росте Vulkan WSI при стабильном USER. Native-origin callback faults/DPI subclass error проверены2026-10-10; искусственные Chrome/GDI/RemoveWindowSubclass failures не проверены. Alt+Space без PowerToys interception — отдельная проверка. Старые opacity/legacy capture failures не объявлены исправленными текущей alpha matrix.
-3. На текущем NVIDIA ICD K7 GDI trend локализован до screen HDC allocation внутри vkCreateSwapchain; safe app-side fix не установлен, поиск workaround пока прекращён по решению пользователя. AMD raw control стабилен по GDI, но full UI configuration на AMD и другая NVIDIA версия не проверены; private/handles growth этим HDC trace не объясняется. Fixed-font full golden и package consumer повторены2026-10-17 в указанном bounded scope; VRAM и real loss остаются. Shared owner устраняет прежний USER trend в предыдущем full run; raw WGL allocator отдельно не установлен.
+3. На прежнем NVIDIA ICD32.0.16.1742 K7 GDI trend локализован до screen HDC allocation внутри vkCreateSwapchain; safe app-side fix не установлен, поиск workaround пока прекращён по решению пользователя. AMD raw control стабилен по GDI, но full K7 UI configuration на AMD и текущем NVIDIA32.0.16.2101 не проверены; private/handles growth этим HDC trace не объясняется. Fixed-font full golden и package consumer повторены2026-10-17 в указанном bounded scope; VRAM и real loss остаются. Shared owner устраняет прежний USER trend в предыдущем full run; raw WGL allocator отдельно не установлен.
 4. Исторический standalone Name binding mismatch остаётся без доказанной причины. Отдельный control-only TextBox defect исправлен, но текущий GLFW фильтрует WM_CHAR13 до UiInput, поэтому этот fix не объявляется объяснением старого Vulkan failure. В20повторах native input не наблюдался; новый trace различает unexpected-value от binding-out-of-sync. При повторе сохранять trace, не заменять failure retry-успехом.
 5. Core/DI failures и full solution tests учитываются в общем и соответствующих модульных статусах, а не как самостоятельные UI задачи. При влиянии на UI Hosting указывать точный integration blocker.
 

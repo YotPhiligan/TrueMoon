@@ -540,6 +540,13 @@ Fluent-вызовы создают и настраивают элементы. �
 
 Уточнение поставки native Skia, 2026-10-04: проверенная DLL с Vulkan interop хранится в существующем `TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64` вместе с revisions/hash. Renderer копирует её при build/publish в отдельный `truemoon-native/win-x64`, чтобы избежать конфликта со штатными native assets. Публичный SkiaNativeLibrary загружает один экземпляр DLL для обоих bindings. Отдельного native-проекта не создаётся. Инструкция пересборки: [README renderer](../../TrueMoon.Alloy.Rendering.Skia/README.md).
 
+Обновление2026-10-28 по запросу пользователя: managed/native пара **4.154.0**
+собрана и проверена в source Debug/published Release Vulkan interop/backend scope.
+ABI v1/48-byte descriptor и sole ownership сохраняются; official version gate
+и extension exports обязательны. Новые pins и условный depot_tools учитывают
+изменения upstream build recipe. [Текущие результаты и границы](HISTORY.md#skiasharp-41540-и-vulkan-interop--2026-10-28).
+Этот quality проход не закрывает independent NuGet ARCH2e, GUI/hardware/K7/VRAM.
+
 Argentis не зависит от Alloy, SkiaSharp или Silk.NET. Реализация поведения и визуального представления контрола находится рядом с контролом и использует независимые контракты; Alloy организует их выполнение.
 
 Основные точки расширения:

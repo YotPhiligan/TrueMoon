@@ -1,6 +1,14 @@
 # TrueMoon.Aether: состояние движка и редактора
 
-Последняя работа — **2026-10-28, сверка рабочего diff, планов и сохранённых evidence**.
+Последняя связанная проверка — **2026-10-28, SkiaSharp/native4.154.0**.
+Полный Editor763/763 Debug/Release прошёл с новой парой; UI893/Hosting114 также
+прошли обе конфигурации. Source/published Vulkan copy/composition и backend
+comparison принадлежат [UI quality scope](../alloy/HISTORY.md#skiasharp-41540-и-vulkan-interop--2026-10-28).
+Nonincremental solution Debug build0errors/1541warnings. Aether/full solution tests,
+Editor GUI/preview workflow и independent NuGet не повторены. ARCH2d/e native/window
+acceptance остаётся открытой; далее ARCH2e.1/2 по существующему плану.
+
+Предыдущая работа — **2026-10-28, сверка рабочего diff, планов и сохранённых evidence**.
 Новых build/tests/process/GPU/package runs в этой сверке нет. Проверены исходники,
 TRX counters и verification summaries; предыдущие результаты сохраняют свои даты
 и scope. Накопленные сводки с исходными failures и прежней очередью перенесены в

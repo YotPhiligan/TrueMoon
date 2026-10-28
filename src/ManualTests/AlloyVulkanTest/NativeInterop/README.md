@@ -1,10 +1,17 @@
 # Эксперимент внешнего Vulkan handoff
 
+Текущая поставляемая пара — **SkiaSharp/native4.154.0**, обновлена2026-10-28.
+Source Debug/published Release прошли ABI,18readbacks и36внешних GPU-композиций
+в каждом profile; core/synchronization validation0errors/0warnings, включая teardown.
+ABI v1/48-byte descriptor и extension source не менялись.
+[Результаты, команды и исходные failures](../../../docs/alloy/HISTORY.md#skiasharp-41540-и-vulkan-interop--2026-10-28).
+Датированные результаты4октября ниже остаются историческими.
+
 Продолжение: `--interop-compose --validation` проверяет **36 GPU-композиций** независимыми Vulkan graphics pipelines на **18 leases** с возвратом shader-read layout; validation 0 ошибок/0 предупреждений. Readback выполняется только после композиции. Исходники shaders, инструкции пересборки SPIR-V и команды: [Shaders/README.md](../Shaders/README.md). Следующий графический шаг — оконный swapchain/resize/presentation.
 
 DLL теперь хранится в `TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64`, копируется при build/publish и автоматически загружается AlloyVulkanTest на Windows x64. Постоянная инструкция хранения, использования и пересборки: [README renderer](../../../TrueMoon.Alloy.Rendering.Skia/README.md). Для обновления DLL после native source build добавьте `-InstallToRenderer`; скрипт проверит версию managed-пакета и обновит DLL/build.json. Явный `--native-skia` сохраняется для альтернативных сборок.
 
-На 2026-10-04 native extension для текущего SkiaSharp **4.153.1** собран и проверен: **18 внешних Vulkan чтений**, возврат состояния и повторная отрисовка; core/synchronization validation — **0 ошибок, 0 предупреждений**, включая teardown. Это эксперимент в ManualTests, а не публичный контракт renderer. Эта первичная проверка handoff была расширена GPU-композицией выше; оконный swapchain остаётся следующим шагом.
+На 2026-10-04 native extension для тогдашнего SkiaSharp **4.153.1** собран и проверен: **18 внешних Vulkan чтений**, возврат состояния и повторная отрисовка; core/synchronization validation — **0 ошибок, 0 предупреждений**, включая teardown. Это эксперимент в ManualTests, а не публичный контракт renderer. Эта первичная проверка handoff была расширена GPU-композицией выше; оконный swapchain остаётся следующим шагом.
 
 ## Зафиксированные исходники
 
@@ -14,8 +21,11 @@ DLL теперь хранится в `TrueMoon.Alloy.Rendering.Skia/NativeAssets
 | --- | --- | --- |
 | 4.152.1 | 47f1630989b6d4d5c347b01dcfc10f0fb49cce74 | 723c5a03a7d18de5fb1a041e6cae2f09c4cb3c7e |
 | 4.153.1 | 4783f51448f9b070dda4f87b83e941c9599e466e | 45afab4f1f0921f3feb97f58cf89b136fffa85e6 |
+| 4.154.0 | 8771a4343c7ca2e5edf18f79a3b7b23c77fff60d | 993e88f35c9d107669824cf5575c002964e4b087 |
 
-Обе native-сборки прошли. DLL 4.152.1 отклоняется текущим managed 4.153.1 с кодом 2; проверка совместимости не обходится.
+Прежние4.152.1/4.153.1 builds сохраняют дату4октября. В текущей паре4.154.0
+прежний native153.x отклонён с кодом2, официальный native154.x без TrueMoon exports
+также отклонён с кодом2. Расширенная154.x DLL проходит оба gates; проверки не обходятся.
 
 ## ABI и владение
 
@@ -47,31 +57,31 @@ Managed lease удерживает владельца и SafeHandle descriptor. 
 Пример использует реальный Python из LibreOffice; WindowsApps alias и launcher LibreOffice не подходят для дочерних процессов. При другом Python пути/переменные надо заменить.
 
 ```powershell
-git clone --depth 1 --branch v4.153.1 https://github.com/mono/SkiaSharp.git TestResults/VulkanInterop/SkiaSharp-4.153.1
+git clone --depth 1 --branch v4.154.0 https://github.com/mono/SkiaSharp.git TestResults/VulkanInterop/SkiaSharp-4.154.0
 $env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.15'
 $env:PATH = 'C:/Program Files/LibreOffice/program;' + $env:PATH
 pwsh -NoProfile -File ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 `
-  -SkiaSharpSourcePath TestResults/VulkanInterop/SkiaSharp-4.153.1 `
+  -SkiaSharpSourcePath TestResults/VulkanInterop/SkiaSharp-4.154.0 `
   -VisualStudioPath C:/BuildTools/TrueMoonVS2022 `
   -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.15/bin/python.exe' `
   -NinjaPath TestResults/VulkanInterop/tools/ninja/ninja.exe -CheckOnly
 # Повторить без -CheckOnly для source build.
 ```
 
-BuildNativeInterop.ps1 инициализирует shallow pinned submodules, проверяет gitlink, применяет extension и запускает upstream Cake libSkiaSharp с Vulkan, без Direct3D. Git core.longpaths и PATH настраиваются только для процесса и восстанавливаются; глобальные Git/Windows настройки не меняются. Скрипт подбирает MSVC prefix 14.4 для pinned GN recipe. ApplyNativeInterop.ps1 создаёт feature branch при detached HEAD/защищённой ветке и допускает повторное применение идентичного extension; отличающиеся файлы не перезаписывает. externals-download не вызывается.
+BuildNativeInterop.ps1 инициализирует shallow pinned Skia submodule и depot_tools только при его наличии в .gitmodules, проверяет gitlink, применяет extension и запускает upstream Cake libSkiaSharp с Vulkan, без Direct3D. Git core.longpaths и PATH настраиваются только для процесса и восстанавливаются; глобальные Git/Windows настройки не меняются. Скрипт подбирает MSVC prefix 14.4 для pinned GN recipe. ApplyNativeInterop.ps1 создаёт feature branch при detached HEAD/защищённой ветке и допускает повторное применение идентичного extension; отличающиеся файлы не перезаписывает. externals-download не вызывается.
 
-Готовая DLL: TestResults/VulkanInterop/SkiaSharp-4.153.1/output/native/windows/x64/libSkiaSharp.dll.
+Готовая DLL: TestResults/VulkanInterop/SkiaSharp-4.154.0/output/native/windows/x64/libSkiaSharp.dll.
 
-SHA-256 текущего артефакта: 96525E8EFC1E3BB4B9C64000307D4D11C378FEDAEEB7C1E62D518EF84CDD1ABE.
+SHA-256 текущего артефакта: AAC2943459738978422DAC15F5A44A5813887448D4AFFB373110099FBC91DB1F.
 
 ## Запуск
 
 Одна DLL передаётся resolver-ам обоих bindings до первого native-вызова; пакетная DLL не подменяется.
 
 ```powershell
-dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj '-bl:skia-probe-{}.binlog'
 $probe = 'ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll'
-$native = 'TestResults/VulkanInterop/SkiaSharp-4.153.1/output/native/windows/x64/libSkiaSharp.dll'
+$native = 'TestResults/VulkanInterop/SkiaSharp-4.154.0/output/native/windows/x64/libSkiaSharp.dll'
 dotnet $probe --interop-check --native-skia $native
 dotnet $probe --interop --native-skia $native
 

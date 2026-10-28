@@ -18,7 +18,8 @@ internal static class RasterProbe
         var builder = App.Builder(b => b.UseDI());
         builder.Setup(app => app.UseAlloy(options => options.UseSkiaRaster().UseExternalHost()));
         using var app = builder.Build(); app.StartAsync().GetAwaiter().GetResult();
-        var factory = (HostedUiSessionFactory)app.Services.GetService(typeof(IUiSessionFactory))!;
+        var factory = (IUiSessionFactory)app.Services.GetService(typeof(IUiSessionFactory))!;
+        var registry = (HostedUiSessionFactory)app.Services.GetService(typeof(HostedUiSessionFactory))!;
         Require(app.Services.GetService(typeof(HostedUiWindow)) == null, "Raster external hosting must not create a window.");
         var hud = new BackendHudView();
         var ui = factory.Create(hud, new RasterUiTarget(), new UiViewport(320, 180));
@@ -41,7 +42,7 @@ internal static class RasterProbe
             Console.WriteLine($"Raster PNG: {outputPath}");
         }
         app.StopAsync().GetAwaiter().GetResult();
-        Require(ui.IsDisposed && hud.IsDisposed && factory.ActiveSessionCount == 0, "App stop must release raster registry/tree.");
+        Require(ui.IsDisposed && hud.IsDisposed && registry.ActiveSessionCount == 0, "App stop must release raster registry/tree.");
         Require(ReadSnapshot(snapshot)[^1] == 0, "Snapshot must remain readable after App/session disposal.");
         Console.WriteLine("Raster hosting passed: CPU RGBA snapshot, retained input/invalidation, App/DI lifecycle; no window or Vulkan device created.");
     }
