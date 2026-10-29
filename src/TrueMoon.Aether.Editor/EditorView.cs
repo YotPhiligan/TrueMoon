@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Linq.Expressions;
 using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Diagnostics;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Aether.Editor.Hierarchy;
 using TrueMoon.Argentis;
@@ -60,6 +61,8 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
     public EditorStatusBarView? StatusBar { get; }
     /// <summary>Parent-owned hierarchy, or null for the legacy flat-list constructor.</summary>
     public EditorHierarchyView? Hierarchy { get; }
+    /// <summary>Parent-owned diagnostic console; its model and collector remain App-owned.</summary>
+    public EditorDiagnosticsView? Diagnostics { get; }
 
     public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents = null,
         IFactory<EditorTransformView>? transform = null, bool compactHeader = false)
@@ -82,6 +85,13 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
         IFactory<EditorTransformView>? transform, bool compactHeader,
         IFactory<EditorStatusBarView, EditorStatusBarArguments>? statusBar, IFactory<EditorHierarchyView>? hierarchy,
         IFactory<EditorInspectorView>? inspector)
+        : this(model, style, documents, transform, compactHeader, statusBar, hierarchy, inspector, null) { }
+
+    /// <summary>Creates the editor with a parent-owned diagnostics console in addition to its authoring panels.</summary>
+    public EditorView(EditorViewModel model, IViewStyle<EditorView> style, IFactory<EditorDocumentView>? documents,
+        IFactory<EditorTransformView>? transform, bool compactHeader,
+        IFactory<EditorStatusBarView, EditorStatusBarArguments>? statusBar, IFactory<EditorHierarchyView>? hierarchy,
+        IFactory<EditorInspectorView>? inspector, IFactory<EditorDiagnosticsView>? diagnostics)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(style);
@@ -107,6 +117,8 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
             Hierarchy = hierarchy?.Create();
             if (hierarchy != null && Hierarchy == null) throw new InvalidOperationException("Hierarchy view factory returned null.");
             if (Hierarchy != null) EntityList.Dispose();
+            Diagnostics = diagnostics?.Create();
+            if (diagnostics != null && Diagnostics == null) throw new InvalidOperationException("Diagnostics factory returned null.");
             if (Transform != null) InspectorHint.Value = "Transform · Ctrl+Enter — применить";
             Selection = Text.Plain().BindText(model, x => x.SelectedName);
             Error = Text.Plain().BindText(model, x => x.ErrorText);
@@ -120,6 +132,7 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
             AddCommand(EditorCommand.Replace, "Применить сборку", x => x.CanReplace);
             AddCommand(EditorCommand.Cancel, "Отмена", x => x.CanCancel);
             Toolbar.Add(Button.Simple("Тема").OnClick(ToggleTheme));
+            if (Diagnostics != null) Toolbar.Add(Button.Simple("Диагностика").OnClick(() => Diagnostics.DataContext!.Toggle()));
             Toolbar.IsVisible = !compactHeader;
             UpdateEntities();
 
@@ -141,7 +154,7 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
             InspectorPanel = InspectorIsland;
             Element tools = Documents == null ? Toolbar : VStack.Create().WithChildren(Toolbar, Documents);
             shell.Items.Remove(footer);
-            shell.Add(new EditorLayout(tools, HierarchyIsland, ViewportFrame, InspectorIsland, footer, overlayChrome: compactHeader));
+            shell.Add(new EditorLayout(tools, HierarchyIsland, ViewportFrame, InspectorIsland, footer, overlayChrome: compactHeader, diagnostics: Diagnostics));
             UpdateSelection();
             UpdateProperties();
             this.WithViewStyle(style);
@@ -166,6 +179,7 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
                 if (StatusBar is { IsDisposed: false, Parent: null }) StatusBar.Dispose();
                 if (Hierarchy is { IsDisposed: false, Parent: null }) Hierarchy.Dispose();
                 if (Inspector is { IsDisposed: false, Parent: null }) Inspector.Dispose();
+                if (Diagnostics is { IsDisposed: false, Parent: null }) Diagnostics.Dispose();
                 if (HierarchyIsland is { IsDisposed: false, Parent: null }) HierarchyIsland.Dispose();
                 if (InspectorIsland is { IsDisposed: false, Parent: null }) InspectorIsland.Dispose();
             }

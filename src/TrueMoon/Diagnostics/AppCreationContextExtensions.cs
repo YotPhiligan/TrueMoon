@@ -34,12 +34,13 @@ public static class AppCreationContextExtensions
         context.Services(services =>
         {
             services.RemoveAll<DiagnosticPipeline>();
-            services.RemoveAll<DiagnosticRecordAccess>().RemoveAll<IDiagnosticRecordReader>().RemoveAll<IDiagnosticRecordImporter>();
+            services.RemoveAll<DiagnosticRecordAccess>().RemoveAll<IDiagnosticRecordReader>().RemoveAll<IDiagnosticRecordImporter>().RemoveAll<IDiagnosticHealthReader>();
             if (options is not null)
                 services.Singleton<DiagnosticPipeline>(_ => new DiagnosticPipeline(options))
                     .Singleton<DiagnosticRecordAccess>(resolver => new(resolver.Resolve<DiagnosticPipeline>()))
                     .Singleton<IDiagnosticRecordReader>(resolver => resolver.Resolve<DiagnosticRecordAccess>())
-                    .Singleton<IDiagnosticRecordImporter>(resolver => resolver.Resolve<DiagnosticRecordAccess>());
+                    .Singleton<IDiagnosticRecordImporter>(resolver => resolver.Resolve<DiagnosticRecordAccess>())
+                    .Singleton<IDiagnosticHealthReader>(resolver => resolver.Resolve<DiagnosticRecordAccess>());
             services.RemoveAll<IDiagnosticTelemetry>().Singleton<IDiagnosticTelemetry>(resolver =>
                 new DiagnosticTelemetry(options?.Telemetry, options is null ? null : resolver.Resolve<DiagnosticPipeline>().ApplicationId));
             services

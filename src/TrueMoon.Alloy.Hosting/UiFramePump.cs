@@ -69,6 +69,9 @@ internal sealed class UiFramePump : IDisposable
             var updated = (session.NeedsUpdate || !session.Viewport.IsEmpty && Continuous(observers)) && session.Update();
             UpdatedLastTick = updated;
             if (session.Viewport.IsEmpty) { if (present) RequestPresentation(); return false; }
+            // Arrange/reveal or drawing may invalidate the tree again. Preserve the
+            // bounded update budget and settle it on the next tick before exporting.
+            if (session.NeedsRender) { RequestPresentation(); RequestWork(); return false; }
             if (!present && !updated && !Continuous(observers)) return false;
             if (UiPresentationBoundary.Run(session, output)) return true;
             RequestPresentation(); return false;

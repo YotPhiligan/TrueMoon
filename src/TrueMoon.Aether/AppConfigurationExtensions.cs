@@ -123,6 +123,9 @@ public static class AppConfigurationExtensions
                 .Singleton<AetherAppLifetime>(resolver => new AetherAppLifetime(resolver.Resolve<AetherHost>()))
                 .Singleton<IStartable>(resolver => resolver.Resolve<AetherAppLifetime>())
                 .Singleton<IStoppable>(resolver => resolver.Resolve<AetherAppLifetime>());
+            if (!services.Exist<TrueMoon.Aether.Diagnostics.IProcessDiagnosticsSource>())
+                services.Singleton<TrueMoon.Aether.Diagnostics.IProcessDiagnosticsSource>(resolver => new TrueMoon.Aether.Diagnostics.AetherProcessDiagnostics(
+                    resolver.Resolve<IRuntimeFactory>(), resolver.Resolve<AetherHost>().Builds));
         });
         return context;
     }

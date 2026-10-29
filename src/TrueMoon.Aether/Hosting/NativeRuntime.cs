@@ -15,8 +15,9 @@ using TrueMoon.Aether.Diagnostics;
 namespace TrueMoon.Aether.Hosting;
 
 
-public sealed class NativeRuntimeFactory : IRuntimeFactory
+public sealed class NativeRuntimeFactory : IRuntimeFactory, IRuntimeDiagnostics
 {
+    private readonly ConcurrentQueue<NativeRuntimeLease> _diagnosticLeases = new();
     private readonly IFactory<PipesInvocationClient<IEngineControl>, string> _clients;
     private readonly IEventsSource<NativeRuntimeFactory>? _events;
     private readonly IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? _diagnostics;
@@ -65,9 +66,19 @@ public sealed class NativeRuntimeFactory : IRuntimeFactory
             AetherDiagnosticEvents.Process(_events, launch, value);
         }, _clients, _diagnostics, _runtime);
         Leases.Add(lease);
+        _diagnosticLeases.Enqueue(lease);
+        while (_diagnosticLeases.Count > 64) _diagnosticLeases.TryDequeue(out _);
         // This is bounded diagnostic tracking; the supervisor retains actual lease ownership.
         if (Leases.Count > 64) Leases.RemoveAt(0);
         return lease;
+    }
+
+    /// <summary>Returns bounded recent memory snapshots, safe to read concurrently with process creation/reap.</summary>
+    public IReadOnlyList<ProcessDiagnosticSnapshot> ReadDiagnostics(int maximumCount, int maximumOutputCharacters)
+    {
+        ProcessDiagnosticSnapshot.ValidateLimits(maximumCount, maximumOutputCharacters);
+        return Array.AsReadOnly(_diagnosticLeases.ToArray().TakeLast(maximumCount).Reverse()
+            .Select(lease => lease.ReadDiagnostics(maximumOutputCharacters)).ToArray());
     }
 }
 
@@ -96,6 +107,7 @@ internal sealed class EngineChild(SessionLaunch launch, Action<object> observe, 
 
 public sealed class NativeRuntimeLease : IRuntimeLease
 {
+    private readonly DateTimeOffset _startedUtc = DateTimeOffset.UtcNow;
     private readonly SessionLaunch launch;
     private readonly IFactory<PipesInvocationClient<IEngineControl>, string>? clients;
     private readonly IFactory<ChildDiagnosticReceiver, ChildDiagnosticReceiverArguments>? _diagnostics;
@@ -131,7 +143,7 @@ public sealed class NativeRuntimeLease : IRuntimeLease
     public ChildDiagnosticStatus? ChildDiagnosticsStatus => _diagnosticReceiver?.Read() ?? _diagnosticStatus;
     private PipesInvocationClient<IEngineControl>? _client;
     private IEngineControl? _service;
-    private ProcessOutputCapture? _stdout, _stderr;
+    private OwnedProcessOutput? _output;
     private IDisposable? _buildPin;
     public int ProcessId { get; private set; }
     public Task Exited => _child.Completion;
@@ -142,9 +154,17 @@ public sealed class NativeRuntimeLease : IRuntimeLease
     /// <summary>Bounded live tail of stdout, available before process exit.</summary>
     public string StandardOutput => StandardOutputStatus?.Text ?? "";
     /// <summary>Live stderr capture counters, including file failure and truncation.</summary>
-    public ProcessOutputSnapshot? StandardErrorStatus => _stderr?.Read();
+    public ProcessOutputSnapshot? StandardErrorStatus => _output?.Stderr.Read();
     /// <summary>Live stdout capture counters, including file failure and truncation.</summary>
-    public ProcessOutputSnapshot? StandardOutputStatus => _stdout?.Read();
+    public ProcessOutputSnapshot? StandardOutputStatus => _output?.Stdout.Read();
+
+    internal ProcessDiagnosticSnapshot ReadDiagnostics(int maximumOutputCharacters)
+    {
+        var output = _output; var identity = Identity;
+        return new($"runtime:{identity.SessionId:D}:{identity.Generation}", "Runtime", _startedUtc, ProcessId == 0 ? null : ProcessId,
+            identity.SessionId, identity.Generation, launch.Role.ToString(), identity.GameBuildId, null, null, Reaped, ResourcesReleased,
+            ProcessStreamDiagnostic.Read(output?.Stdout, maximumOutputCharacters), ProcessStreamDiagnostic.Read(output?.Stderr, maximumOutputCharacters), ChildDiagnosticsStatus);
+    }
     public async Task LaunchAsync(CancellationToken token)
     {
         if (launch.Build != null)
@@ -156,8 +176,7 @@ public sealed class NativeRuntimeLease : IRuntimeLease
         // Four fixed slots per stream bound normal-session disk retention to eight 1MiB files.
         var slot = (launch.Identity.Generation % 4).ToString(System.Globalization.CultureInfo.InvariantCulture);
         var outputRoot = Path.Combine(launch.ReportDirectory, "runtime-output");
-        _stdout = new ProcessOutputCapture(process.StandardOutput, filePath: Path.Combine(outputRoot, "runtime-" + slot + ".stdout.log"));
-        _stderr = new ProcessOutputCapture(process.StandardError, filePath: Path.Combine(outputRoot, "runtime-" + slot + ".stderr.log"));
+        _output = new(process.StandardOutput, process.StandardError, process.StandardInput, outputRoot, "runtime-" + slot);
         if (_diagnostics != null && launch.DiagnosticDelivery?.Enabled == true)
         {
             try { _diagnosticReceiver = _diagnostics.Create(new(launch, ProcessId)); }
@@ -186,8 +205,7 @@ public sealed class NativeRuntimeLease : IRuntimeLease
         _client?.Dispose(); _client = null; _service = null;
         if (await _child.StopAsync(gracefulDeadline).ConfigureAwait(false) != true) throw new IOException("Owned process kill/reap failed.");
         await _child.Completion.ConfigureAwait(false); Reaped = true;
-        await Task.WhenAll(_stdout?.Completion ?? Task.CompletedTask, _stderr?.Completion ?? Task.CompletedTask)
-            .WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        if (_output != null) await _output.DrainAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
         if (_diagnosticReceiver != null)
         {
             await _diagnosticReceiver.StopAsync().ConfigureAwait(false);

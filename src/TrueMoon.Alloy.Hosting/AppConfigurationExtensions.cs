@@ -53,8 +53,14 @@ public static class AppConfigurationExtensions
     private static void RegisterWindow(IAppConfigurationContext app, AlloyOptions options, Func<IServiceResolver, Element> rootFactory)
     {
         app.Services(services => services.Singleton<HostedUiDispatcher>(_ => new HostedUiDispatcher())
-            .Singleton<HostedUiWindow>(resolver => new HostedUiWindow(options.Window!, resolver.Resolve<IUiSessionFactory>(),
-                () => rootFactory(resolver), () => resolver.Resolve<IAppLifetime>().Cancel(), resolver.Resolve<HostedUiDispatcher>()))
+            .Singleton<HostedUiWindow>(resolver =>
+            {
+                // Cleanup can run while the resolver is disposing a partially started window.
+                // Capture the borrowed lifetime now; callbacks must not resolve services during teardown.
+                var lifetime = resolver.Resolve<IAppLifetime>();
+                return new HostedUiWindow(options.Window!, resolver.Resolve<IUiSessionFactory>(),
+                    () => rootFactory(resolver), lifetime.Cancel, resolver.Resolve<HostedUiDispatcher>());
+            })
             .Singleton<IStartable>(resolver => new AppServiceLifecycle(startable: resolver.Resolve<HostedUiWindow>()))
             .Singleton<IStoppable>(resolver => new AppServiceLifecycle(stoppable: resolver.Resolve<HostedUiWindow>()))
             .Singleton<IStoppable>(resolver => new AppServiceLifecycle(stoppable: resolver.Resolve<HostedUiDispatcher>())));

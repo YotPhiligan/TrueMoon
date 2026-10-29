@@ -61,7 +61,11 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
             var gpu = _engine.Gpu.RunSurfaceProducerAsync(_launch, end,
                 validation: Environment.GetEnvironmentVariable("TRUEMOON_GPU_VALIDATION") == "1",
                 frameProvider: (stamp, width, height) => { var frame = _protocol.CaptureRenderFrame(); return GpuFrameData.FromScene(stamp, frame.Tick, frame.Scene); });
-            _workers = [TickAsync(end), ReadStopAsync(end), _frames.RunAsync(_protocol, end), gpu];
+            // Console.In can block synchronously even through ReadLineAsync on redirected stdin.
+            // Give the owned reader its own thread so frame startup and fault observers are installed.
+            _workers = [TickAsync(end), _frames.RunAsync(_protocol, end), gpu,
+                Task.Factory.StartNew(() => ReadStopAsync(end), CancellationToken.None,
+                    TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap()];
             foreach (var worker in _workers)
                 _ = worker.ContinueWith(_ => Cancel(), CancellationToken.None,
                     TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);

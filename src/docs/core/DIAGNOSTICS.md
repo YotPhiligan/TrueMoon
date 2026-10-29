@@ -241,8 +241,8 @@ Dispose закрывает новые операции, а source/meter сохр
 
 ## Чтение и импорт bounded history
 
-Opt-in UseDiagnostics(options) регистрирует IDiagnosticRecordReader и
-IDiagnosticRecordImporter как borrowed nondisposable views одного App-owned
+Opt-in UseDiagnostics(options) регистрирует IDiagnosticRecordReader,
+IDiagnosticRecordImporter и IDiagnosticHealthReader как borrowed nondisposable views одного App-owned
 pipeline. Legacy overload без pipeline их не предоставляет. Повторная конфигурация
 заменяет registrations; разрешение aliases не создаёт дополнительных owners.
 
@@ -250,6 +250,15 @@ LatestSequence включает unavailable capture slots. ReadAfter(afterSequen
 maximumCount) возвращает independent oldest-first snapshot оставшихся records
 после exclusive cursor; cursor неотрицательный, maximumCount от1до1024. Eviction
 может оставить gaps. Это pull API без callbacks на emitter thread.
+
+`IDiagnosticHealthReader.ReadHealth()` возвращает cached in-memory collector/ring,
+sink queue/write/drop/failure, emergency и managed-run retention snapshots. Чтение
+не делает IO/flush/maintenance и не ждёт workers. Состояния отдельных workers сняты
+независимо; null optional status означает disabled/not-yet-available, не healthy0.
+Ring eviction, capture failures, reader sequence gaps и sink loss — разные counters.
+Accepted/Written не подтверждают disk durability. LastError — bounded display text,
+может содержать личные пути; report consumer должен явно решить его privacy policy.
+После close final snapshot остаётся доступным, reader не освобождает pipeline.
 
 TryImport(record, context) назначает host ApplicationId/Sequence и Origin с
 исходными identity/sequence. Timestamp, emitting PID, trace/span и exception strings
@@ -287,7 +296,7 @@ Read/Health, MemoryEvicted, CaptureFailures и LateWrites доступны дл�
 
 ## Перенаправленные stdout/stderr
 
-`TrueMoon.Core.ProcessOutputCapture` — отдельный low-level utility без App/DI
+`ProcessOutputCapture` из `TrueMoon.Core` — отдельный low-level utility без App/DI
 зависимости. Он заимствует TextReader, сразу запускает drainage, хранит tail
 (default32Ki UTF16 chars) и при необходимости пишет bounded UTF8 file
 (default1MiB). Файловый worker получает максимум8chunks; очередь переполнена или
@@ -297,6 +306,12 @@ Read/Health, MemoryEvicted, CaptureFailures и LateWrites доступны дл�
 FileBytesWritten/FileBytesDropped и FileError. FileBytesWritten учитывает успешно
 завершившиеся записи; частичный IO failure может оставить неполную запись в файле.
 Tail и file retention независимы; file loss явно обозначен counters.
+`Read(maximumCharacters)` копирует только выбранное UTF16-safe tail window;
+`ProcessOutputSnapshot.Limit(...)` ограничивает уже снятый snapshot. Original
+TotalCharacters/DroppedCharacters и file counters сохраняются. Новое
+OmittedCharacters считает только исключённые меньшим display window символы,
+отдельно от capture eviction/file loss. Нулевое window даёт counters без текста.
+Прежние `Read()` и шестипараметрический constructor snapshot сохраняются.
 Владелец процесса ждёт Completion после exit до освобождения reader/process.
 Read failure передаётся через Completion; timeout ожидания не означает drain.
 

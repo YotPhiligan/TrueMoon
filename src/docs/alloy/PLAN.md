@@ -12,12 +12,48 @@
 
 ## Дополнительный план улучшения инфраструктуры Alloy — 2026-10-18
 
+### Runtime HUD Aether — 2026-10-29
+
+По запросу пользователя HUD игрового Runtime строится на Argentis/Alloy.
+Launch roles и игровой consumer/acceptance имеют одного владельца:
+[ENG7b](../engine/PLAN.md#eng7b-режимы-запуска-editor-и-player--2026-10-29) и
+[ENG5c.4](../engine/PLAN.md#eng5c4-runtime-hud-поверх-alloyargentis--2026-10-29).
+Это планирование, не новая реализация UI/API или закрытая HUD acceptance.
+
+Общие UI задачи этого consumer:
+
+- Подключение через App/UseAlloy и existing external-host/factory contracts;
+  retained View<TData>, отдельные Data/VM/IViewStyle/Theme по UIA1. HUD owner —
+  runtime session; window/device/loop принадлежат host. UI не создаёт второе окно
+  или вложенный App, не удерживает borrowed dependencies через disposable aliases.
+- Native texture handoff/composition через существующие raw Vulkan targets и
+  sequential acquire/return/completion, с alpha/resize/zero-size/teardown proof.
+  Конкретный engine compositor hook определяется в ENG5c.4.1; Alloy/Argentis
+  не получают зависимости на Aether World, game commands или Editor.
+- HUD/game routing: handled/capture/focus/modal semantics, logical scale mapping,
+  cancellation/reset transient input и owner-thread dispatch. UI продолжает
+  обрабатывать ввод/обновления при paused simulation; игру UI clock не двигает.
+  Runtime adapter и bounded game snapshots/commands остаются у engine consumer.
+- Смена session/scene, failed creation/draw/dispose и retry проверяются на real
+  assembly; theme/style/bindings обновляют существующее дерево. Реализовать лишь
+  выявленные consumer gaps, сохранив regression external host/обычного окна.
+
+HUD/game composition едина для Player и Editor Play; runtime child экспортирует
+составной кадр, Editor не строит вторую копию игрового HUD. Aether core остаётся
+без UI dependency, подключение выполняет optional runtime integration/host.
+Первый HUD не требует весь UI beta или async PA9/multiple frames-in-flight.
+K1–K9/PA/INF и net10.0/xUnit сохраняют отдельные критерии; низкоуровневый Skia
+interop proof не заменяет integrated HUD/input/lifecycle proof.
+
 ### Поддержка рабочего приложения Aether.Editor — 2026-10-22
 
 Решение2026-10-27: целевой TrueMoon.Aether.Editor — library/package, executable
 host подключает reusable View и выбирает поддержанный window/backend/resources.
-ARCH2b уже перевёл Editor в library/App module; оставшийся переход и acceptance ведутся в
-[ARCH2](../engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) до новых ED features.
+ARCH2b перевёл Editor в library/App module; bounded package/native
+[ARCH2](../engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) проверен2026-10-29:
+standard/Cobalt и embedded/MS DI, source/package build/publish, native24/24.
+Hosting cleanup callback захватывает borrowed lifetime до teardown; no late Resolve.
+Engine ARCH2e.4 scoped contract проверен; далее ED6a/ED8a consumer; детали доказательств — в STATUS/HISTORY владельцев.
 Editor panels/styles/commands остаются в Editor; общие controls/input/layout —
 здесь. Изменение формы поставки не закрывает и не расширяет K/PA/INF критерии.
 
@@ -240,6 +276,13 @@ viewport. Raster/OpenGL/Vulkan output guards используют NeedsRender. �
 выполняет очередь и не обещает применение ещё ожидающих model commands. Это явное
 расширение прежнего guard, необходимое для presentation при bounded queue/flood.
 [Собственные regressions/native/package/golden evidence](HISTORY.md#inf3-запросы-кадров-и-scheduling--2026-10-18).
+
+Уточнение реализации2026-10-29 по ED6a.2 native finding: `Update()` может оставить
+`NeedsRender=true`, если selection reveal/Arrange или Draw снова invalidated tree.
+UiFramePump не экспортирует такой кадр, сохраняет request и выполняет следующий
+bounded update на очередном deadline. Повторного unbounded Update-loop нет;
+OpenGL/Raster/Vulkan output guards сохраняются. Pending FIFO без visual dirty
+по-прежнему допускает last completed image. [RED/GREEN](HISTORY.md#inf3-dirty-frame-после-update--2026-10-29).
 
 INF4 — решение2026-10-18: `HostedUiWindow.RequestCloseAsync(token)` — cancellable
 user request (`Application`), native close — тот же путь с reason `Native`.

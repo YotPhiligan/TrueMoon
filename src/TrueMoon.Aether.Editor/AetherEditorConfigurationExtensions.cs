@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Diagnostics;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Aether.Editor.Hierarchy;
 using TrueMoon.Aether.Editor.Projects;
@@ -41,6 +42,7 @@ public static class AetherEditorConfigurationExtensions
         context.UseAetherAuthoring();
         context.UseAetherEditorDocuments();
         context.UseAetherEditorProjects();
+        context.EnsureAetherEditorDiagnostics();
         context.Services(services =>
         {
             if (!services.Exist<EditorWorkspace>()) services.Singleton<EditorWorkspace>(_ => new(
@@ -76,12 +78,12 @@ public static class AetherEditorConfigurationExtensions
             if (!services.Exist<IFactory<EditorView>>()) services.Singleton<IFactory<EditorView>>(r =>
                 new Factory<EditorView>(() => new(r.Resolve<EditorViewModel>(), r.Resolve<IViewStyle<EditorView>>(),
                     r.Resolve<IFactory<EditorDocumentView>>(), null, true, r.Resolve<IFactory<EditorStatusBarView, EditorStatusBarArguments>>(),
-                    r.Resolve<IFactory<EditorHierarchyView>>(), r.Resolve<IFactory<EditorInspectorView>>())));
+                    r.Resolve<IFactory<EditorHierarchyView>>(), r.Resolve<IFactory<EditorInspectorView>>(), r.Resolve<IFactory<EditorDiagnosticsView>>())));
         });
         context.UseAetherEditorEditing(previewInStatusBar: true);
         context.UseAetherEditorHierarchy(); context.UseAetherEditorHeader(); context.UseAetherEditorStatusBar();
         context.Services(services => services.Singleton<EditorSession>(r => new(snapshot, r.Resolve<AetherHost>(), r.Resolve<EditorProjects>(),
-                r.Resolve<EditorWorkspace>(), r.Resolve<EditorCommands>(), r.Resolve<EditorDocumentCommands>(), r.Resolve<EditorViewModel>(), r.Resolve<EditorViewportBinding>()))
+                r.Resolve<EditorWorkspace>(), r.Resolve<EditorCommands>(), r.Resolve<EditorDocumentCommands>(), r.Resolve<EditorViewModel>(), r.Resolve<EditorViewportBinding>(), r.Resolve<EditorDiagnosticsViewModel>()))
             .Singleton<IStartable>(r => r.Resolve<EditorSession>()).Singleton<IStoppable>(r => r.Resolve<EditorSession>()));
         return context;
     }

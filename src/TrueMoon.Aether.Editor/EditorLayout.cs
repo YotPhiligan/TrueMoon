@@ -15,6 +15,8 @@ public sealed class EditorLayout : ElementList
     public Element Inspector { get; }
     /// <summary>Bottom status row.</summary>
     public Element Status { get; }
+    /// <summary>Optional bottom console, overlaying the scene above the status row.</summary>
+    public Element? Diagnostics { get; }
     /// <summary>Whether the viewport extends behind window chrome and the status row.</summary>
     public bool OverlayChrome { get; }
     /// <summary>Logical title-bar space kept clear of tools and islands, without reducing the viewport.</summary>
@@ -24,13 +26,19 @@ public sealed class EditorLayout : ElementList
     /// <param name="viewport">Scene surface.</param><param name="inspector">Right island.</param><param name="status">Footer.</param>
     /// <param name="overlayChrome">Whether chrome overlays a full-area scene.</param><param name="chromeInset">Logical title-bar height in overlay mode.</param>
     public EditorLayout(Element toolbar, Element hierarchy, Element viewport, Element inspector, Element status, bool overlayChrome = false, float chromeInset = 36)
+        : this(toolbar, hierarchy, viewport, inspector, status, null, overlayChrome, chromeInset) { }
+
+    /// <summary>Adopts the existing regions and an optional bottom diagnostics overlay.</summary>
+    public EditorLayout(Element toolbar, Element hierarchy, Element viewport, Element inspector, Element status, Element? diagnostics, bool overlayChrome = false, float chromeInset = 36)
     {
         if (!float.IsFinite(chromeInset) || chromeInset < 0) throw new ArgumentOutOfRangeException(nameof(chromeInset));
         Element[] children = overlayChrome ? [viewport, hierarchy, inspector, status, toolbar] : [toolbar, viewport, hierarchy, inspector, status];
         if (children.Any(x => x == null)) throw new ArgumentNullException(nameof(toolbar), "All shell regions are required.");
-        if (children.Distinct().Count() != 5 || children.Any(x => x.Parent != null || x.IsAttached || x.IsDisposed)) throw new ArgumentException("Shell regions must be distinct, live and unowned.");
+        if (diagnostics != null) children = [.. children, diagnostics];
+        if (children.Distinct().Count() != children.Length || children.Any(x => x.Parent != null || x.IsAttached || x.IsDisposed)) throw new ArgumentException("Shell regions must be distinct, live and unowned.");
         Toolbar = toolbar; Hierarchy = hierarchy; Viewport = viewport; Inspector = inspector; Status = status;
         OverlayChrome = overlayChrome; ChromeInset = chromeInset;
+        Diagnostics = diagnostics;
         try { foreach (var child in children) Add(child); } catch { Dispose(); throw; }
     }
     private float Top(float height) => Math.Min(OverlayChrome ? ChromeInset : Math.Max(52, Toolbar.DesiredSize.Height), height);
@@ -41,6 +49,8 @@ public sealed class EditorLayout : ElementList
         Status.Measure(available, text);
         var top = Top(available.Height); var footer = Math.Min(28, Math.Max(0, available.Height - top));
         var height = Math.Max(0, available.Height - top - footer);
+        Diagnostics?.Measure(new(available.Width, ConsoleHeight(height)), text);
+        height -= ConsoleHeight(height);
         Viewport.Measure(OverlayChrome ? available : new(available.Width, height), text);
         var inset = Math.Min(8, Math.Min(available.Width, height) / 2);
         var width = Math.Max(0, available.Width - inset * 2); var panelHeight = Math.Max(0, height - inset * 2);
@@ -56,6 +66,9 @@ public sealed class EditorLayout : ElementList
         var top = Top(area.Height); var footer = Math.Min(28, Math.Max(0, area.Height - top));
         Status.Arrange(new(area.X, area.Y + area.Height - footer, area.Width, footer));
         var height = Math.Max(0, area.Height - top - footer); var y = area.Y + top;
+        var console = ConsoleHeight(height);
+        Diagnostics?.Arrange(new(area.X, area.Y + area.Height - footer - console, area.Width, console));
+        height -= console;
         Viewport.Arrange(OverlayChrome ? area : new(area.X, y, area.Width, height));
         var inset = Math.Min(8, Math.Min(area.Width, height) / 2);
         var width = Math.Max(0, area.Width - inset * 2); var panelHeight = Math.Max(0, height - inset * 2);
@@ -73,4 +86,5 @@ public sealed class EditorLayout : ElementList
     }
     /// <inheritdoc />
     protected override Color ThemeBackground => Theme.Surface;
+    private float ConsoleHeight(float available) => Diagnostics is { IsVisible: true } ? Math.Min(360, available * .6f) : 0;
 }

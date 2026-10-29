@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><RootNamespace>PackageRuntime</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TrueMoon" Version="$(TrueMoonPackageVersion)" />
+    <PackageReference Include="TrueMoon.Aether" Version="$(TrueMoonPackageVersion)" />
+  </ItemGroup>
+</Project>

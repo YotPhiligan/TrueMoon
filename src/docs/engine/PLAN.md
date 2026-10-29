@@ -11,8 +11,9 @@ ARCH1a.1/2 immutable authoring model, scene aggregate/resolver и compatibility 
 ENG5c.1/2 runtime scene consumer/комната и reach/interaction реализованы2026-10-22;
 ARCH1b.1 локальный Transform/query/history API и первый независимый GPU Edit preview проверены2026-10-23;
 остальной ARCH1, ENG5 и ENG6–ENG8 запланированы**.
-[Текущий приоритет: ARCH2, Aether и Editor как подключаемые пакеты](#arch2-aether-и-editor-как-пакеты--2026-10-27).
-После перехода — ED6a/ED8a console/export и дальнейший authoring маршрут ED4c.2/3.
+[Текущий приоритет: compiler diagnostics/navigation и полный ED8a report](EDITOR_PLAN.md#ed6a-консоль-диагностики--2026-10-25).
+ARCH2e.4 и ED6a structured/raw/health срезы проверены в указанном STATUS scope.
+Далее — compiler navigation/full report и authoring маршрут ED4c.2/3.
 ED1a/ED2a/b и Transform/history/preview consumer реализованы; exact проверки и
 точка продолжения ведутся в STATUS. Датированные «следующие шаги» ниже сохраняют
 контекст своего этапа и не заменяют актуальный статус.
@@ -29,7 +30,7 @@ Transform → увидеть Edit preview → Undo/Redo → сохранить �
 реализованы. ED1a project description/ProjectSession и ED2a document/persistence
 API реализованы в первых profiles. ED2b document UI commands/close policy и
 ED3a Transform/Undo/preview integration также реализованы; следующий доступный
-шаг — ARCH2e.1/2. Полный движок не является предварительным условием.
+шаг — ED6a/ED8a bounded console/export; ARCH2 package/native переход проверен2026-10-29 в Windows x64/net10 profile. Полный движок не является предварительным условием.
 IPC Editor↔Runtime — Enerit; frame transport отдельный.
 
 Наблюдение2026-10-23 из ED4a integration: старый CPU `FrameReceiver` test
@@ -77,7 +78,14 @@ adapter. [Решения и декомпозиция ARCH1](#arch1-entity-compon
 или тонкий поставляемый пример. Этот раздел — единственное место подробной
 декомпозиции перехода; ED1–ED8 продолжаются в EDITOR_PLAN.md после него.
 
-**Статус2026-10-28:** ARCH2a–c реализованы: shared scene persistence, Editor
+**Статус2026-10-29:** ARCH2e.3 проверен в bounded Windows x64/net10.0/OpenGL↔Vulkan
+profile; ARCH2e.4 file-worker contract проверен. Native24/24 и fresh package/headless8/8, source Debug/published Release
+и independent NuGet Debug/published Release проверены; standard/Cobalt и
+embedded/MS DI consumers сохраняют document/history при startup/close failure
+и runtime crash. [Evidence и точные ограничения](HISTORY.md#arch2e3-native-editor-consumers-и-startup-cancellation--2026-10-29).
+K3/K7/K8/physical/VRAM/general release остаются отдельными gates.
+
+**Срез2026-10-28:** ARCH2a–c реализованы: shared scene persistence, Editor
 library/App integration и explicit runtime executable/bootstrap/identity.
 [Инвентаризация типов, API и ownership](PACKAGE_BOUNDARIES.md).
 Минимальные Main/CLI/App composition находятся в Examples/AetherEditor и
@@ -96,9 +104,9 @@ Full Aether1541/1541 Debug/Release проверен в исходном TEMP п�
 [Точный scope и failures](STATUS.md), [история migration](HISTORY.md#eng3-buildreplace-fixture-migration--2026-10-27).
 ARCH2d реализован в source/build/published ресурсном и headless scope: тонкие
 Examples hosts, собственные font/OFL, managed themes/styles, embedded shaders и
-native payloads проверяет VerifyExampleHosts. GUI/GPU acceptance остаётся на
-паузе после BSOD; ARCH2e independent NuGet ещё открыт. Прежний functional GPU
-proof был без Vulkan validation layer.
+native payloads проверяет VerifyExampleHosts. На дату среза GUI/GPU acceptance
+была на паузе после BSOD.29октября e.1/2 и bounded e.3 consumers проверены
+отдельными runs выше; прежний functional GPU proof был без validation layer.
 
 ### Fixture quality follow-ups — 2026-10-27
 
@@ -191,8 +199,8 @@ RuntimeBootstrap выполняет общую validation до App; Main/App.Bui
 | ARCH2a | Реализовано2026-10-27: общие scene files/публичная headless persistence и карта границ Editor | SceneFileCodec/store/results/conflict в Aether.Scenes; UseAetherScenePersistence через App, Editor делегирует persistence. [Inventory/ownership/migration](PACKAGE_BOUNDARIES.md); датированные module/full results и последующий Mithril fix — в STATUS/HISTORY |
 | ARCH2b | Реализовано2026-10-27: Editor library/packable module | Main/CLI/runtime branch/smokes в AetherEditorHost; metadata/PACKAGE.md, UseAetherEditor/options/factories/lifecycle и стандартная window integration. 20новых cases, Editor763/Aether1347 Debug/Release; source/published functional native proof. Vulkan validation profile требует отсутствующий layer; полный package proof остаётся ARCH2e |
 | ARCH2c | Реализовано2026-10-27: explicit runtime bootstrap и launch identity | NativeRuntimeLaunch/RuntimeBootstrap/paired fingerprint, отдельный AetherRuntimeHost без Editor/UI; source Debug/published Release DLL/apphost4/4. Последующие ENG2/Build/Replace fixes и текущие module results — в STATUS; исходные failures сохранены в HISTORY |
-| ARCH2d | Реализовано; проверен ресурсный/headless scope2026-10-28, GUI/GPU acceptance открыта | Examples/AetherEditor и Examples/AetherRuntimeHost: Main/composition в host, smoke/probes отдельно; собственный font/OFL, managed themes/styles, embedded shaders/native payloads без ManualTests lookup. VerifyExampleHosts: fresh published closure вне workspace, hashes/PE metadata,16CLI checks, independent runtime DLL/apphost4/4 source/published. Editor763/763 Debug/Release. Окно/GPU не запускались из-за BSOD; критерии native acceptance сохраняются. [Текущий scope](STATUS.md) |
-| ARCH2e | Открыт: independent NuGet consumer; следующий доступный шаг e.1/2 | Fresh packages и отдельное решение без repo ProjectReference/linked source открывают Editor и запускают Aether runtime. Build/publish/headless/both-DI/resources и native scenarios проверяются раздельно; декомпозиция ниже. GUI/GPU часть отложена после BSOD, полный этап не закрыт |
+| ARCH2d | Реализовано; ресурсный/headless scope2026-10-28, native module composition проверена в e.3 consumers2026-10-29 | Examples hosts владеют Main/CLI/fonts/OFL, без ManualTests lookup; прежние16CLI/resource/independent runtime checks сохраняют дату28октября. Новый standard-window/embedded-View source/published GUI proof, actual font/native loading и cleanup — в ARCH2e.3; source и NuGet results разделены |
+| ARCH2e | Проверено2026-10-29 в Windows x64/net10.0 profile | Fresh15packages, isolated feed/cache: headless8/8/24children, native24/24 с standard/Cobalt и embedded/MS DI в4profiles. Open/Transform/preview/Undo/Redo/save/reopen, startup/close failure, runtime crash/recovery, actual resources/validation/drain/reap; K/physical/VRAM/general release отдельно |
 
 Порядок: ARCH2a → ARCH2b/c → ARCH2d → ARCH2e. Этот переход предшествует новым
 ED6a/ED8a console/export и ED4c.2/3 features; существующее поведение сохраняется
@@ -203,20 +211,64 @@ ED6a/ED8a console/export и ED4c.2/3 features; существующее пове
 
 Уточнение по сверке рабочего дерева: ARCH2d resource/headless proof позволяет
 начать package checks без запуска окна/GPU. Состав acceptance не сокращается;
-GUI/native proof ARCH2d и e.3 остаётся открытым до отдельного разбора BSOD и
-подготовки Vulkan validation environment. ProjectReference examples — исходник
+На дату декомпозиции GUI/native proof ARCH2d/e.3 оставался на паузе после BSOD;
+bounded profile проверен29октября после process-local подготовки validation.
+ProjectReference examples — исходник
 composition для consumer, их успешный publish не является NuGet proof.
 
 | Подэтап | Следующая работа | Критерий результата |
 | --- | --- | --- |
-| ARCH2e.1 | Собрать fresh packages и отдельное решение с Editor/runtime consumers вне checkout | Isolated feed/cache и PackageReference; без repo ProjectReference, linked source и ManualTests lookup. Cobalt/Enerit analyzers, dependency closure, metadata, host-owned fonts/OFL, managed styles/themes, embedded shaders и native files доставлены в Debug build/Release publish. Version/source/package/resource hashes и точные команды сохранены; NuGet push не требуется |
-| ARCH2e.2 | Выполнить доступный package headless/App/DI proof | Общие scene persistence и Editor registration/View ownership через публичные extensions/factories на Cobalt и существующем Microsoft DI adapter; independent runtime DLL/apphost, bootstrap/identity rejection, selected game, Build/Replace/checkpoint/Stop и diagnostic delivery/capture проверены в затронутом scope. Отдельные results для build/publish, ownership/drain/reap и отсутствия Editor/UI/game в чужом CLR; окно/GPU не нужны этому proof |
-| ARCH2e.3 | После подготовки окружения повторить GUI/native acceptance для новых hosts и packages | Standard window и parent-owned View в отдельных consumers; Open → Transform → preview → Undo/Redo → Save/reopen, failed/cancelled startup/close и runtime crash сохраняют документ. Font/native loading, validation и actual UI/GPU cleanup подтверждены вне checkout. Source Debug и published Release результаты разделены; прежние K3/K7/K8/VRAM ограничения сохраняются |
+| ARCH2e.1 | Проверено2026-10-29: fresh packages и отдельное решение вне checkout | Isolated feed/cache и PackageReference; без repo ProjectReference, linked source и ManualTests lookup. Cobalt/Enerit analyzers, dependency closure, metadata, host-owned fonts/OFL, managed styles/themes, embedded shaders и native files доставлены в Debug build/Release publish. Повтор после Hosting fix:15packages,624source fingerprints,22resource file checks; actual native/font loading — e.3 |
+| ARCH2e.2 | Проверено2026-10-29: package headless/App/DI proof | Shared scene persistence/create conflict и Editor registration/parent-owned View/borrowed model на Cobalt/MS DI; independent runtime DLL/apphost, bootstrap/identity rejection, selected game, Build/Replace/checkpoint/Stop/restart, CPU pixels и diagnostic delivery/raw capture.8/8cases/24children с MaxLive1, stop/drain/reap и role isolation; окно/GPU не запускались |
+| ARCH2e.3 | Проверено2026-10-29: bounded GUI/native acceptance |24/24:4source/package build/publish profiles × standard/Cobalt и embedded/MS DI × workflow/failure/cancel.56children с8owned crashes;48graceful validation0/0, actual font/extended native loading, GPU pixels/Undo/Redo/save/reopen, dirty close/save failure/crash preservation, View detach/recreate, UI/GPU/producer cleanup. K3/K7/K8/physical/VRAM отдельно |
 
-После e.1/2 возможен статус «package build/headless проверен», но ARCH2 целиком
-остаётся частичным до native proof и остальных критериев ниже. Новые ED features
-продолжаются после полного перехода; новых World/ECS/DI scope contracts для этого
-шага не требуется.
+Результаты2026-10-29: [consumer/команды](../../ManualTests/AetherPackageConsumer/README.md),
+[fresh headless verification](../../TestResults/ARCH2e3-Packages-20261029-3/verification.json),
+[runtime fix, RED/GREEN и module regressions](HISTORY.md#arch2e-independent-packages-и-cpu-runtime-startup--2026-10-29).
+Consumer проверяет headless composition и CPU frame transport, без project/document
+GUI workflow. Child использует Cobalt; оба DI проверены в parent Apps.
+
+ARCH2e.3 выполнен отдельной [native matrix](../../TestResults/ARCH2e3-20261029-9/verification.json)
+и [audit](../../TestResults/ARCH2e3-20261029-9/audit.json): source и package не смешаны,
+1259hash checks и160loaded-package DLL checks,40PNG,24case reports,4current TRX.
+Матрица использует публичный модульный composition API, не заявляет отдельный
+GUI run каждого CLI branch минимальных Examples. Native ARCH2e.3 выполнен в указанном supported profile; output-drain follow-up
+ARCH2e.4 scoped contract проверен перед ED6a/ED8a. Новых World/ECS/
+DI scope contracts для этого не требуется. Physical/general release gates прежние.
+
+### ARCH2e.4: устойчивость output drain — follow-up 2026-10-29
+
+**Результат2026-10-29:** scoped contract выполнен: runtime/compiler закрывают
+accessed stdio, file-enabled capture после EOF не требует свободного shared pool
+worker. Controlled starvation RED→GREEN, Core374/Aether1550 Debug/Release,
+fresh packages/headless8/8 и native24/24 подтверждены отдельно.
+[Current audit](../../TestResults/ARCH2e4-FileDrain-Native-20261029-1/audit.json).
+
+**Уточнение архитектуры/acceptance2026-10-29:** shared-worker availability не
+должна быть условием file-drain после EOF. Core использует один dedicated worker
+на file-enabled capture, sync wake-up и file IO; no-file mode без worker. Queue8,
+UTF8/tail/file budgets, borrowing, IO loss/error visibility и2s/5s caller deadlines
+прежние. Completion ждёт reader/file и освобождает внутренний wake-up resource.
+Прямой worker с async channel-to-Task bridge был недостаточен: он тоже требовал
+pool callback. Детали/цена/границы — в [Core плане](../core/PLAN.md) и
+[RED/GREEN history](../core/HISTORY.md#file-drain-без-shared-threadpool--2026-10-29).
+
+Критерий подтверждён отдельным Core-only процессом:24bytes записаны, reader EOF
+завершён, единственный shared worker удерживается callback, оба completion tasks
+и файл завершаются за прежние2s, borrowed reader не освобождён. Test host pool не
+меняется. Ещё4000file captures и real App/IPC/package/native consumers прошли.
+
+Исторический intermittent timeout сохранён как observation с неизвестной точной
+причинной цепочкой: у него нет failure heap/точной file phase. Controlled proof
+подтверждает устранённый класс liveness defects, не приписывает прошлому эпизоду
+недоказанную причину. Passing повтор сам по себе не закрывает historical cause;
+при повторе сохраняются atomic marker/read/file stages/counters для анализа.
+Arbitrary filesystem stalls и global real-time guarantees не обещаются. Это не
+отмена hardware/K3/K7/K8/physical/VRAM/general-release gates.
+
+ARCH2 package/native prerequisite завершён в указанном Windows x64/net10 profile;
+следующий feature step — ED6a/ED8a bounded console/export. Launch roles/Player/HUD
+остаются отдельными будущими этапами.
 
 ### Критерии завершения ARCH2
 
@@ -702,11 +754,17 @@ flowchart LR
     subgraph RP["Процесс Runtime"]
         R["Runtime host: world, simulation, renderer"]
         L["Game.Logic: версия игровой сборки"]
+        H["План ENG5c.4: Alloy HUD, View/Data/styles"]
+        F["Runtime composition: game + HUD frame"]
         R -->|"Загрузка и выполнение"| L
+        R -->|"Bounded HUD state"| H
+        H -->|"Typed commands"| R
+        R -->|"Game scene"| F
+        H -->|"UI texture"| F
     end
     A -->|"Mithril: запуск, остановка, reap"| R
     A <-->|"Enerit IPC: команды, input, состояние"| R
-    R -->|"Frame transport: RAM или GPU"| E
+    F -->|"Frame transport: RAM или GPU"| E
 ```
 
 Editor владеет своим окном, UI, authoring documents и приёмником кадров.
@@ -714,6 +772,8 @@ Game.Runtime владеет live game world, game loop, renderer и producer р�
 кадров. Общая библиотека движка может загружаться в обоих процессах, но их
 objects/devices/lifetimes независимы. Editor передаёт DTO, asset/entity IDs и
 версии, а не ссылки на CLR objects или raw native pointers другого процесса.
+HUD и composite path на схеме — запланированный optional UI consumer ENG5c.4;
+headless/no-HUD профиль и отсутствие UI dependencies в Aether core сохраняются.
 
 Редактируемый scene document является источником authoring данных. Runtime
 получает snapshot/deltas и владеет состоянием симуляции. Сохранение результатов
@@ -769,8 +829,58 @@ Editor API выполняет authoring операции локально в с�
 включая headless authoring profile; собственный обход lifecycle/валидации им не
 нужен. В standalone Player использует тот же Runtime с собственным presentation.
 Текущий probe уже выполняет Editor/Runtime роли одного executable в разных
-процессах. Раздельные production Editor/Player executables относятся к ENG7;
-контракт двух процессов не требует их немедленного выделения.
+процессах. Решение2026-10-29: один пользовательский executable может выбирать
+Editor или Player при запуске; отдельные executables остаются вариантом поставки.
+Контракт двух процессов в Editor сохраняется. Подробности —
+[ENG7b](#eng7b-режимы-запуска-editor-и-player--2026-10-29).
+
+### ENG7b: режимы запуска Editor и Player — 2026-10-29
+
+Согласовано с пользователем: режим выбирается при запуске до App.Build и
+построения DI-графа. Первый профиль имеет две пользовательские роли; переключение
+живого Player в Editor и обратно сейчас не требуется. Play/Pause/Stop внутри
+Editor управляют игровой сессией и сохраняют роль родительского приложения.
+Это запланированная функциональность; существующая same-executable child branch
+сама по себе ещё не является полноценным standalone Player.
+
+| Роль | Запуск и владение |
+| --- | --- |
+| Editor | Создаёт Editor App, окно, проект/документы и инструменты. Play запускает owned Runtime child через существующий supervisor/Mithril; Stop завершает игру, Editor продолжает работу |
+| Player | Создаёт собственный Runtime App, игровое окно/presentation, input и выбранный game artifact. Родительский Editor, его bootstrap и IPC для запуска не требуются; Editor services/View не создаются |
+| Runtime child редактора | Внутренняя роль с проверенным RuntimeBootstrap, parent/session/generation identity и offscreen output. Получает ввод/управление по Enerit, отдаёт итоговый кадр через существующий frame transport |
+
+CLI может использовать --editor/--player; окончательные flags/default/manifest
+фиксируются перед реализацией. Внутренний --runtime не превращается в публичный
+standalone запуск путём ослабления bootstrap checks. Launch role не смешивается
+с состояниями Playing/Paused или текущими RuntimeRole Game/EditPreview.
+
+Один и тот же exe может запускать Editor и дочерний Runtime через явный
+CurrentProcess("--runtime"). Существующий explicit separate-runtime descriptor
+также сохраняется. Main выбирает одну composition до App startup; runtime и Editor
+остаются подключаемыми пакетами. В комбинированном deployment могут присутствовать
+Editor dependencies; Player branch не должна создавать Editor graph. Чистый
+headless/runtime consumer по-прежнему подключает Aether без Editor/UI, отдельный
+Player-only host допустим для самостоятельной игровой поставки.
+
+Player использует те же game entry/factory, scene/build/checkpoint и lifecycle
+contracts. Для запуска опубликованной игры выбирается доставленный artifact и
+scene/content; автоматические Build/SDK/source-checkout lookup не требуются.
+Данные старта snapshot/revision/selected artifact фиксируются до создания сессии.
+Play не записывает live game state в authoring document автоматически; parent
+сохраняет документ/history при Stop и обычном child crash. Приёмка прикладного
+Build/Play/Stop из документа принадлежит [ED6b](EDITOR_PLAN.md#ed6b-buildplaystop-из-редактора--2026-10-29).
+Runtime-edit/full snapshot ARCH1c и горячая смена launch role остаются дальнейшим
+развитием, не prerequisites этого профиля.
+
+| Подэтап | Результат и проверка |
+| --- | --- |
+| ENG7b.1 | Контракт role selection/Main, mutually exclusive arguments и pre-App validation; выбрать default/inputs для combined host. Подтвердить DI generation/registration и один App/owner graph на роль на Cobalt/MS DI, отсутствие Editor graph в Player и обязательный bootstrap у child |
+| ENG7b.2 | Standalone Player composition: local runtime/session/window/input и опциональный HUD. Закрытие окна, cancellation/startup failure/Stop освобождают owned UI/session/render resources; Editor package не требуется Player-only consumer |
+| ENG7b.3 | Combined-exe и отдельные host profiles в source Debug/published Release, далее затронутый independent NuGet proof: startup selection, selected game/content, child identity rejection, повторные Play/Stop/crash и reap, отсутствие game load в Editor CLR и сохранность документа |
+
+Реализация следует после ARCH2 и связывается с ED6 project/document workflow.
+ENG7b.1/2 нужны для standalone acceptance HUD; полный World/ECS и новый DI scope
+API для этого не требуются. Эти будущие роли не меняют очередь из STATUS.
 
 ### Модель мира и наследование
 
@@ -1317,8 +1427,113 @@ opaque scene geometry: fixed-tick sweep/slide, предсказуемые гра
 tunneling и корректный старт у/внутри препятствия. Сохранить raycast/interaction,
 камера и нужное dynamic state должны входить в versioned checkpoint до изменения
 gameplay. Проверить стены/углы/diagonal movement/большой шаг и Replace managed/
-native Debug/published Release. Затем Alloy HUD с target/reach/состоянием и pause;
+native Debug/published Release. Затем [ENG5c.4: Alloy HUD и pause](#eng5c4-runtime-hud-поверх-alloyargentis--2026-10-29);
 raw cursor и full World/edit/MCP остаются отдельными задачами.
+
+### ENG5c.4: Runtime HUD поверх Alloy/Argentis — 2026-10-29
+
+Пользователь задал HUD внутри игрового Runtime на нашем UI модуле. Принята
+архитектурная граница ниже; конкретные renderer hooks, input packet additions,
+App extension names и budgets требуют контракта до реализации. Этап запланирован,
+существующие standalone/external HUD probes и Skia4.154 interop proof подтверждают
+низкоуровневые возможности, но не готовый игровой HUD.
+
+#### Расположение и композиция кадра
+
+- HUD живёт в Runtime вместе с игровой сессией. Его дерево строится через
+  Argentis/Alloy View<TData>, Fluent API и IViewStyle<TView>, с отдельными Data/VM
+  и Theme по [UIA1](../alloy/PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22).
+  Конкретные показатели/действия выбирает игра; Editor panels не являются HUD.
+  Первый профиль включает HUD в game Play/Player; Edit preview по умолчанию
+  сохраняет прежний профиль без игрового HUD. HUD preview в authoring — отдельный consumer.
+- Runtime рисует game scene → прозрачный HUD → итоговый кадр. Editor child
+  экспортирует этот кадр через RAM/GPU transport, Player выводит его в собственное
+  окно. Представление HUD и игровая логика одинаковы для обоих profiles.
+- Первый GPU-профиль опирается на существующий последовательный Vulkan interop:
+  borrowed device/graphics queue, premultiplied alpha, явные acquire/return/layout
+  и подтверждённое completion. HUD lease возвращается до reuse/export/teardown.
+  CPU readback допустим для assertions; readback/upload на каждый игровой кадр
+  не добавляется в этот GPU-путь. Async multi-queue/frames-in-flight — отдельный PA9.
+  Format/color space/origin, scale и compositing bounds согласуются с game target;
+  unsupported сочетание явно отклоняется, без неявного swizzle/alpha conversion.
+- Aether engine assembly сохраняет независимость от Alloy/Argentis/Skia/Editor.
+  Runtime host подключает UI через публичный App путь и optional integration
+  adapter; минимальный hook композиции определить в ENG5c.4.1. Adapter принадлежит
+  UI integration/consumer, не core engine. Новую сборку или scope не вводить без
+  подтверждённой нужды; один manual example не заменяет module App registration.
+- Headless/no-HUD runtime остаётся без UI. В HUD-enabled profile загрузка Alloy/
+  Skia ожидаема; Editor graph не нужен. Существующие no-UI proofs сохраняются для
+  headless profile, их assertions нельзя молча ослабить для всех consumers.
+
+#### Данные, ввод и пауза
+
+- World/game logic остаются владельцем состояния. Runtime публикует ограниченный
+  immutable HUD snapshot на согласованной границе обновления; UI применяет latest
+  state на своём owner thread. Binding не читает изменяемый World между потоками.
+  Частоты, размеры и bounds mailbox/очередей фиксируются в первом контракте.
+- View обновляется адресно по изменившимся данным, сохраняет focus/capture и
+  retained tree; полная перестройка каждый tick/frame не используется. UI commands
+  — типизированные запросы к injected game/session services, с generation/revision
+  checks; stale callbacks после Stop/Replace/scene switch отклоняются.
+- В Player native input поступает в runtime router. В Editor сначала обрабатываются
+  его tools/overlays; только input игрового viewport передаётся Runtime по существующему
+  transport. Далее порядок единый: modal/focused/captured HUD → unhandled game input.
+  Один click/key не исполняет и UI action, и игровое действие повторно.
+- Для interactive HUD сохранить порядок PointerDown/Up, KeyDown/Up и text input;
+  coalescing применим только к разрешённым transient событиям. Существующий gameplay
+  InputBatch не считается достаточным UI transport без проверки этих semantics.
+  Нужное расширение/capability/version согласовать в ENG5c.4.1; новый pipe не требуется
+  автоматически. Overflow наблюдаем, Pause/Resume/Stop не голодают за UI трафиком.
+- Явно согласовать Editor viewport → runtime pixels → HUD logical coordinates,
+  DPI/scale/resize и keyboard/text focus. Focus/capture loss, modal open, Pause,
+  Stop и смена generation сбрасывают transient held-game input. HUD capture не
+  отдаёт pointer игре при движении за границы элемента.
+  В Editor отдельно согласовать parent viewport/native capture и virtual HUD capture
+  в child: drag/up за пределами viewport, release/cancel и stale generation. UI owner
+  не блокируется ожиданием IPC round trip; raw native handles между процессами не идут.
+- Gameplay mutations применяются на fixed-tick границе. Pause/Resume/Stop и UI
+  input/render/animations обрабатываются независимой control/UI фазой, доступной
+  при остановленной симуляции: Resume не ждёт следующего simulation tick.
+  UI clock не продвигает World. Политика host focus loss и конфликты Escape/Editor
+  shortcuts фиксируются явно, без двух конкурирующих получателей input.
+- Первый HUD: target/reach/interaction state и модальное pause menu с Resume.
+  Действия выхода задаются host policy: остановить Play либо завершить Player;
+  lifecycle owner выполняет Stop/drain, View не завершает чужой процесс напрямую.
+  HUD не меняет authoring document; transient focus/capture/UI caches не входят
+  в game checkpoint. Persisted game/UI state требует отдельного логического contract.
+
+#### Ownership и приёмка
+
+Data/VM, styles и factories регистрируются через App/DI; UI/session products
+создаются injected IFactory на owner thread. Game session владеет своим HUD,
+borrowed dependencies не освобождаются View и aliases. Runtime host владеет
+window/device/presentation; HUD использует external-host путь без второго окна,
+вложенного App или собственного несогласованного render loop. Fonts/Theme/content
+явно доставляются host/game package, не ищутся в Editor/ManualTests.
+Первый профиль размещает View/style в runtime UI composition игры/host; новый
+UI markup/asset editor не требуется. Доставку HUD code/content и его поведение при
+Game.Logic Replace определить явно, сохраняя текущие game artifact/scene formats
+до отдельного versioned решения.
+
+На scene unload/Stop/Replace сначала прекращаются input/state updates и callbacks,
+drains UI work и возвращаются leases, затем освобождаются View/subscriptions и
+UI GPU/context resources, после них — runtime-owned render device/window. Failed
+creation/cleanup сохраняет исходную ошибку и владельца для retry; неподтверждённое
+GPU completion не позволяет разрушить borrowed resources. Hud failure наблюдаем
+в session diagnostics; скрытый fallback или успешный Stop при незавершённом drain
+не объявляются нормальным результатом.
+
+| Подэтап | Проверяемый результат |
+| --- | --- |
+| ENG5c.4.1 | До прикладного HUD определить minimal compositor/input/state contract и bounds. Offscreen proof одной game scene + Alloy HUD на runtime device: alpha/layout/return/redraw, отсутствие лишнего readback, owner-thread/failure cleanup и no-HUD regression |
+| ENG5c.4.2 | Подключить retained HUD/VM/style и pause menu к игре: изменения target/interaction без rebuilding, HUD/game input arbitration, capture/focus/scale, Resume при frozen simulation, bounded updates/commands и stale-generation fence |
+| ENG5c.4.3 | Editor Play и standalone Player из одного HUD composition: scene unload/reload, repeated Play/Stop/Replace, resize/zero-size/restore, crash/cancel и actual GPU/UI cleanup. Source Debug/published Release и затронутый package consumer, validation и resource/latency baseline фиксируются раздельно |
+
+Порядок room consumer: ENG5c.3 → ENG5c.4. Контракт/offscreen proof можно готовить
+после ARCH2 независимо от полного World/ECS; standalone приёмка зависит от ENG7b.2,
+Editor document workflow — от ED6b. Общие input/layout/rendering capabilities и
+их критерии принадлежат [UI плану](../alloy/PLAN.md#runtime-hud-aether--2026-10-29).
+Этап не закрывает K3/K7/K8/VRAM или весь ENG5/ENG7 автоматически.
 
 ## Управление игровой сессией
 
@@ -2016,9 +2231,9 @@ ENG1 и ENG2 proof выполнены2026-10-17; следующий code эта�
 | ENG2 | CPU frame viewport — реализован/проверен2026-10-17 | Детерминированный pattern/counter из child виден в Editor; bounded ring, корректные generations/resize/slow receiver/EOF и resource cleanup |
 | ENG3 | Сборка и replacement Game.Logic — реализован/проверен2026-10-20 | Смена поведения через новую игровую DLL без restart Editor; compile failure сохраняет рабочую версию; checkpoint/reset и rollback candidate проверены |
 | ENG4 | Vulkan shared GPU prototype — ENG4a–d2 проверены; ENG4e baseline получен2026-10-21 | Ordinary GPU Editor Build/Replace/checkpoint/first-present/lifecycle и measured CPU/GPU reference path подтверждены; Debug CPU budget breaches/temporary staging allocations сохранены, hardware/final acceptance открыты |
-| ENG5 | Небольшая играбельная 3D-сцена — ENG5a/b/c.1/2 room/reach/interaction реализованы | Далее ENG5c.3 collisions камеры, затем Alloy HUD/pause; level load/unload и standalone launch ещё нужны |
+| ENG5 | Небольшая играбельная 3D-сцена — ENG5a/b/c.1/2 room/reach/interaction реализованы | Далее ENG5c.3 collisions камеры и ENG5c.4 runtime Alloy HUD/pause; level load/unload и standalone Player ENG7b ещё нужны |
 | ENG6 | Hot Reload исследование | Зафиксирован supported edit набор/state behavior, unsupported edits переводятся в проверенный replacement; ALC только по подтверждённой потребности |
-| ENG7 | Рабочее приложение редактора и доставка; ENG7a/UIA1 — существующая основа | [ED1–ED8](EDITOR_PLAN.md): project/documents/editing/preview/workflow/extensions/reliability. Первый Transform/Undo/save/preview срез; scene/asset/runtime возможности не объявляются реализованными наличием shell |
+| ENG7 | Рабочее приложение редактора и доставка; ENG7a/UIA1 — существующая основа, ENG7b launch roles/Player запланирован | [ED1–ED8](EDITOR_PLAN.md): project/documents/editing/preview/workflow/extensions/reliability; ED6b запускает Play из Editor. Роль выбирается до App.Build, горячая смена ролей не требуется. Scene/asset/runtime возможности не объявляются реализованными наличием shell |
 | ENG8 | Финальные robustness/performance checks; [ENG8a diagnostics](#eng8a-диагностика-сессий-и-процессного-вывода--2026-10-25) разрабатывается отдельным ранним срезом | Frame time/latency/allocations/resource trends измерены на фиксированной сцене; reload/resize/crash/cancel/close и diagnostic overload/retention проходят в объявленных limits |
 
 ENG4 может быть заменён проверенным transport для выбранной платформы после

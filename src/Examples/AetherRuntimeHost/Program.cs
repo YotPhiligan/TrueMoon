@@ -16,18 +16,18 @@ internal static class Program
     {
         try
         {
-            if (args is not ([] or ["--runtime"]))
+            if (args.Length > 2 || args.Any(argument => argument is not ("--runtime" or "--console-diagnostics")) || args.Distinct().Count() != args.Length)
             {
-                Console.Error.WriteLine("Usage: AetherRuntimeHost [--runtime]; requires an owned Aether runtime bootstrap.");
+                Console.Error.WriteLine("Usage: AetherRuntimeHost [--runtime] [--console-diagnostics]; requires an owned Aether runtime bootstrap.");
                 return 2;
             }
-            await RunAsync();
+            await RunAsync(args.Contains("--console-diagnostics"));
             return 0;
         }
         catch (Exception error) { Console.Error.WriteLine(error); return 1; }
     }
 
-    private static async Task RunAsync()
+    private static async Task RunAsync(bool consoleDiagnostics)
     {
         // Self-check precedes App construction, including diagnostic directory creation.
         var bootstrap = RuntimeBootstrap.ReadEnvironment();
@@ -37,7 +37,7 @@ internal static class Program
             context.UseDiagnostics(new DiagnosticPipelineOptions
             {
                 JsonDirectory = Path.Combine(launch.ReportDirectory, "diagnostics", "runtime"),
-                JsonUseRunDirectories = true
+                JsonUseRunDirectories = true, ConsoleOutput = consoleDiagnostics
             });
             context.UseAether(options =>
             {

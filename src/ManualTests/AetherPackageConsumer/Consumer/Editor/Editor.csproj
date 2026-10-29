@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><RootNamespace>PackageEditor</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TrueMoon" Version="$(TrueMoonPackageVersion)" />
+    <PackageReference Include="TrueMoon.Aether.Editor" Version="$(TrueMoonPackageVersion)" />
+    <PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="$(TrueMoonPackageVersion)" />
+    <PackageReference Include="TrueMoon.Enerit.Generator" Version="$(TrueMoonPackageVersion)" PrivateAssets="all" />
+    <None Update="Assets/Fonts/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

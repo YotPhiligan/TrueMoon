@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>Game.Logic</AssemblyName><RootNamespace>Game.Logic</RootNamespace></PropertyGroup>
+  <ItemGroup Condition="'$(AetherContractPath)' == ''">
+    <PackageReference Include="TrueMoon.Aether" Version="$(TrueMoonPackageVersion)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(AetherContractPath)' != ''">
+    <!-- The runtime compiler freezes these references to the installed package DLLs. -->
+    <Reference Include="TrueMoon.Aether" HintPath="$(AetherContractPath)" Private="false" />
+    <Reference Include="TrueMoon.Contracts" HintPath="$(TrueMoonContractsPath)" Private="false" />
+  </ItemGroup>
+</Project>

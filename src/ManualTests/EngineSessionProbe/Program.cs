@@ -13,6 +13,8 @@ using EngineSessionProbe.Measurements;
 
 try
 {
+    if (args is ["--stdio-child", var streamMode, var streamDirectory])
+        return await StandardStreamProbe.RunChildAsync(streamMode, streamDirectory);
     if (args is ["--runtime"])
         return ChildDiagnosticDeliveryProbe.IsChild() ? await ChildDiagnosticDeliveryProbe.RunChildAsync()
             : PreviewRuntimeEntry.IsPreview() ? await PreviewRuntimeEntry.RunAsync() : await RuntimeHost.RunAsync();

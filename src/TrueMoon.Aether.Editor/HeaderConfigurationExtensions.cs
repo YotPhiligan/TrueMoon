@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Diagnostics;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
@@ -23,7 +24,7 @@ public static class HeaderConfigurationExtensions
             if (!services.Exist<IViewStyle<EditorHeaderView>>()) services.Singleton<IViewStyle<EditorHeaderView>>(_ => new EditorHeaderViewStyle());
             services.Singleton<IFactory<EditorHeaderView, EditorHeaderArguments>>(r => new Factory<EditorHeaderView, EditorHeaderArguments>(args =>
                 new(r.Resolve<EditorViewModel>()!, r.Resolve<EditorDocumentViewModel>()!, r.Resolve<EditorInspectorViewModel>()!,
-                    r.Resolve<IViewStyle<EditorHeaderView>>()!, args)));
+                    r.Resolve<IViewStyle<EditorHeaderView>>()!, args, r.TryResolve<EditorDiagnosticsViewModel>())));
         });
         return context;
     }

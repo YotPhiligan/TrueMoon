@@ -15,6 +15,9 @@ the installed Vulkan driver/loader is needed only for the GPU profile.
 The parent supplies `TM_ENGINE_BOOTSTRAP` and the Mithril parent/control environment.
 Invoke either the apphost with no arguments or an absolute dotnet executable with
 `AetherRuntimeHost.dll`. `--runtime` is accepted explicitly but is not required.
+`--console-diagnostics` explicitly enables the App-owned console sink on stdout,
+alongside bounded JSONL and child delivery. A parent's raw stdout capture remains
+raw text; it is never parsed back into structured events or compiler diagnostics.
 Other arguments return exit code 2 before App creation.
 
 After building the test projects separately, the independent executable proof is:

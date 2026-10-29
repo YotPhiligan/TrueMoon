@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Diagnostics;
 using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Alloy.Runtime;
@@ -18,13 +19,16 @@ public sealed class EditorSession : IStartable, IStoppable
     private readonly EditorDocumentCommands _documents;
     private readonly EditorViewModel _model;
     private readonly EditorViewportBinding _viewport;
+    private readonly EditorDiagnosticsViewModel? _diagnostics;
+    private long _nextDiagnosticsRefresh;
 
     internal EditorSession(AetherEditorOptions options, AetherHost engine, EditorProjects projects,
         EditorWorkspace workspace, EditorCommands commands, EditorDocumentCommands documents,
-        EditorViewModel model, EditorViewportBinding viewport)
+        EditorViewModel model, EditorViewportBinding viewport, EditorDiagnosticsViewModel? diagnostics = null)
     {
         _options = options; _engine = engine; _projects = projects; _workspace = workspace;
         _commands = commands; _documents = documents; _model = model; _viewport = viewport;
+        _diagnostics = diagnostics;
     }
 
     /// <inheritdoc />
@@ -56,6 +60,12 @@ public sealed class EditorSession : IStartable, IStoppable
         _viewport.Observe(ui, view);
         if (view.Canvas.DrawnFrame is { } frame && !_engine.Preview.Presented(frame)) _engine.Frames.Presented(frame);
         _model.Refresh(_engine.Supervisor.Status, _engine.Editor.Status, _commands.Error ?? _engine.Frames.TransportError);
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (_diagnostics != null && now >= _nextDiagnosticsRefresh)
+        {
+            _diagnostics.Refresh();
+            _nextDiagnosticsRefresh = now + (long)(_diagnostics.RefreshInterval.TotalSeconds * System.Diagnostics.Stopwatch.Frequency);
+        }
         view.Canvas.EmptyText = _projects.Active?.Documents?.Read().Content == null
             ? "Соберите проект и запустите сцену" : "Откройте Edit Preview в строке состояния";
         view.Documents?.SynchronizeFocus(ui);

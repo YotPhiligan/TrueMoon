@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(TestsTF)</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
+    <ProjectReference Include="../../TrueMoon.Core/TrueMoon.Core.csproj" />
+  </ItemGroup>
+</Project>

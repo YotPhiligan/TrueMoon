@@ -196,6 +196,25 @@ public sealed class DiagnosticPipeline : IDisposable, IAsyncDisposable
     }
     /// <summary>Returns independent bounded sink health snapshots.</summary>
     public IReadOnlyList<DiagnosticSinkStatus> Health() => _workers.Select(worker => worker.Read()).ToArray();
+
+    /// <summary>Returns bounded in-memory health without flushing sinks or inspecting storage.</summary>
+    public DiagnosticHealthSnapshot ReadHealth()
+    {
+        DiagnosticHealthSnapshot result;
+        lock (_gate) result = new(ApplicationId, _closed, _sequence, _memory.Count, _memoryBytes, _evicted, _captureFailures, _lateWrites, []);
+        var sinks = Health().Select(value => new DiagnosticSinkHealth(Clip(value.Name, 256)!, value.Accepted, value.Written,
+            value.Dropped, value.Failures, value.Queued, value.Bytes, Clip(value.LastError, 1024))).ToArray();
+        var emergency = EmergencyStatus; var retention = JsonRetentionStatus;
+        return result with
+        {
+            Sinks = Array.AsReadOnly(sinks),
+            Emergency = emergency == null ? null : new(emergency.Accepted, emergency.Written, emergency.Dropped, emergency.Suppressed,
+                emergency.Failures, emergency.Queued, Clip(emergency.LastError, 256)),
+            Retention = retention == null ? null : new(retention.RetainedRuns, retention.RetainedBytes, retention.ActiveRuns,
+                retention.SkippedDirectories, retention.DeletedRuns, retention.Failures, Clip(retention.LastError, 1024), retention.IsOverBudget, retention.MaintenanceBusy)
+        };
+        static string? Clip(string? text, int length) => text?.Length > length ? text[..length] : text;
+    }
     /// <summary>Waits for all sink writes accepted before this call; does not close admission.</summary>
     /// <param name="cancellationToken">Cancels only this wait, preserving ownership.</param>
     public async Task FlushAsync(CancellationToken cancellationToken = default)

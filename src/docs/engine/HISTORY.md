@@ -1,5 +1,435 @@
 # Engine / Editor: история решений и проверок
 
+## ED6a.2: raw streams и health — 2026-10-29
+
+Core добавил borrowed nondisposable IDiagnosticHealthReader с cached parent
+collector/ring/sink/emergency/retention counters и ограниченное UTF16-safe чтение
+output window. [Core semantics/proof](../core/HISTORY.md#borrowed-health-и-output-windows--2026-10-29).
+UseAether регистрирует nondisposable IProcessDiagnosticsSource над injected runtime
+factory и compiler. Native factory optional capability IRuntimeDiagnostics читает
+thread-safe bounded history64leases; supervisor сохраняет actual ownership.
+Compiler хранит16completed snapshots+active job, включая failed job после successful
+retry, с PID/job/revision/build correlation. История не удерживает owned leases
+compiler jobs и не читает files; disk retention остаётся независимой.
+Snapshot API не включает nonce/endpoint/environment. Runtime factory без capability
+даёт RuntimeAvailable=false; отсутствие capture — null, а не zero-byte healthy.
+
+Editor modes Structured/RAW stdout/RAW stderr/Health используют одну retained
+Tree/Scroll/readonly Details. Raw rows — presentation snapshots, не synthetic
+DiagnosticRecord и не повторный import в Core. Нельзя выводить severity/compiler
+classification из stderr. Raw filters: source/exact session/generation/role/search;
+level/event/grouping/clear только structured. Health не фильтруется как log.
+Default16processes/4096chars per stream; options разрешают до64/16384. Ingestion
+сохраняет bounded history при закрытой панели, если host продолжает Present.
+Inspected raw/health text frozen до явного refresh или eviction; polling/filter/
+theme не сбрасывают его selection. Равные rows не публикуются повторно. Data/VM
+не зависит от renderer/native handles; reader/source borrowed и внедрены через App.
+Core counters относятся к parent; child sink health не переносится текущим protocol.
+UI gaps, parent sink drops, receiver lost/unconfirmed, capture eviction/file loss и
+display OmittedCharacters показаны отдельно, без заявления durable delivery.
+
+Metadata report теперь включает numeric parent/process/capture/delivery health;
+raw/message/exception/stack/caller/error text и arbitrary properties исключены.
+Health/process metadata имеет часть общего byte budget, явные omitted flags/count;
+512KiB/cooperative5s/no-overwrite/atomic publication и App stop/drain прежние.
+Report81529bytes содержит162structured metadata records,7process metadata и1parent
+sink в final native case. Existing report constructor/VM constructor/Read() APIs
+сохранены; новых generic factory/scopes/async activation не вводилось.
+
+Examples/AetherRuntimeHost получил opt-in `--console-diagnostics`: executable
+явно включает существующий Core ConsoleOutput sink для stdout. Default CLI/startup
+и bootstrap validation прежние; Editor/UI dependency в runtime не добавлена.
+Gui acceptance передаёт флаг явно, поэтому raw panel проверяет настоящий output.
+Stderr в данном native case пуст, но capture/finished status доступен; nonempty
+stdout/stderr и graceful/natural/kill drain проверены real stdio subprocess tests.
+
+Текущие full module tests, failed/skipped0 в final runs:
+
+| Проект | Debug | Release |
+| --- | --- | --- |
+| TrueMoon.Tests |387/387|387/387|
+| TrueMoon.Aether.Tests |1556/1556|1556/1556|
+| TrueMoon.Aether.Editor.Tests |823/823|823/823|
+| TrueMoon.Alloy.Hosting.Tests |117/117|117/117|
+
+Commands: `dotnet test <project>/<project>.csproj --no-restore -c Debug` и `-c Release`,
+с unique binlogs/TRX.37новых cases (Core13/Aether6/Editor15/Hosting3); existing
+failed/success compiler, native raw drain и both-provider ownership tests усилены.
+[Audit/8TRX/current sources](../../TestResults/ED6a2-20261029-1/audit.json).
+Первый concurrent full Aether run имел1555pass/1EOF FirstFrame timeout3s;
+focused1/1 прошёл42ms. Новый concurrent-reader test переведён на собственный worker,
+не удерживает shared pool; final Debug/Release1556/1556 прошли. Причина единичного
+старого EOF timeout не объявляется доказанной; production frame code/deadlines не менялись.
+
+Native mode cycle выявил отдельный Hosting scheduling defect: Update после Tree
+selection reveal оставляет NeedsRender. Premature PresentOpenGL вызывает strict
+guard и terminal fault, после чего acceptance cleanup зависал. Сохранены stacks/
+primary UI failure; [RED3→GREEN3/fix](../alloy/HISTORY.md#inf3-dirty-frame-после-update--2026-10-29).
+Старый guard сохранён; pump defers dirty output на следующий bounded tick.
+Native runs1/2/3 failures сохранены, failed owned tree3 завершён после фиксации
+fault; run4 был заблокирован его loaded DLL. Run5 прошёл после fix; run6 подтвердил
+final glyph correction. General terminal rendering-fault cleanup этим не закрыт.
+
+Final native **SourceDebug/standard window/Cobalt1/1**,7children (1owned crash),
+6graceful core/sync Vulkan reports0errors/0warnings; UI/GPU/handles0 и owned processes0
+после Dispose.17imported child records и crashed PID сохранены, stdout534chars
+прежней generation доступен после reap, raw stderr не получает warning severity.
+Raw/health/structured mode cycle, public filters, reopen, frozen inspect и unchanged
+dirty document/selection проверены directed input на owner13.4diagnostics PNG
+осмотрены; standard preview5PNG сохраняют actual red-cube pixel assertions.
+[Native manifest](../../TestResults/ED6a2-Native-20261029-6/verification.json),
+[stdout](../../TestResults/ED6a2-20261029-1/diagnostics-stdout.png),
+[health](../../TestResults/ED6a2-20261029-1/diagnostics-health.png).
+
+ED6a.2 bounded scope выполнен. Далее compiler file/line/column diagnostics и
+navigation hook, затем full ED8a: persistent/rotated history, raw-text/privacy policy,
+child sink health/backend/device/configuration и explicit user cancellation.
+Published/package/provider matrix нового consumer, broader flood/slow UI, UI893/
+full solution, physical/K7/VRAM/BSOD/release gates не запускались и не закрыты.
+
+## ED6a: structured console и первый partial export — 2026-10-29
+
+`TrueMoon.Aether.Editor.Diagnostics` добавляет App-owned ViewModel над borrowed
+`IDiagnosticRecordReader`, options, parent-owned typed View/style/IFactory и stateless
+report writer. `UseAetherEditor` включает consumer, header открывает его через
+«Вид → Диагностика», standalone toolbar имеет такую же команду. Lower-level
+`UseAetherEditorDiagnostics(options)` можно подключить заранее; duplicate attachment
+отклоняется, отсутствие bounded collector показано явно. Новый logger не создаётся.
+
+Reader получает одну порцию64records/100ms; retained default512records/1MiB payload
+estimate/8192chars per record. Counts/bytes/characters/update batch конфигурируются
+и валидируются отдельно от Core budgets. Показаны timestamp/source/level/event,
+message/exception/stack/properties, observed cursor gaps и presentation eviction/
+truncation; unknown sink health не интерпретируется как0. Поиск, source/event,
+minimum level и exact session/generation/role filters не меняют domain state.
+Grouping учитывает process/context/build/exception, count относится только к
+retained window и виден в начале строки. Clear меняет только presentation/cursor;
+follow-tail pause не останавливает ingestion. Tree/scroll/detail controls retained;
+filter скрывает выбранную строку без потери detail selection, пока событие retained.
+Ctrl+C в списке и readonly detail дают явное копирование текста пользователем.
+Данные нормализуются в LF/valid UTF-16; View Dispose снимает подписки, model/reader
+заимствуются. Session.Present выполняет bounded polling на UI owner.
+
+«Экспорт без текста» принимает явный путь нового JSON, writes recent metadata
+в sequence order до512KiB/cooperative5s и атомарно публикует без overwrite.
+Versions/OS/presentation limits и allowlisted correlation сохраняются; message,
+exception/stack/caller/arbitrary properties исключены, source/event identifiers
+сохраняются. Это metadata-only policy; `partial=true`, omissions и unavailable
+raw/history/sink health/backend/configuration/compiler fields указаны явно.
+Snapshot не зависит от display filter; task отменяется/drain при App stop/dispose.
+Ошибки пути/записи/cancel показываются без исключения через UI command.
+
+Проверки текущего кода:
+
+- `dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore`
+  и тот же command с `-c Release`, с TRX/unique binlogs: **808/808** в каждой,
+  failed/skipped0.45новых tests проверяют exact byte/count boundary, truncation/
+  gaps/clear/frozen snapshots, все filters, grouping identity, retained focus/detail/
+  paused scroll/theme, copy/reopen/factory failure, Cobalt/MS DI borrowing, report
+  privacy/size/order/no-overwrite/write failure/cancellation и Unicode/LF.
+  Прежние public constructors EditorView/Header/Layout сохранены отдельными
+  overloads; точные binary call signatures защищены regression test.
+  [Debug](../../TestResults/ED6a-20261029-1/Editor-Debug.trx),
+  [Release](../../TestResults/ED6a-20261029-1/Editor-Release.trx),
+  [audit/current hashes](../../TestResults/ED6a-20261029-1/audit.json).
+- `VerifyGui.ps1 -RunProfile SourceDebug -HostKind Standard -Scenario Workflow`
+  поверх предыдущего package baseline, с process-local Vulkan validation: **1/1**,
+ 7owned children reaped/released, один explicit crash,6graceful core/sync reports
+ 0errors/0warnings; UI sessions/GPU resources/handles0 после Dispose. В console
+  сохранены17imported child records, в том числе crashed PID; native input проверяет
+ 2groups(20+1), generation filter/retained inspect, новый report73164bytes и reopen
+  при неизменном dirty document/selection. Notifications на UI owner13.
+  [Native manifest](../../TestResults/ED6a-Native-20261029-7/verification.json),
+  [actual screenshot](../../TestResults/ED6a-20261029-1/diagnostics.png).
+  Extended Skia154.0 и NotoSans3748glyphs загружены; screenshot осмотрен. Visual QA
+  исправила console-local input padding и читаемый repeat count.
+- Промежуточный native run1 прерван tool session; run2 timeout маскировался finally
+  с cancelled token. Phase markers показали в run3 ошибку harness: пустое Text event
+  не очищает поле; теперь Ctrl+A/Delete. Run4 нарушал контракт OpenGL readback при
+  pending update; screenshot перенесён в FramePresented. Run5 прошёл функционально,
+  run6 повторил весь case после visual corrections; run7 подтвердил final DLL
+  после сохранения прежних constructor overloads. Это test harness fixes, не
+  изменение production input/render contracts. Earlier failed evidence сохранён.
+
+Полные ED6a/ED8a остаются открыты: raw streams, borrowed sink/delivery/capture health,
+compiler navigation, richer export/history/backend/configuration/user cancel,
+flood/slow UI и published/package/provider matrix нового consumer. В этом шаге
+не повторялись Core/Aether/Hosting/UI suites или full solution; прежние результаты
+не объявляются новыми. SourceDebug native case не доказывает package/published
+готовность новой console. K7/VRAM/BSOD/physical/release gates прежние.
+
+## ARCH2e.4: file-worker liveness contract — 2026-10-29
+
+Core устранил доказанную shared-pool dependency file-drain после EOF, включая
+async channel-to-Task bridge. [Архитектура/RED/GREEN/стоимость](../core/HISTORY.md#file-drain-без-shared-threadpool--2026-10-29).
+Isolated Core-only child:24bytes записаны, reader завершён, единственный shared
+worker удерживается, FileCompletion/Completion и файл закрываются в прежние2s.
+Добавлена автоматическая Core regression; pool settings test host не меняются.
+Full Core374/374 и Aether1550/1550 Debug/Release прошли.4TRX, native24/24,
+56children/8owned crash cases/48graceful validation0/0 и full teardown0 проверены
+[аудитом](../../TestResults/ARCH2e4-FileDrain-Native-20261029-1/audit.json).
+Fresh15packages/headless8/8/625source inputs:
+[verification](../../TestResults/ARCH2e4-FileDrain-Packages-20261029-2/verification.json).
+Старые resource ownership/runtime startup fixes сохраняются; новое изменение
+не меняет Aether wire/App/DI contracts. Shared utilities остаются без UI dependency.
+
+Решение/границы acceptance явны в [ARCH2e.4](PLAN.md#arch2e4-устойчивость-output-drain--follow-up-2026-10-29):
+закрыт proven scoped contract; точный cause прежнего intermittent observation не
+приписывается без failure heap. Подготовлены sync atomic marker и targeted heap
+collection в consumer;30cached replays/90children и fresh pre-fix run не дали
+heap signal. Это не дополнительный historical-root-cause passing proof.
+No worker mode, UTF8/tail/file budgets и IO loss/error visibility прежние;
+новая цена — один dedicated file worker на active capture. Generic filesystem
+stalls/global real-time guarantee не добавлены. Общие hardware/release gates прежние.
+Далее ED6a/ED8a bounded console/export; launch roles/Player/HUD остаются в плане.
+
+## ARCH2e.4: stdio ownership и диагностика drain — 2026-10-29
+
+Исследован исходный timeout из ARCH2e3-Packages-20261029-2. Timeline показывает
+StopRequested → через3s Killing/GracefulStopIncomplete → ProcessReleased/Killed
+(exit-1), затем повторные2s output-drain timeouts. Child успел записать report с
+Error=null и released diagnostics/resources. Это был forced reap, а не доказанное
+штатное завершение. Шесть повторов неизменного headless consumer на предыдущем
+feed прошли,18children; [attempts](../../TestResults/ARCH2e4-20261029-1/repeat-summary.json).
+Первый reproduction fixture ошибочно использовал checkout для candidate и упал
+при Build; затем исправлен на независимый TEMP. Он не считается reproduction
+исходной ошибки. На этом этапе причина отсутствия completion ещё не была установлена; дальнейшее наблюдение ниже локализует file sink.
+
+На свежем feed [ARCH2e4-Packages-20261029-1](../../TestResults/ARCH2e4-Packages-20261029-1/verification.json)
+ошибка воспроизвелась с новой диагностикой: stdout и stderr ReadCompletion уже
+RanToCompletion, FileCompletion у обоих WaitingForActivation, counters24written/
+24characters/0dropped. [Полная ошибка](../../TestResults/ARCH2e4-Packages-20261029-1/build-Debug-dll-cobalt.stderr.log).
+Значит незавершён именно file sink, а не pipe EOF. Также timeout Shutdown pipeline
+есть в emergency output. Counters отражают принятые buffered writes, не fsync.
+После этого8replays тех же новых пакетов прошли, как и cold feeds2/3/4.
+Temporary Microsoft dotnet-stack10.0.750501 установлен только в ignored evidence.
+[Stack медленного, но успешного cold4 consumer](../../TestResults/ARCH2e4-20261029-1/cold4-stack-37652.txt)
+не застал зависание sink и не устанавливает его причину; OS/runtime/AV fault не
+объявляется. Для следующего наблюдения добавлены FileStage и thread-pool counters,
+без смены file IO реализации или увеличения deadlines.
+
+Гипотеза о том, что Mithril Process.Dispose закрывает уже полученные readers,
+не подтвердилась: [Process.Close в .NET10](https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/Process.cs#L809-L869)
+оставляет accessed standard streams вызывающему коду. Найден отдельный production
+ownership defect: NativeRuntimeLease и GameBuildCompiler не закрывали эти streams.
+Реальная Windows regression получила OS SafeFileHandles stdin/stdout/stderr,
+проверила graceful/natural/forced exit и повтор Stop: до fix stdout оставался
+открыт во всех3cases. [RED3](../../TestResults/ARCH2e4-20261029-1/stdio-red-valid.trx).
+Первый RED fixture имел неверный endpoint prefix; его падение отдельно сохранено
+и не считается ownership proof.
+
+Added internal Hosting.OwnedProcessOutput удерживает accessed stdout/stderr и
+optional stdin, начинает bounded capture сразу, а после reap дожидается reader/file
+completion и закрывает streams. Общий owner используется runtime и compiler;
+compiler не получает фиктивный stdin. Timeout сохраняет drain task/streams и
+возможность retry, successful releases не повторяются. Read/close failures не
+подавляются; остальные streams всё равно получают release attempt. Core capture
+по-прежнему borrowing: добавлены ReadCompletion/FileCompletion и FileStage для различения
+ожидания EOF и file sink. Ошибка timeout содержит статусы и счётчики обоих
+захватов без raw output. Production budgets остаются2s runtime/5s compiler.
+Новых DI contracts/scopes и изменений Mithril runtime/API нет.
+
+| Поведение | Точная проверка |
+| --- | --- |
+| Real child reap, persisted output и закрытие3OS handles при graceful/natural/kill | NativeRuntimeOutputTests.Stop_ReapsChildDrainsOutputAndClosesAllAccessedStandardStreams,3cases |
+| Timeout сохраняет владельца, retry/concurrent waits завершают drain до однократного close; optional stdin | OwnedProcessOutputTests.Drain_TimeoutRetainsStreamsAndRetryPersistsOutputBeforeClosingOnce,2cases |
+| Read failure сохраняется после file drain и release всех streams | OwnedProcessOutputTests.Drain_ReadFailurePreservesOriginalErrorAndClosesEveryStreamAfterFileDrain |
+| Close failure не мешает другим releases; retry закрывает только failed owner | OwnedProcessOutputTests.Drain_CloseFailureAttemptsOtherStreamsAndRetriesOnlyUnreleasedOwner |
+
+[GREEN7](../../TestResults/ARCH2e4-20261029-1/output-green-final.trx).
+Initial full Debug1550 дал1549passing/1failed: existing
+ChildDiagnosticForwarderTests.OwnRequestDeadlineAndPendingGuard_BoundAnInjectedClientWithLargeCapacityAndTimeout
+не достиг remote barrier, потому что500ms request deadline включал cold connection.
+Fixture теперь устанавливает physical connection до публикации record. Повтор
+под compiler/process load всё ещё мог истратить500ms до handler barrier;
+live-pipe forwarding class выделен в nonparallel xUnit collection, как существующий
+exclusive bootstrap fixture. RequestTimeout/pending guard/assertions и production IPC прежние.
+[Исходный full failure](../../TestResults/ARCH2e4-20261029-1/TrueMoon.Aether.Tests-Debug.trx)
+сохранён отдельно от итоговых full Aether1550/1550 Debug/Release и Core373/373
+Debug/Release; failed/skipped0. Точные команды (в каждой конфигурации отдельно):
+
+```powershell
+dotnet test ./TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug --logger 'trx;LogFileName=Aether-complete-Debug.trx' --results-directory ./TestResults/ARCH2e4-20261029-1 --verbosity quiet '-bl:./TestResults/ARCH2e4-20261029-1/Aether-complete-Debug-{}.binlog'
+dotnet test ./TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Release --logger 'trx;LogFileName=Aether-complete-Release.trx' --results-directory ./TestResults/ARCH2e4-20261029-1 --verbosity quiet '-bl:./TestResults/ARCH2e4-20261029-1/Aether-complete-Release-{}.binlog'
+dotnet test ./TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --logger 'trx;LogFileName=Core-complete-Debug.trx' --results-directory ./TestResults/ARCH2e4-20261029-1 --verbosity quiet '-bl:./TestResults/ARCH2e4-20261029-1/Core-complete-Debug-{}.binlog'
+dotnet test ./TrueMoon.Tests/TrueMoon.Tests.csproj -c Release --logger 'trx;LogFileName=Core-final-Release.trx' --results-directory ./TestResults/ARCH2e4-20261029-1 --verbosity quiet '-bl:./TestResults/ARCH2e4-20261029-1/Core-final-Release-{}.binlog'
+```
+
+Финальные fresh packages:15nupkg version0.2.2.7-arch2e.20261029151729,
+625source fingerprints,8/8headless cases/24children/30commands,22resource checks.
+[Verification](../../TestResults/ARCH2e4-Packages-20261029-4/verification.json).
+Native повтор после resource fix и финальной диагностики:24/24cases/32commands,
+source Debug/published Release и Package Debug/published Release, оба hosts.
+56children/8owned crash tests;48graceful core+sync validation reports0errors/
+0warnings, после App dispose UI/GPU/handles0.40PNG/160loaded-package DLL checks/
+1261hashes/4current Core+Aether TRX и отсутствие owned процессов проверены
+[аудитом](../../TestResults/ARCH2e4-Native-20261029-1/audit.json).
+[Native verification](../../TestResults/ARCH2e4-Native-20261029-1/verification.json),
+[package embedded recovered capture](../../TestResults/ARCH2e4-Native-20261029-1/captures/PackageRelease-Embedded-Workflow/recovered.png)
+просмотрен визуально. Framework source changes against fresh feed0. Эти passing
+повторы не отменяют file-sink failure в run1 и не закрывают его root cause.
+28documents/722links/405anchors проверены без ошибок; source/package checks640
+в [docs audit](../../TestResults/ARCH2e4-Native-20261029-1/docs-check.json).
+
+Intermittent file-sink timeout не объявляется исправленным: EOF уже завершился,
+resource leak доказан и закрыт отдельно. Причина незавершённого file sink не установлена. ARCH2e.4 остаётся
+частично открытым; новое наблюдение должно сохранить read/file task statuses,
+output counters, stop reason и runtime metadata. Старые hardware/BSOD/K7 gates
+не меняются; UI/Hosting/Editor suites и полный solution run здесь не повторяются.
+
+## ARCH2e.3: native Editor consumers и startup cancellation — 2026-10-29
+
+По запросу перейти к следующему этапу выполнена bounded GUI/native acceptance.
+Окружение подготовлено process-local: Windows26300 x64, SDK10.0.403, NVIDIA
+RTX5070Ti32.0.16.2101 (также установлен AMD32.0.21042.62), локальный validation
+layer1.4.363 из предыдущей pinned SDK поставки. Driver/OS settings не менялись,
+K7/240-window stress и поиск workaround не запускались. Предыдущая пауза после
+BSOD снята только для этой последовательной consumer matrix; причина BSOD не
+установлена и исправление driver fault не объявляется.
+
+Добавлен [Gui consumer/runner](../../ManualTests/AetherPackageConsumer/README.md#native-editor-acceptance-arch2e3):
+source ProjectReference composition и отдельный pure-PackageReference template.
+Custom host использует публичные View factory/App/viewport contracts, без
+internal Editor binding или source linking библиотек. Native GL queries остаются
+тонким host glue. Он сам задаёт
+first-presentation readiness, GL context/adapter и factory transport, сохраняет
+GL owner до drain, detach/dispose/recreate View и заимствует App models.
+Системный input не отправляется: directed gestures поступают в своё UI дерево.
+
+Native cancellation выявила production defect в Alloy.Hosting RegisterWindow:
+callback закрытия выполнял `resolver.Resolve<IAppLifetime>()` во время Dispose
+частично запущенного window. Resolver уже закрывал admission и выбрасывал
+ObjectDisposedException. Borrowed lifetime теперь захватывается в registration
+factory и callback вызывает `lifetime.Cancel`; ownership/API прежние.
+
+| Проверка | Фактический результат/evidence |
+| --- | --- |
+| Native cancellation после первого frame до готовности Editor App | RED `SourceDebug-Standard-Cancel`, [ошибка](../../TestResults/ARCH2e3-20261029-5/SourceDebug-Standard-Cancel.stderr.log); после fix — GREEN, path в [указателе](../../TestResults/ARCH2e3-20261029-1/cancel-green-path.txt). Затем Standard/Embedded Cancel прошли во всех4profiles |
+| Hosting/Editor regressions после fix | Hosting114/114 и Editor763/763 отдельно Debug/Release,4TRX/1754passed/failed0/skipped0; exact файлы/хеши — в [audit](../../TestResults/ARCH2e3-20261029-9/audit.json). UI/Aether/full solution suites в этом шаге не повторялись |
+| Fresh package/headless regression | 15packages `0.2.2.7-arch2e.20261029143357`, isolated feed/cache,8/8cases/24children,624source inputs; [verification](../../TestResults/ARCH2e3-Packages-20261029-3/verification.json). Прежний package run сохранён со своей версией |
+| GUI/native acceptance | **24/24**: source Debug, source published Release, NuGet Debug, NuGet published Release × Standard/Cobalt и Embedded/MS DI × Workflow/Failure/Cancel.32commands/8MSBuild binlogs; [verification](../../TestResults/ARCH2e3-20261029-9/verification.json) |
+
+Финальная перепаковка включает актуальные packaged README. Первый native run
+`ARCH2e3-20261029-8` уже прошёл24cases на предыдущем feed; финальный run9 повторяет
+тот же код на новой версии. Дополнительный headless run2 завершился с единичным
+[output-drain timeout](../../TestResults/ARCH2e3-Packages-20261029-2/build-Debug-dll-cobalt.stderr.log)
+в NativeRuntimeLease.StopAsync после reap; runtime report содержит Error=null и
+resources/handles0. [Адресный повтор](../../TestResults/ARCH2e3-Packages-20261029-2/retry.stdout.log)
+на тех же пакетах завершился exit0; затем новый run3 дал8/8passing. Причина не
+установлена. Открыт [ARCH2e.4](PLAN.md#arch2e4-устойчивость-output-drain--follow-up-2026-10-29),
+успешные повторы этот эпизод не отменяют; timeout/production code не менялись.
+
+В8workflow проверены Open → invalid draft/Theme → Transform через UI input →
+actual GPU preview pixels → Undo/Redo → SaveAs/close/reopen. Retained inspector,
+scene ID, source file и UI owner thread сохранены. Cancel dirty close и injected
+save error сохраняют document/history; затем SaveAs восстанавливает работу.
+После принудительного завершения только своего preview child окно остаётся
+живым, dirty document/Undo/selection неизменны, explicit preview retry снова
+представляет ту же revision, затем Save и clean close завершаются успешно.
+
+Всего56owned preview children:7на workflow, MaxLive1, все reaped/released.
+48graceful reports: core/sync validation enabled, Errors0/Warnings0 после teardown,
+surfaces/slots/devices created=released, live slots/open handles/resources0.
+8deliberately killed children не могут дать final validation report и не
+добавляются к этим48. Во всех24cases App Dispose завершён/наблюдён до passing
+report; UI sessions/GPU resources/handles0. Original injected startup IOException
+остаётся observable из startup/Stop/Dispose; harness принимает только её exact
+leaf marker, чужие cleanup errors не подавляются.
+
+Actual loaded extended Skia hash `AAC2943459738978422DAC15F5A44A5813887448D4AFFB373110099FBC91DB1F`,
+native154.0; Noto Sans face3748glyphs загружен из host font, без source lookup.
+160loaded framework DLL checks совпали с fresh nupkg в package profiles,1259input/
+package/layer hashes сверены.40PNG/24case JSON скопированы в evidence; pixel
+`#ffcc3326` проверен для original/edited/undo/redo/recovered позиций. Representative
+[standard edited](../../TestResults/ARCH2e3-20261029-9/captures/SourceDebug-Standard-Workflow/edited.png)
+и [package embedded recovered](../../TestResults/ARCH2e3-20261029-9/captures/PackageRelease-Embedded-Workflow/recovered.png)
+просмотрены визуально. Активных owned процессов после matrix нет.
+
+Attempts1–7 сохранены: исправлены fixture public API/usings, PowerShell XML
+variable collision, passing report до implicit Dispose и отсутствие собственной
+first-frame readiness у custom host. Ни один неполный/failed attempt не считается
+полной matrix. ARCH2e.3 проверен в описанном Windows x64/OpenGL↔Vulkan/net10 profile;
+physical OS input/DPI/monitors, K3/K7/K8/VRAM/trends/general release отдельно.
+Следующий этап — ARCH2e.4 output-drain follow-up, затем ED6a/ED8a bounded console/export и ED4c.2/3/workflow.
+
+## ARCH2e: independent packages и CPU runtime startup — 2026-10-29
+
+Добавлен [воспроизводимый NuGet consumer](../../ManualTests/AetherPackageConsumer/README.md):
+fresh local feed/version/cache, отдельное решение вне checkout, PackageReference
+без source/project links. Consumer owns Main/App/CLI/game/font/OFL; runtime child
+подключает bootstrap/Aether без Editor/UI. Матрица build Debug/publish Release,
+runtime DLL/apphost и Cobalt/Microsoft DI в parent выполняется отдельно от GUI.
+Подробные package результаты — в [verification.json](../../TestResults/ARCH2e-20261029-7/verification.json).
+Успешный run:15fresh packages `0.2.2.7-arch2e.20261029130748`, отдельный private
+feed/cache и net10.0 solution под TEMP; source inputs618 и все package hashes
+не изменились. SDK10.0.403, Windows x64, framework-dependent deployment.
+30owned SDK/consumer commands, каждый MSBuild invocation с unique binlog.
+
+Матрица **8/8**: Debug build/Release publish × Runtime DLL/apphost × parent
+Cobalt/MS DI;24successful children, MaxLive1, mappings/GPU resources/handles0,
+compiler и child processes reaped/released. Проверены Editor View factory/sole
+parent ownership/borrowed models, common scene revision17 roundtrip/create-only
+conflict, два game artifacts, CPU pixels обоих builds, tick3/interaction checkpoint,
+Replace и повторный Start с восстановлением state. Game DLL отсутствует в parent
+CLR; runtime не имеет Editor/UI package dependencies и не загружает их.
+Exact selected game path/build sequence A→B→B проверена для каждого case.
+Доставлены144пользовательских child records суммарно, context/redaction и raw
+stdout/stderr markers проверены.8wrong-fingerprint launches отвергнуты до spawn;
+2no-bootstrap CLI controls дали expected exit1. Negative exits не являются failures.
+
+Проверены15package metadata/license/icon/readme/dependency sets, только package
+assets graph и fresh-feed provenance; Cobalt/Enerit actual consumer generation,
+4analyzer/buildTransitive payload hashes, loaded framework DLL hashes из nupkg.
+22file delivery checks: managed assemblies, custom Skia native, stock Skia/
+HarfBuzz/GLFW, fonts/OFL в двух profiles. Два embedded shaders совпали с source
+в каждом case; native/font loading и actual GPU render этим не подтверждены.
+Consumer build и Editor publish имеют прежний generated CS8669 warning; warnings
+не исправлялись и не объявляются отсутствующими. Публикации на NuGet не было.
+
+Найден production defect `AetherRuntimeHost.RunAsync`: Windows `Console.In`
+может синхронно блокировать даже ReadLineAsync; вызов stdin reader внутри массива
+workers происходил до запуска FrameProducer и установки fault continuations.
+Поэтому Hello/scene/Step проходили, а CPU frame не появлялся до stdin Stop.
+Reader перенесён в отдельную LongRunning owned task, включённую в общий drain;
+frame/tick/GPU workers и наблюдение failures запускаются до ожидания stdin.
+Новых public contracts, lifetime владельцев или UI dependencies нет.
+
+Существующий process proof RuntimeLaunchProbe теперь конфигурирует shared CPU
+surface, получает кадр после одного Step и проверяет selected-game pattern/tick
+до отправки Stop. NativeRuntimeProcessTests проверяет эти поля вместе с прежними
+identity/role/isolation/reap assertions; новая test project не создавалась.
+
+| Требование регрессии | Фактическая проверка |
+| --- | --- |
+| CPU кадр выбранной игры до stdin Stop, DLL и apphost; tick1 и pattern | `IndependentRuntime_PreservesExactIdentityRoleIsolationAndOwnedCleanup`: RED0/2 → GREEN2/2 Debug, [RED TRX](../../TestResults/ARCH2e-RuntimeRegression-20261029/runtime-red.trx), [GREEN TRX](../../TestResults/ARCH2e-RuntimeRegression-20261029/runtime-green-Debug.trx) |
+| Сохранить session/bootstrap/frames/build/checkpoint/Replace/diagnostic/lifecycle regressions | Полный Aether1543/1543 Debug и1543/1543 Release, failed/skipped0: [Debug](../../TestResults/ARCH2e-RuntimeRegression-20261029/Aether-Debug.trx), [Release](../../TestResults/ARCH2e-RuntimeRegression-20261029/Aether-Release.trx) |
+
+Каждый dotnet test сохранил отдельный binlog. Начальная попытка regression build
+имела ошибку namespace в assertion; после исправления RED получен именно на
+отсутствующем кадре, до production fix. Полный solution/Editor/UI test run не
+выполнялся, GPU/window/native loading не проверялись.
+
+Первые package attempts сохранены в TestResults/ARCH2e-20261029-1…6: исправлены
+fixture generated-output path (Debug sources попадали в Release glob), inherited
+repo NuGet properties у candidate/report внутри checkout, тип PowerShell XML
+variable, diagnostic source вне штатного TrueMoon.* collector filter и сравнение
+смешанных Windows path separators в fixture. Код
+framework изменён только для подтверждённого runtime worker startup defect.
+
+## Launch roles и Runtime HUD: решение — 2026-10-29
+
+По обсуждению с пользователем в PLAN добавлены
+[ENG7b Editor/Player](PLAN.md#eng7b-режимы-запуска-editor-и-player--2026-10-29) и
+[ENG5c.4 runtime HUD](PLAN.md#eng5c4-runtime-hud-поверх-alloyargentis--2026-10-29).
+Роль выбирается до App.Build, Editor запускает owned child; game + Alloy HUD
+компонуются в Runtime. Hot role switching не входит в первый профиль.
+[ED6b](EDITOR_PLAN.md#ed6b-buildplaystop-из-редактора--2026-10-29) хранит прикладной
+document/build/play workflow, общие UI capabilities — в UI плане.
+Согласованы границы, зависимости и проверяемые подэтапы; implementation/API ещё
+не выполнены. Ближайший ARCH2e и существующая функциональная очередь сохранены.
+Работа документационная: code/build/tests/process/GPU/package runs не выполнялись.
+Предыдущий Skia4.154 proof сохраняет дату28октября и свой scope.
+
 ## Сверка рабочего дерева и архив STATUS — 2026-10-28
 
 Сопоставлены рабочие source/test/example изменения с ARCH2d, ENG2/ENG3 и

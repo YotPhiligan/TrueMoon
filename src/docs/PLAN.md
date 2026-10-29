@@ -14,15 +14,31 @@
 
 UI alpha и контрольное beta приложение имеют собственные критерии. Готовность UI не означает готовность всех модулей TrueMoon; обратное тоже не следует из общего build.
 
-Текущий приоритет2026-10-28 —
-[ARCH2: Aether/Editor packages и executable hosts](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27).
-ARCH2a–c реализованы; ARCH2d hosts/resources проверены source/published headless,
-его GUI/GPU acceptance отложена после BSOD. Следующий доступный шаг —
-[ARCH2e.1/2 independent NuGet consumer](engine/PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28):
-fresh packages, отдельное решение и build/publish/headless/App/DI/resource proof.
-Полный ARCH2, включая native acceptance, предшествует новым Editor features.
+Текущий приоритет, сверка2026-10-29 —
+[Compiler diagnostics/navigation и полный ED8a report](engine/EDITOR_PLAN.md#ed6a-консоль-диагностики--2026-10-25).
+ED6a.2 raw/parent-health/delivery/capture проверен bounded consumer срезом2026-10-29.
+Первый structured console/filter/inspect/partial export проверен2026-10-29;
+remaining acceptance и подробные задачи ведутся в прикладном Editor плане.
+[ARCH2: Aether/Editor packages и executable hosts](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27)
+проверен в bounded Windows x64/net10.0/OpenGL↔Vulkan profile:15fresh packages,
+headless8/8cases/24children и native24/24cases/56children с8owned crashes.
+Standard/Cobalt и embedded/MS DI проверены в source Debug/published Release и
+NuGet Debug/published Release;48graceful validation0/0 и actual UI/GPU cleanup.
+Startup/close failure, document preservation и crash/recovery прошли; Hosting
+callback больше не делает Resolve во время DI Dispose. Остальные physical/
+K3/K7/K8/VRAM/general release gates и причина прежнего BSOD не закрыты.
+ARCH2e.4 scoped contract выполнен: stdio ownership и file-drain без shared worker проверены controlled RED/GREEN, Core374/Aether1550 и fresh consumers. Точный historical cause не приписывается без failure heap; это ограничение сохранено в HISTORY.
 Quality follow-ups ENG2/ENG3, Mithril ready-file и diagnostic forwarding закрыты
 в своих проверенных scopes; общая release matrix не повторена. Точные даты — в STATUS.
+
+Решение2026-10-29: [Editor/Player выбираются при запуске executable](engine/PLAN.md#eng7b-режимы-запуска-editor-и-player--2026-10-29),
+до App/DI; Editor запускает игру отдельным owned Runtime child. Один exe допустим
+для всех ролей, горячее переключение работающего Player в Editor пока не требуется.
+[Игровой HUD](engine/PLAN.md#eng5c4-runtime-hud-поверх-alloyargentis--2026-10-29)
+принадлежит Runtime и строится поверх Alloy/Argentis; optional host/integration
+сохраняет Aether core без UI зависимости. Общие UI возможности —
+[в UI плане](alloy/PLAN.md#runtime-hud-aether--2026-10-29), Editor workflow — ED6b.
+Эти будущие этапы не меняют очередь ED6a/ED8a → ED4c.2/3/workflow и не объявляются реализованными.
 
 ## Карта модулей
 
@@ -34,7 +50,7 @@ Quality follow-ups ENG2/ENG3, Mithril ready-file и diagnostic forwarding зак
 | Mithril | TrueMoon.Mithril: units, hosting/startup/lifetime/restart policies, процессные handles | [Mithril](mithril/PLAN.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: retained UI, renderer, окно/input, standalone и external HUD | [UI](alloy/PLAN.md) |
 | Aether / Engine | TrueMoon.Aether: library/package общего engine/components/authoring/runtime, sessions/control/frames/builds/checkpoint/Replace; отдельные executable/game consumers | [Aether](engine/PLAN.md), [ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) |
-| Aether Editor | TrueMoon.Aether.Editor — подключаемая library/package с View/Data/styles, commands и прикладными services; ARCH2a–c реализованы, ARCH2d hosts/assets проверены headless; independent NuGet и GUI/native acceptance открыты | [Подключаемый Editor ED1–ED8](engine/EDITOR_PLAN.md), [package/host переход ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) |
+| Aether Editor | Подключаемая library/package с View/Data/styles и services; ARCH2 source/package/headless/native transition проверен в Windows x64 profile. ED1–ED8 остаются частичными | [Подключаемый Editor ED1–ED8](engine/EDITOR_PLAN.md), [package/host переход ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) |
 
 Тестовые проекты, generators и ManualTests относятся к своим направлениям. Они не образуют отдельный продуктовый roadmap. Общие CI/build/package задачи остаются на уровне этого документа.
 
@@ -99,7 +115,7 @@ command/bootstrap и точную identity пары host/runtime; отдельн
 проверены отдельно от GPU/package acceptance; CPU race, legacy fixture и compiler
 follow-ups закрыты своими проверками в STATUS. ARCH2d hosts/resources проверены
 в resource/headless scope2026-10-28, GUI/GPU acceptance остаётся на паузе после BSOD.
-Следующий доступный шаг — ARCH2e.1/2 independent NuGet consumer;
+ARCH2e.1/2 и e.3 native/GUI consumers проверены2026-10-29; далее ED6a/ED8a;
 отдельные результаты и ограничения проверок находятся в STATUS. Весь ARCH2 предшествует
 console/export и новым authoring UI features. После него —
 ED6a/ED8a, ED4c.2/3 и project/build/play workflow; оставшиеся Core/DI/IPC/UI roadmaps
@@ -269,11 +285,8 @@ TrueMoon.Aether.Editor/Tests и назначил аудит Aether по этом
 
 ## Порядок развития
 
-Актуальный порядок2026-10-28: ARCH2d реализован и проверен в resource/headless scope;
-далее ARCH2e.1/2 independent NuGet build/publish/headless/App/DI/resource proof.
-GUI/GPU acceptance ARCH2d/e остаётся открытой до отдельного разбора BSOD и подготовки
-validation environment; доступный headless шаг её не отменяет. После полного ARCH2 —
-ED6a/ED8a console/export, ED4c.2 имена/порядок,
+Актуальный порядок2026-10-29: ARCH2 source/package/headless/native profile проверен
+в bounded Windows x64 profile; ARCH2e.4 checked в своём scope, затем ED6a/ED8a console/export, ED4c.2 имена/порядок,
 ED4c.3 create/delete/duplicate и project picker/switch с ED1/ED6 workflow.
 Незавершённые проверки после BSOD и scopes закрытых quality fixes — в [STATUS](STATUS.md).
 Датированные маршруты ниже сохраняют историю решений и не заменяют эту очередь.

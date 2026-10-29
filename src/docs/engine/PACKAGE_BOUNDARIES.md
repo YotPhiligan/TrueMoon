@@ -4,6 +4,17 @@ ARCH2a–c,2026-10-27. [Этапы и критерии ARCH2](PLAN.md#arch2-aeth
 [текущие проверки](STATUS.md). Эта карта описывает размещение и ownership;
 подробный roadmap остаётся в PLAN.
 
+ARCH2e.1/2,2026-10-29: [independent NuGet consumer и команда проверки](../../ManualTests/AetherPackageConsumer/README.md).
+Private fresh feed/cache, внешнее решение и PackageReference проверяют headless
+Editor composition и independent runtime, build/published delivery без source
+lookup. ARCH2e.3 native consumers проверены отдельной matrix29октября:
+standard/Cobalt и embedded/MS DI, source Debug/published Release и NuGet Debug/
+published Release. Custom host задаёт readiness и public transport factory,
+сохраняет GL owner до drain и сам владеет View tree. Window cleanup заимствует
+lifetime, полученный при DI construction, без late Resolve во время Dispose.
+[Native scope/evidence](HISTORY.md#arch2e3-native-editor-consumers-и-startup-cancellation--2026-10-29).
+Переход не меняет public API и не означает NuGet publication/general release.
+
 ## Общие API движка
 
 | Типы/область | Assembly и namespace | Lifetime/owner |

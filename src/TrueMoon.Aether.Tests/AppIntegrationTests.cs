@@ -46,6 +46,9 @@ public sealed class AppIntegrationTests
         await app.StartAsync();
         var host = Assert.IsType<AetherHost>(app.Services.Resolve<AetherHost>());
         Assert.Same(host, app.Services.Resolve<AetherHost>()); Assert.Equal(1, calls); Assert.Empty(factory.Leases);
+        var diagnostics = app.Services.Resolve<TrueMoon.Aether.Diagnostics.IProcessDiagnosticsSource>()!;
+        Assert.False(diagnostics is IDisposable); Assert.False(diagnostics is IAsyncDisposable);
+        var initialDiagnostics = diagnostics.Read(16, 128); Assert.False(initialDiagnostics.RuntimeAvailable); Assert.True(initialDiagnostics.BuildAvailable); Assert.Empty(initialDiagnostics.Processes);
         await host.Supervisor.StartAsync(Scene());
         var lease = Assert.Single(factory.Leases);
         Assert.Equal(Hash, lease.Launch.Identity.GameBuildId);

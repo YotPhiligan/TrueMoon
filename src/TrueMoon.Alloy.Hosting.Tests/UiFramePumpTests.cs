@@ -6,6 +6,37 @@ namespace TrueMoon.Alloy.Hosting.Tests;
 
 public sealed class UiFramePumpTests
 {
+    [Theory]
+    [InlineData(UiFrameMode.OnDemand)]
+    [InlineData(UiFrameMode.Continuous)]
+    public void SelectionReveal_DefersOutputUntilLayoutSettlesAndKeepsFrameCadence(UiFrameMode mode)
+    {
+        var tree = new TreeView(); tree.SetItems(Enumerable.Range(1, 100).Select(index => new TreeItem(index.ToString(), null, "Row " + index)));
+        var scroll = new ScrollViewer(); scroll.SetContent(tree); var clock = new Clock();
+        using var ui = new UiSession(scroll, new Surface(), new(200, 100)); var diagnostics = ui.EnableDiagnostics();
+        using var pump = new UiFramePump(mode, 100, () => { }, clock); pump.Attach(ui); var outputs = 0;
+        bool Output() { Assert.False(ui.NeedsRender); outputs++; return true; }
+        Assert.True(pump.Tick(false, Output)); Assert.Equal(1, outputs);
+        tree.Select("100"); clock.Advance(10);
+        Assert.False(pump.Tick(false, Output)); Assert.True(pump.UpdatedLastTick); Assert.True(ui.NeedsRender); Assert.True(scroll.Offset > 0);
+        Assert.Equal(1, outputs); Assert.Equal(1, diagnostics.Snapshot.Present.Attempts);
+        var updates = diagnostics.Snapshot.Update.Completed; Assert.False(pump.Tick(false, Output)); Assert.Equal(updates, diagnostics.Snapshot.Update.Completed);
+        clock.Advance(10); Assert.True(pump.Tick(false, Output)); Assert.False(ui.NeedsRender); Assert.Equal(2, outputs);
+        Assert.Equal("100", tree.SelectedId); Assert.True(tree.GetItemBounds("100")!.Value.Y >= scroll.Bounds.Y);
+    }
+
+    [Fact]
+    public void VisualInvalidationDuringDraw_DefersOutputWithoutLoopingUpdateOnTheOwner()
+    {
+        using var fixture = new Fixture(); var draws = 0; var outputs = 0;
+        fixture.Surface.Drawing = () => { if (++draws == 1) fixture.Ui.Root.Invalidate(); };
+        bool Output() { Assert.False(fixture.Ui.NeedsRender); outputs++; return true; }
+        Assert.False(fixture.Pump.Tick(false, Output)); Assert.Equal(1, draws); Assert.Equal(0, outputs);
+        Assert.True(fixture.Ui.NeedsRender); Assert.False(fixture.Pump.Tick(false, Output)); Assert.Equal(1, draws);
+        fixture.Clock.Advance(10); Assert.True(fixture.Pump.Tick(false, Output)); Assert.Equal(2, draws); Assert.Equal(1, outputs);
+        Assert.Equal(0, fixture.Diagnostics.Snapshot.Update.Failed); Assert.Equal(0, fixture.Diagnostics.Snapshot.Present.Failed);
+    }
+
     [Fact]
     public void OnDemand_CleanTreeWithObserversDoesNotUpdateOrPresentUntilRequested()
     {

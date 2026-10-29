@@ -10,8 +10,9 @@ Host предоставляет
 fonts и runtime configuration; пакет не создаёт вложенный App и не открывает
 native resources при регистрации. ARCH2c предоставляет explicit runtime launch,
 bootstrap и pair identity. [Examples guide](../Examples/README.md) описывает owners
-ресурсов и source/published headless verifier; GUI/native acceptance и ARCH2e
-independent NuGet ещё открыты. Local pack не означает готовность поставки.
+ресурсов и source/published headless verifier; ARCH2e independent NuGet/native
+проверен в bounded Windows profile. Новый console consumer пока проверен отдельно
+в source Debug; его package/published acceptance открыт. Local pack не означает готовность поставки.
 
 [План развития рабочего приложения](../docs/engine/EDITOR_PLAN.md) задаёт ED1–ED8:
 project/documents/editing/preview/workflow/extensions/reliability. Первый сквозной
@@ -25,6 +26,13 @@ Undo/Redo и independent Edit preview подключены к общему autho
 динамический инспектор компонентов справа и строка состояния снизу. Desktop host WinExe
 не открывает дополнительную консоль. Dark/Light
 переключаются через «Вид → Сменить тему». Editor — library, `IsPackable=true`;
+«Вид → Диагностика» открывает bounded structured console: поиск, source/level/
+event/session/generation/role фильтры, grouping, inspect/copy и pause follow-tail.
+Переключатель режима добавляет RAW stdout/RAW stderr и Health: bounded runtime/build
+snapshots, parent Core sinks, child delivery и capture/file counters. Уровень события
+не определяется по stderr. «Обновить детали» явно заменяет зафиксированный снимок.
+«Экспорт без текста» пишет partial metadata/health JSON без raw/message/exception/
+stack/error text и произвольных properties; compiler navigation и полный ED8a ещё открыты.
 движок остаётся в единственной сборке `TrueMoon.Aether`. Редактор и его tests
 относятся к модулю Aether; прежние имена `TrueMoon.Editor`/`TrueMoon.Editor.Tests`
 заменены на `TrueMoon.Aether.Editor`/`TrueMoon.Aether.Editor.Tests`.

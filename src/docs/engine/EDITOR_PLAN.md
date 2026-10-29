@@ -9,8 +9,9 @@ TrueMoon.Aether.Editor — library/NuGet package, подключаемый к ex
 Переход [ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) предшествует
 новым ED features. ARCH2a/b shared scene persistence и Editor library/App
 integration и ARCH2c explicit runtime launch/bootstrap/identity реализованы;
-ARCH2d hosts/resources проверены source/published headless; GUI/GPU acceptance и
-ARCH2e independent NuGet открыты. Минимальные executable consumers — Examples/
+ARCH2 source/package/headless/native transition проверен2026-10-29 в bounded
+Windows x64 profile; full Editor ED1–ED8 и hardware/release gates не закрыты.
+Минимальные executable consumers — Examples/
 AetherEditor и AetherRuntimeHost; directed smoke workflows — AetherEditorHost.
 **ED1a project/session и ED2a/b documents реализованы2026-10-23;
 прикладные ED1–ED8 остаются частично открытыми**. Наличие плана не означает
@@ -181,7 +182,7 @@ backend-independent contracts. Общие реализации и acceptance в�
 
 | Этап | Результат | Зависимости |
 | --- | --- | --- |
-| [ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) | ARCH2a–c реализованы; d hosts/resources проверены headless, GUI/native acceptance открыта; далее e.1/2 independent NuGet | Текущие engine/Editor contracts; подробные этапы и acceptance только в engine плане, e.3 GUI/GPU отложен после BSOD |
+| [ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27) | Проверен в bounded Windows x64 profile: headless8/8 и native24/24 source/package build/publish | Подробные этапы/evidence только в engine плане; physical/K3/K7/K8/VRAM и general release отдельно |
 | ED1 | Проект и рабочая сессия | App/DI/lifecycle; текущий UIA1 |
 | ED2 | Документы и сохранение | ED1; immutable authoring model |
 | ED3 | Общие операции редактирования и Undo/Redo | ED2; минимальный ARCH1b и его headless proof до подключения edit UI |
@@ -194,13 +195,13 @@ backend-independent contracts. Общие реализации и acceptance в�
 Это порядок пользовательских результатов. Нужные интерфейсы, cleanup и regression
 tests вводятся вместе с соответствующей функциональностью, не откладываются до
 ED7/ED8. Единичный generic UI control не требует завершить весь UI beta roadmap.
-Сверка2026-10-28: ARCH2a–c реализованы, ARCH2d hosts/resources проверены в
-source/published headless scope; следующий доступный шаг —
-[ARCH2e.1/2 independent NuGet](PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28).
-GUI/GPU acceptance ARCH2d/e остаётся открытой. ENG2 CPU race, legacy Build/Replace,
+Сверка2026-10-29: [ARCH2](PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28)
+проверен в source/package build/published headless/native profile, следующий
+этап — ED6a/ED8a console/export после проверенного ARCH2e.4 contract. ENG2 CPU race, legacy Build/Replace,
 MSB3030 staging paths и forwarding test follow-ups закрыты в своих scopes;
-датированные TRX и ограничения — в STATUS/HISTORY, новых runs в сверке нет.
-После полного ARCH2 —
+датированные TRX и ограничения — в STATUS/HISTORY. Native24/24 и свежий package
+headless8/8 прошли после Hosting lifecycle fix; Hosting114/Editor763 Debug/Release
+повторены, прежний Aether1543/1543 сохраняет свой run. Дальнейшая очередь —
 ED6a → ED8a console/export в подключаемом Editor, ED4c.2 → ED4c.3,
 project picker/switch и ED1/ED6 workflow. Gameplay ENG5c.3 и hardware gates прежние.
 
@@ -781,6 +782,12 @@ readonly/snapshot transaction contracts ARCH1c, а не прямые измен�
 
 ## ED6. Игровой цикл разработки
 
+Решение2026-10-29: Editor является launch role приложения; Play/Pause/Stop
+управляют owned игровой сессией и не превращают Editor App в Player.
+Режимы executable и standalone Player ведутся в
+[ENG7b](PLAN.md#eng7b-режимы-запуска-editor-и-player--2026-10-29), runtime HUD —
+в [ENG5c.4](PLAN.md#eng5c4-runtime-hud-поверх-alloyargentis--2026-10-29).
+
 - [ ] Связать project/document identity с Build/Play/Stop/Replace; явно различать
   saved source, текущий authoring document и выбранный game artifact.
 - [ ] Показывать tasks/progress/cancellation и bounded compiler/runtime diagnostics;
@@ -802,7 +809,8 @@ readonly/snapshot transaction contracts ARCH1c, а не прямые измен�
 подключены к Editor/runtime. Обычный parent Editor использует постоянный root
 между запусками; smoke/runtime хранят runs в своём report scope.
 [Настройки и границы](../core/DIAGNOSTICS.md#хранение-jsonl-между-запусками).
-UI console/filter/copy задачи ниже остаются открытыми.
+Structured console/filter/copy и ED6a.2 raw/health реализованы bounded срезами
+2026-10-29; compiler navigation и полная ED8a acceptance ниже остаются открытыми.
 
 Согласовано пользователем, запланировано; общий pipeline —
 [CORE6](../core/PLAN.md#core6-структурированная-диагностика--2026-10-25),
@@ -811,29 +819,90 @@ Editor — consumer ограниченной истории, без собств
 
 Первый infrastructure consumer реализован2026-10-25: EditorApplication и runtime
 включают общий bounded JSONL pipeline в report directory/diagnostics. View console
-и export UI ещё не реализованы; их checklist ниже не закрыт этим подключением.
+и metadata-only export UI добавлены2026-10-29; полные ED6a/ED8a acceptance этим
+подключением не закрыты.
 
-- [ ] Объединённый просмотр Editor/Runtime/Build/IPC/graphics с фильтрами по
+- [x] Structured просмотр общей истории Editor/Runtime/Build/IPC/graphics с фильтрами по
   source/level/event/session/generation/runtime role; текстовый поиск, clear view,
   pause/resume auto-scroll и группировка повторов со счётчиком. Очистка View не
   удаляет persistent diagnostics без отдельного явного действия.
-- [ ] Показывать timestamp, source, EventName/message, exception/stack и bounded
-  properties; различать raw stdout/stderr и structured events, указывать loss/
-  truncation/sink health. После crash/Replace история прежней generation доступна
-  и не смешивается с текущим domain state.
+- [x] Timestamp, source, EventName/message, exception/stack, bounded properties и
+  inspect/copy structured event. Старые session/generation остаются в ограниченной
+  истории, фильтры не меняют domain state. Observed sequence gaps, presentation
+  eviction/truncation отделены от неизвестного sink health.
+- [x] **ED6a.2:** подключить raw stdout/stderr и доступный health/loss Core sinks,
+  child delivery и process capture через borrowed snapshots; явно отличать raw
+  streams от structured events. Не выдавать observed gaps UI reader за sink loss
+  или durability. Сохранить crashed/replaced generation в пределах budgets.
+
+  Проверено2026-10-29: отдельные Structured/RAW stdout/RAW stderr/Health modes;
+  borrowed Core parent health и runtime/compiler snapshots. Default16processes,
+  4096chars/stream, compiler16completed jobs+active, native64recent leases.
+  Raw source/session/generation/role/search filters сохраняют identity; level/event/
+  grouping/clear относятся к structured. Health не фильтруется как log. Inspected
+  raw/health text frozen до явного «Обновить детали»; polling не делает IO/IPC/SDK wait.
+  Parent sink, child delivery lost/unconfirmed, capture eviction/file loss и display
+  omissions разделены; child sink health остаётся unavailable. Metadata-only export
+  содержит numeric health/correlation с отдельным budget/omission, raw/error text
+  исключены. [Точные проверки и scoped native proof](HISTORY.md#ed6a2-raw-streams-и-health--2026-10-29).
 - [ ] Compiler diagnostics дают file/line/column и переход через определённый editor
   hook; классификацию не выводить только из stdout/stderr. Связь с build job/artifact
   сохраняется при compile failure и при последующем успешном Build.
-- [ ] Diagnostics View<TData>, отдельные Data/ViewModel/IViewStyle и UI-owner factory
+- [x] Diagnostics View<TData>, отдельные Data/ViewModel/IViewStyle и UI-owner factory
   через App/Cobalt; получать bounded batches на UI thread, не вызывать контролы
   из producer callback. Ограничить retained rows/bytes и update budget; сохранить
   focus/selection/scroll при обновлении/filter/theme. При Dispose снять подписки,
   borrowed App-owned pipeline не освобождать. Нужные общие controls принадлежат UI плану.
 
+**Первый проверенный срез2026-10-29:** `UseAetherEditor` подключает console;
+меню «Вид → Диагностика», в standalone toolbar — одноимённая кнопка.
+`UseAetherEditorDiagnostics(options)` позволяет заранее задать presentation budgets
+или подключить console отдельно. Default:512 records,1MiB payload estimate,
+8192chars/record,64records/100ms. Это отдельный presentation limit поверх Core ring,
+не heap measurement или обещание восстановить JSONL. Group count относится к
+retained window; pause отключает только follow-tail, ingestion продолжается.
+Clear очищает только View и переводит cursor к текущей границе collector.
+Core reader заимствован; дополнительные logger/subscriptions на producers не создаются.
+Editor808/808 Debug/Release; native SourceDebug/standard window/Cobalt проверяет
+live child history, crash/recovery, grouping/filter/inspect/reopen/export, UI owner
+и сохранность dirty document. [Evidence и ограничения](HISTORY.md#ed6a-structured-console-и-первый-partial-export--2026-10-29).
+Остальные native/provider/published profiles и полный flood/slow-UI acceptance
+ED6a не выводятся из этого одного native case.
+
 Acceptance: сообщения из child видны во время работы, фильтры/grouping/inspect/copy
 и compiler navigation работают; flood/slow UI/повторные открытия панели и crash/
 Replace не блокируют команды и не растят память/подписки. Проверки Data и native
 UI выделяются отдельно, исторический shell proof не закрывает эту задачу.
+
+### ED6b. Build/Play/Stop из редактора — 2026-10-29
+
+Запланировано по согласованному startup-only выбору Editor/Player. Существующий
+legacy demo Build/Replace и Edit preview не закрывают игровой workflow открытого
+authoring document. Нужен следующий прикладной срез поверх общих engine contracts:
+
+- [ ] Связать выбранные project/document revision и game artifact. До Play явно
+  определить saved/draft policy и захватить согласованный immutable scene snapshot;
+  не запускать другой artifact или изменённый источник по завершению stale build.
+- [ ] Сохранить документ, selection/history и dirty state в родительском Editor.
+  Обычный Play использует runtime copy; автоматического переноса live state назад
+  нет. Build failure/cancel, child crash и Stop не уничтожают документ/Undo.
+- [ ] Согласовать Edit preview → game Play и обратный путь: fence input/late results,
+  stop/drain/reap прежней сессии до создания следующей, ownership/retry при cleanup
+  failure. Не ослаблять существующие scene/session/surface limits и identity.
+- [ ] Start/Play создаёт owned Runtime child того же exe либо explicit separate
+  runtime через существующую factory/supervisor. Ready/Playing/Paused/Stopped,
+  progress, ошибки и доступность действий отражают фактический runtime result.
+- [ ] Игровой HUD приходит внутри готового runtime frame, Editor рисует собственные
+  tools отдельно. Viewport input проходит Editor routing до runtime HUD/game;
+  Stop/global shortcuts и focus/capture reset определены без двойного исполнения.
+- [ ] Проверить повторные Build/Play/Pause/Resume/Stop, open/close/cancel/crash и
+  устаревшие callbacks в source Debug/published Release и затронутом package
+  consumer; user close по-прежнему применяет Save/Discard/Cancel policy.
+
+Детальные runtime/Player/HUD contracts не дублируются здесь. Полный ARCH2
+предшествует новым ED features; прежняя очередь console/export → names/order →
+create/delete → project picker/switch и ED1/ED6 workflow сохраняется. Наличие
+этого checklist не означает реализации ED6b или всего ED6.
 
 ## ED7. Проверенная расширяемость
 
@@ -873,6 +942,22 @@ failures проверены, данные сохраняются, незавер
 готовность framework/release не выводится из одного редактора.
 
 ### ED8a. Экспорт диагностического отчёта — 2026-10-25
+
+Первый partial export реализован2026-10-29: кнопка «Экспорт без текста» и явный
+путь нового JSON файла в console. До512KiB, cooperative5s deadline, до1024recent
+metadata records, атомарная публикация без перезаписи существующего файла; accepted
+work отменяется/drain при App stop. Report содержит versions/OS, effective
+presentation limits, session/generation/build ID allowlist и counters. Message,
+exception/stack/caller и произвольные properties исключены; source/event identifiers
+сохраняются. Это deliberate metadata-only privacy policy, а не автоматическая
+очистка любого пользовательского текста. `partial=true`, omitted count и unavailable
+список обязательны. ED6a.2 добавляет numeric parent health/process metadata с
+explicit budget omission; raw/error text по-прежнему исключены. Optional raw export
+policy, persistent history, child sink health/backend/device/collector configuration
+и explicit user cancellation остаются следующей частью ED8a, checklist ниже открыт.
+Tests проверяют size/order/privacy, write failure/no-overwrite и cancellation;
+native проверяет после runtime crash при неизменном dirty document. Published
+app/export и rotated disk history новым запуском не проверены.
 
 - [ ] Явная команда экспорта bounded report: последние structured/raw события с
   session/generation/build correlation, loss/truncation/sink health, версии

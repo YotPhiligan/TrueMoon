@@ -1,5 +1,106 @@
 # Core: история проверок и ревью
 
+## Borrowed health и output windows — 2026-10-29
+
+Для ED6a.2 добавлен общий `IDiagnosticHealthReader`/`DiagnosticHealthSnapshot` в
+Contracts. `DiagnosticRecordAccess` предоставляет этот alias вместе с history/
+importer, не реализует Dispose и не становится отдельным owner pipeline.
+UseDiagnostics legacy/repeated setup удаляет все три access registrations.
+ReadHealth копирует collector counters под его gate, затем independent worker
+snapshots; не flush-ит sinks, не запускает retention и не читает файлы. Optional
+emergency/retention может быть disabled/not-yet-available. UI reader gaps, ring
+eviction/capture failures и per-sink drops не суммируются в один loss. Accepted/
+Written не объявляются durable delivery. Bounded LastError пригоден для local
+display; Editor metadata exporter исключает его текст.
+
+ProcessOutputCapture.Read(maxChars) копирует только выбранный suffix ring с UTF16
+boundary. Прежний Read() сохранён. Original capture/file counters неизменны;
+ProcessOutputSnapshot.OmittedCharacters отдельно описывает display window,
+Limit(...) работает над independent snapshot. Window0 даёт counters без текста.
+Reader/file tasks, queue8, file budget, borrowed TextReader и2s/5s owner waits
+не менялись. Это не ещё одно исправление исторического file-worker timeout.
+
+Core **387/387** Debug/Release, failed/skipped0;13новых cases. Tests
+`Health_ReadsBlockedSinkWithoutDrainAndSeparatesMemoryEvictionFromSinkLoss`,
+`AppHealth_IsBorrowedAndRepeatedLegacySetupRemovesEveryAccessView` (Cobalt/MS DI),
+`FailingSink_HealthReportsFailureAndBoundedErrorInsteadOfSuccessfulWrite`,
+`ReadWindow_PreservesCaptureLossAndSeparatesDisplayOmission`,
+`WindowBoundary_DoesNotExposeHalfSurrogateOrDoubleCountCaptureLoss` и invalid-window
+case проверяют новые contracts напрямую. Commands: `dotnet test
+TrueMoon.Tests/TrueMoon.Tests.csproj --no-restore -c Debug` и `-c Release`, с unique
+binlogs/TRX. [Audit/8TRX](../../TestResults/ED6a2-20261029-1/audit.json).
+Engine/UI/native results имеют [свой scope](../engine/HISTORY.md#ed6a2-raw-streams-и-health--2026-10-29);
+Core не получает UI dependency. Full solution/packages/published/hardware не запускались.
+
+## File-drain без shared ThreadPool — 2026-10-29
+
+По продолжению ARCH2e.4 добавлен [Core-only ProcessOutputProbe](../../ManualTests/ProcessOutputProbe/README.md).
+Предварительные controls:1000pairs/2000files в одном процессе,50cold processes
+по20pairs и1000pairs с App/JSON diagnostics прошли. Отдельный diagnostic consumer
+на прежних nupkg с sync failure marker прошёл30replays/90children. Fresh run со
+сбором heap только по фактическому marker также прошёл8cases; failure heap не
+получен, дамп успешного процесса вместо fault не выдаётся за root-cause proof.
+Исходный external consumer source восстановлен/проверен по baseline SHA перед
+созданием отдельной diagnostic copy; старый immutable feed не менялся.
+
+Контролируемый isolated process доказал конкретную liveness dependency: после
+допуска/записи24bytes reader доходит до EOF, затем единственный shared worker
+удерживается completion callback. Старый async file worker остаётся
+WaitingForActivation/WaitingForChunk и не завершает drain за прежние2s при
+ReadCompletion=RanToCompletion,24written/24characters/0dropped.
+[Exact RED](../../TestResults/ARCH2e4-FileDrain-20261029-1/starvation-exact-red/report.json).
+Один LongRunning worker с прежним `WaitToReadAsync().AsTask()` тоже дал RED:
+async-to-Task bridge всё ещё требовал pool callback.
+[Промежуточный RED](../../TestResults/ARCH2e4-FileDrain-20261029-1/starvation-green/report.json).
+
+**Решение2026-10-29:** file-enabled capture получает один dedicated background
+worker с synchronous file IO. Channel сохраняет8bounded chunks; TryWrite/drop и
+UTF8/file budgets прежние. Sync semaphore будит worker отдельно на каждый
+admitted chunk и на EOF. No-file mode worker не создаёт. Semaphore освобождается
+после обоих tasks; borrowed reader остаётся у caller. FileStage/ReadCompletion/
+FileCompletion и file errors/loss counters сохраняются. Runtime/compile budgets
+2s/5s не увеличены. Цена решения — один background worker на active file capture;
+caller по-прежнему управляет количеством captures. App/DI/async activation API
+не менялись; arbitrary uncooperative filesystem liveness не обещается.
+
+[GREEN](../../TestResults/ARCH2e4-FileDrain-20261029-1/starvation-green2/report.json)
+получен при том же занятом pool worker. Автоматическая регрессия
+`ProcessOutputFileWorkerTests.FileDrain_PoolWorkerHeldAfterEof_CompletesAndPreservesBorrowedReader`
+проверяет оба completion tasks, реальное содержимое файла,24bytes/0loss/null IO
+error и borrowed reader. Pool settings меняет только child process, test host не
+меняется. Fixture подключён к существующему TrueMoon.Tests через ProjectReference
+без runtime reference и Copy/FileWrites target, отдельного test project нет.
+Core capture subset20/20, full Core374/374 и Aether1550/1550 Debug/Release прошли.
+Post-fix controls:1000pairs/2000files непосредственно и ещё столько же внутри
+App/JSON diagnostics прошли. Это lifecycle/content proof, не perf baseline.
+
+Точные успешные test команды (в Debug и Release, отдельные TRX/binlogs):
+
+```powershell
+dotnet test ./TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --logger 'trx;LogFileName=TrueMoon.Tests-Debug.trx' --results-directory ./TestResults/ARCH2e4-FileDrain-20261029-1 --verbosity quiet '-bl:./TestResults/ARCH2e4-FileDrain-20261029-1/TrueMoon.Tests-Debug-{}.binlog'
+dotnet test ./TrueMoon.Tests/TrueMoon.Tests.csproj -c Release --logger 'trx;LogFileName=TrueMoon.Tests-Release.trx' --results-directory ./TestResults/ARCH2e4-FileDrain-20261029-1 --verbosity quiet '-bl:./TestResults/ARCH2e4-FileDrain-20261029-1/TrueMoon.Tests-Release-{}.binlog'
+dotnet test ./TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug --logger 'trx;LogFileName=TrueMoon.Aether.Tests-Debug.trx' --results-directory ./TestResults/ARCH2e4-FileDrain-20261029-1 --verbosity quiet '-bl:./TestResults/ARCH2e4-FileDrain-20261029-1/TrueMoon.Aether.Tests-Debug-{}.binlog'
+dotnet test ./TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Release --logger 'trx;LogFileName=TrueMoon.Aether.Tests-Release.trx' --results-directory ./TestResults/ARCH2e4-FileDrain-20261029-1 --verbosity quiet '-bl:./TestResults/ARCH2e4-FileDrain-20261029-1/TrueMoon.Aether.Tests-Release-{}.binlog'
+```
+
+Связь controlled starvation с точной причиной прежнего intermittent эпизода
+не установлена: у исторического failure нет heap и точной file phase. Исправлен
+доказанный shared-pool dependency, historical observation сохранён отдельно.
+Passing повторы сами по себе не объявляются доказательством отсутствия иных IO
+faults. Hardware/driver/K7/general release и полный solution scope не меняются.
+
+## Фазы process output capture — 2026-10-29
+
+Для ARCH2e.4 ProcessOutputCapture получил ReadCompletion/FileCompletion/FileStage при
+прежнем Completion=WhenAll и borrowing contract. Это позволяет отличить EOF/read
+failure от незавершённого file sink в bounded cleanup timeout. Constructor,
+ProcessOutputSnapshot, бюджеты и поведение file errors не менялись. Actual stream
+ownership исправлен в Aether, Core не закрывает borrowed reader.
+Core373/373 Debug/Release прошли; новый combined read/close/timeout proof находится
+в Aether output-owner tests. [Точная история, команды и ограничения](../engine/HISTORY.md#arch2e4-stdio-ownership-и-диагностика-drain--2026-10-29).
+Свежий run e4-Packages1 показал completed readers при pending file sinks; добавлены FileStage и thread-pool counters. Исходная причина intermittent timeout не установлена; новая диагностика не
+объявляется исправлением этого observation. Общий solution run не повторялся.
+
 ## Чтение и импорт child diagnostics — 2026-10-27
 
 Contracts добавляет IDiagnosticRecordReader/Importer и DiagnosticOrigin; старый

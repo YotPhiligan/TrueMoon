@@ -1,6 +1,55 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-28, SkiaSharp4.154.0 и пересборка native interop**.
+Последняя работа — **2026-10-29, ED6a.2 consumer и INF3 dirty-frame fix**.
+Raw stdout/stderr/health остаются typed Editor View/Data/style consumer существующих
+controls. Native mode cycle выявил presentation после Update с NeedsRender=true:
+selection reveal меняет scroll при Arrange. UiFramePump сохраняет request и ждёт
+следующего bounded tick; strict output guards/cadence/FIFO budget прежние.
+Hosting117/117 Debug/Release, RED3→GREEN3; Editor823/823 Debug/Release.
+Native SourceDebug/standard/Cobalt прошёл всю цепочку с4diagnostics PNG, raw stdout
+534chars упавшей generation, empty stderr как available capture и parent health;
+6graceful Vulkan reports0/0, UI/GPU/handles0. [Finding и scope](HISTORY.md#inf3-dirty-frame-после-update--2026-10-29).
+Core387/Aether1556 проверены отдельно; UI893/full solution/packages/physical gates
+не повторялись. Далее compiler navigation/full report у engine.
+
+Предыдущая consumer-работа — **2026-10-29, ED6a structured diagnostics console**.
+Editor использует существующие TreeView/ScrollViewer/RichTextEditor, typed
+View/Data/style/IFactory; общие UI APIs и renderer не менялись. Editor808/808
+Debug/Release; один SourceDebug/standard window/Cobalt native workflow проверяет
+live child history, filter/group/inspect/reopen/partial export, actual OpenGL screenshot,
+dirty document и cleanup. Visual QA исправила console-local padding полей и видимость
+repeat counter. [Точный scope](../engine/HISTORY.md#ed6a-structured-console-и-первый-partial-export--2026-10-29).
+UI893/Hosting114, package/published/provider matrix и hardware gates заново не
+запускались. Далее ED6a.2 raw/health и compiler navigation/full report у engine.
+Historical file-worker exact cause attribution сохранён отдельно у Core.
+
+Предыдущая работа — **2026-10-29, native Editor consumers и Hosting callback fix**.
+RegisterWindow захватывает borrowed IAppLifetime до startup: cleanup не делает
+Resolve во время Dispose контейнера. Native cancellation RED → GREEN;
+текущий полный Hosting114/114 и Editor763/763 отдельно Debug/Release, failed/skipped0.
+24/24native cases проверили standard window/Cobalt и embedded View/MS DI в source
+Debug/published Release и NuGet Debug/published Release. Actual extended native/
+NotoSans loading, UI/GPU pixels/Theme/retained fields, View detach/recreate,
+startup/close failure и owned child crash/recovery прошли; UI sessions0 после Dispose.
+48graceful producer reports: core/sync validation0/0, native surfaces/slots/devices/
+handles released.8killed children не включены в48; K3/K7/K8/physical/VRAM не закрыты.
+[Scope и история](HISTORY.md#arch2e3-native-consumers-и-lifetime-callback--2026-10-29),
+[audit/40PNG/loaded package hashes](../../TestResults/ARCH2e3-20261029-9/audit.json).
+Fresh15packages/headless8/8 проверены отдельно. UI893/Aether1543/full solution
+в этом шаге не перезапускались; Skia raw Vulkan copy proof ниже сохраняет дату28октября.
+ARCH2e.3 native profile проверен; e.4 output drain остаётся у engine; ближайший Editor
+consumer — ED6a/ED8a console/export. Общие UI и hardware/INF/PA gates прежние.
+
+Предыдущая работа — **2026-10-29, планирование Runtime HUD на Alloy/Argentis**.
+[UI integration boundaries](PLAN.md#runtime-hud-aether--2026-10-29) связаны с
+[ENG5c.4](../engine/PLAN.md#eng5c4-runtime-hud-поверх-alloyargentis--2026-10-29):
+HUD tree/session в Runtime, game + UI до frame export/present, existing external
+host и owner-thread factory route, input arbitration и pause UI при frozen game.
+Детальный game/Player checklist остаётся у engine; новые UI APIs не назначены.
+Изменены только планы/статусы, build/tests/GPU/packages не запускались; Skia proof
+ниже сохраняет дату28октября. Ближайший ARCH2e и hardware/GUI gates прежние.
+
+Предыдущая работа — **2026-10-28, SkiaSharp4.154.0 и пересборка native interop**.
 Managed/native версия обновлена согласованно, DLL/build.json и SourcePins заменены;
 новый upstream больше не требует depot_tools, recipe учитывает .gitmodules.
 C ABI v1/48bytes, extension source и ownership прежние. Raster smoke исправлен:
@@ -466,9 +515,9 @@ Alpha K1–K9 не объявляется завершённой. Требова
 ## Следующий конкретный шаг
 
 При работе над приложением использовать [первый срез и порядок API → preview → UI](../engine/EDITOR_PLAN.md#первый-сквозной-срез);
-текущий доступный шаг — ARCH2e.1/2 package build/publish/headless/App/DI/resources,
-затем GUI/native proof после подготовки окружения. После полного ARCH2 — ED6a/ED8a
-console/export, затем authoring очередь ниже; UI capabilities добавляются по consumer.
+ARCH2 source/package/headless/native profile проверен29октября; текущий шаг —
+ED6a/ED8a console/export, затем authoring очередь ниже. UI capabilities
+добавляются по consumer, hardware/general release gates сохраняются отдельно.
 ARCH1b.1, ED1a, ED2a/b, ED3a и ED4c.1 выполнены в своих границах; authoring
 consumer после перехода и console — rename/reorder ED4c.2 после persistent engine metadata, затем
 create/delete UI commands общего authoring API.

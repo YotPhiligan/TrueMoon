@@ -22,6 +22,17 @@
       <ProjectReference Include="..\TrueMoon\TrueMoon.csproj" />
       <ProjectReference Include="..\TrueMoon.Core\TrueMoon.Core.csproj" />
       <ProjectReference Include="..\TrueMoon.Cobalt.Generator\TrueMoon.Cobalt.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+      <ProjectReference Include="../ManualTests/ProcessOutputProbe/ProcessOutputProbe.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
+
+    <Target Name="TrueMoonTests_CopyProcessOutputProbe" AfterTargets="Build">
+      <ItemGroup>
+        <ProcessOutputProbeFile Include="../ManualTests/ProcessOutputProbe/bin/$(Configuration)/$(TestsTF)/**/*" />
+        <FileWrites Include="@(ProcessOutputProbeFile->'$(OutDir)process-output-probe/%(RecursiveDir)%(Filename)%(Extension)')" />
+      </ItemGroup>
+      <Copy SourceFiles="@(ProcessOutputProbeFile)"
+            DestinationFiles="@(ProcessOutputProbeFile->'$(OutDir)process-output-probe/%(RecursiveDir)%(Filename)%(Extension)')"
+            SkipUnchangedFiles="true" />
+    </Target>
 
 </Project>

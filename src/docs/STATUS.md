@@ -1,48 +1,49 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-28, обновление SkiaSharp/native4.154.0 по запросу пользователя**.
-Новая extended DLL собрана из pinned source; Vulkan copy/return/redraw и GPU
-composition прошли source Debug/published Release с core/sync validation0/0.
-ABI/ownership сохраняются; build recipe и Raster probe исправлены. UI893/Hosting114/
-Editor763 прошли отдельно Debug/Release,6TRX/3540passed/failed0/skipped0.
-Nonincremental solution Debug build0errors/1541warnings; renderer nupkg payload/
-dependency проверены. [Точный scope](alloy/HISTORY.md#skiasharp-41540-и-vulkan-interop--2026-10-28).
-Это targeted native quality pass; independent NuGet ARCH2e, полный Editor GUI/
-WSI/K7/physical/VRAM и full solution tests не закрыты. Далее ARCH2e.1/2.
+Последняя работа — **2026-10-29, ED6a.2 raw streams и health**.
+Editor показывает bounded runtime/build stdout/stderr и parent Core/child delivery/
+capture health; raw severity и известные/unknown counters разделены. Metadata
+export содержит numeric health без raw/error text. Core387/Aether1556/Editor823/
+Hosting117 Debug/Release и один SourceDebug/Cobalt native case прошли. Native finding
+потребовал Hosting fix: dirty после Update откладывает presentation до следующего
+bounded tick, output guards сохранены. [Evidence/ограничения](engine/HISTORY.md#ed6a2-raw-streams-и-health--2026-10-29).
+Далее compiler diagnostics/navigation и полный ED8a report; broader delivery/package/
+published/physical acceptance остаётся отдельной.
 
-Предыдущая работа — **2026-10-28, сверка рабочего diff и актуализация планов**.
-ARCH2a–c уже входят в HEAD `af03ca3`. Текущие изменения продолжают ARCH2d:
-тонкие Examples hosts/resources и перенос runtime; отдельно исправляют ENG2 CPU
-frame race, ENG3 build/Replace fixtures и staging paths, Mithril ready-file reader
-и ошибочное ожидание diagnostic forwarding Accepted.
+Предыдущая работа — **2026-10-29, ED6a structured console и первый partial export**.
+Editor показывает bounded structured history, filter/group/inspect/copy/clear/follow-tail;
+metadata-only report явно отмечает partial/unavailable и исключает message/stack/
+arbitrary properties. Editor808/808 Debug/Release; один SourceDebug/Cobalt native
+workflow проверяет live child history, crash/recovery, filter/group/reopen/export,
+6graceful Vulkan reports0/0 и cleanup0. [Точный scope и evidence](engine/HISTORY.md#ed6a-structured-console-и-первый-partial-export--2026-10-29).
+Следующий шаг — ED6a.2 raw streams/borrowed health, затем compiler navigation/full
+ED8a report; package/published/provider/flood acceptance новой console открыт.
 
-ARCH2d реализован и проверен в source/published resource/headless scope.
-Следующий доступный шаг — [ARCH2e.1/2 independent NuGet](engine/PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28).
-GUI/native acceptance ARCH2d/e остаётся открытой; GPU runs отложены после BSOD,
-причина и связь с проектом не установлены. Полный ARCH2 предшествует новым
-ED6a/ED8a → ED4c.2/3 → project picker/switch и ED1/ED6 workflow.
+Предыдущая работа — **2026-10-29, ARCH2e.4 scoped file-drain contract**.
+Исправлена подтверждённая зависимость file sink от shared ThreadPool после EOF:
+dedicated worker/sync wake-up, прежние queue8/budgets/ownership и deadlines.
+Controlled RED→GREEN; Core374/374 и Aether1550/1550 отдельно Debug/Release,
+fresh15packages/headless8/8 и native24/24/56children прошли.48graceful Vulkan
+validation reports0errors/0warnings, teardown0/owned processes0.
+[Аудит/current TRX](../TestResults/ARCH2e4-FileDrain-Native-20261029-1/audit.json),
+[Core proof/границы](core/HISTORY.md#file-drain-без-shared-threadpool--2026-10-29).
 
-В этой сверке прочитаны исходники, сохранённые TRX и verification artifacts;
-новых build/tests/process/GPU/package runs нет. Последние module results:
-Aether1543/1543 и Editor763/763 от28октября, Mithril111/111 от27октября,
-каждый отдельно Debug/Release, failed/skipped0. Общий full test run после fixes
-не повторён. Детальная связь diff с задачами — [engine STATUS](engine/STATUS.md),
-накопленные сводки и прежние failures — [HISTORY](HISTORY.md#сверка-рабочего-дерева-и-архив-status--2026-10-28).
-
-Документационный QA:20документов,707локальных ссылок/425якорей без ошибок;
-53source fingerprints совпали,6сохранённых TRX сверены.
-[Отчёт сверки](../TestResults/PlanningReview-20261028/verification.json).
+ARCH2e.4 завершён в проверенном scope; первый ED6a/ED8a consumer описан выше.
+Точная причинная цепочка старого intermittent episode не установлена: controlled
+proof не подменяет его отсутствующий failure heap. Observation и инструменты
+при повторе сохранены, arbitrary FS stalls не обещаются. Общие UI/hardware/K7/
+VRAM/BSOD/general-release gates и полный solution run этим не закрываются.
 
 ## Состояние модулей
 
 | Модуль | Текущий результат и область вывода | Продолжение |
 | --- | --- | --- |
-| [Core](core/STATUS.md) | CORE6 bounded pipeline/capture/emergency/operations + history/import views; current373/373 Debug/Release | Domain/aggregate telemetry, bootstrap/App-private/generation/performance; прежние cooperative/platform limits |
+| [Core](core/STATUS.md) | CORE6 + borrowed health/read-window APIs; Core387/387 Debug/Release, counters/ownership/UTF16 boundaries проверены | Domain/aggregate telemetry, bootstrap/App-private/generation/performance; прежние cooperative/platform limits |
 | [Cobalt / DI](cobalt/STATUS.md) | Текущий179/generator91 Debug/Release; document/project ownership на Cobalt/MS DI | API прежние; performance/allocation backlog отдельно |
 | [Enerit](enerit/STATUS.md) | ENE6d.1–3 metrics/traces и отдельный Aether child lane; current343/generator114 Debug/Release; прежний package proof отдельно | Queue distribution; ENE6c/MMF/trends и расширенная platform/package matrix отдельно |
 | [Mithril](mithril/STATUS.md) | Ready-file reader исправлен с RED2→GREEN; полный111/111 Debug/Release, published composition14/restart20. Runtime/API и identity/reap assertions прежние | Ready-file follow-up закрыт; полный MIT6 fault matrix/containment/trends остаётся отдельным |
-| [Alloy / Argentis](alloy/STATUS.md) | Current managed full UI893/Hosting114 Debug/Release; предыдущие native proofs сохраняют свои даты | Rename/reorder consumer; physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
-| [Aether / Engine](engine/STATUS.md) | ARCH2d: resource/headless delivery proof,18hash checks/16CLI/runtime4/4 вне workspace; Editor763/763 Debug/Release. Предыдущие Aether1543/1543 и headless matrices сохраняют свой scope | ARCH2e.1/2 independent NuGet consumer → native proof → ED6a/ED8a → ED4c.2/3/workflow. GUI/GPU/native acceptance открыта, GPU отложен до разбора BSOD |
+| [Alloy / Argentis](alloy/STATUS.md) | INF3 dirty-frame RED3→GREEN3; Hosting117/Editor823 Debug/Release и native ED6a.2 consumer1/1. UI893 сохраняет предыдущий run | Compiler navigation/full report и rename/reorder consumer; physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
+| [Aether / Engine](engine/STATUS.md) | ED6a.2 raw/health: Aether1556/Editor823 Debug/Release; Core387/Hosting117 отдельно, native SourceDebug/Cobalt1/1. Предыдущие ARCH2 package/native результаты сохраняют scope | Compiler navigation/full ED8a → ED4c.2/3/project/workflow. Hardware/release gates отдельно |
 
 Подробные contracts/commands/failures ведутся у владельцев. Historical packages,
 performance и аппаратные проверки не становятся частью текущего full solution.
@@ -55,7 +56,7 @@ performance и аппаратные проверки не становятся �
 | G2. Core и DI | Bounded headless source/package proof завершён; UI package wiring проверен2026-10-15 в своём scope |
 | G3. IPC и units | Same-build own-child/App/pipes/restart/package и ENE5/MIT5 проверены в локальных scopes |
 | G4. UI alpha | Частично; K7 failed, остальные аппаратные/final acceptance ограничения сохранены |
-| G5. Сквозные consumers | Runtime/preview/project/documents/Transform/menu UI имеют датированные proofs, ARCH2a–c реализованы; ARCH2d resource/headless проверен; independent NuGet, GUI/native acceptance и общий project/runtime switch открыты |
+| G5. Сквозные consumers | ARCH2e.3 native/headless profile проверен; ARCH2e.4 file-worker contract проверен; ED1–ED8, общий project/runtime switch и дальнейшие consumers открыты |
 | G6. Общая поставка | R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе readiness не подтверждает |
 
 ## Общие проверки — датированные сведения
@@ -73,8 +74,8 @@ composition14/restart20; Aether1543/1543 и Editor763/763 Debug/Release пров
 
 ARCH2d resource/headless verification:18hash checks,16CLI checks и independent
 runtime DLL/apphost4/4 source Debug/published Release вне workspace. [Точный scope](engine/HISTORY.md#arch2d-hosts-и-доставка-ресурсов--2026-10-28).
-GUI/native loading, независимый NuGet consumer и общая release matrix этим не
-подтверждены. В текущей документационной сверке проверки не перезапускались.
+GUI/native loading и independent NuGet подтверждены отдельными runs29октября
+выше; это не новый общий solution/release run.
 Более ранние full/package/native результаты — в [HISTORY](HISTORY.md).
 
 ## Общие блокеры и неопределённости
@@ -110,15 +111,11 @@ GUI/native loading, независимый NuGet consumer и общая release 
 
 ## Следующий конкретный шаг
 
-1. [ARCH2e.1/2](engine/PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28): ARCH2a–c
-   shared scene persistence, Editor library/App integration и explicit runtime
-   launch/bootstrap/identity реализованы; ARCH2d hosts/resources проверены source/
-   published headless. Далее fresh independent NuGet consumer; GUI/native acceptance
-   остаётся открытой, GPU runs на паузе после BSOD. Editor и runtime подключаются из
-   пользовательского решения, без source-checkout и executable dependencies пакетов.
-2. После ARCH2 в diagnostics направлении — ED6a/ED8a bounded console/export поверх
-   [готовой child delivery lane](engine/DIAGNOSTICS_DELIVERY.md), затем command/frame
-   aggregates. App-private routing и общий artifact quota требуют отдельных контрактов.
+1. Compiler file/line/column diagnostics/navigation hook и полный ED8a report:
+   history/raw/health/backend/device/configuration, user cancellation и published/flood proof.
+   [Детальный план Editor](engine/EDITOR_PLAN.md#ed6a-консоль-диагностики--2026-10-25).
+2. Затем command/frame aggregates. App-private routing и общий artifact quota
+   требуют отдельных контрактов; native/hardware stress gates не подменяются console UI.
 3. Продолжить [ED4c.2 имена и порядок соседей](engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24)
    через общие engine metadata/history, затем UI rename/reorder. Следом ED4c.3
    create/delete/duplicate, чтобы New был пригоден для работы. Затем project picker/switch и

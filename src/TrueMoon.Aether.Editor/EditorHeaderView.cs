@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Diagnostics;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Argentis;
 
@@ -51,6 +52,11 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     /// <param name="arguments">Window-specific popup host, caption and coordinated close callback.</param>
     public EditorHeaderView(EditorViewModel model, EditorDocumentViewModel documents,
         EditorInspectorViewModel transform, IViewStyle<EditorHeaderView> style, EditorHeaderArguments arguments)
+        : this(model, documents, transform, style, arguments, null) { }
+
+    /// <summary>Creates a header with an optional borrowed diagnostics presentation and its menu command.</summary>
+    public EditorHeaderView(EditorViewModel model, EditorDocumentViewModel documents,
+        EditorInspectorViewModel transform, IViewStyle<EditorHeaderView> style, EditorHeaderArguments arguments, EditorDiagnosticsViewModel? diagnostics)
     {
         ArgumentNullException.ThrowIfNull(model); ArgumentNullException.ThrowIfNull(documents);
         ArgumentNullException.ThrowIfNull(transform); ArgumentNullException.ThrowIfNull(style);
@@ -104,7 +110,10 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
                     new("edit.undo", "Отменить изменение", undo, UiSymbol.Undo, "Ctrl+Z"),
                     new("edit.redo", "Повторить изменение", redo, UiSymbol.Redo, "Ctrl+Y")
                 ]),
-                new("view", "Вид", [new("view.theme", "Сменить тему", Command(ToggleTheme), UiSymbol.Theme)]),
+                new("view", "Вид", diagnostics == null
+                    ? [new("view.theme", "Сменить тему", Command(ToggleTheme), UiSymbol.Theme)]
+                    : [new("view.theme", "Сменить тему", Command(ToggleTheme), UiSymbol.Theme),
+                        new("view.diagnostics", "Диагностика", Command(diagnostics.Toggle), UiSymbol.Info)]),
                 new("project", "Проект",
                 [
                     Runtime(EditorCommand.Build, "Собрать проект", UiSymbol.Build),

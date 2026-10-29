@@ -6,6 +6,7 @@ using static TrueMoon.Aether.Tests.Diagnostics.ChildDiagnosticFixture;
 
 namespace TrueMoon.Aether.Tests.Diagnostics;
 
+[Collection(nameof(ChildDiagnosticForwarderCollection))]
 public class ChildDiagnosticForwarderTests
 {
     [Theory]
@@ -115,9 +116,10 @@ public class ChildDiagnosticForwarderTests
     [Fact]
     public async Task OwnRequestDeadlineAndPendingGuard_BoundAnInjectedClientWithLargeCapacityAndTimeout()
     {
-        // Allow the initial physical connection to reach the barrier; the injected client still waits 50s.
+        // Establish the physical connection before publishing. This test bounds an
+        // outstanding request, independently of cold connection startup under load.
         var launch = Launch(); launch.DiagnosticDelivery!.RequestTimeout = TimeSpan.FromMilliseconds(500);
-        var app = Guid.NewGuid(); var reader = new DeliveryReader(); reader.Add(Record(1, app));
+        var app = Guid.NewGuid(); var reader = new DeliveryReader();
         var entered = Signal(); var release = Signal();
         await using var remote = new DeliveryRemote(launch, async (packet, _) =>
         {
@@ -128,6 +130,8 @@ public class ChildDiagnosticForwarderTests
         await using var sender = new ChildDiagnosticForwarder(launch, reader, clients);
         try
         {
+            await UntilAsync(() => clients.Product!.IsConnected);
+            reader.Add(Record(1, app));
             await entered.Task.WaitAsync(Deadline);
             await UntilAsync(() => sender.Read().Unconfirmed == 1);
             Assert.Equal(1, clients.Product!.PendingRequestCount);

@@ -178,8 +178,12 @@ This is a trusted-local compatibility check, not an authentication boundary or a
 complete native/private-dependency hash. Do not mutate either deployment in place
 during a session. A different pair identity invalidates previous game artifacts
 and checkpoints: rebuild games for the new pair. Scene/project formats do not
-change. ARCH2d asset delivery and ARCH2e independent NuGet/published acceptance
-remain open; source process checks do not establish that matrix.
+change. Repository verification on 2026-10-29 covers independent NuGet build/
+publish/headless consumers and standard/embedded native Editor consumers on
+Windows x64/net10.0 with OpenGL/Vulkan interop. The [consumer instructions](../ManualTests/AetherPackageConsumer/README.md)
+describe separate source/package profiles, ownership, native validation and
+failure/cleanup checks. Other OS/RID/AOT, physical input/DPI/monitors, device loss,
+K7 stress and VRAM/general release remain separate acceptance work.
 
 Services are created through injected `IFactory<T>` / `IFactory<T, TArguments>`.
 Register overrides before `UseAether`; the host owns its factory-created children.
@@ -200,6 +204,20 @@ factory and runtime host also own a separate child-log receiver/forwarder pair.
 preserves origin/PID/trace and exposes loss/unconfirmed/cleanup health without
 sharing control admission. Local JSONL and continuous stdout/stderr remain fallback.
 See [delivery configuration and ownership](../docs/engine/DIAGNOSTICS_DELIVERY.md).
+
+`UseAether` also registers a non-disposable `Diagnostics.IProcessDiagnosticsSource`
+over borrowed runtime/compiler owners. `Read(maximumCount, maximumOutputCharacters)`
+returns at most64 recent memory snapshots with public session/generation/role/build/
+job/revision correlation, raw stdout/stderr, read/file completion and delivery health.
+No endpoint, nonce or environment is exposed and no files/IPC/SDK operations are
+performed by a read. A custom IRuntimeFactory can implement IRuntimeDiagnostics;
+otherwise RuntimeAvailable is false, independently of compiler availability.
+NativeRuntimeFactory retains64 recent lease references with thread-safe reads;
+GameBuildCompiler retains16 completed job snapshots plus its active job, including
+failed builds across a successful retry. This memory history does not replace disk
+retention. Limits and UTF16-safe tail windows do not reclassify raw stderr as errors.
+Consumers borrow the source and never dispose/reap its underlying process owners.
+
 Inject `Scenes.SceneResolutionService` for authoring resolution through its
 document-specific `EntityResolver` factory.
 

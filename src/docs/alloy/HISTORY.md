@@ -1,5 +1,93 @@
 # Alloy / Argentis: история работ и проверок
 
+## INF3: dirty frame после Update — 2026-10-29
+
+ED6a.2 native mode cycle Structured→stdout→stderr→Health→Structured с сохранённой
+строкой воспроизвёл InvalidOperationException «Update UI before using its OpenGL
+output» из HostedUiWindow.PresentOutput. TreeView selection reveal меняет
+ScrollViewer.Offset во время Arrange; UiSession.Update оставляет visual dirty
+для следующего layout. UiFramePump раньше без проверки передавал этот кадр в
+strict OpenGL output boundary. Это renderer-independent scheduling defect,
+не изменение Vulkan copy/native library и не основание ослабить NeedsRender guard.
+
+Два headless cases `SelectionReveal_DefersOutputUntilLayoutSettlesAndKeepsFrameCadence`
+(OnDemand/Continuous) и `VisualInvalidationDuringDraw_DefersOutputWithoutLoopingUpdateOnTheOwner`
+дали **RED3** до fix. Теперь pump сохраняет presentation/work request и возвращает
+false, если Update оставил NeedsRender; следующий tick выполняется по прежнему
+deadline, без unbounded Update-loop. Pending commands/future RequestFrame без
+visual dirty по-прежнему допускают готовый cached image.
+Полный Hosting **117/117 Debug/Release**, failed/skipped0, включая GREEN3,
+fairness/queue/coalescing/resize/suspend/cached presentation contracts.
+Editor823/823 проверен отдельно. [8TRX и hashes](../../TestResults/ED6a2-20261029-1/audit.json).
+
+Native run1/2 зависали в cleanup после terminal output guard failure; run2 managed
+stack показал owner wait, но не объяснял первичную ошибку. В run3 acceptance helper
+сохранил underlying HostedUiWindow fault до cleanup. Driver/owned failed tree
+завершены; увеличение deadlines или обход guard не применялись. Run4 build был
+заблокирован DLL оставшегося failed consumer, после его scoped termination run5
+прошёл полностью. Run6 подтвердил final code после замены unsupported glyph в
+raw budget label. General terminal render-fault/active-preview cleanup этим не
+объявляется исправленным: нормальный mode cycle больше не вызывает этот fault.
+
+SourceDebug/standard window/Cobalt **1/1**,7children (1owned crash),6graceful Vulkan
+core/sync reports0errors/0warnings, UI sessions/GPU resources/handles0 после App
+Dispose. PNG Structured/stdout/stderr/Health осмотрены; текущий raw stdout534chars,
+stderr capture пустой и доступный, прежняя generation released и остаётся читаемой.
+[Native manifest](../../TestResults/ED6a2-Native-20261029-6/verification.json),
+[raw PNG](../../TestResults/ED6a2-20261029-1/diagnostics-stdout.png),
+[health PNG](../../TestResults/ED6a2-20261029-1/diagnostics-health.png).
+Новые общий controls/UI runtime не добавлялись; UI893, other native providers,
+NuGet/published/full solution и physical/K7/VRAM/BSOD acceptance не запускались.
+
+## ARCH2e.3: native consumers и lifetime callback — 2026-10-29
+
+Подробная [engine acceptance](../engine/HISTORY.md#arch2e3-native-editor-consumers-и-startup-cancellation--2026-10-29)
+подтвердила standard Editor window на Cobalt и parent-owned embedded View на
+MS DI в source Debug/published Release и NuGet Debug/published Release.
+24/24native cases включают8workflows с actual font/native loading, GPU preview
+pixels/Undo/Redo/save/reopen, dirty close Cancel/save failure, owned child crash/
+recovery и16startup failure/cancel cases. Embedded View detach/dispose/recreate
+сохраняет borrowed model; notifications остаются на UI owner thread.
+
+Production fix — только RegisterWindow: callback cleanup больше не обращается
+к disposing resolver, IAppLifetime захватывается заранее в factory. Native RED
+ObjectDisposedException на cancellation сменился GREEN. Full Hosting114/114 и
+Editor763/763 Debug/Release прошли; UI893/Aether1543/full solution не перезапускались.
+Fresh15packages/headless8/8 после fix проверены отдельно от native24/24.
+
+48graceful Runtime producer reports прошли core/sync validation0/0 и actual
+surface/slot/device/handle teardown.8killed children в эту цифру не включены.
+UI session count0 и App disposal наблюдены во всех24cases;40PNG и actual
+extended-Skia/NotoSans/loaded package DLL hashes сохранены в
+[audit](../../TestResults/ARCH2e3-20261029-9/audit.json).
+Windows26300/RTX5070Ti32.0.16.2101/local validation1.4.363; OS/driver settings не
+менялись. Этот bounded pass не закрывает physical DPI/input/monitors, K3/K7/K8/
+VRAM/long trends и не объясняет прежний BSOD. HUD/Player features ещё в плане.
+
+## ARCH2e: headless Editor consumer и package payloads — 2026-10-29
+
+В [engine package proof](../engine/HISTORY.md#arch2e-independent-packages-и-cpu-runtime-startup--2026-10-29)
+использованы fresh NuGet packages и решение вне checkout/isolated cache.
+8/8cases build Debug/publish Release × DLL/apphost × parent Cobalt/MS DI
+проверили Editor View factory, parent ownership/borrowed model и повторное создание.
+22file delivery checks включают managed UI assemblies, custom/stock native
+Skia, HarfBuzz/GLFW и host-owned font/OFL; дополнительно проверены embedded shaders
+и hashes фактически загруженных framework DLL из nupkg. UI code/API прежние.
+Это headless/resource delivery; native/font loading, renderer/window/input/
+GUI workflow и K3/K7/K8/VRAM не проверены. UI/Hosting/Editor suites не повторялись;
+новый full Aether1543/1543 Debug/Release не переносится на UI. Следующий ARCH2e.3
+сохраняет отдельную native acceptance; HUD/runtime launch планы не реализованы.
+
+## Runtime HUD: план UI integration — 2026-10-29
+
+По запросу пользователя игровой HUD строится поверх Alloy/Argentis в Runtime.
+[UI план](PLAN.md#runtime-hud-aether--2026-10-29) задаёт общие external-host,
+owner-thread/data/style/input/rendering границы и ссылается на единственный
+подробный [engine checklist ENG5c.4](../engine/PLAN.md#eng5c4-runtime-hud-поверх-alloyargentis--2026-10-29).
+Same HUD composition используется в Editor Play и Player; Aether core остаётся
+без UI dependency. Новых UI API, кода, build/tests/GPU/package runs нет;
+Skia4.154/893UI/114Hosting/763Editor результаты ниже остаются датированными28октября.
+
 ## SkiaSharp 4.154.0 и Vulkan interop — 2026-10-28
 
 По запросу пользователя обновлён SkiaSharp4.153.1 → **4.154.0**, последний stable

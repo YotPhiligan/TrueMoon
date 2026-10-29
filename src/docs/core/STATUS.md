@@ -1,6 +1,31 @@
 # Core: состояние и точка продолжения
 
-Связанное планирование — **2026-10-27, ARCH2 пакетный Editor/host**.
+Последняя работа — **2026-10-29, borrowed health и bounded output windows для ED6a.2**.
+`UseDiagnostics(options)` даёт nondisposable `IDiagnosticHealthReader`; cached
+ring/sink/emergency/retention counters читаются без IO/flush/wait. `Read(maxChars)`/
+snapshot.Limit отделяют display omission от capture/file loss, сохраняют старый API.
+Core387/387 Debug/Release, failed/skipped0; blocked sink/no-drain, sink failure,
+Cobalt/MS DI ownership и UTF16/window boundaries проверены. Aether1556/Editor823/
+Hosting117 Debug/Release и один native SourceDebug/Cobalt consumer проверены отдельно.
+[История и evidence](HISTORY.md#borrowed-health-и-output-windows--2026-10-29).
+Core/App-private routing, общий disk quota и physical/release gates этим не закрыты.
+
+Предыдущая работа — **2026-10-29, file-drain вне shared ThreadPool**.
+ProcessOutputCapture использует dedicated file worker и прямой sync wake-up,
+сохраняет queue8/UTF8/tail/file budgets/borrowing/error accounting. No-file mode
+без worker; один background worker на active file capture — цена решения.
+Controlled RED→GREEN: EOF/24bytes уже завершены, shared worker удерживается,
+FileCompletion и Completion завершаются за прежние2s. Pool settings меняет только
+Core-only child fixture. Core374/374 Debug/Release, Aether1550/1550 Debug/Release,
+4000file controls, fresh headless8/8 и native24/24 прошли.
+[History/точный тест/границы](HISTORY.md#file-drain-без-shared-threadpool--2026-10-29),
+[audit/current TRX](../../TestResults/ARCH2e4-FileDrain-Native-20261029-1/audit.json).
+Исторический intermittent episode не имеет failure heap; его точная причина не
+объявляется установленной. Исправлена доказанная pool dependency; arbitrary FS
+stall/global real-time guarantees не добавлены. App/DI contracts и full solution
+scope не менялись. Следующий engine consumer — ED6a/ED8a console/export.
+
+Историческое планирование — **2026-10-27, ARCH2 пакетный Editor/host**.
 Текущих App/IFactory contracts достаточно для начала; новые Core APIs не назначены.
 Порядок работ изменён: [ARCH2](../engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27)
 предшествует console/export. Core code/API не менялись; build/tests не запускались.

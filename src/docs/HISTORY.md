@@ -1,4 +1,104 @@
 # TrueMoon: история общей документации
+## ED6a.2 raw streams и health — 2026-10-29
+
+Core borrowed health/window APIs и Aether runtime/build memory snapshots подключены
+к raw/health modes Editor. Metadata export содержит numeric counters без raw/error
+text. Native finding потребовал INF3 dirty-frame deferral при сохранении output
+guard. Final Core387/Aether1556/Editor823/Hosting117 Debug/Release и один native
+SourceDebug/Cobalt case прошли; detailed failures/evidence и remaining acceptance
+ведутся у [engine](engine/HISTORY.md#ed6a2-raw-streams-и-health--2026-10-29).
+Общий приоритет — compiler diagnostics/navigation, затем full ED8a report;
+широкие package/published/physical gates остаются открыты.
+
+## ED6a structured console и partial export — 2026-10-29
+
+Общий приоритет уточнён после первого console consumer: ED6a.2 raw/health, затем
+compiler navigation/full ED8a report и дальнейший authoring маршрут. Editor808/808
+Debug/Release и один SourceDebug/standard/Cobalt native workflow проверены;
+новый package/published/provider/flood acceptance открыт. Детальные задачи не
+дублируются в общем плане. [Engine evidence](engine/HISTORY.md#ed6a-structured-console-и-первый-partial-export--2026-10-29).
+
+## ARCH2e.4 file-worker contract — 2026-10-29
+
+Подтверждённая pool dependency file-drain исправлена controlled RED/GREEN,
+Core374/Aether1550 Debug/Release и fresh headless8/native24 proofs. Dedicated
+file worker и sync signal сохраняют queue8/budgets/borrowing/deadlines. Historical
+exact cause старого episode не объявляется установленным; scope/наблюдение
+сохранены. [Core evidence](core/HISTORY.md#file-drain-без-shared-threadpool--2026-10-29),
+[engine acceptance](engine/HISTORY.md#arch2e4-file-worker-liveness-contract--2026-10-29).
+Следующий feature step — ED6a/ED8a, hardware/general release отдельно.
+
+## ARCH2e.4: process streams и drain observation — 2026-10-29
+
+Исправлена доказанная утечка accessed streams у Aether runtime/compiler,
+Core capture expose read/file completion phases. Real-handle RED3→GREEN,
+7directed cases и full Aether1550/Core373 Debug/Release прошли. Исправлен cold
+connection setup одного existing deadline fixture без смены production IPC.
+После6passing replays старого feed свежая упаковка повторила timeout с completed
+readers/pending file sinks; root cause file-drain остаётся открытым. Связь с утечкой не доказана. ARCH2e.4 остаётся частично открытым;
+дальше нужен исходный сбой с новой read/file/stop metadata, затем console/export.
+[Подробная история/команды/evidence](engine/HISTORY.md#arch2e4-stdio-ownership-и-диагностика-drain--2026-10-29).
+Готовность UI/аппаратных gates и full solution этим не меняются.
+
+## ARCH2 native переход и архив сводки — 2026-10-29
+
+ARCH2e.3 проверен в bounded Windows x64/net10 profile: native24/24 и fresh
+package/headless8/8 после Hosting callback fix. Все подробности и evidence
+ведутся у [engine](engine/HISTORY.md#arch2e3-native-editor-consumers-и-startup-cancellation--2026-10-29)
+и [UI](alloy/HISTORY.md#arch2e3-native-consumers-и-lifetime-callback--2026-10-29).
+Открыт ARCH2e.4 output-drain follow-up после единичного headless timeout; затем ED6a/ED8a console/export. Остальные quality/hardware/release gates прежние.
+Full solution tests в этом шаге не запускались. Ниже сохранён предыдущий intro
+общего STATUS без переноса его результатов в current run.
+
+### Предыдущая сводка
+
+Предыдущая работа — **2026-10-29, согласованные launch modes и план Runtime HUD**.
+Editor/Player выбираются до App.Build; Editor Play запускает отдельный owned
+Runtime, переключение живого Player в Editor пока не требуется. HUD принадлежит
+Runtime и строится на Alloy/Argentis, final game + HUD frame экспортируется Editor
+либо выводится Player. UI integration остаётся optional, Aether core без UI.
+Детали — [ENG7b](engine/PLAN.md#eng7b-режимы-запуска-editor-и-player--2026-10-29),
+[ENG5c.4](engine/PLAN.md#eng5c4-runtime-hud-поверх-alloyargentis--2026-10-29),
+[ED6b](engine/EDITOR_PLAN.md#ed6b-buildplaystop-из-редактора--2026-10-29) и
+[UI boundaries](alloy/PLAN.md#runtime-hud-aether--2026-10-29).
+Это планирование; новых code/build/tests/GPU/package runs нет. ARCH2e.1/2 остаётся
+ближайшим шагом. ED6b уточняет прежний project/workflow backlog, gameplay HUD
+следует после ENG5c.3 и требует ENG7b.2 для standalone acceptance.
+
+Предыдущая работа — **2026-10-28, обновление SkiaSharp/native4.154.0 по запросу пользователя**.
+Новая extended DLL собрана из pinned source; Vulkan copy/return/redraw и GPU
+composition прошли source Debug/published Release с core/sync validation0/0.
+ABI/ownership сохраняются; build recipe и Raster probe исправлены. UI893/Hosting114/
+Editor763 прошли отдельно Debug/Release,6TRX/3540passed/failed0/skipped0.
+Nonincremental solution Debug build0errors/1541warnings; renderer nupkg payload/
+dependency проверены. [Точный scope](alloy/HISTORY.md#skiasharp-41540-и-vulkan-interop--2026-10-28).
+Это targeted native quality pass; independent NuGet ARCH2e, полный Editor GUI/
+WSI/K7/physical/VRAM и full solution tests не закрыты. Далее ARCH2e.1/2.
+
+Предыдущая работа — **2026-10-28, сверка рабочего diff и актуализация планов**.
+ARCH2a–c уже входят в HEAD `af03ca3`. Текущие изменения продолжают ARCH2d:
+тонкие Examples hosts/resources и перенос runtime; отдельно исправляют ENG2 CPU
+frame race, ENG3 build/Replace fixtures и staging paths, Mithril ready-file reader
+и ошибочное ожидание diagnostic forwarding Accepted.
+
+ARCH2d реализован и проверен в source/published resource/headless scope.
+Следующий доступный шаг — [ARCH2e.1/2 independent NuGet](engine/PLAN.md#arch2e-независимый-nuget-consumer--декомпозиция-2026-10-28).
+GUI/native acceptance ARCH2d/e остаётся открытой; GPU runs отложены после BSOD,
+причина и связь с проектом не установлены. Полный ARCH2 предшествует новым
+ED6a/ED8a → ED4c.2/3 → project picker/switch и ED1/ED6 workflow.
+
+В этой сверке прочитаны исходники, сохранённые TRX и verification artifacts;
+новых build/tests/process/GPU/package runs нет. Последние module results:
+Aether1543/1543 и Editor763/763 от28октября, Mithril111/111 от27октября,
+каждый отдельно Debug/Release, failed/skipped0. Общий full test run после fixes
+не повторён. Детальная связь diff с задачами — [engine STATUS](engine/STATUS.md),
+накопленные сводки и прежние failures — [HISTORY](HISTORY.md#сверка-рабочего-дерева-и-архив-status--2026-10-28).
+
+Документационный QA:20документов,707локальных ссылок/425якорей без ошибок;
+53source fingerprints совпали,6сохранённых TRX сверены.
+[Отчёт сверки](../TestResults/PlanningReview-20261028/verification.json).
+
+
 
 ## Сверка рабочего дерева и архив STATUS — 2026-10-28
 

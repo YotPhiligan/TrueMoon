@@ -2,7 +2,18 @@
 
 Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Этапы ниже запланированы; конкретные semantics уточняются по существующему API перед реализацией.
 
+Уточнение2026-10-29: ProcessOutputCapture предоставляет отдельные read/file completion tasks для диагностики cleanup при прежнем borrowing contract. Ownership native streams и открытый timeout follow-up ведутся в [ARCH2e.4](../engine/PLAN.md#arch2e4-устойчивость-output-drain--follow-up-2026-10-29); новых App/DI scopes нет.
+
+Решение2026-10-29 для [ARCH2e.4](../engine/PLAN.md#arch2e4-устойчивость-output-drain--follow-up-2026-10-29): file-enabled ProcessOutputCapture использует dedicated worker и прямой sync wake-up, чтобы после EOF drain не зависел от доступности shared ThreadPool. Queue8, UTF8/tail/file budgets, borrowing и failed-IO accounting сохраняются; один worker на capture — явная цена. No-file mode без worker. [Доказательство/границы](HISTORY.md#file-drain-без-shared-threadpool--2026-10-29).
+
 ## Границы
+
+Дополнение2026-10-29 для ED6a.2: bounded `UseDiagnostics(options)` предоставляет
+nondisposable `IDiagnosticHealthReader` с in-memory counters parent collector/sinks/
+emergency/retention. Новый `ProcessOutputCapture.Read(maximumCharacters)` и
+`ProcessOutputSnapshot.Limit` сохраняют capture/file counters и отдельно считают
+display-window OmittedCharacters. Прежние signatures/owners/IO deadlines сохранены;
+Core не получает зависимости от Aether/UI. [Semantics](DIAGNOSTICS.md).
 
 Входят TrueMoon, TrueMoon.Contracts, TrueMoon.Core и TrueMoon.Tests. Bootstrap/App.Builder, configuration, diagnostics и app lifecycle находятся в TrueMoon; независимые публичные contracts — в Contracts, utilities/buffers/scheduler — в Core. Это группа планирования, не предложение объединить сборки.
 

@@ -6,6 +6,7 @@ using System.Text.Json;
 using TrueMoon;
 using TrueMoon.Aether;
 using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Frames;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Sessions;
@@ -16,7 +17,7 @@ using TrueMoon.Mithril;
 
 namespace EngineSessionProbe;
 
-// Headless executable acceptance: no compiler, frame surface, UI or copied fault runtime.
+// Headless executable acceptance: CPU shared frames, no compiler, window, GPU or copied fault runtime.
 internal static class RuntimeLaunchProbe
 {
     internal static async Task<int> RunAsync(string runtimePath, string directory)
@@ -125,7 +126,7 @@ internal static class RuntimeLaunchProbe
     {
         await using var lease = (NativeRuntimeLease)factory.Create(launch);
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(token); limit.CancelAfter(TimeSpan.FromSeconds(15));
-        ulong sequence = 0; ulong tick = 0;
+        ulong sequence = 0; ulong tick = 0; object? cpuFrame = null;
         async Task<ControlReply> Exchange(CommandKind kind)
         {
             var request = ControlRequest.Create(launch.Identity, ++sequence, kind);
@@ -148,6 +149,19 @@ internal static class RuntimeLaunchProbe
             {
                 var stepped = await Exchange(CommandKind.Step); tick = unchecked((ulong)stepped.Tick);
                 Probe.Check(stepped.Phase == "Paused" && tick == 1, "Selected game did not execute exactly one tick.");
+                var surface = FrameSurface.Create(launch.Identity, 1, 32, 16);
+                using var ring = SharedFrameRing.Create(surface);
+                await using var receiver = new FrameReceiver(ring);
+                var configure = ControlRequest.Create(launch.Identity, ++sequence, CommandKind.ConfigureSurface);
+                configure.Surface = surface.ToWire();
+                var configured = await lease.SendAsync(configure, limit.Token);
+                SessionSupervisor.ValidateReply(launch.Identity, sequence, CommandKind.ConfigureSurface, lease.ProcessId, configured);
+                await receiver.FirstFrame.WaitAsync(limit.Token);
+                using var frame = receiver.TakeLatest() ?? throw new InvalidOperationException("First CPU frame is missing.");
+                var pixel = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(frame.Pixels[(10 * surface.Stride + 16 * 4)..]);
+                Probe.Check(frame.Metadata.Tick == 1 && pixel == FramePattern.Pixel(16, 10, 32, 16, frame.Metadata.FrameId, 1, 0xff2080c0),
+                    "Selected runtime did not produce CPU pixels before stdin Stop.");
+                cpuFrame = new { frame.Metadata.Tick, frame.Metadata.FrameId, Pixel = pixel, Color = 0xff2080c0u };
             }
             Probe.Check((await Exchange(CommandKind.Stop)).Phase == "Stopping", "Stop acknowledgement missing.");
         }
@@ -176,7 +190,7 @@ internal static class RuntimeLaunchProbe
             }
         }
         return new { launch.Identity.SessionId, launch.Identity.Generation, Role = launch.Role.ToString(), lease.ProcessId, lease.Reaped, lease.ResourcesReleased,
-            Controls = sequence, Tick = tick, HelloAccepted = true, SceneLoaded = true, MetadataFile = metadataFile, Metadata = metadata,
+            Controls = sequence, Tick = tick, CpuFrame = cpuFrame, HelloAccepted = true, SceneLoaded = true, MetadataFile = metadataFile, Metadata = metadata,
             lease.StandardError, lease.StandardOutput };
     }
 

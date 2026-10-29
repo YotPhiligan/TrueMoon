@@ -122,6 +122,15 @@ Child останавливает game/control workers до sender cleanup. Sende
 и повторного ожидания после освобождения blocker. In-process callbacks не
 объявляются принудительно прерванными по timeout.
 
-Full typed UI console/export, global App-private routing, absolute artifact quota,
+ED6a.2 consumer использует borrowed `IProcessDiagnosticsSource` из UseAether и
+`IDiagnosticHealthReader` из bounded UseDiagnostics. Core health — только parent;
+protocol не переносит child sink health. Native factory предоставляет memory
+snapshots через optional `IRuntimeDiagnostics`, compiler хранит16completed jobs и
+active job. Данные содержат public identity, raw stdout/stderr/capture counters и
+receiver health, без nonce/endpoint/environment. Readers не управляют leases,
+не читают файлы и не ждут cleanup. Raw snapshots не импортируются как structured
+events и не классифицируются по stream. UI/health/export остаются consumer-задачами.
+
+Полная console acceptance/export, global App-private routing, absolute artifact quota,
 arbitrary parent-death containment, GPU/display и long trends остаются отдельными
 этапами. Этот transport не меняет game/session state и не заменяет typed outcomes.

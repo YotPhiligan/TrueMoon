@@ -2,6 +2,8 @@ using System.Diagnostics;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Diagnostics;
 using System.Text.Json;
+using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Diagnostics;
 
 namespace TrueMoon.Aether.Builds;
 
@@ -21,6 +23,19 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     private readonly IDiagnosticTelemetry? _telemetry;
     private readonly BuildDiagnosticStore _diagnostics;
     private ProcessOutputCapture? _stdout, _stderr;
+    private readonly Queue<ProcessDiagnosticSnapshot> _completedDiagnostics = new();
+
+    /// <summary>Returns at most16 completed jobs plus the active job, bounded by the requested count/tail window; no files are read.</summary>
+    public IReadOnlyList<ProcessDiagnosticSnapshot> ReadDiagnostics(int maximumCount, int maximumOutputCharacters)
+    {
+        ProcessDiagnosticSnapshot.ValidateLimits(maximumCount, maximumOutputCharacters);
+        lock (_gate)
+        {
+            var records = _completedDiagnostics.Select(item => item.Limit(maximumOutputCharacters));
+            if (_owned is { } current) records = records.Append(current.Snapshot(false, maximumOutputCharacters));
+            return Array.AsReadOnly(records.TakeLast(maximumCount).Reverse().ToArray());
+        }
+    }
     /// <summary>Last best-effort retention pass. Active, unrecognized and incomplete directories are preserved.</summary>
     public GameBuildRetentionStatus? RetentionStatus { get; private set; }
     /// <summary>Live bounded compiler stdout tail, file loss and error counters.</summary>
@@ -119,7 +134,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         var lease = await Task.Run(_diagnostics.Begin).ConfigureAwait(false);
         var job = lease.Directory;
         DiagnosticsDirectory = job;
-        var owned = new OwnedJob(lease); lock (_gate) _owned = owned;
+        var owned = new OwnedJob(lease) { SourceRevision = request.SourceRevision }; lock (_gate) _owned = owned;
         AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Information, 1200, "Build.Starting", "Game build operation", () =>
             new Dictionary<string, string?> { ["SourceRevision"] = request.SourceRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["JobId"] = Path.GetFileName(job) });
@@ -137,18 +152,19 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
             UpdateRetention(job);
             end.Token.ThrowIfCancellationRequested();
             var process = Process.Start(info) ?? throw new IOException("Compiler process did not start.");
-            lock (_gate) owned.Process = process;
-            _stdout = new ProcessOutputCapture(process.StandardOutput, filePath: Path.Combine(job, "build.stdout.log"));
-            _stderr = new ProcessOutputCapture(process.StandardError, filePath: Path.Combine(job, "build.stderr.log"));
-            owned.Stdout = _stdout.Completion; owned.Stderr = _stderr.Completion;
+            lock (_gate) { owned.Process = process; owned.ProcessId = process.Id; }
+            owned.Output = new(process.StandardOutput, process.StandardError, null, job, "build");
+            _stdout = owned.Output.Stdout; _stderr = owned.Output.Stderr;
             await process.WaitForExitAsync(end.Token).ConfigureAwait(false);
             end.Token.ThrowIfCancellationRequested();
             if (process.ExitCode != 0) throw new GameBuildException("Game compilation failed.", process.ExitCode, job);
             var allowed = new[] { request.EntryAssembly }.Concat(request.Dependencies!).ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (Directory.EnumerateFiles(output, "*.dll").Any(p => !allowed.Contains(Path.GetFileName(p))))
                 throw new InvalidDataException("Compiler output contains undeclared DLLs; use a non-copying frozen Aether reference.");
-            return GameBuildArtifact.Publish(output, _root, _hostId, request.EntryAssembly, request.EntryType,
+            var artifact = GameBuildArtifact.Publish(output, _root, _hostId, request.EntryAssembly, request.EntryType,
                 request.SourceRevision, request.Dependencies, end.Token);
+            owned.GameBuildId = artifact.BuildId;
+            return artifact;
         }
         catch (OperationCanceledException error) when (timeout.IsCancellationRequested && !caller.IsCancellationRequested && !_closing.IsCancellationRequested)
         { throw new TimeoutException("Game build exceeded its compiler deadline.", error); }
@@ -159,7 +175,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         if (owned.Process is { } process)
         {
             await ReapAsync(process).ConfigureAwait(false);
-            await Task.WhenAll(owned.Stdout, owned.Stderr).WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            if (owned.Output != null) await owned.Output.DrainAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             // Capture failures/truncation remain observable independently of the compiler's exit outcome.
             try
             {
@@ -185,7 +201,15 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
                 "Could not complete build diagnostics ownership metadata", () => new Dictionary<string, string?>(), error);
         }
         UpdateRetention(owned.Directory, completionError);
-        lock (_gate) { if (_owned == owned) _owned = null; }
+        lock (_gate)
+        {
+            if (_owned == owned)
+            {
+                _completedDiagnostics.Enqueue(owned.Snapshot(true, 32768));
+                while (_completedDiagnostics.Count > 16) _completedDiagnostics.Dequeue();
+                _owned = null;
+            }
+        }
     }
     private void UpdateRetention(string currentJob, Exception? completionError = null)
     {
@@ -237,9 +261,17 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
     private sealed class OwnedJob(BuildDiagnosticStore.Job diagnostics)
     {
+        internal readonly DateTimeOffset StartedUtc = DateTimeOffset.UtcNow;
+        internal int? ProcessId;
+        internal long SourceRevision;
+        internal string? GameBuildId;
         internal readonly BuildDiagnosticStore.Job Diagnostics = diagnostics;
         internal string Directory => Diagnostics.Directory;
         internal Process? Process;
-        internal Task Stdout = Task.CompletedTask, Stderr = Task.CompletedTask;
+        internal OwnedProcessOutput? Output;
+        internal ProcessDiagnosticSnapshot Snapshot(bool completed, int maximumOutputCharacters) => new(
+            "build:" + Path.GetFileName(Directory), "Build", StartedUtc, ProcessId, null, null, null, GameBuildId,
+            Path.GetFileName(Directory), SourceRevision, completed, completed,
+            ProcessStreamDiagnostic.Read(Output?.Stdout, maximumOutputCharacters), ProcessStreamDiagnostic.Read(Output?.Stderr, maximumOutputCharacters), null);
     }
 }

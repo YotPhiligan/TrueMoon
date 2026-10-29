@@ -189,8 +189,18 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
         Assert.Contains("CS", File.ReadAllText(Path.Combine(error.DiagnosticsDirectory, "build.stdout.log")));
         Assert.False(Directory.Exists(Path.Combine(error.DiagnosticsDirectory, "output"))); Assert.False(Directory.Exists(Path.Combine(error.DiagnosticsDirectory, "work")));
         Assert.DoesNotContain(Directory.EnumerateDirectories(root), p => Path.GetFileName(p) != "jobs");
+        var failed = Assert.Single(compiler.ReadDiagnostics(16, 128));
+        Assert.Equal(Path.GetFileName(error.DiagnosticsDirectory), failed.JobId); Assert.Equal(41, failed.SourceRevision);
+        Assert.True(failed.Completed); Assert.True(failed.ResourcesReleased); Assert.Null(failed.GameBuildId);
+        Assert.NotNull(failed.StandardOutput); Assert.InRange(failed.StandardOutput.Output.Text.Length, 1, 128);
+        Assert.True(failed.StandardOutput.ReadFinished); Assert.True(failed.StandardOutput.FileFinished);
         var retry = await compiler.BuildAsync(new(fixture.ProjectA, fixture.A.EntryAssembly, fixture.A.EntryType, 42, ["Game.Private.dll"]));
         Assert.Equal(42, retry.SourceRevision); Assert.Null(compiler.ProcessId);
+        var history = compiler.ReadDiagnostics(16, 64); Assert.Equal(2, history.Count); Assert.Equal(retry.BuildId, history[0].GameBuildId);
+        Assert.Equal(42, history[0].SourceRevision); Assert.Equal(failed.Id, history[1].Id); Assert.NotEqual(history[0].JobId, history[1].JobId);
+        Assert.All(history, snapshot => { Assert.True(snapshot.ResourcesReleased); Assert.True(snapshot.StandardOutput!.Output.Text.Length <= 64); });
+        Assert.Equal(history[0].Id, Assert.Single(compiler.ReadDiagnostics(1, 0)).Id);
+        Assert.Equal("", compiler.ReadDiagnostics(1, 0)[0].StandardOutput!.Output.Text);
     }
     [Theory]
     [InlineData(false)]
