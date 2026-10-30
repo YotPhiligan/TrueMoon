@@ -10,6 +10,8 @@ public sealed class OpenGLUiTarget : UiRenderTarget
 {
     internal Func<string, nint> GetProcedureAddress { get; }
     internal Action VerifyCurrent { get; }
+    /// <summary>Optional value-only host observation, captured on its current GL context.</summary>
+    public UiRenderDeviceInfo? DeviceInfo { get; init; }
     /// <summary>Describes an existing context without taking ownership of it.</summary>
     /// <param name="getProcedureAddress">Resolves desktop GL procedures for this context.</param>
     /// <param name="verifyCurrent">Ensures this live context is current, or throws before native calls.</param>
@@ -39,7 +41,7 @@ public sealed class SkiaOpenGLRenderBackend : IRenderBackend
 }
 
 /// <summary>A retained premultiplied RGBA GPU surface. Owns Skia resources, never the host GL context or destination framebuffer.</summary>
-public sealed class SkiaOpenGLSurface : IUiRenderSurface
+public sealed class SkiaOpenGLSurface : IUiRenderSurface, IUiRenderDiagnostics
 {
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private readonly OpenGLUiTarget _host;
@@ -52,6 +54,8 @@ public sealed class SkiaOpenGLSurface : IUiRenderSurface
     private bool _disposed, _drawing, _hasFrame;
     /// <inheritdoc />
     public ITextLayoutService TextLayout { get; }
+    /// <inheritdoc />
+    public UiRenderDeviceInfo? DeviceInfo => _host.DeviceInfo;
 
     internal SkiaOpenGLSurface(OpenGLUiTarget host, UiViewport viewport, SkiaFontCatalog? fonts = null)
     {

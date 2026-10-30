@@ -8,7 +8,7 @@ namespace TrueMoon.Aether.Editor.Hierarchy;
 
 /// <summary>UI-owner hierarchy presentation; borrows document admission, selection and Transform presentation.
 /// Parent changes use the same authoring session/history as inspector edits; no controls or theme are held.</summary>
-public sealed class EditorHierarchyViewModel : INotifyPropertyChanged, IDisposable
+public sealed partial class EditorHierarchyViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly EditorWorkspace _workspace;
     private readonly EditorDocumentCommands _commands;
@@ -67,10 +67,14 @@ public sealed class EditorHierarchyViewModel : INotifyPropertyChanged, IDisposab
         Set(ref _selected, _workspace.SelectedId, nameof(SelectedId));
         var canMove = document != null && state.RuntimeIdle && !state.Busy && !state.Exiting && !state.Closed &&
             state.Document?.Operation == DocumentOperation.None && !_transform.CanCancel;
+        if (IsRenaming && (!canMove || _renameId != _selected || !ReferenceEquals(_renameState, state.Document?.Content))) ClearRename();
+        canMove &= !IsRenaming;
         Set(ref _canMove, canMove, nameof(CanMove));
+        Set(ref _canRename, canMove && _items.Any(item => item.Id == _selected), nameof(CanRename));
         Set(ref _canMoveToRoot, canMove && _items.Any(item => item.Id == _selected && item.ParentId != null), nameof(CanMoveToRoot));
+        RefreshEntityActions(document);
         Set(ref _hint, document == null ? "Иерархия · только просмотр" : _transform.CanCancel ? "Завершите правку свойств перед переносом" :
-            canMove ? "Перенос · Ctrl+Left/Right" : "Перенос временно недоступен", nameof(Hint));
+            IsRenaming ? "Имя · Enter сохранить · Esc отменить" : canMove ? "F2 имя · Ctrl+Up/Down порядок" : "Перенос временно недоступен", nameof(Hint));
     }
     /// <summary>Selects an existing occurrence and updates the borrowed inspector.</summary>
     /// <param name="id">Existing key, or null to clear inspection.</param>
@@ -86,17 +90,31 @@ public sealed class EditorHierarchyViewModel : INotifyPropertyChanged, IDisposab
     /// <returns>True only after successful shared-history commit.</returns>
     public bool Move(string id, string? parentId)
     {
+        return Place(id, parentId, null, EntityPlacement.Last);
+    }
+    /// <summary>Places an occurrence last or relative to a destination sibling through shared history.</summary>
+    public bool Place(string id, string? parentId, string? anchorId, EntityPlacement placement)
+    {
         VerifyOwner(); var expected = _baseline; Refresh();
         if (!ReferenceEquals(expected, _baseline))
         { Set(ref _error, "Сцена изменилась. Повторите перенос на актуальном дереве.", nameof(ErrorText)); return false; }
         if (!CanMove || !Guid.TryParse(id, out var source) || parentId != null && !Guid.TryParse(parentId, out _)) return false;
         var item = _items.FirstOrDefault(item => item.Id == id);
-        if (item == null || item.ParentId == parentId) return false;
+        if (item == null || item.ParentId == parentId && placement == EntityPlacement.Last) return false;
         if (parentId != null && !_items.Any(item => item.Id == parentId)) return false;
+        if (placement != EntityPlacement.Last)
+        {
+            if (anchorId == id || !_items.Any(item => item.Id == anchorId && item.ParentId == parentId)) return false;
+            var siblings = _items.Where(item => item.ParentId == parentId).Select(item => item.Id).ToList();
+            var old = siblings.IndexOf(id); siblings.Remove(id);
+            var position = siblings.IndexOf(anchorId!) + (placement == EntityPlacement.After ? 1 : 0);
+            if (old >= 0 && old == position) return false;
+        }
         try
         {
-            var result = _commands.Reparent(expected!, new(new(Guid.NewGuid(), expected!.Revision, "editor"),
-                [new(new(source), parentId == null ? null : new EntityId(Guid.Parse(parentId)))]));
+            var result = _commands.EditHierarchy(expected!, new(new(Guid.NewGuid(), expected!.Revision, "editor"), placements:
+                [new(new(source), parentId == null ? null : new EntityId(Guid.Parse(parentId)), placement,
+                    anchorId == null ? null : new EntityId(Guid.Parse(anchorId)))]));
             if (!result.Succeeded) { Set(ref _error, (result.Error + ": " + result.Message).ReplaceLineEndings("\n"), nameof(ErrorText)); return false; }
             _workspace.SetDocument(_commands.Read().Document!.Content);
             _transform.Refresh(_workspace.SelectedId); Refresh();

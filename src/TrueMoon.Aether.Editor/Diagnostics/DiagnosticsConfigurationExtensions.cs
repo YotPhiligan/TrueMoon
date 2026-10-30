@@ -6,6 +6,20 @@ namespace TrueMoon.Aether.Editor.Diagnostics;
 /// <summary>Registers the App-owned presentation and parent-owned console factory without creating a collector.</summary>
 public static class DiagnosticsConfigurationExtensions
 {
+    /// <summary>Registers an App-owned shell-free command hook. Configure before building the App; the user's editor process remains externally owned.</summary>
+    /// <param name="context">Application composition root.</param><param name="options">Frozen executable/argument configuration.</param>
+    /// <returns>The same configuration context.</returns>
+    public static IAppConfigurationContext UseAetherEditorSourceNavigation(this IAppConfigurationContext context, SourceEditorOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(context); ArgumentNullException.ThrowIfNull(options); var snapshot = options.Snapshot();
+        context.Services(services =>
+        {
+            if (services.Exist<ISourceFileNavigator>()) throw new InvalidOperationException("Source navigation is already registered.");
+            services.Singleton<ISourceFileNavigator>(_ => new CommandSourceFileNavigator(snapshot));
+        });
+        return context;
+    }
+
     public static IAppConfigurationContext UseAetherEditorDiagnostics(this IAppConfigurationContext context, EditorDiagnosticsOptions? options = null)
         => Register(context, options, false);
 
@@ -21,10 +35,11 @@ public static class DiagnosticsConfigurationExtensions
                 if (useExisting) return;
                 throw new InvalidOperationException("Editor diagnostics are already registered.");
             }
-            if (!services.Exist<EditorDiagnosticReportWriter>()) services.Singleton<EditorDiagnosticReportWriter>(_ => new());
+            if (!services.Exist<EditorDiagnosticReportWriter>()) services.Singleton<EditorDiagnosticReportWriter>(r => new(
+                r.TryResolve<IDiagnosticArchiveReader>(), r.TryResolve<IDiagnosticConfigurationReader>()));
             if (!services.Exist<IViewStyle<EditorDiagnosticsView>>()) services.Singleton<IViewStyle<EditorDiagnosticsView>>(_ => new EditorDiagnosticsViewStyle());
             services.Singleton<EditorDiagnosticsViewModel>(r => new(r.TryResolve<IDiagnosticRecordReader>(), snapshot, r.Resolve<EditorDiagnosticReportWriter>(),
-                r.TryResolve<IDiagnosticHealthReader>(), r.TryResolve<TrueMoon.Aether.Diagnostics.IProcessDiagnosticsSource>()));
+                r.TryResolve<IDiagnosticHealthReader>(), r.TryResolve<TrueMoon.Aether.Diagnostics.IProcessDiagnosticsSource>(), r.TryResolve<ISourceFileNavigator>()));
             if (!services.Exist<IFactory<EditorDiagnosticsView>>()) services.Singleton<IFactory<EditorDiagnosticsView>>(r =>
                 new Factory<EditorDiagnosticsView>(() => new(r.Resolve<EditorDiagnosticsViewModel>(), r.Resolve<IViewStyle<EditorDiagnosticsView>>())));
             services.Singleton<IStoppable>(r => new DiagnosticsLifetime(r.Resolve<EditorDiagnosticsViewModel>()));

@@ -9,6 +9,13 @@ public sealed record TreeItem(string Id, string? ParentId, string Text, UiSymbol
 /// <param name="Id">Dragged/keyboard-selected key.</param><param name="ParentId">New parent, or null for root.</param>
 public readonly record struct TreeMove(string Id, string? ParentId);
 
+/// <summary>Drop position relative to the row under the pointer.</summary>
+public enum TreeDropPosition { Into, Before, After }
+/// <summary>Consumer-owned sibling placement request; the control never changes data.</summary>
+/// <param name="Id">Source key.</param><param name="ParentId">Destination parent.</param>
+/// <param name="AnchorId">Sibling anchor.</param><param name="Position">Before/After the anchor.</param>
+public readonly record struct TreePlacement(string Id, string? ParentId, string AnchorId, TreeDropPosition Position);
+
 /// <summary>Selection, expansion and parent-move capability of a single-selection tree.</summary>
 public interface ITreeView
 {
@@ -35,6 +42,8 @@ public sealed class TreeView : Element, ITreeView
 {
     /// <summary>Whether parent changes can be requested. Selection/navigation remain available when false.</summary>
     public static readonly UiProperty<bool> MoveEnabledProperty = new("MoveEnabled", false);
+    /// <summary>Enables before/after edge drops and Ctrl+Up/Down placement requests. Parent-only behavior is the default.</summary>
+    public static readonly UiProperty<bool> ReorderEnabledProperty = new("ReorderEnabled", false);
     /// <summary>Logical row height.</summary>
     public static readonly UiProperty<float> RowHeightProperty = new("RowHeight", 24, Invalidation.Layout, v => float.IsFinite(v) && v > 0 && v <= 128);
     /// <summary>Logical indentation per level.</summary>
@@ -45,6 +54,8 @@ public sealed class TreeView : Element, ITreeView
     private readonly HashSet<string> _expanded = new(StringComparer.Ordinal);
     private readonly List<Row> _rows = [];
     private string? _selected, _hover, _pressed, _dropParent;
+    private string? _dropAnchor;
+    private TreeDropPosition _dropPosition;
     private float _downX, _downY;
     private bool _dragging, _dropValid, _reveal;
     private IInputContext? _capture;
@@ -63,6 +74,8 @@ public sealed class TreeView : Element, ITreeView
     public string? SelectedId => _selected;
     /// <summary>Gets or sets parent-move admission.</summary>
     public bool MoveEnabled { get => Get(MoveEnabledProperty); set => Set(MoveEnabledProperty, value); }
+    /// <summary>Gets or sets optional sibling placement input.</summary>
+    public bool ReorderEnabled { get => Get(ReorderEnabledProperty); set => Set(ReorderEnabledProperty, value); }
     /// <summary>Gets or sets logical row height.</summary>
     public float RowHeight { get => Get(RowHeightProperty); set => Set(RowHeightProperty, value); }
     /// <summary>Gets or sets logical level indentation.</summary>
@@ -75,6 +88,8 @@ public sealed class TreeView : Element, ITreeView
     public event Action<string, bool>? ExpansionChanged;
     /// <inheritdoc />
     public event Action<TreeMove>? MoveRequested;
+    /// <summary>Raised for admitted before/after requests; consumers commit their own ordering.</summary>
+    public event Action<TreePlacement>? PlacementRequested;
 
     /// <inheritdoc />
     public void SetItems(IEnumerable<TreeItem> items)
@@ -222,9 +237,14 @@ public sealed class TreeView : Element, ITreeView
             UiSymbols.Draw(context, row.Item.Icon, new(x + 16, y, 14, 14), color);
             context.Text(Ellipsize(row.Item.Text, Math.Max(0, bounds.X + bounds.Width - x - 36)), x + 34,
                 bounds.Y + (bounds.Height - FontSize) / 2, color, FontSize, FontFamily);
-            if (_dragging && _dropValid && _dropParent == row.Item.Id) context.Stroke(bounds.Deflate(new Thickness(1)), Theme.Focus, 2);
+            if (_dragging && _dropValid)
+            {
+                if (_dropPosition == TreeDropPosition.Into && _dropParent == row.Item.Id) context.Stroke(bounds.Deflate(new Thickness(1)), Theme.Focus, 2);
+                else if (_dropPosition != TreeDropPosition.Into && _dropAnchor == row.Item.Id)
+                    context.Fill(new(bounds.X, _dropPosition == TreeDropPosition.Before ? bounds.Y : bounds.Y + bounds.Height - 2, bounds.Width, 2), Theme.Focus);
+            }
         }
-        if (_dragging && _dropValid && _dropParent == null) context.Stroke(visible.Deflate(new Thickness(1)), Theme.Focus, 2);
+        if (_dragging && _dropValid && _dropPosition == TreeDropPosition.Into && _dropParent == null) context.Stroke(visible.Deflate(new Thickness(1)), Theme.Focus, 2);
     }
     private string Ellipsize(string value, float width)
     {
@@ -269,13 +289,26 @@ public sealed class TreeView : Element, ITreeView
         {
             if (_dragging) UpdateDrop(input.X, input.Y);
             var move = _dragging && _dropValid && MoveEnabled ? new TreeMove(_pressed, _dropParent) : (TreeMove?)null;
-            CancelMove(); if (move is { } request) MoveRequested?.Invoke(request); return true;
+            var placement = move != null && _dropPosition != TreeDropPosition.Into && _dropAnchor != null ? new TreePlacement(_pressed, _dropParent, _dropAnchor, _dropPosition) : (TreePlacement?)null;
+            CancelMove();
+            if (placement is { } relative) PlacementRequested?.Invoke(relative);
+            else if (move is { } request) MoveRequested?.Invoke(request);
+            return true;
         }
         if (input.Kind != InputKind.KeyDown) return false;
         if (input.Key == UiKey.Escape && _pressed != null) { CancelMove(); return true; }
         if (_rows.Count == 0) return false;
         var selectedIndex = _rows.FindIndex(row => row.Item.Id == _selected);
         var selectedItem = selectedIndex < 0 ? null : _rows[selectedIndex].Item;
+        if (ReorderEnabled && input.Control && input.Key is UiKey.Up or UiKey.Down)
+        {
+            if (!MoveEnabled || selectedItem == null) return false;
+            var siblings = _items.Where(item => item.ParentId == selectedItem.ParentId).ToList();
+            var index = siblings.FindIndex(item => item.Id == selectedItem.Id); var target = index + (input.Key == UiKey.Up ? -1 : 1);
+            if (target >= 0 && target < siblings.Count)
+                PlacementRequested?.Invoke(new(selectedItem.Id, selectedItem.ParentId, siblings[target].Id, input.Key == UiKey.Up ? TreeDropPosition.Before : TreeDropPosition.After));
+            return true;
+        }
         if (input.Control && input.Key is UiKey.Left or UiKey.Right)
         {
             if (!MoveEnabled || selectedItem == null) return false;
@@ -318,20 +351,36 @@ public sealed class TreeView : Element, ITreeView
     private void UpdateDrop(float x, float y)
     {
         var index = HitRow(x, y); _dropParent = index < 0 ? null : _rows[index].Item.Id;
-        _dropValid = VisibleArea().Contains(x, y) && _pressed != null && CanMove(_pressed, _dropParent);
+        _dropPosition = TreeDropPosition.Into; _dropAnchor = null;
+        if (ReorderEnabled && index >= 0)
+        {
+            var bounds = RowBounds(index); var offset = y - bounds.Y;
+            if (offset < RowHeight / 4 || offset >= RowHeight * 3 / 4)
+            {
+                _dropPosition = offset < RowHeight / 4 ? TreeDropPosition.Before : TreeDropPosition.After;
+                _dropAnchor = _rows[index].Item.Id; _dropParent = _rows[index].Item.ParentId;
+            }
+        }
+        _dropValid = VisibleArea().Contains(x, y) && _pressed != null && (_dropPosition == TreeDropPosition.Into ? CanMove(_pressed, _dropParent) : CanPlace(_pressed, _dropParent, _dropAnchor!));
+    }
+    private bool CanPlace(string id, string? parent, string anchor)
+    {
+        if (id == anchor) return false;
+        for (var current = parent; current != null; current = _byId[current].ParentId) if (current == id) return false;
+        return true;
     }
     /// <summary>Cancels a pending gesture and releases its owned capture without requesting an edit.</summary>
     public void CancelMove()
     {
         VerifyAccess(); var context = _capture; var changed = _pressed != null;
-        _capture = null; _pressed = null; _dragging = _dropValid = false; _dropParent = null;
+        _capture = null; _pressed = null; _dragging = _dropValid = false; _dropParent = _dropAnchor = null; _dropPosition = TreeDropPosition.Into;
         if (context != null) context.ReleaseCapture(this);
         if (changed) Invalidate();
     }
     private void Changed(Element sender, object property)
     {
         if (ReferenceEquals(property, MoveEnabledProperty) && !MoveEnabled ||
-            ReferenceEquals(property, RowHeightProperty) || ReferenceEquals(property, IndentProperty)) CancelMove();
+            ReferenceEquals(property, ReorderEnabledProperty) || ReferenceEquals(property, RowHeightProperty) || ReferenceEquals(property, IndentProperty)) CancelMove();
     }
     private void Attachment() { if (!IsAttached) CancelMove(); }
     /// <inheritdoc />
@@ -343,7 +392,7 @@ public sealed class TreeView : Element, ITreeView
         finally
         {
             if (IsDisposed)
-            { _capture = null; _pressed = null; SelectionChanged = null; ExpansionChanged = null; MoveRequested = null; _text = null; }
+            { _capture = null; _pressed = null; SelectionChanged = null; ExpansionChanged = null; MoveRequested = null; PlacementRequested = null; _text = null; }
         }
     }
     private readonly record struct Row(TreeItem Item, int Depth);

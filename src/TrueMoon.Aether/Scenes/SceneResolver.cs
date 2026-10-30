@@ -45,7 +45,7 @@ public static class SceneResolver
         ValidateParentGraph(entities, path, cancellationToken);
         var roots = ImmutableArray.CreateBuilder<EntityId>();
         var children = entities.Keys.ToDictionary(id => id, _ => new List<EntityId>());
-        foreach (var entity in ordered)
+        foreach (var entity in ordered.OrderBy(entity => entity.SiblingOrder ?? 0))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (entity.ParentId is { } parent) children[parent].Add(entity.Id); else roots.Add(entity.Id);

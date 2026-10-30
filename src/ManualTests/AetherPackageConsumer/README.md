@@ -64,6 +64,10 @@ recreates the View without disposing its shared model.
 The actual window workflow opens a scene, checks invalid drafts and retained theme
 updates, edits Transform through UI input, verifies GPU pixels for preview/Undo/
 Redo, saves/reopens, vetoes dirty close with Cancel and an injected save failure,
+kicks off inline F2 name editing and Ctrl+Down sibling reordering through the retained
+hierarchy, checks their shared Undo/Redo and persistent metadata after another Save/reopen,
+creates a cube and child from New, duplicates/deletes/restores the branch through context
+actions and keyboard, searches by ID and reopens the created scene with clean history,
 kills only its own preview child, preserves dirty document/history/selection,
 and recovers preview before saving/closing. Separate native startup failure and
 first-frame cancellation cases check rollback and final App disposal. Original

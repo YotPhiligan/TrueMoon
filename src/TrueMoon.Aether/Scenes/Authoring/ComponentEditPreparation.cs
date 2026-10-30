@@ -107,7 +107,7 @@ internal static class ComponentEditPreparation
                 else overrides[address] = new(edit.ComponentId, edit.PropertyId, edit.Value);
             }
             return new EntityInstance(entity.Id, entity.DefinitionId,
-                new EntityPatch(added.Values, removed, overrides.Values, restored), entity.ParentId);
+                new EntityPatch(added.Values, removed, overrides.Values, restored), entity.ParentId, entity.Name, entity.SiblingOrder);
         });
         return new(source.Id, source.Revision, entities, source.Definitions, source.Schemas);
     }

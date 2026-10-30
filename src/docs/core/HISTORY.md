@@ -1,5 +1,55 @@
 # Core: история проверок и ревью
 
+## Архив JSONL и конфигурация для ED8a — 2026-10-30
+
+Для Editor report добавлены nondisposable `IDiagnosticArchiveReader` и
+`IDiagnosticConfigurationReader`, вместе с тремя прежними aliases они заимствуют
+один App-owned pipeline. Повторный legacy setup снимает все пять registrations;
+factory/DI aliases не получают повторное Dispose. Новый общий контракт не зависит
+от Aether/UI. Scalar configuration копируется под gate: live minimum level и filter
+counts, frozen queue/ring/field/retention/emergency/telemetry options. Paths, rule
+names, sink factories и environment не входят в snapshot.
+
+Archive reader работает в background task, не flush-ит sinks и не запускает
+maintenance. Recognized flat slots/managed marker runs, current-run exception для
+собственного marker lease; чужие active/недоступные entries могут быть пропущены.
+Reparse points отвергаются. Discovery256entries, default16files/4MiB actual read,
+512records/2MiB estimated retained/64KiB line/2s cooperative. File tails читаются
+newest-modified first, records refreeze/clip по Core field limits, retained-window
+dedup по collector identity, chronological output. Incomplete boundary/final lines,
+malformed/oversized lines, disappearing files, IO failures и budget omissions имеют
+раздельные counters. Это independent snapshot без полноты async хвоста/durability;
+произвольный filesystem stall не прерывается жёстким таймером.
+
+Проверки Windows x64/SDK10.0.403/net10.0/xUnit2, VSTest:
+
+- Core narrow56/56; archive/health/retention. Новых11cases; full **398/398 Debug**
+  и **398/398 Release**, failed/skipped0. `RecordBudget_KeepsLatestAndReportsExactOmissions`
+  проверяет разные retained windows; `FlatHistory_RejectsMalformedOversizedAndIncompleteLinesWithoutReadingOtherFiles`
+  — невалидные строки и чужие файлы; `TailRead_RespectsActualByteBudgetAndRetainsLastCompleteRecord`
+  — реальные bytes и last complete record.
+- `CurrentManagedRun_IsReadableWithoutFlushOrWaitingForBlockedOtherSink` удерживает
+  custom sink и читает уже записанный current JSONL без его drain. Managed closed
+  runs/unknown dirs, old-run rotation slots после уменьшения JsonMaxFiles,
+  file budget/dedup, disabled/cancelled reads и отсутствие IO при
+  disabled capability проверены отдельно.
+- `ConfigurationViews_AreBorrowedFrozenPathFreeAndRemovedByLegacyReplacement`
+  проверяет Cobalt и Microsoft DI, live minimum/filter counts, freeze исходных options,
+  отсутствие путей/rule names и повторный setup.
+- Exact command: `dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --no-restore`
+  и тот же проект с `-c Release`; фактически с TRX, `-v minimal`,
+  `-p:UseSharedCompilation=false -nodeReuse:false`.
+  [Initial runner](../../TestResults/DiagnosticReport-ED8a-20261030-1/RunFull.ps1),
+  [final Core runner](../../TestResults/DiagnosticReport-ED8a-20261030-1/RunCoreFinal.ps1),
+  [audit/TRX](../../TestResults/DiagnosticReport-ED8a-20261030-1/verification.json).
+
+Aether1570/Editor842 Debug/Release и published Release/Cobalt consumer проверены
+отдельно: parent rotation/corrupt tail, real CPU preview normal/crashed children,
+bounded report и5000imports. [Scope](../engine/HISTORY.md#ed8a1-архив-и-управляемый-экспорт--2026-10-30).
+После проверки old-run rotation slots full Core Debug/Release и published consumer
+повторены на окончательном reader. Full solution, fresh NuGet packages, UI/Hosting/Enerit/Mithril suites и hardware/
+release matrix не запускались. Общий CORE6 остаётся частичным.
+
 ## Borrowed health и output windows — 2026-10-29
 
 Для ED6a.2 добавлен общий `IDiagnosticHealthReader`/`DiagnosticHealthSnapshot` в

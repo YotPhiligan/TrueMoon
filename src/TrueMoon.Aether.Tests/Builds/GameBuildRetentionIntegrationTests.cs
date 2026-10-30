@@ -39,6 +39,7 @@ public sealed class GameBuildRetentionIntegrationTests(GameBuildFixture fixture)
             var oldJob = compiler.DiagnosticsDirectory!;
             Assert.Equal(1, compiler.RetentionStatus!.RetainedJobs);
             Assert.True(File.Exists(Path.Combine(oldJob, BuildDiagnosticStore.MarkerFile)));
+            Assert.True(File.Exists(Path.Combine(oldJob, GameBuildDiagnosticReader.FileName)));
             var project = InvalidProject();
             var error = await Assert.ThrowsAsync<GameBuildException>(() => compiler.BuildAsync(new(project, "Game.Invalid.dll", "Game.Invalid.Entry", 72)));
             var current = compiler.DiagnosticsDirectory!;

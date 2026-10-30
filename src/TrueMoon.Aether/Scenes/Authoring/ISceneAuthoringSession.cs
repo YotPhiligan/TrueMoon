@@ -23,6 +23,17 @@ public interface ISceneAuthoringSession : IDisposable
     /// <param name="cancellationToken">Cancellation checked before the single commit point.</param>
     /// <returns>Idempotent receipt; invalid schemas, dependencies or values leave content/history unchanged.</returns>
     SceneAuthoringResult EditComponents(ComponentEditBatch batch, CancellationToken cancellationToken = default);
+    /// <summary>Atomically edits instance names and ordered placements using the same revision/receipts/history.</summary>
+    /// <param name="batch">Frozen metadata intent.</param><param name="cancellationToken">Before-commit cancellation.</param>
+    /// <returns>The shared receipt. Older custom session implementations may reject this optional capability.</returns>
+    SceneAuthoringResult EditHierarchy(HierarchyEditBatch batch, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This authoring session does not support hierarchy metadata edits.");
+    /// <summary>Atomically creates, deletes or duplicates instances and validates the complete resulting graph.</summary>
+    /// <param name="batch">Frozen entity operation, including explicit descendant/identity intent.</param>
+    /// <param name="cancellationToken">Checked before the single commit point.</param>
+    /// <returns>The shared receipt; unsupported legacy implementations may reject this optional capability.</returns>
+    SceneAuthoringResult EditEntities(EntityEditBatch batch, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This authoring session does not support entity operations.");
     /// <summary>Restores the previous content with a new, monotonically increasing document revision.</summary>
     /// <param name="operation">New operation identity and expected current revision.</param>
     /// <param name="cancellationToken">Cancellation before commit.</param>
@@ -74,7 +85,9 @@ public enum SceneAuthoringError
     /// <summary>No transaction remains on the redo branch.</summary>
     NoRedo,
     /// <summary>No larger document revision can be represented.</summary>
-    RevisionExhausted
+    RevisionExhausted,
+    /// <summary>The instance name violates the bounded single-line metadata contract.</summary>
+    InvalidName
 }
 
 /// <summary>Small immutable terminal receipt; it does not retain an old document or resolved scene.</summary>

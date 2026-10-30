@@ -138,7 +138,7 @@ internal sealed class DiagnosticRunStore
         return files;
     }
 
-    private static bool TryReadCreation(FileStream stream, out DateTimeOffset created)
+    internal static bool TryReadCreation(FileStream stream, out DateTimeOffset created)
     {
         created = default;
         if (stream.Length is < 1 or > 128) return false;
@@ -153,7 +153,7 @@ internal sealed class DiagnosticRunStore
             Path.TrimEndingDirectorySeparator(Path.GetFullPath(second)),
             OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
-    private static void RejectLinks(string path)
+    internal static void RejectLinks(string path)
     {
         for (var current = Path.GetFullPath(path); current != null; current = Path.GetDirectoryName(current))
         {
@@ -169,7 +169,7 @@ internal sealed class DiagnosticRunStore
     private static bool IsSharingViolation(IOException error) => (error.HResult & 0xffff) is 32 or 33;
     private static bool IsFileError(Exception error) => error is IOException or UnauthorizedAccessException or System.Security.SecurityException;
 
-    private static bool IsEventFile(string name)
+    internal static bool IsEventFile(string name)
     {
         if (!name.StartsWith("events-", StringComparison.Ordinal) || !name.EndsWith(".jsonl", StringComparison.Ordinal)) return false;
         var suffix = name[7..^6];

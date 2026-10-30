@@ -16,6 +16,7 @@ using TrueMoon.Aether.Sessions;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
+using TrueMoon.Aether.Editor.Diagnostics;
 using TrueMoon.Extensions.DependencyInjection;
 
 namespace PackageEditor;
@@ -111,6 +112,7 @@ internal static class Program
         await using var app = App.Builder(c => { if (microsoft) c.UseDI(); }).Setup(c =>
         {
             c.UseDiagnostics(new DiagnosticPipelineOptions { JsonDirectory = Path.Combine(directory, "diagnostics", "host"), JsonUseRunDirectories = true });
+            c.UseAetherEditorDiagnostics();
             c.UseAether(o =>
             {
                 o.HostContractId = hostId; o.GameBuildId = BuildIdentity.PreviewId;
@@ -206,9 +208,17 @@ internal static class Program
                 StringComparison.OrdinalIgnoreCase), "Game loaded outside the exact selected artifact.");
             Check(l.StandardOutput.Contains("PACKAGE_RUNTIME_STDOUT", StringComparison.Ordinal) &&
                 l.StandardError.Contains("PACKAGE_RUNTIME_STDERR", StringComparison.Ordinal), "Raw child output capture failed.");
+            Check(l.ChildDiagnosticsStatus?.RuntimeObservation?.Collector?.Sinks.Any(sink => sink.Name == "jsonl") == true &&
+                l.ChildDiagnosticsStatus.RuntimeObservation.GraphicsDevice == null, "CPU game runtime lost child health or fabricated a graphics device.");
             return new { l.ProcessId, l.Reaped, l.ResourcesReleased, Metadata = metadata, l.ChildDiagnosticsStatus };
         }).ToArray();
         Check(children.Length == 3 && imported.Length > 0 && !GameLoaded(), "Incomplete package runtime proof.");
+        var diagnostics = app.Services.Resolve<EditorDiagnosticsViewModel>()!; diagnostics.Refresh();
+        var diagnosticReport = Path.Combine(directory, "game-diagnostic-report.json");
+        await app.Services.Resolve<EditorDiagnosticReportWriter>()!.WriteReportAsync(diagnostics.Snapshot(), diagnosticReport, new());
+        using var report = JsonDocument.Parse(await File.ReadAllTextAsync(diagnosticReport, token));
+        var observedGames = report.RootElement.GetProperty("runtimeObservations").EnumerateArray().Where(row => row.GetProperty("ProcessId").ValueKind == JsonValueKind.Number && row.GetProperty("ProcessId").GetInt32() > 0).ToArray();
+        Check(observedGames.Length == 3 && observedGames.All(row => row.GetProperty("CollectorAvailable").GetBoolean() && !row.GetProperty("DeviceAvailable").GetBoolean()), "Game diagnostic report lost numeric child health/unavailable CPU device state.");
         Check(children.Select(child => child.Metadata.GetProperty("GameBuildId").GetString()).SequenceEqual(new[] { a.BuildId, b.BuildId, b.BuildId }),
             "Runtime did not execute the selected build sequence.");
         var shaders = typeof(AetherHost).Assembly.GetManifestResourceNames().Where(n => n.EndsWith(".spv", StringComparison.Ordinal))
@@ -220,7 +230,7 @@ internal static class Program
         Check(shaders.Length == 2, "Aether embedded shaders are missing.");
         return new { HostId = hostId, RuntimePath = runtimePath, Builds = new[] { a, b }, Checkpoint = checkpoint.State, Shaders = shaders,
             Replacement = replacement.Identity, MaxLive = maxLive, Children = children, ImportedRecords = imported.Length,
-            IdentityRejected = true, Mappings = host.Frames.MappingCount };
+            IdentityRejected = true, Mappings = host.Frames.MappingCount, DiagnosticReport = diagnosticReport };
     }
 
     private static async Task Present(FrameSession frames, Task pending, uint color, ulong generation, CancellationToken token)

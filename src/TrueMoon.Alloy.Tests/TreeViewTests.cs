@@ -330,6 +330,57 @@ public sealed class TreeViewTests
         Assert.Equal(icons.Length, shapes.Distinct().Count());
     }
 
+    [Theory]
+    [InlineData(2, TreeDropPosition.Before)] [InlineData(22, TreeDropPosition.After)]
+    public void Reorder_EdgeDropRequestsSiblingPlacementWithoutChangingConsumerData(float offset, TreeDropPosition position)
+    {
+        var tree = new TreeView { MoveEnabled = true, ReorderEnabled = true }; tree.SetItems(Graph()); tree.SetExpanded("root", true);
+        using var ui = Create(tree); ui.Update(); var placements = new List<TreePlacement>(); var moves = new List<TreeMove>();
+        tree.PlacementRequested += placements.Add; tree.MoveRequested += moves.Add;
+        var source = Row(tree, "other"); var target = Row(tree, "sibling");
+        ui.HandleInput(new(InputKind.PointerDown, source.X + 80, source.Y + 12));
+        Assert.True(ui.HandleInput(new(InputKind.PointerMove, target.X + 80, target.Y + offset)).PointerCaptured);
+        Assert.False(ui.HandleInput(new(InputKind.PointerUp, target.X + 80, target.Y + offset)).PointerCaptured);
+        Assert.Equal(new TreePlacement("other", "root", "sibling", position), Assert.Single(placements)); Assert.Empty(moves);
+        Assert.Null(tree.Items.Single(item => item.Id == "other").ParentId); Assert.Equal("other", tree.SelectedId);
+    }
+
+    [Fact]
+    public void Reorder_ControlArrowsUseSiblingsAndPreserveSelectionWhilePlainArrowsNavigate()
+    {
+        var tree = new TreeView { MoveEnabled = true, ReorderEnabled = true }; tree.SetItems(Graph()); tree.Select("sibling");
+        using var ui = Create(tree); ui.Update(); ui.Focus(tree); var placements = new List<TreePlacement>(); tree.PlacementRequested += placements.Add;
+        Key(ui, UiKey.Up, true); Assert.Equal(new TreePlacement("sibling", "root", "branch", TreeDropPosition.Before), Assert.Single(placements));
+        Assert.Equal("sibling", tree.SelectedId); Key(ui, UiKey.Down, true); Assert.Single(placements);
+        Key(ui, UiKey.Up); Assert.Equal("branch", tree.SelectedId);
+        tree.MoveEnabled = false; Key(ui, UiKey.Down, true); Assert.Single(placements); Assert.Equal("branch", tree.SelectedId);
+    }
+
+    [Theory]
+    [InlineData("disable-reorder")] [InlineData("snapshot")] [InlineData("escape")]
+    public void Reorder_CancelledEdgeDropCannotEmitLatePlacement(string cause)
+    {
+        var tree = new TreeView { MoveEnabled = true, ReorderEnabled = true }; tree.SetItems(Graph()); tree.SetExpanded("root", true);
+        using var ui = Create(tree); ui.Update(); var placements = new List<TreePlacement>(); tree.PlacementRequested += placements.Add;
+        var source = Row(tree, "other"); var target = Row(tree, "sibling");
+        ui.HandleInput(new(InputKind.PointerDown, source.X + 80, source.Y + 12));
+        ui.HandleInput(new(InputKind.PointerMove, target.X + 80, target.Y + 2));
+        if (cause == "disable-reorder") tree.ReorderEnabled = false;
+        else if (cause == "snapshot") tree.SetItems(Graph()); else Key(ui, UiKey.Escape);
+        Assert.False(ui.HandleInput(new(InputKind.PointerUp, target.X + 80, target.Y + 2)).PointerCaptured); Assert.Empty(placements);
+    }
+
+    [Fact]
+    public void FocusChanged_ReportsTransferFocusLossAndDetachWithoutDuplicates()
+    {
+        var first = new TextBox(); var second = new TextBox(); var panel = new VStack().WithChildren(first, second);
+        using var ui = Create(panel); ui.Update(); var changes = new List<bool>(); first.FocusChanged += element => changes.Add(element.IsFocused);
+        ui.Focus(first); ui.Focus(first); ui.Focus(second); ui.Focus(first); ui.HandleInput(new(InputKind.FocusLost));
+        Assert.Equal(new[] { true, false, true, false }, changes);
+        ui.Focus(first); panel.Items.Remove(first); Assert.Equal(new[] { true, false, true, false, true, false }, changes);
+        first.Dispose(); Assert.Equal(6, changes.Count);
+    }
+
     private static Rect Row(TreeView tree, string id) => tree.GetItemBounds(id) ?? throw new InvalidOperationException("Row is not visible: " + id);
     private static void Key(UiSession ui, UiKey key, bool control = false) => ui.HandleInput(new(InputKind.KeyDown, Key: key, Control: control));
     private static void Click(UiSession ui, float x, float y) { ui.HandleInput(new(InputKind.PointerDown, x, y)); ui.HandleInput(new(InputKind.PointerUp, x, y)); }

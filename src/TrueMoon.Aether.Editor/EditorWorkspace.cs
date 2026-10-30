@@ -60,7 +60,7 @@ public sealed class EditorWorkspace
                 var entity = _document.Resolved.Entities[id]; var key = id.Value.ToString("D");
                 var kind = entity.Components.Values.Any(c => c.TypeId == BuiltInComponents.InteractionId) ? HierarchyItemKind.Interactive :
                     entity.Components.Values.Any(c => c.TypeId == BuiltInComponents.AppearanceId) ? HierarchyItemKind.Renderable : HierarchyItemKind.Entity;
-                return new HierarchyItem(key, entity.ParentId?.Value.ToString("D"), EditorScene.Name(key), kind);
+                return new HierarchyItem(key, entity.ParentId?.Value.ToString("D"), entity.Name ?? EditorScene.Name(key), kind);
             }).ToArray());
         _entityIds = Array.AsReadOnly(_hierarchy.Select(item => item.Id).ToArray());
     }

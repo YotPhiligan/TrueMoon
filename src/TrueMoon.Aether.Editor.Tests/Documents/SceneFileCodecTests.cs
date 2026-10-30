@@ -90,7 +90,7 @@ public sealed class SceneFileCodecTests
     }
 
     [Theory]
-    [InlineData("formatVersion", "0")] [InlineData("formatVersion", "2")] [InlineData("formatVersion", "1.5")]
+    [InlineData("formatVersion", "0")] [InlineData("formatVersion", "3")] [InlineData("formatVersion", "1.5")]
     [InlineData("revision", "-1")] [InlineData("revision", "9223372036854775808")]
     [InlineData("id", "\"00000000-0000-0000-0000-000000000000\"")]
     [InlineData("id", "\"not-a-guid\"")] [InlineData("entities", "null")]

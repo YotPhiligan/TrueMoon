@@ -1,5 +1,13 @@
 # TrueMoon.Alloy: план первой рабочей версии
 
+Уточнение INF5,2026-10-31: optional `IUiRenderDiagnostics`/`UiRenderDeviceInfo`
+передаёт cached value-only device evidence из host в surface. OpenGL/Vulkan host
+снимает данные при initialization; getter не делает native calls, IO или waits и
+не является проверкой текущего GPU health. External raw hosts могут оставить
+DeviceInfo=null; raster не получает фиктивный device. Editor копирует строки,
+не сохраняет renderer/handles в модели. [Scope и evidence](HISTORY.md#inf5-cached-device-observation-для-editor--2026-10-31).
+INF5 и общие K1–K9 остаются частичными; новый report consumer не закрывает release.
+
 План восстановлен 2026-09-27 из предоставленного пользователем текста предыдущей сессии. Сохранены цели, архитектурные решения, последовательность работ, проверки и границы первой версии. Идентификаторы пунктов добавлены для отслеживания выполнения.
 
 ## Область плана — уточнение формата 2026-10-09
@@ -1179,16 +1187,33 @@ drag/drop и keyboard. Контрол не меняет предметные д�
 первом bounded profile. Поддерживаются rejection self/descendant/same-parent и
 cancel capture при Esc/FocusLost/disable/detach/new snapshot. Нет фоновых timers,
 resolution на кадр или полного пересоздания row-controls при обновлении.
-Порядок row siblings следует входным данным. Reorder/rename/multiselect/typeahead,
-drag autoexpand/autoscroll и полная virtualization — следующие consumer-driven
-расширения, их готовность данным первым срезом не заявляется.
+Порядок row siblings следует входным данным. Уточнение2026-10-31 по ED4c.2:
+optional ReorderEnabled (default false) добавляет consumer-owned PlacementRequested,
+Ctrl+↑/↓ и Before/After в первой/последней четверти строки. Центр строки и пустая
+область сохраняют parent-move semantics. Контрол отвергает self/descendant targets;
+destination/anchor/revision/history валидирует consumer. Смена reorder capability
+отменяет capture, как смена snapshot. UI не переставляет source items самостоятельно.
+Inline rename остаётся композицией retained TextBox в Editor. Общий Element.FocusChanged
+сообщает transfer/FocusLost/detach; UiSession отменяет input до закрытия dispatcher,
+затем отменяет queued work и освобождает дерево. Это позволяет focus-loss callbacks
+обновить bound model без отправки уведомлений в уже закрытый dispatcher.
+Multiselect/typeahead, drag autoexpand/autoscroll и полная virtualization остаются
+следующими consumer-driven расширениями.
 
 Первый bounded TreeView реализован2026-10-24; editor использует общий контрол,
 свой стиль и DI-created View. Прямые TreeView tests и native consumer проверяют
 иконки/глубину/clip/выбор/раскрытие/перенос/capture/сохранение дерева при theme.
 [Текущие проверки](STATUS.md), [точная область и команды](HISTORY.md#pa4c-treeview-и-ed4c1--2026-10-24).
-Следующие rename/reorder capabilities добавляются по ED4c.2 после persistent
-engine metadata, без UI-only изменений предметного дерева.
+Rename/reorder consumer ED4c.2 использует persistent engine metadata и общую history;
+текущие проверки — [STATUS](STATUS.md).
+Уточнение ED4c.3 от2026-10-31: MenuPopup принимает1..64frozen shared MenuAction,
+пропускает disabled rows при Up/Down/Home/End/Tab и закрывается перед выполнением
+команды. OverlayHost владеет popup; MenuItem заимствует command и снимает подписку
+при Dispose. Escape focused popup закрывает его раньше expanded menu bar, возвращая
+focus trigger. Shift+F10 оставлен context consumers, plain F10 сохраняет menu-bar path.
+Editor использует общий popup для right-click/keyboard actions; document/history,
+search policy и coalesced items/selection projection принадлежат consumer.
+Расширения physical menu input, nested/scrolling menu и accessibility остаются отдельно.
 
 ### PA8a: дефолтный стиль контролов и оформление окна — 2026-10-21
 

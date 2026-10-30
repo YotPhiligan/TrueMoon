@@ -3,7 +3,7 @@ using TrueMoon.Aether.Scenes.Authoring;
 
 namespace TrueMoon.Aether.Scenes;
 
-/// <summary>Strict version-1 authoring JSON. Persists catalogs and local patches, never resolved/runtime state or history.</summary>
+/// <summary>Strict authoring JSON: reads v1/v2, writes v2 when instance name/order metadata is present. Never persists resolved state/history.</summary>
 /// <param name="authoring">Borrowed validation factory; temporary products are disposed before returning.</param>
 public sealed class SceneFileCodec(IFactory<ISceneAuthoringSession, SceneDocument> authoring)
 {
@@ -28,12 +28,18 @@ public sealed class SceneFileCodec(IFactory<ISceneAuthoringSession, SceneDocumen
         using var buffer = new LimitedBuffer();
         using (var writer = new Utf8JsonWriter(buffer))
         {
-            writer.WriteStartObject(); writer.WriteNumber("formatVersion", 1);
+            var version = document.Entities.Any(entity => entity.Name != null || entity.SiblingOrder != null) ? 2 : 1;
+            writer.WriteStartObject(); writer.WriteNumber("formatVersion", version);
             writer.WriteString("id", document.Id.Value); writer.WriteNumber("revision", document.Revision);
             Array(writer, "entities", document.Entities, MaximumEntities, entity =>
             {
                 writer.WriteStartObject(); writer.WriteString("id", entity.Id.Value); writer.WriteString("definitionId", entity.DefinitionId.Value);
                 NullableId(writer, "parentId", entity.ParentId?.Value);
+                if (version == 2)
+                {
+                    writer.WriteString("name", entity.Name);
+                    if (entity.SiblingOrder is { } order) writer.WriteNumber("siblingOrder", order); else writer.WriteNull("siblingOrder");
+                }
                 writer.WritePropertyName("changes"); WritePatch(writer, entity.Changes); writer.WriteEndObject();
             });
             Array(writer, "definitions", document.Definitions, MaximumDefinitions, definition =>
@@ -73,13 +79,17 @@ public sealed class SceneFileCodec(IFactory<ISceneAuthoringSession, SceneDocumen
         {
             using var json = JsonDocument.Parse(bytes, new() { MaxDepth = 32 });
             var root = Object(json.RootElement, "formatVersion", "id", "revision", "entities", "definitions", "schemas");
-            if (root.GetProperty("formatVersion").GetInt32() != 1) throw new InvalidDataException("Unsupported scene format; expected version 1.");
+            var version = root.GetProperty("formatVersion").GetInt32();
+            if (version is not (1 or 2)) throw new InvalidDataException("Unsupported scene format; expected version 1 or 2.");
             var entities = Items(root.GetProperty("entities"), MaximumEntities).Select(element =>
             {
-                var value = Object(element, "id", "definitionId", "parentId", "changes");
+                var value = version == 1 ? Object(element, "id", "definitionId", "parentId", "changes") :
+                    Object(element, "id", "definitionId", "parentId", "changes", "name", "siblingOrder");
                 var parent = OptionalId(value.GetProperty("parentId"));
                 return new EntityInstance(new(value.GetProperty("id").GetGuid()), new(value.GetProperty("definitionId").GetGuid()),
-                    ReadPatch(value.GetProperty("changes")), parent is { } id ? new EntityId(id) : null);
+                    ReadPatch(value.GetProperty("changes")), parent is { } id ? new EntityId(id) : null,
+                    version == 1 ? null : value.GetProperty("name").GetString(),
+                    version == 1 || value.GetProperty("siblingOrder").ValueKind == JsonValueKind.Null ? null : value.GetProperty("siblingOrder").GetInt32());
             }).ToArray();
             var definitions = Items(root.GetProperty("definitions"), MaximumDefinitions).Select(element =>
             {

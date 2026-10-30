@@ -3,7 +3,7 @@
 /// <summary>Fixed identity envelope. Nonce and endpoint must never be copied into diagnostic records.</summary>
 public sealed class DiagnosticDeliveryPacket
 {
-    /// <summary>Packet schema, currently1.</summary>
+    /// <summary>Body schema:1 is a record array;2 adds a bounded runtime observation in the same byte budget.</summary>
     public int Version { get; set; } = 1;
     /// <summary>Expected engine session.</summary>
     public Guid SessionId { get; set; }
@@ -29,6 +29,6 @@ public sealed class DiagnosticDeliveryPacket
     public long Lost { get; set; }
     /// <summary>Child's cumulative unknown delivery outcomes.</summary>
     public long Unconfirmed { get; set; }
-    /// <summary>Bounded JSON array of DiagnosticRecord values.</summary>
+    /// <summary>Bounded JSON body; its schema is selected by Version. The binary envelope is unchanged.</summary>
     public byte[] Payload { get; set; } = [];
 }

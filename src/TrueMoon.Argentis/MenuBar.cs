@@ -90,7 +90,7 @@ public sealed class MenuBar : ElementList, IMenu, IUiFrameParticipant, IUiInputO
     public bool PreviewInput(UiInput input, IInputContext context)
     {
         if (input.Kind == InputKind.FocusLost) { if (IsMenuOpen) _overlays.Close(false); _pinned = false; _open = -1; Expand(false, true); return false; }
-        if (input.Kind == InputKind.KeyDown && input.Key == UiKey.F10) { _pinned = true; _openFirstWhenRevealed = false; Expand(true, true); context.Focus(_headings.Values.First()); return true; }
+        if (input.Kind == InputKind.KeyDown && input.Key == UiKey.F10 && !input.Shift) { _pinned = true; _openFirstWhenRevealed = false; Expand(true, true); context.Focus(_headings.Values.First()); return true; }
         if (input.Kind == InputKind.KeyDown && input.Key == UiKey.Escape && (_expanded || IsMenuOpen)) { CloseMenu(); context.Focus(_more); return true; }
         if (input.Kind == InputKind.KeyDown && input.Key is UiKey.Left or UiKey.Right && IsMenuOpen)
         { OpenGroup(_groups[(_open + (input.Key == UiKey.Right ? 1 : _groups.Length - 1)) % _groups.Length].Id, context); return true; }

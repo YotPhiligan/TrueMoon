@@ -1,6 +1,63 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-29, ED6a.2 consumer и INF3 dirty-frame fix**.
+Последняя работа — **2026-10-31, MenuPopup и ED4c.3 context commands**.
+Общий bounded popup использует MenuAction/MenuItem/IUiCommand и OverlayHost ownership,
+поддерживает navigation/Tab/disabled rows и dismiss-before-execute; Escape сохраняет focus
+context trigger при expanded menu bar. Shift+F10 оставлен
+context consumers; plain F10 прежний. Editor добавил semantic action row/search/context
+menu и согласованную retained items/selection projection без feedback reset.
+Alloy909/Hosting117/Editor883 отдельно Debug/Release, failed/skipped0. Final source/fresh
+NuGet published standard/Cobalt workflows2/2,4PNG просмотрены, UI/GPU/handles0,
+12graceful validation0/0. [Scope/evidence](HISTORY.md#pa4c-menupopup-и-ed4c3--2026-10-31).
+Далее project/workflow consumer; физические input/DPI, nested/scrolling menu,
+accessibility, device-loss/K3/K7/K8/VRAM/final alpha остаются отдельными.
+
+Предыдущая работа — **2026-10-31, PA4c reorder и inline rename consumer ED4c.2**.
+TreeView с optional ReorderEnabled запрашивает sibling Before/After по краям строки
+и Ctrl+↑/↓; source items меняет consumer. Element.FocusChanged позволяет отменять
+retained TextBox draft при transfer/FocusLost/detach. UiSession отменяет input до
+закрытия dispatcher, затем отменяет pending work и освобождает дерево.
+Alloy900/Hosting117/Editor866 отдельно Debug/Release, failed/skipped0.
+[Audit/8TRX](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/verification.json).
+Final published source/fresh NuGet standard/Cobalt workflows2/2:4PNG просмотрены,
+hint использует Up/Down вместо отсутствующих glyphs; UI/GPU/handles0,12validation0/0.
+[Приёмка](../engine/HISTORY.md#ed4c2-имена-и-порядок-сущностей--2026-10-31).
+Далее ED4c.3 у engine; multiselect/typeahead/drag autoscroll/virtualization и прежние
+physical/device loss/K3/K7/K8/VRAM/final alpha gates остаются открытыми.
+
+Предыдущая работа — **2026-10-31, INF5 cached device observation для Editor ED8a.2**.
+Optional IUiRenderDiagnostics/UiRenderDeviceInfo передаёт host-captured device value
+из OpenGL/Vulkan targets в surfaces; getter не делает native queries/waits. Model
+получает только строки. Existing interfaces/constructors/ownership сохранены.
+Alloy893/Hosting117/Editor847 отдельно Debug/Release, failed/skipped0. Source и
+fresh NuGet published standard/Cobalt окна проверили actual OpenGL UI device и
+Vulkan child report после crash;4PNG просмотрены,12graceful validation0/0, cleanup0.
+[Контракт/границы](HISTORY.md#inf5-cached-device-observation-для-editor--2026-10-31).
+Vulkan UI metadata/native extended backend/provider matrix, physical input/device
+loss/K3/K7/K8/VRAM не проверялись этим срезом; INF5 и release частичны. Далее ED4c.2
+у engine. Общие controls/layout не менялись.
+
+Предыдущая связанная работа — **2026-10-30, Editor ED8a.1 report consumer**.
+Typed retained View/Data/style использует существующие CheckBox/Button/UiSession,
+показывает text/history policy и cancel. Model получает только value snapshot
+backend/viewport; View заимствует UI session и снимает актуальные значения перед
+export. Paused-follow initial observation исправлен, resize/scale regression есть.
+Editor842/842 отдельно Debug/Release и published Release/Cobalt native Skia raster
+с2просмотренными PNG прошли. [Evidence](../engine/HISTORY.md#ed8a1-архив-и-управляемый-экспорт--2026-10-30).
+Общие UI APIs/renderer не менялись; UI/Hosting suites, окно/GPU и physical/K3/K7/K8/
+VRAM не повторялись. Далее ED8a.2 window/game acceptance у engine, затем rename/reorder.
+
+Предыдущая связанная работа — **2026-10-30, Editor compiler diagnostics consumer**.
+Compiler mode использует существующие TreeView/RichTextEditor/Button и scoped
+View/Data/style; новые общие UI APIs/renderer не добавлены. LF normalization
+исправляет недопустимый CRLF в details. Editor833/833 Debug/Release, Cobalt/MS DI
+hook route и SourceDebug/Cobalt/native Skia raster consumer с3просмотренными PNG
+прошли; source failure→navigation→theme→successful retry и View/App cleanup.
+[Evidence и ограничения](../engine/HISTORY.md#ed6a3-compiler-diagnostics-и-source-navigation--2026-10-30).
+UI/Hosting suites, окно/GPU/published/package/physical/K3/K7/K8/VRAM не повторялись.
+Далее полный ED8a и scoped window/published acceptance у engine, затем rename/reorder.
+
+Предыдущая работа — **2026-10-29, ED6a.2 consumer и INF3 dirty-frame fix**.
 Raw stdout/stderr/health остаются typed Editor View/Data/style consumer существующих
 controls. Native mode cycle выявил presentation после Update с NeedsRender=true:
 selection reveal меняет scroll при Arrange. UiFramePump сохраняет request и ждёт
@@ -515,12 +572,11 @@ Alpha K1–K9 не объявляется завершённой. Требова
 ## Следующий конкретный шаг
 
 При работе над приложением использовать [первый срез и порядок API → preview → UI](../engine/EDITOR_PLAN.md#первый-сквозной-срез);
-ARCH2 source/package/headless/native profile проверен29октября; текущий шаг —
-ED6a/ED8a console/export, затем authoring очередь ниже. UI capabilities
+ARCH2 source/package/headless/native profile и scoped ED6a/ED8a проверены;
+ED4c.2/3 rename/reorder и create/delete/duplicate/search/context реализованы через engine metadata/history. UI capabilities
 добавляются по consumer, hardware/general release gates сохраняются отдельно.
-ARCH1b.1, ED1a, ED2a/b, ED3a и ED4c.1 выполнены в своих границах; authoring
-consumer после перехода и console — rename/reorder ED4c.2 после persistent engine metadata, затем
-create/delete UI commands общего authoring API.
+ARCH1b.1, ED1a, ED2a/b, ED3a и ED4c.1–3 выполнены в своих границах; следующий
+consumer — project picker/switch и ED1/ED6 workflow.
 Общие UI capabilities для ED4/ED5/ED7 развивать здесь по конкретному consumer;
 готовность приложения не требует заранее закончить весь UI beta backlog.
 

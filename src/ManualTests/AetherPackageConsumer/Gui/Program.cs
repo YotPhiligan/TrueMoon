@@ -226,14 +226,15 @@ internal static class Program
     private static SceneDocument Scene()
     {
         var definition = new EntityDefinitionId(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000030"));
+        var empty = new EntityDefinitionId(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000031"));
         var transform = new ComponentId(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000010"));
         var appearance = new ComponentId(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000011"));
         static KeyValuePair<string, PropertyValue> Value(string key, double value) => KeyValuePair.Create(key, PropertyValue.From(value));
         return new(new(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000100")), 7,
-            [new(new(CubeId), definition)],
+            [new(new(CubeId), definition), new(new(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000002")), empty)],
             [new(definition, new(addedComponents:
             [new(transform, BuiltInComponents.TransformId, 1, [Value("x", -1.5), Value("y", 1), Value("z", -1)]),
-             new(appearance, BuiltInComponents.AppearanceId, 1, [Value("r", .8), Value("g", .2), Value("b", .15)])]))], BuiltInComponents.Schemas);
+             new(appearance, BuiltInComponents.AppearanceId, 1, [Value("r", .8), Value("g", .2), Value("b", .15)])])), new(empty, EntityPatch.Empty)], BuiltInComponents.Schemas);
     }
     internal static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     private static bool Contains(Exception error, string text) => error.ToString().Contains(text, StringComparison.Ordinal);

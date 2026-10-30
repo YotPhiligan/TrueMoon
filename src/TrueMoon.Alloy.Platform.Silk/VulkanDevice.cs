@@ -36,6 +36,8 @@ public sealed unsafe class VulkanDevice : IDisposable
     public Instance Instance { get; private set; }
     /// <summary>The selected GPU.</summary>
     public PhysicalDevice PhysicalDevice { get; private set; }
+    /// <summary>Detached selected-device evidence captured during initialization; reads perform no native calls.</summary>
+    public UiRenderDeviceInfo? DeviceInfo { get; private set; }
     /// <summary>The logical device.</summary>
     public Device Device { get; private set; }
     /// <summary>The graphics and presentation queue.</summary>
@@ -194,6 +196,11 @@ public sealed unsafe class VulkanDevice : IDisposable
         };
         Check(Api.CreateDevice(PhysicalDevice, in deviceInfo, null, out var device), "CreateDevice");
         Device = device;
+        Api.GetPhysicalDeviceProperties(PhysicalDevice, out var properties);
+        var nameBytes = new ReadOnlySpan<byte>(properties.DeviceName, 256); var end = nameBytes.IndexOf((byte)0);
+        DeviceInfo = new("Vulkan", System.Text.Encoding.UTF8.GetString(end < 0 ? nameBytes : nameBytes[..end]),
+            properties.VendorID.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            properties.ApiVersion.ToString(System.Globalization.CultureInfo.InvariantCulture) + "/" + properties.DriverVersion.ToString(System.Globalization.CultureInfo.InvariantCulture));
         Api.GetDeviceQueue(Device, QueueFamily, 0, out var queue);
         Queue = queue;
     }

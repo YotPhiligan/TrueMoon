@@ -353,10 +353,11 @@ public sealed class UiSession : IDisposable, IInputContext
         if (!Root.IsDisposed) Root.VerifyTreeAccess();
         _disposing = true;
         SetDiagnosticState(_diagnostics);
-        _posted.Close();
         var errors = new List<Exception>();
         void Release(Action action) { try { action(); } catch (Exception error) { errors.Add(error); } }
-        Release(CancelInput); Root.Invalidated -= Invalidated;
+        // Focus-loss callbacks may update bound presentation. Cancel input while their dispatcher is still available,
+        // then close it before detaching/disposal; any queued UI work is cancelled rather than run during teardown.
+        Release(CancelInput); _posted.Close(); Root.Invalidated -= Invalidated;
         Release(Root.Dispose); Release(Rendering.Dispose);
         _disposed = true; _disposing = false;
         _participants = []; _inputObservers = [];

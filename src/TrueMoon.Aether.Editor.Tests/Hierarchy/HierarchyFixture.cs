@@ -29,7 +29,9 @@ internal sealed class HierarchyFixture : IDisposable
         else DocumentUiFixture.Wait(Owner.Document.NewAsync(scene ?? DocumentData.Scene()));
         Preview = new((snapshot, _) => { Shown.Add(snapshot); return Task.FromResult(EditingFixture.Receipt(snapshot)); }, () => Task.CompletedTask);
         Transform = new(Owner.Commands, Preview);
-        Workspace.SetDocument(Owner.Document.Read().Content); Workspace.Select(Child); Transform.Refresh(Child);
+        Workspace.SetDocument(Owner.Document.Read().Content);
+        if (Workspace.EntityIds.Contains(Child)) Workspace.Select(Child); else Workspace.ClearSelection();
+        Transform.Refresh(Workspace.SelectedId);
         Model = new(Workspace, Owner.Commands, Transform); Model.Refresh();
     }
     public void Synchronize()

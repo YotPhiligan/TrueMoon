@@ -1,6 +1,17 @@
 # Core: состояние и точка продолжения
 
-Последняя работа — **2026-10-29, borrowed health и bounded output windows для ED6a.2**.
+Последняя работа — **2026-10-30, bounded JSONL archive/configuration views для ED8a**.
+App предоставляет ещё два borrowed aliases без нового owner: bounded async чтение
+recognized history и frozen path-free scalar configuration. Чтение не flush-ит
+sinks, consumer отменяет/drain свою задачу. Core398/398 отдельно Debug/Release,
+failed/skipped0; narrow56/56, Cobalt/MS DI и blocked-sink/current-run route проверены.
+[Контракт и evidence](HISTORY.md#архив-jsonl-и-конфигурация-для-ed8a--2026-10-30).
+Published Release/Cobalt Editor consumer проверен отдельно с normal/crashed CPU
+preview и rotating/malformed history. Full solution/NuGet/hardware не повторялись.
+Далее ED8a.2 child health/device/acceptance у engine; полный CORE6 и App-private
+routing остаются отдельными задачами.
+
+Предыдущая работа — **2026-10-29, borrowed health и bounded output windows для ED6a.2**.
 `UseDiagnostics(options)` даёт nondisposable `IDiagnosticHealthReader`; cached
 ring/sink/emergency/retention counters читаются без IO/flush/wait. `Read(maxChars)`/
 snapshot.Limit отделяют display omission от capture/file loss, сохраняют старый API.

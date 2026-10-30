@@ -46,6 +46,7 @@ public sealed class VulkanSharedFrame : IGpuResource
     private readonly ConcurrentQueue<string> _validationMessages = new();
     internal int DeviceCreations { get; private set; }
     internal int DeviceReleases { get; private set; }
+    internal GpuDeviceObservation? DeviceObservation { get; private set; }
     /// <summary>Core/synchronization validation and ownership snapshot, including teardown messages.</summary>
     public GpuProducerDiagnostics Diagnostics => new(_validation, Volatile.Read(ref _validationErrors), Volatile.Read(ref _validationWarnings),
         Array.AsReadOnly(_validationMessages.ToArray()), IsReleased, Volatile.Read(ref GpuNtHandle.ActiveCount));
@@ -95,13 +96,18 @@ public sealed class VulkanSharedFrame : IGpuResource
         uint count = 0; Check(_vk.EnumeratePhysicalDevices(_instance, &count, null), "EnumeratePhysicalDevices count");
         if (count is 0 or > 16) throw new NotSupportedException("GPU physical device count.");
         var devices = new PhysicalDevice[count]; fixed (PhysicalDevice* pointer = devices) Check(_vk.EnumeratePhysicalDevices(_instance, &count, pointer), "EnumeratePhysicalDevices");
-        var matches = 0;
+        var matches = 0; GpuDeviceObservation? selectedDevice = null;
         foreach (var physical in devices)
         {
             var ids = new PhysicalDeviceIDProperties { SType = StructureType.PhysicalDeviceIDProperties };
             var props = new PhysicalDeviceProperties2 { SType = StructureType.PhysicalDeviceProperties2, PNext = &ids }; _vk.GetPhysicalDeviceProperties2(physical, &props);
             if (Convert.ToHexString(new ReadOnlySpan<byte>(ids.DeviceUuid, 16)) == _adapter.DeviceUuid && Convert.ToHexString(new ReadOnlySpan<byte>(ids.DriverUuid, 16)) == _adapter.DriverUuid)
-            { _physical = physical; matches++; }
+            {
+                _physical = physical; matches++;
+                var nameBytes = new ReadOnlySpan<byte>(props.Properties.DeviceName, 256); var end = nameBytes.IndexOf((byte)0);
+                selectedDevice = new("Vulkan", System.Text.Encoding.UTF8.GetString(end < 0 ? nameBytes : nameBytes[..end]),
+                    props.Properties.ApiVersion, props.Properties.DriverVersion, props.Properties.VendorID, props.Properties.DeviceID);
+            }
         }
         if (matches != 1) throw new NotSupportedException("No unique matching Vulkan device/driver.");
         uint queues = 0; _vk.GetPhysicalDeviceQueueFamilyProperties(_physical, &queues, null);
@@ -115,11 +121,13 @@ public sealed class VulkanSharedFrame : IGpuResource
         var deviceInfo = new DeviceCreateInfo { SType = StructureType.DeviceCreateInfo, QueueCreateInfoCount = 1, PQueueCreateInfos = &queueInfo,
             EnabledExtensionCount = 2, PpEnabledExtensionNames = (byte**)extensions.Handle };
         Check(_vk.CreateDevice(_physical, in deviceInfo, null, out _device), "CreateDevice"); DeviceCreations++; _vk.GetDeviceQueue(_device, _family, 0, out _queue);
+        DeviceObservation = selectedDevice;
         }
         else
         {
             // Only the surface accesses these borrowed contexts and serializes all queue operations.
             _deviceOwner.EnsureOpen(); _vk = _deviceOwner._vk ?? throw new InvalidOperationException("Shared Vulkan device was not initialized."); _physical = _deviceOwner._physical;
+            DeviceObservation = _deviceOwner.DeviceObservation;
             _device = _deviceOwner._device; _queue = _deviceOwner._queue; _family = _deviceOwner._family;
         }
         var externalImage = new ExternalMemoryImageCreateInfo { SType = StructureType.ExternalMemoryImageCreateInfo, HandleTypes = ExternalMemoryHandleTypeFlags.OpaqueWin32Bit };

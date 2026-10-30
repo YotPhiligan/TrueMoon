@@ -11,9 +11,19 @@ ARCH1a.1/2 immutable authoring model, scene aggregate/resolver и compatibility 
 ENG5c.1/2 runtime scene consumer/комната и reach/interaction реализованы2026-10-22;
 ARCH1b.1 локальный Transform/query/history API и первый независимый GPU Edit preview проверены2026-10-23;
 остальной ARCH1, ENG5 и ENG6–ENG8 запланированы**.
-[Текущий приоритет: compiler diagnostics/navigation и полный ED8a report](EDITOR_PLAN.md#ed6a-консоль-диагностики--2026-10-25).
+[Текущий приоритет: project picker/switch и ED1/ED6 workflow](EDITOR_PLAN.md#ed1-проект-и-рабочая-сессия).
 ARCH2e.4 и ED6a structured/raw/health срезы проверены в указанном STATUS scope.
-Далее — compiler navigation/full report и authoring маршрут ED4c.2/3.
+Compiler navigation ED6a.3 проверен2026-10-30 в unit/raster scope; window/published
+acceptance отдельно. ED8a.1 archive/text-policy/cancel/scalar config/backend report
+проверен2026-10-30 в unit и published CPU-preview/native raster scope.
+ED8a.2 child health/device и scoped window/game/package acceptance проверен31октября.
+ED4c.2 persistent Name/SiblingOrder, JSON v1/v2 и atomic hierarchy edits реализованы
+31октября; подробный контракт и UI consumer ведутся только в Editor плане.
+ED4c.3 create/delete/duplicate, search/context commands и New→Save/reopen реализованы
+31октября через общий authoring API/history; detailed policy — только в Editor плане.
+Далее project picker/switch и ED1/ED6; wider native/provider/backend и physical/release gates отдельно.
+Повторный headless output-drain timeout31октября требует отдельного ARCH2e.4 follow-up
+по новому снимку; successful replays не считаются установлением/исправлением причины.
 ED1a/ED2a/b и Transform/history/preview consumer реализованы; exact проверки и
 точка продолжения ведутся в STATUS. Датированные «следующие шаги» ниже сохраняют
 контекст своего этапа и не заменяют актуальный статус.
@@ -68,6 +78,14 @@ CPU Debug budget breaches и allocation debt reference GPU staging path;
 редактирования Play через snapshot; локальные ИИ-агенты подключаются через MCP
 adapter. [Решения и декомпозиция ARCH1](#arch1-entity-components-и-api--2026-10-22)
 выполняются по подэтапам: ARCH1a.1/2 реализованы; runtime world/tooling пока запланированы.
+
+Дополнение2026-10-30 по запросу пользователя: проработан план агентов внутри
+Editor и через локальный MCP, доступа к Runtime и создания/отладки ИИ мобов.
+[ARCH1d.1–4](#локальные-агенты-и-mcp-adapter) задают общий API и agent workflow;
+[ENG9](#eng9-ии-мобов-и-агентные-проверки--2026-10-30) — поведение, наблюдение,
+воспроизводимые сценарии и отдельный optional LLM-профиль персонажа.
+Это запланированные этапы; текущая очередь ED6a/ED8a → ED4c.2/3 → project/workflow
+сохраняется. Прикладные панели ведутся только в EDITOR_PLAN.md.
 
 ## ARCH2: Aether и Editor как пакеты — 2026-10-27
 
@@ -973,20 +991,73 @@ resource preparation и проверка restore. Существующие64KiB 
 
 ### Локальные агенты и MCP adapter
 
+Уточнение2026-10-30 по обсуждению с пользователем. Состояние — запланировано:
+ARCH1b.1 и существующие supervisor/build/diagnostics services дают основу, но
+не подтверждают готовый agent adapter, runtime world editing или Game AI.
+
 Первый профиль — локальные агенты, подключённые к общему API через MCP adapter.
 Runtime и authoring services не зависят от конкретной модели или поставщика ИИ;
 MCP переводит tools/resources в операции API. Core API независим от транспорта;
 удалённый доступ оставлен последующим профилем, без открытия network endpoint
 в первой реализации. Adapter/сервисы с lifetime подключаются через App.
 
-Доступны discovery возможностей/схем, queries проекта/сцен/объектов, изменение
-документа/шаблона, runtime editing по контракту выше, build/Play/Pause/Step/Replace,
-логи, состояние jobs и viewport capture. Неподдержанные операции объявляются
-через capabilities. Для длительных jobs нужны operation status, cancellation и
-наблюдаемый terminal result; доступ к authoring сохраняется без Editor UI.
+Целевые возможности: discovery схем и capabilities, queries проекта/сцен/объектов,
+authoring edits, build/Play/Pause/Step/Stop/Replace, логи, jobs и viewport capture.
+Runtime editing подключается по ARCH1c; чтение и управление сессией могут появиться
+раньше полного snapshot/rollback. Неподдержанные операции объявляются через
+capabilities. Для длительных jobs нужны status/cancellation и наблюдаемый terminal
+result; доступ к authoring сохраняется без Editor UI.
 Права разделяют чтение, authoring edits, runtime control и изменение кода;
 actor/operation/revision фиксируются в истории. Агент использует ту же валидацию,
 конфликты и edit transaction, что и пользователь, без отдельного обходного пути.
+
+#### Общий путь внешнего и встроенного агента
+
+- Внешний MCP adapter и встроенный task host редактора вызывают одинаковые typed
+  операции Aether. UI consumer — [ED7a](EDITOR_PLAN.md#ed7a-помощник-и-задачи-агентов--2026-10-30).
+  Model/provider integration остаётся optional adapter/host; Aether Runtime не
+  получает зависимости от Editor, LLM SDK или конкретного agent framework.
+- До реализации определить local attach к уже открытому Editor и headless profile:
+  точную project/document/session identity, владельца adapter/task host, lifetime
+  соединения и bounded transport. Подключение к открытому проекту использует его
+  действующий owner/history; второй независимый mutable document/world не создаётся.
+- Queries возвращают immutable bounded snapshots с entity/component IDs, schemas,
+  document/world revision и session/generation/tick по назначению. Пагинация,
+  truncation/unavailable и происхождение данных явны; viewport capture связан с
+  actual frame identity. Агент не получает mutable World/CLR references.
+- Команда задаёт target, actor, operation ID, expected revision и runtime identity.
+  До реализации зафиксировать budgets запросов/ответов/очередей/истории, deadlines,
+  deduplication horizon и recovery неизвестного outcome. Reconnect не повторяет
+  мутацию вслепую; авторство из transport metadata не считается проверенным правом.
+- Authoring patch имеет preview diff и atomic commit через общую history/Undo/Redo.
+  Конкурирующая правка человеком или другим агентом даёт conflict с актуальной
+  revision. Изменение исходников идёт через workspace/build/artifact/Replace с
+  отдельным контрактом; scene Undo не обещает откат кода или внешних эффектов.
+- Runtime queries/control проходят через supervisor/Enerit и применяются своим
+  owner. Query по умолчанию readonly; Pause/Step/Stop сохраняют приоритет при
+  agent flood. Произвольный live World patch требует полного ARCH1c, а перенос
+  результата Play в authoring — отдельной команды с diff/history.
+- Services/options/factories регистрируются публичной App integration через Cobalt
+  и внедрённые IFactory; application services не получают resolver. Явно определить
+  owned и borrowed task/provider/transport resources, failed startup и retry cleanup.
+  Close/Switch/Stop отменяют и drain accepted work; поздний ответ не публикуется в
+  другую document/session generation. Закрытие панели само по себе не завершает
+  заимствованную игровую сессию; task lifetime задаётся контрактом host.
+
+#### Подэтапы ARCH1d
+
+| ID | Результат и зависимости | Критерий завершения |
+| --- | --- | --- |
+| ARCH1d.1 | Сверка существующих общих API; contract capabilities/identity/operations и local attach/headless ownership | Определены targets/права, schemas/budgets/terminal outcomes, conflict/dedup/reconnect/cancel, App registration и provider boundary; выбран минимальный поддержанный набор без требований полного World/ECS |
+| ARCH1d.2 | Локальный MCP: discovery, readonly authoring/runtime queries, диагностика/capture и существующие session controls | Внешний клиент обращается к нужному открытому проекту и headless services; stale generation/disconnect/overload/Stop и failed startup/cleanup проверены; runtime observation не требует ARCH1c |
+| ARCH1d.3 | Authoring patch/diff/commit и jobs build/Replace поверх реализованных ARCH1b/ENG3; ED7a использует тот же API | Agent edit → Undo/Redo → Save/reopen, human/agent conflict и duplicate operation не теряют данные; compile failure сохраняет рабочий artifact, cancel не публикует late result; code edits и scene transactions проверены отдельно |
+| ARCH1d.4 | Агентные эксперименты с поведением через ENG9a–c: подготовить сценарий → запустить → наблюдать → изменить → повторить | Проверяемые assertions и report связаны с версиями поведения, input/seed и runtime identity; неподдержанные probes явны. Произвольные live edits добавляются только после ARCH1c с rollback/failure proof |
+
+Чтение и первые controls можно реализовывать поверх доступных services без полного
+Game AI и встроенного чата. ED7a развивается после минимального общего API;
+ENG9d с LLM-персонажем — отдельный optional профиль, не условие ARCH1d.1–4.
+SDK/model/provider, численные budgets и transport/schema versions выбираются перед
+соответствующей реализацией. Текущие wire/frame/checkpoint limits сохраняются.
 
 ### Декомпозиция и критерии ARCH1
 
@@ -999,7 +1070,7 @@ ARCH1a.1/2 реализованы/проверены2026-10-22; ARCH1a в цел
 | ARCH1a | Частично: ARCH1a.1/2 immutable model, scene aggregate/resolver и projection проверены; ENG5c.1 static runtime consumer добавлен | IDs/schema/inheritance, overrides, parent graph, versioned resolved authoring snapshot и primitive projection реализованы; live runtime world/full snapshot ещё нужны |
 | ARCH1b | Частично: первый локальный Transform/query/history срез ARCH1b.1; остальные authoring операции запланированы | UI и headless client используют одинаковые команды; atomic batch, undo/redo, revision conflict, duplicate operation и schemas/history проверены |
 | ARCH1c | Полный snapshot и runtime edit поверх ARCH1a/b | Readonly default; Playing/Paused success, cancel/error rollback, unsupported participant, failed restore, stale generation, concurrent Stop и input/time reset проверены; данные вне snapshot не объявлены сохранёнными |
-| ARCH1d | Локальный MCP adapter поверх общих API; runtime edits требуют ARCH1c | Агент обнаруживает schemas/capabilities, читает и меняет сцену без UI, получает job/result/conflict, использует те же права/transactions; cleanup через App проверен |
+| ARCH1d | Запланированы d.1–4: общий agent API, локальный MCP, authoring/jobs и эксперименты ENG9; встроенный UI — ED7a, live edits требуют ARCH1c | Внешний и встроенный consumers используют общие права/transactions, snapshots/jobs/conflicts и lifecycle; Game AI scenario проверяет наблюдение и изменение поведения, без заявления готовности полного World edit |
 
 Порядок уточнён2026-10-23: для приложения Editor первый минимальный ARCH1b.1
 выполнен; независимый Edit preview и ED1a также реализованы в своих границах.
@@ -2146,6 +2217,12 @@ producers, aggregate frame/queue/latency metrics и Editor live delivery/export
 
 ### Child diagnostic delivery ENG8a.3 / ENE6d.4 — 2026-10-27
 
+Дополнение2026-10-31: [version2 runtime observation](DIAGNOSTICS_DELIVERY.md#runtime-observation-version2--2026-10-31)
+переносит bounded numeric child health и last selected device в том же body budget.
+Wire envelope, endpoints, queue/request/byte/rate/cleanup limits и same-build guard
+сохранены. Version1 records поддержаны; public3-argument standalone forwarder прежний.
+Editor UI/report consumer и detailed acceptance ведутся в ED8a, не дублируются здесь.
+
 Следующий срез после ENE6d.3: отдельный same-build diagnostic endpoint
 controlEndpoint + -diag. Pixel/control/Mithril endpoints не используются для logs.
 Через existing Enerit invocation передаётся version1 identity envelope и bounded
@@ -2212,6 +2289,99 @@ negotiation, abrupt parent containment и long trends остаются отде�
 Первый профиль реализован и проверен27октября:
 [direct/both-DI/3-child proof и full Debug/Release](HISTORY.md#child-diagnostic-delivery--2026-10-27).
 
+## ENG9: ИИ мобов и агентные проверки — 2026-10-30
+
+Запланировано по запросу пользователя: агенты помогают создавать, настраивать и
+отлаживать поведение мобов с доступом к Editor и Runtime. Отдельный последующий
+профиль допускает LLM как участника игрового поведения. Общий agent API/MCP —
+[ARCH1d](#локальные-агенты-и-mcp-adapter), инспектор поведения —
+[ED4g](EDITOR_PLAN.md#ed4g-наблюдение-и-отладка-поведения-мобов--2026-10-30).
+
+### Состояние, решения и наблюдение
+
+- Game AI — предметная подсистема Runtime/игры. Игра определяет perception,
+  память/blackboard, цели и действия; общий engine contract предоставляет schemas,
+  versioned snapshots/commands и diagnostic probes. Первый профиль — небольшая
+  state machine охранника; behavior tree/utility подходы расширяются по потребности,
+  универсальный ECS или графовый редактор не становятся prerequisites.
+- Разделить authoring definition/parameters и runtime instance: память, текущую
+  цель/состояние, таймеры и исполнение действия. Stable IDs и behavior/schema
+  versions связывают их со сценой. Сохраняемые параметры проходят обычные
+  authoring history/validation/persistence, live state принадлежит Runtime.
+- Perception описывает видимые цели, услышанные события и последнюю известную
+  позицию. Readonly snapshot показывает память/blackboard, цель, активное поведение,
+  доступные действия и причины решений/отказов. Только поддержанные probes
+  объявляются capabilities; отсутствующая информация отмечается unavailable.
+- Decision trace фиксирует проверенные условия, выбранный переход, старт/результат
+  действия и причину: потеря видимости, истечение памяти, cooldown, недостижимая
+  цель и другие определённые игрой outcomes. Это факты исполнения; пояснение LLM
+  не подменяет recorded trace. Correlation: entity/behavior version, session,
+  generation, world revision/tick, scenario и operation.
+- Runtime собирает snapshot на своей безопасной границе. Частоты/число наблюдаемых
+  мобов, trace ring/retention/payload и export budgets определить до реализации;
+  loss/truncation различимы. UI/agent не читает World между потоками и не вызывает
+  запрос на каждого моба каждый frame. CORE6/ENG8a несут bounded diagnostics;
+  большие structured state queries остаются отдельной ограниченной операцией.
+- Game debug controls, параметры и полноценное редактирование live World различны.
+  Pause/Step и сценарный input используют штатный control path; debug action
+  объявляет capability/validation и применяется на tick boundary. Произвольная
+  правка live AI state требует ARCH1c и capture/restore всех участников.
+
+### Воспроизводимые эксперименты
+
+Первый acceptance: одна комната, один охранник, маршрут из точек и состояния
+Patrol → Investigate → Chase с возвратом в Patrol. Агент проверяет задачу:
+«охранник слышит шум, ищет источник и возвращается к патрулю, если никого не нашёл».
+
+Сценарий задаёт начальную сцену/behavior artifact, seed/RNG, fixed-tick input и
+stimuli, лимит шагов/времени и явные assertions на переходы/результаты. Известные
+ожидаемые результаты и заведомо ошибочный вариант проверяют сам runner. Агент
+получает trace/report, изменяет authoring-параметр либо код через build/Replace и
+повторяет сценарий; baseline/candidate связаны с точными версиями и inputs.
+Вывод об успехе основан на assertions, а текстовое объяснение хранится отдельно.
+
+Headless runner использует те же Game AI системы и simulation semantics, что Play;
+GPU/input/presentation acceptance фиксируется отдельно. Cancel/crash/timeout,
+unsupported probe и unknown outcome имеют terminal result; Stop/Switch исключают
+поздний apply/resume. Сценарный прогон не изменяет открытый unsaved document.
+
+### Optional LLM-персонаж
+
+LLM может выбирать высокоуровневую цель/действие или диалог. Игровые системы
+выполняют движение, столкновения и действия на fixed tick. Персонаж получает
+разрешённое ему perception/knowledge; developer-agent имеет отдельный debug scope.
+Доступ отладчика ко всему миру не передаётся персонажу автоматически.
+
+Inference выполняется асинхронно вне simulation/render loop через optional
+provider adapter. До реализации определить bounded concurrency/queues/context,
+частоту решений, timeout/cancellation и token/cost budgets по выбранному provider.
+Ответ — typed proposal с entity/session/generation, behavior/state version и
+сроком актуальности; игра валидирует доступность действия и принимает его на
+tick boundary. Stale/invalid/timeout/provider failure приводит к определённому
+детерминированному fallback; ожидание модели не блокирует tick/Pause/Stop.
+
+Accepted decisions фиксируются с inputs/versions и applied tick для replay.
+Повторный live model call не объявляется детерминированным replay. При checkpoint/
+Replace определить сохранение логической памяти, RNG, pending decision IDs и
+отмену/отклонение прежних callbacks; Task/connection/provider handles не входят
+в snapshot. Ownership и drain provider work согласуются с App/game session.
+
+### Подэтапы ENG9
+
+| ID | Результат и зависимости | Критерий завершения |
+| --- | --- | --- |
+| ENG9a | Минимальные runtime entity/perception/behavior contracts и один охранник FSM; versioned authoring parameters | Patrol/Investigate/Chase/return исполняются на fixed tick; memory/timers/RNG и capture/restore scope определены, unsupported snapshot блокирует live edit; код/данные игры не загружаются в Editor CLR |
+| ENG9b | Bounded snapshots/decision traces и scenario runner; общий consumer API для UI/MCP | Воспроизводимый seed/input, assertions, baseline/candidate report, trace loss/unavailable и cancel/crash/timeout проверены; observer не меняет игровой результат, отдельный headless proof |
+| ENG9c | Сквозной agent workflow ARCH1d.2–4 + ENG9a/b, ED4g/ED7a по готовности UI | Агент находит ошибку поведения по evidence, меняет authoring-параметры или код, повторяет сценарий и подтверждает исправление assertions; conflicts/Undo/save/reopen и failed build/Replace сохраняют документ/рабочий artifact |
+| ENG9d | Optional LLM policy/диалоги поверх игровых capabilities и provider adapter | Проверены perception scope, async budgets, validation/fallback, stale response после смены состояния/Stop/Replace, decision replay и lifecycle; вызовы модели не находятся в tick/render path |
+
+Порядок развития: общий ARCH1d contract → bounded observation/control и authoring
+tools → ENG9a/b → agent experiment ENG9c; ED4g/ED7a подключаются к готовым API.
+ENG9d выбирается отдельным implementation срезом. Работа может идти headless;
+расширение игровой комнаты учитывает ENG5c.3, а HUD/Player сохраняют свои этапы.
+Новый roadmap не меняет текущую очередь ED6a/ED8a → ED4c.2/3 → project/workflow,
+не вводит выбранный SDK, новую assembly или требование полного ARCH1c для queries.
+
 ## Этапы будущей реализации
 
 ENG0 **определён документом2026-10-15**; ENG1 проверен2026-10-17 в headless scope;
@@ -2235,6 +2405,7 @@ ENG1 и ENG2 proof выполнены2026-10-17; следующий code эта�
 | ENG6 | Hot Reload исследование | Зафиксирован supported edit набор/state behavior, unsupported edits переводятся в проверенный replacement; ALC только по подтверждённой потребности |
 | ENG7 | Рабочее приложение редактора и доставка; ENG7a/UIA1 — существующая основа, ENG7b launch roles/Player запланирован | [ED1–ED8](EDITOR_PLAN.md): project/documents/editing/preview/workflow/extensions/reliability; ED6b запускает Play из Editor. Роль выбирается до App.Build, горячая смена ролей не требуется. Scene/asset/runtime возможности не объявляются реализованными наличием shell |
 | ENG8 | Финальные robustness/performance checks; [ENG8a diagnostics](#eng8a-диагностика-сессий-и-процессного-вывода--2026-10-25) разрабатывается отдельным ранним срезом | Frame time/latency/allocations/resource trends измерены на фиксированной сцене; reload/resize/crash/cancel/close и diagnostic overload/retention проходят в объявленных limits |
+| ENG9 | Запланированы [ИИ мобов и agent experiments](#eng9-ии-мобов-и-агентные-проверки--2026-10-30), затем optional LLM-персонаж | Детальные ENG9a–d ведутся выше; общий API/MCP — ARCH1d, UI — ED4g/ED7a. Readonly/control возможны до полного ARCH1c; поведение проверяется trace/scenario assertions |
 
 ENG4 может быть заменён проверенным transport для выбранной платформы после
 явной записи решения. Производительный GPU path не является условием ENG1–ENG3.

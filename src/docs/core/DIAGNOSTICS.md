@@ -242,7 +242,8 @@ Dispose закрывает новые операции, а source/meter сохр
 ## Чтение и импорт bounded history
 
 Opt-in UseDiagnostics(options) регистрирует IDiagnosticRecordReader,
-IDiagnosticRecordImporter и IDiagnosticHealthReader как borrowed nondisposable views одного App-owned
+IDiagnosticRecordImporter, IDiagnosticHealthReader, IDiagnosticArchiveReader и
+IDiagnosticConfigurationReader как borrowed nondisposable views одного App-owned
 pipeline. Legacy overload без pipeline их не предоставляет. Повторная конфигурация
 заменяет registrations; разрешение aliases не создаёт дополнительных owners.
 
@@ -272,6 +273,38 @@ DiagnosticListener. Accepted означает collector admission; sinks и ring
 Reader/importer сами не создают transport. Aether подключает их через отдельную
 [child → host delivery lane](../engine/DIAGNOSTICS_DELIVERY.md), сохраняя child
 JSONL и raw stdout/stderr. Это не меняет process-global routing обычных listeners.
+
+## Архив JSONL и действующие настройки
+
+`IDiagnosticArchiveReader.ReadHistoryAsync(options, token)` читает только настроенный
+logger root: flat slots либо recognized managed runs с корректным marker. Старые
+recognized runs могут иметь другое число rotation slots; их файлы ограничиваются
+read budgets, а не текущим JsonMaxFiles. Текущий
+run читается без ожидания его marker lease; чужой active/недоступный run может быть
+пропущен. Неизвестные каталоги, посторонние файлы и reparse points не читаются.
+Чтение не выполняет flush, retention, запись или ожидание других sinks. Caller
+владеет принятой задачей и отменяет/drain её до освобождения своих зависимостей.
+
+Default budgets:512records,4MiB фактически прочитанных bytes,2MiB estimated retained
+payload,16files,64KiB/line и cooperative2s. Discovery ограничен256entries. Читаются
+хвосты файлов, начиная с недавно изменённых; incomplete boundary/final lines,
+malformed/oversized lines и disappearing/unavailable files учитываются отдельно.
+Records заново ограничиваются стандартными Core field budgets и замораживаются;
+сохраняются collector identity и child Origin. Дедупликация действует в retained
+window по ApplicationId/Sequence; результат отсортирован по timestamp/identity,
+не обещает глобального causal order. `IsTruncated`, omissions и time budget
+отделены от capture/sink loss. `Available=false` означает отсутствие JSONL capability.
+Independent snapshots не гарантируют полноту async хвоста или disk durability;
+cooperative deadlines не прерывают произвольный зависший filesystem call.
+
+`IDiagnosticConfigurationReader.ReadConfiguration()` без IO возвращает frozen
+scalar settings: текущий minimum level, размеры queues/ring/fields, retention,
+telemetry/emergency flags и количества filter rules. Пути, имена правил, delegates,
+environment и endpoints не входят в контракт. Source/event overrides продолжают
+действовать; их количества не заменяют подробную конфигурацию фильтров.
+Оба access aliases не IDisposable; владельцем pipeline остаётся App.
+Повторный legacy UseDiagnostics снимает все пять aliases.
+[Editor consumer и политика передачи текста](../engine/EDITOR_PLAN.md#ed8a-экспорт-диагностического-отчёта--2026-10-25).
 
 ## Завершение и ошибки
 

@@ -39,6 +39,9 @@ public class ChildDiagnosticFactoriesTests
             var imported = Assert.Single(hostPipeline.Read(), x => x.EventName == "Delivery.App" && x.Origin != null);
             Assert.Equal(childPipeline.ApplicationId, imported.Origin!.ApplicationId); Assert.Equal(hostPipeline.ApplicationId, imported.ApplicationId);
             Assert.Equal(launch.Identity.SessionId.ToString("D"), imported.Properties["SessionId"]);
+            await UntilAsync(() => receiver.Read().RuntimeObservation?.Collector?.ApplicationId == childPipeline.ApplicationId);
+            Assert.Null(receiver.Read().RuntimeObservation!.GraphicsDevice);
+            Assert.Equal(0, child.Services.Resolve<AetherHost>()!.Gpu.ResourceCount);
             Assert.True(receiver.Read().Enabled); Assert.True(sender.Read().Enabled);
             await sender.StopAsync(); await receiver.StopAsync();
             Assert.True(sender.Read().Released); Assert.True(receiver.Read().Released);
@@ -80,6 +83,8 @@ public class ChildDiagnosticFactoriesTests
         {
             var runtime = app.Services.Resolve<AetherRuntimeHost>()!;
             Assert.NotNull(sender); Assert.NotNull(game);
+            // Establish that the background worker has started before testing shutdown ordering.
+            await UntilAsync(() => !reader.Reads.IsEmpty);
             reader.OnLatest = () => { Assert.Throws<ObjectDisposedException>(() => game!.CaptureRenderScene()); Interlocked.Increment(ref checkedAfterGame); return 0; };
             await runtime.DisposeAsync(); await runtime.DisposeAsync();
             Assert.Equal(1, checkedAfterGame); Assert.True(sender!.Read().Closed); Assert.True(sender.Read().Released); Assert.True(sender.Read().DrainComplete);

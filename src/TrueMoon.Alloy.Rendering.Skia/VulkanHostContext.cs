@@ -19,6 +19,8 @@ public delegate nint VulkanProcedureResolver(string name, nint instance, nint de
 /// </remarks>
 public sealed class VulkanHostContext
 {
+    /// <summary>Optional detached device evidence captured by the host; reading never queries native state.</summary>
+    public TrueMoon.Alloy.Runtime.UiRenderDeviceInfo? DeviceInfo { get; init; }
     private readonly VulkanProcedureResolver _resolver;
     private readonly Action _waitIdle;
     private Exception? _resolutionError;

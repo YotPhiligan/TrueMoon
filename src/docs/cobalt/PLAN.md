@@ -69,6 +69,7 @@ Scopes, delivery analyzer через package и произвольная под�
 | COB3 | Согласованные runtime/generated/provider paths | Поведение сравнивается на одних service graphs; generator diagnostics и unsupported cases имеют ясный результат |
 | COB4 | Analyzer/runtime package consumer | Pack и отдельная сборка потребителя подтверждают доставку analyzer/generated sources и работоспособный resolution |
 | COB5 | Контрольный app и измерения | Core integration работает; startup/resolution/allocations baseline на фиксированном graph, оптимизации проверяются повтором |
+| COB5a | Источники аллокаций warm resolution | Неизменённый COB7 graph, текущие paired measurements, allocation attribution и отдельный эксперимент подтверждают причины до изменения runtime |
 | COB6 | Качество и удобство текущего API | Runtime/generator дают наблюдаемые ошибки, registration/lifetime contracts описаны и проверены; поддержанный consumer не требует обхода defects |
 | COB7 | Сравнение providers и решение о переходе | Один реальный App scenario на Cobalt/Microsoft DI; удобство, ограничения, диагностика, lifetime, пакеты и измерения сопоставлены, миграция определяется отдельным результатом |
 
@@ -298,6 +299,37 @@ COB5 закрыт как первый baseline указанного graph/окр
 тот же graph для сравнения Cobalt/Microsoft DI
 через собственный TrueMoon API, включая errors/cancellation/ownership и удобство;
 миграция определяется этим сравнением отдельно.
+
+### COB5a: источники аллокаций warm resolution — 2026-10-29
+
+По запросу пользователя выбран отдельный performance investigation Cobalt.
+Исследовать прежние32B singleton/exact closed,96B open generic и transient/multiple
+overhead на неизменённом COB7 graph; полный cold/App/package comparison сюда не входит.
+
+- Повторить пять warm operation pairs Cobalt/Microsoft: singleton, exact closed,
+  open generic, transient Request и materialized plugins. Проверить graph/provider
+  behavior, Dry и calibrated measurements с MemoryDiagnoser; сохранить source/binary
+  fingerprints, версии runtime/SDK, confidence intervals и неизменённую power plan.
+- Разделить возвращаемые объекты/массивы workload и расходы контейнера. Независимые
+  allocation counters и адресный эксперимент выполняются после BDN, без concurrent
+  builds. Manual loops допустимы для подсчёта bytes/op; они не являются timing benchmark.
+- Проверить захват в activation-cycle predicate, GenericTypeArguments и generated
+  MakeGenericType; отличать warmed path от initialization, mixed-generic enumerable
+  merge и reflection fallback. Не выводить allocation types только из исходников.
+- Экспериментальные варианты остаются task-scoped в ignored TestResults. Удаление
+  diagnostics/depth/cycle/ownership checks и новые public contracts не являются
+  способом улучшить результат. Оптимизация production — отдельный следующий срез
+  с собственными behavioral/generator/lifecycle проверками и повтором измерений.
+
+Этот этап не меняет provider/migration решение COB7 и не создаёт нового
+межмодульного prerequisite. Результаты и точная область вывода — в STATUS/HISTORY.
+
+Исследование проверено2026-10-29: 10 Dry/10 bounded paired BDN cases, 20 provider
+behavior scenarios, 158 unchanged source fingerprints; counters и no-capture
+experiment подтвердили32 B на activation predicate и два32 B generic costs.
+Production optimization не выполнена. Следующий срез — адресная замена predicate
+с полными собственными регрессиями и повтором paired measurements; generic cache/
+dispatch требует отдельного решения. [Evidence и точные границы](HISTORY.md#cob5a-warm-allocations--2026-10-29).
 
 ### COB7: сравнение providers на App graph v1 — 2026-10-15
 

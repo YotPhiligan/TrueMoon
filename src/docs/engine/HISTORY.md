@@ -1,5 +1,418 @@
 # Engine / Editor: история решений и проверок
 
+## ED4c.3: операции объектов, поиск и контекстное меню — 2026-10-31
+
+В существующий ISceneAuthoringSession добавлен optional EditEntities: closed family
+CreateEntitiesBatch/DeleteEntitiesBatch/DuplicateEntitiesBatch. Прежние factory,
+constructors и методы сохранены; custom sessions могут явно отклонить capability.
+Общий Execute использует прежние revision/receipt/operation/history/limit/cancellation
+contracts и один commit после полной scene resolution. Новых services/scopes/owners нет.
+Детальная descendant/reference/catalog/placement policy ведётся только в
+[ED4c](EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24).
+
+Editor добавляет root/child presets с Transform (cube также Appearance), создаёт
+definition/missing canonical schemas тем же engine batch. Удаление — explicit subtree,
+duplicate — fresh entity ID map с remap внутренних parents и сохранением child order,
+inheritance/names/local patches. Catalogs при удалении не очищаются. Shared commands
+дают icons, Insert/Ctrl+Insert/Ctrl+D/Delete и right-click/Shift+F10/context button.
+Ctrl+F/Enter ищет name/ID с reveal без фильтрации/мутации scene. Model остаётся без UI
+controls/theme; View/Data/Style, Cobalt factories и UI-owner lifecycle прежние.
+
+Общий MenuPopup использует MenuAction/MenuItem/IUiCommand/OverlayHost, bounds1..64,
+disabled navigation и dismiss-before-execute. Escape focused popup обрабатывает
+раньше expanded menu bar и возвращает focus context trigger. Plain F10 сохранён, Shift+F10 не
+перехватывается menu bar. Captured context version/selection и engine expected owner
+fence не допускают late action над заменённым document. Retained projection coalesce-ит
+latest items/selection вместе и подавляет feedback selection при SetItems. Commands
+обновляют availability только при изменении соответствующих свойств.
+
+Фактические Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest проверки:
+
+| Suite | Debug | Release |
+|---|---:|---:|
+| Aether |1629|1629|
+| Editor |883|883|
+| Alloy |909|909|
+| Hosting |117|117|
+
+Все final8runs failed/skipped0,7076cases суммарно. Новых53cases: engine27, Editor17,
+Alloy9. Initial focused engine26/26 до capacity boundary; Editor86/86 до queued
+projection regression; final MenuPopup9/9. Editor/Alloy после последних fixes повторены
+целиком Debug/Release.
+IDE findTests недоступен; существующие fixtures/tests найдены прямым поиском, coverage
+и project-wide source/test pairing не выполнялись.
+[Audit/точные команды/8TRX/fully-qualified новые cases](../../TestResults/EntityOperations-ED4c3-20261031-1/verification.json),
+[full runner](../../TestResults/EntityOperations-ED4c3-20261031-1/RunFull.ps1),
+[final Editor/Alloy/acceptance runner](../../TestResults/EntityOperations-ED4c3-20261031-1/RunMenuFinal.ps1).
+
+Initial focused Editor4failures сохранены: две неверные fixture preconditions
+(New поверх dirty document не заменяет его), selection feedback при удалении строки
+и redundant command notifications, откладывавшие inspector refresh. Исправлены fixtures,
+projection guard и адресная availability notification.
+[Initial TRX](../../TestResults/EntityOperations-ED4c3-20261031-1/editor-narrow-attempt1.trx).
+Initial published SourceRelease обнаружил queued Select(newID) до SetItems при
+нескольких commits в одном update. Это реальный UI defect, не изменение timeout:
+добавлен QueuedSelectionAndMultipleStructuralCommits_ProjectLatestItemsBeforeSelectingNewIdentity,
+latest items/selection применяются одним coalesced callback; reattachment сбрасывает
+stale scheduling flag. [Native RED](../../TestResults/EntityOperations-Native-SourceRelease-20261031-1/verification.json).
+
+Escape regression требует dismissal и focus context trigger при expanded menu bar.
+Initial assertion ошибочно требовала сохранить expanded bar после OverlayHost.Closed;
+исправлена на прежнюю collapse policy, защита focus от перехвата bar сохранена.
+[Focused initial assertion](../../TestResults/EntityOperations-ED4c3-20261031-1/menu-escape-attempt1.trx),
+[final focused9/9](../../TestResults/EntityOperations-ED4c3-20261031-1/menu-final.trx).
+
+Final fresh15packages с окончательным packaged README, isolated feed/cache и external
+solution прошли8headless Game cases (Debug/published Release ×dll/exe ×Cobalt/MS DI).
+Published SourceRelease и PackageRelease standard/Cobalt workflows2/2 проверили New→
+cube/child→Transform2.25→subtree duplicate/delete/Undo/Redo→ID search→Save/reopen с теми
+же IDs/parent/value и clean history. Прежний preview/metadata/diagnostic/crash recovery
+workflow также прошёл.14native children reaped/released,2owned crashes,12graceful
+Vulkan reports errors0/warnings0, active UI/GPU resources/handles0. Killed child не
+даёт final validation report. Source fingerprints совпали;4finalPNG просмотрены:
+читаемые actions/shortcuts, раскрытый cube/child, selected child и сохранённый X2.25.
+[Final packages](../../TestResults/EntityOperations-Packages-20261031-3/verification.json),
+[source GUI](../../TestResults/EntityOperations-Native-SourceRelease-20261031-3/verification.json),
+[package GUI](../../TestResults/EntityOperations-Native-PackageRelease-20261031-3/verification.json),
+[acceptance/copies](../../TestResults/EntityOperations-ED4c3-20261031-1/acceptance.json).
+
+ED4c.3 закрыт в этом bounded profile. Полный ARCH1b/ED4, multiselect/typed references/
+catalog management, physical input/DPI, extended native/provider/backend matrix,
+device loss/VRAM/long-load и release gates открыты. Core/Enerit/Mithril/full solution
+suites не повторялись. Прежний intermittent output-drain snapshot ED4c.2 не объявлен
+исправленным passing этого шага. Далее project picker/switch и ED1/ED6 workflow.
+Итоговая документационная сверка проверяет добавленные local links/anchors, namespace
+новых feature files и git diff --check; staged changes0.
+[Audit](../../TestResults/EntityOperations-ED4c3-20261031-1/docs-audit.json).
+
+## ED4c.2: имена и порядок сущностей — 2026-10-31
+
+EntityInstance/ResolvedEntity получили optional Name/SiblingOrder; прежний constructor
+сохранён. Имена принадлежат экземплярам, stable IDs не меняются. Полный контракт
+валидации/порядка/совместимости ведётся в [Editor плане](EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24).
+Общий HierarchyEditBatch содержит names и последовательные Last/Before/After placements,
+использует прежние expected revision, operation receipts, limits, history и один commit
+после полной resolution/cancellation. Invalid name/anchor/cycle не публикует частичный
+документ. Reparent/Transform/component clones сохраняют metadata. Сортировка siblings:
+rank (null=0), затем Guid; destination ranks нормализуются, source declaration order
+сохраняется. JSON reader принимает строгие v1/v2; writer выбирает v2 при наличии
+metadata, без неё сохраняет v1. Старый reader отклонит v2 вместо silent downgrade.
+
+Editor document commands/session используют прежний IO/runtime/owner gate. Model
+хранит name draft и exact authoring state, не содержит controls. F2 открывает retained
+TextBox поверх строки; Enter/пустое имя commit/reset, Esc/focus/selection/owner/revision/
+admission/dispose отменяют draft. Unchanged name и reorder на ту же позицию не создают
+UI history entry. Clipboard/caret остаются TextBox; document/history shortcuts во
+время name draft не применяются. Ctrl+↑/↓ и края строки запрашивают before/after;
+обычный перенос добавляет последним к новому parent. ID, local patches, selection,
+expansion, scroll и View parts сохраняются. Новых DI services/scopes/owners нет.
+
+Общий TreeView.ReorderEnabled default=false сохраняет прежних consumers. Новый
+PlacementRequested не меняет source items. Element.FocusChanged покрывает transfer,
+FocusLost и detach. UiSession отменяет input перед закрытием dispatcher; созданные
+callback уведомления не исполняются при teardown. Focus больше не хранится в модели.
+
+Фактические проверки Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest:
+
+| Suite | Debug | Release |
+|---|---:|---:|
+| Aether |1602|1602|
+| Editor |866|866|
+| Alloy |900|900|
+| Hosting |117|117|
+
+Все8полных runs: failed/skipped0. Добавлено47cases: engine21, Editor19 и UI7.
+Focused final до двух последних Editor cases: engine21/21, Editor135/135, Tree48/48;
+оба последних cases входят в полные866/866. IDE findTests недоступен; существующие
+fixture/test files найдены прямым поиском. Полный suite discovery/coverage не делался.
+Точные команды, TRX и все fully-qualified новые cases — в
+[verification.json](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/verification.json),
+[full runner](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/RunFull.ps1).
+
+Initial focused runs выявили ошибку ImmutableArray equality assertion, назначение
+фокуса до применения queued visibility binding и notification в закрытый dispatcher
+при Dispose. Исправлены sequence assertion, синхронная установка текущего draft
+перед Focus (включая text в том же native input batch) и порядок CancelInput/Close.
+Cancellation/dispose и shell shortcut regressions прошли в final full suites.
+
+Первый package attempt отклонён hash guard: consumer README был изменён после
+снятия source fingerprints. Evidence сохранён, passing не засчитан. Второй fresh
+package/headless/native2/2 прошёл, но visual review обнаружил missing arrow glyphs
+в Noto Sans hint. Подсказка заменена на ASCII Up/Down; Editor866/866 повторён
+Debug/Release; новый final package/native proof после этого изменения приведён ниже.
+
+Третий package run выявил отдельный output-drain timeout в build-Debug-exe-di,
+generation3, после reap. stdout/stderr read=WaitingForActivation, file=WaitingForChunk;
+весь фактический вывод24bytes/stream записан, dropped0, ThreadPool9/pending0.
+Runtime metadata всех3children без ошибок; live PID check подтвердил отсутствие
+всех3процессов. [Failure](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/headless-drain-failure.txt),
+[snapshot](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/headless-drain-snapshot.json),
+[неполный package manifest](../../TestResults/HierarchyMetadata-Packages-20261031-3/verification.json).
+Два exact binary replays с теми же cache/provider/exe и прежними2s drain/240s outer
+deadline прошли в новых case directories, без изменения production code или budgets.
+[Команды/exit0](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/drain-replays.json).
+Это новая intermittent observation ARCH2e.4; причина неизвестна. Ни прошедшие replays,
+ни последующая приёмка не объявляют её исправленной; отдельный follow-up остаётся.
+
+Финальный fourth fresh run:15NuGet packages, isolated feed/cache и independent
+solution вне checkout;8headless Game cases прошли (Debug/published Release ×
+dll/exe ×Cobalt/MS DI). Все source hashes совпадают с окончательными файлами.
+SourceRelease и PackageRelease standard/Cobalt GUI workflows2/2 проверили F2 name,
+Ctrl+Down reorder, общий Undo/Redo, Save/reopen JSON v2 с clean history и прежними IDs,
+Transform/preview/crash recovery и сохранение inspector parts.14native children
+reaped/released,2owned crashes;12graceful Vulkan reports errors0/warnings0,
+active UI/GPU resources/handles0. Killed child не даёт final validation report.
+4окончательных PNG просмотрены: исходный ID label/order и сохранённое Scene Guardian
+после перестановки; Up/Down hint читается в используемом Noto Sans без missing glyphs.
+
+[Final packages](../../TestResults/HierarchyMetadata-Packages-20261031-4/verification.json),
+[source GUI](../../TestResults/HierarchyMetadata-Native-SourceRelease-20261031-4/verification.json),
+[package GUI](../../TestResults/HierarchyMetadata-Native-PackageRelease-20261031-4/verification.json),
+[acceptance audit/copies](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/acceptance.json),
+[Editor final runner](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/RunEditorFinal.ps1),
+[replays/final runner](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/RunRecoveryFinal.ps1).
+Core/Enerit/Mithril/full solution suites, coverage, physical input/DPI, extended
+backend/provider matrix, device loss/VRAM/long-load и release gates не повторялись.
+ED4c.2 закрыт в этом scope. Далее ED4c.3 create/delete/duplicate, затем project/workflow;
+новый intermittent output-drain follow-up самостоятельный и не закрыт passing rerun.
+
+## ED8a.2: child health и device observations — 2026-10-31
+
+В App forwarder добавлен borrowed memory-only RuntimeDiagnosticObservationSource:
+Core health view и cached GpuResourceHost.LastDevice. Source не делает IO/native
+queries/flush/wait и не владеет зависимостями. Device value фиксируется после
+успешного создания реально выбранного Vulkan producer; reusable slots заимствуют
+тот же value. LastDevice переживает cleanup, не содержит handles/UUID и не означает
+current GPU health. Aether не получает UI dependency. Factory создаётся в App
+composition, custom factories и прежний3-argument standalone sender сохранены.
+
+DiagnosticDeliveryPacket binary envelope не меняется. Version1 body — прежний array;
+version2 body содержит Records/Observation/ObservationOmittedByBudget. Общие body,
+wire/rate/request/queue/shutdown limits прежние, wrapper резервирует128bytes.
+Observation до8KiB/16sinks, numeric collector/ring/sink/emergency/retention counters,
+optional last GPU device; text errors заменены фиксированным marker. Sinks и целый
+snapshot могут быть omitted с отдельными counters. Empty ring может отправить
+health heartbeat. Source failure не блокирует records. Receiver сохраняет exact
+identity/rate guards, валидирует весь packet до import/cache, отвергает negative/
+foreign/oversized/error-text input и публикует detached readonly snapshot. Legacy
+packet/omission не стирает last observation. Native lease сохраняет его после reap;
+child CapturedUtc не является freshness/final-health/durability гарантией.
+
+Editor Health показывает последнее наблюдение с timestamp. Polling не переписывает
+inspected details; explicit Refresh заменяет снимок. Schema2 report добавляет bounded
+runtimeObservations по process/session/generation, numeric health/device availability
+и budget omissions. Child sink error text исключён в обоих text profiles. Schema1
+остаётся metadata-only; существующие report/DI APIs и signatures сохранены.
+UI OpenGL/Vulkan surfaces предоставляют optional IUiRenderDiagnostics с cached
+UiRenderDeviceInfo, заполненным host при initialization. Getter без native calls;
+View копирует только strings в model. External raw hosts могут не дать capability,
+CPU/raster device остаётся unavailable. [Контракт](DIAGNOSTICS_DELIVERY.md#runtime-observation-version2--2026-10-31).
+
+Проверки Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest:
+
+- Narrow Aether138/138, Editor84/84;11новых engine +5editor cases. Real-pipe empty
+  ring/health, retained evidence/read-only collections, invalid identity/counters/
+  sink count/error text/body size, byte/count omissions, source failure with records,
+  no native work in source и Cobalt/MS DI factories проверены непосредственно.
+- Полные Debug: **Aether1581, Editor847, Alloy893, Hosting117**, failed/skipped0.
+  Initial Release Aether1580passed/1failed: `RuntimeHost_OwnsSenderAndDrainsItAfterPreviewGameCleanup(di: True)`
+  ожидал callback count1, получил0. Fixture не устанавливал факт старта worker перед
+  немедленным Stop. Добавлен first-poll barrier при сохранённой проверке disposed
+  game и cleanup counters; production sender/deadlines не менялись ради этого теста.
+  Финальный Release: **Aether1581, Editor847, Alloy893, Hosting117**, failed/skipped0.
+  Initial failure/TRX сохранён, final callback/DI Debug повторён узко.
+- Exact commands: `dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug --no-restore`,
+  аналогично Editor/Alloy/Hosting, затем те же проекты с `-c Release`. Фактически с
+  TRX/result directory, `-v minimal -p:UseSharedCompilation=false -nodeReuse:false`.
+  [Full runner](../../TestResults/RuntimeObservation-ED8a2-20261031-1/RunFull.ps1),
+  [final Release runner](../../TestResults/RuntimeObservation-ED8a2-20261031-1/RunReleaseFinal.ps1),
+  [audit/TRX/commands](../../TestResults/RuntimeObservation-ED8a2-20261031-1/verification.json).
+- `EmptyRing_TransmitsSanitizedHealthThroughRealPipeAndRetainsLastObservationAfterStop`,
+  `InvalidObservation_RejectsWholePacketAndPreservesPreviousSnapshotAndRecordCursor`,
+  `ObservationBudgetOmission_CountsPacketWithoutClearingCachedEvidenceOrBlockingRecords`
+  проверяют actual receiver state и import cursor. `Report_ExportsNumericChildHealthAndDeviceAfterCrashWithoutSinkErrorText`,
+  `SmallBudget_OmitsChildObservationExplicitlyAndKeepsValidPartialJson`,
+  `HealthInspection_FreezesObservedChildStateUntilExplicitRefreshAndMarksMissingDataUnavailable`
+  и `PresentationDevice_IsReadFromCachedOptionalSurfaceCapabilityAndCopiedAsValues`
+  проверяют JSON privacy/budget и retained UI semantics.
+
+Fresh package acceptance:15новых nupkg с unique version, isolated feed/cache/source
+mapping и independent solution вне checkout;8cases в Debug/published Release,
+DLL/apphost и Cobalt/MS DI.24CPU Game children reaped/released, health/jsonl sink
+получен в parent, GPU device явно unavailable; schema2 Game report проверен.
+Первый package run дошёл до consumer execution и остановился на новой fixture
+проверке GetInt32 для null PID отвергнутого до spawn запуска. Исправлена проверка
+nullable PID; старый deployment не менялся, fresh run2 прошёл8/8.
+[Fail1](../../TestResults/RuntimeObservation-Packages-20261031-1/verification.json),
+[passing2](../../TestResults/RuntimeObservation-Packages-20261031-2/verification.json).
+
+Published GUI acceptance: SourceRelease и PackageRelease, по одному standard/Cobalt
+workflow, самостоятельные UI/Runtime executables вне checkout. Native Skia/fonts/
+shaders/assemblies delivery, Transform/Undo/Redo/save/close/recovery и dirty document
+сохранены. Перед directed owned crash fixture ожидает получение device observation;
+обычная авария без него по контракту оставляет unavailable.14children освобождены,
+2killed исключены из12graceful reports; Vulkan core/sync validation0errors/0warnings,
+surfaces/slots/devices/handles released, UI session/GPU/handles0 после App dispose.
+Report содержит actual OpenGL UI device и last child Vulkan device/health после
+crash; его private-text exclusion и size bound проверены. Mode-cycle fixture
+учитывает добавленный ранее Compiler mode.4diagnostic PNG просмотрены:
+[source console](../../TestResults/RuntimeObservation-ED8a2-20261031-1/SourceRelease-diagnostics.png),
+[source health](../../TestResults/RuntimeObservation-ED8a2-20261031-1/SourceRelease-diagnostics-health.png),
+[package console](../../TestResults/RuntimeObservation-ED8a2-20261031-1/PackageRelease-diagnostics.png),
+[package health](../../TestResults/RuntimeObservation-ED8a2-20261031-1/PackageRelease-diagnostics-health.png).
+[Runner](../../TestResults/RuntimeObservation-ED8a2-20261031-1/RunAcceptance.ps1),
+[native audit](../../TestResults/RuntimeObservation-ED8a2-20261031-1/acceptance.json).
+
+ED8a закрыт в этом scoped Windows x64/net10/OpenGL UI↔Vulkan preview + CPU Game
+профиле; ED8/framework release в целом не закрыты. Report намеренно partial:
+independent snapshots, missing capabilities и persistent compiler history unavailable.
+Не повторялись full native/provider/backend matrix, native Vulkan UI metadata,
+physical OS input/device loss/K3/K7/K8/VRAM/long-load и full solution/Core/Enerit/
+Mithril suites. Следующий основной шаг — ED4c.2 имена сущностей, затем ED4c.3 и
+project/workflow; agent/Game AI roadmap остаётся согласованным backlog.
+
+## ED8a.1: архив и управляемый экспорт — 2026-10-30
+
+Продолжена очередь ED8a. Report writer сохраняет прежний schema1 `WriteAsync`
+metadata API и добавляет `WriteReportAsync`/schema2 с явными frozen options.
+Core archive/configuration views заимствуются через App registration; IO выполняется
+в background task. Snapshot объединяет до1024memory и1024archive entries по
+ApplicationId/Sequence, memory выигрывает collision. Сохраняются collector/child
+origin, correlation allowlist, timestamps и независимые loss/health counters.
+Schema2 содержит versions/OS, scalar effective config, observed presentation backend/
+viewport, parent sink health и process metadata. Budget omission отличается от
+unavailable capability; child sink health/runtime device/persistent compiler history
+в этом срезе явно unavailable, правило не заменено фиктивными healthy0.
+
+Default metadata-only: без message/exception/stack/raw/compiler/source path/caller/
+arbitrary properties. Explicit text opt-in добавляет bounded producer text, включая
+raw stdout/stderr и compiler diagnostics; paths/user data могут сохраниться.
+Bootstrap/environment/control fields никогда не копируются как данные. Строки с
+известными control-field ключами и configured sensitive literals очищаются до
+clipping, включая literal на границе output. Это не обещание автоматической
+анонимизации любого пользовательского текста. UI показывает политику, text/history
+checkboxes, новый путь и cancel. Path/options frozen до drain; user/App cancellation,
+write error/deadline и no-overwrite оставляют destination и history нетронутыми,
+собственный temporary file удаляется. Default512KiB/5s/4096text chars; limits options
+проверяются до IO. Legacy API не начинает читать историю неявно.
+
+Published proof выявил missing presentation при paused follow-tail: UiSession
+вызывает frame participant только при NeedsFrame. Добавлен одноразовый observation
+независимо от follow; UI export снимает текущий viewport со своего borrowed session
+перед замораживанием DTO. View освобождает ссылку при Dispose, model не хранит UI
+объекты. Регрессия проверяет initial paused mode, resize/scale и cancel; full Editor
+Debug/Release повторён после исправления. Два первых запуска probe исправляли
+невалидный fixture nonce/endpoint; engine guards не ослаблялись.
+
+Проверки Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest:
+
+- Narrow Core56/56 и Editor47/47, failed/skipped0. Новых11Core +9Editor cases.
+- Полные **Core398/398, Aether1570/1570, Editor842/842 отдельно Debug/Release**,
+  failed/skipped0. После paused-presentation fix Editor842 повторён в обеих конфигурациях.
+  [Full runner](../../TestResults/DiagnosticReport-ED8a-20261030-1/RunFull.ps1),
+  [final Core runner](../../TestResults/DiagnosticReport-ED8a-20261030-1/RunCoreFinal.ps1),
+  [final Editor runner](../../TestResults/DiagnosticReport-ED8a-20261030-1/RunEditorFinal.ps1),
+  [audit/TRX](../../TestResults/DiagnosticReport-ED8a-20261030-1/verification.json).
+- Точные команды: `dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --no-restore`,
+  аналогично `TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj` и
+  `TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj`, затем `-c Release`.
+  Фактические flags: `--logger trx;LogFileName=... --results-directory ... -v minimal
+  -p:UseSharedCompilation=false -nodeReuse:false`; в runners logger argument передан
+  одной строкой, без shell interpretation.
+- `MetadataReport_MergesArchiveWithMemoryByCollectorIdentityAndOmitsAllProducerText`,
+  `TextOptIn_ExportsRawCompilerAndExceptionTextWhileRedactingControlDataAndHostLiterals`,
+  `SmallBudget_ProducesValidBoundedPartialJsonAndCountsDroppedRecords` проверяют
+  actual JSON content, identities, explicit text/raw/compiler и4096byte budgets.
+  `NewReport_NoOverwriteWriteFailureCancellationAndDeadlineLeaveNoTemporaryFiles`,
+  `UserCancellation_DrainsBeforeRetryAndNeverChangesHistoryOrFrozenChoices` и
+  `View_ExposesExplicitTextHistoryChoicesCancellationAndActualPresentationValues`
+  проверяют failures/ownership/UI route; text boundary и optional source failures отдельно.
+- Published **Release/Cobalt** consuming executable вне checkout и запуск из `%TEMP%`.
+  Managed assemblies загружены из deployment; native Skia/fonts доставлены, fallback
+  на source assets нет. Реальные CPU EditPreview children: первый экспорт при live
+  normal runtime, второй после owned kill; оба reaped/resources released. UI keyboard
+  экспортирует metadata и text profiles, проверяет control-value exclusion,
+  actual backend/config/process capture, current + rotated closed JSONL,
+  malformed/incomplete counters. Native raster Dark/Light PNG просмотрены.
+- Flood5000imports при ring64 проверяет bounded presentation/report; отдельный text
+  report с8192byte budget — valid partial JSON с omissions. Это finite headless/raster
+  workload, не long-load/slow-UI/window responsiveness qualification.
+  [Publish runner](../../TestResults/DiagnosticReport-ED8a-20261030-1/RunPublished.ps1),
+  [probe](../../TestResults/DiagnosticReport-ED8a-20261030-1/PublishedProbe/Program.cs),
+  [passing proof](../../TestResults/DiagnosticReport-ED8a-20261030-1/published-proof.json),
+  [Dark](../../TestResults/DiagnosticReport-ED8a-20261030-1/normal-dark.png),
+  [Light](../../TestResults/DiagnosticReport-ED8a-20261030-1/crashed-light.png).
+
+Source/project-reference publish не является fresh NuGet consumer proof. Окно/GPU,
+Game.Logic runtime, compiler navigation через внешний editor executable, broader
+provider/native/package matrix, full solution и UI/Hosting/Enerit/Mithril suites
+этим шагом не проверялись. K3/K7/K8/VRAM/physical/general release остаются открытыми.
+ED8a.1 завершён в описанном scope; следующий ED8a.2 — child sink health/device
+capability и window/game/package acceptance, затем прежний ED4c.2/3/project/workflow.
+
+## ED6a.3: compiler diagnostics и source navigation — 2026-10-30
+
+Продолжена прежняя очередь после фиксации agent/Game AI roadmap. C# compiler
+получает job-owned ErrorLog/SARIF2.1; classification не выводится из raw stdout/
+stderr. После reap читается до2MiB,128results, code128/message2048/path4096 chars.
+Pending/Available/Unavailable/Failed/TooLarge различимы. Unsupported URI/base mapping
+не даёт навигацию; file/line/column локального source имеют1-based координаты.
+MSBuild/restore failure до C# compilation может не произвести SARIF.
+
+ProcessDiagnosticSnapshot дополнен optional CompilerDiagnostics без изменения
+старой positional signature.16completed jobs+active сохраняют failed diagnostics
+после успешного retry; чтение UI snapshots остаётся in-memory. SARIF включён в
+owned flat archive и общие count/bytes/age limits. Первый full Debug run обнаружил
+пропуск SARIF в allowlist:1566passed/4failed, retention считала0recognized jobs.
+Добавление owned filename восстановило retention/delete-failure contracts;
+исходный RED сохранён в `engine-before-retention-fix.trx` в evidence ниже.
+
+Editor добавляет Compiler mode (старые enum values сохранены), frozen job/source
+selection, explicit refresh и bounded total entries/payload через существующие
+MaximumRecords/MaximumRetainedBytes. Нет второй истории Core events. Detail text
+нормализован до LF: UI regression поймала Windows AppendLine/CRLF, недопустимый
+для RichTextEditor. Filter/theme/polling не переписывают inspected text; eviction
+отключает source action. Metadata report экспортирует numeric compiler counters,
+явно исключает compilerText/sourcePaths.
+
+ISourceFileNavigator — borrowed App hook; UseAetherEditorSourceNavigation фиксирует
+SourceEditorOptions и регистрирует CommandSourceFileNavigator. Аргументы с
+{file}/{line}/{column} передаются через ArgumentList без shell. Внешний editor
+process не App-owned: handle освобождается, exit не ожидается. Model сериализует
+один accepted request, Stop отменяет/drain его до DI teardown; failure наблюдаем
+через NavigationStatus. Кнопка доступна с клавиатуры по Tab/Enter. Custom hook
+можно зарегистрировать через DI. Старые3/5-argument constructors сохранены,
+добавлен6-argument вариант с optional hook; Cobalt/MS DI путь проверен отдельно.
+
+Проверки текущего среза, Windows x64/SDK10.0.403/net10.0/xUnit2:
+
+- Narrow: Aether19/19 (SARIF parser, actual failed→successful build, retention
+  integration), Editor34/34 (compiler/context/View/configuration).
+- Полный Aether **1570/1570 Debug и1570/1570 Release**, failed/skipped0.
+- Полный Editor **833/833 Debug и833/833 Release**, failed/skipped0. После усиления
+  assertions compiler metadata privacy/counts и both-DI hook оба Editor run повторены.
+- Команды: `dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug`
+  и `dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug`,
+  затем те же проекты с `-c Release`; фактически с `--no-restore`, TRX/result directory,
+  `-p:UseSharedCompilation=false -nodeReuse:false`. [Exact runner](../../TestResults/CompilerNavigation-20261030-1/RunSuites.ps1),
+  [четыре full TRX и логи](../../TestResults/CompilerNavigation-20261030-1/).
+- Source Debug/Cobalt/native Skia raster consumer выполняет реальную compilation
+  failure CS1029 → frozen coordinates/hook через focused button → Dark/Light →
+  successful retry при сохранённой old-job selection → View/App cleanup.
+  [Proof](../../TestResults/CompilerNavigation-20261030-1/raster/proof.json),
+  [source probe](../../TestResults/CompilerNavigation-20261030-1/RasterProbe/Program.cs).
+  Все3PNG просмотрены: [Dark](../../TestResults/CompilerNavigation-20261030-1/raster/compiler-dark.png),
+  [Light](../../TestResults/CompilerNavigation-20261030-1/raster/compiler-light.png),
+  [после retry](../../TestResults/CompilerNavigation-20261030-1/raster/compiler-after-retry.png).
+
+Raster proof использует записывающий host hook, без запуска пользовательского
+editor executable и без окна/GPU. Shell-free argv, missing source/cancel, DI,
+source coordinates и failure handling проверены direct tests. Full solution,
+Core/Enerit/Mithril/UI/Hosting suites, published/package/provider native matrix,
+physical/K3/K7/K8/VRAM не повторялись. Нет нового general release proof.
+Далее ED8a persistent history/raw policy/child sink health/backend/configuration/
+user cancellation и scoped window/published/flood acceptance; полный ED6a открыт.
+
 ## ED6a.2: raw streams и health — 2026-10-29
 
 Core добавил borrowed nondisposable IDiagnosticHealthReader с cached parent

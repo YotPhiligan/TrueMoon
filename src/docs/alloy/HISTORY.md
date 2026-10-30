@@ -1,5 +1,102 @@
 # Alloy / Argentis: история работ и проверок
 
+## PA4c: MenuPopup и ED4c.3 — 2026-10-31
+
+Общий MenuPopup принимает1..64distinct MenuAction до создания/подписки MenuItem rows;
+заимствует commands, OverlayHost владеет transient subtree. Up/Down/Home/End/Tab
+пропускают disabled rows, all-disabled popup получает focus сам, activation закрывает
+popup до Execute. Escape focused popup проходит раньше expanded menu bar и восстанавливает
+focus trigger; общий host затем сворачивает bar по прежней Closed policy.
+Dispose отсоединяет каждую command subscription. Shift+F10 оставлен
+context consumers; plain F10 menu-bar path сохранён. Silk mapping добавляет Insert/F
+без изменения прежних UiKey values.
+
+Editor consumer использует semantic icon actions, retained query/control/style и
+shared commands для buttons/keyboard/context menu. Popup используется у внешнего
+editor OverlayHost либо standalone fallback. Snapshot/selection/admission смена
+закрывает context; captured command guard отклоняет позднее выполнение. Model не
+содержит controls/theme. Tree projection coalesce-ит latest items+selection, suppress-ит
+feedback при SetItems и не пересоздаёт data на selection-only/theme refresh.
+
+Alloy909/909, Hosting117/117, Editor883/883 отдельно Debug/Release, failed/skipped0.
+MenuPopup9direct cases: keyboard/disabled/tab/dismiss, invalid/64/65bounds, subscriptions,
+Shift/plain F10 и Escape при expanded bar. Editor17new cases: presets/child/duplicate/delete/shared history,
+real store Save/reopen, admission/stale owner, name/ID search, context/focus/dispose,
+late activation и несколько structural commits перед одним update. Engine1629
+проверен отдельно и не подменяет UI evidence.
+[Audit/команды/8TRX](../../TestResults/EntityOperations-ED4c3-20261031-1/verification.json).
+
+Initial focused inspector latency исправлена адресным command availability refresh;
+native RED выявил Select(newID) раньше SetItems. Добавлена coalesced projection и
+прямая regression; final Editor повторён. Published source/fresh NuGet standard/Cobalt
+workflows2/2 прошли:4PNG actions/created scene просмотрены, New→create/Transform→
+duplicate/delete/Undo/Redo→search→Save/reopen подтверждён.14children reaped/released,
+12graceful validation0/0, UI/GPU/handles0.
+[Initial findings/границы](../engine/HISTORY.md#ed4c3-операции-объектов-поиск-и-контекстное-меню--2026-10-31),
+[native/package audit](../../TestResults/EntityOperations-ED4c3-20261031-1/acceptance.json).
+
+Nested/scrolling menus, physical OS input/DPI, accessibility, device loss/K3/K7/K8/
+VRAM/final alpha и прежний engine output-drain follow-up остаются открытыми.
+Следующий consumer — project picker/switch и ED1/ED6 workflow.
+
+## PA4c: sibling reorder и focus lifecycle для ED4c.2 — 2026-10-31
+
+TreeView получил optional ReorderEnabled (default false), consumer-owned
+PlacementRequested, Ctrl+↑/↓ и edge-quarter Before/After drop. Центр строки и blank
+root area сохраняют parent semantics. Capture отменяется также при смене reorder
+capability; item snapshot, IDs и selection не меняются контролом. Inline rename —
+retained TextBox композиция Editor, данные/engine history принадлежат consumer.
+
+Element.FocusChanged сообщает focus transfer/FocusLost/detach. UiSession.CancelInput
+выполняется перед dispatcher Close: focus-loss callback может отменить bound draft;
+queued work после этого отменяется и не исполняется во время disposal. Initial
+Editor regression воспроизвела прежний ObjectDisposedException, final исправлена.
+F2 нормализован в SilkWindowHost; общая mapping используется обоими host backends.
+
+Alloy900/900, Hosting117/117 и Editor866/866 отдельно Debug/Release, failed/skipped0.
+Новые UI7cases проверяют edge placement, keyboard siblings, отмену позднего release
+и transfer/FocusLost/detach без duplicate focus notifications. Tree focused48/48.
+Editor cases покрывают inline position, retained theme/caret/selection, shared history,
+invalid/stale/replaced owner, focus/selection/dispose cancel, global shortcuts и
+реальный JsonSceneDocumentStore Save/reopen. Engine1602 проверен отдельно, его
+passing не заменяет UI/Hosting evidence.
+[Audit/команды/8TRX](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/verification.json),
+[engine scope](../engine/HISTORY.md#ed4c2-имена-и-порядок-сущностей--2026-10-31).
+
+Final source и fresh NuGet published standard/Cobalt GUI workflows2/2 прошли после
+замены unsupported arrow glyphs на Up/Down в hint.4окончательных PNG просмотрены;
+name/order, shared Undo/Redo/Save/reopen, inspector retention и GPU pixels подтверждены.
+14children reaped/released,12graceful validation0/0, UI/GPU/handles0.
+[Native/package audit](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/acceptance.json).
+Отдельный headless process-output drain timeout и два успешных binary replays описаны
+у engine; повторная passing приёмка не объявляется исправлением его причины.
+
+Multiselect/typeahead/autoscroll/autoexpand/virtualization, physical DPI/OS input,
+loss/K3/K7/K8/VRAM и final alpha этим срезом не закрыты. Следующий consumer — ED4c.3.
+
+## INF5: cached device observation для Editor — 2026-10-31
+
+В Alloy.Runtime добавлены optional IUiRenderDiagnostics и immutable UiRenderDeviceInfo
+(API/name/vendor/version). OpenGL/Vulkan Skia surfaces возвращают только host-cached
+value. HostedUiWindow читает GL strings при current-context initialization через
+частный API wrapper, не передавая ему владение window context. VulkanDevice копирует
+properties выбранного physical device после успешного logical-device creation;
+SilkVulkanHost передаёт value в raw VulkanHostContext. Raw hosts могут оставить null.
+Native queries в getters/exporter, новые handles/resources/scopes и renderer→platform
+dependency не добавлены. Existing constructors/interfaces/lifetimes сохранены.
+Raster не выдаёт фиктивный GPU. Editor View копирует строки в собственный DTO.
+
+Alloy893/893, Hosting117/117 и Editor847/847 отдельно Debug/Release, failed/skipped0.
+Два published standard/Cobalt consumer workflows — SourceRelease и fresh NuGet
+PackageRelease — проверили actual OpenGL device metadata, Vulkan child snapshot
+после crash, layout/native Skia/fonts и dispose.14children/2owned crashes,
+12graceful Vulkan validation0/0, surfaces/slots/devices/handles и active UI0.
+4diagnostic PNG просмотрены. Native Vulkan UI metadata и остальная backend/provider
+matrix в этом шаге не запускались. Physical input/device loss/K3/K7/K8/VRAM/long-load
+и общий release остаются открытыми; INF5 целиком не закрыт.
+[Точные команды/fixture findings/evidence](../engine/HISTORY.md#ed8a2-child-health-и-device-observations--2026-10-31),
+[audit/8TRX](../../TestResults/RuntimeObservation-ED8a2-20261031-1/verification.json).
+
 ## INF3: dirty frame после Update — 2026-10-29
 
 ED6a.2 native mode cycle Structured→stdout→stderr→Health→Structured с сохранённой

@@ -14,8 +14,17 @@
 
 UI alpha и контрольное beta приложение имеют собственные критерии. Готовность UI не означает готовность всех модулей TrueMoon; обратное тоже не следует из общего build.
 
-Текущий приоритет, сверка2026-10-29 —
-[Compiler diagnostics/navigation и полный ED8a report](engine/EDITOR_PLAN.md#ed6a-консоль-диагностики--2026-10-25).
+Текущий приоритет, сверка2026-10-31 —
+[project picker/switch и ED1/ED6 workflow](engine/EDITOR_PLAN.md#ed1-проект-и-рабочая-сессия).
+ED4c.3 создание/удаление/дублирование, поиск и context commands реализованы в bounded
+профиле31октября. ED4c.2 добавляет сохраняемые имена/порядок через общую history;
+подробности и проверки принадлежат Editor плану/STATUS. ED8a.1/2 diagnostic report завершён в scoped profiles:
+archive/text policy/cancel/config, cached child health/device, source и fresh NuGet
+published standard/Cobalt window/OpenGL↔Vulkan preview и CPU Game consumers.
+Подробный checklist и ограничения — только в Editor плане; full native/provider/
+backend и physical/release gates не объявляются закрытыми.
+Compiler diagnostics/navigation ED6a.3 проверен30октября в unit/native raster scope;
+window/GPU/published acceptance остаётся отдельной. Детали — в Editor плане/STATUS.
 ED6a.2 raw/parent-health/delivery/capture проверен bounded consumer срезом2026-10-29.
 Первый structured console/filter/inspect/partial export проверен2026-10-29;
 remaining acceptance и подробные задачи ведутся в прикладном Editor плане.
@@ -120,6 +129,22 @@ ARCH2e.1/2 и e.3 native/GUI consumers проверены2026-10-29; далее 
 console/export и новым authoring UI features. После него —
 ED6a/ED8a, ED4c.2/3 и project/build/play workflow; оставшиеся Core/DI/IPC/UI roadmaps
 не становятся обязательными prerequisites и не считаются завершёнными.
+
+### Агенты в Editor и Runtime, ИИ мобов — 2026-10-30
+
+По запросу пользователя запланировано общее направление Aether: внешний локальный
+MCP consumer и встроенный помощник используют общие authoring/runtime операции;
+агенты создают, наблюдают и проверяют поведение мобов. Optional LLM-персонаж —
+отдельный последующий профиль. Детальные API/MCP tasks —
+[ARCH1d.1–4](engine/PLAN.md#локальные-агенты-и-mcp-adapter), Game AI/сценарии —
+[ENG9a–d](engine/PLAN.md#eng9-ии-мобов-и-агентные-проверки--2026-10-30), прикладные
+[ED4g Inspector](engine/EDITOR_PLAN.md#ed4g-наблюдение-и-отладка-поведения-мобов--2026-10-30)
+и [ED7a agent tasks](engine/EDITOR_PLAN.md#ed7a-помощник-и-задачи-агентов--2026-10-30) — в Editor плане.
+Наблюдение/control используют supervisor/Enerit и доступны до полного ARCH1c;
+произвольные live edits требуют snapshot/rollback. App/DI/lifecycle сохраняются,
+engine не получает зависимости от Editor/LLM provider. Первое сквозное упражнение —
+охранник Patrol/Investigate/Chase с trace и воспроизводимыми assertions.
+Это план, не реализация; очередь ED6a/ED8a → ED4c.2/3 → project/workflow прежняя.
 
 ### Единая структурированная диагностика — 2026-10-25
 

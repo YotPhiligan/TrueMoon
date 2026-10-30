@@ -26,16 +26,24 @@ public sealed class ChildDiagnosticForwarder : IAsyncDisposable
     private long _cursor, _target = -1, _packet, _accepted, _rejected, _lost, _unconfirmed, _failures, _rateLimited, _suppressed;
     private Guid _applicationId;
     private string? _lastFailure;
+    private readonly IRuntimeDiagnosticObservationSource? _observations;
 
     /// <summary>Creates a caller-owned forwarder. A missing reader or disabled launch creates no transport.</summary>
     /// <param name="launch">Generation and copied delivery settings.</param><param name="reader">Borrowed source ring.</param>
     /// <param name="clients">Borrowed isolated client factory.</param>
     public ChildDiagnosticForwarder(SessionLaunch launch, IDiagnosticRecordReader? reader,
         IFactory<PipesInvocationClient<IChildDiagnosticDelivery>, string> clients)
+        : this(launch, reader, clients, null) { }
+
+    /// <summary>Creates a forwarder with a borrowed memory-only observation capability. No source is disposed by the lane.</summary>
+    /// <param name="launch">Fixed generation identity.</param><param name="reader">Borrowed record ring.</param>
+    /// <param name="clients">Borrowed transport factory.</param><param name="observations">Optional cached health/device source.</param>
+    public ChildDiagnosticForwarder(SessionLaunch launch, IDiagnosticRecordReader? reader,
+        IFactory<PipesInvocationClient<IChildDiagnosticDelivery>, string> clients, IRuntimeDiagnosticObservationSource? observations)
     {
         ArgumentNullException.ThrowIfNull(launch); ArgumentNullException.ThrowIfNull(clients); launch.Identity.Validate();
         if (!Enum.IsDefined(launch.Role)) throw new ArgumentOutOfRangeException(nameof(launch));
-        _launch = launch; _reader = reader; _options = (launch.DiagnosticDelivery ?? new() { Enabled = false }).Snapshot();
+        _launch = launch; _reader = reader; _observations = observations; _options = (launch.DiagnosticDelivery ?? new() { Enabled = false }).Snapshot();
         _rate = new(_options); _enabled = _options.Enabled && reader != null; _released = _drainComplete = !_enabled;
         try
         {
@@ -68,6 +76,7 @@ public sealed class ChildDiagnosticForwarder : IAsyncDisposable
                 var records = _reader!.ReadAfter(_cursor, _options.MaxBatchRecords);
                 var previousCursor = _cursor;
                 var batch = new ArrayBufferWriter<byte>(); batch.Write("["u8); var count = 0; long lastSent = 0;
+                var recordBudget = _options.MaxBatchBytes - (_observations == null ? 0 : 128);
                 foreach (var record in records)
                 {
                     if (closing && record.Sequence > _target) break;
@@ -78,21 +87,35 @@ public sealed class ChildDiagnosticForwarder : IAsyncDisposable
                     byte[] bytes;
                     try { bytes = JsonSerializer.SerializeToUtf8Bytes(ChildDiagnosticCodec.Bound(record), ChildDiagnosticCodec.Json); }
                     catch (Exception error) { Consume(record.Sequence); lock (_gate) { _lost++; Failed(error); } continue; }
-                    if (bytes.Length + 2 > _options.MaxBatchBytes)
+                    if (bytes.Length + 2 > recordBudget)
                     { Consume(record.Sequence); lock (_gate) _lost++; continue; }
-                    if (batch.WrittenCount + bytes.Length + (count == 0 ? 0 : 1) + 1 > _options.MaxBatchBytes) break;
+                    if (batch.WrittenCount + bytes.Length + (count == 0 ? 0 : 1) + 1 > recordBudget) break;
                     Consume(record.Sequence);
                     if (count != 0) batch.Write(","u8);
                     batch.Write(bytes); count++; lastSent = record.Sequence;
                 }
                 batch.Write("]"u8);
+                var payload = batch.WrittenSpan.ToArray();
+                if (_observations != null)
+                {
+                    byte[]? observation = null; var omitted = false;
+                    try
+                    {
+                        var value = _observations.Read();
+                        if (_applicationId == Guid.Empty && value.Collector is { ApplicationId: var application } && application != Guid.Empty) _applicationId = application;
+                        observation = RuntimeDiagnosticObservationCodec.Encode(value, _options.MaxBatchBytes - payload.Length - 128);
+                        omitted = observation == null;
+                    }
+                    catch (Exception error) { lock (_gate) Failed(error); }
+                    payload = ChildDiagnosticCodec.Envelope(payload, observation, omitted);
+                }
                 if (closing && count == 0 && _cursor < _target && _cursor == previousCursor)
                 { lock (_gate) _lost += _target - _cursor; _cursor = _target; }
                 if (_applicationId != Guid.Empty && (count != 0 || !closing))
                 {
-                    if (!_rate.Enter(count, batch.WrittenCount))
+                    if (!_rate.Enter(count, payload.Length))
                     { lock (_gate) { _lost += count; _rateLimited += count; } }
-                    else await SendAsync(batch.WrittenSpan.ToArray(), count, lastSent, token).ConfigureAwait(false);
+                    else await SendAsync(payload, count, lastSent, token).ConfigureAwait(false);
                 }
                 if (closing && _cursor >= _target)
                 { lock (_gate) _drainComplete = !token.IsCancellationRequested; break; }
@@ -119,6 +142,7 @@ public sealed class ChildDiagnosticForwarder : IAsyncDisposable
         var identity = _launch.Identity;
         var packet = new DiagnosticDeliveryPacket
         {
+            Version = _observations == null ? 1 : 2,
             SessionId = identity.SessionId, Generation = unchecked((long)identity.Generation), HostContractId = identity.HostContractId,
             GameBuildId = identity.GameBuildId, Nonce = identity.Nonce, Role = (int)_launch.Role, ProcessId = Environment.ProcessId,
             ApplicationId = _applicationId, PacketSequence = ++_packet, RecordCount = count, Payload = payload

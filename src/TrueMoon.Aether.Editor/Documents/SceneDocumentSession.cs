@@ -157,6 +157,14 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     /// <returns>The engine receipt.</returns>
     public SceneAuthoringResult EditComponents(ComponentEditBatch batch, CancellationToken cancellationToken = default)
     { lock (_gate) { VerifyEditable(); return Current.EditComponents(batch, cancellationToken); } }
+    /// <summary>Commits names/ordered placements through the shared engine history.</summary>
+    /// <param name="batch">Atomic hierarchy intent.</param><param name="cancellationToken">Before-commit cancellation.</param><returns>Engine receipt.</returns>
+    public SceneAuthoringResult EditHierarchy(HierarchyEditBatch batch, CancellationToken cancellationToken = default)
+    { lock (_gate) { VerifyEditable(); return Current.EditHierarchy(batch, cancellationToken); } }
+    /// <summary>Creates, deletes or duplicates instances through the existing owned engine session.</summary>
+    /// <param name="batch">Frozen entity request.</param><param name="cancellationToken">Before-commit cancellation.</param><returns>Shared engine receipt.</returns>
+    public SceneAuthoringResult EditEntities(EntityEditBatch batch, CancellationToken cancellationToken = default)
+    { lock (_gate) { VerifyEditable(); return Current.EditEntities(batch, cancellationToken); } }
     /// <summary>Restores prior content using the existing engine history.</summary>
     /// <param name="operation">Engine operation identity.</param><param name="cancellationToken">Before-commit cancellation.</param>
     /// <returns>Engine receipt.</returns>

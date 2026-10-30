@@ -2,6 +2,175 @@
 
 [План](PLAN.md), [текущий статус](STATUS.md), [общий статус](../STATUS.md).
 
+## COB5a: warm allocations — 2026-10-29
+
+**Исследование завершено; production optimization не выполнялась.** На прежнем
+COB7 graph воспроизведены расходы warm resolution. Контрольная копия runtime
+подтвердила вклад activation-cycle predicate; отдельно измерены generic operations
+и возвращаемые данные. Cobalt остаётся default, Microsoft DI adapter и решение
+отложить массовую migration сохраняются.
+
+### Протокол и текущие измерения
+
+Windows 11 x64 10.0.26300.9818, Ryzen 9 9900X, SDK 10.0.403/.NET 10.0.14,
+BDN 0.15.8, Release, Concurrent Workstation GC. GC/JIT environment overrides
+отсутствуют; active power scheme e9a42b02-d5df-448d-aa00-03f14749eb61 совпадает
+до/после. Desktop background workloads не контролировались.
+
+Исходный default run прошёл graph/provider verification, 10 Dry и два singleton
+cases, но группа оставшихся восьми cases превысила общий deadline 900 s на последнем
+CobaltTransient. Owned process tree завершён runner; comparison/summary.json
+содержит Completed=false. Этот запуск не считается полным passing comparison.
+Сохранились его raw BDN log и отдельные успешные singleton reports.
+
+Повторный bounded run завершён: **10 Dry + 10 measured cases**, 20 provider behavior
+scenarios и baseline workload verification. Job Short с explicit warmupCount=3,
+iterationCount=10, iterationTime=100 ms; invocation count выбирает BDN pilot.
+После стандартного удаления outliers остаётся 8–10 observations. Это investigation
+job с ограниченной точностью времени, не замена полного COB7 default/cold/App proof.
+158 source fingerprints неизменны, source mismatches=0. Scenario.cs SHA256
+B8E4EAEF7F1C1EB57A311941D303240DBE171CE9548AA04E28577BE48934098E
+совпадает с историческим graph v1.
+
+Mean ± Error (half-width 99.9% CI), ns/op; B/op — MemoryDiagnoser:
+
+| Операция | Cobalt ns/op | Microsoft ns/op | Cobalt B/op | Microsoft B/op |
+| --- | --- | --- | --- | --- |
+| Singleton | 50.45 ± 0.33 | 14.18 ± 0.23 | 32 | 0 |
+| Exact closed generic | 39.91 ± 0.27 | 14.69 ± 0.02 | 32 | 0 |
+| Open generic | 156.21 ± 46.64 | 14.57 ± 0.07 | 96 | 0 |
+| Transient Request | 452.85 ± 6.14 | 30.20 ± 0.68 | 440 | 184 |
+| Materialized plugins | 178.17 ± 1.84 | 30.69 ± 0.22 | 248 | 120 |
+
+Особенно широкий CI open generic не позволяет делать точный вывод о его latency.
+SDK/runtime отличаются от отчёта 15 октября; source framework также изменялся.
+Эти времена не являются before/after speedup или доказательством регрессии.
+Подтверждён текущий allocation backlog на неизменённом caller graph.
+
+### Static scan перед классификацией
+
+Scope: CobaltServiceResolverBase.cs и TypeContainer.cs; оба файла прочитаны целиком.
+Критические, memory/string, collections/LINQ и structural recipes выполнены:
+
+| Recipe | Совпадений |
+| --- | --- |
+| Literal IndexOf / Substring / StartsWith-EndsWith / Contains без comparison | 0 / 0 / 0 / 0 |
+| ToLower-ToUpper / Replace chains / params / LINQ chars | 0 / 0 / 0 / 0 |
+| Static Dictionary / static FrozenDictionary | 0 / 0 |
+| Explicit new List / new Dictionary / CurrentCulture comparer | 0 / 0 / 0 |
+| Select-Where-Cast-Take-Aggregate / Any-All / OrderBy-GroupBy | 2 / 1 / 1 |
+| Non-abstract unsealed classes / sealed classes | 1 / 0 |
+| GenericTypeArguments / reflection Invoke | 2 / 1 |
+
+Подробные locations — static-scan.json. FrozenDictionary registration lookup уже
+используется как instance field. Mutable path/activation stacks не являются
+кандидатами для FrozenDictionary. Public TypeContainer не предлагается seal ради
+этого scan. Его lazy Select/ToArray выполняется при инициализации. Mixed open/closed
+enumerable merge и manual typed-resolver reflection fallback данным graph не
+измерены; их LINQ/reflection не приписываются warm результатам.
+
+### Allocation attribution и контрольный эксперимент
+
+Task-scoped Probe использует тот же benchmark assembly/graph. Reflection для выбора
+internal verification и получения generated resolvers выполняется до подсчёта.
+Счётчик — GC.GetAllocatedBytesForCurrentThread, observable result sink, не timing loop.
+
+Первая проба с одним фиксированным warmup=100000 оказалась недостаточной: early
+singleton показывал 96 B вместо BDN 32 B, transient менялся 888→440 B между сериями.
+Gate отклонил результат. allocation-baseline.json и allocation-no-capture.json
+сохранены как неудачная ранняя проба, не как warm baseline.
+
+Финальная проба греет каждую операцию не менее 1 s блоками по 100000 calls, затем
+выполняет пять серий по 100000. Counter min/max всех десяти provider cases совпадают
+с BDN в пределах 0.01 B/op; разброс каждой серии также ≤0.01 B/op. В raw JSON есть
+небольшой residual порядка 0.00168–0.00504 B/op; таблицы округлены до целых B.
+
+**Moderate: захватывающий activation-cycle predicate, 1 site.**
+CobaltServiceResolverBase.ResolveItem: проверка через Any захватывает resolver/type
+при каждом activation, включая singleton cache hits. В отдельной копии сборки только
+эта проверка заменена индексным циклом с тем же predicate и исключением. Lock,
+dependency path, depth, failure recording, activation push/pop и ownership сохранены.
+Оригинальный Cobalt DLL hash совпал с BDN baseline; рабочий runtime не подменялся.
+
+| Операция Cobalt | Original B/op | No-capture experiment B/op | Убрано B/op |
+| --- | --- | --- | --- |
+| Singleton / exact closed generic | 32 | 0 | 32 |
+| Open generic | 96 | 64 | 32 |
+| Transient Request | 440 | 216 | 224 |
+| Materialized plugins | 248 | 152 | 96 |
+
+По 10 existing Cobalt behavior scenarios прошли на original и experimental runtime:
+graph/aliases/owned-borrowed cleanup, normal App, modules, missing service,
+factory/constructor/cycle recovery, startup rollback, normal/cancelled RunAsync.
+Это адресный behavioral proof, не полный unit/generator/package run. Скорость
+experimental runtime BDN не измерялась; таблица подтверждает только bytes/op.
+
+**Moderate: generic operations, 2 runtime sites + 1 generator site.**
+ResolveItem получает GenericTypeArguments; generated open singleton затем всегда
+вызывает MakeGenericType до обращения к dictionary готовых instances.
+Изолированные calls дают по 32 B/op для GenericTypeArguments и MakeGenericType
+с заранее сохранённым Type[]. Direct generated open Resolve с cached arguments
+выделяет 32 B/op, direct generated closed singleton — 0. Поэтому оставшиеся
+64 B open generic подтверждены двумя независимыми component probes.
+
+В synthesized IEnumerable ResolveCore отдельно читает GenericTypeArguments:
+это оставшиеся 32 B/op поверх данных после no-capture experiment. Замена только
+predicate не устраняет generic metadata costs.
+
+**Данные workload, не расходы контейнера:** ThirdPlugin=24 B, Ticket=24 B,
+plugin array из трёх элементов=48 B, Request с constructor-owned копией массива=88 B.
+Полный transient result=184 B, materialized plugins=120 B; это совпадает с Microsoft.
+Получается allocation decomposition без вычитания независимых latency means:
+
+- Transient: 440 = 184 result data + 7×32 activation predicate + 32 generic arguments.
+- Multiple: 248 = 120 result data + 3×32 activation predicate + 32 generic arguments.
+- Open generic: 96 = 32 activation predicate + 32 generic arguments + 32 MakeGenericType.
+
+### Следующий срез и границы
+
+1. Перенести адресную no-capture проверку в production, сохранив cycle/depth/errors/
+   retry/alias/ownership contracts. Выполнить собственные runtime/generator/adapter
+   регрессии и повторить paired measurements; не объявлять ускорение по allocation
+   эксперименту.
+2. Отдельно спроектировать устранение повторных generic metadata allocations.
+   Проверить closed-type identity, constructed-type retention, ограничения cache и
+   совместимость IGenericResolver; не передавать общий mutable Type[] сторонним
+   resolvers без контракта.
+3. Mixed generic enumerables, cold/App build, contention и Enerit CPU/allocations
+   остаются отдельными исследованиями. Новые scopes/factory APIs или migration
+   consumers этим результатом не назначены.
+
+Production runtime/generator/adapter, benchmark source и public API не менялись.
+Full unit suites, package consumers, UI/native и full solution не запускались.
+
+### Evidence и команды
+
+- [Bounded comparison: Completed=true, sources/binaries/reports/commands](../../TestResults/CobaltAllocations-20261029-1/comparison-bounded/summary.json).
+- [Counter/ablation: Completed=true](../../TestResults/CobaltAllocations-20261029-1/attribution.json),
+  [original warm counters](../../TestResults/CobaltAllocations-20261029-1/allocation-warm-baseline.json),
+  [experimental counters](../../TestResults/CobaltAllocations-20261029-1/allocation-warm-no-capture.json).
+- [Scan recipes/locations](../../TestResults/CobaltAllocations-20261029-1/static-scan.json),
+  [experimental source](../../TestResults/CobaltAllocations-20261029-1/variant/CobaltServiceResolverBase.cs).
+- [Первый неполный default run](../../TestResults/CobaltAllocations-20261029-1/comparison/summary.json),
+  runner.stderr.log и ранние allocation JSON сохранены рядом.
+
+Команды фактических успешных этапов из workspace (артефакты не перезаписывать;
+повтор выполняется в новом task root с тем же относительным расположением):
+
+pwsh -NoProfile -File TestResults/CobaltAllocations-20261029-1/RunBoundedComparison.ps1
+
+pwsh -NoProfile -File TestResults/CobaltAllocations-20261029-1/RunAttributionWarm.ps1
+
+Task-scoped scripts, probe и variant остаются в ignored TestResults; новые
+permanent benchmark cases не добавлены. Метаданные и raw JSON сохраняют точные
+jobs/confidence intervals/assembly SHA; не заменять их округлёнными таблицами.
+
+| Severity | Findings | Главный результат |
+| --- | --- | --- |
+| Critical | 0 | В исследованном scope не выявлены |
+| Moderate | 2 | Activation predicate; повторные generic metadata operations |
+| Info | 0 | Cold/unmeasured paths не классифицировались как hot-path defects |
+
 ## Core headless quality integration — 2026-10-15
 
 Собственный Core проход подтвердил Cobalt source28 +package headless28/direct4

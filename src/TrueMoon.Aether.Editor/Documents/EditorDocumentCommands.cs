@@ -142,6 +142,14 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     /// <returns>The engine receipt.</returns>
     public SceneAuthoringResult EditComponents(SceneDocument expected, ComponentEditBatch batch)
     { ArgumentNullException.ThrowIfNull(batch); return Edit(expected, document => document.EditComponents(batch, _lifetime)); }
+    /// <summary>Edits name/placement metadata under the existing document/runtime/IO admission gate.</summary>
+    /// <param name="expected">Exact captured document.</param><param name="batch">Atomic metadata request.</param><returns>Engine receipt.</returns>
+    public SceneAuthoringResult EditHierarchy(SceneDocument expected, HierarchyEditBatch batch)
+    { ArgumentNullException.ThrowIfNull(batch); return Edit(expected, document => document.EditHierarchy(batch, _lifetime)); }
+    /// <summary>Changes scene instances under the existing document/runtime/IO gate and shared history.</summary>
+    /// <param name="expected">Exact captured document.</param><param name="batch">Frozen entity request.</param><returns>Engine receipt.</returns>
+    public SceneAuthoringResult EditEntities(SceneDocument expected, EntityEditBatch batch)
+    { ArgumentNullException.ThrowIfNull(batch); return Edit(expected, document => document.EditEntities(batch, _lifetime)); }
     /// <summary>Uses the active document's shared history.</summary>
     /// <param name="expected">Exact captured document.</param><param name="operation">Engine identity/revision.</param><returns>Engine receipt.</returns>
     public SceneAuthoringResult Undo(SceneDocument expected, AuthoringOperation operation)

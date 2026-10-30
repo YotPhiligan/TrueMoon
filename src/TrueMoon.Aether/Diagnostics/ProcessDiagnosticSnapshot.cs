@@ -12,12 +12,16 @@ public sealed record ProcessStreamDiagnostic(ProcessOutputSnapshot Output, bool 
     private static string? Failure(Task task) => task.IsFaulted ? task.Exception?.GetBaseException().GetType().FullName : null;
 }
 
-/// <summary>Bounded memory snapshot with public correlation only. Never includes nonce, endpoint, environment or project contents.</summary>
+/// <summary>Bounded memory snapshot with public correlation and producer text. Never includes bootstrap nonce, endpoint or environment.</summary>
+/// <remarks>Raw output and compiler diagnostics may contain personal paths and user-provided text.</remarks>
 public sealed record ProcessDiagnosticSnapshot(string Id, string Source, DateTimeOffset StartedUtc, int? ProcessId,
     Guid? SessionId, ulong? Generation, string? RuntimeRole, string? GameBuildId, string? JobId, long? SourceRevision,
     bool Completed, bool ResourcesReleased, ProcessStreamDiagnostic? StandardOutput, ProcessStreamDiagnostic? StandardError,
     ChildDiagnosticStatus? Delivery)
 {
+    /// <summary>Optional structured C# compiler capture; null for a runtime process or unsupported producer.</summary>
+    public TrueMoon.Aether.Builds.GameBuildDiagnosticBatch? CompilerDiagnostics { get; init; }
+
     internal ProcessDiagnosticSnapshot Limit(int maximumCharacters) => this with
     { StandardOutput = StandardOutput?.Limit(maximumCharacters), StandardError = StandardError?.Limit(maximumCharacters) };
 

@@ -24,6 +24,34 @@ public sealed class DiagnosticPipeline : IDisposable, IAsyncDisposable
     /// <summary>Latest managed JSONL run maintenance status, or null before initialization or in flat mode.</summary>
     public DiagnosticRetentionStatus? JsonRetentionStatus => _jsonSink?.RetentionStatus;
 
+    /// <summary>Copies effective scalar configuration without exposing output paths, factory delegates or environment.</summary>
+    /// <returns>A detached memory-only snapshot. Rule details are represented by counts.</returns>
+    public DiagnosticCollectorConfiguration ReadConfiguration()
+    {
+        lock (_gate) return new()
+        {
+            ApplicationId = ApplicationId, MinimumLevel = MinimumLevel,
+            QueueCapacity = _options.QueueCapacity, ReservedErrorCapacity = _options.ReservedErrorCapacity, QueueByteCapacity = _options.QueueByteCapacity,
+            MemoryCapacity = _options.MemoryCapacity, MemoryByteCapacity = _options.MemoryByteCapacity,
+            MaxMessageChars = _options.MaxMessageChars, MaxExceptionChars = _options.MaxExceptionChars, MaxPropertyChars = _options.MaxPropertyChars,
+            MaxProperties = _options.MaxProperties, MaxNameChars = _options.MaxNameChars,
+            SourceRuleCount = _sourceLevels.Count, DisabledEventCount = _disabledEvents.Count, SinkRuleCount = _options.SinkMinimumLevels.Count,
+            JsonEnabled = _options.JsonDirectory != null, JsonFileSizeBytes = _options.JsonFileSizeBytes, JsonMaxFiles = _options.JsonMaxFiles,
+            JsonUseRunDirectories = _options.JsonUseRunDirectories, JsonMaxRuns = _options.JsonRetention.MaxRuns,
+            JsonMaxTotalBytes = _options.JsonRetention.MaxTotalBytes, JsonMaxAge = _options.JsonRetention.MaxAge,
+            ConsoleOutput = _options.ConsoleOutput, CustomSinkCount = _options.SinkFactories.Count, EmergencyEnabled = _options.Emergency.Enabled,
+            TracingEnabled = _options.Telemetry.TracingEnabled, MetricsEnabled = _options.Telemetry.MetricsEnabled,
+            MaxOperationNames = _options.Telemetry.MaxOperationNames, ShutdownTimeout = _options.ShutdownTimeout
+        };
+    }
+
+    /// <summary>Reads only this logger's configured JSONL history with finite discovery, byte and record budgets.</summary>
+    /// <param name="options">Read and retention limits.</param><param name="cancellationToken">Caller-owned cancellation.</param>
+    /// <returns>A best-effort snapshot; reading does not flush or dispose the logger.</returns>
+    public Task<DiagnosticHistorySnapshot> ReadHistoryAsync(DiagnosticHistoryReadOptions options, CancellationToken cancellationToken = default)
+        => DiagnosticArchiveReader.ReadAsync(_options.JsonDirectory, _options.JsonUseRunDirectories, JsonDirectory,
+            _options.JsonMaxFiles, options, cancellationToken);
+
     /// <summary>Creates the configured sinks using their borrowed factories, taking ownership of each result.</summary>
     /// <param name="options">Validated budgets; copied before any sink is created.</param>
     public DiagnosticPipeline(DiagnosticPipelineOptions options)

@@ -172,3 +172,8 @@ Scene formatVersion1 и deterministic UTF8/BOM policies, IDs/revision/raw catalo
 replacement с cooperative write-lock. Cancellation проверяется до commit;
 невозможно обещать durable fsync или защиту от произвольных внешних rename races.
 Перенос не меняет format version и не требует пересохранения existing scenes.
+
+Позднейшее уточнение2026-10-31, ED4c.2: codec читает v1/v2, пишет v2 при наличии
+instance Name/SiblingOrder. Existing v1 не требует пересохранения. Политика metadata,
+history и совместимости ведётся в [Editor плане](EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24);
+владение codec/store и границы пакетов прежние.

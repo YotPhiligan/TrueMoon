@@ -19,11 +19,11 @@ public sealed class ResolvedSceneSnapshot
     public long Revision { get; }
     /// <summary>Gets all effective entities, keyed by stable instance IDs.</summary>
     public ImmutableDictionary<EntityId, ResolvedEntity> Entities { get; }
-    /// <summary>Gets root IDs sorted by Guid comparison.</summary>
+    /// <summary>Gets roots sorted by sibling order (missing means zero), then stable Guid comparison.</summary>
     public ImmutableArray<EntityId> Roots { get; }
-    /// <summary>Gets sorted children for every entity, including empty arrays for leaves.</summary>
+    /// <summary>Gets children sorted by sibling order then Guid for every entity, including leaves.</summary>
     public ImmutableDictionary<EntityId, ImmutableArray<EntityId>> Children { get; }
-    /// <summary>Gets deterministic preorder: parents before children, roots/siblings sorted by Guid comparison.</summary>
+    /// <summary>Gets deterministic preorder: parents before children, siblings sorted by order then Guid.</summary>
     public ImmutableArray<EntityId> HierarchyOrder { get; }
     /// <summary>Gets exact revisions of definitions referenced by resolved inheritance chains.</summary>
     public ImmutableDictionary<EntityDefinitionId, long> DefinitionRevisions { get; }

@@ -219,7 +219,11 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
             var gl = _window.NativeWindow.GLContext ?? throw new NotSupportedException("Silk did not create an OpenGL context.");
             gl.MakeCurrent();
             SupportsPerPixelTransparency = _window.AppearanceCapabilities.TransparentFramebuffer;
-            _session = CreateSession(new OpenGLUiTarget(name => gl.TryGetProcAddress(name, out var address) ? address : 0, gl.MakeCurrent), _window);
+            using var api = Silk.NET.OpenGL.GL.GetApi(name => gl.TryGetProcAddress(name, out var address) ? address : 0);
+            var deviceInfo = new UiRenderDeviceInfo("OpenGL", api.GetStringS(Silk.NET.OpenGL.StringName.Renderer),
+                api.GetStringS(Silk.NET.OpenGL.StringName.Vendor), api.GetStringS(Silk.NET.OpenGL.StringName.Version));
+            _session = CreateSession(new OpenGLUiTarget(name => gl.TryGetProcAddress(name, out var address) ? address : 0, gl.MakeCurrent)
+                { DeviceInfo = deviceInfo }, _window);
         }
         else
         {

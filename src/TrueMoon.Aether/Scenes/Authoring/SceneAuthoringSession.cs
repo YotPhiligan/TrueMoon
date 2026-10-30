@@ -44,11 +44,24 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
     public SceneAuthoringResult Undo(AuthoringOperation operation, CancellationToken cancellationToken = default)
         => Execute(Command.Undo, operation, [], [], cancellationToken);
 
+    public SceneAuthoringResult EditHierarchy(HierarchyEditBatch batch, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+        return Execute(Command.Hierarchy, batch.Operation, [], [], cancellationToken, hierarchy: batch);
+    }
+
     public SceneAuthoringResult Redo(AuthoringOperation operation, CancellationToken cancellationToken = default)
         => Execute(Command.Redo, operation, [], [], cancellationToken);
 
+    public SceneAuthoringResult EditEntities(EntityEditBatch batch, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+        return Execute(Command.Entities, batch.Operation, [], [], cancellationToken, entities: batch);
+    }
+
     private SceneAuthoringResult Execute(Command command, AuthoringOperation operation, ImmutableArray<TransformEdit> edits,
-        ImmutableArray<ReparentEdit> parents, CancellationToken token, ComponentEditBatch? components = null)
+        ImmutableArray<ReparentEdit> parents, CancellationToken token, ComponentEditBatch? components = null, HierarchyEditBatch? hierarchy = null,
+        EntityEditBatch? entities = null)
     {
         ArgumentNullException.ThrowIfNull(operation);
         lock (_gate)
@@ -57,7 +70,9 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
             if (_executing) throw new InvalidOperationException("Reentrant authoring mutations are not supported.");
             if (data.Receipts.TryGetValue(operation.Id, out var receipt))
                 return receipt.Command == command && receipt.Operation == operation && receipt.Edits.SequenceEqual(edits) && receipt.Parents.SequenceEqual(parents) &&
-                    (receipt.Components == null ? components == null : components != null && receipt.Components.SameChanges(components))
+                    (receipt.Components == null ? components == null : components != null && receipt.Components.SameChanges(components)) &&
+                    (receipt.Hierarchy == null ? hierarchy == null : hierarchy != null && receipt.Hierarchy.SameChanges(hierarchy)) &&
+                    (receipt.Entities == null ? entities == null : entities != null && receipt.Entities.SameChanges(entities))
                     ? receipt.Result : Result(operation, SceneAuthoringError.OperationIdConflict, data.State);
             token.ThrowIfCancellationRequested();
             if (data.Receipts.Count == _options.MaxOperations)
@@ -66,7 +81,7 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
             SceneAuthoringResult Reject(SceneAuthoringError error, string path = "", string message = "")
             {
                 var result = Result(operation, error, data.State, path, message);
-                _data = data with { Receipts = data.Receipts.Add(operation.Id, new(command, operation, edits, parents, components, result)) };
+                _data = data with { Receipts = data.Receipts.Add(operation.Id, new(command, operation, edits, parents, components, hierarchy, entities, result)) };
                 return result;
             }
 
@@ -74,7 +89,8 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
             if (data.State.Document.Revision == long.MaxValue) return Reject(SceneAuthoringError.RevisionExhausted);
             if (command == Command.Undo && data.Undo.IsEmpty) return Reject(SceneAuthoringError.NoUndo);
             if (command == Command.Redo && data.Redo.IsEmpty) return Reject(SceneAuthoringError.NoRedo);
-            if (edits.Length + parents.Length + (components?.Properties.Length ?? 0) + (components?.Components.Length ?? 0) > _options.MaxBatchEdits)
+            if (edits.Length + parents.Length + (components?.Properties.Length ?? 0) + (components?.Components.Length ?? 0) +
+                (hierarchy?.Names.Length ?? 0) + (hierarchy?.Placements.Length ?? 0) > _options.MaxBatchEdits)
                 return Reject(SceneAuthoringError.BatchLimitExceeded);
             if (command == Command.Apply && ValidateEdits(data.State.Resolved, edits) is { } invalid)
                 return Reject(invalid.Error, invalid.Path, invalid.Message);
@@ -82,19 +98,25 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
                 return Reject(invalidParent.Error, invalidParent.Path, invalidParent.Message);
             if (components != null && ComponentEditPreparation.Validate(data.State.Document, data.State.Resolved, components) is { } invalidComponent)
                 return Reject(invalidComponent.Error, invalidComponent.Path, invalidComponent.Message);
+            if (hierarchy != null && HierarchyEditPreparation.Validate(data.State.Resolved, hierarchy) is { } invalidHierarchy)
+                return Reject(invalidHierarchy.Error, invalidHierarchy.Path, invalidHierarchy.Message);
+            if (entities != null && EntityEditPreparation.Validate(data.State.Document, data.State.Resolved, entities, _options.MaxBatchEdits) is { } invalidEntities)
+                return Reject(invalidEntities.Error, invalidEntities.Path, invalidEntities.Message);
 
             _executing = true;
             try
             {
                 var revision = data.State.Document.Revision + 1;
                 var entry = command == Command.Undo ? data.Undo[^1] : command == Command.Redo ? data.Redo[^1] : null;
-                var applying = command is Command.Apply or Command.Reparent or Command.Components;
+                var applying = command is Command.Apply or Command.Reparent or Command.Components or Command.Hierarchy or Command.Entities;
                 SceneDocument content;
                 try
                 {
                     content = command == Command.Apply ? ApplyEdits(data.State.Document, edits) :
                         command == Command.Reparent ? ApplyParents(data.State.Document, parents) :
                         command == Command.Components ? ComponentEditPreparation.Apply(data.State.Document, components!, token) :
+                        command == Command.Hierarchy ? HierarchyEditPreparation.Apply(data.State.Document, hierarchy!, token) :
+                        command == Command.Entities ? EntityEditPreparation.Apply(data.State.Document, data.State.Resolved, entities!, token) :
                         command == Command.Undo ? entry!.Before : entry!.After;
                 }
                 catch (InvalidDataException error) { token.ThrowIfCancellationRequested(); return Reject(SceneAuthoringError.InvalidScene, SceneResolver.ScenePath(data.State.Document.Id), error.Message); }
@@ -111,6 +133,8 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
                     case Command.Apply:
                     case Command.Reparent:
                     case Command.Components:
+                    case Command.Hierarchy:
+                    case Command.Entities:
                         redo = [];
                         if (_options.MaxHistoryEntries > 0)
                         {
@@ -123,7 +147,7 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
                 }
                 var state = new SceneAuthoringState(document, resolved, contentRevision, undo.Count, redo.Count);
                 var result = Result(operation, SceneAuthoringError.None, state);
-                var next = new SessionData(state, undo, redo, data.Receipts.Add(operation.Id, new(command, operation, edits, parents, components, result)));
+                var next = new SessionData(state, undo, redo, data.Receipts.Add(operation.Id, new(command, operation, edits, parents, components, hierarchy, entities, result)));
                 token.ThrowIfCancellationRequested();
                 // The single publication is the commit point. Cancellation after this cannot change the returned outcome.
                 _data = next;
@@ -162,7 +186,7 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
                 .Concat(updates.SelectMany(edit => edit.Value.Properties().Select(p =>
                     new ComponentPropertyOverride(edit.ComponentId, p.Key, PropertyValue.From(p.Value)))));
             return new EntityInstance(entity.Id, entity.DefinitionId,
-                new EntityPatch(patch.AddedComponents, patch.RemovedComponents, overrides, patch.RestoredComponents), entity.ParentId);
+                new EntityPatch(patch.AddedComponents, patch.RemovedComponents, overrides, patch.RestoredComponents), entity.ParentId, entity.Name, entity.SiblingOrder);
         });
         return new(source.Id, source.Revision, entities, source.Definitions, source.Schemas);
     }
@@ -185,7 +209,7 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
     {
         var parents = edits.ToDictionary(e => e.EntityId, e => e.ParentId);
         var entities = source.Entities.Select(entity => parents.TryGetValue(entity.Id, out var parent)
-            ? new EntityInstance(entity.Id, entity.DefinitionId, entity.Changes, parent) : entity);
+            ? new EntityInstance(entity.Id, entity.DefinitionId, entity.Changes, parent, entity.Name, entity.SiblingOrder) : entity);
         return new(source.Id, source.Revision, entities, source.Definitions, source.Schemas);
     }
 
@@ -235,10 +259,10 @@ internal sealed class SceneAuthoringSession : ISceneAuthoringSession
 
     private static SceneAuthoringResult Result(AuthoringOperation operation, SceneAuthoringError error, SceneAuthoringState state,
         string path = "", string message = "") => new(operation, error, state.Document.Revision, state.ContentRevision, path, message);
-    private enum Command { Apply, Undo, Redo, Reparent, Components }
+    private enum Command { Apply, Undo, Redo, Reparent, Components, Hierarchy, Entities }
     private sealed record HistoryEntry(SceneDocument Before, SceneDocument After, long BeforeContentRevision, long AfterContentRevision, AuthoringOperation Operation);
     private sealed record Receipt(Command Command, AuthoringOperation Operation, ImmutableArray<TransformEdit> Edits,
-        ImmutableArray<ReparentEdit> Parents, ComponentEditBatch? Components, SceneAuthoringResult Result);
+        ImmutableArray<ReparentEdit> Parents, ComponentEditBatch? Components, HierarchyEditBatch? Hierarchy, EntityEditBatch? Entities, SceneAuthoringResult Result);
     private sealed record SessionData(SceneAuthoringState State, ImmutableList<HistoryEntry> Undo, ImmutableList<HistoryEntry> Redo,
         ImmutableDictionary<Guid, Receipt> Receipts);
 }

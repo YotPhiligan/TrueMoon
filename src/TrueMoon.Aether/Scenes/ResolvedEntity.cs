@@ -53,11 +53,15 @@ public sealed class ResolvedEntity
 {
     internal ResolvedEntity(EntityInstance instance, ImmutableArray<EntityDefinitionId> chain,
         ImmutableDictionary<ComponentId, ResolvedComponent> components)
-    { Id = instance.Id; ParentId = instance.ParentId; DefinitionId = instance.DefinitionId; DefinitionChain = chain; Components = components; }
+    { Id = instance.Id; ParentId = instance.ParentId; DefinitionId = instance.DefinitionId; DefinitionChain = chain; Components = components; Name = instance.Name; SiblingOrder = instance.SiblingOrder; }
     /// <summary>Gets instance identity.</summary>
     public EntityId Id { get; }
     /// <summary>Gets scene parent independently of inheritance resolution.</summary>
     public EntityId? ParentId { get; }
+    /// <summary>Instance display name; null retains an ID-based fallback.</summary>
+    public string? Name { get; }
+    /// <summary>Optional sibling rank; missing/tied ranks resolve by GUID.</summary>
+    public int? SiblingOrder { get; }
     /// <summary>Gets the selected definition.</summary>
     public EntityDefinitionId DefinitionId { get; }
     /// <summary>Gets definitions in base-to-variant application order.</summary>

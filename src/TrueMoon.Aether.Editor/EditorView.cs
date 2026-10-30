@@ -210,6 +210,7 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
     /// <summary>Routes document shortcuts even when an exposed scene has no focused UI element.</summary>
     public bool PreviewInput(UiInput input, IInputContext context)
     {
+        if (Hierarchy?.NameEditor.IsFocused == true) return false;
         if (Documents == null || input.Kind != InputKind.KeyDown || !input.Control || input.Key is not (UiKey.S or UiKey.W)) return false;
         Header?.Menu.CloseMenu();
         return Documents.HandleShortcut(input);

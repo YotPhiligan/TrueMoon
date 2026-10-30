@@ -35,13 +35,29 @@ internal static class ChildDiagnosticCodec
     }
     internal static bool Sensitive(string key) => key.Equals("Nonce", StringComparison.OrdinalIgnoreCase) || key.Equals("Endpoint", StringComparison.OrdinalIgnoreCase);
     internal static DiagnosticRecord[] Decode(DiagnosticDeliveryPacket packet, ChildDiagnosticDeliveryOptions options)
+        => DecodeEnvelope(packet, options).Records;
+
+    internal static (DiagnosticRecord[] Records, RuntimeDiagnosticObservation? Observation, bool Omitted) DecodeEnvelope(DiagnosticDeliveryPacket packet, ChildDiagnosticDeliveryOptions options)
     {
         if (packet.Payload == null || packet.Payload.Length > options.MaxBatchBytes || packet.RecordCount < 0 || packet.RecordCount > options.MaxBatchRecords)
             throw new InvalidDataException("Invalid diagnostic packet bounds.");
         using var document = JsonDocument.Parse(packet.Payload, new JsonDocumentOptions { MaxDepth = 16 });
-        if (document.RootElement.ValueKind != JsonValueKind.Array || document.RootElement.GetArrayLength() != packet.RecordCount)
+        var body = document.RootElement; RuntimeDiagnosticObservation? observation = null; var omitted = false;
+        if (packet.Version == 2)
+        {
+            if (body.ValueKind != JsonValueKind.Object) throw new InvalidDataException("Invalid diagnostic envelope.");
+            var value = body.GetProperty("Observation"); omitted = body.GetProperty("ObservationOmittedByBudget").GetBoolean();
+            if (value.ValueKind != JsonValueKind.Null)
+            {
+                if (omitted || System.Text.Encoding.UTF8.GetByteCount(value.GetRawText()) > RuntimeDiagnosticObservationCodec.MaximumBytes) throw new InvalidDataException("Invalid observation size.");
+                observation = RuntimeDiagnosticObservationCodec.Decode(value, packet.ApplicationId);
+            }
+            body = body.GetProperty("Records");
+        }
+        else if (packet.Version != 1) throw new InvalidDataException("Invalid diagnostic version.");
+        if (body.ValueKind != JsonValueKind.Array || body.GetArrayLength() != packet.RecordCount)
             throw new InvalidDataException("Invalid diagnostic record count.");
-        var records = document.RootElement.Deserialize<DiagnosticRecord[]>(Json) ?? throw new InvalidDataException("Missing diagnostic records.");
+        var records = body.Deserialize<DiagnosticRecord[]>(Json) ?? throw new InvalidDataException("Missing diagnostic records.");
         long sequence = 0;
         foreach (var record in records)
         {
@@ -55,6 +71,17 @@ internal static class ChildDiagnosticCodec
                 throw new InvalidDataException("Invalid diagnostic record.");
             sequence = record.Sequence;
         }
-        return records;
+        return (records, observation, omitted);
+    }
+    internal static byte[] Envelope(byte[] records, byte[]? observation, bool omitted)
+    {
+        using var buffer = new MemoryStream();
+        using (var json = new Utf8JsonWriter(buffer))
+        {
+            json.WriteStartObject(); json.WritePropertyName("Records"); json.WriteRawValue(records);
+            json.WritePropertyName("Observation"); if (observation == null) json.WriteNullValue(); else json.WriteRawValue(observation);
+            json.WriteBoolean("ObservationOmittedByBudget", omitted); json.WriteEndObject();
+        }
+        return buffer.ToArray();
     }
 }

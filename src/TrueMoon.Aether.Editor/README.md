@@ -32,8 +32,26 @@ event/session/generation/role фильтры, grouping, inspect/copy и pause fo
 snapshots, parent Core sinks, child delivery и capture/file counters. Уровень события
 не определяется по stderr. «Обновить детали» явно заменяет зафиксированный снимок.
 «Экспорт без текста» пишет partial metadata/health JSON без raw/message/exception/
-stack/error text и произвольных properties; compiler navigation и полный ED8a ещё открыты.
-движок остаётся в единственной сборке `TrueMoon.Aether`. Редактор и его tests
+stack/error text и произвольных properties. «История запусков» добавляет bounded
+JSONL историю настроенного parent logger; остальные active runs могут быть пропущены.
+«Включить текст» явно разрешает messages, exceptions/stacks, raw stdout/stderr и
+compiler text/source paths. Такой отчёт может содержать личные пути и данные:
+проверьте его перед передачей. Это не автоматическая анонимизация. Служебные
+bootstrap/environment/control fields и произвольные properties не экспортируются;
+строки с известными control-field ключами очищаются. Host может дополнительно задать
+точные sensitive literals через `EditorDiagnosticExportOptions.RedactedValues`.
+Отчёт включает доступные scalar settings, observed backend/viewport и counters;
+child sink health и last selected runtime device берутся из последнего полученного
+снимка с временем наблюдения. После crash он может быть устаревшим; отсутствие
+снимка/device, в том числе CPU-only запуск, указано явно. Тексты ошибок child sinks
+не передаются; persistent compiler history недоступна. Presentation device приходит
+из optional cached capability поверхности; exporter не вызывает GPU API.
+Путь задаёт новый файл; существующие файлы не перезаписываются. Default лимиты —
+512KiB/cooperative5s; «Отменить экспорт» запрашивает отмену, повтор доступен после
+завершения принятой операции. App stop также отменяет и drain-ит работу. Незавершённая запись удаляется.
+ED8a проверен в scoped source/NuGet published window/GPU и headless Game профилях;
+расширенная backend/provider matrix и общий release остаются открытыми. Checks — в
+[статусе](../docs/engine/STATUS.md). Движок остаётся в сборке `TrueMoon.Aether`. Редактор и его tests
 относятся к модулю Aether; прежние имена `TrueMoon.Editor`/`TrueMoon.Editor.Tests`
 заменены на `TrueMoon.Aether.Editor`/`TrueMoon.Aether.Editor.Tests`.
 
@@ -92,11 +110,26 @@ Undo/Redo, dirty state, Save/reopen и обновлением Edit Preview.
 смены документа отклоняется; повторите его на обновлённом дереве. Ошибки можно
 выделить и скопировать. Legacy game scene пока доступна только для просмотра.
 
-Это первый этап [ED4c](../docs/engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24).
-Следующие этапы добавят сохраняемые имена, порядок соседей, создание/удаление и
-дублирование. Сейчас authoring-имя выводится из ID, порядок соседей задаёт resolver;
-перетаскивание меняет родителя. Множественный выбор и автоматическая прокрутка при
-drag также остаются в плане. Общий `TreeView`/`ITreeView` находится в Argentis,
+F2 открывает имя в строке; Enter сохраняет, Esc отменяет. Потеря фокуса, смена
+selection/документа/revision отменяет незавершённое имя. Пустое имя возвращает label
+из ID. Имена могут совпадать; ID не меняется. Ctrl+Up/Down переставляет соседей;
+верхняя/нижняя четверть строки при drop задаёт before/after, центр меняет родителя.
+
+После **New** кнопки обозревателя создают объект с Transform или видимый куб.
+Insert создаёт объект в корне, Ctrl+Insert — под выбранным; Ctrl+D дублирует ветвь,
+Delete удаляет выбранную ветвь с потомками. Это обратимые операции общей history.
+Копия получает новые entity IDs, сохраняет inheritance/patches/имена и порядок детей;
+её корень появляется после исходного. Удаление сохраняет definition/schema catalogs.
+Правый клик, Shift+F10 или кнопка действий открывают те же команды, включая создание
+дочернего куба. Созданная/скопированная сущность сразу выбрана для инспекции.
+Ctrl+F переводит фокус в поиск по имени или ID; Enter/«Найти» циклически выбирает
+совпадение и раскрывает предков. Поиск не фильтрует дерево и не меняет документ.
+
+Реализован bounded [ED4c.1–3 profile](../docs/engine/EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24).
+Общие limits authoring session применяются и к expanded delete/duplicate; ошибка
+не меняет документ/history. Множественный выбор, autoscroll/autoexpand при drag,
+typed entity references и управление каталогами остаются в плане.
+Общий `TreeView`/`ITreeView` находится в Argentis,
 прикладные View/Data/Style и typed factory — в Editor, без зависимости модели от UI.
 
 ## Компактная верхняя панель
@@ -291,8 +324,9 @@ definition/instance patches, masks/restores и schemas. Resolved scene, runtime
 и Undo history в файл не входят. Значения имеют явный kind: `null`, `boolean`,
 `integer` (Int64), `number` (finite Double), `string`; отсутствие свойства
 отличается от explicit null/default. UTF8 optional BOM,≤4MiB включая BOM,
-JSON depth32, строгие required/unknown/duplicate/case-sensitive fields. Version1
-не мигрирует неизвестные версии автоматически. Полные collection limits и
+JSON depth32, строгие required/unknown/duplicate/case-sensitive fields. Reader принимает
+v1/v2; writer выбирает v2 при наличии instance Name/SiblingOrder, иначе v1. Старые
+сцены читаются без пересохранения; неизвестные версии отклоняются. Полные collection limits и
 [контракт формата](../docs/engine/EDITOR_PLAN.md#ed2a-documentpersistence-api--2026-10-23).
 
 NewAsync создаёт unsaved document; LoadAsync готовит/валидирует candidate до
@@ -451,8 +485,8 @@ preview до смены документа; Cancel решения оставля
 Текущий профиль: Windows x64, OpenGL UI/Vulkan child, фиксированная камера,
 surface640×360, до64entities и новый child при обновлении ревизии. Лимит относится
 к preview: большие authoring документы не обрезаются и доступны для сохранения.
-Создание/удаление объектов, live runtime edits, gizmos и camera navigation —
-следующие задачи; New пока создаёт пустую сцену.
+New создаёт пустую сцену; её можно наполнить через команды обозревателя.
+Live runtime edits, gizmos и camera navigation остаются следующими задачами.
 
 Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smoke-transform`.
 Только для disposable fixture с Transform.aetherscene: ввод/валидация/темы,
@@ -542,6 +576,53 @@ App использует Cobalt по умолчанию. Workspace/binding/comma
 Borrowed lifecycle/service facades не освобождают owned targets повторно.
 [Решения и границы DI1–DI4](../docs/engine/PLAN.md#приведение-к-правилу-cobaltifactory),
 [миграция игровых сборок](../TrueMoon.Aether/README.md#сборка-и-выбор-игровой-версии--eng3a).
+
+## Диагностика компилятора и переход в исходник
+
+В консоли «Диагностика» режим `Compiler` показывает ошибки и предупреждения C#/
+analyzers с кодом, сообщением, файлом и координатами. Выберите строку ошибки и
+нажмите «Открыть исходник»; кнопка доступна и с клавиатуры через Tab/Enter.
+Для перехода host подключает `ISourceFileNavigator` через DI либо стандартный hook:
+
+```csharp
+context.UseAetherEditorSourceNavigation(new SourceEditorOptions
+{
+    ExecutablePath = sourceEditorExecutable, // абсолютный путь к executable
+    Arguments = sourceEditorArguments       // отдельные аргументы CLI этого редактора
+});
+```
+
+Типы и extension находятся в `TrueMoon.Aether.Editor.Diagnostics`. В аргументах
+поддерживаются `{file}`, `{line}`, `{column}`; координаты начинаются с1. Например,
+один аргумент `{file}:{line}:{column}` подходит executable с соответствующим CLI.
+В массиве должен присутствовать `{file}`. Arguments не являются строкой shell:
+каждый элемент передаётся отдельно через `ProcessStartInfo.ArgumentList`, без
+добавления кавычек вокруг пути. Конфигурация фиксируется при сборке App; повторная
+регистрация hook отклоняется. Сам внешний editor process принадлежит пользователю;
+App освобождает process handle и drain/cancel только принятый navigation request.
+Пользовательский hook заимствуется моделью и должен выполнять работу асинхронно,
+учитывать cancellation и завершать accepted work до teardown приложения.
+
+Источник structured данных — job-owned `compiler.sarif` формата2.1 через
+[C# ErrorLog](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/errors-warnings#errorlog) после завершения
+компилятора. Severity берётся из отчёта, не из stdout/stderr. Ошибка MSBuild/restore
+до запуска C# compiler может не иметь SARIF: это `Unavailable`, raw вывод остаётся
+в отдельных режимах. `Failed` и `TooLarge` отличаются от валидного пустого отчёта.
+Поддерживаются локальные source locations; неизвестные URI/base mappings не дают
+переход. Координаты относятся к исходной сборке, изменившийся файл не переадресуется.
+
+Пределы: чтение SARIF до2MiB,128diagnostics/job,2048characters/message,
+128/code,4096/source path. Compiler хранит16completed jobs+active; file retention
+учитывает SARIF вместе с stdout/stderr. UI отдельно ограничивает compiler entries
+через `EditorDiagnosticsOptions.MaximumRecords`/`MaximumRetainedBytes` (default512/
+1MiB суммарно по показанным jobs), отмечает omissions/truncation и сохраняет
+выбранную ошибку failed job после следующего successful Build в пределах истории.
+Чтение UI snapshots не выполняет IO; source request использует frozen location.
+Без hook или корректной source region переход недоступен, диагностика остаётся видна.
+
+«Экспорт без текста» сохраняет только compiler state/count/omission metadata;
+messages и source paths явно исключены. Persistent compiler history, полный
+диагностический отчёт и platform/published acceptance продолжаются в ED8a.
 
 ## Проверки и published запуск
 

@@ -1,12 +1,27 @@
 # Cobalt / DI: состояние и точка продолжения
 
+Последняя работа — **2026-10-29, COB5a: исследование warm allocations**.
+Неизменённый graph v1: 10 Dry + 10 bounded paired BDN cases и 20 provider behavior
+scenarios прошли; 158 source fingerprints, mismatches=0, power plan прежняя.
+Current Cobalt singleton/closed 32 B, open 96 B, transient 440 B, multiple 248 B.
+Независимые counters после прогрева совпали с BDN в пределах 0.01 B/op. В отдельной
+копии runtime no-capture cycle check даёт 0/0/64/216/152 B соответственно; по 10
+existing Cobalt behavior scenarios на original и variant прошли. Два оставшихся
+open generic costs — GenericTypeArguments 32 B и MakeGenericType 32 B.
+Production runtime/generator/adapter, benchmark graph и public API не менялись.
+Первый default run завершён deadline runner на последнем case, ранний короткий
+counter warmup отклонён stability gate; failures сохранены отдельно от successful
+bounded run. SDK 10.0.403/.NET 10.0.14, Short: 3 warmups/10 iterations/100 ms; latency
+exploratory, CI open generic широкий. Full units/generator/package/UI/solution
+не повторены. [Результаты, ограничения и evidence](HISTORY.md#cob5a-warm-allocations--2026-10-29).
+
 Связанная проверка — **2026-10-23, ENE6a/MIT6a integration**: runtime179/179 и
 generator91/91 Debug/Release в полном solution2361/configuration; App options/
 factory/lifecycle и fresh package132 проверяют оба providers, включая DI без
 Cobalt analyzer. Runtime/generator/adapter API не менялись; allocation/performance
 baseline не повторён. [Команды и scope](../enerit/HISTORY.md#ene6a-finite-admission-и-наблюдаемая-остановка--2026-10-23).
 
-Последняя работа — **2026-10-23, сверка предпосылок Aether**.
+Предыдущая работа — **2026-10-23, сверка предпосылок Aether**.
 Повторный полный DI quality проход перед локальным authoring API не требуется:
 текущие регистрации/lifetime/IFactory достаточны в проверенном scope. Allocation
 backlog и новые scopes не становятся engine blockers. [Общая сверка](../PLAN.md#сверка-основы-перед-aether--2026-10-23).
@@ -92,7 +107,7 @@ Runtime/Contracts/generator/adapter logic не менялась; optimization и
 даёт structured errors/reference-unique cleanup, MS дешевле в горячем resolution.
 UI-specific consumers требуют собственной проверки, provider selectors сохраняются.
 
-## Текущий запуск
+## Предыдущий COB7 run — 2026-10-15
 
 Ниже сохранены результаты предыдущего собственного COB7 run; текущая Core
 integration указана выше и не является новым performance измерением.
@@ -146,8 +161,10 @@ ARCH1b.1, ED1a и первый ENE6a/MIT6a срез выполнены в сво
 package/Hosting проход выполнен в своём scope и не является текущим prerequisite.
 [Сверка зависимости](../PLAN.md#сверка-основы-перед-aether--2026-10-23).
 
-Cobalt performance backlog перед пересмотром migration: исследовать32B warm resolve,
-96B open-generic и transient overhead на том же paired workload, затем повторить
-измерения/регрессии. Это отдельная будущая задача, не сделанная оптимизация и не
-новое обязательное условие следующего модульного прохода. Explicit UseDI consumers сохранены;
-адресная migration возможна после проверки конкретного consumer и его limits.
+COB5a attribution выполнена. Следующий локальный performance срез — перенести
+проверенную no-capture проверку циклов в production с runtime/generator/lifecycle
+регрессиями и повтором paired measurements. Затем отдельно решить повторные
+GenericTypeArguments/MakeGenericType allocations и synthesized enumerable metadata.
+Оптимизация ещё не выполнена; общий engine порядок и межмодульные prerequisites
+не менялись. Explicit UseDI consumers сохранены; migration требует проверки
+конкретного consumer и его limits. [Контракт COB5a](PLAN.md#cob5a-источники-аллокаций-warm-resolution--2026-10-29).

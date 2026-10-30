@@ -30,8 +30,8 @@ internal sealed class ChildDiagnosticReceiverFactory(IDiagnosticRecordImporter? 
 }
 
 internal sealed class ChildDiagnosticForwarderFactory(IDiagnosticRecordReader? reader,
-    IFactory<PipesInvocationClient<IChildDiagnosticDelivery>, string> clients)
+    IFactory<PipesInvocationClient<IChildDiagnosticDelivery>, string> clients, IRuntimeDiagnosticObservationSource? observations = null)
     : IFactory<ChildDiagnosticForwarder, SessionLaunch>
 {
-    public ChildDiagnosticForwarder Create(SessionLaunch arguments) => new(arguments, reader, clients);
+    public ChildDiagnosticForwarder Create(SessionLaunch arguments) => new(arguments, reader, clients, observations);
 }

@@ -98,6 +98,41 @@ local report/JSONL и raw output остаются fallback. Common Core health �
 
 ## Wire, identity и lifecycle
 
+### Runtime observation version2 — 2026-10-31
+
+Штатный App forwarder заимствует Core health view и cached `GpuResourceHost.LastDevice`.
+Чтение не делает IO/flush/native queries и не ждёт sink workers. Device value
+фиксируется при успешной инициализации реально выбранного Vulkan producer; до GPU
+инициализации и в CPU-only роли он null. Handles/UUID/bootstrap/environment
+в observation не передаются. Numeric collector/ring/sink/emergency/retention counters
+сняты независимо; error fields заменены фиксированным marker `omitted`.
+
+Binary envelope и wire cap72KiB не меняются. Version1 body остаётся JSON array;
+version2 — `{Records, Observation, ObservationOmittedByBudget}`. Новый sender
+резервирует128bytes под wrapper, observation ограничен8KiB/16sinks и делит прежний
+MaxBatchBytes с records. При нехватке места удаляются последние sinks с OmittedSinks;
+если не помещается минимальный snapshot, observation пропускается целиком.
+Rate budget учитывает весь body и прежние1024bytes envelope cost. Empty heartbeat
+может передавать health даже при пустом record ring. Отказ source не блокирует
+передачу records и увеличивает Failures. Старый standalone3-argument constructor
+ChildDiagnosticForwarder остаётся version1; новый4-argument принимает borrowed
+`IRuntimeDiagnosticObservationSource`. Source и Core view не освобождаются lane.
+
+Receiver после exact generation/PID/nonce/appid/rate guards проверяет весь body до
+import/cache update: depth/bytes, identity collector, неотрицательные counters,
+число sinks, длины имён и отсутствие error text. Неверная observation отвергает
+весь packet. Legacy packet либо budget omission не очищает прежнее наблюдение.
+`ChildDiagnosticStatus.RuntimeObservation` хранит detached readonly snapshot;
+`ObservationOmittedPackets` считает validated omissions. Native lease сохраняет
+последний полученный snapshot после reap. Timestamp обозначает время child capture,
+не подтверждает freshness, final health или durability. Crash может потерять хвост
+и новое device observation; null означает unavailable, а не healthy zero.
+
+Editor показывает данные в Health и schema2 report по каждому runtime process.
+Aggregate `unavailable` может означать неполное покрытие процессов; точные flags —
+в `runtimeObservations`. Child sink error text не экспортируется даже при text opt-in.
+[Проверки](HISTORY.md#ed8a2-child-health-и-device-observations--2026-10-31).
+
 DiagnosticDeliveryPacket version1 переносит exact SessionId/generation/host/game/
 nonce/role/owned PID и child appid, packet/record sequences, loss totals и byte[]
 JSON. Generation использует exact UInt64 bits в существующем Int64 scalar codec.

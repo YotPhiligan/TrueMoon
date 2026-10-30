@@ -190,6 +190,7 @@ backend-independent contracts. Общие реализации и acceptance в�
 | ED5 | Edit preview, camera/picking и viewport tools | Минимальный preview Aether — до editable UI; полноценные tools/selection интегрируются с ED2–ED4 |
 | ED6 | Повседневный Build/Play/Replace workflow | ED1–ED5; существующие compiler/supervisor/replacement contracts |
 | ED7 | Проверенная расширяемость | Минимальные contracts появляются в ED3–ED5; ED7 подтверждает независимое расширение |
+| ED4g / ED7a | Запланированы Game AI inspector и встроенный помощник2026-10-30 | Общие agent API ARCH1d и Game AI ENG9; readonly queries/control не требуют полного ARCH1c, live World edits требуют |
 | ED8 | Надёжность и поставка | Подтверждает ED1–ED7; recovery/diagnostics разрабатываются вместе с владельцами |
 
 Это порядок пользовательских результатов. Нужные интерфейсы, cleanup и regression
@@ -204,6 +205,12 @@ headless8/8 прошли после Hosting lifecycle fix; Hosting114/Editor763 
 повторены, прежний Aether1543/1543 сохраняет свой run. Дальнейшая очередь —
 ED6a → ED8a console/export в подключаемом Editor, ED4c.2 → ED4c.3,
 project picker/switch и ED1/ED6 workflow. Gameplay ENG5c.3 и hardware gates прежние.
+
+Дополнение2026-10-30: по запросу пользователя запланированы [ED7a agent tasks](#ed7a-помощник-и-задачи-агентов--2026-10-30)
+и [ED4g Game AI inspector](#ed4g-наблюдение-и-отладка-поведения-мобов--2026-10-30).
+Engine/MCP/сценарные contracts принадлежат ARCH1d/ENG9 в PLAN.md. Эти consumers
+развиваются после минимальных общих API и не меняют текущую очередь выше;
+полный чат, LLM-персонаж или runtime editing не становятся условиями первого среза.
 
 Уточнение2026-10-23: [общая основа API Aether](PLAN.md#основа-api-перед-редактируемым-ui--2026-10-23)
 предшествует редактируемым inspector/tools: contracts → минимальный ARCH1b →
@@ -316,13 +323,14 @@ cancel не теряют unsaved changes. Dirty учитывает возвра�
 
 ### ED2a: document/persistence API — 2026-10-23
 
-`.aetherscene` — строгий UTF8 JSON formatVersion1 с optional BOM, максимум4MiB
+`.aetherscene` — строгий UTF8 JSON formatVersion1/2 с optional BOM, максимум4MiB
 вместе с BOM и JSON depth32. Сохраняются исходные SceneDocument ID/revision,
 entities/parent IDs, definition inheritance/patches и schema catalogs. Resolved
 scene, runtime state и Undo history не сериализуются. Scalar kind явно отличает
 Int64/finite Double/Boolean/String/null, отсутствие свойства сохраняется отдельно
 от explicit null/default. Unknown/duplicate/case-mismatched members и unsupported
-versions отклоняются; автоматических миграций нет до появления следующей версии.
+versions отклоняются. ED4c.2 от2026-10-31 добавляет явное чтение v1/v2 и выбор v2
+при наличии instance name/order; [полный контракт](#ed4c-обозреватель-сущностей--начат-2026-10-24).
 Лимиты:4096entities/definitions,1024schemas; на patch256added/removed/restored и
 1024overrides;256properties на component/schema и256required types. Engine
 authoring factory валидирует документ до записи и после чтения; оба направления
@@ -412,8 +420,9 @@ invalid/stale ввод не меняет history, один commit — одна t
 Preview обновляется после commit/history, а не после каждого символа; допускается
 только одно выполняемое и одно последнее ожидающее обновление. Его текущий лимит
 64 entities и child replacement сообщаются явно; ошибка сохраняет документ.
-New пока создаёт пустую сцену: следующий отдельный срез — минимальные create/delete
-через общий authoring API/history. Полный World/ECS для этих шагов не требуется.
+New создаёт пустую сцену; ED4c.3 от2026-10-31 позволяет наполнить её объектами/кубами,
+изменить Transform, удалить/Undo и Save/reopen через общий authoring API/history.
+Полный World/ECS для этих шагов не требуется.
 После первого edit/save/preview цикла — project picker/switch и ED1/ED6 workflow;
 общие UI capabilities добавляются по конкретному consumer, без предварительной
 docking/plugin платформы. ENE6c/d и оставшиеся MIT6a/c остаются отдельными этапами
@@ -565,25 +574,83 @@ API/history, с expected revision и проверкой актуального d
    сохраняет локальный Transform и inheritance; запрещает self/cycles/missing
    targets, stale revision и правки во время IO/runtime/Transform draft.
    Undo/Redo, dirty/save/reopen и committed Edit Preview используют прежних owners.
-2. **ED4c.2 — имена и порядок.** Сначала persistent engine metadata/формат и
-   операции history: имя экземпляра и sibling order, совместимое чтение старых
-   сцен. Затем inline rename (F2/Enter/Esc), before/after drop и клавиши перестановки.
-   Нельзя хранить эти правки только в UI или подменять устойчивый ID именем.
-3. **ED4c.3 — операции объектов.** Общий create/delete/duplicate с явной политикой
-   descendants/references и один UI gesture = одна transaction. Поиск, контекстное
-   меню и согласованные команды добавляются к тому же обозревателю.
+2. **ED4c.2 — реализован 2026-10-31: имена и порядок.** EntityInstance/ResolvedEntity
+   содержат optional Name/SiblingOrder; общий HierarchyEditBatch фиксирует имена и
+   placements атомарно через прежние revision/receipts/history. JSON v1 читается как
+   прежде; writer выбирает v2 при наличии метаданных. Inline rename F2/Enter/Esc,
+   before/after drop на краях строки и Ctrl+↑/↓ используют тот же document owner.
+   Устойчивый ID и локальные component patches сохраняются.
+3. **ED4c.3 — реализован 2026-10-31: операции объектов.** Общие CreateEntitiesBatch,
+   DeleteEntitiesBatch и DuplicateEntitiesBatch через EditEntities используют прежние
+   revision/receipts/history. New → объект/куб → Transform → subtree delete/Undo →
+   Save/reopen проверен. Поиск по имени/ID, context menu, icon actions и shortcuts
+   используют тот же обозреватель и shared commands; политика descendants/references ниже.
 4. **Дальше по workload.** Multiselect/batch moves, autoscroll/autoexpand при drag,
    virtualization, camera/world-preserving reparent и расширяемые icon providers.
 
-Первый срез сохраняет Guid order родителей/соседей, не обещает rename/reorder.
+Решение ED4c.3 от2026-10-31:
+
+- Create добавляет instances и, при необходимости, новые definitions/exact schemas
+  одной transaction. Существующие каталоги не перезаписываются; entities append к
+  указанным parents в caller order. Input SiblingOrder должен быть null; ranks
+  назначаются общим placement preparation. Parents/definitions могут создаваться
+  в том же batch; валидируется весь полученный graph/catalog до commit.
+- Delete требует явный RejectChildren либо Subtree. Первый отклоняет dangling
+  children, второй включает всех потомков; overlapping roots допустимы, duplicate
+  roots отклоняются. Удаляются только instances, definition/schema catalogs остаются.
+  Undo создания восстанавливает и предыдущие каталоги; автоматического GC каталогов нет.
+- Duplicate получает exact caller-assigned map original→fresh nonempty entity IDs
+  для одного root или полного subtree. Внутренние parent links remap-ятся; inheritance,
+  names и immutable local patches сохраняются. Component occurrence IDs остаются
+  entity-scoped. Root размещается после source при том же parent, иначе last у нового
+  existing parent; порядок детей сохраняется независимо от новых GUID через dense ranks.
+  Destination sibling ranks могут нормализоваться как в ED4c.2.
+- В текущем scalar profile нет typed entity-reference properties. Произвольные GUID
+  strings не считаются ссылками и не переписываются. Типизированные references и их
+  delete/copy policy требуют отдельного расширения, не обещаются этим профилем.
+- MaxBatchEdits учитывает expanded delete/duplicate instances; для create — instances
+  плюс новые definitions/schemas. Сохраняются bounds4096entities/definitions,1024schemas.
+  Expected owner/revision, cancellation, idempotency, history и failed preparation
+  используют прежний session contract; новая revision публикуется только целиком.
+- UI presets «Объект» и «Куб» дают Transform; cube добавляет Appearance. Новый definition
+  и недостающие canonical built-in schemas идут тем же batch, поэтому New пригоден для
+  работы. Несовместимый existing built-in schema не перезаписывается. Созданный/скопированный
+  root выбирается для inspection; удаление child выбирает живого parent, root снимает выбор.
+- Insert/Ctrl+Insert создают root/child, Ctrl+D копирует ветвь, Delete удаляет ветвь с
+  потомками. Right-click/Shift+F10/кнопка действий используют те же shared commands.
+  Context actions привязаны к snapshot/selection; late activation не применяется к новому
+  owner. Нет file/runtime/property/name draft admission — нет structural commit.
+- Ctrl+F и Enter/«Найти» циклически переходят по ordinal case-insensitive name/ID matches,
+  раскрывают предков и reveal-ят строку. Поиск не фильтрует дерево, не меняет документ и
+  не создаёт history. Query и UI focus остаются user-local, не сериализуются в scene.
+- Retained projection coalesce-ит текущие items и selection одной owner-thread операцией;
+  обновление items не отправляет обратный выбор в model. Одно selection-only изменение
+  не пересоздаёт row data. Новых DI services/scopes/owners или второй истории нет.
+
+Решение ED4c.2 от2026-10-31: Name принадлежит экземпляру, не наследуется, не обязан
+быть уникальным. Null возвращает ID-based label; пустой UI draft очищает имя.
+Непустое имя — валидный однострочный UTF16 без control characters, до128code units;
+whitespace-only запрещён, нормализация/trim не выполняются. SiblingOrder — optional
+nonnegative int, null означает0, равные ranks разрешаются Guid order. Placement
+Last/Before/After перенумеровывает только destination siblings; anchors проверяются
+последовательно в caller order, source declaration order не меняется. Прежний
+Reparent остаётся parent-only и сохраняет метаданные. Старые сцены сохраняют Guid order.
+JSON v2 требует nullable name/siblingOrder у каждого entity; прежний v1 reader
+отклоняет v2 вместо тихой потери имени/порядка. Writer без метаданных сохраняет v1.
+
 Данные/состояние не содержат controls/тему; UI хранит только expansion/gesture/focus.
 Theme/refresh сохраняют дерево/выбор/scroll; смена snapshot/detach/FocusLost/Esc
 отменяет незавершённый drag. Иконки геометрические, чужие OS данные не принимаются.
+Draft имени дополнительно привязан к exact authoring state: смена owner/revision,
+selection, admission или фокуса отменяет его без history entry. Ошибка имени
+сохраняет draft и diagnostic до исправления/отмены. Во время ввода clipboard/caret
+принадлежат TextBox, глобальные document/history shortcuts не применяются к сцене.
+Unchanged имя и UI reorder без изменения позиции не создают лишний history entry.
 Проверки: прямые engine/TreeView/Editor/DI tests и native перенос→Undo/Redo→Save/reopen.
 Текущие результаты и ограничения — в [STATUS](STATUS.md), точные команды —
-в [HISTORY](HISTORY.md#ed4c1-дерево-сущностей-и-reparent--2026-10-24).
-Следующий конкретный шаг — ED4c.2: сохраняемые имена/порядок через общие engine
-contracts/history, затем UI rename/reorder; ED4c.3 остаётся открытым.
+в [HISTORY](HISTORY.md#ed4c3-операции-объектов-поиск-и-контекстное-меню--2026-10-31).
+Следующий конкретный шаг — project picker/switch и ED1/ED6 document/build/play workflow.
+Multiselect/virtualization/typed references и полный ARCH1b/ED4 остаются открытыми.
 
 - [ ] Иерархия сцены отражает реальные parent relationships: выбор, раскрытие,
   поиск и синхронизация с inspector; размер/virtualization проверяются на заданном workload.
@@ -753,6 +820,37 @@ platform/host, ViewModel не зависит от Windows. Shared contracts/acce
 UI плана; native Editor proof проверяет actual active/inactive border pixels,
 owned HWND messages и cleanup без изменения настроек ОС.
 
+### ED4g. Наблюдение и отладка поведения мобов — 2026-10-30
+
+Запланировано по обсуждению с пользователем. Предметные данные/исполнение,
+decision traces и scenario runner — [ENG9](PLAN.md#eng9-ии-мобов-и-агентные-проверки--2026-10-30).
+Здесь только прикладное представление и подключение общих операций.
+
+- [ ] Выбор моба связан с entity ID и runtime session/generation. Показать versioned
+  authoring parameters отдельно от live perception, memory/blackboard, цели,
+  активного состояния/действия и причины перехода; tick/давность snapshot видимы.
+  Отсутствующие probes и потеря связи имеют unavailable/stale presentation.
+- [ ] Добавить bounded историю решений: условия, переходы и outcomes, фильтр по
+  entity/scenario и переход к связанному событию/диагностике. Freeze/refresh детали
+  не объявляются паузой симуляции; все чтения идут через общие snapshots.
+- [ ] Подключить Pause/Step и поддержанные scenario/debug commands; доступность
+  определяется capabilities, session/job state и правами. Параметры документа
+  меняются через authoring diff/history; live patch доступен только по ARCH1c.
+  Возврат из Play не сохраняет память/состояние моба в документ автоматически.
+- [ ] Показать scenario inputs/seed, assertions, baseline/candidate versions и report;
+  передать выбранный snapshot/trace/scenario в задачу ED7a с его точной identity.
+  Результаты сценария относятся к исходной generation и не подменяют текущую.
+- [ ] Реализовать retained View<TData>/отдельные Data и IViewStyle через App/DI/
+  IFactory на UI owner thread. Окно/панель владеет View и снимает subscriptions;
+  runtime/provider services заимствуются. Poll/updates bounded, IO/IPC не блокируют
+  UI; Close/Switch/Replace отменяют subscriptions и отклоняют late results.
+
+Готовность: Inspector охранника объясняет Patrol/Investigate/Chase/return по recorded
+trace, синхронизирует выбор и сохраняет focus/scroll при обновлении. Direct tests
+и native workflow проверяют stale/unavailable/loss, Pause/Step, scenario results,
+theme/retained state, повторный Play/Stop/Replace и cleanup; headless Game AI proof
+не объявляется UI/GPU acceptance. Визуальный редактор графа — дальнейший workload.
+
 ## ED5. Edit preview и инструменты viewport
 
 Первый [engine preview profile](PLAN.md#edit-preview-первый-engine-profile--2026-10-23)
@@ -810,7 +908,8 @@ readonly/snapshot transaction contracts ARCH1c, а не прямые измен�
 между запусками; smoke/runtime хранят runs в своём report scope.
 [Настройки и границы](../core/DIAGNOSTICS.md#хранение-jsonl-между-запусками).
 Structured console/filter/copy и ED6a.2 raw/health реализованы bounded срезами
-2026-10-29; compiler navigation и полная ED8a acceptance ниже остаются открытыми.
+2026-10-29; compiler navigation ED6a.3 реализован2026-10-30 с unit/raster proof.
+Полные ED6a/ED8a и window/GPU/published acceptance нового среза остаются открытыми.
 
 Согласовано пользователем, запланировано; общий pipeline —
 [CORE6](../core/PLAN.md#core6-структурированная-диагностика--2026-10-25),
@@ -845,7 +944,7 @@ Editor — consumer ограниченной истории, без собств
   omissions разделены; child sink health остаётся unavailable. Metadata-only export
   содержит numeric health/correlation с отдельным budget/omission, raw/error text
   исключены. [Точные проверки и scoped native proof](HISTORY.md#ed6a2-raw-streams-и-health--2026-10-29).
-- [ ] Compiler diagnostics дают file/line/column и переход через определённый editor
+- [x] Compiler diagnostics дают file/line/column и переход через определённый editor
   hook; классификацию не выводить только из stdout/stderr. Связь с build job/artifact
   сохраняется при compile failure и при последующем успешном Build.
 - [x] Diagnostics View<TData>, отдельные Data/ViewModel/IViewStyle и UI-owner factory
@@ -873,6 +972,37 @@ Acceptance: сообщения из child видны во время работ�
 и compiler navigation работают; flood/slow UI/повторные открытия панели и crash/
 Replace не блокируют команды и не растят память/подписки. Проверки Data и native
 UI выделяются отдельно, исторический shell proof не закрывает эту задачу.
+
+### ED6a.3. Диагностика компилятора и source navigation — 2026-10-30
+
+Реализован bounded compiler consumer: GameBuildCompiler запрашивает C# SARIF2.1
+и после завершения читает до2MiB/128entries; code/severity/message/location
+принадлежат producer. Pending/Available/Unavailable/Failed/TooLarge различаются;
+ошибка MSBuild до C# compilation не классифицируется разбором raw stream.
+SARIF входит в ownership/count/bytes/age retention завершённых jobs.
+
+Режим Compiler сохраняет job/revision/artifact correlation и frozen selection
+failed job после successful retry. Entries суммарно ограничены MaximumRecords/
+MaximumRetainedBytes, text/path/code — producer и presentation bounds; unknown
+locations не дают source action. Refresh/filter/theme не переписывают inspected
+text; при eviction переход отключается. Structured level/event/group/clear
+сохраняют прежнюю область. Metadata-only export содержит numeric compiler health,
+исключает compiler message/source paths.
+
+`ISourceFileNavigator` — borrowed host hook; стандартная App registration
+`UseAetherEditorSourceNavigation(SourceEditorOptions)` фиксирует executable и
+argv placeholders `{file}/{line}/{column}`. Кнопка/Tab+Enter посылает одну frozen
+location, process launch идёт вне UI; внешний editor process не App-owned.
+Accepted task отменяется/drain при Stop, failure наблюдаем без throw через View.
+Старые public constructors и enum values сохранены. [Подключение](../../TrueMoon.Aether.Editor/README.md#диагностика-компилятора-и-переход-в-исходник).
+
+Проверено2026-10-30: Aether1570/1570 и Editor833/833 отдельно Debug/Release,
+failed/skipped0; narrow19+34. SourceDebug/Cobalt/native Skia raster consumer:
+реальная compile failure → exact location/hook → themes → successful retry,
+3PNG просмотрены, View/App cleanup выполнен. Это offscreen proof без окна/GPU
+и без запуска пользовательского внешнего editor. [Команды/evidence/границы](HISTORY.md#ed6a3-compiler-diagnostics-и-source-navigation--2026-10-30).
+Далее полный ED8a report и scoped window/published/provider/flood acceptance;
+весь ED6a этим срезом не закрывается.
 
 ### ED6b. Build/Play/Stop из редактора — 2026-10-29
 
@@ -921,6 +1051,46 @@ create/delete → project picker/switch и ED1/ED6 workflow сохраняетс
 App-local, dependencies внедрены; не требуется global locator, tree reflection или
 переписывание редактора. Dynamic plugin loading этим этапом не обещается.
 
+### ED7a. Помощник и задачи агентов — 2026-10-30
+
+Запланировано по запросу пользователя: встроенный помощник работает с проектом,
+документом и Runtime через [ARCH1d.1–4](PLAN.md#локальные-агенты-и-mcp-adapter).
+Внешний MCP consumer использует те же операции; Game AI эксперименты — ENG9.
+Выбор модели/SDK и task/provider adapter уточняется перед реализацией; общий
+Editor/Aether API сохраняет независимость от поставщика.
+
+- [ ] Панель задачи показывает цель, actor/target project/document/session,
+  выполняемые операции/jobs, progress, результат/conflict/error и отмену. Context
+  включает выбранные IDs/schemas, bounded snapshots/diagnostics/capture и их
+  revisions; состав передаваемых provider данных задаётся явно в task options.
+- [ ] Подключить injected task host/provider adapter с ограниченными context,
+  concurrency/queues/history и deadlines. UI updates приходят на owner thread;
+  inference/tool work не блокирует UI или runtime tick. Внешние и встроенные задачи
+  используют один operation contract, но сохраняют свои actor/operation IDs.
+- [ ] Показывать предложенный authoring diff, его проверку и commit/result по
+  выданным правам. Применение использует общие history/Undo/Redo и expected revision;
+  правка человеком/другим агентом даёт conflict. Code/build/Replace jobs имеют
+  отдельный результат, scene Undo не обещает откат исходников.
+- [ ] Подключить readonly runtime observation, diagnostics и доступные controls
+  до полного ARCH1c; unsupported tools явно недоступны. Настройка документа,
+  runtime debug action и полноценный live edit имеют разное представление target.
+  Stop/Pause/Cancel доступны при выполняемой agent task без starvation.
+- [ ] Зафиксировать task lifetime при закрытии панели и политику Close/Switch/App
+  stop: отмена/drain accepted work, завершённый/неизвестный outcome и отсутствие
+  late commit/resume в новую session. Неизвестный outcome требует query/recovery
+  по operation ID. Панель не освобождает borrowed Runtime/provider dependencies.
+- [ ] View/Data/style/task host/factories подключаются через публичную App точку,
+  Cobalt/IFactory и действующие extension contracts. Закрытие/повторное открытие
+  панели сохраняет нужную task history без удержания старого View/subscriptions;
+  partial startup и failed cleanup сохраняют единственного owner/retry path.
+
+Готовность первого consumer: запросить выбранный объект/Runtime snapshot, выполнить
+authoring edit → Undo/Redo → Save/reopen и получить наблюдаемый job result. Общий
+headless/MCP proof, DI/lifetime tests и native panel workflow фиксируются отдельно.
+Дальнейший acceptance ENG9c: задача об охраннике → trace/assertions → изменение →
+повторный scenario report; UI не объявляет гипотезу агента доказанным исправлением.
+Полноценная chat platform и LLM в роли моба не являются prerequisites панели.
+
 ## ED8. Надёжность и поставка
 
 - [ ] Добавить autosave/recovery отдельно от явного Save; восстановление предлагает
@@ -952,24 +1122,66 @@ exception/stack/caller и произвольные properties исключены
 сохраняются. Это deliberate metadata-only privacy policy, а не автоматическая
 очистка любого пользовательского текста. `partial=true`, omitted count и unavailable
 список обязательны. ED6a.2 добавляет numeric parent health/process metadata с
-explicit budget omission; raw/error text по-прежнему исключены. Optional raw export
-policy, persistent history, child sink health/backend/device/collector configuration
-и explicit user cancellation остаются следующей частью ED8a, checklist ниже открыт.
+explicit budget omission; raw/error text в этом прежнем профиле исключены. Optional
+raw export policy, persistent history, backend/configuration и user cancellation
+дополнены срезом2026-10-30 ниже. Child sink health/device и полная acceptance открыты.
 Tests проверяют size/order/privacy, write failure/no-overwrite и cancellation;
 native проверяет после runtime crash при неизменном dirty document. Published
-app/export и rotated disk history новым запуском не проверены.
+app/export и rotated disk history в том запуске не проверялись.
 
-- [ ] Явная команда экспорта bounded report: последние structured/raw события с
+**ED8a.1 реализован и проверен2026-10-30:** schema2 объединяет memory и configured
+parent JSONL history по collector ApplicationId/Sequence; default metadata-only,
+explicit text opt-in для message/exception/stack/raw/compiler/source path. Arbitrary
+properties/caller/bootstrap/environment/control fields не копируются. Известные
+control-key строки и заданные host sensitive literals редактируются до clipping;
+это не автоматическая анонимизация личных путей/данных. Выбор «История запусков»
+управляет IO; options/path заморожены во время export, отдельная кнопка отмены
+сохраняет single-flight до drain. Atomic no-overwrite/cleanup и App stop прежние.
+Default512KiB/5s, text4096chars; archive512records/4MiB read/2MiB retained/16files/
+64KiB line/2s. Versions/OS, effective scalar collector configuration, observed
+presentation backend/viewport, parent sink health/process capture и independent
+snapshot/omission counters включены. Rule names/paths конфигурации исключены явно.
+
+Core398/Aether1570/Editor842 отдельно Debug/Release, failed/skipped0. Published
+Release/Cobalt consuming app вне checkout: реальные CPU preview children normal +
+owned crash, оба reaped/released; rotating/malformed/incomplete history, text policy,
+5000events flood и native Skia Dark/Light raster проверены. Initial native probe
+выявил missing backend при paused follow-tail: initial observation и snapshot на
+export исправлены; регрессия проверяет ещё resize/scale. Full Editor повторён.
+[Evidence и точные границы](HISTORY.md#ed8a1-архив-и-управляемый-экспорт--2026-10-30).
+**ED8a.2 реализован и проверен2026-10-31:** child collector/sinks/emergency/retention
+и last selected Vulkan device доставляются bounded version2 body по прежнему
+отдельному diagnostic lane; UI/export читает cached detached snapshots без IPC/GPU
+queries. Last observation/time сохраняется после crash, null/omissions различимы.
+Presentation OpenGL/Vulkan surfaces имеют optional memory-only device capability;
+Editor копирует только значения. Report исключает child sink error text.
+
+Aether1581/Editor847/Alloy893/Hosting117 отдельно Debug/Release, final failed/skipped0.
+Fresh15packages:8headless cases/24CPU Game children, Cobalt/MS DI, DLL/apphost и
+Debug/published Release. Published source и NuGet GUI:2standard/Cobalt workflows,
+14preview children с2owned crashes;12graceful Vulkan validation reports0/0 и teardown0.
+Native export содержит actual OpenGL presentation device и retained child health/
+Vulkan device после crash, dirty document/selection/history сохранены;4PNG просмотрены.
+[Evidence и границы](HISTORY.md#ed8a2-child-health-и-device-observations--2026-10-31).
+ED8a checklist ниже выполнен в этом Windows x64/net10/OpenGL UI↔Vulkan preview и
+CPU Game профиле. `partial=true` сохраняется: snapshots независимы, capabilities
+могут отсутствовать, persistent compiler history не добавлен. Full native/provider/
+backend matrix, physical input/device loss/VRAM и long-load не выводятся из этого
+acceptance. ED8/release в целом остаются открыты. Следующий основной шаг — ED4c.2.
+
+- [x] Явная команда экспорта bounded report: последние structured/raw события с
   session/generation/build correlation, loss/truncation/sink health, версии
   приложения/контрактов, OS/backend/device и effective diagnostic configuration.
   Framework storage/schema определяет CORE6, engine context — ENG8a; здесь только
   пользовательский сбор/выбор назначения и feedback/cancellation.
-- [ ] Ограничить размер/время экспорта; исключить nonce/environment/control endpoints
+- [x] Ограничить размер/время экспорта; исключить nonce/environment/control endpoints
   и произвольное содержимое проекта, определить обработку личных путей/exception
   text. Partial/unavailable данные обозначать явно, unsaved document не изменять.
-- [ ] Проверить normal/crashed runtime, rotated/truncated history, write failure и
+- [x] Проверить normal/crashed runtime, rotated/truncated history, write failure и
   cancellation, published app вне checkout. Экспорт после crash использует имеющиеся
-  данные и не обещает восстановить потерянный хвост async queue.
+  данные и не обещает восстановить потерянный хвост async queue. ED8a.1 проверяет
+  published CPU preview/raster consumer; ED8a.2 добавляет CPU Game/NuGet и два
+  published standard-window/GPU workflows. Остальные profiles имеют отдельные gates.
 
 ## Первый сквозной срез
 
@@ -1011,5 +1223,7 @@ physical DPI/K7/device loss/VRAM acceptance остаются открытыми.
 
 После первой версии по реальным сценариям развиваются multi-document/docking UX,
 asset browser/import pipeline, новые scene/render capabilities, live runtime edits
-ARCH1c и MCP ARCH1d, dynamic extensions и automation. Они не становятся скрытыми
+ARCH1c, dynamic extensions и automation. Agent/MCP направление уточнено2026-10-30:
+ARCH1d/ENG9 — в engine плане, прикладные задачи — ED4g/ED7a выше. Readonly/control
+и authoring tools возможны до полного ARCH1c. Эти этапы не становятся скрытыми
 условиями первого Transform/save/preview среза.

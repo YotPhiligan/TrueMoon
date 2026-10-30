@@ -9,7 +9,7 @@ internal sealed class BuildDiagnosticStore
     internal const string MarkerFile = ".build-diagnostics";
     private const string Magic = "TrueMoon.Aether.BuildDiagnostics/1\n";
     private static readonly HashSet<string> Names = new(StringComparer.Ordinal)
-        { MarkerFile, "build.stdout.log", "build.stderr.log", "build.output.json" };
+        { MarkerFile, "build.stdout.log", "build.stderr.log", "build.output.json", GameBuildDiagnosticReader.FileName };
     private readonly string _jobs;
     private readonly GameBuildRetentionOptions _options;
 

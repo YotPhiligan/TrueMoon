@@ -19,7 +19,7 @@ public static class SilkVulkanHost
         // is used by its presenter, not by Skia; do not advertise queried GPU features as enabled.
         return new(device.Instance.Handle, device.PhysicalDevice.Handle, device.Device.Handle, device.Queue.Handle,
             device.QueueFamily, Vk.Version11, device.GetProcedureAddress, device.WaitIdle,
-            device.InstanceExtensions, device.DeviceExtensions);
+            device.InstanceExtensions, device.DeviceExtensions) { DeviceInfo = device.DeviceInfo };
     }
 
     /// <summary>Creates a UI target on a borrowed Silk Vulkan device.</summary>

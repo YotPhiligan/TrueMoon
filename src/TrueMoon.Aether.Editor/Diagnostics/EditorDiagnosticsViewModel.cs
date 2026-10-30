@@ -45,7 +45,7 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
         $"Structured · {_entries.Count} строк / {_records.Count} событий · {_bytes / 1024} KiB · пропуски {_gaps} · вытеснено {_evicted} · усечено {_truncated} · health: {(_health == null ? "недоступно" : "отдельная вкладка")}";
     public string ExportStatus => _exportStatus;
     public bool IsExporting => _export is { IsCompleted: false };
-    public bool CanExport => !IsExporting;
+    public bool CanExport => !IsExporting && !_lifetime.IsCancellationRequested;
     private string _exportPath = Path.Combine(Path.GetTempPath(), $"TrueMoon-diagnostics-{Guid.NewGuid():N}.json");
     public string ExportPath
     {
@@ -69,7 +69,7 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
     /// <summary>Reads at most one bounded batch. Call on the presentation owner, at RefreshInterval or slower.</summary>
     public void Refresh()
     {
-        VerifyOpen(); ObserveExport(); RefreshContext();
+        VerifyOpen(); ObserveExport(); ObserveNavigation(); RefreshContext();
         if (_reader == null) return;
         var latest = _reader.LatestSequence;
         var batch = _reader.ReadAfter(_cursor, _options.RecordsPerRefresh);
@@ -106,27 +106,37 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
 
     /// <summary>Reports include retained history regardless of the active display filter.</summary>
     public EditorDiagnosticSnapshot Snapshot()
-    { VerifyOpen(); return new(Array.AsReadOnly(_records.Select(item => item.Record).ToArray()), _cursor, _gaps, _evicted, _truncated, CollectorAvailable) { PresentationLimits = _options, Health = _health, Processes = _processes }; }
+    { VerifyOpen(); return new(Array.AsReadOnly(_records.Select(item => item.Record).ToArray()), _cursor, _gaps, _evicted, _truncated, CollectorAvailable) { PresentationLimits = _options, Health = _health, Processes = _processes, Presentation = _presentation }; }
 
     /// <summary>Starts one explicit partial export. Existing files are never overwritten.</summary>
     public void Export()
     {
-        VerifyOpen(); if (IsExporting) return;
-        ObserveExport();
-        _exportStatus = "Экспорт идентификаторов без текста сообщений и стеков…";
-        try { _export = _reports.WriteAsync(Snapshot(), ExportPath, cancellationToken: _lifetime.Token); }
-        catch (Exception error) { _export = Task.FromException(error); ObserveExport(); }
-        Changed(nameof(ExportStatus)); Changed(nameof(IsExporting)); Changed(nameof(CanExport));
+        VerifyOpen();
+        lock (_shutdownGate)
+        {
+            if (IsExporting) return;
+            ObserveExport();
+            if (_lifetime.IsCancellationRequested) { _exportStatus = "Экспорт отменён: приложение останавливается."; ExportChanged(); return; }
+            _exportTextAtStart = ExportIncludesText;
+            _exportCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+            _exportStatus = "Сбор диагностического отчёта…";
+            try { _export = _reports.WriteReportAsync(Snapshot(), ExportPath, new()
+                { IncludeText = ExportIncludesText, IncludePersistentHistory = ExportIncludesHistory }, _exportCancellation.Token); }
+            catch (Exception error) { _export = Task.FromException(error); }
+            ObserveExport(); ExportChanged();
+        }
     }
 
     private void ObserveExport()
     {
         if (_export is not { IsCompleted: true } finished) return;
         _export = null;
-        try { finished.GetAwaiter().GetResult(); _exportStatus = "Частичный отчёт сохранён: metadata и доступный health, без raw text/сообщений/стеков."; }
+        try { finished.GetAwaiter().GetResult(); _exportStatus = _exportTextAtStart
+            ? "Частичный отчёт сохранён с выбранным текстом. Проверьте данные перед передачей."
+            : "Частичный отчёт сохранён: metadata и доступный health, без raw text/сообщений/стеков."; }
         catch (OperationCanceledException) { _exportStatus = "Экспорт отменён или истёк лимит времени."; }
         catch (Exception error) { _exportStatus = "Экспорт не выполнен: " + error.GetType().Name; }
-        Changed(nameof(ExportStatus)); Changed(nameof(IsExporting)); Changed(nameof(CanExport));
+        _exportCancellation?.Dispose(); _exportCancellation = null; ExportChanged();
     }
 
     public Task StopAsync()
@@ -136,6 +146,7 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
     {
         _lifetime.Cancel();
         if (_export is { } export) try { await export.ConfigureAwait(false); } catch { /* Owner observes the final task; the UI reports its result on Refresh. */ }
+        if (_navigation is { } navigation) try { await navigation.ConfigureAwait(false); } catch { /* The borrowed hook's accepted work is drained. */ }
     }
 
     private void Filter(ref string field, string value, string property)
@@ -235,6 +246,7 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
     {
         if (_disposed) return;
         _disposed = true; StopAsync().GetAwaiter().GetResult(); _lifetime.Dispose(); _records.Clear(); _entries = Array.Empty<EditorDiagnosticEntry>();
-        _bytes = 0; _details = ""; _rows = []; _processes = null; _health = null; _inspectedContext = ""; PropertyChanged = null;
+        _bytes = 0; _details = ""; _rows = []; _processes = null; _health = null; _inspectedContext = ""; _selectedSource = null; _navigation = null;
+        _presentation = null; _exportCancellation?.Dispose(); _exportCancellation = null; PropertyChanged = null;
     }
 }

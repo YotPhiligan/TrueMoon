@@ -17,6 +17,13 @@ gate; официальный native154.x без extension также откло�
 
 ## Использование
 
+OpenGL/Vulkan surfaces дополнительно предоставляют optional `IUiRenderDiagnostics`
+с value-only `UiRenderDeviceInfo`. Hosting фиксирует данные фактически выбранного
+device/context при initialization и передаёт их через `OpenGLUiTarget.DeviceInfo`
+либо `VulkanHostContext.DeviceInfo`. Getter не делает native queries/waits и не
+проверяет GPU health. External host может оставить metadata null; handles и lifetime
+по-прежнему заимствуются по исходному контракту. Raster не получает фиктивный GPU.
+
 Ссылка на renderer автоматически копирует DLL при build и publish в `truemoon-native/win-x64/libSkiaSharp.dll` относительно выходного каталога приложения. В NuGet пакет DLL входит под `nativeAssets/win-x64/`; `build`/`buildTransitive` targets доставляют её стандартными MSBuild items как при прямом PackageReference, так и транзитивно через Hosting. Одного contentFiles/copy-to-output для транзитивного consumer недостаточно. Выходной путь и loader API не изменены; отдельный каталог предотвращает конфликт со штатными SkiaSharp.NativeAssets. Воспроизводимая проверка — [package consumer](../ManualTests/AlloyPackageConsumer/README.md).
 
 Публичный `SkiaNativeLibrary.Initialize(path?)` до первого native-вызова загружает DLL и устанавливает DllImportResolver для SkiaSharp и interop bindings. Обе сборки используют один handle до завершения процесса. Vulkan/OpenGL/raster renderers автоматически инициализируют bundled DLL; явный вызов нужен для своего пути до первого использования Skia. Аргумент `--native-skia <путь>` в AlloyVulkanTest позволяет проверить альтернативный файл. На других платформах встроенный Windows asset не загружается; interop там не проверен. Runtime и подключение App: [Hosting](../TrueMoon.Alloy.Hosting/README.md).

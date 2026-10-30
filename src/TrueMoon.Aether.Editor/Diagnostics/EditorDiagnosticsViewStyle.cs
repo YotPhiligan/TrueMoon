@@ -11,6 +11,7 @@ public sealed class EditorDiagnosticsViewStyle : IViewStyle<EditorDiagnosticsVie
         styles.Role(EditorDiagnosticsView.RowRole).Spacing(6);
         styles.Role(EditorDiagnosticsView.FilterRole).Set(UiProperties.Width, 190f).Height(26).Padding(new Thickness(4, 2, 4, 2)).FontSize(12);
         styles.Role(EditorDiagnosticsView.CommandRole).Height(26).Padding(new Thickness(6, 2, 6, 2)).FontSize(12);
+        styles.Role(EditorDiagnosticsView.ExportChoiceRole).Height(26).Padding(new Thickness(32, 2, 6, 2)).FontSize(12);
         styles.Role(EditorDiagnosticsView.LabelRole).FontSize(12);
         styles.Part(view => view.Actions).Height(28);
         styles.Part(view => view.Summary).FontSize(11);
@@ -18,5 +19,6 @@ public sealed class EditorDiagnosticsViewStyle : IViewStyle<EditorDiagnosticsVie
         styles.Part(view => view.Events).FontSize(12);
         styles.Part(view => view.ExportPath).Set(UiProperties.Width, 640f).Height(26).Padding(new Thickness(4, 2, 4, 2)).FontSize(12);
         styles.Part(view => view.ExportStatus).FontSize(11);
+        styles.Part(view => view.ExportPrivacy).FontSize(11);
     }
 }

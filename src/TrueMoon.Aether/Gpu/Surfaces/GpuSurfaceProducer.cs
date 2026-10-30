@@ -54,7 +54,7 @@ internal static class GpuSurfaceProducer
                         var adapter = request.Adapter ?? throw new InvalidDataException("Missing surface adapter.");
                         surface = host.Own(new VulkanSurface(launch.Identity, generation, adapter, request.Width, request.Height, validation));
                         created++;
-                        try { await surface.InitializeAsync(end).ConfigureAwait(false); }
+                        try { await surface.InitializeAsync(end).ConfigureAwait(false); host.ObserveDevice(surface.DeviceObservation); }
                         finally { slotsCreated += surface.SlotCount; }
                         ledger = new(launch.Identity, generation); reply = new(sequence, "Surface", launch.Identity, generation, Offer: surface.Offer); break;
                     case "Imported":
@@ -119,6 +119,7 @@ internal sealed class VulkanSurface(SessionIdentity identity, ulong generation, 
     private readonly SemaphoreSlim _gate = new(1, 1);
     public bool IsReleased { get; private set; }
     internal int SlotCount => _slots.Count;
+    internal GpuDeviceObservation? DeviceObservation => _slots.Count == 0 ? null : _slots[0].DeviceObservation;
     internal int DeviceCreations => _slots.Count == 0 ? 0 : _slots[0].DeviceCreations;
     internal int DeviceReleases => _slots.Count == 0 ? 0 : _slots[0].DeviceReleases;
     internal int LiveSlots => _slots.Count(s => !s.IsReleased);

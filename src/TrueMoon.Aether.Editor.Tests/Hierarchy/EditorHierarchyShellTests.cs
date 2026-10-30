@@ -52,6 +52,26 @@ public sealed class EditorHierarchyShellTests
     }
 
     [Fact]
+    public void InlineNameDraft_ConsumesGlobalDocumentAndHistoryShortcutsUntilCommitted()
+    {
+        using var test = new HierarchyFixture(); using var documents = new EditorDocumentViewModel(test.Owner.Commands);
+        using var model = new EditorViewModel(test.Workspace, new((_, _) => Task.CompletedTask, CancellationToken.None), documents, test.Transform, test.Model);
+        var view = new EditorView(model, new EditorViewStyle(),
+            new Factory<EditorDocumentView>(() => new(documents, new EditorDocumentViewStyle())),
+            new Factory<EditorTransformView>(() => new(test.Transform, new EditorTransformViewStyle())), false, null,
+            new Factory<EditorHierarchyView>(() => new(test.Model, new EditorHierarchyViewStyle())));
+        using var ui = DocumentUiFixture.Ui(view); ui.Update(); ui.Focus(view.Hierarchy!.Tree);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F2)); ui.HandleInput(new(InputKind.Text, Text: "Draft"));
+        foreach (var key in new[] { UiKey.S, UiKey.W, UiKey.Z, UiKey.Y })
+            Assert.True(ui.HandleInput(new(InputKind.KeyDown, Key: key, Control: true)).Handled);
+        Assert.Empty(test.Owner.Store.Writes); Assert.NotNull(test.Owner.Document.Read().Content);
+        Assert.Equal(7, test.Owner.Document.Read().Content!.Document.Revision); Assert.Equal("Draft", test.Model.RenameText);
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter)); ui.Update();
+        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.S, Control: true)); test.Owner.Complete();
+        Assert.Single(test.Owner.Store.Writes); Assert.Equal("Draft", test.Owner.Store.Writes[0].Document.Entities.Single(entity => entity.Id == DocumentData.Child).Name);
+    }
+
+    [Fact]
     public void NullHierarchyFactoryProduct_CleansAlreadyCreatedViewsAndPreservesBorrowedOwners()
     {
         using var test = new HierarchyFixture(); using var documents = new EditorDocumentViewModel(test.Owner.Commands);

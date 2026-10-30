@@ -25,6 +25,8 @@ public sealed class ChildDiagnosticReceiver : IChildDiagnosticDelivery, IAsyncDi
     private long _packet, _sequence, _accepted, _rejected, _failures, _duplicates, _rateLimited, _childLost, _childUnconfirmed;
     private string? _lastFailure;
     private readonly bool _enabled;
+    private RuntimeDiagnosticObservation? _observation;
+    private long _observationOmitted;
 
     /// <summary>Creates a caller-owned receiver from copied launch options and an injected endpoint factory.</summary>
     /// <param name="launch">Immutable generation identity and optional delivery settings.</param><param name="processId">Owned child PID.</param>
@@ -47,7 +49,8 @@ public sealed class ChildDiagnosticReceiver : IChildDiagnosticDelivery, IAsyncDi
     public ChildDiagnosticStatus Read()
     {
         lock (_gate) return new(_enabled, _closed, _released, _released, _accepted, _rejected, 0, 0, _failures,
-            _duplicates, _rateLimited, 0, _childLost, _childUnconfirmed, _lastFailure);
+            _duplicates, _rateLimited, 0, _childLost, _childUnconfirmed, _lastFailure)
+        { RuntimeObservation = _observation, ObservationOmittedPackets = _observationOmitted };
     }
     /// <inheritdoc />
     public Task<DiagnosticDeliveryReply> PushAsync(DiagnosticDeliveryPacket packet, CancellationToken cancellationToken = default)
@@ -58,7 +61,7 @@ public sealed class ChildDiagnosticReceiver : IChildDiagnosticDelivery, IAsyncDi
         {
             var count = Math.Clamp(packet.RecordCount, 0, _options.MaxBatchRecords);
             if (_closed || !_enabled) return Task.FromResult(Reject(5, count));
-            if (packet.Version != 1 || packet.ApplicationId == Guid.Empty || packet.PacketSequence <= 0 || packet.Lost < 0 || packet.Unconfirmed < 0 ||
+            if (packet.Version is not (1 or 2) || packet.ApplicationId == Guid.Empty || packet.PacketSequence <= 0 || packet.Lost < 0 || packet.Unconfirmed < 0 ||
                 packet.RecordCount < 0 || packet.RecordCount > _options.MaxBatchRecords || packet.Payload == null || packet.Payload.Length > _options.MaxBatchBytes)
                 return Task.FromResult(Reject(1, count));
             var identity = _launch.Identity;
@@ -70,13 +73,16 @@ public sealed class ChildDiagnosticReceiver : IChildDiagnosticDelivery, IAsyncDi
             if (_handling) { _rateLimited += count; return Task.FromResult(Reject(4, count)); }
             // Charge even malformed JSON bodies before parsing them; invalid data cannot bypass the parse budget.
             if (!_rate.Enter(count, packet.Payload.Length)) { _rateLimited += count; return Task.FromResult(Reject(4, count)); }
-            try { records = ChildDiagnosticCodec.Decode(packet, _options); }
+            (DiagnosticRecord[] Records, RuntimeDiagnosticObservation? Observation, bool Omitted) decoded;
+            try { decoded = ChildDiagnosticCodec.DecodeEnvelope(packet, _options); records = decoded.Records; }
             catch (Exception error) { Failed(error); return Task.FromResult(Reject(1, count)); }
             if (records.Length != 0 && records[0].Sequence <= _sequence)
             { _duplicates += count; return Task.FromResult(Reject(3, count)); }
             _applicationId = packet.ApplicationId; _packet = packet.PacketSequence;
             if (records.Length != 0) _sequence = records[^1].Sequence;
             _childLost = Math.Max(_childLost, packet.Lost); _childUnconfirmed = Math.Max(_childUnconfirmed, packet.Unconfirmed);
+            if (decoded.Observation != null) _observation = decoded.Observation;
+            if (decoded.Omitted) _observationOmitted++;
             _handling = true; _drained = new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
         return ImportAsync(records, cancellationToken);

@@ -36,7 +36,7 @@ public sealed class SkiaVulkanRenderBackend : IRenderBackend
     }
 }
 /// <summary>Session-owned context/surface on a borrowed device, with explicit host texture leases.</summary>
-public sealed class SkiaVulkanSurface : IUiRenderSurface
+public sealed class SkiaVulkanSurface : IUiRenderSurface, IUiRenderDiagnostics
 {
     private readonly VulkanHostContext _device;
     private readonly GRVkExtensions _extensions;
@@ -49,6 +49,8 @@ public sealed class SkiaVulkanSurface : IUiRenderSurface
     private readonly int _thread = Environment.CurrentManagedThreadId;
     /// <inheritdoc />
     public ITextLayoutService TextLayout { get; }
+    /// <inheritdoc />
+    public UiRenderDeviceInfo? DeviceInfo => _device.DeviceInfo;
     internal SkiaVulkanSurface(VulkanHostContext device, UiViewport viewport, SkiaFontCatalog? fonts = null)
     {
         _device = device;

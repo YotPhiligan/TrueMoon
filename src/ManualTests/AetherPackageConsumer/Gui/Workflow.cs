@@ -84,13 +84,38 @@ internal static class Workflow
             await Until(() => panel.Properties.Values.Any(p => p.Property.Key == "x" && ((TextBox)p.Input).Value == "1.5"));
             Program.Check(document.Read().Content!.UndoCount == 0 && !document.Read().IsDirty && document.Read().Content!.Document.Id == original.Document.Id,
                 "Save/reopen lost identity/value or retained ephemeral history.");
+            var hierarchy = view.Hierarchy ?? throw new InvalidOperationException("Missing hierarchy.");
+            var hierarchyModel = (TrueMoon.Aether.Editor.Hierarchy.EditorHierarchyViewModel)hierarchy.DataContext!;
+            await Until(() => hierarchyModel.CanRename);
+            await ui.InvokeAsync(() =>
+            {
+                ui.Focus(hierarchy.Tree); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F2));
+                ui.HandleInput(new(InputKind.Text, Text: "Scene Guardian"));
+                ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter));
+            }).WaitAsync(token);
+            await Until(() => document.Read().Content!.Resolved.Entities[new(Program.CubeId)].Name == "Scene Guardian");
+            await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Down, Control: true))).WaitAsync(token);
+            await Until(() => document.Read().Content!.Resolved.Roots[^1] == new EntityId(Program.CubeId));
+            Program.Check(document.Read().Content!.UndoCount == 2 && workspace.SelectedId == Program.CubeId.ToString("D"), "Name/order did not share history and selection.");
+            await Click(panel.Undo); await Until(() => document.Read().Content!.Resolved.Roots[0] == new EntityId(Program.CubeId));
+            await Click(panel.Redo); await Until(() => document.Read().Content!.Resolved.Roots[^1] == new EntityId(Program.CubeId));
+            await Doc(DocumentCommand.Save); await Doc(DocumentCommand.Close); await Doc(DocumentCommand.Open, "Edited.aetherscene");
+            await ui.InvokeAsync(() => workspace.Select(Program.CubeId.ToString("D"))).WaitAsync(token);
+            await Until(() => panel.Properties.Values.Any(p => p.Property.Key == "x" && ((TextBox)p.Input).Value == "1.5"));
+            Program.Check(document.Read().Content!.Resolved.Entities[new(Program.CubeId)].Name == "Scene Guardian" &&
+                document.Read().Content!.Resolved.Roots[^1] == new EntityId(Program.CubeId) && document.Read().Content!.UndoCount == 0 && !document.Read().IsDirty,
+                "Name/order did not survive Save/reopen with a clean history.");
+            var entityProof = await EntityOperations();
             field = (TextBox)panel.Properties.Values.Single(p => p.Property.Key == "x").Input;
             await StartPreview(); await Preview();
+            await Capture("hierarchy-named.png", 1.5f);
             await Edit(field, "1.25"); await Preview();
             retained = document.Read().Content; var selected = workspace.SelectedId;
             var framesBeforeCrash = window.PresentedFrames;
             crashedPid = engine.Supervisor.Status.ProcessId!.Value;
             Program.Check(runtimes.Leases.Any(l => l.ProcessId == crashedPid && !l.ResourcesReleased), "Crash target is not this App's owned child.");
+            await Until(() => runtimes.Leases.Single(l => l.ProcessId == crashedPid).ChildDiagnosticsStatus?.RuntimeObservation is
+                { Collector: not null, GraphicsDevice: not null });
             using (var child = Process.GetProcessById(crashedPid)) { child.Kill(); await child.WaitForExitAsync(token); }
             await Until(() => engine.Supervisor.Status.State is SessionState.Faulted or SessionState.Stopped);
             await Until(() => window.PresentedFrames > framesBeforeCrash + 1);
@@ -108,7 +133,7 @@ internal static class Workflow
             Program.Check(notificationThreads.SetEquals([owner]) && runtimes.Leases.Count == 7 && maxLive == 1, "Owner-thread or child generation count changed.");
             return new { Captures = captures, PresentedRevisions = revisions, OwnerThread = owner, NotificationThreads = notificationThreads,
                 MaxLive = maxLive, CrashedPid = crashedPid, CancelClosePreserved = true, FailedSavePreserved = true, CrashPreserved = true,
-                Recovered = true, SourceUnchanged = true, StableInspector = true, SavedScene = savedPath, Diagnostics = consoleProof };
+                Recovered = true, SourceUnchanged = true, StableInspector = true, HierarchyMetadataPersisted = true, EntityOperations = entityProof, SavedScene = savedPath, Diagnostics = consoleProof };
         }
         finally { model.PropertyChanged -= Changed; }
 
@@ -139,6 +164,48 @@ internal static class Workflow
                 }
                 await Task.Delay(10, token);
             }
+        }
+        async Task<object> EntityOperations()
+        {
+            Progress("Entity creation/deletion workflow");
+            var hierarchy = view.Hierarchy!;
+            await Doc(DocumentCommand.New); await Until(() => hierarchy.CreateButton.IsEffectivelyEnabled && document.Read().Content!.Document.Entities.Length == 0);
+            await Click(hierarchy.CubeButton); await Until(() => document.Read().Content!.Document.Entities.Length == 1 && panel.Properties.Values.Any(property => property.Property.Key == "x"));
+            var rootId = workspace.SelectedId!; var sceneId = document.Read().Content!.Document.Id;
+            await ui.InvokeAsync(() => { ui.Focus(hierarchy.Tree); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.F10, Shift: true)); }).WaitAsync(token);
+            await Until(() => view.Overlays.Popup is MenuPopup);
+            await CapturePanel("entity-actions.png");
+            var popup = (MenuPopup)view.Overlays.Popup!;
+            await Click(popup.Children.OfType<MenuItem>().Single(item => item.ActionId == "create.child"));
+            await Until(() => document.Read().Content!.Document.Entities.Length == 2 && workspace.SelectedId != rootId && panel.Properties.Values.Any(property => property.Property.Key == "x"));
+            var childId = workspace.SelectedId!;
+            var field = (TextBox)panel.Properties.Values.Single(property => property.Property.Key == "x").Input;
+            await Edit(field, "2.25"); await Until(() => !model.HasDraft);
+            await ui.InvokeAsync(() => { hierarchy.Tree.Select(rootId); ui.Focus(hierarchy.Tree); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.D, Control: true)); }).WaitAsync(token);
+            await Until(() => document.Read().Content!.Document.Entities.Length == 4); var copied = workspace.SelectedId!;
+            Program.Check(copied != rootId && document.Read().Content!.Resolved.Children[new(Guid.Parse(copied))].Length == 1, "Subtree duplication did not remap child identity.");
+            await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Delete))).WaitAsync(token);
+            await Until(() => document.Read().Content!.Document.Entities.Length == 2 && workspace.SelectedId == null);
+            await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Z, Control: true))).WaitAsync(token);
+            await Until(() => document.Read().Content!.Document.Entities.Length == 4);
+            await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Y, Control: true))).WaitAsync(token);
+            await Until(() => document.Read().Content!.Document.Entities.Length == 2);
+            await Set(hierarchy.Search, childId); await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter))).WaitAsync(token);
+            await Until(() => workspace.SelectedId == childId && hierarchy.Tree.IsExpanded(rootId));
+            await Doc(DocumentCommand.SaveAs, "Created.aetherscene"); await Doc(DocumentCommand.Close); await Doc(DocumentCommand.Open, "Created.aetherscene");
+            await ui.InvokeAsync(() => hierarchy.Tree.Select(childId)).WaitAsync(token);
+            await Until(() => panel.Properties.Values.Any(property => property.Property.Key == "x" && ((TextBox)property.Input).Value == "2.25"));
+            var restored = document.Read().Content!;
+            Program.Check(restored.Document.Id == sceneId && restored.UndoCount == 0 && restored.Document.Entities.Length == 2 &&
+                restored.Resolved.Entities[new(Guid.Parse(childId))].ParentId == new EntityId(Guid.Parse(rootId)) && !document.Read().IsDirty,
+                "Created scene lost identities, parent, values or clean history after reopen.");
+            await CapturePanel("created-entities.png"); var saved = document.Read().Path!;
+            await Doc(DocumentCommand.Close); await Doc(DocumentCommand.Open, "Edited.aetherscene");
+            await ui.InvokeAsync(() => workspace.Select(Program.CubeId.ToString("D"))).WaitAsync(token);
+            await Until(() => panel.Properties.Values.Any(property => property.Property.Key == "x" && ((TextBox)property.Input).Value == "1.5"));
+            await Set(hierarchy.Search, "");
+            return new { CreatedScene = saved, Root = rootId, Child = childId, Duplicate = copied, RemappedSubtree = true, DeleteUndoRedo = true,
+                SearchRevealed = true, ReopenedClean = true, Captures = new[] { "entity-actions.png", "created-entities.png" } };
         }
         async Task<object> Diagnostics()
         {
@@ -174,12 +241,20 @@ internal static class Workflow
                 Program.Check(data.SelectedId == oldEntry.Id && console.Details.SelectionLength == 12, "Filtering discarded the inspected old generation.");
                 await Set(console.Generation, "");
                 Progress("Diagnostics inspected old generation");
+                await Until(() => data.Processes?.Processes.Any(process => process.ProcessId == crashedPid &&
+                    process.Delivery?.RuntimeObservation is { Collector: not null, GraphicsDevice: not null }) == true);
                 var exportPath = Path.Combine(directory, "console-report.json"); await Set(console.ExportPath, exportPath); await Click(console.Export);
                 await Until(() => !data.IsExporting && data.ExportStatus.Contains("сохранён", StringComparison.Ordinal));
                 Progress("Diagnostics report exported");
                 var bytes = await File.ReadAllBytesAsync(exportPath, token); using var report = JsonDocument.Parse(bytes);
                 Program.Check(bytes.Length <= EditorDiagnosticReportWriter.DefaultMaximumBytes && report.RootElement.GetProperty("partial").GetBoolean() &&
                     !System.Text.Encoding.UTF8.GetString(bytes).Contains("PRIVATE_CONSOLE", StringComparison.Ordinal), "Console report leaked text/secrets or exceeded its bound.");
+                var crashedObservation = report.RootElement.GetProperty("runtimeObservations").EnumerateArray().Single(row => row.GetProperty("ProcessId").GetInt32() == crashedPid);
+                Program.Check(crashedObservation.GetProperty("CollectorAvailable").GetBoolean() && crashedObservation.GetProperty("DeviceAvailable").GetBoolean() &&
+                    crashedObservation.GetProperty("GraphicsDevice").GetProperty("Backend").GetString() == "Vulkan" &&
+                    crashedObservation.GetProperty("Collector").GetProperty("Sinks").GetArrayLength() > 0 &&
+                    report.RootElement.GetProperty("presentation").GetProperty("Device").GetString()!.Length > 0,
+                    "Report lost the last child sink/device observation or actual presentation device.");
                 var imported = 0; var crashedHistory = false;
                 await ui.InvokeAsync(() =>
                 {
@@ -214,11 +289,13 @@ internal static class Workflow
                 {
                     console.Events.Select("process:" + raw.Id);
                     Program.Check(data.Details.Contains("Delivery:", StringComparison.Ordinal) && data.Details.Contains("file dropped", StringComparison.Ordinal) &&
-                        data.CollectorHealth != null, "Health view did not expose collector/delivery/capture independently.");
+                        data.CollectorHealth != null && data.Details.Contains("Child sink jsonl", StringComparison.Ordinal) &&
+                        data.Details.Contains("Last runtime device: Vulkan", StringComparison.Ordinal), "Health view did not expose collector/delivery/capture independently.");
                 }).WaitAsync(token);
                 await CapturePanel("diagnostics-health.png");
                 Progress("Diagnostics return to structured");
-                await Click(console.Mode); await Until(() => data.Mode == EditorDiagnosticMode.Structured);
+                for (var mode = 0; mode < 5 && data.Mode != EditorDiagnosticMode.Structured; mode++) await Click(console.Mode);
+                await Until(() => data.Mode == EditorDiagnosticMode.Structured);
                 Progress("Diagnostics structured selected");
                 await Set(console.Source, "Acceptance.Console"); await Set(console.Session, correlation);
                 Progress("Diagnostics structured filters restored");
@@ -233,6 +310,7 @@ internal static class Workflow
                     Groups = 2, RetainedDetails = true, Reopened = true, OwnerThreads = diagnosticThreads, Capture = "diagnostics.png",
                     RawStdoutCharacters = raw.StandardOutput!.Output.TotalCharacters, RawStderrAvailable = raw.StandardError != null,
                     RawOldProcessReleased = raw.ResourcesReleased, CollectorHealthAvailable = data.CollectorHealth != null,
+                    CrashedChildObservation = crashedObservation.Clone(), PresentationDevice = report.RootElement.GetProperty("presentation").GetProperty("Device").GetString(),
                     RawCaptures = new[] { "diagnostics-stdout.png", "diagnostics-stderr.png", "diagnostics-health.png" } };
             }
             finally { data.PropertyChanged -= Notification; }

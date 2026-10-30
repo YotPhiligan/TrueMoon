@@ -19,4 +19,6 @@ public sealed record EditorDiagnosticSnapshot(IReadOnlyList<DiagnosticRecord> Re
     public EditorDiagnosticsOptions? PresentationLimits { get; init; }
     public TrueMoon.Diagnostics.DiagnosticHealthSnapshot? Health { get; init; }
     public TrueMoon.Aether.Diagnostics.ProcessDiagnosticBatch? Processes { get; init; }
+    /// <summary>Actual value-only presentation observation, when a UI session has reported one.</summary>
+    public EditorDiagnosticPresentation? Presentation { get; init; }
 }

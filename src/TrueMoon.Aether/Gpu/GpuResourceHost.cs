@@ -21,6 +21,10 @@ public sealed class GpuResourceHost : IAsyncDisposable
     private readonly CancellationTokenSource _end = new();
     private bool _closed;
     private Task? _dispose;
+    private GpuDeviceObservation? _lastDevice;
+    /// <summary>Last successfully selected producer device, copied during initialization. Reading performs no native queries; the value survives cleanup.</summary>
+    public GpuDeviceObservation? LastDevice => Volatile.Read(ref _lastDevice);
+    internal void ObserveDevice(GpuDeviceObservation? device) { if (device != null) Volatile.Write(ref _lastDevice, device); }
     /// <summary>Unreleased resources, including failed cleanup retained for retry.</summary>
     public int ResourceCount { get { lock (_gate) return _resources.Count(r => !r.IsReleased); } }
     /// <summary>Observed cleanup failure; cleared by a successful retry.</summary>
@@ -140,6 +144,7 @@ public sealed class GpuResourceHost : IAsyncDisposable
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, End);
             await frame.InitializeAsync(linked.Token).ConfigureAwait(false);
             lock (_gate) ObjectDisposedException.ThrowIf(_closed, this);
+            ObserveDevice(frame.DeviceObservation);
             return frame;
         }
         catch (Exception original)

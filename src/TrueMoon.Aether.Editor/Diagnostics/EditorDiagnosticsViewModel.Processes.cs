@@ -18,9 +18,14 @@ public sealed partial class EditorDiagnosticsViewModel
     /// <summary>Creates a presentation model over borrowed history, health and process snapshot sources.</summary>
     public EditorDiagnosticsViewModel(IDiagnosticRecordReader? reader, EditorDiagnosticsOptions options, EditorDiagnosticReportWriter reports,
         IDiagnosticHealthReader? healthReader, IProcessDiagnosticsSource? processSource)
+        : this(reader, options, reports, healthReader, processSource, null) { }
+
+    /// <summary>Creates a presentation model borrowing an optional source-navigation hook.</summary>
+    public EditorDiagnosticsViewModel(IDiagnosticRecordReader? reader, EditorDiagnosticsOptions options, EditorDiagnosticReportWriter reports,
+        IDiagnosticHealthReader? healthReader, IProcessDiagnosticsSource? processSource, ISourceFileNavigator? navigator)
     {
         ArgumentNullException.ThrowIfNull(options); ArgumentNullException.ThrowIfNull(reports);
-        _reader = reader; _options = options.Snapshot(); _reports = reports; _healthReader = healthReader; _processSource = processSource;
+        _reader = reader; _options = options.Snapshot(); _reports = reports; _healthReader = healthReader; _processSource = processSource; _navigator = navigator;
         UpdateDetails();
     }
 
@@ -37,7 +42,8 @@ public sealed partial class EditorDiagnosticsViewModel
         {
             VerifyOpen(); if (!Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(value));
             if (_mode == value) return; _mode = value; _contextSelection = null; _inspectedContext = "";
-            RebuildRows(); UpdateDetails(); Changed(nameof(Mode)); Changed(nameof(CanClear)); Changed(nameof(CanFilter)); Changed(nameof(CanRefreshDetails)); Changed(nameof(Summary));
+            _selectedSource = null;
+            RebuildRows(); UpdateDetails(); Changed(nameof(Mode)); Changed(nameof(CanClear)); Changed(nameof(CanFilter)); Changed(nameof(CanRefreshDetails)); Changed(nameof(Summary)); Changed(nameof(CanOpenSource));
         }
     }
 
@@ -49,15 +55,18 @@ public sealed partial class EditorDiagnosticsViewModel
     {
         _health = BoundHealth(_healthReader?.ReadHealth());
         var batch = _processSource?.Read(_options.MaximumProcesses, _options.MaximumRawCharacters);
+        var compilerRemaining = _options.MaximumRecords; var compilerBytes = _options.MaximumRetainedBytes;
         _processes = batch == null ? null : batch with
         {
-            Processes = Array.AsReadOnly(batch.Processes.Take(_options.MaximumProcesses).Select(BoundProcess).ToArray())
+            Processes = Array.AsReadOnly(batch.Processes.Take(_options.MaximumProcesses).Select(process =>
+                BoundProcess(process) with { CompilerDiagnostics = BoundCompiler(process.CompilerDiagnostics, ref compilerRemaining, ref compilerBytes) }).ToArray())
         };
         if (Mode != EditorDiagnosticMode.Structured) RebuildRows();
         // Keep an inspected snapshot stable while output grows. Remove it only if its owner leaves the bounded history.
         if (_contextSelection != null && Mode is EditorDiagnosticMode.StandardOutput or EditorDiagnosticMode.StandardError &&
             !(_processes?.Processes.Any(process => process.Id == _contextSelection) ?? false))
         { _contextSelection = null; _inspectedContext = ""; UpdateDetails(); }
+        if (Mode == EditorDiagnosticMode.Compiler && _contextSelection != null && !HasCompilerSelection(_contextSelection)) SelectCompiler(null);
         Changed(nameof(Summary));
     }
 
@@ -66,8 +75,23 @@ public sealed partial class EditorDiagnosticsViewModel
         Id = Display(process.Id, 256), Source = Display(process.Source, 128), RuntimeRole = process.RuntimeRole == null ? null : Display(process.RuntimeRole, 128),
         GameBuildId = process.GameBuildId == null ? null : Display(process.GameBuildId, 256), JobId = process.JobId == null ? null : Display(process.JobId, 128),
         StandardOutput = BoundStream(process.StandardOutput), StandardError = BoundStream(process.StandardError),
-        Delivery = process.Delivery == null ? null : process.Delivery with { LastFailureType = process.Delivery.LastFailureType == null ? null : Display(process.Delivery.LastFailureType, 256) }
+        Delivery = process.Delivery == null ? null : process.Delivery with
+        {
+            LastFailureType = process.Delivery.LastFailureType == null ? null : Display(process.Delivery.LastFailureType, 256),
+            RuntimeObservation = BoundObservation(process.Delivery.RuntimeObservation)
+        }
     };
+    private static RuntimeDiagnosticObservation? BoundObservation(RuntimeDiagnosticObservation? observation)
+    {
+        if (observation == null) return null;
+        var health = BoundHealth(observation.Collector);
+        return observation with
+        {
+            Collector = health == null ? null : health with { Sinks = Array.AsReadOnly(health.Sinks.Take(16).ToArray()) },
+            OmittedSinks = (int)Math.Min(int.MaxValue, Math.Max(0L, observation.OmittedSinks) + Math.Max(0, (observation.Collector?.Sinks.Count ?? 0) - 16)),
+            GraphicsDevice = observation.GraphicsDevice is not { } device ? null : device with { Backend = Display(device.Backend, 64), Name = Display(device.Name, 256) }
+        };
+    }
     private ProcessStreamDiagnostic? BoundStream(ProcessStreamDiagnostic? stream)
     {
         if (stream == null) return null;
@@ -91,6 +115,7 @@ public sealed partial class EditorDiagnosticsViewModel
         {
             EditorDiagnosticMode.Structured => _entries.Select(entry => new EditorDiagnosticRow(entry.Id, entry.Label) { Warning = entry.Record.Level >= DiagnosticLevel.Warning }),
             EditorDiagnosticMode.Health => HealthRows(),
+            EditorDiagnosticMode.Compiler => CompilerRows(),
             _ => (_processes?.Processes ?? []).Where(MatchesProcess).Select(process =>
             {
                 var stream = Stream(process); var output = stream?.Output;
@@ -108,10 +133,11 @@ public sealed partial class EditorDiagnosticsViewModel
         (_session.Length == 0 || string.Equals(process.SessionId?.ToString("D"), _session, StringComparison.OrdinalIgnoreCase)) &&
         (_generation.Length == 0 || process.Generation?.ToString(System.Globalization.CultureInfo.InvariantCulture) == _generation) &&
         (_role.Length == 0 || string.Equals(process.RuntimeRole, _role, StringComparison.OrdinalIgnoreCase)) &&
-        (_search.Length == 0 || Contains(FormatProcess(process), _search));
+        (Mode == EditorDiagnosticMode.Compiler || _search.Length == 0 || Contains(FormatProcess(process), _search));
     private ProcessStreamDiagnostic? Stream(ProcessDiagnosticSnapshot process) => Mode == EditorDiagnosticMode.StandardError ? process.StandardError : process.StandardOutput;
     private void SelectContext(string? id)
     {
+        if (Mode == EditorDiagnosticMode.Compiler) { SelectCompiler(id); return; }
         _contextSelection = id;
         if (Mode == EditorDiagnosticMode.Health) _inspectedContext = HealthDetails(id);
         else
@@ -125,6 +151,8 @@ public sealed partial class EditorDiagnosticsViewModel
 
     private string ContextSummary => Mode == EditorDiagnosticMode.Health
         ? $"Health · Core parent {(_health == null ? "недоступно" : "доступен")} · runtime capture {(_processes?.RuntimeAvailable == true ? "доступен" : "недоступно")} · Accepted/Written не означают disk durability"
+        : Mode == EditorDiagnosticMode.Compiler
+        ? $"Compiler · SARIF2.1 · build capture {(_processes?.BuildAvailable == true ? "доступен" : "недоступно")} · до {_options.MaximumRecords} diagnostics / {_options.MaximumRetainedBytes / 1024} KiB · координаты относятся к исходной сборке"
         : $"RAW {(Mode == EditorDiagnosticMode.StandardOutput ? "stdout" : "stderr")} · {_rows.Count} процессов · tail до {_options.MaximumRawCharacters} символов · level/event filters: только structured · Обновить детали — новый снимок";
 
     private IEnumerable<EditorDiagnosticRow> HealthRows()
@@ -149,7 +177,7 @@ public sealed partial class EditorDiagnosticsViewModel
 
     private string HealthDetails(string? id)
     {
-        var text = new StringBuilder("HEALTH SNAPSHOT · Обновить детали — новый снимок\nCore health относится к parent App; child sinks недоступны.\nAccepted/Written не подтверждают disk durability. Counters разных workers сняты независимо.\n");
+        var text = new StringBuilder("HEALTH SNAPSHOT · Обновить детали — новый снимок\nCore health относится к parent App. Child health — последнее независимое наблюдение, в том числе после crash.\nAccepted/Written не подтверждают disk durability. Counters разных workers сняты независимо.\n");
         if (id == "collector" && _health is { } health)
             text.AppendLine($"App {health.ApplicationId}\nClosed {health.Closed}; sequence {health.LatestSequence}\nRetained {health.RetainedRecords}/{health.RetainedBytes} bytes\nMemory evicted {health.MemoryEvicted}; capture failures {health.CaptureFailures}; late writes {health.LateWrites}");
         else if (id?.StartsWith("sink:", StringComparison.Ordinal) == true && int.TryParse(id[5..], out var index) && _health != null && index >= 0 && index < _health.Sinks.Count)
@@ -162,6 +190,20 @@ public sealed partial class EditorDiagnosticsViewModel
             text.AppendLine($"Completed {process.Completed}; resources released {process.ResourcesReleased}");
             AppendStream(text, "stdout", process.StandardOutput, false); AppendStream(text, "stderr", process.StandardError, false);
             text.AppendLine("Delivery: " + (process.Delivery?.ToString() ?? "недоступно/выключен"));
+            if (process.Delivery?.RuntimeObservation is { } observation)
+            {
+                text.AppendLine($"Child observed {observation.CapturedUtc:O}; omitted sinks {observation.OmittedSinks}; observation packets omitted {process.Delivery.ObservationOmittedPackets}");
+                if (observation.Collector is { } child)
+                {
+                    text.AppendLine($"Child collector {child.ApplicationId}; retained {child.RetainedRecords}; evicted {child.MemoryEvicted}; capture failures {child.CaptureFailures}; closed {child.Closed}");
+                    foreach (var sink in child.Sinks.Take(16)) text.AppendLine($"Child sink {sink.Name}: accepted {sink.Accepted}; written {sink.Written}; dropped {sink.Dropped}; failures {sink.Failures}; queued {sink.Queued}");
+                    text.AppendLine($"Child emergency: {(child.Emergency == null ? "недоступно/выключен" : $"failures {child.Emergency.Failures}; dropped {child.Emergency.Dropped}")}");
+                    text.AppendLine($"Child retention: {(child.Retention == null ? "недоступно/выключен" : $"failures {child.Retention.Failures}; over budget {child.Retention.IsOverBudget}")}");
+                }
+                else text.AppendLine("Child sinks: недоступны.");
+                text.AppendLine(observation.GraphicsDevice is { } device ? $"Last runtime device: {device.Backend} / {device.Name} / API {device.ApiVersion} / driver {device.DriverVersion}" : "Runtime device: недоступен/CPU-only.");
+            }
+            else text.AppendLine("Child sinks/device: недоступны; наблюдение не получено.");
         }
         else text.AppendLine(ContextSummary);
         return Display(text.ToString(), 32768);

@@ -47,7 +47,8 @@ public static class AppConfigurationExtensions
                 resolver.TryResolve<IDiagnosticRecordImporter>(),
                 resolver.Resolve<IFactory<PipesInvocationServer<IChildDiagnosticDelivery>, PipesInvocationServerArguments<IChildDiagnosticDelivery>>>()));
             Register<ChildDiagnosticForwarder, SessionLaunch>(services, resolver => new ChildDiagnosticForwarderFactory(
-                resolver.TryResolve<IDiagnosticRecordReader>(), resolver.Resolve<IFactory<PipesInvocationClient<IChildDiagnosticDelivery>, string>>()));
+                resolver.TryResolve<IDiagnosticRecordReader>(), resolver.Resolve<IFactory<PipesInvocationClient<IChildDiagnosticDelivery>, string>>(),
+                new RuntimeDiagnosticObservationSource(resolver.TryResolve<IDiagnosticHealthReader>(), resolver.Resolve<AetherHost>().Gpu)));
             Register<PipesInvocationClient<IEngineControl>, string>(services, resolver =>
                 new PipesInvocationClientFactory<IEngineControl>(resolver.Resolve<IEventsSource<PipesInvocationClient<IEngineControl>>>(),
                     new PipesTransportOptions { PropagateTraceContext = true }, resolver.Resolve<IDiagnosticTelemetry>()));

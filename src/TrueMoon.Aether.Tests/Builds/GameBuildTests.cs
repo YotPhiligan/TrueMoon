@@ -194,10 +194,18 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
         Assert.True(failed.Completed); Assert.True(failed.ResourcesReleased); Assert.Null(failed.GameBuildId);
         Assert.NotNull(failed.StandardOutput); Assert.InRange(failed.StandardOutput.Output.Text.Length, 1, 128);
         Assert.True(failed.StandardOutput.ReadFinished); Assert.True(failed.StandardOutput.FileFinished);
+        Assert.NotNull(failed.CompilerDiagnostics); Assert.Equal(GameBuildDiagnosticState.Available, failed.CompilerDiagnostics.State);
+        var diagnostic = Assert.Single(failed.CompilerDiagnostics.Entries, entry => entry.Code == "CS1002");
+        Assert.Equal(GameBuildDiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Equal(Path.Combine(Path.GetDirectoryName(project)!, "Game.cs"), diagnostic.FilePath); Assert.Equal(1, diagnostic.Line); Assert.True(diagnostic.Column > 0);
+        Assert.True(File.Exists(Path.Combine(error.DiagnosticsDirectory, "compiler.sarif")));
         var retry = await compiler.BuildAsync(new(fixture.ProjectA, fixture.A.EntryAssembly, fixture.A.EntryType, 42, ["Game.Private.dll"]));
         Assert.Equal(42, retry.SourceRevision); Assert.Null(compiler.ProcessId);
         var history = compiler.ReadDiagnostics(16, 64); Assert.Equal(2, history.Count); Assert.Equal(retry.BuildId, history[0].GameBuildId);
         Assert.Equal(42, history[0].SourceRevision); Assert.Equal(failed.Id, history[1].Id); Assert.NotEqual(history[0].JobId, history[1].JobId);
+        Assert.Equal(GameBuildDiagnosticState.Available, history[0].CompilerDiagnostics!.State);
+        Assert.DoesNotContain(history[0].CompilerDiagnostics!.Entries, entry => entry.Severity == GameBuildDiagnosticSeverity.Error);
+        Assert.Equal(diagnostic, history[1].CompilerDiagnostics!.Entries.Single(entry => entry.Code == "CS1002"));
         Assert.All(history, snapshot => { Assert.True(snapshot.ResourcesReleased); Assert.True(snapshot.StandardOutput!.Output.Text.Length <= 64); });
         Assert.Equal(history[0].Id, Assert.Single(compiler.ReadDiagnostics(1, 0)).Id);
         Assert.Equal("", compiler.ReadDiagnostics(1, 0)[0].StandardOutput!.Output.Text);

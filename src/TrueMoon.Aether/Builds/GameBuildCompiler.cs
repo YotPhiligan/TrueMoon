@@ -134,7 +134,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         var lease = await Task.Run(_diagnostics.Begin).ConfigureAwait(false);
         var job = lease.Directory;
         DiagnosticsDirectory = job;
-        var owned = new OwnedJob(lease) { SourceRevision = request.SourceRevision }; lock (_gate) _owned = owned;
+        var owned = new OwnedJob(lease, Path.GetDirectoryName(request.ProjectPath)!) { SourceRevision = request.SourceRevision }; lock (_gate) _owned = owned;
         AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Information, 1200, "Build.Starting", "Game build operation", () =>
             new Dictionary<string, string?> { ["SourceRevision"] = request.SourceRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["JobId"] = Path.GetFileName(job) });
@@ -147,6 +147,10 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
             "-property:BuildProjectReferences=false", "-property:UseSharedCompilation=false", "-nodeReuse:false",
             "-property:AetherContractPath=" + typeof(IGameSession).Assembly.Location,
             "-property:TrueMoonContractsPath=" + typeof(IFactory<>).Assembly.Location }) info.ArgumentList.Add(argument);
+        var errorLog = Path.Combine(job, GameBuildDiagnosticReader.FileName);
+        foreach (var character in new[] { '%', ';', ',', '$', '@', '(', ')', '\'' })
+            errorLog = errorLog.Replace(character.ToString(), "%" + ((int)character).ToString("X2"), StringComparison.Ordinal);
+        info.ArgumentList.Add("-property:ErrorLog=" + errorLog + "%2Cversion=2.1");
         try
         {
             UpdateRetention(job);
@@ -176,6 +180,8 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         {
             await ReapAsync(process).ConfigureAwait(false);
             if (owned.Output != null) await owned.Output.DrainAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            var compilerDiagnostics = GameBuildDiagnosticReader.Read(Path.Combine(owned.Directory, GameBuildDiagnosticReader.FileName), owned.ProjectDirectory);
+            lock (_gate) owned.CompilerDiagnostics = compilerDiagnostics;
             // Capture failures/truncation remain observable independently of the compiler's exit outcome.
             try
             {
@@ -259,8 +265,10 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     }
     /// <summary>Synchronously completes the same owned cleanup.</summary>
     public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
-    private sealed class OwnedJob(BuildDiagnosticStore.Job diagnostics)
+    private sealed class OwnedJob(BuildDiagnosticStore.Job diagnostics, string projectDirectory)
     {
+        internal readonly string ProjectDirectory = projectDirectory;
+        internal GameBuildDiagnosticBatch CompilerDiagnostics = new(GameBuildDiagnosticState.Pending, []);
         internal readonly DateTimeOffset StartedUtc = DateTimeOffset.UtcNow;
         internal int? ProcessId;
         internal long SourceRevision;
@@ -272,6 +280,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         internal ProcessDiagnosticSnapshot Snapshot(bool completed, int maximumOutputCharacters) => new(
             "build:" + Path.GetFileName(Directory), "Build", StartedUtc, ProcessId, null, null, null, GameBuildId,
             Path.GetFileName(Directory), SourceRevision, completed, completed,
-            ProcessStreamDiagnostic.Read(Output?.Stdout, maximumOutputCharacters), ProcessStreamDiagnostic.Read(Output?.Stderr, maximumOutputCharacters), null);
+            ProcessStreamDiagnostic.Read(Output?.Stdout, maximumOutputCharacters), ProcessStreamDiagnostic.Read(Output?.Stderr, maximumOutputCharacters), null)
+            { CompilerDiagnostics = CompilerDiagnostics };
     }
 }

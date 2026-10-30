@@ -45,7 +45,9 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     /// <summary>Whether the pointer is over this element.</summary>
     public bool IsHovered { get => _hovered; set { if (_hovered != value) { VerifyAccess(); _hovered = value; Invalidate(Invalidation.Render); } } }
     /// <summary>Whether this element has keyboard focus.</summary>
-    public bool IsFocused { get => _focused; set { if (_focused != value) { VerifyAccess(); _focused = value; Invalidate(Invalidation.Render); } } }
+    public bool IsFocused { get => _focused; set { if (_focused != value) { VerifyAccess(); _focused = value; Invalidate(Invalidation.Render); FocusChanged?.Invoke(this); } } }
+    /// <summary>Raised on the UI owner after keyboard focus changes. Detaching a focused element also raises it.</summary>
+    public event Action<Element>? FocusChanged;
     /// <summary>The effective enabled state, including ancestors.</summary>
     public bool IsEffectivelyEnabled => IsEnabled && (Parent?.IsEffectivelyEnabled ?? true);
     /// <summary>Explicit width; NaN selects automatic sizing.</summary>
@@ -340,7 +342,9 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
             node._post = null;
             node._detaching = null;
             Interlocked.Increment(ref node._attachmentVersion);
+            var focused = node._focused;
             node._hovered = node._focused = false;
+            if (focused) change.Schedule(() => node.FocusChanged?.Invoke(node));
         }
         foreach (var node in nodes.Reverse())
         {
@@ -484,7 +488,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         }
         finally
         {
-            Invalidated = null; PropertyChanged = null; AttachmentChanged = null;
+            Invalidated = null; PropertyChanged = null; AttachmentChanged = null; FocusChanged = null;
             _disposed = true;
             _disposing = false;
         }

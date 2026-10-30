@@ -313,6 +313,19 @@ Domain transport/child identity остаётся в
 [Aether](../engine/PLAN.md#child-diagnostic-delivery-eng8a3--ene6d4--2026-10-27).
 [Реализация и проверки27октября](HISTORY.md#чтение-и-импорт-child-diagnostics--2026-10-27).
 
+### Bounded archive/configuration views для ED8a — 2026-10-30
+
+CORE6c дополнен borrowed `IDiagnosticArchiveReader` и
+`IDiagnosticConfigurationReader`. Первый читает recognized JSONL tails с отдельными
+IO/retained/line/file/time budgets и explicit omissions; второй копирует effective
+scalar settings без путей, rule names и callbacks. App остаётся единственным
+владельцем pipeline, consumer отменяет/drain свой archive request; sink flush и
+filesystem maintenance не запускаются. Подробный контракт —
+[в guide](DIAGNOSTICS.md#архив-jsonl-и-действующие-настройки),
+[проверки](HISTORY.md#архив-jsonl-и-конфигурация-для-ed8a--2026-10-30).
+Полный CORE6, App-private routing, aggregate metrics и release matrix остаются
+отдельными задачами. UI/report privacy policy ведётся только в Editor плане.
+
 ## Критерии готовности
 
 - Известный набор тестов действительно обнаружен и пройден, skipped/failed указаны; tests existence не считается passing результатом.

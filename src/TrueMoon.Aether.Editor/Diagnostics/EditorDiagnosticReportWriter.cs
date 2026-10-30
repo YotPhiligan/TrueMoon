@@ -5,8 +5,8 @@ using TrueMoon.Aether.Diagnostics;
 
 namespace TrueMoon.Aether.Editor.Diagnostics;
 
-/// <summary>Writes an explicitly partial metadata report. Does not read project files, environment, control endpoints or disk history.</summary>
-public sealed class EditorDiagnosticReportWriter
+/// <summary>Writes bounded partial reports with an explicit text policy and optional configured diagnostic history.</summary>
+public sealed partial class EditorDiagnosticReportWriter
 {
     public const int DefaultMaximumBytes = 512 * 1024;
     private static readonly string[] ContextKeys = ["SessionId", "Generation", "RuntimeRole", "GameBuildId", "BuildJobId", "JobId", "ArtifactId"];
@@ -40,7 +40,7 @@ public sealed class EditorDiagnosticReportWriter
                 json.WritePropertyName("presentationLimits"); JsonSerializer.Serialize(json, snapshot.PresentationLimits);
                 WriteContext(json, snapshot, maximumBytes);
                 json.WriteStartArray("unavailable");
-                foreach (var item in new[] { "persistentHistory", "effectiveCollectorConfiguration", "backendDevice", "compilerNavigation", "childSinkHealth" }) json.WriteStringValue(item);
+                foreach (var item in new[] { "persistentHistory", "effectiveCollectorConfiguration", "backendDevice", "persistentCompilerHistory", "childSinkHealth" }) json.WriteStringValue(item);
                 if (snapshot.Health == null) json.WriteStringValue("sinkHealth");
                 if (snapshot.Processes == null) json.WriteStringValue("rawStdoutStderr");
                 else
@@ -49,7 +49,7 @@ public sealed class EditorDiagnosticReportWriter
                     if (!snapshot.Processes.BuildAvailable) json.WriteStringValue("buildCapture");
                 }
                 json.WriteEndArray(); json.WriteStartArray("omittedByPolicy");
-                foreach (var item in new[] { "rawText", "messages", "exceptions", "stacks", "caller", "arbitraryProperties", "sinkErrorText" }) json.WriteStringValue(item);
+                foreach (var item in new[] { "rawText", "messages", "exceptions", "stacks", "caller", "arbitraryProperties", "sinkErrorText", "compilerText", "sourcePaths" }) json.WriteStringValue(item);
                 json.WriteEndArray(); json.WriteStartArray("records"); json.Flush();
                 var written = 0;
                 // Export the most recent metadata, in collector sequence order. Bound input iteration as well as output bytes.
@@ -88,17 +88,7 @@ public sealed class EditorDiagnosticReportWriter
     private static void WriteContext(Utf8JsonWriter json, EditorDiagnosticSnapshot snapshot, int maximumBytes)
     {
         var health = snapshot.Health;
-        var core = health == null ? null : new
-        {
-            health.ApplicationId, health.Closed, health.LatestSequence, health.RetainedRecords, health.RetainedBytes,
-            health.MemoryEvicted, health.CaptureFailures, health.LateWrites,
-            Sinks = health.Sinks.Take(66).Select(sink => new { Name = Identifier(sink.Name), sink.Accepted, sink.Written, sink.Dropped,
-                sink.Failures, sink.Queued, sink.Bytes, HasError = sink.LastError != null }),
-            Emergency = health.Emergency is not { } emergency ? null : new { emergency.Accepted, emergency.Written, emergency.Dropped,
-                emergency.Suppressed, emergency.Failures, emergency.Queued, HasError = emergency.LastError != null },
-            Retention = health.Retention is not { } retention ? null : new { retention.RetainedRuns, retention.RetainedBytes, retention.ActiveRuns,
-                retention.SkippedDirectories, retention.DeletedRuns, retention.Failures, retention.IsOverBudget, retention.MaintenanceBusy, HasError = retention.LastError != null }
-        };
+        var core = HealthMetadata(health);
         var metadataBudget = maximumBytes / 2;
         var coreData = JsonSerializer.SerializeToUtf8Bytes(core);
         var includeCore = health != null && json.BytesCommitted + json.BytesPending + coreData.Length + 768 <= metadataBudget;
@@ -116,6 +106,8 @@ public sealed class EditorDiagnosticReportWriter
                 GameBuildId = SafeContext(process.GameBuildId) ? process.GameBuildId : null, JobId = SafeContext(process.JobId) ? process.JobId : null,
                 process.SourceRevision, process.Completed, process.ResourcesReleased,
                 StandardOutput = StreamMetadata(process.StandardOutput), StandardError = StreamMetadata(process.StandardError),
+                Compiler = process.CompilerDiagnostics is not { } compiler ? null : new { compiler.State, Count = compiler.Entries.Count,
+                    compiler.Omitted, compiler.IsTruncated, HasFailure = compiler.FailureType != null },
                 Delivery = process.Delivery is not { } lane ? null : new { lane.Enabled, lane.Closed, lane.Released, lane.DrainComplete,
                     lane.Accepted, lane.Rejected, lane.Lost, lane.Unconfirmed, lane.Failures, lane.Duplicates, lane.RateLimited, lane.Suppressed,
                     lane.ChildReportedLost, lane.ChildReportedUnconfirmed, HasError = lane.LastFailureType != null }
@@ -126,6 +118,17 @@ public sealed class EditorDiagnosticReportWriter
         json.WriteEndArray(); json.WriteNumber("processMetadataOmitted", (snapshot.Processes?.Processes.Count ?? 0) - count);
     }
 
+    private static object? HealthMetadata(DiagnosticHealthSnapshot? health, int maximumSinks = 66) => health == null ? null : new
+    {
+        health.ApplicationId, health.Closed, health.LatestSequence, health.RetainedRecords, health.RetainedBytes,
+        health.MemoryEvicted, health.CaptureFailures, health.LateWrites,
+        Sinks = health.Sinks.Take(maximumSinks).Select(sink => new { Name = Identifier(sink.Name), sink.Accepted, sink.Written, sink.Dropped,
+            sink.Failures, sink.Queued, sink.Bytes, HasError = sink.LastError != null }),
+        Emergency = health.Emergency is not { } emergency ? null : new { emergency.Accepted, emergency.Written, emergency.Dropped,
+            emergency.Suppressed, emergency.Failures, emergency.Queued, HasError = emergency.LastError != null },
+        Retention = health.Retention is not { } retention ? null : new { retention.RetainedRuns, retention.RetainedBytes, retention.ActiveRuns,
+            retention.SkippedDirectories, retention.DeletedRuns, retention.Failures, retention.IsOverBudget, retention.MaintenanceBusy, HasError = retention.LastError != null }
+    };
     private static object? StreamMetadata(ProcessStreamDiagnostic? stream) => stream == null ? null : new
     {
         stream.Output.TotalCharacters, stream.Output.DroppedCharacters, stream.Output.OmittedCharacters, stream.Output.FileBytesWritten,

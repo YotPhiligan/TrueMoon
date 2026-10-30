@@ -13,4 +13,10 @@
 /// <param name="LastFailureType">Bounded type name only; no endpoint/nonce/error text.</param>
 public sealed record ChildDiagnosticStatus(bool Enabled, bool Closed, bool Released, bool DrainComplete,
     long Accepted, long Rejected, long Lost, long Unconfirmed, long Failures, long Duplicates, long RateLimited,
-    long Suppressed, long ChildReportedLost, long ChildReportedUnconfirmed, string? LastFailureType);
+    long Suppressed, long ChildReportedLost, long ChildReportedUnconfirmed, string? LastFailureType)
+{
+    /// <summary>Last validated child observation, retained after reap; null when unavailable or never received.</summary>
+    public RuntimeDiagnosticObservation? RuntimeObservation { get; init; }
+    /// <summary>Validated packets whose optional observation did not fit the shared body budget.</summary>
+    public long ObservationOmittedPackets { get; init; }
+}
