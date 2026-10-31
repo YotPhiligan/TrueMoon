@@ -15,7 +15,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     private readonly string _hostId, _root;
     private readonly TimeSpan _timeout;
     private readonly CancellationTokenSource _closing = new();
-    private Task<GameBuildArtifact>? _job;
+    private Task? _job;
     private Task? _dispose;
     private OwnedJob? _owned;
     private bool _closed;
@@ -81,6 +81,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     public Task<GameBuildArtifact> BuildAsync(GameBuildRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (request.CaptureCompilation && !request.TrackInputs) throw new ArgumentException("Captured compilation requires tracked inputs.", nameof(request));
         ArgumentException.ThrowIfNullOrWhiteSpace(request.ProjectPath);
         var project = Path.GetFullPath(request.ProjectPath);
         if (!File.Exists(project) || !project.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Expected an existing game csproj.", nameof(request));
@@ -97,6 +98,65 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         }
         _ = CompleteAsync(snapshot, cancellationToken, completion);
         return completion.Task;
+    }
+
+    /// <summary>Re-evaluates a process-local input witness before starting its selected artifact.</summary>
+    /// <param name="expected">Witness retained from a tracked build, not reconstructed from artifact files.</param>
+    /// <param name="cancellationToken">Cancellation; accepted SDK work is always reaped/drained.</param>
+    /// <returns>Completion after a matching observation, or an observable input mismatch.</returns>
+    public Task VerifyInputsAsync(GameBuildInputSnapshot expected, CancellationToken cancellationToken = default)
+        => VerifyInputsCore(expected, null, cancellationToken);
+
+    /// <summary>Rechecks source evaluation and the original non-generated compiler/reference/config byte inputs.</summary>
+    /// <param name="expected">Original evaluated-input witness.</param><param name="compilation">Matching process-local compiler capture.</param>
+    /// <param name="cancellationToken">Cancellation; verification remains owned until SDK/hash work drains.</param>
+    /// <returns>Completion after all live inputs match.</returns>
+    public Task VerifyInputsAsync(GameBuildInputSnapshot expected, GameBuildCompilationSnapshot compilation, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(compilation);
+        if (compilation.InputFingerprint != expected.Fingerprint) throw new ArgumentException("Compilation capture does not belong to the evaluated witness.", nameof(compilation));
+        return VerifyInputsCore(expected, compilation, cancellationToken);
+    }
+
+    private Task VerifyInputsCore(GameBuildInputSnapshot expected, GameBuildCompilationSnapshot? compilation, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        TaskCompletionSource completion;
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_closed, this); cancellationToken.ThrowIfCancellationRequested();
+            if (_job is { IsCompleted: false } || _owned != null) throw new InvalidOperationException("A compiler job/cleanup is already active.");
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously); _job = completion.Task;
+        }
+        _ = VerifyCoreAsync(); return completion.Task;
+        async Task VerifyCoreAsync()
+        {
+            try { await VerifyOwnedAsync(expected, compilation, cancellationToken).ConfigureAwait(false); completion.TrySetResult(); }
+            catch (OperationCanceledException cancelled) { completion.TrySetCanceled(cancelled.CancellationToken); }
+            catch (Exception error) { completion.TrySetException(error); }
+        }
+    }
+
+    private async Task VerifyOwnedAsync(GameBuildInputSnapshot expected, GameBuildCompilationSnapshot? compilation, CancellationToken caller)
+    {
+        using var timeout = new CancellationTokenSource(_timeout);
+        using var end = CancellationTokenSource.CreateLinkedTokenSource(caller, _closing.Token, timeout.Token);
+        DiagnosticsDirectory = null; _stdout = null; _stderr = null;
+        var lease = await Task.Run(_diagnostics.Begin).ConfigureAwait(false);
+        var owned = new OwnedJob(lease, Path.GetDirectoryName(expected.Request.ProjectPath)!)
+            { SourceRevision = expected.Request.SourceRevision, Kind = "BuildInputs" };
+        DiagnosticsDirectory = owned.Directory; lock (_gate) _owned = owned;
+        try
+        {
+            UpdateRetention(owned.Directory);
+            var actual = await ObserveInputsAsync(owned, expected.Request, "verify", end.Token).ConfigureAwait(false);
+            if (actual.Fingerprint != expected.Fingerprint) throw new GameBuildInputsChangedException(expected.Fingerprint, actual.Fingerprint);
+            if (compilation != null) await compilation.VerifyOriginalsAsync(end.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException error) when (timeout.IsCancellationRequested && !caller.IsCancellationRequested && !_closing.IsCancellationRequested)
+        { throw new TimeoutException("Game build input verification exceeded its SDK deadline.", error); }
+        finally { await CleanupAsync(owned).ConfigureAwait(false); }
     }
     private async Task CompleteAsync(GameBuildRequest request, CancellationToken caller, TaskCompletionSource<GameBuildArtifact> completion)
     {
@@ -138,35 +198,48 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Information, 1200, "Build.Starting", "Game build operation", () =>
             new Dictionary<string, string?> { ["SourceRevision"] = request.SourceRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["JobId"] = Path.GetFileName(job) });
-        var output = Path.Combine(job, "output"); var work = Path.Combine(job, "work");
-        var info = new ProcessStartInfo("dotnet") { WorkingDirectory = Path.GetDirectoryName(request.ProjectPath)!,
-            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (var argument in new[] { "build", request.ProjectPath, "--configuration", "Release", "--framework", "net10.0",
-            "--output", output, "--artifacts-path", work, "--verbosity", "quiet", "--disable-build-servers",
-            "-property:IncludeProjectNameInArtifactsPaths=false",
-            "-property:BuildProjectReferences=false", "-property:UseSharedCompilation=false", "-nodeReuse:false",
-            "-property:AetherContractPath=" + typeof(IGameSession).Assembly.Location,
-            "-property:TrueMoonContractsPath=" + typeof(IFactory<>).Assembly.Location }) info.ArgumentList.Add(argument);
-        var errorLog = Path.Combine(job, GameBuildDiagnosticReader.FileName);
-        foreach (var character in new[] { '%', ';', ',', '$', '@', '(', ')', '\'' })
-            errorLog = errorLog.Replace(character.ToString(), "%" + ((int)character).ToString("X2"), StringComparison.Ordinal);
-        info.ArgumentList.Add("-property:ErrorLog=" + errorLog + "%2Cversion=2.1");
+        var output = Path.Combine(job, "output");
+        var info = BuildInfo(request, owned);
         try
         {
             UpdateRetention(job);
             end.Token.ThrowIfCancellationRequested();
+            var inputs = request.TrackInputs ? await ObserveInputsAsync(owned, request, "before", end.Token).ConfigureAwait(false) : null;
+            GameBuildCompilation? compilation = null;
+            if (request.CaptureCompilation)
+            {
+                var preparation = BuildInfo(request, owned);
+                var prepared = Path.Combine(job, "prepare.json");
+                foreach (var argument in new[] { "-target:Compile", "-property:SkipCompilerExecution=true", "-property:ProvideCommandLineArgs=true",
+                    "-getItem:CscCommandLineArgs,ReferenceCopyLocalPaths", "-getProperty:RoslynTargetsPath,CscToolPath,CscToolExe,NETCoreSdkVersion,MSBuildToolsPath,NetCoreTargetingPackRoot,CscEnvironment",
+                    "-getResultOutputFile:" + prepared }) preparation.ArgumentList.Add(argument);
+                await ProbeAsync(owned, preparation, "prepare", end.Token).ConfigureAwait(false);
+                if (new FileInfo(prepared).Length > GameBuildInputSnapshot.MaximumDocumentBytes) throw new InvalidDataException("Compiler preparation exceeds its limit.");
+                compilation = await GameBuildCompilation.CaptureAsync(inputs!, await File.ReadAllTextAsync(prepared, end.Token).ConfigureAwait(false), job, end.Token).ConfigureAwait(false);
+                owned.OriginalPaths = compilation.OriginalPaths;
+                info = compilation.StartInfo;
+            }
             var process = Process.Start(info) ?? throw new IOException("Compiler process did not start.");
             lock (_gate) { owned.Process = process; owned.ProcessId = process.Id; }
             owned.Output = new(process.StandardOutput, process.StandardError, null, job, "build");
+            owned.BuildOutput = owned.Output;
             _stdout = owned.Output.Stdout; _stderr = owned.Output.Stderr;
             await process.WaitForExitAsync(end.Token).ConfigureAwait(false);
             end.Token.ThrowIfCancellationRequested();
             if (process.ExitCode != 0) throw new GameBuildException("Game compilation failed.", process.ExitCode, job);
+            if (inputs != null)
+            {
+                await ReleaseProcessAsync(owned).ConfigureAwait(false);
+                var actual = await ObserveInputsAsync(owned, request, "after", end.Token).ConfigureAwait(false);
+                if (actual.Fingerprint != inputs.Fingerprint) throw new GameBuildInputsChangedException(inputs.Fingerprint, actual.Fingerprint);
+                if (compilation != null) await compilation.Snapshot.VerifyOriginalsAsync(end.Token).ConfigureAwait(false);
+            }
             var allowed = new[] { request.EntryAssembly }.Concat(request.Dependencies!).ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (Directory.EnumerateFiles(output, "*.dll").Any(p => !allowed.Contains(Path.GetFileName(p))))
                 throw new InvalidDataException("Compiler output contains undeclared DLLs; use a non-copying frozen Aether reference.");
             var artifact = GameBuildArtifact.Publish(output, _root, _hostId, request.EntryAssembly, request.EntryType,
                 request.SourceRevision, request.Dependencies, end.Token);
+            if (inputs != null) artifact = artifact.WithInputs(inputs, compilation?.Snapshot);
             owned.GameBuildId = artifact.BuildId;
             return artifact;
         }
@@ -174,13 +247,75 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         { throw new TimeoutException("Game build exceeded its compiler deadline.", error); }
         finally { await CleanupAsync(owned).ConfigureAwait(false); }
     }
+    private static ProcessStartInfo BuildInfo(GameBuildRequest request, OwnedJob owned)
+    {
+        var info = new ProcessStartInfo("dotnet") { WorkingDirectory = Path.GetDirectoryName(request.ProjectPath)!,
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var argument in new[] { "build", request.ProjectPath, "--configuration", "Release", "--framework", "net10.0",
+            "--output", Path.Combine(owned.Directory, "output"), "--artifacts-path", Path.Combine(owned.Directory, "work"),
+            "--verbosity", "quiet", "--disable-build-servers", "-property:IncludeProjectNameInArtifactsPaths=false",
+            "-property:BuildProjectReferences=false", "-property:UseSharedCompilation=false", "-nodeReuse:false",
+            "-property:AetherContractPath=" + typeof(IGameSession).Assembly.Location,
+            "-property:TrueMoonContractsPath=" + typeof(IFactory<>).Assembly.Location }) info.ArgumentList.Add(argument);
+        var errorLog = Path.Combine(owned.Directory, GameBuildDiagnosticReader.FileName);
+        foreach (var character in new[] { '%', ';', ',', '$', '@', '(', ')', '\'' })
+            errorLog = errorLog.Replace(character.ToString(), "%" + ((int)character).ToString("X2"), StringComparison.Ordinal);
+        info.ArgumentList.Add("-property:ErrorLog=" + errorLog + "%2Cversion=2.1");
+        return info;
+    }
+
+    private async Task<GameBuildInputSnapshot> ObserveInputsAsync(OwnedJob owned, GameBuildRequest request, string phase, CancellationToken token)
+    {
+        var query = BuildInfo(request, owned);
+        // Machine input must bypass the deliberately lossy diagnostic stream sink.
+        var json = Path.Combine(owned.Directory, phase + ".evaluation.json");
+        query.ArgumentList.Add("-getResultOutputFile:" + json);
+        query.ArgumentList.Add("-consoleloggerparameters:ErrorsOnly");
+        query.ArgumentList.Add("-getItem:Compile,EmbeddedResource,AdditionalFiles,Analyzer,Reference,Content,None,ProjectReference,PackageReference,EditorConfigFiles,GlobalAnalyzerConfigFiles,CompilerVisibleProperty,CompilerVisibleItemMetadata");
+        query.ArgumentList.Add("-getProperty:TargetFramework,NETCoreSdkVersion,DefineConstants,LangVersion,Nullable,AllowUnsafeBlocks,Optimize,CheckForOverflowUnderflow,TreatWarningsAsErrors,WarningLevel,NoWarn,WarningsAsErrors,WarningsNotAsErrors,DebugType,Deterministic,PathMap,PlatformTarget,Features,RootNamespace,AssemblyName,AnalysisLevel,AnalysisMode,RunAnalyzersDuringBuild,CodeAnalysisRuleSet");
+        await ProbeAsync(owned, query, phase + "-query", token).ConfigureAwait(false);
+        var preprocess = BuildInfo(request, owned); var path = Path.Combine(owned.Directory, phase + ".project.xml");
+        preprocess.ArgumentList.Add("-consoleloggerparameters:ErrorsOnly"); preprocess.ArgumentList.Add("-preprocess:" + path);
+        await ProbeAsync(owned, preprocess, phase + "-project", token).ConfigureAwait(false);
+        foreach (var file in new[] { json, path })
+            if (new FileInfo(file).Length > GameBuildInputSnapshot.MaximumDocumentBytes) throw new InvalidDataException("SDK input document exceeds its limit.");
+        var snapshot = GameBuildInputSnapshot.Create(request, await File.ReadAllTextAsync(json, token).ConfigureAwait(false),
+            await File.ReadAllTextAsync(path, token).ConfigureAwait(false), owned.Directory, token);
+        await File.WriteAllTextAsync(Path.Combine(owned.Directory, phase + ".inputs.json"), JsonSerializer.Serialize(snapshot), token).ConfigureAwait(false);
+        return snapshot;
+    }
+
+    private async Task ProbeAsync(OwnedJob owned, ProcessStartInfo info, string name, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        var process = Process.Start(info) ?? throw new IOException("SDK input evaluation did not start.");
+        lock (_gate) { owned.Process = process; owned.ProcessId = process.Id; }
+        owned.Output = new(process.StandardOutput, process.StandardError, null, owned.Directory, name);
+        if (owned.BuildOutput == null) { _stdout = owned.Output.Stdout; _stderr = owned.Output.Stderr; }
+        await process.WaitForExitAsync(token).ConfigureAwait(false); token.ThrowIfCancellationRequested();
+        if (process.ExitCode != 0) throw new GameBuildException("SDK input phase failed: " + name, process.ExitCode, owned.Directory);
+        await ReleaseProcessAsync(owned).ConfigureAwait(false);
+    }
+
+    private async Task ReleaseProcessAsync(OwnedJob owned)
+    {
+        if (owned.Process is not { } process) return;
+        await ReapAsync(process).ConfigureAwait(false);
+        if (owned.Output != null) await owned.Output.DrainAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        lock (_gate) owned.Process = null;
+        process.Dispose();
+    }
+
     private async Task CleanupAsync(OwnedJob owned)
     {
-        if (owned.Process is { } process)
+        await ReleaseProcessAsync(owned).ConfigureAwait(false);
         {
-            await ReapAsync(process).ConfigureAwait(false);
-            if (owned.Output != null) await owned.Output.DrainAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             var compilerDiagnostics = GameBuildDiagnosticReader.Read(Path.Combine(owned.Directory, GameBuildDiagnosticReader.FileName), owned.ProjectDirectory);
+            if (owned.OriginalPaths != null) compilerDiagnostics = compilerDiagnostics with
+            {
+                Entries = Array.AsReadOnly(compilerDiagnostics.Entries.Select(entry => entry.FilePath is { } path && owned.OriginalPaths.TryGetValue(path, out var original)
+                    ? entry with { FilePath = original } : entry).ToArray())
+            };
             lock (_gate) owned.CompilerDiagnostics = compilerDiagnostics;
             // Capture failures/truncation remain observable independently of the compiler's exit outcome.
             try
@@ -193,11 +328,10 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
                 AetherDiagnosticEvents.Emit(_events, DiagnosticLevel.Warning, 1204, "Build.DiagnosticsWriteFailed",
                     "Could not persist build output status", () => new Dictionary<string, string?>(), error);
             }
-            lock (_gate) owned.Process = null;
-            process.Dispose();
         }
         GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "output"), owned.Directory);
         GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "work"), owned.Directory);
+        GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "capture"), owned.Directory);
         Exception? completionError = null;
         try { owned.Diagnostics.Complete(DateTimeOffset.UtcNow); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException)
@@ -257,7 +391,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
             return new(_dispose = DisposeCoreAsync(_job));
         }
     }
-    private async Task DisposeCoreAsync(Task<GameBuildArtifact>? job)
+    private async Task DisposeCoreAsync(Task? job)
     {
         if (job != null) { try { await job.ConfigureAwait(false); } catch { /* Build errors belong to their caller; process ownership is checked below. */ } }
         OwnedJob? owned; lock (_gate) owned = _owned;
@@ -273,14 +407,17 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         internal int? ProcessId;
         internal long SourceRevision;
         internal string? GameBuildId;
+        internal string Kind = "Build";
+        internal IReadOnlyDictionary<string, string>? OriginalPaths;
         internal readonly BuildDiagnosticStore.Job Diagnostics = diagnostics;
         internal string Directory => Diagnostics.Directory;
         internal Process? Process;
         internal OwnedProcessOutput? Output;
+        internal OwnedProcessOutput? BuildOutput;
         internal ProcessDiagnosticSnapshot Snapshot(bool completed, int maximumOutputCharacters) => new(
-            "build:" + Path.GetFileName(Directory), "Build", StartedUtc, ProcessId, null, null, null, GameBuildId,
+            "build:" + Path.GetFileName(Directory), Kind, StartedUtc, ProcessId, null, null, null, GameBuildId,
             Path.GetFileName(Directory), SourceRevision, completed, completed,
-            ProcessStreamDiagnostic.Read(Output?.Stdout, maximumOutputCharacters), ProcessStreamDiagnostic.Read(Output?.Stderr, maximumOutputCharacters), null)
+            ProcessStreamDiagnostic.Read((BuildOutput ?? Output)?.Stdout, maximumOutputCharacters), ProcessStreamDiagnostic.Read((BuildOutput ?? Output)?.Stderr, maximumOutputCharacters), null)
             { CompilerDiagnostics = CompilerDiagnostics };
     }
 }

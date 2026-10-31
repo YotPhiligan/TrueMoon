@@ -55,12 +55,12 @@ public sealed class EditorDocumentView : View<EditorDocumentViewModel>, IUiInput
         try
         {
             model.Refresh(); DataContext = model;
-            PathInput = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.PathDraft)
-                .Bind(UiProperties.Enabled, model, x => x.CanEditPath).SetValue(UiProperties.AccessibleName, "Путь сцены");
+            PathInput = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.RequestedPath)
+                .Bind(UiProperties.Enabled, model, x => x.CanEditPath).Bind(UiProperties.AccessibleName, model, x => x.PathInputLabel);
             SavePathInput = TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, x => x.SavePathDraft)
                 .SetValue(UiProperties.AccessibleName, "Сохранить новую сцену как");
             Title = compactHeader ? Text.Plain().BindText(model, x => x.PathPromptText) : Text.Plain().BindText(model, x => x.Title);
-            ScenesRoot = Text.Plain().BindText(model, x => x.ScenesRoot);
+            ScenesRoot = Text.Plain().BindText(model, x => x.PathHint);
             Error = Text.Plain().BindText(model, x => x.ErrorText);
             Actions.Add(Text.Plain("Сцена:")); Actions.Add(PathInput);
             Add(DocumentCommand.New, "Новая", x => x.CanNew);

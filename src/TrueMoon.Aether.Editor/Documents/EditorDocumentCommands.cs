@@ -15,11 +15,15 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     private readonly Func<Task> _stopRuntime;
     private readonly Func<Task> _stopPreview;
     private readonly CancellationToken _lifetime;
+    private readonly Action<ProjectSession?>? _selectProject;
+    private ProjectSession? _boundProject;
+    private bool _projectReady = true;
     private Task _pending = Task.CompletedTask;
     private Task<bool>? _exit;
     private CancellationTokenSource? _cancellation;
     private TaskCompletionSource<(DocumentCloseChoice Choice, string? Path)>? _decision;
     private DocumentCommand _operation;
+    private TrueMoon.Aether.Editing.GameEditorOperation _runtimeOperation;
     private Exception? _error;
     private Exception? _cancellationError;
     private bool _busy, _exiting;
@@ -33,10 +37,20 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     /// <param name="stopPreview">Optional borrowed preview fence/drain before document replacement, close and exit.</param>
     public EditorDocumentCommands(EditorProjects projects, Func<bool> canTransition, Func<Task> stopRuntime,
         CancellationToken lifetime = default, Func<Task>? stopPreview = null)
+        : this(projects, canTransition, stopRuntime, lifetime, stopPreview, null) { }
+
+    /// <summary>Creates shared project/document admission with an explicit runtime context binding.</summary>
+    /// <param name="projects">Borrowed project owner.</param><param name="canTransition">Fresh idle-runtime admission.</param>
+    /// <param name="stopRuntime">Terminal runtime command drain.</param><param name="lifetime">App cancellation.</param>
+    /// <param name="stopPreview">Reusable preview fence/drain.</param>
+    /// <param name="selectProject">Binds or clears the actual committed project's build identity before admission reopens.</param>
+    public EditorDocumentCommands(EditorProjects projects, Func<bool> canTransition, Func<Task> stopRuntime,
+        CancellationToken lifetime, Func<Task>? stopPreview, Action<ProjectSession?>? selectProject)
     {
         ArgumentNullException.ThrowIfNull(projects); ArgumentNullException.ThrowIfNull(canTransition); ArgumentNullException.ThrowIfNull(stopRuntime);
         _projects = projects; _canTransition = canTransition; _stopRuntime = stopRuntime; _lifetime = lifetime;
         _stopPreview = stopPreview ?? (() => Task.CompletedTask);
+        _selectProject = selectProject; _boundProject = projects.Active;
     }
 
     /// <summary>Gets actual completion of the last accepted UI action, including a pending decision.</summary>
@@ -50,7 +64,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         {
             var project = _projects.Active;
             return new(_operation, _busy, _decision != null, _exiting, _closed, project?.Documents?.Read(),
-                project?.Project.ScenesDirectory, _error, !_closed && _canTransition());
+                project?.Project.ScenesDirectory, _error, !_closed && BindingReady && _canTransition())
+                { Project = project, ProjectReady = BindingReady, ProjectSwitchEnabled = _selectProject != null, RuntimeOperation = _runtimeOperation };
         }
     }
 
@@ -65,6 +80,10 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     private bool Available(DocumentCommand command)
     {
         if (_closed || _busy || _exiting || _lifetime.IsCancellationRequested || !_canTransition()) return false;
+        if (command is DocumentCommand.OpenProject or DocumentCommand.CloseProject)
+            return _selectProject != null && (command == DocumentCommand.OpenProject ? _projects.CanSelect : _projects.CanClose) &&
+                _projects.Active?.Documents?.Read().Operation is null or DocumentOperation.None;
+        if (!BindingReady) return false;
         var document = _projects.Active?.Documents?.Read();
         if (document == null || document.IsClosed || document.Operation != DocumentOperation.None) return false;
         return command is DocumentCommand.New or DocumentCommand.Open ||
@@ -77,11 +96,11 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     public bool Execute(DocumentCommand command, string path = "")
     {
         Validate(command); ArgumentNullException.ThrowIfNull(path);
-        TaskCompletionSource completion; CancellationTokenSource cancellation; SceneDocumentSession document;
+        TaskCompletionSource completion; CancellationTokenSource cancellation; SceneDocumentSession? document;
         lock (_gate)
         {
             if (!Available(command)) return false;
-            document = _projects.Active!.Documents!;
+            document = _projects.Active?.Documents;
             cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             _cancellation = cancellation; _pending = completion.Task; _busy = true; _operation = command; _error = null; _cancellationError = null;
@@ -92,6 +111,47 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             try
             {
                 var token = cancellation.Token; token.ThrowIfCancellationRequested();
+                if (command is DocumentCommand.OpenProject or DocumentCommand.CloseProject)
+                {
+                    var previous = _projects.Active;
+                    Exception? transitionFailure = null;
+                    try
+                    {
+                        if (command == DocumentCommand.OpenProject)
+                            await _projects.SwitchAsync(path, prepare, token).ConfigureAwait(false);
+                        else
+                        {
+                            var decision = await prepare(token).ConfigureAwait(false);
+                            await _projects.CloseAsync(decision.Choice, decision.Path, token).ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception error) { transitionFailure = error; throw; }
+                    finally
+                    {
+                        if (!ReferenceEquals(previous, _projects.Active) || !BindingReady)
+                        {
+                            lock (_gate) _projectReady = false;
+                            try
+                            {
+                                var actual = _projects.Active; _selectProject!(actual);
+                                lock (_gate) { _boundProject = actual; _projectReady = true; }
+                            }
+                            catch (Exception binding) when (transitionFailure != null) { throw new AggregateException(transitionFailure, binding); }
+                        }
+                    }
+                    return;
+
+                    async Task<(DocumentCloseChoice Choice, string? Path)> prepare(CancellationToken preparing)
+                    {
+                        var decision = document?.Read().IsDirty == true ? await DecideAsync(preparing).ConfigureAwait(false) : (DocumentCloseChoice.Discard, (string?)null);
+                        if (decision.Item1 == DocumentCloseChoice.Cancel) throw new OperationCanceledException(preparing);
+                        preparing.ThrowIfCancellationRequested();
+                        await _stopPreview().ConfigureAwait(false);
+                        preparing.ThrowIfCancellationRequested();
+                        return decision;
+                    }
+                }
+                if (document == null) throw new InvalidOperationException("No project document session is available.");
                 var choice = DocumentCloseChoice.Cancel; string? saveAs = null;
                 if (command is DocumentCommand.New or DocumentCommand.Open or DocumentCommand.Close && document.Read().IsDirty)
                     (choice, saveAs) = await DecideAsync(token).ConfigureAwait(false);
@@ -126,6 +186,59 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             }
         });
         return true;
+    }
+
+    // Runtime preparation and controls use the same gate and tracked completion as file/edit/exit operations.
+    // Controls may run while the game is paused/playing; entering Build/Start still requires idle runtime admission.
+    internal Task RunRuntimeAsync(TrueMoon.Aether.Editing.GameEditorOperation operation, bool entering,
+        Func<ProjectSession, SceneAuthoringState, CancellationToken, Task> action, CancellationToken caller)
+    {
+        ProjectSession project; SceneAuthoringState content; TaskCompletionSource completion; CancellationTokenSource cancellation;
+        var result = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_gate)
+        {
+            caller.ThrowIfCancellationRequested();
+            if (_closed || _exiting || _busy || !BindingReady || _lifetime.IsCancellationRequested || entering && !_canTransition())
+                throw new InvalidOperationException("Finish the current project/document/runtime operation first.");
+            project = _projects.Active ?? throw new InvalidOperationException("Open a project first.");
+            var state = project.Documents?.Read();
+            if (state == null || state.IsClosed || state.Operation != DocumentOperation.None || state.Content == null)
+                throw new InvalidOperationException("Open an idle scene document first.");
+            content = state.Content;
+            cancellation = CancellationTokenSource.CreateLinkedTokenSource(caller, _lifetime);
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pending = completion.Task; _cancellation = cancellation; _busy = true; _operation = DocumentCommand.None;
+            _runtimeOperation = operation; _error = _cancellationError = null;
+        }
+        _ = Task.Run(async () =>
+        {
+            Exception? failure = null;
+            try { cancellation.Token.ThrowIfCancellationRequested(); await action(project, content, cancellation.Token).ConfigureAwait(false); }
+            catch (Exception error) { failure = error; }
+            lock (_gate)
+            {
+                _error = Combine(failure is OperationCanceledException ? null : failure, _cancellationError);
+                _cancellationError = null; _cancellation = null; cancellation.Dispose();
+                _runtimeOperation = TrueMoon.Aether.Editing.GameEditorOperation.Idle;
+                if (!_exiting) { _busy = false; _operation = DocumentCommand.None; }
+            }
+            // Exit awaits a drain barrier, just as it does for normal document commands; the operation caller owns its failure.
+            completion.TrySetResult();
+            if (failure is OperationCanceledException cancelled) result.TrySetCanceled(cancelled.CancellationToken);
+            else if (failure != null) result.TrySetException(failure); else result.TrySetResult();
+        });
+        return result.Task;
+    }
+
+    internal Task StartCapturedRuntime(ProjectSession project, SceneAuthoringState content, Func<Task> start, CancellationToken token)
+    {
+        lock (_gate)
+        {
+            token.ThrowIfCancellationRequested();
+            if (_closed || _exiting || !BindingReady || !ReferenceEquals(_projects.Active, project))
+                throw new OperationCanceledException("Project startup was superseded.", token);
+            return project.Documents!.WithCapturedState(content, start);
+        }
     }
 
     /// <summary>Commits a Transform gesture through the active document under the same admission gate as file transitions.</summary>
@@ -273,6 +386,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         if (!Enum.IsDefined(command) || command is DocumentCommand.None or DocumentCommand.Exit)
             throw new ArgumentOutOfRangeException(nameof(command));
     }
+
+    private bool BindingReady => _projectReady && (_selectProject == null || ReferenceEquals(_boundProject, _projects.Active));
 
     private Exception? CancelWork()
     { try { _cancellation?.Cancel(); return null; } catch (Exception error) { return error; } }

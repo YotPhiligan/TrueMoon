@@ -43,7 +43,7 @@ public sealed partial class EditorDiagnosticsViewModel
             VerifyOpen(); if (!Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(value));
             if (_mode == value) return; _mode = value; _contextSelection = null; _inspectedContext = "";
             _selectedSource = null;
-            RebuildRows(); UpdateDetails(); Changed(nameof(Mode)); Changed(nameof(CanClear)); Changed(nameof(CanFilter)); Changed(nameof(CanRefreshDetails)); Changed(nameof(Summary)); Changed(nameof(CanOpenSource));
+            RebuildRows(); UpdateDetails(); OnPropertyChanged(nameof(Mode)); OnPropertyChanged(nameof(CanClear)); OnPropertyChanged(nameof(CanFilter)); OnPropertyChanged(nameof(CanRefreshDetails)); OnPropertyChanged(nameof(Summary)); OnPropertyChanged(nameof(CanOpenSource));
         }
     }
 
@@ -67,7 +67,7 @@ public sealed partial class EditorDiagnosticsViewModel
             !(_processes?.Processes.Any(process => process.Id == _contextSelection) ?? false))
         { _contextSelection = null; _inspectedContext = ""; UpdateDetails(); }
         if (Mode == EditorDiagnosticMode.Compiler && _contextSelection != null && !HasCompilerSelection(_contextSelection)) SelectCompiler(null);
-        Changed(nameof(Summary));
+        OnPropertyChanged(nameof(Summary));
     }
 
     private ProcessDiagnosticSnapshot BoundProcess(ProcessDiagnosticSnapshot process) => process with
@@ -126,7 +126,7 @@ public sealed partial class EditorDiagnosticsViewModel
         };
         var next = rows.ToArray();
         if (_rows.SequenceEqual(next)) return;
-        _rows = Array.AsReadOnly(next); Changed(nameof(Rows)); Changed(nameof(SelectedId)); Changed(nameof(CanRefreshDetails));
+        _rows = Array.AsReadOnly(next); OnPropertyChanged(nameof(Rows)); OnPropertyChanged(nameof(SelectedId)); OnPropertyChanged(nameof(CanRefreshDetails));
     }
 
     private bool MatchesProcess(ProcessDiagnosticSnapshot process) => Contains(process.Source, _source) &&
@@ -146,7 +146,7 @@ public sealed partial class EditorDiagnosticsViewModel
             if (process == null) _contextSelection = null;
             _inspectedContext = process == null ? "" : FormatProcess(process);
         }
-        UpdateDetails(); Changed(nameof(CanRefreshDetails));
+        UpdateDetails(); OnPropertyChanged(nameof(CanRefreshDetails));
     }
 
     private string ContextSummary => Mode == EditorDiagnosticMode.Health

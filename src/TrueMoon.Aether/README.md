@@ -599,6 +599,54 @@ Authoring-системы получают `SceneResolutionService` через co
 `SceneResolver.Resolve` остаётся независимой точкой для low-level применения.
 Документы, значения, UI elements и native handles не становятся DI services.
 
+## Захваченная C#-компиляция — ED6b.2b.1
+
+`GameBuildRequest.CaptureCompilation = true` вместе с `TrackInputs` подготавливает
+SDK Compile с `SkipCompilerExecution`/`ProvideCommandLineArgs`, затем копирует точные
+Csc inputs в owned job: source/generated files, managed references/reference packs,
+analyzer configs, штатные SDK analyzers/generators и managed compiler/deps/runtimeconfig.
+Отдельный `dotnet exec` компилирует из этих копий без повторного выполнения MSBuild.
+Изменение/удаление оригиналов после capture не меняет использованные bytes. Обычные
+source inputs сверяются с исходным witness во время копирования; прежние post-Build/
+pre-Start stale checks сохраняются. `Compilation` содержит process-local SHA256
+descriptor использованных файлов/аргументов. Open schema1 artifact его не восстанавливает.
+
+Captured profile — C# library с explicit file inputs; unknown/file-search/response-file
+switches, custom compiler/environment, external analyzers, resources/rulesets/signing
+и absolute analyzer-config sections отклоняются. Outputs остаются внутри job; имя
+entry DLL должно совпасть. Private DLLs копируются из captured ReferenceCopyLocalPaths.
+Source path mapping сохраняет CallerFilePath и structured diagnostics; generated job
+paths имеют стабильный virtual prefix. Перед Start также проверяются original compiler/
+reference/config bytes, кроме generated files завершённого job. Capture/work/output
+staging drains и удаляется до возврата Build result, diagnostics подчиняются прежней retention policy.
+
+Это byte capture compiler invocation после доверенной MSBuild preparation, не общий
+hermetic MSBuild build: tasks/generators preparation могут читать/писать произвольные
+файлы, installed dotnet runtime и environment остаются trusted. Custom postcompile/
+postbuild semantics не воспроизводятся. Capture не является sandbox; полного source
+closure до evaluation, package/project graph, arbitrary generators, cache/reuse/Replace
+ещё нет. Пределы4096files/64MiB per file/256MiB total включают compiler/reference packs;
+query/response/config documents ограничены8MiB. Legacy requests default false.
+
+## Наблюдаемые входы сборки — ED6b.2a
+
+`GameBuildRequest.TrackInputs = true` включает process-local `GameBuildArtifact.Inputs`:
+SHA256 evaluated files (Compile/resources/analyzers/configuration/HintPath references),
+canonical MSBuild properties/items и preprocessed imports. Compile ticket и owned job
+paths не входят в identity. До и после компиляции входы должны совпасть; GameEditor
+проверяет их повторно до запуска child. `VerifyInputsAsync` использует тот же single-job
+admission, cancellation/deadline, process reap/output drain и diagnostic retention.
+Persistent mismatch возвращает `GameBuildInputsChangedException`, не публикует candidate
+при Build и не создаёт runtime при Start. Schema1 artifacts неизменны; Open/Publish
+не восстанавливают witness, tracked Start требует оригинальный результат Build.
+
+Поддержан один net10.0 SDK project с explicit managed HintPath references, без
+PackageReference/ProjectReference. Legacy requests по умолчанию не включают tracking.
+Пределы:4096files,64MiB/file,256MiB total,8MiB на query/preprocessed document.
+Это наблюдение содержимого, а не hermetic snapshot: transient edit-and-revert,
+произвольные target/generator/environment inputs ещё не изолированы. Artifact reuse,
+полный source closure и document-aware Replace остаются следующими срезами ED6b.2.
+
 ## Сборка и выбор игровой версии — ENG3a
 
 После UseAether получите AetherHost. Его `Builds` работает независимо от текущей
@@ -789,6 +837,10 @@ point/host. Каждый SetContext копирует dependencies, меняет 
 
 `StartAsync(width,height)` запускает остановленную сцену с selected artifact или
 fixed build при отсутствии выбора; ждёт first-present и сбрасывает candidate.
+`StartBuildAsync(width,height,expectedContextVersion)` требует selected candidate
+и точную ContextVersion, captured после SetContext до Build. Проверка версии и
+приём команды атомарны; stale context/no candidate не запускают fixed runtime.
+Этот overload используется document-aware Editor scene playback.
 `PlayAsync`, `PauseAsync`, `StepAsync` сериализованы с Build/Select/Start/Replace.
 Конкурирующая команда отвергается до завершения текущей. `CancelAsync` отменяет и
 наблюдает текущую работу; Replace сохраняет свою recovery policy. `StopAsync`

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using TrueMoon.Argentis;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Aether.Scenes;
@@ -8,7 +8,7 @@ namespace TrueMoon.Aether.Editor.Hierarchy;
 
 /// <summary>UI-owner hierarchy presentation; borrows document admission, selection and Transform presentation.
 /// Parent changes use the same authoring session/history as inspector edits; no controls or theme are held.</summary>
-public sealed partial class EditorHierarchyViewModel : INotifyPropertyChanged, IDisposable
+public sealed partial class EditorHierarchyViewModel : ViewModel, IDisposable
 {
     private readonly EditorWorkspace _workspace;
     private readonly EditorDocumentCommands _commands;
@@ -48,8 +48,6 @@ public sealed partial class EditorHierarchyViewModel : INotifyPropertyChanged, I
     public string ErrorText => _error;
     /// <summary>Gets whether a complete selectable mutation diagnostic is present.</summary>
     public bool HasError => _error.Length != 0;
-    /// <inheritdoc />
-    public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed() { if (!_disposed) Refresh(); }
     /// <summary>Observes the current committed document/admission on its UI owner thread.</summary>
     public void Refresh()
@@ -58,11 +56,11 @@ public sealed partial class EditorHierarchyViewModel : INotifyPropertyChanged, I
         var state = _commands.Read(); var document = state.Document?.Content?.Document;
         if (!ReferenceEquals(_baseline, document))
         {
-            _baseline = document; _version++; Notify(nameof(SnapshotVersion));
+            _baseline = document; _version++; OnPropertyChanged(nameof(SnapshotVersion));
             Set(ref _error, "", nameof(ErrorText));
         }
         if (!_items.SequenceEqual(_workspace.HierarchyItems))
-        { _items = _workspace.HierarchyItems; Notify(nameof(Items)); }
+        { _items = _workspace.HierarchyItems; OnPropertyChanged(nameof(Items)); }
         Set(ref _caption, _workspace.Scene.Id, nameof(Caption));
         Set(ref _selected, _workspace.SelectedId, nameof(SelectedId));
         var canMove = document != null && state.RuntimeIdle && !state.Busy && !state.Exiting && !state.Closed &&
@@ -130,17 +128,16 @@ public sealed partial class EditorHierarchyViewModel : INotifyPropertyChanged, I
         if (Interlocked.CompareExchange(ref _owner, thread, 0) is var owner && owner != 0 && owner != thread)
             throw new InvalidOperationException("Hierarchy presentation must be updated on its UI owner thread.");
     }
-    private void Notify(string name) => PropertyChanged?.Invoke(this, new(name));
     private void Set<T>(ref T field, T value, string name)
     {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        var hadError = HasError; field = value; Notify(name);
-        if (hadError != HasError) Notify(nameof(HasError));
+        var hadError = HasError;
+        if (!SetProperty(ref field, value, name)) return;
+        if (hadError != HasError) OnPropertyChanged(nameof(HasError));
     }
     /// <summary>Disconnects selection callbacks; all dependencies remain borrowed.</summary>
     public void Dispose()
     {
         if (_disposed) return; _disposed = true;
-        _workspace.SceneChanged -= Changed; _workspace.SelectionChanged -= Changed; PropertyChanged = null;
+        _workspace.SceneChanged -= Changed; _workspace.SelectionChanged -= Changed; ClearPropertyChangedSubscribers();
     }
 }

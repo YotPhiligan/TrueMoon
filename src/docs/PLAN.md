@@ -15,7 +15,17 @@
 UI alpha и контрольное beta приложение имеют собственные критерии. Готовность UI не означает готовность всех модулей TrueMoon; обратное тоже не следует из общего build.
 
 Текущий приоритет, сверка2026-10-31 —
-[project picker/switch и ED1/ED6 workflow](engine/EDITOR_PLAN.md#ed1-проект-и-рабочая-сессия).
+[ED6b document-aware Build/Play/Stop](engine/EDITOR_PLAN.md#ed6b-buildplaystop-из-редактора--2026-10-29).
+Первый [срез ED6b.1](engine/EDITOR_PLAN.md#ed6b1-запуск-runtime-копии-открытой-сцены--2026-10-31)
+подключает fresh Build и Runtime copy текущей unsaved сцены с сохранением parent
+document/history. [ED6b.2a](engine/EDITOR_PLAN.md#ed6b2a-наблюдаемые-входы-сборки-и-stale-start--2026-10-31)
+добавляет content witness и проверку наблюдаемых SDK inputs перед Start.
+Первый [ED6b.2b.1](engine/EDITOR_PLAN.md#ed6b2b1-захваченная-c-компиляция--2026-10-31)
+компилирует C# из byte copies после trusted SDK preparation. Следом ED6b.2b.2 closure
+до evaluation/preparation до artifact reuse; gameplay
+input/HUD/Player и полный ED6b сохраняют свои дальнейшие задачи.
+ED1b.1/2 согласуют project/document Switch/Close API, retained project path UI и runtime
+rebinding в stopped-game/idle-compiler profile. Подробная policy/evidence — в Editor плане/STATUS.
 ED4c.3 создание/удаление/дублирование, поиск и context commands реализованы в bounded
 профиле31октября. ED4c.2 добавляет сохраняемые имена/порядок через общую history;
 подробности и проверки принадлежат Editor плану/STATUS. ED8a.1/2 diagnostic report завершён в scoped profiles:
@@ -39,6 +49,11 @@ K3/K7/K8/VRAM/general release gates и причина прежнего BSOD не
 ARCH2e.4 scoped contract выполнен: stdio ownership и file-drain без shared worker проверены controlled RED/GREEN, Core374/Aether1550 и fresh consumers. Точный historical cause не приписывается без failure heap; это ограничение сохранено в HISTORY.
 Quality follow-ups ENG2/ENG3, Mithril ready-file и diagnostic forwarding закрыты
 в своих проверенных scopes; общая release matrix не повторена. Точные даты — в STATUS.
+
+Планирование2026-10-31: [PA8c — качество UI-рендеринга и текста](alloy/PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31)
+добавляет отдельную ветку: чёткость текста, DPI/геометрия, шрифты, изображения/
+композиция и измеряемая стоимость. Подробные этапы и visual acceptance ведутся
+только в UI плане; первый шаг ветки — baseline PA8c.0. Текущий приоритет ED6b сохранён.
 
 Решение2026-10-29: [Editor/Player выбираются при запуске executable](engine/PLAN.md#eng7b-режимы-запуска-editor-и-player--2026-10-29),
 до App/DI; Editor запускает игру отдельным owned Runtime child. Один exe допустим

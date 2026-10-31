@@ -1,6 +1,42 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-10-31, MenuPopup и ED4c.3 context commands**.
+Последняя связанная работа — **2026-10-31, Editor ED6b.2b.1 captured compiler inputs**.
+Scene actions используют C# byte capture; общий UI API/renderer не менялся.
+Editor943/Aether1683 отдельно Debug/Release, failed/skipped0. Fresh15packages/headless8;
+published source/NuGet standard/Cobalt +embedded/MS DI4/4workflows:44children/40graceful
+validation0/0, UI/GPU/handles0;4PNG просмотрены. Captured fingerprints стабильны,
+188files/42105392bytes на compile, staging очищен до Start.
+[Scope/commands/границы](../engine/HISTORY.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
+Alloy/Hosting suites не повторялись; historical Preview popup/output-drain causes остаются
+открытыми. Далее ED6b.2b.2 preparation closure; собственная UI quality ветка — PA8c.0.
+
+Предыдущее планирование — **2026-10-31, PA8c качество рендеринга и текста**.
+Добавлены этапы baseline → text AA/hinting → DPI/геометрия → font metrics/shaping/
+fallback → image/color/alpha composition → performance → visual/package acceptance.
+[Подробный план и критерии](PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31).
+Это документация: код и build/test/native проверки в этом шаге не выполнялись.
+При возвращении к ветке первый шаг — PA8c.0; общий приоритет ED6b сохраняется.
+
+Предыдущая реализация — **2026-10-31, UIA1e Bindable → ViewModel**.
+Argentis содержит общую реализацию INotifyPropertyChanged с SetProperty/OnPropertyChanged.
+Editor ViewModels и settings sample переиспользуют её; guards, dependent notifications
+и cleanup сохранены. UI919/919 и Editor923/923 Debug/Release, failed/skipped0;
+10новых direct/binding cases. [Команды/границы](HISTORY.md#uia1e-bindable-и-viewmodel--2026-10-31).
+Hosting/Aether/другие suites, package/native/physical checks в этом шаге не запускались.
+Следующий consumer — прежний ED6b; physical/release gates остаются открытыми.
+
+Предыдущая связанная работа — **2026-10-31, Editor ED1b.2 project picker consumer**.
+Использует существующие Menu/TextBox/View/Data/Style и retained path tools; scene/project/
+save drafts разделены, focus/theme/command identity сохраняются. Header coalesce-ит
+refresh без задержки Run enabled state. UI library/provider API не менялись.
+Editor923/923 Debug/Release, failed/skipped0; Aether1631 проверен отдельно, Alloy/Hosting
+suites в этом шаге не повторялись. [Scope/evidence](HISTORY.md#editor-ed1b2-project-picker-consumer--2026-10-31).
+Published source/fresh NuGet standard/Cobalt +embedded/MS DI4/4workflows прошли:
+14PNG просмотрены,32children reaped/released,28graceful validation0/0, UI/GPU/handles0.
+Далее ED6b consumer; OS picker/recents, physical/DPI/device/K3/K7/K8/VRAM/final alpha
+остаются отдельными.
+
+Предыдущая работа — **2026-10-31, MenuPopup и ED4c.3 context commands**.
 Общий bounded popup использует MenuAction/MenuItem/IUiCommand и OverlayHost ownership,
 поддерживает navigation/Tab/disabled rows и dismiss-before-execute; Escape сохраняет focus
 context trigger при expanded menu bar. Shift+F10 оставлен
@@ -575,8 +611,11 @@ Alpha K1–K9 не объявляется завершённой. Требова
 ARCH2 source/package/headless/native profile и scoped ED6a/ED8a проверены;
 ED4c.2/3 rename/reorder и create/delete/duplicate/search/context реализованы через engine metadata/history. UI capabilities
 добавляются по consumer, hardware/general release gates сохраняются отдельно.
-ARCH1b.1, ED1a, ED2a/b, ED3a и ED4c.1–3 выполнены в своих границах; следующий
-consumer — project picker/switch и ED1/ED6 workflow.
+ARCH1b.1, ED1a/b, ED2a/b, ED3a, ED4c.1–3 и ED6b.1 выполнены в своих границах;
+следующий consumer — ED6b.2 source graph/revision/artifact policy перед reuse/Replace.
+Для следующего прохода качества UI запланирован
+[PA8c.0 baseline текста/геометрии/композиции](PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31);
+он предшествует выбору rendering options и оптимизаций в этой ветке.
 Общие UI capabilities для ED4/ED5/ED7 развивать здесь по конкретному consumer;
 готовность приложения не требует заранее закончить весь UI beta backlog.
 

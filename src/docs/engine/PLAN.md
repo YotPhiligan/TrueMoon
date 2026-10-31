@@ -11,7 +11,7 @@ ARCH1a.1/2 immutable authoring model, scene aggregate/resolver и compatibility 
 ENG5c.1/2 runtime scene consumer/комната и reach/interaction реализованы2026-10-22;
 ARCH1b.1 локальный Transform/query/history API и первый независимый GPU Edit preview проверены2026-10-23;
 остальной ARCH1, ENG5 и ENG6–ENG8 запланированы**.
-[Текущий приоритет: project picker/switch и ED1/ED6 workflow](EDITOR_PLAN.md#ed1-проект-и-рабочая-сессия).
+[Текущий приоритет: ED6b document-aware Build/Play/Stop](EDITOR_PLAN.md#ed6b-buildplaystop-из-редактора--2026-10-29).
 ARCH2e.4 и ED6a structured/raw/health срезы проверены в указанном STATUS scope.
 Compiler navigation ED6a.3 проверен2026-10-30 в unit/raster scope; window/published
 acceptance отдельно. ED8a.1 archive/text-policy/cancel/scalar config/backend report
@@ -21,7 +21,14 @@ ED4c.2 persistent Name/SiblingOrder, JSON v1/v2 и atomic hierarchy edits реа
 31октября; подробный контракт и UI consumer ведутся только в Editor плане.
 ED4c.3 create/delete/duplicate, search/context commands и New→Save/reopen реализованы
 31октября через общий authoring API/history; detailed policy — только в Editor плане.
-Далее project picker/switch и ED1/ED6; wider native/provider/backend и physical/release gates отдельно.
+ED1b.1/2 добавляют project/document Switch/Close, retained project path UI и context
+rebinding; profile требует stopped game/idle compiler и drains active preview.
+ED6b.1 подключает fresh Build/Play текущей in-memory сцены с parent history/dirty
+preservation. ED6b.2a добавляет process-local content witness и проверку SDK inputs
+до/после Build и перед Start; single-project HintPath profile не обещает hermetic capture.
+ED6b.2b.1 компилирует C# из captured source/reference/config/compiler bytes после trusted
+SDK preparation. Далее ED6b.2b.2 closure до evaluation/preparation до reuse/Replace;
+wider native/provider/backend и physical/release gates отдельно. Детали — в Editor плане.
 Повторный headless output-drain timeout31октября требует отдельного ARCH2e.4 follow-up
 по новому снимку; successful replays не считаются установлением/исправлением причины.
 ED1a/ED2a/b и Transform/history/preview consumer реализованы; exact проверки и
@@ -398,6 +405,8 @@ EditorViewModel/EditorViewStyle и Fluent View<EditorViewModel> через DI.
 [проверки](../alloy/HISTORY.md#uia1-view-viewmodel-и-typed-styles--2026-10-22).
 Это реорганизация UI state/appearance, без реализации inspector editing/runtime
 World или изменения engine protocol; DI1–DI4 ownership сохраняется.
+Уточнение2026-10-31: Editor models переиспользуют Argentis Bindable → ViewModel;
+общий контракт и проверки — [UIA1e](../alloy/PLAN.md#uia1e-bindable-и-viewmodel--2026-10-31).
 
 По запросу пользователя редактор относится к Aether: application и tests
 переименованы в `TrueMoon.Aether.Editor` и `TrueMoon.Aether.Editor.Tests`, включая
@@ -1825,6 +1834,19 @@ Cancel завершает текущую операцию с обычной reco
 permanently closes admission; App drains Editor до disposal зависимых ресурсов.
 UI показывает operation/source/active/candidate и полную исходную/recovery error.
 Scene/Dirty/selection/panels автора не меняются при симуляции и failure.
+
+Уточнение2026-10-31: GameEditor.StartBuildAsync(width,height,expectedContextVersion)
+атомарно требует exact context version и selected candidate перед startup, без
+fixed-build fallback. Старый StartAsync contract сохранён. Прикладная in-memory
+scene copy/shared document admission и fresh-build policy принадлежат
+[ED6b.1](EDITOR_PLAN.md#ed6b1-запуск-runtime-копии-открытой-сцены--2026-10-31).
+Опциональный `GameBuildRequest.TrackInputs` и process-local `GameBuildArtifact.Inputs`
+проверяют наблюдаемые SDK inputs до/после Build и перед GameEditor Start. Schema1
+не меняется; reopening artifact не восстанавливает witness. Детальный bounded profile
+и ограничения — [ED6b.2a](EDITOR_PLAN.md#ed6b2a-наблюдаемые-входы-сборки-и-stale-start--2026-10-31).
+`CaptureCompilation` дополнительно сохраняет actual Csc inputs/compiler bytes в owned
+job; artifact.Compilation — process-local identity, без изменения schema1. General
+MSBuild/postbuild semantics не подменяются: [ED6b.2b.1](EDITOR_PLAN.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
 
 Native proof в Debug apphost и published Release: один Editor App/Alloy OpenGL
 window,20последовательных A/B Replace в Paused/Playing, фактические selected DLL

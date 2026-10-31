@@ -1,6 +1,56 @@
 # TrueMoon.Aether: состояние движка и редактора
 
-Последняя работа — **2026-10-31, ED4c.3 операции объектов, поиск и context menu**.
+Последняя работа — **2026-10-31, ED6b.2b.1 захваченная C#-компиляция**.
+Scene requests включают CaptureCompilation+TrackInputs: trusted SDK preparation отдаёт
+actual Csc args; compiler/source/generated/reference/config bytes копируются в owned job.
+Отдельный Csc читает эти copies. После Build и перед Start проверяются original
+non-generated compiler/reference/config inputs; прежние source stale/context fences сохранены.
+CallerFilePath/user PathMap, stable generated/PDB paths и original diagnostics проверены.
+Job staging удаляется до возврата Build; cancellation/reap/retention остаются compiler-owned.
+C# library profile отвергает opaque inputs/custom extensions; schema1 прежняя,
+Compilation descriptor process-local. Полная MSBuild preparation не изолирована.
+Aether1683/Editor943 отдельно Debug/Release, failed/skipped0;26новых cases.
+Fresh15packages/headless8; published source/NuGet standard/Cobalt +embedded/MS DI4/4:
+44children reaped/released (8game),40graceful validation0/0, final UI/GPU/handles0;
+4PNG просмотрены. На native compile188files/42105392bytes, stable fingerprints двух builds.
+[Команды/findings/границы](HISTORY.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
+Далее ED6b.2b.2 immutable closure до evaluation/preparation, включая toolchain/runtime/
+environment assumptions. Arbitrary tasks/generators, package/project graph, cache/reuse/
+Replace/full ED6b открыты. Исторические popup/output-drain causes этим run не исправлены;
+другие module/full solution suites и physical/release gates не повторялись.
+
+Предыдущая связанная работа — **2026-10-31, общие Bindable/ViewModel**.
+Шесть Editor ViewModels переиспользуют Argentis property notifications; InspectorProperty
+использует Bindable. Owner-thread guards, dependent properties и Dispose subscriptions
+сохранены. Editor923/923 и UI919/919 Debug/Release, failed/skipped0.
+[Команды/границы](HISTORY.md#editor-и-общие-bindableviewmodel--2026-10-31).
+Aether/другие suites и package/native runs в этом шаге не повторялись. Далее ED6b.
+
+Предыдущая работа — **2026-10-31, ED1b.2 project picker и runtime rebinding**.
+Меню «Проект» и retained path prompt используют общую document/project queue и
+Save/Discard/Cancel. До возврата admission привязывается actual game build context;
+Close его очищает. Workspace/selection обновляются на UI owner, stale actions fenced.
+Profile: stopped game/idle compiler; active preview drains/reaps до publication.
+Aether1631/Editor923 отдельно Debug/Release, failed/skipped0,22новых cases.
+Final15fresh packages/headless8 и published source/NuGet ×standard/Cobalt +embedded/MS DI:
+4/4workflows,32children reaped/released,28graceful validation0/0, UI/GPU/handles0;
+14PNG просмотрены, final input fingerprints совпадают.
+[Команды/initial findings/границы](HISTORY.md#ed1b2-project-picker-и-runtime-rebinding--2026-10-31).
+Следующий шаг — ED6b source/artifact/immutable authoring snapshot policy и Build/Play.
+OS picker/recents/wizard, extended physical/native/backend/release gates и прежний
+intermittent output-drain follow-up остаются отдельными.
+
+Предыдущая работа — **2026-10-31, ED1b.1 project/document transition API**.
+Switch проверяет candidate до Save/Discard/Cancel; exact document guard сохраняет
+новые edits/history при stale decision. Explicit Close drains preparation/IO, ошибки
+Save и cancel сохраняют active owner; post-publication cleanup удерживается для retry.
+Editor903/903 отдельно Debug/Release, failed/skipped0,20новых cases.
+[Команды/границы](HISTORY.md#ed1b1-projectdocument-transition-api--2026-10-31).
+UI picker и runtime/build rebinding после этого API-среза реализованы в ED1b.2 выше.
+Общие ED1/ED6b, ARCH1b и прежний intermittent output-drain follow-up открыты.
+Другие module suites, package/native/GPU/physical runs этим API-срезом не повторялись.
+
+Предыдущая работа — **2026-10-31, ED4c.3 операции объектов, поиск и context menu**.
 Общие create/delete/duplicate batches используют прежние owner/revision/receipts/history.
 New позволяет создать объект/куб и child; shared icons/Insert/Ctrl+D/Delete/context
 commands, поиск по имени/ID и inspection работают с persisted scene. Retained tree
@@ -160,6 +210,9 @@ directed workflows и explicit same-exe runtime — ManualTests/AetherEditorHost
 
 | Дата / профиль | Фактический результат | Evidence и границы |
 | --- | --- | --- |
+| 2026-10-31, ED6b.1 | Aether1635/Editor943 отдельно Debug/Release; fresh15packages/headless8/native4/4 | [Audit/4TRX](../../TestResults/ScenePlayback-ED6b1-20261031-1/verification.json), [acceptance/4PNG](../../TestResults/ScenePlayback-ED6b1-20261031-1/acceptance.json); Runtime copy открытой сцены, ED6b.2/full ED6b впереди |
+| 2026-10-31, ED1b.2 | Aether1631/Editor923 отдельно Debug/Release; final15packages/headless8/native4/4 | [Audit/4TRX](../../TestResults/ProjectPicker-ED1b2-20261031-1/verification.json), [acceptance/14PNG](../../TestResults/ProjectPicker-ED1b2-20261031-1/acceptance.json); stopped/idle project workflow, ED6b открыт |
+| 2026-10-31, ED1b.1 | Editor903/903 отдельно Debug/Release; focused20/20, failed/skipped0 | [Audit/3TRX](../../TestResults/ProjectTransitions-ED1b1-20261031-1/verification.json); только project/document API, UI/runtime/NuGet/native не повторены |
 | 2026-10-31, ED4c.3 | Aether1629/Editor883/Alloy909/Hosting117 отдельно Debug/Release; final packages15/headless8/native2/2 | [Audit/8TRX](../../TestResults/EntityOperations-ED4c3-20261031-1/verification.json), [acceptance](../../TestResults/EntityOperations-ED4c3-20261031-1/acceptance.json); native RED→GREEN tree projection, 4PNG просмотрены |
 | 2026-10-31, ED4c.2 | Aether1602/Editor866/Alloy900/Hosting117 отдельно Debug/Release; final packages15/headless8/native2/2 | [Audit/8TRX](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/verification.json), [acceptance](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/acceptance.json); initial findings и новый drain snapshot сохранены |
 | 2026-10-31, ED8a.2 | Aether1581/Editor847/Alloy893/Hosting117 отдельно Debug/Release; packages15/headless8, published native2/2 | [Audit/8TRX](../../TestResults/RuntimeObservation-ED8a2-20261031-1/verification.json), [acceptance](../../TestResults/RuntimeObservation-ED8a2-20261031-1/acceptance.json); initial fixture failures сохранены, scope выше |
@@ -203,20 +256,24 @@ compact/default TEMP profiles сохранены в HISTORY; passing друго�
 ## Границы приложения и engine
 
 ED1a выбирает один проект через explicit .aetherproj; без него пустая workspace,
-legacy .csproj сохраняет игровой demo workflow. Project picker/switch UI,
-templates/wizard/recent/preferences ещё нужны. ED2a/b .aetherscene v1/v2≤4MiB/
+legacy .csproj сохраняет игровой demo workflow. Project picker/switch реализован в
+stopped-game/idle-compiler profile; templates/wizard/recent/preferences ещё нужны.
+ED2a/b .aetherscene v1/v2≤4MiB/
 depth32; unknown versions отклоняются без migration, resolved/runtime/history не
 сохраняются. Atomic store использует SHA256 guard и sidecar для cooperating writers;
 arbitrary external rename, links sandbox и power-loss durability не гарантируются.
 
 Document actions доступны при stopped/idle game/compiler или Edit preview; preview
-останавливается до document replacement/close. Open document по-прежнему блокирует
-Build/Play/Replace до ED6 identity/workflow integration. New создаёт пустую сцену.
+останавливается до document replacement/close. Штатный Open document допускает
+fresh Build/Play in-memory scene copy через ED6b.1/2a; inspector draft/conflict требует
+Apply/Cancel. Document-aware Replace ещё не подключён. New создаёт пустую сцену.
 Reparent, имена/порядок и schema-driven component edits реализованы в ED4c.1/2 и ED4d;
 Create/delete/duplicate реализованы в ED4c.3; typed references, catalog management
 и остальной ARCH1b открыты. Общая project/runtime
-Switch/Close transaction остаётся ED1/ED6; ED2 document Close/Switch/window Exit profile
-выполнен. Terminal shutdown forced discard/drain; native user close vetoable.
+Switch/Close transaction выполнена в stopped-game/idle-compiler ED1b.2 profile;
+переключение при играющем runtime остаётся отдельным ED1/ED6 расширением.
+ED2 document Close/Switch/window Exit profile выполнен. Terminal shutdown forced
+discard/drain; native user close vetoable.
 
 Preview GPU-only Windows x64/OpenGL UI/Vulkan child, fixed camera,640×360,≤64entities,
 новый child при обновлении revision. Authoring hierarchy/properties не обрезаются
@@ -242,9 +299,12 @@ launch roles/Player/HUD ещё запланированы и не входят �
 Compiler diagnostics/source hook ED6a.3 и report ED8a.1/2 проверены в scopes выше.
 Extended native/provider/backend matrix, persistent compiler history и command/frame
 metrics остаются отдельными. ED4c.2/3 имена/порядок и операции объектов реализованы
-через общую history. Следующий основной шаг — project picker/switch и ED1/ED6
-document/build/play workflow с сохранением active document/unsaved/cancel/ownership contracts.
-Детали — [ED4c](EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24).
+через общую history. ED1b.2 project picker/switch и runtime context rebinding реализованы
+в stopped-game/idle-compiler profile. ED6b.1 запускает in-memory scene copy через
+fresh Build/Start/Play и сохраняет parent state. ED6b.2a/b.1 добавляют content witness,
+stale Start rejection и C# compilation из captured bytes. Следующий основной шаг —
+ED6b.2b.2 closure до evaluation/preparation до reuse/Replace; полный input/HUD/Player впереди.
+Детали — [ED6b.2b.1](EDITOR_PLAN.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
 ENG2 CPU FrameReceiver и legacy Build/Replace follow-ups проверены новыми full
 Aether runs и headless source/published matrix выше; исходные failures сохранены.
 Mithril ready-file race закрыт отдельными module/published proofs. Diagnostic
@@ -252,7 +312,7 @@ forwarding test follow-up закрыт2026-10-28 codec/late-ACK regressions и f
 выше; конкретный источник задержки initial Debug run из старого TRX неизвестен.
 MSB3030 закрыт новым staging layout, inner binlogs и default-TEMP full runs выше;
 произвольно длинные paths вне проверенного профиля не обещаются. Общая очередь
-теперь project/workflow; полный World/ECS не prerequisite.
+теперь ED6b document/build/play workflow; полный World/ECS не prerequisite.
 Новый ED6b уточняет этот workflow; launch roles/Player — ENG7b. Runtime HUD
 ENG5c.4 следует за gameplay collisions ENG5c.3, приёмка в Player зависит от ENG7b.2.
 Full snapshot/runtime editing ARCH1c и смена launch role на ходу не prerequisites.

@@ -50,8 +50,8 @@ internal static class Program
         Directory.CreateDirectory(Path.Combine(projectRoot, "Game"));
         Directory.CreateDirectory(Path.Combine(projectRoot, "Scenes"));
         Directory.CreateDirectory(Path.Combine(projectRoot, "Content"));
-        File.WriteAllText(Path.Combine(projectRoot, "Game", "Game.csproj"),
-            "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
+        File.WriteAllText(Path.Combine(projectRoot, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
+        SceneGameSource.Write(Path.Combine(projectRoot, "Game"));
         var project = new ProjectDescription(1, Guid.NewGuid(), "External consumer · Мир", "Game/Game.csproj",
             "Game.Logic.dll", "Game.Logic.ProbeGame", "Scenes", "Content");
         var manifest = Path.Combine(projectRoot, "consumer.aetherproj");
@@ -187,14 +187,23 @@ internal static class Program
         var runtimeReports = Directory.GetFiles(report, "runtime-*.json").Select(p => JsonSerializer.Deserialize<JsonElement>(File.ReadAllText(p))).ToArray();
         if (scenario == "workflow")
         {
-            Check(runtimeReports.Length == 6, "Missing graceful preview validation reports.");
+            Check(runtimeReports.Length == 10 && runtimeReports.Count(child => child.GetProperty("GameLoaded").GetBoolean()) == 2,
+                "Missing graceful preview/game validation reports.");
             foreach (var child in runtimeReports)
             {
                 var validation = child.GetProperty("Validation");
                 Check(validation.GetProperty("ValidationEnabled").GetBoolean() && validation.GetProperty("Errors").GetInt32() == 0 &&
                     validation.GetProperty("Warnings").GetInt32() == 0 && child.GetProperty("Resources").GetInt32() == 0 && child.GetProperty("Handles").GetInt32() == 0 &&
-                    !child.GetProperty("EditorLoaded").GetBoolean() && !child.GetProperty("UiLoaded").GetBoolean() && !child.GetProperty("GameLoaded").GetBoolean(),
-                    "Runtime validation, cleanup or preview role isolation failed.");
+                    !child.GetProperty("EditorLoaded").GetBoolean() && !child.GetProperty("UiLoaded").GetBoolean(),
+                    "Runtime validation, cleanup or role isolation failed.");
+                if (child.GetProperty("GameLoaded").GetBoolean())
+                {
+                    var build = child.GetProperty("Build");
+                    var prefix = Path.TrimEndingDirectorySeparator(build.GetProperty("DirectoryPath").GetString()!) + Path.DirectorySeparatorChar;
+                    Check(child.GetProperty("GameBuildId").GetString() == build.GetProperty("BuildId").GetString() &&
+                        child.GetProperty("GameAssemblyPaths").EnumerateArray().All(path => path.GetString()!.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)),
+                        "Game child loaded an unselected artifact.");
+                }
                 Check(validation.GetProperty("LiveSlots").GetInt32() == 0 && validation.GetProperty("OpenHandles").GetInt32() == 0 &&
                     validation.GetProperty("DevicesCreated").GetInt32() == validation.GetProperty("DevicesReleased").GetInt32() &&
                     validation.GetProperty("SlotsCreated").GetInt32() == validation.GetProperty("SlotsReleased").GetInt32() &&

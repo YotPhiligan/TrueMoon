@@ -28,6 +28,13 @@ public sealed class GameBuildArtifact
     public string EntryAssembly => _manifest.EntryAssembly;
     /// <summary>Gets the public IGameSession/IGameSessionEntry implementation type name.</summary>
     public string EntryType => _manifest.EntryType;
+    /// <summary>Process-local evaluated-input witness from a tracked build; null for legacy Publish/Open results.</summary>
+    /// <remarks>Not part of the persisted artifact schema. Reopening an artifact never recreates trusted input provenance.</remarks>
+    public GameBuildInputSnapshot? Inputs { get; private init; }
+    /// <summary>Process-local proof of owned compiler input copies; null for uncaptured builds and reopened schema1 artifacts.</summary>
+    public GameBuildCompilationSnapshot? Compilation { get; private init; }
+    internal GameBuildArtifact WithInputs(GameBuildInputSnapshot inputs, GameBuildCompilationSnapshot? compilation = null)
+        => new(DirectoryPath, BuildId, _manifest) { Inputs = inputs, Compilation = compilation };
     /// <summary>Gets a copy of the declared managed files.</summary>
     public IReadOnlyList<string> Files => Array.AsReadOnly(_manifest.Files.Select(f => f.Name).ToArray());
     internal static string ContractHash => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(

@@ -20,6 +20,81 @@ public sealed class GameEditorTests(GameBuildFixture builds) : IClassFixture<Gam
     private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     [Fact]
+    public async Task TrackedStart_RejectsSourceChangesBeforeAnyRuntimeIsCreated()
+    {
+        await using var c = await CreateAsync();
+        var project = builds.Project("tracked-stale", "Game.Observed", GameBuildFixture.Source("0xff2080c0u"));
+        c.Host.Editor.SetContext(new(new(project, "Game.Observed.dll", "Game.Candidate.Game", 1) { TrackInputs = true, CaptureCompilation = true }, Scene(), "switch"));
+        var candidate = await c.Host.Editor.BuildAsync();
+        File.AppendAllText(Path.Combine(Path.GetDirectoryName(project)!, "Game.cs"), "\n// source changed after Build");
+        var error = await Assert.ThrowsAsync<GameBuildInputsChangedException>(() => c.Host.Editor.StartBuildAsync(32, 16, c.Host.Editor.Status.ContextVersion));
+        Assert.Same(error, c.Host.Editor.Status.Error); Assert.Empty(c.Factory.Leases); Assert.Null(c.Host.Builds.ProcessId);
+        Assert.Equal(candidate.BuildId, c.Host.Editor.Status.Candidate!.Build.BuildId); Assert.Equal(SessionState.Stopped, c.Host.Supervisor.Status.State);
+    }
+
+    [Fact]
+    public async Task TrackedStart_VerifiesInputsThenWaitsForPresentationOfExactBuild()
+    {
+        await using var c = await CreateAsync(); c.Factory.Produce = true;
+        var project = builds.Project("tracked-start", "Game.Observed", GameBuildFixture.Source("0xff2080c0u"));
+        c.Host.Editor.SetContext(new(new(project, "Game.Observed.dll", "Game.Candidate.Game", 1) { TrackInputs = true, CaptureCompilation = true }, Scene(), "switch"));
+        var candidate = await c.Host.Editor.BuildAsync();
+        Assert.NotNull(candidate.Compilation);
+        var starting = c.Host.Editor.StartBuildAsync(32, 16, c.Host.Editor.Status.ContextVersion);
+        await TestWait.UntilAsync(() => c.Host.Frames.Display?.Receiver.FirstFrame.IsCompletedSuccessfully == true, TimeSpan.FromSeconds(25));
+        Assert.False(starting.IsCompleted); var display = c.Host.Frames.Display!;
+        using (var frame = Assert.IsType<FrameLease>(display.Receiver.TakeLatest())) c.Host.Frames.Presented(display, frame.Metadata);
+        await starting; Assert.Equal(candidate.BuildId, c.Host.Supervisor.Status.Identity!.GameBuildId); Assert.Null(c.Host.Builds.ProcessId);
+        await c.Host.Editor.StopAsync(); Assert.Equal(0, c.Host.Frames.MappingCount); Assert.True(c.Factory.Leases[0].ResourcesReleased);
+    }
+
+    [Fact]
+    public async Task TrackedStart_RejectsReopenedArtifactWithoutOriginalWitness()
+    {
+        await using var c = await CreateAsync();
+        var context = Context(builds.A); c.Host.Editor.SetContext(context with { Build = context.Build with { TrackInputs = true } });
+        await c.Host.Editor.SelectBuildAsync(builds.A);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => c.Host.Editor.StartBuildAsync(32, 16, c.Host.Editor.Status.ContextVersion));
+        Assert.Contains("witness", error.Message); Assert.Empty(c.Factory.Leases); Assert.Null(c.Host.Builds.ProcessId);
+    }
+
+    [Fact]
+    public async Task StartBuild_RequiresCandidateAndNeverFallsBackToFixedRuntime()
+    {
+        await using var c = await CreateAsync(); c.Host.Editor.SetContext(Context(builds.A));
+        var version = c.Host.Editor.Status.ContextVersion;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => c.Host.Editor.StartBuildAsync(32, 16, version));
+        Assert.Empty(c.Factory.Leases); Assert.Equal(SessionState.Stopped, c.Host.Supervisor.Status.State);
+        Assert.Null(c.Host.Editor.Status.Candidate); Assert.Equal(version, c.Host.Editor.Status.ContextVersion);
+    }
+
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public async Task StartBuild_RejectsOldContextEvenWhenAnotherCandidateIsSelected(bool select)
+    {
+        await using var c = await CreateAsync(); c.Host.Editor.SetContext(Context(builds.A));
+        await c.Host.Editor.SelectBuildAsync(builds.A); var version = c.Host.Editor.Status.ContextVersion;
+        c.Host.Editor.SetContext(Context(builds.B));
+        if (select) await c.Host.Editor.SelectBuildAsync(builds.B);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => c.Host.Editor.StartBuildAsync(32, 16, version));
+        Assert.Empty(c.Factory.Leases); Assert.Equal(SessionState.Stopped, c.Host.Supervisor.Status.State);
+        Assert.Equal(select ? builds.B.BuildId : null, c.Host.Editor.Status.Candidate?.Build.BuildId);
+    }
+
+    [Fact]
+    public async Task StartBuild_UsesExactCandidateAndWaitsForActualPresentation()
+    {
+        await using var c = await CreateAsync(); c.Factory.Produce = true;
+        c.Host.Editor.SetContext(Context(builds.A)); await c.Host.Editor.SelectBuildAsync(builds.A);
+        var starting = c.Host.Editor.StartBuildAsync(32, 16, c.Host.Editor.Status.ContextVersion);
+        await TestWait.UntilAsync(() => c.Host.Frames.Display?.Receiver.FirstFrame.IsCompletedSuccessfully == true, TimeSpan.FromSeconds(3));
+        Assert.False(starting.IsCompleted); var display = c.Host.Frames.Display!;
+        using (var frame = Assert.IsType<FrameLease>(display.Receiver.TakeLatest())) c.Host.Frames.Presented(display, frame.Metadata);
+        await starting; Assert.Equal(builds.A.BuildId, c.Host.Supervisor.Status.Identity!.GameBuildId);
+        Assert.Equal(SessionState.Paused, c.Host.Supervisor.Status.State); Assert.Null(c.Host.Editor.Status.Candidate);
+        await c.Host.Editor.StopAsync(); Assert.Equal(0, c.Host.Frames.MappingCount); Assert.True(c.Factory.Leases[0].ResourcesReleased);
+    }
+
+    [Fact]
     public async Task Build_PublishesCandidateWithoutLaunchingOrChangingRunningWorld()
     {
         await using var c = await CreateAsync(); await c.Host.Supervisor.StartAsync(Scene(), builds.A);
@@ -231,6 +306,34 @@ public sealed class GameEditorTests(GameBuildFixture builds) : IClassFixture<Gam
     }
 
     private static void SetHeld(Owned c, string project) => c.Host.Editor.SetContext(new(new(project, "Game.Held.dll", "Game.Candidate.Game", 99), Scene(), "switch"));
+    [Fact]
+    public async Task ClearContext_FencesCandidateAndCommandsWithoutStoppingBorrowedRuntime()
+    {
+        await using var c = await CreateAsync(); await c.Host.Supervisor.StartAsync(Scene(), builds.A);
+        c.Host.Editor.SetContext(Context(builds.A)); await c.Host.Editor.SelectBuildAsync(builds.A);
+        var before = c.Host.Editor.Status; var identity = c.Host.Supervisor.Status.Identity;
+        c.Host.Editor.ClearContext();
+        Assert.Null(c.Host.Editor.Status.Context); Assert.Null(c.Host.Editor.Status.Candidate);
+        Assert.Equal(before.ContextVersion + 1, c.Host.Editor.Status.ContextVersion);
+        Assert.Equal(identity, c.Host.Supervisor.Status.Identity); Assert.Equal(0, c.Factory.Leases[0].Stops);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => c.Host.Editor.BuildAsync());
+        c.Host.Editor.SetContext(Context(builds.B)); await c.Host.Editor.SelectBuildAsync(builds.B);
+        Assert.Equal(builds.B.BuildId, c.Host.Editor.Status.Candidate!.Build.BuildId);
+        Assert.Equal(identity, c.Host.Supervisor.Status.Identity);
+    }
+
+    [Fact]
+    public async Task ClearContext_DrainsHeldBuildAndRejectsItsLateResult()
+    {
+        await using var c = await CreateAsync(); var held = builds.HeldProject(); SetHeld(c, held.Project);
+        var building = c.Host.Editor.BuildAsync();
+        await TestWait.UntilAsync(() => File.Exists(held.Marker), TimeSpan.FromSeconds(15));
+        c.Host.Editor.ClearContext(); File.WriteAllText(held.Release, "release");
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => building);
+        Assert.Null(c.Host.Editor.Status.Context); Assert.Null(c.Host.Editor.Status.Candidate);
+        Assert.Null(c.Host.Builds.ProcessId); Assert.Empty(c.Factory.Leases);
+        Assert.Equal(GameEditorOperation.Idle, c.Host.Editor.Status.Operation);
+    }
     private static bool Exited(int pid) { try { using var p = System.Diagnostics.Process.GetProcessById(pid); return p.HasExited; } catch (ArgumentException) { return true; } }
     private async Task<Owned> CreateAsync()
     {

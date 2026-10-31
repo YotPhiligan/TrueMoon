@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -7,7 +7,7 @@ using TrueMoon.Argentis;
 namespace AlloyTest;
 
 /// <summary>The retained state edited by the settings form.</summary>
-public sealed class SettingsModel : INotifyPropertyChanged
+public sealed class SettingsModel : ViewModel
 {
     private string _name = "Алексей";
     private bool _enabled = true;
@@ -36,8 +36,8 @@ public sealed class SettingsModel : INotifyPropertyChanged
 
     private void NotifyAppearance(string property)
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Appearance)));
+        OnPropertyChanged(property);
+        OnPropertyChanged(nameof(Appearance));
     }
 
     /// <summary>The desired branch/message of the separate status region.</summary>
@@ -53,7 +53,7 @@ public sealed class SettingsModel : INotifyPropertyChanged
     {
         if (_loadStatus == status) return;
         _loadStatus = status;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LoadStatus)));
+        OnPropertyChanged(nameof(LoadStatus));
     }
 
     /// <summary>The editable list, preserved independently of its generated controls.</summary>
@@ -105,15 +105,11 @@ public sealed class SettingsModel : INotifyPropertyChanged
     }
     /// <summary>A description of the current model, observed by a one-way text binding.</summary>
     public string Summary => $"{Name} · уведомления: {(Enabled ? "вкл." : "выкл.")} · громкость: {Volume:P0}";
-    /// <inheritdoc />
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     private void Change<T>(ref T field, T value, [CallerMemberName] string? property = null)
     {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Summary)));
+        if (!SetProperty(ref field, value, property)) return;
+        OnPropertyChanged(nameof(Summary));
     }
     /// <summary>Restores the initial settings through model notifications.</summary>
     public void Reset() { Name = "Алексей"; Enabled = true; Volume = .4f; }

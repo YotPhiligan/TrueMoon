@@ -27,7 +27,7 @@ public sealed partial class EditorHierarchyViewModel
     private void UpdateMatches()
     {
         var canFind = CanFindNext; Set(ref _matches, Matches().Count(), nameof(MatchCount));
-        if (canFind != CanFindNext) Notify(nameof(CanFindNext));
+        if (canFind != CanFindNext) OnPropertyChanged(nameof(CanFindNext));
     }
     private void RefreshEntityActions(SceneDocument? document)
     {

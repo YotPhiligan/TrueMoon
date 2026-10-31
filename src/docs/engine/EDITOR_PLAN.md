@@ -91,6 +91,10 @@ preview и контрактов расширения shell. Runtime viewport п�
 | Исполняемый host | Main/CLI/App composition, выбор поддержанного window/backend/resources и explicit runtime launch; подключает пакеты, не содержит reusable Editor/engine implementation |
 | Argentis/Alloy и интеграции | Контролы, composition/layout/input/focus, overlays, sessions/rendering/platform; общие UI возможности принадлежат UI плану |
 
+Уточнение2026-10-31: конкретные Editor ViewModels используют общую иерархию
+Argentis Bindable → ViewModel; scalar InspectorProperty — непосредственно Bindable.
+Notification contract ведётся в [UIA1e](../alloy/PLAN.md#uia1e-bindable-и-viewmodel--2026-10-31).
+
 У документа один владелец committed state, revision и history. ViewModel не
 поддерживает вторую независимо изменяемую сцену. Поля инспектора могут хранить
 draft до commit/cancel, но не обходят authoring API прямыми mutable references.
@@ -246,7 +250,7 @@ Runtime не зависит от Editor package; hosts/assets/package acceptance
   валидировать пути/toolchain и сообщать отсутствующие файлы/SDK как actionable errors.
 - [x] Убрать обязательную зависимость нормального запуска от demo и source checkout.
   Вход по явному пути допустим на этапе service/API; меню/диалоги подключаются в ED4.
-- [ ] Определить project switch/cancel и завершение tasks/subscriptions/resources;
+- [x] Определить project switch/cancel и завершение tasks/subscriptions/resources;
   не заменять рабочую сессию частично подготовленной новой.
 
 Готовность: опубликованный редактор открывает пользовательский проект вне repo;
@@ -297,11 +301,72 @@ products пока не принадлежат ему. Metadata-only регист
 workflow; автоматического поиска checkout/demo больше нет.
 [Примеры API/manifest/CLI](../../TrueMoon.Aether.Editor/README.md#проект-и-сессия-ed1a).
 
-Четвёртый ED1 пункт остаётся открытым для прикладной Switch/Close транзакции с
-documents, compiler/preview/game work и subscriptions; metadata preparation уже
-fenced/drained. ED2a добавил document API Save/Discard/Cancel и dirty/busy guard
-project switch/Close. Общая UI-транзакция и подключение authoring/preview ещё нужны.
-Полный ED1–ED8 этими срезами не закрыт.
+Четвёртый ED1 пункт остаётся открытым для общей UI/runtime транзакции; ED1b.1 ниже
+согласует project/document API. Полный ED1–ED8 этими срезами не закрыт.
+
+### ED1b.1: project/document transition API — 2026-10-31
+
+- [x] `EditorProjects.SwitchAsync` подготавливает manifest/SDK/factory candidate до
+  применения explicit Save/Discard/Cancel к прежнему document. Прежние Open/Create
+  и clean-only Close signatures/поведение сохраняются.
+- [x] До publication ошибка/cancel сохраняют previous session, authoring product и
+  shared Undo/Redo. Discard разрешён только для точного document object, captured при
+  admission: edit/replacement, даже с прежними ID/revision, требует нового решения.
+  Pending IO/cleanup отклоняют commit; Switch не отменяет чужой Save ради Discard.
+- [x] Save использует прежний project root, path/fingerprint и exact captured content.
+  Untitled требует saveCurrentAs. Запись, committed перед отменой, сохраняет truthful
+  saved checkpoint; later edit во время Save сохраняется и veto-ит project publication.
+- [x] Explicit Close policy drains project preparation, затем document IO/Save и owned
+  disposal; Cancel/failed Save оставляют active owner/history доступными. После document
+  commit cancellation не откатывает close. Close можно повторить и затем снова Open.
+- [x] После project publication cleanup failure сохраняет new Active и retired owner,
+  запрещая следующий Open/Create/Switch до Close retry. App terminal shutdown сохраняет
+  forced discard/drain. DI graph/factories/ownership не меняются.
+- [x] Подключить project picker/commands и dynamic context через ED1b.2 ниже;
+  low-level API по-прежнему требует от host заранее stop/drain runtime/preview.
+
+Проверки/точные команды и ограничения —
+[HISTORY](HISTORY.md#ed1b1-projectdocument-transition-api--2026-10-31).
+Этот API-профиль предшествует ED1b.2 и не закрывает document-aware ED6b Play workflow.
+
+### ED1b.2: выбор проекта в UI и runtime rebinding — 2026-10-31
+
+- [x] В меню «Проект» стандартного окна — OpenProject/CloseProject shared commands.
+  Retained typed document path prompt принимает полный .aetherproj path; project/scene/
+  first-save drafts раздельны. Enter подтверждает, Escape отменяет, theme/контролы/
+  фокус сохраняются. Caption показывает portable project name. OS file picker, recent
+  projects/preferences и wizard остаются расширениями, явный путь — текущий profile.
+- [x] Project/document actions, edits/Undo/Redo и user Exit используют прежнюю tracked
+  EditorDocumentCommands admission. Project switch/Close доступен только при idle
+  compiler и stopped game; сначала explicit Stop. Active preview допускает transition,
+  но его stop/drain/reap завершён до publication. Нельзя закрыть весь EditorCommands
+  service при switch: это terminal-only Stop, после switch Build остаётся доступен.
+- [x] Switch preflight manifest/SDK/factory предшествует unsaved decision. Cancel и
+  invalid candidate сохраняют owner/document/history/selection/context и не останавливают
+  preview. После выбора и начала drain поздняя отмена ждёт actual work; прежний document
+  сохраняется, preview может остаться stopped. Failed Save/drain допускает повтор.
+- [x] Binding до возврата admission задаёт GameEditor context actual active project и
+  сбрасывает старый build candidate; Close вызывает ClearContext. Его версия fence-ит
+  pending results; низкоуровневый ClearContext не останавливает runtime сам.
+  При post-commit cleanup failure binding всё равно следует actual Active; обе ошибки
+  cleanup/binding сохраняются. Failed binding блокирует game/document actions, Close/
+  reopen остаётся recovery path. Retired owner остаётся у project coordinator для retry.
+- [x] Workspace project identity, document/selection и inspector/hierarchy обновляются
+  на UI owner; старое представление не может запустить game action до projection.
+  Смена project очищает данные/selection даже при одинаковых scene/entity IDs.
+  Document/project snapshot читается до runtime/candidate readers; переход между
+  чтениями отклоняется exact project guard и не включает stale Run/Build.
+  Header coalesce-ит notification refresh; callbacks читают актуальную command state.
+- [x] UseAetherEditor регистрирует binding через App/Cobalt, startup по explicit manifest
+  использует ту же очередь. Старые constructors/record positional API сохранены;
+  custom composition без binding сохраняет document workflow и disabled project actions.
+  Новых scopes/DI owners нет; View снимает subscriptions при Dispose.
+
+ED1 switch/Close определён в этом bounded stopped-game/idle-compiler profile.
+Document-aware Build/Play и observed source witness реализованы ниже в ED6b.1/2a;
+Edit Preview использует свой runtime, который drains до game startup. Следующий
+source closure/capture и artifact reuse принадлежат ED6b.2b, без live copyback.
+[Датированные проверки и границы](HISTORY.md#ed1b2-project-picker-и-runtime-rebinding--2026-10-31).
 
 ## ED2. Документы и сохранение
 
@@ -1006,7 +1071,7 @@ failed/skipped0; narrow19+34. SourceDebug/Cobalt/native Skia raster consumer:
 
 ### ED6b. Build/Play/Stop из редактора — 2026-10-29
 
-Запланировано по согласованному startup-only выбору Editor/Player. Существующий
+Начат ED6b.1 по согласованному startup-only выбору Editor/Player. Существующий
 legacy demo Build/Replace и Edit preview не закрывают игровой workflow открытого
 authoring document. Нужен следующий прикладной срез поверх общих engine contracts:
 
@@ -1032,7 +1097,138 @@ authoring document. Нужен следующий прикладной срез 
 Детальные runtime/Player/HUD contracts не дублируются здесь. Полный ARCH2
 предшествует новым ED features; прежняя очередь console/export → names/order →
 create/delete → project picker/switch и ED1/ED6 workflow сохраняется. Наличие
-этого checklist не означает реализации ED6b или всего ED6.
+этого checklist не означает завершения ED6b или всего ED6. Первый реализованный срез
+и оставшиеся границы приведены ниже.
+
+#### ED6b.1: запуск runtime-копии открытой сцены — 2026-10-31
+
+Первый bounded profile — текущий committed in-memory authoring snapshot, включая
+unsaved/untitled scene. Save не обязателен; неприменённый inspector draft/conflict
+требует Apply/Cancel до Build/Start. Game работает с отдельной projected copy;
+документ, saved checkpoint/dirty, selection и shared history остаются у Editor.
+Передача live state обратно не выполняется.
+
+- [x] UseAetherEditor регистрирует App-owned EditorScenePlayback с borrowed document,
+  preview и engine dependencies. Старый пятиаргументный EditorViewModel constructor
+  и custom legacy graphs сохраняют поведение. Новых scopes/service locators нет.
+- [x] Build/Start/Play/Pause/Step используют gate и tracked drain barrier прежнего
+  EditorDocumentCommands. IO/edit/project/exit не могут получить половинчатый запуск.
+  Stop/Cancel прерывают accepted work и ждут фактического drain; terminal Exit ждёт
+  barrier отдельно от результата failed/cancelled game command.
+- [x] PrimitiveSceneAdapter валидирует immutable resolved snapshot до остановки
+  preview и compiler work. Прежний limit64entities/built-in roles сохраняется.
+  Затем preview stop/drain/reap, exact project/document/content guard, SetContext,
+  fresh Build и startup. Изменение/replacement документа или direct IO veto-ит Start;
+  проверка captured content и приём Start выполняются под document owner gate.
+- [x] Start/Run всегда делает новую сборку. SourceRevision — App-local монотонный
+  compile request ticket; scene ID/revision задаются отдельно. Engine StartBuildAsync
+  требует exact ContextVersion и selected candidate атомарно, без fixed-runtime
+  fallback. Ошибка/stale completion не запускает другой context/candidate.
+- [x] ▶ выполняет Start→first-present→Play, отдельный Start оставляет Pause.
+  Pause/Resume/Step/Stop отражают actual state. Во время подготовки/игры authoring
+  admission закрыта; controls Stop/Cancel остаются доступны. Failed startup drains
+  owned game, original+cleanup errors сохраняются и failed cleanup оставляет Stop retry.
+  После Stop можно редактировать и отдельно включить Edit Preview, без auto restart.
+- [x] Model/header/status используют shared scene actions и fresh presentation/project
+  guards. Неприменённые поля inspector не попадают в runtime. DI composition проверяется
+  Cobalt/MS DI; прямые coordinator/engine tests проверяют capture, cancel/drain,
+  expected context/candidate, IO/exit, cleanup/retry и совместимость legacy constructor.
+- [x] Fresh source/NuGet standard/embedded acceptance: actual scene pixels,
+  selected child-only Game.Logic, preview/game reap, repeated controls/Stop и сохранность
+  unsaved scene/history/selection. Evidence фиксировать в HISTORY отдельно от unit runs.
+
+**Продолжение ED6b.2:** определить и реализовать manifest/fingerprint либо immutable
+capture полного поддержанного MSBuild source graph, внешних imports/references и
+source revision policy до artifact reuse/document-aware Replace. Текущий compile ticket
+не является hash исходников и не обещает hermetic build при внешних edits во время
+компиляции. Fresh Start не переиспользует ранее выбранный artifact. Source watcher и
+достоверное отображение изменённого source graph остаются частью следующего среза.
+
+Полный HUD/input/Player acceptance, native game crash/recovery matrix и live Replace
+остаются в ED6b/ENG7b/ENG5c.4. Полный World/ECS не prerequisite первого запуска.
+Датированные команды, фактические результаты и ограничения —
+[HISTORY](HISTORY.md#ed6b1-запуск-открытой-сцены--2026-10-31).
+
+#### ED6b.2a: наблюдаемые входы сборки и stale Start — 2026-10-31
+
+Первый срез ED6b.2 вводит content witness и повторную проверку, сохраняя fresh Build
+для каждого scene Start. Это наблюдение файлов и evaluation, ещё не hermetic capture.
+
+- [x] Scene playback включает `GameBuildRequest.TrackInputs`; legacy requests имеют
+  default false. Поддержан один net10.0 SDK project без PackageReference/ProjectReference,
+  с explicit managed HintPath references. Неподдержанный graph отклоняется явно.
+- [x] MSBuild evaluation возвращает properties/items; preprocessed project учитывает
+  содержимое imports. SHA256 включает bytes Compile/resources/additional/analyzer/config
+  и HintPath files, настройки, item metadata/order и imported project. Job paths и
+  timestamps нормализуются; compile ticket не является source fingerprint.
+- [x] Witness immutable, bounded:4096files,64MiB/file,256MiB total,8MiB/query и imports.
+  Потенциальные отсутствующие analyzer configs допускаются; их создание меняет witness.
+  Отсутствующий Compile/reference input отклоняется вместо неполной identity.
+- [x] Наблюдения до/после Build должны совпасть до Publish. GameEditor повторяет SDK
+  observation перед Start; mismatch не создаёт runtime. После await сохраняются
+  existing context/session/cancel fences. Все SDK processes принадлежат compiler:
+  single-job admission, deadlines, Stop/Dispose cancellation, reap/drain/cleanup retry.
+  Diagnostic retention знает точный набор новых плоских files.
+- [x] `GameBuildArtifact.Inputs` сохраняет process-local provenance результата Build.
+  Artifact schema1 не меняется; Open/Publish не восстанавливают witness. Tracked Start
+  с reopened artifact требует новый Build; неподтверждённый artifact не становится trusted.
+- [x] Проверить реальные SDK edits source/addition/import/reference после Build,
+  source edit/cancel во время held compilation, stale Start без child, matching Start
+  с actual first-present, stable fingerprint при разных jobs/tickets и retention.
+  Native source/NuGet workflows сохраняют fingerprints двух fresh scene builds.
+
+**Продолжение ED6b.2b:** согласовать и реализовать immutable capture поддержанного
+source closure, включая внешние imports/references, SDK/generator/target inputs и
+явные границы profile. Текущий witness не изолирует transient edit-and-revert,
+произвольный target/generator/environment IO или edits после последней observation.
+PackageReference/ProjectReference, source watcher, artifact reuse/cache и document-aware
+Replace ещё не реализованы. Ни full ED6b.2, ни общий ED6b этим не закрываются.
+Команды, результаты и первоначальные findings —
+[HISTORY](HISTORY.md#ed6b2a-наблюдаемые-входы-сборки--2026-10-31).
+
+#### ED6b.2b.1: захваченная C#-компиляция — 2026-10-31
+
+Первый byte-capture profile начинается после доверенной MSBuild preparation, не до
+evaluation. Общий MSBuild build и arbitrary task/generator IO этим не изолируются.
+
+- [x] `CaptureCompilation` требует `TrackInputs`, legacy default false. Scene Start
+  включает оба флага. SDK Compile с SkipCompilerExecution/ProvideCommandLineArgs
+  возвращает точную Csc invocation после генерации SDK sources и ResolveReferences.
+- [x] Owned job копирует source/generated/additional/config files, managed references/
+  reference packs, штатные SDK analyzers/generators и Csc DLL/deps/runtimeconfig/managed
+  compiler assemblies. Обычные witnessed files должны совпасть по bytes при копировании.
+  Отдельный dotnet exec Csc читает copies; MSBuild compile targets не выполняются снова.
+- [x] Ограничить файлы4096,64MiB/file,256MiB total вместе с compiler/reference packs;
+  preparation/response/analyzer-config documents8MiB. Inputs regular-file only, outputs
+  внутри owner; entry DLL name соответствует request. Private DLLs берутся из captured
+  ReferenceCopyLocalPaths. Не добавлять permissive search-path fallback.
+- [x] Unknown/file-search/response-file switches, custom compiler/environment/external
+  analyzers, resource/ruleset/signing и absolute analyzer-config sections отклоняются.
+  Supported profile — C# library compilation, не произвольные postcompile/postbuild steps.
+- [x] PathMap сохраняет обычный CallerFilePath и user mappings; job-generated/PDB paths
+  получают stable virtual prefix. Structured diagnostics отображают original source
+  paths после cleanup. Не открывать удалённые capture paths в source navigator.
+- [x] Artifact.Compilation хранит immutable process-local file/argument identity.
+  Schema1 прежняя, Open теряет provenance. После Build и перед Start сверяются original
+  non-generated compiler/reference/config bytes, generated files completed job больше
+  не требуются. Source evaluation stale checks остаются; чужой capture/witness rejected.
+- [x] Capture использует прежние compiler admission/deadline/cancel/reap/drain/cleanup
+  retry. Staging удаляется до возврата результата; exact diagnostic files включены в
+  retention. Не регистрировать низкоуровневый staging resource как отдельный DI service.
+- [x] Прямые tests: замена source/reference/compiler после capture не меняет compilation;
+  user PathMap/CallerFilePath, unsupported/bad/missing/oversize/cancelled inputs, SDK
+  generated/reference/private files, same-input fingerprints/DLL bytes, original source
+  errors, cancellation/reap, cleanup/retention и prestart без stale child.
+- [x] Завершить fresh source/NuGet standard/embedded acceptance с capture fingerprints,
+  files/bytes и cleanup до Start; фактические результаты фиксировать в HISTORY.
+
+**Следующий срез ED6b.2b.2:** согласованный immutable closure до MSBuild evaluation/
+preparation, включая project/import graph, tasks/generators и pinned environment/
+toolchain/runtime assumptions. Текущий profile доверяет preparation и installed dotnet
+runtime/ambient environment; transient edits до freeze и произвольные task/generator IO
+не изолированы. PackageReference/ProjectReference, arbitrary compiler extensions,
+cache/reuse/document-aware Replace и full ED6b остаются открытыми.
+[Команды/проверки/границы](HISTORY.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
 
 ## ED7. Проверенная расширяемость
 
@@ -1093,6 +1289,10 @@ headless/MCP proof, DI/lifetime tests и native panel workflow фиксирую�
 
 ## ED8. Надёжность и поставка
 
+- [ ] Исследовать intermittent timeout открытия status Preview popup, наблюдённый
+  до SDK Build в PackageRelease/embedded workflow2026-10-31. Снять popup owner,
+  overflow/focus/layout и actual input readiness; exact binary replay с прежними
+  deadlines не является исправлением причины. Evidence — в ED6b.2a HISTORY.
 - [ ] Добавить autosave/recovery отдельно от явного Save; восстановление предлагает
   пользователю выбор и не перезаписывает сохранённую сцену автоматически.
 - [ ] Завершить policy внешних изменений файлов, interrupted save, damaged recovery,

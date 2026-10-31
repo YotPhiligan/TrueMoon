@@ -239,6 +239,59 @@ public sealed class AetherEditorCompositionTests
     }
 
     private static IAppBuilder Builder(bool microsoft) => App.Builder(context => { if (microsoft) context.UseDI(); });
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void ProjectPicker_RebindsActualBuildAndClearsContextOnCloseInBothProviders(bool microsoft)
+    {
+        using var first = new ProjectFixture(); using var next = new ProjectFixture(); var runtime = new NeverRuntime();
+        var store = new EditorProjectsTests.Store(first.Resolved);
+        using var app = Builder(microsoft).Setup(context =>
+        {
+            context.Services(s => s.Singleton<IProjectStore>(_ => store).Singleton<IProjectToolchain>(_ => new EditorProjectsTests.Toolchain()));
+            context.UseAetherEditor(engine => Configure(engine, first, runtime));
+        }).Build();
+        DocumentUiFixture.Wait(app.StartAsync());
+        var documents = app.Services.Resolve<EditorDocumentCommands>()!; var projects = app.Services.Resolve<EditorProjects>()!;
+        var engine = app.Services.Resolve<AetherHost>()!; var session = app.Services.Resolve<EditorSession>()!;
+        var view = app.Services.Resolve<IFactory<EditorView>>()!.Create()!; using var ui = DocumentUiFixture.Ui(view);
+        ui.Update(); session.Present(ui, view); Assert.False(view.DataContext!.CanBuild);
+        Assert.True(documents.Execute(DocumentCommand.OpenProject, first.Manifest)); DocumentUiFixture.Wait(documents.Pending);
+        Assert.Null(documents.Read().Error); Assert.True(documents.Read().ProjectReady);
+        Assert.Equal(first.Resolved.GameProjectPath, engine.Editor.Status.Context!.Build.ProjectPath);
+        session.Present(ui, view); ui.Update(); Assert.True(view.DataContext.CanBuild);
+        var old = projects.Active!; var version = engine.Editor.Status.ContextVersion;
+        store.Project = next.Resolved;
+        Assert.True(documents.Execute(DocumentCommand.OpenProject, next.Manifest)); DocumentUiFixture.Wait(documents.Pending);
+        Assert.True(old.IsClosed); Assert.Equal(next.Resolved.GameProjectPath, engine.Editor.Status.Context!.Build.ProjectPath);
+        Assert.Equal(version + 1, engine.Editor.Status.ContextVersion); Assert.Null(engine.Editor.Status.Candidate);
+        session.Present(ui, view); ui.Update(); Assert.Same(projects.Active, app.Services.Resolve<EditorWorkspace>()!.Project);
+        Assert.True(documents.Execute(DocumentCommand.CloseProject)); DocumentUiFixture.Wait(documents.Pending);
+        Assert.Null(engine.Editor.Status.Context); Assert.Null(projects.Active);
+        session.Present(ui, view); ui.Update(); Assert.False(view.DataContext.HasProject); Assert.False(view.DataContext.CanBuild);
+        Assert.Null(view.DataContext.SelectedId); Assert.Equal(0, runtime.Launches);
+    }
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public void ScenePlayback_DefaultCompositionEnablesRunForUnsavedDocumentWithoutCandidate(bool microsoft)
+    {
+        using var files = new ProjectFixture(); var runtime = new NeverRuntime();
+        using var app = Builder(microsoft).Setup(context =>
+        {
+            context.Services(s => s.Singleton<IProjectStore>(_ => new EditorProjectsTests.Store(files.Resolved))
+                .Singleton<IProjectToolchain>(_ => new EditorProjectsTests.Toolchain()));
+            context.UseAetherEditor(engine => Configure(engine, files, runtime), editor => editor.ProjectPath = files.Manifest);
+        }).Build();
+        DocumentUiFixture.Wait(app.StartAsync());
+        var project = app.Services.Resolve<EditorProjects>()!.Active!;
+        DocumentUiFixture.Wait(project.Documents!.NewAsync(DocumentData.Scene()));
+        var playback = app.Services.Resolve<EditorScenePlayback>()!;
+        Assert.Same(playback, app.Services.Resolve<EditorScenePlayback>());
+        var model = app.Services.Resolve<EditorViewModel>()!; var engine = app.Services.Resolve<AetherHost>()!;
+        model.Refresh(engine.Supervisor.Status, engine.Editor.Status);
+        Assert.True(model.CanRun); Assert.True(model.CanBuild);
+        Assert.Null(app.Services.Resolve<AetherHost>()!.Editor.Status.Candidate);
+        Assert.True(project.Documents.Read().IsDirty); Assert.Null(project.Documents.Read().Path); Assert.Equal(0, runtime.Launches);
+    }
+
     // Keep all UI access on the test's owner thread, as the neighboring UI fixtures do.
     private static T Complete<T>(Task<T> task) => task.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
     private static void Configure(AetherOptions options, ProjectFixture files, NeverRuntime runtime)

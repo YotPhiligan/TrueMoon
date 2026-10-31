@@ -189,6 +189,17 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
         }
     }
 
+    internal T WithCapturedState<T>(SceneAuthoringState expected, Func<T> action)
+    {
+        lock (_gate)
+        {
+            VerifyOpen();
+            if (_pending != null || _closing || _retired.Count != 0 || !ReferenceEquals(Current.Read(), expected))
+                throw new OperationCanceledException("Scene startup was superseded by document work.");
+            return action();
+        }
+    }
+
     private async Task<bool> AllowTransitionAsync(DocumentCloseChoice choice, string? saveAs, CancellationToken token)
     {
         if (!Read().IsDirty) return true;
@@ -283,10 +294,20 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     // Project commit calls this under its own gate, immediately before publishing the new project.
     // The same gate as Apply/Undo/Redo prevents a new unsaved edit between the cleanliness check and disposal.
     internal bool TryFenceClean()
+        => TryFence(false, false, null);
+
+    // An explicit project decision may discard only the captured document, never a later edit/replacement.
+    internal bool TryFenceForProject(SceneDocument? expected, bool discard)
+        => TryFence(discard, true, expected);
+
+    private bool TryFence(bool discard, bool checkExpected, SceneDocument? expected)
     {
         lock (_gate)
         {
-            if (_pending != null || _closing || _retired.Count != 0 || Read().IsDirty) return false;
+            if (_pending != null || _closing || _retired.Count != 0) return false;
+            var state = Read();
+            if (!discard && state.IsDirty ||
+                checkExpected && !ReferenceEquals(state.Content?.Document, expected)) return false;
             _closed = true;
             return true;
         }

@@ -1,9 +1,9 @@
-using System.ComponentModel;
+using TrueMoon.Argentis;
 
 namespace AlloyTest;
 
 /// <summary>One editable item, whose identity determines its retained UI row.</summary>
-public sealed class SettingsRow : INotifyPropertyChanged
+public sealed class SettingsRow : Bindable
 {
     private string _name;
 
@@ -18,14 +18,10 @@ public sealed class SettingsRow : INotifyPropertyChanged
         set
         {
             Validate(value);
-            if (_name == value) return;
-            _name = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+            SetProperty(ref _name, value);
         }
     }
 
-    /// <inheritdoc />
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     private static void Validate(string name)
     {

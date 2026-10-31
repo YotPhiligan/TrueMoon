@@ -13,8 +13,35 @@ dependency. A visual application also needs a compatible Alloy renderer and
 host; `TrueMoon.Alloy.Hosting` provides the optional App/window integration.
 
 Author screens as `View<TData>` with Fluent composition and explicit bindings.
-Data may be a plain model; observable ViewModels implement `INotifyPropertyChanged`
-for bindings and keep state/actions independent of controls and themes.
+Data may be a plain model; observable presentation models derive from `ViewModel`,
+which derives from `Bindable` and reuses its `INotifyPropertyChanged` implementation.
+Use `Bindable` directly for observable data that is not a view model. Both classes
+live in `TrueMoon.Argentis` and keep state/actions independent of controls and themes.
+
+```csharp
+using TrueMoon.Argentis;
+
+public sealed class SettingsViewModel : ViewModel
+{
+    private string _name = "";
+    public string Name
+    {
+        get => _name;
+        set => SetProperty(ref _name, value);
+    }
+}
+```
+
+`SetProperty` uses the default equality comparer, returns whether the field changed,
+and raises `PropertyChanged` after committing a new value. `CallerMemberName` supplies
+the property name; pass it explicitly when updating from a helper or refresh method.
+Use `OnPropertyChanged(nameof(ComputedProperty))` for dependent properties; null or
+empty names notify all properties. Observer exceptions propagate after the update.
+Notifications are synchronous on the caller's thread; models retain their existing
+synchronization and lifetime policy. A disposable model can release current observers
+with `ClearPropertyChangedSubscribers()` after its own cleanup. `ViewModel` adds no
+automatic dependency ownership. Bindings still accept any `INotifyPropertyChanged`.
+
 Separate appearance into `IViewStyle<TView>.Configure(IViewStyleBuilder<TView>)`.
 Declare `Root()`, `Part(view => view.Header)` or `Role(sharedTypedRole)` rules, then
 apply/replace/remove them with `view.WithViewStyle(style)` / `WithViewStyle(null)`.

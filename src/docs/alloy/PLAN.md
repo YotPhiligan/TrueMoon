@@ -116,6 +116,7 @@ Theme/style обновляются без rebuild; dynamic roles пересчи�
 | UIA1b | Theme switch и dynamic transfer без утраты tree/input/selection/scroll/bindings; failed value atomicity |
 | UIA1c | EditorViewModel/Style и Fluent View через DI; notifications/commands/ownership tested без renderer |
 | UIA1d | Debug/Release suites, native Editor/published proof, fresh packaged API consumer и docs/agent rules |
+| UIA1e | Общие Bindable → ViewModel и переиспользование property notifications в Editor/sample; direct и binding regression tests |
 
 UIA1a–d выполнены2026-10-22 в указанном scope: UI661/Editor49, full2321/2321
 Debug/Release, nonincremental Debug build, native Debug/published Release и fresh
@@ -125,6 +126,36 @@ Debug/Release, nonincremental Debug build, native Debug/published Release и fre
 animations и массовая migration consumers сохраняют собственные будущие задачи.
 Фактические passing результаты отдельно в STATUS/HISTORY; UIA1 не закрывает
 physical DPI/K3/K7/K8/VRAM/final alpha или ENG7 property editing.
+
+### UIA1e: Bindable и ViewModel — 2026-10-31
+
+По запросу пользователя общая иерархия observable presentation — `Bindable` →
+`ViewModel` → конкретная модель. Оба abstract public класса находятся в корне
+TrueMoon.Argentis, без новых assembly/provider/App dependencies. Обычные данные
+по-прежнему могут использоваться без base class; observable data без роли ViewModel
+могут наследовать непосредственно Bindable. Binding API принимает прежний
+INotifyPropertyChanged и не требует этой иерархии от внешнего consumer.
+
+- [x] Bindable реализует event и protected SetProperty(ref field, value, propertyName):
+  EqualityComparer<T>.Default, bool change result, CallerMemberName, commit перед
+  синхронным event; одинаковое значение не заменяет stored instance и не уведомляет.
+- [x] Protected virtual OnPropertyChanged позволяет сообщать computed/dependent
+  properties; explicit null/empty означает все properties. Observer failure
+  распространяется после commit. UI dispatch/synchronization остаются у владельца.
+- [x] ViewModel наследует Bindable без дополнительного service/lifecycle API.
+  Protected ClearPropertyChangedSubscribers освобождает текущие observers при
+  cleanup derived owner; зависимости/повторные подписки/Dispose не управляются базой.
+- [x] Шесть Editor ViewModels используют общую базу, InspectorProperty — Bindable;
+  Transform наследует её через Inspector. Partial notifications, dependent HasError,
+  owner-thread guards и прежний cleanup сохраняются. SettingsModel/SettingsRow sample
+  демонстрируют оба уровня. Diagnostic test doubles/custom subscription counters
+  сохраняют самостоятельную реализацию интерфейса по назначению.
+- [x] Direct tests проверяют hierarchy, caller name, committed value, equality/null,
+  observer failure/unsubscribe, virtual hook, clearing observers и retained two-way
+  binding; полные UI/Editor suites выполнены отдельно Debug/Release.
+
+Команды/результаты/границы — [HISTORY](HISTORY.md#uia1e-bindable-и-viewmodel--2026-10-31).
+Package/native/physical проверки этого изменения отдельным прогоном не выполнялись.
 
 Решение2026-10-22: [Aether DI1–DI4](../engine/PLAN.md#приведение-к-правилу-cobaltifactory)
 добавляет Alloy→Contracts для IUiSessionFactory : IFactory<UiSession,UiSessionCreation>.
@@ -986,7 +1017,7 @@ Windows per-pixel adapter использует SetWindowSubclass, сохраня
 | PA5. Формы и модель | Первая beta | Валидация, преобразования значений, режимы commit; async loading/cancellation и состояния выполнения без ручного повторения инфраструктуры в каждой форме. |
 | PA6. Большие данные | Список в первой beta; дерево и таблицы далее | Виртуализированные списки и деревья, затем таблицы; стабильные ключи, сохранение выделения, фокуса и прокрутки при обновлении и повторном использовании элементов. |
 | PA7. Текст и доступность | Клавиатура вместе с PA3–PA5; отдельные следующие подэтапы | IME/composition, развитие текстового ввода, semantic tree и platform accessibility adapter для повседневной работы и автоматизации. |
-| PA8. Оформление | PA8a — отдельный запланированный этап для существующих контролов; новые контролы оформлять после определения их поведения | Дефолтный минималистичный цветной стиль и оформление окна — PA8a ниже; системные theme tokens, templates, состояния, transitions и animations развиваются поверх общего поведения. |
+| PA8. Оформление | PA8a — оформление существующих контролов; PA8c — отдельный плановый проход качества рендера и текста | Дефолтный минималистичный цветной стиль и оформление окна — PA8a; качество текста, DPI/геометрии и композиции — PA8c ниже. Системные theme tokens, templates, состояния, transitions и animations развиваются поверх общего поведения. |
 | PA9. Vulkan/HUD | Отдельная ветка по реальной интеграции с движком | Асинхронный обмен кадрами, несколько frames-in-flight и явные completion tokens с новым контрактом владения ресурсами. |
 | PA10. Производительность | По измерениям PA1 и последующих сценариев | Виртуализация, кеширование текста, уменьшение повторного layout и рисования; для каждого изменения профиль, baseline до/после и проверки корректности. |
 
@@ -1290,6 +1321,64 @@ invalidation и cleanup после смены темы/закрытия. Изм�
 checks, затем native Debug/published Release и fresh package consumer по
 затронутым contracts. Этот этап не закрывает K3/K7/K8/VRAM/final alpha и не
 возобновляет остановленный поиск NVIDIA workaround.
+
+### PA8c: качество рендеринга и текста — 2026-10-31
+
+По запросу пользователя запланирован отдельный проход качества UI-рендеринга:
+читаемый текст небольших размеров, чёткие линии/иконки, предсказуемое масштабирование
+и одинаковая композиция на raster/OpenGL/Vulkan. Контрольные consumers — Settings
+и существующие панели Aether.Editor: меню, дерево, inspector, console и text editors.
+Это план, реализация не начата. Текущая общая очередь ED6b сохраняется; при переходе
+к этой ветке первым выполнить PA8c.0, затем PA8c.1/2. Остальные этапы выбирать по
+найденным дефектам и замерам, сохраняя отдельную приёмку каждого среза.
+
+**Границы.** Общий контракт принадлежит этому UI плану. Argentis сохраняет
+нейтральные text/layout/drawing contracts; Skia/font policy и native ресурсы —
+Rendering.Skia, DPI окна и presentation — Platform/Hosting. Новые options/API и
+их default/compatibility определить перед реализацией, без типов Skia в ViewModel.
+Изменение 3D-освещения/материалов/сглаживания игровой сцены остаётся в engine плане;
+здесь проверяется качество показа готового изображения в UI viewport/HUD.
+IME, bidi navigation и новые функции rich editor ведутся в
+[RTE плане](RICH_TEXT_EDITOR_PLAN.md), без дублирования его checklist.
+
+Все подэтапы ниже **запланированы**:
+
+| ID | Результат | Критерий завершения |
+| --- | --- | --- |
+| PA8c.0 | Исходная сцена и baseline качества | Доставляемые fonts/licenses и hashes, размеры/веса, logical/framebuffer bounds, scale, backend/driver/native revisions; исходные PNG 1:1 и увеличенные фрагменты, список конкретных дефектов и timings до изменений |
+| PA8c.1 | Чёткость и сглаживание текста | Сравнить и явно выбрать antialiasing, hinting и fractional/subpixel positioning для небольшого текста; отдельно opaque, translucent и offscreen targets. LCD/subpixel AA допускается только при подтверждённых условиях target/composition; portable default и fallback проверены на всех трёх backend |
+| PA8c.2 | DPI и точность геометрии | Согласовать logical→device mapping, stroke alignment, baseline/caret/selection и clipping на целых/дробных координатах. Линии, границы, иконки и текст не получают повторное масштабирование; measure/hit testing сохраняют логические координаты и точность |
+| PA8c.3 | Метрики и разрешение шрифтов | Согласовать measure/draw, ascent/descent/line height и bounds для обычного и rich text; исключить обрезание верхних/нижних выносных элементов. Проверить кириллицу/латиницу, combining marks, ligatures и mixed font runs; определить поддержанные shaping/fallback/missing-glyph сценарии и проверять glyph advances вместе с caret/hit testing |
+| PA8c.4 | Изображения, цвет и композиция | Явная sampling policy для 1:1, увеличения/уменьшения и pixel-art; проверить цветовое пространство, premultiplied alpha, opacity/backdrop/clip и прозрачные края. UI viewport/HUD показывает кадр без случайного double scaling, ореолов и повторного alpha blend |
+| PA8c.5 | Стоимость улучшений и кеширование | Сравнить layout/draw CPU time, allocations и owned native/GPU resources до/после. Оптимизировать только измеренные затраты; bounded text/font/layout caches учитывают font/style/scale/render policy и корректно инвалидируются, evict/dispose не нарушают ownership |
+| PA8c.6 | Итоговая визуальная и consumer приёмка | Общая visual matrix raster/OpenGL/Vulkan, Debug/published Release, source/fresh package consumer по затронутым API. Снимки визуально сверены при 1:1 и увеличении; focus/selection/scroll/editing и cleanup сохранены, расхождения и ограничения документированы |
+
+**Сцена и проверки.** Подготовить отдельные fixtures для текста 10–18 logical units,
+обычных/bold/italic начертаний, длинных строк, многострочного текста, выносных элементов,
+combining sequences и отсутствующих glyphs. Проверять light/dark, normal/disabled/
+selected/error states, caret/selection, прозрачные панели, hairlines, скругления,
+иконки и изображения. Emoji/color fonts включать только в явно выбранный supported
+профиль с доставленными assets и описанным fallback.
+
+Synthetic scale matrix — 1/1.25/1.5/1.75/2; отдельно реальные Windows DPI и перенос
+между мониторами, если окружение доступно. Directed/synthetic cases не заменяют
+physical proof. Для text layout проверять bounds/advances/cluster positions и input,
+для изображения — PNG и численное сравнение; selected-pixel smoke недостаточен.
+Различать нечёткость исходного рендера и масштабирование захвата/просмотрщика.
+
+Прежние K2/K4 fixtures и tolerances сохранять read-only. Intentional visual changes
+получают отдельный baseline с before/after и визуальной сверкой; пороги сравнения
+зафиксировать по измерениям до финального прогона, не расширять ради passing.
+Performance budgets согласовать после PA8c.0/5, без заранее выдуманного FPS target.
+При изменении font resolution/cache policy сохранить explicit catalog/default face
+и lifetime; новые fallback/shaping возможности вводить как явное изменение контракта.
+
+Начинать с behavioral/layout и raster checks, затем GPU/native и поставки. Смена
+theme/font/scale, resize/minimize/restore и закрытие должны сохранять retained tree,
+фокус, ввод, selection/scroll и освобождать owned ресурсы. Применяются прежние
+K2/K3/K4/K6/K7/K9 и PA10; этот проход не закрывает автоматически K8/VRAM/final alpha
+и не возобновляет остановленный поиск NVIDIA workaround. Реализацию и фактические
+результаты каждого этапа записывать в STATUS/HISTORY отдельно от этого плана.
 
 ### Архитектурные ориентиры
 

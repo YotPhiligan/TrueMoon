@@ -106,6 +106,8 @@ internal static class Workflow
                 document.Read().Content!.Resolved.Roots[^1] == new EntityId(Program.CubeId) && document.Read().Content!.UndoCount == 0 && !document.Read().IsDirty,
                 "Name/order did not survive Save/reopen with a clean history.");
             var entityProof = await EntityOperations();
+            var projectProof = await ProjectOperations();
+            var scenePlaybackProof = await ScenePlayback();
             field = (TextBox)panel.Properties.Values.Single(p => p.Property.Key == "x").Input;
             await StartPreview(); await Preview();
             await Capture("hierarchy-named.png", 1.5f);
@@ -130,10 +132,11 @@ internal static class Workflow
             var savedPath = document.Read().Path!;
             Program.Check(await window.RequestCloseAsync().WaitAsync(token), "Clean close was vetoed.");
             await window.Completion.WaitAsync(token);
-            Program.Check(notificationThreads.SetEquals([owner]) && runtimes.Leases.Count == 7 && maxLive == 1, "Owner-thread or child generation count changed.");
+            Program.Check(notificationThreads.SetEquals([owner]) && runtimes.Leases.Count == 11 && maxLive == 1, "Owner-thread or child generation count changed.");
             return new { Captures = captures, PresentedRevisions = revisions, OwnerThread = owner, NotificationThreads = notificationThreads,
                 MaxLive = maxLive, CrashedPid = crashedPid, CancelClosePreserved = true, FailedSavePreserved = true, CrashPreserved = true,
-                Recovered = true, SourceUnchanged = true, StableInspector = true, HierarchyMetadataPersisted = true, EntityOperations = entityProof, SavedScene = savedPath, Diagnostics = consoleProof };
+                Recovered = true, SourceUnchanged = true, StableInspector = true, HierarchyMetadataPersisted = true, EntityOperations = entityProof,
+                ProjectOperations = projectProof, ScenePlayback = scenePlaybackProof, SavedScene = savedPath, Diagnostics = consoleProof };
         }
         finally { model.PropertyChanged -= Changed; }
 
@@ -165,6 +168,152 @@ internal static class Workflow
                 await Task.Delay(10, token);
             }
         }
+        async Task<object> ProjectOperations()
+        {
+            Progress("Project picker/switch workflow");
+            var initial = projects.Active!; var manifest = initial.Project.ManifestPath;
+            var alternate = Path.Combine(Path.GetDirectoryName(manifest)!, "alternate.aetherproj");
+            var alternateGame = Path.Combine(Path.GetDirectoryName(manifest)!, "Game2", "Game.csproj");
+            Directory.CreateDirectory(Path.GetDirectoryName(alternateGame)!);
+            File.Copy(initial.Project.GameProjectPath, alternateGame);
+            var description = initial.Project.Description with { Id = Guid.NewGuid(), Name = "Switched project", GameProject = "Game2/Game.csproj" };
+            await File.WriteAllTextAsync(alternate, JsonSerializer.Serialize(description, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }), token);
+            var field = (TextBox)panel.Properties.Values.Single(property => property.Property.Key == "x").Input;
+            await Edit(field, "1.75"); var before = document.Read().Content!; var selected = workspace.SelectedId;
+            await RequestProject(alternate, capture: true);
+            await Until(() => documents.Read().AwaitingDecision);
+            await Click(view.Documents!.CancelChoice); await documents.Pending.WaitAsync(token);
+            Program.Check(ReferenceEquals(initial, projects.Active) && ReferenceEquals(before.Document, document.Read().Content?.Document) &&
+                document.Read().Content!.UndoCount == before.UndoCount && workspace.SelectedId == selected, "Cancelled project switch changed the document/history/selection.");
+            await Click(panel.Undo); await Until(() => !document.Read().IsDirty);
+            await Doc(DocumentCommand.New); await Until(() => view.Hierarchy!.CubeButton.IsEffectivelyEnabled);
+            await Click(view.Hierarchy!.CubeButton); await Until(() => panel.Properties.Values.Any(property => property.Property.Key == "x"));
+            var savedId = document.Read().Content!.Document.Id; var savedEntity = workspace.SelectedId!;
+            field = (TextBox)panel.Properties.Values.Single(property => property.Property.Key == "x").Input;
+            await Edit(field, "2.75");
+            await StartPreview(); await Preview(); var previewPid = engine.Supervisor.Status.ProcessId!.Value;
+            await RequestProject(alternate);
+            await Until(() => documents.Read().AwaitingDecision && view.Documents!.SavePathInput.IsEffectivelyEnabled);
+            await Set(view.Documents!.SavePathInput, "ProjectSwitchSaved.aetherscene");
+            await Click(view.Documents.SaveChoice); await documents.Pending.WaitAsync(token);
+            Program.Check(documents.Read().Error == null && projects.Active != null && !ReferenceEquals(initial, projects.Active), "Save project switch failed: " + documents.Read().Error);
+            document = projects.Active!.Documents!;
+            await Until(() => ReferenceEquals(workspace.Project, projects.Active) && workspace.EntityCount == 0 && workspace.SelectedId == null);
+            Program.Check(initial.IsClosed && engine.Editor.Status.Context!.Build.ProjectPath == alternateGame && engine.Editor.Status.Candidate == null && documents.Read().ProjectReady,
+                "Project publication kept the old game context/candidate.");
+            Program.Check(!preview.Read().Active && engine.Supervisor.Status.State == SessionState.Stopped &&
+                runtimes.Leases.Single(lease => lease.ProcessId == previewPid) is { Reaped: true, ResourcesReleased: true }, "Switch published before preview reap/release.");
+            await CapturePanel("project-switched.png");
+            await ui.InvokeAsync(() =>
+            {
+                if (view.Header is { } header) header.DocumentCommands[DocumentCommand.CloseProject].Execute();
+                else ((EditorDocumentViewModel)view.Documents!.DataContext!).Request(DocumentCommand.CloseProject);
+            }).WaitAsync(token);
+            await documents.Pending.WaitAsync(token);
+            await Until(() => projects.Active == null && !workspace.HasProject && workspace.EntityCount == 0);
+            Program.Check(engine.Editor.Status.Context == null && engine.Editor.Status.Candidate == null, "Project close kept the old game context.");
+            await CapturePanel("project-closed.png");
+            await RequestProject(manifest); await documents.Pending.WaitAsync(token);
+            Program.Check(documents.Read().Error == null && projects.Active != null, "Project reopen failed.");
+            document = projects.Active!.Documents!;
+            await Until(() => ReferenceEquals(workspace.Project, projects.Active));
+            await Doc(DocumentCommand.Open, "ProjectSwitchSaved.aetherscene");
+            await ui.InvokeAsync(() => workspace.Select(savedEntity)).WaitAsync(token);
+            await Until(() => panel.Properties.Values.Any(property => property.Property.Key == "x" && ((TextBox)property.Input).Value == "2.75"));
+            Program.Check(document.Read().Content!.Document.Id == savedId && document.Read().Content!.UndoCount == 0 && !document.Read().IsDirty,
+                "Save-before-switch did not reopen with stable IDs/value and clean history.");
+            var savedScene = document.Read().Path!;
+            await Doc(DocumentCommand.Close); await Doc(DocumentCommand.Open, "Edited.aetherscene");
+            await ui.InvokeAsync(() => workspace.Select(Program.CubeId.ToString("D"))).WaitAsync(token);
+            await Until(() => panel.Properties.Values.Any(property => property.Property.Key == "x" && ((TextBox)property.Input).Value == "1.5"));
+            return new { CancelledPreserved = true, SavedBeforeSwitch = true, BuildContextRebound = true, ClosedContextCleared = true,
+                ReopenedClean = true, PreviewReapedBeforePublish = true, OriginalManifest = manifest, AlternateManifest = alternate, AlternateGame = alternateGame, SavedScene = savedScene, SavedId = savedId };
+
+            async Task RequestProject(string path, bool capture = false)
+            {
+                await Until(() => ((EditorDocumentViewModel)view.Documents!.DataContext!).CanOpenProject);
+                if (view.Header is { } header)
+                {
+                    await ui.InvokeAsync(() => header.Menu.OpenGroup("project", ui)).WaitAsync(token);
+                    await Until(() => view.Overlays.Popup != null);
+                    if (capture) await CapturePanel("project-menu.png");
+                    var action = view.Overlays.Popup!.Children.OfType<MenuItem>().Single(row => row.ActionId == "document.OpenProject");
+                    await Click(action);
+                }
+                else await ui.InvokeAsync(() => ((EditorDocumentViewModel)view.Documents!.DataContext!).Request(DocumentCommand.OpenProject)).WaitAsync(token);
+                await Until(() => view.Documents!.PathInput.IsEffectivelyEnabled && view.Documents.DataContext!.PathRequest == DocumentCommand.OpenProject);
+                await Set(view.Documents!.PathInput, path);
+                if (capture) await CapturePanel("project-path.png");
+                await Click(view.Documents.ConfirmPath);
+            }
+        }
+
+        async Task<object> ScenePlayback()
+        {
+            Progress("Scene Build/Play/Pause/Step/Stop workflow");
+            var playback = app.Services.Resolve<EditorScenePlayback>()!;
+            var field = (TextBox)panel.Properties.Values.Single(property => property.Property.Key == "x").Input;
+            await Edit(field, "1.65"); var content = document.Read().Content!; var selected = workspace.SelectedId;
+            await StartPreview(); await Preview(); var previewPid = engine.Supervisor.Status.ProcessId!.Value;
+            var builds = new List<string>(); var pids = new List<int>(); var inputs = new List<string>();
+            var compilations = new List<string>(); var capturedFiles = new List<int>(); var capturedBytes = new List<long>();
+            for (var run = 0; run < 2; run++)
+            {
+                await Until(() => view.DataContext!.CanRun);
+                if (view.Header is { } header) await Click(header.RunButton);
+                else await ui.InvokeAsync(() => view.DataContext!.RunSimulation()).WaitAsync(token);
+                await Until(() => playback.Error != null || engine.Supervisor.Status.State == SessionState.Playing && playback.Pending.IsCompleted);
+                Program.Check(playback.Error == null, "Scene game failed: " + playback.Error);
+                var identity = engine.Supervisor.Status.Identity!; builds.Add(identity.GameBuildId); pids.Add(engine.Supervisor.Status.ProcessId!.Value);
+                using (var witness = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(engine.Builds.DiagnosticsDirectory!, "verify.inputs.json"), token)))
+                {
+                    inputs.Add(witness.RootElement.GetProperty("Fingerprint").GetString()!);
+                    Program.Check(engine.Editor.Status.Context!.Build.TrackInputs && witness.RootElement.GetProperty("Files").GetArrayLength() > 2,
+                        "Scene Build/Play did not verify observed SDK inputs.");
+                }
+                var buildJob = engine.Builds.ReadDiagnostics(16, 0).Single(job => job.Source == "Build" && job.GameBuildId == identity.GameBuildId);
+                var buildDirectory = Path.Combine(Path.GetDirectoryName(engine.Builds.DiagnosticsDirectory!)!, buildJob.JobId!);
+                using (var compilation = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(buildDirectory, "capture.json"), token)))
+                {
+                    compilations.Add(compilation.RootElement.GetProperty("Fingerprint").GetString()!);
+                    capturedFiles.Add(compilation.RootElement.GetProperty("Files").GetArrayLength());
+                    capturedBytes.Add(compilation.RootElement.GetProperty("TotalBytes").GetInt64());
+                    Program.Check(engine.Editor.Status.Context!.Build.CaptureCompilation && capturedFiles[^1] > 100 && capturedBytes[^1] > 1024 * 1024 &&
+                        !Directory.Exists(Path.Combine(buildDirectory, "capture")), "Scene compilation did not capture compiler inputs or release its staging before Start.");
+                }
+                Program.Check(!preview.Read().Active && runtimes.Leases.Single(lease => lease.ProcessId == previewPid) is { Reaped: true, ResourcesReleased: true },
+                    "Game startup preceded preview reap/release.");
+                Program.Check(engine.Editor.Status.Context!.Scene.Id == content.Document.Id.Value.ToString("D") &&
+                    engine.Editor.Status.Context.Scene.Revision == content.Document.Revision && !documents.CanExecute(DocumentCommand.Save),
+                    "Game did not use the captured scene or left authoring admission open.");
+                await Until(() => view.DataContext!.CanPause);
+                if (view.Header is { } pauseHeader) await Click(pauseHeader.PauseButton);
+                else await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Pause)).WaitAsync(token);
+                await Until(() => engine.Supervisor.Status.State == SessionState.Paused && playback.Pending.IsCompleted);
+                var tick = engine.Supervisor.Status.Tick;
+                await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Step)).WaitAsync(token);
+                await Until(() => playback.Pending.IsCompleted && engine.Supervisor.Status.Tick == tick + 1);
+                if (run == 0) await Capture("scene-play-paused.png", 1.65f, game: true);
+                await Until(() => view.DataContext!.CanStop);
+                if (view.Header is { } stopHeader) await Click(stopHeader.StopButton);
+                else await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Stop)).WaitAsync(token);
+                await Until(() => playback.Pending.IsCompleted && engine.Supervisor.Status.State == SessionState.Stopped);
+                Program.Check(playback.Error == null && !playback.OwnsRuntime && runtimes.Leases.Single(lease => lease.ProcessId == pids[^1]) is { Reaped: true, ResourcesReleased: true },
+                    "Scene game Stop did not complete cleanup.");
+                Program.Check(ReferenceEquals(content, document.Read().Content) && document.Read().IsDirty && content.UndoCount == 1 && workspace.SelectedId == selected,
+                    "Scene game modified authoring state/history/selection or its dirty checkpoint.");
+            }
+            Program.Check(builds.Distinct().Count() == 2 && pids.Distinct().Count() == 2, "Restart reused a stale build or child.");
+            Program.Check(inputs.Distinct().Count() == 1, "Unchanged source inputs did not retain the same fingerprint across fresh builds.");
+            Program.Check(compilations.Distinct().Count() == 1, "Unchanged captured compiler inputs did not retain the same fingerprint.");
+            await Until(() => panel.Undo.IsEffectivelyEnabled); await Click(panel.Undo);
+            await Until(() => !document.Read().IsDirty && field.Value == "1.5");
+            return new { FreshBuilds = builds, RuntimePids = pids, InputFingerprints = inputs, InputsValidated = true,
+                CompilationFingerprints = compilations, CapturedFiles = capturedFiles, CapturedBytes = capturedBytes, CapturedCompilation = true,
+                PreviewPid = previewPid, PreviewReapedBeforeGame = true,
+                DraftCopy = true, PauseStepStop = true, HistoryDirtySelectionPreserved = true, Capture = "scene-play-paused.png" };
+        }
+
         async Task<object> EntityOperations()
         {
             Progress("Entity creation/deletion workflow");
@@ -346,6 +495,7 @@ internal static class Workflow
         }
         async Task Set(TextBox field, string value)
         {
+            await Until(() => Ready(field));
             var invoke = ui.InvokeAsync(() =>
             {
                 ClickInput(field); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
@@ -361,7 +511,15 @@ internal static class Workflow
             }
             await Until(() => field.Value == value);
         }
-        async Task Click(Button button) { await Until(() => button.IsEffectivelyEnabled); await ui.InvokeAsync(() => ClickInput(button)).WaitAsync(token); }
+        async Task Click(Button button)
+        {
+            await Until(() => Ready(button));
+            await ui.InvokeAsync(() => ClickInput(button)).WaitAsync(token);
+        }
+        static bool Visible(Element element)
+        { for (Element? current = element; current != null; current = current.Parent) if (!current.IsVisible) return false; return true; }
+        bool Ready(Element element) => element.IsAttached && element.IsEffectivelyEnabled &&
+            element.Bounds.Width > 0 && element.Bounds.Height > 0 && Visible(element) && !ui.NeedsUpdate;
         void ClickInput(Element element)
         {
             var bounds = element.Bounds; Program.Check(bounds.Width > 0 && bounds.Height > 0, "Control has no actual layout.");
@@ -387,12 +545,13 @@ internal static class Workflow
             try { await captured.Task.WaitAsync(token); } finally { window.FramePresented -= CaptureConsole; }
             Progress("Captured " + name);
         }
-        async Task Capture(string name, float x)
+        async Task Capture(string name, float x, bool game = false)
         {
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             void CaptureFrame(UiSession current)
             {
-                if (current.NeedsUpdate || view.Canvas.DrawnFrame is not { } frame || engine.Preview.Describe(frame)?.Document != preview.Read().Presented) return;
+                if (current.NeedsUpdate || view.Canvas.DrawnFrame is not { } frame) return;
+                if (game ? !ReferenceEquals(frame.Presentation, engine.Frames.Presentation) : engine.Preview.Describe(frame)?.Document != preview.Read().Presented) return;
                 window.FramePresented -= CaptureFrame;
                 try
                 {
@@ -405,7 +564,7 @@ internal static class Workflow
                     Program.Check(Math.Abs(pixel.Red - 204) <= 2 && Math.Abs(pixel.Green - 51) <= 2 && Math.Abs(pixel.Blue - 38) <= 2,
                         "Actual preview pixel differs: " + pixel);
                     using var data = image.Encode(SKEncodedImageFormat.Png, 100); using var file = File.Create(Path.Combine(directory, name)); data.SaveTo(file);
-                    captures.Add(new { Name = name, Pixel = pixel.ToString(), X = x, Revision = preview.Read().Presented!.Revision });
+                    captures.Add(new { Name = name, Pixel = pixel.ToString(), X = x, Revision = game ? engine.Editor.Status.Context!.Scene.Revision : preview.Read().Presented!.Revision, Game = game });
                     ready.TrySetResult();
                 }
                 catch (Exception error) { ready.TrySetException(error); }

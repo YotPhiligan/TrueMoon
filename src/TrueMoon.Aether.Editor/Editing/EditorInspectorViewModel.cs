@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using TrueMoon.Argentis;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Scenes.Authoring;
@@ -6,7 +7,7 @@ using TrueMoon.Aether.Scenes.Authoring;
 namespace TrueMoon.Aether.Editor.Editing;
 
 /// <summary>Schema-driven inspector drafts over one shared document authoring history; borrows App-owned dependencies.</summary>
-public class EditorInspectorViewModel : INotifyPropertyChanged, IDisposable
+public class EditorInspectorViewModel : ViewModel, IDisposable
 {
     private readonly EditorDocumentCommands _commands;
     private readonly EditorPreview _preview;
@@ -62,8 +63,6 @@ public class EditorInspectorViewModel : INotifyPropertyChanged, IDisposable
     public string PreviewText => _previewText;
     /// <summary>Actual preview state for structured status presentation.</summary>
     public EditorPreviewState PreviewState => _previewState;
-    /// <inheritdoc />
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>Copies committed state on the UI thread. Selection changes discard the previous selection's draft;
     /// external revision changes preserve a draft and require explicit cancellation.</summary>
@@ -100,7 +99,7 @@ public class EditorInspectorViewModel : INotifyPropertyChanged, IDisposable
     private void Load(SceneAuthoringState? content)
     {
         _baseline = content?.Document; _component = default; _entity = default; _conflict = false;
-        Set(ref _error, "", nameof(ErrorText)); _loading = true;
+        SetProperty(ref _error, "", nameof(ErrorText)); _loading = true;
         try
         {
             var groups = new List<InspectorComponent>(); var hidden = new List<InspectorRemovedComponent>();
@@ -160,7 +159,7 @@ public class EditorInspectorViewModel : INotifyPropertyChanged, IDisposable
             _addable = content == null || entity == null ? [] : content.Document.Schemas.OrderBy(s => s.TypeId.Value).ThenBy(s => s.Version)
                 .Select(schema => new InspectorComponentType(schema, ComponentName(schema.TypeId) + " v" + schema.Version,
                     (schema.AllowMultiple || !types.Contains(schema.TypeId)) && schema.RequiredTypes.All(types.Contains))).ToArray();
-            foreach (var name in new[] { nameof(Components), nameof(AddableTypes), nameof(RemovedComponents), nameof(HasSelection), nameof(NoSelection), nameof(SelectionText), nameof(HasDraft) }) Notify(name);
+            foreach (var name in new[] { nameof(Components), nameof(AddableTypes), nameof(RemovedComponents), nameof(HasSelection), nameof(NoSelection), nameof(SelectionText), nameof(HasDraft) }) OnPropertyChanged(name);
         }
         finally { _loading = false; }
     }
@@ -176,7 +175,7 @@ public class EditorInspectorViewModel : INotifyPropertyChanged, IDisposable
     private void DraftChanged()
     {
         if (_loading) return;
-        Set(ref _error, "", nameof(ErrorText)); UpdateState(_commands.Read().Document?.Content); Notify(nameof(HasDraft));
+        SetProperty(ref _error, "", nameof(ErrorText)); UpdateState(_commands.Read().Document?.Content); OnPropertyChanged(nameof(HasDraft));
     }
     private bool Validate()
     {
@@ -187,23 +186,23 @@ public class EditorInspectorViewModel : INotifyPropertyChanged, IDisposable
     private void UpdateState(SceneAuthoringState? content)
     {
         var valid = Validate(); var draft = HasDraft;
-        Set(ref _canEdit, _available && _component != default, nameof(CanEdit));
-        Set(ref _canEditProperties, _available && _entity != default, nameof(CanEditProperties));
-        Set(ref _canChangeComponents, CanEditProperties && !draft && !_conflict, nameof(CanChangeComponents));
+        SetProperty(ref _canEdit, _available && _component != default, nameof(CanEdit));
+        SetProperty(ref _canEditProperties, _available && _entity != default, nameof(CanEditProperties));
+        SetProperty(ref _canChangeComponents, CanEditProperties && !draft && !_conflict, nameof(CanChangeComponents));
         foreach (var field in _active) field.Enable(CanEditProperties);
-        Set(ref _canApply, CanEditProperties && draft && valid && !_conflict, nameof(CanApply));
-        Set(ref _canCancel, draft || _conflict, nameof(CanCancel));
-        Set(ref _canUndo, _available && !draft && !_conflict && content?.UndoCount > 0, nameof(CanUndo));
-        Set(ref _canRedo, _available && !draft && !_conflict && content?.RedoCount > 0, nameof(CanRedo));
+        SetProperty(ref _canApply, CanEditProperties && draft && valid && !_conflict, nameof(CanApply));
+        SetProperty(ref _canCancel, draft || _conflict, nameof(CanCancel));
+        SetProperty(ref _canUndo, _available && !draft && !_conflict && content?.UndoCount > 0, nameof(CanUndo));
+        SetProperty(ref _canRedo, _available && !draft && !_conflict && content?.RedoCount > 0, nameof(CanRedo));
         var preview = _preview.Read();
-        Set(ref _previewState, preview, nameof(PreviewState));
-        Set(ref _canPreview, _available && content != null && !preview.Busy, nameof(CanPreview));
-        Set(ref _canStopPreview, preview.Active || preview.Busy || preview.Error != null, nameof(CanStopPreview));
+        SetProperty(ref _previewState, preview, nameof(PreviewState));
+        SetProperty(ref _canPreview, _available && content != null && !preview.Busy, nameof(CanPreview));
+        SetProperty(ref _canStopPreview, preview.Active || preview.Busy || preview.Error != null, nameof(CanStopPreview));
         var shown = preview.Presented == null ? "нет кадра" : $"кадр r{preview.Presented.Revision}";
         var text = preview.Error != null ? "Preview: " + preview.Error.Message :
             preview.Active ? $"Preview: {shown} / документ r{content?.Document.Revision} {(preview.Busy ? "· обновление…" : "")}" : "Preview выключен · до 64 объектов";
-        Set(ref _previewText, text, nameof(PreviewText));
-        if (_conflict) Set(ref _error, "Сцена изменилась. Отмените черновик и повторите правку.", nameof(ErrorText));
+        SetProperty(ref _previewText, text, nameof(PreviewText));
+        if (_conflict) SetProperty(ref _error, "Сцена изменилась. Отмените черновик и повторите правку.", nameof(ErrorText));
     }
     /// <summary>Commits changed properties/resets as one shared authoring transaction.</summary>
     public void Apply()
@@ -247,13 +246,13 @@ public class EditorInspectorViewModel : INotifyPropertyChanged, IDisposable
     private void ChangeComponent(Func<ComponentEdit> change)
     {
         VerifyOwner(); var expected = _baseline; Refresh(_selection);
-        if (!ReferenceEquals(expected, _baseline)) { Set(ref _error, "Сцена изменилась. Повторите действие.", nameof(ErrorText)); return; }
+        if (!ReferenceEquals(expected, _baseline)) { SetProperty(ref _error, "Сцена изменилась. Повторите действие.", nameof(ErrorText)); return; }
         if (!CanChangeComponents) return;
         Mutate(() => _commands.EditComponents(_baseline!, new(Operation(), [], [change()])));
     }
     private AuthoringOperation Operation() => new(Guid.NewGuid(), _baseline!.Revision, "editor");
     /// <summary>Discards uncommitted text and reloads the latest selected occurrence.</summary>
-    public void Cancel() { VerifyOwner(); Load(_commands.Read().Document?.Content); Refresh(_selection); Notify(nameof(HasDraft)); }
+    public void Cancel() { VerifyOwner(); Load(_commands.Read().Document?.Content); Refresh(_selection); OnPropertyChanged(nameof(HasDraft)); }
     /// <summary>Uses the document's existing engine Undo history.</summary>
     public void Undo() { VerifyOwner(); Refresh(_selection); if (CanUndo) Mutate(() => _commands.Undo(_baseline!, new(Guid.NewGuid(), _baseline!.Revision, "editor"))); }
     /// <summary>Uses the document's existing engine Redo history.</summary>
@@ -264,11 +263,11 @@ public class EditorInspectorViewModel : INotifyPropertyChanged, IDisposable
         {
             var result = action();
             if (result.Succeeded) Load(_commands.Read().Document?.Content);
-            else Set(ref _error, result.Error + ": " + result.Message, nameof(ErrorText));
+            else SetProperty(ref _error, result.Error + ": " + result.Message, nameof(ErrorText));
         }
-        catch (Exception error) { Set(ref _error, error.Message, nameof(ErrorText)); }
-        var failure = _error; Refresh(_selection); if (failure.Length != 0) Set(ref _error, failure, nameof(ErrorText));
-        Notify(nameof(HasDraft));
+        catch (Exception error) { SetProperty(ref _error, error.Message, nameof(ErrorText)); }
+        var failure = _error; Refresh(_selection); if (failure.Length != 0) SetProperty(ref _error, failure, nameof(ErrorText));
+        OnPropertyChanged(nameof(HasDraft));
     }
     /// <summary>Enables committed-revision preview or retries a failed revision.</summary>
     public void ShowPreview() { VerifyOwner(); Refresh(_selection); if (CanPreview && _commands.Read().Document?.Content is { } content) _preview.Show(content.Resolved); Refresh(_selection); }
@@ -281,17 +280,17 @@ public class EditorInspectorViewModel : INotifyPropertyChanged, IDisposable
         if (Interlocked.CompareExchange(ref _owner, thread, 0) is var owner && owner != 0 && owner != thread)
             throw new InvalidOperationException("Transform presentation must be updated on its UI owner thread.");
     }
-    private void Notify(string property)
+    /// <inheritdoc />
+    protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(this, new(property));
-        if (property == nameof(ErrorText)) PropertyChanged?.Invoke(this, new(nameof(HasError)));
+        base.OnPropertyChanged(propertyName);
+        if (propertyName == nameof(ErrorText)) base.OnPropertyChanged(nameof(HasError));
     }
-    private void Set<T>(ref T field, T value, string property) { if (!EqualityComparer<T>.Default.Equals(field, value)) { field = value; Notify(property); } }
     /// <summary>Disconnects field callbacks; borrowed document and preview owners remain alive.</summary>
     public void Dispose()
     {
         if (_disposed) return; _disposed = true;
         foreach (var field in Fields.Cast<InspectorProperty>().Concat(_properties.Values).Distinct()) field.Changed -= DraftChanged;
-        PropertyChanged = null;
+        ClearPropertyChangedSubscribers();
     }
 }

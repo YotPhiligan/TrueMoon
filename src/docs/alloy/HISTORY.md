@@ -1,5 +1,115 @@
 # Alloy / Argentis: история работ и проверок
 
+## Editor ED6b.2b.1 captured compiler consumer — 2026-10-31
+
+Scene action включает capture C# compiler inputs; общие UI API/renderer не менялись.
+Aether1683/Editor943 отдельно Debug/Release, failed/skipped0; fresh15packages/headless8
+и published source/NuGet standard/embedded4/4workflows.44Runtime children/40graceful
+Vulkan validation0/0, final UI/GPU/handles0;4PNG просмотрены.188files/42105392bytes
+на native compile, stable capture fingerprints и staging release до Start проверены.
+Alloy/Hosting suites/physical/quality/performance gates не повторены; historical popup/
+output-drain observations остаются открытыми. [Полные evidence/границы](../engine/HISTORY.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
+Далее ED6b.2b.2 preparation closure; собственная UI quality ветка — PA8c.0.
+
+## Editor ED6b.2a build inputs consumer — 2026-10-31
+
+Editor scene actions проверяют observed SDK input witness до game startup. Общие
+controls/renderer не менялись. Aether1657/Editor943 отдельно Debug/Release, failed/
+skipped0; fresh15packages/headless8 и final published source/NuGet standard/embedded
+4/4workflows,44children/40graceful validation0/0, final UI/GPU/handles0.4PNG просмотрены.
+Initial package embedded Preview popup timeout до SDK Build сохранён отдельно;
+exact frozen binary replay и final package2/2 прошли без смены deadlines, причина
+остаётся ED8 follow-up. Alloy/Hosting suites и physical/quality/performance gates не
+повторялись. [Полные команды/evidence/границы](../engine/HISTORY.md#ed6b2a-наблюдаемые-входы-сборки--2026-10-31).
+Следующий consumer — ED6b.2b source capture; собственная quality ветка — PA8c.0.
+
+## Editor ED6b.1 scene playback consumer — 2026-10-31
+
+Editor использует прежние Run/Pause/Stop/header/status controls и retained models
+для current unsaved scene Build/Play. Common UI APIs/renderer не изменялись. Shared
+document admission и inspector draft guard сохраняют parent history/dirty/selection.
+Editor943/943 и Aether1635/1635 Debug/Release, failed/skipped0; Alloy/Hosting/Core и
+прочие suites не повторялись. Source/fresh NuGet standard/Cobalt +embedded/MS DI:
+4/4workflows,44children reaped/released (8game),40graceful validation0/0, final
+UI/GPU/handles0.4paused scene PNG визуально просмотрены. Selected scene pixels и
+controls проверены; новый PA8c font/rendering quality baseline этим не выполнен.
+[Контракт/команды/initial findings/границы](../engine/HISTORY.md#ed6b1-запуск-открытой-сцены--2026-10-31).
+Далее ED6b.2 source/artifact policy; physical/device/K7/VRAM/release gates прежние.
+
+## План качества рендеринга и текста PA8c — 2026-10-31
+
+По запросу пользователя в [UI плане](PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31)
+добавлены PA8c.0–6: исходные captures/замеры, text AA/hinting, DPI/pixel alignment,
+font metrics/shaping/fallback, image sampling/color/premultiplied composition,
+измеряемая стоимость/cache lifetime и visual/native/package acceptance.
+Общий roadmap ссылается на этот единственный детальный checklist. Старые K2/K4
+goldens/tolerances сохраняются; intentional changes требуют отдельного reviewed baseline.
+Synthetic fractional scales и physical DPI учитываются раздельно. Функциональный RTE
+backlog и 3D rendering остаются у своих владельцев; общий приоритет ED6b сохранён.
+Сверены текущий UI PLAN/STATUS, RTE plan и simple Skia text/font adapter. Это
+документационное изменение без реализации, build/tests/native/package запусков.
+
+## UIA1e: Bindable и ViewModel — 2026-10-31
+
+По запросу пользователя реализованы root Argentis abstract Bindable и ViewModel:
+общий event, SetProperty с default equality/CallerMemberName/bool result и virtual
+OnPropertyChanged. Значение committed перед синхронным event; observer failure
+не откатывает field. ClearPropertyChangedSubscribers сохраняет прежнее освобождение
+UI observers при конкретном Dispose, не добавляя ownership/lifecycle в базу.
+Полный контракт ведётся в [UIA1e](PLAN.md#uia1e-bindable-и-viewmodel--2026-10-31),
+пример использования — [package README](../../TrueMoon.Argentis/PACKAGE.md).
+
+EditorViewModel, EditorStatusBarViewModel, EditorDocumentViewModel,
+EditorInspectorViewModel, EditorHierarchyViewModel и EditorDiagnosticsViewModel
+наследуют ViewModel; InspectorProperty/TransformField получают Bindable. Notifications
+из partial files перенесены вместе с основной декларацией. SettingsModel наследует
+ViewModel, SettingsRow — Bindable. Shared dependency ownership, owner-thread guards,
+computed notifications и binding subscriptions сохранены; новых DI registrations нет.
+
+Фактический Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest run:
+
+| Suite | Debug | Release | Failed/skipped |
+|---|---:|---:|---:|
+| BindableTests, focused |10|—|0/0|
+| Alloy UI, full |919|919|0/0|
+| Aether Editor, full |923|923|0/0|
+
+Focused tests входят в UI suite, не прибавляются к4full runs3684cases.
+Новые10cases: inheritance и committed caller-name event; equality/value identity,
+null transitions; explicit property/all-properties names; virtual hook; observer
+failure/unsubscribe; release/resubscribe; existing retained two-way binding.
+Первый compile выявил недостающий private HeadlessSurface в новом fixture; добавлен
+обычный локальный test surface, production behavior/assertions не ослаблялись.
+IDE findTests tool недоступен, neighbouring tests прочитаны напрямую.
+[Команды/5TRX/10cases/source hashes/quality review](../../TestResults/Bindable-20261031-1/verification.json),
+[runner](../../TestResults/Bindable-20261031-1/RunTests.ps1),
+[docs/namespace/diff audit](../../TestResults/Bindable-20261031-1/docs-audit.json).
+Tests/production diff сверены по поведению, empirical mutations и coverage не собирались.
+Hosting/Aether/Core/прочие suites и full solution не повторялись; прежние package/native/
+physical results не относятся к текущим input fingerprints. Далее ED6b consumer,
+общие K3/K7/K8/VRAM/final alpha ограничения прежние.
+
+## Editor ED1b.2: project picker consumer — 2026-10-31
+
+Editor использует существующие MenuBar/MenuAction/TextBox/typed View/Data/Style для
+project path и Close actions. Project/scene/first-save drafts разделены, focus/theme и
+retained controls сохраняются; caption показывает selected portable project name.
+Header coalesce-ит command notifications после найденной RunButton latency regression.
+UI library/provider API не менялись, новых UI services/owners нет.
+
+Editor923/923 Debug/Release, failed/skipped0; Aether1631 отдельно, UI/Hosting/Core и
+остальные suites не повторялись. Published source/fresh NuGet standard/Cobalt и embedded/
+MS DI4/4workflows прошли, включая active preview drain при switch, Save/Cancel,
+reopen и прежний edit/diagnostics/crash/recovery profile.32children reaped/released,
+28graceful validation0/0, final UI/GPU/handles0.14finalPNG просмотрены. Initial native
+harness input-before-layout findings и условия input readiness сохранены в engine истории.
+[Scope/команды/границы](../engine/HISTORY.md#ed1b2-project-picker-и-runtime-rebinding--2026-10-31),
+[final audit/PNG hashes](../../TestResults/ProjectPicker-ED1b2-20261031-1/acceptance.json).
+
+Следующий consumer — ED6b document-aware Build/Play. OS file picker/recents, physical
+input/DPI, accessibility/device loss/K3/K7/K8/VRAM/final alpha и старый engine output-drain
+follow-up остаются отдельными; historical checks не объявляются текущими runs.
+
 ## PA4c: MenuPopup и ED4c.3 — 2026-10-31
 
 Общий MenuPopup принимает1..64distinct MenuAction до создания/подписки MenuItem rows;

@@ -11,14 +11,14 @@ public sealed partial class EditorDiagnosticsViewModel
     {
         get => _exportIncludesText;
         set { VerifyOpen(); if (IsExporting) throw new InvalidOperationException("Export options are frozen while a report is running.");
-            if (_exportIncludesText == value) return; _exportIncludesText = value; Changed(nameof(ExportIncludesText)); Changed(nameof(ExportPrivacyNotice)); }
+            if (_exportIncludesText == value) return; _exportIncludesText = value; OnPropertyChanged(nameof(ExportIncludesText)); OnPropertyChanged(nameof(ExportPrivacyNotice)); }
     }
     /// <summary>Whether the next report reads Core's configured persistent JSONL history.</summary>
     public bool ExportIncludesHistory
     {
         get => _exportIncludesHistory;
         set { VerifyOpen(); if (IsExporting) throw new InvalidOperationException("Export options are frozen while a report is running.");
-            if (_exportIncludesHistory == value) return; _exportIncludesHistory = value; Changed(nameof(ExportIncludesHistory)); }
+            if (_exportIncludesHistory == value) return; _exportIncludesHistory = value; OnPropertyChanged(nameof(ExportIncludesHistory)); }
     }
     /// <summary>Whether an export can still accept a user cancellation request.</summary>
     public bool CanCancelExport => IsExporting && _exportCancellation is { IsCancellationRequested: false };
@@ -31,7 +31,7 @@ public sealed partial class EditorDiagnosticsViewModel
     public void CancelExport()
     {
         VerifyOpen(); if (!CanCancelExport) return; _exportCancellation!.Cancel();
-        _exportStatus = "Отмена экспорта…"; Changed(nameof(ExportStatus)); Changed(nameof(CanCancelExport));
+        _exportStatus = "Отмена экспорта…"; OnPropertyChanged(nameof(ExportStatus)); OnPropertyChanged(nameof(CanCancelExport));
     }
 
     /// <summary>Copies a value-only presentation observation on the UI owner; no renderer/device is retained.</summary>
@@ -47,7 +47,7 @@ public sealed partial class EditorDiagnosticsViewModel
 
     private void ExportChanged()
     {
-        Changed(nameof(ExportStatus)); Changed(nameof(IsExporting)); Changed(nameof(CanExport));
-        Changed(nameof(CanCancelExport)); Changed(nameof(CanChangeExportOptions));
+        OnPropertyChanged(nameof(ExportStatus)); OnPropertyChanged(nameof(IsExporting)); OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanCancelExport)); OnPropertyChanged(nameof(CanChangeExportOptions));
     }
 }

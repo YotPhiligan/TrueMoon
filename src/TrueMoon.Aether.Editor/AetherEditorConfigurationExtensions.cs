@@ -66,15 +66,26 @@ public static class AetherEditorConfigurationExtensions
                 return new(resolver.Resolve<EditorProjects>(), () => commands.Pending.IsCompleted &&
                     (engine.Supervisor.Status.State == SessionState.Stopped || preview.Read().Active) &&
                     engine.Editor.Status.Operation == TrueMoon.Aether.Editing.GameEditorOperation.Idle,
-                    commands.StopAsync, resolver.Resolve<IAppLifetime>().AppCancellationToken, preview.StopAsync);
+                    commands.StopAsync, resolver.Resolve<IAppLifetime>().AppCancellationToken, preview.StopAsync,
+                    project =>
+                    {
+                        if (project == null) engine.Editor.ClearContext();
+                        else engine.Editor.SetContext(new(project.CreateBuildRequest(0), new SceneSnapshot("Сцена не открыта", 0, []), ""));
+                    });
             });
             if (!services.Exist<EditorDocumentViewModel>()) services.Singleton<EditorDocumentViewModel>(r => new(r.Resolve<EditorDocumentCommands>()));
+            if (!services.Exist<EditorScenePlayback>()) services.Singleton<EditorScenePlayback>(r =>
+            {
+                var engine = r.Resolve<AetherHost>();
+                return new(r.Resolve<EditorDocumentCommands>(), r.Resolve<EditorPreview>(), engine.Editor,
+                    () => engine.Supervisor.Status, r.Resolve<EditorViewportBinding>().Ready, r.Resolve<IAppLifetime>().AppCancellationToken);
+            });
             if (!services.Exist<IViewStyle<EditorDocumentView>>()) services.Singleton<IViewStyle<EditorDocumentView>>(_ => new EditorDocumentViewStyle());
             if (!services.Exist<IFactory<EditorDocumentView>>()) services.Singleton<IFactory<EditorDocumentView>>(r =>
                 new Factory<EditorDocumentView>(() => new(r.Resolve<EditorDocumentViewModel>(), r.Resolve<IViewStyle<EditorDocumentView>>(), compactHeader: true)));
             if (!services.Exist<IViewStyle<EditorView>>()) services.Singleton<IViewStyle<EditorView>>(_ => new EditorViewStyle());
             if (!services.Exist<EditorViewModel>()) services.Singleton<EditorViewModel>(r => new(r.Resolve<EditorWorkspace>(), r.Resolve<EditorCommands>(),
-                r.Resolve<EditorDocumentViewModel>(), r.Resolve<EditorInspectorViewModel>(), r.Resolve<EditorHierarchyViewModel>()));
+                r.Resolve<EditorDocumentViewModel>(), r.Resolve<EditorInspectorViewModel>(), r.Resolve<EditorHierarchyViewModel>(), r.Resolve<EditorScenePlayback>()));
             if (!services.Exist<IFactory<EditorView>>()) services.Singleton<IFactory<EditorView>>(r =>
                 new Factory<EditorView>(() => new(r.Resolve<EditorViewModel>(), r.Resolve<IViewStyle<EditorView>>(),
                     r.Resolve<IFactory<EditorDocumentView>>(), null, true, r.Resolve<IFactory<EditorStatusBarView, EditorStatusBarArguments>>(),

@@ -1,12 +1,12 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
+using TrueMoon.Argentis;
 using System.Text;
 using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether.Editor.Diagnostics;
 
 /// <summary>UI-owner presentation over a borrowed collector. No producer callbacks, timers or native resources.</summary>
-public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged, IDisposable
+public sealed partial class EditorDiagnosticsViewModel : ViewModel, IDisposable
 {
     private readonly IDiagnosticRecordReader? _reader;
     private readonly EditorDiagnosticsOptions _options;
@@ -50,19 +50,18 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
     public string ExportPath
     {
         get => _exportPath;
-        set { VerifyOpen(); ArgumentNullException.ThrowIfNull(value); if (_exportPath == value) return; _exportPath = value; Changed(nameof(ExportPath)); }
+        set { VerifyOpen(); ArgumentNullException.ThrowIfNull(value); if (_exportPath == value) return; _exportPath = value; OnPropertyChanged(nameof(ExportPath)); }
     }
-    public bool IsOpen { get => _open; set { VerifyOpen(); if (_open == value) return; _open = value; Changed(nameof(IsOpen)); } }
-    public bool FollowTail { get => _follow; set { VerifyOpen(); if (_follow == value) return; _follow = value; Changed(nameof(FollowTail)); } }
-    public bool GroupRepeats { get => _group; set { VerifyOpen(); if (_group == value) return; _group = value; Rebuild(); Changed(nameof(GroupRepeats)); } }
-    public DiagnosticLevel? MinimumLevel { get => _level; set { VerifyOpen(); if (value.HasValue && !Enum.IsDefined(value.Value)) throw new ArgumentOutOfRangeException(nameof(value)); if (_level == value) return; _level = value; Rebuild(); Changed(nameof(MinimumLevel)); } }
+    public bool IsOpen { get => _open; set { VerifyOpen(); if (_open == value) return; _open = value; OnPropertyChanged(nameof(IsOpen)); } }
+    public bool FollowTail { get => _follow; set { VerifyOpen(); if (_follow == value) return; _follow = value; OnPropertyChanged(nameof(FollowTail)); } }
+    public bool GroupRepeats { get => _group; set { VerifyOpen(); if (_group == value) return; _group = value; Rebuild(); OnPropertyChanged(nameof(GroupRepeats)); } }
+    public DiagnosticLevel? MinimumLevel { get => _level; set { VerifyOpen(); if (value.HasValue && !Enum.IsDefined(value.Value)) throw new ArgumentOutOfRangeException(nameof(value)); if (_level == value) return; _level = value; Rebuild(); OnPropertyChanged(nameof(MinimumLevel)); } }
     public string Search { get => _search; set => Filter(ref _search, value, nameof(Search)); }
     public string Source { get => _source; set => Filter(ref _source, value, nameof(Source)); }
     public string EventName { get => _event; set => Filter(ref _event, value, nameof(EventName)); }
     public string Session { get => _session; set => Filter(ref _session, value, nameof(Session)); }
     public string Generation { get => _generation; set => Filter(ref _generation, value, nameof(Generation)); }
     public string RuntimeRole { get => _role; set => Filter(ref _role, value, nameof(RuntimeRole)); }
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     public void Toggle() => IsOpen = !IsOpen;
 
@@ -153,7 +152,7 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
     {
         VerifyOpen(); ArgumentNullException.ThrowIfNull(value);
         if (value.Length > 256) value = value[..256];
-        if (field == value) return; field = value; Rebuild(); Changed(property);
+        if (field == value) return; field = value; Rebuild(); OnPropertyChanged(property);
     }
 
     private void Evict() { var old = _records.Dequeue(); _bytes -= old.Bytes; _evicted++; }
@@ -164,7 +163,7 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
             ? visible.GroupBy(GroupKey).Select(group => new EditorDiagnosticEntry(group.First(), group.Count()))
             : visible.Select(record => new EditorDiagnosticEntry(record, 1))).ToArray());
         if (_selection.HasValue && !_records.Any(item => item.Record.Sequence == _selection)) _selection = null;
-        UpdateDetails(); RebuildRows(); Changed(nameof(Entries)); Changed(nameof(Summary));
+        UpdateDetails(); RebuildRows(); OnPropertyChanged(nameof(Entries)); OnPropertyChanged(nameof(Summary));
     }
 
     private bool Matches(DiagnosticRecord record) => (!_level.HasValue || record.Level >= _level) &&
@@ -187,8 +186,8 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
         var record = _records.FirstOrDefault(item => item.Record.Sequence == _selection).Record;
         var text = Mode != EditorDiagnosticMode.Structured ? (_inspectedContext.Length == 0 ? "Выберите снимок. Обновить детали — получить новый. Raw text и ошибки могут содержать личные пути." : _inspectedContext)
             : record == null ? "Выберите событие. Ctrl+C в списке копирует его детали; текст может содержать личные пути." : Format(record);
-        if (_details != text) { _details = text; Changed(nameof(Details)); }
-        Changed(nameof(SelectedId));
+        if (_details != text) { _details = text; OnPropertyChanged(nameof(Details)); }
+        OnPropertyChanged(nameof(SelectedId));
     }
 
     private static string Format(DiagnosticRecord record)
@@ -240,13 +239,12 @@ public sealed partial class EditorDiagnosticsViewModel : INotifyPropertyChanged,
         return (record, 256 + 2 * (_options.MaximumRecordCharacters - remaining) + properties.Count * 128);
     }
 
-    private void Changed(string property) => PropertyChanged?.Invoke(this, new(property));
     private void VerifyOpen() => ObjectDisposedException.ThrowIf(_disposed, this);
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true; StopAsync().GetAwaiter().GetResult(); _lifetime.Dispose(); _records.Clear(); _entries = Array.Empty<EditorDiagnosticEntry>();
         _bytes = 0; _details = ""; _rows = []; _processes = null; _health = null; _inspectedContext = ""; _selectedSource = null; _navigation = null;
-        _presentation = null; _exportCancellation?.Dispose(); _exportCancellation = null; PropertyChanged = null;
+        _presentation = null; _exportCancellation?.Dispose(); _exportCancellation = null; ClearPropertyChangedSubscribers();
     }
 }

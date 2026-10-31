@@ -62,7 +62,7 @@ public sealed class EditorCommands
         try { await _dispatch(EditorCommand.Stop, CancellationToken.None).ConfigureAwait(false); await pending.ConfigureAwait(false); }
         catch { lock (_gate) _closing = false; throw; }
     }
-    private static Func<EditorCommand, CancellationToken, Task> Dispatch(GameEditor editor, Task ready)
+    internal static Func<EditorCommand, CancellationToken, Task> Dispatch(GameEditor editor, Task ready)
     {
         ArgumentNullException.ThrowIfNull(editor); ArgumentNullException.ThrowIfNull(ready);
         return async (command, token) =>

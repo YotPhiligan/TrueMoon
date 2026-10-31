@@ -1,6 +1,52 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-10-31, ED4c.3 операции объектов и UI commands**.
+Последняя реализация — **2026-10-31, ED6b.2b.1 захваченная C#-компиляция**.
+Scene Start собирает из owned copies source/generated/reference/config/compiler bytes
+после trusted SDK preparation; original compiler/reference bytes также проверяются до Start.
+Пути исходников/diagnostics сохраняются, staging удаляется до возврата Build result.
+C# library profile fail-closed для opaque inputs/custom extensions; schema1 прежняя.
+Aether1683/Editor943 отдельно Debug/Release, failed/skipped0;26новых cases.
+Fresh15packages/headless8 и published source/NuGet standard/embedded4/4:44children
+reaped/released,40graceful validation0/0, UI/GPU/handles0;4PNG просмотрены.
+Каждая native compilation захватывает188files/42105392bytes; fingerprints повторных
+сборок совпадают. [Scope/commands/findings](engine/HISTORY.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
+Далее ED6b.2b.2 closure до evaluation/preparation. Arbitrary task/generator IO,
+installed runtime/environment, cache/reuse/Replace/full ED6b/HUD/input/Player и
+historical popup/output-drain/hardware/release follow-ups открыты. Другие suites не повторены.
+
+Предыдущее планирование — **2026-10-31, качество UI-рендеринга и текста PA8c**.
+[UI план](alloy/PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31) содержит baseline,
+text/DPI/font/image/composition улучшения, performance и visual acceptance.
+Это документация, новых code/build/test/native/package результатов нет.
+Приоритет ED6b сохранён; первый шаг новой ветки — PA8c.0.
+
+Предыдущая реализация — **2026-10-31, UIA1e Bindable → ViewModel**.
+Argentis переиспользует INotifyPropertyChanged в общей базе; Editor models/settings
+sample подключены к иерархии. UI919/919 и Editor923/923 Debug/Release, failed/skipped0.
+[Контракт/evidence](alloy/HISTORY.md#uia1e-bindable-и-viewmodel--2026-10-31).
+Другие module/full solution suites, package/native/physical проверки в этом шаге
+не повторялись. Общая очередь ED6b и прежние hardware/output-drain ограничения сохранены.
+
+Предыдущая работа — **2026-10-31, ED1b.2 project picker и runtime rebinding**.
+Retained project path UI, shared Save/Discard/Cancel и workspace/build identity
+согласованы до возврата admission; Close очищает context. Profile требует stopped
+game/idle compiler и drains active preview. Aether1631/Editor923 отдельно Debug/Release,
+failed/skipped0. [Scope/evidence](engine/HISTORY.md#ed1b2-project-picker-и-runtime-rebinding--2026-10-31).
+Final15fresh packages/headless8 и published source/NuGet standard/Cobalt +embedded/MS DI
+4/4workflows прошли;32children reaped/released,28graceful validation0/0,14PNG просмотрены.
+Далее ED6b document-aware Build/Play. Другие module suites и physical/release gates
+этими Aether/Editor runs не закрываются; старый output-drain follow-up открыт.
+
+Предыдущая работа — **2026-10-31, ED1b.1 project/document transitions**.
+Project API получил Switch с explicit Save/Discard/Cancel и guarded Close; failed
+preparation/cancel сохраняют текущую session/history, cleanup owners удерживаются для retry.
+Editor903/903 отдельно Debug/Release,20новых cases, failed/skipped0.
+[Scope/evidence](engine/HISTORY.md#ed1b1-projectdocument-transition-api--2026-10-31).
+Следовавшие project picker и runtime/build rebinding реализованы в ED1b.2 выше;
+ED1/ED6b остаются частичными. Другие suites и прежний package/native scope
+этим API-запуском не повторены.
+
+Предыдущая работа — **2026-10-31, ED4c.3 операции объектов и UI commands**.
 Atomic create/delete/duplicate, New presets, поиск и context menu используют общую
 engine history. Исправлена retained items/selection projection, включая несколько
 commits в одном UI update. Aether1629/Editor883/Alloy909/Hosting117 отдельно
@@ -104,8 +150,8 @@ VRAM/BSOD/general-release gates и полный solution run этим не за�
 | [Cobalt / DI](cobalt/STATUS.md) | Текущий179/generator91 Debug/Release; document/project ownership на Cobalt/MS DI | API прежние; performance/allocation backlog отдельно |
 | [Enerit](enerit/STATUS.md) | ENE6d.1–3 metrics/traces и отдельный Aether child lane; current343/generator114 Debug/Release; прежний package proof отдельно | Queue distribution; ENE6c/MMF/trends и расширенная platform/package matrix отдельно |
 | [Mithril](mithril/STATUS.md) | Ready-file reader исправлен с RED2→GREEN; полный111/111 Debug/Release, published composition14/restart20. Runtime/API и identity/reap assertions прежние | Ready-file follow-up закрыт; полный MIT6 fault matrix/containment/trends остаётся отдельным |
-| [Alloy / Argentis](alloy/STATUS.md) | ED4c.3 MenuPopup/context commands; Alloy909/Hosting117/Editor883 Debug/Release и published source/NuGet2/2 | Project/workflow consumer; physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
-| [Aether / Engine](engine/STATUS.md) | ED4c.3 create/delete/duplicate/history/New→Save/reopen; Aether1629/Editor883 Debug/Release и final packages/native | Project picker/switch → ED1/ED6 workflow. Intermittent drain/hardware/release gates отдельно |
+| [Alloy / Argentis](alloy/STATUS.md) | ED6b.2b.1 consumer; Editor943/Aether1683 Debug/Release и published native source/NuGet4/4; Alloy/Hosting suites не повторены | ED6b.2b.2 consumer; PA8c.0; ED8 popup follow-up. Physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
+| [Aether / Engine](engine/STATUS.md) | ED6b.2b.1 captured C# invocation; Aether1683/Editor943 Debug/Release, fresh15packages/headless8/native4/4 | ED6b.2b.2 closure до MSBuild preparation; cache/reuse/Replace/full ED6b и drain/popup/hardware/release follow-ups отдельно |
 
 Подробные contracts/commands/failures ведутся у владельцев. Historical packages,
 performance и аппаратные проверки не становятся частью текущего full solution.
@@ -173,8 +219,9 @@ GUI/native loading и independent NuGet подтверждены отдельн�
 
 ## Следующий конкретный шаг
 
-1. [Project picker/switch](engine/EDITOR_PLAN.md#ed1-проект-и-рабочая-сессия), затем
-   ED1/ED6 document/build/play workflow с общими ownership/unsaved/cancel contracts.
+1. [ED6b.2b.2](engine/EDITOR_PLAN.md#ed6b2b1-захваченная-c-компиляция--2026-10-31):
+   immutable closure до evaluation/preparation после captured C# invocation, до
+   artifact reuse/document-aware Replace. Project picker/scene Build/Play реализованы.
 2. Command/frame aggregates после scoped ED8a. App-private routing и общий artifact quota
    требуют отдельных контрактов; native/hardware stress gates не подменяются console UI.
 3. При возврате к gameplay — ENG5c.3 collisions камеры, затем HUD/Player по их планам.

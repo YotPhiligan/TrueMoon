@@ -9,7 +9,14 @@ namespace TrueMoon.Aether.Builds;
 /// <param name="SourceRevision">Caller revision; build completion never changes the running session automatically.</param>
 /// <param name="Dependencies">Explicit private managed DLLs; no native/assets/framework/contract copies.</param>
 public sealed record GameBuildRequest(string ProjectPath, string EntryAssembly, string EntryType, long SourceRevision,
-    IReadOnlyList<string>? Dependencies = null);
+    IReadOnlyList<string>? Dependencies = null)
+{
+    /// <summary>Opt-in evaluated-input witness and rechecks around compilation/startup. Not a hermetic build sandbox.</summary>
+    public bool TrackInputs { get; init; }
+    /// <summary>Compile from owned byte copies of prepared C# inputs and SDK compiler files. Requires TrackInputs.</summary>
+    /// <remarks>Trusted MSBuild preparation and installed dotnet runtime remain outside this bounded capture profile.</remarks>
+    public bool CaptureCompilation { get; init; }
+}
 
 /// <summary>A child bootstrap reference to an already-published, validated artifact.</summary>
 /// <param name="DirectoryPath">Absolute artifact directory.</param>

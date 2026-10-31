@@ -55,12 +55,25 @@ public sealed class GameEditor
     }
 
     /// <summary>Builds a candidate without changing the running world. Stale completion is rejected.</summary>
+    /// <remarks>Closing a project uses ClearContext after stopping its runtime.</remarks>
     public Task<GameBuildArtifact> BuildAsync(CancellationToken token = default)
         => Run(GameEditorOperation.Build, async command =>
         {
             var build = await _builds.BuildAsync(command.Context.Build, command.Cancellation.Token).ConfigureAwait(false);
             Select(command, build); return build;
         }, token, clearCandidate: true);
+
+    /// <summary>Removes project/build identity and invalidates candidates and pending results. Does not stop the runtime.</summary>
+    /// <remarks>The host must stop/drain the runtime before closing its project.</remarks>
+    public void ClearContext()
+    {
+        lock (_gate)
+        {
+            EnsureOpen();
+            _status = _status with { ContextVersion = checked(_status.ContextVersion + 1), Context = null, Candidate = null, Error = null };
+            _active?.Cancellation.Cancel();
+        }
+    }
 
     /// <summary>Explicitly selects a previously published build for the current context and runtime.</summary>
     public Task<GameBuildArtifact> SelectBuildAsync(GameBuildArtifact build, CancellationToken token = default)
@@ -86,14 +99,37 @@ public sealed class GameEditor
 
     /// <summary>Explicitly starts/reset the scene using the selected build, or the fixed runtime when none is selected.</summary>
     public Task StartAsync(int width, int height, CancellationToken token = default)
+        => StartCoreAsync(width, height, null, token);
+
+    /// <summary>Starts only a selected build from the exact expected context; never falls back to the fixed runtime.</summary>
+    /// <param name="width">Initial viewport width.</param><param name="height">Initial viewport height.</param>
+    /// <param name="expectedContextVersion">Context captured by the caller before building.</param><param name="token">Startup cancellation.</param>
+    /// <returns>Actual startup/presentation completion.</returns>
+    public Task StartBuildAsync(int width, int height, long expectedContextVersion, CancellationToken token = default)
+    {
+        if (expectedContextVersion < 0) throw new ArgumentOutOfRangeException(nameof(expectedContextVersion));
+        return StartCoreAsync(width, height, expectedContextVersion, token);
+    }
+
+    private Task StartCoreAsync(int width, int height, long? expectedVersion, CancellationToken token)
         => Run(GameEditorOperation.Start, async command =>
         {
-            var candidate = Candidate(command, required: false);
+            var candidate = Candidate(command, required: expectedVersion.HasValue);
+            if (command.Context.Build.TrackInputs && candidate?.Build.Inputs == null)
+                throw new InvalidOperationException("Tracked startup requires the original build input witness; build again instead of reopening an artifact.");
+            if (command.Context.Build.CaptureCompilation && candidate?.Build.Compilation == null)
+                throw new InvalidOperationException("Captured startup requires the original captured compilation result.");
+            if (candidate?.Build.Inputs is { } inputs)
+            {
+                if (candidate.Build.Compilation is { } compilation) await _builds.VerifyInputsAsync(inputs, compilation, command.Cancellation.Token).ConfigureAwait(false);
+                else await _builds.VerifyInputsAsync(inputs, command.Cancellation.Token).ConfigureAwait(false);
+            }
+            lock (_gate) CheckCurrent(command);
             if (candidate == null) await _frames.StartAsync(command.Context.Scene, width, height, token: command.Cancellation.Token).ConfigureAwait(false);
             else await _frames.StartAsync(command.Context.Scene, candidate.Build, width, height, token: command.Cancellation.Token).ConfigureAwait(false);
             lock (_gate) if (_status.ContextVersion == command.Version) _status = _status with { Candidate = null };
             return true;
-        }, token);
+        }, token, expectedVersion: expectedVersion);
 
     /// <summary>Applies the selected candidate through the checkpoint/rollback transaction.</summary>
     public Task<GameReplacementResult> ReplaceAsync(CancellationToken token = default)
@@ -180,12 +216,15 @@ public sealed class GameEditor
             throw new OperationCanceledException("Command completed for an earlier Editor context/runtime.");
     }
     private void EnsureOpen() => ObjectDisposedException.ThrowIf(_status.Closed, this);
-    private Task<T> Run<T>(GameEditorOperation kind, Func<Command, Task<T>> action, CancellationToken token, bool clearCandidate = false)
+    private Task<T> Run<T>(GameEditorOperation kind, Func<Command, Task<T>> action, CancellationToken token, bool clearCandidate = false,
+        long? expectedVersion = null)
     {
         Command command; var result = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_gate)
         {
             EnsureOpen();
+            if (expectedVersion.HasValue && expectedVersion.Value != _status.ContextVersion)
+                throw new OperationCanceledException("The requested build belongs to an earlier Editor context.", token);
             if (_active != null || _stop is { IsCompleted: false }) throw new InvalidOperationException("An Editor command is already running.");
             var context = _status.Context ?? throw new InvalidOperationException("Select an Editor context first.");
             command = new(context, _status.ContextVersion, _supervisor.Status.Identity, _supervisor.StopVersion,

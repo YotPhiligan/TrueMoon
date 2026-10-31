@@ -21,6 +21,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     private readonly List<DelegateUiCommand> _commands = [];
     private Element? _hint;
     private TimeSpan _hintRemaining;
+    private bool _refreshPending;
     private readonly Dictionary<EditorCommand, IUiCommand> _runtime = [];
     private readonly Dictionary<DocumentCommand, IUiCommand> _documents = [];
     /// <summary>Gets the compact disclosure and application menus.</summary>
@@ -79,14 +80,15 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
                     EditorCommand.Replace => model.CanReplace, EditorCommand.Cancel => model.CanCancel, _ => false
                 }));
             }
-            foreach (var command in new[] { DocumentCommand.New, DocumentCommand.Open, DocumentCommand.Save, DocumentCommand.SaveAs, DocumentCommand.Close })
+            foreach (var command in new[] { DocumentCommand.New, DocumentCommand.Open, DocumentCommand.Save, DocumentCommand.SaveAs, DocumentCommand.Close, DocumentCommand.OpenProject, DocumentCommand.CloseProject })
             {
                 var value = command;
                 _documents.Add(value, Command(() => documents.Request(value), () => value switch
                 {
                     DocumentCommand.New => documents.CanNew, DocumentCommand.Open => documents.CanOpen,
                     DocumentCommand.Save => documents.CanSave, DocumentCommand.SaveAs => documents.CanSaveAs,
-                    DocumentCommand.Close => documents.CanClose, _ => false
+                    DocumentCommand.Close => documents.CanClose,
+                    DocumentCommand.OpenProject => documents.CanOpenProject, DocumentCommand.CloseProject => documents.CanCloseProject, _ => false
                 }));
             }
             RunCommand = Command(model.RunSimulation, () => model.CanRun);
@@ -116,6 +118,8 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
                         new("view.diagnostics", "Диагностика", Command(diagnostics.Toggle), UiSymbol.Info)]),
                 new("project", "Проект",
                 [
+                    File(DocumentCommand.OpenProject, "Открыть проект по пути", UiSymbol.Folder),
+                    File(DocumentCommand.CloseProject, "Закрыть проект", UiSymbol.Close),
                     Runtime(EditorCommand.Build, "Собрать проект", UiSymbol.Build),
                     Runtime(EditorCommand.Replace, "Применить сборку", UiSymbol.Build),
                     Runtime(EditorCommand.Cancel, "Отменить операцию", UiSymbol.Close)
@@ -168,14 +172,19 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     }
     private void Watch(INotifyPropertyChanged model)
     {
-        void Changed(object? sender, PropertyChangedEventArgs args) => Dispatch(() =>
-        { foreach (var command in _commands) command.Refresh(); UpdateCaption(); });
+        void Changed(object? sender, PropertyChangedEventArgs args)
+        {
+            if (_refreshPending) return;
+            _refreshPending = true;
+            Dispatch(() => { _refreshPending = false; foreach (var command in _commands) command.Refresh(); UpdateCaption(); });
+        }
         model.PropertyChanged += Changed;
         Own(new Subscription(() => model.PropertyChanged -= Changed));
     }
     private void UpdateCaption()
     {
-        Caption.Value = _baseTitle + (_documentModel.Document?.Content == null ? "" : " · " + _documentModel.Title);
+        Caption.Value = _baseTitle + (_documentModel.ProjectName.Length == 0 ? "" : " · " + _documentModel.ProjectName) +
+            (_documentModel.Document?.Content == null ? "" : " · " + _documentModel.Title);
         Caption.AccessibleName = Caption.Value + "\n" + (_documentModel.Document?.Path ?? _documentModel.ScenesRoot);
     }
     private void ToggleTheme()
@@ -241,7 +250,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
         _hintRemaining = TimeSpan.Zero; _hint = null;
         if (ReferenceEquals(_overlays.PopupOwner, this)) _overlays.Close(false);
     }
-    private void Detached() { if (!IsAttached) { _hintRemaining = TimeSpan.Zero; _hint = null; } }
+    private void Detached() { if (!IsAttached) { _hintRemaining = TimeSpan.Zero; _hint = null; _refreshPending = false; } }
     private sealed class Subscription(Action release) : IDisposable { public void Dispose() => release(); }
 
     private sealed class HeaderHintSurface : Border

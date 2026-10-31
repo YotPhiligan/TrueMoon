@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using TrueMoon.Aether.Builds;
 
 namespace TrueMoon.Aether.Editor.Diagnostics;
@@ -23,7 +23,7 @@ public sealed partial class EditorDiagnosticsViewModel
         _navigationStatus = "Открытие исходника…";
         try { _navigation = _navigator!.OpenAsync(_selectedSource!, _lifetime.Token); }
         catch (Exception error) { _navigation = Task.FromException(error); }
-        ObserveNavigation(); Changed(nameof(CanOpenSource)); Changed(nameof(NavigationStatus));
+        ObserveNavigation(); OnPropertyChanged(nameof(CanOpenSource)); OnPropertyChanged(nameof(NavigationStatus));
     }
 
     private void ObserveNavigation()
@@ -33,7 +33,7 @@ public sealed partial class EditorDiagnosticsViewModel
         try { completed.GetAwaiter().GetResult(); _navigationStatus = "Запрос на открытие исходника отправлен."; }
         catch (OperationCanceledException) { _navigationStatus = "Открытие исходника отменено."; }
         catch (Exception error) { _navigationStatus = "Исходник не открыт: " + error.GetType().Name; }
-        Changed(nameof(CanOpenSource)); Changed(nameof(NavigationStatus));
+        OnPropertyChanged(nameof(CanOpenSource)); OnPropertyChanged(nameof(NavigationStatus));
     }
 
     private IEnumerable<EditorDiagnosticRow> CompilerRows()
@@ -76,7 +76,7 @@ public sealed partial class EditorDiagnosticsViewModel
             if (_contextSelection != null) break;
         }
         _inspectedContext = Display(_inspectedContext, 12288);
-        UpdateDetails(); Changed(nameof(CanOpenSource)); Changed(nameof(CanRefreshDetails));
+        UpdateDetails(); OnPropertyChanged(nameof(CanOpenSource)); OnPropertyChanged(nameof(CanRefreshDetails));
     }
 
     private bool HasCompilerSelection(string id) => _processes?.Processes.Any(process => process.CompilerDiagnostics is { } batch &&

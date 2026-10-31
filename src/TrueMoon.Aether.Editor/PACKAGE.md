@@ -65,6 +65,27 @@ disposes its model. Non-disposable lifecycle aliases prevent double disposal.
 Failed startup runs App rollback; cleanup failures remain observable and existing
 document/engine cleanup methods retain their retry semantics.
 
+With an open authoring scene, Run builds the selected game project and starts an
+independent runtime copy of the current in-memory snapshot. Save is optional;
+unapplied inspector drafts must be applied/cancelled first. Preview drains before
+game startup. Pause/Resume/Step/Stop preserve the editor document, dirty checkpoint,
+selection and history. File/project edits remain fenced while preparing/playing;
+Stop cleanup failure retains retry admission. Each Start builds anew and requires
+the exact candidate/context version, with no fixed-runtime fallback. Tracked scene
+builds observe evaluated files/options, preprocessed imports and managed HintPath
+references before/after compilation and again before Start. Persistent changes reject
+startup. The initial profile is one net10.0 SDK project without PackageReference or
+ProjectReference; unsupported graphs fail closed. The process-local witness is lost
+when reopening an artifact; schema1 is unchanged. Scene startup also opts into
+CaptureCompilation: trusted SDK preparation returns exact Csc args, compiler and
+source/generated/reference/config bytes are copied, and Csc compiles from those copies.
+Source paths/diagnostics are mapped back and staging is released before Start. This
+bounded C# library profile rejects opaque compiler inputs/custom analyzers and
+resource/ruleset/signing profiles. Installed dotnet runtime/environment and arbitrary
+preparation task/generator IO remain trusted; full pre-evaluation source closure is
+still planned. This slice does not add live copyback,
+document-aware Replace, gameplay input/HUD or standalone Player features.
+
 The aggregate also registers a retained diagnostics console, opened through
 View / Diagnostics in the standard header. It borrows IDiagnosticRecordReader
 from bounded UseDiagnostics; without one, the console explicitly shows history

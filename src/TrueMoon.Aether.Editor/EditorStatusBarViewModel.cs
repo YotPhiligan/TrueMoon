@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using TrueMoon.Argentis;
 using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Aether.Editing;
@@ -10,7 +11,7 @@ namespace TrueMoon.Aether.Editor;
 public enum EditorStatusKind { Ready, Busy, Paused, Running, Error, Waiting }
 
 /// <summary>App-owned status presentation borrowing the existing runtime/document/preview models.</summary>
-public sealed class EditorStatusBarViewModel : INotifyPropertyChanged, IDisposable
+public sealed class EditorStatusBarViewModel : ViewModel, IDisposable
 {
     private readonly EditorViewModel _editor;
     private readonly EditorDocumentViewModel _documents;
@@ -51,8 +52,6 @@ public sealed class EditorStatusBarViewModel : INotifyPropertyChanged, IDisposab
     public bool CanPreview => _canPreview;
     /// <summary>Existing preview stop/recovery admission.</summary>
     public bool CanStopPreview => _canStopPreview;
-    /// <inheritdoc />
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     private void Changed(object? sender, PropertyChangedEventArgs args) { if (!_disposed) Refresh(); }
     private void Refresh()
@@ -71,11 +70,17 @@ public sealed class EditorStatusBarViewModel : INotifyPropertyChanged, IDisposab
         var errors = new[] { _editor.ErrorText, _documents.ErrorText, preview.Error?.Message ?? "" }
             .Where(s => s.Length != 0).Distinct().ToArray();
         var hadError = HasError;
-        Set(ref _error, string.Join("\n\n", errors).ReplaceLineEndings("\n"), nameof(ErrorDetails));
-        if (hadError != HasError) Notify(nameof(HasError));
+        SetProperty(ref _error, string.Join("\n\n", errors).ReplaceLineEndings("\n"), nameof(ErrorDetails));
+        if (hadError != HasError) OnPropertyChanged(nameof(HasError));
         var kind = EditorStatusKind.Ready;
         var summary = _editor.HasProject ? "Готово" : "Проект не открыт";
-        if (_documents.AwaitingDecision) { kind = EditorStatusKind.Waiting; summary = "Выберите: сохранить или отменить"; }
+        if (_documents.RuntimeOperation != GameEditorOperation.Idle)
+        {
+            kind = EditorStatusKind.Busy;
+            summary = _documents.RuntimeOperation switch
+            { GameEditorOperation.Build => "Сборка сцены…", GameEditorOperation.Start => "Подготовка и запуск сцены…", _ => "Команда игры…" };
+        }
+        else if (_documents.AwaitingDecision) { kind = EditorStatusKind.Waiting; summary = "Выберите: сохранить или отменить"; }
         else if (_documents.IsBusy)
         {
             kind = EditorStatusKind.Busy;
@@ -90,16 +95,16 @@ public sealed class EditorStatusBarViewModel : INotifyPropertyChanged, IDisposab
         else if (_editor.RuntimeState == SessionState.Playing) { kind = EditorStatusKind.Running; summary = "Симуляция"; }
         else if (_editor.RuntimeState == SessionState.Paused) { kind = EditorStatusKind.Paused; summary = "Симуляция на паузе"; }
         else if (_editor.RuntimeState is SessionState.Starting or SessionState.Stopping) { kind = EditorStatusKind.Busy; summary = runtime + "…"; }
-        Set(ref _kind, kind, nameof(Kind)); Set(ref _summary, summary, nameof(Summary));
-        Set(ref _entities, $"{_editor.EntityCount} объектов", nameof(EntityText));
-        Set(ref _runtime, $"{(preview.Active ? "Runtime Edit Preview" : "Runtime")}: {runtime} · Tick {_editor.Tick} · PID {_editor.ProcessId?.ToString() ?? "—"}", nameof(RuntimeDetails));
-        Set(ref _operation, "Операция: " + (kind is EditorStatusKind.Busy or EditorStatusKind.Waiting ? summary : operation), nameof(OperationDetails));
-        Set(ref _preview, preview.Error != null ? "Edit Preview: ошибка" : preview.Busy ? "Edit Preview: обновление…" :
+        SetProperty(ref _kind, kind, nameof(Kind)); SetProperty(ref _summary, summary, nameof(Summary));
+        SetProperty(ref _entities, $"{_editor.EntityCount} объектов", nameof(EntityText));
+        SetProperty(ref _runtime, $"{(preview.Active ? "Runtime Edit Preview" : "Runtime")}: {runtime} · Tick {_editor.Tick} · PID {_editor.ProcessId?.ToString() ?? "—"}", nameof(RuntimeDetails));
+        SetProperty(ref _operation, "Операция: " + (kind is EditorStatusKind.Busy or EditorStatusKind.Waiting ? summary : operation), nameof(OperationDetails));
+        SetProperty(ref _preview, preview.Error != null ? "Edit Preview: ошибка" : preview.Busy ? "Edit Preview: обновление…" :
             preview.Active ? "Edit Preview: вкл." : "Edit Preview: выкл.", nameof(PreviewSummary));
-        Set(ref _previewDetails, _transform.PreviewText, nameof(PreviewDetails));
-        Set(ref _canCancel, _documents.CanCancel || _editor.CanCancel || preview.Busy && _transform.CanStopPreview, nameof(CanCancel));
-        Set(ref _canPreview, _transform.CanPreview, nameof(CanPreview));
-        Set(ref _canStopPreview, _transform.CanStopPreview, nameof(CanStopPreview));
+        SetProperty(ref _previewDetails, _transform.PreviewText, nameof(PreviewDetails));
+        SetProperty(ref _canCancel, _documents.CanCancel || _editor.CanCancel || preview.Busy && _transform.CanStopPreview, nameof(CanCancel));
+        SetProperty(ref _canPreview, _transform.CanPreview, nameof(CanPreview));
+        SetProperty(ref _canStopPreview, _transform.CanStopPreview, nameof(CanStopPreview));
     }
     /// <summary>Cancels the active document/game operation, or drains a pending preview.</summary>
     public Task CancelAsync()
@@ -114,13 +119,11 @@ public sealed class EditorStatusBarViewModel : INotifyPropertyChanged, IDisposab
     public void ShowPreview() { ObjectDisposedException.ThrowIf(_disposed, this); _transform.ShowPreview(); }
     /// <summary>Fences and drains the existing preview owner.</summary>
     public Task StopPreviewAsync() { ObjectDisposedException.ThrowIf(_disposed, this); return _transform.StopPreviewAsync(); }
-    private void Set<T>(ref T field, T value, string name) { if (EqualityComparer<T>.Default.Equals(field, value)) return; field = value; Notify(name); }
-    private void Notify(string name) => PropertyChanged?.Invoke(this, new(name));
     /// <summary>Disconnects subscriptions; the injected models remain App-owned.</summary>
     public void Dispose()
     {
         if (_disposed) return; _disposed = true;
         _editor.PropertyChanged -= Changed; _documents.PropertyChanged -= Changed; _transform.PropertyChanged -= Changed;
-        PropertyChanged = null;
+        ClearPropertyChangedSubscribers();
     }
 }

@@ -21,6 +21,43 @@ project/documents/editing/preview/workflow/extensions/reliability. Первый 
 реализованы; ED2b подключает документы к обычному UI. Первый Transform inspector,
 Undo/Redo и independent Edit preview подключены к общему authoring API.
 
+## Запуск открытой сцены — ED6b.1
+
+В штатном UseAetherEditor графе ▶ запускает текущую authoring-сцену как отдельную
+игровую копию. Save не обязателен: захватывается текущий committed in-memory document,
+включая несохранённые изменения, но не неприменённые поля инспектора. Сначала Apply/
+Cancel для draft/conflict. Документ, dirty checkpoint, selection и Undo/Redo остаются
+в родительском Editor; изменения игры обратно не переносятся.
+
+Каждый Start/Run заново собирает выбранный game csproj. Сначала проектируется immutable
+scene snapshot, затем Edit Preview stop/drain/reap, установка context, Build и запуск
+точного candidate/context version. Обычный ▶ включает Play после actual first-present;
+«Запустить на паузе» оставляет Pause. Доступны Pause/Resume/Step/Stop. Во время подготовки
+и игры file/project actions и authoring edits закрыты общей admission. Cancel ждёт
+фактического завершения принятой работы; failed startup очищает owned runtime, failed
+cleanup оставляет Stop retry. После Stop можно продолжить редактирование и отдельно
+включить Edit Preview. Build failure и child crash не уничтожают authoring history.
+
+EditorScenePlayback — App-owned coordinator; low-level GameEditor и document API
+сохраняют отдельные contracts. Компиляционный SourceRevision здесь — монотонный номер
+запроса. ED6b.2a дополнительно проверяет наблюдаемые MSBuild inputs до/после Build
+и перед Start: содержимое evaluated files и HintPath references, настройки и
+preprocessed imports. Изменённые входы запрещают запуск и требуют нового Build.
+Профиль: один net10.0 SDK project без PackageReference/ProjectReference. Witness
+хранится в памяти; повторное открытие artifact не восстанавливает доверенный witness.
+Штатный scene Start также включает ED6b.2b.1 CaptureCompilation: после SDK preparation
+компилятор, source/generated/reference/config inputs копируются в owned workspace;
+отдельный Csc собирает из этих bytes без повторного MSBuild. После capture edits
+оригиналов не влияют на compilation, но прежние stale checks всё равно требуют
+актуальные исходники до Start. Source paths/diagnostics сохраняются, staging очищается.
+Это ограниченный C# library profile; opaque compiler inputs/custom analyzers и
+resource/ruleset/signing profiles отклоняются. MSBuild preparation, installed dotnet
+runtime и ambient environment остаются trusted; transient edits во время preparation
+и произвольный IO tasks/generators ещё не изолированы. Полный source closure,
+переиспользование artifacts для изменяемых исходников, document-aware Replace, gameplay
+input/HUD/Player расширения остаются следующими срезами ED6b. Предел projected runtime
+scene64entities и текущий supported viewport profile сохраняются.
+
 Первый основной экран редактора: стандартное borderless оформление Alloy,
 компактный заголовок с меню и симуляцией, дерево сущностей слева, живой3D viewport в центре,
 динамический инспектор компонентов справа и строка состояния снизу. Desktop host WinExe
@@ -238,7 +275,7 @@ Scene files и project/user preferences имеют отдельные владе
 theme/layout и machine-specific settings в manifest не сохраняются.
 
 `UseAetherEditorProjects()` подключает API без окна/engine/native startup.
-`EditorProjects.OpenAsync/CreateAsync/CloseAsync` управляют одним active project;
+`EditorProjects.OpenAsync/CreateAsync/SwitchAsync/CloseAsync` управляют одним active project;
 `IFactory<ProjectSession, ProjectSessionArguments>` создаёт owned products.
 Create сначала проверяет существующий игровой проект/корни/SDK и атомарно
 публикует новый manifest без overwrite. Шаблоны игры и project wizard ещё не введены.
@@ -263,10 +300,62 @@ admission окончательно. Если отмена пришла посл�
 Для тестов/интеграций store/toolchain/factory можно зарегистрировать до UseX;
 они заимствуются coordinator и принадлежат DI согласно их регистрации.
 
+ED1b.1 добавляет явную document policy для переключения и закрытия проекта.
+Host сначала удерживает admission своих команд и останавливает/drains preview и game;
+сам EditorProjects не владеет runtime. При подключённых documents:
+
+```csharp
+// using TrueMoon.Aether.Editor.Documents;
+await projects.SwitchAsync(nextManifest, DocumentCloseChoice.Save,
+    saveCurrentAs: "Untitled.aetherscene", cancellationToken: cancellationToken);
+await projects.CloseAsync(DocumentCloseChoice.Discard);
+```
+
+Switch сначала валидирует manifest/SDK и создаёт candidate; только затем сохраняет
+прежний документ либо применяет Discard при commit. Invalid candidate, failed Save
+и cancellation до publication сохраняют прежнюю session и Undo/Redo. Решение относится
+к точному document object: edit/replacement во время подготовки требует нового решения,
+даже при совпадающих ID/revision. Pending document IO не прерывается ради Discard.
+Save использует прежний project root и наблюдённый fingerprint; untitled требует
+saveCurrentAs. Успешная запись перед поздней отменой оставляет честный saved checkpoint.
+Cancel отменяет Task только при несохранённом документе; clean/empty project допускает переход.
+Старый OpenAsync и CloseAsync без policy сохраняют strict clean-only поведение.
+
+После publication отмена не откатывает новый проект. Ошибка disposal прежнего owner
+может завершить Switch с ошибкой при уже новом Active: owner удерживается для Close retry,
+дальнейший Open/Create/Switch запрещён до cleanup. Explicit Close ждёт подготовки/IO,
+исключает late publish и после document commit завершает owned disposal без detach.
+App shutdown остаётся terminal forced discard/drain.
+
+ED1b.2 подключает эти transitions к стандартному меню «Проект»: «Открыть проект по пути»
+показывает retained prompt для полного пути .aetherproj, «Закрыть проект» возвращает
+пустую workspace. Project path, scene path и first-save path хранятся отдельно;
+Escape отменяет ввод, Enter подтверждает. Это ввод явного пути; OS file picker,
+recent projects и project wizard остаются следующими расширениями.
+
+Project/document действия используют общую tracked queue и Save/Discard/Cancel.
+Project commands доступны при stopped/idle game/compiler; сначала остановите игру.
+Активный Edit Preview fences/drains после candidate validation и подтверждения решения.
+Invalid manifest/SDK и Cancel оставляют прежние документ/history/selection и runtime context.
+Failed Save/drain показывают ошибку с возможностью повторить действие. Switch не закрывает
+весь runtime command service: после открытия другого проекта Build снова доступен.
+
+До возврата command admission binding устанавливает GameEditor context нового проекта,
+сбрасывая candidate прежней сборки. Close очищает context. Workspace, selection,
+inspector/hierarchy и caption синхронизируются на UI owner; свежие guards не позволяют
+вызвать game action из ещё старой presentation. Failed binding блокирует game/document
+actions и сохраняет actual project identity; Close/reopen остаются recovery path.
+Custom compositions без supplied project binding сохраняют прежние document commands,
+project menu actions в них disabled. UseAetherEditor регистрирует binding через App/Cobalt;
+новых scopes нет. Штатный граф дополнительно предоставляет document-aware Build/Play
+через EditorScenePlayback по ED6b.1 выше. Custom graph без этого coordinator сохраняет
+прежнюю блокировку game actions при открытом authoring document.
+
 Открытие `.aetherproj` пока выбирает project/build identity, но не загружает сцену:
 ED2a предоставляет document loading/save/reopen API, ED2b — панель документов и
-Save/Discard/Cancel. Выбор другого проекта через UI, общие меню/диалоги и runtime
-coordination развиваются в ED1/ED4/ED6. Edit Preview открытого документа доступен в строке состояния.
+Save/Discard/Cancel. Выбор другого проекта через shared path prompt реализован ED1b.2;
+OS picker, recent projects и полный игровой workflow развиваются в ED1/ED4/ED6.
+Edit Preview открытого документа доступен в строке состояния.
 
 ## Документ сцены ED2a
 
@@ -399,9 +488,9 @@ control characters, integer/number/null сохраняют смысл. Сохр�
 не перестраивают shell, viewport, поле пути или неизменившиеся entity controls.
 
 Операции документов выполняются при stopped/idle runtime/compiler либо в Edit preview.
-Во время IO/decision и при открытом authoring document игровые действия
-заблокированы: привязка scene document к Build/Play остаётся ED6.
-Project picker и file browser ещё не реализованы;
+Во время IO/decision игровые действия заблокированы. Открытый authoring document
+подключён к Build/Play в штатном графе через ED6b.1 выше; custom legacy graphs
+сохраняют прежнюю блокировку. Project path prompt реализован; OS file browser ещё запланирован;
 explicit legacy .csproj сохраняет прежний игровой workflow.
 
 Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smoke-documents`.

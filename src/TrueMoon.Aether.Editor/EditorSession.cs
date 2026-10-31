@@ -38,8 +38,13 @@ public sealed class EditorSession : IStartable, IStoppable
         if (_options.ProjectPath == null) return;
         try
         {
-            var project = await _projects.OpenAsync(_options.ProjectPath, cancellationToken).ConfigureAwait(false);
-            _engine.Editor.SetContext(new(project.CreateBuildRequest(_workspace.Scene.Revision), _workspace.Scene, _workspace.SelectedId ?? ""));
+            if (!_documents.Execute(DocumentCommand.OpenProject, _options.ProjectPath))
+                throw new InvalidOperationException("Project startup was not admitted.");
+            using var cancellation = cancellationToken.Register(_documents.Cancel);
+            await _documents.Pending.ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_documents.Read().Error is { } error) throw error;
+            if (_projects.Active == null) throw new OperationCanceledException(cancellationToken);
         }
         catch (Exception failure)
         {
@@ -59,7 +64,7 @@ public sealed class EditorSession : IStartable, IStoppable
         if (!ReferenceEquals(view.DataContext, _model)) throw new ArgumentException("View belongs to another editor App.", nameof(view));
         _viewport.Observe(ui, view);
         if (view.Canvas.DrawnFrame is { } frame && !_engine.Preview.Presented(frame)) _engine.Frames.Presented(frame);
-        _model.Refresh(_engine.Supervisor.Status, _engine.Editor.Status, _commands.Error ?? _engine.Frames.TransportError);
+        _model.Refresh(() => _engine.Supervisor.Status, () => _engine.Editor.Status, _commands.Error ?? _engine.Frames.TransportError);
         var now = System.Diagnostics.Stopwatch.GetTimestamp();
         if (_diagnostics != null && now >= _nextDiagnosticsRefresh)
         {

@@ -4,14 +4,16 @@ using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Scenes.Authoring;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Editor.Hierarchy;
+using TrueMoon.Aether.Editor.Projects;
 
 namespace TrueMoon.Aether.Editor;
 
 /// <summary>UI-owned scene selection and immutable runtime presentation; mutations still go through Aether commands.</summary>
 public sealed class EditorWorkspace
 {
-    private readonly SceneEntity[] _entities;
-    private readonly SceneSnapshot _initialScene;
+    private SceneEntity[] _entities;
+    private SceneSnapshot _initialScene;
+    private bool _projectSynchronized;
     private SceneAuthoringState? _document;
     private string? _selected;
     private IReadOnlyList<HierarchyItem> _hierarchy = [];
@@ -23,7 +25,19 @@ public sealed class EditorWorkspace
     }
     public SceneSnapshot Scene { get; private set; }
     /// <summary>Gets whether build/game actions have an explicitly selected project.</summary>
-    public bool HasProject { get; }
+    public bool HasProject { get; private set; }
+    /// <summary>Borrowed project identity last presented by the UI owner; null also supports legacy compositions.</summary>
+    public ProjectSession? Project { get; private set; }
+    /// <summary>Replaces project presentation on the UI owner, clearing selection and all previous scene data.</summary>
+    /// <param name="project">Actual committed project, or null for an empty workspace.</param>
+    public void SetProject(ProjectSession? project)
+    {
+        if (_projectSynchronized && ReferenceEquals(Project, project)) return;
+        _projectSynchronized = true; Project = project; HasProject = project != null;
+        _document = null; _entities = []; _selected = null; HasCandidate = false;
+        Scene = _initialScene = new(project == null ? "Проект не открыт" : "Сцена не открыта", 0, []);
+        UpdateHierarchy(); SceneChanged?.Invoke(); SelectionChanged?.Invoke();
+    }
     public int EntityCount => _document?.Document.Entities.Length ?? _entities.Length;
     public IReadOnlyList<string> EntityIds => _entityIds;
     /// <summary>Gets stable immutable parent/name/role data for the current scene revision.</summary>

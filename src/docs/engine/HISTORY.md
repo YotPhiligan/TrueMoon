@@ -1,5 +1,431 @@
 # Engine / Editor: история решений и проверок
 
+## ED6b.2b.1: захваченная C#-компиляция — 2026-10-31
+
+По запросу продолжения ED6b реализован первый compiler-input byte capture после
+доверенной MSBuild preparation. Подробный контракт — только в
+[ED6b.2b.1](EDITOR_PLAN.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
+Scene requests включают CaptureCompilation+TrackInputs; legacy default false.
+SDK Compile выполняется с SkipCompilerExecution/ProvideCommandLineArgs, отдаёт actual
+Csc arguments после generated sources/ResolveReferences. Затем owned job копирует
+source/generated/additional/config inputs, managed references/reference packs,
+штатные SDK analyzers/generators и Csc DLL/deps/runtimeconfig/managed compiler files.
+Отдельный dotnet exec компилирует эти copies без повторного выполнения compile targets.
+Оригинальные witnessed files должны совпасть при capture. Действующие source evaluation
+checks до/после Build и перед Start сохраняются. Дополнительно original non-generated
+compiler/reference/config bytes сверяются после Build и перед Start; deleted generated
+files завершённого job не нужны. Чужая пара witness/capture rejected до SDK job.
+
+Capture — низкоуровневый resource compiler owner, не отдельный DI service. Прежние
+single-job admission,120s maximum budget, cancel/Stop/reap/output drain/cleanup retry
+сохраняются. Capture/work/output staging удаляется до возврата Build result;
+prepare/capture diagnostics включены в exact retention allowlist. Artifact.Compilation
+хранит immutable process-local hashes файлов/аргументов/SDK; schema1 прежняя, Open не
+восстанавливает trusted capture. Private output DLLs берутся из captured inputs.
+
+Profile — C# library с explicit compiler file inputs. Unknown/search/response-file
+switches, custom compiler/environment, external analyzers, resource/ruleset/signing и
+absolute analyzer-config sections fail closed. Entry DLL basename обязан совпасть.
+Пределы4096files/64MiB per file/256MiB total включают compiler/reference packs;
+preparation/response/config documents8MiB. Source tree mirror сохраняет relative config
+globs. CallerFilePath и user PathMap сохраняются, generated/PDB job paths имеют stable
+virtual prefix; structured source errors используют original paths после cleanup.
+Выбранный способ проверен на текущем SDK и описан в
+[официальном Roslyn C# target](https://github.com/dotnet/roslyn/blob/main/src/Compilers/Core/MSBuildTask/Microsoft.CSharp.Core.targets).
+
+Фактические Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest проверки:
+
+| Suite | Debug | Release | Failed/skipped |
+|---|---:|---:|---:|
+| Aether |1683|1683|0/0|
+| Editor |943|943|0/0|
+
+4full runs5252cases;26новых cases. Узкие проверки29engine/build +18scene playback
+прошли до full matrix. Captured Csc выполняется после порчи original source/reference/
+compiler: PE constant остаётся authored, CallerFilePath проверен через IL literal с
+обычным и user PathMap. SDK cases проверяют generated/reference pack/private files,
+matching fingerprints и exact DLL bytes двух jobs/tickets, source diagnostics line1,
+schema1 loss of provenance, MaxJobs1 retention и staging absence до смены diagnostic job.
+Есть unsupported/bad/missing/oversize/cancelled capture partitions, original compiler/
+reference changes, deleted job inputs, mismatched witness до SDK spawn. Real SDK search
+path fail-closed и held preparation cancellation подтверждают cleanup/reap. Direct
+GameEditor stale/matching Start используют capture; actual presentation и no-child
+guards прежние. Scene coordinator test проверяет оба opt-in flags.
+[4TRX/26cases/commands/source hashes](../../TestResults/CompilationCapture-ED6b2b-20261031-1/verification.json),
+[final runner](../../TestResults/CompilationCapture-ED6b2b-20261031-1/RunFinal.ps1),
+[quality review](../../TestResults/CompilationCapture-ED6b2b-20261031-1/test-quality.json),
+[docs/namespace/hash audit](../../TestResults/CompilationCapture-ED6b2b-20261031-1/docs-audit.json).
+
+Initial CallerFilePath RED выявил неверный Windows prefix при forward-slash mappings:
+native separators исправили source identity, assertion не ослаблялся.
+[RED TRX](../../TestResults/CompilationCapture-ED6b2b-20261031-1/CallerPath-first-red.trx).
+Второй RED выявил volatile PDB/output paths при одинаковом input fingerprint; virtual
+mapping теперь включает mirrored generated и actual owned output paths. Exact DLL-byte
+equality прошла. [RED TRX](../../TestResults/CompilationCapture-ED6b2b-20261031-1/PdbPath-first-red.trx).
+noconfig перенесён на actual command line за пределы response file, чтобы compiler
+не игнорировал его и не добавлял warning. Initial synchronous-throw test overload
+исправлен statement lambda; production guard и тип исключения сохранены.
+Roslyn parse-only Builds root до новых files:12sources/0tests, sibling tests вне root;
+это не coverage/absence conclusion. Rider findTests unavailable, fixtures прочитаны
+напрямую. Broad research/plan/status — non-stageable OS-temp. Static gap/assertion
+review завершён; empirical mutation/coverage не собирались. Deadlines не менялись.
+
+Fresh15packages и8headless cases прошли с isolated feed/cache/external solution.
+Published SourceRelease/PackageRelease ×standard/Cobalt и embedded/MS DI:4/4workflows
+без дополнительных replay в этом срезе. Каждый выполняет2fresh scene game builds,
+проверяет source/captured compiler fingerprints, actual GPU pixels/child-only game
+DLL, preview reap до game startup, Pause/Step/Stop, parent history/dirty/selection.
+На каждую native compilation188files/42105392bytes; fingerprints двух fresh builds
+одинаковы при разных artifact/child IDs, capture staging удалён до Start.
+44Runtime children reaped/released (8game),40graceful Vulkan reports0errors/0warnings,
+resources/handles0, final UI/GPU/handles0.4PNG просмотрены: cube, selected Scene Guardian,
+X1.65 disabled, paused status, preview off, standard dirty caption; geometry читаема.
+Framework source/package hashes после runs совпадают.
+[Packages](../../TestResults/CompilationCapture-Packages-20261031-1/verification.json),
+[source GUI](../../TestResults/CompilationCapture-Native-SourceRelease-20261031-1/verification.json),
+[NuGet GUI](../../TestResults/CompilationCapture-Native-PackageRelease-20261031-1/verification.json),
+[acceptance/PNG hashes](../../TestResults/CompilationCapture-ED6b2b-20261031-1/acceptance.json).
+
+Это не общий hermetic MSBuild build: preparation tasks/generators могут выполнять
+произвольный IO, installed dotnet runtime и ambient environment остаются trusted.
+Transient edits до freeze, полный pre-evaluation project/import closure и произвольные
+postcompile/postbuild semantics не воспроизводятся этим profile. Owned job placement/
+source-glob exclusion также входит в дальнейшую closure policy; проверенная matrix
+держит job root вне игрового source tree. PackageReference/ProjectReference, arbitrary
+compiler extensions, cache/reuse/Replace, full ED6b/HUD/input/Player и expanded native
+game-crash/physical/loss/VRAM/release gates остаются открытыми. Historical popup и
+output-drain causes этим passing run не объявляются исправленными. Другие module/
+full solution suites не повторялись; control/frame/checkpoint formats прежние.
+
+## ED6b.2a: наблюдаемые входы сборки — 2026-10-31
+
+Продолжение ED6b добавляет process-local immutable content witness и stale input
+rejection. Детальные критерии и дальнейший source capture ведутся только в
+[ED6b.2a](EDITOR_PLAN.md#ed6b2a-наблюдаемые-входы-сборки-и-stale-start--2026-10-31).
+Scene playback включает GameBuildRequest.TrackInputs; legacy requests default false.
+Профиль — один net10.0 SDK project без PackageReference/ProjectReference, explicit
+managed HintPath references. Неподдержанный graph отклоняется до compiler publication.
+
+MSBuild возвращает evaluated items/properties и preprocessed imported project;
+content identity включает bytes files, options/item metadata/order, imports и
+configuration/reference/analyzer inputs. Compile ticket/timestamps и owned job paths
+не входят в fingerprint. Потенциальные отсутствующие analyzer configs допускаются,
+их появление меняет witness; missing Compile/reference не создаёт неполную identity.
+Пределы:4096files,64MiB/file,256MiB total,8MiB/query и preprocessed document.
+См. [официальную документацию evaluation queries](https://learn.microsoft.com/en-us/visualstudio/msbuild/evaluate-items-and-properties)
+и [MSBuild command implementation](https://github.com/dotnet/msbuild/blob/main/src/MSBuild/XMake.cs).
+
+Проверка до/после Build предшествует Publish; GameEditor повторяет observation до
+создания runtime, затем применяет прежние context/session/cancel fences. SDK probes
+используют тот же compiler single-job gate,120s maximum budget, cancellation/reap/
+output drain и retryable ownership. Diagnostic retention знает exact новые files.
+Artifact.Inputs хранится только в памяти оригинального Build result: schema1 прежняя,
+Open/Publish не создают trusted witness, tracked Start требует новый Build.
+
+Фактические Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest проверки:
+
+| Suite | Debug | Release | Failed/skipped |
+|---|---:|---:|---:|
+| Aether |1657|1657|0/0|
+| Editor |943|943|0/0|
+
+4full runs5200cases;22новых cases. Проверяются равные по длине byte edits с
+восстановленным mtime, options/imports/order/additions/references/configs, bounds,
+missing inputs/cancel, immutable copied dependencies/read-only files. Реальный SDK
+проверяет stable fingerprint при разных jobs/tickets, >32KiB item metadata,
+ErrorLog-conditional properties, schema1 reopening без witness и MaxJobs1 retention.
+После source/addition/import/reference edits Verify отклоняет старый результат.
+Held compile source edit не публикует artifact; cancel дожидается compiler/helper reap.
+GameEditor stale Start не создаёт ни одной lease; matching Start ждёт actual frame
+presentation точного BuildId и затем освобождает resources при Stop. Scene action
+test проверяет включение TrackInputs. Existing legacy tests сохранены.
+[4TRX/22cases/commands/source hashes](../../TestResults/BuildInputs-ED6b2a-20261031-1/verification.json),
+[runner](../../TestResults/BuildInputs-ED6b2a-20261031-1/RunFinal.ps1),
+[test-quality review](../../TestResults/BuildInputs-ED6b2a-20261031-1/test-quality.json),
+[docs/namespace/hash audit](../../TestResults/BuildInputs-ED6b2a-20261031-1/docs-audit.json).
+
+Initial SDK RED9 выявил потенциальные отсутствующие ancestor .globalconfig candidates:
+[TRX](../../TestResults/BuildInputs-ED6b2a-20261031-1/Inputs-first-red.trx).
+Следующие4fixture failures нарушали прежний exact DLL output allowlist случайным
+basename private reference; fixture теперь сохраняет Game.Private.dll:
+[TRX](../../TestResults/BuildInputs-ED6b2a-20261031-1/Inputs-second-red.trx).
+Initial full Release RED6: diagnostic stdout file намеренно допускает chunk loss и
+не подходит для machine JSON. Query теперь пишет непосредственно через MSBuild
+-getResultOutputFile; размер проверяется до чтения, large metadata проверяется тестом.
+Core capture contract не менялся. [Initial Release TRX](../../TestResults/BuildInputs-ED6b2a-20261031-1/InitialFull/TrueMoon.Aether.Tests-Release.trx).
+При review выровнены ErrorLog global properties query/preprocess/compile; conditional
+SDK option имеет прямое assertion. Все4full suites повторены на окончательном коде.
+Roslyn parse-only Builds root до добавления файлов:9sources/0tests; sibling tests
+вне этого root, вывода об отсутствии tests/coverage нет. Rider findTests недоступен;
+existing fixtures прочитаны напрямую. Research/plan/status — non-stageable OS-temp.
+Empirical mutations и coverage не собирались; deadlines/assertions не ослаблялись.
+
+Fresh15packages и8headless cases прошли с isolated feed/cache/external solution.
+Финальные published SourceRelease ×standard/Cobalt и embedded/MS DI, затем свежий
+PackageRelease profile2 ×те же hosts:4/4workflows. Каждый проверяет2fresh game builds
+с distinct artifact/child IDs и одинаковым verified input fingerprint, actual scene
+GPU pixels, preview reap до game startup, Pause/Step/Stop и parent history/dirty/selection.
+В финальных4cases44children reaped/released (8game),40graceful Vulkan reports0errors/
+0warnings/resources/handles0; final UI/GPU/handles0.4scene-paused PNG просмотрены:
+actual red cube, selection, inspector X1.65 disabled во время игры, paused status,
+preview off и dirty caption standard host. Package source hashes после runs совпадают.
+[Packages](../../TestResults/BuildInputs-Packages-20261031-1/verification.json),
+[source GUI](../../TestResults/BuildInputs-Native-SourceRelease-20261031-1/verification.json),
+[final NuGet GUI](../../TestResults/BuildInputs-Native-PackageRelease-20261031-2/verification.json),
+[final package runner](../../TestResults/BuildInputs-ED6b2a-20261031-1/RunPackageFinal.ps1),
+[acceptance/PNG hashes](../../TestResults/BuildInputs-ED6b2a-20261031-1/acceptance.json).
+
+Первый package embedded case остановился до SDK Build на Until открытия status Preview
+popup (Workflow line466,30s). Standard case этого profile прошёл; failed attempt
+сохранён отдельно и не входит в final4cases. Exact frozen binary replay с новым
+disposable case directory, прежними30s condition/300s process deadlines и без code
+changes прошёл весь workflow. Затем rebuilt fresh package GUI/runtime profile2 дал2/2.
+[Initial attempt/logs](../../TestResults/BuildInputs-Native-PackageRelease-20261031-1/verification.json),
+[exact binary replay](../../TestResults/BuildInputs-ED6b2a-20261031-1/exact-replay.json).
+Причина popup timeout не установлена, это открытый ED8 follow-up, не исправленный bug.
+Replay/initial extra cases не суммируются с final44children или headless counts.
+
+Witness обнаруживает наблюдаемые persistent changes, не изолирует transient edit-and-
+revert, произвольный target/generator/environment IO или edits после последней проверки.
+Далее ED6b.2b immutable supported source closure/capture до cache/reuse/Replace;
+PackageReference/ProjectReference и source watcher ещё не добавлены. Полный ED6b,
+input/HUD/Player/native game-crash matrix, physical/device loss/VRAM/release gates и
+прежний output-drain cause остаются открытыми. Другие module/full solution suites
+не повторялись; UI renderer/control/frame/checkpoint formats не менялись.
+
+## ED6b.1: запуск открытой сцены — 2026-10-31
+
+По запросу «Начни реализацию ED6b — запуска сцены из редактора» штатный App graph
+регистрирует EditorScenePlayback. ▶ захватывает current committed in-memory scene,
+включая dirty/untitled, валидирует bounded primitive projection, drains Edit Preview,
+устанавливает context, делает fresh Build и Start→actual first-present→Play.
+Отдельный Start оставляет Pause; Pause/Resume/Step/Stop используют тот же coordinator.
+Документ/history/dirty checkpoint/selection не заменяются runtime state; Save не обязателен.
+Неприменённые inspector drafts/conflicts veto-ят Build/Run. Подробный контракт ведётся
+только в [ED6b.1](EDITOR_PLAN.md#ed6b1-запуск-runtime-копии-открытой-сцены--2026-10-31).
+
+Game operations используют shared EditorDocumentCommands gate и drain barrier;
+file/edit/project/exit не проходят через pending scene work. Exact project/content
+guards отклоняют direct changes, replacement и IO до startup. Start acceptance
+согласован с document owner gate. Новый GameEditor.StartBuildAsync атомарно требует
+expected ContextVersion и candidate, без fixed-runtime fallback. Старый StartAsync
+и пятиаргументный EditorViewModel constructor сохраняются; positional record API прежний.
+Viewport readiness ожидается до acquisition runtime ownership. Failed startup drains
+owned game; original+cleanup causes сохраняются, failed Stop допускает explicit retry.
+
+Actual Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest:
+
+| Suite | Debug | Release | Failed/skipped |
+|---|---:|---:|---:|
+| Aether |1635|1635|0/0|
+| Editor |943|943|0/0|
+
+4full runs5156cases;24новых cases (Aether4, Editor20). Прямые проверки включают
+unsaved scene ID/revision/world coordinates, exact object/history/dirty preservation,
+no Save writes, fresh compile tickets, controls/restart; uncooperative build/preview
+drain, direct document/IO/context change, cancel before viewport readiness, failed
+startup/cleanup/Stop retry и forced/user-vetoed Exit. Core cases исключают missing/
+stale candidate fallback и требуют actual presentation. Cobalt/MS DI default graph
+проверяет Run availability без предварительного candidate; legacy tests сохранены.
+[Audit/4TRX/24cases/exact commands/source hashes](../../TestResults/ScenePlayback-ED6b1-20261031-1/verification.json),
+[final runner](../../TestResults/ScenePlayback-ED6b1-20261031-1/RunFinal.ps1),
+[quality review](../../TestResults/ScenePlayback-ED6b1-20261031-1/test-quality.json),
+[docs/namespace/diff audit](../../TestResults/ScenePlayback-ED6b1-20261031-1/docs-audit.json).
+
+Initial RED7: faulted/cancelled runtime task прерывала Exit до cleanup. Shared pending
+теперь является actual drain barrier, outcome возвращается отдельному operation caller.
+[RED TRX](../../TestResults/ScenePlayback-ED6b1-20261031-1/exit-drain-red.trx).
+Первый compile shadowing исправлен. Новый availability fixture изначально мерил rich
+inspector на simple headless surface; тест DI/state отделён от нерелевантного rendering.
+Случайно изменённая строка прежнего test fixture возвращена к исходной Scene.
+Assertions/deadlines не ослаблялись. Roslyn parse-only production Editor root:
+87sources/0tests в этом root, без вывода об отсутствии sibling tests/coverage.
+IDE findTests недоступен; existing fixtures прочитаны напрямую. Broad research/plan/
+status — non-stageable OS-temp; empirical mutations и coverage не запускались.
+
+Первый standard source probe прошёл до окончательного разделения viewport readiness/
+startup admission и считается промежуточным:
+[probe](../../TestResults/ScenePlayback-Probe-SourceRelease-20261031-1/verification.json).
+Затем rebuilt fresh15NuGet packages, isolated feed/cache/external solution и8headless
+cases прошли. Финальные published SourceRelease/PackageRelease ×standard/Cobalt и
+embedded/MS DI:4/4workflows. Consumer компилирует собственную Game.Logic в отдельном
+SDK process; каждый workflow делает2fresh game starts с distinct build IDs/children,
+проверяет scene GPU pixel, Pause/Step/Stop, actual child-only game assembly paths,
+preview reap до game start, parent history/dirty/selection и Undo после Stop.
+Resume проверен прямым coordinator test; отдельного native Resume утверждения нет.
+Существующий project/document/preview/diagnostics/crash/recovery workflow сохранён.
+
+44native children reaped/released, из них8game;4owned preview crashes,40graceful
+Vulkan reports errors0/warnings0 и resources/handles0, final UI/GPU/handles0.
+Killed preview не предоставляет final report.4новых PNG просмотрены: actual cube,
+paused status, retained dirty caption/selection и disabled authoring fields X1.65;
+standard/embedded source/package geometry читаема. Fingerprints совпадают с final
+package baseline. Headless8cases имеют собственный lifecycle scope и не суммируются
+с native counts.
+[Packages](../../TestResults/ScenePlayback-Packages-20261031-1/verification.json),
+[source GUI](../../TestResults/ScenePlayback-Native-SourceRelease-20261031-1/verification.json),
+[NuGet GUI](../../TestResults/ScenePlayback-Native-PackageRelease-20261031-1/verification.json),
+[acceptance/4PNG hashes](../../TestResults/ScenePlayback-ED6b1-20261031-1/acceptance.json).
+
+Compile SourceRevision — запросный ticket, не hash всего MSBuild source graph.
+Hermetic capture/external source edits/artifact reuse и document-aware Replace — ED6b.2;
+полный gameplay input/HUD/Player и native game crash/recovery matrix ещё нужны.
+Primitive/control/frame/checkpoint limits и formats прежние. Другие module/full
+solution suites, physical DPI/device loss/VRAM/long-load/release gates не повторялись.
+Прежний intermittent output-drain cause не объявляется исправленным этими runs.
+
+## Editor и общие Bindable/ViewModel — 2026-10-31
+
+EditorViewModel, status/document/inspector/hierarchy/diagnostics models наследуют
+Argentis ViewModel → Bindable вместо отдельных реализаций INotifyPropertyChanged.
+InspectorProperty/TransformField используют Bindable для редактируемых значений.
+Explicit dependent notifications, partial declarations, exact project admission,
+owner-thread checks и конкретный Dispose cleanup сохранены; DI graph прежний.
+Общий контракт/детальные проверки — [UIA1e](../alloy/PLAN.md#uia1e-bindable-и-viewmodel--2026-10-31),
+[UI history](../alloy/HISTORY.md#uia1e-bindable-и-viewmodel--2026-10-31).
+
+Текущий SDK10.0.403/net10.0/xUnit2/VSTest: Editor923/923 и UI919/919 отдельно
+Debug/Release, failed/skipped0. Новые Bindable10cases входят в UI; существующие
+Editor tests продолжают проверять models/views/subscriptions и Cobalt/MS DI compositions.
+[Команды/5TRX/source hashes](../../TestResults/Bindable-20261031-1/verification.json).
+Aether/Core/Hosting/другие suites, full solution и package/native/physical matrix
+не повторялись. Предыдущая ED1b.2 package/native acceptance относится к предыдущим
+input fingerprints. Следующий основной engine consumer — прежний ED6b.
+
+## ED1b.2: project picker и runtime rebinding — 2026-10-31
+
+Стандартное меню «Проект» использует новые OpenProject/CloseProject identities в
+прежнем EditorDocumentCommands. Existing typed View/Data/Style path tools разделяют
+project/scene/first-save drafts. Project snapshot и binding-ready observation расширяют
+record init properties, не меняя positional constructor/deconstruction. Публичные
+старые constructors сохранены; compositions без runtime binding имеют disabled project
+actions. App startup по manifest использует ту же tracked queue и сохраняет rollback.
+Подробный policy/ownership contract — только в
+[ED1b.2](EDITOR_PLAN.md#ed1b2-выбор-проекта-в-ui-и-runtime-rebinding--2026-10-31).
+
+Project candidate готовится до unsaved decision/preview stop. Coordinator остаётся busy
+до actual preview drain, metadata commit и binding actual Active. GameEditor.SetContext
+сбрасывает прежний candidate; новый ClearContext убирает project identity и fence-ит
+pending results, не останавливая runtime сам. UI project actions требуют stopped game/
+idle compiler. После switch EditorCommands остаётся reusable; terminal StopAsync не
+вызывается вместо project transition. Cleanup/binding errors агрегируются, failed binding
+закрывает game/document admission до recovery. Workspace очищает selection/data на UI
+owner; stale presentation не допускает game action даже после отдельного model refresh.
+Финальная source/assertion сверка выявила риск смешанного кадра: новый project snapshot
+мог сочетаться с прежним runtime/candidate status. Present теперь читает document/project
+перед runtime readers; exact project guard блокирует action при переходе между чтениями.
+Регрессия ProjectSnapshot_PrecedesRuntimeReadersAndMixedFrameCannotEnableStaleCandidate
+выполняет switch внутри runtime reader, проверяет отказ Run/Build и следующий coherent кадр.
+
+Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest, actual final runs:
+
+| Suite | Debug | Release | Failed/skipped |
+|---|---:|---:|---:|
+| Aether |1631|1631|0/0|
+| Editor |923|923|0/0|
+
+4full runs,5108cases суммарно;22new cases (Aether2, Editor20). New cases прямо проверяют
+Save/Discard/Cancel, SDK/save/drain failures, uncooperative preparation/preview drain,
+actual identity после cleanup/binding failures и recovery, unsupported legacy graph,
+shared path/menu actions, retained focus/theme/control tree, fresh workspace admission,
+две App/DI composition и actual GameEditor target/context clearing. Engine tests проверяют
+candidate/version fencing, неизменённый borrowed runtime и observed held-build drain.
+[Audit/4TRX/22cases/команды/source hashes](../../TestResults/ProjectPicker-ED1b2-20261031-1/verification.json),
+[full runner](../../TestResults/ProjectPicker-ED1b2-20261031-1/RunFull.ps1),
+[final Editor runner](../../TestResults/ProjectPicker-ED1b2-20261031-1/RunEditorFinal.ps1),
+[bounded quality review](../../TestResults/ProjectPicker-ED1b2-20261031-1/test-quality.json),
+[docs/namespace/diff audit](../../TestResults/ProjectPicker-ED1b2-20261031-1/docs-audit.json).
+Roslyn parse-only run на production Editor root увидел86sources/0tests в этом root;
+он не pair-ит sibling test project и не доказывает отсутствие tests/line coverage.
+IDE findTests недоступен; existing fixtures прочитаны напрямую. Broad test research/
+plan/status находятся в OS-temp и не входят в worktree. Empirical mutations и coverage
+не запускались; source/assertion review выполнен без временных source mutations.
+
+Initial header regression: fan-out notifications задержали RunButton enabled update.
+Header refresh coalesced, unchanged path assignments больше не уведомляют bindings.
+[Initial unit RED](../../TestResults/ProjectPicker-ED1b2-20261031-1/editor-header-latency-red.trx).
+Native attempt1 нажал Cancel до layout решения; attempt2 standard прошёл, embedded
+пытался вводить first-save path до layout. Это harness preconditions: input теперь ждёт
+attached/enabled/visible bounds и settled layout; assertions/deadlines прежние.
+[Attempt1](../../TestResults/ProjectPicker-Native-SourceRelease-20261031-1/verification.json),
+[attempt2](../../TestResults/ProjectPicker-Native-SourceRelease-20261031-2/verification.json),
+[embedded source probe](../../TestResults/ProjectPicker-Probe-Embedded-20261031-3/verification.json).
+
+Final fresh15NuGet packages,8headless Game cases и isolated feed/cache/external solution
+прошли. Published SourceRelease/PackageRelease ×standard/Cobalt +embedded/MS DI:
+4/4workflows. Проверены path prompt/menu, Cancel с сохранением scene/history/selection,
+Save untitled→switch на другой manifest/game path, real active preview reap/release до
+publication, cleared context/selection при Close, reopen исходного проекта и persisted
+scene с теми же IDs/value и clean history. Предыдущий edit/history/preview/diagnostics/
+owned crash workflow тоже проходит.32native children reaped/released,4owned crashes;
+28graceful Vulkan reports errors0/warnings0 и resources/handles0, final UI/GPU/handles0.
+Killed child не предоставляет final validation report.14finalPNG просмотрены: readable
+project actions/path prompt, новый caption, пустая hierarchy и скрытый inspector после
+switch/close. Input fingerprints совпадают с final package baseline.
+[Packages](../../TestResults/ProjectPicker-Packages-20261031-4/verification.json),
+[source GUI](../../TestResults/ProjectPicker-Native-SourceRelease-20261031-4/verification.json),
+[NuGet GUI](../../TestResults/ProjectPicker-Native-PackageRelease-20261031-4/verification.json),
+[acceptance/14PNG hashes](../../TestResults/ProjectPicker-ED1b2-20261031-1/acceptance.json).
+После snapshot-order regression Editor suites повторены; final package/native matrix4
+собрана заново из исправленных sources. Passing matrix3 сохранена как промежуточная.
+
+ED1 switch/Close определён в этом bounded idle/stopped profile. Document-aware ED6b
+Build/Play, OS file picker/recents/wizard, extended backend/provider/native, physical
+input/DPI/device loss/VRAM/long-load и release gates остаются отдельными. Другие module/
+full-solution suites не повторялись. Прежний ED4c.2 intermittent output-drain cause
+не объявляется исправленным этими passing runs. Далее ED6b source/artifact revision и
+immutable authoring snapshot policy, затем игровой Build/Play workflow.
+
+## ED1b.1: project/document transition API — 2026-10-31
+
+EditorProjects получил SwitchAsync(path, DocumentCloseChoice, saveCurrentAs, token)
+и explicit-policy CloseAsync. Используются прежние coordinator/factory/document owners,
+без новых DI services/scopes. Подробная policy ведётся только в
+[ED1b.1](EDITOR_PLAN.md#ed1b1-projectdocument-transition-api--2026-10-31).
+TryFenceForProject сравнивает точный captured SceneDocument под тем же document gate,
+что Apply/Undo/Redo, и только после полного candidate preflight разрешает discard.
+Save использует существующий persistence/checkpoint path. Старые Open/Create и
+clean-only Close signatures/behavior сохранены; metadata-only composition доступна.
+
+Public remarks/packaged README явно требуют от host остановить/drain runtime/preview
+и удержать admission команд. Текущий EditorSession задаёт GameEditor context только
+при startup, Workspace.HasProject фиксирован при composition: UI picker пока нельзя
+включить без dynamic context/artifact fencing и согласования models/subscriptions.
+Этот завершённый API-срез предшествует общей UI-транзакции и ED6b Play workflow.
+
+Фактические Windows x64/SDK10.0.403/net10.0/xUnit2/VSTest результаты:
+
+| Run | Passed | Failed | Skipped |
+|---|---:|---:|---:|
+| Focused ProjectTransitionsTests, Debug |20|0|0|
+| Full Editor, Debug |903|0|0|
+| Full Editor, Release |903|0|0|
+
+20new cases проверяют discard/save/untitled/existing path; invalid SDK, Cancel и
+failed Save с сохранённым Undo; truthful checkpoint после file commit перед отменой;
+late edit, same-ID/revision document replacement, edit during Save, pending IO;
+Close drain с uncooperative preflight, dirty policies/reopen/failed Save retry;
+post-publication cleanup failure/retired owner retry; invalid choices/precancel.
+Прежние document/project/registration и остальные Editor cases включены в903.
+Assertions сверены с source: значения/owner identity, exact saved snapshot/path/stamp,
+history после failure, candidate disposal и отсутствие late publication проверяются
+напрямую. Initial compile-only attempt исправил SceneFileStamp.Sha256, UndoCount и
+xUnit async assertion signatures; тесты в той попытке не запускались. Initial16 и
+final20 focused прошли; после compatibility refinement full Editor повторён в обеих
+конфигурациях. IDE findTests недоступен, использованы existing fixtures через direct
+search; coverage/project-wide source pairing не выполнялись.
+
+[Audit/3TRX/cases/source hashes](../../TestResults/ProjectTransitions-ED1b1-20261031-1/verification.json),
+[runner/точные команды](../../TestResults/ProjectTransitions-ED1b1-20261031-1/RunFull.ps1),
+[initial compile log](../../TestResults/ProjectTransitions-ED1b1-20261031-1/compile-attempt1.log).
+Local links/anchors, namespaces и git diff --check проверены;
+[документационный audit](../../TestResults/ProjectTransitions-ED1b1-20261031-1/docs-audit.json), staged0.
+Другие module/full solution suites, NuGet delivery, native UI/GPU/physical и runtime
+rebinding этим шагом не повторялись. ED1 четвёртый пункт и ED6b остаются открытыми.
+Прежний intermittent runtime output-drain follow-up сохраняется отдельно.
+Следующий шаг: typed UI project picker вместе с workspace/runtime/build rebinding и
+общей command admission; затем document-aware Build/Play.
+
 ## ED4c.3: операции объектов, поиск и контекстное меню — 2026-10-31
 
 В существующий ISceneAuthoringSession добавлен optional EditEntities: closed family

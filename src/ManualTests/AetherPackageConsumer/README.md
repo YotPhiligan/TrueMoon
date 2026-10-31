@@ -68,6 +68,25 @@ kicks off inline F2 name editing and Ctrl+Down sibling reordering through the re
 hierarchy, checks their shared Undo/Redo and persistent metadata after another Save/reopen,
 creates a cube and child from New, duplicates/deletes/restores the branch through context
 actions and keyboard, searches by ID and reopens the created scene with clean history,
+opens the project path prompt, cancels a dirty switch, saves an untitled scene before
+switching to another manifest/game path, verifies context/selection reset, closes and
+reopens the project and persisted scene (the embedded host uses the same model actions),
+and reaps an active preview before project publication,
+then builds consumer-owned Game.Logic from an unsaved scene and runs two fresh
+game children through Play/Pause/Step/Stop. It checks actual scene GPU pixels,
+preview reap before game startup, distinct selected artifact IDs, child-only game
+assembly paths and unchanged authoring dirty/history/selection. It records the
+verified input fingerprints and requires identical inputs across both fresh builds;
+the compile tickets and artifact IDs remain distinct. The tracked scene profile is
+one net10.0 SDK project with HintPath references, without PackageReference/ProjectReference.
+It also records captured compiler fingerprints/file counts/bytes, requires stable
+fingerprints across both fresh compiles and confirms staging was released before Start.
+The bounded C# capture profile copies source/generated/reference/config/compiler inputs
+after trusted MSBuild preparation; installed dotnet runtime/environment and arbitrary
+preparation task/generator IO remain trusted. Undo after Stop
+restores the saved scene before the remaining crash/recovery workflow. Each full
+workflow owns eleven children, with ten graceful validation reports including two
+game runs; the intentionally killed preview has no final report. The workflow then
 kills only its own preview child, preserves dirty document/history/selection,
 and recovers preview before saving/closing. Separate native startup failure and
 first-frame cancellation cases check rollback and final App disposal. Original

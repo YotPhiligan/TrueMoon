@@ -28,7 +28,7 @@ public sealed partial class EditorHierarchyViewModel
         _renameState = _commands.Read().Document!.Content;
         _renameId = _selected; _renameOriginal = _items.Single(item => item.Id == _selected).Name;
         RenameText = _renameOriginal;
-        Notify(nameof(RenameId)); Notify(nameof(IsRenaming)); Refresh(); return true;
+        OnPropertyChanged(nameof(RenameId)); OnPropertyChanged(nameof(IsRenaming)); Refresh(); return true;
     }
     /// <summary>Commits a valid draft as one shared history entry, preserving the entity identity.</summary>
     public bool CommitRename()
@@ -53,6 +53,6 @@ public sealed partial class EditorHierarchyViewModel
     {
         if (!IsRenaming) return;
         _renameId = null; _renameState = null;
-        Notify(nameof(RenameId)); Notify(nameof(IsRenaming));
+        OnPropertyChanged(nameof(RenameId)); OnPropertyChanged(nameof(IsRenaming));
     }
 }

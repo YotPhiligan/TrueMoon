@@ -296,6 +296,30 @@ explicit Stop/close prevent recovery. App snapshots ReplacementDeadlines: total4
 forward18s, cleanup10s; limits may be reduced. Unconfirmed cleanup retains the task
 and lease in CleanupFailed until an explicit successful Stop retry. Headless and
 visible CPU viewport are supported; resume a suspended surface before Replace.
+Opt-in `CaptureCompilation` (requiring `TrackInputs`) prepares SDK Csc arguments,
+copies source/generated/reference/config/SDK analyzer and compiler bytes into the
+owned job, then executes captured Csc without rerunning MSBuild. Process-local
+`GameBuildArtifact.Compilation` records their hashes; schema1 reopening loses this
+provenance. Source paths/diagnostics are mapped back, staging is removed before the
+result returns, and private DLL outputs use captured copies. Unknown/search/response
+file switches, custom compiler/environment/external analyzers, resource/ruleset/signing
+inputs and absolute analyzer-config sections fail closed. This is a C# library
+compilation profile, not general MSBuild/postbuild semantics. Preparation, installed
+dotnet runtime and ambient environment remain trusted; arbitrary task/generator IO,
+pre-evaluation source closure and cache/reuse/Replace are not isolated. The existing
+file/byte limits include compiler and reference-pack files; response/config documents
+are limited to8MiB. Legacy requests keep capture disabled.
+
+Opt-in `GameBuildRequest.TrackInputs` observes evaluated SDK files/options and
+preprocessed imports before/after compilation. `GameBuildArtifact.Inputs` retains an
+immutable process-local content witness; GameEditor rechecks it before Start. Persistent
+changes reject publication/startup with `GameBuildInputsChangedException`. The bounded
+profile is one net10.0 SDK project without PackageReference/ProjectReference, using
+managed HintPath references. Reopening an artifact does not recreate its witness;
+schema1 is unchanged. Verification uses compiler-owned cancellation/deadline/reap/drain
+and diagnostic retention. Transient edit-and-revert, arbitrary target/generator/environment
+IO, hermetic capture, artifact caching and document-aware Replace remain later work.
+
 `host.Editor` provides UI-independent serialized Build/Select/Start/Replace/Play/
 Pause/Step/Cancel/Stop commands. SetContext snapshots build/scene/selection inputs,
 cancels pending work and invalidates candidates; completion checks originating

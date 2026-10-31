@@ -1,11 +1,11 @@
-﻿using System.ComponentModel;
+using TrueMoon.Argentis;
 using System.Globalization;
 using TrueMoon.Aether.Scenes;
 
 namespace TrueMoon.Aether.Editor.Editing;
 
 /// <summary>Typed scalar draft and provenance, independent of controls, rendering and themes.</summary>
-public class InspectorProperty : INotifyPropertyChanged
+public class InspectorProperty : Bindable
 {
     private readonly Action _verifyOwner;
     private string _value = "", _original = "", _error = "", _source = "";
@@ -32,7 +32,7 @@ public class InspectorProperty : INotifyPropertyChanged
         {
             ArgumentNullException.ThrowIfNull(value); _verifyOwner();
             if (_value == value && !_reset) return;
-            _value = value; _reset = false; Notify(nameof(Value)); Notify(nameof(BooleanValue)); DraftChanged();
+            _value = value; _reset = false; OnPropertyChanged(nameof(Value)); OnPropertyChanged(nameof(BooleanValue)); DraftChanged();
         }
     }
     /// <summary>Gets/sets a Boolean without parsing localized labels.</summary>
@@ -49,7 +49,7 @@ public class InspectorProperty : INotifyPropertyChanged
         {
             _verifyOwner(); if (value && !IsNullable) throw new InvalidOperationException("The property is not nullable.");
             if (_null == value && !_reset) return;
-            _null = value; _reset = false; Notify(nameof(IsNull)); DraftChanged();
+            _null = value; _reset = false; OnPropertyChanged(nameof(IsNull)); DraftChanged();
         }
     }
     /// <summary>Gets whether this field is a changed draft or pending inheritance reset.</summary>
@@ -69,22 +69,20 @@ public class InspectorProperty : INotifyPropertyChanged
     /// <summary>Gets whether a diagnostic is present.</summary>
     public bool HasError => _error.Length != 0;
     internal event Action? Changed;
-    /// <inheritdoc />
-    public event PropertyChangedEventHandler? PropertyChanged;
     internal void Enable(bool enabled)
-    { if (_enabled == enabled) return; _enabled = enabled; Notify(nameof(CanWrite)); Notify(nameof(CanChangeNull)); Notify(nameof(CanReset)); }
+    { if (_enabled == enabled) return; _enabled = enabled; OnPropertyChanged(nameof(CanWrite)); OnPropertyChanged(nameof(CanChangeNull)); OnPropertyChanged(nameof(CanReset)); }
     internal void Load(PropertyValue value, string source, bool local)
     {
         _value = _original = Format(value).ReplaceLineEndings("\n");
         _null = _originalNull = value.Kind == PropertyValueKind.Null; _reset = false; _source = source; _local = local;
-        foreach (var property in new[] { nameof(Value), nameof(BooleanValue), nameof(IsNull), nameof(HasDraft), nameof(IsReset), nameof(SourceText), nameof(CanWrite), nameof(CanChangeNull), nameof(CanReset) }) Notify(property);
+        foreach (var property in new[] { nameof(Value), nameof(BooleanValue), nameof(IsNull), nameof(HasDraft), nameof(IsReset), nameof(SourceText), nameof(CanWrite), nameof(CanChangeNull), nameof(CanReset) }) OnPropertyChanged(property);
         SetError("");
     }
     internal void Reset()
-    { _verifyOwner(); if (!CanReset) return; _reset = true; Notify(nameof(IsReset)); DraftChanged(); }
+    { _verifyOwner(); if (!CanReset) return; _reset = true; OnPropertyChanged(nameof(IsReset)); DraftChanged(); }
     private void DraftChanged()
     {
-        Notify(nameof(HasDraft)); Notify(nameof(IsReset)); Notify(nameof(SourceText)); Notify(nameof(CanWrite)); Notify(nameof(CanChangeNull)); Notify(nameof(CanReset)); Changed?.Invoke();
+        OnPropertyChanged(nameof(HasDraft)); OnPropertyChanged(nameof(IsReset)); OnPropertyChanged(nameof(SourceText)); OnPropertyChanged(nameof(CanWrite)); OnPropertyChanged(nameof(CanChangeNull)); OnPropertyChanged(nameof(CanReset)); Changed?.Invoke();
     }
     internal bool TryValue(out PropertyValue value)
     {
@@ -117,7 +115,7 @@ public class InspectorProperty : INotifyPropertyChanged
         SetError(error); return error.Length == 0;
     }
     internal void SetError(string value)
-    { if (_error == value) return; _error = value; Notify(nameof(Error)); Notify(nameof(HasError)); }
+    { if (_error == value) return; _error = value; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); }
     internal static string Format(PropertyValue value) => value.Kind switch
     {
         PropertyValueKind.Boolean => value.GetBoolean() ? "true" : "false",
@@ -134,5 +132,4 @@ public class InspectorProperty : INotifyPropertyChanged
         }
         return true;
     }
-    private void Notify(string property) => PropertyChanged?.Invoke(this, new(property));
 }
