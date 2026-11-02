@@ -10,11 +10,14 @@ internal sealed class BuildDiagnosticStore
     private const string Magic = "TrueMoon.Aether.BuildDiagnostics/1\n";
     private static readonly HashSet<string> Names = new(StringComparer.Ordinal)
         { MarkerFile, "build.stdout.log", "build.stderr.log", "build.output.json", GameBuildDiagnosticReader.FileName,
-            "prepare.json", "prepare.stdout.log", "prepare.stderr.log", "capture.json" };
+            "prepare.json", "prepare.stdout.log", "prepare.stderr.log", "capture.json", "reuse.json" };
+    private static readonly HashSet<string> GraphSuffixes = new(StringComparer.Ordinal)
+        { ".project.xml", ".evaluation.json", ".inputs.json", "-query.stdout.log", "-query.stderr.log", "-project.stdout.log", "-project.stderr.log",
+            "-prepare.json", "-prepare.stdout.log", "-prepare.stderr.log", "-build.stdout.log", "-build.stderr.log" };
     static BuildDiagnosticStore()
     {
         foreach (var phase in new[] { "before", "after", "verify" })
-            foreach (var suffix in new[] { ".project.xml", ".evaluation.json", ".inputs.json", "-query.stdout.log", "-query.stderr.log", "-project.stdout.log", "-project.stderr.log" })
+            foreach (var suffix in new[] { ".project.xml", ".evaluation.json", ".inputs.json", "-query.stdout.log", "-query.stderr.log", "-project.stdout.log", "-project.stderr.log", "-restore.stdout.log", "-restore.stderr.log" })
                 Names.Add(phase + suffix);
     }
     private readonly string _jobs;
@@ -136,9 +139,17 @@ internal sealed class BuildDiagnosticStore
     private static string[]? OwnedFiles(string directory)
     {
         var files = Directory.EnumerateFileSystemEntries(directory).ToArray();
+        var projects = new HashSet<string>(StringComparer.Ordinal);
         foreach (var path in files)
         {
-            if (!Names.Contains(Path.GetFileName(path))) return null;
+            var name = Path.GetFileName(path);
+            if (!Names.Contains(name))
+            {
+                if (!name.StartsWith("graph-", StringComparison.Ordinal) || name.Length <= 22 ||
+                    name.AsSpan(6, 16).ContainsAnyExcept("0123456789ABCDEF") || !GraphSuffixes.Contains(name[22..])) return null;
+                projects.Add(name.Substring(6, 16));
+                if (projects.Count > 3) return null;
+            }
             var attributes = File.GetAttributes(path);
             if ((attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0) return null;
         }

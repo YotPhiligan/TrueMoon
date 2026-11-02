@@ -14,14 +14,19 @@ public sealed class GameBuildInputSnapshot
     internal const int MaximumFiles = 4096;
     internal const long MaximumFileBytes = 64L * 1024 * 1024, MaximumTotalBytes = 256L * 1024 * 1024;
     private static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-    private GameBuildInputSnapshot(GameBuildRequest request, string evaluation, string project, IReadOnlyList<GameBuildInputFile> files)
+    private GameBuildInputSnapshot(GameBuildRequest request, string evaluation, string project, IReadOnlyList<GameBuildInputFile> files,
+        GameBuildPreparationSnapshot? preparation, string job, bool hasProjectReferences)
     {
         Request = request with { Dependencies = Array.AsReadOnly(request.Dependencies?.ToArray() ?? []) };
-        EvaluationHash = evaluation; PreprocessedHash = project; Files = files;
+        EvaluationHash = evaluation; PreprocessedHash = project; Files = files; Preparation = preparation;
+        HasProjectReferences = hasProjectReferences;
         Fingerprint = Hash(JsonSerializer.SerializeToUtf8Bytes(new { Request.ProjectPath, Request.EntryAssembly, Request.EntryType,
-            Dependencies = Request.Dependencies?.ToArray() ?? [], EvaluationHash, PreprocessedHash, Files }));
+            Dependencies = Request.Dependencies?.ToArray() ?? [], EvaluationHash, PreprocessedHash,
+            Files = Files.Select(file => file with { Path = file.Path.Replace(job, "$JOB", OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) }),
+            Preparation = preparation?.Fingerprint }));
     }
     internal GameBuildRequest Request { get; }
+    internal bool HasProjectReferences { get; }
     /// <summary>Content identity, excluding the caller's compile ticket and owned temporary job paths.</summary>
     public string Fingerprint { get; }
     /// <summary>Canonical evaluated properties/items, retaining item order and ignoring file timestamps.</summary>
@@ -30,9 +35,14 @@ public sealed class GameBuildInputSnapshot
     public string PreprocessedHash { get; }
     /// <summary>Read-only source/resource/analyzer/hint-reference and configuration file identities.</summary>
     public IReadOnlyList<GameBuildInputFile> Files { get; }
+    /// <summary>Pre-evaluation closure identity when frozen preparation was requested; null for the legacy trusted preparation profile.</summary>
+    public GameBuildPreparationSnapshot? Preparation { get; }
+    /// <summary>Process-local original-source projection from frozen capture; never reconstructed by artifact Open.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public GameBuildSourceWatchDescriptor? SourceWatch => Preparation?.SourceWatch;
 
     internal static GameBuildInputSnapshot Create(GameBuildRequest request, string query, string preprocessed, string job,
-        CancellationToken token = default)
+        CancellationToken token = default, GameBuildPreparation? preparation = null)
     {
         token.ThrowIfCancellationRequested();
         if (Encoding.UTF8.GetByteCount(query) > MaximumDocumentBytes || Encoding.UTF8.GetByteCount(preprocessed) > MaximumDocumentBytes)
@@ -41,8 +51,10 @@ public sealed class GameBuildInputSnapshot
         string Normalize(string value)
         {
             var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-            return value.Replace(SecurityElement.Escape(fullJob)!, "$JOB", comparison).Replace(fullJob, "$JOB", comparison)
+            value = preparation?.Original(value) ?? value;
+            value = value.Replace(SecurityElement.Escape(fullJob)!, "$JOB", comparison).Replace(fullJob, "$JOB", comparison)
                 .Replace(fullJob.Replace('\\', '/'), "$JOB", comparison);
+            return preparation == null ? value : value.Replace(fullJob[System.IO.Path.GetPathRoot(fullJob)!.Length..], "$JOB", comparison);
         }
         using var document = JsonDocument.Parse(query);
         var root = document.RootElement;
@@ -51,8 +63,8 @@ public sealed class GameBuildInputSnapshot
         foreach (var name in new[] { "ProjectReference", "PackageReference" })
             if (items.GetProperty(name).GetArrayLength() != 0) throw new NotSupportedException("Tracked inputs currently require a single project with explicit managed HintPath references; " + name + " is unsupported.");
 
-        var paths = new HashSet<string>(Paths) { System.IO.Path.GetFullPath(request.ProjectPath) };
-        var projectDirectory = System.IO.Path.GetDirectoryName(request.ProjectPath)!;
+        var paths = new HashSet<string>(Paths) { preparation?.CopyPath(request.ProjectPath) ?? System.IO.Path.GetFullPath(request.ProjectPath) };
+        var projectDirectory = System.IO.Path.GetDirectoryName(preparation?.CopyPath(request.ProjectPath) ?? request.ProjectPath)!;
         foreach (var group in items.EnumerateObject())
         {
             token.ThrowIfCancellationRequested();
@@ -80,17 +92,25 @@ public sealed class GameBuildInputSnapshot
             }
         }
         for (var directory = new DirectoryInfo(projectDirectory); directory != null; directory = directory.Parent)
+        {
             foreach (var name in new[] { ".editorconfig", "global.json", "NuGet.Config", "nuget.config", "Directory.Build.rsp", "MSBuild.rsp" })
             {
                 token.ThrowIfCancellationRequested(); var path = System.IO.Path.Combine(directory.FullName, name);
                 if (File.Exists(path)) paths.Add(path);
             }
+            if (preparation?.IsBoundary(directory.FullName) == true) break;
+        }
         if (paths.Count > MaximumFiles) throw new InvalidDataException("Too many tracked build input files.");
         var files = new List<GameBuildInputFile>(); long total = 0;
         var buffer = new byte[64 * 1024];
         foreach (var path in paths.Order(StringComparer.Ordinal))
         {
             token.ThrowIfCancellationRequested();
+            var original = preparation?.Original(path) ?? path;
+            if (preparation != null && preparation.Files.TryGetValue(original, out var frozen))
+            {
+                files.Add(frozen); continue;
+            }
             if ((File.GetAttributes(path) & (FileAttributes.ReparsePoint | FileAttributes.Directory)) != 0)
                 throw new NotSupportedException("Tracked build inputs must be regular files: " + path);
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
@@ -104,12 +124,13 @@ public sealed class GameBuildInputSnapshot
                 hash.AppendData(buffer, 0, count);
             }
             if (read != length) throw new IOException("A build input changed while being read: " + path);
-            files.Add(new(path, length, Convert.ToHexString(hash.GetHashAndReset())));
+            files.Add(new(original, length, Convert.ToHexString(hash.GetHashAndReset())));
         }
         using var canonical = new MemoryStream();
         using (var writer = new Utf8JsonWriter(canonical)) { Write(root, writer); writer.Flush(); }
         token.ThrowIfCancellationRequested();
-        return new(request, Hash(canonical.ToArray()), Hash(Encoding.UTF8.GetBytes(Normalize(preprocessed))), files.AsReadOnly());
+        return new(request, Hash(canonical.ToArray()), Hash(Encoding.UTF8.GetBytes(Normalize(preprocessed))),
+            Array.AsReadOnly(files.OrderBy(f => f.Path, StringComparer.Ordinal).ToArray()), preparation?.Snapshot, fullJob, preparation?.References.Count > 0);
 
         void Write(JsonElement value, Utf8JsonWriter writer)
         {

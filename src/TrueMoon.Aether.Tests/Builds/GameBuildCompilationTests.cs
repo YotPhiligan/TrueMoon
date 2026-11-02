@@ -9,6 +9,7 @@ using Xunit;
 
 namespace TrueMoon.Aether.Tests.Builds;
 
+[Collection(nameof(GameBuildPreparationCollection))]
 public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassFixture<GameBuildFixture>
 {
     [Theory] [InlineData(false)] [InlineData(true)]
@@ -76,13 +77,28 @@ public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassF
         }
     }
 
-    [Fact]
-    public async Task SdkCapturedBuild_PublishesExactPrivateDependencyAndReleasesStaging()
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public async Task SdkCapturedBuild_PublishesExactPrivateDependencyAndReleasesStaging(bool freezePreparation)
     {
+        if (freezePreparation)
+        {
+            var project = System.Xml.Linq.XDocument.Load(builds.ProjectA); var items = project.Root!.Element("ItemGroup")!;
+            items.AddFirst(new System.Xml.Linq.XElement("ProjectReference", new System.Xml.Linq.XAttribute("Include", "missing.csproj"),
+                new System.Xml.Linq.XAttribute("Condition", "'$(AetherContractPath)' == ''")));
+            foreach (var reference in items.Elements("Reference"))
+            {
+                var hint = reference.Element("HintPath")!; reference.SetAttributeValue("HintPath", hint.Value); hint.Remove();
+            }
+            project.Save(builds.ProjectA);
+        }
         await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, Path.Combine(builds.Root, "capture-artifacts"), null, null, new() { MaxJobs = 1 });
-        var request = new GameBuildRequest(builds.ProjectA, builds.A.EntryAssembly, builds.A.EntryType, 7, ["Game.Private.dll"]) { TrackInputs = true, CaptureCompilation = true };
-        var first = await compiler.BuildAsync(request); var snapshot = Assert.IsType<GameBuildCompilationSnapshot>(first.Compilation);
+        var request = new GameBuildRequest(builds.ProjectA, builds.A.EntryAssembly, builds.A.EntryType, 7, ["Game.Private.dll"]) { TrackInputs = true, CaptureCompilation = true, CapturePreparation = freezePreparation };
+        GameBuildArtifact first;
+        try { first = await compiler.BuildAsync(request); }
+        catch { builds.PreserveArtifacts = true; throw; }
+        var snapshot = Assert.IsType<GameBuildCompilationSnapshot>(first.Compilation);
         var buildDirectory = compiler.DiagnosticsDirectory!;
+        Assert.Equal(freezePreparation, first.Inputs!.Preparation != null);
         Assert.True(File.Exists(Path.Combine(buildDirectory, "capture.json")));
         Assert.False(Directory.Exists(Path.Combine(buildDirectory, "capture"))); Assert.False(Directory.Exists(Path.Combine(buildDirectory, "work")));
         Assert.Null(compiler.ProcessId);

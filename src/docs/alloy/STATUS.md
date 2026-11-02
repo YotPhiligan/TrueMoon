@@ -1,6 +1,80 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя связанная работа — **2026-10-31, Editor ED6b.2b.1 captured compiler inputs**.
+Последняя связанная работа — **2026-11-03, ED6b.2e.2–3 retained source status**.
+Editor status bar получил отдельные source badge/details через current-owner pull
+snapshot в Present/Refresh. Source errors/Changed не заменяют primary runtime/command
+status; controls/focus/draft/history/theme сохраняются, worker не обращается к UI.
+Общие Alloy/Argentis controls/renderer не менялись. Full Editor1062/1062 Debug/Release
+и source/fresh package Release ×standard/Cobalt+embedded/MS DI4/4 прошли;
+15packages/headless8/8,4children reaped/released и Vulkan validation0/0.
+[Owner contract/checks](../engine/HISTORY.md#ed6b2e23-observer-и-source-ui--2026-11-03).
+Следующий шаг — измерить source observer cost на большом local graph; прежние PA8c.0,
+physical/hardware/performance/release gates этим срезом не закрыты.
+
+Предыдущая связанная документационная работа — **2026-11-02, ED6b.2e source status contract**.
+Для будущего Editor indicator определены owner-thread pull готового snapshot через
+Present/Refresh, отдельные source/scene/runtime states и сохранение retained
+focus/draft/history без filesystem IO в UI frame. Worker не удерживает View и не
+вызывает PropertyChanged из background callbacks. [Contract](../engine/EDITOR_PLAN.md#ed6b2e-контракт-source-watcher-и-stale-build-status--2026-11-02).
+Код/renderer/UI не менялись; source watcher/indicator ещё не реализованы, tests/
+native/visual checks в этом шаге не запускались. Далее engine descriptor/observer,
+затем UI integration; PA8c.0 и прежние physical/hardware/release gates сохраняются.
+
+Предыдущая связанная работа — **2026-11-02, native package interrupts/preflight ED6b.2b.2c.1**.
+Source/fresh NuGet Release ×standard/Cobalt и embedded/MS DI52/52cases:36interrupts
+и16Start/Replace stale/corrupt package preflights.76Game children reaped/released,
+76graceful validation0/0, maxLive1, final UI/GPU/handles0;4recoveries только
+Restore+Cancel. Fresh15packages/headless8/8,2743hashes без drift. Родительский
+document/history/selection сохранён; failed preflight не запускает child/checkpoint,
+новый Build затем успешен с selected package DLL. Только acceptance harness/docs;
+production UI/runtime API, unit/Alloy/Hosting/full solution и ordinary Workflow
+не менялись/не повторялись. Скриншоты не создавались; visual acceptance не заявляется.
+[Scope/evidence](../engine/HISTORY.md#ed6b2b2c1-native-package-interrupts-и-preflight--2026-11-02).
+Далее engine source watcher/stale Build status; PA8c.0 и прежние gates сохраняются.
+
+Предыдущая связанная работа — **2026-11-02, captured managed packages ED6b.2b.2c**.
+Published source/fresh NuGet Release ×standard/Cobalt и embedded/MS DI4/4ordinary
+Workflow с Game.Shared +locked Game.Packaged:56children reaped/released,52graceful
+validation0/0,20Game с private DLL только из selected artifact; maxLive1, final UI/GPU/
+handles0. Verified reuse/paused Replace/compiler failure/rollback и parent document
+сохранены. Fresh15packages/headless8/8,2059hash checks без drift;2final PNG просмотрены.
+Final package33/full Editor978 прошли Debug/Release; scoped293до последнего nuspec
+guard отдельно отмечены в истории. UI/renderer API и production native paths не
+менялись; Alloy/Hosting/full solution и physical/hardware/release gates не повторялись.
+[Scope/commands/evidence](../engine/HISTORY.md#ed6b2b2c-captured-managed-packages--2026-11-02).
+Далее directed native package interrupts/stale archive; PA8c.0 и прежние gates сохраняются.
+
+Предыдущая связанная работа — **2026-11-02, native graph interrupts ED6b.2b.2b.1**.
+Source/fresh NuGet published Release standard/Cobalt +embedded/MS DI36/36cases,
+52Game children reaped/released,52graceful validation0/0, maxLive1, final UI/GPU/handles0.
+Dependency SDK/graph verify/restore прерваны Cancel/Stop/Exit, parent state сохранён;
+late/recovery child после Stop/Exit нет. Fresh15packages/headless8/8,2735hashes без drift.
+Изменён acceptance harness; production UI/renderer API, unit/Alloy/Hosting/full solution
+и ordinary Workflow matrix не менялись/не повторялись.
+[Scope/evidence](../engine/HISTORY.md#ed6b2b2b1-native-graph-interrupts--2026-11-02).
+Далее engine locked managed package closure; PA8c.0 и прежние physical/hardware/popup/
+drain/release gates сохраняются. Предыдущие262/971 и graph workflow — в HISTORY.
+
+Предыдущая связанная работа — **2026-11-01, code Replace ED6b.2d**.
+Published source/NuGet standard/Cobalt +embedded/MS DI4/4workflows:56children reaped/
+released,52graceful Vulkan validation0errors/0warnings, final UI/GPU/handles0;8new PNG
+просмотрены. Replace/compile failure/rollback сохраняют parent state и runtime mode.
+Fresh15packages/headless8/8; scoped Aether82/82+full Editor957/957 Debug/Release. Общие UI/renderer
+APIs и Alloy/Hosting suites не менялись/не повторялись; full suites прежние.
+Дальнейший directed native Cancel/Stop/exit внутри Replace принадлежит engine плану.
+[Evidence/границы](../engine/HISTORY.md#ed6b2d-document-aware-code-replace--2026-11-01).
+PA8c.0, physical/K3/K7/K8/VRAM, historical popup/drain и final alpha открыты.
+
+Предыдущая связанная работа — **2026-10-31, Editor ED6b.2b.2a preparation freeze**.
+Scene Start включает supported declarative Windows graph capture до SDK evaluation.
+Общие UI/renderer APIs не менялись; Aether1704/Editor943 Debug/Release, failed/skipped0.
+Alloy/Hosting suites не повторены; [контракт/findings](../engine/HISTORY.md#ed6b2b2a-declarative-preparation-closure--2026-10-31).
+Fresh15packages/headless8/8, exit0, без window/GPU. Native Scene Start preparation
+workflow этим headless lane не подтверждается.
+Consumer acceptance нового профиля, physical/K3/K7/K8/VRAM и historical popup/drain
+остаются отдельными. Собственная UI quality ветка начинается с PA8c.0.
+
+Предыдущая связанная работа — **2026-10-31, Editor ED6b.2b.1 captured compiler inputs**.
 Scene actions используют C# byte capture; общий UI API/renderer не менялся.
 Editor943/Aether1683 отдельно Debug/Release, failed/skipped0. Fresh15packages/headless8;
 published source/NuGet standard/Cobalt +embedded/MS DI4/4workflows:44children/40graceful

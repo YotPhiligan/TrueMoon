@@ -20,14 +20,17 @@ public sealed class EditorScenePlaybackTests
         Assert.Null(h.Playback.Error); Assert.Equal(SessionState.Playing, h.State); Assert.True(h.Playback.OwnsRuntime);
         var context = h.Context!;
         Assert.True(context.Build.TrackInputs);
+        Assert.True(context.Build.CaptureProjectReferences);
         Assert.True(context.Build.CaptureCompilation);
+        Assert.True(context.Build.CapturePreparation);
+        Assert.True(context.Build.ReuseArtifact);
         Assert.Equal(h.Documents.Projects.Active!.Project.GameProjectPath, context.Build.ProjectPath);
         Assert.Equal(before.Content!.Document.Id.Value.ToString("D"), context.Scene.Id);
         Assert.Equal(before.Content.Document.Revision, context.Scene.Revision);
         Assert.Equal(11, context.Scene.CopyEntities().Single(e => e.Id == DocumentData.Child.Value.ToString("D")).X);
         Assert.Equal(new[] { "preview-stop", "context", "Build", "Start", "Play" }, h.Events.ToArray());
         Assert.False(h.Documents.Commands.CanExecute(DocumentCommand.Save)); Assert.False(h.Documents.Commands.CanExecute(DocumentCommand.OpenProject));
-        Assert.False(h.Playback.CanExecute(EditorCommand.Build)); Assert.False(h.Playback.CanExecute(EditorCommand.Replace));
+        Assert.False(h.Playback.CanExecute(EditorCommand.Build)); Assert.True(h.Playback.CanExecute(EditorCommand.Replace));
         Assert.True(h.Playback.Execute(EditorCommand.Pause)); h.Complete(); Assert.Equal(SessionState.Paused, h.State);
         Assert.True(h.Playback.Execute(EditorCommand.Step)); h.Complete(); Assert.Equal(1, h.Steps);
         Assert.True(h.Playback.RunSimulation()); h.Complete(); Assert.Equal(SessionState.Playing, h.State); Assert.Equal(1, h.Builds);
@@ -50,6 +53,98 @@ public sealed class EditorScenePlaybackTests
         Assert.Same(before.Content, h.Documents.Document.Read().Content); Assert.True(h.Documents.Document.Read().IsDirty);
         Assert.True(h.Playback.CanExecute(EditorCommand.Start)); h.Build = null; h.StopPreview = null;
         Assert.True(h.Playback.RunSimulation()); h.Complete(); Assert.Null(h.Playback.Error); Assert.Equal(1, h.Starts);
+    }
+
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public void Replace_BuildsCapturedDocumentAndPreservesModeAndHistory(bool playing)
+    {
+        using var h = new Fixture(); var before = h.Documents.Document.Read();
+        Assert.True(playing ? h.Playback.RunSimulation() : h.Playback.Execute(EditorCommand.Start)); h.Complete();
+        var origin = h.Identity; var revision = h.Context!.Build.SourceRevision;
+        Assert.True(h.Playback.Execute(EditorCommand.Replace)); h.Complete();
+        Assert.Null(h.Playback.Error); Assert.Equal(1, h.Starts); Assert.Equal(2, h.Builds); Assert.Equal(1, h.Replaces); Assert.Equal(0, h.Stops);
+        Assert.Equal(playing ? SessionState.Playing : SessionState.Paused, h.State); Assert.NotEqual(origin, h.Identity);
+        Assert.True(h.Context!.Build.SourceRevision > revision); Assert.False(h.Context.Build.ReuseArtifact);
+        Assert.Equal(new[] { "context", "Build", "Replace" }, h.Events.Skip(playing ? 5 : 4));
+        Assert.Same(before.Content, h.Documents.Document.Read().Content); Assert.Equal(1, before.Content!.UndoCount);
+        Assert.True(h.Documents.Document.Read().IsDirty); Assert.True(h.Playback.OwnsRuntime); Assert.True(h.Playback.CanExecute(EditorCommand.Replace));
+    }
+
+    [Theory] [InlineData("document")] [InlineData("runtime")]
+    public void Replace_RejectsDifferentDocumentOrRuntimeBeforeBuild(string change)
+    {
+        using var h = new Fixture(); Assert.True(h.Playback.RunSimulation()); h.Complete();
+        if (change == "runtime") h.Identity = Fixture.NewIdentity();
+        else { var state = h.Documents.Document.Read().Content!; h.Documents.Document.Apply(DocumentData.Edit(state.Document.Revision, 17)); }
+        Assert.False(h.Playback.CanExecute(EditorCommand.Replace)); Assert.False(h.Playback.Execute(EditorCommand.Replace));
+        Assert.Equal(1, h.Builds); Assert.Equal(0, h.Replaces); Assert.Equal(0, h.Stops);
+    }
+
+    [Theory] [InlineData("document")] [InlineData("runtime")] [InlineData("context")]
+    public void Replace_RejectsStaleCompletionBeforeTransaction(string change)
+    {
+        using var h = new Fixture(); Assert.True(h.Playback.RunSimulation()); h.Complete();
+        var entered = DocumentData.Signal(); var release = DocumentData.Signal();
+        h.Build = async _ => { entered.TrySetResult(); await release.Task; };
+        Assert.True(h.Playback.Execute(EditorCommand.Replace)); DocumentUiFixture.Wait(entered.Task);
+        try
+        {
+            if (change == "runtime") h.Identity = Fixture.NewIdentity();
+            else if (change == "context") h.Version++;
+            else { var state = h.Documents.Document.Read().Content!; h.Documents.Document.Apply(DocumentData.Edit(state.Document.Revision, 17)); }
+        }
+        finally { release.TrySetResult(); }
+        h.Complete(); Assert.Null(h.Playback.Error); Assert.Equal(0, h.Replaces); Assert.Equal(0, h.Stops);
+        Assert.Equal(SessionState.Playing, h.State); Assert.True(h.Playback.OwnsRuntime);
+    }
+
+    [Theory] [InlineData("build")] [InlineData("transaction")] [InlineData("rollback")]
+    public void Replace_FailureKeepsOldOrRecoveredRuntimeOwned(string stage)
+    {
+        using var h = new Fixture(); var before = h.Documents.Document.Read(); Assert.True(h.Playback.RunSimulation()); h.Complete();
+        Exception failure = stage == "build" ? new IOException("compiler") : new GameReplacementException("Candidate", new IOException("restore"), stage == "rollback", stage == "rollback", null);
+        if (stage == "build") h.Build = _ => Task.FromException(failure);
+        else h.Replace = _ => { if (stage == "rollback") h.Identity = Fixture.NewIdentity(); return Task.FromException(failure); };
+        Assert.True(h.Playback.Execute(EditorCommand.Replace)); h.Complete();
+        Assert.Same(failure, h.Playback.Error); Assert.Equal(stage == "build" ? 0 : 1, h.Replaces); Assert.Equal(0, h.Stops);
+        Assert.Equal(SessionState.Playing, h.State); Assert.True(h.Playback.OwnsRuntime); Assert.True(h.Playback.CanExecute(EditorCommand.Replace));
+        Assert.Same(before.Content, h.Documents.Document.Read().Content); Assert.True(h.Documents.Document.Read().IsDirty);
+    }
+
+    [Theory] [InlineData(EditorCommand.Cancel)] [InlineData(EditorCommand.Stop)]
+    public void Replace_InterruptFencesStopBeforeCancellingTransaction(EditorCommand interrupt)
+    {
+        using var h = new Fixture(); Assert.True(h.Playback.RunSimulation()); h.Complete();
+        var entered = DocumentData.Signal(); var release = DocumentData.Signal(); var cancelled = DocumentData.Signal();
+        var stopWasFenced = false;
+        h.Replace = async token =>
+        {
+            using var registration = token.Register(() => { stopWasFenced = h.Events.Contains("Stop"); cancelled.TrySetResult(); });
+            entered.TrySetResult(); await release.Task; token.ThrowIfCancellationRequested();
+        };
+        Assert.True(h.Playback.Execute(EditorCommand.Replace)); DocumentUiFixture.Wait(entered.Task);
+        try
+        {
+            Assert.True(h.Playback.Execute(interrupt)); DocumentUiFixture.Wait(cancelled.Task);
+            Assert.Equal(interrupt == EditorCommand.Stop, stopWasFenced);
+            Assert.False(h.Playback.Pending.IsCompleted); Assert.False(h.Playback.Execute(EditorCommand.Replace));
+            Assert.False(h.Documents.Commands.Execute(DocumentCommand.New));
+        }
+        finally { release.TrySetResult(); h.Complete(); }
+        Assert.Equal(interrupt == EditorCommand.Stop ? SessionState.Stopped : SessionState.Playing, h.State);
+    }
+
+    [Theory] [InlineData(EditorCommand.Cancel)] [InlineData(EditorCommand.Stop)]
+    public void Replace_InterruptDuringBuildDrainsBeforeAdmission(EditorCommand interrupt)
+    {
+        using var h = new Fixture(); Assert.True(h.Playback.RunSimulation()); h.Complete();
+        var entered = DocumentData.Signal(); var release = DocumentData.Signal(); h.Build = async _ => { entered.TrySetResult(); await release.Task; };
+        Assert.True(h.Playback.Execute(EditorCommand.Replace)); DocumentUiFixture.Wait(entered.Task);
+        try { Assert.True(h.Playback.Execute(interrupt)); Assert.False(h.Playback.Pending.IsCompleted); Assert.False(h.Playback.Execute(EditorCommand.Replace)); }
+        finally { release.TrySetResult(); }
+        h.Complete(); Assert.Equal(0, h.Replaces); Assert.Equal(interrupt == EditorCommand.Stop ? 1 : 0, h.Stops);
+        Assert.Equal(interrupt == EditorCommand.Stop ? SessionState.Stopped : SessionState.Playing, h.State);
+        Assert.Equal(interrupt != EditorCommand.Stop, h.Playback.OwnsRuntime); Assert.Equal(1, h.Documents.Document.Read().Content!.UndoCount);
     }
 
     [Theory] [InlineData(EditorCommand.Cancel)] [InlineData(EditorCommand.Stop)]
@@ -173,6 +268,7 @@ public sealed class EditorScenePlaybackTests
         Assert.False(model.CanRun); Assert.False(model.CanBuild); model.RunSimulation(); Assert.Equal(0, h.Starts);
         inspector.Cancel(); model.Refresh(h.Runtime(), h.Editor()); model.RunSimulation(); h.Complete();
         model.Refresh(h.Runtime(), h.Editor()); Assert.True(model.CanStop); Assert.True(model.CanPause); Assert.False(model.CanBuild);
+        Assert.True(model.CanReplace); model.Execute(EditorCommand.Replace); h.Complete(); Assert.Equal(1, h.Replaces);
         model.Execute(EditorCommand.Stop); h.Complete(); model.Refresh(h.Runtime(), h.Editor());
         Assert.Equal(selection, model.SelectedId); Assert.True(model.CanRun); Assert.Equal(0, legacy);
         Assert.Equal(1, h.Documents.Document.Read().Content!.UndoCount);
@@ -239,8 +335,9 @@ public sealed class EditorScenePlaybackTests
         public ConcurrentQueue<string> Events { get; } = new();
         public GameEditorContext? Context; public long Version;
         public SessionState State = SessionState.Stopped;
-        public int Builds, Starts, Stops, Steps;
-        public Func<CancellationToken, Task>? Build, Start;
+        public int Builds, Starts, Stops, Steps, Replaces;
+        public SessionIdentity? Identity;
+        public Func<CancellationToken, Task>? Build, Start, Replace;
         public Func<Task>? StopPreview; public Exception? StopFailure; public Action? BeforeStart, AfterContext;
         public Fixture(Task? ready = null)
         {
@@ -249,15 +346,22 @@ public sealed class EditorScenePlaybackTests
             Documents.Commands.Apply(state.Document, DocumentData.Edit(state.Document.Revision, 9));
             Preview = new((_, _) => throw new NotSupportedException(), () => { Events.Enqueue("preview-stop"); return StopPreview?.Invoke() ?? Task.CompletedTask; });
             Playback = new(Documents.Commands, Preview, Runtime, Editor,
-                context => { Events.Enqueue("context"); Context = context; Version++; AfterContext?.Invoke(); }, Dispatch, StartVersionAsync, ready: ready);
+                context => { Events.Enqueue("context"); Context = context; Version++; AfterContext?.Invoke(); }, Dispatch, StartVersionAsync, ready: ready, replace: ReplaceVersionAsync);
             Documents.StopRuntime = () => Dispatch(EditorCommand.Stop, default);
         }
         private Task StartVersionAsync(long version, CancellationToken token)
         {
             BeforeStart?.Invoke(); if (version != Version) throw new OperationCanceledException(token);
-            Events.Enqueue("Start"); Starts++; SetState(SessionState.Paused); return Start?.Invoke(token) ?? Task.CompletedTask;
+            Events.Enqueue("Start"); Starts++; Identity = NewIdentity(); SetState(SessionState.Paused); return Start?.Invoke(token) ?? Task.CompletedTask;
         }
-        public SessionStatus Runtime() => new(State);
+        private async Task ReplaceVersionAsync(long version, CancellationToken token)
+        {
+            if (version != Version) throw new OperationCanceledException(token);
+            Events.Enqueue("Replace"); Replaces++;
+            if (Replace != null) await Replace(token); else Identity = NewIdentity();
+        }
+        public static SessionIdentity NewIdentity() => new(Guid.NewGuid(), 1, new('a', 64), new('b', 64), new('c', 64));
+        public SessionStatus Runtime() => new(State) { Identity = Identity };
         public GameEditorStatus Editor() => new(Version, Context, GameEditorOperation.Idle, null, null, false);
         private async Task Dispatch(EditorCommand command, CancellationToken token)
         {
@@ -268,7 +372,7 @@ public sealed class EditorScenePlaybackTests
                 case EditorCommand.Play: SetState(SessionState.Playing); break;
                 case EditorCommand.Pause: SetState(SessionState.Paused); break;
                 case EditorCommand.Step: Steps++; break;
-                case EditorCommand.Stop: Stops++; if (StopFailure != null) throw StopFailure; Version++; SetState(SessionState.Stopped); break;
+                case EditorCommand.Stop: Stops++; if (StopFailure != null) throw StopFailure; Version++; Identity = null; SetState(SessionState.Stopped); break;
             }
         }
         private void SetState(SessionState state) { State = state; Documents.RuntimeIdle = state == SessionState.Stopped; }

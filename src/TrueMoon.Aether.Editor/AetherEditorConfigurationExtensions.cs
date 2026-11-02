@@ -41,6 +41,15 @@ public static class AetherEditorConfigurationExtensions
         });
         context.UseAetherAuthoring();
         context.UseAetherEditorDocuments();
+        context.Services(services =>
+        {
+            if (!services.Exist<IFactory<EditorSourceWatch, ResolvedProject>>())
+            {
+                var clock = services.Exist<TimeProvider>();
+                services.Singleton<IFactory<EditorSourceWatch, ResolvedProject>>(resolver =>
+                    new EditorSourceWatchFactory(snapshot.SourceTracking, clock ? resolver.Resolve<TimeProvider>() : TimeProvider.System));
+            }
+        });
         context.UseAetherEditorProjects();
         context.EnsureAetherEditorDiagnostics();
         context.Services(services =>

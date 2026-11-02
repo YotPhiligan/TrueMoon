@@ -8,6 +8,59 @@ namespace TrueMoon.Aether.Editor.Tests.Projects;
 public sealed class JsonProjectStoreTests
 {
     [Fact]
+    public async Task VersionThree_LocalPackageDirectoryRoundTripsAndMapsToAbsoluteBuildInput()
+    {
+        using var fixture = new ProjectFixture(); Directory.CreateDirectory(Path.Combine(fixture.Root, "Packages"));
+        var store = new JsonProjectStore();
+        var resolved = store.Resolve(fixture.Manifest, fixture.Description with { FormatVersion = 3, PackageDirectory = "Content/../Packages", Dependencies = ["Leaf.dll"] });
+        await store.WriteNewAsync(resolved); var read = await store.ReadAsync(fixture.Manifest);
+        Assert.Equal("Packages", read.Description.PackageDirectory); Assert.Equal(3, read.Description.FormatVersion);
+        using var session = new ProjectSession(new(read, new("10.0.403")));
+        Assert.Equal(Path.Combine(fixture.Root, "Packages"), session.CreateBuildRequest(1).PackageDirectory);
+    }
+
+    [Theory] [InlineData(1, "Packages")] [InlineData(2, "Packages")] [InlineData(3, "../Packages")]
+    [InlineData(3, "")] [InlineData(3, "C:/Packages")] [InlineData(3, "Missing")]
+    public void PackageDirectory_RejectsInvalidVersionOrPathBeforePublication(int version, string path)
+    {
+        using var fixture = new ProjectFixture(); Directory.CreateDirectory(Path.Combine(fixture.Root, "Packages"));
+        var error = Record.Exception(() => new JsonProjectStore().Resolve(fixture.Manifest, fixture.Description with { FormatVersion = version, PackageDirectory = path }));
+        Assert.True(error is InvalidDataException or DirectoryNotFoundException); Assert.False(File.Exists(fixture.Manifest));
+    }
+
+    [Fact]
+    public async Task VersionTwo_PrivateDependenciesRoundTripAsAnImmutableBuildAllowlist()
+    {
+        using var fixture = new ProjectFixture(); var names = new[] { "Game.Shared.dll" };
+        var store = new JsonProjectStore();
+        var resolved = store.Resolve(fixture.Manifest, fixture.Description with { FormatVersion = 2, Dependencies = names });
+        names[0] = "Changed.dll";
+        await store.WriteNewAsync(resolved); var read = await store.ReadAsync(fixture.Manifest);
+        Assert.Equal(2, read.Description.FormatVersion); Assert.Equal(new[] { "Game.Shared.dll" }, read.Description.Dependencies);
+        Assert.Throws<NotSupportedException>(() => ((IList<string>)read.Description.Dependencies).Clear());
+        using var session = new ProjectSession(new(read, new("10.0.403")));
+        var request = session.CreateBuildRequest(42);
+        Assert.Equal(new[] { "Game.Shared.dll" }, request.Dependencies);
+        Assert.Throws<NotSupportedException>(() => ((IList<string>)request.Dependencies!).Clear());
+    }
+
+    [Theory] [InlineData("version")] [InlineData("null")] [InlineData("duplicate")] [InlineData("entry")]
+    [InlineData("path")] [InlineData("extension")] [InlineData("limit")]
+    public void Dependencies_RejectInvalidAllowlistBeforeManifestPublication(string problem)
+    {
+        using var fixture = new ProjectFixture();
+        IReadOnlyList<string> names = problem switch
+        {
+            "null" => null!, "duplicate" => ["Shared.dll", "shared.dll"], "entry" => [fixture.Description.EntryAssembly],
+            "path" => ["../Shared.dll"], "extension" => ["Shared.exe"], "limit" => Enumerable.Range(0, 16).Select(index => $"Shared{index}.dll").ToArray(),
+            _ => ["Shared.dll"]
+        };
+        Assert.Throws<InvalidDataException>(() => new JsonProjectStore().Resolve(fixture.Manifest,
+            fixture.Description with { FormatVersion = problem == "version" ? 1 : 2, Dependencies = names }));
+        Assert.False(File.Exists(fixture.Manifest));
+    }
+
+    [Fact]
     public void Resolve_NormalizesContainedPathsAndNameWithoutChangingPortableInput()
     {
         using var fixture = new ProjectFixture();
@@ -161,7 +214,7 @@ public sealed class JsonProjectStoreTests
         using var fixture = new ProjectFixture();
         var description = kind switch
         {
-            "format" => fixture.Description with { FormatVersion = 2 },
+            "format" => fixture.Description with { FormatVersion = int.MaxValue },
             "id" => fixture.Description with { Id = Guid.Empty },
             "name" => fixture.Description with { Name = " " },
             "assembly-path" => fixture.Description with { EntryAssembly = "bin/Game.dll" },

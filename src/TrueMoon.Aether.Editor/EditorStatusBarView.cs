@@ -21,6 +21,8 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
     public Element Entities { get; }
     /// <summary>Preview status and popup trigger.</summary>
     public Button PreviewButton { get; }
+    /// <summary>Retained independent source-state segment and complete-details trigger.</summary>
+    public Button SourceButton { get; }
     /// <summary>Always-reserved details action.</summary>
     public IconButton DetailsButton { get; }
     /// <summary>Shared adaptive UI layout.</summary>
@@ -28,8 +30,9 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
     /// <inheritdoc />
     public bool NeedsFrame => _restoreDetailsFocus || IsAttached && Bar.KeepBackdropVisible != KeepsBackdropVisible;
     private bool OwnsPopup => ReferenceEquals(_overlays.PopupOwner, SummaryButton) ||
-        ReferenceEquals(_overlays.PopupOwner, PreviewButton) || ReferenceEquals(_overlays.PopupOwner, DetailsButton);
-    private bool KeepsBackdropVisible => _model.HasError || _model.Kind is EditorStatusKind.Busy or EditorStatusKind.Error or EditorStatusKind.Waiting || OwnsPopup;
+        ReferenceEquals(_overlays.PopupOwner, PreviewButton) || ReferenceEquals(_overlays.PopupOwner, SourceButton) || ReferenceEquals(_overlays.PopupOwner, DetailsButton);
+    private bool KeepsBackdropVisible => _model.HasError || _model.Kind is EditorStatusKind.Busy or EditorStatusKind.Error or EditorStatusKind.Waiting ||
+        _model.HasSource && _model.SourceKind is EditorStatusKind.Busy or EditorStatusKind.Waiting || OwnsPopup;
     /// <inheritdoc />
     public int InputPriority => 10;
     /// <inheritdoc />
@@ -38,7 +41,7 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
         if (_restoreDetailsFocus)
         {
             _restoreDetailsFocus = false;
-            if (ReferenceEquals(_overlays.PopupOwner, PreviewButton)) _overlays.Close(false);
+            if (ReferenceEquals(_overlays.PopupOwner, PreviewButton) || ReferenceEquals(_overlays.PopupOwner, SourceButton)) _overlays.Close(false);
             if (_overlays.Popup == null) context.Focus(DetailsButton);
         }
         Bar.KeepBackdropVisible = KeepsBackdropVisible;
@@ -60,10 +63,13 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
             PreviewButton = new SegmentButton(UiSymbol.Preview, "Управление Edit Preview", (context, button) => Open(context, button, true))
                 .SetValue(UiProperties.AccessibleName, "Управление Edit Preview").BindText(model, x => x.PreviewSummary);
             DetailsButton = new DetailsAction((context, button) => Open(context, button, false));
-            Bar = new(SummaryButton, CancelButton, [Entities, PreviewButton], DetailsButton);
+            SourceButton = new SegmentButton(UiSymbol.Build, "Состояние исходников", (context, button) => Open(context, button, false))
+                .BindText(model, x => x.SourceSummary).Bind(UiProperties.Visible, model, x => x.HasSource);
+            Bar = new(SummaryButton, CancelButton, [Entities, PreviewButton, SourceButton], DetailsButton);
             void OverflowChanged()
             {
-                if (ReferenceEquals(_overlays.PopupOwner, PreviewButton) && Bar.OverflowedItems.Contains(PreviewButton))
+                if (ReferenceEquals(_overlays.PopupOwner, PreviewButton) && Bar.OverflowedItems.Contains(PreviewButton) ||
+                    ReferenceEquals(_overlays.PopupOwner, SourceButton) && Bar.OverflowedItems.Contains(SourceButton))
                     _restoreDetailsFocus = true;
             }
             Bar.OverflowChanged += OverflowChanged; Own(new Release(() => Bar.OverflowChanged -= OverflowChanged));
@@ -81,7 +87,8 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
         }
     }
     private void Changed(object? sender, PropertyChangedEventArgs args)
-    { if (args.PropertyName is nameof(EditorStatusBarViewModel.Kind) or nameof(EditorStatusBarViewModel.HasError)) Dispatch(UpdateKind); }
+    { if (args.PropertyName is nameof(EditorStatusBarViewModel.Kind) or nameof(EditorStatusBarViewModel.HasError) or
+        nameof(EditorStatusBarViewModel.SourceKind) or nameof(EditorStatusBarViewModel.HasSource)) Dispatch(UpdateKind); }
     private void UpdateKind()
     {
         ((SegmentButton)SummaryButton).Symbol = _model.Kind switch
@@ -90,6 +97,9 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
             EditorStatusKind.Paused => UiSymbol.Pause, EditorStatusKind.Running => UiSymbol.Play, _ => UiSymbol.Check
         };
         ((SegmentButton)SummaryButton).Kind = _model.Kind;
+        ((SegmentButton)SourceButton).Kind = _model.SourceKind;
+        ((SegmentButton)SourceButton).Symbol = _model.SourceKind == EditorStatusKind.Busy ? UiSymbol.Busy :
+            _model.SourceKind == EditorStatusKind.Waiting ? UiSymbol.Warning : UiSymbol.Build;
         Bar.KeepBackdropVisible = KeepsBackdropVisible;
     }
     private void Open(IInputContext context, Element trigger, bool preview)

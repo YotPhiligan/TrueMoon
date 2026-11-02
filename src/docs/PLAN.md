@@ -14,15 +14,37 @@
 
 UI alpha и контрольное beta приложение имеют собственные критерии. Готовность UI не означает готовность всех модулей TrueMoon; обратное тоже не следует из общего build.
 
-Текущий приоритет, сверка2026-10-31 —
+Текущий приоритет, сверка2026-11-02 —
 [ED6b document-aware Build/Play/Stop](engine/EDITOR_PLAN.md#ed6b-buildplaystop-из-редактора--2026-10-29).
 Первый [срез ED6b.1](engine/EDITOR_PLAN.md#ed6b1-запуск-runtime-копии-открытой-сцены--2026-10-31)
 подключает fresh Build и Runtime copy текущей unsaved сцены с сохранением parent
 document/history. [ED6b.2a](engine/EDITOR_PLAN.md#ed6b2a-наблюдаемые-входы-сборки-и-stale-start--2026-10-31)
 добавляет content witness и проверку наблюдаемых SDK inputs перед Start.
 Первый [ED6b.2b.1](engine/EDITOR_PLAN.md#ed6b2b1-захваченная-c-компиляция--2026-10-31)
-компилирует C# из byte copies после trusted SDK preparation. Следом ED6b.2b.2 closure
-до evaluation/preparation до artifact reuse; gameplay
+компилирует C# из byte copies. [ED6b.2b.2a](engine/EDITOR_PLAN.md#ed6b2b2a-снимок-declarative-preparation--2026-10-31)
+добавляет freeze поддержанного declarative graph до SDK evaluation с pinned Windows
+toolchain/runtime и explicit environment. Scoped source/fresh NuGet native acceptance
+и [снижение стоимости freeze](engine/EDITOR_PLAN.md#ed6b2b2a1-стоимость-toolchain-freeze--2026-10-31)
+подтверждены. [ED6b.2c](engine/EDITOR_PLAN.md#ed6b2c-повторное-использование-проверенного-payload--2026-11-01)
+добавляет process-local reuse managed DLL с прежними identity/prestart/ownership
+fences и новым manifest для compile ticket. [ED6b.2d](engine/EDITOR_PLAN.md#ed6b2d-document-aware-code-replace--2026-11-01)
+добавляет code Replace для owned runtime/неизменённого authoring snapshot с input
+preflight и rollback. [ED6b.2d.1](engine/EDITOR_PLAN.md#ed6b2d1-прерывание-replace-в-native-consumer--2026-11-02)
+исправляет порядок Stop/exit перед cancellation и проверяет native interrupts.
+[ED6b.2b.2b](engine/EDITOR_PLAN.md#ed6b2b2b-захваченный-managed-projectreference-graph--2026-11-02)
+добавляет captured DAG до4managed projects, explicit DLL allowlist и manifest v2 с
+сохранением v1. [ED6b.2b.2b.1](engine/EDITOR_PLAN.md#ed6b2b2b1-native-прерывания-project-graph--2026-11-02)
+проверяет directed native interrupts в dependency SDK/graph verification/restore.
+[ED6b.2b.2c](engine/EDITOR_PLAN.md#ed6b2b2c-захваченный-managed-packagereference-closure--2026-11-02)
+добавляет locked local unsigned managed PackageReference closure без build/analyzer/native assets;
+scoped unit/package/native acceptance пройдена.
+[ED6b.2b.2c.1](engine/EDITOR_PLAN.md#ed6b2b2c1-native-package-interrupts-и-preflight--2026-11-02)
+проверяет52native package interrupts/stale/corrupt cases перед Start/Replace.
+[ED6b.2e contract](engine/EDITOR_PLAN.md#ed6b2e-контракт-source-watcher-и-stale-build-status--2026-11-02)
+определяет invalidation/ownership/debounce/drain/UI delivery source watcher без
+auto Build/Play; ED6b.2e.1–3 descriptor/probes, project-owned observer и retained source
+indicator реализованы/проверены в bounded local Windows profile. Далее measured observer
+cost на большом graph; wider profiles и Gameplay
 input/HUD/Player и полный ED6b сохраняют свои дальнейшие задачи.
 ED1b.1/2 согласуют project/document Switch/Close API, retained project path UI и runtime
 rebinding в stopped-game/idle-compiler profile. Подробная policy/evidence — в Editor плане/STATUS.

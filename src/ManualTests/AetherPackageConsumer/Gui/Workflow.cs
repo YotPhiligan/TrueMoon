@@ -132,7 +132,7 @@ internal static class Workflow
             var savedPath = document.Read().Path!;
             Program.Check(await window.RequestCloseAsync().WaitAsync(token), "Clean close was vetoed.");
             await window.Completion.WaitAsync(token);
-            Program.Check(notificationThreads.SetEquals([owner]) && runtimes.Leases.Count == 11 && maxLive == 1, "Owner-thread or child generation count changed.");
+            Program.Check(notificationThreads.SetEquals([owner]) && runtimes.Leases.Count == 14 && maxLive == 1, "Owner-thread or child generation count changed.");
             return new { Captures = captures, PresentedRevisions = revisions, OwnerThread = owner, NotificationThreads = notificationThreads,
                 MaxLive = maxLive, CrashedPid = crashedPid, CancelClosePreserved = true, FailedSavePreserved = true, CrashPreserved = true,
                 Recovered = true, SourceUnchanged = true, StableInspector = true, HierarchyMetadataPersisted = true, EntityOperations = entityProof,
@@ -257,24 +257,56 @@ internal static class Workflow
             await StartPreview(); await Preview(); var previewPid = engine.Supervisor.Status.ProcessId!.Value;
             var builds = new List<string>(); var pids = new List<int>(); var inputs = new List<string>();
             var compilations = new List<string>(); var capturedFiles = new List<int>(); var capturedBytes = new List<long>();
+            var preparationFingerprints = new List<string>(); var preparationCosts = new List<object>(); var startMilliseconds = new List<double>();
+            var reusedArtifacts = new List<bool>();
+            object? replacement = null;
+            using var ownProcess = Process.GetCurrentProcess(); var handlesBefore = ownProcess.HandleCount;
             for (var run = 0; run < 2; run++)
             {
                 await Until(() => view.DataContext!.CanRun);
+                var startClock = Stopwatch.StartNew();
                 if (view.Header is { } header) await Click(header.RunButton);
                 else await ui.InvokeAsync(() => view.DataContext!.RunSimulation()).WaitAsync(token);
+                // Build and prestart verification have compiler-owned budgets; wait for the admitted operation.
+                await playback.Pending.WaitAsync(token);
                 await Until(() => playback.Error != null || engine.Supervisor.Status.State == SessionState.Playing && playback.Pending.IsCompleted);
                 Program.Check(playback.Error == null, "Scene game failed: " + playback.Error);
+                startMilliseconds.Add(startClock.Elapsed.TotalMilliseconds);
                 var identity = engine.Supervisor.Status.Identity!; builds.Add(identity.GameBuildId); pids.Add(engine.Supervisor.Status.ProcessId!.Value);
                 using (var witness = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(engine.Builds.DiagnosticsDirectory!, "verify.inputs.json"), token)))
                 {
                     inputs.Add(witness.RootElement.GetProperty("Fingerprint").GetString()!);
                     Program.Check(engine.Editor.Status.Context!.Build.TrackInputs && witness.RootElement.GetProperty("Files").GetArrayLength() > 2,
                         "Scene Build/Play did not verify observed SDK inputs.");
+                    ReadPreparation(witness.RootElement, "verify", run);
                 }
                 var buildJob = engine.Builds.ReadDiagnostics(16, 0).Single(job => job.Source == "Build" && job.GameBuildId == identity.GameBuildId);
                 var buildDirectory = Path.Combine(Path.GetDirectoryName(engine.Builds.DiagnosticsDirectory!)!, buildJob.JobId!);
+                using (var reuse = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(buildDirectory, "reuse.json"), token)))
+                {
+                    var reused = reuse.RootElement.GetProperty("Reused").GetBoolean(); reusedArtifacts.Add(reused);
+                    Program.Check(reused == (run == 1) && (run == 0 || reuse.RootElement.GetProperty("PreviousBuildId").GetString() == builds[0]) &&
+                        File.Exists(Path.Combine(buildDirectory, "prepare.json")) == !reused &&
+                        File.Exists(Path.Combine(buildDirectory, "build.stdout.log")) == !reused,
+                        "Scene restart did not verify and reuse the last payload without compiling again.");
+                }
+                foreach (var phase in new[] { "before", "after" })
+                {
+                    using var witness = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(buildDirectory, phase + ".inputs.json"), token));
+                    ReadPreparation(witness.RootElement, phase, run);
+                }
+                Program.Check(engine.Editor.Status.Context!.Build.CapturePreparation &&
+                    !Directory.Exists(Path.Combine(buildDirectory, "preparation")) &&
+                    !Directory.Exists(Path.Combine(engine.Builds.DiagnosticsDirectory!, "preparation")),
+                    "Scene Start did not freeze preparation or release its staging before game startup.");
                 using (var compilation = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(buildDirectory, "capture.json"), token)))
                 {
+                    var references = compilation.RootElement.GetProperty("Projects");
+                    Program.Check(references.GetArrayLength() == 1 && references[0].GetProperty("EntryAssembly").GetString() == "Game.Shared.dll" &&
+                        engine.Editor.Status.Context!.Build.CaptureProjectReferences, "Scene compilation did not capture its private project graph.");
+                    Program.Check(engine.Editor.Status.Context!.Build.PackageDirectory != null && compilation.RootElement.GetProperty("Files").EnumerateArray().Any(file =>
+                        file.GetProperty("Path").GetString()!.EndsWith(Path.Combine("packages", "game.packaged", "1.0.0", "Game.Packaged.dll"))),
+                        "Scene compilation did not capture its locked package DLL.");
                     compilations.Add(compilation.RootElement.GetProperty("Fingerprint").GetString()!);
                     capturedFiles.Add(compilation.RootElement.GetProperty("Files").GetArrayLength());
                     capturedBytes.Add(compilation.RootElement.GetProperty("TotalBytes").GetInt64());
@@ -294,11 +326,13 @@ internal static class Workflow
                 await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Step)).WaitAsync(token);
                 await Until(() => playback.Pending.IsCompleted && engine.Supervisor.Status.Tick == tick + 1);
                 if (run == 0) await Capture("scene-play-paused.png", 1.65f, game: true);
+                var activePid = pids[^1];
+                if (run == 1) { replacement = await ReplaceGame(); activePid = engine.Supervisor.Status.ProcessId!.Value; }
                 await Until(() => view.DataContext!.CanStop);
                 if (view.Header is { } stopHeader) await Click(stopHeader.StopButton);
                 else await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Stop)).WaitAsync(token);
                 await Until(() => playback.Pending.IsCompleted && engine.Supervisor.Status.State == SessionState.Stopped);
-                Program.Check(playback.Error == null && !playback.OwnsRuntime && runtimes.Leases.Single(lease => lease.ProcessId == pids[^1]) is { Reaped: true, ResourcesReleased: true },
+                Program.Check(playback.Error == null && !playback.OwnsRuntime && runtimes.Leases.Single(lease => lease.ProcessId == activePid) is { Reaped: true, ResourcesReleased: true },
                     "Scene game Stop did not complete cleanup.");
                 Program.Check(ReferenceEquals(content, document.Read().Content) && document.Read().IsDirty && content.UndoCount == 1 && workspace.SelectedId == selected,
                     "Scene game modified authoring state/history/selection or its dirty checkpoint.");
@@ -306,12 +340,95 @@ internal static class Workflow
             Program.Check(builds.Distinct().Count() == 2 && pids.Distinct().Count() == 2, "Restart reused a stale build or child.");
             Program.Check(inputs.Distinct().Count() == 1, "Unchanged source inputs did not retain the same fingerprint across fresh builds.");
             Program.Check(compilations.Distinct().Count() == 1, "Unchanged captured compiler inputs did not retain the same fingerprint.");
+            Program.Check(preparationFingerprints.Count == 6 && preparationFingerprints.Distinct().Count() == 1,
+                "Before/after/prestart preparation closure changed across fresh builds.");
+            ownProcess.Refresh(); var handlesAfter = ownProcess.HandleCount;
             await Until(() => panel.Undo.IsEffectivelyEnabled); await Click(panel.Undo);
             await Until(() => !document.Read().IsDirty && field.Value == "1.5");
             return new { FreshBuilds = builds, RuntimePids = pids, InputFingerprints = inputs, InputsValidated = true,
                 CompilationFingerprints = compilations, CapturedFiles = capturedFiles, CapturedBytes = capturedBytes, CapturedCompilation = true,
+                PreparationFingerprints = preparationFingerprints, PreparationCosts = preparationCosts, FrozenPreparation = true,
+                StartMilliseconds = startMilliseconds, HandlesBefore = handlesBefore, HandlesAfter = handlesAfter,
+                ReusedArtifacts = reusedArtifacts, CapturedPackages = true,
+                Replacement = replacement,
                 PreviewPid = previewPid, PreviewReapedBeforeGame = true,
                 DraftCopy = true, PauseStepStop = true, HistoryDirtySelectionPreserved = true, Capture = "scene-play-paused.png" };
+
+            async Task<object> ReplaceGame()
+            {
+                Progress("Document-aware Replace");
+                var source = Path.Combine(Path.GetDirectoryName(projects.Active!.Project.GameProjectPath)!, "Game.cs");
+                var original = await File.ReadAllTextAsync(source, token);
+                var changed = original.Replace("0xff2080c0", "0xff2080c1", StringComparison.Ordinal);
+                Program.Check(changed != original, "Missing consumer-owned code replacement marker.");
+                var before = engine.Supervisor.Status; var oldPid = before.ProcessId!.Value; var oldBuild = before.Identity!.GameBuildId;
+                await File.WriteAllTextAsync(source, changed, token);
+                await ReplaceCommand();
+                var replaced = engine.Supervisor.Status;
+                Program.Check(playback.Error == null && replaced.State == SessionState.Paused && replaced.Tick == before.Tick &&
+                    replaced.Identity != before.Identity && replaced.Identity!.GameBuildId != oldBuild &&
+                    runtimes.Leases.Single(lease => lease.ProcessId == oldPid) is { Reaped: true, ResourcesReleased: true },
+                    "Replacement lost paused state/checkpoint, used a stale build or preceded old-child cleanup.");
+                await Capture("scene-replaced-paused.png", 1.65f, game: true);
+                var successIdentity = replaced.Identity; var successPid = replaced.ProcessId!.Value;
+                await File.WriteAllTextAsync(source, "invalid C# replacement", token);
+                await ReplaceCommand();
+                Program.Check(playback.Error is TrueMoon.Aether.Builds.GameBuildException && engine.Supervisor.Status.Identity == successIdentity &&
+                    engine.Supervisor.Status.State == SessionState.Paused && !runtimes.Leases.Single(lease => lease.ProcessId == successPid).ResourcesReleased,
+                    "Compiler failure changed or stopped the old game.");
+                await File.WriteAllTextAsync(source, changed.Replace("RejectRestore = false", "RejectRestore = true", StringComparison.Ordinal), token);
+                await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Play)).WaitAsync(token); await playback.Pending.WaitAsync(token);
+                await Until(() => engine.Supervisor.Status.State == SessionState.Playing && view.DataContext!.CanReplace);
+                var playingTick = engine.Supervisor.Status.Tick;
+                await ReplaceCommand();
+                var failure = playback.Error as GameReplacementException; var recovered = engine.Supervisor.Status;
+                Program.Check(failure is { RollbackAttempted: true, RollbackSucceeded: true, RecoveryError: null } &&
+                    recovered.State == SessionState.Playing && recovered.Identity != successIdentity &&
+                    recovered.Identity!.GameBuildId == successIdentity!.GameBuildId && recovered.Tick >= playingTick &&
+                    runtimes.Leases.Single(lease => lease.ProcessId == successPid) is { Reaped: true, ResourcesReleased: true } && playback.OwnsRuntime,
+                    "Rejected candidate did not roll back the old code/state/mode under scene ownership.");
+                await File.WriteAllTextAsync(source, changed, token);
+                await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Pause)).WaitAsync(token); await playback.Pending.WaitAsync(token);
+                await Until(() => engine.Supervisor.Status.State == SessionState.Paused && view.DataContext!.CanReplace);
+                Program.Check(ReferenceEquals(content, document.Read().Content) && document.Read().IsDirty && content.UndoCount == 1 && workspace.SelectedId == selected,
+                    "Replace/failure/rollback modified authoring state or selection.");
+                await Capture("scene-rollback-paused.png", 1.65f, game: true);
+                return new { OldBuild = oldBuild, CandidateBuild = successIdentity.GameBuildId, OldPid = oldPid, CandidatePid = successPid,
+                    RecoveredPid = recovered.ProcessId, PausedTickPreserved = true, CompilerFailureKeptOld = true,
+                    RollbackStateAndPlayingMode = true, ParentDocumentPreserved = true };
+            }
+            async Task ReplaceCommand()
+            {
+                await Until(() => view.DataContext!.CanReplace);
+                await ui.InvokeAsync(() => view.DataContext!.Execute(EditorCommand.Replace)).WaitAsync(token);
+                await playback.Pending.WaitAsync(token);
+            }
+
+            void ReadPreparation(JsonElement witness, string phase, int run)
+            {
+                var preparation = witness.GetProperty("Preparation"); var files = preparation.GetProperty("Files").EnumerateArray().ToArray();
+                var elapsed = preparation.GetProperty("ElapsedMilliseconds").GetDouble();
+                var source = preparation.GetProperty("SourceMilliseconds").GetDouble();
+                var toolchain = preparation.GetProperty("ToolchainMilliseconds").GetDouble();
+                var enumeration = preparation.GetProperty("ToolchainEnumerationMilliseconds").GetDouble();
+                var opening = preparation.GetProperty("ToolchainOpenMilliseconds").GetDouble();
+                var hashing = preparation.GetProperty("ToolchainHashMilliseconds").GetDouble();
+                var toolchainFiles = preparation.GetProperty("ToolchainFiles").GetInt32(); var toolchainBytes = preparation.GetProperty("ToolchainBytes").GetInt64();
+                Program.Check(double.IsFinite(elapsed) && elapsed > 0 && source > 0 && toolchain > 0 && elapsed >= source + toolchain &&
+                    enumeration > 0 && opening > 0 && hashing > 0 && toolchain >= enumeration + opening + hashing &&
+                    files.Length > 2 && files.Any(file => file.GetProperty("Path").GetString()!.EndsWith("game.packaged.1.0.0.nupkg", StringComparison.Ordinal)) &&
+                    files.Any(file => file.GetProperty("Path").GetString()!.EndsWith("packages.lock.json", StringComparison.Ordinal)) &&
+                    toolchainFiles is > 0 and <= 8192 && toolchainBytes is > 0 and <= 1024L * 1024 * 1024,
+                    "Preparation cost/closure evidence is missing or exceeds its supported budget.");
+                preparationFingerprints.Add(preparation.GetProperty("Fingerprint").GetString()!);
+                preparationCosts.Add(new { Run = run, Phase = phase, ElapsedMilliseconds = elapsed, SourceMilliseconds = source,
+                    ToolchainMilliseconds = toolchain, SourceFiles = files.Length, SourceBytes = files.Sum(file => file.GetProperty("Length").GetInt64()),
+                    ToolchainFiles = toolchainFiles, ToolchainBytes = toolchainBytes,
+                    ToolchainEnumerationMilliseconds = enumeration, ToolchainOpenMilliseconds = opening, ToolchainHashMilliseconds = hashing,
+                    SdkVersion = preparation.GetProperty("SdkVersion").GetString(), RuntimeVersion = preparation.GetProperty("RuntimeVersion").GetString(),
+                    ToolchainFingerprint = preparation.GetProperty("ToolchainFingerprint").GetString(),
+                    EnvironmentFingerprint = preparation.GetProperty("EnvironmentFingerprint").GetString() });
+            }
         }
 
         async Task<object> EntityOperations()

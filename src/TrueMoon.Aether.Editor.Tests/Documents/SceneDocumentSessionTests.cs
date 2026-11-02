@@ -7,6 +7,36 @@ namespace TrueMoon.Aether.Editor.Tests.Documents;
 public sealed class SceneDocumentSessionTests
 {
     [Fact]
+    public async Task RuntimeCapture_FencesDirectEditsAndIoUntilActualDrain()
+    {
+        using var files = new DocumentFiles(); var store = new DocumentStore(); var factory = new DocumentData.Sessions();
+        await using var session = new SceneDocumentSession(files.Project, store, factory); await session.NewAsync(DocumentData.Scene());
+        var state = session.Read().Content!; var finish = DocumentData.Signal();
+        var running = session.RunCapturedAsync(state, _ => finish.Task, default);
+        Assert.Equal(DocumentOperation.Runtime, session.Read().Operation);
+        Assert.Throws<InvalidOperationException>(() => session.Apply(DocumentData.Edit(state.Document.Revision, 20)));
+        Assert.Throws<InvalidOperationException>(() => { _ = session.SaveAsAsync("blocked.aetherscene"); });
+        Assert.Same(state, session.Read().Content); Assert.Empty(store.Writes);
+        finish.TrySetResult(); await running;
+        Assert.Equal(DocumentOperation.None, session.Read().Operation);
+        Assert.True(session.Apply(DocumentData.Edit(state.Document.Revision, 20)).Succeeded);
+    }
+
+    [Fact]
+    public async Task RuntimeCapture_CloseCancelsAndDrainsBeforeAuthoringDisposal()
+    {
+        using var files = new DocumentFiles(); var store = new DocumentStore(); var factory = new DocumentData.Sessions();
+        await using var session = new SceneDocumentSession(files.Project, store, factory); await session.NewAsync(DocumentData.Scene());
+        var state = session.Read().Content!; var finish = DocumentData.Signal(); var cancelled = DocumentData.Signal();
+        var running = session.RunCapturedAsync(state, async token =>
+        { using var registration = token.Register(() => cancelled.TrySetResult()); await finish.Task; token.ThrowIfCancellationRequested(); }, default);
+        var closing = session.CloseAsync(DocumentCloseChoice.Discard);
+        await cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5)); Assert.False(closing.IsCompleted); Assert.Equal(0, factory.Products[0].Disposals);
+        finish.TrySetResult(); await Assert.ThrowsAnyAsync<OperationCanceledException>(() => running); Assert.True(await closing);
+        Assert.Null(session.Read().Content); Assert.Equal(1, factory.Products[0].Disposals);
+    }
+
+    [Fact]
     public async Task NewSaveEditUndoRedoAndReload_UseContentCheckpointRatherThanMonotonicDocumentRevision()
     {
         using var files = new DocumentFiles(); var store = new DocumentStore(); var factory = new DocumentData.Sessions();

@@ -304,11 +304,45 @@ provenance. Source paths/diagnostics are mapped back, staging is removed before 
 result returns, and private DLL outputs use captured copies. Unknown/search/response
 file switches, custom compiler/environment/external analyzers, resource/ruleset/signing
 inputs and absolute analyzer-config sections fail closed. This is a C# library
-compilation profile, not general MSBuild/postbuild semantics. Preparation, installed
-dotnet runtime and ambient environment remain trusted; arbitrary task/generator IO,
-pre-evaluation source closure and cache/reuse/Replace are not isolated. The existing
+compilation profile, not general MSBuild/postbuild semantics. Without CapturePreparation,
+preparation, installed dotnet runtime and ambient environment remain trusted. The existing
 file/byte limits include compiler and reference-pack files; response/config documents
 are limited to8MiB. Legacy requests keep capture disabled.
+
+`CapturePreparation` additionally requires both flags and freezes the supported
+declarative project/import/source/reference closure before SDK evaluation. Scene
+Start enables it by default. The profile is Windows/stable net10.0 Microsoft.NET.Sdk
+library with literal imports/HintPath/linked files and project-local globs. Custom
+tasks/targets, MSBuild functions, custom SDKs/analyzers, external globs and package/
+project graphs fail closed before any SDK process. Explicit installed SDK/runtime
+files are read-leased; processes use an explicit private environment/home/temp and
+offline NuGet configuration. Installed toolchain directories and Windows/native OS
+remain trusted; arbitrary MSBuild code is not sandboxed. Original paths and diagnostics
+are preserved, including generated analyzer-config ProjectDir. `Inputs.Preparation`
+records process-local source/toolchain/environment identity; reopening schema1 loses
+provenance. ElapsedMilliseconds/SourceMilliseconds/ToolchainMilliseconds and
+ToolchainFiles/ToolchainBytes report freeze cost without changing content identity;
+SDK restore/evaluation/compilation and total consumer Start latency are separate.
+ToolchainEnumerationMilliseconds/ToolchainOpenMilliseconds/ToolchainHashMilliseconds
+split census/path validation, fresh path checks/read leases and byte reads/SHA256.
+Every phase still enumerates and hashes the entire toolchain. Ancestor validation
+is reused only within one pass over trusted/stable installed directories, and
+leases disable per-stream managed buffering in favor of one 64KiB capture buffer.
+After-build/prestart re-freeze live inputs before accepting them.
+Requests may opt into ReuseArtifact with CapturePreparation. The compiler retains
+one successful process-local result without live resources. Matching before/after
+input observations, original compiler inputs and pinned artifact hashes allow reusing
+its managed DLLs; a new source ticket republishes the manifest. Missing/corrupt
+payloads or changed inputs rebuild; failed/cancelled jobs and failed prestart checks
+discard reuse. Reopening schema1 never seeds it. Explicit builds remain fresh by default.
+GameEditor.ReplaceBuildAsync(expectedContextVersion) requires the exact selected
+context/candidate; both Replace entry points verify tracked inputs before reserving
+the checkpoint transaction or pausing the old game. Reopened tracked provenance is
+rejected. Existing compatible-scene and bounded recovery/Stop fences remain unchanged.
+Source quota is4096files/64MiB per file/256MiB; toolchain8192files/1GiB, depth≤64. Copies and
+leases remain compiler-owned and are released with the job before result completion.
+Extended graph profiles, disk cache/document-aware Replace and independent native/
+package acceptance remain separate work.
 
 Opt-in `GameBuildRequest.TrackInputs` observes evaluated SDK files/options and
 preprocessed imports before/after compilation. `GameBuildArtifact.Inputs` retains an
@@ -386,3 +420,62 @@ owned-process cleanup and frame/thread ownership remain required.
 
 Source, integration example and roadmap:
 [TrueMoon repository](https://github.com/YotPhiligan/TrueMoon).
+
+With `CaptureProjectReferences = true` (requires CapturePreparation), the compiler
+captures a DAG of at most four net10.0 C# library projects including the entry.
+Project directories must not overlap. References must be unconditional literal ProjectReference items without metadata;
+dependency AssemblyName is the project filename or an unconditional literal.
+Every private DLL must be declared in Dependencies. Cycles, output-name collisions,
+mixed SDKs, package references without PackageDirectory and context-dependent shared imports fail closed.
+All source/import/config/glob/reference inputs are frozen before SDK execution.
+Each node compiles once from captured Csc inputs in dependency order, with isolated
+intermediates and one job's aggregate4096file/64MiB per file/256MiB input budget.
+Compilation.Projects retains child provenance; VerifyInputsAsync(inputs, compilation)
+and reuse recheck the entire closure and stage dependency bytes from the selected,
+pinned artifact. Open never restores provenance. Graph staging drains with the job;
+SDK BuildProjectReferences remains false. This opt-in extends the default
+single-project profile; artifact/checkpoint/control schemas remain unchanged.
+
+`GameBuildRequest.PackageDirectory` opts into local unsigned managed packages and
+requires CapturePreparation. Supply lowercase `id.version.nupkg` archives and a
+schema1 `packages.lock.json` beside each package-consuming project (only net10.0,
+no RID). PackageReference must have unconditional literal Include/Version without
+metadata; stable normalized three-part versions only, with resolved equal to the
+literal version. Direct/transitive edges and ranges must agree with the nuspec;
+archive SHA512 must equal the lock contentHash before SDK execution. No network,
+ambient NuGet source/cache or package resolution participates.
+RestorePackagesWithLockFile/RestoreLockedMode declarations are supported; after our
+package admission, SDK restore uses rewritten references and its own lock under job work.
+
+Archives must contain one managed lib target (net10.0/net9.0/net8.0/netstandard2.1/
+netstandard2.0), flat IL-only DLLs, optional XML/PDB and ordinary package metadata.
+One matching dependency group or an ungrouped list is supported. Signatures,
+multiple lib targets, ref/runtime variants, build/analyzer/native/content/framework
+assets, meta-packages and nuspec references/developmentDependency are rejected.
+At most16 packages share the entire graph;
+versions/hashes must agree and DLL names must be unique. Every private DLL belongs
+to Dependencies (the flat artifact still admits at most15 plus entry). Archives
+and expanded entries share the source4096file/64MiB per file/256MiB budget.
+PackageReference becomes Reference only in owned mirrors; packages propagate through
+the project graph. Full capture before/after compilation, prestart and reuse checks
+include lock/archive hashes; captured DLLs drain with preparation. This bounded
+profile does not implement general NuGet asset selection or signature validation.
+
+### Process-local source watch descriptor
+
+A successful frozen Build exposes `artifact.Inputs.SourceWatch`, an immutable
+`GameBuildSourceWatchDescriptor`. Files retain original path/length/SHA256 for
+source/import/config/HintPath/lock/nupkg inputs; SourceTrees contain only original
+project directories; TreeFiles retain actual enumerated membership separately from
+explicit inputs; Probes retain exact present and absent import/config/response
+paths. The shared Policy.ExcludesEntry predicate and limits match recursive capture,
+including case-sensitive excluded directory names. Explicit inputs under bin/obj
+remain known files. Ancestors are exact probes, never recursive watch roots.
+
+SourceFingerprint covers source bytes, file membership, probe presence and policy,
+excluding tickets, staging, toolchain census and environment. Full input identity
+and artifact schemas are unchanged. The descriptor owns no live resources and its
+snapshot properties are excluded from diagnostic serialization. Open does not
+restore it. A watch-only probe limit or unrepresentable probe leaves the Build
+valid with a null descriptor and Inputs.Preparation.SourceWatchUnavailableReason.
+This supplies observer data; compiler preflight remains required.

@@ -4,25 +4,31 @@ using System.Text.Json;
 namespace TrueMoon.Aether.Builds;
 
 /// <summary>Process-local identity of the byte inputs used by a captured C# compilation.</summary>
-/// <remarks>MSBuild preparation and the installed dotnet runtime remain trusted. This is not a sandbox for arbitrary generators or build tasks.</remarks>
+/// <remarks>CapturePreparation additionally freezes the supported declarative graph and pins SDK/runtime. This is not a sandbox for arbitrary generators or build tasks.</remarks>
 public sealed class GameBuildCompilationSnapshot
 {
     private readonly string[] _arguments;
     private readonly string _job;
-    internal GameBuildCompilationSnapshot(string sdkVersion, IEnumerable<GameBuildInputFile> files, IEnumerable<string> arguments, string job, string inputFingerprint)
+    internal GameBuildCompilationSnapshot(string sdkVersion, IEnumerable<GameBuildInputFile> files, IEnumerable<string> arguments, string job, string inputFingerprint,
+        IEnumerable<GameBuildProjectCompilationSnapshot>? projects = null, GameBuildReference? artifact = null)
     {
         _job = Path.TrimEndingDirectorySeparator(Path.GetFullPath(job)); _arguments = arguments.ToArray(); InputFingerprint = inputFingerprint;
         SdkVersion = sdkVersion; Files = Array.AsReadOnly(files.OrderBy(f => f.Path, StringComparer.Ordinal).ToArray());
+        Projects = Array.AsReadOnly(projects?.ToArray() ?? []); Artifact = artifact;
         Fingerprint = Compute(Files);
     }
     internal string InputFingerprint { get; }
+    internal GameBuildReference? Artifact { get; }
+    internal GameBuildCompilationSnapshot WithProjects(IEnumerable<GameBuildProjectCompilationSnapshot> projects, GameBuildReference? artifact = null)
+        => new(SdkVersion, Files, _arguments, _job, InputFingerprint, projects, artifact);
     private string Compute(IEnumerable<GameBuildInputFile> files)
     {
         string Normalize(string value) => value.Replace(_job, "$JOB",
             OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            SdkVersion, Files = files.Select(f => f with { Path = Normalize(f.Path) }), Arguments = _arguments.Select(Normalize)
+            SdkVersion, Files = files.Select(f => f with { Path = Normalize(f.Path) }), Arguments = _arguments.Select(Normalize),
+            Projects = Projects.Select(project => new { project.ProjectPath, project.EntryAssembly, Inputs = project.Inputs.Fingerprint, Compilation = project.Compilation.Fingerprint })
         })));
     }
     internal async Task VerifyOriginalsAsync(CancellationToken token)
@@ -49,6 +55,7 @@ public sealed class GameBuildCompilationSnapshot
         }
         var fingerprint = Compute(actual);
         if (fingerprint != Fingerprint) throw new GameBuildInputsChangedException(Fingerprint, fingerprint);
+        foreach (var project in Projects) await project.Compilation.VerifyOriginalsAsync(token).ConfigureAwait(false);
     }
     /// <summary>SDK version used to prepare the captured compiler invocation.</summary>
     public string SdkVersion { get; }
@@ -56,6 +63,8 @@ public sealed class GameBuildCompilationSnapshot
     public string Fingerprint { get; }
     /// <summary>Immutable original-path identities, including generated sources, reference packs and compiler assemblies.</summary>
     public IReadOnlyList<GameBuildInputFile> Files { get; }
+    /// <summary>Referenced-library captures in dependency order; empty for a single-project compilation.</summary>
+    public IReadOnlyList<GameBuildProjectCompilationSnapshot> Projects { get; }
     /// <summary>Total bytes copied for the compiler invocation.</summary>
-    public long TotalBytes => Files.Sum(f => f.Length);
+    public long TotalBytes => Files.Sum(f => f.Length) + Projects.Sum(project => project.Compilation.TotalBytes);
 }

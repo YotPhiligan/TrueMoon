@@ -29,7 +29,10 @@ Undo/Redo и independent Edit preview подключены к общему autho
 Cancel для draft/conflict. Документ, dirty checkpoint, selection и Undo/Redo остаются
 в родительском Editor; изменения игры обратно не переносятся.
 
-Каждый Start/Run заново собирает выбранный game csproj. Сначала проектируется immutable
+Каждый Start/Run проверяет входы выбранного game csproj и может повторно использовать
+последние проверенные DLL текущего компилятора. При изменениях выполняется новая
+компиляция; явная команда Build всегда компилирует заново. Каждый compile ticket
+сохраняет собственную SourceRevision и manifest. Сначала проектируется immutable
 scene snapshot, затем Edit Preview stop/drain/reap, установка context, Build и запуск
 точного candidate/context version. Обычный ▶ включает Play после actual first-present;
 «Запустить на паузе» оставляет Pause. Доступны Pause/Resume/Step/Stop. Во время подготовки
@@ -37,6 +40,18 @@ scene snapshot, затем Edit Preview stop/drain/reap, установка cont
 фактического завершения принятой работы; failed startup очищает owned runtime, failed
 cleanup оставляет Stop retry. После Stop можно продолжить редактирование и отдельно
 включить Edit Preview. Build failure и child crash не уничтожают authoring history.
+
+«Применить сборку» (Replace) доступно для принадлежащей редактору Playing/Paused игры
+с тем же захваченным project/document state. Команда фиксирует новый source ticket,
+собирает код при работающем старом runtime и проверяет входы перед Pause. Затем
+существующая checkpoint-транзакция переносит state в новый child и возвращает прежний
+режим. Parent document/dirty/history/selection не меняются. Ошибка компиляции оставляет
+старую игру; отказ candidate допускает один rollback к старому коду. Cancel ждёт drain/
+recovery, явный Stop/выход запрещает запуск rollback и сохраняет cleanup retry.
+Game должен поддерживать ICheckpointGameSession. На время async verification/start/
+Replace SceneDocumentSession также отклоняет прямые edits/IO; Close отменяет и drains
+эту подготовку до освобождения authoring product.
+Изменение authoring scene требует Stop/Start: live scene migration в этот профиль не входит.
 
 EditorScenePlayback — App-owned coordinator; low-level GameEditor и document API
 сохраняют отдельные contracts. Компиляционный SourceRevision здесь — монотонный номер
@@ -51,9 +66,15 @@ preprocessed imports. Изменённые входы запрещают зап�
 оригиналов не влияют на compilation, но прежние stale checks всё равно требуют
 актуальные исходники до Start. Source paths/diagnostics сохраняются, staging очищается.
 Это ограниченный C# library profile; opaque compiler inputs/custom analyzers и
-resource/ruleset/signing profiles отклоняются. MSBuild preparation, installed dotnet
-runtime и ambient environment остаются trusted; transient edits во время preparation
-и произвольный IO tasks/generators ещё не изолированы. Полный source closure,
+resource/ruleset/signing profiles отклоняются. Scene Start также включает
+CapturePreparation: поддержанный declarative project/import/source/reference graph
+копируется до MSBuild evaluation. Используются explicit SDK/runtime, read-leased
+toolchain files и private environment/home/temp/offline NuGet config. Original
+source paths и диагностика сохраняются. Этот профиль требует Windows и обычный
+Microsoft.NET.Sdk library; custom targets/tasks, MSBuild functions, custom SDK,
+package/project graphs и внешние globs отклоняются до SDK execution. Installed
+toolchain directories и Windows/native OS остаются доверенными. Legacy compiler
+requests могут использовать прежний trusted preparation profile. Расширенный closure,
 переиспользование artifacts для изменяемых исходников, document-aware Replace, gameplay
 input/HUD/Player расширения остаются следующими срезами ED6b. Предел projected runtime
 scene64entities и текущий supported viewport profile сохраняются.
@@ -743,3 +764,66 @@ Build/Start/Play/Pause/Step/Replace/Stop, theme/resize, та же UI tree/window
 close/drain и zero owned resources. Это native correctness proof, не performance
 или physical DPI acceptance. Подробности — [план](../docs/engine/PLAN.md#eng7a-основной-экран-редактора--2026-10-22),
 [статус](../docs/engine/STATUS.md), [история](../docs/engine/HISTORY.md).
+
+### Игровые библиотеки через ProjectReference
+
+Manifest `formatVersion: 2` добавляет явный flat allowlist:
+`"dependencies": ["Game.Shared.dll"]`. Старые version1 manifests по-прежнему
+читаются и записываются с прежними восемью полями; private dependencies требуют v2.
+Имена различаются без учёта регистра, не повторяют entryAssembly; максимум15DLL.
+Допустимые framework/contract/private names дополнительно проверяет Aether compiler.
+
+Scene Build/Start/Replace включают CaptureProjectReferences: до4C# net10.0 library
+projects вместе с entry, обычные unconditional literal ссылки без metadata;
+каталоги проектов не пересекаются.
+Весь source/import/config/reference graph захвачен до SDK execution, каждый узел
+компилируется из copies с отдельными intermediates. Dependencies участвуют в
+artifact identity; before/after/prestart/reuse проверяют весь graph. Game загружает
+private DLL только из selected artifact; родительский Editor их не загружает.
+PackageReference без packageDirectory, cycles, mixed SDKs, custom tasks и более широкие graph profiles
+пока не поддержаны. Лимиты, checkpoint/Replace и ownership contracts прежние.
+
+Manifest `formatVersion: 3` добавляет необязательный `"packageDirectory": "Packages"`:
+существующий каталог внутри проекта, содержащий lowercase `id.version.nupkg`.
+Version1/2 сохраняют чтение/запись прежних полей. `ProjectSession.CreateBuildRequest`
+передаёт абсолютный путь; scene Build/Start/Replace используют общий captured profile.
+Рядом с каждым package-consuming csproj нужен `packages.lock.json` schema1/net10.0;
+direct stable версии совпадают с resolved, contentHash SHA512 — с unsigned archive.
+Все package DLL добавляются в dependencies вместе с project DLL. Поддержан один
+managed lib target, без build/analyzer/native/content/ref assets или signatures;
+детальные границы — [в Aether](../TrueMoon.Aether/README.md#захваченные-локальные-managed-пакеты).
+Неподдержанные пакеты и hash mismatch отклоняются до SDK, повторный prestart capture
+защищает Start/Replace, а reuse требует того же closure. Исходные archives/lock
+не изменяются; Editor не загружает package DLL в свой CLR.
+
+## Наблюдение исходников и source indicator
+
+Full `UseAetherEditor` регистрирует factory инертного project-owned
+`Editing.EditorSourceWatch` до project factory. Open/empty startup не открывает
+handles, worker и SDK ради tracking. После подходящего successful scene Build
+привязывается actual candidate, включая reuse. Failed/cancelled/stale completion
+не заменяет baseline. Metadata-only `UseAetherEditorProjects` без source factory
+сохранён; заранее зарегистрированная фабрика не заменяется.
+
+`AetherEditorOptions.SourceTracking` задаёт copied defaults: Enabled,
+UseFileSystemNotifications, Debounce250ms, MaximumDebounce1s, PollInterval10s,
+ScanBudget5s и MaximumWatchers32. Зарегистрированный до Editor `TimeProvider`
+используется для scheduling. Изменение исходных options после composition не
+меняет default product; opt-out относится к default factory.
+
+Observer проверяет original descriptor files, actual TreeFiles и present/absent
+probes без SDK/ZIP evaluation. FSW — bounded hints, полный polling сохраняет
+coverage при lost events/attach failures/handle limit. Same требует полного pass;
+locked/unstable/unknown IO не считаются отсутствием. UNC/network/reparse profiles
+пока Unavailable. Changed сохраняется до нового successful Build, включая revert.
+Scene dirty/Save/Undo/selection и game Stop не меняют code baseline; automatic
+Build/Play/Stop не выполняется, compiler preflight остаётся обязательным.
+
+ProjectSession владеет observer и actual stop/drain/retry; View заимствует его.
+`EditorSession.Present` / owner `EditorViewModel.Refresh` читает готовый immutable
+snapshot только текущего owner. Worker не вызывает PropertyChanged/UI. Retained
+source segment/details не заменяют primary runtime/command/error status и не
+перестраивают дерево. Standard window continuous; custom host обязан вызывать
+Present/Refresh регулярно (не реже1s в active window) либо организовать собственный
+owner-thread wakeup. On-demand host без pump видит последний прочитанный snapshot;
+скрытого cross-thread posting нет.

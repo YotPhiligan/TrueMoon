@@ -189,14 +189,34 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
         }
     }
 
-    internal T WithCapturedState<T>(SceneAuthoringState expected, Func<T> action)
+    internal Task RunCapturedAsync(SceneAuthoringState expected, Func<CancellationToken, Task> action, CancellationToken caller)
     {
         lock (_gate)
         {
             VerifyOpen();
             if (_pending != null || _closing || _retired.Count != 0 || !ReferenceEquals(Current.Read(), expected))
                 throw new OperationCanceledException("Scene startup was superseded by document work.");
-            return action();
+            caller.ThrowIfCancellationRequested();
+            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(caller);
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pending = cancellation; _operation = DocumentOperation.Runtime; _error = null; _work = completion.Task;
+            Task work;
+            try { work = action(cancellation.Token); }
+            catch (Exception error)
+            {
+                _pending = null; _operation = DocumentOperation.None; _error = error; cancellation.Dispose();
+                completion.TrySetResult(); throw; // No runtime admission occurred; preserve synchronous rejection.
+            }
+            _ = CompleteAsync(); return completion.Task;
+            async Task CompleteAsync()
+            {
+                Exception? failure = null;
+                try { await work.ConfigureAwait(false); }
+                catch (Exception error) { failure = error; }
+                finally { lock (_gate) { _pending = null; _operation = DocumentOperation.None; _error = failure; cancellation.Dispose(); } }
+                if (failure is OperationCanceledException cancelled) completion.TrySetCanceled(cancelled.CancellationToken);
+                else if (failure != null) completion.TrySetException(failure); else completion.TrySetResult();
+            }
         }
     }
 
@@ -252,7 +272,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
             if (_closed) choice = DocumentCloseChoice.Discard;
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously); _close = completion.Task;
             _closing = true; _discarding = choice != DocumentCloseChoice.Save; work = _work;
-            if (_discarding || _operation == DocumentOperation.Loading)
+            if (_discarding || _operation is DocumentOperation.Loading or DocumentOperation.Runtime)
                 try { _pending?.Cancel(); } catch (Exception error) { cancellationFailure = error; }
         }
         _ = CompleteCloseAsync(work, choice, saveAsPath, cancellationToken, cancellationFailure, completion);
@@ -315,7 +335,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     private ISceneAuthoringSession Current => _current ?? throw new InvalidOperationException("No scene document is open.");
     private void VerifyOpen() => ObjectDisposedException.ThrowIf(_closed, this);
     private void VerifyEditable()
-    { VerifyOpen(); if (_closing || _operation == DocumentOperation.Loading || _retired.Count != 0) throw new InvalidOperationException("The document is transitioning."); }
+    { VerifyOpen(); if (_closing || _operation is DocumentOperation.Loading or DocumentOperation.Runtime || _retired.Count != 0) throw new InvalidOperationException("The document is transitioning."); }
     private void Release(ISceneAuthoringSession product)
     { try { product.Dispose(); } catch { lock (_gate) _retired.Add(product); throw; } }
     private static void Choice(DocumentCloseChoice choice)

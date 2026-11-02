@@ -19,6 +19,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     private Task? _dispose;
     private OwnedJob? _owned;
     private bool _closed;
+    private GameBuildArtifact? _reusable;
     private readonly IEventsSource? _events;
     private readonly IDiagnosticTelemetry? _telemetry;
     private readonly BuildDiagnosticStore _diagnostics;
@@ -77,26 +78,33 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     public string? DiagnosticsDirectory { get; private set; }
     /// <summary>Builds a candidate into owned staging, using the currently loaded Aether DLL as the frozen contract.</summary>
     /// <remarks>The project must consume AetherContractPath. ProjectReference builds and shared build servers are disabled.
-    /// Each single-project job owns its artifact paths, so intermediate paths omit the redundant project-name segment.</remarks>
+    /// Frozen project graphs compile in dependency order with isolated intermediate paths inside this same job.</remarks>
     public Task<GameBuildArtifact> BuildAsync(GameBuildRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (request.CaptureCompilation && !request.TrackInputs) throw new ArgumentException("Captured compilation requires tracked inputs.", nameof(request));
+        if (request.CapturePreparation && (!request.TrackInputs || !request.CaptureCompilation)) throw new ArgumentException("Frozen preparation requires tracked and captured compilation.", nameof(request));
+        if (request.ReuseArtifact && !request.CapturePreparation) throw new ArgumentException("Artifact reuse requires frozen preparation.", nameof(request));
+        if (request.CaptureProjectReferences && !request.CapturePreparation) throw new ArgumentException("Project graph capture requires frozen preparation.", nameof(request));
+        if (request.PackageDirectory != null && !request.CapturePreparation) throw new ArgumentException("Package capture requires frozen preparation.", nameof(request));
         ArgumentException.ThrowIfNullOrWhiteSpace(request.ProjectPath);
         var project = Path.GetFullPath(request.ProjectPath);
         if (!File.Exists(project) || !project.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Expected an existing game csproj.", nameof(request));
         if (request.SourceRevision < 0 || string.IsNullOrWhiteSpace(request.EntryType)) throw new ArgumentException("Invalid game revision/entry type.", nameof(request));
         var dependencies = request.Dependencies?.ToArray() ?? [];
         GameBuildArtifact.ValidateNames(new[] { request.EntryAssembly }.Concat(dependencies).ToArray());
-        var snapshot = request with { ProjectPath = project, Dependencies = dependencies };
+        var snapshot = request with { ProjectPath = project, Dependencies = dependencies,
+            PackageDirectory = request.PackageDirectory == null ? null : Path.GetFullPath(request.PackageDirectory) };
         TaskCompletionSource<GameBuildArtifact> completion;
+        GameBuildArtifact? previous;
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_closed, this); cancellationToken.ThrowIfCancellationRequested();
             if (_job is { IsCompleted: false } || _owned != null) throw new InvalidOperationException("A compiler job/cleanup is already active.");
+            previous = _reusable; _reusable = null;
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously); _job = completion.Task;
         }
-        _ = CompleteAsync(snapshot, cancellationToken, completion);
+        _ = CompleteAsync(snapshot, previous, cancellationToken, completion);
         return completion.Task;
     }
 
@@ -122,6 +130,8 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     private Task VerifyInputsCore(GameBuildInputSnapshot expected, GameBuildCompilationSnapshot? compilation, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(expected);
+        if (expected.HasProjectReferences && compilation == null)
+            throw new InvalidOperationException("Frozen project graph verification requires its original compilation provenance.");
         TaskCompletionSource completion;
         lock (_gate)
         {
@@ -133,8 +143,8 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         async Task VerifyCoreAsync()
         {
             try { await VerifyOwnedAsync(expected, compilation, cancellationToken).ConfigureAwait(false); completion.TrySetResult(); }
-            catch (OperationCanceledException cancelled) { completion.TrySetCanceled(cancelled.CancellationToken); }
-            catch (Exception error) { completion.TrySetException(error); }
+            catch (OperationCanceledException cancelled) { lock (_gate) _reusable = null; completion.TrySetCanceled(cancelled.CancellationToken); }
+            catch (Exception error) { lock (_gate) _reusable = null; completion.TrySetException(error); }
         }
     }
 
@@ -150,7 +160,10 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         try
         {
             UpdateRetention(owned.Directory);
-            var actual = await ObserveInputsAsync(owned, expected.Request, "verify", end.Token).ConfigureAwait(false);
+            var preparation = await PrepareAsync(owned, expected.Request, "verify", end.Token).ConfigureAwait(false);
+            if (preparation?.References.Count > 0 && !await StageProjectOutputsAsync(preparation, compilation, end.Token).ConfigureAwait(false))
+                throw new GameBuildInputsChangedException(expected.Fingerprint, preparation.Snapshot.Fingerprint);
+            var actual = await ObserveInputsAsync(owned, expected.Request, "verify", end.Token, preparation).ConfigureAwait(false);
             if (actual.Fingerprint != expected.Fingerprint) throw new GameBuildInputsChangedException(expected.Fingerprint, actual.Fingerprint);
             if (compilation != null) await compilation.VerifyOriginalsAsync(end.Token).ConfigureAwait(false);
         }
@@ -158,15 +171,17 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         { throw new TimeoutException("Game build input verification exceeded its SDK deadline.", error); }
         finally { await CleanupAsync(owned).ConfigureAwait(false); }
     }
-    private async Task CompleteAsync(GameBuildRequest request, CancellationToken caller, TaskCompletionSource<GameBuildArtifact> completion)
+    private async Task CompleteAsync(GameBuildRequest request, GameBuildArtifact? previous, CancellationToken caller, TaskCompletionSource<GameBuildArtifact> completion)
     {
         using var operation = AetherDiagnosticEvents.Start(_telemetry, "Aether.Build", () =>
             new Dictionary<string, string?> { ["SourceRevision"] = request.SourceRevision.ToString(System.Globalization.CultureInfo.InvariantCulture) });
         try
         {
-            var result = await RunAsync(request, caller).ConfigureAwait(false);
+            var result = await RunAsync(request, previous, caller).ConfigureAwait(false);
             Emit("Build.Completed", DiagnosticLevel.Information);
             operation?.Complete(); operation?.Dispose();
+            // Only completed cleanup establishes the reusable result. It owns no live streams/processes.
+            lock (_gate) if (!_closed && request.CapturePreparation) _reusable = result;
             completion.TrySetResult(result);
         }
         catch (OperationCanceledException)
@@ -185,7 +200,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
                 new Dictionary<string, string?> { ["SourceRevision"] = request.SourceRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     ["JobId"] = DiagnosticsDirectory is null ? null : Path.GetFileName(DiagnosticsDirectory) }, error);
     }
-    private async Task<GameBuildArtifact> RunAsync(GameBuildRequest request, CancellationToken caller)
+    private async Task<GameBuildArtifact> RunAsync(GameBuildRequest request, GameBuildArtifact? previous, CancellationToken caller)
     {
         using var timeout = new CancellationTokenSource(_timeout);
         using var end = CancellationTokenSource.CreateLinkedTokenSource(caller, _closing.Token, timeout.Token);
@@ -199,53 +214,133 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
             new Dictionary<string, string?> { ["SourceRevision"] = request.SourceRevision.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["JobId"] = Path.GetFileName(job) });
         var output = Path.Combine(job, "output");
-        var info = BuildInfo(request, owned);
         try
         {
             UpdateRetention(job);
             end.Token.ThrowIfCancellationRequested();
-            var inputs = request.TrackInputs ? await ObserveInputsAsync(owned, request, "before", end.Token).ConfigureAwait(false) : null;
-            GameBuildCompilation? compilation = null;
-            if (request.CaptureCompilation)
+            var frozen = await PrepareAsync(owned, request, "before", end.Token).ConfigureAwait(false);
+            var budget = new GameBuildCompilation.Budget();
+            IReadOnlyList<GameBuildProjectCompilationSnapshot> projects = [];
+            var staged = false;
+            if (frozen?.References.Count > 0)
             {
-                var preparation = BuildInfo(request, owned);
-                var prepared = Path.Combine(job, "prepare.json");
-                foreach (var argument in new[] { "-target:Compile", "-property:SkipCompilerExecution=true", "-property:ProvideCommandLineArgs=true",
-                    "-getItem:CscCommandLineArgs,ReferenceCopyLocalPaths", "-getProperty:RoslynTargetsPath,CscToolPath,CscToolExe,NETCoreSdkVersion,MSBuildToolsPath,NetCoreTargetingPackRoot,CscEnvironment",
-                    "-getResultOutputFile:" + prepared }) preparation.ArgumentList.Add(argument);
-                await ProbeAsync(owned, preparation, "prepare", end.Token).ConfigureAwait(false);
-                if (new FileInfo(prepared).Length > GameBuildInputSnapshot.MaximumDocumentBytes) throw new InvalidDataException("Compiler preparation exceeds its limit.");
-                compilation = await GameBuildCompilation.CaptureAsync(inputs!, await File.ReadAllTextAsync(prepared, end.Token).ConfigureAwait(false), job, end.Token).ConfigureAwait(false);
+                if (request.ReuseArtifact && previous?.Compilation != null)
+                    try { staged = await StageProjectOutputsAsync(frozen, previous.Compilation, end.Token).ConfigureAwait(false); }
+                    catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException) { /* Rebuild unavailable payloads. */ }
+                if (!staged) projects = await CompileProjectsAsync(owned, request, frozen, budget, end.Token).ConfigureAwait(false);
+            }
+            var info = frozen?.BuildInfo() ?? BuildInfo(request, owned);
+            var inputs = request.TrackInputs ? await ObserveInputsAsync(owned, request, "before", end.Token, frozen).ConfigureAwait(false) : null;
+            using var reused = request.ReuseArtifact && previous?.Inputs?.Fingerprint == inputs?.Fingerprint && previous?.Compilation != null
+                ? TryPinReusable(previous) : null;
+            var reusedCompilation = reused == null ? null : previous!.Compilation;
+            if (request.ReuseArtifact)
+                await File.WriteAllTextAsync(Path.Combine(job, "reuse.json"), JsonSerializer.Serialize(new
+                { Reused = reused != null, PreviousBuildId = reused == null ? null : previous!.BuildId }), end.Token).ConfigureAwait(false);
+            GameBuildCompilation? compilation = null;
+            if (reusedCompilation != null)
+            {
+                await reusedCompilation.VerifyOriginalsAsync(end.Token).ConfigureAwait(false);
+                await File.WriteAllTextAsync(Path.Combine(job, "capture.json"), JsonSerializer.Serialize(reusedCompilation), end.Token).ConfigureAwait(false);
+                output = previous!.DirectoryPath;
+            }
+            else if (request.CaptureCompilation)
+            {
+                if (staged)
+                {
+                    projects = await CompileProjectsAsync(owned, request, frozen!, budget, end.Token).ConfigureAwait(false);
+                    inputs = await ObserveInputsAsync(owned, request, "before", end.Token, frozen).ConfigureAwait(false);
+                }
+                compilation = await CaptureCompilationAsync(owned, request, inputs!, frozen, budget, end.Token).ConfigureAwait(false);
                 owned.OriginalPaths = compilation.OriginalPaths;
                 info = compilation.StartInfo;
             }
-            var process = Process.Start(info) ?? throw new IOException("Compiler process did not start.");
-            lock (_gate) { owned.Process = process; owned.ProcessId = process.Id; }
-            owned.Output = new(process.StandardOutput, process.StandardError, null, job, "build");
-            owned.BuildOutput = owned.Output;
-            _stdout = owned.Output.Stdout; _stderr = owned.Output.Stderr;
-            await process.WaitForExitAsync(end.Token).ConfigureAwait(false);
-            end.Token.ThrowIfCancellationRequested();
-            if (process.ExitCode != 0) throw new GameBuildException("Game compilation failed.", process.ExitCode, job);
+            if (reused == null)
+            {
+                var process = Process.Start(info) ?? throw new IOException("Compiler process did not start.");
+                lock (_gate) { owned.Process = process; owned.ProcessId = process.Id; }
+                owned.Output = new(process.StandardOutput, process.StandardError, null, job, "build");
+                owned.BuildOutput = owned.Output;
+                _stdout = owned.Output.Stdout; _stderr = owned.Output.Stderr;
+                await process.WaitForExitAsync(end.Token).ConfigureAwait(false);
+                end.Token.ThrowIfCancellationRequested();
+                if (process.ExitCode != 0) throw new GameBuildException("Game compilation failed.", process.ExitCode, job);
+            }
+            var captured = compilation?.Snapshot.WithProjects(projects) ?? reusedCompilation;
             if (inputs != null)
             {
                 await ReleaseProcessAsync(owned).ConfigureAwait(false);
-                var actual = await ObserveInputsAsync(owned, request, "after", end.Token).ConfigureAwait(false);
+                var after = await PrepareAsync(owned, request, "after", end.Token).ConfigureAwait(false);
+                var actual = await ObserveInputsAsync(owned, request, "after", end.Token, after).ConfigureAwait(false);
                 if (actual.Fingerprint != inputs.Fingerprint) throw new GameBuildInputsChangedException(inputs.Fingerprint, actual.Fingerprint);
-                if (compilation != null) await compilation.Snapshot.VerifyOriginalsAsync(end.Token).ConfigureAwait(false);
+                if (captured != null) await captured.VerifyOriginalsAsync(end.Token).ConfigureAwait(false);
             }
             var allowed = new[] { request.EntryAssembly }.Concat(request.Dependencies!).ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (Directory.EnumerateFiles(output, "*.dll").Any(p => !allowed.Contains(Path.GetFileName(p))))
                 throw new InvalidDataException("Compiler output contains undeclared DLLs; use a non-copying frozen Aether reference.");
             var artifact = GameBuildArtifact.Publish(output, _root, _hostId, request.EntryAssembly, request.EntryType,
                 request.SourceRevision, request.Dependencies, end.Token);
-            if (inputs != null) artifact = artifact.WithInputs(inputs, compilation?.Snapshot);
+            if (inputs != null) artifact = artifact.WithInputs(inputs, captured?.WithProjects(captured.Projects, new(artifact.DirectoryPath, artifact.BuildId)));
+            if (captured != null) await File.WriteAllTextAsync(Path.Combine(job, "capture.json"), JsonSerializer.Serialize(artifact.Compilation), end.Token).ConfigureAwait(false);
             owned.GameBuildId = artifact.BuildId;
             return artifact;
         }
         catch (OperationCanceledException error) when (timeout.IsCancellationRequested && !caller.IsCancellationRequested && !_closing.IsCancellationRequested)
         { throw new TimeoutException("Game build exceeded its compiler deadline.", error); }
         finally { await CleanupAsync(owned).ConfigureAwait(false); }
+    }
+    private static IDisposable? TryPinReusable(GameBuildArtifact artifact)
+    {
+        try { return artifact.Pin(); }
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
+        { return null; } // The owned payload may have been removed/corrupted; a normal build must replace the candidate.
+    }
+    private async Task<GameBuildCompilation> CaptureCompilationAsync(OwnedJob owned, GameBuildRequest request, GameBuildInputSnapshot inputs,
+        GameBuildPreparation? frozen, GameBuildCompilation.Budget budget, CancellationToken token, GameBuildPreparation.Project? project = null)
+    {
+        var name = project == null ? "prepare" : "graph-" + project.Key + "-prepare";
+        var preparation = frozen?.BuildInfo(request.ProjectPath) ?? BuildInfo(request, owned);
+        var prepared = Path.Combine(owned.Directory, name + ".json");
+        foreach (var argument in new[] { frozen == null ? "-target:Compile" : "-target:ResolveReferences;Compile", "-property:SkipCompilerExecution=true", "-property:ProvideCommandLineArgs=true",
+            "-getItem:CscCommandLineArgs,ReferenceCopyLocalPaths", "-getProperty:RoslynTargetsPath,CscToolPath,CscToolExe,NETCoreSdkVersion,MSBuildToolsPath,NetCoreTargetingPackRoot,CscEnvironment",
+            "-getResultOutputFile:" + prepared }) preparation.ArgumentList.Add(argument);
+        await ProbeAsync(owned, preparation, name, token).ConfigureAwait(false);
+        if (new FileInfo(prepared).Length > GameBuildInputSnapshot.MaximumDocumentBytes) throw new InvalidDataException("Compiler preparation exceeds its limit.");
+        return await GameBuildCompilation.CaptureAsync(inputs, await File.ReadAllTextAsync(prepared, token).ConfigureAwait(false),
+            owned.Directory, token, frozen, project?.Key, budget).ConfigureAwait(false);
+    }
+
+    private async Task<IReadOnlyList<GameBuildProjectCompilationSnapshot>> CompileProjectsAsync(OwnedJob owned, GameBuildRequest request,
+        GameBuildPreparation preparation, GameBuildCompilation.Budget budget, CancellationToken token)
+    {
+        var captures = new List<GameBuildProjectCompilationSnapshot>();
+        foreach (var project in preparation.References)
+        {
+            token.ThrowIfCancellationRequested();
+            var dependency = request with { ProjectPath = project.Path, EntryAssembly = project.Assembly, Dependencies = [] };
+            var inputs = await ObserveInputsAsync(owned, dependency, "graph-" + project.Key, token, preparation).ConfigureAwait(false);
+            var compilation = await CaptureCompilationAsync(owned, dependency, inputs, preparation, budget, token, project).ConfigureAwait(false);
+            owned.OriginalPaths = compilation.OriginalPaths;
+            await ProbeAsync(owned, compilation.StartInfo, "graph-" + project.Key + "-build", token).ConfigureAwait(false);
+            captures.Add(new(project.Path, project.Assembly, inputs, compilation.Snapshot));
+        }
+        return captures.AsReadOnly();
+    }
+
+    private async Task<bool> StageProjectOutputsAsync(GameBuildPreparation preparation, GameBuildCompilationSnapshot? compilation, CancellationToken token)
+    {
+        if (compilation?.Artifact is not { } reference || preparation.References.Count != compilation.Projects.Count ||
+            preparation.References.Zip(compilation.Projects).Any(pair => !BuildIdentity.SamePath(pair.First.Path, pair.Second.ProjectPath) ||
+                !pair.First.Assembly.Equals(pair.Second.EntryAssembly, StringComparison.OrdinalIgnoreCase))) return false;
+        using var pin = GameBuildArtifact.Open(reference.DirectoryPath, _hostId, reference.BuildId).Pin();
+        foreach (var project in preparation.References)
+        {
+            var output = preparation.ReferenceOutput(project); Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+            await using var source = new FileStream(Path.Combine(reference.DirectoryPath, project.Assembly), FileMode.Open, FileAccess.Read, FileShare.Read, 65536, FileOptions.Asynchronous);
+            await using var destination = new FileStream(output, FileMode.Create, FileAccess.Write, FileShare.None, 65536, FileOptions.Asynchronous);
+            await source.CopyToAsync(destination, token).ConfigureAwait(false);
+        }
+        return true;
     }
     private static ProcessStartInfo BuildInfo(GameBuildRequest request, OwnedJob owned)
     {
@@ -264,9 +359,20 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         return info;
     }
 
-    private async Task<GameBuildInputSnapshot> ObserveInputsAsync(OwnedJob owned, GameBuildRequest request, string phase, CancellationToken token)
+    private async Task<GameBuildPreparation?> PrepareAsync(OwnedJob owned, GameBuildRequest request, string phase, CancellationToken token)
     {
-        var query = BuildInfo(request, owned);
+        if (!request.CapturePreparation) return null;
+        var preparation = await GameBuildPreparation.CaptureAsync(request, owned.Directory, phase, _root, token).ConfigureAwait(false);
+        owned.Preparations.Add(preparation);
+        var restore = preparation.BuildInfo(); restore.ArgumentList.Add("-target:Restore");
+        await ProbeAsync(owned, restore, phase + "-restore", token).ConfigureAwait(false);
+        return preparation;
+    }
+
+    private async Task<GameBuildInputSnapshot> ObserveInputsAsync(OwnedJob owned, GameBuildRequest request, string phase, CancellationToken token,
+        GameBuildPreparation? preparation = null)
+    {
+        var query = preparation?.BuildInfo(request.ProjectPath) ?? BuildInfo(request, owned);
         // Machine input must bypass the deliberately lossy diagnostic stream sink.
         var json = Path.Combine(owned.Directory, phase + ".evaluation.json");
         query.ArgumentList.Add("-getResultOutputFile:" + json);
@@ -274,13 +380,13 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         query.ArgumentList.Add("-getItem:Compile,EmbeddedResource,AdditionalFiles,Analyzer,Reference,Content,None,ProjectReference,PackageReference,EditorConfigFiles,GlobalAnalyzerConfigFiles,CompilerVisibleProperty,CompilerVisibleItemMetadata");
         query.ArgumentList.Add("-getProperty:TargetFramework,NETCoreSdkVersion,DefineConstants,LangVersion,Nullable,AllowUnsafeBlocks,Optimize,CheckForOverflowUnderflow,TreatWarningsAsErrors,WarningLevel,NoWarn,WarningsAsErrors,WarningsNotAsErrors,DebugType,Deterministic,PathMap,PlatformTarget,Features,RootNamespace,AssemblyName,AnalysisLevel,AnalysisMode,RunAnalyzersDuringBuild,CodeAnalysisRuleSet");
         await ProbeAsync(owned, query, phase + "-query", token).ConfigureAwait(false);
-        var preprocess = BuildInfo(request, owned); var path = Path.Combine(owned.Directory, phase + ".project.xml");
+        var preprocess = preparation?.BuildInfo(request.ProjectPath) ?? BuildInfo(request, owned); var path = Path.Combine(owned.Directory, phase + ".project.xml");
         preprocess.ArgumentList.Add("-consoleloggerparameters:ErrorsOnly"); preprocess.ArgumentList.Add("-preprocess:" + path);
         await ProbeAsync(owned, preprocess, phase + "-project", token).ConfigureAwait(false);
         foreach (var file in new[] { json, path })
             if (new FileInfo(file).Length > GameBuildInputSnapshot.MaximumDocumentBytes) throw new InvalidDataException("SDK input document exceeds its limit.");
         var snapshot = GameBuildInputSnapshot.Create(request, await File.ReadAllTextAsync(json, token).ConfigureAwait(false),
-            await File.ReadAllTextAsync(path, token).ConfigureAwait(false), owned.Directory, token);
+            await File.ReadAllTextAsync(path, token).ConfigureAwait(false), owned.Directory, token, preparation);
         await File.WriteAllTextAsync(Path.Combine(owned.Directory, phase + ".inputs.json"), JsonSerializer.Serialize(snapshot), token).ConfigureAwait(false);
         return snapshot;
     }
@@ -309,6 +415,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     private async Task CleanupAsync(OwnedJob owned)
     {
         await ReleaseProcessAsync(owned).ConfigureAwait(false);
+        foreach (var preparation in owned.Preparations) preparation.Dispose();
         {
             var compilerDiagnostics = GameBuildDiagnosticReader.Read(Path.Combine(owned.Directory, GameBuildDiagnosticReader.FileName), owned.ProjectDirectory);
             if (owned.OriginalPaths != null) compilerDiagnostics = compilerDiagnostics with
@@ -332,6 +439,8 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "output"), owned.Directory);
         GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "work"), owned.Directory);
         GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "capture"), owned.Directory);
+        GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "graph"), owned.Directory);
+        GameBuildArtifact.DeleteOwned(Path.Combine(owned.Directory, "preparation"), owned.Directory);
         Exception? completionError = null;
         try { owned.Diagnostics.Complete(DateTimeOffset.UtcNow); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException)
@@ -380,7 +489,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false); }
         catch (TimeoutException error) { throw new IOException("Owned compiler kill/reap failed; cleanup must be retried.", error); }
     }
-    internal void CloseAdmission() { lock (_gate) { _closed = true; _closing.Cancel(); } }
+    internal void CloseAdmission() { lock (_gate) { _closed = true; _reusable = null; _closing.Cancel(); } }
     /// <summary>Fences new jobs, cancels and reaps the owned compiler, and waits for diagnostics/staging cleanup.</summary>
     public ValueTask DisposeAsync()
     {
@@ -409,6 +518,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
         internal string? GameBuildId;
         internal string Kind = "Build";
         internal IReadOnlyDictionary<string, string>? OriginalPaths;
+        internal readonly List<GameBuildPreparation> Preparations = [];
         internal readonly BuildDiagnosticStore.Job Diagnostics = diagnostics;
         internal string Directory => Diagnostics.Directory;
         internal Process? Process;

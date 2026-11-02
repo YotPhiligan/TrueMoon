@@ -7,6 +7,71 @@ namespace TrueMoon.Aether.Editor.Tests.DocumentsUi;
 
 public sealed class DocumentCommandsTests
 {
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public async Task ExitDuringReplace_FencesBeforeCancellationAndDrainsBeforeDocumentClose(bool force)
+    {
+        await using var owner = new DocumentUiFixture(); owner.Run(DocumentCommand.New);
+        var content = owner.Document.Read().Content; var entered = DocumentData.Signal();
+        var release = DocumentData.Signal(); var stopRelease = DocumentData.Signal(); var cancelled = DocumentData.Signal();
+        var stopWasFenced = false;
+        owner.StopRuntime = () => stopRelease.Task;
+        var work = owner.Commands.RunRuntimeAsync(TrueMoon.Aether.Editing.GameEditorOperation.Replace, false, async (_, _, token) =>
+        {
+            using var registration = token.Register(() => { stopWasFenced = owner.RuntimeStops == 1; cancelled.TrySetResult(); });
+            entered.TrySetResult(); await release.Task; token.ThrowIfCancellationRequested();
+        }, default);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Task exit = force ? owner.Commands.StopAsync() : owner.Commands.RequestExitAsync();
+        try
+        {
+            await cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5)); Assert.True(stopWasFenced); Assert.Equal(1, owner.RuntimeStops);
+            Assert.False(exit.IsCompleted); Assert.Same(content, owner.Document.Read().Content);
+            Assert.False(owner.Commands.Execute(DocumentCommand.New)); Assert.Equal(0, owner.Authoring.Products[0].Disposals);
+            release.TrySetResult(); await Assert.ThrowsAnyAsync<OperationCanceledException>(() => work);
+            Assert.False(exit.IsCompleted); Assert.Same(content, owner.Document.Read().Content);
+            Assert.False(owner.Commands.Read().AwaitingDecision); Assert.Equal(0, owner.Authoring.Products[0].Disposals);
+            stopRelease.TrySetResult();
+            if (!force) { owner.Decision(); Assert.True(owner.Commands.Choose(DocumentCloseChoice.Cancel)); }
+            await exit.WaitAsync(TimeSpan.FromSeconds(5));
+            if (force) { Assert.Null(owner.Document.Read().Content); Assert.Equal(1, owner.Authoring.Products[0].Disposals); }
+            else { Assert.Same(content, owner.Document.Read().Content); Assert.False(owner.Commands.Read().Closed); }
+        }
+        finally
+        {
+            release.TrySetResult(); stopRelease.TrySetResult();
+            try { await work; } catch (OperationCanceledException) { }
+            if (!force && !exit.IsCompleted) { owner.Decision(); owner.Commands.Choose(DocumentCloseChoice.Cancel); }
+            await exit;
+        }
+    }
+
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public async Task ExitDuringReplace_CleanupFailureKeepsDocumentAndAllowsRetry(bool force)
+    {
+        await using var owner = new DocumentUiFixture(); owner.Run(DocumentCommand.New);
+        var content = owner.Document.Read().Content; var entered = DocumentData.Signal(); var release = DocumentData.Signal();
+        var failure = new IOException("replacement cleanup failed");
+        owner.StopRuntime = () => Task.FromException(failure);
+        var work = owner.Commands.RunRuntimeAsync(TrueMoon.Aether.Editing.GameEditorOperation.Replace, false, async (_, _, token) =>
+        { entered.TrySetResult(); await release.Task; token.ThrowIfCancellationRequested(); }, default);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Task? stopping = null; Task<bool>? exiting = null;
+        try
+        {
+            if (force) stopping = owner.Commands.StopAsync(); else exiting = owner.Commands.RequestExitAsync();
+            Assert.Equal(1, owner.RuntimeStops); Assert.False((stopping ?? exiting!).IsCompleted);
+        }
+        finally { release.TrySetResult(); }
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => work);
+        if (force) Assert.Same(failure, await Assert.ThrowsAsync<IOException>(() => stopping!));
+        else Assert.False(await exiting!);
+        Assert.Same(failure, owner.Commands.Read().Error); Assert.Same(content, owner.Document.Read().Content);
+        Assert.True(owner.Document.Read().IsDirty); Assert.Equal(0, owner.Authoring.Products[0].Disposals);
+        owner.StopRuntime = null; await owner.Commands.StopAsync();
+        Assert.Equal(2, owner.RuntimeStops); Assert.Null(owner.Document.Read().Content);
+        Assert.Equal(1, owner.Authoring.Products[0].Disposals); Assert.Null(owner.Commands.Read().Error);
+    }
+
     [Theory]
     [InlineData(false)] [InlineData(true)]
     public async Task EmptyOrMetadataOnlyProject_RejectsDocumentActionsAndExitsWithoutImplicitScene(bool metadataOnly)

@@ -14,6 +14,7 @@ public sealed class EditorStatusBarViewStyle : IViewStyle<EditorStatusBarView>
         styles.Part(view => view.CancelButton).FontSize(12);
         styles.Part(view => view.Entities).FontSize(12).Foreground(theme => theme.Disabled);
         styles.Part(view => view.PreviewButton).FontSize(12);
+        styles.Part(view => view.SourceButton).FontSize(12);
         styles.Part(view => view.DetailsButton).Set(UiProperties.Width, 24f).Height(24);
     }
     internal static Color StatusColor(Theme theme, EditorStatusKind kind) => kind switch

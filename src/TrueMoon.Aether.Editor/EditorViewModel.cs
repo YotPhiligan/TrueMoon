@@ -26,6 +26,8 @@ public sealed class EditorViewModel : ViewModel, IDisposable
     private GameEditorOperation _operation;
     private ulong _tick;
     private int? _processId;
+    private int _presentationOwner;
+    private EditorSourceSnapshot? _source;
 
     /// <summary>Creates a model borrowing App-owned workspace and command services.</summary>
     public EditorViewModel(EditorWorkspace workspace, EditorCommands commands, EditorDocumentViewModel? documents = null,
@@ -69,6 +71,11 @@ public sealed class EditorViewModel : ViewModel, IDisposable
     public int? ProcessId => _processId;
     /// <summary>Whether an explicit project/game is selected.</summary>
     public bool HasProject => _workspace.HasProject;
+    /// <summary>Whether presentation has an actual project-session owner rather than a legacy scene-only workspace.</summary>
+    public bool HasSourceContext => _workspace.Project is { IsClosed: false };
+    /// <summary>Last immutable source publication pulled after current project/document binding; no worker calls this model.</summary>
+    public EditorSourceSnapshot? Source => _workspace.Project is { IsClosed: false } project &&
+        _source?.OwnerKey == project.OwnerKey ? _source : null;
     public IReadOnlyList<KeyValuePair<string, string>> Properties => _properties;
     public bool CanBuild => _canBuild;
     public bool CanStart => _canStart;
@@ -132,8 +139,18 @@ public sealed class EditorViewModel : ViewModel, IDisposable
         _documents?.Refresh();
         if (_documents?.ProjectSwitchEnabled == true) _workspace.SetProject(_documents.Project);
         if (_documents != null) _workspace.SetDocument(_documents.Document?.Content);
+        if (_workspace.Project != null || _presentationOwner != 0)
+        {
+            var thread = Environment.CurrentManagedThreadId;
+            if (Interlocked.CompareExchange(ref _presentationOwner, thread, 0) is var owner && owner != 0 && owner != thread)
+                throw new InvalidOperationException("Editor presentation must be refreshed on its owner thread.");
+        }
         _transform?.Refresh(_workspace.SelectedId);
         _workspace.Refresh(runtime(), editor(), UsesScenePlayback ? _playback!.Error ?? commandError : commandError);
+        var project = _workspace.Project;
+        var source = project is { IsClosed: false } ? project.SourceWatch?.Read() : null;
+        if (source?.OwnerKey != project?.OwnerKey) source = null;
+        SetProperty(ref _source, source, nameof(Source));
         RefreshState();
         _hierarchy?.Refresh();
     }
@@ -198,6 +215,7 @@ public sealed class EditorViewModel : ViewModel, IDisposable
         OnPropertyChanged(nameof(EntityIds));
         OnPropertyChanged(nameof(EntityCount));
         OnPropertyChanged(nameof(HasProject));
+        OnPropertyChanged(nameof(HasSourceContext));
     }
 
     private bool RuntimeAllowed => _documents?.BlocksRuntime != true &&

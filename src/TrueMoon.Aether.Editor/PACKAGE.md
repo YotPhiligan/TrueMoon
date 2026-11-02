@@ -70,7 +70,7 @@ independent runtime copy of the current in-memory snapshot. Save is optional;
 unapplied inspector drafts must be applied/cancelled first. Preview drains before
 game startup. Pause/Resume/Step/Stop preserve the editor document, dirty checkpoint,
 selection and history. File/project edits remain fenced while preparing/playing;
-Stop cleanup failure retains retry admission. Each Start builds anew and requires
+Stop cleanup failure retains retry admission. Each Start verifies or builds a candidate and requires
 the exact candidate/context version, with no fixed-runtime fallback. Tracked scene
 builds observe evaluated files/options, preprocessed imports and managed HintPath
 references before/after compilation and again before Start. Persistent changes reject
@@ -81,10 +81,30 @@ CaptureCompilation: trusted SDK preparation returns exact Csc args, compiler and
 source/generated/reference/config bytes are copied, and Csc compiles from those copies.
 Source paths/diagnostics are mapped back and staging is released before Start. This
 bounded C# library profile rejects opaque compiler inputs/custom analyzers and
-resource/ruleset/signing profiles. Installed dotnet runtime/environment and arbitrary
-preparation task/generator IO remain trusted; full pre-evaluation source closure is
-still planned. This slice does not add live copyback,
-document-aware Replace, gameplay input/HUD or standalone Player features.
+resource/ruleset/signing profiles. Scene Start additionally enables CapturePreparation:
+the supported declarative project/import/source/reference closure is copied before
+MSBuild evaluation. Explicit installed SDK/runtime files are read-leased, processes
+use a private environment/home/temp and offline NuGet configuration, and original
+source/diagnostic paths are preserved. This Windows Microsoft.NET.Sdk library profile
+rejects custom tasks/targets, MSBuild functions, custom SDKs, package/project graphs
+and external globs before SDK execution. Installed toolchain directories and the
+Windows/native OS remain trusted; this is not an arbitrary-MSBuild sandbox.
+Legacy requests can retain trusted preparation.
+Scene Start opts into process-local ReuseArtifact: unchanged verified inputs and
+pinned payloads reuse the last managed DLLs, while each new ticket republishes its
+manifest and each Start captures a new scene. Explicit Build compiles again. Prestart
+verification remains mandatory; cold/changed/unavailable payloads rebuild normally.
+The existing Replace action now builds and applies code for the exact owned running
+project/document snapshot. It keeps the old world running during compilation, verifies
+tracked inputs before Pause, and uses the exact expected context version for the
+checkpoint/recovery transaction. Compiler failure leaves the old world alive; failed
+candidate restore can recover old code/state/mode. Explicit Stop/exit fences recovery.
+Authoring changes still require Stop/Start; parent document/history/selection remain intact.
+Replace requires ICheckpointGameSession. The document's Runtime operation also fences
+direct edit/IO APIs for the full asynchronous transition; Close cancels and drains it
+before disposing the authoring product, including SDK verification before Pause.
+This slice does not add live copyback, gameplay input/HUD
+or standalone Player features.
 
 The aggregate also registers a retained diagnostics console, opened through
 View / Diagnostics in the standard header. It borrows IDiagnosticRecordReader
@@ -160,3 +180,59 @@ startup/close/crash recovery. Custom hosts own first-presentation readiness and
 their viewport adapter; keep the GL owner alive until runtime/UI drain completes.
 These checks do not establish physical OS input/DPI/monitors, driver/device loss,
 K7 stress, VRAM or general release readiness. No NuGet publication is implied.
+
+Project manifest formatVersion2 adds an explicit `dependencies` array of distinct
+flat private managed DLL names (at most15, excluding entryAssembly). Version1
+remains readable/writable with the original eight fields and no private dependencies.
+Resolved allowlists and build requests own immutable snapshots of those names.
+Scene Build/Start/Replace enable CaptureProjectReferences, extending the default
+compiler profile to at most four net10.0 C# libraries with unconditional literal
+references and no metadata; source directories must not overlap. All source/import/config inputs are frozen before SDK
+execution; each node compiles from copies with isolated intermediates. Verification
+and reuse cover the full graph and pinned selected payload. Only the child Game
+loads these private assemblies. PackageReference without packageDirectory, cycles, custom tasks, mixed SDKs
+and wider graph profiles remain unsupported.
+
+Project formatVersion3 adds optional `packageDirectory`, a contained existing local
+directory of lowercase `id.version.nupkg` archives. Versions1/2 remain readable and
+writable with their previous fields. ProjectSession maps this path to the compiler's
+absolute PackageDirectory. Every package-consuming project needs a schema1/net10.0
+packages.lock.json; stable literal direct versions and unsigned archive SHA512 must
+match. All package DLLs join the explicit dependencies allowlist. The initial
+profile admits one managed lib target, with no signatures/build/analyzer/native/
+content/ref assets; the Aether package documents exact limits. Build/Start/Replace
+and reuse use the same before/after/prestart capture and cleanup fences. Source
+archives/locks remain untouched; only child Game loads the selected private DLLs.
+
+## Source observations and retained indicator
+
+Full `UseAetherEditor` registers an inert, project-owned `EditorSourceWatch` factory
+before project factories. No files, watcher handles, worker or SDK are started at
+project open. Successful scene Build/Start/Replace preparation binds its actual
+current candidate (including reuse); failed/cancelled/stale work preserves the
+previous baseline. Metadata-only `UseAetherEditorProjects` remains valid without
+tracking. A factory registered before the full editor is preserved.
+
+Configure copied defaults through `AetherEditorOptions.SourceTracking`:
+Enabled=true, UseFileSystemNotifications=true, Debounce250ms, MaximumDebounce1s,
+PollInterval10s, ScanBudget5s and MaximumWatchers32. Register `TimeProvider` before
+the editor to override scheduling. The default product never observes later
+mutations of the supplied options. Explicit opt-out affects the default factory.
+
+The observer hashes original descriptor inputs and file membership, including
+expected-absent probes. It performs no SDK evaluation or package extraction.
+Notifications are bounded hints; full polling also covers lost events, failed
+attachments and targets exceeding the handle limit. Unknown/unstable/locked reads
+do not become Same. UNC/network/reparse paths are unavailable in this first profile.
+Known Changed is sticky until a new successful baseline; scene edits/Save/Undo,
+selection and game Stop do not reset it. These observations never replace compiler
+preflight or trigger automatic Build/Play/Stop.
+
+ProjectSession owns stop/fence/actual worker+handle drain and retry after cleanup
+failure. Views and models borrow it. `EditorViewModel.Refresh`/`EditorSession.Present`
+pull one immutable current-owner snapshot; worker callbacks never notify controls.
+The retained status segment and details keep source state separate from primary
+runtime/command/error status. The standard window is continuous. A custom host
+must call Present/owner Refresh regularly (at most1s while active), or provide its
+own owner-thread wakeup. An on-demand host without a pump displays its last read
+snapshot; no hidden cross-thread UI posting is performed.

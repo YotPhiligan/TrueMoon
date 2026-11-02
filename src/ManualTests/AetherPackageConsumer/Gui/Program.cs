@@ -52,8 +52,8 @@ internal static class Program
         Directory.CreateDirectory(Path.Combine(projectRoot, "Content"));
         File.WriteAllText(Path.Combine(projectRoot, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
         SceneGameSource.Write(Path.Combine(projectRoot, "Game"));
-        var project = new ProjectDescription(1, Guid.NewGuid(), "External consumer · Мир", "Game/Game.csproj",
-            "Game.Logic.dll", "Game.Logic.ProbeGame", "Scenes", "Content");
+        var project = new ProjectDescription(3, Guid.NewGuid(), "External consumer · Мир", "Game/Game.csproj",
+            "Game.Logic.dll", "Game.Logic.ProbeGame", "Scenes", "Content") { Dependencies = ["Game.Shared.dll", "Game.Packaged.dll"], PackageDirectory = "Packages" };
         var manifest = Path.Combine(projectRoot, "consumer.aetherproj");
         File.WriteAllText(manifest, JsonSerializer.Serialize(project, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
         var fontPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "NotoSans-Regular.ttf");
@@ -82,7 +82,15 @@ internal static class Program
             {
                 o.RuntimeLaunch = selectedRuntime; o.HostContractId = hostId; o.GameBuildId = BuildIdentity.PreviewId; o.ReportDirectory = report;
                 if (embedded) o.ViewportTransportFactory = r => r.Resolve<ConsumerViewport>();
-            }, o => o.ProjectPath = manifest);
+            }, o =>
+            {
+                o.ProjectPath = manifest;
+                if (scenario == "sourcewatch")
+                {
+                    o.SourceTracking.PollInterval = TimeSpan.FromMilliseconds(500);
+                    o.SourceTracking.UseFileSystemNotifications = !embedded;
+                }
+            });
             if (!embedded) c.UseAetherEditorWindow(fonts);
             else c.UsePresentation(r =>
             {
@@ -151,7 +159,16 @@ internal static class Program
                         recreated = true;
                     }).WaitAsync(token);
                 }
-                try { workflow = await Workflow.Run(report, window, ui, capture.View!, app, token); }
+                try
+                {
+                    workflow = scenario == "sourcewatch"
+                        ? await SourceWatchWorkflow.Run(report, window, ui, capture.View!, app, token)
+                        : scenario.StartsWith("package-", StringComparison.Ordinal)
+                        ? await PackageInputWorkflow.Run(report, window, ui, capture.View!, app, scenario, token)
+                        : scenario.StartsWith("replace-", StringComparison.Ordinal)
+                        ? await ReplaceInterruptWorkflow.Run(report, window, ui, capture.View!, app, scenario, token)
+                        : await Workflow.Run(report, window, ui, capture.View!, app, token);
+                }
                 catch (Exception error)
                 {
                     await File.WriteAllTextAsync(Path.Combine(report, "workflow.failure.txt"), error.ToString(), CancellationToken.None);
@@ -183,12 +200,15 @@ internal static class Program
             engine.Gpu.CleanupError == null && engine.Builds.ProcessId == null && factory.Leases.All(l => l.Reaped && l.ResourcesReleased),
             "Native cleanup retained owned resources.");
         Check(projects.IsClosed && projects.Active == null && (capture.View == null || capture.View.IsDisposed), "UI/project owner did not close.");
-        Check(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "Game.Logic"), "Editor loaded Game.Logic.");
+        Check(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name is "Game.Logic" or "Game.Shared" or "Game.Packaged"), "Editor loaded a private game assembly.");
         var runtimeReports = Directory.GetFiles(report, "runtime-*.json").Select(p => JsonSerializer.Deserialize<JsonElement>(File.ReadAllText(p))).ToArray();
-        if (scenario == "workflow")
+        if (scenario is "workflow" or "sourcewatch" || scenario.StartsWith("replace-", StringComparison.Ordinal) || scenario.StartsWith("package-", StringComparison.Ordinal))
         {
-            Check(runtimeReports.Length == 10 && runtimeReports.Count(child => child.GetProperty("GameLoaded").GetBoolean()) == 2,
-                "Missing graceful preview/game validation reports.");
+            if (scenario == "workflow")
+                Check(runtimeReports.Length == 13 && runtimeReports.Count(child => child.GetProperty("GameLoaded").GetBoolean()) == 5,
+                    "Missing graceful preview/game validation reports.");
+            else Check(runtimeReports.Length == factory.Leases.Count && runtimeReports.All(child => child.GetProperty("GameLoaded").GetBoolean()),
+                "Missing graceful validation for an interrupted/recovered game child.");
             foreach (var child in runtimeReports)
             {
                 var validation = child.GetProperty("Validation");
@@ -200,6 +220,10 @@ internal static class Program
                 {
                     var build = child.GetProperty("Build");
                     var prefix = Path.TrimEndingDirectorySeparator(build.GetProperty("DirectoryPath").GetString()!) + Path.DirectorySeparatorChar;
+                    Check(child.GetProperty("GameAssemblyPaths").EnumerateArray().Any(path => Path.GetFileName(path.GetString()!) == "Game.Shared.dll"),
+                        "Game did not load its selected ProjectReference payload.");
+                    Check(child.GetProperty("GameAssemblyPaths").EnumerateArray().Any(path => Path.GetFileName(path.GetString()!) == "Game.Packaged.dll"),
+                        "Game did not load its selected PackageReference payload.");
                     Check(child.GetProperty("GameBuildId").GetString() == build.GetProperty("BuildId").GetString() &&
                         child.GetProperty("GameAssemblyPaths").EnumerateArray().All(path => path.GetString()!.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)),
                         "Game child loaded an unselected artifact.");

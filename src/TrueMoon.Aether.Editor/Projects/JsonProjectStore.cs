@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace TrueMoon.Aether.Editor.Projects;
 
-/// <summary>Strict version-1 JSON project files, bounded to 64 KiB. Paths use the manifest directory, never the process CWD.</summary>
+/// <summary>Strict version1/2/3 JSON project files, bounded to 64 KiB. Paths use the manifest directory, never the process CWD.</summary>
 /// <remarks>Projects are trusted local inputs. Lexical path containment does not establish a filesystem security sandbox over links.</remarks>
 public sealed class JsonProjectStore : IProjectStore
 {
@@ -57,7 +57,7 @@ public sealed class JsonProjectStore : IProjectStore
         var path = ManifestPath(manifestPath);
         var root = Path.GetDirectoryName(path)!;
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Create the project directory '{root}' first.");
-        if (description.FormatVersion != ProjectDescription.CurrentVersion)
+        if (description.FormatVersion is not (1 or 2 or ProjectDescription.CurrentVersion))
             throw new InvalidDataException($"Unsupported project format {description.FormatVersion}; expected {ProjectDescription.CurrentVersion}.");
         if (description.Id == Guid.Empty) throw new InvalidDataException("Project id must be nonempty.");
         Text(description.Name, 128, "name");
@@ -71,9 +71,25 @@ public sealed class JsonProjectStore : IProjectStore
         if (!Regex.IsMatch(description.EntryType, @"^[\p{L}_][\p{L}\p{N}_]*(?:[.+][\p{L}_][\p{L}\p{N}_]*)*$",
                 RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1)))
             throw new InvalidDataException("entryType must be a qualified non-generic type name.");
+        if (description.Dependencies == null || description.Dependencies.Count > 15)
+            throw new InvalidDataException("dependencies must contain at most15 private DLL names.");
+        if (description.FormatVersion == 1 && description.Dependencies.Count != 0)
+            throw new InvalidDataException("Private dependencies require project formatVersion2.");
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { description.EntryAssembly };
+        foreach (var dependency in description.Dependencies)
+        {
+            Text(dependency, 128, "dependency");
+            if (!dependency.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || dependency.Length == 4 ||
+                dependency.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || dependency.Contains('/') || dependency.Contains('\\') || !names.Add(dependency))
+                throw new InvalidDataException("dependencies require distinct flat .dll names, excluding entryAssembly.");
+        }
         var game = ResolvePath(root, description.GameProject, "gameProject");
         var scenes = ResolvePath(root, description.ScenesRoot, "scenesRoot");
         var content = ResolvePath(root, description.ContentRoot, "contentRoot");
+        if (description.PackageDirectory != null && description.FormatVersion < 3)
+            throw new InvalidDataException("packageDirectory requires project formatVersion3.");
+        var packages = description.PackageDirectory == null ? null : ResolvePath(root, description.PackageDirectory, "packageDirectory");
+        if (packages != null && !Directory.Exists(packages)) throw new DirectoryNotFoundException("Package directory is missing: " + packages);
         if (!game.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("gameProject must point to a .csproj file.");
         if (!File.Exists(game)) throw new FileNotFoundException("Game project is missing. Update gameProject or restore the file.", game);
@@ -81,7 +97,8 @@ public sealed class JsonProjectStore : IProjectStore
         if (!Directory.Exists(content)) throw new DirectoryNotFoundException($"Content directory is missing: '{content}'.");
         string Relative(string value) => Path.GetRelativePath(root, value).Replace('\\', '/');
         var normalized = description with { Name = description.Name.Trim(), GameProject = Relative(game),
-            ScenesRoot = Relative(scenes), ContentRoot = Relative(content) };
+            ScenesRoot = Relative(scenes), ContentRoot = Relative(content), PackageDirectory = packages == null ? null : Relative(packages), Dependencies = description.Dependencies.Count == 0
+                ? Array.Empty<string>() : Array.AsReadOnly(description.Dependencies.ToArray()) };
         return new(normalized, path, root, game, scenes, content);
     }
 
@@ -91,7 +108,10 @@ public sealed class JsonProjectStore : IProjectStore
         ArgumentNullException.ThrowIfNull(project);
         cancellationToken.ThrowIfCancellationRequested();
         var candidate = Resolve(project.ManifestPath, project.Description);
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(candidate.Description, Json);
+        var json = JsonSerializer.SerializeToNode(candidate.Description, Json)!.AsObject();
+        if (candidate.Description.Dependencies.Count == 0) json.Remove("dependencies");
+        if (candidate.Description.PackageDirectory == null) json.Remove("packageDirectory");
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(json, Json);
         if (bytes.Length > MaximumBytes) throw new InvalidDataException("Serialized project exceeds the manifest limit.");
         var temporary = candidate.ManifestPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         Exception? failure = null;

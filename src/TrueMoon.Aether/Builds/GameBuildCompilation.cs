@@ -21,17 +21,21 @@ internal sealed class GameBuildCompilation
     private readonly List<GameBuildInputFile> _files = [];
     private readonly string _job, _directory, _projectDirectory, _sdk, _packs;
     private readonly GameBuildInputSnapshot _inputs;
+    private readonly Budget _budget;
+    private GameBuildPreparation? _preparation;
     private long _bytes;
-    private GameBuildCompilation(string job, GameBuildInputSnapshot inputs, string sdk, string packs)
+    private GameBuildCompilation(string job, GameBuildInputSnapshot inputs, string sdk, string packs, GameBuildPreparation? preparation, string? projectKey, Budget? budget)
     {
-        _job = Path.GetFullPath(job); _directory = Path.Combine(_job, "capture"); _inputs = inputs;
-        _projectDirectory = Path.GetDirectoryName(inputs.Request.ProjectPath)!; _sdk = Path.GetFullPath(sdk); _packs = Path.GetFullPath(packs);
+        _job = Path.GetFullPath(job); _directory = projectKey == null ? Path.Combine(_job, "capture") : Path.Combine(_job, "capture", projectKey); _inputs = inputs;
+        _projectDirectory = Path.GetDirectoryName(preparation?.CopyPath(inputs.Request.ProjectPath) ?? inputs.Request.ProjectPath)!; _sdk = Path.GetFullPath(sdk); _packs = Path.GetFullPath(packs);
+        _preparation = preparation; _budget = budget ?? new();
     }
     internal GameBuildCompilationSnapshot Snapshot { get; private set; } = null!;
     internal ProcessStartInfo StartInfo { get; private set; } = null!;
-    internal IReadOnlyDictionary<string, string> OriginalPaths => _copies.ToDictionary(p => p.Value, p => p.Key, Paths);
+    internal IReadOnlyDictionary<string, string> OriginalPaths => _copies.ToDictionary(p => p.Value, p => _preparation?.Original(p.Key) ?? p.Key, Paths);
 
-    internal static async Task<GameBuildCompilation> CaptureAsync(GameBuildInputSnapshot inputs, string preparation, string job, CancellationToken token)
+    internal static async Task<GameBuildCompilation> CaptureAsync(GameBuildInputSnapshot inputs, string preparation, string job, CancellationToken token,
+        GameBuildPreparation? frozen = null, string? projectKey = null, Budget? budget = null)
     {
         token.ThrowIfCancellationRequested();
         if (Encoding.UTF8.GetByteCount(preparation) > GameBuildInputSnapshot.MaximumDocumentBytes) throw new InvalidDataException("Compiler preparation exceeds its document limit.");
@@ -40,7 +44,8 @@ internal sealed class GameBuildCompilation
         string Property(string name) => properties.GetProperty(name).GetString()!;
         if (new[] { "CscToolPath", "CscToolExe", "CscEnvironment" }.Any(name => !string.IsNullOrEmpty(Property(name))))
             throw new NotSupportedException("Captured compilation requires the SDK compiler without custom Csc tools/environment.");
-        var capture = new GameBuildCompilation(job, inputs, Property("MSBuildToolsPath"), Property("NetCoreTargetingPackRoot"));
+        var capture = new GameBuildCompilation(job, inputs, Property("MSBuildToolsPath"), Property("NetCoreTargetingPackRoot"), frozen, projectKey, budget);
+        var outputDirectory = projectKey == null ? Path.Combine(job, "output") : Path.Combine(job, "graph", "output");
         var compiler = Path.Combine(Path.GetFullPath(Property("RoslynTargetsPath")), "bincore");
         if (!Inside(compiler, capture._sdk)) throw new NotSupportedException("Compiler must belong to the selected SDK.");
         Directory.CreateDirectory(capture._directory);
@@ -83,7 +88,7 @@ internal sealed class GameBuildCompilation
                 case "out":
                     if (!Path.GetFileName(value).Equals(inputs.Request.EntryAssembly, StringComparison.OrdinalIgnoreCase))
                         throw new InvalidDataException("Captured compiler output does not match the declared entry assembly.");
-                    output = true; arguments.Add("/out:" + Quote(Path.Combine(job, "output", inputs.Request.EntryAssembly))); break;
+                    output = true; arguments.Add("/out:" + Quote(Path.Combine(outputDirectory, inputs.Request.EntryAssembly))); break;
                 case "refout": arguments.Add("/refout:" + Quote(Path.Combine(capture._directory, "reference.dll"))); break;
                 case "pdb": arguments.Add("/pdb:" + Quote(Path.Combine(capture._directory, "game.pdb"))); break;
                 case "doc": arguments.Add("/doc:" + Quote(Path.Combine(capture._directory, "game.xml"))); break;
@@ -106,6 +111,7 @@ internal sealed class GameBuildCompilation
         }
         if (!output || !library || sources == 0) throw new InvalidDataException("Incomplete C# library invocation.");
         // Preserve CallerFilePath/PDB paths. More-specific user maps precede the root maps.
+        if (frozen != null) pathMaps.AddRange(frozen.PathMaps.Select(p => capture.Mirror(p.Key) + "=" + p.Value));
         pathMaps.Add(capture.Mirror(capture._job) + "=/_/TrueMoon.Build");
         pathMaps.AddRange(capture._roots.Select(p => Path.TrimEndingDirectorySeparator(p.Value) + "=" + Path.TrimEndingDirectorySeparator(p.Key)));
         pathMaps.Add(capture._job + "=/_/TrueMoon.Build"); // PDB/output paths are owned but are not mirrored inputs.
@@ -114,21 +120,22 @@ internal sealed class GameBuildCompilation
         var response = Path.Combine(capture._directory, "compiler.rsp");
         if (arguments.Sum(argument => (long)Encoding.UTF8.GetByteCount(argument) + 1) > GameBuildInputSnapshot.MaximumDocumentBytes)
             throw new InvalidDataException("Captured compiler response exceeds its limit.");
-        Directory.CreateDirectory(Path.Combine(job, "output"));
+        Directory.CreateDirectory(outputDirectory);
         await File.WriteAllLinesAsync(response, arguments, new UTF8Encoding(false), token).ConfigureAwait(false);
-        foreach (var name in inputs.Request.Dependencies ?? [])
+        foreach (var name in projectKey == null ? inputs.Request.Dependencies ?? [] : [])
         {
             var rows = document.RootElement.GetProperty("Items").GetProperty("ReferenceCopyLocalPaths").EnumerateArray()
                 .Select(row => row.GetProperty("FullPath").GetString()!).Where(path => Path.GetFileName(path).Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
             if (rows.Length != 1) throw new InvalidDataException("Captured private dependency is missing or ambiguous: " + name);
             var dependency = await capture.CopyAsync(rows[0], token).ConfigureAwait(false);
-            File.Copy(dependency, Path.Combine(job, "output", name));
+            File.Copy(dependency, Path.Combine(outputDirectory, name));
         }
-        capture.Snapshot = new(Property("NETCoreSdkVersion"), capture._files, raw, job, inputs.Fingerprint);
+        capture.Snapshot = new(Property("NETCoreSdkVersion"), capture._files, raw.Select(arg => frozen?.Original(arg) ?? arg), job, inputs.Fingerprint);
         capture.StartInfo = new("dotnet") { WorkingDirectory = capture._directory, UseShellExecute = false, CreateNoWindow = true,
             RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in new[] { "exec", capture._copies[Path.Combine(compiler, "csc.dll")], "/noconfig", "@" + response }) capture.StartInfo.ArgumentList.Add(argument);
-        await File.WriteAllTextAsync(Path.Combine(job, "capture.json"), JsonSerializer.Serialize(capture.Snapshot), token).ConfigureAwait(false);
+        frozen?.ConfigureCompiler(capture.StartInfo);
+        await File.WriteAllTextAsync(projectKey == null ? Path.Combine(job, "capture.json") : Path.Combine(capture._directory, "capture.json"), JsonSerializer.Serialize(capture.Snapshot), token).ConfigureAwait(false);
         return capture;
     }
 
@@ -153,6 +160,7 @@ internal sealed class GameBuildCompilation
         var target = Mirror(full); Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         using var source = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 65536, FileOptions.Asynchronous);
         var length = source.Length;
+        _budget.Reserve(length);
         if (length > GameBuildInputSnapshot.MaximumFileBytes || _bytes > GameBuildInputSnapshot.MaximumTotalBytes - length)
             throw new InvalidDataException("Captured compiler inputs exceed their byte budget.");
         await using var destination = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 65536, FileOptions.Asynchronous);
@@ -164,13 +172,35 @@ internal sealed class GameBuildCompilation
         }
         if (read != length) throw new IOException("Compiler input changed during capture: " + full);
         var sha = Convert.ToHexString(hash.GetHashAndReset());
-        var witnessed = _inputs.Files.FirstOrDefault(file => Paths.Equals(file.Path, full));
+        if (_preparation != null && Inside(full, _job) && full.EndsWith(".editorconfig", StringComparison.OrdinalIgnoreCase))
+        {
+            if (length > GameBuildInputSnapshot.MaximumDocumentBytes) throw new InvalidDataException("Generated analyzer config exceeds its limit.");
+            var bytes = new UTF8Encoding(false).GetBytes(_preparation.Original(await File.ReadAllTextAsync(full, token).ConfigureAwait(false)));
+            destination.SetLength(0); destination.Position = 0;
+            await destination.WriteAsync(bytes, token).ConfigureAwait(false);
+            length = bytes.Length; sha = Convert.ToHexString(SHA256.HashData(bytes));
+        }
+        var original = _preparation?.Original(full) ?? full;
+        var witnessed = _inputs.Files.FirstOrDefault(file => Paths.Equals(file.Path, original));
         if (witnessed != null && (witnessed.Length != length || witnessed.Sha256 != sha)) throw new IOException("Witnessed input changed before capture: " + full);
-        _files.Add(new(full, length, sha)); _bytes += length; _copies.Add(full, target); return target;
+        _files.Add(new(original, length, sha)); _bytes += length; _copies.Add(full, target); return target;
     }
     private static bool Inside(string path, string directory) => Path.GetFullPath(path).StartsWith(
         Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)) + Path.DirectorySeparatorChar,
         OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    // One job shares this aggregate budget across every compiler invocation in the graph.
+    internal sealed class Budget
+    {
+        private int _files;
+        private long _bytes;
+        internal void Reserve(long bytes)
+        {
+            if (_files >= GameBuildInputSnapshot.MaximumFiles || bytes > GameBuildInputSnapshot.MaximumFileBytes ||
+                _bytes > GameBuildInputSnapshot.MaximumTotalBytes - bytes)
+                throw new InvalidDataException("Captured project graph exceeds its aggregate compiler-input budget.");
+            _files++; _bytes += bytes;
+        }
+    }
     private static string Unquote(string value) => value.Length >= 2 && value[0] == '"' && value[^1] == '"' ? value[1..^1] : value;
     private static string Quote(string value)
     {

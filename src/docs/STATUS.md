@@ -1,6 +1,94 @@
 # TrueMoon: общий статус
 
-Последняя реализация — **2026-10-31, ED6b.2b.1 захваченная C#-компиляция**.
+Последняя работа — **2026-11-03, ED6b.2e.2–3 Observer/source UI**.
+Project-owned inert/activated observer, bounded census/hints/polling/drain и retained
+status indicator реализованы. Source state отделён от scene/runtime; preflight и
+existing ownership/admission fences сохранены. Full Editor1062/1062 Debug/Release
+прошёл (84новых cases); source Release2/2 +fresh package Release2/2 прошли,
+15packages/headless8/8,4game children reaped/released и Vulkan validation0/0.
+[Срез/команды/evidence](engine/HISTORY.md#ed6b2e23-observer-и-source-ui--2026-11-03).
+Далее measured observer cost на большом local graph; wider profiles и остальные
+module/hardware/release gates прежние.
+
+Предыдущая работа — **2026-11-02, ED6b.2e.1 descriptor и probes**.
+Capture-derived immutable source descriptor, exact present/absent probes и общий
+compiler exclusion predicate реализованы. Full input identity, schemas и обязательный
+preflight сохранены. Final Aether26/26 (22новых cases +4integration) и full
+Editor978/978 прошли Debug/Release; fresh15packages/headless8/8 без source drift.
+[Реализация/проверки](engine/HISTORY.md#ed6b2e1-descriptor-и-probes--2026-11-02).
+Далее ED6b.2e.2 project-owned observer, затем UI indicator; hardware/release gates
+прочих направлений прежние.
+
+Предыдущая работа — **2026-11-02, ED6b.2e contract source watcher/stale Build**.
+Определены наблюдаемый source descriptor, state/identity rules, project-owned lifetime,
+bounded hints/polling/debounce и UI snapshot delivery без auto Build/Play. Compiler
+preflight остаётся обязательным. [Contract/этапы](engine/EDITOR_PLAN.md#ed6b2e-контракт-source-watcher-и-stale-build-status--2026-11-02).
+В том срезе только source review и документация, C# API/observer/indicator не добавлены;
+build/test/native не запускались. Contract определил ED6b.2e.1 descriptor/probes/shared policy,
+затем observer и UI acceptance. Hardware/release gates и прочие направления прежние.
+
+Предыдущая работа — **2026-11-02, ED6b.2b.2c.1 native package interrupts/preflight**.
+Source/fresh NuGet Release ×standard/Cobalt и embedded/MS DI52/52native cases:
+36interrupts +16stale/corrupt preflights перед Start/Replace.76Game children
+reaped/released,76graceful validation0/0, maxLive1, final UI/GPU/handles0;
+4recoveries только Restore+Cancel. Fresh15packages/headless8/8,2743hashes без drift.
+Production runtime/API, unit/full solution и ordinary Workflow matrix не менялись/
+не повторялись. [Contract/commands/evidence](engine/HISTORY.md#ed6b2b2c1-native-package-interrupts-и-preflight--2026-11-02).
+Далее bounded source watcher/stale Build status без auto Build/Play; wider packages,
+HUD/input/Player и physical/hardware/performance/release gates остаются отдельными.
+
+Предыдущая работа — **2026-11-02, ED6b.2b.2c captured managed packages**.
+Реализован явный local PackageDirectory + locked unsigned managed closure до SDK,
+без package build/analyzer/native assets, с прежними reuse/prestart/ownership fences.
+Project manifest v3 добавляет contained packageDirectory; v1/v2 совместимы.
+Final package33/full Editor978 прошли Debug/Release, failed/skipped0; SDK lock входит
+в package cases. Scoped293прошли до последнего nuspec guard, покрытого final package33.
+Fresh15packages/headless8/8 и source/NuGet Release ×standard/Cobalt +embedded/MS DI
+4/4native Workflow прошли:56children reaped/released,52graceful validation0/0,
+20Game с package DLL только из selected artifact, UI/GPU/handles0,2059hashes без drift.
+Далее directed native package interrupts/stale-archive cases; full solution и
+hardware/performance/release gates не повторялись.
+[Контракт/команды/результаты](engine/HISTORY.md#ed6b2b2c-captured-managed-packages--2026-11-02).
+
+Предыдущая работа — **2026-11-02, ED6b.2b.2b.1 native graph interrupts**.
+Source/fresh NuGet standard/Cobalt +embedded/MS DI36/36native cases: Cancel/Stop/Exit
+в dependency SDK, graph verify и restore.52Game children reaped/released,52graceful
+validation0/0, UI/GPU/handles0;4recoveries только Restore+Cancel, late child после
+Stop/Exit нет. Fresh15packages/headless8/8,2735hash checks без drift.
+[Contract/matrix/evidence](engine/HISTORY.md#ed6b2b2b1-native-graph-interrupts--2026-11-02).
+Production C#/unit/full solution и ordinary Workflow matrix не менялись/не повторялись.
+Далее — locked managed PackageReference closure без build/analyzer/native assets;
+hardware/performance/release gates сохраняются.
+
+Предыдущий graph profile и262/971 Debug/Release —
+[в истории](engine/HISTORY.md#ed6b2b2b-captured-managed-project-graph--2026-11-02).
+
+Предыдущий ED6b.2d.1 Stop/exit order и single-project native interrupt proof —
+[в истории](engine/HISTORY.md#ed6b2d1-native-replace-interrupts--2026-11-02).
+
+Предыдущая работа — **2026-11-01, ED6b.2d document-aware code Replace**.
+Fresh15packages/headless8/8 и published source/NuGet standard/Cobalt +embedded/MS DI
+4/4workflows:56children reaped/released,52graceful validation0/0, UI/GPU/handles0,
+8new PNG просмотрены. Scoped Aether82/82 и full Editor957/957 Debug/Release; full
+Aether/Alloy/Hosting/solution не повторены. Code swap сохраняет paused tick; compiler failure оставляет old child,
+restore rejection возвращает old code/state/Playing mode. Authoring scene неизменна.
+Следующий шаг — directed native Cancel/Stop/exit в середине Replace;
+native Release workflow не закрывает physical/hardware/general release gates.
+[Контракт, проверки и границы](engine/HISTORY.md#ed6b2d-document-aware-code-replace--2026-11-01).
+
+Предыдущая реализация — **2026-10-31, ED6b.2b.2a declarative preparation closure**.
+Scene Start фиксирует поддержанный project/import/source/reference graph до первого
+SDK process. Windows SDK/runtime files read-leased; environment/home/temp/NuGet config
+явные. Custom tasks/functions/SDK и package/project graphs отклоняются до execution.
+Original paths и repeatable compiler bytes сохранены; legacy flags default false.
+Aether1704/1704 и Editor943/943 отдельно Debug/Release, failed/skipped0. Другие module
+suites и full solution не повторены; прежние failures сохранены в HISTORY.
+Fresh15packages/headless8/8, exit0; native/window/GPU runs не повторены.
+[Контракт и проверки](engine/HISTORY.md#ed6b2b2a-declarative-preparation-closure--2026-10-31).
+Дальше — consumer acceptance и стоимость freeze; native/hardware/release gates,
+расширенные profiles и artifact reuse/Replace этим не закрываются.
+
+Предыдущая реализация — **2026-10-31, ED6b.2b.1 захваченная C#-компиляция**.
 Scene Start собирает из owned copies source/generated/reference/config/compiler bytes
 после trusted SDK preparation; original compiler/reference bytes также проверяются до Start.
 Пути исходников/diagnostics сохраняются, staging удаляется до возврата Build result.
@@ -150,8 +238,8 @@ VRAM/BSOD/general-release gates и полный solution run этим не за�
 | [Cobalt / DI](cobalt/STATUS.md) | Текущий179/generator91 Debug/Release; document/project ownership на Cobalt/MS DI | API прежние; performance/allocation backlog отдельно |
 | [Enerit](enerit/STATUS.md) | ENE6d.1–3 metrics/traces и отдельный Aether child lane; current343/generator114 Debug/Release; прежний package proof отдельно | Queue distribution; ENE6c/MMF/trends и расширенная platform/package matrix отдельно |
 | [Mithril](mithril/STATUS.md) | Ready-file reader исправлен с RED2→GREEN; полный111/111 Debug/Release, published composition14/restart20. Runtime/API и identity/reap assertions прежние | Ready-file follow-up закрыт; полный MIT6 fault matrix/containment/trends остаётся отдельным |
-| [Alloy / Argentis](alloy/STATUS.md) | ED6b.2b.1 consumer; Editor943/Aether1683 Debug/Release и published native source/NuGet4/4; Alloy/Hosting suites не повторены | ED6b.2b.2 consumer; PA8c.0; ED8 popup follow-up. Physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
-| [Aether / Engine](engine/STATUS.md) | ED6b.2b.1 captured C# invocation; Aether1683/Editor943 Debug/Release, fresh15packages/headless8/native4/4 | ED6b.2b.2 closure до MSBuild preparation; cache/reuse/Replace/full ED6b и drain/popup/hardware/release follow-ups отдельно |
+| [Alloy / Argentis](alloy/STATUS.md) | ED6b.2d source/NuGet published native4/4; UI/GPU/handles0,8new PNG просмотрены; Alloy/Hosting suites не повторены | PA8c.0; ED8 popup follow-up. Physical/full INF5/K3/K7/K8/VRAM/final alpha открыты |
+| [Aether / Engine](engine/STATUS.md) | ED6b.2d scoped Aether82/82+full Editor957/957 Debug/Release, native4/4, fresh15packages/headless8/8; document-aware code Replace | ED6b.2d.1 native interrupt acceptance; scene migration/graphs/disk cache/full ED6b и прежние follow-ups отдельно |
 
 Подробные contracts/commands/failures ведутся у владельцев. Historical packages,
 performance и аппаратные проверки не становятся частью текущего full solution.
@@ -219,9 +307,9 @@ GUI/native loading и independent NuGet подтверждены отдельн�
 
 ## Следующий конкретный шаг
 
-1. [ED6b.2b.2](engine/EDITOR_PLAN.md#ed6b2b1-захваченная-c-компиляция--2026-10-31):
-   immutable closure до evaluation/preparation после captured C# invocation, до
-   artifact reuse/document-aware Replace. Project picker/scene Build/Play реализованы.
+1. [ED6b.2d.1](engine/EDITOR_PLAN.md#ed6b2d-document-aware-code-replace--2026-11-01):
+   directed native Cancel/Stop/exit в середине document-aware Replace, с проверкой
+   recovery/admission/drain. Scene migration, disk cache и extended graphs отдельно.
 2. Command/frame aggregates после scoped ED8a. App-private routing и общий artifact quota
    требуют отдельных контрактов; native/hardware stress gates не подменяются console UI.
 3. При возврате к gameplay — ENG5c.3 collisions камеры, затем HUD/Player по их планам.

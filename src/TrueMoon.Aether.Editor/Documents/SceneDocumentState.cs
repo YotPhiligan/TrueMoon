@@ -24,7 +24,9 @@ public enum DocumentOperation
     /// <summary>Writing one captured snapshot; edits remain permitted.</summary>
     Saving,
     /// <summary>Fenced close and actual drain.</summary>
-    Closing
+    Closing,
+    /// <summary>Preparing/applying a captured runtime transition; edits and file IO are fenced until drain.</summary>
+    Runtime
 }
 
 /// <summary>Coherent observable state; the content is the original engine authoring state, not another mutable scene.</summary>

@@ -230,14 +230,14 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         return result.Task;
     }
 
-    internal Task StartCapturedRuntime(ProjectSession project, SceneAuthoringState content, Func<Task> start, CancellationToken token)
+    internal Task RunCapturedRuntime(ProjectSession project, SceneAuthoringState content, Func<CancellationToken, Task> start, CancellationToken token)
     {
         lock (_gate)
         {
             token.ThrowIfCancellationRequested();
             if (_closed || _exiting || !BindingReady || !ReferenceEquals(_projects.Active, project))
                 throw new OperationCanceledException("Project startup was superseded.", token);
-            return project.Documents!.WithCapturedState(content, start);
+            return project.Documents!.RunCapturedAsync(content, start, token);
         }
     }
 
@@ -331,7 +331,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
 
     private Task<bool> ExitAsync(bool force)
     {
-        Task work; TaskCompletionSource<bool> completion; Exception? cancellationFailure;
+        Task work; TaskCompletionSource<bool> completion; Exception? cancellationFailure; Task? replacementStop = null;
         lock (_gate)
         {
             if (_exit is { IsCompleted: false })
@@ -348,6 +348,13 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             if (force) _closed = true;
             _exiting = true; _busy = true; _error = null; work = _pending; _operation = DocumentCommand.Exit;
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously); _exit = completion.Task;
+            if (_runtimeOperation == TrueMoon.Aether.Editing.GameEditorOperation.Replace && !work.IsCompleted)
+            {
+                // Fence recovery before cancelling Replace. Keep its parent document alive
+                // until both the accepted operation and runtime cleanup actually drain.
+                try { replacementStop = _stopRuntime(); }
+                catch (Exception error) { replacementStop = Task.FromException(error); }
+            }
             _decision?.TrySetResult((DocumentCloseChoice.Cancel, null)); cancellationFailure = CancelWork();
         }
         _ = Task.Run(async () =>
@@ -356,6 +363,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             try
             {
                 await work.ConfigureAwait(false);
+                if (replacementStop != null) await replacementStop.ConfigureAwait(false);
                 if (cancellationFailure != null) throw cancellationFailure;
                 var document = _projects.Active?.Documents;
                 var choice = DocumentCloseChoice.Discard; string? path = null;
@@ -365,7 +373,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
                 if (choice == DocumentCloseChoice.Cancel) return;
                 await _stopPreview().ConfigureAwait(false);
                 if (document != null && !await document.CloseAsync(choice, path).ConfigureAwait(false)) return;
-                await _stopRuntime().ConfigureAwait(false); success = true;
+                if (replacementStop == null) await _stopRuntime().ConfigureAwait(false);
+                success = true;
             }
             catch (Exception error) { failure = error; }
             finally

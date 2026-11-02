@@ -5,7 +5,7 @@ param(
     [string]$EvidenceDirectory,
     [Alias('Profile')][ValidateSet('All','SourceDebug','SourceRelease','PackageDebug','PackageRelease')][string]$RunProfile = 'All',
     [ValidateSet('All','Standard','Embedded')][string]$HostKind = 'All',
-    [ValidateSet('All','Workflow','Failure','Cancel')][string]$Scenario = 'All'
+    [ValidateSet('All','Workflow','Failure','Cancel','ReplaceInterrupt','Replace-Restore-Exit','PackageInputs','PackageAcceptance','SourceWatch')][string]$Scenario = 'All'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -40,16 +40,29 @@ function Invoke-Gui([string]$name, [string[]]$arguments, [string]$cwd = "$guiRun
     $process = [Diagnostics.Process]::new(); $process.StartInfo = $info
     $output = [IO.File]::Create("$guiEvidence/$name.stdout.log"); $errors = [IO.File]::Create("$guiEvidence/$name.stderr.log")
     $command = [ordered]@{ Name = $name; FileName = $guiDotnet; Arguments = $arguments; WorkingDirectory = $cwd
-        Started = [DateTimeOffset]::UtcNow; ProcessId = $null; ExitCode = $null; TimedOut = $false; PackageCache = [bool]$package }
+        Started = [DateTimeOffset]::UtcNow; ProcessId = $null; ExitCode = $null; TimedOut = $false; PackageCache = [bool]$package
+        ElapsedMilliseconds = $null; ProcessorMilliseconds = $null; PeakHandles = 0; PeakWorkingSetBytes = 0 }
     $guiReport.Commands += $command
+    $clock = [Diagnostics.Stopwatch]::StartNew()
     try {
         if (!$process.Start()) { throw "Cannot start $name" }
         $command.ProcessId = $process.Id; Save-GuiReport
         $copyOutput = $process.StandardOutput.BaseStream.CopyToAsync($output)
         $copyErrors = $process.StandardError.BaseStream.CopyToAsync($errors)
-        if (!$process.WaitForExit(300000)) { $command.TimedOut = $true; $process.Kill($true); if (!$process.WaitForExit(10000)) { throw 'Cannot reap owned process tree.' } }
+        while (!$process.WaitForExit(100)) {
+            $process.Refresh()
+            $command.PeakHandles = [Math]::Max($command.PeakHandles, $process.HandleCount)
+            $command.PeakWorkingSetBytes = [Math]::Max($command.PeakWorkingSetBytes, $process.WorkingSet64)
+            if ($clock.Elapsed.TotalSeconds -ge 300) {
+                $command.TimedOut = $true; $process.Kill($true)
+                if (!$process.WaitForExit(10000)) { throw 'Cannot reap owned process tree.' }
+                break
+            }
+        }
         $null = $copyOutput.GetAwaiter().GetResult(); $null = $copyErrors.GetAwaiter().GetResult(); $output.Flush(); $errors.Flush()
         $command.ExitCode = $process.ExitCode
+        $command.ElapsedMilliseconds = $clock.Elapsed.TotalMilliseconds
+        $command.ProcessorMilliseconds = $process.TotalProcessorTime.TotalMilliseconds
         if ($command.TimedOut -or $command.ExitCode -ne 0) { throw "$name failed (exit $($command.ExitCode)); see persisted logs." }
         if ($arguments[0] -in @('restore','build','publish') -and !(Get-ChildItem -LiteralPath $guiEvidence -Filter "$name-*.binlog")) { throw 'MSBuild binlog missing.' }
         Write-Host "$name passed"
@@ -69,6 +82,18 @@ try {
                 $guiReport.FrameworkChangesSincePackage += $entry.Path
                 if ($RunProfile -in @('All','PackageDebug','PackageRelease')) { throw "Framework input changed; generate fresh packages first: $($entry.Path)" }
             }
+        }
+    }
+    # Include new framework inputs as well as files present in the package baseline.
+    $knownFrameworkInputs = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($entry in $guiReport.Sources) { [void]$knownFrameworkInputs.Add($entry.Path) }
+    foreach ($id in @($guiBaseline.Packages.Id) + @('TrueMoon.Cobalt.Generator')) {
+        foreach ($file in Get-ChildItem -LiteralPath (Join-Path $guiWorkspace $id) -File -Recurse |
+            Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.Extension -in @('.cs','.csproj','.props','.targets','.dll','.spv','.ps1','.md') }) {
+            if (!$knownFrameworkInputs.Add($file.FullName)) { continue }
+            $guiReport.Sources += [ordered]@{ Path = $file.FullName; Sha256 = Gui-Hash $file.FullName }
+            $guiReport.FrameworkChangesSincePackage += $file.FullName
+            if ($RunProfile -in @('All','PackageDebug','PackageRelease')) { throw "New framework input requires fresh packages: $($file.FullName)" }
         }
     }
     foreach ($path in @("$guiValidation/VkLayer_khronos_validation.json", "$guiValidation/VkLayer_khronos_validation.dll")) {
@@ -129,13 +154,62 @@ try {
         $runtime = switch ($item) { 'SourceDebug' { "$guiWorkspace/Examples/AetherRuntimeHost/bin/Debug/net10.0/AetherRuntimeHost.exe" } 'SourceRelease' { "$guiRun/source-Release/Runtime/AetherRuntimeHost.exe" } 'PackageDebug' { "$guiRun/consumer/Runtime/bin/Debug/net10.0/Runtime.exe" } 'PackageRelease' { "$guiRun/package-Release/Runtime/Runtime.exe" } }
         $hosts = if ($HostKind -eq 'All') { @('Standard','Embedded') } else { @($HostKind) }
         foreach ($hostMode in $hosts) {
-            $scenarios = if ($Scenario -eq 'All') { @('Workflow','Failure','Cancel') } else { @($Scenario) }
+            $scenarios = if ($Scenario -eq 'All') { @('Workflow','Failure','Cancel') }
+                elseif ($Scenario -in @('ReplaceInterrupt','PackageInputs','PackageAcceptance')) {
+                    if ($Scenario -ne 'PackageInputs') { @('Build','Verify','Restore') | ForEach-Object { $phase = $_; @('Cancel','Stop','Exit') | ForEach-Object { "Replace-$phase-$_" } } }
+                    if ($Scenario -ne 'ReplaceInterrupt') { @('Start','Replace') | ForEach-Object { $operation = $_; @('Stale','Corrupt') | ForEach-Object { "Package-$operation-$_" } } }
+                }
+                else { @($Scenario) }
             foreach ($caseMode in $scenarios) {
                 $name = "$item-$hostMode-$caseMode"; $report = "$guiRun/cases/$name"
                 $provider = if ($hostMode -eq 'Standard') { 'cobalt' } else { 'di' }
                 Invoke-Gui $name @("$gui/GuiConsumer.dll", $runtime, $report, $hostMode.ToLowerInvariant(), $provider, $caseMode.ToLowerInvariant()) -package:($item -like 'Package*')
                 $result = Get-Content -LiteralPath "$report/report.json" -Raw | ConvertFrom-Json
                 if (!$result.Passed -or $result.ActiveUiSessions -ne 0 -or $result.GpuResources -ne 0 -or $result.GpuHandles -ne 0) { throw 'Case cleanup failed.' }
+                if ($caseMode -eq 'Workflow') {
+                    $playback = $result.Workflow.ScenePlayback
+                    if (!$playback.FrozenPreparation -or !$playback.CapturedPackages -or $playback.PreparationCosts.Count -ne 6 -or $playback.StartMilliseconds.Count -ne 2 -or
+                        $playback.ReusedArtifacts.Count -ne 2 -or $playback.ReusedArtifacts[0] -or !$playback.ReusedArtifacts[1] -or
+                        !$playback.Replacement.PausedTickPreserved -or !$playback.Replacement.CompilerFailureKeptOld -or
+                        !$playback.Replacement.RollbackStateAndPlayingMode -or !$playback.Replacement.ParentDocumentPreserved -or
+                        @($playback.PreparationFingerprints | Sort-Object -Unique).Count -ne 1) { throw 'Frozen preparation acceptance evidence is incomplete.' }
+                }
+                if ($caseMode -eq 'SourceWatch') {
+                    $proof = $result.Workflow
+                    if ($proof.Profile -ne 'SourceWatch' -or !$proof.MetadataTouchSame -or !$proof.SameLengthSameTimestampChanged -or
+                        !$proof.StickyChanged -or !$proof.RetainedDraftAndControls -or !$proof.PreflightRequired -or
+                        !$proof.SourceErrorIndependent -or !$proof.RunningIdentityPreserved -or !$proof.CloseDrained -or !$proof.ReopenNoBuild -or
+                        $proof.NotificationThreads.Count -ne 1 -or $proof.NotificationThreads[0] -ne $proof.OwnerThread -or
+                        $proof.NativeNotifications -ne ($hostMode -eq 'Standard')) { throw 'Source observer/UI acceptance evidence is incomplete.' }
+                }
+                if ($caseMode -like 'Replace-*') {
+                    $proof = $result.Workflow
+                    if (!$proof.StageObserved -or !$proof.ProjectGraphConfirmed -or !$proof.PackageConfirmed -or !$proof.StagingDrained -or
+                        !$proof.AdmissionClosed -or !$proof.CompilerDrained -or !$proof.ParentPreserved -or
+                        !$proof.RecoveryPolicy -or !$proof.NoLateChild -or $proof.MaxLive -ne 1 -or $proof.Children -ne $result.Children.Count) {
+                        throw 'Native replacement interruption evidence is incomplete.'
+                    }
+                    $expectedStage = if ($proof.Phase -eq 'build') { 'DependencySdkQuery' } elseif ($proof.Phase -eq 'verify') { 'GraphPrestartQuery' } else { 'CandidateRestore' }
+                    if ($proof.CompilerStage -ne $expectedStage -or ($proof.Phase -ne 'restore' -and
+                        (!$proof.CompilerPid -or !$proof.SdkLog -or !$proof.SdkStartedUtc -or !$proof.SdkLogCreatedUtc -or
+                         [datetime]$proof.SdkLogCreatedUtc -lt [datetime]$proof.SdkStartedUtc)) -or
+                        ($proof.Phase -eq 'verify' -and $proof.GraphPayloadSha256 -notmatch '^[0-9A-F]{64}$') -or
+                        [Convert]::FromBase64String($proof.PackageArchiveSha512).Length -ne 64 -or $proof.PackagePayloadSha256 -notmatch '^[0-9A-F]{64}$') {
+                        throw 'Native graph interrupt did not observe the required owned SDK/payload stage.'
+                    }
+                }
+                if ($caseMode -like 'Package-*') {
+                    $proof = $result.Workflow
+                    $expected = if ($proof.Change -eq 'stale') { 'GameBuildInputsChangedException' } else { 'InvalidDataException' }
+                    if ($proof.Profile -ne 'GameEditorPreflight' -or !$proof.Rejected -or $proof.Rejection -ne $expected -or
+                        !$proof.PackageOnlyMutation -or !$proof.NoChildOrPauseBeforeReject -or !$proof.NoCheckpointBeforeReject -or
+                        !$proof.ParentPreserved -or !$proof.CompilerDrained -or !$proof.FreshBuildRequired -or !$proof.FreshPackageLoaded -or
+                        $proof.MaxLive -ne 1 -or $proof.Children -ne $result.Children.Count -or
+                        $proof.InitialArchiveSha256 -eq $proof.ChangedArchiveSha256 -or $proof.OldPayloadSha256 -eq $proof.FreshPayloadSha256 -or
+                        ($proof.Change -eq 'corrupt' -and (!$proof.CorruptBeforeSdk -or $proof.InitialLockSha256 -ne $proof.ChangedLockSha256))) {
+                        throw 'Native package preflight/rebuild evidence is incomplete.'
+                    }
+                }
                 $guiReport.Cases += [ordered]@{ Profile = $item; Host = $hostMode; Provider = $provider; Scenario = $caseMode; Report = "$report/report.json" }
                 Save-GuiReport
             }

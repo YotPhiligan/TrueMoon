@@ -38,6 +38,7 @@ public sealed class EditorStatusPopupView : View<EditorStatusBarViewModel>
             PreviewActions.WithChildren(StartPreview, StopPreview);
             Body.WithChildren(Title, Row(x => x.Summary),
                 Row(x => x.RuntimeDetails), Row(x => x.OperationDetails),
+                Row(x => x.SourceSummary), Row(x => x.SourceDetails),
                 Row(x => x.EntityText), Row(x => x.PreviewSummary),
                 PreviewDetails, PreviewActions, Error);
             MaxHeight = 420;

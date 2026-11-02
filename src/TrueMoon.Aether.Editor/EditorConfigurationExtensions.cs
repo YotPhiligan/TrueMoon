@@ -1,5 +1,6 @@
 using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.Editing;
 
 namespace TrueMoon.Aether.Editor;
 
@@ -23,8 +24,10 @@ public static class EditorConfigurationExtensions
             if (!services.Exist<IFactory<ProjectSession, ProjectSessionArguments>>())
             {
                 var documents = services.Exist<IFactory<SceneDocumentSession, ResolvedProject>>();
+                var source = services.Exist<IFactory<EditorSourceWatch, ResolvedProject>>();
                 services.Singleton<IFactory<ProjectSession, ProjectSessionArguments>>(resolver => new ProjectSessionFactory(
-                    documents ? resolver.Resolve<IFactory<SceneDocumentSession, ResolvedProject>>() : null));
+                    documents ? resolver.Resolve<IFactory<SceneDocumentSession, ResolvedProject>>() : null,
+                    source ? resolver.Resolve<IFactory<EditorSourceWatch, ResolvedProject>>() : null));
             }
             services.Singleton<EditorProjects>(resolver => new(resolver.Resolve<IProjectStore>(), resolver.Resolve<IProjectToolchain>(),
                     resolver.Resolve<IFactory<ProjectSession, ProjectSessionArguments>>()))

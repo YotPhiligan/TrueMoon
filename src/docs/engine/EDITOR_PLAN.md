@@ -1181,8 +1181,9 @@ source revision policy до artifact reuse/document-aware Replace. Текущи�
 source closure, включая внешние imports/references, SDK/generator/target inputs и
 явные границы profile. Текущий witness не изолирует transient edit-and-revert,
 произвольный target/generator/environment IO или edits после последней observation.
-PackageReference/ProjectReference, source watcher, artifact reuse/cache и document-aware
-Replace ещё не реализованы. Ни full ED6b.2, ни общий ED6b этим не закрываются.
+PackageReference/ProjectReference, source watcher, disk cache и document-aware
+Replace ещё не реализованы. Ограниченный process-local reuse описан в ED6b.2c.
+Ни full ED6b.2, ни общий ED6b этим не закрываются.
 Команды, результаты и первоначальные findings —
 [HISTORY](HISTORY.md#ed6b2a-наблюдаемые-входы-сборки--2026-10-31).
 
@@ -1222,13 +1223,589 @@ evaluation. Общий MSBuild build и arbitrary task/generator IO этим н�
 - [x] Завершить fresh source/NuGet standard/embedded acceptance с capture fingerprints,
   files/bytes и cleanup до Start; фактические результаты фиксировать в HISTORY.
 
-**Следующий срез ED6b.2b.2:** согласованный immutable closure до MSBuild evaluation/
-preparation, включая project/import graph, tasks/generators и pinned environment/
-toolchain/runtime assumptions. Текущий profile доверяет preparation и installed dotnet
-runtime/ambient environment; transient edits до freeze и произвольные task/generator IO
-не изолированы. PackageReference/ProjectReference, arbitrary compiler extensions,
-cache/reuse/document-aware Replace и full ED6b остаются открытыми.
+**Продолжение ED6b.2b.2:** первый ограниченный declarative Windows profile описан ниже.
+PackageReference/ProjectReference, arbitrary compiler extensions, disk cache/
+document-aware Replace и full ED6b остаются открытыми.
 [Команды/проверки/границы](HISTORY.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
+
+#### ED6b.2b.2a: снимок declarative preparation — 2026-10-31
+
+Решение этого среза: immutable closure поддерживается для trusted-local Windows
+net10.0 Microsoft.NET.Sdk library с декларативными props/items и literal imports/
+HintPath/linked files. Произвольный MSBuild код не превращается в sandbox:
+Target/UsingTask, property/condition functions, custom SDK/analyzer, package/project
+graphs и внешние globs отклоняются до первого SDK process. Неактивный repository
+ProjectReference с точным guard AetherContractPath удаляется из рабочей копии;
+исходный проект не изменяется. Legacy requests без CapturePreparation сохраняют
+предыдущий профиль.
+
+- [x] CapturePreparation требует TrackInputs+CaptureCompilation; штатный Scene Start
+  включает все три флага. Compiler job владеет staging и file leases, новых DI APIs нет.
+- [x] До SDK evaluation копировать project tree (без bin/obj/.git/.codex/.agents и
+  artifact root), ancestor props/targets/editor configs, literal imports/linked inputs
+  и contract/HintPath DLLs. XML читается из уже скопированных bytes; DTD запрещён.
+  Paths переписываются только в рабочей копии; glob membership фиксируется копированием.
+- [x] Использовать explicit installed dotnet/MSBuild.dll, stable net10 SDK selection
+  с поддержанными global.json policies и exact --fx-version. SDK/runtime/host/ref-pack
+  files read-leased на весь job; content identity входит в process-local witness.
+  Installed toolchain directories и Windows/native OS остаются trusted assumptions;
+  это не защита от arbitrary filesystem/driver/OS вмешательства.
+- [x] У процессов explicit environment, private home/temp/offline NuGet configuration,
+  no auto response/user extension/workload discovery. Restore выполняется после freeze
+  до первой observation. Package restore из внешних feeds не добавляется.
+- [x] Original-path identities/CallerFilePath/diagnostics сохраняются; generated analyzer
+  config получает original ProjectDir. Job/phase/rootless metadata нормализуются для
+  fingerprints и repeatable DLL bytes. After-build/prestart заново фиксируют live graph,
+  не выполняя неподдержанный MSBuild code, и отклоняют stale input.
+- [x] Сохранить deadline/cancel/reap/drain/retry и cleanup до возврата результата;
+  retention распознаёт новые restore diagnostics. Project limits прежние4096files/
+  64MiB/file/256MiB, toolchain8192files/1GiB; budget не заменяется unbounded recursion.
+- [x] Module Debug/Release: Aether1704/1704, Editor943/943, failed/skipped0;
+  source SDK/private dependency/реальный Game.Logic проверены. Evidence — в HISTORY.
+- [x] Source/fresh package native Scene Start acceptance: published Release ×standard/
+  Cobalt и embedded/MS DI4/4workflows,44children reaped/released,40graceful validation
+  reports0errors/0warnings, final UI/GPU/handles0;4PNG просмотрены. Debug/native full
+  matrix и GPU/physical gates отдельно. [Evidence](HISTORY.md#ed6b2b2a-native-acceptance-and-freeze-baseline--2026-10-31).
+- [x] Стоимость freeze:24samples/8Start,6028toolchain files/755663686bytes per capture;
+  median freeze7.386s, Source14.17ms, toolchain99.755% суммарного freeze времени;
+  full Start26.43–30.30s, median27.826s. Local warm-cache Windows baseline, без cache flush.
+
+Дальше — снижение стоимости toolchain freeze по следующему срезу. Поддержку
+новых graph/task profiles согласовывать отдельно; artifact reuse/Replace не включать
+до подтверждённого supported closure. Полный ED6b.2b.2 этим автоматически не закрывается.
+
+#### ED6b.2b.2a.1: стоимость toolchain freeze — 2026-10-31
+
+- [x] Разделить стоимость enumeration/link checks/open/read-lease/hash и проверить
+  удерживаемую буферизацию FileStream: текущий whole-app peak1349–1459MiB и12.7khandles
+  сам по себе не является attribution только к freeze.
+- [x] Уменьшить повторную toolchain работу внутри owned compiler job; сохранять
+  exact SDK/runtime/environment selection, source recapture, file/byte/depth limits,
+  immutable content identity, stale rejection и cancel/cleanup/retry. Не заменять
+  provenance доверенным timestamp/глобальным unbounded cache и не вводить новый DI scope.
+- [x] Сравнить тот же paired source/fresh NuGet Release workflow и freeze/Start/
+  memory/handles с baseline. Captured DLL/fingerprints, source paths и lifecycle
+  должны сохранить прежние критерии; расширение supported graphs отдельное.
+
+Результат: каждый проход заново перечисляет и хеширует все6028files/755663686bytes;
+ancestor checks переиспользуются только внутри прохода, перед open начинается новый.
+Один64KiB buffer заменяет retained buffers отдельных leases. Toolchain/environment
+fingerprints совпадают с baseline; limits/stale/cancel/cleanup и ownership сохранены.
+47/47focused tests отдельно Debug/Release, fresh15packages/headless8/8, native4/4.
+Median freeze7.386→1.322s (24samples), Start27.826→9.218s (8samples), parent GUI
+sampled peak working set1349–1459→294–319MiB; handles остаются около12.7k.
+[Методика, breakdown, исходные failures и границы](HISTORY.md#ed6b2b2a1-toolchain-freeze-cost--2026-10-31).
+
+Process-local reuse поддержанного profile ведётся в ED6b.2c ниже.
+
+#### ED6b.2c: повторное использование проверенного payload — 2026-11-01
+
+Согласованная область после ED6b.2b.2a.1: reuse готовых managed DLL, без повторного
+Csc/capture, в одном экземпляре GameBuildCompiler. Новый SourceRevision сохраняет
+собственный manifest/BuildId; same-ticket reuse сохраняет прежний ID. Schema1 и
+проверки source ticket/context в GameEditor не меняются. Новый runtime child и новая
+immutable scene copy создаются при каждом Start независимо от reuse кода.
+
+- [x] `ReuseArtifact` opt-in требует CapturePreparation. Один последний успешный
+  supported-profile result хранит immutable provenance без живых handles/processes.
+  Cache устанавливается только после successful job cleanup, сбрасывается при
+  следующем build job/failure/cancel/failed prestart verification и CloseAdmission.
+- [x] Полный before/after freeze и SDK input observation, проверка original compiler
+  inputs и hash/Pin опубликованного payload предшествуют reuse. Changed identity,
+  cold compiler, missing/corrupt payload выполняют обычную компиляцию. Open не
+  восстанавливает witness и не заполняет process-local cache.
+- [x] Публиковать manifest текущего compile ticket из pinned DLL bytes. Prestart
+  verification остаётся обязательной; stale context/scene/input не запускает child.
+  Existing corrupt same-ticket destination остаётся fail-closed Publish error;
+  автоматического удаления опубликованных artifacts нет.
+- [x] Scene Start включает reuse; явный Editor Build всегда компилирует и может
+  подготовить result для последующего Start. Preview drain и authoring admission,
+  dirty/history/selection, cancellation/cleanup retry сохраняют прежние contracts.
+- [x] Проверить same/new ticket, explicit fresh Build, content/import/entry changes,
+  cold/new compiler, missing/corrupt payload, failure/cancel/stale discard;
+  existing compilation/Editor context fences, Debug/Release.
+- [x] Fresh packages/headless и source/NuGet Release ×standard/embedded workflow:
+  first compile/second reuse, одинаковые content fingerprints, distinct ticket IDs,
+  no Csc/prepare output у reused job, cleanup до Start и native ownership/pixels.
+
+Проверено1ноября: Aether89/89 и ScenePlayback18/18 отдельно Debug/Release,
+failed/skipped0. Fresh15packages/headless8/8; native4/4,44children reaped/released,
+40graceful validation0/0, UI/GPU/handles0,4PNG просмотрены. Local median first Start
+10.110s, reused Start8.109s, по4samples; это bounded fixture, не общий performance gate.
+[Команды, матрица тестов, evidence и ограничения](HISTORY.md#ed6b2c-verified-payload-reuse--2026-11-01).
+
+Document-aware code Replace ведётся в ED6b.2d ниже. Disk cache, новые graph/task
+profiles, gameplay HUD/input/Player и полный ED6b остаются отдельными задачами.
+
+#### ED6b.2d: document-aware code Replace — 2026-11-01
+
+Первый профиль заменяет код принадлежащей ScenePlayback Playing/Paused игры при том
+же captured project/document state и совместимой scene revision. Миграции изменённой
+authoring scene нет: для неё нужен Stop/Start. Game должен поддерживать
+ICheckpointGameSession; прежние bounded checkpoint/rollback contracts не меняются.
+
+- [x] ScenePlayback фиксирует новый source ticket и immutable scene, оставляет старый
+  мир работать при Build и закрывает document/file/edit admission до actual drain.
+  Replace доступен только для owned runtime identity и исходного authoring state.
+- [x] GameEditor.ReplaceBuildAsync(expectedContextVersion) требует точный candidate/
+  context. Обе Replace точки проверяют tracked input/compilation witness до Pause и
+  до reservation транзакции. Reopened/stale witness не изменяет старую игру.
+- [x] После Build повторить project/document/runtime capture checks, применить
+  candidate через shared captured-document gate. Чужой runtime, изменённый document
+  или superseded context не получают поздний Replace.
+- [x] DocumentOperation.Runtime держит direct edit/IO admission закрытой на всё время
+  async verification/start/Replace. Close отменяет и drains эту работу до authoring
+  disposal; synchronous rejected engine admission не приобретает чужой runtime.
+- [x] Сохранить parent document/dirty/history/selection. Compiler failure оставляет
+  старый мир, successful rollback обновляет owned identity восстановленного child.
+  Cancel ждёт drain/recovery; явный Stop/exit запрещает recovery и сохраняет cleanup retry.
+- [x] Проверить model admission/stale/failure/cancel и engine context/input preflight,
+  прежние replacement/recovery/Stop fences: scoped Aether82/82 и full Editor957/957
+  отдельно Debug/Release, failed/skipped0; full Aether/solution не повторены.
+- [x] Fresh15packages/headless8/8; source/fresh NuGet Release ×standard/Cobalt и
+  embedded/MS DI4/4workflows: paused code swap сохраняет tick, compile failure не
+  меняет child, rejected restore восстанавливает old code/state/Playing mode.
+  56children reaped/released,52graceful validation0/0,20game, maxLive1, final UI/GPU/
+  handles0;8new paused PNG просмотрены,2031source hash checks без drift.
+
+[Контракт, exact test matrix, commands, initial failures и evidence](HISTORY.md#ed6b2d-document-aware-code-replace--2026-11-01).
+
+#### ED6b.2d.1: прерывание Replace в native consumer — 2026-11-02
+
+- [x] Наблюдать live compiler в Build и input verification; отправлять interrupt из
+  того же UI owner invocation. Старый Playing runtime сохраняется до transaction.
+- [x] Удерживать реальный RestoreCheckpoint bounded барьером в consumer Game.Logic,
+  после reap/release старого child; не добавлять acceptance hooks во фреймворк.
+- [x] Cancel до transaction оставляет old child; после candidate restore admission
+  восстанавливает old code/checkpoint/Playing mode ровно одним owned child.
+- [x] Stop синхронно fences recovery до caller cancellation. Exit начинает runtime
+  Stop до отмены Replace и ждёт оба drain до document close/Save/Discard/Cancel.
+  Failed cleanup сохраняет authoring product для явного retry.
+- [x] RED: native Exit создал лишний rollback child; три новых model cases падали.
+  GREEN: source Release ×standard/Cobalt и embedded/MS DI18/18cases,26children,
+  26graceful validation0/0, maxLive1, final UI/GPU/handles0. Build/verify/restore ×
+  Cancel/Stop/Exit закрывают admission до actual drain и не публикуют late child.
+- [x] Scoped Aether82/82 и full Editor963/963 отдельно Debug/Release; failed/skipped0.
+  Шесть новых cases проверяют ordering, drain до close decision, cleanup failure/retry.
+- [x] Fresh15packages/headless8/8; NuGet Release повторил18/18native cases. Итого
+  source/NuGet36/36cases,52children/52graceful validation0/0, maxLive1, final UI/GPU/
+  handles0. Итоговый audit2053input hashes без drift; diff check пройден.
+
+[Контракт, точные тесты, команды и evidence](HISTORY.md#ed6b2d1-native-replace-interrupts--2026-11-02).
+
+#### ED6b.2b.2b: захваченный managed ProjectReference graph — 2026-11-02
+
+Первый профиль — opt-in `CaptureProjectReferences`, требующий CapturePreparation.
+До первого SDK process захватывается DAG максимум4C# net10.0 library projects,
+включая entry, в непересекающихся каталогах. Обычные unconditional literal ProjectReference без metadata; все
+private outputs перечислены в Dependencies. Циклы, повторяющиеся DLL names, разные
+SDK, context-dependent shared imports, package/custom task/SDK graphs отклоняются.
+`AssemblyName` dependency — имя project file либо явный unconditional literal.
+
+- [x] Один compiler job владеет всем staging и process chain. Shared pre-evaluation
+  closure фиксирует source/import/glob/config/reference inputs всех узлов; каждый
+  SDK pass видит только copies и read-leased installed toolchain.
+- [x] Переписать ProjectReference только в mirrors, добавить transitive references;
+  Csc каждого узла получает byte copies, intermediates/capture изолированы. Зависимости
+  собираются один раз в topological order. SDK BuildProjectReferences остаётся false.
+- [x] Сохранить aggregate compiler-input limits4096files/64MiB per file/256MiB total
+  для всех Csc invocations, общие source/toolchain и deadline limits. Flat artifact
+  содержит только explicit managed DLL allowlist, без host/native копий.
+- [x] Root compilation witness содержит child inputs/captures. Before/after/prestart
+  recapture проверяет весь source graph; graph DLLs для verify/reuse берутся из pinned
+  выбранного artifact. Cold/changed/unavailable payload выполняет fresh compilation.
+  Open не восстанавливает witness. Cleanup удаляет graph staging; retention принимает
+  только известные suffixes и максимум3hash-named dependency diagnostic prefixes.
+- [x] Manifest formatVersion2 добавляет dependencies. Version1 сохраняет чтение/запись
+  прежних восьми полей; dependencies нормализованы в immutable allowlist. ScenePlayback
+  включает graph capture для Build/Start/Replace. Общие App/DI/lifetime APIs прежние.
+- [x] Проверить single edge/diamond, repeatability, changed dependency/prestart/reuse,
+  rejection до SDK, compiler error/source paths, cancel/drain/retry, manifest compatibility.
+- [x] Fresh packages/headless и published source/NuGet native consumer с Game.Shared.dll:
+  DLL загружается только из selected artifact дочерним Game, Editor её не загружает.
+
+Текущие проверки: scoped Builds/GameEditor/Replace262/262 и full Editor971/971 отдельно
+Debug/Release, failed/skipped0. Fresh15packages/headless8/8; published source/NuGet ×
+standard/Cobalt и embedded/MS DI4/4workflows:56children reaped/released,52graceful
+validation0/0,20Game с Game.Shared.dll, maxLive1, final UI/GPU/handles0;16полных root
+graph captures,4partial captures соответствуют намеренной C# ошибке.2056input hashes
+без drift;2representative paused PNG просмотрены.
+[Contract/exact tests/commands/evidence](HISTORY.md#ed6b2b2b-captured-managed-project-graph--2026-11-02).
+
+#### ED6b.2b.2b.1: native прерывания project graph — 2026-11-02
+
+- [x] Startup capture доказывает один Game.Shared.dll ProjectReference. Build interrupt
+  ждёт graph-<key>-query.stdout.log; creation time относится к наблюдаемому live SDK
+  PID, output ещё открыт. Наличие старого log не авторизует следующую стадию.
+- [x] Verify interrupt ждёт live verify-query, DocumentOperation.Runtime и сравнивает
+  staged Game.Shared.dll с candidate artifact, записывает SHA256. Restore использует
+  bounded native Game barrier после old-child reap/release.
+- [x] Тот же UI owner invocation наблюдает stage и отправляет Cancel/Stop/Exit. До
+  actual drain admission закрыта. Проверяются compiler reaping, completed diagnostics
+  и отсутствие preparation/capture/graph/work/output staging; barrier release в finally.
+- [x] Source Release ×standard/Cobalt и embedded/MS DI, затем fresh NuGet обаhost:
+  Build/Verify/Restore ×Cancel/Stop/Exit,36cases. Cancel сохраняет old runtime либо
+  делает один rollback; Stop/exit запрещают late/recovery child, parent state сохранён.
+- [x] Fresh packages/headless, private selected-path/role isolation, graceful Vulkan
+  validation, UI/GPU/handle cleanup и source hashes. Предыдущие passing не переносятся.
+
+Результат текущего lane:36/36native cases,52Game children reaped/released,52graceful
+Vulkan validation0errors/0warnings, maxLive1, final UI/GPU/handles0. Двенадцать наблюдений
+накаждуюstage;4recoveries только Restore+Cancel. Fresh15packages/headless8/8,
+2735input hashes без drift. Production C#/unit/full solution и ordinary Workflow
+matrix в этом шаге не менялись/не повторялись.
+[Contract/commands/matrix/evidence](HISTORY.md#ed6b2b2b1-native-graph-interrupts--2026-11-02).
+
+Продолжение этого lane — locked managed PackageReference closure ниже.
+Scene migration/live copyback, graph extensions, HUD/input/Player/full ED6b и прежние
+hardware/release gates остаются отдельными.
+
+#### ED6b.2b.2c: захваченный managed PackageReference closure — 2026-11-02
+
+Решение первого среза: явный локальный `GameBuildRequest.PackageDirectory`, только
+unsigned `id.version.nupkg`, без ambient cache/feed/network resolution. Null сохраняет
+прежний отказ; требуется CapturePreparation. Каждый package-consuming проект хранит
+свой `packages.lock.json` schema1/net10.0 без RID. Это ограниченный package profile,
+не общий NuGet resolver и не выполнение package build logic.
+
+- [x] Admit только unconditional literal PackageReference Include/Version, без metadata.
+  Версии stable normalized x.y.z или [x.y.z], resolved совпадает. Direct/transitive
+  dependency closure/ranges сверяются с nuspec; contentHash SHA512 — с archive bytes.
+  Cycles/unreachable lock entries/conflicting versions или hashes отклоняются.
+- [x] До SDK скопировать lock/archive, проверить ZIP paths/duplicates/links, лимиты и
+  IL-only DLL identity. Один lib target: net10.0/net9.0/net8.0/netstandard2.1/netstandard2.0;
+  один matching dependency group либо общий список. Signatures, multiple targets,
+  ref/runtime variants, build/analyzer/native/content/framework assets и метапакеты
+  и nuspec references/developmentDependency явно unsupported. Максимум16пакетов; source+expanded entries делят4096files,
+  64MiB/file и256MiB; aggregate Csc budget и entry+15private DLL прежние.
+- [x] Переписать PackageReference в Reference только в mirrors, передать package DLL
+  по project graph. Все DLL входят в explicit Dependencies; collisions запрещены.
+  Before/after/prestart/reuse включают lock/archive identity, compiler читает copies.
+  Original archives/locks не изменяются; cleanup удаляет package staging с preparation.
+- [x] Project manifest v3 добавляет contained existing packageDirectory; v1/v2 сохраняют
+  чтение/запись прежних полей. Session передаёт абсолютный путь; scene Build/Start/Replace
+  используют общий captured closure без новых App/DI/lifetime APIs.
+- [x] Реализовать проверки actual package DLL loading, transitive packages/project graph,
+  changed lock/archive/prestart/reuse, edit во время SDK, pre-SDK rejection и manifest
+  compatibility. Final package33/33 и full Editor978/978 отдельно Debug/Release.
+  Scoped Builds/GameEditor/Replace293/293 Debug/Release прошли до последнего
+  rejection guard; его delta и прежние package cases входят в final package33.
+- [x] Проверить scoped Builds/GameEditor/Replace и full Editor Debug/Release, затем fresh
+  packages/headless и native source/NuGet ×standard/Cobalt и embedded/MS DI Workflow:
+  package DLL только из selected artifact в Game, parent CLR не загружает её;
+  Build/Play/reuse/Replace/rollback и cleanup сохраняют fences.
+  Final package33/full Editor978 отдельно Debug/Release; scoped293до последнего
+  nuspec guard, покрытого package33. Fresh15packages/headless8/8; native4/4,
+  56children/52graceful validation0/0,20Game, UI/GPU/handles0;2059hashes без drift.
+
+Подробные команды, ограничения и результаты — [HISTORY](HISTORY.md#ed6b2b2c-captured-managed-packages--2026-11-02).
+Directed native package interrupts/stale-archive cases, wider package profiles,
+scene migration/live copyback, HUD/input/Player/full ED6b и hardware/release gates
+остаются отдельными.
+
+#### ED6b.2b.2c.1: native package interrupts и preflight — 2026-11-02
+
+- [x] Усилить existing native Build/Verify/Restore ×Cancel/Stop/Exit package archive/
+  lock SHA512 и selected package DLL SHA256. Live SDK наблюдается по owned PID,
+  timestamps и незавершённому stdout; package copies должны соответствовать выбранному
+  artifact. После restore допускается наблюдение published candidate, staging уже drained.
+- [x] Добавить PackageInputs: Start/Replace ×stale/corrupt. После UI scene capture/Build
+  менять только archive/lock, затем вызывать public GameEditor prestart API. Проверять
+  отказ до child/transaction, сохранение old Playing mode/identity и parent state.
+  Consumer checkpoint marker отсутствует при rejection и появляется при fresh Replace.
+  Corrupt archive отклоняется до SDK; новый Build потребляет changed DLL и не reuse old payload.
+  Этот lane не подменяет ScenePlayback document admission: оно проверяется interrupt cases.
+- [x] Source/fresh NuGet published Release ×standard/Cobalt и embedded/MS DI:
+  13cases на host/profile,52всего; все children reaped/released, validation0/0,
+  maxLive1, final UI/GPU/handles0, source/package census без drift.
+  Фактически52/52cases,76/76Game children и graceful reports,4recoveries только
+  Restore+Cancel,15fresh packages/headless8/8,2743hash checks без drift.
+
+Production runtime/API не меняются, acceptance и actual checks ведутся в
+[HISTORY](HISTORY.md#ed6b2b2c1-native-package-interrupts-и-preflight--2026-11-02).
+Следующий конкретный шаг ED6b.2 — bounded source watcher и достоверный stale Build
+status для текущего project/document. Сначала определить invalidation, owner/lifetime,
+debounce/drain и UI-thread delivery contract, без auto Build/Play. Wider package
+profiles, HUD/input/Player и прежние hardware/release gates остаются отдельными.
+
+#### ED6b.2e: контракт source watcher и stale Build status — 2026-11-02
+
+**Состояние на2026-11-03: ED6b.2e.1–3 реализованы и проверены в bounded Windows
+local-source profile.** Descriptor/probes/shared policy, project-owned observer
+и retained source indicator работают через существующие Build/project/UI fences.
+Проверки и границы записаны в [HISTORY](HISTORY.md#ed6b2e23-observer-и-source-ui--2026-11-03).
+Решение относится к Windows/net10.0 trusted-local captured profile ED6b.2b.2a/b/c.
+Legacy/reopened artifact без process-local preparation descriptor не получает
+доверенный source status. Полный NuGet/MSBuild resolver, auto Build/Play/Replace,
+изменение running world и расширение compiler budgets сюда не входят.
+
+##### Смысл статуса и связь с командами
+
+Watcher сообщает о наблюдавшихся изменениях source closure последнего успешного
+Build текущего ProjectSession. Его snapshot — подсказка пользователю, не admission
+token: StartBuildAsync/ReplaceBuildAsync всегда сохраняют compiler preflight,
+project/document/context guards и actual stop/drain/reap. Watcher не выбирает и не
+очищает candidate, не меняет ContextVersion, не отменяет compiler command, не
+запускает SDK/Csc и не вызывает Build/Start/Replace/Pause/Stop.
+
+SourceRevision остаётся compile ticket; его нельзя сравнивать вместо content hash.
+Baseline включает BuildId + full Inputs.Fingerprint для связи с compiler result,
+но observer вычисляет отдельный SourceFingerprint только своего descriptor.
+Сравнивать SourceFingerprint с full Inputs.Fingerprint запрещено: последний
+учитывает SDK evaluation/toolchain/environment, которых observer не перепроверяет.
+Ни одно UI состояние не называется Fresh/Verified/ReadyToStart.
+Статус ограничен disk inputs текущей загруженной конфигурации ProjectSession:
+не сохранённые buffers внешнего IDE и external .aetherproj edits не являются
+compiler source witness. Autoreload manifest отсутствует; новые project settings
+вступают в силу через existing explicit project open/switch. Мониторинг/UX внешних
+изменений самого .aetherproj — отдельное расширение, не скрытая гарантия этого badge.
+
+Три независимые оси отображения:
+
+- Code inputs последнего successful Build — источник этого watcher.
+- Current authoring scene ID/revision и inspector draft — существующие document/
+  scene gates. Dirty/Save/selection/Undo не должны объявлять code inputs Changed.
+- Running BuildId — actual SessionIdentity. Успешный новый Build не означает, что
+  running child уже заменён; source status не подменяет runtime identity/mode.
+
+Для нового документа того же проекта code baseline можно сохранить, но candidate
+и scene readiness не восстанавливаются. Closed/no document не получает Play
+разрешение из source status. Resume/Pause/Step/Stop прежнего child остаются доступны
+по прежним правилам, даже если source inputs изменились или наблюдение недоступно.
+Start через ScenePlayback и explicit Build/Replace могут исправить Changed/Unknown:
+watcher не блокирует эти команды своим статусом.
+
+##### Descriptor от compiler, а не повторный разбор проекта в Editor
+
+Текущий GameBuildPreparationSnapshot.Files — список известных существовавших файлов.
+Его недостаточно для новых glob members, отсутствовавших imports/config и новых
+subdirectories. В ED6b.2e.1 compiler формирует immutable process-local
+`GameBuildSourceWatchDescriptor` в TrueMoon.Aether.Builds из того же declarative
+capture/census. Он доступен через `Inputs.SourceWatch` и `Preparation.SourceWatch`;
+`Preparation.SourceWatchUnavailableReason` объясняет watch-only отказ. Новые свойства
+не сериализуются в diagnostics. `GameBuildSourceWatchPolicy` разделяет entry predicate
+и tree limits с compiler; exact probes представлены `GameBuildSourceWatchProbe`.
+`TreeFiles` фиксирует реально перечисленные members отдельно от known files: casing
+explicit пути под bin/obj не позволяет надёжно восстановить membership по его строке.
+
+Descriptor содержит version/policy identity, исходный project path и:
+
+| Часть | Содержание и смысл |
+| --- | --- |
+| Known files | Original path/length/SHA256 всех frozen source/import/config/HintPath/lock/nupkg inputs; shared paths дедуплицированы |
+| Source trees | До4original project directories, рекурсивный file membership и та же exclusion/depth/entry policy, что использовал capture |
+| Probes | Exact paths, включая expected absence: literal conditional imports, ancestor Directory.Build.props/targets, .editorconfig/.globalconfig, global.json и запрещённые response files, которые реально проверяет frozen profile |
+| SourceFingerprint | Hash известных bytes, file membership и probe presence; стабильный порядок/Windows path comparer, без compile ticket/job paths |
+
+Нельзя перечислять весь workspace/common ancestor ради parent props. Для outside
+imports/references/archives используются exact paths; parent directory — только
+notification hint. Не добавлять ambient NuGet/config/CPM inputs, отключённые самим
+frozen profile. Поведение source tree — именно capture policy, включая files вне
+Compile, а не приблизительный фильтр *.cs. Empty directory сам по себе не меняет
+file membership, но новый файл внутри нового directory должен обнаруживаться.
+
+Tree exclusions (_excluded artifact root, bin/obj/.git/.codex/.agents) разделяют
+общий predicate с compiler и не переопределяются независимо в Editor. Exclusion
+для recursive tree не исключает explicit HintPath/linked input под bin/obj.
+Original framework contract HintPaths входят как exact files. SDK/runtime/ref-pack/
+compiler census и captured/generated job/graph outputs не наблюдаются. Source
+descriptor не сохраняет streams, leases, processes, resolver, View или native handles.
+
+Descriptor относится ко всему captured project graph, включая locks/archives его
+package-consuming узлов; expanded package DLL из удаляемого job не является original
+watch target. Изменение original archive bytes — изменение input, без повторного
+NuGet resolution/ZIP extraction в observer. Project/Import/PackageReference edits
+делают старый descriptor устаревшим; новый graph строится только следующим Build.
+
+Добавление descriptor не меняет artifact/checkpoint/control/project manifest schemas
+и существующий full input fingerprint. Reopen не восстанавливает descriptor/trust.
+Descriptor передаётся с process-local successful Build result; в diagnostics не
+дублировать большие Files arrays и не сериализовать живые resources. Если только
+watch projection превышает собственные limits/непредставима, Build остаётся valid,
+а tracking получает Unavailable с причиной. Compiler validation не ослабляется.
+
+##### Состояния и публикация
+
+| State | Текст для UI | Условие |
+| --- | --- | --- |
+| NoBuild | Сборка не создана | Проект есть, подходящий successful Build ещё не наблюдался |
+| Checking | Проверяются исходники | Новая baseline, relevant hint/overflow либо незавершённое повторное наблюдение |
+| ObservedUnchanged | Изменения исходников не обнаружены | Полный завершённый bounded pass совпал с descriptor; показывать last observation time |
+| Changed | После сборки наблюдались изменения — требуется Build | Подтверждён хотя бы один content/membership/probe difference |
+| Unavailable | Состояние исходников неизвестно | Legacy/no descriptor, unsupported path, read/coverage/limit error; причина bounded |
+| Stopped | Не отображается для закрытого проекта | Admission fenced; worker/handles закрываются или уже drained |
+
+NoProject берётся из существующего HasProject, отдельный filesystem state не нужен.
+FSW notification сама по себе не доказывает content change: metadata-only/touch/
+duplicate events переводят в Checking, затем полный pass может вернуть
+ObservedUnchanged. Подтверждённый Changed sticky до новой successful baseline:
+edit-and-revert после уже увиденного различия не заявляет прежнюю сборку свежей.
+Changed при последующей IO error остаётся Changed с coverage warning; известный
+diff нельзя потерять в Unknown. Incomplete scan никогда не публикует ObservedUnchanged.
+Relevant hints не снимают уже установленный Changed. Во время обычного maintenance
+без новых hints допустимо сохранить последнее ObservedUnchanged с отдельным
+IsScanning и прежним observation time, не мигать основным статусом каждые10s.
+Это итог последнего наблюдения, не непрерывное доказательство отсутствия edits.
+
+Каждая publication содержит fresh project-session owner key, BaselineVersion,
+BuildId/full input fingerprint, ObservationVersion и SignalVersion. Manifest Guid
+не является owner key: reopen того же проекта создаёт другую session. Baseline
+заменяет только successful Build для всё ещё активного captured project/context;
+failed/cancelled/stale completion сохраняет прежнюю baseline и её status.
+
+После Build baseline сначала Checking. Observer ставит hints и делает initial full
+pass; это закрывает промежуток между compiler return и подпиской. Result публикуется
+только если owner/baseline/signal versions ещё совпадают. Hint во время scan veto-ит
+ObservedUnchanged и коалесцируется в следующий pass. Старый result не применяется
+к новому проекту, baseline или закрытому owner. Хранится одна baseline и максимум
+одно latest pending rebinding; нельзя запускать новый worker на каждый event/Build.
+
+##### Worker, notifications и resource limits
+
+Один background worker на activated project product. FileSystemWatcher — только
+ускоряющий hint; authoritative для этого observer — bounded source census/hash pass.
+Callbacks не читают files, не обращаются к DI/UI/SDK и только отмечают signal + bounded
+wakeup. Дубликаты/rename/temp-file atomic saves ожидаемы. Overflow/Error заставляет
+Checking/full rescan, а не утверждение «изменений нет». Потерю/дублирование FSW events
+учитывает [официальный контракт .NET10](https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher?view=net-10.0).
+
+Начальные bounded defaults (решение дизайна; performance ещё не измерена):
+
+- Debounce250ms, max wait1s с первого pending hint; не откладывать scan бесконечно
+  непрерывным потоком notifications. Один pass +один coalesced pending signal.
+  При уже активном pass1s — scheduling deadline, не принудительный IO timeout:
+  due pending pass стартует сразу после actual завершения/cancellation drain старого,
+  без нового debounce window и без второго concurrent worker. Checking виден сразу.
+- Независимый full maintenance pass раз в10s в ObservedUnchanged/Unavailable,
+  interval отсчитывается после завершения предыдущего pass; zero-IO UI frame.
+  Changed не требует постоянного повторного hashing, пока не появится новая baseline.
+  Повтор из Unavailable допускается только для recoverable IO/coverage failure с
+  usable descriptor. Disabled/legacy/no descriptor/permanent unsupported profile
+  остаются inert до подходящей новой baseline, без бессмысленного polling.
+- До32FSW handles, InternalBufferSize8KiB на handle; recursive source hints только
+  в declared project trees, exact external files — по parent и фильтру. Не включать
+  recursive watch workspace/drive/installed SDK. При handle limit/attach failure
+  оставшиеся exact targets покрывает maintenance polling; targets не отбрасывать.
+- Сами ancestor probes на drive/root проверять exact-path polling, без broad root
+  watch. Ошибка hints при работающем полном polling отражается как observation mode,
+  а не потеря покрытия. После overflow текущий Same result недействителен до rescan.
+- До4096known files и4096deduplicated probes, до4trees,8192entries/64depth на census,
+  64MiB/file и256MiB bytes/pass. Эти limits не увеличивают compiler limits. Baseline
+  arrays immutable, при event storm очередь не растёт; changed path samples максимум16.
+- Полный pass имеет5s cooperative budget; не более3transient read retries с backoff
+  внутри budget, затем Unavailable. Нет tight retry loop. TimeProvider внедряется
+  для scheduling/tests; новый clock/scopes/async activation API не вводится.
+
+Timestamp/length — лишь hints, не shortcut для доказательства Same: полное byte
+hashing обязано ловить изменение при прежних length/mtime. Можно завершить pass
+раньше при доказанном diff, но для Same нужны все targets и membership. Missing
+known/probe changes отличаются от access denied/locked/unstable read; неизвестное
+нельзя трактовать как пустой file/tree. Reparse/UNC/network/unrepresentable source
+в первом observer profile дают Unavailable, без обхода compiler path validation.
+
+Hashing — async bounded reads с FileShare.ReadWrite|Delete, без долгих compiler-style
+read leases, caches по timestamps или удержания файла между passes. Cancellation
+budget не означает фактический drain: пока IO не завершилось, новый pass не стартует
+и dispose не объявляется успешным. Worker не выполняет MSBuild или evaluation.
+
+##### DI, ownership и интеграция с existing workflow
+
+Full UseAetherEditor настраивает/валидирует copied source-tracking options и
+регистрирует default `IFactory<EditorSourceWatch, ResolvedProject>` через Cobalt,
+сохраняя заранее зарегистрированный provider. Factory создаёт inert project-owned
+product в TrueMoon.Aether.Editor.Editing. Generic IFactory из Contracts прежний;
+watcher-specific types не переносятся в TrueMoon.Contracts и не требуют нового UseX
+для low-level resources. Optional constructor dependencies сохраняют legacy paths.
+Default tracking включён в full editor, opt-out фиксируется при App composition и
+не меняется через mutable options после Build. Factory регистрируется до вызова
+UseAetherEditorProjects: текущая регистрация ProjectSessionFactory определяет
+optional dependencies именно в setup, а не ищет их поздним service location.
+
+ProjectSessionFactory получает фабрику явно, создаёт source product вместе с optional
+document и передаёт единственное владение ProjectSession. Existing public constructors
+сохраняются отдельными overloads; не менять старую signature добавлением optional
+parameter. Partial factory failure освобождает оба уже созданных продукта, объединяя
+original/cleanup errors. Container владеет фабрикой, но не её products; lifecycle/DI
+aliases и ViewModel не освобождают watcher повторно. Metadata-only
+UseAetherEditorProjects без source factory остаётся возможным.
+
+Project Open/constructor и empty-workspace startup не открывают watcher handles,
+не создают worker и не запускают SDK ради tracking. Activation — после первого
+подходящего successful Build. Source stop/dispose начинается с closed/epoch fence,
+отписки hints/cancellation, затем actual worker/callback drain и освобождение handles.
+Не терять ещё не drained product при cleanup failure; ProjectSession/retired owner
+сохраняется для retry. Document cleanup также должен быть выполнен/ошибка агрегирована.
+Repeated Dispose/Close ждёт тот же drain или повторяет cleanup, не пропускает его
+только из-за IsClosed. App shutdown использует существующий EditorProjects lifetime.
+
+ScenePlayback после `_dispatch(Build)` и повторного VerifyCapture связывает
+selected successful artifact с **этим** ProjectSession, включая reused result.
+Наблюдение не запускается из Canvas/FramePresented. Raw GameEditor/legacy callers
+без editor binding не получают автоматического source observer; это отдельно
+объявленная граница. GameEditor.Status.Candidate не хранит историю после Start,
+поэтому baseline нельзя восстанавливать поздним polling этого getter.
+
+Новый документ/Save/Undo/selection и Game Stop/Cancel не освобождают project watcher.
+Source errors не делают успешный Build/Start failed: состояние Unavailable хранится
+в source status, не в GameEditor.Error или document error. Project close/switch
+fence запрещает поздний attach/publish; cancelled/vetoed switch оставляет прежний
+project owner, successful transition/retired cleanup соблюдают прежние правила.
+
+EditorSession.Present/EditorViewModel.Refresh на UI owner thread читает один готовый
+immutable source snapshot после current project/document binding и проверяет owner
+key. Worker не вызывает PropertyChanged/View/UiSession, не держит references на
+View; отдельной очереди UI callbacks в первом profile нет. Только changed values
+вызывают notifications. Source badge/details добавляются в retained status/header
+через existing model и IViewStyle: без перестройки дерева/потери focus/selection/
+scroll/draft и без изменения primary runtime/command/error status precedence.
+Первый UI profile использует existing continuous Editor window. Custom host
+обязан вызывать Present/owner Refresh регулярно (плановый верхний UI interval1s,
+когда окно активно) либо обеспечить свой owner-thread wakeup; worker остаётся
+независим от UiSession. On-demand host без такого pump видит последний прочитанный
+snapshot и не получает обещания автоматического badge update. Это явно проверять
+в host integration, не добавлять скрытый cross-thread UI post из filesystem callback.
+
+##### Реализация и acceptance
+
+- [x] ED6b.2e: source-informed contract, state/identity/ownership/bounds и acceptance
+  определены в этом плане. Это документационная работа, не passing implementation.
+- [x] ED6b.2e.1: общий capture-derived descriptor и tests source membership/probes,
+  exclusions/explicit bin HintPath, package graph, process-local/reopen semantics,
+  stable source fingerprint без toolchain/job paths. Не ослаблять compiler checks.
+- [x] ED6b.2e.2: inert/project-owned observer, state machine, worker/hints/polling,
+  DI composition и close/switch/App drain. Fake TimeProvider/control event source
+  дают детерминированные assertions; production behavior не опирается на sleeps.
+- [x] ED6b.2e.3: baseline attach после actual Build и retained source indicator,
+  unit/model +source/fresh NuGet standard/Cobalt и embedded/MS DI acceptance.
+
+Обязательные partitions для checks (case names выбрать при реализации):
+
+| Область | Что должно быть доказано |
+| --- | --- |
+| Empty/baseline | NoProject/NoBuild без handles/tasks; valid Build→Checking→Same; reopened/legacy→Unavailable; failed/cancelled Build не сбрасывает старую baseline |
+| Content/membership | Edit прежних length/mtime, add/delete/rename file/new subtree, missing import/global config creation, referenced-project/HintPath/lock/nupkg change; исключённый output не вызывает self-loop |
+| False positives | Touch/same bytes и duplicate events→Same после full pass; наблюдённый diff→Changed, revert не снимает latch; scene dirty/Undo/Save/selection не меняют source code status |
+| Event coverage | Дубликаты/atomic save, overflow/lost events, disabled/failed FSW и polling fallback; incomplete/limited/locked read не выдаёт Same |
+| Races/bounds | Edit во время initial handoff/scan, new baseline/project пока old IO suspended, storm не создаёт Nworkers/не starve max debounce; точные budget boundaries +over-limit |
+| Lifetime | Close/switch/reopen того же manifest, view detach/recreate, App stop, cancelled switch, failed cleanup/retry: no old publication, no leaked handles/tasks/double dispose |
+| Commands/UI | Changed/Unavailable не трогают running child, Resume/Stop; preflight остаётся обязательным даже при Same; новые Start/Replace используют existing capture/fences; notifications только owner thread, retained focus/draft/history |
+
+Фактические команды, результаты и performance observations записывать в HISTORY
+при реализации. Native interrupt52/52 предыдущего этапа не являются acceptance
+watcher; full solution, wider packages, HUD/Player и hardware/release gates прежние.
+
+Реализация2026-11-03: full UseAetherEditor регистрирует copied SourceTracking и
+IFactory до Projects; public ProjectSession constructor сохранён отдельным overload.
+ProjectSession владеет observer/document и сохраняется для retry cleanup. Successful
+ScenePlayback candidate связывается после VerifyCapture и context-version check.
+EditorViewModel.Source проверяет current owner даже во время project binding events;
+legacy scene-only consumers сохраняют прежнюю admission/presentation семантику.
+Source badge/details находятся в retained status bar, оформлены его scoped style.
+
+Следующий технический шаг: измерить стоимость observer на большом local project graph
+при обычных10s polling/5s budget; начальные scheduling limits не являются measured
+performance guarantee. UNC/network/reparse и wider package/HUD/Player остаются отдельными
+профилями, а source status не является release/hardware acceptance всего Editor.
 
 ## ED7. Проверенная расширяемость
 

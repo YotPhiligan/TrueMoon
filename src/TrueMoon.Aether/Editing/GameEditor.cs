@@ -115,15 +115,7 @@ public sealed class GameEditor
         => Run(GameEditorOperation.Start, async command =>
         {
             var candidate = Candidate(command, required: expectedVersion.HasValue);
-            if (command.Context.Build.TrackInputs && candidate?.Build.Inputs == null)
-                throw new InvalidOperationException("Tracked startup requires the original build input witness; build again instead of reopening an artifact.");
-            if (command.Context.Build.CaptureCompilation && candidate?.Build.Compilation == null)
-                throw new InvalidOperationException("Captured startup requires the original captured compilation result.");
-            if (candidate?.Build.Inputs is { } inputs)
-            {
-                if (candidate.Build.Compilation is { } compilation) await _builds.VerifyInputsAsync(inputs, compilation, command.Cancellation.Token).ConfigureAwait(false);
-                else await _builds.VerifyInputsAsync(inputs, command.Cancellation.Token).ConfigureAwait(false);
-            }
+            await VerifyCandidateAsync(command, candidate).ConfigureAwait(false);
             lock (_gate) CheckCurrent(command);
             if (candidate == null) await _frames.StartAsync(command.Context.Scene, width, height, token: command.Cancellation.Token).ConfigureAwait(false);
             else await _frames.StartAsync(command.Context.Scene, candidate.Build, width, height, token: command.Cancellation.Token).ConfigureAwait(false);
@@ -133,15 +125,43 @@ public sealed class GameEditor
 
     /// <summary>Applies the selected candidate through the checkpoint/rollback transaction.</summary>
     public Task<GameReplacementResult> ReplaceAsync(CancellationToken token = default)
+        => ReplaceCoreAsync(null, token);
+
+    /// <summary>Replaces only the selected candidate from the caller's exact context version, after input verification.</summary>
+    /// <param name="expectedContextVersion">Context captured before building the replacement.</param>
+    /// <param name="token">Cancellation; accepted replacement retains its owned cleanup/recovery policy.</param>
+    /// <returns>The actual replacement/checkpoint result, or an observable preflight/transaction failure.</returns>
+    public Task<GameReplacementResult> ReplaceBuildAsync(long expectedContextVersion, CancellationToken token = default)
+    {
+        if (expectedContextVersion < 0) throw new ArgumentOutOfRangeException(nameof(expectedContextVersion));
+        return ReplaceCoreAsync(expectedContextVersion, token);
+    }
+
+    private Task<GameReplacementResult> ReplaceCoreAsync(long? expectedVersion, CancellationToken token)
         => Run(GameEditorOperation.Replace, async command =>
         {
             var candidate = Candidate(command, required: true)!;
             var identity = command.Origin ?? throw new InvalidOperationException("No originating runtime to replace.");
+            await VerifyCandidateAsync(command, candidate).ConfigureAwait(false);
+            lock (_gate) CheckCurrent(command);
             var result = await _replacement.ReplaceAsync(new(candidate.Build, identity, command.Context.Scene,
                 command.Context.Build.SourceRevision), command.Cancellation.Token).ConfigureAwait(false);
             lock (_gate) if (_status.ContextVersion == command.Version) _status = _status with { Candidate = null };
             return result;
-        }, token);
+        }, token, expectedVersion: expectedVersion);
+
+    private async Task VerifyCandidateAsync(Command command, GameEditorCandidate? candidate)
+    {
+        if (command.Context.Build.TrackInputs && candidate?.Build.Inputs == null)
+            throw new InvalidOperationException("Tracked startup requires the original build input witness; build again instead of reopening an artifact.");
+        if (command.Context.Build.CaptureCompilation && candidate?.Build.Compilation == null)
+            throw new InvalidOperationException("Captured startup requires the original captured compilation result.");
+        if (candidate?.Build.Inputs is { } inputs)
+        {
+            if (candidate.Build.Compilation is { } compilation) await _builds.VerifyInputsAsync(inputs, compilation, command.Cancellation.Token).ConfigureAwait(false);
+            else await _builds.VerifyInputsAsync(inputs, command.Cancellation.Token).ConfigureAwait(false);
+        }
+    }
 
     /// <summary>Resumes simulation.</summary>
     public Task PlayAsync(CancellationToken token = default) => Run(GameEditorOperation.Play, c => _supervisor.SetPlayingAsync(true, c.Cancellation.Token), token);

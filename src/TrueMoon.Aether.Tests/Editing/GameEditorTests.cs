@@ -20,6 +20,43 @@ public sealed class GameEditorTests(GameBuildFixture builds) : IClassFixture<Gam
     private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     [Fact]
+    public async Task TrackedReplace_RejectsChangedInputsBeforePauseOrStop()
+    {
+        await using var c = await CreateAsync(); await c.Host.Supervisor.StartAsync(Scene(), builds.A);
+        var origin = c.Host.Supervisor.Status.Identity;
+        var project = builds.Project("replace-stale", "Game.Observed", GameBuildFixture.Source("0xff2080c0u"));
+        c.Host.Editor.SetContext(new(new(project, "Game.Observed.dll", "Game.Candidate.Game", 1) { TrackInputs = true, CaptureCompilation = true }, Scene(), "switch"));
+        await c.Host.Editor.PlayAsync();
+        await c.Host.Editor.BuildAsync(); var version = c.Host.Editor.Status.ContextVersion;
+        File.AppendAllText(Path.Combine(Path.GetDirectoryName(project)!, "Game.cs"), "//changed");
+        await Assert.ThrowsAsync<GameBuildInputsChangedException>(() => c.Host.Editor.ReplaceBuildAsync(version));
+        Assert.Equal(origin, c.Host.Supervisor.Status.Identity); Assert.Equal(SessionState.Playing, c.Host.Supervisor.Status.State);
+        Assert.Single(c.Factory.Leases); Assert.Equal(0, c.Factory.Leases[0].Stops); Assert.Null(c.Host.Builds.ProcessId);
+    }
+
+    [Fact]
+    public async Task TrackedReplace_RejectsReopenedWitnessBeforePauseOrStop()
+    {
+        await using var c = await CreateAsync(); await c.Host.Supervisor.StartAsync(Scene(), builds.A);
+        var origin = c.Host.Supervisor.Status.Identity; var context = Context(builds.B);
+        c.Host.Editor.SetContext(context with { Build = context.Build with { TrackInputs = true } }); await c.Host.Editor.SelectBuildAsync(builds.B);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => c.Host.Editor.ReplaceBuildAsync(c.Host.Editor.Status.ContextVersion));
+        Assert.Equal(origin, c.Host.Supervisor.Status.Identity); Assert.Equal(SessionState.Paused, c.Host.Supervisor.Status.State);
+        Assert.Single(c.Factory.Leases); Assert.Equal(0, c.Factory.Leases[0].Stops);
+    }
+
+    [Fact]
+    public async Task ReplaceBuild_RejectsSupersededContextBeforeTransaction()
+    {
+        await using var c = await CreateAsync(); await c.Host.Supervisor.StartAsync(Scene(), builds.A);
+        c.Host.Editor.SetContext(Context(builds.B)); await c.Host.Editor.SelectBuildAsync(builds.B); var version = c.Host.Editor.Status.ContextVersion;
+        c.Host.Editor.SetContext(Context(builds.A)); await c.Host.Editor.SelectBuildAsync(builds.A); var origin = c.Host.Supervisor.Status.Identity;
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => c.Host.Editor.ReplaceBuildAsync(version));
+        Assert.Equal(origin, c.Host.Supervisor.Status.Identity); Assert.Equal(builds.A.BuildId, c.Host.Editor.Status.Candidate!.Build.BuildId);
+        Assert.Single(c.Factory.Leases); Assert.Equal(0, c.Factory.Leases[0].Stops);
+    }
+
+    [Fact]
     public async Task TrackedStart_RejectsSourceChangesBeforeAnyRuntimeIsCreated()
     {
         await using var c = await CreateAsync();

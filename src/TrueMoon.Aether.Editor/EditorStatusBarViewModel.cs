@@ -20,6 +20,9 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable
     private string _summary = "", _entities = "", _runtime = "", _operation = "", _preview = "", _previewDetails = "", _error = "";
     private EditorStatusKind _kind;
     private bool _canCancel, _canPreview, _canStopPreview;
+    private string _sourceSummary = "", _sourceDetails = "";
+    private EditorStatusKind _sourceKind;
+    private bool _hasSource;
     /// <summary>Creates presentation without taking ownership of the injected models.</summary>
     public EditorStatusBarViewModel(EditorViewModel editor, EditorDocumentViewModel documents, EditorInspectorViewModel transform)
     {
@@ -42,6 +45,14 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable
     public string PreviewSummary => _preview;
     /// <summary>Actual preview revision and pending work.</summary>
     public string PreviewDetails => _previewDetails;
+    /// <summary>Independent source badge; it does not replace the primary runtime/command status.</summary>
+    public string SourceSummary => _sourceSummary;
+    /// <summary>Last observation, baseline and coverage details.</summary>
+    public string SourceDetails => _sourceDetails;
+    /// <summary>Source-specific semantic styling.</summary>
+    public EditorStatusKind SourceKind => _sourceKind;
+    /// <summary>Whether the current project has a source segment.</summary>
+    public bool HasSource => _hasSource;
     /// <summary>Complete runtime/document/preview diagnostics.</summary>
     public string ErrorDetails => _error;
     /// <summary>Whether diagnostics are available.</summary>
@@ -56,6 +67,7 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable
     private void Changed(object? sender, PropertyChangedEventArgs args) { if (!_disposed) Refresh(); }
     private void Refresh()
     {
+        RefreshSource();
         var preview = _transform.PreviewState;
         var runtime = _editor.RuntimeState switch
         {
@@ -105,6 +117,32 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable
         SetProperty(ref _canCancel, _documents.CanCancel || _editor.CanCancel || preview.Busy && _transform.CanStopPreview, nameof(CanCancel));
         SetProperty(ref _canPreview, _transform.CanPreview, nameof(CanPreview));
         SetProperty(ref _canStopPreview, _transform.CanStopPreview, nameof(CanStopPreview));
+    }
+    private void RefreshSource()
+    {
+        var source = _editor.Source;
+        var state = source?.State ?? Editing.EditorSourceState.Unavailable;
+        var summary = !_editor.HasProject ? "Проект не открыт" : state switch
+        {
+            Editing.EditorSourceState.NoBuild => "Сборка не создана",
+            Editing.EditorSourceState.Checking => "Проверяются исходники",
+            Editing.EditorSourceState.ObservedUnchanged => "Изменения исходников не обнаружены",
+            Editing.EditorSourceState.Changed => "Исходники изменены — требуется Build",
+            Editing.EditorSourceState.Stopped => "Наблюдение остановлено",
+            _ => "Состояние исходников неизвестно"
+        };
+        var kind = state == Editing.EditorSourceState.Checking ? EditorStatusKind.Busy :
+            state is Editing.EditorSourceState.Changed or Editing.EditorSourceState.Unavailable ? EditorStatusKind.Waiting : EditorStatusKind.Ready;
+        var details = source == null ? (_editor.HasProject ? "Наблюдение исходников не подключено." : "Проект не открыт.") :
+            summary + "\nBuild: " + source.BuildId + "\nПоследнее наблюдение: " +
+            (source.ObservedAt?.ToLocalTime().ToString("HH:mm:ss", System.Globalization.CultureInfo.CurrentCulture) ?? "ещё не завершено") +
+            "\nРежим: " + (source.Mode == Editing.EditorSourceObservationMode.NotificationsAndPolling ? "уведомления и полный опрос" : "полный опрос") +
+            (source.IsScanning ? " · проверка выполняется" : "") + (source.Reason == null ? "" : "\n" + source.Reason) +
+            (source.ChangedPaths.Count == 0 ? "" : "\nИзменённые пути:\n" + string.Join("\n", source.ChangedPaths));
+        SetProperty(ref _hasSource, _editor.HasProject && _editor.HasSourceContext, nameof(HasSource));
+        SetProperty(ref _sourceSummary, summary, nameof(SourceSummary));
+        SetProperty(ref _sourceDetails, details, nameof(SourceDetails));
+        SetProperty(ref _sourceKind, kind, nameof(SourceKind));
     }
     /// <summary>Cancels the active document/game operation, or drains a pending preview.</summary>
     public Task CancelAsync()

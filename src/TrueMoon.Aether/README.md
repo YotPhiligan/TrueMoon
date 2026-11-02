@@ -620,13 +620,78 @@ paths имеют стабильный virtual prefix. Перед Start такж�
 reference/config bytes, кроме generated files завершённого job. Capture/work/output
 staging drains и удаляется до возврата Build result, diagnostics подчиняются прежней retention policy.
 
-Это byte capture compiler invocation после доверенной MSBuild preparation, не общий
+Без `CapturePreparation` это byte capture compiler invocation после доверенной MSBuild preparation, не общий
 hermetic MSBuild build: tasks/generators preparation могут читать/писать произвольные
 файлы, installed dotnet runtime и environment остаются trusted. Custom postcompile/
 postbuild semantics не воспроизводятся. Capture не является sandbox; полного source
-closure до evaluation, package/project graph, arbitrary generators, cache/reuse/Replace
+closure до evaluation, package/project graph, arbitrary generators, disk cache/Replace
 ещё нет. Пределы4096files/64MiB per file/256MiB total включают compiler/reference packs;
 query/response/config documents ограничены8MiB. Legacy requests default false.
+
+## Снимок подготовки сборки — ED6b.2b.2a
+
+`GameEditor.ReplaceBuildAsync(expectedContextVersion)` применяет только candidate
+точного контекста после tracked input/compilation verification, до Pause старой игры.
+Обычный ReplaceAsync использует ту же проверку. Reopened artifact без process-local
+witness не заменяет tracked game; scene revision совместимость и checkpoint/rollback
+остаются в существующем GameReplacement. Проверка не расходует его forward budget.
+
+`ReuseArtifact = true` разрешает компилятору использовать последний успешный managed
+payload в текущем процессе. Требуется CapturePreparation. Каждый запрос по-прежнему
+выполняет полный before/after freeze и SDK input observation, проверяет исходные
+compiler inputs и hashes/pin опубликованных DLL. При совпадении Csc/preparation capture
+не повторяются; новый SourceRevision получает новый manifest с прежними DLL bytes.
+Prestart verification сохраняется. Отсутствие/повреждение payload или изменение inputs
+ведёт к обычной сборке; failed/cancelled jobs и failed prestart verification сбрасывают
+reuse. Хранится только один result без живых streams/processes, до следующего job или
+закрытия компилятора. `Open` не восстанавливает provenance; disk cache не добавлен.
+По умолчанию Build всегда компилирует. Scene Start включает reuse, явный Editor Build
+выполняет новую компиляцию и может подготовить payload для следующего Start.
+
+`GameBuildRequest.CapturePreparation = true` требует `TrackInputs` и
+`CaptureCompilation`. Штатный Scene Start редактора включает все три флага.
+До первого SDK process job копирует поддержанный declarative project/import/
+source/reference/config graph. XML разбирается из копий, paths переписываются только
+в них, внешние imports/references имеют короткие owned paths. Новые файлы и изменения
+оригиналов после freeze не меняют эту компиляцию; before/after/prestart observations
+проверяют актуальный graph отдельно. `Inputs.Preparation` хранит process-local
+identity исходных bytes, SDK/runtime и explicit environment. Schema1 не меняется;
+открытие artifact не восстанавливает provenance.
+
+Snapshot также содержит `ElapsedMilliseconds`, `SourceMilliseconds`,
+`ToolchainMilliseconds`, `ToolchainFiles` и `ToolchainBytes`. Это наблюдение стоимости
+самого freeze: profile selection/copy/validation и read-lease/hash toolchain;
+последующие SDK restore/evaluation/compile сюда не входят. Timings и счётчики не
+участвуют в content fingerprint. Общий Build/Start измеряется отдельно у consumer.
+`ToolchainEnumerationMilliseconds`, `ToolchainOpenMilliseconds` и
+`ToolchainHashMilliseconds` разделяют обход/проверку путей, повторную проверку при
+открытии leases и чтение/SHA256. Полный census и hash выполняются заново для каждой
+фазы; проверенные предки запоминаются только внутри одного прохода. Leases не
+содержат индивидуальных managed buffers: один буфер 64KiB используется при чтении
+всех файлов capture. Installed directories по-прежнему считаются trusted/stable.
+
+Профиль: Windows, stable net10.0 Microsoft.NET.Sdk library, декларативные properties/
+items, literal imports/HintPath/linked files и globs внутри project directory.
+Target/UsingTask, property/condition functions, custom SDK/analyzers, external globs,
+PackageReference без PackageDirectory и ProjectReference без отдельного graph opt-in отклоняются до SDK execution. Repository guard
+`ProjectReference Condition="'$(AetherContractPath)' == ''"` поддержан как неактивный
+при frozen contract reference. Другой executable MSBuild code не исполняется.
+
+Используются absolute dotnet/MSBuild.dll, exact `--fx-version`, поддержанные
+global.json SDK policies disable/patch/latestPatch/latestMinor и private
+environment/home/temp/offline NuGet configuration. SDK/runtime/host/reference-pack
+files удерживаются read leases до cleanup. Installed toolchain directories и Windows/
+native OS доверенные; это не sandbox для arbitrary code/IO. Source quota4096files/
+64MiB/file/256MiB, toolchain8192files/1GiB, directory/import depth≤64. Artifact root
+не должен быть предком source directory. Глубокие source paths нормализуются для
+diagnostics; поддержка произвольных Windows paths не обещается.
+
+Original CallerFilePath/diagnostics и stable generated paths сохраняются; generated
+analyzer config получает исходный ProjectDir. Job владеет copies/leases/processes,
+сохраняет deadline/cancel/reap/drain/retry и удаляет preparation/capture/work/output
+до завершения результата. Low-level resource не становится отдельным DI service.
+Source/fresh-package/native acceptance, расширенные graph profiles и стоимость
+freeze учитываются отдельно от module tests; reuse/cache/Replace этим не включаются.
 
 ## Наблюдаемые входы сборки — ED6b.2a
 
@@ -640,8 +705,8 @@ Persistent mismatch возвращает `GameBuildInputsChangedException`, не
 при Build и не создаёт runtime при Start. Schema1 artifacts неизменны; Open/Publish
 не восстанавливают witness, tracked Start требует оригинальный результат Build.
 
-Поддержан один net10.0 SDK project с explicit managed HintPath references, без
-PackageReference/ProjectReference. Legacy requests по умолчанию не включают tracking.
+По умолчанию поддержан один net10.0 SDK project с explicit managed HintPath references,
+без PackageReference/ProjectReference. Legacy requests по умолчанию не включают tracking.
 Пределы:4096files,64MiB/file,256MiB total,8MiB на query/preprocessed document.
 Это наблюдение содержимого, а не hermetic snapshot: transient edit-and-revert,
 произвольные target/generator/environment inputs ещё не изолированы. Artifact reuse,
@@ -1025,3 +1090,75 @@ pwsh -NoProfile -File ManualTests/EngineSessionProbe/RunProbe.ps1 -IncludeViewpo
 Тесты используют прямой ProjectReference на Aether; linked production source
 copies и dependency на executable примера не требуются. Native runner отдельно
 проверяет Debug apphost и published Release с own-process cleanup.
+
+### Захваченный граф игровых библиотек
+
+`GameBuildRequest.CaptureProjectReferences = true` требует CapturePreparation и
+поддерживает DAG до4C# net10.0 libraries вместе с entry. Каждый ProjectReference
+имеет literal Include без Condition/metadata; каталоги проектов не пересекаются.
+Зависимости используют имя csproj
+либо явный unconditional literal AssemblyName. Все private DLL перечисляются в
+Dependencies. PackageReference без PackageDirectory, cycles, DLL-name collisions, разные SDK и
+context-dependent shared imports отклоняются до SDK execution.
+
+Один job захватывает весь source/import/glob/config/reference graph до первого
+SDK process. Csc запускается из byte copies в dependency order, по одному разу на
+узел; SDK BuildProjectReferences остаётся false. Intermediates изолированы, aggregate
+compiler inputs ограничены4096files/64MiB на файл/256MiB суммарно по всем узлам.
+Child inputs/compilations доступны в Compilation.Projects. Before/after/prestart
+проверяют весь closure; verify/reuse копируют graph DLL из pinned выбранного artifact.
+Для графа вызывайте VerifyInputsAsync(inputs, compilation): отдельного inputs witness
+недостаточно. Reopened artifacts не восстанавливают provenance. Cleanup удаляет
+graph staging, а diagnostic retention сохраняет только известные graph job files.
+Schema1 artifact/checkpoint/control contracts прежние; dependency DLL остаются
+частью flat managed allowlist. Native/assets/custom build tasks этим не добавляются.
+
+### Захваченные локальные managed пакеты
+
+`GameBuildRequest.PackageDirectory` — абсолютный путь к явно выбранному локальному
+каталогу `<id в нижнем регистре>.<version>.nupkg`; null сохраняет отказ от PackageReference.
+Требуется CapturePreparation. Каждый проект с PackageReference предоставляет свой
+`packages.lock.json` schema1 с единственным target `net10.0`. Поддержаны unconditional
+literal Include/Version без metadata, стабильные трёхкомпонентные версии (`1.2.3`
+либо `[1.2.3]`); resolved обязан совпадать. Direct/transitive closure, dependency
+ranges и SHA512 contentHash сверяются с nuspec и bytes unsigned архива до SDK.
+Пакеты/lock не изменяются; feed/cache/environment/network resolution не используются.
+Стандартные RestorePackagesWithLockFile/RestoreLockedMode допустимы: после нашего
+package capture SDK работает с переписанными Reference и собственным lock в job work.
+
+Первый профиль допускает один `lib/net10.0`, `lib/net9.0`, `lib/net8.0`,
+`lib/netstandard2.1` либо `lib/netstandard2.0` target в архиве, с flat IL-only DLL,
+XML/PDB и обычной package metadata. Поддержан один matching nuspec dependency group
+либо общий список dependencies. Multi-target/ref/runtime variants, signed packages,
+build/buildTransitive, analyzers/generators, native/content/framework assets и
+метапакеты, nuspec references/developmentDependency отклоняются. Это ограниченный
+профиль, не общий NuGet resolver.
+
+До16пакетов на весь graph; повторное использование одной версии/хеша допускается,
+version/hash conflicts, циклы, unreachable lock entries и DLL-name collisions
+запрещены. Все package DLL перечисляются в Dependencies; общий flat payload всё так
+же ограничен entry+15DLL. Архивы и expanded entries разделяют исходный budget
+4096files/64MiB per file/256MiB total. Безопасность ZIP paths/duplicates/links и
+declared/actual DLL lengths проверяется при capture. В mirrors PackageReference
+заменяются на Reference к owned copies, пакетные DLL передаются и зависимым проектам.
+Before/after/prestart/reuse повторно захватывают lock/archive closure; Csc читает
+свои byte copies. Пакетный staging удаляется с preparation, ownership прежний.
+
+### Source watch descriptor
+
+Успешный frozen Build предоставляет `artifact.Inputs.SourceWatch` — immutable
+`GameBuildSourceWatchDescriptor` исходного graph. `Files` содержит original
+path/length/SHA256, включая linked/HintPath/lock/nupkg; `SourceTrees` — только
+каталоги проектов; `TreeFiles` — реально перечисленные tree members, отдельно от
+explicit inputs; `Probes` — exact present/absent import/config/response paths.
+`Policy.ExcludesEntry(path, isDirectory)` разделяет recursive exclusions и limits
+с compiler: artifact owner, bin/obj/.git/.codex/.agents. Имена исключаемых папок
+сохраняют текущую case-sensitive семантику; explicit inputs не фильтруются.
+
+`SourceFingerprint` учитывает bytes, file membership, probes и policy; ticket,
+job staging, SDK/runtime census и environment в него не входят. Полный input
+fingerprint и schemas прежние. Descriptor не владеет leases/streams/processes,
+не сериализуется в diagnostics и не восстанавливается через artifact Open.
+Watch-only probe limit/непредставимый путь оставляет Build valid с null descriptor
+и `Inputs.Preparation.SourceWatchUnavailableReason`. Это данные для будущего
+observer; compiler preflight остаётся обязательным.

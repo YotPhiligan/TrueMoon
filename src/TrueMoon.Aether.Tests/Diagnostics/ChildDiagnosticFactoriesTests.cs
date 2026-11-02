@@ -34,8 +34,8 @@ public class ChildDiagnosticFactoriesTests
             await using var sender = senders.Create(launch);
             var source = child.Services.Resolve<IEventsSourceFactory>()!.Create("TrueMoon.DeliveryApp." + Guid.NewGuid().ToString("N"));
             source.Write(DiagnosticLevel.Warning, 719, "Delivery.App", "app delivery");
-            await UntilAsync(() => sender.Read().Accepted > 0);
             var childPipeline = child.Services.Resolve<DiagnosticPipeline>()!; var hostPipeline = host.Services.Resolve<DiagnosticPipeline>()!;
+            await UntilAsync(() => hostPipeline.Read().Any(x => x.EventName == "Delivery.App" && x.Origin?.ApplicationId == childPipeline.ApplicationId));
             var imported = Assert.Single(hostPipeline.Read(), x => x.EventName == "Delivery.App" && x.Origin != null);
             Assert.Equal(childPipeline.ApplicationId, imported.Origin!.ApplicationId); Assert.Equal(hostPipeline.ApplicationId, imported.ApplicationId);
             Assert.Equal(launch.Identity.SessionId.ToString("D"), imported.Properties["SessionId"]);

@@ -80,13 +80,37 @@ verified input fingerprints and requires identical inputs across both fresh buil
 the compile tickets and artifact IDs remain distinct. The tracked scene profile is
 one net10.0 SDK project with HintPath references, without PackageReference/ProjectReference.
 It also records captured compiler fingerprints/file counts/bytes, requires stable
-fingerprints across both fresh compiles and confirms staging was released before Start.
-The bounded C# capture profile copies source/generated/reference/config/compiler inputs
-after trusted MSBuild preparation; installed dotnet runtime/environment and arbitrary
-preparation task/generator IO remain trusted. Undo after Stop
+fingerprints across both tickets and confirms staging was released before Start.
+The first Scene Start compiles; the second verifies and reuses its managed payload.
+Each job records reuse.json; the reused job has no prepare.json or build stdout,
+while before/after/prestart observations and a distinct revision/manifest remain required.
+The bounded C# capture profile copies source/generated/reference/config/compiler inputs.
+Scene Start additionally freezes the supported declarative graph before preparation,
+pins installed Windows SDK/runtime files with read leases and uses a private process
+environment. Custom tasks/functions/SDKs, external analyzers/globs and package/project
+graphs fail closed; installed toolchain directories/native OS remain trusted.
+The workflow requires CapturePreparation, matching before/after/prestart preparation
+fingerprints across both fresh builds and absence of preparation staging before Start.
+It records six freeze samples with source/toolchain durations and byte/file counts,
+two complete Start latencies and parent handle counts. The runner samples process
+wall/CPU time, working set and handle peaks; timings do not enter build fingerprints.
+Build/Start waits for its admitted operation under compiler and case deadlines;
+the general 30-second UI-state polling deadline remains unchanged. Undo after Stop
 restores the saved scene before the remaining crash/recovery workflow. Each full
-workflow owns eleven children, with ten graceful validation reports including two
-game runs; the intentionally killed preview has no final report. The workflow then
+workflow owns fourteen children, with thirteen graceful validation reports including
+  five game runs. Its version3 project declares Game.Shared.dll from a sibling
+  ProjectReference library and Game.Packaged.dll from that library's locked local
+  unsigned PackageReference. The fixture emits IL into a local nupkg without loading
+  it into the parent. Every graceful Game report must load both private DLLs from
+  the selected artifact; the parent Editor must never load them. Root capture
+  metadata must contain the child compilation and package DLL, and before/after/
+  prestart preparation must include the lock/archive hashes. The second Start reuses
+  the whole verified payload; the same package participates in Replace/rollback.
+  Document-aware Replace checks a paused code swap with exact tick
+preservation, a compiler failure leaving the old world alive, and candidate restore
+rejection rolling back old code/state/Playing mode. It captures replaced/recovered
+paused frames and preserves the same authoring history. The intentionally killed
+preview has no final report. The workflow then
 kills only its own preview child, preserves dirty document/history/selection,
 and recovers preview before saving/closing. Separate native startup failure and
 first-frame cancellation cases check rollback and final App disposal. Original
@@ -98,5 +122,37 @@ validation and surface/slot/device/handle teardown, plus actual child reap and
 UI session counts. Deliberately killed children cannot supply a final validation
 report. These directed inputs do not replace physical OS input/DPI/multi-monitor,
 K7 stress, device loss or VRAM acceptance. Use `-Profile`, `-HostKind` and
-`-Scenario` for bounded subprofiles; source-only profiles record framework changes
+  `-Scenario` for bounded subprofiles. `-Scenario ReplaceInterrupt` runs nine cases
+  per host: Cancel/Stop/exit during the dependency SDK query, graph input verification,
+  and native checkpoint restore after old-child reap. The query log's creation time
+  must belong to the observed live compiler PID, with its output still open. Verification
+  additionally compares staged Game.Shared.dll with the selected candidate payload.
+  Startup capture must prove the private project graph; all compiler staging must
+  be removed before admission reopens. Restore uses a bounded barrier inside the consumer
+  game, with real RPC, runtime and viewport. Cancel retains the old game before
+  the transaction or recovers old code/state/Playing mode after candidate admission.
+  Stop/exit forbid recovery; document admission stays closed until actual drain.
+  All children must supply graceful validation reports and release owned resources.
+  This lane is separate from the full Workflow and startup Failure/Cancel cases.
+  Source-only profiles record framework changes
 since the package baseline, whereas package profiles require matching fresh inputs.
+
+`-Scenario PackageAcceptance` combines the nine ReplaceInterrupt cases with four
+`PackageInputs` cases per host (Start/Replace × stale/corrupt archive). Interrupts
+also prove the locked archive SHA512 and selected Game.Packaged.dll SHA256, including
+the captured copies used by the live dependency/root SDK query. Restore observes
+the candidate's published package after preparation staging has drained.
+
+PackageInputs uses UI scene capture/Build, then the public GameEditor StartBuildAsync
+or ReplaceBuildAsync API, without a production hook. It changes only package inputs
+after candidate selection: stale regenerates a valid DLL with the same behavior and
+updates its lock; corrupt changes the archive while retaining the old lock. Rejection
+must preserve the original stopped/playing runtime and child count, document dirty/
+history/selection, and leave no checkpoint marker. Corruption must fail before SDK.
+The marker is inside the consumer game; successful fresh Replace must activate it,
+so its absence during failed preflight is meaningful. A new Build consumes the
+changed DLL, rejects stale payload reuse, and must successfully start/replace a real
+native Game. The final child reports prove both private DLLs came from its selected
+artifact. These cases test the engine preflight API; document-operation admission
+is exercised separately by the ScenePlayback interrupt lane. No claim about direct
+document gates is inferred from a raw GameEditor call.
