@@ -1,5 +1,86 @@
 # TrueMoon.Aether.Editor: план подключаемого редактора
 
+<a id="ed4g-compact-transform"></a>
+## ED4g. Компактный Transform и цветовые состояния — 2026-11-05
+
+Согласовано: три строки Position XYZ, Rotation Pitch/Yaw/Roll (радианы), Scale XYZ;
+общая колонка подписей, равные поля, центрирование по высоте, label-above при узкой
+панели. [Общий дизайн-код](../alloy/DESIGN.md) и общие controls принадлежат UIA3.
+Специализированный TransformEditor выбирается по built-in TypeId/schema v1;
+стабильные property addresses, строковые drafts, validators и authoring transactions
+сохраняются. Метаданные/происхождение/индивидуальный сброс раскрываются «⋯»,
+ошибки всегда доступны. Применение остаётся одной явной общей транзакцией;
+Cancel/Esc, Undo/Redo, focus/selection и ownership сохраняются.
+Следующий UX срез: numeric drag/step и связанный scale с отдельным контрактом жеста;
+успех/таймеры/автоматическое применение в текущую задачу не входят.
+
+<a id="ed4g1-generic-editors"></a>
+### ED4g.1. Остальные редакторы и их состояния — 2026-11-05
+
+По запросу пользователя дизайн-код применяется ко всем оставшимся редакторам
+существующих inspector schema kinds: Number/Integer, Boolean, String и nullable.
+Одинаковая label column88, adaptive label-above, capped120numeric/96boolean и
+filling text; nullable accessory остаётся рядом со значением. Numbers используют
+общий NumberBox, boolean — «Да»/«Нет», multiline retained RichTextEditor растёт26–78.
+Null показан отдельным «Не задано» без потери draft/editor identity. Состояния
+error/focus/modified/hover/disabled/read-only следуют [дизайн-коду](../alloy/DESIGN.md),
+применяются к actual CheckBox indicator и текстовым полям. Reset/provenance доступны
+в full-width disclosure; Apply/Cancel, shared history, nullable semantics и ownership
+не меняются. Критерии проверяются на каждом scalar kind, длинном/пустом тексте,
+invalid/nullable/pending-reset/temporarily-disabled состоянии, смене темы/ширины/
+selection/history и disposal. Новые enum/reference/color-picker contracts вне scope.
+
+<a id="ed4g2-numeric-gestures"></a>
+### ED4g.2. Числовые жесты, шаг и связанный масштаб — 2026-11-05
+
+Следующий согласованный UI срез после ED4g.1. NumberBox opt-in adjustment:
+↑/↓ меняют валидное число шагом, pointer drag начинается на осевом префиксе или
+видимом геометрическом маркере.4logical pixels дают один шаг от начала жеста,
+при возврате в нулевой шаг восстанавливается точная исходная строка. Real шаг0.1,
+Integer1, Rotation(rad)/Scale0.01; Shift×10, Ctrl×0.1, Integer минимум1. Modifiers
+фиксируются на pointer-down; keyboard шаг использует текущие modifiers. Wheel
+не редактирует числа. Int64 вычисляется без Double round-trip, overflow/out-of-range/
+invalid/nonfinite значения отвергаются без clamp или coercion.
+
+Жест захватывает pointer и меняет только draft. Release сохраняет draft, Apply/
+Ctrl+Enter создаёт одну обычную authoring transaction. Esc сначала отменяет активный
+жест и восстанавливает pre-gesture drafts, второй Esc действует как общий Cancel.
+FocusLost/capture loss/hide/disable/detach отменяют жест; внешний canonical value
+или новая selection/document revision прерывают его без записи старого baseline
+в новый контекст. Ошибка callback не удерживает capture. Native cursor warp, timer
+и live runtime mutation отсутствуют.
+
+Связанный Scale — отдельный opt-in footer toggle, по умолчанию false. Переключение
+не меняет XYZ/dirty/history. Валидное положительное конечное Float-compatible
+значение одной оси изменяет две другие пропорционально последнему валидному XYZ.
+Все targets проверяются до записи. Invalid source draft остаётся локальным;
+overflow или pending-reset другого target сохраняет source draft, не меняет peers
+и блокирует Apply с диагностикой. Esc жеста восстанавливает точные три drafts,
+включая прежние неприменённые значения/flags; scoped identity fence защищает другую
+scene/selection. Смена единиц угла, group reset и viewport tools остаются отдельными.
+
+<a id="ed4g2a-native-numeric"></a>
+### ED4g.2a. Native numeric acceptance — 2026-11-05
+
+Scoped source Debug/published Release smoke выполняется через
+`ManualTests/AetherPackageConsumer/VerifyNumeric.ps1`: standard/Cobalt и embedded/
+MS DI, настоящий OpenGL readback, retained controls, exact draft/cancel, один
+Apply/Undo и финальный UI/GPU/handle drain. Routed input и Windows input имеют
+разные записи evidence. Проверка не требует runtime child/fresh NuGet или Vulkan
+layer и не заменяет их release gates.
+
+Проверены четыре native run: обе конфигурации standard с Windows drag/Esc/
+Ctrl+Enter/Undo и обе embedded с routed arrows/Shift/Ctrl/captured Esc. Исправлен
+адаптер pointer events: кнопки/колесо используют координаты последнего ordered
+cursor event, Shift/Ctrl передаются в UiInput. Детали —
+[история](HISTORY.md#ed4g2a-native-numeric-2026-11-05).
+Физические ↑/↓ с модификаторами, Esc при удерживаемой кнопке и pointer modifiers
+остаются открытой частью acceptance: текущий Windows driver передаёт стрелки как
+UiKey.None и не предоставляет раздельный mouse-down/key/mouse-up. Следующий шаг —
+закрыть эти input gates; затем согласовать group reset и отображение единиц угла.
+
+
+
 Согласовано с пользователем **2026-10-22** после обсуждения перехода от стенда и
 proof of concept к приложению для повседневной работы. Это прикладной подплан
 направления Aether, развивающий ENG7; отдельного функционального модуля или новой
@@ -884,6 +965,71 @@ runtime state сохраняются. Получение цвета и native no
 platform/host, ViewModel не зависит от Windows. Shared contracts/acceptance — PA8b.4
 UI плана; native Editor proof проверяет actual active/inactive border pixels,
 owned HWND messages и cleanup без изменения настроек ОС.
+
+<a id="ed4f3-window-root"></a>
+
+### ED4f.3. Window root стандартного Editor — реализовано 2026-11-04
+
+Адресная интеграция [UIA2 Window](../alloy/PLAN.md#uia2-window) реализована:
+UseAetherEditorWindow создаёт EditorMainWindow : Window<EditorViewModel> через
+IFactory<EditorMainWindow, EditorMainWindowArguments>. Root содержит один
+DI-created EditorView; EditorMainWindowStyle оформляет только wrapper. Existing
+EditorWindow сохраняет роль lifecycle adapter, EditorView — reusable View<TData>
+для custom/embedded hosts. Новых assemblies/scopes/dependencies нет.
+
+Публичный EditorMainWindow.FromRoot принимает direct root либо его единственный
+WindowFrame и возвращает typed EditorView без recursive search. Default/custom
+ConfigureDefaultTitleBar callbacks по-прежнему получают именно EditorView;
+base title для header берётся из immutable arguments, без повторения suffix.
+Исходная [плановая сверка2026-11-03](HISTORY.md#window-engine-integration-review-2026-11-03)
+сохраняется как история, а не результат этой реализации.
+
+- [x] Зарегистрировать root, его scoped style и IFactory через существующую App
+  composition. ViewModel/style заимствуются; host owns Window, Window owns EditorView,
+  каждый UI product создаётся один раз на owner. У wrapper и nested EditorView
+  собственные style scopes; родитель не обходит внутреннее дерево nested view.
+- [x] Согласовать initial Title/ClientSize с supported UseAetherEditorWindow(configure)
+  overrides через snapshot/typed factory arguments до native allocation. Сохранить
+  default1280×800 и native min1100×700: Window default960×540 иначе не пройдёт Chrome
+  limits. Не терять пользовательские Title/Width/Height молча из-за component
+  precedence; поддержанные/invalid options проверить отдельно. Нативное оформление,
+  backend и frame mode остаются в host options.
+- [x] Передавать strongly typed EditorView instance в Presented/ConfigureDefaultTitleBar
+  и standard consumer вместо предположения, что WindowFrame.Content всегда EditorView.
+  Сохранить одну рамку, общий header/Overlays/viewport и явные typed parts; не искать
+  View рекурсивно и не менять embedded path ради нового standalone root.
+- [x] Оставить единственного владельца document Save/Discard/Cancel у existing
+  EditorWindow/EditorSession close policy. Component RequestClose идёт через тот же
+  host coordinator; дополнительные Closing guards не вызывают RequestExit второй раз.
+  Shutdown сохраняет Stop/drain/reap, veto/error/cancel не делают late close или
+  повторный Save. Header close также использует coordinated request.
+- [x] Согласовать один UI-independent caption source для native title и compact
+  header (project/scene/dirty/custom base title), не связывать VM с Window/handles.
+  Сохранить retained controls/focus/draft/history/theme и source status current owner.
+- [x] Оставить GPU/context initialization в existing first-presentation/Ready path,
+  а не в конструкторе Window: root создаётся до native/GPU. Failed startup/close/App
+  stop должны drain initialization и observer/runtime work до tree/device disposal,
+  сохранить borrowed lifetimes и не добавлять второй App/window/device.
+- [x] Проверить direct root/factory/override/close-count tests и Editor regression;
+  actual source Debug/published Release +fresh NuGet standard/Cobalt и embedded/MS DI
+  с actual preview/game, project switch/close, unsaved save/discard/cancel/error,
+  initialization failure, retained state и cleanup. Явно разделять producer pack,
+  scoped validation и hardware gates; ordinary UIA2 probe этот Editor lane не заменяет.
+
+Проверки2026-11-04:64новых cases, full Editor1126/1126, Alloy976/976 и Hosting154/154
+отдельно Debug/Release; solution Debug nonincremental build0errors/1584warnings.
+Fresh15packages/headless8/8, source Debug/published Release/fresh NuGet Release
+×standard/Cobalt и embedded/MS DI6/6native Workflow:84children reaped/released,
+78graceful Vulkan validation0/0,30Game reports, maxLive1, final UI/GPU/handles0.
+12/12startup failure/cancel cases подтверждают ранний root failure и later cancel;
+3PNG просмотрены,2855input hashes без drift. Native WindowRoot lane включает
+retained editor/source owners, Build/reuse/Replace/rollback и три component close
+requests; Save/Discard/Cancel/native/header/concurrent/Shutdown policy дополнительно
+проверена direct tests. Команды, exact tests и ограничения —
+[HISTORY](HISTORY.md#ed4f3-window-root-2026-11-04).
+Source observer performance и текущий follow-up — в [ED6b.2e.4](#ed6b2e4-observer-performance).
+Общие Window API/acceptance остаются в UI плане; wider backends, physical/hardware/
+K7/release gates и full ED4/ED6 этим wrapper не закрываются.
 
 ### ED4g. Наблюдение и отладка поведения мобов — 2026-10-30
 
@@ -1777,6 +1923,11 @@ snapshot и не получает обещания автоматическог�
   дают детерминированные assertions; production behavior не опирается на sleeps.
 - [x] ED6b.2e.3: baseline attach после actual Build и retained source indicator,
   unit/model +source/fresh NuGet standard/Cobalt и embedded/MS DI acceptance.
+- [x] ED6b.2e.4: стоимость actual Observer на больших local graphs при default10s/5s,
+  setup/steady boundaries, CPU/allocations/logical IO/memory, content detection
+  и owner drain; результаты ограничены измеренным headless profile ниже.
+- [x] ED6b.2e.4a: managed thread-time traces на неизменённом baseline binary,
+  повторяемый resolved hot path и source-derived count общих ancestor checks.
 
 Обязательные partitions для checks (case names выбрать при реализации):
 
@@ -1802,10 +1953,218 @@ EditorViewModel.Source проверяет current owner даже во время
 legacy scene-only consumers сохраняют прежнюю admission/presentation семантику.
 Source badge/details находятся в retained status bar, оформлены его scoped style.
 
-Следующий технический шаг: измерить стоимость observer на большом local project graph
-при обычных10s polling/5s budget; начальные scheduling limits не являются measured
-performance guarantee. UNC/network/reparse и wider package/HUD/Player остаются отдельными
-профилями, а source status не является release/hardware acceptance всего Editor.
+<a id="ed6b2e4-observer-performance"></a>
+
+##### ED6b.2e.4. Стоимость Observer на большом local graph — 2026-11-04
+
+Измерительный consumer — `ManualTests/AetherSourceWatchPerformance`: отдельный
+Release/net10 process на case, App-registered compiler/typed observer factory,
+public EditorSourceWatch и descriptor после actual successful frozen Build.
+Production census/scheduling/API не меняются, friend/reflection/copied scanner нет.
+
+Профиль: четыре non-overlapping projects с diamond ProjectReference; control64C#
+files/64KiB, files2560C# files/10MiB, bytes128non-Compile tree members/128MiB плюс
+четыре C# marker. Actual descriptor также включает project/entry/contract inputs.
+Non-Compile files входят в shared capture/observer tree policy; byte profile не
+расширяет aggregate compiler-input limits. Только local Windows paths и warmed
+filesystem cache после generation/Build, без package/network/cold-disk/UI claims.
+
+Для каждого graph — default notifications off/on, polling10s после завершения
+предыдущего pass, cooperative budget5s, debounce250ms/max1s/max32watchers.
+Два2s idle windows (NoBuild и sticky Changed), initial+3steady full passes,
+late-tree content edit с прежними length/mtime и actual Dispose/drain. Source
+восстанавливается и сверяется по hash. Budget expiry сохраняет Unavailable,
+не увеличивает policy limits и не выдаёт Same. Результаты, включая исходные
+неуспешные setup/calibration attempts, записываются в HISTORY.
+
+Метрики: snapshot-derived scan bounds/actual sampler gaps, process CPU/managed
+allocations/GC, logical read bytes/operations,100ms sampled private/working set,
+content-publication latency и close time. Build/fixture/final hash IO вне windows;
+CPU/allocations включают sampler/прочую работу target process и polling wait.
+Короткие idle calibrations не вычитаются как точная attribution Observer.
+Наличие initial scheduling limits не является performance guarantee. UNC/network/
+reparse, wider package/HUD/Player и release/hardware acceptance Editor отдельные.
+
+Результат2026-11-04:6/6cases, initial6+steady18 Same,6same-length/same-mtime
+changes, budget exceeded0. Actual files profile2567known files/11.11MiB: median
+scan bounds1494–1524ms polling и1266–1291ms notifications; CPU process/cycle11.81%
+и11.74% одного logical core, allocation6.75MiB/cycle. Actual byte profile139files/
+129.11MiB:156–182ms, CPU2.61–3.07%, allocation0.62MiB/cycle. Notifications ускорили
+publication до1579ms(files)/429ms(bytes); immediate post-pass polling mutation
+обнаружена за11366/10181ms. Полный logical read равен descriptor bytes на всех24
+Same passes, idle read0;6owners drained/Stopped/watchers0.48source/DLL hashes и
+5554restored fixture hashes без drift. [Протокол/команды/evidence](HISTORY.md#ed6b2e4-observer-performance-2026-11-04).
+
+Attribution выполнена в ED6b.2e.4a ниже. Следующий технический шаг — адресное
+снижение повторных ancestor checks с сохранением exact content/membership/probe,
+reparse/limits/cancel/drain semantics.
+Native UI/GPU/fresh package/full solution tests в performance lane не повторялись.
+
+<a id="ed6b2e4a-observer-profile"></a>
+
+###### ED6b.2e.4a. Профилирование конкретного hot path — 2026-11-04
+
+Public production Observer и тот же Release harness сохранены:48baseline hashes
+без drift. Local Microsoft dotnet-trace10.0.750501 подключён только к подтверждённым
+owned PIDs после frozen Build/initial pass, в первом polling wait;30s managed
+thread-time traces,64MiB buffer, rundown/Speedscope, без elevated token/global tools.
+Два many-files repeats +byte control прошли:3/3targets/collectors exit0,12Same passes,
+3same-length/same-mtime Changed, budget0, Stopped/watchers0.
+
+Подтверждённый resolved hot path — EditorSourceCensus.ValidatePath → Attributes:
+39.95%/41.90% веса census stacks в repeats; вместе с file/probe metadata вне
+ValidatePath60.47–60.62%. Для byte control ancestor checks6.80%. Анализ фильтрует
+стек реального census и сохраняет вес в непересекающихся categories; это sampled
+managed thread time, не whole-process CPU и не полный async wall breakdown.
+Unresolved native/inlined frames29.32–37.70% в files repeats ограничивают native
+attribution; kernel/driver и отдельный lost-event audit не выполнялись.
+
+Descriptor+неизменённый цикл ValidatePath дают2655validated paths и26203ancestor
+Attributes visits на clean pass при103distinct directories, из них26100повторные.
+Это source-derived loop count, не measured syscall count; retries могут его увеличить.
+Таким образом следующая оптимизация адресует повторную валидацию общих предков.
+Bounded per-pass reuse требует доказать поведение при ancestor replacement/reparse,
+access failure и cancellation, сохранить exact membership/probes и полное хеширование
+bytes. Production cache/быстрый путь здесь не добавлен, speedup не заявляется.
+[Протокол/результаты/ограничения](HISTORY.md#ed6b2e4a-observer-profile-2026-11-04).
+
+<a id="ed6b2e4b-observer-directory-cache"></a>
+
+###### ED6b.2e.4b. Кэш ancestor validation — 2026-11-04
+
+Адресная оптимизация подтверждённого ED6b.2e.4a hot path, без изменения public API,
+descriptor/policy, полного byte hashing, membership/probes и общего retry budget.
+
+- [x] Положительный case-insensitive кэш только на одну попытку Census, максимум
+  256каталогов. Root-first цепочка native pins обязательна для reuse потомков;
+  missing/non-directory/errors и цепочки сверх лимита проверяются заново.
+- [x] Windows pins используют LIST_DIRECTORY|READ_ATTRIBUTES, read/write sharing
+  без delete sharing и OPEN_REPARSE_POINT. Каталог нельзя переименовать/заменить
+  до Dispose, но child file edits/add/delete разрешены. Если optional pin недоступен,
+  сохраняются fresh metadata checks, без нового требования list permission.
+- [x] Перед Same — свежая проверка каждого retained ancestor по path: persistent
+  reparse/access/type/disappearance не становятся успешным результатом. Sharing
+  не замораживает ACL/attributes; атомарный snapshot и transient ABA не обещаются.
+- [x] При retry создаётся новый кэш после disposal предыдущего. Cancellation,
+  Changed/Unavailable/exception освобождают владельцев; cleanup идёт до конца,
+  rejected products не становятся cache hits. Никакого reuse между passes/Build.
+- [x] 48новых cases: cap0/1/255/256, fallback/reparse/denied/missing, retry,
+  cancellation/cleanup и actual native rename fence/child IO. Focused75/75,
+  full Editor1174/1174 отдельно Debug/Release, failed/skipped0.
+- [x] Повторены6performance cases и3profiles на том же10s/5s profile:
+  many-files scan0.82–0.85s вместо1.27–1.52s, allocation4.95vs6.75MiB/cycle;
+  ancestor attributes40–42% →0.67–1.07% sampled census thread weight.36Same/
+  9content changes, budget0, все owners drained; общий Debug build0errors/1555warnings.
+- [x] Уточнить оставшийся per-file open/OSFileStreamStrategy constructor и metadata
+  cost: адресная оптимизация и повторные profiles выполнены в ED6b.2e.4c ниже;
+  unresolved native/OS attribution остаётся отдельным follow-up.
+
+Повторные performance/profile результаты и следующий подтверждённый hot path
+ведутся в [истории](HISTORY.md#ed6b2e4b-observer-directory-cache-2026-11-04).
+Private Editor scanner change не расширяет Window/UI/GPU/package/hardware scope.
+
+<a id="ed6b2e4c-observer-file-io"></a>
+
+###### ED6b.2e.4c. Открытие файлов и file/probe metadata — 2026-11-04
+
+Follow-up подтверждённых ED6b.2e.4b per-file costs. Private EditorSourceFile читает
+с одного owned synchronous handle на существующем background worker, без IOCP
+binding/дополнительного stream buffer и continuation на каждый small-file read.
+GENERIC_READ +read/write/delete sharing, OPEN_EXISTING|OPEN_REPARSE_POINT|
+SEQUENTIAL_SCAN; reparse при open отвергается. Length/mtime/attributes перед чтением
+берутся с opened handle, после EOF — свежая query исходного path. Файлы и probes
+не кэшируются; SHA256 всех bytes, directory pins/revalidation, membership/exclusions,
+cumulative byte/retry budgets и10s/5s policy сохраняются.
+
+Одна metadata query возвращает attributes/length/raw FILETIME; missing2/3 не создают
+исключение, access/sharing/прочие ошибки не превращаются в отсутствие. Probe query
+остаётся свежей даже после hashing того же known file. Injected streams сохраняют
+независимый path-before/path-after seam для deterministic race/error тестов.
+Cancellation кооперативна между local reads; Stop ждёт actual completion/handle
+disposal. Атомарный filesystem snapshot/обнаружение transient change-revert и
+hard timeout отдельного OS IO не обещаются.
+
+- [x] Реализовать owned reader, opened-before/fresh path-after metadata и missing
+  probes без exceptions; public API/descriptor/default limits сохранить.
+- [x] 41новый case +regressions: focused116/116, full Editor1215/1215 Debug/Release,
+  failed/skipped0; новые files без analyzer warnings. Общий Debug build0errors/1555warnings.
+- [x] Повторить6unprofiled cases и3profiles: scan2567files0.56–0.61s вместо0.82–0.85s,
+  allocation4.08vs4.95MiB/cycle;36Same/9content changes, budget0/actual owner drain.
+  Path metadata resolved share33–34% →2.5–9%, full hashing сохранён.55input/
+  10827fixture/6trace hashes без drift; CPU control cases не все улучшились.
+- [ ] Уточнить оставшийся native Open/handle metadata cost отдельным OS attribution,
+  прежде чем менять следующую часть scanner; EventPipe categories не kernel timers.
+
+Проверки и сравнение с directory-cache baseline ведутся в
+[истории](HISTORY.md#ed6b2e4c-observer-file-io-2026-11-04).
+
+<a id="ed6b2e4d-observer-native-open"></a>
+
+###### ED6b.2e.4d. Native open и metadata открытого handle — 2026-11-04
+
+Follow-up ED6b.2e.4c: отдельный open-only comparison проверяет legacy metadata,
+FILE_BASIC_INFO+size, relative NtCreateFile, CreateFile2 и sequential hint. Relative/
+CreateFile2/no-hint не дали устойчивого дополнительного выигрыша; новые NT APIs,
+parent borrowing и query-result caches в production не вводятся.
+
+Opened-before metadata использует FILE_BASIC_INFO40 +GetFileSizeEx; legacy query
+остаётся только для unsupported1/50/87. Reparse/directory проверяются до size query;
+access/sharing/IO errors не становятся absence. Win32 CreateFileW flags/sharing,
+весь EOF/full SHA256, retry/cumulative budgets и cancellation/drain сохраняются.
+
+Reader готовит extended native path один раз; final query использует это имя со
+свежими attributes/length/time. Данные metadata не кэшируются. Injected metadata
+delegate имеет прежний приоритет, static probe queries остаются свежими. Prepared
+path не является file identity или atomic snapshot и не переживает owner.
+
+- [x] Сравнить native candidates, реализовать basic/size +prepared name без
+  new NT/parent-handle APIs; сохранить unsupported-provider fallback/error semantics.
+- [x] 8новых cases: focused124/124, full Editor1223/1223 Debug/Release, failed/skipped0;
+  новые files без analyzer warnings. Общий Debug build0errors/1555warnings.
+- [x] Повторить6unprofiled cases/3profiles:36Same/9Changed, budget0/owners drained,
+  55input/10827fixture/6trace hashes drift0. Allocation2567files−10.1%, OtherOps
+  21819→16685/cycle; polling upper bound614→545ms, notifications593→602ms.
+  Uniform latency/CPU improvement не заявлен; full hashing/fresh queries сохранены.
+- [ ] Отдельно уточнить native/OS open attribution: current Open category58–59%
+  не isolated syscall timer, unresolved context62–63% не позволяет ранжировать drivers.
+
+Проверки/сравнение с file-IO baseline — в
+[истории](HISTORY.md#ed6b2e4d-observer-native-open-2026-11-04).
+
+<a id="ed6b2e4e-observer-open-batches"></a>
+
+###### ED6b.2e.4e. Ограниченная параллельность native open — 2026-11-04
+
+Absolute NtOpenFile/NtCreateFile/minimal-rights experiment не выявил преимущества
+перед текущим Win32 path. Выбран bounded batch4 для default Census от256known files:
+validation на coordinator последовательно, native open/initial metadata в коротких
+worker jobs. Все opens завершаются до hand-off; чтение/SHA256/byte budget остаются
+последовательными с одним64KiBbuffer. Simultaneous staged file handles максимум4.
+
+Take передаёт ownership ровно один раз; missing/exception потребляются в исходном
+descriptor order. Early Changed не подменяется будущей speculative ошибкой. Dispose
+закрывает всё непотреблённое до retry/return/probes/final directory revalidation;
+Stop/cancel ждут actual native completion. Directory cache не разделяется между
+workers, public API/options/default polling limits не меняются. Small graphs и
+injected file/metadata/directory hooks сохраняют serial path. Internal batch factory
+seam нужен для deterministic real Census/Watch drain tests, App API не расширяет.
+
+Prefetched initial snapshots могут быть старше начала чтения; fresh final path
+metadata/full hash/reparse checks сохраняются, atomic snapshot/ABA/hard IO timeout
+не обещаются. Scheduling/allocations tradeoff оценивается end-to-end measurements.
+
+- [x] Реализовать batch4/threshold256, ordered ownership/error/cancel/drain без
+  public options/new NT APIs; small graphs и existing hooks сохраняют serial path.
+- [x] 21новый case: full Editor1244/1244 Debug/Release +final focused145/145 в обеих
+  конфигурациях; failed/skipped0. Общий Debug build0errors/1555warnings.
+- [x] 6cases/3profiles:36Same/9Changed, budget0/actual drain; many-files median
+  upper335/470msvs545/602ms, allocation+23%, CPU/cycle+23–43%. Tradeoff явный.
+  56collection input records/10827fixture/6trace hashes проверены, current corrected
+  classifier revision отдельно; production snapshot прежний.
+- [ ] Сократить task/allocation/scheduling overhead batch с теми же max4/error-order/
+  retry/cancel/actual drain guarantees. OS/kernel trace и hardware scope отдельно.
+
+[Решение/проверки/результаты](HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04).
 
 ## ED7. Проверенная расширяемость
 

@@ -5,6 +5,14 @@ namespace TrueMoon.Argentis;
 /// <summary>A retained multiline rich editor. Documents/options are immutable snapshots; indices are UTF-16 grapheme boundaries.</summary>
 public sealed class RichTextEditor : Element
 {
+    /// <summary>Minimum preferred content height, excluding padding; the constructor's MinHeight remains independent.</summary>
+    public static readonly UiProperty<float> MinimumContentHeightProperty = new("MinimumContentHeight", 80, Invalidation.Layout, v => float.IsFinite(v) && v >= 0);
+    /// <summary>Maximum preferred content height, excluding padding. A ceiling below the minimum takes precedence.</summary>
+    public static readonly UiProperty<float> MaximumContentHeightProperty = new("MaximumContentHeight", float.PositiveInfinity, Invalidation.Layout, v => !float.IsNaN(v) && v > 0);
+    /// <summary>Preferred lower bound for automatically measured content height.</summary>
+    public float MinimumContentHeight { get => Get(MinimumContentHeightProperty); set => Set(MinimumContentHeightProperty, value); }
+    /// <summary>Preferred upper bound for automatically measured content height; infinity preserves the available-space policy.</summary>
+    public float MaximumContentHeight { get => Get(MaximumContentHeightProperty); set => Set(MaximumContentHeightProperty, value); }
     /// <summary>Bindable rich content. Replacing it externally clears undo/redo history.</summary>
     public static readonly UiProperty<RichTextDocument> DocumentProperty = new("Document", RichTextDocument.Empty, Invalidation.Layout, value => value != null);
     /// <summary>Bindable plain text. External assignment replaces formatting and normalizes line endings.</summary>
@@ -219,7 +227,7 @@ public sealed class RichTextEditor : Element
     {
         EnsureLayout(available.Width, text);
         return new(Math.Min(float.IsFinite(available.Width) ? available.Width : 320, Math.Max(160, _layout!.Size.Width)),
-            Math.Min(float.IsFinite(available.Height) ? available.Height : 160, Math.Max(80, _layout.Size.Height)));
+            Math.Min(Math.Min(float.IsFinite(available.Height) ? available.Height : 160, MaximumContentHeight), Math.Max(MinimumContentHeight, _layout.Size.Height)));
     }
     /// <inheritdoc />
     protected override void ArrangeCore(Rect contentBounds)

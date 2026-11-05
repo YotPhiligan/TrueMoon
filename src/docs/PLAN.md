@@ -1,5 +1,21 @@
 # TrueMoon: общий план развития
 
+UI follow-up2026-11-05: [ED4g.2](engine/EDITOR_PLAN.md#ed4g2-numeric-gestures) и
+[UIA3c](alloy/PLAN.md#uia3c-numeric-gestures) добавляют numeric step/drag и linked
+scale с draft-only/cancel/identity contract. Scoped source/published native proof
+выполнен в [ED4g.2a](engine/EDITOR_PLAN.md#ed4g2a-native-numeric); физические arrows/
+captured Esc/pointer modifiers остаются открыты. Затем group reset/angle units;
+engine Observer и hardware/release gates отдельно.
+
+UI-срез 2026-11-05: компактный Transform инспектора ведётся в
+[ED4g](engine/EDITOR_PLAN.md#ed4g-compact-transform), общие числовые редакторы и
+цветовые состояния — в [UIA3](alloy/PLAN.md#uia3-компактные-редакторы-и-семантические-цвета--2026-11-05).
+Общие правила оформления зафиксированы в [дизайн-коде](alloy/DESIGN.md).
+Observer scheduling/allocation follow-up сохраняется отдельной engine-задачей.
+Продолжение [ED4g.1](engine/EDITOR_PLAN.md#ed4g1-generic-editors) применяет тот же язык
+к остальным scalar/nullable editors; общие Row/CheckBox/RichText capabilities — UIA3b.
+
+
 Создан 2026-10-09 по запросу разделить общий roadmap и планы модулей. [Корневой README](../../README.md), [индекс документации](README.md), [текущее состояние](STATUS.md), [формат ведения планов](PLANNING.md). Это план всего фреймворка; детальные задачи и проверки находятся в документах соответствующих модулей.
 
 ## Цель
@@ -43,8 +59,20 @@ scoped unit/package/native acceptance пройдена.
 [ED6b.2e contract](engine/EDITOR_PLAN.md#ed6b2e-контракт-source-watcher-и-stale-build-status--2026-11-02)
 определяет invalidation/ownership/debounce/drain/UI delivery source watcher без
 auto Build/Play; ED6b.2e.1–3 descriptor/probes, project-owned observer и retained source
-indicator реализованы/проверены в bounded local Windows profile. Далее measured observer
-cost на большом graph; wider profiles и Gameplay
+indicator реализованы/проверены в bounded local Windows profile.
+[ED6b.2e.4](engine/EDITOR_PLAN.md#ed6b2e4-observer-performance) измерил стоимость
+Observer на больших local graphs при10s/5s;
+[ED6b.2e.4a](engine/EDITOR_PLAN.md#ed6b2e4a-observer-profile) подтвердил repeated
+ancestor Attributes в ValidatePath. [ED6b.2e.4b](engine/EDITOR_PLAN.md#ed6b2e4b-observer-directory-cache)
+добавляет bounded per-attempt reuse с safety checks и повторными замерами.
+[ED6b.2e.4c](engine/EDITOR_PLAN.md#ed6b2e4c-observer-file-io) сокращает per-file
+open/metadata overhead без ослабления hashing/probes/cancel/drain.
+[ED6b.2e.4d](engine/EDITOR_PLAN.md#ed6b2e4d-observer-native-open) уточняет opened
+metadata API и повторную подготовку native path; next steps определяются по
+новым end-to-end profiles, OS attribution остаётся отдельной.
+[ED6b.2e.4e](engine/EDITOR_PLAN.md#ed6b2e4e-observer-open-batches) добавляет bounded
+open concurrency для больших graphs; latency выигрывает за счёт CPU/allocations.
+Следующий узкий follow-up — overhead batch с прежними lifecycle fences. Wider profiles и Gameplay
 input/HUD/Player и полный ED6b сохраняют свои дальнейшие задачи.
 ED1b.1/2 согласуют project/document Switch/Close API, retained project path UI и runtime
 rebinding в stopped-game/idle-compiler profile. Подробная policy/evidence — в Editor плане/STATUS.
@@ -139,6 +167,22 @@ Data/ViewModel и typed IViewStyle<TView>. Реализация/критерии
 [UIA1](alloy/PLAN.md#uia1-view-dataviewmodel-и-scoped-styles--2026-10-22), первый
 production consumer — Aether.Editor. DI/owner-thread factory route сохранён;
 новых межмодульных dependencies это изменение не добавляет.
+
+### Window UIA2 и engine consumer — обновлено 2026-11-04
+
+[Window/Window<TData> UIA2](alloy/PLAN.md#uia2-window) реализованы; independent
+fresh NuGet Window App consumer проверен через standard Editor/Cobalt в bounded
+Windows x64/net10/OpenGL parent/Vulkan child profile, embedded/MS DI отдельно.
+Producer pack и старый Editor regression сохранены с собственным scope.
+
+Standard Editor root реализован по
+[ED4f.3](engine/EDITOR_PLAN.md#ed4f3-window-root), с reusable EditorView и прежними
+lifecycle/close owners. Core Aether/offscreen runtime сохраняет свои зависимости.
+Player рассматривает
+компонент в ENG7b.2 UI-host с одним native/device owner; HUD остаётся external View.
+[Границы](engine/PLAN.md#window-integration-2026-11-03), [датированный статус](alloy/STATUS.md).
+[Текущая реализация/проверки](engine/HISTORY.md#ed4f3-window-root-2026-11-04);
+Текущий observer performance/follow-up — в ED6b.2e.4; wider hardware/release gates открыты.
 
 ### Aether и Editor как подключаемые пакеты — 2026-10-27
 
@@ -347,11 +391,22 @@ TrueMoon.Aether.Editor/Tests и назначил аудит Aether по этом
 
 ## Порядок развития
 
-Актуальный порядок2026-10-29: ARCH2 source/package/headless/native profile проверен
+Текущая точка2026-11-04: после bounded document Build/Play/Replace/source tracking
+Observer cost на большом local graph с ordinary10s/5s измерена в ED6b.2e.4.
+ED6b.2e.4a подтвердил repeated ancestor Attributes в ValidatePath двумя traces.
+ED6b.2e.4b реализует bounded directory cache, ED6b.2e.4c — owned file reader и
+объединённые metadata queries с прежними content/membership/probe, reparse/error/
+cancel/ownership fences. Следующий Observer шаг выбирается по повторным профилям
+в engine STATUS; kernel/native attribution и wider acceptance отдельные.
+Window consumer ED4f.3 реализован; UIA2d targeted independent package
+delivery проверен через Editor. Wider Window/hardware gates отдельные. Точные scope/ограничения
+и предыдущие passing результаты — в STATUS, детальные задачи — у владельцев выше.
+
+Предыдущий порядок2026-10-29: ARCH2 source/package/headless/native profile проверен
 в bounded Windows x64 profile; ARCH2e.4 checked в своём scope, затем ED6a/ED8a console/export, ED4c.2 имена/порядок,
 ED4c.3 create/delete/duplicate и project picker/switch с ED1/ED6 workflow.
 Незавершённые проверки после BSOD и scopes закрытых quality fixes — в [STATUS](STATUS.md).
-Датированные маршруты ниже сохраняют историю решений и не заменяют эту очередь.
+Датированные маршруты ниже сохраняют историю решений и не заменяют текущую точку2026-11-04.
 
 Историческая точка2026-10-21: ENG1–ENG3/ENG4a/b/c реализованы в TrueMoon.Aether;
 ENG4d borrowed texture/retained GPU copy bridge проверен в actual reference viewport.

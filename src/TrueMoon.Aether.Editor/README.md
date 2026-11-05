@@ -1,8 +1,42 @@
 # TrueMoon.Aether.Editor
 
+Числа инспектора поддерживают ↑/↓ и drag за осевой префикс/маркер:4logical pixels
+на шаг, Shift×10, Ctrl×0.1 (Integer минимум1). Position/Number шаг0.1,
+Rotation(rad)/Scale0.01, Integer1. Release оставляет draft; Apply/Ctrl+Enter создаёт
+одну history transaction. Esc во время drag восстанавливает состояние до жеста,
+сохраняя прежние черновики. Переключатель «Сохранять пропорции XYZ» включает
+связанный Scale; по умолчанию выключен. Ошибка/overflow/pending target draft не
+перезаписывают другие оси. [Контракт ED4g.2](../docs/engine/EDITOR_PLAN.md#ed4g2-numeric-gestures).
+
+
+Остальные schema-defined редакторы используют общую адаптивную строку: числа
+ограничены по ширине, boolean подписан «Да»/«Нет», строки растут по содержимому
+от26до78logical pixels. При null показано «Не задано» с явным переключателем;
+прежний редактор и draft сохраняются. Цветовые состояния применяются также к
+индикаторам checkbox. [Подробности ED4g.1](../docs/engine/EDITOR_PLAN.md#ed4g1-generic-editors).
+
+
+Инспектор использует компактный `TransformEditor`: три адаптивные строки Position,
+Pitch/Yaw/Roll в радианах и Scale с общими NumberBox/Vector3Editor Argentis.
+Сведения о происхождении и сброс значений раскрываются кнопкой «⋯»; ошибки остаются
+у поля и в полной копируемой панели диагностики. Цветовые роли осей/редакторов,
+фокус, ошибки и неприменённые правки следуют [дизайн-коду](../docs/alloy/DESIGN.md).
+Действуют прежние Apply/Ctrl+Enter, Cancel/Esc и история документа.
+
+
 Подключаемая библиотека/NuGet-пакет редактора, net10.0. Публичный вход —
 `UseAetherEditor(configureEngine, configureEditor)`; optional стандартное окно —
 `UseAetherEditorWindow(fonts, configureWindow)`. [API, ownership и quickstart](PACKAGE.md).
+
+Стандартный host создаёт `EditorMainWindow : Window<EditorViewModel>` через
+`IFactory<EditorMainWindow, EditorMainWindowArguments>`. Он владеет одним EditorView;
+модели/style заимствуются. Title/Width/Height копируются после configureWindow,
+native и compact caption используют одну функцию модели документа. Public
+ConfigureDefaultTitleBar по-прежнему получает EditorView, включая chained callbacks.
+Root создаётся до native/GPU, viewport initialization остаётся после первого frame.
+EditorWindow сохраняет единственную Save/Discard/Cancel policy. Custom/embedded
+hosts продолжают получать EditorView напрямую; для standard root используйте
+`EditorMainWindow.FromRoot(ui.Root).EditorView`. [Подробный контракт](PACKAGE.md).
 Main/CLI/App composition находятся в тонком
 [AetherEditor](../Examples/AetherEditor/README.md); directed smoke checks и явный
 same-exe runtime profile — в [AetherEditorHost](../ManualTests/AetherEditorHost/README.md).

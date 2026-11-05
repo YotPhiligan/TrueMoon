@@ -183,9 +183,8 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     }
     private void UpdateCaption()
     {
-        Caption.Value = _baseTitle + (_documentModel.ProjectName.Length == 0 ? "" : " · " + _documentModel.ProjectName) +
-            (_documentModel.Document?.Content == null ? "" : " · " + _documentModel.Title);
-        Caption.AccessibleName = Caption.Value + "\n" + (_documentModel.Document?.Path ?? _documentModel.ScenesRoot);
+        Caption.Value = _documentModel.GetWindowCaption(_baseTitle);
+        Caption.AccessibleName = _documentModel.GetWindowCaptionDescription(_baseTitle);
     }
     private void ToggleTheme()
     {

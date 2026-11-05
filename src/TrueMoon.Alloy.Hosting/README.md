@@ -8,6 +8,16 @@ WindowFrame с minimize/maximize/restore/close и resize grip. `TitleBarFactory`
 Обычные окна сохраняют системное оформление. Close кнопка использует cancellable
 App close coordinator, включая asynchronous save/drain.
 
+`TrueMoon.Argentis.Window` / `Window<TData>` можно передавать корнем через
+`UsePresentationFactory<TWindow>`. Компонент задаёт Title/ClientSize, содержимое,
+bindings и scoped style; native/GPU ресурсы остаются у Hosting. Корневая фабрика
+вызывается на UI owner **до** native/graphics allocation и не должна требовать
+current graphics context. Effective Title/ClientSize компонента имеют приоритет
+над Title/Width/Height host options. Native state возвращается отдельно через
+State/IsActive/ActualClientSize, сохраняя запрошенный размер и существующее дерево.
+Closing компонента исполняется перед host callbacks через прежний async close
+coordinator. Подробный контракт и ownership — в [package README](PACKAGE.md).
+
 Проект предоставляет единый модуль регистрации UI. Настройка выполняется до `Build()` и не создаёт окно или GPU-контекст. Целевая платформа — `net10.0`; поставляемая native Skia для Vulkan/OpenGL/raster пока проверена на Windows x64.
 
 ## Подключение через NuGet

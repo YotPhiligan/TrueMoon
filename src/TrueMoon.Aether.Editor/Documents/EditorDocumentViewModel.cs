@@ -48,6 +48,17 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable
     public SceneDocumentState? Document => _state?.Document;
     /// <summary>Gets file identity, dirty marker and current activity.</summary>
     public string Title => _title;
+    /// <summary>Formats the native/header caption from the same copied project/document state.</summary>
+    /// <param name="baseTitle">Host-selected base caption.</param><returns>Caption including project, scene, dirty and activity markers.</returns>
+    public string GetWindowCaption(string baseTitle)
+    {
+        ArgumentNullException.ThrowIfNull(baseTitle);
+        return baseTitle + (ProjectName.Length == 0 ? "" : " · " + ProjectName) +
+            (Document?.Content == null ? "" : " · " + Title);
+    }
+    /// <summary>Formats the shared accessible caption and full document/root path.</summary>
+    /// <param name="baseTitle">Host-selected base caption.</param><returns>Caption followed by its path description.</returns>
+    public string GetWindowCaptionDescription(string baseTitle) => GetWindowCaption(baseTitle) + "\n" + (Document?.Path ?? ScenesRoot);
     /// <summary>Gets the canonical scene root used to interpret relative input.</summary>
     public string ScenesRoot => _root;
     /// <summary>Gets an actionable error without dropping path drafts or document content.</summary>

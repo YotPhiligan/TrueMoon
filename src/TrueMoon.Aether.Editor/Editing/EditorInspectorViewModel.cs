@@ -25,7 +25,30 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     private bool _loading, _disposed, _available, _conflict;
     private bool _canEdit, _canApply, _canCancel, _canUndo, _canRedo, _canPreview, _canStopPreview;
     private string _error = "", _previewText = "Preview выключен · до 64 объектов";
+    private string _validationText = "";
     private EditorPreviewState _previewState = new(false, false, null, null);
+    private bool _scaleLinked, _linkingScale, _restoringGesture, _canLinkScale;
+    private double[] _scaleReference = [1, 1, 1];
+    private string _scaleLinkError = "";
+    private InspectorProperty? _scaleErrorField;
+    private NumericDraftSession? _numericGesture;
+    private long _nextGestureId;
+    private sealed record NumericDraftSession(long Id, InspectorProperty Source, SceneDocument? Document, string? Selection,
+        (InspectorProperty Field, InspectorProperty.DraftState Draft)[] Drafts);
+    /// <summary>Opt-in proportional scale editing. Enabling it does not change any field or commit data.</summary>
+    public bool ScaleLinked
+    {
+        get => _scaleLinked;
+        set
+        {
+            VerifyOwner(); if (_scaleLinked == value) return;
+            FinishNumericGesture(NumericGestureResult.Cancelled, _numericGesture?.Id ?? 0);
+            _scaleLinked = value; _scaleLinkError = ""; _scaleErrorField = null; RebaseScale();
+            OnPropertyChanged(); UpdateState(_commands.Read().Document?.Content);
+        }
+    }
+    /// <summary>Whether the selected Transform's link preference can be changed.</summary>
+    public bool CanLinkScale => _canLinkScale;
 
     /// <summary>Creates presentation over borrowed App-owned services.</summary>
     /// <param name="commands">Shared document admission and operations.</param><param name="preview">Bounded preview coordinator.</param>
@@ -59,6 +82,10 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     public string ErrorText => _error.ReplaceLineEndings("\n");
     /// <summary>Gets whether a complete mutation/conflict diagnostic is available.</summary>
     public bool HasError => _error.Length != 0;
+    /// <summary>Complete copyable mutation and field diagnostics, including messages clipped in a narrow numeric column.</summary>
+    public string DiagnosticsText => string.Join("\n", new[] { ErrorText, _validationText }.Where(text => text.Length != 0));
+    /// <summary>Whether the inspector should expose its full diagnostics panel.</summary>
+    public bool HasDiagnostics => HasError || _validationText.Length != 0;
     /// <summary>Gets actual presented and requested revision information.</summary>
     public string PreviewText => _previewText;
     /// <summary>Actual preview state for structured status presentation.</summary>
@@ -161,7 +188,7 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
                     (schema.AllowMultiple || !types.Contains(schema.TypeId)) && schema.RequiredTypes.All(types.Contains))).ToArray();
             foreach (var name in new[] { nameof(Components), nameof(AddableTypes), nameof(RemovedComponents), nameof(HasSelection), nameof(NoSelection), nameof(SelectionText), nameof(HasDraft) }) OnPropertyChanged(name);
         }
-        finally { _loading = false; }
+        finally { _loading = false; _scaleLinkError = ""; _scaleErrorField = null; RebaseScale(); }
     }
     /// <summary>Gets a built-in name or a stable fallback for a schema-defined component.</summary>
     /// <param name="type">Persistent component type.</param><returns>A presentation name, never used for addressing.</returns>
@@ -172,10 +199,101 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
         source.EntityId != null ? "Локальное значение" :
         "Наследуется · " + source.DefinitionId?.Value.ToString("D")[..8] + " r" + source.DefinitionRevision;
 
-    private void DraftChanged()
+    private void DraftChanged(InspectorProperty? changed = null)
     {
-        if (_loading) return;
+        if (_loading || _restoringGesture) return;
+        if (!_linkingScale && changed is TransformField && changed.Key is "sx" or "sy" or "sz")
+        {
+            if (ScaleLinked) PropagateScale(changed); else RebaseScale();
+        }
+        if (_linkingScale) return;
         SetProperty(ref _error, "", nameof(ErrorText)); UpdateState(_commands.Read().Document?.Content); OnPropertyChanged(nameof(HasDraft));
+    }
+    private TransformField[] ScaleFields => Fields.Where(item => item.Key is "sx" or "sy" or "sz").ToArray();
+    private static bool TryScale(InspectorProperty field, out double value) =>
+        double.TryParse(field.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value) &&
+        value > 0 && float.IsFinite((float)value) && (float)value > 0;
+    private void RebaseScale()
+    {
+        var fields = ScaleFields; var values = new double[3];
+        for (var i = 0; i < 3; i++) if (fields[i].IsNull || fields[i].IsReset || !TryScale(fields[i], out values[i])) return;
+        _scaleReference = values;
+    }
+    private void PropagateScale(InspectorProperty source)
+    {
+        _scaleLinkError = ""; _scaleErrorField = null;
+        if (source.IsReset || source.IsNull || !TryScale(source, out var value)) return;
+        var fields = ScaleFields; var index = Array.IndexOf(fields, source);
+        if (index < 0) return;
+        var reference = _scaleReference; NumericDraftSession? captured = null;
+        if (_numericGesture is { Drafts.Length: 3 } gesture && IsNumericGestureCurrent(source, gesture.Id))
+        {
+            var baseline = new double[3]; var validBaseline = true;
+            for (var i = 0; i < 3; i++) validBaseline &= double.TryParse(gesture.Drafts[i].Draft.Value,
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out baseline[i]) && baseline[i] > 0;
+            if (validBaseline) { reference = baseline; captured = gesture; }
+        }
+        var ratio = value / reference[index]; var values = new double[3];
+        for (var i = 0; i < 3; i++)
+        {
+            values[i] = i == index ? value : ProportionalScale(reference[i], value, reference[index], ratio);
+            if (fields[i].IsReset || fields[i].IsNull || i != index && !TryScale(fields[i], out _) ||
+                values[i] <= 0 || !float.IsFinite((float)values[i]) || (float)values[i] <= 0)
+            {
+                _scaleLinkError = "Связанный масштаб выходит за допустимый диапазон или содержит незавершённый черновик/сброс.";
+                _scaleErrorField = source; return;
+            }
+        }
+        _linkingScale = true;
+        try
+        {
+            for (var i = 0; i < 3; i++) if (i != index)
+                fields[i].Value = captured != null && source.Value == captured.Drafts[index].Draft.Value
+                    ? captured.Drafts[i].Draft.Value : values[i].ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+        }
+        finally { _linkingScale = false; }
+        _scaleReference = values;
+    }
+    private static double ProportionalScale(double target, double value, double source, double ratio)
+    {
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        if (decimal.TryParse(target.ToString("R", culture), System.Globalization.NumberStyles.Float, culture, out var a) && (double)a == target &&
+            decimal.TryParse(value.ToString("R", culture), System.Globalization.NumberStyles.Float, culture, out var b) && (double)b == value &&
+            decimal.TryParse(source.ToString("R", culture), System.Globalization.NumberStyles.Float, culture, out var c) && c != 0 && (double)c == source)
+        {
+            try { return (double)checked(a * b / c); }
+            catch (OverflowException) { }
+        }
+        return target * ratio;
+    }
+    internal bool CanAdjustNumeric(InspectorProperty property)
+    {
+        if (_disposed) return false;
+        VerifyOwner(); var state = _commands.Read();
+        return _active.Contains(property) && property.CanWrite && !_conflict && state.RuntimeIdle && !state.Busy && !state.Exiting && !state.Closed &&
+            state.Document?.Operation == DocumentOperation.None && ReferenceEquals(state.Document?.Content?.Document, _baseline);
+    }
+    internal bool IsNumericGestureCurrent(InspectorProperty property, long id) => !_disposed && _numericGesture is { } gesture && gesture.Id == id &&
+        ReferenceEquals(gesture.Source, property) && ReferenceEquals(gesture.Document, _baseline) && gesture.Selection == _selection &&
+        ReferenceEquals(gesture.Document, _commands.Read().Document?.Content?.Document) && _active.Contains(property);
+    internal long BeginNumericGesture(InspectorProperty property)
+    {
+        if (!CanAdjustNumeric(property)) return 0;
+        var fields = ScaleLinked && property is TransformField && property.Key is "sx" or "sy" or "sz" ? ScaleFields.Cast<InspectorProperty>().ToArray() : [property];
+        var id = unchecked(++_nextGestureId); if (id == 0) id = unchecked(++_nextGestureId);
+        _numericGesture = new(id, property, _baseline, _selection, fields.Select(field => (field, field.CaptureDraft())).ToArray());
+        return id;
+    }
+    internal void FinishNumericGesture(NumericGestureResult result, long id)
+    {
+        var gesture = _numericGesture; if (gesture == null || gesture.Id != id) return; _numericGesture = null;
+        if (_disposed || gesture == null || result != NumericGestureResult.Cancelled || !ReferenceEquals(gesture.Document, _baseline) ||
+            gesture.Selection != _selection || !ReferenceEquals(gesture.Document, _commands.Read().Document?.Content?.Document) ||
+            gesture.Drafts.Any(item => !_active.Contains(item.Field))) return;
+        _restoringGesture = true;
+        try { foreach (var item in gesture.Drafts) item.Field.RestoreDraft(item.Draft); }
+        finally { _restoringGesture = false; }
+        _scaleLinkError = ""; _scaleErrorField = null; RebaseScale(); DraftChanged();
     }
     private bool Validate()
     {
@@ -186,7 +304,11 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     private void UpdateState(SceneAuthoringState? content)
     {
         var valid = Validate(); var draft = HasDraft;
+        if (_scaleLinkError.Length != 0) { valid = false; _scaleErrorField?.SetError(_scaleLinkError); }
+        SetProperty(ref _validationText, string.Join("\n", _components.SelectMany(component => component.Properties
+            .Where(field => field.HasError).Select(field => component.Title + " · " + field.Label + ": " + field.Error))), nameof(DiagnosticsText));
         SetProperty(ref _canEdit, _available && _component != default, nameof(CanEdit));
+        SetProperty(ref _canLinkScale, CanEdit && !_conflict, nameof(CanLinkScale));
         SetProperty(ref _canEditProperties, _available && _entity != default, nameof(CanEditProperties));
         SetProperty(ref _canChangeComponents, CanEditProperties && !draft && !_conflict, nameof(CanChangeComponents));
         foreach (var field in _active) field.Enable(CanEditProperties);
@@ -284,12 +406,14 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         base.OnPropertyChanged(propertyName);
-        if (propertyName == nameof(ErrorText)) base.OnPropertyChanged(nameof(HasError));
+        if (propertyName == nameof(ErrorText))
+        { base.OnPropertyChanged(nameof(HasError)); base.OnPropertyChanged(nameof(DiagnosticsText)); base.OnPropertyChanged(nameof(HasDiagnostics)); }
+        if (propertyName == nameof(DiagnosticsText)) base.OnPropertyChanged(nameof(HasDiagnostics));
     }
     /// <summary>Disconnects field callbacks; borrowed document and preview owners remain alive.</summary>
     public void Dispose()
     {
-        if (_disposed) return; _disposed = true;
+        if (_disposed) return; _disposed = true; _numericGesture = null;
         foreach (var field in Fields.Cast<InspectorProperty>().Concat(_properties.Values).Distinct()) field.Changed -= DraftChanged;
         ClearPropertyChangedSubscribers();
     }

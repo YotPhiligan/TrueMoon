@@ -1,5 +1,1310 @@
 # Engine / Editor: история решений и проверок
 
+<a id="ed4g2a-native-numeric-2026-11-05"></a>
+## ED4g.2a: native numeric acceptance — 2026-11-05
+
+Добавлен `Gui/NumericWorkflow.cs` и отдельный `VerifyNumeric.ps1` в
+ManualTests/AetherPackageConsumer. Скрипт строит source Debug и publishes Release
+Editor/runtime с парными shared binaries; создаёт отдельные проекты, сохраняет
+binlogs/stdout/stderr/assembly paths, native OpenGL PNG, source hashes и report.
+Routed подаёт UiSession.HandleInput, WindowsPointer/WindowsArrows ожидают настоящий
+ввод в окне и валидируют переходы через stage.json. Standard/Cobalt и embedded/
+MS DI используют существующие App factories/Window/cleanup; runtime child не
+запрашивается. Native/font asset проверяется тем же bootstrap.
+
+До исправления быстрый Windows drag давал pointer-down и pointer-up в конечной
+точке. Причина уточнена по реализации
+[GlfwMouse.Position](https://github.com/dotnet/Silk.NET/blob/v2.23.0/src/Input/Silk.NET.Input.Glfw/GlfwMouse.cs):
+это live cursor query, а не координата доставляемого button event; наш callback
+boundary выполняет действие сразу. Platform.Silk теперь хранит последнее ordered
+cursor event отдельно для каждой мыши, использует его для button/wheel и передаёт
+Shift/Ctrl. Native proof после правки показывает down1134/up1174 и
+Scale2/3/5→2.1/3.15/5.25 без auto Apply. Регрессии — в UI истории.
+
+Свежие завершённые runs в `TestResults/NumericNative-20261105/`:
+
+| Profile | Composition | Input | Result |
+| --- | --- | --- | --- |
+| SourceDebug-Fixed | standard/Cobalt | 4routed +6Windows cases | passed |
+| PublishedRelease-Paired | standard/Cobalt | 4routed +6Windows cases | passed |
+| Repeatable-Embedded/SourceDebug-report | embedded/MS DI | 4routed cases | passed |
+| Repeatable-Embedded/PublishedRelease-report | embedded/MS DI | 4routed cases | passed |
+
+Проверены arrows/Shift/Ctrl, invalid NaN без coercion, exact02.0/03.0/05.0 rollback
+на captured Esc, release draft, explicit Ctrl+Enter и одна shared history entry.
+Windows дополнительно проверяет настоящий checkbox, быстрый drag/release, Esc
+после release, Ctrl+Enter и Undo button. Controls retained; final active UI/GPU/
+handles0, runtime children/reports0 во всех четырёх;28native readback PNG retained.
+Свежие full Alloy1101/1101, Hosting154/154, Editor1295/1295 каждый Debug/Release,
+failed/skipped0; focused pointer6/6 Debug. Полный solution test run не выполнялся.
+
+Незавершённые диагностические запуски сохранены: первоначальный harness ожидал
+неполную синхронизацию Open→workspace (исправлено ожиданием EntityIds); автоматические
+Up/Shift+Up приходили как UiKey.None, хотя Ctrl+A распознавался; pre-fix pointer
+run воспроизвёл live-position ошибку; первоначальный Release вызов с Debug runtime
+был отвергнут штатным fingerprint guard, затем выбран парный published Release.
+Эти результаты не включены в четыре passing run. Все тестовые процессы/окна закрыты.
+
+Граница: нет утверждения о физической клавиатуре, arrows с modifiers через Windows,
+Esc при удерживаемой кнопке или pointer modifiers через OS. У текущего automation
+API нет отдельных down/up для смешанного mouse/key жеста. Эти gates идут следующими,
+затем group reset/angle units. Fresh packages, Vulkan validation/runtime preview,
+device-loss, driver recovery и release matrix этим OpenGL smoke не повторялись.
+Отчёт/аудит: `TestResults/NumericNative-20261105/REPORT.md`, `verification.json`.
+
+
+<a id="ed4g2-numeric-gestures-2026-11-05"></a>
+
+## ED4g.2: numeric gestures и proportional Scale — 2026-11-05
+
+Реализован следующий UI пункт плана [ED4g.2](EDITOR_PLAN.md#ed4g2-numeric-gestures).
+Все current numeric editors включают общий NumberBox adjustment: Integer1, Real/
+Position0.1, Rotation(rad)/Scale0.01, Shift×10/Ctrl×0.1. Gesture является draft-only:
+pointer release не Apply; Esc отменяет локальный gesture прежде общего Cancel;
+Ctrl+Enter завершает capture перед одной authoring transaction. Input capture и
+callbacks UI-owned, модель хранит только immutable draft snapshots/identity, не View.
+
+Transform footer LinkScale выключен по умолчанию и не меняет dirty/history сам.
+Typing/step/drag сохраняют XYZ ratios. Drag targets вычисляются от captured3axis
+baseline, предотвращая accumulation drift; возврат к началу сохраняет raw peer
+strings. Decimal multiplication-before-division используется только для round-trip
+operands, иначе finite Double fallback: простые2.01/3.015/5.025 и6.02/9.03/15.05
+показываются без binary tails. Invalid source/peer, overflow и pending-reset targets
+не вызывают частичных peer writes; source draft/diagnostic сохранены, Apply blocked.
+Snapshot exact3flags/value restores прежние drafts на Esc/input loss. Selection,
+document ref/revision и unique per-gesture epoch не допускают stale rollback, в том
+числе при двух Inspector Views с общей borrowed моделью. Engine/schema/wire/DI
+lifetimes и explicit history contract прежние.
+
+Fresh [evidence](../../TestResults/NumericGestures-20261105/REPORT.md): full Editor
+**1295/1295 D/R**, failed/skipped0,24новых Editor cases. Отдельно Alloy **1095/1095**
+и Hosting **154/154** D/R; reviewed controls40/40 Debug. Focused Inspector180/180
+Debug прошёл перед последним formatting-only fix; финальные полные D/R после него
+подтвердили exact string assertions и весь новый subset. Final nonincremental Debug
+build0errors/1555warnings, full solution tests не выполнялись.11Skia CPU frames
+прошли no-auto-Apply/one-transaction/Undo/exactcancel assertions и визуальную проверку;
+preview build0warnings/errors. Native/GPU/fresh package/physical acceptance не повторена.
+
+В fix cycles исправлены реальный fractional-coordinate tick и callback cleanup;
+два overflow fixtures сначала не проходили scene admission из-за parent×child world
+scale, окончательный witness1e10→target1e40 admitted и проверяет atomic preflight.
+Один прежний compact test намеренно учитывает footer (3Vectorrows+CheckBox,116px);
+остальные focus/history/selection/lifetime assertions сохранены. Manual inspector
+smoke проверяет3actualVectorrows и наличие footer, native run не повторён.
+
+Команды full: `dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj
+--no-restore -c Debug` и Release с TRX/results/unique binlog. Авторитетные финальные
+TRX: `Editor-Final-Debug` / `Editor-Final-Release`; предыдущие циклы сохранены отдельно.
+Сборка: `dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug` с `-bl`.
+Далее source/published native numeric gesture/cancel proof; group reset/angle units
+и Observer scheduling/allocation остаются отдельными задачами.
+
+
+<a id="ed4g1-generic-editors-2026-11-05"></a>
+
+## ED4g.1: остальные редакторы и их состояния — 2026-11-05
+
+Реализован [ED4g.1](EDITOR_PLAN.md#ed4g1-generic-editors). Все existing Number/Integer/
+Boolean/String/nullable поля строятся через общую responsive PropertyEditorRow.
+Числа используют NumberBox с прежним typed TextBox Input, boolean отображает «Да»/
+«Нет», строки сохраняют RichTextEditor и автоматически растут26–78. Null показывает
+«Не задано», скрывая, но сохраняя тот же контрол и stored draft. Пустая строка,
+null и0 остаются различными. GenericEditors доступны по прежним точным addresses;
+удаление selection/schema/dispose очищает owned controls и mapping. Reset/provenance
+раскрываются на полной ширине; ошибка/modified/hover/focus/disabled/read-only
+применяют общие роли и actual checkbox indicator. Engine schemas/wire/DI lifetimes
+не менялись. Apply/Ctrl+Enter, Cancel/Esc и одна shared transaction сохраняются.
+
+Свежие [результаты](../../TestResults/InspectorEditors-20261105/REPORT.md): full
+Editor **1271/1271 Debug/Release**, failed/skipped0;15новых Editor cases. Отдельно
+full Alloy **1055/1055 D/R**, Hosting **154/154 D/R**; focused Inspector
+**156/156 Debug**. Null Integer/Number/Boolean проверены отдельными случаями сверх
+строкового fixture: retained typed draft, toggle, commit/Undo; RuntimeIdle false→true
+сохраняет draft/null/reset/history при временно недоступных inputs/accessory.
+Валидация invalid numeric drafts, multiline undo/selection/resize/theme и lifetime
+имеет прямые assertions. Новых analyzer warnings нет; два прежних xUnit1031 в
+Diagnostics сохранены. Общий nonincremental Debug build0errors/1555warnings,
+полного solution test run нет.14реальных Skia CPU captures просмотрены; source/
+published/fresh NuGet native, runtime/GPU/physical acceptance не повторялись.
+
+Команды: full `dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj
+--no-restore -c Debug` и Release с TRX/results directory/unique binlog. Final focused
+filter: `FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Inspector|FullyQualifiedName~EditorTransformView`.
+Сборка: `dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug` с `-bl`.
+Два intentional legacy теста адаптируют auto height и scroll precondition; история/
+валидация/выделение/cleanup не ослаблялись. Остальные code changes предыдущих задач
+и локальный .codex сохранены. Далее числовые gestures/step/linked scale; Observer
+scheduling/allocation follow-up остаётся отдельной engine-задачей.
+
+
+<a id="ed4g-compact-transform-2026-11-05"></a>
+
+## ED4g: компактный Transform и цветовые состояния — 2026-11-05
+
+Реализован согласованный [ED4g](EDITOR_PLAN.md#ed4g-compact-transform): отдельный
+parent-owned UI control TransformEditor содержит Position XYZ, Rotation P/Y/R в
+радианах и Scale XYZ на общих NumberBox/Vector3Editor. При выборе reserved built-in
+TypeId/schema v1 сохраняются девять точных property addresses и TextBox identities;
+другие типы используют generic fallback, неподдержанный reserved v2 отвергается
+существующим engine validator до публикации controls. Схемы/wire/history не изменены.
+
+Подписи и содержимое TextBox центрированы; три равные колонки адаптируются к ширине.
+«⋯» раскрывает metadata и full-width provenance/индивидуальные reset actions для
+конкретного компонента. Reset остаётся pending draft. Ошибки получают короткую метку
+и полный AccessibleName, а полные field+mutation diagnostics показаны в read-only
+копируемой панели с переносом строк. Draft/ошибка/доступность принадлежат модели;
+цветовые роли/приоритет событий описаны в [общем дизайн-коде](../alloy/DESIGN.md).
+
+Состояния полей обновляются одним coalesced callback View. InspectorProperty.Load
+сравнивает observable values до/после загрузки, не засыпает bounded64 dispatcher
+неизменёнными уведомлениями. Это исправило обнаруженные selection/Cancel/Undo
+регрессии без изменения dispatcher budget и без ослабления прежних однообновленных
+assertions. Изменение UI не меняет Apply/Ctrl+Enter, Cancel/Esc или общую history
+transaction; View по-прежнему заимствует модель и владеет только деревом/подписками.
+
+Fresh [evidence](../../TestResults/CompactInspector-20261105/REPORT.md):
+full Editor **1256/1256 Debug/Release**, failed/skipped0,12новых Editor cases.
+Отдельно full Alloy **1020/1020** и Hosting **154/154** в обеих конфигурациях.
+После assertions-only усиления multi-field diagnostics финальные focused
+**141/141 Debug/Release** прошли; production source прежний. Новых test warnings нет,
+сохраняются два прежних xUnit1031 в Diagnostics. Общая nonincremental Debug сборка
+**0errors/1555warnings**; полный solution test run не выполнялся.
+
+Команды full: `dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj
+--no-restore -c Debug` и Release, с отдельными TRX/log/unique binlog.
+Финальный filter: `FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Inspector|FullyQualifiedName~EditorTransformView`.
+Сборка: `dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug` с `-bl`.
+Точные runnable commands и artifacts — в отчёте. CPU-preview runner в ignored
+TestResults получил9PNG с реальным Skia text layout; Dark/Light/narrow/состояния
+визуально проверены. Manual inspector smoke обновлён для нового disclosure/reset
+пути и3row identity proof; native run, fresh NuGet, runtime/GPU и physical acceptance
+не повторялись. Предыдущие Window/Observer proofs остаются историческими.
+
+Далее numeric gestures/step и linked-scale с явными границами commit/cancel;
+Observer scheduling/allocation follow-up сохраняется отдельной задачей.
+
+
+<a id="ed6b2e4e-observer-open-batches-2026-11-04"></a>
+
+## ED6b.2e.4e: ограниченная параллельность native open — 2026-11-04
+
+По запросу пользователя продолжена оптимизация native open. Baseline — предыдущий
+`TestResults/ObserverNativeOpen-20261104`. Абсолютные NT API сначала сравнены отдельно:
+Win32Basic51.92ms, NtOpenFull51.27ms, NtCreateFull51.92ms, minimal rights52.54ms на2567
+files; преимущества для нового NT API не подтверждены. Warmed bounded parallel
+open+metadata experiment дал59.37ms degree1,30.33ms degree2,16.57ms degree4.
+Это exploratory open-only4round comparison, не end-to-end speedup. `Add-Type`
+первого probe остановился на compile diagnostic недостижимой ветки; ветка удалена,
+final probe JSON/source сохранены отдельно. Один auto-review timeout параллельного
+probe повторён разрешённым retry, затем approved; unresolved approval blockers нет.
+Production не получает NT calls, новые права, OS/thread-pool configuration или
+persistent handle cache. Полные API/schema/dependencies и polling10s/budget5s прежние.
+
+### Реализация, порядок ошибок и lifetime
+
+Новый internal EditorSourceOpenBatch применяется default Census от256known files,
+capacity4. Coordinator последовательно валидирует paths и один владеет directory
+cache; короткие Task.Run jobs только открывают файлы/получают initial metadata.
+Task.WhenAll завершает все начатые opens до передачи batch, включая cancellation.
+Scheduler cancellation не используется: каждый job возвращает reader или captured
+error, открытый product закрывается при cancellation после open.
+
+Missing/exception хранятся в descriptor order, Take передаёт reader один раз.
+Поздняя speculative ошибка не заменяет доказанный Changed более раннего файла.
+Validation error на позиции j прекращает последующий admission, но предыдущие jobs
+дожидаются завершения. File reads/SHA256/cumulative byte budget последовательны,
+один64KiBbuffer; одновременно максимум4staged native file handles. Перед новым
+batch предыдущий закрывается, finally закрывает всё непотреблённое перед retry,
+Changed/Unavailable/cancel/exception, probes и final directory revalidation.
+Stop сохраняет actual worker/open drain; отдельный synchronous OS call не получает
+hard timeout/forced cancellation guarantee. Не добавлены callback IO/UI связи.
+
+Small graphs и injected open/metadata/directory hooks сохраняют serial path. Новый
+optional internal batches factory нужен для deterministic real Census/Watch drain
+tests, не является App API/service lifecycle. Metadata/bytes не кэшируются; native
+sharing/no-follow flags, fresh path/probe checks и directory caps прежние. Initial
+snapshots будущих4files могут предшествовать чтению; sampled/ABA/неатомарные границы
+наблюдения сохраняются. Любой scheduling/allocation cost оценивается вместе с
+end-to-end scan, а не скрывается за native-only experiment.
+
+### Проверки
+
+13methods/21новый case в OpenBatchTests/CensusTests: четыре opens реально overlap,
+handoff ждёт все jobs; offset/tail/invalid inputs, missing/error/validation order,
+transfer-once/disposal, preCancel/cancel-after-open cleanup. Default255/256/257files
+проверяют threshold, полные hashes/fresh probes/exclusive reopen; injected hooks
+остаются serial. Early Changed выигрывает у later locked input. Retry factory
+проверяет prior batch disposed и exclusive reopen unread product до следующего
+admission. Real Watch Stop остаётся incomplete до4native products и не публикует
+поздний snapshot. Test gates bounded и без timing sleeps/OS privilege changes.
+
+Первый focused145/145 прошёл. Затем усилен cleanup самих gated tests и direct
+retry-admission assertions; production не менялась. Full Editor1244/1244 отдельно
+Debug/Release прошли; окончательный focused145/145 Debug иRelease после review
+также прошёл, failed/skipped0. Новые files без analyzer warnings; два прежних
+xUnit1031 в Diagnostics tests сохранены. Final Release harness0warnings/0errors.
+Assertion-quality/static mutation review выполнены; empirical mutation/coverage
+score не заявляется. Internal research/plan/status — OS temp, не intended commit.
+IDE findTests отсутствует; Roslyn pairing один раз22sources/0tests в narrowEditing,
+не вывод об отсутствии module tests. Предыдущие dirty files/.codex сохранены.
+
+SDK commands последовательны/unique binlogs, native tests с ordinary user token
+вне filesystem sandbox. Final focused commands используют одинаковый filter:
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceFile|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceDirectory|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceNativeMetadata|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceOpenBatch|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceCensusTests' --logger 'trx;LogFileName=Focused-Review-Debug.trx' --results-directory TestResults/ObserverNativeOpen2-20261104 '-bl:TestResults/ObserverNativeOpen2-20261104/focused-review-Debug-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceFile|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceDirectory|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceNativeMetadata|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceOpenBatch|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceCensusTests' --logger 'trx;LogFileName=Focused-Review-Release.trx' --results-directory TestResults/ObserverNativeOpen2-20261104 '-bl:TestResults/ObserverNativeOpen2-20261104/focused-review-Release-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore --logger 'trx;LogFileName=Editor-Debug.trx' --results-directory TestResults/ObserverNativeOpen2-20261104 '-bl:TestResults/ObserverNativeOpen2-20261104/editor-debug-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --no-restore --logger 'trx;LogFileName=Editor-Release.trx' --results-directory TestResults/ObserverNativeOpen2-20261104 '-bl:TestResults/ObserverNativeOpen2-20261104/editor-release-tests-{}.binlog'
+dotnet build ManualTests/AetherSourceWatchPerformance/AetherSourceWatchPerformance.csproj -c Release --no-restore '-bl:TestResults/ObserverNativeOpen2-20261104/harness-final-{}.binlog'
+& ./ManualTests/AetherSourceWatchPerformance/Run.ps1 -EvidenceDirectory TestResults/ObserverNativeOpen2-20261104/Performance -Profiles @('files','bytes','control') -SkipBuild
+& ./ManualTests/AetherSourceWatchPerformance/Summarize.ps1 -Verification TestResults/ObserverNativeOpen2-20261104/Performance/verification.json
+& ./ManualTests/AetherSourceWatchPerformance/Profile.ps1 -TraceTool TestResults/ObserverProfile-20261104/tools/dotnet-trace.exe -EvidenceDirectory TestResults/ObserverNativeOpen2-20261104/Profiles -BaselineVerification TestResults/ObserverNativeOpen2-20261104/Performance/verification.json
+dotnet build TrueMoon.slnx -c Debug --no-restore --no-incremental '-bl:TestResults/ObserverNativeOpen2-20261104/solution-debug-{}.binlog'
+```
+
+No SDK/tests/analysis запускаются внутри measurement windows; общий solution build
+выполняется после profile lane. Новые raw manifests/reports/traces/analysis outputs
+сохраняются отдельно; старые/current traces используют один classifier с OpenBatch
+worker roots. Сумма параллельного sampled thread-time не равна elapsed scan time.
+
+### Повторный unprofiled matrix и tradeoff
+
+Те же6isolated Release/net10 cases/default10s/5s, actual four-project descriptors,
+warmed cache, Win11/Ryzen9 9900X/24logical CPUs/.NET10.0.14/SDK10.0.403. В этот раз
+many-files cases выполнены первыми; baseline order был bytes/files/control. Каждый
+case всё равно имеет свой process/fixture/actual Build и3steady samples. Bounds
+snapshot-derived, CPU/allocation/IO whole-process+sampler+polling wait. Нет cold-disk,
+physical UI, statistical или exact method-timer guarantee.
+
+| Case | Serial-open baseline bounds ms | Batch bounds ms | CPU ms/cycle before → after | Alloc MiB/cycle before → after |
+| --- | ---: | ---: | ---: | ---: |
+| files-Polling | 514.26–545.47 | 312.11–335.47 | 406.25 → 500.00 | 3.66 → 4.50 |
+| files-Notifications | 579.41–602.08 | 439.95–469.99 | 468.75 → 671.88 | 3.67 → 4.50 |
+| bytes-Polling | 78.03–108.09 | 77.81–105.40 | 265.62 → 140.62 | 0.40 → 0.40 |
+| bytes-Notifications | 77.23–109.20 | 77.63–102.34 | 203.12 → 140.62 | 0.40 → 0.40 |
+| control-Polling | 0.00–30.76 | 0.00–23.12 | 62.50 → 62.50 | 0.31 → 0.31 |
+| control-Notifications | 0.00–21.23 | 0.00–23.56 | 31.25 → 125.00 | 0.31 → 0.31 |
+
+На2567files median upper bounds уменьшились на38.50% polling/21.94% notifications;
+notification detection824.26→658.80ms. Цена — allocations+22.8%, CPU/cycle+23.1%/
+43.3%:4.84%/6.41% одного logical core вместо3.90%/4.41%. Это latency/throughput
+tradeoff, не CPU/allocation optimization. Физический объём bytes/native opens не
+сокращён; OtherIO16685/cycle прежний. Byte/control graphs serial, отличия их CPU/
+коротких bounds нельзя приписывать batching; small lower0 — sampler resolution.
+
+6/6cases:24full-read Same,6same-length+mtime Changed, budget0, idle source reads0,
+все owners Stopped/watchers0. Polling detection10346.85ms(files)/10148.86ms(bytes),
+notifications658.80/381.79ms. Close/drain1.37–1.84ms. Sampled private peaks70.51–
+120.49MiB/working set107.03–153.41MiB — whole process с retained Build memory,
+не batch-only.54current source/DLL/harness input hashes без drift. Raw options,
+commands/environment/descriptor provenance — Performance/verification.json/reports.
+
+### Повторные profiles, classifier review и финальная сверка
+
+3fresh EventPipe30s traces,2many-files repeats +byte control, прежние tool/options,
+attach после Build/initial pass.3targets/collectors exit0,12Same/3Changed, budget0,
+owners Stopped/watchers0, token не elevated. Old/current traces разобраны одним
+final classifier; actual OpenBatch frames подтверждены в2many-files, byte control
+остался serial. Stack ordering/balance/category conservation прошли.
+
+| Trace | Census sampled thread ms before → after | Open/handle metadata/close % before → after | New unresolved context % | Batch |
+| --- | ---: | ---: | ---: | --- |
+| files-1 | 1191.36 → 1396.13 | 57.88 → 72.74 | 66.47 | да |
+| files-2 | 1137.82 → 1394.52 | 58.89 → 75.43 | 52.96 | да |
+| bytes-3 | 187.04 → 233.41 | 42.56 → 13.34 | 6.66 | нет |
+
+Thread weights суммируют работу concurrent workers и НЕ измеряют elapsed scan time
+или whole-process CPU %. Большее значение при меньшем scan wall time соответствует
+tradeoff, а не опровергает unprofiled result. Open category включает metadata/close,
+не isolated CreateFile syscall timer. Inlining/limited samples/неполная native
+symbolization ограничивают attribution, нулевые categories не равны zero work.
+Byte hash67.03% относится только к этому serial control. Следующий адресный шаг —
+снижение task/allocation/scheduling overhead batch без потери concurrency/ownership;
+kernel/filter-driver attribution и hardware acceptance остаются отдельными.
+
+При review обнаружен classifier bug: frame CreateAsync может остаться ниже inline
+Census continuation. Предварительный match всего EditorSourceOpenBatch относил
+часть дальнейшей работы к open. Final match ограничен producer Open; прежний
+classifier сохранён как AnalyzeProfile-at-collection.ps1 с hash из collection
+manifest. Post-measurement изменение только analysis script записано в
+analysis-revision.json; production/harness/runner inputs и binaries не менялись.
+Все6old/new traces заново разобраны final revision в *-before/after-final.json,
+preliminary outputs сохранены отдельно. Это исправление анализа, не новый run.
+
+Общий nonincremental Debug build0errors/1555warnings; полный solution test run
+не повторён. Aggregate audit:56collection input records (54matrix +script/tool,
+classifier проверен по сохранённому snapshot),1current classifier revision check,
+10827restored fixture hashes,6current raw trace hashes,9reports, drift0. Всего
+36full-read Same/9content changes, budget0/actual drain. Unprofiled ReadBytes exact
+descriptor bytes; diagnostic extra process IO attached targets сохранён отдельно.
+SourceFile/compiler/benchmark C#/Run.ps1 и policy прежние; intended Census/new
+batch/binary/analyzer differences отражены в comparison-audit.json.
+
+Evidence: `TestResults/ObserverNativeOpen2-20261104/REPORT.md`,
+`Performance/verification.json`, `Profiles/verification.json`, `comparison-audit.json`,
+`analysis-revision.json`, `Comparison/*-final.json` и `CompareAndAudit.ps1`.
+GPU/UI/package/window/hardware/release gates не закрываются private scanner scope.
+
+<a id="ed6b2e4d-observer-native-open-2026-11-04"></a>
+
+## ED6b.2e.4d: native open и opened metadata — 2026-11-04
+
+По запросу пользователя продолжена оптимизация оставшегося ED6b.2e.4c участка.
+Private EditorSourceFile/Census изменены, public API/packages/dependencies/policy
+и directory-cache ownership сохранены. Базовое сравнение — непосредственно
+предыдущий `TestResults/ObserverFileIO-20261104`, а не ранний uncached scanner.
+
+### Выбор изменения по native experiment
+
+Read-only open+metadata comparison использует предыдущий owned fixture2567files/
+11.11MiB. Четыре alternating-order rounds, отдельный warmup64files/mode, без hashing/
+polling/sampler в timed loop. Это exploratory warmed open-only experiment,
+не полная стоимость Observer и не statistical guarantee. First/expanded JSON и
+Add-Type C# source сохранены в `TestResults/ObserverNativeOpen-20261104`.
+
+| Native variant | Expanded median ms /2567files |
+| --- | ---: |
+| CreateFileW +legacy handle metadata | 60.28 |
+| CreateFileW +FILE_BASIC_INFO/size | 55.57 |
+| Relative NtCreateFile +legacy metadata | 57.64 |
+| Relative NtCreateFile +basic/size | 55.28 |
+| CreateFile2 +basic/size | 56.02 |
+| CreateFileW without sequential hint +basic/size | 55.92 |
+| CreateFile2 without hint +basic/size | 56.39 |
+
+Initial4mode run дал63.86ms legacy vs56.63ms basic/size; expanded7mode run подтверждает
+примерно8% open-only improvement. Relative/CreateFile2/no-hint не дали устойчивого
+дополнительного выигрыша относительно basic/size. Поэтому production не получает
+NT APIs, borrowed parent handles или новые pin rights.2567fixture hashes после
+экспериментов совпали с descriptor, drift0. `native-probe-verification.json` фиксирует
+scope/source hash; source/full-framework/hardware acceptance им не заменяется.
+
+### Реализация и safety
+
+Opened-before metadata теперь получает FILE_BASIC_INFO40 и GetFileSizeEx вместо
+legacy volume/file-ID record. Reparse/directory guard выполняется до size query;
+negative size отвергается. Legacy GetFileInformationByHandle52 остаётся только
+для unsupported errors1/50/87. Denied/sharing/IO failures по-прежнему дают coverage
+failure и закрывают failed handle. Совместимость unsupported-provider fallback
+проверена по исходникам, но на текущем local filesystem эта ветка не вызвана.
+ABI сверены с [FILE_BASIC_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_basic_info),
+[GetFileInformationByHandleEx](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getfileinformationbyhandleex)
+и [GetFileSizeEx](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfilesizeex).
+LARGE_INTEGER — long, attributes DWORD — uint, BOOL — int, SafeFileHandle ownership
+и SetLastError сохранены. GenericRead/shareRWD/no-follow/sequential flags прежние.
+
+Один reader готовит extended native path один раз. Instance ReadMetadata() использует
+это имя для новой path query, не заменяет её opened-handle snapshot и не следует
+за переименованным исходным handle. Rename/missing/replacement/directory/reparse
+occupation по original path остаются наблюдаемыми. Dispose запрещает новую instance
+query. Census использует prepared name только при отсутствии injected metadata
+delegate; delegate priority/counts/fresh semantics сохранены. Static probe metadata
+queries также свежие, без persistent name/result cache.
+
+Все EOF bytes по-прежнему хешируются; sizes/timestamps не заменяют content check.
+Before остаётся immutable initial snapshot, final metadata всегда перечитывается.
+Не добавлены atomic snapshot/file identity/ABA гарантии или hard OS IO timeout.
+Directory revalidation, cumulative retry/byte budgets, cooperative cancel и actual
+Stop/drain прежние. Семантические тесты не отличают эквивалентную повторную подготовку
+имени; экономия подготовки/аллокаций оценивается отдельными measurements.
+
+### Текущие тесты и команды
+
+Два новых test files,6methods/8cases: short/long Unicode fresh fields, неизменность
+Before, metadata query без изменения read position, disposed guard/exclusive reopen,
+original name после rename→replacement, directory/junction occupation и cleanup,
+default Census explicit long-path full hashing при same-length/mtime edits, приоритет
+injected metadata над native reader и reparse failure без retained owners.
+Initial focused124:122passed/2failed из-за fixture WriteAllBytes(CREATE_ALWAYS) по
+hidden file. Writer заменён на FileMode.Open +SetLength/Write, hidden assertions
+сохранены. Final focused124/124, full Editor1223/1223 Debug/Release, failed/skipped0.
+Новые files без analyzer warnings; два прежних xUnit1031 в Diagnostics tests остаются.
+Editor Release и final harness build0warnings/0errors. Assertion-quality/static
+pseudo-mutation review выполнены, empirical mutation/coverage claims отсутствуют.
+
+IDE findTests недоступен; Roslyn pairing один раз дал22sources/0tests в narrow
+Editing subtree, не project-wide missing tests. Internal research/plan/status в
+OS temp вне intended commit. SDK commands последовательны с unique binlogs;
+native tests/fixtures используют обычный user token вне filesystem sandbox,
+без elevation/ACL/privilege/OS changes. Все предыдущие dirty Window/cache files
+и локальный .codex сохранены. Commands:
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceFile|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceDirectory|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceNativeMetadata|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceCensusTests' --logger 'trx;LogFileName=Focused-Final-Debug.trx' --results-directory TestResults/ObserverNativeOpen-20261104 '-bl:TestResults/ObserverNativeOpen-20261104/focused-final-debug-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore --logger 'trx;LogFileName=Editor-Debug.trx' --results-directory TestResults/ObserverNativeOpen-20261104 '-bl:TestResults/ObserverNativeOpen-20261104/editor-debug-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --no-restore --logger 'trx;LogFileName=Editor-Release.trx' --results-directory TestResults/ObserverNativeOpen-20261104 '-bl:TestResults/ObserverNativeOpen-20261104/editor-release-tests-{}.binlog'
+dotnet build ManualTests/AetherSourceWatchPerformance/AetherSourceWatchPerformance.csproj -c Release --no-restore '-bl:TestResults/ObserverNativeOpen-20261104/harness-final-{}.binlog'
+& ./ManualTests/AetherSourceWatchPerformance/Run.ps1 -EvidenceDirectory TestResults/ObserverNativeOpen-20261104/Performance -Profiles @('bytes','files','control') -SkipBuild
+& ./ManualTests/AetherSourceWatchPerformance/Summarize.ps1 -Verification TestResults/ObserverNativeOpen-20261104/Performance/verification.json
+& ./ManualTests/AetherSourceWatchPerformance/Profile.ps1 -TraceTool TestResults/ObserverProfile-20261104/tools/dotnet-trace.exe -EvidenceDirectory TestResults/ObserverNativeOpen-20261104/Profiles -BaselineVerification TestResults/ObserverNativeOpen-20261104/Performance/verification.json
+dotnet build TrueMoon.slnx -c Debug --no-restore --no-incremental '-bl:TestResults/ObserverNativeOpen-20261104/solution-debug-{}.binlog'
+```
+
+Полный solution build выполняется после measurement windows. Raw TRX/logs/binlogs,
+performance/profiles manifests/reports/traces сохраняются в новом ignored evidence
+directory; прежние outputs не перезаписываются. Старые/new traces анализируются
+одним текущим classifier, включая ReadOpenedMetadata в open category.
+
+### Повторный unprofiled Observer matrix
+
+Прежние Release/net10.0, Windows11/Ryzen9 9900X/24logical CPUs/.NET10.0.14/
+SDK10.0.403, actual four-project descriptors, warmed caches,10s polling/5s budget.
+По3steady samples; snapshot-derived bounds и process-wide CPU/allocation/logical IO,
+включая sampler и polling wait. Build/setup/final hashes вне measured windows.
+
+| Case | File-IO baseline scan bounds ms | Native metadata scan bounds ms | CPU ms/cycle before → after | Other IO ops before → after | Allocation MiB before → after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bytes-Polling | 77.63–109.25 | 78.03–108.09 | 296.88 → 265.62 | 1406 → 1128 | 0.42 → 0.40 |
+| bytes-Notifications | 78.14–103.51 | 77.23–109.20 | 234.38 → 203.12 | 1406 → 1128 | 0.42 → 0.40 |
+| files-Polling | 588.45–613.58 | 514.26–545.47 | 453.12 → 406.25 | 21819 → 16685 | 4.08 → 3.66 |
+| files-Notifications | 560.74–592.55 | 579.41–602.08 | 421.88 → 468.75 | 21819 → 16685 | 4.08 → 3.67 |
+| control-Polling | 0.00–23.10 | 0.00–30.76 | 187.50 → 62.50 | 862 → 720 | 0.32 → 0.31 |
+| control-Notifications | 0.00–21.40 | 0.00–21.23 | 125.00 → 31.25 | 862 → 720 | 0.32 → 0.31 |
+
+На2567files allocations снизились на10.1%, OtherOperations — на5134/cycle (2per-file
+по process counters). Это logical IO observation, не instrumented syscall count.
+Polling median upper bound снизился на11.10%; notifications выше baseline на1.61%,
+его CPU/cycle также выше. Byte notifications и малый polling не улучшили upper bound.
+Общий latency/CPU speedup на всех profiles не заявляется;3samples и заметный разброс
+не являются statistical guarantee. Control lower bound0 означает sampler resolution,
+не zero cost. Memory peaks whole-process/retained Build, не reader-only:
+private75.73–131.82MiB, working set113.29–168.98MiB.
+
+6/6cases,24full-read Same,6same-length+mtime Changed, budget0/owners Stopped/watchers0;
+idle source reads0. Notifications detection824.26ms(files)/389.08ms(bytes),
+polling10545.94/10114.90ms; close/drain1.47–1.91ms.53source/DLL/harness hashes
+без drift. Actual byte counts/options/environment, descriptor provenance и case
+commands сохранены в Performance/verification.json +per-case report.json.
+
+### Повторные profiles и финальная сверка
+
+3fresh EventPipe30s traces на тех же default polling options/tool/buffer, attach
+после actual Build/initial pass:2many-files +byte control.3targets/collectors exit0,
+12Same/3same-length+mtime Changed, budget0, owners Stopped/watchers0, token не elevated.
+Old file-IO и new traces разобраны одним текущим AnalyzeProfile с новыми output
+filenames; старые outputs сохранены. Stack/order/category conservation прошли.
+
+| Trace | Census sampled thread ms before → after | Open/handle metadata/close % before → after | Path metadata % before → after | New unresolved context % |
+| --- | ---: | ---: | ---: | ---: |
+| files-1 | 1190.67 → 1191.36 | 59.23 → 57.88 | 2.52 → 14.57 | 62.00 |
+| files-2 | 1228.87 → 1137.82 | 63.22 → 58.89 | 8.96 → 9.59 | 63.27 |
+| bytes-3 | 200.41 → 187.04 | 30.91 → 42.56 | нет samples → 8.04 | 50.15 |
+
+Open остаётся главным resolved участком many-files. Profile weights — sampled
+managed thread-time conditional на Census/owned helpers, не CPU %, не полный async
+wall breakdown и не isolated CreateFile/metadata syscall time. Новое разделение
+ReadOpenedMetadata/QueryMetadata и inlining меняют caller attribution: увеличение
+видимой path metadata share не доказывает изменение стоимости самой path query.
+Нулевые cache/ancestor samples не означают zero work; sources cache не менялись,
+его tests прошли. Unresolved native/inlined context62–63% в repeats ограничивает
+следующий вывод. Ни uniform speedup, ни точный kernel/filter-driver/lost-event
+разбор не заявлены. Следующий шаг — отдельная native/OS attribution оставшегося
+open cost; новые optimization decisions принимать по ней, сохраняя full hashing.
+
+Общий nonincremental Debug build прошёл0errors/1555warnings, полный solution test
+run не повторялся. Final aggregate audit:55current input hashes (53matrix +script/
+tool),10827restored fixture file hashes,6raw trace hashes,9reports, drift0. Всего
+36full-read Same/9content changes в matrix+profiles. Unprofiled ReadBytes exact
+descriptor bytes; extra process IO attached targets фиксируется отдельно.
+Benchmark C#/project/Run.ps1, compiler и directory-cache sources совпадают с
+file-IO baseline; intentional SourceFile/Census/binaries/analyzer differences
+записаны в comparison-audit.json. Experiments и test intermediates не предназначены
+для commit. UI/GPU/package/hardware/release gates сохраняют собственный scope.
+
+Evidence: `TestResults/ObserverNativeOpen-20261104/REPORT.md`,
+`comparison-audit.json`, `Performance/verification.json`, `Profiles/verification.json`,
+`Comparison/*-before/after.json`, `CompareAndAudit.ps1`; initial failed/final passing
+test artifacts сохранены отдельно. Native open-only experiment не заменяет эти
+whole Observer measurements и не выдаётся за полноценный OS trace.
+
+<a id="ed6b2e4c-observer-file-io-2026-11-04"></a>
+
+## ED6b.2e.4c: открытие файлов и file/probe metadata — 2026-11-04
+
+По запросу пользователя оптимизированы подтверждённые ED6b.2e.4b costs: constructor
+OSFileStreamStrategy42.59–42.70% inclusive и file/probe metadata32.90–34.16% census
+sampled thread weight. Private/internal EditorSourceFile добавлен в Editing;
+публичные API, dependencies/packages, descriptor, App/DI/lifecycle не менялись.
+Предыдущий directory-cache baseline — ignored `TestResults/ObserverCache-20261104`;
+его binaries/hashes намеренно отличаются от нового implementation snapshot.
+
+### Изменение file IO и границы
+
+На один known file теперь один owned SafeFileHandle: CreateFileW с GENERIC_READ,
+READ|WRITE|DELETE sharing, OPEN_EXISTING и SEQUENTIAL_SCAN|OPEN_REPARSE_POINT
+(0x08200000). Нет OVERLAPPED/IOCP binding, дополнительного FileStream buffer или
+queued continuation на каждый small-file read. ReadFile синхронно заполняет общий
+64KiB Census buffer, ReadAsync возвращает completed ValueTask. Это IO на прежнем
+Task.Run Observer worker, не на UI thread. Cancellation проверяется до/после read;
+Stop ждёт actual completion перед disposal. Отдельный OS read не получает hard
+timeout/cancel guarantee; cooperative scan budget5s и polling10s сохранены.
+BACKUP_SEMANTICS в file-open flags отсутствует, privilege/ACL/OS settings не менялись.
+
+Attributes/length/raw FILETIME перед чтением берутся одним GetFileInformationByHandle
+с открытого no-follow handle. После EOF — свежая GetFileAttributesExW query по
+исходному path, проверяющая отсутствие reparse/directory, те же length/write time
+и фактически прочитанный объём. Full SHA256 сравнивается с frozen descriptor,
+включая same-length/same-mtime edits. Это sampled observation, не атомарный snapshot
+и не обещание обнаружить transient change/revert или любую file replacement ABA.
+Read/write/delete sharing сохраняет возможность saves/rename/delete во время read.
+
+Native WIN32_FILE_ATTRIBUTE_DATA36bytes даёт attributes/length/time одним вызовом;
+BY_HANDLE_FILE_INFORMATION52bytes содержит Volume перед SizeHigh/SizeLow. DWORD и
+FILETIME представлены uint fields, BOOL — int, UTF16 LibraryImport/SafeFileHandle
+с SetLastError. Native declarations сверены с
+[Microsoft layout](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/ns-fileapi-by_handle_file_information),
+[attribute data](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/ns-fileapi-win32_file_attribute_data)
+и [ReadFile contract](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-readfile).
+Create/query rejection закрывает свой handle; directory occupancy определяется
+без traversal и без retained file owner. Reparse отвергается при open и final query.
+
+Probes получают fresh metadata без FileInfo/исключений для ожидаемого отсутствия.
+Только Win32 errors2/3 возвращают null; denied/sharing/прочие ошибки дают retryable
+coverage failure, а reparse/occupied probe directory — permanent Unavailable.
+Known-file probes не используют metadata, сохранённые после hashing: presence
+проверяется заново в probe phase. Metadata/file contents не кэшируются между reads,
+attempts или passes. Directory cache/pins/final revalidation, tree membership,
+exclusions, full byte hashing и cumulative retry budgets сохранены.
+
+Прежний injected stream hook остаётся: для него выполняются path-before/path-after
+queries. Новый optional internal metadata delegate принадлежит одному Census и
+нужен для deterministic error/race assertions; globals/public API не добавлены.
+
+### Текущие проверки
+
+Два новых test files: EditorSourceFileTests и EditorSourceFileCensusTests,
+17methods/41cases. Native read0/1/65535/65536/65537bytes, span slice guards/EOF,
+synchronous ValueTask/cancel-no-consumption, read/write/delete sharing, long Unicode
+paths, missing/directory/locked/junction cleanup и HRESULT mapping проверены.
+Census tests подтверждают opened-before metadata/fresh final query, повторный
+known-file probe, denied/IO/security/reparse/loss/instability retries без false Same,
+fresh recovery, cancellation/disposal и oversize-before-open для injected path.
+Существующие byte-budget/retry/hash/membership/probe/directory-cache regressions
+прошли с новой реализацией.
+
+Первый focused116/116 passed. Static review добавил peer reader assertion для
+SHARE_READ; два новых CA2022 в expected-throw async assertions исправлены capture
+count +Assert.Fail, без suppression. Итоговый focused116/116 и full Editor1215/1215
+отдельно Debug/Release прошли, failed/skipped0. Новые files без analyzer warnings;
+остались два прежних xUnit1031 в EditorFullDiagnosticReportTests.cs130/132.
+Release Editor и финальная harness build прошли0warnings/0errors.
+Assertion-quality и static pseudo-mutation review выполнены; empirical mutation
+score/coverage percentage не заявляются. Промежуточные research/plan/status хранятся
+в OS temp, не среди intended commit files. IDE findTests недоступен (Tool not found
+после уточнения rootFolder); existing tests/helpers прочитаны напрямую. Roslyn
+parse-only pairing выполнен однажды: narrow Editing21sources/0tests не означает
+отсутствие тестов у модуля.
+
+Все SDK invocations последовательные, с уникальными binlogs. Native tests и
+performance/profile работают с обычным пользовательским token вне filesystem
+sandbox, без elevation/admin/privilege changes; junctions только owned fixtures.
+Commands (полный solution build выполняется после measurement windows):
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceFile|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceDirectory|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceCensusTests' --logger 'trx;LogFileName=Focused-Final-Debug.trx' --results-directory TestResults/ObserverFileIO-20261104 '-bl:TestResults/ObserverFileIO-20261104/focused-final-debug-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore --logger 'trx;LogFileName=Editor-Debug.trx' --results-directory TestResults/ObserverFileIO-20261104 '-bl:TestResults/ObserverFileIO-20261104/editor-debug-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --no-restore --logger 'trx;LogFileName=Editor-Release.trx' --results-directory TestResults/ObserverFileIO-20261104 '-bl:TestResults/ObserverFileIO-20261104/editor-release-tests-{}.binlog'
+dotnet build ManualTests/AetherSourceWatchPerformance/AetherSourceWatchPerformance.csproj -c Release --no-restore '-bl:TestResults/ObserverFileIO-20261104/harness-final-{}.binlog'
+& ./ManualTests/AetherSourceWatchPerformance/Run.ps1 -EvidenceDirectory TestResults/ObserverFileIO-20261104/Performance -Profiles @('bytes','files','control') -SkipBuild
+& ./ManualTests/AetherSourceWatchPerformance/Summarize.ps1 -Verification TestResults/ObserverFileIO-20261104/Performance/verification.json
+& ./ManualTests/AetherSourceWatchPerformance/Profile.ps1 -TraceTool TestResults/ObserverProfile-20261104/tools/dotnet-trace.exe -EvidenceDirectory TestResults/ObserverFileIO-20261104/Profiles -BaselineVerification TestResults/ObserverFileIO-20261104/Performance/verification.json
+dotnet build TrueMoon.slnx -c Debug --no-restore --no-incremental '-bl:TestResults/ObserverFileIO-20261104/solution-debug-{}.binlog'
+```
+
+В новом `TestResults/ObserverFileIO-20261104` сохраняются TRX/logs/binlogs,
+Performance/Profiles manifests и raw reports/traces. Один обновлённый AnalyzeProfile
+повторно разбирает previous cache и new traces, сохраняя Comparison/*-before/after.json.
+Классификация теперь учитывает EditorSourceFile и OSFileStreamStrategy constructor;
+open category включает initial handle metadata/close и не выдаётся за isolated
+CreateFile syscall timer. Прежние conservative outputs не перезаписываются.
+
+### Повторная unprofiled matrix после file IO изменений
+
+Та же машина/Release/net10/.NET10.0.14/SDK10.0.403, warmed cache и actual four-project
+descriptors, по3steady samples. Snapshot-derived bounds и process-wide CPU/alloc/IO
+включают sampler и polling wait; generation/Build/final hashes за пределами windows.
+Сравнение с непосредственно предыдущим directory-cache baseline:
+
+| Case | Cache baseline scan bounds ms | File IO scan bounds ms | CPU ms/cycle before → after | Other IO ops before → after | Allocation MiB before → after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bytes-Polling | 109.11–130.42 | 77.63–109.25 | 250.00 → 296.88 | 1819 → 1406 | 0.50 → 0.42 |
+| bytes-Notifications | 109.02–136.33 | 78.14–103.51 | 343.75 → 234.38 | 1819 → 1406 | 0.50 → 0.42 |
+| files-Polling | 821.78–846.38 | 588.45–613.58 | 718.75 → 453.12 | 29515 → 21819 | 4.95 → 4.08 |
+| files-Notifications | 827.70–854.66 | 560.74–592.55 | 750.00 → 421.88 | 29515 → 21819 | 4.95 → 4.08 |
+| control-Polling | 0.00–29.10 | 0.00–23.10 | 62.50 → 187.50 | 1072 → 862 | 0.37 → 0.32 |
+| control-Notifications | 0.00–27.88 | 0.00–21.40 | 93.75 → 125.00 | 1071 → 862 | 0.37 → 0.32 |
+
+Many-files median upper bounds снизились ещё на27.50% polling/30.67% notifications,
+allocation на17.6%; process CPU/cycle4.28%/3.99% одного logical core вместо6.63%/6.92%.
+Byte/control scan bounds и allocations уменьшились, но bytes-Polling/control CPU
+выше baseline. Нельзя объявлять universal CPU improvement, вычитать короткий idle
+как точный observer cost или объяснять этот рост без отдельного attribution proof.
+Memory peaks whole-process/retained Build, не reader-only: private70.50–142.60MiB,
+working set106.97–180.03MiB. Small control lower bound0 — ограничение resolution,
+не zero scan cost. Three-sample warmed-cache сравнение не statistical guarantee.
+
+6/6cases,24initial+steady Same с exact descriptor read bytes,6same-length/mtime
+Changed, budget0, все owners Stopped/watchers0, idle source reads0. Notifications
+detection822.39ms(files)/402.09ms(bytes); polling10577.42/10121.62ms. Close/drain
+1.45–2.01ms.53current source/DLL/harness hashes без drift. Actual sizes/counts,
+compiler descriptors, commands/options/environment — в Performance/verification.json
+и per-case report.json; previous baseline raw evidence сохранены.
+
+### Повторное профилирование и итоговая сверка
+
+Три fresh EventPipe30s traces тем же local Microsoft dotnet-trace10.0.750501:
+files-1/files-2/bytes-3, attach после Build/initial pass,64MiB buffer, прежний
+polling-only режим. Token не elevated,3targets/3collectors exit0,12Same/3Changed,
+budget0, все owners Stopped/watchers0. Старые cache и новые traces повторно
+разобраны одним текущим analyzer, balanced stack/order/category conservation прошли.
+
+| Trace | Census thread weight ms before → after | Open/handle metadata/close % before → after | File/probe path metadata % before → after | New unresolved caller context % |
+| --- | ---: | ---: | ---: | ---: |
+| files-1 | 1674.16 → 1190.67 | 44.87 → 59.23 | 32.90 → 2.52 | 57.93 |
+| files-2 | 1696.15 → 1228.87 | 44.48 → 63.22 | 34.16 → 8.96 | 51.87 |
+| bytes-3 | 225.64 → 200.41 | 23.64 → 30.91 | 17.82 → нет samples | 23.21 |
+
+Это disjoint sampled managed thread weights в контексте Census/owned IO helpers,
+не CPU %, не полный async wall-time breakdown и не independent syscall timers.
+Async→sync меняет форму стеков; inlining/sampling оставляют часть работы в caller/
+Other census frames. В files-1/bytes-3 cache frames не попали в samples, в files-2
+видны pins1.26%; это не отсутствие ancestor checks: directory-cache sources
+не менялись, его native/regression tests прошли. Нулевой category sample не равен
+нулевой стоимости. Profile totals не используются как unprofiled speedup estimate.
+
+Initial metadata теперь входит в Open; поэтому рост доли open category и перенос
+работы из FileInfo не являются изолированным CreateFile regression/improvement.
+Оставшийся основной resolved участок — native Open +handle metadata/close59–63%.
+В byte control доминирует hashing46.37% и read22.72%. Точный kernel/filesystem/
+filter-driver cost и dropped-event accounting этими EventPipe данными не доказаны.
+Следующий конкретный Observer шаг — отдельная native/OS attribution открытия
+файлов; выбирать новую оптимизацию по ней, сохраняя обязательный full hashing.
+Повторное внедрение timestamp/content/handle cache этим результатом не разрешается.
+
+Общая nonincremental Debug сборка TrueMoon.slnx прошла0errors/1555warnings;
+полный solution test run не повторён. Aggregate audit:55current input hashes
+(53matrix +collector script/tool),10827restored fixture hashes,6raw trace hashes,
+9reports, drift0. Всего36full Same/9same-length+mtime Changed в matrix+profiles,
+budget0/owners drained. Unprofiled process ReadBytes exact descriptor bytes;
+attached targets имеют diagnostic extra233/0/28bytes в steady windows, записанные
+отдельно, а не объявленные source-only IO. Benchmark C#/project/Run.ps1 и compiler
+sources совпали с cache baseline; intended Census/new reader/binaries/analyzer
+различия записаны в `comparison-audit.json`.
+
+Читаемый отчёт — `TestResults/ObserverFileIO-20261104/REPORT.md`, raw manifests —
+`Performance/verification.json` и `Profiles/verification.json`, повторный анализ —
+`Comparison/*-before/after.json`, aggregate verification — `comparison-audit.json`.
+`CompareAndAudit.ps1` воспроизводит проверки/таблицы; test state остаётся в OS temp.
+UI/GPU/window/package/native consumer и hardware/release/cold-disk/network gates
+не закрываются private scanner tests/performance; прежние passing results ниже
+сохраняют собственный scope. Новый native file IO проверен текущими тестами/graph runs.
+
+<a id="ed6b2e4b-observer-directory-cache-2026-11-04"></a>
+
+## ED6b.2e.4b: кэш каталогов и повторное профилирование — 2026-11-04
+
+По запросу пользователя реализован private/internal per-attempt ancestor cache
+в EditorSourceCensus: новые EditorSourceDirectoryCache и EditorSourceDirectoryPin,
+без изменения public API/packages/dependencies/descriptor и scheduling limits.
+Общий baseline — предыдущие ED6b.2e.4 performance и ED6b.2e.4a traces ниже;
+их passing результаты не выдаются за новые проверки.
+
+### Границы reuse и native ownership
+
+OrdinalIgnoreCase positive cache ограничен 256каталогами. При первом обращении
+цепочка собирается итеративно и закрепляется root-first. Cached descendant допустим
+только при закреплённой цепочке до drive root. Windows CreateFileW использует
+LIST_DIRECTORY|READ_ATTRIBUTES (0x81), READ|WRITE sharing (3), OPEN_EXISTING,
+BACKUP_SEMANTICS|OPEN_REPARSE_POINT (0x02200000). Owned SafeFileHandle проверяет
+FILE_ATTRIBUTE_TAG_INFO; opened reparse отвергается без traversal/retained handle.
+Отсутствие DELETE sharing запрещает rename/replacement каталога до disposal,
+при этом child-file writes/add/rename/delete остаются допустимыми.
+
+Pins optional: при обычном native IO/access failure выполняется fresh path metadata
+check, без memoization всей незакреплённой цепочки. Поэтому новый кэш не требует
+list permission там, где раньше достаточно было metadata permission. Missing,
+non-directory, failed acquisition/admission и overflow не становятся cache hits.
+За пределами cap прежние ancestor checks продолжаются, новый coverage limit не вводится.
+
+Sharing не запрещает in-place ACL/attribute/reparse changes. Непосредственно перед
+Same все cached directories заново проверяются по path: persistent reparse, access
+error, исчезновение или изменение типа отвергаются. Это sampled observation с
+прежними race bounds, не атомарный filesystem snapshot и не обещание поймать
+невидимый transient change/revert. Полные bytes/hashes, tree membership, probes,
+exclusions и cumulative retry budget не заменены metadata/timestamp shortcut.
+
+Одна попытка Census владеет кэшем через using; следующая retry получает новый после
+actual disposal предыдущего. Early Changed/Unavailable/cancel/error также закрывают
+владельцев. Reverse cleanup идёт до конца с aggregation ошибок; rejected product
+с failed cleanup остаётся отдельным owned product для Dispose retry и никогда
+не считается validated. Default SafeFileHandle disposal не бросает; seam не обещает
+автоматически восстановить навсегда падающий custom disposer без владельца.
+Новый typed internal pin/attribute delegate seam не вводит globals или public DI API.
+
+### Текущие проверки и исправления, найденные тестами
+
+Добавлены27test methods /48cases в трёх новых Editing test files: cap0/1/255/256,
+case-insensitive/root-first reuse, fresh overflow, missing/non-directory/unpinnable,
+final reparse/denied/IO/security/loss, isolation across attempts/calls, cancel,
+cleanup errors/retry и настоящие Windows rename/child IO/junction случаи.
+Junctions создаются только между owned GUID fixture children без ACL/OS изменений.
+
+Первый focused Debug72cases дал44passed/28failed: READ_ATTRIBUTES-only handle не
+создавал rename fence, а sandbox не разрешал native open user ancestors. Исправлен
+desired access на LIST_DIRECTORY|READ_ATTRIBUTES; optional pin fallback сохраняет
+metadata-only semantics. Assertions не ослаблены. Повтор ordinary-user access дал
+74/75: единственная ошибка была в test fixture, повторно вычислявшей Tree через
+project после его успешного rename. Сохранены исходные path strings до move.
+Final focused **75/75**, failed/skipped0, включая48новых и27existing Census cases.
+Full Editor **1174/1174 Debug и1174/1174 Release**, failed/skipped0. Только два
+прежних xUnit1031 предупреждения в EditorFullDiagnosticReportTests.cs130/132,
+новые тесты без analyzer warnings. Финальная Release harness build:0warnings/0errors.
+После test phases выполнен полный nonincremental Debug build TrueMoon.slnx:
+0errors/1555warnings. Это новая общая сборка, не полный solution test run.
+
+SDK commands выполнялись последовательно; native tests/performance использовали
+обычный user token вне filesystem sandbox, без elevation/admin/privilege changes.
+Static source pairing выполнен однажды; narrow Editing subtree19sources/0tests
+не является project-wide missing-test выводом. IDE findTests оказался недоступен
+(`Tool findTests not found`), существующие Census tests/helpers прочитаны напрямую.
+Assertion-quality и pseudo-mutation review выполнены; empirical mutation score
+и coverage percentage не заявляются.
+
+Команды (у каждого SDK invocation уникальный `-bl:...-{}.binlog`, restore не повторялся):
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore --filter 'FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceDirectory|FullyQualifiedName~TrueMoon.Aether.Editor.Tests.Editing.EditorSourceCensusTests' --logger 'trx;LogFileName=CacheFocused-Final-Debug.trx' --results-directory TestResults/ObserverCache-20261104 '-bl:TestResults/ObserverCache-20261104/focused-final-debug-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --no-restore --logger 'trx;LogFileName=Editor-Debug.trx' --results-directory TestResults/ObserverCache-20261104 '-bl:TestResults/ObserverCache-20261104/editor-debug-{}.binlog'
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Release --no-restore --logger 'trx;LogFileName=Editor-Release.trx' --results-directory TestResults/ObserverCache-20261104 '-bl:TestResults/ObserverCache-20261104/editor-release-tests-{}.binlog'
+dotnet build ManualTests/AetherSourceWatchPerformance/AetherSourceWatchPerformance.csproj -c Release --no-restore '-bl:TestResults/ObserverCache-20261104/harness-final-{}.binlog'
+dotnet build TrueMoon.slnx -c Debug --no-restore --no-incremental '-bl:TestResults/ObserverCache-20261104/solution-debug-{}.binlog'
+& ./ManualTests/AetherSourceWatchPerformance/Run.ps1 -EvidenceDirectory TestResults/ObserverCache-20261104/Performance -Profiles @('bytes','files','control') -SkipBuild
+& ./ManualTests/AetherSourceWatchPerformance/Summarize.ps1 -Verification TestResults/ObserverCache-20261104/Performance/verification.json
+& ./ManualTests/AetherSourceWatchPerformance/Profile.ps1 -TraceTool TestResults/ObserverProfile-20261104/tools/dotnet-trace.exe -EvidenceDirectory TestResults/ObserverCache-20261104/Profiles -BaselineVerification TestResults/ObserverCache-20261104/Performance/verification.json
+```
+
+Артефакты — ignored `TestResults/ObserverCache-20261104`: исходные failed/retry/final
+TRX/logs/binlogs сохранены отдельно; Performance и Profiles получают собственные
+immutable manifests/raw reports/traces. AnalyzeProfile теперь учитывает cache/pin
+frames, отдельную pin category и явно называет ValidationModel legacy comparison,
+не фактическим optimized syscall count. Один и тот же analyzer применяется к старым
+и новым traces с новыми output filenames; прежние evidence не перезаписываются.
+
+### Повторный unprofiled performance matrix
+
+Те же Windows11/AMD Ryzen9 9900X/24logical CPUs/.NET10.0.14/SDK10.0.403,
+Release/net10, warmed filesystem cache и actual four-project diamond descriptors.
+Шесть isolated sequential processes, по initial+3steady passes, обычные10s/5s.
+Build/generation/final hashes вне measured windows; короткие idle windows не
+вычитаются как точная observer CPU attribution. Медианы трёх steady samples:
+
+| Case | Baseline scan bounds ms | Cache scan bounds ms | Process CPU ms/cycle before → after | Other IO ops before → after | Allocation MiB before → after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bytes-Polling | 155.89–181.64 | 109.11–130.42 | 265.62 → 250.00 | 5468 → 1819 | 0.62 → 0.50 |
+| bytes-Notifications | 156.00–179.72 | 109.02–136.33 | 312.50 → 343.75 | 5468 → 1819 | 0.62 → 0.50 |
+| files-Polling | 1494.21–1524.24 | 821.78–846.38 | 1359.38 → 718.75 | 81200 → 29515 | 6.75 → 4.95 |
+| files-Notifications | 1265.92–1291.21 | 827.70–854.66 | 1343.75 → 750.00 | 81200 → 29515 | 6.75 → 4.95 |
+| control-Polling | 31.95–61.98 | 0.00–29.10 | 156.25 → 62.50 | 3368 → 1072 | 0.44 → 0.37 |
+| control-Notifications | 16.02–45.17 | 0.00–27.88 | 62.50 → 93.75 | 3368 → 1071 | 0.44 → 0.37 |
+
+Для2567files/11.11MiB median upper bound сократился на44.47% polling и33.81%
+notifications; process CPU/cycle6.63%/6.92% одного logical core вместо11.81%/11.74%.
+129.11MiB control уменьшил scan bounds на24–28%, но process CPU в notifications
+выше baseline (343.75vs312.50ms); общей гарантии CPU improvement для всех cases нет.
+Control scans короче sampler resolution, поэтому lower bound0 не означает zero cost.
+Это snapshot bounds/three-sample measured comparison, не statistical guarantee.
+OtherOperations — process logical IO, не точный syscall counter или physical disk IO.
+
+6/6cases прошли, все24initial+steady Same прочитали exact descriptor bytes;
+6same-length+same-mtime edits обнаружены, budget expiry0, idle source reads0,
+Stopped/watchers0. Notifications detection1115.57ms(files)/396.04ms(bytes),
+polling10838.49/10148.15ms; close/drain1.56–2.13ms. Sampled private peak78.89–136.64MiB,
+working set115.27–171.52MiB — whole process с retained Build memory, не cache-only.
+52production/harness/loaded DLL input hashes совпали до/после matrix.
+
+### Повторные profiles, оставшийся расход и финальный audit
+
+Три fresh EventPipe collections тем же local Microsoft dotnet-trace10.0.750501:
+files-1/files-2/bytes-3,30s после Build/initial pass, прежние64MiB/settings,
+3targets и3collectors exit0, token не elevated.12Same/3same-length+mtime Changed,
+budget0, все owners Stopped/watchers0. Один текущий AnalyzeProfile.ps1 повторно
+разобрал старые и новые Speedscope traces в Comparison/*-before/after.json,
+не меняя старые outputs. Event ordering/stack balance/weight conservation прошли.
+
+| Trace | Census sampled thread weight ms before → after | Ancestor attributes % before → after | Cache pin category % | Other file/probe metadata % | Unresolved caller context % |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| files-1 | 2785.32 → 1674.16 | 39.95 → 0.67 | 0.47 | 32.90 | 55.99 |
+| files-2 | 3040.30 → 1696.15 | 41.90 → 1.07 | 0.48 | 34.16 | 55.91 |
+| bytes-3 | 219.67 → 225.64 | 6.80 → 1.09 | в samples не выделена | 17.82 | 41.65 |
+
+Это условный sampled managed thread time реальных Census/cache/pin frames,
+не CPU percent и не полный async wall-time breakdown; profile totals не подменяют
+unprofiled speedup. Native/inlined unresolved caller context55.91–55.99% у files
+ограничивает attribution: точный kernel/syscall cost и dropped events не установлены.
+Conservative disjoint classifier оставляет OSFileStreamStrategy..ctor в Other
+census frames; его отдельно проверенный inclusive caller weight42.59–42.70%
+не суммируется с category shares. FileInfo.Exists16.49–17.47% и
+Census.Attributes16.31–16.64% составляют resolved metadata cost. Следующий
+конкретный Observer шаг — уточнить per-file open/constructor/native и metadata
+cost, затем выбирать следующую адресную оптимизацию без ослабления byte/race fences.
+Directory ancestor validation больше не основной resolved hot path.
+
+Final aggregate audit:54current input hashes (52matrix +collector script/tool),
+10827restored fixture file hashes,6raw trace hashes,9reports, drift0. Всего36Same
+и9content changes в matrix+profiles. Unprofiled ReadBytes exact descriptor bytes;
+attached process имеет ещё233/0/28bytes в steady windows во всех трёх cases.
+Initial audit ошибочно требовал source-only equality от process-wide counter и
+остановился; final audit требует equality без collector и >=descriptor с collector,
+сохраняя каждый extra byte count. Production/tests/измерения не менялись.
+Diagnostic IPC в attached process ограничивает интерпретацию IO этих окон.
+
+Полный машинный audit и сравнение: `TestResults/ObserverCache-20261104/comparison-audit.json`;
+читаемый отчёт: `TestResults/ObserverCache-20261104/REPORT.md`; reproducible audit:
+`CompareAndAudit.ps1`, original audit note — `audit-attempts.md`. Native directory
+tests/profile запускались, UI/GPU/window/package acceptance в этом срезе не повторена.
+Hardware/release/cold-disk/network и полные ED4/ED6 gates остаются отдельными.
+
+<a id="ed6b2e4a-observer-profile-2026-11-04"></a>
+
+## ED6b.2e.4a: конкретное узкое место Observer — 2026-11-04
+
+По запросу пользователя выполнено call-stack profiling вместо дальнейшего вывода
+только по объёму/числу файлов. Microsoft dotnet-trace10.0.750501 установлен локально
+в ignored `TestResults/ObserverProfile-20261104/tools`, version commit
+`ad724c4b85e7ae775e42f393c6e95a7557a57954`; project dependencies/SDK/global tools и
+production C# не менялись. Token не elevated; использован EventPipe, не kernel ETW.
+Все48source/framework/harness hashes предыдущего baseline совпали до/после сборов.
+Новые manual scripts — Profile.ps1 и AnalyzeProfile.ps1, docs/README обновлены.
+
+### Сбор и scope
+
+Тот же public Observer/Release harness/actual frozen four-project descriptor,
+Windows11/AMD Ryzen9 9900X/24logical processors/.NET10.0.14 из baseline. Profiles:
+два повтора2567known files/11.11MiB и один139files/129.11MiB control. Notifications
+disabled, остальные default10s polling after completion/5s budget прежние.
+Каждый target создан runner, PID дополнительно подтверждён `dotnet-trace ps`;
+чужие command lines не сохраняются. Attach начинается после successful frozen Build
+и initial observation, на первом steady polling wait, поэтому source generation,
+SDK/compilation и первоначальная JIT/attach hints фаза вне исследуемого scanner scope.
+
+Collection: `dotnet-common,dotnet-sampled-thread-time`,64MiB buffer,30s duration,
+NetTrace +local Speedscope conversion/rundown. Target продолжает полный benchmark,
+включая3steady observations, same-length/same-mtime edit/revert/sticky Changed и
+actual drain.3targets и3collectors exit0,12initial/steady Same passes,3Changed,
+budget-exceeded0, Stopped/watchers0, source-restoration assertions прошли.
+В профиле captured worker thread-time, включая возможное ожидание; это не raw CPU
+cycles. Global topN в основном показывает idle/provider waits: анализировать его
+проценты как долю стоимости census нельзя.
+
+### Подтверждённый hot path
+
+Analyzer replay проверяет chronological/balanced Speedscope stacks и берёт только
+интервалы с frame настоящего EditorSourceCensus. Categories взаимоисключающие;
+их сумма и сумма leaf weights равны census weight. Inclusive method totals
+пересекаются и отдельно не складываются. Веса по resolved caller context:
+
+| Case | Census sampled thread-time, ms | ValidatePath → ancestor Attributes | File/probe metadata вне ValidatePath | Other census frames | Unresolved frames в census context |
+| --- | --- | --- | --- | --- | --- |
+| files repeat1 |2785.32 |39.95% |20.52% |28.35% |37.70% |
+| files repeat2 |3040.30 |41.90% |18.72% |23.71% |29.32% |
+| bytes control |219.67 |6.80% |7.29% |<0.01% |21.86% |
+
+Resolved ancestor checking — наибольшая branch в обоих many-files repeats;
+вместе с file/probe metadata это60.47–60.62% census stack weight. Tree enumeration+
+entry attributes4.04–4.48%, resolved file read2.78–8.62%, open/handle/dispose2.01–2.25%,
+hash creation/update/finalization0.56–1.00%; unknown/inlined native work не объявляется
+исследованным. Byte control смещается к resolved hash43.20% и open/handle/dispose35.93%.
+Профилировщик добавляет overhead; эти значения не подменяют unprofiled wall/CPU
+baseline ED6b.2e.4 и не являются полным async critical-path breakdown.
+
+Конкретный код:
+[EditorSourceCensus.ValidatePath](../../TrueMoon.Aether.Editor/Editing/EditorSourceCensus.cs)
+для каждого root/file/probe проходит `Path.GetDirectoryName` до drive root и вызывает
+Attributes для каждого ancestor. Helper вызывает File.GetAttributes; common parents
+не дедуплицируются между файлами. Из реального descriptor и неизменённого loop:
+
+| Graph | ValidatePath calls | Ancestor Attributes visits на clean pass | Distinct ancestors | Повторные visits |
+| --- | --- | --- | --- | --- |
+| files, каждый repeat |2655 |26203 |103 |26100 |
+| bytes control |227 |1919 |27 |1892 |
+
+Это source-derived count обязательных loop iterations при полном clean pass,
+не API instrumentation/syscall count; retries могут добавить visits, а tree/file/
+probe checks вне ValidatePath идут дополнительно. Таким образом не только количество
+файлов, но и конкретный повторяемый путь затрат установлен двумя traces плюс code model.
+Native kernel/driver attribution и независимое lost-event accounting не собраны;
+unresolved frames сохраняют видимый managed caller, а не получают выдуманный native symbol.
+
+### Следующее изменение
+
+Адресный target — bounded deduplication/reuse общей ancestor validation в пределах
+pass. До реализации выбрать и проверить safety contract для ancestor rename/replacement,
+reparse changes, absent/access-error probes, IO retries и actual cancellation/drain.
+Не заменять content hashes timestamp cache, не менять census exclusions/limits и
+не переносить cache между owners/baselines без отдельного контракта. Native safety
+и ABA/race fences важнее механического удаления Attributes calls. Production
+оптимизация в этом задании не выполнялась; speedup после неё ещё предстоит измерить
+на тех же graphs/политике, отдельно от profiler overhead.
+
+### Команды, validation и artifacts
+
+Из `src`:
+
+```powershell
+dotnet tool install dotnet-trace --tool-path TestResults/ObserverProfile-20261104/tools --version 10.0.750501 --configfile NuGet.Config
+& ./ManualTests/AetherSourceWatchPerformance/Profile.ps1 -TraceTool TestResults/ObserverProfile-20261104/tools/dotnet-trace.exe -EvidenceDirectory TestResults/ObserverProfile-20261104/Trace4
+foreach ($name in @('files-1','files-2','bytes-3')) {
+    & ./ManualTests/AetherSourceWatchPerformance/AnalyzeProfile.ps1 -Speedscope "TestResults/ObserverProfile-20261104/Trace4/$name/observer.speedscope.json" -Output "TestResults/ObserverProfile-20261104/Trace4/$name/analysis-final.json"
+}
+pwsh -NoProfile -NonInteractive -File TestResults/ObserverProfile-20261104/Audit.ps1
+```
+
+Каждый case дополнительно сохранил `dotnet-trace report <trace> topN --number80
+--inclusive --verbose` и exclusive variant. Точные collector args/PID/start timestamps,
+tool version/hash и discovery — `Trace4/verification.json`. Raw traces4.54–4.73MB,
+Speedscope/etlx caches, topN, profiled benchmark report, stdout/stderr и
+`analysis-final.json` сохранены для каждого case. Canonical
+[REPORT](../../TestResults/ObserverProfile-20261104/REPORT.md), root `audit.json`;
+повторный runner не перезаписывает прежние verification/report files.
+
+Initial Trace1–3 attempts завершились до полезного сбора: empty live stdout и
+несовместимый read sharing mode. Trace4 использует FileShare.ReadWrite для
+live reader и проходит3/3. Первый derived analysis.json сохранён отдельно;
+analysis-final.json использует финальный analyzer с loop-count model и исправленным
+console projection. Эти setup ошибки не относятся к Observer и не смешиваются с traces.
+Unit/full solution/native UI/GPU/fresh package tests не запускались: новые изменения
+только в manual PS scripts/docs. Ранее незакоммиченные Window/Editor/performance
+изменения и src/.codex сохранены, commit/push не выполнялись.
+
+<a id="ed6b2e4-observer-performance-2026-11-04"></a>
+
+## ED6b.2e.4: производительность Observer — 2026-11-04
+
+По запросу пользователя выполнен первый measured baseline на большом поддерживаемом
+local graph при штатных polling10s после previous completion и cooperative budget5s.
+Production Observer/compiler/UI API, limits, SDK/dependencies и runtime lifecycle не
+менялись. Добавлен отдельный headless consumer
+[AetherSourceWatchPerformance](../../ManualTests/AetherSourceWatchPerformance/README.md):
+App DI регистрирует real GameBuildCompiler и IFactory<EditorSourceWatch,ResolvedProject>;
+observer caller-owned, compiler App-owned. Только public API, без fabricated descriptor,
+friend assembly/reflection/copied census. Каждый case получает descriptor из actual
+successful frozen Build четырёх проектов; compilation и source generation вне windows.
+Game/runtime/native UI не запускаются. Исторические Window/Observer unit/native/package
+результаты этим performance run не переобъявляются текущими.
+
+Финальная матрица: Windows11 Pro for Workstations10.0.26300, AMD Ryzen9 9900X,
+12cores/24logical processors, SDK10.0.403, runtime/net10.0.14, Release, workstation GC.
+Шесть последовательных отдельных процессов на той же машине; power/priority/cache/
+OS settings не менялись. Cache warmed by fixture generation/Build, cold-disk guarantee
+нет. Полные OS/CPU/SDK, paths, commands, binary/source/report hashes — в manifests.
+
+### Протокол и границы метрик
+
+Три source fixtures: four-project diamond с64C# files/64KiB(control),2560C# files/
+10MiB(files),128non-Compile data members/128MiB(bytes) плюс4small C# marker.
+Actual descriptor включает также4csproj, entry и exact framework-contract files:
+71/2567/139known files,4trees и84exact probes на case. Shared tree policy наблюдает
+non-Compile files; byte fixture измеряет объём census в пределах compiler profile.
+Нет PackageReference/network/reparse/cold storage или UI presentation profile.
+
+Для каждого fixture default notifications off/on; default debounce250ms/max1s,
+max32watchers. В enabled cases actual mode NotificationsAndPolling,6watchers;
+disabled — Polling/0watchers. Затем2s inert NoBuild, initial full pass,3steady polling cycles,
+late generated file mutation с прежними length/mtime, восстановление байта,
+2s sticky Changed и repeated awaited Dispose/drain. Snapshot-derived scan bounds
+получены с requested5ms sampling; actual max gaps16.46–19.89ms. Lower/upper bounds
+учитывают начальную/конечную sample uncertainty; это не точный method profiler.
+
+CPU — whole target process milliseconds и %одного logical core за полный polling
+cycle, включая10swait и sampler. Managed allocations/GC также process-wide.
+NoBuild2s — startup calibration, Changed2s — post-work calibration; их не вычитаем
+как точный census CPU. CPU granularity Windows заметна на коротких windows.
+GetProcessIoCounters ReadTransfer — logical process bytes, включая cache/metadata,
+не physical disk traffic. Private/working set sampled100ms +endpoints включает
+retained setup/build baseline и может пропустить более короткий peak.
+Setup forced GC, source restoration audit и report/hash writes вне measured windows;
+внутри windows induced GC нет. Cooperative5s не означает hard realtime для stalls.
+
+### Фактические результаты финальной матрицы
+
+Медианы3steady samples; первая observation отдельно сохранена в raw report.
+
+| Graph / mode | Actual files / MiB | Median scan bounds, ms | CPU ms/cycle / %one core | Alloc MiB/cycle | Change publication, ms |
+| --- | --- | --- | --- | --- | --- |
+| control / polling |71 /1.18 |31.95–61.98 |156.25 /1.55 |0.44 |10044.59 |
+| control / notifications |71 /1.18 |16.02–45.17 |62.50 /0.62 |0.44 |299.94 |
+| files / polling |2567 /11.11 |1494.21–1524.24 |1359.38 /11.81 |6.75 |11365.55 |
+| files / notifications |2567 /11.11 |1265.92–1291.21 |1343.75 /11.74 |6.75 |1578.53 |
+| bytes / polling |139 /129.11 |155.89–181.64 |265.62 /2.61 |0.62 |10180.79 |
+| bytes / notifications |139 /129.11 |156.00–179.72 |312.50 /3.07 |0.62 |429.01 |
+
+6/6case processes exit0, initial6+steady18 full Same passes, budget-exceeded0;
+каждый Same pass ReadTransfer равен полному descriptor byte count. Changed6/6
+при прежних length/mtime и после revert остаётся latched, idle ReadBytes0.
+Sampled private peaks76.92–141.20MiB, working-set115.95–176.15MiB по всему процессу,
+а не память одного Observer. В files steady samples — по1Gen0 collection на mode,
+Gen1/2=0; в остальных samples GC0. Close/drain1.48–2.48ms, Stopped/watchers0 у всех
+шести owners; target processes reaped штатно. Source/loaded DLL/harness hashes48,
+restored fixture file hashes5554, report hashes6 — drift0. Detailed raw memory,
+CPU, IO operations, sampler calibration и timing windows —
+[REPORT](../../TestResults/ObserverPerformance-20261104/Final/REPORT.md).
+
+Observed inference: many small files здесь дороже byte volume. OtherOperationCount
+median81200/cycle(files) против5468(bytes), а byte profile читает примерно в11.6раз
+больше данных. Кандидат для следующей attribution — repeated local-drive/ancestor
+metadata validation в EditorSourceCensus.ValidatePath и entry/file attribute calls.
+Call stacks или syscall breakdown пока не собраны: конкретная горячая функция
+не объявляется доказанной причиной. Производственный cache/быстрый путь не добавлялся.
+Далее измерить эту часть отдельно, затем оптимизировать подтверждённую стоимость,
+сохраняя content hashes, exact membership/probes, reparse/byte/entry/depth bounds,
+cooperative cancel и actual drain. Три samples дают baseline, не release guarantee.
+
+### Команды и evidence
+
+Из `src` (действительно выполненные final commands):
+
+```powershell
+dotnet build ManualTests/AetherSourceWatchPerformance/AetherSourceWatchPerformance.csproj -c Release --no-restore -v quiet '-bl:TestResults/ObserverPerformance-20261104/harness-release-data-{}.binlog'
+& ./ManualTests/AetherSourceWatchPerformance/Run.ps1 -EvidenceDirectory TestResults/ObserverPerformance-20261104/Final -Profiles @('bytes','files','control') -SkipBuild
+pwsh -NoProfile -NonInteractive -File ManualTests/AetherSourceWatchPerformance/Summarize.ps1 -Verification TestResults/ObserverPerformance-20261104/Final/verification.json
+pwsh -NoProfile -NonInteractive -File TestResults/ObserverPerformance-20261104/Audit.ps1
+pwsh -NoProfile -NonInteractive -File TestResults/ObserverPerformance-20261104/AuditDocs.ps1
+```
+
+Final harness build0errors/0warnings; unique binlog и console log сохранены.
+Run.ps1 сам умеет Release build с unique binlog; final matrix reuses тот же проверенный
+binary без SDK rebuild между observation cases. Frozen compiler внутри case сохраняет
+свои обычные per-phase SDK stdout/stderr logs. Unit/full-solution tests, native GPU/UI
+и fresh NuGet acceptance в этом lane не запускались: изменены только manual harness/docs.
+
+Evidence: `TestResults/ObserverPerformance-20261104/Final/{verification.json,summary.json,REPORT.md}`,
+six case reports/stdout/stderr, root `audit.json`, `final2.log/exit`, final harness
+binlog и logs. Fixture/artifact temp directories сохранены и перечислены в reports.
+Snapshots фиксируют исходники и точные DLL, а не только historical test counts.
+Docs audit:7PLAN/STATUS/HISTORY files +7new manual files,51local links/anchors,
+broken/trailing whitespace0, git diff --check exit0; `docs-audit.json` сохранён.
+
+Начальные attempts сохранены отдельно и не включены в final table:
+
+- First restore в sandbox не смог прочитать user NuGet.Config; ordinary approved
+  restore/build выполнен. Затем исправлен missing App.Builder callback в harness,
+  не production API. Final build выше прошёл с existing assets.
+- Pilot1 source fixture внутри checkout наследовала Directory.Build.props, mirror
+  path превысил SDK260chars limit до restore. Fixture вынесена в short unique temp
+  вне checkout hierarchy; limits/OS settings не менялись.
+- Pilot2 прошёл, но Process.Refresh100ms sampling давал material overhead на small
+  graph. Финальный sampler использует Win32 IO/memory/handle counters с borrowed
+  SafeProcessHandle и BOOL/int +DWORD/SIZE_T/ULONGLONG layout; signatures сверены с
+  official GetProcessIoCounters/GetProcessMemoryInfo/IO_COUNTERS docs. Pilot CPU
+  не используется как production performance result.
+- Matrix1:4valid control/files cases, затем128MiB C# fixture отклонена aggregate
+  compiler-input budget до Observer. Byte profile заменён non-Compile data той же
+  tree policy; исходная ошибка — compiler fixture boundary, не scan-budget timeout.
+  Все6final cases повторены на одном исправленном binary; старые4не смешиваются с final.
+- CLI `pwsh -File ... -Profiles bytes,files,control` передал одну строку и был
+  отклонён ValidateSet до старта. Final command передаёт typed PowerShell array.
+
+Существующие незакоммиченные Window/Editor изменения и src/.codex сохранены;
+commit/push/package publication не выполнялись. Wider hardware/physical/K7/release
+gates и UNC/network/reparse/HUD/Player остаются отдельными.
+
+<a id="ed4f3-window-root-2026-11-04"></a>
+
+## ED4f.3: Window root стандартного Editor — 2026-11-04
+
+По запросу пользователя реализована адресная интеграция existing Argentis Window
+в standard Editor. [EditorMainWindow](../../TrueMoon.Aether.Editor/EditorMainWindow.cs)
+наследует Window<EditorViewModel>, содержит один IFactory-created EditorView,
+владеет им и подпиской на document presentation; main/document models, factories
+и styles заимствуются. Detached/disposed/foreign factory products проверяются;
+failed constructor очищает только принятый fresh product, сохраняя original/cleanup
+errors. Dispose снимает подписку; retained caption dispatch coalesces owner updates
+и отбрасывает старое attachment. Wrapper style не обходит nested view scope.
+
+UseAetherEditorWindow регистрирует IViewStyle<EditorMainWindow> и
+IFactory<EditorMainWindow, EditorMainWindowArguments> через существующий App/DI
+composition, сохраняя pre-registered factories/style и Cobalt/MS DI. Immutable
+arguments фиксируют effective base Title/ClientSize после configureWindow callback;
+default1280×800/min1100×700 и custom overrides сохранены. Изменение исходных options
+после Build не меняет root/native snapshot. Embedded UseAetherEditor не регистрирует
+standalone wrapper. Новых assemblies/dependencies/scopes нет.
+
+EditorMainWindow.FromRoot принимает только direct component или один WindowFrame,
+проверяет owner/lifetime и возвращает typed nested EditorView. EditorWindow.Presented
+и standard manual consumer используют этот путь. ConfigureDefaultTitleBar,
+включая сохранённый default callback, получает прежний EditorView. Для default
+header берётся immutable base title, чтобы full root caption не удваивал suffix.
+EditorDocumentViewModel.GetWindowCaption/GetWindowCaptionDescription — общий
+UI-independent formatter для native Window и header: base/project/scene/dirty/busy/path.
+
+EditorWindow/EditorSession остаются единственным Save/Discard/Cancel owner.
+Component RequestClose, header и native request входят в прежнюю coordination;
+Window не добавляет второй document Closing handler. Shutdown сохраняет Stop/drain;
+GPU/context initialization остаётся в first-presentation/Ready, root constructor
+предшествует native allocation. Adapter dispose не освобождает заимствованные
+дерево/engine. Core/headless/offscreen/HUD dependencies прежние; Player — ENG7b.2.
+
+### Requirement и точные direct tests
+
+Добавлены4файла/25methods/64cases в TrueMoon.Aether.Editor.Tests; final Debug и
+Release содержат все64cases. Примеры проверяемых контрактов:
+
+| Requirement | Evidence: exact test name |
+| --- | --- |
+| Интегрировать Window в Editor через typed root и один owned view | Factory_CreatesOneTypedEditorPerRootAndOnlyRootOwnsItsIndependentProduct |
+| Сохранить overrides, early root и callback compatibility | StandardRootCallback_UsesCopiedEffectiveSettingsAndPreservesCustomFactoryBeforeNativeAllocation; DefaultHeaderCallback_ChainingReceivesOriginalEditorAndUsesBaseTitleExactlyOnce |
+| Сохранить embedded DI profile | BothProviders_EmbeddedCompositionRetainsRawFactoryAndRegistersNoStandaloneRoot |
+| Одна close policy для component/header/native ×Save/Discard/Cancel | ComponentHeaderAndNativeClose_ReachOneExistingDecisionWithoutDuplicateSaveOrOwnership |
+| Ошибки Save, concurrent drain и forced Shutdown | SaveErrorVeto_IsRetryableWithoutLateCloseOrSecondSaveAndBorrowedRootRemainsAlive; ConcurrentComponentAndNativeClose_DrainIgnoredSaveOnceBeforeRuntimeStop; Shutdown_UpgradesPendingDecisionAndStopsOnceWithoutASecondUserExitOrSave |
+| Caption/source updates сохраняют draft/history/controls и current owner | CaptionDetachReattach_DiscardsOldQueuedWorkAndCoalescesLatestStateWithoutRebuilding; WrappedSourceUpdatesAndProjectReopen_PreserveDraftHistoryControlsAndRejectOldOwner |
+| Failed construction и subscription lifetime | RootStyleFailure_DisposesAcceptedTreeAndPreservesBorrowedModelsAndBothErrors; Disposal_ReleasesCaptionSubscriptionSoBorrowedDocumentModelCannotRetainDisposedRoot |
+| Presented/Ready и borrowed adapter lifetime | EmptyWorkspacePresentation_ReadiesTypedRootOnceWithoutGpuAndAdapterDisposalBorrowsTreeAndEngine |
+
+Test-quality review добавил WeakReference regression: одного отсутствия позднего
+callback недостаточно, поскольку disposed Element.Dispatch мог скрыть утечку
+подписки. Borrowed document model остаётся alive, disposed root должен собраться;
+NoInlining helper и3bounded GC cycles, без sleeps/native IO/production seam.
+Pseudo-mutation review выполнен по исходникам, empirical mutation score и coverage
+percentage не заявляются. Required parse-only source pairing tool не стартовал
+из-за отсутствующих analyzer assets; IDE findTests отсутствовал. Эти ограничения
+не подменены утверждением о выполненном анализаторе. Первые test cycles: compile
+ошибка двух using Scenes и затем62/63 из-за попытки fixture pre-register header
+factory, запрещённой existing contract; fixtures исправлены, assertions не ослаблены.
+Focused63/63 предшествует добавлению WeakReference case; final source proof —1126.
+
+### Текущие проверки и область
+
+- Full Editor1126/1126, Alloy976/976 и Hosting154/154 **отдельно Debug/Release**,
+  failed/skipped0. Final Editor — `EditorFinal-{Debug,Release}.trx`,64new cases
+  независимо сверены. Первые1125Editor TRX исторические для промежуточного состояния.
+- Full solution Debug `--no-restore --no-incremental`:0errors/1584existing warnings.
+  Full solution/Aether tests в этом срезе не запускались. Cached-assets NU1900 и
+  прежние compiler/analyzer warnings не означают нового clean-warning build.
+- VerifyPackages:15fresh packages версии `0.2.2.7-arch2e.20261104003745`,8headless
+  Debug build/published Release ×DLL/apphost ×Cobalt/MS DI и2no-bootstrap negative
+  controls. Isolated consumer/cache, packages не опубликованы в remote feed.
+- VerifyGui WindowRoot: source Debug, source published Release, fresh NuGet
+  published Release ×standard/Cobalt и embedded/MS DI —6/6cases. По14owned children,
+  13graceful/5Game/maxLive1 на case;84children reaped/released,78validation-enabled
+  reports0errors/0warnings,30Game с selected artifact private DLL/BuildId. Шесть
+  deliberate crashes восстановлены. Final UI sessions/GPU/resources/handles0.
+- Standard lane проверяет copied custom Unicode title/1360×840, default header
+  callback с nested EditorView, одну рамку/neutral geometry, retained root/view,
+  clean+dirty native/header/component captions и3current source owners. Три actual
+  component close requests проходят Cancel, failed Save и final clean close через
+  прежнюю policy. Underlying Workflow сохраняет actual preview/game, document/history,
+  project switch/close, Build/reuse/paused Replace/compiler rejection/rollback,
+  selected ProjectReference+locked PackageReference closure и diagnostics.
+- Embedded lane сохраняет raw tree/отдельный View recreation; root/header style
+  creates0. Startup failure/cancel на тех же6verified binaries:12/12cases,
+  failure до native allocation, cancel после first frame, error recorded/completion
+  true, children0, final UI/GPU/handles0. Injected failure cleanup error сохранён
+  как ожидаемый result; не скрыт под утверждением об отсутствии startup errors.
+- Просмотрены3PNG: SourceDebug-Standard/edited, PackageRelease-Standard/
+  diagnostics-health, PackageRelease-Embedded/hierarchy-named. Одна рамка/caption,
+  preview/inspector/diagnostics и embedded geometry сохранены в этих снимках.
+- Evidence audit:2855producer/consumer/package/validation/startup binary hashes,
+  drift0. `VerifyEvidence.ps1` проверяет TRX, exits,6native+12startup reports,
+  resource ledgers и source snapshots. Центральные docs не входят в package snapshot.
+  Документационный audit9PLAN/STATUS/HISTORY +report:54added local links/anchors,
+  broken0, git diff --check exit0; `docs-verification.json` сохраняет результат.
+
+Exact source/test/package/native commands (cwd `src`; logs/TRX/unique binlogs
+сохранены в `TestResults/EditorWindow-20261104`):
+
+```powershell
+foreach ($c in @('Debug','Release')) {
+    dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $c --no-restore --logger "trx;LogFileName=EditorFinal-$c.trx" --results-directory TestResults/EditorWindow-20261104 "-bl:TestResults/EditorWindow-20261104/EditorFinal-$c-{}.binlog"
+}
+pwsh -NoProfile -NonInteractive -File TestResults/EditorWindow-20261104/RunTests.ps1
+dotnet build TrueMoon.slnx -c Debug --no-restore --no-incremental -v quiet '-bl:TestResults/EditorWindow-20261104/solution-debug-{}.binlog'
+pwsh -NoProfile -NonInteractive -File ManualTests/AetherPackageConsumer/VerifyPackages.ps1 -EvidenceDirectory TestResults/EditorWindow-20261104/Packages
+pwsh -NoProfile -NonInteractive -File ManualTests/AetherPackageConsumer/VerifyGui.ps1 -PackageVerification TestResults/EditorWindow-20261104/Packages/verification.json -ValidationDirectory TestResults/EditorWindow-20261104/tools/validation -RunProfile SourceDebug -HostKind All -Scenario WindowRoot -EvidenceDirectory TestResults/EditorWindow-20261104/SourceDebug1
+pwsh -NoProfile -NonInteractive -File ManualTests/AetherPackageConsumer/VerifyGui.ps1 -PackageVerification TestResults/EditorWindow-20261104/Packages/verification.json -ValidationDirectory TestResults/EditorWindow-20261104/tools/validation -RunProfile SourceRelease -HostKind All -Scenario WindowRoot -EvidenceDirectory TestResults/EditorWindow-20261104/SourceRelease
+pwsh -NoProfile -NonInteractive -File ManualTests/AetherPackageConsumer/VerifyGui.ps1 -PackageVerification TestResults/EditorWindow-20261104/Packages/verification.json -ValidationDirectory TestResults/EditorWindow-20261104/tools/validation -RunProfile PackageRelease -HostKind All -Scenario WindowRoot -EvidenceDirectory TestResults/EditorWindow-20261104/PackageRelease
+pwsh -NoProfile -NonInteractive -File TestResults/EditorWindow-20261104/RunStartupCases.ps1
+pwsh -NoProfile -NonInteractive -File TestResults/EditorWindow-20261104/VerifyEvidence.ps1
+```
+
+RunTests.ps1 содержит первые Editor1125 +full Alloy/Hosting commands; последние
+не менялись после дополнительного Editor-only test. Final Editor loop выше —
+авторитетный1126result. Это список выполненных команд, не их временная очередность.
+После выбора binlog-generation все последующие MSBuild commands записывали unique
+binlogs; два начальных bootstrap build имели только console logs.
+
+Для strict Vulkan lane скачан [официальный Khronos nightly archive](https://github.com/KhronosGroup/Vulkan-ValidationLayers/releases/tag/nightly),
+published2026-11-03T08:13:38Z, commit `e34b578596abaab2fc61a906a9f036b6fbe4e312`,
+SHA256 `2CF7A41DF60BE9944499A232178CB7AAB1FB68F4265E6B374F3D8835336F5B93`.
+Metadata/download/digest записаны в `tools/validation-provenance.json`. Layer
+распакован в ignored evidence, VK_LAYER_PATH задан child environment; SDK/driver/
+registry/OS settings не менялись. Доступ к обычному restore/user NuGet.Config
+разрешён для текущих package/native scripts; старое ограничение run2026-11-03
+не является текущим blocker. Validation означает только OpenGL Editor parent/
+Vulkan runtime profile, а не новый proof прежнего plain Window Vulkan UI backend.
+
+Evidence: `TestResults/EditorWindow-20261104/{verification.json,hash-checks.json,REPORT.md}`,
+`Packages/verification.json`, `{SourceDebug1,SourceRelease,PackageRelease}/verification.json`,
+`startup-cases.json` и12Startup reports. UIA2d targeted independent consumer закрыт
+этим profile. Следующий основной шаг — measured source observer cost на большом
+local graph с ordinary10s/5s. Wider Window backends/HUD/Player, physical/DPI/hardware/
+K7/release gates и full ED4/ED6 не объявляются завершёнными.
+
+<a id="window-engine-integration-review-2026-11-03"></a>
+
+## Window: интеграция с движком и Editor — сверка 2026-11-03
+
+По запросу пользователя обновлены PLAN/STATUS после реализации UIA2 и проверена
+необходимость engine integration. Только source review и документация; C# migration,
+новые build/test/native не выполнялись. Результаты предыдущего UIA2 code run —
+[UI HISTORY](../alloy/HISTORY.md#uia2-window-component--2026-11-03):94new cases,
+Alloy976/Hosting154/Editor1062 отдельно Debug/Release, source/published Window/App
+proof и2producer packages. Editor regression там ещё использует прежний view root.
+Missing validation layer/fresh restore и independent NuGet ограничения сохранены.
+
+Проверены источники:
+
+- [EditorWindowConfigurationExtensions](../../TrueMoon.Aether.Editor/EditorWindowConfigurationExtensions.cs):
+  UseAetherEditorWindow создаёт IFactory<EditorView>, host options задают1280×800,
+  min1100×700, custom frame/header; configure callback выполняется последним.
+- [EditorWindow](../../TrueMoon.Aether.Editor/EditorWindow.cs): Presented ожидает
+  EditorView в WindowFrame.Content; Closing делегирует user close в
+  EditorSession.RequestCloseAsync, Shutdown — в StopAsync. Adapter владеет подписками.
+- [EditorView](../../TrueMoon.Aether.Editor/EditorView.cs) — reusable View<EditorViewModel>;
+  [EditorSession](../../TrueMoon.Aether.Editor/EditorSession.cs) принимает именно его
+  для Present и сохраняет document close policy. Embedded consumer использует тот же
+  View factory напрямую, поэтому его нельзя автоматически превратить в Window.
+- [EditorViewportBinding](../../TrueMoon.Aether.Editor/EditorViewportBinding.cs):
+  GPU initialization опирается на ready native context через PostWindow после первого
+  presentation; её нельзя перенести в ранний constructor нового root.
+- [GUI package consumer](../../ManualTests/AetherPackageConsumer/Gui/Program.cs):
+  standard/embedded ветки и direct WindowFrame.Content cast потребуют адресного
+  обновления/отдельной проверки, а не вывода из generic Window probe.
+- [Aether csproj](../../TrueMoon.Aether/TrueMoon.Aether.csproj) содержит Contracts,
+  Enerit/Mithril/Vulkan, без Argentis/Alloy/Hosting. Editor csproj уже содержит Hosting.
+
+Вывод: рекомендовать отдельный standalone Window<EditorViewModel> wrapper для
+standard Editor, сохранить существующий EditorWindow lifecycle adapter и reusable
+EditorView. Component defaults960×540 конфликтуют с editor min1100×700, а Title/
+ClientSize имеют приоритет над host options: explicit snapshot/creation-arguments
+bridge нужен для прежних configure overrides. Typed root/header access, одна рамка,
+общий caption source и один document close owner — части предлагаемого среза
+[ED4f.3](EDITOR_PLAN.md#ed4f3-window-root), не уже реализованные свойства Editor.
+
+Core/headless и offscreen Runtime/preview не требуют Window. HUD остаётся
+external-host View, Player рассматривает компонент только в ENG7b.2 UI-host с
+единственным native/device owner. Публичный Window API и его acceptance ведутся
+в UI плане; shared engine contracts, wire/checkpoints/Replace не меняются.
+Прикладная миграция не назначена автоматически новой основной очередью: measured
+observer cost остаётся текущим Aether шагом. Ссылки и changed-doc diff проверяются
+отдельно от runtime tests; исторические отсутствующие ignored TestResults не
+восстанавливаются и не заменяются новыми passing утверждениями.
+
+Документационный audit прошёл:9documents,35added links/anchors без ошибок,
+git diff --check exit0,16source/2package hash checks drift0,6сохранённых TRX сверены.
+Evidence — `TestResults/WindowPlanning-20261103/verification.json`; новые runtime
+проверки этой записью не объявляются.
+
 ## ED6b.2e.2–3: Observer и source UI — 2026-11-03
 
 Работа начата2ноября, финальная матрица завершена3ноября. Реализован

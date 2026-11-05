@@ -8,7 +8,7 @@ using TrueMoon.Argentis;
 namespace TrueMoon.Alloy.Hosting;
 
 /// <summary>Owns a standalone window and graphics resources on the shared Windows UI owner thread.</summary>
-public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
+public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable, IWindowController
 {
     private static long _nextId;
     private volatile UiDiagnostics? _diagnostics;
@@ -31,6 +31,9 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
     private VulkanWindowPresenter? _presenter;
     private UiSession? _session;
     private DefaultWindowFrameBinding? _defaultFrame;
+    private WindowFrame? _windowFrame;
+    private WindowComponentBinding? _component;
+    private Element? _startupRoot;
     private Exception? _failure;
     private bool _rendering;
     private readonly ConcurrentQueue<Action<SilkWindowHost>> _commands = new();
@@ -211,7 +214,20 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
     }
     private void Initialize()
     {
+        var root = _root() ?? throw new InvalidOperationException("The root factory returned null.");
+        if (root.IsDisposed || root.IsAttached || root.Parent != null || root is Window { IsHosted: true })
+            throw new InvalidOperationException("The root factory must return a fresh, detached root.");
+        _startupRoot = root;
+        WindowComponentBinding.ValidateRoot(root);
+        if (root is Window component) WindowComponentBinding.Configure(component, _options);
         _window = new SilkWindowHost(_options.Width, _options.Height, _options.Title, _options.OpenGL, _options.Appearance, _options.Chrome);
+        if (root is Window view)
+            _component = new WindowComponentBinding(view, this, title =>
+                {
+                    _window.NativeWindow.Title = title;
+                    if (_windowFrame?.DefaultTitleBar is { } bar) bar.Title = title;
+                },
+                size => { _options.Chrome?.ValidateSize(size); _window.Resize((int)size.Width, (int)size.Height); });
         AppearanceCapabilities = _window.AppearanceCapabilities;
         ChromeCapabilities = _window.ChromeCapabilities;
         if (_options.OpenGL)
@@ -222,7 +238,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
             using var api = Silk.NET.OpenGL.GL.GetApi(name => gl.TryGetProcAddress(name, out var address) ? address : 0);
             var deviceInfo = new UiRenderDeviceInfo("OpenGL", api.GetStringS(Silk.NET.OpenGL.StringName.Renderer),
                 api.GetStringS(Silk.NET.OpenGL.StringName.Vendor), api.GetStringS(Silk.NET.OpenGL.StringName.Version));
-            _session = CreateSession(new OpenGLUiTarget(name => gl.TryGetProcAddress(name, out var address) ? address : 0, gl.MakeCurrent)
+            _session = CreateSession(root, new OpenGLUiTarget(name => gl.TryGetProcAddress(name, out var address) ? address : 0, gl.MakeCurrent)
                 { DeviceInfo = deviceInfo }, _window);
         }
         else
@@ -230,8 +246,9 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
             _device = new VulkanDevice(_window.NativeWindow, _options.ValidationMessage);
             _presenter = new VulkanWindowPresenter(_device, _options.Appearance.Transparency);
             SupportsPerPixelTransparency = _window.AppearanceCapabilities.TransparentFramebuffer && _presenter.SupportsPerPixelTransparency;
-            _session = CreateSession(SilkVulkanHost.CreateTarget(_device), _window);
+            _session = CreateSession(root, SilkVulkanHost.CreateTarget(_device), _window);
         }
+        _startupRoot = null;
         _window.Input += Input;
         _frames.Attach(_session);
         _window.RenderRequested += Render;
@@ -243,8 +260,11 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
         _window!.NativeWindow.IsClosing = false;
         _ = _close.Request(UiCloseReason.Native);
     }
-    private Func<UiCloseReason, Task<bool>>[] CloseHandlers() => Closing?.GetInvocationList()
-        .Cast<Func<UiCloseReason, Task<bool>>>().ToArray() ?? [];
+    private Func<UiCloseReason, Task<bool>>[] CloseHandlers()
+    {
+        var host = Closing?.GetInvocationList().Cast<Func<UiCloseReason, Task<bool>>>().ToArray() ?? [];
+        return [..(_component?.SnapshotClosingHandlers() ?? []), ..host];
+    }
     private bool Tick()
     {
         try
@@ -262,6 +282,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
             }
             if (_failure != null) return false; // A terminal failure still drains close handlers before cleanup.
             MakeCurrent();
+            SynchronizeComponent();
             // Finite command batch: a producer cannot starve sibling windows.
             for (var i = 0; i < 64 && !_stop && _commands.TryDequeue(out var command); i++)
             {
@@ -272,6 +293,7 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
             if (_stop) return true;
             var closing = _window!.Pump(render: false);
             ThrowFailure();
+            SynchronizeComponent();
             if (!closing && !_stop) RenderFrame(false);
             if (closing && !_stop) NativeClosing(); // Also intercept direct IsClosing assignments.
             return _stop;
@@ -288,6 +310,18 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
     {
         if (_options.OpenGL) _window?.NativeWindow.GLContext?.MakeCurrent();
     }
+    private void SynchronizeComponent()
+    {
+        if (_component == null || _window == null) return;
+        var viewport = _window.Viewport;
+        _component.Synchronize(_window.State switch
+        {
+            UiWindowState.Normal => WindowPresentationState.Normal,
+            UiWindowState.Minimized => WindowPresentationState.Minimized,
+            UiWindowState.Maximized => WindowPresentationState.Maximized,
+            _ => throw new InvalidOperationException("Unknown native window state.")
+        }, _window.IsFocused, new Size(viewport.Width / viewport.Scale, viewport.Height / viewport.Scale));
+    }
     private void ThrowFailure()
     {
         if (_failure != null) ExceptionDispatchInfo.Capture(_failure).Throw();
@@ -302,7 +336,9 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
                 () => { if (window != null) { window.Input -= Input; window.RenderRequested -= Render; window.NativeWindow.Closing -= NativeClosing; } },
                 _frames.Dispose,
                 () => { MakeCurrent(); if (window is { NativeWindow.IsClosing: false }) window.NativeWindow.Close(); },
+                () => _component?.Dispose(),
                 () => { MakeCurrent(); session?.Dispose(); },
+                () => { if (_startupRoot is { IsDisposed: false } pending) pending.Dispose(); },
                 () =>
                 {
                     if (session is { IsDisposed: false }) throw new InvalidOperationException("UI still owns a borrowed/in-flight frame; keep its presenter/device alive.");
@@ -319,24 +355,21 @@ public sealed class HostedUiWindow : IStartable, IStoppable, IAsyncDisposable
                 },
                 () => window?.Dispose(), () => _closed?.Invoke());
         }
-        finally { _close.Finish(); _defaultFrame = null; _window = null; _session = null; _presenter = null; _device = null; }
+        finally { _close.Finish(); _component = null; _startupRoot = null; _windowFrame = null; _defaultFrame = null; _window = null; _session = null; _presenter = null; _device = null; }
     }
-    private UiSession CreateSession(UiRenderTarget target, SilkWindowHost window)
+    private UiSession CreateSession(Element root, UiRenderTarget target, SilkWindowHost window)
     {
-        var root = _root() ?? throw new InvalidOperationException("The root factory returned null.");
-        if (root.IsDisposed || root.IsAttached || root.Parent != null)
-            throw new InvalidOperationException("The root factory must return a fresh, detached root.");
         Element? title = null;
         try
         {
             if (_options.TitleBarFactory != null)
             {
                 title = _options.TitleBarFactory(window) ?? throw new InvalidOperationException("TitleBarFactory returned null.");
-                root = new WindowFrame(title, root);
+                root = _windowFrame = new WindowFrame(title, root);
             }
             else if (_options.Chrome != null && _options.UseDefaultWindowFrame)
             {
-                var frame = WindowFrame.CreateDefault(_options.Title, root); root = frame;
+                var frame = WindowFrame.CreateDefault(_options.Title, root); root = _windowFrame = frame;
                 frame.TitleBarOverContent = _options.TitleBarOverContent;
                 frame.UseSystemAccentBorder = _options.UseSystemAccentBorder;
                 _options.ConfigureDefaultTitleBar?.Invoke(frame.DefaultTitleBar!, frame.Content, () => { _ = RequestCloseAsync(); });

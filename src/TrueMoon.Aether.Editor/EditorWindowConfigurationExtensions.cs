@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -15,7 +16,10 @@ public static class EditorWindowConfigurationExtensions
     /// <param name="configure">Optional overrides for the standard window settings.</param>
     /// <returns>The same context.</returns>
     /// <remarks>Window creation is deferred to App startup. Custom/embedded hosts instead use IFactory&lt;EditorView&gt;
-    /// and EditorSession.Present/RequestCloseAsync on their UI owner. They own the view and UI session.</remarks>
+    /// and EditorSession.Present/RequestCloseAsync on their UI owner. They own the view and UI session.
+    /// Standard roots use IFactory&lt;EditorMainWindow, EditorMainWindowArguments&gt; and own one EditorView.
+    /// Caption/client settings are copied after configure; later mutation of the options object has no effect.
+    /// ConfigureDefaultTitleBar callbacks still receive EditorView as content, including when chaining the default callback.</remarks>
     public static IAppConfigurationContext UseAetherEditorWindow(this IAppConfigurationContext context,
         SkiaFontCatalog fonts, Action<SilkUiWindowOptions>? configure = null)
     {
@@ -24,6 +28,15 @@ public static class EditorWindowConfigurationExtensions
         {
             if (!services.Exist<EditorSession>()) throw new InvalidOperationException("Call UseAetherEditor before UseAetherEditorWindow.");
             if (services.Exist<EditorWindow>()) throw new InvalidOperationException("Editor window is already registered.");
+            if (!services.Exist<IViewStyle<EditorMainWindow>>())
+                services.Singleton<IViewStyle<EditorMainWindow>>(_ => new EditorMainWindowStyle());
+            if (!services.Exist<IFactory<EditorMainWindow, EditorMainWindowArguments>>())
+                services.Singleton<IFactory<EditorMainWindow, EditorMainWindowArguments>>(resolver =>
+                {
+                    var model = resolver.Resolve<EditorViewModel>(); var documents = resolver.Resolve<EditorDocumentViewModel>();
+                    var views = resolver.Resolve<IFactory<EditorView>>(); var style = resolver.Resolve<IViewStyle<EditorMainWindow>>();
+                    return new Factory<EditorMainWindow, EditorMainWindowArguments>(arguments => new(model, documents, views, style, arguments));
+                });
             services.Singleton<EditorWindow>(r => new(r.Resolve<HostedUiWindow>(), r.Resolve<EditorSession>(),
                     r.Resolve<EditorWorkspace>(), r.Resolve<EditorViewportBinding>(), r.Resolve<AetherHost>()))
                 .Singleton<WindowLifetime>(r => new(r.Resolve<EditorWindow>()))
@@ -31,11 +44,12 @@ public static class EditorWindowConfigurationExtensions
                 .Singleton<IStoppable>(r => r.Resolve<WindowLifetime>());
         });
         IFactory<EditorHeaderView, EditorHeaderArguments>? headers = null;
+        EditorMainWindowArguments arguments = null!;
         context.UsePresentation(resolver =>
         {
             headers = resolver.Resolve<IFactory<EditorHeaderView, EditorHeaderArguments>>();
-            return resolver.Resolve<IFactory<EditorView>>().Create()
-                ?? throw new InvalidOperationException("Editor view factory returned null.");
+            return resolver.Resolve<IFactory<EditorMainWindow, EditorMainWindowArguments>>().Create(arguments)
+                ?? throw new InvalidOperationException("Editor window factory returned null.");
         }, presentation => presentation.UseSkiaOpenGL(fonts).UseSilkWindow(window =>
         {
             window.Width = 1280; window.Height = 800; window.Title = "TrueMoon Aether Editor";
@@ -46,12 +60,21 @@ public static class EditorWindowConfigurationExtensions
             window.ConfigureDefaultTitleBar = (title, content, requestClose) =>
             {
                 var view = (EditorView)content;
-                var header = headers!.Create(new(view.Overlays, title.Title, requestClose))
+                var header = headers!.Create(new(view.Overlays, arguments.Title, requestClose))
                     ?? throw new InvalidOperationException("Editor header factory returned null.");
                 try { title.SetHeader(header); view.Header = header; }
                 catch { if (header.Parent == null && !header.IsDisposed) header.Dispose(); throw; }
             };
             configure?.Invoke(window);
+            arguments = new(window.Title, new(window.Width, window.Height));
+            // Preserve the pre-Window callback contract, including callbacks chaining the default implementation.
+            var configureHeader = window.ConfigureDefaultTitleBar;
+            if (configureHeader != null)
+                window.ConfigureDefaultTitleBar = (title, content, requestClose) =>
+                {
+                    var root = (EditorMainWindow)content;
+                    configureHeader(title, root.EditorView, requestClose);
+                };
         }));
         // Wait only after HostedUiWindow starts. App rollback also runs WindowLifetime
         // when readiness fails after native window creation.

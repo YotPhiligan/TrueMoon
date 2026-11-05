@@ -166,6 +166,8 @@ public sealed class EditorInspectorViewTests
         var view = new EditorInspectorView(test.Model, new EditorInspectorViewStyle());
         using var ui = InspectorFixture.Ui(view); ui.Update();
         var reset = view.Properties[(DocumentData.Custom, "nullable")].Reset;
+        Assert.False(reset.IsVisible);
+        Click(ui, view, view.DetailsButtons[DocumentData.Custom]); Assert.True(reset.IsVisible);
         Click(ui, view, reset); ui.Update(); Assert.True(test.Property(DocumentData.Custom, "nullable").IsReset);
         Click(ui, view, view.Apply); ui.Update();
         Assert.Equal("inherited", Assert.IsType<RichTextEditor>(view.Properties[(DocumentData.Custom, "nullable")].Input).Text);
@@ -198,7 +200,9 @@ public sealed class EditorInspectorViewTests
         Assert.Equal(12f, number.FontSize); Assert.Equal(new Thickness(4, 2, 4, 2), number.Padding);
         Assert.Equal(26f, number.Height); Assert.Equal("1", number.Value);
         Assert.True(number.Bounds.Width > 0); Assert.True(number.Bounds.X + number.Bounds.Width <= view.Components[added].Body.Bounds.X + view.Components[added].Body.Bounds.Width + .01f);
-        Assert.Equal(70f, Assert.IsType<RichTextEditor>(view.Properties[(added, "text")].Input).Height);
+        var multiline = Assert.IsType<RichTextEditor>(view.Properties[(added, "text")].Input);
+        Assert.True(float.IsNaN(multiline.Height)); Assert.Equal(18f, multiline.MinimumContentHeight); Assert.Equal(70f, multiline.MaximumContentHeight);
+        Assert.InRange(multiline.Bounds.Height, 26f, 78f);
         Assert.True(Assert.IsType<CheckBox>(view.Properties[(added, "flag")].Input).IsChecked);
         Assert.True(view.Properties[(added, "nullable")].Null!.IsChecked);
     }

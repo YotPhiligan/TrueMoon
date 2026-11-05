@@ -24,7 +24,8 @@ namespace AetherGuiConsumer;
 
 internal static class Workflow
 {
-    internal static async Task<object> Run(string directory, HostedUiWindow window, UiSession ui, EditorView view, IApp app, CancellationToken token)
+    internal static async Task<object> Run(string directory, HostedUiWindow window, UiSession ui, EditorView view, IApp app, CancellationToken token,
+        Func<Task<bool>>? requestClose = null)
     {
         var projects = app.Services.Resolve<EditorProjects>()!;
         var document = projects.Active!.Documents!;
@@ -65,13 +66,13 @@ internal static class Workflow
                 "Committed edits rebuilt the retained inspector.");
 
             var retained = document.Read().Content;
-            var closing = window.RequestCloseAsync();
+            var closing = requestClose?.Invoke() ?? window.RequestCloseAsync();
             await Until(() => documents.Read().AwaitingDecision);
             Program.Check(documents.Choose(DocumentCloseChoice.Cancel), "Cancel close choice was unavailable.");
             Program.Check(!await closing.WaitAsync(token) && !window.Completion.IsCompleted && ReferenceEquals(retained, document.Read().Content),
                 "Cancelled close lost the window/document.");
             writes.FailNext();
-            closing = window.RequestCloseAsync(); await Until(() => documents.Read().AwaitingDecision);
+            closing = requestClose?.Invoke() ?? window.RequestCloseAsync(); await Until(() => documents.Read().AwaitingDecision);
             Program.Check(documents.Choose(DocumentCloseChoice.Save), "Save close choice was unavailable.");
             Program.Check(!await closing.WaitAsync(token) && !window.Completion.IsCompleted && document.Read().IsDirty &&
                 ReferenceEquals(retained, document.Read().Content) && documents.Read().Error?.ToString().Contains("Acceptance: failed save during close", StringComparison.Ordinal) == true,
@@ -130,7 +131,7 @@ internal static class Workflow
             await Doc(DocumentCommand.Save);
             Program.Check(!document.Read().IsDirty, "Save after recovery failed.");
             var savedPath = document.Read().Path!;
-            Program.Check(await window.RequestCloseAsync().WaitAsync(token), "Clean close was vetoed.");
+            Program.Check(await (requestClose?.Invoke() ?? window.RequestCloseAsync()).WaitAsync(token), "Clean close was vetoed.");
             await window.Completion.WaitAsync(token);
             Program.Check(notificationThreads.SetEquals([owner]) && runtimes.Leases.Count == 14 && maxLive == 1, "Owner-thread or child generation count changed.");
             return new { Captures = captures, PresentedRevisions = revisions, OwnerThread = owner, NotificationThreads = notificationThreads,

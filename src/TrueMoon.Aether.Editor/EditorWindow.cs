@@ -32,7 +32,7 @@ public sealed class EditorWindow : IDisposable, IAsyncDisposable
         token.ThrowIfCancellationRequested();
         ObjectDisposedException.ThrowIf(_dispose != null, this);
         if (!_attached)
-        { _window.FramePresented += Presented; _window.Closing += Closing; _attached = true; }
+        { _window.FramePresented += Presented; _window.Closing += HandleClosingAsync; _attached = true; }
         return Task.CompletedTask;
     }
 
@@ -53,9 +53,9 @@ public sealed class EditorWindow : IDisposable, IAsyncDisposable
         finally { await DisposeAsync().ConfigureAwait(false); }
     }
 
-    private void Presented(UiSession ui)
+    internal void Presented(UiSession ui)
     {
-        var view = (EditorView)((WindowFrame)ui.Root).Content;
+        var view = EditorMainWindow.FromRoot(ui.Root).EditorView;
         _editor.Present(ui, view);
         lock (_gate)
         {
@@ -80,7 +80,7 @@ public sealed class EditorWindow : IDisposable, IAsyncDisposable
         catch (Exception error) { _ready.TrySetException(error); }
     }
 
-    private async Task<bool> Closing(UiCloseReason reason)
+    internal async Task<bool> HandleClosingAsync(UiCloseReason reason)
     {
         if (reason == UiCloseReason.Shutdown) { await _editor.StopAsync().ConfigureAwait(false); return true; }
         return await _editor.RequestCloseAsync().ConfigureAwait(false);
@@ -97,7 +97,7 @@ public sealed class EditorWindow : IDisposable, IAsyncDisposable
         lock (_gate)
         {
             if (_dispose != null) return new(_dispose);
-            if (_attached) { _window.FramePresented -= Presented; _window.Closing -= Closing; _attached = false; }
+            if (_attached) { _window.FramePresented -= Presented; _window.Closing -= HandleClosingAsync; _attached = false; }
             _lifetime.Cancel(); _viewport.Forget(); _ready.TrySetCanceled();
             _dispose = DrainAsync();
             return new(_dispose);

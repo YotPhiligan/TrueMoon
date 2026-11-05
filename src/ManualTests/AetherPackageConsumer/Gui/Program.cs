@@ -33,7 +33,7 @@ internal static class Program
         Directory.CreateDirectory(report);
         try
         {
-            using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+            using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(scenario is "numeric-os" or "numeric-pointer" ? 15 : 4));
             await Run(runtime, report, composition == "embedded", provider == "di", scenario, deadline.Token);
             return 0;
         }
@@ -67,6 +67,7 @@ internal static class Program
         var selectedRuntime = new NativeRuntimeLaunch(runtime, Path.ChangeExtension(runtime, ".dll"), ["--console-diagnostics"]);
         var hostId = BuildIdentity.ForRuntime(selectedRuntime.RuntimeAssemblyPath);
         var capture = new EditorViewReference();
+        var windowProbe = new WindowRootProbe(); SilkUiWindowOptions? configuredWindow = null;
         var ready = new TaskCompletionSource<UiSession>(TaskCreationOptions.RunContinuationsAsynchronously);
         var app = App.Builder(c => { if (microsoft) c.UseDI(); }).Setup(c =>
         {
@@ -77,6 +78,7 @@ internal static class Program
                 s.Singleton<ISceneDocumentStore>(r => r.Resolve<SceneWriteProbe>());
                 if (embedded) s.Singleton<ConsumerViewport>(_ => new());
                 if (scenario == "failure") s.Singleton<IViewStyle<EditorView>>(_ => new FailingStyle());
+                if (scenario == "windowroot") s.Singleton<IViewStyle<EditorMainWindow>>(_ => windowProbe);
             });
             c.UseAetherEditor(o =>
             {
@@ -91,7 +93,21 @@ internal static class Program
                     o.SourceTracking.UseFileSystemNotifications = !embedded;
                 }
             });
-            if (!embedded) c.UseAetherEditorWindow(fonts);
+            if (!embedded) c.UseAetherEditorWindow(fonts, options =>
+            {
+                if (scenario.StartsWith("numeric", StringComparison.Ordinal))
+                { options.Title = "Numeric acceptance · " + scenario; options.Width = 1360; options.Height = 840; return; }
+                if (scenario != "windowroot") return;
+                configuredWindow = options; options.Title = WindowRootProbe.BaseTitle;
+                options.Width = (int)WindowRootProbe.Client.Width; options.Height = (int)WindowRootProbe.Client.Height;
+                var configureHeader = options.ConfigureDefaultTitleBar;
+                options.ConfigureDefaultTitleBar = (bar, content, close) =>
+                {
+                    Check(content is EditorView, "Public header callback no longer receives EditorView.");
+                    windowProbe.HeaderCalls++; windowProbe.HeaderContent = (EditorView)content;
+                    configureHeader!(bar, content, close);
+                };
+            });
             else c.UsePresentation(r =>
             {
                 capture.View = r.Resolve<IFactory<EditorView>>().Create()!;
@@ -106,6 +122,8 @@ internal static class Program
             // A custom host defines its own presentation readiness, just like EditorWindow.Ready.
             if (embedded) c.Services(s => s.Singleton<IStartable>(_ => new FirstPresentation(ready.Task)));
         }).Build();
+        if (configuredWindow != null)
+        { configuredWindow.Title = "late mutation"; configuredWindow.Width = 1600; configuredWindow.Height = 900; }
         var engine = app.Services.Resolve<AetherHost>()!;
         var editor = app.Services.Resolve<EditorSession>()!;
         var projects = app.Services.Resolve<EditorProjects>()!;
@@ -116,7 +134,7 @@ internal static class Program
         using var startup = CancellationTokenSource.CreateLinkedTokenSource(token);
         void Presented(UiSession ui)
         {
-            capture.View ??= (EditorView)((WindowFrame)ui.Root).Content;
+            capture.View ??= EditorMainWindow.FromRoot(ui.Root).EditorView;
             if (embedded) editor.Present(ui, capture.View);
             if (scenario == "cancel") startup.Cancel();
             ready.TrySetResult(ui);
@@ -130,7 +148,7 @@ internal static class Program
         try
         {
             var store = app.Services.Resolve<ISceneDocumentStore>()!;
-            await store.WriteAsync(Path.Combine(projectRoot, "Scenes", "Original.aetherscene"), Scene(), null, token);
+            await store.WriteAsync(Path.Combine(projectRoot, "Scenes", "Original.aetherscene"), Scene(scenario.StartsWith("numeric", StringComparison.Ordinal)), null, token);
             try { await app.StartAsync(startup.Token); }
             catch (Exception error) when (scenario is "failure" or "cancel") { expectedStartup = error; }
             if (scenario is "failure" or "cancel")
@@ -138,7 +156,8 @@ internal static class Program
                 Check(expectedStartup != null, "Injected startup did not fail/cancel.");
                 Check(scenario == "failure" ? Contains(expectedStartup!, "Acceptance: view startup failure") : startup.IsCancellationRequested,
                     "Startup failed for an unrelated reason.");
-                Check(window.AppearanceCapabilities != null, "Startup case did not reach actual native window creation.");
+                Check(scenario == "failure" ? window.AppearanceCapabilities == null && sessions.ActiveSessionCount == 0 : window.AppearanceCapabilities != null,
+                    "Startup did not respect early root failure versus native cancellation boundaries.");
             }
             else
             {
@@ -161,7 +180,11 @@ internal static class Program
                 }
                 try
                 {
-                    workflow = scenario == "sourcewatch"
+                    workflow = scenario.StartsWith("numeric", StringComparison.Ordinal)
+                        ? await NumericWorkflow.Run(report, window, ui, capture.View!, app, scenario is "numeric-os" or "numeric-pointer", scenario == "numeric-os", token)
+                        : scenario == "windowroot"
+                        ? await WindowRootWorkflow.Run(report, window, ui, capture.View!, app, windowProbe, embedded, token)
+                        : scenario == "sourcewatch"
                         ? await SourceWatchWorkflow.Run(report, window, ui, capture.View!, app, token)
                         : scenario.StartsWith("package-", StringComparison.Ordinal)
                         ? await PackageInputWorkflow.Run(report, window, ui, capture.View!, app, scenario, token)
@@ -202,9 +225,9 @@ internal static class Program
         Check(projects.IsClosed && projects.Active == null && (capture.View == null || capture.View.IsDisposed), "UI/project owner did not close.");
         Check(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name is "Game.Logic" or "Game.Shared" or "Game.Packaged"), "Editor loaded a private game assembly.");
         var runtimeReports = Directory.GetFiles(report, "runtime-*.json").Select(p => JsonSerializer.Deserialize<JsonElement>(File.ReadAllText(p))).ToArray();
-        if (scenario is "workflow" or "sourcewatch" || scenario.StartsWith("replace-", StringComparison.Ordinal) || scenario.StartsWith("package-", StringComparison.Ordinal))
+        if (scenario is "workflow" or "windowroot" or "sourcewatch" || scenario.StartsWith("replace-", StringComparison.Ordinal) || scenario.StartsWith("package-", StringComparison.Ordinal))
         {
-            if (scenario == "workflow")
+            if (scenario is "workflow" or "windowroot")
                 Check(runtimeReports.Length == 13 && runtimeReports.Count(child => child.GetProperty("GameLoaded").GetBoolean()) == 5,
                     "Missing graceful preview/game validation reports.");
             else Check(runtimeReports.Length == factory.Leases.Count && runtimeReports.All(child => child.GetProperty("GameLoaded").GetBoolean()),
@@ -256,7 +279,7 @@ internal static class Program
         public async Task StartAsync(CancellationToken cancellationToken = default)
         { cancellationToken.ThrowIfCancellationRequested(); await ready.WaitAsync(cancellationToken); }
     }
-    private static SceneDocument Scene()
+    private static SceneDocument Scene(bool numeric = false)
     {
         var definition = new EntityDefinitionId(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000030"));
         var empty = new EntityDefinitionId(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000031"));
@@ -266,7 +289,9 @@ internal static class Program
         return new(new(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000100")), 7,
             [new(new(CubeId), definition), new(new(Guid.Parse("a846e4a2-7c35-4f21-92e8-000000000002")), empty)],
             [new(definition, new(addedComponents:
-            [new(transform, BuiltInComponents.TransformId, 1, [Value("x", -1.5), Value("y", 1), Value("z", -1)]),
+            [new(transform, BuiltInComponents.TransformId, 1, numeric
+                ? [Value("x", -1.5), Value("y", 1), Value("z", -1), Value("sx", 2), Value("sy", 3), Value("sz", 5)]
+                : [Value("x", -1.5), Value("y", 1), Value("z", -1)]),
              new(appearance, BuiltInComponents.AppearanceId, 1, [Value("r", .8), Value("g", .2), Value("b", .15)])])), new(empty, EntityPatch.Empty)], BuiltInComponents.Schemas);
     }
     internal static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }

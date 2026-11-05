@@ -1,5 +1,17 @@
 # TrueMoon.Aether: план игрового движка и редактора
 
+Продолжение UI2026-11-05 — [ED4g.2](EDITOR_PLAN.md#ed4g2-numeric-gestures):
+numeric gestures и proportional Scale в existing draft/history contract.
+Runtime mutation/viewport tools/schema/wire/DI scope не расширяется.
+
+UI-срез 2026-11-05: компактный инспектор Transform, retained поля и цветовые состояния
+имеют одного прикладного владельца — [ED4g](EDITOR_PLAN.md#ed4g-compact-transform).
+Общие controls/palette находятся в [UIA3 и дизайн-коде](../alloy/DESIGN.md);
+изменений engine schema, authoring/history или runtime wire contract нет.
+Продолжение [ED4g.1](EDITOR_PLAN.md#ed4g1-generic-editors) оформляет остальные scalar/
+nullable editors и их состояния; новые property kinds и engine APIs не вводятся.
+
+
 Зафиксировано **2026-10-13** по обсуждению будущего кастомного движка для одной
 не очень сложной 3D-игры. Исторический срез2026-10-23: **ENG0 определён;
 ENG1 headless supervisor и ENG2 CPU viewport реализованы в bounded probe scope;
@@ -36,6 +48,24 @@ ED1a/ED2a/b и Transform/history/preview consumer реализованы; exact 
 контекст своего этапа и не заменяют актуальный статус.
 [Статус направления](STATUS.md), [общий план](../PLAN.md),
 [правила ведения](../PLANNING.md).
+
+Обновление2026-11-04 после UIA2: standard Editor использует отдельный typed Window
+root по [ED4f.3](EDITOR_PLAN.md#ed4f3-window-root); reusable EditorView и existing
+close/Ready owners сохранены, source/fresh NuGet consumer проверен в bounded scope.
+[Границы Window для engine/Player/HUD](#window-integration-2026-11-03)
+не добавляют UI в headless Aether. Source Observer cost измерена в
+[ED6b.2e.4](EDITOR_PLAN.md#ed6b2e4-observer-performance); профилирование
+[ED6b.2e.4a](EDITOR_PLAN.md#ed6b2e4a-observer-profile) подтвердило repeated ancestor
+Attributes в ValidatePath. [ED6b.2e.4b](EDITOR_PLAN.md#ed6b2e4b-observer-directory-cache)
+реализует bounded per-attempt reuse с native pins/fallback/final revalidation;
+[ED6b.2e.4c](EDITOR_PLAN.md#ed6b2e4c-observer-file-io) добавляет owned synchronous
+file reader и fresh file/probe metadata без timestamp shortcuts или cross-pass reuse;
+[ED6b.2e.4d](EDITOR_PLAN.md#ed6b2e4d-observer-native-open) сокращает подготовку имени
+и запрашивает только необходимые opened metadata с unsupported-provider fallback;
+[ED6b.2e.4e](EDITOR_PLAN.md#ed6b2e4e-observer-open-batches) добавляет bounded native
+open batch для больших graphs с явным latency/CPU/allocation tradeoff;
+текущие повторные замеры и оставшийся hot path ведутся в STATUS/HISTORY.
+Датированные очереди ниже сохраняют контекст; текущая точка — STATUS.
 
 Прикладной план **TrueMoon.Aether.Editor** согласован2026-10-22;
 решение2026-10-27 меняет целевую роль Editor на библиотеку/NuGet-пакет:
@@ -216,6 +246,34 @@ mutation deployment во время сессии не поддерживаетс
 игровых artifacts; прежние checkpoints несовместимы. Scene/project format не меняется. Без descriptor
 общие/headless services работают, default native Start даёт configuration error.
 RuntimeBootstrap выполняет общую validation до App; Main/App.Build принадлежат host.
+
+<a id="window-integration-2026-11-03"></a>
+
+### Window и границы Aether — обновлено 2026-11-04
+
+[UIA2](../alloy/PLAN.md#uia2-window) предоставляет provider-neutral Window component,
+а HostedUiWindow сохраняет native/device ownership. Адресная интеграция standard
+Editor реализована2026-11-04; core/headless/offscreen contracts прежние.
+
+| Контур | Вывод и владелец работы |
+| --- | --- |
+| TrueMoon.Aether core/headless | Window не нужен. В csproj нет Argentis/Alloy/Hosting; public authoring/runtime/control contracts не получают UI dependency |
+| Standard Aether.Editor window | EditorMainWindow : Window<EditorViewModel> содержит один reusable EditorView; factory/header/close/override contract и acceptance — только [ED4f.3](EDITOR_PLAN.md#ed4f3-window-root) |
+| Custom/embedded Editor | Сохранить IFactory<EditorView> и EditorSession.Present/RequestCloseAsync. Контент остаётся View, не обязательным standalone Window |
+| Runtime child / Edit preview | Offscreen frame producer не получает native Window или второй App; существующие bootstrap/session/transport owners прежние |
+| Runtime HUD | View<TData> в external UiSession/compositor по ENG5c.4. Игровое окно/устройство принадлежат host; Window не является корнем HUD по умолчанию |
+| Standalone Player | Рассмотреть Window только в UI-host composition ENG7b.2 после выбора role/native/render owner. Новый HostedUiWindow нельзя добавлять поверх уже owned game window/device; при external host понадобится его controller/connection, а не второй owner |
+
+Наличие Window не меняет pause/input/checkpoint/Replace и не завершает Player/HUD.
+Это UI root, а не ECS/scene component; его presentation state не сериализуется
+как World state или game checkpoint.
+Для Editor сохранены UIA2 early root construction и component property precedence;
+immutable creation arguments фиксируют effective configure overrides до allocation.
+Typed root access/header callback, viewport identity и одна Save/Discard/Cancel
+policy проверены вместе с failure/cancel cleanup. Current full Editor1126 Debug/
+Release и6source/package native workflows относятся к новому consumer;
+[команды/evidence](HISTORY.md#ed4f3-window-root-2026-11-04). Прежний1062 regression
+остаётся исторической проверкой old root. Window не меняет full engine readiness.
 
 ### Этапы ARCH2
 

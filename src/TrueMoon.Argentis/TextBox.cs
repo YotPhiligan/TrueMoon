@@ -71,6 +71,8 @@ public sealed class TextBox : Element
         ClampSelection();
         if (IsReadOnly) context.Fill(new Rect(Bounds.X + Bounds.Width - 4, Bounds.Y + 4, 2, Math.Max(0, Bounds.Height - 8)), Theme.Border);
         var area = Bounds.Deflate(Padding);
+        var lineHeight = Math.Min(area.Height, _text?.Measure("Mg", FontSize, FontFamily).Height ?? area.Height);
+        var textY = area.Y + (area.Height - lineHeight) / 2;
         var caretX = MeasurePrefix(_caret);
         _scrollX = Math.Clamp(_scrollX, Math.Max(0, caretX - area.Width + 2), Math.Max(0, caretX));
         context.Save();
@@ -78,10 +80,10 @@ public sealed class TextBox : Element
         {
             context.Clip(area);
             if (IsFocused && SelectionLength > 0)
-                context.Fill(new Rect(area.X + MeasurePrefix(SelectionStart) - _scrollX, area.Y,
-                    MeasurePrefix(SelectionStart + SelectionLength) - MeasurePrefix(SelectionStart), area.Height), Theme.Accent with { A = 100 });
-            context.Text(Value, area.X - _scrollX, area.Y, IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily);
-            if (IsFocused) context.Fill(new Rect(area.X + caretX - _scrollX, area.Y, 1, area.Height), Foreground);
+                context.Fill(new Rect(area.X + MeasurePrefix(SelectionStart) - _scrollX, textY,
+                    MeasurePrefix(SelectionStart + SelectionLength) - MeasurePrefix(SelectionStart), lineHeight), Theme.Accent with { A = 100 });
+            context.Text(Value, area.X - _scrollX, textY, IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily);
+            if (IsFocused) context.Fill(new Rect(area.X + caretX - _scrollX, textY, 1, lineHeight), Foreground);
         }
         finally { context.Restore(); }
     }

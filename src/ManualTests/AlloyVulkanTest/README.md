@@ -334,3 +334,21 @@ $env:VK_LAYER_PATH=(Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.
 `--window-callback-failure --validation` проверяет deferred errors native-origin mouse/key/text/focus handlers, managed Render dispatch и actual DPI subclass fault (directed WM_GETDPISCALEDSIZE dpi0/valid SIZE). Последующие handlers подавляются, ошибка передаётся через VerifyWindowAccess/Run; direct hosts должны проверять VerifyWindowAccess после manual DoEvents/DoRender. NativeWindow/GLFW callbacks никогда не являются местом для unwind managed exceptions.
 
 Для hosted OpenGL/Vulkan×Opaque/Opacity/PerPixel проверяются original+cleanup errors, Completion/StopAsync identity, tree/focus/registry/HWND/DPI/chrome/transparency hooks cleanup и явная здоровая новая session/window. `--callback-output <path>` сохраняет JSON scope/counters. Нужен существующий validation manifest, переданный через process-local VK_LAYER_PATH. Directed faults не являются physical DPI/device loss или long resource soak. [Точные команды и результаты2026-10-10](../../docs/alloy/HISTORY.md#49--k7-callback-fault-boundary-и-cleanup-2026-10-10).
+## Window component
+
+`--window-component --component-output <fresh-directory>` проверяет настоящий
+Argentis Window<TData> через HostedUiWindow на OpenGL и Vulkan. Initial component
+Title/ClientSize имеют приоритет над host defaults; проверяются одна рамка,
+native/painted caption, resize/state commands, retained focused draft/theme,
+component close veto → async drain → actual cleanup и session/native hooks0.
+App profiles дополнительно проверяют UsePresentationFactory, borrowed VM/style,
+Cobalt/MS DI, lazy Build и единственное создание/disposal продукта и модели.
+OpenGL PNG снимается после presentation. `--validation` требует установленного
+VK_LAYER_KHRONOS_validation и корректного VK_LAYER_PATH; plain run без него не
+является Vulkan validation proof.
+
+```powershell
+dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug -- --window-component --component-output TestResults/WindowComponent/native-debug
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release -o TestResults/WindowComponent/publish
+dotnet TestResults/WindowComponent/publish/AlloyVulkanTest.dll --window-component --component-output TestResults/WindowComponent/native-release
+```

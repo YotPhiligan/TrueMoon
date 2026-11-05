@@ -23,7 +23,12 @@ public sealed class InspectorIconActionsTests
             Assert.Same(section.Header.Parent, section.Remove.Parent);
             Assert.True(section.Header.Bounds.X + section.Header.Bounds.Width <= section.Remove.Bounds.X + .01f);
         }
-        foreach (var property in view.Properties.Values) AssertIcon(property.Reset, UiSymbol.Undo, 24);
+        Assert.All(view.Properties.Values, property => Assert.False(property.Reset.IsVisible));
+        foreach (var details in view.DetailsButtons.Values)
+        {
+            view.Scroll.BringIntoView(details.Bounds); test.Drain(); DocumentUiFixture.Click(test.Ui, details); test.Drain();
+        }
+        foreach (var property in view.Properties.Values) { Assert.True(property.Reset.IsVisible); AssertIcon(property.Reset, UiSymbol.Undo, 24); }
         Assert.All(view.AddButtons.Values, button => { Assert.IsNotType<IconButton>(button); Assert.NotEmpty(button.Value); });
 
         test.Owner.Model.Refresh(InspectorFixture.Parent); test.Drain();
@@ -107,7 +112,9 @@ public sealed class InspectorIconActionsTests
     [InlineData("scroll")]
     public void Tooltip_InputOrContextChangeDisposesOwnedHintWithoutPublishingAnEdit(string change)
     {
-        using var test = new IconsFixture(); test.ShowHint(test.View.Apply);
+        using var test = new IconsFixture();
+        if (change == "scroll") { test.Ui.Resize(new(1280, 200)); test.Drain(); Assert.True(test.View.Scroll.Extent > test.View.Scroll.Bounds.Height); }
+        test.ShowHint(test.View.Apply); var initialOffset = test.View.Scroll.Offset;
         var popup = test.Host.Popup!; var before = test.Owner.Owner.Document.Read().Content;
         switch (change)
         {
@@ -121,6 +128,7 @@ public sealed class InspectorIconActionsTests
             case "scroll": test.View.Scroll.Offset = 50; break;
         }
         test.Drain(); test.Clock.Advance(1000); test.Drain();
+        if (change == "scroll") Assert.True(test.View.Scroll.Offset > initialOffset);
         Assert.Null(test.Host.Popup); Assert.True(popup.IsDisposed); Assert.False(test.View.NeedsFrame);
         Assert.Same(before, test.Owner.Owner.Document.Read().Content); Assert.False(test.Owner.Model.HasDraft);
         Assert.False(test.Host.IsDisposed);

@@ -51,8 +51,37 @@ and allocates no native resources. An initial project is opened at App startup b
 With the standard window, App startup waits for first presentation/viewport
 readiness; a failure rolls back the window and editor even after native creation.
 
-For an embedded UI, omit UseAetherEditorWindow. Create a fresh EditorView through
-IFactory<EditorView> on the parent UI owner thread; the parent owns its tree.
+The standard host now creates `EditorMainWindow : Window<EditorViewModel>` through
+`IFactory<EditorMainWindow, EditorMainWindowArguments>`. The Window owns exactly
+one fresh `EditorView`; models/styles/factories are borrowed. Register a custom
+`IViewStyle<EditorMainWindow>` or typed root factory before UseAetherEditorWindow
+to replace defaults. The default wrapper adds no padding/background of its own;
+the nested EditorView keeps its own scoped style and embedded contract.
+
+The existing configure callback still sets native/backend/chrome/frame options.
+Title/Width/Height are copied after that callback into immutable root arguments,
+preserving the 1280x800 default and supported caller overrides. Later mutations of
+the captured options object have no effect. `ConfigureDefaultTitleBar` continues
+to receive the nested EditorView as content, including callbacks chaining the
+default implementation. Root factories must honour their creation arguments and
+create on the UI owner before native/GPU allocation.
+
+`EditorMainWindow.FromRoot(ui.Root).EditorView` reads the standard typed content
+with or without its one WindowFrame. Embedded consumers retain their own explicit
+view reference. Project/document/dirty caption text comes from the same document
+view-model formatting used by the native title and compact header. Native
+observations never overwrite requested ClientSize; content/focus/drafts/history
+and source-owner binding remain retained.
+
+EditorWindow remains the lifecycle adapter and the single document exit-policy
+owner. Window/header close requests use the existing host coordinator; no second
+Save/Discard/Cancel handler is installed on the component. GPU viewport setup stays
+after first presentation/Ready. Failed early root creation disposes only accepted
+fresh products and allocates no native window. Native/initialization failures and
+App stop still drain through the existing lifecycle.
+
+For an embedded UI, omit UseAetherEditorWindow and use IFactory<EditorView> on the
+parent UI owner thread; the parent owns its tree and requires no Window wrapper.
 After presentation call EditorSession.Present(ui, view). Call RequestCloseAsync
 before user close to apply Save/Discard/Cancel. App shutdown drains accepted work
 and terminally discards any remaining unsaved document. Embedded GPU viewport

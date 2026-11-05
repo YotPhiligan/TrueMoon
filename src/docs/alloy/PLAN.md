@@ -1,5 +1,42 @@
 # TrueMoon.Alloy: план первой рабочей версии
 
+<a id="uia3c-numeric-gestures"></a>
+## UIA3c. Numeric step/drag — 2026-11-05
+
+NumberBox получает opt-in checked Int64/finite Real step и pointer capture gesture,
+явные Completed/Cancelled/Interrupted outcomes, точный string rollback, consumer
+admission/identity gates и cleanup при interrupt/callback failure. Общие styles/
+types/ownership без engine dependency; прикладной proportional Scale и history —
+[ED4g.2](../engine/EDITOR_PLAN.md#ed4g2-numeric-gestures). Контракт ввода и цветовые
+состояния — в [дизайн-коде](DESIGN.md#numeric-gestures). Готовность подтверждается
+arithmetic/routed input/capture/dispose tests и actual Editor transaction proof;
+native/GPU/package/physical gates сохраняют свой scope.
+
+Native follow-up [ED4g.2a](../engine/EDITOR_PLAN.md#ed4g2a-native-numeric)
+проверен в source Debug/published Release standard/Cobalt и embedded/MS DI.
+Platform.Silk сохраняет ordered cursor position для button/wheel input и передаёт
+Shift/Ctrl в pointer events. Windows drag/release/Esc/Ctrl+Enter/Undo подтверждены
+отдельно от routed arrows/captured cancel. Physical arrows, Esc во время удержания
+кнопки и pointer modifiers остаются отдельными gates; затем group reset/angle units.
+
+## UIA3. Компактные редакторы и семантические цвета — 2026-11-05
+
+Продолжение UIA3b: общий PropertyEditorRow с adaptive label/value/accessory,
+ограниченная автоматическая высота RichTextEditor, реальный CheckBox indicator
+для общих color/state roles и read-only activation contract. Прикладные generic
+Number/Integer/Boolean/String/nullable consumers принадлежат
+[ED4g.1](../engine/EDITOR_PLAN.md#ed4g1-generic-editors). Типы схем/engine не расширяются.
+
+
+По согласованному дизайну инспектора принимается [дизайн-код](DESIGN.md).
+Цветовые роли редактора и состояния границы независимы; значения принадлежат Theme.
+Общие `NumberBox`/`Vector3Editor`, pending-edit state и palette tokens развиваются
+здесь; Transform/history/schema integration — в [ED4g](../engine/EDITOR_PLAN.md#ed4g-compact-transform).
+Критерии: равные адаптивные колонки, центрированный текст, retained draft/focus/
+selection/theme, явный state priority/override, error marker и отсутствие idle work.
+Drag/step/linked-scale, success/busy animation и hardware/release gates отдельны.
+
+
 Уточнение INF5,2026-10-31: optional `IUiRenderDiagnostics`/`UiRenderDeviceInfo`
 передаёт cached value-only device evidence из host в surface. OpenGL/Vulkan host
 снимает данные при initialization; getter не делает native calls, IO или waits и
@@ -84,6 +121,69 @@ IEditorCommand/panel/property-editor/tool contracts принадлежат па�
 capabilities, необходимых первому Transform/preview/Undo/save срезу, сохраняя UIA1,
 net10.0/xUnit/ownership и существующие PA/K критерии. Это документационное
 планирование без новых code/API или текущих passing результатов.
+
+<a id="uia2-window"></a>
+
+### UIA2: Window как компонент Argentis — 2026-11-03
+
+По запросу пользователя реализованы Window/Window<TData> как provider-neutral root
+поверх существующих View/content/style и HostedUiWindow. Window<TData> наследует
+Window и реализует IView<TData>; отдельное владение моделью не вводится. Argentis
+не получает зависимости от Alloy/Silk/Skia/App. WindowFrame/WindowTitleBar и native
+ownership остаются прежними; вложенный Window не создаёт самостоятельное окно.
+
+- Title и ClientSize — typed properties с обычным приоритетом local/binding →
+  element style → scoped view style → default. ClientSize: whole logical pixels
+  [1,32768], не обещание предела конкретного GPU; Element.Width/Height — layout.
+- WindowPresentationState/IsActive/ActualClientSize — наблюдение, не команды и не
+  перезапись requested size. Actual size допускает fractional DPI и zero/minimize.
+- IWindowController заимствуется через одну WindowHostConnection; root должен быть
+  fresh/detached. UI owner/lifetime fences предшествуют native side effects; stale
+  connection не может публиковать state в новый host. Controller/VM не dispose-ятся.
+- Minimize/Maximize/Restore/RequestCloseAsync и Closing используют существующую
+  host policy. Component close callbacks перед host callbacks, snapshot на attempt;
+  Application/Native veto/error оставляют окно, Shutdown drains all/ignores vetoes.
+  Caller cancellation отменяет wait, а не accepted attempt/actual drain.
+- HostedUiWindow создаёт root до native/graphics allocation: component initial
+  settings и root validation выполняются до HWND. Это явное уточнение прежнего
+  root-factory timing; фабрика не должна требовать current graphics context.
+  Component Title/ClientSize, включая defaults, имеют приоритет над host settings.
+  Native/platform/backend настройки остаются в Hosting options.
+- Полная fresh root ownership при failed startup; foreign trees не освобождаются.
+  Disconnect предшествует tree/native dispose. Host добавляет одну existing frame,
+  синхронизирует native/default painted title и effective style/binding properties
+  без пересоздания content. Existing ordinary View path проверять отдельно.
+
+Acceptance: direct Argentis component/connection checks, Hosting property/ownership/
+close integration, Cobalt factory compatibility, native OpenGL/Vulkan source Debug/
+published Release, затронутые packages и actual cleanup. Modal/dialog/window-manager,
+новые renderer/platform APIs и hardware/release gates не входят в этот профиль.
+Фактические результаты и текущие ограничения — в STATUS/HISTORY.
+
+Состояние2026-11-04; исходный component run2026-11-03 и новый Editor consumer
+различаются по native/backend scope:
+
+| Подэтап | Состояние и граница вывода |
+| --- | --- |
+| UIA2a: component/connection/Fluent | Реализовано;57новых direct cases входят в full Alloy976/976 Debug/Release |
+| UIA2b: Hosting properties/startup/close | Реализовано;37новых cases входят в full Hosting154/154 Debug/Release; сохранён ordinary View путь |
+| UIA2c: source App/native regression | Проверено в Windows x64/net10/SDK10.0.403: source Debug/published Release, OpenGL/Vulkan и App Cobalt/MS DI, по4/4cases; Editor1062/1062 отдельно Debug/Release — regression старого consumer |
+| UIA2d: package delivery | Independent fresh NuGet Window App consumer проверен через standard Editor/Cobalt; embedded/MS DI regression отдельно. Fresh15packages/headless8/8, published Release2/2 WindowRoot workflows. Это закрывает targeted delivery profile, не все Window backends |
+| UIA2e: validation/остальные режимы | В новом Editor OpenGL parent/Vulkan child profile временный official validation layer доступен:78graceful reports0errors/0warnings. Старый plain Window Vulkan UI-presenter run не переобъявляется validated; physical/hardware/K7/release gates остаются отдельными |
+
+[Команды и результаты исходного component run](HISTORY.md#uia2-window-component--2026-11-03),
+[новый Editor consumer](HISTORY.md#uia2-editor-window-consumer-2026-11-04).
+Текущие full Alloy976/Hosting154 отдельно Debug/Release прошли; это собственные
+suite results, не вывод из Editor tests. Следующие wider Window backend/validation
+checks и PA8c.0/physical/hardware/K7/release gates сохраняют отдельный scope.
+
+Прикладной consumer стандартного окна Aether.Editor реализован:
+[ED4f.3](../engine/EDITOR_PLAN.md#ed4f3-window-root). Его задачи и acceptance ведутся
+только в Editor плане. EditorView сохраняет reusable View contract для embedded
+hosts; headless Aether и offscreen runtime/HUD не получают Window dependency.
+Standalone Player рассматривает Window в своём host composition/ENG7b.2, сохраняя
+одного владельца native window/device. Editor consumer не меняет общего Window API
+и не является доказательством готовности HUD/Player.
 
 ### UIA1: View, Data/ViewModel и scoped styles — 2026-10-22
 

@@ -3,8 +3,11 @@ using TrueMoon.Aether.Builds;
 
 namespace TrueMoon.Aether.Editor.Editing;
 
-// One pass owns its streams. No leases, timestamp cache, MSBuild evaluation or package extraction.
-internal sealed class EditorSourceCensus(TimeProvider time, Func<string, Stream>? open = null)
+// One attempt owns its streams and bounded directory pins; no timestamp cache, MSBuild evaluation or package extraction.
+internal sealed class EditorSourceCensus(TimeProvider time, Func<string, Stream>? open = null,
+    Func<CancellationToken, EditorSourceDirectoryCache>? directories = null,
+    Func<string, EditorSourceFile.Snapshot?>? metadata = null,
+    Func<IReadOnlyList<GameBuildInputFile>, int, Action<string>, CancellationToken, Task<EditorSourceOpenBatch>>? batches = null)
 {
     private static readonly StringComparer Paths = StringComparer.OrdinalIgnoreCase;
 
@@ -33,10 +36,11 @@ internal sealed class EditorSourceCensus(TimeProvider time, Func<string, Stream>
         if (descriptor.Files.Count > GameBuildSourceWatchPolicy.MaximumPaths || descriptor.Probes.Count > GameBuildSourceWatchPolicy.MaximumPaths ||
             descriptor.SourceTrees.Count > GameBuildSourceWatchPolicy.MaximumTrees || descriptor.TreeFiles.Count > GameBuildSourceWatchPolicy.MaximumPaths)
             throw new NotSupportedException("Source descriptor exceeds its path budget.");
+        using var validation = directories?.Invoke(token) ?? new EditorSourceDirectoryCache(token);
         var trees = new HashSet<string>(Paths);
         foreach (var root in descriptor.SourceTrees)
         {
-            ValidatePath(root);
+            validation.ValidatePath(root);
             if (!Attributes(root, out var attributes)) return EditorSourceScan.Difference(root);
             if ((attributes & FileAttributes.Directory) == 0) return EditorSourceScan.Difference(root);
             Census(root, 0);
@@ -46,46 +50,75 @@ internal sealed class EditorSourceCensus(TimeProvider time, Func<string, Stream>
             return EditorSourceScan.Difference(trees.Except(expectedTrees, Paths).Concat(expectedTrees.Except(trees, Paths)).Take(16).ToArray());
 
         var buffer = new byte[65536];
-        foreach (var file in descriptor.Files)
+        var batched = descriptor.Files.Count >= EditorSourceOpenBatch.MinimumFiles && open == null && metadata == null && directories == null;
+        EditorSourceOpenBatch? batch = null;
+        try
         {
-            token.ThrowIfCancellationRequested(); ValidatePath(file.Path);
-            if (!Attributes(file.Path, out var attributes) || (attributes & FileAttributes.Directory) != 0)
-                return EditorSourceScan.Difference(file.Path);
-            try
+            for (var index = 0; index < descriptor.Files.Count; index++)
             {
-                var before = new FileInfo(file.Path); var length = before.Length; var written = before.LastWriteTimeUtc;
-                if (length > GameBuildSourceWatchPolicy.MaximumFileBytes || budget.Bytes > GameBuildSourceWatchPolicy.MaximumTotalBytes - length)
-                    throw new InvalidDataException("Source observation exceeds its byte budget.");
-                await using var stream = open?.Invoke(file.Path) ?? new FileStream(file.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
-                    65536, FileOptions.Asynchronous | FileOptions.SequentialScan);
-                using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-                long read = 0; int count;
-                while ((count = await stream.ReadAsync(buffer, token).ConfigureAwait(false)) != 0)
+                var file = descriptor.Files[index];
+                token.ThrowIfCancellationRequested();
+                if (batched)
                 {
-                    read += count;
-                    budget.Bytes += count;
-                    if (read > GameBuildSourceWatchPolicy.MaximumFileBytes || budget.Bytes > GameBuildSourceWatchPolicy.MaximumTotalBytes)
-                        throw new InvalidDataException("Source observation exceeds its byte budget.");
-                    hash.AppendData(buffer, 0, count);
+                    if (index % EditorSourceOpenBatch.Capacity == 0)
+                    {
+                        batch?.Dispose(); batch = null;
+                        batch = await (batches != null ? batches(descriptor.Files, index, validation.ValidatePath, token) :
+                            EditorSourceOpenBatch.CreateAsync(descriptor.Files, index, validation.ValidatePath, token)).ConfigureAwait(false);
+                    }
                 }
-                var after = new FileInfo(file.Path);
-                if (!after.Exists || read != length || after.Length != length || after.LastWriteTimeUtc != written)
-                    throw new IOException("Source file changed during observation.");
-                if (read != file.Length || !StringComparer.OrdinalIgnoreCase.Equals(Convert.ToHexString(hash.GetHashAndReset()), file.Sha256))
-                    return EditorSourceScan.Difference(file.Path);
+                else validation.ValidatePath(file.Path);
+                try
+                {
+                    // Native reads get their initial metadata from the opened no-follow handle.
+                    // Injected streams retain fresh path-before/path-after validation for read hooks.
+                    var before = open == null ? null : Metadata(file.Path);
+                    if (open != null && (before == null || (before.Value.Attributes & FileAttributes.Directory) != 0))
+                        return EditorSourceScan.Difference(file.Path);
+                    if (before is { } injected) CheckByteBudget(injected.Length);
+                    await using var stream = batched ? batch!.Take(index % EditorSourceOpenBatch.Capacity) : open != null ? open(file.Path) : EditorSourceFile.Open(file.Path);
+                    if (stream == null) return EditorSourceScan.Difference(file.Path);
+                    before ??= ((EditorSourceFile)stream).Before;
+                    token.ThrowIfCancellationRequested();
+                    var length = before.Value.Length; var written = before.Value.Written;
+                    CheckByteBudget(length);
+                    using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                    long read = 0; int count;
+                    while ((count = await stream.ReadAsync(buffer, token).ConfigureAwait(false)) != 0)
+                    {
+                        read += count;
+                        budget.Bytes += count;
+                        if (read > GameBuildSourceWatchPolicy.MaximumFileBytes || budget.Bytes > GameBuildSourceWatchPolicy.MaximumTotalBytes)
+                            throw new InvalidDataException("Source observation exceeds its byte budget.");
+                        hash.AppendData(buffer, 0, count);
+                    }
+                    var after = Metadata(file.Path, stream as EditorSourceFile);
+                    if (after == null || (after.Value.Attributes & FileAttributes.Directory) != 0 || read != length || after.Value.Length != length || after.Value.Written != written)
+                        throw new IOException("Source file changed during observation.");
+                    if (read != file.Length || !StringComparer.OrdinalIgnoreCase.Equals(Convert.ToHexString(hash.GetHashAndReset()), file.Sha256))
+                        return EditorSourceScan.Difference(file.Path);
+                }
+                catch (FileNotFoundException) { return EditorSourceScan.Difference(file.Path); }
+                catch (DirectoryNotFoundException) { return EditorSourceScan.Difference(file.Path); }
             }
-            catch (FileNotFoundException) { return EditorSourceScan.Difference(file.Path); }
-            catch (DirectoryNotFoundException) { return EditorSourceScan.Difference(file.Path); }
         }
+        finally { batch?.Dispose(); }
         foreach (var probe in descriptor.Probes)
         {
-            token.ThrowIfCancellationRequested(); ValidatePath(probe.Path);
-            var exists = Attributes(probe.Path, out var attributes);
-            if (exists && (attributes & FileAttributes.Directory) != 0)
+            token.ThrowIfCancellationRequested(); validation.ValidatePath(probe.Path);
+            var probeMetadata = Metadata(probe.Path); var exists = probeMetadata != null;
+            if (exists && (probeMetadata!.Value.Attributes & FileAttributes.Directory) != 0)
                 throw new NotSupportedException("Source probe is occupied by a directory.");
             if (exists != probe.Exists) return EditorSourceScan.Difference(probe.Path);
         }
+        validation.Revalidate();
         return EditorSourceScan.Same;
+
+        void CheckByteBudget(long length)
+        {
+            if (length > GameBuildSourceWatchPolicy.MaximumFileBytes || budget.Bytes > GameBuildSourceWatchPolicy.MaximumTotalBytes - length)
+                throw new InvalidDataException("Source observation exceeds its byte budget.");
+        }
 
         void Census(string directory, int depth)
         {
@@ -107,6 +140,13 @@ internal sealed class EditorSourceCensus(TimeProvider time, Func<string, Stream>
         }
     }
 
+    private EditorSourceFile.Snapshot? Metadata(string path, EditorSourceFile? file = null)
+    {
+        var value = metadata != null ? metadata(path) : file != null ? file.ReadMetadata() : EditorSourceFile.ReadMetadata(path);
+        if (value is { } snapshot) EditorSourceFile.RejectReparse(snapshot);
+        return value;
+    }
+
     private static bool Attributes(string path, out FileAttributes attributes, bool allowReparse = false)
     {
         try
@@ -119,13 +159,4 @@ internal sealed class EditorSourceCensus(TimeProvider time, Func<string, Stream>
         catch (DirectoryNotFoundException) { attributes = default; return false; }
     }
 
-    private static void ValidatePath(string path)
-    {
-        if (!Path.IsPathFullyQualified(path) || path.StartsWith(@"\\", StringComparison.Ordinal) ||
-            new DriveInfo(Path.GetPathRoot(path)!).DriveType == DriveType.Network)
-            throw new NotSupportedException("Source observation requires representable local drive paths.");
-        // Probe absence must not hide an unsupported ancestor or an access error.
-        for (var current = Path.GetDirectoryName(path); current != null; current = Path.GetDirectoryName(current))
-            Attributes(current, out _);
-    }
 }

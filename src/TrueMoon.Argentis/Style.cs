@@ -54,6 +54,26 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
     public Color Focus { get; init; } = new(255, 201, 92);
     /// <summary>Error outline/marker color.</summary>
     public Color Error { get; init; } = new(255, 112, 128);
+    /// <summary>Hovered outline when no stronger state is active.</summary>
+    public Color BorderHover { get; init; } = new(153, 176, 203);
+    /// <summary>Pending edit outline and structural marker.</summary>
+    public Color Modified { get; init; } = new(208, 169, 242);
+    /// <summary>Scalar numeric editor accent.</summary>
+    public Color NumberAccent { get; init; } = new(117, 188, 226);
+    /// <summary>Text editor accent.</summary>
+    public Color TextAccent { get; init; } = new(201, 177, 233);
+    /// <summary>Boolean editor accent.</summary>
+    public Color BooleanAccent { get; init; } = new(112, 200, 184);
+    /// <summary>Symbols on semantic editor accent fills, independently of action-button contrast.</summary>
+    public Color OnEditorAccent { get; init; } = new(18, 22, 30);
+    /// <summary>Object/resource reference editor accent.</summary>
+    public Color ReferenceAccent { get; init; } = new(225, 185, 111);
+    /// <summary>X-axis accent, also used for pitch in a spatial editor.</summary>
+    public Color AxisX { get; init; } = new(238, 132, 142);
+    /// <summary>Y-axis accent, also used for yaw in a spatial editor.</summary>
+    public Color AxisY { get; init; } = new(134, 204, 151);
+    /// <summary>Z-axis accent, also used for roll in a spatial editor.</summary>
+    public Color AxisZ { get; init; } = new(126, 180, 241);
     /// <summary>Destructive action background.</summary>
     public Color Danger { get; init; } = new(190, 43, 61);
     /// <summary>Positive action background.</summary>
@@ -78,11 +98,25 @@ public sealed record Theme(Color Surface, Color Control, Color Accent, Color For
         Border = new(114, 128, 147), ControlHover = new(226, 235, 247), ControlPressed = new(202, 220, 241),
         ControlDisabled = new(226, 231, 239), Input = new(255, 255, 255), ReadOnly = new(233, 238, 245),
         Focus = new(142, 72, 0), Error = new(174, 30, 51),
+        BorderHover = new(60, 83, 113), Modified = new(113, 65, 155),
+        NumberAccent = new(27, 104, 143), TextAccent = new(116, 67, 155),
+        BooleanAccent = new(22, 113, 94), ReferenceAccent = new(135, 91, 20),
+        OnEditorAccent = new(255, 255, 255),
+        AxisX = new(171, 48, 65), AxisY = new(30, 117, 55), AxisZ = new(32, 99, 175),
         MenuBackdrop = new(12, new(242, 245, 250, 192), new(242, 245, 250)),
         PanelBackdrop = new(8, new(242, 245, 250, 216), new(242, 245, 250))
     };
 
     internal Color ActionColor(ControlTone tone) => tone switch { ControlTone.Accent => Accent, ControlTone.Positive => Positive, ControlTone.Danger => Danger, _ => Control };
+    /// <summary>Resolves a semantic editor accent in this palette.</summary>
+    public Color EditorColor(EditorColorRole role) => role switch
+    {
+        EditorColorRole.Neutral => Foreground, EditorColorRole.Number => NumberAccent,
+        EditorColorRole.Text => TextAccent, EditorColorRole.Boolean => BooleanAccent,
+        EditorColorRole.Reference => ReferenceAccent, EditorColorRole.AxisX => AxisX,
+        EditorColorRole.AxisY => AxisY, EditorColorRole.AxisZ => AxisZ,
+        _ => throw new ArgumentOutOfRangeException(nameof(role))
+    };
     internal static Color Mix(Color a, Color b, float amount) => new((byte)MathF.Round(a.R + (b.R - a.R) * amount),
         (byte)MathF.Round(a.G + (b.G - a.G) * amount), (byte)MathF.Round(a.B + (b.B - a.B) * amount), a.A);
 }

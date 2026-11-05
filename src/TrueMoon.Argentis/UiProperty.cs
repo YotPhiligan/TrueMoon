@@ -28,6 +28,10 @@ public static class UiProperties
     public static readonly UiProperty<ControlTone> Tone = new("Tone", ControlTone.Neutral, validate: Enum.IsDefined);
     /// <summary>Visual error state, including an outline and a structural marker.</summary>
     public static readonly UiProperty<bool> HasError = new("HasError", false);
+    /// <summary>A pending edit, distinct from a validation error.</summary>
+    public static readonly UiProperty<bool> IsModified = new("IsModified", false);
+    /// <summary>Semantic editor accent, inherited by composite parts and resolved through the current theme.</summary>
+    public static readonly UiProperty<EditorColorRole> ColorRole = new("ColorRole", EditorColorRole.Neutral, validate: Enum.IsDefined);
     /// <summary>Accessible semantic name; no operating-system accessibility bridge is implied.</summary>
     public static readonly UiProperty<string> AccessibleName = new("AccessibleName", "", validate: value => value != null);
     /// <summary>Explicit corner radius; local/style values override the theme.</summary>

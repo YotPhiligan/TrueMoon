@@ -68,21 +68,40 @@ public class InspectorProperty : Bindable
     public string Error => _error;
     /// <summary>Gets whether a diagnostic is present.</summary>
     public bool HasError => _error.Length != 0;
-    internal event Action? Changed;
+    internal event Action<InspectorProperty>? Changed;
+    internal readonly record struct DraftState(string Value, bool IsNull, bool IsReset);
+    internal DraftState CaptureDraft() => new(_value, _null, _reset);
+    internal void RestoreDraft(DraftState state)
+    {
+        _verifyOwner(); _value = state.Value; _null = state.IsNull; _reset = state.IsReset;
+        OnPropertyChanged(nameof(Value)); OnPropertyChanged(nameof(BooleanValue)); OnPropertyChanged(nameof(IsNull)); DraftChanged();
+    }
     internal void Enable(bool enabled)
     { if (_enabled == enabled) return; _enabled = enabled; OnPropertyChanged(nameof(CanWrite)); OnPropertyChanged(nameof(CanChangeNull)); OnPropertyChanged(nameof(CanReset)); }
     internal void Load(PropertyValue value, string source, bool local)
     {
+        var oldValue = Value; var oldBoolean = BooleanValue; var oldNull = IsNull;
+        var oldDraft = HasDraft; var oldReset = IsReset; var oldSource = SourceText;
+        var oldWrite = CanWrite; var oldChangeNull = CanChangeNull; var oldCanReset = CanReset;
         _value = _original = Format(value).ReplaceLineEndings("\n");
         _null = _originalNull = value.Kind == PropertyValueKind.Null; _reset = false; _source = source; _local = local;
-        foreach (var property in new[] { nameof(Value), nameof(BooleanValue), nameof(IsNull), nameof(HasDraft), nameof(IsReset), nameof(SourceText), nameof(CanWrite), nameof(CanChangeNull), nameof(CanReset) }) OnPropertyChanged(property);
+        // Reusing fields across selection/history must not enqueue reads for unchanged presentation values.
+        if (oldValue != Value) OnPropertyChanged(nameof(Value));
+        if (oldBoolean != BooleanValue) OnPropertyChanged(nameof(BooleanValue));
+        if (oldNull != IsNull) OnPropertyChanged(nameof(IsNull));
+        if (oldDraft != HasDraft) OnPropertyChanged(nameof(HasDraft));
+        if (oldReset != IsReset) OnPropertyChanged(nameof(IsReset));
+        if (oldSource != SourceText) OnPropertyChanged(nameof(SourceText));
+        if (oldWrite != CanWrite) OnPropertyChanged(nameof(CanWrite));
+        if (oldChangeNull != CanChangeNull) OnPropertyChanged(nameof(CanChangeNull));
+        if (oldCanReset != CanReset) OnPropertyChanged(nameof(CanReset));
         SetError("");
     }
     internal void Reset()
     { _verifyOwner(); if (!CanReset) return; _reset = true; OnPropertyChanged(nameof(IsReset)); DraftChanged(); }
     private void DraftChanged()
     {
-        OnPropertyChanged(nameof(HasDraft)); OnPropertyChanged(nameof(IsReset)); OnPropertyChanged(nameof(SourceText)); OnPropertyChanged(nameof(CanWrite)); OnPropertyChanged(nameof(CanChangeNull)); OnPropertyChanged(nameof(CanReset)); Changed?.Invoke();
+        OnPropertyChanged(nameof(HasDraft)); OnPropertyChanged(nameof(IsReset)); OnPropertyChanged(nameof(SourceText)); OnPropertyChanged(nameof(CanWrite)); OnPropertyChanged(nameof(CanChangeNull)); OnPropertyChanged(nameof(CanReset)); Changed?.Invoke(this);
     }
     internal bool TryValue(out PropertyValue value)
     {

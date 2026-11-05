@@ -1,5 +1,43 @@
 # TrueMoon.Argentis
 
+`NumberBox.AdjustmentEnabled` opts into Up/Down stepping and pointer dragging on
+its prefix or geometric marker. Configure NumericKind, Step and inclusive bounds;
+invalid/nonfinite/overflow values are rejected without coercion or clamping.
+Integer arithmetic and finite integer bounds retain exact Int64 precision. Shift
+multiplies the step by10, Control divides by10 (integer minimum1); drag snapshots
+modifiers and uses4logical pixels per step. Text editing still accepts partial drafts.
+CanAdjust is a borrowed admission callback; IsGestureCurrent fences an active
+gesture's application identity. Release retains the draft, CancelGesture restores
+its exact initial string, and external/context changes interrupt without rollback.
+GestureStarted/GestureEnded report capture lifecycle; no outcome commits application
+data. Capture is released before terminal callbacks, including callback failures.
+Dispose clears callbacks and ends owned interaction; it never owns the data model.
+
+
+`PropertyEditorRow` composes a retained label, value editor and optional accessory.
+Its preferred value width can be capped or fill available space; narrow layouts
+move the label above the editor. `ShowEmpty` presents an explicit absent value
+without clearing/replacing the owned editor. Null/validation/commit semantics stay
+with the consumer. `RichTextEditor.MinimumContentHeight` and `MaximumContentHeight`
+bound automatic content measurement separately from explicit Height/MinHeight;
+defaults preserve the existing available-space behavior. `CheckBox.IsReadOnly`
+retains focus but suppresses toggle/Click activation. Its actual indicator uses
+the shared state outline and semantic palette; OnEditorAccent colors its check.
+
+
+Compact numeric authoring uses `NumberBox.Editor` (a retained TextBox holding a
+string draft) and `NumberBox.Prefix`. `Vector3Editor` owns three NumberBoxes in
+equal columns, moving its shared Label above them when space is limited; optional
+diagnostics can be appended to FirstCell/SecondCell/ThirdCell. Neither control
+parses or commits engine values. The consumer supplies validation and transactions.
+`ColorRole` selects a themed editor/axis accent and is inherited by composite
+parts. `IsModified` indicates a pending edit; `HasError`, focus, hover and enabled
+state select themed outlines. Explicit BorderColor overrides retain their usual
+priority; error/edit markers and the independent focus ring remain visible.
+Theme carries dark/light Number/Text/Boolean/Reference and AxisX/Y/Z tokens plus
+Modified/BorderHover. Replacing a palette or style preserves existing editor state.
+
+
 Backend-independent retained UI controls, property bindings, layout and input
 contracts for TrueMoon Alloy. Requires .NET 10. Alpha API.
 
@@ -11,6 +49,43 @@ Argentis defines element trees and controls, including the rich-text document/
 editing model. It has no renderer, native window, DI or application bootstrap
 dependency. A visual application also needs a compatible Alloy renderer and
 host; `TrueMoon.Alloy.Hosting` provides the optional App/window integration.
+
+`Window` / `Window<TData>` are standalone root components with the same content,
+bindings and scoped styles as View. Construction allocates no native resources.
+The typed form implements `IView<TData>` and borrows its data; it derives from
+`Window`, so window factories and styles can share the non-generic root contract.
+
+```csharp
+public sealed class SettingsWindow : Window<SettingsViewModel>
+{
+    public SettingsWindow(SettingsViewModel data, IViewStyle<SettingsWindow> style)
+    {
+        this.WithTitle("Settings").WithClientSize(800, 600);
+        Content(data, model => new TextBox { Value = model!.Name });
+        this.WithViewStyle(style);
+    }
+}
+```
+
+`TitleProperty` and `ClientSizeProperty` support normal bindings/style precedence.
+Requested client dimensions are whole logical pixels in [1,32768]; device/platform
+limits may be narrower. Inherited Width/Height affect content layout only.
+`State`, `IsActive` and `ActualClientSize` are observed host state; native resize
+does not overwrite the requested size. `HostStateChanged` runs on the UI owner.
+`Minimize`, `Maximize`, `Restore` and `RequestCloseAsync` require a connected host.
+`Closing` callbacks may veto Application/Native close; Shutdown drains all callbacks
+and ignores vetoes. Cancellation cancels a caller's wait, not an accepted close.
+
+Use Hosting's `UsePresentationFactory<SettingsWindow>` with an injected
+`IFactory<SettingsWindow>`. The window owns the returned component/content, while
+data/style/controller remain borrowed. A Window must be the presentation root.
+Custom hosts use `AttachHost(IWindowController)` and its exclusive
+`WindowHostConnection` on the UI owner, publish observations, snapshot callbacks
+for their close coordinator and disconnect before tree disposal. No automatic
+Show/modal/multi-window service or native resource ownership is implied.
+
+When importing both Argentis and Silk windowing, qualify the native static
+factory as `Silk.NET.Windowing.Window.Create(...)` to distinguish the two types.
 
 Author screens as `View<TData>` with Fluent composition and explicit bindings.
 Data may be a plain model; observable presentation models derive from `ViewModel`,

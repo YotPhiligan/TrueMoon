@@ -31,7 +31,7 @@ public class GlGraphicsPlatform : IGlGraphicsPlatform
             UpdatesPerSecond = 60,
         };
 
-        _nativeWindow = Window.Create(opts);
+        _nativeWindow = global::Silk.NET.Windowing.Window.Create(opts);
 
         _nativeWindow.Load += () =>
         {

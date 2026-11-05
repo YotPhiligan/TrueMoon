@@ -1,6 +1,116 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя связанная работа — **2026-11-03, ED6b.2e.2–3 retained source status**.
+Последняя работа — **2026-11-05, UIA3c native input follow-up**.
+Platform.Silk button/wheel input использует последнее ordered cursor event вместо
+live cursor query; быстрый drag теперь сохраняет стартовую точку. Pointer events
+передают Shift/Ctrl. Шесть новых regression cases проверяют snapshots, wheel и
+actual NumberBox drag с четырьмя комбинациями modifiers. Свежие full Alloy
+**1101/1101**, Hosting **154/154** каждый Debug/Release; focused6/6 Debug.
+Отдельно Editor **1295/1295 D/R**. Четыре native OpenGL runs source Debug/published
+Release × standard/Cobalt и embedded/MS DI прошли; Windows linked drag/Esc draft/
+Ctrl+Enter/Undo — в двух standard. UI/GPU/handles0, runtime children0.
+[Evidence](HISTORY.md#uia3c-native-numeric-2026-11-05).
+Открыты physical arrows/modifiers, Esc при удерживаемой кнопке и pointer modifiers;
+automation arrows поступают как UiKey.None. Затем group reset/angle units.
+Fresh NuGet/Vulkan/device-loss/full-solution gates этим запуском не закрываются.
+
+
+Предыдущая работа — **2026-11-05, UIA3c numeric step/drag**.
+NumberBox opt-in adjustment: typed Int64/Real, ↑/↓, Shift/Ctrl, prefix/marker drag,
+capture и terminal outcomes с exact rollback/consumer identity fence. Cleanup при
+callback failures, style/hide/readonly/disable/detach проверен; idle timers нет.
+Full Alloy **1095/1095 Debug/Release**, Hosting **154/154 D/R**, failed/skipped0;
+40новых UI cases. После assertions-only усиления invalid pointer-start final focused
+controls **40/40 Debug** прошли. Editor **1295/1295 D/R** отдельно, focused180/180
+Debug;24новых Editor cases. Итоговая nonincremental Debug сборка0errors/1555warnings;
+full solution tests не выполнялись.11Skia CPU PNG проверены с actual drag/cancel/
+linked Apply/Undo; native/GPU/package/physical acceptance отдельно.
+[Дизайн-код](DESIGN.md#numeric-gestures), [evidence](HISTORY.md#uia3c-numeric-gestures-2026-11-05).
+Следующий конкретный proof — source/published native numeric gesture/cancel smoke;
+затем отдельные group reset/angle units. UIA/PA/INF/release gates прежние.
+
+
+Предыдущая работа — **2026-11-05, UIA3b остальные редакторы и состояния**.
+Общий PropertyEditorRow, auto-height bounds RichTextEditor и themed CheckBox
+indicator/read-only реализованы. Числа capped120, boolean96 с «Да»/«Нет», строки
+автоматически26–78; nullable показывает retained compact placeholder. Цвета и
+приоритеты состояний едины с Transform, explicit border overrides сохраняются.
+Full Alloy **1055/1055**, Hosting **154/154** Debug/Release прошли;35новых UI cases.
+Отдельно Editor **1271/1271** в обеих конфигурациях и focused156/156 Debug;
+failed/skipped0. Общая nonincremental Debug сборка0errors/1555warnings, full solution
+tests не выполнялись.14CPU-raster PNG проверены, native/GPU/package/physical gates
+не повторялись. [Дизайн-код](DESIGN.md), [evidence](HISTORY.md#uia3b-generic-editors-2026-11-05).
+Следом числовые gestures/step/linked scale с явным commit/cancel contract;
+остальные UIA/PA/INF/hardware/release gates прежние.
+
+
+Предыдущая работа — **2026-11-05, UIA3 компактные редакторы и цветовые состояния**.
+NumberBox/Vector3Editor, inherited ColorRole, Theme palette и IsModified реализованы;
+TextBox центрирует текст/выделение/caret по общей строке. Themed border priority:
+disabled → error → focus → modified → hover → role; явные local/Style overrides
+сохранены вместе с независимыми маркерами и focus ring. [Дизайн-код](DESIGN.md)
+подключён из AGENTS и UI-плана. Full Alloy **1020/1020 Debug/Release**, Hosting
+**154/154 Debug/Release** прошли, failed/skipped0;44новых UI cases.
+Прикладной Transform/diagnostics/history — [ED4g](../engine/EDITOR_PLAN.md#ed4g-compact-transform),
+full Editor1256/1256 Debug/Release прошёл отдельно. CPU raster preview проверяет
+тёмную/светлую тему, narrow layout и состояния; native/GPU/package/physical acceptance
+не повторялась. Далее numeric gestures/step и linked scale с отдельным контрактом;
+UIA2/PA/INF/K7/release gates прежние.
+
+
+Предыдущая связанная работа — **2026-11-04, Editor Window consumer ED4f.3**.
+Standard Editor использует EditorMainWindow : Window<EditorViewModel> с одним
+nested EditorView; App factories, snapshots, header callback и close/Ready owners
+проверены. Embedded View contract сохранён. Собственные full Alloy976/976 и
+Hosting154/154 прошли Debug/Release; отдельно full Editor1126/1126 с64новыми cases.
+Fresh15packages/headless8/8 и6native workflows (source Debug/published Release/
+fresh NuGet Release ×standard/Cobalt и embedded/MS DI) прошли;84children released,
+78graceful Vulkan validation0/0, maxLive1, final UI/GPU/handles0; startup12/12.
+UIA2d independent Window App delivery подтверждён через fresh Editor consumer.
+Временный official layer использован только в текущем OpenGL parent/Vulkan child
+profile; прежний plain Window Vulkan UI-presenter run не становится validated.
+[Scope/evidence](HISTORY.md#uia2-editor-window-consumer-2026-11-04).
+Aether performance baseline10s/5s измерен в [ED6b.2e.4](../engine/EDITOR_PLAN.md#ed6b2e4-observer-performance);
+ED6b.2e.4a подтвердил repeated ancestor checks; [ED6b.2e.4b](../engine/EDITOR_PLAN.md#ed6b2e4b-observer-directory-cache)
+реализует bounded cache/native pins/final revalidation. Fresh Editor1174/1174
+Debug/Release и6/6performance cases прошли; актуальные profiles/следующий шаг —
+в engine STATUS/HISTORY. Follow-up [ED6b.2e.4c](../engine/EDITOR_PLAN.md#ed6b2e4c-observer-file-io)
+добавляет native file reader/fresh metadata, full Editor1215/1215 Debug/Release
+прошли; текущие повторные measurements/profile results принадлежат engine lane.
+Последующий [ED6b.2e.4d](../engine/EDITOR_PLAN.md#ed6b2e4d-observer-native-open)
+оптимизирует opened metadata/prepared path: Editor1223/1223 Debug/Release,
+6performance cases/3profiles проверены, UI/renderer acceptance не расширена.
+[ED6b.2e.4e](../engine/EDITOR_PLAN.md#ed6b2e4e-observer-open-batches) добавляет bounded
+native open batch: Editor1244/1244 Debug/Release +final focused145/145 D/R,
+6cases/3profiles проверены. UI controls/renderer/full GPU checks этим не повторены.
+Alloy/Argentis controls и renderer в этих срезах не менялись.
+UI/renderer tests этими performance/profile runs не повторены.
+PA8c.0/physical/hardware/K7/release и
+wider Window backend acceptance сохраняются отдельно.
+
+Предыдущая работа — **2026-11-03, документальная сверка UIA2 и engine consumers**.
+Сохранённые результаты Window сопоставлены с source hashes (16files, drift0),
+PLAN получил состояния UIA2a–e. Стандартный Editor рекомендован отдельным consumer
+[ED4f.3](../engine/EDITOR_PLAN.md#ed4f3-window-root); core/offscreen/HUD остаются без
+Window, Player решает это в ENG7b.2. Миграция C# и новые build/test/native runs
+в этой сверке не выполнялись. [Выводы](HISTORY.md#uia2-window-сверка-планов-и-consumers--2026-11-03).
+
+Предыдущая code работа — **2026-11-03, UIA2 Window component**. Argentis Window/Window<TData>
+предоставляют typed properties/content/style, observed state и borrowed host commands.
+HostedUiWindow создаёт root до native allocation, связывает caption/size/close и
+сохраняет одну рамку/retained content. Full Alloy976/976, Hosting154/154 и отдельно
+Editor1062/1062 прошли Debug/Release, failed/skipped0;94новых component/adapter cases.
+Solution Debug --no-restore --no-incremental прошёл;2producer packages проверены.
+Native source Debug и published Release: OpenGL/Vulkan +App factory Cobalt/MS DI,
+по4/4cases, sessions/hooks0; legacy async-close regression прошла в обеих конфигурациях.
+Vulkan validation **не подтверждена**: layer отсутствует, directed attempt завершился
+NotSupportedException. Fresh restore ограничен доступом к user NuGet.Config; cached
+assets использованы явно. [Контракт/команды/границы](HISTORY.md#uia2-window-component--2026-11-03).
+На дату того run следующим UIA2 proof был independent fresh NuGet Window App
+consumer; текущий Editor profile выше проверяет этот путь. PA8c.0/physical/
+hardware/K7/release gates прежние.
+
+Предыдущая связанная работа — **2026-11-03, ED6b.2e.2–3 retained source status**.
 Editor status bar получил отдельные source badge/details через current-owner pull
 snapshot в Present/Refresh. Source errors/Changed не заменяют primary runtime/command
 status; controls/focus/draft/history/theme сохраняются, worker не обращается к UI.
@@ -681,12 +791,15 @@ Alpha K1–K9 не объявляется завершённой. Требова
 
 ## Следующий конкретный шаг
 
-При работе над приложением использовать [первый срез и порядок API → preview → UI](../engine/EDITOR_PLAN.md#первый-сквозной-срез);
-ARCH2 source/package/headless/native profile и scoped ED6a/ED8a проверены;
-ED4c.2/3 rename/reorder и create/delete/duplicate/search/context реализованы через engine metadata/history. UI capabilities
-добавляются по consumer, hardware/general release gates сохраняются отдельно.
-ARCH1b.1, ED1a/b, ED2a/b, ED3a, ED4c.1–3 и ED6b.1 выполнены в своих границах;
-следующий consumer — ED6b.2 source graph/revision/artifact policy перед reuse/Replace.
+UIA2d targeted independent package delivery проверен через Editor. Следующие wider
+Window backend/validation checks сохраняют отдельный scope с доступным layer;
+hardware/general release gates отдельные.
+Адресная интеграция [ED4f.3 Window root стандартного Editor](../engine/EDITOR_PLAN.md#ed4f3-window-root)
+реализована; EditorView и existing custom/embedded hosts сохраняют свой contract.
+Observer cost с default10s/5s измерена в [ED6b.2e.4](../engine/EDITOR_PLAN.md#ed6b2e4-observer-performance).
+Текущий Aether шаг — bounded reuse общей ancestor validation после profiling ED6b.2e.4a;
+ранее завершённые scoped reuse/Replace/graph profiles не назначаются заново.
+UI capabilities добавляются по consumer; полная готовность ED1–ED8 этим не объявляется.
 Для следующего прохода качества UI запланирован
 [PA8c.0 baseline текста/геометрии/композиции](PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31);
 он предшествует выбору rendering options и оптимизаций в этой ветке.
@@ -700,7 +813,7 @@ Synthetic/native результаты PA8a эти пункты не закрыв
 остаётся остановленным. Full INF5/resource projection расширять под конкретного
 consumer, отложенные PA1–PA10 и [RTE backlog](RICH_TEXT_EDITOR_PLAN.md) сохраняются.
 
-Общая engine точка продолжения после возвращения к этому направлению —
+При отдельном возврате к gameplay —
 [ENG5c.3 collisions камеры](../engine/PLAN.md#eng5c3-следующий-шаг-collisions-камеры),
 затем HUD. UI функциональность не добавлялась в Aether assembly.
 

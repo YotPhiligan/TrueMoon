@@ -23,6 +23,16 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
     public static ViewStyleRole<Text> LabelRole { get; } = new("InspectorLabel");
     /// <summary>Numeric scalar inputs.</summary>
     public static ViewStyleRole<TextBox> InputRole { get; } = new("InspectorInput");
+    /// <summary>Responsive three-column numeric rows.</summary>
+    public static ViewStyleRole<Vector3Editor> VectorRole { get; } = new("InspectorVector");
+    /// <summary>Vector labels and axis prefixes without the scalar label's fixed width.</summary>
+    public static ViewStyleRole<Text> VectorLabelRole { get; } = new("InspectorVectorLabel");
+    /// <summary>Responsive rows for all schema-defined scalar editors.</summary>
+    public static ViewStyleRole<PropertyEditorRow> FieldRole { get; } = new("InspectorField");
+    /// <summary>Compact explicit-null presentation.</summary>
+    public static ViewStyleRole<Text> EmptyValueRole { get; } = new("InspectorEmptyValue");
+    /// <summary>Opt-in numeric pointer and keyboard adjustment configuration.</summary>
+    public static ViewStyleRole<NumberBox> NumberRole { get; } = new("InspectorNumber");
     /// <summary>Boolean scalar inputs.</summary>
     public static ViewStyleRole<CheckBox> BooleanRole { get; } = new("InspectorBoolean");
     /// <summary>Nullable switches.</summary>
@@ -42,6 +52,19 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
     private readonly Dictionary<(ComponentTypeId, int), Button> _addButtons = [];
     private readonly Dictionary<ComponentId, Button> _restoreButtons = [];
     private readonly HashSet<ComponentId> _collapsed = [];
+    private readonly HashSet<ComponentId> _details = [];
+    private readonly Dictionary<ComponentId, IconButton> _detailsButtons = [];
+    private readonly Dictionary<ComponentId, TransformEditor> _transforms = [];
+    private readonly Dictionary<ComponentId, VStack> _transformDetails = [];
+    private readonly Dictionary<(ComponentId, string), PropertyEditorRow> _genericEditors = [];
+    private readonly Dictionary<(ComponentId, string), NumberBox> _numericEditors = [];
+    /// <summary>Retained generic numeric, Boolean and string rows, keyed by exact component/property addresses.</summary>
+    public IReadOnlyDictionary<(ComponentId, string), PropertyEditorRow> GenericEditors => _genericEditors;
+    private bool _synchronizePending;
+    /// <summary>Retained per-component details disclosures for provenance and inheritance resets.</summary>
+    public IReadOnlyDictionary<ComponentId, IconButton> DetailsButtons => _detailsButtons;
+    /// <summary>Specialized controls selected by exact built-in component type and schema.</summary>
+    public IReadOnlyDictionary<ComponentId, TransformEditor> TransformEditors => _transforms;
     private IconButton? _hint;
     private OverlayHost? _hintHost;
     private Rect _hintBounds;
@@ -103,7 +126,7 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
             AddChoices.IsVisible = false;
             Error = new(new RichTextEditorOptions { IsReadOnly = true, WordWrap = true });
             Error.MinWidth = 0; Error.MinHeight = 0;
-            Error.Bind(RichTextEditor.TextProperty, model, x => x.ErrorText).Bind(UiProperties.Visible, model, x => x.HasError);
+            Error.Bind(RichTextEditor.TextProperty, model, x => x.DiagnosticsText).Bind(UiProperties.Visible, model, x => x.HasDiagnostics);
             Actions.WithChildren(Apply, Cancel, Undo, Redo, AddComponent);
             Form.WithChildren(Empty, Actions, AddChoices, Error, ComponentList, Removed);
             Scroll.Content(Form); Content(model, _ => Scroll); this.WithViewStyle(style);
@@ -119,17 +142,25 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
     {
         if (change.PropertyName == nameof(EditorInspectorViewModel.HasSelection)) Dispatch(CloseHint);
         if (change.PropertyName is nameof(EditorInspectorViewModel.Components) or nameof(EditorInspectorViewModel.AddableTypes) or
-            nameof(EditorInspectorViewModel.RemovedComponents) or nameof(EditorInspectorViewModel.CanChangeComponents)) Dispatch(Synchronize);
+            nameof(EditorInspectorViewModel.RemovedComponents) or nameof(EditorInspectorViewModel.CanChangeComponents) or
+            nameof(EditorInspectorViewModel.HasDraft) or nameof(EditorInspectorViewModel.DiagnosticsText))
+        {
+            if (_synchronizePending) return;
+            _synchronizePending = true;
+            Dispatch(() => { _synchronizePending = false; if (!IsDisposed) Synchronize(); });
+        }
     }
     private void Synchronize()
     {
         VerifyAccess();
+        foreach (var box in NumericEditors()) if (box.IsDragging && !(box.IsGestureCurrent?.Invoke() ?? true)) box.CancelGesture();
         var wanted = _model.Components.Select(c => c.Id).ToHashSet();
         foreach (var id in _components.Keys.Where(id => !wanted.Contains(id)).ToArray())
         {
             var section = _components[id]; ComponentList.Items.Remove(section.Section); section.Section.Dispose(); _components.Remove(id);
-            foreach (var address in _properties.Keys.Where(key => key.Item1 == id).ToArray()) _properties.Remove(address);
+            foreach (var address in _properties.Keys.Where(key => key.Item1 == id).ToArray()) { _properties.Remove(address); _genericEditors.Remove(address); _numericEditors.Remove(address); }
             _collapsed.Remove(id);
+            _details.Remove(id); _detailsButtons.Remove(id); _transforms.Remove(id); _transformDetails.Remove(id);
         }
         for (var index = 0; index < _model.Components.Count; index++)
         {
@@ -140,9 +171,12 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
                 var header = new ComponentHeader().WithRole(HeaderRole);
                 header.OnClick(() => { if (!_collapsed.Add(component.Id)) _collapsed.Remove(component.Id); body.IsVisible = !_collapsed.Contains(component.Id); header.Expanded = body.IsVisible; });
                 var remove = Action(UiSymbol.Delete, "Удалить компонент " + component.Title).OnClick(() => _model.RemoveComponent(component.Id));
+                var details = Action(UiSymbol.More, "Сведения и сброс значений · " + component.Title).OnClick(() => ToggleDetails(component.Id));
+                _detailsButtons.Add(component.Id, details);
                 var metadata = Text.Plain().WithRole(MetadataRole);
+                metadata.IsVisible = false;
                 var section = Border.Create().WithRole(SectionRole).Content(VStack.Create().WithRole(StackRole).WithChildren(
-                    new ComponentLine(header, remove), metadata, body));
+                    new ComponentLine(header, details, remove), metadata, body));
                 parts = new(section, header, body, remove, metadata); _components.Add(component.Id, parts); ComponentList.Add(section);
             }
             parts.Header.Value = component.Title;
@@ -150,6 +184,12 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
             parts.Metadata.Value = component.SourceText + " · v" + component.SchemaVersion + " · " + component.Id.Value.ToString("D")[..8];
             parts.Metadata.AccessibleName = $"Type {component.TypeId.Value:D}; component {component.Id.Value:D}; schema {component.SchemaVersion}";
             parts.Remove.IsEnabled = _model.CanChangeComponents;
+            if (component.TypeId == BuiltInComponents.TransformId && component.SchemaVersion == 1)
+            {
+                if (!_transforms.ContainsKey(component.Id)) CreateTransform(component, parts.Body);
+                Reorder(ComponentList, parts.Section, index);
+                continue;
+            }
             var addresses = component.Properties.Select(p => (component.Id, p.Key)).ToHashSet();
             foreach (var address in _properties.Keys.Where(key => key.Item1 == component.Id && !addresses.Contains(key)).ToArray()) RemoveProperty(address, parts.Body);
             for (var position = 0; position < component.Properties.Count; position++)
@@ -189,36 +229,125 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
             }
             button.IsEnabled = _model.CanChangeComponents; Reorder(Removed, button.Parent!, i);
         }
+        // Coalesce presentation updates instead of adding two dispatcher entries per field on every model reload.
+        foreach (var property in _properties.Values)
+        {
+            property.Input.HasError = property.Property.HasError; property.Input.IsModified = property.Property.HasDraft;
+            if (property.Input is CheckBox boolean) boolean.Value = property.Property.BooleanValue ? "Да" : "Нет";
+            if (_genericEditors.TryGetValue((property.Property.ComponentId, property.Property.Key), out var editor))
+            {
+                editor.ShowEmpty(property.Property.IsNull);
+                editor.Empty.IsModified = property.Property.HasDraft;
+                editor.Empty.HasError = property.Property.HasError;
+                if (property.Null != null) property.Null.IsModified = property.Property.HasDraft;
+            }
+        }
     }
     private InspectorPropertyControls CreateProperty(InspectorProperty property, string component)
     {
-        Element input;
+        Element input; Element content;
         if (property.Kind == PropertyValueKind.Boolean)
-            input = CheckBox.Create().WithRole(BooleanRole).BindTwoWay(CheckBox.IsCheckedProperty, property, x => x.BooleanValue);
+            content = input = CheckBox.Create().WithRole(BooleanRole).BindTwoWay(CheckBox.IsCheckedProperty, property, x => x.BooleanValue);
         else if (property.Kind == PropertyValueKind.String)
-            input = RichTextEditor.Create(new() { WordWrap = true }).WithRole(StringRole)
+            content = input = RichTextEditor.Create(new() { WordWrap = true }).WithRole(StringRole)
                 .BindTwoWay(RichTextEditor.TextProperty, property, x => x.Value);
-        else input = TextBox.Create().WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, property, x => x.Value);
+        else
+        {
+            var number = new NumberBox().WithRole(NumberRole); content = number;
+            number.NumericKind = property.Kind == PropertyValueKind.Integer ? NumericValueKind.Integer : NumericValueKind.Real;
+            if (property.Kind == PropertyValueKind.Integer) number.Step = 1;
+            input = number.Editor.WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, property, x => x.Value);
+            ConfigureNumber(number, property);
+        }
         input.MinWidth = 0; input.MinHeight = 0;
         input.Bind(UiProperties.Enabled, property, x => x.CanWrite);
+        input.ColorRole = property.Kind == PropertyValueKind.Boolean ? EditorColorRole.Boolean :
+            property.Kind == PropertyValueKind.String ? EditorColorRole.Text : EditorColorRole.Number;
         input.AccessibleName = component + " " + property.Key;
         var reset = Action(UiSymbol.Undo, "Сбросить " + component + " · " + property.Label + " к наследуемому значению или умолчанию").WithRole(ResetRole).Bind(UiProperties.Enabled, property, x => x.CanReset)
             .OnClick(() => _model.ResetProperty(property));
         var nullable = property.IsNullable ? CheckBox.Create("null").WithRole(NullRole)
             .BindTwoWay(CheckBox.IsCheckedProperty, property, x => x.IsNull)
             .Bind(UiProperties.Enabled, property, x => x.CanChangeNull) : null;
+        if (nullable != null) { nullable.ColorRole = input.ColorRole; nullable.AccessibleName = "Нет значения · " + component + " " + property.Key; }
         var source = Text.Plain().WithRole(MetadataRole).BindText(property, x => x.SourceText);
+        var showDetails = _details.Contains(property.ComponentId);
+        source.IsVisible = showDetails; reset.IsVisible = showDetails;
         var row = VStack.Create().WithRole(StackRole);
-        HStack line = property.Kind == PropertyValueKind.String ? HStack.Create() : new ScalarLine();
-        line.WithRole(RowRole).WithChildren(Text.Plain(property.Label).WithRole(LabelRole));
-        if (property.Kind != PropertyValueKind.String) line.Add(input);
-        line.Add(reset); if (nullable != null) line.Add(nullable);
-        row.Add(line); if (property.Kind == PropertyValueKind.String) row.Add(input);
-        row.WithChildren(source, Text.Plain().WithRole(ErrorRole).BindText(property, x => x.Error).Bind(UiProperties.Visible, property, x => x.HasError));
+        var line = new PropertyEditorRow(content, nullable, property.Label).WithRole(FieldRole);
+        line.Label.WithRole(VectorLabelRole); line.Empty.WithRole(EmptyValueRole);
+        line.Empty.AccessibleName = component + " " + property.Key + ": null";
+        line.ValueWidth = property.Kind == PropertyValueKind.Boolean ? 96 : property.Kind == PropertyValueKind.String ? float.NaN : 120;
+        line.ShowEmpty(property.IsNull); _genericEditors.Add((property.ComponentId, property.Key), line);
+        var details = HStack.Create().WithRole(RowRole).WithChildren(reset, source); details.IsVisible = showDetails;
+        row.WithChildren(line, details,
+            Text.Plain().WithRole(ErrorRole).BindText(property, x => x.Error).Bind(UiProperties.Visible, property, x => x.HasError));
         return new(property, row, input, nullable, reset, source);
     }
+    private void CreateTransform(InspectorComponent component, VStack body)
+    {
+        var editor = new TransformEditor().WithRole(StackRole);
+        editor.LinkScale.WithRole(BooleanRole).BindTwoWay(CheckBox.IsCheckedProperty, _model, p => p.ScaleLinked)
+            .Bind(UiProperties.Enabled, _model, p => p.CanLinkScale);
+        _transforms.Add(component.Id, editor); body.Add(editor);
+        var details = VStack.Create().WithRole(StackRole); details.IsVisible = false;
+        _transformDetails.Add(component.Id, details); body.Add(details);
+        Configure(editor.Position, ["x", "y", "z"]);
+        Configure(editor.Rotation, ["pitch", "yaw", "roll"]);
+        Configure(editor.Scale, ["sx", "sy", "sz"]);
+        void Configure(Vector3Editor row, string[] keys)
+        {
+            row.WithRole(VectorRole); row.Label.WithRole(VectorLabelRole);
+            var boxes = new[] { row.First, row.Second, row.Third };
+            var cells = new[] { row.FirstCell, row.SecondCell, row.ThirdCell };
+            for (var i = 0; i < keys.Length; i++)
+            {
+                var property = component.Properties.Single(p => p.Key == keys[i]);
+                boxes[i].WithRole(NumberRole);
+                boxes[i].Minimum = property.Key is "sx" or "sy" or "sz" ? float.Epsilon : -float.MaxValue;
+                boxes[i].Maximum = float.MaxValue;
+                if (property.Key is "sx" or "sy" or "sz" or "pitch" or "yaw" or "roll") boxes[i].Step = .01;
+                ConfigureNumber(boxes[i], property);
+                var input = boxes[i].Editor.WithRole(InputRole)
+                    .BindTwoWay(TextBox.ValueProperty, property, p => p.Value)
+                    .Bind(UiProperties.Enabled, property, p => p.CanWrite);
+                input.MinHeight = 0; input.AccessibleName = component.Title + " " + property.Label;
+                boxes[i].Prefix.WithRole(VectorLabelRole);
+                var reset = Action(UiSymbol.Undo, "Сбросить " + component.Title + " · " + property.Label + " к наследуемому значению или умолчанию")
+                    .WithRole(ResetRole).Bind(UiProperties.Enabled, property, p => p.CanReset).OnClick(() => _model.ResetProperty(property));
+                var source = Text.Plain().WithRole(MetadataRole).BindText(property, p => p.SourceText);
+                reset.IsVisible = false; source.IsVisible = false;
+                var cell = cells[i].WithRole(StackRole);
+                cell.Add(Text.Plain("Ошибка").WithRole(ErrorRole).Bind(UiProperties.AccessibleName, property, p => p.Error)
+                    .Bind(UiProperties.Visible, property, p => p.HasError));
+                details.Add(HStack.Create().WithRole(RowRole).WithChildren(reset,
+                    Text.Plain(property.Label).WithRole(LabelRole).Configure(x => x.VerticalAlignment = LayoutAlignment.Center), source));
+                _properties.Add((component.Id, property.Key), new(property, cell, input, null, reset, source));
+            }
+        }
+    }
+    private void ConfigureNumber(NumberBox box, InspectorProperty property)
+    {
+        _numericEditors[(property.ComponentId, property.Key)] = box;
+        long gestureId = 0;
+        box.CanAdjust = () => _model.CanAdjustNumeric(property);
+        box.IsGestureCurrent = () => _model.IsNumericGestureCurrent(property, gestureId);
+        box.GestureStarted += () => gestureId = _model.BeginNumericGesture(property);
+        box.GestureEnded += result => { _model.FinishNumericGesture(result, gestureId); gestureId = 0; };
+        box.AccessibleName = property.Label + " · перетаскивание: 4 пикселя на шаг; ↑/↓; Shift ×10, Ctrl ×0.1; Esc — отменить жест";
+    }
+    private IEnumerable<NumberBox> NumericEditors() => _numericEditors.Values;
+    private void ToggleDetails(ComponentId id)
+    {
+        if (!_details.Add(id)) _details.Remove(id);
+        var visible = _details.Contains(id); _components[id].Metadata.IsVisible = visible;
+        _detailsButtons[id].Tone = visible ? ControlTone.Accent : ControlTone.Neutral;
+        if (_transformDetails.TryGetValue(id, out var panel)) panel.IsVisible = visible;
+        foreach (var entry in _properties.Where(p => p.Key.Item1 == id).Select(p => p.Value))
+        { entry.Reset.IsVisible = visible; entry.Source.IsVisible = visible; entry.Source.Parent!.IsVisible = visible; }
+    }
     private void RemoveProperty((ComponentId, string) address, VStack body)
-    { var old = _properties[address]; body.Items.Remove(old.Row); old.Row.Dispose(); _properties.Remove(address); }
+    { var old = _properties[address]; body.Items.Remove(old.Row); old.Row.Dispose(); _properties.Remove(address); _genericEditors.Remove(address); _numericEditors.Remove(address); }
     private static void Reorder(VStack parent, Element child, int index)
     { if (ReferenceEquals(parent.Children[index], child)) return; parent.Items.Remove(child); parent.Items.Insert(index, child); }
 
@@ -227,6 +356,9 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
     public bool HandleShortcut(UiInput input)
     {
         VerifyAccess(); if (input.Kind != InputKind.KeyDown) return false;
+        if (input.Key == UiKey.Escape && NumericEditors().FirstOrDefault(box => box.IsDragging) is { } dragging)
+        { dragging.CancelGesture(); return true; }
+        if (input.Control && input.Key == UiKey.Enter) foreach (var box in NumericEditors()) box.CompleteGesture();
         if (input.Key == UiKey.Escape && _model.CanCancel) { _model.Cancel(); return true; }
         if (!input.Control) return false;
         if (input.Key == UiKey.Enter) { _model.Apply(); return true; }
@@ -240,7 +372,7 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
     /// <inheritdoc />
     public bool PreviewInput(UiInput input, IInputContext context)
     {
-        if (input.Kind == InputKind.PointerMove)
+        if (input.Kind == InputKind.PointerMove && !NumericEditors().Any(box => box.IsDragging))
         {
             var hint = IconAt(this, input.X, input.Y);
             if (!ReferenceEquals(hint, _hint))
@@ -328,17 +460,19 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
 
     private sealed class ComponentLine : HStack
     {
-        public ComponentLine(Element header, Element remove) { Add(header); Add(remove); }
+        public ComponentLine(Element header, Element details, Element remove) { Add(header); Add(details); Add(remove); }
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         {
             foreach (var child in Children) child.Measure(available, text);
-            return new(Math.Min(available.Width, Children.Sum(child => child.DesiredSize.Width) + 3), Children.Max(child => child.DesiredSize.Height));
+            return new(Math.Min(available.Width, Children.Sum(child => child.DesiredSize.Width) + 6), Children.Max(child => child.DesiredSize.Height));
         }
         protected override void ArrangeCore(Rect area)
         {
-            var width = Math.Min(area.Width, Children[1].DesiredSize.Width);
-            Children[0].Arrange(new(area.X, area.Y, Math.Max(0, area.Width - width - 3), area.Height));
-            Children[1].Arrange(new(area.X + area.Width - width, area.Y, width, area.Height));
+            var actionWidth = Math.Min(area.Width / 2, Math.Max(Children[1].DesiredSize.Width, Children[2].DesiredSize.Width));
+            var headerWidth = Math.Max(0, area.Width - actionWidth * 2 - 6);
+            Children[0].Arrange(new(area.X, area.Y, headerWidth, area.Height));
+            Children[1].Arrange(new(area.X + headerWidth + 3, area.Y, actionWidth, area.Height));
+            Children[2].Arrange(new(area.X + area.Width - actionWidth, area.Y, actionWidth, area.Height));
         }
     }
 
@@ -359,24 +493,4 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
         }
     }
 
-    private sealed class ScalarLine : HStack
-    {
-        protected override Size MeasureCore(Size available, ITextLayoutService text)
-        {
-            foreach (var child in Children) child.Measure(available, text);
-            return new(Math.Min(available.Width, Children.Sum(c => c.DesiredSize.Width) + Spacing * (Children.Count - 1)),
-                Children.Max(c => c.DesiredSize.Height));
-        }
-        protected override void ArrangeCore(Rect area)
-        {
-            var fixedWidth = Children.Where((_, i) => i != 1).Sum(c => c.DesiredSize.Width);
-            var inputWidth = Math.Max(0, area.Width - fixedWidth - Spacing * (Children.Count - 1));
-            var x = area.X;
-            for (var i = 0; i < Children.Count; i++)
-            {
-                var width = i == 1 ? inputWidth : Children[i].DesiredSize.Width;
-                Children[i].Arrange(new(x, area.Y, width, area.Height)); x += width + Spacing;
-            }
-        }
-    }
 }

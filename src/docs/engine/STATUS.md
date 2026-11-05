@@ -1,6 +1,196 @@
 # TrueMoon.Aether: состояние движка и редактора
 
-Последняя работа — **2026-11-03, ED6b.2e.2–3 Observer и source UI**.
+Последняя работа — **2026-11-05, ED4g.2a native numeric proof**.
+Четыре свежих native OpenGL запуска: source Debug/published Release × standard/
+Cobalt и embedded/MS DI. В standard через Windows проверены linked drag/release,
+Esc draft cancel, Ctrl+Enter и один Undo; во всех четырёх routed arrows/Shift/Ctrl,
+invalid input и exact captured Esc. Retained controls сохранены, final UI/GPU/
+handles0, runtime children0. Исправлен ordered pointer position и передача Shift/
+Ctrl в Platform.Silk. Свежие full Editor **1295/1295**, Alloy **1101/1101**, Hosting
+**154/154** каждый Debug/Release; failed/skipped0, шесть новых UI cases.
+[План](EDITOR_PLAN.md#ed4g2a-native-numeric),
+[evidence и ограничения](HISTORY.md#ed4g2a-native-numeric-2026-11-05).
+Следом physical ↑/↓+modifiers, Esc при удержании кнопки и pointer modifiers:
+текущий automation driver отправляет arrows как UiKey.None. Затем group reset/
+angle units. Fresh packages, Vulkan/runtime/device-loss/full-solution tests не
+повторялись; Observer follow-up отдельно.
+
+
+Предыдущая работа — **2026-11-05, ED4g.2 numeric gestures и proportional Scale**.
+Typed arrow-step/drag меняют только draft; release не Apply. Esc локально отменяет
+gesture с exact pre-existing drafts, Ctrl+Enter завершает capture и делает одну
+authoring transaction. Scale link opt-in false сохраняет XYZ ratios при typing/
+step/drag; preflight targets не затирает invalid/pending-reset peers. Selection/
+revision/unique gesture epoch защищают rollback, включая два View с общей моделью.
+Full Editor **1295/1295 D/R**, focused180/180 Debug, failed/skipped0;24новых cases.
+Отдельно Alloy1095/1095 и Hosting154/154 D/R;64новых cases суммарно. Final Debug
+solution build0errors/1555warnings, полный solution test run не выполнялся.
+11реальных Skia CPU captures с assertions для no-auto-Apply, linked ratio, exact
+cancel и one-history Apply/Undo проверены. Native/GPU/fresh package/physical scope
+не повторялся. [Контракт](EDITOR_PLAN.md#ed4g2-numeric-gestures),
+[evidence](HISTORY.md#ed4g2-numeric-gestures-2026-11-05).
+Далее source/published native input/cancel proof; Observer follow-up отдельно.
+
+
+Предыдущая работа — **2026-11-05, ED4g.1 остальные редакторы и состояния**.
+Все существующие scalar kinds/nullable используют retained PropertyEditorRow:
+одинаковая label column88, capped numeric/boolean, строка auto26–78 и компактный
+null. Typed Input/addresses, stored drafts, Apply/Cancel/history и ownership
+сохранены; actual checkbox indicator получает shared states. Full Editor
+**1271/1271 Debug/Release**, failed/skipped0;15новых Editor cases. Отдельно Alloy
+**1055/1055**, Hosting **154/154** D/R; focused156/156 Debug. Общая nonincremental
+Debug сборка0errors/1555warnings, full solution tests не выполнялись.14Skia CPU
+PNG проверены (темы/narrow/modified/focus/error/null/read-only/reset/disabled),
+native/GPU/fresh package/physical acceptance не повторялась.
+[ED4g.1](EDITOR_PLAN.md#ed4g1-generic-editors), [evidence](HISTORY.md#ed4g1-generic-editors-2026-11-05).
+Следующий UI срез — numeric gestures/step/linked scale; Observer follow-up отдельно.
+
+
+Предыдущая работа — **2026-11-05, ED4g компактный инспектор Transform**.
+Три retained строки Position/Rotation(rad)/Scale на NumberBox/Vector3Editor;
+labels/text центрированы, узкая панель переносит подпись над тремя равными полями.
+Происхождение/индивидуальный reset и metadata раскрываются «⋯»; ошибки остаются
+маркером в поле и полным копируемым diagnostics panel. Apply/Cancel/Undo/Redo,
+точные schema IDs, ownership и engine contracts сохранены. Уведомления состояния
+сведены к одному view update; Load не уведомляет неизменённые computed values.
+Full Editor **1256/1256 Debug/Release**, failed/skipped0;12новых Editor cases.
+Alloy1020/1020 и Hosting154/154 в обеих конфигурациях проверены отдельно.
+[Дизайн-код](../alloy/DESIGN.md), [прикладной план](EDITOR_PLAN.md#ed4g-compact-transform).
+CPU raster images покрывают темы/narrow/error/focus/modified/details; native/GPU/
+fresh package acceptance не повторялась. Далее числовые gestures/step/linked scale;
+Observer scheduling/allocation follow-up остаётся отдельной задачей.
+
+
+Предыдущая работа — **2026-11-04, ED6b.2e.4e bounded native open batches**.
+Default Census от256files открывает максимум4файла параллельно; coordinator один,
+validation/hash/byte budgets последовательны, ordered errors/fresh metadata/actual
+drain сохранены.21новый case, full Editor1244/1244 Debug/Release, окончательный
+focused145/145 в обеих конфигурациях после review; failed/skipped0, новые warnings0.
+6/6performance cases:24Same/6Changed, budget0/owners drained.2567files bounds312–
+335ms polling/440–470ms notifications вместо514–545/579–602ms (upper−38.5%/−21.9%).
+Tradeoff: alloc4.50vs3.66–3.67MiB/cycle, CPU500/672vs406/469ms/cycle. OtherIO/bytes
+прежние, small graphs serial; универсальный CPU/memory improvement не заявляется.
+54collection input hashes drift0.3fresh profiles/targets/collectors прошли,12Same/
+3Changed; native batch подтверждён в2many-files, byte control serial. Concurrent
+thread weights не равны scan wall time. Classifier уточнён после сбора с сохранением
+collection snapshot, production inputs прежние.56collection records/10827fixtures/
+6traces проверены,1current analysis revision отдельно, drift0. Общая nonincremental
+Debug сборка0errors/1555warnings; full solution tests не повторены. Следующий шаг —
+уменьшить scheduling/allocation overhead batch с прежними ownership/cancel fences.
+[Решения/проверки/результаты](HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04).
+
+Предыдущая работа — **2026-11-04, ED6b.2e.4d opened metadata/prepared native path**.
+FILE_BASIC_INFO+size с unsupported-provider legacy fallback и reuse только native
+имени для fresh final query реализованы. Full hashing/metadata override/reparse/
+access/cancel/drain сохранены.8новых cases; focused124/124, full Editor1223/1223
+Debug/Release, failed/skipped0; новые files без analyzer warnings, harness build0/0.
+6/6cases:24Same/6content changes, budget0/owners drained.2567files allocation3.66–3.67
+vs4.08MiB/cycle, OtherOps16685vs21819. Polling scan514–545msvs588–614ms; notifications
+579–602msvs561–593ms, universal latency/CPU improvement не заявляется.53inputs drift0.
+Relative/CreateFile2/no-hint native experiments не показали устойчивого extra benefit,
+в production не добавлены.3fresh profiles/targets/collectors прошли,12Same/3Changed;
+open+handle metadata/close57.88–58.89% census sampled thread weight остаётся главным
+resolved участком; unresolved context62.00–63.27% ограничивает дальнейшую attribution.
+Следующий шаг — отдельная native/OS attribution, не новая гипотеза о kernel cost.
+55input/10827fixture/6trace hashes drift0; общая nonincremental Debug сборка0errors/
+1555warnings, full solution tests не повторены.
+[Scope/проверки/результаты](HISTORY.md#ed6b2e4d-observer-native-open-2026-11-04).
+
+Предыдущая работа — **2026-11-04, ED6b.2e.4c file open/file-probe metadata**.
+Owned no-follow native reader на прежнем worker заменяет per-file async FileStream
+strategy/IOCP setup. Opened-before metadata +fresh path-after query, missing probes
+без exceptions и без memoization; full hashing/cumulative budgets/ancestor safety
+сохранены.41новый case, focused116/116 и full Editor1215/1215 отдельно Debug/Release,
+failed/skipped0, новые files без analyzer warnings. Release harness build0/0.
+Повторные6/6cases:24full-read Same/6same-length+mtime Changed, budget0, owners drained.
+2567files: scan0.561–0.614s вместо0.822–0.855s, allocation4.08vs4.95MiB/cycle;
+CPU process/cycle3.99–4.28% одного core вместо6.63–6.92%.53input hashes drift0.
+Control/bytes-Polling CPU вырос: universal CPU improvement не заявляется.
+3fresh profiles/targets/collectors прошли,12Same/3Changed без budget expiry.
+Resolved path metadata32.90–34.16% →2.52–8.96%; open+handle metadata/close теперь
+59.23–63.22% census thread weight. Inlining/async→sync и unresolved native context
+51.87–57.93% ограничивают attribution; нулевые cache samples не означают zero work.
+Следующий шаг — отдельная native/OS attribution оставшегося per-file Open cost.
+55input/10827fixture/6trace hashes drift0. Общая nonincremental Debug сборка0errors/
+1555warnings; полный solution test run не повторялся.
+[Контракт/проверки/полные результаты](HISTORY.md#ed6b2e4c-observer-file-io-2026-11-04).
+
+Предыдущая работа — **2026-11-04, ED6b.2e.4b bounded directory cache Observer**.
+Per-attempt positive cache до256каталогов, root-first native rename pins,
+fresh-check fallback при недоступном pin/overflow и final path revalidation перед
+Same реализованы. Нет reuse между attempts/passes; full hashing/membership/probes,
+10s/5s policy и cumulative retry budget сохранены.48новых cases, focused75/75 и
+full Editor1174/1174 отдельно Debug/Release, failed/skipped0. Release harness build0/0.
+Повторные6/6performance cases:24full-read Same,6same-length+mtime Changed, budget0,
+Stopped/watchers0. Actual2567files/11.11MiB: median scan0.822–0.855s вместо1.266–1.524s,
+CPU process/cycle6.63–6.92% одного core вместо11.74–11.81%, allocation4.95vs6.75MiB.
+52source/DLL/harness hashes без drift. CPU control cases не все улучшились;
+snapshot bounds/whole-process counters/warmed cache не являются performance guarantee.
+Три fresh profiles:3targets/collectors exit0,12Same/3Changed, budget0; ancestor
+attributes39.95–41.90% →0.67–1.07% census sampled thread weight. Следующий шаг —
+уточнить per-file open/OSFileStreamStrategy constructor42.59–42.70% inclusive и
+metadata32.90–34.16%; unresolved native caller context55.91–55.99% ограничивает
+точную attribution.54input/10827fixture/6trace hashes drift0. Общая nonincremental
+Debug сборка прошла:0errors/1555warnings; полный solution test run не повторялся.
+[Safety/команды/полные результаты](HISTORY.md#ed6b2e4b-observer-directory-cache-2026-11-04).
+UI/GPU/fresh package/full solution tests в cache lane не повторены.
+
+Предыдущая работа — **2026-11-04, ED6b.2e.4a профилирование hot path Observer**.
+Тот же Release binary/source48hashes сохранён.3managed thread-time traces после
+Build/initial pass:2many-files repeats +byte control,3targets/collectors exit0,
+12Same/3same-length+mtime Changed, budget0, Stopped/watchers0.
+ValidatePath → ancestor Attributes занимает39.95%/41.90% веса census stacks;
+вместе с file/probe metadata60.47–60.62%. Source-derived clean-pass model:
+26203ancestor visits на103distinct directories (2655validated paths).
+Это подтверждённый resolved hot path, не kernel/CPU-cycle/full async breakdown;
+native/inlined unresolved context29.32–37.70% в repeats сохраняет свои ограничения.
+[Профиль/методика/evidence](HISTORY.md#ed6b2e4a-observer-profile-2026-11-04).
+Следующий шаг — bounded reuse/deduplication ancestor validation в пределах pass
+с проверкой replacement/reparse/access errors/retry/cancel/drain и прежним full hashing.
+Production оптимизация/API/policy и новые unit/native/package checks не выполнялись.
+
+Предыдущая работа — **2026-11-04, ED6b.2e.4 measured Observer performance**.
+Manual Release consumer получил real frozen Build descriptor для4project diamond;
+production code/API/default10s polling/5s budget сохранены.6/6cases, initial6+
+steady18full Same passes, budget-exceeded0,6same-length/same-mtime changes.
+Actual2567files/11.11MiB: median scan1.27–1.52s, process CPU11.74–11.81%одного core,
+allocation6.75MiB/cycle.139files/129.11MiB:0.156–0.182s, CPU2.61–3.07%,0.62MiB/cycle.
+Notifications publication1.58s(files)/0.429s(bytes), polling11.37s/10.18s.
+Read bytes равны descriptor на всех24passes; idle0, Stopped/watchers0 у6owners.
+48source/DLL +5554restored fixture hashes без drift. CPU/allocations/memory — whole
+process+sampler, filesystem cache warmed; native UI/GPU/package/unit/full solution
+в этом performance lane не повторялись. [Методика/команды/evidence](HISTORY.md#ed6b2e4-observer-performance-2026-11-04).
+Следующий шаг — attribution metadata/path-validation cost на many-files graph,
+затем адресная оптимизация подтверждённых затрат с прежними correctness/drain fences.
+
+Предыдущая работа — **2026-11-04, ED4f.3 Window root стандартного Editor**.
+EditorMainWindow : Window<EditorViewModel> создаётся App/typed IFactory, содержит
+один reusable EditorView и заимствует модель/style. Effective title/client size
+копируются после configure callback, header получает прежний EditorView и общий
+caption source. Existing EditorWindow/EditorSession сохраняют одну close policy и
+first-presentation GPU initialization; embedded путь остаётся raw EditorView.
+64новых cases, full Editor1126/1126, Alloy976/976 и Hosting154/154 отдельно
+Debug/Release прошли, failed/skipped0; solution Debug nonincremental build0errors/
+1584existing warnings. Fresh15packages/headless8/8; source Debug/published Release/
+fresh NuGet Release ×standard/Cobalt и embedded/MS DI6/6native workflows:
+84children reaped/released,78graceful Vulkan validation0/0,30Game, maxLive1,
+final UI/GPU/handles0. Startup failure/cancel12/12,3PNG просмотрены,
+2855input hashes без drift. [Реализация/команды/границы](HISTORY.md#ed4f3-window-root-2026-11-04).
+UIA2d targeted independent package consumer подтверждён этим Editor profile;
+full ED4/ED6 и physical/hardware/K7/release gates открыты. Следующий Aether шаг —
+measured observer cost на большом local graph с ordinary10s/5s.
+
+Предыдущая работа — **2026-11-03, source/документационная сверка Window integration**.
+UIA2 API и сохранённые проверки сверены; текущий standard Editor ещё использует
+EditorView +HostedUiWindow/WindowFrame, отдельного Window root нет. Рекомендуемый
+consumer запланирован в [ED4f.3](EDITOR_PLAN.md#ed4f3-window-root): wrapper сохраняет
+embedded EditorView, typed root access/overrides, header/viewport и одну close policy.
+Core/headless/offscreen/HUD не получают Window; Player решает это в ENG7b.2 с одним
+native/device owner. [Сверка и исходные точки](HISTORY.md#window-engine-integration-review-2026-11-03).
+Предыдущий UIA2 code run отдельно подтвердил Editor1062/1062 Debug/Release regression;
+новые engine build/test/native в текущей документационной работе не запускались.
+
+Предыдущая code работа — **2026-11-03, ED6b.2e.2–3 Observer и source UI**.
 Один project-owned worker, bounded hints+polling, full byte/membership/probe census,
 sticky Changed, unavailable/recovery и actual stop/drain/retry реализованы. Open
 инертен; successful current ScenePlayback Build/reuse привязывает baseline, source
@@ -411,6 +601,14 @@ K8/VRAM/final alpha открыты; NVIDIA workaround search остановле�
 
 ## Следующий конкретный шаг
 
+Основной Aether шаг — measured source observer cost на большом local graph при
+обычных10s polling/5s budget. Общая UI поставка Window требует independent fresh
+NuGet consumer. Если выбран Editor Window consumer — выполнить
+[ED4f.3](EDITOR_PLAN.md#ed4f3-window-root) с собственным standard/embedded/native/package
+proof; сегодняшняя сверка лишь определяет этот маршрут. Header/casts/initial size/
+configure compatibility и close-once — необходимые части, простая смена базового
+класса EditorView не подходит. Hardware/release gates и наблюдение ARCH2e.4 ниже прежние.
+
 ARCH2e.4 scoped contract проверен прежними controlled RED/GREEN. Новый run2026-10-31
 снова наблюдал stdout/stderr drain timeout после reap в headless exe/MS DI generation3:
 оба readers WaitingForActivation,24bytes сохранены,9workers/pending0, все3children
@@ -428,9 +626,12 @@ metrics остаются отдельными. ED4c.2/3 имена/порядо�
 через общую history. ED1b.2 project picker/switch и runtime context rebinding реализованы
 в stopped-game/idle-compiler profile. ED6b.1 запускает in-memory scene copy через
 fresh Build/Start/Play и сохраняет parent state. ED6b.2a/b.1 добавляют content witness,
-stale Start rejection и C# compilation из captured bytes. Следующий основной шаг —
-ED6b.2b.2a.1 снижение стоимости toolchain после scoped native acceptance; reuse/Replace и
-полный input/HUD/Player впереди. Детали — [ED6b.2b.2a](EDITOR_PLAN.md#ed6b2b2a-снимок-declarative-preparation--2026-10-31).
+stale Start rejection и C# compilation из captured bytes. Последующие freeze/reuse/
+document-aware Replace, bounded project/package graphs и source watcher выполнены
+в своих profiles, указанных в датированных записях выше. Текущий measured-cost шаг
+относится к observer; эти completed slices не назначаются заново. Полный input/HUD/
+Player остаются отдельно. Детали source tracking —
+[ED6b.2e](EDITOR_PLAN.md#ed6b2e-контракт-source-watcher-и-stale-build-status--2026-11-02).
 ENG2 CPU FrameReceiver и legacy Build/Replace follow-ups проверены новыми full
 Aether runs и headless source/published matrix выше; исходные failures сохранены.
 Mithril ready-file race закрыт отдельными module/published proofs. Diagnostic

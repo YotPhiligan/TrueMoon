@@ -120,7 +120,7 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
         }
         Chrome = chrome;
         var options = openGL ? WindowOptions.Default : WindowOptions.DefaultVulkan;
-        NativeWindow = Window.Create(options with
+        NativeWindow = global::Silk.NET.Windowing.Window.Create(options with
         { Size = new Vector2D<int>(width, height), Title = title, FramesPerSecond = 60, UpdatesPerSecond = 60,
             ShouldSwapAutomatically = false, PreferredStencilBufferBits = 8, IsVisible = false,
             TransparentFramebuffer = appearance.Transparency == WindowTransparencyMode.PerPixel,
@@ -175,10 +175,19 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
             NativeWindow.StateChanged += _stateHandler;
             foreach (var mouse in _input.Mice)
             {
-                mouse.MouseMove += (_, p) => _callbacks.Execute(() => PointerInput(InputKind.PointerMove, p.X, p.Y));
-                mouse.MouseDown += (m, b) => _callbacks.Execute(() => PointerInput(InputKind.PointerDown, m.Position.X, m.Position.Y, (int)b));
-                mouse.MouseUp += (m, b) => _callbacks.Execute(() => PointerInput(InputKind.PointerUp, m.Position.X, m.Position.Y, (int)b));
-                mouse.Scroll += (m, wheel) => _callbacks.Execute(() => PointerInput(InputKind.Wheel, m.Position.X, m.Position.Y, wheel: wheel.Y));
+                var initial = mouse.Position;
+                var pointer = new WindowPointerState(initial.X, initial.Y);
+                mouse.MouseMove += (_, p) => _callbacks.Execute(() =>
+                { pointer.Move(p.X, p.Y); Dispatch(InputKind.PointerMove); });
+                mouse.MouseDown += (_, b) => _callbacks.Execute(() => Dispatch(InputKind.PointerDown, (int)b));
+                mouse.MouseUp += (_, b) => _callbacks.Execute(() => Dispatch(InputKind.PointerUp, (int)b));
+                mouse.Scroll += (_, wheel) => _callbacks.Execute(() => Dispatch(InputKind.Wheel, wheel: wheel.Y));
+                void Dispatch(InputKind kind, int button = 0, float wheel = 0)
+                {
+                    var shift = _input.Keyboards.Any(k => k.IsKeyPressed(Key.ShiftLeft) || k.IsKeyPressed(Key.ShiftRight));
+                    var control = _input.Keyboards.Any(k => k.IsKeyPressed(Key.ControlLeft) || k.IsKeyPressed(Key.ControlRight));
+                    PointerInput(pointer.Create(kind, button, wheel, shift, control));
+                }
             }
             foreach (var keyboard in _input.Keyboards)
             {
@@ -263,11 +272,11 @@ public sealed class SilkWindowHost : IWindowAppearanceHost, IWindowChromeHost, I
         _chrome?.Verify();
         _dpi?.Verify();
     }
-    private void PointerInput(InputKind kind, float x, float y, int button = 0, float wheel = 0)
+    private void PointerInput(UiInput input)
     {
         // GLFW coordinates are already logical on framebuffer-scaled platforms, but physical on Windows.
         var scale = _dpi?.PixelScale;
-        Input?.Invoke(new UiInput(kind, scale?.ToLogical(x) ?? x, scale?.ToLogical(y) ?? y, Button: button, WheelDelta: wheel));
+        Input?.Invoke(input with { X = scale?.ToLogical(input.X) ?? input.X, Y = scale?.ToLogical(input.Y) ?? input.Y });
     }
     private void KeyInput(IKeyboard keyboard, Key key, InputKind kind)
     {

@@ -5,7 +5,7 @@ param(
     [string]$EvidenceDirectory,
     [Alias('Profile')][ValidateSet('All','SourceDebug','SourceRelease','PackageDebug','PackageRelease')][string]$RunProfile = 'All',
     [ValidateSet('All','Standard','Embedded')][string]$HostKind = 'All',
-    [ValidateSet('All','Workflow','Failure','Cancel','ReplaceInterrupt','Replace-Restore-Exit','PackageInputs','PackageAcceptance','SourceWatch')][string]$Scenario = 'All'
+    [ValidateSet('All','Workflow','WindowRoot','Failure','Cancel','ReplaceInterrupt','Replace-Restore-Exit','PackageInputs','PackageAcceptance','SourceWatch')][string]$Scenario = 'All'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -166,13 +166,21 @@ try {
                 Invoke-Gui $name @("$gui/GuiConsumer.dll", $runtime, $report, $hostMode.ToLowerInvariant(), $provider, $caseMode.ToLowerInvariant()) -package:($item -like 'Package*')
                 $result = Get-Content -LiteralPath "$report/report.json" -Raw | ConvertFrom-Json
                 if (!$result.Passed -or $result.ActiveUiSessions -ne 0 -or $result.GpuResources -ne 0 -or $result.GpuHandles -ne 0) { throw 'Case cleanup failed.' }
-                if ($caseMode -eq 'Workflow') {
-                    $playback = $result.Workflow.ScenePlayback
+                if ($caseMode -in @('Workflow','WindowRoot')) {
+                    $playback = if ($caseMode -eq 'WindowRoot') { $result.Workflow.UnderlyingWorkflow.ScenePlayback } else { $result.Workflow.ScenePlayback }
                     if (!$playback.FrozenPreparation -or !$playback.CapturedPackages -or $playback.PreparationCosts.Count -ne 6 -or $playback.StartMilliseconds.Count -ne 2 -or
                         $playback.ReusedArtifacts.Count -ne 2 -or $playback.ReusedArtifacts[0] -or !$playback.ReusedArtifacts[1] -or
                         !$playback.Replacement.PausedTickPreserved -or !$playback.Replacement.CompilerFailureKeptOld -or
                         !$playback.Replacement.RollbackStateAndPlayingMode -or !$playback.Replacement.ParentDocumentPreserved -or
                         @($playback.PreparationFingerprints | Sort-Object -Unique).Count -ne 1) { throw 'Frozen preparation acceptance evidence is incomplete.' }
+                }
+                if ($caseMode -eq 'WindowRoot') {
+                    $proof = $result.Workflow
+                    if ($proof.Profile -ne 'EditorWindowRoot' -or $proof.Integrated -ne ($hostMode -eq 'Standard') -or
+                        ($hostMode -eq 'Standard' -and (!$proof.CopiedSettings -or !$proof.HeaderCallbackReceivesEditorView -or
+                            $proof.CloseRequests -ne 3 -or $proof.ComponentCloseCalls -ne 3 -or $proof.StyleCreates -ne 1 -or $proof.HeaderCreates -ne 1 -or
+                            $proof.CleanCaptions -lt 1 -or $proof.DirtyCaptions -lt 1 -or $proof.SourceOwners.Count -lt 2)) -or
+                        ($hostMode -eq 'Embedded' -and ($proof.StyleCreates -ne 0 -or $proof.HeaderCreates -ne 0))) { throw 'Editor Window integration proof is incomplete.' }
                 }
                 if ($caseMode -eq 'SourceWatch') {
                     $proof = $result.Workflow

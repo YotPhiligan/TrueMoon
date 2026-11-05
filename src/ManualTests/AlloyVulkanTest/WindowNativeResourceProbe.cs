@@ -129,7 +129,7 @@ internal static partial class WindowNativeResourceProbe
                         {
                             var options = openGL ? WindowOptions.Default : WindowOptions.DefaultVulkan;
                             options.Size = new Vector2D<int>(320, 200); options.Title = "Direct Silk resource control";
-                            using var window = Window.Create(options);
+            using var window = global::Silk.NET.Windowing.Window.Create(options);
                             window.Initialize(); var directFrames = 0;
                             Initialized(openGL ? NativeWindowDiagnostics.GraphicsInfo() : null);
                             window.Render += _ => { window.GLContext?.SwapBuffers(); if (++directFrames == 3) window.Close(); };

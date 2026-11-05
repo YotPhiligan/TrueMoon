@@ -1,5 +1,306 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="uia3c-native-numeric-2026-11-05"></a>
+## UIA3c: native numeric follow-up — 2026-11-05
+
+Исправлен Platform.Silk pointer adapter: button/wheel берут позицию последнего
+упорядоченного cursor event вместо live IMouse.Position. State отдельный для
+каждой мыши; события сохраняют value snapshot. Pointer UiInput теперь включает
+Shift/Ctrl от подключённых keyboards. Публичные API/зависимости не изменялись.
+`WindowPointerState.cs` включён source link в существующий native-free Alloy test
+project, как WindowCallbackBoundary/WindowPixelScale. Новые regression tests:
+
+| Behavior | Test |
+| --- | --- |
+| Initial point/button/modifiers survive later movement | PressSnapshotRetainsOrderedPositionAndModifiersAcrossLaterMovement |
+| Wheel carries last cursor coordinates/delta/flags | WheelUsesLastOrderedCursorEventAndPreservesItsDelta |
+| Buffered press/move/release drives real NumberBox, no/Shift/Ctrl/both | BufferedDragStartsOnPrefixAndRetainsPressModifiers (4cases) |
+
+Свежие full Alloy **1101/1101 Debug/Release**, Hosting **154/154 Debug/Release**,
+failed/skipped0. Focused new6/6 Debug. Отдельно full Editor1295/1295 D/R.
+Native OpenGL proof: source Debug/published Release × standard/Cobalt и embedded/
+MS DI, четыре passing runs; standard дополнительно6Windows-input stages каждый.
+После исправления тот же быстрый OS drag меняет Scale2/3/5→2.1/3.15/5.25;
+Esc draft cancel, Ctrl+Enter one transaction и Undo прошли, final UI/GPU/handles0.
+Native readback и startup asset/font paths проверены; runtime children0.
+Полный журнал и ограничения —
+[engine history](../engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05).
+
+Открыты physical arrows/modifiers, Esc при удерживаемой кнопке и pointer modifiers.
+Windows driver отправляет Up как UiKey.None; routed arrows не считаются Windows
+proof. Fresh package/Vulkan/device-loss/full-solution tests не выполнялись.
+Далее закрыть input gates; group reset и angle units — отдельный следующий срез.
+Evidence: `TestResults/NumericNative-20261105/REPORT.md`, `verification.json`.
+
+
+<a id="uia3c-numeric-gestures-2026-11-05"></a>
+
+## UIA3c: numeric step/drag — 2026-11-05
+
+Следующий пункт [дизайн-кода](DESIGN.md#numeric-gestures) реализован в общем NumberBox.
+Opt-in AdjustmentEnabled сохраняет прежний plain-draft default. NumericKind/Step/
+inclusive bounds обеспечивают checked Int64 и finite Real ↑/↓/prefix drag;4logical
+pixels на tick, start-snapshot modifiers и точный string возврат на нулевой tick.
+Capture принадлежит UI control до terminal event, context заимствуется. Release
+сохраняет draft, Cancelled восстанавливает baseline, Interrupted не затирает внешнюю
+canonical/identity. CanAdjust/IsGestureCurrent — borrowed callbacks; они очищаются
+при Dispose. Failures и invalidation освобождают capture до rollback/terminal events.
+Wheel/timers/native cursor warp/engine dependency не добавлены.
+
+Во время проверок исправлены: Int64 bounds выше2^53 (candidate не проходит через
+Double); callback failure в hover invalidation до HandleInput; subpixel Single
+round-off на точном4px tick. Shift+Ctrl factor вычисляется до умножения, integer
+minimum1 применяется корректно. Стандартные partial text drafts не coerce-ятся.
+
+Fresh [evidence](../../TestResults/NumericGestures-20261105/REPORT.md):40новых UI
+expanded cases, full Alloy **1095/1095 D/R**, Hosting **154/154 D/R**, failed/skipped0.
+Final controls focused **40/40 Debug** после assertions-only усиления invalid
+pointer-start. Editor **1295/1295 D/R** и focused180/180 Debug отдельно; суммарно
+64новых cases. Final nonincremental Debug build0errors/1555warnings, full solution
+tests не выполнялись.11actual Skia CPU captures просмотрены; source/published
+native input, GPU, fresh package и physical delivery не повторялись.
+
+Запуски: full `dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --no-restore
+-c Debug` и Release; аналогично Hosting, каждый с отдельными TRX/log/unique binlog.
+Final focused filter `FullyQualifiedName~NumberBoxAdjustmentTests|FullyQualifiedName~NumberBoxGestureTests`.
+Полные commands/hashes — в отчёте. Static pairing prerequisite NETSDK1004 снова
+остановил parse-only launcher; pairing/coverage/mutation execution не заявляются.
+Далее scoped source/published native numeric input/cancel proof.
+
+
+<a id="uia3b-generic-editors-2026-11-05"></a>
+
+## UIA3b: остальные редакторы и состояния — 2026-11-05
+
+По запросу пользователя общий [дизайн-код](DESIGN.md) распространён на remaining
+Inspector scalar editors. В Argentis добавлен PropertyEditorRow: owned label/value/
+optional accessory, общая label column, capped/filling values, label-above на узких
+ширинах и ShowEmpty без замены/очистки редактора. Входные части проверяются до
+ownership transfer. CheckBox рисует state BorderColor на actual indicator, использует
+семантический fill/OnEditorAccent, центрирует caption; IsReadOnly сохраняет focus,
+но блокирует pointer/keyboard toggle и Click. RichTextEditor получил styled min/max
+content-height bounds; прежние defaults/explicit Height/MinHeight сохраняются.
+
+Свежие [результаты](../../TestResults/InspectorEditors-20261105/REPORT.md):
+35новых direct UI cases, full Alloy **1055/1055 D/R**, Hosting **154/154 D/R**,
+failed/skipped0. Прикладной Editor **1271/1271 D/R** отдельно; focused Inspector
+**156/156 Debug**. Всего50новых expanded cases/23метода. Общая nonincremental
+Debug сборка0errors/1555warnings; полный solution test run не выполнялся.
+14Skia CPU raster captures проверены в Dark/Light, narrow и состояниях modified/
+focus/error/null/non-null/read-only/details/pending-reset/disabled. Финальный preview
+build0warnings/0errors; runner проверяет фактический staged reset перед capture.
+Native/GPU/fresh package/physical/release acceptance не повторялась.
+
+Direct controls35/35 прошли с первого запуска. Два прежних Inspector ожидания
+целенаправленно адаптированы: fixed Height70 заменён bounds26–78 и auto-height
+контрактом; scroll tooltip case использует малый viewport и доказывает фактическую
+прокрутку, поскольку компактная форма теперь помещается в прежние800pixels.
+Остальные validation/history/focus/disposal assertions сохранены.
+Roslyn static pairing launcher снова остановился на missing analyzer assets
+NETSDK1004; пакет/SDK не устанавливался, pairing/coverage/mutation execution не заявлены.
+
+Команды: full `dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --no-restore
+-c Debug` и Release; аналогично Hosting. Каждый запуск имеет отдельный TRX/log/unique
+`-bl:...-{}.binlog`. Полные runnable commands и input/artifact hashes — в отчёте.
+Далее numeric drag/step/linked scale и отдельный gesture transaction/cancel contract;
+новые enum/reference/color-picker schema contracts в этот срез не входят.
+
+
+<a id="uia3-compact-editors-2026-11-05"></a>
+
+## UIA3: компактные редакторы и дизайн-код — 2026-11-05
+
+По согласованному [дизайну](DESIGN.md) добавлены provider-neutral `NumberBox` и
+`Vector3Editor` в корне Argentis. NumberBox владеет TextBox и семантическим префиксом,
+сохраняет точный строковый draft; Vector3Editor располагает три равные колонки и
+переносит общую подпись над ними на узкой панели. Controls не знают engine types,
+не парсят и не применяют значения. Вложенные части наследуют ColorRole с обычным
+local/Style/ViewStyle приоритетом; смена темы/ширины не заменяет редакторы.
+
+Theme получила отдельные Number/Text/Boolean/Reference/AxisX/Y/Z, Modified и
+BorderHover токены для Dark/Light. Общий themed border разрешает disabled → error →
+focus → modified → hover → role. Явные BorderColor overrides сохранены; структурные
+error/edit markers и внутренний focus ring независимы. TextBox центрирует строку
+текста, selection и caret внутри padding, включая ограниченную высоту. Новых
+timers/idle frames, native API, renderer backend или package dependencies нет.
+
+Fresh evidence: [TestResults/CompactInspector-20261105](../../TestResults/CompactInspector-20261105/REPORT.md).
+44новых expanded UI cases; полный Alloy **1020/1020 Debug/Release**, Hosting
+**154/154 Debug/Release**, failed/skipped0. Прикладной Editor **1256/1256** в обеих
+конфигурациях проверен отдельно. Финальный focused Inspector **141/141 D/R** после
+assertions-only review, production прежний; общий nonincremental Debug build
+**0errors/1555warnings**. Полный solution test run не выполнялся.
+
+9Skia CPU raster PNG получены и проверены для Dark/Light, narrow, modified, focused,
+error, details и компактных Transform previews. Это raster evidence, без native
+window/GPU/package/physical acceptance. Manual inspector smoke адаптирован к
+раскрытию сведений перед reset и проверяет retained3rows, но native run не повторён.
+Первые controls failures были ошибками ожидания bounds центрированного Text.
+Новые состояния выявили лишние dispatcher notifications в Editor: view updates
+объединены, InspectorProperty.Load уведомляет только изменённые observable values.
+Existing single-update selection/history checks сохранены; неподдержанный reserved
+Transform v2 проверяется как admission failure, другой тип с теми же ключами — fallback.
+
+Команды: `dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj --no-restore -c Debug`
+и `-c Release`; аналогично `TrueMoon.Alloy.Hosting.Tests`. Для каждого запуска сохранены
+TRX, полный log и отдельный `-bl:...-{}.binlog`; точные commands/границы — в отчёте.
+Первый preview restore встретил sandbox-denied NuGet.Config; повтор с ordinary-user
+доступом прошёл. Новых SDK/packages и системных настроек не устанавливалось.
+
+Далее numeric drag/step, linked scale и отдельный transaction/cancel contract жеста.
+Success/busy transitions, wider native/GPU/physical/release gates остаются отдельными.
+
+
+<a id="uia2-editor-window-consumer-2026-11-04"></a>
+
+## UIA2: Editor Window consumer — 2026-11-04
+
+Прикладной [ED4f.3](../engine/EDITOR_PLAN.md#ed4f3-window-root) интегрирует existing
+Window API в standard Editor через EditorMainWindow : Window<EditorViewModel>.
+Один nested EditorView сохраняет собственный style scope и viewport/overlays;
+typed IFactory/immutable creation arguments сохраняют configure overrides и
+borrowed/owned lifetimes. Default/custom header callback получает EditorView,
+caption/header используют один UI-independent formatter. Existing close policy
+и first-presentation GPU initialization прежние; embedded consumer остаётся View.
+Новых common renderer/platform/window APIs в этом срезе нет.
+
+Фактически выполнены собственные full Alloy976/976 и Hosting154/154 отдельно
+Debug/Release, failed/skipped0. Отдельно full Editor1126/1126 Debug/Release,
+включая64новых cases, solution Debug nonincremental0errors/1584existing warnings.
+Fresh15packages/headless8/8, source Debug/published Release/fresh NuGet Release
+×standard/Cobalt и embedded/MS DI6/6WindowRoot workflows прошли.84children
+reaped/released,78graceful reports с validation enabled0errors/0warnings,
+30Game с selected private DLL, maxLive1, final UI/GPU/handles0.
+12startup failure/cancel cases прошли;3representative PNG просмотрены;
+2855source/package/validation/startup artifact hashes без drift.
+Документационный audit9PLAN/STATUS/HISTORY +report:54local links/anchors,
+broken0, git diff --check exit0.
+
+UIA2d targeted independent Window App delivery подтверждён через свежие NuGet
+пакеты standard Editor/Cobalt; embedded/MS DI проверен отдельно в том же consumer.
+Для текущего OpenGL UI parent/Vulkan runtime profile временно распакован official
+Khronos layer в ignored evidence, только child-process environment. Это не
+повторный validation run прежнего plain Window Vulkan UI presenter. Старые
+NotSupportedException/user NuGet.Config ограничения относятся к run2026-11-03;
+в новом run обычный restore с разрешённым доступом выполнен успешно. Широкая
+Window backend matrix, PA8c.0, physical/DPI/hardware/K7/release gates открыты.
+
+Canonical implementation/requirement matrix, exact commands, provenance и failures —
+[engine HISTORY](../engine/HISTORY.md#ed4f3-window-root-2026-11-04).
+Evidence: `TestResults/EditorWindow-20261104/{verification.json,hash-checks.json,REPORT.md}`,
+six final suite TRX, package/native manifests и startup reports. Следующий
+основной Aether шаг остаётся measured observer cost с default10s/5s.
+
+## UIA2 Window: сверка планов и consumers — 2026-11-03
+
+Документационная работа после реализации Window. Сверены сохранённые six full TRX,
+native App reports, producer packages summary и16source hashes: drift0. Предыдущие
+Alloy976/Hosting154/Editor1062 Debug/Release и94new cases сохраняют дату и scope
+code run ниже; build/test/native повторно не запускались. UIA2a–c отмечены как
+реализованные/проверенные, UIA2d independent package consumer остаётся открытым;
+validation layer и fresh-restore ограничения не потеряны.
+
+По source review Window нужен как адресный consumer стандартного Editor host,
+а не dependency core Aether/offscreen Runtime/HUD. EditorView — reusable typed
+View; новый Window root оборачивает именно этот экземпляр, не меняет embedded
+contract и не создаёт второго native окна. Детальный предлагаемый срез/guards —
+[ED4f.3](../engine/EDITOR_PLAN.md#ed4f3-window-root). Player рассматривается только
+в ENG7b.2 с прежним единственным native/device owner. Новых C# изменений нет.
+
+Документационный audit:9PLAN/STATUS/HISTORY files,35added local links/anchors,
+broken0, diff whitespace0;16source/2package hashes без drift,6previous TRX сверены.
+Evidence: `TestResults/WindowPlanning-20261103/verification.json`; это read-only
+проверка прежних результатов, не новый passing runtime/test run.
+
+## UIA2 Window component — 2026-11-03
+
+По запросу пользователя реализованы Window/Window<TData>, IWindowController,
+WindowHostConnection, WindowPresentationState/WindowCloseReason и Fluent helpers
+в Argentis. Window наследует View; typed форма наследует Window, реализует
+IView<TData> и использует те же content/binding/scoped-style правила. Новых
+dependencies/assemblies/DI scopes нет. Data/style/controller заимствуются; Window
+владеет content и subscriptions. Native/GPU ресурсы остаются у HostedUiWindow.
+
+Title/ClientSize — typed properties. Requested dimensions: whole logical pixels
+[1,32768]; предел конкретного backend/device этим не обещан. Element.Width/Height
+остаются layout. ActualClientSize допускает fractional DPI и zero suspension,
+наблюдение не перезаписывает request. State/IsActive/HostStateChanged публикуются
+на owner thread; commands не подменяют фактический native state.
+
+Host connection эксклюзивна для fresh detached root. Root construction теперь
+выполняется до HWND/graphics, чтобы применить component settings/validate root;
+это явное изменение прежнего timing, а не требование current graphics context.
+Title/ClientSize компонента, включая defaults, переопределяют host Title/Width/Height.
+Backend/appearance/chrome остаются Hosting options. HostedUiWindow добавляет одну
+existing WindowFrame, обновляет native/default painted caption и effective style/
+binding properties без rebuild. Вложенные Window отвергаются при startup.
+
+Window.RequestCloseAsync делегирует прежнему coordinator; callbacks компонента
+перед host callbacks, snapshot на попытку. Application/Native veto/error сохраняют
+окно; Shutdown игнорирует veto, drains все handlers и сохраняет errors. Отмена
+caller wait не отменяет accepted attempt. Disconnect до tree/native disposal;
+startup failure освобождает только принятый fresh root. Native side effects имеют
+owner/exclusive-lifetime fences, включая reentrant disconnect из caption delegate
+и HostStateChanged. Попытка менять connected Window с worker ничего не публикует.
+
+Новый public Window конфликтует с unqualified Silk.NET.Windowing.Window при обоих
+using; in-repo native factory calls квалифицированы. Migration note и новые
+ownership/timing правила добавлены в Argentis/Hosting package README и Hosting README.
+Штатное создание — existing UsePresentationFactory<TWindow>/IFactory<TWindow>.
+
+Текущие проверки, Windows x64/net10.0/SDK10.0.403:
+
+| Область | Результат |
+| --- | --- |
+| New direct component/connection/fluent cases |57/57 Debug; входят в full suites ниже |
+| New Hosting binding/startup/close cases |37/37 Debug; входят в full suites ниже |
+| Full Alloy |976/976 Debug и976/976 Release, failed/skipped0 |
+| Full Hosting |154/154 Debug и154/154 Release, failed/skipped0 |
+| Full Editor regression |1062/1062 Debug и1062/1062 Release, failed/skipped0; это собственный текущий run Editor, не вывод из Alloy |
+| Solution build |Debug --no-restore --no-incremental exit0,0errors/1584warnings; исходные XML/nullable и cached NU1900 предупреждения не подавлялись |
+| Producer packages |Argentis/Alloy.Hosting Release pack --no-build --no-restore; DLL hashes/XML/new Window docs проверены, без NuGet push |
+| Native Window component |source Debug и published Release, по OpenGL/Vulkan2/2 +App Cobalt/MS DI2/2; model/style/IFactory, lazy Build, UI-owner creation, single product, actual cleanup |
+| Native legacy async-close |source Debug/published Release exit0: native veto/save failure/retry, canceled wait, responsive owner, forced Stop, cleanup failures, GL/Vulkan |
+
+Native component lane проверяет initial settings, одну рамку, native/painted caption,
+resize/maximize/restore/minimize, requested-size сохранность, retained focused draft
+при theme/resize, component veto до host callback, pending async drain и cleanup.
+После каждого lane sessions/native chrome+DPI hooks0. App model заимствуется Window
+и dispose-ится App один раз; factory Create1. Два final OpenGL PNG просмотрены.
+Device metadata — NVIDIA RTX5070Ti/OpenGL NVIDIA621.01; это observation, не K7 soak.
+
+Evidence: `TestResults/WindowComponent-20261103/`: six full TRX/logs, RunTests.ps1,
+tests.json, solution-debug-no-restore.log, NativeAppDebug/NativeAppRelease report.json
+и PNG, legacy-close logs, Packages, REPORT.md/verification.json. Команды:
+
+```powershell
+dotnet build TrueMoon.slnx -c Debug --no-restore --no-incremental -v quiet
+pwsh -NoProfile -NonInteractive -File TestResults/WindowComponent-20261103/RunTests.ps1
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug --no-restore
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --window-component --component-output TestResults/WindowComponent-20261103/NativeAppDebug
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --no-restore -o TestResults/WindowComponent-20261103/PublishFinal
+dotnet TestResults/WindowComponent-20261103/PublishFinal/AlloyVulkanTest.dll --window-component --component-output TestResults/WindowComponent-20261103/NativeAppRelease
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --async-close
+dotnet TestResults/WindowComponent-20261103/Publish/AlloyVulkanTest.dll --async-close
+dotnet pack TrueMoon.Argentis/TrueMoon.Argentis.csproj -c Release --no-build --no-restore -o TestResults/WindowComponent-20261103/Packages
+dotnet pack TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj -c Release --no-build --no-restore -o TestResults/WindowComponent-20261103/Packages
+```
+
+Initial native harness вызывал Update из InvokeAsync callback и получил правильный
+reentrancy rejection; capture перенесён в FramePresented. Новый app probe отдельно
+исправил ambiguous target-typed Color. Production fixes не ослабляли эти guards.
+Первый solution build с implicit restore failed на access denied user NuGet.Config;
+cached-assets --no-restore build выше прошёл. Static pairing analyzer/IDE findTests
+не были доступны (temp analyzer restore тоже блокирован user NuGet.Config); это
+не выдано за выполненный Roslyn pairing. Assertion/pseudo-mutation review выполнен
+по public outcomes, без executed mutation score и без coverage claims.
+
+Directed --validation attempt **failed**: VK_LAYER_KHRONOS_validation unavailable.
+Plain native successes не являются validation0/0. Fresh independent NuGet Window App
+consumer, hardware DPI/OS input/device loss/VRAM/K7 soak, full solution test run и
+release readiness не выполнены. Следующий UIA2 шаг — independent package Window
+consumer с factory/borrowed model/style и указанной backend/provider matrix.
+
 ## Editor ED6b.2b.1 captured compiler consumer — 2026-10-31
 
 Scene action включает capture C# compiler inputs; общие UI API/renderer не менялись.

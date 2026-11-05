@@ -68,6 +68,17 @@ internal static class EditorInspectorSmoke
             await Until(() => view.InspectorPanel.IsVisible && panel.Components.Count == 3 && !ui.NeedsUpdate);
             var transform = model.Components.Single(c => c.TypeId == BuiltInComponents.TransformId).Id;
             var appearance = model.Components.Single(c => c.TypeId == BuiltInComponents.AppearanceId).Id;
+            await ui.InvokeAsync(() =>
+            {
+                Require(panel.TransformEditors.TryGetValue(transform, out var compact) && compact.Children.OfType<Vector3Editor>().Count() == 3 &&
+                    compact.Children.Contains(compact.LinkScale) &&
+                    ReferenceEquals(compact.Position.First.Editor, panel.Properties[(transform, "x")].Input) &&
+                    ReferenceEquals(compact.Rotation.First.Editor, panel.Properties[(transform, "pitch")].Input) &&
+                    ReferenceEquals(compact.Scale.Third.Editor, panel.Properties[(transform, "sz")].Input),
+                    "Transform did not use the retained three-row numeric editor.");
+                Require(!panel.Components[transform].Metadata.IsVisible && !panel.Properties[(transform, "x")].Source.IsVisible,
+                    "Inspector metadata is not collapsed by default.");
+            }).WaitAsync(token);
             var text = panel.Properties[(custom, "text")].Input;
             Require(text is RichTextEditor && panel.Properties[(custom, "flag")].Input is CheckBox &&
                 panel.Properties[(custom, "count")].Input is TextBox, "Schema kinds did not choose actual editor controls.");
@@ -93,6 +104,7 @@ internal static class EditorInspectorSmoke
                 properties["text"].Value.GetString() == "Edited line\nUnicode: Привет 🙂", "Typed Apply lost scalar kind, Int64, null distinction or multiline text.");
             await Click(panel.Undo); await Until(() => !document.Read().IsDirty);
             await Click(panel.Redo); await Until(() => document.Read().IsDirty);
+            await Click(panel.DetailsButtons[custom]);
             await Click(panel.Properties[(custom, "count")].Reset);
             await Click(panel.Apply); await Until(() => !model.HasDraft);
             Require(document.Read().Content!.Resolved.Entities[cube].Components[custom].Properties["count"].Value.GetInteger() == 7,

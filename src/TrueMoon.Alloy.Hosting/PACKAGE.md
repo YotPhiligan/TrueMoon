@@ -12,7 +12,7 @@ keep system decorations. `TitleBarFactory` overrides this composition;
 uses the existing cancellable asynchronous close coordinator.
 
 Explicit root factory: `context.UsePresentation(resolver => new MyView(resolver.Resolve<MyModel>()), configure)`
-creates the root on the UI owner after the target is ready. Register dependencies
+creates the root on the UI owner before native/graphics allocation. Register dependencies
 explicitly; the view is not registered/resolved as a service and a factory-based
 Cobalt graph needs no generated view resolver. The generic overload remains.
 For an injected factory, register `IFactory<MyView>` and call
@@ -22,6 +22,25 @@ borrow their target, avoiding multiple provider-owned disposable aliases.
 Renderer/window settings are snapshotted during registration. Return a fresh,
 detached root; null/disposed/parented/attached roots fault startup without disposing
 another owner's tree. Factory exceptions remain observable through Completion.
+
+The root may be an Argentis `Window` / `Window<TData>`. Use the same
+`UsePresentationFactory<TWindow>` registration and borrowed model/style lifetimes.
+Effective component Title/ClientSize take precedence over SilkUiWindowOptions
+Title/Width/Height, including their component defaults. Other native/backend
+settings remain host configuration. Root construction is now before native
+allocation, allowing initial component settings and root validation to run first;
+root factories must not depend on a current graphics context. Fresh roots are
+disposed on failed startup; foreign parented/attached/hosted roots remain untouched.
+
+The host adds the existing frame once, connects component actions to its own
+coordinator, and polls effective properties on the owner, including style/theme
+changes. Native and default painted captions stay synchronized. Observed size/state
+does not rewrite requested properties or rebuild the tree. Component Closing
+callbacks precede host Closing callbacks in each attempt; a component veto stops
+the user attempt before host handlers run. Shutdown still drains every callback.
+The host disconnects the component before disposing the UI tree and native resources.
+Nested Window roots are rejected; ordinary View roots retain their existing frame
+configuration and close handlers. Reusing a disposed component requires a new factory product.
 
 `UiRendererKind` exposes the selected built-in integration. Raster accepts RasterUiTarget
 for external sessions; OpenGL/OpenGLUiTarget and Vulkan/VulkanUiTarget use matching

@@ -39,6 +39,37 @@ GUI/font/native loading, Vulkan validation, Editor preview/document workflows,
 device/driver loss and resource trends belong to ARCH2e.3 and the UI plan. No
 NuGet publication is performed.
 
+## Numeric native acceptance (ED4g.2a)
+
+```powershell
+./ManualTests/AetherPackageConsumer/VerifyNumeric.ps1
+./ManualTests/AetherPackageConsumer/VerifyNumeric.ps1 -HostKind Embedded
+./ManualTests/AetherPackageConsumer/VerifyNumeric.ps1 -InputMode WindowsPointer
+```
+
+Windows x64/OpenGL, source Debug and published Release, standard/Cobalt or
+embedded/Microsoft DI. Each run creates a disposable project in a fresh evidence
+directory. This focused source/publish runner requires no package proof or Vulkan
+validation layer and launches no runtime child. It retains SDK binlogs, native
+readback PNGs, input-source labels, assembly paths and final cleanup counters.
+
+The default `Routed` mode supplies `UiSession.HandleInput` events to the native
+host: arrows/Shift/Ctrl, invalid input, exact three-axis draft restoration during
+a captured drag, release without auto Apply, explicit Apply and one Undo entry.
+`WindowsPointer` waits for actual window input, reporting the next action in
+`stage.json`: enable Scale link, drag X right from its prefix and release, Esc,
+drag again, Ctrl+Enter, click Undo. Use current window geometry rather than fixed
+screen coordinates. The runner verifies values/history and captures each stage;
+it never supplies these Windows-phase actions itself. Close the clean window to
+abort; incomplete stages fail rather than producing a passing report.
+
+`WindowsArrows` additionally requires Position X: Up, Shift+Up, Ctrl+Down and Esc
+before the linked-scale actions. It remains an acceptance mode for a physical
+keyboard or a compatible input driver. The 2026-11-05 automation delivered arrows
+as `UiKey.None`; this mode was not marked passed. Esc while a mouse button remains
+held and pointer modifiers also require separate physical acceptance; the routed
+and unit results do not imply those gates passed.
+
 ## Native Editor acceptance (ARCH2e.3)
 
 ```powershell
@@ -156,3 +187,14 @@ native Game. The final child reports prove both private DLLs came from its selec
 artifact. These cases test the engine preflight API; document-operation admission
 is exercised separately by the ScenePlayback interrupt lane. No claim about direct
 document gates is inferred from a raw GameEditor call.
+
+## ED4f.3 Window root
+
+`VerifyGui.ps1 -Scenario WindowRoot` сохраняет strict runtime validation и прежний
+full document/preview/game workflow. Standard/Cobalt использует настоящий
+EditorMainWindow, copied custom Title/1360x840 и chained header callback с EditorView;
+проверяет native/header clean+dirty captions, одну root/view/header identity,
+retained source owners и три component close requests (Cancel, failed Save, clean).
+Embedded/MS DI сохраняет старый EditorView/parent path без Window products.
+SourceDebug/SourceRelease и свежий PackageRelease запускаются отдельно; metadata
+failure теперь ожидается до native allocation, cancellation — после него.

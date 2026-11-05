@@ -74,10 +74,18 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     protected virtual BackdropMaterial? ThemeBackdrop => null;
     /// <summary>Foreground when no local/style value is supplied.</summary>
     protected virtual Color ThemeForeground => Theme.Foreground;
+    /// <summary>Semantic editor role inherited by composite parts unless explicitly overridden.</summary>
+    protected virtual EditorColorRole ThemeColorRole => Parent?.ColorRole ?? EditorColorRole.Neutral;
     /// <summary>Inside outline width when no local/style value is supplied.</summary>
     protected virtual float ThemeBorderWidth => 0;
     /// <summary>Outline color when no local, element style or view style value is supplied.</summary>
-    protected virtual Color ThemeBorderColor => HasError ? Theme.Error : Theme.Border;
+    protected virtual Color ThemeBorderColor => !IsEffectivelyEnabled ? Theme.Border :
+        HasError ? Theme.Error : IsFocused ? Theme.Focus : IsModified ? Theme.Modified : IsHovered ? Theme.BorderHover :
+        ColorRole == EditorColorRole.Neutral ? Theme.Border : Theme.Mix(Theme.Border, Theme.EditorColor(ColorRole), .4f);
+    /// <summary>Pending edit state; does not change layout or commit data.</summary>
+    public bool IsModified { get => Get(UiProperties.IsModified); set => Set(UiProperties.IsModified, value); }
+    /// <summary>Semantic editor accent independent of validation and focus.</summary>
+    public EditorColorRole ColorRole { get => Get(UiProperties.ColorRole); set => Set(UiProperties.ColorRole, value); }
     /// <summary>Semantic action tone.</summary>
     public ControlTone Tone { get => Get(UiProperties.Tone); set => Set(UiProperties.Tone, value); }
     /// <summary>Visual error state; has both a color and a left-edge marker.</summary>
@@ -135,6 +143,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (ReferenceEquals(property, UiProperties.FontFamily)) return (T)(object)Theme.FontFamily;
         if (ReferenceEquals(property, UiProperties.Padding)) return (T)(object)ThemePadding;
         if (ReferenceEquals(property, UiProperties.Spacing)) return (T)(object)Theme.StackSpacing;
+        if (ReferenceEquals(property, UiProperties.ColorRole)) return (T)(object)ThemeColorRole;
         return property.DefaultValue;
     }
     /// <summary>Sets a typed local value and invalidates its dependent work.</summary>
@@ -453,6 +462,7 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         else foreach (var child in Children) child.Draw(context);
         if (BorderWidth > 0) context.Stroke(Bounds.Deflate(new Thickness(BorderWidth / 2)), BorderColor, BorderWidth, CornerRadius);
         if (HasError) context.Fill(new Rect(Bounds.X, Bounds.Y, Math.Min(3, Bounds.Width), Bounds.Height), Theme.Error);
+        else if (IsModified) context.Fill(new Rect(Bounds.X + Math.Max(0, Bounds.Width - 5), Bounds.Y + 2, Math.Min(3, Bounds.Width), Math.Min(3, Bounds.Height)), Theme.Modified);
         if (IsFocused && IsEffectivelyEnabled) context.Stroke(Bounds.Deflate(new Thickness(2)), Theme.Focus, 2, CornerRadius);
     }
     /// <summary>Draws custom content before children.</summary>
