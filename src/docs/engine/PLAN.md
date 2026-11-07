@@ -1,5 +1,65 @@
 # TrueMoon.Aether: план игрового движка и редактора
 
+<a id="current-engine-queue"></a>
+<a id="текущая-очередь--ревизия-2026-11-05"></a>
+## Текущая очередь — актуализация 2026-11-07
+
+Уточнение2026-11-06 по запросу пользователя: **ECS и системные компоненты отображения
+включены в план** — [ARCH1e](#arch1e-ecs) и [ARCH1f](#arch1f-rendering).
+[Проект ECS](ECS_DESIGN.md) дополнен [renderer/material/resource design](RENDERING_DESIGN.md).
+Первый storage срез ARCH1e.1 реализован по [World v1 decisions](ECS_DESIGN.md#world-v1):
+typed sparse/dense pools, singleton values без managed references, generational
+handles, bounded growth и App factory с caller ownership. ARCH1e.2 добавляет
+[execution contract](ECS_EXECUTION.md): scoped typed queries, preflight phase buffer,
+declared read/write/order, последовательный scheduler и owned system lifecycle.
+Проверки фиксируются в STATUS. E.3a добавляет [registry/scene loading](ECS_LOADING.md):
+полный versioned document envelope, private materialization и owned resource cleanup.
+E.3b добавляет [initial Runtime activation/transport](ECS_RUNTIME_LOADING.md),
+capability/registry generation и bounded chunks. E.4 реализует
+[Transform/movement/primitive profile](ECS_PRIMITIVES.md); проверки отдельно в STATUS.
+ARCH1f.0 зафиксировал [opaque-unlit/1 contracts](RENDERING_CONTRACTS.md):
+exact mesh/material versions/slots, color pipeline, strict CPU/GPU fences и budgets.
+F.1 CPU definitions/schemas/canonical codec и validation реализованы2026-11-07.
+F.2 добавляет [App-owned catalog/device resources, counted leases и preparation](RENDER_RESOURCES.md),
+атомарный World rebind и standalone Vulkan upload/readback. Проверки отдельно в STATUS.
+Следующий кодовый этап — f.3 owned camera/mesh snapshots; surface renderer/Playing fence
+остаются f.4 и не подменяются resource-ready.
+Прикладной маршрут [ED4g.3/4 → ED5a](EDITOR_PLAN.md#current-editor-queue)
+сохраняется отдельной веткой.
+Engine уже предоставляет immutable authoring/history, document-aware runtime и
+bounded preview; group reset/angle display не требуют нового World/ECS/protocol.
+Для camera/picking определить минимальный preview camera/selection contract перед
+реализацией. Детальные Editor задачи не дублируются здесь.
+
+Независимые варианты: [Observer cost ED6b.2e.4f](EDITOR_PLAN.md#ed6b2e4f-observer-cost)
+и reliability ARCH2e.4b ниже. ARCH2 source/package/native transition, Window consumer,
+source descriptor/probes и directory/file/open optimizations не назначаются заново.
+ENG5c.3 collisions→HUD/ENG7b Player и ARCH1d/ENG9/ED4h/ED7a agents остаются будущими
+ветками; они не prerequisites нового поля инспектора. Все их contracts сохранены.
+
+<a id="arch2e4b-drain-diagnostics"></a>
+### ARCH2e.4b. Диагностика повторного post-reap drain timeout — ревизия 2026-11-05
+
+Открытый факт из31октября: после reap readers оставались WaitingForActivation,
+24bytes сохранены,9workers/pending0; два exact-binary replays прошли. Предыдущий
+file-worker fix снял доказанную ThreadPool dependency, но не доказывает причину
+этого повторения. Не расширять прежний вывод до «drain больше не может зависнуть».
+
+- [ ] Воспроизвести на сохранённом supported profile либо обеспечить полезный
+  failure snapshot следующего повторения: owner/PID/generation, reader/file/EOF
+  completions, queue/worker state, timestamps и actual cleanup outcome.
+- [ ] Отличать failure ожидания harness от потерянного pipe/reader/file completion;
+  сохранить исходную ошибку и нужные trace/stack/dump данные без ретрая вместо failure.
+- [ ] Выбрать production fix только после причинного evidence у фактического owner
+  Aether/Core/Mithril; отдельно RED→GREEN и независимые source/package consumers.
+  Увеличение timeout, изменение ThreadPool или успешный replay не считаются исправлением.
+- [ ] Подтвердить current full-solution baseline отдельно от targeted regression;
+  не обещать abort arbitrary filesystem/user-code hang или другой OS/RID без proof.
+
+Эта задача — отдельный reliability трек, не подтверждённый новый дефект Mithril
+и не автоматическая блокировка каждой Editor feature. Подробный исходный факт —
+[история ED4c.2](HISTORY.md#ed4c2-имена-и-порядок-сущностей--2026-10-31).
+
 Продолжение UI2026-11-05 — [ED4g.2](EDITOR_PLAN.md#ed4g2-numeric-gestures):
 numeric gestures и proportional Scale в existing draft/history contract.
 Runtime mutation/viewport tools/schema/wire/DI scope не расширяется.
@@ -990,6 +1050,187 @@ API для этого не требуются. Эти будущие роли н
   с версиями definitions/assets; изменение шаблона не переписывает работающий
   World в обход операции редактирования.
 
+<a id="arch1e-ecs"></a>
+<a id="arch1e-runtime-ecs-и-мост-компонентов--проработка-2026-11-05"></a>
+### ARCH1e. Runtime ECS и мост компонентов — план 2026-11-06
+
+Обсуждение2026-11-05 включено в план по запросу2026-11-06 и уточняет будущий
+runtime World из ARCH1a. Authoring модель Scenes/IDs/schema/inheritance сохраняется.
+Принято направление: components как данные, systems через App/DI/IFactory, отдельные
+persistent IDs/runtime handles, phase structural commands и owned render snapshots.
+[ECS_DESIGN](ECS_DESIGN.md) хранит проект и открытые вопросы; таблица ниже —
+единственное место ведения детальных этапов. Storage/singleton/value policy первого
+профиля выбраны в [World v1](ECS_DESIGN.md#world-v1); full load/batch/resource
+contracts ещё уточняются. Запись в плане не закрывает implementation gates.
+
+| Этап | Предлагаемый результат | Проверяемый критерий до закрытия |
+| --- | --- | --- |
+| ARCH1e.0 | Storage/execution/load/primitive profiles выбраны; functional workload10000entities, caller ownership, count limits и batch/fault/stop определены. Render resource budgets/leases выбраны в [ARCH1f.0](RENDERING_CONTRACTS.md); latency SLA не заявлен | Ясно разделены authoring/runtime state/cache/assets, GUID/handles, refs и batch error outcomes; renderer service не становится компонентом с native handles; никаких скрытых новых wire limits |
+| ARCH1e.1 | Реализован первый headless World/EntityHandle/pools и UseAetherEcs; результаты проверок отдельно в STATUS | Stale/cross-world/disposed/retirement, singleton/value admission, growth/type limits/options и App factory ownership; authoring multiplicity validation относится к e.3 |
+| ARCH1e.2 | Реализован headless execution profile:1/2component queries, до8exclusions, scoped read/write callbacks, bounded reusable phase commands, scheduler и App/IFactory registration | Preflight FIFO/allocator/types до commit, deferred batch IDs и invocation-fenced writers; graph/access/phase/lifetime/cancel/fault/failed cleanup проверяются отдельно. Steady allocation measurement scoped в STATUS; Runtime integration ещё e.3/4 |
+| ARCH1e.3 | Registry/materializer/full document codec и e.3b initial Runtime transfer/activation реализованы; проверки отдельно в STATUS | Defaults/nullable/finite conversions, stable type/property IDs, references/dependencies/multiplicity, unknown/version mismatch; no partial active World; Runtime/parent same-build provenance, bounded transfer/cancel/drain/cleanup и independent consumer proof |
+| ARCH1e.4 | Реализован [primitive ECS profile](ECS_PRIMITIVES.md): typed Local/Parent/World Transform, parent-space velocity, ordered systems и detached snapshots; проверки отдельно в STATUS | Iterative10k hierarchy, finite/unit/range/parent/cycle/stale/cancel/cache checks, no shear loss;64enabled drawables отдельно от logical count; initial prepare/failed cleanup и сцена→movement→existing renderer, source/published/package evidence |
+| ARCH1e.5 | Logical World checkpoint, schema migrations и Replace integration | Entity remap/tick/RNG/state participants, failed restore/late generations/resource cleanup; явные transport budgets, capability unavailable без нужного snapshot support |
+
+Первый профиль: typed sparse/dense pools и внешне сериализованный owner. Direct
+reads возвращают copies; scoped query callbacks дают ref/in только до возврата.
+World запрещает direct structural/Set/dispose/playback во время query; systems
+записывают команды через active-invocation writer, commit выполняется после фазы.
+Archetype/chunk остаётся измеряемой альтернативой. Массовая reflection в tick, service locator
+и Dispose скопированных value components не являются предлагаемыми contracts.
+Полный ARCH1c live edit, parallel jobs и новый renderer не prerequisites первого
+headless slice. Конкретные Health/Patrol/Inventory принадлежат Tales/Lore.
+
+<a id="arch1e3-scene-loading"></a>
+#### ARCH1e.3a/b. Registry, scene materialization и подключение Runtime — 2026-11-06
+
+E.3a реализует [выбранный load contract](ECS_LOADING.md): immutable exact registry,
+same-type version bindings, typed validation/import scopes, full neutral SceneDocument
+payload и TMWL codec (existing authoring body,4MiB+44bytes). Before World: source/
+resolved budgets, schemas/refs/RequiredTypes/multiplicity и asset validation. Before
+publish: complete typed values и tracked exclusive resource leases. SceneWorld owns
+private World и leases; context не получает mutable World, cancellation/error cleanup
+reverse, failures retain CleanupOwner. App factory не удерживает successful products.
+
+| Этап | Состояние/результат | Критерий до закрытия |
+| --- | --- | --- |
+| ARCH1e.3a | Реализован headless registry/codec/materializer, проверки в STATUS | Exact schema/default/null/kind/range, forward/dangling refs, same-World identity, quotas/resources/cleanup retry, full data fidelity и Cobalt/MS DI проверены; no silent unknown data drop |
+| ARCH1e.3b | Реализован [initial Runtime profile](ECS_RUNTIME_LOADING.md): Hello capability,32KiB chunks/один staging до4MiB+44, один transfer/generation, SceneWorldGameSession и StartWorldAsync | Session/build/registry-generation/operation identity, exact source counts/hash, corrupt/stale/cancel/drain/failed activation outcomes и no partial active World. Actual selected-game/CPU frame source/published/fresh-package proof фиксируется в STATUS; game CLR не загружается в parent |
+
+E.3a сохраняет headless materializer. E.3b использует прежний SendAsync с appended
+operations/DTO fields, explicit optional game base и отдельный StartWorldAsync;
+IGameSession.Load(SceneSnapshot), preview и64primitive projection не мигрируют.
+Выбран initial-only contract: failed/aborted transfer требует новый runtime generation,
+а existing64KiB control limit сохранён. Новые same-build DTO требуют rebuild peers.
+Builtin Transform mapping/extraction реализованы в e.4 ниже; existing preview
+и Editor Play не мигрируют автоматически и не получают4096drawable limit.
+Полный runtime state/checkpoint/Replace остаётся e.5; asset revisions и async/native
+resource queues — ARCH1f. Caller-driven scheduler e.2 подключается к published World.
+
+<a id="arch1e4-primitive-extraction"></a>
+#### ARCH1e.4. Transform, movement и primitive extraction — 2026-11-06
+
+Реализован [выбранный профиль](ECS_PRIMITIVES.md): existing v1 Transform/Appearance/
+Interaction IDs/defaults сохранены, runtime helper добавляет optional Velocity schema.
+Local stores parent-space position/unit quaternion/positive scale; iterative graph
+считает S*R*T и local*parentWorld, сохраняя shear. Default parent=root; destroy не
+делает cascade/reparent. Complete Local/Parent/World cache roles, same-World/liveness/
+cycle/numeric/budget checks предшествуют cache commit; ошибки preflight сохраняют
+прошлые matrices/stamp. First tick0, затем строгое увеличение.
+
+Ordered owned graph: Movement→Transform→Extraction. Private initial preparation
+создаёт identity groups/derived roles и frame0 до ActiveScene publication. Snapshot
+с World/scene/revision/tick копирует values; новые frames публикуются только после
+успешного scheduler tick. Failed preparation/cleanup сохраняет graph/World owners.
+UseAetherPrimitiveEcs и runtime lazy defaults работают через typed factories; native
+resources не попадают в компоненты. Fixed render-view camera — настройка профиля,
+не новый Camera component или input selector.
+
+Functional10k deep hierarchy и64enabled drawables имеют разные admission limits.
+Source Debug/published Release/fresh NuGet headless checks и source/published native
+Vulkan geometry/validation/cleanup записываются в STATUS/HISTORY. Mid-loop cancel
+timing/unknown commit injection, новый renderer/backend/mesh/material resources,
+Editor Play/preview migration и checkpoint не объявляются этим этапом.
+
+Контракты ECS/render продолжения зафиксированы в [ARCH1f.0](RENDERING_CONTRACTS.md):
+exact mesh/material schemas, slots/revisions/color encoding, resource/snapshot leases
+и budgets. F.1 CPU contracts реализованы; следующий кодовый этап — f.2.
+Logical checkpoint/Replace e.5 ждёт явных state participants/remapping policy.
+
+<a id="arch1f-rendering"></a>
+### ARCH1f. Компоненты отображения, материалы и ресурсы — план 2026-11-06
+
+Новый запрос расширяет ECS план ролями MeshRenderer/Camera и общими material/mesh/
+texture/shader assets. [RENDERING_DESIGN](RENDERING_DESIGN.md) описывает проект;
+детальные этапы и acceptance принадлежат этой таблице. Renderer — сервис/подсистема,
+MeshRenderer — данные entity, MaterialAsset — разделяемый versioned ресурс; instance
+overrides не мутируют общий asset. World не владеет borrowed GPU handles.
+
+| Этап | Запланированный результат и зависимости | Проверяемый критерий до закрытия |
+| --- | --- | --- |
+| ARCH1f.0 | Завершён этап решений до кода2026-11-06: [opaque-unlit/1](RENDERING_CONTRACTS.md), [запись](#arch1f0-render-contracts) | Reserved IDs/v1 shapes, P3f32/UInt32/8exact slots, binding set/linear tint, explicit perspective camera, sRGB conversion, strict CPU/GPU fences, leases/completion и count/byte budgets выбраны; C# API/native proof этим не объявлены |
+| ARCH1f.1 | Реализован2026-11-07: platform-neutral MeshRenderer/Camera schemas, exact unmanaged asset keys и immutable mesh/material/binding-set definitions; TMRA canonical codec и frozen CPU manifest/fingerprint | Reserved IDs/versions/defaults/required Transform, finite/conversion/index/range/layout/exact slots/bounds/gray vectors/dependency/type/unknown-version/budget checks проверяются в unit/source/package scope; [конкретный API](RENDERING_CONTRACTS.md#cpu-v1), текущие результаты в STATUS. Legacy schemas/document/history и native protocol сохранены |
+| ARCH1f.2 | Реализован2026-11-07: [resource owners/leases/preparation](RENDER_RESOURCES.md), frozen in-memory catalog, App/IFactory integration, atomic World binding и standalone Vulkan upload | Bounded old/candidate/retiring allocations и metadata, counted CPU/preparation leases, stale owner/device/slot rejection; cancel/late completion/failed creation/reload/drain retry. Explicit pinned-key rebind, no sync GPU wait в scene loader; unit/source/published/fresh-package CPU и actual Vulkan upload/readback проверены отдельно. Surface rendering/Playing fence — f.3/4; external-file delivery отдельно |
+| ARCH1f.3 | После ARCH1e.4 и f.1/2: extraction camera/mesh/material и bounded owned render snapshots | World/tick/revision согласованы, masks/enabled/bounds/shear проверены, нет refs в pools и смешанных revisions; drop/coalesce освобождает leases, submitted work удерживает ресурсы до completion; primitive compatibility отдельна |
+| ARCH1f.4 | Vulkan consumer: built-in cube mesh, shared opaque unlit material и независимый tint override | Две entities/один shared asset, изменение override не меняет соседа, reload/delete/resize/suspend/Stop/Replace/failed startup не нарушают retirement; actual source Debug/published Release pixels/core+sync validation/ownership и затронутый fresh-package consumer проверяются отдельно от headless |
+| ARCH1f.5 | Texture/sampler profile, затем Light/lighting/PBR по выбранному workload | Layout/capability и color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes; performance/native evidence для каждого добавленного profile, без заявления готовности transparency/shadows/skinning |
+| ARCH1f.6 | Content revisions и runtime material overrides в checkpoint/Replace после ARCH1e.5 | Logical IDs/revisions вместо handles, required content preparation до resume, remap/migration/failed restore/stale generation; render cache восстанавливается, capability недоступна без полного support участников |
+
+<a id="arch1f0-render-contracts"></a>
+#### ARCH1f.0. Первый mesh/material/resource contract — 2026-11-06
+
+По запросу перейти к ARCH1f.0 завершён выбор профиля до кода. Нормативные решения
+находятся в [RENDERING_CONTRACTS](RENDERING_CONTRACTS.md), общий design согласован с ним.
+MeshRenderer/Camera component IDs1101/1102 и asset kinds1201–1203 зарезервированы;
+это ещё не public types. Fixed vertex/index layout и exact binding slots отделены
+от renderer-wide linear tint, shared revision не изменяется instance operation.
+Strict readiness разделена на CPU-before-World и GPU-before-render-ready; existing
+synchronous loader/IDisposable hook не становятся async GPU owner.
+
+Content scope первого сквозного результата — builtin/typed in-memory definitions
+в pinned build, без передачи mesh bytes через прежний scene/control payload.
+Bounded current/pending/recording/submitted/candidate leases и resource retirement
+описаны отдельно от existing external surface ledger; неизвестный completion не
+разрешает timeout-based release. Decisions/budget consistency и документационные
+проверки записаны в STATUS/HISTORY; новых build/test/native passing results нет.
+Кодовая очередь f.1→f.2→f.3/4 сохранена; checkpoint e.5/f.6 и ED4i отдельно.
+
+<a id="arch1f1-cpu-contracts"></a>
+#### ARCH1f.1. CPU types, schemas и validation — 2026-11-07
+
+Реализован [CPU v1](RENDERING_CONTRACTS.md#cpu-v1): RenderContentHash/RenderAssetKey,
+immutable definitions, exact slot bindings, RenderBounds/RenderColor, canonical
+TMRA codec и TMRM manifest fingerprint. Definitions вычисляют hash после validation;
+manifest сверяет supplied keys с content/dependencies и фиксирует project/build/keys,
+отделяя process-local generation. Это CPU value/data scope без resource lifetime.
+
+Explicit MeshRenderingComponents добавляет только две schemas и frozen callbacks
+к existing App/IFactory scene loading. Numeric Number domain проверяется до/после
+Single conversion, masks unsigned32; invisible/off values также проходят validation.
+Appearance+MeshRenderer ambiguity отвергается; default/foreign/stale content keys не
+переходят в native commands. PerspectiveCamera helper проверяет rigid explicit pose,
+но scene-wide active-camera/WorldTransform extraction остаётся f.3.
+
+Unit/source Debug/published Release/fresh isolated NuGet CPU acceptance —
+[датированная запись](HISTORY.md#render-cpu-2026-11-07). IRenderGameSession/GpuFrameData,
+native shaders/transport/dependencies не менялись. Реализованный f.2 ниже создаёт
+App-owned catalog/device/preparation services и реальные counted leases/readiness/drain;
+pure manifest f.1 не подменяет их. ED4i/Editor Play/preview не мигрированы.
+
+<a id="arch1f2-resource-owners"></a>
+#### ARCH1f.2. Resource owners, leases и preparation — 2026-11-07
+
+[Контракт и API](RENDER_RESOURCES.md): copied options, counted canonical CPU scopes,
+exact-key mesh cache, owner/device/slot generations, bounded preparation queue и
+retained cleanup owners. App owns host/catalog; typed factories создают caller-owned
+devices, operations и World bindings, Host сохраняет fallback ownership. CPU import
+остаётся synchronous; SceneWorld owns import leases, World содержит только values.
+
+World binding готовит candidate до commit, сверяет membership/values/revisions и
+атомарно rebinds pinned keys без изменения tint/masks. Failed candidate сохраняет
+старый current; failed old cleanup после commit сохраняет retired owner для retry.
+Host stop сразу закрывает CPU/device admission, затем drains bindings/preparations,
+devices и последним catalog; отмена ожидания не означает завершение cleanup.
+
+Уточнение bounded profile принято явно: один device и один required World binding
+на host, максимум4096renderers;64CPU scopes/16384lease wrappers/2048slot records.
+Geometry/staging limits учитывают actual allocations до AllocateMemory, включая
+old/candidate/retiring и failed cleanup. Standalone lazy Vulkan context выбирает
+первый graphics device; adapter matching/sharing с surface renderer относится к f.3/4.
+
+Unit D/R, source Debug/published Release/fresh7-package consumers и actual Vulkan
+upload/readback/validation/zero-budget denial — [датированная запись](HISTORY.md#render-resources-2026-11-07).
+Mesh snapshots, submitted-frame leases, surface/pixels и required-view Runtime Playing
+fence ещё f.3/4; новый backend не меняет прежний primitive renderer/transport.
+
+Порядок первого сквозного результата: e.0/f.0 → e.1/2 → e.3 + f.1/2 → e.4 →
+f.3/4. Headless World и existing primitive consumer не ждут PBR/нового asset browser.
+Logical checkpoint e.5 и f.6 развиваются отдельным срезом перед полным ARCH1c live edit.
+Editor mesh/material inspector — [ED4i](EDITOR_PLAN.md#ed4i-render-components), не
+вторая копия resource lifecycle. HUD/Alloy external composition остаётся ENG5c.4,
+generic controls — в UI плане. Новый пакет/backend/render graph/DI scope автоматически
+не назначены. K7/K8/VRAM/final release сохраняют прежний незакрытый scope.
+
 ### API и владельцы изменений
 
 Игровой API внутри Runtime предоставляет создание/удаление объектов, изменение
@@ -1049,8 +1290,9 @@ snapshot contracts. Новая подсистема должна определ�
 в атомарный batch. GPU/OS handles и CLR references не сериализуются: ресурсы
 восстанавливаются по проверенным IDs/версиям с явным ownership.
 
-Текущий TMCK v1 содержит только tick/camera/interaction и не является таким
-snapshot. Перед реализацией требуются schema/version/limits, правила migration,
+Текущий demo checkpoint содержит tick/camera/interaction и в schema v2 ещё
+per-entity switch states; это не полный World snapshot. Перед его реализацией
+требуются schema/version/limits, правила migration,
 resource preparation и проверка restore. Существующие64KiB wire/checkpoint bounds
 не отменяются молча: larger state требует отдельного bounded transport contract.
 Участник без нужного snapshot support делает edit недоступным с явной причиной;
@@ -1138,6 +1380,8 @@ ARCH1a.1/2 реализованы/проверены2026-10-22; ARCH1a в цел
 | ARCH1b | Частично: первый локальный Transform/query/history срез ARCH1b.1; остальные authoring операции запланированы | UI и headless client используют одинаковые команды; atomic batch, undo/redo, revision conflict, duplicate operation и schemas/history проверены |
 | ARCH1c | Полный snapshot и runtime edit поверх ARCH1a/b | Readonly default; Playing/Paused success, cancel/error rollback, unsupported participant, failed restore, stale generation, concurrent Stop и input/time reset проверены; данные вне snapshot не объявлены сохранёнными |
 | ARCH1d | Запланированы d.1–4: общий agent API, локальный MCP, authoring/jobs и эксперименты ENG9; встроенный UI — ED7a, live edits требуют ARCH1c | Внешний и встроенный consumers используют общие права/transactions, snapshots/jobs/conflicts и lifecycle; Game AI scenario проверяет наблюдение и изменение поведения, без заявления готовности полного World edit |
+| ARCH1e | Storage e.1, execution e.2, registry/load/initial Runtime e.3a/b и builtin Transform/primitive extraction e.4 реализованы2026-11-06, [этапы e.0–5](#arch1e-ecs) | Authoring/schema/IDs сохранены; проверки/открытые failures отдельно в STATUS; checkpoint e.5 и общий mesh/material renderer ещё впереди |
+| ARCH1f | [F.0/f.1 CPU contracts](RENDERING_CONTRACTS.md) и [f.2 resource services](RENDER_RESOURCES.md) реализованы по своим scope2026-11-06/07; f.3–6 запланированы | CPU/unit/package и actual Vulkan resource upload/readback имеют отдельные checks; owned extraction/submitted-frame leases/surface renderer proof ещё нужны; primitive64 не объявлен новым renderer |
 
 Порядок уточнён2026-10-23: для приложения Editor первый минимальный ARCH1b.1
 выполнен; независимый Edit preview и ED1a также реализованы в своих границах.
@@ -2375,7 +2619,7 @@ negotiation, abrupt parent containment и long trends остаются отде�
 отлаживать поведение мобов с доступом к Editor и Runtime. Отдельный последующий
 профиль допускает LLM как участника игрового поведения. Общий agent API/MCP —
 [ARCH1d](#локальные-агенты-и-mcp-adapter), инспектор поведения —
-[ED4g](EDITOR_PLAN.md#ed4g-наблюдение-и-отладка-поведения-мобов--2026-10-30).
+[ED4h](EDITOR_PLAN.md#ed4h-ai-inspector).
 
 ### Состояние, решения и наблюдение
 
@@ -2452,11 +2696,11 @@ Replace определить сохранение логической памя�
 | --- | --- | --- |
 | ENG9a | Минимальные runtime entity/perception/behavior contracts и один охранник FSM; versioned authoring parameters | Patrol/Investigate/Chase/return исполняются на fixed tick; memory/timers/RNG и capture/restore scope определены, unsupported snapshot блокирует live edit; код/данные игры не загружаются в Editor CLR |
 | ENG9b | Bounded snapshots/decision traces и scenario runner; общий consumer API для UI/MCP | Воспроизводимый seed/input, assertions, baseline/candidate report, trace loss/unavailable и cancel/crash/timeout проверены; observer не меняет игровой результат, отдельный headless proof |
-| ENG9c | Сквозной agent workflow ARCH1d.2–4 + ENG9a/b, ED4g/ED7a по готовности UI | Агент находит ошибку поведения по evidence, меняет authoring-параметры или код, повторяет сценарий и подтверждает исправление assertions; conflicts/Undo/save/reopen и failed build/Replace сохраняют документ/рабочий artifact |
+| ENG9c | Сквозной agent workflow ARCH1d.2–4 + ENG9a/b, ED4h/ED7a по готовности UI | Агент находит ошибку поведения по evidence, меняет authoring-параметры или код, повторяет сценарий и подтверждает исправление assertions; conflicts/Undo/save/reopen и failed build/Replace сохраняют документ/рабочий artifact |
 | ENG9d | Optional LLM policy/диалоги поверх игровых capabilities и provider adapter | Проверены perception scope, async budgets, validation/fallback, stale response после смены состояния/Stop/Replace, decision replay и lifecycle; вызовы модели не находятся в tick/render path |
 
 Порядок развития: общий ARCH1d contract → bounded observation/control и authoring
-tools → ENG9a/b → agent experiment ENG9c; ED4g/ED7a подключаются к готовым API.
+tools → ENG9a/b → agent experiment ENG9c; ED4h/ED7a подключаются к готовым API.
 ENG9d выбирается отдельным implementation срезом. Работа может идти headless;
 расширение игровой комнаты учитывает ENG5c.3, а HUD/Player сохраняют свои этапы.
 Новый roadmap не меняет текущую очередь ED6a/ED8a → ED4c.2/3 → project/workflow,
@@ -2485,7 +2729,7 @@ ENG1 и ENG2 proof выполнены2026-10-17; следующий code эта�
 | ENG6 | Hot Reload исследование | Зафиксирован supported edit набор/state behavior, unsupported edits переводятся в проверенный replacement; ALC только по подтверждённой потребности |
 | ENG7 | Рабочее приложение редактора и доставка; ENG7a/UIA1 — существующая основа, ENG7b launch roles/Player запланирован | [ED1–ED8](EDITOR_PLAN.md): project/documents/editing/preview/workflow/extensions/reliability; ED6b запускает Play из Editor. Роль выбирается до App.Build, горячая смена ролей не требуется. Scene/asset/runtime возможности не объявляются реализованными наличием shell |
 | ENG8 | Финальные robustness/performance checks; [ENG8a diagnostics](#eng8a-диагностика-сессий-и-процессного-вывода--2026-10-25) разрабатывается отдельным ранним срезом | Frame time/latency/allocations/resource trends измерены на фиксированной сцене; reload/resize/crash/cancel/close и diagnostic overload/retention проходят в объявленных limits |
-| ENG9 | Запланированы [ИИ мобов и agent experiments](#eng9-ии-мобов-и-агентные-проверки--2026-10-30), затем optional LLM-персонаж | Детальные ENG9a–d ведутся выше; общий API/MCP — ARCH1d, UI — ED4g/ED7a. Readonly/control возможны до полного ARCH1c; поведение проверяется trace/scenario assertions |
+| ENG9 | Запланированы [ИИ мобов и agent experiments](#eng9-ии-мобов-и-агентные-проверки--2026-10-30), затем optional LLM-персонаж | Детальные ENG9a–d ведутся выше; общий API/MCP — ARCH1d, UI — ED4h/ED7a. Readonly/control возможны до полного ARCH1c; поведение проверяется trace/scenario assertions |
 
 ENG4 может быть заменён проверенным transport для выбранной платформы после
 явной записи решения. Производительный GPU path не является условием ENG1–ENG3.

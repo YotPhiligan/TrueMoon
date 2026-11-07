@@ -36,6 +36,19 @@ public sealed class ControlRequest
     /// <summary>Coalesced interaction press, independent of the held keys.</summary>
     public bool InputInteract { get; set; }
 
+    /// <summary>Exact nonempty initial scene transfer operation GUID.</summary>
+    public string SceneLoadId { get; set; } = "";
+    /// <summary>Process-local registry generation advertised by this runtime.</summary>
+    public string SceneRegistryId { get; set; } = "";
+    /// <summary>Total encoded scene bytes, bounded separately from each control message.</summary>
+    public int SceneBytes { get; set; }
+    /// <summary>Exact next contiguous byte offset.</summary>
+    public int SceneOffset { get; set; }
+    /// <summary>One at most32KiB scene chunk; never a full oversized control message.</summary>
+    public byte[]? SceneChunk { get; set; }
+    /// <summary>SHA256 of the complete encoded scene envelope in hexadecimal.</summary>
+    public string SceneDigest { get; set; } = "";
+
     public SessionIdentity Identity() => new(Guid.Parse(SessionId), unchecked((ulong)Generation), HostContractId, GameBuildId,
         Nonce, ControlVersion, FrameVersion, SnapshotVersion);
 

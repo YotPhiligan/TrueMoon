@@ -12,7 +12,7 @@ public sealed class GameBuildLoader : IDisposable
     private LoadContext? _context;
     private readonly IDisposable _pin;
     private IGameSession? _session;
-    private bool _disposed;
+    private bool _disposed, _disposing;
     private GameBuildLoader(GameBuildArtifact artifact, IFactory<IGameSession, Type> sessions)
     {
         Artifact = artifact; _pin = artifact.Pin(); _context = new(artifact);
@@ -45,9 +45,17 @@ public sealed class GameBuildLoader : IDisposable
     /// <summary>Disposes the game, requests cooperative context unload and releases artifact pins.</summary>
     public void Dispose()
     {
-        if (_disposed) return; _disposed = true;
-        var session = _session; _session = null; var context = _context; _context = null;
-        try { session?.Dispose(); } finally { try { context?.Unload(); } finally { _pin.Dispose(); } }
+        if (_disposed) return;
+        if (_disposing) throw new InvalidOperationException("Game cleanup is not reentrant.");
+        _disposing = true;
+        try
+        {
+            // A failed game/scene cleanup retains its owner, dependency context and artifact pin for retry.
+            _session?.Dispose(); _session = null;
+            _context?.Unload(); _context = null;
+            _pin.Dispose(); _disposed = true;
+        }
+        finally { _disposing = false; }
     }
     private sealed class LoadContext(GameBuildArtifact artifact) : AssemblyLoadContext("Aether.Game." + artifact.BuildId, isCollectible: true)
     {

@@ -58,12 +58,13 @@ public static class AppConfigurationExtensions
             {
                 var leases = resolver.Resolve<IFactory<IRuntimeLease, SessionLaunch>>();
                 var events = resolver.Resolve<IEventsSource<SessionSupervisor>>();
+                var sceneCodec = resolver.TryResolve<Ecs.Loading.SceneWorldCodec>() ?? EcsSceneLoadingConfigurationExtensions.CreateNeutralCodec(resolver);
                 return new Factory<SessionSupervisor>(() => new(leases, snapshot.HostContractId,
                     snapshot.GameBuildId, snapshot.ReportDirectory, snapshot.Deadlines, status =>
                     {
                         AetherDiagnosticEvents.Session(events, status);
                         snapshot.StatusChanged?.Invoke(status);
-                    }));
+                    }, sceneCodec, resolver.Resolve<SceneResolutionService>()));
             });
             Register<GpuResourceHost>(services, _ => new Factory<GpuResourceHost>(() => new()));
             Register<IGameSession, Type>(services, resolver => new GameSessionFactory(resolver));

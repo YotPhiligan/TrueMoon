@@ -7,6 +7,25 @@ comparison, fresh10-package/40-process delivery, Alloy/Hosting/Editor D/R regres
 Solution Debug build0errors, новых warnings0; [результаты и команды](HISTORY.md#skiasharp-41550-2026-11-07).
 Следующая самостоятельная visual-quality задача остаётся PA8c.0; physical/K7/K8 gates открыты.
 
+<a id="current-ui-queue"></a>
+## Текущая очередь — ревизия 2026-11-05
+
+UIA2 Window и UIA3 compact/numeric editors реализованы в проверенных scopes.
+Ближайший прикладной consumer — [ED4g.3/4, затем ED5a](../engine/EDITOR_PLAN.md#current-editor-queue).
+Общие capabilities добавлять по этому consumer, не переносить document/history/
+angle-unit policy в Argentis и не ставить выполненный Window повторно как feature.
+
+| Трек | Следующий результат | Граница |
+| --- | --- | --- |
+| Numeric acceptance | Physical arrows/modifiers/captured Esc/OS pointer modifiers | Unverified input не равен доказанному hardware defect; routed input не заменяет этот proof |
+| Качество отображения | PA8c.0 baseline текста/геометрии/композиции, затем PA8c.1/2 по дефектам | Не менять hinting/AA/fonts до baseline |
+| Инфраструктура | Оставшийся INF5 по реальному diagnostics consumer | Не полный redesign scheduler/DI |
+| Release | Wider Window/backend/package, physical K3/K7/K8/VRAM/final alpha matrix | Отдельное окружение/выбранный scope; остановленный поиск NVIDIA workaround не возобновлён |
+
+K1–K9, PA1–PA10, net10.0/xUnit и их критерии сохранены. Hardware/release gates
+ограничивают готовность выпуска, не требуют завершить весь alpha перед каждым
+прикладным UI изменением. Датированные маршруты ниже не заменяют эту очередь.
+
 <a id="uia3c-numeric-gestures"></a>
 ## UIA3c. Numeric step/drag — 2026-11-05
 
@@ -764,7 +783,8 @@ Vulkan surface/lease и публичный `SkiaNativeLibrary` перенесе�
 
 ## Последовательность реализации
 
-### Актуальная точка продолжения — реализация DPI 2026-10-09
+<a id="актуальная-точка-продолжения--реализация-dpi-2026-10-09"></a>
+### Историческая точка продолжения — реализация DPI 2026-10-09
 
 Реализованы функциональные подэтапы3.5a/b/c/d,4.8,5.1a/b/c и общая Settings-сцена raster/OpenGL/Vulkan/HUD, контракт2.4/K8 с controlled failure/recreate, K9 baseline/profile/reuse и Windows appearance/custom chrome/native Snap4.9b/c/d. 2026-10-09 добавлен native Windows DPI contract: Scale, логические размеры и нормализованный ввод. Фактически выполненные текущие build/tests/GPU/publish и границы проверки находятся в STATUS. Реализация не означает итоговую готовность alpha.
 

@@ -1,5 +1,61 @@
 # TrueMoon.Aether.Editor: план подключаемого редактора
 
+<a id="current-editor-queue"></a>
+<a id="точка-продолжения--ревизия-2026-11-05"></a>
+## Точка продолжения — актуализация 2026-11-06
+
+ED4f.3 Window, ED4g.1/2 compact/numeric editors, ED6b source tracking и bounded
+Build/Play/Replace реализованы в scopes из [STATUS](STATUS.md). Первый profiling,
+directory cache и native open/metadata не являются новой следующей задачей.
+ED5 уже имеет прикладной GPU Edit Preview; camera/picking/gizmos ещё не реализованы.
+
+Уточнение2026-11-06: ECS и renderer/material resources включены в engine план
+[ARCH1e/f](PLAN.md#arch1f-rendering). Будущий inspector consumer —
+[ED4i](#ed4i-render-components); его реализации ещё нет. Выбор asset/override в UI
+следует готовым schema/content contracts и не становится prerequisite group reset/units.
+
+| Очередь | Результат | Статус |
+| --- | --- | --- |
+| Малый UI срез | [ED4g.3 group reset](#ed4g3-group-reset) | Предложен ревизией; существующие draft/history/DI contracts достаточны для проектирования |
+| Следом UI | [ED4g.4 angle units](#ed4g4-angle-units) | До реализации выбрать поведение invalid draft при смене единиц |
+| Крупный UI срез | [ED5a camera/picking](#ed5a-camera-picking), затем перемещение объекта | Нужен отдельный preview camera/selection contract с engine |
+| Параллельный proof | [ED4g.2a physical input](#ed4g2a-native-numeric) | Частично: source/published native пройден, оставшиеся physical cases не подтверждены |
+| Performance альтернатива | [ED6b.2e.4f](#ed6b2e4f-observer-cost) | Устранить измеренный CPU/allocation tradeoff; не ослаблять hashing/ownership |
+
+Общие full-solution/release и drain diagnostics ведутся в engine/общем плане.
+Hardware gates ограничивают readiness, не требуют завершить всё UI alpha перед
+каждым прикладным control. Game AI inspector обозначен **ED4h**: прежний ED4g
+от30октября конфликтовал с compact Transform от5ноября; старый anchor сохранён.
+
+<a id="ed4g3-group-reset"></a>
+### ED4g.3. Групповой сброс Transform — предложено 2026-11-05
+
+Следующий небольшой пользовательский результат — одна явная reset action на
+Position/Rotation/Scale вместо трёх разрозненных field actions. Предлагаемый scope:
+
+- [ ] Согласовать compact action/tooltip/keyboard доступ и disabled/read-only states
+  в существующем дизайн-коде; provenance/details остаются доступны.
+- [ ] Сбросить группу к значениям по existing schema/inheritance/reset semantics,
+  без безусловной подстановки0/1 вместо inherited values. Linked Scale не должен
+  последовательно пересчитывать peers поверх группового reset.
+- [ ] Действие меняет draft; existing Apply — одна transaction, Cancel не меняет
+  committed document. Ошибки/conflicts и недоступность действий сохраняются.
+- [ ] Прямые поведенческие проверки inherited/overridden/invalid/link/read-only,
+  retained controls, Apply/Undo/Redo и save/reopen; соответствующий native consumer
+  не подменяется CPU preview. Public API/DI scope не расширять без необходимости.
+
+<a id="ed4g4-angle-units"></a>
+### ED4g.4. Единицы отображения углов — предложено 2026-11-05
+
+- [ ] Выбрать явный UI переключатель rad/deg, подпись и шаг в выбранных единицах;
+  пересчёт deg↔rad принадлежит представлению, canonical scene/wire остаётся rad.
+- [ ] До кода решить invalid/incomplete draft и смену единиц: отключение переключения
+  либо сохранение исходного представления. Не молча нормализовать или терять ввод.
+- [ ] Смена единиц не Apply/dirty/history; conversion/round-trip, finite Float limits,
+  unrelated fields, Cancel/Undo/Redo и theme/focus сохраняют свои contracts.
+- [ ] Проверить boundary values, repeated switching без накопленного drift и
+  source/published presentation; этот срез не добавляет новые rotation conventions.
+
 <a id="ed4g-compact-transform"></a>
 ## ED4g. Компактный Transform и цветовые состояния — 2026-11-05
 
@@ -76,8 +132,9 @@ cursor event, Shift/Ctrl передаются в UiInput. Детали —
 [история](HISTORY.md#ed4g2a-native-numeric-2026-11-05).
 Физические ↑/↓ с модификаторами, Esc при удерживаемой кнопке и pointer modifiers
 остаются открытой частью acceptance: текущий Windows driver передаёт стрелки как
-UiKey.None и не предоставляет раздельный mouse-down/key/mouse-up. Следующий шаг —
-закрыть эти input gates; затем согласовать group reset и отображение единиц угла.
+UiKey.None и не предоставляет раздельный mouse-down/key/mouse-up. Оставшуюся input
+acceptance закрывать отдельно при подходящем вводе; следующий прикладной срез —
+ED4g.3/4 из текущей очереди, требования physical проверки сохраняются.
 
 
 
@@ -275,7 +332,7 @@ backend-independent contracts. Общие реализации и acceptance в�
 | ED5 | Edit preview, camera/picking и viewport tools | Минимальный preview Aether — до editable UI; полноценные tools/selection интегрируются с ED2–ED4 |
 | ED6 | Повседневный Build/Play/Replace workflow | ED1–ED5; существующие compiler/supervisor/replacement contracts |
 | ED7 | Проверенная расширяемость | Минимальные contracts появляются в ED3–ED5; ED7 подтверждает независимое расширение |
-| ED4g / ED7a | Запланированы Game AI inspector и встроенный помощник2026-10-30 | Общие agent API ARCH1d и Game AI ENG9; readonly queries/control не требуют полного ARCH1c, live World edits требуют |
+| ED4h / ED7a | Запланированы Game AI inspector и встроенный помощник2026-10-30 | Общие agent API ARCH1d и Game AI ENG9; readonly queries/control не требуют полного ARCH1c, live World edits требуют |
 | ED8 | Надёжность и поставка | Подтверждает ED1–ED7; recovery/diagnostics разрабатываются вместе с владельцами |
 
 Это порядок пользовательских результатов. Нужные интерфейсы, cleanup и regression
@@ -292,7 +349,7 @@ ED6a → ED8a console/export в подключаемом Editor, ED4c.2 → ED4c
 project picker/switch и ED1/ED6 workflow. Gameplay ENG5c.3 и hardware gates прежние.
 
 Дополнение2026-10-30: по запросу пользователя запланированы [ED7a agent tasks](#ed7a-помощник-и-задачи-агентов--2026-10-30)
-и [ED4g Game AI inspector](#ed4g-наблюдение-и-отладка-поведения-мобов--2026-10-30).
+и [ED4h Game AI inspector](#ed4h-ai-inspector).
 Engine/MCP/сценарные contracts принадлежат ARCH1d/ENG9 в PLAN.md. Эти consumers
 развиваются после минимальных общих API и не меняют текущую очередь выше;
 полный чат, LLM-персонаж или runtime editing не становятся условиями первого среза.
@@ -1031,7 +1088,12 @@ Source observer performance и текущий follow-up — в [ED6b.2e.4](#ed6b
 Общие Window API/acceptance остаются в UI плане; wider backends, physical/hardware/
 K7/release gates и full ED4/ED6 этим wrapper не закрываются.
 
-### ED4g. Наблюдение и отладка поведения мобов — 2026-10-30
+<a id="ed4g-наблюдение-и-отладка-поведения-мобов--2026-10-30"></a>
+<a id="ed4h-ai-inspector"></a>
+### ED4h. Наблюдение и отладка поведения мобов — 2026-10-30
+
+Идентификатор уточнён ревизией2026-11-05: ED4g занят compact Transform. Scope и
+критерии прежнего Game AI пункта сохранены, старый anchor остаётся совместимым.
 
 Запланировано по обсуждению с пользователем. Предметные данные/исполнение,
 decision traces и scenario runner — [ENG9](PLAN.md#eng9-ии-мобов-и-агентные-проверки--2026-10-30).
@@ -1062,19 +1124,43 @@ trace, синхронизирует выбор и сохраняет focus/scrol
 theme/retained state, повторный Play/Stop/Replace и cleanup; headless Game AI proof
 не объявляется UI/GPU acceptance. Визуальный редактор графа — дальнейший workload.
 
+<a id="ed4i-render-components"></a>
+### ED4i. MeshRenderer, Camera и material bindings в инспекторе — план 2026-11-06
+
+Зависит от schema/asset/validation contracts [ARCH1f.1/2](PLAN.md#arch1f-rendering),
+изображение результата — от ARCH1f.3/4. Детальный engine resource lifecycle ведётся
+только там; новый generic asset browser не обязателен для первого built-in profile.
+
+- [ ] Retained schema-driven поля mesh/material reference, slots, enabled/layers и
+  camera projection; выбор ID/type/revision и missing/incompatible diagnostics без
+  загрузки Game.Logic или native handles в Data/ViewModel.
+- [ ] Per-entity material override/reset явно отличается от shared asset edit.
+  Scene binding/override проходит existing draft/Apply/Cancel/history; shared asset
+  получает собственный document/version/conflict/history contract до его UI editing.
+  Редактирование одной entity не меняет материал всех остальных неявно.
+- [ ] Mesh replacement с несовместимыми slots требует explicit remap/rejection.
+  Pending/Ready/Failed и late completion проверяют document/session/revision;
+  неподдержанная capability видна пользователю, fallback не скрывает ошибку.
+- [ ] Поведенческие проверки reference/slots/override/reset/Undo/Redo/save/reopen,
+  read-only Play и stale reload; retained focus/selection/theme и design-code roles.
+  Native preview подтверждает tint/shared-asset outcomes и cleanup отдельно от
+  headless tests. GPU allocation/IO не выполняются из View/style.
+
 ## ED5. Edit preview и инструменты viewport
 
 Первый [engine preview profile](PLAN.md#edit-preview-первый-engine-profile--2026-10-23)
-реализован отдельно от normal Editor UI: immutable document/revision → isolated
-built-in runtime → GPU actual-presentation. Использует Enerit/Mithril и прежний
-renderer, без game build/Play/Game.Logic. First profile заменяет child на каждое
-обновление; fixed camera и GPU-only bounds явно ограничены. Это engine proof,
-не завершение пунктов ED5 ниже: прикладные mode switching, связь с active project/
-document, tools/camera/picking и UI integration ещё нужны.
+дополнен прикладным [ED3a](#ed3a-transformhistorypreview-в-ui--2026-10-23):
+EditorPreview уже связывает committed document с isolated built-in runtime и
+actual GPU presentation. Старт/retry явный, Apply/Undo/Redo обновляют snapshot;
+stop/project/document transitions fence/drain accepted work. Код Game.Logic не
+загружается в CLR Editor. Эти факты сверены по текущим EditorPreview и Inspector
+и прежним native workflows; новых запусков ревизия не добавляет.
+Fixed camera,640×360,до64entities, child replacement и GPU-only Windows profile
+сохранены. Полный ED5 не закрыт: camera/picking/tools и их acceptance впереди.
 
-- [ ] Определить совместный Editor/Aether режим preview, независимый от ручного
+- [x] Реализован первый совместный Editor/Aether режим preview, независимый от ручного
   Build/Play и пользовательского Game.Logic; game code не загружается в CLR Editor.
-- [ ] Передавать resolved document snapshots/updates в preview runtime через Enerit
+- [x] В первом bounded profile передаются resolved document snapshots/updates в preview runtime через Enerit
   с document revision и session/generation fencing; не подтверждать устаревший кадр
   как новый. Frame payload остаётся в отдельном frame transport.
 - [ ] Добавить editor camera, picking и синхронизацию selection viewport/tree/inspector.
@@ -1088,6 +1174,27 @@ document, tools/camera/picking и UI integration ещё нужны.
 camera/selection отражаются на правильной revision. Cancel drag восстанавливает
 исходное состояние. Полный live World editing не требуется: для Play действуют
 readonly/snapshot transaction contracts ARCH1c, а не прямые изменения runtime.
+
+<a id="ed5a-camera-picking"></a>
+### ED5a. Камера редактора и выбор объекта — предложено ревизией 2026-11-05
+
+Первый крупный функциональный шаг после удобства Transform. До реализации выбрать
+camera state/projection и revision/identity contract с engine preview; не пытаться
+сразу вводить весь gizmo/toolset или live World API.
+
+- [ ] Editor navigation/focus/capture/Esc отделены от gameplay. Камера не меняет
+  документ/history и не требует запуска пользовательского Game.Logic.
+- [ ] Picking возвращает entity из правильной presented scene/revision; tree,
+  inspector и viewport используют один selection owner. Background/stale frame/
+  удалённый entity и Play transition не назначают неправильный selection.
+- [ ] Camera/selection обновление не строит заново retained UI и не теряет draft
+  без существующей conflict/cancel policy. Resize/DPI/image letterboxing учитываются.
+- [ ] Прямые engine/Editor tests и source/published native proof проверяют camera,
+  selection/clear, stale frames, capture cancellation и shutdown ownership.
+
+Затем отдельный translation tool: drag preview→один commit/Undo либо cancel.
+Rotation/scale gizmos следуют после него; inspector numeric drag не считается
+реализацией viewport tool.
 
 ## ED6. Игровой цикл разработки
 
@@ -2166,6 +2273,26 @@ metadata/full hash/reparse checks сохраняются, atomic snapshot/ABA/ha
 
 [Решение/проверки/результаты](HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04).
 
+<a id="ed6b2e4f-observer-cost"></a>
+##### ED6b.2e.4f. CPU и allocations open batches — предложено ревизией 2026-11-05
+
+Продолжение подтверждённого tradeoff4e: many-files latency ниже, но allocations
+выше примерно23%, CPU/cycle на23–43% в измеренных cases. Это следующий performance
+срез, а не повтор первых profiling/directory-cache/native metadata задач.
+
+- [ ] До изменения сохранить baseline текущего4e на тех же frozen fixtures и
+  ordinary10s polling/5s budget; раздельно latency, CPU/cycle, bytes allocated/cycle
+  и small/control behavior. Уточнить целевой budget/допустимый tradeoff.
+- [ ] По profile сократить task/list/closure/scheduling cost или выбрать admission
+  batch по размеру graph; не объявлять заранее выигрыш и не расширять concurrency>4.
+- [ ] Сохранить полный content/membership/probe witness, first-error ordering,
+  directory pin/reparse/replacement guards, cancellation и actual owner drain.
+- [ ] Повторить парные measurements, lifecycle/correctness regressions и content
+  change при прежних length/mtime; явно указать регрессии/цены и scope выводов.
+
+OS/kernel attribution и wider platform/hardware acceptance остаются отдельно.
+Шаг необязателен для group reset/units/camera и не меняет свидетельство Same.
+
 ## ED7. Проверенная расширяемость
 
 - [ ] Уточнить минимальные public contracts из первых потребителей, ограничить
@@ -2360,6 +2487,6 @@ physical DPI/K7/device loss/VRAM acceptance остаются открытыми.
 После первой версии по реальным сценариям развиваются multi-document/docking UX,
 asset browser/import pipeline, новые scene/render capabilities, live runtime edits
 ARCH1c, dynamic extensions и automation. Agent/MCP направление уточнено2026-10-30:
-ARCH1d/ENG9 — в engine плане, прикладные задачи — ED4g/ED7a выше. Readonly/control
+ARCH1d/ENG9 — в engine плане, прикладные задачи — ED4h/ED7a выше. Readonly/control
 и authoring tools возможны до полного ARCH1c. Эти этапы не становятся скрытыми
 условиями первого Transform/save/preview среза.

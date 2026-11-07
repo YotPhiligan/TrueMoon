@@ -20,6 +20,12 @@ try
             : PreviewRuntimeEntry.IsPreview() ? await PreviewRuntimeEntry.RunAsync() : await RuntimeHost.RunAsync();
     if (args is ["--runtime-launch-proof", var runtimePath, var runtimeLaunchDirectory])
         return await RuntimeLaunchProbe.RunAsync(Path.GetFullPath(runtimePath), Path.GetFullPath(runtimeLaunchDirectory));
+    if (args is ["--ecs-world-proof", var ecsRuntimePath, var ecsGameDirectory, var ecsReportDirectory])
+        return await SceneWorldRuntimeProbe.RunAsync(Path.GetFullPath(ecsRuntimePath), Path.GetFullPath(ecsGameDirectory), Path.GetFullPath(ecsReportDirectory));
+    if (args is ["--ecs-primitive-proof", var primitiveRuntimePath, var primitiveGameDirectory, var primitiveReportDirectory])
+        return await PrimitiveRuntimeProbe.RunAsync(Path.GetFullPath(primitiveRuntimePath), Path.GetFullPath(primitiveGameDirectory), Path.GetFullPath(primitiveReportDirectory));
+    if (args is ["--ecs-primitive-native", var nativePrimitiveRuntime, var nativePrimitiveGame, var nativePrimitiveReport])
+        return await PrimitiveNativeProbe.RunAsync(Path.GetFullPath(nativePrimitiveRuntime), Path.GetFullPath(nativePrimitiveGame), Path.GetFullPath(nativePrimitiveReport));
     if (args is ["--child-diagnostics-proof", var deliveryDirectory]) return await ChildDiagnosticDeliveryProbe.RunAsync(Path.GetFullPath(deliveryDirectory));
     if (args is ["--edit-preview-proof", var previewDirectory]) return await EditPreviewProbe.RunAsync(Path.GetFullPath(previewDirectory));
     if (args is ["--scene"]) return await SceneInputProbe.RunAsync(null);

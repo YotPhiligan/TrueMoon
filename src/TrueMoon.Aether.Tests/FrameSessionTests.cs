@@ -81,7 +81,12 @@ public sealed class FrameSessionTests
     {
         var identity = new SessionIdentity(Guid.NewGuid(), 1, Hash, Hash, Hash);
         using var game = new ProbeGame(); using var producer = new FrameProducer();
-        var protocol = new RuntimeProtocol(identity, game, 123, producer.Configure); using var cancel = new CancellationTokenSource();
+        using var protocol = new RuntimeProtocol(identity, game, 123, producer.Configure); using var cancel = new CancellationTokenSource();
+        await protocol.SendAsync(ControlRequest.Create(identity, 1, CommandKind.Hello));
+        var scene = Scene(); var load = ControlRequest.Create(identity, 2, CommandKind.LoadScene);
+        load.SceneId = scene.Id; load.Revision = scene.Revision; load.Entities = scene.CopyEntities();
+        var loaded = await protocol.SendAsync(load);
+        Assert.Equal(("Paused", scene.Revision, 0L), (loaded.Phase, loaded.Revision, loaded.Tick));
         var worker = producer.RunAsync(protocol, cancel.Token);
         var s1 = FrameSurface.Create(identity, 1, 32, 16); var s2 = FrameSurface.Create(identity, 2, 32, 16);
         using var ring1 = SharedFrameRing.Create(s1); using var ring2 = SharedFrameRing.Create(s2);

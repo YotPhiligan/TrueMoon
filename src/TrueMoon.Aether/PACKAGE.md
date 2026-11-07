@@ -1,5 +1,160 @@
 # TrueMoon.Aether
 
+`UseAetherEcs()` registers an App-local `IFactory<TrueMoon.Aether.Ecs.World>` without
+runtime/window/GPU activation. Each returned World is caller-owned; dispose it in
+the owning session, not through a second DI alias. The first profile provides
+generational entity handles and bounded typed singleton component pools. Component
+structs cannot contain managed references; reads return copies, values are never
+disposed, and access must be serialized by the caller. Default limits are 65536 slots,
+128 retained types and 64 initial slots; configuration is validated and copied.
+Typed Query<T>/Query<T1,T2> supports scoped in/ref callbacks and up to eight excluded
+types. Structural mutations are blocked during iteration. EntityCommandBuffer
+preflights the whole bounded FIFO batch before commit; unexpected commit failure
+faults World without pretending rollback. Deferred tokens are buffer/batch-local.
+
+UseAetherEcsSystems registers IFactory<EcsScheduler,World> after UseAetherEcs.
+Register each IFactory<TSystem,World> in the game module; describe Read/Write and
+Before/After dependencies with EcsSystemDescription. Scheduler owns factory results,
+borrows World/dependencies, and runs caller-driven positive fixed ticks in ordered
+phases. Stop/cancel discards pending phase commands; failures are terminal and failed
+cleanup remains owned for retry. Dispose scheduler before World. No timer or late
+container resolution is introduced. Context command writers are invocation-fenced.
+
+`TrueMoon.Aether.Ecs.Loading` adds frozen exact ComponentRegistry bindings and
+SceneWorldLoader/IFactory<SceneWorld,SceneWorldLoadRequest>. Call UseAetherSceneLoading
+after UseAetherEcs with a composition-root registry factory. Full immutable
+SceneDocument data is resolved/validated before World creation; all entities are
+reserved before import. Source defaults/null/references and exact schema versions
+are preserved, singleton admission is explicit. Importers receive scoped data/handle
+access and tracked resource acquisition, not a mutable World or service resolver.
+
+SceneWorld owns World and prepared IDisposable leases. Dispose its scheduler first,
+then SceneWorld; direct World disposal is rejected. Failure/cancel publishes no
+partial scene, reverse cleanup retains failed resources via CleanupOwner for retry.
+Loader/codec are stateless borrowed services; App does not own their factory results.
+
+SceneWorldCodec adds a TMWL/version1/length/SHA256 envelope over the existing strict
+authoring body, maximum4MiB+44bytes. It needs no registry/game assembly; malformed
+UTF16 is rejected instead of silently replaced. Initial runtime activation negotiates
+version1/registry generation in Hello and sends this envelope in contiguous32KiB
+chunks within the existing64KiB control limit. One transfer per runtime generation;
+checksums, source/operation/session/build identity, exact counts and atomic initial
+publication are checked before readiness. SessionSupervisor.StartWorldAsync accepts
+complete neutral data and an optional selected artifact; FrameSession.StartWorldAsync
+adds existing first-presentation ownership. Neither loads game CLR types in the parent.
+
+Ecs.Runtime.SceneWorldGameSession owns the active SceneWorld and retained failed
+cleanup, using its injected registry-specific SceneWorldLoader. UseAetherRuntime
+provides IFactory<SceneWorldLoader,ComponentRegistry> and preserves existing World
+factory overrides. Failed Tick faults the World; cleanup starts a terminal operation
+fence, retains failed owners and permits Dispose retry. GameBuildLoader retains the
+game/ALC/artifact pin if cleanup fails. The protocol drains cooperative importers
+before releasing staging; the runtime host drains admission/workers before the game.
+
+`PrimitiveEcsComponents.Register(builder)` explicitly binds the existing three builtin
+v1 schemas and optional parent-space VelocitySchema to value components. Existing
+BuiltInComponents.Schemas is unchanged. LocalTransform uses a unit quaternion and
+positive scale; iterative TransformSystem validates complete Parent/Local/World roles,
+cycles/stale/foreign parents and numeric limits before cache publication, preserving shear.
+MovementSystem integrates parent-coordinate velocity before Transform/Extraction.
+
+UseAetherPrimitiveEcs configures copied count limits/fixed step/fixed-view camera and
+lazy typed factories. UseAetherRuntime preserves existing factory overrides. The
+caller owns PrimitiveSimulation, its scheduler and systems; its SceneWorld is borrowed
+and must outlive the controller. Initial tick0 is prepared privately; detached immutable
+PrimitiveRenderSnapshot values are published only after a successful complete tick.
+PrimitiveGameSession implements IRenderGameSession for the existing cube renderer.
+SceneWorldGameSession.PrepareSceneWorld may return an exclusively owned controller;
+base disposes it before World and retains failed SceneWorldPreparationException.CleanupOwner.
+Preflight errors preserve old caches/frames; whole simulation ticks are not rollback transactions.
+
+Primitive extraction limits enabled drawables to64 independently of logical groups,
+rejecting overflow without truncation. Native handles never enter these pools/snapshots.
+Editor Play/preview, mesh/material resource preparation/rendering and ECS checkpoint/Replace
+remain separate stages. Existing64-entity legacy SceneSnapshot and checkpoint limits
+remain unchanged; complete scene capability has a separate bounded4096entity profile.
+
+`TrueMoon.Aether.Rendering` provides CPU-only `RenderContentHash`/`RenderAssetKey`,
+immutable `MeshDefinition`, `OpaqueUnlitMaterialDefinition`, `MaterialBindingSetDefinition`
+and `RenderContentManifest`. Keys contain no managed/native references. Definitions
+copy bounded input lists; the manifest checks exact project/kind/schema/revision,
+duplicate identities, complete dependencies and ordered mesh slots. It is immutable
+data, not a GPU cache or IDisposable service. BuiltinRenderContent.Create supplies
+the eight-vertex cube, white material and exact default binding set for a project/build.
+
+RenderContentCodec encodes/strictly decodes TMRA v1 canonical asset payloads: RFC4122
+GUID bytes, little-endian scalars, normalized positive zero. SHA256 revisions cover
+canonical data and dependencies. A manifest checks supplied revisions against content;
+decode alone does not authenticate a caller's expected revision. EncodeManifest writes
+a TMRM fingerprint of project/build and sorted exact keys, excluding process-local
+generation. This is a CPU format, not an extension to the Runtime control protocol.
+
+`Ecs.Rendering.MeshRenderingComponents.Register(builder,content)` registers only
+the exact singleton MeshRenderer/PerspectiveCamera schemas, each requiring Transform.
+It installs the builder's AssetValidator for that frozen manifest; consumers with
+additional asset domains must explicitly compose their validator afterwards.
+Register Transform separately, for example through PrimitiveEcsComponents.Register.
+Use the existing UseAetherEcs/UseAetherSceneLoading composition path:
+
+```csharp
+var content = BuiltinRenderContent.Create(projectId, RenderContentHash.Parse(buildSha256), Guid.NewGuid());
+context.UseAetherEcs();
+context.UseAetherSceneLoading(_ => MeshRenderingComponents.Register(
+    PrimitiveEcsComponents.Register(new ComponentRegistryBuilder()), content).Build());
+```
+
+Import validates all references/values before World creation, including disabled
+renderers, zero layer masks and disabled tint. Appearance+MeshRenderer on one entity
+is rejected. Shared material data stays immutable; instance tint is a linear RGB
+multiplier and reset disables it. RenderColor explicitly decodes sRGB and encodes
+linear results. PerspectiveCamera validates rigid explicit poses and finite Vulkan
+view/projection matrices; import validates settings, not derived WorldTransform.
+CPU types need no fake UseMesh service registration. Resource ownership/preparation
+is opt-in below; owned mesh snapshots, new shader/renderer and Editor integration
+are subsequent stages.
+
+`UseAetherRenderResources(options => ...)` explicitly adds an App-owned
+`Rendering.Resources.RenderResourceHost` and non-disposable typed factory wrappers
+for RenderManifestLease, RenderDeviceOwner, RenderPreparation and RenderWorldBinding.
+Startup stays CPU-only/lazy. Existing IFactory<IRenderResourceBackend,RenderDeviceRequest>
+overrides are preserved; the default backend prepares Vulkan geometry on demand.
+The host owns its CPU catalog and retains device/binding products until successful
+cleanup; callers dispose products early, before SceneWorld and App. DI aliases do
+not independently own the same disposable service. App cleanup with live external
+CPU leases closes admission and fails without losing the owner; release and retry.
+
+RenderContentCatalog admits complete frozen CPU scopes, deduplicates exact keys and
+physical definition buffers, and returns exclusive counted leases. Aliasing a lease
+does not acquire it. RenderResourceComponents.Register(builder,scope) adds the same
+two rendering schemas and retains one CPU lease per imported mesh/camera component
+through existing ComponentLoadContext.Acquire; SceneWorld owns these retains. Keep
+the initial scope alive while its registry accepts new loads. Scene resource-count
+admission remains separate and may require explicitly chosen load options.
+
+RenderPreparation owns the entire ready closure until disposal; Completion is a
+Task, not a second resource owner. The bounded device queue admits four active and
+sixteen waiting operations by default. Exact mesh keys share one generation-fenced
+entry. One cancelled waiter cannot destroy a resource used by another; last release
+drains upload before destruction. Failed cleanup retains entries/slots/budgets for
+retry. Unknown native submission/completion fences the device and retains ownership.
+StopAsync cancellation stops the wait, never pretends resources were released.
+
+RenderWorldBinding borrows World. InitializeAsync awaits resource readiness;
+ReloadAsync prepares a complete candidate, rechecks render membership/values, then
+changes pinned component keys and current manifest at a serialized boundary. The
+caller serializes World access. Failed preflight/cancel preserves current binding;
+successful publication with failed old cleanup returns Committed=true plus CleanupError.
+This is resource readiness, not Runtime Playing, frame presentation or checkpoint support.
+
+CPU limits include2048revisions/64MiB definition arrays/64scopes/16384lease wrappers.
+Device budgets include64MiB actual geometry requirements,16MiB upload allocations
+and16MiB CPU staging; old/candidate/retiring owners all count. Lower limits are copied
+at configuration. Object/driver overhead and existing surface allocations are outside
+these byte classes. Default Vulkan backend owns a standalone lazy graphics context,
+uploads vertex/index buffers, confirms fences and optionally verifies GPU readback
+hashes. It creates no shaders/pipelines/surfaces and exports no native handles.
+Owned snapshots, surface/device matching and frame retirement integration remain f.3/4.
+
 `Scenes.EntityDefinition`, `EntityInstance`, `EntityPatch` and `EntityResolver`
 provide immutable in-memory authoring with single-base variants, property overrides,
 component additions/removals/restorations and value provenance. Exact `ComponentSchema`

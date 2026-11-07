@@ -72,6 +72,18 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
     public Task StartAsync(SceneSnapshot scene, int width, int height, string behavior = "normal", CancellationToken token = default)
         => StartCoreAsync(scene, null, null, width, height, behavior, token);
 
+    /// <summary>Loads a complete ECS scene and waits for its first acknowledged presentation.</summary>
+    /// <param name="scene">Complete neutral data.</param><param name="width">Physical width.</param><param name="height">Physical height.</param>
+    /// <param name="behavior">Explicit probe behavior.</param><param name="token">Readiness cancellation.</param><returns>First-presentation completion.</returns>
+    public Task StartWorldAsync(Ecs.Loading.SceneWorldData scene, int width, int height, string behavior = "normal", CancellationToken token = default)
+    { ArgumentNullException.ThrowIfNull(scene); return StartCoreAsync(null, null, null, width, height, behavior, token, worldScene: scene); }
+
+    /// <summary>Loads a selected ECS game in the child and waits for complete scene activation and first presentation.</summary>
+    /// <param name="scene">Complete neutral data.</param><param name="build">Selected artifact.</param><param name="width">Physical width.</param>
+    /// <param name="height">Physical height.</param><param name="behavior">Explicit probe behavior.</param><param name="token">Readiness cancellation.</param><returns>First-presentation completion.</returns>
+    public Task StartWorldAsync(Ecs.Loading.SceneWorldData scene, GameBuildArtifact build, int width, int height, string behavior = "normal", CancellationToken token = default)
+    { ArgumentNullException.ThrowIfNull(scene); ArgumentNullException.ThrowIfNull(build); return StartCoreAsync(null, build, null, width, height, behavior, token, worldScene: scene); }
+
     internal Task StartPreviewAsync(SceneSnapshot scene, int width, int height, CancellationToken token)
         => StartCoreAsync(scene, null, null, width, height, "normal", token, role: RuntimeRole.EditPreview);
 
@@ -109,8 +121,8 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
         try { supervisor.Admission.Check(owner); return Presentation?.Surface; }
         finally { _gate.Release(); }
     }
-    private async Task StartCoreAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, int width, int height, string behavior,
-        CancellationToken token, ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game)
+    private async Task StartCoreAsync(SceneSnapshot? scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, int width, int height, string behavior,
+        CancellationToken token, ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, Ecs.Loading.SceneWorldData? worldScene = null)
     {
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
@@ -131,17 +143,22 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
             deadline.CancelAfter(TimeSpan.FromSeconds(15));
             try
             {
-                if (role == RuntimeRole.EditPreview)
-                    await supervisor.StartPreviewAsync(scene, deadline.Token).ConfigureAwait(false);
+                if (worldScene != null)
+                {
+                    if (build == null) await supervisor.StartWorldAsync(worldScene, behavior, deadline.Token).ConfigureAwait(false);
+                    else await supervisor.StartWorldAsync(worldScene, build, behavior, deadline.Token).ConfigureAwait(false);
+                }
+                else if (role == RuntimeRole.EditPreview)
+                    await supervisor.StartPreviewAsync(scene!, deadline.Token).ConfigureAwait(false);
                 else if (owner != null)
-                    await supervisor.StartForReplacementAsync(scene, build, checkpoint!, behavior, owner, deadline.Token).ConfigureAwait(false);
+                    await supervisor.StartForReplacementAsync(scene!, build, checkpoint!, behavior, owner, deadline.Token).ConfigureAwait(false);
                 else if (build == null)
                 {
-                    if (checkpoint == null) await supervisor.StartAsync(scene, behavior, deadline.Token).ConfigureAwait(false);
-                    else await supervisor.StartAsync(scene, checkpoint, behavior, deadline.Token).ConfigureAwait(false);
+                    if (checkpoint == null) await supervisor.StartAsync(scene!, behavior, deadline.Token).ConfigureAwait(false);
+                    else await supervisor.StartAsync(scene!, checkpoint, behavior, deadline.Token).ConfigureAwait(false);
                 }
-                else if (checkpoint == null) await supervisor.StartAsync(scene, build, behavior, deadline.Token).ConfigureAwait(false);
-                else await supervisor.StartAsync(scene, build, checkpoint, behavior, deadline.Token).ConfigureAwait(false);
+                else if (checkpoint == null) await supervisor.StartAsync(scene!, build, behavior, deadline.Token).ConfigureAwait(false);
+                else await supervisor.StartAsync(scene!, build, checkpoint, behavior, deadline.Token).ConfigureAwait(false);
                 await ConfigureCoreAsync(width, height, deadline.Token, owner).ConfigureAwait(false);
             }
             catch (Exception e) { await FaultCoreAsync("FirstFrame", e).ConfigureAwait(false); throw; }

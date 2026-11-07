@@ -35,7 +35,7 @@ internal sealed class RuntimeHostFactory(AetherHost engine, IAppLifetime lifetim
                 var loaded = Own(games.Create(arguments.Build!)); game = loaded; session = loaded.Session;
             }
             var frame = Own(frames.Create()!);
-            var protocol = protocols.Create((arguments, session, frame));
+            var protocol = Own(protocols.Create((arguments, session, frame)));
             var server = Own(servers.Create((arguments, protocol)));
             var delivery = diagnostics == null ? null : Own(diagnostics.Create(arguments));
             return new(engine, lifetime, parent, game, frame, protocol, server, arguments, parentId, delivery);

@@ -1,645 +1,100 @@
 # TrueMoon.Aether: состояние движка и редактора
 
-Последняя работа — **2026-11-05, ED4g.2a native numeric proof**.
-Четыре свежих native OpenGL запуска: source Debug/published Release × standard/
-Cobalt и embedded/MS DI. В standard через Windows проверены linked drag/release,
-Esc draft cancel, Ctrl+Enter и один Undo; во всех четырёх routed arrows/Shift/Ctrl,
-invalid input и exact captured Esc. Retained controls сохранены, final UI/GPU/
-handles0, runtime children0. Исправлен ordered pointer position и передача Shift/
-Ctrl в Platform.Silk. Свежие full Editor **1295/1295**, Alloy **1101/1101**, Hosting
-**154/154** каждый Debug/Release; failed/skipped0, шесть новых UI cases.
-[План](EDITOR_PLAN.md#ed4g2a-native-numeric),
-[evidence и ограничения](HISTORY.md#ed4g2a-native-numeric-2026-11-05).
-Следом physical ↑/↓+modifiers, Esc при удержании кнопки и pointer modifiers:
-текущий automation driver отправляет arrows как UiKey.None. Затем group reset/
-angle units. Fresh packages, Vulkan/runtime/device-loss/full-solution tests не
-повторялись; Observer follow-up отдельно.
-
-
-Предыдущая работа — **2026-11-05, ED4g.2 numeric gestures и proportional Scale**.
-Typed arrow-step/drag меняют только draft; release не Apply. Esc локально отменяет
-gesture с exact pre-existing drafts, Ctrl+Enter завершает capture и делает одну
-authoring transaction. Scale link opt-in false сохраняет XYZ ratios при typing/
-step/drag; preflight targets не затирает invalid/pending-reset peers. Selection/
-revision/unique gesture epoch защищают rollback, включая два View с общей моделью.
-Full Editor **1295/1295 D/R**, focused180/180 Debug, failed/skipped0;24новых cases.
-Отдельно Alloy1095/1095 и Hosting154/154 D/R;64новых cases суммарно. Final Debug
-solution build0errors/1555warnings, полный solution test run не выполнялся.
-11реальных Skia CPU captures с assertions для no-auto-Apply, linked ratio, exact
-cancel и one-history Apply/Undo проверены. Native/GPU/fresh package/physical scope
-не повторялся. [Контракт](EDITOR_PLAN.md#ed4g2-numeric-gestures),
-[evidence](HISTORY.md#ed4g2-numeric-gestures-2026-11-05).
-Далее source/published native input/cancel proof; Observer follow-up отдельно.
-
-
-Предыдущая работа — **2026-11-05, ED4g.1 остальные редакторы и состояния**.
-Все существующие scalar kinds/nullable используют retained PropertyEditorRow:
-одинаковая label column88, capped numeric/boolean, строка auto26–78 и компактный
-null. Typed Input/addresses, stored drafts, Apply/Cancel/history и ownership
-сохранены; actual checkbox indicator получает shared states. Full Editor
-**1271/1271 Debug/Release**, failed/skipped0;15новых Editor cases. Отдельно Alloy
-**1055/1055**, Hosting **154/154** D/R; focused156/156 Debug. Общая nonincremental
-Debug сборка0errors/1555warnings, full solution tests не выполнялись.14Skia CPU
-PNG проверены (темы/narrow/modified/focus/error/null/read-only/reset/disabled),
-native/GPU/fresh package/physical acceptance не повторялась.
-[ED4g.1](EDITOR_PLAN.md#ed4g1-generic-editors), [evidence](HISTORY.md#ed4g1-generic-editors-2026-11-05).
-Следующий UI срез — numeric gestures/step/linked scale; Observer follow-up отдельно.
-
-
-Предыдущая работа — **2026-11-05, ED4g компактный инспектор Transform**.
-Три retained строки Position/Rotation(rad)/Scale на NumberBox/Vector3Editor;
-labels/text центрированы, узкая панель переносит подпись над тремя равными полями.
-Происхождение/индивидуальный reset и metadata раскрываются «⋯»; ошибки остаются
-маркером в поле и полным копируемым diagnostics panel. Apply/Cancel/Undo/Redo,
-точные schema IDs, ownership и engine contracts сохранены. Уведомления состояния
-сведены к одному view update; Load не уведомляет неизменённые computed values.
-Full Editor **1256/1256 Debug/Release**, failed/skipped0;12новых Editor cases.
-Alloy1020/1020 и Hosting154/154 в обеих конфигурациях проверены отдельно.
-[Дизайн-код](../alloy/DESIGN.md), [прикладной план](EDITOR_PLAN.md#ed4g-compact-transform).
-CPU raster images покрывают темы/narrow/error/focus/modified/details; native/GPU/
-fresh package acceptance не повторялась. Далее числовые gestures/step/linked scale;
-Observer scheduling/allocation follow-up остаётся отдельной задачей.
-
-
-Предыдущая работа — **2026-11-04, ED6b.2e.4e bounded native open batches**.
-Default Census от256files открывает максимум4файла параллельно; coordinator один,
-validation/hash/byte budgets последовательны, ordered errors/fresh metadata/actual
-drain сохранены.21новый case, full Editor1244/1244 Debug/Release, окончательный
-focused145/145 в обеих конфигурациях после review; failed/skipped0, новые warnings0.
-6/6performance cases:24Same/6Changed, budget0/owners drained.2567files bounds312–
-335ms polling/440–470ms notifications вместо514–545/579–602ms (upper−38.5%/−21.9%).
-Tradeoff: alloc4.50vs3.66–3.67MiB/cycle, CPU500/672vs406/469ms/cycle. OtherIO/bytes
-прежние, small graphs serial; универсальный CPU/memory improvement не заявляется.
-54collection input hashes drift0.3fresh profiles/targets/collectors прошли,12Same/
-3Changed; native batch подтверждён в2many-files, byte control serial. Concurrent
-thread weights не равны scan wall time. Classifier уточнён после сбора с сохранением
-collection snapshot, production inputs прежние.56collection records/10827fixtures/
-6traces проверены,1current analysis revision отдельно, drift0. Общая nonincremental
-Debug сборка0errors/1555warnings; full solution tests не повторены. Следующий шаг —
-уменьшить scheduling/allocation overhead batch с прежними ownership/cancel fences.
-[Решения/проверки/результаты](HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04).
-
-Предыдущая работа — **2026-11-04, ED6b.2e.4d opened metadata/prepared native path**.
-FILE_BASIC_INFO+size с unsupported-provider legacy fallback и reuse только native
-имени для fresh final query реализованы. Full hashing/metadata override/reparse/
-access/cancel/drain сохранены.8новых cases; focused124/124, full Editor1223/1223
-Debug/Release, failed/skipped0; новые files без analyzer warnings, harness build0/0.
-6/6cases:24Same/6content changes, budget0/owners drained.2567files allocation3.66–3.67
-vs4.08MiB/cycle, OtherOps16685vs21819. Polling scan514–545msvs588–614ms; notifications
-579–602msvs561–593ms, universal latency/CPU improvement не заявляется.53inputs drift0.
-Relative/CreateFile2/no-hint native experiments не показали устойчивого extra benefit,
-в production не добавлены.3fresh profiles/targets/collectors прошли,12Same/3Changed;
-open+handle metadata/close57.88–58.89% census sampled thread weight остаётся главным
-resolved участком; unresolved context62.00–63.27% ограничивает дальнейшую attribution.
-Следующий шаг — отдельная native/OS attribution, не новая гипотеза о kernel cost.
-55input/10827fixture/6trace hashes drift0; общая nonincremental Debug сборка0errors/
-1555warnings, full solution tests не повторены.
-[Scope/проверки/результаты](HISTORY.md#ed6b2e4d-observer-native-open-2026-11-04).
-
-Предыдущая работа — **2026-11-04, ED6b.2e.4c file open/file-probe metadata**.
-Owned no-follow native reader на прежнем worker заменяет per-file async FileStream
-strategy/IOCP setup. Opened-before metadata +fresh path-after query, missing probes
-без exceptions и без memoization; full hashing/cumulative budgets/ancestor safety
-сохранены.41новый case, focused116/116 и full Editor1215/1215 отдельно Debug/Release,
-failed/skipped0, новые files без analyzer warnings. Release harness build0/0.
-Повторные6/6cases:24full-read Same/6same-length+mtime Changed, budget0, owners drained.
-2567files: scan0.561–0.614s вместо0.822–0.855s, allocation4.08vs4.95MiB/cycle;
-CPU process/cycle3.99–4.28% одного core вместо6.63–6.92%.53input hashes drift0.
-Control/bytes-Polling CPU вырос: universal CPU improvement не заявляется.
-3fresh profiles/targets/collectors прошли,12Same/3Changed без budget expiry.
-Resolved path metadata32.90–34.16% →2.52–8.96%; open+handle metadata/close теперь
-59.23–63.22% census thread weight. Inlining/async→sync и unresolved native context
-51.87–57.93% ограничивают attribution; нулевые cache samples не означают zero work.
-Следующий шаг — отдельная native/OS attribution оставшегося per-file Open cost.
-55input/10827fixture/6trace hashes drift0. Общая nonincremental Debug сборка0errors/
-1555warnings; полный solution test run не повторялся.
-[Контракт/проверки/полные результаты](HISTORY.md#ed6b2e4c-observer-file-io-2026-11-04).
-
-Предыдущая работа — **2026-11-04, ED6b.2e.4b bounded directory cache Observer**.
-Per-attempt positive cache до256каталогов, root-first native rename pins,
-fresh-check fallback при недоступном pin/overflow и final path revalidation перед
-Same реализованы. Нет reuse между attempts/passes; full hashing/membership/probes,
-10s/5s policy и cumulative retry budget сохранены.48новых cases, focused75/75 и
-full Editor1174/1174 отдельно Debug/Release, failed/skipped0. Release harness build0/0.
-Повторные6/6performance cases:24full-read Same,6same-length+mtime Changed, budget0,
-Stopped/watchers0. Actual2567files/11.11MiB: median scan0.822–0.855s вместо1.266–1.524s,
-CPU process/cycle6.63–6.92% одного core вместо11.74–11.81%, allocation4.95vs6.75MiB.
-52source/DLL/harness hashes без drift. CPU control cases не все улучшились;
-snapshot bounds/whole-process counters/warmed cache не являются performance guarantee.
-Три fresh profiles:3targets/collectors exit0,12Same/3Changed, budget0; ancestor
-attributes39.95–41.90% →0.67–1.07% census sampled thread weight. Следующий шаг —
-уточнить per-file open/OSFileStreamStrategy constructor42.59–42.70% inclusive и
-metadata32.90–34.16%; unresolved native caller context55.91–55.99% ограничивает
-точную attribution.54input/10827fixture/6trace hashes drift0. Общая nonincremental
-Debug сборка прошла:0errors/1555warnings; полный solution test run не повторялся.
-[Safety/команды/полные результаты](HISTORY.md#ed6b2e4b-observer-directory-cache-2026-11-04).
-UI/GPU/fresh package/full solution tests в cache lane не повторены.
-
-Предыдущая работа — **2026-11-04, ED6b.2e.4a профилирование hot path Observer**.
-Тот же Release binary/source48hashes сохранён.3managed thread-time traces после
-Build/initial pass:2many-files repeats +byte control,3targets/collectors exit0,
-12Same/3same-length+mtime Changed, budget0, Stopped/watchers0.
-ValidatePath → ancestor Attributes занимает39.95%/41.90% веса census stacks;
-вместе с file/probe metadata60.47–60.62%. Source-derived clean-pass model:
-26203ancestor visits на103distinct directories (2655validated paths).
-Это подтверждённый resolved hot path, не kernel/CPU-cycle/full async breakdown;
-native/inlined unresolved context29.32–37.70% в repeats сохраняет свои ограничения.
-[Профиль/методика/evidence](HISTORY.md#ed6b2e4a-observer-profile-2026-11-04).
-Следующий шаг — bounded reuse/deduplication ancestor validation в пределах pass
-с проверкой replacement/reparse/access errors/retry/cancel/drain и прежним full hashing.
-Production оптимизация/API/policy и новые unit/native/package checks не выполнялись.
-
-Предыдущая работа — **2026-11-04, ED6b.2e.4 measured Observer performance**.
-Manual Release consumer получил real frozen Build descriptor для4project diamond;
-production code/API/default10s polling/5s budget сохранены.6/6cases, initial6+
-steady18full Same passes, budget-exceeded0,6same-length/same-mtime changes.
-Actual2567files/11.11MiB: median scan1.27–1.52s, process CPU11.74–11.81%одного core,
-allocation6.75MiB/cycle.139files/129.11MiB:0.156–0.182s, CPU2.61–3.07%,0.62MiB/cycle.
-Notifications publication1.58s(files)/0.429s(bytes), polling11.37s/10.18s.
-Read bytes равны descriptor на всех24passes; idle0, Stopped/watchers0 у6owners.
-48source/DLL +5554restored fixture hashes без drift. CPU/allocations/memory — whole
-process+sampler, filesystem cache warmed; native UI/GPU/package/unit/full solution
-в этом performance lane не повторялись. [Методика/команды/evidence](HISTORY.md#ed6b2e4-observer-performance-2026-11-04).
-Следующий шаг — attribution metadata/path-validation cost на many-files graph,
-затем адресная оптимизация подтверждённых затрат с прежними correctness/drain fences.
-
-Предыдущая работа — **2026-11-04, ED4f.3 Window root стандартного Editor**.
-EditorMainWindow : Window<EditorViewModel> создаётся App/typed IFactory, содержит
-один reusable EditorView и заимствует модель/style. Effective title/client size
-копируются после configure callback, header получает прежний EditorView и общий
-caption source. Existing EditorWindow/EditorSession сохраняют одну close policy и
-first-presentation GPU initialization; embedded путь остаётся raw EditorView.
-64новых cases, full Editor1126/1126, Alloy976/976 и Hosting154/154 отдельно
-Debug/Release прошли, failed/skipped0; solution Debug nonincremental build0errors/
-1584existing warnings. Fresh15packages/headless8/8; source Debug/published Release/
-fresh NuGet Release ×standard/Cobalt и embedded/MS DI6/6native workflows:
-84children reaped/released,78graceful Vulkan validation0/0,30Game, maxLive1,
-final UI/GPU/handles0. Startup failure/cancel12/12,3PNG просмотрены,
-2855input hashes без drift. [Реализация/команды/границы](HISTORY.md#ed4f3-window-root-2026-11-04).
-UIA2d targeted independent package consumer подтверждён этим Editor profile;
-full ED4/ED6 и physical/hardware/K7/release gates открыты. Следующий Aether шаг —
-measured observer cost на большом local graph с ordinary10s/5s.
-
-Предыдущая работа — **2026-11-03, source/документационная сверка Window integration**.
-UIA2 API и сохранённые проверки сверены; текущий standard Editor ещё использует
-EditorView +HostedUiWindow/WindowFrame, отдельного Window root нет. Рекомендуемый
-consumer запланирован в [ED4f.3](EDITOR_PLAN.md#ed4f3-window-root): wrapper сохраняет
-embedded EditorView, typed root access/overrides, header/viewport и одну close policy.
-Core/headless/offscreen/HUD не получают Window; Player решает это в ENG7b.2 с одним
-native/device owner. [Сверка и исходные точки](HISTORY.md#window-engine-integration-review-2026-11-03).
-Предыдущий UIA2 code run отдельно подтвердил Editor1062/1062 Debug/Release regression;
-новые engine build/test/native в текущей документационной работе не запускались.
-
-Предыдущая code работа — **2026-11-03, ED6b.2e.2–3 Observer и source UI**.
-Один project-owned worker, bounded hints+polling, full byte/membership/probe census,
-sticky Changed, unavailable/recovery и actual stop/drain/retry реализованы. Open
-инертен; successful current ScenePlayback Build/reuse привязывает baseline, source
-status не заменяет preflight и не меняет game/scene state. Retained status badge/details
-читают current-owner immutable snapshot только через owner Present/Refresh.
-Full Editor1062/1062 Debug/Release, включая84новых cases, failed/skipped0. Source
-Release standard/Cobalt+embedded/MS DI2/2 и fresh package Release2/2 прошли;
-15packages/headless8/8,4game children reaped/released, Vulkan validation0/0.
-[Решения/команды/evidence](HISTORY.md#ed6b2e23-observer-и-source-ui--2026-11-03).
-Следующий шаг — measured cost на большом local graph с default10s/5s; UNC/network/
-reparse, wider package/HUD/Player и прежние hardware/release gates отдельные.
-
-Предыдущая работа — **2026-11-02, ED6b.2e.1 descriptor/probes/shared policy**.
-Frozen capture выдаёт immutable original-source descriptor через Inputs.SourceWatch:
-known files, project-only trees, exact present/absent probes и source fingerprint.
-Recursive exclusions/limits общие с compiler; watch-only ошибки дают null/reason,
-не меняя full fingerprint, schemas и preflight. Reopen не восстанавливает provenance;
-новые properties не сериализуются в diagnostics. Final Aether26/26 (22новых cases
-и4package/diamond/reuse) и full Editor978/978 прошли Debug/Release; fresh15packages/
-headless8/8, source hashes без drift. Более широкий scoped279/279 Debug/Release
-предшествует final TreeFiles уточнению и не подменяет его delta checks.
-[Изменения/команды/evidence](HISTORY.md#ed6b2e1-descriptor-и-probes--2026-11-02).
-Следующий шаг — ED6b.2e.2 project-owned observer; UI indicator — ED6b.2e.3.
-
-Предыдущая работа — **2026-11-02, ED6b.2e contract source watcher/stale Build**.
-По исходникам определены capture-derived descriptor, code/scene/runtime identities,
-NoBuild/Checking/ObservedUnchanged/Changed/Unavailable/Stopped, project ownership,
-bounded hints+polling/debounce/drain и owner-thread snapshot delivery. Watcher не
-заменяет compiler preflight и не вызывает auto Build/Play. Contract находится в
-[Editor плане](EDITOR_PLAN.md#ed6b2e-контракт-source-watcher-и-stale-build-status--2026-11-02),
-[исходная сверка/границы](HISTORY.md#ed6b2e-контракт-source-watcher-и-stale-build-status--2026-11-02).
-В том документационном срезе C# API/observer/indicator не добавлялись, build/test/native
-не запускались. Он определил ED6b.2e.1 descriptor/probes/shared policy и tests,
-далее project-owned worker/retained indicator. Предыдущие passing результаты ниже
-сохраняют собственную область; watcher/hardware/release acceptance ими не закрыта.
-
-Предыдущая работа — **2026-11-02, ED6b.2b.2c.1 native package interrupts/preflight**.
-Source/fresh NuGet published Release ×standard/Cobalt и embedded/MS DI52/52cases:
-Build/Verify/Restore ×Cancel/Stop/exit и Start/Replace ×stale/corrupt archive.
-Package copies/selected DLL и live SDK PID подтверждены; corruption отклоняется
-до SDK, stale preflight сохраняет old Playing identity/mode и parent state.
-Fresh Build меняет payload, затем actual Start/Replace успешен.76Game children
-reaped/released,76graceful validation0/0, maxLive1, final UI/GPU/handles0;
-4recoveries только Restore+Cancel. Fresh15packages/headless8/8,2743hash checks без drift.
-Production runtime/API не менялись; unit/full solution/ordinary Workflow не повторены.
-[Contract/commands/initial harness failure/evidence](HISTORY.md#ed6b2b2c1-native-package-interrupts-и-preflight--2026-11-02).
-Далее bounded source watcher/stale Build status: сначала invalidation/ownership/
-debounce/drain/UI delivery contract без auto Build/Play. Wider packages, HUD/Player
-и прежние physical/hardware/performance/release gates остаются отдельными.
-
-Предыдущая работа — **2026-11-02, ED6b.2b.2c captured managed packages**.
-Явный PackageDirectory + schema1/net10.0 lock захватывают unsigned archives до SDK;
-версии/edges/SHA512/ZIP/IL-only DLL проверяются, mirrors используют captured Reference.
-Один lib target, без build/analyzer/native/content/ref assets; общий source/expanded
-budget и private DLL allowlist сохранены. Project v3 добавляет contained packageDirectory,
-v1/v2 совместимы. Before/after/prestart/reuse и cleanup используют прежние fences.
-SDK-generated lock probe входит в final package33/33; full Editor978/978, отдельно
-Debug/Release, failed/skipped0. Scoped293/293 Debug/Release прошли до последнего
-nuspec guard; его delta покрывает final package33. Fresh15packages/headless8/8 и
-source/NuGet Release ×standard/Cobalt и embedded/MS DI4/4native Workflow прошли:
-56children reaped/released,52graceful validation0/0,20Game с selected package DLL,
-maxLive1, final UI/GPU/handles0.2059input hashes без drift;2representative PNG просмотрены.
-[Контракт, exact tests, commands и текущие результаты](HISTORY.md#ed6b2b2c-captured-managed-packages--2026-11-02).
-Full Aether/Alloy/Hosting/solution и hardware/release gates не повторялись.
-Следующий шаг — directed native package Cancel/Stop/exit и stale/corrupt archive
-перед Start/Replace. Wider package profiles и full ED6b остаются отдельными.
-
-Предыдущая работа — **2026-11-02, ED6b.2b.2b.1 native graph interrupts**.
-Source/fresh NuGet published Release ×standard/Cobalt и embedded/MS DI36/36cases:
-dependency SDK query, graph prestart verification и candidate restore ×Cancel/Stop/Exit.
-SDK log timestamps относятся к live owned PID; verify сравнивает staged Game.Shared.dll
-с selected candidate. Admission закрыта до actual drain; compiler staging удалён.
-52Game children reaped/released,52graceful Vulkan validation0/0, maxLive1, final UI/GPU/
-handles0.4recoveries только Restore+Cancel; Stop/Exit не запускают late child.
-Fresh15packages/headless8/8,2735hash checks без drift. Production C# не менялся,
-unit/full solution и ordinary Workflow matrix в этом lane не повторены.
-[Contract/commands/matrix/evidence](HISTORY.md#ed6b2b2b1-native-graph-interrupts--2026-11-02).
-Далее — минимальный locked managed PackageReference closure без build/analyzer/native
-assets. PackageReference пока отклоняется; physical/hardware/performance/release gates открыты.
-
-Предыдущий captured graph profile, scoped262/full Editor971 Debug/Release и4native
-workflows — [ED6b.2b.2b](HISTORY.md#ed6b2b2b-captured-managed-project-graph--2026-11-02).
-
-Предыдущий single-project native interrupt lane ED6b.2d.1 и исправление Stop/exit order
-сохранены в [HISTORY](HISTORY.md#ed6b2d1-native-replace-interrupts--2026-11-02).
-
-Предыдущая работа — **2026-11-01, ED6b.2d document-aware code Replace**.
-ScenePlayback строит новый candidate для owned Playing/Paused runtime и того же
-authoring state. GameEditor.ReplaceBuildAsync проверяет точный context и tracked
-inputs до Pause; общая checkpoint/rollback транзакция прежняя. Scene/document/runtime
-stale fences, dirty/history/selection сохранены; recovered child остаётся owned.
-DocumentOperation.Runtime fences direct edit/IO до async drain; Close отменяет работу
-до authoring disposal. Scoped Aether82/82 и full Editor957/957 отдельно Debug/Release,
-failed/skipped0; full Aether/Alloy/Hosting/solution не повторены.
-Fresh15packages/headless8/8; source/NuGet standard/Cobalt +embedded/MS DI
-4/4workflows: paused swap с тем же tick, compiler failure без смены child, restore
-rejection с rollback old code/state/Playing mode.56children reaped/released,20game,
-52graceful validation0/0, maxLive1, UI/GPU/handles0;8new PNG просмотрены;2031hash checks
-без drift. Initial test-setup и старый child-count harness failures сохранены.
-[Contract/commands/matrix/evidence](HISTORY.md#ed6b2d-document-aware-code-replace--2026-11-01).
-Профиль требует checkpoint capability и неизменной authoring scene: migration/live
-copyback нет. Далее ED6b.2d.1 — directed native Cancel/Stop/exit во время Replace;
-engine/model interrupt checks не заменяют этот native lane. Extended graphs/disk
-cache/HUD/Player/full ED6b и прежние physical/drain/popup/distinct-PID/release gates открыты.
-[Предыдущий reuse](HISTORY.md#ed6b2c-verified-payload-reuse--2026-11-01).
-
-Предыдущая работа — **2026-10-31, ED6b.2b.2a declarative preparation closure**.
-CapturePreparation включён в Scene Start и требует TrackInputs+CaptureCompilation.
-Поддержанный project/import/source/reference graph копируется до SDK evaluation;
-SDK/runtime/host/ref-pack files read-leased, процессы получают private environment/
-home/temp/offline NuGet config. Custom tasks/functions/SDK/analyzers и package/project
-graphs отклоняются до execution; Windows/installed directories остаются trusted.
-Original source/diagnostic paths, generated ProjectDir, repeatable fingerprints/DLL
-и lifecycle cleanup сохранены. Реальный Game.Logic/ancestor props/contracts и private
-dependency подтверждены SDK tests. Final Aether1704/1704 и Editor943/943 отдельно
-Debug/Release, failed/skipped0;21новый case, плюс исправлено ожидание diagnostic event
-и изолированы тяжёлые SDK fixtures. [Scope/findings/evidence](HISTORY.md#ed6b2b2a-declarative-preparation-closure--2026-10-31).
-Fresh15packages/headless8/8 Debug/published Release ×DLL/apphost ×Cobalt/MS DI,
-exit0; window/GPU=false. Это прежний headless lane, не native preparation workflow.
-Дальше consumer acceptance и стоимость freeze; native/hardware/release gates,
-расширенные graph profiles/cache/reuse/Replace/full ED6b открыты.
-Промежуточный Release failure из-за distinct-PID assumption сохранён:8leases,
-один PID повторился, все reaped/released. Final passing не закрывает этот отдельный
-test-contract follow-up; identity/reap assertions и runtime не менялись.
-
-Предыдущая работа — **2026-10-31, ED6b.2b.1 захваченная C#-компиляция**.
-Scene requests включают CaptureCompilation+TrackInputs: trusted SDK preparation отдаёт
-actual Csc args; compiler/source/generated/reference/config bytes копируются в owned job.
-Отдельный Csc читает эти copies. После Build и перед Start проверяются original
-non-generated compiler/reference/config inputs; прежние source stale/context fences сохранены.
-CallerFilePath/user PathMap, stable generated/PDB paths и original diagnostics проверены.
-Job staging удаляется до возврата Build; cancellation/reap/retention остаются compiler-owned.
-C# library profile отвергает opaque inputs/custom extensions; schema1 прежняя,
-Compilation descriptor process-local. Полная MSBuild preparation не изолирована.
-Aether1683/Editor943 отдельно Debug/Release, failed/skipped0;26новых cases.
-Fresh15packages/headless8; published source/NuGet standard/Cobalt +embedded/MS DI4/4:
-44children reaped/released (8game),40graceful validation0/0, final UI/GPU/handles0;
-4PNG просмотрены. На native compile188files/42105392bytes, stable fingerprints двух builds.
-[Команды/findings/границы](HISTORY.md#ed6b2b1-захваченная-c-компиляция--2026-10-31).
-Далее ED6b.2b.2 immutable closure до evaluation/preparation, включая toolchain/runtime/
-environment assumptions. Arbitrary tasks/generators, package/project graph, cache/reuse/
-Replace/full ED6b открыты. Исторические popup/output-drain causes этим run не исправлены;
-другие module/full solution suites и physical/release gates не повторялись.
-
-Предыдущая связанная работа — **2026-10-31, общие Bindable/ViewModel**.
-Шесть Editor ViewModels переиспользуют Argentis property notifications; InspectorProperty
-использует Bindable. Owner-thread guards, dependent properties и Dispose subscriptions
-сохранены. Editor923/923 и UI919/919 Debug/Release, failed/skipped0.
-[Команды/границы](HISTORY.md#editor-и-общие-bindableviewmodel--2026-10-31).
-Aether/другие suites и package/native runs в этом шаге не повторялись. Далее ED6b.
-
-Предыдущая работа — **2026-10-31, ED1b.2 project picker и runtime rebinding**.
-Меню «Проект» и retained path prompt используют общую document/project queue и
-Save/Discard/Cancel. До возврата admission привязывается actual game build context;
-Close его очищает. Workspace/selection обновляются на UI owner, stale actions fenced.
-Profile: stopped game/idle compiler; active preview drains/reaps до publication.
-Aether1631/Editor923 отдельно Debug/Release, failed/skipped0,22новых cases.
-Final15fresh packages/headless8 и published source/NuGet ×standard/Cobalt +embedded/MS DI:
-4/4workflows,32children reaped/released,28graceful validation0/0, UI/GPU/handles0;
-14PNG просмотрены, final input fingerprints совпадают.
-[Команды/initial findings/границы](HISTORY.md#ed1b2-project-picker-и-runtime-rebinding--2026-10-31).
-Следующий шаг — ED6b source/artifact/immutable authoring snapshot policy и Build/Play.
-OS picker/recents/wizard, extended physical/native/backend/release gates и прежний
-intermittent output-drain follow-up остаются отдельными.
-
-Предыдущая работа — **2026-10-31, ED1b.1 project/document transition API**.
-Switch проверяет candidate до Save/Discard/Cancel; exact document guard сохраняет
-новые edits/history при stale decision. Explicit Close drains preparation/IO, ошибки
-Save и cancel сохраняют active owner; post-publication cleanup удерживается для retry.
-Editor903/903 отдельно Debug/Release, failed/skipped0,20новых cases.
-[Команды/границы](HISTORY.md#ed1b1-projectdocument-transition-api--2026-10-31).
-UI picker и runtime/build rebinding после этого API-среза реализованы в ED1b.2 выше.
-Общие ED1/ED6b, ARCH1b и прежний intermittent output-drain follow-up открыты.
-Другие module suites, package/native/GPU/physical runs этим API-срезом не повторялись.
-
-Предыдущая работа — **2026-10-31, ED4c.3 операции объектов, поиск и context menu**.
-Общие create/delete/duplicate batches используют прежние owner/revision/receipts/history.
-New позволяет создать объект/куб и child; shared icons/Insert/Ctrl+D/Delete/context
-commands, поиск по имени/ID и inspection работают с persisted scene. Retained tree
-projection согласует items/selection, не сбрасывает выбор при удалении строки.
-Aether1629/Editor883/Alloy909/Hosting117 отдельно Debug/Release, failed/skipped0.
-Final15fresh packages/headless8 и published source/NuGet standard/Cobalt workflows2/2:
-New→create→Transform→duplicate/delete/Undo/Redo→search→Save/reopen прошёл;
-14native children reaped/released,12graceful validation0/0, UI/GPU/handles0,4PNG просмотрены.
-[Команды/initial findings/evidence](HISTORY.md#ed4c3-операции-объектов-поиск-и-контекстное-меню--2026-10-31).
-Далее project picker/switch и ED1/ED6 workflow. Full ARCH1b/ED4 и прежний intermittent
-output-drain follow-up остаются открытыми; новый passing не объявляет его исправленным.
-
-Предыдущая работа — **2026-10-31, ED4c.2 сохраняемые имена и порядок сущностей**.
-Общие EntityInstance/ResolvedEntity metadata, atomic HierarchyEditBatch и JSON v1/v2
-подключены к прежним document owner/revision/history. Editor даёт inline F2/Enter/Esc,
-Ctrl+↑/↓ и before/after drop; ID, component patches, selection и retained controls сохраняются.
-Aether1602/Editor866/Alloy900/Hosting117 отдельно Debug/Release, failed/skipped0.
-[Audit/8TRX и новые cases](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/verification.json).
-Final fresh15packages/headless8 и published SourceRelease/PackageRelease standard/Cobalt
-workflows2/2 прошли;14children reaped/released,12graceful Vulkan validation0/0,
-UI/GPU/handles0.4finalPNG просмотрены после исправления hint glyphs.
-[Приёмка/границы и отдельный drain follow-up](HISTORY.md#ed4c2-имена-и-порядок-сущностей--2026-10-31).
-Следом ED4c.3 create/delete/duplicate, затем project/workflow; полный ARCH1b и ED4 открыты.
-
-Предыдущая работа — **2026-10-31, ED8a.2 child health/device и acceptance**.
-Version2 body в прежнем diagnostic lane доставляет bounded numeric child health и
-last selected Vulkan device. UI/report читает cached immutable observation/time,
-сохраняет его после crash и отличает unknown/omitted от healthy0. Cached UI device
-capability даёт actual presentation metadata без native queries при export.
-Aether1581/Editor847/Alloy893/Hosting117 отдельно Debug/Release, final failed/skipped0;
-initial Release1fixture failure исправлен first-poll barrier, budgets прежние.
-Fresh15NuGet packages:8headless Game cases/24children. SourceRelease и PackageRelease
-standard/Cobalt GUI:2/2workflows,14children/2owned crashes,12graceful validation0/0,
-UI/GPU/handles0.4PNG просмотрены. [Evidence/границы](HISTORY.md#ed8a2-child-health-и-device-observations--2026-10-31).
-ED8a закрыт в этом Windows x64/net10/OpenGL UI↔Vulkan preview и CPU Game scope.
-Далее ED4c.2 сохраняемые имена, затем ED4c.3. Persistent compiler history, extended
-native/provider/backend matrix, physical/device loss/VRAM/long-load и общий release
-остаются отдельными. Core/Enerit/Mithril/full solution suites этим шагом не повторялись.
-
-Предыдущая работа — **2026-10-30, ED8a.1 JSONL history и управляемый report export**.
-Schema2 объединяет bounded parent archive/memory, effective scalar config и observed
-backend/viewport; explicit text/history choices, privacy notice, user cancel и
-single-flight/drain. Default metadata-only, opt-in raw/compiler/exception/source text;
-child sink health/device/persistent compiler history явно unavailable.
-Core398/Aether1570/Editor842 отдельно Debug/Release, failed/skipped0. Published
-Release/Cobalt consumer вне checkout: реальные CPU preview normal/crashed children,
-rotated/malformed/incomplete history,5000imports и Dark/Light native Skia raster;
-оба children reaped/released, View/App cleanup прошёл. Paused-follow backend gap
-исправлен, full Editor повторён. [Evidence/границы](HISTORY.md#ed8a1-архив-и-управляемый-экспорт--2026-10-30).
-Далее ED8a.2 child health/device и window/game/NuGet acceptance, затем ED4c.2/3.
-Full solution/UI/Hosting/Enerit/Mithril suites, окно/GPU и hardware gates не повторялись.
-
-Предыдущая работа — **2026-10-30, ED6a.3 compiler diagnostics/source navigation**.
-GameBuildCompiler читает bounded SARIF2.1 после compile/reap; job/revision/artifact
-и failed diagnostics сохраняются после successful retry. SARIF включён в owned
-retention; initial full Debug выявил4regressions allowlist, исправлены с повтором.
-Editor Compiler mode и borrowed ISourceFileNavigator/command hook дают переход по
-frozen location, cancellation/drain и observed failure. Metadata export не содержит
-compiler text/source paths. [Контракт, команды и evidence](HISTORY.md#ed6a3-compiler-diagnostics-и-source-navigation--2026-10-30).
-Текущие Aether1570/1570 и Editor833/833 отдельно Debug/Release, failed/skipped0;
-narrow19+34. SourceDebug/Cobalt/native Skia raster: реальный failure→navigation→
-themes→retry,3PNG просмотрены, View/App cleanup. Окно/GPU/внешний editor process,
-published/packages/full solution и остальные suites не проверялись этим срезом.
-Следующий шаг — полный ED8a report и scoped window/published/flood acceptance.
-
-Предыдущая фиксация планов — **2026-10-30, agent integration и Game AI**.
-По запросу пользователя уточнены [ARCH1d.1–4](PLAN.md#локальные-агенты-и-mcp-adapter):
-общий API, локальный MCP, Runtime observation/control, authoring/jobs и эксперименты.
-Добавлены [ENG9a–d](PLAN.md#eng9-ии-мобов-и-агентные-проверки--2026-10-30): поведение
-охранника, bounded decision traces/scenario assertions и optional LLM-персонаж;
-UI consumers — ED4g/ED7a в EDITOR_PLAN.md. Все новые этапы запланированы.
-Изменены только планы/статусы, ссылки и согласованность проверены чтением;
-build/tests/native/packages не запускались. Очередь ED6a/ED8a → ED4c.2/3 →
-project/workflow и hardware/release ограничения сохранены. При начале agent среза —
-ARCH1d.1: сверка API и contract local attach/headless/identity/budgets/ownership.
-
-Предыдущая реализация и проверка — **2026-10-29, ED6a.2 raw streams и health**.
-В console добавлены RAW stdout/RAW stderr/Health: borrowed in-memory runtime/build
-snapshots, parent Core sink/ring/emergency/retention и child delivery/capture counters.
-Default16processes/4096chars per stream; raw severity не выводится из stderr,
-inspected text frozen до явного refresh. Compiler хранит16completed jobs+active,
-native64recent leases; nonce/endpoints не входят в snapshot API. Metadata report
-включает numeric health, исключает raw/error text и явно указывает budget omissions.
-Core387, Aether1556, Editor823 и Hosting117 — Debug/Release, failed/skipped0 в final
-runs. Native SourceDebug/standard/Cobalt прошёл raw/health/mode cycle/crash/reopen,
-7children reaped,6graceful Vulkan reports0/0, UI/GPU/handles0. Native finding исправлен
-в Hosting: visual dirty после Update переносит presentation на следующий bounded tick.
-[История и audit](HISTORY.md#ed6a2-raw-streams-и-health--2026-10-29).
-Далее compiler file/line/column navigation и полный ED8a: history/raw export policy/
-child sink health/backend/config/user cancel. Published/provider/flood/physical gates открыты.
-
-Предыдущая работа — **2026-10-29, ED6a: structured console и первый partial export**.
-«Вид → Диагностика»: bounded reader, фильтры/search/grouping, inspect/copy,
-clear view и pause follow-tail; retained View/Data/style/IFactory и App ownership.
-Metadata-only JSON export до512KiB/cooperative5s, без текста/stack/arbitrary properties,
-с explicit partial/unavailable и no-overwrite. Editor808/808 Debug/Release,
-failed/skipped0. Native SourceDebug/standard window/Cobalt: live child history,
-crash/recovery, filters/groups/retained inspect/reopen/export;7children reaped,
-6graceful Vulkan core/sync reports0errors/0warnings, UI/GPU/handles0 после Dispose.
-[Evidence и границы](HISTORY.md#ed6a-structured-console-и-первый-partial-export--2026-10-29).
-Далее ED6a.2: raw stdout/stderr и borrowed sink/delivery/capture health, затем
-compiler file/line/column navigation и полный ED8a report. Полные ED6a/ED8a,
-published/package/native-provider matrix и flood/slow-UI acceptance ещё открыты.
-
-Предыдущая работа — **2026-10-29, ARCH2e.4: independent file worker**.
-После EOF file-drain больше не зависит от свободного shared ThreadPool worker:
-dedicated worker + sync wake-up/IO, queue8/budgets/borrowing и2s/5s deadlines прежние.
-Controlled RED→GREEN:24bytes/EOF завершены, единственный pool worker удерживается,
-оба completion tasks и файл завершаются. Один worker на active file capture —
-явная цена; no-file mode без worker. Core374/374 и Aether1550/1550 Debug/Release,
-headless8/8 на15fresh packages/625inputs, native24/24/56children и48graceful
-validation0/0 прошли. UI/GPU/handles0 после App dispose, owned processes0.
-[Audit/current4TRX](../../TestResults/ARCH2e4-FileDrain-Native-20261029-1/audit.json),
-[headless](../../TestResults/ARCH2e4-FileDrain-Packages-20261029-2/verification.json),
-[Core proof/решение](../core/HISTORY.md#file-drain-без-shared-threadpool--2026-10-29).
-
-Scoped ARCH2e.4 contract выполнен; первый ED6a/ED8a consumer реализован выше.
-Точная причинная цепочка исторического intermittent timeout не установлена:
-controlled proof и passing matrix не выдаются за failure heap прежнего эпизода.
-Observation и atomic marker/phase counters сохранены; при повторе нужен targeted
-analysis. Arbitrary filesystem stalls/global real-time guarantee не обещаются.
-Hosting/Editor/UI suites и full solution в ARCH2e.4 не повторялись; новый Editor run указан выше. Hardware/
-K7/VRAM/general release и причина BSOD отдельно; массовый stress не запускался.
-Launch roles ENG7b, workflow ED6b и runtime HUD ENG5c.4 остаются в плане;
-Aether core не получает UI dependency.
+**2026-11-07 — ARCH1f.2: реализованы resource owners, leases и preparation.**
+Перед ECS commit повторены1230/1230 каждый D/R и solution Debug0errors/1555warnings
+с общей версией0.2.5.1-alpha; [текущие команды/scope](HISTORY.md#ecs-commit-2026-11-07).
+[Resource API](RENDER_RESOURCES.md): App-owned catalog/device, counted CPU/ready leases,
+bounded admission/allocations, atomic World rebind, retained failed cleanup и lazy Vulkan.
+Current Debug/Release1230/1230 каждый:137new+1093прежних ECS/Rendering/frame cases.
+Source Debug/published Release/fresh7-package CPU и actual Vulkan upload/readback
+прошли:2generations+zero-budget denial каждый, validation0errors/0warnings, cleanup0.
+Solution nonincremental Debug build0errors/1555warnings, warning catalogue unchanged.
+Mesh snapshots/surface renderer/Runtime Playing fence ещё f.3/4.
+Full Aether/performance в этом срезе не запускались. Прежний full6ноября
+2536/2538 с diagnostics timeouts остаётся non-green; причина не установлена.
+Preview/Editor Play/latency scope не обновлены.
+[Очередь Editor](EDITOR_PLAN.md#current-editor-queue), [engine roadmap](PLAN.md#current-engine-queue),
+[полный прежний STATUS](HISTORY.md#status-before-planning-revision-2026-11-05).
 
 ## Реализация и связь с планом
 
-ARCH2a–d и quality follow-ups входят в предыдущие commits; текущая работа
-добавляет ARCH2e.1–3 package/native proof, runtime startup и Hosting cleanup fixes. Engine/Editor остаются
-library/packable modules, App/DI/lifecycle и единственный owner сохраняются.
-
-| Изменения рабочего дерева | Этап и текущее состояние |
+| Область | Текущее состояние |
 | --- | --- |
-| Create/delete/duplicate batches, New presets, search/context commands, retained tree projection | ED4c.3 checked: Aether1629/Editor883/UI908/Hosting117 Debug/Release; final15packages/headless8/native2. Typed entity references/catalog management/multiselect и full ARCH1b/ED4 отдельно |
-| Persistent Name/SiblingOrder, HierarchyEditBatch/history, JSON v1/v2; Editor inline rename/reorder | ED4c.2 checked: Aether1602/Editor866/UI900/Hosting117 Debug/Release; final15packages/headless8/native2. Intermittent headless drain observation остаётся отдельным follow-up |
-| Runtime observation/version2 body; cached Vulkan/OpenGL device metadata; Editor health/report; package/native assertions | ED8a.2 checked: Aether1581/Editor847/UI893/Hosting117 Debug/Release;15fresh packages/headless8 и source/NuGet published native2, validation12×0/0. Extended matrix/release отдельно |
-| Core archive/configuration views, Editor schema2/text/history/cancel/viewport | ED8a.1: Core398/Aether1570/Editor842 Debug/Release; published Release/Cobalt CPU preview normal/crash + raster/flood. Child health/device и broader native/NuGet acceptance открыты |
-| Core borrowed health/window APIs, Aether process history/source, Editor raw/health, Hosting dirty-frame deferral | ED6a.2 checked: Core387/Aether1556/Editor823/Hosting117 Debug/Release; native SourceDebug/Cobalt1/1. Compiler navigation/full ED8a и wider acceptance открыты |
-| Editor Diagnostics, header/layout/session и Gui consumer | ED6a structured console + ED8a metadata-only partial export: Editor808 Debug/Release и один native SourceDebug/Cobalt workflow; full raw/health/compiler/published acceptance открыт |
-| AetherPackageConsumer/Gui/VerifyGui, Hosting callback lifetime capture | ARCH2e.3 native24/24, Hosting114/Editor763 Debug/Release и fresh package/headless8/8 после fix; native cancellation RED→GREEN, полный teardown до passing report |
-| AetherPackageConsumer, AetherRuntimeHost worker startup, RuntimeLaunchProbe/NativeRuntimeProcessTests | ARCH2e.1/2 и CPU startup fix проверены29октября; предыдущий Aether1543/1543 Debug/Release не считается новым run этого native шага |
-| Examples hosts/resources и VerifyExampleHosts | Resource/headless proof28октября дополнен standard-window/embedded-View native composition29октября. GUI matrix проверяет публичный модульный API, не каждый CLI branch Examples |
-| FrameWorkers/SharedFrameRing и FrameTransportTests | ENG2 pending CPU frame больше не теряется при empty/stale poll и EOF; lazy reservation сохраняет два private buffers, UI lease и drain. Follow-up закрыт в проверенном CPU scope |
-| BuildProbe/ReplacementProbe и NativeRuntimeProcessTests | ENG3 fixtures мигрированы на IGameSessionEntry/Contracts без ослабления production guards; build/selected artifact/checkpoint/rollback/cleanup follow-up закрыт |
-| GameBuildCompiler/GameBuildRequest, deep-job regression | ENG3 single-project staging сокращает intermediate path при неизменной GUID isolation. MSB3030 follow-up закрыт в проверенном TEMP/LongPathsEnabled0 profile; arbitrary long paths не обещаются |
-| ChildDiagnosticFixture/ForwarderTests/LimitsTests и delivery guide | ENG8a.3/ENE6d.4 test-quality fix: codec clipping отдельно от real-pipe bounded outcomes. Поздний ACK не переводит уже Unconfirmed в Accepted; runtime и budgets прежние |
-| Mithril composition/restart probes и ReadyFileProcessTests | Связанный fixture quality fix закрыт в [Mithril STATUS](../mithril/STATUS.md); runtime/API Mithril и полный MIT6 этим не меняются |
-
-Публичные границы/owners — [PACKAGE_BOUNDARIES](PACKAGE_BOUNDARIES.md).
-Минимальные hosts — Examples/AetherEditor и Examples/AetherRuntimeHost;
-directed workflows и explicit same-exe runtime — ManualTests/AetherEditorHost.
+| ARCH2 / App/DI/owned children | Library/package Editor и executable hosts реализованы; bounded source/fresh NuGet/headless/native proof есть. Не полный release/platform scope |
+| ED1–ED3 / ED4c/d | Project picker/switch в stopped/idle, persistence/conflicts, entity operations, schema-driven inspector и общая Undo/Redo history реализованы |
+| ED4f.3 / UIA2 | EditorMainWindow использует Window; standard/Cobalt и embedded/MS DI сохраняют своих owners |
+| ED4g.1/2 | Compact typed editors, shared states, numeric step/drag/cancel и opt-in linked Scale реализованы; group reset/angle units ещё запланированы |
+| ED5 | GPU Edit Preview уже подключён к документу: committed Apply/Undo/Redo → revision/presentation fence. Fixed camera,640×360,до64entities, child replacement; camera/picking/gizmos впереди |
+| ED6b | Document-aware Build/Play/Replace, capture declarative/project/package inputs, process-local payload reuse и source watcher реализованы в ограниченных profiles |
+| Observer ED6b.2e.4a–e | Directory cache/pins, owned native file metadata и bounded open batches4 реализованы; full content/membership/probe hashing и drain сохранены |
+| ED6a / ED8a | Console/compiler diagnostics и report/child health реализованы в scoped consumers; aggregate metrics/extended acceptance отдельно |
+| ARCH1c/d, ENG7b/ENG9, ED4h/ED7a | Live World edits, Player roles, agents и Game AI inspector не реализованы этим UI срезом |
+| ARCH1e.1/2 | World/EntityHandle/value pools, scoped1/2type queries, exclusions, phase commands, sequential graph/access checks и App factories реализованы. World borrowed by scheduler; builtin transform/extraction добавлены в e.4, checkpoint ещё впереди |
+| ARCH1e.3a/b | ComponentRegistry/SceneWorldLoader/Codec, initial Runtime capability/chunks и StartWorldAsync реализованы. Полный document, exact schema/refs/counts, atomic SceneWorldGameSession/owned cleanup; actual selected game в child, CPU consumers проверены |
+| ARCH1e.4 | Explicit builtin bindings, Local/Parent/World cache, iterative hierarchy, parent-space velocity, ordered systems и detached primitive snapshots реализованы. PrimitiveGameSession готовит graph/frame0 до activation; source/published native pixels проверены |
+| ARCH1f / ED4i | F.0/f.1 CPU API и [f.2 resource API](RENDER_RESOURCES.md) реализованы: counted catalog/scene/preparation leases, bounded device cache, atomic reload, cleanup retry и standalone Vulkan upload/readback. F.3/4 owned extraction/submitted-frame leases/surface renderer/Playing fence и ED4i inspector ещё нужны |
 
 ## Последние датированные проверки
 
-Запуски29октября выполнены в текущей работе; более ранние сохраняют свои даты.
+Текущий f.2 resource run отделён от прежних full module/frame/performance результатов.
 
-| Дата / профиль | Фактический результат | Evidence и границы |
+| Дата | Scope и результат | Evidence |
 | --- | --- | --- |
-| 2026-10-31, ED6b.1 | Aether1635/Editor943 отдельно Debug/Release; fresh15packages/headless8/native4/4 | [Audit/4TRX](../../TestResults/ScenePlayback-ED6b1-20261031-1/verification.json), [acceptance/4PNG](../../TestResults/ScenePlayback-ED6b1-20261031-1/acceptance.json); Runtime copy открытой сцены, ED6b.2/full ED6b впереди |
-| 2026-10-31, ED1b.2 | Aether1631/Editor923 отдельно Debug/Release; final15packages/headless8/native4/4 | [Audit/4TRX](../../TestResults/ProjectPicker-ED1b2-20261031-1/verification.json), [acceptance/14PNG](../../TestResults/ProjectPicker-ED1b2-20261031-1/acceptance.json); stopped/idle project workflow, ED6b открыт |
-| 2026-10-31, ED1b.1 | Editor903/903 отдельно Debug/Release; focused20/20, failed/skipped0 | [Audit/3TRX](../../TestResults/ProjectTransitions-ED1b1-20261031-1/verification.json); только project/document API, UI/runtime/NuGet/native не повторены |
-| 2026-10-31, ED4c.3 | Aether1629/Editor883/Alloy909/Hosting117 отдельно Debug/Release; final packages15/headless8/native2/2 | [Audit/8TRX](../../TestResults/EntityOperations-ED4c3-20261031-1/verification.json), [acceptance](../../TestResults/EntityOperations-ED4c3-20261031-1/acceptance.json); native RED→GREEN tree projection, 4PNG просмотрены |
-| 2026-10-31, ED4c.2 | Aether1602/Editor866/Alloy900/Hosting117 отдельно Debug/Release; final packages15/headless8/native2/2 | [Audit/8TRX](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/verification.json), [acceptance](../../TestResults/HierarchyMetadata-ED4c2-20261031-1/acceptance.json); initial findings и новый drain snapshot сохранены |
-| 2026-10-31, ED8a.2 | Aether1581/Editor847/Alloy893/Hosting117 отдельно Debug/Release; packages15/headless8, published native2/2 | [Audit/8TRX](../../TestResults/RuntimeObservation-ED8a2-20261031-1/verification.json), [acceptance](../../TestResults/RuntimeObservation-ED8a2-20261031-1/acceptance.json); initial fixture failures сохранены, scope выше |
-| 2026-10-30, ED8a.1 report | Core398/Aether1570/Editor842 отдельно Debug/Release, failed/skipped0; published Release/Cobalt normal/crashed CPU preview + native Skia raster/flood | [Audit/TRX](../../TestResults/DiagnosticReport-ED8a-20261030-1/verification.json), [published proof](../../TestResults/DiagnosticReport-ED8a-20261030-1/published-proof.json); child sink health/device, window/game/NuGet и hardware gates открыты |
-| 2026-10-29, ED6a.2 raw/health | Core387/Aether1556/Editor823/Hosting117 отдельно Debug/Release; Hosting RED3→GREEN3; native SourceDebug/Cobalt1/1 | [Audit/8TRX](../../TestResults/ED6a2-20261029-1/audit.json), [native](../../TestResults/ED6a2-Native-20261029-6/verification.json); initial failures сохранены, packages/other native profiles не запускались |
-| 2026-10-29, ED6a structured console | Editor808/808 Debug/Release;45новых tests, failed/skipped0. SourceDebug/standard/Cobalt native1/1,7children/6graceful validation0/0 | [Audit](../../TestResults/ED6a-20261029-1/audit.json), [native](../../TestResults/ED6a-Native-20261029-7/verification.json); raw/health/compiler/full export и другие native/package profiles открыты |
-| 2026-10-29, ARCH2e.4 file-worker contract | Core374/Aether1550 Debug/Release; controlled starvation RED→GREEN, fresh headless8/native24 | [Current audit](../../TestResults/ARCH2e4-FileDrain-Native-20261029-1/audit.json); exact historical attribution отдельно |
-| 2026-10-29, ARCH2e.4 после resource fix | Core373/Aether1550 Debug/Release; headless8/8, native24/24,48validation0/0 | [Audit](../../TestResults/ARCH2e4-Native-20261029-1/audit.json); file-sink root cause открыт, run1 failure сохранён |
-| 2026-10-29, ARCH2e.3 native |24/24cases,56children/8owned crashes,48graceful validation0/0,40PNG, teardown0 | [Verification](../../TestResults/ARCH2e3-20261029-9/verification.json), [audit](../../TestResults/ARCH2e3-20261029-9/audit.json);4source/package build/publish profiles, standard/Cobalt и embedded/MS DI |
-| 2026-10-29, Hosting/Editor Debug/Release |114/114 и763/763 отдельно в каждой конфигурации, failed/skipped0 | После Hosting lifecycle fix;4TRX в native audit; UI/Aether/full solution suites не повторены |
-| 2026-10-29, fresh packages после Hosting fix |15packages,8/8headless cases/24children,624source inputs | [Verification](../../TestResults/ARCH2e3-Packages-20261029-3/verification.json); новый immutable feed/version, отдельно от native run |
-| 2026-10-29, ARCH2e packages/headless | 15fresh packages;8/8combinations,24children, MaxLive1;618source inputs и22resource delivery checks | [Verification](../../TestResults/ARCH2e-20261029-7/verification.json); CPU frames/App/DI/Build/Replace/checkpoint/diagnostics и cleanup; без GUI/native loading |
-| 2026-10-29, Aether Debug/Release | 1543/1543 в каждой конфигурации, failed/skipped0; targeted RED2→GREEN2 | [История runtime fix](HISTORY.md#arch2e-independent-packages-и-cpu-runtime-startup--2026-10-29); full module, не full solution/Editor/UI |
-| 2026-10-28, Aether Debug/Release | 1543/1543 в каждой конфигурации, failed/skipped0 | [Forwarding fix](HISTORY.md#diagnostic-forwarding-bounded-outcomes--2026-10-28), focused44/44 Debug; full module включает headless processes, отдельная published/native matrix не повторена |
-| 2026-10-28, Editor Debug/Release | 763/763 в каждой конфигурации, failed/skipped0 | [ARCH2d](HISTORY.md#arch2d-hosts-и-доставка-ресурсов--2026-10-28); Cobalt/MS DI, options, factory/View ownership и startup/close, без окна/GPU |
-| 2026-10-28, ARCH2d source Debug/published Release | 18resource hashes,16CLI checks, independent runtime DLL/apphost4/4;11source inputs unchanged | [Verification](../../TestResults/ARCH2d-20261028-1/verification.json); fresh external deployment/unrelated cwd. PE/resource checks не доказывают native/font loading/rendering |
-| 2026-10-28, solution nonincremental Debug build | 0errors/1541warnings | [Build log](../../TestResults/ARCH2d-20261028-1/solution-Debug.log); это build, полный solution test run не повторён |
-| 2026-10-27, ENG3 source Debug/published Release | Headless21/21 +21/21 после fixture migration; позднее compiler/checkpoint/Replace/App-stop4/4 +4/4 | [Migration](HISTORY.md#eng3-buildreplace-fixture-migration--2026-10-27), [staging fix](HISTORY.md#eng3-compiler-staging-paths--2026-10-27); последние8cases не являются повтором всей21-scenario matrix |
-| 2026-10-27, ENG2 CPU/session/Frames Debug/Release | 94/94 в каждой конфигурации, deterministic RED→GREEN | [Pending frame fix](HISTORY.md#eng2-сохранение-pending-cpu-frame-при-пустом-poll--2026-10-27); hardware/GPU acceptance не входит |
-| 2026-10-27, Mithril Debug/Release и fresh published Release | 111/111 в каждой конфигурации; composition14/restart20 | [Отдельный owner и scope](../mithril/STATUS.md) |
+| 2026-11-07 | Resource owners:1230/1230 каждый D/R,137newcases, failed/skipped0. Source Debug/published Release/fresh isolated7pkg CPU и Vulkan:3entities/6components/3assets,2resource generations+zero-budget denial каждый; upload/readback hashes, stale handles, final owners/counters0, core+sync validation0/0. Solution nonincremental Debug0errors/1555warnings. Full Aether/frame/performance не запускались | [Resources](HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07 | CPU render contracts:1093/1093 каждый D/R,309newcases, failed/skipped0. Source Debug/published Release/fresh isolated7pkg CPU:3entities/6components/3assets, exact canonical bytes/hash/manifest, bounds/projection/tint/reset/App factory. Solution nonincremental Debug0errors/1555warnings. Full Aether/native не запускались | [CPU contracts](HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06 | ARCH1f.0: чтение текущих schema/loader/GPU contracts, выбор opaque-unlit/1 и проверка document links/IDs/budget/color vectors. C# sources/API/dependencies не менялись; новых build/test/native результатов нет | [Contract decisions](HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06 | Transform/primitive:751/751 D/R (750ECS+frame1),207newcases,10k deep chain. Source/published/fresh7pkg:133logical/2drawables/7source components,2generations каждый. Native source/published:4captures/2generations каждый, red movement/green stationary, validation0/0/final GPU/UI/process owners0. Solution Debug0errors/1555warnings. Full Debug2536/2538:2diagnostics cleanup timeouts, replay25/25; общий regression не green | [Primitive profile](HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06 | Initial Runtime loading: ECS543/543 +updated frame fixture1/1 каждый D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings. Source Debug/published Release/fresh isolated NuGet Release:286046bytes/256entities/256components,2generations каждый, CPU pixels0→1tick, no Game.Logic in parent, confirmed cleanup | [Runtime load](HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06 | Loading: all-ECS409/409 каждый D/R (новые201, прежние208), full Aether Debug2197/2197 включая все409ECS, failed/skipped0. Solution nonincremental Debug0errors/1555warnings, новых ECS warnings0. Registry/codec/context/resources/App ownership и Unicode fidelity | [Registry/load](HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-06 | Execution: latest ECS208/208 каждый D/R, Aether Debug snapshot1994/1994 (206ECS, до2добавленных Stop-error tests), failed/skipped0. Последние2cases проверены latest targeted D/R. Cached one-entity query/delegate workload10000ticks:0bytes D/R; solution Debug0errors/1555warnings | [Execution](HISTORY.md#ecs-execution-2026-11-06) |
+| 2026-11-06 | Новый ECS57/57 каждый Debug/Release, full Aether Debug1845/1845, failed/skipped0. Identity/retirement, singleton values,10000entities, limits/options и Cobalt/MS DI ownership; solution nonincremental Debug0errors/1555warnings | [World v1](HISTORY.md#ecs-world-v1-2026-11-06) |
+| 2026-11-05 | Full Editor1295/1295 Debug/Release; отдельно Alloy1101/Hosting154 D/R;4native OpenGL runs, standard с6Windows-input stages каждый, final UI/GPU/handles0 | [ED4g.2a](HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04 | Observer many-files median scan upper335/470ms против545/602ms; allocations+23%, CPU/cycle+23–43%, budget0 и actual drain. Измеренный tradeoff, не общий speedup | [ED6b.2e.4e](HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-11-04 | Window source/published/fresh NuGet standard/embedded bounded workflows проверены; это прежний run, не пакетная проверка новых numeric controls | [Window consumer](HISTORY.md#ed4f3-window-root-2026-11-04) |
 
-ENG2, legacy Build/Replace, compiler MSB3030 и ошибочное ожидание forwarding
-Accepted закрыты соответствующими regressions. Конкретный источник задержки
-исходного forwarding run из старого TRX не установлен. Исходные failed runs и
-compact/default TEMP profiles сохранены в HISTORY; passing другого модуля
-не превращает прежний full solution failure в новый общий green.
+Более ранние full Aether runs и прежние compiler/package/preview traces
+сохранены в архиве и HISTORY. Editor suite не считается runtime suite. Повторяемые
+runners: ManualTests/AetherPackageConsumer/VerifyNumeric.ps1, VerifyGui.ps1,
+VerifyPackages.ps1 и AetherSourceWatchPerformance; full-solution run не собран из их результатов.
 
 ## Открытая acceptance и ограничения
 
-- ARCH2e.3 проверен только в описанном Windows x64/net10.0/OpenGL↔Vulkan profile.
-  Native consumers не подтверждают другие OS/RID/AOT, каждый CLI branch Examples,
-  physical OS input/DPI/monitors, driver/device loss и долгие resource trends.
-  Локальный validation layer использован process-local; причина прежнего BSOD
-  не установлена, массовые GPU/K7 stress runs не повторялись.
-- Новый общий full solution Debug/Release test run после quality fixes не выполнен.
-  Последний сводный ARCH2a run от27октября: Debug4296/4296, Release4295/4296,
-  failed1 в Mithril ready-file; последующий Mithril fix имеет отдельный proof.
-- Physical DPI/K3/K7/K8/VRAM/final alpha и long resource/performance trends открыты.
-  K7 workaround search остановлен по решению пользователя; публикации NuGet не было.
+- Последний full Aether Debug6ноября имеет diagnostics Stop/Dispose timeouts; в первом
+  прогоне был отдельный Delivery.App timeout. Focused replays прошли, но причина
+  не установлена. Diagnostics source/таймауты не менялись; это открытый reliability
+  результат, а не подтверждение исправления или доказанная регрессия ECS.
+- Numeric physical arrows/modifiers/captured Esc/OS pointer modifiers открыты.
+  UiKey.None при автоматизации — наблюдение, не доказанная причина реального keyboard defect.
+- Drain timeout после reap31октября не закрыт успешными replays. Следующий
+  [ARCH2e.4b](PLAN.md#arch2e4b-drain-diagnostics) сначала получает причинное evidence.
+- Fixed-camera/GPU-only preview, stopped/idle project switch и поддержанный captured
+  SDK graph сохраняют границы. Disk cache, scene migration, полный World/runtime editing отдельно.
+- Physical K3/K7/K8/VRAM/general release у UI; восстановление stdout и UI/GPU cleanup
+  имеют разных owners. Кооперативный stop не гарантирует прерывание arbitrary hang.
 
 ## Границы приложения и engine
 
-ED1a выбирает один проект через explicit .aetherproj; без него пустая workspace,
-legacy .csproj сохраняет игровой demo workflow. Project picker/switch реализован в
-stopped-game/idle-compiler profile; templates/wizard/recent/preferences ещё нужны.
-ED2a/b .aetherscene v1/v2≤4MiB/
-depth32; unknown versions отклоняются без migration, resolved/runtime/history не
-сохраняются. Atomic store использует SHA256 guard и sidecar для cooperating writers;
-arbitrary external rename, links sandbox и power-loss durability не гарантируются.
-
-Document actions доступны при stopped/idle game/compiler или Edit preview; preview
-останавливается до document replacement/close. Штатный Open document допускает
-fresh Build/Play in-memory scene copy через ED6b.1/2a; inspector draft/conflict требует
-Apply/Cancel. Document-aware Replace ещё не подключён. New создаёт пустую сцену.
-Reparent, имена/порядок и schema-driven component edits реализованы в ED4c.1/2 и ED4d;
-Create/delete/duplicate реализованы в ED4c.3; typed references, catalog management
-и остальной ARCH1b открыты. Общая project/runtime
-Switch/Close transaction выполнена в stopped-game/idle-compiler ED1b.2 profile;
-переключение при играющем runtime остаётся отдельным ED1/ED6 расширением.
-ED2 document Close/Switch/window Exit profile выполнен. Terminal shutdown forced
-discard/drain; native user close vetoable.
-
-Preview GPU-only Windows x64/OpenGL UI/Vulkan child, fixed camera,640×360,≤64entities,
-новый child при обновлении revision. Authoring hierarchy/properties не обрезаются
-этим лимитом; preflight rejection сохраняет документ. Build/Play/Game.Logic для
-preview не нужны. Frames не идут через IPC; Enerit — control, Mithril — процессы.
-Failed cleanup удерживает ownership для retry; arbitrary driver/dispatcher hang
-не прерывается deadline. API experimental, публикации не было. Physical DPI/K3/K7/
-K8/VRAM/final alpha открыты; NVIDIA workaround search остановлен по решению пользователя.
+Authoring/history/schemas/preview/session/build contracts — Aether; views/styles,
+инспектор, единицы отображения и выбор UI — Editor; общие controls/input — Argentis/Alloy.
+Подробный backlog находится в одном плане владельца. Новые scopes/protocols/ECS
+и загрузка game assembly в CLR Editor для следующих UI задач не назначены.
+Поведение конкретной игры/мира принадлежит TrueMoon.Tales/Lore.
 
 ## Следующий конкретный шаг
 
-Основной Aether шаг — measured source observer cost на большом local graph при
-обычных10s polling/5s budget. Общая UI поставка Window требует independent fresh
-NuGet consumer. Если выбран Editor Window consumer — выполнить
-[ED4f.3](EDITOR_PLAN.md#ed4f3-window-root) с собственным standard/embedded/native/package
-proof; сегодняшняя сверка лишь определяет этот маршрут. Header/casts/initial size/
-configure compatibility и close-once — необходимые части, простая смена базового
-класса EditorView не подходит. Hardware/release gates и наблюдение ARCH2e.4 ниже прежние.
+Следующий этап — [ARCH1f.3](PLAN.md#arch1f-rendering): explicit camera/mesh/material
+extraction и bounded owned snapshots с согласованными World/tick/revision, masks/bounds,
+drop/coalesce и leases до submitted completion. F.2 resource-ready уже реализован;
+surface/device matching, frame presentation и required-view Runtime Playing fence — f.4.
+PBR/checkpoint отдельно.
+E.4 primitive profile ранее реализован и проверен отдельным native consumer; existing
+Editor Play/preview и old64entity projection не мигрированы автоматически.
+Game.Logic в Editor не загружается; ECS checkpoint/Replace остаётся e.5,
+wire/checkpoint limits не расширены.
 
-ARCH2e.4 scoped contract проверен прежними controlled RED/GREEN. Новый run2026-10-31
-снова наблюдал stdout/stderr drain timeout после reap в headless exe/MS DI generation3:
-оба readers WaitingForActivation,24bytes сохранены,9workers/pending0, все3children
-уже завершились. Два exact binary replays прошли без смены deadlines. Причина не
-установлена и не объявляется исправленной; [новый snapshot/follow-up](HISTORY.md#ed4c2-имена-и-порядок-сущностей--2026-10-31).
-
-ARCH2 package/native и file-worker profile проверены. Публичные границы
-и ownership — PACKAGE_BOUNDARIES.md; supported consumer commands —
-ManualTests/AetherPackageConsumer/README.md. Headless и UI зависимости разделены;
-launch roles/Player/HUD ещё запланированы и не входят в закрытие ARCH2.
-
-Compiler diagnostics/source hook ED6a.3 и report ED8a.1/2 проверены в scopes выше.
-Extended native/provider/backend matrix, persistent compiler history и command/frame
-metrics остаются отдельными. ED4c.2/3 имена/порядок и операции объектов реализованы
-через общую history. ED1b.2 project picker/switch и runtime context rebinding реализованы
-в stopped-game/idle-compiler profile. ED6b.1 запускает in-memory scene copy через
-fresh Build/Start/Play и сохраняет parent state. ED6b.2a/b.1 добавляют content witness,
-stale Start rejection и C# compilation из captured bytes. Последующие freeze/reuse/
-document-aware Replace, bounded project/package graphs и source watcher выполнены
-в своих profiles, указанных в датированных записях выше. Текущий measured-cost шаг
-относится к observer; эти completed slices не назначаются заново. Полный input/HUD/
-Player остаются отдельно. Детали source tracking —
-[ED6b.2e](EDITOR_PLAN.md#ed6b2e-контракт-source-watcher-и-stale-build-status--2026-11-02).
-ENG2 CPU FrameReceiver и legacy Build/Replace follow-ups проверены новыми full
-Aether runs и headless source/published matrix выше; исходные failures сохранены.
-Mithril ready-file race закрыт отдельными module/published proofs. Diagnostic
-forwarding test follow-up закрыт2026-10-28 codec/late-ACK regressions и full runs
-выше; конкретный источник задержки initial Debug run из старого TRX неизвестен.
-MSB3030 закрыт новым staging layout, inner binlogs и default-TEMP full runs выше;
-произвольно длинные paths вне проверенного профиля не обещаются. Общая очередь
-теперь ED6b document/build/play workflow; полный World/ECS не prerequisite.
-Новый ED6b уточняет этот workflow; launch roles/Player — ENG7b. Runtime HUD
-ENG5c.4 следует за gameplay collisions ENG5c.3, приёмка в Player зависит от ENG7b.2.
-Full snapshot/runtime editing ARCH1c и смена launch role на ходу не prerequisites.
+Сохранённый UI маршрут: [ED4g.3 group reset](EDITOR_PLAN.md#ed4g3-group-reset), затем
+ED4g.4 units и ED5a camera/picking. Numeric physical acceptance идёт отдельной проверкой.
+Performance альтернатива — [ED6b.2e.4f](EDITOR_PLAN.md#ed6b2e4f-observer-cost),
+а не повтор первого profiling/cache/open этапа. Reliability — ARCH2e.4b и текущий
+full-solution baseline; release matrix после выбора supported scope.
+Gameplay collisions→HUD/Player и Game AI/agents остаются отдельными ветками.

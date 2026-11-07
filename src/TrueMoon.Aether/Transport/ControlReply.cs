@@ -17,4 +17,22 @@ public sealed class ControlReply
     public byte[]? Checkpoint { get; set; }
     /// <summary>GameInputOutcome for SetInput; zero for other operations.</summary>
     public int InputOutcome { get; set; }
+    /// <summary>Full-scene capability version, or zero for a legacy game/preview.</summary>
+    public int SceneWorldVersion { get; set; }
+    /// <summary>Exact process-local component registry generation.</summary>
+    public string SceneRegistryId { get; set; } = "";
+    /// <summary>Maximum complete envelope bytes, independent of the control-message limit.</summary>
+    public int SceneMaximumBytes { get; set; }
+    /// <summary>Maximum contiguous scene chunk bytes.</summary>
+    public int SceneChunkBytes { get; set; }
+    /// <summary>Acknowledged initial transfer operation.</summary>
+    public string SceneLoadId { get; set; } = "";
+    /// <summary>Complete contiguous bytes acknowledged so far.</summary>
+    public int SceneLoadOffset { get; set; }
+    /// <summary>Active ECS World identity, empty until complete activation.</summary>
+    public string SceneWorldId { get; set; } = "";
+    /// <summary>Initial active entity cardinality.</summary>
+    public int SceneEntityCount { get; set; }
+    /// <summary>Initial active component cardinality.</summary>
+    public int SceneComponentCount { get; set; }
 }

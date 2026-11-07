@@ -67,15 +67,23 @@ public static class RuntimeConfigurationExtensions
         {
             if (!services.Exist<AetherHost>()) throw new InvalidOperationException("Call UseAether before UseAetherRuntime.");
             if (services.Exist<AetherRuntimeHost>()) throw new InvalidOperationException("The runtime is already registered.");
+            PrimitiveEcsConfigurationExtensions.RegisterDefaults(services);
+            if (!services.Exist<IFactory<Ecs.World>>())
+                services.Singleton<IFactory<Ecs.World>>(_ => new Factory<Ecs.World>(() => new()));
+            if (!services.Exist<IFactory<Ecs.Loading.SceneWorldLoader, Ecs.Loading.ComponentRegistry>>())
+                services.Singleton<IFactory<Ecs.Loading.SceneWorldLoader, Ecs.Loading.ComponentRegistry>>(resolver =>
+                    new Factory<Ecs.Loading.SceneWorldLoader, Ecs.Loading.ComponentRegistry>(registry =>
+                        new(registry, resolver.Resolve<IFactory<Ecs.World>>(), resolver.Resolve<Scenes.SceneResolutionService>())));
             if (launch.Role == RuntimeRole.EditPreview)
                 Register<PreviewGameSession>(services, _ => new Factory<PreviewGameSession>(() => new()));
             Register<FrameProducer>(services, _ => new Factory<FrameProducer>(() => new()));
             Register<UnitParentProcessEventsHandler>(services, resolver => new Factory<UnitParentProcessEventsHandler>(() =>
                     new(resolver.Resolve<IConfiguration>(), resolver.Resolve<IAppLifetime>(), resolver.Resolve<IEventsSource<UnitParentProcessEventsHandler>>())));
-            Register<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)>(services, _ =>
+            Register<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)>(services, resolver =>
                     new Factory<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)>(args =>
                         new(args.Launch.Identity, args.Game, Environment.ProcessId, args.Frames.Configure, () => args.Frames.Dropped,
-                            args.Launch.RequireRestore, args.Launch.Role)));
+                            args.Launch.RequireRestore, args.Launch.Role,
+                            resolver.TryResolve<Ecs.Loading.SceneWorldCodec>() ?? EcsSceneLoadingConfigurationExtensions.CreateNeutralCodec(resolver))));
             Register<PipesInvocationServer<IEngineControl>, PipesInvocationServerArguments<IEngineControl>>(services, resolver =>
                     new PipesInvocationServerFactory<IEngineControl>(resolver.Resolve<IEventsSource<PipesInvocationServer<IEngineControl>>>(),
                         new PipesTransportOptions { PropagateTraceContext = true }, resolver.Resolve<IDiagnosticTelemetry>()));

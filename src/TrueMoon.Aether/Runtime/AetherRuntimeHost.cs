@@ -28,7 +28,7 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
     private Task[] _workers = [];
     private Task? _dispose;
     private bool _running;
-    private bool _serverReleased, _parentReleased, _framesReleased, _gameReleased, _diagnosticsReleased;
+    private bool _serverReleased, _parentReleased, _framesReleased, _protocolReleased, _gameReleased, _diagnosticsReleased;
     /// <summary>Optional child forwarding health, independent of control/game outcome.</summary>
     public ChildDiagnosticStatus? ChildDiagnosticsStatus => _diagnostics?.Read();
 
@@ -117,6 +117,7 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
             catch (Exception error) { errors.Add(error); }
         }
         if (!_framesReleased) Try(() => { _frames.Dispose(); _framesReleased = true; });
+        if (!_protocolReleased) Try(() => { _protocol.Dispose(); _protocolReleased = true; });
         if (!_gameReleased) Try(() => { _game.Dispose(); _gameReleased = true; });
         if (!_diagnosticsReleased)
         {

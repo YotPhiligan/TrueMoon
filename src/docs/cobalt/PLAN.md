@@ -1,5 +1,19 @@
 # Cobalt / DI: план модуля
 
+<a id="current-cobalt-queue"></a>
+## Точка продолжения — ревизия 2026-11-05
+
+Следующий локальный performance срез после COB5a attribution — production
+no-capture cycle check с прежним dependency path/error/recovery/ownership,
+runtime/generator/lifecycle regressions и повтором paired graph measurements.
+Variant allocation results не объявляются production optimization. Open-generic
+reflection/enumerable metadata оптимизируются затем отдельными изменениями.
+
+COB6 quality/COB5/COB7 имеют прежние bounded proofs; не назначать весь старый
+quality маршрут повторно. Cobalt default и Microsoft DI adapter сохраняются;
+новые scopes и migration не назначены. Эта задача не блокирует Editor/Observer.
+[Общий roadmap](../PLAN.md#current-roadmap), [состояние/evidence](STATUS.md).
+
 Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Новые этапы запланированы, конкретные API/semantics определяются перед работой.
 
 ## Границы
@@ -404,7 +418,7 @@ keyed counterparts и полная ecosystem conformance **не входят в 
   analyzer path/SHA/generated sources, clean runtime payload и opt-out negative
   compile. IPC/units package composition проверяется отдельно в своём scope.
 
-Дальнейший маршрут: COB6 diagnostics/constructor/runtime errors/registration
+Исторический маршрут14–15октября: COB6 diagnostics/constructor/runtime errors/registration
 удобство → COB5 baseline → COB7 сравнение выбранного TrueMoon application scenario
 и условная миграция explicit Microsoft DI consumers. Scopes, runtime fallback и
 новые capabilities добавляются по потребности собственных приложений, без

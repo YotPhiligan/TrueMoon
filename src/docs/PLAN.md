@@ -5,6 +5,54 @@
 подробные этапы и результаты — в [UI плане](alloy/PLAN.md#skiasharp-41550-completed).
 Прикладная очередь и открытая physical/release acceptance сохраняются.
 
+<a id="current-roadmap"></a>
+<a id="текущая-очередь--ревизия-2026-11-05"></a>
+## Текущая очередь — актуализация 2026-11-07
+
+Основание: запрос общей ревизии после db5ea97, текущие PLAN/STATUS и адресное чтение
+Editor preview/Transform/Observer. Новых execution results эта запись не создаёт.
+По запросу2026-11-06 **ECS внесена в план**: [ARCH1e](engine/PLAN.md#arch1e-ecs),
+[проект](engine/ECS_DESIGN.md). Добавлены системные компоненты отображения и
+материалы: [ARCH1f](engine/PLAN.md#arch1f-rendering), [renderer/resource design](engine/RENDERING_DESIGN.md).
+Headless World storage и e.2 queries/phase commands/systems реализованы по
+[World v1](engine/ECS_DESIGN.md#world-v1) и [execution contract](engine/ECS_EXECUTION.md).
+E.3a [registry/headless scene loading](engine/ECS_LOADING.md) добавляет полный
+document envelope, exact bindings и private World materialization/owned cleanup.
+E.3b [initial Runtime activation](engine/ECS_RUNTIME_LOADING.md) добавляет capability,
+bounded chunks и explicit ECS game consumer; результаты проверок — у engine владельца.
+E.4 [Transform/movement/primitive profile](engine/ECS_PRIMITIVES.md) реализует
+bounded hierarchy и detached render snapshots; проверки — у engine владельца.
+F.0 [mesh/material contracts](engine/RENDERING_CONTRACTS.md) зафиксировал v1 profile,
+versions/slots/color pipeline и resource/snapshot budgets/owners до кода.
+F.1 CPU definitions/schemas/validation и canonical codec реализованы2026-11-07;
+f.2 добавляет [resource owners/leases/preparation](engine/RENDER_RESOURCES.md), bounded
+catalog/device lifecycle, atomic World rebind и standalone Vulkan upload/readback.
+Ближайшее продолжение — f.3 owned render snapshots, затем f.4 surface consumer/Playing fence.
+Детали этапов только в engine плане; массовая миграция не назначена. Маршрут ежедневного Editor,
+performance и release сохраняются ниже как независимые варианты продолжения.
+
+| Направление | Следующий результат | План владельца |
+| --- | --- | --- |
+| ECS и отображение, текущий запрос | После f.2 resources — camera/mesh/material extraction и bounded owned snapshots; затем surface renderer/Playing fence | [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering), [реализованный resource API](engine/RENDER_RESOURCES.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
+| Editor, малый срез | Group reset Position/Rotation/Scale, затем единицы углов | [ED4g.3/4](engine/EDITOR_PLAN.md#current-editor-queue) |
+| Editor, следующий крупный срез | Управляемая camera и selection picking, затем translation tool | [ED5a](engine/EDITOR_PLAN.md#ed5a-camera-picking) |
+| Performance | Уменьшить CPU/allocations open batches, сохранив измеренный latency выигрыш и safety fences | [ED6b.2e.4f](engine/EDITOR_PLAN.md#ed6b2e4f-observer-cost) |
+| Надёжность | Один текущий full-solution Debug/Release baseline; отдельно причинное evidence post-reap drain timeout | [ARCH2e.4b](engine/PLAN.md#arch2e4b-drain-diagnostics), R2/R3 |
+| Visual quality | Baseline реальных дефектов текста/геометрии перед выбором rendering options | [PA8c.0](alloy/PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31) |
+| Приёмка выпуска | Выбрать supported scope, повторить fresh packages/native и доступные physical/hardware gates | R1–R6 ниже, [UI STATUS](alloy/STATUS.md#блокеры-и-ограничения) |
+
+Numeric physical input проверяется отдельно при подходящем вводе. Unverified
+arrows/captured Esc не означают подтверждённый physical-keyboard defect; они не
+закрыты routed input и не превращают каждый UI feature в повтор native smoke.
+K7 остаётся release blocker в прежнем scope; остановленный пользователем поиск
+NVIDIA workaround не возобновляется этой ревизией. Сквозной release не объявляется
+готовым по сумме старых модульных запусков. Условия реализации новых UI срезов
+помечены как предложения; новые public API/ownership contracts заранее не вводятся.
+
+Прежние датированные маршруты ниже сохраняют архитектуру и историю решений.
+При выборе следующей работы использовать эту очередь и локальный STATUS; уже
+выполненные ARCH2/Window/Observer cache/open/console/report срезы не назначать заново.
+
 UI follow-up2026-11-05: [ED4g.2](engine/EDITOR_PLAN.md#ed4g2-numeric-gestures) и
 [UIA3c](alloy/PLAN.md#uia3c-numeric-gestures) добавляют numeric step/drag и linked
 scale с draft-only/cancel/identity contract. Scoped source/published native proof
@@ -35,7 +83,7 @@ Observer scheduling/allocation follow-up сохраняется отдельно
 
 UI alpha и контрольное beta приложение имеют собственные критерии. Готовность UI не означает готовность всех модулей TrueMoon; обратное тоже не следует из общего build.
 
-Текущий приоритет, сверка2026-11-02 —
+Исторический маршрут, сверка2026-11-02 —
 [ED6b document-aware Build/Play/Stop](engine/EDITOR_PLAN.md#ed6b-buildplaystop-из-редактора--2026-10-29).
 Первый [срез ED6b.1](engine/EDITOR_PLAN.md#ed6b1-запуск-runtime-копии-открытой-сцены--2026-10-31)
 подключает fresh Build и Runtime copy текущей unsaved сцены с сохранением parent
@@ -108,7 +156,8 @@ Quality follow-ups ENG2/ENG3, Mithril ready-file и diagnostic forwarding зак
 Планирование2026-10-31: [PA8c — качество UI-рендеринга и текста](alloy/PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31)
 добавляет отдельную ветку: чёткость текста, DPI/геометрия, шрифты, изображения/
 композиция и измеряемая стоимость. Подробные этапы и visual acceptance ведутся
-только в UI плане; первый шаг ветки — baseline PA8c.0. Текущий приоритет ED6b сохранён.
+только в UI плане; первый шаг ветки — baseline PA8c.0. На31октября приоритет ED6b
+сохранялся; текущая очередь задана в начале этого документа.
 
 Решение2026-10-29: [Editor/Player выбираются при запуске executable](engine/PLAN.md#eng7b-режимы-запуска-editor-и-player--2026-10-29),
 до App/DI; Editor запускает игру отдельным owned Runtime child. Один exe допустим
@@ -224,7 +273,7 @@ MCP consumer и встроенный помощник используют об�
 отдельный последующий профиль. Детальные API/MCP tasks —
 [ARCH1d.1–4](engine/PLAN.md#локальные-агенты-и-mcp-adapter), Game AI/сценарии —
 [ENG9a–d](engine/PLAN.md#eng9-ии-мобов-и-агентные-проверки--2026-10-30), прикладные
-[ED4g Inspector](engine/EDITOR_PLAN.md#ed4g-наблюдение-и-отладка-поведения-мобов--2026-10-30)
+[ED4h Inspector](engine/EDITOR_PLAN.md#ed4h-ai-inspector)
 и [ED7a agent tasks](engine/EDITOR_PLAN.md#ed7a-помощник-и-задачи-агентов--2026-10-30) — в Editor плане.
 Наблюдение/control используют supervisor/Enerit и доступны до полного ARCH1c;
 произвольные live edits требуют snapshot/rollback. App/DI/lifecycle сохраняются,
@@ -396,7 +445,12 @@ TrueMoon.Aether.Editor/Tests и назначил аудит Aether по этом
 
 ## Порядок развития
 
-Текущая точка2026-11-04: после bounded document Build/Play/Replace/source tracking
+Текущая очередь после ревизии — [в начале документа](#current-roadmap).
+Каждая детальная задача имеет одного владельца; общий план задаёт порядок и
+межмодульные gates. Остальные Core/Cobalt/Enerit/Mithril backlog задачи не являются
+автоматическими prerequisites Editor. Ревизия меняет навигацию и очередь, не R1–R6.
+
+Предыдущая точка2026-11-04: после bounded document Build/Play/Replace/source tracking
 Observer cost на большом local graph с ordinary10s/5s измерена в ED6b.2e.4.
 ED6b.2e.4a подтвердил repeated ancestor Attributes в ValidatePath двумя traces.
 ED6b.2e.4b реализует bounded directory cache, ED6b.2e.4c — owned file reader и
@@ -411,7 +465,7 @@ delivery проверен через Editor. Wider Window/hardware gates отд�
 в bounded Windows x64 profile; ARCH2e.4 checked в своём scope, затем ED6a/ED8a console/export, ED4c.2 имена/порядок,
 ED4c.3 create/delete/duplicate и project picker/switch с ED1/ED6 workflow.
 Незавершённые проверки после BSOD и scopes закрытых quality fixes — в [STATUS](STATUS.md).
-Датированные маршруты ниже сохраняют историю решений и не заменяют текущую точку2026-11-04.
+Датированные маршруты ниже сохраняют историю решений и не заменяют текущую очередь.
 
 Историческая точка2026-10-21: ENG1–ENG3/ENG4a/b/c реализованы в TrueMoon.Aether;
 ENG4d borrowed texture/retained GPU copy bridge проверен в actual reference viewport.
@@ -660,6 +714,17 @@ runtime/consumer/native/release acceptance R1–R6.
 | R6. Воспроизводимость | Версии source/SDK/packages/native/assets/configuration и точные команды сохранены; release readiness не выводится из исторических результатов |
 
 Набор модулей общего выпуска и заявленные платформы определяются явно перед G6. Локальный выпуск одного модуля проверяется по его собственным критериям и зависимостям; он не помечает общий roadmap завершённым.
+
+<a id="release-evidence"></a>
+### Воспроизводимость evidence — уточнение ревизии 2026-11-05
+
+Перед следующим release определить хранение компактного manifest: source commit,
+SDK/native/assets/configuration, точные команды, результаты/ограничения и адрес/
+retention raw artifacts. Большие ignored TestResults не являются долговечной
+публичной ссылкой. STATUS ссылается на versioned HISTORY и повторяемый runner,
+а raw paths остаются дополнительным evidence. Отсутствующие старые artifacts не
+воссоздавать по памяти и не переводить прежний run в новый passing результат.
+Это продолжение R6, не новый запуск проверок и не требование включать все dumps/PNG в Git.
 
 ## После первой проверенной поставки
 

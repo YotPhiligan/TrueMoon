@@ -9,6 +9,181 @@ contracts игровой сессии, supervisor, control protocol, CPU frame t
 [пример Editor/Game.Runtime](../ManualTests/EngineSessionProbe/README.md),
 [отдельный runtime без Editor/UI](../Examples/AetherRuntimeHost/README.md).
 
+## Headless ECS World
+
+`UseAetherEcs()` регистрирует App-local `IFactory<World>` из `TrueMoon.Contracts`;
+тип World находится в `TrueMoon.Aether.Ecs`. Для подключения не нужны `UseAether`,
+runtime child, окно или GPU. Создавать World в session/owner через внедрённую
+фабрику; её результаты принадлежат caller и должны быть явно освобождены им.
+App не регистрирует singleton World и не удерживает Worlds до своего завершения.
+
+Первый профиль: generational entity handles, bounded typed sparse/dense pools и
+singleton components без managed references. Create/Destroy/Add/Set/Get/TryGet/
+Has/Remove требуют сериализованного доступа; чтение возвращает копии. World.Dispose
+инвалидирует handles и storage; component values не получают вызов Dispose.
+По умолчанию: 65 536 slots, 128 типов, начальная ёмкость 64 slots;
+options копируются при конфигурации.
+
+Execution profile добавляет `Query<T>()`/`Query<T1,T2>()`, typed exclusions и
+scoped read/write callbacks. Во время обхода структурные/direct Set операции
+отклоняются; queued commands применяются после preflight всего FIFO batch.
+Непредвиденная commit failure делает World Faulted; inspection reads доступны,
+новые mutations требуют Dispose/recreate. Reads/Get по-прежнему возвращают copies.
+
+Внутри сессии с уже полученным World, для собственных value types Position/Velocity:
+
+```csharp
+using var commands = new EntityCommandBuffer(world);
+var spawned = commands.CreateEntity();
+commands.AddComponent(spawned, new Position(10));
+commands.AddComponent(spawned, new Velocity(2));
+var created = commands.Playback();
+var entity = created.Resolve(spawned);
+world.Query<Position, Velocity>().ForEachWrite(
+    static (EntityHandle _, ref Position position, in Velocity velocity) =>
+        position = new Position(position.X + velocity.X));
+```
+
+`UseAetherEcsSystems(builder => builder.Add<MoveSystem>(description))` после
+UseAetherEcs подключает App-local `IFactory<EcsScheduler,World>`. Game module
+регистрирует `IFactory<MoveSystem,World>` в своём composition root. Description —
+EcsSystemDescription с Read/Write/After/Before и EcsPhase. Factory results принадлежат
+scheduler; его World/factories/dependencies заимствуются. Scheduler.Stop/Dispose
+завершаются до World.Dispose; failed cleanup сохраняет owner для retry.
+
+Tick получает positive fixed step от caller, без своего timer. Порядок — phases и
+topological dependencies; playback после каждой phase, reentrant Tick запрещён.
+Context.Commands — scoped writer, retained writer не оживает на следующем вызове.
+Stop/cancel отбрасывают pending commands, не делают rollback прежних writes;
+failure оставляет terminal Faulted. [Полный контракт](../docs/engine/ECS_EXECUTION.md).
+
+Explicit ECS Runtime consumer описан ниже; прежние Editor Play/preview не мигрированы.
+Builtin transform/extraction описаны ниже; shared mesh/material resources и checkpoint
+следуют [плану ECS](../docs/engine/PLAN.md#arch1e-ecs).
+Ограничение64entities нынешнего
+scene/primitive transport не меняется ростом локального World.
+
+## Registry и загрузка сцены в World
+
+`TrueMoon.Aether.Ecs.Loading` предоставляет immutable ComponentRegistry и
+SceneWorldLoader. Builder.Register<T> связывает exact ComponentSchema/version с
+runtime value type и importer; optional references/validator задают data-only
+проверки до создания World. Один stable type имеет один CLR type во всех версиях;
+AllowMultiple=true и schema drift отклоняются явно, без implicit migration.
+
+ARCH1f.1 добавляет [CPU mesh/material contracts](../docs/engine/RENDERING_CONTRACTS.md#cpu-v1):
+RenderAssetKey/RenderContentHash, immutable MeshDefinition/MaterialBindingSetDefinition/
+OpaqueUnlitMaterialDefinition, frozen RenderContentManifest и строгий canonical codec.
+Это данные без GPU/cache/lease lifetime. В BuiltinRenderContent есть versioned cube/
+white/bindings defaults. `MeshRenderingComponents.Register(builder,content)` из
+Ecs.Rendering явно добавляет только MeshRenderer/Camera schemas и устанавливает
+AssetValidator frozen scope; Transform регистрируется отдельно, например через
+PrimitiveEcsComponents.Register. Другие asset domains требуют explicit composite validator.
+Загрузка проверяет type/revision/slots и disabled values до World; opt-in resource
+upload описан ниже, mesh renderer ещё f.3/4. [CPU package consumer](../ManualTests/RenderingCpu/README.md).
+
+ARCH1f.2 добавляет explicit `UseAetherRenderResources` и resource owner/factories:
+counted CPU scopes, generation-fenced device entries, bounded cancellable preparation
+и atomic resource-key reload borrowed World. Default Vulkan backend лениво готовит
+vertex/index buffers с actual allocation budgets и fence/readback confirmation;
+shader/frame renderer ещё отдельно. `RenderResourceComponents.Register(builder,scope)`
+подключает counted scene CPU leases к existing SceneWorld ownership. Products
+освобождаются до World/App; cleanup failures сохраняют owner для retry.
+[Source/package/native preparation consumer](../ManualTests/RenderResources/README.md).
+
+В App вызвать UseAetherEcs, затем UseAetherSceneLoading с composition-root registry
+factory. Dependency resolution остаётся здесь; importers получают данные и scoped
+ComponentLoadContext без mutable World. Пример для собственных schema и Position:
+
+```csharp
+context.UseAetherEcs();
+context.UseAetherSceneLoading(_ => new ComponentRegistryBuilder()
+    .Register<Position>(positionSchema, data => new Position(data.GetSingle("x")))
+    .Build());
+```
+
+Owning session получает `IFactory<SceneWorld,SceneWorldLoadRequest>` через DI:
+
+```csharp
+using var loaded = scenes.Create(new SceneWorldLoadRequest(new SceneWorldData(document)));
+var world = loaded.World; // borrowed; Dispose loaded after its scheduler
+```
+
+SceneWorld.Scene сохраняет resolved metadata/hierarchy/provenance; Entities связывает
+persistent EntityId с первоначальным generational handle. Все entities резервируются
+до import, включая forward references. Scalar helpers выполняют exact-kind/finite/
+range conversion. Entity/asset String references требуют explicit declarations;
+nonnull IDs — GUID D format, nullable null остаётся null. Assets проверяет borrowed
+validator; native/content preparation остаётся provider contract.
+
+Acquire учитывает owned IDisposable leases, резервирует quota до provider callback
+и clean up reverse после World. Failure/cancel не публикует partial scene; failed
+cleanup сохраняет SceneWorldLoadException.CleanupOwner для explicit Dispose retry.
+SceneWorld owns World: direct World.Dispose запрещён; сначала Dispose scheduler,
+затем loaded owner. App не удерживает и не освобождает factory results автоматически.
+
+SceneWorldCodec сериализует **полный SceneDocument**, а не primitive projection:
+TMWL/version1/length/SHA256 + existing strict authoring v1/v2 body. Limit4MiB+44bytes;
+malformed strings, unknown versions и corrupt/trailing data отклоняются. Registry/
+Game.Logic для codec не нужны. Current materializer admission — до4096entities;
+old64-entity/64KiB primitive/control limits отдельно и не расширены.
+Initial Runtime transfer использует explicit capability и32KiB chunks в пределах
+каждого64KiB control message. `Ecs.Runtime.SceneWorldGameSession` владеет complete
+World, `SessionSupervisor.StartWorldAsync` загружает neutral данные без Game.Logic
+в parent, `FrameSession.StartWorldAsync` ждёт first presentation. UseAetherRuntime
+предоставляет registry-specific `IFactory<SceneWorldLoader,ComponentRegistry>` для
+explicit child game entry factory; custom World factory сохраняется.
+
+```csharp
+await host.Supervisor.StartWorldAsync(new SceneWorldData(document), selectedBuild, token: token);
+var worldId = host.Supervisor.Status.SceneWorldId;
+await host.Supervisor.StepAsync(token);
+await host.Supervisor.StopAsync();
+```
+
+Game derives SceneWorldGameSession, реализует TickWorld/PatternColor и получает loader
+через injected factory в IGameSessionEntry.Create. Только successful initial load
+публикует ActiveScene; failed/cancelled preparation и cleanup failures сохраняют owners.
+До scene activation frames не выдаются; ECS checkpoint/Replace остаётся следующим stage.
+[Load](../docs/engine/ECS_LOADING.md),
+[Runtime contract и повторяемая проверка](../docs/engine/ECS_RUNTIME_LOADING.md).
+
+## Transform, movement и primitive renderer из ECS
+
+`PrimitiveEcsComponents.Register(builder)` связывает прежние BuiltIn Transform/
+Appearance/Interaction v1 schemas и optional VelocitySchema с runtime values.
+Existing BuiltInComponents.Schemas не меняется. LocalTransform хранит quaternion,
+positive scale и parent-space position; TransformSystem без recursion проверяет
+complete graph/cycles/stale refs и вычисляет local*parentWorld, сохраняя shear.
+MovementSystem использует local-position units/sec, без своей reflection/Resolve.
+
+`UseAetherPrimitiveEcs(options)` регистрирует caller-owned typed controller/system
+factories. UseAetherRuntime предоставляет lazy defaults, сохраняя explicit overrides.
+Headless owner получает сцены/controller через внедрённые фабрики:
+
+```csharp
+using var scene = scenes.Create(new SceneWorldLoadRequest(new SceneWorldData(document)));
+using var simulation = simulations.Create(new PrimitiveSimulationRequest(scene));
+var initial = simulation.Snapshot; // tick0, detached values
+simulation.Tick();
+var next = simulation.Snapshot; // movement -> transform -> extraction
+```
+
+Dispose simulation до borrowed scene. Нельзя продолжать Tick после terminal graph
+failure. Snapshot values/metadata остаются пригодны после disposal World; matrices
+не decomposed и не удерживают native/GPU resources. Limit64 относится к enabled
+drawables, а не logical groups; overflow отклоняет весь frame без silent truncation.
+Initial caches готовятся до активации; preflight failure сохраняет прошлый cache/frame.
+
+`Ecs.Runtime.PrimitiveGameSession` реализует IRenderGameSession и готовит private
+graph/frame0 через PrepareSceneWorld перед ActiveScene publication. Base owns
+returned controller, releases it before World и retains failed cleanup for retry.
+Selected game entry получает registry-specific loader/controller factory через DI;
+пример — ManualTests/Game.Logic/PrimitiveProbeGame.cs. Native cube backend и old
+64entity SceneSnapshot projection сохраняют свои contracts. Camera — copied view
+options; mesh/material/camera components и checkpoint отдельно.
+[Контракт и проверки](../docs/engine/ECS_PRIMITIVES.md).
+
 ## Scene files без Editor
 
 UseAetherAuthoring().UseAetherScenePersistence() подключает общие

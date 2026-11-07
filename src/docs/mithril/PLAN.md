@@ -1,5 +1,19 @@
 # Mithril: план units и процессного lifecycle
 
+<a id="current-mithril-queue"></a>
+## Точка продолжения — ревизия 2026-11-05
+
+MIT0–5, первый MIT6a и ready-file fixture fix имеют датированные bounded proofs.
+ARCH2 package/headless/native уже выполнен у Aether; не назначать его заново как
+неосуществлённый prerequisite Mithril. Текущий Editor использует прежний lifecycle.
+
+Следующий самостоятельный срез — оставшийся MIT6 fault/containment/resource-trend
+profile: определить consumer, unsupported/uncooperative поведение и owner, затем
+точный сценарий и acceptance. Aether Hello/heartbeat/Replace/recovery не дублируются
+вторым restart policy. Post-reap output drain пока ведётся в
+[ARCH2e.4b](../engine/PLAN.md#arch2e4b-drain-diagnostics), пока evidence не определит
+Mithril owner. [Общий roadmap](../PLAN.md#current-roadmap), [состояние](STATUS.md).
+
 Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Уточнённые MIT0–MIT5 contracts записаны ниже; bounded App/IPC/package scope и operational diagnostics имеют отдельные датированные проверки в статусе.
 
 ## Границы

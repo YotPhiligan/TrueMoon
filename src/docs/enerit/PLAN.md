@@ -1,5 +1,19 @@
 # Enerit: план IPC и генерации invocation
 
+<a id="current-enerit-queue"></a>
+## Точка продолжения — ревизия 2026-11-05
+
+ENE6a и bounded ENE6d/отдельный Aether diagnostic lane имеют собственные proofs;
+Editor console/export уже реализованы в scope потребителя. Не назначать их заново
+как prerequisite IPC. Для performance первым делать scalar c1/c8 allocation/CPU
+profile на неизменном ENE5 workload, затем выбирать оптимизацию по evidence.
+
+При расширении peer compatibility сначала ENE6c negotiation/framing contract;
+same-build API не обещает remote handler cancel/replay. Queue distribution/domain
+aggregates — по конкретному consumer. MMF, long trends и wider platform/package
+acceptance остаются отдельными, не обязательными для текущего Editor.
+[Общий roadmap](../PLAN.md#current-roadmap), [состояние](STATUS.md).
+
 Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Планируемые semantics и новые API уточняются перед соответствующим этапом.
 
 ## Границы
@@ -474,6 +488,7 @@ runtime126/generator114 в каждой Debug/Release. [Числа и огран
 Client all-thread allocation2.2–3.0KB/call и scalar/concurrency overhead требуют
 отдельного allocation/CPU profile перед оптимизацией. Это measured backlog,
 не подтверждённый correctness blocker и не автоматическое требование MMF/новых API.
-Следующий общий функциональный этап — Mithril MIT5 operational diagnostics.
+На15октября следующим общим этапом был Mithril MIT5 operational diagnostics;
+он выполнен в bounded scope, актуальная очередь приведена в начале документа.
 Generated nullable-context warnings CS8669 сохраняются отдельным quality backlog;
 новый benchmark проявляет10таких warnings, массового подавления нет.

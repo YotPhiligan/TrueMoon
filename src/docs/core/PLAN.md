@@ -1,5 +1,20 @@
 # Core: план bootstrap и общих контрактов
 
+<a id="current-core-queue"></a>
+## Точка продолжения — ревизия 2026-11-05
+
+CORE0–5 и bounded CORE6 имеют датированные proofs; это не объявление полного
+CORE6/release. Editor console/export/child health уже подключены у Aether и не
+ставятся будущими prerequisites. Текущий UI маршрут использует существующие
+App/IFactory/diagnostics contracts. Reliability owner координируется в
+[ARCH2e.4b](../engine/PLAN.md#arch2e4b-drain-diagnostics) только после evidence.
+
+Собственный следующий дизайн: выбрать конкретный consumer для App-private/
+bootstrap diagnostic routing либо aggregate metrics CORE6d; определить lifetime,
+bounded delivery и acceptance до кода. CORE6e generation и общий artifact quota —
+отдельные contracts, не выводимые из JSONL retention. Общая очередь —
+[roadmap](../PLAN.md#current-roadmap); прежние датированные «далее» ниже исторические.
+
 Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Этапы ниже запланированы; конкретные semantics уточняются по существующему API перед реализацией.
 
 Уточнение2026-10-29: ProcessOutputCapture предоставляет отдельные read/file completion tasks для диагностики cleanup при прежнем borrowing contract. Ownership native streams и открытый timeout follow-up ведутся в [ARCH2e.4](../engine/PLAN.md#arch2e4-устойчивость-output-drain--follow-up-2026-10-29); новых App/DI scopes нет.

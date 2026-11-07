@@ -7,13 +7,24 @@ using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Transport;
 using TrueMoon.Aether.Builds;
 using TrueMoon.Aether.Input;
+using TrueMoon.Aether.Ecs.Loading;
 
 namespace TrueMoon.Aether.Sessions;
 
 public enum SessionState { Stopped, Starting, Paused, Playing, Stopping, Faulted, CleanupFailed }
 public sealed record SessionFailure(string Phase, Exception Cause, Exception? CleanupError = null);
 public sealed record SessionStatus(SessionState State, SessionIdentity? Identity = null, int? ProcessId = null,
-    bool HelloAccepted = false, bool SceneLoaded = false, ulong Tick = 0, SessionFailure? Failure = null, long? SceneRevision = null);
+    bool HelloAccepted = false, bool SceneLoaded = false, ulong Tick = 0, SessionFailure? Failure = null, long? SceneRevision = null)
+{
+    /// <summary>Gets the last acknowledged complete ECS World identity; null on the legacy load path.</summary>
+    public Guid? SceneWorldId { get; init; }
+    /// <summary>Gets the exact child registry generation for the complete World.</summary>
+    public Guid? SceneRegistryId { get; init; }
+    /// <summary>Gets initial source entity cardinality, not a live runtime query.</summary>
+    public int? SceneEntityCount { get; init; }
+    /// <summary>Gets initial resolved component cardinality.</summary>
+    public int? SceneComponentCount { get; init; }
+}
 /// <summary>Immutable per-generation child launch configuration.</summary>
 /// <param name="Identity">Expected runtime identity.</param><param name="Endpoint">Private control endpoint.</param>
 /// <param name="ReportDirectory">Runtime diagnostics destination.</param><param name="Behavior">Probe behavior selector.</param>
@@ -61,10 +72,12 @@ public interface IRuntimeFactory : IFactory<IRuntimeLease, SessionLaunch> { }
 
 // All remote work is serialized. Stop cancels the current local wait before
 // entering the gate; a cancelled/expired command is never replayed.
-public sealed class SessionSupervisor : IAsyncDisposable
+public sealed partial class SessionSupervisor : IAsyncDisposable
 {
     private readonly IFactory<IRuntimeLease, SessionLaunch> _factory;
     private readonly SessionDeadlines _deadlines;
+    private readonly SceneWorldCodec? _sceneWorldCodec;
+    private readonly SceneResolutionService? _sceneResolution;
     private readonly string _hostId, _gameId, _directory;
     private string _sceneId = "";
     private readonly Action<SessionStatus>? _trace;
@@ -88,11 +101,14 @@ public sealed class SessionSupervisor : IAsyncDisposable
     internal RuntimeRole ActiveRole { get; private set; }
 
     public SessionSupervisor(IFactory<IRuntimeLease, SessionLaunch> factory, string hostId, string gameId, string directory,
-        SessionDeadlines? deadlines = null, Action<SessionStatus>? trace = null)
+        SessionDeadlines? deadlines = null, Action<SessionStatus>? trace = null, SceneWorldCodec? sceneWorldCodec = null,
+        SceneResolutionService? sceneResolution = null)
     {
         ArgumentNullException.ThrowIfNull(factory); ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         new SessionIdentity(_sessionId, 1, hostId, gameId, new string('0', 64)).Validate();
         _factory = factory; _hostId = hostId; _gameId = gameId; _directory = directory;
+        _sceneWorldCodec = sceneWorldCodec;
+        _sceneResolution = sceneResolution;
         _deadlines = deadlines ?? new(); _deadlines.Validate(); _trace = trace;
     }
     private void Publish(SessionStatus value)
@@ -122,11 +138,13 @@ public sealed class SessionSupervisor : IAsyncDisposable
     internal Task StartForReplacementAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint checkpoint, string behavior,
         ReplacementAdmission.Lease owner, CancellationToken token) => StartCoreAsync(scene, build, checkpoint, behavior, token, owner);
 
-    private async Task StartCoreAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, string behavior, CancellationToken token,
-        ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game)
+    private async Task StartCoreAsync(SceneSnapshot? scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, string behavior, CancellationToken token,
+        ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, SceneWorldData? worldScene = null)
     {
-        ArgumentNullException.ThrowIfNull(scene);
-        checkpoint?.ValidateFor(_hostId, scene);
+        if (scene == null && worldScene == null) throw new ArgumentNullException(nameof(scene));
+        checkpoint?.ValidateFor(_hostId, scene!);
+        var sceneId = worldScene?.Scene.Id.Value.ToString("D") ?? scene!.Id;
+        var sceneRevision = worldScene?.Scene.Revision ?? scene!.Revision;
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
         var phase = "Launch";
@@ -136,12 +154,17 @@ public sealed class SessionSupervisor : IAsyncDisposable
             Admission.Check(owner);
             if (fence != Volatile.Read(ref _fence)) throw new OperationCanceledException("Start superseded by Stop.");
             if (_lease != null) throw new InvalidOperationException("Stop/reap the previous runtime before Start.");
+            var worldBytes = worldScene == null ? null : (_sceneWorldCodec ?? throw new InvalidOperationException("A scene World codec must be injected before starting full scenes.")).Encode(worldScene, token);
+            var worldComponents = worldScene == null ? 0 : checked((_sceneResolution ?? throw new InvalidOperationException("A neutral scene resolver must be injected before starting full scenes."))
+                .Resolve(worldScene.Scene, token).Entities.Values.Sum(entity => entity.Components.Count));
+            if (worldComponents > 65536) throw new InvalidDataException("Resolved scene component budget exceeded.");
             if (build != null) GameBuildArtifact.Open(build.DirectoryPath, _hostId, build.BuildId);
             ActiveRole = role;
             var identity = new SessionIdentity(_sessionId, checked(++_generation), _hostId,
                 role == RuntimeRole.EditPreview ? Hosting.BuildIdentity.PreviewId : build?.BuildId ?? _gameId,
                 Convert.ToHexString(RandomNumberGenerator.GetBytes(32)));
             _work?.Dispose(); _work = new(); _sequence = 0;
+            _activeWorldId = null; _activeRegistryId = null; _activeSceneOperation = null;
             Publish(new(SessionState.Starting, identity));
             try
             {
@@ -156,16 +179,22 @@ public sealed class SessionSupervisor : IAsyncDisposable
                 if (hello.Phase != "HelloAccepted") throw new InvalidDataException("Hello acknowledgement phase mismatch.");
                 Publish(Status with { HelloAccepted = true });
                 phase = "LoadScene";
-                var loaded = await ExchangeAsync(CommandKind.LoadScene, r =>
-                { r.SceneId = scene.Id; r.Revision = scene.Revision; r.Entities = scene.CopyEntities(); }, startup.Token).ConfigureAwait(false);
-                if (loaded.Revision != scene.Revision || loaded.Phase != "Paused") throw new InvalidDataException("Scene acknowledgement mismatch.");
-                _sceneId = scene.Id;
-                Publish(Status with { SceneLoaded = true, Tick = unchecked((ulong)loaded.Tick), SceneRevision = scene.Revision });
+                var loaded = worldScene == null
+                    ? await ExchangeAsync(CommandKind.LoadScene, r =>
+                        { r.SceneId = scene!.Id; r.Revision = scene.Revision; r.Entities = scene.CopyEntities(); }, startup.Token).ConfigureAwait(false)
+                    : await TransferWorldAsync(worldScene, worldBytes!, worldComponents, hello, startup.Token).ConfigureAwait(false);
+                if (loaded.Revision != sceneRevision || loaded.Phase != "Paused") throw new InvalidDataException("Scene acknowledgement mismatch.");
+                _sceneId = sceneId;
+                Publish(Status with { SceneLoaded = true, Tick = unchecked((ulong)loaded.Tick), SceneRevision = sceneRevision,
+                    SceneWorldId = _activeWorldId == null ? null : Guid.Parse(_activeWorldId),
+                    SceneRegistryId = _activeRegistryId == null ? null : Guid.Parse(_activeRegistryId),
+                    SceneEntityCount = _activeWorldId == null ? null : _activeEntityCount,
+                    SceneComponentCount = _activeWorldId == null ? null : _activeComponentCount });
                 if (checkpoint != null)
                 {
                     phase = "RestoreCheckpoint";
                     var restored = await ExchangeAsync(CommandKind.RestoreCheckpoint, r => r.Checkpoint = GameCheckpointCodec.Encode(checkpoint), startup.Token).ConfigureAwait(false);
-                    if (restored.Phase != "Paused" || restored.Revision != scene.Revision || restored.Checkpoint is { Length: > 0 })
+                    if (restored.Phase != "Paused" || restored.Revision != sceneRevision || restored.Checkpoint is { Length: > 0 })
                         throw new InvalidDataException("Malformed restore acknowledgement.");
                     if (restored.CheckpointOutcome is (int)CheckpointOutcome.Unsupported or (int)CheckpointOutcome.RestoreRejected)
                         throw new CheckpointRejectedException((CheckpointOutcome)restored.CheckpointOutcome);
@@ -177,7 +206,7 @@ public sealed class SessionSupervisor : IAsyncDisposable
                 var mode = await ExchangeAsync(CommandKind.SetMode, r => r.Playing = false, startup.Token).ConfigureAwait(false);
                 if (mode.Phase != "Paused") throw new InvalidDataException("Paused acknowledgement missing.");
                 Publish(Status with { State = SessionState.Paused, Tick = unchecked((ulong)mode.Tick) });
-                Configuration = (scene, build, behavior);
+                Configuration = scene == null ? null : (scene, build, behavior);
                 _monitor = MonitorAsync(_lease, _work.Token);
             }
             catch (Exception error)
@@ -202,6 +231,7 @@ public sealed class SessionSupervisor : IAsyncDisposable
         if (first == lease.Exited && !pending.IsCompleted) throw new IOException("Runtime exited before acknowledgement.");
         var reply = await pending.WaitAsync(token).ConfigureAwait(false);
         ValidateReply(identity, unchecked((ulong)request.Sequence), kind, lease.ProcessId, reply);
+        ValidateActiveWorld(reply);
         _lastAcknowledgement = Stopwatch.GetTimestamp();
         return reply;
     }
