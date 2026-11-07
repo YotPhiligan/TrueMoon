@@ -1,5 +1,12 @@
 # TrueMoon.Alloy: план первой рабочей версии
 
+<a id="skiasharp-41550-completed"></a>
+Выполнено2026-11-07: **SkiaSharp/native4.155.0** — pinned source build extended DLL,
+ABI v1/48bytes, source Debug/published Release Vulkan readback/composition и backend
+comparison, fresh10-package/40-process delivery, Alloy/Hosting/Editor D/R regression.
+Solution Debug build0errors, новых warnings0; [результаты и команды](HISTORY.md#skiasharp-41550-2026-11-07).
+Следующая самостоятельная visual-quality задача остаётся PA8c.0; physical/K7/K8 gates открыты.
+
 <a id="uia3c-numeric-gestures"></a>
 ## UIA3c. Numeric step/drag — 2026-11-05
 

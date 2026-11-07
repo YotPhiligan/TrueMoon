@@ -39,7 +39,8 @@ Runner создаёт новый `TestResults/AlloyPackages/run-*`, уникал
    рендерит RichTextEditor, применяет formatting/undo и проверяет его disposal;
    Topten.RichTextKit/HarfBuzz приходят транзитивно через renderer.
 6. Создаёт direct renderer consumer только с Rendering.Skia и explicit fonts,
-   без Hosting/App/Core/Contracts/platform: **4 процесса** Debug/Release ×build/publish.
+   без Hosting/App/Core/platform; Contracts приходит для IUiSessionFactory/IFactory:
+   **4 процесса** Debug/Release ×build/publish. Проверяется точный набор4TrueMoon packages.
    Проверяет реальный raster text, static redraw и disposal дерева.
 7. В отдельном consumer отключает analyzer, сохраняя compile-time ссылку на generated
    registration. Build должен завершиться CS0246/CS0234; это **negative control**,

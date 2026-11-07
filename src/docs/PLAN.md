@@ -1,5 +1,10 @@
 # TrueMoon: общий план развития
 
+Выполнено2026-11-07: **SkiaSharp/native4.155.0** согласованы, extended DLL пересобрана
+из pinned sources. ABI, source/published Vulkan и fresh NuGet delivery проверены;
+подробные этапы и результаты — в [UI плане](alloy/PLAN.md#skiasharp-41550-completed).
+Прикладная очередь и открытая physical/release acceptance сохраняются.
+
 UI follow-up2026-11-05: [ED4g.2](engine/EDITOR_PLAN.md#ed4g2-numeric-gestures) и
 [UIA3c](alloy/PLAN.md#uia3c-numeric-gestures) добавляют numeric step/drag и linked
 scale с draft-only/cancel/identity contract. Scoped source/published native proof

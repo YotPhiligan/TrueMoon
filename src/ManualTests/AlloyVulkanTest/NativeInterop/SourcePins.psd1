@@ -14,4 +14,9 @@
         SkiaSharpRevision = '8771a4343c7ca2e5edf18f79a3b7b23c77fff60d'
         SkiaRevision = '993e88f35c9d107669824cf5575c002964e4b087'
     }
+    '4.155.0' = @{
+        Version = '4.155.0'
+        SkiaSharpRevision = 'd25e7fa628a2576e50ecc42004cc4fd03c6657f5'
+        SkiaRevision = 'c2d78902a56e24827a7273a4ed3461ce18780680'
+    }
 }

@@ -1,6 +1,12 @@
 # TrueMoon: общий статус
 
-Последняя работа — **2026-11-05, native numeric acceptance**.
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+Предыдущая работа — **2026-11-05, native numeric acceptance**.
 [ED4g.2a](engine/EDITOR_PLAN.md#ed4g2a-native-numeric): четыре source Debug/published
 Release OpenGL smoke прошли в standard/Cobalt и embedded/MS DI. Windows linked
 drag, Esc draft cancel, Ctrl+Enter и Undo подтверждены в standard; routed arrows/

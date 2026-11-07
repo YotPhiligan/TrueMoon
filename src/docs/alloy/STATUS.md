@@ -1,6 +1,14 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-Последняя работа — **2026-11-05, UIA3c native input follow-up**.
+**2026-11-07 — SkiaSharp/native обновлены до4.155.0.**
+DLL пересобрана из exact NuGet source commit с прежним Vulkan extension/ABI v1;
+официальный version gate и TrueMoon exports проверены. Source Debug/published Release:
+18readbacks/36GPU-композиций/backend comparison каждый, core+sync validation0/0.
+Alloy1101/1101, Hosting154/154 и Editor1295/1295 каждый D/R. Fresh10pkg:36App+4direct processes
+Debug/Release×build/publish на raster/OpenGL/Vulkan, native delivery/cleanup passed.
+[Команды и scope](HISTORY.md#skiasharp-41550-2026-11-07).
+
+Предыдущая работа — **2026-11-05, UIA3c native input follow-up**.
 Platform.Silk button/wheel input использует последнее ordered cursor event вместо
 live cursor query; быстрый drag теперь сохраняет стартовую точку. Pointer events
 передают Shift/Ctrl. Шесть новых regression cases проверяют snapshots, wheel и

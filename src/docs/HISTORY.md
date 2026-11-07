@@ -1,4 +1,33 @@
 # TrueMoon: история общей документации
+
+<a id="skiasharp-41550-2026-11-07"></a>
+## SkiaSharp/native4.155.0 — 2026-11-07
+
+Уже выбранный managed4.155.0 был несовместим с bundled native154.0: официальный
+version gate явно отказал exit2. Patched DLL пересобрана из exact NuGet source commit
+SkiaSharp d25e7fa628a2576e50ecc42004cc4fd03c6657f5 / Skia c2d78902a56e24827a7273a4ed3461ce18780680
+с неизменённым TrueMoon extension/ABI1/48bytes. SourcePins, DLL/build.json и инструкции
+обновлены; пользовательский выбор версии в Directory.Packages.props сохранён.
+
+Source Debug/published Release прошли ABI,18external readbacks/36GPU compositions/
+raster/OpenGL/Vulkan comparison каждый, core+sync validation0/0 включая cleanup.
+Alloy1101/1101, Hosting154/154 и Editor1295/1295 каждый D/R. Solution nonincremental
+Debug0errors/1555warnings,1422distinct warning catalogue unchanged.
+Fresh10local packages прошли36App+4direct
+processes Debug/Release×build/publish, raster/OpenGL/Vulkan, native delivery/behavior/
+cleanup и expected missing-analyzer failure. Runner добавляет unique binlogs и сверяет
+exact direct graph4packages, включая Contracts для existing IUiSessionFactory; старое
+ожидание3 исправлено без изменения production dependencies. Aggregate frozen proof
+Completed=true; failed attempts сохраняют stale graph guard/changed README outcomes.
+[Точные команды, SHA, scope и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+Scope audit:1598прежних файлов preserved/12bounded existing edits, новых versionable
+files0; C#/production graph/user package selection preserved. Docs40Markdown/1947valid
+links/no new failures,247old distinct issues,7STATUS archives verbatim; diff --check passed.
+
+Новые C# API/extension changes, compiler/SDK install, driver/global settings и остановленный
+K7 workaround search не назначены. Physical/K8/VRAM/final alpha и прежние reliability
+failures не закрыты этим update. Engine очередь ARCH1f.3 не менялась.
+
 ## ED6a.2 raw streams и health — 2026-10-29
 
 Core borrowed health/window APIs и Aether runtime/build memory snapshots подключены

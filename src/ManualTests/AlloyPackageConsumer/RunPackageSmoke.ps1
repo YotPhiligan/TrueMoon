@@ -40,6 +40,9 @@ function Remember([string] $Path) {
     if ($evidencePaths.Add($full)) { $summary.Evidence += (Fingerprint $full) }
 }
 function Invoke-DotNet([string] $Name, [string[]] $Arguments, [int] $TimeoutSeconds = 180, [bool] $ExpectedFailure = $false) {
+    if ($Arguments[0] -in @('restore', 'build', 'pack', 'publish')) {
+        $Arguments += '-bl:' + (Join-Path $logs "$Name-{}.binlog")
+    }
     $info = [Diagnostics.ProcessStartInfo]::new('dotnet')
     $info.WorkingDirectory = $run
     $info.UseShellExecute = $false
@@ -131,8 +134,12 @@ function Verify-Assets([string] $Consumer, [bool] $Direct = $false) {
     if (@($assets.libraries.Values | Where-Object type -ne 'package').Count) { throw 'Consumer has non-package dependencies.' }
     if (@($assets.libraries.Keys | Where-Object { $_ -match '^(Microsoft.CodeAnalysis|TrueMoon.Cobalt.Generator/)' }).Count) { throw 'Build-only Roslyn or standalone generator dependency.' }
     $local = @($assets.libraries.Keys | Where-Object { $_ -match '^TrueMoon(?:\.|/)' })
-    $expected = if ($Direct) { 3 } else { 10 }
+    $directPackages = @('TrueMoon.Alloy', 'TrueMoon.Alloy.Rendering.Skia', 'TrueMoon.Argentis', 'TrueMoon.Contracts')
+    $expected = if ($Direct) { $directPackages.Count } else { 10 }
     if ($local.Count -ne $expected) { throw "Expected $expected local packages, got $($local.Count)." }
+    if ($Direct -and @(Compare-Object $directPackages @($local | ForEach-Object { ($_ -split '/')[0] })).Count) {
+        throw 'Direct renderer package graph differs from the explicit Alloy/Argentis/Skia/IFactory-contract graph.'
+    }
     foreach ($library in $local) {
         if (!$library.EndsWith('/' + $PackageVersion)) { throw "Unexpected TrueMoon version: $library" }
         $packageRoot = Join-Path $cache $assets.libraries[$library].path
@@ -140,7 +147,7 @@ function Verify-Assets([string] $Consumer, [bool] $Direct = $false) {
         if ($metadata.source.TrimEnd('\', '/') -ne $feed.TrimEnd('\', '/')) { throw "Wrong source: $library" }
         Remember (Join-Path $packageRoot '.nupkg.metadata')
     }
-    if ($Direct -and @($local | Where-Object { $_ -match '^TrueMoon(?:\.Alloy\.Hosting|\.Alloy\.Platform|\.Core|\.Contracts|\.Cobalt|/)' }).Count) {
+    if ($Direct -and @($local | Where-Object { $_ -match '^TrueMoon(?:\.Alloy\.Hosting|\.Alloy\.Platform|\.Core|\.Cobalt|/)' }).Count) {
         throw 'Direct renderer depends on App/Hosting/platform.'
     }
     $summary.Libraries += @{ Consumer = [IO.Path]::GetRelativePath($run, $Consumer); Packages = $local }

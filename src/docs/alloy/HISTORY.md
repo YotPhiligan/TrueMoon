@@ -1,5 +1,115 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="skiasharp-41550-2026-11-07"></a>
+## SkiaSharp4.155.0 и native Vulkan interop — 2026-11-07
+
+Проверка по запросу пользователя обнаружила уже внесённый выбор managed4.155.0
+в Directory.Packages.props при bundled native4.154.0. Этот пользовательский diff
+сохранён. Version gate воспроизвёл явный отказ exit2: native154.0 несовместим с
+required range[155.0,156.0). Штатный official native155.0 также exit2, поскольку
+не содержит TrueMoon exports; подмена packaged DLL не решает задачу.
+
+Package metadata из existing NuGet cache задаёт SkiaSharp source commit
+d25e7fa628a2576e50ecc42004cc4fd03c6657f5, release/4.155.0. Upstream checkout и gitlink
+подтверждают Skia c2d78902a56e24827a7273a4ed3461ce18780680. SourcePins.psd1 дополнен
+новой exact парой, прежние pins сохранены. Source fetched в ignored TestResults,
+HEAD закреплён явно; наличие тега v4.155.0 не предполагалось. Source provenance
+сверен с официальным NuGet nuspec, не с поисковым индексом более ранних previews.
+[Upstream release notes](https://mono.github.io/SkiaSharp/docs/releases/4.155.0.html)
+описывают переход наM155; native API signatures/exports проверялись по actual sources.
+
+BuildNativeInterop -CheckOnly и затем source build -InstallToRenderer прошли exit0.
+Инструменты: existing VS Build Tools2026 18.11.3, MSVC14.51.36231/Spectre, SDK10.0.26100.0,
+Python3.13.17 из LibreOffice; Ninja1.13.2 скачан в local TestResults с проверкой known
+archive SHA256. Compiler/SDK не устанавливались. PYTHONHOME/PATH/VSLANG/Git longpaths
+действовали только для процесса/children; глобальные settings и NuGet cache не подменялись.
+Native build1m43.8s,1532ninja steps, upstream warnings есть; нулевое число native warnings
+не заявляется. Extension .h/.inc и C# bindings не менялись: ABI1,48-byte descriptor,
+borrow/return/cleanup ownership сохранены.
+
+Bundled libSkiaSharp.dll9041920bytes и build.json обновлены согласованно.
+SHA256:229C431C90DC69FFBC1F4C4864025297D33535E5AE73E2F8254756E011E86C0C.
+Source output, source Debug и published Release native delivery имеют этот же hash.
+Прежняя DLL и failed/negative artifacts сохранены в ignored evidence.
+
+Source Debug и framework-dependent published Release каждый прошёл:
+
+| Probe | Результат на новой DLL |
+| --- | --- |
+| --interop-check | Official managed/native compatibility + TrueMoon ABI v1/48bytes, exit0 |
+| --interop --validation |18external VkImage readbacks, layout return/redraw/surface recreation/2Skia contexts, exit0 |
+| --interop-compose --validation |36GPU compositions/18leases, independent graphics pipelines, premultiplied alpha/text/shader-read return, exit0 |
+| --backend-compare --validation |Same Argentis tree raster/OpenGL/Vulkan,3viewports/scales1/1.5/2, selected RGBA/layout/input/retained redraw, exit0 |
+| Core+sync validation |0errors/0warnings в каждом GPU profile, включая teardown |
+
+Alloy1101/1101, Hosting154/154 и Editor1295/1295 каждый Debug/Release,
+failed/skipped0, exit0. Editor здесь unit/integration suite, не physical/native Play run.
+Solution nonincremental Debug build exit0,0errors/1555warnings;1422normalized distinct
+warning messages/files совпадают с предыдущим f.2 build, delta0.
+Имеющиеся tests повторены на restored4.155.0 graph; новые unit tests не добавлялись.
+Проверки не заменяют old physical input, K7 GDI soak, K8 device loss/VRAM/final matrix.
+
+Existing RunPackageSmoke теперь сохраняет unique binlog для каждого restore/build/
+publish/pack. Первый run прошёл36App processes, затем direct graph guard обнаружил
+устаревшее ожидание3packages. Actual graph содержит4: Alloy/Argentis/Rendering.Skia и
+Contracts для уже существующего IUiSessionFactory:IFactory. Runner теперь проверяет
+этот exact set, pinned versions/local source и по-прежнему запрещает App/Core/Cobalt/
+Hosting/platform. Production dependency graph не менялся. README direct consumer
+и прежнее утверждение renderer об отсутствии Contracts исправлены по actual API.
+Следующий run прошёл36App+4direct processes и ожидаемый missing-analyzer failure,
+но whole-run source hash audit отклонил README, обновлённый во время запуска.
+Это ошибка организации проверки; итоговый проход повторён на frozen sources,
+предыдущие failed directories не перезаписывались и не выдаются за complete proof.
+
+Final frozen runner exit0/Completed=true:10fresh local packages,36App+4direct cases,
+Debug/Release×build/publish, raster/OpenGL/Vulkan и Cobalt/MS DI/di-only compilation.
+Все runtime cases подтвердили native LoadedPath/SHA, fonts, tree/layout/input/theme/
+model behavior и cleanup; missing-analyzer compile control exit1 ожидаем. Native DLL
+в nupkg и outputs совпадает с installed source artifact. Direct graph — exact4packages,
+full graph10, zero ProjectReferences.67commands,27unique MSBuild binlogs;366producer
+source hashes сохранились. Version0.2.2.7-alpha.ui.20261107100039380. Это свежий
+NuGet proof новой DLL, отдельно от source/published interop/core+sync validation.
+
+Повторяемые команды из src (PowerShell; paths инструментов заменить при необходимости):
+
+```powershell
+$env:PYTHONHOME='C:/Program Files/LibreOffice/program/python-core-3.13.17'
+$env:PATH='C:/Program Files/LibreOffice/program;'+$env:PATH
+& ./ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 -SkiaSharpSourcePath TestResults/SkiaSharp41550-20261107/SkiaSharp -VisualStudioPath 'C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools' -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.17/bin/python.exe' -NinjaPath TestResults/SkiaSharp41550-20261107/tools/ninja/ninja.exe -InstallToRenderer
+dotnet restore TrueMoon.slnx '-bl:TestResults/SkiaSharp41550-20261107/solution-restore-{}.binlog'
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --no-restore -c Debug '-bl:TestResults/SkiaSharp41550-20261107/probe-final-Debug-{}.binlog'
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj --no-restore -c Release --self-contained false -o TestResults/SkiaSharp41550-20261107/published '-bl:TestResults/SkiaSharp41550-20261107/probe-publish-Release-{}.binlog'
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/EditorWindow-20261104/tools/validation).Path
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --interop-check
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --interop --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --interop-compose --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --backend-compare --validation
+# Те же4режима повторены для published/AlloyVulkanTest.dll.
+foreach($project in @('TrueMoon.Alloy.Tests','TrueMoon.Alloy.Hosting.Tests')) {
+  foreach($config in @('Debug','Release')) {
+    dotnet test "$project/$project.csproj" --no-restore -c $config --logger "trx;LogFileName=$project-$config.trx" --results-directory TestResults/SkiaSharp41550-20261107/Tests "-bl:TestResults/SkiaSharp41550-20261107/$project-$config-{}.binlog"
+  }
+}
+& ./ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 -RunDirectory (Join-Path (Get-Location) 'TestResults/AlloyPackages/SkiaSharp41550-20261107-frozen')
+foreach($config in @('Debug','Release')) {
+  dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj --no-restore -c $config --logger "trx;LogFileName=Editor-$config.trx" --results-directory TestResults/SkiaSharp41550-20261107/Tests "-bl:TestResults/SkiaSharp41550-20261107/Editor-$config-{}.binlog"
+}
+dotnet build TrueMoon.slnx --no-restore --no-incremental -c Debug -m '-bl:TestResults/SkiaSharp41550-20261107/solution-Debug-{}.binlog'
+```
+
+Raw log/TRX/binlog/source checkout/previous DLL сохранены в ignored
+TestResults/SkiaSharp41550-20261107; package attempts — TestResults/AlloyPackages/
+SkiaSharp41550-20261107*, каждый с отдельными summary/logs/feed/cache. Команды,
+outcomes и scope сохранены здесь независимо от хранения raw artifacts.
+Scope audit:1598прежних файлов побайтно сохранены,12bounded existing edits, новых
+versionable files0; production C#/project/dependency graph и пользовательский
+Directory.Packages.props сохранены. Docs40Markdown/1947valid local links, новых link
+failures0;247прежних distinct issues не относятся к update,7STATUS archives verbatim.
+Git diff --check passed. Full solution/Aether tests и performance не запускались.
+Editor physical/preview/Playing и Aether resource implementation не изменены;
+общая engine очередь ARCH1f.3 остаётся прежней. Старые reliability failures не
+объявляются устранёнными обновлением Skia.
+
 <a id="uia3c-native-numeric-2026-11-05"></a>
 ## UIA3c: native numeric follow-up — 2026-11-05
 

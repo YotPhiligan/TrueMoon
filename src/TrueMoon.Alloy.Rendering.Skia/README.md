@@ -2,13 +2,19 @@
 
 Проект хранит проверенную Windows x64 библиотеку с Vulkan interop extension:
 
-- `NativeAssets/win-x64/libSkiaSharp.dll` — SkiaSharp 4.154.0, ABI v1, около 9 MB.
+- `NativeAssets/win-x64/libSkiaSharp.dll` — SkiaSharp 4.155.0, ABI v1, около 9 MB.
 - `NativeAssets/win-x64/libSkiaSharp.build.json` — точные revisions и SHA-256 артефакта.
 - Исходники extension и инструменты: [NativeInterop](../ManualTests/AlloyVulkanTest/NativeInterop/README.md).
 
 DLL предназначена для хранения в Git вместе с проектом; исходники Skia и промежуточная native-сборка остаются в игнорируемом TestResults. Новый проект не требуется: native asset относится к существующему Skia renderer.
 
-Обновление2026-10-28: managed/native пара4.154.0 проверена source Debug и
+Обновление2026-11-07: DLL пересобрана из pinned SkiaSharp4.155.0/SkiaM155 с прежним
+extension. Source Debug/published Release прошли ABI v1/48bytes,18external readbacks,
+36GPU-композиций и raster/OpenGL/Vulkan comparison каждый; core+sync validation0/0.
+Прежняя154.x DLL отклоняется официальным gate, штатная155.x без extension — нашим ABI gate.
+[Точные revisions, проверки и ограничения](../docs/alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+Прежнее обновление2026-10-28: managed/native пара4.154.0 проверена source Debug и
 published Release: ABI, Vulkan image readback/return/redraw, внешняя GPU-композиция,
 raster/OpenGL/Vulkan comparison и native delivery в renderer nupkg. C ABI v1,
 48-byte descriptor и ownership сохранены. Старый native153.x отклоняется version
@@ -35,7 +41,7 @@ dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --inter
 dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --interop-compose
 ```
 
-Для существующего устройства игрового движка renderer принимает `VulkanHostContext` с borrowed instance/physical device/device/queue handles, family, API version, enabled extensions/features и host loader/completion callbacks. Он не создаёт и не уничтожает device/instance и не требует `VulkanDevice` в raw target. Подробный [пример и lifetime contract](../TrueMoon.Alloy.Hosting/README.md#устройство-чужого-движка); проверки — `--raw-host --validation` и `--raw-hud-window --validation`. В PLAN 2.1a прямая зависимость renderer-сборки от Platform.Silk удалена: прямые raw Vulkan/raster/OpenGL пути через `UiSession.Create` не требуют Platform.Silk или Hosting. После 2.1b нет и транзитивных TrueMoon.Core/Contracts/Windowing зависимостей через Alloy. `Silk.NET.Vulkan` bindings остаются явной backend-specific зависимостью Vulkan renderer, а не оконным API.
+Для существующего устройства игрового движка renderer принимает `VulkanHostContext` с borrowed instance/physical device/device/queue handles, family, API version, enabled extensions/features и host loader/completion callbacks. Он не создаёт и не уничтожает device/instance и не требует `VulkanDevice` в raw target. Подробный [пример и lifetime contract](../TrueMoon.Alloy.Hosting/README.md#устройство-чужого-движка); проверки — `--raw-host --validation` и `--raw-hud-window --validation`. В PLAN 2.1a прямая зависимость renderer-сборки от Platform.Silk удалена: прямые raw Vulkan/raster/OpenGL пути через `UiSession.Create` не требуют Platform.Silk или Hosting. После 2.1b нет транзитивных TrueMoon.Core/Windowing зависимостей через Alloy; текущий Contracts нужен для IUiSessionFactory/IFactory. `Silk.NET.Vulkan` bindings остаются явной backend-specific зависимостью Vulkan renderer, а не оконным API.
 
 ## Миграция alpha API: PLAN 2.1a
 
@@ -59,7 +65,7 @@ Native asset/ABI, lease/ownership и retirement в 2.1b не изменялис�
 
 `SkiaOpenGLRenderBackend`/`OpenGLUiTarget` работают через общие UiSession и Skia drawing/text adapter. Target заимствует существующий desktop GL context через resolver/current-context guard; Skia owns offscreen RGBA/Premul GPU surface. `PresentOpenGL` композитит кадр в host-owned RGBA8 framebuffer без CPU copy/swap; `clear: false` сохраняет scene. `ReadbackOpenGLImage` возвращает независимую CPU копию для assertions/export. Thread affinity, pending frame guard, zero-size suspend/restore и draw retry сохраняются.
 
-Хост owns context/FBO/attachments, обеспечивает current context и заново binds своё GL state после Skia. UI закрывают до уничтожения context. Standalone доступен через `UsePresentation(...UseSkiaOpenGL().UseSilkWindow())`; explicit swap и Closing disposal выполняет hosting. Текущая bundled4.154.0 DLL/ABI v1 проверена backend comparison на raster/OpenGL/Vulkan. Прежний App/standalone GL proof сохраняет собственную дату; legacy manual GL hosting probes ещё требуют устранить downcast borrowed DI alias. [Подключение и границы](../TrueMoon.Alloy.Hosting/README.md#opengl-hud-и-окно), [probes](../ManualTests/AlloyVulkanTest/README.md). Windows x64 desktop OpenGL; GLES/ANGLE и cross-context texture handoff не подтверждены.
+Хост owns context/FBO/attachments, обеспечивает current context и заново binds своё GL state после Skia. UI закрывают до уничтожения context. Standalone доступен через `UsePresentation(...UseSkiaOpenGL().UseSilkWindow())`; explicit swap и Closing disposal выполняет hosting. Текущая bundled4.155.0 DLL/ABI v1 проверена backend comparison на raster/OpenGL/Vulkan. Прежний App/standalone GL proof сохраняет собственную дату; legacy manual GL hosting probes ещё требуют устранить downcast borrowed DI alias. [Подключение и границы](../TrueMoon.Alloy.Hosting/README.md#opengl-hud-и-окно), [probes](../ManualTests/AlloyVulkanTest/README.md). Windows x64 desktop OpenGL; GLES/ANGLE и cross-context texture handoff не подтверждены.
 
 ## CPU raster backend
 
@@ -84,19 +90,20 @@ Native asset/ABI, lease/ownership и retirement в 2.1b не изменялис�
 При первом запуске:
 
 ```powershell
-git clone --depth 1 --branch v4.154.0 https://github.com/mono/SkiaSharp.git TestResults/VulkanInterop/SkiaSharp-4.154.0
+git clone --depth 1 --branch release/4.155.0 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41550-20261107/SkiaSharp
+git -C TestResults/SkiaSharp41550-20261107/SkiaSharp checkout --detach d25e7fa628a2576e50ecc42004cc4fd03c6657f5
 ```
 
 Повторная сборка с используемыми в этой машине инструментами:
 
 ```powershell
-$env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.15'
+$env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.17'
 $env:PATH = 'C:/Program Files/LibreOffice/program;' + $env:PATH
 pwsh -NoProfile -File ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 `
-  -SkiaSharpSourcePath TestResults/VulkanInterop/SkiaSharp-4.154.0 `
-  -VisualStudioPath C:/BuildTools/TrueMoonVS2022 `
-  -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.15/bin/python.exe' `
-  -NinjaPath TestResults/VulkanInterop/tools/ninja/ninja.exe -InstallToRenderer
+  -SkiaSharpSourcePath TestResults/SkiaSharp41550-20261107/SkiaSharp `
+  -VisualStudioPath 'C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools' `
+  -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.17/bin/python.exe' `
+  -NinjaPath TestResults/SkiaSharp41550-20261107/tools/ninja/ninja.exe -InstallToRenderer
 ```
 
 Для другого Python/компилятора замените пути; PYTHONHOME нужен только для данного bundled Python. `-CheckOnly` проверяет prerequisites и revisions без сборки/копирования.
@@ -105,7 +112,7 @@ pwsh -NoProfile -File ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInter
 
 В4.154 upstream удалил gitlink externals/depot_tools. Скрипт всегда получает
 externals/skia и добавляет depot_tools только когда он объявлен pinned .gitmodules;
-старые source pins сохраняются. Нельзя подключать прежнюю DLL153.x к managed154.x
+старые source pins сохраняются. Нельзя подключать прежнюю DLL154.x к managed155.x
 или обходить официальный SkiaSharp version gate.
 
 После обновления выполнить build, ABI probe и GPU probe из раздела выше. Для core/synchronization validation:
