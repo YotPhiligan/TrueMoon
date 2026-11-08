@@ -1,0 +1,140 @@
+using System.Buffers;
+using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text.Json;
+using TrueMoon;
+using TrueMoon.Dependencies;
+using TrueMoon.Nom;
+using TrueMoon.Nom.Catalog;
+using TrueMoon.Nom.Hosting;
+using TrueMoon.Nom.Resources;
+
+var report = Path.GetFullPath(args[0]);
+var root = Path.Combine(Path.GetDirectoryName(report)!, "buffer-store-" + Path.GetFileNameWithoutExtension(report));
+var checks = new List<string>();
+void Check(bool value, string name) { if (!value) throw new InvalidDataException(name); checks.Add(name); }
+async Task Reject<T>(Func<Task> action, string name) where T : Exception
+{ try { await action(); } catch (T) { checks.Add(name); return; } throw new InvalidDataException(name); }
+var sourceId = Guid.NewGuid(); var kindId = Guid.NewGuid();
+AssetRecord Row(string name) => new(Guid.NewGuid(), sourceId, kindId, name, []);
+var app = App.Build(c => c.UseNom());
+var factory = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
+var host = app.Services.Resolve<NomStoreHost>()!;
+Check(host.ActiveStoreCount == 0 && !Directory.Exists(root), "App has no implicit root");
+var open = new OpenAssetStoreArguments(root, Guid.NewGuid(), Guid.NewGuid(), AssetStoreOpenMode.Create);
+var store = factory.Create(open);
+try
+{
+    var bytes = new byte[128 * 1024 + 29]; new Random(8124).NextBytes(bytes);
+    var expected = bytes.AsSpan(7, bytes.Length - 19).ToArray();
+    var row = Row("buffer/memory"); var manager = new BorrowedMemory(bytes);
+    ReadOnlyMemory<byte> view = manager.Memory.Slice(7, expected.Length);
+    var ticket = await store.ReserveResourcesAsync(0, [new AssetResourceWrite(row, expected.Length, MaximumBytes: expected.Length)]);
+    var receipt = await store.PublishResourceAsync(ticket, row.Id, view);
+    var version = receipt.Resources.Single();
+    Check(receipt.Generation == 1 && version.Digest == Convert.ToHexStringLower(SHA256.HashData(expected)), "nonarray sliced memory publishes exact digest");
+    Check(!manager.Disposed && manager.PinCalls == 0, "publication borrows nonpinnable owner");
+    var targetBytes = Enumerable.Repeat((byte)0xa5, expected.Length + 31).ToArray();
+    using (var target = new BorrowedMemory(targetBytes))
+    {
+        var count = await store.ReadResourceAsync(version, target.Memory.Slice(5));
+        Check(count == expected.Length && targetBytes.AsSpan(5, count).SequenceEqual(expected), "nonarray destination receives whole exact resource");
+        Check(targetBytes.AsSpan(0, 5).ToArray().All(b => b == 0xa5) && targetBytes.AsSpan(5 + count).ToArray().All(b => b == 0xa5) && target.PinCalls == 0 && !target.Disposed, "destination prefix tail and owner preserved");
+    }
+    var detached = await store.LoadResourceAsync(version, expected.Length);
+    Check(detached.Span.SequenceEqual(expected), "bounded detached load equals input");
+    await using (var read = await store.OpenResourceAsync(version))
+    {
+        var first = new byte[17]; read.ReadExactly(first.AsSpan());
+        Check(first.AsSpan().SequenceEqual(expected.AsSpan(0, 17)), "verified stream writable Span remains compatible");
+    }
+    ((IDisposable)manager).Dispose();
+    var replay = await store.PublishResourceAsync(ticket, row.Id, view);
+    Check(replay.Generation == receipt.Generation && replay.Resources.Single() == version, "committed memory replay never reads disposed backing view");
+
+    var left = Row("buffer/left"); var right = Row("buffer/right");
+    var batchTicket = await store.ReserveResourcesAsync(1, [new AssetResourceWrite(left), new AssetResourceWrite(right)]);
+    var inputs = new Dictionary<Guid, ReadOnlyMemory<byte>> { [left.Id] = bytes.AsMemory(2, 80), [right.Id] = bytes.AsMemory(9, 65) };
+    var batchTask = store.PublishResourcesAsync(batchTicket, inputs); inputs.Clear();
+    var batch = await batchTask;
+    Check(batch.Generation == 2 && batch.Resources.Length == 2, "batch captures descriptors and commits whole set");
+    Check((await store.LoadResourceAsync(batch.Resources.Single(v => v.AssetId == left.Id), 80)).Span.SequenceEqual(bytes.AsSpan(2, 80)) &&
+        (await store.LoadResourceAsync(batch.Resources.Single(v => v.AssetId == right.Id), 65)).Span.SequenceEqual(bytes.AsSpan(9, 65)), "overlapping readonly views remain independent resources");
+    await Reject<InvalidDataException>(() => store.PublishResourceAsync(batchTicket, left.Id, view), "single helper rejects committed multi ticket without reading disposed memory");
+
+    var copyRow = Row("buffer/span-copy"); var original = expected.ToArray();
+    var copyTicket = await store.ReserveResourcesAsync(2, [new AssetResourceWrite(copyRow)]);
+    var copying = store.PublishResourceCopyAsync(copyTicket, copyRow.Id, original.AsSpan(), original.Length);
+    original.AsSpan().Fill(0x5c); var copied = (await copying).Resources.Single();
+    Check((await store.LoadResourceAsync(copied, expected.Length)).Span.SequenceEqual(expected), "writable Span snapshot finishes before Task return");
+    var copyReplay = await store.PublishResourceCopyAsync(copyTicket, copyRow.Id, ReadOnlySpan<byte>.Empty, 1);
+    Check(copyReplay.Resources.Single() == copied, "readonly Span copy replay resolves committed receipt");
+
+    var mutable = Row("buffer/writable-memory"); Memory<byte> writable = expected.AsMemory();
+    var mutableTicket = await store.ReserveResourcesAsync(3, [new AssetResourceWrite(mutable)]);
+    var mutableVersion = (await store.PublishResourceAsync(mutableTicket, mutable.Id, writable)).Resources.Single();
+    Check(mutableVersion.Digest == version.Digest && writable.Span.SequenceEqual(expected), "writable Memory input converts without mutation");
+    var emptyRow = Row("buffer/empty"); var emptyTicket = await store.ReserveResourcesAsync(4, [new AssetResourceWrite(emptyRow, 0)]);
+    var empty = (await store.PublishResourceAsync(emptyTicket, emptyRow.Id, ReadOnlyMemory<byte>.Empty)).Resources.Single();
+    Check((await store.LoadResourceAsync(empty, 1)).IsEmpty && await store.ReadResourceAsync(empty, Memory<byte>.Empty) == 0 && empty.Digest == Convert.ToHexStringLower(SHA256.HashData([])), "empty resource still uses verified identity");
+
+    var sentinel = Enumerable.Repeat((byte)0x33, expected.Length - 1).ToArray();
+    await Reject<ArgumentException>(() => store.ReadResourceAsync(version, sentinel), "short destination rejected");
+    Check(sentinel.All(b => b == 0x33), "failed read admission preserves destination");
+    await Reject<ArgumentException>(() => store.LoadResourceAsync(version, expected.Length - 1), "load one byte over explicit budget rejected");
+    await Reject<ArgumentOutOfRangeException>(() => store.LoadResourceAsync(version, 0), "load requires positive budget");
+    await Reject<ArgumentException>(() => store.PublishResourceCopyAsync(copyTicket, copyRow.Id, expected.AsSpan(), expected.Length - 1), "copy one byte over budget rejected before replay");
+    await Reject<ArgumentOutOfRangeException>(() => store.PublishResourceCopyAsync(copyTicket, copyRow.Id, ReadOnlySpan<byte>.Empty, 0), "copy requires positive budget even empty");
+    using (var cancelled = new CancellationTokenSource())
+    {
+        cancelled.Cancel();
+        await Reject<OperationCanceledException>(() => store.PublishResourceAsync(ticket, row.Id, view, cancelled.Token), "cancel before memory publication does not read source");
+        await Reject<OperationCanceledException>(() => store.ReadResourceAsync(version, new byte[expected.Length], cancelled.Token), "cancel before read is terminal failure");
+        await Reject<OperationCanceledException>(() => store.LoadResourceAsync(version, expected.Length, cancelled.Token), "cancel before detached load is terminal failure");
+    }
+    Check(store.ContentGeneration == 5 && (await store.LookupResourceOperationAsync(copyTicket)).Resources.Single() == copied, "rejections preserve catalog and durable outcomes");
+
+    var replacement = new AssetRecord(row.Id, row.Source, row.Kind, row.Locator, []);
+    var replacementTicket = await store.ReserveResourcesAsync(5, [new AssetResourceWrite(replacement)]);
+    await store.PublishResourceAsync(replacementTicket, row.Id, new byte[] { 1, 2, 3 });
+    await store.PruneResourceOperationsAsync(replacementTicket.Sequence);
+    var plan = await store.PlanGarbageCollectionAsync();
+    var gc = await store.CollectGarbageAsync(plan);
+    Check(!gc.CleanupPending && detached.Span.SequenceEqual(expected), "detached bytes survive reimport and offline GC");
+
+    // End-to-end IO workload, not a microbenchmark or a portable performance gate.
+    var workload = new byte[16 * 1024 * 1024]; new Random(8125).NextBytes(workload);
+    var workloadRow = Row("buffer/workload"); var measurements = new List<object>();
+    foreach (var mode in new[] { "Stream", "Memory", "SpanCopy" })
+    {
+        for (var iteration = -1; iteration < 3; iteration++)
+        {
+            var write = await store.ReserveResourcesAsync(store.ContentGeneration, [new AssetResourceWrite(workloadRow, workload.Length, MaximumBytes: workload.Length)]);
+            var allocated = GC.GetTotalAllocatedBytes(true); var watch = Stopwatch.StartNew(); AssetWriteReceipt result;
+            if (mode == "Stream") { using var stream = new MemoryStream(workload, false); result = await store.PublishResourcesAsync(write, new Dictionary<Guid, Stream> { [workloadRow.Id] = stream }); }
+            else if (mode == "Memory") result = await store.PublishResourceAsync(write, workloadRow.Id, workload.AsMemory());
+            else result = await store.PublishResourceCopyAsync(write, workloadRow.Id, workload.AsSpan(), workload.Length);
+            watch.Stop(); var allocation = GC.GetTotalAllocatedBytes(true) - allocated;
+            if (iteration >= 0) measurements.Add(new { Mode = mode, Bytes = workload.Length, Iteration = iteration, Milliseconds = watch.Elapsed.TotalMilliseconds, AllocatedBytes = allocation });
+            if (result.Resources.Single().Length != workload.Length) throw new InvalidDataException("workload publication");
+        }
+    }
+    Check(measurements.Count == 9, "three publication paths measured on same bounded IO workload");
+    await store.DisposeAsync(); await app.DisposeAsync();
+    Check(host.ActiveStoreCount == 0 && host.IsReleased && detached.Span.SequenceEqual(expected), "detached bytes survive actual store and App disposal");
+    var module = typeof(AssetStoreBufferExtensions).Assembly;
+    File.WriteAllText(report, JsonSerializer.Serialize(new { Completed = true, Consumer = typeof(Program).Assembly.GetName().Name,
+        Checks = checks, Measurements = measurements, ModulePath = module.Location,
+        ModuleSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(module.Location))) }, new JsonSerializerOptions { WriteIndented = true }));
+    Console.WriteLine("Public buffer consumer passed: " + checks.Count);
+}
+finally { await store.DisposeAsync(); await app.DisposeAsync(); }
+
+sealed class BorrowedMemory(byte[] bytes) : MemoryManager<byte>
+{
+    internal bool Disposed; internal int PinCalls;
+    public override Span<byte> GetSpan() { ObjectDisposedException.ThrowIf(Disposed, this); return bytes; }
+    public override MemoryHandle Pin(int elementIndex = 0) { PinCalls++; throw new NotSupportedException("This owner deliberately cannot pin."); }
+    public override void Unpin() => throw new NotSupportedException();
+    protected override void Dispose(bool disposing) { Disposed = true; }
+}

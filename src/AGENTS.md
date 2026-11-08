@@ -16,6 +16,7 @@
 - Mithril/units/process lifecycle: `docs/mithril/`.
 - Alloy/Argentis/rendering/platform/Hosting: `docs/alloy/`.
 - Aether/engine/editor: `docs/engine/`.
+- Nom/asset storage: `docs/nom/`.
 
 Для работы над приложением `TrueMoon.Aether.Editor` дополнительно прочитайте
 [прикладной план редактора](docs/engine/EDITOR_PLAN.md). Детальные ED1–ED8 задачи

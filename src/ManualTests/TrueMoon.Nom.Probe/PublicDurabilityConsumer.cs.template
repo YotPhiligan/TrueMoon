@@ -1,0 +1,193 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+using TrueMoon;
+using TrueMoon.Dependencies;
+using TrueMoon.Nom;
+using TrueMoon.Nom.Backup;
+using TrueMoon.Nom.Catalog;
+using TrueMoon.Nom.Hosting;
+using TrueMoon.Nom.Resources;
+
+namespace NomPhysicalConsumer;
+
+// Copied into an external PackageReference-only project; no friend/internal API.
+internal static class Program
+{
+    private const long MiB = 1024 * 1024;
+    private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
+    private static readonly List<string> Checks = [];
+    private static void Check(bool condition, string name)
+    { if (!condition) throw new InvalidDataException(name); Checks.Add(name); }
+
+    public static async Task<int> Main(string[] args)
+    {
+        if (args.Length != 4 || args[0] is not ("guard" or "disk-full")) return 64;
+        var report = Path.GetFullPath(args[3]);
+        if (File.Exists(report) || !Directory.Exists(Path.GetDirectoryName(report))) return 64;
+        var cases = new List<object>(); string? failure = null;
+        try
+        {
+            if (args[0] == "guard")
+            {
+                Check(ContainsDiskFull(new IOException("classification only", unchecked((int)0x80070070))), "DiskFull112Classified");
+                Check(ContainsDiskFull(new AggregateException(new IOException("classification only", unchecked((int)0x80070027)))), "NestedDiskFull39Classified");
+                Check(!ContainsDiskFull(new IOException("ordinary IO")) && !ContainsDiskFull(new InvalidOperationException("not disk full")), "OtherErrorsCannotSatisfyDiskFullGate");
+                foreach (var root in new[] { args[1], Path.GetPathRoot(args[1])!, @"\\server\share\", @"C:\ordinary\folder" })
+                {
+                    var rejected = false; try { ValidateVolume(root, args[2]); } catch (InvalidDataException) { rejected = true; }
+                    Check(rejected, "UnownedOrHostVolumeRejectedBeforeWrite");
+                }
+            }
+            else
+            {
+                var volume = ValidateVolume(args[1], args[2]);
+                Check(!string.Equals(Path.GetPathRoot(report), volume.Name, StringComparison.OrdinalIgnoreCase), "ReportOutsideFilledVolume");
+                await using var app = App.Build(c => c.UseNom()); await app.StartAsync();
+                var opens = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>() ?? throw new InvalidOperationException("Missing open factory.");
+                var restores = app.Services.Resolve<IFactory<IProjectAssetStore, RestoreAssetStoreArguments>>() ?? throw new InvalidOperationException("Missing restore factory.");
+                var host = app.Services.Resolve<NomStoreHost>() ?? throw new InvalidOperationException("Missing host.");
+                foreach (var phase in new[] { "staging", "catalog-append", "checkpoint", "export", "restore" })
+                {
+                    cases.Add(await DiskFullCase(volume.Name, args[2], phase, opens, restores));
+                    Check(host.ActiveStoreCount == 0, "CaseReleasesActualStoreOwners");
+                }
+                await app.StopAsync(); Check(host.IsReleased, "AppReleasesActualOwnersAfterDiskFull");
+            }
+        }
+        catch (Exception error) { failure = error.ToString(); Console.Error.WriteLine(error); }
+        var module = typeof(IProjectAssetStore).Assembly;
+        await using var file = new FileStream(report, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        await JsonSerializer.SerializeAsync(file, new
+        {
+            Completed = failure == null, Kind = args[0], Checks, Cases = cases, Failure = failure,
+            PhysicalDiskFullTested = args[0] == "disk-full" && failure == null && cases.Count == 5,
+            PowerLossTested = false, Consumer = typeof(Program).Assembly.GetName().Name,
+            ModuleSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(module.Location)))
+        }, Json); await file.FlushAsync(); file.Flush(true);
+        return failure == null ? 0 : 1;
+    }
+
+    private static DriveInfo ValidateVolume(string root, string token)
+    {
+        Check(OperatingSystem.IsWindows() && token.Length == 32 && token.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'), "ValidWindowsVolumeToken");
+        Check(root.Length == 3 && char.IsAsciiLetter(root[0]) && root[1..] == @":\", "OnlyDriveRootAccepted");
+        var drive = new DriveInfo(root);
+        Check(drive.IsReady && drive.DriveFormat == "NTFS" && drive.TotalSize is >= 64 * MiB and <= 128 * MiB && drive.VolumeLabel == "NOM7_" + token[..24], "SmallOwnedNtfsVolumeRequired");
+        var marker = Path.Combine(root, ".nom-durability-owner.json");
+        Check(File.Exists(marker) && new FileInfo(marker).Length is > 0 and <= 4096 && (File.GetAttributes(marker) & FileAttributes.ReparsePoint) == 0, "OwnedVolumeMarkerRequired");
+        using var json = JsonDocument.Parse(File.ReadAllBytes(marker));
+        Check(json.RootElement.GetProperty("Token").GetString() == token && json.RootElement.GetProperty("VolumeRoot").GetString() == root, "VolumeMarkerIdentityRequired");
+        return drive;
+    }
+
+    private static async Task<object> DiskFullCase(string volume, string token, string phase,
+        IFactory<IProjectAssetStore, OpenAssetStoreArguments> opens, IFactory<IProjectAssetStore, RestoreAssetStoreArguments> restores)
+    {
+        ValidateVolume(volume, token);
+        var work = Path.Combine(volume, "case-" + phase + "-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(work);
+        var root = Path.Combine(work, "source"); var backup = Path.Combine(work, "backup"); var destination = Path.Combine(work, "restore");
+        var filler = Path.Combine(work, "owned-filler.bin"); var project = Guid.NewGuid(); var identity = Guid.NewGuid(); var oldId = Guid.NewGuid(); var candidateId = Guid.NewGuid();
+        var bytes = Enumerable.Range(0, 32785).Select(i => (byte)(i * 73 + 19)).ToArray();
+        var oldRecord = new AssetRecord(oldId, Guid.NewGuid(), Guid.NewGuid(), "durability/old", new byte[48 * 1024]);
+        var candidate = new AssetRecord(candidateId, oldRecord.Source, oldRecord.Kind, "durability/candidate", new byte[48 * 1024]);
+        IProjectAssetStore? store = null; AssetWriteTicket? ticket = null; AssetResourceVersion old; Exception? observed = null; object? filled = null; var metadataAttempts = 0; FileStream? fillerHandle = null;
+        try
+        {
+            store = opens.Create(new(root, project, identity, AssetStoreOpenMode.Create));
+            var seed = await store.ReserveResourcesAsync(0, [new(oldRecord, bytes.Length, MaximumBytes: bytes.Length)]);
+            using (var source = new MemoryStream(bytes, false)) old = (await store.PublishResourcesAsync(seed, new Dictionary<Guid, Stream> { [oldId] = source })).Resources.Single();
+            if (phase == "staging") ticket = await store.ReserveResourcesAsync(1, [new(candidate, MiB, MaximumBytes: MiB)]);
+            if (phase == "restore") { await store.ExportBackupAsync(backup); await store.DisposeAsync(); store = null; }
+            try
+            {
+                (fillerHandle, filled) = FillOwnedVolume(volume, token, filler);
+                try
+                {
+                    switch (phase)
+                    {
+                        case "staging":
+                            using (var source = new MemoryStream(new byte[MiB], false)) await store!.PublishResourcesAsync(ticket!, new Dictionary<Guid, Stream> { [candidateId] = source });
+                            break;
+                        case "catalog-append":
+                            // NTFS can let an existing file consume already allocated space at free=0.
+                            // Exhaust that space through real metadata IO without publishing content.
+                            for (metadataAttempts = 1; metadataAttempts <= 16; metadataAttempts++)
+                            {
+                                ticket = await store!.ReserveResourcesAsync(1, [new(candidate, 1, MaximumBytes: 1)]);
+                                await store.AbortResourceOperationAsync(ticket);
+                            }
+                            break;
+                        case "checkpoint": await store!.CompactAsync(); break;
+                        case "export": await store!.ExportBackupAsync(backup); break;
+                        case "restore": await using (var unexpected = restores.Create(new(backup, destination, project, identity))) { } break;
+                    }
+                }
+                catch (Exception error) when (ContainsDiskFull(error)) { observed = error; }
+            }
+            finally
+            {
+                // Keep the filler exclusively owned until deletion-on-close, so a scanner cannot
+                // acquire a shared-delete handle between fill and release. Free before recovery.
+                ValidateVolume(volume, token);
+                if (fillerHandle != null) { fillerHandle.Dispose(); fillerHandle = null; }
+                Check(!File.Exists(filler), "OwnedFillerActuallyRemoved");
+                var released = System.Diagnostics.Stopwatch.StartNew();
+                while (new DriveInfo(volume).AvailableFreeSpace < 16 * MiB && released.Elapsed < TimeSpan.FromSeconds(15)) await Task.Delay(50);
+                Check(new DriveInfo(volume).AvailableFreeSpace >= 16 * MiB, "FillerFreeSpaceRecoveredBeforeReopen");
+            }
+            Check(observed != null && filled != null, phase + ":RealStorageDiskFullRequired");
+            if (store != null) { await store.DisposeAsync(); store = null; }
+            Check(phase != "restore" || !Directory.Exists(destination), "FailedRestoreNotPublished");
+            Check(phase != "export" || !Directory.Exists(backup), "FailedExportNotPublished");
+            store = opens.Create(new(root, project, identity, AssetStoreOpenMode.Open));
+            Check(store.ProjectId == project && store.StoreId == identity && store.ContentGeneration == 1 && await store.FindResourceAsync(oldId) == old && await store.FindResourceAsync(candidateId) == null,
+                phase + ":WholeOldStateAfterReopen");
+            await Exact(store, old, bytes);
+            var durableSeed = await store.LookupResourceOperationAsync(seed);
+            Check(durableSeed.Status == "committed" && durableSeed.Generation == 1 && durableSeed.Resources.SequenceEqual([old]), phase + ":AcknowledgedOutcomeSurvivesDiskFull");
+            if (ticket != null) Check((await store.LookupResourceOperationAsync(ticket)).Status == "aborted", "LastIssuedOperationResolvedAbortedWithoutHead");
+            if (phase == "checkpoint") { var cp = await store.CompactAsync(); Check(cp.Generation == 1 && cp.Changed && !cp.CleanupPending, "CheckpointRetryAfterFreeSpace"); }
+            if (phase is "export" or "restore")
+            {
+                var readyBackup = phase == "restore" ? backup : Path.Combine(work, "backup-retry");
+                if (phase == "export") await store.ExportBackupAsync(readyBackup);
+                await using var restored = restores.Create(new(readyBackup, Path.Combine(work, "restore-retry"), project, identity));
+                Check(restored.ContentGeneration == 1 && await restored.FindResourceAsync(oldId) == old, "TransferRetryPreservesExactState"); await Exact(restored, old, bytes);
+            }
+            var retryRecord = new AssetRecord(candidate.Id, candidate.Source, candidate.Kind, candidate.Locator, [9]);
+            var retry = await store.ReserveResourcesAsync(1, [new(retryRecord, 1, MaximumBytes: 1)]);
+            using (var source = new MemoryStream([7], false)) { var committed = await store.PublishResourcesAsync(retry, new Dictionary<Guid, Stream> { [candidateId] = source }); Check(committed.Generation == 2, "AppendLivenessAfterDiskFullRecovery"); }
+            await Exact(store, old, bytes);
+            return new { Phase = phase, MetadataAttempts = metadataAttempts, Filler = filled, StorageException = observed!.ToString(), RecoveredGeneration = store.ContentGeneration, OldBytesVerified = true };
+        }
+        finally { if (store != null) await store.DisposeAsync(); }
+    }
+
+    private static (FileStream Handle, object Observation) FillOwnedVolume(string volume, string token, string filler)
+    {
+        var drive = ValidateVolume(volume, token); var before = drive.AvailableFreeSpace;
+        var stream = new FileStream(filler, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.WriteThrough | FileOptions.DeleteOnClose);
+        try
+        {
+        Check((File.GetAttributes(filler) & (FileAttributes.Compressed | FileAttributes.SparseFile | FileAttributes.ReparsePoint)) == 0, "FillerUsesRealAllocatedNonSparseBytes");
+        var block = Enumerable.Range(0, 65536).Select(i => (byte)(i * 31 + 17)).ToArray(); var size = block.Length; long written = 0; IOException? diskFull = null;
+        while (written <= 128 * MiB)
+        {
+            try { stream.Write(block, 0, size); written += size; }
+            catch (IOException error) when (ContainsDiskFull(error)) { diskFull = error; if (size == 4096) break; size = 4096; }
+        }
+        Check(diskFull != null && written > MiB && drive.AvailableFreeSpace < 65536, "RealOsDiskFullOnLimitedVolume");
+        return (stream, new { BeforeFreeBytes = before, AfterFreeBytes = drive.AvailableFreeSpace, WrittenBytes = written, ErrorHResult = diskFull!.HResult, LowWord = diskFull.HResult & 0xffff });
+        }
+        catch { stream.Dispose(); throw; }
+    }
+    private static bool ContainsDiskFull(Exception error) =>
+        error is IOException && (error.HResult & 0xffff) is 39 or 112 ||
+        error is AggregateException aggregate && aggregate.InnerExceptions.Any(ContainsDiskFull) || error.InnerException is { } inner && ContainsDiskFull(inner);
+    private static async Task Exact(IProjectAssetStore store, AssetResourceVersion version, byte[] bytes)
+    {
+        await using var stream = await store.OpenResourceAsync(version); var offset = 0; var buffer = new byte[65536];
+        while (true) { var count = await stream.ReadAsync(buffer); if (count == 0) break; Check(offset <= bytes.Length - count && buffer.AsSpan(0, count).SequenceEqual(bytes.AsSpan(offset, count)), "ExactBytesAfterDiskFull"); offset += count; }
+        Check(offset == bytes.Length && stream.Length == bytes.Length, "ExactLengthAndEofAfterDiskFull");
+    }
+}

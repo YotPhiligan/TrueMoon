@@ -1,5 +1,16 @@
 # TrueMoon: общий статус
 
+**Nom2026-11-08:** [исходники организованы по подсистемам](nom/STRUCTURE.md#nom-source-layout-2026-11-08),
+namespace соответствует пути. Public types перенесены вместе с реализациями;
+alpha consumers требуют новых imports и пересборки. Формат/lifetime/dependencies
+сохранены. Nom862/862 каждый D/R,120functional groups/profile source/published,
+App34/Buffer28/Raw31checks D/R и fresh4package/4consumer delivery прошли. Full solution
+nonincremental Debug0errors/1560warnings, Nom/Nom.Tests0warnings.
+[Scope/команды](nom/HISTORY.md#nom-structure-2026-11-08). NOM8 готов; далее g.2 после
+g.1 по согласованию engine. VM verification отложена, hardware power-off исключён;
+UI/Editor/release очереди сохранены.
+
+
 Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
 targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
 1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
@@ -33,6 +44,7 @@ Preview/Editor Play/latency и общая release acceptance этим срезо
 | [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
 | [Alloy/Argentis](alloy/STATUS.md) | Window, compact typed editors, numeric gestures, styles/states; native pointer fix; SkiaSharp/native4.155.0 с source/published/fresh-package proof | Input acceptance, PA8c.0 baseline качества; hardware/final alpha отдельно |
 | [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build/source tracking; ECS primitive pipeline; f.0/f.1 CPU contracts и f.2 resource owners/leases/atomic reload/Vulkan upload с package proof | [ARCH1f.3 owned snapshots](engine/PLAN.md#arch1f-rendering), затем f.4 surface consumer/Playing fence; checkpoint/UI/Observer/reliability сохранены |
+| [Nom/storage](nom/STATUS.md) | NOM0–NOM8: KV/CAS/App, snapshots/GC/backup, byte/raw API; subsystem namespaces;862cases D/R и4consumer fresh-package scope | Engine g.2 после g.1 по согласованию; VM verification отложена, hardware power-off исключён; другие OS/RID/modes и release gates отдельно |
 
 ## Общие этапы
 
@@ -48,6 +60,15 @@ G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе
 
 | Дата и scope | Последний относящийся результат | Где подробности |
 | --- | --- | --- |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
 | 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
 | 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
 | 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
@@ -60,13 +81,16 @@ G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе
 | 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
 | Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
 
-Последний nonincremental solution Debug build —7ноября0errors/1555warnings.
+Последний относящийся nonincremental solution Debug build —8ноября0errors/1560warnings (Nom source organization); Nom warnings0. Это предыдущий build, не новый запуск при подготовке коммита.
 Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
 ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
 а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
 
 ## Общие блокеры и неопределённости
 
+- Nom: actual guest-VM crash verification отложена пользователем; harness сохранён,
+  но actual trials0. Hardware power-off исключён из текущего acceptance. Прежний
+  isolated-volume disk-full проверен отдельным UAC запуском; [scope](nom/DURABILITY.md).
 - Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
   исходниках; focused replays прошли, причина не установлена. Это открытый
   reliability result, не доказанная регрессия ECS и не исправленный timeout.

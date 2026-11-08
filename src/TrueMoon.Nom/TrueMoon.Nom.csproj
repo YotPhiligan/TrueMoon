@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <Description>TrueMoon asset catalog with transactional KV metadata, streamed immutable resources, exact snapshots and verified backup/restore. Alpha API.</Description>
+    <IsPackable>true</IsPackable>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);assets;storage;streaming;key-value</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+
+    <ProjectReference Include="../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
+    <InternalsVisibleTo Include="TrueMoon.Nom.Probe" />
+    <InternalsVisibleTo Include="TrueMoon.Nom.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="$(MSBuildThisFileDirectory)..\..\README.md" />
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+  </ItemGroup>
+</Project>

@@ -7,7 +7,7 @@
 
 <a id="current-roadmap"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-07
+## Текущая очередь — актуализация 2026-11-08
 
 Основание: запрос общей ревизии после db5ea97, текущие PLAN/STATUS и адресное чтение
 Editor preview/Transform/Observer. Новых execution results эта запись не создаёт.
@@ -28,12 +28,28 @@ F.1 CPU definitions/schemas/validation и canonical codec реализованы
 f.2 добавляет [resource owners/leases/preparation](engine/RENDER_RESOURCES.md), bounded
 catalog/device lifecycle, atomic World rebind и standalone Vulkan upload/readback.
 Ближайшее продолжение — f.3 owned render snapshots, затем f.4 surface consumer/Playing fence.
-Детали этапов только в engine плане; массовая миграция не назначена. Маршрут ежедневного Editor,
+Самостоятельный модуль **TrueMoon.Nom** хранит assets вне Aether. Решение пользователя
+2026-11-07 обновлено: **полностью заменить LiteDB собственной реализацией** —
+transactional KV catalog, append-only journal, bounded key index и streamed immutable
+CAS bytes. [Решение](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07),
+[единственная очередь NOM0–NOM8](nom/PLAN.md#nom-own-queue).
+NOM0/1 format/KV и [NOM2 App/resource cutover](nom/CATALOG.md#nom2-catalog-2026-11-08)
+проверены: собственный backend используется UseNom, LiteDB source/tests/packages/vendor
+probes удалены. NOM3 deterministic IO/process acceptance проверена2026-11-08:
+[426cases/65groups и lifecycle fixes](nom/RECOVERY_ACCEPTANCE.md). Subsequent UAC proof
+подтвердил bounded real-volume disk-full/recovery. Actual VM verification отложена
+пользователем; аппаратный power-off исключён из текущего scope.
+NOM4 checkpoint/offline compaction и [NOM5 indexes/snapshots/pins/offline GC](nom/RETENTION.md) реализованы и проверены в IO/process scope; NOM6 [backup/restore](nom/BACKUP.md) и [limits/workload](nom/PERFORMANCE.md) проверены; [NOM7 package delivery/independent consumers](nom/DELIVERY.md) проверен в local Windows x64 portable/win-x64 framework-dependent scope. External publish/остальные платформы и physical gates открыты. Vendor fix/upgrade/worker и optional
+LiteDB provider отменены. Прежние AST результаты — история; текущие proofs и scope —
+[Nom STATUS](nom/STATUS.md). Engine f.3→f.4 и importer g.1 сохраняются.
+
+Детали storage — в Nom плане, остальные этапы — в engine плане; массовая миграция не назначена. Маршрут ежедневного Editor,
 performance и release сохраняются ниже как независимые варианты продолжения.
 
 | Направление | Следующий результат | План владельца |
 | --- | --- | --- |
 | ECS и отображение, текущий запрос | После f.2 resources — camera/mesh/material extraction и bounded owned snapshots; затем surface renderer/Playing fence | [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering), [реализованный resource API](engine/RENDER_RESOURCES.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
+| Самостоятельное хранение ассетов | NOM0–6 IO/process scope и NOM7 local4package delivery/independent consumers проверены; далее engine g.2 bridge по согласованию, другие OS/RID/modes и physical/release gates отдельно; [disk-full/recovery](nom/DURABILITY.md) после UAC прошёл5cases/D/R; [VM harness](nom/VM_CRASH.md) сохранён, actual verification отложена; [NOM8a/b buffer/raw API](nom/BUFFER_API.md#nom8b-raw-api) реализован и проверен; consumer bridge g.2 после g.1 по согласованию engine; hardware power-off исключён | [Nom queue](nom/PLAN.md#nom-own-queue), [решение](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07) |
 | Editor, малый срез | Group reset Position/Rotation/Scale, затем единицы углов | [ED4g.3/4](engine/EDITOR_PLAN.md#current-editor-queue) |
 | Editor, следующий крупный срез | Управляемая camera и selection picking, затем translation tool | [ED5a](engine/EDITOR_PLAN.md#ed5a-camera-picking) |
 | Performance | Уменьшить CPU/allocations open batches, сохранив измеренный latency выигрыш и safety fences | [ED6b.2e.4f](engine/EDITOR_PLAN.md#ed6b2e4f-observer-cost) |

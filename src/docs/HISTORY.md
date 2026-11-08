@@ -1,5 +1,321 @@
 # TrueMoon: история общей документации
 
+<!-- Nom-only staging: module event records are included below; full unrelated UI/Editor
+     status snapshots remain outside this commit. Nom-specific archives and complete
+     command/result history are in docs/nom/HISTORY.md. Existing committed history is preserved. -->
+<a id="nom-commit-2026-11-08"></a>
+## Nom: проверка отдельного commit scope — 2026-11-08
+
+Перед Nom-only commit/push повторены862/862 теста Nom каждый Debug/Release,
+0failed/0skipped; C# и зависимости не менялись. Включены модуль/тесты/probes/tool,
+документация Nom и его solution/navigation записи. Параллельные UI/Editor/engine
+правки и newline-only Directory.Packages.props оставлены локально. В общих документах
+сохраняются только записи Nom; полная module history — [здесь](nom/HISTORY.md#nom-commit-2026-11-08).
+Предыдущие package/solution/native/physical proofs не выдаются за новый запуск.
+VM acceptance отложена, hardware power-off исключён.
+
+<a id="nom-structure-2026-11-08"></a>
+## Nom: функциональная структура исходников — 2026-11-08
+
+По запросу пользователя [Nom sources](nom/STRUCTURE.md#nom-source-layout-2026-11-08)
+разложены по подсистемам с соответствующими namespace:60moves+NomLifecycle extraction,
+66files. Публичные типы также перенесены; alpha consumers обновляют imports и
+пересобираются. Код/формат/lifecycle/dependencies сохранены, bodies/partial groups
+проверены отдельно. Source freeze теперь рекурсивный, package audit проверяет namespaces.
+
+Новые фактические проверки:Nom862/862 каждый D/R;120functional groups/profile
+source/published; public App34/Buffer28/Raw31checks D/R; fresh4package/4consumer
+portable Debug/published Release/win-x64 FDD delivery, managed/internal negatives.
+Durability template только compiled D/R, не запускался. Full nonincremental solution
+Debug0errors/1560warnings, Nom/Nom.Tests0warnings. [Команды/границы](nom/HISTORY.md#nom-structure-2026-11-08).
+Nom/engine/UI/release очередь сохраняется. Actual VM verification отложена,
+hardware power-off исключён; native/GPU/physical/heavy capacity acceptance не повторялась.
+
+<a id="nom8b-2026-11-08"></a>
+## Nom: unmanaged raw helpers реализованы — 2026-11-08
+
+[NOM8b](nom/BUFFER_API.md#nom8b-raw-api) добавляет raw T:unmanaged Memory/Span
+publication/copy и complete typed read с element count. Checked byte sizing,
+divisibility, runtime layout/endianness/padding и actual borrowed lifetime зафиксированы.
+Storage interface/format/App/dependencies сохранены; portable serialization не вводится.
+
+Actual proofs:862/862 Nom каждый D/R (73новых raw cases),120functional groups/profile
+source/published; public Raw31/Buffer28/App34checks D/R; fresh4package/4consumer delivery
+в portable Debug/published Release/win-x64 FDD Release. Managed T compiler negative
+получил CS8377 на каждой из трёх операций. Full solution nonincremental Debug:
+0errors/1560warnings, Nom/Nom.Tests0warnings. [Команды/точный scope](nom/HISTORY.md#nom8b-2026-11-08).
+NOM8 завершён в local scope; следующий bridge — engine g.2 после importer g.1,
+по согласованию владельца engine. UI/Editor/release очередь сохранена, текущий
+Vulkan frosted MenuBackdrop blocker не относится к Nom и этим запуском не закрыт.
+Actual VM verification отложена пользователем, hardware power-off исключён.
+
+<a id="nom8a-2026-11-08"></a>
+## Nom: byte buffer API реализован — 2026-11-08
+
+[NOM8a](nom/BUFFER_API.md#nom8-buffer-api) добавляет borrowed memory publication/batch,
+explicit Span copy, complete read в caller Memory и detached bounded load. App/DI,
+storage interface/format/dependencies сохранены. Copy snapshot-ит каждый вызов до
+Task return, включая replay; borrowed memory replay не читает source bytes.
+
+Новые actual proofs:Nom789/789 каждый Debug/Release (71новый byte case),120functional
+groups/profile source/published, public Buffer28/App34checks D/R, fresh4package
+delivery с тремя consumers в portable Debug/Release и win-x64 FDD Release.
+Full nonincremental solution Debug:0errors/1560warnings, Nom/Nom.Tests0warnings.
+Bounded16MiB IO observation подтверждает стоимость explicit snapshot; performance
+promises не добавлены. Exact commands/hashes/test matrix/scope — [Nom HISTORY](nom/HISTORY.md#nom8a-2026-11-08).
+NOM8b raw T:unmanaged — следующий Nom этап; engine/UI/release очереди сохранены.
+Actual VM verification остаётся отложенной пользователем, hardware power-off исключён.
+Другие OS/RID/AOT/trimming/external publish и heavy NOM6 workload не повторялись.
+
+<a id="nom8-design-2026-11-08"></a>
+## Nom: buffer API предусмотрен, реализация ещё не начата — 2026-11-08
+
+По запросу пользователя [NOM8 draft](nom/BUFFER_API.md#nom8-buffer-api) проектирует
+Memory/Span и readonly variants:borrowed async memory, explicit bounded span copy,
+detached reads и explicit unmanaged raw contract. Это план public resource helpers,
+не изменение текущего API/package/format. Новых SDK/tests/benchmarks нет, performance
+claims не делаются. VM verification остаётся отложенной, engine очередь не меняется.
+[Единственный подробный план](nom/PLAN.md#nom-own-queue).
+
+<a id="nom-vm-deferred-2026-11-08"></a>
+## Nom VM verification отложена — 2026-11-08
+
+По просьбе пользователя actual VM run отложен из-за подготовки image/credential.
+Harness сохранён, acceptance не закрыта, аппаратный power-off исключён; дальнейшая
+разработка Nom/engine этим не блокируется. Подготовка VM параметров не активная задача,
+возврат — по новому запросу. Никаких новых build/test/VM results: это документационный
+шаг. [Решение и scope](nom/HISTORY.md#nom-vm-deferred-2026-11-08).
+
+<a id="nom-vm-2026-11-08"></a>
+## Nom guest-crash harness, hardware power исключён — 2026-11-08
+
+По решению пользователя аппаратное отключение питания исключено из текущей Nom
+приёмки; реализован owned Hyper-V VM controller/external durable witness/raw snapshot/
+distinct boot/recovery,7IO cutpoints.98guards и10host-process protocol groups каждый
+D/R прошли,7children/profile reaped;120functional groups/profile повторены.
+Full solution Debug0errors/1560warnings, Nom/Probe0; новые diagnostics в параллельном
+EditorHost, его код не менялся в Nom. Actual VM0trials/Blocked:нужны prepared Windows
+Gen2 VHDX и локальный guest credential. HardwarePowerLossRequired=false; VM acceptance
+не подменяется process kills. Прежний UAC disk-full scope сохраняется, engine/Editor
+очереди не меняются. [Контракт](nom/VM_CRASH.md), [команды/evidence](nom/HISTORY.md#nom-vm-2026-11-08).
+
+<a id="nom7-uac-2026-11-08"></a>
+## Nom: UAC real-volume disk-full/recovery passed — 2026-11-08
+
+По разрешению пользователя runner запущен через Windows UAC, Administrator=true.
+Новый owned128MiB NTFS/VHDX прошёл5physical cases/166assertions каждый Debug/published
+Release consumer:staging/catalog append/checkpoint/export/restore; free0/OS112, exact
+old bytes/head/ack outcome, reopen и новая generation2. VHDX отключён, cleanup0.
+Исправлены assumptions harness о первом append при full volume и filler ownership;
+production API/source не изменён.24guards/12assertions D/R и fresh package proof
+App34/tool211 также прошли. Итоговый exit2/DiskFullPassed-PowerLossOpen ожидаем:
+disk-full gate закрыт в bounded NTFS/VHDX scope, power-loss/остальные release gates
+открыты. Unit/full solution/native не повторялись. Editor ED5a.3 и engine очередь
+сохранены; [команды/failures/границы](nom/HISTORY.md#nom7-uac-2026-11-08).
+
+<a id="nom7-durability-2026-11-08"></a>
+## Nom physical durability follow-up — 2026-11-08
+
+Добавлен isolated128MiB VHDX disk-full harness/public package consumer: staging,
+catalog append,checkpoint,export,restore;24pure guards и12consumer assertions каждый
+Debug/published Release прошли, compile0new warnings. Fresh4package delivery повторён:
+App34checks/3NuGet profiles, tool211checks/4profiles. Physical cases0:Windows New-VHD
+authorization снова отказала до создания/подключения/format, runner exit2/Blocked,
+Completed=false. Power-cut rig не предоставлен, автоматического cut runner нет;
+physical disk-full/power-loss остаются открыты. Unit/full solution/native не повторены.
+Editor ED5a.3/engine и release очереди сохранены, shared docs с fresh SHA guards.
+[Подробные команды/ошибка](nom/HISTORY.md#nom7-durability-2026-11-08),
+[acceptance contract](nom/DURABILITY.md).
+
+<a id="nom7-2026-11-08"></a>
+## Nom NOM7: package delivery и independent consumer — 2026-11-08
+
+Nom IsPackable=true, standalone README/license/icon и minimal Contracts dependency.
+Fresh local4package closure, два public no-friend consumers без ProjectReference/fallback;
+portable Debug/published Release и win-x64 framework-dependent Release проверены.
+NomPublicConsumer34checks/profile, NomAssetTool211checks/9success+2admission-rejections
+в source Debug и каждом из3NuGet profiles; exact pins/backup/typed restore/GC/reopen,
+source сохранён. Actual internal CS0122/missing package NU1101 controls passed.
+Nom.Tests718/718 каждый D/R,120functional groups/profile и App34checks source/published.
+Solution nonincremental Debug0errors/1555warnings; Nom/Tests/Probe/Tool0warnings.
+Full other-module suites/native и NOM6 heavy profiles здесь не запускались.
+Общая версия не изменена, external publish не выполнялся; physical NOM3/4 и остальные
+OS/RID/modes остаются открыты. Editor ED5a.2/engine f.3→f.4/g.1 очередь сохранена.
+Detailed commands/version/four hashes/artifact retention — [Nom HISTORY](nom/HISTORY.md#nom7-2026-11-08),
+[delivery scope](nom/DELIVERY.md). Shared docs заменены после fresh SHA check атомарно.
+
+<a id="nom4-2026-11-08"></a>
+## Nom NOM4: checkpoint и offline compaction — 2026-11-08
+
+Explicit CompactAsync/checkpoint/rotation реализованы с сохранением public resource
+outcomes/CAS/floor/generation.535initial→536finalcases:536/536 D/R+solution-filter,
+110new, source/published92groups/profile (Maintenance27/24actual kills+reaps, прежние
+Core18/KV6/Fault41 повторены). Public no-friend App16checks/profile. Solution Debug
+0errors/1555warnings, Nom0warnings; full suite/engine/GPU/performance не запускались.
+Physical VHD gate снова Windows denied/non-Administrator; disk-full/power-loss не
+закрыты. Следующий implementation этап NOM5. [Scope/команды](nom/HISTORY.md#nom4-2026-11-08).
+
+<a id="nom3-2026-11-08"></a>
+## Nom NOM3: расширенные faults/recovery, physical gate открыт — 2026-11-08
+
+426/426 Nom.Tests D/R и solution-filter,44newcases; Core18+KV6+Fault41 groups каждый
+source Debug/published Release;48actual killed/reaped children/Fault profile.
+Public no-friend App10checks/profile повторён. Исправлены reservation headroom,
+poisoned pending-read stop и handoff при stop-during-reserving. Solution Debug
+nonincremental0errors/1555warnings, Nom0warnings. Новых full suite/GPU/performance/
+package результатов нет. Physical VHDX creation отказана Windows authorization,
+Administrator=false: полный NOM3 остаётся частичным до isolated-volume acceptance.
+[Scope/команды](nom/HISTORY.md#nom3-2026-11-08), [матрица](nom/RECOVERY_ACCEPTANCE.md).
+
+<a id="nom2-2026-11-08"></a>
+## Nom NOM2: собственный App/resource backend — 2026-11-08
+
+UseNom/public factory/store теперь используют свой KV; typed catalog records и
+atomic resource publication заменили LiteDB/BSON. Runtime/package/CPM и vendor
+runners/downloads удалены. Legacy roots rejected/no reset; API/lifetimes сохранены.
+382/382 Nom.Tests каждый D/R и solution-filter;18core+6KV groups каждый source Debug/
+published Release, public no-friend App consumer10checks/profile. Isolated core graph
+0external packages; restored/runtime/fresh output audit без LiteDB. Solution Debug
+nonincremental0errors/1555warnings, Nom warnings0. Остальные модули не тестировались;
+NOM3 integrated faults/physical gate, NOM4 maintenance и NOM7 delivery ещё нужны.
+[Подробности и команды](nom/HISTORY.md#nom2-2026-11-08).
+
+<a id="nom1-2026-11-07"></a>
+## Nom NOM1: working KV writer и actual crash recovery — 2026-11-07
+
+Реализован [low-level KV](nom/KV_CORE.md#nom1-kv-2026-11-07): Create/Open/Get/WriteBatch,
+exact expected sequence/generation, durable flush/Unknown tickets и retained cleanup.
+316/316 Nom.Tests каждый D/R и solution-filter,83newcases.6groups source Debug/
+published Release,6children started=reaped/profile,4actual kill cutpoints/profile.
+Solution nonincremental Debug0errors/1555warnings, Nom warnings0. Прежние2Skia warnings
+ушли в параллельной UI работе, не исправлялись этим срезом. Full suite/GPU/fresh packages/
+physical gates не проверялись, старые Aether/vendor failures не закрыты.
+App/resource backend ещё LiteDB: полный cutover/удаление — NOM2.
+[Подробный scope/команды/evidence](nom/HISTORY.md#nom1-2026-11-07).
+
+<a id="nom0-2026-11-07"></a>
+## Nom NOM0: binary codecs и read-only recovery — 2026-11-07
+
+[Format v1](nom/FORMAT.md#nom0-format-2026-11-07) закрепил root/segment/batch authority,
+strict keys/metadata и новый revision domain. Codecs и read-only bounded replay с
+sealed chain state реализованы; 233/233 Nom.Tests каждый D/R, 147new cases,
+failed/skipped0. Solution nonincremental Debug0errors/1557warnings (1555baseline+2CS8620 в SkiaFontCatalog).
+App/storage backend остаётся LiteDB, dependency/public API/solution не менялись.
+NOM1 writer/real Open/root publisher впереди; NOM2 полностью удаляет LiteDB.
+Full suite/published/fresh packages/GPU/physical gates не проверялись, Aether failures
+не закрыты. [Подробный scope/evidence](nom/HISTORY.md#nom0-2026-11-07).
+
+<a id="nom-own-store-2026-11-07"></a>
+## Принята собственная реализация Nom вместо LiteDB — 2026-11-07
+
+Пользователь утвердил полное удаление LiteDB в пользу собственного transactional KV
+каталога/append-only journal с immutable streamed CAS resources. Optional provider,
+vendor fix/upgrade/process isolation и TrueMoon.Nom.LiteDb split отменены.
+NOM0 format/recovery/budgets → NOM1 runnable core → NOM2 App/resource cutover и полное
+удаление source/dependency/test/probe paths; последующие fault/compaction/pins/GC/
+backup/performance/delivery этапы — только в [Nom PLAN](nom/PLAN.md#nom-own-queue).
+[Архитектура/совместимость](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07).
+
+Только документационные изменения; код ещё на LiteDB, package/solution не менялись,
+новых build/test результатов нет. Прежние86safe cases/18groups/8fatal children
+сохранены как история и не переносятся на новый backend. Legacy roots не сбрасываются
+и не мигрируют автоматически. Engine f.3→f.4/importer g.1 не переупорядочены.
+
+<a id="nom-faults-2026-11-07"></a>
+## Nom AST1b.f: safe fixes и подтверждённый backend blocker — 2026-11-07
+
+Исправлены sink/cleanup error preservation, retained write reservation и native
+file/close ownership с явным retry на том же owner thread.86safe Nom.Tests каждый
+Debug/Release и solution discovery, core18groups source/published прошли.
+Solution nonincremental Debug0errors/1555existing warnings/delta0, new Nom warnings0.
+Full suite/GPU не запускались, Aether failures не закрыты.
+
+WAL fault acceptance **не прошла**:8/8 isolated children воспроизвели fatal finalizer
+defect LiteDB5.0.21 после atomic reopen verification; все reaped, runner exit1.
+Physical disk-full — OS permission gate New-VHD, attach/format не выполнялись.
+AST1b.f/AST1 не закрыты; следующий приоритет — проверенный vendor fix/версия либо
+process isolation, решение не принято. Dependency не менялась, engine очередь прежняя.
+[Exact scope/команды](nom/FAULT_ACCEPTANCE.md#nom-faults-2026-11-07), [Nom queue](nom/PLAN.md#nom-fault-queue).
+
+<a id="nom-app-2026-11-07"></a>
+## Nom подключён через App — 2026-11-07
+
+[AST2a](nom/APP_INTEGRATION.md#nom-app-2026-11-07) добавил public UseNom/options,
+typed caller-disposable store factory и one owned host/shared lifecycle aliases.
+DefaultApp startup rollback/RunAsync/stop/dispose и retained read/writer drain
+проверены в57/57 Nom.Tests каждый D/R и solution-filter Debug. Core regression18groups
+каждый source Debug/published Release. Solution nonincremental Debug0errors/
+1555existing warnings/delta0; full suite не запускалась, Aether failures не закрыты.
+Library по-прежнему non-packable: package/provider delivery — AST2b; disk/close fault,
+GC/GPU/physical gates отдельно. Engine код/очередь f.3→f.4 не менялись.
+
+<a id="nom-rename-2026-11-07"></a>
+## Storage получил имя TrueMoon.Nom и проекты в solution — 2026-11-07
+
+По решению пользователя модуль Assets переименован в TrueMoon.Nom. Core выделено в
+отдельную internal/non-packable library, proofs — в TrueMoon.Nom.Probe с ProjectReference;
+оба добавлены в TrueMoon.slnx. LiteDB5.0.21 включён в CPM, docs/nom — canonical docs,
+прежние пути docs/assets оставлены pointers. Public App/provider/package — AST2.
+Повторно18groups каждый source Debug/published Release,5commands0/3SDK binlogs/
+15input hashes, separate module assembly и4actual kill/reap points/profile прошли.
+Общий nonincremental solution Debug0errors/1555existing warnings/delta0. Full unit
+suite не запускалась; Aether failures и physical/fault gates не закрыты.
+[Подробности и команда](nom/NOM_RENAME.md#nom-rename-2026-11-07); очередь сохранена.
+
+<a id="assets-ast1b-2026-11-07"></a>
+## Assets AST1b: потоковые bytes и atomic publication — 2026-11-07
+
+[Streaming core](nom/AST1B_STREAMING.md#ast1b-2026-11-07) реализован в research consumer
+вне Aether: geometry/image/shader Streams,64KiB bounded I/O, CAS, atomic multi-resource
+generation и operation journal.18groups каждый source Debug/published Release прошли,
+4actual killed/reaped children/profile,5commands/3SDK binlogs/11source hashes/drift0.
+Общий nonincremental solution Debug0errors/1555existing warnings/delta0. Full unit
+suite не запускалась; Aether diagnostic failures не закрыты. Symlink fixture privilege-gated;
+AST1b.f disk/write/cleanup faults, snapshots/GC, production App/package и GPU отдельно.
+Детальная очередь остаётся в Assets; engine f.3→f.4 и g.1 не переупорядочены.
+
+<a id="assets-ast1a-2026-11-07"></a>
+## Assets AST1a: runnable LiteDB prototype проверен — 2026-11-07
+
+[Standalone AST1a](nom/AST1A_PROTOTYPE.md#ast1a-2026-11-07) закрепил LiteDB5.0.21/
+System.Buffers4.5.1 и actual DLL hash5.0.21.0, без Aether/production package graph edits.
+Source Debug/published Release прошли по10groups: IDs/schema/collation/index,
+exclusive root/Direct, owner-thread/rollback/reopen, serialized/query/queue limits и
+startup-stop/factory drain.2profiles/5commands/3SDK binlogs, fresh archive bootstrap;
+symlink fixture privilege-gated и не считается выполненной. Общий nonincremental
+solution Debug0errors/1555existing warnings/delta0; full unit suite не запускалась,
+старые diagnostics failures не закрыты. [Команды и ограничения](nom/HISTORY.md#ast1a-2026-11-07).
+Далее AST1b CAS/journal/publication; App/package остаётся AST2. Engine f.3→f.4 не изменён.
+
+<a id="litedb-assets-design-2026-11-07"></a>
+## Assets: пользователь выбрал LiteDB — 2026-11-07
+
+После comparison выбран LiteDB; [v1 design](nom/LITEDB_DESIGN.md#litedb-v1-2026-11-07)
+фиксирует initial Direct/one-owner profile, catalog authority, immutable bytes,
+staged generation publication, operation outcomes, snapshots/pins/offline GC и
+numeric defaults. [Детальная очередь AST1a–d](nom/PLAN.md#litedb-ast1) теперь
+LiteDB-specific; SQLite не текущий implementation target. Прежнее сравнение/история
+сохранены. Следующий результат — pinned5.0.21 standalone source prototype; новые
+production packages/API и runtime/build/tests/benchmark результаты не объявлены.
+Engine остаётся consumer, его f.3→f.4 очередь не изменена.
+
+<a id="asset-storage-planning-2026-11-07"></a>
+## Самостоятельный модуль хранения ассетов: начало исследования — 2026-11-07
+
+Пользователь предложил LiteDB и задал границу: подключаемый модуль вне движка,
+выбор обсудить позднее. Добавлены [Assets PLAN/AST0–AST3](nom/PLAN.md),
+[STATUS](nom/STATUS.md) и [сравнение](nom/RESEARCH.md) по official docs.
+LiteDB/SQLite catalog, database BLOB/FileStorage и filesystem/manifests сравниваются
+как варианты. SQLite+immutable content-addressed objects — предварительная гипотеза,
+не утверждённый backend и не измеренный performance winner. FileStorage chunk
+transactions и catalog↔external bytes consistency требуют явного publication/recovery.
+Identity authority/portable records, process model, snapshots/pins/GC/cancel/commit и
+App/IFactory ownership вынесены на обсуждение AST0. Детальные storage работы ведутся
+в одном собственном плане; Aether g.1/2 и audio — consumers, f.3→f.4 не переупорядочены.
+Документационное исследование: dependencies/C#/project files не менялись,
+новых build/unit/native/database benchmark результатов нет.
+
+
 <a id="ecs-commit-2026-11-07"></a>
 ## ECS и общая версия0.2.5.1-alpha — 2026-11-07
 

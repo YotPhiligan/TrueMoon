@@ -1,0 +1,14 @@
+using TrueMoon.Nom;
+using TrueMoon.Nom.Resources;
+
+// A compiler rejection probe, not an executable test. Every raw operation must keep its unmanaged constraint.
+public static class RawManagedRejection
+{
+    public static void Reject(IProjectAssetStore store, AssetWriteTicket ticket, AssetResourceVersion exact)
+    {
+        _ = store.PublishRawResourceAsync<string>(ticket, Guid.NewGuid(), ReadOnlyMemory<string>.Empty);
+        _ = store.PublishRawResourceCopyAsync<string>(ticket, Guid.NewGuid(), ReadOnlySpan<string>.Empty, 1);
+        _ = store.ReadRawResourceAsync<ManagedElement>(exact, Memory<ManagedElement>.Empty);
+    }
+}
+public struct ManagedElement { public object? Reference; }

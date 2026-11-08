@@ -1,0 +1,144 @@
+using System.Buffers;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text.Json;
+using TrueMoon;
+using TrueMoon.Dependencies;
+using TrueMoon.Nom;
+using TrueMoon.Nom.Catalog;
+using TrueMoon.Nom.Hosting;
+using TrueMoon.Nom.Resources;
+
+var report = Path.GetFullPath(args[0]);
+var root = Path.Combine(Path.GetDirectoryName(report)!, "raw-store-" + Path.GetFileNameWithoutExtension(report));
+var checks = new List<string>();
+void Check(bool value, string name) { if (!value) throw new InvalidDataException(name); checks.Add(name); }
+async Task Reject<T>(Func<Task> action, string name) where T : Exception
+{ try { await action(); } catch (T) { checks.Add(name); return; } throw new InvalidDataException(name); }
+var sourceId = Guid.NewGuid(); var kindId = Guid.NewGuid();
+AssetRecord Row(string name) => new(Guid.NewGuid(), sourceId, kindId, name, []);
+var app = App.Build(c => c.UseNom());
+var factory = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
+var host = app.Services.Resolve<NomStoreHost>()!;
+Check(host.ActiveStoreCount == 0 && !Directory.Exists(root), "App owns no implicit raw root");
+var open = new OpenAssetStoreArguments(root, Guid.NewGuid(), Guid.NewGuid(), AssetStoreOpenMode.Create);
+var store = factory.Create(open);
+try
+{
+    var values = new Triple[21871]; var originalBytes = MemoryMarshal.AsBytes(values.AsSpan()); new Random(8224).NextBytes(originalBytes);
+    var count = values.Length - 7; var expected = MemoryMarshal.AsBytes(values.AsSpan(3, count)).ToArray();
+    var row = Row("raw/packed-triples"); var manager = new RawOwner<Triple>(values);
+    ReadOnlyMemory<Triple> view = manager.View.Slice(3, count);
+    var ticket = await store.ReserveResourcesAsync(0, [new AssetResourceWrite(row, expected.Length, MaximumBytes: expected.Length)]);
+    var receipt = await store.PublishRawResourceAsync(ticket, row.Id, view); var version = receipt.Resources.Single();
+    Check(Unsafe.SizeOf<Triple>() == 3 && version.Length == expected.Length && version.Digest == Convert.ToHexStringLower(SHA256.HashData(expected)), "packed three-byte input crosses IO chunk with exact raw hash");
+    Check(manager.PinCalls == 0 && !manager.Disposed && manager.SpanCalls > 1, "nonarray source borrowed without pin or disposal");
+    var targetValues = new Triple[count + 7]; MemoryMarshal.AsBytes(targetValues.AsSpan()).Fill(0xa5);
+    using (var target = new RawOwner<Triple>(targetValues))
+    {
+        var copied = await store.ReadRawResourceAsync(version, target.View.Slice(2));
+        Check(copied == count && MemoryMarshal.AsBytes(targetValues.AsSpan(2, count)).SequenceEqual(expected), "typed read returns element count and copies packed bytes");
+        Check(MemoryMarshal.AsBytes(targetValues.AsSpan(0, 2)).ToArray().All(b => b == 0xa5) && MemoryMarshal.AsBytes(targetValues.AsSpan(2 + count)).ToArray().All(b => b == 0xa5), "typed destination prefix and tail preserved");
+        Check(target.PinCalls == 0 && !target.Disposed, "nonpinnable typed destination remains caller owned");
+    }
+    var detached = await store.LoadResourceAsync(version, expected.Length);
+    Check(MemoryMarshal.Cast<byte, Triple>(detached.Span).Length == count && detached.Span.SequenceEqual(expected), "detached byte load exposes readonly typed Span");
+    await using (var stream = await store.OpenResourceAsync(version))
+    {
+        var sync = new Triple[count]; stream.ReadExactly(MemoryMarshal.AsBytes(sync.AsSpan()));
+        Check(MemoryMarshal.AsBytes(sync.AsSpan()).SequenceEqual(expected), "verified stream fills writable typed Span through byte view");
+    }
+    ((IDisposable)manager).Dispose(); var replay = await store.PublishRawResourceAsync(ticket, row.Id, view);
+    Check(replay.Resources.Single() == version && replay.Generation == 1, "committed raw memory replay never reads disposed backing owner");
+
+    var mutableTicket = await store.ReserveResourcesAsync(store.ContentGeneration, [new AssetResourceWrite(row)]);
+    Memory<Triple> mutableView = values.AsMemory(3, count);
+    Check((await store.PublishRawResourceAsync(mutableTicket, row.Id, mutableView)).Resources.Single() == version, "writable typed Memory infers T and preserves exact revision");
+    var copiedSource = values.AsSpan(3, count).ToArray(); var copyTicket = await store.ReserveResourcesAsync(store.ContentGeneration, [new AssetResourceWrite(row)]);
+    var copying = store.PublishRawResourceCopyAsync(copyTicket, row.Id, copiedSource.AsSpan(), expected.Length);
+    MemoryMarshal.AsBytes(copiedSource.AsSpan()).Fill(0xee);
+    Check((await copying).Resources.Single() == version && (await store.LoadResourceAsync(version, expected.Length)).Span.SequenceEqual(expected), "writable typed Span snapshot finishes before returning Task");
+    var readonlyTicket = await store.ReserveResourcesAsync(store.ContentGeneration, [new AssetResourceWrite(row)]);
+    ReadOnlySpan<Triple> readonlySpan = values.AsSpan(3, count);
+    Check((await store.PublishRawResourceCopyAsync(readonlyTicket, row.Id, readonlySpan, expected.Length)).Resources.Single() == version, "readonly typed Span infers T and hashes identically");
+    Check((await store.PublishRawResourceCopyAsync<Triple>(copyTicket, row.Id, ReadOnlySpan<Triple>.Empty, 1)).Resources.Single() == version, "raw span replay resolves original outcome after copying replacement");
+
+    async Task Roundtrip<T>(string name, T[] data) where T : unmanaged
+    {
+        var raw = MemoryMarshal.AsBytes(data.AsSpan()).ToArray(); var item = Row(name);
+        var reserved = await store.ReserveResourcesAsync(store.ContentGeneration, [new AssetResourceWrite(item, raw.Length)]);
+        var exact = (await store.PublishRawResourceAsync<T>(reserved, item.Id, data)).Resources.Single();
+        var output = new T[data.Length]; var elements = await store.ReadRawResourceAsync<T>(exact, output);
+        Check(elements == data.Length && exact.Length == raw.Length && MemoryMarshal.AsBytes(output.AsSpan()).SequenceEqual(raw), name + " runtime representation including element size preserved");
+    }
+    await Roundtrip("raw/bool", new[] { true, false, true });
+    await Roundtrip("raw/char", new[] { '\u044f', '\u0000', '\uffff' });
+    await Roundtrip("raw/native-int", new nint[] { -1, 0, 17 });
+    await Roundtrip("raw/enum", new[] { RawKind.First, RawKind.Last });
+    var padded = new Padded[2]; MemoryMarshal.AsBytes(padded.AsSpan()).Fill(0x7b); padded[0].Tag = 1; padded[0].Value = -7;
+    await Roundtrip("raw/padding", padded);
+    await Roundtrip("raw/empty", Array.Empty<long>());
+
+    var sentinels = new Triple[count - 1]; MemoryMarshal.AsBytes(sentinels.AsSpan()).Fill(0x33);
+    await Reject<ArgumentException>(() => store.ReadRawResourceAsync<Triple>(version, sentinels), "short typed destination rejected");
+    Check(MemoryMarshal.AsBytes(sentinels.AsSpan()).ToArray().All(b => b == 0x33), "short typed destination admission leaves all bytes unchanged");
+    await Reject<ArgumentException>(() => store.ReadRawResourceAsync(version with { Length = expected.Length - 1 }, new Triple[count].AsMemory()), "misaligned raw byte length rejected before exact open");
+    await Reject<ArgumentException>(() => store.PublishRawResourceCopyAsync(copyTicket, row.Id, values.AsSpan(3, count), expected.Length - 1), "raw copy ceiling uses bytes rather than elements");
+    await Reject<ArgumentOutOfRangeException>(() => store.PublishRawResourceCopyAsync(copyTicket, row.Id, ReadOnlySpan<Triple>.Empty, 0), "empty raw snapshot still requires positive byte budget");
+    using (var oversized = new RawOwner<long>([], int.MaxValue))
+    {
+        await Reject<ArgumentOutOfRangeException>(() => store.PublishRawResourceAsync(copyTicket, row.Id, oversized.View), "element multiplication cannot wrap int byte length");
+        Check(oversized.SpanCalls == 0 && oversized.PinCalls == 0 && !oversized.Disposed, "oversized logical typed view rejected without access or disposal");
+    }
+    using (var cancel = new CancellationTokenSource())
+    {
+        cancel.Cancel();
+        await Reject<OperationCanceledException>(() => store.PublishRawResourceAsync(ticket, row.Id, view, cancel.Token), "cancel before raw publication does not read released owner");
+        await Reject<OperationCanceledException>(() => store.ReadRawResourceAsync(version, new Triple[count].AsMemory(), cancel.Token), "cancel before typed read returns no successful count");
+    }
+
+    // The same bounded publication workload as the byte consumer; explicit runtime data, no performance gate.
+    var workload = new uint[4 * 1024 * 1024]; new Random(8225).NextBytes(MemoryMarshal.AsBytes(workload.AsSpan()));
+    var workloadBytes = checked(workload.Length * sizeof(uint)); var workloadRow = Row("raw/workload"); var measurements = new List<object>();
+    foreach (var mode in new[] { "RawMemory", "RawSpanCopy" })
+    {
+        for (var iteration = -1; iteration < 3; iteration++)
+        {
+            var write = await store.ReserveResourcesAsync(store.ContentGeneration, [new AssetResourceWrite(workloadRow, workloadBytes, MaximumBytes: workloadBytes)]);
+            var allocation = GC.GetTotalAllocatedBytes(true); var clock = Stopwatch.StartNew();
+            var result = mode == "RawMemory" ? await store.PublishRawResourceAsync(write, workloadRow.Id, workload.AsMemory()) :
+                await store.PublishRawResourceCopyAsync(write, workloadRow.Id, workload.AsSpan(), workloadBytes);
+            clock.Stop(); allocation = GC.GetTotalAllocatedBytes(true) - allocation;
+            if (iteration >= 0) measurements.Add(new { Mode = mode, Bytes = workloadBytes, Iteration = iteration, Milliseconds = clock.Elapsed.TotalMilliseconds, AllocatedBytes = allocation });
+            if (result.Resources.Single().Length != workloadBytes) throw new InvalidDataException("raw workload publication");
+        }
+    }
+    Check(measurements.Count == 6, "raw memory and snapshot measured on bounded sixteen MiB workload");
+    await store.DisposeAsync(); store = factory.Create(open with { Mode = AssetStoreOpenMode.Open });
+    Check((await store.PublishRawResourceAsync(ticket, row.Id, view)).Resources.Single() == version, "durable typed replay after reopen ignores disposed original manager");
+    await store.DisposeAsync(); await app.DisposeAsync();
+    Check(host.IsReleased && host.ActiveStoreCount == 0 && detached.Span.SequenceEqual(expected), "raw adapters retain no store root after completion and detached bytes survive App");
+    var module = typeof(AssetStoreRawBufferExtensions).Assembly;
+    File.WriteAllText(report, JsonSerializer.Serialize(new { Completed = true, Consumer = typeof(Program).Assembly.GetName().Name,
+        Checks = checks, Measurements = measurements, ModulePath = module.Location,
+        ModuleSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(module.Location))) }, new JsonSerializerOptions { WriteIndented = true }));
+    Console.WriteLine("Public raw consumer passed: " + checks.Count);
+}
+finally { await store.DisposeAsync(); await app.DisposeAsync(); }
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+struct Triple { public byte A, B, C; }
+[StructLayout(LayoutKind.Sequential)]
+struct Padded { public byte Tag; public int Value; }
+enum RawKind : long { First = long.MinValue, Last = long.MaxValue }
+sealed class RawOwner<T>(T[] values, int? logicalLength = null) : MemoryManager<T> where T : unmanaged
+{
+    internal bool Disposed; internal int PinCalls, SpanCalls;
+    internal Memory<T> View => CreateMemory(logicalLength ?? values.Length);
+    public override Span<T> GetSpan() { ObjectDisposedException.ThrowIf(Disposed, this); SpanCalls++; return values; }
+    public override MemoryHandle Pin(int elementIndex = 0) { PinCalls++; throw new NotSupportedException("This owner cannot pin."); }
+    public override void Unpin() => throw new NotSupportedException();
+    protected override void Dispose(bool disposing) { Disposed = true; }
+}

@@ -1,0 +1,120 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+using TrueMoon;
+using TrueMoon.Dependencies;
+using TrueMoon.Nom;
+using TrueMoon.Nom.Backup;
+using TrueMoon.Nom.Catalog;
+using TrueMoon.Nom.Hosting;
+using TrueMoon.Nom.Resources;
+
+var root = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(args[0]))!, "public-store-" + Path.GetFileNameWithoutExtension(args[0]));
+var project = Guid.NewGuid(); var storeId = Guid.NewGuid();
+var open = new OpenAssetStoreArguments(root, project, storeId, AssetStoreOpenMode.Create);
+var checks = new List<string>();
+void Check(bool condition, string name) { if (!condition) throw new InvalidDataException(name); checks.Add(name); }
+await using var app = App.Build(c => c.UseNom());
+var factory = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
+var host = app.Services.Resolve<NomStoreHost>()!;
+Check(!Directory.Exists(root) && host.ActiveStoreCount == 0, "App construction opens no store");
+var owner = factory.Create(open);
+var row = new AssetRecord(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "geometry/public", [7, 8, 9]);
+var content = new byte[2 * 1024 * 1024 + 17]; new Random(7142).NextBytes(content);
+var digest = Convert.ToHexStringLower(SHA256.HashData(content));
+using var source = new MemoryStream(content, writable: false);
+var ticket = await owner.ReserveResourcesAsync(0, [new AssetResourceWrite(row, content.Length, digest, content.Length)]);
+var receipt = await owner.PublishResourcesAsync(ticket, new Dictionary<Guid, Stream> { [row.Id] = source });
+var version = receipt.Resources.Single();
+Check(receipt.Generation == 1 && version.Length == content.Length && version.Digest == digest && source.CanRead, "atomic publication preserves borrowed input");
+await owner.DisposeAsync();
+Check(owner.IsClosed && host.ActiveStoreCount == 0, "consumer disposal releases owner before App");
+owner = factory.Create(open with { Mode = AssetStoreOpenMode.Open });
+Check(owner.ContentGeneration == 1 && await owner.FindResourceAsync(row.Id) == version, "public reopen preserves exact revision");
+Check((await owner.LookupResourceOperationAsync(ticket)).Resources.Single() == version, "durable operation outcome");
+await using (var read = await owner.OpenResourceAsync(version))
+{
+    using var output = new MemoryStream(); await read.CopyToAsync(output);
+    Check(read.CanSeek && !read.CanWrite && output.ToArray().AsSpan().SequenceEqual(content), "exact stream bytes after reopen");
+}
+var descriptor = (await owner.ReadAsync()).Single();
+Check(descriptor.Id == row.Id && descriptor.Metadata.AsSpan().SequenceEqual(new byte[] { 7, 8, 9 }), "canonical metadata after reopen");
+await using (var held = await owner.OpenResourceAsync(version))
+{
+    var rejected = false;
+    try { await owner.CompactAsync(); } catch (InvalidDataException) { rejected = true; }
+    Check(rejected && held.ReadByte() == content[0] && !owner.IsClosed, "offline compaction preserves active read lease");
+}
+var compacted = await owner.CompactAsync();
+Check(compacted.Changed && !compacted.CleanupPending && compacted.Epoch == 2 && compacted.Generation == 1 && compacted.CheckpointBytes >= 160,
+    "explicit checkpoint and journal rotation");
+Check((await owner.LookupResourceOperationAsync(ticket)).Resources.Single() == version, "public operation retained through compaction");
+var repeat = await owner.CompactAsync();
+Check(!repeat.Changed && repeat.Epoch == compacted.Epoch && !repeat.CleanupPending, "compaction repeat is idempotent");
+await owner.DisposeAsync(); owner = factory.Create(open with { Mode = AssetStoreOpenMode.Open });
+await using (var read = await owner.OpenResourceAsync(version))
+{
+    using var output = new MemoryStream(); await read.CopyToAsync(output);
+    Check(owner.ContentGeneration == 1 && output.ToArray().AsSpan().SequenceEqual(content) && await owner.FindResourceAsync(row.Id) == version, "checkpoint reopen preserves exact resource bytes");
+}
+var unusedRow = new AssetRecord(Guid.NewGuid(), row.Source, row.Kind, "after-checkpoint", []);
+var unusedTicket = await owner.ReserveResourcesAsync(1, [new AssetResourceWrite(unusedRow)]);
+await owner.AbortResourceOperationAsync(unusedTicket);
+Check(unusedTicket.Sequence > ticket.Sequence && (await owner.LookupResourceOperationAsync(unusedTicket)).Status == "aborted" && owner.ContentGeneration == 1,
+    "post-checkpoint journal append and abort");
+var linked = new AssetRecord(Guid.NewGuid(),row.Source,row.Kind,"linked",[],["geometry"],[version]);
+var linkedTicket = await owner.ReserveResourcesAsync(1,[new AssetResourceWrite(linked,1,null,1)]);
+using var linkedInput = new MemoryStream(new byte[] { 5 });
+var linkedVersion = (await owner.PublishResourcesAsync(linkedTicket,new Dictionary<Guid,Stream> { [linked.Id]=linkedInput })).Resources.Single();
+var manifest = await owner.CreateSnapshotAsync([linkedVersion]); var pin = Guid.NewGuid(); await owner.PinSnapshotAsync(manifest.Id,pin);
+Check(manifest.Generation==2 && manifest.Members.Length==2 && manifest.Members.Contains(version),"frozen exact dependency manifest");
+Check((await owner.QueryAssetsAsync(new AssetQuery(row.Source,row.Kind,"geometry"))).Items.Single().Id==linked.Id,"indexed source kind and ordinal tag");
+var updated = new AssetRecord(row.Id,row.Source,row.Kind,row.Locator,[10],["geometry"]);
+var updateTicket = await owner.ReserveResourcesAsync(2,[new AssetResourceWrite(updated,2,null,2)]); using var updateInput = new MemoryStream(new byte[] { 42,43 });
+var updatedVersion = (await owner.PublishResourcesAsync(updateTicket,new Dictionary<Guid,Stream> { [row.Id]=updateInput })).Resources.Single();
+var updatedLinked = new AssetRecord(linked.Id,linked.Source,linked.Kind,linked.Locator,[],["geometry"],[updatedVersion]);
+var linkedUpdateTicket = await owner.ReserveResourcesAsync(3,[new AssetResourceWrite(updatedLinked,1,null,1)]); using var linkedUpdateInput = new MemoryStream(new byte[] { 7 });
+var updatedLinkedVersion = (await owner.PublishResourcesAsync(linkedUpdateTicket,new Dictionary<Guid,Stream> { [linked.Id]=linkedUpdateInput })).Resources.Single();
+await owner.PruneResourceOperationsAsync(linkedUpdateTicket.Sequence);
+Check((await owner.ReadDependenciesAsync(updatedVersion,reverse:true)).Single()==updatedLinkedVersion,"exact reverse dependency after reimport");
+Check((await owner.PlanGarbageCollectionAsync()).ObjectsToDelete==0,"retained manifest protects old CAS after outcome prune");
+await owner.DisposeAsync(); owner = factory.Create(open with { Mode=AssetStoreOpenMode.Open });
+var snapshot = await owner.OpenSnapshotAsync(manifest.Id); var oldStream = await snapshot.OpenResourceAsync(version);
+using (var output = new MemoryStream()) { await oldStream.CopyToAsync(output); Check(output.ToArray().AsSpan().SequenceEqual(content),"durable snapshot and old exact bytes after reopen"); }
+var pinnedRejected = false; try { await owner.RemoveSnapshotAsync(manifest.Id); } catch(InvalidDataException) { pinnedRejected=true; }
+Check(pinnedRejected,"durable pin forbids manifest removal after reopen");
+await snapshot.DisposeAsync(); await owner.ReleaseSnapshotPinAsync(pin);
+var heldRejected=false; try { await owner.RemoveSnapshotAsync(manifest.Id); } catch(InvalidDataException) { heldRejected=true; }
+Check(heldRejected && oldStream.CanRead,"closed snapshot stream retains ownership until actual close");
+await oldStream.DisposeAsync(); await owner.RemoveSnapshotAsync(manifest.Id);
+var garbage=await owner.PlanGarbageCollectionAsync(); Check(garbage.RevisionsToPrune==2 && garbage.ObjectsToDelete==2,"bounded offline GC dry run");
+var collected=await owner.CollectGarbageAsync(garbage); Check(collected.RevisionsPruned==2 && collected.ObjectsDeleted==2 && !collected.CleanupPending && owner.ContentGeneration==4,"atomic metadata prune and CAS cleanup");
+Check(!(await owner.CollectGarbageAsync()).CleanupPending && await owner.FindResourceAsync(row.Id)==updatedVersion,"idempotent GC resume preserves current head");
+await owner.CompactAsync(); await owner.DisposeAsync(); owner=factory.Create(open with { Mode=AssetStoreOpenMode.Open });
+Check((await owner.GetDependencyClosureAsync([updatedLinkedVersion])).Length==2 && (await owner.QueryAssetsAsync(new AssetQuery(Tag:"geometry"))).Items.Length==2,"post-GC checkpoint rebuilds exact dependency and tag indexes");
+var backupManifest=await owner.CreateSnapshotAsync([updatedLinkedVersion]);var backupPin=Guid.NewGuid();await owner.PinSnapshotAsync(backupManifest.Id,backupPin);
+var exported=await owner.ExportBackupAsync(root+"-backup");
+Check(exported.Generation==4 && exported.StoreId==storeId && exported.Files>=4 && exported.Bytes>0,"verified immutable backup export");
+var archiveRejected=false;try{factory.Create(open with{Root=exported.Root,Mode=AssetStoreOpenMode.Open});}catch(InvalidDataException){archiveRejected=true;}
+Check(archiveRejected,"normal factory rejects immutable backup root");
+var restoreFactory=app.Services.Resolve<IFactory<IProjectAssetStore,RestoreAssetStoreArguments>>()!;
+await using(var restored=restoreFactory.Create(new(exported.Root,root+"-restored",project,storeId)))
+{
+    Check(restored.ProjectId==project && restored.StoreId==storeId && restored.ContentGeneration==4 && host.ActiveStoreCount==2,"typed restore factory preserves identity and owner registration");
+    Check(await restored.FindResourceAsync(row.Id)==updatedVersion && (await restored.ReadDependenciesAsync(updatedLinkedVersion)).Single()==updatedVersion,"restore preserves exact revisions and dependency index");
+    var pinRejected=false;try{await restored.RemoveSnapshotAsync(backupManifest.Id);}catch(InvalidDataException){pinRejected=true;}
+    Check(pinRejected,"restore preserves durable pins");
+    await using(var frozen=await restored.OpenSnapshotAsync(backupManifest.Id))
+    {await using var stream=await frozen.OpenResourceAsync(updatedVersion);using var output=new MemoryStream();await stream.CopyToAsync(output);Check(output.ToArray().AsSpan().SequenceEqual(new byte[]{42,43}),"restored pinned stream exact bytes");}
+    await restored.ReleaseSnapshotPinAsync(backupPin);await restored.RemoveSnapshotAsync(backupManifest.Id);
+}
+Check(host.ActiveStoreCount==1 && await owner.FindResourceAsync(row.Id)==updatedVersion,"restored product disposal preserves source owner");
+await host.StopAsync();
+Check(owner.IsClosed && host.ActiveStoreCount == 0 && host.IsReleased, "App host fallback drains live owner");
+try { factory.Create(open with { Mode = AssetStoreOpenMode.Open }); throw new InvalidDataException("Stopped host admitted store"); }
+catch (ObjectDisposedException) { checks.Add("stop closes factory admission"); }
+Check(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "LiteDB"), "no removed backend loaded");
+var module = typeof(NomStoreHost).Assembly;
+File.WriteAllText(args[0], JsonSerializer.Serialize(new { Completed = true, Checks = checks, Module = module.GetName().Name,
+    ModulePath = module.Location, ModuleSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(module.Location))),
+    Consumer = typeof(Program).Assembly.GetName().Name, Framework = Environment.Version.ToString() }, new JsonSerializerOptions { WriteIndented = true }));
+Console.WriteLine("Public App consumer passed: " + checks.Count);
