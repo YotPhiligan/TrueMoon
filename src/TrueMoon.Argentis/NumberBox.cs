@@ -59,6 +59,8 @@ public sealed class NumberBox : ElementList
 
     /// <inheritdoc />
     protected override EditorColorRole ThemeColorRole => EditorColorRole.Number;
+    /// <inheritdoc />
+    protected override bool SharesValidationWithEditors => true;
 
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)

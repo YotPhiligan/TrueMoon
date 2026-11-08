@@ -136,7 +136,7 @@ public sealed class WindowTitleBar : ElementList, IUiFrameParticipant, IUiInputO
             if (_header == null)
             {
                 if (_icon != null) { context.Image(_icon, new(x, Bounds.Y + (Bounds.Height - 16) / 2, 16, 16)); x += 24; }
-                context.Text(_title, x, Bounds.Y + (Bounds.Height - FontSize) / 2, _state.Active ? Foreground : Theme.Disabled, FontSize, FontFamily);
+                context.Text(_title, x, Bounds.Y + (Bounds.Height - FontSize) / 2, _state.Active ? Foreground : Theme.Disabled, FontSize, FontFamily, FontWeight, FontItalic);
             }
         }
         finally { context.Restore(); }

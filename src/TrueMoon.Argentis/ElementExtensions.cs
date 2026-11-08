@@ -101,6 +101,14 @@ public static class ElementExtensions
     public static T Configure<T>(this T element, Action<T> configure) where T : Element { configure(element); return element; }
     /// <summary>Applies internal spacing.</summary>
     public static T Padding<T>(this T element, float padding) where T : Element { element.Padding = new Thickness(padding); return element; }
+    /// <summary>Applies a local font weight.</summary>
+    /// <typeparam name="T">Concrete element type.</typeparam><param name="element">The element.</param>
+    /// <param name="weight">Weight100..900;400 is regular and600 semibold.</param><returns>The same element.</returns>
+    public static T FontWeight<T>(this T element, int weight) where T : Element { element.FontWeight = weight; return element; }
+    /// <summary>Applies a local italic selection.</summary>
+    /// <typeparam name="T">Concrete element type.</typeparam><param name="element">The element.</param>
+    /// <param name="italic">Whether to select italic.</param><returns>The same element.</returns>
+    public static T FontItalic<T>(this T element, bool italic = true) where T : Element { element.FontItalic = italic; return element; }
     /// <summary>Applies a background color.</summary>
     public static T Background<T>(this T element, Color color) where T : Element { element.Background = color; return element; }
     /// <summary>Adds child elements in paint order.</summary>

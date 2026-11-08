@@ -37,7 +37,9 @@ internal static class EditorStatusBarSmoke
         }).WaitAsync(token);
         await Capture("status-bar.png");
         await ui.InvokeAsync(() => EditorHeaderSmoke.Move(ui, footer.Bar)).WaitAsync(token);
-        await Until(() => footer.Bar.OverlayReveal == 1 && !ui.NeedsUpdate);
+        // Native pointer samples may arrive between directed gestures and the rendered hover frame.
+        await EditorHeaderSmoke.UntilAsync(ui, () => footer.Bar.OverlayReveal == 1 && !ui.NeedsUpdate, token,
+            () => EditorHeaderSmoke.Move(ui, footer.Bar));
         Require(view.Canvas.Bounds == viewport && footer.Bar.Backdrop == footer.Theme.PanelBackdrop &&
             footer.Bar.Opacity == 1 && footer.SummaryButton.Opacity == 1, "Status hover reframed the scene or faded its controls.");
         await Capture("status-hover.png");

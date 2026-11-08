@@ -34,6 +34,7 @@ public sealed class EditorWorkspace
     {
         if (_projectSynchronized && ReferenceEquals(Project, project)) return;
         _projectSynchronized = true; Project = project; HasProject = project != null;
+        DocumentEpoch = Guid.NewGuid(); ContentToken = Guid.NewGuid(); SelectionRevision = checked(SelectionRevision + 1);
         _document = null; _entities = []; _selected = null; HasCandidate = false;
         Scene = _initialScene = new(project == null ? "Проект не открыт" : "Сцена не открыта", 0, []);
         UpdateHierarchy(); SceneChanged?.Invoke(); SelectionChanged?.Invoke();
@@ -43,6 +44,14 @@ public sealed class EditorWorkspace
     /// <summary>Gets stable immutable parent/name/role data for the current scene revision.</summary>
     public IReadOnlyList<HierarchyItem> HierarchyItems => _hierarchy;
     public string? SelectedId => _selected;
+    /// <summary>Gets the current opening epoch, renewed even for same-ID/revision reopen.</summary>
+    public Guid DocumentEpoch { get; private set; } = Guid.NewGuid();
+    /// <summary>Gets the exact current committed payload token.</summary>
+    public Guid ContentToken { get; private set; } = Guid.NewGuid();
+    /// <summary>Gets the committed authoring observation; no control/theme dependencies are held.</summary>
+    public SceneAuthoringState? Document => _document;
+    /// <summary>Advances for every explicit selection/clear intent, including same-ID and already-clear requests.</summary>
+    public ulong SelectionRevision { get; private set; }
     public SessionState State { get; private set; } = SessionState.Stopped;
     public GameEditorOperation Operation { get; private set; }
     public bool HasCandidate { get; private set; }
@@ -55,14 +64,20 @@ public sealed class EditorWorkspace
     public event Action? SceneChanged;
     /// <summary>Displays immutable authoring content without projecting into the legacy 64-entity runtime format.</summary>
     /// <param name="document">Current project-owned state, or null to return to the original workspace.</param>
-    public void SetDocument(SceneAuthoringState? document)
+    public void SetDocument(SceneAuthoringState? document) => SetDocument(document, Guid.Empty);
+    /// <summary>Copies a coherent opening identity with committed content.</summary>
+    /// <param name="document">Current immutable source.</param><param name="openingId">Actual document owner epoch, or empty for legacy observations.</param>
+    public void SetDocument(SceneAuthoringState? document, Guid openingId)
     {
-        if (ReferenceEquals(_document?.Document, document?.Document)) return;
+        var epoch = openingId != Guid.Empty ? openingId : document == null || _document?.Document.Id != document.Document.Id ? Guid.NewGuid() : DocumentEpoch;
+        if (ReferenceEquals(_document?.Document, document?.Document) && (openingId == Guid.Empty || epoch == DocumentEpoch)) return;
         var previousScene = Scene.Id;
+        var reopened = epoch != DocumentEpoch;
+        DocumentEpoch = epoch; ContentToken = Guid.NewGuid(); SelectionRevision = checked(SelectionRevision + 1);
         _document = document;
         Scene = document == null ? _initialScene : new(document.Document.Id.Value.ToString("D"), document.Document.Revision, []);
         UpdateHierarchy();
-        if (previousScene != Scene.Id || _selected != null && !EntityIds.Contains(_selected)) _selected = EntityIds.FirstOrDefault();
+        if (reopened || previousScene != Scene.Id || _selected != null && !EntityIds.Contains(_selected)) _selected = EntityIds.FirstOrDefault();
         SceneChanged?.Invoke(); SelectionChanged?.Invoke();
     }
     private void UpdateHierarchy()
@@ -82,11 +97,13 @@ public sealed class EditorWorkspace
     {
         ArgumentNullException.ThrowIfNull(id);
         if (!EntityIds.Contains(id)) throw new ArgumentException("Entity is not in this scene.", nameof(id));
+        SelectionRevision = checked(SelectionRevision + 1);
         if (_selected == id) return; _selected = id; SelectionChanged?.Invoke();
     }
     /// <summary>Clears inspection while retaining the scene and all entities.</summary>
     public void ClearSelection()
     {
+        SelectionRevision = checked(SelectionRevision + 1);
         if (_selected == null) return;
         _selected = null; SelectionChanged?.Invoke();
     }

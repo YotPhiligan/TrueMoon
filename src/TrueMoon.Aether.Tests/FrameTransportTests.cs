@@ -17,12 +17,12 @@ public sealed class FrameTransportTests
 {
     private static SessionIdentity Identity() => new(Guid.NewGuid(), 1, new('A', 64), new('B', 64), new('C', 64));
     private static FrameSurface Surface(int width = 32, int height = 16) => FrameSurface.Create(Identity(), 1, width, height);
-    private static byte[] Header(FrameSurface surface) { var h = new byte[1024]; FrameCodec.Initialize(h, surface); return h; }
+    private static byte[] Header(FrameSurface surface) { var h = new byte[FrameCodec.HeaderBytes]; FrameCodec.Initialize(h, surface); return h; }
     private static void Edit(FrameSurface surface, Action<byte[]> edit)
     {
         using var map = MemoryMappedFile.OpenExisting(surface.Mapping);
-        using var view = map.CreateViewAccessor(); var header = new byte[1024]; view.ReadArray(0, header, 0, 1024);
-        edit(header); view.WriteArray(0, header, 0, 1024);
+        using var view = map.CreateViewAccessor(); var header = new byte[FrameCodec.HeaderBytes]; view.ReadArray(0, header, 0, header.Length);
+        edit(header); view.WriteArray(0, header, 0, header.Length);
     }
 
     [Fact]
@@ -44,13 +44,13 @@ public sealed class FrameTransportTests
     public void Codec_ExplicitLittleEndianLayoutAndUnsignedCountersRoundTrip()
     {
         var surface = Surface(); var bytes = Header(surface);
-        Assert.Equal("TMFRAME1"u8.ToArray(), bytes[..8]); Assert.Equal(1u, BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(8)));
+        Assert.Equal("TMFRAME2"u8.ToArray(), bytes[..8]); Assert.Equal(2u, BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(8)));
         Assert.Equal(32u, BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(20)));
-        Assert.Equal(1024 + 3 * 32 * 16 * 4, surface.MappingBytes);
-        Assert.Equal(640, FrameCodec.SlotOffset(2)); Assert.Equal(5120, FrameCodec.PixelsOffset(surface, 2));
+        Assert.Equal(1536 + 3 * 32 * 16 * 4, surface.MappingBytes);
+        Assert.Equal(1024, FrameCodec.SlotOffset(2)); Assert.Equal(5632, FrameCodec.PixelsOffset(surface, 2));
         var metadata = new FrameMetadata(2, ulong.MaxValue, 0xabcdef0123456789, 0x12345678, 123456);
         FrameCodec.WriteSlot(bytes, surface, metadata, FrameSlotState.Ready);
-        Assert.Equal(0x78, bytes[680]); Assert.Equal(0x56, bytes[681]);
+        Assert.Equal(0x78, bytes[1064]); Assert.Equal(0x56, bytes[1065]);
         Assert.Equal(metadata, FrameCodec.ReadSlot(bytes, surface, 2)); FrameCodec.ValidateHeader(bytes, surface);
         Assert.Equal(FrameSlotState.Ready, FrameCodec.State(bytes, 2));
         Assert.Throws<ArgumentOutOfRangeException>(() => FrameCodec.SlotOffset(3));
@@ -82,7 +82,7 @@ public sealed class FrameTransportTests
     [Fact]
     public void Surface_MaximumAndSuspensionHaveBoundedDistinctResources()
     {
-        var s = Surface(1920, 1080); Assert.Equal(24884224, s.MappingBytes); Assert.True(s.MappingBytes < 25L * 1024 * 1024);
+        var s = Surface(1920, 1080); Assert.Equal(24884736, s.MappingBytes); Assert.True(s.MappingBytes < 25L * 1024 * 1024);
         Assert.NotEqual(s.Mapping, s.Mutex); Assert.NotEqual(s.Mapping, s.ReadyEvent);
         var zero = FrameSurface.Create(s.Identity, 2, 0, 0); Assert.True(zero.Suspended); Assert.Equal(0, zero.MappingBytes);
         Assert.Throws<InvalidDataException>(() => (zero with { Mapping = s.Mapping }).Validate());
@@ -154,11 +154,11 @@ public sealed class FrameTransportTests
         var s = Surface(); using var editor = SharedFrameRing.Create(s); using var child = SharedFrameRing.Open(s);
         var row = new byte[s.Stride]; child.WritePattern(1, 1, 0xff2080c0, row);
         using var map = MemoryMappedFile.OpenExisting(s.Mapping); using var view = map.CreateViewAccessor();
-        var original = new byte[s.PixelBytes]; view.ReadArray(1024, original, 0, original.Length);
+        var original = new byte[s.PixelBytes]; view.ReadArray(FrameCodec.HeaderBytes, original, 0, original.Length);
         Edit(s, h => FrameCodec.SetState(h, 0, FrameSlotState.Reading));
         Assert.True(child.WritePattern(2, 2, 0xff2080c0, row)); Assert.True(child.WritePattern(3, 3, 0xff2080c0, row));
         Assert.False(child.WritePattern(4, 4, 0xff2080c0, row));
-        var unchanged = new byte[s.PixelBytes]; view.ReadArray(1024, unchanged, 0, unchanged.Length); Assert.Equal(original, unchanged);
+        var unchanged = new byte[s.PixelBytes]; view.ReadArray(FrameCodec.HeaderBytes, unchanged, 0, unchanged.Length); Assert.Equal(original, unchanged);
         Assert.Null(editor.CopyLatest(unchanged, 3)); Assert.Equal(2, editor.Superseded);
         Edit(s, h => Assert.Equal(FrameSlotState.Reading, FrameCodec.State(h, 0)));
     }
@@ -169,7 +169,7 @@ public sealed class FrameTransportTests
         var s = Surface(); using var ring = SharedFrameRing.Create(s); ring.WritePattern(1, 0, 0xff2080c0, new byte[s.Stride]);
         if (fault == "eof") ring.End();
         else if (fault == "crc")
-        { using var map = MemoryMappedFile.OpenExisting(s.Mapping); using var view = map.CreateViewAccessor(); view.Write(1024, (byte)99); }
+        { using var map = MemoryMappedFile.OpenExisting(s.Mapping); using var view = map.CreateViewAccessor(); view.Write(FrameCodec.HeaderBytes, (byte)99); }
         else Edit(s, h => { if (fault == "header") h[0] = 0; else if (fault == "slot") h[FrameCodec.SlotOffset(0) + 56]++; else h[FrameCodec.SlotOffset(2)] = 4; });
         var error = Record.Exception(() => ring.CopyLatest(new byte[s.PixelBytes], 0));
         if (fault == "eof") Assert.IsType<EndOfStreamException>(error); else Assert.IsType<InvalidDataException>(error);

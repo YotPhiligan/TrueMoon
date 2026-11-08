@@ -26,6 +26,33 @@ public sealed class PreviewGameSession : IRenderGameSession
         var candidate = new PrimitiveScene(Camera, scene.CopyEntities().Where(e => e.Primitive != null).Select(e => e.Primitive!.ToPrimitive()));
         _scene = candidate; Revision = scene.Revision;
     }
+    /// <summary>Installs the initial explicit view atomically with the projected scene before frame readiness.</summary>
+    /// <param name="scene">Exact projected payload.</param><param name="view">Opening/content identity and external camera.</param>
+    public void Load(SceneSnapshot scene, PreviewViewState view)
+    {
+        ArgumentNullException.ThrowIfNull(scene); ArgumentNullException.ThrowIfNull(view);
+        ValidateView(scene, view);
+        Load(scene); _scene = _scene! with { PreviewView = view };
+    }
+    /// <summary>Gets the current explicit view; legacy preview remains untagged.</summary>
+    public PreviewViewState? View => _scene?.PreviewView;
+    /// <summary>Applies a whole newer view at the runtime's serialized command boundary.</summary>
+    /// <param name="view">Same context, monotonically newer camera, or an exact no-op.</param>
+    public void SetView(PreviewViewState view)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this); ArgumentNullException.ThrowIfNull(view);
+        view.Camera.CreateProjection(16, 16);
+        var old = View ?? throw new InvalidOperationException("Explicit preview view was not negotiated at LoadScene.");
+        if (view.Context != old.Context || view.Camera.Revision < old.Camera.Revision ||
+            view.Camera.Revision == old.Camera.Revision && view != old) throw new InvalidDataException("Stale/foreign preview view.");
+        _scene = _scene! with { PreviewView = view };
+    }
+    private static void ValidateView(SceneSnapshot scene, PreviewViewState view)
+    {
+        view.Camera.CreateProjection(16, 16);
+        if (!Guid.TryParse(scene.Id, out var id) || id != view.Context.SceneId || scene.Revision != view.Context.SceneRevision)
+            throw new InvalidDataException("Preview view does not describe the loaded scene.");
+    }
     /// <summary>Does not advance gameplay or modify authoring data.</summary>
     public void Tick() => ObjectDisposedException.ThrowIf(_disposed, this);
     /// <summary>Returns the immutable render scene at tick zero.</summary>

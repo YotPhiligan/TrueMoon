@@ -112,7 +112,7 @@ public sealed class GameInputProtocolTests
     [Fact]
     public void ControlV3_RoundTripsInputFlagsLookActionAndOutcomeAndRejectsOlderVersions()
     {
-        var id = Identity; id.Validate(); Assert.Equal(3, id.ControlVersion);
+        var id = Identity; id.Validate(); Assert.Equal(4, id.ControlVersion);
         Assert.Throws<InvalidDataException>(() => (id with { ControlVersion = 2 }).Validate());
         Assert.Throws<InvalidDataException>(() => (id with { ControlVersion = 1 }).Validate());
         var request = Input(id, 17, new(true, GameButtons.Forward | GameButtons.Left, -.25f, .5f, true));

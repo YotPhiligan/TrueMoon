@@ -66,3 +66,50 @@ Native `--validation` additionally requires a Vulkan validation layer accessible
 to the child process tree through its environment. Missing tooling yields
 `ErrorLayerNotPresent`; an ordinary functional run without this flag proves no
 Vulkan validation acceptance. No driver or machine configuration is changed.
+
+ED5a.2 camera API proof: `--project fixture.aetherproj --smoke fresh-directory --smoke-camera --validation`.
+Use a disposable Transform fixture with Transform.aetherscene containing one inherited
+opaque cube, default rotation and Appearance. The profile opens it without Build/game
+logic, installs an explicit view, sends50camera samples through the same child/surface,
+checks actual GPU pixels and Editor ReadPresentedView, resizes/suspends/resumes, and
+checks unchanged authoring/selection and zero cleanup. It records camera.json and four
+camera PNGs in addition to existing window/header/status proofs. This exercises engine
+camera APIs, not orbit/pan/dolly/select input. Source/published scope and exact fixture
+are documented in docs/engine/HISTORY.md under ED5a.2.
+
+ED5a.3 directed navigation proof:
+`--project fixture.aetherproj --smoke fresh-directory --smoke-navigation --validation`.
+Use a disposable Transform fixture with two independent inherited opaque cubes at
+(-1.5,1,-1)/(1.5,1,-1), with red/green Appearance. The profile exercises production
+UiSession routing: LMB hit/same/different/miss, shared tree/inspector policy, invalid
+draft retention through RMB/MMB/wheel/F, Esc rollback, and actual GPU pixel readback.
+navigation.json and six navigation PNGs retain camera/frame/layout evidence. Camera-only
+input must preserve document/history/tick and the single runtime/surface. report.json
+records zero owned UI/GPU/mapping/child resources and process-local validation.
+Source Debug/published Release runs are recorded in docs/engine/HISTORY.md (ED5a.3).
+This historical ED5a.3 profile is directed UI input in a native window. Current ED5a.4 results and limits are below.
+ED5a.4 full lifecycle profile:
+`--project fixture.aetherproj --smoke fresh-directory --smoke-viewport --validation`.
+Use the two-cube [scene template](../AetherPackageConsumer/Viewport/Transform.aetherscene)
+and disposable fixture/Other/Bad projects (Bad has a missing game entry); generate them
+with [VerifyViewport.ps1](../AetherPackageConsumer/VerifyViewport.ps1).
+The directed production UiSession scenario checks50orbit samples/pending, pan/dolly/F/
+Esc/focus loss, invalid draft, actual pixels, UI/render resize, native minimize/resume,
+render suspension, newer intent, delete/Undo, same-ID reopen, project switch, real
+Build/Play/Stop, activation failure, first-presentation cancellation and recovery.
+viewport-acceptance.json lists13groups and17PNG; report.json requires9reaped children,
+8GPU validation reports plus1explicit pre-GPU failure, zero owned resources/errors.
+
+Windows input observer:
+`--project fixture.aetherproj --smoke fresh-directory --smoke-native-input --validation`.
+This profile observes SilkWindowHost.Input and never injects events. In the window:
+click each cube and empty background, focus inspector X, Ctrl+A and enter `invalid`,
+wheel over canvas to dolly, focus canvas and press F, drag LMB then release, press/
+release RMB and MMB. Close with native X. native-input-live.json exposes progress;
+native-input.json records input counts, camera/frame/layout/DPI and final predicates.
+Wheel steps depend on the input driver; observe actual camera revision/distance.
+Debug/published Release Windows SendInput ran on DPI1.5 with camera1→2dolly→3F,
+draft retained, same PID/surface,6PNG,1child=reaped and zero resources/validation.
+Sky supplies LMB drag only: moving RMB/MMB/Esc/focus loss have directed UI/GPU tests,
+physical held-button/multi-monitor DPI are separate gates. Neither profile proves
+device-loss/K7/VRAM acceptance. [Exact current evidence](../../docs/engine/HISTORY.md#ed5a4-acceptance-2026-11-08).

@@ -27,7 +27,10 @@ internal static class EditorApplication
         if (smoke != null && Directory.Exists(smoke)) throw new IOException("Use a new smoke directory.");
         var directory = Path.GetFullPath(smoke ?? Path.Combine(Path.GetTempPath(), "TrueMoon", "Editor", Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(directory);
-        var fonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string> { ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets/Fonts/NotoSans-Regular.ttf") });
+        var buildDirectory=options.AcceptanceSmoke?Path.Combine(Path.GetTempPath(),"TrueMoon","ViewportAcceptance",Guid.NewGuid().ToString("N")):null;
+        if(buildDirectory!=null)File.WriteAllText(Path.Combine(directory,"compiler-location.txt"),buildDirectory);
+        var fallbackFonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string> { ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets/Fonts/NotoSans-Regular.ttf") });
+        var fonts = SkiaFontCatalog.FromSystemFonts([FontDefaults.Family, FontDefaults.FallbackFamily], fallbackFonts);
         await using var app = App.Build(context =>
         {
             context.UseDiagnostics(new DiagnosticPipelineOptions
@@ -43,6 +46,7 @@ internal static class EditorApplication
             context.UseAetherEditor(engine =>
             {
                 engine.HostContractId = BuildIdentity.HostId; engine.GameBuildId = new('0', 64); engine.ReportDirectory = directory;
+                engine.BuildDirectory=buildDirectory;
                 engine.RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime");
             }, editor => editor.ProjectPath = options.LegacyProject ? null : options.ProjectPath);
             context.UseAetherEditorWindow(fonts, window => window.Title = "TrueMoon Aether Editor · " +
@@ -60,7 +64,7 @@ internal static class EditorApplication
         var documents = app.Services.Resolve<EditorDocumentCommands>()!;
         var first = new TaskCompletionSource<UiSession>(TaskCreationOptions.RunContinuationsAsynchronously);
         EditorView? view = null; ProjectSession? selectedProject = null;
-        window.FramePresented += ui => { view ??= (EditorView)((WindowFrame)ui.Root).Content; first.TrySetResult(ui); };
+        window.FramePresented += ui => { view ??= EditorMainWindow.FromRoot(ui.Root).EditorView; first.TrySetResult(ui); };
         try
         {
             using var startup = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -68,7 +72,7 @@ internal static class EditorApplication
             var ui = await first.Task.WaitAsync(startup.Token);
             await app.Services.Resolve<EditorWindow>()!.Ready.WaitAsync(startup.Token);
             selectedProject = projects.Active;
-            if (options.Light) await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = "Noto Sans" }));
+            if (options.Light) await ui.InvokeAsync(() => ui.SetTheme(Theme.Light));
             if (smoke != null)
             {
                 using var headerDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -77,7 +81,16 @@ internal static class EditorApplication
                 await EditorBorderSmoke.VerifyAsync(directory, window, ui, view!, borderDeadline.Token);
                 using var statusDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                 await EditorStatusBarSmoke.VerifyAsync(directory, window, ui, view!, statusDeadline.Token);
-                if (options.InspectorSmoke) await EditorInspectorSmoke.RunAsync(directory, window, ui, view!, workspace,
+                if (options.NativeInputSmoke) await EditorNativeInputSmoke.RunAsync(directory, window, ui, view!, workspace,
+                    documents, engine, runtimeFactory, app.Services.Resolve<EditorSession>()!, app.Services.Resolve<EditorPreview>()!, app.Services.Resolve<EditorViewportState>()!);
+                else if (options.AcceptanceSmoke) await EditorViewportAcceptanceSmoke.RunAsync(directory, window, ui, view!, workspace,
+                    documents, engine, runtimeFactory, app.Services.Resolve<EditorSession>()!, app.Services.Resolve<EditorPreview>()!, app.Services.Resolve<EditorViewportState>()!, app.Services.Resolve<EditorScenePlayback>()!);
+                else if (options.NavigationSmoke) await EditorViewportInputSmoke.RunAsync(directory, window, ui, view!, workspace,
+                    documents, selectedProject!.Documents!, engine, runtimeFactory, app.Services.Resolve<EditorSession>()!,
+                    app.Services.Resolve<EditorPreview>()!, app.Services.Resolve<EditorViewportState>()!);
+                else if (options.CameraSmoke) await EditorPreviewCameraSmoke.RunAsync(directory, window, ui, view!, workspace,
+                    documents, selectedProject!.Documents!, engine, runtimeFactory, app.Services.Resolve<EditorSession>()!);
+                else if (options.InspectorSmoke) await EditorInspectorSmoke.RunAsync(directory, window, ui, view!, workspace,
                     documents, selectedProject!.Documents!, app.Services.Resolve<ISceneDocumentStore>()!, app.Services.Resolve<EditorPreview>()!, engine, runtimeFactory);
                 else if (options.HierarchySmoke) await EditorHierarchySmoke.RunAsync(directory, window, ui, view!, workspace,
                     documents, selectedProject!.Documents!, app.Services.Resolve<ISceneDocumentStore>()!, app.Services.Resolve<EditorPreview>()!, engine, runtimeFactory);

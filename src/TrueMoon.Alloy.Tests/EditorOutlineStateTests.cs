@@ -55,8 +55,9 @@ public sealed class EditorOutlineStateTests
         editor.BorderColor = new(77, 88, 99); ui.SetTheme(Theme.Light); ui.Update();
         var drawing = new OutlineDrawing(); editor.Draw(drawing);
         Assert.Contains(drawing.Strokes, stroke => stroke == (new Rect(.5f, .5f, 99, 49), new Color(77, 88, 99), 1f));
-        Assert.Contains(drawing.Strokes, stroke => stroke == (new Rect(2, 2, 96, 46), Theme.Light.Focus, 2f));
-        Assert.Contains(drawing.Fills, fill => fill == (new Rect(0, 0, 3, 50), Theme.Light.Error));
+        Assert.Contains(drawing.Strokes, stroke => stroke == (new Rect(2, 2, 46, 46), Theme.Light.Focus, 2f));
+        Assert.Contains(drawing.Fills, fill => fill.Color == Theme.Light.Error && editor.ValidationIconBounds.Contains(fill.Bounds.X, fill.Bounds.Y));
+        Assert.DoesNotContain(drawing.Fills, fill => fill == (new Rect(0, 0, 3, 50), Theme.Light.Error));
         Assert.DoesNotContain(drawing.Fills, fill => fill.Color == Theme.Light.Modified);
         Assert.Equal(drawing.Saves, drawing.Restores);
         editor.Clear(UiProperties.BorderColor); Assert.Equal(new Color(44, 55, 66), editor.BorderColor);
@@ -84,10 +85,11 @@ public sealed class EditorOutlineStateTests
     }
 
     [Theory]
-    [InlineData(48f, 16f, 13f, 16f)]
-    [InlineData(20f, 16f, 3f, 8f)]
-    [InlineData(60f, 12f, 21f, 12f)]
-    public void TextBox_TextSelectionAndCaretShareVerticallyCenteredLineBox(float height, float fontSize, float textY, float lineHeight)
+    [InlineData(48f, 16f, 13f, 16f, 1f, 46f)]
+    [InlineData(20f, 16f, 1.5f, 16f, 1f, 18f)]
+    [InlineData(60f, 12f, 21f, 12f, 1f, 58f)]
+    [InlineData(12f, 16f, -2f, 16f, 1f, 10f)]
+    public void TextBox_TextSelectionAndCaretShareVerticallyCenteredLineBox(float height, float fontSize, float textY, float lineHeight, float clipY, float clipHeight)
     {
         var editor = new TextBox { Value = "AB", FontSize = fontSize, Padding = new(4, 3, 8, 9) };
         using var ui = CompactControlHarness.Ui(editor, 120, (int)height); ui.Update(); ui.Focus(editor);
@@ -96,7 +98,7 @@ public sealed class EditorOutlineStateTests
         Assert.Equal(("AB", 4f, textY), Assert.Single(drawing.Texts));
         Assert.Contains(drawing.Fills, fill => fill == (new Rect(4, textY, fontSize, lineHeight), Theme.Dark.Accent with { A = 100 }));
         Assert.Contains(drawing.Fills, fill => fill == (new Rect(4 + fontSize, textY, 1, lineHeight), Theme.Dark.Foreground));
-        Assert.Contains(new Rect(4, 3, 108, height - 12), drawing.Clips);
+        Assert.Contains(new Rect(4, clipY, 108, clipHeight), drawing.Clips);
         Assert.Equal(2, editor.CaretIndex); Assert.Equal(2, editor.SelectionLength); Assert.Equal("AB", editor.Value);
         Assert.Equal(drawing.Saves, drawing.Restores);
     }

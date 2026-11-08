@@ -4,6 +4,7 @@ using TrueMoon.Aether.Editor;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
+using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 
@@ -45,10 +46,13 @@ internal static class Program
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrueMoon", "AetherEditor", "runs", Guid.NewGuid().ToString("N"));
             var diagnostics = values.ContainsKey("--report") ? Path.Combine(report, "diagnostics", "editor") : Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrueMoon", "Diagnostics", "Editor");
-            var fonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
+            var fallbackFonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
             {
                 ["Noto Sans"] = values.GetValueOrDefault("--font") ?? Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "NotoSans-Regular.ttf")
             });
+            // An explicit --font remains a deterministic file-only override.
+            var fonts = values.ContainsKey("--font") ? fallbackFonts :
+                SkiaFontCatalog.FromSystemFonts([FontDefaults.Family, FontDefaults.FallbackFamily], fallbackFonts);
             // Main owns composition and paths; all editor services and UI products come from App/DI.
             await using var app = App.Build(context =>
             {

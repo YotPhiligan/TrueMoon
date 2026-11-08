@@ -7,6 +7,9 @@ public sealed class DefaultStyleGallery : ContentControl
 {
     /// <summary>Editable field used by the directed focus proof.</summary>
     public TextBox NameEditor { get; }
+    /// <summary>Rejected draft demonstrating the validation badge and its tooltip.</summary>
+    public TextBox ErrorEditor { get; } = new() { Value = "Укажите корректное имя", HasError = true,
+        ErrorMessage = "Имя должно быть уникальным", AccessibleName = "Имя с ошибкой" };
     /// <summary>Interactive overflowing list.</summary>
     public ScrollViewer Scroller { get; }
     /// <summary>Creates an independent gallery with theme-switching actions.</summary>
@@ -26,8 +29,7 @@ public sealed class DefaultStyleGallery : ContentControl
         var left = new VStack { Spacing = 10, Width = 440 }.WithChildren(
             Heading("Поля и состояния"), new Text("Название проекта · фокус с клавиатуры"), NameEditor,
             new TextBox { Value = "Только чтение · можно выделить и скопировать", IsReadOnly = true },
-            new TextBox { Value = "Укажите корректное имя", HasError = true, AccessibleName = "Имя с ошибкой" },
-            new ErrorLabel("Ошибка: имя должно быть уникальным"),
+            ErrorEditor,
             new TextBox { Value = "Недоступное поле", IsEnabled = false },
             new HStack { Spacing = 12 }.WithChildren(new CheckBox("Сетка") { IsChecked = true }, new CheckBox("Привязка"), new CheckBox("Заблокировано") { IsEnabled = false }),
             Heading("Многострочный редактор"),
@@ -37,20 +39,19 @@ public sealed class DefaultStyleGallery : ContentControl
         var right = new VStack { Spacing = 10, Width = 440 }.WithChildren(
             Heading("Цветные действия"), new HStack { Spacing = 8 }.WithChildren(normal, accent, positive, danger),
             new HStack { Spacing = 8 }.WithChildren(new Button("Hover") { IsHovered = true }, new Button("Недоступно") { IsEnabled = false }),
-            new Text("Прямые углы · бордер 1 · фокус 2 · маркер ошибки 3"),
+            new Text("Прямые углы · бордер 1 · фокус 2 · квадрат ошибки"),
             Heading("Значения"), slider, progress,
             Heading("Список и полоса прокрутки"), Scroller,
             new Border { Padding = new Thickness(12) }.Content(new VStack { Spacing = 4 }.WithChildren(
                 new Text("Tab — переход между контролами"), new Text("Enter / Space — активация кнопки"), new Text("Колесо / перетаскивание — прокрутка"))),
             new HStack { Spacing = 8 }.WithChildren(new Button("Светлая тема").OnClick(() => Switch(Theme.Light)), new Button("Тёмная тема").OnClick(() => Switch(Theme.Dark))));
-        SetContent(new VStack { Padding = new Thickness(24), Spacing = 18 }.WithChildren(
+        SetContent(new OverlayHost(new VStack { Padding = new Thickness(24), Spacing = 18 }.WithChildren(
             new Text("TrueMoon Alloy") { FontSize = 28 }, new Text("Стандартное оформление контролов и окна"),
-            new HStack { Spacing = 24 }.WithChildren(left, right)));
+            new HStack { Spacing = 24 }.WithChildren(left, right))));
     }
     /// <inheritdoc />
     protected override Color ThemeBackground => Theme.Surface;
     private static Text Heading(string value) => new(value) { FontSize = 20 };
-    private sealed class ErrorLabel(string value) : Text(value) { protected override Color ThemeForeground => Theme.Error; }
     private void Switch(Theme theme)
     {
         Element root = this; while (root.Parent != null) root = root.Parent;

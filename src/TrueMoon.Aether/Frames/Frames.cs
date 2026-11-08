@@ -49,20 +49,24 @@ public sealed record FrameSurface(SessionIdentity Identity, ulong Generation, st
 }
 
 public enum FrameSlotState { Free, Writing, Ready, Reading }
-public sealed record FrameMetadata(int Slot, ulong FrameId, ulong Tick, uint Checksum, long ProducedTimestamp);
+public sealed record FrameMetadata(int Slot, ulong FrameId, ulong Tick, uint Checksum, long ProducedTimestamp)
+{
+    /// <summary>Explicit frame-v2 capture stamp; absent reference/game/legacy frames are non-pickable.</summary>
+    public Preview.PreviewFrameStamp? PreviewView { get; init; }
+}
 
-// Explicit little-endian v1. No native struct layout, borrowed pointers or strings
+// Explicit little-endian v2. No native struct layout, borrowed pointers or strings
 // with variable length are mapped. Identity hashes are raw SHA256; Guid is ASCII N.
 public static class FrameCodec
 {
-    public const int HeaderBytes = 1024, SlotBytes = 192, SlotsOffset = 256, SlotCount = 3;
+    public const int HeaderBytes = 1536, SlotBytes = 384, SlotsOffset = 256, SlotCount = 3;
     public static int SlotOffset(int slot) => slot is >= 0 and < SlotCount ? SlotsOffset + slot * SlotBytes : throw new ArgumentOutOfRangeException(nameof(slot));
     public static long PixelsOffset(FrameSurface surface, int slot) => checked(HeaderBytes + (long)(SlotOffset(slot) - SlotsOffset) / SlotBytes * surface.PixelBytes);
     public static void Initialize(Span<byte> bytes, FrameSurface surface)
     {
         surface.Validate(); if (surface.Suspended || bytes.Length != HeaderBytes) throw new InvalidDataException("Invalid header buffer.");
-        bytes.Clear(); "TMFRAME1"u8.CopyTo(bytes);
-        U32(bytes, 8, 1); U32(bytes, 12, HeaderBytes); U32(bytes, 16, SlotCount);
+        bytes.Clear(); "TMFRAME2"u8.CopyTo(bytes);
+        U32(bytes, 8, 2); U32(bytes, 12, HeaderBytes); U32(bytes, 16, SlotCount);
         Dimensions(bytes, 20, surface); U32(bytes, 36, surface.PixelBytes);
         U64(bytes, 40, surface.Identity.Generation); U64(bytes, 48, surface.Generation); U64(bytes, 56, checked((ulong)surface.MappingBytes));
         Identity(bytes[64..], surface.Identity);
@@ -71,7 +75,7 @@ public static class FrameCodec
     public static void ValidateHeader(ReadOnlySpan<byte> bytes, FrameSurface surface)
     {
         surface.Validate();
-        if (bytes.Length != HeaderBytes || !bytes[..8].SequenceEqual("TMFRAME1"u8) || R32(bytes, 8) != 1 || R32(bytes, 12) != HeaderBytes || R32(bytes, 16) != SlotCount ||
+        if (bytes.Length != HeaderBytes || !bytes[..8].SequenceEqual("TMFRAME2"u8) || R32(bytes, 8) != 2 || R32(bytes, 12) != HeaderBytes || R32(bytes, 16) != SlotCount ||
             !SameDimensions(bytes, 20, surface) || R32(bytes, 36) != surface.PixelBytes || R64(bytes, 40) != surface.Identity.Generation ||
             R64(bytes, 48) != surface.Generation || R64(bytes, 56) != (ulong)surface.MappingBytes || !SameIdentity(bytes[64..], surface.Identity) || R32(bytes, 160) > 1)
             throw new InvalidDataException("Corrupt/stale frame header.");
@@ -91,6 +95,7 @@ public static class FrameCodec
         Dimensions(b, 24, surface); BinaryPrimitives.WriteUInt32LittleEndian(b[40..], metadata.Checksum);
         BinaryPrimitives.WriteInt64LittleEndian(b[48..], metadata.ProducedTimestamp);
         U64(b, 56, surface.Identity.Generation); U64(b, 64, surface.Generation); Identity(b[72..], surface.Identity);
+        Preview.PreviewViewCodec.WriteStamp(b.Slice(176, Preview.PreviewViewCodec.StampBytes), metadata.PreviewView);
     }
     public static FrameMetadata ReadSlot(ReadOnlySpan<byte> header, FrameSurface surface, int slot)
     {
@@ -98,7 +103,8 @@ public static class FrameCodec
         if (R32(b, 4) != slot || !SameDimensions(b, 24, surface) || R64(b, 56) != surface.Identity.Generation ||
             R64(b, 64) != surface.Generation || !SameIdentity(b[72..], surface.Identity) || R64(b, 8) == 0 || BinaryPrimitives.ReadInt64LittleEndian(b[48..]) <= 0)
             throw new InvalidDataException("Corrupt/stale frame metadata.");
-        return new(slot, R64(b, 8), R64(b, 16), BinaryPrimitives.ReadUInt32LittleEndian(b[40..]), BinaryPrimitives.ReadInt64LittleEndian(b[48..]));
+        return new(slot, R64(b, 8), R64(b, 16), BinaryPrimitives.ReadUInt32LittleEndian(b[40..]), BinaryPrimitives.ReadInt64LittleEndian(b[48..]))
+        { PreviewView = Preview.PreviewViewCodec.ReadStamp(b.Slice(176, Preview.PreviewViewCodec.StampBytes)) };
     }
     private static void Identity(Span<byte> b, SessionIdentity identity)
     {

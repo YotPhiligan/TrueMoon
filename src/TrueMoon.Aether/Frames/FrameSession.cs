@@ -86,6 +86,8 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
 
     internal Task StartPreviewAsync(SceneSnapshot scene, int width, int height, CancellationToken token)
         => StartCoreAsync(scene, null, null, width, height, "normal", token, role: RuntimeRole.EditPreview);
+    internal Task StartPreviewViewAsync(SceneSnapshot scene, Preview.PreviewViewState view, int width, int height, CancellationToken token)
+        => StartCoreAsync(scene, null, null, width, height, "normal", token, role: RuntimeRole.EditPreview, previewView: view);
 
     /// <summary>Starts a selected artifact and waits for its acknowledged first presentation.</summary>
     public Task StartAsync(SceneSnapshot scene, GameBuildArtifact build, int width, int height, string behavior = "normal", CancellationToken token = default)
@@ -122,7 +124,8 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
         finally { _gate.Release(); }
     }
     private async Task StartCoreAsync(SceneSnapshot? scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, int width, int height, string behavior,
-        CancellationToken token, ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, Ecs.Loading.SceneWorldData? worldScene = null)
+        CancellationToken token, ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, Ecs.Loading.SceneWorldData? worldScene = null,
+        Preview.PreviewViewState? previewView = null)
     {
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
@@ -149,7 +152,10 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
                     else await supervisor.StartWorldAsync(worldScene, build, behavior, deadline.Token).ConfigureAwait(false);
                 }
                 else if (role == RuntimeRole.EditPreview)
-                    await supervisor.StartPreviewAsync(scene!, deadline.Token).ConfigureAwait(false);
+                {
+                    if (previewView == null) await supervisor.StartPreviewAsync(scene!, deadline.Token).ConfigureAwait(false);
+                    else await supervisor.StartPreviewViewAsync(scene!, previewView, deadline.Token).ConfigureAwait(false);
+                }
                 else if (owner != null)
                     await supervisor.StartForReplacementAsync(scene!, build, checkpoint!, behavior, owner, deadline.Token).ConfigureAwait(false);
                 else if (build == null)

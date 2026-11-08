@@ -55,6 +55,7 @@ public sealed class ViewportPresentation
     public ViewportFrame Issue(FrameMetadata metadata)
     {
         ArgumentNullException.ThrowIfNull(metadata);
+        metadata.PreviewView?.Validate();
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_closed, this);

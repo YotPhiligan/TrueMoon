@@ -32,16 +32,18 @@ internal static class RuntimeEntryPoint
             if (preview) context.UseAetherPreviewRuntime(launch, parentId);
             else context.UseAetherRuntime(launch, parentId);
         });
-        await app.StartAsync();
-        var runtime = app.Services.Resolve<AetherRuntimeHost>()!;
         var engine = app.Services.Resolve<AetherHost>()!;
-        try { await runtime.RunAsync(); }
+        AetherRuntimeHost? runtime=null;var started=false;Exception? failure=null;
+        try { await app.StartAsync();started=true;runtime=app.Services.Resolve<AetherRuntimeHost>()!;await runtime.RunAsync(); }
+        catch(Exception error){failure=error;throw;}
         finally
         {
-            await runtime.DisposeAsync(); await app.StopAsync();
+            if(runtime!=null)await runtime.DisposeAsync(); await app.StopAsync();
             File.WriteAllText(Path.Combine(launch.ReportDirectory, $"runtime-{launch.Identity.Generation}.json"), JsonSerializer.Serialize(new
             { Pid = Environment.ProcessId, Validation = engine.Gpu.LastSurfaceProducer, Resources = engine.Gpu.ResourceCount, Handles = engine.Gpu.OpenHandleCount,
-                ChildDiagnostics = runtime.ChildDiagnosticsStatus }));
+                Started=started,RuntimeActivated=runtime!=null,FailurePhase=failure==null?null:!started?"AppStartup":runtime==null?"GameActivation":"Run",
+                FailureType=failure?.GetType().FullName,NoGpuSurfaceProduced=engine.Gpu.LastSurfaceProducer==null,
+                ChildDiagnostics = runtime?.ChildDiagnosticsStatus }));
         }
     }
 }

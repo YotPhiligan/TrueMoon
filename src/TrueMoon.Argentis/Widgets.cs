@@ -37,7 +37,7 @@ public sealed class CheckBox : Button
     {
         var area = Bounds.Deflate(Padding);
         context.Text(Value, area.X, area.Y + Math.Max(0, (area.Height - _labelHeight) / 2),
-            IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily);
+            IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily, FontWeight, FontItalic);
         var box = new Rect(Bounds.X + 10, Bounds.Y + (Bounds.Height - 16) / 2, 16, 16);
         var color = !IsEffectivelyEnabled ? Theme.Disabled : IsReadOnly ? Theme.Border :
             ColorRole == EditorColorRole.Neutral ? Theme.Accent : Theme.EditorColor(ColorRole);

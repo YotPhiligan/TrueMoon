@@ -17,7 +17,7 @@ public sealed record ScenePreviewFrame(ScenePreviewDocument Document, ViewportFr
 
 /// <summary>Serializes static Edit preview replacement through existing frame/process owners.
 /// Borrows FrameSession; its AetherHost owns and disposes this controller.</summary>
-public sealed class ScenePreview : IAsyncDisposable
+public sealed partial class ScenePreview : IAsyncDisposable
 {
     private readonly FrameSession _frames;
     private readonly IEventsSource? _events;
@@ -65,13 +65,14 @@ public sealed class ScenePreview : IAsyncDisposable
             return properties;
         }, () => ShowCoreAsync(scene, width, height, token));
 
-    private async Task<ScenePreviewDocument> ShowCoreAsync(ResolvedSceneSnapshot scene, int width, int height, CancellationToken token)
+    private async Task<ScenePreviewDocument> ShowCoreAsync(ResolvedSceneSnapshot scene, int width, int height, CancellationToken token, PreviewViewState? view = null)
     {
         ArgumentNullException.ThrowIfNull(scene);
         var fence = BeginPreflight(); ValidateSize(width, height, false);
         if (_frames.TransportKind != ViewportTransportKind.Gpu) throw new NotSupportedException("Edit preview requires the explicit primitive GPU viewport.");
         var projection = PrimitiveSceneAdapter.Project(scene, token);
-        if (!await _gate.WaitAsync(0, token).ConfigureAwait(false)) throw new InvalidOperationException("A preview update is already in progress.");
+        var picks = view == null ? null : PreviewPickSnapshot.Capture(projection, PreviewPickSnapshot.CubeGeometryProfile);
+        await EnterViewGateAsync(token).ConfigureAwait(false);
         try
         {
             lock (_stateGate)
@@ -80,10 +81,12 @@ public sealed class ScenePreview : IAsyncDisposable
                 if (!_ownsSession && _frames.Supervisor.Status.State != SessionState.Stopped ||
                     _frames.Supervisor.Status.State != SessionState.Stopped && _frames.Supervisor.ActiveRole != RuntimeRole.EditPreview)
                     throw new InvalidOperationException("Stop the game explicitly before opening Edit preview.");
-                if (_document is { } previous && previous.SceneId == scene.Id && scene.Revision < previous.Revision)
+                if (_document is { } previous && previous.SceneId == scene.Id && scene.Revision < previous.Revision &&
+                    (view == null || _viewCurrent?.Context.DocumentEpoch == view.Context.DocumentEpoch))
                     throw new InvalidOperationException("Stale authoring revision. Stop before opening a different authoring session.");
                 _work = CancellationTokenSource.CreateLinkedTokenSource(token);
                 _document = null; _presented = null; _target = null; Volatile.Write(ref _error, null);
+                InitializeViewCore(view, picks);
             }
             try
             {
@@ -94,7 +97,8 @@ public sealed class ScenePreview : IAsyncDisposable
                     CheckFence(fence, token);
                     _ownsSession = true; _target = (scene.Id, scene.Revision); work = _work!.Token;
                 }
-                await _frames.StartPreviewAsync(projection, width, height, work).ConfigureAwait(false);
+                if (view == null) await _frames.StartPreviewAsync(projection, width, height, work).ConfigureAwait(false);
+                else await _frames.StartPreviewViewAsync(projection, view, width, height, work).ConfigureAwait(false);
                 lock (_stateGate)
                 {
                     CheckFence(fence, work);
@@ -106,7 +110,7 @@ public sealed class ScenePreview : IAsyncDisposable
             catch (Exception error) { await FailAsync(error).ConfigureAwait(false); throw; }
             finally { EndWork(); }
         }
-        finally { _gate.Release(); }
+        finally { _gate.Release(); EndViewChange(); }
     }
 
     /// <summary>Resizes the active preview, or suspends with0x0. Resume waits for actual presentation on the new surface.</summary>
@@ -124,7 +128,7 @@ public sealed class ScenePreview : IAsyncDisposable
     private async Task ResizeCoreAsync(int width, int height, CancellationToken token)
     {
         var fence = BeginPreflight(); ValidateSize(width, height, true);
-        if (!await _gate.WaitAsync(0, token).ConfigureAwait(false)) throw new InvalidOperationException("A preview update is already in progress.");
+        await EnterViewGateAsync(token).ConfigureAwait(false);
         try
         {
             lock (_stateGate)
@@ -141,7 +145,7 @@ public sealed class ScenePreview : IAsyncDisposable
             catch (Exception error) { await FailAsync(error).ConfigureAwait(false); throw; }
             finally { EndWork(); }
         }
-        finally { _gate.Release(); }
+        finally { _gate.Release(); EndViewChange(); }
     }
 
     /// <summary>Describes a ticket only while its exact preview generation/surface is active. Does not acknowledge presentation.</summary>
@@ -157,8 +161,8 @@ public sealed class ScenePreview : IAsyncDisposable
         lock (_stateGate)
         {
             var value = DescribeCore(frame);
-            if (value == null || !_frames.Presented(frame)) return false;
-            _presented = value; return true;
+            if (_presentationSuspended || value == null || !_frames.Presented(frame)) return false;
+            _presented = value; AcknowledgeCameraCore(frame); return true;
         }
     }
 
@@ -166,7 +170,8 @@ public sealed class ScenePreview : IAsyncDisposable
     {
         var target = _target;
         if (_closed || target == null || !ReferenceEquals(_frames.Presentation, frame.Presentation) ||
-            !MatchesRuntime(frame.Presentation.Surface.Identity) || _frames.Supervisor.Status.SceneRevision != target.Value.Revision) return null;
+            !MatchesRuntime(frame.Presentation.Surface.Identity) || _frames.Supervisor.Status.SceneRevision != target.Value.Revision ||
+            (_viewCurrent != null && CaptureStateCore(frame) == null) || (_viewCurrent == null && frame.Metadata.PreviewView != null)) return null;
         return new(new(target.Value.Id, target.Value.Revision, frame.Presentation.Surface.Identity), frame);
     }
     private bool MatchesRuntime(SessionIdentity identity) => _frames.Supervisor.ActiveRole == RuntimeRole.EditPreview &&
@@ -181,6 +186,7 @@ public sealed class ScenePreview : IAsyncDisposable
         lock (_stateGate)
         {
             _fence++; _document = null; _target = null; _presented = null;
+            CancelCameraCore(); InitializeViewCore(null, null);
             try { _work?.Cancel(); } catch (Exception error) { cancellation = error; }
         }
         return AetherDiagnosticEvents.ObserveAsync(_events, _telemetry, "Preview.Stop", 1420, Context, () => StopCoreAsync(cancellation));
@@ -194,6 +200,10 @@ public sealed class ScenePreview : IAsyncDisposable
     }
     private async Task StopCoreAsync(Exception? cancellation)
     {
+        Task camera; lock (_stateGate) camera = _cameraTask;
+        try { await camera.ConfigureAwait(false); }
+        catch (Exception error) { Volatile.Write(ref _error, error); } // Original camera failure is already retained; Stop retries cleanup.
+        lock (_stateGate) { _cameraEnd?.Dispose(); _cameraEnd = null; }
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -210,7 +220,7 @@ public sealed class ScenePreview : IAsyncDisposable
     }
     private async Task FailAsync(Exception original)
     {
-        lock (_stateGate) { _document = null; _target = null; _presented = null; }
+        lock (_stateGate) { _document = null; _target = null; _presented = null; CancelCameraCore(); InitializeViewCore(null, null); }
         Volatile.Write(ref _error, original);
         try { if (_ownsSession) { await _frames.StopAsync().ConfigureAwait(false); _ownsSession = false; } }
         catch (Exception cleanup)

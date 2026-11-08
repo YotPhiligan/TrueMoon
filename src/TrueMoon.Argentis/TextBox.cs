@@ -28,6 +28,8 @@ public sealed class TextBox : Element
     protected override Thickness ThemePadding => Theme.EditorPadding;
     /// <inheritdoc />
     public override bool Focusable => true;
+    /// <inheritdoc />
+    protected override bool SupportsValidationIcon => true;
     /// <summary>The editor content.</summary>
     public string Value { get => Get(ValueProperty); set => Set(ValueProperty, value); }
     /// <inheritdoc />
@@ -44,8 +46,8 @@ public sealed class TextBox : Element
     public int SelectionLength => Math.Abs(_caret - _anchor);
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
-    { _text = text; ClampSelection(); return new Size(160, text.Measure("Mg", FontSize, FontFamily).Height); }
-    private float MeasurePrefix(int position) => _text?.Measure(Value[..position], FontSize, FontFamily).Width ?? 0;
+    { _text = text; ClampSelection(); return new Size(160, text.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height); }
+    private float MeasurePrefix(int position) => _text?.Measure(Value[..position], FontSize, FontFamily, FontWeight, FontItalic).Width ?? 0;
     private void ClampSelection()
     {
         var value = Value;
@@ -65,24 +67,40 @@ public sealed class TextBox : Element
         ClampSelection();
         Invalidate(Invalidation.Layout);
     }
+    private Rect TextLineArea(float lineHeight)
+    {
+        var area = EditorContentBounds;
+        if (area.Height >= lineHeight) return area;
+        // A fixed compact height may not accommodate both the font and requested
+        // padding. Give the line priority, retaining the top/bottom padding ratio.
+        var border = Math.Min(BorderWidth, Bounds.Height / 2);
+        var height = Math.Min(lineHeight, Math.Max(0, Bounds.Height - 2 * border));
+        var spare = Math.Max(0, Bounds.Height - 2 * border - height);
+        var top = Padding.Vertical > 0 ? spare * (Padding.Top / Padding.Vertical) : spare / 2;
+        return area with { Y = Bounds.Y + border + top, Height = height };
+    }
     /// <inheritdoc />
     protected override void DrawCore(IDrawingContext context)
     {
         ClampSelection();
-        if (IsReadOnly) context.Fill(new Rect(Bounds.X + Bounds.Width - 4, Bounds.Y + 4, 2, Math.Max(0, Bounds.Height - 8)), Theme.Border);
-        var area = Bounds.Deflate(Padding);
-        var lineHeight = Math.Min(area.Height, _text?.Measure("Mg", FontSize, FontFamily).Height ?? area.Height);
+        if (IsReadOnly && !HasError) context.Fill(new Rect(Bounds.X + Bounds.Width - 4, Bounds.Y + 4, 2, Math.Max(0, Bounds.Height - 8)), Theme.Border);
+        var lineHeight = _text?.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height ?? EditorContentBounds.Height;
+        var area = TextLineArea(lineHeight);
+        var border = Math.Min(BorderWidth, Bounds.Height / 2);
+        // Padding positions the line; it must not clip glyph ink or antialiased
+        // selection edges. Horizontal clipping still excludes the error badge.
+        var viewport = area with { Y = Bounds.Y + border, Height = Math.Max(0, Bounds.Height - 2 * border) };
         var textY = area.Y + (area.Height - lineHeight) / 2;
         var caretX = MeasurePrefix(_caret);
-        _scrollX = Math.Clamp(_scrollX, Math.Max(0, caretX - area.Width + 2), Math.Max(0, caretX));
+        _scrollX = Math.Clamp(_scrollX, Math.Max(0, caretX - Math.Max(0, area.Width - 2)), Math.Max(0, caretX));
         context.Save();
         try
         {
-            context.Clip(area);
+            context.Clip(viewport);
             if (IsFocused && SelectionLength > 0)
                 context.Fill(new Rect(area.X + MeasurePrefix(SelectionStart) - _scrollX, textY,
                     MeasurePrefix(SelectionStart + SelectionLength) - MeasurePrefix(SelectionStart), lineHeight), Theme.Accent with { A = 100 });
-            context.Text(Value, area.X - _scrollX, textY, IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily);
+            context.Text(Value, area.X - _scrollX, textY, IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily, FontWeight, FontItalic);
             if (IsFocused) context.Fill(new Rect(area.X + caretX - _scrollX, textY, 1, lineHeight), Foreground);
         }
         finally { context.Restore(); }
@@ -94,6 +112,7 @@ public sealed class TextBox : Element
         ClampSelection();
         if (input.Kind == InputKind.PointerDown && input.Button == 0)
         {
+            if (HasError && ValidationIconBounds.Contains(input.X, input.Y)) return true;
             context.Focus(this);
             var x = input.X - Bounds.X - Padding.Left + _scrollX;
             var positions = StringInfo.ParseCombiningCharacters(Value).Append(Value.Length);

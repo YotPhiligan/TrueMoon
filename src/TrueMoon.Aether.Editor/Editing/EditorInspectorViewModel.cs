@@ -11,7 +11,9 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
 {
     private readonly EditorDocumentCommands _commands;
     private readonly EditorPreview _preview;
+    private readonly EditorWorkspace? _workspace;
     private SceneDocument? _baseline;
+    private Guid _openingId;
     private EntityId _entity;
     private ComponentId _component;
     private string? _selection;
@@ -28,13 +30,15 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     private string _validationText = "";
     private EditorPreviewState _previewState = new(false, false, null, null);
     private bool _scaleLinked, _linkingScale, _restoringGesture, _canLinkScale;
+    private bool _resettingTransformGroup, _canResetPosition, _canResetRotation, _canResetScale;
+    private bool _anglesInDegrees, _canChangeAngleUnits;
     private double[] _scaleReference = [1, 1, 1];
     private string _scaleLinkError = "";
     private InspectorProperty? _scaleErrorField;
     private NumericDraftSession? _numericGesture;
     private long _nextGestureId;
     private sealed record NumericDraftSession(long Id, InspectorProperty Source, SceneDocument? Document, string? Selection,
-        (InspectorProperty Field, InspectorProperty.DraftState Draft)[] Drafts);
+        (InspectorProperty Field, InspectorProperty.DraftState Draft, string? Display)[] Drafts);
     /// <summary>Opt-in proportional scale editing. Enabling it does not change any field or commit data.</summary>
     public bool ScaleLinked
     {
@@ -49,13 +53,50 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     }
     /// <summary>Whether the selected Transform's link preference can be changed.</summary>
     public bool CanLinkScale => _canLinkScale;
+    /// <summary>Whether Position has local values or drafts that can be reset.</summary>
+    public bool CanResetPosition => _canResetPosition;
+    /// <summary>Whether Rotation has local values or drafts that can be reset.</summary>
+    public bool CanResetRotation => _canResetRotation;
+    /// <summary>Whether Scale has local values or drafts that can be reset.</summary>
+    public bool CanResetScale => _canResetScale;
+    /// <summary>Transient inspector angle display preference. Invalid rotation text, active gestures,
+    /// read-only/busy or conflicting state reject changes without altering drafts.</summary>
+    public bool AnglesInDegrees
+    {
+        get => _anglesInDegrees;
+        set
+        {
+            VerifyOwner(); if (_anglesInDegrees == value) return;
+            Refresh(_selection); if (!CanChangeAngleUnits) return;
+            _anglesInDegrees = value;
+            for (var i = 3; i < 6; i++) Fields[i].SetDegrees(value);
+            OnPropertyChanged(); OnPropertyChanged(nameof(RotationLabel)); OnPropertyChanged(nameof(RotationStep));
+            OnPropertyChanged(nameof(RotationMaximum)); OnPropertyChanged(nameof(RotationMinimum));
+            UpdateState(_commands.Read().Document?.Content);
+        }
+    }
+    /// <summary>Whether all displayed rotation text can safely change units now, including pending resets.</summary>
+    public bool CanChangeAngleUnits => _canChangeAngleUnits;
+    /// <summary>The compact rotation heading with current display units.</summary>
+    public string RotationLabel => AnglesInDegrees ? "Поворот, °" : "Поворот, рад";
+    /// <summary>Keyboard and pointer step in current display units.</summary>
+    public double RotationStep => AnglesInDegrees ? 1d : .01d;
+    /// <summary>Positive numeric adjustment limit in display units; canonical Float validation remains authoritative.</summary>
+    public double RotationMaximum => AnglesInDegrees ? TransformField.ToDegrees(float.MaxValue) : float.MaxValue;
+    /// <summary>Negative numeric adjustment limit in display units.</summary>
+    public double RotationMinimum => -RotationMaximum;
 
     /// <summary>Creates presentation over borrowed App-owned services.</summary>
     /// <param name="commands">Shared document admission and operations.</param><param name="preview">Bounded preview coordinator.</param>
-    public EditorInspectorViewModel(EditorDocumentCommands commands, EditorPreview preview)
+    public EditorInspectorViewModel(EditorDocumentCommands commands, EditorPreview preview) : this(commands,preview,null) { }
+    /// <summary>Creates presentation that synchronizes committed source with the borrowed viewport workspace before preview capture.</summary>
+    /// <param name="commands">Shared document admission and operations.</param><param name="preview">Bounded preview coordinator.</param>
+    /// <param name="workspace">Optional App-owned committed observation; no UI references are retained.</param>
+    public EditorInspectorViewModel(EditorDocumentCommands commands, EditorPreview preview, EditorWorkspace? workspace)
     {
         ArgumentNullException.ThrowIfNull(commands); ArgumentNullException.ThrowIfNull(preview);
         _commands = commands; _preview = preview;
+        _workspace = workspace;
         Fields = new[] { ("x", "X"), ("y", "Y"), ("z", "Z"), ("pitch", "Pitch, рад"), ("yaw", "Yaw, рад"), ("roll", "Roll, рад"), ("sx", "Scale X"), ("sy", "Scale Y"), ("sz", "Scale Z") }
             .Select(x => new TransformField(x.Item1, x.Item2, VerifyOwner)).ToArray();
         foreach (var field in Fields) field.Changed += DraftChanged;
@@ -97,10 +138,14 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     public void Refresh(string? selectedId)
     {
         VerifyOwner(); var state = _commands.Read(); var content = state.Document?.Content;
+        _workspace?.SetDocument(content, state.Document?.OpeningId ?? Guid.Empty);
+        var opening = state.Document?.OpeningId ?? Guid.Empty;
+        var changedOpening = opening != _openingId;
         var changedSelection = selectedId != _selection || _baseline?.Id != content?.Document.Id;
+        _openingId = opening;
         _selection = selectedId;
         if (changedSelection || !HasDraft && !ReferenceEquals(_baseline, content?.Document)) Load(content);
-        else if (!ReferenceEquals(_baseline, content?.Document)) _conflict = true;
+        else if (changedOpening || !ReferenceEquals(_baseline, content?.Document)) _conflict = true;
         _available = state.RuntimeIdle && !state.Busy && !state.Exiting && !state.Closed && state.Document?.Operation == DocumentOperation.None;
         if (content != null) _preview.Synchronize(content.Resolved);
         UpdateState(content);
@@ -201,7 +246,7 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
 
     private void DraftChanged(InspectorProperty? changed = null)
     {
-        if (_loading || _restoringGesture) return;
+        if (_loading || _restoringGesture || _resettingTransformGroup) return;
         if (!_linkingScale && changed is TransformField && changed.Key is "sx" or "sy" or "sz")
         {
             if (ScaleLinked) PropagateScale(changed); else RebaseScale();
@@ -281,17 +326,28 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
         if (!CanAdjustNumeric(property)) return 0;
         var fields = ScaleLinked && property is TransformField && property.Key is "sx" or "sy" or "sz" ? ScaleFields.Cast<InspectorProperty>().ToArray() : [property];
         var id = unchecked(++_nextGestureId); if (id == 0) id = unchecked(++_nextGestureId);
-        _numericGesture = new(id, property, _baseline, _selection, fields.Select(field => (field, field.CaptureDraft())).ToArray());
+        _numericGesture = new(id, property, _baseline, _selection, fields.Select(field =>
+            (field, field.CaptureDraft(), field is TransformField { IsAngle: true } angle ? angle.DisplayValue : null)).ToArray());
+        UpdateTransformResetState();
+        UpdateAngleUnitState();
         return id;
     }
     internal void FinishNumericGesture(NumericGestureResult result, long id)
     {
         var gesture = _numericGesture; if (gesture == null || gesture.Id != id) return; _numericGesture = null;
+        if (!_disposed) { UpdateTransformResetState(); UpdateAngleUnitState(); }
         if (_disposed || gesture == null || result != NumericGestureResult.Cancelled || !ReferenceEquals(gesture.Document, _baseline) ||
             gesture.Selection != _selection || !ReferenceEquals(gesture.Document, _commands.Read().Document?.Content?.Document) ||
             gesture.Drafts.Any(item => !_active.Contains(item.Field))) return;
         _restoringGesture = true;
-        try { foreach (var item in gesture.Drafts) item.Field.RestoreDraft(item.Draft); }
+        try
+        {
+            foreach (var item in gesture.Drafts)
+            {
+                item.Field.RestoreDraft(item.Draft);
+                if (item.Field is TransformField angle && item.Display != null) angle.RestoreDisplayText(item.Display);
+            }
+        }
         finally { _restoringGesture = false; }
         _scaleLinkError = ""; _scaleErrorField = null; RebaseScale(); DraftChanged();
     }
@@ -306,12 +362,15 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
         var valid = Validate(); var draft = HasDraft;
         if (_scaleLinkError.Length != 0) { valid = false; _scaleErrorField?.SetError(_scaleLinkError); }
         SetProperty(ref _validationText, string.Join("\n", _components.SelectMany(component => component.Properties
-            .Where(field => field.HasError).Select(field => component.Title + " · " + field.Label + ": " + field.Error))), nameof(DiagnosticsText));
+            .Where(field => field.HasError).Select(field => component.Title + " · " +
+                (field is TransformField transform ? transform.DisplayLabel : field.Label) + ": " + field.Error))), nameof(DiagnosticsText));
         SetProperty(ref _canEdit, _available && _component != default, nameof(CanEdit));
         SetProperty(ref _canLinkScale, CanEdit && !_conflict, nameof(CanLinkScale));
         SetProperty(ref _canEditProperties, _available && _entity != default, nameof(CanEditProperties));
         SetProperty(ref _canChangeComponents, CanEditProperties && !draft && !_conflict, nameof(CanChangeComponents));
         foreach (var field in _active) field.Enable(CanEditProperties);
+        UpdateTransformResetState();
+        UpdateAngleUnitState();
         SetProperty(ref _canApply, CanEditProperties && draft && valid && !_conflict, nameof(CanApply));
         SetProperty(ref _canCancel, draft || _conflict, nameof(CanCancel));
         SetProperty(ref _canUndo, _available && !draft && !_conflict && content?.UndoCount > 0, nameof(CanUndo));
@@ -329,7 +388,8 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     /// <summary>Commits changed properties/resets as one shared authoring transaction.</summary>
     public void Apply()
     {
-        VerifyOwner(); Refresh(_selection); if (!CanApply || !Validate()) return;
+        VerifyOwner(); if (_resettingTransformGroup) return;
+        Refresh(_selection); if (!CanApply || !Validate()) return;
         var replaceTransform = ReplaceWholeTransform && Fields.Any(field => field.HasDraft);
         var edits = _active.Where(field => field.HasDraft || replaceTransform && field is TransformField).Select(field =>
         {
@@ -346,6 +406,50 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     {
         ArgumentNullException.ThrowIfNull(property); VerifyOwner(); Refresh(_selection);
         if (CanEditProperties && !_conflict && _active.Contains(property)) property.Reset();
+    }
+    private static int GroupOffset(TransformGroup group) => group switch
+    {
+        TransformGroup.Position => 0,
+        TransformGroup.Rotation => 3,
+        TransformGroup.Scale => 6,
+        _ => throw new ArgumentOutOfRangeException(nameof(group))
+    };
+    private bool CanResetGroup(int offset)
+    {
+        if (!CanEdit || _conflict || _numericGesture != null || _resettingTransformGroup) return false;
+        for (var i = offset; i < offset + 3; i++)
+            if (Fields[i].CanReset && !Fields[i].IsReset) return true;
+        return false;
+    }
+    private void UpdateTransformResetState()
+    {
+        SetProperty(ref _canResetPosition, CanResetGroup(0), nameof(CanResetPosition));
+        SetProperty(ref _canResetRotation, CanResetGroup(3), nameof(CanResetRotation));
+        SetProperty(ref _canResetScale, CanResetGroup(6), nameof(CanResetScale));
+    }
+    private void UpdateAngleUnitState() => SetProperty(ref _canChangeAngleUnits,
+        CanEdit && !_conflict && _numericGesture == null && Fields[3].HasValidAngle && Fields[4].HasValidAngle && Fields[5].HasValidAngle,
+        nameof(CanChangeAngleUnits));
+    /// <summary>Stages inheritance/schema resets for a whole Transform group without committing it.
+    /// Clean inherited fields remain untouched. Numeric gestures must finish before resetting.</summary>
+    /// <param name="group">The group in the selected built-in Transform.</param>
+    public void ResetTransformGroup(TransformGroup group)
+    {
+        VerifyOwner(); var offset = GroupOffset(group);
+        if (_resettingTransformGroup) return;
+        var expected = _baseline; Refresh(_selection);
+        if (!ReferenceEquals(expected, _baseline))
+        { SetProperty(ref _error, "Сцена изменилась. Повторите действие.", nameof(ErrorText)); return; }
+        if (!CanResetGroup(offset)) return;
+        _resettingTransformGroup = true;
+        try
+        {
+            for (var i = offset; i < offset + 3; i++)
+                if (Fields[i].CanReset && !Fields[i].IsReset) Fields[i].Reset();
+        }
+        finally { _resettingTransformGroup = false; }
+        if (group == TransformGroup.Scale) { _scaleLinkError = ""; _scaleErrorField = null; RebaseScale(); }
+        DraftChanged();
     }
     /// <summary>Adds a new component occurrence using schema defaults.</summary>
     /// <param name="type">Exact type.</param><param name="version">Exact version.</param>

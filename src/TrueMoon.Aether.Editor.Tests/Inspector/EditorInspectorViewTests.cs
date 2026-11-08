@@ -129,14 +129,16 @@ public sealed class EditorInspectorViewTests
         Enter(ui, view, view.Properties[(DocumentData.Custom, "number")].Input, "NaN");
         Enter(ui, view, view.Properties[(DocumentData.Custom, "text")].Input, "do not publish");
         var field = test.Property(DocumentData.Custom, "number");
-        var error = Assert.Single(DocumentUiFixture.Tree(view.Properties[(DocumentData.Custom, "number")].Row).OfType<Text>(), item => item.Value == field.Error && item.Value.Length != 0);
-        Assert.True(error.IsVisible); Assert.Equal(view.Theme.Error, error.Foreground);
+        var error = view.Properties[(DocumentData.Custom, "number")].Input;
+        Assert.True(error.HasError); Assert.Equal(field.Error, error.ErrorMessage); Assert.True(error.ValidationIconBounds.Width > 0);
+        Assert.Contains(field.Error, view.Error.Text);
         Assert.False(view.Apply.IsEnabled); Assert.True(view.Cancel.IsEnabled);
         Click(ui, view, view.Apply); Assert.Equal(0, test.Owner.Document.Read().Content!.UndoCount);
         Click(ui, view, view.Cancel); ui.Update();
         Assert.Equal("1", Assert.IsType<TextBox>(view.Properties[(DocumentData.Custom, "number")].Input).Value);
         Assert.Equal(DocumentData.Text, Assert.IsType<RichTextEditor>(view.Properties[(DocumentData.Custom, "text")].Input).Text);
-        Assert.False(error.IsVisible); Assert.False(test.Model.HasDraft); Assert.False(test.Owner.Document.Read().IsDirty);
+        Assert.False(error.HasError); Assert.Empty(error.ErrorMessage); Assert.Equal(default, error.ValidationIconBounds);
+        Assert.False(test.Model.HasDraft); Assert.False(test.Owner.Document.Read().IsDirty);
     }
 
     [Fact]

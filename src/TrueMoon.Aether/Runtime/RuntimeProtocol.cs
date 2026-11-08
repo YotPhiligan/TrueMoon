@@ -38,6 +38,8 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
             if (!Enum.IsDefined((CommandKind)request.Kind)) throw new InvalidDataException("Unknown control operation.");
             if (_stopping) throw new InvalidOperationException("Runtime is stopping.");
             var kind = (CommandKind)request.Kind;
+            if (request.PreviewView != null && kind is not (CommandKind.LoadScene or CommandKind.SetPreviewView))
+                throw new InvalidDataException("Preview payload is not valid for this operation.");
             if (role == RuntimeRole.EditPreview && (kind == CommandKind.Step || kind == CommandKind.SetInput || kind == CommandKind.SetMode && request.Playing))
                 throw new InvalidOperationException("Edit preview has no gameplay simulation or input.");
             if (!_hello && kind != CommandKind.Hello) throw new InvalidOperationException("Hello required.");
@@ -52,10 +54,21 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                     if (_loaded) throw new InvalidOperationException("Scene already loaded.");
                     if (_sceneTransferUsed) throw new InvalidOperationException("Full-scene transfer already admitted on this runtime.");
                     var scene = new SceneSnapshot(request.SceneId, request.Revision, request.Entities ?? throw new InvalidDataException("Missing scene entities."));
-                    game.Load(scene); _scene = scene;
+                    if (request.PreviewView != null)
+                    {
+                        if (role != RuntimeRole.EditPreview || game is not Preview.PreviewGameSession preview) throw new InvalidOperationException("Preview view capability unavailable.");
+                        preview.Load(scene, Preview.PreviewViewCodec.Decode(request.PreviewView));
+                    }
+                    else game.Load(scene);
+                    _scene = scene;
                     _loaded = true; break;
                 case CommandKind.SetMode:
                     RequireReady(); _input.Clear(); _playing = request.Playing; break;
+                case CommandKind.SetPreviewView:
+                    RequireReady();
+                    if (role != RuntimeRole.EditPreview || game is not Preview.PreviewGameSession viewGame) throw new InvalidOperationException("Preview view capability unavailable.");
+                    var view = Preview.PreviewViewCodec.Decode(request.PreviewView ?? throw new InvalidDataException("Missing preview view."));
+                    viewGame.SetView(view); break;
                 case CommandKind.Step:
                     RequireReady();
                     if (_playing) throw new InvalidOperationException("Step requires Paused.");
@@ -139,6 +152,12 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                 CheckpointOutcome = (int)checkpointOutcome, Checkpoint = checkpoint, InputOutcome = (int)inputOutcome,
                 Phase = _stopping ? "Stopping" : SceneGame?.IsFaulted == true ? "Faulted" : !_loaded ? "HelloAccepted" : _playing ? "Playing" : "Paused"
             };
+            if (role == RuntimeRole.EditPreview && game is Preview.PreviewGameSession previewGame)
+            {
+                reply.PreviewViewVersion = Preview.PreviewViewCodec.Version;
+                if (previewGame.View is { } currentView)
+                { reply.PreviewViewStamp = new byte[Preview.PreviewViewCodec.StampBytes]; Preview.PreviewViewCodec.WriteStamp(reply.PreviewViewStamp, currentView.Stamp); }
+            }
             DescribeSceneWorld(reply); return Task.FromResult(reply);
         }
     }

@@ -38,6 +38,8 @@ public sealed record PrimitiveScene(CameraTransform Camera, float Rotation, Vect
     public float Near { get; init; } = 0.1f;
     /// <summary>Far plane distance, greater than the near plane.</summary>
     public float Far { get; init; } = 100;
+    /// <summary>Explicit external preview capture; null retains the checkpoint-compatible fixed/game camera path.</summary>
+    public Preview.PreviewViewState? PreviewView { get; init; }
 
     /// <summary>Rejects invalid state before recording any native command.</summary>
     public void Validate()
@@ -69,6 +71,7 @@ public sealed record PrimitiveScene(CameraTransform Camera, float Rotation, Vect
     {
         Validate(); GpuSurfaceOffer.ValidateExtent(width, height);
         if (width == 0) throw new ArgumentOutOfRangeException(nameof(width));
+        if (PreviewView is { } preview) return preview.Camera.CreateProjection(width, height).ViewProjection;
         var position = new Vector3(Camera.X, Camera.Y, Camera.Z);
         var orientation = Quaternion.CreateFromYawPitchRoll(Camera.Yaw, Camera.Pitch, Camera.Roll);
         var view = Matrix4x4.CreateLookAt(position, position + Vector3.Transform(-Vector3.UnitZ, orientation), Vector3.Transform(Vector3.UnitY, orientation));

@@ -19,6 +19,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     private SceneFileStamp? _stamp;
     private long? _saved;
     private long _generation;
+    private Guid _openingId;
     private DocumentOperation _operation;
     private CancellationTokenSource? _pending;
     private Task _work = Task.CompletedTask;
@@ -44,7 +45,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
         {
             var content = _closed ? null : _current?.Read();
             return new(content, _path, _stamp, _saved, _closing ? DocumentOperation.Closing : _operation,
-                content != null && (_saved == null || content.ContentRevision != _saved), _error, _closed);
+                content != null && (_saved == null || content.ContentRevision != _saved), _error, _closed) { OpeningId = content == null ? Guid.Empty : _openingId };
         }
     }
 
@@ -91,7 +92,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
             {
                 token.ThrowIfCancellationRequested(); VerifyOpen();
                 if (_closing) throw new OperationCanceledException(token);
-                previous = _current; _current = candidate; candidate = null; _generation++;
+                previous = _current; _current = candidate; candidate = null; _generation++; _openingId = Guid.NewGuid();
                 _path = path; _stamp = stamp; _saved = path == null ? null : state.ContentRevision;
             }
             if (previous != null) Release(previous);
@@ -295,7 +296,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                 lock (_gate)
                 {
                     foreach (var retired in _retired.ToArray()) { retired.Dispose(); _retired.Remove(retired); }
-                    _current?.Dispose(); _current = null; _path = null; _stamp = null; _saved = null; _generation++;
+                    _current?.Dispose(); _current = null; _path = null; _stamp = null; _saved = null; _generation++; _openingId = Guid.Empty;
                 }
             }
         }

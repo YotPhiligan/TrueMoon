@@ -14,7 +14,7 @@ public sealed record GpuFrameData(byte[] Pixels, FrameMetadata Metadata)
     {
         ArgumentNullException.ThrowIfNull(stamp);
         ArgumentNullException.ThrowIfNull(scene); scene.Validate();
-        return new([], new(stamp.Slot, FrameNumber(stamp), tick, 0, Stopwatch.GetTimestamp())) { Scene = scene };
+        return new([], new(stamp.Slot, FrameNumber(stamp), tick, 0, Stopwatch.GetTimestamp()) { PreviewView = scene.PreviewView?.Stamp }) { Scene = scene };
     }
     /// <summary>Monotonic frame number when the three persistent slots are produced in order.</summary>
     public static ulong FrameNumber(GpuFrameStamp stamp)
@@ -24,6 +24,8 @@ public sealed record GpuFrameData(byte[] Pixels, FrameMetadata Metadata)
     {
         ArgumentNullException.ThrowIfNull(stamp); GpuSlotLedger.ValidateStamp(stamp, stamp.Identity); GpuSurfaceOffer.ValidateExtent(width, height);
         Scene?.CreateViewProjection(width, height);
+        Metadata?.PreviewView?.Validate();
+        if (Metadata?.PreviewView != Scene?.PreviewView?.Stamp) throw new InvalidDataException("Preview metadata must match the captured render scene.");
         if (width == 0 || Pixels == null || Pixels.Length != (Scene == null ? checked(width * height * 4) : 0) || Metadata == null ||
             Metadata.Slot != stamp.Slot || Metadata.FrameId != FrameNumber(stamp) || Metadata.ProducedTimestamp <= 0)
             throw new InvalidDataException("GPU frame pixels/metadata do not match the produced slot.");

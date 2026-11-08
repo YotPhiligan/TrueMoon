@@ -36,7 +36,7 @@ internal static class EditorSmoke
         await Click(EditorCommand.Build); await Click(EditorCommand.Replace);
         Require(engine.Supervisor.Status.Identity!.Generation > identity!.Generation && engine.Supervisor.Status.Tick == tick + 1, "Replace did not preserve paused state.");
         Require(window.Id == windowId, "Replacement recreated the editor window.");
-        await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = "Noto Sans" })).WaitAsync(token);
+        await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = view.Theme.FontFamily, FontSize = view.Theme.FontSize, FontWeight = view.Theme.FontWeight, FontItalic = view.Theme.FontItalic })).WaitAsync(token);
         await Capture("editor-light.png");
         window.Resize(1100, 700);
         await UntilAsync(async () => { var ready = false; await ui.InvokeAsync(() => ready = ui.Viewport.Width / ui.Viewport.Scale == 1100); return ready; });
@@ -99,17 +99,28 @@ internal static class EditorSmoke
     internal static void WriteCleanup(string directory, HostedUiSessionFactory sessions, AetherHost engine, NativeRuntimeFactory factory, EditorView view)
     {
         Require(view.IsDisposed && sessions.ActiveSessionCount == 0 && engine.Frames.MappingCount == 0 && engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0 && factory.Leases.All(x => x.Reaped && x.ResourcesReleased), "Final cleanup retained owned resources.");
+        var validationReports=0;var failedBeforeGpu=0;
         foreach (var child in factory.Leases)
         {
             using var cleanup = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, $"runtime-{child.Identity.Generation}.json")));
             var root = cleanup.RootElement; var validation = root.GetProperty("Validation");
             Require(root.GetProperty("Resources").GetInt32() == 0 && root.GetProperty("Handles").GetInt32() == 0, "Runtime retained GPU ownership.");
+            if(validation.ValueKind==JsonValueKind.Null)
+            {
+                Require(root.TryGetProperty("RuntimeActivated",out var activated)&&!activated.GetBoolean()&&
+                    root.TryGetProperty("FailurePhase",out var phase)&&phase.GetString() is "AppStartup" or "GameActivation"&&
+                    root.TryGetProperty("FailureType",out var failure)&&failure.ValueKind==JsonValueKind.String&&
+                    root.TryGetProperty("NoGpuSurfaceProduced",out var noGpu)&&noGpu.GetBoolean(),"Missing validation evidence without a reported pre-GPU startup failure.");
+                failedBeforeGpu++;continue;
+            }
+            validationReports++;
             Require(validation.GetProperty("Errors").GetInt32() == 0 && validation.GetProperty("Warnings").GetInt32() == 0, "Runtime Vulkan validation failed.");
             if (Environment.GetEnvironmentVariable("TRUEMOON_GPU_VALIDATION") == "1") Require(validation.GetProperty("ValidationEnabled").GetBoolean(), "Runtime validation was not enabled.");
         }
         File.WriteAllText(Path.Combine(directory, "report.json"), JsonSerializer.Serialize(new { Passed = true, UiSessions = sessions.ActiveSessionCount, Mappings = engine.Frames.MappingCount, GpuResources = engine.Gpu.ResourceCount,
             GpuHandles = engine.Gpu.OpenHandleCount, Children = factory.Leases.Count, Reaped = factory.Leases.All(x => x.Reaped), ViewDisposed = view.IsDisposed,
-            ValidationRequested = Environment.GetEnvironmentVariable("TRUEMOON_GPU_VALIDATION") == "1", ValidationErrors = 0, ValidationWarnings = 0 }, new JsonSerializerOptions { WriteIndented = true }));
+            ValidationRequested = Environment.GetEnvironmentVariable("TRUEMOON_GPU_VALIDATION") == "1", ValidationErrors = 0, ValidationWarnings = 0,
+            ValidationReports=validationReports,FailedBeforeGpu=failedBeforeGpu }, new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine("Editor screen proof passed: interaction, close/drain and zero ownership.");
     }
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }

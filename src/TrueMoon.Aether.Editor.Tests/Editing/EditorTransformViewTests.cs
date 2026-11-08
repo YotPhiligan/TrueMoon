@@ -22,10 +22,12 @@ public sealed class EditorTransformViewTests
         Assert.Equal(14.5, DocumentData.X(test.Owner.Document.Read().Content!)); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
         Assert.True(view.Undo.IsEnabled); Assert.False(view.Apply.IsEnabled); Assert.False(model.HasDraft);
         Enter(ui, view.Fields["sy"], "0"); ui.Update(); Assert.False(view.Apply.IsEnabled); Assert.True(view.Cancel.IsEnabled);
-        var error = Assert.Single(DocumentUiFixture.Tree(view).OfType<Text>(), text => text.Value == test.Field("sy").Error && text.Value.Length != 0);
-        Assert.True(error.IsVisible); Assert.Equal(view.Theme.Error, error.Foreground);
+        var error = view.Fields["sy"];
+        Assert.True(error.HasError); Assert.Equal(test.Field("sy").Error, error.ErrorMessage);
+        Assert.True(error.ValidationIconBounds.Width > 0);
         DocumentUiFixture.Click(ui, view.Apply); Assert.Equal(1, test.Owner.Document.Read().Content!.UndoCount);
         DocumentUiFixture.Click(ui, view.Cancel); ui.Update(); Assert.Equal("1", view.Fields["sy"].Value); Assert.Empty(test.Field("sy").Error);
+        Assert.False(error.HasError); Assert.Empty(error.ErrorMessage); Assert.Equal(default, error.ValidationIconBounds);
         DocumentUiFixture.Click(ui, view.Undo); ui.Update(); Assert.Equal("4", view.Fields["x"].Value); Assert.True(view.Redo.IsEnabled);
         DocumentUiFixture.Click(ui, view.Redo); ui.Update(); Assert.Equal("14.5", view.Fields["x"].Value); Assert.False(view.Redo.IsEnabled);
     }

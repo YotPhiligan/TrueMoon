@@ -12,6 +12,24 @@ namespace TrueMoon.Aether.Editor.Tests;
 
 public sealed class EditorStatusBarViewTests
 {
+    [Fact]
+    public void StatusEllipsisAndHover_MeasureAndDrawTheSelectedWeightAndItalic()
+    {
+        using var test = new StatusFixture(); using var ui = test.Ui(); ui.Update();
+        var summary = test.View.SummaryButton;
+        ui.HandleInput(new(InputKind.PointerMove, summary.Bounds.X + 5, summary.Bounds.Y + 5)); test.Settle(ui);
+        summary.Value = new string('W', 40); summary.FontFamily = "typography-family"; summary.FontWeight = 600; summary.FontItalic = true;
+        var probe = new TypographyRecordingContext();
+        summary.Measure(new(120, 40), probe); summary.Arrange(new(0, 0, 120, 40)); summary.Draw(probe);
+        var drawn = Assert.Single(probe.Texts); var area = summary.Bounds.Deflate(summary.Padding);
+        Assert.EndsWith("…", drawn.Text);
+        Assert.Equal((12f, "typography-family", 600, true), (drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
+        var available = area.Width - 20;
+        Assert.True(probe.Measure(drawn.Text, drawn.Size, drawn.Family, drawn.Weight, drawn.Italic).Width <= available);
+        Assert.True(probe.Measure("W" + drawn.Text, drawn.Size, drawn.Family, drawn.Weight, drawn.Italic).Width > available);
+        Assert.Contains(probe.Measures, call => call.Text == summary.Value && call.Weight == 600 && call.Italic);
+        Assert.Contains(probe.Fills, call => call.Color == summary.Theme.ControlHover && call.Bounds.Width == 120);
+    }
     [Theory]
     [InlineData(1f)] [InlineData(1.5f)] [InlineData(2f)]
     public void DefaultFrame_StatusBarReachesBottomBorderWithoutExtraRowAndKeepsResizeGripClear(float scale)

@@ -12,6 +12,25 @@ public sealed class ViewStyleTests
     private static readonly UiProperty<int> Marker = new("Marker", 5);
 
     [Fact]
+    public void FontWeightAndItalic_RespectStylePrecedenceAndRecomputeWithTheme()
+    {
+        using var view = new SampleView();
+        view.ApplyTheme(Theme.Dark with { FontWeight = 600, FontItalic = true });
+        view.WithViewStyle(new Declaration<SampleView>(styles =>
+            styles.Part(v => v.Action).FontWeight(theme => theme.FontWeight + 100).FontItalic(false)));
+        Assert.Equal(700, view.Action.FontWeight); Assert.False(view.Action.FontItalic);
+        Assert.Equal(600, view.Editor.FontWeight); Assert.True(view.Editor.FontItalic);
+        view.Action.Style = new Style().With(UiProperties.FontWeight, 500);
+        view.Action.FontWeight = 800; Assert.Equal(800, view.Action.FontWeight);
+        view.Action.Clear(UiProperties.FontWeight); Assert.Equal(500, view.Action.FontWeight);
+        view.Action.Style = null;
+        view.ApplyTheme(Theme.Light with { FontWeight = 400 });
+        Assert.Equal(500, view.Action.FontWeight); Assert.False(view.Action.FontItalic);
+        Assert.Equal(400, view.Editor.FontWeight); Assert.False(view.Editor.FontItalic);
+        view.WithViewStyle<SampleView>(null); Assert.Equal(400, view.Action.FontWeight);
+    }
+
+    [Fact]
     public void StyleScopes_TypedRootPartsAndRolesRespectBoundaryAndDefinitionOrder()
     {
         using var view = new SampleView();

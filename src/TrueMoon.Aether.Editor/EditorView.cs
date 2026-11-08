@@ -39,6 +39,14 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
     public Text ViewportTitle { get; } = Text.Plain("VIEWPORT · Предпросмотр сцены");
     public ContentControl ViewportFrame { get; }
     public EditorViewport Canvas { get; } = new();
+    /// <summary>Parent-owned exclusive viewport controller, created lazily through the App factory on first presentation.</summary>
+    public EditorViewportController? ViewportController { get; private set; }
+    internal void EnsureViewportController(IFactory<EditorViewportController,EditorViewportArguments> factory)
+    {
+        if(ViewportController!=null)return;
+        var controller=factory.Create(new(this))??throw new InvalidOperationException("Viewport controller factory returned null.");
+        ViewportController=controller;Own(controller);
+    }
     /// <summary>Gets the nested project-document view owned by this tree, when configured.</summary>
     public EditorDocumentView? Documents { get; }
     /// <summary>Gets the nested Transform form owned by this tree.</summary>
@@ -210,6 +218,7 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
     /// <summary>Routes document shortcuts even when an exposed scene has no focused UI element.</summary>
     public bool PreviewInput(UiInput input, IInputContext context)
     {
+        if(ViewportController?.PreviewInput(input,context)==true)return true;
         if (Hierarchy?.NameEditor.IsFocused == true) return false;
         if (Documents == null || input.Kind != InputKind.KeyDown || !input.Control || input.Key is not (UiKey.S or UiKey.W)) return false;
         Header?.Menu.CloseMenu();
@@ -266,7 +275,7 @@ public sealed class EditorView : View<EditorViewModel>, IUiInputObserver
         while (root.Parent != null) root = root.Parent;
         root.ApplyTheme((Theme.Surface == Theme.Dark.Surface ? Theme.Light : Theme.Dark) with
         {
-            FontFamily = Theme.FontFamily
+            FontFamily = Theme.FontFamily, FontSize = Theme.FontSize, FontWeight = Theme.FontWeight, FontItalic = Theme.FontItalic
         });
     }
 

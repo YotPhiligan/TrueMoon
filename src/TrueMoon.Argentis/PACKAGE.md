@@ -1,5 +1,13 @@
 # TrueMoon.Argentis
 
+Themes and new controls use `FontDefaults.Family` (`Segoe UI Variable Text`) at
+weight400. `FontDefaults.FallbackFamily` is `Segoe UI`; rendering providers resolve
+availability. `FontWeight(600)` selects semibold, and `FontItalic` requests italic
+when the family supplies it. Element/style/view-style/theme overrides retain their
+usual priority. A renderer configured with an explicit file catalog continues to
+use that catalog. Color-theme changes can preserve FontFamily/FontSize/FontWeight/
+FontItalic while replacing the palette.
+
 `NumberBox.AdjustmentEnabled` opts into Up/Down stepping and pointer dragging on
 its prefix or geometric marker. Configure NumericKind, Step and inclusive bounds;
 invalid/nonfinite/overflow values are rejected without coercion or clamping.
@@ -141,3 +149,27 @@ does not supply IME, accessibility or complete Unicode/emoji platform support.
 
 Source, supported scope and ownership documentation:
 [TrueMoon repository](https://github.com/YotPhiligan/TrueMoon).
+
+TextBox keeps the full measured font line height. For compact fixed heights, effective
+vertical padding gives way to the line while preserving the top/bottom ratio; the
+vertical clip stays inside the border rather than inside padding. Horizontal padding
+and validation-badge exclusion remain in effect. Natural height still includes the
+configured padding. A field physically shorter than its font remains bounded by its
+outer rectangle; text is not scaled down.
+
+Validation presentation: bind HasError and ErrorMessage on TextBox/RichTextEditor
+or NumberBox. A solid Theme.Error square at the right edge spans the field height;
+Theme.OnError supplies the contrasting centered symbol. Narrow fields clip the badge.
+ValidationIconBounds denotes the whole colored tooltip target. Text/caret/selection
+and the focus ring stop before it; rich auto-height wrapping includes its width.
+NumberBox.Editor inherits parent validation after local/element/view style overrides.
+The existing explicit NumberBox.Editor validation bindings also remain supported.
+With an OverlayHost in the tree, hover for500ms shows the exact
+message in a wrapped/scrollable tooltip without changing focus/selection. Model
+validation, draft storage and commit policy stay with the consumer.
+
+Element.Shadow accepts immutable BoxShadow(sigma,offsetX,offsetY,color); local null
+disables it. MenuPopup uses Theme.MenuShadow, while semantic panel View styles can
+set UiProperties.Shadow from Theme.PanelShadow. Layout-only containers stay plain.
+Shadows change painting only, outside own bounds inside ancestor clips, including
+subtree opacity. Legacy contexts without IShadowDrawingContext omit the effect.

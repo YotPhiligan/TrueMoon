@@ -565,7 +565,8 @@ Viewport постоянно занимает всю рабочую област�
 Островки пока закреплены по сторонам; свободное перемещение/resize — отдельный этап.
 Esc в обозревателе снимает выбор (во время drag сначала отменяет перенос).
 Apply/Cancel/Undo/Redo/Add представлены квадратными иконками в одной строке,
-удаление — возле заголовка компонента, сброс — возле свойства. Наведите мышь на
+удаление — возле заголовка компонента, групповой сброс — справа от Position/Rotation/Scale.
+Индивидуальные resets свойств остаются в «⋯». Наведите мышь на
 иконку на500мс для Tooltip с названием действия и сочетанием клавиш; у недоступной
 команды подсказка также работает. Названия вариантов добавления остаются текстом.
 
@@ -603,8 +604,24 @@ component actions, зависимость, reset, theme retention, shared histor
 
 ## Transform, Undo/Redo и Edit preview
 
+Кнопка ↶ справа от каждой группы подготавливает сброс Position, Rotation или Scale
+к наследуемым значениям либо defaults схемы. Фокус через Tab, действие Enter/Space;
+Tooltip объясняет смысл и недоступное состояние. Чистая inherited группа недоступна,
+локальные overrides и изменённые поля становятся pending reset. Apply подтверждает
+весь черновик одной операцией, Cancel отменяет его. Во время numeric drag, runtime/
+document busy или conflict сброс недоступен. Linked Scale сбрасывается без пересчёта
+соседних осей; preference сохраняется. При смене темы/ширины контролы и draft остаются.
+
 Откройте сцену с built-in v1 Transform и выберите объект слева. Inspector показывает
-девять полей: XYZ, Pitch/Yaw/Roll в радианах и Scale XYZ. Формат чисел — с точкой,
+девять полей: XYZ, Pitch/Yaw/Roll и Scale XYZ. По умолчанию углы в радианах;
+переключатель **«Углы в градусах»** под Rotation меняет подпись, display limits и шаг
+(0.01рад/1°). В документе и сохранённом файле остаются радианы. Сам switch не создаёт
+правку/dirty/history; ввод90° даётπ/2rad при Apply,720° не приводятся к0–360°.
+При незавершённом/ошибочном вводе углов (в том числе pending reset), numeric drag,
+busy/read-only/conflict смена единиц недоступна; исправьте ввод, отмените draft или
+примените reset. Ошибка другого поля не мешает switch. Исходные пробелы/экспонента
+и precision сохраняются при обратном switch и отмене drag. Выбранный режим переживает
+Cancel, selection/history/theme и остаётся состоянием inspector, а не scene metadata. Формат чисел — с точкой,
 допускается экспонента. NaN/Infinity, значения вне Float и неположительный либо
 округляющийся в ноль масштаб отклоняются рядом с полем. Engine дополнительно
 проверяет итоговую сцену/мировые матрицы; отказ сохраняет черновик и документ.
@@ -626,26 +643,54 @@ committed сцены без Build/Play/Game.Logic.
 preview до смены документа; Cancel решения оставляет прежнюю сцену и preview.
 Ошибка preview не откатывает правку и не удаляет history; повтор — кнопкой Preview.
 
-Текущий профиль: Windows x64, OpenGL UI/Vulkan child, фиксированная камера,
-surface640×360, до64entities и новый child при обновлении ревизии. Лимит относится
+Текущий профиль: Windows x64, OpenGL UI/Vulkan child, transient editor camera,
+surface640×360, до64entities и новый child при обновлении committed source revision. Лимит относится
 к preview: большие authoring документы не обрезаются и доступны для сохранения.
 New создаёт пустую сцену; её можно наполнить через команды обозревателя.
-Live runtime edits, gizmos и camera navigation остаются следующими задачами.
+Live runtime edits и gizmos остаются отдельными задачами; camera navigation подключена к Edit Preview.
+[Контракт камеры/selection ED5a.0](../docs/engine/EDITOR_CAMERA_SELECTION.md)
+зафиксирован2026-11-08: external transient camera, actual-present identity и
+single selection owner. ED5a.1 CPU camera/projection/ray/pick values реализованы
+в Aether; ED5a.2 добавил explicit ShowView/QueueCamera, Control4/Frame2 и actual receipt.
+ReadPresentedView(view) вызывается на UI owner и проверяет current camera/surface/
+drawn layout/clip/visibility. Upload и control ack не являются presentation.
+Default GPU coordinator использует explicit ShowView: actual document OpeningId,
+exclusive ViewId и committed ContentToken. External custom transport сохраняет
+legacy Show API и собственную presentation policy.
+
+В Edit Preview: RMB drag — orbit, MMB drag — pan, wheel — dolly; F на focused canvas
+кадрирует выбранный opaque cube. LMB click выбирает куб, фон очищает выбор через
+общий tree/inspector owner. Same-ID сохраняет draft, different/clear применяет прежнюю
+политику. Camera-only не меняет document/history/invalid draft; wheel не забирает focus.
+Esc/focus loss/capture cancellation откатывает pose с новой camera revision.
+Overlays, chrome, letterbox, pending camera и Play блокируют picking/navigation.
+
+App владеет EditorViewportState/coordinator; View владеет созданным через IFactory
+EditorViewportController (EditorViewportArguments). Commit/Undo/Redo сохраняет camera,
+same-ID reopen/project/binding renew сбрасывает её. Hide отменяет presentation waits
+и прекращает UI texture copies, resume требует fresh draw/ack. Custom host вызывает
+EditorSession.Present на owner UI после actual presentation; второй attached View
+не крадёт active binding. Detach/dispose освобождает capture/subscriptions и передаёт
+async stop/drain App coordinator. ED5a.4 bounded Windows x64 source/published/fresh-package GPU и supported Windows input прошёл; physical held-RMB/MMB+Esc и multi-monitor DPI gates остаются отдельно. [Результаты/ограничения](../docs/engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
 
 Directed acceptance: `--project fixture.aetherproj --smoke fresh-directory --smoke-transform`.
-Только для disposable fixture с Transform.aetherscene: ввод/валидация/темы,
-Apply/Preview/Undo/Redo, pixel checks, Save/Close/reopen и child/resource cleanup.
+Только для нового disposable проекта с Transform.aetherscene: inherited cube Position
+(-1.5,1,-1), Appearance(.8,.2,.15), без instance overrides. Ввод/валидация/темы,
+group reset Position/Rotation/linked Scale, rad/deg no-history switch/invalid admission,
+exact text round trip,90°→π/2 commit/Undo/Redo/save/reopen и actual rotated pixel checks,
+keyboard/Cancel/Apply/Preview и child/resource cleanup. Каждый профиль использует
+собственный проект: SaveAs Edited.aetherscene не перезаписывает существующий файл.
 
 ## Границы первого экрана
 
 - Инспектор редактирует scalar-свойства и состав компонентов authoring документа.
   Legacy runtime остаётся readonly; live runtime edit transaction ещё нужна.
 - Дерево поддерживает parent/child, иконки, выбор и перенос. Сохраняемые имена и
-  порядок соседей, create/delete/duplicate, picking/gizmos/docking — следующие этапы.
+  порядок соседей и create/delete/duplicate реализованы; gizmos/docking — следующие этапы.
 - Viewport отображает реальную игру из child process через existing shared GPU
   transport. Размер legacy render surface960×540, Edit preview640×360; изображение вписывается без искажения;
-  resize окна меняет layout. Editor camera navigation/gameplay input в этом
-  приложении ещё не подключены; прежние input consumers сохранены отдельно.
+  resize окна меняет layout. Retained camera/navigation/selection работает в Edit Preview;
+  gameplay input в этом приложении остаётся отдельным consumer.
 - Текущий GPU путь — Windows x64, OpenGL UI + Vulkan runtime, совместимые UUID и
   extended native Skia. System settings/driver selection не меняются и implicit
   fallback не добавлен. Physical multi-monitor DPI и прежние UI release gates
@@ -861,3 +906,10 @@ source segment/details не заменяют primary runtime/command/error statu
 Present/Refresh регулярно (не реже1s в active window) либо организовать собственный
 owner-thread wakeup. On-demand host без pump видит последний прочитанный snapshot;
 скрытого cross-thread posting нет.
+
+Validation UI uses a red icon at the right edge of TextBox/RichTextEditor and
+numeric fields. Hover shows the exact validator reason; long text wraps/scrolls.
+Inline field error rows are replaced; the shared copyable Diagnostics panel remains.
+Drafts, selection, Apply/Cancel/Undo/Redo stay with the existing models. Editor island
+styles use Theme.PanelShadow; menus use Theme.MenuShadow, with local Shadow=null
+available. Full Editor D/R regression passed; full release/platform gates remain separate.

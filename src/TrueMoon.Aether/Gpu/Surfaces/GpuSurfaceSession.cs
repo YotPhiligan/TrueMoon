@@ -108,6 +108,7 @@ public sealed class GpuSurfaceSession : IGpuResource
                 var ready = reply.Completion ?? throw new InvalidDataException("Missing surface ready completion."); ledger.Produced(ready);
                 if (reply.Metadata is { } metadata && (metadata.Slot != slot || metadata.FrameId != GpuFrameData.FrameNumber(stamp) || metadata.ProducedTimestamp <= 0))
                     throw new InvalidDataException("GPU runtime frame metadata mismatch.");
+                reply.Metadata?.PreviewView?.Validate();
                 Guard(); return new(ready, reply.Metadata);
             }
             catch { Fence(); throw; }

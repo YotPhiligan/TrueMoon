@@ -288,16 +288,48 @@ public sealed class EditorHeaderViewTests
     [Fact]
     public void ThemeAndStyleReplacement_PreserveRetainedHeaderAndInputFocus()
     {
-        using var test = new HeaderFixture(); using var ui = test.Ui(); ui.Update();
+        using var test = new HeaderFixture(); using var ui = test.Ui();
+        ui.SetTheme(Theme.Dark with { FontFamily = "Consolas", FontSize = 19, FontWeight = 500, FontItalic = true }); ui.Update();
         var tree = DocumentUiFixture.Tree(test.Header).ToArray(); ui.Focus(test.Header.Menu.MoreButton);
         var font = test.Header.Theme.FontFamily;
         test.Header.Menu.Groups.Single(group => group.Id == "view").Actions.Single().Command.Execute();
         test.Header.WithViewStyle(new EditorHeaderViewStyle()); ui.Update();
         Assert.Equal(Theme.Light.Surface, test.Header.Theme.Surface); Assert.Equal(font, test.Header.Theme.FontFamily);
+        Assert.Equal(19, test.Header.Theme.FontSize); Assert.Equal(500, test.Header.Theme.FontWeight); Assert.True(test.Header.Theme.FontItalic);
+        Assert.Equal(600, test.Header.Caption.FontWeight);
         Assert.Equal(tree, DocumentUiFixture.Tree(test.Header)); Assert.True(test.Header.Menu.MoreButton.IsFocused);
         Assert.Equal(ControlTone.Positive, test.Header.RunButton.Tone); Assert.Equal(ControlTone.Danger, test.Header.StopButton.Tone);
         Assert.Equal(WindowRegionRole.Caption, test.Header.WindowRegion); Assert.Equal(WindowRegionRole.Client, test.Header.Menu.WindowRegion);
         Assert.False(ui.Update());
+    }
+
+    [Fact]
+    public void CaptionEllipsis_UsesTheStyledFaceForMeasurementAndDrawing()
+    {
+        using var test = new HeaderFixture(); var caption = test.Header.Caption;
+        caption.Value = new string('W', 80); caption.FontFamily = "typography-family"; caption.FontWeight = 600; caption.FontItalic = true;
+        var probe = new TypographyRecordingContext();
+        caption.Measure(new(150, 40), probe); caption.Arrange(new(0, 0, 150, 40)); caption.Draw(probe);
+        var drawn = Assert.Single(probe.Texts);
+        Assert.Equal(new string('W', 14) + "…", drawn.Text);
+        Assert.Equal((14f, "typography-family", 600, true), (drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
+        Assert.All(probe.Measures, call => Assert.Equal((600, true), (call.Weight, call.Italic)));
+    }
+
+    [Fact]
+    public void WrappedHint_UsesStyledAdvancesAndLineHeightForEachRenderedLine()
+    {
+        using var test = new HeaderFixture(false); using var ui = test.Ui(); ui.Update();
+        ui.HandleInput(new(InputKind.PointerMove, test.Header.RunButton.Bounds.X + 3, test.Header.RunButton.Bounds.Y + 3));
+        test.Clock.Advance(500); ui.Update();
+        var text = Assert.Single(DocumentUiFixture.Tree(test.Overlays.Popup!).OfType<Text>());
+        text.Value = "AAAA BBBB CCCC"; text.FontFamily = "typography-family"; text.FontSize = 14; text.FontWeight = 600; text.FontItalic = true;
+        var probe = new TypographyRecordingContext();
+        text.Measure(new(50, 200), probe); text.Arrange(new(0, 0, 50, 200)); text.Draw(probe);
+        Assert.Equal(new[] { "AAAA ", "BBBB ", "CCCC" }, probe.Texts.Select(call => call.Text));
+        Assert.Equal(60, text.DesiredSize.Height);
+        Assert.All(probe.Texts, call => Assert.Equal((14f, "typography-family", 600, true), (call.Size, call.Family, call.Weight, call.Italic)));
+        Assert.Equal(new[] { 0f, 20f, 40f }, probe.Texts.Select(call => call.Y));
     }
 
     [Fact]

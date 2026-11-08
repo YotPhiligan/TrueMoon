@@ -5,6 +5,11 @@ public interface ITextLayoutService
 {
     /// <summary>Measures a single line using the selected font.</summary>
     Size Measure(string text, float fontSize, string fontFamily);
+    /// <summary>Measures a styled single line. Legacy providers fall back to their normal face.</summary>
+    /// <param name="text">Literal single-line text.</param><param name="fontSize">Logical font size.</param>
+    /// <param name="fontFamily">Requested family.</param><param name="fontWeight">Weight100..900;400 is regular and600 semibold.</param>
+    /// <param name="fontItalic">Whether to select an italic face.</param><returns>Logical text dimensions.</returns>
+    Size Measure(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic) => Measure(text, fontSize, fontFamily);
 }
 /// <summary>A borrowed or owned decoded image. The creator controls its lifetime.</summary>
 public interface IImageSource : IDisposable
@@ -29,6 +34,12 @@ public interface IDrawingContext
     void Stroke(Rect rectangle, Color color, float width = 1, float radius = 0);
     /// <summary>Draws one line of text at its top-left position.</summary>
     void Text(string text, float x, float y, Color color, float fontSize, string fontFamily);
+    /// <summary>Draws a styled line. Legacy providers fall back to their normal face, as in measurement.</summary>
+    /// <param name="text">Literal single-line text.</param><param name="x">Logical left position.</param><param name="y">Logical top position.</param>
+    /// <param name="color">Text color.</param><param name="fontSize">Logical font size.</param><param name="fontFamily">Requested family.</param>
+    /// <param name="fontWeight">Weight100..900;400 is regular and600 semibold.</param><param name="fontItalic">Whether to select an italic face.</param>
+    void Text(string text, float x, float y, Color color, float fontSize, string fontFamily, int fontWeight, bool fontItalic) =>
+        Text(text, x, y, color, fontSize, fontFamily);
     /// <summary>Draws an image into a destination rectangle.</summary>
     void Image(IImageSource source, Rect destination);
 }

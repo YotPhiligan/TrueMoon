@@ -4,9 +4,45 @@ Reusable editor module for TrueMoon App, targeting net10.0. Includes retained
 View/Data/styles, scene hierarchy/inspector, project/document coordination,
 commands and an optional Windows x64 Skia/OpenGL window integration.
 
+The inspector exposes `ResetTransformGroup(TransformGroup)` with Position/Rotation/Scale
+admission flags. It stages inherited/schema resets, preserves unrelated drafts and
+the linked-scale preference, and uses the existing Apply/Cancel and shared history.
+Numeric gestures must finish before a group reset.
+
+`EditorInspectorViewModel.AnglesInDegrees` and `CanChangeAngleUnits` provide the
+transient rotation preference and admission. `TransformField.Value` remains canonical
+radians; `DisplayValue`/`DisplayLabel` expose selected units. Changing units alone
+preserves canonical text and history; explicit degree edits convert once. Invalid
+rotation text (including pending resets), gestures and busy/conflicting/read-only state
+block the switch. Raw display text is retained across round trips and gesture rollback.
+Rotation step is0.01rad/1degree, with limits checked in canonical Float radians.
+The retained Degrees checkbox and labels reuse existing controls; legacy View also
+binds the display projection. [ED4g.4 source/published checks](../docs/engine/HISTORY.md#ed4g4-angle-units-2026-11-08)
+do not claim a fresh Editor nupkg delivery run. Each retained group row owns a
+keyboard-accessible reset icon and reserves its width before responsive vector layout.
+ED4g.3 source Debug/published Release native delivery and Editor tests are recorded in
+[engine history](../docs/engine/HISTORY.md#ed4g3-group-reset-2026-11-08); fresh NuGet
+delivery was not rerun for this slice.
+
 The consuming executable owns Main, CLI, App composition, diagnostics, fonts,
 report paths and runtime bootstrap. This package creates no nested App and
 contains no executable entry point or smoke checks.
+
+Default typography follows Argentis: `Segoe UI Variable Text`, regular400 for
+body text and semibold600 for the compact caption and pane titles. Custom caption,
+tooltip, status and viewport text pass weight/italic through measure and drawing;
+the editor's light/dark commands preserve the selected family/size/weight/italic.
+The host can pass `SkiaFontCatalog.SystemDefault` to UseAetherEditorWindow, or add
+an explicit file fallback as in the example host:
+
+```csharp
+var fallback = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
+{
+    ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets/Fonts/NotoSans-Regular.ttf")
+});
+var fonts = SkiaFontCatalog.FromSystemFonts(
+    [TrueMoon.Argentis.FontDefaults.Family, TrueMoon.Argentis.FontDefaults.FallbackFamily], fallback);
+```
 
 ```csharp
 using TrueMoon;
@@ -265,3 +301,40 @@ runtime/command/error status. The standard window is continuous. A custom host
 must call Present/owner Refresh regularly (at most1s while active), or provide its
 own owner-thread wakeup. An on-demand host without a pump displays its last read
 snapshot; no hidden cross-thread UI posting is performed.
+
+Explicit preview-view integration uses the matching Aether Control4/Frame2 binaries.
+EditorSession.Present acknowledges a stamped frame with its actually drawn image,
+clip and layout revision. ReadPresentedView(view), called on the UI owner, returns
+only an actual receipt admitted by current camera/context/runtime/surface and drawn
+layout/visibility; newer received FrameIds of the same view are allowed. It does not
+select or clear entities itself. Default GPU document preview uses explicit opening/
+view/content identities. SceneDocumentState.OpeningId renews on every successful
+opening, including the same immutable scene; Workspace.ContentToken renews for committed
+content and SelectionRevision advances for every explicit Select/Clear intent.
+
+App owns EditorViewportState and the preview coordinator. A View owns its UI-thread
+IFactory<EditorViewportController,EditorViewportArguments> product and subscriptions;
+dependencies are borrowed. One attached binding owns frame delivery/input; another
+view cannot steal it. Detach/dispose releases capture and schedules tracked Stop/drain.
+The previous two-argument inspector constructor remains available; full composition
+injects the workspace to capture committed source coherently before worker dispatch.
+
+RMB orbit, MMB pan, wheel dolly, and F on a focused canvas update only the transient
+camera. LMB click/miss uses the shared selection owner and existing inspector draft
+policy. Pending/stale/unsupported views, Play, overlays, chrome, letterbox and foreign
+capture cannot select. Esc/focus/capture cancellation restores pose with a fresh camera
+revision; source/context changes discard the old gesture. Commits/Undo/Redo preserve
+the camera; reopening/project/binding renewal resets it. UI resize/DPI/hide invalidates
+drawn geometry; resume requires fresh actual presentation. Initial hidden preview waits
+for visibility before allocating a runtime. A custom external transport preserves the
+legacy Show path and supplies its own presentation policy. Bounded Windows x64
+source/published/fresh-package GPU lifecycle and supported Windows input acceptance
+passed. Moving RMB/MMB/Esc is directed UiSession/native GPU evidence; physical
+held-button and multi-monitor DPI remain separate hardware/input gates.
+
+Validation UI uses a red icon at the right edge of TextBox/RichTextEditor and
+numeric fields. Hover shows the exact validator reason; long text wraps/scrolls.
+Inline field error rows are replaced; the shared copyable Diagnostics panel remains.
+Drafts, selection, Apply/Cancel/Undo/Redo stay with the existing models. Editor island
+styles use Theme.PanelShadow; menus use Theme.MenuShadow, with local Shadow=null
+available. Full Editor D/R regression passed; full release/platform gates remain separate.

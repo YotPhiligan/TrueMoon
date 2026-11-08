@@ -42,6 +42,8 @@ Engine implementation/contracts теперь объединены в [TrueMoon.A
   [ARCH2 package/host перехода](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27)
   существующая ENG7a/UIA1 основа развивается в project/document editor, preview, undo и расширения.
   Первый срез — Open → Transform → preview → Undo/Redo → Save → reopen.
+  [Контракт камеры/selection ED5a.0](engine/EDITOR_CAMERA_SELECTION.md) и
+  [численный probe](../ManualTests/AetherCameraContractProbe/README.md) фиксируют следующий viewport profile.
 
 ## Практические входные точки
 

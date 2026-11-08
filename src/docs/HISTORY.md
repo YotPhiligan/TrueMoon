@@ -1,8 +1,5 @@
 # TrueMoon: история общей документации
 
-<!-- Nom-only staging: module event records are included below; full unrelated UI/Editor
-     status snapshots remain outside this commit. Nom-specific archives and complete
-     command/result history are in docs/nom/HISTORY.md. Existing committed history is preserved. -->
 <a id="nom-commit-2026-11-08"></a>
 ## Nom: проверка отдельного commit scope — 2026-11-08
 
@@ -31,6 +28,190 @@ Debug0errors/1560warnings, Nom/Nom.Tests0warnings. [Команды/границ�
 Nom/engine/UI/release очередь сохраняется. Actual VM verification отложена,
 hardware power-off исключён; native/GPU/physical/heavy capacity acceptance не повторялась.
 
+<a id="status-before-nom-structure-2026-11-08"></a>
+## Предыдущий общий STATUS перед Nom source organization — дословный архив
+
+# TrueMoon: общий статус
+
+**UI2026-11-08:** [UIA3d.1 Vulkan frosted backdrop](alloy/PLAN.md#uia3d1-vulkan-backdrop)
+исправлен: native GENERAL source stage теперь включает HOST для HOST_WRITE.
+Pinned DLL/metadata/source patch обновлены, blur/default backdrop/ABI сохранены.
+Source Debug/published Release frosted3backend/Dark/Light1/1.5/2:18PNG и actual blur
+witnesses/profile, validation0/0. Fresh5package Vulkan D/R, interop18/composition36,
+UI1170/Hosting154/Editor1412 каждый D/R прошли. [Scope/хеши/команды](alloy/HISTORY.md#vulkan-backdrop-2026-11-08).
+Отрицательные old-native/disabled-blur controls сработали. Wider release gates
+и engine/Nom очередь не переоценивались.
+
+**Editor2026-11-08:** [ED5a.4](engine/EDITOR_PLAN.md#ed5a4-acceptance) завершён
+в bounded Windows x64 v1 scope. Source Debug/published Release и fresh-package GPU:
+13groups/17PNG,9children=reaped каждый; Windows SendInput D/R — выбор/clear,
+invalid draft+wheel/F, LMB drag и RMB/MMB release, same PID/surface и cleanup0.
+Validation0errors/0warnings;8GPU reports+1pre-GPU failure/lifecycle profile.
+Full Editor1412/1412 и bounded Aether2104/2104 каждый D/R,15fresh packages,
+8headless delivery cases+2GPU profiles. Исправлен hidden-camera wait при resume.
+[Scope/команды/limits](engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
+Moving RMB/MMB/Esc — directed UI/GPU; physical held-button/multi-monitor hardware
+gates отдельно. Далее [ED5b translation contract](engine/EDITOR_PLAN.md#ed5b-translation).
+Full solution/full Aether этой задачей не повторены; engine/Nom/release очереди сохранены.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [NOM8b raw T:unmanaged](nom/BUFFER_API.md#nom8b-raw-api)
+реализован:Memory/Span publication/copy, typed read с element count, checked byte
+sizing/divisibility, explicit runtime layout и actual borrowed lifetime.
+Nom862/862 каждый D/R,120functional groups/profile source/published, public
+Raw31/Buffer28/App34checks D/R и fresh4package/4consumer delivery прошли, включая
+managed-T compiler negatives. Full nonincremental solution Debug0errors/1560warnings,
+Nom/Nom.Tests0warnings. [Scope/команды](nom/HISTORY.md#nom8b-2026-11-08).
+NOM8 завершён; далее engine g.2 после g.1 по согласованию владельца. Actual VM
+verification отложена, hardware power-off исключён; UI/Editor/release очереди сохранены.
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–6 IO/process scope и NOM7 local4package delivery; independent App/tool, portable/win-x64 FDD;718cases D/R,120functional/profile | Engine g.2 bridge по согласованию; другие OS/RID/modes и physical/release gates открыты |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  backup/workload/limits NOM6 проверены; delivery — NOM7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
+<a id="vulkan-backdrop-2026-11-08"></a>
+## Исправлен Vulkan frosted backdrop — 2026-11-08
+
+Pinned Skia GENERAL source stage включал ALL_COMMANDS без HOST при HOST_WRITE
+access. Добавлен HOST, native DLL/source recipe/metadata обновлены без смены ABI.
+Source Debug/published Release frosted3backend matrix и fresh5package Vulkan D/R
+прошли, actual blur проверен пикселями, validation0/0 включая teardown.
+Interop18/composition36 и UI1170/Hosting154/Editor1412 каждый D/R прошли.
+[Хеши/commands/negative controls/scope](alloy/HISTORY.md#vulkan-backdrop-2026-11-08).
+Engine/Nom и full release gates не переоценивались.
+
 <a id="nom8b-2026-11-08"></a>
 ## Nom: unmanaged raw helpers реализованы — 2026-11-08
 
@@ -48,6 +229,186 @@ NOM8 завершён в local scope; следующий bridge — engine g.2 �
 по согласованию владельца engine. UI/Editor/release очередь сохранена, текущий
 Vulkan frosted MenuBackdrop blocker не относится к Nom и этим запуском не закрыт.
 Actual VM verification отложена пользователем, hardware power-off исключён.
+
+<a id="status-before-nom-raw-api-2026-11-08"></a>
+## Предыдущий общий STATUS перед Nom raw API — дословный архив
+
+# TrueMoon: общий статус
+
+**UI2026-11-08:** [UIA3d validation/shadows](alloy/PLAN.md#uia3d-validation-shadows)
+реализован: правые error icons с exact validator tooltip, themed panel/menu shadows,
+retained inspector input/Diagnostics. UI1170/Hosting154/Editor1412 каждый D/R,
+source/published3backend opaque gallery и fresh4package raster consumer прошли.
+Открыт Vulkan frosted MenuBackdrop VUID02819, воспроизводится без теней; exact native
+cause не установлен. [Scope/команды](alloy/HISTORY.md#validation-shadows-2026-11-08).
+
+**Editor2026-11-08:** [ED5a.4](engine/EDITOR_PLAN.md#ed5a4-acceptance) завершён
+в bounded Windows x64 v1 scope. Source Debug/published Release и fresh-package GPU:
+13groups/17PNG,9children=reaped каждый; Windows SendInput D/R — выбор/clear,
+invalid draft+wheel/F, LMB drag и RMB/MMB release, same PID/surface и cleanup0.
+Validation0errors/0warnings;8GPU reports+1pre-GPU failure/lifecycle profile.
+Full Editor1412/1412 и bounded Aether2104/2104 каждый D/R,15fresh packages,
+8headless delivery cases+2GPU profiles. Исправлен hidden-camera wait при resume.
+[Scope/команды/limits](engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
+Moving RMB/MMB/Esc — directed UI/GPU; physical held-button/multi-monitor hardware
+gates отдельно. Далее [ED5b translation contract](engine/EDITOR_PLAN.md#ed5b-translation).
+Full solution/full Aether этой задачей не повторены; engine/Nom/release очереди сохранены.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [NOM8a byte API](nom/BUFFER_API.md#nom8-buffer-api) реализован:
+Memory/batch publication, bounded Span snapshot, whole-resource destination read
+и detached load. Nom789/789 каждый D/R,120functional groups/profile source/published,
+public Buffer28/App34checks D/R и fresh4package/3consumer matrix прошли. Full solution
+nonincremental Debug0errors/1560warnings, Nom/Nom.Tests0warnings.
+[Exact evidence/scope](nom/HISTORY.md#nom8a-2026-11-08). Далее NOM8b raw unmanaged;
+actual VM verification отложена, hardware power-off исключён. Engine/UI/release
+очереди и прежние bounded proofs сохранены.
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–6 IO/process scope и NOM7 local4package delivery; independent App/tool, portable/win-x64 FDD;718cases D/R,120functional/profile | Engine g.2 bridge по согласованию; другие OS/RID/modes и physical/release gates открыты |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  backup/workload/limits NOM6 проверены; delivery — NOM7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
+<a id="validation-shadows-2026-11-08"></a>
+## UI validation icons и shadows — 2026-11-08
+
+UIA3d реализован: exact validator tooltip на правом error icon, retained editing,
+outer panel/menu shadows через Theme/Style. UI1170/Hosting154/Editor1412 каждый D/R,
+source/published3backend opaque gallery, fresh4package raster consumer прошли.
+Frosted MenuBackdrop Vulkan VUID02819 сохраняется без теней; точный native cause
+открыт UIA3d.1, default/native DLL не отключались. [Tests/commands/limits](alloy/HISTORY.md#validation-shadows-2026-11-08).
+Engine/Nom и full release gates не переоценивались.
 
 <a id="nom8a-2026-11-08"></a>
 ## Nom: byte buffer API реализован — 2026-11-08
@@ -67,6 +428,167 @@ NOM8b raw T:unmanaged — следующий Nom этап; engine/UI/release о�
 Actual VM verification остаётся отложенной пользователем, hardware power-off исключён.
 Другие OS/RID/AOT/trimming/external publish и heavy NOM6 workload не повторялись.
 
+<a id="status-before-nom-byte-api-2026-11-08"></a>
+## Предыдущий общий STATUS перед Nom byte API — дословный архив
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.4](engine/EDITOR_PLAN.md#ed5a4-acceptance) завершён
+в bounded Windows x64 v1 scope. Source Debug/published Release и fresh-package GPU:
+13groups/17PNG,9children=reaped каждый; Windows SendInput D/R — выбор/clear,
+invalid draft+wheel/F, LMB drag и RMB/MMB release, same PID/surface и cleanup0.
+Validation0errors/0warnings;8GPU reports+1pre-GPU failure/lifecycle profile.
+Full Editor1412/1412 и bounded Aether2104/2104 каждый D/R,15fresh packages,
+8headless delivery cases+2GPU profiles. Исправлен hidden-camera wait при resume.
+[Scope/команды/limits](engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
+Moving RMB/MMB/Esc — directed UI/GPU; physical held-button/multi-monitor hardware
+gates отдельно. Далее [ED5b translation contract](engine/EDITOR_PLAN.md#ed5b-translation).
+Full solution/full Aether этой задачей не повторены; engine/Nom/release очереди сохранены.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08, проектирование:** [NOM8 buffer API](nom/BUFFER_API.md#nom8-buffer-api)
+предусмотрен по запросу:Memory/Span/readonly, borrowed async memory и explicit span
+copy; raw T:unmanaged отдельно от portable codec. Реализация/новые overloads ещё не
+добавлены, build/tests не запускались. VM verification отложена пользователем, engine
+очередь и прежние bounded proofs сохранены. [Решения](nom/HISTORY.md#nom8-design-2026-11-08).
+
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–6 IO/process scope и NOM7 local4package delivery; independent App/tool, portable/win-x64 FDD;718cases D/R,120functional/profile | Engine g.2 bridge по согласованию; другие OS/RID/modes и physical/release gates открыты |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  backup/workload/limits NOM6 проверены; delivery — NOM7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
 <a id="nom8-design-2026-11-08"></a>
 ## Nom: buffer API предусмотрен, реализация ещё не начата — 2026-11-08
 
@@ -77,6 +599,179 @@ detached reads и explicit unmanaged raw contract. Это план public resour
 claims не делаются. VM verification остаётся отложенной, engine очередь не меняется.
 [Единственный подробный план](nom/PLAN.md#nom-own-queue).
 
+<a id="status-before-nom-buffer-design-2026-11-08"></a>
+## Предыдущий общий STATUS перед Nom buffer design — дословный архив
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.4](engine/EDITOR_PLAN.md#ed5a4-acceptance) завершён
+в bounded Windows x64 v1 scope. Source Debug/published Release и fresh-package GPU:
+13groups/17PNG,9children=reaped каждый; Windows SendInput D/R — выбор/clear,
+invalid draft+wheel/F, LMB drag и RMB/MMB release, same PID/surface и cleanup0.
+Validation0errors/0warnings;8GPU reports+1pre-GPU failure/lifecycle profile.
+Full Editor1412/1412 и bounded Aether2104/2104 каждый D/R,15fresh packages,
+8headless delivery cases+2GPU profiles. Исправлен hidden-camera wait при resume.
+[Scope/команды/limits](engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
+Moving RMB/MMB/Esc — directed UI/GPU; physical held-button/multi-monitor hardware
+gates отдельно. Далее [ED5b translation contract](engine/EDITOR_PLAN.md#ed5b-translation).
+Full solution/full Aether этой задачей не повторены; engine/Nom/release очереди сохранены.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08, документация:** actual [VM crash verification](nom/VM_CRASH.md)
+отложена пользователем из-за подготовки image/credential. Harness и прежние proofs
+сохранены; VM acceptance не закрыта, hardware power-off исключён. Подготовка VM не
+блокирует независимые engine/Nom features; f.3/f.4/g.1 очередь сохраняется.
+Новых build/test/VM результатов нет. [Решение](nom/HISTORY.md#nom-vm-deferred-2026-11-08).
+
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–6 IO/process scope и NOM7 local4package delivery; independent App/tool, portable/win-x64 FDD;718cases D/R,120functional/profile | Engine g.2 bridge по согласованию; другие OS/RID/modes и physical/release gates открыты |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  backup/workload/limits NOM6 проверены; delivery — NOM7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
+<a id="ed5a4-2026-11-08"></a>
+## Editor ED5a.4 bounded acceptance — 2026-11-08
+
+Source Debug/published Release, independent fresh-package GPU и supported Windows
+SendInput прошли camera/selection lifecycle. Editor1412/Aether2104 каждый D/R,
+15fresh packages/8headless cases+2GPU profiles; native lifecycle13groups/17PNG,
+9children=reaped,8GPU validation+1pre-GPU failure каждый, cleanup0/validation0.
+Исправлен hidden-camera wait при resume. Physical held-RMB/MMB+Esc и multi-monitor
+DPI остаются input/hardware gates; full solution/full Aether не повторены этой задачей.
+[Команды/тесты/failures/retention](engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
+Далее ED5b translation contract; Nom и engine f.3/f.4 очереди сохранены.
+
 <a id="nom-vm-deferred-2026-11-08"></a>
 ## Nom VM verification отложена — 2026-11-08
 
@@ -85,6 +780,167 @@ Harness сохранён, acceptance не закрыта, аппаратный p
 разработка Nom/engine этим не блокируется. Подготовка VM параметров не активная задача,
 возврат — по новому запросу. Никаких новых build/test/VM results: это документационный
 шаг. [Решение и scope](nom/HISTORY.md#nom-vm-deferred-2026-11-08).
+
+<a id="status-before-nom-vm-deferred-2026-11-08"></a>
+## Предыдущий общий STATUS перед отсрочкой VM — дословный архив
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.3 navigation/selection](engine/EDITOR_PLAN.md#ed5a3-navigation-picking)
+реализован: default explicit context, exclusive viewport controller через App factory,
+orbit/pan/dolly/F и общий hit/miss selection intent. Document/history/draft сохранены,
+same-ID reopen renews epoch; DPI/layout/hide admission и actual presentation fence.
+33new Editor+1Aether case; full Editor1396/1396 и bounded Aether2104/2104 каждый D/R.
+Source Debug/published Release directed UiSession/native GPU:6PNG/profile, camera1→7,
+same PID/surface, owners0/validation0. [Scope/команды](engine/HISTORY.md#ed5a3-input-2026-11-08).
+Следующий Editor этап — ED5a.4 physical/lifecycle/delivery acceptance. Full solution,
+fresh NuGet/full Aether не повторены; engine/Nom/release очереди сохранены.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [VM crash harness](nom/VM_CRASH.md) реализован по запросу без
+аппаратного power-off.98guards/10host protocol groups каждый D/R и120functional groups
+прошли,7children/profile reaped. Actual VM0trials/Blocked:нет prepared Windows Gen2
+VHDX/guest credential. HardwarePowerLossRequired=false; process kills не являются VM
+proof. Solution Debug0errors/1560warnings, Nom/Probe0; новые EditorHost warnings
+вне Nom scope. Прежний UAC disk-full proof сохраняется, engine/Editor очередь не менялась.
+[Команды/границы](nom/HISTORY.md#nom-vm-2026-11-08).
+
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–6 IO/process scope и NOM7 local4package delivery; independent App/tool, portable/win-x64 FDD;718cases D/R,120functional/profile | Engine g.2 bridge по согласованию; другие OS/RID/modes и physical/release gates открыты |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  backup/workload/limits NOM6 проверены; delivery — NOM7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
 
 <a id="nom-vm-2026-11-08"></a>
 ## Nom guest-crash harness, hardware power исключён — 2026-11-08
@@ -98,6 +954,166 @@ EditorHost, его код не менялся в Nom. Actual VM0trials/Blocked:�
 Gen2 VHDX и локальный guest credential. HardwarePowerLossRequired=false; VM acceptance
 не подменяется process kills. Прежний UAC disk-full scope сохраняется, engine/Editor
 очереди не меняются. [Контракт](nom/VM_CRASH.md), [команды/evidence](nom/HISTORY.md#nom-vm-2026-11-08).
+
+<a id="status-before-nom-vm-2026-11-08"></a>
+## Предыдущий общий STATUS перед VM harness — дословный архив
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.3 navigation/selection](engine/EDITOR_PLAN.md#ed5a3-navigation-picking)
+реализован: default explicit context, exclusive viewport controller через App factory,
+orbit/pan/dolly/F и общий hit/miss selection intent. Document/history/draft сохранены,
+same-ID reopen renews epoch; DPI/layout/hide admission и actual presentation fence.
+33new Editor+1Aether case; full Editor1396/1396 и bounded Aether2104/2104 каждый D/R.
+Source Debug/published Release directed UiSession/native GPU:6PNG/profile, camera1→7,
+same PID/surface, owners0/validation0. [Scope/команды](engine/HISTORY.md#ed5a3-input-2026-11-08).
+Следующий Editor этап — ED5a.4 physical/lifecycle/delivery acceptance. Full solution,
+fresh NuGet/full Aether не повторены; engine/Nom/release очереди сохранены.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [UAC physical disk-full/recovery](nom/DURABILITY.md) прошёл:
+5cases/166assertions каждый Debug/published Release, real free0/OS112, old exact
+state/outcome и post-reopen generation2. Новый128MiB VHDX создан/отформатирован/
+отключён, cleanup0.24guards/12assertions D/R и fresh4package App34/tool211 повторены.
+DiskFullStatus=Passed; exit2/DiskFullPassed-PowerLossOpen ожидаем, power-loss gate открыт.
+Production API не менялся; unit/full solution/native здесь не повторены.
+Engine/Editor/release очередь сохранена. [Evidence](nom/HISTORY.md#nom7-uac-2026-11-08).
+
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–6 IO/process scope и NOM7 local4package delivery; independent App/tool, portable/win-x64 FDD;718cases D/R,120functional/profile | Engine g.2 bridge по согласованию; другие OS/RID/modes и physical/release gates открыты |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  backup/workload/limits NOM6 проверены; delivery — NOM7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
 
 <a id="nom7-uac-2026-11-08"></a>
 ## Nom: UAC real-volume disk-full/recovery passed — 2026-11-08
@@ -113,6 +1129,166 @@ disk-full gate закрыт в bounded NTFS/VHDX scope, power-loss/осталь�
 открыты. Unit/full solution/native не повторялись. Editor ED5a.3 и engine очередь
 сохранены; [команды/failures/границы](nom/HISTORY.md#nom7-uac-2026-11-08).
 
+<a id="status-before-nom7-uac-2026-11-08"></a>
+## Предыдущий общий STATUS перед UAC proof — дословный архив
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.3 navigation/selection](engine/EDITOR_PLAN.md#ed5a3-navigation-picking)
+реализован: default explicit context, exclusive viewport controller через App factory,
+orbit/pan/dolly/F и общий hit/miss selection intent. Document/history/draft сохранены,
+same-ID reopen renews epoch; DPI/layout/hide admission и actual presentation fence.
+33new Editor+1Aether case; full Editor1396/1396 и bounded Aether2104/2104 каждый D/R.
+Source Debug/published Release directed UiSession/native GPU:6PNG/profile, camera1→7,
+same PID/surface, owners0/validation0. [Scope/команды](engine/HISTORY.md#ed5a3-input-2026-11-08).
+Следующий Editor этап — ED5a.4 physical/lifecycle/delivery acceptance. Full solution,
+fresh NuGet/full Aether не повторены; engine/Nom/release очереди сохранены.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [physical durability follow-up](nom/DURABILITY.md) добавил isolated
+VHDX disk-full harness и public fresh-package consumer.24pure guards и12consumer
+assertions каждый D/R прошли; fresh4package App34/tool211checks повторены. Physical
+cases0:New-VHD запрещён Windows authorization до создания/подключения/format; exit2/
+Blocked, Completed=false. Power-cut rig отсутствует, оба physical gates открыты.
+Последние718unit D/R/120functional/full solution относятся к прежнему NOM7 delivery,
+здесь не повторены. Engine/Editor/release очередь сохранена.
+[Команды/ошибка/scope](nom/HISTORY.md#nom7-durability-2026-11-08).
+
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–6 IO/process scope и NOM7 local4package delivery; independent App/tool, portable/win-x64 FDD;718cases D/R,120functional/profile | Engine g.2 bridge по согласованию; другие OS/RID/modes и physical/release gates открыты |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  backup/workload/limits NOM6 проверены; delivery — NOM7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
 <a id="nom7-durability-2026-11-08"></a>
 ## Nom physical durability follow-up — 2026-11-08
 
@@ -126,6 +1302,174 @@ physical disk-full/power-loss остаются открыты. Unit/full solutio
 Editor ED5a.3/engine и release очереди сохранены, shared docs с fresh SHA guards.
 [Подробные команды/ошибка](nom/HISTORY.md#nom7-durability-2026-11-08),
 [acceptance contract](nom/DURABILITY.md).
+
+<a id="status-before-nom7-durability-2026-11-08"></a>
+## Предыдущий общий STATUS перед physical follow-up — дословный архив
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.3 navigation/selection](engine/EDITOR_PLAN.md#ed5a3-navigation-picking)
+реализован: default explicit context, exclusive viewport controller через App factory,
+orbit/pan/dolly/F и общий hit/miss selection intent. Document/history/draft сохранены,
+same-ID reopen renews epoch; DPI/layout/hide admission и actual presentation fence.
+33new Editor+1Aether case; full Editor1396/1396 и bounded Aether2104/2104 каждый D/R.
+Source Debug/published Release directed UiSession/native GPU:6PNG/profile, camera1→7,
+same PID/surface, owners0/validation0. [Scope/команды](engine/HISTORY.md#ed5a3-input-2026-11-08).
+Следующий Editor этап — ED5a.4 physical/lifecycle/delivery acceptance. Full solution,
+fresh NuGet/full Aether не повторены; engine/Nom/release очереди сохранены.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [NOM7 package delivery](nom/DELIVERY.md) и самостоятельный NomAssetTool
+реализованы и проверены: fresh4packages, no-friend App34checks и tool211checks/profile,
+0ProjectReference/fallback; portable Debug/published Release и win-x64 FDD Release.
+Повторены718/718 Nom tests D/R,120functional groups/profile и App34checks source/published.
+Solution nonincremental Debug0errors/1555warnings, Nom/Tests/Probe/Tool0warnings.
+External publish не выполнялся; другие платформы/modes и physical NOM3/4 gates открыты.
+Heavy maxima/workload остаются NOM6 результатом. Engine g.2 bridge — отдельный consumer
+этап; engine/Editor очереди сохранены. [Команды/evidence](nom/HISTORY.md#nom7-2026-11-08).
+
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–6 IO/process scope и NOM7 local4package delivery; independent App/tool, portable/win-x64 FDD;718cases D/R,120functional/profile | Engine g.2 bridge по согласованию; другие OS/RID/modes и physical/release gates открыты |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  backup/workload/limits NOM6 проверены; delivery — NOM7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
+### Editor ED5a.3 — 2026-11-08
+
+Retained orbit/pan/dolly/F/click, explicit opening/view/content owner и общий selection
+intent реализованы.33new Editor+1Aether case; full Editor1396/1396 и bounded Aether2104/2104
+каждый D/R. Native source Debug/published Release directed UiSession/GPU proof:
+6PNG/profile, same PID/surface, document/history/draft сохранены, owners0/validation0.
+[Команды, не-green промежуточные attempts и ограничения](engine/HISTORY.md#ed5a3-input-2026-11-08).
+Далее ED5a.4 physical/lifecycle/delivery acceptance; engine/Nom очереди не менялись.
 
 <a id="nom7-2026-11-08"></a>
 ## Nom NOM7: package delivery и independent consumer — 2026-11-08
@@ -144,6 +1488,188 @@ OS/RID/modes остаются открыты. Editor ED5a.2/engine f.3→f.4/g.1
 Detailed commands/version/four hashes/artifact retention — [Nom HISTORY](nom/HISTORY.md#nom7-2026-11-08),
 [delivery scope](nom/DELIVERY.md). Shared docs заменены после fresh SHA check атомарно.
 
+<a id="status-before-nom7-2026-11-08"></a>
+## Предыдущий общий STATUS перед NOM7 — дословный архив
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.2 explicit camera/frame/actual receipt](engine/EDITOR_PLAN.md#ed5a2-preview-view)
+реализован: Control4/Frame2, same-child bounded camera lane, frozen receipt/current
+layout admission.52new Aether+10Editor cases; bounded Aether2103/2103 и full Editor1363/1363
+каждый D/R. Source Debug/published Release native shifted pixels/resize/suspend/resume,
+same camera-only PID/surface, owners0/validation0. [Scope/команды](engine/HISTORY.md#ed5a2-view-2026-11-08).
+Full Aether attempt non-green/interrupted, fresh NuGet/full solution не объявлены.
+Дальше ED5a.3 retained input/context/selection; default Editor пока fixed/untagged.
+Engine/Nom/physical/release очередь сохранена.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [NOM6 verified backup/restore](nom/BACKUP.md) и [limits/workload](nom/PERFORMANCE.md)
+реализованы и проверены:718/718 D/R+solution-filter,90newcases;120functional+4Capacity
+groups/profile,16Backup actual kills/reaps; public App34checks/profile. Actual2mkeys/
+256MiBcheckpoint/65536flush batches и1GiBresource batch подтверждены. Corpus1k/4k/16k
+и50k/100k/300k измерены; default64MiB сохранён, large budget opt-in256MiB.
+Solution nonincremental Debug0errors/1555warnings, Nom0warnings. Physical NOM3/NOM4
+disk-full/power-loss gates открыты (VHD здесь не повторялся). Далее NOM7 delivery.
+[Scope/evidence](nom/HISTORY.md#nom6-2026-11-08).
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–6 IO/process scope,718cases D/R,120functional+4Capacity groups/profile; backup/restore/limits/workload проверены, LiteDB отсутствует | NOM7 fresh delivery/second consumer/RID; physical gates открыты |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  backup/workload/limits NOM6 проверены; delivery — NOM7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
+<a id="ed5a2-2026-11-08"></a>
+## Editor ED5a.2: explicit preview view и actual receipt — 2026-11-08
+
+Control4/Frame2/Snapshot2, preview capability1, same-child bounded camera lane и
+actual-present receipt реализованы.52new Aether+10Editor cases; final bounded Aether2103/2103
+и full Editor1363/1363 каждый D/R. Source Debug/published Release actual moved pixels,
+resize/suspend/resume,1child=reaped, cleanup0/validation0 прошли. Full Aether attempt
+non-green/interrupted; найденный cancellation race исправлен, repository-build missing
+csproj case остаётся непроверенной причиной. Fresh NuGet/full solution не объявлены.
+[Единственный подробный план](engine/EDITOR_PLAN.md#ed5a2-preview-view),
+[команды/failures/границы](engine/HISTORY.md#ed5a2-view-2026-11-08).
+Далее ED5a.3 retained context/navigation/selection; default Editor пока static/untagged.
+Shared документы обновлены с fresh SHA/atomic replacement, Nom очередь сохранена.
+
+<a id="ed5a1-2026-11-08"></a>
+## Editor ED5a.1: camera/geometry values — 2026-11-08
+
+В Aether добавлены immutable external camera, shared projection/unprojection,
+bounded world ray и frozen projected cube picking с Hit/Miss/Unavailable.
+77newcases; bounded Aether1857/1857 каждый D/R и Editor1353/1353 Debug прошли.
+Runtime/UI camera input не подключён; дальше ED5a.2 versioned preview metadata/
+actual receipt. [Единственный подробный план](engine/EDITOR_PLAN.md#ed5a1-camera-values),
+[команды, failures, ограничения](engine/HISTORY.md#ed5a1-values-2026-11-08).
+Общие очереди синхронизированы с проверкой актуальных SHA; соседние Nom изменения
+сохранены. Новых native/published/fresh package/full solution результатов нет.
+
 <a id="nom4-2026-11-08"></a>
 ## Nom NOM4: checkpoint и offline compaction — 2026-11-08
 
@@ -154,6 +1680,184 @@ Core18/KV6/Fault41 повторены). Public no-friend App16checks/profile. So
 0errors/1555warnings, Nom0warnings; full suite/engine/GPU/performance не запускались.
 Physical VHD gate снова Windows denied/non-Administrator; disk-full/power-loss не
 закрыты. Следующий implementation этап NOM5. [Scope/команды](nom/HISTORY.md#nom4-2026-11-08).
+
+<a id="status-before-nom4-2026-11-08"></a>
+## Предыдущий общий STATUS перед NOM4 — дословно
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.0 camera/selection contract](engine/EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1)
+зафиксирован; numerical probe20/20 на текущей projection math прошёл. Следующий
+срез — ED5a.1 values/ray math, затем transport/receipt и UI. Navigation/picking ещё
+не реализованы; [границы проверки](engine/HISTORY.md#ed5a0-contract-2026-11-08).
+Прежние ED4g.4 Editor1353/1353 D/R/native результаты в этом срезе не повторялись.
+Engine/Nom/physical/release очередь сохранена.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [NOM3 расширенная fault/recovery acceptance](nom/RECOVERY_ACCEPTANCE.md)
+проверена в deterministic IO/process scope.426/426 D/R и solution-filter,44newcases;
+Core18+KV6+Fault41 groups source/published,48actual killed/reaped children/Fault profile.
+Public App10checks/profile повторён. Capacity/poisoned-read/reserving-stop fixes;
+solution nonincremental Debug0errors/1555warnings, Nom0warnings. Полный NOM3 частичен:
+physical disk-full требует разрешённого isolated-volume окружения; текущий New-VHD
+отклонён Windows. [Scope/evidence](nom/HISTORY.md#nom3-2026-11-08).
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–2 и NOM3 IO/process scope проверены;426cases D/R,65groups/profile, public App; LiteDB отсутствует | NOM3 physical disk-full gate открыт; NOM4 maintenance, затем snapshots/performance/delivery |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: NOM3 deterministic/process acceptance прошла; physical isolated-volume disk-full
+  остаётся OS permission gate (New-VHD denied, non-Administrator). Полный NOM3 не закрыт;
+  checkpoint/compaction, snapshots/GC и delivery — NOM4–7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
+<a id="ed5a0-2026-11-08"></a>
+## Editor ED5a.0: camera/selection contract — 2026-11-08
+
+По запросу пользователя зафиксирован [контракт](engine/EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1)
+внешней камеры, actual-present receipt и общего selection owner. Fresh численный
+ManualTests probe20checks passed; [команда/outcomes/scope](engine/HISTORY.md#ed5a0-contract-2026-11-08).
+Camera transport/navigation/picking API и UI ещё не реализованы, новые Editor/unit/
+native/release результаты не заявлены. Предыдущий ED4g.4 run не повторялся.
+Следующий UI/engine consumer — ED5a.1 immutable values/ray math, затем versioned
+metadata и retained input. Detailed tasks только в EDITOR_PLAN; engine f.3/f.4,
+Nom и release/physical gates сохранены. Shared docs обновлены с fresh SHA guards.
+
+
+<a id="ed4g4-2026-11-08"></a>
+## Editor ED4g.4 rad/deg завершён — 2026-11-08
+
+По запросу пользователя добавлено переключение углов в inspector, canonical
+radians и existing draft/history сохранены. Детальные решения и actual checks —
+[у Editor](engine/HISTORY.md#ed4g4-angle-units-2026-11-08): baseline1323 Debug,
+final1353/1353 D/R; source/published native90°→π/2/Undo/Redo/save/reopen/actual
+rotated preview, по10reaped children/11PNG, owners0/validation0/0. Неуспешные
+pixel expectation и popup wait attempts сохранены, production renderer/input fix
+не заявлен. Общий full solution/release/fresh Editor NuGet не перепроверялись.
+Очередь UI обновлена до ED5a camera/projection/revision/selection contract;
+engine f.3/f.4, Nom и physical/release gates сохранены. Shared docs перечитаны
+и SHA проверены перед атомарной заменой.
+
 
 <a id="nom3-2026-11-08"></a>
 ## Nom NOM3: расширенные faults/recovery, physical gate открыт — 2026-11-08
@@ -167,6 +1871,154 @@ package результатов нет. Physical VHDX creation отказана W
 Administrator=false: полный NOM3 остаётся частичным до isolated-volume acceptance.
 [Scope/команды](nom/HISTORY.md#nom3-2026-11-08), [матрица](nom/RECOVERY_ACCEPTANCE.md).
 
+<a id="status-before-nom3-2026-11-08"></a>
+## Предыдущий общий STATUS перед NOM3 — дословно
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED4g.3 group reset](engine/EDITOR_PLAN.md#ed4g3-group-reset)
+реализован; final Editor1323/1323 каждый D/R, source Debug/published Release native
+history/save/reopen/preview и cleanup0/validation0/0. [Scope и сохранённые harness failures](engine/HISTORY.md#ed4g3-group-reset-2026-11-08).
+Наш следующий UI этап — ED4g.4 angle units; независимая engine/Nom очередь сохранена.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** NOM2 переключил [App/resource catalog](nom/CATALOG.md#nom2-catalog-2026-11-08)
+на свой KV и полностью удалил LiteDB implementation/зависимости/vendor runners.
+382/382 Nom.Tests каждый D/R и solution-filter;18core+6KV groups source/published,
+public no-friend App consumer10checks/profile. Actual core graph0external packages,
+App restored/runtime/fresh output graphs без LiteDB. Solution nonincremental Debug
+0errors/1555warnings, Nom warnings0. Далее NOM3 integrated faults, maintenance NOM4
+и fresh NuGet delivery NOM7. [Scope](nom/STATUS.md), [evidence](nom/HISTORY.md#nom2-2026-11-08).
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED4g.3 — [ED4g.4](engine/EDITOR_PLAN.md#current-editor-queue); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–2 format/KV/App/resource catalog проверены, LiteDB удалён;382cases D/R, source/published/public App proofs | NOM3 integrated faults, затем maintenance/snapshots/performance/delivery NOM4–7 |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: App/resource cutover NOM2 и удаление LiteDB проверены. Полная integrated
+  fault/cleanup/capacity acceptance NOM3 и physical disk-full gate ещё нужны;
+  checkpoint/compaction, snapshots/GC и delivery — NOM4–7. Старый vendor defect
+  остаётся историческим результатом удалённого backend. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока следующий срез после завершённого ED4g.3 —
+**ED4g.4 единицы углов**, затем camera/picking; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
 <a id="nom2-2026-11-08"></a>
 ## Nom NOM2: собственный App/resource backend — 2026-11-08
 
@@ -179,6 +2031,166 @@ published Release, public no-friend App consumer10checks/profile. Isolated core 
 nonincremental0errors/1555warnings, Nom warnings0. Остальные модули не тестировались;
 NOM3 integrated faults/physical gate, NOM4 maintenance и NOM7 delivery ещё нужны.
 [Подробности и команды](nom/HISTORY.md#nom2-2026-11-08).
+
+<a id="status-before-nom2-2026-11-08"></a>
+## Предыдущий общий STATUS перед NOM2 — дословно
+
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED4g.3 group reset](engine/EDITOR_PLAN.md#ed4g3-group-reset)
+реализован; final Editor1323/1323 каждый D/R, source Debug/published Release native
+history/save/reopen/preview и cleanup0/validation0/0. [Scope и сохранённые harness failures](engine/HISTORY.md#ed4g3-group-reset-2026-11-08).
+Наш следующий UI этап — ED4g.4 angle units; независимая engine/Nom очередь сохранена.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-07:** [NOM1 рабочий KV core](nom/KV_CORE.md#nom1-kv-2026-11-07) реализован:
+Create/Open/Get/WriteBatch, root/chain/repair, durable flush/Unknown и retained close.
+316/316 Nom.Tests каждый Debug/Release и solution discovery,83newcases;6groups
+source/published,6started=reaped children/profile (4actual kills). Solution Debug
+0errors/1555warnings, Nom0warnings. Далее NOM2 App/resource cutover и полное удаление
+LiteDB; сейчас публичный App backend ещё прежний. [Scope](nom/STATUS.md),
+[история](nom/HISTORY.md#nom1-2026-11-07).
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED4g.3 — [ED4g.4](engine/EDITOR_PLAN.md#current-editor-queue); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0/1 format+working KV core проверены; UseNom/resource backend ещё на LiteDB | NOM2 полный App/catalog cutover и удаление LiteDB; далее NOM3–7 |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —7ноября0errors/1555warnings; новых Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: NOM0/1 format и KV writer проверены, новый App/resource backend ещё не подключён. LiteDB defect остаётся
+  историческим подтверждённым результатом текущего кода до cutover; его vendor fix
+  больше не планируется. Physical disk-full permission gate сохраняется для нового
+  backend. [Активная очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока следующий срез после завершённого ED4g.3 —
+**ED4g.4 единицы углов**, затем camera/picking; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+
+<a id="ed4g3-2026-11-08"></a>
+## Editor ED4g.3 завершён — 2026-11-08
+
+По запросу пользователя реализован групповой сброс Transform; detailed task и
+actual tests/native evidence только у [Editor](engine/HISTORY.md#ed4g3-group-reset-2026-11-08).
+Final Editor1323/1323 каждый D/R, source Debug/published Release native group
+reset/history/save/reopen/preview, zero owned resources и validation0/0.
+Сохранены две неуспешные harness попытки; общий release/full-solution не проверялся.
+Прикладной порядок обновлён до ED4g.4 units → ED5a camera/picking; engine f.3/f.4,
+Nom NOM2 и physical/release blockers сохранены. Shared docs перечитаны и SHA
+проверены непосредственно перед атомарной заменой.
+
 
 <a id="nom1-2026-11-07"></a>
 ## Nom NOM1: working KV writer и actual crash recovery — 2026-11-07
@@ -315,6 +2327,56 @@ App/IFactory ownership вынесены на обсуждение AST0. Дета
 Документационное исследование: dependencies/C#/project files не менялись,
 новых build/unit/native/database benchmark результатов нет.
 
+<a id="captured-import-2026-11-07"></a>
+## Model import: captured inputs, limits, IDs и cancel proof — 2026-11-07
+
+[Captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) реализован в research
+consumer выбранного low-level Netter: immutable bytes/no disk fallback, numeric
+budgets, persistent semantic-ID ledger и native worker Job512MiB/cancel/kill/reap.
+Source Debug/published Release прошли по8групп/9reaped workers/LiveImports0;
+comparison regression4variants/8profiles также прошёл. Один общий nonincremental
+Debug build:0errors/1555warnings; full unit suite/GPU/Editor/Runtime/production importer
+package не проверялись. [Команды, failed attempts и точный scope](engine/HISTORY.md#captured-import-2026-11-07).
+Production App/IFactory adapter и dependency/identity discovery остаются g.1;
+полный format policy ещё нужен для завершения g.0. Кодовая очередь f.3→f.4 и audio h.0
+сохранены, production dependency/API contracts не расширены.
+
+<a id="assimp-selection-2026-11-07"></a>
+## Model importer: выбран кандидат для g.1 — 2026-11-07
+
+После headless comparative spike выбран [AssimpNetter6.0.5 low-level](engine/MODEL_IMPORT_RESEARCH.md#decision-2026-11-07)
+для Editor/build import adapter.4variants/8Debug-published Release profiles прошли
+geometry/material assignments/hierarchy/repeatability, invalid-input и actual native
+version/SHA/delivery probes. Low-level Netter~4.67MB managed allocation на grid workload
+против~12.30MB high-level при той же native6.0.5; это scoped observation, не общий SLA.
+21commands/12unique binlogs, reproducible pinned-archive bootstrap, tracked owners0.
+[Команда и фактические границы](engine/HISTORY.md#assimp-selection-2026-11-07).
+Production dependency/API/renderer не менялись; full solution/unit/GPU/production-package
+proof не выполнялся. G.0 ещё требует captured I/O/identity/budgets/cancel decisions,
+audio h.0 остаётся исследовательским планом, кодовая очередь f.3 сохранена.
+
+<a id="assimp-research-2026-11-07"></a>
+## Assimp: начат model asset research — 2026-11-07
+
+ARCH1g.0 получил [первичную Assimp/.NET matrix](engine/MODEL_IMPORT_RESEARCH.md):
+official sources и4NuGet ZIP/nuspec/runtime inventories. Assimp подходит как кандидат
+multi-format import stage; исследованы Silk/Ultz и AssimpNetter, legacy AssimpNet
+отделён от новых wrappers, SharpGLTF добавлен как glTF-only control. Binding/profile/
+budgets не утверждены; next research step — fixture/ABI/delivery/memory comparison.
+Production dependencies/code не менялись, DLL/import/build/test/native probes не
+выполнялись. Audio h.0 и кодовая очередь f.3 сохраняют свои состояния.
+[Подробности](engine/HISTORY.md#assimp-research-2026-11-07).
+
+<a id="model-audio-planning-2026-11-07"></a>
+## Model assets и audio: дополнение roadmap — 2026-11-07
+
+В engine плане запланированы исследования [импорта моделей ARCH1g](engine/PLAN.md#arch1g-model-assets)
+и [аудиомодуля ARCH1h](engine/PLAN.md#arch1h-audio), затем ограниченные prototype/
+integration этапы с проверяемыми критериями. Общий PLAN хранит ссылки и порядок,
+детальные задачи — только у engine. Форматы/libraries/backend/package scope ещё
+не выбраны, App/ECS/ownership/real-time/delivery decisions входят в исследования.
+Следующий кодовый шаг ARCH1f.3 сохранён. Это документационная работа без новых
+build/test/native результатов; [подробности](engine/HISTORY.md#model-audio-planning-2026-11-07).
 
 <a id="ecs-commit-2026-11-07"></a>
 ## ECS и общая версия0.2.5.1-alpha — 2026-11-07
@@ -3079,3 +5141,336 @@ GUI/native loading и independent NuGet подтверждены отдельн�
 История реорганизации планов и предыдущих сводок — в [HISTORY](HISTORY.md).
 
 </details>
+
+<a id="nom5-2026-11-08"></a>
+## Nom NOM5: indexes/snapshots/pins/GC — 2026-11-08
+
+NOM5 реализован в самостоятельном Nom: compatible metadata extension, indexed pages/
+exact dependencies, identity tombstones, frozen manifests/durable pins/actual stream
+ownership и offline GC с bounded HasMore slices/durable queue/reopen resume.
+628/628 каждый Debug/Release+solution-filter,92newcases,0failed/skipped;104groups
+source/published,12Retention kills/reaps/profile; no-friend public App27checks/profile.
+Solution nonincremental Debug0errors/1555warnings, Nom0warnings. No LiteDB graphs/output.
+Physical disk-full/power-loss NOM3/4 остаются открыты, New-VHD в этом срезе не повторялся.
+Full solution suites/engine/GPU/fresh packages/performance не запускались.
+Детальные команды/evidence/limits — [Nom HISTORY](nom/HISTORY.md#nom5-2026-11-08),
+[контракт](nom/RETENTION.md). Далее NOM6 backup/export/limits/performance, затем NOM7.
+Очередь engine f.3→f.4/importer g.1 и соседние Editor изменения сохранены.
+
+<a id="status-before-nom5-2026-11-08"></a>
+## Предыдущий общий STATUS перед NOM5 — дословно
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.1 immutable camera/projection/ray/pick values](engine/EDITOR_PLAN.md#ed5a1-camera-values)
+реализованы;77newcases. Aether ECS/Rendering/Scenes/Preview1857/1857 каждый D/R,
+Editor1353/1353 Debug прошли, failed0/skipped0; [scope](engine/HISTORY.md#ed5a1-values-2026-11-08).
+Следующий срез — ED5a.2 versioned preview view/actual-present receipt, затем UI.
+Runtime navigation не подключена; native/published/fresh package/full solution
+не запускались. Engine/Nom/physical/release очередь сохранена.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [NOM4 checkpoint/explicit rotation/offline compaction](nom/COMPACTION.md)
+реализованы и проверены:536/536 D/R+solution-filter,110newcases; source/published
+92groups/profile,24actual maintenance kills/reaps; public App16checks/profile.
+Resource outcomes/CAS/floor/generation сохраняются. Solution nonincremental Debug
+0errors/1555warnings, Nom0warnings. Physical NOM3/NOM4 disk-full/power-loss gates
+открыты: свежий New-VHD вновь отклонён Windows. Следующий implementation этап NOM5.
+[Scope/evidence](nom/HISTORY.md#nom4-2026-11-08).
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–4 проверены в указанном IO/process scope;536cases D/R,92groups/profile, public CompactAsync/checkpoint; LiteDB отсутствует | NOM5 indexes/snapshots/pins/offline GC; physical disk-full gate открыт, performance/delivery — NOM6/7 |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance проверена; snapshot/GC,
+  performance и delivery — NOM5–7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.
+
+<a id="nom6-2026-11-08"></a>
+## Nom NOM6: backup/restore, format protocol, limits/performance — 2026-11-08
+
+Verified immutable backup/current-format restore и typed App factory реализованы;
+physical/live metadata authority, retained revisions/pins/tickets/tombstones сохраняются.
+Prepared file/hash/domain verification до directory publication, source без mutation.
+718/718 D/R+solution-filter,90newcases;120functional+4Capacity groups/profile,
+16Backup killed/reaped/profile, public no-friend App34checks/profile. Actual2mkeys,
+256MiBindex/checkpoint и65536durable batches с adjacent refusals подтверждены.
+Published Release1k/4k/16k +50k/100k/300k/16–128MiB streams/1GiBbatch измерены;
+full domain index pass остаётся измеренной стоимостью, default64MiB сохранён (large opt-in256MiB).
+Solution nonincremental Debug0errors/1555warnings, Nom0warnings. No LiteDB graph/output.
+Full suites/engine/UI/GPU/fresh packages/physical-volume/power-loss здесь не запускались.
+Детали/команды — [Nom HISTORY](nom/HISTORY.md#nom6-2026-11-08), [backup](nom/BACKUP.md),
+[workload/limits](nom/PERFORMANCE.md). Далее NOM7, прежние physical gates открыты.
+Соседние Editor/engine планы и результаты сохранены.
+
+<a id="status-before-nom6-2026-11-08"></a>
+## Предыдущий общий STATUS перед NOM6 — дословно
+# TrueMoon: общий статус
+
+**Editor2026-11-08:** [ED5a.2 explicit camera/frame/actual receipt](engine/EDITOR_PLAN.md#ed5a2-preview-view)
+реализован: Control4/Frame2, same-child bounded camera lane, frozen receipt/current
+layout admission.52new Aether+10Editor cases; bounded Aether2103/2103 и full Editor1363/1363
+каждый D/R. Source Debug/published Release native shifted pixels/resize/suspend/resume,
+same camera-only PID/surface, owners0/validation0. [Scope/команды](engine/HISTORY.md#ed5a2-view-2026-11-08).
+Full Aether attempt non-green/interrupted, fresh NuGet/full solution не объявлены.
+Дальше ED5a.3 retained input/context/selection; default Editor пока fixed/untagged.
+Engine/Nom/physical/release очередь сохранена.
+
+**UI typography2026-11-08:** Segoe UI Variable Text стал default; Editor system
+catalog и styled text подключены. Alloy1126/Hosting154/Editor1300 каждый D/R,
+4native Editor runs и default3backend matrix/fresh4package raster consumer прошли
+в [указанном scope](alloy/HISTORY.md#default-fonts-2026-11-08).
+Это не повторный full solution/Aether/release proof; текущие Nom/engine blockers сохранены.
+
+
+**Nom2026-11-08:** [NOM5 indexes/snapshots/pins/offline GC](nom/RETENTION.md)
+реализованы и проверены:628/628 D/R+solution-filter,92newcases; source/published
+104groups/profile,12Retention actual kills/reaps; public App27checks/profile.
+Frozen old bytes/durable pins/actual stream ownership и GC recovery проверены.
+Solution nonincremental Debug0errors/1555warnings, Nom0warnings. Physical NOM3/NOM4
+disk-full/power-loss gates открыты (в NOM5 VHD proof не повторялся). Далее NOM6
+backup/export/limits/performance. [Scope/evidence](nom/HISTORY.md#nom5-2026-11-08).
+
+**Исследование2026-11-07:** [captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1)
+для выбранного AssimpNetter6.0.5 low-level проверен в source Debug/published Release:
+frozen dependency I/O, limits/Job memory cap, stable ID ledger, native cancel/kill/reap;
+по8групп/9workers reaped, owners0. Comparison regression4variants/8profiles также прошёл.
+Production App/IFactory adapter, automatic discovery/full format policy ещё нужны;
+[scope и команды](engine/HISTORY.md#captured-import-2026-11-07).
+Audio ARCH1h.0 ещё запланирован; ближайший кодовый этап ARCH1f.3 сохранён.
+
+Перед ECS commit2026-11-07 проверена конфигурация **0.2.5.1-alpha**:
+targeted ECS/Rendering1230/1230 каждый D/R, solution nonincremental Debug0errors/
+1555existing warnings, новых warnings0. [Scope и команды](engine/HISTORY.md#ecs-commit-2026-11-07).
+
+Последнее обновление зависимости — **2026-11-07, SkiaSharp/native4.155.0**.
+Extended DLL пересобрана; source/published Vulkan validation0/0, fresh10-package/
+40-process delivery и Alloy1101/Hosting154/Editor1295 каждый D/R прошли.
+Solution nonincremental Debug0errors/1555existing warnings, новых warnings0.
+[Результаты и ограничения](alloy/HISTORY.md#skiasharp-41550-2026-11-07).
+
+**Актуализация 2026-11-07 после db5ea97:** ARCH1f.2 реализует
+[resource owners/leases/preparation](engine/RENDER_RESOURCES.md), atomic World rebind
+и standalone Vulkan uploads. Current targeted1230/1230 каждый D/R (137new),
+source/published/fresh7pkg CPU и Vulkan consumers прошли:2generations+zero-budget
+denial каждый, upload/readback, validation0/0 и cleanup0. Solution nonincremental
+Debug build0errors/1555warnings. Следующий этап f.3 owned render snapshots;
+surface renderer/Runtime Playing fence — f.4. Full Aether/performance здесь не запускались.
+Прежний full6ноября2536/2538 с diagnostics cleanup timeouts остаётся non-green,
+причина не установлена; replays не подтверждают исправление.
+Preview/Editor Play/latency и общая release acceptance этим срезом не обновлены.
+[Текущая очередь](PLAN.md#current-roadmap), [формат](PLANNING.md),
+[прежний STATUS целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | App/configuration/lifecycle, bounded diagnostics, borrowed health/archive/configuration readers | CORE6: App-private/bootstrap routing и aggregate metrics по конкретному consumer; generation отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter и ownership; COB5a attribution выполнена | Production no-capture cycle check и paired measurements; scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes, finite admission/stop, telemetry и отдельный child-log lane у Aether | ENE6c при расширении протокола; scalar CPU/allocations profile и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Owned process/restart/diagnostics; ready-file regression исправлен в своём scope | Остальной MIT6 fault/containment/resource-trend profile; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/numeric/styles; PA8c.3a/3b system fonts, weight/italic и default Variable Text проверены в source/publish/package scope | Прикладной ED4g.3 завершён без новых generic controls; независимый PA8c.0 current-font baseline; physical/release отдельно |
+| [Aether/Editor](engine/STATUS.md) | Documents/history/preview/build; Editor typography подключена, retained custom text/темы проверены; ECS f.1/f.2 CPU/resource owners и Vulkan upload сохраняют свой scope | Engine [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering); наш UI маршрут после ED5a.0 — [ED5a.1](engine/EDITOR_PLAN.md#ed5a1-camera-values); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–5 проверены в указанном IO/process scope;628cases D/R,104groups/profile, indexes/snapshots/pins/GC; LiteDB отсутствует | NOM6 backup/export/limits/performance; physical gate открыт, delivery — NOM7 |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; версия0.2.2.7-alpha сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope: f.2 относится к текущему запуску7ноября;
+старые модульные/full/frame результаты не считаются повторёнными этим запуском.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: physical isolated-volume disk-full NOM3/NOM4 остаётся OS permission gate
+  (New-VHD denied, non-Administrator). IO/process maintenance/indexes/snapshots/GC проверены;
+  performance и delivery — NOM6–7. [Очередь](nom/PLAN.md#nom-own-queue).
+
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview остаётся fixed-camera/GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+После Runtime/primitive ECS, CPU definitions f.1 и resource owners f.2 текущая очередь —
+[ARCH1f.3](engine/PLAN.md#arch1f-rendering): camera/mesh/material extraction и bounded
+owned snapshots, revision consistency/drop/coalesce/completion leases; f.4 — surface
+renderer и required-view Runtime Playing fence.
+Explicit Runtime ECS consumer и прежний primitive renderer уже подключены;
+миграция preview, новый frame renderer и full checkpoint ещё впереди.
+Независимо можно уточнить g.0 profile/captured-I/O/identity/budgets перед g.1 на
+AssimpNetter low-level и исследовать h.0 audio; детали и критерии только в engine плане.
+
+Для текущего UI/Editor потока после завершённых ED4g.3/4 следующий срез —
+**ED5a.1 camera/pick values и ray math** по зафиксированному ED5a.0; детали только в
+[Editor плане](engine/EDITOR_PLAN.md#current-editor-queue).
+Physical input acceptance можно закрывать параллельно при подходящем вводе;
+она ограничивает заявление о готовности, но не назначает бесконечный повтор одного smoke.
+
+Альтернативный performance трек — ED6b.2e.4f, снижение CPU/allocations batch при
+сохранении выигрыша latency. Reliability/release трек — текущий full-solution
+Debug/Release baseline, диагностируемый drain failure и затем fresh package/native
+matrix на явно выбранном scope. Это варианты очереди, не объявление их реализации.
+Game AI/agents, Player/HUD и новые протоколы остаются последующими направлениями.

@@ -61,9 +61,10 @@ internal sealed class SkiaRichTextLayout : IRichTextLayout
     }
     private static KitStyle Style(RichTextStyle style, RichTextStyle defaults) => new()
     {
-        FontFamily = style.FontFamily ?? defaults.FontFamily ?? "Segoe UI",
+        FontFamily = style.FontFamily ?? defaults.FontFamily ?? FontDefaults.Family,
         FontSize = style.FontSize ?? defaults.FontSize ?? 16,
-        FontWeight = style.Bold == true ? 700 : 400, FontItalic = style.Italic ?? false,
+        FontWeight = style.FontWeight ?? (style.Bold.HasValue ? (style.Bold.Value ? 700 : 400) :
+            defaults.FontWeight ?? (defaults.Bold == true ? 700 : 400)), FontItalic = style.Italic ?? defaults.Italic ?? false,
         Underline = style.Underline == true ? UnderlineStyle.Solid : UnderlineStyle.None,
         StrikeThrough = style.StrikeThrough == true ? StrikeThroughStyle.Solid : StrikeThroughStyle.None,
         TextColor = Color(style.Foreground ?? defaults.Foreground ?? new Argentis.Color(0, 0, 0)),
@@ -174,7 +175,7 @@ internal sealed class SkiaRichTextFontMapper(SkiaFontCatalog? catalog) : FontMap
     private bool _disposed;
     internal string PrepareText(string text, IStyle style)
     {
-        if (catalog == null) return text;
+        if (catalog == null || ReferenceEquals(catalog, SkiaFontCatalog.SystemDefault)) return text;
         // Keep explicit catalogs independent of system fallback. Substitution preserves code-point counts.
         using var font = new SKFont(TypefaceFromStyle(style, false), style.FontSize);
         System.Text.StringBuilder? result = null;
@@ -200,13 +201,12 @@ internal sealed class SkiaRichTextFontMapper(SkiaFontCatalog? catalog) : FontMap
         ObjectDisposedException.ThrowIf(_disposed, this);
         var key = (style.FontFamily, style.FontWeight, style.FontItalic);
         if (_faces.TryGetValue(key, out var face)) return face;
-        var identity = catalog == null ? $"system:{style.FontFamily}:{style.FontWeight}:{style.FontItalic}"
-            : "file:" + catalog.RichFaceIdentity(style.FontFamily, style.FontWeight, style.FontItalic);
+        var identity = "catalog:" + (catalog ?? SkiaFontCatalog.SystemDefault).RichFaceIdentity(style.FontFamily, style.FontWeight, style.FontItalic);
         lock (FaceGate)
         {
             if (!SharedFaces.TryGetValue(identity, out var weak) || !weak.TryGetTarget(out face) || face.Handle == IntPtr.Zero)
             {
-                face = catalog?.CreateTypeface(style.FontFamily, style.FontWeight, style.FontItalic) ?? base.TypefaceFromStyle(style, ignoreFontVariants);
+                face = (catalog ?? SkiaFontCatalog.SystemDefault).CreateTypeface(style.FontFamily, style.FontWeight, style.FontItalic);
                 SharedFaces[identity] = new(face);
             }
         }

@@ -51,7 +51,7 @@ internal static class EditorDocumentSmoke
             Require(commands.Read().Error is SceneFileConflictException && Hash(Path.Combine(root, "Copied.aetherscene")) == changedHash, "External file change was silently overwritten.");
             await PathDraft("Recovered.aetherscene"); await Click(DocumentCommand.SaveAs);
             Require(commands.Read().Error == null && !document.Read().IsDirty, "SaveAs did not recover from conflict.");
-            await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = "Noto Sans" })).WaitAsync(token);
+            await ui.InvokeAsync(() => ui.SetTheme(Theme.Light with { FontFamily = panel.Theme.FontFamily, FontSize = panel.Theme.FontSize, FontWeight = panel.Theme.FontWeight, FontItalic = panel.Theme.FontItalic })).WaitAsync(token);
             await Until(() => panel.Theme.Surface == Theme.Light.Surface);
             Require(ReferenceEquals(panel.PathInput, pathControl) && ReferenceEquals(canvas, view.Canvas) &&
                 ReferenceEquals(firstEntity, (Element?)view.Hierarchy?.Tree ?? view.Entities[ids[0]]) && model.PathDraft == "Recovered.aetherscene", "Save/theme rebuilt the tree or lost path draft.");

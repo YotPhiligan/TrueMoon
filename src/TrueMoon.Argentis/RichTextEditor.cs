@@ -5,6 +5,8 @@ namespace TrueMoon.Argentis;
 /// <summary>A retained multiline rich editor. Documents/options are immutable snapshots; indices are UTF-16 grapheme boundaries.</summary>
 public sealed class RichTextEditor : Element
 {
+    /// <inheritdoc />
+    protected override bool SupportsValidationIcon => true;
     /// <summary>Minimum preferred content height, excluding padding; the constructor's MinHeight remains independent.</summary>
     public static readonly UiProperty<float> MinimumContentHeightProperty = new("MinimumContentHeight", 80, Invalidation.Layout, v => float.IsFinite(v) && v >= 0);
     /// <summary>Maximum preferred content height, excluding padding. A ceiling below the minimum takes precedence.</summary>
@@ -208,7 +210,8 @@ public sealed class RichTextEditor : Element
             throw new ArgumentOutOfRangeException(nameof(horizontal));
         _scrollX = horizontal; _scrollY = vertical; _revealCaret = false; ClampScroll(); Invalidate();
     }
-    private RichTextStyle Defaults => new() { FontFamily = FontFamily, FontSize = FontSize, Foreground = IsEffectivelyEnabled ? Foreground : Theme.Disabled };
+    private RichTextStyle Defaults => new() { FontFamily = FontFamily, FontSize = FontSize, FontWeight = FontWeight, Italic = FontItalic,
+        Foreground = IsEffectivelyEnabled ? Foreground : Theme.Disabled };
     private void ReleaseLayout()
     { _layout?.Dispose(); _layout = null; _defaults = null; }
     private void EnsureLayout(float width, ITextLayoutService service)
@@ -225,26 +228,47 @@ public sealed class RichTextEditor : Element
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
+        var ceiling = Math.Min(float.IsFinite(available.Height) ? available.Height : 160, MaximumContentHeight);
+        float ContentHeight() => Math.Min(ceiling, Math.Max(MinimumContentHeight, _layout!.Size.Height));
+        float BadgeReserve(float contentHeight)
+        {
+            if (!HasError) return 0;
+            var height = Math.Clamp(float.IsNaN(Height) ? contentHeight + Padding.Vertical : Height, MinHeight, MaxHeight);
+            if (float.IsFinite(available.Height)) height = Math.Min(height, available.Height + Padding.Vertical);
+            var width = Math.Min(height, available.Width + Padding.Horizontal);
+            return Math.Max(0, width + 4 - Padding.Right);
+        }
         EnsureLayout(available.Width, text);
-        return new(Math.Min(float.IsFinite(available.Width) ? available.Width : 320, Math.Max(160, _layout!.Size.Width)),
-            Math.Min(Math.Min(float.IsFinite(available.Height) ? available.Height : 160, MaximumContentHeight), Math.Max(MinimumContentHeight, _layout.Size.Height)));
+        var height = ContentHeight(); var reserve = BadgeReserve(height);
+        // Wrapping can grow the auto-height field, which widens its square badge.
+        // Start afresh on each measure so wider constraints also allow it to shrink.
+        for (var pass = 0; HasError; pass++)
+        {
+            EnsureLayout(Math.Max(0, available.Width - reserve), text);
+            var next = Math.Max(height, ContentHeight());
+            if (next == height) break;
+            height = pass < 31 ? next : ceiling;
+            reserve = BadgeReserve(height);
+            if (pass >= 31) { EnsureLayout(Math.Max(0, available.Width - reserve), text); break; }
+        }
+        return new(Math.Min(float.IsFinite(available.Width) ? available.Width : 320, Math.Max(160, _layout!.Size.Width + reserve)), height);
     }
     /// <inheritdoc />
     protected override void ArrangeCore(Rect contentBounds)
     {
-        if (_service != null) EnsureLayout(contentBounds.Width, _service);
+        if (_service != null) EnsureLayout(EditorContentBounds.Width, _service);
         ClampScroll();
     }
     private void ClampScroll()
     {
-        var area = Bounds.Deflate(Padding);
+        var area = EditorContentBounds;
         _scrollX = Options.WordWrap ? 0 : Math.Clamp(_scrollX, 0, Math.Max(0, (_layout?.Size.Width ?? 0) - area.Width + 2));
         _scrollY = Math.Clamp(_scrollY, 0, Math.Max(0, (_layout?.Size.Height ?? 0) - area.Height));
     }
     private void RevealCaret()
     {
         if (_layout == null) return;
-        var area = Bounds.Deflate(Padding); var caret = _layout.GetCaretBounds(_caret);
+        var area = EditorContentBounds; var caret = _layout.GetCaretBounds(_caret);
         if (caret.X < _scrollX) _scrollX = caret.X;
         else if (caret.X + caret.Width > _scrollX + area.Width) _scrollX = caret.X + caret.Width - area.Width;
         if (caret.Y < _scrollY) _scrollY = caret.Y;
@@ -255,11 +279,11 @@ public sealed class RichTextEditor : Element
     protected override void DrawCore(IDrawingContext context)
     {
         if (_service == null) return;
-        EnsureLayout(Bounds.Deflate(Padding).Width, _service);
+        EnsureLayout(EditorContentBounds.Width, _service);
         if (_revealCaret) { RevealCaret(); _revealCaret = false; }
         if (context is not IRichTextDrawingContext rich) throw new NotSupportedException("RichTextEditor requires an IRichTextDrawingContext backend.");
-        if (Options.IsReadOnly) context.Fill(new Rect(Bounds.X + Bounds.Width - 4, Bounds.Y + 4, 2, Math.Max(0, Bounds.Height - 8)), Theme.Border);
-        var area = Bounds.Deflate(Padding);
+        if (Options.IsReadOnly && !HasError) context.Fill(new Rect(Bounds.X + Bounds.Width - 4, Bounds.Y + 4, 2, Math.Max(0, Bounds.Height - 8)), Theme.Border);
+        var area = EditorContentBounds;
         context.Save();
         try
         {
@@ -303,6 +327,7 @@ public sealed class RichTextEditor : Element
         if (!IsEffectivelyEnabled) return false;
         if (input is { Kind: InputKind.PointerDown, Button: 0 })
         {
+            if (HasError && ValidationIconBounds.Contains(input.X, input.Y)) return true;
             context.Focus(this); context.Capture(this); _dragging = true;
             try { Move(Hit(input), input.Shift); }
             catch { _dragging = false; context.ReleaseCapture(this); throw; }
@@ -336,8 +361,9 @@ public sealed class RichTextEditor : Element
                 case UiKey.V: if (Editable && context.GetClipboardText() is { } text) InsertText(text); return true;
                 case UiKey.Z: if (input.Shift) Redo(); else Undo(); return true;
                 case UiKey.Y: Redo(); return true;
-                case UiKey.B: ApplyStyle(new() { Bold = !(SelectionStyle.Bold ?? false) }); return true;
-                case UiKey.I: ApplyStyle(new() { Italic = !(SelectionStyle.Italic ?? false) }); return true;
+                case UiKey.B: ApplyStyle(new() { Bold = (SelectionStyle.FontWeight ??
+                    (SelectionStyle.Bold.HasValue ? (SelectionStyle.Bold.Value ? 700 : 400) : FontWeight)) < 700 }); return true;
+                case UiKey.I: ApplyStyle(new() { Italic = !(SelectionStyle.Italic ?? FontItalic) }); return true;
                 case UiKey.U: ApplyStyle(new() { Underline = !(SelectionStyle.Underline ?? false) }); return true;
             }
         }

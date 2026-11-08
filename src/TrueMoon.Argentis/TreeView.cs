@@ -1,4 +1,4 @@
-﻿namespace TrueMoon.Argentis;
+namespace TrueMoon.Argentis;
 
 /// <summary>Immutable display data; IDs and parent links are independent of labels and icons.</summary>
 /// <param name="Id">Stable nonblank key.</param><param name="ParentId">Parent key, or null for a root.</param>
@@ -185,7 +185,7 @@ public sealed class TreeView : Element, ITreeView
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
         _text = text;
-        var width = _rows.Select(row => text.Measure(row.Item.Text, FontSize, FontFamily).Width + row.Depth * Indent + 36).DefaultIfEmpty(0).Max();
+        var width = _rows.Select(row => text.Measure(row.Item.Text, FontSize, FontFamily, FontWeight, FontItalic).Width + row.Depth * Indent + 36).DefaultIfEmpty(0).Max();
         return new(Math.Min(available.Width, width), _rows.Count * RowHeight);
     }
     /// <inheritdoc />
@@ -236,7 +236,7 @@ public sealed class TreeView : Element, ITreeView
                 UiSymbols.Draw(context, _expanded.Contains(row.Item.Id) ? UiSymbol.ChevronDown : UiSymbol.ChevronRight, new(x, y, 14, 14), color);
             UiSymbols.Draw(context, row.Item.Icon, new(x + 16, y, 14, 14), color);
             context.Text(Ellipsize(row.Item.Text, Math.Max(0, bounds.X + bounds.Width - x - 36)), x + 34,
-                bounds.Y + (bounds.Height - FontSize) / 2, color, FontSize, FontFamily);
+                bounds.Y + (bounds.Height - FontSize) / 2, color, FontSize, FontFamily, FontWeight, FontItalic);
             if (_dragging && _dropValid)
             {
                 if (_dropPosition == TreeDropPosition.Into && _dropParent == row.Item.Id) context.Stroke(bounds.Deflate(new Thickness(1)), Theme.Focus, 2);
@@ -248,12 +248,12 @@ public sealed class TreeView : Element, ITreeView
     }
     private string Ellipsize(string value, float width)
     {
-        if (_text == null || _text.Measure(value, FontSize, FontFamily).Width <= width) return value;
+        if (_text == null || _text.Measure(value, FontSize, FontFamily, FontWeight, FontItalic).Width <= width) return value;
         var low = 0; var high = value.Length;
         while (low < high)
         {
             var middle = (low + high + 1) / 2;
-            if (_text.Measure(value[..middle] + "…", FontSize, FontFamily).Width <= width) low = middle; else high = middle - 1;
+            if (_text.Measure(value[..middle] + "…", FontSize, FontFamily, FontWeight, FontItalic).Width <= width) low = middle; else high = middle - 1;
         }
         if (low > 0 && char.IsHighSurrogate(value[low - 1])) low--;
         return low == 0 ? "" : value[..low] + "…";

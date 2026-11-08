@@ -326,7 +326,7 @@ managed entries plus exact shared Aether/Contracts/Enerit/Mithril binaries. It
 checks the shared binaries in both entry directories; parent launch and child
 bootstrap also verify their actual managed entry. Native counterpart identity
 Version1 is carried in `RuntimeLaunchIdentity`; bootstrap JSON is bounded to
-16384 characters and depth32. Control3/frame1/snapshot2 and session/nonce/generation
+16384 characters and depth32. Control4/frame2/snapshot2 and session/nonce/generation
 fencing are unchanged.
 
 This is a trusted-local compatibility check, not an authentication boundary or a
@@ -634,3 +634,67 @@ snapshot properties are excluded from diagnostic serialization. Open does not
 restore it. A watch-only probe limit or unrepresentable probe leaves the Build
 valid with a null descriptor and Inputs.Preparation.SourceWatchUnavailableReason.
 This supplies observer data; compiler preflight remains required.
+
+## External preview camera geometry
+
+`TrueMoon.Aether.Preview.PreviewCamera` is an immutable external camera, separate
+from authoring, World and game checkpoints. Default pose is (0,1,6), identity
+orientation, pivot(0,1,0), distance6, vertical FOV pi/3, near0.1/far100, revision1.
+WithView returns the same instance for an exact no-op; any changed camera/navigation
+value advances the exact ulong revision. Invalid candidates and overflow do not
+mutate the previous instance. Context epochs and publication remain caller-owned.
+
+`TrueMoon.Aether.Rendering.PerspectiveProjection` shares rigid-pose validation and
+RH row-vector Vulkan projection math with Ecs.Rendering.PerspectiveCamera.
+`camera.CreateProjection(width,height)` freezes a CameraProjection with a usable
+inverse and physical extent16..1920 by16..1080. TryProject accepts finite points in
+front of the camera; TryUnproject uses NDC depth[0,1]. TryCreateRay uses a pixel
+center, near origin, normalized world direction and bounded near-to-far distance.
+Invalid points/inverses/segments are rejected, not clamped.
+
+ViewportImageBounds maps already-normalized logical coordinates to physical pixels
+using half-open image bounds, excluding letterbox bars and without another DPI factor.
+Ray3.TryIntersectUnitCube preserves world distance with full affine scale/shear;
+true+null means a valid miss, false means unavailable math. A near origin inside
+the cube uses its exit surface. These are pure values/helpers, with no DI lifetime.
+
+PreviewPickSnapshot.Capture(projectedScene, PreviewPickSnapshot.CubeGeometryProfile)
+freezes the exact render payload, persistent GUID IDs, draw order and validated
+inverses, up to64 entities. It does not reproject authoring or filter by Interaction.
+Nearest Hit wins; exact ties retain draw order. PreviewPickResult retains its frozen
+source and distinguishes Hit, Miss and Unavailable. Unknown complete geometry
+profiles and unusable inverses disable the whole query, preserving occlusion policy.
+
+The geometry result does not authorize Select/Clear. Explicit preview integration
+now uses Control4/Frame2/Snapshot2, capability PreviewViewVersion1 and dedicated
+PreviewViewCodec bytes. Both native counterparts must use the new matching binaries;
+older session/frame versions are rejected. GPU synchronization stamp version2 stays
+separate from the new required preview stamp Version1. CPU reference patterns stay
+untagged/non-pickable; Frame2 can encode an explicit capture stamp without reusing tick.
+
+ScenePreview.ShowViewAsync(scene, viewState, width, height, token) installs the initial
+PreviewViewContext+PreviewCamera with the projected scene before frame readiness.
+The context has caller-owned DocumentEpoch/ViewId/ContentId/SceneId/SceneRevision;
+same-ID reopen needs a fresh opening epoch. QueueCamera(context,camera) retains one
+in-flight control/presentation wait and one latest waiting value. CameraUpdates
+awaits actual presentation; moves preserve the child, surface and tick. Show/Resize/
+Stop cancel presentation readiness before draining accepted control. Suspension
+retains latest desired until resume; errors retain cleanup ownership for Stop retry.
+
+Presented(frame,imageBounds,clipBounds,layoutRevision) creates PreviewPresentedView
+only after actual presentation ack, freezing its original camera/projection/extent,
+pick source and UI geometry. IsCurrent checks desired camera/context/runtime/surface
+without requiring latest FrameId or acknowledging again. The Editor UI owner uses
+EditorSession.ReadPresentedView(view) to additionally check drawn layout/clip/visibility.
+Retain only the immutable receipt, not borrowed GPU handles.
+
+Use a single explicit preview owner alongside the shared FrameSession; do not race
+game/legacy document commands against it. Legacy ShowAsync stays fixed/untagged.
+The default GPU Editor now owns explicit opening/view/content context, retained
+orbit/pan/dolly/F and shared selection intent admission. A custom external transport
+can retain the legacy consumer. UI consumers may call SetPresentationSuspended(true)
+when hidden/minimized: presentation waits are cancelled, receipts invalidated, latest
+desired camera retained and actual ack denied without replacing the child/surface.
+SetPresentationSuspended(false) resumes the bounded latest camera lane. The consumer
+must also fence UI copies and drawn geometry/DPI; physical ResizeAsync(0,0) remains
+the separate render-surface suspension API. Resume preserves a pending camera wait queued while hidden until actual presentation. Bounded Windows x64 source/published/fresh-package acceptance is complete; physical held-RMB/MMB and multi-monitor DPI remain separate hardware gates.

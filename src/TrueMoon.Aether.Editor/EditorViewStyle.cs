@@ -14,17 +14,18 @@ public sealed class EditorViewStyle : IViewStyle<EditorView>
         styles.Role(EditorView.IslandRole).Padding(8);
         styles.Role(EditorView.IslandSurfaceRole).Set(UiProperties.CornerRadius, 8f).BorderWidth(1)
             .Set(UiProperties.Backdrop, theme => theme.PanelBackdrop)
+            .Set(UiProperties.Shadow, theme => theme.PanelShadow)
             .Background(theme => theme.PanelBackdrop == null ? theme.Surface : Color.Transparent);
         styles.Role(EditorView.PaneContentRole).Spacing(10);
         styles.Role(EditorView.PaneItemsRole).Spacing(6);
-        styles.Role(EditorView.PaneTitleRole).FontSize(13);
+        styles.Role(EditorView.PaneTitleRole).FontSize(13).FontWeight(600);
         styles.Role(EditorView.PropertyRowsRole).Spacing(2);
         styles.Role(EditorView.PropertyRowRole).Height(36);
         styles.Role(EditorView.PropertyNameRole).FontSize(14).Padding(8);
-        styles.Role(EditorView.SceneCaptionRole).FontSize(14);
+        styles.Role(EditorView.SceneCaptionRole).FontSize(14).FontWeight(600);
         styles.Part(view => view.InspectorHint).FontSize(12);
         styles.Part(view => view.ViewportFrame).Padding(1).BorderWidth(1);
-        styles.Part(view => view.ViewportTitle).FontSize(12).Padding(8).Height(30);
+        styles.Part(view => view.ViewportTitle).FontSize(12).FontWeight(600).Padding(8).Height(30);
         styles.Part(view => view.Error).Foreground(theme => theme.Error);
         styles.Part(view => view.Commands[EditorCommand.Start]).Tone(ControlTone.Accent);
         styles.Part(view => view.Commands[EditorCommand.Play]).Tone(ControlTone.Positive);

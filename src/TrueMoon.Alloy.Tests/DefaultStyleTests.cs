@@ -65,8 +65,9 @@ public sealed class DefaultStyleTests
         var editor = new TextBox { HasError = true }; using var ui = Create(editor); ui.Update(); ui.Focus(editor);
         var drawing = new Drawing(); editor.Draw(drawing);
         Assert.Contains(drawing.Strokes, x => x.Bounds == new Rect(.5f, .5f, 239, 139) && x.Color == new Color(255, 112, 128) && x.Width == 1 && x.Radius == 0);
-        Assert.Contains(drawing.Strokes, x => x.Bounds == new Rect(2, 2, 236, 136) && x.Color == new Color(255, 201, 92) && x.Width == 2 && x.Radius == 0);
-        Assert.Contains(drawing.Fills, x => x.Bounds == new Rect(0, 0, 3, 140) && x.Color == new Color(255, 112, 128));
+        Assert.Contains(drawing.Strokes, x => x.Bounds == new Rect(2, 2, 96, 136) && x.Color == new Color(255, 201, 92) && x.Width == 2 && x.Radius == 0);
+        Assert.Contains(drawing.Fills, x => editor.ValidationIconBounds.Contains(x.Bounds.X, x.Bounds.Y) && x.Color == new Color(255, 112, 128));
+        Assert.DoesNotContain(drawing.Fills, x => x.Bounds == new Rect(0, 0, 3, 140) && x.Color == editor.Theme.Error);
         Assert.All(drawing.Fills, x => Assert.Equal(0, x.Radius));
         Assert.Equal(drawing.Saves, drawing.Restores);
     }

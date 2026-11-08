@@ -45,6 +45,7 @@ public sealed partial class EditorHierarchyView : View<EditorHierarchyViewModel>
             Tree.ReorderEnabled = true;
             NameEditor.AccessibleName = "Имя сущности"; NameEditor.MinWidth = 0;
             NameEditor.BindTwoWay(TextBox.ValueProperty, model, value => value.RenameText).Bind(UiProperties.Visible, model, value => value.IsRenaming);
+            NameEditor.Bind(UiProperties.HasError, model, value => value.HasRenameError).Bind(UiProperties.ErrorMessage, model, value => value.RenameError);
             Scroll.SetContent(new RenameLayer(Tree, NameEditor, model)); Layout = new HierarchyLayout(Title, RootButton, Caption, Actions, SearchRow, Hint, Error, Scroll);
             Overlays = new(Layout); Content(model, _ => Overlays);
             SynchronizeItems();

@@ -40,6 +40,7 @@ public sealed class CompactDocumentToolsTests
         Assert.True(path.IsFocused); Assert.Equal(selection, path.SelectionLength);
         Assert.Equal(tree, DocumentUiFixture.Tree(tools).ToArray()); Assert.Same(path, tools.PathInput);
         Assert.Equal("Сцена с пробелом.aetherscene", model.PathDraft); Assert.Equal(Theme.Light.PanelBackdrop, tools.Backdrop);
+        Assert.Same(Theme.Light.PanelShadow, tools.Shadow);
         DocumentUiFixture.Click(ui, tools.ConfirmPath); owner.Complete(); model.Refresh(); ui.Update(); tools.SynchronizeFocus(ui);
         Assert.EndsWith("Сцена с пробелом.aetherscene", Assert.Single(owner.Store.Reads));
         Assert.False(tools.IsVisible); Assert.True(scene.IsFocused); Assert.Equal(viewport, scene.Bounds);

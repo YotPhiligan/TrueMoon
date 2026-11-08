@@ -310,7 +310,10 @@ public class SkiaViewPresenter : IViewPresenter
         
         using var skFont = new SKFont();
         skFont.Size = 14;
-        skFont.Typeface = SKTypeface.FromFamilyName("Segoe UI");
+        using var typeface = SKFontManager.Default.MatchFamily(FontDefaults.Family)
+            ?? SKFontManager.Default.MatchFamily(FontDefaults.FallbackFamily)
+            ?? SKTypeface.FromFamilyName(null);
+        skFont.Typeface = typeface;
         using var blob = SKTextBlob.Create($"text test {DateTime.Now.TimeOfDay:G}".AsSpan(), skFont);
         
         using var fontPaint = new SKPaint();

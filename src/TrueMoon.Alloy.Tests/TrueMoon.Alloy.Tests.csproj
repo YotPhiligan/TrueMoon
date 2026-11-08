@@ -17,6 +17,7 @@
   <ItemGroup>
     <!-- Test the actual sample widget source without introducing an App/Silk dependency into this test project. -->
     <Compile Include="..\ManualTests\AlloyTest\LoadStatus.cs" Link="Demo\LoadStatus.cs" />
+    <Compile Include="..\ManualTests\AlloyTest\DefaultStyleGallery.cs" Link="Demo\DefaultStyleGallery.cs" />
     <Compile Include="..\ManualTests\AlloyTest\CustomTitleBar.cs" Link="Demo\CustomTitleBar.cs" />
     <Compile Include="..\ManualTests\AlloyTest\LoadStatusRegion.cs" Link="Demo\LoadStatusRegion.cs" />
     <Compile Include="..\ManualTests\AlloyTest\SettingsModel.cs" Link="Demo\SettingsModel.cs" />

@@ -91,7 +91,7 @@ public sealed class ObjectCheckpointTests
     public void SnapshotNegotiation_RequiresV2WhileControlAndFrameRemainCurrent()
     {
         var identity = new SessionIdentity(Guid.NewGuid(), 1, CheckpointCodecTests.Hash, CheckpointCodecTests.Hash, CheckpointCodecTests.Hash);
-        identity.Validate(); Assert.Equal(2, identity.SnapshotVersion); Assert.Equal(3, identity.ControlVersion); Assert.Equal(1, identity.FrameVersion);
+        identity.Validate(); Assert.Equal(2, identity.SnapshotVersion); Assert.Equal(4, identity.ControlVersion); Assert.Equal(2, identity.FrameVersion);
         Assert.Throws<InvalidDataException>(() => (identity with { SnapshotVersion = 1 }).Validate());
     }
 }

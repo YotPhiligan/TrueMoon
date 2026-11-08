@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using TrueMoon.Argentis;
 
 namespace TrueMoon.Aether.Editor;
@@ -156,7 +156,7 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
         {
             if (IsHovered || IsPressed)
             {
-                var width = Math.Min(Bounds.Width, (_text?.Measure(Value, FontSize, FontFamily).Width ?? 0) + 20 + Padding.Left + Padding.Right);
+                var width = Math.Min(Bounds.Width, (_text?.Measure(Value, FontSize, FontFamily, FontWeight, FontItalic).Width ?? 0) + 20 + Padding.Left + Padding.Right);
                 context.Fill(new(Bounds.X, Bounds.Y, width, Bounds.Height), IsPressed ? Theme.ControlPressed : Theme.ControlHover);
             }
             DrawSegment(context, this, Symbol, Value, _text);
@@ -177,13 +177,13 @@ public sealed class EditorStatusBarView : View<EditorStatusBarViewModel>, IUiInp
         var area = element.Bounds.Deflate(element.Padding); var color = element.IsEffectivelyEnabled ? element.Foreground : element.Theme.Disabled;
         UiSymbols.Draw(context, symbol, new(area.X, area.Y + (area.Height - 14) / 2, 14, 14), color);
         var width = Math.Max(0, area.Width - 20); var display = text;
-        if (layout != null && layout.Measure(display, element.FontSize, element.FontFamily).Width > width)
+        if (layout != null && layout.Measure(display, element.FontSize, element.FontFamily, element.FontWeight, element.FontItalic).Width > width)
         {
             var count = display.Length;
-            while (count > 0 && layout.Measure(display[..count] + "…", element.FontSize, element.FontFamily).Width > width) count--;
+            while (count > 0 && layout.Measure(display[..count] + "…", element.FontSize, element.FontFamily, element.FontWeight, element.FontItalic).Width > width) count--;
             if (count > 0 && char.IsHighSurrogate(display[count - 1])) count--;
             display = count == 0 ? "" : display[..count] + "…";
         }
-        context.Text(display, area.X + 20, area.Y + (area.Height - element.FontSize) / 2, color, element.FontSize, element.FontFamily);
+        context.Text(display, area.X + 20, area.Y + (area.Height - element.FontSize) / 2, color, element.FontSize, element.FontFamily, element.FontWeight, element.FontItalic);
     }
 }

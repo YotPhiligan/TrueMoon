@@ -35,7 +35,11 @@ public enum DocumentOperation
 /// <param name="Operation">Pending operation.</param><param name="IsDirty">Current content differs from the saved checkpoint, or has never been saved.</param>
 /// <param name="Error">Last operation error.</param><param name="IsClosed">Terminal owner disposal closed admission.</param>
 public sealed record SceneDocumentState(SceneAuthoringState? Content, string? Path, SceneFileStamp? Stamp,
-    long? SavedContentRevision, DocumentOperation Operation, bool IsDirty, Exception? Error, bool IsClosed);
+    long? SavedContentRevision, DocumentOperation Operation, bool IsDirty, Exception? Error, bool IsClosed)
+{
+    /// <summary>Fresh identity of the owned authoring opening, independent of persistent scene/revision or file path.</summary>
+    public Guid OpeningId { get; init; }
+}
 
 /// <summary>Receipt identifying the exact snapshot persisted by a successful save.</summary>
 /// <param name="Path">Committed file path.</param><param name="Revision">Captured document revision.</param>

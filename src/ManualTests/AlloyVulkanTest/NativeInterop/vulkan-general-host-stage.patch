@@ -1,0 +1,13 @@
+diff --git a/src/gpu/ganesh/vk/GrVkImage.cpp b/src/gpu/ganesh/vk/GrVkImage.cpp
+--- a/src/gpu/ganesh/vk/GrVkImage.cpp
++++ b/src/gpu/ganesh/vk/GrVkImage.cpp
+@@ -320,6 +320,8 @@
+ VkPipelineStageFlags GrVkImage::LayoutToPipelineSrcStageFlags(const VkImageLayout layout) {
+     if (VK_IMAGE_LAYOUT_GENERAL == layout) {
+-        return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
++        // GENERAL's source access mask includes HOST_WRITE. ALL_COMMANDS covers queue
++        // commands, not host execution, so the host stage must be included explicitly.
++        return VK_PIPELINE_STAGE_ALL_COMMANDS_BIT | VK_PIPELINE_STAGE_HOST_BIT;
+     } else if (VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL == layout ||
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL == layout) {
+         return VK_PIPELINE_STAGE_TRANSFER_BIT;

@@ -106,6 +106,12 @@ try {
             skiaRevision = $pin.SkiaRevision; interopAbi = 1; runtimeIdentifier = 'win-x64'
             sha256 = (Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash
         }
+        if ($pin.Version -eq '4.155.0') {
+            $metadata.sourcePatches = @([ordered]@{
+                id = 'vulkan-general-host-stage'
+                sha256 = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'vulkan-general-host-stage.patch') -Algorithm SHA256).Hash
+            })
+        }
         $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $destination 'libSkiaSharp.build.json') -Encoding utf8
         Write-Output "Installed renderer native asset: $destination"
     }

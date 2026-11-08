@@ -1,5 +1,9 @@
 # TrueMoon: общий план развития
 
+**UI2026-11-08:** [UIA3d validation/shadows](alloy/PLAN.md#uia3d-validation-shadows) и [UIA3d.1 Vulkan frosted barrier](alloy/PLAN.md#uia3d1-vulkan-backdrop) реализованы и проверены в указанном scope. Детальная очередь у UI владельца; engine/Nom порядок сохранён.
+
+**UI typography2026-11-08:** по запросу пользователя Segoe UI Variable Text — default controls/text; Editor consumer подключён. Детальный task и границы — [UI PA8c.3b](alloy/PLAN.md#pa8c3b-default-fonts). Общий порядок engine/Nom не изменён.
+
 Выполнено2026-11-07: **SkiaSharp/native4.155.0** согласованы, extended DLL пересобрана
 из pinned sources. ABI, source/published Vulkan и fresh NuGet delivery проверены;
 подробные этапы и результаты — в [UI плане](alloy/PLAN.md#skiasharp-41550-completed).
@@ -28,6 +32,16 @@ F.1 CPU definitions/schemas/validation и canonical codec реализованы
 f.2 добавляет [resource owners/leases/preparation](engine/RENDER_RESOURCES.md), bounded
 catalog/device lifecycle, atomic World rebind и standalone Vulkan upload/readback.
 Ближайшее продолжение — f.3 owned render snapshots, затем f.4 surface consumer/Playing fence.
+По запросу2026-11-07 добавлены исследования [загрузки моделей ARCH1g.0](engine/PLAN.md#arch1g-model-assets)
+и [аудиомодуля ARCH1h.0](engine/PLAN.md#arch1h-audio): выбор форматов/backends,
+content delivery, App/ECS integration, resource ownership и критерии прототипов.
+Направления остаются до production реализации; очередность f.3→f.4 сохраняется,
+новые пакеты/API и поддержка файловых форматов этим не объявлены.
+G.0 выбрал [AssimpNetter6.0.5 low-level](engine/MODEL_IMPORT_RESEARCH.md#decision-2026-11-07)
+для g.1 после8Debug/published Release comparative profiles.
+[Captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) проверен как research
+prototype: frozen dependency I/O, limits, persistent ID ledger и native worker cancel.
+Production adapter/discovery/full format policy ещё нужны; Runtime contracts не расширены.
 Самостоятельный модуль **TrueMoon.Nom** хранит assets вне Aether. Решение пользователя
 2026-11-07 обновлено: **полностью заменить LiteDB собственной реализацией** —
 transactional KV catalog, append-only journal, bounded key index и streamed immutable
@@ -43,18 +57,23 @@ NOM4 checkpoint/offline compaction и [NOM5 indexes/snapshots/pins/offline GC](n
 LiteDB provider отменены. Прежние AST результаты — история; текущие proofs и scope —
 [Nom STATUS](nom/STATUS.md). Engine f.3→f.4 и importer g.1 сохраняются.
 
-Детали storage — в Nom плане, остальные этапы — в engine плане; массовая миграция не назначена. Маршрут ежедневного Editor,
+Детали import/audio этапов — в engine плане, storage — в Nom; массовая миграция не назначена. Маршрут ежедневного Editor,
 performance и release сохраняются ниже как независимые варианты продолжения.
 
 | Направление | Следующий результат | План владельца |
 | --- | --- | --- |
 | ECS и отображение, текущий запрос | После f.2 resources — camera/mesh/material extraction и bounded owned snapshots; затем surface renderer/Playing fence | [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering), [реализованный resource API](engine/RENDER_RESOURCES.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
+| Исследование ассетов моделей | Кандидат и captured-I/O/limits/ID/cancel research prototype проверены; далее полный format policy и g.1 App/IFactory adapter/discovery | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [captured contract](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) |
 | Самостоятельное хранение ассетов | NOM0–6 IO/process scope и NOM7 local4package delivery/independent consumers проверены; далее engine g.2 bridge по согласованию, другие OS/RID/modes и physical/release gates отдельно; [disk-full/recovery](nom/DURABILITY.md) после UAC прошёл5cases/D/R; [VM harness](nom/VM_CRASH.md) сохранён, actual verification отложена; [NOM8a/b buffer/raw API](nom/BUFFER_API.md#nom8b-raw-api) реализован и проверен; consumer bridge g.2 после g.1 по согласованию engine; hardware power-off исключён | [Nom queue](nom/PLAN.md#nom-own-queue), [решение](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07) |
-| Editor, малый срез | Group reset Position/Rotation/Scale, затем единицы углов | [ED4g.3/4](engine/EDITOR_PLAN.md#current-editor-queue) |
-| Editor, следующий крупный срез | Управляемая camera и selection picking, затем translation tool | [ED5a](engine/EDITOR_PLAN.md#ed5a-camera-picking) |
+| Исследование аудиомодуля | Backend/codec/package scope, real-time/device/clip ownership и ECS integration; затем offline и device prototypes | [ARCH1h.0–2](engine/PLAN.md#arch1h-audio) |
+| Editor, контракт готов | ED4g.3/4 завершены; ED5a.0 camera/selection contract зафиксирован2026-11-08 и проверен numerical probe20checks | [Контракт](engine/EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1), [scope](engine/HISTORY.md#ed5a0-contract-2026-11-08) |
+| Editor, численный срез готов | ED5a.1 immutable camera/projection/unprojection/ray/pick API;77newcases, Aether1857 D/R и Editor1353 Debug | [Scope](engine/HISTORY.md#ed5a1-values-2026-11-08) |
+| Editor, transport/receipt готов | ED5a.2 Control4/Frame2, same-child camera lane и actual receipt; Aether2103/Editor1363 D/R и source/published native в указанном scope | [Проверки/limitations](engine/HISTORY.md#ed5a2-view-2026-11-08) |
+| Editor, v1 acceptance завершена | ED5a.4 bounded Windows x64: Editor1412/Aether2104 D/R, source/published/fresh-package GPU и supported Windows input; physical held-button/multi-monitor gates отдельно | [Scope](engine/HISTORY.md#ed5a4-acceptance-2026-11-08) |
+| Editor, следующий контракт | ED5b translation: transient drag → один commit/Undo либо cancel; rotation/scale позже | [Единственный план Editor](engine/EDITOR_PLAN.md#ed5b-translation) |
 | Performance | Уменьшить CPU/allocations open batches, сохранив измеренный latency выигрыш и safety fences | [ED6b.2e.4f](engine/EDITOR_PLAN.md#ed6b2e4f-observer-cost) |
 | Надёжность | Один текущий full-solution Debug/Release baseline; отдельно причинное evidence post-reap drain timeout | [ARCH2e.4b](engine/PLAN.md#arch2e4b-drain-diagnostics), R2/R3 |
-| Visual quality | Baseline реальных дефектов текста/геометрии перед выбором rendering options | [PA8c.0](alloy/PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31) |
+| Visual quality | Baseline реальных дефектов текста/геометрии на текущем default Variable Text перед следующими rendering options | [PA8c.0](alloy/PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31); [завершённая typography](alloy/PLAN.md#pa8c3b-default-fonts) |
 | Приёмка выпуска | Выбрать supported scope, повторить fresh packages/native и доступные physical/hardware gates | R1–R6 ниже, [UI STATUS](alloy/STATUS.md#блокеры-и-ограничения) |
 
 Numeric physical input проверяется отдельно при подходящем вводе. Unverified
@@ -73,7 +92,7 @@ UI follow-up2026-11-05: [ED4g.2](engine/EDITOR_PLAN.md#ed4g2-numeric-gestures) �
 [UIA3c](alloy/PLAN.md#uia3c-numeric-gestures) добавляют numeric step/drag и linked
 scale с draft-only/cancel/identity contract. Scoped source/published native proof
 выполнен в [ED4g.2a](engine/EDITOR_PLAN.md#ed4g2a-native-numeric); физические arrows/
-captured Esc/pointer modifiers остаются открыты. Затем group reset/angle units;
+captured Esc/pointer modifiers остаются открыты. ED4g.3/4 group reset/angle units завершены; далее ED5a;
 engine Observer и hardware/release gates отдельно.
 
 UI-срез 2026-11-05: компактный Transform инспектора ведётся в

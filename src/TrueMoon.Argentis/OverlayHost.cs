@@ -1,7 +1,7 @@
 ﻿namespace TrueMoon.Argentis;
 
 /// <summary>Owns ordinary content and one transient popup above it. Works within the same retained tree, renderer and input session.</summary>
-public sealed class OverlayHost : ElementList, IUiInputObserver, IUiFrameParticipant
+public sealed partial class OverlayHost : ElementList, IUiInputObserver, IUiFrameParticipant
 {
     private Element? _popup, _owner, _returnFocus;
     private IInputContext? _context;
@@ -23,9 +23,13 @@ public sealed class OverlayHost : ElementList, IUiInputObserver, IUiFramePartici
     /// <summary>Gets the borrowed owner of the active popup.</summary>
     public Element? PopupOwner => _owner;
     /// <inheritdoc />
-    public bool NeedsFrame => _popup != null && (_owner is not { IsDisposed: false, IsAttached: true, IsVisible: true, IsEffectivelyEnabled: true } || Hidden(_owner));
+    public bool NeedsFrame => NeedsValidationFrame || _popup != null && (_owner is not { IsDisposed: false, IsAttached: true, IsVisible: true, IsEffectivelyEnabled: true } || Hidden(_owner));
     /// <inheritdoc />
-    public void AdvanceFrame(TimeSpan elapsed, IInputContext context) { if (NeedsFrame) Close(false); }
+    public void AdvanceFrame(TimeSpan elapsed, IInputContext context)
+    {
+        AdvanceValidationHint(elapsed, context);
+        if (_popup != null && (_owner is not { IsDisposed: false, IsAttached: true, IsVisible: true, IsEffectivelyEnabled: true } || Hidden(_owner))) Close(false);
+    }
     /// <summary>Raised after a popup is removed, before its owner may open another.</summary>
     public event Action? Closed;
     /// <summary>Adopts a fresh popup, replacing and disposing the previous one.</summary>
@@ -40,7 +44,9 @@ public sealed class OverlayHost : ElementList, IUiInputObserver, IUiFramePartici
         if (!IsAttached || !ReferenceEquals(RootOf(owner), RootOf(this))) throw new ArgumentException("Popup owner must belong to the same UI tree.", nameof(owner));
         if (!float.IsFinite(anchor.X) || !float.IsFinite(anchor.Y) || !float.IsFinite(anchor.Width) || !float.IsFinite(anchor.Height) || anchor.Width < 0 || anchor.Height < 0)
             throw new ArgumentOutOfRangeException(nameof(anchor));
-        ValidateChild(popup); Close(false);
+        ValidateChild(popup);
+        if (!ReferenceEquals(popup, _validationPopup)) CancelValidationHint();
+        Close(false);
         _owner = owner; _anchor = anchor; _context = context; _returnFocus = returnFocus; _tooltip = tooltip;
         _popup = popup;
         try { Add(popup); }
@@ -51,6 +57,7 @@ public sealed class OverlayHost : ElementList, IUiInputObserver, IUiFramePartici
     public void Close(bool restoreFocus = true)
     {
         VerifyAccess(); var popup = _popup; if (popup == null) return;
+        if (ReferenceEquals(popup, _validationPopup)) ForgetValidationHint();
         var context = _context; var target = _returnFocus;
         _popup = _owner = _returnFocus = null; _context = null;
         List<Exception> errors = [];
@@ -68,11 +75,13 @@ public sealed class OverlayHost : ElementList, IUiInputObserver, IUiFramePartici
         // attachment notifications; hide immediately, release host/focus references and
         // dispose the retained popup on reattachment/Close or parent disposal.
         _owner = _returnFocus = null; _context = null;
+        ForgetValidationHint();
         if (_popup is { IsDisposed: false }) _popup.IsVisible = false;
     }
     /// <inheritdoc />
     public bool PreviewInput(UiInput input, IInputContext context)
     {
+        ObserveValidationHint(input);
         if (_popup == null || !_popup.IsVisible) return false;
         if (_owner is not { IsDisposed: false, IsAttached: true, IsVisible: true, IsEffectivelyEnabled: true } || Hidden(_owner)) { Close(false); return false; }
         if (input.Kind == InputKind.FocusLost) { Close(false); return false; }
@@ -107,6 +116,6 @@ public sealed class OverlayHost : ElementList, IUiInputObserver, IUiFramePartici
     public override void Dispose()
     {
         try { base.Dispose(); }
-        finally { if (IsDisposed) { _popup = _owner = _returnFocus = null; _context = null; Closed = null; AttachmentChanged -= Attachment; } }
+        finally { if (IsDisposed) { ForgetValidationHint(); _popup = _owner = _returnFocus = null; _context = null; Closed = null; AttachmentChanged -= Attachment; } }
     }
 }

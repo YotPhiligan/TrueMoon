@@ -16,5 +16,7 @@ public enum CommandKind
     /// <summary>Validates and atomically activates the completely staged initial World.</summary>
     ActivateSceneWorld,
     /// <summary>Abandons initial staging; a new transfer requires a new runtime generation.</summary>
-    AbortSceneWorld
+    AbortSceneWorld,
+    /// <summary>Updates the explicit external view on the same EditPreview runtime, without simulation or surface replacement.</summary>
+    SetPreviewView
 }

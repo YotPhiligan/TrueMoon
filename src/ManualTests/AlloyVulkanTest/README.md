@@ -352,3 +352,36 @@ dotnet run --project ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug
 dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release -o TestResults/WindowComponent/publish
 dotnet TestResults/WindowComponent/publish/AlloyVulkanTest.dll --window-component --component-output TestResults/WindowComponent/native-release
 ```
+## System font typography
+
+`dotnet run --project ManualTests/AlloyVulkanTest -- --font-typography --font-output TestResults/Fonts-new --validation`
+uses a fresh output directory and writes18dark/light raster/OpenGL/Vulkan PNGs at
+synthetic100/150/200%, full-frame comparisons and font/native/hardware metadata.
+Configure process-local `VK_LAYER_PATH` to an available validation manifest directory.
+The fixture covers weights400/600, italic, ordered family fallback, plain/rich text,
+selection retention, idle and disposal. Optional Segoe UI Variable families fall
+back explicitly; this is not physical-DPI or automatic-optical-sizing acceptance.
+
+## Validation icons and shadows
+
+`--validation-shadows --design-output fresh-directory --validation` runs the shared
+gallery scaffold with full-height square TextBox/RichTextEditor/NumberBox validation badges, an actual500ms hover
+tooltip, semantic panel and a MenuPopup sample. Raster/OpenGL/Vulkan, Dark/Light,
+synthetic100/150/200%,18PNG/12comparisons; exact logical bounds, flat tolerance2 and
+symmetric1px edge envelope with coverage32 (typography retains24). Uses default
+system fonts, preserves input/selection, verifies idle and owned tree disposal.
+The menu sample now uses the default frosted backdrop over a black/white split.
+BlurWitness pins actual Gaussian mixing, so a tint/opaque/no-blur substitute fails.
+Pinned native4.155.0 includes the GENERAL source-stage HOST fix for VUID02819.
+`--design-frosted-menu` remains an explicit alias; `--design-opaque-menu` and
+`--design-no-shadows` are positive controls. `--design-no-blur` must fail the semantic
+pixel assertion. A pre-fix `--native-skia` DLL must reproduce VUID02819.
+Configure VK_LAYER_PATH to the available validation layer and use fresh output paths.
+`VerifyBackdropPackages.ps1 -ValidationDirectory <layer> -EvidenceDirectory <fresh>`
+packs5fresh packages, restores an external PackageReference-only Vulkan consumer,
+then checks6Dark/Light/DPI cases and teardown validation in Debug/published Release.
+It also verifies solid square badges, Theme.OnError, NumberBox parent validation and
+the exact live tooltip without losing selection/focus; screenshots precede the tooltip.
+[Badge audit and current checks](../../docs/alloy/HISTORY.md#validation-badge-2026-11-08).
+See [current native fix evidence](../../docs/alloy/HISTORY.md#vulkan-backdrop-2026-11-08).
+[Current commands/results/limits](../../docs/alloy/HISTORY.md#validation-shadows-2026-11-08).

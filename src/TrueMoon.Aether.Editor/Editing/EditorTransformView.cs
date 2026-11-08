@@ -56,11 +56,11 @@ public sealed class EditorTransformView : View<EditorInspectorViewModel>
             Form.Add(Text.Plain("Transform · десятичная точка"));
             foreach (var field in model.Fields)
             {
-                var input = TextBox.Create().WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, field, x => x.Value)
-                    .Bind(UiProperties.Enabled, model, x => x.CanEdit).SetValue(UiProperties.AccessibleName, "Transform " + field.Label);
+                var input = TextBox.Create().WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, field, x => x.DisplayValue)
+                    .Bind(UiProperties.Enabled, model, x => x.CanEdit).Bind(UiProperties.AccessibleName, field, x => x.InputAccessibleName)
+                    .Bind(UiProperties.HasError, field, x => x.HasError).Bind(UiProperties.ErrorMessage, field, x => x.Error);
                 _fields.Add(field.Key, input);
-                Form.Add(HStack.Create().WithRole(FieldRole).WithChildren(Text.Plain(field.Label).WithRole(LabelRole), input));
-                Form.Add(Text.Plain().WithRole(ErrorRole).BindText(field, x => x.Error).Bind(UiProperties.Visible, field, x => x.HasError));
+                Form.Add(HStack.Create().WithRole(FieldRole).WithChildren(Text.Plain().WithRole(LabelRole).BindText(field, x => x.DisplayLabel), input));
             }
             Apply = Button.Simple("Применить").Bind(UiProperties.Enabled, model, x => x.CanApply).OnClick(model.Apply);
             Cancel = Button.Simple("Отменить").Bind(UiProperties.Enabled, model, x => x.CanCancel).OnClick(model.Cancel);

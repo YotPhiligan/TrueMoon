@@ -27,7 +27,9 @@ public static class UiProperties
     /// <summary>Semantic control color.</summary>
     public static readonly UiProperty<ControlTone> Tone = new("Tone", ControlTone.Neutral, validate: Enum.IsDefined);
     /// <summary>Visual error state, including an outline and a structural marker.</summary>
-    public static readonly UiProperty<bool> HasError = new("HasError", false);
+    public static readonly UiProperty<bool> HasError = new("HasError", false, Invalidation.Layout);
+    /// <summary>Exact validator explanation; display-only, never parses or commits the editor value.</summary>
+    public static readonly UiProperty<string> ErrorMessage = new("ErrorMessage", "", validate: value => value != null);
     /// <summary>A pending edit, distinct from a validation error.</summary>
     public static readonly UiProperty<bool> IsModified = new("IsModified", false);
     /// <summary>Semantic editor accent, inherited by composite parts and resolved through the current theme.</summary>
@@ -55,12 +57,18 @@ public static class UiProperties
     public static readonly UiProperty<Color> Background = new("Background", Color.Transparent);
     /// <summary>Optional frosted material drawn before background, foreground and children.</summary>
     public static readonly UiProperty<BackdropMaterial?> Backdrop = new("Backdrop", null);
+    /// <summary>Optional outer shadow. Does not enlarge layout or pointer hit bounds.</summary>
+    public static readonly UiProperty<BoxShadow?> Shadow = new("Shadow", null);
     /// <summary>Text and foreground color.</summary>
     public static readonly UiProperty<Color> Foreground = new("Foreground", new Color(235, 237, 242));
     /// <summary>Font size in logical pixels.</summary>
     public static readonly UiProperty<float> FontSize = new("FontSize", 16, Invalidation.Layout, v => float.IsFinite(v) && v > 0);
     /// <summary>Font family name.</summary>
-    public static readonly UiProperty<string> FontFamily = new("FontFamily", "Segoe UI", Invalidation.Layout, v => !string.IsNullOrWhiteSpace(v));
+    public static readonly UiProperty<string> FontFamily = new("FontFamily", FontDefaults.Family, Invalidation.Layout, v => !string.IsNullOrWhiteSpace(v));
+    /// <summary>Font weight100..900;400 is regular and600 semibold.</summary>
+    public static readonly UiProperty<int> FontWeight = new("FontWeight", 400, Invalidation.Layout, v => v is >= 100 and <= 900);
+    /// <summary>Whether to select an italic face.</summary>
+    public static readonly UiProperty<bool> FontItalic = new("FontItalic", false, Invalidation.Layout);
     /// <summary>Whether the element participates in layout and rendering.</summary>
     public static readonly UiProperty<bool> Visible = new("Visible", true, Invalidation.Layout | Invalidation.Tree);
     /// <summary>Whether the element accepts input.</summary>

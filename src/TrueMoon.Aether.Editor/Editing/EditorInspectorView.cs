@@ -13,6 +13,7 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
     public static ViewStyleRole<VStack> StackRole { get; } = new("InspectorStack");
     /// <summary>Compact action rows.</summary>
     public static ViewStyleRole<HStack> RowRole { get; } = new("InspectorRow");
+    internal static ViewStyleRole<HStack> TransformGroupRole { get; } = new("InspectorTransformGroup");
     /// <summary>Component disclosure buttons.</summary>
     public static ViewStyleRole<Button> HeaderRole { get; } = new("InspectorHeader");
     /// <summary>Compact inspector actions, including dynamic schema and presence buttons.</summary>
@@ -233,6 +234,7 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
         foreach (var property in _properties.Values)
         {
             property.Input.HasError = property.Property.HasError; property.Input.IsModified = property.Property.HasDraft;
+            property.Input.ErrorMessage = property.Property.Error;
             if (property.Input is CheckBox boolean) boolean.Value = property.Property.BooleanValue ? "Да" : "Нет";
             if (_genericEditors.TryGetValue((property.Property.ComponentId, property.Property.Key), out var editor))
             {
@@ -280,13 +282,21 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
         line.ValueWidth = property.Kind == PropertyValueKind.Boolean ? 96 : property.Kind == PropertyValueKind.String ? float.NaN : 120;
         line.ShowEmpty(property.IsNull); _genericEditors.Add((property.ComponentId, property.Key), line);
         var details = HStack.Create().WithRole(RowRole).WithChildren(reset, source); details.IsVisible = showDetails;
-        row.WithChildren(line, details,
-            Text.Plain().WithRole(ErrorRole).BindText(property, x => x.Error).Bind(UiProperties.Visible, property, x => x.HasError));
+        row.WithChildren(line, details);
         return new(property, row, input, nullable, reset, source);
     }
     private void CreateTransform(InspectorComponent component, VStack body)
     {
         var editor = new TransformEditor().WithRole(StackRole);
+        ConfigureAction(editor.ResetPosition).WithRole(ResetRole).Bind(UiProperties.Enabled, _model, p => p.CanResetPosition)
+            .OnClick(() => _model.ResetTransformGroup(TransformGroup.Position));
+        ConfigureAction(editor.ResetRotation).WithRole(ResetRole).Bind(UiProperties.Enabled, _model, p => p.CanResetRotation)
+            .OnClick(() => _model.ResetTransformGroup(TransformGroup.Rotation));
+        ConfigureAction(editor.ResetScale).WithRole(ResetRole).Bind(UiProperties.Enabled, _model, p => p.CanResetScale)
+            .OnClick(() => _model.ResetTransformGroup(TransformGroup.Scale));
+        editor.Degrees.WithRole(BooleanRole).BindTwoWay(CheckBox.IsCheckedProperty, _model, p => p.AnglesInDegrees)
+            .Bind(UiProperties.Enabled, _model, p => p.CanChangeAngleUnits);
+        editor.Rotation.Label.BindText(_model, p => p.RotationLabel);
         editor.LinkScale.WithRole(BooleanRole).BindTwoWay(CheckBox.IsCheckedProperty, _model, p => p.ScaleLinked)
             .Bind(UiProperties.Enabled, _model, p => p.CanLinkScale);
         _transforms.Add(component.Id, editor); body.Add(editor);
@@ -302,26 +312,32 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
             var cells = new[] { row.FirstCell, row.SecondCell, row.ThirdCell };
             for (var i = 0; i < keys.Length; i++)
             {
-                var property = component.Properties.Single(p => p.Key == keys[i]);
+                var property = (TransformField)component.Properties.Single(p => p.Key == keys[i]);
                 boxes[i].WithRole(NumberRole);
                 boxes[i].Minimum = property.Key is "sx" or "sy" or "sz" ? float.Epsilon : -float.MaxValue;
                 boxes[i].Maximum = float.MaxValue;
-                if (property.Key is "sx" or "sy" or "sz" or "pitch" or "yaw" or "roll") boxes[i].Step = .01;
+                if (property.IsAngle)
+                {
+                    boxes[i].Bind(NumberBox.StepProperty, _model, p => p.RotationStep)
+                        .Bind(NumberBox.MinimumProperty, _model, p => p.RotationMinimum)
+                        .Bind(NumberBox.MaximumProperty, _model, p => p.RotationMaximum);
+                }
+                else if (property.Key is "sx" or "sy" or "sz") boxes[i].Step = .01;
                 ConfigureNumber(boxes[i], property);
                 var input = boxes[i].Editor.WithRole(InputRole)
-                    .BindTwoWay(TextBox.ValueProperty, property, p => p.Value)
+                    .BindTwoWay(TextBox.ValueProperty, property, p => p.DisplayValue)
+                    .Bind(UiProperties.AccessibleName, property, p => p.InputAccessibleName)
                     .Bind(UiProperties.Enabled, property, p => p.CanWrite);
-                input.MinHeight = 0; input.AccessibleName = component.Title + " " + property.Label;
+                input.MinHeight = 0;
                 boxes[i].Prefix.WithRole(VectorLabelRole);
                 var reset = Action(UiSymbol.Undo, "Сбросить " + component.Title + " · " + property.Label + " к наследуемому значению или умолчанию")
+                    .Bind(UiProperties.AccessibleName, property, p => p.ResetAccessibleName)
                     .WithRole(ResetRole).Bind(UiProperties.Enabled, property, p => p.CanReset).OnClick(() => _model.ResetProperty(property));
                 var source = Text.Plain().WithRole(MetadataRole).BindText(property, p => p.SourceText);
                 reset.IsVisible = false; source.IsVisible = false;
                 var cell = cells[i].WithRole(StackRole);
-                cell.Add(Text.Plain("Ошибка").WithRole(ErrorRole).Bind(UiProperties.AccessibleName, property, p => p.Error)
-                    .Bind(UiProperties.Visible, property, p => p.HasError));
                 details.Add(HStack.Create().WithRole(RowRole).WithChildren(reset,
-                    Text.Plain(property.Label).WithRole(LabelRole).Configure(x => x.VerticalAlignment = LayoutAlignment.Center), source));
+                    Text.Plain().WithRole(LabelRole).BindText(property, p => p.DisplayLabel).Configure(x => x.VerticalAlignment = LayoutAlignment.Center), source));
                 _properties.Add((component.Id, property.Key), new(property, cell, input, null, reset, source));
             }
         }
@@ -334,7 +350,9 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
         box.IsGestureCurrent = () => _model.IsNumericGestureCurrent(property, gestureId);
         box.GestureStarted += () => gestureId = _model.BeginNumericGesture(property);
         box.GestureEnded += result => { _model.FinishNumericGesture(result, gestureId); gestureId = 0; };
-        box.AccessibleName = property.Label + " · перетаскивание: 4 пикселя на шаг; ↑/↓; Shift ×10, Ctrl ×0.1; Esc — отменить жест";
+        const string gestureHint = " · перетаскивание: 4 пикселя на шаг; ↑/↓; Shift ×10, Ctrl ×0.1; Esc — отменить жест";
+        if (property is TransformField transform) box.Bind(UiProperties.AccessibleName, transform, p => p.NumericGestureHint);
+        else box.AccessibleName = property.Label + gestureHint;
     }
     private IEnumerable<NumberBox> NumericEditors() => _numericEditors.Values;
     private void ToggleDetails(ComponentId id)
@@ -444,8 +462,9 @@ public sealed class EditorInspectorView : View<EditorInspectorViewModel>, IUiInp
     private void Attachment()
     { if (!IsAttached) ForgetHint(); }
     private static IconButton Action(UiSymbol symbol, string name)
+        => ConfigureAction(new IconButton(symbol, name));
+    private static IconButton ConfigureAction(IconButton button)
     {
-        var button = new IconButton(symbol, name);
         button.Clear(UiProperties.Width); button.Clear(UiProperties.Height); button.Clear(UiProperties.Padding);
         return button.WithRole(ActionRole).WithRole(IconRole);
     }

@@ -10,6 +10,32 @@ namespace TrueMoon.Aether.Editor.Tests;
 public sealed class EditorScreenTests
 {
     [Fact]
+    public void ThemeAction_PreservesTypographyAndRetainedReadOnlyDraftSelection()
+    {
+        var workspace = new EditorWorkspace(EditorScene.Demo()); using var model = Model(workspace);
+        var view = new EditorView(model, new EditorViewStyle()); using var ui = Create(view);
+        ui.SetTheme(Theme.Dark with { FontFamily = "Consolas", FontSize = 19, FontWeight = 500, FontItalic = true });
+        ui.Update(); Click(ui, view.Entities["green-cube"]); ui.Update();
+        var field = Descendants(view).OfType<TextBox>().Single(value => value.AccessibleName == "X");
+        ui.Focus(field); ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+        var theme = view.Toolbar.Children.OfType<Button>().Single(button => button.Value == "Тема");
+        Click(ui, theme); ui.Update();
+        Assert.Equal(Theme.Light.Surface, view.Theme.Surface);
+        Assert.Equal(("Consolas", 19f, 500, true), (view.Theme.FontFamily, view.Theme.FontSize, view.Theme.FontWeight, view.Theme.FontItalic));
+        Assert.Same(field, Descendants(view).OfType<TextBox>().Single(value => value.AccessibleName == "X"));
+        Assert.Equal("1.5", field.Value); Assert.Equal(3, field.SelectionLength); Assert.True(theme.IsFocused);
+        Assert.Equal("green-cube", workspace.SelectedId); Assert.False(ui.Update());
+    }
+
+    [Fact]
+    public void EmptyViewportText_UsesConfiguredTypographyIncludingSize()
+    {
+        using var viewport = new EditorViewport { EmptyText = "Привет", FontFamily = "typography-family", FontSize = 21, FontWeight = 600, FontItalic = true };
+        var probe = new TypographyRecordingContext(); viewport.Measure(new(600, 420), probe); viewport.Arrange(new(0, 0, 600, 420)); viewport.Draw(probe);
+        var drawn = Assert.Single(probe.Texts);
+        Assert.Equal(("Привет", 21f, "typography-family", 600, true), (drawn.Text, drawn.Size, drawn.Family, drawn.Weight, drawn.Italic));
+    }
+    [Fact]
     public void ShellGeometry_FillsBodyWithViewportAndPaintsAnchoredIslandsAboveIt()
     {
         using var layout = new EditorLayout(new Box(), new Box(), new Box(), new Box(), new Box());

@@ -14,6 +14,9 @@ $surface = [IO.File]::ReadAllText($surfacePath)
 $include = '#include "src/c/truemoon_vk_interop.inc"'
 if (!$surface.Contains('SkSurfaces::WrapBackendTexture')) { throw 'Unexpected surface implementation.' }
 if ($CheckOnly) {
+    if ($pin.Version -eq '4.155.0') {
+        & (Join-Path $PSScriptRoot 'ApplyVulkanGeneralStage.ps1') -SkiaSourcePath $source -CheckOnly
+    }
     Write-Output "Source revision and insertion point verified: SkiaSharp $($pin.Version), $revision. No files changed."
     exit 0
 }
@@ -22,6 +25,9 @@ $branch = & git -C $source branch --show-current
 if ([string]::IsNullOrEmpty($branch) -or $branch -in @('main', 'skiasharp')) {
     & git -C $source switch -c truemoon-vulkan-interop
     if ($LASTEXITCODE -ne 0) { throw 'Could not create the local interop branch.' }
+}
+if ($pin.Version -eq '4.155.0') {
+    & (Join-Path $PSScriptRoot 'ApplyVulkanGeneralStage.ps1') -SkiaSourcePath $source
 }
 foreach ($entry in @(@('truemoon_vk_interop.h', 'include/c'), @('truemoon_vk_interop.inc', 'src/c'))) {
     $target = Join-Path (Join-Path $source $entry[1]) $entry[0]

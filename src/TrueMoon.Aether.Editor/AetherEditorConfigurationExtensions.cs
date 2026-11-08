@@ -56,13 +56,24 @@ public static class AetherEditorConfigurationExtensions
         {
             if (!services.Exist<EditorWorkspace>()) services.Singleton<EditorWorkspace>(_ => new(
                 new SceneSnapshot(snapshot.ProjectPath == null ? "Проект не открыт" : "Сцена не открыта", 0, []), snapshot.ProjectPath != null));
+            if (!services.Exist<EditorViewportState>()) services.Singleton<EditorViewportState>(r => new(r.Resolve<EditorWorkspace>(),r.Resolve<AetherHost>().Preview));
             if (!services.Exist<EditorPreview>()) services.Singleton<EditorPreview>(resolver =>
             {
                 var engine = resolver.Resolve<AetherHost>(); var viewport = resolver.Resolve<EditorViewportBinding>();
-                return new(async (scene, token) =>
+                if (!defaultViewport)
+                    return new EditorPreview((scene, token) => engine.Preview.ShowAsync(scene, 640, 360, token), engine.Preview.StopAsync);
+                var state = resolver.Resolve<EditorViewportState>();
+                return new(state.Capture, async (scene, view, token) =>
                 {
                     await viewport.Ready.WaitAsync(token).ConfigureAwait(false);
-                    return await engine.Preview.ShowAsync(scene, 640, 360, token).ConfigureAwait(false);
+                    while(true)
+                    {
+                        await state.VisibleReady.WaitAsync(token).ConfigureAwait(false);
+                        var visibility=state.VisibilityToken;
+                        using var linked=CancellationTokenSource.CreateLinkedTokenSource(token,visibility);
+                        try{return await engine.Preview.ShowViewAsync(scene,view,640,360,linked.Token).ConfigureAwait(false);}
+                        catch(OperationCanceledException)when(!token.IsCancellationRequested&&visibility.IsCancellationRequested) { }
+                    }
                 }, engine.Preview.StopAsync);
             });
             if (!services.Exist<EditorCommands>()) services.Singleton<EditorCommands>(resolver => new(
@@ -102,8 +113,13 @@ public static class AetherEditorConfigurationExtensions
         });
         context.UseAetherEditorEditing(previewInStatusBar: true);
         context.UseAetherEditorHierarchy(); context.UseAetherEditorHeader(); context.UseAetherEditorStatusBar();
-        context.Services(services => services.Singleton<EditorSession>(r => new(snapshot, r.Resolve<AetherHost>(), r.Resolve<EditorProjects>(),
-                r.Resolve<EditorWorkspace>(), r.Resolve<EditorCommands>(), r.Resolve<EditorDocumentCommands>(), r.Resolve<EditorViewModel>(), r.Resolve<EditorViewportBinding>(), r.Resolve<EditorDiagnosticsViewModel>()))
+        context.Services(services => services
+            .Singleton<IFactory<EditorViewportController,EditorViewportArguments>>(r => new Factory<EditorViewportController,EditorViewportArguments>(args =>
+                new(args,r.Resolve<EditorViewportState>(),r.Resolve<EditorWorkspace>(),r.Resolve<EditorDocumentCommands>(),r.Resolve<EditorViewModel>(),
+                    r.Resolve<EditorPreview>(),r.Resolve<AetherHost>().Preview)))
+            .Singleton<EditorSession>(r => new(snapshot, r.Resolve<AetherHost>(), r.Resolve<EditorProjects>(),
+                r.Resolve<EditorWorkspace>(), r.Resolve<EditorCommands>(), r.Resolve<EditorDocumentCommands>(), r.Resolve<EditorViewModel>(), r.Resolve<EditorViewportBinding>(), r.Resolve<EditorDiagnosticsViewModel>(),
+                r.Resolve<IFactory<EditorViewportController,EditorViewportArguments>>()))
             .Singleton<IStartable>(r => r.Resolve<EditorSession>()).Singleton<IStoppable>(r => r.Resolve<EditorSession>()));
         return context;
     }

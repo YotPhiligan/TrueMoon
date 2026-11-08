@@ -20,15 +20,18 @@ public sealed class EditorSession : IStartable, IStoppable
     private readonly EditorViewModel _model;
     private readonly EditorViewportBinding _viewport;
     private readonly EditorDiagnosticsViewModel? _diagnostics;
+    private readonly IFactory<EditorViewportController,EditorViewportArguments>? _controllers;
     private long _nextDiagnosticsRefresh;
 
     internal EditorSession(AetherEditorOptions options, AetherHost engine, EditorProjects projects,
         EditorWorkspace workspace, EditorCommands commands, EditorDocumentCommands documents,
-        EditorViewModel model, EditorViewportBinding viewport, EditorDiagnosticsViewModel? diagnostics = null)
+        EditorViewModel model, EditorViewportBinding viewport, EditorDiagnosticsViewModel? diagnostics = null,
+        IFactory<EditorViewportController,EditorViewportArguments>? controllers = null)
     {
         _options = options; _engine = engine; _projects = projects; _workspace = workspace;
         _commands = commands; _documents = documents; _model = model; _viewport = viewport;
         _diagnostics = diagnostics;
+        _controllers = controllers;
     }
 
     /// <inheritdoc />
@@ -62,8 +65,18 @@ public sealed class EditorSession : IStartable, IStoppable
         ArgumentNullException.ThrowIfNull(ui); ArgumentNullException.ThrowIfNull(view);
         view.VerifyAccess();
         if (!ReferenceEquals(view.DataContext, _model)) throw new ArgumentException("View belongs to another editor App.", nameof(view));
-        _viewport.Observe(ui, view);
-        if (view.Canvas.DrawnFrame is { } frame && !_engine.Preview.Presented(frame)) _engine.Frames.Presented(frame);
+        if(_controllers!=null)view.EnsureViewportController(_controllers);
+        view.ViewportController?.Observe(ui);
+        var active=view.ViewportController?.IsActive!=false;
+        if(active)_viewport.Observe(ui, view);
+        if (active && view.Canvas.CanAcknowledgeDraw && view.Canvas.DrawnFrame is { } frame)
+        {
+            var image = view.Canvas.ImageBounds; var clip = view.Canvas.DrawnClipBounds;
+            if (frame.Metadata.PreviewView != null)
+                _engine.Preview.Presented(frame, new(image.X, image.Y, image.Width, image.Height),
+                    new(clip.X, clip.Y, clip.Width, clip.Height), view.Canvas.LayoutRevision);
+            else if (!_engine.Preview.Presented(frame)) _engine.Frames.Presented(frame);
+        }
         _model.Refresh(() => _engine.Supervisor.Status, () => _engine.Editor.Status, _commands.Error ?? _engine.Frames.TransportError);
         var now = System.Diagnostics.Stopwatch.GetTimestamp();
         if (_diagnostics != null && now >= _nextDiagnosticsRefresh)
@@ -74,6 +87,21 @@ public sealed class EditorSession : IStartable, IStoppable
         view.Canvas.EmptyText = _projects.Active?.Documents?.Read().Content == null
             ? "Соберите проект и запустите сцену" : "Откройте Edit Preview в строке состояния";
         view.Documents?.SynchronizeFocus(ui);
+    }
+
+    /// <summary>Reads an actual receipt admitted by the current runtime/camera and this view's drawn layout. Does not acknowledge another frame.</summary>
+    /// <param name="view">Live App-local view on its UI owner.</param><returns>Ready semantic receipt, or null while pending/stale/hidden/foreign.</returns>
+    public Preview.PreviewPresentedView? ReadPresentedView(EditorView view)
+    {
+        ArgumentNullException.ThrowIfNull(view); view.VerifyAccess();
+        if (!ReferenceEquals(view.DataContext,_model) || view.IsDisposed || view.ViewportController?.IsActive==false) return null;
+        var receipt = _engine.Preview.PresentedView;
+        return receipt != null && _engine.Preview.IsCurrent(receipt) &&
+            (view.ViewportController==null || receipt.State.Context.ViewId==view.ViewportController.ViewId &&
+                receipt.State.Context.DocumentEpoch==_workspace.DocumentEpoch && receipt.State.Context.ContentId==_workspace.ContentToken) &&
+            view.Canvas.DrawnFrame?.Metadata.PreviewView == receipt.State.Stamp &&
+            ReferenceEquals(view.Canvas.DrawnFrame?.Presentation,receipt.Frame.Presentation) &&
+            view.Canvas.MatchesPresentedLayout(receipt.ImageBounds,receipt.ClipBounds,receipt.LayoutRevision) ? receipt : null;
     }
 
     /// <summary>Applies Save/Discard/Cancel policy before the parent closes its editor UI.</summary>

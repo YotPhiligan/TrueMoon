@@ -30,6 +30,8 @@ public sealed class MenuPopup : ElementList, IUiInputObserver
     /// <inheritdoc />
     protected override BackdropMaterial? ThemeBackdrop => Theme.MenuBackdrop;
     /// <inheritdoc />
+    protected override BoxShadow? ThemeShadow => Theme.MenuShadow;
+    /// <inheritdoc />
     protected override Color ThemeBackground => Backdrop == null ? Theme.Surface : Color.Transparent;
     /// <inheritdoc />
     protected override float ThemeBorderWidth => 1;

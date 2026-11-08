@@ -125,6 +125,15 @@ Register the view's model/dependencies in the same `Services` configuration. The
 
 For reproducible font selection, load your licensed font files with `SkiaFontCatalog.Load(defaultFamily, files)` from `TrueMoon.Alloy.Rendering.Skia` and pass the catalog to `UseSkiaRaster(fonts)`, `UseSkiaOpenGL(fonts)` or `UseSkiaVulkan(fonts)`. Deliver those files and their license as application content with `CopyToOutputDirectory` and `CopyToPublishDirectory`. Loading validates fonts through native Skia before App startup; the renderer package does not bundle demo fonts. Unregistered font families use the catalog's default face without system font lookup.
 
+For installed fonts, `SkiaFontCatalog.FromSystemFonts(["Segoe UI Variable Text", "Segoe UI"], fileCatalog)`
+configures requested-family → ordered system families → file catalog selection through
+the same `UseSkia*` overloads. Omit the final file catalog to use the system default
+when all names are missing. Set `Theme.FontWeight`/`Element.FontWeight` or view-style
+`FontWeight(600)` for semibold; `FontItalic` selects italic. The choice is shared by
+layout and drawing. Default themes/controls use Segoe UI Variable Text; parameterless
+Skia backends use SystemDefault with Segoe UI fallback. File-only catalogs remain
+explicit. System-font metrics depend on the machine and optical sizing is not automatic.
+
 Constructors and factories can be mixed. `TextBox.Create().BindTwoWay(TextBox.ValueProperty, model, state => state.Name)` binds an `INotifyPropertyChanged` model to an editor. Keep durable state in the model and create a fresh UI tree when recreating a session.
 
 `RichTextEditor.Create(new RichTextEditorOptions { WordWrap = true, UndoLimit = 100 })`

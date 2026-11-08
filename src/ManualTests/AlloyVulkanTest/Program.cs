@@ -17,6 +17,25 @@ if (nativePathIndex >= 0 && nativePathIndex + 1 == args.Length)
     throw new ArgumentException("--native-skia requires a DLL path.");
 SkiaNativeLibrary.Initialize(nativePathIndex >= 0 ? args[nativePathIndex + 1] : null);
 Console.WriteLine($"Native Skia: {SkiaNativeLibrary.LoadedPath}");
+if (args.Contains("--validation-shadows"))
+{
+    var index = Array.IndexOf(args, "--design-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--design-output requires a fresh directory.");
+    FontTypographyProbe.OmitDecorationShadows = args.Contains("--design-no-shadows");
+    if (args.Contains("--design-frosted-menu") && args.Contains("--design-opaque-menu"))
+        throw new ArgumentException("Choose either frosted or opaque menu control.");
+    FontTypographyProbe.UseDecorationBackdrop = !args.Contains("--design-opaque-menu");
+    FontTypographyProbe.OmitDecorationBlur = args.Contains("--design-no-blur");
+    if (FontTypographyProbe.OmitDecorationBlur && !FontTypographyProbe.UseDecorationBackdrop)
+        throw new ArgumentException("The missing-blur negative control requires a frosted menu.");
+    FontTypographyProbe.Run(args[index + 1], args.Contains("--validation"), useDefaults: true, decorations: true); return;
+}
+if (args.Contains("--font-typography"))
+{
+    var index = Array.IndexOf(args, "--font-output");
+    if (index < 0 || index + 1 == args.Length) throw new ArgumentException("--font-output requires a fresh directory.");
+    FontTypographyProbe.Run(args[index + 1], args.Contains("--validation"), args.Contains("--font-defaults")); return;
+}
 if (args.Contains("--style-gallery"))
 {
     var index = Array.IndexOf(args, "--style-output");

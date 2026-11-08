@@ -4,7 +4,7 @@ using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Rendering.Skia;
 
-internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources, SKSurface? surface = null) : IDrawingContext, ITextLayoutService, IRichTextLayoutService, IRichTextDrawingContext, IBackdropDrawingContext, IOpacityDrawingContext
+internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources resources, SKSurface? surface = null) : IDrawingContext, ITextLayoutService, IRichTextLayoutService, IRichTextDrawingContext, IBackdropDrawingContext, IOpacityDrawingContext, IShadowDrawingContext
 {
     // Contexts are created at the surface's root clip, before Element.Draw narrows it.
     private readonly SKRectI _surfaceBounds = canvas.DeviceClipBounds;
@@ -14,6 +14,26 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
     public void Restore() => canvas.Restore();
     public void Clip(Rect rectangle) => canvas.ClipRect(Rect(rectangle));
     public void Translate(float x, float y) => canvas.Translate(x, y);
+    public void DrawShadow(Rect rectangle, BoxShadow shadow, float cornerRadius)
+    {
+        resources.VerifyRichTextAccess(); ArgumentNullException.ThrowIfNull(shadow);
+        if (!float.IsFinite(rectangle.X) || !float.IsFinite(rectangle.Y) || !float.IsFinite(rectangle.Width) || !float.IsFinite(rectangle.Height) ||
+            rectangle.Width < 0 || rectangle.Height < 0 || !float.IsFinite(cornerRadius) || cornerRadius < 0)
+            throw new ArgumentOutOfRangeException(nameof(rectangle));
+        if (rectangle.Width == 0 || rectangle.Height == 0 || shadow.Color.A == 0) return;
+        // Use the render-target image-filter path rather than a cached CPU blur mask.
+        using var filter = SKImageFilter.CreateDropShadowOnly(shadow.OffsetX, shadow.OffsetY,
+            shadow.BlurSigma, shadow.BlurSigma, Color(shadow.Color));
+        using var paint = new SKPaint { IsAntialias = true, Color = SKColors.Black, ImageFilter = filter };
+        canvas.Save();
+        try
+        {
+            using var original = new SKRoundRect(Rect(rectangle), cornerRadius, cornerRadius);
+            canvas.ClipRoundRect(original, SKClipOperation.Difference, true);
+            canvas.DrawRoundRect(Rect(rectangle), cornerRadius, cornerRadius, paint);
+        }
+        finally { canvas.Restore(); }
+    }
     public void SaveOpacity(Rect bounds, float opacity)
     {
         resources.VerifyRichTextAccess();
@@ -44,13 +64,17 @@ internal sealed class SkiaDrawingContext(SKCanvas canvas, SkiaDrawingResources r
         canvas.DrawRoundRect(Rect(rectangle), radius, radius, outline);
     }
     public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily)
+        => Text(text, x, y, color, fontSize, fontFamily, 400, false);
+    public void Text(string text, float x, float y, Color color, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
     {
-        var entry = resources.Font(fontFamily, fontSize);
+        var entry = resources.Font(fontFamily, fontSize, fontWeight, fontItalic);
         var paint = resources.Paint(Color(color), SKPaintStyle.Fill);
         canvas.DrawText(text, x, y - entry.Metrics.Ascent, SKTextAlign.Left, entry.Font, paint);
     }
     public Size Measure(string text, float fontSize, string fontFamily)
-    { var entry = resources.Font(fontFamily, fontSize); return new Size(entry.Font.MeasureText(text), entry.Metrics.Descent - entry.Metrics.Ascent); }
+        => Measure(text, fontSize, fontFamily, 400, false);
+    public Size Measure(string text, float fontSize, string fontFamily, int fontWeight, bool fontItalic)
+    { var entry = resources.Font(fontFamily, fontSize, fontWeight, fontItalic); return new Size(entry.Font.MeasureText(text), entry.Metrics.Descent - entry.Metrics.Ascent); }
     public void Image(IImageSource source, Rect destination)
     {
         if (source is not SkiaImageSource image) throw new ArgumentException("Image must be a SkiaImageSource.", nameof(source));
@@ -132,7 +156,7 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object
     private SkiaRichTextFontMapper? _richFonts;
     internal SkiaRichTextFontMapper RichFonts { get { VerifyAvailable(); return _richFonts ??= new(fonts); } }
     internal void VerifyRichTextAccess() => VerifyAvailable();
-    private readonly record struct FontKey(string Family, float Size);
+    private readonly record struct FontKey(string Family, float Size, int Weight, bool Italic);
     internal readonly record struct FontEntry(SKFont Font, SKFontMetrics Metrics);
 
     private void VerifyAvailable()
@@ -150,13 +174,14 @@ internal sealed class SkiaDrawingResources(SkiaFontCatalog? fonts = null, object
         return _paint;
     }
 
-    internal FontEntry Font(string family, float size)
+    internal FontEntry Font(string family, float size, int weight = 400, bool italic = false)
     {
         VerifyAvailable();
-        var key = new FontKey(family, size);
+        if (weight is < 100 or > 900) throw new ArgumentOutOfRangeException(nameof(weight));
+        var key = new FontKey(family, size, weight, italic);
         if (_fonts.TryGetValue(key, out var entry)) return entry;
         // SKFont retains its native typeface reference. Do not retain shared managed typeface wrappers.
-        using var typeface = fonts == null ? SKTypeface.FromFamilyName(family) : fonts.CreateTypeface(family);
+        using var typeface = (fonts ?? SkiaFontCatalog.SystemDefault).CreateTypeface(family, weight, italic);
         var font = new SKFont(typeface, size);
         try
         {

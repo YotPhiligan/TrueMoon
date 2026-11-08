@@ -72,6 +72,8 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     protected virtual Color ThemeBackground => Color.Transparent;
     /// <summary>Optional background material when no local or styled value is supplied.</summary>
     protected virtual BackdropMaterial? ThemeBackdrop => null;
+    /// <summary>Outer shadow when no local or styled value is supplied.</summary>
+    protected virtual BoxShadow? ThemeShadow => null;
     /// <summary>Foreground when no local/style value is supplied.</summary>
     protected virtual Color ThemeForeground => Theme.Foreground;
     /// <summary>Semantic editor role inherited by composite parts unless explicitly overridden.</summary>
@@ -88,8 +90,34 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     public EditorColorRole ColorRole { get => Get(UiProperties.ColorRole); set => Set(UiProperties.ColorRole, value); }
     /// <summary>Semantic action tone.</summary>
     public ControlTone Tone { get => Get(UiProperties.Tone); set => Set(UiProperties.Tone, value); }
-    /// <summary>Visual error state; has both a color and a left-edge marker.</summary>
+    /// <summary>Visual error state; text editors use a right-edge icon, other controls a structural marker.</summary>
     public bool HasError { get => Get(UiProperties.HasError); set => Set(UiProperties.HasError, value); }
+    /// <summary>Validator explanation for the error icon's tooltip; does not mutate the value.</summary>
+    public string ErrorMessage { get => Get(UiProperties.ErrorMessage); set => Set(UiProperties.ErrorMessage, value); }
+    /// <summary>Whether this control reserves a right-edge validation icon.</summary>
+    protected virtual bool SupportsValidationIcon => false;
+    /// <summary>Whether direct editor children borrow this control's validation state when they have no override.</summary>
+    protected virtual bool SharesValidationWithEditors => false;
+    /// <summary>Root-coordinate validation badge bounds. The square spans the field height and is clipped for narrower fields.</summary>
+    public Rect ValidationIconBounds
+    {
+        get
+        {
+            if (!SupportsValidationIcon || !HasError) return default;
+            var width = Math.Max(0, Math.Min(Bounds.Width, Bounds.Height));
+            if (width == 0 || Bounds.Height <= 0) return default;
+            return new(Bounds.X + Bounds.Width - width, Bounds.Y, width, Bounds.Height);
+        }
+    }
+    /// <summary>Text viewport excluding padding and the validation icon; caret and selection share this geometry.</summary>
+    protected Rect EditorContentBounds
+    {
+        get
+        {
+            var area = Bounds.Deflate(Padding); var icon = ValidationIconBounds;
+            return icon.Width <= 0 ? area : area with { Width = Math.Max(0, Math.Min(area.Width, icon.X - 4 - area.X)) };
+        }
+    }
     /// <summary>Semantic name for icon-only controls and future accessibility adapters.</summary>
     public string AccessibleName { get => Get(UiProperties.AccessibleName); set => Set(UiProperties.AccessibleName, value); }
     /// <summary>Effective corner radius.</summary>
@@ -116,10 +144,16 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
     public float Opacity { get => Get(UiProperties.Opacity); set => Set(UiProperties.Opacity, value); }
     /// <summary>Optional backdrop material, painted before the ordinary background fill.</summary>
     public BackdropMaterial? Backdrop { get => Get(UiProperties.Backdrop); set => Set(UiProperties.Backdrop, value); }
+    /// <summary>Optional outer shadow; it changes painting only, within the ancestor clip.</summary>
+    public BoxShadow? Shadow { get => Get(UiProperties.Shadow); set => Set(UiProperties.Shadow, value); }
     /// <summary>Font size.</summary>
     public float FontSize { get => Get(UiProperties.FontSize); set => Set(UiProperties.FontSize, value); }
     /// <summary>Font family.</summary>
     public string FontFamily { get => Get(UiProperties.FontFamily); set => Set(UiProperties.FontFamily, value); }
+    /// <summary>Font weight100..900;400 is regular and600 semibold.</summary>
+    public int FontWeight { get => Get(UiProperties.FontWeight); set => Set(UiProperties.FontWeight, value); }
+    /// <summary>Whether to select an italic face.</summary>
+    public bool FontItalic { get => Get(UiProperties.FontItalic); set => Set(UiProperties.FontItalic, value); }
     /// <summary>Raised for a local typed property change.</summary>
     public event Action<Element, object>? PropertyChanged;
     /// <summary>Raised when this element or a descendant needs work.</summary>
@@ -133,14 +167,20 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         if (_values.TryGetValue(property, out var value)) return (T)value!;
         if (_style != null && _style.TryGet(property, out T styled)) return styled;
         if (_viewStyle != null && _viewStyle.TryGet(property, out T viewStyled)) return viewStyled;
+        if (SupportsValidationIcon && Parent?.SharesValidationWithEditors == true &&
+            (ReferenceEquals(property, UiProperties.HasError) || ReferenceEquals(property, UiProperties.ErrorMessage)))
+            return Parent.Get(property);
         if (ReferenceEquals(property, UiProperties.Background)) return (T)(object)ThemeBackground;
         if (ReferenceEquals(property, UiProperties.Backdrop)) return (T)(object?)ThemeBackdrop!;
+        if (ReferenceEquals(property, UiProperties.Shadow)) return (T)(object?)ThemeShadow!;
         if (ReferenceEquals(property, UiProperties.Foreground)) return (T)(object)ThemeForeground;
         if (ReferenceEquals(property, UiProperties.CornerRadius)) return (T)(object)Theme.CornerRadius;
         if (ReferenceEquals(property, UiProperties.BorderWidth)) return (T)(object)ThemeBorderWidth;
         if (ReferenceEquals(property, UiProperties.BorderColor)) return (T)(object)ThemeBorderColor;
         if (ReferenceEquals(property, UiProperties.FontSize)) return (T)(object)Theme.FontSize;
         if (ReferenceEquals(property, UiProperties.FontFamily)) return (T)(object)Theme.FontFamily;
+        if (ReferenceEquals(property, UiProperties.FontWeight)) return (T)(object)Theme.FontWeight;
+        if (ReferenceEquals(property, UiProperties.FontItalic)) return (T)(object)Theme.FontItalic;
         if (ReferenceEquals(property, UiProperties.Padding)) return (T)(object)ThemePadding;
         if (ReferenceEquals(property, UiProperties.Spacing)) return (T)(object)Theme.StackSpacing;
         if (ReferenceEquals(property, UiProperties.ColorRole)) return (T)(object)ThemeColorRole;
@@ -434,16 +474,23 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
         context.Save();
         try
         {
-            context.Clip(Bounds);
+            if (Shadow == null) context.Clip(Bounds);
             if (Opacity < 1 && context is IOpacityDrawingContext composite)
             {
-                composite.SaveOpacity(Bounds, Opacity);
-                try { DrawContents(context); }
+                composite.SaveOpacity(Shadow?.PaintBounds(Bounds) ?? Bounds, Opacity);
+                try { DrawSurface(context); }
                 finally { context.Restore(); }
             }
-            else DrawContents(context);
+            else DrawSurface(context);
         }
         finally { context.Restore(); }
+    }
+    private void DrawSurface(IDrawingContext context)
+    {
+        if (Shadow is { Color.A: > 0 } shadow && context is IShadowDrawingContext drawing)
+            drawing.DrawShadow(Bounds, shadow, CornerRadius);
+        if (Shadow != null) context.Clip(Bounds);
+        DrawContents(context);
     }
     private void DrawContents(IDrawingContext context)
     {
@@ -460,10 +507,25 @@ public abstract class Element : PropertiesBase, IElement, IDisposable
             finally { context.Restore(); }
         }
         else foreach (var child in Children) child.Draw(context);
+        var badge = ValidationIconBounds;
+        if (badge.Width > 0) context.Fill(badge, Theme.Error);
         if (BorderWidth > 0) context.Stroke(Bounds.Deflate(new Thickness(BorderWidth / 2)), BorderColor, BorderWidth, CornerRadius);
-        if (HasError) context.Fill(new Rect(Bounds.X, Bounds.Y, Math.Min(3, Bounds.Width), Bounds.Height), Theme.Error);
+        if (HasError && SupportsValidationIcon)
+        {
+            var size = Math.Max(0, Math.Min(14, Math.Min(badge.Width - 4, badge.Height - 4)));
+            if (size > 0) UiSymbols.Draw(context, UiSymbol.Warning,
+                new(badge.X + (badge.Width - size) / 2, badge.Y + (badge.Height - size) / 2, size, size), Theme.OnError);
+        }
+        else if (HasError)
+        {
+            if (!SharesValidationWithEditors) context.Fill(new Rect(Bounds.X, Bounds.Y, Math.Min(3, Bounds.Width), Bounds.Height), Theme.Error);
+        }
         else if (IsModified) context.Fill(new Rect(Bounds.X + Math.Max(0, Bounds.Width - 5), Bounds.Y + 2, Math.Min(3, Bounds.Width), Math.Min(3, Bounds.Height)), Theme.Modified);
-        if (IsFocused && IsEffectivelyEnabled) context.Stroke(Bounds.Deflate(new Thickness(2)), Theme.Focus, 2, CornerRadius);
+        if (IsFocused && IsEffectivelyEnabled)
+        {
+            var focus = badge.Width > 0 ? Bounds with { Width = Math.Max(0, badge.X - Bounds.X) } : Bounds;
+            if (focus.Width > 4 && focus.Height > 4) context.Stroke(focus.Deflate(new Thickness(2)), Theme.Focus, 2, CornerRadius);
+        }
     }
     /// <summary>Draws custom content before children.</summary>
     protected virtual void DrawCore(IDrawingContext context) { }

@@ -13,13 +13,35 @@ namespace TrueMoon.Aether.Editor.Tests.Inspector;
 public sealed class InspectorNumericGestureTests
 {
     [Fact]
+    public void GroupReset_DuringCapturedDragIsDisabledAndCannotBeOverwrittenByLateCancellation()
+    {
+        using var test = new NumericInspectorFixture(); test.Owner.Model.ScaleLinked = true;
+        test.Field("sx").Value = "4"; test.Owner.Model.Fields[0].Value = "2"; test.Drain();
+        Assert.True(test.Transform.ResetScale.IsEnabled); Assert.True(test.Transform.ResetPosition.IsEnabled);
+        var box = test.Transform.Scale.First; var start = test.Start(box); test.Drain();
+        Assert.True(box.IsDragging); Assert.False(test.Transform.ResetScale.IsEnabled); Assert.False(test.Transform.ResetPosition.IsEnabled);
+        test.Owner.Model.ResetTransformGroup(TransformGroup.Scale);
+        Assert.False(test.Field("sx").IsReset); Assert.True(box.IsDragging);
+        test.Ui.HandleInput(new(InputKind.PointerMove, start.X + 4, start.Y));
+        test.Ui.HandleInput(new(InputKind.PointerUp, start.X + 4, start.Y)); test.Drain();
+        Assert.False(box.IsDragging); Assert.True(test.Transform.ResetScale.IsEnabled);
+        test.Click(test.Transform.ResetScale);
+        Assert.All(test.Fields, field => Assert.True(field.IsReset));
+        box.CancelGesture(); test.Drain(); Assert.All(test.Fields, field => Assert.True(field.IsReset));
+        Assert.Equal(0, test.Owner.Owner.Document.Read().Content!.UndoCount);
+    }
+
+    [Fact]
     public void Inspector_UsesDeclaredUnitsTypedIntegersAndOneBorrowedOptInLinkToggle()
     {
         using var owner = new InspectorFixture(); var view = new EditorInspectorView(owner.Model, new EditorInspectorViewStyle());
         using var ui = InspectorFixture.Ui(view); ui.Update(); ui.Update();
         var transform = view.TransformEditors[DocumentData.Transform];
         Assert.False(owner.Model.ScaleLinked); Assert.False(transform.LinkScale.IsChecked); Assert.True(transform.LinkScale.IsEnabled);
-        Assert.Equal(new Element[] { transform.Position, transform.Rotation, transform.Scale, transform.LinkScale }, transform.Children);
+        Assert.Equal(new Element[] { transform.Position.Parent!, transform.Rotation.Parent!, transform.Degrees, transform.Scale.Parent!, transform.LinkScale }, transform.Children);
+        Assert.Equal(new Element[] { transform.Position, transform.ResetPosition }, transform.Position.Parent!.Children);
+        Assert.Equal(new Element[] { transform.Rotation, transform.ResetRotation }, transform.Rotation.Parent!.Children);
+        Assert.Equal(new Element[] { transform.Scale, transform.ResetScale }, transform.Scale.Parent!.Children);
         Assert.Equal(.1, transform.Position.First.Step); Assert.Equal(.01, transform.Rotation.First.Step); Assert.Equal(.01, transform.Scale.First.Step);
         Assert.Equal(float.Epsilon, transform.Scale.First.Minimum); Assert.Equal(float.MaxValue, transform.Position.First.Maximum);
         var integer = Assert.IsType<NumberBox>(view.GenericEditors[(DocumentData.Custom, "integer")].Editor);

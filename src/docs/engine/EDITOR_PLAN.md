@@ -1,13 +1,30 @@
 # TrueMoon.Aether.Editor: план подключаемого редактора
 
+**UI consumer2026-11-08:** [UIA3d](../alloy/PLAN.md#uia3d-validation-shadows) реализовал
+error icon/validator tooltip для полей и shadows панелей/меню. Inline field errors
+заменены, общая Diagnostics сохранена. Детальная задача у UI; ED5b остаётся
+следующим Editor contract; Vulkan frosted native gate исправлен в UIA3d.1 в указанном scope.
+[UIA3d.2](../alloy/PLAN.md#uia3d2-validation-badge) обновил badge всех текстовых inputs;
+при аудите добавлена адресная InvalidName ошибка inline rename. Editor1412 D/R прошёл;
+детальные решения и проверки — в UI плане, ED5b очередь сохранена.
+
 <a id="current-editor-queue"></a>
 <a id="точка-продолжения--ревизия-2026-11-05"></a>
-## Точка продолжения — актуализация 2026-11-06
+## Точка продолжения — актуализация 2026-11-08
 
 ED4f.3 Window, ED4g.1/2 compact/numeric editors, ED6b source tracking и bounded
 Build/Play/Replace реализованы в scopes из [STATUS](STATUS.md). Первый profiling,
 directory cache и native open/metadata не являются новой следующей задачей.
-ED5 уже имеет прикладной GPU Edit Preview; camera/picking/gizmos ещё не реализованы.
+ED5 имеет GPU Edit Preview и завершённый ED5a camera/selection v1 в указанном acceptance scope; gizmos остаются отдельными.
+
+Типографика больше не входит в открытую очередь: [подключение Editor/default family](#editor-default-typography)
+завершено в [PA8c.3b](../alloy/PLAN.md#pa8c3b-default-fonts). ED4g.3 group reset
+реализован и проверен2026-11-08; ED4g.4 rad/deg также завершён.
+ED5a.0 contract и ED5a.1 immutable camera/projection/unprojection/cube ray math
+реализованы. ED5a.2 explicit preview view/actual receipt также реализован и проверен.
+ED5a.1–4 завершены в bounded Windows x64 scope: source/published и fresh-package GPU,
+Windows input доступного supported scope. Далее ED5b — контракт translation tool;
+held-RMB/MMB hardware input и multi-monitor DPI остаются отдельными gates.
 
 Уточнение2026-11-06: ECS и renderer/material resources включены в engine план
 [ARCH1e/f](PLAN.md#arch1f-rendering). Будущий inspector consumer —
@@ -16,9 +33,14 @@ ED5 уже имеет прикладной GPU Edit Preview; camera/picking/gizm
 
 | Очередь | Результат | Статус |
 | --- | --- | --- |
-| Малый UI срез | [ED4g.3 group reset](#ed4g3-group-reset) | Предложен ревизией; существующие draft/history/DI contracts достаточны для проектирования |
-| Следом UI | [ED4g.4 angle units](#ed4g4-angle-units) | До реализации выбрать поведение invalid draft при смене единиц |
-| Крупный UI срез | [ED5a camera/picking](#ed5a-camera-picking), затем перемещение объекта | Нужен отдельный preview camera/selection contract с engine |
+| Завершённый UI срез | [ED4g.3 group reset](#ed4g3-group-reset) | Реализован2026-11-08: Editor1323/1323 D/R, source Debug/published Release native history/save/reopen/preview; [scope](HISTORY.md#ed4g3-group-reset-2026-11-08) |
+| Завершённый UI срез | [ED4g.4 angle units](#ed4g4-angle-units) | Реализован2026-11-08: default rad, display deg, explicit invalid/gesture admission; Editor1353/1353 D/R + source/published native; [scope](HISTORY.md#ed4g4-angle-units-2026-11-08) |
+| Контракт готов | [ED5a.0 camera/selection](#ed5a0-contract) | Решения2026-11-08 и20численных checks; исторический contract-only этап, реализация/acceptance ниже |
+| Реализован численный срез | [ED5a.1 camera values/ray math](#ed5a1-camera-values) | 77newcases; Aether1857/1857 D/R, Editor1353/1353 Debug; [scope](HISTORY.md#ed5a1-values-2026-11-08) |
+| Реализован transport/receipt | [ED5a.2 preview view/actual receipt](#ed5a2-preview-view) | Control4/Frame2,52new Aether+10Editor cases; Aether2103/Editor1363 D/R, source/published native same-child pixels и cleanup0; [scope](HISTORY.md#ed5a2-view-2026-11-08) |
+| Input реализован | [ED5a.3 navigation/selection](#ed5a3-navigation-picking) |33new Editor+1Aether case; Editor1396/Aether2104 D/R и native source/published directed GPU input; [scope](HISTORY.md#ed5a3-input-2026-11-08) |
+| Приёмка завершена в указанном scope | [ED5a.4 full profile](#ed5a4-acceptance) | Editor1412/Aether2104 D/R; source/published/fresh-package GPU и Windows input; [scope/limits](HISTORY.md#ed5a4-acceptance-2026-11-08) |
+| Следующий прикладной шаг | [ED5b translation contract](#ed5b-translation) | Запланировано: transient drag → один commit/Undo либо cancel; rotation/scale позже |
 | Параллельный proof | [ED4g.2a physical input](#ed4g2a-native-numeric) | Частично: source/published native пройден, оставшиеся physical cases не подтверждены |
 | Performance альтернатива | [ED6b.2e.4f](#ed6b2e4f-observer-cost) | Устранить измеренный CPU/allocation tradeoff; не ослаблять hashing/ownership |
 
@@ -27,34 +49,79 @@ Hardware gates ограничивают readiness, не требуют заве�
 каждым прикладным control. Game AI inspector обозначен **ED4h**: прежний ED4g
 от30октября конфликтовал с compact Transform от5ноября; старый anchor сохранён.
 
+<a id="editor-default-typography"></a>
+### Типографика Editor — 2026-11-08
+
+Выполнено по запросу пользователя: host/example используют системный каталог
+Segoe UI Variable Text → Segoe UI → Noto, custom text учитывает weight/italic,
+смена темы сохраняет typography и retained state. Этот же preferred family стал
+framework default; единственный подробный task — [UI PA8c.3b](../alloy/PLAN.md#pa8c3b-default-fonts),
+[проверки](../alloy/HISTORY.md#default-fonts-2026-11-08).
+Типографика не меняла engine очередь f.3/f.4; актуальный UI маршрут указан выше.
+
 <a id="ed4g3-group-reset"></a>
-### ED4g.3. Групповой сброс Transform — предложено 2026-11-05
+### ED4g.3. Групповой сброс Transform — реализован и проверен 2026-11-08
 
-Следующий небольшой пользовательский результат — одна явная reset action на
-Position/Rotation/Scale вместо трёх разрозненных field actions. Предлагаемый scope:
+По запросу пользователя добавлены три retained icon actions24×24 справа от
+Position/Rotation/Scale. При узкой панели label переходит над тремя равными колонками;
+кнопка остаётся в своей строке. Tooltip500мс и accessible name поясняют наследование,
+Tab + Enter/Space активируют действие. Provenance/details и отдельные field resets сохранены.
 
-- [ ] Согласовать compact action/tooltip/keyboard доступ и disabled/read-only states
-  в существующем дизайн-коде; provenance/details остаются доступны.
-- [ ] Сбросить группу к значениям по existing schema/inheritance/reset semantics,
-  без безусловной подстановки0/1 вместо inherited values. Linked Scale не должен
-  последовательно пересчитывать peers поверх группового reset.
-- [ ] Действие меняет draft; existing Apply — одна transaction, Cancel не меняет
-  committed document. Ошибки/conflicts и недоступность действий сохраняются.
-- [ ] Прямые поведенческие проверки inherited/overridden/invalid/link/read-only,
-  retained controls, Apply/Undo/Redo и save/reopen; соответствующий native consumer
-  не подменяется CPU preview. Public API/DI scope не расширять без необходимости.
+- [x] `ResetTransformGroup(TransformGroup)` и `CanResetPosition/Rotation/Scale`
+  принадлежат Editor presentation; новые DI/lifetime/engine contracts не понадобились.
+  Группа доступна при локальных значениях или изменённых draft fields. Чистые inherited
+  fields и уже staged reset не трогаются. Во время numeric drag действие недоступно;
+  также проверяются selection, runtime/document busy, conflict и stale baseline.
+- [x] Используется existing reset semantics: local overrides/initial component values
+  удаляются при Apply, проявляются inherited values либо schema defaults. Linked Scale
+  сбрасывается пакетом без proportional propagation; его preference сохраняется.
+  Invalid text в группе можно сбросить, ошибки остальных групп остаются блокирующими.
+- [x] Reset меняет только draft; Apply создаёт одну общую authoring transaction,
+  Cancel сохраняет committed document. Undo/Redo/save/reopen, theme/resize/focus,
+  retained controls и late numeric cancellation проверены напрямую.
+- [x] Baseline1300/1300 Debug; final Editor1323/1323 каждый Debug/Release,
+  failed0/skipped0. Source Debug и published Release native profiles прошли:
+  staged Rotation/linked Scale + Cancel, keyboard Position reset, Apply/Undo/Redo,
+  actual preview pixel/revision, Save/reopen/inheritance и cleanup0; по7reaped children,
+  validation0errors/0warnings. Сохранены также SaveAs conflict reused fixture и
+  status-hover timeout до feature workflow; это не исправления production code.
+
+Команды, evidence и ограничения — в [HISTORY](HISTORY.md#ed4g3-group-reset-2026-11-08).
+Fresh Editor NuGet/full solution/physical input acceptance этим срезом не закрыты.
 
 <a id="ed4g4-angle-units"></a>
-### ED4g.4. Единицы отображения углов — предложено 2026-11-05
+### ED4g.4. Единицы отображения углов — реализован и проверен 2026-11-08
 
-- [ ] Выбрать явный UI переключатель rad/deg, подпись и шаг в выбранных единицах;
-  пересчёт deg↔rad принадлежит представлению, canonical scene/wire остаётся rad.
-- [ ] До кода решить invalid/incomplete draft и смену единиц: отключение переключения
-  либо сохранение исходного представления. Не молча нормализовать или терять ввод.
-- [ ] Смена единиц не Apply/dirty/history; conversion/round-trip, finite Float limits,
-  unrelated fields, Cancel/Undo/Redo и theme/focus сохраняют свои contracts.
-- [ ] Проверить boundary values, repeated switching без накопленного drift и
-  source/published presentation; этот срез не добавляет новые rotation conventions.
+Решение перед кодом2026-11-08 выполнено: retained переключатель «Углы в градусах»
+под Rotation, default radians. Подписи/accessible names/step/limits используют выбранные
+единицы, шаг0.01rad/1degree. Новые generic controls/DI/engine/protocol contracts не потребовались.
+
+- [x] Canonical `TransformField.Value`, authoring/persistence/wire остаются radians;
+  `DisplayValue` конвертирует только явную правку в degrees. Unit-only switch не
+  переписывает canonical string, не создаёт draft/dirty/history и не меняет other fields.
+  Нет wrap/clamp: например720° остаются4πrad. Float limit проверяется после conversion.
+- [x] Invalid/incomplete rotation text, включая pending reset, блокирует switch до
+  исправления/Cancel/Apply reset. Unrelated invalid fields не мешают. Active numeric
+  gesture, busy/read-only/conflict/missing Transform также запрещают смену единиц.
+  Preference относится к inspector и сохраняется при Cancel/selection/history/theme.
+- [x] Повторное переключение использует исходный canonical text без накопленного
+  drift; сохраняется exact degree text (пробелы/exponent/format). Эквивалентный display
+  format не создаёт canonical draft. Numeric gesture snapshot сохраняет отдельно
+  display text; Esc восстанавливает и canonical draft, и точную строку.
+- [x] Direct tests: conversions всех трёх осей, signed zero/ru-RU/Float limits,
+  inherited/valid+invalid reset, unrelated fields, busy/conflict/selection, drag/step/
+  modifiers, Apply/Cancel/Undo/Redo/save/reopen, retained theme/focus/resize и legacy View.
+  Fresh baseline1323/1323 Debug; final Editor1353/1353 каждый Debug/Release (+30cases),
+  failed0/skipped0. Source Debug и published Release native acceptance подтверждают
+  unit-only no-history, invalid admission, exact round trip,90°→π/2 commit/history/
+  save/reopen и actual rotated preview pixel/revision; по10reaped children/11PNG,
+  owners0 и Vulkan validation0errors/0warnings.
+
+Native harness отдельно учитывает освещение видимой грани при +90° yaw и удерживает
+только раскрытие Preview popup при native focus changes; Start/Stop выполняются один раз.
+Первоначальные pixel expectation failure и popup wait timeout сохранены как failures,
+без заявления о production renderer/input fix. [Команды/evidence/scope](HISTORY.md#ed4g4-angle-units-2026-11-08).
+Fresh Editor NuGet/full solution/physical input matrix здесь не запускались.
 
 <a id="ed4g-compact-transform"></a>
 ## ED4g. Компактный Transform и цветовые состояния — 2026-11-05
@@ -67,7 +134,8 @@ Position/Rotation/Scale вместо трёх разрозненных field act
 сохраняются. Метаданные/происхождение/индивидуальный сброс раскрываются «⋯»,
 ошибки всегда доступны. Применение остаётся одной явной общей транзакцией;
 Cancel/Esc, Undo/Redo, focus/selection и ownership сохраняются.
-Следующий UX срез: numeric drag/step и связанный scale с отдельным контрактом жеста;
+Numeric drag/step и linked scale реализованы в ED4g.2 с отдельным контрактом жеста;
+ED4g.3 group reset и ED4g.4 angle display завершены; следующий UX срез — ED5a camera/picking;
 успех/таймеры/автоматическое применение в текущую задачу не входят.
 
 <a id="ed4g1-generic-editors"></a>
@@ -113,7 +181,7 @@ FocusLost/capture loss/hide/disable/detach отменяют жест; внешн
 overflow или pending-reset другого target сохраняет source draft, не меняет peers
 и блокирует Apply с диагностикой. Esc жеста восстанавливает точные три drafts,
 включая прежние неприменённые значения/flags; scoped identity fence защищает другую
-scene/selection. Смена единиц угла, group reset и viewport tools остаются отдельными.
+scene/selection. Group reset и angle units реализованы отдельно в ED4g.3/4; viewport tools впереди.
 
 <a id="ed4g2a-native-numeric"></a>
 ### ED4g.2a. Native numeric acceptance — 2026-11-05
@@ -134,7 +202,7 @@ cursor event, Shift/Ctrl передаются в UiInput. Детали —
 остаются открытой частью acceptance: текущий Windows driver передаёт стрелки как
 UiKey.None и не предоставляет раздельный mouse-down/key/mouse-up. Оставшуюся input
 acceptance закрывать отдельно при подходящем вводе; следующий прикладной срез —
-ED4g.3/4 из текущей очереди, требования physical проверки сохраняются.
+ED5a из текущей очереди, требования physical проверки сохраняются.
 
 
 
@@ -667,7 +735,7 @@ accepted preview work; Cancel close decision сохраняет preview. Cleanup
 наблюдаем и допускает retry. View products owned родителем; model/style/coordinator
 получаются через App/Cobalt/IFactory, без второй scene/history и service locator.
 
-Текущий preview profile — fixed camera,640×360, Windows x64 OpenGL UI/Vulkan child,
+Исторический ED3b preview profile — fixed camera,640×360, Windows x64 OpenGL UI/Vulkan child,
 до64entities, child replacement на обновление. Authoring document не обрезается.
 Подтверждение среза требует реального edit/preview/Undo/Redo/save/reopen и cleanup;
 точные результаты — в STATUS/HISTORY. Создание/удаление объектов и прочие ED3/ED4/
@@ -1155,8 +1223,9 @@ actual GPU presentation. Старт/retry явный, Apply/Undo/Redo обнов
 stop/project/document transitions fence/drain accepted work. Код Game.Logic не
 загружается в CLR Editor. Эти факты сверены по текущим EditorPreview и Inspector
 и прежним native workflows; новых запусков ревизия не добавляет.
-Fixed camera,640×360,до64entities, child replacement и GPU-only Windows profile
-сохранены. Полный ED5 не закрыт: camera/picking/tools и их acceptance впереди.
+Базовый640×360/до64entities, child replacement на source revision и GPU-only Windows
+profile сохранены. ED5a.1–3 ниже добавляют transient camera и picking; полный ED5
+не закрыт: physical/lifecycle/delivery acceptance и tools остаются отдельными.
 
 - [x] Реализован первый совместный Editor/Aether режим preview, независимый от ручного
   Build/Play и пользовательского Game.Logic; game code не загружается в CLR Editor.
@@ -1176,25 +1245,151 @@ camera/selection отражаются на правильной revision. Cancel
 readonly/snapshot transaction contracts ARCH1c, а не прямые изменения runtime.
 
 <a id="ed5a-camera-picking"></a>
-### ED5a. Камера редактора и выбор объекта — предложено ревизией 2026-11-05
+### ED5a. Камера редактора и выбор объекта — v1 завершён в указанном scope 2026-11-08
 
-Первый крупный функциональный шаг после удобства Transform. До реализации выбрать
-camera state/projection и revision/identity contract с engine preview; не пытаться
-сразу вводить весь gizmo/toolset или live World API.
+Первый крупный функциональный шаг после удобства Transform. Единственный contract
+reference — [камера/selection v1](EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1).
+Детальные этапы реализации ведутся здесь; ED5a.1–4 завершены в bounded Windows x64 scope ниже. Hardware/platform gates сохранены явно.
 
-- [ ] Editor navigation/focus/capture/Esc отделены от gameplay. Камера не меняет
-  документ/history и не требует запуска пользовательского Game.Logic.
-- [ ] Picking возвращает entity из правильной presented scene/revision; tree,
-  inspector и viewport используют один selection owner. Background/stale frame/
-  удалённый entity и Play transition не назначают неправильный selection.
-- [ ] Camera/selection обновление не строит заново retained UI и не теряет draft
-  без существующей conflict/cancel policy. Resize/DPI/image letterboxing учитываются.
-- [ ] Прямые engine/Editor tests и source/published native proof проверяют camera,
-  selection/clear, stale frames, capture cancellation и shutdown ownership.
+<a id="ed5a0-contract"></a>
+**ED5a.0 — решения до кода, завершено2026-11-08.**
 
-Затем отдельный translation tool: drag preview→один commit/Undo либо cancel.
-Rotation/scale gizmos следуют после него; inspector numeric drag не считается
-реализацией viewport tool.
+- [x] Внешняя transient rigid/perspective camera: defaults прежнего preview,
+  conventions existing PerspectiveCamera/PrimitiveScene, canonical authoring/history
+  не меняются. RMB orbit/MMB pan/wheel dolly/F focus — будущий v1 input profile.
+- [x] Document/view/content/camera/surface/layout/selection intent fences;
+  Produced→actual Presented receipt, camera pending запрещает picking. Новый FrameId
+  того же semantic view не отменяет click, same-ID document reopen отменяет.
+- [x] Один selection owner EditorWorkspace; valid Hit/Miss использует существующую
+  tree selection/draft policy. Unavailable/stale/unsupported не превращается в clear.
+  Первый профиль — CPU ray по exact projected cubes с full affine transforms.
+- [x] Ownership/DI, bounded camera lane без child-per-move, versioned camera/frame
+  metadata prerequisite и границы mesh renderer/Play зафиксированы. Численный
+  [ManualTests probe](../../ManualTests/AetherCameraContractProbe/README.md)20/20
+  проверяет existing projection и prototype ray math. Это не production/navigation
+  или native proof; [результаты](HISTORY.md#ed5a0-contract-2026-11-08).
+
+<a id="ed5a1-camera-values"></a>
+**ED5a.1 — camera и geometry values: реализовано и проверено2026-11-08.**
+
+- [x] `PreviewCamera`: frozen rigid pose/pivot/distance/projection, positive ulong
+  revision, exact no-op, новая revision при rollback/navigation-state change,
+  checked overflow без wrap. Extent-dependent projection admission выполняется отдельно.
+  `PerspectiveProjection` содержит общую math/validation для external и ECS cameras;
+  прежний `PerspectiveCamera` API и44existing tests сохранены.
+- [x] `CameraProjection`, `ViewportImageBounds`, `Ray3`: frozen matrix/inverse/extent,
+  projection/unprojection, pixel center, half-open logical bounds без повторного DPI.
+  Near-to-far ray и full affine cube test сохраняют world t, включая scale/shear,
+  inside exit и parallel axes. Finite inverse проверяется обоими identity products.
+- [x] `PreviewPickSnapshot.Capture` копирует exact projected payload, persistent GUIDs
+  и draw order, заранее фиксирует inverses. Nearest Hit/exact ties, valid Miss и
+  Unavailable раздельны; unknown complete geometry profile/invalid inverse запрещают
+  весь query. Ни geometry result, ни scene ID/revision сами по себе не разрешают selection.
+- [x] Direct xUnit tests:77newcases, arbitrary rigid/Single/inverse failures,
+  clipping/inside/parallel/miss/overlap/ties, actual hierarchy/render projection,
+  scale/shear, pixel/DPI/letterbox/half-open, malformed IDs и source mutation.
+  Aether ECS/Rendering/Scenes/Preview1857/1857 каждый D/R; Editor1353/1353 Debug.
+  [Команды, failures и ограничения](HISTORY.md#ed5a1-values-2026-11-08).
+
+Runtime camera/frame metadata, presentation admission и UI не изменялись.
+ED5a.1–3 реализованы; итоговая ED5a.4 acceptance и её границы указаны ниже.
+
+<a id="ed5a2-preview-view"></a>
+**ED5a.2 — versioned preview view и actual presentation: реализовано2026-11-08.**
+
+- [x] `ShowViewAsync` принимает explicit opening/view/content context и initial camera
+  вместе с projected scene до frames. `QueueCamera` сохраняет один in-flight/control/
+  presentation wait + один latest waiting value, без child/surface/tick/build на move.
+  Show/Resize/Stop закрывают camera admission, отменяют presentation completion до
+  wait cancellation, drain-ят accepted control под собственным supervisor deadline.
+  Suspend хранит latest desired до Resume; errors/failed cleanup остаются owned/retryable.
+- [x] Control4/Frame2/Snapshot2, capability `PreviewViewVersion=1`, отдельные256-byte
+  `PreviewViewCodec` payload и148-byte stamp. CPU header1536/slot384 содержит explicit
+  field; GPU JSON требует stamp Version1 и exact frame/slot association. CPU reference
+  pattern остаётся untagged/non-pickable; GPU scene/stamp снимаются атомарно. Никакого
+  переопределения Tick/SceneRevision/timestamp/reserved v1 fields. Старые peers отвергаются.
+- [x] `PreviewPresentedView` создаётся только после successful actual ack, фиксирует
+  exact state/projection/extent/pick source/frame/image/clip/layout. `IsCurrent` проверяет
+  desired camera/context/runtime/surface без latest FrameId. `EditorSession.ReadPresentedView`
+  дополняет проверку live drawn layout/visibility и camera stamp; upload не считается
+  presented, разные FrameIds одного semantic view допускаются. Context/selection intent
+  owner и active-binding admission подключаются в ED5a.3.
+- [x]52new Aether +10new Editor cases; final bounded Aether2103/2103 D/R,
+  full Editor1363/1363 D/R. Source Debug/published Release actual GPU proof:50camera
+  samples с тем же PID/surface, shifted cube pixels, resize/suspend/resume, unchanged
+  document/history/selection,1child=reaped, ownership0 и validation0errors/0warnings.
+  [Команды, cancellation race fix и non-green full attempt](HISTORY.md#ed5a2-view-2026-11-08).
+
+Legacy `ShowAsync` сохраняет fixed/untagged API. Default GPU Editor consumer переведён
+на explicit path в ED5a.3 ниже; historical ED5a.2 native consumer проверял API без ввода.
+Fresh NuGet/full solution/full ED5a acceptance не объявлены.
+
+<a id="ed5a3-navigation-picking"></a>
+**ED5a.3 — retained input и общий selection path: реализовано2026-11-08.**
+
+- [x] Default GPU EditorPreview captures explicit view на requesting UI owner:
+  SceneDocumentState.OpeningId, exclusive ViewId, fresh committed ContentToken.
+  Camera сохраняется при Apply/Undo/Redo и сбрасывается при same-ID/same immutable
+  document reopen. External custom transport оставляет прежний legacy consumer.
+- [x] App-owned EditorViewportState и injected IFactory<EditorViewportController,
+  EditorViewportArguments>; product принадлежит View/UI parent. Один attached owner,
+  release не крадёт чужой binding; detach/dispose освобождает capture/subscriptions
+  и оставляет async Stop/drain у App coordinator. UI tree не пересоздаётся.
+- [x] RMB orbit (.008rad/logical pixel, pitch clamp), MMB pan с image logical height,
+  wheel exponential dolly, F fit selected affine cube. Routing уважает chrome/islands/
+  overlays/foreign capture; wheel не меняет focus, F требует canvas focus.
+  Camera-only сохраняет document/history/invalid draft; Esc/focus loss/capture
+  cancellation rollback получает новую revision; context change отбрасывает gesture.
+- [x] LMB down/up≤4logical pixels публикует hit/valid miss через EditorViewModel.
+  Same-ID сохраняет draft, different/clear применяет existing policy. Opening/view/
+  content/camera/surface/layout и монотонный selection intent проверяются после query
+  и release capture; pending camera/Play/unsupported не публикуют selection.
+- [x] Resize/render aspect/DPI/hide обновляют geometry admission без rebuild tree.
+  UI hide отменяет presentation waits и UI copies; latest desired возобновляется
+  с прежним child/surface, новая actual draw обязательна для picking. Initial hidden
+  default viewport ждёт visibility до Show; source queue остаётся one-current/latest.
+- [x]33new Editor +1Aether case. Full Editor1396/1396 и bounded Aether2104/2104 D/R,
+  native source Debug/published Release directed UiSession input:6GPU captures/profile,
+  hit/same/different/miss, invalid draft, orbit/pan/wheel/F/Esc, same child/surface,
+  document/history/tick unchanged, owners0, validation0/0. [Команды/ограничения](HISTORY.md#ed5a3-input-2026-11-08).
+
+На момент ED5a.3 physical/lifecycle/delivery acceptance оставалась открытой.
+Текущий результат — ED5a.4 ниже; исторический directed UI run сам её не доказывает.
+
+<a id="ed5a4-acceptance"></a>
+**ED5a.4 — сквозная приёмка v1: завершено2026-11-08 в bounded Windows x64 scope.**
+
+| Область | Проверки и фактическое evidence |
+| --- | --- |
+| Camera-only |50orbit samples, pan/dolly/F без document dirty/revision/history/Game.Logic/tick; stable PID/surface; invalid draft сохранён |
+| Presentation | Control ack и upload/draw не открывают picking; только actual Presented с exact camera/content stamp. Hidden-camera wait сохраняется до actual resume ack; найденный дефект исправлен |
+| Frame/context | New FrameId того же semantic view разрешён; changed camera/surface/layout, same-ID reopen, project/Stop/Play/delete отвергают old click;16новых Editor cases |
+| Selection | Два entities/same/background, общий tree/inspector intent, letterbox/overlay/unsupported и newer intent rejection; source/package GPU pixel comparisons |
+| Input/state | Directed UiSession/native GPU: capture/Esc/focus loss/detach, UI/render resize, minimize/latest/resume, reopen/project/Play/failure/cancel. DPI1/1.5/2 tests; actual monitor1.5 |
+| Ownership/delivery | Source Debug/published Release и independent fresh-package D/R:13groups/17PNG,9children=reaped,8GPU validation+1pre-GPU failure каждый. Windows SendInput Debug/published Release: hit/clear, invalid text, wheel/F, LMB drag, RMB/MMB release;1child=reaped каждый. All resources0/validation0errors/0warnings |
+
+- [x] Full Editor1412/1412 и bounded Aether2104/2104 каждый Debug/Release, failed0/skipped0.
+- [x] 15fresh packages,8headless Cobalt/MS DI delivery cases и2native GPU profiles;
+  no ProjectReference/framework source fallback, package/DLL hashes проверены.
+- [x] CLI, fixture, failure reports, retention, exact tests/commands и non-green attempts
+  записаны в [HISTORY](HISTORY.md#ed5a4-acceptance-2026-11-08).
+
+Граница input acceptance: Windows driver имеет только LMB drag. Moving RMB/MMB,
+Esc/focus loss при gesture подтверждены directed UiSession/native GPU и tests;
+physical held-RMB/MMB+Esc и multi-monitor DPI остаются отдельными hardware/input gates.
+Это не full-solution/full Aether, inspector ED4g.2a или device-loss/K7/VRAM acceptance.
+
+<a id="ed5b-translation"></a>
+### ED5b. Translation tool — следующий запланированный контракт
+
+- [ ] Сначала определить оси/плоскости, hit admission по actual view, world/local
+  semantics и transient drag preview; canonical document не менять на каждом move.
+- [ ] Согласовать один commit/Undo на release либо cancel без history, invalid draft/
+  selection policy, Esc/focus/capture/context loss и stale-source fences.
+- [ ] Зафиксировать ownership/DI и tests/native/package acceptance до реализации.
+
+Rotation/scale gizmos следуют после translation; inspector numeric drag не считается
+viewport tool. Live World editing и Game Play camera остаются отдельными.
 
 ## ED6. Игровой цикл разработки
 

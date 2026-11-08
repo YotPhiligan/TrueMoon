@@ -8,23 +8,161 @@ Solution Debug build0errors, новых warnings0; [результаты и ко
 Следующая самостоятельная visual-quality задача остаётся PA8c.0; physical/K7/K8 gates открыты.
 
 <a id="current-ui-queue"></a>
-## Текущая очередь — ревизия 2026-11-05
+## Текущая очередь — актуализация 2026-11-08
 
 UIA2 Window и UIA3 compact/numeric editors реализованы в проверенных scopes.
-Ближайший прикладной consumer — [ED4g.3/4, затем ED5a](../engine/EDITOR_PLAN.md#current-editor-queue).
+ED4g.3 group reset и ED4g.4 rad/deg завершены без новых generic controls;
+ED5a camera/picking завершён в bounded scope, далее ED5b translation contract.
 Общие capabilities добавлять по этому consumer, не переносить document/history/
 angle-unit policy в Argentis и не ставить выполненный Window повторно как feature.
 
+Закрыто в текущем UI потоке: [PA8c.3a](#pa8c3a-system-fonts) и
+[PA8c.3b](#pa8c3b-default-fonts) — системный каталог, веса и default Variable Text
+во фреймворке/Editor; повторное подключение шрифтов не является следующей задачей.
+[Контракт ED5a.0](../engine/EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1) зафиксирован;
+ED5a.1 values и ED5a.2 versioned transport/actual receipt реализованы в Aether/Editor;
+ED5a.3/4 navigation и bounded acceptance завершены; далее ED5b translation contract.
+UIA3d реализовал validation/shadows; UIA3d.1 исправил Vulkan frosted barrier и проверен отдельно.
+Детальные Editor задачи и acceptance — в Editor плане.
+
 | Трек | Следующий результат | Граница |
 | --- | --- | --- |
+| Реализовано и проверено | UIA3d validation/shadows, UIA3d.1 Vulkan, UIA3d.2 badge/audit и UIA3d.3 TextBox line fit | [UIA3d.1](#uia3d1-vulkan-backdrop): source/published frosted3backend и fresh5package Vulkan прошли; wider release отдельно |
 | Numeric acceptance | Physical arrows/modifiers/captured Esc/OS pointer modifiers | Unverified input не равен доказанному hardware defect; routed input не заменяет этот proof |
-| Качество отображения | PA8c.0 baseline текста/геометрии/композиции, затем PA8c.1/2 по дефектам | Не менять hinting/AA/fonts до baseline |
+| Качество отображения | PA8c.0 baseline на текущем default Variable Text, затем PA8c.1/2 по наблюдаемым дефектам | Включить наблюдаемый shadow-overlap: 2pixels delta3/255 в дополнительной Light200 GL композиции UIA3d.2; основной D/R profile прошёл. Новые hinting/AA/metrics требуют сравнения |
+| Входящие заявки Studio | Разобрать ui.resizable-panes | Заявка proposed; принятие/приоритет через Claim.json и Decision владельца, реализация не начата этой ревизией |
 | Инфраструктура | Оставшийся INF5 по реальному diagnostics consumer | Не полный redesign scheduler/DI |
 | Release | Wider Window/backend/package, physical K3/K7/K8/VRAM/final alpha matrix | Отдельное окружение/выбранный scope; остановленный поиск NVIDIA workaround не возобновлён |
 
 K1–K9, PA1–PA10, net10.0/xUnit и их критерии сохранены. Hardware/release gates
 ограничивают готовность выпуска, не требуют завершить весь alpha перед каждым
 прикладным UI изменением. Датированные маршруты ниже не заменяют эту очередь.
+
+<a id="uia3d-validation-shadows"></a>
+## UIA3d. Значок валидации и тени поверхностей — 2026-11-08
+
+Реализовано и проверено перед ED5b в указанном scope. Детальная задача
+ведётся здесь; Editor — consumer существующих моделей validation/draft.
+
+- [x] TextBox/RichTextEditor и внутренний TextBox NumberBox: красный геометрический
+  значок справа у границы при HasError, отдельное ErrorMessage от валидатора;
+  текст/каретка не заходят под значок. Промежуточный ввод не нормализуется.
+- [x] Наведение именно на значок показывает delayed tooltip с полным сообщением,
+  переносом строк и границами viewport. Без смены focus/capture/selection; закрыть
+  при уходе/input/focus loss, снятии/смене ошибки, hide/detach/dispose/layout change.
+  Общая копируемая диагностика инспектора сохранена; inline error rows заменены.
+- [x] Общий immutable shadow value и свойство оформления; Theme.PanelShadow и
+  MenuShadow. Skia рисует Gaussian outer shadow с offset/radius до содержимого,
+  вне собственной границы, внутри ancestor clip; opacity применяется ко всему.
+  Панели Editor и MenuPopup получают themed shadows; local null отключает эффект.
+- [x] Не расширять layout/hit area, не затенять прозрачную середину/backdrop,
+  не создавать per-frame retained GPU resources или idle animation. Legacy drawing
+  contexts без optional shadow capability продолжают работать без тени.
+- [x] Проверки: icon/text geometry и retained editing, exact tooltip/error lifecycle,
+  theme/style precedence, clipping/opacity/DPI1/1.5/2 raster, D/R UI/Hosting/Editor,
+  source/published visual proof. Фактический scope отдельно в STATUS/HISTORY.
+
+UI1170/Hosting154/Editor1412 каждый D/R, source Debug/published Release3backend
+matrix и fresh4package raster consumer прошли. Первоначальный native gallery menu
+был opaque; последующий UIA3d.1 frosted gate ниже закрыт. [Команды/границы](HISTORY.md#validation-shadows-2026-11-08).
+
+<a id="uia3d3-textbox-line-fit"></a>
+### UIA3d.3. Полная строка в компактном TextBox — 2026-11-08
+
+Реализовано и проверено по screenshot пользователя: fixed Height32 с default Padding8 обрезал
+низ строки default Segoe UI Variable Text16/600 (line box больше16).
+
+- [x] При недостатке внутренней высоты уменьшаются эффективные вертикальные отступы,
+  сохраняя полный измеренный line box, центровку, горизонтальный clip и error badge.
+  Не менять font size, fixed Height, draft, caret/selection или обрезку за Bounds.
+- [x] Exact raster regression против просторного поля с тем же текстом/шрифтом: default,
+  error/selection, NumberBox, Dark/Light и synthetic1/1.5/2. Auto-height и asymmetric
+  padding сохранить; физически слишком низкое поле всё равно ограничено Bounds.
+- [x] Обновлённые source Debug/published Release3backend previews, D/R UI/Hosting/
+  Editor проверки: UI1184/Hosting154/Editor1412 каждый D/R,18PNG/12comparisons и
+  Vulkan0/0/profile. [Причина/проверки/границы](HISTORY.md#textbox-line-fit-2026-11-08).
+
+<a id="uia3d2-validation-badge"></a>
+### UIA3d.2. Квадратный блок валидации и аудит полей — 2026-11-08
+
+Реализовано и проверено в bounded scope; прежний значок UIA3d заменён
+сплошным блоком цвета ошибки справа, стороной в высоту поля. В узком поле блок
+ограничен границами контрола. Контрастный символ — Theme.OnError; tooltip работает
+на всём блоке, focus и текст остаются в редактируемой части.
+
+- [x] TextBox/RichTextEditor, auto-height/wrapping и NumberBox; local/style priority,
+  draft, selection, focus и tooltip lifecycle сохранены.
+- [x] Аудит потребителей: исправлены пропущенные сообщения/привязки;
+  отклонённый ввод отделён от общей диагностики команд и read-only текста.
+- [x] Геометрия/контраст/input regression, D/R suites, source/published raster/GL/Vulkan
+  previews; UI1176/Hosting154/Editor1412 каждый D/R, fresh5package Vulkan6cases D/R.
+  [Аудит/tests/границы](HISTORY.md#validation-badge-2026-11-08).
+
+<a id="uia3d1-vulkan-backdrop"></a>
+### UIA3d.1. Vulkan frosted backdrop — исправлено и проверено 2026-11-08
+
+- [x] Native cause установлен: pinned GrVkImage GENERAL access включает HOST_WRITE,
+  source stages были ALL_COMMANDS без HOST. Добавлен HOST к GENERAL source stage,
+  access/остальные layouts/ABI/ownership сохранены. Reproducible patch включён в
+  native apply/build scripts только для pinned4.155.0; DLL+metadata установлены.
+- [x] Actual blur witness на чёрно-белой подложке и frosted default gallery;
+  source Debug/published Release3backend Dark/Light1/1.5/2 прошли18PNG/12comparisons
+  и6Vulkan validation0/0 reports каждый. Opaque/no-shadow controls также прошли;
+  старая DLL дала прежний VUID, disabled-blur control отклонён pixel witness.
+- [x] ABI/readback/return18 и composition36/leases18 с validation0/0; UI1170,
+  Hosting154, Editor1412 каждый D/R; fresh5package Vulkan consumer D/R по6cases,
+  native SHA совпал. [Команды/хеши/ограничения](HISTORY.md#vulkan-backdrop-2026-11-08).
+
+Default backdrop/blur/shadow сохранён. Нет suppression validation/CPU fallback.
+Wider K7/device-loss/VRAM/physical/swapchain и полный release остаются отдельно.
+
+<a id="pa8c3a-system-fonts"></a>
+## PA8c.3a. Opt-in системные шрифты и веса — 2026-11-07
+
+**Статус: завершён в проверенном scope.** Прежняя opt-in граница этого этапа
+сохранена ниже как решение07ноября; текущий default определён PA8c.3b.
+
+Принято и реализовано по прямому запросу пользователя: отдельные family/weight/
+italic в UI, общий measure/draw/cache путь; явная policy requested family →
+ordered system families → file catalog/system default. Файловые каталоги остаются
+детерминированными; default typography/hinting/AA не меняются. Изменение ограничено
+Argentis/Skia и existing Hosting catalog overloads, без зависимости от Nom.
+
+До правок сохранены и просмотрены исходные raster font samples/layout1/1.5/2;
+прежние pixels/layout после изменения совпадают. Acceptance этого bounded среза:
+style/theme/local invalidation,400/600/italic, fallback order/immutable config,
+same-font metrics/pixels/caret, Rich/Bold/Undo, bounded ownership, source Debug и
+published Release3backends, independent package-only consumer. Проверено в этих
+scopes; [точные результаты и команды](HISTORY.md#system-fonts-2026-11-07).
+
+Это не закрытие всего PA8c.0/3/5/6: arbitrary variation axes/automatic opsz,
+per-glyph fallback/shaping для plain text, physical DPI, performance/VRAM и wider
+package GPU/Hosting acceptance остаются отдельными задачами. Выбор default отдельным opt-in стилем был границей PA8c.3a;
+текущий framework default принят и проверен в PA8c.3b.
+
+<a id="pa8c3b-default-fonts"></a>
+## PA8c.3b. Общая default typography и Editor — 2026-11-08
+
+**Статус: завершён в описанном source/publish/package scope.** Более широкая
+PA8c/physical/release acceptance остаётся у своих этапов.
+
+По прямому запросу пользователя принято продолжение PA8c.3a: FontDefaults.Family=
+Segoe UI Variable Text для Theme/UiProperties/новых controls и Rich fallback;
+SystemDefault: requested → preferred → Segoe UI → system default. Явный file
+catalog сохраняет своё назначение. В Editor host/пример добавлен Noto/OFL final
+fallback; --font примера остаётся явным file-only override. Это меняет прежнее
+решение PA8c.3a оставить смену default отдельному consumer; baseline сохранён.
+
+Custom caption/hint/status/viewport согласуют measure/draw weight/italic, palette
+switch сохраняет все4typography параметра. Semibold600 — scoped title styles,
+основной текст regular400. Default policy не владеет native resources; прежние
+App/Cobalt/factory/surface lifetimes, file catalogs и native ABI сохранены.
+
+Реализовано и проверено в [указанных source/publish/package scopes](HISTORY.md#default-fonts-2026-11-08):
+Alloy1126/Hosting154/Editor1300 каждый D/R,4native Editor profiles и default
+3backend gallery. Automatic opsz, plain glyph shaping, full physical/release/
+performance acceptance не закрыты этим срезом. Детальный task ведётся здесь;
+[Editor plan](../engine/EDITOR_PLAN.md#editor-default-typography) ссылается на него.
 
 <a id="uia3c-numeric-gestures"></a>
 ## UIA3c. Numeric step/drag — 2026-11-05
@@ -43,7 +181,7 @@ Native follow-up [ED4g.2a](../engine/EDITOR_PLAN.md#ed4g2a-native-numeric)
 Platform.Silk сохраняет ordered cursor position для button/wheel input и передаёт
 Shift/Ctrl в pointer events. Windows drag/release/Esc/Ctrl+Enter/Undo подтверждены
 отдельно от routed arrows/captured cancel. Physical arrows, Esc во время удержания
-кнопки и pointer modifiers остаются отдельными gates; затем group reset/angle units.
+кнопки и pointer modifiers остаются отдельными gates; ED4g.3/4 group reset/angle units завершены, далее ED5a.
 
 ## UIA3. Компактные редакторы и семантические цвета — 2026-11-05
 
@@ -1574,3 +1712,12 @@ Engine transport/process ownership остаётся в Aether, без UI depende
 [engine плане](../engine/PLAN.md#eng4d-gpu-viewport-bridge--2026-10-20).
 Reference viewport proof не закрывает ordinary GameEditor GPU integration,
 zero-copy/performance или K3/K7/K8/VRAM/final UI acceptance.
+
+
+## Входящие заявки приложений — 07.11.2026
+
+Дополнительная очередь для разбора владельцем UI — [каталог заявок Alloy](../requests/alloy/).
+[Правила владения и параллельной работы](../requests/README.md).
+Первый consumer — [регулируемые панели Studio](../requests/alloy/20261107-studio-resizable-panes-5d593644/Request.md).
+Запрос находится в proposed; активная очередь выше и согласованные API сохраняются
+до решения владельца. Новые заявки добавляются отдельными каталогами без правки этого списка.

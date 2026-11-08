@@ -1,5 +1,470 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="textbox-line-fit-2026-11-08"></a>
+## UIA3d.3: TextBox не обрезает строку внутренними отступами — 2026-11-08
+
+Пользователь заметил обрезанный снизу текст в результате UIA3d.2
+(`AIR_Screenshot_2026-11-08_22-47-12.png`). На снимке — fixture TextBox Height32,
+default Segoe UI Variable Text16/600 и Padding8. Для строки оставалось16logical
+pixels, тогда как measured line height больше16. DrawCore ограничивал lineHeight
+высотой padded area и клипал по той же области; baseline оказывался слишком низко.
+Это fixed-height пример со штатными шрифтом/отступами, не natural auto-height поле.
+
+TextBox сохраняет полный измеренный line box. Если font+padding не помещаются,
+эффективные вертикальные отступы уменьшаются, сохраняя их top/bottom пропорцию.
+Позиционирование по Padding отделено от clip: вертикальная обрезка идёт по внутренней
+границе border, сохраняя glyph ink и сглаженные края selection; horizontal viewport
+по-прежнему исключает padding справа и validation badge. Field Height, FontSize,
+Value, focus, selection и scroll semantics сохранены. NumberBox получает исправление
+через тот же TextBox; default auto-height по-прежнему резервирует line+Padding.
+Если сама физическая высота поля меньше строки с рамкой, внешние Bounds остаются
+ограничением; текст не масштабируется и fixed Height принудительно не увеличивается.
+Публичных API, зависимостей или native DLL изменений нет; Nom не менялся.
+
+| Требование | Evidence |
+| --- | --- |
+| «не обрезало текст» | `CompactTextBox_PreservesCompleteGlyphsAndSelectionLikeSpaciousField`: exact raster pixel equality между Height32 и Height48 со сдвигом8logical pixels, Latin/Cyrillic descenders/diacritics, TextBox/NumberBox, Dark/Light, error/no error, selected/unselected, synthetic1/1.5/2. |
+| Natural height и заданные отступы | `DefaultAutoHeight_StillReservesFontLineAndConfiguredPadding`. |
+| Baseline/caret/selection и очень низкое поле | `TextBox_TextSelectionAndCaretShareVerticallyCenteredLineBox`: explicit expected rectangles для normal/asymmetric/compact/physically-too-short height. |
+
+Regression до изменения: baseline.log/TRX — 6pixel cases failed, auto-height case
+passed. После первого исправления Scale2 выявил ещё два clipping cases: clip точно
+по fractional line box отсекал AA край selection. Вертикальный clip расширен до
+interior border; итоговое сравнение **exact**, tolerance не добавлен. Полные suites
+ниже включают final selected/unselected cases; промежуточные ошибки сохранены.
+
+Фактические новые проверки Windows x64 / SDK10.0.403 / net10.0 / xUnit2 VSTest:
+
+| Scope | Debug | Release |
+| --- | --- | --- |
+| TrueMoon.Alloy.Tests | 1184/1184 | 1184/1184 |
+| TrueMoon.Alloy.Hosting.Tests | 154/154 | 154/154 |
+| TrueMoon.Aether.Editor.Tests | 1412/1412 | 1412/1412 |
+| Source/published renderer fixture | 18PNG/12full-frame comparisons | 18PNG/12full-frame comparisons |
+
+Failed0/skipped0 во всех final suites. Renderer: Raster/OpenGL/Vulkan × Dark/Light ×
+synthetic1/1.5/2; layout, real solid badge, exact live tooltip, selection/focus/idle/
+cleanup и actual menu blur прошли. Vulkan6reports/profile errors0/warnings0 including
+teardown. Прежние flat2/255 + symmetric1px envelope/32 comparison thresholds
+сохранены. Published dark150/light100 PNG осмотрены: строка целиком, без обрезки снизу.
+
+Evidence: `TestResults/TextBoxViewport-1794160248/`: baseline/fixed/fixed-complete
+logs/TRX, ui-/hosting-/editor-debug/release logs, уникальные binlogs, gallery-debug/
+report.json и gallery-release/report.json,36PNG. Основные команды:
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c Debug --artifacts-path TestResults/TextBoxViewport-1794160248/ui-debug --logger 'trx;LogFilePrefix=ui-debug' --results-directory TestResults/TextBoxViewport-1794160248/tests '-bl:TestResults/TextBoxViewport-1794160248/ui-debug-{}.binlog'
+# То же Release; Hosting/Editor — их csproj, собственные artifact/log/binlog paths.
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug --artifacts-path TestResults/TextBoxViewport-1794160248/native-debug '-bl:TestResults/TextBoxViewport-1794160248/native-debug-{}.binlog'
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --artifacts-path TestResults/TextBoxViewport-1794160248/native-release -o TestResults/TextBoxViewport-1794160248/published '-bl:TestResults/TextBoxViewport-1794160248/native-release-{}.binlog'
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/EditorWindow-20261104/tools/validation).Path
+dotnet TestResults/TextBoxViewport-1794160248/native-debug/bin/AlloyVulkanTest/debug/AlloyVulkanTest.dll --validation-shadows --design-output TestResults/TextBoxViewport-1794160248/gallery-debug --validation
+dotnet TestResults/TextBoxViewport-1794160248/published/AlloyVulkanTest.dll --validation-shadows --design-output TestResults/TextBoxViewport-1794160248/gallery-release --validation
+```
+
+Текущий scope не включает fresh NuGet consumer, physical input/DPI/multi-monitor,
+native Editor workflow, full solution/Aether или release gates. Предыдущие UIA3d.2
+fresh-package results не переобъявлены текущими. Дополнительный lower-field tooltip
+shadow-overlap случай (2pixels delta3/255 из UIA3d.2) остаётся открытым в PA8c.0;
+этот TextBox fix не заявляет его исправление. Следующий UI шаг — PA8c.0 visual
+baseline, самостоятельный Editor contract — ED5b. Shared docs: fresh SHA + atomic replace.
+
+
+<a id="validation-badge-2026-11-08"></a>
+## UIA3d.2: квадратный блок валидации и аудит потребителей — 2026-11-08
+
+Запрос: сплошной цветной квадрат справа, стороной в высоту текстового поля,
+со значком проблемы; проверить места, где оформление ещё не применено.
+[UIA3d.2](PLAN.md#uia3d2-validation-badge) завершён в указанном ниже scope.
+
+TextBox/RichTextEditor рисуют заполненный Theme.Error блок по всей высоте поля;
+Theme.OnError задаёт контрастный центрированный символ14px (Dark18/22/30,
+Light255/255/255). В узких полях ширина ограничена Bounds, текстовый viewport
+неотрицателен. ValidationIconBounds теперь обозначает весь badge/hit target.
+Focus-контур ограничен редактируемой частью; внешний local/style border сохраняет
+приоритет. Draft, caret, selection, history и размеры fixed-height поля сохранены.
+RichText auto-height измеряет перенос с учётом растущего квадратного блока;
+монотонный bounded расчёт начинается заново при resize и допускает уменьшение.
+NumberBox передаёт HasError/ErrorMessage внутреннему Editor как fallback после
+local/element style/view style; внешний дублирующий error stripe не рисуется.
+
+Аудит tracked+untracked C# через git ls-files и Select-String; вывод:
+`TestResults/ValidationBadge-1794158768/consumer-audit.txt`. Nom не менялся.
+
+| Потребитель | Результат |
+| --- | --- |
+| Inspector compact Transform, generic Number/String и прежний EditorTransformView | HasError/ErrorMessage уже переданы реальному input; новый badge применяется общим renderer. Проверены существующими Editor suites. |
+| Hierarchy inline rename | Исправлен пропуск: RenameError/HasRenameError только для InvalidName, привязаны к NameEditor. Отклонённый draft/история сохранены; новый ввод/Cancel/context reset снимают field error. Общая диагностика команд остаётся отдельной. |
+| DefaultStyleGallery | Вместо inline ErrorLabel поле содержит ErrorMessage; добавлен OverlayHost для действительного tooltip. Исходник галереи включён в существующий UI test project, отдельная runtime проверка прошла. |
+| NumberBox public composite state | Исправлен framework gap: parent local/style validation виден Editor, внутренние overrides приоритетнее. Native fixture использует parent state. |
+| Documents Open/Save paths, Diagnostics export path | Общие результаты async command/IO/admission не являются адресным состоянием validator поля; их не привязывали ко всем inputs. Политика paths не менялась. |
+| Diagnostics filters, Hierarchy search, demo Settings name | Строковые query/single-line drafts без отдельного отклонённого validator state; дополнительный HasError не выдумывался. |
+| Read-only diagnostics/status/error text и nullable empty-value label | Это вывод состояния, не editable text field; отдельные семантические маркеры/копирование сохранены. |
+
+Новые/обновлённые directed tests:
+`ValidationBadge_FillsEntireSquareWithContrastingCenteredSymbolAndSeparateFocus`
+(Dark/Light, raster fill, контраст>=4.5, tooltip по краю за пределами glyph),
+`NumberBox_ParentValidationFlowsToEditorWithLocalAndStylePrecedence`,
+`RichValidationBadge_AutoHeightWrapsAgainstItsOwnHeightAndReturnsToIdleAfterResize`,
+`DefaultStyleGallery_RejectedDraftHasFullBadgeAndWorkingValidatorTooltip`,
+`Rename_InvalidDraftRetainsInputAndEmptyDraftRestoresFallbackWithoutChangingId`.
+Существующие validation lifecycle, narrow0/8/16, selection/focus и outline tests
+обновлены на квадратную геометрию. 36validation cases, 18hierarchy cases прошли.
+
+Фактические новые проверки Windows x64 SDK10.0.403 / net10.0 / xUnit2 VSTest:
+
+| Scope | Debug | Release |
+| --- | --- | --- |
+| TrueMoon.Alloy.Tests | 1176/1176 | 1176/1176 |
+| TrueMoon.Alloy.Hosting.Tests | 154/154 | 154/154 |
+| TrueMoon.Aether.Editor.Tests | 1412/1412 | 1412/1412 |
+| Shared renderer gallery | 18PNG /12full-frame comparisons | 18PNG /12full-frame comparisons |
+| Fresh5package external Vulkan consumer | 6cases | 6cases published |
+
+Все перечисленные final runs: failed0/skipped0; Vulkan6reports/profile errors0/
+warnings0 including teardown. Gallery: Raster/OpenGL/Vulkan × Dark/Light × synthetic
+1/1.5/2; square geometry и solid fill проверены до открытия перекрывающего нижние
+поля tooltip, затем exact message/focus/selection/idle/cleanup и actual menu blur.
+Пороги comparison сохранены: flat2/255, symmetric1px edge envelope/32. Старый
+Vulkan HOST stage fix и DLL SHA B1C01F7D0A6DCCF9CD9CEF0027306B89EC84A71487825519EE3BCEC72D2E1754
+сохранены. Source/published reports находятся в gallery-debug/report.json и
+gallery-release/report.json внутри указанного TestResults каталога.
+
+Свежий package consumer дополнен TextBox/NumberBox/RichTextEditor, square/fill,
+Theme.OnError, parent validation и actual500ms tooltip/selection/idle checks.
+5nupkg из private feed, consumer вне checkout, private cache; Debug build/run,
+Release publish/run, Native SHA и teardown0/0 подтверждены. 12PNG сохраняют состояние
+до tooltip, само popup состояние проверено отдельно после capture. Evidence:
+packages/verification.json, native-debug.json, native-release.json.
+
+Команды (везде отдельный `-bl:TestResults/ValidationBadge-1794158768/<name>-{}.binlog`):
+
+```powershell
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c Debug --artifacts-path TestResults/ValidationBadge-1794158768/artifacts-debug
+# То же Release; Hosting и Editor — собственные hosting-/editor-debug/release paths.
+# TRX --logger trx;LogFilePrefix=<name> --results-directory .../tests.
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug --artifacts-path TestResults/ValidationBadge-1794158768/native-debug
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --artifacts-path TestResults/ValidationBadge-1794158768/native-release -o TestResults/ValidationBadge-1794158768/published
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/EditorWindow-20261104/tools/validation).Path
+dotnet TestResults/ValidationBadge-1794158768/native-debug/bin/AlloyVulkanTest/debug/AlloyVulkanTest.dll --validation-shadows --design-output TestResults/ValidationBadge-1794158768/gallery-debug --validation
+dotnet TestResults/ValidationBadge-1794158768/published/AlloyVulkanTest.dll --validation-shadows --design-output TestResults/ValidationBadge-1794158768/gallery-release --validation
+./ManualTests/AlloyVulkanTest/VerifyBackdropPackages.ps1 -ValidationDirectory TestResults/EditorWindow-20261104/tools/validation -EvidenceDirectory TestResults/ValidationBadge-1794158768/packages
+```
+
+Первые тестовые попытки сохранены отдельно: два неверных test assumptions
+(Light.OnError совпадает с цветом background, default16px line выше18px) исправлены;
+hierarchy error UI использует настоящий rich backend вместо простого fake.
+Первый gallery fill sample попадал под popup — перенесён до его открытия.
+Дополнительная композиция с hover у нижнего RichText поля, вместо исходного
+TextBox, дала **2pixels outside tolerance** в Light200 OpenGL у перекрытия теней,
+вне badge. Первый (1077,457): raster254/254/254, GL251/251/251, delta3/255.
+Её PNG/log сохранены в gallery-debug-visible; это не passing full-frame run.
+Основная исходная композиция прошла D/R без изменения tolerance. Дополнительный
+shadow-overlap случай оставлен в PA8c.0 для широкой visual baseline, не объявлен
+исправленным и не переносится на Vulkan barrier/validation readiness.
+
+Physical input/DPI/multi-monitor, full solution/Aether, VRAM/K7/K8 и release gates
+этой задачей не проверялись. Следующий UI шаг — PA8c.0, включая указанный overlap;
+следующий самостоятельный Editor contract — ED5b. Shared docs обновлены с fresh SHA.
+
+
+<a id="vulkan-backdrop-2026-11-08"></a>
+## UIA3d.1: исправление Vulkan backdrop barrier — 2026-11-08
+
+Запрос: «Исправь Vulkan-дефект размытого backdrop у контекстного меню».
+[UIA3d.1](PLAN.md#uia3d1-vulkan-backdrop) завершён в Windows x64/pinned SkiaSharp4.155.0
+scope. Сохранены прежние dirty UI/Editor/ED5a файлы, parallel Nom, solution/
+dependencies и src/.codex. Постоянные package versions и публичные managed API,
+native ABI v1/descriptor48bytes, ownership и compiler/App/DI contracts не менялись.
+
+### Причина и исправление
+
+В pinned Skia `src/gpu/ganesh/vk/GrVkImage.cpp` функция
+`LayoutToSrcAccessMask(GENERAL)` включает HOST_WRITE, но парная
+`LayoutToPipelineSrcStageFlags(GENERAL)` возвращала только ALL_COMMANDS.
+ALL_COMMANDS охватывает queue commands, HOST — отдельная host pseudo-stage:
+[первичный Vulkan contract](https://docs.vulkan.org/refpages/latest/refpages/source/VkPipelineStageFlagBits.html).
+При backdrop snapshot/copy temporary image проходит через GENERAL; source stage
+не поддерживала объявленный source access. Core validation выдавал
+`VUID-vkCmdPipelineBarrier-pImageMemoryBarriers-02819`, в том числе без shadow.
+
+Адресная правка: GENERAL source stage теперь ALL_COMMANDS|HOST. Source access
+маска сохранена, остальные layouts, queue indices, descriptor/lease protocol и
+shader/blur path не менялись. Никаких suppression validation, opaque fallback,
+отключения blur/shadow или CPU readback в production draw не добавлено.
+
+Versioned `NativeInterop/vulkan-general-host-stage.patch` применяется
+`ApplyVulkanGeneralStage.ps1` только к pinned Skia
+c2d78902a56e24827a7273a4ed3461ce18780680 (SkiaSharp
+d25e7fa628a2576e50ecc42004cc4fd03c6657f5). ApplyNativeInterop вызывает его для4.155.0;
+forward applicability, apply и повторный/reverse check выполнены. Неизвестный
+source revision/неподходящий hunk отвергается. Изменения upstream source вне
+extension + этого hunk не выполнялись; commits/publication отсутствуют.
+
+BuildNativeInterop source build/Cake/Ninja/MSVC прошёл сначала без установки.
+Candidate прошёл исходный18image frosted reproducer, затем DLL установлена вместе
+с build metadata/source patch hash. Extended exports/ABI сохранены.
+
+| Артефакт | SHA256 |
+| --- | --- |
+| Прежняя libSkiaSharp.dll |229C431C90DC69FFBC1F4C4864025297D33535E5AE73E2F8254756E011E86C0C|
+| Исправленная libSkiaSharp.dll |B1C01F7D0A6DCCF9CD9CEF0027306B89EC84A71487825519EE3BCEC72D2E1754|
+| Source patch |58F1F52FD510A5EA234AFCCBCA35DC220B4A9832F5BAB509C0D6169B34E0AEBC|
+
+### Regression witness
+
+Manual `--validation-shadows` теперь по умолчанию использует настоящий frosted
+MenuBackdrop, соответствующий framework default. `--design-frosted-menu` сохранён;
+`--design-opaque-menu` и `--design-no-shadows` — явные controls. Под меню добавлен
+чёрно-белый фон, расширенный на весь Gaussian halo. В bottom padding без текста
+проверяется смешивание по обе стороны границы с учётом tint alpha. Dark100:
+actual red43/57 против12.42353/91.42352 без blur, одинаково raster/GL/Vulkan.
+Все18captures/profile сохраняют independent BlurWitness. Просто снять blur,
+закрасить меню opaque или обойти проблемный draw теперь недостаточно для pass.
+`--design-no-blur` — отрицательный control: сообщение `Backdrop blur missing`.
+
+`FontTypographyProbe.ExerciseDecorations` проверяет actual blur вместе с UI
+draft/selection/tooltip и exact geometry; `Run` требует core/sync validation0/0
+для каждого Vulkan device включая teardown. Пределы pixel comparison не менялись:
+flat2/255, symmetric1px edge envelope/coverage32 для decorations.
+
+### Фактические запуски
+
+Run root: `TestResults/VulkanBackdrop-1794155634`, SDK10.0.403/net10.0/xUnit2/VSTest.
+MSVC Build Tools18/MSVC14.51/Spectre, Python3.13.17/Ninja1.13.2 из ранее проверенного
+локального toolchain; установка compiler/driver/SDK и смена системных настроек
+не требовались. Native source pins те же, новый native revision не подставлялся.
+
+```powershell
+$r='TestResults/VulkanBackdrop-1794155634'
+$env:PYTHONHOME='C:/Program Files/LibreOffice/program/python-core-3.13.17'
+$env:PATH='C:/Program Files/LibreOffice/program;'+$env:PATH
+./ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 -SkiaSharpSourcePath TestResults/SkiaSharp41550-20261107/SkiaSharp -VisualStudioPath 'C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools' -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.17/bin/python.exe' -NinjaPath TestResults/SkiaSharp41550-20261107/tools/ninja/ninja.exe -InstallToRenderer
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/EditorWindow-20261104/tools/validation).Path
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug --artifacts-path "$r/artifacts-debug" "-bl:$r/final-debug-{}.binlog" --verbosity quiet
+dotnet "$r/artifacts-debug/bin/AlloyVulkanTest/debug/AlloyVulkanTest.dll" --validation-shadows --design-output "$r/final-debug" --validation
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --artifacts-path "$r/artifacts-release" -o "$r/published" "-bl:$r/final-release-{}.binlog" --verbosity quiet
+dotnet "$r/published/AlloyVulkanTest.dll" --validation-shadows --design-output "$r/final-release" --validation
+```
+
+| Проверка | Результат |
+| --- | --- |
+| Live before/current old-DLL control | VUID02819 воспроизведён, exit nonzero; старая DLL сохранена в raw artifacts |
+| Candidate source build, до vendor install | Исходный frosted matrix passed,18PNG/12comparisons,0/0validation |
+| Final source Debug и published Release | Каждый: raster/OpenGL/Vulkan × Dark/Light × synthetic1/1.5/2,18PNG/12comparisons,18actual blur witnesses,6Vulkan reports errors0/warnings0 включая teardown, exit0 |
+| Verified no-shadow frosted control |18PNG/12comparisons, actual blur,0/0validation; report.Shadows=false проверен |
+| Verified opaque control |18PNG/12comparisons,0/0validation; report.OpaqueMenu=true проверен |
+| Старый native на новом contrast fixture | VUID02819/exit nonzero; positive blur witness не скрывает native sync defect |
+| Disabled-blur negative control | Exit nonzero, `Backdrop blur missing`; validation-only success не засчитывается |
+| `--interop --validation` |18external readbacks, layout return/redraw/recreation/2contexts, core+sync0errors/0warnings включая disposal |
+| `--interop-compose --validation` |36GPU compositions/18leases, premultiplied alpha/text/layout return, core+sync0errors/0warnings включая disposal |
+| Full Alloy D/R |1170/1170 каждый, failed0/skipped0 |
+| Full Hosting D/R |154/154 каждый, failed0/skipped0 |
+| Full Editor D/R |1412/1412 каждый, failed0/skipped0 |
+
+TRX: `{alloy,hosting,editor}-{debug,release}.trx`. Команда каждого suite:
+`dotnet test <project>/<project>.csproj -c <Debug|Release> --artifacts-path <unique-per-suite> --logger "trx;LogFileName=<name>.trx" --results-directory "$r/results" "-bl:$r/<name>-{}.binlog" --verbosity quiet`.
+Native binary copied hashes в Debug/publish и source metadata совпали. Просмотрен
+published Vulkan Light150: blur transition присутствует, controls/text сохранены.
+Это renderer/offscreen и existing interop scope; отдельный Editor workflow с
+runtime child, native swapchain/K7/device-loss/VRAM/physical DPI не повторялся.
+Full solution/full Aether/Nom этим исправлением не запускались.
+
+### Свежие пакеты
+
+Versioned `ManualTests/AlloyVulkanTest/VerifyBackdropPackages.ps1` создаёт independent
+consumer вне checkout с private feed/cache, только PackageReference. Fresh5packages:
+Contracts/Argentis/Alloy/Rendering.Skia/Platform.Silk, версия
+`0.2.2.7-backdrop.20261108164649`. App использует public VulkanDevice/VulkanHostContext/
+SkiaVulkanRenderBackend и actual MenuPopup, копирует только Manual readback helper,
+framework source/ProjectReference fallback отсутствует. Debug и published Release
+прошли по6Dark/Light×DPI cases, actual blur witnesses, tree/surface/device disposal
+и errors0/warnings0 после teardown;12PNG. Native loaded SHA совпадает с vendor DLL.
+
+```powershell
+./ManualTests/AlloyVulkanTest/VerifyBackdropPackages.ps1 -ValidationDirectory TestResults/EditorWindow-20261104/tools/validation -EvidenceDirectory "$r/packages"
+```
+
+Archive hashes/commands/consumer path записаны в verification.json. Постоянные
+package versions и external NuGet publication не менялись. Чтобы получить новую
+native DLL, source host нужно пересобрать/перепубликовать; старые outputs/cache
+не переписывались. Последующие README/status edits не меняют проверенный DLL.
+
+### Неуспешные controls и retention
+
+Первый PowerShell control batch использовал splatting single string; одиночные
+flags не достигли программы. Отчёты показали Shadows=true/Opaque=false/Blur=true,
+поэтому control-no-shadow/control-opaque/negative-no-blur не засчитаны как нужные
+variants. Они сохранены как misconfigured attempts. В повторе переданы literal
+CLI flags и проверены report markers; missing-blur действительно отклонён.
+Исходные before и negative-old-native остаются ожидаемыми non-green regressions.
+
+Raw logs/TRX/binlogs/JSON/PNG, previous native DLL/metadata и audit.json локально
+в ignored run root; source checkout и toolchain в прежнем ignored SkiaSharp41550
+root. Хранить до integration/review, external upload/долговременного retention нет.
+Independent package app — unique `%TEMP%`, testagent notes также вне Git. Versioned
+запись сохраняет commands/scope/outcomes/limits при утрате raw artifacts.
+
+
+
+<a id="validation-shadows-2026-11-08"></a>
+## UIA3d: значок ошибки, validator tooltip и тени — 2026-11-08
+
+По прямому запросу пользователя реализован [UIA3d](PLAN.md#uia3d-validation-shadows).
+Предшествующие dirty typography/Editor/ED5a файлы, Nom, solution/dependencies и
+src/.codex сохранены. Публичные API добавлены в Argentis; native DLL/ABI,
+App/Cobalt/factory lifetimes и зависимости не менялись.
+
+### Поведение
+
+TextBox/RichTextEditor (включая Editor TextBox в NumberBox) показывают красный
+геометрический Warning в14logical pixels справа с inset2 при HasError. Общий
+ErrorMessage хранит точное сообщение валидатора отдельно от draft. Текст, каретка,
+выделение и rich wrapping используют общий viewport без области значка. Нулевые/
+узкие поля не дают отрицательную ширину или ошибку scrolling; read-only marker
+не перекрывает error icon. HasError вызывает layout invalidation ради wrapping.
+Остальные controls сохраняют прежний структурный маркер. Значок не применяет/
+исправляет draft, click по нему не двигает caret/не забирает focus.
+
+OverlayHost владеет delayed500ms tooltip. Hover именно по icon bounds открывает
+точный ErrorMessage с переносом, max width400, scrollable content ceiling240,
+clamp/flip в доступном viewport. Cursor может перейти на tooltip и прокручивать
+длинное сообщение. Field text/selection/focus не меняются. Уход, key/text/click,
+wheel вне tooltip, focus loss, clear/message change, hide/detach/dispose/geometry
+change закрывают/dispose старый popup. Hidden/disabled ancestor events снимают
+ожидание, обработчики снимаются при close/detach/dispose. Disabled field сам по
+себе допускает чтение ошибки. Existing menu не заменяется, nested OverlayHost
+обрабатывает свою область. Host без OverlayHost показывает icon/сообщение в модели,
+но сам не предоставляет popup layer; consumer должен использовать OverlayHost.
+
+Inspector связывает ErrorMessage с existing property/Transform validator. Field
+inline labels и «Ошибка» под XYZ убраны, общая копируемая панель Diagnostics
+с полным адресом поля остаётся. Generic/compact/legacy Transform consumers,
+Apply/Cancel/Undo/Redo, model error precedence и unchanged document/history
+сохранены; theme changes не пересоздают controls.
+
+BoxShadow — immutable value: sigma0..32, offsets±64, Color+alpha, logical pixels.
+UiProperties.Shadow/Element.Shadow разрешаются обычным local→element Style→View
+style→Theme/default путём; local null отключает тень. Theme.PanelShadow/MenuShadow
+содержат Dark/Light значения. MenuPopup использует MenuShadow; Editor hierarchy/document и island
+surfaces — PanelShadow через IViewStyle. Layout-only panels не получают лишние
+тени автоматически. Backend optional IShadowDrawingContext сохраняет legacy
+contexts без эффекта и без изменения IDrawingContext.
+
+Skia DrawShadow использует DropShadowOnly image filter и исключает исходный
+rounded rect: прозрачная середина/backdrop не темнеет от своей тени. Рисование
+до own clip, внутри ancestor clip; subtree opacity layer включает shadow halo.
+Layout/hit area не расширяется. Native filter/paint/round-rect освобождаются в
+draw scope; exceptions балансируют clipping/opacity. Старый clip/opacity order
+для элементов без Shadow сохранён. Long-run VRAM/GDI/performance не измерялись.
+
+### Текущие проверки
+
+SDK10.0.403/net10.0/xUnit2/VSTest. Raw run root:
+`TestResults/ValidationShadows-1794150669`. Full final suites, failed0/skipped0:
+
+| Suite | Debug | Release |
+| --- | --- | --- |
+| TrueMoon.Alloy.Tests |1170/1170|1170/1170|
+| TrueMoon.Alloy.Hosting.Tests |154/154|154/154|
+| TrueMoon.Aether.Editor.Tests |1412/1412|1412/1412|
+
+44новых UI cases плюс адресно обновлённые прежние assertions вместо removed
+left stripe/inline labels. Это не новый full-solution/Aether/Nom run.
+
+```powershell
+$r='TestResults/ValidationShadows-1794150669'
+# Each project/configuration uses its own artifacts directory (see TRX/binlogs).
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c Debug --artifacts-path "$r/artifacts" --logger 'trx;LogFileName=alloy-debug-verified.trx' --results-directory "$r/results" "-bl:$r/alloy-debug-verified-{}.binlog" --verbosity quiet
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c Release --artifacts-path "$r/artifacts-release" --logger 'trx;LogFileName=alloy-release-verified.trx' --results-directory "$r/results" "-bl:$r/alloy-release-verified-{}.binlog" --verbosity quiet
+# Same command for Hosting.Tests and Aether.Editor.Tests, both configurations:
+# hosting-{debug,release}-current / editor-{debug,release}-verified TRX and binlogs.
+```
+
+| Требование | Конкретные tests / assertions |
+| --- | --- |
+| Правый красный значок, текст не под ним, retained selection/theme | `ErrorIcon_ReservesRightEdgeWithoutChangingDraftSelectionOrFocus` (TextBox/Rich × DPI1/1.5/2): exact icon bounds, content clip, red raster pixels, draft/focus/selection до/после, theme+clear |
+| Numeric raw draft и узкие поля | `NumberBox_UsesInnerEditorErrorWithoutNormalizingRejectedDraft`, `NarrowErrorField_ClampsTextViewportWithoutThrowingOrLosingDraft` (0/8/16width × TextBox/Rich) |
+| Exact validator tooltip/focus/disabled/idle | `HoverIcon_ShowsExactWrappedValidatorDetailsWithoutTakingFocusEvenWhenDisabled`; message+accessible name equal exact multiline diagnostic,500ms boundary, bounds/idle/focus |
+| Stale details и lifecycle | `Tooltip_ContextChangeDisposesPopupAndDoesNotRetainStaleDetails` (12paths), `PendingTooltip_MessageChangeAndDetachCannotPublishOldError` |
+| Icon-only trigger, menu coexistence и полное длинное сообщение | `Tooltip_OnlyIconTriggersAndExistingMenuIsNotReplaced`, `LongTooltip_ScrollsWithinViewportAndKeepsAllValidatorText` |
+| Outer blur/layout/DPI | `OuterShadow_BlursOutsideBoundsWithoutDarkeningTransparentInteriorOrChangingLayout` (1/1.5/2): independent white interior/outside, near/far gradient, clear/unchanged bounds/idle |
+| Clip/opacity/hit/rounding/ownership | `Shadow_RespectsAncestorClipAndSubtreeOpacity`, `Shadow_HasNoPointerHitAreaAndRoundedCornersRemainTransparent`, `LegacyContext_OmitsShadowAndExceptionRestoresShadowOpacityScope` |
+| Editor panels | `PanelMaterials_AreScopedSeparateFromMenuAndThemeChangeRetainsInputsDraftFocusAndScroll`: actual nested hierarchy/inspector styles, theme/local null, retained draft/focus/scroll; compact document tools also pin PanelShadow |
+| Theme/style/null/value admission | `MenuShadow_UsesThemeAndHonorsStyleLocalNullAndRemoval`, `Shadow_RejectsNonFiniteOrUnboundedValues` |
+| Editor validator/model integration | `InvalidAxisDraft_RemainsExactAndShowsCompleteDiagnosticsWhileDetailsStayCollapsed`; `TwoWayInputs_CommitAndCancelThroughButtonsAndShowFieldValidation`, `FieldValidation_ShowsAddressedErrorAndCancelRestoresControlWithoutPublishingOtherDrafts`: exact model error on input, icon, Diagnostics, Cancel clears and history unchanged |
+
+Generated tests reopened against sources. Every method has behavioral assertions,
+no skipped/trivial-only/round-trip identity substitute. Static pseudo-mutation
+review: icon under text fails exact clip; generic/stale message fails exact text;
+focus theft or lost selection fails state assertions; retained popup fails disposal;
+shadow drawn only inside own clip fails outside pixel; double shadow on transparent
+interior fails independent white; layer too small/forgotten restore fails bounds/
+depth. No mutation-tool or code-coverage percentage claimed. Boolean guards lead
+to observable postconditions; constructor exception-only cases are intentional.
+
+### Native source/published и package consumer
+
+New ManualTests flag uses existing3backend matrix scaffold:
+
+```powershell
+$env:VK_LAYER_PATH=(Resolve-Path TestResults/EditorWindow-20261104/tools/validation).Path
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug --artifacts-path "$r/native-artifacts" "-bl:$r/native-debug-verified-{}.binlog"
+dotnet "$r/native-artifacts/bin/AlloyVulkanTest/debug/AlloyVulkanTest.dll" --validation-shadows --design-output "$r/native-debug-verified" --validation
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --artifacts-path "$r/native-release-artifacts" -o "$r/published" "-bl:$r/native-release-verified-{}.binlog"
+dotnet "$r/published/AlloyVulkanTest.dll" --validation-shadows --design-output "$r/native-release-verified" --validation
+```
+
+Оба final profiles прошли: raster/OpenGL/Vulkan × Dark/Light × scale1/1.5/2,
+18PNG/profile и12full-frame comparisons. Actual logical bounds equal across
+backends; flat pixels tolerance2/255, symmetric1physical-pixel edge envelope с
+coverage tolerance32 для новой rounded/shadow сцены (типографический профиль
+сохраняет24). Initial Light corner had1pixel outside прежнего edge24 envelope;
+flat interiors и logical layout не ослаблены. Popup реально открыт через
+UiSession pointer hover/OverlayHost delay; MenuPopup показан как статический
+gallery sample. Draft/focus/selection/idle и owned tree/popup Dispose проверены,
+6Vulkan devices/profile дали errors0/warnings0 включая teardown. Просмотрены
+Light100 и Dark150 изображения; OS SendInput/physical DPI/долгая VRAM matrix
+здесь не выполнялась. Это renderer fixture, не повтор всей Editor native workflow.
+
+Fresh4package consumer: Contracts/Argentis/Alloy/Rendering.Skia,
+`0.2.2.7-design.20261108154129`. Temporary feed/cache и standalone app вне checkout,
+только PackageReference/no ProjectReference/source fallback. Debug и published
+Release проверили новое Shadow/ErrorMessage API, actual delayed tooltip, raw value/
+selection и tree disposal, raster PNG. SHA archives/paths в packages.json;
+script package-consumer.ps1 сохранён вместе с evidence. Постоянные версии и NuGet
+publication не менялись. Package README соответствует моменту pack; последующие
+документальные правки не меняют проверенные DLL.
+
+### Failures и открытый Vulkan backdrop gate
+
+Initial suites ожидали прежние left stripe/inline labels; обновлены assertions
+на right icon и exact model ErrorMessage, проверки history/Cancel сохранены.
+Первый new raster test снимал image до Update после pointer input; исправлен
+driver order. Цвет glyph на100% учитывает AA: geometry/style pin точный Theme.Error,
+raster predicate проверяет достаточную red coverage вместо обязательного fully
+opaque pixel. Попытка edgeRadius2 отклонена самим comparator; сохранён его1px
+contract, explicit corner coverage32 относится только к новой decorations scene.
+
+Initial native-debug/native-release и image-filter variant завершились non-green
+с Vulkan `VUID-vkCmdPipelineBarrier-pImageMemoryBarriers-02819`: HOST_WRITE access
+не поддержан указанными shader/all-commands stages. Первоначальное подозрение на
+shadow mask filter не подтвердилось: **тот же VUID воспроизводится с полностью
+отключёнными тенями**, если MenuBackdrop frosted. С opaque menu и включёнными
+тенями все18cases/profile прошли. Значит новый shadow effect проверен отдельно;
+точный native cause frosted backdrop ещё не установлен, не объявлен исправленным.
+Default MenuBackdrop и production native library не отключены/не модифицированы.
+Текущие native-frosted-repro/native-frosted-no-shadow подтвердили тот же VUID/exit nonzero.
+Повторить проблемный variant можно флагами `--design-frosted-menu`, отдельно с
+`--design-no-shadows`. Этот gate ведётся как UIA3d.1, не hidden validation pass.
+
+Raw TRX/binlog/log/JSON/PNG и audit manifest локально в ignored run directory;
+external package consumer в unique `%TEMP%`. Хранить до интеграции/ревью, без
+external upload/обещания долговременного retention. Temporary testagent research/
+plan/status находятся вне Git. Versioned запись сохраняет результат при утрате raw.
+
+
+
 <a id="skiasharp-41550-2026-11-07"></a>
 ## SkiaSharp4.155.0 и native Vulkan interop — 2026-11-07
 
@@ -5761,3 +6226,357 @@ UI PLAN явно ограничен Alloy/Argentis и интеграциями, 
 Проверки текущей работы прошли: чтение исходников/project references; полный прежний STATUS сохранён verbatim, K1–K9 table rows идентичны, PA1–PA10/net10.0/xUnit сохранены. Общая документальная сверка —17planning/AGENTS документов,270local links/21anchors, Markdown fences/whitespace/conflicts/NUL; scoped git diff --check прошёл. Source worktree status при финальной сверке не изменился, staged entries0. Артефакты — ignored TestResults/PlanningFormat. Новые code/build/tests/GPU/publish не выполнялись.
 
 </details>
+
+<a id="system-fonts-2026-11-07"></a>
+## PA8c.3a: системные шрифты и веса — 2026-11-07
+
+По прямому запросу пользователя добавлен opt-in выбор установленного семейства и
+веса; параллельная работа Nom, shared package versions и solution не изменялись.
+Работа поверх HEAD6dae16a; коммиты/публикация во внешний feed не выполнялись.
+SkiaSharp/native4.155.0, ABI и зависимости сохранены.
+
+Реализация:
+
+- Argentis Element/Theme/UiProperties/view styles/Fluent: FontWeight100..900 и
+  FontItalic, layout invalidation и прежний приоритет local→style→view style→theme.
+  Все встроенные plain-text measure/draw/prefix/caret пути передают оба параметра.
+  Новые interface overloads имеют normal-face fallback для прежних providers.
+- SkiaFontCatalog.FromSystemFonts: requested family → ordered installed families →
+  optional explicit file catalog → system default. Список snapshot-ится; вложенный
+  system fallback запрещён. Load/LoadFaces остаются file-only; normal/bold/italic
+  file variants теперь используются и plain text. Native fonts принадлежат surface.
+- Ключ bounded FIFO16 font cache включает family/size/weight/italic. Rich mapper
+  различает system fallback policies; rich FontWeight наследуется, explicit weight
+  сильнее Bold. Bold-only patch заменяет weight; Ctrl+B/I учитывает inherited style,
+  Undo сохраняет прежний weight и selection.
+- Семейства на текущей машине: Segoe UI; Segoe UI Variable Small/Text/Display.
+  MatchFamily("Segoe UI",600) даёт SegoeUI-Semibold; Variable Text400/600 —
+  реальные named variable instances с2осями, opsz10.5. Голое имя Segoe UI Variable
+  и Segoe UI Semibold не разрешаются как семейство этим font manager.
+
+До правок: полный Alloy Debug1101/1101, failed/skipped0; исходные PNG и logical
+layout обычного текста11/12/14/18при scales1/1.5/2 сохранены и просмотрены.
+После правок эти3PNG byte-identical и layout JSON совпадает. Это bounded baseline
+для opt-in capability; общий PA8c.0/1/2 и K3/K7/K8 не объявлены выполненными.
+
+Фактические проверки этого запуска:
+
+| Scope | Результат |
+| --- | --- |
+| Alloy Debug / Release |1122/1122в каждой конфигурации; failed0/skipped0,21новый case |
+| Hosting Debug / Release |154/154в каждой; failed0/skipped0 |
+| Source Debug / published Release typography |18dark/light captures и12full-frame raster↔OpenGL/Vulkan comparisons каждый; scales1/1.5/2, complete logical bounds equal; outside-tolerance pixels0 |
+| Native lifecycle | Weight update, focused TextBox/RichText selection, idle и tree cleanup passed; Vulkan core/sync validation0errors/0warnings включая teardown |
+| Fresh package consumer |4локальных nupkg 0.2.5.1-fonts.mw6pfnp5; verified package-only graph, Debug build/run и Release publish/run passed; fonts/license/native delivered, plain/rich/styled measure/selection/idle/dispose |
+| Whitespace | scoped git diff --check passed |
+
+Порог full-frame сравнения не ослаблялся: existing PixelDifference tolerance2,
+symmetric edgeRadius1/edgeTolerance24; flat/low-contrast pixels strict2.
+Raster dark100 и Vulkan light150 просмотрены визуально, без пропавших glyphs и
+обрезания строк; pixel equivalence не означает полного physical visual acceptance.
+Окружение: Windows10.0.26340.0 x64, .NET SDK10.0.403/runtime10.0.14,
+NVIDIA GeForce RTX5070Ti; Vulkan DriverVersion2604892160/ApiVersion4211045.
+Полные hardware/OS/font/native fingerprints находятся в report.json.
+
+Матрица требований и точных регрессий:
+
+| Требование | Проверка |
+| --- | --- |
+| Установленные семейства и порядок fallback | SystemChain_UsesRequestedFamilyBeforeOrderedFallbacksAndSnapshotsOptions; FileCatalog_IsExplicitAndSystemCatalogUsesFileFallbackOnlyAfterSystemCandidates; EmptySystemChain_UsesExplicitFileAliasOrSystemDefault |
+| Segoe UI Semibold / Variable Text400/600 | VariableText_SelectsRealRegularAndSemiboldInstancesWithCyrillicGlyphs |
+| Одинаковые measure/draw/контрол | StyledMeasureAndDraw_MatchNativeFaceMetricsAndPixels |
+| Theme/style/local и состояния ввода | FontWeightAndItalic_RespectStylePrecedenceAndRecomputeWithTheme; ThemeWeight_RelayoutsTextAndPreservesFocusedTextBoxSelectionAndHitTesting |
+| Вес100/900 и отклонение99/901 | BoundaryWeights_AreAcceptedAndInvalidateLayout; InvalidWeight_RejectsLocalStyleThemeAndRichFormattingWithoutInvalidation |
+| Кэш и ownership | FontCache_SeparatesWeightAndItalicAndDisposesEvictedFonts; RichFontCache_DistinguishesSystemFallbackPoliciesAcrossSurfaces |
+| Rich наследование/Bold/Undo | RichText_ResolvesInheritedWeightItalicAndLegacyBoldOverrides; RichFormatting_WeightAndBoldReplaceEachOtherAndUndoRetainsExplicitWeight; RichKeyboardFormatting_TogglesExplicitAndInheritedBoldItalicWithoutReplacingDocumentText |
+| Прежние providers / file variants | LegacyTextProviders_StyledOverloadsForwardToMatchingNormalMeasurementAndDrawing; FileVariants_ApplyToPlainMeasurementAndDrawingAsWellAsRichText |
+
+Воспроизведение (из src; уникальные пути не перезаписывают общие bin/obj):
+
+~~~powershell
+$run = 'TestResults/SystemFonts-mw6pfnp5'
+$env:VK_LAYER_PATH = (Resolve-Path TestResults/EditorWindow-20261104/tools/validation).Path
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c Debug --artifacts-path "$run/artifacts" --logger trx --results-directory $run "-bl:$run/alloy-debug-{}.binlog"
+dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c Release --artifacts-path "$run/artifacts" --logger trx --results-directory $run "-bl:$run/alloy-release-{}.binlog"
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj -c Debug --artifacts-path "$run/artifacts" --logger trx --results-directory $run "-bl:$run/hosting-debug-{}.binlog"
+dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj -c Release --artifacts-path "$run/artifacts" --logger trx --results-directory $run "-bl:$run/hosting-release-{}.binlog"
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug --artifacts-path "$run/artifacts" "-bl:$run/probe-debug-{}.binlog"
+dotnet "$run/artifacts/bin/AlloyVulkanTest/debug/AlloyVulkanTest.dll" --font-typography --font-output "$run/new-debug" --validation
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --artifacts-path "$run/artifacts" -o "$run/new-publish" "-bl:$run/probe-publish-{}.binlog"
+dotnet "$run/new-publish/AlloyVulkanTest.dll" --font-typography --font-output "$run/new-release" --validation
+~~~
+
+Для package-only проверки Contracts/Argentis/Alloy/Rendering.Skia упакованы через
+dotnet pack -c Release --no-build --no-restore --artifacts-path "$run/artifacts"
+-p:Version=0.2.5.1-fonts.mw6pfnp5 -p:PackageVersion=0.2.5.1-fonts.mw6pfnp5 -o "$run/packages"
+с отдельным -blдля каждого проекта. Consumer имеет единственный PackageReference
+на Rendering.Skia этой версии и0ProjectReference; assets проверен на4expected
+TrueMoon package libraries. Его NuGet.Config явно сопоставляет TrueMoon.* локальному
+feed, остальные пакеты — nuget.org. Build/publish с отдельными binlogs; программа
+проверяет600/native measurement, selection/idle/dispose и пишет PNG.
+
+Артефакты: ignored TestResults/SystemFonts-mw6pfnp5: baseline/unchanged PNG+layout+hashes,
+alloy-reviewed-Debug/Release.trx, hosting-debug/release.trx, binlogs/logs,
+source-debug-verified/report.json, published-release/report.json,4nupkg,
+consumer graph/source/build/run/publish. Хранение локальное, внешняя retention
+не обещана; воспроизводимый fixture versioned в ManualTests/AlloyVulkanTest.
+Исторические результаты других запусков не использованы как новые проверки.
+
+Начальные попытки сохранены: sandbox restore не мог прочитать пользовательский
+NuGet.Config; тесты затем выполнены с разрешённым чтением. Первый GPU запуск без
+process-local VK_LAYER_PATH остановился на unavailable validation layer; final
+matrix выполнена с найденным локальным layer. Package consumer сначала остановился
+на inherited PackageSourceMapping, затем успешно восстановлен с явным mapping.
+При review тест glyph pixels дополнен тем же bounds clip, который имеет Text;
+не менялись production clipping/AA и допуски сравнения.
+Rider findTests недоступен (tool not found); parse-only pairing analyzer также
+остановился на sandbox NuGet.Config, это не coverage result. Существующие тесты
+прочитаны; целевые assertions и пропуски проверены напрямую по исходникам.
+
+Ограничения: автоматический opsz/arbitrary axes не добавлены; family fallback
+не является посимвольным fallback/shaping/emoji для plain text. Системные fonts
+не включались в nupkg. Default theme, hinting и AA не менялись. Fresh package
+GPU/Hosting/Cobalt matrix, Editor/full solution tests, physical DPI/device loss,
+performance/VRAM/long soak этим запуском не выполнялись; wider acceptance остаётся
+отдельной работой. Следующий прикладной шаг — opt-in темы consumer с выбранными
+ролями Regular/Semibold и сравнением Text/Small на его фактическом DPI.
+
+<details>
+<summary>Предыдущий STATUS перед задачей системных шрифтов</summary>
+
+# Alloy / Argentis: текущее состояние и точка продолжения
+
+**2026-11-07 — SkiaSharp/native обновлены до4.155.0.**
+DLL пересобрана из exact NuGet source commit с прежним Vulkan extension/ABI v1;
+официальный version gate и TrueMoon exports проверены. Source Debug/published Release:
+18readbacks/36GPU-композиций/backend comparison каждый, core+sync validation0/0.
+Alloy1101/1101, Hosting154/154 и Editor1295/1295 каждый D/R. Fresh10pkg:36App+4direct processes
+Debug/Release×build/publish на raster/OpenGL/Vulkan, native delivery/cleanup passed.
+[Команды и scope](HISTORY.md#skiasharp-41550-2026-11-07).
+[Текущая очередь](PLAN.md#current-ui-queue), [дизайн-код](DESIGN.md),
+[прежний STATUS полностью](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Состояние реализации
+
+UIA1 typed View/Data/scoped styles и App factories, UIA2 Window, UIA3 compact
+NumberBox/Vector3Editor/PropertyEditorRow, RichText auto-height, themed CheckBox
+и states реализованы. Numeric adjustment opt-in, draft/capture/cancel outcomes
+и stable identity gates сохранены. Platform.Silk button/wheel использует ordered
+cursor position и передаёт Shift/Ctrl. Прикладные Transform/history/units — Editor.
+
+INF1–4/6/7 имеют реализацию и bounded checks; INF5 diagnostics остаётся частичным.
+TreeView/menu/bindings/appearance/DPI существуют в указанных в HISTORY scopes;
+наличие API не закрывает все beta/PA1–PA10, alpha/K1–K9 или физическую приёмку.
+
+## Проверки готовности
+
+Текущий run **2026-11-07**: native source build4.155.0 exit0, managed/native154→155
+negative gate exit2, штатный native155 без extension exit2. Bundled DLL, source Debug
+и published Release имеют совпадающий SHA; ABI48bytes, readback/layout return/redraw,
+external composition и raster/OpenGL/Vulkan comparison прошли. All1101Alloy/154Hosting
+cases прошли в каждой Debug/Release, failed/skipped0. Physical/K7/K8 scope не расширен.
+Fresh NuGet matrix Completed=true:10packages,36App+4direct cases, exact package-only
+graphs, new DLL SHA/delivery/fonts/behavior/cleanup и expected missing-analyzer control.
+Initial failures stale direct graph guard и changed README сохранены, final source
+hash audit прошёл на frozen snapshot. Это не новая physical Window/release matrix.
+Editor1295/1295 D/R также passed; solution nonincremental Debug0errors/1555warnings,
+1422distinct warning catalogue unchanged. Full solution/Aether tests не запускались.
+
+Сохранённый run **2026-11-05**: full Alloy1101/1101 и Hosting154/154 каждый
+Debug/Release, failed/skipped0,6новых pointer regression cases. Отдельно full
+Editor1295/1295 D/R;4native OpenGL runs source Debug/published Release × standard/
+Cobalt и embedded/MS DI. В standard Windows linked drag/release, Esc draft cancel,
+Ctrl+Enter и Undo прошли; routed arrows/captured Esc — во всех. UI/GPU/handles0,
+runtime children0. [Точное evidence](HISTORY.md#uia3c-native-numeric-2026-11-05).
+
+Window delivery через fresh Editor NuGet consumer проверен4ноября; новые numeric
+изменения не получили этим новый fresh-package proof. Прежние raster/OpenGL/Vulkan
+goldens, Settings/scale/HUD и PA8a checks имеют собственные даты в архиве/HISTORY.
+Они не являются текущим full hardware/release проходом.
+
+## Блокеры и ограничения
+
+- Numeric physical arrows/modifiers, Esc с удерживаемой кнопкой и OS pointer
+  modifiers не подтверждены. Automation arrows поступали как UiKey.None; mixed
+  down/key/up не предоставляется текущим automation API. Требования не отменены.
+- K3: physical100/200% и разные DPI мониторов ещё требуют своего proof.
+- K7: прежний240-window run failed, GDI23→137/USER26→26; trace локализовал screen
+  HDC в NVIDIA ICD32.0.16.1742. Safe app-side fix не установлен, поиск workaround
+  остановлен по решению пользователя. AMD raw control не равен full UI K7.
+- K8 physical device/context loss, VRAM, resource trends и итоговая alpha matrix
+  открыты. OS/driver settings и hardware при документационной ревизии не менялись.
+- K9 имеет прежний managed baseline; новые rendering options требуют PA8c.0 и
+  текущих измерений. Старые capture/Name-binding failures не объявлены объяснёнными.
+
+## Следующий конкретный шаг
+
+Для Editor — поддержать [ED4g.3/4](../engine/EDITOR_PLAN.md#current-editor-queue)
+только теми общими UI capabilities, которые потребуются consumer. Numeric input
+acceptance остаётся отдельным доступным proof при подходящем вводе.
+Самостоятельная visual-quality задача — **PA8c.0 baseline текста/геометрии**,
+затем выбор конкретных PA8c.1/2 исправлений по наблюдаемым дефектам.
+Wider Window/backend/fresh package и hardware/release checks не назначаются
+повторно как завершённая feature и не блокируют каждое новое поле инспектора.
+Full INF5 и отложенный RichTextEditor backlog развивать по отдельному consumer.
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="текущие-проверки--wsi-stages2026-10-10"></a>
+<a id="предыдущие-проверки--hosting-dispatcher2026-10-10"></a>
+<a id="предыдущие-проверки--wglthread-lifetime2026-10-10"></a>
+<a id="предыдущие-проверки--lifecycleresize2026-10-10"></a>
+<a id="предыдущие-проверки--textboxname-smoke2026-10-10"></a>
+<a id="предыдущие-проверки--интеграция-в-main2026-10-10"></a>
+<a id="предыдущие-проверки--агентный-callback-run2026-10-10"></a>
+<a id="предыдущие-ui-проверки--code-run2026-10-09"></a>
+<a id="последнее-изменение-формата--2026-10-09"></a>
+Прежние датированные разделы — в [полном архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+</details>
+
+SHA256 проверенных font/native файлов:
+- NotoSans-Regular.ttf: B85C38ECEA8A7CFB39C24E395A4007474FA5A4FC864F6EE33309EB4948D232D5
+- libSkiaSharp.dll: 229C431C90DC69FFBC1F4C4864025297D33535E5AE73E2F8254756E011E86C0C
+- segoeui.ttf: 704EADA12961A27FD271F7D3B09E2066520E758390C1776744EFF430FEE30F6E
+- seguisb.ttf: 6C3FD894B19950B10C34BF64069EF821EAF2F58F959146306FEE5B367472E501
+- SegUIVar.ttf: 27CA1AB4BD5AD3B0404EE6A9A03B143408DBD7E5A4C9E4B2054639C03FC0F682
+
+<a id="default-fonts-2026-11-08"></a>
+## PA8c.3b: default typography и Editor — 2026-11-08
+
+Продолжение PA8c.3a по прямому запросу пользователя: подключить системный каталог
+и custom text controls редактора, сделать Segoe UI Variable Text общим default.
+Работа/проверки начаты7ноября и закончены8ноября по Asia/Yekaterinburg; raw logs
+содержат собственные timestamps. Nom, package versions/dependencies, solution и
+native Skia/ABI не менялись этой задачей; прежние незакоммиченные изменения сохранены.
+
+Решение и реализация:
+
+- FontDefaults в корне Argentis: Family=Segoe UI Variable Text,
+  FallbackFamily=Segoe UI. Theme constructor/Dark/Light и UiProperties/new controls
+  используют preferred family, weight400. Semibold600 назначен стилями заголовкам
+  Editor caption/pane/scene/viewport title; local/style overrides сохраняются.
+- SkiaFontCatalog.SystemDefault — immutable managed policy без native ownership:
+  requested → preferred → Segoe UI → system default. Parameterless backends и
+  plain/rich face mapper используют одну policy. Явный SystemDefault сохраняет
+  прежний parameterless rich-text Unicode/glyph fallback и caret positions.
+  Custom/file catalogs не подменяются; file snapshots сохраняют свой режим.
+- EditorApplication и публичный Examples/AetherEditor подключают system chain
+  с поставляемым Noto Sans/OFL как final file fallback. Явный --font примера
+  остаётся file-only override. Объекты fonts — bootstrap data; App/Cobalt/IFactory,
+  view/style ownership и startup/stop/dispose graph не менялись.
+- Header caption/ellipsis, wrapped hint, status segments/hover/ellipsis и viewport
+  передают weight/italic в measure/draw; viewport учитывает FontSize. Обе команды
+  смены темы EditorHeaderView/EditorView сохраняют family/size/weight/italic.
+- Исправлен существовавший до fonts дефект test host: Frame.Content теперь
+  EditorMainWindow; извлечение view через FromRoot, native smoke проверяет wrapper.
+  Это исправление проверочного host, не новый production Window contract.
+
+Исходная проверка этого запуска: full Editor Debug1295/1295, failed0/skipped0.
+Первый native baseline остановился на InvalidCastException EditorMainWindow→
+EditorView до изменения шрифтов. После минимального исправления harness получены
+baseline-editor-fixed PNG/JSON и успешные interaction/close/drain/cleanup.
+После default change ожидаемо меняются glyph pixels/ширины; baseline не перезаписан.
+
+Фактические итоговые проверки:
+
+| Scope | Результат |
+| --- | --- |
+| Alloy Debug/Release |1126/1126каждый, failed0/skipped0;4новых case сверх предыдущего1122 |
+| Editor Debug/Release |1300/1300каждый, failed0/skipped0;5новых custom-text/theme case сверх baseline1295 |
+| Hosting Debug/Release |154/154каждый, failed0/skipped0 |
+| Editor source Debug/published Release × dark/light |4final native runs; effective Segoe UI Variable Text/weight600 и native measurement подтверждены; scale1.5; menu/theme/tooltip/header/status/idle/close/drain прошли |
+| Editor cleanup |Каждый final report: UiSessions/Mappings/GpuResources/GpuHandles/Children0, Reaped/ViewDisposed=true, project closed, validation0errors/0warnings |
+| Parameterless backend matrix source Debug/published Release |По18dark/light captures и12full-frame raster↔OpenGL/Vulkan comparisons при synthetic1/1.5/2; outside-tolerance0; validation0/0 including teardown |
+| Exact package-only consumer |4nupkg 0.2.5.1-defaultfonts.mw6qun5o.r1, graph всех4type=package/точная версия, Debug build/run и Release publish/run passed; default family600, plain/rich/selection/idle/cleanup и file override |
+| Examples/AetherEditor |Debug build и Release publish прошли; новая system policy и поставка Noto/OFL; standalone example runtime/play не запускался |
+| Source/package delivery |Managed Rendering.Skia Release SHA совпадает с final package consumer; bundled native SHA одинаковый в source/Editor publish/consumer; scoped diff --check passed |
+
+Новые regression names:
+
+| Требование | Проверка |
+| --- | --- |
+| «по умолчанию это семейство» | FrameworkDefaults_SelectVariableTextForThemesAndNewControls; DefaultSystemPolicy_PlainAndRichTextSelectTheSameAvailableFamilyAndWeight |
+| Явный default/Unicode/caret | ExplicitSystemDefault_PreservesImplicitRichTextUnicodeAndCaretPositions |
+| Header и подсказки | CaptionEllipsis_UsesTheStyledFaceForMeasurementAndDrawing; WrappedHint_UsesStyledAdvancesAndLineHeightForEachRenderedLine |
+| Статус и viewport | StatusEllipsisAndHover_MeasureAndDrawTheSelectedWeightAndItalic; EmptyViewportText_UsesConfiguredTypographyIncludingSize |
+| Theme retention | ThemeAction_PreservesTypographyAndRetainedReadOnlyDraftSelection; усилен ThemeAndStyleReplacement_PreserveRetainedHeaderAndInputFocus |
+
+TypographyRecordingContext отвергает old overloads, задаёт независимые styled
+advances и проверяет exact ellipsis/wrapped lines, hover bounds и font tuples.
+Это реальное caller behavior, а не assertion на значение, только что присвоенное
+контролу. В review проверены default/preferred/unavailable/file/explicit-default
+branches, style precedence, Unicode caret, selection и ownership. Новых тестов
+без assertions нет; broad test-agent state хранится только в OS temp.
+
+Основные воспроизводимые команды из src (каждый output должен быть новым):
+
+~~~powershell
+$run = 'TestResults/DefaultFonts-mw6qun5o'
+$env:VK_LAYER_PATH = (Resolve-Path TestResults/EditorWindow-20261104/tools/validation).Path
+foreach ($configuration in @('Debug','Release')) {
+  dotnet test TrueMoon.Alloy.Tests/TrueMoon.Alloy.Tests.csproj -c $configuration --artifacts-path "$run/artifacts" --logger trx --results-directory $run "-bl:$run/alloy-$configuration-{}.binlog"
+  dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c $configuration --artifacts-path "$run/artifacts" --logger trx --results-directory $run "-bl:$run/editor-$configuration-{}.binlog"
+  dotnet test TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj -c $configuration --artifacts-path "$run/artifacts" --logger trx --results-directory $run "-bl:$run/hosting-$configuration-{}.binlog"
+}
+dotnet build ManualTests/AetherEditorHost/AetherEditorHost.csproj -c Debug --artifacts-path "$run/artifacts" "-bl:$run/host-build-{}.binlog"
+dotnet "$run/artifacts/bin/AetherEditorHost/debug/AetherEditorHost.dll" --smoke "$run/new-editor-debug-dark" --validation
+dotnet "$run/artifacts/bin/AetherEditorHost/debug/AetherEditorHost.dll" --smoke "$run/new-editor-debug-light" --light --validation
+dotnet publish ManualTests/AetherEditorHost/AetherEditorHost.csproj -c Release --artifacts-path "$run/artifacts" -o "$run/new-editor-publish" "-bl:$run/host-publish-{}.binlog"
+dotnet "$run/new-editor-publish/AetherEditorHost.dll" --smoke "$run/new-editor-release-dark" --validation
+dotnet "$run/new-editor-publish/AetherEditorHost.dll" --smoke "$run/new-editor-release-light" --light --validation
+dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug --artifacts-path "$run/artifacts" "-bl:$run/fonts-build-{}.binlog"
+dotnet "$run/artifacts/bin/AlloyVulkanTest/debug/AlloyVulkanTest.dll" --font-typography --font-defaults --font-output "$run/new-font-defaults-debug" --validation
+dotnet publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Release --artifacts-path "$run/artifacts" -o "$run/new-fonts-publish" "-bl:$run/fonts-publish-{}.binlog"
+dotnet "$run/new-fonts-publish/AlloyVulkanTest.dll" --font-typography --font-defaults --font-output "$run/new-font-defaults-release" --validation
+~~~
+
+Final package verification: Contracts/Argentis/Alloy/Rendering.Skia pack Release
+--no-build --no-restore --artifacts-path "$run/artifacts" с Version/PackageVersion=
+0.2.5.1-defaultfonts.mw6qun5o.r1, каждый с отдельным binlog; consumer имеет один PackageReference на
+Rendering.Skia с exact range [0.2.5.1-defaultfonts.mw6qun5o.r1] и0ProjectReference. NuGet.Config явно
+сопоставляет TrueMoon.* локальному packages-final feed; assets проверен на4точные
+library versions. Initial r1 attempt смотрел в прежний feed и получил NU1603/
+старую сборку без FontDefaults; попытка сохранена как failed. Exact feed/range
+исправлены, final build0errors/0warnings, оба run passed; старый пакет не принят
+за финальную проверку.
+
+Raw artifacts — ignored TestResults/DefaultFonts-mw6qun5o: baseline-editor-fixed,
+editor-final-debug/release-dark/light PNG+header/status/report/project-cleanup JSON,
+default-policy-final-debug/release reports и36PNG; TRX/log/binlogs,
+packages-final/consumer exact graph/source/build/publish и source/native hashes.
+Raw retention локальная, внешнего хранения не обещано; commands/outcomes/scope
+сохранены здесь, runnable fixtures versioned в ManualTests. Dark/light Editor
+workspace снимки просмотрены; типографика/кириллица/ellipsis помещаются в свои области.
+Default-policy full-frame допуски прежние: channel2, symmetric edgeRadius1/
+edgeTolerance24, без masked/outlier pixels. Наблюдаемые изменения glyph pixels
+между Noto baseline и новым default являются ожидаемой сменой font family.
+
+Ограничения: automatic opsz/arbitrary axes не добавлены. Family selection не
+добавляет новый per-glyph fallback в plain text; прежний default RichTextKit
+fallback сохранён. В текущей native Editor matrix пустой workspace, без Build/
+Play/scene importer; full Aether/solution, fresh package GPU/Editor App/Cobalt
+matrix, physical100/200/monitor transitions, performance/VRAM/long-soak не запускались.
+Открытые K3/K7/K8 и diagnostics cleanup reliability не объявлены исправленными.
+Следующий самостоятельный UI шаг — общий PA8c.0 baseline/PA8c.1/2; прикладная
+очередь Editor ED4g.3/4 сохранена. Текущий выбор уже default, повторный opt-in
+для обычных контролов/parameterless backends не требуется.
+
+<a id="planning-after-default-fonts-2026-11-08"></a>
+## Сверка планов после default typography — 2026-11-08
+
+По запросу пользователя согласованы текущие очереди/таблицы общего PLAN/STATUS,
+UI PLAN/STATUS и Editor PLAN/engine STATUS. PA8c.3a/3b явно завершены в собственном
+проверенном scope; старое opt-in ограничение3a отмечено историческим. Текущий
+framework default не назначен повторно как будущая задача.
+Для нашего UI/Editor потока следующий предложенный срез — ED4g.3 group reset,
+затем ED4g.4 units и ED5a camera/picking. Единственный детальный план прикладных
+задач остаётся EDITOR_PLAN; отдельный visual-quality вариант — PA8c.0 на текущем
+default. Engine f.3/f.4 и Nom queue не менялись. Studio ui.resizable-panes остаётся
+proposed, Claim/Decision в этой актуализации не создавались.
+
+Проверка только документационная: прочитаны сохранённые6TRX (Alloy1126,
+Hosting154, Editor1300 в D/R, failed/skipped0),4native Editor JSON,2backend reports
+(36captures/24comparisons), совпали21source SHA из final-source-hashes.json.
+Даты тестов —07ноября23:45–23:57+05:00, native/publish завершались08ноября.
+Эта сверка не является новым build/test/native запуском и не расширяет acceptance.
+Артефакт сверки — ignored TestResults/PlanningRefresh-20261108-mw6scoyd/audit.json. Проверены scoped diff/links/anchors.

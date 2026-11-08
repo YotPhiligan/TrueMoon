@@ -24,12 +24,26 @@ F.2 добавляет [App-owned catalog/device resources, counted leases и pr
 атомарный World rebind и standalone Vulkan upload/readback. Проверки отдельно в STATUS.
 Следующий кодовый этап — f.3 owned camera/mesh snapshots; surface renderer/Playing fence
 остаются f.4 и не подменяются resource-ready.
-Прикладной маршрут [ED4g.3/4 → ED5a](EDITOR_PLAN.md#current-editor-queue)
-сохраняется отдельной веткой.
+Дополнение2026-11-07: запланированы исследования [импорта моделей ARCH1g.0](#arch1g-model-assets)
+и [аудиомодуля ARCH1h.0](#arch1h-audio). Они могут идти независимо от f.3;
+Audio backend, production package/API boundaries и budgets ещё не выбраны. Кодовая
+очередь f.3→f.4 сохраняется; исследования завершаются решениями и планом прототипа.
+G.0 получил [оценку и сравнительный import spike](MODEL_IMPORT_RESEARCH.md#decision-2026-11-07):
+выбран AssimpNetter6.0.5 low-level для g.1,8D/R profiles прошли.
+[Captured import v1](MODEL_IMPORT_CAPTURE.md#capture-v1) зафиксировал immutable dependency
+I/O, numeric budgets, persistent ID ledger и kill/reap native worker; отдельный research
+proof прошёл source Debug/published Release. Production App/IFactory adapter, automatic
+dependency/identity discovery и полный selected-format/unsupported policy ещё нужны.
+ED4g.3 group reset и ED4g.4 rad/deg завершены2026-11-08. Следующий прикладной
+этап — [ED5a camera/picking](EDITOR_PLAN.md#ed5a-camera-picking), отдельная ветка.
 Engine уже предоставляет immutable authoring/history, document-aware runtime и
 bounded preview; group reset/angle display не требуют нового World/ECS/protocol.
-Для camera/picking определить минимальный preview camera/selection contract перед
-реализацией. Детальные Editor задачи не дублируются здесь.
+[Camera/selection contract ED5a.0](EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1)
+зафиксирован2026-11-08; ED5a.1 immutable camera/pick values и projection/ray math
+реализованы и проверены в [указанном scope](HISTORY.md#ed5a1-values-2026-11-08).
+ED5a.2 versioned camera/frame metadata и actual receipt реализованы; [scope](HISTORY.md#ed5a2-view-2026-11-08).
+ED5a.4 завершён в bounded Windows x64 scope (source/published/fresh-package GPU и supported Windows input); physical held-button/multi-monitor gates отдельно. Далее ED5b translation contract. [Scope](HISTORY.md#ed5a4-acceptance-2026-11-08). Детальные задачи только в EDITOR_PLAN;
+новый primitive preview view не заменяет renderer f.3/f.4 или live World contracts.
 
 Независимые варианты: [Observer cost ED6b.2e.4f](EDITOR_PLAN.md#ed6b2e4f-observer-cost)
 и reliability ARCH2e.4b ниже. ARCH2 source/package/native transition, Window consumer,
@@ -1231,6 +1245,125 @@ Editor mesh/material inspector — [ED4i](EDITOR_PLAN.md#ed4i-render-components)
 generic controls — в UI плане. Новый пакет/backend/render graph/DI scope автоматически
 не назначены. K7/K8/VRAM/final release сохраняют прежний незакрытый scope.
 
+<a id="arch1g-model-assets"></a>
+### ARCH1g. Импорт и загрузка ассетов моделей — план исследования 2026-11-07
+
+Статус: **кандидат g.1 выбран — AssimpNetter6.0.5, low-level API**;
+[captured I/O/limits/ID/cancel contract v1](MODEL_IMPORT_CAPTURE.md#capture-v1) реализован
+и проверен как Windows x64 research prototype. Production importer/file delivery ещё
+не реализованы. [Сравнение и решение](MODEL_IMPORT_RESEARCH.md#decision-2026-11-07)
+основаны на4variants/8Debug-published Release profiles, actual version/SHA/delivery,
+literal geometry/hierarchy/slots и scoped allocation measurements. G.0 не закрыт
+полностью: static-profile details, stable IDs, captured I/O, numeric budgets и
+native cancel/isolation ещё требуют решения; зависимости production не добавлены.
+Владелец — engine/content направление; текущие f.1 CPU definitions и f.2 owners
+предоставляют основу, но поддерживают frozen builtin/in-memory content. Файловый
+import должен получить собственный контракт inputs/build/delivery до подключения
+к Runtime. Детальные задачи ведутся здесь, общий PLAN только ссылается на них.
+
+| Этап | Результат и зависимости | Критерий завершения |
+| --- | --- | --- |
+| ARCH1g.0 | Исследование форматов, importer libraries и content pipeline; доступно до f.3/4 | Матрица вариантов по возможностям, лицензиям/redistribution, managed/native зависимостям, поддержанным OS/RID, determinism и стоимости. Decision record выбирает ограниченный первый profile, явные unsupported cases, численные budgets и протокол измерений; определены fixtures и план прототипа |
+| ARCH1g.1 | После g.0: ограниченный CPU importer prototype вне tick/render loop | Лицензированные fixtures дают ожидаемые geometry/slots/transforms/dependencies и stable canonical revisions; повторный import воспроизводим. Corrupt/oversized/missing/unsupported inputs и cancel не публикуют частичный manifest; limits проверены до крупных allocations |
+| ARCH1g.2 | После g.1: captured asset inputs, build artifact/delivery и Runtime activation; визуальный consumer требует f.3/4 | Изменение model/dependency/import settings меняет captured build; complete immutable manifest и bytes доступны child без Game.Logic в Editor. Source/published/fresh-package load, reload/delete/cancel/Stop/Replace ownership проверены; actual native render proof отдельно от CPU import |
+
+Вопросы ARCH1g.0:
+
+- Сравнить glTF/GLB как кандидата первого профиля с OBJ/FBX и другими вариантами.
+  Уточнение2026-11-07: выбран low-level AssimpNetter6.0.5 для Editor/build import;
+  captured proof — static GLB/glTF+BIN/OBJ+MTL, FBX остаётся experimental. Runtime
+  должен получать engine artifacts, production format/unsupported policy ещё закрыть.
+- Разделить source model, import settings, generated mesh/material/texture assets
+  и scene/prefab instances. Определить stable AssetId при reimport/rename, exact revisions,
+  dependency closure и происхождение данных; paths не становятся runtime handles.
+- Зафиксировать axes/units/handedness, winding, index widths, node hierarchy и transforms,
+  material-slot mapping, bounds, instancing. Для normals/tangents/UV/textures/PBR,
+  animation/skinning/morphs/compression/extensions выбрать поддержку либо явную policy
+  отказа/сохранения. Текущий position-only opaque-unlit profile не расширяется молча.
+- Описать dependency resolution для embedded/external buffers и textures: разрешённые
+  roots/URIs, missing files и недопустимые внешние обращения; remote delivery — отдельное
+  решение. Выбрать limits для input/decompressed bytes, vertices/indices/nodes/depth,
+  dependency count, temporary/resident memory и concurrent imports; оценить worker isolation.
+- Согласовать source watcher/build capture с model dependencies и import settings,
+  cache invalidation, artifact retention, validation до World publication и preparation
+  через существующих resource owners. Наличие managed source watcher не считается
+  готовым asset watcher; no IO/decode/import/DI resolution в simulation query.
+- Выбрать небольшой воспроизводимый набор fixtures с разными slots/hierarchy/units,
+  повторным использованием mesh и повреждёнными dependencies. Измерить import time,
+  peak memory, artifact size и upload cost на заявленном workload; SLA до замеров не обещать.
+
+Результат исследования — decision record, схема source→import→artifact→CPU manifest→
+leases/preparation→render snapshot, перечень ограничений и конкретный g.1 prototype.
+Общие importer/content contracts принадлежат TrueMoon; конкретные модели, игровые
+правила и лицензированные assets — приложению/TrueMoon.Tales. Asset browser и inspector
+UX потребуют отдельного прикладного Editor шага после определения engine contracts.
+
+Принято2026-11-07: [captured import v1](MODEL_IMPORT_CAPTURE.md) задаёт32files,
+16MiB/file и32MiB/closure,128MiB cumulative read,64meshes,65536vertices/mesh,
+4096nodes/instances,64depth,8MiB detached payload; native worker —512MiB committed
+memory,1active/0queued, finite≤30s deadline, kill+actual exit перед release. Stable
+SourceId/subasset ledger не зависит от content revision; rename/restore требуют
+explicit mappings, publication atomic по generation. Числа — bounded research profile,
+не latency SLA; существующие f.1/2 budgets не расширяются.
+
+G.0 остаётся частичным до полного coordinate/unit/material/unsupported-feature policy.
+Следующий import шаг g.1: App registration и typed factory/owners, bounded dependency
+discovery и handle-verified source capture, native semantic locator→persistent ledger,
+полная validated CPU candidate+ledger transaction. Исследовательские manual owners
+и пофайловый local capture не заменяют эти production contracts.
+
+Storage boundary2026-11-07: persistent catalog/bytes/snapshots принадлежат
+[самостоятельному TrueMoon.Nom](../nom/PLAN.md#nom-own-queue) вне Aether. Пользователь
+утвердил полную замену LiteDB собственным KV/CAS хранилищем; [решение](../nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07)
+и detailed NOM0–NOM7 ведутся только у Nom. NOM2 переключил App/catalog на свой KV; далее NOM3. G.1 владеет
+import/decode/CPU validation, g.2 — consumer/build/runtime integration. Engine f.3/f.4
+не получают новой зависимости; публичные render contracts не переносятся в storage.
+
+<a id="arch1h-audio"></a>
+### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07
+
+Статус: **запланировано исследование и проектирование**, аудиомодуля/публичного API
+пока нет. Engine roadmap владеет этим направлением до решения о package boundaries;
+отдельный модульный PLAN появится при выделении модуля, без дублирования задач.
+
+| Этап | Результат и зависимости | Критерий завершения |
+| --- | --- | --- |
+| ARCH1h.0 | Исследование backend/codec вариантов, real-time модели, App/lifetime и границ модуля; независимо от renderer | Decision record сравнивает лицензии/поставку, OS/RID/native ABI, latency/CPU/memory, device handling и testability. Выбран scope первого результата, численные budgets, ownership diagram, public integration proposal и fixtures; новый пакет/provider ещё не объявлен реализованным |
+| ARCH1h.1 | После h.0: headless/offline prototype и выбранный минимальный sound profile | Decode/mix/commands проверены по известным PCM vectors: timing, gain, loop, pause/stop, sample rate/channels, clipping policy и bounded voice admission. Null/offline mode явно выбран, не выдаётся за успешное открытие physical device; invalid/cancel/overload/cleanup проверены |
+| ARCH1h.2 | После h.1: App-owned audio service/device и ECS source/listener consumer | App/IFactory/lifetime, startup failure, source deletion, pause/resume, session switch/Stop/Replace и device loss/disconnect имеют явные outcomes. Captured audio assets доступны Runtime; source/published/fresh-package proof, callback drain/owners и фактическое воспроизведение проверяются отдельно от offline tests |
+
+Вопросы ARCH1h.0:
+
+- Определить границу общего audio package/backend и Aether integration: устройство,
+  decoder, mixer, clip/stream owners — сервисы; source/listener/settings — данные ECS.
+  Имена AudioSource/AudioListener здесь обозначают роли, не утверждённые public types.
+  World не хранит managed buffers, device handles или lease owners; игровая sound policy
+  и выбор конкретных клипов принадлежат приложению.
+- Исследовать первый профиль: short effects и music, 2D/3D positioning, one listener,
+  attenuation/panning, buses/master gain/mute, pause/time-scale и streaming. Для WAV/PCM
+  и compressed codecs выбрать поддержку, loop/seek/sample-rate/channel semantics;
+  formats/backend/bindings и их лицензии проверяются по официальным источникам до выбора.
+- Предложить публичное App-подключение и typed IFactory для session/source resources,
+  explicit injection и native ownership. Выбрать owner thread/callback model, bounded
+  command queue, voice limits/stealing и observable overload/fault; не выполнять file IO,
+  decode, DI resolution, блокирующие ожидания или непредсказуемые allocations в callback.
+- Определить clip/stream identity/revisions и leases, peak PCM/decode/stream buffers,
+  old/candidate/retiring ownership, cancel/late completion и порядок stop/drain/dispose.
+  RenderAssetKey/RenderDeviceOwner не становятся audio API автоматически; общие asset
+  contracts требуют отдельного решения. Не освобождать callback resources до actual drain.
+- Согласовать audio assets с g.0 captured-input/delivery решениями, сохранив независимость
+  playback от model importer и GPU. Описать headless/muted mode, переключение проекта,
+  Editor preview versus Runtime playback, device reopen/failure и checkpoint eligibility;
+  wire/checkpoint capability не расширяется без полного support участников.
+- Подготовить generated PCM fixtures, bounded command/voice stress и известные mix
+  reference vectors, затем тест реального устройства. Отдельно измерять callback time,
+  underruns, latency и resource trends; audible output/OS settings не менять автоматически
+  при headless CI. Численные цели выбираются по workload, результаты не предполагаются.
+
+Исследование заканчивается выбором backend/scope, схемой data→commands→audio owner→
+callback→completion и планом h.1. Модели g.0 и audio h.0 могут исследоваться параллельно;
+их решения не объявляют f.3/4, PBR, анимацию или весь игровой движок готовыми.
+
 ### API и владельцы изменений
 
 Игровой API внутри Runtime предоставляет создание/удаление объектов, изменение
@@ -1382,6 +1515,8 @@ ARCH1a.1/2 реализованы/проверены2026-10-22; ARCH1a в цел
 | ARCH1d | Запланированы d.1–4: общий agent API, локальный MCP, authoring/jobs и эксперименты ENG9; встроенный UI — ED7a, live edits требуют ARCH1c | Внешний и встроенный consumers используют общие права/transactions, snapshots/jobs/conflicts и lifecycle; Game AI scenario проверяет наблюдение и изменение поведения, без заявления готовности полного World edit |
 | ARCH1e | Storage e.1, execution e.2, registry/load/initial Runtime e.3a/b и builtin Transform/primitive extraction e.4 реализованы2026-11-06, [этапы e.0–5](#arch1e-ecs) | Authoring/schema/IDs сохранены; проверки/открытые failures отдельно в STATUS; checkpoint e.5 и общий mesh/material renderer ещё впереди |
 | ARCH1f | [F.0/f.1 CPU contracts](RENDERING_CONTRACTS.md) и [f.2 resource services](RENDER_RESOURCES.md) реализованы по своим scope2026-11-06/07; f.3–6 запланированы | CPU/unit/package и actual Vulkan resource upload/readback имеют отдельные checks; owned extraction/submitted-frame leases/surface renderer proof ещё нужны; primitive64 не объявлен новым renderer |
+| ARCH1g | [Model assets/import research](#arch1g-model-assets): выбран AssimpNetter6.0.5 low-level после [8-profile spike](MODEL_IMPORT_RESEARCH.md#decision-2026-11-07), production graph не менялся | G.0 ещё требует captured-I/O/identity/budgets/cancel decisions перед g.1; current builtin/in-memory profile не считается file importer |
+| ARCH1h | [Audio module research](#arch1h-audio) запланировано; backend/package/API ещё не выбраны | H.0 фиксирует real-time/ownership/budgets; offline и actual device/package proofs разделены, ECS хранит только data |
 
 Порядок уточнён2026-10-23: для приложения Editor первый минимальный ARCH1b.1
 выполнен; независимый Edit preview и ED1a также реализованы в своих границах.

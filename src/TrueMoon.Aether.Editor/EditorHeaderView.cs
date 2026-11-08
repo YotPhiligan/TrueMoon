@@ -189,7 +189,8 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
     private void ToggleTheme()
     {
         Element root = this; while (root.Parent != null) root = root.Parent;
-        root.ApplyTheme((Theme.Surface == Theme.Dark.Surface ? Theme.Light : Theme.Dark) with { FontFamily = Theme.FontFamily });
+        root.ApplyTheme((Theme.Surface == Theme.Dark.Surface ? Theme.Light : Theme.Dark) with
+        { FontFamily = Theme.FontFamily, FontSize = Theme.FontSize, FontWeight = Theme.FontWeight, FontItalic = Theme.FontItalic });
     }
     /// <summary>Preserves application shortcuts when focus returns to title controls after menu dismissal.</summary>
     public override bool HandleInput(UiInput input, IInputContext context)
@@ -265,7 +266,7 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
         protected override Size MeasureCore(Size available, ITextLayoutService text)
         {
             var width = Math.Min(560, available.Width); var widest = 0f;
-            _lineHeight = Math.Max(FontSize, text.Measure("Mg", FontSize, FontFamily).Height) + 2;
+            _lineHeight = Math.Max(FontSize, text.Measure("Mg", FontSize, FontFamily, FontWeight, FontItalic).Height) + 2;
             _lines.Clear();
             foreach (var paragraph in Value.Replace("\r", "").Split('\n'))
             {
@@ -273,18 +274,18 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
                 while (elements.MoveNext())
                 {
                     var next = elements.GetTextElement();
-                    if (line.Length != 0 && text.Measure(line + next, FontSize, FontFamily).Width > width)
-                    { _lines.Add(line); widest = Math.Max(widest, text.Measure(line, FontSize, FontFamily).Width); line = next; }
+                    if (line.Length != 0 && text.Measure(line + next, FontSize, FontFamily, FontWeight, FontItalic).Width > width)
+                    { _lines.Add(line); widest = Math.Max(widest, text.Measure(line, FontSize, FontFamily, FontWeight, FontItalic).Width); line = next; }
                     else line += next;
                 }
-                _lines.Add(line); widest = Math.Max(widest, text.Measure(line, FontSize, FontFamily).Width);
+                _lines.Add(line); widest = Math.Max(widest, text.Measure(line, FontSize, FontFamily, FontWeight, FontItalic).Width);
             }
             return new(Math.Min(width, widest), _lines.Count * _lineHeight);
         }
         protected override void DrawCore(IDrawingContext context)
         {
             var y = Bounds.Y;
-            foreach (var line in _lines) { context.Text(line, Bounds.X, y, Foreground, FontSize, FontFamily); y += _lineHeight; }
+            foreach (var line in _lines) { context.Text(line, Bounds.X, y, Foreground, FontSize, FontFamily, FontWeight, FontItalic); y += _lineHeight; }
         }
     }
 
@@ -326,15 +327,15 @@ public sealed class EditorHeaderView : View<EditorViewModel>, IUiFrameParticipan
         protected override void ArrangeCore(Rect area)
         {
             _display = Value;
-            if (_text == null || _text.Measure(_display, FontSize, FontFamily).Width <= area.Width) return;
+            if (_text == null || _text.Measure(_display, FontSize, FontFamily, FontWeight, FontItalic).Width <= area.Width) return;
             const string ellipsis = "…";
-            if (_text.Measure(ellipsis, FontSize, FontFamily).Width > area.Width) { _display = ""; return; }
+            if (_text.Measure(ellipsis, FontSize, FontFamily, FontWeight, FontItalic).Width > area.Width) { _display = ""; return; }
             var count = Value.Length;
-            while (count > 0 && _text.Measure(Value[..count] + ellipsis, FontSize, FontFamily).Width > area.Width) count--;
+            while (count > 0 && _text.Measure(Value[..count] + ellipsis, FontSize, FontFamily, FontWeight, FontItalic).Width > area.Width) count--;
             if (count > 0 && char.IsHighSurrogate(Value[count - 1])) count--;
             _display = Value[..count] + ellipsis;
         }
         protected override void DrawCore(IDrawingContext context) =>
-            context.Text(_display, Bounds.X, Bounds.Y + (Bounds.Height - FontSize) / 2, Foreground, FontSize, FontFamily);
+            context.Text(_display, Bounds.X, Bounds.Y + (Bounds.Height - FontSize) / 2, Foreground, FontSize, FontFamily, FontWeight, FontItalic);
     }
 }

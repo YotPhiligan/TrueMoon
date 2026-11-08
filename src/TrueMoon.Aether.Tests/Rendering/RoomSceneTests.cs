@@ -50,18 +50,18 @@ public sealed class RoomSceneTests
     }
 
     [Fact]
-    public void ControlV3_RoundTripsWorldMatrixColorAndNeutralGroupWithoutAliasing()
+    public void ControlV4_RoundTripsWorldMatrixColorAndNeutralGroupWithoutAliasing()
     {
         var id = Identity; var request = ControlRequest.Create(id, 2, CommandKind.LoadScene);
         request.SceneId = "room"; request.Revision = 7; request.Entities = [new() { Id = "group" }, new() { Id = "cube", Primitive = ScenePrimitive.FromPrimitive(Cube) }];
         var bytes = new ArrayBufferWriter<byte>(); request.Serialize(bytes); var offset = 0;
         var result = new ControlRequest().Deserialize(bytes.WrittenSpan, ref offset);
-        Assert.Equal(3, result.ControlVersion); Assert.Equal(id, result.Identity()); Assert.Equal(bytes.WrittenCount, offset);
+        Assert.Equal(4, result.ControlVersion); Assert.Equal(id, result.Identity()); Assert.Equal(bytes.WrittenCount, offset);
         Assert.Equal(7, result.Revision); Assert.Equal("room", result.SceneId); Assert.Null(result.Entities![0].Primitive);
         Assert.Equal(Cube, result.Entities[1].Primitive!.ToPrimitive());
         request.Entities[1].Primitive!.Transform[12] = -100; Assert.Equal(2, result.Entities[1].Primitive!.Transform[12]);
         Assert.Throws<InvalidDataException>(() => (id with { ControlVersion = 2 }).Validate());
-        Assert.Equal(1, id.FrameVersion); Assert.Equal(GameCheckpoint.CurrentVersion, id.SnapshotVersion);
+        Assert.Equal(2, id.FrameVersion); Assert.Equal(GameCheckpoint.CurrentVersion, id.SnapshotVersion);
     }
 
     [Theory]

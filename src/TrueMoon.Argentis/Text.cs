@@ -15,11 +15,11 @@ public class Text : Element, ITextElement
     /// <summary>The displayed string.</summary>
     public string Value { get => Get(ValueProperty); set => Set(ValueProperty, value); }
     /// <inheritdoc />
-    protected override Size MeasureCore(Size available, ITextLayoutService text) => text.Measure(Value, FontSize, FontFamily);
+    protected override Size MeasureCore(Size available, ITextLayoutService text) => text.Measure(Value, FontSize, FontFamily, FontWeight, FontItalic);
     /// <inheritdoc />
     protected override void DrawCore(IDrawingContext context)
     {
         var area = Bounds.Deflate(Padding);
-        context.Text(Value, area.X, area.Y, IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily);
+        context.Text(Value, area.X, area.Y, IsEffectivelyEnabled ? Foreground : Theme.Disabled, FontSize, FontFamily, FontWeight, FontItalic);
     }
 }

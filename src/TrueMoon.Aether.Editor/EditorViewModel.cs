@@ -138,7 +138,7 @@ public sealed class EditorViewModel : ViewModel, IDisposable
         ArgumentNullException.ThrowIfNull(runtime); ArgumentNullException.ThrowIfNull(editor);
         _documents?.Refresh();
         if (_documents?.ProjectSwitchEnabled == true) _workspace.SetProject(_documents.Project);
-        if (_documents != null) _workspace.SetDocument(_documents.Document?.Content);
+        if (_documents != null) _workspace.SetDocument(_documents.Document?.Content, _documents.Document?.OpeningId ?? Guid.Empty);
         if (_workspace.Project != null || _presentationOwner != 0)
         {
             var thread = Environment.CurrentManagedThreadId;

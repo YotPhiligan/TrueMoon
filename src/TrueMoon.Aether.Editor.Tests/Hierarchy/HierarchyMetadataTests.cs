@@ -5,6 +5,8 @@ using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Scenes;
 using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Alloy.Rendering.Skia;
+using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -65,15 +67,24 @@ public sealed class HierarchyMetadataTests
     public void Rename_InvalidDraftRetainsInputAndEmptyDraftRestoresFallbackWithoutChangingId()
     {
         using var test = new HierarchyFixture();
+        var view = new EditorHierarchyView(test.Model, new EditorHierarchyViewStyle());
+        using var ui = UiSession.Create(view, new SkiaRasterRenderBackend(), new RasterUiTarget(), new(1280, 800)); ui.Update();
         Assert.True(test.Model.BeginRename()); test.Model.RenameText = new string('x', 129);
         Assert.False(test.Model.CommitRename()); Assert.True(test.Model.IsRenaming); Assert.Contains("InvalidName", test.Model.ErrorText);
+        ui.Update(); Assert.True(test.Model.HasRenameError); Assert.True(view.NameEditor.HasError);
+        Assert.Equal(test.Model.ErrorText, view.NameEditor.ErrorMessage); Assert.Equal(new string('x', 129), view.NameEditor.Value);
+        Assert.Equal(view.NameEditor.Bounds.Height, view.NameEditor.ValidationIconBounds.Width);
         Assert.Equal(7, test.Owner.Document.Read().Content!.Document.Revision);
-        test.Model.RenameText = "Named"; Assert.True(test.Model.CommitRename());
+        test.Model.RenameText = "Named"; ui.Update(); Assert.False(view.NameEditor.HasError); Assert.Equal("", view.NameEditor.ErrorMessage);
+        Assert.False(test.Model.HasError); Assert.True(test.Model.CommitRename());
         Assert.True(test.Model.BeginRename()); test.Model.RenameText = ""; Assert.True(test.Model.CommitRename());
         Assert.Null(test.Owner.Document.Read().Content!.Resolved.Entities[DocumentData.Child].Name);
         Assert.Equal(HierarchyFixture.Child, test.Model.SelectedId); Assert.Equal(2, test.Owner.Document.Read().Content!.UndoCount);
         Assert.True(test.Model.BeginRename()); Assert.True(test.Model.CommitRename());
         Assert.Equal(2, test.Owner.Document.Read().Content!.UndoCount);
+        Assert.True(test.Model.BeginRename()); test.Model.RenameText = " "; Assert.False(test.Model.CommitRename());
+        test.Model.CancelRename(); ui.Update(); Assert.False(test.Model.HasRenameError); Assert.False(view.NameEditor.HasError);
+        Assert.Equal("", view.NameEditor.ErrorMessage); Assert.Equal(2, test.Owner.Document.Read().Content!.UndoCount);
     }
 
     [Fact]

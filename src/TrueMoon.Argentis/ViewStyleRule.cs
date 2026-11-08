@@ -64,6 +64,18 @@ public sealed class ViewStyleRule
     /// <summary>Declares a font family derived from the current theme.</summary>
     public ViewStyleRule FontFamily(Func<Theme, string> value) => Set(UiProperties.FontFamily, value);
 
+    /// <summary>Declares font weight100..900;600 selects semibold.</summary>
+    /// <param name="value">Requested weight.</param><returns>This declaration.</returns>
+    public ViewStyleRule FontWeight(int value) => Set(UiProperties.FontWeight, value);
+
+    /// <summary>Declares a font weight derived from the current theme.</summary>
+    /// <param name="value">Theme-dependent requested weight.</param><returns>This declaration.</returns>
+    public ViewStyleRule FontWeight(Func<Theme, int> value) => Set(UiProperties.FontWeight, value);
+
+    /// <summary>Declares whether text uses an italic face.</summary>
+    /// <param name="value">Whether to select italic.</param><returns>This declaration.</returns>
+    public ViewStyleRule FontItalic(bool value) => Set(UiProperties.FontItalic, value);
+
     /// <summary>Declares a background color.</summary>
     public ViewStyleRule Background(Color value) => Set(UiProperties.Background, value);
 

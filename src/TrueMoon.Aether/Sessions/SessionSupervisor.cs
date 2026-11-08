@@ -122,6 +122,8 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
 
     internal Task StartPreviewAsync(SceneSnapshot scene, CancellationToken token)
         => StartCoreAsync(scene, null, null, "normal", token, role: RuntimeRole.EditPreview);
+    internal Task StartPreviewViewAsync(SceneSnapshot scene, Preview.PreviewViewState view, CancellationToken token)
+        => StartCoreAsync(scene, null, null, "normal", token, role: RuntimeRole.EditPreview, previewView: view);
 
     /// <summary>Explicitly starts a validated artifact on a fresh generation. Build completion never calls this automatically.</summary>
     public Task StartAsync(SceneSnapshot scene, GameBuildArtifact build, string behavior = "normal", CancellationToken token = default)
@@ -139,7 +141,7 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
         ReplacementAdmission.Lease owner, CancellationToken token) => StartCoreAsync(scene, build, checkpoint, behavior, token, owner);
 
     private async Task StartCoreAsync(SceneSnapshot? scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, string behavior, CancellationToken token,
-        ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, SceneWorldData? worldScene = null)
+        ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, SceneWorldData? worldScene = null, Preview.PreviewViewState? previewView = null)
     {
         if (scene == null && worldScene == null) throw new ArgumentNullException(nameof(scene));
         checkpoint?.ValidateFor(_hostId, scene!);
@@ -177,13 +179,17 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
                 phase = "Hello";
                 var hello = await ExchangeAsync(CommandKind.Hello, null, startup.Token).ConfigureAwait(false);
                 if (hello.Phase != "HelloAccepted") throw new InvalidDataException("Hello acknowledgement phase mismatch.");
+                if (previewView != null && hello.PreviewViewVersion != Preview.PreviewViewCodec.Version)
+                    throw new InvalidDataException("Runtime does not support the explicit preview view capability.");
                 Publish(Status with { HelloAccepted = true });
                 phase = "LoadScene";
                 var loaded = worldScene == null
                     ? await ExchangeAsync(CommandKind.LoadScene, r =>
-                        { r.SceneId = scene!.Id; r.Revision = scene.Revision; r.Entities = scene.CopyEntities(); }, startup.Token).ConfigureAwait(false)
+                        { r.SceneId = scene!.Id; r.Revision = scene.Revision; r.Entities = scene.CopyEntities();
+                          r.PreviewView = previewView == null ? null : Preview.PreviewViewCodec.Encode(previewView); }, startup.Token).ConfigureAwait(false)
                     : await TransferWorldAsync(worldScene, worldBytes!, worldComponents, hello, startup.Token).ConfigureAwait(false);
                 if (loaded.Revision != sceneRevision || loaded.Phase != "Paused") throw new InvalidDataException("Scene acknowledgement mismatch.");
+                if (previewView != null) ValidatePreviewReply(loaded, previewView);
                 _sceneId = sceneId;
                 Publish(Status with { SceneLoaded = true, Tick = unchecked((ulong)loaded.Tick), SceneRevision = sceneRevision,
                     SceneWorldId = _activeWorldId == null ? null : Guid.Parse(_activeWorldId),
@@ -284,6 +290,14 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
     }
     public Task<ControlReply> SetPlayingAsync(bool playing, CancellationToken token = default)
         => CommandAsync(CommandKind.SetMode, r => r.Playing = playing, token, playing);
+    internal Task<ControlReply> UpdatePreviewViewAsync(Preview.PreviewViewState view, SessionIdentity expectedIdentity, CancellationToken token)
+        => CommandAsync(CommandKind.SetPreviewView, r => r.PreviewView = Preview.PreviewViewCodec.Encode(view), token, expectedIdentity: expectedIdentity, expectedPreview: view);
+    private static void ValidatePreviewReply(ControlReply reply, Preview.PreviewViewState view)
+    {
+        if (reply.PreviewViewVersion != Preview.PreviewViewCodec.Version || reply.Phase != "Paused" || reply.Revision != view.Context.SceneRevision || reply.Tick != 0 ||
+            reply.PreviewViewStamp == null || Preview.PreviewViewCodec.ReadStamp(reply.PreviewViewStamp) != view.Stamp)
+            throw new InvalidDataException("Preview view acknowledgement mismatch.");
+    }
     internal Task<ControlReply> StatusForReplacementAsync(ReplacementAdmission.Lease owner, CancellationToken token)
         => CommandAsync(CommandKind.GetStatus, null, token, owner: owner);
     internal Task<ControlReply> ModeForReplacementAsync(bool playing, ReplacementAdmission.Lease owner, CancellationToken token)
@@ -293,7 +307,7 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
     internal Task<ControlReply> SurfaceForReplacementAsync(FrameSurface surface, ReplacementAdmission.Lease owner, CancellationToken token)
         => CommandAsync(CommandKind.ConfigureSurface, r => r.Surface = surface.ToWire(), token, surfaceGeneration: surface.Generation, owner: owner);
     private async Task<ControlReply> CommandAsync(CommandKind kind, Action<ControlRequest>? configure, CancellationToken token, bool? expectedPlaying = null,
-        ulong? surfaceGeneration = null, ReplacementAdmission.Lease? owner = null, SessionIdentity? expectedIdentity = null)
+        ulong? surfaceGeneration = null, ReplacementAdmission.Lease? owner = null, SessionIdentity? expectedIdentity = null, Preview.PreviewViewState? expectedPreview = null)
     {
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
@@ -312,6 +326,11 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
             try
             {
                 var reply = await ExchangeAsync(kind, configure, deadline.Token).ConfigureAwait(false);
+                if (kind == CommandKind.SetPreviewView)
+                {
+                    if (ActiveRole != RuntimeRole.EditPreview || Status.State != SessionState.Paused) throw new InvalidDataException("Preview view requires paused EditPreview.");
+                    ValidatePreviewReply(reply, expectedPreview ?? throw new InvalidOperationException("Expected preview view is required."));
+                }
                 if (kind == CommandKind.SetInput && (reply.InputOutcome is not ((int)GameInputOutcome.Accepted) and not ((int)GameInputOutcome.Unsupported) ||
                     reply.Phase != Status.State.ToString() || Status.State == SessionState.Paused && unchecked((ulong)reply.Tick) != Status.Tick))
                     throw new InvalidDataException("Input acknowledgement changed paused tick/mode or omitted its outcome.");

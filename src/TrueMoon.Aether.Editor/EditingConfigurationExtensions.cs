@@ -24,7 +24,9 @@ public static class EditingConfigurationExtensions
                 throw new InvalidOperationException("Editor editing is already registered.");
             if (!services.Exist<EditorDocumentCommands>() || !services.Exist<EditorPreview>())
                 throw new InvalidOperationException("Configure document commands and preview before editor editing.");
-            services.Singleton<EditorInspectorViewModel>(r => new(r.Resolve<EditorDocumentCommands>()!, r.Resolve<EditorPreview>()!));
+            var workspace = services.Exist<EditorWorkspace>();
+            services.Singleton<EditorInspectorViewModel>(r => new(r.Resolve<EditorDocumentCommands>()!, r.Resolve<EditorPreview>()!,
+                workspace ? r.Resolve<EditorWorkspace>() : null));
             if (!services.Exist<IViewStyle<EditorInspectorView>>()) services.Singleton<IViewStyle<EditorInspectorView>>(_ => new EditorInspectorViewStyle());
             services.Singleton<IFactory<EditorInspectorView>>(r => new Factory<EditorInspectorView>(() =>
                 new(r.Resolve<EditorInspectorViewModel>()!, r.Resolve<IViewStyle<EditorInspectorView>>()!)));

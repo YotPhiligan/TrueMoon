@@ -27,6 +27,7 @@ internal sealed class EditorViewportBinding : IFactory<IGameViewportTransport, G
     public IGameViewportTransport Create(GpuResourceHost gpu) => new GpuViewportTransport(gpu, () => (_adapter, _context), Consume, runtime => (NativeRuntimeLease)runtime);
     internal void Observe(UiSession ui, EditorView view)
     {
+        if(view.ViewportController?.IsActive==false)return;
         if (_ui == null) _ui = new(ui); else _ui.SetTarget(ui);
         if (_view == null) _view = new(view); else _view.SetTarget(view);
     }
@@ -35,6 +36,8 @@ internal sealed class EditorViewportBinding : IFactory<IGameViewportTransport, G
     {
         if (!ReferenceEquals(_engine.Frames.Presentation, source.Frame.Presentation)) return;
         if (_ui == null || !_ui.TryGetTarget(out var ui) || _view == null || !_view.TryGetTarget(out var view) || view.IsDisposed) return;
+        if(ui.Viewport.IsEmpty||view.ViewportController is {CanPresent:false}||
+            view.ViewportController is {} controller&&source.Frame.Metadata.PreviewView is {} stamp&&stamp.ViewId!=controller.ViewId)return;
         var image = ((SkiaOpenGLSurface)ui.Rendering).CopyTexture(source.Texture.Name, source.Texture.Width, source.Texture.Height);
         try { view.Canvas.Upload(image, source.Frame, () => ReferenceEquals(_engine.Frames.Presentation, source.Frame.Presentation)); }
         catch { image.Dispose(); throw; }

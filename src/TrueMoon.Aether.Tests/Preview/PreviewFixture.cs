@@ -45,6 +45,7 @@ internal sealed class PreviewFixture : IAsyncDisposable
         internal readonly List<Lease> Leases = [];
         internal Exception? LaunchError;
         internal Func<ControlRequest, CancellationToken, Task>? BeforeSend;
+        internal Func<ControlRequest, ControlReply, ControlReply>? AfterSend;
         internal int MaxLive;
         public IRuntimeLease Create(SessionLaunch launch)
         {
@@ -75,7 +76,8 @@ internal sealed class PreviewFixture : IAsyncDisposable
         {
             Commands.Enqueue((CommandKind)request.Kind);
             if (owner.BeforeSend is { } before) await before(request, token);
-            return await Protocol.SendAsync(request, token);
+            var reply = await Protocol.SendAsync(request, token);
+            return owner.AfterSend?.Invoke(request, reply) ?? reply;
         }
         internal void Crash() => _exit.TrySetResult();
         public Task StopAsync(CancellationToken gracefulDeadline = default)

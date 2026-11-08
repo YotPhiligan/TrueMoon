@@ -9,6 +9,21 @@ namespace TrueMoon.Aether.Editor.Tests.Inspector;
 
 public sealed class InspectorIconActionsTests
 {
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void GroupResetTooltip_ExplainsInheritanceAndDisabledPendingResetWithoutStealingFocus(bool pending)
+    {
+        using var test = new IconsFixture(); var transform = test.View.TransformEditors[DocumentData.Transform];
+        if (pending) test.Owner.Model.ResetTransformGroup(TransformGroup.Position);
+        test.Drain(); var input = transform.Rotation.First.Editor; test.Ui.Focus(input);
+        test.Hover(transform.ResetPosition); test.Clock.Advance(499); test.Drain(); Assert.Null(test.Host.Popup);
+        test.Clock.Advance(1); test.Drain();
+        Assert.Equal(transform.ResetPosition.AccessibleName + (pending ? " · сейчас недоступно" : ""),
+            Assert.Single(DocumentUiFixture.Tree(test.Host.Popup!).OfType<Text>()).Value);
+        Assert.Contains("наследуемым", transform.ResetPosition.AccessibleName); Assert.True(input.IsFocused);
+        Assert.False(test.View.NeedsFrame); Assert.Equal(0, test.Owner.Owner.Document.Read().Content!.UndoCount);
+    }
+
     [Fact]
     public void IconActions_UseCompactSemanticSymbolsWhileSchemaChoicesAndRemovedComponentNamesRemainVisible()
     {

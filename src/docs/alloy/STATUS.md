@@ -1,16 +1,61 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-**2026-11-07 — SkiaSharp/native обновлены до4.155.0.**
-DLL пересобрана из exact NuGet source commit с прежним Vulkan extension/ABI v1;
-официальный version gate и TrueMoon exports проверены. Source Debug/published Release:
-18readbacks/36GPU-композиций/backend comparison каждый, core+sync validation0/0.
-Alloy1101/1101, Hosting154/154 и Editor1295/1295 каждый D/R. Fresh10pkg:36App+4direct processes
-Debug/Release×build/publish на raster/OpenGL/Vulkan, native delivery/cleanup passed.
-[Команды и scope](HISTORY.md#skiasharp-41550-2026-11-07).
-[Текущая очередь](PLAN.md#current-ui-queue), [дизайн-код](DESIGN.md),
-[прежний STATUS полностью](HISTORY.md#status-before-planning-revision-2026-11-05).
+**2026-11-08 — UIA3d.3 исправлен TextBox line fit:** Height32 с default Padding8
+больше не обрезает низ default16/600 строки. Полный font line box получает место
+за счёт вертикальных отступов; clip внутри border отделён от позиции по Padding.
+NumberBox получает то же исправление, natural height и error badge сохранены.
+Exact raster regression против Height48, selected/unselected, Dark/Light1/1.5/2
+прошёл. Новые UI1184/Hosting154/Editor1412 каждый D/R, source/published3backend
+по18PNG/12comparisons и Vulkan0/0 прошли. [Причина/команды/scope](HISTORY.md#textbox-line-fit-2026-11-08).
+Далее PA8c.0, включая прежний дополнительный shadow-overlap случай; physical input/
+DPI/full solution/fresh NuGet consumer этим исправлением не повторялись.
+
+**2026-11-08 — UIA3d.2 завершён:** TextBox/RichTextEditor/NumberBox используют
+сплошной квадрат Theme.Error стороной в высоту поля и символ Theme.OnError.
+Text/focus viewport и rich auto-height учитывают блок; tooltip активен на всей площади.
+Аудит исправил inline rename InvalidName binding и demo message/OverlayHost;
+командные/IO diagnostics сохранены. UI1176/Hosting154/Editor1412 каждый D/R,
+source/published3backend18PNG/12comparisons каждый и fresh5package Vulkan6cases D/R
+прошли, validation0/0. [Изменения/аудит/команды](HISTORY.md#validation-badge-2026-11-08).
+Дополнительный lower-field tooltip profile дал 2shadow-overlap pixels delta3/255
+вне badge; это отдельный PA8c.0 baseline пункт, основной profile прошёл без смены
+порогов. Physical input/DPI/full solution этим срезом не проверялись.
+
+**2026-11-08 — UIA3d.1 Vulkan frosted backdrop исправлен и проверен.**
+TextBox/RichTextEditor/NumberBox.Editor резервируют место для красного значка справа.
+OverlayHost показывает точный ErrorMessage с delay500ms, wrap/scroll и cleanup;
+Inspector сохраняет aggregate Diagnostics, draft/selection/history, inline labels убраны.
+BoxShadow/Shadow, themed PanelShadow/MenuShadow и Skia outer image-filter path
+подключены к Editor island styles и MenuPopup. Legacy contexts omitting optional
+shadow capability совместимы; App/DI/native ABI/dependencies не менялись.
+Первоначальные UIA3d opaque/raster proofs сохраняют собственный scope в [HISTORY](HISTORY.md#validation-shadows-2026-11-08); текущие native проверки — ниже.
+
+**UIA3d.1 закрыт:** в pinned native Skia к GENERAL source stage добавлен HOST,
+соответствующий существующему HOST_WRITE. DLL пересобрана, patch/hash включены в
+reproducible recipe/build metadata. Blur/default backdrop/ABI/ownership сохранены.
+Новые source Debug/published Release frosted profiles:18actual blur witnesses,
+18PNG/12comparisons,6Vulkan validation0/0 reports каждый. Fresh5package independent
+Vulkan consumer D/R по6cases и loaded native SHA прошёл. Старый native и отключённый
+blur отрицательные controls отклонены. Interop18 и composition36/leases18 прошли;
+UI1170/Hosting154/Editor1412 каждый D/R повторены, failed0/skipped0.
+[Причина/команды/хеши/scope](HISTORY.md#vulkan-backdrop-2026-11-08).
+Physical input/DPI/multi-monitor, VRAM/K7/K8/swapchain и full solution/release
+этим срезом не проверялись. Далее PA8c.0 visual baseline по запросу consumer;
+независимый Editor шаг — ED5b contract.
+
+Предыдущие typography PA8c.3b и ED5a.4 результаты сохраняют собственные даты/scope:
+[default fonts](HISTORY.md#default-fonts-2026-11-08),
+[camera/selection acceptance](../engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
+[Текущая очередь](PLAN.md#current-ui-queue), [дизайн-код](DESIGN.md).
 
 ## Состояние реализации
+
+PA8c.3b делает preferred family общим default; системный каталог применяется
+к parameterless backend и RichText, file-only override сохранён.
+
+SkiaSharp/native4.155.0 и прежний Vulkan ABI сохранены. PA8c.3a включает
+FontWeight100..900/FontItalic, styled measure/draw и cache keys; Rich FontWeight,
+Bold/Undo и requested→system chain→file fallback. File-only catalogs сохранены.
 
 UIA1 typed View/Data/scoped styles и App factories, UIA2 Window, UIA3 compact
 NumberBox/Vector3Editor/PropertyEditorRow, RichText auto-height, themed CheckBox
@@ -24,31 +69,24 @@ TreeView/menu/bindings/appearance/DPI существуют в указанных
 
 ## Проверки готовности
 
-Текущий run **2026-11-07**: native source build4.155.0 exit0, managed/native154→155
-negative gate exit2, штатный native155 без extension exit2. Bundled DLL, source Debug
-и published Release имеют совпадающий SHA; ABI48bytes, readback/layout return/redraw,
-external composition и raster/OpenGL/Vulkan comparison прошли. All1101Alloy/154Hosting
-cases прошли в каждой Debug/Release, failed/skipped0. Physical/K7/K8 scope не расширен.
-Fresh NuGet matrix Completed=true:10packages,36App+4direct cases, exact package-only
-graphs, new DLL SHA/delivery/fonts/behavior/cleanup и expected missing-analyzer control.
-Initial failures stale direct graph guard и changed README сохранены, final source
-hash audit прошёл на frozen snapshot. Это не новая physical Window/release matrix.
-Editor1295/1295 D/R также passed; solution nonincremental Debug0errors/1555warnings,
-1422distinct warning catalogue unchanged. Full solution/Aether tests не запускались.
+Последний кодовый fonts/defaults запуск **2026-11-07/08**: Alloy1126/1126, Hosting154/154,
+Editor1300/1300 каждый D/R, failed0/skipped0. Source Debug/published Release ×
+dark/light:4Editor native runs, actual Segoe UI Variable Text600, scale1.5,
+header/menu/status/theme/idle/close/drain и UI/GPU/children owners0, validation0/0.
+Parameterless backend gallery: по18captures/12complete-frame comparisons в source
+Debug и published Release при synthetic1/1.5/2, outside-tolerance pixels0.
+Exact fresh4nupkg consumer Debug build/run и Release publish/run подтверждает
+default family и file-only override; public example build/publish также прошёл.
+[Подробные команды, baseline, initial failures и ограничения](HISTORY.md#default-fonts-2026-11-08).
 
-Сохранённый run **2026-11-05**: full Alloy1101/1101 и Hosting154/154 каждый
-Debug/Release, failed/skipped0,6новых pointer regression cases. Отдельно full
-Editor1295/1295 D/R;4native OpenGL runs source Debug/published Release × standard/
-Cobalt и embedded/MS DI. В standard Windows linked drag/release, Esc draft cancel,
-Ctrl+Enter и Undo прошли; routed arrows/captured Esc — во всех. UI/GPU/handles0,
-runtime children0. [Точное evidence](HISTORY.md#uia3c-native-numeric-2026-11-05).
-
-Window delivery через fresh Editor NuGet consumer проверен4ноября; новые numeric
-изменения не получили этим новый fresh-package proof. Прежние raster/OpenGL/Vulkan
-goldens, Settings/scale/HUD и PA8a checks имеют собственные даты в архиве/HISTORY.
-Они не являются текущим full hardware/release проходом.
+Предыдущая opt-in fonts matrix: [PA8c.3a](HISTORY.md#system-fonts-2026-11-07).
+Прежние Skia update/full-solution/Editor/native numeric результаты сохраняют
+свои даты и scopes; новые full Aether/solution/Playing proof не объявлены.
 
 ## Блокеры и ограничения
+
+- Fonts: automatic opsz/arbitrary axes и plain-text per-glyph fallback не добавлены.
+  Physical DPI, performance/VRAM и fresh package GPU/Hosting matrix не проверялись.
 
 - Numeric physical arrows/modifiers, Esc с удерживаемой кнопкой и OS pointer
   modifiers не подтверждены. Automation arrows поступали как UiKey.None; mixed
@@ -64,14 +102,18 @@ goldens, Settings/scale/HUD и PA8a checks имеют собственные д�
 
 ## Следующий конкретный шаг
 
-Для Editor — поддержать [ED4g.3/4](../engine/EDITOR_PLAN.md#current-editor-queue)
-только теми общими UI capabilities, которые потребуются consumer. Numeric input
-acceptance остаётся отдельным доступным proof при подходящем вводе.
-Самостоятельная visual-quality задача — **PA8c.0 baseline текста/геометрии**,
-затем выбор конкретных PA8c.1/2 исправлений по наблюдаемым дефектам.
-Wider Window/backend/fresh package и hardware/release checks не назначаются
-повторно как завершённая feature и не блокируют каждое новое поле инспектора.
-Full INF5 и отложенный RichTextEditor backlog развивать по отдельному consumer.
+UIA3d.1 завершён; следующий UI visual шаг — PA8c.0 baseline по конкретному consumer.
+Независимый Editor шаг — [ED5b translation contract](../engine/EDITOR_PLAN.md#ed5b-translation).
+Общие controls добавлять в Alloy/Argentis по конкретной потребности consumer.
+
+Независимый visual-quality трек — PA8c.0 baseline на текущем Variable Text,
+затем PA8c.1/2 по наблюдаемым дефектам. Default policy и подключение Editor уже
+завершены в сохранённом scope. Numeric physical acceptance, K3/K7/K8 и wider
+release/fresh package matrix остаются отдельными проверками.
+
+Входящая Studio ui.resizable-panes остаётся proposed: Claim/Decision владельца
+ещё нужны, в этой документационной актуализации работа не принята.
+INF5 и отложенный RichTextEditor backlog выбирать по конкретному consumer.
 
 <!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
 <a id="текущие-проверки--wsi-stages2026-10-10"></a>

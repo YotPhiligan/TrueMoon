@@ -32,6 +32,7 @@ public sealed class InspectorIslandStyleTests
         Assert.Equal(new Thickness(8), view.HierarchyIsland.Padding);
         Assert.Equal(new Thickness(8), view.InspectorIsland.Padding);
         Assert.Equal(theme.PanelBackdrop, surface.Backdrop); Assert.Equal(theme.PanelBackdrop, view.Hierarchy.Backdrop);
+        Assert.Same(theme.PanelShadow, surface.Shadow); Assert.Same(theme.PanelShadow, view.Hierarchy.Shadow);
         Assert.Equal(Color.Transparent, surface.Background); Assert.Equal(Color.Transparent, section.Background);
         Assert.Equal(8f, surface.CornerRadius); Assert.Equal(1f, surface.BorderWidth);
         Assert.Equal(8f, view.Hierarchy.CornerRadius); Assert.Equal(1f, view.Hierarchy.BorderWidth);
@@ -45,6 +46,8 @@ public sealed class InspectorIslandStyleTests
         Assert.True(offset > 0); ui.Focus(input);
         var fallback = (light ? Theme.Dark : Theme.Light) with { PanelBackdrop = null };
         ui.SetTheme(fallback); Drain();
+        Assert.Same(fallback.PanelShadow, surface.Shadow); Assert.Same(fallback.PanelShadow, view.Hierarchy.Shadow);
+        surface.Shadow = null; Assert.Null(surface.Shadow); surface.Clear(UiProperties.Shadow); Assert.Same(fallback.PanelShadow, surface.Shadow);
         Assert.Same(inspector, view.Inspector); Assert.Same(tree, view.Hierarchy.Tree);
         Assert.Same(input, inspector.Properties[(DocumentData.Transform, "x")].Input);
         Assert.Same(section, inspector.Components[DocumentData.Transform].Section);

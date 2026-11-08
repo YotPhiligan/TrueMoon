@@ -37,7 +37,7 @@ focus/hover/enabled. События меняют состояние; отрис�
 | Приоритет themed-границы | Состояние / событие | Представление |
 | --- | --- | --- |
 | 1 | Недоступен, включая недоступного родителя | Нейтральная граница; ввод запрещён |
-| 2 | Ошибка валидации | Error и структурный маркер; пояснение возле поля |
+| 2 | Ошибка валидации | Error и красный значок справа у границы TextBox/RichTextEditor; точное пояснение в tooltip |
 | 3 | Получен фокус | Focus; дополнительный внутренний контур толщиной 2 |
 | 4 | Есть неприменённый draft или pending reset | Modified и маленький маркер изменения |
 | 5 | Наведение указателя | BorderHover |
@@ -68,17 +68,35 @@ Read-only CheckBox получает фон ReadOnly, принимает фоку
 ## Плотность и формы
 
 Компактный инспектор использует строку ввода 26 logical pixels, текст 12 и подписи 11.
-Подпись, префикс и строка ввода центрированы по высоте. Подписи выровнены общей
+Подпись, префикс и строка ввода центрированы по высоте. TextBox использует полный
+измеренный line box; при компактной fixed Height вертикальные отступы уступают место
+строке с сохранением top/bottom пропорции. Padding задаёт позицию, вертикальный clip
+идёт по внутренней границе border, чтобы не срезать glyph ink/AA края выделения.
+Горизонтальный clip сохраняет отступы и исключает validation badge. Natural height
+остаётся line+Padding; заведомо слишком низкий fixed Height ограничен внешними Bounds.
+Подписи выровнены общей
 колонкой; числовые компоненты вектора имеют равную ширину. На узкой панели подпись
 переходит над тройкой полей; resize не заменяет редакторы. Ошибка не сдвигает подпись
-относительно основной строки ввода. Длинные диагностические строки могут обрезаться
-в узком поле; полное пояснение показано в общей копируемой панели диагностики
-инспектора с переносом строк, без изменения самого draft.
+относительно основной строки ввода. Справа рисуется сплошной квадрат Theme.Error
+со стороной в высоту поля; на нём центрирован символ14px цвета Theme.OnError.
+Узкое поле ограничивает блок своими границами. Текст, caret, selection и focus-контур
+заканчиваются перед блоком. RichText auto-height учитывает его ширину при переносе.
+NumberBox принимает HasError/ErrorMessage на себе; внутренний Editor может явно
+переопределить состояние через local/style. Hover по всему блоку через500мс показывает точный
+ErrorMessage с переносом и прокруткой длинных сообщений. Inline error rows под
+текстовыми/числовыми полями убраны. Общая копируемая панель Diagnostics остаётся
+для полного адреса поля и keyboard/copy workflow, без изменения самого draft.
 
 Transform имеет три строки: Position XYZ, Rotation Pitch/Yaw/Roll (радианы), Scale XYZ.
-Сведения о происхождении, идентичности компонента и сбросе значений раскрываются
-кнопкой «⋯». Ошибки остаются видимыми при закрытых сведениях. Сброс — явный draft,
-который проходит через общий Apply/Cancel и историю документа.
+С2026-11-08 справа у каждой Transform группы есть reset icon24×24: доступ по
+Tab + Enter/Space, Tooltip500мс и accessible name с inheritance/schema смыслом.
+При narrow layout shared label переносится над равными XYZ колонками, action остаётся
+в строке. Кнопка недоступна без local/draft values, для уже staged reset, при numeric
+drag, read-only/busy/conflict. Чистые inherited fields не меняются; local values/drafts
+помечаются reset. Linked Scale сбрасывается без proportional пересчёта, preference
+сохраняется. Сведения о происхождении/идентичности и отдельные field resets остаются
+в «⋯». Ошибки видимы и при закрытых сведениях. Сброс — явный draft через общий
+Apply/Cancel и историю документа; canonical defaults0/1 не подставляются поверх наследования.
 
 `NumberBox` хранит ввод как строку во вложенном TextBox: пустая строка, минус и
 промежуточные значения не нормализуются автоматически. `Vector3Editor` компонует
@@ -110,7 +128,16 @@ draft. Pending reset и временная недоступность не ст�
 доступны, включая полный копируемый текст диагностики. Никаких новых schema kinds,
 reference picker или enum contracts этот срез не вводит.
 
-Переключение градусов/радиан и меню группового сброса — отдельные улучшения.
+Переключение градусов/радиан реализовано2026-11-08 в ED4g.4, групповой сброс — ED4g.3.
+Под Rotation находится retained checkbox «Углы в градусах», default off/radians.
+Label/accessible names/step/adjustment limits следуют display units; шаг0.01rad/1°,
+Scale сохраняет0.01. Canonical authoring/wire остаются radians, switch не создаёт
+draft/dirty/history и не переписывает canonical text. Degrees не wrap/clamp-ятся.
+Invalid/incomplete rotation text (также pending reset) запрещает switch до исправления/
+Cancel/Apply reset; unrelated invalid field не мешает. Active drag/read-only/busy/conflict
+также запрещают смену единиц. Валидный текст обеих форм сохраняется для exact обратного
+switch; gesture cancellation возвращает отдельный display snapshot и canonical draft.
+Preference сохраняется при selection/history/Cancel/theme; controls не перестраиваются.
 Numeric drag/step и связанный масштаб описаны ниже; явный Apply, Ctrl+Enter,
 Cancel/Esc и существующий Undo/Redo сохраняются.
 
@@ -122,7 +149,7 @@ Opt-in AdjustmentEnabled добавляет geometric drag marker для без�
 для вектора handle — осевой префикс. ↑/↓ на focused editor меняют число шагом,
 4logical pixels горизонтального drag дают один шаг. Нулевое смещение не нормализует
 исходную строку. Shift увеличивает шаг×10, Ctrl уменьшает×0.1; целые имеют минимум1.
-В Inspector Real step0.1, Integer1, Rotation(rad)/Scale0.01. Колесо оставлено прокрутке.
+В Inspector Real step0.1, Integer1, Rotation0.01rad/1°, Scale0.01. Колесо оставлено прокрутке.
 Invalid/overflow/границы не заменяются нулём и не clamp-ятся. Текстовый draft
 нормализуется только явным adjustment или обычным application commit.
 
@@ -140,3 +167,42 @@ Scale link — явная подпись «Сохранять пропорции
 invalid source остаётся локальным, targets проверяются до обновления. Overflow или
 незавершённый reset target блокирует Apply и показывает диагностику. Один Apply
 остаётся одной общей Undo transaction; preview обновляется после application commit.
+
+## Типографика по умолчанию — 2026-11-08
+
+По запросу пользователя default для controls/text — FontDefaults.Family:
+Segoe UI Variable Text. Основной текст regular400, заголовки/осмысленные акценты
+semibold600 через scoped IViewStyle. Family, размер, weight и italic остаются
+независимыми параметрами; local/binding → element style → view style → Theme →
+default сохраняется. Цветовая смена Theme в Editor не сбрасывает typography.
+
+Parameterless Skia policy: requested family → preferred → Segoe UI → system
+default. Приложение может добавить свой file fallback либо выбрать file-only
+catalog. Системные шрифты используются из ОС, не копируются в пакеты. Measure,
+draw, ellipsis/wrap и caret используют одинаковые параметры. Для variable fonts
+не подразумевается автоматический opsz; italic зависит от доступных faces.
+Детальный task/evidence — [PA8c.3b](PLAN.md#pa8c3b-default-fonts).
+
+## Камера и выбор в viewport — контракт ED5a.0, 2026-11-08
+
+Прикладной [camera/selection contract](../engine/EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1)
+принадлежит Editor/engine. Для будущего viewport controls/menu/popup/chrome и чужой
+capture имеют input priority; backdrop transparency не делает их click-through.
+Navigation сохраняет inspector draft, selection intent использует общий owner и
+существующую tree policy. Камера/picking пока не реализованы; общие UI capabilities
+добавлять по конкретной потребности ED5a consumer.
+
+## Тени панелей и transient surfaces — 2026-11-08
+
+Semantic panels используют Theme.PanelShadow через scoped View style; MenuPopup
+по умолчанию использует Theme.MenuShadow. Layout-only containers не затеняются.
+BoxShadow задаёт logical sigma/offset/color, local Shadow=null отключает эффект.
+Тень рисуется снаружи rounded surface до её содержимого, ограничивается ancestor
+clip, не расширяет layout/hit bounds и не темнит прозрачную середину/backdrop.
+Opacity охватывает поверхность вместе с halo. Смена темы сохраняет дерево и ввод;
+эффект не использует таймеров и не создаёт idle animation.
+
+Validation tooltip — opaque readable surface с MenuShadow; не забирает focus или
+capture. Уход/input/смена ошибки/hide/detach закрывают старое пояснение. Для общего
+popup layer нужен OverlayHost. Dark/Light значения находятся в Theme; прикладные
+RGB не дублируются. [Результаты UIA3d](HISTORY.md#validation-shadows-2026-11-08), [исправленный Vulkan backdrop](HISTORY.md#vulkan-backdrop-2026-11-08).

@@ -49,6 +49,9 @@ public sealed class ControlRequest
     /// <summary>SHA256 of the complete encoded scene envelope in hexadecimal.</summary>
     public string SceneDigest { get; set; } = "";
 
+    /// <summary>Exact preview-view/1 bytes, used by explicit preview LoadScene and SetPreviewView only.</summary>
+    public byte[]? PreviewView { get; set; }
+
     public SessionIdentity Identity() => new(Guid.Parse(SessionId), unchecked((ulong)Generation), HostContractId, GameBuildId,
         Nonce, ControlVersion, FrameVersion, SnapshotVersion);
 

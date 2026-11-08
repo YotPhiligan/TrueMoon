@@ -35,4 +35,8 @@ public sealed class ControlReply
     public int SceneEntityCount { get; set; }
     /// <summary>Initial active component cardinality.</summary>
     public int SceneComponentCount { get; set; }
+    /// <summary>Explicit preview view capability; zero for game/legacy/reference consumers.</summary>
+    public int PreviewViewVersion { get; set; }
+    /// <summary>Exact accepted capture stamp; control acknowledgement does not prove presentation.</summary>
+    public byte[]? PreviewViewStamp { get; set; }
 }

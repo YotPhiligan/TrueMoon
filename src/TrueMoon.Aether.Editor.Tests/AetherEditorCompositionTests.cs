@@ -70,6 +70,10 @@ public sealed class AetherEditorCompositionTests
         var first = factory.Create()!; var second = factory.Create()!;
         using var firstUi = DocumentUiFixture.Ui(first); using var secondUi = DocumentUiFixture.Ui(second);
         firstUi.Update(); secondUi.Update(); editor.Present(firstUi, first); editor.Present(secondUi, second);
+        var viewportState=app.Services.Resolve<EditorViewportState>()!;
+        Assert.True(first.ViewportController!.IsActive);Assert.False(second.ViewportController!.IsActive);
+        Assert.Equal(first.ViewportController.ViewId,viewportState.ActiveView);
+        Assert.Null(editor.ReadPresentedView(first)); Assert.Null(editor.ReadPresentedView(second));
         Assert.Same(model, first.DataContext); Assert.Same(model, second.DataContext);
         Assert.Same(style, app.Services.Resolve<IViewStyle<EditorView>>()); Assert.Equal(2, style.Configurations);
         Assert.NotSame(first, second); Assert.NotSame(first.Documents, second.Documents);
@@ -77,10 +81,12 @@ public sealed class AetherEditorCompositionTests
         Assert.NotSame(first.Canvas, second.Canvas); Assert.NotNull(first.StatusBar);
         firstUi.Dispose(); Assert.True(first.IsDisposed); Assert.False(second.IsDisposed);
         editor.Present(secondUi, second);
+        Assert.True(second.ViewportController.IsActive);Assert.Equal(second.ViewportController.ViewId,viewportState.ActiveView);
         Assert.IsType<InvalidOperationException>(Complete(Task.Run(() => Record.Exception(() => editor.Present(secondUi, second)))));
         using (var third = factory.Create()!) Assert.Same(model, third.DataContext);
         Assert.Equal(3, style.Configurations);
         Assert.Throws<ObjectDisposedException>(() => editor.Present(firstUi, first));
+        Assert.Throws<ObjectDisposedException>(() => editor.ReadPresentedView(first));
         Assert.Equal(0, runtime.Launches);
         var status = app.Services.Resolve<AetherHost>()!.Editor.Status;
         app.Dispose(); Assert.False(second.IsDisposed);

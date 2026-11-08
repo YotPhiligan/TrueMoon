@@ -8,8 +8,12 @@ public sealed class EditorPreview : IDisposable, IAsyncDisposable
 {
     private readonly Lock _gate = new();
     private readonly Func<ResolvedSceneSnapshot, CancellationToken, Task<ScenePreviewDocument>> _show;
+    private readonly Func<ResolvedSceneSnapshot, PreviewViewState>? _capture;
+    private readonly Func<ResolvedSceneSnapshot, PreviewViewState, CancellationToken, Task<ScenePreviewDocument>>? _showView;
     private readonly Func<Task> _stop;
     private ResolvedSceneSnapshot? _requested, _waiting;
+    private PreviewViewState? _waitingView;
+    private PreviewViewState? _requestedView;
     private CancellationTokenSource? _cancellation;
     private Task _pending = Task.CompletedTask;
     private Task? _stopping;
@@ -22,6 +26,14 @@ public sealed class EditorPreview : IDisposable, IAsyncDisposable
     /// <param name="stop">Fences, drains and reaps the engine preview; never stops an unrelated game.</param>
     public EditorPreview(Func<ResolvedSceneSnapshot, CancellationToken, Task<ScenePreviewDocument>> show, Func<Task> stop)
     { ArgumentNullException.ThrowIfNull(show); ArgumentNullException.ThrowIfNull(stop); _show = show; _stop = stop; }
+    /// <summary>Creates explicit-view coordination. Capture runs synchronously on the requesting UI owner; the worker receives only frozen values.</summary>
+    /// <param name="capture">Captures the current committed source and its exact binding/context.</param>
+    /// <param name="show">Presents the frozen source/view and completes after actual presentation.</param>
+    /// <param name="stop">Drains and releases preview resources.</param>
+    public EditorPreview(Func<ResolvedSceneSnapshot,PreviewViewState> capture,
+        Func<ResolvedSceneSnapshot,PreviewViewState,CancellationToken,Task<ScenePreviewDocument>> show, Func<Task> stop)
+        : this((_,_)=>throw new InvalidOperationException("Explicit capture required."),stop)
+    { ArgumentNullException.ThrowIfNull(capture); ArgumentNullException.ThrowIfNull(show); _capture=capture; _showView=show; }
 
     /// <summary>Gets completion of accepted preview work.</summary>
     public Task Pending { get { lock (_gate) return _stopping is { IsCompleted: false } ? _stopping : _pending; } }
@@ -37,7 +49,7 @@ public sealed class EditorPreview : IDisposable, IAsyncDisposable
         lock (_gate)
         {
             if (_closed || _stopping is { IsCompleted: false }) return false;
-            _active = true; Queue(scene); return true;
+            _active = true; Queue(scene, true); return true;
         }
     }
 
@@ -46,12 +58,17 @@ public sealed class EditorPreview : IDisposable, IAsyncDisposable
     public void Synchronize(ResolvedSceneSnapshot scene)
     {
         ArgumentNullException.ThrowIfNull(scene);
-        lock (_gate) if (_active && !_closed && _stopping is not { IsCompleted: false } && !ReferenceEquals(scene, _requested)) Queue(scene);
+        lock (_gate) if (_active && !_closed && _stopping is not { IsCompleted: false }) Queue(scene, false);
     }
 
-    private void Queue(ResolvedSceneSnapshot scene)
+    private void Queue(ResolvedSceneSnapshot scene, bool force)
     {
+        PreviewViewState? captured;
+        try { captured=_capture?.Invoke(scene); }
+        catch(Exception error) { _error=error; return; }
+        if (!force && ReferenceEquals(scene,_requested) && captured?.Context == _requestedView?.Context) return;
         _requested = _waiting = scene; _error = null;
+        _waitingView = _requestedView = captured;
         if (_busy) return;
         _busy = true; _cancellation = new();
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -60,16 +77,16 @@ public sealed class EditorPreview : IDisposable, IAsyncDisposable
         {
             while (true)
             {
-                ResolvedSceneSnapshot current; CancellationToken token;
+                ResolvedSceneSnapshot current; PreviewViewState? view; CancellationToken token;
                 lock (_gate)
                 {
                     if (!_active || _waiting == null)
                     { _busy = false; _cancellation!.Dispose(); _cancellation = null; completion.TrySetResult(); return; }
-                    current = _waiting; _waiting = null; token = _cancellation!.Token;
+                    current = _waiting; view = _waitingView; _waiting = null; _waitingView = null; token = _cancellation!.Token;
                 }
                 try
                 {
-                    var shown = await _show(current, token).ConfigureAwait(false);
+                    var shown = view == null ? await _show(current,token).ConfigureAwait(false) : await _showView!(current,view,token).ConfigureAwait(false);
                     if (shown.SceneId != current.Id || shown.Revision != current.Revision)
                         throw new InvalidOperationException("Preview acknowledged a different document revision.");
                     lock (_gate) if (_active && !token.IsCancellationRequested) { _presented = shown; _error = null; }
@@ -88,6 +105,8 @@ public sealed class EditorPreview : IDisposable, IAsyncDisposable
         {
             if (_stopping is { IsCompleted: false }) return _stopping;
             _active = false; _waiting = _requested = null; _presented = null;
+            _waitingView = null;
+            _requestedView = null;
             Exception? cancellation = null;
             try { _cancellation?.Cancel(); } catch (Exception error) { cancellation = error; }
             var work = _pending;

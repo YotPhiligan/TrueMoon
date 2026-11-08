@@ -198,3 +198,27 @@ retained source owners и три component close requests (Cancel, failed Save, 
 Embedded/MS DI сохраняет старый EditorView/parent path без Window products.
 SourceDebug/SourceRelease и свежий PackageRelease запускаются отдельно; metadata
 failure теперь ожидается до native allocation, cancellation — после него.
+
+## ED5a.4 fresh-package viewport
+
+`VerifyViewport.ps1` consumes a completed fresh `VerifyPackages.ps1` manifest. It
+checks package/framework source SHA, creates an independent external application
+host with PackageReference only, private feed/cache and copied font/license, then
+builds Debug and publishes Release. No framework ProjectReference/source fallback.
+It creates disposable two-cube/Other/Bad fixtures, runs13group native GPU lifecycle
+in both configurations, checks17PNG/profile,9children=reaped,8GPU validation reports+
+1explicit pre-GPU failure, zero owned resources, and installed/output DLL hashes.
+
+```powershell
+./ManualTests/AetherPackageConsumer/VerifyViewport.ps1 `
+  -PackageVerification TestResults/fresh-packages/verification.json `
+  -ValidationDirectory E:/tools/validation `
+  -EvidenceDirectory TestResults/fresh-viewport
+```
+
+All run/evidence paths must be fresh; ValidationDirectory must contain the Vulkan
+layer manifest. The application-only sources are copied from ManualTests; framework
+code comes from the fresh packages. This is directed UiSession/native GPU input,
+with separate Windows input evidence in the source/published host. Current15package,
+8headless and2GPU profile results/limits are in
+[HISTORY](../../docs/engine/HISTORY.md#ed5a4-acceptance-2026-11-08).

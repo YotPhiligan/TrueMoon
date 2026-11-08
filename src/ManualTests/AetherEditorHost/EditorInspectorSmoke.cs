@@ -70,7 +70,7 @@ internal static class EditorInspectorSmoke
             var appearance = model.Components.Single(c => c.TypeId == BuiltInComponents.AppearanceId).Id;
             await ui.InvokeAsync(() =>
             {
-                Require(panel.TransformEditors.TryGetValue(transform, out var compact) && compact.Children.OfType<Vector3Editor>().Count() == 3 &&
+                Require(panel.TransformEditors.TryGetValue(transform, out var compact) && compact.Children.SelectMany(child => child.Children).OfType<Vector3Editor>().Count() == 3 &&
                     compact.Children.Contains(compact.LinkScale) &&
                     ReferenceEquals(compact.Position.First.Editor, panel.Properties[(transform, "x")].Input) &&
                     ReferenceEquals(compact.Rotation.First.Editor, panel.Properties[(transform, "pitch")].Input) &&

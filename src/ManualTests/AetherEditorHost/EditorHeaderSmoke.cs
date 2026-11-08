@@ -20,12 +20,24 @@ internal static partial class EditorHeaderSmoke
         var captures = new List<string>();
         float caption = 0, run = 0;
         Rect brand = default, disclosure = default;
+        object? typography = null;
         await UntilAsync(ui, () => !ui.NeedsUpdate, token);
         await ui.InvokeAsync(() =>
         {
             Require(!view.Toolbar.IsVisible && documents.Commands.Values.All(b => !b.IsVisible), "Legacy command rows are still visible.");
             var frame = (WindowFrame)ui.Root;
-            Require(frame.TitleBarOverContent && frame.DefaultTitleBar!.OverlayContent && ReferenceEquals(frame.Content, view) &&
+            Require(frame.Theme.FontFamily == FontDefaults.Family && header.Caption.FontWeight == 600,
+                "Editor did not adopt the framework default family and semibold caption style.");
+            using var style = new SKFontStyle(600, 5, SKFontStyleSlant.Upright);
+            using var face = SKFontManager.Default.MatchFamily(FontDefaults.Family, style)
+                ?? SKFontManager.Default.MatchFamily(FontDefaults.FallbackFamily, style)
+                ?? SKTypeface.FromFile(Path.Combine(AppContext.BaseDirectory, "Assets/Fonts/NotoSans-Regular.ttf"));
+            using var font = new SKFont(face, header.Caption.FontSize);
+            typography = new { RequestedFamily = frame.Theme.FontFamily, EffectiveFamily = face.FamilyName,
+                EffectiveWeight = face.FontWeight, CaptionWeight = header.Caption.FontWeight, ui.Viewport.Scale };
+            Require(ui.Rendering.TextLayout.Measure("Привет WWW", header.Caption.FontSize, FontDefaults.Family, 600, false).Width == font.MeasureText("Привет WWW"),
+                "Editor system catalog disagrees with native semibold measurement.");
+            Require(frame.TitleBarOverContent && frame.DefaultTitleBar!.OverlayContent && frame.Content is EditorMainWindow main && ReferenceEquals(main.EditorView, view) &&
                 view.Canvas.Bounds.Y < frame.TitleBar.Bounds.Y + frame.TitleBar.Bounds.Height &&
                 view.Canvas.Bounds.Y + view.Canvas.Bounds.Height > view.StatusBar!.Bounds.Y && !documents.IsVisible,
                 "Viewport did not extend beneath chrome or idle document tools reserved space.");
@@ -52,9 +64,12 @@ internal static partial class EditorHeaderSmoke
             () => HoldGroup(ui, header.Menu, view.Overlays, "view"));
         await Capture("header-menu.png");
         var oldSurface = header.Theme.Surface;
+        var oldTypography = (header.Theme.FontFamily, header.Theme.FontSize, header.Theme.FontWeight, header.Theme.FontItalic);
         await ClickActionAsync(ui, view, "view", "view.theme", token);
         await UntilAsync(ui, () => header.Theme.Surface != oldSurface, token);
         Require(ReferenceEquals(view.Header, header), "Theme rebuilt header.");
+        Require((header.Theme.FontFamily, header.Theme.FontSize, header.Theme.FontWeight, header.Theme.FontItalic) == oldTypography,
+            "Theme switch changed editor typography.");
         await ClickActionAsync(ui, view, "view", "view.theme", token);
         await UntilAsync(ui, () => header.Theme.Surface == oldSurface, token);
         await ui.InvokeAsync(() => { header.Menu.CloseMenu(); Move(ui, view.Canvas); }).WaitAsync(token);
@@ -100,7 +115,7 @@ internal static partial class EditorHeaderSmoke
             Passed = true, Hover = true, CaptionShift = true, FixedSimulationButtons = true, Keyboard = true,
             ThemeRetention = true, Tooltip = true, FocusLost = true, BrandMark = true, DisclosureOpensFirst = true,
             DisclosureToggle = true, FullAreaViewport = true, HoverBackdrop = true, NativeCaptionHover = true, IdleDocumentToolsHidden = true,
-            BrandBounds = brand, DisclosureBounds = disclosure, Captures = captures
+            BrandBounds = brand, DisclosureBounds = disclosure, Captures = captures, Typography = typography
         }, new JsonSerializerOptions { WriteIndented = true }));
 
         async Task Capture(string name)

@@ -1,0 +1,282 @@
+{
+  "formatVersion": 2,
+  "id": "7bf2c00e-7481-41d0-a129-94473e6e8545",
+  "revision": 7,
+  "entities": [
+    {
+      "id": "60000000-0000-0000-0000-000000000001",
+      "definitionId": "50000000-0000-0000-0000-000000000001",
+      "parentId": null,
+      "name": "Reset cube",
+      "siblingOrder": null,
+      "changes": {
+        "added": [],
+        "removed": [],
+        "restored": [],
+        "overrides": []
+      }
+    },
+    {
+      "id": "30000000-0000-0000-0000-000000000002",
+      "definitionId": "50000000-0000-0000-0000-000000000002",
+      "parentId": null,
+      "name": "Second cube",
+      "siblingOrder": null,
+      "changes": {
+        "added": [],
+        "removed": [],
+        "restored": [],
+        "overrides": []
+      }
+    }
+  ],
+  "definitions": [
+    {
+      "id": "50000000-0000-0000-0000-000000000001",
+      "revision": 0,
+      "baseDefinitionId": null,
+      "changes": {
+        "added": [
+          {
+            "id": "40000000-0000-0000-0000-000000000001",
+            "typeId": "6fc9fce0-9547-42f5-b4df-f05f306f1001",
+            "schemaVersion": 1,
+            "properties": {
+              "x": {
+                "kind": "number",
+                "value": -1.5
+              },
+              "y": {
+                "kind": "number",
+                "value": 1
+              },
+              "z": {
+                "kind": "number",
+                "value": -1
+              }
+            }
+          },
+          {
+            "id": "40000000-0000-0000-0000-000000000002",
+            "typeId": "6fc9fce0-9547-42f5-b4df-f05f306f1002",
+            "schemaVersion": 1,
+            "properties": {
+              "b": {
+                "kind": "number",
+                "value": 0.15
+              },
+              "g": {
+                "kind": "number",
+                "value": 0.2
+              },
+              "r": {
+                "kind": "number",
+                "value": 0.8
+              }
+            }
+          }
+        ],
+        "removed": [],
+        "restored": [],
+        "overrides": []
+      }
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000002",
+      "revision": 0,
+      "baseDefinitionId": null,
+      "changes": {
+        "added": [
+          {
+            "id": "40000000-0000-0000-0000-000000000001",
+            "typeId": "6fc9fce0-9547-42f5-b4df-f05f306f1001",
+            "schemaVersion": 1,
+            "properties": {
+              "x": {
+                "kind": "number",
+                "value": 1.5
+              },
+              "y": {
+                "kind": "number",
+                "value": 1
+              },
+              "z": {
+                "kind": "number",
+                "value": -1
+              }
+            }
+          },
+          {
+            "id": "40000000-0000-0000-0000-000000000002",
+            "typeId": "6fc9fce0-9547-42f5-b4df-f05f306f1002",
+            "schemaVersion": 1,
+            "properties": {
+              "b": {
+                "kind": "number",
+                "value": 0.3
+              },
+              "g": {
+                "kind": "number",
+                "value": 0.8
+              },
+              "r": {
+                "kind": "number",
+                "value": 0.2
+              }
+            }
+          }
+        ],
+        "removed": [],
+        "restored": [],
+        "overrides": []
+      }
+    }
+  ],
+  "schemas": [
+    {
+      "typeId": "6fc9fce0-9547-42f5-b4df-f05f306f1001",
+      "version": 1,
+      "allowMultiple": false,
+      "requiredTypes": [],
+      "properties": [
+        {
+          "id": "pitch",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 0
+          }
+        },
+        {
+          "id": "roll",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 0
+          }
+        },
+        {
+          "id": "sx",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 1
+          }
+        },
+        {
+          "id": "sy",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 1
+          }
+        },
+        {
+          "id": "sz",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 1
+          }
+        },
+        {
+          "id": "x",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 0
+          }
+        },
+        {
+          "id": "y",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 0
+          }
+        },
+        {
+          "id": "yaw",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 0
+          }
+        },
+        {
+          "id": "z",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 0
+          }
+        }
+      ]
+    },
+    {
+      "typeId": "6fc9fce0-9547-42f5-b4df-f05f306f1002",
+      "version": 1,
+      "allowMultiple": false,
+      "requiredTypes": [
+        "6fc9fce0-9547-42f5-b4df-f05f306f1001"
+      ],
+      "properties": [
+        {
+          "id": "b",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 1
+          }
+        },
+        {
+          "id": "g",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 1
+          }
+        },
+        {
+          "id": "r",
+          "kind": "number",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "number",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "typeId": "6fc9fce0-9547-42f5-b4df-f05f306f1003",
+      "version": 1,
+      "allowMultiple": false,
+      "requiredTypes": [
+        "6fc9fce0-9547-42f5-b4df-f05f306f1001"
+      ],
+      "properties": [
+        {
+          "id": "enabled",
+          "kind": "boolean",
+          "isNullable": false,
+          "defaultValue": {
+            "kind": "boolean",
+            "value": true
+          }
+        }
+      ]
+    }
+  ]
+}

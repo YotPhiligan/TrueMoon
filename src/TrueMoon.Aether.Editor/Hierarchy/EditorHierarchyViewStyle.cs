@@ -9,6 +9,7 @@ public sealed class EditorHierarchyViewStyle : IViewStyle<EditorHierarchyView>
     public void Configure(IViewStyleBuilder<EditorHierarchyView> styles)
     {
         styles.Root().Padding(8).BorderWidth(1).Set(UiProperties.CornerRadius, 8f).Set(UiProperties.Backdrop, theme => theme.PanelBackdrop)
+            .Set(UiProperties.Shadow, theme => theme.PanelShadow)
             .Background(theme => theme.PanelBackdrop == null ? theme.Surface : Color.Transparent);
         styles.Part(view => view.Layout).Set(UiProperties.Spacing, 4f);
         styles.Part(view => view.Title).FontSize(13);

@@ -1,4 +1,4 @@
-﻿namespace TrueMoon.Argentis;
+namespace TrueMoon.Argentis;
 
 /// <summary>Immutable menu action description; contains no controls or native resources.</summary>
 /// <param name="Id">Stable action identity.</param><param name="Text">Visible action name.</param><param name="Command">Borrowed shared command.</param>
@@ -56,7 +56,7 @@ public sealed class MenuItem : Button
     /// <inheritdoc />
     protected override Size MeasureCore(Size available, ITextLayoutService text)
     {
-        var label = text.Measure(Value, FontSize, FontFamily); var shortcut = text.Measure(_action.Shortcut, FontSize, FontFamily);
+        var label = text.Measure(Value, FontSize, FontFamily, FontWeight, FontItalic); var shortcut = text.Measure(_action.Shortcut, FontSize, FontFamily, FontWeight, FontItalic);
         _shortcutWidth = shortcut.Width;
         return new(Math.Max(180, label.Width + (_action.Shortcut.Length == 0 ? 0 : shortcut.Width + 32)), Math.Max(18, label.Height));
     }
@@ -65,8 +65,8 @@ public sealed class MenuItem : Button
     {
         var color = IsEffectivelyEnabled ? Foreground : Theme.Disabled;
         if (_action.Icon is { } icon) UiSymbols.Draw(context, icon, new(Bounds.X + 8, Bounds.Y + (Bounds.Height - 12) / 2, 12, 12), color);
-        var area = Bounds.Deflate(Padding); context.Text(Value, area.X, area.Y, color, FontSize, FontFamily);
-        if (_action.Shortcut.Length != 0) context.Text(_action.Shortcut, Bounds.X + Bounds.Width - Padding.Right - _shortcutWidth, area.Y, Theme.Disabled, FontSize, FontFamily);
+        var area = Bounds.Deflate(Padding); context.Text(Value, area.X, area.Y, color, FontSize, FontFamily, FontWeight, FontItalic);
+        if (_action.Shortcut.Length != 0) context.Text(_action.Shortcut, Bounds.X + Bounds.Width - Padding.Right - _shortcutWidth, area.Y, Theme.Disabled, FontSize, FontFamily, FontWeight, FontItalic);
     }
     private float _shortcutWidth;
     /// <inheritdoc />

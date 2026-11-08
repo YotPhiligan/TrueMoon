@@ -10,6 +10,7 @@ public sealed class EditorDocumentViewStyle : IViewStyle<EditorDocumentView>
     {
         styles.Root().Padding(10).FontSize(13).BorderWidth(1).Set(UiProperties.CornerRadius, 8f)
             .Set(UiProperties.Backdrop, theme => theme.PanelBackdrop)
+            .Set(UiProperties.Shadow, theme => theme.PanelShadow)
             .Background(theme => theme.PanelBackdrop == null ? theme.Surface : Color.Transparent);
         styles.Part(view => view.Actions).Spacing(6);
         styles.Part(view => view.PathInput).Set(UiProperties.Width, 260f);

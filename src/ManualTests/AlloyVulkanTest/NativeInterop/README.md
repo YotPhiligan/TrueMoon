@@ -1,5 +1,15 @@
 # Эксперимент внешнего Vulkan handoff
 
+**2026-11-08 — UIA3d.1:** для pinned4.155.0 ApplyNativeInterop дополнительно
+применяет [vulkan-general-host-stage.patch](vulkan-general-host-stage.patch) через
+[ApplyVulkanGeneralStage.ps1](ApplyVulkanGeneralStage.ps1). GENERAL source access
+содержит HOST_WRITE, поэтому source stage обязан включать HOST вместе с ALL_COMMANDS.
+Исправление сохраняет access mask/другие layouts/ABI и устраняет frosted snapshot
+VUID02819. CheckOnly проверяет forward/already-applied applicability, непредусмотренный
+source отвергается. SourcePins неизменны; другие legacy versions не объявлены исправленными.
+BuildNativeInterop -InstallToRenderer записывает DLL hash и sourcePatches id/hash
+в build metadata. [Проверки и source pins](../../../docs/alloy/HISTORY.md#vulkan-backdrop-2026-11-08).
+
 Текущая поставляемая пара — **SkiaSharp/native4.155.0**, обновлена2026-11-07.
 Source Debug/published Release прошли ABI,18readbacks и36внешних GPU-композиций
 в каждом profile; core/synchronization validation0errors/0warnings, включая teardown.
@@ -79,7 +89,7 @@ BuildNativeInterop.ps1 инициализирует shallow pinned Skia submodul
 
 Готовая DLL: TestResults/SkiaSharp41550-20261107/SkiaSharp/output/native/windows/x64/libSkiaSharp.dll.
 
-SHA-256 текущего артефакта:229C431C90DC69FFBC1F4C4864025297D33535E5AE73E2F8254756E011E86C0C.
+SHA-256 текущего артефакта:B1C01F7D0A6DCCF9CD9CEF0027306B89EC84A71487825519EE3BCEC72D2E1754.
 
 ## Запуск
 

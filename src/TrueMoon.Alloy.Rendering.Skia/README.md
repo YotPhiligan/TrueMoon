@@ -1,5 +1,14 @@
 # Нативная Skia для TrueMoon.Alloy.Rendering.Skia
 
+**Обновление2026-11-08:** исправлен Vulkan frosted backdrop VUID02819: в pinned
+GrVkImage GENERAL source stage добавлен HOST к ALL_COMMANDS для существующего
+HOST_WRITE access. Source patch применяется native build recipe; DLL и build.json
+с patch hash обновлены вместе. Blur/default MenuBackdrop, ABI v1/48bytes и ownership
+сохранены. Source Debug/published Release3backend frosted matrix, interop/compose и
+fresh5package Vulkan consumer прошли с validation0/0 и actual blur witness.
+[Причина/хеши/команды/scope](../docs/alloy/HISTORY.md#vulkan-backdrop-2026-11-08).
+Старые outputs нужно пересобрать/перепубликовать; external NuGet publication не выполнялась.
+
 Проект хранит проверенную Windows x64 библиотеку с Vulkan interop extension:
 
 - `NativeAssets/win-x64/libSkiaSharp.dll` — SkiaSharp 4.155.0, ABI v1, около 9 MB.

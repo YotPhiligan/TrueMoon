@@ -1,19 +1,51 @@
 using SkiaSharp;
+using TrueMoon.Argentis;
 
 namespace TrueMoon.Alloy.Rendering.Skia;
 
-/// <summary>Immutable font-file snapshots shared by Skia backends without system font lookup.</summary>
-/// <remarks>Unregistered family names use the explicit default face. Missing glyphs use that face's
-/// missing-glyph symbol; this catalog does not introduce shaping or system/emoji fallback.
-/// Each surface owns its native fonts. The catalog holds only managed bytes and needs no disposal.</remarks>
+/// <summary>Immutable font selection shared by Skia backends: explicit file snapshots or an opt-in system family chain.</summary>
+/// <remarks>File catalogs never look up system fonts. System catalogs try the requested family, configured
+/// fallback families, then a file catalog or the system default. This is family fallback, not per-glyph fallback.
+/// Each surface owns its native fonts. The catalog holds only managed data and needs no disposal.</remarks>
 public sealed class SkiaFontCatalog
 {
-    private readonly Dictionary<string, byte[]> _faces;
-    private readonly byte[] _defaultFace;
+    /// <summary>The default system policy: requested family, Segoe UI Variable Text, Segoe UI, then the system default.</summary>
+    /// <remarks>Contains managed configuration only. Native font lookup occurs on each surface's cache misses,
+    /// after the rendering backend initializes Skia. Explicitly passing this policy also preserves the
+    /// parameterless rich-text glyph fallback. Explicit file catalogs retain file-only selection.</remarks>
+    public static SkiaFontCatalog SystemDefault { get; } = new([FontDefaults.Family, FontDefaults.FallbackFamily], null);
+
+    private readonly Dictionary<string, byte[]> _faces = new(StringComparer.Ordinal);
+    private readonly byte[]? _defaultFace;
     private readonly Dictionary<(string Family, int Weight, bool Italic), byte[]> _variants = [];
+    private readonly string[]? _systemFamilies;
+    private readonly SkiaFontCatalog? _fallbackCatalog;
+    private readonly string? _systemIdentity;
 
     private SkiaFontCatalog(Dictionary<string, byte[]> faces, string defaultFamily)
     { _faces = faces; _defaultFace = faces[defaultFamily]; }
+
+    private SkiaFontCatalog(string[] families, SkiaFontCatalog? fallback)
+    {
+        _systemFamilies = families; _fallbackCatalog = fallback;
+        _systemIdentity = string.Concat(families.Select(family => $"{family.Length}:{family}"));
+    }
+
+    /// <summary>Uses installed fonts with an ordered family fallback chain.</summary>
+    /// <param name="fallbackFamilies">Families tried after the requested family; copied before returning. An empty list is allowed.</param>
+    /// <param name="fallback">Optional explicit file catalog used when no system family matches; null uses the system default.</param>
+    /// <returns>A managed, immutable selection policy; each surface owns its native fonts.</returns>
+    /// <remarks>Use family names reported by Skia, for example Segoe UI Variable Text, with a separate weight600 for semibold.
+    /// System font availability can vary between machines. Optical-size axes are not automatically changed with text size.</remarks>
+    public static SkiaFontCatalog FromSystemFonts(IReadOnlyList<string> fallbackFamilies, SkiaFontCatalog? fallback = null)
+    {
+        ArgumentNullException.ThrowIfNull(fallbackFamilies);
+        if (fallback?._systemFamilies != null) throw new ArgumentException("The final fallback must be an explicit file catalog.", nameof(fallback));
+        var families = fallbackFamilies.ToArray();
+        foreach (var family in families) ArgumentException.ThrowIfNullOrWhiteSpace(family);
+        SkiaNativeLibrary.Initialize();
+        return new SkiaFontCatalog(families, fallback);
+    }
 
     /// <summary>Reads and validates font files once, retaining independent immutable snapshots.</summary>
     /// <param name="defaultFamily">Registered alias used for every unregistered family.</param>
@@ -45,7 +77,7 @@ public sealed class SkiaFontCatalog
         return new SkiaFontCatalog(faces, defaultFamily);
     }
 
-    internal SKTypeface CreateTypeface(string family) => Decode(_faces.GetValueOrDefault(family, _defaultFace), family);
+    internal SKTypeface CreateTypeface(string family) => CreateTypeface(family, 400, false);
 
     /// <summary>Loads explicit normal/bold/italic faces without changing the process font mapper.</summary>
     /// <param name="defaultFamily">Registered family with a normal weight400 face.</param>
@@ -78,13 +110,39 @@ public sealed class SkiaFontCatalog
 
     internal SKTypeface CreateTypeface(string family, int weight, bool italic)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(family);
+        if (weight is < 100 or > 900) throw new ArgumentOutOfRangeException(nameof(weight));
+        if (_systemFamilies != null)
+        {
+            using var style = new SKFontStyle(weight, 5, italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
+            var face = MatchSystemFamily(family, style);
+            if (face != null) return face;
+            foreach (var candidate in _systemFamilies)
+            {
+                face = MatchSystemFamily(candidate, style);
+                if (face != null) return face;
+            }
+            return _fallbackCatalog?.CreateTypeface(family, weight, italic) ?? SKTypeface.FromFamilyName(null, style);
+        }
         if (_variants.TryGetValue((family, weight, italic), out var bytes)) return Decode(bytes, family);
-        return CreateTypeface(family);
+        return Decode(_faces.GetValueOrDefault(family, _defaultFace!), family);
+    }
+
+    private static SKTypeface? MatchSystemFamily(string family, SKFontStyle style)
+    {
+        var face = SKFontManager.Default.MatchFamily(family, style);
+        // Some font managers return their default for an unknown name; do not stop the chain there.
+        if (face == null || string.Equals(face.FamilyName, family, StringComparison.OrdinalIgnoreCase)) return face;
+        face.Dispose();
+        return null;
     }
 
     internal string RichFaceIdentity(string family, int weight, bool italic)
     {
-        var bytes = _variants.GetValueOrDefault((family, weight, italic)) ?? _faces.GetValueOrDefault(family, _defaultFace);
+        if (_systemFamilies != null)
+            return $"system:{family.Length}:{family}:{weight}:{italic}:{_systemIdentity}:fallback:" +
+                (_fallbackCatalog?.RichFaceIdentity(family, weight, italic) ?? "default");
+        var bytes = _variants.GetValueOrDefault((family, weight, italic)) ?? _faces.GetValueOrDefault(family, _defaultFace!);
         return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
     }
 
