@@ -108,3 +108,11 @@ after use. Manual unscoped readers/custom callbacks must manage ownership/valida
 The source repository's ManualTests/UnitsPackageConsumer/RunPackageSmoke.ps1 builds
 a local feed and isolated PackageReference consumer, checks analyzer provenance and
 runs typed calls/restart/rollback/cleanup. Packages are not published by that script.
+
+## Unified transport limits
+
+Add `PipesConfigurationSchema.Default` (`Enerit:Pipes`) to the App profile and call
+`UseConfiguredPipesServiceTransport(endpoint, configure)` instead of supplying a
+separate options parser. Limits and deadlines are startup-only, validated and copied
+before transport registration. Endpoints, handlers, request data and owned transport
+lifecycle remain explicit; legacy `PipesServiceTransport` overloads remain available.

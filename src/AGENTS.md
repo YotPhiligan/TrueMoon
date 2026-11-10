@@ -1,4 +1,4 @@
-﻿# Работа над TrueMoon
+# Работа над TrueMoon
 
 ## Общие планы и планы модулей
 
@@ -124,6 +124,49 @@ module-specific factory contracts оставлять в своём модуле.
 Существующий Microsoft DI adapter и provider-specific проверки сохранять;
 массовая миграция существующих consumers не входит в фиксацию этого правила.
 Адресные изменения проверять на соответствие DI generation, lifetime и lifecycle.
+
+## Единая конфигурация App и модулей
+
+Штатный механизм настроек приложения — `TrueMoon.Configuration` и общие
+контракты `IConfiguration` и providers из `TrueMoon.Contracts`, независимо от
+Cobalt или Microsoft DI adapter. Источники, их приоритеты и явные переопределения
+собираются в App/bootstrap/composition root. Детальный план унификации и перехода:
+[CORE7](docs/core/PLAN.md#core7-unified-configuration).
+
+Для новых и целенаправленно перерабатываемых настроек использовать общий слой:
+источники → разрешение ключей и приоритетов → типизированные options → проверка →
+регистрация через публичный `UseModule`/`AddModule` и DI. Сервисам передавать
+проверенные options/неизменяемый снимок либо специализированный reader, когда нужны
+динамические настройки. Не внедрять весь конфиг во все системы без необходимости,
+не выполнять разбор, IO и поиск настроек на каждом кадре или элементе.
+
+Не создавать независимые правила чтения args/environment/JSON и их приоритетов
+в каждом модуле. Чтение настроек из ОС сосредоточивать в общих providers
+и явных bootstrap adapters; получение PID, системных путей и других сведений об ОС
+само по себе не является чтением настроек приложения. Bootstrap до создания App
+использует общий минимальный reader/parser без построения App/DI, затем передаёт
+проверенный неизменяемый результат в composition root. Служебные parent/session/
+nonce/protocol identity не переопределяются обычными пользовательскими источниками.
+
+Сохранить удобные типизированные configure callbacks модулей, явные factory runtime
+arguments и ownership/lifecycle. Команды, документы сцены, форматы ассетов и изменяемое
+состояние UI/игры не превращать автоматически в configuration providers.
+Секреты и полное окружение не выводить в диагностику; в сообщениях указывать ключ
+и источник ошибки, маскируя чувствительные значения.
+
+Общий profile/App stage/reload реализован в CORE7.1–3, Core/Mithril adapters —
+в CORE7.4, модульные schemas/UseConfigured helpers — в CORE7.5.
+[Рабочее руководство](docs/core/CONFIGURATION_GUIDE.md),
+[каталог стандартных ключей](docs/core/CONFIGURATION_KEYS.md),
+[API и границы модулей](docs/core/CONFIGURATION_MODULES.md).
+CORE7.6 завершил сверку документации и единой поставки App/child consumers; точные
+configuration proofs не заменяют native/GPU/release acceptance.
+В composition root явно добавлять точные schema instances и источники; модули
+используют нейтральные schema/binding utilities из Contracts. Bootstrap adapters
+остаются ограниченными и явными; недостающие возможности фиксировать в CORE7.
+Сохранять совместимость CLI/env/JSON, identity/captures, проверки и process ownership.
+Старые callbacks остаются совместимым путём; наличие инструкции не переводит
+автоматически все приложения и не подтверждает native/release readiness.
 
 ## UI направление
 

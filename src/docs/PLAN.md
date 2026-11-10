@@ -11,7 +11,7 @@
 
 <a id="current-roadmap"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-08
+## Текущая очередь — актуализация 2026-11-09
 
 Основание: запрос общей ревизии после db5ea97, текущие PLAN/STATUS и адресное чтение
 Editor preview/Transform/Observer. Новых execution results эта запись не создаёт.
@@ -31,7 +31,7 @@ versions/slots/color pipeline и resource/snapshot budgets/owners до кода.
 F.1 CPU definitions/schemas/validation и canonical codec реализованы2026-11-07;
 f.2 добавляет [resource owners/leases/preparation](engine/RENDER_RESOURCES.md), bounded
 catalog/device lifecycle, atomic World rebind и standalone Vulkan upload/readback.
-Ближайшее продолжение — f.3 owned render snapshots, затем f.4 surface consumer/Playing fence.
+F.3 owned render snapshots реализован09ноября; ближайшее продолжение — f.4 surface consumer/Playing fence.
 По запросу2026-11-07 добавлены исследования [загрузки моделей ARCH1g.0](engine/PLAN.md#arch1g-model-assets)
 и [аудиомодуля ARCH1h.0](engine/PLAN.md#arch1h-audio): выбор форматов/backends,
 content delivery, App/ECS integration, resource ownership и критерии прототипов.
@@ -60,9 +60,17 @@ LiteDB provider отменены. Прежние AST результаты — и
 Детали import/audio этапов — в engine плане, storage — в Nom; массовая миграция не назначена. Маршрут ежедневного Editor,
 performance и release сохраняются ниже как независимые варианты продолжения.
 
+[CORE7 — единая конфигурация App и модулей](core/PLAN.md#core7-unified-configuration):
+2026-11-11 CORE7.0–7.6 завершены в configuration scope:
+[guide](core/CONFIGURATION_GUIDE.md), [139keys](core/CONFIGURATION_KEYS.md),
+source solution D/R0errors,7suites6945/6945 D/R и fresh16packages одной версии.
+Source/published/fresh: по230checks на обоих DI,4owned children/profile.
+[Точные результаты/ограничения](core/HISTORY.md#core76-2026-11-10); engine f.4 независим.
+
 | Направление | Следующий результат | План владельца |
 | --- | --- | --- |
-| ECS и отображение, текущий запрос | После f.2 resources — camera/mesh/material extraction и bounded owned snapshots; затем surface renderer/Playing fence | [ARCH1f.3/4](engine/PLAN.md#arch1f-rendering), [реализованный resource API](engine/RENDER_RESOURCES.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
+| Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
+| ECS и отображение, текущий шаг | После готовых f.2/f.3 resources/owned snapshots — f.4 actual Vulkan surface renderer/Playing fence | [ARCH1f.4](engine/PLAN.md#arch1f-rendering), [snapshot API](engine/RENDER_SNAPSHOTS.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
 | Исследование ассетов моделей | Кандидат и captured-I/O/limits/ID/cancel research prototype проверены; далее полный format policy и g.1 App/IFactory adapter/discovery | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [captured contract](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) |
 | Самостоятельное хранение ассетов | NOM0–6 IO/process scope и NOM7 local4package delivery/independent consumers проверены; далее engine g.2 bridge по согласованию, другие OS/RID/modes и physical/release gates отдельно; [disk-full/recovery](nom/DURABILITY.md) после UAC прошёл5cases/D/R; [VM harness](nom/VM_CRASH.md) сохранён, actual verification отложена; [NOM8a/b buffer/raw API](nom/BUFFER_API.md#nom8b-raw-api) реализован и проверен; consumer bridge g.2 после g.1 по согласованию engine; hardware power-off исключён | [Nom queue](nom/PLAN.md#nom-own-queue), [решение](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07) |
 | Исследование аудиомодуля | Backend/codec/package scope, real-time/device/clip ownership и ECS integration; затем offline и device prototypes | [ARCH1h.0–2](engine/PLAN.md#arch1h-audio) |
@@ -70,8 +78,8 @@ performance и release сохраняются ниже как независим
 | Editor, численный срез готов | ED5a.1 immutable camera/projection/unprojection/ray/pick API;77newcases, Aether1857 D/R и Editor1353 Debug | [Scope](engine/HISTORY.md#ed5a1-values-2026-11-08) |
 | Editor, transport/receipt готов | ED5a.2 Control4/Frame2, same-child camera lane и actual receipt; Aether2103/Editor1363 D/R и source/published native в указанном scope | [Проверки/limitations](engine/HISTORY.md#ed5a2-view-2026-11-08) |
 | Editor, v1 acceptance завершена | ED5a.4 bounded Windows x64: Editor1412/Aether2104 D/R, source/published/fresh-package GPU и supported Windows input; physical held-button/multi-monitor gates отдельно | [Scope](engine/HISTORY.md#ed5a4-acceptance-2026-11-08) |
-| Editor, следующий контракт | ED5b translation: transient drag → один commit/Undo либо cancel; rotation/scale позже | [Единственный план Editor](engine/EDITOR_PLAN.md#ed5b-translation) |
-| Performance | Уменьшить CPU/allocations open batches, сохранив измеренный latency выигрыш и safety fences | [ED6b.2e.4f](engine/EDITOR_PLAN.md#ed6b2e4f-observer-cost) |
+| Editor, завершённый v1 срез | ED5b world translation: transient outline → один commit/Undo либо cancel; проверен09ноября. Local-oriented handles/snapping и rotation/scale требуют отдельного scope | [Единственный план Editor](engine/EDITOR_PLAN.md#ed5b-translation) |
+| Performance, завершённый срез | ED6b.2e.4f allocation objective проверен09ноября:−3.46/−3.51% workload при latency близкой к baseline; общий speedup не заявлен | [Единственный task](engine/EDITOR_PLAN.md#ed6b2e4f-observer-cost), [measurements](engine/OBSERVER_COST.md) |
 | Надёжность | Один текущий full-solution Debug/Release baseline; отдельно причинное evidence post-reap drain timeout | [ARCH2e.4b](engine/PLAN.md#arch2e4b-drain-diagnostics), R2/R3 |
 | Visual quality | Baseline реальных дефектов текста/геометрии на текущем default Variable Text перед следующими rendering options | [PA8c.0](alloy/PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31); [завершённая typography](alloy/PLAN.md#pa8c3b-default-fonts) |
 | Приёмка выпуска | Выбрать supported scope, повторить fresh packages/native и доступные physical/hardware gates | R1–R6 ниже, [UI STATUS](alloy/STATUS.md#блокеры-и-ограничения) |

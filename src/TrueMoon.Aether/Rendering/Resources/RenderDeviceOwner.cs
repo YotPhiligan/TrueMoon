@@ -74,6 +74,32 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
     {
         lock (_gate) { EnsureOpen(); operation.Token.ThrowIfCancellationRequested(); ValidateContent(operation.Content); operation.SetReady(); }
     }
+    internal RenderSnapshotResources RetainSnapshot(RenderPreparation operation, ulong revision)
+    {
+        lock (_gate)
+        {
+            EnsureOpen();
+            ResourceGuard.Require(operation.CanRetainSnapshot && _operations.Contains(operation), RenderResourceError.Closed, "A live ready binding is required.");
+            var content = operation.Content.Retain(); var leases = new List<EntryLease>();
+            try
+            {
+                foreach (var asset in content.Manifest.Entries)
+                {
+                    if (asset.Definition is not MeshDefinition) continue;
+                    ResourceGuard.Require(_entries.TryGetValue(asset.Key, out var entry) && entry.References > 0 && entry.Error == null && entry.Completion.Task.IsCompletedSuccessfully,
+                        RenderResourceError.StaleHandle, "Required mesh is not completely ready.");
+                    var lease = new EntryLease(this, entry!); leases.Add(lease); entry!.References++;
+                }
+                return new(this, content, leases, revision);
+            }
+            catch
+            {
+                // The preparation still owns every entry under this gate: rollback cannot be last release.
+                foreach (var lease in leases) lease.Value.References--;
+                content.Dispose(); throw;
+            }
+        }
+    }
     internal EntryLease Acquire(RenderAssetEntry mesh)
     {
         lock (_gate)
@@ -197,6 +223,13 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
         finally { entry.CleanupGate.Release(); }
     }
     internal void EnsureOpen() => ResourceGuard.Require(!Volatile.Read(ref _closed), RenderResourceError.Closed, "Device preparation/use admission is closed.");
+    internal bool IsAdmissionClosed => Volatile.Read(ref _closed);
+    internal void FenceSnapshotGeneration()
+    {
+        // Close allocation before cancellation callbacks; accepted uses still own their retained entries.
+        lock (_gate) _closed = true;
+        AllocationBudget.Close(); BeginStop();
+    }
     /// <summary>Starts cleanup; cancellation only stops this caller's wait, not actual resource retirement.</summary><param name="cancellationToken">Wait cancellation.</param><returns>Confirmed cleanup or retained failure.</returns>
     public async Task StopAsync(CancellationToken cancellationToken = default) => await DisposeAsync().AsTask().WaitAsync(cancellationToken).ConfigureAwait(false);
     internal void BeginStop()

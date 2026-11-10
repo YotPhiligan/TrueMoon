@@ -42,27 +42,28 @@ public static class AppCreationContextExtensions
         Definition[] declared;
         lock (definitions) declared = definitions.Items.ToArray();
         var snapshots = UnitConfigurationSnapshot.Create(declared.Select(d => d.Configuration));
+        UnitLaunchSettings launch;
+        try { launch = UnitBootstrap.Read(configuration); }
+        catch (ConfigurationException) { throw new ArgumentException("Invalid unit launch settings.", nameof(configuration)); }
+        context.Services(services => services.Instance(launch));
         var unitContext = new UnitContext(context, configuration);
-        if (configuration.IsProcessingUnit())
+        if (launch.UnitId is { } id)
         {
-            var id = configuration.GetProcessingUnitId() ?? throw new ArgumentException("Invalid processing unit id.");
             var index = Array.FindIndex(snapshots.ToArray(), u => u.Index == id);
             if (index < 0) throw new ArgumentException($"Unknown processing unit id {id}.");
             declared[index].Action(unitContext);
-            if (configuration.Get<string>(UnitsConfigurationExtensions.UnitParentIdArg) is { } parent)
+            if (launch.ParentProcessId is not null)
             {
-                if (!int.TryParse(parent, out var parentId) || parentId <= 0 || parentId == Environment.ProcessId)
-                    throw new ArgumentException("Invalid parent process id.");
                 context.Services(r => r
                     .Singleton<IFactory<UnitParentProcessEventsHandler>>(resolver => new Factory<UnitParentProcessEventsHandler>(() =>
-                        new(configuration, resolver.Resolve<IAppLifetime>(), resolver.Resolve<IEventsSource<UnitParentProcessEventsHandler>>())))
+                        new(launch, resolver.Resolve<IAppLifetime>(), resolver.Resolve<IEventsSource<UnitParentProcessEventsHandler>>())))
                     .Singleton<UnitParentProcessEventsHandler>(resolver => resolver.Resolve<IFactory<UnitParentProcessEventsHandler>>().Create()!)
                     .Singleton<IStartable>(resolver => new AppServiceLifecycle(startable: resolver.Resolve<UnitParentProcessEventsHandler>()))
                     .Singleton<IStoppable>(resolver => new AppServiceLifecycle(stoppable: resolver.Resolve<UnitParentProcessEventsHandler>())));
             }
             return;
         }
-        if (configuration.Get<string>("-ud", ConfigurationSectionNames.CommandLineArguments) == "1") return;
+        if (launch.UnitsDisabled) return;
         for (var i = 0; i < snapshots.Count; i++)
             if (snapshots[i].HostingPolicy == UnitHostingPolicy.MainProcess) declared[i].Action(unitContext);
         context.Services(r =>

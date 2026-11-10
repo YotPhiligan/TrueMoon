@@ -1,6 +1,207 @@
 # Cobalt / DI: история проверок
 
+<a id="precommit-2026-11-11"></a>
+## Предкоммитная сверка Cobalt — 2026-11-11
+
+Полные runtime179/179 и generator96/96 каждый Debug/Release, failed/skipped0.
+Команды/inputs/retention — [общая запись](../HISTORY.md#precommit-2026-11-11).
+C#/csproj совпадают с CORE7.6 source baseline; runtime/generator API не менялся
+после проверок. Allocations/BDN/package/native profiles этим запуском не повторены.
+
+
 [План](PLAN.md), [текущий статус](STATUS.md), [общий статус](../STATUS.md).
+
+<a id="cob5a1-production-2026-11-09"></a>
+## COB5a.1 production no-capture cycle check — 2026-11-09
+
+По явному запросу пользователя, owner `/root/cobalt_cob5a`; основной агент
+разрабатывает ED5b. Production изменение ограничено ResolveItem в
+TrueMoon.Cobalt/CobaltServiceResolverBase.cs: Any с захваченными resolver/type
+заменён индексным обходом List<(IResolver Resolver, Type Service)> под прежним
+reentrant lock. Predicate сравнивает resolver по ReferenceEquals и тот же closed
+Service. CheckDepth, исключение/path, activation push/pop, RecordFailure и owned
+disposal не менялись. API/namespace/packages/dependencies не расширены.
+COB6e generator и чужие изменения сохранены. Общие PLAN/STATUS/версия не менялись.
+
+### Проверки поведения
+
+| Выполненный scope | Debug | Release |
+| --- | --- | --- |
+| TrueMoon.Cobalt.Tests, runtime+Microsoft adapter |Passed179, Failed0, Skipped0 |Passed179, Failed0, Skipped0 |
+| TrueMoon.Cobalt.Generator.Tests |Passed96, Failed0, Skipped0 |Passed96, Failed0, Skipped0 |
+
+Релевантные существующие tests в ResolutionErrorTests:
+DirectFactoryCycle_FailsBeforeRecursion_ThroughEveryEntryPoint,
+IndirectFactoryCycle_ReportsFullDependencyPath_AndDoesNotPoisonHealthyService,
+DifferentRegistrationsOfSameService_CanResolveOneAnother,
+OpenGenericResolver_CanConstructAnotherClosedType,
+IndependentResolvers_DoNotShareActivationState,
+CyclicFactory_CanRetryAfterFailure_WithoutLosingOwnership,
+ResolutionDepth_BoundaryAndExpandingGenericGraph_AreBoundedAndRecoverable,
+CompositeCycle_ReportsAliasesAndEnumerableElements,
+GeneratedConstructorCycle_IsDetectedForClosedAndOpenTypes.
+Полная suite также проверяет original exception/stack, cleanup/aliases,
+конкурентные singletons и reentrant disposal. Новые тесты, повторяющие predicate,
+не добавлялись: эти cases различают оба поля tuple и проверяют caller outcomes.
+
+Команды: для каждого Debug/Release и двух названных csproj выполнялся dotnet test
+с --artifacts-path TestResults/CobaltCob5a/tests-artifacts, --logger
+"trx;LogFileName=<project>-<configuration>.trx", --results-directory
+TestResults/CobaltCob5a, -v quiet и отдельным -bl:<project>-<configuration>-{}.binlog.
+Task-local DirectoryPackagesPropsPath/RestoreConfigFile/RestorePackagesPath и
+NuGetAudit=false использовались для изоляции, затем команды exit0/green summaries.
+
+### Frozen paired measurements
+
+Scenario.cs и provider workload не изменены. Сначала baseline benchmark project
+собран в baseline-artifacts, затем новый Cobalt — в optimized-artifacts. Frozen
+baseline output скопирован в optimized-bin; заменён только TrueMoon.Cobalt.dll.
+Остальные44из45файлов, включая benchmark assembly, adapter, App, Contracts и
+deps/runtimeconfig, совпадают SHA256. В обоих snapshot --verify прошёл;
+--verify-provider cobalt/microsoft дал по10scenarios (всего40). Проверены graph/
+aliases/owned-borrowed, App/modules, missing/factory/constructor/cycle recovery,
+startup rollback и normal/cancelled RunAsync.
+
+BDN0.15.8, Windows11 build10.0.26340.9882, SDK10.0.403/.NET10.0.14, X64 RyuJIT.
+BDN CPU model недоступна (Unknown processor), модель не выводилась из старого лога.
+Selected GC/JIT overrides отсутствовали. Current power plan
+e9a42b02-d5df-448d-aa00-03f14749eb61 совпал до/после; системные настройки не менялись.
+Владелец ED5b подтвердил отсутствие параллельных builds/tests в measurement window;
+другие desktop workloads не контролировались.
+
+Job: InProcessEmitToolchain, ShortRun, launch1, warmup3, iteration10,
+IterationTime100ms, MemoryDiagnoser;10Dry+10measured cases каждого snapshot.
+Перед матрицей отдельный singleton Default representative прошёл:
+55.11 ±0.611ns/32B; Dry representative не считается measurement.
+In-process выбран, чтобы BDN не пересобирал изменяемый shared checkout и исполнял
+ровно frozen binaries; отдельный host process на original/optimized запуск.
+
+Mean ± Error (half-width99.9%CI), ns/op, B/op:
+
+| Method | Original ns/op | Optimized ns/op | Original B/op | Optimized B/op |
+| --- | --- | --- | --- | --- |
+| MicrosoftClosedGeneric | 17.96 ± 0.60 | 15.24 ± 0.29 | 0 | 0 |
+| CobaltClosedGeneric | 52.53 ± 6.64 | 52.40 ± 8.57 | 32 | 0 |
+| MicrosoftMultiple | 38.71 ± 3.65 | 33.98 ± 1.58 | 120 | 120 |
+| CobaltMultiple | 285.40 ± 53.06 | 225.95 ± 8.71 | 248 | 152 |
+| MicrosoftOpenGeneric | 18.08 ± 1.50 | 16.13 ± 0.45 | 0 | 0 |
+| CobaltOpenGeneric | 177.06 ± 10.10 | 178.56 ± 6.00 | 96 | 64 |
+| MicrosoftSingleton | 15.41 ± 0.55 | 15.29 ± 0.28 | 0 | 0 |
+| CobaltSingleton | 61.28 ± 2.66 | 56.67 ± 1.96 | 32 | 0 |
+| MicrosoftTransient | 35.65 ± 3.18 | 33.87 ± 0.76 | 184 | 184 |
+| CobaltTransient | 473.28 ± 19.72 | 443.76 ± 11.01 | 440 | 216 |
+
+Итого32B/activation closure удалено; transient graph содержит7активаций (−224B),
+plugin graph3 (−96B). Microsoft allocation controls неизменны. Снижение managed
+allocations подтверждено на этом graph. Не заявляется общий latency speedup:
+часть confidence intervals перекрывается, Microsoft control means тоже дрейфуют,
+есть BDN MinIterationTime warnings около100ms и стандартно удалённые outliers.
+Bounded in-process job не заменяет default out-of-process/cold/App/full release.
+GenericTypeArguments/MakeGenericType и enumerable metadata не оптимизировались.
+
+Команды measurement после frozen snapshot preparation (все20main measured cases
+завершены exit0, отсутствующие/failed cases из таблицы не исключались):
+
+```powershell
+$warmFilters = @('*ProviderComparisonBenchmarks.CobaltSingleton', '*ProviderComparisonBenchmarks.MicrosoftSingleton', '*ProviderComparisonBenchmarks.CobaltClosedGeneric', '*ProviderComparisonBenchmarks.MicrosoftClosedGeneric', '*ProviderComparisonBenchmarks.CobaltOpenGeneric', '*ProviderComparisonBenchmarks.MicrosoftOpenGeneric', '*ProviderComparisonBenchmarks.CobaltTransient', '*ProviderComparisonBenchmarks.MicrosoftTransient', '*ProviderComparisonBenchmarks.CobaltMultiple', '*ProviderComparisonBenchmarks.MicrosoftMultiple')
+$baselineDll = (Resolve-Path TestResults/CobaltCob5a/baseline-artifacts/bin/TrueMoon.Cobalt.Benchmarks/release/TrueMoon.Cobalt.Benchmarks.dll).Path
+$optimizedDll = (Resolve-Path TestResults/CobaltCob5a/optimized-bin/TrueMoon.Cobalt.Benchmarks.dll).Path
+# Dry и measured для каждого snapshot; noOverwrite сохраняет отдельные reports.
+& dotnet $baselineDll --filter @warmFilters --job Dry --inProcess --noOverwrite --artifacts TestResults/CobaltCob5a/dry-baseline-all
+& dotnet $baselineDll --filter @warmFilters --job Short --warmupCount 3 --iterationCount 10 --iterationTime 100 --inProcess --noOverwrite --artifacts TestResults/CobaltCob5a/measured-baseline
+& dotnet $optimizedDll --filter @warmFilters --job Dry --inProcess --noOverwrite --artifacts TestResults/CobaltCob5a/dry-optimized-all
+& dotnet $optimizedDll --filter @warmFilters --job Short --warmupCount 3 --iterationCount 10 --iterationTime 100 --inProcess --noOverwrite --artifacts TestResults/CobaltCob5a/measured-optimized
+```
+
+Actual runs передавали absolute artifact paths и весь stdout/stderr направляли
+в соответствующие *.log. Команды source tests:
+
+```powershell
+$cobRoot = (Resolve-Path TestResults/CobaltCob5a).Path
+$env:APPDATA = Join-Path $cobRoot 'settings'
+foreach ($configuration in @('Debug','Release')) {
+    foreach ($project in @('TrueMoon.Cobalt.Tests','TrueMoon.Cobalt.Generator.Tests')) {
+        $logName = "$project-$configuration"
+        dotnet test "$project/$project.csproj" -c $configuration --artifacts-path TestResults/CobaltCob5a/tests-artifacts -p:DirectoryPackagesPropsPath="$cobRoot/Packages.props" -p:RestoreConfigFile="$cobRoot/NuGet.Config" -p:RestorePackagesPath=C:/Users/MEGA6/.nuget/packages -p:NuGetAudit=false "-bl:TestResults/CobaltCob5a/$logName-{}.binlog" --logger "trx;LogFileName=$logName.trx" --results-directory TestResults/CobaltCob5a -v quiet
+    }
+}
+```
+
+### Fingerprints, artifacts и границы
+
+- Scenario source SHA256: `B8E4EAEF7F1C1EB57A311941D303240DBE171CE9548AA04E28577BE48934098E`.
+- Original runtime source SHA256: `694732FFC60706AB298DEB41F7E14FCBA7D74246D1C15880749591F06298F7BC`.
+- Optimized runtime source SHA256: `B6191E7578103CC9120B2C162DE59A8F901B11BFD7BBD076CF7EDE1E6728BED3`.
+- Original runtime DLL SHA256: `8317DE51854C10D64462169E72B38ABF7DC5E0D564994D3006FA278DE304D97C`.
+- Optimized runtime DLL SHA256: `755E7883C95133EDC5433CD67747923CE4FB2C7A18547664125A204CB75ECC63`.
+- Общий benchmark DLL SHA256: `56BEC13FF09F9084014045CD40B2EE92426CE098B8D89D67A5FB19D87F4B9F34`.
+
+Task-local logs/TRX/binlogs/frozen DLLs/JSON/CSV/GitHub reports:
+TestResults/CobaltCob5a. summary.json, binary-fingerprints.json и
+baseline-sources.json связывают файлы/версии с measurement. Raw retention локальный,
+не гарантирован бессрочно; эта versioned запись сохраняет командный scope,
+результаты, таблицу и fingerprints независимо от ignored artifacts.
+
+Initial isolated restore failed: obsolete DotNetCliToolReference dotnet-xunit из
+общего Directory.Packages не разрешился offline. Для всех изолированных сборок
+использована task-local копия Packages.props с теми же pinned PackageVersion без
+этого устаревшего tool и local-only cached-package NuGet.Config, process APPDATA.
+Original props, обычные bin/obj и пользовательский NuGet.Config не менялись.
+Build warnings существующие; full-solution warning baseline не выполнялся.
+Нет новых package/native/Studio proofs, external publish или commits.
+
+<a id="cobalt-status-before-cob5a1-2026-11-09"></a>
+## STATUS перед COB5a.1 — снимок 2026-11-09
+
+# Cobalt / DI: состояние и точка продолжения
+
+**2026-11-09 — COB6e: две адресные правки generator выполнены и проверены.**
+[План](PLAN.md#cob6e-generator-consumer-fixes), [команды/scope/артефакты](HISTORY.md#cob6e-generator-2026-11-09).
+
+## Готовность и ограничения
+
+Resolver hint names теперь имеют ASCII-префикс и SHA-256 полного ключа; компонент
+не длиннее128символов. Generated classes и registration identity сохраняются.
+Public registration/Init имеют XML summary; consumer CS1591 не подавляется.
+Runtime API, dependencies, lifetime/ownership не изменены.
+
+Registration/generation/lifetime/errors/owned disposal и App integration сохраняют
+собственные bounded proofs. Cobalt остаётся штатным provider; Microsoft DI adapter
+и explicit UseDI consumers сохраняются. Новые scopes/factory APIs и массовая
+миграция не назначены.
+
+## Текущие проверки
+
+Windows x64 / SDK10.0.403 / net10.0,09ноября2026:
+
+| Scope | Debug | Release |
+| --- | --- | --- |
+| Generator tests (включая5новых cases) |96/96, failed/skipped0 |96/96, failed/skipped0 |
+| Runtime/adapter tests |179/179, failed/skipped0 |179/179, failed/skipped0 |
+| Fresh bundled NuGet0.2.5.2-alpha consumer |0errors/0warnings,9sources,11checks |0errors/0warnings,9sources,11checks |
+| Consumer CS1591 negative control |Expected failure в Undocumented.cs |Expected failure в Undocumented.cs |
+
+Consumer проверяет EmitCompilerGeneratedFiles, XML docs + CS1591-as-error,
+actual bundled analyzer path/SHA, typed factory/open generic/Unicode/nested types,
+identity и owned cleanup. Имена стабильны между D/R; maximum fixture component122.
+[Повторяемый runner](../../ManualTests/CobaltGeneratorConsumer/README.md).
+Обе заявки закрыты реализацией и local package proof; проверка обновлённой Studio
+остаётся отдельным действием потребителя. External publish не выполнялся.
+Source builds сохраняют прежние warnings; full solution/native/performance не запускались.
+
+## Следующий конкретный шаг
+
+**COB5a production follow-up:** перенести no-capture cycle check с сохранением
+dependency path, reentrancy и failure cleanup; повторить runtime/generator/lifecycle
+и paired graph measurements. Затем отдельно решать open-generic reflection и
+synthesized enumerable metadata costs. Attribution29октября и variant measurements
+остаются историческими, production optimization не выполнена.
+Общая очередь — [roadmap](../PLAN.md#current-roadmap); Editor/Observer не заблокирован.
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="предыдущий-cob7-run--2026-10-15"></a>
+Прежние датированные разделы — в [архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
+
 
 ## COB5a: warm allocations — 2026-10-29
 
@@ -1415,5 +1616,122 @@ GenericTypeArguments/MakeGenericType allocations и synthesized enumerable metad
 Оптимизация ещё не выполнена; общий engine порядок и межмодульные prerequisites
 не менялись. Explicit UseDI consumers сохранены; migration требует проверки
 конкретного consumer и его limits. [Контракт COB5a](PLAN.md#cob5a-источники-аллокаций-warm-resolution--2026-10-29).
+
+</details>
+
+<a id="cob6e-generator-2026-11-09"></a>
+## COB6e: две адресные правки Cobalt generator — 2026-11-09
+
+По прямому запросу пользователя приняты и выполнены заявки Studio
+[hint names](../requests/cobalt/20261107-studio-generated-hint-names-87952664/Request.md) и
+[XML docs](../requests/cobalt/20261107-studio-generated-xml-docs-56375bd8/Request.md).
+Claim созданы через FileMode.CreateNew; один task/план — [COB6e](PLAN.md#cob6e-generator-consumer-fixes).
+Исходные Request.md сохранены. Перед работой был локально изменён только общий
+Version в Directory.Build.props:0.2.5.2-alpha; эта правка пользователя сохранена.
+Появившиеся параллельно UI/SplitView изменения не относятся к Cobalt.
+
+### Реализация
+
+[CobaltGenerator](../../TrueMoon.Cobalt.Generator/CobaltGenerator.cs) меняет только
+hint name resolver source: `Cobalt_<implementation ASCII prefix36>_<SHA256 full key>_<Resolver|AliasResolver>.g.cs`.
+Максимальный компонент127символов (контракт≤128), hash — полный SHA-256 прежнего
+инъективно экранированного имени, включающего service/implementation/lifetime/alias.
+Имена generated classes, их ссылки и дедупликация сохранены; новых runtime API,
+зависимостей, lifetime/ownership semantics не добавлено. Регистрация и Init имеют
+XML summary при прежней public видимости. Consumer NoWarn не вводится.
+
+[GeneratedSourceTests](../../TrueMoon.Cobalt.Generator.Tests/GeneratedSourceTests.cs):
+
+| Требование | Прямое evidence |
+| --- | --- |
+| Длинные/похожие/Unicode/nested/open и closed generic имена, повторы, lifetime и aliases; стабильность при перестановке и смене assembly identity; запись на Windows | `HintNames_AreBoundedDistinctStable_AndWritableForLongUnicodeNestedGenericTypes`, Debug/Release optimization;10distinct sources и round-trip содержимого каждого файла |
+| XML docs/CS1591-as-error, actual module initializer и singleton/transient/alias/disposal | `GeneratedRegistration_WithDocumentationAndCS1591AsError_CompilesAndInitializesGraph`, Debug/Release optimization; Emit PE/XML, Assembly.Load, identity и один Dispose |
+| Собственный undocumented public member consumer остаётся ошибкой | `ConsumerDocumentationErrors_AreStillReportedAtConsumerDeclaration`, exact diagnostic severity/location и unsuccessful Emit |
+
+### Текущие проверки
+
+Windows x64, SDK10.0.403, net10.0, текущая общая версия0.2.5.2-alpha.
+Все положительные команды ниже завершились exit0:
+
+```powershell
+dotnet test TrueMoon.Cobalt.Generator.Tests/TrueMoon.Cobalt.Generator.Tests.csproj -c Debug --no-restore --logger 'trx;LogFileName=generator-debug-final.trx' --results-directory TestResults/CobaltGeneratorFixes '-bl:TestResults/CobaltGeneratorFixes/generator-debug-final-{}.binlog' --verbosity quiet
+dotnet test TrueMoon.Cobalt.Generator.Tests/TrueMoon.Cobalt.Generator.Tests.csproj -c Release --no-restore --logger 'trx;LogFileName=generator-release-final.trx' --results-directory TestResults/CobaltGeneratorFixes '-bl:TestResults/CobaltGeneratorFixes/generator-release-final-{}.binlog' --verbosity quiet
+dotnet test TrueMoon.Cobalt.Tests/TrueMoon.Cobalt.Tests.csproj -c Debug --logger 'trx;LogFileName=runtime-debug.trx' --results-directory TestResults/CobaltGeneratorFixes '-bl:TestResults/CobaltGeneratorFixes/runtime-debug-{}.binlog' --verbosity quiet
+dotnet test TrueMoon.Cobalt.Tests/TrueMoon.Cobalt.Tests.csproj -c Release --no-restore --logger 'trx;LogFileName=runtime-release.trx' --results-directory TestResults/CobaltGeneratorFixes '-bl:TestResults/CobaltGeneratorFixes/runtime-release-{}.binlog' --verbosity quiet
+./ManualTests/CobaltGeneratorConsumer/Run.ps1
+```
+
+| Scope | Debug | Release |
+| --- | --- | --- |
+| Generator suite | Passed96, Failed0, Skipped0 | Passed96, Failed0, Skipped0 |
+| Runtime/adapter suite | Passed179, Failed0, Skipped0 | Passed179, Failed0, Skipped0 |
+| Independent PackageReference consumer | Build0errors/0warnings,11checks,9generated sources | Build0errors/0warnings,11checks,9generated sources |
+| Undocumented consumer negative control | Expected exit1, только CS1591 в Undocumented.cs | Expected exit1, только CS1591 в Undocumented.cs |
+
+Source builds имеют прежние XML/nullable/unused-parameter warnings; нулевые warnings
+относятся именно к независимому consumer. Первые два sandbox-запуска остановились
+до тестов на denied пользовательском NuGet.Config, затем успешно выполнены с доступом
+к обычному окружению .NET. IDE findTests недоступен, тесты найдены по исходникам.
+
+### Fresh package delivery
+
+[Повторяемый consumer/runner](../../ManualTests/CobaltGeneratorConsumer/README.md)
+упаковал TrueMoon.Contracts и TrueMoon.Cobalt0.2.5.2-alpha в новый локальный feed;
+consumer не имеет ProjectReference, отдельного analyzer reference или Roslyn runtime
+packages. В изолированном cache только два ожидаемых пакета. Actual compiler analyzer
+ровно один и совпал по пути/SHA с bundled generator и source Release DLL:
+`F1E6B5C9EDC1A6B17301E1C54B1F26C327B80CDE1545CF133B6867DE996B3A6C`.
+
+Обе конфигурации включают EmitCompilerGeneratedFiles, GenerateDocumentationFile и
+WarningsAsErrors=CS1591. Все9файлов записаны Windows compiler; maximum component122,
+имена совпали между D/R.11runtime checks подтверждают typed IFactory, Unicode/nested,
+open/closed generic resolution, singleton/transient/Composite identity и disposal.
+Negative controls добавляют public class только в scratch consumer; original fixture
+не меняется. Обе ошибки указали только consumer Undocumented.cs.
+
+Raw artifacts: `TestResults/CobaltGeneratorFixes/` (TRX/logs/unique binlogs), package
+run `packages-20261109-121201731/summary.json` и local feed/cache. Они ignored,
+хранятся локально без гарантии retention; этот versioned раздел сохраняет итог и
+команды при отсутствии raw artifacts. External publish и Studio не запускались;
+потребителю передана необходимость отдельно проверить обновлённый Studio graph.
+Full solution, native, performance/BDN и другие модули этим run не проверены.
+Следующий локальный Cobalt шаг остаётся COB5a production no-capture cycle check.
+
+<details>
+<summary>STATUS перед COB6e, актуализация2026-11-05</summary>
+# Cobalt / DI: состояние и точка продолжения
+
+**2026-11-05 — ревизия очереди, без изменений runtime/generator/adapter и новых запусков.**
+[План](PLAN.md#current-cobalt-queue), [полный прежний STATUS](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Готовность и ограничения
+
+Registration/generation/lifetime/errors/owned disposal и App integration имеют
+собственные bounded proofs. Cobalt остаётся штатным provider; Microsoft DI adapter
+и explicit UseDI consumers сохраняются. Новые scopes/factory APIs и массовая
+миграция не следуют из ревизии планов.
+
+Последняя собственная работа — **2026-10-29, COB5a warm allocation attribution**:
+10Dry +10bounded paired BDN cases и20behavior scenarios; production не оптимизирован.
+На фиксированном graph v1 singleton/closed32B, open96B, transient440B, multiple248B.
+Экспериментальная no-capture cycle check:0/0/64/216/152B; это variant, не текущий API.
+[Результаты и границы](HISTORY.md#cob5a-warm-allocations--2026-10-29).
+
+Предыдущие runtime179/generator91 D/R и package/provider proofs сохраняют свои
+даты и graph. UI native Cobalt/MS DI consumer не равен новому полному Cobalt run.
+Latency exploratory; performance budget/migration конкретного consumer требуют
+отдельного решения. Other compiler/OS/RID/AOT и новые lifetime guarantees не обещаются.
+
+## Следующий конкретный шаг
+
+**COB5a production follow-up:** перенести no-capture cycle check с сохранением
+dependency path, reentrancy и failure cleanup; повторить runtime/generator/lifecycle
+и paired graph measurements. Затем отдельно решать open-generic reflection и
+synthesized enumerable metadata costs. Это полезная независимая performance задача,
+а не prerequisite Editor/Observer. Общая очередь — [roadmap](../PLAN.md#current-roadmap).
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="предыдущий-cob7-run--2026-10-15"></a>
+Прежние датированные разделы — в [полном архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
 
 </details>

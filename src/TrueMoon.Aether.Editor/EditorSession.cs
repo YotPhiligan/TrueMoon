@@ -87,6 +87,7 @@ public sealed class EditorSession : IStartable, IStoppable
         view.Canvas.EmptyText = _projects.Active?.Documents?.Read().Content == null
             ? "Соберите проект и запустите сцену" : "Откройте Edit Preview в строке состояния";
         view.Documents?.SynchronizeFocus(ui);
+        view.ViewportController?.TranslationPresentationChanged();
     }
 
     /// <summary>Reads an actual receipt admitted by the current runtime/camera and this view's drawn layout. Does not acknowledge another frame.</summary>

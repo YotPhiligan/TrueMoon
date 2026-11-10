@@ -5,7 +5,7 @@ public class CommandLineArgsProvider : IConfigurationProvider
 {
     private readonly Func<IEnumerable<string>> _arguments;
 
-    public CommandLineArgsProvider() : this(() => Environment.GetCommandLineArgs().Skip(1)) { }
+    public CommandLineArgsProvider() : this(() => ConfigurationCommandLine.Capture()) { }
 
     /// <summary>Creates a provider from arguments without the executable name.</summary>
     public CommandLineArgsProvider(Func<IEnumerable<string>> arguments)
@@ -19,12 +19,13 @@ public class CommandLineArgsProvider : IConfigurationProvider
     public IReadOnlyList<IConfigurationSection> GetSections()
     {
         var dictionary = new Dictionary<string, object?>();
-        foreach (var argument in _arguments())
+        var arguments = _arguments().ToArray();
+        foreach (var argument in arguments)
         {
             var separator = argument.IndexOf('=');
             if (separator < 0) dictionary[argument] = null;
             else dictionary[argument[..separator]] = argument[(separator + 1)..];
         }
-        return [new CommandLineArgsSection(dictionary)];
+        return [new CommandLineArgsSection(dictionary, arguments)];
     }
 }

@@ -2,6 +2,7 @@ using TrueMoon.Aether.Ecs;
 using TrueMoon.Aether.Gpu.Vulkan;
 using TrueMoon.Aether.Rendering;
 using TrueMoon.Aether.Rendering.Resources;
+using TrueMoon.Aether.Rendering.Snapshots;
 
 namespace TrueMoon.Aether;
 
@@ -18,7 +19,8 @@ public static class RenderResourceConfigurationExtensions
         {
             if (services.Exist<RenderResourceHost>() || services.Exist<IFactory<RenderManifestLease, RenderContentManifest>>() ||
                 services.Exist<IFactory<RenderDeviceOwner, RenderDeviceRequest>>() || services.Exist<IFactory<RenderPreparation, RenderPreparationRequest>>() ||
-                services.Exist<IFactory<RenderWorldBinding, RenderWorldBindingRequest>>()) throw new InvalidOperationException("Aether render resources are already registered.");
+                services.Exist<IFactory<RenderWorldBinding, RenderWorldBindingRequest>>() ||
+                services.Exist<IFactory<RenderSnapshotView, RenderSnapshotViewRequest>>()) throw new InvalidOperationException("Aether render resources are already registered.");
             if (!services.Exist<IFactory<IRenderResourceBackend, RenderDeviceRequest>>())
                 services.Singleton<IFactory<IRenderResourceBackend, RenderDeviceRequest>>(_ => new Factory<IRenderResourceBackend, RenderDeviceRequest>(request => new VulkanRenderResourceBackend(request)));
             services.Singleton<RenderResourceHost>(resolver => new(new RenderContentCatalog(limits), resolver.Resolve<IFactory<IRenderResourceBackend, RenderDeviceRequest>>(), limits));
@@ -30,6 +32,8 @@ public static class RenderResourceConfigurationExtensions
                 new Factory<RenderPreparation, RenderPreparationRequest>(resolver.Resolve<RenderResourceHost>().Create));
             services.Singleton<IFactory<RenderWorldBinding, RenderWorldBindingRequest>>(resolver =>
                 new Factory<RenderWorldBinding, RenderWorldBindingRequest>(resolver.Resolve<RenderResourceHost>().Create));
+            services.Singleton<IFactory<RenderSnapshotView, RenderSnapshotViewRequest>>(resolver =>
+                new Factory<RenderSnapshotView, RenderSnapshotViewRequest>(resolver.Resolve<RenderResourceHost>().Create));
         });
         return context;
     }

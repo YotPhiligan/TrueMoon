@@ -1,5 +1,9 @@
 # TrueMoon.Nom: план самостоятельного модуля хранения
 
+Конфигурация2026-11-10: [CORE7.5](../core/CONFIGURATION_MODULES.md) добавил Nom
+admission schema/UseConfiguredNom. Project/store identity и roots остаются runtime
+arguments; storage format и очередь ниже сохраняются. Детальная задача — Core.
+
 <a id="current-assets-queue"></a>
 <a id="current-nom-queue"></a>
 <a id="nom-own-queue"></a>

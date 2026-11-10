@@ -8,7 +8,7 @@ slots/revisions, color conversion, budgets и CPU/GPU owners. Направлен
 [ARCH1e](PLAN.md#arch1e-ecs) и [ECS_DESIGN](ECS_DESIGN.md). Workload, budgets и
 lease/cache policy выбраны в f.0; CPU schemas/definitions/codec реализованы в f.1,
 [App-owned resources/leases/preparation](RENDER_RESOURCES.md) — в f.2,2026-11-07.
-Owned mesh extraction и surface renderer остаются f.3/4; standalone Vulkan upload
+[Owned mesh extraction/mailbox/submission contracts](RENDER_SNAPSHOTS.md) реализованы в f.3; surface renderer остаётся f.4. Standalone Vulkan upload
 не объявляется готовым frame consumer. Первый headless storage срез описан в [ECS World v1](ECS_DESIGN.md#world-v1).
 
 ## Исходная точка

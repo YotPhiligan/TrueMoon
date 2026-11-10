@@ -58,6 +58,9 @@ public sealed class EditorViewModel : ViewModel, IDisposable
     public string? SelectedId => _selectedId;
     /// <summary>Shows entity properties only while there is a selected entity context.</summary>
     public bool IsInspectorVisible => _selectedId != null;
+    internal bool CanTranslateViewport => _transform?.CanTranslateViewport == true;
+    internal bool CommitViewportTranslation(Translation.TranslationTarget target, Translation.TranslationPosition position)
+        => _transform?.CommitViewportTranslation(target, position) == true;
     public string SelectedName => _selectedName;
     public string StatusText => _statusText;
     public string ErrorText => _errorText;

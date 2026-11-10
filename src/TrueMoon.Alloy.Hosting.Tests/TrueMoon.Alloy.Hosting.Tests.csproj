@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
+    <ProjectReference Include="..\TrueMoon\TrueMoon.csproj" />
   </ItemGroup>
 </Project>

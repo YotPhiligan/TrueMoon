@@ -1,5 +1,11 @@
 # TrueMoon.Aether.Editor
 
+В Edit Preview выбранный видимый cube можно перемещать за ось X/Y/Z или плоскость
+XY/XZ/YZ. Во время drag цветной контур показывает будущее положение; release
+применяет одно изменение с Undo/Redo, Esc отменяет. Сначала Apply/Cancel черновик
+инспектора. Направления мировые, позиция записывается относительно родителя;
+solid preview обновляется после commit. [Профиль и ограничения](../docs/engine/EDITOR_TRANSLATION.md).
+
 Числа инспектора поддерживают ↑/↓ и drag за осевой префикс/маркер:4logical pixels
 на шаг, Shift×10, Ctrl×0.1 (Integer минимум1). Position/Number шаг0.1,
 Rotation(rad)/Scale0.01, Integer1. Release оставляет draft; Apply/Ctrl+Enter создаёт
@@ -913,3 +919,8 @@ Inline field error rows are replaced; the shared copyable Diagnostics panel rema
 Drafts, selection, Apply/Cancel/Undo/Redo stay with the existing models. Editor island
 styles use Theme.PanelShadow; menus use Theme.MenuShadow, with local Shadow=null
 available. Full Editor D/R regression passed; full release/platform gates remain separate.
+
+Configuration uses `EditorConfigurationSchemas` and `UseConfiguredAetherEditor`
+with an explicit `AetherComposition`. Source tracking/diagnostics/window settings
+are prepared startup data; documents, UI state and Build/Play captures keep their
+existing owners. [Configuration guide](../docs/core/CONFIGURATION_MODULES.md).

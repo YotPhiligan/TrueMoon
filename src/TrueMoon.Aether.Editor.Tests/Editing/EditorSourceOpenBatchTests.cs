@@ -9,6 +9,87 @@ namespace TrueMoon.Aether.Editor.Tests.Editing;
 public sealed class EditorSourceOpenBatchTests
 {
     [Fact]
+    public async Task Create_CompletionMayDisposeAndReadmitWithoutRetainingAnyEarlierNativeOwner()
+    {
+        using var files = new Inputs(4); using var release = new ManualResetEventSlim();
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); var entered = 0;
+        var firstOwners = new ConcurrentBag<EditorSourceFile>();
+        var creating = EditorSourceOpenBatch.CreateAsync(files.Files, 0, _ => { }, default, path =>
+        {
+            var reader = EditorSourceFile.Open(path) ?? throw new FileNotFoundException(path); firstOwners.Add(reader);
+            if (Interlocked.Increment(ref entered) == 4) ready.TrySetResult();
+            try { if (!release.Wait(TimeSpan.FromSeconds(10))) throw new TimeoutException("Reentrant completion gate not released."); return reader; }
+            catch { reader.Dispose(); throw; }
+        });
+        var readmitted = DisposeAndReadmit();
+        try
+        {
+            await ready.Task.WaitAsync(TimeSpan.FromSeconds(10)); Assert.False(readmitted.IsCompleted);
+            release.Set(); using var next = await readmitted.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal(4, next.Count); Assert.All(firstOwners, owner => Assert.False(owner.CanRead));
+            for (var index = 0; index < 4; index++)
+            {
+                using var reader = Assert.IsType<EditorSourceFile>(next.Take(index));
+                Assert.Equal(files.Files[index].Length, reader.Before.Length);
+            }
+        }
+        finally
+        {
+            release.Set(); using var next = await readmitted.WaitAsync(TimeSpan.FromSeconds(10));
+            next.Dispose(); foreach (var reader in firstOwners) reader.Dispose();
+            foreach (var file in files.Files) Exclusive(file.Path);
+        }
+
+        async Task<EditorSourceOpenBatch> DisposeAndReadmit()
+        {
+            using var first = await creating.ConfigureAwait(false);
+            first.Dispose(); foreach (var file in files.Files) Exclusive(file.Path);
+            return await EditorSourceOpenBatch.CreateAsync(files.Files, 0, _ => { }, default).ConfigureAwait(false);
+        }
+    }
+
+    [Fact]
+    public async Task Create_WorkersRetainEachAdmissionExecutionContextWithoutLeakingChangesToTheCoordinator()
+    {
+        using var files = new Inputs(4); var ambient = new AsyncLocal<string?> { Value = "coordinator" };
+        var seen = new ConcurrentDictionary<string, string?>();
+        using var batch = await EditorSourceOpenBatch.CreateAsync(files.Files, 0, path => ambient.Value = path, default, path =>
+        {
+            seen[path] = ambient.Value;
+            ambient.Value = "worker-only";
+            return EditorSourceFile.Open(path);
+        });
+        Assert.Equal("coordinator", ambient.Value); Assert.Equal(4, batch.Count); Assert.Equal(4, seen.Count);
+        for (var index = 0; index < 4; index++)
+        {
+            Assert.Equal(files.Files[index].Path, seen[files.Files[index].Path]);
+            using var reader = Assert.IsType<EditorSourceFile>(batch.Take(index));
+            Assert.Equal(files.Files[index].Length, reader.Before.Length);
+        }
+        batch.Dispose(); foreach (var file in files.Files) Exclusive(file.Path);
+    }
+
+    [Fact]
+    public async Task Create_ImmediatelyCompletedWorkersCannotLoseSlotsOrPublishBeforeAllAdmissions()
+    {
+        using var files = new Inputs(4);
+        for (var attempt = 0; attempt < 128; attempt++)
+        {
+            var validated = new List<string>(); var opened = new ConcurrentDictionary<string, int>();
+            using var batch = await EditorSourceOpenBatch.CreateAsync(files.Files, 0, validated.Add, default, path =>
+            { opened.AddOrUpdate(path, 1, static (_, count) => count + 1); return null; });
+            Assert.Equal(4, batch.Count); Assert.Equal(files.Files.Select(file => file.Path), validated);
+            Assert.Equal(4, opened.Count); Assert.All(opened.Values, count => Assert.Equal(1, count));
+            for (var index = 0; index < batch.Count; index++)
+            {
+                Assert.Null(batch.Take(index));
+                Assert.Throws<InvalidOperationException>(() => batch.Take(index));
+            }
+        }
+        foreach (var file in files.Files) Exclusive(file.Path);
+    }
+
+    [Fact]
     public async Task Create_FourNativeOpensOverlapButHandOffWaitsForEveryOwnerAndPreservesOrder()
     {
         using var files = new Inputs(5); using var release = new ManualResetEventSlim();

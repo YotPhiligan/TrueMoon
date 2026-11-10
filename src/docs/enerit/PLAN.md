@@ -1,5 +1,9 @@
 # Enerit: план IPC и генерации invocation
 
+Конфигурация2026-11-10: [CORE7.5](../core/CONFIGURATION_MODULES.md) добавил
+Enerit:Pipes schema и UseConfiguredPipesServiceTransport, сохраняя endpoint,
+handlers и transport ownership. Детальная задача — Core; IPC очередь ниже сохранена.
+
 <a id="current-enerit-queue"></a>
 ## Точка продолжения — ревизия 2026-11-05
 

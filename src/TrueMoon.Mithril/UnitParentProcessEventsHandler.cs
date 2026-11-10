@@ -32,15 +32,21 @@ public class UnitParentProcessEventsHandler : IStartable, IStoppable, IDisposabl
     /// <param name="appLifetime">The child application's lifetime.</param>
     /// <param name="eventsSource">Diagnostics.</param>
     public UnitParentProcessEventsHandler(IConfiguration configuration, IAppLifetime appLifetime,
+        IEventsSource<UnitParentProcessEventsHandler> eventsSource) : this(UnitBootstrap.Read(configuration), appLifetime, eventsSource) { }
+
+    /// <summary>Creates a listener from a validated immutable launch; the parent remains borrowed.</summary>
+    /// <param name="launch">Frozen launch identity and endpoint.</param><param name="appLifetime">Child App lifetime.</param>
+    /// <param name="eventsSource">Diagnostics.</param>
+    public UnitParentProcessEventsHandler(UnitLaunchSettings launch, IAppLifetime appLifetime,
         IEventsSource<UnitParentProcessEventsHandler> eventsSource)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(launch);
         ArgumentNullException.ThrowIfNull(appLifetime);
         ArgumentNullException.ThrowIfNull(eventsSource);
         _appLifetime = appLifetime;
         _eventsSource = eventsSource;
-        _parentId = configuration.GetProcessingUnitParentId();
-        _endpoint = configuration.Get<string>(ControlPipeKey);
+        _parentId = launch.ParentProcessId;
+        _endpoint = launch.ControlPipe;
     }
 
     /// <summary>Completion of the owned monitor and command tasks; also usable after shutdown.</summary>

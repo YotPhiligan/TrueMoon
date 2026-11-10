@@ -8,7 +8,7 @@ using TrueMoon.Argentis;
 namespace TrueMoon.Aether.Editor;
 
 /// <summary>UI-parent-owned retained camera/input controller. Borrows App data/preview; owns subscriptions and its capture only.</summary>
-public sealed class EditorViewportController : IDisposable
+public sealed partial class EditorViewportController : IDisposable
 {
     private readonly EditorView _view;
     private readonly EditorViewportState _state;
@@ -28,7 +28,7 @@ public sealed class EditorViewportController : IDisposable
     private float _x,_y;
     private Gesture _gesture;
     private bool _disposed;
-    private enum Gesture { None, Click, Orbit, Pan }
+    private enum Gesture { None, Click, Orbit, Pan, Translate }
     /// <summary>Creates a caller-owned controller through the registered factory, on the UI owner.</summary>
     /// <param name="arguments">Caller-owned view.</param><param name="state">Borrowed App-owned camera/binding state.</param>
     /// <param name="workspace">Borrowed selection/content owner.</param><param name="documents">Borrowed document admission.</param>
@@ -114,6 +114,7 @@ public sealed class EditorViewportController : IDisposable
             !_state.Matches(ViewId,receipt.State.Context)||_preview.Document?.Runtime!=receipt.Frame.Presentation.Surface.Identity||
             !ReferenceEquals(_preview.PresentedView?.Frame.Presentation,receipt.Frame.Presentation)||
             !_view.Canvas.MatchesPresentedLayout(receipt.ImageBounds,receipt.ClipBounds,receipt.LayoutRevision))return false;
+        if (_gesture == Gesture.Translate) return TranslationCurrent(receipt);
         return _gesture==Gesture.Click ? _workspace.SelectionRevision==_selection&&_preview.IsCurrent(receipt) :
             _preview.DesiredView?.Camera==_state.Camera;
     }
@@ -134,6 +135,7 @@ public sealed class EditorViewportController : IDisposable
         if(IsGesturing)
         {
             if(!GestureCurrent()){End(false);return false;}
+            if (_gesture == Gesture.Translate) return HandleTranslation(input);
             if(input.Kind==InputKind.KeyDown&&input.Key==UiKey.Escape){End(true);return true;}
             if(input.Kind==InputKind.PointerMove)
             {
@@ -168,6 +170,7 @@ public sealed class EditorViewportController : IDisposable
                 return true;
             }
             if(input.Kind!=InputKind.PointerDown||input.Button is <0 or >2)return false;
+            if (input.Button == 0 && BeginTranslation(receipt, input, context)) return true;
             context.Focus(_view.Canvas);
             _gesture=input.Button==0?Gesture.Click:input.Button==1?Gesture.Orbit:Gesture.Pan;
             _start=receipt;_original=_state.Camera;_viewport=_ui!.Viewport;_selection=_workspace.SelectionRevision;_x=input.X;_y=input.Y;_capture=context;
@@ -209,11 +212,14 @@ public sealed class EditorViewportController : IDisposable
     private void End(bool rollback)
     {
         if(_gesture==Gesture.None)return;
-        var restore=rollback&&_gesture!=Gesture.Click&&GestureCurrent(false);var original=_original;var receipt=_start;var capture=_capture;
+        var translating = _gesture == Gesture.Translate;
+        var restore=rollback&&(_gesture is Gesture.Orbit or Gesture.Pan)&&GestureCurrent(false);var original=_original;var receipt=_start;var capture=_capture;
         _gesture=Gesture.None;_capture=null;_start=null;_original=null;
+        ClearTranslation();
         try{capture?.ReleaseCapture(_view.Canvas);}
         finally
         {
+            if (translating) _view.Canvas.Invalidate();
             if(restore&&original!=null&&receipt!=null&&DocumentReady()&&_state.Matches(ViewId,receipt.State.Context))
                 try{Publish(receipt,_state.Camera.WithView(original.World,original.Projection,original.Pivot,original.Distance));}
                 catch(OverflowException){_ = _coordinator.StopAsync();}

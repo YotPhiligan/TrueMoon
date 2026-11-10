@@ -6,6 +6,12 @@ using TrueMoon.Argentis;
 using TrueMoon.Diagnostics;
 using TrueMoon.Extensions.DependencyInjection;
 
+if (args.Contains("--split-view") || args.Contains("--split-view-smoke"))
+{
+    await SplitViewDemo.RunAsync(args);
+    return;
+}
+
 if (args.Contains("--collection-failure"))
 {
     await CollectionFailureProbe.RunAsync();

@@ -1,21 +1,26 @@
 # TrueMoon.Aether.Editor: план подключаемого редактора
 
+Конфигурация2026-11-10: [CORE7.5](../core/CONFIGURATION_MODULES.md) добавил
+Editor/source-tracking/diagnostics/window data schemas и общий launch CLI.
+Selection/camera/history/Build-Play captures и ED очередь ниже сохраняются;
+детальная задача и проверки принадлежат Core.
+
 **UI consumer2026-11-08:** [UIA3d](../alloy/PLAN.md#uia3d-validation-shadows) реализовал
 error icon/validator tooltip для полей и shadows панелей/меню. Inline field errors
-заменены, общая Diagnostics сохранена. Детальная задача у UI; ED5b остаётся
-следующим Editor contract; Vulkan frosted native gate исправлен в UIA3d.1 в указанном scope.
+заменены, общая Diagnostics сохранена. Детальная задача у UI; ED5b реализован
+09ноября и описан ниже. Vulkan frosted native gate исправлен в UIA3d.1 в указанном scope.
 [UIA3d.2](../alloy/PLAN.md#uia3d2-validation-badge) обновил badge всех текстовых inputs;
 при аудите добавлена адресная InvalidName ошибка inline rename. Editor1412 D/R прошёл;
-детальные решения и проверки — в UI плане, ED5b очередь сохранена.
+детальные решения и проверки — в UI плане; итог ED5b указан ниже.
 
 <a id="current-editor-queue"></a>
 <a id="точка-продолжения--ревизия-2026-11-05"></a>
-## Точка продолжения — актуализация 2026-11-08
+## Точка продолжения — актуализация 2026-11-09
 
 ED4f.3 Window, ED4g.1/2 compact/numeric editors, ED6b source tracking и bounded
 Build/Play/Replace реализованы в scopes из [STATUS](STATUS.md). Первый profiling,
 directory cache и native open/metadata не являются новой следующей задачей.
-ED5 имеет GPU Edit Preview и завершённый ED5a camera/selection v1 в указанном acceptance scope; gizmos остаются отдельными.
+ED5 имеет GPU Edit Preview, завершённый ED5a camera/selection и ED5b translation v1 в указанном acceptance scope; rotation/scale остаются отдельными.
 
 Типографика больше не входит в открытую очередь: [подключение Editor/default family](#editor-default-typography)
 завершено в [PA8c.3b](../alloy/PLAN.md#pa8c3b-default-fonts). ED4g.3 group reset
@@ -23,8 +28,9 @@ ED5 имеет GPU Edit Preview и завершённый ED5a camera/selection 
 ED5a.0 contract и ED5a.1 immutable camera/projection/unprojection/cube ray math
 реализованы. ED5a.2 explicit preview view/actual receipt также реализован и проверен.
 ED5a.1–4 завершены в bounded Windows x64 scope: source/published и fresh-package GPU,
-Windows input доступного supported scope. Далее ED5b — контракт translation tool;
-held-RMB/MMB hardware input и multi-monitor DPI остаются отдельными gates.
+Windows input доступного supported scope. ED5b world translation v1 реализован и проверен09ноября;
+local-oriented handles/snapping и rotation/scale — отдельный будущий scope.
+Held-button hardware input и multi-monitor DPI остаются отдельными gates.
 
 Уточнение2026-11-06: ECS и renderer/material resources включены в engine план
 [ARCH1e/f](PLAN.md#arch1f-rendering). Будущий inspector consumer —
@@ -40,9 +46,9 @@ held-RMB/MMB hardware input и multi-monitor DPI остаются отдельн
 | Реализован transport/receipt | [ED5a.2 preview view/actual receipt](#ed5a2-preview-view) | Control4/Frame2,52new Aether+10Editor cases; Aether2103/Editor1363 D/R, source/published native same-child pixels и cleanup0; [scope](HISTORY.md#ed5a2-view-2026-11-08) |
 | Input реализован | [ED5a.3 navigation/selection](#ed5a3-navigation-picking) |33new Editor+1Aether case; Editor1396/Aether2104 D/R и native source/published directed GPU input; [scope](HISTORY.md#ed5a3-input-2026-11-08) |
 | Приёмка завершена в указанном scope | [ED5a.4 full profile](#ed5a4-acceptance) | Editor1412/Aether2104 D/R; source/published/fresh-package GPU и Windows input; [scope/limits](HISTORY.md#ed5a4-acceptance-2026-11-08) |
-| Следующий прикладной шаг | [ED5b translation contract](#ed5b-translation) | Запланировано: transient drag → один commit/Undo либо cancel; rotation/scale позже |
+| Приёмка v1 завершена | [ED5b translation v1](#ed5b-translation) | World handles/outline/one commit; Editor1465 D/R, source/published/fresh-package native; [scope](HISTORY.md#ed5b-translation-2026-11-09) |
 | Параллельный proof | [ED4g.2a physical input](#ed4g2a-native-numeric) | Частично: source/published native пройден, оставшиеся physical cases не подтверждены |
-| Performance альтернатива | [ED6b.2e.4f](#ed6b2e4f-observer-cost) | Устранить измеренный CPU/allocation tradeoff; не ослаблять hashing/ownership |
+| Performance срез завершён | [ED6b.2e.4f](#ed6b2e4f-observer-cost) | Allocation objective проверен09ноября:−3.46/−3.51% workload, latency близка к baseline; общий speedup не заявлен. [Scope](OBSERVER_COST.md) |
 
 Общие full-solution/release и drain diagnostics ведутся в engine/общем плане.
 Hardware gates ограничивают readiness, не требуют завершить всё UI alpha перед
@@ -1380,16 +1386,26 @@ physical held-RMB/MMB+Esc и multi-monitor DPI остаются отдельны
 Это не full-solution/full Aether, inspector ED4g.2a или device-loss/K7/VRAM acceptance.
 
 <a id="ed5b-translation"></a>
-### ED5b. Translation tool — следующий запланированный контракт
+### ED5b. Translation tool v1 — реализован и проверен 2026-11-09
 
-- [ ] Сначала определить оси/плоскости, hit admission по actual view, world/local
-  semantics и transient drag preview; canonical document не менять на каждом move.
-- [ ] Согласовать один commit/Undo на release либо cancel без history, invalid draft/
-  selection policy, Esc/focus/capture/context loss и stale-source fences.
-- [ ] Зафиксировать ownership/DI и tests/native/package acceptance до реализации.
+Контракт первого профиля: [EDITOR_TRANSLATION](EDITOR_TRANSLATION.md).
+Первый bounded profile завершён; [проверки/границы](HISTORY.md#ed5b-translation-2026-11-09). Параллельная COB5a.1 завершена в Cobalt плане.
 
-Rotation/scale gizmos следуют после translation; inspector numeric drag не считается
-viewport tool. Live World editing и Game Play camera остаются отдельными.
+- [x] ED5b.0: world XYZ/XY/XZ/YZ, actual-view hit admission, inverse-parent local
+  position, transient outline preview без canonical mutation и нового protocol.
+  Local-oriented axes, snapping, rotation/scale и live World editing — отдельные задачи.
+- [x] ED5b.1: frozen CPU geometry/axis-plane ray math/target, finite/degenerate
+  rejection и double-preserving changed-only x/y/z edits. Видимые descendants
+  получают future-bounds outline; solid остаётся исходным до commit.
+- [x] ED5b.2: retained controller через существующий App/IFactory, clean inspector
+  admission, capture и release-before-callbacks, один ComponentEditBatch/Undo либо
+  no-op/cancel; selection/opening/content/camera/surface/layout/popup/draft fences.
+- [x] ED5b.3: полный Editor1465/1465 D/R, final source/published native outline + solid pixels,
+  Undo/Redo/cleanup и independent15fresh-package D/R consumer:4profiles, по5PNG/4reaped children,
+  owners0/validation0/0. Solution Debug0errors/1556warnings. [Команды/limits](HISTORY.md#ed5b-translation-2026-11-09).
+
+Native input и synthetic DPI не объявляются physical/multi-monitor acceptance.
+Прежние ED5a/preview/runtime contracts сохраняются; f.3/f.4 renderer — отдельный поток.
 
 ## ED6. Игровой цикл разработки
 
@@ -2469,24 +2485,27 @@ metadata/full hash/reparse checks сохраняются, atomic snapshot/ABA/ha
 [Решение/проверки/результаты](HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04).
 
 <a id="ed6b2e4f-observer-cost"></a>
-##### ED6b.2e.4f. CPU и allocations open batches — предложено ревизией 2026-11-05
+##### ED6b.2e.4f. CPU и allocations open batches — завершён bounded allocation срез 2026-11-09
 
-Продолжение подтверждённого tradeoff4e: many-files latency ниже, но allocations
-выше примерно23%, CPU/cycle на23–43% в измеренных cases. Это следующий performance
-срез, а не повтор первых profiling/directory-cache/native metadata задач.
+Продолжение measured4e tradeoff (allocations+23%, CPU/cycle+23–43% в прежних cases).
+Новый baseline/current сравниваются только в одной frozen паре; старые absolute
+numbers не выданы за текущие. [Решения/полные metrics/отклонённые варианты](OBSERVER_COST.md).
 
-- [ ] До изменения сохранить baseline текущего4e на тех же frozen fixtures и
-  ordinary10s polling/5s budget; раздельно latency, CPU/cycle, bytes allocated/cycle
-  и small/control behavior. Уточнить целевой budget/допустимый tradeoff.
-- [ ] По profile сократить task/list/closure/scheduling cost или выбрать admission
-  batch по размеру graph; не объявлять заранее выигрыш и не расширять concurrency>4.
-- [ ] Сохранить полный content/membership/probe witness, first-error ordering,
-  directory pin/reparse/replacement guards, cancellation и actual owner drain.
-- [ ] Повторить парные measurements, lifecycle/correctness regressions и content
-  change при прежних length/mtime; явно указать регрессии/цены и scope выводов.
+- [x] До patch сохранён baseline, frozen fixtures, ordinary10s polling/5s budget;
+  latency/CPU/allocations и control profiles разделены. Final objective — batch
+  allocation≥25% и workload≥3%, no latency regression>10%; CPU exploratory.
+- [x] Static state, nongeneric Task workers и inline buffer заменили closures/List/
+  generic results; scheduler/context/completion model и concurrency≤4 сохранены.
+- [x] Full content/membership/probe witness, first-error ordering, directory pins/
+  reparse/replacement, cancellation и actual owner drain сохранены и проверены.
+- [x] Final4paired cases: allocation−3.46/−3.51%, scan upper1148→1162/1154→1144ms;
+  same-length+mtime Changed,16Same/4Changed, budget0/watchers0. Synthetic batch−34.4%
+  отдельно; full Editor1468/1468 D/R, focused199Release и3new regressions.
 
-OS/kernel attribution и wider platform/hardware acceptance остаются отдельно.
-Шаг необязателен для group reset/units/camera и не меняет свидетельство Same.
+Whole-process CPU3samples exploratory; общий CPU/latency speedup не заявлен.
+Rejected variants и limits сохранены в OBSERVER_COST; wider release/OS/hardware
+acceptance этим file-workload proof не закрывается. Новые CPU targets требуют
+нового measured workload, task4f повторно не назначается автоматически.
 
 ## ED7. Проверенная расширяемость
 

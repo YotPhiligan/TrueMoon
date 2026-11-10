@@ -15,7 +15,7 @@ internal sealed class RuntimeHostFactory(AetherHost engine, IAppLifetime lifetim
     IFactory<UnitParentProcessEventsHandler> parents, IFactory<GameBuildLoader, GameBuildReference> games,
     IFactory<FrameProducer> frames, IFactory<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)> protocols,
     IFactory<PipesInvocationServer<IEngineControl>, (SessionLaunch Launch, RuntimeProtocol Protocol)> servers,
-    IFactory<PreviewGameSession>? previews = null, IFactory<ChildDiagnosticForwarder, SessionLaunch>? diagnostics = null)
+    IFactory<PreviewGameSession>? previews = null, IFactory<ChildDiagnosticForwarder, SessionLaunch>? diagnostics = null, RuntimeStartupSettings? settings = null)
     : IFactory<AetherRuntimeHost, SessionLaunch>
 {
     public AetherRuntimeHost Create(SessionLaunch arguments)
@@ -38,7 +38,7 @@ internal sealed class RuntimeHostFactory(AetherHost engine, IAppLifetime lifetim
             var protocol = Own(protocols.Create((arguments, session, frame)));
             var server = Own(servers.Create((arguments, protocol)));
             var delivery = diagnostics == null ? null : Own(diagnostics.Create(arguments));
-            return new(engine, lifetime, parent, game, frame, protocol, server, arguments, parentId, delivery);
+            return new(engine, lifetime, parent, game, frame, protocol, server, arguments, parentId, delivery, settings);
         }
         catch (Exception original)
         {

@@ -86,7 +86,8 @@ public sealed class EditorViewport : Element, IUiFrameParticipant
             if (LayoutRevision == 0 || _drawnImage != ImageBounds || DrawnClipBounds != clip || _drawnViewportEpoch!=_viewportEpoch)
             { LayoutRevision = checked(LayoutRevision + 1); _drawnImage = ImageBounds; DrawnClipBounds = clip; }
             _drawnViewportEpoch=_viewportEpoch;
-            _drawnBounds = Bounds; context.Image(_image, ImageBounds); DrawnFrame = _frame; return;
+            _drawnBounds = Bounds; context.Image(_image, ImageBounds); DrawnFrame = _frame;
+            _controller?.DrawTranslationOverlay(context); return;
         }
         var line = new Color(28, 37, 52);
         for (var x = Bounds.X; x < Bounds.X + Bounds.Width; x += 32) context.Fill(new(x, Bounds.Y, 1, Bounds.Height), line);

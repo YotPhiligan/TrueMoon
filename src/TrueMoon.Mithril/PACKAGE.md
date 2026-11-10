@@ -1,10 +1,29 @@
 # TrueMoon.Mithril
 
 Alpha .NET10 App-local units and owned process lifecycle. Configure through
-TrueMoon App/AddUnit. The package depends on Contracts/Core and does not depend
+TrueMoon App/AddUnit. The package depends on Contracts/Core/TrueMoon for the shared
+bootstrap parser, schemas and configuration profile; it does not depend
 on Enerit or UI. Add Enerit and its generator explicitly when typed IPC is needed.
 For default Cobalt, its generator is bundled in TrueMoon.Cobalt; Microsoft DI
 can use TrueMoon.Extensions.DependencyInjection without the Cobalt analyzer.
+
+`UnitBootstrap.Parse(arguments, environment)` is the minimal pre-App reader and
+does not construct App/DI or read the OS. `UnitBootstrap.Read(configuration)` is a
+bounded compatibility adapter; AddUnit captures one immutable `UnitLaunchSettings`
+and the parent listener receives it directly. Legacy `-u/-p/-ud=1/0`, canonical
+`--Mithril:UnitId/ParentProcessId/ControlPipe/Disabled` options and the standard
+separate-value grammar are supported. `TRUEMOON_MITHRIL__DISABLED` is a user control;
+CLI overrides it. A nonempty captured launch environment group (`-u`, `-p`,
+`TrueMoon.Mithril.ControlPipe`) is authoritative for the entire identity and never
+merges CLI fields. A unit id without a parent remains an unmanaged child selection.
+
+Identity is validated outside ordinary App profiles; user JSON keys cannot spoof
+it. Original standard provider sections are selected before file/provider overlays,
+and removed providers are not recaptured. Custom IConfiguration implementations
+without the optional bootstrap capability explicitly supply trusted compatibility
+sections. Invalid identity fails before unit actions/process resources; parent,
+control pipe, stop/reap and restart ownership remain unchanged. No launch snapshot
+or endpoint is hot-reloaded.
 
 Main services share the App graph. ChildProcess starts the current apphost/hosted
 assembly with selected unit/parent environment; External launches and owns the

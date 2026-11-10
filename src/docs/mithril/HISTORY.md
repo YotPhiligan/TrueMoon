@@ -1,5 +1,66 @@
 # Mithril: история реализации и проверок
 
+<a id="core76-2026-11-10"></a>
+## CORE7.6: текущая итоговая сверка — 2026-11-10
+
+[Единственная подробная запись и команды](../core/HISTORY.md#core76-2026-11-10),
+[guide](../core/CONFIGURATION_GUIDE.md).
+7suites6945/6945 каждый D/R; module-specific counts и exclusions указаны в текущем
+STATUS. Source solution0errors в D/R;16fresh packages одной версии,5programs×3forms,
+по230checks/4owned children на source/published/fresh profile, оба DI.
+Window/GPU/game/native runtime не запускаются в новых configuration consumers.
+Aether full3234/3234 D/R выполнен последовательно с test-only props copy; ordinary
+nested restore и прежние diagnostics reliability причины не исправлены этим proof.
+Current managed public API8assemblies unchanged; source C#/csproj1673/1673 сохранены.
+Дальнейшая очередь модуля и hardware/native/release gates остаются самостоятельными.
+
+
+<a id="core74-2026-11-10"></a>
+## CORE7.4: общий bootstrap и typed launch — 2026-11-10
+
+UnitBootstrap/UnitLaunchSettings заменили runtime чтение общего object bag; protected original inputs не подменяются JSON overlays. Parent handler принимает typed snapshot. Mithril→TrueMoon dependency для общих parser/schema/profile проверена fresh package graph. Подробная задача и решения остаются только в [Core PLAN](../core/PLAN.md#core7-unified-configuration), [полное evidence](../core/HISTORY.md#core74-2026-11-10), [guide](../core/CONFIGURATION_CORE_MITHRIL.md).
+
+Свежие проверки:44new focused cases;155/155 Debug и Release, failed/skipped0. Повторены existing process/composition/restart/parent-control suites. Independent source/published/fresh6packages по108checks/profile, оба DI и2real owned child/profile с graceful exit/reap. Version0.2.5.2-core74.20261110190453. Это не полная MIT6 containment/trends, external restart или hardware/release acceptance. Lifecycle algorithms не переработаны.
+
+<a id="status-before-core74-2026-11-10"></a>
+## Mithril STATUS перед CORE7.4 — снимок 2026-11-10
+
+**2026-11-05 — ревизия планов без runtime/API изменений и новых запусков.**
+[План](PLAN.md#current-mithril-queue), [прежняя сводка](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Реализация и фактические проверки
+
+Owned main/child/external process lifecycle, bounded restart и operational
+diagnostics реализованы в same-build/cooperative scope. Started — OS start,
+не readiness. Aether владеет своим Hello/heartbeat/replacement/recovery;
+второй автоматический restart в Mithril не назначен.
+
+Последняя собственная recorded проверка — **2026-10-27**:111/111 Debug/Release,
+ready-file RED2→GREEN12, fresh published composition14/14 иrestart20/20.
+Reader повторяет missing-file/Windows sharing/lock conflicts в едином8s deadline;
+malformed/null JSON остаётся ошибкой. [Evidence](HISTORY.md#ready-json-bounded-read-retry--2026-10-27).
+Последующий ARCH2 package/headless/native consumer выполнен у Aether; это не
+новая полная Mithril или MIT6 acceptance matrix.
+
+## Ограничения
+
+External launched/owned без borrowed attach; independent external restart не
+подтверждён. Diagnostic observer синхронный, errors изолированы, blocking/reentrancy
+не обещаются. Concurrent stop/monitor callbacks и repeated Stop сохраняют
+прежние Terminal/NoProcess semantics; Error может содержать OS details.
+Real OS permission/reap failures, uncooperative services, containment/trends MIT6c,
+other OS/RID/AOT и durable recovery не подтверждены. Parent abrupt-exit proof
+не наблюдает workers/sinks убитого parent. Остальные детали — в архиве/HISTORY.
+
+## Следующий конкретный шаг
+
+**Оставшийся MIT6 fault/containment/resource-trend профиль** по выбранному consumer;
+перед реализацией определить unsupported/uncooperative поведение и ownership.
+Ready-file fix и ARCH2 headless/native не ставятся повторно как незавершённые функции.
+Post-reap output drain расследуется у [Aether/Core](../engine/PLAN.md#arch2e4b-drain-diagnostics),
+пока нет доказанного Mithril defect. Hardware K7/K8 остаётся у UI.
+Прикладной порядок — [общий roadmap](../PLAN.md#current-roadmap).
+
 ## Сверка рабочего дерева и архив STATUS — 2026-10-28
 
 Сверены bounded retry обоих probes и12cases ReadyFileProcessTests; ready-file
@@ -963,3 +1024,47 @@ Cobalt allocations и Enerit scalar CPU/allocation profile остаются от
 Предыдущие MIT0–MIT4 и package runs2026-10-14 сохранены в [HISTORY](HISTORY.md).
 
 </details>
+
+<a id="status-before-core76-2026-11-10"></a>
+## Полный STATUS перед CORE7.6 — 2026-11-10
+
+# Mithril: состояние и точка продолжения
+
+**2026-11-10 — CORE7.4 common configuration bootstrap реализован и проверен.**
+Детальная задача — [Core PLAN](../core/PLAN.md#core7-unified-configuration),
+[guide](../core/CONFIGURATION_CORE_MITHRIL.md), [evidence](HISTORY.md#core74-2026-11-10).
+
+## Реализация и фактические проверки
+
+UnitBootstrap использует common parser/profile/schema до App/DI; AddUnit фиксирует
+UnitLaunchSettings и передаёт parent handler явно. Original standard args/env/default
+inputs защищены от file/provider overlays. Authoritative env identity group не
+смешивается с CLI; ordinary profile не подменяет unit/parent/control endpoint.
+Legacy aliases/default composition/ctor сохранены через ограниченные adapters.
+Mithril теперь зависит от TrueMoon для общего concrete bootstrap API; цикла нет.
+
+Свежая suite: **155/155 Debug и Release**, failed/skipped0, включая44new cases и
+прежние process/composition/restart/parent-control/ready-file проверки. Independent
+Core-owned source Debug/published Release/fresh6packages —108checks/profile, оба DI
+и2real owned child/profile с graceful exit/reap, version0.2.5.2-core74.20261110190453.
+Полные commands/scope/SHA — [Core HISTORY](../core/HISTORY.md#core74-2026-11-10).
+
+Owned main/child/external lifecycle, bounded restart и diagnostics сохраняют прежний
+same-build/cooperative contract. Started — OS start, не readiness. Aether владеет
+Hello/heartbeat/replacement/recovery; второй restart в Mithril не назначен.
+
+## Ограничения
+
+Launch snapshot не reloadable. Custom IConfiguration без optional bootstrap
+capability сам предоставляет trusted compatibility sections. External launched/owned
+без borrowed attach, independent external restart не подтверждён. Cooperative
+shutdown/permission/reap failures, containment/resource trends, other OS/RID/AOT и
+durable recovery не закрыты. Root solution build не является suite остальных модулей.
+[Прежний STATUS](HISTORY.md#status-before-core74-2026-11-10) сохранён полностью.
+
+## Следующий конкретный шаг
+
+Оставшийся MIT6 fault/containment/resource-trend profile с явным consumer/owner и
+unsupported behavior. Post-reap drain остаётся у Aether/Core до causal Mithril defect.
+CORE7.5 ведётся у владельцев Aether/Editor/других модулей; этот шаг не повторять.
+Прикладной порядок — [общий roadmap](../PLAN.md#current-roadmap).

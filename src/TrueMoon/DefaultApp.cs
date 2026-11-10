@@ -18,6 +18,7 @@ public class DefaultApp : IApp
     private AppState _state;
     private int _disposeRequested;
     private bool _consoleSubscribed;
+    private readonly string? _configuredName;
 
     /// <summary>Creates an application owning the supplied service provider.</summary>
     /// <param name="eventsSource">Application diagnostic events.</param>
@@ -31,6 +32,7 @@ public class DefaultApp : IApp
         _eventsSource = eventsSource;
         Configuration = parameters;
         Services = services.GetService(typeof(IServiceResolver)) as IServiceProvider ?? services;
+        _configuredName = (Services.GetService(typeof(AppNameSnapshot)) as AppNameSnapshot)?.Name;
         _cancelHandler = (_, args) =>
         {
             args.Cancel = true;
@@ -40,7 +42,7 @@ public class DefaultApp : IApp
     }
 
     /// <inheritdoc />
-    public string Name => Configuration.GetName() ?? "";
+    public string Name => _configuredName ?? Configuration.GetName() ?? "";
     /// <inheritdoc />
     public IServiceProvider Services { get; }
     /// <inheritdoc />

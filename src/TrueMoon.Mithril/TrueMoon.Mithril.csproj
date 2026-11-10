@@ -11,6 +11,7 @@
     <ItemGroup>
       <ProjectReference Include="..\TrueMoon.Contracts\TrueMoon.Contracts.csproj" />
       <ProjectReference Include="..\TrueMoon.Core\TrueMoon.Core.csproj" />
+      <ProjectReference Include="..\TrueMoon\TrueMoon.csproj" />
     </ItemGroup>
     
     <ItemGroup><None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" /></ItemGroup>

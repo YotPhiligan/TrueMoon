@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text.Json;
 using TrueMoon.Aether.Sessions;
+using TrueMoon.Configuration;
+using TrueMoon.Mithril;
 
 namespace TrueMoon.Aether.Hosting;
 
@@ -11,14 +13,38 @@ public sealed record RuntimeBootstrap(SessionLaunch Launch, int ParentProcessId)
 {
     private const int MaximumTextLength = 16384;
     private static readonly JsonSerializerOptions JsonOptions = new() { MaxDepth = 32 };
+    /// <summary>Public flags captured before resources; the runtime loop never rereads them.</summary>
+    public RuntimeStartupSettings Settings { get; init; } = new();
+    /// <summary>Captured protected parent and optional control endpoint.</summary>
+    public UnitLaunchSettings? ParentLaunch { get; init; }
 
     /// <summary>Reads and validates the current child's bootstrap and parent environment variables.</summary>
     /// <param name="allowLegacyGame">Explicitly permits a game without a selected artifact only when its ID matches the local legacy game.</param>
     /// <returns>Validated launch data and parent process ID.</returns>
     /// <exception cref="InvalidDataException">The bootstrap, parent, runtime identity or launch configuration is invalid.</exception>
     public static RuntimeBootstrap ReadEnvironment(bool allowLegacyGame = false)
-        => Parse(Environment.GetEnvironmentVariable(NativeRuntimeFactory.BootstrapKey)!,
-            Environment.GetEnvironmentVariable("-p")!, allowLegacyGame);
+        => ParseEnvironment(ConfigurationEnvironment.Capture(NativeRuntimeFactory.BootstrapKey, "-p",
+            UnitParentProcessEventsHandler.ControlPipeKey, RuntimeStartupSettings.LegacyValidationKey, RuntimeStartupSettings.ValidationKey), allowLegacyGame);
+
+    /// <summary>Reads a selected explicit capture without an App/DI or more OS reads.</summary>
+    /// <param name="environment">Protected envelope and selected flags.</param><param name="allowLegacyGame">Explicit legacy probe mode.</param>
+    /// <returns>Validated frozen bootstrap.</returns>
+    public static RuntimeBootstrap ParseEnvironment(IReadOnlyDictionary<string, string?> environment, bool allowLegacyGame = false)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        var parsed = Parse(environment.GetValueOrDefault(NativeRuntimeFactory.BootstrapKey)!, environment.GetValueOrDefault("-p")!, allowLegacyGame);
+        try
+        {
+            return parsed with
+            {
+                Settings = RuntimeStartupSettings.Parse(environment),
+                ParentLaunch = new UnitLaunchSettings(ParentProcessId: parsed.ParentProcessId,
+                    ControlPipe: environment.GetValueOrDefault(UnitParentProcessEventsHandler.ControlPipeKey))
+            };
+        }
+        catch (Exception error) when (error is ConfigurationException or ArgumentException)
+        { throw new InvalidDataException("Invalid runtime startup flags or parent control input."); }
+    }
 
     /// <summary>Parses bounded launch JSON and validates it against the current child runtime.</summary>
     /// <param name="text">Launch JSON, limited to 16384 characters and a maximum depth of 32.</param>

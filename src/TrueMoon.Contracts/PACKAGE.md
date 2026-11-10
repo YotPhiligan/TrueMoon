@@ -31,3 +31,36 @@ net10.0 with the .NET 10 SDK on Windows; other configurations and a full framewo
 release are not implied by that bounded result.
 
 [Source, contracts and module plans](https://github.com/YotPhiligan/TrueMoon).
+
+## Unified configuration data contracts
+
+`TrueMoon.Configuration` adds data-only profile, source, schema, snapshot and codec
+contracts alongside the existing `IConfiguration` interfaces. Logical keys are
+module-qualified paths. `ConfigurationKey.Codec` optionally carries a type-erased
+explicit converter; generic codecs remain typed. Implementations live in the
+TrueMoon package and do not require a specific DI adapter. Existing configuration
+interfaces gain no mandatory members. Optional `IAppConfigurationStage` and
+`IConfigurationReader` support deferred App composition and borrowed reads.
+`IConfigurationProfileSchemas`/`IConfigurationSchemaVisitor` describe every typed
+schema without reflection or new required members on `IConfigurationProfile`.
+`IConfigurationReloader`, `IConfigurationChanges` and `IConfigurationWriter` expose
+explicit atomic reload, bounded notifications and source patches. `ConfigurationEdit`
+distinguishes deletion (missing value) from JSON null; `ConfigurationUpdate` owns
+its changed-key list. Optional `IConfigurationMutableSource` and
+`IConfigurationProfileWriter` add writing without changing existing read interfaces.
+Implementation and single runtime ownership live in TrueMoon; public service aliases
+are borrowed and nondisposable. Shutdown drains callbacks, which must not wait for
+App shutdown themselves. Writes never publish a reader generation implicitly.
+
+`IConfigurationBootstrapInputs` is an optional legacy bridge to the original
+args/env/default provider snapshots before ordinary file/provider overlays.
+It adds no required members to `IConfiguration`. Protected process identity readers
+use these captured inputs; provider removal does not trigger another OS read.
+
+## Module configuration definitions
+
+`ConfigurationSchemaDefinitions.Create<T>` and `ConfigurationModuleBinding.Configure`
+provide pure schema construction and optional `IAppConfigurationStage` binding for
+module libraries. They do not select sources, read the OS, build App/DI or activate
+resources. Standard scalar conversion and validation are shared with the bootstrap.
+The existing `ConfigurationSchemas.Create` facade remains in TrueMoon for compatibility.

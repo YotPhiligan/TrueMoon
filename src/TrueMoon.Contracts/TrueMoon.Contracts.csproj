@@ -9,6 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="TrueMoon" />
+    <InternalsVisibleTo Include="TrueMoon.Tests" />
     <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
   </ItemGroup>
 

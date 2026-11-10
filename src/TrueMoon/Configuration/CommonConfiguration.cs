@@ -1,11 +1,12 @@
 namespace TrueMoon.Configuration;
 
 /// <summary>Configuration with providers in descending priority order and atomic refresh snapshots.</summary>
-public class CommonConfiguration : IConfiguration
+public class CommonConfiguration : IConfiguration, IConfigurationBootstrapInputs
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly IConfigurationProvider[] _providers;
     private IConfigurationSection[] _sections = [];
+    private IReadOnlyDictionary<string, IConfigurationSection> _bootstrap = new Dictionary<string, IConfigurationSection>();
 
     public CommonConfiguration(IEnumerable<IConfigurationProvider> configurationProviders)
     {
@@ -30,6 +31,15 @@ public class CommonConfiguration : IConfiguration
     {
         _gate.Wait();
         try { return GetSectionCore(name); }
+        finally { _gate.Release(); }
+    }
+
+    /// <inheritdoc />
+    public IConfigurationSection? GetBootstrapSection(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        _gate.Wait();
+        try { return _bootstrap.GetValueOrDefault(name); }
         finally { _gate.Release(); }
     }
 
@@ -82,8 +92,12 @@ public class CommonConfiguration : IConfiguration
     private void RefreshCore()
     {
         // Construct fully before publishing: a broken provider does not erase the last valid snapshot.
-        var sections = _providers.SelectMany(provider => provider.GetSections()).ToArray();
+        var sources = _providers.Select(provider => (Provider: provider, Sections: provider.GetSections())).ToArray();
+        var sections = sources.SelectMany(source => source.Sections).ToArray();
+        var bootstrap = sources.Where(source => source.Provider is CommandLineArgsProvider or EnvironmentVariablesProvider or DefaultConfigurationProvider)
+            .SelectMany(source => source.Sections).DistinctBy(section => section.Name).ToDictionary(section => section.Name, StringComparer.Ordinal);
         _sections = sections;
+        _bootstrap = bootstrap;
     }
 
     private sealed class OverlaySection(string name, IConfigurationSection[] sections) : IConfigurationSection

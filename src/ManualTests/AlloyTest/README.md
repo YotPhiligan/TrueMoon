@@ -1,5 +1,19 @@
 # AlloyTest: редактируемая форма OpenGL/Vulkan/Silk
 
+`--split-view` открывает отдельную демонстрацию вложенных разделителей панелей:
+navigation/workspace/timeline, retained draft, Tab/стрелки/Shift/Home/End и Esc.
+`--split-view-smoke` выполняет bounded routed-input/idle/disposal proof в реальном
+окне; `--vulkan --validation` выбирает Vulkan. OpenGL smoke сохраняет
+`TestResults/SplitView/native.png`. Используются Cobalt и `IFactory<TView>`,
+отдельные Data/View/Style. [Контракт и ограничения](../../docs/alloy/SPLIT_VIEW.md).
+Программный input не объявляется physical/OS capture или multi-monitor DPI proof.
+
+`RunSplitViewPackageSmoke.ps1 -Feed <local-feed> -PackageVersion <version>`
+создаёт изолированный consumer без ProjectReference, восстанавливает только local
+пакеты Contracts/Argentis/Alloy и проверяет public SplitView API в Debug/Release.
+Исходники, local NuGet config/cache, logs и unique binlogs остаются в
+`TestResults/SplitViewPackageConsumer/<unique-id>`.
+
 Для расследования нерегулярного smoke failure добавьте `--smoke-trace <path.json>` к `--smoke` (или clipboard smoke). После завершения либо отказа сохраняются последние128 snapshots: frame/stage, модель и редактор, enabled/focus/caret/selection, native input после Hosting routing. Это наблюдение нормализованного ввода, не raw Win32 messages; маршрутизация не меняется. Name failure сообщает expected/model/editor и различает `unexpected-value` от `binding-out-of-sync`. Ошибка сохранения trace не маскирует уже возникший smoke failure. [Результаты расследования](../../docs/alloy/HISTORY.md#textbox-control-text-и-name-smoke--2026-10-10).
 
 Оконный пример для Windows x64 / .NET 10. [View1](View1.cs) создаёт постоянное дерево формы, динамический список, условную область и controls/theme демонстрацию, а [SettingsModel](SettingsModel.cs) хранит значения отдельно от контролов. Explicit Hosting/Silk с OpenGL по умолчанию или Vulkan через `--vulkan`, одна модель из DI. Функциональный standalone набор и OS clipboard проверены; та же сцена используется в [backend comparison и Vulkan HUD](../AlloyVulkanTest/README.md#общая-форма-rasteropenglvulkan-и-hud).

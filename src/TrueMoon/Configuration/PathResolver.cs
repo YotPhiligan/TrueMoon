@@ -9,20 +9,38 @@ public class PathResolver : IPathResolver
     private readonly string _rootPath;
     private readonly string _secrets;
 
-    public PathResolver() : this(Environment.GetCommandLineArgs().Skip(1)) { }
+    public PathResolver() : this(ConfigurationCommandLine.Capture()) { }
 
     /// <summary>Creates a resolver from arguments excluding the executable.</summary>
-    public PathResolver(IEnumerable<string> arguments)
+    public PathResolver(IEnumerable<string> arguments) : this(Parse(arguments)) { }
+
+    /// <summary>Creates a resolver from a detached, validated startup path snapshot.</summary>
+    /// <param name="settings">Product root settings; subsequent mutations do not affect this resolver.</param>
+    public PathResolver(PathSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        var (companyName, productName) = GetInfo();
+        if (settings.Root is not null && string.IsNullOrWhiteSpace(settings.Root)) throw new ArgumentException("Invalid product root.", nameof(settings));
+        _rootPath = settings.Root is null
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), companyName, productName)
+            : Path.GetFullPath(settings.Root);
+        _secrets = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), companyName, productName);
+    }
+
+    private static PathSettings Parse(IEnumerable<string> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        var (companyName, productName) = GetInfo();
-        var argument = arguments.LastOrDefault(value => value.StartsWith("-root=", StringComparison.Ordinal));
-        if (argument is not null && string.IsNullOrWhiteSpace(argument[6..]))
-            throw new ArgumentException("The -root= argument must contain a path.", nameof(arguments));
-        _rootPath = argument is null
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), companyName, productName)
-            : Path.GetFullPath(argument[6..]);
-        _secrets = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), companyName, productName);
+        try
+        {
+            var selected = ConfigurationCommandLine.ParseKnown(arguments.ToArray(), CoreConfigurationSchemas.Paths.Keys);
+            var profile = ConfigurationProfiles.Create(builder =>
+            {
+                builder.AddSchema(CoreConfigurationSchemas.Paths);
+                builder.AddValues("path-arguments", ConfigurationSourcePriority.Arguments, selected.Entries);
+            });
+            return CoreConfigurationSchemas.Paths.Bind(profile.LoadAsync().GetAwaiter().GetResult());
+        }
+        catch (ConfigurationException) { throw new ArgumentException("Invalid product root settings.", nameof(arguments)); }
     }
 
     private static (string companyName, string productName) GetInfo()

@@ -177,9 +177,9 @@ public sealed class RuntimeBootstrapTests
             "host" => identity with { HostContractId = "short" },
             "game" => identity with { GameBuildId = new string('Z', 64) },
             "nonce" => identity with { Nonce = "" },
-            "control-version" => identity with { ControlVersion = 4 },
-            "frame-version" => identity with { FrameVersion = 2 },
-            "snapshot-version" => identity with { SnapshotVersion = 3 },
+            "control-version" => identity with { ControlVersion = checked(identity.ControlVersion + 1) },
+            "frame-version" => identity with { FrameVersion = checked(identity.FrameVersion + 1) },
+            "snapshot-version" => identity with { SnapshotVersion = checked(identity.SnapshotVersion + 1) },
             _ => throw new ArgumentOutOfRangeException(nameof(field))
         };
         Reject(launch with { Identity = identity });

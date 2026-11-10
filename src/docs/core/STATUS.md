@@ -1,38 +1,41 @@
 # Core: состояние и точка продолжения
 
-**Сверка 2026-11-05:** документация и межмодульная очередь; код и проверки не менялись.
-[План](PLAN.md#current-core-queue), [прежняя сводка целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+**2026-11-11 — CORE7.0–7.6 завершены в configuration scope.**
+[Рабочий guide](CONFIGURATION_GUIDE.md), [139keys/17schemas](CONFIGURATION_KEYS.md),
+[единый runner](../../ManualTests/ConfigurationDelivery/README.md),
+[команды/результаты/границы](HISTORY.md#core76-2026-11-10).
 
 ## Реализация и проверки
 
-App/bootstrap/configuration, cooperative lifecycle/rollback и owned/borrowed
-disposal реализованы в своих bounded scopes. CORE6 частичен: structured events,
-early filters/bounded pipeline, console/rotating JSONL/memory sinks, operations,
-health/read windows и borrowed history/import/archive/configuration readers есть.
-App остаётся owner; reader aliases не создают новых owners или sink flush.
+| Область | Текущий запуск CORE7.6 |
+| --- | --- |
+| Solution | Debug0errors/256warnings, Release0errors/190warnings, --no-restore |
+|7full suites | Core661, Mithril155, Enerit354, Nom874, Hosting171, Editor1496, Aether3234 каждый D/R |
+| Test total |6945/6945 каждый D/R, Failed:0, Skipped:0; не все test projects solution |
+| Delivery |16packages version0.2.5.2-core76.20261110234501;5programs×source/published/fresh;230checks/profile |
+| Owned children |4/profile,12total; Cobalt/MS DI, actual bootstrap/identity/control, graceful stop/reap; без renderer/game/native runtime |
+| Metadata/catalog |16projects/16archives verified; public metadata17schemas/139keys; shared/module README/license/icon/analyzers/native payload hashes |
+| API/examples |8managed surfaces added0/removed0;4API doc blocks compiled, guide example executed во всех3forms |
+| Preservation |1673/1673baseline C#/csproj сохранены; runtime API/dependencies/TF/source version0.2.5.2-alpha не менялись |
 
-Последняя собственная указанная проверка — **2026-10-30: Core398/398 Debug/Release**,
-failed/skipped0, narrow56/56. [Archive/configuration evidence](HISTORY.md#архив-jsonl-и-конфигурация-для-ed8a--2026-10-30).
-Предыдущие file-worker/borrowed-health/headless/package proofs сохраняют даты
-и условия в HISTORY. Editor console/report/child health уже имеют scoped consumers;
-ED8a.2 больше не назначается будущим prerequisite Core.
+Reader/profile/options, atomic reload/notifications/explicit writer, Core/Mithril
+и модульные adapters готовы по guide. Старые callbacks и protected launch contracts
+сохранены. [Предыдущий STATUS целиком](HISTORY.md#status-before-core76-2026-11-10).
 
 ## Ограничения
 
-Cooperative shutdown не прерывает ignoring-token Task. Configuration persistence
-не обещает power-loss durability, concurrent atomic create или arbitrary
-external-writer protection. DI adapters сохраняют provider-specific disposal.
-App-private diagnostics routing, bootstrap-before-pipeline, общий artifact/report
-quota и full aggregate metrics не выводятся из текущих JSONL/readers contracts.
-CORE6e generation и performance — отдельные задачи после конкретного consumer.
-Other OS/RID/AOT/долгие trends и общая release matrix не подтверждены.
+Aether full passing получен последовательно с documented test-only props copy:
+obsolete dotnet-xunit CLI reference исключён, CPM ограничен workspace descendants.
+Root props не менялся, ordinary nested restore без override не объявлен исправленным.
+Старые diagnostics timeout причины не закрываются этим passing run.
+
+Стандартные module fields StartupOnly. Configuration proof не включает новый
+native/GPU/hardware/device-loss/VM/release acceptance. Полные generator/UI suites
+не повторялись. Межпроцессная запись, power-loss durability, other OS/RID/AOT
+и hard termination произвольного callback/driver не обещаны.
 
 ## Следующий конкретный шаг
 
-Текущий Editor не требует нового Core API для group reset/camera. Для reliability
-предоставлять evidence по [повторному post-reap drain](../engine/PLAN.md#arch2e4b-drain-diagnostics);
-не менять ProcessOutputCapture/ThreadPool/timeouts без подтверждённой причины.
-Для собственного развития сначала выбрать consumer и контракт App-private/bootstrap
-routing либо aggregate metrics CORE6d; затем implementation и собственные проверки.
-Типизированный generator не является prerequisite прикладного Editor.
-Общий порядок — [roadmap](../PLAN.md#current-roadmap).
+Применять общий слой при целевых изменениях consumers; новые providers/options/
+lifecycle возможности согласовывать отдельными задачами. Самостоятельные CORE6
+routing/metrics/quota, Mithril MIT6, engine f.4 и wider release очередь сохранены.

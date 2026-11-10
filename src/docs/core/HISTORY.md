@@ -1,5 +1,1123 @@
 # Core: история проверок и ревью
 
+<a id="core76-2026-11-10"></a>
+## CORE7.6: документация, поставка и App/child consumers — 2026-11-10 UTC / итог11ноября по Екатеринбургу
+
+По запросу пользователя завершён итоговый configuration scope CORE7.0–7.6.
+HEAD2e3b2b1a00d67ef10d44e8c8deab1d811584d42d; рабочая копия предыдущих этапов
+и новая game-surface заявка TALES-20261110-ae80510f сохранены, Claim не создавался.
+Новый native/game host не реализовывался: это engine f.4, отдельный запрос.
+
+### Документация и helpers проверки
+
+[Рабочий guide](CONFIGURATION_GUIDE.md) сводит sources/приоритеты, typed options,
+legacy IConfiguration против unified reader, callbacks/copies, reload/changes/
+explicit writer, protected process boundary и aliases.
+[Каталог](CONFIGURATION_KEYS.md) содержит139keys из17standard schemas:
+types/default JSON/aliases/required, StartupOnly и symbolic entry-dependent App:Name.
+Export-Keys читает public frozen metadata успешных fresh assemblies без App,
+provider IO или GPU. Sensitive defaults маскируются; source/published metadata
+не подменяет semantic validation и runtime configuration.
+
+Обновлены docs/README, AGENTS, модульные ссылки и корневой README репозитория:
+устаревшие source version/SDK/Mithril test count заменены текущими значениями либо
+датированной навигацией; добавлена configuration точка входа. Root README выше src
+заменён только по подготовленной копии и SHA guard, с разрешённым расширением
+доступа к этому конкретному файлу. Source version **0.2.5.2-alpha** не менялась.
+
+Новый [общий runner](../../ManualTests/ConfigurationDelivery/README.md) объединяет
+существующие profile/App/module программы и новый BootstrapConsumer:
+реальный child читает bounded RuntimeBootstrap до App, проверяет protected
+identity/report/delivery и captured canonical GPU flag над legacy0, строит/
+освобождает configured runtime graph без его запуска. Затем отдельный Core/Mithril
+App проверяет unit/parent/control identity, source spoof77/CLI999 против actual1,
+готовность и graceful stop/reap. Runtime/game/renderer не активируются.
+
+Verification tools получили bounded параметры:
+ConfigurationApiDesign/Verify.ps1 — fresh OutputDirectory вместо перезаписи старого
+CORE70 evidence; Check-PackageMetadata — IncludeProject (alias Project) и NoBuild,
+а CLI first-run/PATH noise отключён для машинного JSON. Production C#/csproj/
+package dependencies/TF и native binaries не менялись.
+
+### Текущие builds/tests
+
+SDK10.0.403, net10.0, xUnit2/VSTest, Windows x64 environment.
+Все команды build/test/restore/pack/publish имеют отдельный binlog.
+
+| Проверка | Debug | Release |
+| --- | --- | --- |
+| Solution build, --no-restore -m |0errors/256warnings |0errors/190warnings |
+| Core full |661/661 |661/661 |
+| Mithril full |155/155 |155/155 |
+| Enerit runtime full |354/354 |354/354 |
+| Nom full |874/874 |874/874 |
+| Hosting full |171/171 |171/171 |
+| Editor full |1496/1496 |1496/1496 |
+| Aether full |3234/3234 |3234/3234 |
+|7suites total |6945/6945, failed0/skipped0 |6945/6945, failed0/skipped0 |
+
+Solution command: `dotnet build TrueMoon.slnx --no-restore -c Debug|Release -m
+"-bl:<CORE76>/solution-<configuration>-{}.binlog"`.
+Test command: `dotnet test <project>/<project>.csproj --no-build --no-restore
+-c Debug|Release --logger "trx;LogFileName=<suite>-<configuration>.trx"
+--results-directory <CORE76> "-bl:<CORE76>/<suite>-<configuration>-{}.binlog"`.
+Projects: TrueMoon.Tests, TrueMoon.Mithril.Tests, TrueMoon.Enerit.Tests,
+TrueMoon.Nom.Tests, TrueMoon.Alloy.Hosting.Tests, TrueMoon.Aether.Editor.Tests,
+TrueMoon.Aether.Tests. Report counts извлечены из14TRX в test-summary.json.
+Это7suites, а не все тестовые проекты solution; generator/полная UI suite отдельно.
+
+Полные Aether D/R шли последовательно после остальных SDK работ:8m24s /8m58s.
+APPDATA/CLI home изолированы. Для nested fixtures test process получал ignored
+DirectoryPackagesPropsPath: копия package props без obsolete dotnet-xunit2.3.1,
+ManagePackageVersionsCentrally включён только для workspace descendants.
+Версии PackageVersion сохранены. Root Directory.Packages.props не правился.
+
+Это current full passing baseline на указанном input profile. Ordinary nested
+restore без override не объявлен исправленным. SDK .version cross-process locking
+исключён порядком запуска; прежние diagnostics timeouts в этом запуске не
+воспроизвелись, их причинное reliability закрытие не выведено из passing/replay.
+Прежние CORE7.5 non-green attempts остаются в истории.
+
+### Единая поставка и реальные children
+
+Успешный финальный proof:
+**0.2.5.2-core76.20261110234501**, CORE76/delivery-complete/verification.json.
+16пакетов одной версии: Contracts, Core, Cobalt, TrueMoon, Extensions.DependencyInjection,
+Enerit.Generator, Enerit, Mithril, Argentis, Alloy, Rendering.Skia, Platform.Silk,
+Alloy.Hosting, Aether, Aether.Editor и Nom.
+
+| Программа | Checks на source / published / fresh profile | DI / процессный scope |
+| --- | --- | --- |
+| Standalone profile |15 | Pure profile, DI не требуется |
+| App/reload/write |108 | Cobalt/MS DI,2actual owned children/profile |
+| Modules |76 | Cobalt/MS DI, actual World/Nom admission и empty Editor startup |
+| Aether bootstrap child |30 | Cobalt/MS DI,2actual owned children/profile |
+| Guide example |1 | Реальный Cobalt App Start/Stop, canonical CLI name; код извлечён из guide |
+
+Итого15program/form combinations, **230checks на каждый из3profiles**,690checks
+суммарно.4owned children/profile, **12owned children** total, graceful stop и reap.
+App/modules/bootstrap покрывают оба DI; standalone не зависит от DI, guide использует
+default Cobalt. Source Debug и published Release используют source ProjectReference
+graph; fresh Release имеет0ProjectReference, отдельный пустой cache для каждого
+consumer, exact local-feed provenance и installed/deployed runtime DLL SHA equality.
+No network feeds, external nupkg seeded только точных существующих versions.
+WindowRun/GpuRun/NativeRuntimeStarted=false у соответствующих headless proofs.
+
+Runner: `./ManualTests/ConfigurationDelivery/Verify.ps1 -EvidenceDirectory <fresh>`.
+У него собственные run/feed/cache вне checkout и unrelated cwd. Parent env не
+меняется; selected flags/identity передаются в ProcessStartInfo. Parent/child
+deadlines/finally обеспечивают cleanup; верхний timeout ограничивает и убирает
+owned process tree при ошибке. All recorded sources оставались неизменными.
+
+Package payload hashes сверены с текущим shared README (15пакетов; Nom намеренно
+удаляет этот item), own PACKAGE.md, LICENSE/icon, Cobalt/Enerit analyzer DLL и
+targets, bundled extended Skia/native targets. Отдельный existing metadata checker
+подтвердил16projects/16intended packages/16archives:
+`eng/Check-PackageMetadata.ps1 -Pack -NoBuild -IncludeProject <16paths>
+-DeferredProject @() -RunDirectory <fresh-under-TestResults/PackageMetadata>`.
+Его final report — PackageMetadata/CORE76-verified/summary.json; metadata archives
+используют source alpha version и не являются заменой primary unique-version feed.
+
+Промежуточные verification attempts сохранены:
+- Первая delivery версия0.2.5.2-core76.20261110231422 прошла12profiles/229checks
+  до final shared README/guide-example проверки.
+- delivery-final0.2.5.2-core76.20261110233838 остановлен строгой payload проверкой:
+  Nom по проектному правилу не включает общий README. Checker учитывает это явно
+  и проверяет его отсутствие; обязательный own PACKAGE.md проверяется.
+- Broad metadata checker обнаружил unrelated ManualTests/CobaltGeneratorConsumer
+  как packable project. Scope ограничен16library paths, чужой consumer не менялся.
+  Новый параметр получил отдельное имя IncludeProject, чтобы не конфликтовать
+  с PowerShell foreach $project. Далее исключён ненужный implicit restore/
+  недоступный user NuGet.Config и first-run PATH noise в JSON. Все intermediate
+  directories сохранены; final metadata16/16 прошёл с isolated APPDATA/CLI home.
+
+### API, документационные примеры и сохранность
+
+Четыре api: blocks declarations/headless/Mithril/Editor из CONFIGURATION_API.md
+скомпилированы against actual assemblies Release:0errors/0warnings; не исполнялись.
+Новый guide example исполнялся без изменения кода в source/published/fresh forms.
+
+Managed public declarations8assemblies против fresh CORE7.5:
+Contracts, TrueMoon, Mithril, Aether, Editor, Enerit, Nom, Hosting —
+**added0/removed0**. Это managed surface comparison, не ABI/platform acceptance.
+1673из1673baseline C#/csproj hashes сохранены; новый C# — только BootstrapConsumer.
+Новые/изменённые proof scripts и docs не являются изменением runtime API.
+Root shared files/package targets/native inputs проверены по hashes; изменения
+планов/статусов выполнялись с актуальным SHA и atomic replacement.
+Предыдущие STATUS сохранены целиком в своих HISTORY с исходным SHA.
+
+Raw retention: ignored CORE76 хранит все logs/binlogs/TRX, API/payload/catalog/
+source manifests и все attempts; PackageMetadata directories и independent TEMP
+run/feed/cache сохранены. Автоматическая очистка может удалить raw files, поэтому
+scope/commands/counts/failures/limitations зафиксированы здесь versioned текстом.
+External publish/commit/push, новый native/GPU/physical/VM/device-loss/K7/VRAM
+acceptance не выполнялись. CORE7 завершён в configuration scope; engine f.4 и
+остальные самостоятельные module/reliability/release очереди не закрыты.
+
+
+<a id="core75-2026-11-10"></a>
+## CORE7.5: Aether, Editor и общая конфигурация модулей — 2026-11-10
+
+Реализовано по запросу пользователя. HEAD2e3b2b1a00d67ef10d44e8c8deab1d811584d42d;
+сохранялась незакоммиченная рабочая копия предыдущих этапов. Подробный контракт:
+[модули/ключи/aliases/ownership](CONFIGURATION_MODULES.md),
+[точные49method names/110cases](CONFIGURATION_MODULE_TESTS.md).
+Рабочая версия0.2.5.2-alpha и внешние dependency versions/TF не менялись.
+
+### Изменения и архитектурная проверка
+
+- Aether Engine/ECS World/Scheduler/SceneLoading/Primitives/RenderResources/Authoring,
+  Editor Options/Diagnostics/SourceEditor/Window, Enerit:Pipes, Nom и Alloy:Window:
+  data-only schemas → common profile → all-schema prepare/validate →
+  existing App/DI registration. Все поля StartupOnly; callback и private copies
+  сохраняются. Existing Use* API продолжает работать.
+- AetherComposition отделяет identity/factories/resources от AetherSettings.
+  NativeRuntimeLaunch переносит frozen GPU flags только в child StartInfo;
+  runtime host не читает mutable env. RuntimeBootstrap использует selected capture,
+  сохраняет envelope limits/identity checks и typed parent/control; обычные sources
+  не переопределяют protected launch report/delivery/identity.
+- AetherEditorHost launch CLI использует общий ParseSingleUse с прежними aliases,
+  inline/canonical forms, false flags, strict duplicate scalar/flag rejection и
+  безопасными ошибками. Обычные Parse/ParseKnown остаются last-wins.
+- Финальная сверка совместимости сохранила legacy validation env для Editor при
+  отсутствующем CLI flag. ValidationSpecified/ResolveRuntimeSettings различают
+  absent и explicit false; true/false перекрывают invalid lower env без его bind.
+  Captured inputs объединяются до App без глобального SetEnvironmentVariable.
+  Существующий CLI Fact дополнен этой regression проверкой без новых methods/cases;
+  последняя полная Editor suite снова1496/1496 каждый D/R
+  (editor-final-cli-Debug/Release.trx). Host опубликован Release;6source/published
+  CLI executions проверили help/duplicate/redacted invalid input без window/GPU/
+  runtime child. Опубликованный host DLL совпадает по SHA с проверенным Release.
+  Это executable-only delta: все source hashes successful module package manifest
+  повторно совпали (drift0), packed libraries/API не изменились.
+- Первая полная Editor suite выявила1495/1496: LibraryArtifact_HasNoEntryPointBootstrapDependencyOrExecutableProbeTypes.
+  Тест не ослаблялся. Pure schema factory/codecs/metadata и optional stage binding
+  размещены в Contracts; ConfigurationSchemas.Create остаётся фасадом TrueMoon с
+  прежним публичным API. Прямых production dependencies Editor/Hosting/Nom/Enerit
+  на bootstrap не добавлено. Hosting.Tests получил прямую test-only ProjectReference
+  на TrueMoon; первая сборка после удаления transitive edge была non-green,
+  исправление подтверждено полными171tests D/R.
+- Два test agents работали только в6новых test files по code-testing-agent workflow:
+  source research/pairing, directed behavior plan, assertion и behavioral gap review.
+  Pairing — heuristic, не coverage; повторные presence-only проверки не подменяют
+  actual World/scene/scheduler/authoring/render admission, transport quota, Nom
+  stores, Editor startup, copied process command и owned cleanup.
+- Source audit: выбранных GetEnvironmentVariable(s)/GetCommandLineArgs осталось
+ 4calls/4files только в общих capture/providers. Остальные OS facts, protected child
+  serialization, isolated compiler environment, document/asset JSON и executable
+  probe/benchmark commands классифицированы в guide, не превращены в providers.
+
+### Текущие проверки
+
+SDK10.0.403, net10.0, xUnit2/VSTest. APPDATA/CLI home изолированы в ignored
+TestResults/ConfigurationPlan/CORE75. Каждый restore/build/test/publish/pack имеет
+отдельный binlog; console logs/TRX сохранены рядом.
+
+| Suite | Debug | Release | Scope |
+| --- | --- | --- | --- |
+| Core |661/661 |661/661 | Полная; общий schema/conversion/facade/reader слой |
+| Mithril |155/155 |155/155 | Полная; protected bootstrap и прежний process lifecycle |
+| Enerit |354/354 |354/354 | Полная runtime;11new configuration cases; generator suite не повторялась |
+| Nom |874/874 |874/874 | Полная;12new cases |
+| Hosting |171/171 |171/171 | Полная;17new cases; Debug verified-hosting replay после test reference repair |
+| Editor |1496/1496 |1496/1496 | Полная;28new cases и сохранён architecture boundary test |
+| Aether migration + old failure replay |47/47 |47/47 |42new configuration cases +5старых случаев, последовательно |
+| New cases total |110/110 |110/110 |6новых файлов /49methods, failed/skipped0 |
+
+Основная команда: `dotnet test <project>/<project>.csproj --no-restore -c Debug|Release
+-m --logger "trx;LogFileName=<name>.trx" --results-directory <CORE75>
+"-bl:<CORE75>/<name>-{}.binlog"`. Projects: TrueMoon.Tests, TrueMoon.Mithril.Tests,
+TrueMoon.Enerit.Tests, TrueMoon.Nom.Tests, TrueMoon.Alloy.Hosting.Tests,
+TrueMoon.Aether.Editor.Tests, TrueMoon.Aether.Tests. После reference repair Debug
+Hosting использовал BuildProjectReferences=false и существующие свежие library DLL.
+
+Serial Aether replay: та же команда с --no-build --no-restore и filter OR по
+Configuration.ModuleConfigurationMigrationTests, Configuration.RuntimeSettingsMigrationTests,
+Capture_PinsExecutableRuntimeSdkAndEnvironmentWithStableIdentity,
+Packages_ConsumesSdkGeneratedLockWithoutChangingOriginalLockOrArchive,
+BlockedDiagnosticImporter_DoesNotBlockIndependentControlConnection и
+CompiledGameFixtures_PreserveSelectedBuildCheckpointRollbackAndCleanup (2scenario cases).
+Артефакты serial-aether-Debug/Release.trx. В new-cases.json извлечены фактические
+110Passed каждого profile из TRX; это не перенос test count из прежнего этапа.
+
+### Полные Aether attempts и ограничения
+
+Полная suite не объявляется green:
+
+1. Первый Debug3232/3234: прежние build-artifacts/replacement fixtures упали на
+   inherited legacy DotNetCliToolReference dotnet-xunit2.3.1 / NU1100 и SDK path error.
+2. Debug final3233/3234: локальная env DirectoryPackagesPropsPath сначала включила
+   CPM в чужом temporary fixture; Packages_ConsumesSdkGeneratedLockWithoutChangingOriginalLockOrArchive
+   получил NU1008. Для следующих запусков клонированный props ограничил
+   ManagePackageVersionsCentrally только workspace projects.
+3. Дополнительный full Debug verified3232/3234 и full Release3233/3234 выполнялись
+   одновременно и пересеклись на эксклюзивном SDK .version в
+   Capture_PinsExecutableRuntimeSdkAndEnvironmentWithStableIdentity.
+   В дополнительном Debug также TaskCanceledException в
+   BlockedDiagnosticImporter_DoesNotBlockIndependentControlConnection (12s wait).
+   Это observed failures; полные concurrent runs не являются clean baseline.
+4. После завершения процессов serial47/47 D/R подтвердил все5затронутых old cases,
+   включая2real compiled-game process fixtures, и42new configuration cases.
+   Replay не исправляет исторический non-green full-run result и не доказывает
+   устранение прежней diagnostics reliability причины.
+
+Root Directory.Packages.props не изменялся. Для offline restore использовалась
+ignored копия без obsolete DotNetCliToolReference, версии пакетов сохранены,
+NuGet.Config с пустыми feeds и RestorePackagesPath=C:/Users/MEGA6/.nuget/packages.
+Environment override текущих serial tests — только процесс запуска, не App setting
+и не новое глобальное поведение production. Чистый последовательный full baseline
+и стандартная изоляция nested fixtures остаются отдельной reliability задачей.
+
+### Source / published / fresh-package delivery
+
+Новый independent consumer [Program/runner](../../ManualTests/ConfigurationModulesConsumer/README.md):
+`./ManualTests/ConfigurationModulesConsumer/Verify.ps1 -EvidenceDirectory
+<fresh-directory>`. Fresh directories вне checkout, unrelated cwd, local-only feed,
+свежий NuGet cache,0ProjectReference в package graph.
+
+Успешная версия: **0.2.5.2-core75.20261110212150**.
+16пакетов: Contracts, Core, Cobalt, TrueMoon, Extensions.DependencyInjection,
+Enerit.Generator, Enerit, Mithril, Argentis, Alloy, Alloy.Rendering.Skia,
+Alloy.Platform.Silk, Alloy.Hosting, Aether, Aether.Editor, Nom.
+Source Debug/published Release/fresh Release: каждый **76checks** на Cobalt/MS DI.
+Actual ECS quota/tick, empty Editor startup, typed diagnostic budget, actual Nom
+store admission/close/reopen/drain, provenance/callback/copies, atomic restart
+rejection, lazy UI composition, flag aliases и Editor bootstrap independence.
+Runtime factory1creation/1dispose на provider; GpuRun=false, WindowRun=false,
+ChildProcessRun=false. Это отдельный configuration proof, не повтор native UI/GPU
+или fresh real-child acceptance CORE7.4.
+
+Первый delivery attempt успешно pack/restore, затем намеренно строгая graph
+проверка обнаружила отсутствие PrivateAssets Enerit.Generator в transitive graph.
+Fresh consumer получил явный build-only PackageReference, как требует existing
+Enerit package guide; весь runner повторён с новой версией/пустыми directories.
+Оба attempt сохранены, успешный — CORE75/delivery-final/verification.json.
+Все16versions/feed provenance, exact cached external nupkg, hashes installed/output
+TrueMoon DLL и отсутствие source drift проверены runner. Packages не публиковались
+во внешний feed. Независимые consumer build/publish:0errors/0warnings.
+
+### API, сохранность и документы
+
+Reflection public declarations: removed0 в7assemblies. Contracts1655→1668 (+13),
+TrueMoon1073→1076 (+3), Mithril433→433, Aether9128→9317 (+189),
+Editor3484→3561 (+77), Enerit406→414 (+8), Hosting571→642 (+71).
+Сравнение с сохранёнными fresh artifacts CORE7.4 (первые3), RenderSnapshots (Aether)
+и ED5b (Editor/Enerit/Hosting); это comparison к указанным artifact baselines,
+не заявление о всех ABI/platform сценариях. Nom existing source bodies/API files
+сохранены hash-аудитом, добавлены2новых API files.
+
+Baseline1649C#/csproj:1633без изменений,14целевых изменений (12C#+2csproj),
+2internal files перенесены TrueMoon→Contracts,26C# добавлены (включая2переноса,
+6tests и independent consumer). Head/Directory.Build.props/прежние ED5b,
+Cobalt, SplitView, rendering snapshots и src/.codex сохранены.
+Планы/статусы Core/engine/Enerit/Nom/Alloy и общий roadmap обновлены под SHA guard;
+предыдущие STATUS сохранены целиком в HISTORY. Module PLAN содержит только ссылку
+на детальный CORE7.5 task, без второй очереди реализации.
+
+Raw retention: CORE75 сохраняет ignored logs/TRX/binlogs/manifests/hashes, оба
+delivery attempts и source-before/audit; standalone run/feed/cache оставлены в
+записанных TEMP directories. На автоматическую очистку TEMP/ignored artifacts
+вечной ссылки нет; дата/команды/counts/failures/scope сохранены здесь.
+Полный solution build/tests и новый hardware/native/GPU acceptance не заявляются.
+Далее CORE7.6: финальная сверка документации/поставки и совместный App/child consumer;
+engine f.4, MIT6, физические input/device-loss/K7/VRAM и wider release отдельно.
+
+
+<a id="core74-2026-11-10"></a>
+## CORE7.4: Core settings и защищённый Mithril bootstrap — 2026-11-10
+
+По запросу пользователя выполнен следующий этап единого configuration profile.
+CoreConfigurationSchemas.App/Paths и UseCoreConfiguration связывают App:Name и
+Paths:Root после всех Setup/legacy callbacks и до DI. App.Name получает private
+snapshot; IPathResolver получает собственную копию, даже при изменении injected
+DTO до первого resolve. Legacy-only App.Name остаётся dynamic. AddLegacySources
+импортирует только appName/default/env/args и CLI-root на стандартных levels;
+обычные JSON/env/args/overrides продолжают общую priority/validation семантику.
+
+PathResolver использует common ParseKnown/schema/profile до App/DI, новое ctor
+PathSettings принимает готовые данные. Common Capture — одна OS args boundary.
+Старый CommandLineArgsProvider сохраняет original tokens вместе с прежней args
+projection; separate values, aliases и last-wins обрабатывает общий parser.
+Legacy Set отслеживается явно, включая null/same-value, не сравнением значений.
+Regression ExplicitLegacyArgumentMutationOverridesOrErasesCapturedIdentity дал
+RED1 (null уже был в projection) → GREEN после override virtual Set; тест не ослаблен.
+
+DiagnosticsSettings содержит все33data fields pipeline: budgets, filters/rules,
+retention, emergency и telemetry. Maps/arrays deep copied, enum maps имеют explicit
+codec с duplicate/range validation. UseConfiguredDiagnostics связывает data до
+ресурсов, отдельно принимает borrowed factories/listeners/emergency writer.
+Активация DiagnosticSubscription и IDiagnosticsConfiguration идут через DI;
+старый object-bag key остаётся compatibility mirror прежнего UseDiagnostics.
+Все standard Core/diagnostics fields StartupOnly; reload возвращает restart-required
+без замены Current/resources. Динамическое применение к ресурсам не назначено.
+
+Mithril AddUnit читает один immutable UnitLaunchSettings через UnitBootstrap;
+parent handler получает его явно. Parse использует общие parser/profile/schema
+без App/DI/OS capture. Read — ограниченный legacy adapter. Env group -u/-p/control
+authoritative целиком, без дополнения CLI/defaults. Unit/parent/endpoint валидируются
+до unit actions/resources; UnitId без parent допустим как unmanaged selection.
+User profile Mithril:UnitId и arbitrary sections не участвуют в identity.
+
+Новый optional IConfigurationBootstrapInputs возвращает original standard
+args/env/default provider sections до ordinary overlays. env.json/args.json/default.json
+не подменяют trusted envelope, удалённый provider не перечитывает ОС. Custom
+IConfiguration без capability предоставляет trusted bounded sections по договору
+совместимости. Existing interfaces не получили mandatory членов; legacy selection
+helpers/parent IConfiguration ctor сохранены. AddUnit сохраняет ArgumentException
+boundary для malformed/unknown selection; direct Parse/Read — ConfigurationException.
+
+Mithril добавил необходимую ProjectReference на TrueMoon, где живут common concrete
+parser/schema/profile. Contracts/Core сохранены, цикла нет. NuGet dependency
+TrueMoon.Mithril→TrueMoon проверена в nupkg и fresh6package graph. New external
+package versions/TF/assembly identities не назначены, общая0.2.5.2-alpha не менялась.
+Process launch/env generation, parent/pipe ownership, stop/restart/kill/reap
+алгоритмы не переработаны; их прежние suites повторены ниже.
+
+### Свежая проверка
+
+| Проверка | Результат и область |
+| --- | --- |
+| New focused tests | Core42/42, Mithril44/44;86newcases, оба DI и негативные paths |
+| Full Core |661/661 Debug и Release, failed/skipped0 |
+| Full Mithril |155/155 Debug и Release, failed/skipped0; existing real process/composition/restart/parent-control cases включены |
+| Ordinary incremental solution Debug |0errors/790warnings; full-solution tests не запускались |
+| API specimen |4blocks Release0errors/0warnings against actual assemblies; no runtime proof этим compile |
+| Source Debug / published Release / fresh6packages |по108checks/profile, Cobalt/MS DI; real owned child на обоих DI в каждом профиле |
+| Public surface | Contracts1652→1655, TrueMoon835→1073, Mithril395→433 reflection declaration lines; removed0. Это surface comparison, не все binary compatibility сценарии |
+
+Fresh version `0.2.5.2-core74.20261110190453`, independent temp consumer, fresh local
+feed/cache, unrelated cwd, no ProjectReference в package graph. Два child на профиль
+(6всего): protected env против conflicting CLI/user profile, selected unit1 вместо999/99,
+реальный parent PID/control pipe, graceful stopped marker, exit/reap и drained monitor.
+No GPU/window. Source includes former2MainProcess units and reload/writer checks.
+Nupkg Mithril dependencies Contracts/Core/TrueMoon указывают новую proof version.
+
+Baseline1635files (1574C#+61csproj):1621hashes сохранены,13C#+1Mithril.csproj
+целенаправленно изменены. Добавлены11production и3test C#; текущее перечисление
+1588C#/894production. Остальная dirty работа и .codex сохранены. Новых settings OS
+readers в сервисах нет; два прежних GetCommandLineArgs сведены к common Capture.
+Current selected-call ledger7calls/6files; прежние ledger/counts остаются историей.
+
+### Requirement → конкретные tests
+
+| Требование | Test |
+| --- | --- |
+| Common grammar/strict compatibility | BootstrapConfigurationTests.SelectedParserRetainsUnknownArgumentsAndUsesCommonKnownGrammar; StrictParserStillRejectsUnknownOption |
+| Core aliases/priority/capture | CoreConfigurationMigrationTests.LegacyAdapterUsesNamedSourcesAndCapturesTheirValuesWithNormalPriorities; OriginalArgumentsPreserveSeparatedRootAndAppNameAliasOrdering |
+| Frozen Name/path и app isolation | CoreConfigurationMigrationTests.StandardCoreCompositionFreezesAppNameAndPathsWhileReaderReturnsCopies; IndependentAppsHaveIndependentStandardSettingsAndResolvers |
+| Invalid winner до DI/resources / restart | CoreConfigurationMigrationTests.InvalidWinningCoreValueFailsBeforeRegistrationOrFactory; CoreStartupChangesRequireRestartAndKeepTheCurrentGeneration |
+| Data-only diagnostics / ownership | CoreConfigurationMigrationTests.ConfiguredDiagnosticsUsesDiWithoutLegacyMirrorAndOwnsSinkProducts |
+| Nested/rules/deep copies/real telemetry | CoreConfigurationMigrationTests.DiagnosticRulesAndNestedSettingsBindIntoPipelineAndRemainDeepCopied; InvalidNestedDiagnosticsAndRulesCannotCreateResources |
+| Env authoritative group/no partial merge | UnitBootstrapConfigurationTests.ProtectedEnvironmentIdentityReplacesTheWholeCliGroup; PartialEnvironmentIdentityDoesNotBorrowCliParentOrEndpoint; InvalidProtectedWinnerNeverFallsBackToValidCli |
+| Bounded original-provider bridge | UnitBootstrapConfigurationTests.ArbitraryProviderCannotSpoofProtectedInputsEvenUsingStandardSectionNames; RemovedStandardEnvironmentIsNotRecapturedFromUnknownProvider; CustomConfigurationWithoutBootstrapCapabilityRetainsTrustedBoundedFallback |
+| Actual standard token grammar/explicit null | UnitBootstrapConfigurationTests.OriginalStandardProviderTokensPreserveSelectedAliasOrder; ExplicitLegacyArgumentMutationOverridesOrErasesCapturedIdentity |
+| Frozen App selection/disable/parent adapter | UnitBootstrapConfigurationTests.AppUnitSelectionCapturesTypedLaunchBeforeLaterLegacyMutation; DisableControlPreventsMainUnitActionAndControllerCreation; TypedAndLegacyParentHandlersBorrowLifetimeWithoutStartingOnConstruction |
+
+Exact40-method matrix, research/plan/quality review сохранены в nonstageable TEMP
+testagent state. Static pairing2929source/687test heuristic включает TestResults;
+это не measurement coverage и не основание менять явное Core/Mithril ownership.
+
+### Команды, restore и артефакты
+
+SDK10.0.403; APPDATA/DOTNET_CLI_HOME изолированы в ignored CORE74 evidence,
+first-run certificate/telemetry выключены. Для новой ProjectReference выполнен
+offline restore graph: временная копия Directory.Packages.props с теми же exact
+package versions, без старого unrelated DotNetCliToolReference dotnet-xunit2.3.1;
+NuGet.Config без sources, audit disabled для offline run, явный существующий package
+cache. Repo Directory.Packages.props не менялся. Первая попытка с redirected default
+cache дала NU1100; повтор с прежним cached package path успешен. Это tooling/cache
+boundary, не новая framework dependency или online restore proof.
+
+```powershell
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj --no-restore -c Debug --filter 'FullyQualifiedName~CoreConfigurationMigrationTests|FullyQualifiedName~BootstrapConfigurationTests' --logger 'trx;LogFileName=core-focused-final.trx' --results-directory TestResults/ConfigurationPlan/CORE74 -m '-bl:TestResults/ConfigurationPlan/CORE74/focused-green-{}.binlog'
+dotnet test TrueMoon.Mithril.Tests/TrueMoon.Mithril.Tests.csproj --no-restore -c Debug --filter 'FullyQualifiedName~UnitBootstrapConfigurationTests' --logger 'trx;LogFileName=mithril-focused-final.trx' --results-directory TestResults/ConfigurationPlan/CORE74 -m '-bl:TestResults/ConfigurationPlan/CORE74/focused-green-{}.binlog'
+# Полные обе suites повторены с -c Debug и -c Release, без filter; TRX core-final-*/mithril-final-*.
+dotnet build TrueMoon.slnx --no-restore -c Debug -m '-bl:TestResults/ConfigurationPlan/CORE74/solution-debug-{}.binlog'
+& ManualTests/ConfigurationAppConsumer/Verify.ps1 -EvidenceDirectory TestResults/ConfigurationPlan/CORE74/consumer-delivery
+& ManualTests/ConfigurationApiDesign/Verify.ps1
+```
+
+Все build/test/restore/pack/publish имеют unique binlogs. Raw logs/TRX/source baseline,
+package/dll hashes/manifests, API diff и final audit — ignored
+`TestResults/ConfigurationPlan/CORE74/`; four-block shape — `CORE70Api/` рядом.
+[Руководство](CONFIGURATION_CORE_MITHRIL.md),
+[consumer](../../ManualTests/ConfigurationAppConsumer/Program.cs),
+[runner](../../ManualTests/ConfigurationAppConsumer/Verify.ps1).
+
+Далее CORE7.5 у владельцев Aether/Editor/остальных модулей. Их RuntimeBootstrap,
+GPU env flags, Play/Build captures, identity/version/size limits не мигрированы этим
+шагом. MIT6 containment/trends, existing native fixture failures и hardware/release
+acceptance остаются самостоятельными задачами; новых broad OS/durability promises нет.
+
+<a id="status-before-core74-2026-11-10"></a>
+## Core STATUS перед CORE7.4 — снимок 2026-11-10
+
+**2026-11-10 — CORE7.3 reload/changes/writer реализован и проверен.**
+[Reload guide](CONFIGURATION_RELOAD.md), [App stage](CONFIGURATION_APP.md),
+[standalone](CONFIGURATION_USAGE.md), [API](CONFIGURATION_API.md),
+[план](PLAN.md#core7-unified-configuration), [evidence/limits](HISTORY.md#core73-2026-11-10).
+
+## Реализация и проверки
+
+| Область | Текущее состояние |
+| --- | --- |
+| CORE7.0–3 | Sources/schema/parser/App stage; atomic raw+options reload, startup-only whole rejection, safe rollback, bounded/coalesced changes, explicit JSON patch |
+| Ownership | Один App-owned runtime;4nondisposable aliases; Stop/failed-start закрывают admission и drain callbacks, Current доступен до Dispose; issued snapshots остаются значениями |
+| Core tests |619/619 Debug и Release, failed/skipped0;65newcases, оба DI, concurrency/cancel/failures/retry/capacity/reentrancy/cleanup |
+| Delivery | Source Debug/published Release/fresh6package Release по72checks/profile; Cobalt/MS DI и2Mithril MainProcess units, no OS child/GPU/window. Version0.2.5.2-core73.20261110164712 |
+| Solution/API | Ordinary incremental Debug0errors/855warnings;4API blocks Release0errors/0warnings; не full-solution tests |
+| Legacy/CORE6 | IConfiguration/App.Name/модульные CLI/bootstrap не мигрированы; diagnostics routing/metrics/generation/release отдельно |
+
+Commands/scope/SHA — в HISTORY. Общая0.2.5.2-alpha не менялась;1552из1560baseline
+C# hashes сохранены,8целевых исходников изменены,11production/3tests добавлены.
+[Прежний STATUS](HISTORY.md#status-before-core73-2026-11-10).
+
+## Ограничения
+
+Нет automatic watcher и автоматического применения dynamic options к ресурсам:
+injected T остаётся startup copy. Diff сравнивает typed raw value/ReadState/Origin
+до configure. Callbacks чистые, schema.Copy обеспечивает deep copies. Callback
+уведомления не ждёт App shutdown; blocking/ignoring-cancellation callback/source
+не завершается принудительно. Custom profile для App требует optional catalog;
+без optional writer capability запись отклоняется. Writer не публикует/reload
+автоматически; общий gate не даёт interprocess/external-writer/power-loss durability.
+Protected process identity/OS facts/UI documents не стали user settings.
+Modules ещё не переведены (CORE7.4/5), native failures/release gates не закрыты.
+
+## Следующий конкретный шаг
+
+CORE7.4: перевести Core/App name/diagnostics defaults и Mithril bootstrap на общий
+профиль/options, сохранить legacy CLI/env aliases и protected process identity,
+parent monitoring, start/stop/restart/cleanup и ownership. Детали — в одном Core PLAN.
+Engine f.4 независим.
+
+<a id="core73-2026-11-10"></a>
+## CORE7.3: атомарный reload, bounded changes и явная запись — 2026-11-10
+
+По запросу пользователя реализован следующий этап общего configuration profile.
+Frozen App stage сохраняет schema/configure plan; каждый reload загружает все
+sources и заново готовит все typed options/copies/validation. Одной атомарной
+заменой публикуются raw+prepared values. Нет повторного module register/UseModule,
+DI activation и пересоздания сервисов. Failed/canceled candidate сохраняет прежний
+объект Current/generation; no-op тоже не публикует. Любой changed StartupOnly
+ключ отклоняет весь candidate с RestartRequired. Успех увеличивает generation на1.
+
+Diff — canonical typed raw values через codec.Write, ReadState и Origin; keys
+Ordinal sorted. Configure чистый/frozen и не является diff-reader; зависимость
+startup resource от dynamic поля требует module contract. Typed snapshot readers
+закрываются reflection один раз при composition, не в Current/Read/GetOptions.
+Existing injected options и issued snapshots не меняются. Custom profile обязан
+предоставлять immutable snapshots, а custom schema/copy/codec — чистые deep copies.
+
+ConfigurationUpdate/ConfigurationEdit и reloader/changes/writer добавлены в
+Contracts без новых обязательных членов existing interfaces. Optional
+IConfigurationMutableSource/IConfigurationProfileWriter допускают расширение
+записи; built-in JSON mutable, args/env/defaults/overrides read-only. Exact source
+ID, целиком validated/copied patch до IO, delete vs explicit JSON null. JSON
+staging рядом с target и rename; success после commit не превращается в canceled
+write. Нет implicit save/reload/notification при записи. Один runtime gate
+сериализует reload/write, не межпроцессные external writers/power-loss durability.
+
+На subscription max64slots и1pending latest update с union ChangedKeys.
+Callback вне gate/lock, исключения изолированы с value-safe diagnostic code.
+Dispose handle снимает только подписку, retiring callback удерживает slot до выхода.
+Все4public aliases nondisposable, owner runtime один. Borrowed lifecycle adapter
+стартует перед user services: Stop и failed-start rollback закрывают admission,
+отменяют pending operations/delivery и ожидают callbacks. Reader живёт до Dispose;
+Stop token ограничивает ожидание, не прерывает blocking callback/source. Callback
+не должен ждать App Stop/Dispose, который сам ожидает его завершения.
+
+### Свежие проверки и точная область
+
+| Проверка | Фактический результат |
+| --- | --- |
+| Focused Core73 |65/65 new cases, failed/skipped0, xUnit2/VSTest; Cobalt и MS DI |
+| Core suite |619/619 Debug и619/619 Release, failed/skipped0 |
+| Ordinary incremental solution Debug |0errors/855warnings; не запуск всех test projects |
+| Mithril Release rebuild |0errors/232warnings incremental; не новая Mithril suite |
+| API specimen |4blocks Release0errors/0warnings against actual assemblies; no runtime/child |
+| Public API comparison | Reflection declarations из предыдущих CORE7.2 и новых fresh packages: Contracts1571→1652, TrueMoon835→835; removed0. Это surface/signature comparison, не анализ всех binary compatibility scenarios |
+| Source Debug / published Release / fresh packages |по72checks/profile, Cobalt+MS DI; прежние2actual Mithril MainProcess units сохранены, OS child/GPU/window не запускались |
+
+Fresh delivery: `0.2.5.2-core73.20261110164712`; six packages Contracts/Core/Cobalt/
+TrueMoon/MSDI/Mithril из local feed в fresh isolated cache, без ProjectReference,
+unrelated cwd. Общая0.2.5.2-alpha, identities, dependencies и TF не менялись.
+В baseline1560C# изменены только8целевых файлов;1552hashes сохранены. Добавлены
+11production и3test files. Остальная dirty работа, планы соседних модулей и .codex
+сохранены. Это Core-owned proof, не module migration или release acceptance.
+
+### Requirement → точное test evidence
+
+| Требование | Test (TrueMoon.Tests.Configuration) |
+| --- | --- |
+| Atomic raw/options, old values/services unchanged | ConfigurationReloadTests.ReloadPublishesOneAtomicGenerationAndRetainsOldOptionsServicesAndSnapshots |
+| Typed no-op / provenance | ConfigurationReloadTests.EquivalentTypedValuesAreNoOpDespiteDifferentJsonRepresentation; ProvenanceChangePublishesEvenWhenTypedValueAndStateStayEqual |
+| Startup-only reject | ConfigurationReloadTests.StartupOnlyChangeRejectsWholeCandidateIncludingReloadableChanges |
+| Late-schema atomic rollback/retry | ConfigurationReloadTests.LateUnregisteredSchemaFailureRollsBackWholeCandidateAndRetryPublishesBoth |
+| Pure configure rollback/redaction/retry | ConfigurationReloadTests.PureConfigureFailureIsRedactedAndRollbackRemainsRetryable |
+| Startup-only provenance | ConfigurationReloadTests.StartupOnlyProvenanceChangeRequiresRestartEvenWithEqualValue |
+| Real JSON IO failure/retry | ConfigurationWriteTests.RealJsonIoFailureRetainsSnapshotAndRetryPublishesOnlyAfterExplicitReload |
+| Failed/canceled candidate | ConfigurationReloadTests.InvalidRawOrSemanticCandidateNeverReplacesCurrentSnapshot; CancelledSourceAwaitRetainsCurrentAndSubsequentReloadCanSucceed |
+| JSON null/delete, no implicit reload | ConfigurationWriteTests.JsonPatchDistinguishesExplicitNullAndDeleteAndNeverReloadsImplicitly |
+| Preflight / readonly / unknown | ConfigurationWriteTests.EveryPatchEditIsValidatedBeforeAnySourceIo; UnknownAndReadonlySourcesFailWithoutCallingAnyWriter; CustomProfileWithoutWriterCapabilityIsReadonly |
+| Shared gate / copied edits | ConfigurationWriteTests.WriteAndReloadShareOneGateAndReaderStaysReadableDuringIo; QueuedWriteWaitsForReloadAndCopiesCallerEdits |
+| Write failure/cancel and commit boundary | ConfigurationWriteTests.CancelledOrFailedWriteNeverPublishesAndErrorsHideValues; CancellationAfterSuccessfulSourceCommitDoesNotReportWriteAsCancelled |
+| JSON parent normalization | ConfigurationWriteTests.JsonPatchUsesOneCaseInsensitiveParentForDifferentlyCasedSchemaPaths |
+| Capacity / coalescing | ConfigurationChangesTests.SubscriptionCapacityIs64AndDisposalReleasesSlotWithoutOwningRuntime; SlowObserverGetsLatestPendingGenerationWithUnionOfCanonicalChangedKeys |
+| Callback isolation/reentrancy | ConfigurationChangesTests.ObserverExceptionsDoNotRollbackPublicationOrBlockOtherObservers; CallbackCanSynchronouslyRequestReloadBecauseDeliveryIsOutsideGate; CallbackCanUnsubscribeItselfWithoutDisposingTheRuntime |
+| Stop/failed start | ConfigurationChangesTests.StopWaitsForRunningCallbackAndClosesAllAdmissionWhileCurrentRemainsReadable; FailedStartupClosesReloadWriteAndSubscriptionsBeforeAppDisposal |
+
+All late-schema/configure failures, startup provenance and real JSON IO/retry cases
+также входят в65cases; точные имена в TRX. Source-to-test pairing — static heuristic,
+не measurement coverage. Broad-test research/plan/quality status находятся только
+в nonstageable TEMP; исходные существующие tests не переписаны.
+
+Команды из src, SDK10.0.403, --no-restore использует существующие assets. APPDATA и
+DOTNET_CLI_HOME изолированы внутри ignored evidence; first-run certificate/telemetry
+отключены. Все build/test/pack/publish/restore имеют unique quoted -bl:...-{}.binlog.
+
+```powershell
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj --no-restore -c Debug --filter 'FullyQualifiedName~ConfigurationReloadTests|FullyQualifiedName~ConfigurationWriteTests|FullyQualifiedName~ConfigurationChangesTests' --logger 'trx;LogFileName=reload-final.trx' --results-directory TestResults/ConfigurationPlan/CORE73 -m '-bl:TestResults/ConfigurationPlan/CORE73/reload-final-{}.binlog'
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj --no-restore -c Debug --logger 'trx;LogFileName=core-final-Debug.trx' --results-directory TestResults/ConfigurationPlan/CORE73 -m '-bl:TestResults/ConfigurationPlan/CORE73/core-final-{}.binlog'
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj --no-restore -c Release --logger 'trx;LogFileName=core-final-Release.trx' --results-directory TestResults/ConfigurationPlan/CORE73 -m '-bl:TestResults/ConfigurationPlan/CORE73/core-final-{}.binlog'
+dotnet build TrueMoon.slnx --no-restore -c Debug -m '-bl:TestResults/ConfigurationPlan/CORE73/solution-debug-{}.binlog'
+& ManualTests/ConfigurationAppConsumer/Verify.ps1 -EvidenceDirectory TestResults/ConfigurationPlan/CORE73/consumer-delivery
+& ManualTests/ConfigurationApiDesign/Verify.ps1
+```
+
+Logs/TRX/binlogs/source baseline/delivery manifest/hash audit находятся в ignored
+`TestResults/ConfigurationPlan/CORE73/`; shape proof — `CORE70Api/` рядом.
+[Рабочее руководство](CONFIGURATION_RELOAD.md), [App stage](CONFIGURATION_APP.md),
+[полный API](CONFIGURATION_API.md), [runner](../../ManualTests/ConfigurationAppConsumer/Verify.ps1).
+Нет automatic watcher, live module resources migration, interprocess writer
+transaction, принудительного callback termination или новых native/GPU guarantees.
+Следующий конкретный шаг — CORE7.4; CORE7.5 идёт у соответствующих module owners.
+
+<a id="status-before-core73-2026-11-10"></a>
+## Core STATUS перед CORE7.3 — снимок 2026-11-10
+
+**2026-11-10 — CORE7.2 App stage/reader реализован и проверен.**
+[App guide](CONFIGURATION_APP.md), [standalone](CONFIGURATION_USAGE.md), [API](CONFIGURATION_API.md),
+[план](PLAN.md#core7-unified-configuration), [проверки/limits](HISTORY.md#core72-2026-11-10).
+All-schema deferred binding/configure/validation/copies до register/DI, typed module
+setup и один App-owned runtime с borrowed reader. Legacy путь сохраняется отдельно.
+
+## Реализация и проверки
+
+| Область | Текущее состояние |
+| --- | --- |
+| CORE7.0–2 | Sources/parser/raw snapshots и App stage/reader готовы; optional catalog API добавлен без mandatory членов старых interfaces |
+| Core tests |554/554 D/R, failed/skipped0;48новых App-stage cases, оба DI, ordering/copies/failures/cleanup/contexts/isolations |
+| Delivery | Source Debug/published Release/fresh6package Release по36checks; Cobalt/MS DI и2Mithril MainProcess units, no OS child/GPU/window. Version 0.2.5.2-core72.20261110161630 |
+| Solution | Обычный incremental Debug0errors/855warnings; Mithril Release rebuild0errors/65warnings. Не full-solution tests и не новая Mithril suite |
+| Legacy/CORE6 | IConfiguration/App.Name/модульные CLI/bootstrap не мигрированы; diagnostics routing/metrics/generation/release отдельно |
+
+Commands/scope/SHA/runner — в HISTORY. Общая0.2.5.2-alpha не менялась; source baseline
+сохранён кроме3намеренно изменённых App/profile файлов.
+[Прежний STATUS](HISTORY.md#status-before-core72-2026-11-10).
+
+## Ограничения
+
+Нет reload/write/notifications (CORE7.3); Current generation пока1. Standalone
+GetOptions не получает stage options; App snapshot предоставляет private copies.
+Custom profile для App должен реализовать optional catalog. Consumer register
+callbacks выполняют composition; собственные внешние side effects не откатываются.
+Protected identity/compiler environment/OS facts/UI documents не стали user settings.
+Modules ещё не переведены автоматически (CORE7.4/5), старые native failures/release
+gates не закрыты; новые durability/OS/RID/hardware guarantees не назначены.
+
+## Следующий конкретный шаг
+
+CORE7.3: атомарный candidate raw+prepared options, explicit reload, startup-only
+restart rejection, bounded notifications/ownership и явный write mutable source.
+Не повторять register/UseModule и не пересоздавать services при reload; failed
+candidate сохраняет старую generation. Далее согласованный consumer cutover.
+Engine f.4 независим.
+
+<a id="core72-2026-11-10"></a>
+## CORE7.2: App stage, typed options и borrowed reader — 2026-11-10
+
+По запросу пользователя подключён opt-in profile к App: AppConfigurationContext
+реализует optional IAppConfigurationStage, extensions UseConfiguration/ConfigureModule
+объявляют профиль/модули без загрузки/активации. После всех Setup и legacy callbacks
+stage frozen; source.LoadAsync работает в worker без caller SynchronizationContext,
+все schemas Bind/configure/validate и private copies готовы до первого register.
+Register callbacks и legacy callbacks, которые они добавили, выполняются отдельными
+группами; AddUnit Prepare видит полный набор declarations. Bind/register/DI остаются
+на caller thread, нет новых scopes/async service activation или hot-loop resolution.
+
+Все registered schemas готовятся, даже без module callback. GetOptions требует exact
+schema instance, возвращает копию prepared data без повтора configure/validation;
+raw Read/Origin не переписываются callbacks. Один App-owned ConfigurationRuntime
+создаётся registration factory и обязательно активируется перед CreateApp, чтобы
+provider владел им даже без consumer reader. IConfigurationReader — nondisposable
+borrowed alias. Dispose App закрывает Current, выданные snapshots остаются данными.
+CreateApp failures очищают returned resolver; failed startup сохраняет обычный App
+ownership contract. Legacy IConfiguration/App.Name/DI interfaces не подменены.
+
+Уточнение public API: optional IConfigurationProfileSchemas.VisitSchemas и
+IConfigurationSchemaVisitor.Visit<T> передают весь typed catalog без downcast/reflection.
+IConfigurationProfile и остальные существующие interfaces не получили mandatory
+членов. Custom profile без catalog остаётся standalone, в App явно NotSupported.
+Дубликаты/unknown schema/frozen/reader collision отвергаются, malformed generation0/2
+не доходит до register/DI. Copy/custom-schema ошибки маскируются как configuration errors.
+
+### Выполненные проверки
+
+- SDK10.0.403, полный TrueMoon.Tests: **554/554 Debug и554/554 Release**, failed/skipped0.
+ 48new App-stage cases, обе DI: phase ordering, all-schema validation, private copies,
+ callbacks/provenance, worker/caller contexts, empty/custom catalogs, identity/denials,
+ two Apps/repeated Build и cleanup. Прежние506Core cases повторены в этих же runs.
+ Команда для D/R из src: `dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj --no-restore --configuration <Debug|Release> --logger "trx;LogFileName=core-final-<Debug|Release>.trx" --results-directory TestResults/ConfigurationPlan/CORE72 -m -bl:TestResults/ConfigurationPlan/CORE72/final-{}.binlog -v:minimal`.
+ Process-local APPDATA/DOTNET_CLI_HOME в TestResults/ConfigurationPlan/CORE72;
+ first-use/certificate/tool-path/telemetry отключены. Новых test dependencies нет.
+- `dotnet build TrueMoon.slnx --no-restore --configuration Debug -m -bl:TestResults/ConfigurationPlan/CORE72/solution-{}.binlog -v:minimal`:
+ **0errors/855warnings**, обычная incremental сборка; не full-solution test run.
+ Mithril Release dependency rebuild —0errors/65warnings, без собственной новой suite.
+- [Actual App consumer](../../ManualTests/ConfigurationAppConsumer/Program.cs) и
+ [runner](../../ManualTests/ConfigurationAppConsumer/Verify.ps1):
+ `& ManualTests/ConfigurationAppConsumer/Verify.ps1 -EvidenceDirectory TestResults/ConfigurationPlan/CORE72/consumer-delivery`.
+ Source Debug, published Release и fresh6package Release — **по36checks**, в каждом
+ Cobalt иMicrosoft DI,2actual Mithril MainProcess definitions, start/stop/dispose,
+ service options injection, snapshots/copies/legacy separation, repeated Build и
+ invalid unbound schema before factory. OS child/GPU/window не запускались.
+ Fresh packages: Contracts/Core/Cobalt/TrueMoon/Extensions.DependencyInjection/Mithril,
+ version **0.2.5.2-core72.20261110161630**; cache/feed вне checkout, unrelated cwd,
+ ProjectReferences0, exact cached external NuGet, local-only feed и SHA package/output.
+ Общая версия0.2.5.2-alpha и project references framework не менялись.
+- Shape runner CORE7.0 использует реальные App-stage types из текущих assemblies;
+ заглушки оставлены только CORE7.3 APIs. Его compilation не является runtime proof.
+ Новые production поля/namespace соответствуют структуре; Markdown links/anchors/
+ task IDs/whitespace и source witness проверены отдельно.
+
+### Матрица требований и тестов
+
+| Требование CORE7.2 | Exact test evidence |
+| --- | --- |
+| Setup/legacy/bind/register/drain/DI порядок | AllSetupAndLegacyActionsPrecedeBindingAndAllBindingsPrecedeRegistration; LegacyConfigurationCallbackCanDeclareProfileAndBinding |
+| Все schemas проверены до register/factories | EveryCatalogSchemaIsValidatedAndPreparedEvenWithoutModuleRegistration; InvalidUnboundSchemaStopsEveryRegisterAndResolverBeforeFactories; FailedLaterConfigureCallbackPreventsEarlierModuleRegistration |
+| Копии, provenance, без повторного callback | ReaderReturnsPreparedCopiesWithoutReplayingCallbacksOrChangingRawProvenance; AllRegistrationCopiesArePreparedBeforeAnyRegisterCallback |
+| Catalog/empty/generation compatibility | CustomProfileCatalogPreservesSchemaTypesAndBindsUnregisteredSchemas; EmptyProfileStillCreatesAReaderWithoutInventingOptions; CustomProfileInvalidInitialGenerationFailsBeforeBindRegisterOrResolver |
+| Два App, repeated Build и owner cleanup | TwoAppsAndRepeatedBuilderBuildHaveIndependentStagesAndReaderLifetimes; DisposingAppInvalidatesReaderButIssuedSnapshotsRemainValues; FailureAfterResolverCreationDisposesRuntimeAndOwnedServices; StartupFailureRetainsOriginalFailureAndDisposesOwnedGraphOnce |
+| Worker-only data load | OnlySourceLoadUsesWorkerWithoutCallerSynchronizationContext |
+| Graph/capability/reader denials | ForeignContextAndProfileWithoutSchemaCatalogAreRejectedExplicitly; InvalidStageGraphFailsBeforeResolverAndFactories; FrozenStageRejectsNewProfilesAndBindingsInsideRegister; UserRegistrationCannotReplaceReservedReader |
+
+Тесты: [AppConfigurationStageTests](../../TrueMoon.Tests/Configuration/AppConfigurationStageTests.cs).
+Broad test-gap/assertion review выполнен, state в OS TEMP вне Git; mutants/coverage
+не запускались. Pairing heuristic не является coverage; IDE findTests недоступен.
+Изменены3существующих C# файла (AppBuilder/AppConfigurationContext/ConfigurationProfiles),
+прочие1545из исходного1548source baseline сохранены; добавлены4shared contract files,
+6implementation files,1test и1consumer. src/.codex и прежние dirty изменения сохранены.
+
+Локальные ignored artifacts — TestResults/ConfigurationPlan/CORE72: TRX/logs/binlogs,
+consumer-delivery/verification.json и три consumer profiles. Здесь сохранены команды/
+scope/outcomes, а runner находится в Git. Коммит/push не выполнялись. Следующий шаг
+CORE7.3 reload/notifications/write; module/process bootstrap migration — CORE7.4/5.
+
+<a id="status-before-core72-2026-11-10"></a>
+## Статус перед CORE7.2 — снимок 2026-11-10
+
+**2026-11-10 — standalone CORE7.1 реализован и проверен.**
+[Usage](CONFIGURATION_USAGE.md), [API](CONFIGURATION_API.md), [карта](CONFIGURATION.md),
+[план](PLAN.md#core7-unified-configuration), [evidence/limits](HISTORY.md#core71-2026-11-10).
+Opt-in profiles/schemas/defaults/codecs, normalized paths/приоритеты, CLI/env/JSON,
+immutable raw snapshots доступны без App/DI. Legacy consumers не мигрированы.
+
+## Реализация и проверки
+
+| Область | Текущее состояние |
+| --- | --- |
+| CORE7.0/1 | Проектный контракт и standalone implementation готовы; metadata Codec уточнён добавочно, прежние interfaces не ломались |
+| Unit/source | Core506/506 D/R, failed/skipped0;108новых cases, в том числе errors/redaction/copy/cancellation и все source priority pairs |
+| Delivery | Source Debug/published Release/fresh3package Release consumer по15checks, unrelated cwd/isolated cache/local feed; version0.2.5.2-core71.20261110141224 |
+| Solution | Обычный incremental Debug build0errors/236warnings; full-solution tests не запускались |
+| Legacy/CORE6 | Прежние App/bootstrap/diagnostics/lifecycle semantics сохранены; CORE6 routing/metrics/generation/release отдельно |
+
+Результаты датированы этой работой; source/command/scope — в HISTORY. Общая версия
+0.2.5.2-alpha не менялась. Неизменность всех1515 прежних C# файлов проверена SHA;
+новые production types —29файлов. [Прежний STATUS](HISTORY.md#status-before-core71-2026-11-10).
+
+## Ограничения
+
+Нет App Current reader/отложенного binding stage/reload/write/notifications:
+это CORE7.2/3. Standalone GetOptions бросает InvalidOperationException; использовать
+schema.Bind(snapshot). Модули пока используют прежние callbacks/CLI/bootstrap;
+CORE7.4/5 проведут согласованный cutover. Protected identity/captured compiler env,
+OS facts и UI/documents/operations не объединяются с пользовательскими settings.
+Новых native/hardware/OS/RID/durability гарантий нет; чужие suite failures не закрыты.
+
+## Следующий конкретный шаг
+
+CORE7.2: App-owned deferred stage, bind всех schemas/overrides/callbacks и validation
+до factories/DI, borrowed IConfigurationReader и typed options snapshots. Проверить
+Cobalt/MS DI, два App, repeated setup, invalid startup без owned resources,
+legacy AddUnit/configuration ordering и отсутствие resolution в горячих циклах.
+Engine f.4 остаётся независимым.
+
+
+
+<a id="core71-2026-11-10"></a>
+## CORE7.1: standalone sources, keys и parser — 2026-11-10
+
+По запросу следующего этапа реализованы [standalone unified profiles](CONFIGURATION_USAGE.md)
+в TrueMoon/Configuration и добавочные shared contracts в TrueMoon.Contracts/Configuration.
+Schema metadata/defaults, invariant scalar/nullable/enum/Guid/TimeSpan/collection
+conversion, explicit codecs, normalized Section:Key/aliases, declared priority и
+immutable generation-one snapshots доступны без App/DI. JSON только по явному
+absolute path, env по prefix/allowlist, CLI поддерживает inline/separate/flags/
+negative/repeats/collections/positionals/--. GetOptions на standalone snapshot
+явно отклонён до будущего App stage; schema.Bind доступен как data-only utility.
+
+Старые IConfiguration/ConfigurableBase/ConfigurationBuilder/providers/App/Mithril/
+Editor code paths не правились. Все1515 ранее учтённых C# source hashes сохранены;
+добавлены29production C# файлов (19Contracts+10TrueMoon),3test files и1consumer.
+Доступно862production C# файла вместо833; два новых OS-reader boundary находятся
+в ConfigurationEnvironment.Capture и ConfigurationEnvironmentSource, не в services.
+Source error diagnostics не удерживают raw exception message/inner exception;
+custom codec exceptions и unsolicited cancellation маскируются. Requested source
+cancellation сохраняет token. Отклонённая декларация не занимает ID/section builder.
+
+Уточнение API: ConfigurationKey получил optional Codec property и nongeneric
+IConfigurationValueCodec для передачи explicit converter через public interfaces.
+Прежний constructor и generic codec<T> сохранены; mismatched types отклоняются.
+Схема запрещает branch/leaf overlap и неподдержанные типы без codec до IO.
+Deep copy является контрактом options/codec; identity Copy и disposable options
+отклоняются. App stage/reader/reload/write/notifications не реализованы и не
+регистрируются как готовые services; module consumers ещё не мигрированы.
+
+### Фактические проверки
+
+- SDK10.0.403, TrueMoon.Tests: **506/506 Debug и506/506 Release**, failed/skipped0.
+  Из них108новых cases (CLI24/source17/profile67),27existing ConfigurationTests;
+  остальные прежние Core/lifecycle/process/diagnostics cases повторены полным проектом.
+  Команда из src для каждого D/R: `dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj --no-restore --configuration <Debug|Release> --logger "trx;LogFileName=core-final-<Debug|Release>.trx" --results-directory TestResults/ConfigurationPlan/CORE71 -m -bl:TestResults/ConfigurationPlan/CORE71/final-{}.binlog -v:minimal`.
+  Process-local APPDATA/DOTNET_CLI_HOME направлены в TestResults/ConfigurationPlan/CORE71;
+  certificate/first-use/tool-path/telemetry отключены. Новых test/package dependencies нет.
+- `dotnet build TrueMoon.slnx --no-restore --configuration Debug -m -bl:TestResults/ConfigurationPlan/CORE71/solution-{}.binlog -v:minimal`:
+  **0errors/236warnings**, обычная incremental сборка; это не запуск всего solution.
+  Первый ввод несуществующего TrueMoon.sln дал MSB1009; actual target найден как .slnx.
+  Предыдущие aggregate warnings и native fixture restore failures не объявляются исправленными.
+- [Независимый consumer runner](../../ManualTests/ConfigurationProfileConsumer/Verify.ps1):
+  `& ManualTests/ConfigurationProfileConsumer/Verify.ps1 -EvidenceDirectory TestResults/ConfigurationPlan/CORE71/consumer-delivery`.
+  Source Debug, published Release и isolated fresh-package Release — **по15checks**.
+  Fresh cache/feed вне checkout, unrelated cwd, ProjectReferences0, только local
+  sources, exact cached external dependencies, package/feed/installed/output SHA.
+  Fresh3packages: TrueMoon.Contracts/TrueMoon.Cobalt/TrueMoon,
+  version **0.2.5.2-core71.20261110141224**; общая0.2.5.2-alpha не менялась.
+  Consumer проверяет effective priority/provenance, env/JSON/CLI, custom codec,
+  missing/null, copied arrays, explicit overrides, failed reload isolation,
+  grammar/secret redaction и coexistence с legacy builder. App lifecycle/GPU/native не запускались.
+- Declarations/examples runner CORE7.0 обновлён: implemented types берёт из real
+  local assemblies, только будущие APIs остаются signature stubs. Его type-check
+  не считается runtime proof. Markdown links/anchors/whitespace проверяются отдельно.
+
+### Матрица требований и проверок
+
+| Требование CORE7.1 | Точное test evidence |
+| --- | --- |
+| Приоритеты всех пар источников, same-level order | EverySourcePairUsesDeclaredPriorityInsteadOfRegistrationOrder; LastSourceAtSamePriorityWins |
+| Ключи/sections/aliases, collisions/branch-leaf | MetadataRejectsCaseInsensitiveAliasAndPathCollisions; ProfileRejectsBranchLeafOverlapAcrossSchemasInEitherOrder |
+| Missing/null/invalid без fallback и утечек | DefaultsMissingNullEmptyAndWrongReadTypeRemainDistinct; InvalidWinningValueNeverFallsBackOrLeaksSensitiveContent; SourceCannotForgeDiagnosticIdentityOrLeakItsExceptionPayload; CustomCodecFailuresCannotLeakRawValuesThroughConfigurationExceptions |
+| Invariant conversion, custom codec, snapshots | ConversionIsInvariantAndSupportsEnumNullableGuidAndTimeSpan; ExplicitCustomCodecConvertsDefaultsInputsAndOverrides; SnapshotDetachesSourceJsonAndEveryReturnedCollection |
+| CLI grammar/repeats/flags/negative/-- | AliasesInlineValuesNegativeNumbersFlagsAndDelimiterCompose; RepeatedCollectionsPreserveOccurrenceOrderWithoutCommaSplitting; FlagsDoNotConsumeNextPositionalAndInlineFalseIsExplicit |
+| JSON optional/required/malformed/nested/arrays/IO | OptionalAbsenceUsesDefaultsButRequiredAbsenceFails; ExistingInvalidJsonNeverUsesOptionalFallbackOrLeaksValue; JsonFlattensNestedSectionsAndKeepsArraysAsOneTypedValue; ExistingDirectoryIsAnIoFailureEvenForOptionalFile |
+| Env prefix/allowlist/collision/bootstrap capture | EnvironmentMapsPrefixAndDoubleUnderscoreButPreservesSingleUnderscore; EnvironmentAllowlistFiltersBeforeUnknownKeyValidationAndIsCopied; EnvironmentRejectsUnknownSelectedKeyAndAmbiguousNormalizedNames; CaptureReadsOnlyRequestedNamesAndRetainsMissingAsNull |
+| Freeze/copy/cancellation/failed load | BuildersCannotBeUsedAfterTheirConfigurationCallbackCompletes; IndependentLoadsAndFailureCannotMutateEarlierSnapshots; CancellationAfterSourceAwaitDoesNotReturnPartialOrChangeOldSnapshot |
+
+Тесты находятся в [TrueMoon.Tests/Configuration](../../TrueMoon.Tests/Configuration/UnifiedConfigurationProfileTests.cs)
+(3файла). Broad test-gap/assertion review выполнен; mutant execution/coverage проценты
+не заявлены. IDE findTests недоступен; static pairing analyzer выполнен однократно,
+его heuristic Editor.Tests suggestion переопределён явным Core ownership; pairing
+не является coverage. Исследование/план/quality status хранятся в OS TEMP вне Git.
+
+Подробные local artifacts: ignored TestResults/ConfigurationPlan/CORE71:
+core-final-Debug/Release.trx, final-Debug/Release.log, unique binlogs,
+consumer-delivery/verification.json и три consumer profile reports. История фиксирует
+scope/outcome и runner даже при удалении ignored artifacts. Старые dirty изменения
+и src/.codex сохранены; коммит/push не выполнялись. Следующий шаг — CORE7.2.
+
+<a id="status-before-core71-2026-11-10"></a>
+## Статус перед CORE7.1 — снимок 2026-11-10
+
+**2026-11-10 — CORE7.0 завершён как проектный этап.**
+[Карта использования](CONFIGURATION.md), [точный добавочный API и три примера](CONFIGURATION_API.md),
+[план](PLAN.md#core7-unified-configuration), [проверка и ограничения](HISTORY.md#core70-api-2026-11-10).
+Это подготовка реализации: новый профиль/providers/binding/App reader/reload/write
+ещё не поставлены в production API. Следующий шаг — CORE7.1.
+
+## Реализация и проверки
+
+| Область | Текущее состояние |
+| --- | --- |
+| CORE7.0 | Карта источников/consumers/legacy keys/options, точные signatures/semantics и примеры headless Cobalt/MS DI, Mithril, Editor/Aether child зафиксированы |
+| Type-check API | SDK10.0.403, Release, 4 C# блока, 15 существующих local assembly: 0 errors/0 warnings. Bodies новых методов — неисполнявшиеся заглушки; production проекты не пересобирались |
+| Действующая конфигурация | Args/env/default, opt-in JSON, прежние Get/GetSection/Set/priority/invariant conversion/Refresh; не изменены |
+| App/CORE0–5 и CORE6 | Прежние lifecycle/ownership/configuration и частичные diagnostics результаты сохраняют даты/scope; App-private routing/aggregate metrics/generation/release отдельно |
+
+[Повторяемый runner](../../ManualTests/ConfigurationApiDesign/Verify.ps1) фиксирует
+SHA документа/assembly. Проверены ссылки/anchors, уникальность этапов и whitespace;
+C# исходники фреймворка не менялись. Module/unit/native/package проверки не запускались.
+Прежние Core398/398 D/R и narrow56/56 от 2026-10-30 — [исторические результаты](HISTORY.md#архив-jsonl-и-конфигурация-для-ed8a--2026-10-30).
+[Прежний STATUS](HISTORY.md#status-before-core70-api-2026-11-10).
+
+## Ограничения
+
+CORE7.1–6 не завершены. Новый reader не заменяет legacy IConfiguration; mandatory
+члены старых interfaces не меняются. Protected bootstrap, compiler environment,
+OS facts и UI/documents/operation data отделены от user settings. Старые CLI/JSON/
+GetOrCreate consumers требуют повторной проверки при migration. Type-check не
+подтверждает runtime DI, lifecycle, snapshots/reload, child identity или fresh packages.
+Не назначены новые динамические module fields и durability/OS/RID/native гарантии.
+
+## Следующий конкретный шаг
+
+CORE7.1: реализовать sources/schema metadata/normalized keys/effective values и
+standalone parser CLI/env/JSON по CONFIGURATION_API, сохраняя legacy contracts.
+Проверить приоритеты пар источников, aliases/collisions, null/invalid, `--`/repeats/
+negative/unknown/missing и независимость от App/DI. Затем CORE7.2 binding/App stage,
+CORE7.3 reload/write; CORE7.4/5 переводят consumers. Engine f.4 независим.
+
+
+
+<a id="core70-api-2026-11-10"></a>
+## CORE7.0: API и примеры, завершение проектного этапа — 2026-11-10
+
+Продолжение по запросу пользователя: создан [точный API-контракт](CONFIGURATION_API.md)
+для отдельного unified-v1 reader, profiles/sources/schema metadata/codecs, raw/typed
+snapshots, source provenance, optional IAppConfigurationStage, reload/changes/write.
+Исходные IConfiguration/IConfigurable/builders/context/resolver interfaces не получают
+новых обязательных членов, legacy семантика сохраняется. Module runtime identity,
+factory delegates и captured compiler environment не становятся user settings.
+
+App порядок зафиксирован отдельно: все binding/callback/validation до register
+и DI; legacy callbacks, добавленные register, выполняются после всей группы,
+чтобы AddUnit Prepare увидел полный список declarations. Reader nondisposable,
+один App-owned runtime; reload атомарно готовит raw+options, startup-only candidate
+требует restart, callbacks/services повторно не подключаются. Explicit persistence
+не маскируется чтением и не публикует generation автоматически. Динамические поля
+по умолчанию не назначены; пределы legacy persistence/stop/DI disposal сохранены.
+
+Добавлен [повторяемый type-check runner](../../ManualTests/ConfigurationApiDesign/Verify.ps1).
+Команда из src: `& ManualTests/ConfigurationApiDesign/Verify.ps1`.
+Runner извлекает из документа четыре C# блока: declarations, headless App Cobalt/MS DI,
+Mithril parent/child composition, Editor и pre-App Aether Runtime. Будущие executable
+API bodies бросают NotImplementedException и **не выполняются**. Примеры компилируются
+как библиотека против 15 существующих локальных Debug/net10.0 assembly; SHA inputs
+сохранены. Это проверка формы API/типов, не запуск services/DI/child и не build модулей.
+
+SDK10.0.403, Release, TreatWarningsAsErrors, package sources пусты, local imports
+Directory.Build.props/targets/Directory.Packages.props изолированы: **0 errors/0 warnings**.
+Production C# hashes не изменились; full-module/native/package tests не запускались.
+Предыдущие probes/ED5b/observer/snapshots/Cobalt и src/.codex сохранены, версия не менялась.
+Первый вспомогательный build остановился на чтении user NuGet.Config; после изоляции
+APPDATA проявился унаследованный dotnet-xunit2.3.1 tool reference из общего
+Directory.Packages.props. Изоляция только каталога runner устранила эти restore
+препятствия. Общая сборка/прежние native fixture failures этим не исправлялись.
+
+Артефакты: ignored TestResults/ConfigurationPlan/CORE70Api/inputs.json,
+verification.json, bin/Release/net10.0/ConfigurationApi.dll и отдельный build-*.binlog
+на каждую попытку. Итоговый runner фиксирует SHA документа/assembly, runtime=false.
+Markdown links/anchors/task IDs и whitespace проверены отдельно.
+
+CORE7.0 завершён **как проектный этап**; production feature не объявлен реализованным.
+Следующий шаг CORE7.1 — sources/schema metadata/normalized keys/effective values
+и standalone CLI/env/JSON. Binding/App reader — CORE7.2, reload/write — CORE7.3,
+consumer migration — CORE7.4/5; API diff/номер выпуска перед поставкой реализации.
+Engine f.4 и прежние датированные проверки независимы от этой записи.
+
+<a id="status-before-core70-api-2026-11-10"></a>
+## Статус перед API CORE7.0 — снимок 2026-11-10
+
+**2026-11-10 — CORE7.0 начат, карта текущей конфигурации готова.**
+[Карта и контракт поведения](CONFIGURATION.md), [единственный план](PLAN.md#core7-unified-configuration),
+[запись сверки](HISTORY.md#core70-inventory-2026-11-10).
+Карта охватывает sources/readers/overrides, typed setup, CLI/env/JSON и bootstrap
+по Core/Mithril/Aether/Editor/Enerit/UI/Nom, а также примеры и ручные consumers.
+Стандарт — TrueMoon.Configuration независимо от DI. Код и API не менялись.
+
+## Реализация и проверки
+
+| Область | Текущее состояние |
+| --- | --- |
+| CORE7.0 | Частично: карта, legacy→target mapping, группы options и контракт поведения готовы. Точные добавочные API и примеры подключения ещё не записаны |
+| Действующая конфигурация | Args/env/default, явный JSON, case-sensitive keys, global Get отличается от default GetSection, поздний AddProvider выше args. Существуют invariant conversion и атомарная публикация массива секций при Refresh; общего validated options binding/reload пока нет |
+| Модульные options | Aether/Editor/Enerit/Alloy.Hosting/Nom уже копируют и проверяют typed options; автоматического binding источников нет. Mithril использует IConfiguration для unit identity; Editor parsers и pre-App RuntimeBootstrap отдельны |
+| App/CORE0–5 и CORE6 | Прежние lifecycle/ownership/configuration и частичные diagnostics результаты сохранены со своими датами; App-private routing/aggregate metrics/generation/release остаются отдельно |
+
+Статическая сверка: 833 production C# файла, 6 прямых args/env вызовов в 5 файлах;
+счётчик/исключения и source links — в карте. Проверены ссылки/anchors, whitespace
+и неизменность C# исходников; сборки/тесты/native/package проверки не запускались.
+Исторический Core 398/398 D/R и выборочные 56/56 от 2026-10-30 сохраняют прежнюю
+[область проверки](HISTORY.md#архив-jsonl-и-конфигурация-для-ed8a--2026-10-30).
+[Прежний STATUS](HISTORY.md#status-before-core70-inventory-2026-11-10).
+
+## Ограничения
+
+CORE7.0 ещё не завершён; новый профиль, binding и API снимков/reload/write
+не реализованы. Legacy GetOrCreate/JSON и mutable object bag сохраняют поведение.
+Служебные parent/session/nonce/build identity и compiler environment не становятся
+обычными user settings; OS facts и состояние UI/документов выделены отдельно.
+Миграция CLI/env/JSON требует явной совместимости и повторной проверки consumers.
+Cooperative shutdown, persistence и provider-specific disposal сохраняют прежние
+границы; новые durability/OS/RID/native гарантии не заявлены.
+
+## Следующий конкретный шаг
+
+Завершить [CORE7.0 API-схему](CONFIGURATION.md#remaining-core70): выбор профиля,
+source priority/schema/result/provenance, отложенная bind/validation фаза App,
+explicit reload/write и три примера App/Mithril/Editor, без новых обязательных
+членов legacy interfaces. Затем CORE7.1 parser/providers, CORE7.2 typed options;
+consumer migration — по CORE7.4/5. Engine f.4 остаётся независимым.
+
+
+<a id="core70-inventory-2026-11-10"></a>
+## CORE7.0: карта использования конфигурации — 2026-11-10
+
+По запросу пользователя начат CORE7.0; создана [карта и контракт поведения](CONFIGURATION.md).
+Поиск по 1515 C# файлам без bin/obj/TestResults/Designer, из них 833 production
+TrueMoon* без Tests: IConfiguration/IConfigurable/providers, прямые args/env,
+process launch environment, App setup/options/CLI. Прочитаны найденные реализации;
+примеры, ManualTests и Benchmarks сгруппированы отдельно. Production ledger:
+6 мест вызова выбранных args/env API в 5 файлах (2 command args, 1 env enumeration,
+3 env reads, 0 process env writes), плюс отдельно 4 записи child bootstrap keys.
+Это не счётчик всех IO/Environment вызовов и не число дефектов.
+
+Подтверждены несовпадения global Get/default GetSection, case-sensitive raw keys,
+приоритет позднего AddProvider над args и default Set ниже источников, отдельные
+Editor parsers, pre-App bootstrap и GPU validation env. Сохранены уже существующие
+invariant conversion, atomic publication массива секций при Refresh и typed
+options snapshots модулей: их наличие не равно новому bind/reload контракту.
+Выделены protected identity, compiler captured environment, OS facts и данные
+операций/сцен, которые не мигрируют механически в user settings.
+
+В карте есть правила legacy→target keys и групп options, контракт источников,
+совместимости/отложенной проверки/снимков/записи, контрольные App/Mithril/Editor
+сценарии. CORE7.0 частичен: для завершения нужны точные добавочные API и примеры
+подключения; CORE7.1 и consumer migration не начинались. Входящих Core заявок в
+docs/requests/core на момент сверки нет; отдельный Claim чужой заявки не создавался.
+
+Основа — HEAD 2e3b2b1a00d67ef10d44e8c8deab1d811584d42d и текущие незакоммиченные
+файлы. Предыдущие изменения и src/.codex сохранены. C# код, зависимости и версия
+не менялись; сборки/тесты/native/package проверки не запускались. Документационные
+проверки: относительные ссылки/anchors, уникальность CORE7.0–6, whitespace diff,
+повторное сравнение source SHA. Дополнительные локальные артефакты — ignored
+TestResults/ConfigurationPlan/CORE70 (source hashes и ledger), не единственная
+запись результата. Текущий engine f.4 и прежние датированные проверки не менялись.
+
+<a id="status-before-core70-inventory-2026-11-10"></a>
+## Статус перед картой CORE7.0 — снимок 2026-11-10
+
+**2026-11-09 — запланирован CORE7, единая конфигурация App и всех модулей.**
+[План](PLAN.md#core7-unified-configuration), [решение и сверка исходников](HISTORY.md#configuration-unification-plan-2026-11-09).
+AGENTS закрепляет TrueMoon.Configuration/общие контракты, typed options через DI,
+общие providers/parsers и явный bootstrap adapter. Новые правила приоритетов/ключей,
+CLI/binding/снимки и поэтапный переход ещё не реализованы.
+
+## Реализация и проверки
+
+| Область | Текущее состояние |
+| --- | --- |
+| Действующая конфигурация | App автоматически подключает args/env/default; JSON подключается явно; Get<T> ищет по приоритету, GetSection без имени выбирает default. Mithril использует IConfiguration, Editor/pre-App runtime частично разбирают настройки отдельно. Сверено по исходникам 9 ноября |
+| CORE7 | План и инструкция готовы; контракт/карта использования/parser/typed options/reload и переход модулей запланированы |
+| App/CORE0–5 | Lifecycle/bootstrap/configuration/owned-borrowed disposal сохраняют прежние bounded results |
+| CORE6 | Structured diagnostics, history/import/archive/configuration readers и часть operations есть; App-private routing/aggregate metrics/generation/release остаются отдельно |
+
+Эта работа меняет Markdown: сборки, тесты и native/package проверки не запускались.
+Последняя собственная датированная Core проверка — 398/398 D/R от 2026-10-30,
+выборочные 56/56; [запись](HISTORY.md#архив-jsonl-и-конфигурация-для-ed8a--2026-10-30).
+Она не подтверждает новые CORE7 API. [Прежний STATUS](HISTORY.md#status-before-core7-plan-2026-11-09).
+
+## Ограничения
+
+Текущие contracts не обещают автоматическую typed binding/hot reload/migration,
+power-loss persistence, concurrent atomic create или защиту от любого external writer.
+Cooperative stop не прерывает ignoring-token Task. Provider-specific DI disposal
+сохраняется. CORE7 не отменяет public/CLI compatibility, child identity validation
+или ownership; production options не получают неявного live изменения.
+App-private diagnostics routing/aggregate metrics и wider OS/RID/release отдельно.
+
+## Следующий конкретный шаг
+
+CORE7.0: общий контракт/профиль по умолчанию и карта источников/потребителей
+с переходом со старых keys/CLI/env/JSON. Затем CORE7.1 parser/providers и CORE7.2
+typed options на headless App/Cobalt/MS DI; переход модулей по готовому контракту.
+Engine f.4 остаётся независимым; старые drain failures требуют причинного evidence,
+а не изменения ProcessOutputCapture/ThreadPool/timeouts без подтверждения.
+
+
+<a id="configuration-unification-plan-2026-11-09"></a>
+## CORE7: план единой конфигурации — 2026-11-09
+
+Запрос: улучшить конфигурацию App, унифицировать источники и их использование во всём
+фреймворке, добавить правило в инструкции. Прочитаны исходники и обновлена документация;
+новые runtime/API/parser/binding не реализовывались, зависимости и версии пакетов
+не менялись. Прежние незакоммиченные ED5b/COB5a/SplitView/observer/snapshots сохранены.
+
+Прочитаны AppBuilder, ConfigurationBuilder/CommonConfiguration, configuration
+extensions/providers, Mithril unit launch/parent monitor, RuntimeBootstrap и Editor
+entry points. Подтверждено: источники args/env/default, CLI key=value, снимок env
+при явном refresh, JSON по явному подключению, различие Get<T> и GetSection без имени,
+приоритет последнего добавленного provider, typed callbacks модулей и отдельный
+разбор Editor/pre-App runtime. Сборки и тесты для этой сверки не запускались.
+
+Детальная задача — [CORE7](PLAN.md#core7-unified-configuration), этапы CORE7.0–6:
+контракт/карта использования, общие источники/parser, typed options/проверка App,
+атомарный снимок/reload/запись, переход Core/Mithril, остальных модулей и поставка.
+Выбран приоритет defaults < files < env < args < явные переопределения; логические
+ключи с разделами, env с префиксом, общий CLI parser, защищённый pre-App bootstrap
+и typed options через DI. Новые сигнатуры/профиль совместимости определяются в CORE7.0.
+
+AGENTS устанавливает общий механизм конфигурации TrueMoon, независимость от DI
+provider, общий разбор настроек и границы системных сведений/аргументов операций/
+документов. Существующие потребители переходят по CORE7.4/5 с совместимостью CLI.
+Общий план/статус ссылаются на Core; f.4/другие выбранные задачи не отменялись.
+
+Проверены whitespace в diff, относительные ссылки и уникальность новых anchors;
+сборки/тесты не запускались для изменения Markdown. Прежние Core 398/398 от 30 октября
+и другие исторические результаты сохраняют свои даты и область проверки.
+
+<a id="status-before-core7-plan-2026-11-09"></a>
+## Статус перед планом CORE7 — снимок 2026-11-09
+
+**Сверка 2026-11-05:** документация и межмодульная очередь; код и проверки не менялись.
+[План](PLAN.md#current-core-queue), [прежняя сводка целиком](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Реализация и проверки
+
+App/bootstrap/configuration, cooperative lifecycle/rollback и owned/borrowed
+disposal реализованы в своих bounded scopes. CORE6 частичен: structured events,
+early filters/bounded pipeline, console/rotating JSONL/memory sinks, operations,
+health/read windows и borrowed history/import/archive/configuration readers есть.
+App остаётся owner; reader aliases не создают новых owners или sink flush.
+
+Последняя собственная указанная проверка — **2026-10-30: Core398/398 Debug/Release**,
+failed/skipped0, narrow56/56. [Archive/configuration evidence](HISTORY.md#архив-jsonl-и-конфигурация-для-ed8a--2026-10-30).
+Предыдущие file-worker/borrowed-health/headless/package proofs сохраняют даты
+и условия в HISTORY. Editor console/report/child health уже имеют scoped consumers;
+ED8a.2 больше не назначается будущим prerequisite Core.
+
+## Ограничения
+
+Cooperative shutdown не прерывает ignoring-token Task. Configuration persistence
+не обещает power-loss durability, concurrent atomic create или arbitrary
+external-writer protection. DI adapters сохраняют provider-specific disposal.
+App-private diagnostics routing, bootstrap-before-pipeline, общий artifact/report
+quota и full aggregate metrics не выводятся из текущих JSONL/readers contracts.
+CORE6e generation и performance — отдельные задачи после конкретного consumer.
+Other OS/RID/AOT/долгие trends и общая release matrix не подтверждены.
+
+## Следующий конкретный шаг
+
+Текущий Editor не требует нового Core API для group reset/camera. Для reliability
+предоставлять evidence по [повторному post-reap drain](../engine/PLAN.md#arch2e4b-drain-diagnostics);
+не менять ProcessOutputCapture/ThreadPool/timeouts без подтверждённой причины.
+Для собственного развития сначала выбрать consumer и контракт App-private/bootstrap
+routing либо aggregate metrics CORE6d; затем implementation и собственные проверки.
+Типизированный generator не является prerequisite прикладного Editor.
+Общий порядок — [roadmap](../PLAN.md#current-roadmap).
+
+
+
 ## Архив JSONL и конфигурация для ED8a — 2026-10-30
 
 Для Editor report добавлены nondisposable `IDiagnosticArchiveReader` и
@@ -1226,3 +2344,90 @@ scope, не остаётся текущим prerequisite. Новые общие 
 Enerit/Mithril. Общий release/platform scope и перечисленные ограничения открыты.
 
 </details>
+
+<a id="status-before-core75-2026-11-10"></a>
+## Полный STATUS перед CORE7.5 — 2026-11-10
+
+# Core: состояние и точка продолжения
+
+**2026-11-10 — CORE7.4 Core/Mithril migration реализована и проверена.**
+[Guide](CONFIGURATION_CORE_MITHRIL.md), [общий API](CONFIGURATION_API.md),
+[reload](CONFIGURATION_RELOAD.md), [план](PLAN.md#core7-unified-configuration),
+[evidence/limits](HISTORY.md#core74-2026-11-10).
+
+## Реализация и проверки
+
+| Область | Текущее состояние |
+| --- | --- |
+| Core consumers | Standard App:Name/Paths:Root → UseCoreConfiguration; private startup snapshots, legacy-only Name dynamic; common pre-App root parser |
+| Diagnostics |33data fields/rules/nested limits → UseConfiguredDiagnostics; resources/borrowed inputs отдельно, DI activation; legacy object-bag только compatibility mirror |
+| Mithril bootstrap | Immutable typed launch, original providers до overlays, authoritative env identity group; ordinary profile не подменяет unit/parent/pipe; parent monitor typed |
+| Core tests |661/661 Debug и Release, failed/skipped0;42newcases |
+| Mithril tests |155/155 Debug и Release, failed/skipped0;44newcases, прежний real-process lifecycle suite повторён |
+| Delivery | Source Debug/published Release/fresh6packages по108checks; оба DI,2real owned child/profile, graceful stop/reap; version0.2.5.2-core74.20261110190453 |
+| Solution/API | Ordinary incremental Debug0errors/790warnings;4API blocks Release0errors/0warnings; public reflection surface removed0 |
+
+Mithril добавил TrueMoon dependency для общего parser/profile; внешние versions,
+TF и общая0.2.5.2-alpha не менялись.1621из1635baseline C#/csproj hashes сохранены;
+13C#+1csproj изменены,11production/3tests добавлены. Commands/SHA/restore caveat
+в HISTORY. [Прежний STATUS](HISTORY.md#status-before-core74-2026-11-10).
+
+## Ограничения
+
+Core/diagnostics settings StartupOnly, resources не пересоздаются при reload.
+Legacy-only apps и callbacks сохранены как explicit compatibility path. Custom
+IConfiguration без bootstrap capability предоставляет trusted sections сам.
+Aether RuntimeBootstrap/Editor/прочие module consumers ещё ждут CORE7.5.
+Нет новых forced callback/source termination, OS/RID/AOT, interprocess writer,
+power-loss durability или native/GPU/release guarantees. MIT6 остаётся у Mithril.
+
+## Следующий конкретный шаг
+
+CORE7.5: переход Aether/Editor и других модулей, включая pre-App protected runtime
+bootstrap и GPU flags; сохранить captures, identity/version/size checks и ownership.
+Детальный scope — Core PLAN и соответствующие module owners. Engine f.4 независим.
+
+<a id="status-before-core76-2026-11-10"></a>
+## Полный STATUS перед CORE7.6 — 2026-11-10
+
+# Core: состояние и точка продолжения
+
+**2026-11-10 — CORE7.5 реализован и проверен в configuration scope.**
+[Модули и ключи](CONFIGURATION_MODULES.md), [матрица110новых cases](CONFIGURATION_MODULE_TESTS.md),
+[команды/результаты/ограничения](HISTORY.md#core75-2026-11-10).
+
+## Реализация и проверки
+
+| Область | Текущее состояние |
+| --- | --- |
+| Module configuration | Aether/Editor/ECS/render/authoring, Enerit pipes, Nom и Hosting: common schemas/deferred bind/validated copies → existing App/DI owners; StartupOnly |
+| Bootstrap/CLI | Frozen runtime parent/control/identity/public flags, child-only validation environment; общий Editor CLI parser/aliases; старые callbacks/overloads сохранены |
+| Library boundary | Pure schema/binding utilities в Contracts, старый TrueMoon facade; Editor/Hosting/Nom/Enerit без новой bootstrap dependency |
+| Current full suites | Core661, Mithril155, Enerit354, Nom874, Hosting171, Editor1496 каждый Debug/Release, failed/skipped0 |
+| Aether scope |42newcases +5old failure replays =47/47 каждый D/R последовательно. Full attempts non-green; см. ниже |
+| New cases |110/110 D/R в6новых файлах,49methods |
+| Delivery | Source Debug/published Release/fresh16packages по76checks на Cobalt/MS DI; version0.2.5.2-core75.20261110212150; без window/GPU/child runtime |
+| API/preservation |7public surfaces removed0;1633/1649baseline hashes сохранены,14целевых изменений,2internal files перенесены; прежние работы сохранены |
+
+Общая версия0.2.5.2-alpha, внешние dependencies/TF не менялись.
+[Предыдущий STATUS](HISTORY.md#status-before-core75-2026-11-10).
+
+## Ограничения
+
+Полные Aether attempts не green: initial nested restore/NU1100, один ошибочный
+test-environment CPM override/NU1008, concurrent SDK .version exclusive-access
+collision и отдельный diagnostics timeout. Serial47/47 D/R прошёл; он не
+подменяет чистый full baseline и не закрывает старую reliability причину.
+Root props не менялся; offline tests использовали ограниченную clone без obsolete
+tool reference. Подробные counts и все attempts сохранены в HISTORY.
+
+Module settings StartupOnly; resources не пересоздаются на reload.
+CORE7.4 real-child delivery — предыдущая отдельная проверка; fresh CORE7.5 consumer
+проверяет headless module configuration. Нет новых solution/native/GPU/hardware,
+OS/RID/AOT, interprocess/durability гарантий. Engine f.4 и Mithril MIT6 отдельно.
+
+## Следующий конкретный шаг
+
+CORE7.6: свести документацию/ключи/совместимость, повторить итоговую поставку и
+объединённый независимый App/child consumer на обоих DI. Отдельно получить чистый
+последовательный Aether baseline с изоляцией nested fixtures от legacy tool restore.

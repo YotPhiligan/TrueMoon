@@ -2,7 +2,7 @@
 
 TrueMoon is a modular C# framework for application bootstrapping, service registration, lifecycle management, interprocess calls and optional UI. Applications select the modules they need and retain explicit ownership of their services, processes and graphics resources.
 
-The project is under active **alpha** development. The source version is currently `0.2.2.7-alpha`; a version suffix or a successful build does not establish release readiness. See the [current status](src/docs/STATUS.md) and [roadmap](src/docs/PLAN.md) for verified configurations and remaining work.
+The project is under active **alpha** development. The source version is currently `0.2.5.2-alpha`; a version suffix or a successful build does not establish release readiness. See the [current status](src/docs/STATUS.md) and [roadmap](src/docs/PLAN.md) for verified configurations and remaining work.
 
 ## Modules
 
@@ -21,7 +21,7 @@ UI is optional: bootstrap, DI, IPC and units do not depend on the graphics modul
 
 ## Build from source
 
-Projects target `net10.0`. SDK selection is defined in [global.json](src/global.json): stable .NET SDK `10.0.100` with `latestMinor` roll-forward. The latest recorded checks used SDK `10.0.402` on Windows. Package versions are centralized in [Directory.Packages.props](src/Directory.Packages.props).
+Projects target `net10.0`. SDK selection is defined in [global.json](src/global.json): stable .NET SDK `10.0.100` with `latestMinor` roll-forward. The latest recorded checks used SDK `10.0.403` on Windows. Package versions are centralized in [Directory.Packages.props](src/Directory.Packages.props).
 
 Run the following from the repository root:
 
@@ -37,7 +37,7 @@ Core/runtime component checks use xUnit with VSTest. From `src`, after the Debug
 dotnet test TrueMoon.slnx --configuration Debug --no-build --no-restore
 ```
 
-Read results per test project: `TrueMoon.Mithril.Tests` now has 89 executable cases; dated Debug/Release results cover App-local configuration, main/owned child/external hosting, controller cleanup and parent exit with App lifetime/`RestartPolicy.Never` on Cobalt and Microsoft DI; separate owned-process cases check bounded restart policies, budgets/delays and shutdown during restart. Native/GPU probes are separate from this test command. Build warnings remain; dated results and limitations are recorded in [STATUS](src/docs/STATUS.md).
+Read results per test project. Current test counts, dated commands and limitations are recorded in [STATUS](src/docs/STATUS.md) and module HISTORY files. Native/GPU probes and full release readiness are separate from configuration/package acceptance.
 
 The bundled native UI path currently supports **Windows x64**. OpenGL/Vulkan examples require a compatible graphics driver. Validation probes have additional tool requirements documented in the [Vulkan manual](src/ManualTests/AlloyVulkanTest/README.md). Ordinary `dotnet build` uses the checked-in Skia DLL and does not rebuild native Skia.
 
@@ -74,6 +74,21 @@ public sealed class Worker : IStartable, IStoppable
 
 `App.Builder(builder => builder.UseDI())` selects the Microsoft DI adapter at builder creation. `App.RunAsync(...)` uses the default Cobalt resolver. Configure services before Build; `RunAsync` manages startup, waits for application lifetime cancellation, then stops and disposes the application. Ctrl+C requests shutdown. Cancellation and shutdown are cooperative: services must observe the token for long-running work. See the [Core lifecycle contracts](src/docs/core/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10) and [DI ownership differences](src/docs/cobalt/PLAN.md#принятые-контракты-исправления-ревью--2026-10-10).
 
+## Unified configuration
+
+Use an explicit `ConfigurationProfiles.Create` profile with standard schemas and
+`UseConfiguration`/`UseConfigured*` module helpers. Sources follow one priority
+order and prepare validated options before module registration and DI activation.
+Cobalt and Microsoft DI share these rules. Existing callbacks and bounded legacy
+CLI/environment adapters remain available; protected child identity stays separate.
+
+Start with the [configuration guide](src/docs/core/CONFIGURATION_GUIDE.md),
+[139 standard keys](src/docs/core/CONFIGURATION_KEYS.md),
+[module integration](src/docs/core/CONFIGURATION_MODULES.md) and the independent
+[App/child package acceptance runner](src/ManualTests/ConfigurationDelivery/README.md).
+The default `App.Configuration` legacy provider bag is distinct from the opt-in
+profile's typed reader. Reload, notifications and explicit JSON writes are explained
+in the guide; standard module fields require restart.
 ## Standalone UI
 
 Add `TrueMoon.Alloy.Hosting` alongside `TrueMoon` and `TrueMoon.Extensions.DependencyInjection`. The following view is defined by the consuming application:
@@ -152,13 +167,13 @@ The UI alpha acceptance remains open: fixed-font/full golden comparisons, physic
 
 ## Рабочая область «Сказки истинной луны»
 
-Эта копия TrueMoon находится среди семи самостоятельных репозиториев.
+Эта копия TrueMoon находится среди восьми самостоятельных репозиториев.
 [Карта проектов](../README.md), [общие инструкции агентам](../AGENTS.md),
 [план переноса материалов](../MIGRATION.md), [корневые инструкции TrueMoon](AGENTS.md).
 Для кода src сохраняются [существующие подробные правила](src/AGENTS.md).
 
 Игра TrueMoon.Tales использует пакеты фреймворка; тексты, лор, арты, ролики и код
-видеостудии имеют отдельные репозитории. Их перенос из старого Book пока не выполнен.
+видеостудии имеют отдельные репозитории. Актуальные пути и завершённый перенос Book описаны в [Workspace](../TrueMoon.Workspace/MIGRATION.md).
 31.10.2026 удалены только две регистрации отсутствующих worktree alloy/enerit;
 ветки codex/alloy-next, codex/enerit-next и main сохранены с прежними commit ID.
 Эта организационная проверка не является новой сборкой или проверкой UI alpha.

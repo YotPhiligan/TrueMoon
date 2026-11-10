@@ -338,3 +338,16 @@ Inline field error rows are replaced; the shared copyable Diagnostics panel rema
 Drafts, selection, Apply/Cancel/Undo/Redo stay with the existing models. Editor island
 styles use Theme.PanelShadow; menus use Theme.MenuShadow, with local Shadow=null
 available. Full Editor D/R regression passed; full release/platform gates remain separate.
+
+## Unified startup configuration
+
+Add the exact `AetherConfigurationSchemas.Engine`/`Authoring` and
+`EditorConfigurationSchemas.Options`/`Diagnostics` instances to the App profile,
+then call `UseConfiguredAetherEditor(composition)`. Initial project/source-tracking
+and diagnostic budgets are validated before registration. Add `SourceEditor` and
+`UseConfiguredAetherEditorSourceNavigation` only when launching a source editor is
+wanted; its command remains explicit. The standard window uses `Editor:Window`
+through `UseConfiguredAetherEditorWindow(fonts)` with 1280x800 defaults and a
+1100x700 minimum. Fonts, viewport factories, Build/Play captures, documents,
+selection and camera state remain with their existing owners. All schemas are
+startup-only. The library has no direct reference to the TrueMoon bootstrap assembly.

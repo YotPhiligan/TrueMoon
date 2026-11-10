@@ -173,3 +173,33 @@ disables it. MenuPopup uses Theme.MenuShadow, while semantic panel View styles c
 set UiProperties.Shadow from Theme.PanelShadow. Layout-only containers stay plain.
 Shadows change painting only, outside own bounds inside ancestor clips, including
 subtree opacity. Legacy contexts without IShadowDrawingContext omit the effect.
+
+## Resizable panes
+
+`SplitView` owns two retained pane hosts and a focusable divider. Horizontal
+places panes left/right; Vertical places them above/below. Nest splits for
+navigation, workspace, inspector and timeline layouts.
+
+```csharp
+var split = new SplitView(navigation, workspace) { FirstPaneSize = 220 };
+split.FirstPane.MinWidth = 140;
+split.FirstPane.MaxWidth = 400;
+split.SecondPane.MinWidth = 240;
+split.Divider.AccessibleName = "Navigation width";
+```
+
+FirstPaneSize is a preferred logical size (NaN = half); bind it with
+FirstPaneSizeProperty when the application owns persistence. Host resize clamps
+ActualFirstPaneSize without overwriting the preference. Axis Min/Max on the pane
+hosts constrain allocation; insufficient space compresses minima proportionally,
+while finite maxima leave trailing space. Content must be distinct and unowned;
+SetContent transfers detached old content to the caller without disposal.
+
+Primary drag captures the divider; release completes the UI preference. Escape,
+focus/capture loss, hide/disable/detach/dispose or geometry changes cancel.
+External preference updates interrupt without rollback. Tab, axis arrows, Shift
+for tenfold steps and Home/End work without a pointer. Theme and resize retain
+children, drafts and selection; there are no timers, file IO or idle redraw.
+Collapse, docking, cursor shapes and OS accessibility are outside v1. Style
+Divider.Background/Foreground with local properties or a typed View style;
+colors default to semantic theme states.

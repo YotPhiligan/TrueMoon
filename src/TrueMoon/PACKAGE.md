@@ -91,3 +91,62 @@ within the shutdown budget, and never dispose a borrowed writer.
 
 Source, module plans and reproducible package consumers:
 [TrueMoon repository](https://github.com/YotPhiligan/TrueMoon).
+
+## Standalone unified configuration
+
+The opt-in `TrueMoon.Configuration` APIs `ConfigurationSchemas.Create` and
+`ConfigurationProfiles.Create` provide normalized section keys, explicit source
+priority (defaults < JSON < environment < arguments < overrides), typed invariant
+conversion and immutable data snapshots without App or DI. Add sources through
+`AddJsonFile`, `AddEnvironment` and `AddArguments`, await `profile.LoadAsync()`, then
+use `schema.Bind(snapshot)` for an independent validated options copy. Custom value
+types use explicit codecs; raw secret values are omitted from configuration errors.
+
+Legacy `IConfiguration` and `ConfigurationBuilder` retain their behavior. Connect
+an opt-in profile from App Setup with `context.UseConfiguration(profile)` and
+`context.ConfigureModule(schema, (module, options) => module.UseYourModule(...))`.
+Every schema is bound/validated before module registrations or service activation;
+the callback receives an independent options copy. Use your module's typed options
+or constructor registration, not container lookups in application systems.
+
+App registers a nondisposable borrowed `IConfigurationReader`; `Current.GetOptions(schema)`
+copies already-prepared options without rerunning callbacks. Disposing App closes
+reader access; issued snapshots remain data. Standalone `GetOptions` still requires
+an App stage and throws; use `schema.Bind(snapshot)` outside App. Custom profiles
+need the optional schema catalog to join App composition. Borrowed `IConfigurationReloader`,
+`IConfigurationChanges` and `IConfigurationWriter` provide explicit reload, bounded
+notifications and JSON patches. Reload publishes a complete validated snapshot or
+retains the old one; any changed startup field requires restart. Existing injected
+options remain startup copies. Stop closes mutation/notification admission and drains
+callbacks; reader access lasts until Dispose. Callbacks must return promptly and
+must not wait for App shutdown. Writing does not reload or publish; reads never
+persist JSON implicitly. Existing modules/CLI/private
+process bootstrap are not automatically migrated.
+
+## Standard Core settings
+
+Add `CoreConfigurationSchemas.App` and `.Paths` (or call `profile.AddSchemas()`),
+then call `context.UseCoreConfiguration()`. `App:Name` and `Paths:Root` are startup
+settings. App name and the resolver keep private validated copies even when a
+consumer mutates an injected DTO. Legacy-only applications keep dynamic `appName`.
+`profile.AddLegacySources(legacy)` explicitly imports only supported default/env/args
+aliases at their standard priorities. Captured original tokens retain common
+separate-value parsing and alias ordering; legacy `Set` overrides remain explicit.
+
+`DiagnosticsConfigurationSchema.Default` plus `UseConfiguredDiagnostics` bind
+pipeline budgets, rules, retention, emergency and telemetry settings. Sink factories,
+listeners and borrowed emergency output stay separate composition inputs. Startup
+validation precedes resources; reload requires restarting these pipelines.
+Diagnostic activation uses DI; the former object-bag entry is retained only by
+legacy `UseDiagnostics` as a compatibility mirror.
+
+`ConfigurationCommandLine.ParseKnown` is the minimal selected bootstrap parser;
+strict `Parse` continues rejecting unknown options. `PathResolver` uses the same
+parser and accepts validated `PathSettings` without building App/DI. Ordinary
+file providers cannot replace the original bootstrap sections exposed through
+optional `IConfigurationBootstrapInputs`.
+
+`ConfigurationCommandLine.ParseSingleUse` shares the standard parser and rejects
+duplicate scalar/flag aliases on command surfaces. `Parse`/`ParseKnown` retain their
+existing last-wins behavior. Module libraries can define schemas and defer binding
+through the neutral Contracts helpers without referencing this bootstrap assembly.

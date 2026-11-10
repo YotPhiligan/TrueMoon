@@ -1,5 +1,279 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="precommit-2026-11-11"></a>
+## Предкоммитная сверка UI — 2026-11-11
+
+Alloy1224/1224 каждый Debug/Release, failed/skipped0. Hosting171/Editor1496 D/R —
+отдельный предыдущий CORE7.6 запуск на тех же C#/csproj hashes.
+[Команды/inputs/retention](../HISTORY.md#precommit-2026-11-11).
+Native/GPU/demo/physical/K7 и benchmark profiles здесь не повторялись.
+
+
+<a id="core76-2026-11-10"></a>
+## CORE7.6: текущая итоговая сверка — 2026-11-10
+
+[Единственная подробная запись и команды](../core/HISTORY.md#core76-2026-11-10),
+[guide](../core/CONFIGURATION_GUIDE.md).
+7suites6945/6945 каждый D/R; module-specific counts и exclusions указаны в текущем
+STATUS. Source solution0errors в D/R;16fresh packages одной версии,5programs×3forms,
+по230checks/4owned children на source/published/fresh profile, оба DI.
+Window/GPU/game/native runtime не запускаются в новых configuration consumers.
+Aether full3234/3234 D/R выполнен последовательно с test-only props copy; ordinary
+nested restore и прежние diagnostics reliability причины не исправлены этим proof.
+Current managed public API8assemblies unchanged; source C#/csproj1673/1673 сохранены.
+Дальнейшая очередь модуля и hardware/native/release gates остаются самостоятельными.
+
+
+<a id="core75-2026-11-10"></a>
+## CORE7.5: configured window scalars — 2026-11-10
+
+WindowSettings/WindowConfigurationSchema/UseConfiguredPresentation используют общий
+profile и pure validation; renderer/fonts/chrome/view factories остаются explicit.
+Editor:Window сохраняет1280x800 defaults/min1100x700. Hosting171/171 D/R,
+17newcases, Editor1496/1496 D/R. Hosting.Tests имеет прямую test-only TrueMoon
+reference; production Hosting не получил bootstrap dependency. Новый source/
+published/fresh16package combined consumer76checks/profile на обоих DI проверяет
+binding/build/resolve без window/GPU/child runtime. UI/native SplitView/Studio/
+physical/K7 acceptance этим запуском не повторялась и не закрыта.
+[Команды/границы](../core/HISTORY.md#core75-2026-11-10).
+
+
+<a id="split-view-2026-11-09"></a>
+## UIA3e SplitView — 2026-11-09
+
+По запросу пользователя принят ui.resizable-panes, owner codex-alloy-split-view,
+Claim создан через FileMode.CreateNew. Единственный task: PLAN#uia3e-split-view.
+Добавлены SplitView/SplitOrientation и public API guide/PACKAGE. Две retained pane
+hosts, divider и axis constraints; preferred logical size не перезаписывается
+clamp при resize. Shortage пропорционально minima; finite maxima дают trailing space.
+Capture/cancel/keyboard/theme/style и disposal не пересоздают content. Исправлен
+reentrant preference observer: новое consumer значение прерывает gesture до
+следующего move. Exception cleanup сохраняет исходную ошибку.
+
+ManualTests/AlloyTest: отдельные Data/View/Style, Cobalt/IFactory owner-thread
+creation и --split-view / --split-view-smoke. Другой репозиторий Studio, его layout
+и Cobalt generator этой сессией не менялись. Чужой Directory.Build.props и
+параллельные Cobalt изменения сохранены; общий solution release не объявляется.
+
+### Фактические проверки
+
+| Scope | Debug | Release |
+| --- | --- | --- |
+| TrueMoon.Alloy.Tests | Passed1224, Failed0, Skipped0 | Passed1224, Failed0, Skipped0 |
+| TrueMoon.Alloy.Hosting.Tests | Passed154, Failed0, Skipped0 | Passed154, Failed0, Skipped0 |
+| TrueMoon.Aether.Editor.Tests | Passed1412, Failed0, Skipped0 | Passed1412, Failed0, Skipped0 |
+| Fresh-package independent CPU consumer | 21checks, build0errors/0warnings | 21checks, build0errors/0warnings |
+
+40новых SplitView cases. Requirement-to-test evidence:
+
+| Требование | Exact test names в TrueMoon.Alloy.Tests.SplitViewTests |
+| --- | --- |
+| Axis/min/max/shortage/preferred resize | Layout_UsesAxisConstraintsAndKeepsPreferredSizeAcrossHostResize; Layout_ShortageProportionallyCompressesMinimaWithoutOverflow; Layout_MaximaLeaveTrailingSpaceAndUnboundedMeasureStaysFinite |
+| Capture/release/cancel/detach/dispose/error | Pointer_DragClampsAndReleaseOutsideCompletesWithoutRetainingCapture; Cancellation_RestoresPreferenceAndReleasesGesture; CaptureFailureAndPropertyObserverFailure_ReleaseGestureAndPreserveOriginalError |
+| External/reentrant consumer changes | ExternalPreference_InterruptsDragAndDoesNotRollBackNewValue; ReentrantPreferenceObserver_InterruptsBeforeNextPointerMoveCanOverwriteConsumerValue |
+| Keyboard/name/unrelated input | Keyboard_TabAxisArrowsShiftHomeEndRespectBoundsAndIgnoreOtherKeys; AutoPreference_ClickWithoutMovementRemainsAutomaticAndUnrelatedInputDoesNotResize |
+| Retained state/theme/style/idle | ThemeAndResize_RetainChildrenTextSelectionScrollFocusAndBecomeIdle; TypedStyle_LocalOverrideAndClearRelayoutWithoutReplacingContent; Divider_UsesThemeHoverFocusDisabledAndLocalStyleWithBalancedClipping |
+| Nested axes/synthetic DPI | Input_LogicalCoordinatesWorkAtViewportScaleAndNestedDividerDoesNotResizeParent (1/1.5/2) |
+| Ownership/input validation | ContentOwnership_RejectsAliasesAndInvalidChildrenBeforeAdoptionAndDisposesOnce; InvalidDimensions_AreRejectedWithoutChangingLayout |
+
+Фактические команды: dotnet test каждого из трёх csproj выше --no-restore -c
+Debug/Release, -bl:TestResults/SplitView/<name>-{}.binlog, --logger
+"trx;LogFileName=<name>.trx" --results-directory TestResults/SplitView -v quiet.
+Итоговые raw TRX/logs: ui-debug-final, ui-release-final, hosting-debug,
+hosting-release, editor-debug, editor-release. Все перечисленные команды exit0.
+Native source build и publish0errors; source build3прежних warnings
+(View2 XML docs и SettingsFormSmoke CS8602), новых SplitView warnings не было.
+
+```powershell
+dotnet build ManualTests/AlloyTest/AlloyTest.csproj --no-restore -c Debug '-bl:TestResults/SplitView/native-final-build-{}.binlog'
+dotnet publish ManualTests/AlloyTest/AlloyTest.csproj --no-restore -c Release -o TestResults/SplitView/publish '-bl:TestResults/SplitView/publish-final-{}.binlog'
+$env:VK_LAYER_PATH = (Resolve-Path TestResults/EditorWindow-20261104/tools/validation).Path
+```
+
+Каждый executable — ManualTests/AlloyTest/bin/Debug/net10.0/AlloyTest.exe и
+TestResults/SplitView/publish/AlloyTest.exe — запущен с --split-view-smoke, затем
+с --split-view-smoke --vulkan --validation. 4profiles exit0, nested axes,
+outside-coordinate release, Esc rollback, keyboard, retained draft/selection/theme,
+idle и dispose; registry/sessions0, Vulkan warnings/errors0. Default OpenGL Light
+readback TestResults/SplitView/native.png просмотрен. Native files соответствуют
+финальному коду после reentrant observer fix.
+
+Delivery: Contracts/Argentis/Alloy собраны в 3local nupkg с
+Version=0.2.5.2-splitview.20261109.1 через dotnet pack <csproj> --no-build
+--no-restore -c Release -o TestResults/SplitView/feed и unique /bl каждого.
+Версия не публиковалась. Воспроизводимый runner:
+
+```powershell
+./ManualTests/AlloyTest/RunSplitViewPackageSmoke.ps1 -Feed TestResults/SplitView/feed -PackageVersion 0.2.5.2-splitview.20261109.1
+```
+
+Runner создаёт новый consumer без ProjectReference, со своими Directory.Build/
+Directory.Packages/NuGet.Config, local-only feed/cache и process-only APPDATA,
+затем restore, Debug/Release build и по21проверке. Последний actual output:
+TestResults/SplitViewPackageConsumer/74b503d3cf3f4c3798fc9e851046cabb.
+Все3packages найдены в project.assets как package libraries.
+
+Начальные попытки: demo compile выявил неверные App.Builder/Services вызовы;
+после исправления Cobalt сообщил missing generated data resolver. Регистрации
+данных/style заменены explicit DI factories; Cobalt не менялся. Initial consumer
+restore получил denied user NuGet.Config, затем унаследованный CPM/tool reference;
+изолированные APPDATA/Directory.Packages устранили environmental/config проблему.
+Исходные failed logs/binlogs сохранены; финальные проверки выше exit0.
+
+Scope: Windows x64 SDK10.0.403. Routed input не доказывает physical keyboard,
+held-button OS capture/release вне настоящего окна или multi-monitor DPI.
+Fresh CPU packages не являются GPU package matrix. Full solution/full Aether,
+actual Studio consumer, K7/K8/VRAM/release acceptance не запускались.
+Raw logs/TRX/binlogs/PNG/nupkg находятся в ignored TestResults; retention локальный,
+автоматическое длительное хранение не обещано. Эта versioned запись сохраняет
+scope/команды/outcomes/hash даже после очистки raw artifacts. Исходный snapshot
+STATUS архивирован ниже; прежние UI proofs не выдаются за новый запуск.
+
+HEAD при проверке (рабочее дерево изменено): `2e3b2b1a00d67ef10d44e8c8deab1d811584d42d`.
+
+Source SHA256:
+- `TrueMoon.Argentis/SplitView.cs`: `8a8e70c67564bbc06e0fd450f7e293ddfc85dbfd2ab7c72d47e240000be717d4`
+- `TrueMoon.Argentis/SplitOrientation.cs`: `e83f9f9740f5989bd7966e8b66c4cd8dc12ff56ef186de08ffe01645b4e7f8d1`
+- `TrueMoon.Alloy.Tests/SplitViewTests.cs`: `5f8987e5c9e17350fde296eb3f6406ec93f84fbc9f78bfedf149531a1c9bd483`
+
+Local package SHA256:
+- `TrueMoon.Alloy.0.2.5.2-splitview.20261109.1.nupkg`: `3a3f7fdb50f640b78a9d8fd3810cb9b4ac522e42c643720ef620d6ac7f5f439c`
+- `TrueMoon.Argentis.0.2.5.2-splitview.20261109.1.nupkg`: `0b882c08b909e1d907617b9cb6572e41a9045d6f9449637096629ac68f7fe1b1`
+- `TrueMoon.Contracts.0.2.5.2-splitview.20261109.1.nupkg`: `e48c5ce6d8a9fcf048f7901f5bdec3ec184a33c6ba92cd38480fa07aadc3f9e0`
+
+<a id="ui-status-before-split-view-2026-11-09"></a>
+## Полный STATUS перед UIA3e — снимок 2026-11-09
+
+# Alloy / Argentis: текущее состояние и точка продолжения
+
+**2026-11-08 — UIA3d.3 исправлен TextBox line fit:** Height32 с default Padding8
+больше не обрезает низ default16/600 строки. Полный font line box получает место
+за счёт вертикальных отступов; clip внутри border отделён от позиции по Padding.
+NumberBox получает то же исправление, natural height и error badge сохранены.
+Exact raster regression против Height48, selected/unselected, Dark/Light1/1.5/2
+прошёл. Новые UI1184/Hosting154/Editor1412 каждый D/R, source/published3backend
+по18PNG/12comparisons и Vulkan0/0 прошли. [Причина/команды/scope](HISTORY.md#textbox-line-fit-2026-11-08).
+Далее PA8c.0, включая прежний дополнительный shadow-overlap случай; physical input/
+DPI/full solution/fresh NuGet consumer этим исправлением не повторялись.
+
+**2026-11-08 — UIA3d.2 завершён:** TextBox/RichTextEditor/NumberBox используют
+сплошной квадрат Theme.Error стороной в высоту поля и символ Theme.OnError.
+Text/focus viewport и rich auto-height учитывают блок; tooltip активен на всей площади.
+Аудит исправил inline rename InvalidName binding и demo message/OverlayHost;
+командные/IO diagnostics сохранены. UI1176/Hosting154/Editor1412 каждый D/R,
+source/published3backend18PNG/12comparisons каждый и fresh5package Vulkan6cases D/R
+прошли, validation0/0. [Изменения/аудит/команды](HISTORY.md#validation-badge-2026-11-08).
+Дополнительный lower-field tooltip profile дал 2shadow-overlap pixels delta3/255
+вне badge; это отдельный PA8c.0 baseline пункт, основной profile прошёл без смены
+порогов. Physical input/DPI/full solution этим срезом не проверялись.
+
+**2026-11-08 — UIA3d.1 Vulkan frosted backdrop исправлен и проверен.**
+TextBox/RichTextEditor/NumberBox.Editor резервируют место для красного значка справа.
+OverlayHost показывает точный ErrorMessage с delay500ms, wrap/scroll и cleanup;
+Inspector сохраняет aggregate Diagnostics, draft/selection/history, inline labels убраны.
+BoxShadow/Shadow, themed PanelShadow/MenuShadow и Skia outer image-filter path
+подключены к Editor island styles и MenuPopup. Legacy contexts omitting optional
+shadow capability совместимы; App/DI/native ABI/dependencies не менялись.
+Первоначальные UIA3d opaque/raster proofs сохраняют собственный scope в [HISTORY](HISTORY.md#validation-shadows-2026-11-08); текущие native проверки — ниже.
+
+**UIA3d.1 закрыт:** в pinned native Skia к GENERAL source stage добавлен HOST,
+соответствующий существующему HOST_WRITE. DLL пересобрана, patch/hash включены в
+reproducible recipe/build metadata. Blur/default backdrop/ABI/ownership сохранены.
+Новые source Debug/published Release frosted profiles:18actual blur witnesses,
+18PNG/12comparisons,6Vulkan validation0/0 reports каждый. Fresh5package independent
+Vulkan consumer D/R по6cases и loaded native SHA прошёл. Старый native и отключённый
+blur отрицательные controls отклонены. Interop18 и composition36/leases18 прошли;
+UI1170/Hosting154/Editor1412 каждый D/R повторены, failed0/skipped0.
+[Причина/команды/хеши/scope](HISTORY.md#vulkan-backdrop-2026-11-08).
+Physical input/DPI/multi-monitor, VRAM/K7/K8/swapchain и full solution/release
+этим срезом не проверялись. Далее PA8c.0 visual baseline по запросу consumer;
+независимый Editor шаг — ED5b contract.
+
+Предыдущие typography PA8c.3b и ED5a.4 результаты сохраняют собственные даты/scope:
+[default fonts](HISTORY.md#default-fonts-2026-11-08),
+[camera/selection acceptance](../engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
+[Текущая очередь](PLAN.md#current-ui-queue), [дизайн-код](DESIGN.md).
+
+## Состояние реализации
+
+PA8c.3b делает preferred family общим default; системный каталог применяется
+к parameterless backend и RichText, file-only override сохранён.
+
+SkiaSharp/native4.155.0 и прежний Vulkan ABI сохранены. PA8c.3a включает
+FontWeight100..900/FontItalic, styled measure/draw и cache keys; Rich FontWeight,
+Bold/Undo и requested→system chain→file fallback. File-only catalogs сохранены.
+
+UIA1 typed View/Data/scoped styles и App factories, UIA2 Window, UIA3 compact
+NumberBox/Vector3Editor/PropertyEditorRow, RichText auto-height, themed CheckBox
+и states реализованы. Numeric adjustment opt-in, draft/capture/cancel outcomes
+и stable identity gates сохранены. Platform.Silk button/wheel использует ordered
+cursor position и передаёт Shift/Ctrl. Прикладные Transform/history/units — Editor.
+
+INF1–4/6/7 имеют реализацию и bounded checks; INF5 diagnostics остаётся частичным.
+TreeView/menu/bindings/appearance/DPI существуют в указанных в HISTORY scopes;
+наличие API не закрывает все beta/PA1–PA10, alpha/K1–K9 или физическую приёмку.
+
+## Проверки готовности
+
+Последний кодовый fonts/defaults запуск **2026-11-07/08**: Alloy1126/1126, Hosting154/154,
+Editor1300/1300 каждый D/R, failed0/skipped0. Source Debug/published Release ×
+dark/light:4Editor native runs, actual Segoe UI Variable Text600, scale1.5,
+header/menu/status/theme/idle/close/drain и UI/GPU/children owners0, validation0/0.
+Parameterless backend gallery: по18captures/12complete-frame comparisons в source
+Debug и published Release при synthetic1/1.5/2, outside-tolerance pixels0.
+Exact fresh4nupkg consumer Debug build/run и Release publish/run подтверждает
+default family и file-only override; public example build/publish также прошёл.
+[Подробные команды, baseline, initial failures и ограничения](HISTORY.md#default-fonts-2026-11-08).
+
+Предыдущая opt-in fonts matrix: [PA8c.3a](HISTORY.md#system-fonts-2026-11-07).
+Прежние Skia update/full-solution/Editor/native numeric результаты сохраняют
+свои даты и scopes; новые full Aether/solution/Playing proof не объявлены.
+
+## Блокеры и ограничения
+
+- Fonts: automatic opsz/arbitrary axes и plain-text per-glyph fallback не добавлены.
+  Physical DPI, performance/VRAM и fresh package GPU/Hosting matrix не проверялись.
+
+- Numeric physical arrows/modifiers, Esc с удерживаемой кнопкой и OS pointer
+  modifiers не подтверждены. Automation arrows поступали как UiKey.None; mixed
+  down/key/up не предоставляется текущим automation API. Требования не отменены.
+- K3: physical100/200% и разные DPI мониторов ещё требуют своего proof.
+- K7: прежний240-window run failed, GDI23→137/USER26→26; trace локализовал screen
+  HDC в NVIDIA ICD32.0.16.1742. Safe app-side fix не установлен, поиск workaround
+  остановлен по решению пользователя. AMD raw control не равен full UI K7.
+- K8 physical device/context loss, VRAM, resource trends и итоговая alpha matrix
+  открыты. OS/driver settings и hardware при документационной ревизии не менялись.
+- K9 имеет прежний managed baseline; новые rendering options требуют PA8c.0 и
+  текущих измерений. Старые capture/Name-binding failures не объявлены объяснёнными.
+
+## Следующий конкретный шаг
+
+UIA3d.1 завершён; следующий UI visual шаг — PA8c.0 baseline по конкретному consumer.
+Независимый Editor шаг — [ED5b translation contract](../engine/EDITOR_PLAN.md#ed5b-translation).
+Общие controls добавлять в Alloy/Argentis по конкретной потребности consumer.
+
+Независимый visual-quality трек — PA8c.0 baseline на текущем Variable Text,
+затем PA8c.1/2 по наблюдаемым дефектам. Default policy и подключение Editor уже
+завершены в сохранённом scope. Numeric physical acceptance, K3/K7/K8 и wider
+release/fresh package matrix остаются отдельными проверками.
+
+Входящая Studio ui.resizable-panes остаётся proposed: Claim/Decision владельца
+ещё нужны, в этой документационной актуализации работа не принята.
+INF5 и отложенный RichTextEditor backlog выбирать по конкретному consumer.
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="текущие-проверки--wsi-stages2026-10-10"></a>
+<a id="предыдущие-проверки--hosting-dispatcher2026-10-10"></a>
+<a id="предыдущие-проверки--wglthread-lifetime2026-10-10"></a>
+<a id="предыдущие-проверки--lifecycleresize2026-10-10"></a>
+<a id="предыдущие-проверки--textboxname-smoke2026-10-10"></a>
+<a id="предыдущие-проверки--интеграция-в-main2026-10-10"></a>
+<a id="предыдущие-проверки--агентный-callback-run2026-10-10"></a>
+<a id="предыдущие-ui-проверки--code-run2026-10-09"></a>
+<a id="последнее-изменение-формата--2026-10-09"></a>
+Прежние датированные разделы — в [полном архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+
 <a id="textbox-line-fit-2026-11-08"></a>
 ## UIA3d.3: TextBox не обрезает строку внутренними отступами — 2026-11-08
 
@@ -6580,3 +6854,171 @@ Hosting154, Editor1300 в D/R, failed/skipped0),4native Editor JSON,2backend rep
 Даты тестов —07ноября23:45–23:57+05:00, native/publish завершались08ноября.
 Эта сверка не является новым build/test/native запуском и не расширяет acceptance.
 Артефакт сверки — ignored TestResults/PlanningRefresh-20261108-mw6scoyd/audit.json. Проверены scoped diff/links/anchors.
+
+<a id="status-before-core75-2026-11-10"></a>
+## Полный STATUS перед CORE7.5 — 2026-11-10
+
+# Alloy / Argentis: текущее состояние и точка продолжения
+
+**2026-11-09 — UIA3e SplitView v1 реализован и проверен.** Две retained панели,
+horizontal/vertical axis, logical preference/min/max, pointer capture/release,
+cancel/interrupt и keyboard/accessible name; theme/resize сохраняют дерево и drafts.
+Новые dependencies, DI сервисы и native/GPU пути не добавлены.
+[Контракт](SPLIT_VIEW.md), [задача](PLAN.md#uia3e-split-view),
+[результаты/команды/границы](HISTORY.md#split-view-2026-11-09).
+
+## Состояние реализации
+
+- SplitView владеет двумя pane hosts/divider и их content. Constraints заданы на
+  hosts; shortage сжимает minima пропорционально, конечные maxima оставляют остаток.
+  Preferred размер восстанавливается после расширения. Consumer владеет persistence.
+- Drag освобождает capture до callbacks. Esc/focus/capture/context loss отменяют,
+  внешняя preference (включая reentrant observer) прерывает без возврата старого значения.
+  Tab/axis arrows/Shift/Home/End, Dark/Light и typed/local appearance работают.
+- Cobalt App/IFactory demo с отдельными Data/View/Style и воспроизводимый fresh-package
+  runner находятся в ManualTests/AlloyTest. Studio/Editor layouts автоматически не мигрированы.
+- UIA1 View/Data/styles, UIA2 Window, UIA3 compact/numeric controls, UIA3d validation/
+  shadows/frosted fix/TextBox line fit и PA8c.3a/b typography сохранены. SkiaSharp/native
+  4.155.0, ABI, App/DI/lifecycle contracts не менялись; INF5 остаётся частичным.
+
+## Проверки готовности
+
+| 2026-11-09, scope | Фактический результат |
+| --- | --- |
+| UI xUnit | 1224/1224 каждый Debug/Release, failed0/skipped0; 40 новых SplitView cases |
+| Hosting xUnit | 154/154 каждый Debug/Release, failed0/skipped0 |
+| Editor xUnit | 1412/1412 каждый Debug/Release, failed0/skipped0 |
+| Native demo | source Debug/published Release × OpenGL/Vulkan: 4 успешных profiles, nested axes/input/state/idle/disposal; sessions0, Vulkan warning/error0 |
+| Independent package consumer | 3 fresh local nupkg, отдельный cache/feed, без ProjectReference; по21checks Debug/Release, build0errors/0warnings |
+
+Native input программно routed в реально рисуемом окне. Screenshot OpenGL Light
+просмотрен. Source demo build0errors/3 прежних warnings в View2/SettingsFormSmoke;
+в новых C# файлах warnings не наблюдались. Общая рабочая версия0.2.5.2-alpha
+не изменена этой сессией; delivery proof использует0.2.5.2-splitview.20261109.1.
+Полные solution/Aether tests, actual Studio consumer и release matrix не запускались.
+
+Прежние UI/TextBox/backdrop/fonts результаты сохраняют свои даты и scopes:
+[line fit](HISTORY.md#textbox-line-fit-2026-11-08),
+[Vulkan backdrop](HISTORY.md#vulkan-backdrop-2026-11-08),
+[default fonts](HISTORY.md#default-fonts-2026-11-08).
+[Полный предыдущий STATUS](HISTORY.md#ui-status-before-split-view-2026-11-09).
+
+## Блокеры и ограничения
+
+- SplitView: physical held-button/Esc/OS capture, release вне настоящего окна,
+  multi-monitor DPI и системный accessibility не доказаны routed tests.
+  Collapse/docking/cursor/persistence policy не входят в v1. Synthetic scale1/1.5/2
+  проверена отдельно; local CPU package consumer не заменяет fresh-package GPU matrix.
+- PA8c.0 current-font visual baseline, включая прежний дополнительный shadow-overlap
+  2pixels delta3/255, остаётся. Automatic opsz/arbitrary axes/per-glyph fallback не добавлены.
+- Numeric physical arrows/modifiers/captured Esc и K3 physical100/200%/multi-monitor
+  по-прежнему требуют своего proof; UiKey.None в automation не считается дефектом контрола.
+- K7: прежний240-window run failed, GDI23→137/USER26→26, screen HDC в NVIDIA
+  ICD32.0.16.1742. Поиск workaround остановлен пользователем; этим срезом не возобновлён.
+- K8 device/context loss, VRAM/resource trends и final alpha/release matrix открыты.
+  K9 имеет прежний managed baseline; новые rendering options требуют измерений.
+
+## Следующий конкретный шаг
+
+Передать Studio готовый SplitView API и проверить его actual layout/popup/capture/
+draft scenario у consumer. Независимые ветки: [ED5b](../engine/EDITOR_PLAN.md#ed5b-translation),
+PA8c.0 по наблюдаемому visual дефекту, INF5 по реальному diagnostics consumer.
+K3/K7/K8 и wider release остаются отдельной приёмкой.
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="текущие-проверки--wsi-stages2026-10-10"></a>
+<a id="предыдущие-проверки--hosting-dispatcher2026-10-10"></a>
+<a id="предыдущие-проверки--wglthread-lifetime2026-10-10"></a>
+<a id="предыдущие-проверки--lifecycleresize2026-10-10"></a>
+<a id="предыдущие-проверки--textboxname-smoke2026-10-10"></a>
+<a id="предыдущие-проверки--интеграция-в-main2026-10-10"></a>
+<a id="предыдущие-проверки--агентный-callback-run2026-10-10"></a>
+<a id="предыдущие-ui-проверки--code-run2026-10-09"></a>
+<a id="последнее-изменение-формата--2026-10-09"></a>
+Прежние датированные разделы — в [полном архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+<a id="status-before-core76-2026-11-10"></a>
+## Полный STATUS перед CORE7.6 — 2026-11-10
+
+# Alloy / Argentis: текущее состояние и точка продолжения
+
+**2026-11-10 — CORE7.5: общая конфигурация scalar window settings.**
+Alloy:Window и Editor:Window schemas/deferred binding сохраняют explicit renderer,
+fonts/chrome/view factories и прежний owner-thread lifecycle. Hosting171/171 D/R,
+17newcases; Editor1496/1496 D/R. Combined source/published/fresh16package consumer:
+76checks/profile на обоих DI, native window/GPU/child runtime не запускается.
+[Guide](../core/CONFIGURATION_MODULES.md), [evidence](HISTORY.md#core75-2026-11-10).
+
+UIA3e SplitView v1 и Studio handoff остаются в прежнем scope. Таблица native/UI
+ниже относится к09ноября, это исторические результаты, не повтор текущей задачей.
+[Предыдущий STATUS целиком](HISTORY.md#status-before-core75-2026-11-10).
+
+## Состояние реализации
+
+- SplitView владеет двумя pane hosts/divider и их content. Constraints заданы на
+  hosts; shortage сжимает minima пропорционально, конечные maxima оставляют остаток.
+  Preferred размер восстанавливается после расширения. Consumer владеет persistence.
+- Drag освобождает capture до callbacks. Esc/focus/capture/context loss отменяют,
+  внешняя preference (включая reentrant observer) прерывает без возврата старого значения.
+  Tab/axis arrows/Shift/Home/End, Dark/Light и typed/local appearance работают.
+- Cobalt App/IFactory demo с отдельными Data/View/Style и воспроизводимый fresh-package
+  runner находятся в ManualTests/AlloyTest. Studio/Editor layouts автоматически не мигрированы.
+- UIA1 View/Data/styles, UIA2 Window, UIA3 compact/numeric controls, UIA3d validation/
+  shadows/frosted fix/TextBox line fit и PA8c.3a/b typography сохранены. SkiaSharp/native
+  4.155.0, ABI, App/DI/lifecycle contracts не менялись; INF5 остаётся частичным.
+
+## Проверки готовности
+
+| 2026-11-09, scope | Фактический результат |
+| --- | --- |
+| UI xUnit | 1224/1224 каждый Debug/Release, failed0/skipped0; 40 новых SplitView cases |
+| Hosting xUnit | 154/154 каждый Debug/Release, failed0/skipped0 |
+| Editor xUnit | 1412/1412 каждый Debug/Release, failed0/skipped0 |
+| Native demo | source Debug/published Release × OpenGL/Vulkan: 4 успешных profiles, nested axes/input/state/idle/disposal; sessions0, Vulkan warning/error0 |
+| Independent package consumer | 3 fresh local nupkg, отдельный cache/feed, без ProjectReference; по21checks Debug/Release, build0errors/0warnings |
+
+Native input программно routed в реально рисуемом окне. Screenshot OpenGL Light
+просмотрен. Source demo build0errors/3 прежних warnings в View2/SettingsFormSmoke;
+в новых C# файлах warnings не наблюдались. Общая рабочая версия0.2.5.2-alpha
+не изменена этой сессией; delivery proof использует0.2.5.2-splitview.20261109.1.
+Полные solution/Aether tests, actual Studio consumer и release matrix не запускались.
+
+Прежние UI/TextBox/backdrop/fonts результаты сохраняют свои даты и scopes:
+[line fit](HISTORY.md#textbox-line-fit-2026-11-08),
+[Vulkan backdrop](HISTORY.md#vulkan-backdrop-2026-11-08),
+[default fonts](HISTORY.md#default-fonts-2026-11-08).
+[Полный предыдущий STATUS](HISTORY.md#ui-status-before-split-view-2026-11-09).
+
+## Блокеры и ограничения
+
+- SplitView: physical held-button/Esc/OS capture, release вне настоящего окна,
+  multi-monitor DPI и системный accessibility не доказаны routed tests.
+  Collapse/docking/cursor/persistence policy не входят в v1. Synthetic scale1/1.5/2
+  проверена отдельно; local CPU package consumer не заменяет fresh-package GPU matrix.
+- PA8c.0 current-font visual baseline, включая прежний дополнительный shadow-overlap
+  2pixels delta3/255, остаётся. Automatic opsz/arbitrary axes/per-glyph fallback не добавлены.
+- Numeric physical arrows/modifiers/captured Esc и K3 physical100/200%/multi-monitor
+  по-прежнему требуют своего proof; UiKey.None в automation не считается дефектом контрола.
+- K7: прежний240-window run failed, GDI23→137/USER26→26, screen HDC в NVIDIA
+  ICD32.0.16.1742. Поиск workaround остановлен пользователем; этим срезом не возобновлён.
+- K8 device/context loss, VRAM/resource trends и final alpha/release matrix открыты.
+  K9 имеет прежний managed baseline; новые rendering options требуют измерений.
+
+## Следующий конкретный шаг
+
+Передать Studio готовый SplitView API и проверить его actual layout/popup/capture/
+draft scenario у consumer. Независимые ветки: [ED5b](../engine/EDITOR_PLAN.md#ed5b-translation),
+PA8c.0 по наблюдаемому visual дефекту, INF5 по реальному diagnostics consumer.
+K3/K7/K8 и wider release остаются отдельной приёмкой.
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="текущие-проверки--wsi-stages2026-10-10"></a>
+<a id="предыдущие-проверки--hosting-dispatcher2026-10-10"></a>
+<a id="предыдущие-проверки--wglthread-lifetime2026-10-10"></a>
+<a id="предыдущие-проверки--lifecycleresize2026-10-10"></a>
+<a id="предыдущие-проверки--textboxname-smoke2026-10-10"></a>
+<a id="предыдущие-проверки--интеграция-в-main2026-10-10"></a>
+<a id="предыдущие-проверки--агентный-callback-run2026-10-10"></a>
+<a id="предыдущие-ui-проверки--code-run2026-10-09"></a>
+<a id="последнее-изменение-формата--2026-10-09"></a>
+Прежние датированные разделы — в [полном архиве](HISTORY.md#status-before-planning-revision-2026-11-05).

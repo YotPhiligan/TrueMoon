@@ -9,9 +9,12 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 | [Общий план](PLAN.md) | Цели, границы модулей, зависимости, сквозные сценарии и критерии выпуска |
 | [Общий статус](STATUS.md) | Текущая сводка, подтверждённые проверки, блокеры и ближайшие действия |
 | [Формат планирования](PLANNING.md) | Правила ведения PLAN/STATUS/HISTORY и разделения общей и модульной работы |
+| [Единая конфигурация](core/CONFIGURATION_GUIDE.md) | Рабочее руководство: sources/приоритеты/typed options/App/reload/запись и совместимость |
+| [139 стандартных ключей](core/CONFIGURATION_KEYS.md) | Каталог17schemas, types/defaults/aliases из public metadata свежих пакетов |
+| [App/child configuration delivery](../ManualTests/ConfigurationDelivery/README.md) | Единая независимая source/published/fresh-package проверка на обоих DI |
 | [Аудит размещения типов и namespace — 2026-10-21](HISTORY.md#аудит-размещения-типов-и-namespace--2026-10-21) | Все44проекта, namespace замечания, технические группы типов и порядок исправления |
 | [Исправления структуры — 2026-10-21](HISTORY.md#исправление-структуры-проектов--2026-10-21) | Выполненные переносы, миграция public API, проверки и исправление PID lookup в GPU примере |
-| [Проверка package metadata](../eng/Check-PackageMetadata.ps1) | Вычисленные MSBuild properties всех проектов; с `-Pack` — локальные nupkg/nuspec и README/license/icon/analyzer/native payloads |
+| [Проверка package metadata](../eng/Check-PackageMetadata.ps1) | MSBuild properties; `-IncludeProject <paths>` ограничивает scope, `-Pack -NoBuild` проверяет готовые Release nupkg/nuspec и README/license/icon/analyzer/native payloads |
 
 ## Модули
 

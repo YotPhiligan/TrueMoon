@@ -1,5 +1,10 @@
 # TrueMoon.Alloy: план первой рабочей версии
 
+Конфигурация2026-11-10: [CORE7.5](../core/CONFIGURATION_MODULES.md) добавил
+Alloy:Window scalar schema/UseConfiguredPresentation и Editor:Window defaults.
+Renderer/fonts/chrome factories остаются explicit; UI/native очередь не меняется.
+Детальная задача и configuration evidence принадлежат Core.
+
 <a id="skiasharp-41550-completed"></a>
 Выполнено2026-11-07: **SkiaSharp/native4.155.0** — pinned source build extended DLL,
 ABI v1/48bytes, source Debug/published Release Vulkan readback/composition и backend
@@ -8,7 +13,7 @@ Solution Debug build0errors, новых warnings0; [результаты и ко
 Следующая самостоятельная visual-quality задача остаётся PA8c.0; physical/K7/K8 gates открыты.
 
 <a id="current-ui-queue"></a>
-## Текущая очередь — актуализация 2026-11-08
+## Текущая очередь — актуализация 2026-11-09
 
 UIA2 Window и UIA3 compact/numeric editors реализованы в проверенных scopes.
 ED4g.3 group reset и ED4g.4 rad/deg завершены без новых generic controls;
@@ -30,13 +35,33 @@ UIA3d реализовал validation/shadows; UIA3d.1 исправил Vulkan f
 | Реализовано и проверено | UIA3d validation/shadows, UIA3d.1 Vulkan, UIA3d.2 badge/audit и UIA3d.3 TextBox line fit | [UIA3d.1](#uia3d1-vulkan-backdrop): source/published frosted3backend и fresh5package Vulkan прошли; wider release отдельно |
 | Numeric acceptance | Physical arrows/modifiers/captured Esc/OS pointer modifiers | Unverified input не равен доказанному hardware defect; routed input не заменяет этот proof |
 | Качество отображения | PA8c.0 baseline на текущем default Variable Text, затем PA8c.1/2 по наблюдаемым дефектам | Включить наблюдаемый shadow-overlap: 2pixels delta3/255 в дополнительной Light200 GL композиции UIA3d.2; основной D/R profile прошёл. Новые hinting/AA/metrics требуют сравнения |
-| Входящие заявки Studio | Разобрать ui.resizable-panes | Заявка proposed; принятие/приоритет через Claim.json и Decision владельца, реализация не начата этой ревизией |
+| Разделение панелей | UIA3e v1 реализован: constraints, capture/cancel, keyboard и retained state | [API/guide](SPLIT_VIEW.md), [проверки/границы](HISTORY.md#split-view-2026-11-09); следующий consumer — Studio |
 | Инфраструктура | Оставшийся INF5 по реальному diagnostics consumer | Не полный redesign scheduler/DI |
 | Release | Wider Window/backend/package, physical K3/K7/K8/VRAM/final alpha matrix | Отдельное окружение/выбранный scope; остановленный поиск NVIDIA workaround не возобновлён |
 
 K1–K9, PA1–PA10, net10.0/xUnit и их критерии сохранены. Hardware/release gates
 ограничивают готовность выпуска, не требуют завершить весь alpha перед каждым
 прикладным UI изменением. Датированные маршруты ниже не заменяют эту очередь.
+
+<a id="uia3e-split-view"></a>
+## UIA3e. Разделение панелей — реализовано и проверено 2026-11-09
+
+Владелец `codex-alloy-split-view`, [Claim/Decision заявки Studio](../requests/alloy/20261107-studio-resizable-panes-5d593644/Decision.md).
+Детальный план ведётся только здесь. Две retained ContentControl-панели и focusable
+divider; horizontal/vertical axis, preferred first-pane logical size (NaN = half).
+Axis Min/Max на pane hosts; при дефиците места minima сжимаются пропорционально,
+конечные maxima оставляют trailing space. Resize не перезаписывает preference.
+
+- [x] Реализовать ownership/Fluent/typed properties, layout и themed divider без
+  file IO, collapse, новых DI сервисов или пересоздания детей.
+- [x] Pointer capture/release outside, Escape/focus/capture/visibility/enable/
+  detach/dispose cancellation; внешняя preference прерывает gesture без rollback.
+- [x] Tab, axis arrows, Shift x10, Home/End и accessible name; unrelated input
+  остаётся consumer. Контролы/поля сохраняют draft/selection/scroll/theme state.
+- [x] Адресные layout/input/error/ownership тесты и UI/Hosting/Editor D/R regressions.
+- [x] Cobalt App/IFactory demo, source/published native consumer и independent fresh
+  package consumer; actual scope/results в STATUS/HISTORY. Routed input не доказывает
+  physical input/OS capture/DPI. Studio consumer обновляется его владельцем.
 
 <a id="uia3d-validation-shadows"></a>
 ## UIA3d. Значок валидации и тени поверхностей — 2026-11-08
@@ -1719,5 +1744,6 @@ zero-copy/performance или K3/K7/K8/VRAM/final UI acceptance.
 Дополнительная очередь для разбора владельцем UI — [каталог заявок Alloy](../requests/alloy/).
 [Правила владения и параллельной работы](../requests/README.md).
 Первый consumer — [регулируемые панели Studio](../requests/alloy/20261107-studio-resizable-panes-5d593644/Request.md).
-Запрос находится в proposed; активная очередь выше и согласованные API сохраняются
-до решения владельца. Новые заявки добавляются отдельными каталогами без правки этого списка.
+Запрос выполнен во framework/local-delivery scope2026-11-09: [UIA3e](#uia3e-split-view),
+[Decision](../requests/alloy/20261107-studio-resizable-panes-5d593644/Decision.md).
+Интеграция Studio остаётся у consumer. Новые заявки добавляются отдельными каталогами.

@@ -1,37 +1,36 @@
 # Mithril: состояние и точка продолжения
 
-**2026-11-05 — ревизия планов без runtime/API изменений и новых запусков.**
-[План](PLAN.md#current-mithril-queue), [прежняя сводка](HISTORY.md#status-before-planning-revision-2026-11-05).
+**2026-11-11 — CORE7.6: текущая сверка App/child delivery.**
+Mithril155/155 каждый Debug/Release, Failed:0, Skipped:0.
+Общий source/published/fresh16package runner проверил оба DI, App/unit selection,
+protected parent/control и actual child stop/reap:4children/profile,12total
+в двух child consumers. Bootstrap consumer также проверяет Aether pre-App capture.
+[Guide](../core/CONFIGURATION_GUIDE.md), [scope/evidence](HISTORY.md#core76-2026-11-10).
 
 ## Реализация и фактические проверки
 
-Owned main/child/external process lifecycle, bounded restart и operational
-diagnostics реализованы в same-build/cooperative scope. Started — OS start,
-не readiness. Aether владеет своим Hello/heartbeat/replacement/recovery;
-второй автоматический restart в Mithril не назначен.
+UnitBootstrap/common parser и protected UnitLaunchSettings из CORE7.4 сохранены.
+Original standard args/env/default inputs предшествуют overlays; env identity group
+не смешивается с CLI. Ordinary user profile и fake CLI999 не подменяют actual unit1,
+parent/control endpoint. Source name/root/reload/diagnostics и typed settings
+работают одинаково на Cobalt/MS DI. Lifecycle/DI contracts не менялись.
 
-Последняя собственная recorded проверка — **2026-10-27**:111/111 Debug/Release,
-ready-file RED2→GREEN12, fresh published composition14/14 иrestart20/20.
-Reader повторяет missing-file/Windows sharing/lock conflicts в едином8s deadline;
-malformed/null JSON остаётся ошибкой. [Evidence](HISTORY.md#ready-json-bounded-read-retry--2026-10-27).
-Последующий ARCH2 package/headless/native consumer выполнен у Aether; это не
-новая полная Mithril или MIT6 acceptance matrix.
+Source solution D/R0errors, managed Mithril API unchanged. Package version proof
+0.2.5.2-core76.20261110234501; current230checks/profile относятся ко всем5programs,
+не к одной Mithril suite. [Подробные команды](../core/HISTORY.md#core76-2026-11-10).
+[Предыдущий STATUS целиком](HISTORY.md#status-before-core76-2026-11-10).
 
 ## Ограничения
 
-External launched/owned без borrowed attach; independent external restart не
-подтверждён. Diagnostic observer синхронный, errors изолированы, blocking/reentrancy
-не обещаются. Concurrent stop/monitor callbacks и repeated Stop сохраняют
-прежние Terminal/NoProcess semantics; Error может содержать OS details.
-Real OS permission/reap failures, uncooperative services, containment/trends MIT6c,
-other OS/RID/AOT и durable recovery не подтверждены. Parent abrupt-exit proof
-не наблюдает workers/sinks убитого parent. Остальные детали — в архиве/HISTORY.
+Launch snapshot StartupOnly. Started означает OS start, readiness подтверждается
+отдельно. Same-build/cooperative ownership сохранён; uncooperative containment,
+permission/reap failures, long resource trends/other OS/RID/AOT/durable recovery
+не закрыты. Aether владеет Hello/heartbeat/Replace; второй restart policy не вводился.
+Текущий source fixture props override и прежние diagnostics timeout причины
+учтены в Core history; fresh real children не являются native/GPU acceptance.
 
 ## Следующий конкретный шаг
 
-**Оставшийся MIT6 fault/containment/resource-trend профиль** по выбранному consumer;
-перед реализацией определить unsupported/uncooperative поведение и ownership.
-Ready-file fix и ARCH2 headless/native не ставятся повторно как незавершённые функции.
-Post-reap output drain расследуется у [Aether/Core](../engine/PLAN.md#arch2e4b-drain-diagnostics),
-пока нет доказанного Mithril defect. Hardware K7/K8 остаётся у UI.
-Прикладной порядок — [общий roadmap](../PLAN.md#current-roadmap).
+Оставшийся MIT6 fault/containment/resource-trend profile с consumer/owner и
+unsupported behavior. Post-reap drain остаётся у Aether/Core до causal Mithril defect.
+CORE7.0–7.6 завершены; новую миграцию повторно не назначать.

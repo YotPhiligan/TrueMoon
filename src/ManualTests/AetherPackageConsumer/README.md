@@ -222,3 +222,14 @@ code comes from the fresh packages. This is directed UiSession/native GPU input,
 with separate Windows input evidence in the source/published host. Current15package,
 8headless and2GPU profile results/limits are in
 [HISTORY](../../docs/engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
+
+## ED5b fresh-package translation
+
+Use `VerifyViewport.ps1 -Profile translation` with the same fresh-package manifest,
+validation and fresh evidence arguments. It builds Debug/publishes Release in an
+independent PackageReference-only host, runs --smoke-translation in both, checks
+five translation captures/four reaped children per profile and zero resources/
+validation, and verifies installed/output DLL hashes. The default profile remains
+viewport. Optional `-DependencyFeed path` substitutes an offline hierarchical feed
+for third-party dependencies; TrueMoon IDs remain mapped only to the fresh private
+feed. [Current commands and scope](../../docs/engine/HISTORY.md#ed5b-translation-2026-11-09).

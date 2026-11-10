@@ -3,7 +3,7 @@
 **2026-11-06, ARCH1f.0: принятые решения до кода.** Имя профиля —
 `aether.opaque-unlit/1`. CPU definitions/schemas/codec реализованы в ARCH1f.1
 2026-11-07 ([API и bytes](#cpu-v1)); [resource owners/leases/preparation](RENDER_RESOURCES.md)
-реализованы в f.2. Mesh snapshots/surface renderer остаются f.3/4. Это не новый Runtime
+реализованы в f.2. [Owned mesh snapshots](RENDER_SNAPSHOTS.md) реализованы в f.3; surface renderer остаётся f.4. Это не новый Runtime
 wire format; native resource proofs не подменяют pixels/frame acceptance. Этапы и acceptance ведутся только в
 [PLAN](PLAN.md#arch1f-rendering); общий контекст — [RENDERING_DESIGN](RENDERING_DESIGN.md).
 Изменения ниже относительно первоначальных предложений приняты явно: один

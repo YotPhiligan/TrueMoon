@@ -1,8 +1,13 @@
 # TrueMoon.Aether: план игрового движка и редактора
 
+Конфигурация2026-11-10: [CORE7.5](../core/PLAN.md#core7-unified-configuration)
+подключил Aether/Editor/ECS/render/authoring к общим schema/profile/DI и frozen
+runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.md).
+Детальная задача ведётся в Core; очередь f.4/g/h ниже сохраняется.
+
 <a id="current-engine-queue"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-07
+## Текущая очередь — актуализация 2026-11-09
 
 Уточнение2026-11-06 по запросу пользователя: **ECS и системные компоненты отображения
 включены в план** — [ARCH1e](#arch1e-ecs) и [ARCH1f](#arch1f-rendering).
@@ -22,8 +27,9 @@ exact mesh/material versions/slots, color pipeline, strict CPU/GPU fences и bud
 F.1 CPU definitions/schemas/canonical codec и validation реализованы2026-11-07.
 F.2 добавляет [App-owned catalog/device resources, counted leases и preparation](RENDER_RESOURCES.md),
 атомарный World rebind и standalone Vulkan upload/readback. Проверки отдельно в STATUS.
-Следующий кодовый этап — f.3 owned camera/mesh snapshots; surface renderer/Playing fence
-остаются f.4 и не подменяются resource-ready.
+F.3 [owned snapshots](RENDER_SNAPSHOTS.md) реализован09ноября: explicit camera/extraction,
+bounded mailbox/submission owners и leases; [проверки/limits](HISTORY.md#render-snapshots-2026-11-09).
+Следующий кодовый этап — f.4 actual surface renderer/Playing fence.
 Дополнение2026-11-07: запланированы исследования [импорта моделей ARCH1g.0](#arch1g-model-assets)
 и [аудиомодуля ARCH1h.0](#arch1h-audio). Они могут идти независимо от f.3;
 Audio backend, production package/API boundaries и budgets ещё не выбраны. Кодовая
@@ -1165,7 +1171,7 @@ overrides не мутируют общий asset. World не владеет borr
 | ARCH1f.0 | Завершён этап решений до кода2026-11-06: [opaque-unlit/1](RENDERING_CONTRACTS.md), [запись](#arch1f0-render-contracts) | Reserved IDs/v1 shapes, P3f32/UInt32/8exact slots, binding set/linear tint, explicit perspective camera, sRGB conversion, strict CPU/GPU fences, leases/completion и count/byte budgets выбраны; C# API/native proof этим не объявлены |
 | ARCH1f.1 | Реализован2026-11-07: platform-neutral MeshRenderer/Camera schemas, exact unmanaged asset keys и immutable mesh/material/binding-set definitions; TMRA canonical codec и frozen CPU manifest/fingerprint | Reserved IDs/versions/defaults/required Transform, finite/conversion/index/range/layout/exact slots/bounds/gray vectors/dependency/type/unknown-version/budget checks проверяются в unit/source/package scope; [конкретный API](RENDERING_CONTRACTS.md#cpu-v1), текущие результаты в STATUS. Legacy schemas/document/history и native protocol сохранены |
 | ARCH1f.2 | Реализован2026-11-07: [resource owners/leases/preparation](RENDER_RESOURCES.md), frozen in-memory catalog, App/IFactory integration, atomic World binding и standalone Vulkan upload | Bounded old/candidate/retiring allocations и metadata, counted CPU/preparation leases, stale owner/device/slot rejection; cancel/late completion/failed creation/reload/drain retry. Explicit pinned-key rebind, no sync GPU wait в scene loader; unit/source/published/fresh-package CPU и actual Vulkan upload/readback проверены отдельно. Surface rendering/Playing fence — f.3/4; external-file delivery отдельно |
-| ARCH1f.3 | После ARCH1e.4 и f.1/2: extraction camera/mesh/material и bounded owned render snapshots | World/tick/revision согласованы, masks/enabled/bounds/shear проверены, нет refs в pools и смешанных revisions; drop/coalesce освобождает leases, submitted work удерживает ресурсы до completion; primitive compatibility отдельна |
+| ARCH1f.3 | Реализован2026-11-09: [owned render snapshots](RENDER_SNAPSHOTS.md), explicit camera/mesh/material extraction, bounded mailbox/recording/submission owners, App/IFactory | Same-tick complete matrices/exact keys/masks/tint/shear bounds, drop/coalesce/reload retain, actual backend completion/cleanup contract, generation fence/retry/budgets;1376scoped D/R и source/published/fresh7package CPU proofs. [Evidence/limits](HISTORY.md#render-snapshots-2026-11-09); actual Vulkan surface — f.4 |
 | ARCH1f.4 | Vulkan consumer: built-in cube mesh, shared opaque unlit material и независимый tint override | Две entities/один shared asset, изменение override не меняет соседа, reload/delete/resize/suspend/Stop/Replace/failed startup не нарушают retirement; actual source Debug/published Release pixels/core+sync validation/ownership и затронутый fresh-package consumer проверяются отдельно от headless |
 | ARCH1f.5 | Texture/sampler profile, затем Light/lighting/PBR по выбранному workload | Layout/capability и color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes; performance/native evidence для каждого добавленного profile, без заявления готовности transparency/shadows/skinning |
 | ARCH1f.6 | Content revisions и runtime material overrides в checkpoint/Replace после ARCH1e.5 | Logical IDs/revisions вместо handles, required content preparation до resume, remap/migration/failed restore/stale generation; render cache восстанавливается, capability недоступна без полного support участников |

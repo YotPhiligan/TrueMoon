@@ -40,6 +40,18 @@ public sealed class RenderWorldBinding : IAsyncDisposable
     public bool IsReleased { get; private set; }
     /// <summary>Gets retained candidate/old-owner cleanup failure without hiding the primary operation outcome.</summary>
     public Exception? CleanupError { get; private set; }
+    internal World World => _world;
+    internal RenderDeviceOwner Device => _device;
+    internal async Task<RenderSnapshotResources> CaptureSnapshotResourcesAsync(CancellationToken token)
+    {
+        await _gate.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            Guard(); token.ThrowIfCancellationRequested();
+            return _device.RetainSnapshot(Current ?? throw new RenderResourceException(RenderResourceError.Closed, "Initialize resources before extraction."), Revision);
+        }
+        finally { _gate.Release(); }
+    }
     /// <summary>Prepares initial required resources without modifying component keys or claiming frame readiness.</summary>
     /// <param name="cancellationToken">Cooperative preparation cancellation.</param><returns>Confirmed complete resources.</returns>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)

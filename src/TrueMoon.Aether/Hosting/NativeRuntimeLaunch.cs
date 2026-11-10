@@ -31,6 +31,17 @@ public sealed class NativeRuntimeLaunch
     /// <summary>Absolute child working directory.</summary>
     public string WorkingDirectory { get; }
 
+    /// <summary>Optional public flags explicitly transferred to the child.</summary>
+    public RuntimeStartupSettings? StartupSettings { get; private init; }
+
+    /// <summary>Copies the command with frozen flags without mutating global environment.</summary>
+    /// <param name="settings">Public flags.</param><returns>A new descriptor.</returns>
+    public NativeRuntimeLaunch WithStartupSettings(RuntimeStartupSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return new(ExecutablePath, RuntimeAssemblyPath, Arguments, WorkingDirectory) { StartupSettings = settings with { } };
+    }
+
     /// <summary>Explicitly selects the current application as the runtime, for hosts implementing their own runtime branch.</summary>
     /// <param name="arguments">Explicit runtime selector and other arguments, for example --runtime.</param>
     /// <returns>A descriptor handling both apphost and dotnet entry assembly launch forms.</returns>
@@ -53,6 +64,11 @@ public sealed class NativeRuntimeLaunch
             RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true
         };
         foreach (var argument in Arguments) info.ArgumentList.Add(argument);
+        if (StartupSettings is { } settings)
+        {
+            info.Environment[RuntimeStartupSettings.LegacyValidationKey] = settings.GpuValidation ? "1" : "0";
+            info.Environment[RuntimeStartupSettings.ValidationKey] = settings.GpuValidation ? "true" : "false";
+        }
         return info;
     }
 

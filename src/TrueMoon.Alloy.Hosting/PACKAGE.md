@@ -151,3 +151,12 @@ External-host sessions remain on the caller's owner/render thread. Dispose them 
 Migration: Alloy runtime types remain in `TrueMoon.Alloy`; Silk convenience adapters and standalone presentation live in `TrueMoon.Alloy.Hosting`. The old UI prototype moved to `TrueMoon.Alloy.Hosting.Compatibility` without type forwarders. Rebuild consumers after updating references/imports; binary compatibility across alpha changes is not promised.
 
 Known limit: the current tested NVIDIA ICD retains GDI resources across repeated Vulkan window creation. A successful package smoke does not close K7, prove physical DPI/device-loss behavior, or establish full alpha acceptance. Linux/macOS, ARM64, single-file, trimming, NativeAOT and self-contained deployment are not covered by this package smoke.
+
+## Unified standalone window settings
+
+Add `WindowConfigurationSchema.Default` (`Alloy:Window`) to the App profile and call
+`UseConfiguredPresentation(rootFactory, options => options.UseSkiaVulkan(), configure)`.
+Only scalar window/graphics/frame settings bind from sources; renderer factories,
+fonts, appearance hooks and view creation stay explicit. All fields are startup-only.
+Build/binding does not start a window or a GPU context. `WindowConfigurationSchema.Create`
+provides application-specific defaults and pure validation, as used by Editor.

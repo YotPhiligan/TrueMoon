@@ -28,6 +28,7 @@ public sealed class RenderPreparation : IAsyncDisposable
     private int _state, _disposing;
     internal RenderManifestLease Content { get; }
     internal CancellationToken Token => _token;
+    internal bool CanRetainSnapshot => Volatile.Read(ref _disposing) == 0 && !IsReleased && State == RenderPreparationState.Ready;
     internal LinkedListNode<RenderPreparation>? QueueNode;
     internal RenderPreparation(RenderDeviceOwner owner, RenderManifestLease content, CancellationToken external)
     { _owner = owner; Content = content; _external = external; _end = CancellationTokenSource.CreateLinkedTokenSource(external); _token = _end.Token; }

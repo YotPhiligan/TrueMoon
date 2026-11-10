@@ -5,6 +5,7 @@ using TrueMoon.Aether.Editor.Hierarchy;
 using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Scenes.Authoring;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Argentis;
 
@@ -22,6 +23,13 @@ public static class AetherEditorConfigurationExtensions
     /// beforehand are preserved. Registration and empty-workspace startup perform no SDK/compiler/window/game work.</remarks>
     public static IAppConfigurationContext UseAetherEditor(this IAppConfigurationContext context,
         Action<AetherOptions> configureEngine, Action<AetherEditorOptions>? configure = null)
+        => UseAetherEditor(context, configureEngine, configure, null);
+
+    /// <summary>Registers Editor with explicit authoring limits while preserving the existing resource owners.</summary>
+    /// <param name="context">App context.</param><param name="configureEngine">Engine composition.</param>
+    /// <param name="configure">Initial Editor data.</param><param name="configureAuthoring">Authoring limits.</param><returns>The same context.</returns>
+    public static IAppConfigurationContext UseAetherEditor(this IAppConfigurationContext context,
+        Action<AetherOptions> configureEngine, Action<AetherEditorOptions>? configure, Action<SceneAuthoringOptions>? configureAuthoring)
     {
         ArgumentNullException.ThrowIfNull(context); ArgumentNullException.ThrowIfNull(configureEngine);
         var options = new AetherEditorOptions(); configure?.Invoke(options); var snapshot = options.Snapshot();
@@ -39,7 +47,7 @@ public static class AetherEditorConfigurationExtensions
             if (defaultViewport)
                 engine.ViewportTransportFactory = resolver => resolver.Resolve<EditorViewportBinding>();
         });
-        context.UseAetherAuthoring();
+        context.UseAetherAuthoring(configureAuthoring);
         context.UseAetherEditorDocuments();
         context.Services(services =>
         {

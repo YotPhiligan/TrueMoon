@@ -1,119 +1,74 @@
 # Alloy / Argentis: текущее состояние и точка продолжения
 
-**2026-11-08 — UIA3d.3 исправлен TextBox line fit:** Height32 с default Padding8
-больше не обрезает низ default16/600 строки. Полный font line box получает место
-за счёт вертикальных отступов; clip внутри border отделён от позиции по Padding.
-NumberBox получает то же исправление, natural height и error badge сохранены.
-Exact raster regression против Height48, selected/unselected, Dark/Light1/1.5/2
-прошёл. Новые UI1184/Hosting154/Editor1412 каждый D/R, source/published3backend
-по18PNG/12comparisons и Vulkan0/0 прошли. [Причина/команды/scope](HISTORY.md#textbox-line-fit-2026-11-08).
-Далее PA8c.0, включая прежний дополнительный shadow-overlap случай; physical input/
-DPI/full solution/fresh NuGet consumer этим исправлением не повторялись.
+**2026-11-11 — CORE7.6: итоговая configuration/package сверка.**
+Hosting171/171 и Editor1496/1496 каждый D/R, Failed:0, Skipped:0.
+Source/published/fresh16package configuration collection:230checks/profile, оба DI;
+окно/GPU/game не активируются. Bundled native Skia/analyzer/targets/README payload
+проверены по SHA. Runtime/public API/внешние dependencies не менялись.
+[Guide](../core/CONFIGURATION_GUIDE.md), [команды/границы](HISTORY.md#core76-2026-11-10).
 
-**2026-11-08 — UIA3d.2 завершён:** TextBox/RichTextEditor/NumberBox используют
-сплошной квадрат Theme.Error стороной в высоту поля и символ Theme.OnError.
-Text/focus viewport и rich auto-height учитывают блок; tooltip активен на всей площади.
-Аудит исправил inline rename InvalidName binding и demo message/OverlayHost;
-командные/IO diagnostics сохранены. UI1176/Hosting154/Editor1412 каждый D/R,
-source/published3backend18PNG/12comparisons каждый и fresh5package Vulkan6cases D/R
-прошли, validation0/0. [Изменения/аудит/команды](HISTORY.md#validation-badge-2026-11-08).
-Дополнительный lower-field tooltip profile дал 2shadow-overlap pixels delta3/255
-вне badge; это отдельный PA8c.0 baseline пункт, основной profile прошёл без смены
-порогов. Physical input/DPI/full solution этим срезом не проверялись.
-
-**2026-11-08 — UIA3d.1 Vulkan frosted backdrop исправлен и проверен.**
-TextBox/RichTextEditor/NumberBox.Editor резервируют место для красного значка справа.
-OverlayHost показывает точный ErrorMessage с delay500ms, wrap/scroll и cleanup;
-Inspector сохраняет aggregate Diagnostics, draft/selection/history, inline labels убраны.
-BoxShadow/Shadow, themed PanelShadow/MenuShadow и Skia outer image-filter path
-подключены к Editor island styles и MenuPopup. Legacy contexts omitting optional
-shadow capability совместимы; App/DI/native ABI/dependencies не менялись.
-Первоначальные UIA3d opaque/raster proofs сохраняют собственный scope в [HISTORY](HISTORY.md#validation-shadows-2026-11-08); текущие native проверки — ниже.
-
-**UIA3d.1 закрыт:** в pinned native Skia к GENERAL source stage добавлен HOST,
-соответствующий существующему HOST_WRITE. DLL пересобрана, patch/hash включены в
-reproducible recipe/build metadata. Blur/default backdrop/ABI/ownership сохранены.
-Новые source Debug/published Release frosted profiles:18actual blur witnesses,
-18PNG/12comparisons,6Vulkan validation0/0 reports каждый. Fresh5package independent
-Vulkan consumer D/R по6cases и loaded native SHA прошёл. Старый native и отключённый
-blur отрицательные controls отклонены. Interop18 и composition36/leases18 прошли;
-UI1170/Hosting154/Editor1412 каждый D/R повторены, failed0/skipped0.
-[Причина/команды/хеши/scope](HISTORY.md#vulkan-backdrop-2026-11-08).
-Physical input/DPI/multi-monitor, VRAM/K7/K8/swapchain и full solution/release
-этим срезом не проверялись. Далее PA8c.0 visual baseline по запросу consumer;
-независимый Editor шаг — ED5b contract.
-
-Предыдущие typography PA8c.3b и ED5a.4 результаты сохраняют собственные даты/scope:
-[default fonts](HISTORY.md#default-fonts-2026-11-08),
-[camera/selection acceptance](../engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
-[Текущая очередь](PLAN.md#current-ui-queue), [дизайн-код](DESIGN.md).
+Предкоммитная UI suite11ноября: Alloy1224/1224 каждый D/R, failed/skipped0;
+[команды](HISTORY.md#precommit-2026-11-11). Прежние native SplitView/Studio/physical/K7
+profiles не повторялись. Таблица native/UI ниже относится к09ноября. UI очередь сохранена.
+[Предыдущий STATUS целиком](HISTORY.md#status-before-core76-2026-11-10).
 
 ## Состояние реализации
 
-PA8c.3b делает preferred family общим default; системный каталог применяется
-к parameterless backend и RichText, file-only override сохранён.
-
-SkiaSharp/native4.155.0 и прежний Vulkan ABI сохранены. PA8c.3a включает
-FontWeight100..900/FontItalic, styled measure/draw и cache keys; Rich FontWeight,
-Bold/Undo и requested→system chain→file fallback. File-only catalogs сохранены.
-
-UIA1 typed View/Data/scoped styles и App factories, UIA2 Window, UIA3 compact
-NumberBox/Vector3Editor/PropertyEditorRow, RichText auto-height, themed CheckBox
-и states реализованы. Numeric adjustment opt-in, draft/capture/cancel outcomes
-и stable identity gates сохранены. Platform.Silk button/wheel использует ordered
-cursor position и передаёт Shift/Ctrl. Прикладные Transform/history/units — Editor.
-
-INF1–4/6/7 имеют реализацию и bounded checks; INF5 diagnostics остаётся частичным.
-TreeView/menu/bindings/appearance/DPI существуют в указанных в HISTORY scopes;
-наличие API не закрывает все beta/PA1–PA10, alpha/K1–K9 или физическую приёмку.
+- SplitView владеет двумя pane hosts/divider и их content. Constraints заданы на
+  hosts; shortage сжимает minima пропорционально, конечные maxima оставляют остаток.
+  Preferred размер восстанавливается после расширения. Consumer владеет persistence.
+- Drag освобождает capture до callbacks. Esc/focus/capture/context loss отменяют,
+  внешняя preference (включая reentrant observer) прерывает без возврата старого значения.
+  Tab/axis arrows/Shift/Home/End, Dark/Light и typed/local appearance работают.
+- Cobalt App/IFactory demo с отдельными Data/View/Style и воспроизводимый fresh-package
+  runner находятся в ManualTests/AlloyTest. Studio/Editor layouts автоматически не мигрированы.
+- UIA1 View/Data/styles, UIA2 Window, UIA3 compact/numeric controls, UIA3d validation/
+  shadows/frosted fix/TextBox line fit и PA8c.3a/b typography сохранены. SkiaSharp/native
+  4.155.0, ABI, App/DI/lifecycle contracts не менялись; INF5 остаётся частичным.
 
 ## Проверки готовности
 
-Последний кодовый fonts/defaults запуск **2026-11-07/08**: Alloy1126/1126, Hosting154/154,
-Editor1300/1300 каждый D/R, failed0/skipped0. Source Debug/published Release ×
-dark/light:4Editor native runs, actual Segoe UI Variable Text600, scale1.5,
-header/menu/status/theme/idle/close/drain и UI/GPU/children owners0, validation0/0.
-Parameterless backend gallery: по18captures/12complete-frame comparisons в source
-Debug и published Release при synthetic1/1.5/2, outside-tolerance pixels0.
-Exact fresh4nupkg consumer Debug build/run и Release publish/run подтверждает
-default family и file-only override; public example build/publish также прошёл.
-[Подробные команды, baseline, initial failures и ограничения](HISTORY.md#default-fonts-2026-11-08).
+| 2026-11-09, scope | Фактический результат |
+| --- | --- |
+| UI xUnit | 1224/1224 каждый Debug/Release, failed0/skipped0; 40 новых SplitView cases |
+| Hosting xUnit | 154/154 каждый Debug/Release, failed0/skipped0 |
+| Editor xUnit | 1412/1412 каждый Debug/Release, failed0/skipped0 |
+| Native demo | source Debug/published Release × OpenGL/Vulkan: 4 успешных profiles, nested axes/input/state/idle/disposal; sessions0, Vulkan warning/error0 |
+| Independent package consumer | 3 fresh local nupkg, отдельный cache/feed, без ProjectReference; по21checks Debug/Release, build0errors/0warnings |
 
-Предыдущая opt-in fonts matrix: [PA8c.3a](HISTORY.md#system-fonts-2026-11-07).
-Прежние Skia update/full-solution/Editor/native numeric результаты сохраняют
-свои даты и scopes; новые full Aether/solution/Playing proof не объявлены.
+Native input программно routed в реально рисуемом окне. Screenshot OpenGL Light
+просмотрен. Source demo build0errors/3 прежних warnings в View2/SettingsFormSmoke;
+в новых C# файлах warnings не наблюдались. Общая рабочая версия0.2.5.2-alpha
+не изменена этой сессией; delivery proof использует0.2.5.2-splitview.20261109.1.
+Полные solution/Aether tests, actual Studio consumer и release matrix не запускались.
+
+Прежние UI/TextBox/backdrop/fonts результаты сохраняют свои даты и scopes:
+[line fit](HISTORY.md#textbox-line-fit-2026-11-08),
+[Vulkan backdrop](HISTORY.md#vulkan-backdrop-2026-11-08),
+[default fonts](HISTORY.md#default-fonts-2026-11-08).
+[Полный предыдущий STATUS](HISTORY.md#ui-status-before-split-view-2026-11-09).
 
 ## Блокеры и ограничения
 
-- Fonts: automatic opsz/arbitrary axes и plain-text per-glyph fallback не добавлены.
-  Physical DPI, performance/VRAM и fresh package GPU/Hosting matrix не проверялись.
-
-- Numeric physical arrows/modifiers, Esc с удерживаемой кнопкой и OS pointer
-  modifiers не подтверждены. Automation arrows поступали как UiKey.None; mixed
-  down/key/up не предоставляется текущим automation API. Требования не отменены.
-- K3: physical100/200% и разные DPI мониторов ещё требуют своего proof.
-- K7: прежний240-window run failed, GDI23→137/USER26→26; trace локализовал screen
-  HDC в NVIDIA ICD32.0.16.1742. Safe app-side fix не установлен, поиск workaround
-  остановлен по решению пользователя. AMD raw control не равен full UI K7.
-- K8 physical device/context loss, VRAM, resource trends и итоговая alpha matrix
-  открыты. OS/driver settings и hardware при документационной ревизии не менялись.
-- K9 имеет прежний managed baseline; новые rendering options требуют PA8c.0 и
-  текущих измерений. Старые capture/Name-binding failures не объявлены объяснёнными.
+- SplitView: physical held-button/Esc/OS capture, release вне настоящего окна,
+  multi-monitor DPI и системный accessibility не доказаны routed tests.
+  Collapse/docking/cursor/persistence policy не входят в v1. Synthetic scale1/1.5/2
+  проверена отдельно; local CPU package consumer не заменяет fresh-package GPU matrix.
+- PA8c.0 current-font visual baseline, включая прежний дополнительный shadow-overlap
+  2pixels delta3/255, остаётся. Automatic opsz/arbitrary axes/per-glyph fallback не добавлены.
+- Numeric physical arrows/modifiers/captured Esc и K3 physical100/200%/multi-monitor
+  по-прежнему требуют своего proof; UiKey.None в automation не считается дефектом контрола.
+- K7: прежний240-window run failed, GDI23→137/USER26→26, screen HDC в NVIDIA
+  ICD32.0.16.1742. Поиск workaround остановлен пользователем; этим срезом не возобновлён.
+- K8 device/context loss, VRAM/resource trends и final alpha/release matrix открыты.
+  K9 имеет прежний managed baseline; новые rendering options требуют измерений.
 
 ## Следующий конкретный шаг
 
-UIA3d.1 завершён; следующий UI visual шаг — PA8c.0 baseline по конкретному consumer.
-Независимый Editor шаг — [ED5b translation contract](../engine/EDITOR_PLAN.md#ed5b-translation).
-Общие controls добавлять в Alloy/Argentis по конкретной потребности consumer.
-
-Независимый visual-quality трек — PA8c.0 baseline на текущем Variable Text,
-затем PA8c.1/2 по наблюдаемым дефектам. Default policy и подключение Editor уже
-завершены в сохранённом scope. Numeric physical acceptance, K3/K7/K8 и wider
-release/fresh package matrix остаются отдельными проверками.
-
-Входящая Studio ui.resizable-panes остаётся proposed: Claim/Decision владельца
-ещё нужны, в этой документационной актуализации работа не принята.
-INF5 и отложенный RichTextEditor backlog выбирать по конкретному consumer.
+Передать Studio готовый SplitView API и проверить его actual layout/popup/capture/
+draft scenario у consumer. Независимые ветки: [ED5b](../engine/EDITOR_PLAN.md#ed5b-translation),
+PA8c.0 по наблюдаемому visual дефекту, INF5 по реальному diagnostics consumer.
+K3/K7/K8 и wider release остаются отдельной приёмкой.
 
 <!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
 <a id="текущие-проверки--wsi-stages2026-10-10"></a>

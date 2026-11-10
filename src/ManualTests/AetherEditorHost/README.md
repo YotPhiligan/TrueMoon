@@ -113,3 +113,29 @@ draft retained, same PID/surface,6PNG,1child=reaped and zero resources/validatio
 Sky supplies LMB drag only: moving RMB/MMB/Esc/focus loss have directed UI/GPU tests,
 physical held-button/multi-monitor DPI are separate gates. Neither profile proves
 device-loss/K7/VRAM acceptance. [Exact current evidence](../../docs/engine/HISTORY.md#ed5a4-acceptance-2026-11-08).
+
+## ED5b translation proof
+
+`--project fixture.aetherproj --smoke fresh-directory --smoke-translation --validation`
+uses the disposable two-cube scene template linked above. It checks clean-inspector
+admission/draft denial, actual future-bounds outline without document mutation,
+Esc cancellation, one release commit, actual solid pixels, Undo/Redo and final cleanup.
+It saves the disposable fixture before closing. translation.json and five translation
+PNGs accompany report.json; each profile requires four reaped children, zero owned
+resources and validation0/0. The first profile supports world XYZ/XY/XZ/YZ; the native
+scenario drags X. This is directed production UiSession/native GPU input, not physical
+translation input. [Source/published/fresh-package results](../../docs/engine/HISTORY.md#ed5b-translation-2026-11-09).
+
+## Unified configuration
+
+The executable captures launch commands through the common `ParseSingleUse` schema
+parser. Old aliases remain supported; inline/canonical forms and explicit false
+flags are accepted, duplicate scalar/flag aliases are rejected. Without an explicit
+validation flag, the host keeps legacy/canonical environment defaults; explicit
+true/false takes precedence, including over invalid lower environment input. The frozen command
+snapshot supplies explicit overrides to the App profile and configured Editor,
+engine, diagnostics and window registrations. Child bootstrap captures protected
+identity/parent/control separately; GPU validation is passed only to the owned
+child's environment. No global validation environment is changed. Generic JSON/env
+sources are an explicit composition-root choice, not automatic module IO.
+[Module schemas and compatibility](../../docs/core/CONFIGURATION_MODULES.md).

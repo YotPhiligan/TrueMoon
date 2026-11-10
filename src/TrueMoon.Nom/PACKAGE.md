@@ -214,3 +214,11 @@ checked separately; it does not prove power-loss durability. Actual guest-VM cra
 verification is deferred, and hardware power-off is excluded from current acceptance
 by the user. This package does not import models, decode images/audio, compile shaders
 or own GPU/voice resources.
+
+## Unified admission settings
+
+Add `NomConfigurationSchema.Default` (`Nom`) to the App profile, then call
+`UseConfiguredNom(configure)`. Store/queue/batch/document/index limits and drain
+budget are startup-only, validated and copied before registration. Startup opens
+no store; `OpenAssetStoreArguments` still supplies each project's identity/root,
+and the caller closes each factory product. Existing `UseNom` remains available.

@@ -119,6 +119,21 @@ public class EditorInspectorViewModel : ViewModel, IDisposable
     public bool CanStopPreview => _canStopPreview;
     /// <summary>Gets whether text differs from the captured baseline.</summary>
     public bool HasDraft => _active.Any(item => item.HasDraft);
+    internal bool CanTranslateViewport => !_disposed && CanEdit && !HasDraft && !_conflict && _numericGesture == null && !_resettingTransformGroup;
+    internal bool CommitViewportTranslation(Translation.TranslationTarget target, Translation.TranslationPosition position)
+    {
+        VerifyOwner(); Refresh(_selection);
+        if (!CanTranslateViewport || !ReferenceEquals(_baseline, target.Document) || _entity != target.Entity || _component != target.Component) return false;
+        var edits = target.CreateEdits(position);
+        if (edits.IsEmpty) return true;
+        var committed = false;
+        Mutate(() =>
+        {
+            var result = _commands.EditComponents(target.Document, new(new(Guid.NewGuid(), target.Document.Revision, "editor.viewport.translation"), edits));
+            committed = result.Succeeded; return result;
+        });
+        return committed;
+    }
     /// <summary>Gets field-independent mutation/conflict diagnostics.</summary>
     public string ErrorText => _error.ReplaceLineEndings("\n");
     /// <summary>Gets whether a complete mutation/conflict diagnostic is available.</summary>

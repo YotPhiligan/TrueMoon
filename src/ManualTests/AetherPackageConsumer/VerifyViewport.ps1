@@ -3,7 +3,9 @@ param(
     [Parameter(Mandatory)][string]$PackageVerification,
     [Parameter(Mandatory)][string]$ValidationDirectory,
     [Parameter(Mandatory)][string]$EvidenceDirectory,
-    [string]$RunDirectory
+    [string]$RunDirectory,
+    [ValidateSet('viewport','translation')][string]$Profile = 'viewport',
+    [string]$DependencyFeed = 'https://api.nuget.org/v3/index.json'
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -26,7 +28,8 @@ $hostRoot=Join-Path $run 'Host';New-Item -ItemType Directory -Path $hostRoot,(Jo
 Get-ChildItem -LiteralPath (Join-Path $workspace 'ManualTests/AetherEditorHost') -Filter '*.cs' -File|Copy-Item -Destination $hostRoot
 Copy-Item -LiteralPath (Join-Path $workspace 'Examples/AetherEditor/Assets/Fonts/NotoSans-Regular.ttf'),(Join-Path $workspace 'Examples/AetherEditor/Assets/Fonts/OFL.txt') -Destination (Join-Path $hostRoot 'Assets/Fonts')
 $feed=[Security.SecurityElement]::Escape($package.Feed)
-[IO.File]::WriteAllText((Join-Path $run 'NuGet.Config'),"<configuration><packageSources><clear/><add key='fresh' value='$feed'/><add key='nuget.org' value='https://api.nuget.org/v3/index.json'/></packageSources><packageSourceMapping><packageSource key='fresh'><package pattern='TrueMoon'/><package pattern='TrueMoon.*'/></packageSource><packageSource key='nuget.org'><package pattern='*'/></packageSource></packageSourceMapping></configuration>")
+$dependencies=[Security.SecurityElement]::Escape($DependencyFeed)
+[IO.File]::WriteAllText((Join-Path $run 'NuGet.Config'),"<configuration><packageSources><clear/><add key='fresh' value='$feed'/><add key='nuget.org' value='$dependencies'/></packageSources><packageSourceMapping><packageSource key='fresh'><package pattern='TrueMoon'/><package pattern='TrueMoon.*'/></packageSource><packageSource key='nuget.org'><package pattern='*'/></packageSource></packageSourceMapping></configuration>")
 [IO.File]::WriteAllText((Join-Path $run 'global.json'),'{"sdk":{"version":"'+$package.Sdk+'","rollForward":"disable"}}')
 [IO.File]::WriteAllText((Join-Path $hostRoot 'Host.csproj'),@"
 <Project Sdk="Microsoft.NET.Sdk">
@@ -73,15 +76,18 @@ try{
         }
         $assembly=if($viewportProfile-eq'Debug'){"$hostRoot/bin/Debug/net10.0/ViewportPackageHost.dll"}else{"$run/published/ViewportPackageHost.dll"}
         $case=Join-Path $evidence "native-$viewportProfile"
-        Invoke-Owned "native-$viewportProfile" @($assembly,'--project',"$target/fixture.aetherproj",'--smoke',$case,'--smoke-viewport','--validation') 420
-        $cleanup=Get-Content "$case/report.json" -Raw|ConvertFrom-Json;$acceptance=Get-Content "$case/viewport-acceptance.json" -Raw|ConvertFrom-Json
+        $profileFlag=if($Profile-eq'translation'){'--smoke-translation'}else{'--smoke-viewport'}
+        $profileReport=if($Profile-eq'translation'){'translation.json'}else{'viewport-acceptance.json'}
+        Invoke-Owned "native-$viewportProfile" @($assembly,'--project',"$target/fixture.aetherproj",'--smoke',$case,$profileFlag,'--validation') 420
+        $cleanup=Get-Content "$case/report.json" -Raw|ConvertFrom-Json;$acceptance=Get-Content "$case/$profileReport" -Raw|ConvertFrom-Json
         if(!$cleanup.Passed-or!$acceptance.Passed-or$cleanup.UiSessions-ne0-or$cleanup.GpuResources-ne0-or$cleanup.GpuHandles-ne0-or$cleanup.Mappings-ne0-or!$cleanup.Reaped-or$cleanup.ValidationErrors-ne0-or$cleanup.ValidationWarnings-ne0){throw "Failed native cleanup $viewportProfile"}
         foreach($id in 'TrueMoon.Aether','TrueMoon.Aether.Editor'){
             $installed=Join-Path $package.Cache ($id.ToLowerInvariant()+'/'+$package.Version+'/lib/net10.0/'+$id+'.dll')
             $actual=Join-Path (Split-Path $assembly) ($id+'.dll')
             if((Get-FileHash $installed -Algorithm SHA256).Hash-ne(Get-FileHash $actual -Algorithm SHA256).Hash){throw "Non-package binary $id"}
         }
-        $cases.Add([pscustomobject]@{Profile=$viewportProfile;Passed=$true;Report=$case;Checks=$acceptance.Cases;Children=$cleanup.Children;FailedBeforeGpu=$cleanup.FailedBeforeGpu;ValidationReports=$cleanup.ValidationReports})
+        $checks=if($Profile-eq'translation'){$acceptance.Captures}else{$acceptance.Cases}
+        $cases.Add([pscustomobject]@{Profile=$viewportProfile;Passed=$true;Report=$case;Checks=$checks;Children=$cleanup.Children;FailedBeforeGpu=$cleanup.FailedBeforeGpu;ValidationReports=$cleanup.ValidationReports})
     }
     $report.Completed=$true
 }catch{$report.Failure=$_.ToString();throw}finally{$report|ConvertTo-Json -Depth 20|Set-Content (Join-Path $evidence 'verification.json') -Encoding utf8NoBOM;Write-Host "Viewport package evidence: $evidence"}

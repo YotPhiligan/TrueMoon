@@ -1,19 +1,22 @@
 # Core: план bootstrap и общих контрактов
 
 <a id="current-core-queue"></a>
-## Точка продолжения — ревизия 2026-11-05
+## Точка продолжения — актуализация 2026-11-11
 
-CORE0–5 и bounded CORE6 имеют датированные proofs; это не объявление полного
-CORE6/release. Editor console/export/child health уже подключены у Aether и не
-ставятся будущими prerequisites. Текущий UI маршрут использует существующие
-App/IFactory/diagnostics contracts. Reliability owner координируется в
-[ARCH2e.4b](../engine/PLAN.md#arch2e4b-drain-diagnostics) только после evidence.
+По запросу пользователя ведётся [CORE7 — единая конфигурация App и модулей](#core7-unified-configuration).
+CORE7.0–7.6 завершены в configuration scope: [рабочее руководство](CONFIGURATION_GUIDE.md),
+[139keys/17schemas](CONFIGURATION_KEYS.md), [единый App/child delivery](../../ManualTests/ConfigurationDelivery/README.md).
+Текущие7suites:6945/6945 каждый D/R; solution D/R0errors. Source/published/fresh16packages:
+по230checks,4owned children/profile, оба DI;15program profiles.
+[Evidence/границы](HISTORY.md#core76-2026-11-10). Новые настройки целевых consumers
+подключать через общий слой; расширение providers/lifecycle — по отдельному запросу.
+CORE6 routing/metrics/quota, engine f.4 и physical/release gates независимы.
 
-Собственный следующий дизайн: выбрать конкретный consumer для App-private/
-bootstrap diagnostic routing либо aggregate metrics CORE6d; определить lifetime,
-bounded delivery и acceptance до кода. CORE6e generation и общий artifact quota —
-отдельные contracts, не выводимые из JSONL retention. Общая очередь —
-[roadmap](../PLAN.md#current-roadmap); прежние датированные «далее» ниже исторические.
+CORE0–5 и bounded CORE6 сохраняют исторические proofs. App-private/bootstrap
+diagnostic routing, aggregate metrics CORE6d/generation CORE6e и artifact quota
+остаются самостоятельными задачами. Editor console/export/child health уже имеют
+consumer; повторный post-reap drain требует causal evidence у engine owner.
+Общий engine/UI порядок — [roadmap](../PLAN.md#current-roadmap); CORE7 его не заменяет.
 
 Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Этапы ниже запланированы; конкретные semantics уточняются по существующему API перед реализацией.
 
@@ -83,6 +86,7 @@ factory требует корректные arguments. AppServiceLifecycle forwa
 | CORE4 | Общие utilities по потребности consumers | Buffers/scheduler, участвующие в контрольных сценариях, проверены на границах/lifetime; оптимизация только после измерения |
 | CORE5 | Поставка и пример headless app | Independent consumer подтверждает запуск/shutdown/diagnostics; references и package metadata соответствуют фактическому артефакту |
 | CORE6 | Структурированная диагностика — bounded профиль CORE6a–c, emergency/managed runs и первый operation профиль CORE6d; полный этап частично | [CORE6](#core6-структурированная-диагностика--2026-10-25): queues/sinks/lifecycle, tracing/operation metrics и Aether consumer; IPC propagation, aggregate metrics, bootstrap/routing/generation и release acceptance отдельно |
+| CORE7 | [Единая конфигурация App и всех модулей](#core7-unified-configuration), запланировано 2026-11-09 | Общие источники, ключи, приоритеты, parser, typed options, bootstrap и снимки; поэтапная миграция и проверка поставки. Сейчас готовы только план и инструкции |
 
 CORE0 предшествует выбору fixes. CORE1 и COB1/COB2 связаны через service ownership; lifecycle приложения остаётся задачей Core. CORE2/CORE4 развивать по потребности consumers, без неподтверждённого переписывания utilities.
 
@@ -340,6 +344,139 @@ filesystem maintenance не запускаются. Подробный конт�
 [проверки](HISTORY.md#архив-jsonl-и-конфигурация-для-ed8a--2026-10-30).
 Полный CORE6, App-private routing, aggregate metrics и release matrix остаются
 отдельными задачами. UI/report privacy policy ведётся только в Editor плане.
+
+<a id="core7-unified-configuration"></a>
+<a id="core7-единая-конфигурация-app-и-всего-фреймворка--запланировано-2026-11-09"></a>
+## CORE7. Единая конфигурация App и всего фреймворка — завершено 2026-11-11
+
+Основание: запрос пользователя унифицировать Args/EnvironmentVars, настройки App
+и их использование во фреймворке, закрепить это в инструкциях. Владелец общего контракта — Core
+(TrueMoon.Contracts/Configuration и TrueMoon/Configuration/App bootstrap).
+Модульные adapters/typed options остаются у владельцев модулей. Это единственный
+детальный план задачи; общая и модульные очереди ссылаются на него. Исторические
+проверки CORE2 сохраняются; CORE7.0–7.6 завершены в описанном configuration scope. [Исходная сверка и решение](HISTORY.md#configuration-unification-plan-2026-11-09).
+
+**2026-11-10 — CORE7.0 завершён как проектный этап.** [Карта использования](CONFIGURATION.md)
+и [точные сигнатуры/semantics API](CONFIGURATION_API.md) готовы. Введены проектные
+границы legacy/unified reader, optional App stage, schemas/codecs/provenance,
+snapshots/reload/write. Declarations + три consumer examples прошли Release type-check:
+0 errors/0 warnings, SDK10.0.403, без выполнения заглушек и production rebuild.
+[Запись проверки](HISTORY.md#core70-api-2026-11-10). Статическая карта 833 production
+файлов/6 args-env calls в5файлах сохраняет область сверки; код не мигрирован.
+
+**CORE7.1 реализован и проверен 2026-11-10.** Opt-in standalone profiles,
+schemas/defaults/codecs, normalized paths, explicit priorities, CLI/env/JSON и
+immutable raw snapshots; старые API не менялись. Уточнение metadata: optional
+Key.Codec/type-erased codec передаёт custom converter публичным schemas; поздние
+App/reload/write interfaces не публикуются как неработающие services.
+Core506/506 D/R;108newcases, source Debug/published Release/fresh3packages по15checks.
+Solution обычный incremental Debug0errors/236warnings, не full-solution tests.
+[Evidence](HISTORY.md#core71-2026-11-10), [usage](CONFIGURATION_USAGE.md).
+
+**CORE7.2 реализован и проверен 2026-11-10.** [App-owned stage/reader](CONFIGURATION_APP.md):
+all schemas bind/configure/validation/copies до module register/DI, optional catalog,
+borrowed nondisposable alias и independent snapshots. Cobalt/MS DI, legacy ordering,
+two Apps/repeated Build, failed creation/startup/disposal проверены; реальные
+две Mithril MainProcess declarations согласованы после всех register callbacks.
+Core554/554 D/R,48newcases; source/published/fresh6packages по36checks/profile.
+[Scope](HISTORY.md#core72-2026-11-10). Нет reload/write или автоматического cutover.
+
+### Цель и исходная точка
+
+Один и тот же логический параметр получает одинаковое имя, тип, приоритет и ошибку
+через CLI/env/JSON и публичную настройку модуля; потребители получают проверенные options
+через DI. Стандартом остаётся собственный контракт конфигурации TrueMoon, общий
+для Cobalt/MS DI; переход на Microsoft.Extensions.Configuration или новые зависимости
+не назначены этим решением.
+
+Текущее поведение, сверенное 9 ноября: App автоматически создаёт args/env/default;
+Get<T>(key) ищет по provider order, GetSection() без имени выбирает default; AddProvider
+вставляет в начало, поэтому произвольный поздний JSON provider может перекрыть CLI.
+Args поддерживает raw key=value, сохраняет префиксы, не объединяет --key value;
+env копирует все process variables с исходными именами. JSON opt-in и mutable Set/
+GetOrCreate могут синхронно писать файл. Часть typed module options настраивается
+callbacks отдельно, Editor имеет собственный CLI parser, RuntimeBootstrap читает
+env до App, Mithril использует общий IConfiguration для -u/-p/control pipe.
+
+### Целевые решения и ограничения
+
+Следующие правила — принятый ориентир реализации. Точные новые сигнатуры C#,
+форматы схем/aliases, профиль совместимости и способ регистрации фиксируются
+в CORE7.0 до изменения публичного API. Новые методы Bind/Options/Bootstrap
+пока не реализованы.
+
+1. **Один путь настройки и явный порядок.** Приоритет от низшего к высшему:
+   значения модуля по умолчанию → подключённые JSON/файлы → env → args → явные
+   программные переопределения/configure callbacks. Все переопределения применяются
+   до окончательной проверки и активации сервисов. Для значения известны источник,
+   раздел и ключ. Приоритет provider задаётся явно и не зависит от случайного
+   порядка AddProvider. Файлы подключаются по явным App paths с признаком
+   обязательности; поиск по произвольному рабочему каталогу не выполняется.
+2. **Единое адресное пространство.** Логические ключи включают модуль/раздел:
+   `App:Name`, `Editor:ProjectPath`; сравнение — `OrdinalIgnoreCase` без зависимости
+   от текущей культуры. Get/indexer/Exist/TryGet/чтение разделов/binding согласованно
+   возвращают итоговое значение. Корневой поиск не перебирает одноимённые листья
+   несвязанных разделов. Чтение исходного provider и объединённого корня различаются
+   явно; старый GetSection/default API переводится через профиль совместимости.
+3. **Общий CLI parser.** Поддержать `--key=value`, `--key value`, объявленные короткие
+   aliases, логические флаги, отрицательные числа, позиционные аргументы и разделитель
+   `--`. Нормализация префиксов и aliases едина для всех приложений и модулей.
+   Для повторного скалярного ключа побеждает последнее значение; упорядоченные
+   коллекции объявляются схемой, без неявного разделения по запятой. Отсутствующее
+   значение, неизвестная опция и конфликт aliases дают явную диагностику. Описать
+   переход с `-u/-p/-ud/-root` и `key=value`. Parser принимает явный `string[] args`
+   и работает без App/DI.
+4. **Предсказуемый env provider.** Настраиваемый префикс приложения/список разрешённых
+   ключей; двойное подчёркивание обозначает раздел: `TRUEMOON_EDITOR__PROJECTPATH`
+   → `Editor:ProjectPath` при префиксе `TRUEMOON_`. Одиночные подчёркивания и посторонние
+   переменные ОС не переименовываются по догадке. Неоднозначные имена/aliases после
+   нормализации отклоняются. Старое чтение env доступно через ограниченный адаптер
+   совместимости. Полное окружение не публикуется в диагностике.
+5. **Типизированные options и проверки.** Значения по умолчанию → общий binding →
+   явный callback модуля → проверка допустимости → копия/неизменяемые options в DI.
+   Поддержать вложенные значения, коллекции, enum и преобразование без зависимости
+   от культуры. Различать отсутствие/null/пустоту/ошибку; недопустимое значение
+   победившего источника не скрывать чтением младшего. Ошибка содержит ключ, тип
+   и источник, чувствительное значение маскируется. Внутренние экземпляры сервисов,
+   delegates и `IDiagnosticsConfiguration` переводятся к типизированной регистрации
+   DI; для прежнего хранения объектов в конфигурации нужен адаптер совместимости.
+6. **Bootstrap и граница процесса.** Общие parser/нормализация/проверки работают
+   до App; второй App или service locator для разбора args не создаётся. Модули
+   сохраняют типизированные launch/transport contracts. Parent/session/nonce/protocol
+   identity читаются отдельным защищённым bootstrap profile и не переопределяются
+   пользовательскими CLI/env/файлами. Данные дочернего процесса собираются из typed
+   launch data; проверки identity/размера/версии/ownership Aether/Mithril сохраняются.
+   Корневые пути и пути конфигурации определяются через общий bootstrap без цикла DI.
+7. **Снимки, перечитывание и запись.** По умолчанию потребитель получает проверенный
+   снимок; окружение не перечитывается на каждый Get/кадр. Явный reload собирает
+   и проверяет полный кандидат, затем атомарно публикует новую версию; при ошибке
+   остаётся прежняя. Настройки запуска требуют restart; динамические объявляются
+   явно и обновляются через reader/уведомления с определённым владельцем и cleanup.
+   Автоматическое наблюдение за файлами не обязательно для первой версии. Чтение
+   и изменение итоговой конфигурации не записывают env/CLI/JSON: сохранение — отдельная
+   явная операция. Новые гарантии сохранности при потере питания или транзакций
+   с произвольными внешними писателями в эту задачу не входят.
+
+### Этапы, consumers и критерии
+
+| ID | Результат | Критерий завершения |
+| --- | --- | --- |
+| CORE7.0 | Завершён проектный этап, 2026-11-10: [карта](CONFIGURATION.md), [API](CONFIGURATION_API.md) | Источники/consumers/legacy keys/options и точные добавочные signatures/semantics зафиксированы без новых обязательных членов legacy interfaces. Declarations + headless App Cobalt/MS DI, Mithril и Editor/Aether child examples скомпилированы Release0errors/0warnings; runtime/production proof не заявлен. Далее CORE7.1 |
+| CORE7.1 | Реализован и проверен, 2026-11-10: [standalone profile](CONFIGURATION_USAGE.md) | Normalized keys/sections/приоритеты, schema metadata/defaults/codecs, общий CLI parser, prefix env и explicit JSON; source pairs/collisions/null/invalid/copies/cancellation покрыты. Core506/506 D/R,108newcases; source/published/fresh3package consumer по15checks. App stage ещё не реализован; далее CORE7.2 |
+| CORE7.2 | Реализован и проверен, 2026-11-10: [App stage/reader](CONFIGURATION_APP.md) | All-schema deferred bind/configure/validation и private copies до register/DI, optional catalog, borrowed reader. Core554 D/R,48newcases; source/published/fresh6package consumer36checks/profile на Cobalt/MS DI с2MainProcess units. Legacy/new конфигурации отдельны; reload/write добавлены в CORE7.3 |
+| CORE7.3 | Реализован и проверен, 2026-11-10: [reload/changes/writer](CONFIGURATION_RELOAD.md) | Atomic raw+prepared snapshots, rollback/cancellation/no-op/startup-only restart rejection, bounded64subscriptions/1pending и cleanup. Explicit JSON patch/delete/null, no implicit reload/write, shared runtime gate и IO retry. Core619 D/R,65newcases; source/published/fresh6package consumer72checks/profile на Cobalt/MS DI; нет новых interprocess/durability/native guarantees |
+| CORE7.4 | Реализован и проверен, 2026-11-10: [Core/Mithril migration](CONFIGURATION_CORE_MITHRIL.md) | Standard Core name/paths/diagnostics data, DI activation, common selected bootstrap parser, original-provider protected typed launch. Legacy -u/-p/-ud/-root/appName retained via explicit adapters, process lifecycle unchanged. Core661 и Mithril155 D/R,86newcases; source/published/fresh6packages108checks/profile на обоих DI с real child graceful stop/reap; Mithril→TrueMoon dependency/API reviewed |
+| CORE7.5 | Реализован и проверен в configuration scope, 2026-11-10: [модульный guide](CONFIGURATION_MODULES.md) | Aether/Editor/ECS/render/authoring, Enerit pipes, Nom и Hosting используют общие схемы и deferred binding; resources/identity/captures отдельно. Editor CLI — общий parser; pre-App runtime flags/parent frozen, старые aliases/callbacks сохранены. Neutral Contracts helpers не вводят bootstrap dependency в Editor/Hosting/Nom/Enerit.110newcases; source/published/fresh16packages76checks/profile, оба DI. Full Aether deviations и native limits отдельно в HISTORY |
+| CORE7.6 | Завершён и проверен, 2026-11-11: [guide](CONFIGURATION_GUIDE.md), [keys](CONFIGURATION_KEYS.md), [delivery](../../ManualTests/ConfigurationDelivery/README.md) | Source solution D/R0errors;7suites6945/6945 D/R, включая full Aether3234.16fresh packages одной версии,5consumers×3forms, по230checks/4owned children на source/published/fresh profile; Cobalt/MS DI,0ProjectReference/fresh, payload/runtime hashes и metadata проверены.4API doc blocks compiled, guide example executed;8managed surfaces unchanged. Ordinary nested restore/старые reliability причины и native/GPU/release gates не объявлены исправленными |
+
+Исторический порядок согласования: CORE7.0 → CORE7.1 → CORE7.2. Контракт снимков/записи определить в CORE7.0,
+реализовать в CORE7.3 до перехода потребителей, которым нужен reload. CORE7.4/5
+можно выполнять параллельно в разных модулях по готовому общему контракту.
+Этот порядок сохранён как история; все этапы CORE7.0–7.6 выполнены. Профиль совместимости
+и затронутые версии/пакеты определяются в CORE7.0; общая версия автоматически не меняется.
+
+Готовность options/provider API и завершение миграции учитываются отдельно.
+Первичная запись CORE7 меняла документацию; реализация и новые проверки перечислены по этапам выше. Текущий engine f.4 остаётся независимым направлением работы.
 
 ## Критерии готовности
 

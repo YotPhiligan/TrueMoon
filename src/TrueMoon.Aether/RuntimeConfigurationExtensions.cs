@@ -18,6 +18,28 @@ namespace TrueMoon.Aether;
 /// <summary>Registers the selected game's runtime graph in the child App.</summary>
 public static class RuntimeConfigurationExtensions
 {
+    /// <summary>Registers a selected game from a frozen protected bootstrap and captured public flags.</summary>
+    /// <param name="context">App context.</param><param name="bootstrap">Validated pre-App capture.</param><returns>The same context.</returns>
+    public static IAppConfigurationContext UseAetherRuntime(this IAppConfigurationContext context, RuntimeBootstrap bootstrap)
+    {
+        ArgumentNullException.ThrowIfNull(bootstrap); ArgumentNullException.ThrowIfNull(bootstrap.Launch.Build);
+        if (bootstrap.Launch.Role != RuntimeRole.Game) throw new ArgumentException("Selected games require the game role.", nameof(bootstrap));
+        return RegisterRuntime(context, bootstrap.Launch, bootstrap.ParentProcessId, bootstrap.Settings,
+            bootstrap.ParentLaunch ?? new UnitLaunchSettings(ParentProcessId: bootstrap.ParentProcessId));
+    }
+
+    /// <summary>Registers built-in preview from a frozen protected bootstrap.</summary>
+    /// <param name="context">App context.</param><param name="bootstrap">Validated pre-App capture.</param><returns>The same context.</returns>
+    public static IAppConfigurationContext UseAetherPreviewRuntime(this IAppConfigurationContext context, RuntimeBootstrap bootstrap)
+    {
+        ArgumentNullException.ThrowIfNull(bootstrap);
+        var launch = bootstrap.Launch;
+        if (launch.Role != RuntimeRole.EditPreview || launch.Build != null || launch.RequireRestore || launch.Identity.GameBuildId != BuildIdentity.PreviewId)
+            throw new ArgumentException("Preview requires the built-in identity without a build or restore.", nameof(bootstrap));
+        return RegisterRuntime(context, launch, bootstrap.ParentProcessId, bootstrap.Settings,
+            bootstrap.ParentLaunch ?? new UnitLaunchSettings(ParentProcessId: bootstrap.ParentProcessId));
+    }
+
     /// <summary>Registers caller-independent runtime factories and one App-owned runtime host.</summary>
     /// <param name="context">App configuration with UseAether.</param><param name="launch">Validated child launch.</param>
     /// <param name="parentId">Owned parent process id.</param><returns>The same configuration.</returns>
@@ -42,8 +64,10 @@ public static class RuntimeConfigurationExtensions
         return RegisterRuntime(context, launch, parentId);
     }
 
-    private static IAppConfigurationContext RegisterRuntime(IAppConfigurationContext context, SessionLaunch launch, int parentId)
+    private static IAppConfigurationContext RegisterRuntime(IAppConfigurationContext context, SessionLaunch launch, int parentId,
+        RuntimeStartupSettings? settings = null, UnitLaunchSettings? parentLaunch = null)
     {
+        ArgumentNullException.ThrowIfNull(context);
         launch.Identity.Validate();
         if (launch.Build is { } build)
         {
@@ -63,10 +87,22 @@ public static class RuntimeConfigurationExtensions
             throw new ArgumentException("Runtime launch build/endpoint mismatch.", nameof(launch));
         ArgumentException.ThrowIfNullOrWhiteSpace(launch.ReportDirectory);
         launch = launch with { ReportDirectory = Path.GetFullPath(launch.ReportDirectory) };
+        if (settings is null || parentLaunch is null)
+        {
+            var captured = ConfigurationEnvironment.Capture(RuntimeStartupSettings.LegacyValidationKey, RuntimeStartupSettings.ValidationKey,
+                UnitParentProcessEventsHandler.ControlPipeKey);
+            settings ??= RuntimeStartupSettings.Parse(captured);
+            parentLaunch ??= new UnitLaunchSettings(ParentProcessId: parentId,
+                ControlPipe: captured.GetValueOrDefault(UnitParentProcessEventsHandler.ControlPipeKey));
+        }
+        if (parentLaunch.ParentProcessId != parentId) throw new ArgumentException("Bootstrap parent identities differ.", nameof(parentLaunch));
+        var frozenSettings = settings with { };
+        var frozenParent = parentLaunch;
         context.Services(services =>
         {
             if (!services.Exist<AetherHost>()) throw new InvalidOperationException("Call UseAether before UseAetherRuntime.");
             if (services.Exist<AetherRuntimeHost>()) throw new InvalidOperationException("The runtime is already registered.");
+            services.Instance(frozenSettings);
             PrimitiveEcsConfigurationExtensions.RegisterDefaults(services);
             if (!services.Exist<IFactory<Ecs.World>>())
                 services.Singleton<IFactory<Ecs.World>>(_ => new Factory<Ecs.World>(() => new()));
@@ -78,7 +114,7 @@ public static class RuntimeConfigurationExtensions
                 Register<PreviewGameSession>(services, _ => new Factory<PreviewGameSession>(() => new()));
             Register<FrameProducer>(services, _ => new Factory<FrameProducer>(() => new()));
             Register<UnitParentProcessEventsHandler>(services, resolver => new Factory<UnitParentProcessEventsHandler>(() =>
-                    new(resolver.Resolve<IConfiguration>(), resolver.Resolve<IAppLifetime>(), resolver.Resolve<IEventsSource<UnitParentProcessEventsHandler>>())));
+                    new(frozenParent, resolver.Resolve<IAppLifetime>(), resolver.Resolve<IEventsSource<UnitParentProcessEventsHandler>>())));
             Register<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)>(services, resolver =>
                     new Factory<RuntimeProtocol, (SessionLaunch Launch, IGameSession Game, FrameProducer Frames)>(args =>
                         new(args.Launch.Identity, args.Game, Environment.ProcessId, args.Frames.Configure, () => args.Frames.Dropped,
@@ -101,7 +137,7 @@ public static class RuntimeConfigurationExtensions
                     resolver.Resolve<IFactory<RuntimeProtocol, (SessionLaunch, IGameSession, FrameProducer)>>(),
                     resolver.Resolve<IFactory<PipesInvocationServer<IEngineControl>, (SessionLaunch, RuntimeProtocol)>>(),
                     launch.Role == RuntimeRole.EditPreview ? resolver.Resolve<IFactory<PreviewGameSession>>() : null,
-                    resolver.Resolve<IFactory<ChildDiagnosticForwarder, SessionLaunch>>()));
+                    resolver.Resolve<IFactory<ChildDiagnosticForwarder, SessionLaunch>>(), frozenSettings));
             services.Singleton<AetherRuntimeHost>(resolver => resolver.Resolve<IFactory<AetherRuntimeHost, SessionLaunch>>().Create(launch));
         });
         return context;

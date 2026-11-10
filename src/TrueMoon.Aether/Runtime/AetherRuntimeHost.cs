@@ -22,6 +22,7 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
     private readonly PipesInvocationServer<IEngineControl> _server;
     private readonly SessionLaunch _launch;
     private readonly int _parentId;
+    private readonly RuntimeStartupSettings _settings;
     private readonly ChildDiagnosticForwarder? _diagnostics;
     private readonly CancellationTokenSource _end;
     private readonly Lock _gate = new();
@@ -34,10 +35,11 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
 
     internal AetherRuntimeHost(AetherHost engine, IAppLifetime lifetime, UnitParentProcessEventsHandler parent,
         IDisposable game, FrameProducer frames, RuntimeProtocol protocol, PipesInvocationServer<IEngineControl> server,
-        SessionLaunch launch, int parentId, ChildDiagnosticForwarder? diagnostics = null)
+        SessionLaunch launch, int parentId, ChildDiagnosticForwarder? diagnostics = null, RuntimeStartupSettings? settings = null)
     {
         _engine = engine; _parent = parent; _game = game; _frames = frames; _protocol = protocol;
         _server = server; _launch = launch; _parentId = parentId; _diagnostics = diagnostics;
+        _settings = settings is null ? new() : settings with { };
         _end = CancellationTokenSource.CreateLinkedTokenSource(lifetime.AppCancellationToken);
     }
 
@@ -59,7 +61,7 @@ public sealed class AetherRuntimeHost : IAsyncDisposable
             _parent.StartListen(_parentId);
             var end = _end.Token;
             var gpu = _engine.Gpu.RunSurfaceProducerAsync(_launch, end,
-                validation: Environment.GetEnvironmentVariable("TRUEMOON_GPU_VALIDATION") == "1",
+                validation: _settings.GpuValidation,
                 frameProvider: (stamp, width, height) => { var frame = _protocol.CaptureRenderFrame(); return GpuFrameData.FromScene(stamp, frame.Tick, frame.Scene); });
             // Console.In can block synchronously even through ReadLineAsync on redirected stdin.
             // Give the owned reader its own thread so frame startup and fault observers are installed.

@@ -1,7 +1,14 @@
 # Enerit: состояние и точка продолжения
 
-**2026-11-05 — ревизия документов; новых runtime/generator/transport запусков нет.**
-[План](PLAN.md#current-enerit-queue), [прежний STATUS](HISTORY.md#status-before-planning-revision-2026-11-05).
+**2026-11-11 — CORE7.6: итоговая configuration/package сверка.**
+Runtime354/354 каждый D/R, Failed:0, Skipped:0 — CORE7.6. Предкоммитная
+сверка generator114/114 D/R прошла отдельно11ноября, failed/skipped0;
+[команды](HISTORY.md#precommit-2026-11-11).
+Единый16package source/published/fresh proof:230checks/profile всей collection,
+оба DI,4owned children/profile; native/GPU не активируются. Metadata/analyzer/
+payload closure проверен, runtime API и transport ownership не менялись.
+[Guide](../core/CONFIGURATION_GUIDE.md), [результаты/команды](HISTORY.md#core76-2026-11-10),
+[предыдущий STATUS](HISTORY.md#status-before-core76-2026-11-10).
 
 ## Реализация и сохранённые проверки
 
@@ -10,7 +17,7 @@ bounded waits/stop и первый ENE6d telemetry profile реализован�
 отдельный child diagnostic endpoint; control и logs не делят admission. Editor
 console/export уже имеют scoped consumers и не остаются новым prerequisite.
 
-Последний собственный записанный run — **2026-10-27: Enerit343/generator114** каждый
+Предшествующий runtime/generator run — **2026-10-27: Enerit343/generator114** каждый
 Debug/Release, failed/skipped0;3actual Preview children проверены отдельно у Aether.
 [ENE6d.4](HISTORY.md#ene6d4-отдельный-child-log-канал--2026-10-27).
 Предыдущий ENE5 closed-loop baseline126/generator114 относится к15октября:

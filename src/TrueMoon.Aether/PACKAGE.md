@@ -698,3 +698,52 @@ desired camera retained and actual ack denied without replacing the child/surfac
 SetPresentationSuspended(false) resumes the bounded latest camera lane. The consumer
 must also fence UI copies and drawn geometry/DPI; physical ResizeAsync(0,0) remains
 the separate render-surface suspension API. Resume preserves a pending camera wait queued while hidden until actual presentation. Bounded Windows x64 source/published/fresh-package acceptance is complete; physical held-RMB/MMB and multi-monitor DPI remain separate hardware gates.
+
+## Owned mesh render snapshots — ARCH1f.3
+
+`UseAetherRenderResources` also registers a non-owning
+`IFactory<RenderSnapshotView, RenderSnapshotViewRequest>` in
+`TrueMoon.Aether.Rendering.Snapshots`. A session receives this factory through DI,
+creates one caller-owned view for its resource binding, and disposes the view before
+the binding/device/World. The App host retains failed products for cleanup retry.
+
+After the binding is ready and Transform evaluation completes, call CaptureAsync
+at an externally serialized World boundary. Configuration explicitly selects a
+live entity camera or external rigid pose, physical extent and monotonic camera/
+surface revisions. Hidden renderers are still validated. Frozen draw values contain
+exact content keys, affine matrices/world bounds, linear per-instance color and
+complete source/tick/resource stamps. Current/pending share one immutable allocation;
+inspection data remain readable after release and grant no resource ownership.
+
+TakeLatestAsync transfers the latest pending frame to the sole recording reservation.
+SubmitAsync transfers it to an injected `IFactory<IRenderSnapshotSubmission,
+RenderSnapshotData>`. The backend owner is tracked before native work, must be
+exclusive, and must prove completion and safe cleanup. Coalescing/cancellation cannot
+release accepted work early; unknown completion fences the view and retains owners
+for retry. A zero-by-zero extent suspends publication; changed extent/camera requires
+an advanced generation. Admission is bounded by4096draw ranges,2MiB per payload,
+16MiB retained buffers,7envelopes and3accepted submissions.
+
+The default Vulkan resource backend still provides mesh upload/readback. A built-in
+mesh surface submission backend and Runtime Playing presentation fence follow in
+ARCH1f.4. This API does not change the primitive renderer or existing runtime wire
+formats. Source/published/fresh-package snapshot proofs use a deterministic memory
+backend and do not claim new native pixels/device-loss acceptance.
+
+## Unified startup settings
+
+Register `AetherConfigurationSchemas.Engine` with a unified profile and call
+`UseConfiguredAether(new AetherComposition { HostContractId = hostId,
+GameBuildId = buildId, RuntimeFactory = runtimeFactory })`. Sources bind data-only
+`AetherSettings`; identity, service factories and viewport ownership stay explicit.
+Schemas and matching `UseConfiguredAether*` helpers also cover ECS World, Scheduler,
+SceneLoading, Primitives, RenderResources and Authoring. All these settings are
+startup-only; a changed reload requires a new App. Existing typed `UseAether*`
+callbacks remain available.
+
+The child entry captures `RuntimeBootstrap.ReadEnvironment()` before App and passes
+it to `UseConfiguredAetherRuntime`. The protected launch envelope and parent/control
+identity are separate from public sources. Public GPU validation uses frozen
+`RuntimeStartupSettings`: canonical `TRUEMOON_AETHER_RUNTIME__GPUVALIDATION` overrides
+legacy `TRUEMOON_GPU_VALIDATION` (including 1/0). `NativeRuntimeLaunch.WithStartupSettings`
+passes flags in the owned child's environment without changing the parent process.

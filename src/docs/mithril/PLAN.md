@@ -1,7 +1,9 @@
 # Mithril: план units и процессного lifecycle
 
 <a id="current-mithril-queue"></a>
-## Точка продолжения — ревизия 2026-11-05
+## Точка продолжения — актуализация 2026-11-10
+
+CORE7.4 выполнен: [общий parser/profile и protected typed bootstrap](../core/CONFIGURATION_CORE_MITHRIL.md), Mithril155 D/R и real-child fresh package proof. Детальная задача только в [Core PLAN](../core/PLAN.md#core7-unified-configuration), [evidence](HISTORY.md#core74-2026-11-10). Дальнейшая самостоятельная очередь MIT6 сохранена.
 
 MIT0–5, первый MIT6a и ready-file fixture fix имеют датированные bounded proofs.
 ARCH2 package/headless/native уже выполнен у Aether; не назначать его заново как

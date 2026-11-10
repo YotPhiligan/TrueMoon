@@ -3,7 +3,7 @@
 **2026-11-07.** Реализация поверх [CPU v1](RENDERING_CONTRACTS.md#cpu-v1).
 Этапы/acceptance — [ARCH1f](PLAN.md#arch1f-rendering), фактические проверки —
 [HISTORY](HISTORY.md#render-resources-2026-11-07). Это resource readiness;
-mesh snapshots/draw/surface integration и Runtime Playing fence остаются f.3/4.
+[Owned snapshots](RENDER_SNAPSHOTS.md) добавлены в f.3; draw/surface integration и Runtime Playing fence остаются f.4.
 
 ## App и владельцы
 
@@ -16,6 +16,7 @@ App-owned RenderResourceHost и non-disposable typed Factory wrappers:
 | RenderDeviceOwner | RenderDeviceRequest | Caller освобождает рано; Host сохраняет fallback owner |
 | RenderPreparation | RenderPreparationRequest | Caller владеет operation/ready leases до DisposeAsync |
 | RenderWorldBinding | RenderWorldBindingRequest | Caller владеет current/candidate/retired preparations; World borrowed |
+| RenderSnapshotView | RenderSnapshotViewRequest | Caller владеет current/pending/recording/submission bundles; binding/device/World borrowed; [f.3](RENDER_SNAPSHOTS.md) |
 
 Host exclusively owns Content catalog; backend factory borrowed. Backend result
 owned device, upload result owned cache entry. Default backend — lazy Vulkan;
@@ -97,8 +98,9 @@ Options копируются при composition/owner creation и могут т�
 Byte budgets допускают0, queued jobs0; остальные count limits положительны.
 Новые secondary metadata caps64scopes/16384wrappers/2048slots выбраны явно для bounded
 первого профиля. Existing scene/wire/primitive/checkpoint limits не менялись.
-Pipeline16/snapshot/frame budgets из f.0 будут применяться в f.3/4; этот backend
-ещё не создаёт pipelines/targets и не заявляет общий VRAM cap.
+Snapshot payload/envelope/submission ceilings из f.0 уже применяются в [f.3](RENDER_SNAPSHOTS.md).
+Pipeline16 и actual surface/frame integration остаются f.4; resource backend ещё не
+создаёт pipelines/targets и не заявляет общий VRAM cap.
 
 ## Preparation, cancellation и partial creation
 
@@ -145,7 +147,8 @@ Old cleanup failure после publication возвращает Committed=true+C
 и удерживается до disposal retry. Binding never disposes borrowed World.
 
 Host stop немедленно закрывает CPU/device/factory/use admission, затем cancels/drains
-bindings/preparations, releases devices/backend, последним catalog. Cancelled StopAsync
+snapshot views/accepted uses, затем bindings/preparations, devices/backend и последним catalog.
+Failed view cleanup удерживает dependencies до retry. Cancelled StopAsync
 wait не отменяет actual cleanup task и не объявляет IsReleased. Successful stages не
 повторяют native frees, failed owners остаются reachable. Existing SceneWorld owns
 свои import leases; view cleanup должно закончиться до SceneWorld.Dispose.

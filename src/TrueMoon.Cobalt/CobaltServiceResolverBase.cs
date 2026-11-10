@@ -93,8 +93,12 @@ public abstract class CobaltServiceResolverBase : IServiceResolver, IDisposable,
         try
         {
             CheckDepth(type);
-            if (_activations.Any(a => ReferenceEquals(a.Resolver, resolver) && a.Service == type))
-                throw new ServiceResolvingException(type, _dependencyPath, ServiceResolutionFailure.CircularDependency);
+            for (var index = 0; index < _activations.Count; index++)
+            {
+                var activation = _activations[index];
+                if (ReferenceEquals(activation.Resolver, resolver) && activation.Service == type)
+                    throw new ServiceResolvingException(type, _dependencyPath, ServiceResolutionFailure.CircularDependency);
+            }
             _activations.Add((resolver, type));
             active = true;
             var value = resolver switch

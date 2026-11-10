@@ -57,16 +57,17 @@ public class AppBuilder : IAppBuilder
             action(ctx);
         }
         
-        foreach (var action in ctx.GetConfigurations())
-        {
-            action(configuration);
-        }
+        var hasConfigurationStage = ctx.CompleteConfiguration(configuration);
         
         var serviceResolver = _serviceResolverBuilder.Build(configuration, ctx.GetServicesRegistrations());
         
         try
         {
-            if (configuration.Get<IDiagnosticsConfiguration>(TrueMoon.Diagnostics.ConfigurationExtensions.DiagnosticsConfigurationName) != null)
+            // Instantiate the one owned runtime even if no application service requests its borrowed reader.
+            if (hasConfigurationStage) serviceResolver.Resolve<ConfigurationRuntime>();
+            // Diagnostic resources are selected by composition, independent of mutable settings/object-bag keys.
+            if (serviceResolver.GetService(typeof(DiagnosticSubscription)) is null &&
+                configuration.Get<IDiagnosticsConfiguration>(TrueMoon.Diagnostics.ConfigurationExtensions.DiagnosticsConfigurationName) != null)
                 serviceResolver.Resolve<DiagnosticSubscription>();
             return CreateApp(serviceResolver);
         }

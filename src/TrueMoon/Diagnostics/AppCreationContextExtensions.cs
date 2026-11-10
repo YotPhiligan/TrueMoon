@@ -4,6 +4,28 @@ namespace TrueMoon.Diagnostics;
 
 public static class AppCreationContextExtensions
 {
+    /// <summary>Binds standard scalar pipeline defaults before registering any diagnostic resources.</summary>
+    /// <param name="context">App context with DiagnosticsConfigurationSchema.Default in its profile.</param>
+    /// <param name="action">Listener and legacy source-filter composition.</param>
+    /// <param name="configure">Pure explicit setting overrides.</param><param name="sinkFactories">Borrowed factories; products transfer to the pipeline.</param>
+    /// <param name="emergencyWriter">Optional borrowed emergency output; never serialized or disposed by the pipeline.</param>
+    /// <returns>The same context.</returns>
+    public static IAppConfigurationContext UseConfiguredDiagnostics(this IAppConfigurationContext context,
+        Action<IDiagnosticsConfiguration>? action = null, Action<DiagnosticsSettings>? configure = null,
+        IReadOnlyList<IFactory<IDiagnosticSink>>? sinkFactories = null, TextWriter? emergencyWriter = null)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var factories = sinkFactories?.ToArray() ?? [];
+        return context.ConfigureModule(DiagnosticsConfigurationSchema.Default, (app, settings) =>
+        {
+            app.Services(services => services.RemoveAll<DiagnosticsSettings>().Instance(settings));
+            var options = settings.ToOptions();
+            options.SinkFactories = factories;
+            options.Emergency.Writer = emergencyWriter;
+            UseDiagnosticsCore(app, options.Snapshot(), action, false);
+        }, configure);
+    }
+
     /// <summary>Enables diagnostics owned by the application. Repeated calls replace earlier settings and registrations.</summary>
     /// <param name="context">Application setup context.</param>
     /// <param name="action">Optional settings for the replacement diagnostics configuration.</param>
@@ -24,15 +46,17 @@ public static class AppCreationContextExtensions
     }
 
     private static IAppConfigurationContext UseDiagnosticsCore(IAppConfigurationContext context,
-        DiagnosticPipelineOptions? options, Action<IDiagnosticsConfiguration>? action)
+        DiagnosticPipelineOptions? options, Action<IDiagnosticsConfiguration>? action, bool mirrorLegacy = true)
     {
         ArgumentNullException.ThrowIfNull(context);
         var configuration = new DiagnosticsConfiguration();
         configuration.AddFilter("TrueMoon");
         action?.Invoke(configuration);
-        context.Configuration(conf => conf.Set<IDiagnosticsConfiguration>(ConfigurationExtensions.DiagnosticsConfigurationName, configuration));
+        // The old object-bag entry is a compatibility mirror, never the resource activation mechanism.
+        if (mirrorLegacy) context.Configuration(conf => conf.Set<IDiagnosticsConfiguration>(ConfigurationExtensions.DiagnosticsConfigurationName, configuration));
         context.Services(services =>
         {
+            services.RemoveAll<IDiagnosticsConfiguration>().Instance<IDiagnosticsConfiguration>(configuration);
             services.RemoveAll<DiagnosticPipeline>();
             services.RemoveAll<DiagnosticRecordAccess>().RemoveAll<IDiagnosticRecordReader>().RemoveAll<IDiagnosticRecordImporter>().RemoveAll<IDiagnosticHealthReader>()
                 .RemoveAll<IDiagnosticArchiveReader>().RemoveAll<IDiagnosticConfigurationReader>();

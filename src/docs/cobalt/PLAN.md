@@ -1,13 +1,19 @@
 # Cobalt / DI: план модуля
 
 <a id="current-cobalt-queue"></a>
-## Точка продолжения — ревизия 2026-11-05
+## Точка продолжения — актуализация 2026-11-09
 
-Следующий локальный performance срез после COB5a attribution — production
-no-capture cycle check с прежним dependency path/error/recovery/ownership,
-runtime/generator/lifecycle regressions и повтором paired graph measurements.
-Variant allocation results не объявляются production optimization. Open-generic
-reflection/enumerable metadata оптимизируются затем отдельными изменениями.
+По запросу пользователя выполнены две заявки Studio в **COB6e**: короткие стабильные
+hint names и XML docs служебной регистрации. Детали и критерии —
+[COB6e](#cob6e-generator-consumer-fixes), [проверки](HISTORY.md#cob6e-generator-2026-11-09). Следующий локальный шаг указан ниже.
+
+**COB5a.1 выполнен2026-11-09:** production activation-cycle predicate заменён
+индексным обходом без capture. Runtime/adapter179 и generator96 каждый D/R прошли;
+frozen original/optimized COB7 graph подтвердил снижение managed allocations.
+[Контракт и критерии](#cob5a1-production-cycle-check),
+[парные измерения и ограничения](HISTORY.md#cob5a1-production-2026-11-09).
+Следующий performance срез — open-generic/reflection и synthesized enumerable
+metadata по отдельному измеренному consumer; scopes/API/migration не назначены.
 
 COB6 quality/COB5/COB7 имеют прежние bounded proofs; не назначать весь старый
 quality маршрут повторно. Cobalt default и Microsoft DI adapter сохраняются;
@@ -314,6 +320,21 @@ COB5 закрыт как первый baseline указанного graph/окр
 через собственный TrueMoon API, включая errors/cancellation/ownership и удобство;
 миграция определяется этим сравнением отдельно.
 
+<a id="cob5a1-production-cycle-check"></a>
+### COB5a.1: production no-capture cycle check — 2026-11-09
+
+По запросу пользователя, owner `/root/cobalt_cob5a`; параллельный ED5b принадлежит
+другому агенту. COB6e/source generator, Contracts и общие package versions сохраняются.
+
+- [x] Заменить только захватывающий activation-cycle predicate индексным обходом
+  прежнего resolver/service tuple. Lock, depth/path, failure recording, activation
+  push/pop, retry, aliases и ownership не меняются.
+- [x] Runtime/adapter и generator Debug/Release regressions, включая разные
+  registrations одного service, разные closed generic types, cycle/depth recovery.
+- [x] Один frozen COB7 graph v1: original/optimized runtime, provider behavior,
+  Dry и paired BDN warm measurements; сохранить Mean/Error, allocations, fingerprints
+  и неизменную power plan. Scope/precision отдельно от full cold/App/release.
+
 ### COB5a: источники аллокаций warm resolution — 2026-10-29
 
 По запросу пользователя выбран отдельный performance investigation Cobalt.
@@ -341,8 +362,8 @@ overhead на неизменённом COB7 graph; полный cold/App/package
 Исследование проверено2026-10-29: 10 Dry/10 bounded paired BDN cases, 20 provider
 behavior scenarios, 158 unchanged source fingerprints; counters и no-capture
 experiment подтвердили32 B на activation predicate и два32 B generic costs.
-Production optimization не выполнена. Следующий срез — адресная замена predicate
-с полными собственными регрессиями и повтором paired measurements; generic cache/
+На дату attribution production optimization не выполнялась. Адресная замена
+predicate и собственные регрессии/paired measurements завершены в COB5a.1 выше; generic cache/
 dispatch требует отдельного решения. [Evidence и точные границы](HISTORY.md#cob5a-warm-allocations--2026-10-29).
 
 ### COB7: сравнение providers на App graph v1 — 2026-10-15
@@ -424,6 +445,33 @@ keyed counterparts и полная ecosystem conformance **не входят в 
 новые capabilities добавляются по потребности собственных приложений, без
 обязательного соответствия чужому контейнеру. Синхронизация runtime/generator
 contracts и корректные errors/ownership остаются обязательными.
+
+<a id="cob6e-generator-consumer-fixes"></a>
+### COB6e: две адресные правки Cobalt generator — 2026-11-09
+
+Принято по запросу пользователя из заявок
+[generated hint names](../requests/cobalt/20261107-studio-generated-hint-names-87952664/Request.md) и
+[generated XML docs](../requests/cobalt/20261107-studio-generated-xml-docs-56375bd8/Request.md).
+
+- Меняется только hint name AddSource: ASCII-префикс implementation до36символов,
+  SHA-256 полного прежнего resolver key и суффикс Resolver/AliasResolver; компонент
+  не длиннее128символов. Полный ключ сохраняет service/implementation/lifetime/alias.
+  Имена классов, дедупликация регистраций и runtime/lifetime/ownership не меняются.
+- Public CobaltResolversRegistration и Init сохраняют видимость и получают summary;
+  consumer не требует NoWarn, его собственный CS1591 остаётся наблюдаемым.
+- Приёмка: длинные/похожие/Unicode/nested/closed и open generic types, повторы и
+  lifetime/aliases не конфликтуют; hint names стабильны между независимыми запусками
+  и перестановкой регистраций. Запись generated sources на Windows проходит.
+- Debug/Release: генератор и runtime regressions; fresh bundled package consumer
+  с EmitCompilerGeneratedFiles=true, GenerateDocumentationFile=true и CS1591 в
+  WarningsAsErrors; executable graph проверяет initializer, identity и disposal.
+  Consumer negative control подтверждает собственный undocumented public member.
+- Поставка проверяется на текущей общей версии; external publish и проверка самой
+  Studio выполняются отдельно потребителем, результаты source fixture их не заменяют.
+
+Проверено2026-11-09: generator96/runtime179 каждый Debug/Release; fresh bundled
+package0.2.5.2-alpha consumer —9sources/11checks,0warnings/0errors каждый D/R,
+negative CS1591 controls прошли. [Команды/scope](HISTORY.md#cob6e-generator-2026-11-09).
 
 ## Критерии готовности
 

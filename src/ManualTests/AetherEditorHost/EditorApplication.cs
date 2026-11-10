@@ -12,6 +12,7 @@ using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
+using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 
@@ -21,7 +22,9 @@ internal static class EditorApplication
 {
     internal static async Task RunAsync(EditorLaunchOptions options)
     {
-        if (options.Validation) Environment.SetEnvironmentVariable("TRUEMOON_GPU_VALIDATION", "1");
+        var runtimeSettings = options.ResolveRuntimeSettings(ConfigurationEnvironment.Capture(
+            RuntimeStartupSettings.LegacyValidationKey, RuntimeStartupSettings.ValidationKey));
+        options = options with { Validation = runtimeSettings.GpuValidation };
         var smoke = options.SmokeDirectory;
         if (options.LegacyProject && !File.Exists(options.ProjectPath)) throw new FileNotFoundException("Game project not found.", options.ProjectPath);
         if (smoke != null && Directory.Exists(smoke)) throw new IOException("Use a new smoke directory.");
@@ -33,24 +36,32 @@ internal static class EditorApplication
         var fonts = SkiaFontCatalog.FromSystemFonts([FontDefaults.Family, FontDefaults.FallbackFamily], fallbackFonts);
         await using var app = App.Build(context =>
         {
-            context.UseDiagnostics(new DiagnosticPipelineOptions
+            context.UseConfiguration(ConfigurationProfiles.Create(profile =>
             {
-                JsonDirectory = smoke == null ? Path.Combine(Path.GetTempPath(), "TrueMoon", "Diagnostics", "Editor") : Path.Combine(directory, "diagnostics", "editor"),
-                JsonUseRunDirectories = true
-            });
+                profile.AddSchemas(); profile.AddSchema(DiagnosticsConfigurationSchema.Default);
+                profile.AddSchema(AetherConfigurationSchemas.Engine); profile.AddSchema(AetherConfigurationSchemas.Authoring);
+                profile.AddSchema(EditorConfigurationSchemas.Options); profile.AddSchema(EditorConfigurationSchemas.Diagnostics);
+                profile.AddSchema(EditorConfigurationSchemas.Window);
+                profile.Override("App:Name", "TrueMoon Aether Editor");
+                profile.Override("Diagnostics:JsonDirectory", smoke == null ? Path.Combine(Path.GetTempPath(), "TrueMoon", "Diagnostics", "Editor") : Path.Combine(directory, "diagnostics", "editor"));
+                profile.Override("Diagnostics:JsonUseRunDirectories", true);
+                profile.Override("Aether:ReportDirectory", directory); profile.Override("Aether:BuildDirectory", buildDirectory);
+                profile.Override("Aether:GpuValidation", options.Validation);
+                profile.Override("Editor:ProjectPath", options.LegacyProject ? null : options.ProjectPath);
+                profile.Override("Editor:Window:Title", "TrueMoon Aether Editor · " + (options.ProjectPath == null ? "No project" : Path.GetFileNameWithoutExtension(options.ProjectPath)));
+            }));
+            context.UseCoreConfiguration().UseConfiguredDiagnostics();
             if (options.LegacyProject) context.Services(services => services
                 .Singleton<EditorWorkspace>(_ => new(EditorScene.Demo()))
                 .Singleton<IFactory<EditorView>>(r => new Factory<EditorView>(() => new(r.Resolve<EditorViewModel>(),
                     r.Resolve<IViewStyle<EditorView>>(), r.Resolve<IFactory<EditorDocumentView>>(), null, true,
                     r.Resolve<IFactory<EditorStatusBarView, EditorStatusBarArguments>>(), r.Resolve<IFactory<EditorHierarchyView>>()))));
-            context.UseAetherEditor(engine =>
+            context.UseConfiguredAetherEditor(new AetherComposition
             {
-                engine.HostContractId = BuildIdentity.HostId; engine.GameBuildId = new('0', 64); engine.ReportDirectory = directory;
-                engine.BuildDirectory=buildDirectory;
-                engine.RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime");
-            }, editor => editor.ProjectPath = options.LegacyProject ? null : options.ProjectPath);
-            context.UseAetherEditorWindow(fonts, window => window.Title = "TrueMoon Aether Editor · " +
-                (options.ProjectPath == null ? "No project" : Path.GetFileNameWithoutExtension(options.ProjectPath)));
+                HostContractId = BuildIdentity.HostId, GameBuildId = new('0', 64),
+                RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime")
+            });
+            context.UseConfiguredAetherEditorWindow(fonts);
         });
         var projects = app.Services.Resolve<EditorProjects>()!;
         var engine = app.Services.Resolve<AetherHost>()!; var window = app.Services.Resolve<HostedUiWindow>()!;
@@ -85,6 +96,8 @@ internal static class EditorApplication
                     documents, engine, runtimeFactory, app.Services.Resolve<EditorSession>()!, app.Services.Resolve<EditorPreview>()!, app.Services.Resolve<EditorViewportState>()!);
                 else if (options.AcceptanceSmoke) await EditorViewportAcceptanceSmoke.RunAsync(directory, window, ui, view!, workspace,
                     documents, engine, runtimeFactory, app.Services.Resolve<EditorSession>()!, app.Services.Resolve<EditorPreview>()!, app.Services.Resolve<EditorViewportState>()!, app.Services.Resolve<EditorScenePlayback>()!);
+                else if (options.TranslationSmoke) await EditorTranslationSmoke.RunAsync(directory, window, ui, view!, workspace,
+                    documents, selectedProject!.Documents!, engine, runtimeFactory, app.Services.Resolve<EditorSession>()!, app.Services.Resolve<EditorPreview>()!);
                 else if (options.NavigationSmoke) await EditorViewportInputSmoke.RunAsync(directory, window, ui, view!, workspace,
                     documents, selectedProject!.Documents!, engine, runtimeFactory, app.Services.Resolve<EditorSession>()!,
                     app.Services.Resolve<EditorPreview>()!, app.Services.Resolve<EditorViewportState>()!);

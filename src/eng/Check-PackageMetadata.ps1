@@ -2,6 +2,8 @@
 [CmdletBinding()]
 param(
     [switch] $Pack,
+    [switch] $NoBuild,
+    [Alias('Project')] [string[]] $IncludeProject = @(),
     [string[]] $DeferredProject = @('TrueMoon.Aether/TrueMoon.Aether.csproj'),
     [string] $RunDirectory,
     [ValidateRange(1,1800)] [int] $TimeoutSeconds = 180
@@ -21,6 +23,10 @@ function Invoke-Dotnet([string] $Name, [string[]] $Arguments) {
     $info.RedirectStandardOutput = $true; $info.RedirectStandardError = $true
     $info.StandardOutputEncoding = [Text.Encoding]::UTF8; $info.StandardErrorEncoding = [Text.Encoding]::UTF8
     $info.Environment['DOTNET_CLI_UI_LANGUAGE'] = 'en'
+    $info.Environment['DOTNET_SKIP_FIRST_TIME_EXPERIENCE'] = '1'
+    $info.Environment['DOTNET_ADD_GLOBAL_TOOLS_TO_PATH'] = 'false'
+    $info.Environment['DOTNET_GENERATE_ASPNET_CERTIFICATE'] = 'false'
+    $info.Environment['DOTNET_NOLOGO'] = '1'
     foreach ($argument in $Arguments) { $info.ArgumentList.Add($argument) }
     $process = [Diagnostics.Process]::Start($info)
     $exitCode = $null; $timedOut = $false
@@ -48,6 +54,12 @@ try {
     $projectPaths = @(& git -C $workspace ls-files --cached --others --exclude-standard -- '*.csproj' '*.fsproj' '*.vbproj')
     if ($LASTEXITCODE) { throw 'Cannot enumerate repository projects.' }
     $projectPaths = @($projectPaths | Where-Object { Test-Path -LiteralPath (Join-Path $workspace $_) } | Sort-Object -Unique)
+    if ($IncludeProject.Count) {
+        $requested = @($IncludeProject | ForEach-Object { [IO.Path]::GetFullPath($_, $workspace) })
+        $known = @($projectPaths | ForEach-Object { [IO.Path]::GetFullPath($_, $workspace) })
+        foreach ($path in $requested) { if ($path -notin $known) { throw "Requested project is not in the repository: $path" } }
+        $projectPaths = @($projectPaths | Where-Object { [IO.Path]::GetFullPath($_, $workspace) -in $requested })
+    }
     $inputPaths = @($projectPaths | ForEach-Object { Join-Path $workspace $_ })
     $inputPaths += @($projectPaths | ForEach-Object { Get-ChildItem -LiteralPath ([IO.Path]::GetDirectoryName((Join-Path $workspace $_))) -File -Filter '*.md' } | Select-Object -ExpandProperty FullName)
     $inputPaths += @(& git -C $workspace ls-files --cached --others --exclude-standard -- '*.props' '*.targets' 'global.json' | ForEach-Object { Join-Path $workspace $_ })
@@ -83,6 +95,7 @@ try {
             $metadata = $project.Metadata; $id = $metadata.PackageId
             $feed = Join-Path $run $(if ($project.Deferred) { 'deferred-preview' } else { 'packages' })
             $arguments = @('pack',$project.Project,'--configuration','Release','--output',$feed,'--verbosity','quiet')
+            if ($NoBuild) { $arguments += @('--no-build','--no-restore') }
             if ($project.Deferred) { $arguments += '-property:IsPackable=true' }
             $null = Invoke-Dotnet "pack-$id" $arguments
             $archives = @(Get-Item -LiteralPath (Join-Path $feed "$id.$($metadata.PackageVersion).nupkg") -ErrorAction SilentlyContinue)

@@ -6,6 +6,7 @@ using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
+using TrueMoon.Configuration;
 
 namespace TrueMoon.ManualTests.AetherEditorHost;
 
@@ -19,18 +20,14 @@ internal static class RuntimeEntryPoint
         var preview = launch.Role == RuntimeRole.EditPreview;
         await using var app = App.Build(context =>
         {
-            context.UseDiagnostics(new DiagnosticPipelineOptions
+            context.UseConfiguration(ConfigurationProfiles.Create(profile =>
             {
-                JsonDirectory = Path.Combine(launch.ReportDirectory, "diagnostics", "runtime"),
-                JsonUseRunDirectories = true
-            });
-            context.UseAether(options =>
-            {
-                options.HostContractId = launch.Identity.HostContractId; options.GameBuildId = launch.Identity.GameBuildId; options.ReportDirectory = launch.ReportDirectory;
-                options.ChildDiagnostics = launch.DiagnosticDelivery ?? new() { Enabled = false };
-            });
-            if (preview) context.UseAetherPreviewRuntime(launch, parentId);
-            else context.UseAetherRuntime(launch, parentId);
+                profile.AddSchema(DiagnosticsConfigurationSchema.Default); profile.AddSchema(AetherConfigurationSchemas.Engine);
+                profile.Override("Diagnostics:JsonDirectory", Path.Combine(launch.ReportDirectory, "diagnostics", "runtime"));
+                profile.Override("Diagnostics:JsonUseRunDirectories", true);
+            }));
+            context.UseConfiguredDiagnostics();
+            context.UseConfiguredAetherRuntime(bootstrap);
         });
         var engine = app.Services.Resolve<AetherHost>()!;
         AetherRuntimeHost? runtime=null;var started=false;Exception? failure=null;

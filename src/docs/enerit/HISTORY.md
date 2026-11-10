@@ -1,5 +1,40 @@
 # Enerit: история работы и проверок
 
+<a id="precommit-2026-11-11"></a>
+## Предкоммитная сверка Enerit generator — 2026-11-11
+
+Generator114/114 каждый Debug/Release, failed/skipped0. Runtime354 D/R относится
+к отдельному предыдущему CORE7.6 запуску; source SHA unchanged.
+[Команды/retention](../HISTORY.md#precommit-2026-11-11). Новых IPC/native/benchmarks нет.
+
+
+<a id="core76-2026-11-10"></a>
+## CORE7.6: текущая итоговая сверка — 2026-11-10
+
+[Единственная подробная запись и команды](../core/HISTORY.md#core76-2026-11-10),
+[guide](../core/CONFIGURATION_GUIDE.md).
+7suites6945/6945 каждый D/R; module-specific counts и exclusions указаны в текущем
+STATUS. Source solution0errors в D/R;16fresh packages одной версии,5programs×3forms,
+по230checks/4owned children на source/published/fresh profile, оба DI.
+Window/GPU/game/native runtime не запускаются в новых configuration consumers.
+Aether full3234/3234 D/R выполнен последовательно с test-only props copy; ordinary
+nested restore и прежние diagnostics reliability причины не исправлены этим proof.
+Current managed public API8assemblies unchanged; source C#/csproj1673/1673 сохранены.
+Дальнейшая очередь модуля и hardware/native/release gates остаются самостоятельными.
+
+
+<a id="core75-2026-11-10"></a>
+## CORE7.5: configured pipe limits — 2026-11-10
+
+Enerit:Pipes schema/UseConfiguredPipesServiceTransport подключает prepared scalar
+limits к прежнему transport/ownership. Runtime354/354 каждый Debug/Release,
+11new configuration cases; actual client admission/invalid-before-factory/reload
+и оба DI проверены. Generator test suite не запускалась. Source/published/fresh
+16package module consumer по76checks/profile на обоих DI; это combined configuration
+scope без window/GPU/child runtime, не новый IPC peer/release proof.
+[Точные команды/ограничения](../core/HISTORY.md#core75-2026-11-10).
+
+
 ## ENE6d.4 отдельный child-log канал — 2026-10-27
 
 Aether реализует отдельный typed diagnostic endpoint поверх existing Enerit
@@ -1072,3 +1107,94 @@ blocker; он не требует автоматической реализац�
 release package/platform matrix и ограничения подтверждаются отдельно.
 
 </details>
+
+<a id="status-before-core75-2026-11-10"></a>
+## Полный STATUS перед CORE7.5 — 2026-11-10
+
+# Enerit: состояние и точка продолжения
+
+**2026-11-05 — ревизия документов; новых runtime/generator/transport запусков нет.**
+[План](PLAN.md#current-enerit-queue), [прежний STATUS](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+## Реализация и сохранённые проверки
+
+Same-build pipes/generated invocation, serialization ownership, finite admission,
+bounded waits/stop и первый ENE6d telemetry profile реализованы. Aether использует
+отдельный child diagnostic endpoint; control и logs не делят admission. Editor
+console/export уже имеют scoped consumers и не остаются новым prerequisite.
+
+Последний собственный записанный run — **2026-10-27: Enerit343/generator114** каждый
+Debug/Release, failed/skipped0;3actual Preview children проверены отдельно у Aether.
+[ENE6d.4](HISTORY.md#ene6d4-отдельный-child-log-канал--2026-10-27).
+Предыдущий ENE5 closed-loop baseline126/generator114 относится к15октября:
+[BASELINE](BASELINE.md). Новые Editor runs его не повторяют.
+
+## Ограничения и сохранённые contracts
+
+Same-build method IDs/layouts без schema negotiation. Local cancellation не
+останавливает уже отправленный handler, replay нет; ignoring-token handler
+удерживает drain/Completion. Request-byte budget не равен heap/rental budget.
+MMF/ENE3, полноценный ENE6c, remote cancel, long trends/other OS/RID/AOT отдельно.
+Queue distribution и aggregate domain/frame metrics не следуют из текущих counters.
+Generated nullable-context warnings остаются quality backlog. Closed-loop baseline
+не является open-loop SLA или измерением native/retained памяти.
+
+## Следующий конкретный шаг
+
+Для performance — **scalar c1/c8 allocation/CPU attribution** на неизменном workload,
+затем выбирать изменения по evidence. Для новых interoperable/versioned peers —
+сначала ENE6c negotiation/framing contract; MMF не назначается автоматически.
+Queue distribution/aggregate metrics — по consumer. Существующий Editor продолжает
+использовать текущие bounded IPC contracts. Общий маршрут — [roadmap](../PLAN.md#current-roadmap).
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
+Прежние датированные разделы — в [полном архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+<a id="status-before-core76-2026-11-10"></a>
+## Полный STATUS перед CORE7.6 — 2026-11-10
+
+# Enerit: состояние и точка продолжения
+
+**2026-11-10 — CORE7.5: общая конфигурация pipes limits.**
+PipesConfigurationSchema.Default/UseConfiguredPipesServiceTransport используют
+common prepared options, сохраняя endpoint/handlers/ownership. Runtime354/354 D/R,
+11newcases; generator suite не повторялась. Source/published/fresh16package
+combined consumer76checks/profile на Cobalt/MS DI без window/GPU/child runtime.
+[Guide](../core/CONFIGURATION_MODULES.md), [evidence](HISTORY.md#core75-2026-11-10),
+[предыдущий STATUS](HISTORY.md#status-before-core75-2026-11-10).
+
+## Реализация и сохранённые проверки
+
+Same-build pipes/generated invocation, serialization ownership, finite admission,
+bounded waits/stop и первый ENE6d telemetry profile реализованы. Aether использует
+отдельный child diagnostic endpoint; control и logs не делят admission. Editor
+console/export уже имеют scoped consumers и не остаются новым prerequisite.
+
+Предшествующий runtime/generator run — **2026-10-27: Enerit343/generator114** каждый
+Debug/Release, failed/skipped0;3actual Preview children проверены отдельно у Aether.
+[ENE6d.4](HISTORY.md#ene6d4-отдельный-child-log-канал--2026-10-27).
+Предыдущий ENE5 closed-loop baseline126/generator114 относится к15октября:
+[BASELINE](BASELINE.md). Новые Editor runs его не повторяют.
+
+## Ограничения и сохранённые contracts
+
+Same-build method IDs/layouts без schema negotiation. Local cancellation не
+останавливает уже отправленный handler, replay нет; ignoring-token handler
+удерживает drain/Completion. Request-byte budget не равен heap/rental budget.
+MMF/ENE3, полноценный ENE6c, remote cancel, long trends/other OS/RID/AOT отдельно.
+Queue distribution и aggregate domain/frame metrics не следуют из текущих counters.
+Generated nullable-context warnings остаются quality backlog. Closed-loop baseline
+не является open-loop SLA или измерением native/retained памяти.
+
+## Следующий конкретный шаг
+
+Для performance — **scalar c1/c8 allocation/CPU attribution** на неизменном workload,
+затем выбирать изменения по evidence. Для новых interoperable/versioned peers —
+сначала ENE6c negotiation/framing contract; MMF не назначается автоматически.
+Queue distribution/aggregate metrics — по consumer. Существующий Editor продолжает
+использовать текущие bounded IPC contracts. Общий маршрут — [roadmap](../PLAN.md#current-roadmap).
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
+Прежние датированные разделы — в [полном архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
