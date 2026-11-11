@@ -1,5 +1,9 @@
 [CmdletBinding()]
-param([string]$RunDirectory, [string]$EvidenceDirectory)
+param([string]$RunDirectory, [string]$EvidenceDirectory, [string]$PackageVerification)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 
 # Materialize an independent solution; no window, graphics device or native calls.
 $ErrorActionPreference = 'Stop'
@@ -22,7 +26,12 @@ foreach ($directory in @($packageRun, $packageEvidence, $packageFeed, $packageCa
     [void][IO.Directory]::CreateDirectory($directory)
 }
 $packageDotnet = (Get-Command dotnet.exe -ErrorAction Stop).Source
-$packageVersion = '0.2.2.7-arch2e.' + (Get-Date -Format 'yyyyMMddHHmmss')
+$sharedDelivery = if ($PackageVerification) { Get-Content -LiteralPath $PackageVerification -Raw | ConvertFrom-Json } else { $null }
+if ($sharedDelivery -and (!$sharedDelivery.Completed -or $sharedDelivery.Failure -or
+    !$sharedDelivery.Version.StartsWith($trueMoonBuildProfile.Version + '.', [StringComparison]::Ordinal))) {
+    throw 'Use a completed delivery manifest with the current framework base version.'
+}
+$packageVersion = if ($sharedDelivery) { $sharedDelivery.Version } else { $trueMoonBuildProfile.Version + '.aether.' + (Get-Date -Format 'yyyyMMddHHmmss') }
 $packageIds = @('TrueMoon.Contracts', 'TrueMoon.Core', 'TrueMoon.Cobalt', 'TrueMoon',
     'TrueMoon.Extensions.DependencyInjection', 'TrueMoon.Enerit.Generator', 'TrueMoon.Enerit', 'TrueMoon.Mithril',
     'TrueMoon.Argentis', 'TrueMoon.Alloy', 'TrueMoon.Alloy.Rendering.Skia', 'TrueMoon.Alloy.Platform.Silk',
@@ -30,7 +39,8 @@ $packageIds = @('TrueMoon.Contracts', 'TrueMoon.Core', 'TrueMoon.Cobalt', 'TrueM
 $packageReport = [ordered]@{
     Completed = $false; Stage = 'ARCH2e.1/2'; RunDirectory = $packageRun; Consumer = $packageConsumer
     Version = $packageVersion; Feed = $packageFeed; Cache = $packageCache; GpuRun = $false; WindowRun = $false
-    Sdk = $null; Commands = @(); Packages = @(); Payloads = @(); Sources = @(); Graphs = @(); Resources = @(); Cases = @(); Failure = $null
+    Sdk = $null; BuildProfile = $trueMoonBuildProfile; SharedDelivery = $PackageVerification
+    Commands = @(); Packages = @(); Payloads = @(); Sources = @(); Graphs = @(); Resources = @(); Cases = @(); Failure = $null
 }
 
 function Save-PackageReport {
@@ -103,10 +113,27 @@ try {
     foreach ($path in @($sourcePaths | Sort-Object -Unique)) {
         $packageReport.Sources += [ordered]@{ Path = $path; Sha256 = Get-PackageHash $path }
     }
+    if ($sharedDelivery) {
+        $packageReport.Sources += [ordered]@{ Path = [IO.Path]::GetFullPath($PackageVerification); Sha256 = Get-PackageHash $PackageVerification }
+        foreach ($entry in @($sharedDelivery.Packages)) {
+            if ((Get-PackageHash $entry.Path) -ne $entry.Sha256) { throw "Changed shared package: $($entry.Id)" }
+        }
+        foreach ($entry in @($sharedDelivery.ExternalPackages)) {
+            $origin = Join-Path (Join-Path $sharedDelivery.RunDirectory 'feed') ([IO.Path]::GetFileName($entry.Source))
+            if ((Get-PackageHash $origin) -ne $entry.Sha256) { throw "Changed shared external package: $($entry.Identity)" }
+            Copy-Item -LiteralPath $origin -Destination $packageFeed
+        }
+    }
     foreach ($id in $packageIds) {
         $name = "pack-$id"
-        $null = Invoke-PackageCommand $name @('pack', "$id/$id.csproj", '-c', 'Release', '-o', $packageFeed,
-            "-p:Version=$packageVersion", '--verbosity', 'quiet', "-bl:$packageEvidence/$name-{}.binlog") $packageWorkspace
+        if ($sharedDelivery) {
+            $shared = @($sharedDelivery.Packages | Where-Object Id -eq $id)
+            if ($shared.Count -ne 1) { throw "Missing shared package: $id" }
+            Copy-Item -LiteralPath $shared[0].Path -Destination $packageFeed
+        } else {
+            $null = Invoke-PackageCommand $name @('pack', "$id/$id.csproj", '-c', 'Release', '-o', $packageFeed,
+                "-p:Version=$packageVersion", '--verbosity', 'quiet', "-bl:$packageEvidence/$name-{}.binlog") $packageWorkspace
+        }
         $path = Join-Path $packageFeed "$id.$packageVersion.nupkg"
         $zip = [IO.Compression.ZipFile]::OpenRead($path)
         try {
@@ -121,19 +148,23 @@ try {
         $packageReport.Packages += [ordered]@{ Id = $id; Path = $path; Sha256 = Get-PackageHash $path }
     }
     Copy-Item -Path (Join-Path $PSScriptRoot 'Consumer/*') -Destination $packageConsumer -Recurse
+    Export-TrueMoonConsumerFrameworks -Profile $trueMoonBuildProfile -Directory $packageConsumer
     Copy-Item -LiteralPath (Join-Path $packageWorkspace 'ManualTests/Game.Logic/ProbeGame.cs') -Destination "$packageConsumer/Game/ProbeGame.cs"
     [void][IO.Directory]::CreateDirectory("$packageConsumer/Editor/Assets/Fonts")
     foreach ($name in @('NotoSans-Regular.ttf', 'OFL.txt')) {
         Copy-Item -LiteralPath (Join-Path $packageWorkspace "Examples/AetherEditor/Assets/Fonts/$name") -Destination "$packageConsumer/Editor/Assets/Fonts/$name"
     }
     $props = [IO.File]::ReadAllText("$packageConsumer/Directory.Build.props").Replace('</Project>',
-        "<PropertyGroup><TrueMoonPackageVersion>$packageVersion</TrueMoonPackageVersion></PropertyGroup></Project>")
+        "<PropertyGroup><TrueMoonPackageVersion>$packageVersion</TrueMoonPackageVersion><LangVersion>$($trueMoonBuildProfile.LanguageVersion)</LangVersion><Features>$($trueMoonBuildProfile.Features)</Features></PropertyGroup></Project>")
     [IO.File]::WriteAllText("$packageConsumer/Directory.Build.props", $props)
     $escapedFeed = [Security.SecurityElement]::Escape($packageFeed)
-    [IO.File]::WriteAllText("$packageConsumer/NuGet.Config", @"
+    $nugetConfig = if ($sharedDelivery) {
+        "<configuration><packageSources><clear /><add key='fresh' value='$escapedFeed' /></packageSources><packageSourceMapping><packageSource key='fresh'><package pattern='*' /></packageSource></packageSourceMapping></configuration>"
+    } else { @"
 <configuration><packageSources><clear /><add key="fresh" value="$escapedFeed" /><add key="nuget.org" value="https://api.nuget.org/v3/index.json" /></packageSources>
 <packageSourceMapping><packageSource key="fresh"><package pattern="TrueMoon" /><package pattern="TrueMoon.*" /></packageSource><packageSource key="nuget.org"><package pattern="*" /></packageSource></packageSourceMapping></configuration>
-"@)
+"@ }
+    [IO.File]::WriteAllText("$packageConsumer/NuGet.Config", $nugetConfig)
     [IO.File]::WriteAllText("$packageConsumer/Consumer.slnx", '<Solution><Project Path="Editor/Editor.csproj" /><Project Path="Runtime/Runtime.csproj" /><Project Path="Game/Game.csproj" /></Solution>')
     [IO.File]::WriteAllText("$packageConsumer/global.json", '{"sdk":{"version":"' + $packageReport.Sdk + '","rollForward":"disable"}}')
     $null = Invoke-PackageCommand 'consumer-restore' @('restore', 'Consumer.slnx', '--configfile', "$packageConsumer/NuGet.Config", '--no-http-cache',
@@ -178,11 +209,11 @@ try {
     $nativeHash = Get-PackageZipHash $renderer.Path 'nativeAssets/win-x64/libSkiaSharp.dll'
     $editorAssets = Get-Content -LiteralPath "$packageConsumer/Editor/obj/project.assets.json" -Raw | ConvertFrom-Json -AsHashtable
     foreach ($profile in @('build-Debug', 'published-Release')) {
-        $editor = if ($profile -eq 'build-Debug') { "$packageConsumer/Editor/bin/Debug/net10.0" } else { "$packageRun/published/Editor" }
-        $runtime = if ($profile -eq 'build-Debug') { "$packageConsumer/Runtime/bin/Debug/net10.0" } else { "$packageRun/published/Runtime" }
+        $editor = if ($profile -eq 'build-Debug') { "$packageConsumer/Editor/bin/Debug/$($trueMoonBuildProfile.Framework)" } else { "$packageRun/published/Editor" }
+        $runtime = if ($profile -eq 'build-Debug') { "$packageConsumer/Runtime/bin/Debug/$($trueMoonBuildProfile.Framework)" } else { "$packageRun/published/Runtime" }
         foreach ($id in @('TrueMoon', 'TrueMoon.Aether', 'TrueMoon.Aether.Editor', 'TrueMoon.Argentis', 'TrueMoon.Alloy')) {
             $package = @($packageReport.Packages | Where-Object Id -eq $id)[0]
-            Assert-PackageResource $profile "$editor/$id.dll" (Get-PackageZipHash $package.Path "lib/net10.0/$id.dll")
+            Assert-PackageResource $profile "$editor/$id.dll" (Get-PackageZipHash $package.Path "lib/$($trueMoonBuildProfile.Framework)/$id.dll")
         }
         Assert-PackageResource $profile "$editor/truemoon-native/win-x64/libSkiaSharp.dll" $nativeHash
         $nativeCount = 0
@@ -212,7 +243,7 @@ try {
                     $owner = @($packageReport.Packages | Where-Object Id -eq $assembly.Name)
                     if ($owner.Count -ne 1) { throw "Untracked loaded framework assembly: $($assembly.Name)" }
                     if (![IO.Path]::GetFullPath($assembly.Path).StartsWith([IO.Path]::GetFullPath($editor) + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Loaded framework assembly outside consumer deployment.' }
-                    if ((Get-PackageHash $assembly.Path) -ne (Get-PackageZipHash $owner[0].Path "lib/net10.0/$($assembly.Name).dll")) { throw 'Loaded assembly differs from fresh package.' }
+                    if ((Get-PackageHash $assembly.Path) -ne (Get-PackageZipHash $owner[0].Path "lib/$($trueMoonBuildProfile.Framework)/$($assembly.Name).dll")) { throw 'Loaded assembly differs from fresh package.' }
                 }
                 $packageReport.Cases += [ordered]@{ Profile = $profile; Extension = $extension; Provider = $provider; Report = "$report/report.json" }
             }

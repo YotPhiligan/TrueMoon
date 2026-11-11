@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$EvidenceDirectory,[string]$ArchiveDirectory,[switch]$Captured)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 if(![OperatingSystem]::IsWindows() -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne 'X64'){throw 'This research profile is Windows x64 only.'}
@@ -57,11 +61,11 @@ try{
         $reference=[Security.SecurityElement]::Escape((Join-Path $workspace 'TrueMoon.Aether/TrueMoon.Aether.csproj'))
         $project=Join-Path $dir 'ModelImportResearch.csproj'
         @"
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks><DefineConstants>$($candidate.Define)</DefineConstants></PropertyGroup><ItemGroup><PackageReference Include="$($candidate.Id)" Version="$($candidate.Version)"/><ProjectReference Include="$reference"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks><DefineConstants>$($candidate.Define)</DefineConstants></PropertyGroup><ItemGroup><PackageReference Include="$($candidate.Id)" Version="$($candidate.Version)"/><ProjectReference Include="$reference"/></ItemGroup></Project>
 "@|Set-Content $project -Encoding utf8
         Invoke-Probe "$($candidate.Name)-restore" @('restore',$project,'--configfile',$config,'--packages',(Join-Path $dir 'packages'))
         Invoke-Probe "$($candidate.Name)-Debug" @('build',$project,'--no-restore','-c','Debug')
-        $assembly=Join-Path $dir 'bin/Debug/net10.0/ModelImportResearch.dll'
+        $assembly=Join-Path $dir "bin/Debug/$($trueMoonBuildProfile.Framework)/ModelImportResearch.dll"
         if(!(Test-Path $fixtures)){Invoke-Probe 'fixtures' @($assembly,'fixtures',$fixtures)}
         $report=Join-Path $evidence "$($candidate.Name)-Debug.json"
         $probeArguments=@($fixtures,$report);if($Captured){$probeArguments=@('captured')+$probeArguments}

@@ -32,7 +32,7 @@ public sealed class GameBuildFixture : IAsyncLifetime
         var project = Path.Combine(root, assembly + ".csproj");
         File.WriteAllText(project, $"""
             <Project Sdk="Microsoft.NET.Sdk">
-              <PropertyGroup><TargetFramework>net10.0</TargetFramework><AssemblyName>{assembly}</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+              <PropertyGroup><TargetFramework>{GameBuildProfile.TargetFramework}</TargetFramework><AssemblyName>{assembly}</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
               <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference>{references}</ItemGroup>
               {target}
             </Project>
@@ -44,8 +44,9 @@ public sealed class GameBuildFixture : IAsyncLifetime
         var id = "held-" + Guid.NewGuid().ToString("N"); var directory = Path.Combine(Root, id); Directory.CreateDirectory(directory);
         var marker = Path.Combine(directory, "entered"); var release = Path.Combine(directory, "release");
         var script = Path.Combine(directory, "hold.ps1");
-        File.WriteAllText(script, "param($marker,$release)\n[IO.File]::WriteAllText($marker,[Environment]::ProcessId.ToString())\nwhile (!(Test-Path -LiteralPath $release)) { Start-Sleep -Milliseconds 20 }\n");
-        var command = SecurityElement.Escape($"pwsh -NoProfile -NonInteractive -File \"{script}\" \"{marker}\" \"{release}\"");
+        File.WriteAllText(script, "param($marker,$release)\n[IO.File]::WriteAllText($marker,$PID.ToString())\nwhile (!(Test-Path -LiteralPath $release)) { Start-Sleep -Milliseconds 20 }\n");
+        var shell = OperatingSystem.IsWindows() ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe") : "pwsh";
+        var command = SecurityElement.Escape($"\"{shell}\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{script}\" \"{marker}\" \"{release}\"");
         var target = $"<Target Name=\"HoldBuild\" BeforeTargets=\"CoreCompile\"><Exec Command=\"{command}\" /></Target>";
         return (Project(id, "Game.Held", Source("0xff2080c0u"), target: target), marker, release);
     }

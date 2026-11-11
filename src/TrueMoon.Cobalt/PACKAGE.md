@@ -1,14 +1,20 @@
 # TrueMoon.Cobalt
 
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
 Generated dependency resolution and service lifetime management for TrueMoon
-applications on .NET 10. One package includes the runtime and its source generator:
+applications on .NET 11. One package includes the runtime and its source generator:
 
 ```xml
 <PackageReference Include="TrueMoon.Cobalt" Version="YOUR_VERSION" />
 ```
 
 The generator is attached automatically for direct and transitive package use.
-It requires the .NET 10 SDK compiler and stays out of runtime output. The two
+It requires the .NET 11 SDK compiler and stays out of runtime output. The two
 source projects remain separate. Remove the old explicit
 `TrueMoon.Cobalt.Generator` PackageReference when upgrading: that project no longer
 produces a standalone package. If an older generator package is still referenced,

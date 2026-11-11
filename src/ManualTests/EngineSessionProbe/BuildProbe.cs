@@ -86,7 +86,7 @@ public static class BuildProbe
         return new { Passed = true, Scenario = "build-artifacts", Builds = builds, CompilerReaped = host.Builds.ProcessId == null,
             CompileFailurePreservedSession = failureObserved, StaleCompletionDidNotLaunch = true, HostUnchanged = hostHash == Hash(typeof(AetherHost).Assembly.Location),
             EditorPreserved = before == JsonSerializer.Serialize(authoring), GameLoadedInEditor = false, Mappings = host.Frames.MappingCount,
-            Leases = factory.Leases.Select(l => new { l.ProcessId, l.Reaped, l.ResourcesReleased }) };
+            Leases = factory.Leases.Select(l => new { l.Identity, l.ProcessId, l.Reaped, l.ResourcesReleased }) };
     }
     private static string Project(string directory, string variant, string color)
     {
@@ -94,7 +94,7 @@ public static class BuildProbe
         File.WriteAllText(Path.Combine(root, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
         var path = Path.Combine(root, "Game.Candidate.csproj");
         File.WriteAllText(path, """
-            <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+            <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net11.0</TargetFramework></PropertyGroup>
             <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
             """);
         var source = color == "invalid C#" ? color : $$"""
@@ -118,8 +118,9 @@ public static class BuildProbe
     {
         var project = Project(directory, "close-held", "0xff2080c0u"); var root = Path.GetDirectoryName(project)!;
         var marker = Path.Combine(root, "entered"); var script = Path.Combine(root, "hold.ps1");
-        File.WriteAllText(script, "param($marker)\n[IO.File]::WriteAllText($marker,[Environment]::ProcessId.ToString())\nwhile ($true) { Start-Sleep -Milliseconds 100 }\n");
-        var command = SecurityElement.Escape($"pwsh -NoProfile -NonInteractive -File \"{script}\" \"{marker}\"");
+        File.WriteAllText(script, "param($marker)\n[IO.File]::WriteAllText($marker,$PID.ToString())\nwhile ($true) { Start-Sleep -Milliseconds 100 }\n");
+        var shell = OperatingSystem.IsWindows() ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe") : "pwsh";
+        var command = SecurityElement.Escape($"\"{shell}\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{script}\" \"{marker}\"");
         File.WriteAllText(project, File.ReadAllText(project).Replace("</Project>", $"<Target Name=\"HoldBuild\" BeforeTargets=\"CoreCompile\"><Exec Command=\"{command}\" /></Target></Project>"));
         return (new(project, "Game.Candidate.dll", "Game.Candidate.Game", 99), marker);
     }

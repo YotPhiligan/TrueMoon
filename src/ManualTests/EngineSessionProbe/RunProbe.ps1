@@ -15,6 +15,10 @@ param(
     [string]$GpuValidationLayerDirectory,
     [string[]]$Scenarios = @('repeat','stale','bad-hello','bad-scene','startup-timeout','startup-cancel','command-timeout','command-cancel','stop-pending','crash','disconnect','heartbeat','forced-stop','hang-stop','launch-failure','parent-exit','app-stop','build-artifacts','checkpoint','replacement')
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $resultsRoot = Join-Path $workspace 'TestResults/EngineSessions'
@@ -60,7 +64,7 @@ try {
     foreach ($configuration in $Configurations) {
         if ($configuration -eq 'Debug') {
             Invoke-Owned 'build-Debug' 'dotnet' @('build',(Join-Path $PSScriptRoot 'EngineSessionProbe.csproj'),'--configuration','Debug','--verbosity','quiet',"-bl:$(Join-Path $run 'build-Debug-{}.binlog')") 180
-            $binaryDirectory = Join-Path $PSScriptRoot 'bin/Debug/net10.0'
+            $binaryDirectory = Join-Path $PSScriptRoot "bin/Debug/$($trueMoonBuildProfile.TestFramework)"
         }
         elseif ($configuration -eq 'Release') {
             $binaryDirectory = Join-Path $run 'publish'

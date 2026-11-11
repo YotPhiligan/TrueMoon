@@ -1,5 +1,13 @@
 # Aether independent NuGet consumer
 
+CORE8.5: use `-PackageVerification <ConfigurationDelivery/verification.json>` to
+reuse the completed common delivery's exact package bytes and version. Without
+it, the runner derives a new local version from the current shared base version.
+Independent Editor/Runtime/Game consumers receive the shared SDK/TFM/language/
+runtime-async profile. With a shared delivery, external dependencies also come
+from its local feed. Viewport uses its own fresh cache. The complete sequence is
+documented in `ManualTests/FrameworkDelivery/README.md`.
+
 Windows x64, .NET 10 SDK, PowerShell 7. This is the headless ARCH2e.1/2 profile;
 it opens no window and creates no graphics device.
 
@@ -109,7 +117,7 @@ preview reap before game startup, distinct selected artifact IDs, child-only gam
 assembly paths and unchanged authoring dirty/history/selection. It records the
 verified input fingerprints and requires identical inputs across both fresh builds;
 the compile tickets and artifact IDs remain distinct. The tracked scene profile is
-one net10.0 SDK project with HintPath references, without PackageReference/ProjectReference.
+one net11.0 SDK project with HintPath references, without PackageReference/ProjectReference.
 It also records captured compiler fingerprints/file counts/bytes, requires stable
 fingerprints across both tickets and confirms staging was released before Start.
 The first Scene Start compiles; the second verifies and reuses its managed payload.

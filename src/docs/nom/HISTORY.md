@@ -1,5 +1,68 @@
 # TrueMoon.Nom: история исследования и проверок
 
+<a id="core85-2026-11-11"></a>
+## CORE8.5: согласованная поставка — 2026-11-11
+
+Полные suites D/R: 874; Failed 0, Skipped 0.
+Свежий package и actual App/Nom configuration/admission consumer проверены на обоих DI. Исторические VM/durability boundaries сохранены; VM verification отложена, power-off исключён. Engine g.2 следует после g.1 по согласованию.
+Общая поставка содержит 16 packages одной версии 0.3.0.1-alpha.core85.20261111221352.
+Runtime/API/dependencies сохранены; изменения CORE8.5 относятся к runners/docs.
+[Подробные команды/матрица/границы](../core/HISTORY.md#core85-delivery-2026-11-11).
+
+<a id="nom-status-before-core85-2026-11-11"></a>
+## STATUS до CORE8.5 — архив 2026-11-11
+
+# TrueMoon.Nom: состояние модуля хранения
+
+**2026-11-11 — CORE8.4: полная регрессия на .NET 11 / runtime-async=on прошла.**
+Nom — 874 теста в каждой конфигурации Debug/Release; **Failed 0, Skipped 0**.
+Выполнены явное обнаружение тестов и обычные restore/build без test-only overrides.
+Production runtime, API и зависимости в CORE8.4 не менялись. Исправление четырёх
+manual fixture templates и границы повторных проверок описаны в Core HISTORY.
+[Команды и результаты](../core/HISTORY.md#core84-runtime-2026-11-11), [план](../core/PLAN.md#core8-dotnet11).
+
+Сохранены NOM0–NOM8, schema/IDs/history/atomicity/recovery/admission и структура namespace. Новые VM/disk-full/capacity/power-off проверки не выполнялись: VM verification отложена пользователем, power-off исключён. Engine g.2 следует после g.1 по согласованию; расширенная OS/RID/AOT/release матрица остаётся отдельной.
+
+Общая точка продолжения — **CORE8.5**: свежая согласованная поставка и итоговая документация.
+[Предыдущий STATUS целиком](HISTORY.md#nom-status-before-core84-2026-11-11).
+
+<a id="core84-2026-11-11"></a>
+## CORE8.4: регрессия .NET 11 / runtime-async — 2026-11-11
+
+Nom — 874 теста в каждой конфигурации Debug/Release; Failed 0, Skipped 0.
+Тесты обнаружены явно; исполнение включает обычные restore/build без test-only overrides.
+Production runtime, API и зависимости не менялись; четыре manual fixture template
+получили явную ссылку на Contracts. Полные suites выполнены до этого исправления;
+после него повторены затронутые NativeRuntimeProcessTests (4/4 D/R) и 24 native сценария.
+
+Сохранены NOM0–NOM8, schema/IDs/history/atomicity/recovery/admission и структура namespace. Новые VM/disk-full/capacity/power-off проверки не выполнялись: VM verification отложена пользователем, power-off исключён. Engine g.2 следует после g.1 по согласованию; расширенная OS/RID/AOT/release матрица остаётся отдельной.
+
+[Подробная запись с командами, матрицей и границами](../core/HISTORY.md#core84-runtime-2026-11-11).
+
+<a id="nom-status-before-core84-2026-11-11"></a>
+## STATUS до CORE8.4 — архив 2026-11-11
+
+# TrueMoon.Nom: состояние модуля хранения
+
+**2026-11-11 — CORE7.6: итоговая configuration/package сверка.**
+Nom874/874 каждый D/R, Failed:0, Skipped:0. Combined source/published/fresh16package
+collection проверяет230checks/profile на Cobalt/MS DI, включая actual Nom
+store admission/slot return/open-close-reopen/drain. Это общий count, не отдельные
+230Nom assertions. Window/GPU/game не запускаются.
+[Guide](../core/CONFIGURATION_GUIDE.md), [evidence](HISTORY.md#core76-2026-11-10).
+
+Nom schema/UseConfiguredNom из CORE7.5 используют8startup fields. Roots/IDs остаются
+runtime arguments, startup не открывает store. NOM0–NOM8 и
+[namespace/format contracts](STRUCTURE.md#nom-source-layout-2026-11-08) сохранены.
+Current managed API unchanged, package metadata/payload проверены. Nom намеренно
+не включает shared root README; authoritative PACKAGE.md/license/icon совпали
+по SHA. [Предыдущий STATUS целиком](HISTORY.md#status-before-core76-2026-11-10).
+
+Следующий consumer bridge — engine ARCH1g.2 после g.1 importer по согласованию.
+Actual VM crash verification отложена пользователем, hardware power-off исключён.
+Новых VM/disk-full/capacity/durability trials нет; wider OS/RID/AOT/release gates
+не подтверждаются этой configuration задачей.
+
 <a id="core76-2026-11-10"></a>
 ## CORE7.6: текущая итоговая сверка — 2026-11-10
 

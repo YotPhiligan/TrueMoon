@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>$(TF)</TargetFramework>
-        <Description>Source generator for TrueMoon Enerit typed clients, handlers and payload codecs. Requires the .NET 10 SDK compiler.</Description>
+        <Description>Source generator for TrueMoon Enerit typed clients, handlers and payload codecs. Requires the .NET 11 SDK compiler.</Description>
         <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
         <PackageTags>$(PackageTags);ipc;source-generator;roslyn;analyzer</PackageTags>
         <IncludeBuildOutput>false</IncludeBuildOutput>

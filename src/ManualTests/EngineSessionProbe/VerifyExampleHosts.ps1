@@ -1,7 +1,11 @@
 [CmdletBinding()]
 param([string]$RunDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
 
-# Windows x64, PowerShell 7, framework-dependent net10.0. No window, device or GPU calls.
+
+
+# Windows x64, PowerShell 7; framework-dependent targets come from the shared build profile.
 $ErrorActionPreference = 'Stop'
 $deploymentWorkspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $deploymentRun = if ($RunDirectory) { [IO.Path]::GetFullPath($RunDirectory) } else {
@@ -44,7 +48,7 @@ function Invoke-DeploymentProcess([string]$name, [string]$file, [string[]]$argum
         }
         if ($timedOut) { throw "$name timed out; owned process tree was terminated." }
         if ($process.ExitCode -ne $expectedExit) { throw "$name returned $($process.ExitCode), expected $expectedExit. See stderr/stdout logs." }
-        if ($arguments[0] -in 'build', 'publish' -and -not (Get-ChildItem -LiteralPath $deploymentRun -Filter "$name-*.binlog")) {
+        if ($arguments.Count -gt 0 -and $arguments[0] -in 'build', 'publish' -and -not (Get-ChildItem -LiteralPath $deploymentRun -Filter "$name-*.binlog")) {
             throw "$name produced no binlog."
         }
         Write-Host "$name passed"
@@ -140,11 +144,11 @@ try {
         $name = "publish-$($project.Name)-Release"
         $null = Invoke-DeploymentProcess $name $deploymentDotnet @('publish', $project.Project, '-c', 'Release', '-o', "$deploymentRun/published/$($project.Name)", '--verbosity', 'quiet', "-bl:$deploymentRun/$name-{}.binlog") $deploymentWorkspace
     }
-    $sourceEditor = Join-Path $deploymentWorkspace 'Examples/AetherEditor/bin/Debug/net10.0'
+    $sourceEditor = Join-Path $deploymentWorkspace "Examples/AetherEditor/bin/Debug/$($trueMoonBuildProfile.Framework)"
     foreach ($deploymentProfile in @('source-Debug', 'published-Release')) {
         $editor = if ($deploymentProfile -eq 'source-Debug') { $sourceEditor } else { "$deploymentRun/published/editor" }
-        $runtime = if ($deploymentProfile -eq 'source-Debug') { Join-Path $deploymentWorkspace 'Examples/AetherRuntimeHost/bin/Debug/net10.0' } else { "$deploymentRun/published/runtime" }
-        $probe = if ($deploymentProfile -eq 'source-Debug') { Join-Path $deploymentWorkspace 'ManualTests/EngineSessionProbe/bin/Debug/net10.0' } else { "$deploymentRun/published/probe" }
+        $runtime = if ($deploymentProfile -eq 'source-Debug') { Join-Path $deploymentWorkspace "Examples/AetherRuntimeHost/bin/Debug/$($trueMoonBuildProfile.Framework)" } else { "$deploymentRun/published/runtime" }
+        $probe = if ($deploymentProfile -eq 'source-Debug') { Join-Path $deploymentWorkspace "ManualTests/EngineSessionProbe/bin/Debug/$($trueMoonBuildProfile.TestFramework)" } else { "$deploymentRun/published/probe" }
         Assert-DependencyClosure $editor 'AetherEditor'
         Assert-DependencyClosure $runtime 'AetherRuntimeHost' -runtime
         foreach ($name in @('NotoSans-Regular.ttf', 'OFL.txt')) {

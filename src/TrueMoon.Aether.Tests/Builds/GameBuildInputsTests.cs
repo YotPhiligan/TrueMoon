@@ -64,8 +64,9 @@ public sealed class GameBuildInputsTests(GameBuildFixture builds) : IClassFixtur
     {
         var controls = Path.Combine(builds.Root, "control-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(controls);
         var marker = Path.Combine(controls, "entered"); var release = Path.Combine(controls, "release"); var script = Path.Combine(controls, "hold.ps1");
-        File.WriteAllText(script, "param($marker,$release)\n[IO.File]::WriteAllText($marker,[Environment]::ProcessId.ToString())\nwhile (!(Test-Path -LiteralPath $release)) { Start-Sleep -Milliseconds 20 }\n");
-        var command = SecurityElement.Escape($"pwsh -NoProfile -NonInteractive -File \"{script}\" \"{marker}\" \"{release}\"");
+        File.WriteAllText(script, "param($marker,$release)\n[IO.File]::WriteAllText($marker,$PID.ToString())\nwhile (!(Test-Path -LiteralPath $release)) { Start-Sleep -Milliseconds 20 }\n");
+        var shell = OperatingSystem.IsWindows() ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe") : "pwsh";
+        var command = SecurityElement.Escape($"\"{shell}\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{script}\" \"{marker}\" \"{release}\"");
         var target = $"<Target Name=\"HoldBuild\" BeforeTargets=\"CoreCompile\"><Exec Command=\"{command}\" /></Target>";
         var request = Request("held", target);
         var artifacts = Path.Combine(controls, "artifacts");

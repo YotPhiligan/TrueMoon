@@ -3,7 +3,7 @@
 Экспериментальный модуль игрового движка TrueMoon. Одна библиотека содержит
 contracts игровой сессии, supervisor, control protocol, CPU frame transport и
 явный one-frame Vulkan/OpenGL import probe.
-Текущая реализация рассчитана на Windows x64 и .NET 10.
+Текущая реализация рассчитана на Windows x64 и .NET 11.
 
 [План](../docs/engine/PLAN.md), [статус и ограничения](../docs/engine/STATUS.md),
 [пример Editor/Game.Runtime](../ManualTests/EngineSessionProbe/README.md),
@@ -845,7 +845,21 @@ Snapshot также содержит `ElapsedMilliseconds`, `SourceMilliseconds`
 содержат индивидуальных managed buffers: один буфер 64KiB используется при чтении
 всех файлов capture. Installed directories по-прежнему считаются trusted/stable.
 
-Профиль: Windows, stable net10.0 Microsoft.NET.Sdk library, декларативные properties/
+CORE8.3 (.NET11): compiler target и stable SDK major берутся из стандартного
+TargetFrameworkAttribute самой Aether assembly, сформированного MSBuild из `$(TF)`.
+Рабочий каталог или entry host не меняют этот профиль. Declarative `Features`
+сохраняется в evaluation/captured compiler arguments и их fingerprint, включая
+общий `runtime-async=on`; property functions по-прежнему запрещены.
+Frozen job фиксирует EnableSourceControlManagerQueries=false и EnableSourceLink=false:
+SDK не подмешивает ambient Git metadata или SourceLink из окружающего checkout.
+Сам sourcelink switch не добавлен в допустимые captured compiler inputs. Editor SDK
+preflight и frozen selector требуют stable SDK11. Manifest остаётся schema1 с
+TargetFramework=net11.0; прежние net10 artifacts нужно явно пересобрать. Open
+отклоняет старый target до загрузки game code; auto-migration/перезапись старых
+artifacts и persisted cache не добавлены. Process-local reuse проверяет inputs,
+compiler и payload по прежним правилам.
+
+Профиль: Windows, stable net11.0 Microsoft.NET.Sdk library, декларативные properties/
 items, literal imports/HintPath/linked files и globs внутри project directory.
 Target/UsingTask, property/condition functions, custom SDK/analyzers, external globs,
 PackageReference без PackageDirectory и ProjectReference без отдельного graph opt-in отклоняются до SDK execution. Repository guard
@@ -880,7 +894,7 @@ Persistent mismatch возвращает `GameBuildInputsChangedException`, не
 при Build и не создаёт runtime при Start. Schema1 artifacts неизменны; Open/Publish
 не восстанавливают witness, tracked Start требует оригинальный результат Build.
 
-По умолчанию поддержан один net10.0 SDK project с explicit managed HintPath references,
+По умолчанию поддержан один net11.0 SDK project с explicit managed HintPath references,
 без PackageReference/ProjectReference. Legacy requests по умолчанию не включают tracking.
 Пределы:4096files,64MiB/file,256MiB total,8MiB на query/preprocessed document.
 Это наблюдение содержимого, а не hermetic snapshot: transient edit-and-revert,
@@ -909,7 +923,7 @@ await engine.Supervisor.StartAsync(scene, candidate, token: cancellationToken);
 Caller сопоставляет SourceRevision с актуальными изменениями перед явным выбором;
 поздний результат сборки сам не возобновляет остановленную игру.
 
-Game project — доверенная локальная net10.0 library; он должен использовать
+Game project — доверенная локальная net11.0 library; он должен использовать
 переданные compiler свойства MSBuild `AetherContractPath` и `TrueMoonContractsPath`
 как non-copying references:
 
@@ -1269,7 +1283,7 @@ copies и dependency на executable примера не требуются. Nat
 ### Захваченный граф игровых библиотек
 
 `GameBuildRequest.CaptureProjectReferences = true` требует CapturePreparation и
-поддерживает DAG до4C# net10.0 libraries вместе с entry. Каждый ProjectReference
+поддерживает DAG до4C# net11.0 libraries вместе с entry. Каждый ProjectReference
 имеет literal Include без Condition/metadata; каталоги проектов не пересекаются.
 Зависимости используют имя csproj
 либо явный unconditional literal AssemblyName. Все private DLL перечисляются в
@@ -1293,7 +1307,7 @@ Schema1 artifact/checkpoint/control contracts прежние; dependency DLL о�
 `GameBuildRequest.PackageDirectory` — абсолютный путь к явно выбранному локальному
 каталогу `<id в нижнем регистре>.<version>.nupkg`; null сохраняет отказ от PackageReference.
 Требуется CapturePreparation. Каждый проект с PackageReference предоставляет свой
-`packages.lock.json` schema1 с единственным target `net10.0`. Поддержаны unconditional
+`packages.lock.json` schema1 с единственным target `net11.0`. Поддержаны unconditional
 literal Include/Version без metadata, стабильные трёхкомпонентные версии (`1.2.3`
 либо `[1.2.3]`); resolved обязан совпадать. Direct/transitive closure, dependency
 ranges и SHA512 contentHash сверяются с nuspec и bytes unsigned архива до SDK.
@@ -1301,7 +1315,7 @@ ranges и SHA512 contentHash сверяются с nuspec и bytes unsigned ар
 Стандартные RestorePackagesWithLockFile/RestoreLockedMode допустимы: после нашего
 package capture SDK работает с переписанными Reference и собственным lock в job work.
 
-Первый профиль допускает один `lib/net10.0`, `lib/net9.0`, `lib/net8.0`,
+Первый профиль допускает один `lib/net11.0`, `lib/net10.0`, `lib/net9.0`, `lib/net8.0`,
 `lib/netstandard2.1` либо `lib/netstandard2.0` target в архиве, с flat IL-only DLL,
 XML/PDB и обычной package metadata. Поддержан один matching nuspec dependency group
 либо общий список dependencies. Multi-target/ref/runtime variants, signed packages,

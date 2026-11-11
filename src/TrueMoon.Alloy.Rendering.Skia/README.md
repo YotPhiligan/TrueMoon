@@ -45,9 +45,9 @@ device/context при initialization и передаёт их через `OpenGL
 
 ```powershell
 dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj '-bl:skia-probe-{}.binlog'
-dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --interop-check
-dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --interop
-dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --interop-compose
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net11.0/AlloyVulkanTest.dll --interop-check
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net11.0/AlloyVulkanTest.dll --interop
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net11.0/AlloyVulkanTest.dll --interop-compose
 ```
 
 Для существующего устройства игрового движка renderer принимает `VulkanHostContext` с borrowed instance/physical device/device/queue handles, family, API version, enabled extensions/features и host loader/completion callbacks. Он не создаёт и не уничтожает device/instance и не требует `VulkanDevice` в raw target. Подробный [пример и lifetime contract](../TrueMoon.Alloy.Hosting/README.md#устройство-чужого-движка); проверки — `--raw-host --validation` и `--raw-hud-window --validation`. В PLAN 2.1a прямая зависимость renderer-сборки от Platform.Silk удалена: прямые raw Vulkan/raster/OpenGL пути через `UiSession.Create` не требуют Platform.Silk или Hosting. После 2.1b нет транзитивных TrueMoon.Core/Windowing зависимостей через Alloy; текущий Contracts нужен для IUiSessionFactory/IFactory. `Silk.NET.Vulkan` bindings остаются явной backend-specific зависимостью Vulkan renderer, а не оконным API.
@@ -94,7 +94,7 @@ Native asset/ABI, lease/ownership и retirement в 2.1b не изменялис�
 
 ## Пересборка и обновление DLL
 
-Команды выполняются из src. Требуются .NET 10, Git, настоящий Python 3, Ninja, MSVC C++ x64, Windows SDK и x64 Spectre libraries. Native build не запускается при обычном dotnet build.
+Команды выполняются из src. Требуются .NET 11, Git, настоящий Python 3, Ninja, MSVC C++ x64, Windows SDK и x64 Spectre libraries. Native build не запускается при обычном dotnet build.
 
 При первом запуске:
 
@@ -128,8 +128,8 @@ externals/skia и добавляет depot_tools только когда он о
 
 ```powershell
 $env:VK_LAYER_PATH = (Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
-dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --interop --validation
-dotnet ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll --interop-compose --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net11.0/AlloyVulkanTest.dll --interop --validation
+dotnet ManualTests/AlloyVulkanTest/bin/Debug/net11.0/AlloyVulkanTest.dll --interop-compose --validation
 ```
 
 Validation layer устанавливается/извлекается отдельно; подробности toolchain, pins и предыдущих проверок находятся в [README эксперимента](../ManualTests/AlloyVulkanTest/NativeInterop/README.md). После изменения extension на диске ранее применённая копия в source checkout должна быть обновлена явно: ApplyNativeInterop намеренно отказывается перезаписывать отличающийся extension. Проще использовать новый чистый checkout pinned исходников.

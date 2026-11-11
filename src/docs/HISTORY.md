@@ -1,5 +1,1016 @@
 # TrueMoon: история общей документации
 
+<a id="core85-delivery-2026-11-11"></a>
+## CORE8.5 — 2026-11-11
+
+Согласованный переход на .NET 11 завершён в bounded Windows x64 scope.
+16 packages одной версии, source/published/fresh App и actual runtime/native
+consumers, все 11 suites D/R — по 8567 passed, failed/skipped 0.
+[Единственная подробная запись](core/HISTORY.md#core85-delivery-2026-11-11).
+
+<a id="common-status-before-core85-2026-11-11"></a>
+## STATUS до CORE8.5 — архив 2026-11-11
+
+# TrueMoon: общий статус
+
+**2026-11-11 — CORE8.4 завершён: полная runtime-async регрессия.**
+[Команды, матрица и границы](core/HISTORY.md#core84-runtime-2026-11-11), [CORE8](core/PLAN.md#core8-dotnet11).
+Все 11 test projects прошли в Debug и Release: **Passed 8567, Failed 0, Skipped 0
+на конфигурацию**. Сохранены 22 полных запуска, 17134 test rows и сопоставление
+discovery с TRX. Профиль SDK 11.0.100 / net11.0 / runtime-async=on проверен
+на обычных restore/build без test-only overrides.
+
+Исправлены четыре manual fixture writer: generated game projects явно ссылаются
+на Contracts. Production runtime, API и зависимости не менялись. После исправления
+повторены затронутые NativeRuntimeProcessTests (4/4 D/R) и все 24 source Debug /
+published Release native сценария CPU/GPU viewport/Editor/lifecycle.
+Пиксели, child cleanup и ресурсы проверены в существующем ограниченном профиле.
+Финальная solution сборка D/R: 0 ошибок, incremental warnings 0/0;
+это не новая clean warning baseline.
+
+Далее CORE8.5: свежая согласованная поставка и итоговая документация.
+Physical/release/performance и причины прежних diagnostics/drain timeout остаются отдельными.
+[Предыдущая сводка целиком](HISTORY.md#common-status-before-core84-2026-11-11).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | CORE8.0–4: все 11 suites, по 8567 тестов D/R; 24 source/published native сценария; исправлены 4 manual template; solution D/R без ошибок | [CORE8.5](core/PLAN.md#core8-dotnet11): fresh package/native payload/full delivery и документация; CORE6 отдельно |
+| [Cobalt](cobalt/STATUS.md) | CORE8.2 net11: runtime/adapter179 и generator96 D/R; package generation; прежние COB6e/COB5a.1 сохранены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | CORE8.2 net11: runtime354 и generator114 D/R, actual generated IPC/package proof; same-build contracts сохранены | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
+| [Aether/Editor](engine/STATUS.md) | CORE8.3 net11 frozen game profile; full Aether3243/Editor1496 D/R, source/published SDK11-only compile/reuse/load/Stop/reap | Общая CORE8.5 delivery acceptance; [ARCH1f.4](engine/PLAN.md#arch1f-rendering) surface renderer и прежние reliability gates отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; alpha version сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope; прежние модульные/full/frame проверки не считаются повторёнными текущей задачей.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-11, CORE8.4 | 11 suites: 8567/8567 D/R, failed/skipped 0; 24 source/published native сценария; solution D/R без ошибок | [Команды/границы](core/HISTORY.md#core84-runtime-2026-11-11) |
+| 2026-11-11, CORE8.3 |Full Aether3243/Editor1496 D/R; SDK11-only source/published game compile/reuse/load/Stop/reap,2children; solution D/R0errors | [Команды/границы](core/HISTORY.md#core83-frozen-2026-11-11) |
+| 2026-11-11, CORE8.2 |4suites743/743 D/R,8fresh packages132DI/IPCscenarios; solution Debug0errors/510warnings, Release0errors/1414warnings, incremental | [Команды/исправления/границы](core/HISTORY.md#core82-generators-2026-11-11) |
+| 2026-11-11, CORE8.1 profiles/restore | 45 runners, 61 net11 projects; external NU1008 исправлен; solution D/R0errors,16packages/15profiles/230checks и4children на вид поставки | [Inputs/команды/границы](core/HISTORY.md#core81-profiles-2026-11-11) |
+| 2026-11-11, CORE8.1 TFM |61/61net11 evaluation,8profile controls, solution и6extra projects D/R0errors; manual NU1201 устранён | [Команды/границы](core/HISTORY.md#core81-tfm-2026-11-11) |
+| 2026-11-11, CORE8.0 | Ordinary restore0/build D/R0errors/1556warnings;61evaluation,4manual NU1201 и1/1failed actual game build test | [Входные условия/команды/границы](core/HISTORY.md#core80-baseline-2026-11-11) |
+| 2026-11-11, CORE7.6 итог | Solution D/R0errors;7suites6945/6945 D/R;16packages230checks/4owned children на source/published/fresh profile; metadata16/16,8managed APIs unchanged | [Core evidence/границы](core/HISTORY.md#core76-2026-11-10) |
+| 2026-11-10, CORE7.5 | Six full suites D/R,110newcases; Aether47scoped serial D/R, full attempts non-green. Source/published/fresh16packages76checks/profile, оба DI; API removed0 в7assemblies | [Core evidence/limits](core/HISTORY.md#core75-2026-11-10) |
+| 2026-11-10, CORE7.2 | Core554/554 D/R,48newcases; source/published/fresh6package36checks/profile, оба DI; ordinary incremental solution Debug0errors/855warnings | [Core scope](core/HISTORY.md#core72-2026-11-10) |
+| 2026-11-10, CORE7.1 | Core506/506 D/R,108newcases; source/published/fresh3package consumer15checks/profile; incremental solution Debug0errors/236warnings | [Core scope](core/HISTORY.md#core71-2026-11-10) |
+| 2026-11-09, snapshots/observer |1376scoped D/R и fresh7pkg CPU21checks/profile/owners0; Editor1468 D/R, workload allocations−3.46/−3.51%; solution Debug0errors/1556warnings. Full Aether non-green отделён | [Scope](engine/HISTORY.md#render-snapshots-2026-11-09) |
+| 2026-11-09, ED5b и workspace build | Full Editor1465/1465 D/R; source/published/fresh-package native4profiles по5PNG/4reaped children, owners0/validation0/0. Solution nonincremental Debug0errors/1556warnings | [Translation](engine/HISTORY.md#ed5b-translation-2026-11-09) |
+| 2026-11-09, COB5a.1 | Runtime/adapter179/generator96 каждый D/R; frozen paired allocations и40behavior scenarios; timing exploratory | [Cobalt](cobalt/HISTORY.md#cob5a1-production-2026-11-09) |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- .NET 11: restore/build, все 11 test projects D/R и ограниченный source/published native профиль прошли. Manual NU1201 и внешний CPM NU1008 устранены в CORE8.1, SDK selector/frozen restore/manifest/compiler проверены в CORE8.3. Остаётся CORE8.5: свежая согласованная поставка и итоговая документация.
+
+- Nom: actual VM crash verification отложена пользователем; hardware power-off исключён. Предыдущий isolated-volume disk-full UAC proof проверен отдельно; [scope](nom/DURABILITY.md).
+
+- CORE7.6 Aether 3234/3234 D/R с test props override остаётся историческим результатом.
+  CORE8.3/4 подтвердили ordinary nested restore и полный Aether 3243/3243 D/R
+  без него. Старые non-green attempts и причины diagnostics timeout сохраняются
+  отдельно. [Исторический профиль](core/HISTORY.md#core76-2026-11-10),
+  [текущая проверка](core/HISTORY.md#core84-runtime-2026-11-11).
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview имеет camera/selection и translation v1 в bounded primitive GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+**CORE8.5:** свежая согласованная NuGet/runtime/analyzer/native поставка, source/published/fresh consumers и итоговая документация. [CORE8.4 завершён](core/HISTORY.md#core84-runtime-2026-11-11). Очередь функциональных задач ниже сохраняется.
+
+
+[ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
+renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
+owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
+
+Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
+Reliability: текущие CORE8.3/4 full net11 проверки используют ordinary nested restore,
+без test-only props. Причинное evidence прежнего post-reap drain/diagnostics timeout
+остаётся отдельным шагом; исторический net10 baseline записан в CORE7.6.
+Physical input, device loss/K7/VRAM и release matrix сохраняют отдельные gates.
+
+<a id="common-status-before-core84-2026-11-11"></a>
+## STATUS до CORE8.4 — архив 2026-11-11
+
+# TrueMoon: общий статус
+
+**2026-11-11 — CORE8.3 завершён: согласованный frozen game build .NET11.**
+[Реализация/команды/ограничения](core/HISTORY.md#core83-frozen-2026-11-11), [план CORE8](core/PLAN.md#core8-dotnet11).
+Full Aether3243 и Editor1496 каждый D/R, failed/skipped0, ordinary nested restore
+без test-only props overrides. SDK/target/Features/lock/manifest согласованы;
+старые artifacts отклоняются с rebuild diagnostic, schema1 сохранена.
+
+Source Debug/published Release: actual frozen repository game compile/reuse/Open
+на SDK11-only root → independent Runtime Step/checkpoint/Stop/reap,2children.
+Parent game не загружает; exact artifact и child CoreLib проверены. Это headless
+CPU/control scope, не новый surface/GPU/native release proof.
+Solution incremental D/R с restore:0errors, warnings Debug175/Release175.
+[Предыдущая сводка целиком](HISTORY.md#common-status-before-core83-2026-11-11).
+CORE8.1/2 managed inputs/configuration/generators/DI/IPC proofs сохраняют свои даты.
+Далее CORE8.4 остальные suites/runtime async и CORE8.5 final delivery/native.
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | CORE8.1–3 inputs/generators/DI и frozen game profile проверены; current Aether/Editor4739tests/config и SDK11-only actual Runtime proof; solution D/R0errors | [CORE8.4/5](core/PLAN.md#core8-dotnet11): остальные suites/runtime async и полная поставка/native; CORE6 отдельно |
+| [Cobalt](cobalt/STATUS.md) | CORE8.2 net11: runtime/adapter179 и generator96 D/R; package generation; прежние COB6e/COB5a.1 сохранены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | CORE8.2 net11: runtime354 и generator114 D/R, actual generated IPC/package proof; same-build contracts сохранены | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
+| [Aether/Editor](engine/STATUS.md) | CORE8.3 net11 frozen game profile; full Aether3243/Editor1496 D/R, source/published SDK11-only compile/reuse/load/Stop/reap | Общая CORE8.4/5 acceptance; [ARCH1f.4](engine/PLAN.md#arch1f-rendering) surface renderer и прежние reliability gates отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; alpha version сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope; прежние модульные/full/frame проверки не считаются повторёнными текущей задачей.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-11, CORE8.3 |Full Aether3243/Editor1496 D/R; SDK11-only source/published game compile/reuse/load/Stop/reap,2children; solution D/R0errors | [Команды/границы](core/HISTORY.md#core83-frozen-2026-11-11) |
+| 2026-11-11, CORE8.2 |4suites743/743 D/R,8fresh packages132DI/IPCscenarios; solution Debug0errors/510warnings, Release0errors/1414warnings, incremental | [Команды/исправления/границы](core/HISTORY.md#core82-generators-2026-11-11) |
+| 2026-11-11, CORE8.1 profiles/restore | 45 runners, 61 net11 projects; external NU1008 исправлен; solution D/R0errors,16packages/15profiles/230checks и4children на вид поставки | [Inputs/команды/границы](core/HISTORY.md#core81-profiles-2026-11-11) |
+| 2026-11-11, CORE8.1 TFM |61/61net11 evaluation,8profile controls, solution и6extra projects D/R0errors; manual NU1201 устранён | [Команды/границы](core/HISTORY.md#core81-tfm-2026-11-11) |
+| 2026-11-11, CORE8.0 | Ordinary restore0/build D/R0errors/1556warnings;61evaluation,4manual NU1201 и1/1failed actual game build test | [Входные условия/команды/границы](core/HISTORY.md#core80-baseline-2026-11-11) |
+| 2026-11-11, CORE7.6 итог | Solution D/R0errors;7suites6945/6945 D/R;16packages230checks/4owned children на source/published/fresh profile; metadata16/16,8managed APIs unchanged | [Core evidence/границы](core/HISTORY.md#core76-2026-11-10) |
+| 2026-11-10, CORE7.5 | Six full suites D/R,110newcases; Aether47scoped serial D/R, full attempts non-green. Source/published/fresh16packages76checks/profile, оба DI; API removed0 в7assemblies | [Core evidence/limits](core/HISTORY.md#core75-2026-11-10) |
+| 2026-11-10, CORE7.2 | Core554/554 D/R,48newcases; source/published/fresh6package36checks/profile, оба DI; ordinary incremental solution Debug0errors/855warnings | [Core scope](core/HISTORY.md#core72-2026-11-10) |
+| 2026-11-10, CORE7.1 | Core506/506 D/R,108newcases; source/published/fresh3package consumer15checks/profile; incremental solution Debug0errors/236warnings | [Core scope](core/HISTORY.md#core71-2026-11-10) |
+| 2026-11-09, snapshots/observer |1376scoped D/R и fresh7pkg CPU21checks/profile/owners0; Editor1468 D/R, workload allocations−3.46/−3.51%; solution Debug0errors/1556warnings. Full Aether non-green отделён | [Scope](engine/HISTORY.md#render-snapshots-2026-11-09) |
+| 2026-11-09, ED5b и workspace build | Full Editor1465/1465 D/R; source/published/fresh-package native4profiles по5PNG/4reaped children, owners0/validation0/0. Solution nonincremental Debug0errors/1556warnings | [Translation](engine/HISTORY.md#ed5b-translation-2026-11-09) |
+| 2026-11-09, COB5a.1 | Runtime/adapter179/generator96 каждый D/R; frozen paired allocations и40behavior scenarios; timing exploratory | [Cobalt](cobalt/HISTORY.md#cob5a1-production-2026-11-09) |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- .NET11: обычная source compilation D/R прошла. Manual NU1201 и внешний CPM NU1008 устранены в CORE8.1; открыт Aether SDK selector failure. Managed package/child proof обновлён, полная runtime/test/native acceptance ещё нужна. После selector проверить actual frozen restore/manifest/compiler.
+
+- Nom: actual VM crash verification отложена пользователем; hardware power-off исключён. Предыдущий isolated-volume disk-full UAC proof проверен отдельно; [scope](nom/DURABILITY.md).
+
+- Предыдущий CORE7.6 full Aether3234/3234 D/R прошёл последовательно с bounded
+  test props override. Ordinary nested restore без него не объявлен исправленным;
+  старые non-green attempts и diagnostics причины сохраняются отдельно.
+  [Точный input profile/commands](core/HISTORY.md#core76-2026-11-10).
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview имеет camera/selection и translation v1 в bounded primitive GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+**CORE8.4:** сверка всех11test projects и оставшаяся runtime-async regression; [CORE8.3 full Aether/Editor и SDK11-only runtime proof завершён](core/HISTORY.md#core83-frozen-2026-11-11). Далее CORE8.5 fresh-package/native/full delivery. Feature очередь ниже сохраняется.
+
+
+[ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
+renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
+owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
+
+Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
+Reliability: current CORE8.3 full net11 baseline использует ordinary nested restore,
+без test-only props. Причинное evidence прежнего post-reap drain/diagnostics timeout
+остаётся отдельным шагом; исторический net10 baseline записан в CORE7.6.
+Physical input, device loss/K7/VRAM и release matrix сохраняют отдельные gates.
+
+<a id="common-status-before-core83-2026-11-11"></a>
+## Общий STATUS до CORE8.3 — архив 2026-11-11
+
+# TrueMoon: общий статус
+
+**2026-11-11 — CORE8.2 завершён: генераторы, runtime и DI adapter на .NET11.**
+[Точные результаты и ограничения](core/HISTORY.md#core82-generators-2026-11-11), [план CORE8](core/PLAN.md#core8-dotnet11).
+Cobalt runtime179/generator96 и Enerit runtime354/generator114 каждый D/R,
+failed/skipped0:743tests на конфигурацию. SDK compiler Roslyn5.12 и pinned5.9
+прошли; production API/dependencies/wire сохранены. Исправлены test expectations
+Microsoft DI11 aliases cleanup и trace Recorded mask. Fresh8package DI/IPC
+consumer прошёл132actual process scenarios, оба DI, D/R build/publish и Microsoft
+без Cobalt analyzer; analyzer closure и negative CS0234 проверены.
+
+Финальная ordinary incremental solution сборка с restore: Debug0errors/510warnings,
+Release0errors/1414warnings. Counts не являются warning-clean baseline.
+CORE8.1 ранее проверил61net11projects/45runners/CPM isolation и16package
+configuration delivery; [его scope](core/HISTORY.md#core81-profiles-2026-11-11)
+не повторён целиком CORE8.2. Game/renderer/GPU здесь не запускались.
+Следующий этап — CORE8.3 frozen game profile, затем CORE8.4/5 full regression/delivery.
+[Предыдущая сводка целиком](HISTORY.md#common-status-before-core82-2026-11-11).
+Feature очереди и исторические release gates сохранены.
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | CORE8.1 inputs/profile и CORE8.2 generator/runtime adapter проверены;743tests/config,132fresh DI/IPCscenarios; solution D/R0errors | [CORE8.3–8.5](core/PLAN.md#core8-dotnet11): frozen game profile, полная runtime regression/поставка; CORE6 отдельно |
+| [Cobalt](cobalt/STATUS.md) | CORE8.2 net11: runtime/adapter179 и generator96 D/R; package generation; прежние COB6e/COB5a.1 сохранены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | CORE8.2 net11: runtime354 и generator114 D/R, actual generated IPC/package proof; same-build contracts сохранены | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
+| [Aether/Editor](engine/STATUS.md) | Existing Editor/f.1–f.3; current SDK11 compilation проходит, repo-game build отвергается SelectSdk major10-only; full runtime regression ещё нет | Сначала [CORE8.3](core/PLAN.md#core8-dotnet11) frozen game build migration; затем [ARCH1f.4](engine/PLAN.md#arch1f-rendering); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; alpha version сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope; прежние модульные/full/frame проверки не считаются повторёнными текущей задачей.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-11, CORE8.2 |4suites743/743 D/R,8fresh packages132DI/IPCscenarios; solution Debug0errors/510warnings, Release0errors/1414warnings, incremental | [Команды/исправления/границы](core/HISTORY.md#core82-generators-2026-11-11) |
+| 2026-11-11, CORE8.1 profiles/restore | 45 runners, 61 net11 projects; external NU1008 исправлен; solution D/R0errors,16packages/15profiles/230checks и4children на вид поставки | [Inputs/команды/границы](core/HISTORY.md#core81-profiles-2026-11-11) |
+| 2026-11-11, CORE8.1 TFM |61/61net11 evaluation,8profile controls, solution и6extra projects D/R0errors; manual NU1201 устранён | [Команды/границы](core/HISTORY.md#core81-tfm-2026-11-11) |
+| 2026-11-11, CORE8.0 | Ordinary restore0/build D/R0errors/1556warnings;61evaluation,4manual NU1201 и1/1failed actual game build test | [Входные условия/команды/границы](core/HISTORY.md#core80-baseline-2026-11-11) |
+| 2026-11-11, CORE7.6 итог | Solution D/R0errors;7suites6945/6945 D/R;16packages230checks/4owned children на source/published/fresh profile; metadata16/16,8managed APIs unchanged | [Core evidence/границы](core/HISTORY.md#core76-2026-11-10) |
+| 2026-11-10, CORE7.5 | Six full suites D/R,110newcases; Aether47scoped serial D/R, full attempts non-green. Source/published/fresh16packages76checks/profile, оба DI; API removed0 в7assemblies | [Core evidence/limits](core/HISTORY.md#core75-2026-11-10) |
+| 2026-11-10, CORE7.2 | Core554/554 D/R,48newcases; source/published/fresh6package36checks/profile, оба DI; ordinary incremental solution Debug0errors/855warnings | [Core scope](core/HISTORY.md#core72-2026-11-10) |
+| 2026-11-10, CORE7.1 | Core506/506 D/R,108newcases; source/published/fresh3package consumer15checks/profile; incremental solution Debug0errors/236warnings | [Core scope](core/HISTORY.md#core71-2026-11-10) |
+| 2026-11-09, snapshots/observer |1376scoped D/R и fresh7pkg CPU21checks/profile/owners0; Editor1468 D/R, workload allocations−3.46/−3.51%; solution Debug0errors/1556warnings. Full Aether non-green отделён | [Scope](engine/HISTORY.md#render-snapshots-2026-11-09) |
+| 2026-11-09, ED5b и workspace build | Full Editor1465/1465 D/R; source/published/fresh-package native4profiles по5PNG/4reaped children, owners0/validation0/0. Solution nonincremental Debug0errors/1556warnings | [Translation](engine/HISTORY.md#ed5b-translation-2026-11-09) |
+| 2026-11-09, COB5a.1 | Runtime/adapter179/generator96 каждый D/R; frozen paired allocations и40behavior scenarios; timing exploratory | [Cobalt](cobalt/HISTORY.md#cob5a1-production-2026-11-09) |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- .NET11: обычная source compilation D/R прошла. Manual NU1201 и внешний CPM NU1008 устранены в CORE8.1; открыт Aether SDK selector failure. Managed package/child proof обновлён, полная runtime/test/native acceptance ещё нужна. После selector проверить actual frozen restore/manifest/compiler.
+
+- Nom: actual VM crash verification отложена пользователем; hardware power-off исключён. Предыдущий isolated-volume disk-full UAC proof проверен отдельно; [scope](nom/DURABILITY.md).
+
+- Предыдущий CORE7.6 full Aether3234/3234 D/R прошёл последовательно с bounded
+  test props override. Ordinary nested restore без него не объявлен исправленным;
+  старые non-green attempts и diagnostics причины сохраняются отдельно.
+  [Точный input profile/commands](core/HISTORY.md#core76-2026-11-10).
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview имеет camera/selection и translation v1 в bounded primitive GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+**CORE8.3:** Aether frozen game SDK/TFM, locks/manifests/cache и ordinary nested restore, actual Runtime artifact/load/stop/reap. [CORE8.2 generators/runtime adapter завершён](core/HISTORY.md#core82-generators-2026-11-11). Далее CORE8.4/5 full regression/delivery. Feature очередь ниже сохраняется.
+
+
+[ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
+renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
+owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
+
+Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
+Reliability: изолировать native game fixture SDK inputs от legacy repo CLI tools,
+стандартизовать ordinary fixture restore и получить причинное evidence прежнего drain timeout.
+Предыдущий net10 full baseline на bounded test inputs записан в CORE7.6.
+Physical input, device loss/K7/VRAM и release matrix сохраняют отдельные gates.
+
+<a id="common-status-before-core82-2026-11-11"></a>
+## Общий STATUS до CORE8.2 — архив 2026-11-11
+
+# TrueMoon: общий статус
+
+**2026-11-11 — CORE8.1 завершён в managed build-input/profile scope.**
+[Точные результаты и ограничения](core/HISTORY.md#core81-profiles-2026-11-11), [план CORE8](core/PLAN.md#core8-dotnet11).
+Все 61 проекта net11.0; 45 runners читают общий MSBuild profile. CPM ограничен
+workspace owners; конфликт внешнего restore NU1008 воспроизведён и исправлен.
+Финальная ordinary solution сборка: Debug 0 errors / 1556 warnings,
+Release 0 errors / 1219 warnings, с restore. Это incremental результаты.
+
+16 fresh packages одной версии, 15 source/published/fresh profiles: по 230 checks
+и 4 owned children на вид поставки, Cobalt/MS DI и stop/reap. Cobalt analyzer
+consumer отдельно прошёл по 11 checks D/R и отрицательные CS1591 controls.
+Game/renderer/GPU не запускались. SDK10-only Aether selector остаётся CORE8.3;
+полные module suites и wider native/release acceptance ещё нужны.
+[Предыдущая сводка](HISTORY.md#common-status-before-core81-profiles-2026-11-11).
+Следующий общий этап — CORE8.2 generators/runtime adapter, затем frozen game
+profile и полная regression/delivery. Feature очереди и старые release gates сохранены.
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | CORE7 complete на прежнем net10 профиле; CORE8.1 managed inputs готовы: общий SDK/TFM profile, CPM isolation и текущий16package App/child proof; source D/R0errors | [CORE8.2–8.5](core/PLAN.md#core8-dotnet11): generators/runtime adapter, frozen game profile и полная regression/поставка; CORE6 отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter/ownership, COB6e и COB5a.1 no-capture cycle check проверены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes/admission/stop/telemetry; CORE7.5 common limits, runtime354 D/R | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
+| [Aether/Editor](engine/STATUS.md) | Existing Editor/f.1–f.3; current SDK11 compilation проходит, repo-game build отвергается SelectSdk major10-only; full runtime regression ещё нет | Сначала [CORE8.3](core/PLAN.md#core8-dotnet11) frozen game build migration; затем [ARCH1f.4](engine/PLAN.md#arch1f-rendering); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; alpha version сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope; прежние модульные/full/frame проверки не считаются повторёнными текущей задачей.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-11, CORE8.1 profiles/restore | 45 runners, 61 net11 projects; external NU1008 исправлен; solution D/R0errors,16packages/15profiles/230checks и4children на вид поставки | [Inputs/команды/границы](core/HISTORY.md#core81-profiles-2026-11-11) |
+| 2026-11-11, CORE8.1 TFM |61/61net11 evaluation,8profile controls, solution и6extra projects D/R0errors; manual NU1201 устранён | [Команды/границы](core/HISTORY.md#core81-tfm-2026-11-11) |
+| 2026-11-11, CORE8.0 | Ordinary restore0/build D/R0errors/1556warnings;61evaluation,4manual NU1201 и1/1failed actual game build test | [Входные условия/команды/границы](core/HISTORY.md#core80-baseline-2026-11-11) |
+| 2026-11-11, CORE7.6 итог | Solution D/R0errors;7suites6945/6945 D/R;16packages230checks/4owned children на source/published/fresh profile; metadata16/16,8managed APIs unchanged | [Core evidence/границы](core/HISTORY.md#core76-2026-11-10) |
+| 2026-11-10, CORE7.5 | Six full suites D/R,110newcases; Aether47scoped serial D/R, full attempts non-green. Source/published/fresh16packages76checks/profile, оба DI; API removed0 в7assemblies | [Core evidence/limits](core/HISTORY.md#core75-2026-11-10) |
+| 2026-11-10, CORE7.2 | Core554/554 D/R,48newcases; source/published/fresh6package36checks/profile, оба DI; ordinary incremental solution Debug0errors/855warnings | [Core scope](core/HISTORY.md#core72-2026-11-10) |
+| 2026-11-10, CORE7.1 | Core506/506 D/R,108newcases; source/published/fresh3package consumer15checks/profile; incremental solution Debug0errors/236warnings | [Core scope](core/HISTORY.md#core71-2026-11-10) |
+| 2026-11-09, snapshots/observer |1376scoped D/R и fresh7pkg CPU21checks/profile/owners0; Editor1468 D/R, workload allocations−3.46/−3.51%; solution Debug0errors/1556warnings. Full Aether non-green отделён | [Scope](engine/HISTORY.md#render-snapshots-2026-11-09) |
+| 2026-11-09, ED5b и workspace build | Full Editor1465/1465 D/R; source/published/fresh-package native4profiles по5PNG/4reaped children, owners0/validation0/0. Solution nonincremental Debug0errors/1556warnings | [Translation](engine/HISTORY.md#ed5b-translation-2026-11-09) |
+| 2026-11-09, COB5a.1 | Runtime/adapter179/generator96 каждый D/R; frozen paired allocations и40behavior scenarios; timing exploratory | [Cobalt](cobalt/HISTORY.md#cob5a1-production-2026-11-09) |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- .NET11: обычная source compilation D/R прошла. Manual NU1201 и внешний CPM NU1008 устранены в CORE8.1; открыт Aether SDK selector failure. Managed package/child proof обновлён, полная runtime/test/native acceptance ещё нужна. После selector проверить actual frozen restore/manifest/compiler.
+
+- Nom: actual VM crash verification отложена пользователем; hardware power-off исключён. Предыдущий isolated-volume disk-full UAC proof проверен отдельно; [scope](nom/DURABILITY.md).
+
+- Предыдущий CORE7.6 full Aether3234/3234 D/R прошёл последовательно с bounded
+  test props override. Ordinary nested restore без него не объявлен исправленным;
+  старые non-green attempts и diagnostics причины сохраняются отдельно.
+  [Точный input profile/commands](core/HISTORY.md#core76-2026-11-10).
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview имеет camera/selection и translation v1 в bounded primitive GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+**CORE8.2:** полные generator suites Cobalt/Enerit и runtime/adapter compatibility на SDK11. Затем CORE8.3 actual frozen game profile и CORE8.4/5 full regression/delivery. [CORE8.1 inputs/managed delivery готовы](core/HISTORY.md#core81-profiles-2026-11-11). Feature очередь ниже сохраняется.
+
+
+[ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
+renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
+owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
+
+Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
+Reliability: изолировать native game fixture SDK inputs от legacy repo CLI tools,
+стандартизовать ordinary fixture restore и получить причинное evidence прежнего drain timeout.
+Предыдущий net10 full baseline на bounded test inputs записан в CORE7.6.
+Physical input, device loss/K7/VRAM и release matrix сохраняют отдельные gates.
+
+<a id="common-status-before-core81-profiles-2026-11-11"></a>
+## Общий STATUS до завершения CORE8.1 — архив 2026-11-11
+
+# TrueMoon: общий статус
+
+**2026-11-11 — CORE8.1 частично: все61проекта используют общие TF/TestsTF и получают net11.0.**
+[Изменения и точные проверки](core/HISTORY.md#core81-tfm-2026-11-11), [план CORE8](core/PLAN.md#core8-dotnet11).
+Solution Debug/Release:0errors/1556warnings каждого profile, restore включён.
+6extra source projects тоже собраны D/R без ошибок;8alias/isolation controls прошли.
+Прежние4manual NU1201 устранены. Изменены11csproj/6props; C#/packages/SDK pin сохранены.
+
+Package-only consumers проверены на effective TFM; full fresh-package delivery,
+полные tests и runtime/native/GPU acceptance не выполнялись. Aether SDK10-only
+selector не исправлялся и остаётся CORE8.3 blocker. Scripts/generated fixtures,
+lock/manifest и ordinary nested inputs требуют следующих срезов CORE8.
+[Предыдущая сводка](HISTORY.md#common-status-before-core81-tfm-2026-11-11).
+Feature/release очереди и исторические net10 proofs сохраняют свои границы.
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | CORE7 complete на прежнем net10 профиле; CORE8.1 TFM согласованы61/61; current solution/6extra projects D/R0errors, manual NU1201 устранён | [CORE8.1–8.5](core/PLAN.md#core8-dotnet11): scripts/package profiles/nested restore, generators/Aether и полная поставка; CORE6 отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter/ownership, COB6e и COB5a.1 no-capture cycle check проверены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes/admission/stop/telemetry; CORE7.5 common limits, runtime354 D/R | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
+| [Aether/Editor](engine/STATUS.md) | Existing Editor/f.1–f.3; current SDK11 compilation проходит, repo-game build отвергается SelectSdk major10-only; full runtime regression ещё нет | Сначала [CORE8.3](core/PLAN.md#core8-dotnet11) frozen game build migration; затем [ARCH1f.4](engine/PLAN.md#arch1f-rendering); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; alpha version сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope; прежние модульные/full/frame проверки не считаются повторёнными текущей задачей.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-11, CORE8.1 TFM |61/61net11 evaluation,8profile controls, solution и6extra projects D/R0errors; manual NU1201 устранён | [Команды/границы](core/HISTORY.md#core81-tfm-2026-11-11) |
+| 2026-11-11, CORE8.0 | Ordinary restore0/build D/R0errors/1556warnings;61evaluation,4manual NU1201 и1/1failed actual game build test | [Входные условия/команды/границы](core/HISTORY.md#core80-baseline-2026-11-11) |
+| 2026-11-11, CORE7.6 итог | Solution D/R0errors;7suites6945/6945 D/R;16packages230checks/4owned children на source/published/fresh profile; metadata16/16,8managed APIs unchanged | [Core evidence/границы](core/HISTORY.md#core76-2026-11-10) |
+| 2026-11-10, CORE7.5 | Six full suites D/R,110newcases; Aether47scoped serial D/R, full attempts non-green. Source/published/fresh16packages76checks/profile, оба DI; API removed0 в7assemblies | [Core evidence/limits](core/HISTORY.md#core75-2026-11-10) |
+| 2026-11-10, CORE7.2 | Core554/554 D/R,48newcases; source/published/fresh6package36checks/profile, оба DI; ordinary incremental solution Debug0errors/855warnings | [Core scope](core/HISTORY.md#core72-2026-11-10) |
+| 2026-11-10, CORE7.1 | Core506/506 D/R,108newcases; source/published/fresh3package consumer15checks/profile; incremental solution Debug0errors/236warnings | [Core scope](core/HISTORY.md#core71-2026-11-10) |
+| 2026-11-09, snapshots/observer |1376scoped D/R и fresh7pkg CPU21checks/profile/owners0; Editor1468 D/R, workload allocations−3.46/−3.51%; solution Debug0errors/1556warnings. Full Aether non-green отделён | [Scope](engine/HISTORY.md#render-snapshots-2026-11-09) |
+| 2026-11-09, ED5b и workspace build | Full Editor1465/1465 D/R; source/published/fresh-package native4profiles по5PNG/4reaped children, owners0/validation0/0. Solution nonincremental Debug0errors/1556warnings | [Translation](engine/HISTORY.md#ed5b-translation-2026-11-09) |
+| 2026-11-09, COB5a.1 | Runtime/adapter179/generator96 каждый D/R; frozen paired allocations и40behavior scenarios; timing exploratory | [Cobalt](cobalt/HISTORY.md#cob5a1-production-2026-11-09) |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- .NET11: обычная source compilation D/R прошла. Manual NU1201 устранён в CORE8.1; открыт Aether SDK selector failure, full runtime/test/package acceptance ещё нет. Historical nested restore/старые profiles проверить после selector, не считать его текущей причиной.
+
+- Nom: actual VM crash verification отложена пользователем; hardware power-off исключён. Предыдущий isolated-volume disk-full UAC proof проверен отдельно; [scope](nom/DURABILITY.md).
+
+- Предыдущий CORE7.6 full Aether3234/3234 D/R прошёл последовательно с bounded
+  test props override. Ordinary nested restore без него не объявлен исправленным;
+  старые non-green attempts и diagnostics причины сохраняются отдельно.
+  [Точный input profile/commands](core/HISTORY.md#core76-2026-11-10).
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview имеет camera/selection и translation v1 в bounded primitive GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+**CORE8.1:** после согласованных61TFM довести package profiles/output-path scripts и ordinary restore inputs; затем CORE8.2/3 generators/game profile, CORE8.4/5 full regression/delivery. [Диагностический baseline готов](core/HISTORY.md#core80-baseline-2026-11-11). Feature очередь ниже сохраняется.
+
+
+[ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
+renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
+owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
+
+Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
+Reliability: изолировать native game fixture SDK inputs от legacy repo CLI tools,
+стандартизовать ordinary fixture restore и получить причинное evidence прежнего drain timeout.
+Предыдущий net10 full baseline на bounded test inputs записан в CORE7.6.
+Physical input, device loss/K7/VRAM и release matrix сохраняют отдельные gates.
+
+<a id="common-status-before-core81-tfm-2026-11-11"></a>
+## Общий STATUS до TFM-среза CORE8.1 — архив2026-11-11
+
+# TrueMoon: общий статус
+
+**2026-11-11 — CORE8.0 завершён: ordinary solution restore/build на .NET11 прошли; blockers воспроизведены вне общей компиляции.**
+[Единственный план CORE8](core/PLAN.md#core8-dotnet11), [команды и диагностика](core/HISTORY.md#core80-baseline-2026-11-11).
+Windows x64/SDK11.0.100/runtime11.0.0, net11.0/runtime-async=on/0.3.0.1-alpha.
+Solution Debug0errors/1556warnings и Release0errors/1556warnings, restore включён.
+61project evaluations:47net11/14net10; все14legacy targets вне solution.
+
+Подтверждены NU1201 в4manual consumers net10→net11 и отказ Aether game build:
+SDK10-only selector отклоняет SDK11 до inner restore. Один выбранный integration
+test выполнен1/1failed; это диагностическое воспроизведение, не full regression.
+11test projects собраны D/R, полные suites/discovery не запускались. Runtime async
+behavior, package/publish/native/GPU и старые reliability причины не проверены.
+
+1767tracked source/build inputs сохранены, исправления в CORE8.0 не выполнялись.
+Следующий общий этап — CORE8.1 consumers/restore; далее generators/Aether migration
+и полная acceptance. CORE7/Editor/UI/Nom прежние net10 proofs сохраняют свои даты.
+[Предыдущая сводка](HISTORY.md#common-status-before-core80-2026-11-11).
+Engine f.4/import/audio/Nom feature очередь и release gates не отменены.
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | CORE7 complete на прежнем net10 профиле; CORE8.0 ordinary SDK11 solution D/R0errors/1556warnings, manual/game blockers воспроизведены | [CORE8.1–8.5](core/PLAN.md#core8-dotnet11): manual consumers, generators/Aether и полная поставка; CORE6 отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter/ownership, COB6e и COB5a.1 no-capture cycle check проверены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes/admission/stop/telemetry; CORE7.5 common limits, runtime354 D/R | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
+| [Aether/Editor](engine/STATUS.md) | Existing Editor/f.1–f.3; current SDK11 compilation проходит, repo-game build отвергается SelectSdk major10-only; full runtime regression ещё нет | Сначала [CORE8.3](core/PLAN.md#core8-dotnet11) frozen game build migration; затем [ARCH1f.4](engine/PLAN.md#arch1f-rendering); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; alpha version сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope; прежние модульные/full/frame проверки не считаются повторёнными текущей задачей.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-11, CORE8.0 | Ordinary restore0/build D/R0errors/1556warnings;61evaluation,4manual NU1201 и1/1failed actual game build test | [Входные условия/команды/границы](core/HISTORY.md#core80-baseline-2026-11-11) |
+| 2026-11-11, CORE7.6 итог | Solution D/R0errors;7suites6945/6945 D/R;16packages230checks/4owned children на source/published/fresh profile; metadata16/16,8managed APIs unchanged | [Core evidence/границы](core/HISTORY.md#core76-2026-11-10) |
+| 2026-11-10, CORE7.5 | Six full suites D/R,110newcases; Aether47scoped serial D/R, full attempts non-green. Source/published/fresh16packages76checks/profile, оба DI; API removed0 в7assemblies | [Core evidence/limits](core/HISTORY.md#core75-2026-11-10) |
+| 2026-11-10, CORE7.2 | Core554/554 D/R,48newcases; source/published/fresh6package36checks/profile, оба DI; ordinary incremental solution Debug0errors/855warnings | [Core scope](core/HISTORY.md#core72-2026-11-10) |
+| 2026-11-10, CORE7.1 | Core506/506 D/R,108newcases; source/published/fresh3package consumer15checks/profile; incremental solution Debug0errors/236warnings | [Core scope](core/HISTORY.md#core71-2026-11-10) |
+| 2026-11-09, snapshots/observer |1376scoped D/R и fresh7pkg CPU21checks/profile/owners0; Editor1468 D/R, workload allocations−3.46/−3.51%; solution Debug0errors/1556warnings. Full Aether non-green отделён | [Scope](engine/HISTORY.md#render-snapshots-2026-11-09) |
+| 2026-11-09, ED5b и workspace build | Full Editor1465/1465 D/R; source/published/fresh-package native4profiles по5PNG/4reaped children, owners0/validation0/0. Solution nonincremental Debug0errors/1556warnings | [Translation](engine/HISTORY.md#ed5b-translation-2026-11-09) |
+| 2026-11-09, COB5a.1 | Runtime/adapter179/generator96 каждый D/R; frozen paired allocations и40behavior scenarios; timing exploratory | [Cobalt](cobalt/HISTORY.md#cob5a1-production-2026-11-09) |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- .NET11: обычная source compilation D/R прошла. Открыты подтверждённые manual NU1201 и Aether SDK selector failure; full runtime/test/package acceptance ещё нет. Historical nested restore/старые profiles проверить после selector, не считать его текущей причиной.
+
+- Nom: actual VM crash verification отложена пользователем; hardware power-off исключён. Предыдущий isolated-volume disk-full UAC proof проверен отдельно; [scope](nom/DURABILITY.md).
+
+- Предыдущий CORE7.6 full Aether3234/3234 D/R прошёл последовательно с bounded
+  test props override. Ordinary nested restore без него не объявлен исправленным;
+  старые non-green attempts и diagnostics причины сохраняются отдельно.
+  [Точный input profile/commands](core/HISTORY.md#core76-2026-11-10).
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview имеет camera/selection и translation v1 в bounded primitive GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+**CORE8.1:** согласовать net11.0 у активных manual consumers и ordinary restore inputs; затем CORE8.2/3 generators/game profile, CORE8.4/5 full regression/delivery. [Диагностический baseline готов](core/HISTORY.md#core80-baseline-2026-11-11). Feature очередь ниже сохраняется.
+
+
+[ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
+renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
+owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
+
+Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
+Reliability: изолировать native game fixture SDK inputs от legacy repo CLI tools,
+стандартизовать ordinary fixture restore и получить причинное evidence прежнего drain timeout.
+Предыдущий net10 full baseline на bounded test inputs записан в CORE7.6.
+Physical input, device loss/K7/VRAM и release matrix сохраняют отдельные gates.
+
+<a id="common-status-before-core80-2026-11-11"></a>
+## Общий STATUS до CORE8.0 — архив2026-11-11
+
+# TrueMoon: общий статус
+
+**2026-11-11 — ближайший общий этап: восстановление solution на .NET11, CORE8.**
+[План CORE8.0–8.5](core/PLAN.md#core8-dotnet11), [исходная сверка](core/HISTORY.md#core8-planning-2026-11-11).
+Пользователь обновил семь SDK/TFM/dependency файлов; они сохранены.
+Установлены SDK11.0.100/runtime11.0.0, выбран net11.0/runtime-async=on,
+общая версия0.3.0.1-alpha. Evaluation трёх проектов exit0; restore/build/test
+на новых inputs ещё не запускались, current passing baseline не заявляется.
+
+Найдены46solution projects/61tracked csproj/11test projects,11manual/consumer csproj
+с net10.0 и отдельный consumer props. Aether frozen SDK/build/manifest/lock policy
+закреплены на10; root CPM ещё содержит obsolete dotnet-xunit. Это исходная карта
+расхождений, не перечень воспроизведённых compile failures. Сначала CORE8.0 baseline.
+
+CORE7.0–7.6, ED5b, SplitView, Cobalt/observer/snapshots сохраняют свою реализацию
+и датированные net10 proofs: [CORE7.6](core/HISTORY.md#core76-2026-11-10),
+[предкоммитная сверка11ноября](HISTORY.md#precommit-2026-11-11).
+Прежние6945 и дополнительные1613cases/D/R — разные прошлые collections;
+они не подтверждают обновлённый SDK/TFM/packages/codegen.
+[Предыдущая сводка целиком](HISTORY.md#common-status-before-core8-2026-11-11).
+Очередь engine f.4/import/audio/Nom сохранена; перед продолжением feature работы
+приоритет имеет восстановление общей сборки. Physical/native/wider release gates
+не закрываются этим планом.
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | CORE7 complete на прежнем net10 профиле; SDK11 evaluation трёх проектов exit0, compile/test ещё нет | [CORE8.0–8.5](core/PLAN.md#core8-dotnet11): общий рабочий baseline, generators/Aether и поставка; CORE6 отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter/ownership, COB6e и COB5a.1 no-capture cycle check проверены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes/admission/stop/telemetry; CORE7.5 common limits, runtime354 D/R | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
+| [Aether/Editor](engine/STATUS.md) | Existing Editor/f.1–f.3 и прежние net10 proofs; SDK/compiler/manifest profile ещё10 | Сначала [CORE8.3](core/PLAN.md#core8-dotnet11) frozen game build migration; затем [ARCH1f.4](engine/PLAN.md#arch1f-rendering); reliability отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; alpha version сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope; прежние модульные/full/frame проверки не считаются повторёнными текущей задачей.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-11, CORE8 planning | Static inventory и MSBuild evaluation3projects exit0; restore/build/test не запускались | [Входные условия/команды](core/HISTORY.md#core8-planning-2026-11-11) |
+| 2026-11-11, CORE7.6 итог | Solution D/R0errors;7suites6945/6945 D/R;16packages230checks/4owned children на source/published/fresh profile; metadata16/16,8managed APIs unchanged | [Core evidence/границы](core/HISTORY.md#core76-2026-11-10) |
+| 2026-11-10, CORE7.5 | Six full suites D/R,110newcases; Aether47scoped serial D/R, full attempts non-green. Source/published/fresh16packages76checks/profile, оба DI; API removed0 в7assemblies | [Core evidence/limits](core/HISTORY.md#core75-2026-11-10) |
+| 2026-11-10, CORE7.2 | Core554/554 D/R,48newcases; source/published/fresh6package36checks/profile, оба DI; ordinary incremental solution Debug0errors/855warnings | [Core scope](core/HISTORY.md#core72-2026-11-10) |
+| 2026-11-10, CORE7.1 | Core506/506 D/R,108newcases; source/published/fresh3package consumer15checks/profile; incremental solution Debug0errors/236warnings | [Core scope](core/HISTORY.md#core71-2026-11-10) |
+| 2026-11-09, snapshots/observer |1376scoped D/R и fresh7pkg CPU21checks/profile/owners0; Editor1468 D/R, workload allocations−3.46/−3.51%; solution Debug0errors/1556warnings. Full Aether non-green отделён | [Scope](engine/HISTORY.md#render-snapshots-2026-11-09) |
+| 2026-11-09, ED5b и workspace build | Full Editor1465/1465 D/R; source/published/fresh-package native4profiles по5PNG/4reaped children, owners0/validation0/0. Solution nonincremental Debug0errors/1556warnings | [Translation](engine/HISTORY.md#ed5b-translation-2026-11-09) |
+| 2026-11-09, COB5a.1 | Runtime/adapter179/generator96 каждый D/R; frozen paired allocations и40behavior scenarios; timing exploratory | [Cobalt](cobalt/HISTORY.md#cob5a1-production-2026-11-09) |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- .NET11 migration: работоспособность на новых inputs не подтверждена; SDK10-only Aether profile, старые consumer TFMs/output paths и ordinary nested restore требуют CORE8. Следующий общий baseline — на SDK11, прошлые net10 proofs не переносятся.
+
+- Nom: actual VM crash verification отложена пользователем; hardware power-off исключён. Предыдущий isolated-volume disk-full UAC proof проверен отдельно; [scope](nom/DURABILITY.md).
+
+- Предыдущий CORE7.6 full Aether3234/3234 D/R прошёл последовательно с bounded
+  test props override. Ordinary nested restore без него не объявлен исправленным;
+  старые non-green attempts и diagnostics причины сохраняются отдельно.
+  [Точный input profile/commands](core/HISTORY.md#core76-2026-11-10).
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview имеет camera/selection и translation v1 в bounded primitive GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+**CORE8.0:** ordinary restore/build baseline на SDK11.0.100/net11.0/runtime-async=on с binlogs, затем этапы [CORE8](core/PLAN.md#core8-dotnet11). После восстановления baseline возвращаться к engine очереди ниже.
+
+
+[ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
+renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
+owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
+
+Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
+Reliability: изолировать native game fixture SDK inputs от legacy repo CLI tools,
+стандартизовать ordinary fixture restore и получить причинное evidence прежнего drain timeout.
+Предыдущий net10 full baseline на bounded test inputs записан в CORE7.6.
+Physical input, device loss/K7/VRAM и release matrix сохраняют отдельные gates.
+
+<a id="common-status-before-core8-2026-11-11"></a>
+## Общий STATUS перед планированием CORE8 — архив2026-11-11
+
+# TrueMoon: общий статус
+
+**2026-11-11 — CORE7.0–7.6 завершены в configuration scope.**
+[Рабочее руководство](core/CONFIGURATION_GUIDE.md), [139keys/17schemas](core/CONFIGURATION_KEYS.md),
+[единый App/child runner](../ManualTests/ConfigurationDelivery/README.md),
+[точные commands/limits](core/HISTORY.md#core76-2026-11-10).
+
+Source solution Debug0errors/256warnings, Release0errors/190warnings.
+7suites:6945/6945 каждый D/R, Failed:0, Skipped:0; Aether3234/3234 D/R
+в текущем последовательном запуске с bounded test props override.
+Это current passing на указанных inputs; ordinary nested restore и причины
+старых diagnostics timeouts не объявлены исправленными.
+
+16fresh packages одной версии;5programs×source/published/fresh,230checks/profile,
+Cobalt/MS DI и4owned children/profile (12total). Fresh graphs0ProjectReference,
+metadata/payload/runtime hashes проверены. Guide example исполнен,139keys
+экспортированы из public metadata,8managed surfaces unchanged.
+1673/1673baseline C#/csproj сохранены, source0.2.5.2-alpha не менялась.
+
+Предкоммитная сверка11ноября дополнительно прошла: Cobalt179/generator96,
+Enerit.Generator114 и Alloy1224 каждый D/R (1613cases/profile, failed/skipped0).
+[Отдельные команды/inputs](HISTORY.md#precommit-2026-11-11). CORE7.6 collection
+не повторялась, C#/csproj SHA unchanged. Это не один all-solution test run.
+Новый native/GPU/physical acceptance не заявляется. Engine f.4 и остальные module/reliability/release очереди независимы.
+[Предыдущая сводка целиком](HISTORY.md#status-before-core76-2026-11-10).
+
+## Состояние модулей
+
+| Направление | Что реализовано в проверенном scope | Что дальше у владельца |
+| --- | --- | --- |
+| [Core](core/STATUS.md) | CORE7.0–7.6 complete;6945checks/suite collection D/R, current16package230checks/profile и actual App/child delivery | Применять [guide](core/CONFIGURATION_GUIDE.md); CORE6 routing/metrics/quota отдельно |
+| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter/ownership, COB6e и COB5a.1 no-capture cycle check проверены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | Same-build pipes/admission/stop/telemetry; CORE7.5 common limits, runtime354 D/R | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
+| [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
+| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
+| [Aether/Editor](engine/STATUS.md) | Existing Editor/f.1–f.3; CORE7.6 full Aether3234 и Editor1496 D/R на указанном input profile, fresh bootstrap child proof | [ARCH1f.4](engine/PLAN.md#arch1f-rendering) actual surface; ordinary fixture restore/reliability и дальнейший Editor отдельно |
+| [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
+
+## Общие этапы
+
+G1–G3 и ARCH2 имеют bounded source/package/own-child proofs; это не универсальная
+готовность. G4 UI alpha частичен: K7 и physical/device-loss/VRAM/final matrix открыты.
+G5 продолжает прикладной Editor; весь ED1–ED8/Player/HUD/agents не завершён.
+G6/R1–R6 не закрыты; alpha version сама по себе ничего не подтверждает.
+
+## Общие проверки — датированные сведения
+
+Результаты разделены по датам/scope; прежние модульные/full/frame проверки не считаются повторёнными текущей задачей.
+
+| Дата и scope | Последний относящийся результат | Где подробности |
+| --- | --- | --- |
+| 2026-11-11, CORE7.6 итог | Solution D/R0errors;7suites6945/6945 D/R;16packages230checks/4owned children на source/published/fresh profile; metadata16/16,8managed APIs unchanged | [Core evidence/границы](core/HISTORY.md#core76-2026-11-10) |
+| 2026-11-10, CORE7.5 | Six full suites D/R,110newcases; Aether47scoped serial D/R, full attempts non-green. Source/published/fresh16packages76checks/profile, оба DI; API removed0 в7assemblies | [Core evidence/limits](core/HISTORY.md#core75-2026-11-10) |
+| 2026-11-10, CORE7.2 | Core554/554 D/R,48newcases; source/published/fresh6package36checks/profile, оба DI; ordinary incremental solution Debug0errors/855warnings | [Core scope](core/HISTORY.md#core72-2026-11-10) |
+| 2026-11-10, CORE7.1 | Core506/506 D/R,108newcases; source/published/fresh3package consumer15checks/profile; incremental solution Debug0errors/236warnings | [Core scope](core/HISTORY.md#core71-2026-11-10) |
+| 2026-11-09, snapshots/observer |1376scoped D/R и fresh7pkg CPU21checks/profile/owners0; Editor1468 D/R, workload allocations−3.46/−3.51%; solution Debug0errors/1556warnings. Full Aether non-green отделён | [Scope](engine/HISTORY.md#render-snapshots-2026-11-09) |
+| 2026-11-09, ED5b и workspace build | Full Editor1465/1465 D/R; source/published/fresh-package native4profiles по5PNG/4reaped children, owners0/validation0/0. Solution nonincremental Debug0errors/1556warnings | [Translation](engine/HISTORY.md#ed5b-translation-2026-11-09) |
+| 2026-11-09, COB5a.1 | Runtime/adapter179/generator96 каждый D/R; frozen paired allocations и40behavior scenarios; timing exploratory | [Cobalt](cobalt/HISTORY.md#cob5a1-production-2026-11-09) |
+| 2026-11-08, Nom VM harness |98guards/10host protocol groups D/R,120functional/profile; VM0trials/Blocked image; hardware excluded; solution0errors/1560warnings | [Scope](nom/HISTORY.md#nom-vm-2026-11-08) |
+| 2026-11-08, Nom UAC |5real-volume cases/166assertions D/R, free0/OS112, reopen/liveness; VHDX detached/cleanup0; power-loss open | [Scope](nom/HISTORY.md#nom7-uac-2026-11-08) |
+| 2026-11-08, Nom physical follow-up |24pure guards/12assertions D/R; fresh package proof passed; physical0cases, New-VHD denied, exit2/Blocked; power-loss open | [Scope](nom/HISTORY.md#nom7-durability-2026-11-08) |
+| 2026-11-08, Nom NOM7 |718/718 D/R;120functional/profile, App34source/published; fresh4pkg App34/tool211checks, portable/win-x64 FDD, negative controls; solution0errors/1555warnings | [NOM7](nom/HISTORY.md#nom7-2026-11-08) |
+| 2026-11-08, Nom NOM6 |718/718 D/R+discovery;120functional+4Capacity/profile,16Backup kills/reaps; App34checks; actualmaxima/workload; solution0errors/1555warnings; physical gate открыт | [NOM6](nom/HISTORY.md#nom6-2026-11-08) |
+| 2026-11-08, Nom NOM5 |628/628 D/R+discovery;104groups/profile, Retention12kills/reaps; public App27checks; solution0errors/1555warnings; physical gate открыт | [NOM5](nom/HISTORY.md#nom5-2026-11-08) |
+| 2026-11-08, Nom NOM4 |536/536 D/R+discovery;92groups/profile, Maintenance27/24kills+reaps; public App16checks; solution0errors/1555warnings; physical gate открыт | [NOM4](nom/HISTORY.md#nom4-2026-11-08) |
+| 2026-11-08, Nom NOM3 |426/426 D/R+discovery;65console groups/profile,48kills/reaps/Fault profile; App10checks/profile; solution0errors/1555warnings; physical gate открыт | [NOM3](nom/HISTORY.md#nom3-2026-11-08) |
+| 2026-11-08, Nom NOM2 |382/382 D/R и solution-filter;18core+6KV groups source/published, public App10checks/profile; no LiteDB graphs/output; solution Debug0errors/1555warnings, Nom0warnings | [Catalog cutover](nom/HISTORY.md#nom2-2026-11-08) |
+| 2026-11-07/08, default typography | Alloy1126/Hosting154/Editor1300 каждый D/R;4native Editor profiles и default3backend source/publish gallery, exact fresh4package raster consumer. Сверка TRX/JSON/source SHA08ноября; новые build/test не запускались | [PA8c.3b](alloy/HISTORY.md#default-fonts-2026-11-08) |
+| 2026-11-07, SkiaSharp/native4.155.0 | Source build/ABI v1; source Debug/published Release по18readbacks/36compositions/backend comparison, validation0/0. Alloy1101/Hosting154/Editor1295 каждый D/R; fresh10pkg36App+4direct processes, native SHA/behavior/cleanup. Solution Debug0errors/1555warnings. Физическая UI acceptance не повторялась | [Native update](alloy/HISTORY.md#skiasharp-41550-2026-11-07) |
+| 2026-11-07, ARCH1f.2 |1230/1230 каждый D/R,137newcases; source Debug/published Release/fresh isolated7pkg CPU и actual Vulkan,2resource generations+denial каждый, upload/readback/stale handles/cleanup0/validation0/0. Solution nonincremental Debug0errors/1555warnings; новых full-module/frame/performance результатов нет | [Resources](engine/HISTORY.md#render-resources-2026-11-07) |
+| 2026-11-07, ARCH1f.1 |1093/1093 каждый D/R,309newcases; source Debug/published Release/fresh isolated7pkg CPU consumer,3entities/6components/3assets. Solution nonincremental Debug0errors/1555warnings; новых full-module/native результатов нет | [CPU contracts](engine/HISTORY.md#render-cpu-2026-11-07) |
+| 2026-11-06, ARCH1f.0 | Выбран opaque-unlit/1: exact IDs/slots/versions, linear tint/sRGB encoding, CPU/GPU readiness, leases/completion и budgets. Только документационные проверки; C# не менялся | [Решения](engine/HISTORY.md#render-contracts-2026-11-06) |
+| 2026-11-06, ECS primitive extraction |751/751 D/R; source/published/fresh7pkg headless133logical/2drawables/2generations; source/published Vulkan geometry/core+sync validation0/0/final owners0. Solution Debug0errors/1555warnings. Full Aether Debug2536/2538,2diagnostics cleanup timeouts/replay25/25, общий regression не green | [ARCH1e.4](engine/HISTORY.md#ecs-primitives-2026-11-06) |
+| 2026-11-06, initial Runtime ECS load | ECS543/543 +frame fixture1/1 D/R; full Aether Debug2331/2331, failed/skipped0; solution nonincremental Debug0errors/1555warnings; source Debug/published Release/fresh isolated NuGet Release,256entities/286046bytes/2generations каждый, CPU pixels/tick/cleanup | [ARCH1e.3b](engine/HISTORY.md#ecs-runtime-loading-2026-11-06) |
+| 2026-11-06, ECS registry/load | ECS409/409 D/R; full Aether Debug2197/2197, failed/skipped0; solution nonincremental Debug build0errors/1555warnings | [ARCH1e.3a](engine/HISTORY.md#ecs-loading-2026-11-06) |
+| 2026-11-05, UI/Editor numeric | Alloy1101, Hosting154, Editor1295 в каждой Debug/Release;4native OpenGL runs standard/Cobalt и embedded/MS DI; final UI/GPU/handles0 | [ED4g.2a](engine/HISTORY.md#ed4g2a-native-numeric-2026-11-05) |
+| 2026-11-04, Observer | Open batches ускорили many-files latency, но увеличили allocations/CPU; safety/drain fences сохранены | [ED6b.2e.4e](engine/HISTORY.md#ed6b2e4e-observer-open-batches-2026-11-04) |
+| 2026-10-30/29/27, остальные модули | Собственные Core/Cobalt/Enerit/Mithril результаты имеют отдельные даты и scope | Локальные STATUS/HISTORY выше |
+| Полный solution | Последняя запись в прежней общей сводке:27октября Debug4296/4296, Release4295/4296 с ready-file failure; позднее fix проверен отдельно | [Архив сводки](HISTORY.md#status-before-planning-revision-2026-11-05); это не новый full-solution green |
+
+Последний nonincremental solution Debug build —8ноября0errors/1555warnings; Nom warnings0.
+Проверки разных модулей и дат не суммируются в один solution run. Ссылки на старые
+ignored TestResults могут отсутствовать в checkout; HISTORY сохраняет scope,
+а повторяемые runners — в ManualTests. Для нового release нужен новый evidence set.
+
+## Общие блокеры и неопределённости
+
+- Nom: actual VM crash verification отложена пользователем; hardware power-off исключён. Предыдущий isolated-volume disk-full UAC proof проверен отдельно; [scope](nom/DURABILITY.md).
+
+- Current CORE7.6 full Aether3234/3234 D/R прошёл последовательно с bounded
+  test props override. Ordinary nested restore без него не объявлен исправленным;
+  старые non-green attempts и diagnostics причины сохраняются отдельно.
+  [Точный input profile/commands](core/HISTORY.md#core76-2026-11-10).
+- Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
+  исходниках; focused replays прошли, причина не установлена. Это открытый
+  reliability result, не доказанная регрессия ECS и не исправленный timeout.
+- Physical arrows/modifiers, Esc во время удержания кнопки и OS pointer modifiers
+  numeric UI не подтверждены. Automation Up дал UiKey.None; причина не доказана
+  как дефект физической клавиатуры. Эти проверки не заменяются routed events.
+- K7: прежний240-window run failed по GDI; поиск NVIDIA workaround остановлен
+  по решению пользователя. Новые driver/hardware/OS settings здесь не проверялись.
+  Physical DPI/multi-monitor, device/context loss, VRAM и final UI matrix открыты.
+- Post-reap stdout/stderr drain timeout наблюдался повторно31октября; успешные
+  replays не доказывают устранение причины. [Диагностический шаг](engine/PLAN.md#arch2e4b-drain-diagnostics).
+- Preview имеет camera/selection и translation v1 в bounded primitive GPU Windows profile; project switch — stopped/idle.
+  Cooperative stop не прерывает произвольный зависший user Task/driver.
+- Общая supported configuration, warnings policy и release scope ещё требуют
+  решения. Произвольные OS/RID/AOT/потеря питания и долгие trends не обещаются.
+
+## Следующий конкретный шаг
+
+[ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
+renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
+owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
+
+Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
+Reliability: изолировать native game fixture SDK inputs от legacy repo CLI tools,
+стандартизовать ordinary fixture restore и получить причинное evidence прежнего drain timeout.
+Current full baseline на bounded test inputs записан в CORE7.6.
+Physical input, device loss/K7/VRAM и release matrix сохраняют отдельные gates.
+
 <a id="precommit-2026-11-11"></a>
 ## Предкоммитная сверка завершённых задач — 2026-11-11
 

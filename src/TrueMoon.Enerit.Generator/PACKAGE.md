@@ -1,8 +1,14 @@
 # TrueMoon.Enerit.Generator
 
-Build-time source generator for .NET10 Enerit service adapters and payload codecs.
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
+Build-time source generator for Enerit service adapters and payload codecs.
 Reference it explicitly with PrivateAssets="all", alongside the same version of
-TrueMoon.Enerit. The current analyzer targets net10.0 and requires the .NET10 SDK
+TrueMoon.Enerit. The current analyzer targets net11.0 and requires the .NET11 SDK
 compiler; earlier compilers and cross-version generated/runtime combinations are
 unverified. The package contains analyzers/dotnet/cs/TrueMoon.Enerit.Generator.dll,
 not a runtime library. Do not ship it with the application output.

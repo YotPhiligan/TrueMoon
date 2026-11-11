@@ -1,6 +1,12 @@
 # TrueMoon.Aether.Editor
 
-Reusable editor module for TrueMoon App, targeting net10.0. Includes retained
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
+Reusable editor module for TrueMoon App, targeting net11.0. Includes retained
 View/Data/styles, scene hierarchy/inspector, project/document coordination,
 commands and an optional Windows x64 Skia/OpenGL window integration.
 
@@ -139,7 +145,7 @@ Stop cleanup failure retains retry admission. Each Start verifies or builds a ca
 the exact candidate/context version, with no fixed-runtime fallback. Tracked scene
 builds observe evaluated files/options, preprocessed imports and managed HintPath
 references before/after compilation and again before Start. Persistent changes reject
-startup. The initial profile is one net10.0 SDK project without PackageReference or
+startup. The initial profile is one net11.0 SDK project without PackageReference or
 ProjectReference; unsupported graphs fail closed. The process-local witness is lost
 when reopening an artifact; schema1 is unchanged. Scene startup also opts into
 CaptureCompilation: trusted SDK preparation returns exact Csc args, compiler and
@@ -251,7 +257,7 @@ flat private managed DLL names (at most15, excluding entryAssembly). Version1
 remains readable/writable with the original eight fields and no private dependencies.
 Resolved allowlists and build requests own immutable snapshots of those names.
 Scene Build/Start/Replace enable CaptureProjectReferences, extending the default
-compiler profile to at most four net10.0 C# libraries with unconditional literal
+compiler profile to at most four net11.0 C# libraries with unconditional literal
 references and no metadata; source directories must not overlap. All source/import/config inputs are frozen before SDK
 execution; each node compiles from copies with isolated intermediates. Verification
 and reuse cover the full graph and pinned selected payload. Only the child Game
@@ -261,7 +267,7 @@ and wider graph profiles remain unsupported.
 Project formatVersion3 adds optional `packageDirectory`, a contained existing local
 directory of lowercase `id.version.nupkg` archives. Versions1/2 remain readable and
 writable with their previous fields. ProjectSession maps this path to the compiler's
-absolute PackageDirectory. Every package-consuming project needs a schema1/net10.0
+absolute PackageDirectory. Every package-consuming project needs a schema1/net11.0
 packages.lock.json; stable literal direct versions and unsigned archive SHA512 must
 match. All package DLLs join the explicit dependencies allowlist. The initial
 profile admits one managed lib target, with no signatures/build/analyzer/native/

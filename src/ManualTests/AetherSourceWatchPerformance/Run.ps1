@@ -3,6 +3,10 @@ param(
     [ValidateSet('control','files','bytes')][string[]]$Profiles = @('control','files','bytes'),
     [switch]$SkipBuild
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $evidence = [IO.Path]::GetFullPath($EvidenceDirectory, $workspace)
@@ -13,7 +17,7 @@ if (!$SkipBuild) {
     & $dotnet build "$PSScriptRoot/AetherSourceWatchPerformance.csproj" -c Release --verbosity quiet "-bl:$evidence/harness-build-{}.binlog" *> "$evidence/build.log"
     if ($LASTEXITCODE -ne 0) { throw "Harness build failed. See $evidence/build.log" }
 }
-$harness = Join-Path $PSScriptRoot 'bin/Release/net10.0/AetherSourceWatchPerformance.dll'
+$harness = Join-Path $PSScriptRoot "bin/Release/$($trueMoonBuildProfile.TestFramework)/AetherSourceWatchPerformance.dll"
 if (!(Test-Path -LiteralPath $harness)) { throw 'Build the Release harness first.' }
 $inputs = @(
     Get-ChildItem -LiteralPath $PSScriptRoot -File | Where-Object Extension -in @('.cs','.csproj','.ps1')

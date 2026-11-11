@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([string] $RunDirectory, [string] $PackageVersion)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -122,9 +126,11 @@ function Copy-Consumer([string] $Destination) {
     [IO.Directory]::CreateDirectory($Destination) | Out-Null
     foreach ($name in @('AlloyPackageConsumer.csproj', 'Program.cs', 'ConsumerView.cs', 'ConsumerFonts.cs', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $Destination
+        if ($name -eq 'Directory.Build.props') { Export-TrueMoonConsumerFrameworks -Profile $trueMoonBuildProfile -Directory $Destination }
         Remember (Join-Path $Destination $name)
     }
     Copy-Fonts $Destination
+    Remember (Join-Path $Destination 'global.json')
     Write-NuGetConfig $Destination
     Remember (Join-Path $Destination 'NuGet.Config')
 }
@@ -154,7 +160,7 @@ function Verify-Assets([string] $Consumer, [bool] $Direct = $false) {
     Remember $assetsPath
 }
 function Verify-Generation([string] $Consumer, [string] $Configuration, [bool] $Cobalt) {
-    $list = Join-Path $Consumer "obj/$Configuration/net10.0/resolved-analyzers.txt"
+    $list = Join-Path $Consumer "obj/$Configuration/$($trueMoonBuildProfile.Framework)/resolved-analyzers.txt"
     $analyzers = @(Get-Content -LiteralPath $list)
     $matching = @($analyzers | Where-Object { $_ -like '*TrueMoon.Cobalt.Generator.dll' })
     $files = @(Get-ChildItem -LiteralPath (Join-Path $Consumer "obj/generated/$Configuration") -Recurse -File -Filter '*.g.cs' -ErrorAction SilentlyContinue)
@@ -223,7 +229,7 @@ try {
             foreach ($dependency in $nuspec.SelectNodes('//*[local-name()="dependency"]')) {
                 if ($dependency.id -match '^TrueMoon(?:\.|$)' -and $dependency.version -notmatch [regex]::Escape($PackageVersion)) { throw 'Producer dependency version mismatch.' }
             }
-            $runtime = $archive.GetEntry("lib/net10.0/$($metadata.id).dll")
+            $runtime = $archive.GetEntry("lib/$($trueMoonBuildProfile.Framework)/$($metadata.id).dll")
             if (!$runtime) { throw "Missing runtime DLL in $($metadata.id)." }
             $stream = $runtime.Open()
             try { $runtimeHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) } finally { $stream.Dispose() }
@@ -232,7 +238,7 @@ try {
                 if (!$analyzer -or !$archive.GetEntry('buildTransitive/TrueMoon.Cobalt.targets')) { throw 'Unified Cobalt analyzer delivery missing.' }
                 $stream = $analyzer.Open()
                 try { $summary.AnalyzerSha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) } finally { $stream.Dispose() }
-                $producer = Join-Path $workspace 'TrueMoon.Cobalt.Generator/bin/Release/net10.0/TrueMoon.Cobalt.Generator.dll'
+                $producer = Join-Path $workspace "TrueMoon.Cobalt.Generator/bin/Release/$($trueMoonBuildProfile.Framework)/TrueMoon.Cobalt.Generator.dll"
                 if ((Get-FileHash -LiteralPath $producer).Hash -ne $summary.AnalyzerSha256) { throw 'Producer/package analyzer mismatch.' }
             }
             if ($metadata.id -eq 'TrueMoon.Alloy.Rendering.Skia') {
@@ -242,7 +248,7 @@ try {
                 $stream = $archive.GetEntry('nativeAssets/win-x64/libSkiaSharp.dll').Open()
                 try { $packageNative = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) } finally { $stream.Dispose() }
             }
-            $producer = Join-Path $workspace "$($metadata.id)/bin/Release/net10.0/$($metadata.id).dll"
+            $producer = Join-Path $workspace "$($metadata.id)/bin/Release/$($trueMoonBuildProfile.Framework)/$($metadata.id).dll"
             if ((Get-FileHash -LiteralPath $producer).Hash -ne $runtimeHash) { throw 'Producer/package runtime mismatch.' }
             $summary.Packages += @{ Id = $metadata.id; Version = $metadata.version; Readme = $metadata.readme; Sha256 = (Get-FileHash -LiteralPath $package.FullName).Hash; RuntimeSha256 = $runtimeHash }
             Remember $package.FullName
@@ -266,7 +272,7 @@ try {
             Verify-Generation $consumer $configuration $cobalt
             $publish = Join-Path $run "publish/$variant/$configuration"
             Invoke-DotNet "publish-$variant-$configuration" (@('publish', $project, '--configuration', $configuration, '--no-restore', '--self-contained', 'false', '--output', $publish, '--verbosity', 'quiet') + $properties) | Out-Null
-            foreach ($delivery in @(@{ Name = 'build'; Path = Join-Path $consumer "bin/$configuration/net10.0" }, @{ Name = 'publish'; Path = $publish })) {
+            foreach ($delivery in @(@{ Name = 'build'; Path = Join-Path $consumer "bin/$configuration/$($trueMoonBuildProfile.Framework)" }, @{ Name = 'publish'; Path = $publish })) {
                 Verify-Delivery $delivery.Path
                 Remember (Join-Path $delivery.Path 'AlloyPackageConsumer.dll')
                 $providers = if ($cobalt) { @('cobalt', 'di') } else { @('di') }
@@ -291,12 +297,13 @@ try {
     $direct = Join-Path $run 'direct-renderer'
     [IO.Directory]::CreateDirectory($direct) | Out-Null
     foreach ($name in @('Directory.Build.props', 'Directory.Packages.props', 'ConsumerFonts.cs')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $direct }
+    Export-TrueMoonConsumerFrameworks -Profile $trueMoonBuildProfile -Directory $direct
     '<Project />' | Set-Content -LiteralPath (Join-Path $direct 'Directory.Build.targets')
     Copy-Fonts $direct
     Write-NuGetConfig $direct
     @"
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsPackable>false</IsPackable></PropertyGroup>
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsPackable>false</IsPackable></PropertyGroup>
   <ItemGroup><PackageReference Include="TrueMoon.Alloy.Rendering.Skia" Version="$PackageVersion" /><Content Include="Assets/Fonts/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup>
 </Project>
 "@ | Set-Content -LiteralPath (Join-Path $direct 'DirectRenderer.csproj') -Encoding utf8
@@ -329,7 +336,7 @@ Console.WriteLine("Direct renderer package: passed; fonts, raster, cleanup and n
         Invoke-DotNet "build-direct-$configuration" @('build', $directProject, '--configuration', $configuration, '--no-restore', '--verbosity', 'quiet') | Out-Null
         $publish = Join-Path $run "publish-direct/$configuration"
         Invoke-DotNet "publish-direct-$configuration" @('publish', $directProject, '--configuration', $configuration, '--no-restore', '--self-contained', 'false', '--output', $publish, '--verbosity', 'quiet') | Out-Null
-        foreach ($delivery in @(@{ Name = 'build'; Path = Join-Path $direct "bin/$configuration/net10.0" }, @{ Name = 'publish'; Path = $publish })) {
+        foreach ($delivery in @(@{ Name = 'build'; Path = Join-Path $direct "bin/$configuration/$($trueMoonBuildProfile.Framework)" }, @{ Name = 'publish'; Path = $publish })) {
             Verify-Delivery $delivery.Path
             Remember (Join-Path $delivery.Path 'DirectRenderer.dll')
             $name = "direct-$configuration-$($delivery.Name)"

@@ -1,5 +1,5 @@
 param(
-    [string]$Executable = 'ManualTests/AlloyVulkanTest/bin/Release/net10.0/AlloyVulkanTest.exe',
+    [string]$Executable = $null,
     [string]$OutputDirectory = 'TestResults/AlloyPerformance',
     [ValidateRange(1, 256)][int]$Rows = 32,
     [ValidateRange(2, 10000)][int]$Samples = 500,
@@ -8,6 +8,10 @@ param(
     [ValidateRange(1, 10)][int]$Runs = 2,
     [switch]$Validation
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+if (-not $Executable) { $Executable = "ManualTests/AlloyVulkanTest/bin/Release/$($trueMoonBuildProfile.Framework)/AlloyVulkanTest.exe" }
+
 $ErrorActionPreference = 'Stop'
 if ($Samples % 2 -ne 0) { throw 'Samples must be even so every append is removed.' }
 $repository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))

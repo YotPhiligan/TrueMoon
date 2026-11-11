@@ -2,6 +2,10 @@ param(
     [Parameter(Mandatory)][string]$Feed,
     [Parameter(Mandatory)][ValidatePattern('^[0-9A-Za-z.+-]+$')][string]$PackageVersion
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $sourceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $probeRoot = Join-Path $sourceRoot ('TestResults\SplitViewPackageConsumer\' + [guid]::NewGuid().ToString('N'))
@@ -12,7 +16,7 @@ Set-Content -LiteralPath (Join-Path $probeRoot 'Directory.Build.props') -Value $
 Set-Content -LiteralPath (Join-Path $probeRoot 'Directory.Build.targets') -Value $probeProps -Encoding utf8
 Set-Content -LiteralPath (Join-Path $probeRoot 'Directory.Packages.props') -Value $probeProps -Encoding utf8
 Set-Content -LiteralPath (Join-Path $probeRoot 'NuGet.Config') -Encoding utf8 -Value "<configuration><packageSources><clear/><add key='split' value='$probeFeed'/></packageSources><packageSourceMapping><clear/><packageSource key='split'><package pattern='*'/></packageSource></packageSourceMapping></configuration>"
-Set-Content -LiteralPath (Join-Path $probeRoot 'Probe.csproj') -Encoding utf8 -Value "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><RootNamespace>SplitViewPackageProbe</RootNamespace><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include='TrueMoon.Alloy' Version='$PackageVersion'/></ItemGroup></Project>"
+Set-Content -LiteralPath (Join-Path $probeRoot 'Probe.csproj') -Encoding utf8 -Value "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><RootNamespace>SplitViewPackageProbe</RootNamespace><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include='TrueMoon.Alloy' Version='$PackageVersion'/></ItemGroup></Project>"
 $probeProgram = @'
 using SplitViewPackageProbe;
 using TrueMoon.Argentis;
@@ -73,7 +77,7 @@ try {
     foreach ($probeConfiguration in @('Debug', 'Release')) {
         & dotnet build (Join-Path $probeRoot 'Probe.csproj') --no-restore -c $probeConfiguration "-bl:$probeRoot/build-$probeConfiguration-{}.binlog" | Tee-Object (Join-Path $probeRoot "build-$probeConfiguration.log")
         if ($LASTEXITCODE -ne 0) { throw "Package consumer $probeConfiguration build failed." }
-        & dotnet (Join-Path $probeRoot "bin/$probeConfiguration/net10.0/Probe.dll") | Tee-Object (Join-Path $probeRoot "run-$probeConfiguration.log")
+        & dotnet (Join-Path $probeRoot "bin/$probeConfiguration/$($trueMoonBuildProfile.TestFramework)/Probe.dll") | Tee-Object (Join-Path $probeRoot "run-$probeConfiguration.log")
         if ($LASTEXITCODE -ne 0) { throw "Package consumer $probeConfiguration checks failed." }
     }
     Write-Output "Independent SplitView package proof: $probeRoot"

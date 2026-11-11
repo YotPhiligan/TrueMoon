@@ -1,36 +1,13 @@
 # Mithril: состояние и точка продолжения
 
-**2026-11-11 — CORE7.6: текущая сверка App/child delivery.**
-Mithril155/155 каждый Debug/Release, Failed:0, Skipped:0.
-Общий source/published/fresh16package runner проверил оба DI, App/unit selection,
-protected parent/control и actual child stop/reap:4children/profile,12total
-в двух child consumers. Bootstrap consumer также проверяет Aether pre-App capture.
-[Guide](../core/CONFIGURATION_GUIDE.md), [scope/evidence](HISTORY.md#core76-2026-11-10).
+**2026-11-11 — CORE8.5: свежая согласованная .NET 11 поставка проверена.**
+SDK 11.0.100 / net11.0 / runtime-async=on. Полные suites повторно прошли в каждой
+конфигурации Debug/Release: 155; Failed 0, Skipped 0.
+Runtime/API/dependencies в CORE8.5 не менялись; обновлены runners и документация.
+[Поставка, команды и границы](../core/HISTORY.md#core85-delivery-2026-11-11),
+[переход](../core/DOTNET11_MIGRATION.md).
 
-## Реализация и фактические проверки
+Source/published/fresh App/child и отдельные source/published Runtime hosts проверили ownership/stop/reap. MIT6 fault/containment/resource trends и причины post-reap drain timeout остаются отдельными.
 
-UnitBootstrap/common parser и protected UnitLaunchSettings из CORE7.4 сохранены.
-Original standard args/env/default inputs предшествуют overlays; env identity group
-не смешивается с CLI. Ordinary user profile и fake CLI999 не подменяют actual unit1,
-parent/control endpoint. Source name/root/reload/diagnostics и typed settings
-работают одинаково на Cobalt/MS DI. Lifecycle/DI contracts не менялись.
-
-Source solution D/R0errors, managed Mithril API unchanged. Package version proof
-0.2.5.2-core76.20261110234501; current230checks/profile относятся ко всем5programs,
-не к одной Mithril suite. [Подробные команды](../core/HISTORY.md#core76-2026-11-10).
-[Предыдущий STATUS целиком](HISTORY.md#status-before-core76-2026-11-10).
-
-## Ограничения
-
-Launch snapshot StartupOnly. Started означает OS start, readiness подтверждается
-отдельно. Same-build/cooperative ownership сохранён; uncooperative containment,
-permission/reap failures, long resource trends/other OS/RID/AOT/durable recovery
-не закрыты. Aether владеет Hello/heartbeat/Replace; второй restart policy не вводился.
-Текущий source fixture props override и прежние diagnostics timeout причины
-учтены в Core history; fresh real children не являются native/GPU acceptance.
-
-## Следующий конкретный шаг
-
-Оставшийся MIT6 fault/containment/resource-trend profile с consumer/owner и
-unsupported behavior. Post-reap drain остаётся у Aether/Core до causal Mithril defect.
-CORE7.0–7.6 завершены; новую миграцию повторно не назначать.
+Сквозной CORE8 завершён; далее функциональная очередь владельца модуля.
+[Предыдущий STATUS](HISTORY.md#mithril-status-before-core85-2026-11-11).

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>EneritBaseline</RootNamespace>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>$(TF)</TargetFramework>
     <AssemblyName>EneritBaseline</AssemblyName>
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>

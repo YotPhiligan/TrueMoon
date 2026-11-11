@@ -4,6 +4,10 @@ param(
     [Parameter(Mandatory)][string]$EvidenceDirectory,
     [string]$RunDirectory
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $workspace=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -38,7 +42,7 @@ foreach($id in 'TrueMoon.Contracts','TrueMoon.Argentis','TrueMoon.Alloy','TrueMo
 $escapedFeed=[Security.SecurityElement]::Escape("$run/feed")
 [IO.File]::WriteAllText("$run/NuGet.Config","<configuration><packageSources><clear/><add key='fresh' value='$escapedFeed'/><add key='nuget.org' value='https://api.nuget.org/v3/index.json'/></packageSources><packageSourceMapping><packageSource key='fresh'><package pattern='TrueMoon.*'/></packageSource><packageSource key='nuget.org'><package pattern='*'/></packageSource></packageSourceMapping></configuration>")
 [IO.File]::WriteAllText("$run/consumer/Consumer.csproj",@"
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks><RootNamespace>AlloyVulkanTest</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon.Alloy.Rendering.Skia" Version="$version"/><PackageReference Include="TrueMoon.Alloy.Platform.Silk" Version="$version"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks><RootNamespace>AlloyVulkanTest</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon.Alloy.Rendering.Skia" Version="$version"/><PackageReference Include="TrueMoon.Alloy.Platform.Silk" Version="$version"/></ItemGroup></Project>
 "@)
 Copy-Item -LiteralPath "$PSScriptRoot/VulkanHostReadback.cs" -Destination "$run/consumer/VulkanHostReadback.cs"
 [IO.File]::WriteAllText("$run/consumer/Program.cs",@'
@@ -105,7 +109,7 @@ internal static unsafe class Program
 Invoke-Dotnet 'restore' @('restore',"$run/consumer/Consumer.csproj",'--configfile',"$run/NuGet.Config",'--no-http-cache',"-bl:$evidence/restore-{}.binlog",'--verbosity','quiet')
 Invoke-Dotnet 'build-debug' @('build',"$run/consumer/Consumer.csproj",'-c','Debug','--no-restore',"-bl:$evidence/build-debug-{}.binlog",'--verbosity','quiet')
 Invoke-Dotnet 'publish-release' @('publish',"$run/consumer/Consumer.csproj",'-c','Release','--no-restore','-o',"$run/published","-bl:$evidence/publish-release-{}.binlog",'--verbosity','quiet')
-Invoke-Dotnet 'native-debug' @("$run/consumer/bin/Debug/net10.0/Consumer.dll","$evidence/native-debug")
+Invoke-Dotnet 'native-debug' @("$run/consumer/bin/Debug/$($trueMoonBuildProfile.Framework)/Consumer.dll","$evidence/native-debug")
 Invoke-Dotnet 'native-release' @("$run/published/Consumer.dll","$evidence/native-release")
 $packages=@(Get-ChildItem "$run/feed" -Filter '*.nupkg'|ForEach-Object {[pscustomobject]@{Path=$_.FullName;Sha256=(Get-FileHash $_.FullName).Hash}})
 [pscustomobject]@{Passed=$true;RunDirectory=$run;Version=$version;Packages=$packages;ProjectReferences=0;SourceFallback=$false;Commands=$commands}|ConvertTo-Json -Depth 7|Set-Content "$evidence/verification.json" -Encoding utf8

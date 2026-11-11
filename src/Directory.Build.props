@@ -1,6 +1,12 @@
 <Project>
   <PropertyGroup>
-    <Version Condition="'$(Version)' == ''">0.2.5.2-alpha</Version>
+    <TF>net11.0</TF>
+    <TestsTF>net11.0</TestsTF>
+  </PropertyGroup>
+
+  <!-- Independent consumers import only the shared target-framework properties. -->
+  <PropertyGroup Condition="'$(_TrueMoonFrameworksOnly)' != 'true'">
+    <Version Condition="'$(Version)' == ''">0.3.0.1-alpha</Version>
     <Authors>yotphiligan</Authors>
     <Company>TrueMoon</Company>
     <Product>TrueMoon Framework</Product>
@@ -25,11 +31,11 @@
 
     <IsPackable>true</IsPackable>
 
-    <TF>net10.0</TF>
-    <TestsTF>net10.0</TestsTF>
+    <Features>$(Features);runtime-async=on</Features>
+
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(_TrueMoonFrameworksOnly)' != 'true'">
     <None Include="$(MSBuildThisFileDirectory)..\LICENSE" Pack="true" PackagePath="" Visible="false"/>
     <None Include="$(MSBuildThisFileDirectory)..\materials\icon.png" Pack="true" PackagePath="\" Visible="false"/>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="\" Visible="false"/>

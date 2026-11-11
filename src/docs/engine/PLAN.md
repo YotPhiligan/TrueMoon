@@ -7,7 +7,12 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 
 <a id="current-engine-queue"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-09
+## Текущая очередь — актуализация 2026-11-11
+
+CORE8.3 завершил .NET11 frozen game build: full Aether3243/Editor1496 D/R и
+actual source/published game load/Step/checkpoint/Stop/reap на SDK11-only root.
+[Scope и команды](../core/HISTORY.md#core83-frozen-2026-11-11), детальный план — [Core](../core/PLAN.md#core8-dotnet11).
+Renderer f.4/import/audio очередь ниже сохранена; это не surface/release acceptance.
 
 Уточнение2026-11-06 по запросу пользователя: **ECS и системные компоненты отображения
 включены в план** — [ARCH1e](#arch1e-ecs) и [ARCH1f](#arch1f-rendering).

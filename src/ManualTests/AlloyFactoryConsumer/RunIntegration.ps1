@@ -7,6 +7,10 @@ param(
     [ValidateRange(1, 1800)] [int] $TimeoutSeconds = 180,
     [string] $PackageVersion
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -31,7 +35,7 @@ function Invoke-AssemblyPhase {
             $path = Join-Path $results 'results.trx'; $counters = Read-ProbeTrx $path
             $context.Manifest.Tests += [pscustomobject]@{ Suite = $suite; Configuration = $configuration; Path = $path; Counters = $counters }
             Add-ProbeArtifact $context $path
-            $binary = Join-Path (Split-Path $project) "bin/$configuration/net10.0"
+            $binary = Join-Path (Split-Path $project) "bin/$configuration/$($trueMoonBuildProfile.TestFramework)"
             Add-ProbeBinaries $context $binary
         }
     }
@@ -43,7 +47,7 @@ function Invoke-SourcePhase {
     Invoke-ProbeCommand $context 'source-build-Debug' 'dotnet' @('build', $project, '--configuration', 'Debug', '--verbosity', 'quiet') $TimeoutSeconds
     Invoke-ProbeCommand $context 'source-publish-Release' 'dotnet' @('publish', $project, '--configuration', 'Release', '--output', $publish, '--verbosity', 'quiet') $TimeoutSeconds
     foreach ($configuration in @('Debug', 'Release')) {
-        $directory = if ($configuration -eq 'Debug') { Join-Path $PSScriptRoot 'bin/Debug/net10.0' } else { $publish }
+        $directory = if ($configuration -eq 'Debug') { Join-Path $PSScriptRoot "bin/Debug/$($trueMoonBuildProfile.TestFramework)" } else { $publish }
         Add-ProbeBinaries $context $directory
         foreach ($provider in @('cobalt', 'di')) { foreach ($graphics in @('opengl', 'vulkan')) {
             $name = "source-$configuration-$provider-$graphics"; $report = Join-Path $context.Run "source/$name.json"
@@ -59,7 +63,7 @@ function Invoke-SourcePhase {
     Invoke-ProbeCommand $context 'native-build-Debug' 'dotnet' @('build', $nativeProject, '--configuration', 'Debug', '--verbosity', 'quiet') $TimeoutSeconds
     Invoke-ProbeCommand $context 'native-publish-Release' 'dotnet' @('publish', $nativeProject, '--configuration', 'Release', '--output', $nativePublish, '--verbosity', 'quiet') $TimeoutSeconds
     foreach ($configuration in @('Debug', 'Release')) {
-        $directory = if ($configuration -eq 'Debug') { Join-Path (Split-Path $nativeProject) 'bin/Debug/net10.0' } else { $nativePublish }
+        $directory = if ($configuration -eq 'Debug') { Join-Path (Split-Path $nativeProject) "bin/Debug/$($trueMoonBuildProfile.TestFramework)" } else { $nativePublish }
         Add-ProbeBinaries $context $directory
         foreach ($kind in @('Scheduling', 'Close', 'Dispatcher', 'HUD')) {
             $name = "native-$configuration-$kind"; $report = $null

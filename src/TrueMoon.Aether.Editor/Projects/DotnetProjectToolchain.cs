@@ -1,12 +1,18 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.Versioning;
 using System.Text;
+using TrueMoon.Aether.Builds;
 
 namespace TrueMoon.Aether.Editor.Projects;
 
 /// <summary>Runs a bounded, owned dotnet --version probe in the game directory. No game code or MSBuild targets execute.</summary>
 public sealed class DotnetProjectToolchain : IProjectToolchain
 {
+    private static readonly int SdkMajor = new FrameworkName(typeof(GameBuildCompiler).Assembly
+        .GetCustomAttribute<TargetFrameworkAttribute>()!.FrameworkName).Version.Major;
+
     /// <inheritdoc />
     public async Task<ProjectToolchainInfo> ValidateAsync(string gameProjectPath, CancellationToken cancellationToken = default)
     {
@@ -25,7 +31,7 @@ public sealed class DotnetProjectToolchain : IProjectToolchain
         try
         {
             try { started = process.Start(); }
-            catch (Win32Exception cause) { throw new IOException("Cannot start dotnet. Install the .NET 10 SDK and make dotnet available on PATH.", cause); }
+            catch (Win32Exception cause) { throw new IOException($"Cannot start dotnet. Install the .NET {SdkMajor} SDK and make dotnet available on PATH.", cause); }
             if (!started) throw new IOException("The dotnet SDK probe did not start.");
             output = ReadBoundedAsync(process.StandardOutput);
             error = ReadBoundedAsync(process.StandardError);
@@ -34,8 +40,8 @@ public sealed class DotnetProjectToolchain : IProjectToolchain
             var sdk = (await output.ConfigureAwait(false)).Trim();
             var diagnostics = (await error.ConfigureAwait(false)).Trim();
             if (process.ExitCode != 0 || sdk.Length > 128 ||
-                !Version.TryParse(sdk.Split('-')[0], out var version) || version.Major < 10)
-                throw new IOException($"A .NET 10 or newer SDK must be selected in '{info.WorkingDirectory}'. Check PATH/global.json. " +
+                !Version.TryParse(sdk, out var version) || version.Major != SdkMajor)
+                throw new IOException($"A stable .NET {SdkMajor} SDK must be selected in '{info.WorkingDirectory}'. Check PATH/global.json. " +
                     $"dotnet --version exit {process.ExitCode}: {sdk} {diagnostics}");
             return new(sdk);
         }

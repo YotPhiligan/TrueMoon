@@ -1,7 +1,13 @@
 # TrueMoon.Extensions.DependencyInjection
 
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
 Microsoft.Extensions.DependencyInjection 10 adapter for TrueMoon service
-contracts. Requires .NET 10; alpha API. For an application, reference `TrueMoon`
+contracts. Requires .NET 11; alpha API. For an application, reference `TrueMoon`
 and this package at matching versions:
 
 ```csharp

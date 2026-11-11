@@ -7,6 +7,7 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 | Документ | Для чего читать |
 | --- | --- |
 | [Общий план](PLAN.md) | Цели, границы модулей, зависимости, сквозные сценарии и критерии выпуска |
+| [.NET 11: профиль и переход](core/DOTNET11_MIGRATION.md) | SDK/TFM/runtime-async, independent consumers и пересборка game artifacts |
 | [Общий статус](STATUS.md) | Текущая сводка, подтверждённые проверки, блокеры и ближайшие действия |
 | [Формат планирования](PLANNING.md) | Правила ведения PLAN/STATUS/HISTORY и разделения общей и модульной работы |
 | [Единая конфигурация](core/CONFIGURATION_GUIDE.md) | Рабочее руководство: sources/приоритеты/typed options/App/reload/запись и совместимость |

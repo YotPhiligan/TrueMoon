@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$EvidenceDirectory, [ValidateSet('App','Buffer','Raw')][string]$Consumer='App')
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -51,7 +55,7 @@ try{
     $nom=[Security.SecurityElement]::Escape((Join-Path $workspace 'TrueMoon.Nom/TrueMoon.Nom.csproj'))
     $app=[Security.SecurityElement]::Escape((Join-Path $workspace 'TrueMoon/TrueMoon.csproj'))
     $project=Join-Path $run "$consumerName.csproj"
-    "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>$consumerName</AssemblyName></PropertyGroup><ItemGroup><ProjectReference Include='$nom'/><ProjectReference Include='$app'/></ItemGroup></Project>"|Set-Content $project
+    "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>$consumerName</AssemblyName></PropertyGroup><ItemGroup><ProjectReference Include='$nom'/><ProjectReference Include='$app'/></ItemGroup></Project>"|Set-Content $project
     Invoke-Dotnet 'restore' @('restore',$project,'-p:NuGetAudit=false')
     foreach($file in Get-ChildItem -LiteralPath (Join-Path $run 'artifacts') -Recurse -Filter 'project.assets.json'){
         $graph=Get-Content $file.FullName -Raw|ConvertFrom-Json -AsHashtable

@@ -7,6 +7,10 @@ param(
     [ValidateSet('All','Standard','Embedded')][string]$HostKind = 'All',
     [ValidateSet('All','Workflow','WindowRoot','Failure','Cancel','ReplaceInterrupt','Replace-Restore-Exit','PackageInputs','PackageAcceptance','SourceWatch')][string]$Scenario = 'All'
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 
 $ErrorActionPreference = 'Stop'
 $guiWorkspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -116,11 +120,12 @@ try {
     if (@($profiles | Where-Object { $_ -like 'Package*' }).Count) {
         $consumer = "$guiRun/consumer"; [void][IO.Directory]::CreateDirectory("$consumer/Runtime")
         [void][IO.Directory]::CreateDirectory("$consumer/Gui/Assets/Fonts")
+        Write-TrueMoonConsumerBuildProfile -Profile $trueMoonBuildProfile -Directory $consumer
         Copy-Item -Path "$PSScriptRoot/Gui/*.cs" -Destination "$consumer/Gui"
         [IO.File]::WriteAllText("$consumer/Gui/GuiConsumer.csproj", ([IO.File]::ReadAllText("$PSScriptRoot/Gui/GuiConsumer.csproj.template").Replace('PACKAGE_VERSION', $guiBaseline.Version)))
         Copy-Item -LiteralPath "$guiWorkspace/Examples/AetherRuntimeHost/Program.cs" -Destination "$consumer/Runtime/Program.cs"
         [IO.File]::WriteAllText("$consumer/Runtime/Runtime.csproj", @"
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><RootNamespace>TrueMoon.Examples.AetherRuntimeHost</RootNamespace></PropertyGroup>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><RootNamespace>TrueMoon.Examples.AetherRuntimeHost</RootNamespace></PropertyGroup>
 <ItemGroup><PackageReference Include="TrueMoon" Version="$($guiBaseline.Version)" /><PackageReference Include="TrueMoon.Aether" Version="$($guiBaseline.Version)" /></ItemGroup></Project>
 "@)
         foreach ($name in @('NotoSans-Regular.ttf','OFL.txt')) { Copy-Item -LiteralPath "$guiWorkspace/Examples/AetherEditor/Assets/Fonts/$name" -Destination "$consumer/Gui/Assets/Fonts/$name" }
@@ -150,8 +155,8 @@ try {
         }
     }
     foreach ($item in $profiles) {
-        $gui = switch ($item) { 'SourceDebug' { "$PSScriptRoot/Gui/bin/Debug/net10.0" } 'SourceRelease' { "$guiRun/source-Release/Gui" } 'PackageDebug' { "$guiRun/consumer/Gui/bin/Debug/net10.0" } 'PackageRelease' { "$guiRun/package-Release/Gui" } }
-        $runtime = switch ($item) { 'SourceDebug' { "$guiWorkspace/Examples/AetherRuntimeHost/bin/Debug/net10.0/AetherRuntimeHost.exe" } 'SourceRelease' { "$guiRun/source-Release/Runtime/AetherRuntimeHost.exe" } 'PackageDebug' { "$guiRun/consumer/Runtime/bin/Debug/net10.0/Runtime.exe" } 'PackageRelease' { "$guiRun/package-Release/Runtime/Runtime.exe" } }
+        $gui = switch ($item) { 'SourceDebug' { "$PSScriptRoot/Gui/bin/Debug/$($trueMoonBuildProfile.Framework)" } 'SourceRelease' { "$guiRun/source-Release/Gui" } 'PackageDebug' { "$guiRun/consumer/Gui/bin/Debug/$($trueMoonBuildProfile.Framework)" } 'PackageRelease' { "$guiRun/package-Release/Gui" } }
+        $runtime = switch ($item) { 'SourceDebug' { "$guiWorkspace/Examples/AetherRuntimeHost/bin/Debug/$($trueMoonBuildProfile.Framework)/AetherRuntimeHost.exe" } 'SourceRelease' { "$guiRun/source-Release/Runtime/AetherRuntimeHost.exe" } 'PackageDebug' { "$guiRun/consumer/Runtime/bin/Debug/$($trueMoonBuildProfile.Framework)/Runtime.exe" } 'PackageRelease' { "$guiRun/package-Release/Runtime/Runtime.exe" } }
         $hosts = if ($HostKind -eq 'All') { @('Standard','Embedded') } else { @($HostKind) }
         foreach ($hostMode in $hosts) {
             $scenarios = if ($Scenario -eq 'All') { @('Workflow','Failure','Cancel') }

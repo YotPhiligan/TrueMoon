@@ -11,7 +11,21 @@
 
 <a id="current-roadmap"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-09
+## Текущая очередь — актуализация 2026-11-11
+
+По запросу2026-11-11 ближайший общий этап — [CORE8: восстановление solution на .NET11](core/PLAN.md#core8-dotnet11).
+CORE8.0/8.1 managed inputs готовы: 61 net11 проекта, 45 runners на общем profile,
+external CPM restore исправлен, source build D/R0errors. Независимая поставка:
+16packages/15profiles, по230checks и4owned children на source/published/fresh.
+[Команды/ограничения](core/HISTORY.md#core81-profiles-2026-11-11).
+CORE8.2 завершён: Cobalt179/generator96 и Enerit354/generator114 каждый D/R,
+132fresh-package DI/IPCscenarios. [Scope/исправления](core/HISTORY.md#core82-generators-2026-11-11).
+CORE8.3 завершён: full Aether3243/Editor1496 D/R; SDK11-only source/published
+frozen game compile/reuse/load/Stop/reap. [Scope](core/HISTORY.md#core83-frozen-2026-11-11).
+CORE8.4 и CORE8.5 завершены: [полная регрессия](core/HISTORY.md#core84-runtime-2026-11-11), [свежая согласованная поставка и итоговые suites](core/HISTORY.md#core85-delivery-2026-11-11). Поддержанный профиль и переход — в [руководстве](core/DOTNET11_MIGRATION.md).
+Headless game proofs не заменяют surface/GPU/release acceptance.
+Детальные этапы и критерии — только у Core/build integration. Очередь engine f.4,
+import/audio/Nom и release ниже сохраняется после восстановления рабочего baseline.
 
 Основание: запрос общей ревизии после db5ea97, текущие PLAN/STATUS и адресное чтение
 Editor preview/Transform/Observer. Новых execution results эта запись не создаёт.
@@ -63,12 +77,13 @@ performance и release сохраняются ниже как независим
 [CORE7 — единая конфигурация App и модулей](core/PLAN.md#core7-unified-configuration):
 2026-11-11 CORE7.0–7.6 завершены в configuration scope:
 [guide](core/CONFIGURATION_GUIDE.md), [139keys](core/CONFIGURATION_KEYS.md),
-source solution D/R0errors,7suites6945/6945 D/R и fresh16packages одной версии.
+предыдущий net10 source solution D/R0errors,7suites6945/6945 D/R и fresh16packages одной версии.
 Source/published/fresh: по230checks на обоих DI,4owned children/profile.
 [Точные результаты/ограничения](core/HISTORY.md#core76-2026-11-10); engine f.4 независим.
 
 | Направление | Следующий результат | План владельца |
 | --- | --- | --- |
+| .NET 11, CORE8 завершён | Inputs/generators/frozen game/runtime regression и свежая согласованная поставка проверены; функциональная очередь продолжается у владельцев | [CORE8](core/PLAN.md#core8-dotnet11), [итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11) |
 | Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
 | ECS и отображение, текущий шаг | После готовых f.2/f.3 resources/owned snapshots — f.4 actual Vulkan surface renderer/Playing fence | [ARCH1f.4](engine/PLAN.md#arch1f-rendering), [snapshot API](engine/RENDER_SNAPSHOTS.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
 | Исследование ассетов моделей | Кандидат и captured-I/O/limits/ID/cancel research prototype проверены; далее полный format policy и g.1 App/IFactory adapter/discovery | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [captured contract](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) |

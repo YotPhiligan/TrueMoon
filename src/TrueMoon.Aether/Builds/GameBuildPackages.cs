@@ -39,7 +39,8 @@ internal sealed class GameBuildPackages(string source, string directory, Func<st
         var root = document.RootElement;
         if (root.GetProperty("version").GetInt32() != 1) throw new NotSupportedException("Frozen packages require lock schema1.");
         var targets = root.GetProperty("dependencies").EnumerateObject().ToArray();
-        if (targets.Length != 1 || targets[0].Name != "net10.0") throw new NotSupportedException("Frozen packages require a single net10.0 lock target without runtime identifiers.");
+        if (targets.Length != 1 || targets[0].Name != GameBuildProfile.TargetFramework)
+            throw new NotSupportedException($"Frozen packages require a single {GameBuildProfile.TargetFramework} lock target without runtime identifiers.");
         var rows = new Dictionary<string, JsonElement>(Names);
         var knownProjects = projectNames.ToHashSet(Names);
         foreach (var row in targets[0].Value.EnumerateObject())
@@ -122,7 +123,7 @@ internal sealed class GameBuildPackages(string source, string directory, Func<st
                 throw new NotSupportedException("Package requires unique regular relative paths.");
             if (name.EndsWith('/')) continue;
             var parts = name.Split('/');
-            if (parts.Length == 3 && parts[0] == "lib" && parts[1] is "net10.0" or "net9.0" or "net8.0" or "netstandard2.1" or "netstandard2.0" &&
+            if (parts.Length == 3 && parts[0] == "lib" && (parts[1] == GameBuildProfile.TargetFramework || parts[1] is "net10.0" or "net9.0" or "net8.0" or "netstandard2.1" or "netstandard2.0") &&
                 Path.GetExtension(name) is ".dll" or ".xml" or ".pdb")
             {
                 if (target != null && target != parts[1]) throw new NotSupportedException("Frozen packages require one lib target without ref/runtime variants.");

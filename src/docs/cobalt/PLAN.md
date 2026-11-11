@@ -1,7 +1,12 @@
 # Cobalt / DI: план модуля
 
 <a id="current-cobalt-queue"></a>
-## Точка продолжения — актуализация 2026-11-09
+## Точка продолжения — актуализация 2026-11-11
+
+CORE8.2 завершил текущую .NET11 compatibility сверку: runtime/adapter179 и
+generator96 каждый D/R, independent package generated DI/IPC прошёл.
+[Scope и исправленное DI11 disposal expectation](HISTORY.md#core82-2026-11-11).
+Детальный межмодульный план — [Core](../core/PLAN.md#core8-dotnet11); performance очередь ниже сохранена.
 
 По запросу пользователя выполнены две заявки Studio в **COB6e**: короткие стабильные
 hint names и XML docs служебной регистрации. Детали и критерии —
@@ -75,7 +80,7 @@ generation/registration, lifetime и start/stop/disposal затронутого 
 - Singleton instance принадлежит конкретному resolver, создаётся один раз при конкурентном resolution. Composite aliases2–8 разрешаются в один concrete instance; closed/open generics и typed IEnumerable используют тот же graph. Optional missing-service resolution возвращает null/default, required — наблюдаемую ошибку.
 - Cobalt владеет созданными generated/factory values, включая transients, но не переданными instance registrations. Disposal учитывает reference identity, идёт в обратном порядке, продолжает cleanup после errors и сохраняет их. Sync/async mode использует соответствующий интерфейс, sync поддерживает async-only values.
 - Concurrent Dispose ожидает одно завершение; рекурсивное disposal в той же async call chain не ожидает самого себя. Microsoft DI wrapper — один borrowed instance внутри provider, владеющий provider снаружи.
-- Microsoft DI сохраняет стандартный учёт disposable aliases: Composite aliases имеют shared identity, но provider может вызвать Dispose одного concrete instance несколько раз. Такой сервис должен поддерживать повторный Dispose. Provider cleanup после ошибки также следует стандартному Microsoft DI поведению; гарантия reference-unique/continue-on-error относится к Cobalt.
+- Microsoft DI следует поведению выбранной версии provider. CORE8.2 на Microsoft DI11 подтвердил shared identity Composite aliases и один Dispose общего concrete instance, включая повторный Dispose resolver. Прежний Dispose3 относится к историческому net10 profile и сохранён в HISTORY/COMPARISON. Provider cleanup после ошибки остаётся стандартным Microsoft DI поведением; Cobalt continue-on-error guarantee на adapter не переносится.
 
 Scopes, delivery analyzer через package и произвольная поддержка всех declarations не добавлены этим исправлением. COB4/COB5 остаются самостоятельными этапами.
 

@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$ConsumerEvidenceDirectory,[Parameter(Mandatory)][string]$ValidationDirectory,[string]$EvidenceDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $resourceRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -20,7 +24,7 @@ $resourceReport=[ordered]@{Completed=$false;GpuRun=$true;WindowRun=$false;Consum
 function Save-ResourceReport {$resourceReport|ConvertTo-Json -Depth 10|Set-Content -LiteralPath (Join-Path $resourceEvidence 'verification.json') -Encoding utf8}
 try{
     $profiles=@(
-        @{Name='source';Assembly=(Join-Path $previous.RunDirectory 'source/bin/Debug/net10.0/RenderResourcesConsumer.dll')},
+        @{Name='source';Assembly=(Join-Path $previous.RunDirectory "source/bin/Debug/$($trueMoonBuildProfile.Framework)/RenderResourcesConsumer.dll")},
         @{Name='published';Assembly=(Join-Path $previous.RunDirectory 'published/RenderResourcesConsumer.dll')},
         @{Name='fresh';Assembly=(Join-Path $previous.RunDirectory 'fresh-published/RenderResourcesConsumer.dll')}
     )

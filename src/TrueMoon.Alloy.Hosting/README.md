@@ -18,7 +18,7 @@ State/IsActive/ActualClientSize, сохраняя запрошенный раз�
 Closing компонента исполняется перед host callbacks через прежний async close
 coordinator. Подробный контракт и ownership — в [package README](PACKAGE.md).
 
-Проект предоставляет единый модуль регистрации UI. Настройка выполняется до `Build()` и не создаёт окно или GPU-контекст. Целевая платформа — `net10.0`; поставляемая native Skia для Vulkan/OpenGL/raster пока проверена на Windows x64.
+Проект предоставляет единый модуль регистрации UI. Настройка выполняется до `Build()` и не создаёт окно или GPU-контекст. Целевая платформа — `net11.0`; поставляемая native Skia для Vulkan/OpenGL/raster пока проверена на Windows x64.
 
 ## Подключение через NuGet
 

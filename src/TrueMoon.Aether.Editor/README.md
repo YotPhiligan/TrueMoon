@@ -30,7 +30,7 @@ Pitch/Yaw/Roll в радианах и Scale с общими NumberBox/Vector3Edi
 Действуют прежние Apply/Ctrl+Enter, Cancel/Esc и история документа.
 
 
-Подключаемая библиотека/NuGet-пакет редактора, net10.0. Публичный вход —
+Подключаемая библиотека/NuGet-пакет редактора, net11.0. Публичный вход —
 `UseAetherEditor(configureEngine, configureEditor)`; optional стандартное окно —
 `UseAetherEditorWindow(fonts, configureWindow)`. [API, ownership и quickstart](PACKAGE.md).
 
@@ -98,7 +98,7 @@ EditorScenePlayback — App-owned coordinator; low-level GameEditor и document 
 запроса. ED6b.2a дополнительно проверяет наблюдаемые MSBuild inputs до/после Build
 и перед Start: содержимое evaluated files и HintPath references, настройки и
 preprocessed imports. Изменённые входы запрещают запуск и требуют нового Build.
-Профиль: один net10.0 SDK project без PackageReference/ProjectReference. Witness
+Профиль: один net11.0 SDK project без PackageReference/ProjectReference. Witness
 хранится в памяти; повторное открытие artifact не восстанавливает доверенный witness.
 Штатный scene Start также включает ED6b.2b.1 CaptureCompilation: после SDK preparation
 компилятор, source/generated/reference/config inputs копируются в owned workspace;
@@ -308,7 +308,7 @@ App/Cobalt. Окно владеет View, OverlayHost — popup; общие мо
 Проверка без окна: `AetherEditorHost.exe --check-project E:/games/MyGame/MyGame.aetherproj`.
 Второй вариант выводит JSON с project/SDK identity и результатом закрытия сессии;
 ошибка завершает процесс с ненулевым кодом. SDK preflight запускает только
-`dotnet --version` из каталога игры, учитывает `global.json` и требует SDK10+.
+`dotnet --version` из каталога игры, учитывает `global.json` и требует stable SDK11, согласованный с target самой Aether assembly.
 MSBuild, compiler и runtime при открытии не запускаются; совместимость самой игры
 проверяется отдельной сборкой.
 
@@ -858,7 +858,7 @@ Manifest `formatVersion: 2` добавляет явный flat allowlist:
 Имена различаются без учёта регистра, не повторяют entryAssembly; максимум15DLL.
 Допустимые framework/contract/private names дополнительно проверяет Aether compiler.
 
-Scene Build/Start/Replace включают CaptureProjectReferences: до4C# net10.0 library
+Scene Build/Start/Replace включают CaptureProjectReferences: до4C# net11.0 library
 projects вместе с entry, обычные unconditional literal ссылки без metadata;
 каталоги проектов не пересекаются.
 Весь source/import/config/reference graph захвачен до SDK execution, каждый узел
@@ -872,7 +872,7 @@ Manifest `formatVersion: 3` добавляет необязательный `"pa
 существующий каталог внутри проекта, содержащий lowercase `id.version.nupkg`.
 Version1/2 сохраняют чтение/запись прежних полей. `ProjectSession.CreateBuildRequest`
 передаёт абсолютный путь; scene Build/Start/Replace используют общий captured profile.
-Рядом с каждым package-consuming csproj нужен `packages.lock.json` schema1/net10.0;
+Рядом с каждым package-consuming csproj нужен `packages.lock.json` schema1/net11.0;
 direct stable версии совпадают с resolved, contentHash SHA512 — с unsigned archive.
 Все package DLL добавляются в dependencies вместе с project DLL. Поддержан один
 managed lib target, без build/analyzer/native/content/ref assets или signatures;

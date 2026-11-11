@@ -66,7 +66,7 @@ public sealed class GameBuildArtifact
                 var target = Path.Combine(staging, name); File.Copy(source, target);
                 files.Add(new(name, HashFile(target), length));
             }
-            var manifest = new Manifest(1, "net10.0", hostContractId, ContractHash, entryAssembly, entryType, sourceRevision, files.ToArray());
+            var manifest = new Manifest(1, GameBuildProfile.TargetFramework, hostContractId, ContractHash, entryAssembly, entryType, sourceRevision, files.ToArray());
             ValidateManifest(staging, manifest);
             var bytes = JsonSerializer.SerializeToUtf8Bytes(manifest, Json); var id = Hash(bytes);
             File.WriteAllBytes(Path.Combine(staging, ManifestFile), bytes);
@@ -120,7 +120,9 @@ public sealed class GameBuildArtifact
     }
     private static void ValidateManifest(string directory, Manifest manifest)
     {
-        if (manifest.Schema != 1 || manifest.TargetFramework != "net10.0" || manifest.ContractSha256 != ContractHash || manifest.Files == null)
+        if (manifest.TargetFramework != GameBuildProfile.TargetFramework)
+            throw new InvalidDataException($"Game manifest targets '{manifest.TargetFramework}'; expected {GameBuildProfile.TargetFramework}. Rebuild the game artifact.");
+        if (manifest.Schema != 1 || manifest.ContractSha256 != ContractHash || manifest.Files == null)
             throw new InvalidDataException("Unsupported game manifest or shared contract.");
         ValidateIdentity(manifest.HostContractId); ValidateEntry(manifest.EntryType, manifest.SourceRevision);
         ValidateNames(manifest.Files.Select(f => f?.Name!).ToArray());

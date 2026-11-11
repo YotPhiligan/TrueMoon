@@ -1,5 +1,9 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param([Parameter(Mandatory)][string]$PackageRunDirectory, [string]$LegacyGeneratorPackage)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $packageRun = [IO.Path]::GetFullPath($PackageRunDirectory)
@@ -74,7 +78,7 @@ function DotNet([string]$Name, [string[]]$Arguments, [string[]]$ExpectedDiagnost
     }
 }
 function Verify-Analyzer([string]$ProjectDirectory, [string]$Configuration) {
-    $analyzers = @(Get-Content (Join-Path $ProjectDirectory "obj/$Configuration/net10.0/resolved-analyzers.txt") | Where-Object {$_ -match 'TrueMoon.Cobalt.Generator.dll$'})
+    $analyzers = @(Get-Content (Join-Path $ProjectDirectory "obj/$Configuration/$($trueMoonBuildProfile.Framework)/resolved-analyzers.txt") | Where-Object {$_ -match 'TrueMoon.Cobalt.Generator.dll$'})
     $expected = Join-Path $cache ("truemoon.cobalt/$version/analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll".ToLowerInvariant())
     if ($analyzers.Count -ne 1 -or !$analyzers[0].Equals($expected, [StringComparison]::OrdinalIgnoreCase)) { throw 'The compiler must receive exactly the bundled matching analyzer.' }
     if ((Get-FileHash $expected).Hash -ne $packageSummary.GeneratorSha256) { throw 'Bundled analyzer SHA mismatch.' }
@@ -84,7 +88,7 @@ try {
     $library = Join-Path $run 'Library'; $app = Join-Path $run 'App'
     foreach ($path in @($library,$app)) { [IO.Directory]::CreateDirectory($path) | Out-Null }
     @"
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon.Cobalt" Version="$version" /></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon.Cobalt" Version="$version" /></ItemGroup></Project>
 "@ | Set-Content (Join-Path $library 'Library.csproj') -Encoding utf8
     @'
 using TrueMoon.Services;
@@ -271,9 +275,7 @@ public static class WorkflowChecks {
     internal sealed class Both : IFirst, ISecond;
 }
 '@ | Set-Content (Join-Path $library 'WorkflowChecks.cs') -Encoding utf8
-    @'
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><ProjectReference Include="../Library/Library.csproj" /></ItemGroup></Project>
-'@ | Set-Content (Join-Path $app 'App.csproj') -Encoding utf8
+    "<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><ProjectReference Include=`"../Library/Library.csproj`" /></ItemGroup></Project>" | Set-Content (Join-Path $app 'App.csproj') -Encoding utf8
     @'
 using LibraryFixture;
 using TrueMoon.Cobalt;
@@ -302,7 +304,7 @@ Console.WriteLine("LIBRARY_APP_OK");
         Verify-Analyzer $library $configuration; Verify-Analyzer $app $configuration
         $publish = Join-Path $run "publish/$configuration"
         DotNet "publish-library-app-$configuration" @('publish',(Join-Path $app 'App.csproj'),'--configuration',$configuration,'--no-restore','--output',$publish,'--self-contained','false','-v','quiet')
-        foreach ($delivery in @(@{Name='build';Path=Join-Path $app "bin/$configuration/net10.0"},@{Name='publish';Path=$publish})) {
+        foreach ($delivery in @(@{Name='build';Path=Join-Path $app "bin/$configuration/$($trueMoonBuildProfile.Framework)"},@{Name='publish';Path=$publish})) {
             if (@(Get-ChildItem $delivery.Path -File | Where-Object Name -match '^(TrueMoon.Cobalt.Generator|Microsoft.CodeAnalysis)').Count) { throw 'Build-only DLL leaked into app output.' }
             $name = "run-library-app-$configuration-$($delivery.Name)"
             DotNet $name @((Join-Path $delivery.Path 'App.dll'))
@@ -340,13 +342,13 @@ public static class Module {
         $legacy = Join-Path $run 'Legacy'; [IO.Directory]::CreateDirectory($legacy) | Out-Null
         Copy-Item (Join-Path $PSScriptRoot 'DirectCobalt/*.cs') $legacy
         @"
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>DirectCobaltConsumer</AssemblyName><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon.Cobalt" Version="$version" /><PackageReference Include="TrueMoon.Cobalt.Generator" Version="$legacyVersion" PrivateAssets="all" /></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>DirectCobaltConsumer</AssemblyName><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon.Cobalt" Version="$version" /><PackageReference Include="TrueMoon.Cobalt.Generator" Version="$legacyVersion" PrivateAssets="all" /></ItemGroup></Project>
 "@ | Set-Content (Join-Path $legacy 'Legacy.csproj') -Encoding utf8
         DotNet 'restore-legacy' @('restore',(Join-Path $legacy 'Legacy.csproj'),'--configfile',(Join-Path $run 'NuGet.Config'),'--packages',$cache,'-v','quiet')
         DotNet 'build-legacy' @('build',(Join-Path $legacy 'Legacy.csproj'),'--configuration','Release','--no-restore','-v','quiet')
         Verify-Analyzer $legacy 'Release'
         $report = Join-Path $run 'legacy-result.json'
-        DotNet 'run-legacy' @((Join-Path $legacy 'bin/Release/net10.0/DirectCobaltConsumer.dll'),$report)
+        DotNet 'run-legacy' @((Join-Path $legacy "bin/Release/$($trueMoonBuildProfile.Framework)/DirectCobaltConsumer.dll"),$report)
         if (!(Get-Content $report -Raw | ConvertFrom-Json).Completed) { throw 'Legacy reference consumer failed.' }
         $summary.Cases += 'run-legacy'
     }

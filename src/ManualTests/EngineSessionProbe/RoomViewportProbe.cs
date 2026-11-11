@@ -226,7 +226,7 @@ internal static class RoomViewportProbe
             File.WriteAllText(Path.Combine(input, "Game.cs"), text);
             File.WriteAllText(Path.Combine(input, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
             var path = Path.Combine(input, "Game.Logic.csproj");
-            File.WriteAllText(path, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether\"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
+            File.WriteAllText(path, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether\"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Contracts\"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
             return new(path, "Game.Logic.dll", "Game.Logic.RoomGame", revision);
         }
     }

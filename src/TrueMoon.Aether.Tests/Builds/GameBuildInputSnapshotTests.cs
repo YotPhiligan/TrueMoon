@@ -124,7 +124,7 @@ public sealed class GameBuildInputSnapshotTests
             object[] Rows(string kind) => unsupported == kind ? [new { Identity = "unsupported" }] : [];
             return JsonSerializer.Serialize(new
             {
-                Properties = new { TargetFramework = "net10.0", LangVersion = "14.0", Temporary = Job(job) },
+                Properties = new { TargetFramework = GameBuildProfile.TargetFramework, LangVersion = "14.0", Temporary = Job(job) },
                 Items = new Dictionary<string, object>
                 {
                     ["Compile"] = (sources ?? [Source]).Select(path => new { Identity = path, FullPath = path, ModifiedTime = "timestamp-a" }).ToArray(),

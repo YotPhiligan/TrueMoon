@@ -1,5 +1,9 @@
 [CmdletBinding()]
-param([string]$EvidenceDirectory, [string]$RunDirectory)
+param([string]$EvidenceDirectory, [string]$RunDirectory, [string]$PackageVersion)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -18,11 +22,14 @@ $dotnet = (Get-Command dotnet -ErrorAction Stop).Source
 $feed = Join-Path $run 'feed'
 $cwd = Join-Path $run 'unrelated working directory'
 foreach ($directory in @($run, $evidence, $feed, $cwd)) { [void][IO.Directory]::CreateDirectory($directory) }
-$version = '0.2.5.2-core76.' + (Get-Date -Format 'yyyyMMddHHmmss')
+$version = if ($PackageVersion) { $PackageVersion } else { $trueMoonBuildProfile.Version + '.delivery.' + (Get-Date -Format 'yyyyMMddHHmmss') }
+if ($version -notmatch '^[0-9A-Za-z][0-9A-Za-z.+-]*$' -or !$version.StartsWith($trueMoonBuildProfile.Version + '.', [StringComparison]::Ordinal)) {
+    throw 'Use a unique local prerelease derived from the current framework version.'
+}
 $packages = @('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Extensions.DependencyInjection',
     'TrueMoon.Enerit.Generator','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Argentis','TrueMoon.Alloy',
     'TrueMoon.Alloy.Rendering.Skia','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Hosting','TrueMoon.Aether','TrueMoon.Aether.Editor','TrueMoon.Nom')
-$report = [ordered]@{ Completed=$false; Version=$version; RunDirectory=$run; Commands=@(); Packages=@();
+$report = [ordered]@{ Completed=$false; Version=$version; BuildProfile=$trueMoonBuildProfile; RunDirectory=$run; Commands=@(); Packages=@();
     ExternalPackages=@(); Sources=@(); Graphs=@(); Profiles=@(); Failure=$null; GpuRun=$false; WindowRun=$false }
 function Save-Report { $report | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath (Join-Path $evidence 'verification.json') -Encoding utf8 }
 function Invoke-Delivery([string]$name, [string[]]$arguments, [string]$workingDirectory=$workspace, [string]$cache='') {
@@ -101,11 +108,11 @@ function Verify-Payload([string]$id, [string]$path) {
             if ($archive.GetEntry('README.md')) { throw 'Nom unexpectedly includes the removed shared README.' }
         } else { $files+=,@('README.md',(Join-Path $workspace '../README.md')) }
         if ($id -eq 'TrueMoon.Cobalt') {
-            $files+=,@('analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll',(Join-Path $workspace 'TrueMoon.Cobalt.Generator/bin/Release/net10.0/TrueMoon.Cobalt.Generator.dll'))
+            $files+=,@('analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll',(Join-Path $workspace "TrueMoon.Cobalt.Generator/bin/Release/$($trueMoonBuildProfile.Framework)/TrueMoon.Cobalt.Generator.dll"))
             $files+=,@('buildTransitive/TrueMoon.Cobalt.targets',(Join-Path $workspace 'TrueMoon.Cobalt/buildTransitive/TrueMoon.Cobalt.targets'))
         }
         if ($id -eq 'TrueMoon.Enerit.Generator') {
-            $files+=,@('analyzers/dotnet/cs/TrueMoon.Enerit.Generator.dll',(Join-Path $workspace 'TrueMoon.Enerit.Generator/bin/Release/net10.0/TrueMoon.Enerit.Generator.dll'))
+            $files+=,@('analyzers/dotnet/cs/TrueMoon.Enerit.Generator.dll',(Join-Path $workspace "TrueMoon.Enerit.Generator/bin/Release/$($trueMoonBuildProfile.Framework)/TrueMoon.Enerit.Generator.dll"))
         }
         if ($id -eq 'TrueMoon.Alloy.Rendering.Skia') {
             $files+=,@('nativeAssets/win-x64/libSkiaSharp.dll',(Join-Path $workspace 'TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.dll'))
@@ -181,9 +188,8 @@ try {
             $directory=Join-Path $run ($consumer.Name+'-'+$kind)
             [void][IO.Directory]::CreateDirectory($directory)
             [IO.File]::WriteAllText((Join-Path $directory 'NuGet.Config'), '<configuration><packageSources><clear/><add key="local" value="'+[Security.SecurityElement]::Escape($feed)+'"/></packageSources></configuration>')
-            [IO.File]::WriteAllText((Join-Path $directory 'global.json'), '{"sdk":{"version":"10.0.100","allowPrerelease":false,"rollForward":"latestMinor"}}')
-            [IO.File]::WriteAllText((Join-Path $directory 'Directory.Build.props'), '<Project><PropertyGroup><TargetFramework>net10.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><LangVersion>latest</LangVersion><NuGetAudit>false</NuGetAudit></PropertyGroup></Project>')
-            foreach ($file in @('Directory.Packages.props','Directory.Build.targets')) { [IO.File]::WriteAllText((Join-Path $directory $file), '<Project/>') }
+            Write-TrueMoonConsumerBuildProfile -Profile $trueMoonBuildProfile -Directory $directory
+            [IO.File]::WriteAllText((Join-Path $directory 'Directory.Build.targets'), '<Project/>')
             if ($consumer.ContainsKey('Documentation')) {
                 $document=[IO.File]::ReadAllText((Join-Path $workspace $consumer.File))
                 $block=[regex]::Match($document,'(?s)```csharp\r?\n(.*?)```')
@@ -206,7 +212,7 @@ try {
             if ($kind -eq 'source') {
                 $name=$consumer.Name+'-source-build'
                 Invoke-Delivery $name @('build','Consumer.csproj','--no-restore','-p:BuildProjectReferences=false','-c','Debug',"-bl:$evidence/$name-{}.binlog") $directory $cache
-                Add-Profile $consumer 'source' "$directory/bin/Debug/net10.0/$($consumer.Assembly).dll" $cache
+                Add-Profile $consumer 'source' "$directory/bin/Debug/$($trueMoonBuildProfile.Framework)/$($consumer.Assembly).dll" $cache
                 $name=$consumer.Name+'-published-build'; $output=Join-Path $run ($consumer.Name+'-published')
                 Invoke-Delivery $name @('publish','Consumer.csproj','--no-restore','-p:BuildProjectReferences=false','-c','Release','-o',$output,'-p:UseAppHost=false',"-bl:$evidence/$name-{}.binlog") $directory $cache
                 Add-Profile $consumer 'published' "$output/$($consumer.Assembly).dll" $cache

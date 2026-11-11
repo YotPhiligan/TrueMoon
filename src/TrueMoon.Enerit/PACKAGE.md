@@ -1,6 +1,12 @@
 # TrueMoon.Enerit
 
-Alpha typed IPC runtime for .NET10. Use the same package version and the same
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
+Alpha typed IPC runtime for .NET11. Use the same package version and the same
 service/payload sources on both peers. The named-pipe path targets the bounded
 Windows x64 profile. MMF, other OS, cross-version schemas and production resource
 trends remain separate acceptance. No automatic retry/replay of failed calls.
@@ -10,7 +16,7 @@ the generator reference must use PrivateAssets="all". Add TrueMoon.Mithril for
 App/AddUnit owned children. The TrueMoon.Cobalt package includes its analyzer;
 no separate Cobalt.Generator package reference is needed. Microsoft DI uses the
 TrueMoon.Extensions.DependencyInjection adapter and does not require that analyzer.
-Generators require the .NET10 SDK compiler and belong at build time.
+Generators require the .NET11 SDK compiler and belong at build time.
 
 Configure UseDiagnostics(), PipesServiceTransport() or
 PipesServiceTransport(serviceType => endpoint), then UseInvocationService<T>() on

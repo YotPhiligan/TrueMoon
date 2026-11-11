@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param()
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $run = Join-Path $workspace ('TestResults/CobaltGeneratorFixes/packages-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmssfff'))
@@ -10,7 +14,7 @@ $consumer = Join-Path $run 'consumer'
 [void][IO.Directory]::CreateDirectory($consumer)
 [xml]$props = Get-Content (Join-Path $workspace 'Directory.Build.props') -Raw
 $version = $props.SelectSingleNode('//Version').InnerText
-$summary = [ordered]@{ Completed = $false; Version = $version; RunDirectory = $run; Commands = @(); Configurations = @(); Failure = $null }
+$summary = [ordered]@{ Completed = $false; Version = $version; BuildProfile = $trueMoonBuildProfile; RunDirectory = $run; Commands = @(); Configurations = @(); Failure = $null }
 
 function DotNet([string]$Name, [string[]]$Arguments, [bool]$ExpectedFailure = $false) {
     # Use argument vectors so literal MSBuild properties and generated paths survive quoting.
@@ -51,6 +55,7 @@ try {
         DotNet "pack-$project" @('pack', (Join-Path $workspace "$project/$project.csproj"), '-c', 'Release', '--no-restore', '-o', $feed, '-v', 'quiet')
     }
     Get-ChildItem $PSScriptRoot -File | Where-Object { $_.Extension -in @('.cs', '.csproj', '.props') } | Copy-Item -Destination $consumer
+    Export-TrueMoonConsumerFrameworks -Profile $trueMoonBuildProfile -Directory $consumer
     $feedXml = [Security.SecurityElement]::Escape($feed)
     @"
 <configuration><packageSources><clear /><add key="fresh" value="$feedXml" /></packageSources></configuration>
@@ -62,11 +67,11 @@ try {
     if (Compare-Object @("TrueMoon.Cobalt/$version", "TrueMoon.Contracts/$version") $libraries) { throw 'Unexpected consumer dependencies' }
     $generator = Join-Path $cache "truemoon.cobalt/$version/analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll"
     $summary.GeneratorSha256 = (Get-FileHash $generator).Hash
-    if ($summary.GeneratorSha256 -ne (Get-FileHash (Join-Path $workspace 'TrueMoon.Cobalt.Generator/bin/Release/net10.0/TrueMoon.Cobalt.Generator.dll')).Hash) { throw 'Bundled generator differs from source build' }
+    if ($summary.GeneratorSha256 -ne (Get-FileHash (Join-Path $workspace "TrueMoon.Cobalt.Generator/bin/Release/$($trueMoonBuildProfile.Framework)/TrueMoon.Cobalt.Generator.dll")).Hash) { throw 'Bundled generator differs from source build' }
     $previousNames = $null
     foreach ($configuration in @('Debug', 'Release')) {
         DotNet "build-$configuration" (@('build', 'CobaltGeneratorConsumer.csproj', '-c', $configuration, '--no-restore', '--no-incremental', '-v', 'quiet') + $properties)
-        $analyzers = @(Get-Content (Join-Path $consumer "obj/$configuration/net10.0/analyzers.txt") | Where-Object { $_ -match 'TrueMoon.Cobalt.Generator.dll$' })
+        $analyzers = @(Get-Content (Join-Path $consumer "obj/$configuration/$($trueMoonBuildProfile.Framework)/analyzers.txt") | Where-Object { $_ -match 'TrueMoon.Cobalt.Generator.dll$' })
         if ($analyzers.Count -ne 1 -or [IO.Path]::GetFullPath($analyzers[0]) -ne [IO.Path]::GetFullPath($generator)) { throw 'Expected one isolated bundled analyzer' }
         $sources = @(Get-ChildItem (Join-Path $consumer "obj/generated/$configuration") -Recurse -Filter '*.g.cs')
         if ($sources.Count -ne 9) { throw "Expected nine sources, got $($sources.Count)" }
@@ -75,7 +80,7 @@ try {
         if (@($names | Sort-Object -Unique).Count -ne $names.Count) { throw 'Hint name collision' }
         if ($previousNames -and (Compare-Object $previousNames $names)) { throw 'Hint names changed across configurations' }
         $previousNames = $names
-        DotNet "run-$configuration" @((Join-Path $consumer "bin/$configuration/net10.0/CobaltGeneratorConsumer.dll"))
+        DotNet "run-$configuration" @((Join-Path $consumer "bin/$configuration/$($trueMoonBuildProfile.Framework)/CobaltGeneratorConsumer.dll"))
         $summary.Configurations += @{ Configuration = $configuration; Sources = $names; MaxComponentLength = ($names | ForEach-Object Length | Measure-Object -Maximum).Maximum; Checks = 11 }
     }
     [IO.File]::WriteAllText((Join-Path $consumer 'Undocumented.cs'), 'namespace NegativeControl; public class Undocumented;')

@@ -5,7 +5,12 @@ Enerit:Pipes schema и UseConfiguredPipesServiceTransport, сохраняя endp
 handlers и transport ownership. Детальная задача — Core; IPC очередь ниже сохранена.
 
 <a id="current-enerit-queue"></a>
-## Точка продолжения — ревизия 2026-11-05
+## Точка продолжения — актуализация 2026-11-11
+
+CORE8.2 проверил net11: runtime354/generator114 каждый D/R и132fresh-package
+generated DI/IPCscenarios общей матрицы. Test/probe trace flags сверяются с
+существующим Recorded mask; production transport/generator и зависимости сохранены.
+[Результаты/границы](HISTORY.md#core82-2026-11-11), детальный план — [Core](../core/PLAN.md#core8-dotnet11).
 
 ENE6a и bounded ENE6d/отдельный Aether diagnostic lane имеют собственные proofs;
 Editor console/export уже реализованы в scope потребителя. Не назначать их заново

@@ -5,6 +5,10 @@ param(
     [ValidateRange(3, 100)][int]$ColdSamples = 12,
     [switch]$CompareProviders
 )
+. (Join-Path $PSScriptRoot '../../ManualTests/BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if (!$RunDirectory) { $RunDirectory = Join-Path $workspace ('TestResults/CobaltBaseline/run-' + (Get-Date -Format 'yyyyMMdd-HHmmssfff')) }
@@ -12,7 +16,7 @@ $run = [IO.Path]::GetFullPath($RunDirectory)
 if (Test-Path -LiteralPath $run) { throw "Use a fresh run directory: $run" }
 [void][IO.Directory]::CreateDirectory($run)
 $project = Join-Path $PSScriptRoot 'TrueMoon.Cobalt.Benchmarks.csproj'
-$dll = Join-Path $PSScriptRoot 'bin/Release/net10.0/TrueMoon.Cobalt.Benchmarks.dll'
+$dll = Join-Path $PSScriptRoot "bin/Release/$($trueMoonBuildProfile.Framework)/TrueMoon.Cobalt.Benchmarks.dll"
 $summary = [ordered]@{ Completed=$false; Graph='cobalt-app-v1'; StartedUtc=[DateTime]::UtcNow.ToString('O'); Commands=@(); Results=@(); ColdSamples=@() }
 $summary.Mode = if ($CompareProviders) { 'ProviderComparison' } else { 'CobaltBaseline' }
 $expectedCaseCount = if ($CompareProviders) { 20 } else { 10 }

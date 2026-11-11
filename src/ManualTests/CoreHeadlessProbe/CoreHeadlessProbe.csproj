@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>Headless.Consumer</RootNamespace>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>$(TestsTF)</TargetFramework>
     <AssemblyName>HeadlessConsumer</AssemblyName>
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>

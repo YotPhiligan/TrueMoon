@@ -1,6 +1,10 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$ConsumerEvidenceDirectory,
     [Parameter(Mandatory)][string]$ValidationDirectory,[string]$EvidenceDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 
 # Uses the frozen source/published artifacts from Verify.ps1. Does not build, restore or alter driver/settings.
 $ErrorActionPreference='Stop'
@@ -30,9 +34,9 @@ try{
         $primitiveNativeReport.Sources+=@{Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash}
     }
     foreach($profile in @('source','published')){
-        $parent=if($profile -eq 'source'){Join-Path $primitiveWorkspace 'ManualTests/EngineSessionProbe/bin/Debug/net10.0/EngineSessionProbe.dll'}else{"$primitiveRun/published-parent/EngineSessionProbe.dll"}
-        $runtime=if($profile -eq 'source'){Join-Path $primitiveWorkspace 'Examples/AetherRuntimeHost/bin/Debug/net10.0/AetherRuntimeHost.dll'}else{"$primitiveRun/published-runtime/AetherRuntimeHost.dll"}
-        $game=if($profile -eq 'source'){Join-Path $primitiveWorkspace 'ManualTests/Game.Logic/bin/Debug/net10.0'}else{"$primitiveRun/published-parent"}
+        $parent=if($profile -eq 'source'){Join-Path $primitiveWorkspace "ManualTests/EngineSessionProbe/bin/Debug/$($trueMoonBuildProfile.TestFramework)/EngineSessionProbe.dll"}else{"$primitiveRun/published-parent/EngineSessionProbe.dll"}
+        $runtime=if($profile -eq 'source'){Join-Path $primitiveWorkspace "Examples/AetherRuntimeHost/bin/Debug/$($trueMoonBuildProfile.Framework)/AetherRuntimeHost.dll"}else{"$primitiveRun/published-runtime/AetherRuntimeHost.dll"}
+        $game=if($profile -eq 'source'){Join-Path $primitiveWorkspace "ManualTests/Game.Logic/bin/Debug/$($trueMoonBuildProfile.TestFramework)"}else{"$primitiveRun/published-parent"}
         $output=Join-Path $primitiveNativeEvidence ($profile+'-proof')
         $info=[Diagnostics.ProcessStartInfo]::new($primitiveDotnet)
         $info.WorkingDirectory=Join-Path $primitiveRun 'unrelated working directory'

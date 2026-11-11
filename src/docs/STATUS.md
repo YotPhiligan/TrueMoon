@@ -1,39 +1,29 @@
 # TrueMoon: общий статус
 
-**2026-11-11 — CORE7.0–7.6 завершены в configuration scope.**
-[Рабочее руководство](core/CONFIGURATION_GUIDE.md), [139keys/17schemas](core/CONFIGURATION_KEYS.md),
-[единый App/child runner](../ManualTests/ConfigurationDelivery/README.md),
-[точные commands/limits](core/HISTORY.md#core76-2026-11-10).
+**2026-11-11 — CORE8.5 завершён; согласованный переход на .NET 11 проверен.**
+[Поставка и команды](core/HISTORY.md#core85-delivery-2026-11-11), [миграция](core/DOTNET11_MIGRATION.md).
+SDK 11.0.100 / net11.0 / runtime-async=on. Созданы 16 свежих локальных packages
+одной версии (0.3.0.1-alpha.core85.20261111221352), проверены runtime/analyzer/native payloads и графы.
+App/configuration: 15 source/published/fresh profiles, 690 checks / 12 children,
+оба DI. Source/published example hosts — 4 cases, package game — 8 cases,
+fresh native GPU viewport — 2 profiles. Remote publication не выполнялась.
 
-Source solution Debug0errors/256warnings, Release0errors/190warnings.
-7suites:6945/6945 каждый D/R, Failed:0, Skipped:0; Aether3234/3234 D/R
-в текущем последовательном запуске с bounded test props override.
-Это current passing на указанных inputs; ordinary nested restore и причины
-старых diagnostics timeouts не объявлены исправленными.
-
-16fresh packages одной версии;5programs×source/published/fresh,230checks/profile,
-Cobalt/MS DI и4owned children/profile (12total). Fresh graphs0ProjectReference,
-metadata/payload/runtime hashes проверены. Guide example исполнен,139keys
-экспортированы из public metadata,8managed surfaces unchanged.
-1673/1673baseline C#/csproj сохранены, source0.2.5.2-alpha не менялась.
-
-Предкоммитная сверка11ноября дополнительно прошла: Cobalt179/generator96,
-Enerit.Generator114 и Alloy1224 каждый D/R (1613cases/profile, failed/skipped0).
-[Отдельные команды/inputs](HISTORY.md#precommit-2026-11-11). CORE7.6 collection
-не повторялась, C#/csproj SHA unchanged. Это не один all-solution test run.
-Новый native/GPU/physical acceptance не заявляется. Engine f.4 и остальные module/reliability/release очереди независимы.
-[Предыдущая сводка целиком](HISTORY.md#status-before-core76-2026-11-10).
+Все 11 suites заново прошли Debug и Release: **Passed 8567, Failed 0, Skipped 0
+на конфигурацию**. Ordinary solution builds D/R прошли. В CORE8.5 менялись
+runners и документация; C# runtime, API, SDK pin и зависимости сохранены.
+Physical/release/performance и причины прежних diagnostics/drain timeout
+остаются отдельными. [Предыдущая сводка](HISTORY.md#common-status-before-core85-2026-11-11).
 
 ## Состояние модулей
 
 | Направление | Что реализовано в проверенном scope | Что дальше у владельца |
 | --- | --- | --- |
-| [Core](core/STATUS.md) | CORE7.0–7.6 complete;6945checks/suite collection D/R, current16package230checks/profile и actual App/child delivery | Применять [guide](core/CONFIGURATION_GUIDE.md); CORE6 routing/metrics/quota отдельно |
-| [Cobalt](cobalt/STATUS.md) | Runtime/generator/DI adapter/ownership, COB6e и COB5a.1 no-capture cycle check проверены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
-| [Enerit](enerit/STATUS.md) | Same-build pipes/admission/stop/telemetry; CORE7.5 common limits, runtime354 D/R | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
+| [Core](core/STATUS.md) | CORE8.0–5 завершены: 16 согласованных packages, source/published/fresh App и actual child/native consumers, все 11 suites по 8567 тестов D/R | Функциональная очередь ARCH1f.4; Core/diagnostics follow-up отдельно |
+| [Cobalt](cobalt/STATUS.md) | CORE8.2 net11: runtime/adapter179 и generator96 D/R; package generation; прежние COB6e/COB5a.1 сохранены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
+| [Enerit](enerit/STATUS.md) | CORE8.2 net11: runtime354 и generator114 D/R, actual generated IPC/package proof; same-build contracts сохранены | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
 | [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
 | [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
-| [Aether/Editor](engine/STATUS.md) | Existing Editor/f.1–f.3; CORE7.6 full Aether3234 и Editor1496 D/R на указанном input profile, fresh bootstrap child proof | [ARCH1f.4](engine/PLAN.md#arch1f-rendering) actual surface; ordinary fixture restore/reliability и дальнейший Editor отдельно |
+| [Aether/Editor](engine/STATUS.md) | CORE8.3 net11 frozen game profile; full Aether3243/Editor1496 D/R, source/published SDK11-only compile/reuse/load/Stop/reap | CORE8.5 завершён; [ARCH1f.4](engine/PLAN.md#arch1f-rendering) surface renderer и прежние reliability gates отдельно |
 | [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
 
 ## Общие этапы
@@ -49,6 +39,13 @@ G6/R1–R6 не закрыты; alpha version сама по себе ничег�
 
 | Дата и scope | Последний относящийся результат | Где подробности |
 | --- | --- | --- |
+| 2026-11-11, CORE8.5 | 16 packages; 690 App/configuration checks; 4 source/published host cases, 8 package game cases, 2 fresh native profiles; все 11 suites D/R по 8567/8567, failed/skipped 0 | [Команды/границы](core/HISTORY.md#core85-delivery-2026-11-11) |
+| 2026-11-11, CORE8.4 | 11 suites: 8567/8567 D/R, failed/skipped 0; 24 source/published native сценария; solution D/R без ошибок | [Команды/границы](core/HISTORY.md#core84-runtime-2026-11-11) |
+| 2026-11-11, CORE8.3 |Full Aether3243/Editor1496 D/R; SDK11-only source/published game compile/reuse/load/Stop/reap,2children; solution D/R0errors | [Команды/границы](core/HISTORY.md#core83-frozen-2026-11-11) |
+| 2026-11-11, CORE8.2 |4suites743/743 D/R,8fresh packages132DI/IPCscenarios; solution Debug0errors/510warnings, Release0errors/1414warnings, incremental | [Команды/исправления/границы](core/HISTORY.md#core82-generators-2026-11-11) |
+| 2026-11-11, CORE8.1 profiles/restore | 45 runners, 61 net11 projects; external NU1008 исправлен; solution D/R0errors,16packages/15profiles/230checks и4children на вид поставки | [Inputs/команды/границы](core/HISTORY.md#core81-profiles-2026-11-11) |
+| 2026-11-11, CORE8.1 TFM |61/61net11 evaluation,8profile controls, solution и6extra projects D/R0errors; manual NU1201 устранён | [Команды/границы](core/HISTORY.md#core81-tfm-2026-11-11) |
+| 2026-11-11, CORE8.0 | Ordinary restore0/build D/R0errors/1556warnings;61evaluation,4manual NU1201 и1/1failed actual game build test | [Входные условия/команды/границы](core/HISTORY.md#core80-baseline-2026-11-11) |
 | 2026-11-11, CORE7.6 итог | Solution D/R0errors;7suites6945/6945 D/R;16packages230checks/4owned children на source/published/fresh profile; metadata16/16,8managed APIs unchanged | [Core evidence/границы](core/HISTORY.md#core76-2026-11-10) |
 | 2026-11-10, CORE7.5 | Six full suites D/R,110newcases; Aether47scoped serial D/R, full attempts non-green. Source/published/fresh16packages76checks/profile, оба DI; API removed0 в7assemblies | [Core evidence/limits](core/HISTORY.md#core75-2026-11-10) |
 | 2026-11-10, CORE7.2 | Core554/554 D/R,48newcases; source/published/fresh6package36checks/profile, оба DI; ordinary incremental solution Debug0errors/855warnings | [Core scope](core/HISTORY.md#core72-2026-11-10) |
@@ -85,12 +82,15 @@ ignored TestResults могут отсутствовать в checkout; HISTORY �
 
 ## Общие блокеры и неопределённости
 
+- .NET 11: CORE8.0–5 завершены в описанном Windows x64 framework-dependent профиле. Source build/test, свежая согласованная поставка и actual source/published/fresh consumers проверены. Расширенная release/OS/RID/AOT матрица остаётся отдельной.
+
 - Nom: actual VM crash verification отложена пользователем; hardware power-off исключён. Предыдущий isolated-volume disk-full UAC proof проверен отдельно; [scope](nom/DURABILITY.md).
 
-- Current CORE7.6 full Aether3234/3234 D/R прошёл последовательно с bounded
-  test props override. Ordinary nested restore без него не объявлен исправленным;
-  старые non-green attempts и diagnostics причины сохраняются отдельно.
-  [Точный input profile/commands](core/HISTORY.md#core76-2026-11-10).
+- CORE7.6 Aether 3234/3234 D/R с test props override остаётся историческим результатом.
+  CORE8.3/4 подтвердили ordinary nested restore и полный Aether 3243/3243 D/R
+  без него. Старые non-green attempts и причины diagnostics timeout сохраняются
+  отдельно. [Исторический профиль](core/HISTORY.md#core76-2026-11-10),
+  [текущая проверка](core/HISTORY.md#core84-runtime-2026-11-11).
 - Full Aether6ноября имеет diagnostics delivery/Stop/Dispose timeouts на unchanged
   исходниках; focused replays прошли, причина не установлена. Это открытый
   reliability result, не доказанная регрессия ECS и не исправленный timeout.
@@ -109,12 +109,15 @@ ignored TestResults могут отсутствовать в checkout; HISTORY �
 
 ## Следующий конкретный шаг
 
+**CORE8 завершён.** Следующая функциональная очередь — ARCH1f.4 ниже; новые задачи требуют своего scope и проверок. [Итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11).
+
+
 [ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
 renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
 owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
 
 Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
-Reliability: изолировать native game fixture SDK inputs от legacy repo CLI tools,
-стандартизовать ordinary fixture restore и получить причинное evidence прежнего drain timeout.
-Current full baseline на bounded test inputs записан в CORE7.6.
+Reliability: текущие CORE8.3/4 full net11 проверки используют ordinary nested restore,
+без test-only props. Причинное evidence прежнего post-reap drain/diagnostics timeout
+остаётся отдельным шагом; исторический net10 baseline записан в CORE7.6.
 Physical input, device loss/K7/VRAM и release matrix сохраняют отдельные gates.

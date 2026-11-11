@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([string]$EvidenceDirectory, [string]$RunDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 
 # CPU-only public API acceptance. Every consumer and cache is created in a fresh directory.
 $ErrorActionPreference='Stop'
@@ -57,8 +61,8 @@ try{
     }
     foreach($directory in @($cpuSource,$cpuFresh)){
         [IO.File]::WriteAllText((Join-Path $directory 'NuGet.Config'),'<configuration><packageSources><clear/><add key="local" value="'+[Security.SecurityElement]::Escape($cpuFeed)+'"/></packageSources></configuration>')
-        [IO.File]::WriteAllText((Join-Path $directory 'global.json'),'{"sdk":{"version":"10.0.100","allowPrerelease":false,"rollForward":"latestMinor"}}')
-        [IO.File]::WriteAllText((Join-Path $directory 'Directory.Build.props'),'<Project><PropertyGroup><TargetFramework>net10.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><LangVersion>latest</LangVersion><NuGetAudit>false</NuGetAudit></PropertyGroup></Project>')
+        [IO.File]::WriteAllText((Join-Path $directory 'global.json'),"{`"sdk`":{`"version`":`"$($trueMoonBuildProfile.Sdk)`",`"allowPrerelease`":false,`"rollForward`":`"latestMinor`"}}")
+        [IO.File]::WriteAllText((Join-Path $directory 'Directory.Build.props'),"<Project><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><LangVersion>latest</LangVersion><NuGetAudit>false</NuGetAudit></PropertyGroup></Project>")
         Copy-Item -LiteralPath $program -Destination (Join-Path $directory 'Program.cs')
     }
     $aether=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Aether/TrueMoon.Aether.csproj'))
@@ -66,7 +70,7 @@ try{
     [IO.File]::WriteAllText((Join-Path $cpuSource 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>RenderingCpuConsumer</AssemblyName><RootNamespace>RenderingCpuConsumer</RootNamespace></PropertyGroup><ItemGroup><ProjectReference Include=`"$aether`"/><ProjectReference Include=`"$bootstrap`"/></ItemGroup></Project>")
     Invoke-Cpu 'source-restore' @('restore','Consumer.csproj','--configfile',"$cpuSource/NuGet.Config","-bl:$cpuEvidence/source-restore-{}.binlog") $cpuSource
     Invoke-Cpu 'source-Debug' @('build','Consumer.csproj','--no-restore','-c','Debug',"-bl:$cpuEvidence/source-Debug-{}.binlog") $cpuSource
-    Add-CpuProfile 'source-proof' "$cpuSource/bin/Debug/net10.0/RenderingCpuConsumer.dll" "$cpuEvidence/source-proof"
+    Add-CpuProfile 'source-proof' "$cpuSource/bin/Debug/$($trueMoonBuildProfile.Framework)/RenderingCpuConsumer.dll" "$cpuEvidence/source-proof"
     Invoke-Cpu 'published-Release' @('publish','Consumer.csproj','--no-restore','-c','Release','-o',"$cpuRun/published",'-p:UseAppHost=false',"-bl:$cpuEvidence/published-Release-{}.binlog") $cpuSource
     Add-CpuProfile 'published-proof' "$cpuRun/published/RenderingCpuConsumer.dll" "$cpuEvidence/published-proof"
     foreach($id in $cpuPackages){

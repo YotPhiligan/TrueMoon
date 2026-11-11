@@ -14,6 +14,12 @@ IServiceCollection/Host bridges, scopes/decorators/keyed contracts в задач
 [команды и evidence](HISTORY.md#cob7-provider-comparison--2026-10-15),
 [исходник/протокол](../../Benchmarks/TrueMoon.Cobalt.Benchmarks/README.md).
 
+Актуализация2026-11-11: таблицы и измерения ниже относятся к исходному net10
+профилю15октября. В CORE8.2 Microsoft DI11 в Composite aliases regression дал
+Dispose1, shared identity и повторный Dispose resolver прошли. Runtime179 и
+generator96 каждый D/R net11 проверены; нового provider timing сравнения нет.
+[Точные команды/границы](HISTORY.md#core82-2026-11-11).
+
 ## Что сравнивалось
 
 Один unchanged Scenario.Register из COB5:12registrations/10keys, borrowed settings,

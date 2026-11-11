@@ -59,9 +59,12 @@ public class AdapterRegressionTests
         Assert.Same(concrete, resolver.Resolve<IOwned>());
         Assert.Same(concrete, resolver.Resolve<IBorrowed>());
         Assert.Same(concrete, Assert.Single(resolver.Resolve<IEnumerable<IOwned>>()));
+        Assert.Equal(0, concrete.DisposeCount);
         ((IDisposable)resolver).Dispose();
-        // Microsoft DI captures the disposable implementation and each disposable alias separately.
-        Assert.Equal(3, concrete.DisposeCount);
+        // Microsoft DI 11 deduplicates the owned instance captured through its aliases.
+        Assert.Equal(1, concrete.DisposeCount);
+        ((IDisposable)resolver).Dispose();
+        Assert.Equal(1, concrete.DisposeCount);
     }
     [Fact]
     public async Task ConcurrentAsyncDisposal_WaitsForSameProviderCleanup()

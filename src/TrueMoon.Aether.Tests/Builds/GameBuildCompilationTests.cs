@@ -237,7 +237,7 @@ public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassF
         }
         public GameBuildInputSnapshot Inputs() => GameBuildInputSnapshot.Create(new(Project, "Frozen.dll", "Frozen", 1), JsonSerializer.Serialize(new
         {
-            Properties = new { TargetFramework = "net10.0" }, Items = new { Compile = new[] { new { FullPath = Source } }, Reference = Array.Empty<object>(), ProjectReference = Array.Empty<object>(), PackageReference = Array.Empty<object>() }
+            Properties = new { TargetFramework = GameBuildProfile.TargetFramework }, Items = new { Compile = new[] { new { FullPath = Source } }, Reference = Array.Empty<object>(), ProjectReference = Array.Empty<object>(), PackageReference = Array.Empty<object>() }
         }), "project", Job);
         public string Preparation(params string[] extra)
         {

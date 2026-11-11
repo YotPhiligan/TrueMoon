@@ -1,5 +1,7 @@
 # TrueMoon.Alloy: план первой рабочей версии
 
+Текущий build/test профиль CORE8 (2026-11-11): net11.0, SDK 11.0.100, runtime-async=on, xUnit 2/VSTest. Он заменяет исходный net10 профиль для новых запусков, сохраняя исторические результаты и функциональные критерии. [Переход и границы](../core/DOTNET11_MIGRATION.md).
+
 Конфигурация2026-11-10: [CORE7.5](../core/CONFIGURATION_MODULES.md) добавил
 Alloy:Window scalar schema/UseConfiguredPresentation и Editor:Window defaults.
 Renderer/fonts/chrome factories остаются explicit; UI/native очередь не меняется.

@@ -4,7 +4,7 @@
         <TargetFramework>$(TF)</TargetFramework>
         <IsPackable>false</IsPackable>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-        <Description>C# source generator bundled with TrueMoon.Cobalt. Requires the .NET 10 SDK compiler.</Description>
+        <Description>C# source generator bundled with TrueMoon.Cobalt. Requires the .NET 11 SDK compiler.</Description>
     </PropertyGroup>
 
     <ItemGroup>

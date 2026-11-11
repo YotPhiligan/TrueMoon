@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>Direct.Consumer</RootNamespace>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>$(TF)</TargetFramework>
     <AssemblyName>DirectCobaltConsumer</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

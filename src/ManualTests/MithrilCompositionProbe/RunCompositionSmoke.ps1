@@ -1,6 +1,10 @@
 param(
     [string]$ResultsDirectory = 'TestResults/MithrilComposition/manual'
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $srcRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $resultRoot = [IO.Path]::GetFullPath((Join-Path $srcRoot $ResultsDirectory))
@@ -66,7 +70,7 @@ try {
     $published = Join-Path $resultRoot 'published-release'
     Invoke-OwnedProcess 'dotnet' @('publish', $project, '--configuration', 'Release', '--output', $published, '--verbosity', 'quiet') (Join-Path $resultRoot 'publish-release') 60 | Out-Null
     foreach ($configuration in @('Debug', 'PublishedRelease')) {
-        $directory = if ($configuration -eq 'Debug') { Join-Path $PSScriptRoot 'bin/Debug/net10.0' } else { $published }
+        $directory = if ($configuration -eq 'Debug') { Join-Path $PSScriptRoot "bin/Debug/$($trueMoonBuildProfile.TestFramework)" } else { $published }
         $executable = Join-Path $directory $(if ($IsWindows) { 'MithrilCompositionProbe.exe' } else { 'MithrilCompositionProbe' })
         foreach ($provider in @('cobalt', 'di')) {
             foreach ($scenario in $scenarios) {

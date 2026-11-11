@@ -100,7 +100,7 @@ public sealed class GameBuildPreparationTests
                 File.WriteAllText(Path.Combine(files.Root, change), "<Project/>"); break;
             case ".editorconfig": File.WriteAllText(Path.Combine(files.Root, change), "root = true\n"); break;
             case ".globalconfig": File.WriteAllText(Path.Combine(files.Root, change), "is_global = true\n"); break;
-            case "global.json": File.WriteAllText(Path.Combine(files.Root, change), "{\"sdk\":{\"version\":\"10.0.100\",\"rollForward\":\"latestMinor\"}}"); break;
+            case "global.json": File.WriteAllText(Path.Combine(files.Root, change), "{\"sdk\":{\"version\":\"11.0.100\",\"rollForward\":\"latestMinor\"}}"); break;
         }
         using var second = await GameBuildPreparation.CaptureAsync(files.Request with { SourceRevision = 999 },
             Path.Combine(files.Artifacts, "different-job"), "after", files.Artifacts, default);
@@ -182,11 +182,11 @@ public sealed class GameBuildPreparationTests
         Assert.Null(compiler.DiagnosticsDirectory);
     }
 
-    [Fact]
-    public async Task Packages_BuildLockedTransitiveDllsVerifyChangesAndReuseOnlyVerifiedPayload()
+    [Theory] [InlineData("net11.0")] [InlineData("net10.0")]
+    public async Task Packages_BuildLockedTransitiveDllsVerifyChangesAndReuseOnlyVerifiedPayload(string target)
     {
         using var files = new Files();
-        files.Package("Leaf", 40); files.Package("Upper", 2, dependencies: new() { ["Leaf"] = "[1.0.0]" });
+        files.Package("Leaf", 40, target: target); files.Package("Upper", 2, dependencies: new() { ["Leaf"] = "[1.0.0]" }, target: target);
         files.PackageLock(["Upper"], new() { ["Upper"] = new() { ["Leaf"] = "[1.0.0]" }, ["Leaf"] = new() });
         File.WriteAllText(files.Project, files.Xml("<ItemGroup><PackageReference Include=\"Upper\" Version=\"[1.0.0]\"/></ItemGroup>"));
         File.WriteAllText(files.Source, "public class Original { public static int Value => Upper.Value + Leaf.Value; }");
@@ -203,7 +203,7 @@ public sealed class GameBuildPreparationTests
         await compiler.VerifyInputsAsync(first.Inputs, first.Compilation); files.AssertDrained(compiler);
         var reused = await compiler.BuildAsync(request with { SourceRevision = 2 }); AssertReuse(compiler, true);
         Assert.Equal(first.Compilation.Fingerprint, reused.Compilation!.Fingerprint); Assert.Equal(42, files.Value(reused));
-        files.Package("Leaf", 50); files.PackageLock(["Upper"], new() { ["Upper"] = new() { ["Leaf"] = "[1.0.0]" }, ["Leaf"] = new() });
+        files.Package("Leaf", 50, target: target); files.PackageLock(["Upper"], new() { ["Upper"] = new() { ["Leaf"] = "[1.0.0]" }, ["Leaf"] = new() });
         await Assert.ThrowsAsync<GameBuildInputsChangedException>(() => compiler.VerifyInputsAsync(reused.Inputs!, reused.Compilation));
         var changed = await compiler.BuildAsync(request with { SourceRevision = 3 }); AssertReuse(compiler, false);
         Assert.Equal(52, files.Value(changed)); Assert.NotEqual(first.Inputs.Fingerprint, changed.Inputs!.Fingerprint); files.AssertDrained(compiler);
@@ -256,10 +256,10 @@ public sealed class GameBuildPreparationTests
     [InlineData("optin")] [InlineData("lock")] [InlineData("archive")] [InlineData("hash")]
     [InlineData("version")] [InlineData("floating")] [InlineData("metadata")] [InlineData("condition")]
     [InlineData("edge")] [InlineData("unreachable")] [InlineData("identity")] [InlineData("unresolved")]
-    [InlineData("cycle")] [InlineData("limit")] [InlineData("undeclared")] [InlineData("lib/net10.0/Leaf.dll")]
+    [InlineData("cycle")] [InlineData("limit")] [InlineData("undeclared")] [InlineData("lib/net11.0/Leaf.dll")]
     [InlineData("references")] [InlineData("developmentDependency")]
     [InlineData("build/Run.targets")] [InlineData("analyzers/cs/Run.dll")] [InlineData("runtimes/win-x64/native/Run.dll")]
-    [InlineData("contentFiles/any/any/run.cs")] [InlineData("ref/net10.0/Leaf.dll")] [InlineData(".signature.p7s")]
+    [InlineData("contentFiles/any/any/run.cs")] [InlineData("ref/net11.0/Leaf.dll")] [InlineData(".signature.p7s")]
     [InlineData("../escape.dll")] [InlineData("lib/net9.0/Other.dll")] [InlineData("assembly")] [InlineData("budget")]
     public async Task Packages_RejectUnsupportedOrChangedClosureBeforeSdkAndDrain(string problem)
     {
@@ -711,18 +711,59 @@ public sealed class GameBuildPreparationTests
         Assert.False(Directory.Exists(Path.Combine(compiler.DiagnosticsDirectory!, "capture")));
     }
 
-    [Fact]
-    public async Task RepositoryGameProject_FreezesAncestorPropsAndContractReferences()
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public async Task RepositoryGameProject_FreezesAncestorPropsAndContractReferences(bool artifactInsideCheckout)
     {
         using var files = new Files();
         var project = Path.GetFullPath("../../../../ManualTests/Game.Logic/Game.Logic.csproj", AppContext.BaseDirectory);
+        var results = Path.GetFullPath("../../TestResults", Path.GetDirectoryName(project)!);
+        var artifacts = artifactInsideCheckout ? Path.Combine(results, "RepositoryFrozenBuild", Guid.NewGuid().ToString("N")) : files.Artifacts;
+        try
+        {
+            await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, artifacts);
+            var artifact = await compiler.BuildAsync(new(project, "Game.Logic.dll", "Game.Logic.RoomGame", 1)
+                { TrackInputs = true, CaptureCompilation = true, CapturePreparation = true });
+            Assert.Contains(artifact.Inputs!.Preparation!.Files, file => file.Path == Path.GetFullPath("../../Directory.Build.props", Path.GetDirectoryName(project)!));
+            Assert.Contains(artifact.Compilation!.Files, file => file.Path == typeof(TrueMoon.Aether.Sessions.IGameSession).Assembly.Location);
+            Assert.Equal("net11.0", GameBuildProfile.TargetFramework);
+            Assert.Equal(11, Version.Parse(artifact.Inputs.Preparation.SdkVersion).Major);
+            using (var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(artifact.DirectoryPath, GameBuildArtifact.ManifestFile))))
+            {
+                Assert.Equal(1, manifest.RootElement.GetProperty("Schema").GetInt32());
+                Assert.Equal("net11.0", manifest.RootElement.GetProperty("TargetFramework").GetString());
+            }
+            using (var evaluation = JsonDocument.Parse(File.ReadAllText(Path.Combine(compiler.DiagnosticsDirectory!, "before.evaluation.json"))))
+                Assert.Contains("runtime-async=on", evaluation.RootElement.GetProperty("Properties").GetProperty("Features").GetString());
+            using (var preparation = JsonDocument.Parse(File.ReadAllText(Path.Combine(compiler.DiagnosticsDirectory!, "prepare.json"))))
+            {
+                var arguments = preparation.RootElement.GetProperty("Items").GetProperty("CscCommandLineArgs").EnumerateArray().Select(argument => argument.GetProperty("Identity").GetString()!).ToArray();
+                Assert.Contains(arguments, argument => argument.Contains("runtime-async=on", StringComparison.Ordinal));
+                Assert.DoesNotContain(arguments, argument => argument.StartsWith("/sourcelink:", StringComparison.OrdinalIgnoreCase));
+            }
+            Assert.True(File.Exists(Path.Combine(artifact.DirectoryPath, "Game.Logic.dll")));
+            Assert.Null(compiler.ProcessId); Assert.False(Directory.Exists(Path.Combine(compiler.DiagnosticsDirectory!, "preparation")));
+        }
+        finally { if (artifactInsideCheckout) GameBuildArtifact.DeleteOwned(artifacts, results); }
+    }
+
+    [Theory]
+    [InlineData("10.0.100", "latestMinor", false)]
+    [InlineData("12.0.100", "latestMinor", false)]
+    [InlineData("11.0.100-preview.1", "latestMinor", false)]
+    [InlineData("11.0.100", "latestMajor", false)]
+    [InlineData("11.0.100", "latestMinor", true)]
+    public async Task FrozenSdk_RejectsUnsupportedSelectionBeforeSdkAndDrains(string version, string policy, bool prerelease)
+    {
+        using var files = new Files();
+        File.WriteAllText(Path.Combine(files.Root, "global.json"), JsonSerializer.Serialize(new
+            { sdk = new { version, rollForward = policy, allowPrerelease = prerelease } }));
         await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, files.Artifacts);
-        var artifact = await compiler.BuildAsync(new(project, "Game.Logic.dll", "Game.Logic.RoomGame", 1)
-            { TrackInputs = true, CaptureCompilation = true, CapturePreparation = true });
-        Assert.Contains(artifact.Inputs!.Preparation!.Files, file => file.Path == Path.GetFullPath("../../Directory.Build.props", Path.GetDirectoryName(project)!));
-        Assert.Contains(artifact.Compilation!.Files, file => file.Path == typeof(TrueMoon.Aether.Sessions.IGameSession).Assembly.Location);
-        Assert.True(File.Exists(Path.Combine(artifact.DirectoryPath, "Game.Logic.dll")));
-        Assert.Null(compiler.ProcessId); Assert.False(Directory.Exists(Path.Combine(compiler.DiagnosticsDirectory!, "preparation")));
+        var error = await Assert.ThrowsAsync<NotSupportedException>(() => compiler.BuildAsync(files.Request));
+        Assert.Contains("net11.0", error.Message);
+        Assert.Contains("SDK11", error.Message);
+        Assert.Null(compiler.ProcessId);
+        Assert.False(Directory.Exists(Path.Combine(compiler.DiagnosticsDirectory!, "preparation")));
+        Assert.DoesNotContain(Directory.EnumerateDirectories(files.Artifacts), path => Path.GetFileName(path).Length == 64);
     }
 
     [Theory] [InlineData(false, false)] [InlineData(true, false)] [InlineData(false, true)]
@@ -748,7 +789,7 @@ public sealed class GameBuildPreparationTests
             Directory.CreateDirectory(ProjectDirectory); File.WriteAllText(Project, Xml());
             File.WriteAllText(Source, "public class Original { }");
         }
-        internal string Xml(string extra = "") => "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>" + extra + "</Project>";
+        internal string Xml(string extra = "") => "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>" + GameBuildProfile.TargetFramework + "</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>" + extra + "</Project>";
         internal string Library(string name, string source, string extra = "")
         {
             var directory = Path.Combine(Root, name); Directory.CreateDirectory(directory);
@@ -776,8 +817,9 @@ public sealed class GameBuildPreparationTests
         }
         internal Task<GameBuildPreparation> Capture(string phase) => GameBuildPreparation.CaptureAsync(Request, Path.Combine(Artifacts, "job"), phase, Artifacts, default);
         internal void Package(string id, int value, Dictionary<string, string>? dependencies = null, string? extra = null,
-            string target = "net10.0", string? identity = null, bool invalidAssembly = false, bool oversized = false, string metadata = "")
+            string? target = null, string? identity = null, bool invalidAssembly = false, bool oversized = false, string metadata = "")
         {
+            target ??= GameBuildProfile.TargetFramework;
             Directory.CreateDirectory(PackageDirectory);
             var path = Path.Combine(PackageDirectory, id.ToLowerInvariant() + ".1.0.0.nupkg");
             using var file = File.Create(path); using var zip = new ZipArchive(file, ZipArchiveMode.Create);
@@ -814,7 +856,7 @@ public sealed class GameBuildPreparationTests
             });
             foreach (var id in direct) rows[id]["requested"] = "[1.0.0, 1.0.0]";
             File.WriteAllText(Path.Combine(project ?? ProjectDirectory, "packages.lock.json"), JsonSerializer.Serialize(new
-                { version = 1, dependencies = new Dictionary<string, object> { ["net10.0"] = rows } }));
+                { version = 1, dependencies = new Dictionary<string, object> { [GameBuildProfile.TargetFramework] = rows } }));
         }
         public void Dispose()
         {

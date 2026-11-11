@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([string]$EvidenceDirectory, [string]$RunDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 
 # Headless e.4 acceptance: source Debug, published Release and an independent fresh NuGet consumer.
 # Uses only cached external packages. Creates new directories and preserves all evidence.
@@ -62,9 +66,9 @@ try {
         $name=if($project.StartsWith('ManualTests')){'source-parent'}else{'source-runtime'}
         Invoke-SceneCommand $name @('build',$project,'--no-restore','-c','Debug',"-bl:$sceneEvidence/$name-{}.binlog")
     }
-    $sourceParent=Join-Path $sceneWorkspace 'ManualTests/EngineSessionProbe/bin/Debug/net10.0/EngineSessionProbe.dll'
-    $sourceRuntime=Join-Path $sceneWorkspace 'Examples/AetherRuntimeHost/bin/Debug/net10.0/AetherRuntimeHost.dll'
-    $sourceGame=Join-Path $sceneWorkspace 'ManualTests/Game.Logic/bin/Debug/net10.0'
+    $sourceParent=Join-Path $sceneWorkspace "ManualTests/EngineSessionProbe/bin/Debug/$($trueMoonBuildProfile.TestFramework)/EngineSessionProbe.dll"
+    $sourceRuntime=Join-Path $sceneWorkspace "Examples/AetherRuntimeHost/bin/Debug/$($trueMoonBuildProfile.Framework)/AetherRuntimeHost.dll"
+    $sourceGame=Join-Path $sceneWorkspace "ManualTests/Game.Logic/bin/Debug/$($trueMoonBuildProfile.TestFramework)"
     $sourceOutput=Join-Path $sceneEvidence 'source-proof'
     Invoke-SceneCommand 'source-proof' @($sourceParent,'--ecs-primitive-proof',$sourceRuntime,$sourceGame,$sourceOutput) $sceneCwd
     $sceneReport.Profiles += @{Name='Source Debug';Report=(Join-Path $sourceOutput 'verification.json')}
@@ -103,8 +107,8 @@ try {
         }
     }
     [IO.File]::WriteAllText("$sceneConsumer/NuGet.Config",'<configuration><packageSources><clear/><add key="local" value="'+[Security.SecurityElement]::Escape($sceneFeed)+'"/></packageSources></configuration>')
-    [IO.File]::WriteAllText("$sceneConsumer/global.json",'{"sdk":{"version":"10.0.100","allowPrerelease":false,"rollForward":"latestMinor"}}')
-    [IO.File]::WriteAllText("$sceneConsumer/Directory.Build.props",'<Project><PropertyGroup><TargetFramework>net10.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><LangVersion>latest</LangVersion><NuGetAudit>false</NuGetAudit></PropertyGroup></Project>')
+    [IO.File]::WriteAllText("$sceneConsumer/global.json","{`"sdk`":{`"version`":`"$($trueMoonBuildProfile.Sdk)`",`"allowPrerelease`":false,`"rollForward`":`"latestMinor`"}}")
+    [IO.File]::WriteAllText("$sceneConsumer/Directory.Build.props","<Project><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><LangVersion>latest</LangVersion><NuGetAudit>false</NuGetAudit></PropertyGroup></Project>")
     foreach ($project in @('Parent','Runtime','Game')) { [void][IO.Directory]::CreateDirectory("$sceneConsumer/$project") }
     foreach ($project in @('Parent','Runtime','Game')) {
         $output=if($project -eq 'Game'){''}else{'<OutputType>Exe</OutputType>'}

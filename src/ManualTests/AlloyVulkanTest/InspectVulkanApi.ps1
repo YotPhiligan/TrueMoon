@@ -1,6 +1,10 @@
-﻿param(
-    [string]$AssemblyPath = (Join-Path $PSScriptRoot 'bin/Debug/net10.0/SkiaSharp.dll')
+param(
+    [string]$AssemblyPath = $null
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+if (-not $AssemblyPath) { $AssemblyPath = (Join-Path $PSScriptRoot "bin/Debug/$($trueMoonBuildProfile.Framework)/SkiaSharp.dll") }
+
 
 $ErrorActionPreference = 'Stop'
 $resolvedPath = (Resolve-Path -LiteralPath $AssemblyPath).Path

@@ -282,8 +282,8 @@ public static class EditorViewportProbe
         File.WriteAllText(Path.Combine(input, "Game.cs"), source); File.WriteAllText(Path.Combine(input, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
         var project = Path.Combine(input, "Game.Logic.csproj");
         File.WriteAllText(project, $$"""
-            <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
-            <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference></ItemGroup>{{target}}</Project>
+            <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+            <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup>{{target}}</Project>
             """);
         return new(project, "Game.Logic.dll", "Game.Logic.ProbeGame", revision);
     }
@@ -291,8 +291,9 @@ public static class EditorViewportProbe
     {
         var input = Path.Combine(directory, "input-held-" + name); Directory.CreateDirectory(input);
         var marker = Path.Combine(input, "entered"); var release = Path.Combine(input, "release"); var script = Path.Combine(input, "hold.ps1");
-        File.WriteAllText(script, "param($marker,$release)\n[IO.File]::WriteAllText($marker+'.tmp',[Environment]::ProcessId.ToString())\n[IO.File]::Move($marker+'.tmp',$marker)\nwhile (!(Test-Path -LiteralPath $release)) { Start-Sleep -Milliseconds 20 }\n");
-        var command = SecurityElement.Escape($"pwsh -NoProfile -NonInteractive -File \"{script}\" \"{marker}\" \"{release}\"");
+        File.WriteAllText(script, "param($marker,$release)\n[IO.File]::WriteAllText($marker+'.tmp',$PID.ToString())\n[IO.File]::Move($marker+'.tmp',$marker)\nwhile (!(Test-Path -LiteralPath $release)) { Start-Sleep -Milliseconds 20 }\n");
+        var shell = OperatingSystem.IsWindows() ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe") : "pwsh";
+        var command = SecurityElement.Escape($"\"{shell}\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{script}\" \"{marker}\" \"{release}\"");
         var target = $"<Target Name=\"HoldBuild\" BeforeTargets=\"CoreCompile\"><Exec Command=\"{command}\" /></Target>";
         var source = File.ReadAllText(Path.Combine(CheckpointProbe.FindWorkspace(), "ManualTests/Game.Logic/ProbeGame.cs"));
         return (Project(directory, "held-" + name, source, 99, target), marker, release);

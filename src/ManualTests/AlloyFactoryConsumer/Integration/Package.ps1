@@ -1,3 +1,7 @@
+
+. (Join-Path $PSScriptRoot '../../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../..')))
+
 function Get-ProbePackageIds([string[]] $Projects) {
     foreach ($path in $Projects) {
         [xml] $project = Get-Content -LiteralPath $path -Raw
@@ -57,7 +61,7 @@ function Assert-ProbePackageDelivery($Manifest, [string] $Report, [string] $Bina
         $id = [IO.Path]::GetFileNameWithoutExtension($assembly)
         $package = @($Manifest.Packages | Where-Object Id -eq $id)
         if ($package.Count -ne 1) { throw "Missing fresh package for loaded $id" }
-        if ((Get-FileHash -LiteralPath $assembly).Hash -ne (Get-ProbeZipHash $package[0].Path "lib/net10.0/$id.dll")) {
+        if ((Get-FileHash -LiteralPath $assembly).Hash -ne (Get-ProbeZipHash $package[0].Path "lib/$($trueMoonBuildProfile.Framework)/$id.dll")) {
             throw "Loaded assembly differs from its package: $id"
         }
     }
@@ -69,7 +73,7 @@ function Assert-ProbePackageDelivery($Manifest, [string] $Report, [string] $Bina
 }
 
 function Assert-ProbeNoAnalyzer([string] $Consumer, [string] $Configuration) {
-    $path = Join-Path $Consumer "obj/$Configuration/net10.0/resolved-analyzers.txt"
+    $path = Join-Path $Consumer "obj/$Configuration/$($trueMoonBuildProfile.Framework)/resolved-analyzers.txt"
     if (@(Get-Content -LiteralPath $path | Where-Object { $_ -like '*TrueMoon.Cobalt.Generator.dll' }).Count) {
         throw 'Factory consumer used a Cobalt analyzer.'
     }
@@ -96,6 +100,7 @@ function Invoke-ProbePackages($Context, [string[]] $Projects, [string] $Version,
     [IO.File]::ReadAllText($template).Replace('__VERSION__', $Version) | Set-Content -LiteralPath (Join-Path $consumer 'Consumer.csproj')
     Copy-Item -LiteralPath (Join-Path $Context.Workspace 'ManualTests/AlloyFactoryConsumer/Program.cs') -Destination (Join-Path $consumer 'Program.cs')
     Copy-Item -LiteralPath (Join-Path $Context.Workspace 'global.json') -Destination (Join-Path $consumer 'global.json')
+    Write-TrueMoonConsumerBuildProfile -Profile $trueMoonBuildProfile -Directory $consumer
     $fallback = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
     $feedXml = [Security.SecurityElement]::Escape($feed)
     $fallbackXml = [Security.SecurityElement]::Escape([IO.Path]::GetFullPath($fallback))
@@ -119,8 +124,8 @@ function Invoke-ProbePackages($Context, [string[]] $Projects, [string] $Version,
     Invoke-ProbeCommand $Context 'package-publish-Release' 'dotnet' @('publish', $project, '--configuration', 'Release', '--no-restore', '--output', $publish, '--verbosity', 'quiet') $TimeoutSeconds
     foreach ($configuration in @('Debug', 'Release')) {
         Assert-ProbeNoAnalyzer $consumer $configuration
-        Add-ProbeArtifact $Context (Join-Path $consumer "obj/$configuration/net10.0/resolved-analyzers.txt")
-        $directory = if ($configuration -eq 'Debug') { Join-Path $consumer 'bin/Debug/net10.0' } else { $publish }
+        Add-ProbeArtifact $Context (Join-Path $consumer "obj/$configuration/$($trueMoonBuildProfile.Framework)/resolved-analyzers.txt")
+        $directory = if ($configuration -eq 'Debug') { Join-Path $consumer "bin/Debug/$($trueMoonBuildProfile.Framework)" } else { $publish }
         Add-ProbeBinaries $Context $directory
         foreach ($provider in @('cobalt', 'di')) { foreach ($graphics in @('opengl', 'vulkan')) {
             $name = "package-$configuration-$provider-$graphics"; $report = Join-Path $root "$name.json"

@@ -4,6 +4,10 @@ param(
     [ValidateSet('Standard', 'Embedded')][string]$HostKind = 'Standard',
     [ValidateSet('Routed', 'WindowsPointer', 'WindowsArrows')][string]$InputMode = 'Routed'
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -32,9 +36,9 @@ try {
             & dotnet @command "-bl:$evidence/$runCase-$target-{}.binlog" *> $log
             if ($LASTEXITCODE -ne 0) { throw "SDK operation failed. See $log" }
         }
-        $gui = if ($runCase -eq 'SourceDebug') { Join-Path $repo 'ManualTests/AetherPackageConsumer/Gui/bin/Debug/net10.0/GuiConsumer.exe' }
+        $gui = if ($runCase -eq 'SourceDebug') { Join-Path $repo "ManualTests/AetherPackageConsumer/Gui/bin/Debug/$($trueMoonBuildProfile.Framework)/GuiConsumer.exe" }
             else { Join-Path $evidence "$runCase-gui/GuiConsumer.exe" }
-        $runtime = if ($runCase -eq 'SourceDebug') { Join-Path $repo 'Examples/AetherRuntimeHost/bin/Debug/net10.0/AetherRuntimeHost.exe' }
+        $runtime = if ($runCase -eq 'SourceDebug') { Join-Path $repo "Examples/AetherRuntimeHost/bin/Debug/$($trueMoonBuildProfile.Framework)/AetherRuntimeHost.exe" }
             else { Join-Path $evidence "$runCase-runtime/AetherRuntimeHost.exe" }
         $reportDirectory = Join-Path $evidence "$runCase-report"
         $start = [Diagnostics.ProcessStartInfo]::new($gui)

@@ -1,5 +1,11 @@
 # TrueMoon.Aether
 
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
 `UseAetherEcs()` registers an App-local `IFactory<TrueMoon.Aether.Ecs.World>` without
 runtime/window/GPU activation. Each returned World is caller-owned; dispose it in
 the owning session, not through a second DI alias. The first profile provides
@@ -267,7 +273,7 @@ data remain unchanged. This does not provide full World snapshots or live editin
 Experimental TrueMoon game-engine module: session lifecycle, control contracts,
 owned game processes, checkpoint replacement, bounded CPU/GPU frame transport and
 an explicit Vulkan/OpenGL viewport with a first depth-tested primitive renderer. Current prototype scope:
-Windows x64 and .NET 10.
+Windows x64 and .NET 11.
 
 The repository project is packable. The API remains experimental/alpha;
 local package validation does not imply publication or production readiness.
@@ -412,7 +418,7 @@ its drain before App/UI teardown; raw/locked OS mouse input is not supplied.
 Game logic remains a separate assembly. CPU frame transport and session control
 and explicit immutable game-build compilation/selection are implemented. Use
 `host.Builds.BuildAsync(new GameBuildRequest(project, entryDll, entryType, revision))`
-to compile a trusted local net10.0 library consuming the non-copying MSBuild
+to compile a trusted local net11.0 library consuming the non-copying MSBuild
 `AetherContractPath` and `TrueMoonContractsPath` references. Then explicitly stop/reap the old session and start
 the returned artifact through Supervisor or Frames. Build completion never replaces
 the active game. Host options include BuildDirectory and BuildTimeout (maximum120s).
@@ -465,8 +471,21 @@ file/byte limits include compiler and reference-pack files; response/config docu
 are limited to8MiB. Legacy requests keep capture disabled.
 
 `CapturePreparation` additionally requires both flags and freezes the supported
-declarative project/import/source/reference closure before SDK evaluation. Scene
-Start enables it by default. The profile is Windows/stable net10.0 Microsoft.NET.Sdk
+declarative project/import/source/reference closure before SDK evaluation.
+
+
+The .NET11 migration keeps manifest schema1 and publishes TargetFramework=net11.0.
+Rebuild previous net10 game artifacts explicitly; Open rejects their target with
+a rebuild diagnostic before game loading. No automatic artifact migration or disk
+cache is introduced. Compiler target/stable SDK major follow the module's standard
+TargetFrameworkAttribute (the MSBuild target), independently of the entry host.
+Declarative Features, including runtime-async=on, participate in the captured
+evaluation/compiler fingerprint. Existing bounds, input leases and reuse checks remain.
+Frozen jobs pin EnableSourceControlManagerQueries=false and EnableSourceLink=false,
+preventing ambient Git discovery/SourceLink from extending captured inputs. The
+sourcelink compiler switch remains unsupported.
+
+Scene Start enables it by default. The profile is Windows/stable net11.0 Microsoft.NET.Sdk
 library with literal imports/HintPath/linked files and project-local globs. Custom
 tasks/targets, MSBuild functions, custom SDKs/analyzers, external globs and package/
 project graphs fail closed before any SDK process. Explicit installed SDK/runtime
@@ -503,7 +522,7 @@ Opt-in `GameBuildRequest.TrackInputs` observes evaluated SDK files/options and
 preprocessed imports before/after compilation. `GameBuildArtifact.Inputs` retains an
 immutable process-local content witness; GameEditor rechecks it before Start. Persistent
 changes reject publication/startup with `GameBuildInputsChangedException`. The bounded
-profile is one net10.0 SDK project without PackageReference/ProjectReference, using
+profile is one net11.0 SDK project without PackageReference/ProjectReference, using
 managed HintPath references. Reopening an artifact does not recreate its witness;
 schema1 is unchanged. Verification uses compiler-owned cancellation/deadline/reap/drain
 and diagnostic retention. Transient edit-and-revert, arbitrary target/generator/environment
@@ -577,7 +596,7 @@ Source, integration example and roadmap:
 [TrueMoon repository](https://github.com/YotPhiligan/TrueMoon).
 
 With `CaptureProjectReferences = true` (requires CapturePreparation), the compiler
-captures a DAG of at most four net10.0 C# library projects including the entry.
+captures a DAG of at most four net11.0 C# library projects including the entry.
 Project directories must not overlap. References must be unconditional literal ProjectReference items without metadata;
 dependency AssemblyName is the project filename or an unconditional literal.
 Every private DLL must be declared in Dependencies. Cycles, output-name collisions,
@@ -593,7 +612,7 @@ single-project profile; artifact/checkpoint/control schemas remain unchanged.
 
 `GameBuildRequest.PackageDirectory` opts into local unsigned managed packages and
 requires CapturePreparation. Supply lowercase `id.version.nupkg` archives and a
-schema1 `packages.lock.json` beside each package-consuming project (only net10.0,
+schema1 `packages.lock.json` beside each package-consuming project (only net11.0,
 no RID). PackageReference must have unconditional literal Include/Version without
 metadata; stable normalized three-part versions only, with resolved equal to the
 literal version. Direct/transitive edges and ranges must agree with the nuspec;
@@ -602,7 +621,7 @@ ambient NuGet source/cache or package resolution participates.
 RestorePackagesWithLockFile/RestoreLockedMode declarations are supported; after our
 package admission, SDK restore uses rewritten references and its own lock under job work.
 
-Archives must contain one managed lib target (net10.0/net9.0/net8.0/netstandard2.1/
+Archives must contain one managed lib target (net11.0/net10.0/net9.0/net8.0/netstandard2.1/
 netstandard2.0), flat IL-only DLLs, optional XML/PDB and ordinary package metadata.
 One matching dependency group or an ungrouped list is supported. Signatures,
 multiple lib targets, ref/runtime variants, build/analyzer/native/content/framework

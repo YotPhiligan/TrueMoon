@@ -73,7 +73,7 @@ public static class ReplacementProbe
             CandidateFailure = new { candidateError.Phase, candidateError.RollbackAttempted, candidateError.RollbackSucceeded, Cause = candidateError.InnerException!.GetType().Name },
             RollbackFailure = new { rollbackError.Phase, rollbackError.RollbackAttempted, rollbackError.RollbackSucceeded, Cause = rollbackError.InnerException!.GetType().Name, Recovery = rollbackError.RecoveryError!.GetType().Name },
             StopFenced = true, EditorPreserved = before == JsonSerializer.Serialize(authoring), GameLoadedInEditor = false, Mappings = host.Frames.MappingCount,
-            Leases = factory.Leases.Select(l => new { l.ProcessId, l.Reaped, l.ResourcesReleased }) };
+            Leases = factory.Leases.Select(l => new { l.Identity, l.ProcessId, l.Reaped, l.ResourcesReleased }) };
     }
     private static async Task<GameBuildArtifact> BuildAsync(AetherHost host, string directory, string name, string source, long revision)
     {
@@ -81,7 +81,7 @@ public static class ReplacementProbe
         File.WriteAllText(Path.Combine(input, "Game.cs"), source);
         var project = Path.Combine(input, "Game.Logic.csproj");
         File.WriteAllText(project, """
-            <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+            <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
             <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
             """);
         return await host.Builds.BuildAsync(new(project, "Game.Logic.dll", "Game.Logic.ProbeGame", revision));

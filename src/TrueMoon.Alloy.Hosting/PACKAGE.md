@@ -1,5 +1,11 @@
 # TrueMoon.Alloy.Hosting
 
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
 Controls use the square Dark/Light style by default. `Button.Tone` selects
 Neutral/Accent/Positive/Danger; `HasError`, `TextBox.IsReadOnly`, inside borders
 and keyboard focus share semantic theme tokens. `session.SetTheme(Theme.Light)`
@@ -71,7 +77,7 @@ minimized/zero-sized windows retain redraw until resume. Live windows still poll
 OS events with a bounded wait. `NeedsRender` guards output freshness independently
 of pending commands/future requests included in `NeedsUpdate`.
 
-Optional App integration for Alloy/Argentis UI: standalone OpenGL/Vulkan windows or sessions in an external host. Current native delivery supports **Windows x64 and .NET 10**. This is an alpha API; preparation of local packages does not establish release readiness.
+Optional App integration for Alloy/Argentis UI: standalone OpenGL/Vulkan windows or sessions in an external host. Current native delivery supports **Windows x64 and .NET 11**. This is an alpha API; preparation of local packages does not establish release readiness.
 
 Diagnostics are opt-in: use `session.EnableDiagnostics()` for direct/external sessions,
 or `UseSilkWindow(w => w.EnableDiagnostics = true)` for standalone windows.

@@ -1,5 +1,9 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param([string]$RunDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $root = Join-Path $workspace 'TestResults/RichTextEditor'
@@ -29,7 +33,7 @@ try {
     Invoke-Owned 'build-debug' @('build', $project, '--configuration', 'Debug', '--verbosity', 'quiet')
     $publish = Join-Path $run 'publish'
     Invoke-Owned 'publish-release' @('publish', $project, '--configuration', 'Release', '--self-contained', 'false', '--output', $publish, '--verbosity', 'quiet')
-    foreach ($delivery in @(@{ Name = 'Debug'; Path = Join-Path $PSScriptRoot 'bin/Debug/net10.0' }, @{ Name = 'Release'; Path = $publish })) {
+    foreach ($delivery in @(@{ Name = 'Debug'; Path = Join-Path $PSScriptRoot "bin/Debug/$($trueMoonBuildProfile.TestFramework)" }, @{ Name = 'Release'; Path = $publish })) {
         foreach ($backend in @('raster','opengl','vulkan')) {
             $name = "$($delivery.Name)-$backend"; $reportPath = Join-Path $run "$name.json"
             Invoke-Owned $name @((Join-Path $delivery.Path 'RichTextEditorTest.dll'), $backend, $reportPath) 50

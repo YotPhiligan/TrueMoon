@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$EvidenceDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'DurabilityVolume.ps1')
@@ -48,14 +52,14 @@ try{
     '<Project/>'|Set-Content (Join-Path $consumer 'Directory.Build.props');'<Project/>'|Set-Content (Join-Path $consumer 'Directory.Build.targets');'<Project><PropertyGroup><ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally></PropertyGroup></Project>'|Set-Content (Join-Path $consumer 'Directory.Packages.props')
     Copy-Item (Join-Path $workspace 'global.json') $consumer;Copy-Item (Join-Path $PSScriptRoot 'PublicDurabilityConsumer.cs.template') (Join-Path $consumer 'Program.cs')
     $project=Join-Path $consumer 'NomPhysicalConsumer.csproj';$version=$delivery.Version
-    "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><UseAppHost>false</UseAppHost></PropertyGroup><ItemGroup><PackageReference Include='TrueMoon.Nom' Version='$version'/><PackageReference Include='TrueMoon' Version='$version'/></ItemGroup></Project>"|Set-Content $project
+    "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><UseAppHost>false</UseAppHost></PropertyGroup><ItemGroup><PackageReference Include='TrueMoon.Nom' Version='$version'/><PackageReference Include='TrueMoon' Version='$version'/></ItemGroup></Project>"|Set-Content $project
     Invoke-ConsumerDotnet 'restore' @('restore',$project,'--configfile',$config,'--packages',$cache,'-p:NuGetAudit=false')
     $graph=Get-Content (Join-Path $consumer 'obj/project.assets.json') -Raw|ConvertFrom-Json -AsHashtable
     if($graph.libraries.Count -ne 4 -or @($graph.libraries.Values|Where-Object type -ne 'package').Count -or $graph.packageFolders.Count -ne 1 -or [IO.Path]::TrimEndingDirectorySeparator(@($graph.packageFolders.Keys)[0]) -ne $cache){throw 'Physical consumer graph isolation failed'}
     foreach($package in $delivery.Packages){$cached=Join-Path $cache ($package.Id.ToLowerInvariant()+"/$version/"+$package.Id.ToLowerInvariant()+".$version.nupkg");if((Get-FileHash $cached).Hash -ne $package.Sha256 -or (Get-FileHash $package.DeliveryPath).Hash -ne $package.Sha256){throw 'Physical consumer package bytes differ'}}
     $outputs=@{}
     foreach($profile in 'Debug','Release'){
-        if($profile -eq 'Debug'){Invoke-ConsumerDotnet 'build-Debug' @('build',$project,'-c','Debug','--no-restore');$output=Join-Path $consumer 'bin/Debug/net10.0'}
+        if($profile -eq 'Debug'){Invoke-ConsumerDotnet 'build-Debug' @('build',$project,'-c','Debug','--no-restore');$output=Join-Path $consumer "bin/Debug/$($trueMoonBuildProfile.TestFramework)"}
         else{$output=Join-Path $consumer 'publish';Invoke-ConsumerDotnet 'publish-Release' @('publish',$project,'-c','Release','--no-restore','--self-contained','false','-p:UseAppHost=false','-o',$output)}
         $expected=@($delivery.Packages|Where-Object Id -eq 'TrueMoon.Nom')[0].DllSha256
         if((Get-FileHash (Join-Path $output 'TrueMoon.Nom.dll')).Hash -ne $expected){throw 'Physical output Nom hash mismatch'}

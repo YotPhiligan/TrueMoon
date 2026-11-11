@@ -1,0 +1,643 @@
+{
+    "Stage":  "CORE8.5",
+    "Date":  "2026-11-11",
+    "Completed":  true,
+    "HEAD":  "2553f87d248cf748c858988e0ed38343290eda8c",
+    "WorkingTreeDirty":  true,
+    "Scope":  "Windows x64, framework-dependent",
+    "SDK":  "11.0.100",
+    "TargetFramework":  "net11.0",
+    "LanguageVersion":  "latest",
+    "Features":  ";runtime-async=on",
+    "BaseVersion":  "0.3.0.1-alpha",
+    "PackageVersion":  "0.3.0.1-alpha.core85.20261111221352",
+    "RemotePublication":  false,
+    "Packages":  [
+                     {
+                         "Id":  "TrueMoon.Contracts",
+                         "SHA256":  "4D53662CAEAB944B34C6FB857C8D245538445BB4A6B98ABD6EA079A4071F3AED",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Contracts.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "95B68C718C4D58C1F06E699D35440AF54581E68C7BDA1F6DB70B09F3914BA2A5"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Core",
+                         "SHA256":  "C8CCCC305BF5A482EDBCA27DFB1BB49807A4BB1B255EDB2187BC158CDDFE3EFB",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Core.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "F31DB87C33103A72D9D2BD47746ED439A9E7EF0420788B0553E43497D98694A8"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Cobalt",
+                         "SHA256":  "1A4FA43F3D76E12D1A0AF204A0A34926D931BBAE51193A5A63B28C0977D6FBBF",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Cobalt.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "1E6DE3FC844B8B070CEDEF0257E4D10F51075B77DF7F58AF91F3B5672E4197E8"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         },
+                                                         {
+                                                             "Path":  "analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll",
+                                                             "Sha256":  "7BB039C2A105E1F93C4FA06784E1085A083F406DAE253F400CA175F71DD84FF1"
+                                                         },
+                                                         {
+                                                             "Path":  "buildTransitive/TrueMoon.Cobalt.targets",
+                                                             "Sha256":  "6FA351A7B1E3C400DECCAF8E25FCA64B570BAFD51C4891475F7847E9D88790F5"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon",
+                         "SHA256":  "E0A04C8575BEAB94A6A87127393D61E51DE3E75B653EA5E86B5884B68971E1DD",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "6A8F59E80BFED6E5FD1700625EA3AF58309C0CB5A96E47CBC074A93F52B0979F"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Extensions.DependencyInjection",
+                         "SHA256":  "8244DF9CCA986C4D259AC6EA770001F7931AF98FBF6476021E9752955C1F8D46",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Extensions.DependencyInjection.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "C35ADA8393EE874F6CA856C2D2AE8E9915E2666AD61F1EC30F33A77F5709BB87"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Enerit.Generator",
+                         "SHA256":  "7A497E7312D3B0C138A0983B77487503311315EEB798027E2A4B9CD60A9D4D79",
+                         "RuntimeEntries":  [
+
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "2BE6C3767A6C87798A306D76EA9A7FFFA128CF605AF99B752F57F34B54B3CA45"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         },
+                                                         {
+                                                             "Path":  "analyzers/dotnet/cs/TrueMoon.Enerit.Generator.dll",
+                                                             "Sha256":  "BE4867D3E7C9061766E762280584E1EC7AF51582F9220870B944D3C0D73623A7"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Enerit",
+                         "SHA256":  "01B8B65C5C87EA51A61F131698540214CB913FD6C9B43A96710D1133D33EF5BC",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Enerit.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "E9704A67218DF99FB21278CACE381CDCCABA12F05F16D4900B87C12CFEA83A71"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Mithril",
+                         "SHA256":  "8E939AADCF95025C1C1CC16D7BFA20BB98BFB936E724CFA716840E44F775F803",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Mithril.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "5DFD044BEA94698422A3F786FACAE6AC11F40957AFD21E4B50133AC3A8E1B149"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Argentis",
+                         "SHA256":  "054FE612361B4A06036C58C55FF2E7170F0C8FAFA5DBEF2C13274C18934DAE87",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Argentis.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "36CE1B6CF54F797AE2E4858BEF3511FF7B2ED9903D44576CC08DA79F91C6B368"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Alloy",
+                         "SHA256":  "D39670AAD2CF73CF243CA6CC821070EA18F79AF8137098EE059350DFA1B2889E",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Alloy.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "8B87CD20C3B34A03D87DD46520DC72BF7C18438FA3B17DFA61A68FDE64CE0A51"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Alloy.Rendering.Skia",
+                         "SHA256":  "0F3FD5321431525634E42CFE9491A9DAEF0346B8DBE889ADAA3EC446D8116D42",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Alloy.Rendering.Skia.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "BB881C25CFF3D2D719C244E035F74F94FBAAEFC0906C8E7CC9796B8526ABD404"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         },
+                                                         {
+                                                             "Path":  "nativeAssets/win-x64/libSkiaSharp.dll",
+                                                             "Sha256":  "B1C01F7D0A6DCCF9CD9CEF0027306B89EC84A71487825519EE3BCEC72D2E1754"
+                                                         },
+                                                         {
+                                                             "Path":  "build/TrueMoon.Alloy.Rendering.Skia.targets",
+                                                             "Sha256":  "EC692F760AC3B5141A086B5FEBE24F8AEEC2FB08D2ADECAF3C0310143753A45F"
+                                                         },
+                                                         {
+                                                             "Path":  "buildTransitive/TrueMoon.Alloy.Rendering.Skia.targets",
+                                                             "Sha256":  "92BA0CD2FA7E8E83930D3A9B8FC75912DAB5BFF4EF4A890971E510AB4EFB3409"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Alloy.Platform.Silk",
+                         "SHA256":  "42038D41A003345F14DF0948A7A7E93D5FF69BA5E37AF6A4AA3CE5090EC153D9",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Alloy.Platform.Silk.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "FA21672E0C3602ACC79446F60106C714EB38AAC5CB95ACA70A1329D8866CE683"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Alloy.Hosting",
+                         "SHA256":  "213BA672AAE31309BC51741211F2560002854439182290991D03951B3A2935AB",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Alloy.Hosting.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "19863CCE11CF4489414618270D423330D79F2FFBA6A5209E0721848079CE2166"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Aether",
+                         "SHA256":  "22A8B88BBE0B087FC573840E008BD369918D4DAA05CDA850E0C6ACEC555A052E",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Aether.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "FF299BA363F5F548BC8D1E915DBE73FDF13BB64831E2FCB44E6ED5783FADC4D8"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Aether.Editor",
+                         "SHA256":  "2CE40835DC708E087F86DB3329AB7CCF2FF8B110D154B0ACE9A3A315E8A478C7",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Aether.Editor.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "6F2B5AFDD23C763AC1712216F547003A15A789A69A06BDD25C617AA8C59C9919"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         },
+                                                         {
+                                                             "Path":  "README.md",
+                                                             "Sha256":  "1E44CEBBF441A894779E0FAB4F81106402F996168855B8F3938D59C430ED895B"
+                                                         }
+                                                     ]
+                     },
+                     {
+                         "Id":  "TrueMoon.Nom",
+                         "SHA256":  "E9040612781CA91A3701B23D5903B1F7FB19EA7DF8292ABE6DAFBB4083E61F99",
+                         "RuntimeEntries":  [
+                                                "lib/net11.0/TrueMoon.Nom.dll"
+                                            ],
+                         "MetadataAndToolPayloads":  [
+                                                         {
+                                                             "Path":  "PACKAGE.md",
+                                                             "Sha256":  "0A38D2A1B608BEF1D2D396AD4D936F6EA78486962BFF8911D4FD3202A24C39AB"
+                                                         },
+                                                         {
+                                                             "Path":  "LICENSE",
+                                                             "Sha256":  "6CC351D9BF0E59AC73DAEA5CEFA3A13C00E1B70997FA3D878E7C8B702F27921B"
+                                                         },
+                                                         {
+                                                             "Path":  "icon.png",
+                                                             "Sha256":  "7DC65887E5E9BAD715E91EBFDF86440B87DC773422426FD06F7D89D981A60601"
+                                                         }
+                                                     ]
+                     }
+                 ],
+    "ExternalPackages":  [
+                             {
+                                 "Identity":  "Microsoft.Extensions.DependencyInjection/11.0.0",
+                                 "Sha256":  "4C595155E5023F3704647DB061665DBD9354C4EDD09883F7748EC19F244363F5"
+                             },
+                             {
+                                 "Identity":  "Microsoft.CodeAnalysis.Analyzers/5.9.0",
+                                 "Sha256":  "3A1FF7EC1DE65781D47C9C60742F7163A4E9CE9C09C701CD8202DED9A20D4995"
+                             },
+                             {
+                                 "Identity":  "Microsoft.CodeAnalysis.Common/5.9.0",
+                                 "Sha256":  "77EFD4715C24C8CD6B36F9B92980A2F5A86E4A7B53648D4F1CA3B79A3933A429"
+                             },
+                             {
+                                 "Identity":  "Microsoft.CodeAnalysis.CSharp/5.9.0",
+                                 "Sha256":  "7602C3DBAA122268F3B26C6CC0DD02EB9224DEA9442ED27AF5C3FE56D643993F"
+                             },
+                             {
+                                 "Identity":  "HarfBuzzSharp/14.2.1.301",
+                                 "Sha256":  "E4BE95E0621FFB1B8070137EAC5A1F8544E1D1F517E041A863592C88C49530AC"
+                             },
+                             {
+                                 "Identity":  "HarfBuzzSharp.NativeAssets.Linux/14.2.1.301",
+                                 "Sha256":  "1E22D3BC6765AE70D227A61A30AF88B94AE646DC26EC03C26E7487F9752CBF38"
+                             },
+                             {
+                                 "Identity":  "HarfBuzzSharp.NativeAssets.macOS/14.2.1.301",
+                                 "Sha256":  "1E952B7472A56B5DF53A830A491B3614EE004A7B51557D2C32D53D73A2A4C651"
+                             },
+                             {
+                                 "Identity":  "HarfBuzzSharp.NativeAssets.Win32/14.2.1.301",
+                                 "Sha256":  "20518A559C120CB322B57D8986DE49C5DCA4ECA2547EE69F756B38211B7DD10E"
+                             },
+                             {
+                                 "Identity":  "Microsoft.DotNet.PlatformAbstractions/3.1.6",
+                                 "Sha256":  "45F336A978AA7626A63E45EBE080E435CD0865217D89366FE2EA2EFC4EF3352D"
+                             },
+                             {
+                                 "Identity":  "Microsoft.Extensions.DependencyModel/9.0.9",
+                                 "Sha256":  "D32818F092CE20AB98170C1D542B4397CFFC7D5E480BD2608AF7F35EC8D75EC2"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Core/2.23.0",
+                                 "Sha256":  "2E0AE765CBB1D3D571EC95257C7E3EC9C2593B922FE8F4B2FB9915F88EA8C301"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Vulkan/2.23.0",
+                                 "Sha256":  "6D794A4913C76F8B4467C86E9B480BB732D9B913C763488F29F66EE6F9E4E521"
+                             },
+                             {
+                                 "Identity":  "SkiaSharp/4.155.0",
+                                 "Sha256":  "6F0CA2D4AD38652DF24DC8E4E88D38BFB36FFDA99DDD4D825FE56AE2D73B7377"
+                             },
+                             {
+                                 "Identity":  "SkiaSharp.HarfBuzz/4.153.1",
+                                 "Sha256":  "B655B033CEDA03228940AFE31DEFCE45BC32B162D91FE379E6BFAA9F4AEC93C0"
+                             },
+                             {
+                                 "Identity":  "SkiaSharp.NativeAssets.Linux/4.153.1",
+                                 "Sha256":  "489A5D301F0BB68401D329F5A77DC3FB2A6E51295320DA17C630C0ED5F5B2FF8"
+                             },
+                             {
+                                 "Identity":  "SkiaSharp.NativeAssets.macOS/4.155.0",
+                                 "Sha256":  "1506B13F60F36478D16BF6D5512A47791F4233E63B0E11F1A8D5763360FFEAE6"
+                             },
+                             {
+                                 "Identity":  "SkiaSharp.NativeAssets.Win32/4.155.0",
+                                 "Sha256":  "763EB7F4DADD4E5A0C0044E0A3E54E99F686CE782AC41E3F5C75BFD09563A72D"
+                             },
+                             {
+                                 "Identity":  "Topten.RichTextKit/0.6.170",
+                                 "Sha256":  "26D4B69B3FA1EA81DD5AE5FD3E79180FC4C1A8440FA74129B202097604B53A6D"
+                             },
+                             {
+                                 "Identity":  "Silk.NET/2.23.0",
+                                 "Sha256":  "140E34166C5FEC405AFB3575894CF42DE3BD6FB46725133E3311717DA5E6D934"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.GLFW/2.23.0",
+                                 "Sha256":  "91241B0BE8132EF8445A790A5900B04AC1AE0C8195DB4F62B32CE5AC50D23B15"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Input/2.23.0",
+                                 "Sha256":  "787411EC8060C2CB674BCD190DADAF220F74DA262516080F2A210856897B5766"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Input.Common/2.23.0",
+                                 "Sha256":  "820F440B5C52EA0CA33FF4ABBE52A29EA9D304AF86344B6A5151EB6A0A2EB16C"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Input.Glfw/2.23.0",
+                                 "Sha256":  "1A0C2CBE6AF057205C485F1006A1A394954514803194B3C8689A9DC6E74084EE"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Maths/2.23.0",
+                                 "Sha256":  "6C471EB49D9B597B10E15BE0B24B63BAB44523DEF9480E3318E08FBC0171CF4A"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.OpenAL/2.23.0",
+                                 "Sha256":  "20A6C5DC1550B52BBAEDA8EEBCB273268D41B5F9F4E5CEE2E76FD9DAD2FB5361"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.OpenGL/2.23.0",
+                                 "Sha256":  "CCAF53CD7D043F66B035EA5849CF31B247A5FCCED82A21469500314E28FF5A4C"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Vulkan.Extensions.EXT/2.23.0",
+                                 "Sha256":  "35FEF593764DC0657CDF250472E9761D88FFF09EE419E1F25954D1689D640B24"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Vulkan.Extensions.KHR/2.23.0",
+                                 "Sha256":  "F6462BA09B10A2113710DD51A31A7B61E045B829B78AAE27B92F4020D64530DC"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Windowing/2.23.0",
+                                 "Sha256":  "60D179941FF6BF4D6F4E46DF51655BA500F9CBBDB30EA2DCC7B24571F75CFA66"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Windowing.Common/2.23.0",
+                                 "Sha256":  "69BC0064CF7DE765E811F9E0F7552C081489347448E70A89CBC2E03E1D012E16"
+                             },
+                             {
+                                 "Identity":  "Silk.NET.Windowing.Glfw/2.23.0",
+                                 "Sha256":  "8F164CB9452AB7E0145B2E61D0147303C8320F6AD6A9632B24FB6077887A00D6"
+                             },
+                             {
+                                 "Identity":  "Ultz.Native.GLFW/3.4.0",
+                                 "Sha256":  "F8121464EF88C15BC1C421DA4E39C4029A116D8994D38A600FBB9E8D989D13BE"
+                             }
+                         ],
+    "TestConfigurations":  [
+                               {
+                                   "Configuration":  "Debug",
+                                   "Skipped":  0,
+                                   "Projects":  11,
+                                   "Failed":  0,
+                                   "Passed":  8567
+                               },
+                               {
+                                   "Configuration":  "Release",
+                                   "Skipped":  0,
+                                   "Projects":  11,
+                                   "Failed":  0,
+                                   "Passed":  8567
+                               }
+                           ],
+    "NativeProfiles":  [
+                           {
+                               "ValidationWarnings":  0,
+                               "Checks":  [
+                                              "50cameraSamples/pending/draft/document/tick/sameChildSurface",
+                                              "pan/dolly/F/Esc/focusLoss/cameraOnly",
+                                              "UIresize/renderAspect/letterbox/actualLayout",
+                                              "nativeMinimize/latestCamera/resumeSameChildSurface",
+                                              "renderSuspend/latestCamera/resume",
+                                              "newerSelectionIntent",
+                                              "deletedEntity/oldClick/Undo/cameraPreserved",
+                                              "sameIdReopen/defaultCamera/oldReceiptDenied",
+                                              "projectSwitch/reap/identityReset",
+                                              "Play/build/oldEditReceipt/inputDenied/Stop",
+                                              "failedGameStartup/reaped",
+                                              "cancelFirstPresentation/reaped",
+                                              "recovery/finalStop"
+                                          ],
+                               "Mappings":  0,
+                               "GpuHandles":  0,
+                               "Profile":  "Debug",
+                               "ValidationErrors":  0,
+                               "UiSessions":  0,
+                               "GpuResources":  0,
+                               "Children":  9,
+                               "Reaped":  true
+                           },
+                           {
+                               "ValidationWarnings":  0,
+                               "Checks":  [
+                                              "50cameraSamples/pending/draft/document/tick/sameChildSurface",
+                                              "pan/dolly/F/Esc/focusLoss/cameraOnly",
+                                              "UIresize/renderAspect/letterbox/actualLayout",
+                                              "nativeMinimize/latestCamera/resumeSameChildSurface",
+                                              "renderSuspend/latestCamera/resume",
+                                              "newerSelectionIntent",
+                                              "deletedEntity/oldClick/Undo/cameraPreserved",
+                                              "sameIdReopen/defaultCamera/oldReceiptDenied",
+                                              "projectSwitch/reap/identityReset",
+                                              "Play/build/oldEditReceipt/inputDenied/Stop",
+                                              "failedGameStartup/reaped",
+                                              "cancelFirstPresentation/reaped",
+                                              "recovery/finalStop"
+                                          ],
+                               "Mappings":  0,
+                               "GpuHandles":  0,
+                               "Profile":  "Release",
+                               "ValidationErrors":  0,
+                               "UiSessions":  0,
+                               "GpuResources":  0,
+                               "Children":  9,
+                               "Reaped":  true
+                           }
+                       ],
+    "Evidence":  "TestResults/CORE85-20261111-215503/delivery-complete",
+    "Limitations":  [
+                        "Historical reliability causes remain open",
+                        "Physical input/DPI, K7/device loss/VRAM, VM/power-loss and other OS/RID/AOT are separate",
+                        "No performance or clean-warning baseline claim"
+                    ]
+}

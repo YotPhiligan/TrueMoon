@@ -1,7 +1,13 @@
 # TrueMoon.Alloy
 
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
 Retained UI sessions, bounded dispatch, frame scheduling and rendering contracts
-for Argentis element trees. Requires .NET 10. Alpha API.
+for Argentis element trees. Requires .NET 11. Alpha API.
 
 ```xml
 <PackageReference Include="TrueMoon.Alloy" Version="YOUR_VERSION" />

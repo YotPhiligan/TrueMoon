@@ -258,7 +258,7 @@ internal static class SceneInputProbe
             var path = Path.Combine(directory, "input-" + name); Directory.CreateDirectory(path);
             File.WriteAllText(Path.Combine(path, "Game.cs"), text); File.WriteAllText(Path.Combine(path, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
             var project = Path.Combine(path, "Game.Logic.csproj");
-            File.WriteAllText(project, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether\"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
+            File.WriteAllText(project, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether\"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Contracts\"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
             return new(project, "Game.Logic.dll", "Game.Logic.CameraGame", revision);
         }
     }

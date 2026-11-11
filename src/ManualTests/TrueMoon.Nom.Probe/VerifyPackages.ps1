@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$EvidenceDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 if(![OperatingSystem]::IsWindows() -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne 'X64'){throw 'The executed NOM7 delivery scope is Windows x64.'}
@@ -48,7 +52,7 @@ function Check-Package([string]$id){
         $entries=@($zip.Entries.FullName);$spec=@($entries|Where-Object{$_ -like '*.nuspec'});if($spec.Count -ne 1){throw 'Nuspec count'}
         [xml]$nuspec=[Text.Encoding]::UTF8.GetString((Zip-Bytes $zip $spec[0])).TrimStart([char]0xfeff);$meta=$nuspec.SelectSingleNode('//*[local-name()="metadata"]')
         if($meta.id -ne $id -or $meta.version -ne $version -or $meta.readme -ne 'PACKAGE.md' -or $meta.license.type -ne 'file' -or $meta.license.InnerText -ne 'LICENSE' -or $meta.icon -ne 'icon.png'){throw 'Package metadata mismatch'}
-        $dll=Zip-Bytes $zip "lib/net10.0/$id.dll";$xml=Zip-Bytes $zip "lib/net10.0/$id.xml";$readme=Zip-Bytes $zip 'PACKAGE.md'
+        $dll=Zip-Bytes $zip "lib/$($trueMoonBuildProfile.Framework)/$id.dll";$xml=Zip-Bytes $zip "lib/$($trueMoonBuildProfile.Framework)/$id.xml";$readme=Zip-Bytes $zip 'PACKAGE.md'
         $license=Zip-Bytes $zip 'LICENSE';$icon=Zip-Bytes $zip 'icon.png'
         if([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($license)) -ne (Get-FileHash (Join-Path $workspace '../LICENSE')).Hash -or
             [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($icon)) -ne (Get-FileHash (Join-Path $workspace '../materials/icon.png')).Hash){throw 'License/icon bytes differ'}
@@ -89,7 +93,7 @@ function New-Consumer([string]$name,[string]$consumer){
     else{'using TrueMoon.Nom.Storage; public static class HiddenApiProbe { public static object Probe() => typeof(NomKvStore); }'|Set-Content (Join-Path $directory 'Program.cs')}
     $output=if($consumer -in @('NomInternalVisibilityProbe','NomRawManagedProbe')){'Library'}else{'Exe'}
     $project=Join-Path $directory "$consumer.csproj"
-    "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>$output</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>$consumer</AssemblyName><RootNamespace>TrueMoon.Nom.AssetTool</RootNamespace><UseAppHost>false</UseAppHost><EnableRuntimePackDownload>false</EnableRuntimePackDownload><DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads></PropertyGroup><ItemGroup><PackageReference Include='TrueMoon.Nom' Version='$version'/><PackageReference Include='TrueMoon' Version='$version'/></ItemGroup></Project>"|Set-Content $project
+    "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><OutputType>$output</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>$consumer</AssemblyName><RootNamespace>TrueMoon.Nom.AssetTool</RootNamespace><UseAppHost>false</UseAppHost><EnableRuntimePackDownload>false</EnableRuntimePackDownload><DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads></PropertyGroup><ItemGroup><PackageReference Include='TrueMoon.Nom' Version='$version'/><PackageReference Include='TrueMoon' Version='$version'/></ItemGroup></Project>"|Set-Content $project
     return [pscustomobject]@{Directory=$directory;Cache=$cache;Config=$config;Project=$project;Consumer=$consumer}
 }
 function Check-Graph($consumer){
@@ -169,7 +173,7 @@ try{
         $consumer=New-Consumer $name $name
         Invoke-Dotnet "$name-restore" @('restore',$consumer.Project,'--configfile',$consumer.Config,'--packages',$consumer.Cache,'-p:NuGetAudit=false') $work $consumer.Cache;Check-Graph $consumer
         Invoke-Dotnet "$name-Debug-build" @('build',$consumer.Project,'-c','Debug','--no-restore') $work $consumer.Cache;Check-Compile $consumer
-        $directory=Join-Path $consumer.Directory 'bin/Debug/net10.0';if($name -ne 'NomAssetTool'){Run-App $consumer 'NuGetDebug' $directory}else{Run-Tool 'NuGetDebug' $directory $consumer.Cache}
+        $directory=Join-Path $consumer.Directory "bin/Debug/$($trueMoonBuildProfile.TestFramework)";if($name -ne 'NomAssetTool'){Run-App $consumer 'NuGetDebug' $directory}else{Run-Tool 'NuGetDebug' $directory $consumer.Cache}
         $publish=Join-Path $consumer.Directory 'publish';Invoke-Dotnet "$name-Release-publish" @('publish',$consumer.Project,'-c','Release','--no-restore','--self-contained','false','-p:UseAppHost=false','-o',$publish) $work $consumer.Cache;Check-Compile $consumer
         if($name -ne 'NomAssetTool'){Run-App $consumer 'NuGetRelease' $publish}else{Run-Tool 'NuGetRelease' $publish $consumer.Cache}
         $rid=New-Consumer ($name+'-win-x64') $name
@@ -194,7 +198,7 @@ try{
     foreach($inputFile in $summary.Sources){if((Get-FileHash -LiteralPath $inputFile.Path).Hash -ne $inputFile.Sha256){throw 'Delivery source drift'}}
     $delivered=Join-Path $evidence 'packages';[void][IO.Directory]::CreateDirectory($delivered)
     foreach($package in $summary.Packages){$destination=Join-Path $delivered ([IO.Path]::GetFileName($package.Path));Copy-Item -LiteralPath $package.Path -Destination $destination;if((Get-FileHash $destination).Hash -ne $package.Sha256){throw 'Delivered artifact hash mismatch'};$package.DeliveryPath=$destination}
-    $summary.Platform=[ordered]@{OS=[Runtime.InteropServices.RuntimeInformation]::OSDescription;Architecture=[Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString();Runtime=[Environment]::Version.ToString();Verified=@('net10.0 portable Debug','net10.0 portable framework-dependent Release','win-x64 framework-dependent Release');Unverified=@('linux','osx','win-arm64','self-contained','NativeAOT','trimming')}
+    $summary.Platform=[ordered]@{OS=[Runtime.InteropServices.RuntimeInformation]::OSDescription;Architecture=[Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString();Runtime=[Environment]::Version.ToString();Verified=@("$($trueMoonBuildProfile.Framework) portable Debug","$($trueMoonBuildProfile.Framework) portable framework-dependent Release",'win-x64 framework-dependent Release');Unverified=@('linux','osx','win-arm64','self-contained','NativeAOT','trimming')}
     $summary.Completed=$true
 }catch{$summary.Failure=$_.ToString();throw}
 finally{Save-Report}

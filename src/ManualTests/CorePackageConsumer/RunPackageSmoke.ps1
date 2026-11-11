@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([string] $RunDirectory, [string] $PackageVersion)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $allowedRoot = [IO.Path]::GetFullPath((Join-Path $workspace 'TestResults/CorePackages')) + [IO.Path]::DirectorySeparatorChar
@@ -60,6 +64,7 @@ function Copy-Consumer([string] $Destination, [bool] $Direct = $false) {
         Copy-Item -LiteralPath $_.FullName -Destination $Destination
     }
     $fallback = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget/packages' }
+    Export-TrueMoonConsumerFrameworks -Profile $trueMoonBuildProfile -Directory $Destination
     $feedXml = [Security.SecurityElement]::Escape($feed)
     $fallbackXml = [Security.SecurityElement]::Escape([IO.Path]::GetFullPath($fallback))
     @"
@@ -92,7 +97,7 @@ function Verify-Assets([string] $Consumer, [int] $ExpectedCount, [bool] $Direct 
 }
 
 function Verify-Generation([string] $Consumer, [string] $Configuration, [bool] $Expected = $true) {
-    $analyzers = @(Get-Content -LiteralPath (Join-Path $Consumer "obj/$Configuration/net10.0/resolved-analyzers.txt") | Where-Object { $_ -match 'TrueMoon.Cobalt.Generator.dll$' })
+    $analyzers = @(Get-Content -LiteralPath (Join-Path $Consumer "obj/$Configuration/$($trueMoonBuildProfile.Framework)/resolved-analyzers.txt") | Where-Object { $_ -match 'TrueMoon.Cobalt.Generator.dll$' })
     if (-not $Expected) { if ($analyzers.Count) { throw 'Microsoft-only compilation still includes Cobalt generator.' }; return }
     $generator = Join-Path $cache ("truemoon.cobalt/$PackageVersion/analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll".ToLowerInvariant())
     if ($analyzers.Count -ne 1 -or -not $analyzers[0].Equals($generator, [StringComparison]::OrdinalIgnoreCase)) { throw 'Compiler did not consume the isolated generator package.' }
@@ -128,7 +133,7 @@ try {
             if ($metadata.description -eq 'Package Description') { throw 'Placeholder package description.' }
             if ($metadata.id -eq 'TrueMoon.Cobalt') {
                 $analyzer = $archive.GetEntry('analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll')
-                if (-not $analyzer -or -not $archive.GetEntry('lib/net10.0/TrueMoon.Cobalt.dll') -or -not $archive.GetEntry('buildTransitive/TrueMoon.Cobalt.targets')) { throw 'Invalid unified Cobalt package layout.' }
+                if (-not $analyzer -or -not $archive.GetEntry("lib/$($trueMoonBuildProfile.Framework)/TrueMoon.Cobalt.dll") -or -not $archive.GetEntry('buildTransitive/TrueMoon.Cobalt.targets')) { throw 'Invalid unified Cobalt package layout.' }
                 $stream = $analyzer.Open()
                 try { $summary.GeneratorSha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream)) } finally { $stream.Dispose() }
             }
@@ -151,7 +156,7 @@ try {
             Verify-Generation $consumer $configuration (-not $microsoftOnly)
             $publish = Join-Path $run "publish/$variant/$configuration"
             Invoke-DotNet "publish-$variant-$configuration" (@('publish',$project,'--configuration',$configuration,'--no-restore','--self-contained','false','--output',$publish,'--verbosity','quiet') + $properties)
-            foreach ($delivery in @(@{ Name = 'build'; Path = (Join-Path $consumer "bin/$configuration/net10.0") }, @{ Name = 'publish'; Path = $publish })) {
+            foreach ($delivery in @(@{ Name = 'build'; Path = (Join-Path $consumer "bin/$configuration/$($trueMoonBuildProfile.Framework)") }, @{ Name = 'publish'; Path = $publish })) {
                 if (@(Get-ChildItem -LiteralPath $delivery.Path -Recurse -File | Where-Object { $_.Name -match '^(TrueMoon.Cobalt.Generator|Microsoft.CodeAnalysis|SkiaSharp|Silk\.).*\.dll$' }).Count) { throw 'Runtime output includes build-only analyzer or graphical dependencies.' }
                 if ($direct) {
                     $name = "$variant-$configuration-$($delivery.Name)"; $reportPath = Join-Path $run "$name.json"
@@ -199,14 +204,14 @@ try {
         if ($id -eq 'TrueMoon.Extensions.DependencyInjection') { $references += '<PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="$(TrueMoonPackageVersion)" />' }
         @"
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsPackable>false</IsPackable></PropertyGroup>
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsPackable>false</IsPackable></PropertyGroup>
   <ItemGroup>$references</ItemGroup>
 </Project>
 "@ | Set-Content -LiteralPath (Join-Path $example 'ReadmeExample.csproj') -Encoding utf8
         $project = Join-Path $example 'ReadmeExample.csproj'
         Invoke-DotNet "restore-readme-$id" @('restore',$project,'--configfile',(Join-Path $example 'NuGet.Config'),'--packages',$cache,$versionProperty,'--verbosity','quiet')
         Invoke-DotNet "build-readme-$id" @('build',$project,'--configuration','Release','--no-restore',$versionProperty,'--verbosity','quiet')
-        Invoke-DotNet "run-readme-$id" @((Join-Path $example 'bin/Release/net10.0/ReadmeExample.dll')) $false 30
+        Invoke-DotNet "run-readme-$id" @((Join-Path $example "bin/Release/$($trueMoonBuildProfile.Framework)/ReadmeExample.dll")) $false 30
         $summary.ReadmeExamples += @{ Package = $id; SourceSha256 = (Get-FileHash -LiteralPath (Join-Path $example 'Program.cs')).Hash; Log = "logs/run-readme-$id.log" }
     }
     $summary.Packages = @(Get-ChildItem -LiteralPath $feed -Filter '*.nupkg' | ForEach-Object { @{ Name = $_.Name; Sha256 = (Get-FileHash -LiteralPath $_.FullName).Hash } })

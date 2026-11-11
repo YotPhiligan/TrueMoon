@@ -51,7 +51,9 @@ public class PipesProcessTests
                 Assert.Equal(trace.GetProperty("ClientSpanId").GetString(), trace.GetProperty("ServerParentSpanId").GetString());
                 Assert.NotEqual(trace.GetProperty("ClientSpanId").GetString(), trace.GetProperty("ServerSpanId").GetString());
                 Assert.Equal("Server", trace.GetProperty("ServerKind").GetString()); Assert.Equal("True", trace.GetProperty("RemoteParent").GetString());
-                Assert.Equal(trace.GetProperty("ClientFlags").GetInt32(), trace.GetProperty("ServerFlags").GetInt32());
+                var propagatedFlags = trace.GetProperty("ClientFlags").GetInt32() & (int)ActivityTraceFlags.Recorded;
+                Assert.Equal(propagatedFlags, trace.GetProperty("PropagatedFlags").GetInt32());
+                Assert.Equal(propagatedFlags, trace.GetProperty("ServerFlags").GetInt32());
                 Assert.Equal(result.GetProperty("ChildPid").GetInt32(), trace.GetProperty("ServerPid").GetInt32());
                 Assert.Equal("-", trace.GetProperty("TraceState").GetString()); Assert.Equal(0, trace.GetProperty("BaggageCount").GetInt32());
                 Assert.Equal(1, result.GetProperty("Connections").GetInt32());

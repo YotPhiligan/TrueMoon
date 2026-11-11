@@ -22,7 +22,7 @@ internal sealed class GameBuildPreparation : IDisposable
         "EnableDefaultEmbeddedResourceItems", "EnableDefaultNoneItems", "DefaultItemExcludes", "IsPackable", "Version",
         "VersionPrefix", "VersionSuffix", "Authors", "Company", "Product", "Description", "Copyright", "PackageTags",
         "PackageProjectUrl", "RepositoryUrl", "RepositoryType", "PackageLicenseFile", "PackageReadmeFile", "PackageIcon",
-        "TieredCompilationQuickJit", "TieredPGO", "RestorePackagesWithLockFile", "RestoreLockedMode"
+        "TieredCompilationQuickJit", "TieredPGO", "RestorePackagesWithLockFile", "RestoreLockedMode", "Features"
     };
     private readonly string _job, _directory, _projectDirectory, _excluded;
     private readonly Dictionary<string, string> _roots = new(Paths);
@@ -148,11 +148,12 @@ internal sealed class GameBuildPreparation : IDisposable
         var info = new ProcessStartInfo(_dotnet) { WorkingDirectory = Path.GetDirectoryName(Mirror(project))!, UseShellExecute = false,
             CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in new[] { "exec", "--fx-version", Path.GetFileName(_runtime), Path.Combine(_sdk, "MSBuild.dll"), Mirror(project),
-            "-restore", "-noAutoResponse", "-verbosity:quiet", "-nodeReuse:false", "-property:Configuration=Release", "-property:TargetFramework=net10.0",
+            "-restore", "-noAutoResponse", "-verbosity:quiet", "-nodeReuse:false", "-property:Configuration=Release", "-property:TargetFramework=" + GameBuildProfile.TargetFramework,
             "-property:OutputPath=" + Path.Combine(_job, "output") + Path.DirectorySeparatorChar,
             "-property:UseArtifactsOutput=true", "-property:ArtifactsPath=" + work,
             "-property:IncludeProjectNameInArtifactsPaths=false", "-property:BuildProjectReferences=false", "-property:UseSharedCompilation=false",
             "-property:ImportDirectoryPackagesProps=false", "-property:MSBuildEnableWorkloadResolver=false", "-property:NuGetAudit=false",
+            "-property:EnableSourceControlManagerQueries=false", "-property:EnableSourceLink=false",
             "-property:RestoreConfigFile=" + Path.Combine(_directory, "NuGet.Config"),
             "-property:RestorePackagesWithLockFile=false", "-property:RestoreLockedMode=false", "-property:NuGetLockFilePath=" + Path.Combine(work, "restore.lock.json"),
             "-property:AetherContractPath=" + Mirror(typeof(Sessions.IGameSession).Assembly.Location),
@@ -534,27 +535,29 @@ internal sealed class GameBuildPreparation : IDisposable
 
     private string SelectSdk(string dotnetRoot, string project)
     {
-        var minimum = new Version(10, 0, 0); var policy = "latestMinor";
+        var minimum = new Version(GameBuildProfile.SdkMajor, 0, 0); var policy = "latestMinor";
         for (var directory = new DirectoryInfo(project); directory != null; directory = directory.Parent)
         {
             var path = Path.Combine(directory.FullName, "global.json"); if (!ProbeExists(path)) continue;
             RejectLinks(path);
             if (new FileInfo(path).Length > GameBuildInputSnapshot.MaximumDocumentBytes) throw new InvalidDataException("global.json exceeds its document limit.");
             using var json = JsonDocument.Parse(File.ReadAllText(path));
-            var sdk = json.RootElement.GetProperty("sdk"); minimum = Version.Parse(sdk.GetProperty("version").GetString()!);
+            var sdk = json.RootElement.GetProperty("sdk");
             policy = sdk.TryGetProperty("rollForward", out var roll) ? roll.GetString()! : "patch";
-            if (minimum.Major != 10 || sdk.TryGetProperty("paths", out _) || sdk.TryGetProperty("allowPrerelease", out var prerelease) && prerelease.GetBoolean()
+            if (!Version.TryParse(sdk.GetProperty("version").GetString(), out var requested) || requested.Major != GameBuildProfile.SdkMajor ||
+                sdk.TryGetProperty("paths", out _) || sdk.TryGetProperty("allowPrerelease", out var prerelease) && prerelease.GetBoolean()
                 || policy is not ("disable" or "patch" or "latestPatch" or "latestMinor"))
-                throw new NotSupportedException("Unsupported frozen SDK selection policy.");
+                throw new NotSupportedException($"Frozen {GameBuildProfile.TargetFramework} builds require a stable SDK{GameBuildProfile.SdkMajor} with a supported selection policy. Check global.json and rebuild.");
+            minimum = requested;
             break;
         }
         var candidates = Directory.EnumerateDirectories(Path.Combine(dotnetRoot, "sdk"))
             .Select(path => (Path: path, Parsed: Version.TryParse(Path.GetFileName(path), out var version), Version: version))
-            .Where(v => v.Parsed && v.Version!.Major == 10 && v.Version >= minimum)
+            .Where(v => v.Parsed && v.Version!.Major == GameBuildProfile.SdkMajor && v.Version >= minimum)
             .Where(v => policy == "latestMinor" || policy == "disable" && v.Version == minimum || policy is "patch" or "latestPatch" && v.Version!.Minor == minimum.Minor && v.Version.Build / 100 == minimum.Build / 100)
             .OrderBy(v => v.Version).ToArray();
         return (policy == "patch" && candidates.Any(v => v.Version == minimum) ? candidates.First(v => v.Version == minimum).Path : candidates.LastOrDefault().Path)
-            ?? throw new NotSupportedException("No installed SDK matches the frozen net10.0 profile.");
+            ?? throw new NotSupportedException($"No installed SDK matches the frozen {GameBuildProfile.TargetFramework} profile.");
     }
 
     private bool ProbeExists(string path)

@@ -1,6 +1,12 @@
 # TrueMoon.Contracts
 
-Shared .NET 10 contracts, base models and interfaces for interoperability between
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
+Shared .NET 11 contracts, base models and interfaces for interoperability between
 TrueMoon modules. Application, service registration, configuration and diagnostics
 contracts are part of this shared API. Module-specific types belong to their
 respective modules. Alpha API. The package has no dependency on a DI provider, UI,
@@ -27,7 +33,7 @@ validate calls through the legacy generic factory interface.
 so lifecycle aliases do not duplicate provider ownership.
 
 Use matching versions of TrueMoon modules. The current package consumer checks
-net10.0 with the .NET 10 SDK on Windows; other configurations and a full framework
+net11.0 with the .NET 11 SDK on Windows; other configurations and a full framework
 release are not implied by that bounded result.
 
 [Source, contracts and module plans](https://github.com/YotPhiligan/TrueMoon).

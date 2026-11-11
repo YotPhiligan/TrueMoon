@@ -1,6 +1,16 @@
 <Project>
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <_TrueMoonFrameworkBuildProps>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</_TrueMoonFrameworkBuildProps>
+    <_TrueMoonFrameworksOnly>true</_TrueMoonFrameworksOnly>
+  </PropertyGroup>
+  <Import Project="$(_TrueMoonFrameworkBuildProps)"
+          Condition="('$(TF)' == '' or '$(TestsTF)' == '') and '$(_TrueMoonFrameworkBuildProps)' != ''" />
+  <PropertyGroup>
+    <_TrueMoonFrameworksOnly />
+    <_TrueMoonFrameworkBuildProps />
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>

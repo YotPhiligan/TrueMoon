@@ -346,7 +346,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     {
         var info = new ProcessStartInfo("dotnet") { WorkingDirectory = Path.GetDirectoryName(request.ProjectPath)!,
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (var argument in new[] { "build", request.ProjectPath, "--configuration", "Release", "--framework", "net10.0",
+        foreach (var argument in new[] { "build", request.ProjectPath, "--configuration", "Release", "--framework", GameBuildProfile.TargetFramework,
             "--output", Path.Combine(owned.Directory, "output"), "--artifacts-path", Path.Combine(owned.Directory, "work"),
             "--verbosity", "quiet", "--disable-build-servers", "-property:IncludeProjectNameInArtifactsPaths=false",
             "-property:BuildProjectReferences=false", "-property:UseSharedCompilation=false", "-nodeReuse:false",

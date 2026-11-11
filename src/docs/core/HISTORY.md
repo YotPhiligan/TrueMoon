@@ -1,5 +1,1197 @@
 # Core: история проверок и ревью
 
+<a id="core85-delivery-2026-11-11"></a>
+## CORE8.5: свежая согласованная поставка — 2026-11-11
+
+CORE8.0–8.5 завершены в Windows x64 framework-dependent профиле. SDK 11.0.100,
+net11.0, LangVersion=latest, runtime-async=on, base Version=0.3.0.1-alpha.
+HEAD 2553f87d248cf748c858988e0ed38343290eda8c; накопленные пользовательские
+изменения и proposed game заявка сохранены. В CORE8.5 C# runtime/tests, project
+files, общие props, SDK pin, зависимости и public API не менялись.
+
+### Поставка и actual consumers
+
+Единая локальная версия: **0.3.0.1-alpha.core85.20261111221352**, 16 TrueMoon nupkg и 32 точных external
+nupkg из restored assets. Remote publication не выполнялась. Nuspec identity,
+согласованные TrueMoon dependency versions, net11 runtime payloads, README,
+PACKAGE.md, license/icon, Cobalt/Enerit analyzer, build/buildTransitive targets
+и bundled native Skia проверены по SHA. Aether и viewport используют те же
+package bytes, без повторной упаковки или fallback к ProjectReference.
+
+| Проверка | Результат и границы |
+| --- | --- |
+| Обычные source builds | Solution Debug и Release с restore: exit 0, errors 0/0, incremental warnings 0/0; clean-warning baseline не заявлена |
+| Source/published example hosts | 4 DLL/apphost cases в source Debug / published Release; actual runtime children, 3 generations и 5 fault cases на case, parent/runtime dependency isolation, bootstrap rejection, resources/stop/reap |
+| App/configuration delivery | 5 consumers × source Debug / published Release / fresh Release: 15 profiles, по 230 checks / 4 owned children на вид поставки, итого 690 checks / 12 children; Cobalt и Microsoft DI |
+| Independent package game | Debug build / Release publish × DLL/apphost × Cobalt/Microsoft DI: 8 cases, по 3 actual runtime children; game compile/load/replacement/stop/reap, game не загружается в parent |
+| Fresh package native viewport | 2 profiles: Debug build и Release publish; по 13 групп проверок / 9 owned children, actual GPU pixels, state и child/resource cleanup, validation errors/warnings 0/0 по reports |
+| Финальная runtime regression | Все 11 test projects в Debug и Release: 22 новых полных запуска, по 8567 passed / 0 failed / 0 skipped на конфигурацию |
+
+Независимые consumers находятся вне checkout, имеют собственные props/global.json,
+CPM isolation и новые caches. SDK/TFM/LangVersion/Features передаются снимком.
+TrueMoon packages поступают из локального feed; installed/deployed assemblies,
+analyzer/native assets и source/package closure сверены по SHA. Общий feed содержит
+и внешние зависимости; live NuGet в объединённом сценарии не используется.
+Validation layer — прежний TestResults/EditorWindow-20261104/tools/validation;
+driver/OS settings не менялись. Все stage manifests, source/package hashes и
+command exits сохранены в общем verification.json.
+
+MSBuild metadata сверена для всех 16/16 проектов с фактическими nuspec: identity, version, authors, description, readme/icon/license и target согласованы. Версионный [manifest поставки](CORE8_DELIVERY.json) сохраняет 16 package SHA, 32 external package identities/hashes, tool/native payload hashes и итоговые test/native counts без зависимости от TEMP retention.
+
+### Исправления runners и документации
+
+- Добавлен ManualTests/FrameworkDelivery/Verify.ps1: единый порядок сборки,
+  поставки, actual consumers и финальных suites, с source-drift guards и binlogs.
+- ConfigurationDelivery принимает согласованный уникальный PackageVersion.
+- AetherPackageConsumer принимает completed PackageVerification, проверяет SHA
+  и повторно использует exact packages. Его default version теперь следует
+  текущему base version; independent game consumer получает language/features.
+- Viewport использует собственный новый cache и снимок общего профиля;
+  проверяет package-only graph, cache/feed provenance и deployment hashes.
+  Props ограничены каталогом Host: соседние frozen game fixtures не наследуют
+  host-only NuGetAudit/packaging settings; compiler allowlist не расширялся.
+- Example-host runner безопасно проверяет пустой список CLI arguments.
+- Исправлено подключение общего offline feed: один source key с mapping `*`.
+  Два одинаковых пути под разными ключами дедуплицировались NuGet и приводили
+  к NU1100 для external dependencies. Assertions и compiler policy не ослаблены.
+- StrictMode оркестратора изолирован от старого standalone Aether runner,
+  который читает optional NuGet JSON keys при обычных PowerShell semantics.
+  Его собственный runtime/native verification сохранён.
+- Root README, AGENTS, все 16 PACKAGE.md, актуальные Hosting/Aether требования,
+  Alloy/Editor profile notes и consumer instructions согласованы с .NET 11.
+  [Руководство по переходу](DOTNET11_MIGRATION.md) описывает SDK/TFM/Features,
+  CPM, explicit rebuild прежних game artifacts и acceptance boundaries.
+
+После успешного цикла исправлены ещё два source-only документа: SDK/target в
+непакуемом TrueMoon.Cobalt.Generator/PACKAGE.md и текущие net11 команды в
+TrueMoon.Alloy.Rendering.Skia/README.md. По содержимому MD entries подтверждено,
+что они не входят в 16 nupkg. Их отдельные before/after SHA сохранены;
+package bytes, C#/compiler/test inputs не менялись, тесты ради README не повторялись.
+
+Первичные неуспешные trials сохранены отдельно: ошибка helper на empty arguments,
+NU1100 из-за дублированного feed mapping, inherited StrictMode на optional
+runtimeTargets и host props/NuGetAudit в game fixture. Это failures runners/composition, а не найденные runtime-async
+регрессии. Passing получен новым полным циклом в новых каталогах/version/cache;
+старые manifests не переписаны.
+
+### Полные тесты окончательных исходников
+
+| Проект | Debug passed | Release passed | Failed / skipped |
+| --- | --- | --- | --- |
+| TrueMoon.Aether.Editor.Tests | 1496 | 1496 | 0 / 0 |
+| TrueMoon.Aether.Tests | 3243 | 3243 | 0 / 0 |
+| TrueMoon.Alloy.Hosting.Tests | 171 | 171 | 0 / 0 |
+| TrueMoon.Alloy.Tests | 1224 | 1224 | 0 / 0 |
+| TrueMoon.Cobalt.Generator.Tests | 96 | 96 | 0 / 0 |
+| TrueMoon.Cobalt.Tests | 179 | 179 | 0 / 0 |
+| TrueMoon.Enerit.Generator.Tests | 114 | 114 | 0 / 0 |
+| TrueMoon.Enerit.Tests | 354 | 354 | 0 / 0 |
+| TrueMoon.Mithril.Tests | 155 | 155 | 0 / 0 |
+| TrueMoon.Nom.Tests | 874 | 874 | 0 / 0 |
+| TrueMoon.Tests | 661 | 661 | 0 / 0 |
+| Итого на конфигурацию | 8567 | 8567 | 0 / 0 |
+
+Обычные restore/build в каждой test command; нет test-only props overrides,
+--no-build/--no-restore или смены xUnit 2/VSTest. Проекты запускаются
+последовательно с MaxCpuCount=1 / ParallelizeTestCollections=false /
+MaxParallelThreads=1. Это новые executions, отдельно от CORE8.4 discovery/TRX
+сверки. Старые non-green результаты и причины diagnostics/drain timeout не
+объявляются исправленными успешной регрессией.
+
+### Команды и хранение
+
+Из src, PowerShell 7.2+, Windows x64:
+
+```powershell
+./ManualTests/FrameworkDelivery/Verify.ps1 -ValidationDirectory TestResults/EditorWindow-20261104/tools/validation -EvidenceDirectory TestResults/CORE85-20261111-215503/delivery-complete -RunDirectory "$env:TEMP/TrueMoon-CORE85-20261111-215503-complete"
+```
+
+Все точные child arguments/exit codes — в stage manifests. Финальная test command
+для каждого из 11 проектов и обеих конфигураций:
+
+```powershell
+dotnet test <project> -c <Debug|Release> --settings ManualTests/FrameworkDelivery/serial.runsettings --logger 'trx;LogFileName=tests.trx' --results-directory <evidence>/<project>-<configuration> --verbosity minimal '-bl:<evidence>/<project>-<configuration>-{}.binlog'
+```
+
+Основной evidence: TestResults/CORE85-20261111-215503/delivery-complete/.
+TEMP consumers/feed/cache и source/published examples:
+C:\Users\MEGA6\AppData\Local\Temp\TrueMoon-CORE85-20261111-215503-complete.
+Ignored/TEMP retention не гарантирован; команды, inputs, outcomes, изменения
+и границы сохраняются в этой versioned записи. Свежий повтор требует новых
+каталогов и версии. Пакеты на удалённый NuGet service не отправлялись.
+
+CORE8 завершил согласованный .NET 11 migration scope. Функциональная очередь
+возвращается к ARCH1f.4 и отдельным задачам владельцев. Physical input/DPI,
+K7/device loss/VRAM, Nom VM/power-loss, другие OS/RID/AOT, performance и
+причины прежних reliability timeout сохраняют собственные критерии.
+
+<a id="core-status-before-core85-2026-11-11"></a>
+## STATUS до CORE8.5 — архив 2026-11-11
+
+# Core: состояние и точка продолжения
+
+**2026-11-11 — CORE8.4 завершён: полная runtime-async регрессия.**
+[CORE8](PLAN.md#core8-dotnet11), [команды, матрица и ограничения](HISTORY.md#core84-runtime-2026-11-11).
+Профиль: SDK 11.0.100 / net11.0 / runtime-async=on, обычные restore/build без
+test-only overrides. Из 1769 code/build/script inputs сохранены 1765; исправлены
+только четыре manual fixture writer: явная ссылка на Contracts. Production runtime,
+API и зависимости в CORE8.4 не менялись.
+
+- Все 11 test suites прошли в Debug и Release: **Passed 8567, Failed 0, Skipped 0 на конфигурацию**.
+- Сохранены discovery и сопоставление методов с TRX: 22 полных запуска, 17134 test rows.
+  Theory templates учитываются отдельно от развёрнутых параметризованных cases.
+- После исправления fixtures повторены NativeRuntimeProcessTests: 4/4 в каждой конфигурации.
+- Source Debug / published Release: прошли 24 native сценария CPU/GPU viewport/Editor
+  и lifecycle с проверками пикселей, состояния, child stop/reap и освобождения ресурсов.
+- Финальная solution сборка D/R: 0 ошибок; incremental warnings — 0/0.
+  Это не новая clean warning baseline.
+
+CORE8.0–3 сохраняют отдельные input/generator/frozen-game/package proofs.
+[Предыдущий STATUS целиком](HISTORY.md#core-status-before-core84-2026-11-11).
+
+## Следующий конкретный шаг
+
+**CORE8.5:** свежая package/runtime/analyzer/native поставка одной версии,
+source/published/fresh consumers и итоговая документация. Physical input/DPI,
+device loss/K7/VRAM, другие OS/RID/AOT, performance и причины прежних
+diagnostics/drain timeout остаются отдельными задачами.
+
+<a id="core84-runtime-2026-11-11"></a>
+## CORE8.4: полная runtime-async регрессия — 2026-11-11
+
+Выполнена Windows x64 регрессия на SDK 11.0.100 / runtime 11.0.0,
+TF/TestsTF=net11.0, LangVersion=latest, runtime-async=on,
+Version=0.3.0.1-alpha. HEAD: 2553f87d248cf748c858988e0ed38343290eda8c.
+Сохранены накопленные изменения CORE8.0–3 и proposed game заявка.
+Из 1769 code/build/script inputs сохранены 1765; исправлены только четыре
+manual fixture writer: явная non-copying ссылка на TrueMoon.Contracts через
+прежний TrueMoonContractsPath. Production runtime C#, project files, общие props,
+SDK pin, зависимости, публичные API и native/GPU implementation paths не менялись.
+Assertions, guards и deadlines не ослаблялись.
+
+### Полные suites и discovery
+
+Все 11 tracked test projects обнаружены и выполнены в Debug и Release.
+Исполнение включает обычные restore/build без --no-build/--no-restore,
+test-only DirectoryPackagesPropsPath и props overrides. Сохранён xUnit 2 / VSTest.
+Evaluation каждого проекта в обеих конфигурациях подтвердила net11.0,
+SDK 11.0.100 и runtime-async=on. Проекты и process-heavy fixtures выполнялись
+последовательно: ParallelizeTestCollections=false, MaxParallelThreads=1.
+
+| Проект | Debug passed/total | Release passed/total | Failed / skipped |
+| --- | --- | --- | --- |
+| TrueMoon.Tests | 661/661 | 661/661 | 0/0 |
+| TrueMoon.Cobalt.Tests | 179/179 | 179/179 | 0/0 |
+| TrueMoon.Cobalt.Generator.Tests | 96/96 | 96/96 | 0/0 |
+| TrueMoon.Enerit.Tests | 354/354 | 354/354 | 0/0 |
+| TrueMoon.Enerit.Generator.Tests | 114/114 | 114/114 | 0/0 |
+| TrueMoon.Mithril.Tests | 155/155 | 155/155 | 0/0 |
+| TrueMoon.Nom.Tests | 874/874 | 874/874 | 0/0 |
+| TrueMoon.Alloy.Tests | 1224/1224 | 1224/1224 | 0/0 |
+| TrueMoon.Alloy.Hosting.Tests | 171/171 | 171/171 | 0/0 |
+| TrueMoon.Aether.Tests | 3243/3243 | 3243/3243 | 0/0 |
+| TrueMoon.Aether.Editor.Tests | 1496/1496 | 1496/1496 | 0/0 |
+| Итого на конфигурацию | 8567/8567 | 8567/8567 | 0/0 |
+
+Итого 17134 test rows в 22 полных запусках. Отдельный --list-tests --no-build
+использовал существовавшие assemblies последней CORE8.3 solution сборки;
+каждый последующий execution выполнял обычный build. Discovery logs/binlogs
+сохранены для обеих конфигураций. MemberData может обнаруживаться одним theory
+template: Cobalt — 110 templates / 179 executed rows, Alloy — 1215/1224.
+Первый агрегатор ошибочно требовал равенства этих counts и вернул exit 1,
+хотя все test/discovery команды вернули exit 0. Отдельная сверка сопоставила
+каждый TRX row с обнаруженным методом и подтвердила исполнение всех методов.
+Исходные counts и логи не переписаны. Агрегатор исправлен только в ignored
+TestResults; повторное исполнение тестов из-за этой ошибки счётчика не требовалось.
+
+| Поведение | Проверка в текущем полном запуске |
+| --- | --- |
+| Atomic configuration/reload/write, оба DI | ConfigurationReloadTests.ReloadPublishesOneAtomicGenerationAndRetainsOldOptionsServicesAndSnapshots; ConfigurationWriteTests.JsonPatchDistinguishesExplicitNullAndDeleteAndNeverReloadsImplicitly |
+| Factory/aliases/dispose/errors | Все 179 Cobalt и 96 generator tests, включая AdapterRegressionTests/ResolverRegressionTests/ResolutionErrorTests |
+| IPC cancellation/admission/drain | PipesTraceLifecycleTests.LocalCancellationAndTimeout_EndScopeButKeepCapacityAndOriginalLateResponseCorrelation; PipesMetricsTests.GenericServer_IncludesWaitingAndRetiringConnectionsUntilCancelledStopActuallyDrains |
+| Owned processes/cancel/restart | Все 155 Mithril tests; ReadyFileProcessTests.ReadyRead_SharingRetriesHonorCallerCancellation; RestartProcessTests.Restart_OwnedSequence_EnforcesPolicyBudgetDelayAndStop |
+| Nom IO/admission/reopen/lifetime | Все 874 Nom tests; NomRawBufferFaultTests.RawBlockedSource_CancelOrAppStopRetainsBorrowedOwnerAndRootUntilActualCompletion; NomAppStorageTests.RegisteredFactory_PublicStreamRoundtripReopenAndJournal_PreserveExactContent |
+| UI callbacks / engine / frozen build | Все Alloy 1224 / Hosting 171 / Aether 3243 / Editor 1496 tests и source/published native пробы ниже |
+
+Полные 22 suites выполнены до исправления четырёх manual templates. После
+исправления повторены затронутые NativeRuntimeProcessTests: 4/4 в каждой
+конфигурации, и все 24 source/published native сценария, включая каждый
+затронутый scene/input/room/editor generator. Production runtime/API/dependency
+inputs в CORE8.4 не менялись. Новых runtime/signature/DI semantics failures
+на on не обнаружено; off-control для локализации ошибки не потребовался.
+Результат не является измерением performance или проверкой всех .NET 11 semantics.
+
+### Source/published UI, GPU и child lifetime
+
+RunProbe выполнен на текущем общем MSBuild profile: Debug apphost и published
+Release. По 12 сценариев на конфигурацию: room, scene, input, editor-gpu,
+viewport, editor-proof и шесть lifecycle сценариев — startup-cancel,
+command-cancel, stop-pending, forced-stop, parent-exit, app-stop.
+Все 24 прошли; fresh NuGet consumer в этот запуск не входит.
+
+CPU viewport, CPU Editor и GPU Editor выполнили свои 20-cycle/pixel/lifetime
+профили. GPU использует прежний Vulkan/OpenGL interop transport без import
+readbacks. Соответствующие reports проверяют child release, max-live=1 в Editor,
+сохранение authoring state, отсутствие game load в parent, mappings=0,
+UI sessions=0 и GPU resources/handles=0. Room/scene/input сохранили PNG evidence
+и собственные проверки child/resource/input поведения.
+
+Первый Debug GPU trial завершился до GPU startup на CS0234/CS0012:
+generated game projects не ссылались на TrueMoon.Contracts для
+IGameSessionEntry/IServiceResolver. Исправлены EditorViewportProbe,
+SceneInputProbe, RoomViewportProbe и SceneViewportProbe через прежний
+TrueMoonContractsPath. Исходная ошибка и логи сохранены; transport, assertions
+и runtime-async defaults не менялись. Validation layer взят из существующего
+TestResults/EditorWindow-20261104/tools/validation; SHA DLL/JSON сохранены.
+Системный driver и настройки не менялись.
+
+Это регрессия существующего ограниченного primitive/viewport/UI профиля.
+Новый mesh surface renderer f.4, physical held-button/input/DPI/device loss,
+K7/VRAM, другие OS/RID/AOT и performance baseline остаются отдельными задачами.
+Прохождение регрессии не устанавливает причины прежних diagnostics delivery,
+Stop/Dispose и post-reap drain timeout и не объявляет их исправленными.
+
+### Команды, сборка и хранение
+
+Из src, для каждого проекта в таблице и каждой конфигурации Debug/Release
+(<run> — абсолютный путь TestResults/CORE84-20261111-185124):
+
+```powershell
+dotnet msbuild <project>/<project>.csproj -nologo -property:Configuration=<Debug|Release> -getProperty:TargetFramework,Features,LangVersion,NETCoreSdkVersion '-bl:<run>/<project>/evaluation-{}.binlog'
+dotnet test <project>/<project>.csproj -c <Debug|Release> --no-build --list-tests --settings <run>/serial.runsettings --verbosity minimal '-bl:<run>/<project>/<configuration>/discovery-{}.binlog'
+dotnet test <project>/<project>.csproj -c <Debug|Release> --settings <run>/serial.runsettings --logger 'trx;LogFileName=tests.trx' --results-directory <run>/<project>/<configuration> --verbosity minimal '-bl:<run>/<project>/<configuration>/msbuild-{}.binlog'
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c <Debug|Release> --settings <run>/serial.runsettings --filter 'FullyQualifiedName~TrueMoon.Aether.Tests.NativeRuntimeProcessTests' --logger 'trx;LogFileName=tests.trx' --results-directory <run>/affected-<configuration> --verbosity minimal '-bl:<run>/affected-<configuration>/msbuild-{}.binlog'
+& ./ManualTests/EngineSessionProbe/RunProbe.ps1 -RunDirectory TestResults/EngineSessions/core84-20261111-185124-final -Configurations Debug,Release -IncludeViewport -IncludeEditorGpu -IncludeScene -IncludeInput -IncludeRoom -GpuValidationLayerDirectory TestResults/EditorWindow-20261104/tools/validation -Scenarios startup-cancel,command-cancel,stop-pending,forced-stop,parent-exit,app-stop
+dotnet build TrueMoon.slnx -c <Debug|Release> --verbosity minimal '-bl:<run>/solution-<configuration>-{}.binlog'
+```
+
+Файл serial.runsettings задаёт RunConfiguration.MaxCpuCount=1,
+xUnit.ParallelizeTestCollections=false и xUnit.MaxParallelThreads=1.
+Точные массивы аргументов сохранены рядом с результатами.
+Финальная обычная incremental solution сборка с restore: Debug — 0 errors /
+0 warnings, Release — 0 errors / 0 warnings. Это не clean warning baseline;
+suppression не добавлялся.
+
+Локальные ignored artifacts: TestResults/CORE84-20261111-185124/ — source-before,
+profile evaluations, 22 discovery logs/binlogs, полные TRX/logs/binlogs,
+verified-tests, affected-results, native pointer, final builds, docs-before
+и verification JSON. Native reports/PNG evidence:
+TestResults/EngineSessions/core84-20261111-185124-final/.
+Первый неуспешный native trial сохранён в соседнем каталоге без суффикса -final.
+Ignored artifacts могут отсутствовать в другом checkout; команды, результаты,
+изменения и границы остаются в этой versioned записи.
+
+Следующий этап — CORE8.5: свежая согласованная NuGet/runtime/analyzer/native
+поставка, source/published/fresh consumers и итоговая документация.
+Прежние release/physical/reliability gates сохраняют свои критерии и владельцев.
+
+<a id="core-status-before-core84-2026-11-11"></a>
+## STATUS до CORE8.4 — архив 2026-11-11
+
+# Core: состояние и точка продолжения
+
+**2026-11-11 — CORE8.3 завершён: согласованный .NET11 frozen game build.**
+[CORE8](PLAN.md#core8-dotnet11), [реализация, команды и границы](HISTORY.md#core83-frozen-2026-11-11).
+Target/stable SDK major следуют TargetFrameworkAttribute Aether (MSBuild TF);
+SDK11.0.100/net11.0/runtime-async=on, прежние dependency/package versions сохранены.
+
+| Проверка | Текущий результат |
+| --- | --- |
+| Full Aether |3243/3243 каждый Debug/Release, failed/skipped0|
+| Full Editor |1496/1496 каждый Debug/Release, failed/skipped0|
+| SDK11-only root |Только SDK11.0.100/runtime11.0.0; actual frozen repository game compile/reuse/Open и independent Runtime Step/checkpoint/Stop/reap, source Debug/published Release;2actual children|
+| Ordinary solution build |Debug0errors/175warnings, Release0errors/175warnings, incremental с restore|
+
+Manifest schema1/lock schema1 сохранены, target=net11.0; старые artifacts требуют
+явной пересборки. Features захватываются в evaluation/csc/fingerprint. SDK policy,
+capture bounds, source identity, cache verification и ownership не ослаблены.
+Исправлены helper shell и ошибочное предположение об уникальности OS PID между
+последовательными child generations; проверяются valid SessionIdentity и cleanup.
+[Предыдущий STATUS целиком](HISTORY.md#core-status-before-core83-2026-11-11).
+
+CORE8.1 inputs/CPM/configuration delivery и CORE8.2 Cobalt/Enerit suites/packages
+имеют собственные proofs; не считаются повторёнными текущими двумя suites.
+
+## Следующий конкретный шаг
+
+**CORE8.4:** сверка всех11test projects и оставшаяся runtime-async regression на
+окончательных inputs; Aether/Editor full уже прошли в CORE8.3. Далее CORE8.5 fresh
+packages/native/GPU/full delivery и документация. Warnings, прежние diagnostics/
+drain reliability причины и physical/release gates остаются открытыми.
+
+<a id="core83-frozen-2026-11-11"></a>
+## CORE8.3: Aether frozen game build на .NET 11 — 2026-11-11
+
+Завершён согласованный Windows x64/net11.0 профиль сборки и загрузки игры.
+Исходный HEAD2553f87d248cf748c858988e0ed38343290eda8c и накопленные пользовательские
+изменения CORE8.0–2 сохранены; package/dependency versions, SDK pin и общие props
+не менялись. SDK11.0.100/runtime11.0.0, LangVersion latest, runtime-async=on.
+Новая game заявка TALES-20261110-ae80510f не принималась и не редактировалась.
+
+### Реализация и migration boundary
+
+- Внутренний GameBuildProfile получает target/stable SDK major из стандартного
+  TargetFrameworkAttribute самой Aether assembly, сформированного MSBuild из TF.
+  Все compiler/preparation args, SDK selection, evaluated witness, package lock
+  target и manifest используют один профиль. Entry host/working directory не
+  становятся источником target. Editor preflight требует тот же stable SDK major.
+- global.json сохраняет ограниченные disable/patch/latestPatch/latestMinor,
+  exact installed SDK, runtime pin и read leases. Старые/будущие major, prerelease,
+  allowPrerelease и неподдержанная rollForward policy отклоняются до SDK process.
+  Попытки не ослабляют capture quotas, native/managed bounds или cleanup.
+- Declarative Features разрешён в прежней property allowlist: общий runtime-async
+  проходит через обычный captured MSBuild/csc, evaluation и compiler fingerprints.
+  Functions/tasks/custom SDK и прочие прежние неподдержанные inputs не разрешались.
+  SourceLink/Git metadata discovery отключены стандартными global MSBuild properties
+  только в frozen job: Git checkout не становится новым неучтённым source input.
+- Lock остаётся schema1 с одним net11.0 target без RID. Managed single-lib admission
+  добавляет net11.0, сохраняя net10/net9/net8/netstandard2.1/2.0 и прежние проверки
+  layout/unsigned/edges/hash/declared DLL. Нет сетевого package resolution в frozen
+  preparation. Пакеты, lock и источники не переписываются сборкой.
+- Manifest остаётся schema1: target уже является частью content-addressed bytes.
+  Новый target=net11.0 и shared contract hash отделяют artifacts. Open старого
+  net10 (либо неподдержанного target) сообщает expected net11/rebuild до game load.
+  Нужна явная пересборка; auto-migration/relabel старых artifacts, новая схема и
+  persisted cache не вводились. Process-local reuse сохраняет проверки inputs,
+  compiler/payload и republish для нового SourceRevision.
+- Fixtures и6manual game-project writers переведены на текущий target. Тестовые
+  local hold helpers используют системный Windows PowerShell, $PID и process-only
+  ExecutionPolicy Bypass для своих скриптов; global policy не меняется. Это устраняет
+  зависимость helper от исчезнувшего прежнего PowerShell7 executable и Restricted
+  Windows PowerShell policy. Отмена по-прежнему проверяет actual owned process tree.
+- В процессе full acceptance Windows переиспользовала PID завершённого child.
+  Проверка уникальных PID за все8последовательных leases была неверным предположением:
+  все leases были reaped/released. Probe теперь сохраняет SessionIdentity, тест
+  проверяет distinct valid identities, прежние3/8leases, PID>0/не parent и каждый
+  cleanup; replacement max-live1/rollback/Stop fence assertions сохранены.
+
+### Выполненные проверки
+
+Исходный RepositoryGameProject test воспроизведён1/1failed на SelectSdk major10;
+после первого исправления1/1passed. Первый full trial остановлен после подтверждённых
+fixture failures (PID reuse и недоступный hold helper), не считается полным run.
+После первых исправлений focused21/21, Failed:0, Skipped:0 и промежуточные full Aether3242/Editor1496 D/R прошли. Затем SDK11-only proof выявил ambient SourceLink: frozen policy закрепляет EnableSourceControlManagerQueries=false и EnableSourceLink=false, сохраняя compiler rejection для sourcelink switch. Добавлен actual repository-artifact-root случай; заключительные обычные full suites
+с restore/build, без DirectoryPackagesPropsPath/test-only props overrides:
+
+| Проект | Debug | Release | Failed / skipped |
+| --- | --- | --- | --- |
+| TrueMoon.Aether.Tests |3243/3243|3243/3243|0/0|
+| TrueMoon.Aether.Editor.Tests |1496/1496|1496/1496|0/0|
+| Итого на конфигурацию |4739/4739|4739/4739|0/0|
+
+9new cases:5SDK policy negatives,2rehashed legacy/future manifest targets и
+дополнительный compatible package lib target и artifact root внутри Git checkout. Это targeted regression, не новая
+coverage/performance программа. Existing Builds/source observer/reuse/cancel/
+App/DI/native-child/lifetime проверки выполнены в full Aether/Editor scope.
+Process-heavy suites запускаются последовательно; VSTest settings:
+ParallelizeTestCollections=false, MaxParallelThreads=1.
+[Синтаксис xUnit RunSettings](https://xunit.net/docs/config-runsettings).
+
+| Requirement | Evidence |
+| --- | --- |
+| SDK/target/Features/manifest | GameBuildPreparationTests.RepositoryGameProject_FreezesAncestorPropsAndContractReferences |
+| Unsupported SDK policy до process admission | GameBuildPreparationTests.FrozenSdk_RejectsUnsupportedSelectionBeforeSdkAndDrains |
+| Old/future artifact rejection после корректного rehash | GameBuildTests.RehashedManifest_StillValidatesSchemaContractAndDependencyPolicy |
+| Locked packages, changed bytes и verified reuse | GameBuildPreparationTests.Packages_BuildLockedTransitiveDllsVerifyChangesAndReuseOnlyVerifiedPayload (net11/net10 lib) |
+| Compiler cancellation/input changes/drain | GameBuildInputsTests.ChangeOrCancelDuringCompilation_DrainsOwnedSdkBeforeReturning |
+| Actual selected build/replacement/checkpoint/cleanup | NativeRuntimeProcessTests.CompiledGameFixtures_PreserveSelectedBuildCheckpointRollbackAndCleanup |
+| Full validation | dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj и TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj, -c Debug/Release --settings <run>/serial.runsettings; Passed3243/1496, Failed0, Skipped0 |
+
+### Actual source/published game на SDK11-only root
+
+В ignored run создана изолированная plain copy установленного toolchain
+(5688files/749848460bytes, включая matching net11 targeting packs), без изменения системной установки. В её --list-sdks
+только11.0.100, --list-runtimes только Microsoft.NETCore.App11.0.0; SDK10 отсутствует.
+Оба acceptance consumers фактически работают на CoreLib из этого root, проверяют
+его SDK census и используют его же absolute frozen SDK/MSBuild/csc/runtime paths.
+Первая неполная copy без WindowsDesktop/AspNetCore net11 reference packs дала
+NU1100 до compilation; matching packs скопированы из установленного SDK, без сети.
+Этот fixture failure сохранён отдельно и не объявляется production defect.
+
+Source Debug и published Release consumer/runtime прошли отдельно. Публичный App/
+UseAether/DI путь, exact parent/runtime BuildIdentity, compile actual repository
+Game.Logic.RoomGame → validate manifest → VerifyInputs → verified payload reuse/
+new ticket → Open → actual independent AetherRuntimeHost child → Step1/checkpoint1
+→ Stop/reap выполнены в обоих случаях. Parent не загружает game code; child report
+подтверждает ровно выбранный artifact path/SHA, GameLoaded=true, Editor/UiLoaded=false,
+свой CoreLib из изолированного root и Resources/Handles0. Compiler ProcessId=null,
+каждый из2actual children Reaped/ResourcesReleased=true. Это headless/CPU/control
+acceptance, не native surface/GPU proof и не fresh NuGet consumer.
+
+### Команды, результаты и хранение
+
+Из src, для каждого проекта/конфигурации:
+
+```powershell
+dotnet test <project>/<project>.csproj -c <Debug|Release> --settings <run>/serial.runsettings --logger 'trx;LogFileName=tests.trx' --results-directory <run>/<project>-<configuration> --verbosity minimal '-bl:<run>/<project>-<configuration>/msbuild-{}.binlog'
+dotnet build <run>/consumer/Consumer.csproj -c Debug --verbosity minimal '-bl:<run>/consumer-build-Debug-{}.binlog'
+dotnet publish Examples/AetherRuntimeHost/AetherRuntimeHost.csproj -c Release --self-contained false --output <run>/runtime-published --verbosity minimal '-bl:<run>/runtime-publish-Release-{}.binlog'
+dotnet publish <run>/consumer/Consumer.csproj -c Release --self-contained false --output <run>/consumer-published --verbosity minimal '-bl:<run>/consumer-publish-Release-{}.binlog'
+<run>/dotnet11-only/dotnet.exe exec --fx-version 11.0.0 <source-or-published-Consumer.dll> <matching-AetherRuntimeHost.dll> ManualTests/Game.Logic/Game.Logic.csproj <report> <run>/dotnet11-only <delivery>
+dotnet build TrueMoon.slnx -c <Debug|Release> --verbosity minimal '-bl:<run>/solution-<configuration>-{}.binlog'
+```
+
+Для proof processes DOTNET_ROOT/DOTNET_ROOT_X64/DOTNET_HOST_PATH/PATH указывают
+на isolated root, DOTNET_MULTILEVEL_LOOKUP=0; эти overrides не записаны в систему.
+Compile/publish самого acceptance host выполнены штатным установленным SDK;
+игру frozen compiler собирает уже в фактически выбранном SDK11-only runtime root.
+
+Финальные ordinary incremental solution builds с restore: Debug0errors/175warnings,
+Release0errors/175warnings. Это counts текущих recompiled projects,
+не clean warning baseline и не обещание отсутствия warnings. Public API surface/
+namespaces/ownership и package versions не перерабатывались; Profile — internal.
+Руководства Aether/Editor/packaged README обновлены, исторические dated net10
+GPU/performance proofs сохранены с исходными датами.
+
+Raw artifacts локальны, ignored TestResults/CORE83-20261111-160620/: baseline TRX,
+initial-aborted console/binlog, focused TRX, full4TRX/logs/binlogs, isolated-sdk.json/
+toolchain copy, consumer sources/commands/results и2child summaries, final builds,
+source-before/docs-before/guide-edits/verification JSON. Срок retention не гарантирован;
+inputs/commands/outcomes/scope сохранены в versioned HISTORY независимо от этих файлов.
+
+### Что дальше
+
+CORE8.4: сверка всех11test projects и оставшаяся runtime-async regression на
+окончательных inputs; CORE8.5: fresh package/native/GPU/full delivery и финальная
+сверка документации. Прежние diagnostics delivery/Stop/Dispose/post-reap drain
+timeout причины не закрываются успешным replay. Physical input/device loss/K7/
+VRAM/other OS/RID/AOT/performance и renderer f.4 остаются своими задачами.
+
+<a id="core-status-before-core83-2026-11-11"></a>
+## Core STATUS до CORE8.3 — архив 2026-11-11
+
+# Core: состояние и точка продолжения
+
+**2026-11-11 — CORE8.2 завершён: генераторы, runtime и DI adapter на .NET11.**
+[План CORE8](PLAN.md#core8-dotnet11), [команды, исправления и ограничения](HISTORY.md#core82-generators-2026-11-11).
+SDK11.0.100/net11.0/runtime-async=on; SDK Roslyn5.12, pinned test Roslyn5.9,
+Microsoft DI11. Смена зависимостей и production API не потребовалась.
+
+| Проверка | Текущий результат |
+| --- | --- |
+| Cobalt runtime/adapter |179/179 каждый Debug/Release, failed/skipped0|
+| Cobalt generator |96/96 каждый Debug/Release, failed/skipped0|
+| Enerit generator |114/114 каждый Debug/Release, failed/skipped0|
+| Enerit runtime/process |354/354 каждый Debug/Release, failed/skipped0|
+| Independent packages |8fresh packages;132actual DI/IPC process scenarios, D/R build/publish, оба DI и microsoft-only без Cobalt analyzer; CS0234 negative control прошёл|
+| Ordinary solution build |Debug0errors/510warnings; Release0errors/1414warnings, incremental с restore|
+
+Исправлены два прежних test expectations: single cleanup Composite aliases
+Microsoft DI11 и сравнение trace flags с Recorded mask header v1. Production
+runtime/generator/adapter C# и wire не менялись. SDK requirements generator
+metadata/guides уточнены до11. Первоначальные failures сохранены в evidence.
+
+CORE8.1 ранее завершил61net11projects,45runners/общий MSBuild profile, CPM isolation
+и16package configuration delivery; [его результаты](HISTORY.md#core81-profiles-2026-11-11)
+не считаются повторёнными CORE8.2. Предыдущий STATUS сохранён
+[целиком](HISTORY.md#core-status-before-core82-2026-11-11).
+
+## Ограничения и следующий конкретный шаг
+
+**CORE8.3:** Aether frozen game SDK/TFM, locks/manifests/cache и ordinary nested
+restore; затем actual artifact→Runtime→stop/reap source/published. SDK10-only
+selector пока не исправлен. CORE8.4 — все11test projects и wider runtime async
+regression; CORE8.5 — итоговая delivery/native/GPU/documentation acceptance.
+Предупреждения сборки и прежние diagnostics/drain/physical/release gates открыты.
+
+<a id="core82-generators-2026-11-11"></a>
+## CORE8.2: генераторы, runtime и DI adapter на .NET 11 — 2026-11-11
+
+Этап завершён в Windows x64 managed scope. HEAD до/после проверки:
+`2553f87d248cf748c858988e0ed38343290eda8c`; существующая незакоммиченная миграция
+CORE8.0/8.1 сохранена. SDK11.0.100, MSBuild18.12.2, runtime11.0.0, TF/TestsTF=net11.0,
+LangVersion=latest, runtime-async=on, base Version=0.3.0.1-alpha. xUnit2/VSTest
+сохранены. SDK compiler Microsoft.CodeAnalysis.CSharp5.12.0.0; тестовые dynamic
+compilations используют pinned5.9.0.0. Microsoft DI фактически11.0.0.0.
+Смена Roslyn/dependency versions для совместимости не потребовалась.
+
+### Полные тесты и исправленные ожидания
+
+| Проект | Debug | Release | Failed / skipped в итоговом запуске |
+| --- | --- | --- | --- |
+| TrueMoon.Cobalt.Tests, runtime/adapter |179/179|179/179|0/0|
+| TrueMoon.Cobalt.Generator.Tests |96/96|96/96|0/0|
+| TrueMoon.Enerit.Generator.Tests |114/114|114/114|0/0|
+| TrueMoon.Enerit.Tests, runtime/process |354/354|354/354|0/0|
+| Всего, четыре проекта |743/743|743/743|0/0|
+
+Первый полный запуск сохранён отдельно: Cobalt178/179 и Enerit353/354 в каждой
+конфигурации; обе generator suites сразу прошли. Ошибки локализованы до правок:
+
+- `CompositeAliases_ResolveSameConcreteSingleton`: выбранный Microsoft DI11
+  освободил общий concrete singleton один раз вместо прежних ожидаемых трёх.
+  Production adapter не менялся. Проверка сохраняет shared identity всех aliases,
+  добавляет отсутствие раннего Dispose, ожидает один cleanup и проверяет повторный
+  Dispose resolver без повторного освобождения. Это наблюдение конкретной версии,
+  не перенос Cobalt continue-on-error guarantees на Microsoft DI.
+- Process `trace`: фактические client flags3/server flags1, remote parent и kind
+  корректны. В .NET11 локальный ActivityTraceFlags содержит RandomTraceId=2;
+  существующий header v1 пишет и принимает только Recorded=1. Probe и родительский
+  тест теперь сравнивают server flags с `ClientFlags & Recorded`, отдельно сохраняя
+  исходные client/propagated/server значения. Trace/Span identity, privacy
+  tracestate/baggage, stop/drain/reap assertions сохранены. Wire/runtime код не менялся.
+  [Определение ActivityTraceFlags](https://learn.microsoft.com/dotnet/api/system.diagnostics.activitytraceflags).
+
+После правок прошли focused adapter1/1 и PipesProcessTests7/7, затем обе полные
+runtime suites заново D/R. Итоговая таблица объединяет эти четыре full runtime runs
+с четырьмя generator runs на неизменённых generator sources; focused cases повторно
+в сумму не включены. Нет новых skipped, расширения deadlines или отключения guards.
+
+### Независимая пакетная генерация и исполнение
+
+`ManualTests/UnitsPackageConsumer/RunPackageSmoke.ps1` собрал8fresh nupkg версии
+`0.3.0.1-alpha.units.20261111103406764`: TrueMoon, Contracts, Core, Cobalt, Enerit,
+Enerit.Generator, Extensions.DependencyInjection, Mithril. Consumers скопированы
+в изолированную папку с собственными props/global.json/NuGet config, свежим cache
+TrueMoon packages и local feed; source ProjectReference нет. Внешние зависимости
+могут читаться из штатного fallback cache, локальная package closure проверяется.
+
+Матрица: both-generators на Cobalt и Microsoft DI, microsoft-only без Cobalt
+analyzer, каждый Debug/Release и build/publish;11сценариев на комбинацию,
+**132actual process scenarios**, Completed=true. Payload/concurrent/cancel-request/
+remote-error/restart/budget/stop-pending/startup-failure/parent-exit/saturated-stop/
+saturated-kill проверяют generated DI/IPC, pending/workers, lifecycle и child cleanup.
+120cases подтвердили pending0 и завершённые workers; в12parent-exit cases
+проверен выход собственного child, а in-process counters после смерти parent
+не наблюдаются (pending=-1, WorkersCompleted=false).
+В D/R consumer both-generators имеет10generated sources, microsoft-only4;
+проверены compiler/analyzer paths/SHA, bundled Cobalt buildTransitive layout,
+явный Enerit analyzer, metadata/runtime closure и отсутствие analyzer/Roslyn/native
+graphics DLL в runtime output. Negative build без Enerit generator ожидаемо дал
+exit1/CS0234. Автоматический binlog добавлен всем restore/build/publish/pack этого
+runner; contracts, source payload и сценарии не изменены.
+
+Descriptions обоих generator csproj и package guides Cobalt/Enerit.Generator
+исправлены с требования SDK10 на SDK11; TFM берётся из прежнего `$(TF)`.
+Из1769исходных code/build/script hashes изменились ровно6файлов:3test/probe C#,
+2generator csproj только Description и этот PowerShell runner только binlog hook.
+Runtime/generator/adapter production C# и shared SDK/dependency profile сохранены.
+
+### Команды и финальная сборка
+
+Из `src`, для каждого из четырёх проектов выше и каждой Debug/Release:
+
+```powershell
+dotnet test <project>/<project>.csproj --configuration <Debug|Release> --logger 'trx;LogFileName=tests.trx' --results-directory <run>/<project>-<configuration> --verbosity minimal '-bl:<run>/<project>-<configuration>/msbuild-{}.binlog'
+pwsh -NoProfile -File ManualTests/UnitsPackageConsumer/RunPackageSmoke.ps1 -RunDirectory <units-run>
+dotnet build TrueMoon.slnx -c Debug --verbosity minimal '-bl:<run>/final-Debug-{}.binlog'
+dotnet build TrueMoon.slnx -c Release --verbosity minimal '-bl:<run>/final-Release-{}.binlog'
+```
+
+Full suites и финальный solution build выполнялись с обычным restore/build,
+без `--no-build`/`--no-restore` и без test-only DirectoryPackagesPropsPath overrides.
+Последние incremental solution builds: **Debug0errors/510warnings,
+Release0errors/1414warnings**. Counts зависят от recompiled projects; это не
+доказательство уменьшения warnings backlog. Массового suppression нет.
+
+Raw artifacts: ignored `TestResults/CORE82-20261111-152049/` (первоначальный
+`test-results.json`, full runtime reruns в `runtime-final/`, TRX/logs/binlogs,
+host-versions/source-before/docs-before/final-build-results/verification JSON),
+и `TestResults/UnitsPackages/core82-20261111-153406/` (summary/commands/generated
+hashes/local feed). Хранение локальное, вне Git; гарантированный срок retention
+не задан. Дата, inputs, команды, outcomes и ограничения сохранены здесь независимо
+от доступности raw artifacts.
+
+Во время финальной сверки прежний `C:\Program Files\PowerShell\7\pwsh.exe`
+стал недоступен. Final solution builds и документирование выполнены через
+Windows PowerShell5.1; OS/shell не переустанавливались. Ранее завершённые package
+checks через PowerShell7 этим не повторяются и не теряют собственной даты/scope.
+
+### Границы и продолжение
+
+Проверены четыре suites, не все11test projects. .NET11 source/package compiler
+load и фактическое generated execution прошли; production APIs/wire/ownership
+не переработаны. Нет нового benchmark/other OS/RID/AOT/native/GPU proof и публикации
+во внешний feed. Предыдущая CORE8.1 configuration collection имеет собственный
+scope и не включена в132IPCcases. Следующий этап — CORE8.3 Aether frozen game
+SDK/manifest/cache/ordinary nested restore; CORE8.4/5 full regression/release открыты.
+
+<a id="core-status-before-core82-2026-11-11"></a>
+## Core STATUS до CORE8.2 — архив 2026-11-11
+
+# Core: состояние и точка продолжения
+
+**2026-11-11 — CORE8.1 завершён в build-input/profile scope.**
+[Этапы CORE8](PLAN.md#core8-dotnet11), [команды, результаты и ограничения](HISTORY.md#core81-profiles-2026-11-11).
+Общий профиль SDK/TFM применяется в projects и active runners; C# sources и версии
+пакетов сохранены. Это готовность инфраструктуры сборки, не всего выпуска.
+
+| Проверка | Текущий результат |
+| --- | --- |
+| Framework/CPM | 61 проекта net11.0; 53 root CPM, 8 независимых package consumers без CPM |
+| Scripts | 45 active runners на общем MSBuild profile; 68 scripts parse errors 0 |
+| External restore | NU1008 воспроизведён и устранён; обычные restore/build SDK11 и SDK10 вне checkout прошли с исходным DirectoryPackagesPropsPath |
+| Cobalt package consumer | По 11 checks в Debug/Release, bundled analyzer/generation и отрицательные CS1591 controls прошли |
+| Configuration delivery | 16 fresh packages; 15 source/published/fresh profiles, по 230 checks и 4 owned children на вид поставки; оба DI, stop/reap |
+| Ordinary solution build | Debug 0 errors / 1556 warnings; Release 0 errors / 1219 warnings, с restore |
+
+`ManualTests/BuildProfile.ps1` получает выбранные SDK/TF/TestsTF/Version/LangVersion/
+Features через MSBuild, сохраняет input SHA/binlog и экспортирует независимый
+snapshot. Root CPM ограничен своим каталогом, явный opt-in сохраняется; obsolete
+dotnet-xunit удалён без смены xUnit/VSTest. Package-only Aether consumers изолированы.
+
+Native/UI/performance runners здесь не прошли полную execution acceptance.
+Полные test suites/discovery не запускались; managed child proof не включает
+renderer или game. SDK10-only frozen game selector остаётся CORE8.3 blocker.
+После его исправления отдельно проверить lock/manifest/compiler/load/cleanup.
+Исторические diagnostics/drain и physical/release gates сохраняют свои границы.
+[Предыдущий STATUS](HISTORY.md#core-status-before-core81-profiles-2026-11-11).
+
+## Следующий конкретный шаг
+
+**CORE8.2:** полные Cobalt/Enerit generator suites и Cobalt runtime/adapter в D/R,
+проверка Roslyn/compiler host и независимых generated DI/IPC consumers. Далее
+CORE8.3 frozen game profile, CORE8.4 full runtime regression и CORE8.5 итоговая
+source/publish/package/native acceptance и документация.
+
+<a id="core81-profiles-2026-11-11"></a>
+## CORE8.1: профили скриптов, CPM и независимая поставка — 2026-11-11
+
+Завершена общая инфраструктура сборки CORE8.1 в managed scope. SDK и TFM взяты
+из начатых пользователем настроек: SDK 11.0.100, net11.0, версия 0.3.0.1-alpha,
+runtime-async=on. Предыдущий срез [TF/TestsTF](#core81-tfm-2026-11-11) сохранён.
+C# runtime/generator sources, public APIs и SDK pin в этом продолжении не менялись.
+
+### Изменения
+
+- `ManualTests/BuildProfile.ps1` получает TF, TestsTF, выбранный SDK, Version,
+  LangVersion и Features через обычную MSBuild evaluation. Профиль сохраняется
+  вместе с binlog и SHA исходных props/global.json/helper. Ошибки evaluation
+  наблюдаемы; скрытого fallback на прежний SDK нет.
+- 45 активных PowerShell runners используют общий профиль вместо `net10.0` и
+  `10.0.100`. Пути source test harnesses учитывают TestsTF, runtime/package
+  consumers — TF. В 18 runners адресно уточнены 23 source output expressions.
+  Параметры с путями по умолчанию вычисляются после чтения профиля. Обе csproj
+  templates используют `$(TF)`. Исторический header Summarize.ps1, описывающий
+  прежние performance samples, оставлен net10.0; старые результаты не переименованы.
+- Копированные consumer props получают явные TF/TestsTF и SDK pin. Для новых
+  независимых проектов writer создаёт минимальные props со снимком compiler
+  settings и отключённым CPM. Package metadata репозитория не наследуется.
+  Основной ConfigurationDelivery runner использует этот writer и записывает
+  полный BuildProfile в verification manifest.
+- Корневой Directory.Packages.props включает CPM по умолчанию только для своих
+  descendants. Сравнение учитывает полный prefix с separator и Windows casing;
+  явный ManagePackageVersionsCentrally сохраняется. При намеренном внешнем
+  использовании root CPM его можно явно включить. Неиспользуемый
+  DotNetCliToolReference dotnet-xunit 2.3.1 удалён; xUnit 2/VSTest packages сохранены.
+- AetherPackageConsumer/Consumer получил собственный Directory.Packages.props:
+  его три проекта с явными package versions больше не наследуют root CPM.
+  Остальные package consumers сохраняют прежнюю изоляцию.
+
+Распределение по всем 61 проектам после изменений: net11.0 у каждого,
+53 workspace projects используют root CPM, у восьми package-only consumers
+CPM отключён (семь false, один unset/default false). Это evaluation, а не
+61 independent package build. PackageVersion entries и их версии сохранены.
+
+### Воспроизведение и исправление restore
+
+Два выделенных проекта созданы вне checkout, с обычными global.json/NuGet.Config.
+В окружение передан исходный DirectoryPackagesPropsPath, указывающий на root file.
+Никакая временная копия props и никакой test-only version override не применялись.
+
+| Сценарий | До | После |
+| --- | --- | --- |
+| SDK 11.0.100, net11.0, явная версия Microsoft.Extensions.DependencyInjection 11.0.0 | Restore exit 1, NU1008: унаследованный CPM конфликтует с Version | Обычные restore и build exit 0 |
+| SDK 10.0.404, пустая net10.0 library | Restore exit 0 | Обычные restore и build exit 0 |
+
+SDK10 case — контроль отсутствия регрессии и границы импорта, а не поддержка
+net10 consumers нового фреймворка. Ошибка старого dotnet-xunit в этом запуске
+не воспроизвелась; его удаление не выдается за устранение наблюдавшегося tool failure.
+Подтверждённый и устранённый отказ здесь — NU1008 внешнего проекта.
+
+Команды: dotnet restore/build <external-project> --verbosity minimal
+-bl:<case>-{}.binlog. Проекты работают с выбранным SDK через их global.json,
+source package cache и пустой список feed; framework references уже установлены.
+
+### Реальные проверки на .NET 11
+
+| Проверка | Точный результат |
+| --- | --- |
+| PowerShell syntax | 68 scripts разобраны, parse errors 0; 45 runners переведены на профиль |
+| Reflection runner с default path | Загрузил SkiaSharp 4.155.0.0 из bin/Debug/net11.0; renderer/GPU не создавались |
+| CobaltGeneratorConsumer/Run.ps1 | Два свежих локальных пакета, consumer Debug/Release: по 11 checks, 9 generated sources, bundled analyzer SHA; отрицательный CS1591 control в каждой конфигурации прошёл |
+| ConfigurationDelivery | 16 пакетов версии 0.3.0.1-alpha.core81.20261111145823; 5 consumers × source/published/fresh = 15 profiles |
+| Checks/lifecycle | По 230 checks и 4 owned children на каждый вид поставки, всего 690 checks/12 children; Cobalt и Microsoft DI, bootstrap/identity, graceful stop/reap |
+| Fresh graph/assets | Независимые caches/local feed, 0 ProjectReference в fresh graphs; runtime/analyzer/buildTransitive/native payload hashes проверены |
+| Final ordinary solution Debug | Exit 0, 0 errors / 1556 warnings, restore включён |
+| Final ordinary solution Release | Exit 0, 0 errors / 1219 warnings, restore включён |
+
+Команды: ./ManualTests/CobaltGeneratorConsumer/Run.ps1 и
+./ManualTests/ConfigurationDelivery/Verify.ps1 -EvidenceDirectory <run>/ConfigurationDelivery.
+Последний сам создаёт отдельный run вне checkout; не публикует пакеты наружу,
+не использует live feeds для consumers, не запускает окно или renderer.
+Финальные команды: dotnet build TrueMoon.slnx -c Debug|Release --verbosity minimal
+-bl:<case>-{}.binlog. Это ordinary incremental builds; разное число warnings
+не объявляется их исправлением или новым nonincremental baseline.
+
+Все исходные пользовательские изменения сохранены. C# SHA drift 0; package
+versions, source version и global.json не менялись. Выполнение SDK11 configuration
+delivery не подтверждает все unit/integration suites. Остальные native/UI/
+performance runners получили новые inputs и прошли syntax review; их полная
+execution acceptance остаётся CORE8.4/5. Benchmark jobs/measurements не менялись.
+
+### Границы этапа и продолжение
+
+CORE8.1 завершён в build-input/profile scope. Реальная внутренняя сборка repository
+game всё ещё отклоняется SDK10-only selector из CORE8.0: это CORE8.3. После него
+нужна интеграционная проверка frozen snapshots/lock/manifest/compiler и actual game
+load/stop. Отдельный restore repro здесь не подменяет эту проверку. Старые post-reap
+drain/diagnostics причины, physical/K7/device-loss/VRAM/VM и wider release gates
+сохранены. Следующий этап — CORE8.2: полные Cobalt/Enerit generator suites и
+runtime/adapter compatibility на новом SDK; package smoke этого не заменяет.
+
+Артефакты: ignored TestResults/CORE81-Profiles-20261111-144035: source-before/diff,
+before/after restore logs и binlogs, runner-migration/test-framework-paths JSON,
+final-evaluations (61 projects), final-build-results, ConfigurationDelivery/
+verification.json, delivery-summary и итоговый verification.json. Cobalt evidence:
+TestResults/CobaltGeneratorFixes/packages-20261111-095720884. Configuration delivery
+scratch: %TEMP%/TrueMoon-ConfigurationDelivery-b80263dde11a46359d28e440b33d345c.
+Raw files сохраняются до очистки соответствующих TestResults/temp; команды, inputs,
+outcomes и границы остаются в этой versioned записи независимо от retention.
+
+Основание стандартного CPM/import поведения: [NuGet CPM](https://learn.microsoft.com/nuget/consume-packages/central-package-management),
+[MSBuild property functions](https://learn.microsoft.com/visualstudio/msbuild/property-functions).
+
+<a id="core-status-before-core81-profiles-2026-11-11"></a>
+## Core STATUS до завершения CORE8.1 — архив 2026-11-11
+
+# Core: состояние и точка продолжения
+
+**2026-11-11 — CORE8.1 частично: TF/TestsTF согласованы во всех61проектах.**
+[План CORE8](PLAN.md#core8-dotnet11), [изменения/команды/результаты](HISTORY.md#core81-tfm-2026-11-11).
+11csproj и6props изменены; C# source, package versions и SDK pin сохранены.
+
+## Текущие проверки на .NET11
+
+| Область | Фактический результат |
+| --- | --- |
+| Central TFM | Все61checked-in csproj используют $(TF)/$(TestsTF) либо shared inheritance;61/61effective target=net11.0 |
+| Independent consumers |5local props импортируют только TF/TestsTF;8alias/isolation controls прошли |
+| Ordinary solution build | Debug0errors/1556warnings; Release0errors/1556warnings, с restore |
+| Extra source consumers |6проектов×D/R: все exit0;5проектов0warnings, GuiConsumer1warning/profile |
+| Прежний NU1201 |4manual TFM mismatches устранены ordinary D/R build, без props override |
+| Test execution | Полные suites/discovery не запускались; compilation не является behavioral proof |
+
+Root values TF/TestsTF остаются в Directory.Build.props; metadata/features/package
+defaults не переносятся в isolated consumers. Для standalone copy явно передать
+выбранные TF/TestsTF либо записать их в consumer-local props.8package-only projects
+проверены evaluation, fresh package build/graphs остаются отдельным delivery gate.
+[Предыдущий STATUS](HISTORY.md#core-status-before-core81-tfm-2026-11-11).
+
+## Оставшиеся блокеры и следующий шаг
+
+Довести CORE8.1: актуальные package profiles/output paths и ordinary nested inputs.
+SDK10-only Aether selector не менялся; подтверждённый в CORE8.0 отказ остаётся
+CORE8.3. После него отдельно проверить snapshot/lock/manifest/compiler policies.
+Root legacy dotnet-xunit сохраняется; current root restore проходит, historical
+nested issue не объявлен исправленным. CORE8.2 generators и CORE8.4/5 full runtime
+async regression/packages/publish/native acceptance остаются открыты.
+
+CORE7/CORE6, feature очереди и physical/reliability/release gates сохраняют прежний
+scope. Прежние net10 tests не считаются текущими net11 результатами.
+
+<a id="core81-tfm-2026-11-11"></a>
+## CORE8.1: общие TF/TestsTF во всех checked-in проектах — 2026-11-11
+
+По запросу пользователя все61tracked csproj проверены на использование параметров
+из Directory.Build.props. В11manual/consumer csproj net10.0 заменён на $(TF) либо
+$(TestsTF); ещё3Aether package projects наследуют TargetFramework=$(TF) из общего
+consumer props. Unit test projects уже использовали $(TestsTF). Runtime/libraries,
+Examples/Benchmarks и независимые package app consumers используют $(TF);
+manual test harnesses — $(TestsTF), как существующие ManualTests probes.
+
+TF/TestsTF по-прежнему определены только в корневом Directory.Build.props и имеют
+текущие значения net11.0/net11.0. Они выделены в отдельный ранний PropertyGroup.
+Остальные root properties/items выполняются при _TrueMoonFrameworksOnly != true.
+Пять вложенных consumer Directory.Build.props явно импортируют родительский root
+в этом внутреннем режиме, когда TF/TestsTF отсутствуют, затем очищают служебные
+properties. Так получают только framework values, сохраняя прежнюю границу
+metadata/features/package settings. CPM определяется прежними Directory.Packages.props;
+изменения package versions/SDK pin/runtime code не выполнялись.
+
+При вынесении consumer из checkout выбранные TF/TestsTF передаются явно через
+его собственный Directory.Build.props либо global -p:TF=... и -p:TestsTF=...;
+ссылки на repo-only contracts/metadata/native assets для выбора TFM не нужны.
+Копированные проекты не должны получать пустой TargetFramework или молча выбирать
+старый SDK. Versioned source/template csproj теперь используют общий параметр;
+отдельные generated runtime/test fixtures, compiler lock/manifest и исторические
+net10 literals не заменялись массово: это CORE8.3 и дальнейшие delivery runners.
+
+### Фактическая проверка
+
+Windows x64, SDK11.0.100/runtime11.0.0, Version0.3.0.1-alpha, root runtime-async=on;
+task-local CLI/HTTP cache, штатный существующий NuGet package cache. Каждая MSBuild
+команда имеет отдельный binlog, команды/console/exit сохранены. Никаких temporary
+props overrides, --no-restore или подавления warnings в build не использовалось.
+
+| Scope | Результат |
+| --- | --- |
+| XML audit всех61csproj плюс local props | Нет literal TargetFramework/TargetFrameworks в checked-in csproj; все — $(TF), $(TestsTF) либо shared $(TF) inheritance |
+| MSBuild evaluation всех61projects |61/61exit0; каждый TargetFramework/TF/TestsTF=net11.0 |
+| Alias controls,3cases | TF и TestsTF задавались разными global значениями; runtime, unit test и manual harness выбрали ожидаемый параметр |
+| Independent copy controls,5cases | Реальные consumer csproj/props скопированы под isolation barrier; explicit TF/TestsTF работают, root Version/Features и sentinel parent metadata не наследуются |
+| dotnet build TrueMoon.slnx -c Debug/Release | Каждый exit0,0errors/1556warnings, ordinary restore включён |
+| AetherCameraContractProbe D/R | Каждый exit0,0errors/0warnings |
+| AetherSourceWatchPerformance D/R | Каждый exit0,0errors/0warnings |
+| AlloyFactoryConsumer D/R | Каждый exit0,0errors/0warnings |
+| CoreHeadlessProbe D/R | Каждый exit0,0errors/0warnings |
+| RichTextEditorTest D/R | Каждый exit0,0errors/0warnings |
+| AetherPackageConsumer/Gui D/R | Каждый exit0,0errors/1warning |
+
+Итого14build commands (solution×2 и6extra source projects×2), все exit0.
+Прежние4manual NU1201 из CORE8.0 устранены полным ordinary restore/build в D/R.
+ProcessOutputProbe дополнительно не повторялся: он уже входит в solution graph
+через ProjectReference.61project evaluation не является61independent package build:
+8package-only consumer projects требуют выбранной package version/feed и полного
+delivery profile; fresh package acceptance здесь не выполнялась.
+
+Изменено17build/source inputs:11csproj и6props (root плюс5local consumer props).
+Ни один .cs, Directory.Packages.props или global.json не менялся; пользовательские
+version/dependencies/SDK/runtime-async edits сохранены. Полные unit/integration suites,
+native/GPU/publish/performance acceptance не запускались. Aether SDK major10-only
+selector остаётся прежним блокером CORE8.3; этот срез не объявляет game build готовым.
+
+В первых preflight commands исправлены ошибка shell quoting {} в -bl и некорректное
+условие Import с вложенными кавычками; повторные валидные evaluations и все builds
+прошли. Эти промежуточные CLI/import failures не относятся к итоговому baseline.
+
+Артефакты: ignored TestResults/CORE81-TFM-20261111-142405, source-before.json,
+changed-inputs.json, projects/evaluations/profile-checks JSON,14build result/console/
+arguments и уникальные binlogs, verification.json. Raw files сохраняются до очистки
+TestResults; эта versioned запись сохраняет команды/scope/outcomes независимо от них.
+MSBuild evaluation: dotnet msbuild <project> -nologo
+-getProperty:TargetFramework,TF,TestsTF,... -bl:<case>-{}.binlog.
+Build: dotnet build <solution-or-project> --configuration Debug|Release
+--verbosity minimal -bl:<case>/msbuild-{}.binlog.
+
+CORE8.1 выполнен **частично**: TFM parameterization и подтверждённые manual
+mismatches закрыты. Остались active package profiles/output-path scripts и ordinary
+generated-game restore inputs; генераторы/frozen SDK/manifest и итоговая delivery
+проверяются по CORE8.2–5. [Общий план CORE8](PLAN.md#core8-dotnet11).
+
+<a id="core-status-before-core81-tfm-2026-11-11"></a>
+## Core STATUS до TFM-среза CORE8.1 — архив2026-11-11
+
+# Core: состояние и точка продолжения
+
+**2026-11-11 — CORE8.0 завершён: получен baseline SDK11 и воспроизведены blockers.**
+[План CORE8](PLAN.md#core8-dotnet11), [команды/профиль/диагностика](HISTORY.md#core80-baseline-2026-11-11).
+Исправления SDK/TFM/runtime code в этом этапе не выполнялись;1767source/build inputs
+совпадают с исходным снимком. Пользовательские правки и локальная заявка сохранены.
+
+## Текущие проверки на .NET11
+
+| Область | Фактический результат |
+| --- | --- |
+| Профиль | Windows x64, SDK11.0.100/runtime11.0.0, net11.0, Version0.3.0.1-alpha, LangVersion=latest, runtime-async=on |
+| Ordinary solution restore | exit0; штатный существующий NuGet cache, без props override |
+| Ordinary solution build | Debug0errors/1556warnings; Release0errors/1556warnings; оба с restore |
+| Effective projects |61/61evaluation exit0:47net11.0,14net10.0;46solution roots плюс referenced ProcessOutputProbe;14legacy targets вне solution |
+|11test projects | Собраны D/R, DLL существуют; full discovery/полные suites не запускались |
+| Manual restore/build |4outside-solution projects: NU1201 net10 consumer→net11 producer; camera build воспроизводит тот же restore failure |
+| Async control | Camera restore с global Features=runtime-async=off даёт тот же NU1201; default on сохранён |
+| Repository game build | Один existing Aether test:1executed/1failed, Unsupported frozen SDK selection policy в SelectSdk line548, до inner restore |
+| Binlogs | Уникальные raw logs; errors/warnings replay подтвердил root0errors и одинаковый NU1201 on/off |
+
+## Подтверждённые блокеры и оставшиеся проверки
+
+CORE8.1: согласовать active/manual TFM и scripts/consumer profiles. CORE8.3:
+SDK10-only Aether selector отвергает текущий global.json; затем отдельно проверить
+старые snapshot/manifest/lock/compiler inputs. Root legacy dotnet-xunit сохраняется,
+но в текущем root restore failure не возник. Historical nested-restore issue не
+закрыт; сейчас actual game не доходит до этого шага. Новых generator loader ошибок
+не наблюдалось при compilation, исполнение и package proof ещё требуются.
+
+Runtime async on только скомпилирован; full lifecycle/configuration/IPC/Nom/runtime
+regression — CORE8.4. Root warnings не подавлялись. Package/publish/native/GPU и
+physical/release gates не повторялись. CORE7 остаётся завершённым на предыдущем
+net10 профиле: [guide](CONFIGURATION_GUIDE.md), [proof](HISTORY.md#core76-2026-11-10).
+[Предыдущий STATUS](HISTORY.md#core-status-before-core80-2026-11-11).
+
+## Следующий конкретный шаг
+
+**CORE8.1:** исправить подтверждённый TFM mismatch актуальных manual consumers,
+согласовать старые package profiles и стандартные restore inputs. Затем CORE8.2/3
+generators/frozen game build, CORE8.4 full D/R regression и CORE8.5 delivery.
+CORE6 и feature/release очереди сохраняются отдельно.
+
+<a id="core80-baseline-2026-11-11"></a>
+## CORE8.0: restore/build baseline на .NET 11 — 2026-11-11
+
+Диагностический этап завершён; исправления CORE8.1–5 ещё не начаты.
+HEAD2553f87d248cf748c858988e0ed38343290eda8c/main, текущая пользовательская
+working copy сохранена. Семь пользовательских SDK/TFM/dependency файлов не правились;
+Features теперь композиционно задан как $(Features);runtime-async=on — эта правка
+пользователя уже присутствовала при старте. Непринятая game-surface заявка и .codex
+сохранены. SHA1767tracked .cs/.csproj/.props/.targets/.json/.slnx/.ps1: drift0.
+
+### Профиль и охват
+
+Windows10.0.26340/win-x64, SDK11.0.100, MSBuild18.12.2-1.26529.118,
+Microsoft.NETCore.App11.0.0. global.json11.0.100/allowPrerelease=false/
+rollForward=latestMinor, Version0.3.0.1-alpha, LangVersion=latest.
+Исходные46solution projects плюс ProcessOutputProbe через ProjectReference дают
+47проектов net11.0. Все61tracked csproj прошли MSBuild evaluation exit0:
+47net11.0 и14net10.0. Все14net10 вне solution;11задают TFM явно и ещё3наследуют
+ManualTests/AetherPackageConsumer/Consumer/Directory.Build.props.
+11test projects собраны в D/R, выходные DLL проверены; full tests/discovery всех
+cases не выполнялись. Root compiler logs подтверждают Features=;runtime-async=on
+в Csc; это проверка компиляции, не общей behavioral совместимости runtime async.
+
+NuGet.Config: только https://api.nuget.org/v3/index.json с mapping '*'.
+Использован существующий штатный C:/Users/MEGA6/.nuget/packages; fresh-cache
+acceptance этим не заявлена. DOTNET_CLI_HOME=<run>/cli-home,
+NUGET_HTTP_CACHE_PATH=<run>/http-cache, first-use/telemetry/tool-path отключены
+через task-local env. Restore/build запускались с разрешённым доступом к сети,
+штатному package cache и обычному temp; ошибок сети/доступа в валидных прогонах нет.
+Root props, dependencies, SDK/TFM/Features для ordinary commands не подменялись.
+
+### Фактические команды и результаты
+
+Каждая реальная команда ниже получила уникальный -bl:<case>/msbuild-{}.binlog и
+-flp:logfile=<case>/diagnostic.log;verbosity=diagnostic; console output сохранён.
+Ни один failed restore не скрывался --no-restore в build командах.
+
+| Команда/scope | Результат |
+| --- | --- |
+| dotnet restore TrueMoon.slnx --verbosity minimal | exit0,5.45s, ordinary restore успешен |
+| dotnet build TrueMoon.slnx -c Debug --verbosity minimal | exit0,19.74s,0errors/1556warnings, restore включён |
+| dotnet build TrueMoon.slnx -c Release --verbosity minimal | exit0,14.85s,0errors/1556warnings, restore включён |
+| dotnet restore ManualTests/AetherCameraContractProbe/AetherCameraContractProbe.csproj | exit1, NU1201: net10.0 consumer → TrueMoon.Aether net11.0 |
+| dotnet restore ManualTests/CoreHeadlessProbe/CoreHeadlessProbe.csproj | exit1, NU1201: net10.0 → TrueMoon/TrueMoon.Extensions.DependencyInjection net11.0 |
+| dotnet restore ManualTests/AetherSourceWatchPerformance/AetherSourceWatchPerformance.csproj | exit1, NU1201: net10.0 → TrueMoon/TrueMoon.Aether.Editor net11.0 |
+| dotnet restore ManualTests/RichTextEditorTest/RichTextEditorTest.csproj | exit1, NU1201: net10.0 → TrueMoon/TrueMoon.Alloy.Hosting net11.0 |
+| dotnet build ManualTests/AetherCameraContractProbe/AetherCameraContractProbe.csproj -c Debug | exit1, тот же NU1201 на restore, C# compile не начинался |
+| dotnet restore ManualTests/AetherCameraContractProbe/AetherCameraContractProbe.csproj -p:Features=runtime-async=off | exit1, тот же NU1201; bounded off-control отделяет TFM mismatch от async codegen |
+
+Последняя команда задаёт Features как global MSBuild property; исходный default
+on не менялся. Root off build не выполнялся: root on build уже успешен, а текущий
+manual blocker находится до compiler. Runtime behavioral сравнение — CORE8.4.
+
+Для actual repository-game build выполнен один существующий xUnit2/VSTest test:
+
+```text
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj --no-build --no-restore -c Debug
+  --filter FullyQualifiedName=TrueMoon.Aether.Tests.Builds.GameBuildPreparationTests.RepositoryGameProject_FreezesAncestorPropsAndContractReferences
+  --logger "trx;LogFileName=game-build-repro.trx" --results-directory <case> --diag <case>/vstest.log
+  -bl:<case>/msbuild-{}.binlog
+```
+
+Exit1, ровно1executed/1failed/0passed/0notExecuted, duration2.10s runner.
+Original exception: System.NotSupportedException: Unsupported frozen SDK selection
+policy. Stack: GameBuildPreparation.SelectSdk line548, preparation ctor/capture,
+GameBuildCompiler.PrepareAsync/RunAsync, test line726. Условие minimum.Major != 10
+отвергает repo global.json11.0.100 **до запуска внутреннего restore/compiler**.
+Таким образом несовместимость Aether profile с SDK11 подтверждена исполнением;
+это не наблюдавшаяся ошибка NuGet или compiler host loader. Fixtures/assertions
+и production code не менялись. Новые вопросы cleanup/process acceptance здесь не
+закрывались; прочие Aether/full-module tests не запускались.
+
+### Разбор binlogs, предупреждения и границы вывода
+
+Binlog MCP tools отсутствуют. Через documented dotnet msbuild <binlog> -noconlog
+с errorsonly/warningsonly file loggers воспроизведены Debug и два camera on/off
+restore binlogs. Replay exit0 — лишь чтение записанных событий, не новый build и
+не успешный restore. Debug replay:0errors/1556warning events; camera on/off дают
+одинаковый NU1201. Original logs/binlogs сохранены; бинарный файл как текст не читался.
+
+Наиболее частые Debug warning locations: CS1591=1306, CS8669=59, CS8602=49,
+CS8603=44, CS8618=27; полный список кодов в debug-warning-codes.json. Есть RS1041
+и другие analyzer/nullability/xUnit warnings; они не объявлены исправленными или
+новыми регрессиями SDK11 без same-input comparison. Root build не warning-clean.
+
+Первый вспомогательный batch evaluation получил61MSB1008 из-за ошибочного
+формирования массива аргументов -bl в диагностическом PowerShell runner.
+Binlogs тогда не созданы, compile/restore не запускались. Это ошибка инструмента
+сессии, не61ошибка проектов: исправлен только ignored runner, повтор61/61exit0.
+Итоговый инвентарь использует project-evaluations-corrected/summary.json.
+
+Новые root restore/build failures **не воспроизвелись**. Подтверждены две группы:
+manual consumers TFM mismatch (CORE8.1) и Aether SDK10-only selector (CORE8.3).
+Root dotnet-xunit2.3.1 остаётся, но в current SDK11 root restore не упал.
+Его historical nested-restore issue не доказано исправленным и не назначено
+причиной текущего game failure, который возник раньше restore. Остальные старые
+snapshot/manifest/lock/package policies найдены чтением; следующие failures после
+исправления selector нужно воспроизводить отдельно, не выдумывать заранее.
+
+Следующий шаг — CORE8.1: привести актуальные workspace/manual consumers к net11,
+согласовать active versus compatibility package profiles и ordinary nested inputs.
+Затем CORE8.2 generator execution/package proof и CORE8.3 frozen game profile.
+Полная runtime async regression11suites D/R, package/native/GPU/publish acceptance
+остаются CORE8.4/5. Новых release/performance/physical proofs нет.
+
+Raw artifacts: ignored TestResults/CORE80-20261111-140556. inventory.json,
+source-before.json, working-before.diff, dotnet-info.txt, исходные SDK/props/config,
+command.json/result.json/console.log/diagnostic.log и уникальные binlogs каждого
+case;61corrected evaluation binlogs/JSON, command-summary.json, TRX/VSTest logs,
+binlog-replay/, test-build-inventory.json, итоговый verification.json. Длинные
+diagnostic logs занимают около1.2GiB; сохраняются локально до очистки TestResults,
+в Git не включаются. Основные scope/commands/outcomes сохранены здесь независимо
+от retention ignored files. Исходная сверка — [planning record](#core8-planning-2026-11-11).
+
+<a id="core-status-before-core80-2026-11-11"></a>
+## Core STATUS до CORE8.0 — архив2026-11-11
+
+# Core: состояние и точка продолжения
+
+**2026-11-11 — запланирован CORE8: восстановление solution на .NET11.**
+[Единственный план и критерии](PLAN.md#core8-dotnet11),
+[исходная сверка/команды](HISTORY.md#core8-planning-2026-11-11).
+Реализация миграции в этой сессии не начата; семь пользовательских файлов сохранены.
+
+## Текущая сверка
+
+| Область | Факт на новых inputs |
+| --- | --- |
+| SDK/runtime | Установлены11.0.100/11.0.0; global.json выбирает11.0.100 |
+| Пользовательский профиль | TF/TestsTF=net11.0, Version=0.3.0.1-alpha, LangVersion=latest, runtime-async=on; DI11.0.0/Test.Sdk18.11.1 |
+| MSBuild evaluation | App, Cobalt.Generator и Core tests: exit0, ожидаемые SDK/TFM/Features; это не compile |
+| Инвентарь |46solution projects,61tracked csproj,11test projects;11manual/consumer csproj и отдельный consumer props ещё net10.0 |
+| Расхождения | Aether frozen compiler/SDK selector/manifest/lock policy закреплены на10; manual/package runners содержат старые SDK/TFM/output paths |
+| Restore/build/test | На net11 ещё не запускались; работоспособность solution не подтверждена |
+
+## Предыдущий проверенный профиль
+
+CORE7.0–7.6 завершены в configuration scope на net10.0/SDK10:
+[guide](CONFIGURATION_GUIDE.md), [keys](CONFIGURATION_KEYS.md),
+[точные результаты и ограничения](HISTORY.md#core76-2026-11-10).
+Предыдущие solution D/R0errors,7suites6945/6945 D/R и16package App/child proof
+не распространяются на SDK11, новые зависимости и runtime async.
+[Предыдущий STATUS целиком](HISTORY.md#status-before-core8-2026-11-11).
+
+## Блокеры и ограничения
+
+Первый воспроизведённый compile/runtime blocker ещё не получен. Static mismatches
+выделены отдельно от доказанных failures. Общий obsolete dotnet-xunit и наследование
+CPM inputs во вложенные fixtures требуют ordinary restore проверки; прежний test-only
+props override не является исправлением. Сначала CLI evaluation упёрлась в запрет
+записи first-use sentinel вне workspace; повтор с isolated DOTNET_CLI_HOME прошёл.
+Это ограничение среды агента, не ошибка кода TrueMoon.
+
+Новые native/GPU/physical/release результаты не получены. Старые diagnostics/drain
+причины, K7/device loss/VRAM и Nom VM/power-loss scope сохраняются.
+
+## Следующий конкретный шаг
+
+**CORE8.0:** получить ordinary restore/build baseline с binlogs на текущем
+runtime-async=on, согласовать точный support profile и классифицировать failures.
+Затем CORE8.1/2 общая сборка/generators,8.3 Aether build,8.4 regression,8.5 delivery.
+CORE6 и дальнейшее расширение configuration остаются самостоятельными задачами.
+
+<a id="core8-planning-2026-11-11"></a>
+## CORE8: план перехода на .NET 11, исходная сверка — 2026-11-11
+
+Запрос пользователя — запланировать восстановление solution после частичного
+обновления SDK. HEAD2553f87d248cf748c858988e0ed38343290eda8c/main.
+Изменены пользователем7файлов: global.json, Directory.Build.props,
+Directory.Packages.props, Benchmarks/TrueMoon.Cobalt.Benchmarks и
+Benchmarks/TrueMoon.Enerit.Benchmarks csproj, Examples/AetherEditor и
+Examples/AetherRuntimeHost csproj. Новая непринятая engine заявка остаётся локально,
+Claim/Decision не менялись. В этом planning turn source/props/packages не правились.
+
+Фактическое чтение: git status/diff, общие и Core PLAN/STATUS, PLANNING и requests
+rules; git ls-files/XML inventory всех csproj/solution; поиск старого TFM/SDK
+в tracked .cs/.ps1/.props/.targets/.csproj/.json. Найдены46solution projects,
+61tracked csproj,11test projects.11manual/consumer csproj явно net10.0 плюс
+ManualTests/AetherPackageConsumer/Consumer/Directory.Build.props; всего79files
+с net10.0/NET10/10.0.100. Это список классификации, не79runtime defects.
+
+dotnet --version =11.0.100; --list-sdks/--list-runtimes подтвердили установленный
+SDK11.0.100 и Microsoft.NETCore.App11.0.0 рядом с прежними SDK/runtime.
+global.json:11.0.100/allowPrerelease=false/rollForward=latestMinor.
+Пользовательский root profile: TF/TestsTF net11.0, Version0.3.0.1-alpha,
+LangVersion latest, Features runtime-async=on, DI11.0.0/Test.Sdk18.11.1;
+Roslyn5.9.0 и xunit2.9.3/runner4.0.1 пока без изменений.
+
+Выполнено только evaluation, для TrueMoon/TrueMoon.csproj,
+TrueMoon.Cobalt.Generator/TrueMoon.Cobalt.Generator.csproj и
+TrueMoon.Tests/TrueMoon.Tests.csproj:
+
+```text
+dotnet msbuild <project> -nologo -getProperty:TargetFramework,LangVersion,Features,Version,NETCoreSdkVersion
+```
+
+Каждый exit0, SDK11.0.100/net11.0/latest/runtime-async=on/0.3.0.1-alpha.
+Первый запуск CLI без isolated home завершился UnauthorizedAccessException на
+C:/Users/MEGA6/.dotnet/11.0.100.toolpath.sentinel: sandbox не разрешает эту запись.
+Повтор с DOTNET_CLI_HOME=<run>/cli-home, DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1,
+DOTNET_CLI_TELEMETRY_OPTOUT=1, DOTNET_NOLOGO=1 и
+DOTNET_ADD_GLOBAL_TOOLS_TO_PATH=0 прошёл без расширения разрешений.
+Это environmental first-use issue, не compile failure проекта.
+
+Исходное чтение нашло SDK major10 в GameBuildPreparation.SelectSdk; net10.0 в
+restore/build args, GameBuildInputSnapshot, GameBuildPackages lock target/lib
+allowlist и GameBuildArtifact manifest; wrappers/fixtures/output paths также10.
+Root DotNetCliToolReference dotnet-xunit2.3.1 сохраняется. Прежний CORE7.6 Aether
+passing требовал bounded test-only props clone, поэтому ordinary nested restore
+требуется проверить и исправить штатно. Новые restore/build/test/native/pack/publish
+в этой сессии **не запускались**, первый причинный baseline остаётся CORE8.0.
+
+Внесён [единственный подробный план CORE8.0–8.5](PLAN.md#core8-dotnet11):
+baseline→common restore/build→generators→frozen Aether game profile→runtime async
+и11suites D/R→source/published/fresh package delivery и docs. Runtime async on
+сохранён как целевой input, off только diagnostic control. Старые artifacts требуют
+явной invalidation/rebuild policy, а поддержка net10 consumers не обещана.
+Общий roadmap/STATUS теперь ставят рабочий SDK11 baseline перед продолжением
+feature очереди; реализация CORE7, engine/Nom и прежние release gates сохранены.
+
+Внешняя сверка11ноября: [SDK/runtime release](https://dotnet.microsoft.com/en-us/download/dotnet/11.0),
+[breaking changes](https://learn.microsoft.com/dotnet/core/compatibility/11),
+[runtime/async](https://learn.microsoft.com/dotnet/core/whats-new/dotnet-11/runtime).
+Runtime page помечен RC2-oriented; он задаёт checklist, не доказательство поведения
+установленного SDK и не основание объявлять build green.
+
+Raw artifacts: ignored TestResults/DotNet11Planning-20261111-032635,
+inventory.json/user-changes.json/evaluations.json и property logs; сохранены до
+очистки TestResults. Versioned запись здесь сохраняет scope/commands/outcome без
+зависимости от наличия ignored artifacts. SHA семи пользовательских файлов
+сверяется после документационных правок; локальные source/.codex сохраняются.
+
+<a id="status-before-core8-2026-11-11"></a>
+## Core STATUS перед планированием CORE8 — архив2026-11-11
+
+# Core: состояние и точка продолжения
+
+**2026-11-11 — CORE7.0–7.6 завершены в configuration scope.**
+[Рабочий guide](CONFIGURATION_GUIDE.md), [139keys/17schemas](CONFIGURATION_KEYS.md),
+[единый runner](../../ManualTests/ConfigurationDelivery/README.md),
+[команды/результаты/границы](HISTORY.md#core76-2026-11-10).
+
+## Реализация и проверки
+
+| Область | Текущий запуск CORE7.6 |
+| --- | --- |
+| Solution | Debug0errors/256warnings, Release0errors/190warnings, --no-restore |
+|7full suites | Core661, Mithril155, Enerit354, Nom874, Hosting171, Editor1496, Aether3234 каждый D/R |
+| Test total |6945/6945 каждый D/R, Failed:0, Skipped:0; не все test projects solution |
+| Delivery |16packages version0.2.5.2-core76.20261110234501;5programs×source/published/fresh;230checks/profile |
+| Owned children |4/profile,12total; Cobalt/MS DI, actual bootstrap/identity/control, graceful stop/reap; без renderer/game/native runtime |
+| Metadata/catalog |16projects/16archives verified; public metadata17schemas/139keys; shared/module README/license/icon/analyzers/native payload hashes |
+| API/examples |8managed surfaces added0/removed0;4API doc blocks compiled, guide example executed во всех3forms |
+| Preservation |1673/1673baseline C#/csproj сохранены; runtime API/dependencies/TF/source version0.2.5.2-alpha не менялись |
+
+Reader/profile/options, atomic reload/notifications/explicit writer, Core/Mithril
+и модульные adapters готовы по guide. Старые callbacks и protected launch contracts
+сохранены. [Предыдущий STATUS целиком](HISTORY.md#status-before-core76-2026-11-10).
+
+## Ограничения
+
+Aether full passing получен последовательно с documented test-only props copy:
+obsolete dotnet-xunit CLI reference исключён, CPM ограничен workspace descendants.
+Root props не менялся, ordinary nested restore без override не объявлен исправленным.
+Старые diagnostics timeout причины не закрываются этим passing run.
+
+Стандартные module fields StartupOnly. Configuration proof не включает новый
+native/GPU/hardware/device-loss/VM/release acceptance. Полные generator/UI suites
+не повторялись. Межпроцессная запись, power-loss durability, other OS/RID/AOT
+и hard termination произвольного callback/driver не обещаны.
+
+## Следующий конкретный шаг
+
+Применять общий слой при целевых изменениях consumers; новые providers/options/
+lifecycle возможности согласовывать отдельными задачами. Самостоятельные CORE6
+routing/metrics/quota, Mithril MIT6, engine f.4 и wider release очередь сохранены.
+
 <a id="core76-2026-11-10"></a>
 ## CORE7.6: документация, поставка и App/child consumers — 2026-11-10 UTC / итог11ноября по Екатеринбургу
 

@@ -3,6 +3,10 @@ param(
     [string] $OutputDirectory,
     [string] $ValidationLayerPath
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $output = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else {
@@ -44,7 +48,7 @@ function Invoke-Probe([string] $configuration, [string] $assembly) {
 Push-Location $workspace
 try {
     Invoke-Build 'build-debug' @('build', $project, '--configuration', 'Debug', '--verbosity', 'quiet')
-    Invoke-Probe 'Debug' (Join-Path $PSScriptRoot 'bin/Debug/net10.0/AlloyVulkanTest.dll')
+    Invoke-Probe 'Debug' (Join-Path $PSScriptRoot "bin/Debug/$($trueMoonBuildProfile.Framework)/AlloyVulkanTest.dll")
     $publish = Join-Path $output 'publish'
     Invoke-Build 'publish-release' @('publish', $project, '--configuration', 'Release', '--output', $publish, '--verbosity', 'quiet')
     Invoke-Probe 'Release' (Join-Path $publish 'AlloyVulkanTest.dll')

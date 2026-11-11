@@ -1,6 +1,12 @@
 # TrueMoon.Mithril
 
-Alpha .NET10 App-local units and owned process lifecycle. Configure through
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
+Alpha .NET11 App-local units and owned process lifecycle. Configure through
 TrueMoon App/AddUnit. The package depends on Contracts/Core/TrueMoon for the shared
 bootstrap parser, schemas and configuration profile; it does not depend
 on Enerit or UI. Add Enerit and its generator explicitly when typed IPC is needed.
@@ -31,7 +37,7 @@ specified executable. Borrowed attach is not provided. Only owned processes are
 stopped; other applications are not located or killed by executable name.
 
 App lifecycle starts Immediate units; Delayed/None use explicit Spawn. The verified
-scope is App lifetime, bounded Windows x64/net10.0 owned child handling. The child
+scope is App lifetime, bounded Windows x64/net11.0 owned child handling. The child
 uses an asynchronous per-launch control pipe and observes its parent. Stop requests
 graceful exit, then kill/reap of the owned tree if its deadline expires.
 

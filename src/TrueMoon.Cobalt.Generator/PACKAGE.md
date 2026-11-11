@@ -1,7 +1,7 @@
 # TrueMoon.Cobalt.Generator: internal build component
 
-C# source generator for Cobalt service registrations. Requires the .NET 10 SDK
-compiler; the analyzer itself targets net10.0. Other compiler hosts/SDK versions
+C# source generator for Cobalt service registrations. Requires the .NET 11 SDK
+compiler; the analyzer itself targets net11.0. Other compiler hosts/SDK versions
 have not been verified.
 
 This source project is built separately and is not packable. Its DLL is bundled

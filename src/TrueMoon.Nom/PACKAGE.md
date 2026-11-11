@@ -1,6 +1,12 @@
 # TrueMoon.Nom
 
-Standalone asset storage for .NET 10. Transactional Key-Value metadata, streamed
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
+Standalone asset storage for .NET 11. Transactional Key-Value metadata, streamed
 immutable content-addressed resources, exact dependency queries, frozen snapshots,
 durable pins, explicit checkpoint/GC and verified directory backup/restore.
 The package depends only on **TrueMoon.Contracts**. It has no Aether, UI, GPU,
@@ -22,7 +28,7 @@ preserved; runtime CLR type names are not part of the Nom storage encoding.
 
 ## Connect to an application
 
-Reference `TrueMoon.Nom` and `TrueMoon` at the same package version. Use the .NET 10
+Reference `TrueMoon.Nom` and `TrueMoon` at the same package version. Use the .NET 11
 SDK, including the compiler required by Cobalt's bundled generator.
 
 ```csharp
@@ -196,8 +202,8 @@ explicit offline converter; backup/restore does not silently upgrade them.
 
 ## Limits and platform scope
 
-The verified delivery scope is local Windows x64 with .NET 10, using portable and
-`win-x64` framework-dependent consumers. The package is managed `net10.0`/AnyCPU;
+The current managed delivery profile is local Windows x64 with .NET 11, using portable and
+`win-x64` framework-dependent consumers. The package is managed `net11.0`/AnyCPU;
 other OS/architectures and self-contained/AOT/trimming modes require separate acceptance.
 No native payload is shipped. Network/multi-process writers and hostile/reparse
 filesystems are outside the storage profile.

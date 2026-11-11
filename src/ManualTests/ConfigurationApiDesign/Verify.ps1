@@ -1,6 +1,10 @@
 # Type-checks the proposed declarations and three consumers; never executes them.
 [CmdletBinding()]
 param([string]$OutputDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 
 $ErrorActionPreference = 'Stop'
 $repoPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -46,7 +50,7 @@ foreach ($name in @('Directory.Build.props', 'Directory.Build.targets', 'Directo
 }
 $libraries = [ordered]@{}
 foreach ($directory in @('TrueMoon.Aether.Editor', 'TrueMoon', 'TrueMoon.Cobalt', 'TrueMoon.Extensions.DependencyInjection')) {
-    $binaryPath = Join-Path $repoPath "$directory/bin/Debug/net10.0"
+    $binaryPath = Join-Path $repoPath "$directory/bin/Debug/$($trueMoonBuildProfile.Framework)"
     if (-not (Test-Path -LiteralPath $binaryPath -PathType Container)) { throw "Missing local assemblies: $binaryPath" }
     foreach ($file in Get-ChildItem -LiteralPath $binaryPath -Filter '*.dll') { $libraries[$file.BaseName] = $file.FullName }
 }
@@ -54,10 +58,9 @@ $referenceXml = ($libraries.GetEnumerator() | ForEach-Object {
     '<Reference Include="' + [Security.SecurityElement]::Escape($_.Key) + '"><HintPath>' +
     [Security.SecurityElement]::Escape($_.Value) + '</HintPath><Private>false</Private></Reference>'
 }) -join "`n"
-$project = @'
-<Project Sdk="Microsoft.NET.Sdk">
+$project = "<Project Sdk=`"Microsoft.NET.Sdk`">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework>
     <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion><IsPackable>false</IsPackable>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
@@ -65,11 +68,10 @@ $project = @'
     <GenerateDocumentationFile>false</GenerateDocumentationFile><NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="declarations.cs;headless.cs;mithril.cs;editor.cs" />
+    <Compile Include=`"declarations.cs;headless.cs;mithril.cs;editor.cs`" />
 __REFERENCES__
   </ItemGroup>
-</Project>
-'@
+</Project>"
 $projectPath = Join-Path $outputPath 'ConfigurationApi.csproj'
 [IO.File]::WriteAllText($projectPath, $project.Replace('__REFERENCES__', $referenceXml), $utf8)
 $configPath = Join-Path $outputPath 'NuGet.Config'

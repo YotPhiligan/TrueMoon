@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param([string]$RunDirectory)
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $allowed = [IO.Path]::GetFullPath((Join-Path $workspace 'TestResults/CoreHeadless')) + [IO.Path]::DirectorySeparatorChar
@@ -54,7 +58,7 @@ try {
         Invoke-Child "build-$configuration" 'dotnet' @('build',$project,'-c',$configuration,'--verbosity','quiet')
         $publish = Join-Path $run "publish/$configuration"
         Invoke-Child "publish-$configuration" 'dotnet' @('publish',$project,'-c',$configuration,'--no-restore','--self-contained','false','--output',$publish,'--verbosity','quiet')
-        foreach ($delivery in @(@{ Name = 'build'; Path = (Join-Path $PSScriptRoot "bin/$configuration/net10.0") }, @{ Name = 'publish'; Path = $publish })) {
+        foreach ($delivery in @(@{ Name = 'build'; Path = (Join-Path $PSScriptRoot "bin/$configuration/$($trueMoonBuildProfile.TestFramework)") }, @{ Name = 'publish'; Path = $publish })) {
             foreach ($provider in @('cobalt','microsoft')) {
                 foreach ($scenario in @('normal','cancel','start-failure','stop-failure','build-failure','config-failure','cleanup-failure')) {
                     if ($scenario -eq 'cleanup-failure' -and $provider -ne 'cobalt') { continue }

@@ -6,6 +6,10 @@ param(
     [ValidateRange(1, 30)][int]$WarmupSeconds = 2,
     [ValidateRange(1, 30)][int]$MeasurementSeconds = 5
 )
+. (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference = 'Stop'
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $resultsRoot = Join-Path $workspace 'TestResults/ViewportBaseline'
@@ -70,7 +74,7 @@ try {
     foreach ($configuration in $Configurations) {
         if ($configuration -eq 'Debug') {
             Invoke-Owned 'build-Debug' 'dotnet' @('build',(Join-Path $PSScriptRoot 'EngineSessionProbe.csproj'),'--configuration','Debug','--verbosity','quiet') 240
-            $binaryDirectory = Join-Path $PSScriptRoot 'bin/Debug/net10.0'
+            $binaryDirectory = Join-Path $PSScriptRoot "bin/Debug/$($trueMoonBuildProfile.TestFramework)"
         }
         else {
             $binaryDirectory = Join-Path $run 'publish'

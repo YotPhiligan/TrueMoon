@@ -240,7 +240,9 @@ namespace EneritPipesProbe
                 outgoing = traces.Stopped.Single();
                 Check(outgoing.Kind == ActivityKind.Client && outgoing.TraceId == parent.TraceId && outgoing.ParentSpanId == parent.SpanId, "Process client parent/kind mismatch.");
                 Check(remote.Length == 9 && remote[0] == outgoing.TraceId.ToHexString() && remote[2] == outgoing.SpanId.ToHexString(), "Remote server trace parent mismatch.");
-                Check(remote[3] == "Server" && remote[4] == "True" && remote[5] == ((int)outgoing.ActivityTraceFlags).ToString(), "Remote server kind/remote/flags mismatch.");
+                var propagatedFlags = outgoing.ActivityTraceFlags & ActivityTraceFlags.Recorded;
+                Check(remote[3] == "Server" && remote[4] == "True" && remote[5] == ((int)propagatedFlags).ToString(),
+                    $"Remote server kind/remote/flags mismatch: kind={remote[3]}, remote={remote[4]}, serverFlags={remote[5]}, clientFlags={(int)outgoing.ActivityTraceFlags}.");
                 Check(remote[6] == process.Id.ToString() && remote[7] == "-" && remote[8] == "0", "Trace carried private state or wrong process.");
             }
             Check(telemetry.Read().ActiveOperations == 0 && !telemetry.Read().Closed, "Client retained scope or disposed borrowed owner.");
@@ -254,7 +256,9 @@ namespace EneritPipesProbe
                 TraceEvidence = new { ParentTraceId = parentContext.TraceId.ToHexString(), ParentSpanId = parentContext.SpanId.ToHexString(),
                     ClientTraceId = outgoing.TraceId.ToHexString(), ClientSpanId = outgoing.SpanId.ToHexString(), ClientParentSpanId = outgoing.ParentSpanId.ToHexString(),
                     ServerTraceId = remote[0], ServerSpanId = remote[1], ServerParentSpanId = remote[2], ServerKind = remote[3], RemoteParent = remote[4],
-                    ServerFlags = int.Parse(remote[5]), ClientFlags = (int)outgoing.ActivityTraceFlags, ServerPid = int.Parse(remote[6]), TraceState = remote[7], BaggageCount = int.Parse(remote[8]) } };
+                    ServerFlags = int.Parse(remote[5]), ClientFlags = (int)outgoing.ActivityTraceFlags,
+                    PropagatedFlags = (int)(outgoing.ActivityTraceFlags & ActivityTraceFlags.Recorded),
+                    ServerPid = int.Parse(remote[6]), TraceState = remote[7], BaggageCount = int.Parse(remote[8]) } };
         }
 
         private static Payload CreatePayload(int id) => new()

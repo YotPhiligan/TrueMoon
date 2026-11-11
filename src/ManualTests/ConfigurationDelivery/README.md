@@ -1,9 +1,19 @@
-# Configuration delivery acceptance — CORE7.6
+# Configuration delivery acceptance — CORE7.6 / CORE8
 
 From `src`, run `./ManualTests/ConfigurationDelivery/Verify.ps1` after building the
 checkout in Debug and Release. Optional `-EvidenceDirectory` and `-RunDirectory`
 must point to fresh directories; run files belong outside the checkout. The
 runner does not build repository dependencies or use live package feeds.
+
+`ManualTests/BuildProfile.ps1` evaluates the checkout's SDK, `TF`/`TestsTF`, package
+version, language version and compiler features through MSBuild. Each independent
+consumer receives a self-contained snapshot of that profile, an exact SDK pin,
+and explicit CPM isolation. Optional `-PackageVersion` selects a unique prerelease derived from the current
+framework version. Profile inputs and their hashes are included in the report.
+
+The current profile uses SDK 11.0.100, net11.0 and runtime-async=on. It verifies configuration and child
+bootstrap/lifecycle; it does not compile or activate a game, create a renderer,
+or replace the separate full test/native acceptance stages.
 
 One unique local version is packed for16TrueMoon packages. Exact existing external
 nupkg are copied from restored assets into the local feed. Each consumer has its
@@ -50,3 +60,10 @@ assemblies and does not execute them. Test suite runs and solution builds are
 separate evidence; avoid any concurrent SDK captures during full Aether suites.
 The legacy CLI-tool restore caveat, bounded test props override and current full
 suite outcomes are recorded in `docs/core/HISTORY.md`, independently of this runner.
+
+CORE8.5 combines this manifest with independent game and native viewport
+consumers in `ManualTests/FrameworkDelivery/Verify.ps1`. The shared version/feed
+is reused without repacking. Earlier CORE7 restore caveats are historical:
+CORE8.1/3 removed the legacy CLI-tool/CPM/SDK-selector blockers, and CORE8.4
+ran all 11 suites with ordinary restore/build and no test-only props override.
+Fresh delivery and final runtime results have their own dated Core HISTORY entry.

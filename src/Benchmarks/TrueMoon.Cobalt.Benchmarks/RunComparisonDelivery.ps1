@@ -1,6 +1,10 @@
 #requires -Version 7.0
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$PackageRunDirectory)
+. (Join-Path $PSScriptRoot '../../ManualTests/BuildProfile.ps1')
+$trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..')))
+
+
 $ErrorActionPreference='Stop'
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $packageRun=[IO.Path]::GetFullPath($PackageRunDirectory)
@@ -48,7 +52,7 @@ try {
         }
         $enable=if ($mode -eq 'generated') {'true'} else {'false'}
         @"
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><EnableCobaltGenerator>$enable</EnableCobaltGenerator><EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon" Version="$version"/><PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="$version"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><EnableCobaltGenerator>$enable</EnableCobaltGenerator><EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon" Version="$version"/><PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="$version"/></ItemGroup></Project>
 "@ | Set-Content (Join-Path $directory 'Consumer.csproj') -Encoding utf8
         @'
 using System.Text.Json;
@@ -61,15 +65,15 @@ return 0;
         [void](DotNet "restore-$mode" @('restore',$project,'--packages',$cache,'--configfile',(Join-Path $run 'NuGet.Config'),'-v','quiet'))
         foreach ($configuration in @('Debug','Release')) {
             [void](DotNet "build-$mode-$configuration" @('build',$project,'-c',$configuration,'--no-restore','-v','quiet'))
-            $analyzers=@(Get-Content (Join-Path $directory "obj/$configuration/net10.0/analyzers.txt") | Where-Object { [IO.Path]::GetFileName($_) -eq 'TrueMoon.Cobalt.Generator.dll' })
+            $analyzers=@(Get-Content (Join-Path $directory "obj/$configuration/$($trueMoonBuildProfile.Framework)/analyzers.txt") | Where-Object { [IO.Path]::GetFileName($_) -eq 'TrueMoon.Cobalt.Generator.dll' })
             if ($analyzers.Count -ne $(if ($mode -eq 'generated') {1} else {0})) {throw 'Unexpected analyzer delivery.'}
             if ($analyzers.Count -and ((Get-FileHash $analyzers[0]).Hash -ne $base.GeneratorSha256 -or !$analyzers[0].StartsWith($cache,[StringComparison]::OrdinalIgnoreCase))) {throw 'Analyzer must match fresh cached package.'}
-            $generated=@(Get-ChildItem (Join-Path $directory "obj/$configuration/net10.0") -Recurse -Filter '*CobaltResolversRegistration.g.cs')
+            $generated=@(Get-ChildItem (Join-Path $directory "obj/$configuration/$($trueMoonBuildProfile.Framework)") -Recurse -Filter '*CobaltResolversRegistration.g.cs')
             if (($mode -eq 'generated' -and $generated.Count -ne 1) -or ($mode -ne 'generated' -and $generated.Count)) {throw 'Generated module initializer mismatch.'}
             $summary.Generation+=@{Mode=$mode;Configuration=$configuration;Analyzers=$analyzers;GeneratedModules=$generated.Count}
             $publish=Join-Path $directory "publish/$configuration"
             [void](DotNet "publish-$mode-$configuration" @('publish',$project,'-c',$configuration,'--no-restore','--output',$publish,'--self-contained','false','-v','quiet'))
-            foreach ($delivery in @(@{Name='build';Path=Join-Path $directory "bin/$configuration/net10.0"},@{Name='publish';Path=$publish})) {
+            foreach ($delivery in @(@{Name='build';Path=Join-Path $directory "bin/$configuration/$($trueMoonBuildProfile.Framework)"},@{Name='publish';Path=$publish})) {
                 if (@(Get-ChildItem $delivery.Path -File | Where-Object Name -match '^(TrueMoon.Cobalt.Generator|Microsoft.CodeAnalysis|BenchmarkDotNet)').Count) {throw 'Build/benchmark DLL leaked into runtime output.'}
                 $providers=if ($mode -eq 'generated') {@('cobalt','microsoft')} else {@('microsoft')}
                 foreach ($provider in $providers) {

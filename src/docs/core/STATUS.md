@@ -1,41 +1,23 @@
 # Core: состояние и точка продолжения
 
-**2026-11-11 — CORE7.0–7.6 завершены в configuration scope.**
-[Рабочий guide](CONFIGURATION_GUIDE.md), [139keys/17schemas](CONFIGURATION_KEYS.md),
-[единый runner](../../ManualTests/ConfigurationDelivery/README.md),
-[команды/результаты/границы](HISTORY.md#core76-2026-11-10).
+**2026-11-11 — CORE8.5 и миграция CORE8 завершены в согласованном профиле.**
+[План](PLAN.md#core8-dotnet11), [поставка, команды и ограничения](HISTORY.md#core85-delivery-2026-11-11),
+[руководство перехода](DOTNET11_MIGRATION.md), [manifest пакетов и SHA](CORE8_DELIVERY.json).
 
-## Реализация и проверки
+- SDK 11.0.100 / net11.0 / runtime-async=on; runtime/API/dependencies в CORE8.5 не менялись.
+- 16 свежих локальных TrueMoon packages одной версии: 0.3.0.1-alpha.core85.20261111221352.
+  Runtime/analyzer/buildTransitive/native payloads и dependency versions проверены.
+- App/configuration: 15 source/published/fresh profiles, 690 checks / 12 children, оба DI.
+- Source/published examples: 4 cases; package game: 8 cases на обоих DI; fresh native viewport: 2 profiles.
+- Все 11 suites повторно прошли D/R: **Passed 8567, Failed 0, Skipped 0 на конфигурацию**.
+- Обычные solution builds D/R прошли; исторический warning backlog не закрывался.
 
-| Область | Текущий запуск CORE7.6 |
-| --- | --- |
-| Solution | Debug0errors/256warnings, Release0errors/190warnings, --no-restore |
-|7full suites | Core661, Mithril155, Enerit354, Nom874, Hosting171, Editor1496, Aether3234 каждый D/R |
-| Test total |6945/6945 каждый D/R, Failed:0, Skipped:0; не все test projects solution |
-| Delivery |16packages version0.2.5.2-core76.20261110234501;5programs×source/published/fresh;230checks/profile |
-| Owned children |4/profile,12total; Cobalt/MS DI, actual bootstrap/identity/control, graceful stop/reap; без renderer/game/native runtime |
-| Metadata/catalog |16projects/16archives verified; public metadata17schemas/139keys; shared/module README/license/icon/analyzers/native payload hashes |
-| API/examples |8managed surfaces added0/removed0;4API doc blocks compiled, guide example executed во всех3forms |
-| Preservation |1673/1673baseline C#/csproj сохранены; runtime API/dependencies/TF/source version0.2.5.2-alpha не менялись |
-
-Reader/profile/options, atomic reload/notifications/explicit writer, Core/Mithril
-и модульные adapters готовы по guide. Старые callbacks и protected launch contracts
-сохранены. [Предыдущий STATUS целиком](HISTORY.md#status-before-core76-2026-11-10).
-
-## Ограничения
-
-Aether full passing получен последовательно с documented test-only props copy:
-obsolete dotnet-xunit CLI reference исключён, CPM ограничен workspace descendants.
-Root props не менялся, ordinary nested restore без override не объявлен исправленным.
-Старые diagnostics timeout причины не закрываются этим passing run.
-
-Стандартные module fields StartupOnly. Configuration proof не включает новый
-native/GPU/hardware/device-loss/VM/release acceptance. Полные generator/UI suites
-не повторялись. Межпроцессная запись, power-loss durability, other OS/RID/AOT
-и hard termination произвольного callback/driver не обещаны.
+Root README, AGENTS, package instructions и независимые runners используют текущий
+профиль. Remote publication не выполнялась. [Предыдущий STATUS](HISTORY.md#core-status-before-core85-2026-11-11).
 
 ## Следующий конкретный шаг
 
-Применять общий слой при целевых изменениях consumers; новые providers/options/
-lifecycle возможности согласовывать отдельными задачами. Самостоятельные CORE6
-routing/metrics/quota, Mithril MIT6, engine f.4 и wider release очередь сохранены.
+Сквозная .NET 11 миграция завершена. Следующая функциональная очередь —
+[ARCH1f.4](../engine/PLAN.md#arch1f-rendering); Core/diagnostics follow-up остаётся
+у своего владельца. Physical/release/performance и прежние reliability причины
+не закрываются package acceptance.

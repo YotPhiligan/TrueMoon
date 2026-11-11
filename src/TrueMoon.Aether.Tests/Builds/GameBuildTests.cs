@@ -70,6 +70,8 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
     [InlineData("path")]
     [InlineData("framework")]
     [InlineData("duplicate")]
+    [InlineData("legacy-target")]
+    [InlineData("future-target")]
     public void RehashedManifest_StillValidatesSchemaContractAndDependencyPolicy(string invalid)
     {
         var artifact = fixture.CopyA(); var manifestPath = Path.Combine(artifact.DirectoryPath, GameBuildArtifact.ManifestFile);
@@ -81,11 +83,18 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
             case "path": json["Files"]![0]!["Name"] = "../Game.Candidate.dll"; break;
             case "framework": json["Files"]![0]!["Name"] = "System.Runtime.dll"; break;
             case "duplicate": json["Files"]![1]!["Name"] = "game.candidate.DLL"; break;
+            case "legacy-target": json["TargetFramework"] = "net10.0"; break;
+            case "future-target": json["TargetFramework"] = "net12.0"; break;
         }
         var bytes = System.Text.Encoding.UTF8.GetBytes(json.ToJsonString()); File.WriteAllBytes(manifestPath, bytes);
         var id = Convert.ToHexString(SHA256.HashData(bytes)); var renamed = Path.Combine(Path.GetDirectoryName(artifact.DirectoryPath)!, id);
         Directory.Move(artifact.DirectoryPath, renamed);
-        Assert.Throws<InvalidDataException>(() => GameBuildArtifact.Open(renamed, GameBuildFixture.Hash, id));
+        var error = Assert.Throws<InvalidDataException>(() => GameBuildArtifact.Open(renamed, GameBuildFixture.Hash, id));
+        if (invalid is "legacy-target" or "future-target")
+        {
+            Assert.Contains("net11.0", error.Message);
+            Assert.Contains("Rebuild", error.Message);
+        }
     }
     [Fact]
     public void MissingPrivateDependency_IsRejectedBeforeAnyGameLoad()

@@ -21,20 +21,20 @@ UI is optional: bootstrap, DI, IPC and units do not depend on the graphics modul
 
 ## Build from source
 
-Projects target `net10.0`. SDK selection is defined in [global.json](src/global.json): stable .NET SDK `10.0.100` with `latestMinor` roll-forward. The latest recorded checks used SDK `10.0.403` on Windows. Package versions are centralized in [Directory.Packages.props](src/Directory.Packages.props).
+Projects target `net11.0` through shared `TF` / `TestsTF` properties. [global.json](src/global.json) selects stable .NET SDK `11.0.100` with `latestMinor` roll-forward; the compiler uses `LangVersion=latest` and `runtime-async=on`. Package versions are centralized in [Directory.Packages.props](src/Directory.Packages.props). Use matching versions of all TrueMoon packages. See the [.NET 11 migration guide](src/docs/core/DOTNET11_MIGRATION.md) for frozen game artifacts, independent consumers and the supported Windows x64 profile.
 
 Run the following from the repository root:
 
 ```powershell
 cd src
-dotnet restore TrueMoon.slnx
-dotnet build TrueMoon.slnx --configuration Debug --no-restore
+dotnet restore TrueMoon.slnx '-bl:restore-{}.binlog'
+dotnet build TrueMoon.slnx --configuration Debug --no-restore '-bl:build-Debug-{}.binlog'
 ```
 
 Core/runtime component checks use xUnit with VSTest. From `src`, after the Debug build:
 
 ```powershell
-dotnet test TrueMoon.slnx --configuration Debug --no-build --no-restore
+dotnet test TrueMoon.slnx --configuration Debug --no-build --no-restore --settings ManualTests/FrameworkDelivery/serial.runsettings '-bl:test-Debug-{}.binlog'
 ```
 
 Read results per test project. Current test counts, dated commands and limitations are recorded in [STATUS](src/docs/STATUS.md) and module HISTORY files. Native/GPU probes and full release readiness are separate from configuration/package acceptance.
@@ -43,7 +43,7 @@ The bundled native UI path currently supports **Windows x64**. OpenGL/Vulkan exa
 
 ## Minimal application
 
-Reference `TrueMoon` and `TrueMoon.Extensions.DependencyInjection` for this example. Within the source checkout, use ProjectReference to those projects. The independent [headless package consumer](src/ManualTests/CorePackageConsumer/README.md) verifies both providers, lifecycle faults and analyzer delivery in Debug/Release build/publish on Windows x64/net10.0. The `TrueMoon.Cobalt` package bundles its matching source generator, including transitive delivery through `TrueMoon`; no separate generator package reference is needed. Source ProjectReference consumers retain an analyzer ProjectReference. Microsoft DI consumers can opt out with `EnableCobaltGenerator=false`.
+Reference `TrueMoon` and `TrueMoon.Extensions.DependencyInjection` for this example. Within the source checkout, use ProjectReference to those projects. The independent [headless package consumer](src/ManualTests/CorePackageConsumer/README.md) documents both providers, lifecycle faults and analyzer delivery; dated runs are recorded in Core HISTORY. The current [framework delivery runner](src/ManualTests/FrameworkDelivery/README.md) verifies the agreed .NET 11 package profile. The `TrueMoon.Cobalt` package bundles its matching source generator, including transitive delivery through `TrueMoon`; no separate generator package reference is needed. Source ProjectReference consumers retain an analyzer ProjectReference. Microsoft DI consumers can opt out with `EnableCobaltGenerator=false`.
 
 ```csharp
 using TrueMoon;

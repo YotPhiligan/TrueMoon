@@ -1,5 +1,11 @@
 # TrueMoon.Argentis
 
+Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
+SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
+Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
+performance and release gates require separate evidence. Dated net10 results
+below remain historical and do not define the current package target.
+
 Themes and new controls use `FontDefaults.Family` (`Segoe UI Variable Text`) at
 weight400. `FontDefaults.FallbackFamily` is `Segoe UI`; rendering providers resolve
 availability. `FontWeight(600)` selects semibold, and `FontItalic` requests italic
@@ -47,7 +53,7 @@ Modified/BorderHover. Replacing a palette or style preserves existing editor sta
 
 
 Backend-independent retained UI controls, property bindings, layout and input
-contracts for TrueMoon Alloy. Requires .NET 10. Alpha API.
+contracts for TrueMoon Alloy. Requires .NET 11. Alpha API.
 
 ```xml
 <PackageReference Include="TrueMoon.Argentis" Version="YOUR_VERSION" />

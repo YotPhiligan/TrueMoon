@@ -175,6 +175,11 @@ invalid payload length и truncated header закрывают connection до ha
 Version проверяется сразу после byte21. Trace context не заменяет session identity,
 authorization, method code или domain validation. Tracestate и baggage не передаются.
 
+Сверка .NET 11 в CORE8.2: локальный ActivityTraceFlags может содержать дополнительные
+биты, например RandomTraceId. Header v1 по-прежнему переносит только Recorded;
+проверки сравнивают wire flags с этой маской, сохраняя исходные client flags
+в диагностическом evidence. Изменения версии header или разрешённых wire bits нет.
+
 ## Async flow, cancellation и late response
 
 Client context фиксируется на стороне caller до admission/write queue. Изменения

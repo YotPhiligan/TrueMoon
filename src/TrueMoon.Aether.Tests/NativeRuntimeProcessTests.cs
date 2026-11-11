@@ -45,7 +45,9 @@ public sealed class NativeRuntimeProcessTests
             Assert.Equal(0, result.GetProperty("Mappings").GetInt32());
             var leases = result.GetProperty("Leases").EnumerateArray().ToArray();
             Assert.Equal(scenario == "build-artifacts" ? 3 : 8, leases.Length);
-            Assert.Equal(leases.Length, leases.Select(lease => lease.GetProperty("ProcessId").GetInt32()).Distinct().Count());
+            var identities = leases.Select(lease => lease.GetProperty("Identity").Deserialize<TrueMoon.Aether.Sessions.SessionIdentity>()!).ToArray();
+            Assert.Equal(leases.Length, identities.Distinct().Count());
+            Assert.All(identities, identity => identity.Validate());
             Assert.All(leases, lease =>
             {
                 AssertReleased(lease);

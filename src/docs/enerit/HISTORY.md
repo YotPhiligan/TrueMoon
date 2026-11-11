@@ -1,5 +1,152 @@
 # Enerit: история работы и проверок
 
+<a id="core85-2026-11-11"></a>
+## CORE8.5: согласованная поставка — 2026-11-11
+
+Полные suites D/R: runtime 354, generator 114; Failed 0, Skipped 0.
+Свежий matching generator и actual generated IPC проверены у независимого game consumer на обоих DI. Same-build contracts сохранены. ENE6c, protocol expansion, MMF и performance остаются отдельными.
+Общая поставка содержит 16 packages одной версии 0.3.0.1-alpha.core85.20261111221352.
+Runtime/API/dependencies сохранены; изменения CORE8.5 относятся к runners/docs.
+[Подробные команды/матрица/границы](../core/HISTORY.md#core85-delivery-2026-11-11).
+
+<a id="enerit-status-before-core85-2026-11-11"></a>
+## STATUS до CORE8.5 — архив 2026-11-11
+
+# Enerit: состояние и точка продолжения
+
+**2026-11-11 — CORE8.4: полная регрессия на .NET 11 / runtime-async=on прошла.**
+Enerit runtime — 354 теста, generator — 114 в каждой конфигурации Debug/Release; **Failed 0, Skipped 0**.
+Выполнены явное обнаружение тестов и обычные restore/build без test-only overrides.
+Production runtime, API и зависимости в CORE8.4 не менялись. Исправление четырёх
+manual fixture templates и границы повторных проверок описаны в Core HISTORY.
+[Команды и результаты](../core/HISTORY.md#core84-runtime-2026-11-11), [план](../core/PLAN.md#core8-dotnet11).
+
+Проверены same-build pipes/generated mapping, владение сериализованными данными, admission/cancellation/drain и отдельный diagnostic lane. Remote handler cancellation, replay и schema negotiation не добавлены. ENE6c нужен при расширении протокола; CPU/allocations, MMF, другие OS/RID/AOT и длительные прогоны остаются отдельными задачами.
+
+Общая точка продолжения — **CORE8.5**: свежая согласованная поставка и итоговая документация.
+[Предыдущий STATUS целиком](HISTORY.md#enerit-status-before-core84-2026-11-11).
+
+<a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
+Прежние датированные разделы — в [архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+<a id="core84-2026-11-11"></a>
+## CORE8.4: регрессия .NET 11 / runtime-async — 2026-11-11
+
+Enerit runtime — 354 теста, generator — 114 в каждой конфигурации Debug/Release; Failed 0, Skipped 0.
+Тесты обнаружены явно; исполнение включает обычные restore/build без test-only overrides.
+Production runtime, API и зависимости не менялись; четыре manual fixture template
+получили явную ссылку на Contracts. Полные suites выполнены до этого исправления;
+после него повторены затронутые NativeRuntimeProcessTests (4/4 D/R) и 24 native сценария.
+
+Проверены same-build pipes/generated mapping, владение сериализованными данными, admission/cancellation/drain и отдельный diagnostic lane. Remote handler cancellation, replay и schema negotiation не добавлены. ENE6c нужен при расширении протокола; CPU/allocations, MMF, другие OS/RID/AOT и длительные прогоны остаются отдельными задачами.
+
+[Подробная запись с командами, матрицей и границами](../core/HISTORY.md#core84-runtime-2026-11-11).
+
+<a id="enerit-status-before-core84-2026-11-11"></a>
+## STATUS до CORE8.4 — архив 2026-11-11
+
+# Enerit: состояние и точка продолжения
+
+**2026-11-11 — CORE8.2: .NET11 generator/runtime/process проверки прошли.**
+SDK11.0.100/runtime11.0.0/net11.0/runtime-async=on; SDK Roslyn5.12 и pinned5.9.
+[План интеграции](../core/PLAN.md#core8-dotnet11), [команды/исправления/scope](../core/HISTORY.md#core82-generators-2026-11-11).
+
+| Проверка | Фактический результат |
+| --- | --- |
+| Runtime/process suite |354/354 каждый Debug/Release, failed/skipped0|
+| Generator suite |114/114 каждый Debug/Release, failed/skipped0|
+| Fresh package generated IPC |132actual process scenarios общей Cobalt/Enerit матрицы: оба DI, D/R build/publish и Microsoft без Cobalt analyzer;8packages, generation/closure, отрицательный CS0234|
+
+Первый runtime run353/354 выявил устаревшее сравнение trace flags. Probe и
+родительский тест теперь проверяют `ClientFlags & Recorded` против server flags,
+сохраняя raw/propagated evidence, Trace/Span identity, privacy и lifecycle guards.
+Локальный RandomTraceId bit .NET11 не меняет header v1. Production transport,
+generator sources, dependencies и wire version не менялись. Description и guide
+Enerit.Generator теперь указывают SDK11. [Trace guide](DIAGNOSTICS.md).
+
+Same-build invocation, serialization ownership, finite admission, bounded stop
+и отдельный child diagnostic lane сохранены. CORE7.6/CORE8.1 configuration proof
+и прежний ENE5 baseline имеют собственные даты/scope; здесь нет новых performance
+измерений. [Предыдущий STATUS целиком](HISTORY.md#enerit-status-before-core82-2026-11-11).
+
+## Ограничения и следующий конкретный шаг
+
+Общая миграция продолжится CORE8.3 frozen game profile, затем CORE8.4/5 full
+runtime/delivery. Локальный performance шаг — scalar c1/c8 allocation/CPU
+attribution; ENE6c negotiation/framing перед interoperable/versioned peers.
+Same-build method IDs/layouts, отсутствие remote handler cancel/replay и
+ignoring-token drain bounds сохраняются. Request-byte budget не равен heap budget.
+MMF/ENE3, long trends/other OS/RID/AOT/native и nullable-context warnings отдельно.
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
+Прежние датированные разделы — в [архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+<a id="core82-2026-11-11"></a>
+## CORE8.2: .NET11 generator/runtime/process — 2026-11-11
+
+Runtime354/354 и generator114/114 каждый Debug/Release, failed/skipped0.
+Первоначальный runtime353/354 D/R сохранён: .NET11 trace client flags3/server1,
+поскольку header v1 переносит только Recorded. Исправлены test/probe ожидания
+и добавлено raw/propagated/server evidence без смены wire/runtime или потери
+identity/privacy/stop/reap assertions. Guide документирует этот mask contract.
+SDK compiler Roslyn5.12/pinned5.9 совместимы в проверенном scope, dependency
+versions не менялись; SDK requirement generator metadata/guide исправлен до11.
+Fresh8package matrix прошла132actual generated DI/IPCscenarios (оба DI,
+D/R build/publish и Microsoft без Cobalt analyzer), negative no-Enerit analyzer
+ожидаемо CS0234. Новых benchmarks/other OS/native/release guarantees нет.
+[Единственная подробная запись, команды и raw retention](../core/HISTORY.md#core82-generators-2026-11-11).
+
+<a id="enerit-status-before-core82-2026-11-11"></a>
+## Enerit STATUS до CORE8.2 — архив 2026-11-11
+
+# Enerit: состояние и точка продолжения
+
+**2026-11-11 — CORE7.6: итоговая configuration/package сверка.**
+Runtime354/354 каждый D/R, Failed:0, Skipped:0 — CORE7.6. Предкоммитная
+сверка generator114/114 D/R прошла отдельно11ноября, failed/skipped0;
+[команды](HISTORY.md#precommit-2026-11-11).
+Единый16package source/published/fresh proof:230checks/profile всей collection,
+оба DI,4owned children/profile; native/GPU не активируются. Metadata/analyzer/
+payload closure проверен, runtime API и transport ownership не менялись.
+[Guide](../core/CONFIGURATION_GUIDE.md), [результаты/команды](HISTORY.md#core76-2026-11-10),
+[предыдущий STATUS](HISTORY.md#status-before-core76-2026-11-10).
+
+## Реализация и сохранённые проверки
+
+Same-build pipes/generated invocation, serialization ownership, finite admission,
+bounded waits/stop и первый ENE6d telemetry profile реализованы. Aether использует
+отдельный child diagnostic endpoint; control и logs не делят admission. Editor
+console/export уже имеют scoped consumers и не остаются новым prerequisite.
+
+Предшествующий runtime/generator run — **2026-10-27: Enerit343/generator114** каждый
+Debug/Release, failed/skipped0;3actual Preview children проверены отдельно у Aether.
+[ENE6d.4](HISTORY.md#ene6d4-отдельный-child-log-канал--2026-10-27).
+Предыдущий ENE5 closed-loop baseline126/generator114 относится к15октября:
+[BASELINE](BASELINE.md). Новые Editor runs его не повторяют.
+
+## Ограничения и сохранённые contracts
+
+Same-build method IDs/layouts без schema negotiation. Local cancellation не
+останавливает уже отправленный handler, replay нет; ignoring-token handler
+удерживает drain/Completion. Request-byte budget не равен heap/rental budget.
+MMF/ENE3, полноценный ENE6c, remote cancel, long trends/other OS/RID/AOT отдельно.
+Queue distribution и aggregate domain/frame metrics не следуют из текущих counters.
+Generated nullable-context warnings остаются quality backlog. Closed-loop baseline
+не является open-loop SLA или измерением native/retained памяти.
+
+## Следующий конкретный шаг
+
+Для performance — **scalar c1/c8 allocation/CPU attribution** на неизменном workload,
+затем выбирать изменения по evidence. Для новых interoperable/versioned peers —
+сначала ENE6c negotiation/framing contract; MMF не назначается автоматически.
+Queue distribution/aggregate metrics — по consumer. Существующий Editor продолжает
+использовать текущие bounded IPC contracts. Общий маршрут — [roadmap](../PLAN.md#current-roadmap).
+
+<!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
+<a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
+Прежние датированные разделы — в [полном архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
+
 <a id="precommit-2026-11-11"></a>
 ## Предкоммитная сверка Enerit generator — 2026-11-11
 

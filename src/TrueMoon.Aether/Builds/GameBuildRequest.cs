@@ -3,7 +3,7 @@ using TrueMoon.Aether.Sessions;
 namespace TrueMoon.Aether.Builds;
 
 /// <summary>Inputs for one explicit trusted-local game project build. Dependencies are flat managed DLL file names.</summary>
-/// <param name="ProjectPath">SDK-style net10.0 library consuming the AetherContractPath MSBuild property.</param>
+/// <param name="ProjectPath">SDK-style net11.0 library consuming the AetherContractPath MSBuild property.</param>
 /// <param name="EntryAssembly">Produced game DLL name.</param>
 /// <param name="EntryType">Public IGameSession implementation providing the IGameSessionEntry activation factory.</param>
 /// <param name="SourceRevision">Caller revision; build completion never changes the running session automatically.</param>
@@ -20,7 +20,7 @@ public sealed record GameBuildRequest(string ProjectPath, string EntryAssembly, 
     /// <remarks>Requires TrackInputs and CaptureCompilation. ProjectReference additionally requires CaptureProjectReferences.
     /// Custom tasks/functions are unsupported. Packages additionally require PackageDirectory.</remarks>
     public bool CapturePreparation { get; init; }
-    /// <summary>Compile a frozen graph of at most four declarative net10.0 C# library projects.</summary>
+    /// <summary>Compile a frozen graph of at most four declarative net11.0 C# library projects.</summary>
     /// <remarks>Requires CapturePreparation. Only unconditional literal ProjectReference items are supported.
     /// Project directories must not overlap. Every private graph DLL must be declared in Dependencies;
     /// custom reference metadata remains unsupported.</remarks>

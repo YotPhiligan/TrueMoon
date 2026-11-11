@@ -1,5 +1,7 @@
 # TrueMoon.Aether.Editor: план подключаемого редактора
 
+Текущий build/test профиль CORE8 (2026-11-11): net11.0, SDK 11.0.100, runtime-async=on, xUnit 2/VSTest. Он заменяет исходный net10 профиль для новых запусков, сохраняя исторические результаты и функциональные критерии. [Переход и границы](../core/DOTNET11_MIGRATION.md).
+
 Конфигурация2026-11-10: [CORE7.5](../core/CONFIGURATION_MODULES.md) добавил
 Editor/source-tracking/diagnostics/window data schemas и общий launch CLI.
 Selection/camera/history/Build-Play captures и ED очередь ниже сохраняются;
@@ -15,7 +17,11 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 
 <a id="current-editor-queue"></a>
 <a id="точка-продолжения--ревизия-2026-11-05"></a>
-## Точка продолжения — актуализация 2026-11-09
+## Точка продолжения — актуализация 2026-11-11
+
+CORE8.3: SDK preflight и frozen game compiler переведены на module target .NET11;
+full Editor1496/Aether3243 D/R и SDK11-only source/published runtime proof прошли.
+[Команды/границы](../core/HISTORY.md#core83-frozen-2026-11-11); детальная миграция — Core.
 
 ED4f.3 Window, ED4g.1/2 compact/numeric editors, ED6b source tracking и bounded
 Build/Play/Replace реализованы в scopes из [STATUS](STATUS.md). Первый profiling,

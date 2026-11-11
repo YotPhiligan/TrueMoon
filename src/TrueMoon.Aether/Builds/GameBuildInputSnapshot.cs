@@ -59,7 +59,8 @@ public sealed class GameBuildInputSnapshot
         using var document = JsonDocument.Parse(query);
         var root = document.RootElement;
         var properties = root.GetProperty("Properties"); var items = root.GetProperty("Items");
-        if (properties.GetProperty("TargetFramework").GetString() != "net10.0") throw new InvalidDataException("Tracked builds require net10.0.");
+        if (properties.GetProperty("TargetFramework").GetString() != GameBuildProfile.TargetFramework)
+            throw new InvalidDataException($"Tracked builds require {GameBuildProfile.TargetFramework}.");
         foreach (var name in new[] { "ProjectReference", "PackageReference" })
             if (items.GetProperty(name).GetArrayLength() != 0) throw new NotSupportedException("Tracked inputs currently require a single project with explicit managed HintPath references; " + name + " is unsupported.");
 
