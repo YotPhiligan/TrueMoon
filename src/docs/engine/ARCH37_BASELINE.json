@@ -1,0 +1,2886 @@
+{
+  "Completed": true,
+  "Stage": "ARCH3.7",
+  "Date": "2026-11-14",
+  "GitHead": "0d10f981420b9bafc7e94af213ae76d5737772c9",
+  "Branch": "feat/aether-system-reload",
+  "WorkingTree": "Code/docs changes only; no commit/push. Preexisting local .codex retained.",
+  "BuildProfile": {
+    "Workspace": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+    "Framework": "net11.0",
+    "TestFramework": "net11.0",
+    "Sdk": "11.0.100",
+    "Version": "0.3.0.1-alpha",
+    "LanguageVersion": "latest",
+    "Features": ";runtime-async=on",
+    "Sources": [
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Build.props",
+        "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props",
+        "Sha256": "9A5507DD1784617C30DCEE01BCBC6C73FBBC6B27818E15BD312F18079F1FE285"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\global.json",
+        "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\BuildProfile.ps1",
+        "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+      }
+    ],
+    "EvidencePath": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final\\profile-bfc5b99aa234484bbdb1da8ff76a5c5d.json"
+  },
+  "Builds": [
+    {
+      "Configuration": "debug",
+      "Errors": 0,
+      "Warnings": 1570,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\solution-debug.log",
+      "Sha256": "0F39C87EF8B5113D2B700BD5F3FFA210403DD41E56534A181DBCCFED778183A4"
+    },
+    {
+      "Configuration": "release",
+      "Errors": 0,
+      "Warnings": 1570,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\solution-release.log",
+      "Sha256": "B77FD0E7B4F1FED2ED5913F04DD92F61EE25601A95D56F8399A82992AF08702F"
+    }
+  ],
+  "Tests": [
+    {
+      "Module": "tests",
+      "Configuration": "debug",
+      "Passed": 3455,
+      "Failed": 0,
+      "Skipped": 0,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\tests-debug.trx",
+      "Sha256": "FFA34F96255DA4B443E7CB47A8D7480C3687DAE1DC5AB6B374C420F286419A03"
+    },
+    {
+      "Module": "abstractions",
+      "Configuration": "debug",
+      "Passed": 26,
+      "Failed": 0,
+      "Skipped": 0,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\abstractions-debug.trx",
+      "Sha256": "1F25302458ACC28ED23D6C4A79EEDECAF7440B3E32F8D0A7D8A873E40DA43C26"
+    },
+    {
+      "Module": "player",
+      "Configuration": "debug",
+      "Passed": 17,
+      "Failed": 0,
+      "Skipped": 0,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\player-debug.trx",
+      "Sha256": "E16010C99421CA4F757184DF932DD9273424EC8EB8AB9AACE041515CFB08A707"
+    },
+    {
+      "Module": "editor",
+      "Configuration": "debug",
+      "Passed": 1507,
+      "Failed": 0,
+      "Skipped": 0,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\editor-debug.trx",
+      "Sha256": "8AD0D411657F8E1DD4F51203192A68E55CF8E5352AD7BE93AD792FCDD06863E2"
+    },
+    {
+      "Module": "tests",
+      "Configuration": "release",
+      "Passed": 3455,
+      "Failed": 0,
+      "Skipped": 0,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\tests-release.trx",
+      "Sha256": "73EBC794A4F8E2A0A4BC0EE600643790D2FAF1F241914043A2DF32A2467566D7"
+    },
+    {
+      "Module": "abstractions",
+      "Configuration": "release",
+      "Passed": 26,
+      "Failed": 0,
+      "Skipped": 0,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\abstractions-release.trx",
+      "Sha256": "E71B9BCBCE2FFB76BD22454931C27E73030FD5C7D2D496B6C69A01C20BA571CA"
+    },
+    {
+      "Module": "player",
+      "Configuration": "release",
+      "Passed": 17,
+      "Failed": 0,
+      "Skipped": 0,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\player-release.trx",
+      "Sha256": "C40EB7B66AB872D13367DCE69AB1B9C58EE1ABAC78C983263C5D7DB7A5F807E5"
+    },
+    {
+      "Module": "editor",
+      "Configuration": "release",
+      "Passed": 1507,
+      "Failed": 0,
+      "Skipped": 0,
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\editor-release.trx",
+      "Sha256": "0E7EE27C5E1B1B5FE1E649902F98723DE75F449E267BC21C0B980FCDCC2C73D5"
+    }
+  ],
+  "TestsPerConfiguration": 5005,
+  "NewReloadCasesPerConfiguration": 49,
+  "ReloadProfiles": [
+    {
+      "CandidateModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A",
+      "Name": "source-Debug-cobalt",
+      "ManifestSha256": "3E25D4639244483168275B1E4C91374F50870E6EFA88AC965A9EE13FD2EF7E0E",
+      "HostSha256": "136341B251C721E12385E86E10495B4AAC57670E1D98A0232F4F84CB1B59EC72",
+      "ModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A",
+      "CandidateManifestSha256": "A5DBB850993A162459CF95B192E0283EF9672DBCF9576DA5E4F073244DEE70BA",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A",
+      "Name": "source-Debug-msdi",
+      "ManifestSha256": "3E25D4639244483168275B1E4C91374F50870E6EFA88AC965A9EE13FD2EF7E0E",
+      "HostSha256": "136341B251C721E12385E86E10495B4AAC57670E1D98A0232F4F84CB1B59EC72",
+      "ModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A",
+      "CandidateManifestSha256": "A5DBB850993A162459CF95B192E0283EF9672DBCF9576DA5E4F073244DEE70BA",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A",
+      "Name": "published-Debug-cobalt",
+      "ManifestSha256": "3E25D4639244483168275B1E4C91374F50870E6EFA88AC965A9EE13FD2EF7E0E",
+      "HostSha256": "136341B251C721E12385E86E10495B4AAC57670E1D98A0232F4F84CB1B59EC72",
+      "ModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A",
+      "CandidateManifestSha256": "A5DBB850993A162459CF95B192E0283EF9672DBCF9576DA5E4F073244DEE70BA",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A",
+      "Name": "published-Debug-msdi",
+      "ManifestSha256": "3E25D4639244483168275B1E4C91374F50870E6EFA88AC965A9EE13FD2EF7E0E",
+      "HostSha256": "136341B251C721E12385E86E10495B4AAC57670E1D98A0232F4F84CB1B59EC72",
+      "ModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A",
+      "CandidateManifestSha256": "A5DBB850993A162459CF95B192E0283EF9672DBCF9576DA5E4F073244DEE70BA",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED",
+      "Name": "source-Release-cobalt",
+      "ManifestSha256": "90A1ECB2D992774BC0AF3240BBF332DE2FC74EB95B2435CDDB0D9F2C36045072",
+      "HostSha256": "DA4E4CD8EDAB75453058FF6BAB5E24199EC0343448AE46CF938CEFD3F1F38D7C",
+      "ModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED",
+      "CandidateManifestSha256": "87C28C4678CC54368796E79A8F608A03DCAEBD739790DA1F5141887E23D34254",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED",
+      "Name": "source-Release-msdi",
+      "ManifestSha256": "90A1ECB2D992774BC0AF3240BBF332DE2FC74EB95B2435CDDB0D9F2C36045072",
+      "HostSha256": "DA4E4CD8EDAB75453058FF6BAB5E24199EC0343448AE46CF938CEFD3F1F38D7C",
+      "ModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED",
+      "CandidateManifestSha256": "87C28C4678CC54368796E79A8F608A03DCAEBD739790DA1F5141887E23D34254",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED",
+      "Name": "published-Release-cobalt",
+      "ManifestSha256": "90A1ECB2D992774BC0AF3240BBF332DE2FC74EB95B2435CDDB0D9F2C36045072",
+      "HostSha256": "DA4E4CD8EDAB75453058FF6BAB5E24199EC0343448AE46CF938CEFD3F1F38D7C",
+      "ModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED",
+      "CandidateManifestSha256": "87C28C4678CC54368796E79A8F608A03DCAEBD739790DA1F5141887E23D34254",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED",
+      "Name": "published-Release-msdi",
+      "ManifestSha256": "90A1ECB2D992774BC0AF3240BBF332DE2FC74EB95B2435CDDB0D9F2C36045072",
+      "HostSha256": "DA4E4CD8EDAB75453058FF6BAB5E24199EC0343448AE46CF938CEFD3F1F38D7C",
+      "ModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED",
+      "CandidateManifestSha256": "87C28C4678CC54368796E79A8F608A03DCAEBD739790DA1F5141887E23D34254",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "052EDC38C00CBB0606D962991A6575AD882013539133571D9632F0F87CD58CEF",
+      "Name": "fresh-cobalt",
+      "ManifestSha256": "8CCCD5799888493010A2B0A604B5EBAFEC0DE94E8F11FFFB44D473681E84B37B",
+      "HostSha256": "5B077C120BDCB7DEE0EB4D367BB1272D3D396FBB75E90FF9869719651CCD8B7D",
+      "ModSha256": "D7183F8201DBDAE7CF52E6161B1388B80A104A0BB70ECFF621AD6A214100724A",
+      "CandidateManifestSha256": "CC1E7049D94B6A7BB30634F224525622E975B2ED59CEE3CC56FBB146A37DAF16",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "052EDC38C00CBB0606D962991A6575AD882013539133571D9632F0F87CD58CEF",
+      "Name": "fresh-msdi",
+      "ManifestSha256": "8CCCD5799888493010A2B0A604B5EBAFEC0DE94E8F11FFFB44D473681E84B37B",
+      "HostSha256": "5B077C120BDCB7DEE0EB4D367BB1272D3D396FBB75E90FF9869719651CCD8B7D",
+      "ModSha256": "D7183F8201DBDAE7CF52E6161B1388B80A104A0BB70ECFF621AD6A214100724A",
+      "CandidateManifestSha256": "CC1E7049D94B6A7BB30634F224525622E975B2ED59CEE3CC56FBB146A37DAF16",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "052EDC38C00CBB0606D962991A6575AD882013539133571D9632F0F87CD58CEF",
+      "Name": "sdk-free-cobalt",
+      "ManifestSha256": "8CCCD5799888493010A2B0A604B5EBAFEC0DE94E8F11FFFB44D473681E84B37B",
+      "HostSha256": "5B077C120BDCB7DEE0EB4D367BB1272D3D396FBB75E90FF9869719651CCD8B7D",
+      "ModSha256": "D7183F8201DBDAE7CF52E6161B1388B80A104A0BB70ECFF621AD6A214100724A",
+      "CandidateManifestSha256": "CC1E7049D94B6A7BB30634F224525622E975B2ED59CEE3CC56FBB146A37DAF16",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": false,
+        "ToolingDelivered": false
+      }
+    },
+    {
+      "CandidateModSha256": "052EDC38C00CBB0606D962991A6575AD882013539133571D9632F0F87CD58CEF",
+      "Name": "sdk-free-msdi",
+      "ManifestSha256": "8CCCD5799888493010A2B0A604B5EBAFEC0DE94E8F11FFFB44D473681E84B37B",
+      "HostSha256": "5B077C120BDCB7DEE0EB4D367BB1272D3D396FBB75E90FF9869719651CCD8B7D",
+      "ModSha256": "D7183F8201DBDAE7CF52E6161B1388B80A104A0BB70ECFF621AD6A214100724A",
+      "CandidateManifestSha256": "CC1E7049D94B6A7BB30634F224525622E975B2ED59CEE3CC56FBB146A37DAF16",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 3,
+        "Generation": 2,
+        "WorldPreserved": true,
+        "StatePreserved": true,
+        "ValueAfterReload": 19,
+        "OldCommandsRejected": true,
+        "OldCallbacks": 0,
+        "CurrentCallbacks": 1,
+        "UnloadRequested": true,
+        "Collected": true,
+        "RetiredCollectedWhileCurrentLive": true,
+        "SdkPresent": false,
+        "ToolingDelivered": false
+      }
+    }
+  ],
+  "LegacyProfiles": [
+    {
+      "HostSha256": "136341B251C721E12385E86E10495B4AAC57670E1D98A0232F4F84CB1B59EC72",
+      "Name": "source-Debug-cobalt",
+      "ManifestSha256": "C423928634703523D72FAD84903E39270BDEBBB4FCA01A10C311B738E7A37D0C",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A"
+    },
+    {
+      "HostSha256": "136341B251C721E12385E86E10495B4AAC57670E1D98A0232F4F84CB1B59EC72",
+      "Name": "source-Debug-msdi",
+      "ManifestSha256": "C423928634703523D72FAD84903E39270BDEBBB4FCA01A10C311B738E7A37D0C",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A"
+    },
+    {
+      "HostSha256": "136341B251C721E12385E86E10495B4AAC57670E1D98A0232F4F84CB1B59EC72",
+      "Name": "published-Debug-cobalt",
+      "ManifestSha256": "C423928634703523D72FAD84903E39270BDEBBB4FCA01A10C311B738E7A37D0C",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A"
+    },
+    {
+      "HostSha256": "136341B251C721E12385E86E10495B4AAC57670E1D98A0232F4F84CB1B59EC72",
+      "Name": "published-Debug-msdi",
+      "ManifestSha256": "C423928634703523D72FAD84903E39270BDEBBB4FCA01A10C311B738E7A37D0C",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "477CA3369B29053E422762A9CA3F5DF155544AE9F59883B67F003415B160614A"
+    },
+    {
+      "HostSha256": "DA4E4CD8EDAB75453058FF6BAB5E24199EC0343448AE46CF938CEFD3F1F38D7C",
+      "Name": "source-Release-cobalt",
+      "ManifestSha256": "E1E78132B30FFF2C6AAE97D89AB2770AA04104A39802B94F98C3CF3AA1DD5D10",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED"
+    },
+    {
+      "HostSha256": "DA4E4CD8EDAB75453058FF6BAB5E24199EC0343448AE46CF938CEFD3F1F38D7C",
+      "Name": "source-Release-msdi",
+      "ManifestSha256": "E1E78132B30FFF2C6AAE97D89AB2770AA04104A39802B94F98C3CF3AA1DD5D10",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED"
+    },
+    {
+      "HostSha256": "DA4E4CD8EDAB75453058FF6BAB5E24199EC0343448AE46CF938CEFD3F1F38D7C",
+      "Name": "published-Release-cobalt",
+      "ManifestSha256": "E1E78132B30FFF2C6AAE97D89AB2770AA04104A39802B94F98C3CF3AA1DD5D10",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED"
+    },
+    {
+      "HostSha256": "DA4E4CD8EDAB75453058FF6BAB5E24199EC0343448AE46CF938CEFD3F1F38D7C",
+      "Name": "published-Release-msdi",
+      "ManifestSha256": "E1E78132B30FFF2C6AAE97D89AB2770AA04104A39802B94F98C3CF3AA1DD5D10",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "82C7F7C05B538057C1F0A1DA42FE7CBFCE3E2ACB3F0F0D402E844E7BB782A9ED"
+    },
+    {
+      "HostSha256": "0ECD180830B588F1A130DB49D9EF075F8FD380B2CA6AAA37939BAC105CAC8211",
+      "Name": "fresh-cobalt",
+      "ManifestSha256": "14F9813210766FB35A37F124E34518103D41C907DC1F06D085AD3826846A9AE4",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "A4BFF01CE3DC02FA9AE5A47D4BD8FB81030E5751D01AB4F22C5A7CDA03820159"
+    },
+    {
+      "HostSha256": "0ECD180830B588F1A130DB49D9EF075F8FD380B2CA6AAA37939BAC105CAC8211",
+      "Name": "fresh-msdi",
+      "ManifestSha256": "14F9813210766FB35A37F124E34518103D41C907DC1F06D085AD3826846A9AE4",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": true,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "A4BFF01CE3DC02FA9AE5A47D4BD8FB81030E5751D01AB4F22C5A7CDA03820159"
+    },
+    {
+      "HostSha256": "0ECD180830B588F1A130DB49D9EF075F8FD380B2CA6AAA37939BAC105CAC8211",
+      "Name": "sdk-free-cobalt",
+      "ManifestSha256": "14F9813210766FB35A37F124E34518103D41C907DC1F06D085AD3826846A9AE4",
+      "Proof": {
+        "Success": true,
+        "DI": "cobalt",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": false,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "A4BFF01CE3DC02FA9AE5A47D4BD8FB81030E5751D01AB4F22C5A7CDA03820159"
+    },
+    {
+      "HostSha256": "0ECD180830B588F1A130DB49D9EF075F8FD380B2CA6AAA37939BAC105CAC8211",
+      "Name": "sdk-free-msdi",
+      "ManifestSha256": "14F9813210766FB35A37F124E34518103D41C907DC1F06D085AD3826846A9AE4",
+      "Proof": {
+        "Success": true,
+        "DI": "msdi",
+        "Components": 1,
+        "Entities": 1,
+        "Ticks": 2,
+        "Events": [
+          "root:register",
+          "service:start",
+          "root:start",
+          "execute:7",
+          "execute:8",
+          "root:stop",
+          "service:stop",
+          "system:stop",
+          "system:dispose",
+          "service:dispose",
+          "root:dispose"
+        ],
+        "UnloadRequested": true,
+        "Collected": true,
+        "SdkPresent": false,
+        "ToolingDelivered": false
+      },
+      "ModSha256": "A4BFF01CE3DC02FA9AE5A47D4BD8FB81030E5751D01AB4F22C5A7CDA03820159"
+    }
+  ],
+  "PackageGraphs": [
+    {
+      "Packages": [
+        "TrueMoon.Aether.Abstractions/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Aether.Runtime/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Cobalt/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Contracts/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Core/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Enerit/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Extensions.DependencyInjection/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Mithril/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon/0.3.0.1-alpha.arch37.20261114230818"
+      ],
+      "AssetsSha256": "49A65079D726228F01899DF83D14B7F3B8E6AE2A6816302F8E80AB90A01DAA0F",
+      "Name": "Runtime"
+    },
+    {
+      "Packages": [
+        "TrueMoon.Aether.Abstractions/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Aether.Runtime/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Aether.Tooling/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Cobalt/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Contracts/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Core/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Enerit/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Mithril/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon/0.3.0.1-alpha.arch37.20261114230818"
+      ],
+      "AssetsSha256": "BEBBCAE4A54A767AF4D7630EA492E22A8A608AF96D7D895DA269B2C74277A920",
+      "Name": "Publisher"
+    },
+    {
+      "Packages": [
+        "TrueMoon.Aether.Abstractions/0.3.0.1-alpha.arch37.20261114230818",
+        "TrueMoon.Contracts/0.3.0.1-alpha.arch37.20261114230818"
+      ],
+      "AssetsSha256": "DD8B8C51F6BA5C39E3C3E49813EC7E566C030BDF3BF2221A58BB193C6401A602",
+      "Name": "Mod"
+    }
+  ],
+  "Packages": [
+    {
+      "Sha256": "006021694F3368F3829D6CC5F9835E8C7FCDD08C740D0BF579FE7EDD90F078F2",
+      "Id": "TrueMoon.Contracts",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Contracts.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "D11FE68B3FA74D11037963EC42D902392B3673D034FA34D3E460AC8CF85F93C9",
+      "Id": "TrueMoon.Core",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Core.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "FCC14366AA9B23F214AA0B069E492E77031A1A4C55EBA72DACA25B09599CAE5B",
+      "Id": "TrueMoon.Cobalt",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Cobalt.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "39FE9CB97DA363FDED437A11C682B48FB9919376FB7F08B2B2D2108FABFD1E43",
+      "Id": "TrueMoon",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "BA8A0A6430684C59FFF50CEA759D91B828745B2052A3994C5BC7043FC095839B",
+      "Id": "TrueMoon.Extensions.DependencyInjection",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Extensions.DependencyInjection.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "C36970315431E83FB1D5D9C41FCFE25BC94EAB5F1F1E82C96721A98CEA6CE45F",
+      "Id": "TrueMoon.Aether.Abstractions",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Aether.Abstractions.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "20E3FF9142ED10869D6470572343DEBE6DDB47CBA37487CBE546EA1784A75F32",
+      "Id": "TrueMoon.Enerit.Generator",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Enerit.Generator.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "77FA13A1488838F35AB0C1D5EA9C22A929CA34E3032F29A0552BAAB049C969B1",
+      "Id": "TrueMoon.Enerit",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Enerit.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "7E8E2C6777B55F40F9777566CB7A1D2300342AA7FF17A6003508B0DB208282D6",
+      "Id": "TrueMoon.Mithril",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Mithril.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "9A8F252530DCB3C0758E6A1E00078DD46E3EE56F58C92841C1E30A0309C65D82",
+      "Id": "TrueMoon.Aether.Runtime",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Aether.Runtime.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    },
+    {
+      "Sha256": "16D4C389767599675915560D70CAE0022E6BAD9E0C519FDD977C89458B96065B",
+      "Id": "TrueMoon.Aether.Tooling",
+      "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\feed\\TrueMoon.Aether.Tooling.0.3.0.1-alpha.arch37.20261114230818.nupkg"
+    }
+  ],
+  "Commands": [
+    {
+      "Name": "solution-debug",
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "TrueMoon.slnx",
+        "-c",
+        "Debug",
+        "--no-incremental",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/solution-debug-{}.binlog"
+      ]
+    },
+    {
+      "Name": "tests-debug",
+      "ExitCode": 0,
+      "Arguments": [
+        "test",
+        "TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj",
+        "-c",
+        "Debug",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=tests-debug.trx",
+        "--results-directory",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/tests-debug-{}.binlog"
+      ]
+    },
+    {
+      "Name": "abstractions-debug",
+      "ExitCode": 0,
+      "Arguments": [
+        "test",
+        "TrueMoon.Aether.Abstractions.Tests/TrueMoon.Aether.Abstractions.Tests.csproj",
+        "-c",
+        "Debug",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=abstractions-debug.trx",
+        "--results-directory",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/abstractions-debug-{}.binlog"
+      ]
+    },
+    {
+      "Name": "player-debug",
+      "ExitCode": 0,
+      "Arguments": [
+        "test",
+        "TrueMoon.Aether.Player.Tests/TrueMoon.Aether.Player.Tests.csproj",
+        "-c",
+        "Debug",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=player-debug.trx",
+        "--results-directory",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/player-debug-{}.binlog"
+      ]
+    },
+    {
+      "Name": "editor-debug",
+      "ExitCode": 0,
+      "Arguments": [
+        "test",
+        "TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj",
+        "-c",
+        "Debug",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=editor-debug.trx",
+        "--results-directory",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/editor-debug-{}.binlog"
+      ]
+    },
+    {
+      "Name": "solution-release",
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "TrueMoon.slnx",
+        "-c",
+        "Release",
+        "--no-incremental",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/solution-release-{}.binlog"
+      ]
+    },
+    {
+      "Name": "tests-release",
+      "ExitCode": 0,
+      "Arguments": [
+        "test",
+        "TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=tests-release.trx",
+        "--results-directory",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/tests-release-{}.binlog"
+      ]
+    },
+    {
+      "Name": "abstractions-release",
+      "ExitCode": 0,
+      "Arguments": [
+        "test",
+        "TrueMoon.Aether.Abstractions.Tests/TrueMoon.Aether.Abstractions.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=abstractions-release.trx",
+        "--results-directory",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/abstractions-release-{}.binlog"
+      ]
+    },
+    {
+      "Name": "player-release",
+      "ExitCode": 0,
+      "Arguments": [
+        "test",
+        "TrueMoon.Aether.Player.Tests/TrueMoon.Aether.Player.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=player-release.trx",
+        "--results-directory",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/player-release-{}.binlog"
+      ]
+    },
+    {
+      "Name": "editor-release",
+      "ExitCode": 0,
+      "Arguments": [
+        "test",
+        "TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj",
+        "-c",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--logger",
+        "trx;LogFileName=editor-release.trx",
+        "--results-directory",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022/editor-release-{}.binlog"
+      ]
+    }
+  ],
+  "ReloadCommands": [
+    {
+      "Arguments": [
+        "build",
+        "ManualTests/ModFixture/ModFixture.csproj",
+        "-c",
+        "Debug",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Debug-build-mod-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Debug-build-mod"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "ManualTests/ModFixture/ModFixture.csproj",
+        "--no-build",
+        "-c",
+        "Debug",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/mod",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Debug-publish-mod-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Debug-publish-mod"
+    },
+    {
+      "Arguments": [
+        "build",
+        "ManualTests/ModConsumer/Runtime/ModRuntimeConsumer.csproj",
+        "-c",
+        "Debug",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Debug-build-runtime-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Debug-build-runtime"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "ManualTests/ModConsumer/Runtime/ModRuntimeConsumer.csproj",
+        "--no-build",
+        "-c",
+        "Debug",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/runtime",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Debug-publish-runtime-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Debug-publish-runtime"
+    },
+    {
+      "Arguments": [
+        "build",
+        "ManualTests/ModConsumer/Publisher/ModPublisher.csproj",
+        "-c",
+        "Debug",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Debug-build-publisher-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Debug-build-publisher"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "ManualTests/ModConsumer/Publisher/ModPublisher.csproj",
+        "--no-build",
+        "-c",
+        "Debug",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/publisher",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Debug-publish-publisher-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Debug-publish-publisher"
+    },
+    {
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Publisher/bin/Debug/net11.0/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-source-Debug",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Debug/net11.0/ModFixture.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Debug/net11.0/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.ReloadEntry",
+        "1.0.0"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "source-Debug-publisher"
+    },
+    {
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Publisher/bin/Debug/net11.0/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-source-Debug-v2",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Debug/net11.0/ModFixture.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Debug/net11.0/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.SecondReloadEntry",
+        "2.0.0"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "source-Debug-publisher-v2"
+    },
+    {
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Runtime/bin/Debug/net11.0/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-source-Debug\\3e25d4639244483168275b1e4c91374f50870e6efa88ac965a9ee13fd2ef7e0e",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-source-Debug-v2\\a5dbb850993a162459cf95b192e0283ef9672dbcf9576da5e4f073244dee70ba",
+        "cobalt"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "source-Debug-cobalt"
+    },
+    {
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Runtime/bin/Debug/net11.0/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-source-Debug\\3e25d4639244483168275b1e4c91374f50870e6efa88ac965a9ee13fd2ef7e0e",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-source-Debug-v2\\a5dbb850993a162459cf95b192e0283ef9672dbcf9576da5e4f073244dee70ba",
+        "msdi"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "source-Debug-msdi"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-published-Debug",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/mod/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.ReloadEntry",
+        "1.0.0"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "published-Debug-publisher"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-published-Debug-v2",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/mod/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.SecondReloadEntry",
+        "2.0.0"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "published-Debug-publisher-v2"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/runtime/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-published-Debug\\3e25d4639244483168275b1e4c91374f50870e6efa88ac965a9ee13fd2ef7e0e",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-published-Debug-v2\\a5dbb850993a162459cf95b192e0283ef9672dbcf9576da5e4f073244dee70ba",
+        "cobalt"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "published-Debug-cobalt"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Debug/runtime/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-published-Debug\\3e25d4639244483168275b1e4c91374f50870e6efa88ac965a9ee13fd2ef7e0e",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-published-Debug-v2\\a5dbb850993a162459cf95b192e0283ef9672dbcf9576da5e4f073244dee70ba",
+        "msdi"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "published-Debug-msdi"
+    },
+    {
+      "Arguments": [
+        "build",
+        "ManualTests/ModFixture/ModFixture.csproj",
+        "-c",
+        "Release",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Release-build-mod-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Release-build-mod"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "ManualTests/ModFixture/ModFixture.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/mod",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Release-publish-mod-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Release-publish-mod"
+    },
+    {
+      "Arguments": [
+        "build",
+        "ManualTests/ModConsumer/Runtime/ModRuntimeConsumer.csproj",
+        "-c",
+        "Release",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Release-build-runtime-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Release-build-runtime"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "ManualTests/ModConsumer/Runtime/ModRuntimeConsumer.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/runtime",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Release-publish-runtime-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Release-publish-runtime"
+    },
+    {
+      "Arguments": [
+        "build",
+        "ManualTests/ModConsumer/Publisher/ModPublisher.csproj",
+        "-c",
+        "Release",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Release-build-publisher-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Release-build-publisher"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "ManualTests/ModConsumer/Publisher/ModPublisher.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/publisher",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/source-Release-publish-publisher-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "source-Release-publish-publisher"
+    },
+    {
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Publisher/bin/Release/net11.0/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-source-Release",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Release/net11.0/ModFixture.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Release/net11.0/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.ReloadEntry",
+        "1.0.0"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "source-Release-publisher"
+    },
+    {
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Publisher/bin/Release/net11.0/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-source-Release-v2",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Release/net11.0/ModFixture.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Release/net11.0/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.SecondReloadEntry",
+        "2.0.0"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "source-Release-publisher-v2"
+    },
+    {
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Runtime/bin/Release/net11.0/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-source-Release\\90a1ecb2d992774bc0af3240bbf332de2fc74eb95b2435cddb0d9f2c36045072",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-source-Release-v2\\87c28c4678cc54368796e79a8f608a03dcaebd739790da1f5141887e23d34254",
+        "cobalt"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "source-Release-cobalt"
+    },
+    {
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Runtime/bin/Release/net11.0/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-source-Release\\90a1ecb2d992774bc0af3240bbf332de2fc74eb95b2435cddb0d9f2c36045072",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-source-Release-v2\\87c28c4678cc54368796e79a8f608a03dcaebd739790da1f5141887e23d34254",
+        "msdi"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "source-Release-msdi"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-published-Release",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/mod/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.ReloadEntry",
+        "1.0.0"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "published-Release-publisher"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-published-Release-v2",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/mod/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.SecondReloadEntry",
+        "2.0.0"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "published-Release-publisher-v2"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/runtime/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-published-Release\\90a1ecb2d992774bc0af3240bbf332de2fc74eb95b2435cddb0d9f2c36045072",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-published-Release-v2\\87c28c4678cc54368796e79a8f608a03dcaebd739790da1f5141887e23d34254",
+        "cobalt"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "published-Release-cobalt"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/published-Release/runtime/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-published-Release\\90a1ecb2d992774bc0af3240bbf332de2fc74eb95b2435cddb0d9f2c36045072",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-published-Release-v2\\87c28c4678cc54368796e79a8f608a03dcaebd739790da1f5141887e23d34254",
+        "msdi"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "published-Release-msdi"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Contracts/TrueMoon.Contracts.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Contracts-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Contracts"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Core/TrueMoon.Core.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Core-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Core"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Cobalt/TrueMoon.Cobalt.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Cobalt-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Cobalt"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon/TrueMoon.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Extensions.DependencyInjection-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Extensions.DependencyInjection"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Aether.Abstractions/TrueMoon.Aether.Abstractions.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Aether.Abstractions-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Aether.Abstractions"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Enerit.Generator/TrueMoon.Enerit.Generator.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Enerit.Generator-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Enerit.Generator"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Enerit/TrueMoon.Enerit.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Enerit-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Enerit"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Mithril/TrueMoon.Mithril.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Mithril-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Mithril"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Aether.Runtime-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Aether.Runtime"
+    },
+    {
+      "Arguments": [
+        "pack",
+        "TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch37.20261114230818",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/pack-TrueMoon.Aether.Tooling-{}.binlog"
+      ],
+      "Isolated": false,
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "ExitCode": 0,
+      "Name": "pack-TrueMoon.Aether.Tooling"
+    },
+    {
+      "Arguments": [
+        "restore",
+        "Runtime/ModRuntimeConsumer.csproj",
+        "--force",
+        "--no-cache",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/fresh-restore-Runtime-{}.binlog"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh",
+      "ExitCode": 0,
+      "Name": "fresh-restore-Runtime"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "Runtime/ModRuntimeConsumer.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Runtime",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/fresh-publish-Runtime-{}.binlog"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh",
+      "ExitCode": 0,
+      "Name": "fresh-publish-Runtime"
+    },
+    {
+      "Arguments": [
+        "restore",
+        "Publisher/ModPublisher.csproj",
+        "--force",
+        "--no-cache",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/fresh-restore-Publisher-{}.binlog"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh",
+      "ExitCode": 0,
+      "Name": "fresh-restore-Publisher"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "Publisher/ModPublisher.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Publisher",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/fresh-publish-Publisher-{}.binlog"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh",
+      "ExitCode": 0,
+      "Name": "fresh-publish-Publisher"
+    },
+    {
+      "Arguments": [
+        "restore",
+        "Mod/ModFixture.csproj",
+        "--force",
+        "--no-cache",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/fresh-restore-Mod-{}.binlog"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh",
+      "ExitCode": 0,
+      "Name": "fresh-restore-Mod"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "Mod/ModFixture.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Mod",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/fresh-publish-Mod-{}.binlog"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh",
+      "ExitCode": 0,
+      "Name": "fresh-publish-Mod"
+    },
+    {
+      "Arguments": [
+        "restore",
+        "ModV2/ModFixture.csproj",
+        "--force",
+        "--no-cache",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/fresh-restore-ModV2-{}.binlog"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh",
+      "ExitCode": 0,
+      "Name": "fresh-restore-ModV2"
+    },
+    {
+      "Arguments": [
+        "publish",
+        "ModV2/ModFixture.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/ModV2",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final/fresh-publish-ModV2-{}.binlog"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh",
+      "ExitCode": 0,
+      "Name": "fresh-publish-ModV2"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-fresh",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Mod/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.ReloadEntry",
+        "1.0.0"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "fresh-publisher"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-fresh-v2",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/ModV2/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Mod/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.ReloadEntry",
+        "2.0.0"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "fresh-publisher-v2"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Runtime/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-fresh\\8cccd5799888493010a2b0a604b5ebafec0de94e8f11fffb44d473681e84b37b",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-fresh-v2\\cc1e7049d94b6a7bb30634f224525622e975b2ed59cee3cc56fbb146a37daf16",
+        "cobalt"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "fresh-cobalt"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Runtime/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-fresh\\8cccd5799888493010a2b0a604b5ebafec0de94e8f11fffb44d473681e84b37b",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-fresh-v2\\cc1e7049d94b6a7bb30634f224525622e975b2ed59cee3cc56fbb146a37daf16",
+        "msdi"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "fresh-msdi"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-sdk-free",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Mod/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.ReloadEntry",
+        "1.0.0"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "sdk-free-publisher"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/artifacts-sdk-free-v2",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/ModV2/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Mod/ModPrivateDependency.dll",
+        "TrueMoon.ManualTests.ModFixture.ReloadEntry",
+        "2.0.0"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "sdk-free-publisher-v2"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Runtime/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-sdk-free\\8cccd5799888493010a2b0a604b5ebafec0de94e8f11fffb44d473681e84b37b",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-sdk-free-v2\\cc1e7049d94b6a7bb30634f224525622e975b2ed59cee3cc56fbb146a37daf16",
+        "cobalt"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "sdk-free-cobalt"
+    },
+    {
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/fresh-published/Runtime/ModRuntimeConsumer.dll",
+        "--reload",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-sdk-free\\8cccd5799888493010a2b0a604b5ebafec0de94e8f11fffb44d473681e84b37b",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae\\artifacts-sdk-free-v2\\cc1e7049d94b6a7bb30634f224525622e975b2ed59cee3cc56fbb146a37daf16",
+        "msdi"
+      ],
+      "Isolated": true,
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-b80d0e803e58430bb6db4c39ac5ec0ae/unrelated cwd",
+      "ExitCode": 0,
+      "Name": "sdk-free-msdi"
+    }
+  ],
+  "LegacyCommands": [
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Debug-build-mod",
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "ManualTests/ModFixture/ModFixture.csproj",
+        "-c",
+        "Debug",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Debug-build-mod-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Debug-publish-mod",
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "ManualTests/ModFixture/ModFixture.csproj",
+        "--no-build",
+        "-c",
+        "Debug",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Debug/mod",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Debug-publish-mod-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Debug-build-runtime",
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "ManualTests/ModConsumer/Runtime/ModRuntimeConsumer.csproj",
+        "-c",
+        "Debug",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Debug-build-runtime-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Debug-publish-runtime",
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "ManualTests/ModConsumer/Runtime/ModRuntimeConsumer.csproj",
+        "--no-build",
+        "-c",
+        "Debug",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Debug/runtime",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Debug-publish-runtime-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Debug-build-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "ManualTests/ModConsumer/Publisher/ModPublisher.csproj",
+        "-c",
+        "Debug",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Debug-build-publisher-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Debug-publish-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "ManualTests/ModConsumer/Publisher/ModPublisher.csproj",
+        "--no-build",
+        "-c",
+        "Debug",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Debug/publisher",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Debug-publish-publisher-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "source-Debug-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Publisher/bin/Debug/net11.0/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/artifacts-source-Debug",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Debug/net11.0/ModFixture.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Debug/net11.0/ModPrivateDependency.dll"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "source-Debug-cobalt",
+      "ExitCode": 0,
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Runtime/bin/Debug/net11.0/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-source-Debug\\c423928634703523d72fad84903e39270bdebbb4fca01a10c311b738e7a37d0c",
+        "cobalt"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "source-Debug-msdi",
+      "ExitCode": 0,
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Runtime/bin/Debug/net11.0/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-source-Debug\\c423928634703523d72fad84903e39270bdebbb4fca01a10c311b738e7a37d0c",
+        "msdi"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "published-Debug-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Debug/publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/artifacts-published-Debug",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Debug/mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Debug/mod/ModPrivateDependency.dll"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "published-Debug-cobalt",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Debug/runtime/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-published-Debug\\c423928634703523d72fad84903e39270bdebbb4fca01a10c311b738e7a37d0c",
+        "cobalt"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "published-Debug-msdi",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Debug/runtime/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-published-Debug\\c423928634703523d72fad84903e39270bdebbb4fca01a10c311b738e7a37d0c",
+        "msdi"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Release-build-mod",
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "ManualTests/ModFixture/ModFixture.csproj",
+        "-c",
+        "Release",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Release-build-mod-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Release-publish-mod",
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "ManualTests/ModFixture/ModFixture.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Release/mod",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Release-publish-mod-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Release-build-runtime",
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "ManualTests/ModConsumer/Runtime/ModRuntimeConsumer.csproj",
+        "-c",
+        "Release",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Release-build-runtime-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Release-publish-runtime",
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "ManualTests/ModConsumer/Runtime/ModRuntimeConsumer.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Release/runtime",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Release-publish-runtime-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Release-build-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "ManualTests/ModConsumer/Publisher/ModPublisher.csproj",
+        "-c",
+        "Release",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Release-build-publisher-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "source-Release-publish-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "ManualTests/ModConsumer/Publisher/ModPublisher.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Release/publisher",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/source-Release-publish-publisher-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "source-Release-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Publisher/bin/Release/net11.0/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/artifacts-source-Release",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Release/net11.0/ModFixture.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModFixture/bin/Release/net11.0/ModPrivateDependency.dll"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "source-Release-cobalt",
+      "ExitCode": 0,
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Runtime/bin/Release/net11.0/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-source-Release\\e1e78132b30fff2c6aae97d89ab2770aa04104a39802b94f98c3cf3aa1dd5d10",
+        "cobalt"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "source-Release-msdi",
+      "ExitCode": 0,
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src/ManualTests/ModConsumer/Runtime/bin/Release/net11.0/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-source-Release\\e1e78132b30fff2c6aae97d89ab2770aa04104a39802b94f98c3cf3aa1dd5d10",
+        "msdi"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "published-Release-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Release/publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/artifacts-published-Release",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Release/mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Release/mod/ModPrivateDependency.dll"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "published-Release-cobalt",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Release/runtime/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-published-Release\\e1e78132b30fff2c6aae97d89ab2770aa04104a39802b94f98c3cf3aa1dd5d10",
+        "cobalt"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": false,
+      "Name": "published-Release-msdi",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/published-Release/runtime/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-published-Release\\e1e78132b30fff2c6aae97d89ab2770aa04104a39802b94f98c3cf3aa1dd5d10",
+        "msdi"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Contracts",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Contracts/TrueMoon.Contracts.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Contracts-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Core",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Core/TrueMoon.Core.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Core-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Cobalt",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Cobalt/TrueMoon.Cobalt.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Cobalt-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon/TrueMoon.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Extensions.DependencyInjection",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Extensions.DependencyInjection-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Aether.Abstractions",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Aether.Abstractions/TrueMoon.Aether.Abstractions.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Aether.Abstractions-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Enerit.Generator",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Enerit.Generator/TrueMoon.Enerit.Generator.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Enerit.Generator-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Enerit",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Enerit/TrueMoon.Enerit.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Enerit-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Mithril",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Mithril/TrueMoon.Mithril.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Mithril-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Aether.Runtime",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Aether.Runtime-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+      "Isolated": false,
+      "Name": "pack-TrueMoon.Aether.Tooling",
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj",
+        "--no-build",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/feed",
+        "-p:PackageVersion=0.3.0.1-alpha.arch36.20261114230842",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/pack-TrueMoon.Aether.Tooling-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh",
+      "Isolated": true,
+      "Name": "fresh-restore-Runtime",
+      "ExitCode": 0,
+      "Arguments": [
+        "restore",
+        "Runtime/ModRuntimeConsumer.csproj",
+        "--force",
+        "--no-cache",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/fresh-restore-Runtime-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh",
+      "Isolated": true,
+      "Name": "fresh-publish-Runtime",
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "Runtime/ModRuntimeConsumer.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Runtime",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/fresh-publish-Runtime-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh",
+      "Isolated": true,
+      "Name": "fresh-restore-Publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "restore",
+        "Publisher/ModPublisher.csproj",
+        "--force",
+        "--no-cache",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/fresh-restore-Publisher-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh",
+      "Isolated": true,
+      "Name": "fresh-publish-Publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "Publisher/ModPublisher.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Publisher",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/fresh-publish-Publisher-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh",
+      "Isolated": true,
+      "Name": "fresh-restore-Mod",
+      "ExitCode": 0,
+      "Arguments": [
+        "restore",
+        "Mod/ModFixture.csproj",
+        "--force",
+        "--no-cache",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/fresh-restore-Mod-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh",
+      "Isolated": true,
+      "Name": "fresh-publish-Mod",
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "Mod/ModFixture.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "-o",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Mod",
+        "--verbosity",
+        "quiet",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final/fresh-publish-Mod-{}.binlog"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": true,
+      "Name": "fresh-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/artifacts-fresh",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Mod/ModPrivateDependency.dll"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": true,
+      "Name": "fresh-cobalt",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Runtime/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-fresh\\14f9813210766fb35a37f124e34518103d41c907dc1f06d085ad3826846a9ae4",
+        "cobalt"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": true,
+      "Name": "fresh-msdi",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Runtime/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-fresh\\14f9813210766fb35a37f124e34518103d41c907dc1f06d085ad3826846a9ae4",
+        "msdi"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": true,
+      "Name": "sdk-free-publisher",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Publisher/ModPublisher.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/artifacts-sdk-free",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Mod/ModFixture.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Mod/ModPrivateDependency.dll"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": true,
+      "Name": "sdk-free-cobalt",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Runtime/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-sdk-free\\14f9813210766fb35a37f124e34518103d41c907dc1f06d085ad3826846a9ae4",
+        "cobalt"
+      ]
+    },
+    {
+      "WorkingDirectory": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/unrelated cwd",
+      "Isolated": true,
+      "Name": "sdk-free-msdi",
+      "ExitCode": 0,
+      "Arguments": [
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e/fresh-published/Runtime/ModRuntimeConsumer.dll",
+        "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH36-a8d7f4d0137b475ebc1bcb691065fd8e\\artifacts-sdk-free\\14f9813210766fb35a37f124e34518103d41c907dc1f06d085ad3826846a9ae4",
+        "msdi"
+      ]
+    }
+  ],
+  "SourceInputs": [
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\ModConsumer\\Publisher\\Program.cs",
+      "Sha256": "2D03A2320CC1481B8119552A1C18AC63E84920FB2B017F1BB1C4831F0B7C715E"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\ModConsumer\\Runtime\\Program.cs",
+      "Sha256": "942D3377DAA8D54097965EAA3BE31DCFE0BD32FD2BA3760C795449E76BC34501"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\ModConsumer\\Runtime\\ReloadProof.cs",
+      "Sha256": "529CBAA1871CB11136E5528F82670C222D56987E4047C1ADFF12E167A73124A8"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\ModConsumer\\Verify.ps1",
+      "Sha256": "B7F88133266EEB5BDA6E7C0F657A8DB0C59F7662421AEB157D64780EEE696A3E"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\ModFixture\\ReloadEntry.cs",
+      "Sha256": "849E8069EFEBB709AEABFD9B507949445131711DFF1C99C5015F7A17821C07AD"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Abstractions\\Mods\\IModReloadParticipant.cs",
+      "Sha256": "D9C30CAB09F98234410F6DD2656CA047E44B6A8FA55E1DCCC99400ACEF1D35FD"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Abstractions\\Mods\\ModSystemState.cs",
+      "Sha256": "1D10AC5E60AD10C70B244A887298648591E5821E765BAFCDB18F2A1946159C5D"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Ecs\\EcsScheduler.cs",
+      "Sha256": "4B28C07C203C2522EFDA86C0D9EC6CCC2894ED87EC46359B93BCD43BBDDCCAE4"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Ecs\\EcsScheduler.Reload.cs",
+      "Sha256": "C014EB3BC3A01ABDBE42F7076D953E583F9AB867A700ECEB2ADC7CD04AF083E5"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Ecs\\World.cs",
+      "Sha256": "E4AE1F1F2131920AC6C3814AE53E5A776C4A457832B79CBF6B3FD01B4B7EAA15"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Ecs\\World.Execution.cs",
+      "Sha256": "A00555F0A361E41C698EBD392E3711A863DD20603FD8D2B8177BE4BA11F18A4F"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\ModConfigurationExtensions.cs",
+      "Sha256": "F6D4A1457D1C79D6244459299DC7D859C69928EC7D6FCF8D15A4B266DC6683A3"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Mods\\ModEntryFactory.cs",
+      "Sha256": "534E045072CE4833152D2305F14C15DA035066D613282D15917579E4242FF10C"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Mods\\ModGeneration.cs",
+      "Sha256": "6037BA5ECD7CBCED2AB116F2A66849AF27E846D1D862BFEF41A322C1491021EA"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Mods\\ModGroup.cs",
+      "Sha256": "F0876E2BB645C8F87FC1924F58604D9F489A4397990222AD9F7C4AFE1D69579A"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Mods\\ModGroup.Reload.cs",
+      "Sha256": "DE6AE47951CDDB34565627D66A9E1D4EA3D252210D64DF08F05DA55682271499"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Mods\\ModHost.cs",
+      "Sha256": "1EB1598F1899A1A501432263F676F036F2EF9D92C78E451D788545C20D5D4639"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Mods\\ModLoadResult.cs",
+      "Sha256": "1A727E434AAE9FDD585189D73BD2808575A1F06CE03BA3AA207DBFE253F324B3"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Mods\\ModRegistration.cs",
+      "Sha256": "F90E2724E28E7D274834228E3F282759C53129D2F906D42535FF2CF6A1488BE8"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Mods\\ModReloadResult.cs",
+      "Sha256": "7F41C228C03BB83A5DE8C598426C76C80CCDBA29C3EB6932047742096D743990"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Runtime\\Mods\\ModSystemSession.cs",
+      "Sha256": "2FB57074C2BA94C1BA48CE9F2AA24836A2C61CCB59505F5D5AC748C0F9AD19A0"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Tests\\Mods\\ModGenerationTests.cs",
+      "Sha256": "A09A9894AD647FF6E447BD2B0CCCBF94B47F27B3825142DBA48CB919D34A9939"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Aether.Tests\\Mods\\ModReloadTests.cs",
+      "Sha256": "26B54CB5E40A15796249836A7FC3C900C221B13DA50F09EA0A7FFAF55C9F1180"
+    }
+  ],
+  "ProtectedInputs": [
+    {
+      "Algorithm": "SHA256",
+      "Hash": "9A5507DD1784617C30DCEE01BCBC6C73FBBC6B27818E15BD312F18079F1FE285",
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props"
+    },
+    {
+      "Algorithm": "SHA256",
+      "Hash": "70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A",
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Alloy.Rendering.Skia\\NativeAssets\\win-x64\\libSkiaSharp.dll"
+    }
+  ],
+  "ArtifactManifests": [
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\source-Debug-publisher.json",
+      "Sha256": "3E25D4639244483168275B1E4C91374F50870E6EFA88AC965A9EE13FD2EF7E0E"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\source-Debug-publisher-v2.json",
+      "Sha256": "A5DBB850993A162459CF95B192E0283EF9672DBCF9576DA5E4F073244DEE70BA"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\published-Debug-publisher.json",
+      "Sha256": "3E25D4639244483168275B1E4C91374F50870E6EFA88AC965A9EE13FD2EF7E0E"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\published-Debug-publisher-v2.json",
+      "Sha256": "A5DBB850993A162459CF95B192E0283EF9672DBCF9576DA5E4F073244DEE70BA"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\source-Release-publisher.json",
+      "Sha256": "90A1ECB2D992774BC0AF3240BBF332DE2FC74EB95B2435CDDB0D9F2C36045072"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\source-Release-publisher-v2.json",
+      "Sha256": "87C28C4678CC54368796E79A8F608A03DCAEBD739790DA1F5141887E23D34254"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\published-Release-publisher.json",
+      "Sha256": "90A1ECB2D992774BC0AF3240BBF332DE2FC74EB95B2435CDDB0D9F2C36045072"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\published-Release-publisher-v2.json",
+      "Sha256": "87C28C4678CC54368796E79A8F608A03DCAEBD739790DA1F5141887E23D34254"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\fresh-publisher.json",
+      "Sha256": "8CCCD5799888493010A2B0A604B5EBAFEC0DE94E8F11FFFB44D473681E84B37B"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\fresh-publisher-v2.json",
+      "Sha256": "CC1E7049D94B6A7BB30634F224525622E975B2ED59CEE3CC56FBB146A37DAF16"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\sdk-free-publisher.json",
+      "Sha256": "8CCCD5799888493010A2B0A604B5EBAFEC0DE94E8F11FFFB44D473681E84B37B"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\ArtifactManifests\\sdk-free-publisher-v2.json",
+      "Sha256": "CC1E7049D94B6A7BB30634F224525622E975B2ED59CEE3CC56FBB146A37DAF16"
+    }
+  ],
+  "EvidenceDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022",
+  "ReloadReport": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\reload-final\\verification.json",
+  "LegacyReport": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH37-20261114-222022\\legacy-final\\verification.json",
+  "Limits": {
+    "Systems": 128,
+    "SystemStateBytes": 65536,
+    "GroupStateBytes": 4194304,
+    "GuardedCallbacksPerGeneration": 256
+  },
+  "Boundaries": [
+    "Stable shared components only; no component registrations or migration",
+    "Explicit resumable/private/read-only module contract, not a security sandbox",
+    "Caller owns World; host owns generations; direct factory session results caller-owned",
+    "No native/GPU/GUI/configuration/other-module/OS/AOT/release or ARCH3.9 full20cycle claims",
+    "Exact shared SDK/host/mod hashes require coherent rebuild; existing manifest/API1 and game byte formats unchanged"
+  ],
+  "Documentation": [
+    {
+      "Path": "docs/engine/PLAN.md",
+      "Sha256": "4D06C255CF69F403EAAF9F632564A8AFB7E3AB307BC81F499AD1508804762D46"
+    },
+    {
+      "Path": "docs/engine/STATUS.md",
+      "Sha256": "9C7603B34C8EBBFC129A70664B642C4970A6AF10ECEBD8AB70F07292A9F86274"
+    },
+    {
+      "Path": "docs/engine/HISTORY.md",
+      "Sha256": "4B80382957ABC89BBB18AC756E38FCCC24B1A39DE6F696A14AB9465986FEC724"
+    },
+    {
+      "Path": "docs/engine/EDITOR_PLAN.md",
+      "Sha256": "AA3F47816A3912574E58729BF7E155930CFD0A2315F131A522EF775307BA67A4"
+    },
+    {
+      "Path": "docs/engine/RUNTIME.md",
+      "Sha256": "088A3E1E89C4FD6CA5B1953894A6A3435F3A13168A9DB6A251257579094A6518"
+    },
+    {
+      "Path": "docs/engine/TOOLING.md",
+      "Sha256": "912080B10C7C424E13B313D1FF38E01824C89912CE100DC3295CE1DC5092B185"
+    },
+    {
+      "Path": "docs/PLAN.md",
+      "Sha256": "E4AD1C0860E3ECD781DB1D7152E024D430967A03F424498B58106D510137F4DE"
+    },
+    {
+      "Path": "docs/STATUS.md",
+      "Sha256": "5DAAB99472453EE18A4D62A93A59BB1DBD9927D55FC6DF4E677B09D56FA03418"
+    },
+    {
+      "Path": "docs/HISTORY.md",
+      "Sha256": "EEBF0F2DC195E65281F09EECD7345A56E5955096F58FE321EF21CDD8A054E7B5"
+    },
+    {
+      "Path": "docs/README.md",
+      "Sha256": "B10599DD7BD02EF120E378B8DA156690DCC9E8201EF52666714AB60631D24A64"
+    },
+    {
+      "Path": "docs/engine/MOD_RELOAD.md",
+      "Sha256": "61E9A38DFEC07715EA25A5F48D01376F1F7B52F2808DA78457BA9C5EA9FA9759"
+    },
+    {
+      "Path": "docs/engine/MODS.md",
+      "Sha256": "642A8EC20941F8C7EC678ABE2F1F335A9412B79D2E08DFEEB62E17BFFB1B33F8"
+    },
+    {
+      "Path": "docs/engine/ABSTRACTIONS.md",
+      "Sha256": "7649AD09CF640AE83F5AECCEB6A9A762228191C1EF34ACC26F21605C09A87EC9"
+    },
+    {
+      "Path": "TrueMoon.Aether.Abstractions/PACKAGE.md",
+      "Sha256": "136B00C227717C8EFFCB065B00C82BE2E31758AB1628AC1CE289AF0107518089"
+    },
+    {
+      "Path": "TrueMoon.Aether.Runtime/PACKAGE.md",
+      "Sha256": "F34ABFD2D2A419CD42F50A24EF3900318CD6EDB28B7C37BA5E695E33097AE5E0"
+    }
+  ]
+}

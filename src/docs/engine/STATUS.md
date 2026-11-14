@@ -1,34 +1,36 @@
 # Aether / Editor: состояние и точка продолжения
 
-**2026-11-14 — ARCH3.6 завершён: managed Mod SDK, manifest и collectible loader.**
-[API/manifest/DI/ownership/границы](MODS.md), [manifest/SHA](ARCH36_BASELINE.json),
-[команды/приёмка](HISTORY.md#arch36-2026-11-14).
+**2026-11-15 — ARCH3.9 завершён: сквозная регрессия, единая поставка и руководство.**
+[Выбор слоёв/SDK/ownership/migration](ARCHITECTURE_GUIDE.md),
+[518соответствий/417sources](ARCH39_MIGRATION.csv), [graph6projects](ARCH39_PROJECT_GRAPH.json),
+[baseline/SHA](ARCH39_BASELINE.json), [команды/evidence](HISTORY.md#arch39-2026-11-15).
 
-Abstractions.Mods содержит нейтральный SDK; Runtime.Mods — ModHost и один
-collectible ALC на WholeGroup closure; Tooling.Mods — явный immutable publisher.
-Версии/ranges/cycles, hashes/limits/paths, exact shared/private identities
-проверяются до entry activation. App владеет группами, локальные фабрики/Types
-не регистрируются в root DI; App/provider/bootstrap owners недоступны модам.
-Частные Worlds используют настоящий ECS. Stop закрывает admission до ожидания
-active startup/tick; cleanup освобождает systems до Worlds и сохраняет failed
-owners для retry. Нейтральные outcomes не удерживают модовые exceptions.
-Weak tickets различают unload requested и collection; оба факта проверены.
+ARCH3.1–9 закрыты в scoped Windows x64 profile: Abstractions, Runtime, headless
+Tooling, Editor.UI и optional Editor.Tooling bridge; Mod SDK/loader, stable World
+replacement и private-component migration. Одна immutable поставка20nupkg версии
+`0.3.0.1-alpha.arch39.20261115005454` использована всеми consumers по точным SHA. Новых production
+API/namespace переносов в этом этапе нет; поправлены acceptance runners и навигация.
 
-| Фактическая проверка | Результат |
+| Проверка | Фактический результат |
 | --- | --- |
-| Non-incremental solution Debug/Release | 0 errors, warnings 1570/1570 |
-| Полные Aether / Abstractions / Player / Editor D/R | По 3406 / 26 / 17 / 1507 passed; 4956 на configuration, failed/skipped 0 |
-| Новые Mod tests | 53 на configuration: validation/dependencies/identity, startup/cancel, cleanup retry, tick fence, weak collection |
-| Source/publish D/R + fresh + SDK-free, both DI | 12 managed profiles; component 7→8, private dependency, exact lifecycle и collection |
-| Independent SDK/feed | 11 свежих framework packages; SDK mod получает только Abstractions + Contracts; Runtime graph без Tooling/UI |
+| Non-incremental solution Debug/Release |0errors;1570warnings/configuration, прежний набор |
+| Все14test projects Debug/Release |8906passed/configuration,28TRX, failed/skipped0 |
+| SDK / Runtime / Tooling / Runtime+UI / Player |6 /8 /6 /8 /6profiles; coherent packages, isolated caches/closed feeds, оба DI |
+| Common configuration/App/child |15profiles;20пакетов одной версии, фактические owned children |
+| Stable reload / private-component migration |По12profiles ×20замен =480retired ALC; old collect при live current,24final contexts после App cleanup |
+| Legacy mod loader |12profiles; прежние load/unload semantics сохранены |
+| Full Editor |8package cases +2source GUI +2published-package GUI; Standard/Cobalt и Embedded/MS DI |
+| Negative delivery / map |7invalid manifests rejected +positive exact copy;518namespace/path mappings,6project boundaries |
 
-Windows x64, SDK11.0.100, net11.0, runtime-async=on, xUnit2/VSTest.
-Exact shared hashes требуют coherent rebuild/republication host/game/mod artifacts;
-schema2 и прежние scene/project/control/frame/checkpoint formats не менялись.
-GameBuildLoader сохранён отдельно. Stage3.5 native/GPU/GUI/configuration proofs
-остаются датированной историей: этим этапом они не повторялись. Native mods,
-forced abort, system hot replacement/new-World migration, другие OS/AOT/release
-не приняты; они не следуют из managed unload. Package props/Skia SHA сохранены.
+Source/published/fresh NuGet/SDK-free там, где предусмотрено соответствующим runner.
+Повторные mod profiles сохраняют snapshots/disposed Worlds/stale contexts/guards,
+проверяют IDs/relations/values/state/tick, старые commands/callbacks, owners0 и exact
+disposal. Private migration:1explicit v1→v2 и19same-schema/new-CLR-generation steps.
+Native Runtime+UI/Player/full Editor отдельно проверены validation0/0, resource/
+handle/surface balance и child reap. Это не20GPU-mod-migrations: asset/native/GPU
+migration не входит в managed profile. Unfenced side effects не получают rollback.
+Другие OS/RID/AOT/trimming, physical input/DPI, device loss/K7/VRAM/long soak и
+release gates не расширены. Causal drain follow-up не закрывается passing runs.
 
 **2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
 [Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
@@ -54,10 +56,9 @@ ECS bridge ещё впереди и согласуется с ARCH3. [Едины
 
 ## Следующий конкретный шаг
 
-**ARCH3.7 — горячая замена систем со стабильными компонентами:** отдельная
-candidate generation, resumable quiesce, neutral capture и один commit на tick
-boundary; сохранить last-good World/system state до commit, затем retire old
-callbacks/factories/caches/tasks. New-World component migration — ARCH3.8,
-сквозная приёмка — ARCH3.9. ENG7b.3/release и causal drain follow-up открыты.
-Audio/Kton имеют свои очереди; proposed Request/Claim/Decision не изменены.
-[Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch36-2026-11-14).
+**ENG7b.3 — расширенная матрица Player/combined hosts:** source/published/fresh
+profiles, role selection/selected content, child identity rejection, repeated Play/
+Stop/crash/reap и сохранность документа. Это отдельный следующий кандидат после
+завершённого ARCH3; в этом срезе не выполнялся. Functional ED/import/audio/physics/
+Nom очереди и causal drain/release gates сохранены. Request/Claim/Decision не менялись.
+[Предыдущий STATUS](HISTORY.md#engine-status-before-arch39-2026-11-15).

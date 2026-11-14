@@ -5,7 +5,7 @@ namespace TrueMoon.Aether.Runtime.Mods;
 
 /// <summary>Host-owned atomic module closure, local factories and private Worlds. Never register its collectible Types in App DI.</summary>
 /// <remarks>Owner calls must not reenter this group from module callbacks. Stop is cooperative and waits for active ticks.</remarks>
-public sealed class ModGroup
+public sealed partial class ModGroup
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
@@ -34,12 +34,15 @@ public sealed class ModGroup
     /// <summary>Whether admission/ticks have closed.</summary>
     public bool IsClosed => Volatile.Read(ref _closed) != 0;
 
-    internal async Task<ModDiagnostic> ActivateAsync(CancellationToken token)
+    internal Task<ModDiagnostic> ActivateAsync(CancellationToken token) => ActivateAsync(token, false);
+    internal Task<ModDiagnostic> ActivateAsync(CancellationToken token, bool reload) => ActivateAsync(token, reload, false);
+    internal async Task<ModDiagnostic> ActivateAsync(CancellationToken token, bool reload, bool migration)
     {
         await _gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
         try
         {
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, _lifetime.Token);
+            _host!.BindGeneration(_generation);
             foreach (var module in _artifacts!.Ordered)
             {
                 linked.Token.ThrowIfCancellationRequested();
@@ -52,16 +55,20 @@ public sealed class ModGroup
                 _modules.Add(new(entry)); entry.Register(_registration!);
             }
             _registration!.Seal(); _host!.Seal(); _host = null; _entries = null;
+            if (reload) { if (migration) ValidateMigration(); else ValidateReload(); }
             foreach (var registered in _registration.Services)
             {
                 linked.Token.ThrowIfCancellationRequested();
                 var service = registered.Factory.Create() ?? throw new ModFailure(ModLoadError.ActivationFailed, "Module service factory returned null.");
                 if (_services.Any(o => ReferenceEquals(o.Value, service)) || _modules.Any(o => ReferenceEquals(o.Value, service)))
                     throw new ModFailure(ModLoadError.ActivationFailed, "Module factory results must not alias.");
-                _services.Add(new(service)); await service.StartAsync(linked.Token).ConfigureAwait(false);
+                _services.Add(new(service));
+                if (reload && service is not IModReloadParticipant) throw new ModFailure(ModLoadError.ReloadNotSupported, "Services must support reversible quiesce/resume.");
+                await service.StartAsync(linked.Token).ConfigureAwait(false);
             }
             foreach (var module in _modules) { linked.Token.ThrowIfCancellationRequested(); await module.Value!.StartAsync(linked.Token).ConfigureAwait(false); }
             linked.Token.ThrowIfCancellationRequested();
+            if (!reload) _generation.Open();
             return new(ModLoadError.None, "Module group activated.");
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested || _lifetime.IsCancellationRequested) { return new(ModLoadError.Cancelled, "Module startup cancelled."); }
@@ -93,7 +100,7 @@ public sealed class ModGroup
     }
 
     // Safe to call concurrently with admission or a tick; actual cleanup is serialized after callbacks leave.
-    internal void RequestStop() { Interlocked.Exchange(ref _closed, 1); try { _lifetime.Cancel(); } catch { /* User cancellation callbacks cannot bypass drain. */ } }
+    internal void RequestStop() { Interlocked.Exchange(ref _closed, 1); _generation.Close(); try { _lifetime.Cancel(); } catch { /* User cancellation callbacks cannot bypass drain. */ } }
 
     /// <summary>Closes admission, drains module work, disposes systems before Worlds, clears roots and requests collectible unload.</summary>
     /// <remarks>On failure the host retains this group; call again after fixing the failure. No forced abort or forced GC occurs.</remarks>
@@ -106,11 +113,18 @@ public sealed class ModGroup
             if (UnloadTicket.UnloadRequested) return new(ModLoadError.None, "Unload already requested.");
             try
             {
+                await _generation.QuiesceAsync(CancellationToken.None).ConfigureAwait(false);
+                _generation.Retire();
                 // Successful stop is remembered. Failed stop is retried before dependent resources are disposed.
                 for (var i = _modules.Count - 1; i >= 0; i--)
                     if (!_modules[i].Stopped) { await _modules[i].Value!.StopAsync(CancellationToken.None).ConfigureAwait(false); _modules[i].Stopped = true; }
                 for (var i = _services.Count - 1; i >= 0; i--)
                     if (!_services[i].Stopped) { await _services[i].Value!.StopAsync(CancellationToken.None).ConfigureAwait(false); _services[i].Stopped = true; }
+                for (var i = _reloadSchedulers.Count - 1; i >= 0; i--) _reloadSchedulers[i].Dispose();
+                _reloadSchedulers.Clear();
+                ReleaseMigrationConverters();
+                for (var i = _migrationWorlds.Count - 1; i >= 0; i--) _migrationWorlds[i].Dispose();
+                _migrationWorlds.Clear();
                 for (var i = _sessions.Count - 1; i >= 0; i--) _sessions[i].DisposeCore();
                 _sessions.Clear();
                 for (var i = _services.Count - 1; i >= 0; i--)
@@ -134,5 +148,5 @@ public sealed class ModGroup
         }
         finally { _gate.Release(); }
     }
-    private sealed class Owned<T>(T value) where T : class { internal T? Value = value; internal bool Stopped; }
+    private sealed class Owned<T>(T value) where T : class { internal T? Value = value; internal bool Stopped, Quiesced; }
 }

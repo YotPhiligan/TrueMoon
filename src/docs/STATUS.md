@@ -2,19 +2,17 @@
 
 **2026-11-12 — SkiaSharp/native4.156.0:** bundled Windows x64 DLL пересобрана из exact sources; ABI1/48bytes/GENERAL-HOST fix сохранены. Native source/published validation0/0, Alloy1224/Hosting171/Editor1496 D/R и fresh10package/40case proof прошли. [Результаты/границы](alloy/STATUS.md). Текущая engine очередь ведётся в модульном плане; physical/release gates прежние.
 
-**2026-11-14 — ARCH3.6 завершён: managed Mod SDK / manifest / collectible loader.**
-SDK — Abstractions+Contracts, Runtime — App-owned WholeGroup loader/private ECS
-Worlds, Tooling — immutable publisher. Exact dependency/API/hash checks, local
-factories, startup/cancel/cleanup retry и фактическая weak-reference collection
-проверены. Solution D/R0errors, warnings1570/1570; Aether3406/Abstractions26/
-Player17/Editor1507 каждый D/R =4956passed, failed/skipped0; 53 новых Mod cases.
-12 managed source/publish/fresh/SDK-free profiles на Cobalt/MS DI, 11packages;
-SDK graph только Abstractions+Contracts, Runtime без Tooling/UI. Native/GPU и
-другие module/release gates этим этапом не повторялись. Package props/Skia сохранены.
-[API/границы](engine/MODS.md), [manifest](engine/ARCH36_BASELINE.json),
-[история](engine/HISTORY.md#arch36-2026-11-14). Следующий ARCH3.7 — system reload;
-new-World migration — ARCH3.8; causal drain follow-up и ENG7b.3/release открыты.
-[Предыдущий STATUS целиком](HISTORY.md#common-status-before-arch36-2026-11-14).
+**2026-11-15 — ARCH3.9 завершён: единая architecture/delivery/reload приёмка.**
+Solution D/R0errors/1570warnings; все14test projects по8906passed/configuration,
+failed/skipped0.20coherent nupkg одной версии, SDK/Runtime/Tooling/Runtime+UI/Player/
+full Editor и mod consumers. Stable/migration по12profiles ×20замен:480retired ALC
+collect при live current +24final после App cleanup, owners0/data/state/tick/fences.
+Native consumer profiles validation0/0/resources/handles balanced/reap; asset/native/
+GPU mod migration не заявлена.7negative manifests rejected;518map rows/417sources.
+[Guide](engine/ARCHITECTURE_GUIDE.md), [baseline](engine/ARCH39_BASELINE.json),
+[история](engine/HISTORY.md#arch39-2026-11-15). ARCH3 закрыт в этом scope. Следующий
+кандидат ENG7b.3; other OS/AOT/physical/device-loss/release и causal drain gates прежние.
+[Предыдущий STATUS](HISTORY.md#common-status-before-arch39-2026-11-15).
 
 **Kton/физика2026-11-12 — PHYS4 App/configuration/DI/lifetime завершён:**
 192checks/profile (96Cobalt+96MicrosoftDI) source/fresh NuGet Debug/published Release;
@@ -27,12 +25,12 @@ PHYS2–3 regression309×3. [Scope/evidence](physics/HISTORY.md#phys4-2026-11-12
 
 | Направление | Что реализовано в проверенном scope | Что дальше у владельца |
 | --- | --- | --- |
-| [Core](core/STATUS.md) | ARCH2e.4b progress/EOF metadata, Core662 D/R, fresh Core package proof; CORE8 завершён в прежнем scope | Engine ARCH3.6 Mod SDK/loader; causal drain follow-up открыт |
+| [Core](core/STATUS.md) | ARCH2e.4b progress/EOF metadata, Core662 D/R, fresh Core package proof; CORE8 завершён в прежнем scope | ARCH3 acceptance complete; ENG7b.3/causal drain follow-up отдельно |
 | [Cobalt](cobalt/STATUS.md) | CORE8.2 net11: runtime/adapter179 и generator96 D/R; package generation; прежние COB6e/COB5a.1 сохранены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
 | [Enerit](enerit/STATUS.md) | CORE8.2 net11: runtime354 и generator114 D/R, actual generated IPC/package proof; same-build contracts сохранены | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
 | [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
 | [Alloy/Argentis](alloy/STATUS.md) | SkiaSharp/native4.156.0, native validation0/0, UI1224/Hosting171/Editor1496 D/R и fresh10-package/40-case delivery | PA8c.0 visual baseline, physical input/DPI, K7/K8 и release matrix отдельно; functional queue сохранена |
-| [Aether/Editor](engine/STATUS.md) | ARCH3.5 UI/optional bridge; Aether3353/Editor1507 D/R,8Runtime+UI native,4full GUI,15configuration/package8+2 | ARCH3.6 Mod SDK/loader →reload; [API/границы](engine/EDITOR_LAYERS.md), ENG7b.3/causal follow-up отдельно |
+| [Aether/Editor](engine/STATUS.md) | ARCH3.1–9 scoped complete;14suites8906D/R,20coherent packages,480reloads and actual native consumers | ENG7b.3 next candidate; functional/causal/release gates preserved |
 | [Kton/physics](physics/STATUS.md) | PHYS4 App/configuration/factory/lifecycle:192checks/profile обоих DI, source/fresh package D/published R; provider regression309×3 | [PHYS5](physics/PLAN.md#phys5): ECS/session bridge по ARCH3; controller/дальнейшая поставка отдельно |
 | [Kul/audio](audio/STATUS.md) | AUD1 Windows x64: App/DI, sound voices и music streaming;23tests D/R, source/publish/fresh-package по23offline+18muted WASAPI checks | Aether ECS/asset bridge отдельно; AUD2–3 device loss/RT/queues/other OS |
 | [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
@@ -128,10 +126,10 @@ ignored TestResults могут отсутствовать в checkout; HISTORY �
 
 ## Следующий конкретный шаг
 
-**ARCH3.3 — самостоятельный Runtime:** физическое выделение execution/render/scene
-activation без compiler/project/Tooling/Editor UI; сохранить DI/ownership и headless
-профиль. Затем ARCH3.4–5 и моды. [Очередь](engine/PLAN.md#current-engine-queue).
-ENG7b.3, release gates, causal drain follow-up и собственные Audio/Kton/Nom/ED критерии сохраняются.
+**ENG7b.3 — расширенная Player/combined-host матрица** как следующий кандидат после
+ARCH3: role/content/identity, repeated Play/Stop/crash/reap и document preservation.
+[Очередь](engine/PLAN.md#current-engine-queue). Functional ED/import/audio/physics/
+Nom, physical/release acceptance и causal drain follow-up сохраняют своих владельцев.
 
 Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
 Reliability: текущие CORE8.3/4 full net11 проверки используют ordinary nested restore,

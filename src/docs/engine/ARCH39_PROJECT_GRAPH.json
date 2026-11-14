@@ -1,0 +1,60 @@
+{
+  "Scope": "Verified source ProjectReferences; fresh/runtime graph validation is in ARCH39_BASELINE.json",
+  "Projects": [
+    {
+      "Assembly": "TrueMoon.Aether.Abstractions",
+      "References": [
+        "TrueMoon.Contracts"
+      ],
+      "TargetFramework": "$(TF)"
+    },
+    {
+      "Assembly": "TrueMoon.Aether.Runtime",
+      "References": [
+        "TrueMoon.Aether.Abstractions",
+        "TrueMoon.Contracts",
+        "TrueMoon.Enerit",
+        "TrueMoon.Mithril"
+      ],
+      "TargetFramework": "$(TF)"
+    },
+    {
+      "Assembly": "TrueMoon.Aether.Tooling",
+      "References": [
+        "TrueMoon.Aether.Runtime",
+        "TrueMoon.Contracts",
+        "TrueMoon.Aether.Abstractions",
+        "TrueMoon.Enerit",
+        "TrueMoon.Mithril"
+      ],
+      "TargetFramework": "$(TF)"
+    },
+    {
+      "Assembly": "TrueMoon.Aether.Editor.UI",
+      "References": [
+        "TrueMoon.Contracts",
+        "TrueMoon.Aether.Runtime",
+        "TrueMoon.Alloy.Hosting"
+      ],
+      "TargetFramework": "$(TF)"
+    },
+    {
+      "Assembly": "TrueMoon.Aether.Editor.Tooling",
+      "References": [
+        "TrueMoon.Aether.Editor.UI",
+        "TrueMoon.Contracts",
+        "TrueMoon.Aether.Tooling",
+        "TrueMoon.Alloy.Hosting"
+      ],
+      "TargetFramework": "$(TF)"
+    },
+    {
+      "Assembly": "TrueMoon.Aether.Player",
+      "References": [
+        "TrueMoon.Aether.Runtime",
+        "TrueMoon.Alloy.Hosting"
+      ],
+      "TargetFramework": "$(TF)"
+    }
+  ]
+}

@@ -8,6 +8,7 @@ public sealed partial class World
     private SystemPlan? _systemPlan;
     private object? _schedulerOwner;
     private bool _activatingSystems;
+    private bool _preparingReload;
     private Exception? _failure;
 
     /// <summary>Gets whether an execution failure requires disposal/recreation before further mutations.</summary>
@@ -44,6 +45,7 @@ public sealed partial class World
 
     private void EnsureMutation(Type? type, bool structural)
     {
+        if (_preparingReload) throw new InvalidOperationException("Reload preparation cannot mutate World.");
         EnsureHealthy();
         if (_sceneLoading && !_sceneWrite) throw new InvalidOperationException("Scene preparation cannot mutate unpublished World data.");
         if (_activatingSystems) throw new InvalidOperationException("System factories cannot mutate World during graph activation.");
@@ -57,6 +59,7 @@ public sealed partial class World
 
     private void EnsureWrite(Type type)
     {
+        if (_preparingReload) throw new InvalidOperationException("Reload preparation cannot write World.");
         EnsureHealthy();
         if (_sceneLoading && !_sceneWrite) throw new InvalidOperationException("Scene preparation cannot write unpublished World data.");
         if (_activatingSystems) throw new InvalidOperationException("System factories cannot write World during graph activation.");
@@ -82,15 +85,16 @@ public sealed partial class World
     internal void CheckQueryOwner() => ThrowIfDisposed();
 
     internal void CheckCommandRecording(Type? type)
-    { EnsureHealthy(); if (type != null) EnsureWrite(type); }
+    { EnsureHealthy(); if (_preparingReload) throw new InvalidOperationException("Reload preparation cannot record commands."); if (type != null) EnsureWrite(type); }
 
     internal void CheckPlayback()
     {
         EnsureHealthy();
-        if (_activeQuery || _systemPlan != null || _activatingSystems || _sceneLoading) throw new InvalidOperationException("Playback requires an idle published phase boundary.");
+        if (_activeQuery || _systemPlan != null || _activatingSystems || _sceneLoading || _preparingReload) throw new InvalidOperationException("Playback requires an idle published phase boundary.");
     }
 
     internal void MarkFaulted(Exception failure) => _failure ??= failure;
+    internal void SanitizeModuleFailure() { if (_failure != null) _failure = new InvalidOperationException("A module system faulted this World."); }
 
     internal void ClaimScheduler(object owner)
     {
@@ -105,6 +109,28 @@ public sealed partial class World
 
     internal void ReleaseScheduler(object owner)
     { if (ReferenceEquals(_schedulerOwner, owner)) { _schedulerOwner = null; _activatingSystems = false; } }
+
+    internal void ReplaceScheduler(object previous, object next)
+    {
+        CheckPlayback();
+        if (!ReferenceEquals(_schedulerOwner, previous)) throw new InvalidOperationException("Scheduler ownership mismatch.");
+        _schedulerOwner = next;
+    }
+
+    internal void ValidateStableComponents(Func<Type, bool> stable)
+    {
+        CheckPlayback();
+        if (_pools.Keys.Any(type => !stable(type))) throw new InvalidOperationException("System replacement requires stable shared component types.");
+    }
+
+    internal IDisposable BeginReloadPreparation()
+    {
+        CheckPlayback();
+        if (_preparingReload) throw new InvalidOperationException("Nested reload preparation is unsupported.");
+        _preparingReload = true; return new ReloadPreparation(this);
+    }
+    private sealed class ReloadPreparation(World world) : IDisposable
+    { public void Dispose() => world._preparingReload = false; }
 
     internal void BeginSystem(object owner, SystemPlan plan)
     {

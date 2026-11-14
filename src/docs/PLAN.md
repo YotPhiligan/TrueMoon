@@ -13,7 +13,7 @@
 
 <a id="current-roadmap"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-14
+## Текущая очередь — актуализация 2026-11-15
 
 По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика
 ARCH2e.4b → ARCH1f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5
@@ -23,7 +23,7 @@ types, 61 project graph; owners/compatibility и optional Editor.Tooling integra
 определены в исходной карте. ARCH3.1–5 теперь реализованы; import/audio/ED и release
 gates сохраняют свои IDs/критерии. Короткий diagnostics срез завершён 12 ноября:
 [baseline D/R](engine/HISTORY.md#arch2e4b-2026-11-12), 8568passed/configuration;
-причина старого timeout остаётся открыта. ARCH1f.4 завершён: [surface/fence и actual proofs](engine/HISTORY.md#arch1f4-2026-11-12). ENG7b.1–2 также завершены: [local Player и role/cleanup proofs](engine/HISTORY.md#eng7b12-2026-11-12). ARCH3.1 завершён: [независимый SDK](engine/ABSTRACTIONS.md). ARCH3.2 завершён: [real ECS binding и shared identity](engine/ECS_BINDING.md). ARCH3.3 завершён: [самостоятельный Runtime, App и schema2 ABI](engine/RUNTIME.md), [проверки](engine/ARCH33_BASELINE.json). ARCH3.4 завершён: [headless Tooling](engine/TOOLING.md), [приёмка](engine/ARCH34_BASELINE.json). ARCH3.5 завершён: [Editor UI/optional bridge](engine/EDITOR_LAYERS.md), [приёмка](engine/ARCH35_BASELINE.json). ARCH3.6 завершён: [managed Mod SDK/loader](engine/MODS.md), [приёмка](engine/ARCH36_BASELINE.json). Следующий ARCH3.7 — system reload.
+причина старого timeout остаётся открыта. ARCH1f.4 завершён: [surface/fence и actual proofs](engine/HISTORY.md#arch1f4-2026-11-12). ENG7b.1–2 также завершены: [local Player и role/cleanup proofs](engine/HISTORY.md#eng7b12-2026-11-12). ARCH3.1 завершён: [независимый SDK](engine/ABSTRACTIONS.md). ARCH3.2 завершён: [real ECS binding и shared identity](engine/ECS_BINDING.md). ARCH3.3 завершён: [самостоятельный Runtime, App и schema2 ABI](engine/RUNTIME.md), [проверки](engine/ARCH33_BASELINE.json). ARCH3.4 завершён: [headless Tooling](engine/TOOLING.md), [приёмка](engine/ARCH34_BASELINE.json). ARCH3.5 завершён: [Editor UI/optional bridge](engine/EDITOR_LAYERS.md), [приёмка](engine/ARCH35_BASELINE.json). ARCH3.6 завершён: [managed Mod SDK/loader](engine/MODS.md), [приёмка](engine/ARCH36_BASELINE.json). ARCH3.7 завершён: [stable-component system replacement](engine/MOD_RELOAD.md), [приёмка](engine/ARCH37_BASELINE.json). ARCH3.8 завершён: [private components/new-World migration](engine/MOD_MIGRATION.md), [приёмка/SHA](engine/ARCH38_BASELINE.json). ARCH3.9 завершён 2026-11-15: [слои/guide/единая поставка](engine/ARCHITECTURE_GUIDE.md), [приёмка/SHA](engine/ARCH39_BASELINE.json). Следующий кандидат — ENG7b.3; functional/release gates сохранены.
 
 Предыдущий сквозной этап — [CORE8: восстановление solution на .NET11](core/PLAN.md#core8-dotnet11), завершён 11 ноября.
 CORE8.0/8.1 managed inputs готовы: 61 net11 проекта, 45 runners на общем profile,
@@ -109,7 +109,7 @@ Source/published/fresh: по230checks на обоих DI,4owned children/profile
 
 | Направление | Следующий результат | План владельца |
 | --- | --- | --- |
-| Слои Aether и моды | ARCH3.0–6 завершены: слои/ECS, Editor UI/optional bridge и managed Mod SDK/loader. Далее ARCH3.7 system reload →3.8 migration →3.9 приёмка | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
+| Слои Aether и моды | ARCH3.0–7 завершены: слои/ECS/UI, Mod SDK/loader и stable-component system replacement. Далее ARCH3.8 component migration →3.9 приёмка | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
 | .NET 11, CORE8 завершён | Inputs/generators/frozen game/runtime regression и свежая согласованная поставка проверены; функциональная очередь продолжается у владельцев | [CORE8](core/PLAN.md#core8-dotnet11), [итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11) |
 | Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
 | ECS и отображение, функциональная очередь | F.2/f.3/f.4 resources/snapshots/actual Vulkan surface и Playing fence готовы; далее минимальный Player | [ARCH1f.4](engine/PLAN.md#arch1f-rendering), [snapshot API](engine/RENDER_SNAPSHOTS.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |

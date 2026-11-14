@@ -24,11 +24,14 @@ public sealed class ModEntryFactory : IFactory<IModEntry, ModEntryArguments>
 
 internal sealed class ModHostServices(IServiceResolver resolver, IReadOnlyCollection<Assembly> shared) : IModHostServices
 {
+    private IModGeneration? _generation;
+    internal void BindGeneration(IModGeneration generation) => _generation = generation;
     private IServiceResolver? _resolver = resolver;
     private IReadOnlyCollection<Assembly>? _shared = shared;
     public T GetRequired<T>() where T : class
     {
         var current = _resolver ?? throw new InvalidOperationException("Module composition has ended.");
+        if (typeof(T) == typeof(IModGeneration)) return (T)_generation!;
         if (!Stable(typeof(T))) throw new InvalidOperationException("Module types cannot enter host DI resolution, including generic arguments.");
         var value = current.GetService(typeof(T)) as T ?? throw new InvalidOperationException("Required stable host service is not registered.");
         if (Root(value.GetType())) throw new InvalidOperationException("Application/bootstrap/container owners cannot be passed to a module.");
@@ -40,5 +43,5 @@ internal sealed class ModHostServices(IServiceResolver resolver, IReadOnlyCollec
     private bool Stable(Type type) => !Root(type) && (_shared!.Contains(type.Assembly) ||
         ModArtifactGroup.Framework.ContainsKey(type.Assembly.GetName().Name!) && System.Runtime.Loader.AssemblyLoadContext.GetLoadContext(type.Assembly) == System.Runtime.Loader.AssemblyLoadContext.Default) &&
         (!type.HasElementType || Stable(type.GetElementType()!)) && type.GetGenericArguments().All(Stable);
-    internal void Seal() { _resolver = null; _shared = null; }
+    internal void Seal() { _resolver = null; _shared = null; _generation = null; }
 }

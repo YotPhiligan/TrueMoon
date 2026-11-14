@@ -55,5 +55,19 @@ retains explicit ownership for retry. Weak unload tickets distinguish requested
 unload from actual collection. No native mod libraries or forced thread abort.
 ModArtifactPublisher lives separately in Tooling; GameBuildLoader is unchanged.
 
-Production mod hot replacement/migration, other OS/RID, AOT/trimming,
-device-loss/performance and general release require their own acceptance.
+ARCH3.7 adds ModHost.CreateSystemSession(World): an App-owned system graph borrowing
+a caller-owned stable-component World. ReplaceAsync privately prepares a new ALC,
+quiesces/captures/restores explicit system state and commits at a tick boundary.
+Guarded callbacks stage/drain/clear; failed pre-commit replacement resumes the old
+graph, while post-commit retirement failure is separate and retryable. No per-tick
+resolution, World reset or implicit system-state drop. Direct session factory
+products remain caller-owned and must finish cleanup before borrowed dependencies.
+
+ARCH3.8 adds ModHost.CreateWorldMigrationSession(): App owns changing Worlds and
+groups. Neutral snapshots, bidirectional local bindings and explicit exact migrators
+prepare a private World and preserve system state/tick before a single publication.
+Unknown data rejects; field removal/reset require host admission. Candidate rejection
+resumes the old World; retired cleanup remains separate/retryable. Entity refs remap
+through persistent IDs; old handles are stale. Asset/native/GPU migration, universal
+production reload, other OS/RID, AOT/trimming, device-loss/performance and general
+release require separate acceptance.

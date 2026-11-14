@@ -13,6 +13,9 @@ internal static class Program
 {
 private static void Main(string[] args)
 {
+if (args.Length == 6 && args[0] == "--cycles") { CycleProof.Run(args[1], args[2], args[3], args[4], int.Parse(args[5], System.Globalization.CultureInfo.InvariantCulture)); return; }
+if (args.Length == 4 && args[0] == "--reload") { ReloadProof.Run(args[1], args[2], args[3]); return; }
+if (args.Length == 4 && args[0] == "--migration") { MigrationProof.Run(args[1], args[2], args[3]); return; }
 if (args.Length != 2) throw new ArgumentException("artifactDirectory cobalt|msdi");
 var report = Proof.Run(args[0], args[1] == "msdi");
 for (var i = 0; report.Ticket.IsAlive && i < 30; i++) { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); Thread.Sleep(20); }

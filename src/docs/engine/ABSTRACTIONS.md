@@ -90,6 +90,13 @@ positive version. Unknown schemas требуют explicit preserve/reject/reset 
 
 ## Проверки и продолжение
 
+ARCH3.7 расширяет нейтральный Mod SDK [явными reload contracts](MOD_RELOAD.md):
+resumable lifecycle, copied bounded system state и stable generation callback
+guards. Implementation/World ownership остаются в Runtime; частные component
+types и migration используют [нейтральные ARCH3.8 contracts](MOD_MIGRATION.md).
+Старые DLL требуют coherent rebuild
+с новым exact shared hash; manifest/API version и game byte formats прежние.
+
 ARCH3.6 добавляет отдельные [Mod SDK/manifest/entry/factory contracts](MODS.md)
 в `Mods`. Они остаются нейтральными: SDK-only мод использует Abstractions и
 Contracts, implementation loader — Runtime, publisher — Tooling. Исторический

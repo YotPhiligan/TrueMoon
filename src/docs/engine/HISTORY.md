@@ -14406,3 +14406,348 @@ ARCH3.7–9 добавят system reload/new-World migration и приёмку; 
 loader не объявлен готовым mod manager. ENG7b.3/release и causal drain follow-up
 остаются открыты. Audio/Kton имеют свои очереди. Proposed Request/Claim/Decision
 не изменены. [Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch35-2026-11-14).
+
+
+<a id="arch37-2026-11-14"></a>
+## 2026-11-14 — ARCH3.7: system replacement на стабильном World
+
+Запрос: следующий согласованный этап после ARCH3.6. [API/границы](MOD_RELOAD.md),
+[baseline/source/package/report SHA](ARCH37_BASELINE.json). Branch feat/aether-system-reload
+поверх0d10f981420b9bafc7e94af213ae76d5737772c9; commit/push в этом этапе не выполнялись.
+
+Abstractions: IModReloadParticipant, IModReloadableSystem, copied bounded
+ModSystemState и IModGeneration. Runtime: App-owned borrowing ModSystemSession,
+detached ECS activation, stable shared types/preparation writes fence, one boundary
+commit, callback staging/drain/retire, complete system-state capture/restore.
+No root mod-Type registrations/scopes/per-frame resolve. Caller owns World;
+host owns current/candidate/failed/retired groups. Reject/cancel resumes last-good;
+failed resume needs recovery, committed retirement failure never triggers rollback.
+Exceptions exported only as neutral diagnostics; terminal World fault is sanitized
+so a retained faulted/disposed World does not root the module exception.
+
+Финальные команды: `TestResults/ARCH37-20261114-222022/Run-Final.ps1` выполняет non-incremental solution D/R
+и4полныхengine suites D/R; `ManualTests/ModConsumer/Verify.ps1 -Reload
+-EvidenceDirectory TestResults/ARCH37-20261114-222022/reload-final` и тот же runner без -Reload с
+`TestResults/ARCH37-20261114-222022/legacy-final`. Все MSBuild invocations имеют unique binlogs, TRX/logs/
+SDK/TFM/language/runtime-async/CPM isolation snapshot. Package proofs выполнялись
+после эксклюзивных full Aether runs; Release binaries собраны перед pack --no-build.
+
+| Gate | Result |
+| --- | --- |
+| Solution D/R | 0errors,1570warnings/configuration; новых warnings нет |
+| Aether / Abstractions / Player / Editor D/R |3455 /26 /17 /1507=5005/configuration, failed/skipped0 |
+| New reload/callback cases |49/configuration: state/identity, rejection/cancel, tick/callback drain, rollback retry, cleanup retry, state budgets, ownership и weak collection |
+| Independent reload |12profiles source/publish D/R/fresh/SDK-free ×both DI; World/value7→9→19, tick/state1→2→3, old callbacks0, stale commands rejected, retired context collected while current remains live |
+| Package-only SDK |11framework packages; два independently compiled private DLL с разными SHA, только Abstractions+Contracts, Runtime graph без Tooling/UI |
+| Existing load/unload delivery |12profiles обоих DI, включая fresh/SDK-free |
+
+Build/test research/plan/review/status и raw logs лежат под ignored evidence root;
+точные commands/counts/limits сохраняются здесь и в versioned baseline. Первое
+test compile уточнило Ambiguous EcsSystemContext (Runtime/Abstractions); final uses
+neutral alias. Intermediate 90Mod/964Mod+ECS и ранние package profiles не подменяют
+финальные four-suite и package reports. Package props/Skia SHA сохранены.
+
+Не запускались native/GPU/GUI/configuration delivery, Kton/Kul/other-module suites,
+другие OS/AOT/trimming, universal production/release acceptance и20cycles всех
+ARCH3.9 profiles. Start/capture/restore должны соблюдать private/read-only contract;
+unfenced side effects/async-void/broken non-cooperative modules не являются sandboxed
+rollback scenario. Component type/binding migration остаётся ARCH3.8.
+
+<a id="engine-status-before-arch37-2026-11-14"></a>
+### Предыдущий engine STATUS целиком
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-14 — ARCH3.6 завершён: managed Mod SDK, manifest и collectible loader.**
+[API/manifest/DI/ownership/границы](MODS.md), [manifest/SHA](ARCH36_BASELINE.json),
+[команды/приёмка](HISTORY.md#arch36-2026-11-14).
+
+Abstractions.Mods содержит нейтральный SDK; Runtime.Mods — ModHost и один
+collectible ALC на WholeGroup closure; Tooling.Mods — явный immutable publisher.
+Версии/ranges/cycles, hashes/limits/paths, exact shared/private identities
+проверяются до entry activation. App владеет группами, локальные фабрики/Types
+не регистрируются в root DI; App/provider/bootstrap owners недоступны модам.
+Частные Worlds используют настоящий ECS. Stop закрывает admission до ожидания
+active startup/tick; cleanup освобождает systems до Worlds и сохраняет failed
+owners для retry. Нейтральные outcomes не удерживают модовые exceptions.
+Weak tickets различают unload requested и collection; оба факта проверены.
+
+| Фактическая проверка | Результат |
+| --- | --- |
+| Non-incremental solution Debug/Release | 0 errors, warnings 1570/1570 |
+| Полные Aether / Abstractions / Player / Editor D/R | По 3406 / 26 / 17 / 1507 passed; 4956 на configuration, failed/skipped 0 |
+| Новые Mod tests | 53 на configuration: validation/dependencies/identity, startup/cancel, cleanup retry, tick fence, weak collection |
+| Source/publish D/R + fresh + SDK-free, both DI | 12 managed profiles; component 7→8, private dependency, exact lifecycle и collection |
+| Independent SDK/feed | 11 свежих framework packages; SDK mod получает только Abstractions + Contracts; Runtime graph без Tooling/UI |
+
+Windows x64, SDK11.0.100, net11.0, runtime-async=on, xUnit2/VSTest.
+Exact shared hashes требуют coherent rebuild/republication host/game/mod artifacts;
+schema2 и прежние scene/project/control/frame/checkpoint formats не менялись.
+GameBuildLoader сохранён отдельно. Stage3.5 native/GPU/GUI/configuration proofs
+остаются датированной историей: этим этапом они не повторялись. Native mods,
+forced abort, system hot replacement/new-World migration, другие OS/AOT/release
+не приняты; они не следуют из managed unload. Package props/Skia SHA сохранены.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS4 App/configuration/DI 2026-11-12
+
+TrueMoon.Kton.Bepu public App integration/factories/lifecycle реализованы:
+192checks/profile (96Cobalt+96MicrosoftDI), source/fresh NuGet Debug/published Release;
+реальные worlds, generated constructor,9package closure и cleanup retry.
+Current PHYS2–3 regression309×3. [Scope/evidence](../physics/HISTORY.md#phys4-2026-11-12),
+[App guide](../physics/APP.md), [следующий PHYS5](../physics/STATUS.md).
+ECS bridge ещё впереди и согласуется с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue),
+[ARCH1i](PLAN.md#arch1i-physics). Engine/GPU/platform readiness и очередь не меняются.
+
+## Следующий конкретный шаг
+
+**ARCH3.7 — горячая замена систем со стабильными компонентами:** отдельная
+candidate generation, resumable quiesce, neutral capture и один commit на tick
+boundary; сохранить last-good World/system state до commit, затем retire old
+callbacks/factories/caches/tasks. New-World component migration — ARCH3.8,
+сквозная приёмка — ARCH3.9. ENG7b.3/release и causal drain follow-up открыты.
+Audio/Kton имеют свои очереди; proposed Request/Claim/Decision не изменены.
+[Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch36-2026-11-14).
+
+<a id="arch38-2026-11-15"></a>
+## 2026-11-15 — ARCH3.8: private components/new-World migration
+
+[API/ownership/supported policy](MOD_MIGRATION.md), [baseline/SHA](ARCH38_BASELINE.json).
+Работа начата14ноября, финальная приёмка завершена15ноября. Git branch feat/aether-system-reload,
+предыдущие незакоммиченные ARCH3.7 изменения сохранены; commit/push не выполнялись.
+
+Добавлены neutral snapshots/strict codec, bidirectional local component bindings,
+exact group-owned disposable migrators и persistent entity remap. App-owned сессия
+готовит private World/системы/state, публикует World/group/generation одним assignment,
+retire освобождает old scheduler/World/pools/bindings/ALC. Неучтённые данные и unknown
+types отклоняются. Added/changed fields требуют явной конверсии; removal — declaration
+плюс host admission. Reset выделен в отдельный явный API. Failed pre-commit resumes
+old; resume/retired cleanup/partial stop наблюдаемы и retryable. Фабрика кандидата не
+может присвоить старую систему; stop отменяет и pending capture quiesce. Исключения
+neutralized; retained disposed old World/stale contexts/guard delegates не root ALC.
+
+Финальный evidence: `E:\source\my\TrueMoon.Tales\TrueMoon\src\TestResults\ARCH38-20261114-232415`. `acceptance/` содержит non-incremental solution D/R
+(0errors/1570warnings),8TRX: Aether3504/Abstractions26/Player17/Editor1507 в каждой
+configuration (5054passed/configuration, failed/skipped0).49новых ModMigrationTests;
+focused151 D/R включают прежние53ModLoader и49reload/generation cases.
+`consumer-migration-final`, `consumer-reload-final`, `consumer-legacy-final` — каждый
+Completed/12profiles. Source/publish D/R, closed-feed fresh packages и SDK-free,
+оба DI. Fresh migration/reload компилируют2разныеDLL; old context собирается при
+живой новой generation. SDK graph только Abstractions+Contracts, Runtime без Tooling/UI.
+
+Фактический runner (полный список аргументов/binlogs/SHA — baseline и verification.json):
+
+```powershell
+pwsh -NoProfile -File "E:\source\my\TrueMoon.Tales\TrueMoon\src\TestResults\ARCH38-20261114-232415\Validate.ps1" -Run "E:\source\my\TrueMoon.Tales\TrueMoon\src\TestResults\ARCH38-20261114-232415\acceptance"
+pwsh -NoProfile -File ManualTests/ModConsumer/Verify.ps1 -Migration -EvidenceDirectory "E:\source\my\TrueMoon.Tales\TrueMoon\src\TestResults\ARCH38-20261114-232415\consumer-migration-final"
+pwsh -NoProfile -File ManualTests/ModConsumer/Verify.ps1 -Reload -EvidenceDirectory "E:\source\my\TrueMoon.Tales\TrueMoon\src\TestResults\ARCH38-20261114-232415\consumer-reload-final"
+pwsh -NoProfile -File ManualTests/ModConsumer/Verify.ps1 -EvidenceDirectory "E:\source\my\TrueMoon.Tales\TrueMoon\src\TestResults\ARCH38-20261114-232415\consumer-legacy-final"
+```
+
+Validate.ps1 последовательно выполняет dotnet build TrueMoon.slnx -c Debug/Release
+--no-incremental и dotnet test четырёх проектов --no-build --no-restore с unique
+binlogs/TRX. SDK lease исключает параллельные builds/pack во время full Aether suite.
+Предварительные сборки/focused/proof сохранены, два промежуточных long validation
+process trees остановлены для lifecycle/ownership fixes; они не финальный baseline.
+Final-code-inputs проверены после всех runners. Directory.Packages.props/Skia DLL SHA
+совпадают с initial snapshot. Test-agent research/plan/review лежат в testagent/.
+
+Scope: managed Windows x64/SDK11.0.100/net11.0/runtime-async=on/xUnit2 VSTest.
+Не повторялись native/GPU/GUI/configuration/другие modules/OS/AOT/release proofs.
+Asset bindings/native effects не мигрируются. Reversible participant/pure converters/
+guarded callbacks обязательны; unfenced external side effects не получают rollback.
+ARCH3.9 full architecture matrix/20cycles, causal drain и ENG7b.3 остаются открытыми.
+
+<a id="engine-status-before-arch38-2026-11-15"></a>
+## STATUS до ARCH3.8
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-14 — ARCH3.7 завершён: system replacement на стабильном World.**
+[API/contract/ownership/ошибки](MOD_RELOAD.md), [baseline/SHA](ARCH37_BASELINE.json),
+[команды/границы](HISTORY.md#arch37-2026-11-14).
+
+App-owned ModSystemSession заимствует caller-owned World и заменяет весь mod
+system graph. Candidate готовится в отдельном ALC; current ticks продолжаются
+до boundary/quiesce. Detached factories и capture/restore не могут изменять World.
+Resumable participants и полный versioned system state обязательны; shared stable
+component storage, handles и tick sequence сохраняются. Commit не вызывает module
+code. Guarded callbacks staged/drained/retired, старые commands/context недействительны.
+Reject/cancel до commit возвращает last-good graph; failed resume требует явного
+recovery. После commit retired cleanup failure виден отдельно и retry не откатывает
+новую generation. World никогда не освобождается host/session.
+
+| Фактическая проверка | Результат |
+| --- | --- |
+| Non-incremental solution Debug/Release | 0errors, warnings1570/1570 |
+| Полные Aether / Abstractions / Player / Editor D/R | По3455 /26 /17 /1507passed;5005/configuration, failed/skipped0 |
+| Новые reload/callback tests |49/configuration; прежние53ModLoader cases также прошли |
+| Explicit reload source/publish D/R + fresh + SDK-free ×both DI |12profiles; World/handle/data identity, system-state/tick continuity, retired callbacks/commands и old ALC collection при live current |
+| Fresh SDK |11framework packages;2разные DLL, SDK graph только Abstractions+Contracts; Runtime без Tooling/UI |
+| Совместимость прежнего load/unload |12fresh delivery profiles на обоих DI, включая SDK-free |
+
+Windows x64, SDK11.0.100, net11.0, runtime-async=on, xUnit2/VSTest. Explicit
+factory results/ownership и configuration profile прежние; новых module Type
+registrations в root DI/scopes/per-frame resolution нет. Exact shared hashes
+требуют coherent rebuild host/SDK/mods; manifest/API1 и game byte formats прежние.
+Package props/Skia DLL SHA сохранены. Native/GPU/GUI/configuration delivery,
+другие modules/OS/AOT/release и20cycles всех ARCH3.9 profiles не повторялись.
+Private mod components и migration остаются ARCH3.8; unfenced side effects,
+невозвращающийся module code и forced abort не поддерживаются.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS4 App/configuration/DI 2026-11-12
+
+TrueMoon.Kton.Bepu public App integration/factories/lifecycle реализованы:
+192checks/profile (96Cobalt+96MicrosoftDI), source/fresh NuGet Debug/published Release;
+реальные worlds, generated constructor,9package closure и cleanup retry.
+Current PHYS2–3 regression309×3. [Scope/evidence](../physics/HISTORY.md#phys4-2026-11-12),
+[App guide](../physics/APP.md), [следующий PHYS5](../physics/STATUS.md).
+ECS bridge ещё впереди и согласуется с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue),
+[ARCH1i](PLAN.md#arch1i-physics). Engine/GPU/platform readiness и очередь не меняются.
+
+## Следующий конкретный шаг
+
+**ARCH3.8 — модовые компоненты и migration нового World:** neutral snapshots по
+persistent entity/schema IDs/versions, явные migrators/unknown-data policy,
+private candidate World и один commit; при reject сохранять старое состояние.
+ARCH3.9 — сквозные architecture profiles и20reloadcycles. ENG7b.3/release,
+causal drain follow-up и Audio/Kton очереди сохраняются; Request/Claim/Decision
+не изменены. [Предыдущий STATUS](HISTORY.md#engine-status-before-arch37-2026-11-14).
+
+<a id="arch39-2026-11-15"></a>
+## 2026-11-15 — ARCH3.9: сквозная architecture/delivery/reload приёмка
+
+[Guide](ARCHITECTURE_GUIDE.md), [map518rows/417sources](ARCH39_MIGRATION.csv),
+[source graph](ARCH39_PROJECT_GRAPH.json), [versioned manifest/SHA](ARCH39_BASELINE.json).
+Branch feat/aether-system-reload, исходный HEAD сохранён; существующие ARCH3.7–8
+изменения и local .codex сохранены. Commit/push/public package publishing не было.
+
+Новый ArchitectureDelivery orchestrator и отдельный Regression.ps1 делают
+последовательные solution builds/14suites D/R и одну20-package поставку. Шесть
+standalone verifiers получили optional PackageVerification: копируют exact nupkg
+из completed manifest вместо repack. Их прежний standalone путь сохранён; ModConsumer
+дополнен Cycles20, Source/publish D/R/fresh/SDK-free на обоих DI. В каждом цикле
+retired weak ticket collect при live current; после App Dispose final также collect.
+Удерживаются все старые Worlds/snapshots/guards/contexts. Проверяются live data,
+persistent identity/refs/parent graph, system state/tick, stale commands/callbacks,
+exact entry/system disposal и owners0. Stable cycles чередуют две версии;
+private migration —1explicit v1→v2 и19same-schema/new-CLR-identity migrations.
+
+Финальная версия: `0.3.0.1-alpha.arch39.20261115005454`. Raw evidence: `E:\source\my\TrueMoon.Tales\TrueMoon\src\TestResults\ARCH39-20261115-004600\acceptance`.
+Source Debug/published Release/fresh package profiles: SDK6/Runtime8/Tooling6/
+Runtime+UI8/Player6, configuration15, stable12×20/migration12×20/legacy12,
+full Editor8headless package cases +2sourceGUI +2published-packageGUI.
+Native UI/Player/Editor проверяют validation0/0/resource+handle+surface balance/reap.
+Все shared archive hashes совпадают; metadata/analyzers/native/fonts/shaders
+проверены соответствующими package consumers. Все14ordinary suites D/R:8906/config,
+failed/skipped0. Solution0errors/1570warnings в каждой configuration. Raw regression
+manifest оставляет Warnings=-1 из-за inherited CP866 summary; baseline восстанавливает
+summary text/1570 без изменения raw evidence. До общей приёмки был успешный20cycle
+migration smoke12profiles; финальными являются orchestrated reports.
+
+```powershell
+pwsh -NoProfile -File ManualTests/ArchitectureDelivery/Verify.ps1 -ValidationDirectory "E:\source\my\TrueMoon.Tales\TrueMoon\src\TestResults\EditorWindow-20261104\tools\validation" -EvidenceDirectory "E:\source\my\TrueMoon.Tales\TrueMoon\src\TestResults\ARCH39-20261115-004600\acceptance"
+```
+
+Точные child commands, source/package/proof SHA и28TRX/binlogs находятся в manifest.
+Никакие SDK команды не шли параллельно full Aether tests (exclusive SDK lease).
+NegativeDelivery:7synthetic invalid manifests (unfinished/version/TFM/profile-source/
+archive-hash/duplicate/missing-required) rejected; positive exact copy passed.
+Это не переписывает входящие Request/Claim/Decision. Карта сводит прежние CSV,
+проверяет final namespace/type names/sources, не редактирует исторические карты.
+Root README получил guide/runner navigation и исправление stale version на0.3.0.1-alpha.
+
+Windows x64/SDK11.0.100/net11.0/runtime-async=on/xUnit2 VSTest. Package props/Skia DLL
+SHA неизменны. No asset/native/GPU mod migration, arbitrary external side-effect
+rollback, other OS/AOT/trimming/physical-input/device-loss/K7/VRAM/release-soak claims.
+Passing drain paths не закрывают causal investigation. ENG7b.3 остаётся следующим
+кандидатом, существующие ED/import/audio/physics/Nom/release очереди сохранены.
+Ignored TestResults/temporary feeds не имеют retention guarantee; этот versioned
+record и baseline сохраняют scope/commands/outcomes/hashes.
+
+<a id="engine-status-before-arch39-2026-11-15"></a>
+## STATUS до ARCH3.9
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-15 — ARCH3.8 завершён: private components и migration нового World.**
+[API/ownership/границы](MOD_MIGRATION.md), [baseline/SHA](ARCH38_BASELINE.json),
+[команды и evidence](HISTORY.md#arch38-2026-11-15).
+
+App-owned ModWorldMigrationSession владеет Worlds и generations. Bidirectional
+local bindings/export capture persistent IDs/schema versions, entity refs/parent
+graph и exact system state/tick. Explicit migrators готовят private World с новыми
+CLR types; один commit публикует World/group/generation. Unknown/untracked данные,
+missing migrator и schema drift отклоняются. Field removal требует declaration и
+host options, reset — отдельного Allow. Reject/cancel resumes last-good World;
+failed resume и post-commit cleanup явно различаются и имеют retry. App stop
+отменяет replacement/capture, освобождает scheduler/World/resources и ALC roots.
+Borrowed stable World профиль ARCH3.7 и regular loader ownership сохранены.
+
+| Фактическая проверка | Результат |
+| --- | --- |
+| Non-incremental solution Debug/Release | 0errors; warnings1570/1570 |
+| Полные Aether / Abstractions / Player / Editor D/R | По3504 /26 /17 /1507passed;5054/configuration, failed/skipped0 |
+| Новые migration tests |49/configuration; focused ModLoader/reload/generation/migration151 D/R |
+| Migration source/publish D/R + fresh + SDK-free ×both DI |12profiles;2разные fresh DLL, private CLR types, data/IDs/relations/state/tick сохранены, old ALC collect при live new World |
+| Совместимость stable replacement / regular loader |12reload +12legacy profiles; оба DI, включая SDK-free |
+
+Windows x64, SDK11.0.100/net11.0/runtime-async=on/xUnit2 VSTest. Root DI не хранит
+private module Types/factories; per-tick resolution нет. Package props и Skia DLL
+SHA сохранены. Exact shared hashes требуют coherent rebuild host/SDK/mods; manifest/
+API1 и game byte formats прежние. Asset/native/GPU migration, external side effects,
+другие OS/AOT и universal production reload не заявлены. Сквозная ARCH3.9 матрица/
+20cycles и graphics/audio/configuration/release acceptance остаются отдельными.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS4 App/configuration/DI 2026-11-12
+
+TrueMoon.Kton.Bepu public App integration/factories/lifecycle реализованы:
+192checks/profile (96Cobalt+96MicrosoftDI), source/fresh NuGet Debug/published Release;
+реальные worlds, generated constructor,9package closure и cleanup retry.
+Current PHYS2–3 regression309×3. [Scope/evidence](../physics/HISTORY.md#phys4-2026-11-12),
+[App guide](../physics/APP.md), [следующий PHYS5](../physics/STATUS.md).
+ECS bridge ещё впереди и согласуется с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue),
+[ARCH1i](PLAN.md#arch1i-physics). Engine/GPU/platform readiness и очередь не меняются.
+
+## Следующий конкретный шаг
+
+**ARCH3.9 — сквозная регрессия, поставка и руководство:** единая версия для SDK,
+Runtime-only, Tooling, Runtime+UI без Tooling, full Editor и reload; минимум20cycles
+с освобождением retired ALC/owners/subscriptions/resources. ENG7b.3/release, causal
+drain follow-up и Audio/Kton/Nom/ED очереди сохранены. Request/Claim/Decision не менялись.
+[Предыдущий STATUS](HISTORY.md#engine-status-before-arch38-2026-11-15).

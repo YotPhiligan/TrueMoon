@@ -93,3 +93,12 @@ managed bytes/manifest/hash directories без запуска модов. Collec
 private Worlds принадлежат Runtime, который не получает Tooling dependency.
 Other OS/RID, AOT/trimming, device loss/performance/release и mod hot replacement/
 migration остаются следующими задачами.
+
+
+## ARCH3.7 Runtime system replacement
+
+[Явный system reload на стабильном World](MOD_RELOAD.md) реализован в Runtime;
+Tooling publisher только готовит immutable artifacts. Сам Tooling не владеет
+World/commit. [New-World component migration ARCH3.8](MOD_MIGRATION.md) также
+принадлежит Runtime; wider native/OS/release
+проверки не следуют из managed replacement.

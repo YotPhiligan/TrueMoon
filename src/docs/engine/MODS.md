@@ -7,9 +7,11 @@ App-интеграция находятся в Runtime; явная публик�
 `GameBuildLoader` остаётся отдельным загрузчиком game sessions.
 
 ARCH3.6 предоставляет загрузку и полное освобождение группы, включая её частные
-World. Замена систем на существующем World — ARCH3.7, перенос данных модовых
-CLR-компонентов в новый World — ARCH3.8. `WholeGroup` определяет границу замены;
-автоматического watcher/reload/commit в этой версии нет.
+World. [Замена систем на существующем stable World — ARCH3.7](MOD_RELOAD.md), перенос данных модовых
+CLR-компонентов в новый World — [отдельная owned-World сессия ARCH3.8](MOD_MIGRATION.md).
+`WholeGroup` определяет границу замены;
+автоматического watcher нет. Явный capture/commit предоставляется отдельным
+`ModSystemSession`; обычный load/unload путь ARCH3.6 не выполняет replacement сам.
 
 ## Entry point и локальный граф
 

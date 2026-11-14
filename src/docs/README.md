@@ -15,6 +15,19 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 [текущие проверки](physics/STATUS.md). PHYS0–4 завершены в указанном scope;
 Aether ECS bridge — отдельный PHYS5.
 
+## Слои Aether и поставка
+
+[Выбор слоя, Mod SDK, migration и ownership](engine/ARCHITECTURE_GUIDE.md),
+[итоговая карта переносов](engine/ARCH39_MIGRATION.csv),
+[сквозной runner](../ManualTests/ArchitectureDelivery/README.md).
+
+## Mod reload и migration
+
+[Stable World/reload SDK, callbacks и ownership](engine/MOD_RELOAD.md);
+[проверки stable profile](engine/ARCH37_BASELINE.json).
+[Private components и migration нового World](engine/MOD_MIGRATION.md),
+[migration baseline](engine/ARCH38_BASELINE.json); [сквозная ARCH3.9 приёмка/SHA](engine/ARCH39_BASELINE.json).
+
 ## Общие документы
 
 | Документ | Для чего читать |

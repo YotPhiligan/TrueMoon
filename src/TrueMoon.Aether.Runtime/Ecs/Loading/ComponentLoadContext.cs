@@ -15,6 +15,7 @@ public sealed class ComponentLoadContext : ComponentValidationContext
     { _owner = owner; _entity = owner.Entities[entity.Id]; _parent = entity.ParentId is { } parent ? owner.Entities[parent] : null; }
     /// <summary>Gets this entity's private reservation, valid in the resulting World after publication.</summary>
     public EntityHandle Entity { get { CheckActive(); return _entity; } }
+    internal IReadOnlyDictionary<EntityId, EntityHandle> EntityMap { get { CheckActive(); return _owner.Entities; } }
     /// <summary>Gets the scene parent's reserved handle, independently of template inheritance.</summary>
     public EntityHandle? Parent { get { CheckActive(); return _parent; } }
     /// <summary>Resolves a declared reference, including forward/self references; explicit null returns null.</summary>

@@ -15,8 +15,10 @@ TrueMoon.Aether.Tooling after ARCH3.4. ARCH3.6 adds the managed Mod SDK in Mods:
 versioned manifests, IModEntryPoint/IModEntry, local factory registration,
 composition-only stable host services and cooperative service lifecycle. The SDK
 still has no Runtime implementation dependency. Runtime owns collectible loading;
-Tooling provides explicit immutable artifact publication. Live replacement and
-component migration remain ARCH3.7/3.8.
+Tooling provides explicit immutable artifact publication. ARCH3.7 adds optional
+IModReloadParticipant, IModReloadableSystem, bounded neutral ModSystemState and
+IModGeneration callback fences for explicit stable-component system replacement.
+Private component migration remains ARCH3.8.
 
 IEcsSystem keeps synchronous Execute, cooperative cancellation, Stop before Dispose
 and exclusive scheduler ownership. EcsSystemContext contains invocation-bound data,
@@ -32,3 +34,8 @@ persistence and migrations use ComponentTypeId plus exact positive schema versio
 
 No UseAbstractions registration is needed: this package owns no App services or
 resources. App/DI/factory and lifecycle bindings belong to the runtime implementation.
+
+ARCH3.8 adds optional bidirectional migration registrations (default interface
+implementations reject unsupported backends), neutral bounded ModWorldSnapshot,
+IModEntityMap and exclusively owned IModComponentMigrator contracts. Persistent IDs
+and exact schemas cross generations; private CLR types and handles never do.

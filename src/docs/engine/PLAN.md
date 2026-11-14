@@ -7,7 +7,7 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 
 <a id="current-engine-queue"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-14
+## Текущая очередь — актуализация 2026-11-15
 
 **Согласованный порядок 2026-11-12:**
 
@@ -24,9 +24,12 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 8. [ARCH3.4](#arch3-4) — **завершён 2026-11-14**: [headless Tooling/App/ownership](TOOLING.md), [проверки/SHA](ARCH34_BASELINE.json).
 9. [ARCH3.5](#arch3-5) — Editor UI и optional Editor.Tooling bridge; завершён 14 ноября, [API/приёмка](EDITOR_LAYERS.md).
 10. [ARCH3.6](#arch3-6) — managed Mod SDK/manifest/collectible loader; завершён 14 ноября, [API/ownership](MODS.md), [приёмка/SHA](ARCH36_BASELINE.json).
-11. [ARCH3.7–9](#arch3-7) — system reload, new-World migration и сквозная приёмка; следующий этап — ARCH3.7.
+11. [ARCH3.7](#arch3-7) — stable-component system replacement завершён 14 ноября: [API/ownership](MOD_RELOAD.md), [проверки](ARCH37_BASELINE.json).
+12. [ARCH3.8](#arch3-8) — private components/new-World migration завершён 2026-11-15: [API/ownership](MOD_MIGRATION.md), [приёмка](ARCH38_BASELINE.json).
+13. [ARCH3.9](#arch3-9) — завершён 2026-11-15: [единая поставка/guide](ARCHITECTURE_GUIDE.md), [приёмка/SHA](ARCH39_BASELINE.json).
+14. Следующий кандидат — [ENG7b.3](#eng7b-режимы-запуска-editor-и-player--2026-10-29), расширенная host/Player матрица; прежние functional/release очереди сохранены.
 
-Abstractions/ECS binding, Runtime, headless Tooling и Editor UI/optional bridge выделены. Mod SDK/loader добавлены в ARCH3.6; system reload/migration — далее; новый Player UI package добавлен в ENG7b.1–2. Import/audio/Nom и ED сохраняют
+Abstractions/ECS binding, Runtime, headless Tooling и Editor UI/optional bridge выделены. Mod SDK/loader и stable-component system replacement добавлены в ARCH3.6–7; component migration реализована в ARCH3.8; новый Player UI package добавлен в ENG7b.1–2. Import/audio/Nom и ED сохраняют
 свои номера и критерии; завершение всех graphics/audio возможностей не prerequisite
 разделения. CORE8.5 — [последняя фактическая поставка 11 ноября](../core/HISTORY.md#core85-delivery-2026-11-11),
 её passing counts не подтверждают будущую архитектуру. Ниже — датированная карта
@@ -480,7 +483,7 @@ real project/document/authoring/history/save/reopen/frozen Build без UI/nativ
 оба DI, failure/cancel сохраняют last-good/document, cleanup retry удерживает owner.
 Old Aether проект выведен из current wiring, Editor зависит от Tooling. Existing formats
 и schema2 exact ABI сохранены; imports/artifacts/captures требуют coherent rebuild.
-Editor UI/optional adapters выделены в ARCH3.5 ниже; Mod SDK/reload остаётся дальше.
+Editor UI/optional adapters выделены в ARCH3.5 ниже; Mod SDK/loader и stable-component system replacement реализованы в ARCH3.6–7; component migration — ARCH3.8.
 
 <a id="arch3-5"></a>
 #### ARCH3.5 — Editor UI без обязательного Tooling
@@ -537,6 +540,21 @@ pending admission cancellation, tick drain и retained cleanup owners прове
   до commit оставляет last-good version; cleanup/unload failure после commit
   виден отдельно. Нет per-frame Resolve и скрытого restart/потери system state.
 
+**Завершён 2026-11-14 в scoped managed Windows x64 profile.**
+[Contracts/API/atomic boundary/callbacks/ownership](MOD_RELOAD.md),
+[versioned baseline/SHA](ARCH37_BASELINE.json), [команды](HISTORY.md#arch37-2026-11-14).
+ModSystemSession заимствует существующий stable World; App владеет generations.
+Prepare отдельного ALC, resumable quiesce, bounded copied system state и detached
+activation приводят к одному scheduler commit между ticks. World/handles/data и
+tick/state counters сохранены. Failed candidate/cancel resumes old; failed resume
+и post-commit retirement cleanup различаются и имеют explicit retry. Guarded
+subscriptions clear module targets; stale contexts/commands не переиспользуются.
+49новыхtests D/R; полные4suites по5005/configuration, solution D/R0errors.
+12independent reload profiles +12legacy profiles, оба DI/source/publish/fresh/SDK-free;
+fresh SDK компилирует2разныеDLL, old ALC collect проверен при live current.
+Не расширяет readiness native/GPU/other OS/AOT/release; mod component storage/
+binding changes остаются ARCH3.8, полная20cycle/profile приёмка — ARCH3.9.
+
 <a id="arch3-8"></a>
 #### ARCH3.8 — модовые компоненты и migration нового World
 
@@ -548,6 +566,16 @@ pending admission cancellation, tick drain и retained cleanup owners прове
   проверены без тихой потери данных. Old Type/pools/bindings освобождаются после
   scheduler/World/resource cleanup. Reject до commit сохраняет прежнее состояние;
   отказ от rollback из-за необратимых side effects явно отражён в supported policy.
+
+**Завершён 2026-11-15 в managed Windows x64 profile.** [Контракт и supported policy](MOD_MIGRATION.md),
+[versioned baseline/SHA](ARCH38_BASELINE.json), [фактические команды](HISTORY.md#arch38-2026-11-15).
+Owned-World session, neutral effective snapshots, bidirectional private bindings,
+exact migrators, entity remap, explicit field-removal/reset admission и one-publication
+commit реализованы. Reject/cancel сохраняет last-good, resume/cleanup retry явные;
+scheduler/World/pools/bindings/ALC освобождаются.49новыхtests D/R; полные4suites
+по5054/configuration; solution D/R0errors.12migration+12reload+12legacy independent
+profiles на обоих DI; old ALC collect при live current World. Wider architecture/
+20cycles — ARCH3.9; native/GPU/asset/OS/AOT/release readiness не расширена.
 
 <a id="arch3-9"></a>
 #### ARCH3.9 — сквозная регрессия, поставка и руководство
@@ -565,6 +593,19 @@ pending admission cancellation, tick drain и retained cleanup owners прове
   рост process memory сам по себе не заменяет конкретный root/leak evidence.
   Новые native/GPU readiness и wider OS/RID/AOT/security/performance обещания
   требуют отдельных proofs; документация различает planned и implemented API.
+
+**Завершён 2026-11-15 в Windows x64/SDK11.0.100/net11.0/runtime-async=on profile.**
+[Руководство](ARCHITECTURE_GUIDE.md), [итоговая карта](ARCH39_MIGRATION.csv),
+[baseline/SHA](ARCH39_BASELINE.json), [история](HISTORY.md#arch39-2026-11-15).
+Solution D/R0errors/1570warnings;14full suites по8906passed/configuration.20точных
+nupkg одной версии для потребителей всех слоёв; Source/published/fresh/SDK-free и
+оба DI по профильной матрице. Stable и private migration — по12profiles ×20замен,
+480retired contexts collect при live current,24final contexts после cleanup; owners0,
+stale callbacks/commands fenced, IDs/relations/state/tick сохранены. Native layer
+profiles validation0/0/resources0/handles0/reap отдельно;7negative manifests rejected.
+518соответствий/417existing sources и graph6projects сверены. Managed migration
+не включает native/asset/GPU state; physical/device-loss/OS/AOT/release gates и
+causal drain остаются отдельными. Следующий кандидат — ENG7b.3, не выполнен здесь.
 
 ### Порядок и связь с существующей очередью
 

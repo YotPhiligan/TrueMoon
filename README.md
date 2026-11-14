@@ -2,7 +2,7 @@
 
 TrueMoon is a modular C# framework for application bootstrapping, service registration, lifecycle management, interprocess calls and optional UI. Applications select the modules they need and retain explicit ownership of their services, processes and graphics resources.
 
-The project is under active **alpha** development. The source version is currently `0.2.5.2-alpha`; a version suffix or a successful build does not establish release readiness. See the [current status](src/docs/STATUS.md) and [roadmap](src/docs/PLAN.md) for verified configurations and remaining work.
+The project is under active **alpha** development. The source version is currently `0.3.0.1-alpha`; a version suffix or a successful build does not establish release readiness. See the [current status](src/docs/STATUS.md) and [roadmap](src/docs/PLAN.md) for verified configurations and remaining work.
 
 ## Modules
 
@@ -21,6 +21,12 @@ The project is under active **alpha** development. The source version is current
 | Window integration | [Platform.Silk](src/TrueMoon.Alloy.Platform.Silk), [Alloy.Hosting](src/TrueMoon.Alloy.Hosting) | Windows/input integration, standalone windows, App registration and external-host adapters |
 
 UI is optional: bootstrap, DI, IPC and units do not depend on the graphics modules. Argentis is independent of Alloy/Skia/Silk; Alloy depends on Argentis. Rendering and platform integration are separate, and Hosting combines them when needed. The [general plan](src/docs/PLAN.md#архитектура-и-зависимости) describes the current dependency boundaries.
+
+The [Aether architecture guide](src/docs/engine/ARCHITECTURE_GUIDE.md) explains the
+Abstractions/Runtime/Tooling/Editor.UI layers, the optional Editor.Tooling bridge,
+Mod SDK, stable-World system replacement and private-component migration. The
+[architecture acceptance runner](src/ManualTests/ArchitectureDelivery/README.md)
+checks one coherent package delivery and repeated collectible reload cycles.
 
 ## Build from source
 

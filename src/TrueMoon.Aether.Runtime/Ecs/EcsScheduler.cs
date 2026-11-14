@@ -2,13 +2,14 @@ namespace TrueMoon.Aether.Runtime.Ecs;
 
 /// <summary>Caller-owned sequential system graph. Borrows an exclusive World lease, never its disposal ownership.</summary>
 /// <remarks>Tick/Stop/Dispose require serialized owner access; only RequestStop may be called concurrently.</remarks>
-public sealed class EcsScheduler : IDisposable
+public sealed partial class EcsScheduler : IDisposable
 {
     private Entry[] _entries;
     private readonly World _world;
     private int _state = (int)EcsSchedulerState.Ready;
     private int _stopRequested;
     private bool _ticking;
+    private bool _attached;
     internal EntityCommandBuffer Commands { get; }
     private EcsScheduler(World world, EcsSystemRegistration[] ordered, EcsSchedulerOptions options)
     {
@@ -43,6 +44,7 @@ public sealed class EcsScheduler : IDisposable
         var ordered = order.Select(i => registrations[i]).ToArray();
         var scheduler = new EcsScheduler(world, ordered, limits);
         world.ClaimScheduler(scheduler);
+        scheduler._attached = true;
         try
         {
             var instances = new HashSet<object>(ReferenceEqualityComparer.Instance);
@@ -72,7 +74,7 @@ public sealed class EcsScheduler : IDisposable
     /// <returns>True after a complete tick; false after a cooperative stop request.</returns>
     public bool Tick(TimeSpan deltaTime, CancellationToken cancellationToken = default)
     {
-        if (State != EcsSchedulerState.Ready || _ticking) throw new InvalidOperationException("The scheduler is not ready for a tick.");
+        if (!_attached || State != EcsSchedulerState.Ready || _ticking) throw new InvalidOperationException("The scheduler is not ready for a tick.");
         if (deltaTime <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(deltaTime));
         cancellationToken.ThrowIfCancellationRequested();
         var targetTick = checked(TickNumber + 1);
@@ -149,7 +151,7 @@ public sealed class EcsScheduler : IDisposable
         }
         Commands.Dispose();
         if (_entries.All(e => e.System == null || e.Disposed))
-        { _entries = []; _world.ReleaseScheduler(this); State = EcsSchedulerState.Disposed; }
+        { _entries = []; if (_attached) _world.ReleaseScheduler(this); _attached = false; State = EcsSchedulerState.Disposed; }
         else State = EcsSchedulerState.Faulted;
         if (errors.Count != 0) throw new AggregateException("System graph cleanup failed.", errors);
     }
@@ -159,7 +161,7 @@ public sealed class EcsScheduler : IDisposable
         var errors = StopAfterFailure(State == EcsSchedulerState.Faulted ? EcsSchedulerState.Faulted : EcsSchedulerState.Stopped);
         if (errors.Count == 0) return;
         var error = new AggregateException("System stop failed.", errors); Failure ??= error;
-        _world.MarkFaulted(error); State = EcsSchedulerState.Faulted; throw error;
+        if (_attached) _world.MarkFaulted(error); State = EcsSchedulerState.Faulted; throw error;
     }
     private List<Exception> StopAfterFailure(EcsSchedulerState state)
     {

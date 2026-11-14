@@ -28,7 +28,21 @@ public enum ModLoadError
     /// <summary>Resources remain owned; explicitly retry cleanup.</summary>
     CleanupFailed,
     /// <summary>Host/group is stopping or disposed.</summary>
-    AdmissionClosed
+    AdmissionClosed,
+    /// <summary>The module does not support the stable-component replacement contract.</summary>
+    ReloadNotSupported,
+    /// <summary>Neutral system capture/restore or state identity validation failed.</summary>
+    StateRejected,
+    /// <summary>The old generation could not resume; explicit retry is required.</summary>
+    RollbackFailed,
+    /// <summary>Neutral World snapshot is corrupt, unsupported or contains untracked data.</summary>
+    InvalidSnapshot,
+    /// <summary>Required binding/migrator or explicit data-loss admission is missing.</summary>
+    MigrationNotSupported,
+    /// <summary>Component conversion/import/export failed before commit.</summary>
+    MigrationFailed,
+    /// <summary>Destructive reset was not explicitly admitted.</summary>
+    ResetNotAdmitted
 }
 
 /// <summary>Neutral bounded diagnostic; contains no module exception, Type, Assembly or delegate.</summary>

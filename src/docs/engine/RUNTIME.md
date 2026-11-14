@@ -149,3 +149,12 @@ source/publish/fresh profiles, Playing fence, resize/minimize/restore и cleanup
 GameBuildLoader остаётся прежним game-session путём. Hot replacement/state migration,
 другие OS/RID, AOT/trimming, device loss и general release остаются следующими
 этапами. Точные текущие результаты — в STATUS/HISTORY.
+
+
+## ARCH3.7 stable-component system replacement
+
+[ModSystemSession](MOD_RELOAD.md) предоставляет scoped managed replacement с
+capture/restore, callback/tick fences и explicit rollback/retirement cleanup.
+World остаётся caller-owned; частные component types используют отдельный
+[owned-World migration профиль ARCH3.8](MOD_MIGRATION.md). Исторические
+RuntimeConsumer/Player proofs выше не подменяют новую ARCH37 приёмку.

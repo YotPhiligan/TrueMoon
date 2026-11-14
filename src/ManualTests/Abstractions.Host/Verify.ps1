@@ -1,15 +1,17 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$EvidenceDirectory)
+param([Parameter(Mandatory)][string]$EvidenceDirectory,[string]$PackageVerification)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot '../BuildProfile.ps1')
+. (Join-Path $PSScriptRoot '../PackageDelivery.ps1')
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $evidence=[IO.Path]::GetFullPath($EvidenceDirectory)
 $run=Join-Path ([IO.Path]::GetTempPath()) ('TrueMoon-ARCH31-delivery-'+[Guid]::NewGuid().ToString('N'))
 if(Test-Path -LiteralPath $evidence){throw 'Use a fresh evidence directory.'}
 foreach($directory in @($evidence,$run,"$run/feed","$run/cache","$run/unrelated working directory")){[void][IO.Directory]::CreateDirectory($directory)}
 $profile=Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
-$version=$profile.Version+'.arch31.'+(Get-Date -Format 'yyyyMMddHHmmss')
+$sharedDelivery=Import-TrueMoonPackageDelivery -Manifest $PackageVerification -Profile $profile
+$version=if($sharedDelivery){$sharedDelivery.Version}else{$profile.Version+'.arch31.'+(Get-Date -Format 'yyyyMMddHHmmss')}
 $packages=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Extensions.DependencyInjection','TrueMoon.Aether.Abstractions')
 $report=[ordered]@{Completed=$false;Stage='ARCH3.1';Version=$version;RunDirectory=$run;BuildProfile=$profile;Commands=@();Packages=@();Graphs=@();Profiles=@();Sources=@();Failure=$null}
 function Save-Report{$report | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath "$evidence/verification.json" -Encoding utf8}
@@ -36,6 +38,7 @@ function Run-Profile([string]$name,[string]$hostAssembly,[string]$extension,[swi
     }
 }
 try{
+    if($PackageVerification){$report.Sources+=@{Path=[IO.Path]::GetFullPath($PackageVerification);Sha256=(Get-FileHash -LiteralPath $PackageVerification).Hash}}
     foreach($module in @($packages+'ManualTests/Abstractions.Extension'+'ManualTests/Abstractions.Host')){
         foreach($path in (& rg --files "$workspace/$module" -g '*.cs' -g '*.csproj')){$report.Sources+=@{Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash}}
     }
@@ -44,7 +47,8 @@ try{
     foreach($name in @('Host','Extension')){Invoke-Proof ('publish-'+$name) @('publish',"ManualTests/Abstractions.$name/Abstractions.$name.csproj",'-c','Release','-o',"$run/published/$name",'--verbosity','quiet')}
     Run-Profile 'published' "$run/published/Host/Abstractions.Host.dll" "$run/published/Extension/ContractExtension.dll"
     foreach($id in $packages){
-        Invoke-Proof ('pack-'+$id) @('pack',"$id/$id.csproj",'-c','Release','-o',"$run/feed","-p:Version=$version",'--verbosity','quiet')
+        if($sharedDelivery){Copy-TrueMoonDeliveryPackage -Delivery $sharedDelivery -Id $id -Destination "$run/feed"}
+        else{Invoke-Proof ('pack-'+$id) @('pack',"$id/$id.csproj",'-c','Release','-o',"$run/feed","-p:Version=$version",'--verbosity','quiet')}
         $path="$run/feed/$id.$version.nupkg";$report.Packages+=@{Id=$id;Sha256=(Get-FileHash -LiteralPath $path).Hash;Path=$path}
     }
     $external=@{}

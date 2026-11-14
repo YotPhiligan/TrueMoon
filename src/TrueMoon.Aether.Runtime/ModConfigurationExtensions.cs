@@ -19,6 +19,7 @@ public static class ModConfigurationExtensions
             if (services.Exist<ModHost>() || services.Exist<IFactory<ModGroup, ModLoadRequest>>()) throw new InvalidOperationException("Aether Mods is already registered.");
             if (!services.Exist<IFactory<World>>()) throw new InvalidOperationException("Call UseAetherEcs before UseAetherMods.");
             RuntimeAppConfigurationExtensions.RegisterSceneResolution(services);
+            if (!services.Exist<SceneDocumentCodec>()) services.Singleton<SceneDocumentCodec>(resolver => new(resolver.Resolve<SceneResolutionService>()));
             if (!services.Exist<IFactory<IModEntry, ModEntryArguments>>()) services.Singleton<IFactory<IModEntry, ModEntryArguments>>(_ => new ModEntryFactory());
             services.Singleton<IFactory<ModWorldSession>>(resolver =>
             {
@@ -28,7 +29,17 @@ public static class ModConfigurationExtensions
             });
             services.Singleton<IFactory<ModGroup, ModLoadRequest>>(resolver => new ModGroupFactory(policy, resolver,
                 resolver.Resolve<IFactory<IModEntry, ModEntryArguments>>(), resolver.Resolve<IFactory<ModWorldSession>>()));
-            services.Singleton<ModHost>(resolver => new(resolver.Resolve<IFactory<ModGroup, ModLoadRequest>>()));
+            services.Singleton<IFactory<ModSystemSession, World>>(resolver =>
+                new Factory<ModSystemSession, World>(world => new(world, resolver.Resolve<IFactory<ModGroup, ModLoadRequest>>())));
+            services.Singleton<ModWorldSnapshotCodec>(resolver => new(resolver.Resolve<SceneDocumentCodec>()));
+            services.Singleton<IFactory<ModWorldMigrationSession>>(resolver =>
+            {
+                var groups = resolver.Resolve<IFactory<ModGroup, ModLoadRequest>>(); var worlds = resolver.Resolve<IFactory<World>>();
+                var resolution = resolver.Resolve<SceneResolutionService>(); var codec = resolver.Resolve<ModWorldSnapshotCodec>();
+                var loaders = new Factory<SceneWorldLoader, ComponentRegistry>(registry => new(registry, worlds, resolution));
+                return new Factory<ModWorldMigrationSession>(() => new(groups, loaders, resolution, codec));
+            });
+            services.Singleton<ModHost>(resolver => new(resolver.Resolve<IFactory<ModGroup, ModLoadRequest>>(), resolver.Resolve<IFactory<ModSystemSession, World>>(), resolver.Resolve<IFactory<ModWorldMigrationSession>>()));
             services.Singleton<ModAppLifetime>(resolver => new(resolver.Resolve<ModHost>()))
                 .Singleton<IStartable>(resolver => resolver.Resolve<ModAppLifetime>())
                 .Singleton<IStoppable>(resolver => resolver.Resolve<ModAppLifetime>());
