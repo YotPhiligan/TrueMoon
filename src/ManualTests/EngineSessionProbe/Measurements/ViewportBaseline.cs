@@ -1,13 +1,16 @@
+using TrueMoon.Aether.Runtime;
 using System.Diagnostics;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -126,12 +129,12 @@ internal static class ViewportBaseline
             await app.StartAsync(token);
             if (binding != null) await binding.InitializeAsync(window, host, token);
             var hostId = BuildIdentity.HostId;
-            GameBuildArtifact Artifact(long revision) => GameBuildArtifact.Publish(AppContext.BaseDirectory, Path.Combine(directory, "artifacts"),
-                hostId, "Game.Logic.dll", "Game.Logic.ProbeGame", revision);
+            GameBuildArtifact Artifact(long revision) => GameArtifactPublisher.Publish(AppContext.BaseDirectory, Path.Combine(directory, "artifacts"),
+                hostId, "Game.Logic.dll", "Game.Logic.ProbeGame", revision, runtimeAccess: true);
             var a = Artifact(1); var b = Artifact(2);
             foreach (var artifact in new[] { a, b }) artifacts.Add(new { artifact.BuildId, artifact.SourceRevision,
                 DllSha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Path.Combine(artifact.DirectoryPath, artifact.EntryAssembly)))) });
-            void Context(long revision) => host.Editor.SetContext(new(new(Path.Combine(directory, "fixed-game.csproj"), "Game.Logic.dll", "Game.Logic.ProbeGame", revision),
+            void Context(long revision) => host.Editor.SetContext(new(new(Path.Combine(directory, "fixed-game.csproj"), "Game.Logic.dll", "Game.Logic.ProbeGame", revision) { RuntimeAccess = true },
                 authoring.Snapshot(), authoring.Selection));
             Context(1); await host.Editor.SelectBuildAsync(a, token);
             await Operation("Start", () => host.Editor.StartAsync(640, 360, token));

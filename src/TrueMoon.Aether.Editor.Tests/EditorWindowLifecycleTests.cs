@@ -1,12 +1,18 @@
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tests.Editing;
 using TrueMoon.Aether.Editor.Tests.Inspector;
 using TrueMoon.Aether.Editor.Tests.Projects;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Tooling.Preview;
+using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -120,7 +126,7 @@ public sealed class EditorWindowLifecycleTests
             new EditorMainWindowStyle(), new("Empty", new(1280, 800)));
         var hosted = new HostedUiWindow(new SilkUiWindowOptions(), new NoWindowSessions(), () => throw new Exception("No native root expected"));
         using var adapter = new EditorWindow(hosted, app.Services.Resolve<EditorSession>()!, app.Services.Resolve<EditorWorkspace>()!,
-            app.Services.Resolve<EditorViewportBinding>()!, engine);
+            app.Services.Resolve<RuntimeViewportBinding>()!, engine);
         Element actual = framed ? WindowFrame.CreateDefault(root.Title, root) : root;
         using var ui = InspectorFixture.Ui(actual); ui.Update();
         Assert.False(adapter.Ready.IsCompleted); Assert.Equal(0, engine.Gpu.ResourceCount); Assert.Equal(0, runtime.Launches);
@@ -161,7 +167,7 @@ internal sealed class EditorCloseFixture : IDisposable
     internal EditorCloseFixture()
     {
         _app = EditorWindowTestGraph.Build(_files, Runtime); Engine = _app.Services.Resolve<AetherHost>()!;
-        var viewport = new EditorViewportBinding(false); var workspace = new EditorWorkspace(EditorScene.Demo());
+        var viewport = new RuntimeViewportBinding(false); var workspace = new EditorWorkspace(EditorScene.Demo());
         var session = new EditorSession(new AetherEditorOptions(), Engine, Data.Owner.Projects, workspace,
             new EditorCommands((_, _) => Task.CompletedTask, default), Data.Owner.Commands, Data.Model, viewport);
         Hosted = new(new SilkUiWindowOptions(), new Sessions(), () => throw new Exception("No native allocation expected"));

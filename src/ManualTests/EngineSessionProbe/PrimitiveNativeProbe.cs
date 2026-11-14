@@ -1,13 +1,17 @@
+using TrueMoon.Aether.Runtime;
 using System.Security.Cryptography;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Gpu.OpenGl;
-using TrueMoon.Aether.Gpu.Surfaces;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Gpu.OpenGl;
+using TrueMoon.Aether.Runtime.Gpu.Surfaces;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
@@ -94,8 +98,8 @@ public static class PrimitiveNativeProbe
         {
             Check(validation, "Run this proof with TRUEMOON_GPU_VALIDATION=1 to prove core/synchronization validation.");
             Check(!GameLoaded(), "Native proof parent loaded selected game CLR types.");
-            var build = GameBuildArtifact.Publish(gameDirectory, Path.Combine(reportDirectory, "artifacts"), hostId,
-                "Game.Logic.dll", "Game.Logic.PrimitiveProbeGame", 31);
+            var build = GameArtifactPublisher.Publish(gameDirectory, Path.Combine(reportDirectory, "artifacts"), hostId,
+                "Game.Logic.dll", "Game.Logic.PrimitiveProbeGame", 31, runtimeAccess: true);
             await app.StartAsync(token); await shown.Task.WaitAsync(token);
             var initialized = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             GpuOpenGlContext glContext = null!;

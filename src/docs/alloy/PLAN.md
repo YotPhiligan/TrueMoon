@@ -1,5 +1,15 @@
 # TrueMoon.Alloy: план первой рабочей версии
 
+<a id="skiasharp-41560-completed"></a>
+Выполнено2026-11-12: **SkiaSharp/native4.156.0** — exact source pins, extended
+Windows x64 DLL и GENERAL/HOST patch, ABI1/48bytes. Native build recipe учитывает
+M156 default MSVC/Spectre, installed Windows SDK и explicit upstream NuGet config.
+Source/published5-mode native profiles validation0/0; Alloy/Hosting/Editor D/R,
+solution Debug и fresh10-package/40-process delivery проверены.
+[Manifest/команды/SHA](SKIASHARP41560_RESULTS.json),
+[история/ограничения](HISTORY.md#skiasharp-41560-2026-11-12).
+Функциональная UI очередь и physical/K7/K8/release gates не меняются.
+
 Текущий build/test профиль CORE8 (2026-11-11): net11.0, SDK 11.0.100, runtime-async=on, xUnit 2/VSTest. Он заменяет исходный net10 профиль для новых запусков, сохраняя исторические результаты и функциональные критерии. [Переход и границы](../core/DOTNET11_MIGRATION.md).
 
 Конфигурация2026-11-10: [CORE7.5](../core/CONFIGURATION_MODULES.md) добавил

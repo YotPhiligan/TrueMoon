@@ -1,13 +1,19 @@
 using System.Reflection;
 using System.Reflection.Emit;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Projects;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.SourceTracking;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
@@ -197,11 +203,11 @@ public sealed class EditorSourceIntegrationTests
         var parent = assembly.DefineDynamicModule("Room.Logic").DefineType("Room.Logic.Game", TypeAttributes.Public);
         parent.DefineNestedType("Nested", TypeAttributes.NestedPublic).CreateType(); parent.CreateType();
         assembly.Save(Path.Combine(directory, "Room.Logic.dll"));
-        return GameBuildArtifact.Publish(directory, files.Artifacts, new('A', 64), "Room.Logic.dll", files.Project.Description.EntryType, 1);
+        return GameArtifactPublisher.Publish(directory, files.Artifacts, new('A', 64), "Room.Logic.dll", files.Project.Description.EntryType, 1);
     }
 
     private static IAppBuilder Builder(bool microsoft) => App.Builder(context => { if (microsoft) context.UseDI(); });
-    private static void Configure(TrueMoon.Aether.Hosting.AetherOptions options, SourceWatchFiles files, NeverRuntime runtime)
+    private static void Configure(AetherOptions options, SourceWatchFiles files, NeverRuntime runtime)
     { options.HostContractId = new('A', 64); options.GameBuildId = new('0', 64); options.ReportDirectory = Path.Combine(files.Root, "reports"); options.RuntimeFactory = _ => runtime; }
     private sealed class NeverRuntime : IRuntimeFactory, IDisposable
     { internal int Launches; public IRuntimeLease Create(SessionLaunch launch) { Launches++; throw new InvalidOperationException("Tracking must not start a runtime."); } public void Dispose() { } }

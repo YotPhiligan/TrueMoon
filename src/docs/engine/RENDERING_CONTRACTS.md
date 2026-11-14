@@ -455,3 +455,14 @@ Source Debug/published Release/fresh isolated package runner —
 [ManualTests/RenderingCpu](../../ManualTests/RenderingCpu/README.md).
 GPU resources/leases/readiness, native output и прежний overall regression этим API
 не объявлены исправленными/проверенными.
+
+<a id="surface-v1"></a>
+## Реализация required mesh surface — 2026-11-12
+
+ARCH1f.4 подключает описанный профиль через `UseAetherSurfaceRendering` и explicit
+`IRenderSnapshotGameSession`. [API/owners/fences/матрица](RENDER_SURFACE.md): тот же
+VkDevice/queue, indexed unlit shaders, f.2/f.3 leases, current-source-aware presentation
+и bounded stamp. Upload/production не открывают Playing; obsolete in-flight frames
+не возобновляют его после content/camera change. Headless/primitive capability
+сохраняет прежние границы. Logical material/content checkpoint migration остаётся f.6.
+Фактические результаты перечисляются в STATUS/HISTORY отдельно от CPU v1 выше.

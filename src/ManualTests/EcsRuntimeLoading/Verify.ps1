@@ -26,7 +26,7 @@ $sceneFeed = Join-Path $sceneRun 'feed'; $sceneCache = Join-Path $sceneRun 'cach
 $sceneConsumer = Join-Path $sceneRun 'consumer'; $sceneCwd = Join-Path $sceneRun 'unrelated working directory'
 foreach ($directory in @($sceneRun,$sceneEvidence,$sceneFeed,$sceneCache,$sceneConsumer,$sceneCwd)) { [void][IO.Directory]::CreateDirectory($directory) }
 $sceneVersion = '0.2.2.7-ecsload.' + (Get-Date -Format 'yyyyMMddHHmmss')
-$scenePackages = @('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Aether')
+$scenePackages = @('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime','TrueMoon.Aether.Tooling')
 $sceneReport = [ordered]@{Completed=$false;RunDirectory=$sceneRun;Version=$sceneVersion;Commands=@();Packages=@();ExternalPackages=@();Graphs=@();Sources=@();Profiles=@();Failure=$null;GpuRun=$false;WindowRun=$false}
 function Save-SceneReport { $sceneReport | ConvertTo-Json -Depth 25 | Set-Content -LiteralPath (Join-Path $sceneEvidence 'verification.json') -Encoding utf8 }
 function Invoke-SceneCommand([string]$name,[string[]]$arguments,[string]$cwd=$sceneWorkspace,[switch]$isolated) {
@@ -115,7 +115,7 @@ try {
         $assembly=if($project -eq 'Game'){'Game.Logic'}else{$project}
         $root=if($project -eq 'Game'){'Game.Logic'}elseif($project -eq 'Runtime'){'TrueMoon.Examples.AetherRuntimeHost'}else{'EngineSessionProbe'}
         [IO.File]::WriteAllText("$sceneConsumer/$project/$project.csproj",@"
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>$output<AssemblyName>$assembly</AssemblyName><RootNamespace>$root</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon" Version="$sceneVersion"/><PackageReference Include="TrueMoon.Aether" Version="$sceneVersion"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>$output<AssemblyName>$assembly</AssemblyName><RootNamespace>$root</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include="TrueMoon" Version="$sceneVersion"/><PackageReference Include="TrueMoon.Aether.Tooling" Version="$sceneVersion"/></ItemGroup></Project>
 "@)
     }
     Copy-Item -LiteralPath (Join-Path $sceneWorkspace 'ManualTests/Game.Logic/WorldProbeGame.cs') -Destination "$sceneConsumer/Game/WorldProbeGame.cs"

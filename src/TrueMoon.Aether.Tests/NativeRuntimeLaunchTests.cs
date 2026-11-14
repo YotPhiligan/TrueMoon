@@ -1,10 +1,12 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Extensions.DependencyInjection;
@@ -25,6 +27,7 @@ public sealed class NativeRuntimeLaunchTests
     [
         typeof(SessionIdentity).Assembly.Location,
         typeof(IFactory<>).Assembly.Location,
+        typeof(Abstractions.Ecs.ISystem).Assembly.Location,
         typeof(PipesInvocationClient<>).Assembly.Location,
         typeof(ChildProcessUnitHandle).Assembly.Location
     ];
@@ -307,6 +310,7 @@ public sealed class NativeRuntimeLaunchTests
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
+    [InlineData(4)]
     public void ForRuntime_RejectsEachTamperedSharedCounterpart(int sharedIndex)
     {
         using var copies = new RuntimeCopies();
@@ -360,6 +364,7 @@ public sealed class NativeRuntimeLaunchTests
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
+    [InlineData(4)]
     public void ValidateRuntime_RejectsEachTamperedHostSharedCounterpart(int sharedIndex)
     {
         using var copies = new RuntimeCopies();

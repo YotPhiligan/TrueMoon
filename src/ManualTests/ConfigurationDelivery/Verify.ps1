@@ -28,7 +28,7 @@ if ($version -notmatch '^[0-9A-Za-z][0-9A-Za-z.+-]*$' -or !$version.StartsWith($
 }
 $packages = @('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Extensions.DependencyInjection',
     'TrueMoon.Enerit.Generator','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Argentis','TrueMoon.Alloy',
-    'TrueMoon.Alloy.Rendering.Skia','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Hosting','TrueMoon.Aether','TrueMoon.Aether.Editor','TrueMoon.Nom')
+    'TrueMoon.Alloy.Rendering.Skia','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Hosting','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime','TrueMoon.Aether.Tooling','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling','TrueMoon.Nom')
 $report = [ordered]@{ Completed=$false; Version=$version; BuildProfile=$trueMoonBuildProfile; RunDirectory=$run; Commands=@(); Packages=@();
     ExternalPackages=@(); Sources=@(); Graphs=@(); Profiles=@(); Failure=$null; GpuRun=$false; WindowRun=$false }
 function Save-Report { $report | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath (Join-Path $evidence 'verification.json') -Encoding utf8 }
@@ -138,10 +138,10 @@ try {
             References=@('TrueMoon.Contracts','TrueMoon','TrueMoon.Mithril','TrueMoon.Extensions.DependencyInjection');
             Required=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Mithril','TrueMoon.Extensions.DependencyInjection')},
         @{Name='modules';Assembly='ConfigurationModulesConsumer';File='ManualTests/ConfigurationModulesConsumer/Program.cs';Checks=76;Children=0;
-            References=@('TrueMoon.Contracts','TrueMoon','TrueMoon.Aether.Editor','TrueMoon.Nom','TrueMoon.Extensions.DependencyInjection');Required=$packages},
+            References=@('TrueMoon.Contracts','TrueMoon','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling','TrueMoon.Nom','TrueMoon.Extensions.DependencyInjection');Required=$packages},
         @{Name='bootstrap';Assembly='ConfigurationBootstrapConsumer';File='ManualTests/ConfigurationDelivery/BootstrapConsumer.cs';Checks=30;Children=2;
-            References=@('TrueMoon','TrueMoon.Aether','TrueMoon.Mithril','TrueMoon.Extensions.DependencyInjection');
-            Required=@('TrueMoon.Contracts','TrueMoon','TrueMoon.Aether','TrueMoon.Mithril','TrueMoon.Extensions.DependencyInjection')},
+            References=@('TrueMoon','TrueMoon.Aether.Runtime','TrueMoon.Mithril','TrueMoon.Extensions.DependencyInjection');
+            Required=@('TrueMoon.Contracts','TrueMoon','TrueMoon.Aether.Runtime','TrueMoon.Mithril','TrueMoon.Extensions.DependencyInjection')},
         @{Name='guide';Assembly='ConfigurationGuideConsumer';File='docs/core/CONFIGURATION_GUIDE.md';Checks=1;Children=0;Documentation=$true;
             References=@('TrueMoon');Required=@('TrueMoon.Contracts','TrueMoon.Cobalt','TrueMoon')}
     )

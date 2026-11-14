@@ -2,6 +2,19 @@
 
 TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и необязательного UI. Входная карта проекта и quickstart находятся в [корневом README](../../README.md). Эта страница помогает выбрать документ по задаче; текущая готовность определяется датированными проверками в STATUS, а не наличием проекта или API.
 
+## Kul / Audio
+
+[TrueMoon.Kul: сборка, локальный native feed и App/DI](audio/README.md),
+[API/ownership](../TrueMoon.Kul/PACKAGE.md), [план](audio/PLAN.md),
+[текущие проверки](audio/STATUS.md). Windows x64 AUD1; Aether ECS bridge отдельно.
+
+## Kton / Physics
+
+[TrueMoon.Kton и BEPU provider: App/configuration/ownership](physics/APP.md),
+[контракт](physics/CONTRACTS.md), [план](physics/PLAN.md),
+[текущие проверки](physics/STATUS.md). PHYS0–4 завершены в указанном scope;
+Aether ECS bridge — отдельный PHYS5.
+
 ## Общие документы
 
 | Документ | Для чего читать |
@@ -26,15 +39,17 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 | Enerit | TrueMoon.Enerit и Enerit.Generator: invocation, serialization и IPC transports | [План](enerit/PLAN.md), [статус](enerit/STATUS.md), [история](enerit/HISTORY.md) |
 | Mithril | TrueMoon.Mithril: units, process handles и startup/hosting/lifetime/restart policies | [План](mithril/PLAN.md), [статус](mithril/STATUS.md), [история](mithril/HISTORY.md) |
 | Nom / asset storage | TrueMoon.Nom: transactional KV/CAS, App integration, snapshots/GC/backup и byte/raw unmanaged API; NOM0–NOM8 проверены в описанном local scope; public namespaces организованы по подсистемам | [README](../TrueMoon.Nom/README.md), [структура/API migration](nom/STRUCTURE.md), [план](nom/PLAN.md), [статус](nom/STATUS.md), [решение](nom/STORAGE_DESIGN.md) |
+| Kton / 3D physics | PHYS4 App/configuration/factory/lifecycle:192checks/profile обоих DI; current provider309×3; далее ECS bridge | [App guide](physics/APP.md), [queries/events](physics/QUERIES_CONTACTS.md), [provider](physics/PROVIDER.md), [контракт](physics/CONTRACTS.md), [план](physics/PLAN.md), [статус](physics/STATUS.md), [результаты](physics/HISTORY.md#phys4-2026-11-12), [runner](../ManualTests/KtonApp/README.md) |
 | Alloy / Argentis | Argentis, Alloy, Rendering.Skia, Platform.Silk, Alloy.Hosting: controls/tree/bindings/layout/input, UI sessions, rendering, окна и HUD | [План](alloy/PLAN.md), [статус](alloy/STATUS.md), [стандартный стиль](alloy/DEFAULT_STYLE.md), [история](alloy/HISTORY.md) |
-| Aether / Engine | TrueMoon.Aether: engine contracts, sessions/control, owned child bridge и CPU frame transport; отдельные example/game/test consumers | [README](../TrueMoon.Aether/README.md), [план](engine/PLAN.md), [статус](engine/STATUS.md), [история](engine/HISTORY.md) |
-| Aether Editor | TrueMoon.Aether.Editor — library/NuGet package с UI/View, прикладными services и App integration; runtime/assets/independent package acceptance открыты | [API и host](../TrueMoon.Aether.Editor/README.md), [пакетный переход ARCH2](engine/PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27), [ED1–ED8](engine/EDITOR_PLAN.md) |
+| Aether / Engine | Abstractions + самостоятельный Runtime; headless Tooling compiler/authoring/project workflow; отдельные consumers | [README](../TrueMoon.Aether/README.md), [план](engine/PLAN.md), [статус](engine/STATUS.md), [история](engine/HISTORY.md) |
+| Aether Editor | Editor.UI поверх Runtime; optional Editor.Tooling для project/document/build/authoring workflow | [Слои/API/миграция](engine/EDITOR_LAYERS.md), [full host](../TrueMoon.Aether.Editor.Tooling/README.md), [ED1–ED8](engine/EDITOR_PLAN.md) |
 
 Contracts и Core — разные независимые сборки. DI provider выбирается на builder boundary; IPC, units и UI подключаются по потребности приложения. UI runtime не требует App или конкретного backend; Hosting является опциональной интеграцией. Подробная карта фактических зависимостей хранится в общем плане.
 
 ## Игровой модуль Aether и дальнейшее развитие
 
-Engine implementation/contracts теперь объединены в [TrueMoon.Aether](../TrueMoon.Aether/README.md).
+[Abstractions](../TrueMoon.Aether.Abstractions/PACKAGE.md), [самостоятельный Runtime](engine/RUNTIME.md)
+и [headless Tooling](engine/TOOLING.md) разделены в ARCH3.1–4; [Editor.UI/optional bridge](engine/EDITOR_LAYERS.md) — в ARCH3.5.
 Существующий Editor/Game.Runtime пример и игровая DLL остаются отдельными consumers,
 тесты находятся в TrueMoon.Aether.Tests. Следующий этап после bounded quality прохода определён в
 [сводной матрице качества](QUALITY.md); это оценка scopes и evidence, не новый roadmap.
@@ -81,3 +96,10 @@ PLAN хранит согласованные цели/контракты и кр
 Сверка2026-10-15 документационная: прежние build/tests/package/native результаты
 не считаются новым запуском. Подробная история сохраняется у владельцев и в
 [общей HISTORY](HISTORY.md), актуальная очередность — в [общем STATUS](STATUS.md).
+
+- **Минимальный Player ENG7b.1–2:** [API/CLI/ownership](engine/PLAYER.md),
+  [Player-only](../Examples/AetherPlayer/README.md), [combined host](../Examples/AetherHost/README.md),
+  [native proof](../ManualTests/PlayerProbe/README.md); expanded matrix остаётся ENG7b.3.
+- **Aether Abstractions ARCH3.1:** [контрактный SDK и explicit ABI migration](engine/ABSTRACTIONS.md),
+  [current map](engine/ARCH31_TYPE_MAP.csv), [independent extension/host proof](../ManualTests/Abstractions.Host/README.md).
+  Actual World/scheduler binding — следующий ARCH3.2; старые artifacts не retag автоматически.

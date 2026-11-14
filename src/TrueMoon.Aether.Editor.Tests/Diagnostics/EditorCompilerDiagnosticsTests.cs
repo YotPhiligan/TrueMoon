@@ -1,7 +1,8 @@
 using System.Text.Json;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Diagnostics;
-using TrueMoon.Aether.Editor.Diagnostics;
+using TrueMoon.Aether.Editor.Tooling.Diagnostics;
+using TrueMoon.Aether.Editor.UI.Diagnostics;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Tooling.Diagnostics;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;

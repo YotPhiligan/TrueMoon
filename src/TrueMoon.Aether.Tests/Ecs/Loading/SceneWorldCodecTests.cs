@@ -2,9 +2,12 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using TrueMoon.Aether.Ecs.Loading;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Ecs.Loading;
+using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Ecs.Loading;

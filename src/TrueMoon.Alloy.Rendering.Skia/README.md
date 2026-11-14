@@ -1,5 +1,12 @@
 # Нативная Skia для TrueMoon.Alloy.Rendering.Skia
 
+**Обновление2026-11-12:** managed/native пара **4.156.0 / SkiaM156**. Extended DLL
+пересобрана из exact NuGet source commit/gitlink; Vulkan GENERAL/HOST patch сохранён,
+ABI v1/48bytes и ownership не изменены. Рецепт использует отдельный upstream NuGet
+config, проверяет VS default MSVC/Spectre для M156 и явно выбирает установленный
+полный Windows SDK. В build.json записаны revisions, DLL/patch SHA и toolchain versions.
+[Результаты и границы](../docs/alloy/HISTORY.md#skiasharp-41560-2026-11-12).
+
 **Обновление2026-11-08:** исправлен Vulkan frosted backdrop VUID02819: в pinned
 GrVkImage GENERAL source stage добавлен HOST к ALL_COMMANDS для существующего
 HOST_WRITE access. Source patch применяется native build recipe; DLL и build.json
@@ -11,7 +18,7 @@ fresh5package Vulkan consumer прошли с validation0/0 и actual blur witne
 
 Проект хранит проверенную Windows x64 библиотеку с Vulkan interop extension:
 
-- `NativeAssets/win-x64/libSkiaSharp.dll` — SkiaSharp 4.155.0, ABI v1, около 9 MB.
+- `NativeAssets/win-x64/libSkiaSharp.dll` — SkiaSharp 4.156.0, ABI v1, около 9 MB.
 - `NativeAssets/win-x64/libSkiaSharp.build.json` — точные revisions и SHA-256 артефакта.
 - Исходники extension и инструменты: [NativeInterop](../ManualTests/AlloyVulkanTest/NativeInterop/README.md).
 
@@ -74,7 +81,7 @@ Native asset/ABI, lease/ownership и retirement в 2.1b не изменялис�
 
 `SkiaOpenGLRenderBackend`/`OpenGLUiTarget` работают через общие UiSession и Skia drawing/text adapter. Target заимствует существующий desktop GL context через resolver/current-context guard; Skia owns offscreen RGBA/Premul GPU surface. `PresentOpenGL` композитит кадр в host-owned RGBA8 framebuffer без CPU copy/swap; `clear: false` сохраняет scene. `ReadbackOpenGLImage` возвращает независимую CPU копию для assertions/export. Thread affinity, pending frame guard, zero-size suspend/restore и draw retry сохраняются.
 
-Хост owns context/FBO/attachments, обеспечивает current context и заново binds своё GL state после Skia. UI закрывают до уничтожения context. Standalone доступен через `UsePresentation(...UseSkiaOpenGL().UseSilkWindow())`; explicit swap и Closing disposal выполняет hosting. Текущая bundled4.155.0 DLL/ABI v1 проверена backend comparison на raster/OpenGL/Vulkan. Прежний App/standalone GL proof сохраняет собственную дату; legacy manual GL hosting probes ещё требуют устранить downcast borrowed DI alias. [Подключение и границы](../TrueMoon.Alloy.Hosting/README.md#opengl-hud-и-окно), [probes](../ManualTests/AlloyVulkanTest/README.md). Windows x64 desktop OpenGL; GLES/ANGLE и cross-context texture handoff не подтверждены.
+Хост owns context/FBO/attachments, обеспечивает current context и заново binds своё GL state после Skia. UI закрывают до уничтожения context. Standalone доступен через `UsePresentation(...UseSkiaOpenGL().UseSilkWindow())`; explicit swap и Closing disposal выполняет hosting. Текущая bundled4.156.0 DLL/ABI v1 проверена backend comparison на raster/OpenGL/Vulkan. Прежний App/standalone GL proof сохраняет собственную дату; legacy manual GL hosting probes ещё требуют устранить downcast borrowed DI alias. [Подключение и границы](../TrueMoon.Alloy.Hosting/README.md#opengl-hud-и-окно), [probes](../ManualTests/AlloyVulkanTest/README.md). Windows x64 desktop OpenGL; GLES/ANGLE и cross-context texture handoff не подтверждены.
 
 ## CPU raster backend
 
@@ -94,13 +101,13 @@ Native asset/ABI, lease/ownership и retirement в 2.1b не изменялис�
 
 ## Пересборка и обновление DLL
 
-Команды выполняются из src. Требуются .NET 11, Git, настоящий Python 3, Ninja, MSVC C++ x64, Windows SDK и x64 Spectre libraries. Native build не запускается при обычном dotnet build.
+Команды выполняются из src. Managed consumers используют общий .NET11 profile; native producer — SDK из upstream global.json (здесь10.0.404). Требуются Git, настоящий Python 3, Ninja, MSVC C++ x64, Windows SDK и x64 Spectre libraries. Native build не запускается при обычном dotnet build.
 
 При первом запуске:
 
 ```powershell
-git clone --depth 1 --branch release/4.155.0 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41550-20261107/SkiaSharp
-git -C TestResults/SkiaSharp41550-20261107/SkiaSharp checkout --detach d25e7fa628a2576e50ecc42004cc4fd03c6657f5
+git -c core.longpaths=true clone --depth 1 --branch release/4.156.0 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41560-20261112/SkiaSharp
+git -c core.longpaths=true -C TestResults/SkiaSharp41560-20261112/SkiaSharp checkout --detach c4ef20229bd56e41731aa94eebe8b082b8ef886c
 ```
 
 Повторная сборка с используемыми в этой машине инструментами:
@@ -109,7 +116,7 @@ git -C TestResults/SkiaSharp41550-20261107/SkiaSharp checkout --detach d25e7fa62
 $env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.17'
 $env:PATH = 'C:/Program Files/LibreOffice/program;' + $env:PATH
 pwsh -NoProfile -File ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 `
-  -SkiaSharpSourcePath TestResults/SkiaSharp41550-20261107/SkiaSharp `
+  -SkiaSharpSourcePath TestResults/SkiaSharp41560-20261112/SkiaSharp `
   -VisualStudioPath 'C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools' `
   -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.17/bin/python.exe' `
   -NinjaPath TestResults/SkiaSharp41550-20261107/tools/ninja/ninja.exe -InstallToRenderer

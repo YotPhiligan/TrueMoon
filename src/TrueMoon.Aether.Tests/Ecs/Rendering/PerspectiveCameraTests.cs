@@ -1,8 +1,8 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Rendering;
-using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Abstractions.Ecs.Rendering;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Runtime.Ecs;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Ecs.Rendering;

@@ -1,0 +1,22 @@
+
+namespace TrueMoon.Aether.Abstractions.Scenes;
+
+
+/// <summary>Scene aggregate and compatibility projection failure categories.</summary>
+public enum SceneResolutionError
+{
+    /// <summary>Two scene instances have the same identity.</summary>
+    DuplicateEntity,
+    /// <summary>A scene parent is absent from the same document.</summary>
+    MissingParent,
+    /// <summary>Scene parent links form a cycle.</summary>
+    ParentCycle,
+    /// <summary>The definition/schema catalog has conflicting identities.</summary>
+    InvalidCatalog,
+    /// <summary>An instance could not be resolved against the frozen catalog.</summary>
+    InvalidEntity,
+    /// <summary>A compatibility projector failed or returned an invalid value.</summary>
+    ProjectionFailed,
+    /// <summary>The existing SceneSnapshot entity-count bound would be exceeded.</summary>
+    LegacyEntityLimitExceeded
+}

@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Reflection;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Diagnostics;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Tooling;
 using TrueMoon.Configuration;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Mithril;
@@ -167,10 +169,10 @@ public sealed class RuntimeSettingsMigrationTests
         var spoofedReport = Path.Combine(launch.ReportDirectory, "ordinary-profile");
         var profile = ConfigurationProfiles.Create(builder =>
         {
-            builder.AddSchema(AetherConfigurationSchemas.Engine);
+            builder.AddSchema(RuntimeConfigurationSchemas.Engine);
             builder.Override("Aether:ReportDirectory", spoofedReport);
             builder.Override("Aether:ChildDiagnostics:MaxBatchRecords", 12);
-            builder.Override("Aether:BuildTimeout", TimeSpan.FromSeconds(7));
+            builder.Override("Aether:Deadlines:Command", TimeSpan.FromSeconds(7));
         });
         await using var app = App.Builder(context => { if (microsoft) context.UseDI(); }).Setup(context =>
         {
@@ -184,10 +186,10 @@ public sealed class RuntimeSettingsMigrationTests
             context.Configuration(configuration => configuration.Set("-p", Environment.ProcessId.ToString(CultureInfo.InvariantCulture)));
         }).Build();
         var reader = Assert.IsAssignableFrom<IConfigurationReader>(app.Services.GetService(typeof(IConfigurationReader)));
-        var options = reader.Current.GetOptions(AetherConfigurationSchemas.Engine);
+        var options = reader.Current.GetOptions(RuntimeConfigurationSchemas.Engine);
         Assert.Equal(bootstrap.Launch.ReportDirectory, options.ReportDirectory);
         Assert.Equal(4, options.ChildDiagnostics.MaxBatchRecords);
-        Assert.Equal(TimeSpan.FromSeconds(7), options.BuildTimeout);
+        Assert.Equal(TimeSpan.FromSeconds(7), options.Deadlines.Command);
         Assert.Equal(spoofedReport, reader.Current.Read<string>("Aether:ReportDirectory").Value);
         Assert.Equal(12, reader.Current.Read<int>("Aether:ChildDiagnostics:MaxBatchRecords").Value);
         Assert.True(Assert.IsType<RuntimeStartupSettings>(app.Services.GetService(typeof(RuntimeStartupSettings))).GpuValidation);

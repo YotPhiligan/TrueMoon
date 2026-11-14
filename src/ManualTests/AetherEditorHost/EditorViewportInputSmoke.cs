@@ -1,10 +1,19 @@
+using TrueMoon.Aether.Runtime;
 using System.Text.Json;
 using SkiaSharp;
-using TrueMoon.Aether.Editor;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Abstractions.Preview;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Tooling.Preview;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
@@ -28,7 +37,7 @@ internal static class EditorViewportInputSmoke
         var pid=engine.Supervisor.Status.ProcessId;var generation=engine.Supervisor.Status.Identity!.Generation;
         var surface=engine.Frames.Presentation!.Surface.Generation;var ids=original.Document.Entities.Select(e=>e.Id).ToArray();
         Require(ids.Length==2,"Navigation fixture needs two independent cubes.");var captures=new List<object>();
-        var colorExpected=TrueMoon.Aether.Scenes.PrimitiveSceneAdapter.Project(original.Resolved).CopyEntities()
+        var colorExpected=PrimitiveSceneAdapter.Project(original.Resolved).CopyEntities()
             .Single(e=>e.Id==ids[1].Value.ToString("D")).Primitive!.ToPrimitive().Color;
         await Capture("navigation-default.png");
         await ui.InvokeAsync(()=>
@@ -60,7 +69,7 @@ internal static class EditorViewportInputSmoke
             CameraRevision=state.Camera.Revision,DocumentUnchanged=true,HistoryUnchanged=true,DraftPreserved=true,HitSameDifferentAndMiss=true,Captures=captures},new JsonSerializerOptions{WriteIndented=true}));
         await EditorHeaderSmoke.ClickActionAsync(ui,view,"file","file.exit",token);await window.Completion.WaitAsync(token);
 
-        (float X,float Y) Point(TrueMoon.Aether.Scenes.EntityId id)
+        (float X,float Y) Point(EntityId id)
         {
             var receipt=editor.ReadPresentedView(view)??throw new InvalidOperationException("No current presented view.");
             var cube=receipt.Picks.Primitives.Single(p=>p.Entity==id);Require(receipt.Projection.TryProject(cube.World.Translation,out var p),"Projection failed.");

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" Condition="'$(AetherRuntimePath)' == ''" />
+    <Reference Include="TrueMoon.Aether.Runtime" Condition="'$(AetherRuntimePath)' != ''"><HintPath>$(AetherRuntimePath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="TrueMoon.Contracts" Condition="'$(AetherRuntimePath)' != ''"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="TrueMoon.Aether.Abstractions" Condition="'$(AetherRuntimePath)' != ''"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

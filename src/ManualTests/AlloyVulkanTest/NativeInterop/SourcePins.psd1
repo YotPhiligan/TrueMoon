@@ -18,5 +18,13 @@
         Version = '4.155.0'
         SkiaSharpRevision = 'd25e7fa628a2576e50ecc42004cc4fd03c6657f5'
         SkiaRevision = 'c2d78902a56e24827a7273a4ed3461ce18780680'
+        VulkanGeneralHostStage = $true
+    }
+    '4.156.0' = @{
+        Version = '4.156.0'
+        SkiaSharpRevision = 'c4ef20229bd56e41731aa94eebe8b082b8ef886c'
+        SkiaRevision = 'd1717dc22ef2203b7fc9bf0e01078b37b1a4af6b'
+        VulkanGeneralHostStage = $true
+        DefaultMsvcToolset = $true
     }
 }

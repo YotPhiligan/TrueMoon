@@ -1,0 +1,1345 @@
+{
+  "SchemaVersion": 1,
+  "Module": "TrueMoon.Kton",
+  "Phase": "PHYS0",
+  "Date": "2026-11-12",
+  "Completed": true,
+  "ProductionEligible": false,
+  "Scope": "Limited Windows x64 .NET11 headless package/API research; no production provider, App/DI/ECS acceptance or platform/performance guarantee.",
+  "WorkspaceHead": "73df16229da1db54e1170ac0d56b9d385f91abd7",
+  "WorkspaceDirty": true,
+  "RawEvidenceDirectory": "TestResults/KtonPHYS0-final-20261112",
+  "VerificationSha256": "31D2170D760088335B40C87C6A1FF8E75BA3DC38848831A2F69483EE7F4FC027",
+  "Command": "pwsh -NoProfile -File ManualTests/KtonResearch/Verify.ps1 -EvidenceDirectory TestResults/KtonPHYS0-final-20261112 -PackageDirectory E:/source/my/TrueMoon.Tales/TrueMoon/src/TestResults/KtonPHYS0-package-inspection-20261112",
+  "FreshMachineCommand": "pwsh -NoProfile -File ManualTests/KtonResearch/Verify.ps1 -EvidenceDirectory TestResults/KtonPHYS0-local-001",
+  "BuildProfile": {
+    "Sdk": "11.0.100",
+    "TF": "net11.0",
+    "TestsTF": "net11.0",
+    "Version": "0.3.0.1-alpha",
+    "LangVersion": "latest",
+    "Features": ";runtime-async=on",
+    "CPMIsolated": true,
+    "LockedRestore": true,
+    "PrivateFeedAndCache": true,
+    "Sources": [
+      {
+        "Path": "Directory.Build.props",
+        "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+      },
+      {
+        "Path": "Directory.Packages.props",
+        "Sha256": "4292CD7B581C08609FA173BEBB188F99729068CBA1A24CDD69F97C3CE7D50335"
+      },
+      {
+        "Path": "global.json",
+        "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+      },
+      {
+        "Path": "ManualTests/BuildProfile.ps1",
+        "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+      }
+    ]
+  },
+  "Machine": {
+    "CPU": "AMD Ryzen 9 9900X 12-Core Processor",
+    "CpuSource": "Local registry, recorded after final run",
+    "Runtime": ".NET 11.0.0",
+    "OS": "Microsoft Windows 10.0.26340",
+    "Architecture": "X64",
+    "LogicalProcessors": 24,
+    "VectorFloatCount": 8,
+    "Avx2": true,
+    "HardwareAccelerated": true,
+    "ServerGC": false
+  },
+  "Packages": [
+    {
+      "Sha256": "9C1DB047CD7B3597CD808D7B94A1EF6626E0041E305BB3D8FE41AA658C3F1D03",
+      "NativeAssets": 0,
+      "Version": "2.5.0-beta.33",
+      "Bytes": 442654,
+      "License": "Apache-2.0",
+      "DllSha256": "5BBD07C09F058025049E741E136A4E7AB8A68AFE56F391F58072429F44262FBE",
+      "Dll": "lib/net8.0/BepuPhysics.dll",
+      "RepositoryCommit": "29ed466870534c413aba9eeccd813cf15d135d0b",
+      "Id": "BepuPhysics",
+      "Dependencies": [
+        {
+          "Id": "BepuUtilities",
+          "Version": "2.5.0-beta.33"
+        }
+      ]
+    },
+    {
+      "Sha256": "D1CF1BB261720FEF05D197B4DE9F17E06BAC6D2A6C7574A6DE88BC21122C26EA",
+      "NativeAssets": 0,
+      "Version": "2.5.0-beta.33",
+      "Bytes": 149666,
+      "License": "Apache-2.0",
+      "DllSha256": "4666356F52ED46FCE9707786CDA72CFB6BA6460F8BCD789D75CB816A744643F6",
+      "Dll": "lib/net8.0/BepuUtilities.dll",
+      "RepositoryCommit": "29ed466870534c413aba9eeccd813cf15d135d0b",
+      "Id": "BepuUtilities",
+      "Dependencies": []
+    }
+  ],
+  "ProbeSources": [
+    {
+      "Name": "Callbacks.cs",
+      "Sha256": "EB7B6E399665C9E776A93E98EF52026D561B345CAE89657B697F1E3CF9230AD5"
+    },
+    {
+      "Name": "packages.lock.json",
+      "Sha256": "6E85269054367BE9907BC6FA1DF43D6AAF33F729B3E96E66A18FD0099BDCC7CB"
+    },
+    {
+      "Name": "Probe.csproj",
+      "Sha256": "1F8FDCA401DBCA3026B4F6DBF5765825F2025760D7059EC2088B8A212D7521E4"
+    },
+    {
+      "Name": "ProbeWorld.cs",
+      "Sha256": "C51B6F24AFECB684446A3238B8C30129C121D7F1DDA9B8BBF60A10898B33C13C"
+    },
+    {
+      "Name": "Program.cs",
+      "Sha256": "08D1137EEA1873D8849E4F3E5B784F9A2A0F0510E8091A8CBC882C63A4C788AE"
+    },
+    {
+      "Name": "Queries.cs",
+      "Sha256": "60B0CDEF6A2C1827649A3D5DC00B3CFFEB63A5E71E0F3A32D4E9949B7A75BC6D"
+    },
+    {
+      "Name": "README.md",
+      "Sha256": "738EECD79329CE80BE38CA16C4BEF30EB6B4E1BC89167979C70592CFA9E5E0D4"
+    },
+    {
+      "Name": "Verify.ps1",
+      "Sha256": "4A871378AB38AFC2FA97E25C11AE85610EFC7CEF0A3F7D706C12519FA2E4B590"
+    }
+  ],
+  "ResearchProfile": {
+    "FixedDeltaSeconds": 0.016666668,
+    "Workers": 1,
+    "SolverIterations": 8,
+    "SolverSubsteps": 4,
+    "CollisionSteps": 1,
+    "ContactFrequency": 120,
+    "DampingRatio": 1,
+    "Friction": 0.8,
+    "MaximumRecoveryVelocity": 2,
+    "BodyLimit": 1024,
+    "ShapeLimit": 2048,
+    "ContactSampleLimit": 8192,
+    "QueryResults": "nearest only",
+    "SampledPerWorldPoolBudgetBytes": 16777216,
+    "WarmP99DiagnosticBudgetMs": 1,
+    "BudgetScope": "Research fixture only; sampled BEPU pool budget, not a hard total-memory cap or product frame budget."
+  },
+  "OutcomeCatalogScope": "The same 114 named checks passed in both final profiles; catalog actual values below are from Debug. Individual raw report hashes retained.",
+  "OutcomeCatalog": [
+    {
+      "Name": "runtime-major-11",
+      "Passed": true,
+      "Actual": "11.0.0"
+    },
+    {
+      "Name": "windows-x64-profile",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "gravity-affects-first-world",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "second-world-isolated",
+      "Passed": true,
+      "Actual": {
+        "actual": 10,
+        "expected": 10,
+        "tolerance": 1E-05
+      }
+    },
+    {
+      "Name": "impulse-obeys-mass",
+      "Passed": true,
+      "Actual": {
+        "actual": 2,
+        "expected": 2,
+        "tolerance": 1E-05
+      }
+    },
+    {
+      "Name": "force-integrated-as-impulse-per-step",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.9999997,
+        "expected": 1,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "kinematic-linear-motion",
+      "Passed": true,
+      "Actual": {
+        "actual": 32.999954,
+        "expected": 33,
+        "tolerance": 0.001
+      }
+    },
+    {
+      "Name": "kinematic-not-gravity-integrated",
+      "Passed": true,
+      "Actual": {
+        "actual": 0,
+        "expected": 0,
+        "tolerance": 1E-05
+      }
+    },
+    {
+      "Name": "removed-body-does-not-exist",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "box-rests-on-static-mesh",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.49998316,
+        "expected": 0.5,
+        "tolerance": 0.04
+      }
+    },
+    {
+      "Name": "capsule-half-length-convention",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.9999828,
+        "expected": 1,
+        "tolerance": 0.06
+      }
+    },
+    {
+      "Name": "resting-box-sleeps",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "impulse-wakes-sleeping-box",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shared-shape-survives-body-removal",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "ray-hits-nearest-body",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "ray-distance",
+      "Passed": true,
+      "Actual": {
+        "actual": 4,
+        "expected": 4,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "ray-miss",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "ray-filter-excludes-floor",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-hit",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-to-box-distance",
+      "Passed": true,
+      "Actual": {
+        "actual": 3.5,
+        "expected": 3.5,
+        "tolerance": 0.01
+      }
+    },
+    {
+      "Name": "stationary-sweep-detects-overlap",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "overlap-narrowphase-rejects-aabb-corner",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "raw-contact-manifolds-observed",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sensor-records-manifold",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sensor-suppresses-response",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "collision-filter-prevents-separation",
+      "Passed": true,
+      "Actual": {
+        "actual": 0,
+        "expected": 0,
+        "tolerance": 1E-06
+      }
+    },
+    {
+      "Name": "filtered-pair-has-no-manifold",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "ball-socket-retains-connection",
+      "Passed": true,
+      "Actual": 0.00027945553
+    },
+    {
+      "Name": "joint-body-removal",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "invalid-world-preset-rejected",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "failed-world-preset-does-not-acquire-owner",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "invalid-mass-rejected",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "nonfinite-pose-rejected",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "body-capacity-rejected-before-add",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "capacity-unchanged-after-rejection",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "dispose-idempotent",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "step-after-dispose-rejected",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "warm-workload-finite",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "warm-workload-active",
+      "Passed": true,
+      "Actual": 100
+    },
+    {
+      "Name": "cleanup-cycle-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-3",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-4",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-5",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-6",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-7",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-8",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-9",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-10",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-11",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-12",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-13",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-14",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-15",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-16",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-17",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-18",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-19",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-20",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-21",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-22",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-23",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-24",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-25",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-26",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-27",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-28",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-29",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-30",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-31",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-32",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-33",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-34",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-35",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-36",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-37",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-38",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-39",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-40",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-41",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-42",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-43",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-44",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-45",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-46",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-47",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-48",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-49",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-50",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-51",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-52",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-53",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-54",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-55",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-56",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-57",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-58",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-59",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-60",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-61",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-62",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-cycle-63",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "passive-capped-thin-wall-negative-control",
+      "Passed": true,
+      "Actual": 5.000001
+    },
+    {
+      "Name": "continuous-capped-first-impact",
+      "Passed": true,
+      "Actual": {
+        "actual": -0.11897472,
+        "expected": -0.12,
+        "tolerance": 0.005
+      }
+    },
+    {
+      "Name": "continuous-capped-never-crosses-wall-in-61-ticks",
+      "Passed": true,
+      "Actual": -0.11897472
+    },
+    {
+      "Name": "continuous-capped-post-impact-finite-on-near-side",
+      "Passed": true,
+      "Actual": -1.9314259
+    },
+    {
+      "Name": "continuous-unbounded-first-impact",
+      "Passed": true,
+      "Actual": {
+        "actual": -0.11897401,
+        "expected": -0.12,
+        "tolerance": 0.005
+      }
+    },
+    {
+      "Name": "continuous-unbounded-never-crosses-wall-in-61-ticks",
+      "Passed": true,
+      "Actual": -0.11897401
+    },
+    {
+      "Name": "passive-unbounded-speculative-contacts-stop-projectile",
+      "Passed": true,
+      "Actual": -0.11897401
+    },
+    {
+      "Name": "soft-contact-diagnostic-finite",
+      "Passed": true,
+      "Actual": 2.0216477
+    },
+    {
+      "Name": "all-world-owners-released",
+      "Passed": true,
+      "Actual": 0
+    },
+    {
+      "Name": "all-owned-pools-cleared",
+      "Passed": true,
+      "Actual": 0
+    },
+    {
+      "Name": "sampled-per-world-pools-within-research-budget",
+      "Passed": true,
+      "Actual": 5308416
+    }
+  ],
+  "Profiles": [
+    {
+      "MaximumOwnedPoolBytes": 5308416,
+      "Configuration": "Debug",
+      "ReportSha256": "5CB002CCF747804A13F40B12966EB883F74F2B0920C1E4C174DD96541FC0948A",
+      "Kind": "source build",
+      "MaximumBytesAfterCleanup": 0,
+      "Failed": 0,
+      "LiveOwners": 0,
+      "Completed": true,
+      "ActualAssemblies": [
+        {
+          "Name": "BepuPhysics",
+          "Version": "2.5.0.0",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b",
+          "Sha256": "5BBD07C09F058025049E741E136A4E7AB8A68AFE56F391F58072429F44262FBE"
+        },
+        {
+          "Name": "BepuUtilities",
+          "Version": "2.5.0.0",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b",
+          "Sha256": "4666356F52ED46FCE9707786CDA72CFB6BA6460F8BCD789D75CB816A744643F6"
+        }
+      ],
+      "Metrics": {
+        "ColdCreateFirstStepDisposeMilliseconds": 68.717,
+        "Warm100ActiveBodies": {
+          "WarmupSteps": 120,
+          "Steps": 600,
+          "P50Ms": 0.2957,
+          "P95Ms": 0.4431,
+          "P99Ms": 0.5866,
+          "MaxMs": 1.8801,
+          "AllocatedManagedBytes": 56,
+          "P99DiagnosticBudgetMs": 1,
+          "WithinDiagnosticBudget": true,
+          "MeasurementScope": "Whole research Step including callback reset and pool counters; no ECS. Timing budget is diagnostic, not a hardware-independent gate."
+        },
+        "Cleanup": {
+          "Cycles": 64,
+          "MaximumOwnedPoolBytes": 5308416,
+          "MaximumBytesAfterCleanup": 0,
+          "LeakProofBoundary": "Owned BEPU pool counters and owner count only; not proof against every CLR/process allocation leak."
+        },
+        "CCD": {
+          "PassiveCappedNegativeControl": {
+            "FirstX": 5.000001,
+            "MaximumX": 605.00006,
+            "FinalX": 605.00006
+          },
+          "ContinuousCapped": {
+            "FirstX": -0.11897472,
+            "MaximumX": -0.11897472,
+            "FinalX": -1.9314259
+          },
+          "ContinuousUnbounded": {
+            "FirstX": -0.11897401,
+            "MaximumX": -0.11897401,
+            "FinalX": -1.9314252
+          },
+          "PassiveUnbounded": {
+            "FirstX": -0.11897401,
+            "MaximumX": -0.11897401,
+            "FinalX": -1.9314252
+          },
+          "SoftContinuousKnownLimitation": {
+            "FirstX": 0.022162264,
+            "MaximumX": 2.0216477,
+            "FinalX": 2.0216477
+          },
+          "Speed": 600,
+          "SphereRadius": 0.1,
+          "StartX": -5,
+          "WallThickness": 0.04,
+          "FollowupTicks": 60,
+          "TimeToleranceSeconds": 1E-06,
+          "CappedMargin": 0.01,
+          "SolverIterations": 8,
+          "SolverSubsteps": 4,
+          "CollisionSteps": 1,
+          "AcceptedContactFrequency": 600,
+          "SoftContactFrequency": 120,
+          "SurfaceCenterX": -0.12,
+          "PositionTolerance": 0.005
+        }
+      },
+      "CheckCount": 114
+    },
+    {
+      "MaximumOwnedPoolBytes": 5308416,
+      "Configuration": "Release",
+      "ReportSha256": "BFB6417BF8D54FB3B0F50D489FDCD5D0A582D9BB81F5009CB64C79F9D5875F1A",
+      "Kind": "framework-dependent publish",
+      "MaximumBytesAfterCleanup": 0,
+      "Failed": 0,
+      "LiveOwners": 0,
+      "Completed": true,
+      "ActualAssemblies": [
+        {
+          "Name": "BepuPhysics",
+          "Version": "2.5.0.0",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b",
+          "Sha256": "5BBD07C09F058025049E741E136A4E7AB8A68AFE56F391F58072429F44262FBE"
+        },
+        {
+          "Name": "BepuUtilities",
+          "Version": "2.5.0.0",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b",
+          "Sha256": "4666356F52ED46FCE9707786CDA72CFB6BA6460F8BCD789D75CB816A744643F6"
+        }
+      ],
+      "Metrics": {
+        "ColdCreateFirstStepDisposeMilliseconds": 56.9097,
+        "Warm100ActiveBodies": {
+          "WarmupSteps": 120,
+          "Steps": 600,
+          "P50Ms": 0.2736,
+          "P95Ms": 0.3341,
+          "P99Ms": 0.564,
+          "MaxMs": 1.3531,
+          "AllocatedManagedBytes": 56,
+          "P99DiagnosticBudgetMs": 1,
+          "WithinDiagnosticBudget": true,
+          "MeasurementScope": "Whole research Step including callback reset and pool counters; no ECS. Timing budget is diagnostic, not a hardware-independent gate."
+        },
+        "Cleanup": {
+          "Cycles": 64,
+          "MaximumOwnedPoolBytes": 5308416,
+          "MaximumBytesAfterCleanup": 0,
+          "LeakProofBoundary": "Owned BEPU pool counters and owner count only; not proof against every CLR/process allocation leak."
+        },
+        "CCD": {
+          "PassiveCappedNegativeControl": {
+            "FirstX": 5.000001,
+            "MaximumX": 605.00006,
+            "FinalX": 605.00006
+          },
+          "ContinuousCapped": {
+            "FirstX": -0.11897472,
+            "MaximumX": -0.11897472,
+            "FinalX": -1.9314259
+          },
+          "ContinuousUnbounded": {
+            "FirstX": -0.11897401,
+            "MaximumX": -0.11897401,
+            "FinalX": -1.9314252
+          },
+          "PassiveUnbounded": {
+            "FirstX": -0.11897401,
+            "MaximumX": -0.11897401,
+            "FinalX": -1.9314252
+          },
+          "SoftContinuousKnownLimitation": {
+            "FirstX": 0.022162264,
+            "MaximumX": 2.0216477,
+            "FinalX": 2.0216477
+          },
+          "Speed": 600,
+          "SphereRadius": 0.1,
+          "StartX": -5,
+          "WallThickness": 0.04,
+          "FollowupTicks": 60,
+          "TimeToleranceSeconds": 1E-06,
+          "CappedMargin": 0.01,
+          "SolverIterations": 8,
+          "SolverSubsteps": 4,
+          "CollisionSteps": 1,
+          "AcceptedContactFrequency": 600,
+          "SoftContactFrequency": 120,
+          "SurfaceCenterX": -0.12,
+          "PositionTolerance": 0.005
+        }
+      },
+      "CheckCount": 114
+    }
+  ],
+  "KnownLimitations": [
+    "Continuous plus spring120Hz crosses the thin wall in the 600m/s capped-margin fixture; retained as diagnostic, not a passing CCD preset.",
+    "Spring600Hz is accepted only for this fixture, not a public API default or arbitrary-scene guarantee.",
+    "Nearest queries only; 4096 joints/commands and 256 hits are proposals, not implemented admission limits.",
+    "One worker only; raw manifolds are not generation-safe Begin/Stay/End events.",
+    "Pool high-water sampled after Step, not a hard memory cap; cleared pools do not prove every process/GC leak absent.",
+    "Timings include reset/pool counters; exploratory baseline, no Jolt comparison, FPS guarantee or formal benchmark.",
+    "Other platforms, AOT/trimming, App/Cobalt/ECS, character/ragdoll and production NuGet delivery unverified."
+  ],
+  "PriorFailures": [
+    {
+      "VerificationSha256": "360DAC877C07043D9FFAD5B321CEAB5DEDA6EC94D63A04F39FB21E9A60621B2F",
+      "Attempt": "attempt1",
+      "Completed": false,
+      "Failure": "build-Debug failed with exit 1"
+    },
+    {
+      "VerificationSha256": "85A1F074F2EFF003B8C7BEE2830201C67FE2D9EF5F442EDB12EA734E8F0A8968",
+      "Attempt": "attempt2",
+      "ProbeFailure": "System.InvalidOperationException: Probe failed: continuous-stops-at-thin-wall; actual=0,1784935\r\n   at KtonResearch.Program.Check(String name, Boolean outcome, Object actual) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt2-20261112\\consumer\\Program.cs:line 22\r\n   at KtonResearch.Program.Ccd() in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt2-20261112\\consumer\\Program.cs:line 168\r\n   at KtonResearch.Program.Main(String[] args) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt2-20261112\\consumer\\Program.cs:line 46",
+      "Completed": false,
+      "Failure": "probe-Debug failed with exit 1"
+    },
+    {
+      "VerificationSha256": "0BC999CE2A2F25390EA7AC6813B56D29909091129A09B1B43D114C2361D3D9CF",
+      "Attempt": "attempt3",
+      "ProbeFailure": "System.InvalidOperationException: Probe failed: continuous-stops-at-thin-wall; actual=0,1784935\r\n   at KtonResearch.Program.Check(String name, Boolean outcome, Object actual) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt3-20261112\\consumer\\Program.cs:line 22\r\n   at KtonResearch.Program.Ccd() in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt3-20261112\\consumer\\Program.cs:line 168\r\n   at KtonResearch.Program.Main(String[] args) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt3-20261112\\consumer\\Program.cs:line 46",
+      "Completed": false,
+      "Failure": "probe-Debug failed with exit 1"
+    },
+    {
+      "CCD": {
+        "PassivePositionX": 5.000001,
+        "OneSubstepContinuousPositionX": 0.1784935,
+        "ContinuousPositionX": 0.9007871,
+        "Speed": 600,
+        "WallThickness": 0.04,
+        "TimeToleranceSeconds": 1E-06,
+        "MaximumSpeculativeMargin": 0.01,
+        "SolverIterations": 8,
+        "SolverSubsteps": 4
+      },
+      "ProbeFailure": "System.InvalidOperationException: Probe failed: continuous-stops-at-thin-wall; actual=0,9007871\r\n   at KtonResearch.Program.Check(String name, Boolean outcome, Object actual) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt4-20261112\\consumer\\Program.cs:line 22\r\n   at KtonResearch.Program.Ccd() in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt4-20261112\\consumer\\Program.cs:line 169\r\n   at KtonResearch.Program.Main(String[] args) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt4-20261112\\consumer\\Program.cs:line 46",
+      "Completed": false,
+      "Attempt": "attempt4",
+      "Failure": "probe-Debug failed with exit 1",
+      "VerificationSha256": "121F9B32229855602AC3C9FCAAB2BACA252EA68924640F9CE57728DA9D4F13AD"
+    },
+    {
+      "CCD": {
+        "PassivePositionX": 5.000001,
+        "OneSubstepContinuousPositionX": -0.09218073,
+        "ContinuousPositionX": 0.022162264,
+        "Speed": 600,
+        "WallThickness": 0.04,
+        "TimeToleranceSeconds": 1E-06,
+        "MaximumSpeculativeMargin": 0.01,
+        "SolverIterations": 8,
+        "SolverSubsteps": 4
+      },
+      "ProbeFailure": "System.InvalidOperationException: Probe failed: continuous-stops-at-thin-wall; actual=0,022162264\r\n   at KtonResearch.Program.Check(String name, Boolean outcome, Object actual) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt5-20261112\\consumer\\Program.cs:line 22\r\n   at KtonResearch.Program.Ccd() in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt5-20261112\\consumer\\Program.cs:line 169\r\n   at KtonResearch.Program.Main(String[] args) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt5-20261112\\consumer\\Program.cs:line 46",
+      "Completed": false,
+      "Attempt": "attempt5",
+      "Failure": "probe-Debug failed with exit 1",
+      "VerificationSha256": "159AB83200B2D7ACAB93A4A8FAA4FE2EF2F10EC49D2FE922E8CEEA40685B8E30"
+    },
+    {
+      "CCD": {
+        "PassivePositionX": 5.000001,
+        "OneSubstepContinuousPositionX": -0.09218073,
+        "OneCollisionStepContinuousPositionX": 0.022162264,
+        "ContinuousPositionX": 0.16867298,
+        "Speed": 600,
+        "WallThickness": 0.04,
+        "TimeToleranceSeconds": 1E-06,
+        "MaximumSpeculativeMargin": 0.01,
+        "SolverIterations": 8,
+        "SolverSubsteps": 4,
+        "CollisionSteps": 4,
+        "ContactFrequency": 120
+      },
+      "ProbeFailure": "System.InvalidOperationException: Probe failed: continuous-stops-at-thin-wall; actual=0,16867298\r\n   at KtonResearch.Program.Check(String name, Boolean outcome, Object actual) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt6-20261112\\consumer\\Program.cs:line 22\r\n   at KtonResearch.Program.Ccd() in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt6-20261112\\consumer\\Program.cs:line 169\r\n   at KtonResearch.Program.Main(String[] args) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt6-20261112\\consumer\\Program.cs:line 46",
+      "Completed": false,
+      "Attempt": "attempt6",
+      "Failure": "probe-Debug failed with exit 1",
+      "VerificationSha256": "CAA74CB31435BCE882BC9B02C1B391DD839FAC72EC3148289A5677BBCA5F5A54"
+    },
+    {
+      "CCD": {
+        "PassivePositionX": 5.000001,
+        "ContinuousPositionX": 0.02216298,
+        "Speed": 600,
+        "WallThickness": 0.04,
+        "TimeToleranceSeconds": 1E-06,
+        "Cases": [
+          {
+            "margin": 0.01,
+            "substeps": 1,
+            "collisionSteps": 1,
+            "PositionX": -0.09218073
+          },
+          {
+            "margin": 0.01,
+            "substeps": 1,
+            "collisionSteps": 4,
+            "PositionX": 0.15726683
+          },
+          {
+            "margin": 0.01,
+            "substeps": 4,
+            "collisionSteps": 1,
+            "PositionX": 0.022162264
+          },
+          {
+            "margin": 0.01,
+            "substeps": 4,
+            "collisionSteps": 4,
+            "PositionX": 0.16867298
+          },
+          {
+            "margin": 0.1,
+            "substeps": 1,
+            "collisionSteps": 1,
+            "PositionX": -0.09218073
+          },
+          {
+            "margin": 0.1,
+            "substeps": 1,
+            "collisionSteps": 4,
+            "PositionX": 0.15726683
+          },
+          {
+            "margin": 0.1,
+            "substeps": 4,
+            "collisionSteps": 1,
+            "PositionX": 0.022162264
+          },
+          {
+            "margin": 0.1,
+            "substeps": 4,
+            "collisionSteps": 4,
+            "PositionX": 0.16867298
+          },
+          {
+            "margin": 1,
+            "substeps": 1,
+            "collisionSteps": 1,
+            "PositionX": -0.09218073
+          },
+          {
+            "margin": 1,
+            "substeps": 1,
+            "collisionSteps": 4,
+            "PositionX": 0.15726683
+          },
+          {
+            "margin": 1,
+            "substeps": 4,
+            "collisionSteps": 1,
+            "PositionX": 0.022162264
+          },
+          {
+            "margin": 1,
+            "substeps": 4,
+            "collisionSteps": 4,
+            "PositionX": 0.16867298
+          },
+          {
+            "margin": 3.4028235E+38,
+            "substeps": 1,
+            "collisionSteps": 1,
+            "PositionX": -0.09218025
+          },
+          {
+            "margin": 3.4028235E+38,
+            "substeps": 1,
+            "collisionSteps": 4,
+            "PositionX": 0.15726683
+          },
+          {
+            "margin": 3.4028235E+38,
+            "substeps": 4,
+            "collisionSteps": 1,
+            "PositionX": 0.02216298
+          },
+          {
+            "margin": 3.4028235E+38,
+            "substeps": 4,
+            "collisionSteps": 4,
+            "PositionX": 0.16867298
+          }
+        ],
+        "SolverIterations": 8,
+        "SolverSubsteps": 4,
+        "ContactFrequency": 120
+      },
+      "ProbeFailure": "System.InvalidOperationException: Probe failed: continuous-stops-at-thin-wall; actual=0,02216298\r\n   at KtonResearch.Program.Check(String name, Boolean outcome, Object actual) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt7-20261112\\consumer\\Program.cs:line 22\r\n   at KtonResearch.Program.Ccd() in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt7-20261112\\consumer\\Program.cs:line 175\r\n   at KtonResearch.Program.Main(String[] args) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt7-20261112\\consumer\\Program.cs:line 46",
+      "Completed": false,
+      "Attempt": "attempt7",
+      "Failure": "probe-Debug failed with exit 1",
+      "VerificationSha256": "632DAC74042C3F77D2A9D85A7B5226DA4F8E0FCB7810663595AC03042088F214"
+    },
+    {
+      "CCD": {
+        "PassivePositionX": 5.000001,
+        "ContinuousPositionX": 0.02216298,
+        "Speed": 600,
+        "WallThickness": 0.04,
+        "TimeToleranceSeconds": 1E-06,
+        "Cases": [
+          {
+            "margin": 0.01,
+            "substeps": 1,
+            "collisionSteps": 1,
+            "PositionX": -0.09218073
+          },
+          {
+            "margin": 0.01,
+            "substeps": 1,
+            "collisionSteps": 4,
+            "PositionX": 0.15726683
+          },
+          {
+            "margin": 0.01,
+            "substeps": 4,
+            "collisionSteps": 1,
+            "PositionX": 0.022162264
+          },
+          {
+            "margin": 0.01,
+            "substeps": 4,
+            "collisionSteps": 4,
+            "PositionX": 0.16867298
+          },
+          {
+            "margin": 0.1,
+            "substeps": 1,
+            "collisionSteps": 1,
+            "PositionX": -0.09218073
+          },
+          {
+            "margin": 0.1,
+            "substeps": 1,
+            "collisionSteps": 4,
+            "PositionX": 0.15726683
+          },
+          {
+            "margin": 0.1,
+            "substeps": 4,
+            "collisionSteps": 1,
+            "PositionX": 0.022162264
+          },
+          {
+            "margin": 0.1,
+            "substeps": 4,
+            "collisionSteps": 4,
+            "PositionX": 0.16867298
+          },
+          {
+            "margin": 1,
+            "substeps": 1,
+            "collisionSteps": 1,
+            "PositionX": -0.09218073
+          },
+          {
+            "margin": 1,
+            "substeps": 1,
+            "collisionSteps": 4,
+            "PositionX": 0.15726683
+          },
+          {
+            "margin": 1,
+            "substeps": 4,
+            "collisionSteps": 1,
+            "PositionX": 0.022162264
+          },
+          {
+            "margin": 1,
+            "substeps": 4,
+            "collisionSteps": 4,
+            "PositionX": 0.16867298
+          },
+          {
+            "margin": 3.4028235E+38,
+            "substeps": 1,
+            "collisionSteps": 1,
+            "PositionX": -0.09218025
+          },
+          {
+            "margin": 3.4028235E+38,
+            "substeps": 1,
+            "collisionSteps": 4,
+            "PositionX": 0.15726683
+          },
+          {
+            "margin": 3.4028235E+38,
+            "substeps": 4,
+            "collisionSteps": 1,
+            "PositionX": 0.02216298
+          },
+          {
+            "margin": 3.4028235E+38,
+            "substeps": 4,
+            "collisionSteps": 4,
+            "PositionX": 0.16867298
+          }
+        ],
+        "SpringCases": [
+          {
+            "frequency": 120,
+            "substeps": 1,
+            "PositionX": -0.09218025
+          },
+          {
+            "frequency": 120,
+            "substeps": 4,
+            "PositionX": 0.02216298
+          },
+          {
+            "frequency": 600,
+            "substeps": 1,
+            "PositionX": -0.118742466
+          },
+          {
+            "frequency": 600,
+            "substeps": 4,
+            "PositionX": -0.11897401
+          },
+          {
+            "frequency": 1200,
+            "substeps": 1,
+            "PositionX": -0.119680405
+          },
+          {
+            "frequency": 1200,
+            "substeps": 4,
+            "PositionX": -0.1198591
+          },
+          {
+            "frequency": 10000,
+            "substeps": 1,
+            "PositionX": -0.11999464
+          },
+          {
+            "frequency": 10000,
+            "substeps": 4,
+            "PositionX": -0.11999891
+          }
+        ],
+        "SolverIterations": 8,
+        "SolverSubsteps": 4,
+        "ContactFrequency": 120
+      },
+      "ProbeFailure": "System.InvalidOperationException: Probe failed: continuous-stops-at-thin-wall; actual=0,02216298\r\n   at KtonResearch.Program.Check(String name, Boolean outcome, Object actual) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt8-20261112\\consumer\\Program.cs:line 22\r\n   at KtonResearch.Program.Ccd() in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt8-20261112\\consumer\\Program.cs:line 179\r\n   at KtonResearch.Program.Main(String[] args) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-attempt8-20261112\\consumer\\Program.cs:line 46",
+      "Completed": false,
+      "Attempt": "attempt8",
+      "Failure": "probe-Debug failed with exit 1",
+      "VerificationSha256": "212BE38BEC06F7D116E45796659DEE64276312A6EF95B60FF289C8A9284FA525"
+    },
+    {
+      "CCD": {
+        "PassiveCappedNegativeControl": {
+          "FirstX": 5.000001,
+          "MaximumX": 605.00006,
+          "FinalX": 605.00006
+        },
+        "ContinuousCapped": {
+          "FirstX": -0.11897472,
+          "MaximumX": -0.11897472,
+          "FinalX": -1.9314259
+        },
+        "ContinuousUnbounded": {
+          "FirstX": -0.11897401,
+          "MaximumX": -0.11897401,
+          "FinalX": -1.9314252
+        },
+        "PassiveUnbounded": {
+          "FirstX": -0.11897401,
+          "MaximumX": -0.11897401,
+          "FinalX": -1.9314252
+        },
+        "SoftContinuousKnownLimitation": {
+          "FirstX": 0.022162264,
+          "MaximumX": 2.0216477,
+          "FinalX": 2.0216477
+        },
+        "Speed": 600,
+        "SphereRadius": 0.1,
+        "StartX": -5,
+        "WallThickness": 0.04,
+        "FollowupTicks": 60,
+        "TimeToleranceSeconds": 1E-06,
+        "CappedMargin": 0.01,
+        "SolverIterations": 8,
+        "SolverSubsteps": 4,
+        "CollisionSteps": 1,
+        "AcceptedContactFrequency": 600,
+        "SoftContactFrequency": 120,
+        "SurfaceCenterX": -0.12,
+        "PositionTolerance": 0.005
+      },
+      "ProbeFailure": "System.InvalidOperationException: Probe failed: continuous-capped-resting-position; actual={ actual = -1,9314259, expected = -0,12, tolerance = 0,005 }\r\n   at KtonResearch.Program.Check(String name, Boolean outcome, Object actual) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-acceptance1-20261112\\consumer\\Program.cs:line 22\r\n   at KtonResearch.Program.Near(String name, Single actual, Single expected, Single tolerance) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-acceptance1-20261112\\consumer\\Program.cs:line 25\r\n   at KtonResearch.Program.Ccd() in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-acceptance1-20261112\\consumer\\Program.cs:line 185\r\n   at KtonResearch.Program.Main(String[] args) in E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS0-acceptance1-20261112\\consumer\\Program.cs:line 46",
+      "Completed": false,
+      "Attempt": "acceptance1",
+      "Failure": "probe-Debug failed with exit 1",
+      "VerificationSha256": "BB4154029D950BC636B657D9BA7187E6CD519ED16AFA85412B5BBF9909C96256"
+    }
+  ],
+  "Documentation": "docs/physics/HISTORY.md#phys0-2026-11-12"
+}

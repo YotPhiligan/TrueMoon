@@ -1,14 +1,16 @@
-using TrueMoon.Aether;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Tooling;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
-using TrueMoon.Aether.Frames;
 using SkiaSharp;
 using TrueMoon;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
@@ -110,7 +112,7 @@ public static class ViewportProbe
         GameEditor editor = null!;
         projectPath = Path.GetFullPath(projectPath ?? Path.Combine(CheckpointProbe.FindWorkspace(), "ManualTests/Game.Logic/Game.Logic.csproj"));
         long sourceRevision = authoring.Revision;
-        void RefreshContext() => editor.SetContext(new(new(projectPath, "Game.Logic.dll", "Game.Logic.ProbeGame", sourceRevision), authoring.Snapshot(), authoring.Selection));
+        void RefreshContext() => editor.SetContext(new(new(projectPath, "Game.Logic.dll", "Game.Logic.ProbeGame", sourceRevision) { RuntimeAccess = true }, authoring.Snapshot(), authoring.Selection));
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(smoke ? 180 : 3600));
         var uploads = new LatencySamples(); var latency = new LatencySamples(); var cases = new List<string>();
         (ulong Child, ulong Surface, ulong Frame)? lastPresentation = null;
@@ -313,7 +315,7 @@ public static class ViewportProbe
                     "First presented viewport did not restore checkpoint state.");
                 cases.Add("checkpoint-restored-before-first-present");
                 var candidate = await engine.Builds.BuildAsync(new(Path.Combine(CheckpointProbe.FindWorkspace(), "ManualTests/Game.Logic/Game.Logic.csproj"),
-                    "Game.Logic.dll", "Game.Logic.ProbeGame", authoring.Revision), deadline.Token);
+                    "Game.Logic.dll", "Game.Logic.ProbeGame", authoring.Revision) { RuntimeAccess = true }, deadline.Token);
                 var replacement = await engine.Replacement.ReplaceAsync(new(candidate, supervisor.Status.Identity!, authoring.Snapshot(), authoring.Revision), deadline.Token);
                 Probe.Check(replacement.Checkpoint.State == checkpoint.State && supervisor.Status.Tick == checkpoint.State.Tick &&
                     (await supervisor.CaptureCheckpointAsync(deadline.Token)).State == checkpoint.State && supervisor.Status.Identity!.GameBuildId == candidate.BuildId,

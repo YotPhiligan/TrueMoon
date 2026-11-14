@@ -1,0 +1,86 @@
+BeforePath,AfterPath,BeforeNamespace,AfterNamespace,Disposition
+TrueMoon.Aether.Editor/AetherEditorConfigurationExtensions.cs,TrueMoon.Aether.Editor.Tooling/AetherEditorConfigurationExtensions.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/AetherEditorOptions.cs,TrueMoon.Aether.Editor.Tooling/AetherEditorOptions.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/AssemblyInfo.cs,TrueMoon.Aether.Editor.Tooling/AssemblyInfo.cs,,,Optional full Tooling adapter
+TrueMoon.Aether.Editor/AssemblyInfo.cs,TrueMoon.Aether.Editor.UI/AssemblyInfo.cs,,,UI presentation/ports/math
+TrueMoon.Aether.Editor/ConfiguredEditorExtensions.cs,TrueMoon.Aether.Editor.Tooling/ConfiguredEditorExtensions.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Diagnostics/CommandSourceFileNavigator.cs,TrueMoon.Aether.Editor.Tooling/Diagnostics/CommandSourceFileNavigator.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.Tooling.Diagnostics,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Diagnostics/DiagnosticsConfigurationExtensions.cs,TrueMoon.Aether.Editor.Tooling/Diagnostics/DiagnosticsConfigurationExtensions.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.Tooling.Diagnostics,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Diagnostics/EditorDiagnosticEntry.cs,TrueMoon.Aether.Editor.UI/Diagnostics/EditorDiagnosticEntry.cs,,,UI presentation/ports/math
+TrueMoon.Aether.Editor/Diagnostics/EditorDiagnosticMode.cs,TrueMoon.Aether.Editor.UI/Diagnostics/EditorDiagnosticMode.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.UI.Diagnostics,UI presentation/ports/math
+TrueMoon.Aether.Editor/Diagnostics/EditorDiagnosticSettings.cs,TrueMoon.Aether.Editor.Tooling/Diagnostics/EditorDiagnosticSettings.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.Tooling.Diagnostics,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Diagnostics/EditorDiagnosticsView.cs,TrueMoon.Aether.Editor.UI/Diagnostics/EditorDiagnosticsView.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.UI.Diagnostics,UI presentation/ports/math
+TrueMoon.Aether.Editor/Diagnostics/EditorDiagnosticsViewModel.Compiler.cs,TrueMoon.Aether.Editor.Tooling/Diagnostics/EditorDiagnosticsViewModel.Compiler.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.Tooling.Diagnostics,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Diagnostics/EditorDiagnosticsViewModel.Export.cs,TrueMoon.Aether.Editor.Tooling/Diagnostics/EditorDiagnosticsViewModel.Export.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.Tooling.Diagnostics,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Diagnostics/EditorDiagnosticsViewModel.Processes.cs,TrueMoon.Aether.Editor.Tooling/Diagnostics/EditorDiagnosticsViewModel.Processes.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.Tooling.Diagnostics,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Diagnostics/EditorDiagnosticsViewModel.cs,TrueMoon.Aether.Editor.Tooling/Diagnostics/EditorDiagnosticsViewModel.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.Tooling.Diagnostics,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Diagnostics/EditorDiagnosticsViewStyle.cs,TrueMoon.Aether.Editor.UI/Diagnostics/EditorDiagnosticsViewStyle.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.UI.Diagnostics,UI presentation/ports/math
+TrueMoon.Aether.Editor/Diagnostics/ISourceFileNavigator.cs,TrueMoon.Aether.Editor.UI/Diagnostics/ISourceFileNavigator.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.UI.Diagnostics,UI presentation/ports/math
+TrueMoon.Aether.Editor/Diagnostics/SourceEditorOptions.cs,TrueMoon.Aether.Editor.Tooling/Diagnostics/SourceEditorOptions.cs,TrueMoon.Aether.Editor.Diagnostics,TrueMoon.Aether.Editor.Tooling.Diagnostics,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Documents/DocumentCommand.cs,TrueMoon.Aether.Editor.Tooling/Documents/DocumentCommand.cs,TrueMoon.Aether.Editor.Documents,TrueMoon.Aether.Editor.Tooling.Documents,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Documents/DocumentCommand.cs,TrueMoon.Aether.Editor.UI/Documents/DocumentCommand.cs,TrueMoon.Aether.Editor.Documents,TrueMoon.Aether.Editor.UI.Documents,UI presentation/ports/math
+TrueMoon.Aether.Editor/Documents/EditorDocumentCommands.cs,TrueMoon.Aether.Editor.Tooling/Documents/EditorDocumentCommands.cs,TrueMoon.Aether.Editor.Documents,TrueMoon.Aether.Editor.Tooling.Documents,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Documents/EditorDocumentView.cs,TrueMoon.Aether.Editor.UI/Documents/EditorDocumentView.cs,TrueMoon.Aether.Editor.Documents,TrueMoon.Aether.Editor.UI.Documents,UI presentation/ports/math
+TrueMoon.Aether.Editor/Documents/EditorDocumentViewModel.cs,TrueMoon.Aether.Editor.Tooling/Documents/EditorDocumentViewModel.cs,TrueMoon.Aether.Editor.Documents,TrueMoon.Aether.Editor.Tooling.Documents,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Documents/EditorDocumentViewStyle.cs,TrueMoon.Aether.Editor.UI/Documents/EditorDocumentViewStyle.cs,TrueMoon.Aether.Editor.Documents,TrueMoon.Aether.Editor.UI.Documents,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/EditorInspectorView.cs,TrueMoon.Aether.Editor.UI/Editing/EditorInspectorView.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/EditorInspectorViewModel.cs,TrueMoon.Aether.Editor.Tooling/Editing/EditorInspectorViewModel.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.Tooling.Editing,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Editing/EditorInspectorViewStyle.cs,TrueMoon.Aether.Editor.UI/Editing/EditorInspectorViewStyle.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/EditorScenePlayback.cs,TrueMoon.Aether.Editor.Tooling/Editing/EditorScenePlayback.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.Tooling.Editing,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Editing/EditorTransformView.cs,TrueMoon.Aether.Editor.UI/Editing/EditorTransformView.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/EditorTransformViewModel.cs,TrueMoon.Aether.Editor.Tooling/Editing/EditorTransformViewModel.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.Tooling.Editing,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Editing/EditorTransformViewStyle.cs,TrueMoon.Aether.Editor.UI/Editing/EditorTransformViewStyle.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/InspectorComponent.cs,TrueMoon.Aether.Editor.UI/Editing/InspectorComponent.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/InspectorProperty.cs,TrueMoon.Aether.Editor.UI/Editing/InspectorProperty.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/InspectorPropertyControls.cs,TrueMoon.Aether.Editor.UI/Editing/InspectorPropertyControls.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/TransformEditor.cs,TrueMoon.Aether.Editor.UI/Editing/TransformEditor.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/TransformField.cs,TrueMoon.Aether.Editor.UI/Editing/TransformField.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/Editing/TransformGroup.cs,TrueMoon.Aether.Editor.UI/Editing/TransformGroup.cs,TrueMoon.Aether.Editor.Editing,TrueMoon.Aether.Editor.UI.Editing,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditingConfigurationExtensions.cs,TrueMoon.Aether.Editor.Tooling/EditingConfigurationExtensions.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorCameraNavigation.cs,TrueMoon.Aether.Editor.UI/EditorCameraNavigation.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorCommand.cs,TrueMoon.Aether.Editor.UI/EditorCommand.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorCommands.cs,TrueMoon.Aether.Editor.Tooling/EditorCommands.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorConfigurationSchemas.cs,TrueMoon.Aether.Editor.Tooling/EditorConfigurationSchemas.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorHeaderView.cs,TrueMoon.Aether.Editor.UI/EditorHeaderView.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorHeaderViewStyle.cs,TrueMoon.Aether.Editor.UI/EditorHeaderViewStyle.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorIsland.cs,TrueMoon.Aether.Editor.UI/EditorIsland.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorLayout.cs,TrueMoon.Aether.Editor.UI/EditorLayout.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorMainWindow.cs,TrueMoon.Aether.Editor.UI/EditorMainWindow.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorMainWindowArguments.cs,TrueMoon.Aether.Editor.UI/EditorMainWindowArguments.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorMainWindowStyle.cs,TrueMoon.Aether.Editor.UI/EditorMainWindowStyle.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorScene.cs,TrueMoon.Aether.Editor.UI/EditorScene.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorSession.cs,TrueMoon.Aether.Editor.Tooling/EditorSession.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorStatusBarView.cs,TrueMoon.Aether.Editor.UI/EditorStatusBarView.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorStatusBarViewModel.cs,TrueMoon.Aether.Editor.Tooling/EditorStatusBarViewModel.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorStatusBarViewModel.cs,TrueMoon.Aether.Editor.UI/EditorStatusKind.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,Split pure status enum
+TrueMoon.Aether.Editor/EditorStatusBarViewStyle.cs,TrueMoon.Aether.Editor.UI/EditorStatusBarViewStyle.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorStatusPopupView.cs,TrueMoon.Aether.Editor.UI/EditorStatusPopupView.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorStatusPopupViewStyle.cs,TrueMoon.Aether.Editor.UI/EditorStatusPopupViewStyle.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorView.cs,TrueMoon.Aether.Editor.UI/EditorView.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorViewModel.cs,TrueMoon.Aether.Editor.Tooling/EditorViewModel.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorViewStyle.cs,TrueMoon.Aether.Editor.UI/EditorViewStyle.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorViewport.cs,TrueMoon.Aether.Editor.UI/EditorViewport.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorViewportArguments.cs,TrueMoon.Aether.Editor.UI/EditorViewportArguments.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorViewportBinding.cs,TrueMoon.Aether.Editor.UI/RuntimeViewportBinding.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/EditorViewportController.Translation.cs,TrueMoon.Aether.Editor.Tooling/EditorViewportController.Translation.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorViewportController.cs,TrueMoon.Aether.Editor.Tooling/EditorViewportController.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorViewportState.cs,TrueMoon.Aether.Editor.Tooling/EditorViewportState.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorWindow.cs,TrueMoon.Aether.Editor.Tooling/EditorWindow.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorWindowConfigurationExtensions.cs,TrueMoon.Aether.Editor.Tooling/EditorWindowConfigurationExtensions.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/EditorWorkspace.cs,TrueMoon.Aether.Editor.Tooling/EditorWorkspace.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/HeaderConfigurationExtensions.cs,TrueMoon.Aether.Editor.Tooling/HeaderConfigurationExtensions.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Hierarchy/EditorEntityKind.cs,TrueMoon.Aether.Editor.UI/Hierarchy/EditorEntityKind.cs,TrueMoon.Aether.Editor.Hierarchy,TrueMoon.Aether.Editor.UI.Hierarchy,UI presentation/ports/math
+TrueMoon.Aether.Editor/Hierarchy/EditorHierarchyView.Entities.cs,TrueMoon.Aether.Editor.UI/Hierarchy/EditorHierarchyView.Entities.cs,TrueMoon.Aether.Editor.Hierarchy,TrueMoon.Aether.Editor.UI.Hierarchy,UI presentation/ports/math
+TrueMoon.Aether.Editor/Hierarchy/EditorHierarchyView.cs,TrueMoon.Aether.Editor.UI/Hierarchy/EditorHierarchyView.cs,TrueMoon.Aether.Editor.Hierarchy,TrueMoon.Aether.Editor.UI.Hierarchy,UI presentation/ports/math
+TrueMoon.Aether.Editor/Hierarchy/EditorHierarchyViewModel.Entities.cs,TrueMoon.Aether.Editor.Tooling/Hierarchy/EditorHierarchyViewModel.Entities.cs,TrueMoon.Aether.Editor.Hierarchy,TrueMoon.Aether.Editor.Tooling.Hierarchy,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Hierarchy/EditorHierarchyViewModel.Rename.cs,TrueMoon.Aether.Editor.Tooling/Hierarchy/EditorHierarchyViewModel.Rename.cs,TrueMoon.Aether.Editor.Hierarchy,TrueMoon.Aether.Editor.Tooling.Hierarchy,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Hierarchy/EditorHierarchyViewModel.cs,TrueMoon.Aether.Editor.Tooling/Hierarchy/EditorHierarchyViewModel.cs,TrueMoon.Aether.Editor.Hierarchy,TrueMoon.Aether.Editor.Tooling.Hierarchy,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Hierarchy/EditorHierarchyViewStyle.cs,TrueMoon.Aether.Editor.UI/Hierarchy/EditorHierarchyViewStyle.cs,TrueMoon.Aether.Editor.Hierarchy,TrueMoon.Aether.Editor.UI.Hierarchy,UI presentation/ports/math
+TrueMoon.Aether.Editor/Hierarchy/HierarchyItem.cs,TrueMoon.Aether.Editor.UI/Hierarchy/HierarchyItem.cs,TrueMoon.Aether.Editor.Hierarchy,TrueMoon.Aether.Editor.UI.Hierarchy,UI presentation/ports/math
+TrueMoon.Aether.Editor/HierarchyConfigurationExtensions.cs,TrueMoon.Aether.Editor.Tooling/HierarchyConfigurationExtensions.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/PropertyRow.cs,TrueMoon.Aether.Editor.UI/PropertyRow.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.UI,UI presentation/ports/math
+TrueMoon.Aether.Editor/StatusBarConfigurationExtensions.cs,TrueMoon.Aether.Editor.Tooling/StatusBarConfigurationExtensions.cs,TrueMoon.Aether.Editor,TrueMoon.Aether.Editor.Tooling,Optional full Tooling adapter
+TrueMoon.Aether.Editor/Translation/TranslationDrag.cs,TrueMoon.Aether.Editor.UI/Translation/TranslationDrag.cs,TrueMoon.Aether.Editor.Translation,TrueMoon.Aether.Editor.UI.Translation,UI presentation/ports/math
+TrueMoon.Aether.Editor/Translation/TranslationGeometry.cs,TrueMoon.Aether.Editor.UI/Translation/TranslationGeometry.cs,TrueMoon.Aether.Editor.Translation,TrueMoon.Aether.Editor.UI.Translation,UI presentation/ports/math
+TrueMoon.Aether.Editor/Translation/TranslationHandle.cs,TrueMoon.Aether.Editor.UI/Translation/TranslationHandle.cs,TrueMoon.Aether.Editor.Translation,TrueMoon.Aether.Editor.UI.Translation,UI presentation/ports/math
+TrueMoon.Aether.Editor/Translation/TranslationTarget.cs,TrueMoon.Aether.Editor.Tooling/Translation/TranslationTarget.cs,TrueMoon.Aether.Editor.Translation,TrueMoon.Aether.Editor.Tooling.Translation,Optional full Tooling adapter

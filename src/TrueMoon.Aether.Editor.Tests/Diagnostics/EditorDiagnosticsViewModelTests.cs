@@ -1,4 +1,6 @@
-using TrueMoon.Aether.Editor.Diagnostics;
+using TrueMoon.Aether.Editor.Tooling.Diagnostics;
+using TrueMoon.Aether.Editor.UI.Diagnostics;
+using TrueMoon.Aether.Tooling.Diagnostics;
 using TrueMoon.Diagnostics;
 using Xunit;
 

@@ -1,11 +1,13 @@
-﻿using System.Numerics;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Preview;
-using TrueMoon.Aether.Rendering;
+using System.Numerics;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Abstractions.Preview;
 using TrueMoon.Aether.Runtime;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
+using TrueMoon.Aether.Runtime.Preview;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Transport;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Preview;

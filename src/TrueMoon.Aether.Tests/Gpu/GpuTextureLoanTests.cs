@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Gpu.OpenGl;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Gpu.OpenGl;
+using TrueMoon.Aether.Runtime.Sessions;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Gpu;

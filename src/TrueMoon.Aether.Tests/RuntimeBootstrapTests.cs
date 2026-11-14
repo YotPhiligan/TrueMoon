@@ -1,10 +1,9 @@
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Diagnostics;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests;

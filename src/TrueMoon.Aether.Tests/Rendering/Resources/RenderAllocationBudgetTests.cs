@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Rendering.Resources;
+using TrueMoon.Aether.Runtime.Rendering.Resources;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Rendering.Resources;

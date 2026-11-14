@@ -9,6 +9,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
-    <ProjectReference Include="../../TrueMoon.Aether/TrueMoon.Aether.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" />
   </ItemGroup>
 </Project>

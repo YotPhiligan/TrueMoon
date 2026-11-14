@@ -1,6 +1,10 @@
-﻿using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Tests.Documents;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Scenes;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.DocumentsUi;
@@ -15,7 +19,7 @@ public sealed class DocumentCommandsTests
         var release = DocumentData.Signal(); var stopRelease = DocumentData.Signal(); var cancelled = DocumentData.Signal();
         var stopWasFenced = false;
         owner.StopRuntime = () => stopRelease.Task;
-        var work = owner.Commands.RunRuntimeAsync(TrueMoon.Aether.Editing.GameEditorOperation.Replace, false, async (_, _, token) =>
+        var work = owner.Commands.RunRuntimeAsync(GameEditorOperation.Replace, false, async (_, _, token) =>
         {
             using var registration = token.Register(() => { stopWasFenced = owner.RuntimeStops == 1; cancelled.TrySetResult(); });
             entered.TrySetResult(); await release.Task; token.ThrowIfCancellationRequested();
@@ -52,7 +56,7 @@ public sealed class DocumentCommandsTests
         var content = owner.Document.Read().Content; var entered = DocumentData.Signal(); var release = DocumentData.Signal();
         var failure = new IOException("replacement cleanup failed");
         owner.StopRuntime = () => Task.FromException(failure);
-        var work = owner.Commands.RunRuntimeAsync(TrueMoon.Aether.Editing.GameEditorOperation.Replace, false, async (_, _, token) =>
+        var work = owner.Commands.RunRuntimeAsync(GameEditorOperation.Replace, false, async (_, _, token) =>
         { entered.TrySetResult(); await release.Task; token.ThrowIfCancellationRequested(); }, default);
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Task? stopping = null; Task<bool>? exiting = null;

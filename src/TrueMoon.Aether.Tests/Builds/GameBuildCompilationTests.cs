@@ -4,7 +4,9 @@ using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Text.Json;
-using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Tooling.Builds;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Builds;
@@ -84,7 +86,7 @@ public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassF
         {
             var project = System.Xml.Linq.XDocument.Load(builds.ProjectA); var items = project.Root!.Element("ItemGroup")!;
             items.AddFirst(new System.Xml.Linq.XElement("ProjectReference", new System.Xml.Linq.XAttribute("Include", "missing.csproj"),
-                new System.Xml.Linq.XAttribute("Condition", "'$(AetherContractPath)' == ''")));
+                new System.Xml.Linq.XAttribute("Condition", "'$(AetherAbstractionsPath)' == ''")));
             foreach (var reference in items.Elements("Reference"))
             {
                 var hint = reference.Element("HintPath")!; reference.SetAttributeValue("HintPath", hint.Value); hint.Remove();
@@ -93,7 +95,7 @@ public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassF
         }
         await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, Path.Combine(builds.Root, "capture-artifacts"), null, null, new() { MaxJobs = 1 });
         var request = new GameBuildRequest(builds.ProjectA, builds.A.EntryAssembly, builds.A.EntryType, 7, ["Game.Private.dll"]) { TrackInputs = true, CaptureCompilation = true, CapturePreparation = freezePreparation };
-        GameBuildArtifact first;
+        GameBuildResult first;
         try { first = await compiler.BuildAsync(request); }
         catch { builds.PreserveArtifacts = true; throw; }
         var snapshot = Assert.IsType<GameBuildCompilationSnapshot>(first.Compilation);
@@ -109,7 +111,7 @@ public sealed class GameBuildCompilationTests(GameBuildFixture builds) : IClassF
         var second = await compiler.BuildAsync(request with { SourceRevision = 8 });
         Assert.Equal(snapshot.Fingerprint, second.Compilation!.Fingerprint); Assert.NotEqual(first.BuildId, second.BuildId);
         Assert.Equal(File.ReadAllBytes(Path.Combine(first.DirectoryPath, first.EntryAssembly)), File.ReadAllBytes(Path.Combine(second.DirectoryPath, second.EntryAssembly)));
-        Assert.Null(GameBuildArtifact.Open(first.DirectoryPath, GameBuildFixture.Hash).Compilation);
+        Assert.Null(new GameBuildResult(GameBuildArtifact.Open(first.DirectoryPath, GameBuildFixture.Hash)).Compilation);
         Assert.Equal(0, compiler.RetentionStatus!.SkippedDirectories); Assert.Equal(1, compiler.RetentionStatus.RetainedJobs);
     }
 

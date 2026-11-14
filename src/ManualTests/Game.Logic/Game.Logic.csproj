@@ -5,13 +5,17 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../TrueMoon.Aether/TrueMoon.Aether.csproj" Condition="'$(AetherContractPath)' == ''" />
-    <Reference Include="TrueMoon.Aether" Condition="'$(AetherContractPath)' != ''">
-      <HintPath>$(AetherContractPath)</HintPath>
+    <ProjectReference Include="../../TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" Condition="'$(AetherRuntimePath)' == ''" />
+    <Reference Include="TrueMoon.Aether.Runtime" Condition="'$(AetherRuntimePath)' != ''">
+      <HintPath>$(AetherRuntimePath)</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="TrueMoon.Contracts" Condition="'$(AetherContractPath)' != ''">
+    <Reference Include="TrueMoon.Contracts" Condition="'$(AetherRuntimePath)' != ''">
       <HintPath>$(TrueMoonContractsPath)</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="TrueMoon.Aether.Abstractions" Condition="'$(AetherAbstractionsPath)' != ''">
+      <HintPath>$(AetherAbstractionsPath)</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

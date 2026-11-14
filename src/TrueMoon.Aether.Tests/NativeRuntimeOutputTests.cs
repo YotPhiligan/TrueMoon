@@ -1,6 +1,6 @@
 using System.Reflection;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests;
@@ -58,6 +58,8 @@ public sealed class NativeRuntimeOutputTests
             Assert.Equal(launch.Identity.SessionId, diagnostic.SessionId); Assert.Equal(launch.Identity.Generation, diagnostic.Generation);
             Assert.Equal("EditPreview", diagnostic.RuntimeRole); Assert.Equal(lease.ProcessId, diagnostic.ProcessId);
             Assert.True(diagnostic.Completed); Assert.True(diagnostic.ResourcesReleased); Assert.Null(diagnostic.Delivery);
+            Assert.Equal("Released", diagnostic.CleanupStage); Assert.Null(diagnostic.CleanupFailureType);
+            Assert.True(diagnostic.StandardOutput!.Output.EndOfStream); Assert.True(diagnostic.StandardError!.Output.EndOfStream);
             Assert.InRange(diagnostic.StandardOutput!.Output.Text.Length, 1, 6); Assert.True(diagnostic.StandardOutput.ReadFinished); Assert.True(diagnostic.StandardOutput.FileFinished);
             Assert.Equal(0, diagnostic.StandardOutput.Output.DroppedCharacters); Assert.True(diagnostic.StandardOutput.Output.OmittedCharacters > 0);
             Assert.True(diagnostic.StandardError!.ReadFinished); Assert.True(diagnostic.StandardError.FileFinished);

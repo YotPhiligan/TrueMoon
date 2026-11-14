@@ -1,5 +1,5 @@
 using System.Numerics;
-using TrueMoon.Aether.Ecs.Transforms;
+using TrueMoon.Aether.Abstractions.Ecs.Transforms;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Ecs.Transforms;

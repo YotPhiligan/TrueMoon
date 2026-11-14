@@ -1,5 +1,5 @@
 using System.Numerics;
-using TrueMoon.Aether.Editor.Translation;
+using TrueMoon.Aether.Editor.UI.Translation;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Translation;

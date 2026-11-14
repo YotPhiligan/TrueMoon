@@ -1,6 +1,7 @@
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 using Xunit;
 

@@ -4,7 +4,7 @@ param(
     [switch] $Pack,
     [switch] $NoBuild,
     [Alias('Project')] [string[]] $IncludeProject = @(),
-    [string[]] $DeferredProject = @('TrueMoon.Aether/TrueMoon.Aether.csproj'),
+    [string[]] $DeferredProject = @(),
     [string] $RunDirectory,
     [ValidateRange(1,1800)] [int] $TimeoutSeconds = 180
 )
@@ -18,6 +18,9 @@ if (Test-Path -LiteralPath $run) { throw 'Existing evidence must not be overwrit
 $summary = [ordered]@{ Completed = $false; Packed = [bool]$Pack; Projects = @(); Packages = @(); Inputs = @(); Commands = @(); Failure = $null }
 function Save-Report { $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $run 'summary.json') }
 function Invoke-Dotnet([string] $Name, [string[]] $Arguments) {
+    if ($Arguments[0] -in @('msbuild','build','pack','publish','restore','test')) {
+        $Arguments += "-bl:$(Join-Path $run ($Name + '-{}.binlog'))"
+    }
     $info = [Diagnostics.ProcessStartInfo]::new('dotnet')
     $info.WorkingDirectory = $workspace; $info.UseShellExecute = $false; $info.CreateNoWindow = $true
     $info.RedirectStandardOutput = $true; $info.RedirectStandardError = $true

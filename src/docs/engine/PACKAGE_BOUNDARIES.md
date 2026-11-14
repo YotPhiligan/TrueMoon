@@ -1,5 +1,16 @@
 # Границы пакетов Aether и Editor
 
+**ARCH3.4, 2026-11-14:** headless [Tooling](TOOLING.md) выделен; текущий Editor
+зависит от Tooling. Старый Aether проект выведен из текущего wiring. Далее ARCH3.5
+разделяет Editor UI и optional bridge. Ниже сохранена датированная история.
+
+**ARCH3.3, 2026-11-13:** выделен самостоятельный Runtime; текущие размещение,
+ownership и breaking schema2 migration — в [RUNTIME](RUNTIME.md).
+Abstractions — canonical game/ECS/data; Runtime — execution; прежний Aether —
+временный compiler/authoring workflow, Editor пока содержит также project/document
+coordination. Далее ARCH3.4–5. Ниже сохранена датированная архитектура ARCH2;
+её assembly/namespace paths относятся к состоянию до ARCH3, а не к текущему SDK.
+
 ARCH2a–c,2026-10-27. [Этапы и критерии ARCH2](PLAN.md#arch2-aether-и-editor-как-пакеты--2026-10-27),
 [текущие проверки](STATUS.md). Эта карта описывает размещение и ownership;
 подробный roadmap остаётся в PLAN.
@@ -120,7 +131,7 @@ runtime без Editor/UI dependencies. Минимальный Examples/AetherEdi
 EngineSessionProbe CLI
 `dotnet <EngineSessionProbe.dll> --runtime-launch-proof <runtime dll/exe path> <fresh report dir>`
 проверен отдельно source Debug и published Release, DLL/apphost4/4.
-[Evidence и ограничения расширенной matrix](../../TestResults/ARCH2c-20261027/verification.json).
+Evidence и ограничения расширенной matrix (`TestResults/ARCH2c-20261027/verification.json`, исторический raw artifact сейчас недоступен).
 Этот прежний ARCH2c headless process scope не доказывает asset delivery,
 GPU/presentation или independent NuGet acceptance. Ресурсный/headless proof ARCH2d
 добавлен2026-10-28 в [Examples guide](../../Examples/README.md); GUI/GPU и ARCH2e
@@ -177,3 +188,22 @@ replacement с cooperative write-lock. Cancellation проверяется до 
 instance Name/SiblingOrder. Existing v1 не требует пересохранения. Политика metadata,
 history и совместимости ведётся в [Editor плане](EDITOR_PLAN.md#ed4c-обозреватель-сущностей--начат-2026-10-24);
 владение codec/store и границы пакетов прежние.
+
+## ENG7b.1–2 — Player package delta, 2026-11-12
+
+TrueMoon.Aether.Player → TrueMoon.Aether + TrueMoon.Alloy.Hosting (transitive Alloy/
+Argentis/Skia/Silk); Editor dependency отсутствует. Пакет предоставляет local Player
+window/input/View и App integration. Aether содержит pre-App role/capture, PlayerSession
+и local Vulkan/GL surface. [API/ownership](PLAYER.md), [actual proofs](ENG7B12_BASELINE.json).
+Player-only example зависит от TrueMoon+Player, combined example также от Editor.
+Ни local session, ни окно не создают process-host/compiler/project/IPC graph.
+Это поведенческий baseline до ARCH3, не физический вынос Tooling из прежней DLL.
+## ARCH3.1 — новый Abstractions ABI, 2026-11-12
+
+TrueMoon.Aether.Abstractions → TrueMoon.Contracts only; BCL values/system contracts,
+без конкретного World/compiler/IO/native/backend/UI. [API и staged compatibility](ABSTRACTIONS.md).
+116public types/105neutral counterparts; current monolithic Aether пока не зависит
+от нового SDK и сохраняет прежний ABI. Это временная граница этапов, не постоянная
+двойная модель. ARCH3.2 связывает actual ECS с контрактами, ARCH3.3 переключает
+runtime game/shared artifact closure. Старый artifact не становится совместимым
+из-за появления новой DLL рядом. [Actual proofs](ARCH31_BASELINE.json).

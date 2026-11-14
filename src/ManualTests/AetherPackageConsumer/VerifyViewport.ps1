@@ -45,7 +45,7 @@ $nugetConfig=if($DependencyFeed -eq $package.Feed){
 [IO.File]::WriteAllText((Join-Path $hostRoot 'Host.csproj'),@"
 <Project Sdk="Microsoft.NET.Sdk">
  <PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><OutputType>WinExe</OutputType><AssemblyName>ViewportPackageHost</AssemblyName><RootNamespace>TrueMoon.ManualTests.AetherEditorHost</RootNamespace><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks></PropertyGroup>
- <ItemGroup><PackageReference Include="TrueMoon" Version="$($package.Version)"/><PackageReference Include="TrueMoon.Aether.Editor" Version="$($package.Version)"/></ItemGroup>
+ <ItemGroup><PackageReference Include="TrueMoon" Version="$($package.Version)"/><PackageReference Include="TrueMoon.Aether.Editor.Tooling" Version="$($package.Version)"/></ItemGroup>
  <ItemGroup><Content Include="Assets/Fonts/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup>
 </Project>
 "@)
@@ -88,7 +88,7 @@ try{
             Copy-Item -LiteralPath (Join-Path $workspace 'ManualTests/Game.Logic/RoomGame.cs') -Destination (Join-Path $path 'Game/RoomGame.cs')
             $entry=if($suffix-eq'Bad'){'Game.Logic.MissingEntry'}else{'Game.Logic.RoomGame'}
             [IO.File]::WriteAllText((Join-Path $path 'fixture.aetherproj'),'{"formatVersion":3,"id":"'+[guid]::NewGuid().ToString('D')+'","name":"Viewport package '+$viewportProfile+' '+$suffix+'","gameProject":"Game/Game.csproj","entryAssembly":"Game.dll","entryType":"'+$entry+'","scenesRoot":"Scenes","contentRoot":"Content","dependencies":[],"packageDirectory":null}')
-            [IO.File]::WriteAllText((Join-Path $path 'Game/Game.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><AssemblyName>Game</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=`"TrueMoon.Aether`" HintPath=`"`$(AetherContractPath)`" Private=`"false`"/><Reference Include=`"TrueMoon.Contracts`" HintPath=`"`$(TrueMoonContractsPath)`" Private=`"false`"/></ItemGroup></Project>")
+            [IO.File]::WriteAllText((Join-Path $path 'Game/Game.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><AssemblyName>Game</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=`"TrueMoon.Aether.Runtime`" HintPath=`"`$(AetherRuntimePath)`" Private=`"false`"/><Reference Include=`"TrueMoon.Aether.Abstractions`" HintPath=`"`$(AetherAbstractionsPath)`" Private=`"false`"/><Reference Include=`"TrueMoon.Contracts`" HintPath=`"`$(TrueMoonContractsPath)`" Private=`"false`"/></ItemGroup></Project>")
         }
         $assembly=if($viewportProfile-eq'Debug'){"$hostRoot/bin/Debug/$($trueMoonBuildProfile.Framework)/ViewportPackageHost.dll"}else{"$run/published/ViewportPackageHost.dll"}
         $case=Join-Path $evidence "native-$viewportProfile"
@@ -97,7 +97,7 @@ try{
         Invoke-Owned "native-$viewportProfile" @($assembly,'--project',"$target/fixture.aetherproj",'--smoke',$case,$profileFlag,'--validation') 420
         $cleanup=Get-Content "$case/report.json" -Raw|ConvertFrom-Json;$acceptance=Get-Content "$case/$profileReport" -Raw|ConvertFrom-Json
         if(!$cleanup.Passed-or!$acceptance.Passed-or$cleanup.UiSessions-ne0-or$cleanup.GpuResources-ne0-or$cleanup.GpuHandles-ne0-or$cleanup.Mappings-ne0-or!$cleanup.Reaped-or$cleanup.ValidationErrors-ne0-or$cleanup.ValidationWarnings-ne0){throw "Failed native cleanup $viewportProfile"}
-        foreach($id in 'TrueMoon.Aether','TrueMoon.Aether.Editor'){
+        foreach($id in 'TrueMoon.Aether.Tooling','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling'){
             $installed=Join-Path $viewportCache ($id.ToLowerInvariant()+'/'+$package.Version+"/lib/$($trueMoonBuildProfile.Framework)/"+$id+'.dll')
             $actual=Join-Path (Split-Path $assembly) ($id+'.dll')
             if((Get-FileHash $installed -Algorithm SHA256).Hash-ne(Get-FileHash $actual -Algorithm SHA256).Hash){throw "Non-package binary $id"}

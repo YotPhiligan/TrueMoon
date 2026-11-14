@@ -7,7 +7,30 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 
 <a id="current-engine-queue"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-11
+## Текущая очередь — актуализация 2026-11-14
+
+**Согласованный порядок 2026-11-12:**
+
+1. [ARCH3.0](#arch3-0) — карта типов/зависимостей/совместимости **завершена статически**:
+   [решения](ARCH3_MAP.md), [488 публичных типов](ARCH3_TYPE_MAP.csv), [61 проект](ARCH3_PROJECT_MAP.csv).
+2. Короткий [ARCH2e.4b](#arch2e4b-drain-diagnostics) срез **завершён 2026-11-12**:
+   [диагностика](DRAIN_DIAGNOSTICS.md), solution D/R0errors и 11 suites по8568passed;
+   causal fix исторического timeout открыт, deadlines не повышались.
+3. [ARCH1f.4](#arch1f-rendering) — **завершён 2026-11-12**: [surface/Playing fence](RENDER_SURFACE.md), [actual source/publish/fresh15package proofs](HISTORY.md#arch1f4-2026-11-12).
+4. Минимальные [ENG7b.1–2](#eng7b-режимы-запуска-editor-и-player--2026-10-29) — **завершены 2026-11-12**: [local Player/role contracts](PLAYER.md), [actual proofs](HISTORY.md#eng7b12-2026-11-12).
+5. [ARCH3.1](#arch3-1) — **завершён 2026-11-12**: [независимый контрактный SDK](ABSTRACTIONS.md).
+6. [ARCH3.2](#arch3-2) — **завершён 2026-11-12**: [real ECS binding/App/DI/registry](ECS_BINDING.md), [актуальные проверки](ARCH32_BASELINE.json).
+7. [ARCH3.3](#arch3-3) — **завершён 2026-11-13**: [самостоятельный Runtime/App/schema2](RUNTIME.md), [дельта карты](ARCH33_MIGRATION.csv), [fresh acceptance](ARCH33_BASELINE.json).
+8. [ARCH3.4](#arch3-4) — **завершён 2026-11-14**: [headless Tooling/App/ownership](TOOLING.md), [проверки/SHA](ARCH34_BASELINE.json).
+9. [ARCH3.5](#arch3-5) — Editor UI и optional Editor.Tooling bridge; завершён 14 ноября, [API/приёмка](EDITOR_LAYERS.md).
+10. [ARCH3.6](#arch3-6) — managed Mod SDK/manifest/collectible loader; завершён 14 ноября, [API/ownership](MODS.md), [приёмка/SHA](ARCH36_BASELINE.json).
+11. [ARCH3.7–9](#arch3-7) — system reload, new-World migration и сквозная приёмка; следующий этап — ARCH3.7.
+
+Abstractions/ECS binding, Runtime, headless Tooling и Editor UI/optional bridge выделены. Mod SDK/loader добавлены в ARCH3.6; system reload/migration — далее; новый Player UI package добавлен в ENG7b.1–2. Import/audio/Nom и ED сохраняют
+свои номера и критерии; завершение всех graphics/audio возможностей не prerequisite
+разделения. CORE8.5 — [последняя фактическая поставка 11 ноября](../core/HISTORY.md#core85-delivery-2026-11-11),
+её passing counts не подтверждают будущую архитектуру. Ниже — датированная карта
+предыдущих этапов; её тогдашние «следующие шаги» не заменяют эту очередь.
 
 CORE8.3 завершил .NET11 frozen game build: full Aether3243/Editor1496 D/R и
 actual source/published game load/Step/checkpoint/Stop/reap на SDK11-only root.
@@ -34,11 +57,15 @@ F.2 добавляет [App-owned catalog/device resources, counted leases и pr
 атомарный World rebind и standalone Vulkan upload/readback. Проверки отдельно в STATUS.
 F.3 [owned snapshots](RENDER_SNAPSHOTS.md) реализован09ноября: explicit camera/extraction,
 bounded mailbox/submission owners и leases; [проверки/limits](HISTORY.md#render-snapshots-2026-11-09).
-Следующий кодовый этап — f.4 actual surface renderer/Playing fence.
+F.4 surface renderer/Playing fence реализован 12 ноября; минимальный Player ENG7b.1–2 также завершён; далее ARCH3.1–5.
 Дополнение2026-11-07: запланированы исследования [импорта моделей ARCH1g.0](#arch1g-model-assets)
 и [аудиомодуля ARCH1h.0](#arch1h-audio). Они могут идти независимо от f.3;
-Audio backend, production package/API boundaries и budgets ещё не выбраны. Кодовая
-очередь f.3→f.4 сохраняется; исследования завершаются решениями и планом прототипа.
+Уточнение2026-11-12: [TrueMoon.Kul AUD1](../audio/PLAN.md#current-audio-queue) реализован
+как самостоятельный Windows x64 App/DI модуль на исправленном MiniAudioEx fork.
+ECS bridge и расширенная RT/device-loss/OS матрица открыты; renderer/Player очередь выше прежняя.
+Дополнение2026-11-12: **Kton/BEPU** выбран для самостоятельного физического модуля.
+[ARCH1i](#arch1i-physics) ссылается на [единственный PHYS-план](../physics/PLAN.md#current-physics-queue);
+headless probe независим, production ECS bridge согласуется с ARCH3.1–3.
 G.0 получил [оценку и сравнительный import spike](MODEL_IMPORT_RESEARCH.md#decision-2026-11-07):
 выбран AssimpNetter6.0.5 low-level для g.1,8D/R profiles прошли.
 [Captured import v1](MODEL_IMPORT_CAPTURE.md#capture-v1) зафиксировал immutable dependency
@@ -65,12 +92,20 @@ ENG5c.3 collisions→HUD/ENG7b Player и ARCH1d/ENG9/ED4h/ED7a agents остаю
 <a id="arch2e4b-drain-diagnostics"></a>
 ### ARCH2e.4b. Диагностика повторного post-reap drain timeout — ревизия 2026-11-05
 
+**2026-11-12: короткий диагностический срез завершён.** [Progress/EOF/queue,
+cleanup phases и failure snapshot](DRAIN_DIAGNOSTICS.md); [baseline manifest](ARCH2E4B_BASELINE.json)
+и [точные команды/границы](HISTORY.md#arch2e4b-2026-11-12). Solution D/R0errors;
+все11suites по8568passed/0failed/0skipped. Source/published по6actual children,
+fresh Core package Debug/published; прежние 2s/5s и ownership сохранены.
+Intermittent timeout не повторился, causal production fix **не закрыт**.
+ARCH1f.4 завершён 12 ноября; минимальный Player ENG7b.1–2 завершён; следующий feature этап — ARCH3.1. Causal diagnostics follow-up открыт.
+
 Открытый факт из31октября: после reap readers оставались WaitingForActivation,
 24bytes сохранены,9workers/pending0; два exact-binary replays прошли. Предыдущий
 file-worker fix снял доказанную ThreadPool dependency, но не доказывает причину
 этого повторения. Не расширять прежний вывод до «drain больше не может зависнуть».
 
-- [ ] Воспроизвести на сохранённом supported profile либо обеспечить полезный
+- [x] Воспроизвести на сохранённом supported profile либо обеспечить полезный
   failure snapshot следующего повторения: owner/PID/generation, reader/file/EOF
   completions, queue/worker state, timestamps и actual cleanup outcome.
 - [ ] Отличать failure ожидания harness от потерянного pipe/reader/file completion;
@@ -78,8 +113,14 @@ file-worker fix снял доказанную ThreadPool dependency, но не �
 - [ ] Выбрать production fix только после причинного evidence у фактического owner
   Aether/Core/Mithril; отдельно RED→GREEN и независимые source/package consumers.
   Увеличение timeout, изменение ThreadPool или успешный replay не считаются исправлением.
-- [ ] Подтвердить current full-solution baseline отдельно от targeted regression;
+- [x] Подтвердить current full-solution baseline отдельно от targeted regression;
   не обещать abort arbitrary filesystem/user-code hang или другой OS/RID без proof.
+
+Уточнение очереди 2026-11-12: до f.4 выполнить короткий диагностический срез —
+bounded failure snapshot/связь owner-completions и отдельный current baseline.
+Если timeout не повторился, сохранить инструменты и ограничение вывода; не ждать
+бессрочно воспроизведения и не закрывать causal fix успешным replay. Остальная
+failure/fix acceptance этого task остаётся открыта до соответствующего evidence.
 
 Эта задача — отдельный reliability трек, не подтверждённый новый дефект Mithril
 и не автоматическая блокировка каждой Editor feature. Подробный исходный факт —
@@ -209,6 +250,348 @@ Editor и через локальный MCP, доступа к Runtime и соз
 Это запланированные этапы; текущая очередь ED6a/ED8a → ED4c.2/3 → project/workflow
 сохраняется. Прикладные панели ведутся только в EDITOR_PLAN.md.
 
+<a id="arch3-layers-mods"></a>
+## ARCH3: слои Aether, ECS API и горячая замена модов — план 2026-11-12
+
+**Статус 2026-11-12: ARCH3.0–2 завершены в своих scope; ARCH3.3–9 запланированы.**
+Abstractions SDK выделен в новый ABI; остальные слои ещё не разделены. Полный Mod API и замена модов в живом Runtime
+не реализованы. [Карта и compatibility решения](ARCH3_MAP.md) задают входные
+границы; единственный подробный roadmap — здесь. Очередь перед переносом указана
+[в начале плана](#current-engine-queue); EDITOR_PLAN и общие документы ссылаются сюда.
+
+### Решение и границы ответственности
+
+Приняты четыре основных слоя. ARCH3.0 зафиксировал PackageId = AssemblyName =
+RootNamespace: TrueMoon.Aether.Abstractions, TrueMoon.Aether.Runtime,
+TrueMoon.Aether.Tooling, TrueMoon.Aether.Editor.UI; optional integration —
+TrueMoon.Aether.Editor.Tooling. [Полная карта](ARCH3_MAP.md) выбирает явную breaking
+migration в будущей общей линии 0.4.0-alpha с пересборкой games/artifacts;
+version props и существующие packages сейчас не меняются.
+
+| Слой | Ответственность | Допустимые зависимости и границы |
+| --- | --- | --- |
+| Abstractions | Публичные контракты игры/расширений и ECS, идентификаторы, общие value types и модели обмена; основа внешнего Mod SDK | BCL и необходимые нейтральные App/DI/configuration contracts из TrueMoon.Contracts. Без Runtime/Tooling/UI, Cobalt implementation, IPC implementation, SDK/MSBuild, native handles и GPU/audio backend |
+| Runtime | Исполнение сессий и ECS, стандартные компоненты/системы, загрузка подготовленных сцен и ресурсов, rendering/material/audio возможности по мере готовности их собственных этапов, владельцы backend resources | Зависит от Abstractions. Backend providers подключаются явно; headless режим не активирует окно/GPU/audio. Не требует Tooling, исходного проекта или Editor UI |
+| Tooling | Работа с проектом и authoring documents, команды/Undo/Redo, load/save, SDK preflight и сборка C#, подготовка/импорт ассетов, наблюдение исходников | Может использовать Runtime и Abstractions для preview/validation. Не зависит от Editor UI/Alloy/Argentis и не требует окна. Импорт/аудио, ещё отсутствующие в коде, не объявляются реализованными переносом слоя |
+| Editor UI | View/Data/ViewModel/styles, панели, viewport, runtime inspection и подключение пользовательских действий | Может использовать Runtime/Abstractions и UI modules; не имеет обязательной или транзитивной зависимости от Tooling. Проектные операции предоставляет адаптер приложения-host |
+
+Приложение полного редактора связывает Tooling и UI в composition root;
+адаптеры, зависящие от обоих модулей, располагаются в host/integration assembly,
+не создавая обратной зависимости Tooling → UI. Дополнительная маленькая integration
+сборка выбрана в ARCH3.0 и не является пятым функциональным слоем.
+Отдельный ECS Core сейчас не требуется: Abstractions содержит scoped contracts,
+Runtime — concrete World/pools/scheduler; полная сигнатурная граница проверяется в ARCH3.1–2.
+
+Runtime UI работает без проекта и Tooling: viewport, диагностика, наблюдение
+сущностей/компонентов и управление сессией доступны через объявленные capabilities.
+Full Editor добавляет project/document/build/import возможности. UI получает
+immutable observations и посылает команды с identity/revision/generation checks;
+mutable World и его borrowed refs не передаются в UI thread. Недоступные действия
+не запускают скрытое создание Tooling и не инициируют файловые/SDK операции.
+
+Новые/переносимые functional modules имеют публичные App entry points; там
+фиксируются options из общего configuration слоя и выбираются реализации/lifetime.
+Cobalt — штатный DI, Microsoft DI adapter сохраняется. Системы, сервисы и результаты
+фабрик создаются через внедрённые IFactory; контейнер не ищется на tick/render path.
+Явно сохраняются ownership, stop/drain/dispose и failed-cleanup retry, без новых
+DI scopes, service locator или async factory APIs ради самого разделения.
+
+### ECS-контракты и SDK расширений
+
+- В Abstractions выносятся контракт системы (ISystem либо совместимое развитие
+  IEcsSystem), metadata phase/read/write/order и контракт scoped system context.
+  Контекст предоставляет контрактный доступ к данным/queries/commands; он не
+  возвращает concrete World из Runtime. Финальные сигнатуры фиксируются в ARCH3.1.
+- IComponent — marker для типизированных value components. Пулы остаются typed;
+  компоненты не хранятся как IComponent/object и не проходят per-entity interface
+  dispatch. Ограничение на отсутствие managed references сохраняется. Совместимость
+  существующих struct components без marker и generic constraints проверяется явно.
+- Основная runtime identity — value EntityHandle с WorldId/index/generation;
+  invalid/stale handles не оживают. IEntity допускается как внешний facade по
+  потребности, но не требует отдельного reference object на каждую entity.
+  Persistent authoring EntityId отделён от transient handle и переживает migration.
+- Queries/writers имеют ограниченный invocation lifetime; structural commands
+  применяются на безопасных границах фаз. Read/write declarations, serialized
+  access, cancellation и terminal fault semantics не ослабляются переносом API.
+- Для сериализации используется стабильный ComponentTypeId + schema version,
+  а не CLR Type, assembly-qualified name либо layout старой структуры. Новые
+  bindings/schema migrations регистрируются явно; неизвестные данные не удаляются
+  молча. Поддержанный preserve/reject/reset policy фиксируется до переноса состояния.
+- Engine Mod SDK отделён от API конкретной игры. Игровые сущности, квесты и правила
+  принадлежат игре; её ModApi может зависеть от engine Abstractions. Маркеры ECS
+  сами по себе не определяют protocol загрузки, совместимость и lifecycle мода.
+
+### DLL, collectible AssemblyLoadContext и состояние
+
+Целевой механизм — отдельный collectible ALC для версии модуля либо совместно
+перезагружаемой группы зависимых модов. Shared Abstractions/game ModApi и общие
+contracts используют экземпляры сборок хоста; private dependencies разрешаются
+по проверенному manifest в отдельном immutable каталоге artifact. Загруженные DLL
+не перезаписываются. Mod ID/version, supported engine/game API, dependencies,
+content hashes и limits проверяются до публикации candidate.
+
+Это модель trusted managed C# модов первого профиля. ALC не добавляет security
+sandbox, native plugin support или forced abort произвольного кода. Существующее
+разделение Editor/Runtime по процессам и child replacement сохраняются; добавление
+in-process модов не переносит пользовательский код в Editor.
+
+ALC.Unload — запрос кооперативной выгрузки. World pools (Dictionary<Type,...>),
+system instances, registries, DI factories, delegates/events, reflection caches,
+timers/tasks, snapshots и native resource owners могут удерживать старую сборку.
+Даже пустой пул старого component type нельзя считать освобождённым автоматически.
+Владелец модуля обязан прекратить новые callbacks, согласовать фоновые работы,
+снять подписки, освободить CPU/GPU/audio leases после completion и удалить ссылки.
+Failed cleanup сохраняет owner/diagnostics; результат UnloadPending/Failed не
+выдаётся за успешную выгрузку. Deadlines и безопасный fallback определяются явно.
+
+Приняты два отдельных supported режима замены:
+
+1. **Системы при стабильных общих component types:** по согласованному lifecycle
+   заменить system graph на границе тика, сохранив совместимый World. Состояние
+   самих систем также требует явного capture/restore либо declared reset policy.
+2. **Mod-owned component types или изменение схем:** первый профиль использует
+   private candidate World/session и явную migration из нейтрального снимка.
+   CLR type новой версии отличается от старого даже при совпадении имён.
+   Persistent IDs/отношения сохраняются, handles нового World строятся заново.
+   Произвольное преобразование живых пулов на месте не входит в первый профиль.
+
+Замена проходит как подготовка candidate → безопасная пауза/quiesce → capture →
+validate/migrate/restore private candidate → проверка готовности → commit новой
+generation → retire старой версии → unload verification. При отмене/ошибке до
+commit старая версия остаётся владельцем состояния; возможность возобновления
+требует resumable quiesce contract. Terminal Stop/Dispose старого scheduler не
+считается обратимой паузой. После commit ошибка cleanup не скрывается rollback-
+заявлением: фиксируется отдельное состояние и доступный recovery/fallback.
+Снимки переноса не содержат объектов, Type, delegates или exceptions из старого ALC.
+
+### Этапы и критерии
+
+ARCH3.0 завершён как статическое проектирование, ARCH3.1 — независимый SDK, ARCH3.2 — real ECS binding; этапы ARCH3.3–9 **запланированы**.
+Финальные сигнатуры split APIs уточняются при соответствующем этапе, не меняя
+зафиксированных owners и allowed graph. Исторические CORE8/ARCH1/ARCH2 passes
+не являются проверками новых assemblies или Mod SDK.
+
+<a id="arch3-0"></a>
+#### ARCH3.0 — карта типов, зависимостей и совместимости
+
+**Завершено 2026-11-12 в статическом scope.** [Карта](ARCH3_MAP.md),
+[old → target для 488 публичных типов](ARCH3_TYPE_MAP.csv),
+[61 project XML graph](ARCH3_PROJECT_MAP.csv), [58 forbidden signature pairs](ARCH3_COUPLINGS.csv),
+[счётчики и SHA входов](ARCH3_INVENTORY.json). Просмотрены 385 source files/646 types;
+выбраны имена сборок, optional integration без отдельного ECS Core, breaking
+API/artifact migration, consumers, ownership и budgets. C#/project/package changes,
+build/tests/native не выполнялись. Ограничения semantic analysis и следующий
+порядок — в карте; короткий ARCH2e.4b срез и ARCH1f.4 завершены отдельно 12 ноября; минимальный Player ENG7b.1–2 также завершён; далее ARCH3.1–5.
+
+- Зафиксировать текущий graph, список public types/consumers и распределение по
+  четырём слоям; отдельно runtime scene data / authoring documents / UI state,
+  compiler / prepared-artifact loader, input / editor gestures, assets / import.
+- Выбрать PackageId/AssemblyName/RootNamespace, порядок переноса, facade/type-
+  forwarding либо явную breaking migration. Не переносить namespaces механически
+  по виду типа; соблюдать соответствие реальным semantic folders.
+- Проверить связанность World/query/context API, GameBuildLoader shared assemblies,
+  HostContractId/runtime pair identity, frozen compiler references и artifact/cache
+  policy. Решить compatibility version и обращение со старыми artifacts до изменений.
+- **Готовность:** утверждены карта old → target, acyclic allowed-dependency graph,
+  матрица consumers/сохранённых API, ownership matrix, budgets и последовательность
+  безопасной миграции. Нужда в отдельном ECS Core/optional adapter package решена
+  здесь, не подменяет четыре согласованных слоя.
+
+<a id="arch3-1"></a>
+#### ARCH3.1 — Abstractions и нейтральные ECS-контракты — завершён 2026-11-12
+
+**Результат:** [SDK/API и staged migration](ABSTRACTIONS.md), [actual baseline/SHA](ARCH31_BASELINE.json).
+116public types,105neutral counterparts, только BCL+Contracts;26tests D/R,
+solution non-incremental D/R0errors;6source/publish/fresh-package host profiles на
+Cobalt/MS DI. New ABI не подключён к прежним World/loader: старые определения
+временно остаются до ARCH3.2–3. Это не type-forwarding и не готовый mod manager.
+Pure canonical render/preview codecs находятся в SDK, потому что определения
+вычисляют/проверяют portable hashes; Runtime dependency в их bodies устранена.
+[Обновлённая карта после diagnostics/f.4/Player](ARCH31_TYPE_MAP.csv) не заменяет
+исторические CSV ARCH3.0. Namespace/cast incompatibility и schema/version rules описаны явно.
+
+- Выделить минимальный пакет: system/component contracts, scoped access/commands,
+  handles/IDs и общие runtime values. Устранить concrete World/Runtime типы из
+  полного публичного dependency closure; не переносить native/editor/SDK детали.
+- Зафиксировать lifecycle и cancellation, shared contract identity и component
+  schema/version rules. Сохранить поведение IEcsSystem; source adaptation и breaking
+  namespaces/API описать явно по ARCH3.0.
+- **Готовность:** отдельная C# библиотека расширения компилируется с Abstractions
+  и разрешёнными neutral contracts, без Runtime/Tooling/UI/backend packages;
+  API/metadata graph это подтверждает, типы разделяются с host без duplicate identity.
+
+<a id="arch3-2"></a>
+#### ARCH3.2 — подключение существующего ECS к новым контрактам
+
+- Перевести scheduler/context/pools/registry и builtin systems на контрактную
+  границу, сохранив generational handles, typed storage, query leases, phase
+  playback, read/write/order и bounds; фабрики не вызываются на каждой entity.
+- **Готовность:** внешняя система с пользовательским struct component работает
+  в реальном World через DI/factory; data mutation/order, stale/wrong-World handles,
+  retained access, cancellation/fault и stop/dispose проверены. Marker не приводит
+  к boxed component storage; изменение allocation/performance не объявляется
+  выигрышем без измерений. Выгрузочные roots registries/pools перечислены явно.
+
+**Выполнено 2026-11-12:** [контракт/DI/registry/compatibility](ECS_BINDING.md),
+[полный Aether3330 D/R, independent host и delivery proofs](ARCH32_BASELINE.json),
+[история и ограничения](HISTORY.md#arch32-2026-11-12). Builtin value/scene/game API
+остаются legacy до ARCH3.3; текущий schema1 closure явно расширен Abstractions,
+старые artifacts пересобираются. Performance и production ALC collection не заявлены.
+
+<a id="arch3-3"></a>
+#### ARCH3.3 — самостоятельный Runtime
+
+- Выделить исполнение сессий/ECS, scene activation, rendering/material/resource
+  systems и готовые backend paths; отделить source build/project/authoring workflow.
+- Разделить App registrations и options; сохранить headless режим, bounded
+  child/transport identity, frame ownership и cleanup. Будущие audio/render
+  реализации подключаются в Runtime по собственным ARCH1f/h tasks.
+- **Готовность:** independent Runtime consumer загружает подготовленную сцену/
+  game artifact и выполняет ticks без Tooling, Editor UI и установленного build
+  SDK на машине исполнения, используя заранее собранные FDD assets. Source build
+  самого фреймворка по-прежнему использует согласованный SDK. Окно/GPU опциональны;
+  фактически затронутые CPU/native paths проверены отдельно.
+
+**Выполнено 2026-11-13:** [Runtime/App/configuration/ownership и schema2 migration](RUNTIME.md),
+[237строк фактической migration map](ARCH33_MIGRATION.csv),
+[финальные D/R и package/native/SDK-free proofs](ARCH33_BASELINE.json),
+[команды и границы](HISTORY.md#arch33-2026-11-13). Runtime исполняет prepared scene/game
+без source compiler/authoring/UI; Player и child используют Runtime. Canonical models
+в Abstractions, schema2 shared ABI требует rebuild прежних hosts/artifacts/captures.
+UseAetherRuntime и runtime options/schemas отделены от оставшегося workflow Aether.
+SDK-free proof — isolated runtime root без sdk; production mod unload/release отдельно.
+Следующий этап ARCH3.4 переносит оставшийся workflow и Editor project/document coordination.
+
+<a id="arch3-4"></a>
+#### ARCH3.4 — headless Tooling
+
+- Выделить project/document coordination, history/load/save, compiler/preflight,
+  source observer и существующую asset preparation. Разделить authoring file I/O
+  и runtime loading готовых данных; сохранить IDs, unknown data и explicit formats.
+- **Готовность:** независимый CLI/headless consumer открывает проект, правит сцену,
+  делает Undo/Redo, save/reopen и Build без UI/native activation; cancellation,
+  failed build/save/cleanup сохраняют документ, last-good artifact и владельцев.
+  Будущие production importers/audio tools не входят автоматически в этот перенос.
+
+**Выполнено 2026-11-14:** [headless Tooling/API/ownership/configuration и миграция](TOOLING.md),
+[91перенос/split mapping](ARCH34_MIGRATION.csv), [fresh proofs и полные D/R](ARCH34_BASELINE.json),
+[команды/границы](HISTORY.md#arch34-2026-11-14). Самостоятельный UseAetherTooling:
+real project/document/authoring/history/save/reopen/frozen Build без UI/native activation;
+оба DI, failure/cancel сохраняют last-good/document, cleanup retry удерживает owner.
+Old Aether проект выведен из current wiring, Editor зависит от Tooling. Existing formats
+и schema2 exact ABI сохранены; imports/artifacts/captures требуют coherent rebuild.
+Editor UI/optional adapters выделены в ARCH3.5 ниже; Mod SDK/reload остаётся дальше.
+
+<a id="arch3-5"></a>
+#### ARCH3.5 — Editor UI без обязательного Tooling
+
+- Выделить View/Data/styles и возможности viewport/inspection/session control.
+  Project/document/build panels работают через UI ports и optional host adapters;
+  selection/camera/draft/history ownership и stale-generation checks сохранены.
+- **Готовность:** два independent приложения: Runtime + UI без Tooling и полный
+  Editor с Tooling. Проверяется и package/runtime graph без транзитивного Tooling
+  в первом режиме; отсутствующие capabilities не вызывают скрытый I/O/SDK startup.
+  Второй режим сохраняет существующие open/edit/save/build/play/stop workflows,
+  standalone/embedded UI lifetime и native paths в их прежнем bounded scope.
+
+**Выполнено 2026-11-14:** [Editor.UI/optional Editor.Tooling API/ports/ownership/миграция](EDITOR_LAYERS.md),
+[85переносов/split mapping](ARCH35_MIGRATION.csv), [canonical fresh/native/D/R proofs](ARCH35_BASELINE.json),
+[команды/границы](HISTORY.md#arch35-2026-11-14). Runtime+UI graph без Tooling, готовая
+сборка/сцена и read-only captured inspection/session controls; full Editor сохраняет
+open/edit/save/build/play/replace/stop и standalone/embedded ownership. Source,
+published/fresh-package/SDK-free, оба DI, actual GPU/presentation/cleanup проверены
+в указанном scope. Old Editor project/package убран, formats/schema2 сохранены.
+Mod SDK/manifest/collectible loader — ARCH3.6 ниже; system reload/migration остаются ARCH3.7–8.
+
+<a id="arch3-6"></a>
+#### ARCH3.6 — Mod SDK, manifest и collectible loader
+
+- Зафиксировать module entry/registration contract, API/dependency version checks,
+  group reload policy, artifact/hash limits, immutable directory и shared/private
+  resolution. Создавать module-owned systems/services через внедрённые фабрики;
+  не регистрировать mod Types в долгоживущем App так, чтобы блокировать unload.
+- **Готовность:** внешний мод из package-only SDK создаёт систему/компонент;
+  load/stop/dispose/unload подтверждены weak-reference unload proof после удаления
+  roots. Unsupported API, missing/conflicting dependency, bad hash, failed startup
+  и cleanup дают явный outcome. Existing GameBuildLoader не выдаётся за готовый
+  mod manager; v1 не обещает native DLL mods или forced thread abort.
+
+**Завершён 2026-11-14 в managed Windows x64 scope.** [Mod SDK/manifest/App/DI/ownership](MODS.md),
+[versioned baseline/SHA](ARCH36_BASELINE.json), [точные проверки](HISTORY.md#arch36-2026-11-14).
+Новые типы в Abstractions.Mods / Runtime.Mods / Tooling.Mods, без переноса прежних
+CLR types и без новой Runtime→Tooling зависимости. Source/publish D/R, fresh SDK
+и SDK-free hosts дали 12 профилей на Cobalt/MS DI с actual component/system ticks
+и weak-reference collection. 53 новых Mod cases каждый D/R; полные четыре suites
+по 4956 passed/configuration, solution D/R0errors. Startup/cleanup failures,
+pending admission cancellation, tick drain и retained cleanup owners проверены.
+Это load/unload foundation; commit hot replacement и migration остаются ниже.
+
+<a id="arch3-7"></a>
+#### ARCH3.7 — горячая замена систем со стабильными компонентами
+
+- Подготовить новую generation в отдельном ALC, resumable quiesce, нейтральное
+  system-state capture, private activation и один commit на tick boundary.
+  После commit retire/clear subscriptions, factories, caches/tasks старого модуля.
+- **Готовность:** World и данные стабильных component types сохраняются; старые
+  callbacks/commands не исполняются в новой generation. Candidate failure/cancel
+  до commit оставляет last-good version; cleanup/unload failure после commit
+  виден отдельно. Нет per-frame Resolve и скрытого restart/потери system state.
+
+<a id="arch3-8"></a>
+#### ARCH3.8 — модовые компоненты и migration нового World
+
+- Capture по persistent entity IDs / component schema IDs/versions; проверить
+  явные migrators, relations, unsupported/unknown data и reset admission. Построить
+  private candidate World/session с новыми CLR types, затем commit и retire старого.
+- **Готовность:** неизменённая схема, добавленные/удалённые/изменённые поля,
+  отсутствующий migrator, corrupt snapshot, stale handles и dependent mod group
+  проверены без тихой потери данных. Old Type/pools/bindings освобождаются после
+  scheduler/World/resource cleanup. Reject до commit сохраняет прежнее состояние;
+  отказ от rollback из-за необратимых side effects явно отражён в supported policy.
+
+<a id="arch3-9"></a>
+#### ARCH3.9 — сквозная регрессия, поставка и руководство
+
+- Проверить Source Debug / published Release / fresh independent packages одной
+  версии: Abstractions-only mod SDK, Runtime-only, headless Tooling, Runtime + UI
+  без Tooling, full Editor и module reload. Сохранить namespace/API migration map,
+  runtime/analyzer/native assets и .NET 11 / TF/TestsTF / Features profile.
+- **Готовность:** relevant full suites D/R с discovery/TRX; оба DI adapters на
+  затронутом App/factory/lifetime пути; отрицательные dependency graphs. Не менее
+  20 последовательных supported reload cycles с подтверждённым освобождением всех
+  retired ALC, subscriptions/tasks/owners и CPU/GPU leases после completion.
+  GC/weak-reference loop — диагностическая приёмка, не обязательный игровой tick.
+  Проверены cancellation/startup/migration/commit/cleanup failures и fallback;
+  рост process memory сам по себе не заменяет конкретный root/leak evidence.
+  Новые native/GPU readiness и wider OS/RID/AOT/security/performance обещания
+  требуют отдельных proofs; документация различает planned и implemented API.
+
+### Порядок и связь с существующей очередью
+
+ARCH3.0 завершён статической картой. Согласованный маршрут перед переносом —
+[в начале плана](#current-engine-queue): короткий diagnostics → f.4 → минимальный
+Player, затем ARCH3.1–5 и ARCH3.6–9. До ARCH3.1 сверить дельту карты после новых
+renderer/Player типов. Loader и горячая замена требуют принятого module ownership
+и проверенных runtime boundaries; это не назначение параллельных исполнителей.
+
+Новое решение заменяет прежний выбор двух крупных Aether/Editor assemblies для
+нового развития; ARCH2 остаётся историей фактического перехода и проверок. ENG6
+теперь ссылается на ARCH3.6–8 для ALC hot replacement; compiler/runtime delta Hot
+Reload остаётся отдельным исследованием, существующий child replacement сохраняется.
+ARCH1f.4 mesh surface/Playing fence, g.1 import, h.0 audio, ED1–ED8 и reliability
+имеют прежние task IDs и критерии. ARCH3.0 зафиксировал их целевые owners/точки
+пересечения; завершение всех будущих renderer/audio/import features не является
+условием объявления чистого разделения assemblies. Старые source/package/native
+passes не переносятся на новые границы автоматически.
+
+Proposed [заявка игры](../requests/engine/20261110-truemoontales-game-surface-loop-ae80510f/Request.md)
+учитывается как входящий контекст; её Request/Claim/Decision не меняются этим планом.
+Runtime-only Player и modding не закрывают её actual surface/render acceptance.
+
+Основание .NET: [shared type identity и ALC dependencies](https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/understanding-assemblyloadcontext),
+[cooperative unload и причины удержания контекста](https://learn.microsoft.com/en-us/dotnet/standard/assembly/unloadability).
+
+<a id="arch2-aether-и-editor-как-пакеты--2026-10-27"></a>
 ## ARCH2: Aether и Editor как пакеты — 2026-10-27
 
 Согласовано с пользователем: TrueMoon развивается как инфраструктурный framework
@@ -391,13 +774,13 @@ composition для consumer, их успешный publish не является
 | ARCH2e.3 | Проверено2026-10-29: bounded GUI/native acceptance |24/24:4source/package build/publish profiles × standard/Cobalt и embedded/MS DI × workflow/failure/cancel.56children с8owned crashes;48graceful validation0/0, actual font/extended native loading, GPU pixels/Undo/Redo/save/reopen, dirty close/save failure/crash preservation, View detach/recreate, UI/GPU/producer cleanup. K3/K7/K8/physical/VRAM отдельно |
 
 Результаты2026-10-29: [consumer/команды](../../ManualTests/AetherPackageConsumer/README.md),
-[fresh headless verification](../../TestResults/ARCH2e3-Packages-20261029-3/verification.json),
+fresh headless verification (`TestResults/ARCH2e3-Packages-20261029-3/verification.json`, исторический raw artifact сейчас недоступен),
 [runtime fix, RED/GREEN и module regressions](HISTORY.md#arch2e-independent-packages-и-cpu-runtime-startup--2026-10-29).
 Consumer проверяет headless composition и CPU frame transport, без project/document
 GUI workflow. Child использует Cobalt; оба DI проверены в parent Apps.
 
-ARCH2e.3 выполнен отдельной [native matrix](../../TestResults/ARCH2e3-20261029-9/verification.json)
-и [audit](../../TestResults/ARCH2e3-20261029-9/audit.json): source и package не смешаны,
+ARCH2e.3 выполнен отдельной native matrix (`TestResults/ARCH2e3-20261029-9/verification.json`, исторический raw artifact сейчас недоступен)
+и audit (`TestResults/ARCH2e3-20261029-9/audit.json`, исторический raw artifact сейчас недоступен): source и package не смешаны,
 1259hash checks и160loaded-package DLL checks,40PNG,24case reports,4current TRX.
 Матрица использует публичный модульный composition API, не заявляет отдельный
 GUI run каждого CLI branch минимальных Examples. Native ARCH2e.3 выполнен в указанном supported profile; output-drain follow-up
@@ -410,7 +793,7 @@ DI scope contracts для этого не требуется. Physical/general r
 accessed stdio, file-enabled capture после EOF не требует свободного shared pool
 worker. Controlled starvation RED→GREEN, Core374/Aether1550 Debug/Release,
 fresh packages/headless8/8 и native24/24 подтверждены отдельно.
-[Current audit](../../TestResults/ARCH2e4-FileDrain-Native-20261029-1/audit.json).
+Current audit (`TestResults/ARCH2e4-FileDrain-Native-20261029-1/audit.json`, исторический raw artifact сейчас недоступен).
 
 **Уточнение архитектуры/acceptance2026-10-29:** shared-worker availability не
 должна быть условием file-drain после EOF. Core использует один dedicated worker
@@ -566,11 +949,11 @@ default Cobalt, но это ещё не означает, что весь вну
 
 | Область | Подтверждённое замечание |
 | --- | --- |
-| [AetherHost](../../TrueMoon.Aether/Hosting/AetherHost.cs) | Конструктор создаёт Supervisor/FrameSession/GameBuildCompiler/GameReplacement/GameEditor, property initializer создаёт GpuResourceHost. Зависимости агрегата собираются вручную вне DI registration factory или внедрённой IFactory |
-| [Runtime factory](../../TrueMoon.Aether/Sessions/SessionSupervisor.cs), [options](../../TrueMoon.Aether/Hosting/AetherOptions.cs) | IRuntimeFactory внедрён, но не реализует общий IFactory; viewport выбран через Func. Factory-based ownership уже есть, унификация контрактов ещё не выполнена |
-| [GameBuildLoader](../../TrueMoon.Aether/Runtime/GameBuildLoader.cs) | Игровой IGameSession создаётся через Activator.CreateInstance; DI/IFactory не участвует, constructor dependencies игрового entry point получить нельзя |
+| [AetherHost](../../TrueMoon.Aether.Tooling/Hosting/AetherHost.cs) | Конструктор создаёт Supervisor/FrameSession/GameBuildCompiler/GameReplacement/GameEditor, property initializer создаёт GpuResourceHost. Зависимости агрегата собираются вручную вне DI registration factory или внедрённой IFactory |
+| [Runtime factory](../../TrueMoon.Aether.Runtime/Sessions/SessionSupervisor.cs), [options](../../TrueMoon.Aether.Tooling/Hosting/AetherOptions.cs) | IRuntimeFactory внедрён, но не реализует общий IFactory; viewport выбран через Func. Factory-based ownership уже есть, унификация контрактов ещё не выполнена |
+| [GameBuildLoader](../../TrueMoon.Aether.Runtime/GameBuildLoader.cs) | Игровой IGameSession создаётся через Activator.CreateInstance; DI/IFactory не участвует, constructor dependencies игрового entry point получить нельзя |
 | [Editor composition](../../ManualTests/AetherEditorHost/EditorApplication.cs), [runtime composition](../../ManualTests/AetherEditorHost/RuntimeEntryPoint.cs) | Workspace/binding/runtime factory/commands и runtime protocol/frame producer/IPC services создаются вручную. Часть зависимостей захватывается callbacks вместо регистрации в графе App |
-| [SceneResolver](../../TrueMoon.Aether/Scenes/SceneResolver.cs) | Статический pipeline вручную создаёт EntityResolver с каталогами. Для применения правила к authoring services нужна явная factory/service boundary; документы и immutable results остаются данными |
+| [SceneResolver](../../TrueMoon.Aether.Runtime/Scenes/SceneResolver.cs) | Статический pipeline вручную создаёт EntityResolver с каталогами. Для применения правила к authoring services нужна явная factory/service boundary; документы и immutable results остаются данными |
 
 Правильные существующие границы сохраняются: UseAether snapshots options,
 registers App-local runtime factory/host/lifecycle, запрещает duplicate registration.
@@ -1010,8 +1393,9 @@ Editor или Player при запуске; отдельные executables ос�
 построения DI-графа. Первый профиль имеет две пользовательские роли; переключение
 живого Player в Editor и обратно сейчас не требуется. Play/Pause/Stop внутри
 Editor управляют игровой сессией и сохраняют роль родительского приложения.
-Это запланированная функциональность; существующая same-executable child branch
-сама по себе ещё не является полноценным standalone Player.
+**ENG7b.1–2 завершены 2026-11-12 в минимальном Windows x64 scope.**
+[API/defaults/ownership](PLAYER.md), [проверки и точные границы](HISTORY.md#eng7b12-2026-11-12), [manifest/SHA](ENG7B12_BASELINE.json).
+Same-exe child остаётся отдельной внутренней ролью; расширенная ENG7b.3 matrix открыта.
 
 | Роль | Запуск и владение |
 | --- | --- |
@@ -1019,8 +1403,8 @@ Editor управляют игровой сессией и сохраняют р
 | Player | Создаёт собственный Runtime App, игровое окно/presentation, input и выбранный game artifact. Родительский Editor, его bootstrap и IPC для запуска не требуются; Editor services/View не создаются |
 | Runtime child редактора | Внутренняя роль с проверенным RuntimeBootstrap, parent/session/generation identity и offscreen output. Получает ввод/управление по Enerit, отдаёт итоговый кадр через существующий frame transport |
 
-CLI может использовать --editor/--player; окончательные flags/default/manifest
-фиксируются перед реализацией. Внутренний --runtime не превращается в публичный
+CLI зафиксирован: --editor (default combined), --player (default Player-only),
+--artifact/--scene и явный --scene-format; Editor --runtime-host. [Полный контракт](PLAYER.md). Внутренний --runtime не превращается в публичный
 standalone запуск путём ослабления bootstrap checks. Launch role не смешивается
 с состояниями Playing/Paused или текущими RuntimeRole Game/EditPreview.
 
@@ -1044,13 +1428,16 @@ Runtime-edit/full snapshot ARCH1c и горячая смена launch role ос�
 
 | Подэтап | Результат и проверка |
 | --- | --- |
-| ENG7b.1 | Контракт role selection/Main, mutually exclusive arguments и pre-App validation; выбрать default/inputs для combined host. Подтвердить DI generation/registration и один App/owner graph на роль на Cobalt/MS DI, отсутствие Editor graph в Player и обязательный bootstrap у child |
-| ENG7b.2 | Standalone Player composition: local runtime/session/window/input и опциональный HUD. Закрытие окна, cancellation/startup failure/Stop освобождают owned UI/session/render resources; Editor package не требуется Player-only consumer |
+| ENG7b.1 **завершён 2026-11-12** | Контракт role selection/Main, mutually exclusive arguments и pre-App validation; выбрать default/inputs для combined host. Подтвердить DI generation/registration и один App/owner graph на роль на Cobalt/MS DI, отсутствие Editor graph в Player и обязательный bootstrap у child |
+| ENG7b.2 **завершён 2026-11-12** | Standalone Player composition: local runtime/session/window/input и опциональный HUD. Закрытие окна, cancellation/startup failure/Stop освобождают owned UI/session/render resources; Editor package не требуется Player-only consumer |
 | ENG7b.3 | Combined-exe и отдельные host profiles в source Debug/published Release, далее затронутый independent NuGet proof: startup selection, selected game/content, child identity rejection, повторные Play/Stop/crash и reap, отсутствие game load в Editor CLR и сохранность документа |
 
-Реализация следует после ARCH2 и связывается с ED6 project/document workflow.
-ENG7b.1/2 нужны для standalone acceptance HUD; полный World/ECS и новый DI scope
-API для этого не требуются. Эти будущие роли не меняют очередь из STATUS.
+Уточнение очереди 2026-11-12: минимальные ENG7b.1–2 выполняются после ARCH1f.4
+и до ARCH3.1 как поведенческий Player baseline: selected artifact/content, окно/input,
+role validation и cleanup без создания Editor graph. HUD optional; расширенная
+ENG7b.3 matrix остаётся отдельным этапом. Физическое исключение compiler/Tooling
+из нынешней Aether DLL подтверждается после ARCH3.3, не выдаётся за готовое здесь.
+Полный World/ECS и новый DI scope API сами по себе для выбора роли не требуются.
 
 ### Модель мира и наследование
 
@@ -1177,7 +1564,7 @@ overrides не мутируют общий asset. World не владеет borr
 | ARCH1f.1 | Реализован2026-11-07: platform-neutral MeshRenderer/Camera schemas, exact unmanaged asset keys и immutable mesh/material/binding-set definitions; TMRA canonical codec и frozen CPU manifest/fingerprint | Reserved IDs/versions/defaults/required Transform, finite/conversion/index/range/layout/exact slots/bounds/gray vectors/dependency/type/unknown-version/budget checks проверяются в unit/source/package scope; [конкретный API](RENDERING_CONTRACTS.md#cpu-v1), текущие результаты в STATUS. Legacy schemas/document/history и native protocol сохранены |
 | ARCH1f.2 | Реализован2026-11-07: [resource owners/leases/preparation](RENDER_RESOURCES.md), frozen in-memory catalog, App/IFactory integration, atomic World binding и standalone Vulkan upload | Bounded old/candidate/retiring allocations и metadata, counted CPU/preparation leases, stale owner/device/slot rejection; cancel/late completion/failed creation/reload/drain retry. Explicit pinned-key rebind, no sync GPU wait в scene loader; unit/source/published/fresh-package CPU и actual Vulkan upload/readback проверены отдельно. Surface rendering/Playing fence — f.3/4; external-file delivery отдельно |
 | ARCH1f.3 | Реализован2026-11-09: [owned render snapshots](RENDER_SNAPSHOTS.md), explicit camera/mesh/material extraction, bounded mailbox/recording/submission owners, App/IFactory | Same-tick complete matrices/exact keys/masks/tint/shear bounds, drop/coalesce/reload retain, actual backend completion/cleanup contract, generation fence/retry/budgets;1376scoped D/R и source/published/fresh7package CPU proofs. [Evidence/limits](HISTORY.md#render-snapshots-2026-11-09); actual Vulkan surface — f.4 |
-| ARCH1f.4 | Vulkan consumer: built-in cube mesh, shared opaque unlit material и независимый tint override | Две entities/один shared asset, изменение override не меняет соседа, reload/delete/resize/suspend/Stop/Replace/failed startup не нарушают retirement; actual source Debug/published Release pixels/core+sync validation/ownership и затронутый fresh-package consumer проверяются отдельно от headless |
+| ARCH1f.4 | Реализован2026-11-12: [Vulkan consumer/Playing fence](RENDER_SURFACE.md), built-in cube/shared opaque unlit material/independent tint | Две entities/один shared asset, изменение override не меняет соседа, reload/delete/resize/suspend/Stop/Replace/failed startup не нарушают retirement; actual source Debug/published Release pixels/core+sync validation/ownership и затронутый fresh-package consumer проверяются отдельно от headless |
 | ARCH1f.5 | Texture/sampler profile, затем Light/lighting/PBR по выбранному workload | Layout/capability и color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes; performance/native evidence для каждого добавленного profile, без заявления готовности transparency/shadows/skinning |
 | ARCH1f.6 | Content revisions и runtime material overrides в checkpoint/Replace после ARCH1e.5 | Logical IDs/revisions вместо handles, required content preparation до resume, remap/migration/failed restore/stale generation; render cache восстанавливается, capability недоступна без полного support участников |
 
@@ -1333,9 +1720,19 @@ import/decode/CPU validation, g.2 — consumer/build/runtime integration. Engine
 <a id="arch1h-audio"></a>
 ### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07
 
-Статус: **запланировано исследование и проектирование**, аудиомодуля/публичного API
-пока нет. Engine roadmap владеет этим направлением до решения о package boundaries;
-отдельный модульный PLAN появится при выделении модуля, без дублирования задач.
+Статус2026-11-12: **самостоятельный TrueMoon.Kul Windows x64 AUD1 реализован и проверен**.
+По запросу пользователя audio package/API/App ownership выделены в [единственный Audio PLAN](../audio/PLAN.md#current-audio-queue).
+[API и сборка](../audio/README.md), [23tests D/R +source/publish/fresh-package Kul proofs](../audio/HISTORY.md#kul-rename-2026-11-12),
+[manifest](../audio/KUL_RENAME_RESULTS.json). UseAudio/UseConfiguredAudio, IFactory<AudioSession>,
+shared decoded clips/independent voices, native music streaming и stop/drain/Dispose готовы
+в bounded Windows scope. Cobalt и MS-DI adapter проверены, actual WASAPI приглушён.
+Зависимость — исправленный локальный TrueMoon.MiniAudioEx4.0.1-truemoon.1;
+[исторический native fix](HISTORY.md#audio-native-fix-2026-11-12) и [исследование](AUDIO_RESEARCH.md) сохранены.
+App-модуль готов в AUD1 scope; **Aether ECS/Nom/captured-asset bridge не реализован**.
+Device loss, long RT workload, hard peak budgets/command queues, spatial audio и Linux/macOS
+остаются AUD2–3. Исторические широкие h.0–2 критерии ниже не закрываются автоматически
+первым AUD1 профилем. Следующая engine audio работа — требования и adapter source/listener
+с учётом ARCH3 boundaries; renderer/Player очередь не меняется.
 
 | Этап | Результат и зависимости | Критерий завершения |
 | --- | --- | --- |
@@ -1374,6 +1771,34 @@ import/decode/CPU validation, g.2 — consumer/build/runtime integration. Engine
 Исследование заканчивается выбором backend/scope, схемой data→commands→audio owner→
 callback→completion и планом h.1. Модели g.0 и audio h.0 могут исследоваться параллельно;
 их решения не объявляют f.3/4, PBR, анимацию или весь игровой движок готовыми.
+
+<a id="arch1i-physics"></a>
+### ARCH1i. Kton: самостоятельная физика и ECS integration — 2026-11-12
+
+Пользователь выбрал **TrueMoon.Kton** и BEPUphysics v2 как приоритетный backend.
+**Единственный подробный план физического модуля и bridge — [PHYS0–8](../physics/PLAN.md#current-physics-queue).**
+[Текущий статус](../physics/STATUS.md), [имя из лора](../physics/NAMING.md).
+Здесь не ведётся вторая очередь реализации физики.
+
+Kton API/provider независимы от Aether/Tooling/UI/GPU. Aether потребляет физику
+через value components, phase synchronization и session ownership; размещение
+bridge contracts/runtime systems согласуется с ARCH3.1–3. Подробные критерии
+интеграции — [PHYS5](../physics/PLAN.md#phys5), персонажа — PHYS6, простой ragdoll —
+необязательный PHYS7. Backend types и world owners не помещаются в ECS values.
+Headless PHYS0 выполнен независимо от surface renderer: exact beta.33,
+по114checks source Debug/published Release на общем .NET11,64cleanup cycles/
+owners0/pool bytes0; [границы и known CCD/material предел](../physics/HISTORY.md#phys0-2026-11-12).
+PHYS1 neutral TrueMoon.Kton API/IDs/limits/CCD/validation выполнен:131checks source/
+fresh-package D/published R, dependencies0; [контракт](../physics/CONTRACTS.md),
+[evidence](../physics/HISTORY.md#phys1-2026-11-12). PHYS2 rigid-body provider выполнен:
+184checks source/fresh-package D/published R, current neutral131; [границы](../physics/PROVIDER.md).
+PHYS3 queries/events реализованы:309checks source/fresh-package D/published R,
+[policy](../physics/QUERIES_CONTACTS.md), [evidence](../physics/HISTORY.md#phys3-2026-11-12).
+PHYS4 public App/configuration/DI/lifecycle завершён:192checks/profile обоих DI,
+current provider regression309×3; [App guide](../physics/APP.md),
+[evidence](../physics/HISTORY.md#phys4-2026-11-12). Далее PHYS5 ECS/session bridge.
+Текущая очередь Player → ARCH3 сохраняется;
+proposed game Request/Claim/Decision не изменены.
 
 ### API и владельцы изменений
 
@@ -1527,7 +1952,8 @@ ARCH1a.1/2 реализованы/проверены2026-10-22; ARCH1a в цел
 | ARCH1e | Storage e.1, execution e.2, registry/load/initial Runtime e.3a/b и builtin Transform/primitive extraction e.4 реализованы2026-11-06, [этапы e.0–5](#arch1e-ecs) | Authoring/schema/IDs сохранены; проверки/открытые failures отдельно в STATUS; checkpoint e.5 и общий mesh/material renderer ещё впереди |
 | ARCH1f | [F.0/f.1 CPU contracts](RENDERING_CONTRACTS.md) и [f.2 resource services](RENDER_RESOURCES.md) реализованы по своим scope2026-11-06/07; f.3–6 запланированы | CPU/unit/package и actual Vulkan resource upload/readback имеют отдельные checks; owned extraction/submitted-frame leases/surface renderer proof ещё нужны; primitive64 не объявлен новым renderer |
 | ARCH1g | [Model assets/import research](#arch1g-model-assets): выбран AssimpNetter6.0.5 low-level после [8-profile spike](MODEL_IMPORT_RESEARCH.md#decision-2026-11-07), production graph не менялся | G.0 ещё требует captured-I/O/identity/budgets/cancel decisions перед g.1; current builtin/in-memory profile не считается file importer |
-| ARCH1h | [Audio module research](#arch1h-audio) запланировано; backend/package/API ещё не выбраны | H.0 фиксирует real-time/ownership/budgets; offline и actual device/package proofs разделены, ECS хранит только data |
+| ARCH1i | [Kton/BEPU и отдельный физический модуль](#arch1i-physics): PHYS4 App/configuration/DI/lifetime,192checks/profile обоих DI и provider regression309×3; далее PHYS5 bridge | Детальная реализация/приёмка bridge только в [PHYS5](../physics/PLAN.md#phys5), общий модуль — [PHYS0–8](../physics/PLAN.md#current-physics-queue) |
+| ARCH1h | [TrueMoon.Kul AUD1](../audio/PLAN.md#current-audio-queue), 2026-11-12: App/DI/sound/music/cleanup,23tests D/R и source/publish/fresh-package muted WASAPI | Общий модуль готов в Windows v1 scope; Aether ECS/captured-asset bridge ещё нужен. Audio AUD2–3: device loss/RT/queues/other OS |
 
 Порядок уточнён2026-10-23: для приложения Editor первый минимальный ARCH1b.1
 выполнен; независимый Edit preview и ED1a также реализованы в своих границах.
@@ -2113,11 +2539,12 @@ launch после Stop/failed Start и не поддерживает nonempty la
 компоненты и поля требуют правил migration либо явного reset. После crash
 доступен последний сохранённый checkpoint, а не snapshot уже умершего процесса.
 
-.NET Hot Reload — последующее ускорение для поддерживаемых изменений. Rude edits
-имеют маршрут через child replacement. Collectible AssemblyLoadContext —
-альтернативное исследование: unloading cooperative, references/threads/callbacks
-могут удерживать старые assemblies. Оба механизма не являются предусловием
-первого работающего editor/runtime прототипа.
+.NET compiler/runtime delta Hot Reload остаётся отдельным ускорением для
+поддерживаемых изменений; rude edits сохраняют маршрут через child replacement.
+Уточнение 2026-11-12: collectible ALC выбран для модулей и их горячей замены в
+[ARCH3.6–8](#arch3-6); прежний статус «альтернативное исследование» исторический.
+Cooperative unload, type identity, migration и cleanup имеют отдельные критерии
+ARCH3. Это не уже реализованная замена в живом World и не смена ENG3 semantics.
 
 ## ENG3: уточнение плана перед реализацией — 2026-10-19
 
@@ -2872,7 +3299,7 @@ ENG1 и ENG2 proof выполнены2026-10-17; следующий code эта�
 | ENG3 | Сборка и replacement Game.Logic — реализован/проверен2026-10-20 | Смена поведения через новую игровую DLL без restart Editor; compile failure сохраняет рабочую версию; checkpoint/reset и rollback candidate проверены |
 | ENG4 | Vulkan shared GPU prototype — ENG4a–d2 проверены; ENG4e baseline получен2026-10-21 | Ordinary GPU Editor Build/Replace/checkpoint/first-present/lifecycle и measured CPU/GPU reference path подтверждены; Debug CPU budget breaches/temporary staging allocations сохранены, hardware/final acceptance открыты |
 | ENG5 | Небольшая играбельная 3D-сцена — ENG5a/b/c.1/2 room/reach/interaction реализованы | Далее ENG5c.3 collisions камеры и ENG5c.4 runtime Alloy HUD/pause; level load/unload и standalone Player ENG7b ещё нужны |
-| ENG6 | Hot Reload исследование | Зафиксирован supported edit набор/state behavior, unsupported edits переводятся в проверенный replacement; ALC только по подтверждённой потребности |
+| ENG6 | Модовые ALC и отдельный delta Hot Reload | Детальные загрузка/замена/миграция — [ARCH3.6–8](#arch3-6), запланировано 2026-11-12; compiler deltas исследуются отдельно, existing child replacement сохранён |
 | ENG7 | Рабочее приложение редактора и доставка; ENG7a/UIA1 — существующая основа, ENG7b launch roles/Player запланирован | [ED1–ED8](EDITOR_PLAN.md): project/documents/editing/preview/workflow/extensions/reliability; ED6b запускает Play из Editor. Роль выбирается до App.Build, горячая смена ролей не требуется. Scene/asset/runtime возможности не объявляются реализованными наличием shell |
 | ENG8 | Финальные robustness/performance checks; [ENG8a diagnostics](#eng8a-диагностика-сессий-и-процессного-вывода--2026-10-25) разрабатывается отдельным ранним срезом | Frame time/latency/allocations/resource trends измерены на фиксированной сцене; reload/resize/crash/cancel/close и diagnostic overload/retention проходят в объявленных limits |
 | ENG9 | Запланированы [ИИ мобов и agent experiments](#eng9-ии-мобов-и-агентные-проверки--2026-10-30), затем optional LLM-персонаж | Детальные ENG9a–d ведутся выше; общий API/MCP — ARCH1d, UI — ED4h/ED7a. Readonly/control возможны до полного ARCH1c; поведение проверяется trace/scenario assertions |

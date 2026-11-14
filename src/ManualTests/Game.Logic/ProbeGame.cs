@@ -1,12 +1,14 @@
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Abstractions.Runtime;
+using TrueMoon.Aether.Abstractions.Scenes;
 
 namespace Game.Logic;
 
 // Minimal ENG1/ENG3b demo state; no generic scene migration or replacement transaction.
-public sealed class ProbeGame : ICheckpointGameSession, TrueMoon.Aether.Rendering.IRenderGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
+public sealed class ProbeGame : ICheckpointGameSession, IRenderGameSession, IGameSessionEntry
 {
-    public static global::TrueMoon.Aether.Sessions.IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new ProbeGame();
+    public static global::TrueMoon.Aether.Abstractions.Sessions.IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new ProbeGame();
     private SceneSnapshot? _scene;
     private bool _disposed;
     private CameraTransform _camera = new(0, 1, 3, 0, 0, 0);
@@ -35,7 +37,7 @@ public sealed class ProbeGame : ICheckpointGameSession, TrueMoon.Aether.Renderin
         if (_scene == null) throw new InvalidOperationException("No scene loaded.");
         return new(TickNumber, _camera, _interaction);
     }
-    public TrueMoon.Aether.Rendering.PrimitiveScene CaptureRenderScene()
+    public PrimitiveScene CaptureRenderScene()
     {
         var state = CaptureCheckpoint();
         return new(state.Camera, 0.45f, new System.Numerics.Vector3((PatternColor >> 16 & 255) / 255f,

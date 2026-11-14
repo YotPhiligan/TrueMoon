@@ -2,6 +2,6 @@
   <PropertyGroup><OutputType>Exe</OutputType><RootNamespace>PackageRuntime</RootNamespace></PropertyGroup>
   <ItemGroup>
     <PackageReference Include="TrueMoon" Version="$(TrueMoonPackageVersion)" />
-    <PackageReference Include="TrueMoon.Aether" Version="$(TrueMoonPackageVersion)" />
+    <PackageReference Include="TrueMoon.Aether.Runtime" Version="$(TrueMoonPackageVersion)" />
   </ItemGroup>
 </Project>

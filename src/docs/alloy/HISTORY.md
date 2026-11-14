@@ -1,5 +1,110 @@
 # Alloy / Argentis: история работ и проверок
 
+<a id="skiasharp-41560-2026-11-12"></a>
+## SkiaSharp/native4.156.0 — 2026-11-12
+
+Managed4.156.0 уже выбран пользователем; Directory.Packages.props сохранён
+byte-for-byte вместе с другими его dependency updates. Старая native155.0 DLL
+воспроизвела официальный отказ exit2/range[156.0,157.0). Stock native156.0 без
+TrueMoon exports также exit2. Gates не обходились, package cache DLL не подменялась.
+
+Official NuGet nuspec фиксирует SkiaSharp c4ef20229bd56e41731aa94eebe8b082b8ef886c,
+checkout подтверждает Skia gitlink d1717dc22ef2203b7fc9bf0e01078b37b1a4af6b.
+Новый exact pin добавлен; GENERAL source-stage HOST patch сохранён и включается
+явным флагом только у проверенных4.155.0/4.156.0 pins. Forward/already-applied
+проверки сохранены; unknown source отклоняется до изменения файлов. Старые pins
+не удалены. Extension .h/.inc и C# API не менялись, ABI1/descriptor48bytes прежние.
+
+M156 recipe перешёл к VS default MSVC v145+ и Windows SDK default28000. Build helper
+проверяет фактический default toolset/Spectre и выбирает полный установленный SDK
+(опциональный WindowsSdkVersion), передавая его явно. Tool restore использует
+upstream nuget.config без inherited TrueMoon source mapping. Выбранные MSVC/SDK
+версии записываются в build metadata. Глобальные Git/Windows/NuGet settings не менялись.
+
+Native source build:1475Ninja steps,104.27seconds/exit0. Existing VS2026 18.11.3,
+MSVC14.51.36231/Spectre, SDK10.0.26100.0, Python3.13.17 и Ninja1.13.2; compiler/SDK
+не устанавливались. Cake producer использует upstream SDK10.0.404, managed
+consumers — общий SDK11.0.100/net11/runtime-async=on/xUnit2 VSTest. Upstream GN/CL/
+link warnings сохранены; нулевое число native warnings не заявляется.
+
+DLL9075712bytes/SHA256:
+70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A.
+dumpbin подтвердил5TrueMoon exports; source output, renderer asset, source Debug,
+published Release и nupkg/consumer outputs имеют одинаковые bytes. Build.json
+содержит revisions, DLL hash, patch hash58F1F52F... и toolchain versions.
+
+Source Debug/published Release каждый выполнил5режимов: official compatibility/
+ABI,18external readbacks,36GPU compositions/18leases,3backend comparison и
+frosted-shadow/typography matrix18captures/12comparisons. Actual Gaussian blur
+witness, retained input/layout/idle/cleanup assertions сохранены. Core/sync Vulkan
+validation0errors/0warnings, включая teardown. Это synthetic100/150/200% и
+sequential same-queue profile, не physical-DPI/swapchain/device-loss acceptance.
+
+Alloy1224, Hosting171, Editor1496 каждый Debug/Release, failed/skipped0.
+Solution non-incremental Debug0errors/1556warnings. Новых unit tests и полного
+Aether runtime/Player regression этим срезом не заявляется.
+
+Fresh NuGet delivery:10local packages,36App+4direct cases, Debug/Release ×
+build/publish ×raster/OpenGL/Vulkan ×Cobalt/MS DI (включая DI-only graph).
+Native/font/runtime/analyzer hashes,0ProjectReference, exact package graphs,
+retained behavior и cleanup проверены. Omitted-analyzer compile control exit1/
+CS0246 ожидаем. Финальные435producer source hashes не изменились во время proof;
+version0.3.0.1-alpha.ui.20261112185201005. External NuGet publication не выполнялась.
+
+Диагностика попыток сохранена: initial clone checkout восстановлен только в новом
+isolated repo с process-local longpaths; native attempt1 остановился на inherited
+NuGet mapping, attempt2 — на отсутствующем SDK28000. Оба recipe blockers исправлены
+до successful source build. Первый local GPU runner имел ошибку absolute-path join
+до published cases; итоговый свежий10-case проход успешен. Первый package run
+скомпилировал consumer, но устаревшая проверка generated hint filenames остановила
+runner. Проверка теперь использует актуальные hashed names, требует ровно один
+resolver, exact type/lifetime и прежний analyzer identity/hash. Production Cobalt
+не менялся. Intermediate pass сохранён; финальный frozen run повторён после
+завершения renderer rebuild instructions. Failed attempts не являются passes.
+
+Точные команды, TRX/profile/package/source SHA и raw paths:
+[SKIASHARP41560_RESULTS.json](SKIASHARP41560_RESULTS.json).
+[Native recipe](../../ManualTests/AlloyVulkanTest/NativeInterop/README.md),
+[delivery guide](../../TrueMoon.Alloy.Rendering.Skia/README.md).
+Raw checkouts/logs/feeds остаются локальными ignored artifacts; versioned запись
+не зависит только от их retention. PA8c.0, physical input/DPI, K7 GDI soak,
+K8/device-loss/VRAM, other OS/RID/AOT и wider release gates остаются открыты.
+
+<a id="alloy-status-before-skia41560-2026-11-12"></a>
+### Предыдущий Alloy STATUS целиком
+
+<!-- ENG7b.1–2 consumer update, 2026-11-12 -->
+**Aether Player consumer:** standalone local window/typed View/input через прежний
+Alloy.Hosting/Skia OpenGL; UI library API не менялся.6native source/published/fresh
+package profiles на Cobalt/MS DI,по5captures,0остаточных UI/GPU owners.
+[Engine evidence/ограничения](../engine/HISTORY.md#eng7b12-2026-11-12).
+Это consumer proof; UI release/device-loss/performance gates не закрывает.
+# Alloy / Argentis: состояние и точка продолжения
+
+**2026-11-11 — CORE8.5: свежая согласованная .NET 11 поставка проверена.**
+SDK 11.0.100 / net11.0 / runtime-async=on. Полные suites повторно прошли в каждой
+конфигурации Debug/Release: Alloy 1224, Hosting 171; Failed 0, Skipped 0.
+Runtime/API/dependencies в CORE8.5 не менялись; обновлены runners и документация.
+[Поставка, команды и границы](../core/HISTORY.md#core85-delivery-2026-11-11),
+[переход](../core/DOTNET11_MIGRATION.md).
+
+Свежие runtime/native Skia/targets и два actual package viewport profiles (Debug build / Release publish) прошли pixels/validation/child/resource cleanup. Physical input/DPI/OS capture, PA8c.0, K7/device loss/VRAM и release matrix остаются открытыми.
+
+Сквозной CORE8 завершён; далее функциональная очередь владельца модуля.
+[Предыдущий STATUS](HISTORY.md#alloy-status-before-core85-2026-11-11).
+
+<a id="текущие-проверки--wsi-stages2026-10-10"></a>
+<a id="предыдущие-проверки--hosting-dispatcher2026-10-10"></a>
+<a id="предыдущие-проверки--wglthread-lifetime2026-10-10"></a>
+<a id="предыдущие-проверки--lifecycleresize2026-10-10"></a>
+<a id="предыдущие-проверки--textboxname-smoke2026-10-10"></a>
+<a id="предыдущие-проверки--интеграция-в-main2026-10-10"></a>
+<a id="предыдущие-проверки--агентный-callback-run2026-10-10"></a>
+<a id="предыдущие-ui-проверки--code-run2026-10-09"></a>
+<a id="последнее-изменение-формата--2026-10-09"></a>
+
+---
+
 <a id="core85-2026-11-11"></a>
 ## CORE8.5: согласованная поставка — 2026-11-11
 

@@ -1,15 +1,18 @@
-using TrueMoon.Aether;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Tooling;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
 using EngineSessionProbe;
 using TrueMoon;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Dependencies;
 using TrueMoon.Mithril;
 using EngineSessionProbe.Measurements;
+using TrueMoon.Aether.Tooling.Hosting;
 
 try
 {
@@ -26,6 +29,8 @@ try
         return await PrimitiveRuntimeProbe.RunAsync(Path.GetFullPath(primitiveRuntimePath), Path.GetFullPath(primitiveGameDirectory), Path.GetFullPath(primitiveReportDirectory));
     if (args is ["--ecs-primitive-native", var nativePrimitiveRuntime, var nativePrimitiveGame, var nativePrimitiveReport])
         return await PrimitiveNativeProbe.RunAsync(Path.GetFullPath(nativePrimitiveRuntime), Path.GetFullPath(nativePrimitiveGame), Path.GetFullPath(nativePrimitiveReport));
+    if (args is ["--mesh-surface-proof", var meshRuntime, var meshGame, var meshReport])
+        return await MeshSurfaceProbe.RunAsync(Path.GetFullPath(meshRuntime), Path.GetFullPath(meshGame), Path.GetFullPath(meshReport));
     if (args is ["--child-diagnostics-proof", var deliveryDirectory]) return await ChildDiagnosticDeliveryProbe.RunAsync(Path.GetFullPath(deliveryDirectory));
     if (args is ["--edit-preview-proof", var previewDirectory]) return await EditPreviewProbe.RunAsync(Path.GetFullPath(previewDirectory));
     if (args is ["--scene"]) return await SceneInputProbe.RunAsync(null);

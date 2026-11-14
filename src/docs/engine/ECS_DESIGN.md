@@ -1,5 +1,7 @@
 # ECS Aether: черновик системы компонентов
 
+2026-11-12: [ARCH3.0 карта](ARCH3_MAP.md) зафиксировала EcsSystemContext/World/query границы: scoped contracts и standard value components → Abstractions, typed pools/scheduler/implementation → Runtime; отдельный ECS Core сейчас не нужен. [ARCH3.1–2](PLAN.md#arch3-1) ещё запланированы, mod loading/migration — ARCH3.6–8. Финальные сигнатуры и marker constraints уточняются в .1; ниже сохранён действующий контракт World. Assembly/type migration не выполнена.
+
 **2026-11-05 — обсуждение; 2026-11-06 — направление внесено в план по запросу пользователя.**
 Архитектура развивается поэтапно; headless storage и execution profiles реализованы
 2026-11-06; registry и headless scene loading — в [load profile](ECS_LOADING.md).

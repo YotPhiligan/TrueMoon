@@ -1,13 +1,14 @@
 using System.Numerics;
 using Game.Logic;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Gpu.Surfaces;
-using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Runtime.Gpu;
 using TrueMoon.Aether.Runtime;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
+using TrueMoon.Aether.Runtime.Gpu.Surfaces;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Transport;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Rendering;

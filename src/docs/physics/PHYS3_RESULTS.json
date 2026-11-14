@@ -1,0 +1,4156 @@
+{
+  "SchemaVersion": 1,
+  "Module": "TrueMoon.Kton",
+  "Phase": "PHYS3",
+  "Date": "2026-11-12",
+  "Completed": true,
+  "Readiness": {
+    "Queries": true,
+    "ECS": false,
+    "RigidBodyProvider": true,
+    "AppDI": false,
+    "FullProductionPhysicsModule": false,
+    "ContactEvents": true
+  },
+  "Scope": "Real exact BEPU beta.33 bounded ray/sweep/overlap, mesh BVH, sorted-prefix/scratch admission, Begin/Stay/End/generational identity/overflow, plus PHYS2 regression. One worker Windows x64.",
+  "WorkspaceHead": "73df16229da1db54e1170ac0d56b9d385f91abd7",
+  "WorkspaceDirty": true,
+  "Command": "pwsh -NoProfile -File ManualTests/KtonProvider/Verify.ps1 -EvidenceDirectory TestResults/KtonPHYS3-release-20261112 -PackageDirectory E:/source/my/TrueMoon.Tales/TrueMoon/src/TestResults/KtonPHYS0-package-inspection-20261112",
+  "NeutralRegressionCommand": "pwsh -NoProfile -File ManualTests/KtonContracts/Verify.ps1 -EvidenceDirectory TestResults/KtonPHYS3-contracts-20261112",
+  "RawEvidenceDirectory": "TestResults/KtonPHYS3-release-20261112",
+  "VerificationSha256": "928F20C632A9DD290331EC09F3323057DDB66A48589EA12A9B96D917FE9E638C",
+  "BuildProfile": {
+    "Features": ";runtime-async=on",
+    "PrivateFeedCacheArtifacts": true,
+    "Sdk": "11.0.100",
+    "TestsTF": "net11.0",
+    "LangVersion": "latest",
+    "Version": "0.3.0.1-alpha",
+    "TF": "net11.0",
+    "CPMIsolated": true,
+    "SourceInputs": [
+      {
+        "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C",
+        "Path": "Directory.Build.props"
+      },
+      {
+        "Sha256": "6A37F638ABB48B705FDC8281D0EF2634EA187B523746C5221F0B45F7EDF9A58C",
+        "Path": "Directory.Packages.props"
+      },
+      {
+        "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6",
+        "Path": "global.json"
+      },
+      {
+        "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF",
+        "Path": "ManualTests/BuildProfile.ps1"
+      }
+    ]
+  },
+  "Packages": [
+    {
+      "Version": "2.5.0-beta.33",
+      "Dependencies": [
+        {
+          "Version": "2.5.0-beta.33",
+          "Id": "BepuUtilities"
+        }
+      ],
+      "Sha256": "9C1DB047CD7B3597CD808D7B94A1EF6626E0041E305BB3D8FE41AA658C3F1D03",
+      "Id": "BepuPhysics",
+      "DllSha256": "5BBD07C09F058025049E741E136A4E7AB8A68AFE56F391F58072429F44262FBE"
+    },
+    {
+      "Version": "2.5.0-beta.33",
+      "Dependencies": [],
+      "Sha256": "D1CF1BB261720FEF05D197B4DE9F17E06BAC6D2A6C7574A6DE88BC21122C26EA",
+      "Id": "BepuUtilities",
+      "DllSha256": "4666356F52ED46FCE9707786CDA72CFB6BA6460F8BCD789D75CB816A744643F6"
+    },
+    {
+      "Version": "0.3.0.1-alpha.phys3.20261112155534",
+      "Dependencies": [],
+      "Sha256": "3FB69518537B907E7C0D7C7BB53C92070E11C44D388A692BB67D23ED6DAA981A",
+      "Id": "TrueMoon.Contracts",
+      "DllSha256": "1B315E2F705C7600E6EE0F76BA809F72E5019F2748131963545FCD9124268D42"
+    },
+    {
+      "Version": "0.3.0.1-alpha.phys3.20261112155534",
+      "Dependencies": [],
+      "Sha256": "B46E1D11E63C93AB2ACAFEA9D00823CAE354377EB59390F53AB3EBC2D0BC27D8",
+      "Id": "TrueMoon.Kton",
+      "DllSha256": "4E7CA7178B68E4B70529D14E4E94509EE09362B00582DE901D1CA2B520824E40"
+    },
+    {
+      "Version": "0.3.0.1-alpha.phys3.20261112155534",
+      "Dependencies": [
+        {
+          "Version": "0.3.0.1-alpha.phys3.20261112155534",
+          "Id": "TrueMoon.Contracts"
+        },
+        {
+          "Version": "0.3.0.1-alpha.phys3.20261112155534",
+          "Id": "TrueMoon.Kton"
+        },
+        {
+          "Version": "[2.5.0-beta.33]",
+          "Id": "BepuPhysics"
+        },
+        {
+          "Version": "[2.5.0-beta.33]",
+          "Id": "BepuUtilities"
+        }
+      ],
+      "Sha256": "BDBFFCDA0930E8C31D51FD63027332854D580767B3B31071197CD1133292B0E9",
+      "Id": "TrueMoon.Kton.Bepu",
+      "DllSha256": "B331A060F5EFAAA71EF4C615C5B6CB1E030A3FE7DAEB9ABEDC9C7F1BD25140C4"
+    }
+  ],
+  "SourceInputs": [
+    {
+      "Path": "ManualTests/KtonProvider/ContactsProbe.cs",
+      "Sha256": "D9F34758CB89DCDDBF5CC2509710F646068C23555D0CDCB96D9C5CFB91A292F4"
+    },
+    {
+      "Path": "ManualTests/KtonProvider/FailureProbe.cs",
+      "Sha256": "8CBF8CC8767E2476B4016E7BD97797751F3AD964AC541ECF1E89A046FD62C71F"
+    },
+    {
+      "Path": "ManualTests/KtonProvider/GeometryProbe.cs",
+      "Sha256": "CB97B0170B11B220D7E2DC29F880FF308DAFF391DA535A8F28A1581CDD2737CA"
+    },
+    {
+      "Path": "ManualTests/KtonProvider/Probe.csproj",
+      "Sha256": "FF984F96A2B9121E72237C07273090D3AD00B8C7E576347E595954B5D9603937"
+    },
+    {
+      "Path": "ManualTests/KtonProvider/Program.cs",
+      "Sha256": "C7829BD776A25CDBBFA85E47C5B87BB897D217A77567A11FD5FB13639D369F1E"
+    },
+    {
+      "Path": "ManualTests/KtonProvider/QueriesProbe.cs",
+      "Sha256": "93ED355CF260AD6D0E24BF468A4D85622FB34E5E2E99CC31350338369BD1D007"
+    },
+    {
+      "Path": "ManualTests/KtonProvider/README.md",
+      "Sha256": "18697C029D4824209754B4488DA31C077BEA5084B56A7E7AD47F3BE1AF194146"
+    },
+    {
+      "Path": "ManualTests/KtonProvider/StressProbe.cs",
+      "Sha256": "F5E06C488CE3701CC34AC218383B57E0E9B29FDC4431F4506CB6C67E15BDC6D4"
+    },
+    {
+      "Path": "ManualTests/KtonProvider/Verify.ps1",
+      "Sha256": "51A1480A4DB6631C358120923BD847637061F711060C990E0C1A0C07DB70EAAE"
+    },
+    {
+      "Path": "TrueMoon.Kton/IPhysicsWorld.cs",
+      "Sha256": "978D0264078BF454DC3736D09F31DFD6E4B3B0403894C69CBDED5A4D20833444"
+    },
+    {
+      "Path": "TrueMoon.Kton/PACKAGE.md",
+      "Sha256": "0720C6C4F0D99D301E4605FD8023680C6F0A4F182A5CACB6DB3E83EF3E4149FE"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsError.cs",
+      "Sha256": "3242F54CE6FF86828A3CB713FDF548017F01F59E8ABC3AB49FBE88EA106823F9"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsIdentity.cs",
+      "Sha256": "FAF128469C8CC48F168D2689C57656C9BEA449750F5956F7571B1AC9D2B15C6C"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsLimits.cs",
+      "Sha256": "1BEABB229667239AC010037D7C733D1BADDB53B7AA00C7C1C8747B3A26F6212D"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsPose.cs",
+      "Sha256": "67D871C6E6C66AC984286B75E81CC8A4F12E50F6D895A1F413A7FEEF11AF0AAD"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsQualityProfile.cs",
+      "Sha256": "F111685C9A5E3141447BE3E62C337630848DBA1F198EA7F0298EC38FCFDC9861"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsValidation.cs",
+      "Sha256": "EDF0105A385DAAE7A174F04A30DE3E7ECF97897983797B18F08105955819621B"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsWorldCapabilities.cs",
+      "Sha256": "F2FD34284DE94F370DAE7F9BF3055B28E823FCCA8AEEE04503A5A4CA3432C532"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsWorldId.cs",
+      "Sha256": "710687354E3EF893EEB62D9D4B889B3B8597669E902F993E6AC9F1ECEE1EF1BD"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsWorldOptions.cs",
+      "Sha256": "9C11CE82765C6A80F6CC31F0999C6A8772288D8C2B6813DA004845FDF443CDC1"
+    },
+    {
+      "Path": "TrueMoon.Kton/TrueMoon.Kton.csproj",
+      "Sha256": "D76707803E1C2EA30AA97354A236343D1929567051F332B09ADCE7771B6990FA"
+    },
+    {
+      "Path": "TrueMoon.Kton/Bodies/PhysicsBodyCommand.cs",
+      "Sha256": "EFFCAC8FCE070AFB2E52A180E5457104A7F84FB31CA9EA19FB25DFE99556B803"
+    },
+    {
+      "Path": "TrueMoon.Kton/Bodies/PhysicsBodyDescription.cs",
+      "Sha256": "30C3DE44EA80020BEF96F38130B537FBFF7B2D3D844B6FB6B34B8665B451BC38"
+    },
+    {
+      "Path": "TrueMoon.Kton/Bodies/PhysicsBodyId.cs",
+      "Sha256": "836D3E632EFC1BDE9821F1FD8A77447FE670F0674D7BA2F065C8B38E8AF21021"
+    },
+    {
+      "Path": "TrueMoon.Kton/Contacts/PhysicsContactEvent.cs",
+      "Sha256": "C3956761982CEAE6707C150EFDC8AA4314B0921AD142ACB67743103A3DBCA822"
+    },
+    {
+      "Path": "TrueMoon.Kton/Joints/PhysicsBallSocket.cs",
+      "Sha256": "71A9A4D556134A69A1F46A119773F507D41B473663FCE475E67D06B9F0018A70"
+    },
+    {
+      "Path": "TrueMoon.Kton/Joints/PhysicsJointId.cs",
+      "Sha256": "35DD5DAA686F7D6D63CB418E0D2E12872147B117BC405515AEC20A3096660AC5"
+    },
+    {
+      "Path": "TrueMoon.Kton/Queries/PhysicsQuery.cs",
+      "Sha256": "BC4C527ABC0BC9683F253388838C6B36244FF15C152E1B7FC29661B42C0BC780"
+    },
+    {
+      "Path": "TrueMoon.Kton/Shapes/PhysicsShapeDefinition.cs",
+      "Sha256": "C2D68F22EA00D4814C36BD0B7C3C516930A478DD337C669E0218D03785F4D523"
+    },
+    {
+      "Path": "TrueMoon.Kton/Shapes/PhysicsShapeId.cs",
+      "Sha256": "A739117491728DA8BB485F5EAE4B0AAB08A8F2459EDCD603119DF45401EBDAC0"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuPhysicsWorldFactory.cs",
+      "Sha256": "E020F2F2A56A14AE2F8CAA94874346AC6E08EE80D49A6EDC8877C3C2F7532AC3"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuResourceSnapshot.cs",
+      "Sha256": "5EC45DDCA66891BA492E4A444095DC650D1010A2151014C652FE3961719D9771"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuWorld.Bodies.cs",
+      "Sha256": "A6180C75488D9C09F2E72BE2F571CCEE79F1D9836DC61FD5BAC360B93ECD5E21"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuWorld.Commands.cs",
+      "Sha256": "936882DE66B779408E440F71D49B68F3F62EE51FC8AD0559EECB792094FFAF52"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuWorld.Contacts.cs",
+      "Sha256": "1A776F15DB1FC008CCDE4CC41DA2DAB373259BD809C527CBEB67887FD00622A4"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuWorld.cs",
+      "Sha256": "B86029B33190528385C54A9430D1C047B6E462FF3FC5956545498534AAD50163"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuWorld.Joints.cs",
+      "Sha256": "A5CA0C39A6A80FA06CAB63D402350F55DA8C524C23EDC9FF952F5C2189AC8573"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuWorld.Queries.cs",
+      "Sha256": "917BC95FD09EDD6964F9348C742D65D161BFCD7871D52F4E884670DD4A4AB33F"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuWorld.Shapes.cs",
+      "Sha256": "9733E3E8BCD17D92092A5EBD6F84D7D6A8B1375AE4B90B5FAC29943C7FCF7082"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/BepuWorld.Step.cs",
+      "Sha256": "DE8029D63B329A011CF65AEC5E667838F8E5066BCBB7EEAAAD0FF7FBED0FFCD3"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/ContactState.cs",
+      "Sha256": "5CADB36FA9F591DBB25E4171F1855A7C080B17A3590B41619E7EC4E6F15C7B2C"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/FaultInjection.cs",
+      "Sha256": "A58714E0B0A1CF216597DFB068B23848753095A15A445BFC373C9796AFCBD76C"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/GenerationalSlots.cs",
+      "Sha256": "5A2014592297F2C62BBB21DD4297330895478376D679C1FFCD24B8C44F8EEFC5"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/NarrowPhase.cs",
+      "Sha256": "95E0F55A93F9BDAA146C2830BE2B8E2BFC388F4932F8DD220470AAC43400D293"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/PACKAGE.md",
+      "Sha256": "BA7FD3F9EE29B61AE9429917826C15A46191A535FB6977B1CAFBAE9375F3AF44"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/TrueMoon.Kton.Bepu.csproj",
+      "Sha256": "DFE3164A760DD804C25FF5BC5442F9D4AB3424A47A39A5A03284DBC3D04606FC"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/WorldEntries.cs",
+      "Sha256": "75EAC9E2C2123C7806EAA6888D5B11F8B37366C309513B431DCFB783EC99CE45"
+    },
+    {
+      "Path": "TrueMoon.Kton.Bepu/WorldResources.cs",
+      "Sha256": "AC19F256043185E00791FFC6500523FF54D2B9B6491EDC1B3E3C309DE444462F"
+    },
+    {
+      "Path": "TrueMoon.Contracts/AppCreationException.cs",
+      "Sha256": "E2A28AE04203D2A8F79A2BB43837185E5166479AB563F2E83A5004A6666282E7"
+    },
+    {
+      "Path": "TrueMoon.Contracts/AppServiceLifecycle.cs",
+      "Sha256": "F379D4FB1AD898240DE4467EE80EDF3B0725818963F00FB3606638A85A498021"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Factory.cs",
+      "Sha256": "9A9514CDF4AFB1DEA32429885789B79FA65EEDFBEBCA1DCFCD541C56A0F3F2DD"
+    },
+    {
+      "Path": "TrueMoon.Contracts/IApp.cs",
+      "Sha256": "359AE5B95184E8F83B65D79DF6461D8CDB69F2E7EDD9EAF529E9AA4AF6BEAB65"
+    },
+    {
+      "Path": "TrueMoon.Contracts/IAppBuilder.cs",
+      "Sha256": "9DF46C4ABFF2196B4639FB39A543A47D3D2549F353BAAE9D5336EE9329544BAC"
+    },
+    {
+      "Path": "TrueMoon.Contracts/IAppBuilderConfigurationContext.cs",
+      "Sha256": "B33790550A937FB0104A6F265C9CE81A11A193202046B40DE5412C2226AC3B36"
+    },
+    {
+      "Path": "TrueMoon.Contracts/IAppConfigurationContext.cs",
+      "Sha256": "A274F9B3F006E2D5D95C77A8AD68EF169286B870733A2C76D85432317FF28601"
+    },
+    {
+      "Path": "TrueMoon.Contracts/IAppLifetime.cs",
+      "Sha256": "BA67D94F851C7D2C57AB2A26C3493C2A4F8C921C2D07A10A41030FFE3301CD1A"
+    },
+    {
+      "Path": "TrueMoon.Contracts/IAppLifetimeHandler.cs",
+      "Sha256": "A66E899EC58DA2119DB3119F0EBECF8EDAFF7DB2FF28050F11536B075D774570"
+    },
+    {
+      "Path": "TrueMoon.Contracts/IFactory.cs",
+      "Sha256": "7F5802EB0169F4C513B732C1C97F1F3A6B9C49125374DEF7547AFCA34894DCF5"
+    },
+    {
+      "Path": "TrueMoon.Contracts/IStartable.cs",
+      "Sha256": "67F39AFE41FFAC6CE63DDE18A9BD0E29E96C46DCDC0B7CFBC5F8C6A048095DE7"
+    },
+    {
+      "Path": "TrueMoon.Contracts/IStoppable.cs",
+      "Sha256": "F9D3BB081654EDEA33B3778A160E4A5B4DE2BAF7472BB1912A90DC2DCD708B7E"
+    },
+    {
+      "Path": "TrueMoon.Contracts/PACKAGE.md",
+      "Sha256": "E8E0F9F319C513CEAF18C18691F01DF2C8D7476ADD27CDF4BDFBE7ACA7F8DA5D"
+    },
+    {
+      "Path": "TrueMoon.Contracts/TrueMoon.Contracts.csproj",
+      "Sha256": "F61B12F3ECC62EADD6811E2EE2C62F831AF0DCC120D38FBCC3B5DF41B53BAA6B"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurableBase.cs",
+      "Sha256": "B89067C02EC959486FFAB5E91F3C6A89A1E48355184193E7CC4BD57D5035C26B"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationArgumentKind.cs",
+      "Sha256": "B5A486D568D678B02B045742E3AD38211CD3379B0AA4A624E49EC58A878B00A6"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationChangeMode.cs",
+      "Sha256": "6BB264AFE5148168E67B10491E76FEAA51F968D503C1C597D40CB37EE19493ED"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationCodecs.cs",
+      "Sha256": "8CCA46B365529CD9628EA13A1619B061E4E15546D9D5CE84948C07B43DB2721C"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationCommandLineResult.cs",
+      "Sha256": "D62470CF71EB67034B552FB16F6FC50B00C12EACC6794BF4F8E5C48297843B29"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationEdit.cs",
+      "Sha256": "04C961B4102369A9C38DDA325435B84397F42908067D56E9A10AF8BD048B5379"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationEntry.cs",
+      "Sha256": "D403369A0CB7D850FD0D1B47E2F33868C1F0533880BBC4EE68E5B7B467B9A3FE"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationException.cs",
+      "Sha256": "E885640E8A2B0866B8CBFCB460A534858987C1F4A1736EFF2D81A379B603C40F"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationExtensions.cs",
+      "Sha256": "51A75EBF49F49D425A03F0C79ED5AAEED7DCD9BD77AA2D04E4BDB6BA823B6CA4"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationField.cs",
+      "Sha256": "6BB2D1217F70CEC49A40FD4F1A9555D0C5364A281AA764E6BF9CC8781AFF4264"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationIssue.cs",
+      "Sha256": "B6D094EA26201637145034DEEAAA50A28211D3B2264CB2EBB81F94DC62483C91"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationKey.cs",
+      "Sha256": "D80623DEF3F1A750AA549BB31F0716597B99225656FAD9A350A1428A3B9E266A"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationMetadata.cs",
+      "Sha256": "151EB83ABA83B82856BBCD259A27F57FC23353FF14B3371C8BF1DCEA3B9A98A1"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationModuleBinding.cs",
+      "Sha256": "5E066661305441A1814EBD5E0230B2BBA5CFFF1114E66CC6E03AC1B00CC72A06"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationOrigin.cs",
+      "Sha256": "8AAB05767801D6DC0B2F403B32C77E070E4FB7063154DC3A3DC4AAFBC3C4F9BC"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationRead.cs",
+      "Sha256": "6D2C8CE7F1B243E32941EF9C65E7AEAD57F00CF1F0D86B6DC3775781DE3BC1A1"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationReadState.cs",
+      "Sha256": "E2A45B075E1E4C3D0E4F1EF9720D5038161BE090E329EFC89CFFF830FB84BC91"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationSchemaDefinitions.cs",
+      "Sha256": "6F1C6B6C1F5C2927639BF2E886E1485D164E6B8748B24E7E466E25B82771DD08"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationSectionNames.cs",
+      "Sha256": "47FAE3827BC70C4BEAAF9FBF876FC1BE8B1E644749FD6A2CA561340CCBDF9A5B"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationSourcePriority.cs",
+      "Sha256": "1789091CDDAF6061C706327C1C3A9FAF1FEA02BFA7D4E043EA8CEEE70E82E99C"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/ConfigurationUpdate.cs",
+      "Sha256": "78EB4EEC1E1380231F45BB2A81B13B9FB39FF6D6675E266B9A98A13C4C7B09E3"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IAppConfigurationStage.cs",
+      "Sha256": "0053C72B991B8869CB5148552C11DE0FAA8DA88977703D67BE39B8A3F9706FB6"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurable.cs",
+      "Sha256": "B27331699049E6B2768DC5ACC36239826C4381D4809AD298F53EE04D1B39B3A5"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfiguration.cs",
+      "Sha256": "23FA88848B261501CD200B2685ABEF50EF782726D96FEA31C19C756A3628628F"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationBootstrapInputs.cs",
+      "Sha256": "F045FCB6F21DB8E5A4FB1443A4551DD6D68A4DCEEB306ABFB2BB81D4EAA78174"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationBuilder.cs",
+      "Sha256": "692AE726A5456373E5AAD8640CF2B4073E8CBFD314D07F657C06958E49A0769B"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationChanges.cs",
+      "Sha256": "F4794476ADFBE6C48272B99AAB65970AB4F02F61B1CB59690BBA43CFA5241A14"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationFileHandle.cs",
+      "Sha256": "92A2B4130E377609D361377CD8A0781C535AF49F135B3F3FE1AA12BEFCDF938E"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationMutableSource.cs",
+      "Sha256": "4326899A226744CC848751A5FCB928EF94A6A9AE6198393420C25063D85EB59C"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationProfile.cs",
+      "Sha256": "5C8B01A760301AD8CB873A981BDA3E11F46D6AA16F735963F484A34BF65B9EC2"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationProfileBuilder.cs",
+      "Sha256": "748CC1A883B9C15D8EEEAD0517721B35994F7C389C97A9A35EC24BF440FCC5A0"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationProfileSchemas.cs",
+      "Sha256": "71430246B73F553AC1B9257CB7806FA03103D198970A96E2DEE9BB5106D55F2C"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationProfileWriter.cs",
+      "Sha256": "FE18639546AC2F39D57DF56143ED9C0AFB58B90A4C0229BA9B7FF63444DBC5BB"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationProvider.cs",
+      "Sha256": "68597DF75076852368F3FD3280C6BD7927DA6A93EAA95E1E1F003D71D43EB4F6"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationReader.cs",
+      "Sha256": "199D0F8FB25E77415FE65D12EDCFFA2A816CD58C4EB9222611EDC9D4C28E1CE7"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationReloader.cs",
+      "Sha256": "8B17E28190BC72BCF32BB4577CA26ECC1B8ED565450E57661D12DD62838415D4"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationSchema.cs",
+      "Sha256": "D2ABC7A7A7BCA3B91137E584A76B7CD064BD6F7758E25DA1E4EE1875C21ABEF8"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationSchemaBuilder.cs",
+      "Sha256": "035D6949CBFC990CCC9C0F02B40A6CE70AC5A73A0D50B8CE408CD7AFAA6F1148"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationSchemaVisitor.cs",
+      "Sha256": "457E2533DF558E052B1E32FAA4D5DDBAECAADE831B2E6B8798DCF951D889A909"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationSection.cs",
+      "Sha256": "8DBF5DE2432D43F5D6073BF4D3217AF1549FC25AD07E4C200DEB2C598B41EEF9"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationSnapshot.cs",
+      "Sha256": "FC7C2C9D3A27143EDFB570B13C41800808EE18565500AEAB779D3F5FBC49FF09"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationSource.cs",
+      "Sha256": "25E9148721FC0C0CC62F347FCCAD008E4E20B940DF60B46BC49ABE2B58C60862"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationValueCodec.cs",
+      "Sha256": "551F10ECD08F11AB65F8F57916BB05547392B711FA2A241FFB5D5C8D29056FB5"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IConfigurationWriter.cs",
+      "Sha256": "F31291DF490E794DDCD0D6FB088716F804975B4B4CC2DB6DFBD129D53DF31143"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/IPathResolver.cs",
+      "Sha256": "2CC59D873B999363D3AB9782A41C7D3B984DB7332FB8F7DFC3EEDDD77ED9F316"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Configuration/Paths.cs",
+      "Sha256": "FDB7236BE24F6BCEE589ECF38B4C8842842DE1BAABB7A2D3431EB4A138B75FCB"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Dependencies/ServiceProviderExtensions.cs",
+      "Sha256": "4F7359CEC097A5DD07A9181A7BC56E0A63BD634714E2EF52F1C073B787B5DF9A"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/ConfigurationExtensions.cs",
+      "Sha256": "6515673A4834E29D639BEF6EFBB865D90914E591A01236BBF50D28CBBA0F12D6"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticCollectorConfiguration.cs",
+      "Sha256": "AFFE8E23EAE92C4E414D45D157A08DFC39FD8D1F81C237CFAAF75A35E9767720"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticEvent.cs",
+      "Sha256": "81C3D57614C0180FC38E68C47F8F0DE55C73860321E1B18824F26160191B7C23"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticHealthSnapshot.cs",
+      "Sha256": "4A4DB83C6BB286E43040C837F4B785E5B4C355C7D4B376AB6F1A6A18BAF25CAE"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticHistoryReadOptions.cs",
+      "Sha256": "57AE8C9AA30BED817361554680C458A3A1F15610EA4843A4279003A4BA4F5446"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticHistorySnapshot.cs",
+      "Sha256": "7B0F59D20CCC12A0AF1D25AB5E6C64B0DCCCEFCC9BCE2B2B6FC08AFEBC25D4F0"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticLevel.cs",
+      "Sha256": "2D7D743058C31FD1F8D1DD45093363E609C6F7172A639AFF6C6A3C5F07B6A2AB"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticMessage.cs",
+      "Sha256": "EC36A9755FAB6BB4EBF83403CFC79B4094DD94FCBF3D5B84452274D499EC1785"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticOperationOutcome.cs",
+      "Sha256": "D04F0425EB9213C9D59B0CB247F53FD3903EC880E3E764FC0B31E6127831D544"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticOrigin.cs",
+      "Sha256": "9C2401687255EE6DD64E6E3D3D037107B08F42D8BE5C4140C430A6B8B264713F"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticRecord.cs",
+      "Sha256": "73CFAC45F5EA912257D6BEFA709AA7BE8DE42C56FFDC34C9D39713F529E70549"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/DiagnosticsConfigurationExtensions.cs",
+      "Sha256": "E2BC183883992DF793C8DD827826C052B5A0DAB2545BA6C575DBD2C06E1675A8"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/EventsSourceActivityHandler.cs",
+      "Sha256": "F9BC058C17323BABDD66E1F6D254C3BF3F97BB9683C677389C4A3FFF7AEBE469"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/EventsSourceExtensions.cs",
+      "Sha256": "FA119F0472DE0AA8658A66F9F0BCBDD4FEAA27C2E6F567D7272A6334A9510FD0"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IDiagnosticArchiveReader.cs",
+      "Sha256": "B66581BD79AFFD0DBDB570202DF669174E019BF66EB8D3DB5F8057B077C6B916"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IDiagnosticConfigurationReader.cs",
+      "Sha256": "56D3A9ABD5CF183839079F3217CF24C45B1D8B8E8686BCCA05FCC2EFE74D8D2A"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IDiagnosticHealthReader.cs",
+      "Sha256": "2C425EF5380692111709DE6FEF91129C49DC7566B8B5187C412B2A84E0325310"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IDiagnosticOperation.cs",
+      "Sha256": "BAEC1E3682D3B10F1F0FBA2E3EECB002C8E89C679CB4647B84CB20FB4F8F566D"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IDiagnosticRecordImporter.cs",
+      "Sha256": "D5E63D404C06BD0E035996117289686DB53B3FC8A635659543C66FE12AC37B1E"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IDiagnosticRecordReader.cs",
+      "Sha256": "671D8A25013A819000D4CD5CFD8ACC0E4A75F9EA9DB25F98695868EED4011384"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IDiagnosticsConfiguration.cs",
+      "Sha256": "B5ED6DEBB2C2CFF5103B8CF31071AF93F627E90A0C350874F7E44802E11A1125"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IDiagnosticTelemetry.cs",
+      "Sha256": "8265E6AEEB759B746A080D15E44D8E0813D66FD95FB4607B32A49DCD861BCBC0"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IEventsSource.cs",
+      "Sha256": "D426D3F54BE700B9DB578FFD2B2ACEECEF4685F051B5848FEDCCA39F5D513C34"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Diagnostics/IEventsSourceFactory.cs",
+      "Sha256": "7CE3EBFDD53A55C5C17E9B59316EE249EE101E250395E376A1F750396C363547"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Services/IServiceResolver.cs",
+      "Sha256": "44D6F067C1BD4373AF7AFB8AA0DBE0B9DA10CB45F2B5105943F50F78DA90E484"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Services/IServiceResolverBuilder.cs",
+      "Sha256": "D6D837D5C59FD0EDB8555AB78FFC53FA5844D6CC6353BA79B0919F72E5188712"
+    },
+    {
+      "Path": "TrueMoon.Contracts/Services/IServicesRegistrationContext.cs",
+      "Sha256": "CC44A3BAE5E52264B882BAD5041BCE709838B2CBA3FF7AE3A254BF65A79D6F8A"
+    }
+  ],
+  "Commands": [
+    {
+      "Name": "source-restore",
+      "Seconds": 0.5344572,
+      "ExitCode": 0,
+      "Arguments": [
+        "restore",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-consumer\\Probe.csproj",
+        "--configfile",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\NuGet.Config",
+        "--packages",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\packages",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-artifacts",
+        "-p:NuGetAudit=false",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112/source-restore-{}.binlog"
+      ]
+    },
+    {
+      "Name": "source-build-Debug",
+      "Seconds": 1.080705,
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-consumer\\Probe.csproj",
+        "--no-restore",
+        "-c",
+        "Debug",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-Debug",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112/source-build-Debug-{}.binlog"
+      ]
+    },
+    {
+      "Name": "source-Debug",
+      "Seconds": 0.9265724,
+      "ExitCode": 0,
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-Debug\\KtonProviderProbe.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-Debug.json"
+      ]
+    },
+    {
+      "Name": "pack-TrueMoon.Contracts",
+      "Seconds": 0.580726,
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Contracts\\TrueMoon.Contracts.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\feed",
+        "-p:Version=0.3.0.1-alpha.phys3.20261112155534",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112/pack-TrueMoon.Contracts-{}.binlog"
+      ]
+    },
+    {
+      "Name": "pack-TrueMoon.Kton",
+      "Seconds": 0.4764795,
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Kton\\TrueMoon.Kton.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\feed",
+        "-p:Version=0.3.0.1-alpha.phys3.20261112155534",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112/pack-TrueMoon.Kton-{}.binlog"
+      ]
+    },
+    {
+      "Name": "pack-TrueMoon.Kton.Bepu",
+      "Seconds": 0.6096942,
+      "ExitCode": 0,
+      "Arguments": [
+        "pack",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Kton.Bepu\\TrueMoon.Kton.Bepu.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\source-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\feed",
+        "-p:Version=0.3.0.1-alpha.phys3.20261112155534",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112/pack-TrueMoon.Kton.Bepu-{}.binlog"
+      ]
+    },
+    {
+      "Name": "package-restore",
+      "Seconds": 0.3901173,
+      "ExitCode": 0,
+      "Arguments": [
+        "restore",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-consumer\\Probe.csproj",
+        "--configfile",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\NuGet.Config",
+        "--packages",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\packages",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-artifacts",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112/package-restore-{}.binlog"
+      ]
+    },
+    {
+      "Name": "package-build-Debug",
+      "Seconds": 0.6132366,
+      "ExitCode": 0,
+      "Arguments": [
+        "build",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-consumer\\Probe.csproj",
+        "--no-restore",
+        "-c",
+        "Debug",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-Debug",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112/package-build-Debug-{}.binlog"
+      ]
+    },
+    {
+      "Name": "package-Debug",
+      "Seconds": 0.864136,
+      "ExitCode": 0,
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-Debug\\KtonProviderProbe.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-Debug.json"
+      ]
+    },
+    {
+      "Name": "package-publish-Release",
+      "Seconds": 0.4616114,
+      "ExitCode": 0,
+      "Arguments": [
+        "publish",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-consumer\\Probe.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "--self-contained",
+        "false",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-Release",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112/package-publish-Release-{}.binlog"
+      ]
+    },
+    {
+      "Name": "package-Release",
+      "Seconds": 0.9492053,
+      "ExitCode": 0,
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-Release\\KtonProviderProbe.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS3-release-20261112\\package-Release.json"
+      ]
+    }
+  ],
+  "Profiles": [
+    {
+      "Completed": true,
+      "Name": "source-Debug",
+      "Architecture": "X64",
+      "ReportSha256": "F8CCFDF9F487D9CDF15A051EC5261685FF2EF8329241FAE88ACDAFF274721C25",
+      "OS": "Microsoft Windows 10.0.26340",
+      "Metrics": {
+        "MeshPoolPlateau": {
+          "Waves": 20,
+          "MeshesPerWave": 16,
+          "SamplesBytes": [
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592
+          ],
+          "Boundary": "Sampled BEPU pool counters; not all managed/process memory."
+        },
+        "FastLinear60": {
+          "FirstPositionX": -0.11897472,
+          "MaximumPositionX": -0.11897472,
+          "Ticks": 61,
+          "Speed": 600,
+          "WallThickness": 0.04,
+          "SphereRadius": 0.1
+        },
+        "Cleanup": {
+          "ActiveResourceOwners": 0,
+          "PublishedWorlds": 0,
+          "PendingFailedCreationCleanup": false,
+          "CompletedCleanups": 66,
+          "MaximumSampledPoolBytes": 5029888,
+          "MaximumPoolBytesAfterCleanup": 0,
+          "PoolBudgetExceededOwners": 0
+        },
+        "Queries": {
+          "Calls": 1000,
+          "ManagedAllocationDeltaBytes": 0,
+          "PoolBytesBefore": 4194304,
+          "PoolBytesAfter": 4194304
+        },
+        "MeshQueries": {
+          "Triangles": 512,
+          "Calls": 2000,
+          "ManagedAllocationDeltaBytes": 0,
+          "PoolBytesBefore": 4194304,
+          "PoolBytesAfter": 4194304
+        },
+        "AutomaticSleepContacts": {
+          "Begins": 1,
+          "Ends": 0,
+          "Stays": 31,
+          "IsAwake": false,
+          "ActivePairs": 1
+        }
+      },
+      "Checks": 309,
+      "Failed": 0,
+      "ActualAssemblies": [
+        {
+          "Sha256": "F9A881A7F8B976BE1FAB287ED02A8EE1992568F4090DCD3D26D0129A7E61C967",
+          "References": [
+            "System.Collections",
+            "System.Numerics.Vectors",
+            "System.Runtime"
+          ],
+          "Name": "TrueMoon.Kton",
+          "InformationalVersion": "0.3.0.1-alpha+73df16229da1db54e1170ac0d56b9d385f91abd7"
+        },
+        {
+          "Sha256": "785989591CE7B08583FAA513DEA42CF831330E255ABC07DAD20E68413BDCF1F0",
+          "References": [
+            "BepuPhysics",
+            "BepuUtilities",
+            "System.Collections",
+            "System.Memory",
+            "System.Numerics.Vectors",
+            "System.Runtime",
+            "System.Threading",
+            "TrueMoon.Contracts",
+            "TrueMoon.Kton"
+          ],
+          "Name": "TrueMoon.Kton.Bepu",
+          "InformationalVersion": "0.3.0.1-alpha+73df16229da1db54e1170ac0d56b9d385f91abd7"
+        },
+        {
+          "Sha256": "85FC9260519B9609D1A8F97A702FAE528CE75FC7613FA503A4A8F08273991CF1",
+          "References": [
+            "System.Collections",
+            "System.ComponentModel",
+            "System.ComponentModel.TypeConverter",
+            "System.Diagnostics.DiagnosticSource",
+            "System.Linq",
+            "System.Memory",
+            "System.Runtime",
+            "System.Text.Json"
+          ],
+          "Name": "TrueMoon.Contracts",
+          "InformationalVersion": "0.3.0.1-alpha+73df16229da1db54e1170ac0d56b9d385f91abd7"
+        },
+        {
+          "Sha256": "5BBD07C09F058025049E741E136A4E7AB8A68AFE56F391F58072429F44262FBE",
+          "References": [
+            "BepuUtilities",
+            "System.Collections",
+            "System.Console",
+            "System.Memory",
+            "System.Numerics.Vectors",
+            "System.Runtime",
+            "System.Runtime.Intrinsics",
+            "System.Threading",
+            "System.Threading.Thread"
+          ],
+          "Name": "BepuPhysics",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b"
+        },
+        {
+          "Sha256": "4666356F52ED46FCE9707786CDA72CFB6BA6460F8BCD789D75CB816A744643F6",
+          "References": [
+            "System.Collections",
+            "System.Numerics.Vectors",
+            "System.Runtime",
+            "System.Runtime.InteropServices",
+            "System.Runtime.Intrinsics",
+            "System.Threading",
+            "System.Threading.Thread"
+          ],
+          "Name": "BepuUtilities",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b"
+        }
+      ],
+      "Runtime": ".NET 11.0.0"
+    },
+    {
+      "Completed": true,
+      "Name": "package-Debug",
+      "Architecture": "X64",
+      "ReportSha256": "7EEBB7CFC59278F84EF2BCED86BC421A0C4D697A3CB529FFD22EE267ECB6B130",
+      "OS": "Microsoft Windows 10.0.26340",
+      "Metrics": {
+        "MeshPoolPlateau": {
+          "Waves": 20,
+          "MeshesPerWave": 16,
+          "SamplesBytes": [
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592
+          ],
+          "Boundary": "Sampled BEPU pool counters; not all managed/process memory."
+        },
+        "FastLinear60": {
+          "FirstPositionX": -0.11897472,
+          "MaximumPositionX": -0.11897472,
+          "Ticks": 61,
+          "Speed": 600,
+          "WallThickness": 0.04,
+          "SphereRadius": 0.1
+        },
+        "Cleanup": {
+          "ActiveResourceOwners": 0,
+          "PublishedWorlds": 0,
+          "PendingFailedCreationCleanup": false,
+          "CompletedCleanups": 66,
+          "MaximumSampledPoolBytes": 5029888,
+          "MaximumPoolBytesAfterCleanup": 0,
+          "PoolBudgetExceededOwners": 0
+        },
+        "Queries": {
+          "Calls": 1000,
+          "ManagedAllocationDeltaBytes": 0,
+          "PoolBytesBefore": 4194304,
+          "PoolBytesAfter": 4194304
+        },
+        "MeshQueries": {
+          "Triangles": 512,
+          "Calls": 2000,
+          "ManagedAllocationDeltaBytes": 0,
+          "PoolBytesBefore": 4194304,
+          "PoolBytesAfter": 4194304
+        },
+        "AutomaticSleepContacts": {
+          "Begins": 1,
+          "Ends": 0,
+          "Stays": 31,
+          "IsAwake": false,
+          "ActivePairs": 1
+        }
+      },
+      "Checks": 309,
+      "Failed": 0,
+      "ActualAssemblies": [
+        {
+          "Sha256": "4E7CA7178B68E4B70529D14E4E94509EE09362B00582DE901D1CA2B520824E40",
+          "References": [
+            "System.Collections",
+            "System.Numerics.Vectors",
+            "System.Runtime"
+          ],
+          "Name": "TrueMoon.Kton",
+          "InformationalVersion": "0.3.0.1-alpha.phys3.20261112155534+73df16229da1db54e1170ac0d56b9d385f91abd7"
+        },
+        {
+          "Sha256": "B331A060F5EFAAA71EF4C615C5B6CB1E030A3FE7DAEB9ABEDC9C7F1BD25140C4",
+          "References": [
+            "BepuPhysics",
+            "BepuUtilities",
+            "System.Collections",
+            "System.Memory",
+            "System.Numerics.Vectors",
+            "System.Runtime",
+            "System.Threading",
+            "TrueMoon.Contracts",
+            "TrueMoon.Kton"
+          ],
+          "Name": "TrueMoon.Kton.Bepu",
+          "InformationalVersion": "0.3.0.1-alpha.phys3.20261112155534+73df16229da1db54e1170ac0d56b9d385f91abd7"
+        },
+        {
+          "Sha256": "1B315E2F705C7600E6EE0F76BA809F72E5019F2748131963545FCD9124268D42",
+          "References": [
+            "System.Collections",
+            "System.ComponentModel",
+            "System.ComponentModel.TypeConverter",
+            "System.Diagnostics.DiagnosticSource",
+            "System.Linq",
+            "System.Memory",
+            "System.Runtime",
+            "System.Text.Json"
+          ],
+          "Name": "TrueMoon.Contracts",
+          "InformationalVersion": "0.3.0.1-alpha.phys3.20261112155534+73df16229da1db54e1170ac0d56b9d385f91abd7"
+        },
+        {
+          "Sha256": "5BBD07C09F058025049E741E136A4E7AB8A68AFE56F391F58072429F44262FBE",
+          "References": [
+            "BepuUtilities",
+            "System.Collections",
+            "System.Console",
+            "System.Memory",
+            "System.Numerics.Vectors",
+            "System.Runtime",
+            "System.Runtime.Intrinsics",
+            "System.Threading",
+            "System.Threading.Thread"
+          ],
+          "Name": "BepuPhysics",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b"
+        },
+        {
+          "Sha256": "4666356F52ED46FCE9707786CDA72CFB6BA6460F8BCD789D75CB816A744643F6",
+          "References": [
+            "System.Collections",
+            "System.Numerics.Vectors",
+            "System.Runtime",
+            "System.Runtime.InteropServices",
+            "System.Runtime.Intrinsics",
+            "System.Threading",
+            "System.Threading.Thread"
+          ],
+          "Name": "BepuUtilities",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b"
+        }
+      ],
+      "Runtime": ".NET 11.0.0"
+    },
+    {
+      "Completed": true,
+      "Name": "package-Release",
+      "Architecture": "X64",
+      "ReportSha256": "B4CADCFCFFCF62D2DE44FE9BCE25F756EFD6F810E6138856E60E006595473085",
+      "OS": "Microsoft Windows 10.0.26340",
+      "Metrics": {
+        "MeshPoolPlateau": {
+          "Waves": 20,
+          "MeshesPerWave": 16,
+          "SamplesBytes": [
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592,
+            4718592
+          ],
+          "Boundary": "Sampled BEPU pool counters; not all managed/process memory."
+        },
+        "FastLinear60": {
+          "FirstPositionX": -0.11897472,
+          "MaximumPositionX": -0.11897472,
+          "Ticks": 61,
+          "Speed": 600,
+          "WallThickness": 0.04,
+          "SphereRadius": 0.1
+        },
+        "Cleanup": {
+          "ActiveResourceOwners": 0,
+          "PublishedWorlds": 0,
+          "PendingFailedCreationCleanup": false,
+          "CompletedCleanups": 66,
+          "MaximumSampledPoolBytes": 5029888,
+          "MaximumPoolBytesAfterCleanup": 0,
+          "PoolBudgetExceededOwners": 0
+        },
+        "Queries": {
+          "Calls": 1000,
+          "ManagedAllocationDeltaBytes": 0,
+          "PoolBytesBefore": 4194304,
+          "PoolBytesAfter": 4194304
+        },
+        "MeshQueries": {
+          "Triangles": 512,
+          "Calls": 2000,
+          "ManagedAllocationDeltaBytes": 0,
+          "PoolBytesBefore": 4194304,
+          "PoolBytesAfter": 4194304
+        },
+        "AutomaticSleepContacts": {
+          "Begins": 1,
+          "Ends": 0,
+          "Stays": 31,
+          "IsAwake": false,
+          "ActivePairs": 1
+        }
+      },
+      "Checks": 309,
+      "Failed": 0,
+      "ActualAssemblies": [
+        {
+          "Sha256": "4E7CA7178B68E4B70529D14E4E94509EE09362B00582DE901D1CA2B520824E40",
+          "References": [
+            "System.Collections",
+            "System.Numerics.Vectors",
+            "System.Runtime"
+          ],
+          "Name": "TrueMoon.Kton",
+          "InformationalVersion": "0.3.0.1-alpha.phys3.20261112155534+73df16229da1db54e1170ac0d56b9d385f91abd7"
+        },
+        {
+          "Sha256": "B331A060F5EFAAA71EF4C615C5B6CB1E030A3FE7DAEB9ABEDC9C7F1BD25140C4",
+          "References": [
+            "BepuPhysics",
+            "BepuUtilities",
+            "System.Collections",
+            "System.Memory",
+            "System.Numerics.Vectors",
+            "System.Runtime",
+            "System.Threading",
+            "TrueMoon.Contracts",
+            "TrueMoon.Kton"
+          ],
+          "Name": "TrueMoon.Kton.Bepu",
+          "InformationalVersion": "0.3.0.1-alpha.phys3.20261112155534+73df16229da1db54e1170ac0d56b9d385f91abd7"
+        },
+        {
+          "Sha256": "1B315E2F705C7600E6EE0F76BA809F72E5019F2748131963545FCD9124268D42",
+          "References": [
+            "System.Collections",
+            "System.ComponentModel",
+            "System.ComponentModel.TypeConverter",
+            "System.Diagnostics.DiagnosticSource",
+            "System.Linq",
+            "System.Memory",
+            "System.Runtime",
+            "System.Text.Json"
+          ],
+          "Name": "TrueMoon.Contracts",
+          "InformationalVersion": "0.3.0.1-alpha.phys3.20261112155534+73df16229da1db54e1170ac0d56b9d385f91abd7"
+        },
+        {
+          "Sha256": "5BBD07C09F058025049E741E136A4E7AB8A68AFE56F391F58072429F44262FBE",
+          "References": [
+            "BepuUtilities",
+            "System.Collections",
+            "System.Console",
+            "System.Memory",
+            "System.Numerics.Vectors",
+            "System.Runtime",
+            "System.Runtime.Intrinsics",
+            "System.Threading",
+            "System.Threading.Thread"
+          ],
+          "Name": "BepuPhysics",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b"
+        },
+        {
+          "Sha256": "4666356F52ED46FCE9707786CDA72CFB6BA6460F8BCD789D75CB816A744643F6",
+          "References": [
+            "System.Collections",
+            "System.Numerics.Vectors",
+            "System.Runtime",
+            "System.Runtime.InteropServices",
+            "System.Runtime.Intrinsics",
+            "System.Threading",
+            "System.Threading.Thread"
+          ],
+          "Name": "BepuUtilities",
+          "InformationalVersion": "2.5.0-beta.33+29ed466870534c413aba9eeccd813cf15d135d0b"
+        }
+      ],
+      "Runtime": ".NET 11.0.0"
+    }
+  ],
+  "OutcomeCatalog": [
+    {
+      "Name": "invalid-options-before-resources",
+      "Passed": true,
+      "Actual": {
+        "Code": 7,
+        "Field": "Quality",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "invalid-creation-no-owner",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 0,
+        "MaximumSampledPoolBytes": 0,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "independent-world-incarnations",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "explicit-phys3-capabilities",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "gravity-first-world",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "second-world-not-integrated-by-first",
+      "Passed": true,
+      "Actual": {
+        "actual": 10,
+        "expected": 10,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "foreign-live-body",
+      "Passed": true,
+      "Actual": {
+        "Code": 3,
+        "Field": "Id.World",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "default-body",
+      "Passed": true,
+      "Actual": {
+        "Code": 2,
+        "Field": "Id",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "removed-body-is-stale",
+      "Passed": true,
+      "Actual": {
+        "Code": 4,
+        "Field": "Id.Generation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "body-slot-reused-with-new-generation",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "reused-body-does-not-revive-old-id",
+      "Passed": true,
+      "Actual": {
+        "Code": 4,
+        "Field": "Id.Generation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "query-empty-world-region",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "no-contacts-empty-snapshot",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "two-world-resources-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 2,
+        "MaximumSampledPoolBytes": 4751360,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "factory-does-not-dispose-caller-world",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "closed-factory-rejects-create",
+      "Passed": true,
+      "Actual": {
+        "Code": 10,
+        "Field": "Factory",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "caller-dispose-idempotent",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 3,
+        "MaximumSampledPoolBytes": 4751360,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "disposed-world-rejects-step",
+      "Passed": true,
+      "Actual": {
+        "Code": 10,
+        "Field": "World.State",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "impulse-mass",
+      "Passed": true,
+      "Actual": {
+        "actual": 2,
+        "expected": 2,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "whole-batch-rejects-invalid-later-command",
+      "Passed": true,
+      "Actual": {
+        "Code": 4,
+        "Field": "Id.Generation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "rejected-batch-no-prefix-mutation",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "projected-impulse-speed-rejected",
+      "Passed": true,
+      "Actual": {
+        "Code": 1,
+        "Field": "Body.MotionEnvelope",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "bad-impulse-no-mutation",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "force-integrated-once-per-fixed-step",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.9999997,
+        "expected": 1,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "sleep-clears-pending-force",
+      "Passed": true,
+      "Actual": {
+        "actual": 0,
+        "expected": 0,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "cancel-before-step",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cancel-keeps-ready-tick",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cancel-retains-force-for-one-retry",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.016666668,
+        "expected": 0.016666668,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "repeat-tick-rejected",
+      "Passed": true,
+      "Actual": {
+        "Code": 14,
+        "Field": "Tick",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "skipped-tick-rejected",
+      "Passed": true,
+      "Actual": {
+        "Code": 14,
+        "Field": "Tick",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "teleport-updates-pose",
+      "Passed": true,
+      "Actual": {
+        "actual": 5,
+        "expected": 5,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "teleport-preserves-velocity",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.016666668,
+        "expected": 0.016666668,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "kinematic-motion",
+      "Passed": true,
+      "Actual": {
+        "actual": 22.999954,
+        "expected": 23,
+        "tolerance": 0.001
+      }
+    },
+    {
+      "Name": "kinematic-force-rejected",
+      "Passed": true,
+      "Actual": {
+        "Code": 1,
+        "Field": "Command.BodyMode",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "command-budget-cumulative",
+      "Passed": true,
+      "Actual": {
+        "Code": 5,
+        "Field": "Commands",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "step-resets-command-budget",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "command-worlds-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 2,
+        "MaximumSampledPoolBytes": 4767744,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "shape-in-use",
+      "Passed": true,
+      "Actual": {
+        "Code": 8,
+        "Field": "Shape.Bodies",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "dynamic-mesh-rejected",
+      "Passed": true,
+      "Actual": {
+        "Code": 6,
+        "Field": "Body.Shape",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "captured-mesh-box-rest",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.4999832,
+        "expected": 0.5,
+        "tolerance": 0.04
+      }
+    },
+    {
+      "Name": "capsule-full-cylinder-rest",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.9999828,
+        "expected": 1,
+        "tolerance": 0.06
+      }
+    },
+    {
+      "Name": "resting-box-sleeps",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "impulse-wakes-sleeper",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shared-shape-remains-live",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "removed-shape-is-stale",
+      "Passed": true,
+      "Actual": {
+        "Code": 4,
+        "Field": "Id.Generation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "shape-generation-reused",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "static-teleport",
+      "Passed": true,
+      "Actual": {
+        "actual": -2,
+        "expected": -2,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "body-in-use-by-joint",
+      "Passed": true,
+      "Actual": {
+        "Code": 8,
+        "Field": "Body.Joints",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "ball-socket-anchor-error",
+      "Passed": true,
+      "Actual": 0.00027945553
+    },
+    {
+      "Name": "removed-joint-is-stale",
+      "Passed": true,
+      "Actual": {
+        "Code": 4,
+        "Field": "Id.Generation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "connected-collision-disabled",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.5,
+        "expected": 0.5,
+        "tolerance": 0.01
+      }
+    },
+    {
+      "Name": "duplicate-joint-retains-pair-filter",
+      "Passed": true,
+      "Actual": {
+        "actual": 0.5,
+        "expected": 0.5,
+        "tolerance": 0.01
+      }
+    },
+    {
+      "Name": "last-joint-removal-restores-collision",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "symmetric-mask-no-response",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sensor-no-response",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "mixed-friction-min-zero-retains-speed",
+      "Passed": true,
+      "Actual": {
+        "actual": 5,
+        "expected": 5,
+        "tolerance": 0.01
+      }
+    },
+    {
+      "Name": "nonzero-friction-slows-body",
+      "Passed": true,
+      "Actual": -9.701965E-10
+    },
+    {
+      "Name": "geometry-joints-filters-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 7,
+        "MaximumSampledPoolBytes": 5160960,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "body-limit-includes-statics",
+      "Passed": true,
+      "Actual": {
+        "Code": 5,
+        "Field": "Bodies",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "shape-limit-before-allocation",
+      "Passed": true,
+      "Actual": {
+        "Code": 5,
+        "Field": "Shapes",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "capacity-rejection-preserves-live-counts",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "static-dynamic-share-generational-storage",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "live-mass-ratio-before-body-publication",
+      "Passed": true,
+      "Actual": {
+        "Code": 1,
+        "Field": "Body.MassRatio",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "mass-ratio-reject-keeps-body-count",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "removed-mass-no-longer-constrains-ratio",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "last-generation-body-issued",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "exhausted-body-slot-retired",
+      "Passed": true,
+      "Actual": {
+        "Code": 5,
+        "Field": "Bodies",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "retired-body-id-stale",
+      "Passed": true,
+      "Actual": {
+        "Code": 4,
+        "Field": "Id.Generation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "exhausted-shape-slot-retired",
+      "Passed": true,
+      "Actual": {
+        "Code": 5,
+        "Field": "Shapes",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "joint-capacity-before-add",
+      "Passed": true,
+      "Actual": {
+        "Code": 5,
+        "Field": "Joints",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "exhausted-joint-slot-retired",
+      "Passed": true,
+      "Actual": {
+        "Code": 5,
+        "Field": "Joints",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "capacity-retirement-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 4,
+        "MaximumSampledPoolBytes": 4325376,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "pool-budget-is-observable-not-hard-cap",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "diagnostic-overrun-world-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 4718592,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 1
+      }
+    },
+    {
+      "Name": "failed-creation-PoolCreated",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "Factory.Creation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "failed-creation-PoolCreated-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 0,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "failed-creation-DispatcherCreated",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "Factory.Creation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "failed-creation-DispatcherCreated-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 0,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "failed-creation-SimulationCreated",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "Factory.Creation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "failed-creation-SimulationCreated-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 3801088,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "failed-creation-retains-cleanup-owner",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "Factory.CreationCleanup",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "failed-creation-owner-observable",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 1,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": true,
+        "CompletedCleanups": 0,
+        "MaximumSampledPoolBytes": 3801088,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "pending-cleanup-blocks-next-create",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "Factory.PendingCleanup",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "failed-creation-cleanup-retry",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 3801088,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "cleanup-failure-BeforeSimulationDispose",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "World.Cleanup",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "cleanup-failure-BeforeSimulationDispose-retains-owner",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-failure-BeforeSimulationDispose-blocks-step",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "World.State",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "cleanup-retry-BeforeSimulationDispose-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 4751360,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "cleanup-failure-BeforeDispatcherDispose",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "World.Cleanup",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "cleanup-failure-BeforeDispatcherDispose-retains-owner",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-failure-BeforeDispatcherDispose-blocks-step",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "World.State",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "cleanup-retry-BeforeDispatcherDispose-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 4751360,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "cleanup-failure-BeforePoolClear",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "World.Cleanup",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "cleanup-failure-BeforePoolClear-retains-owner",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cleanup-failure-BeforePoolClear-blocks-step",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "World.State",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "cleanup-retry-BeforePoolClear-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 4751360,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "unexpected-command-commit-fault",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "ApplyCommands",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "partial-command-not-rolled-back",
+      "Passed": true,
+      "Actual": {
+        "actual": 2,
+        "expected": 2,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "partial-command-faulted-no-tick",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "faulted-world-blocks-read",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "World.State",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "faulted-world-blocks-step",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "World.State",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "partial-command-fault-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 3801088,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "callback-error-reported-after-join",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "Step",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "callback-error-does-not-publish-tick",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "callback-fault-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 4767744,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "post-integration-envelope-faults",
+      "Passed": true,
+      "Actual": {
+        "Code": 11,
+        "Field": "Step",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "no-clamp-or-false-published-tick",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "integration-envelope-fault-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 4751360,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "cancel-after-begin-finishes-step",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "concurrent-read-busy",
+      "Passed": true,
+      "Actual": {
+        "Code": 9,
+        "Field": "World",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "concurrent-dispose-busy",
+      "Passed": true,
+      "Actual": {
+        "Code": 9,
+        "Field": "World",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "stepping-state-observable",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "busy-call-does-not-abort-owner-step",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cancel-busy-world-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 4751360,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "live-world-mesh-create-destroy-pool-plateau",
+      "Passed": true,
+      "Actual": [
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592,
+        4718592
+      ]
+    },
+    {
+      "Name": "live-world-mesh-create-destroy-empty-stores",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "live-world-mesh-cycles-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 1,
+        "MaximumSampledPoolBytes": 4718592,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-0",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 2,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-1",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 3,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-2",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 4,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-3",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 5,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-4",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 6,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-5",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 7,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-6",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 8,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-7",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 9,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-8",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 10,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-9",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 11,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-10",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 12,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-11",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 13,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-12",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 14,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-13",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 15,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-14",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 16,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-15",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 17,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-16",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 18,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-17",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 19,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-18",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 20,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-19",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 21,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-20",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 22,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-21",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 23,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-22",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 24,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-23",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 25,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-24",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 26,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-25",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 27,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-26",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 28,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-27",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 29,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-28",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 30,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-29",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 31,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-30",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 32,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-31",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 33,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-32",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 34,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-33",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 35,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-34",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 36,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-35",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 37,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-36",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 38,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-37",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 39,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-38",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 40,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-39",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 41,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-40",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 42,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-41",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 43,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-42",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 44,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-43",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 45,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-44",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 46,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-45",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 47,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-46",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 48,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-47",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 49,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-48",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 50,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-49",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 51,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-50",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 52,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-51",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 53,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-52",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 54,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-53",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 55,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-54",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 56,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-55",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 57,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-56",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 58,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-57",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 59,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-58",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 60,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-59",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 61,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-60",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 62,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-61",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 63,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-62",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 64,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "create-delete-dispose-cycle-63",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 65,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "fast-linear-profile-first-impact",
+      "Passed": true,
+      "Actual": {
+        "actual": -0.11897472,
+        "expected": -0.12,
+        "tolerance": 0.005
+      }
+    },
+    {
+      "Name": "fast-linear-profile-never-crosses-wall",
+      "Passed": true,
+      "Actual": -0.11897472
+    },
+    {
+      "Name": "final-factory-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 66,
+        "MaximumSampledPoolBytes": 5029888,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "ray-nearest",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "ray-distance-metres",
+      "Passed": true,
+      "Actual": {
+        "actual": 4,
+        "expected": 4,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "ray-sorted-independent-of-body-order",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "query-output-tail-untouched",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "nearest-prefix-and-truncation",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "empty-output-observes-existing-hits",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "ray-miss-empty-output",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "ray-start-inside-convex",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "convex-sweep-hits-both",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "convex-sweep-distance",
+      "Passed": true,
+      "Actual": {
+        "actual": 3.5,
+        "expected": 3.5,
+        "tolerance": 0.001
+      }
+    },
+    {
+      "Name": "sweep-initial-overlap",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "exact-overlap",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "overlap-rejects-aabb-corner",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "live-body-query-exclusion",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "stale-query-exclusion-after-reuse",
+      "Passed": true,
+      "Actual": {
+        "Code": 4,
+        "Field": "Id.Generation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "query-returns-new-generation",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "foreign-query-exclusion",
+      "Passed": true,
+      "Actual": {
+        "Code": 3,
+        "Field": "Body.World",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "query-validation-error-leaves-output-untouched",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "scratch-budget-explicit-error",
+      "Passed": true,
+      "Actual": {
+        "Code": 13,
+        "Field": "Query.Scratch",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "scratch-error-no-output-or-world-mutation",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-sweep-0-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-distance-0-0",
+      "Passed": true,
+      "Actual": {
+        "actual": 4,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "shape-pair-overlap-0-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-distance-bounded-0-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-sweep-1-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-distance-1-0",
+      "Passed": true,
+      "Actual": {
+        "actual": 4,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "shape-pair-overlap-1-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-distance-bounded-1-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-sweep-2-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-distance-2-0",
+      "Passed": true,
+      "Actual": {
+        "actual": 4,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "shape-pair-overlap-2-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-distance-bounded-2-0",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-sweep-0-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-distance-0-1",
+      "Passed": true,
+      "Actual": {
+        "actual": 4,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "shape-pair-overlap-0-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-distance-bounded-0-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-sweep-1-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-distance-1-1",
+      "Passed": true,
+      "Actual": {
+        "actual": 3.9996839,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "shape-pair-overlap-1-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-distance-bounded-1-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-sweep-2-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-distance-2-1",
+      "Passed": true,
+      "Actual": {
+        "actual": 4.000001,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "shape-pair-overlap-2-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-distance-bounded-2-1",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-sweep-0-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-distance-0-2",
+      "Passed": true,
+      "Actual": {
+        "actual": 4,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "shape-pair-overlap-0-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-distance-bounded-0-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-sweep-1-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-distance-1-2",
+      "Passed": true,
+      "Actual": {
+        "actual": 4.000001,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "shape-pair-overlap-1-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-distance-bounded-1-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-sweep-2-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "shape-pair-distance-2-2",
+      "Passed": true,
+      "Actual": {
+        "actual": 4,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "shape-pair-overlap-2-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sweep-distance-bounded-2-2",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "rotated-convex-ray",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "rotated-box-full-extents",
+      "Passed": true,
+      "Actual": {
+        "actual": 4,
+        "expected": 4,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "rotated-capsule-sweep",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "rotated-capsule-axis-convention",
+      "Passed": true,
+      "Actual": {
+        "actual": 3.75,
+        "expected": 3.75,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "mesh-ray-front-triangle",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "mesh-ray-translated-pose",
+      "Passed": true,
+      "Actual": {
+        "actual": 3,
+        "expected": 3,
+        "tolerance": 0.0001
+      }
+    },
+    {
+      "Name": "mesh-ray-backface-cull",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "mesh-shared-edge-subshape-ties",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "mesh-sweep-triangle-identity",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "mesh-sweep-distance",
+      "Passed": true,
+      "Actual": {
+        "actual": 2.75,
+        "expected": 2.75,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "mesh-sweep-backface-cull",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "mesh-front-overlap",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "mesh-back-overlap-cull",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "rotated-mesh-ray",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "rotated-mesh-distance",
+      "Passed": true,
+      "Actual": {
+        "actual": 5,
+        "expected": 5,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "mesh-cannot-be-query-shape",
+      "Passed": true,
+      "Actual": {
+        "Code": 6,
+        "Field": "Query.Shape",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "equal-distance-tie-body-slot",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "query-sensor-filter",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "query-layer-independent-of-body-mask",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "query-layer-zero-mask",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "max-hits-ceiling-with-large-output",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "overlap-truncation-identity-order",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "stale-query-shape",
+      "Passed": true,
+      "Actual": {
+        "Code": 4,
+        "Field": "Id.Generation",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "repeated-query-pools-do-not-grow",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "repeated-query-managed-allocation-bounded",
+      "Passed": true,
+      "Actual": 0
+    },
+    {
+      "Name": "bvh-stack-included-in-scratch-reservation",
+      "Passed": true,
+      "Actual": {
+        "Code": 13,
+        "Field": "Query.BvhScratch",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "bvh-reservation-error-before-output",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "filtered-mesh-does-not-reserve-bvh-stack",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "bvh-many-triangles-ray-identity",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "bvh-many-triangles-sweep",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "bvh-many-triangles-sweep-distance",
+      "Passed": true,
+      "Actual": {
+        "actual": 4.75,
+        "expected": 4.75,
+        "tolerance": 0.002
+      }
+    },
+    {
+      "Name": "bvh-repeated-query-pool-plateau",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "bvh-repeated-query-allocation-bounded",
+      "Passed": true,
+      "Actual": 0
+    },
+    {
+      "Name": "query-worlds-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 17,
+        "MaximumSampledPoolBytes": 4194304,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "contact-begin",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "canonical-contact-normal",
+      "Passed": true,
+      "Actual": {
+        "Tick": 1,
+        "Kind": 0,
+        "BodyA": {
+          "World": {
+            "Value": "58cb2ebe-ad05-424d-86a4-68961b278ff8",
+            "IsValid": true
+          },
+          "Slot": 0,
+          "Generation": 1,
+          "IsValid": true
+        },
+        "BodyB": {
+          "World": {
+            "Value": "58cb2ebe-ad05-424d-86a4-68961b278ff8",
+            "IsValid": true
+          },
+          "Slot": 1,
+          "Generation": 1,
+          "IsValid": true
+        },
+        "SubshapeA": -1,
+        "SubshapeB": -1,
+        "IsSensor": false,
+        "HasContact": true,
+        "Point": {},
+        "Normal": {},
+        "Depth": 0.09999998,
+        "EndReason": 0
+      }
+    },
+    {
+      "Name": "contact-output-must-fit-whole-snapshot",
+      "Passed": true,
+      "Actual": {
+        "Code": 5,
+        "Field": "Contacts.Output",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "contact-copy-repeatable-owned",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "contact-stay",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sleep-retains-pair-without-stay",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "wake-resumes-stay",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "teleport-end-old-pair",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "owned-old-begin-survives-next-step",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "teleport-back-new-begin",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "delete-reuse-publishes-old-end-new-begin",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "callback-overflow-faults-with-explicit-code",
+      "Passed": true,
+      "Actual": {
+        "Code": 12,
+        "Field": "Contacts.CallbackSamples",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "overflow-does-not-publish-partial-tick",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "contact-overflow-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 2,
+        "MaximumSampledPoolBytes": 4767744,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "pending-end-cancel",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "cancel-keeps-published-snapshot-and-pending-end",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "pending-end-published-on-retry",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "automatic-sleep-retains-contact-identity",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "automatic-sleep-wake-stay",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sensor-begin-without-solver-response",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "physical-separation-end",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "delete-support-while-sleeping-retains-old-ids",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "same-pair-teleport-end-before-new-begin",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "repeated-teleport-does-not-duplicate-pending-end",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "end-plus-begin-event-overflow",
+      "Passed": true,
+      "Actual": {
+        "Code": 12,
+        "Field": "Contacts.Events",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "event-overflow-keeps-last-completed-tick",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "event-overflow-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 8,
+        "MaximumSampledPoolBytes": 4767744,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "sleeping-cache-plus-new-pair-overflow",
+      "Passed": true,
+      "Actual": {
+        "Code": 12,
+        "Field": "Contacts.SleepingPairs",
+        "IsFailure": true
+      }
+    },
+    {
+      "Name": "sleeping-cache-overflow-keeps-completed-tick",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "sleeping-cache-overflow-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 9,
+        "MaximumSampledPoolBytes": 4767744,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    },
+    {
+      "Name": "contact-filter-applies-before-sensor-events",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "speculative-only-contact-does-not-begin",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "mesh-contact-child-generation-identity",
+      "Passed": true,
+      "Actual": null
+    },
+    {
+      "Name": "mesh-contact-parent-world-point-normal",
+      "Passed": true,
+      "Actual": {
+        "Tick": 1,
+        "Kind": 0,
+        "BodyA": {
+          "World": {
+            "Value": "a221a641-3dd7-4fb4-bfe6-e5c7b447ea7b",
+            "IsValid": true
+          },
+          "Slot": 0,
+          "Generation": 1,
+          "IsValid": true
+        },
+        "BodyB": {
+          "World": {
+            "Value": "a221a641-3dd7-4fb4-bfe6-e5c7b447ea7b",
+            "IsValid": true
+          },
+          "Slot": 1,
+          "Generation": 1,
+          "IsValid": true
+        },
+        "SubshapeA": 0,
+        "SubshapeB": -1,
+        "IsSensor": false,
+        "HasContact": true,
+        "Point": {},
+        "Normal": {},
+        "Depth": 0.1000001,
+        "EndReason": 0
+      }
+    },
+    {
+      "Name": "contact-worlds-clean",
+      "Passed": true,
+      "Actual": {
+        "ActiveResourceOwners": 0,
+        "PublishedWorlds": 0,
+        "PendingFailedCreationCleanup": false,
+        "CompletedCleanups": 12,
+        "MaximumSampledPoolBytes": 4767744,
+        "MaximumPoolBytesAfterCleanup": 0,
+        "PoolBudgetExceededOwners": 0
+      }
+    }
+  ],
+  "OutcomeCatalogScope": "Same 309 named successful checks in all three profiles; actual values catalog below is source Debug. Raw report hashes and each actual assembly SHA retained.",
+  "CurrentNeutralRegression": {
+    "Completed": true,
+    "SourceInputs": [
+      {
+        "Path": "ManualTests/KtonContracts/Probe.csproj",
+        "Sha256": "0D519B68ED9E7107C695685B6D4B80AA00CA4E8E5592F7E294BD6045DB869E34"
+      },
+      {
+        "Path": "ManualTests/KtonContracts/Program.cs",
+        "Sha256": "CC77C81A96D78AEDCF671F0634DBC554180ADD82C85017C03B52CD6C7FC8A804"
+      },
+      {
+        "Path": "ManualTests/KtonContracts/README.md",
+        "Sha256": "796CCD57A9C0C5F1CE26812A0C9D134671710C35FE6BF8B4897161E46C0FA110"
+      },
+      {
+        "Path": "ManualTests/KtonContracts/Verify.ps1",
+        "Sha256": "AB6CFEF022F78B52EA51511513BD64991E66CCE6E3C09C593A1FCD3A528A2FE7"
+      },
+      {
+        "Path": "TrueMoon.Kton/IPhysicsWorld.cs",
+        "Sha256": "978D0264078BF454DC3736D09F31DFD6E4B3B0403894C69CBDED5A4D20833444"
+      },
+      {
+        "Path": "TrueMoon.Kton/PACKAGE.md",
+        "Sha256": "0720C6C4F0D99D301E4605FD8023680C6F0A4F182A5CACB6DB3E83EF3E4149FE"
+      },
+      {
+        "Path": "TrueMoon.Kton/PhysicsError.cs",
+        "Sha256": "3242F54CE6FF86828A3CB713FDF548017F01F59E8ABC3AB49FBE88EA106823F9"
+      },
+      {
+        "Path": "TrueMoon.Kton/PhysicsIdentity.cs",
+        "Sha256": "FAF128469C8CC48F168D2689C57656C9BEA449750F5956F7571B1AC9D2B15C6C"
+      },
+      {
+        "Path": "TrueMoon.Kton/PhysicsLimits.cs",
+        "Sha256": "1BEABB229667239AC010037D7C733D1BADDB53B7AA00C7C1C8747B3A26F6212D"
+      },
+      {
+        "Path": "TrueMoon.Kton/PhysicsPose.cs",
+        "Sha256": "67D871C6E6C66AC984286B75E81CC8A4F12E50F6D895A1F413A7FEEF11AF0AAD"
+      },
+      {
+        "Path": "TrueMoon.Kton/PhysicsQualityProfile.cs",
+        "Sha256": "F111685C9A5E3141447BE3E62C337630848DBA1F198EA7F0298EC38FCFDC9861"
+      },
+      {
+        "Path": "TrueMoon.Kton/PhysicsValidation.cs",
+        "Sha256": "EDF0105A385DAAE7A174F04A30DE3E7ECF97897983797B18F08105955819621B"
+      },
+      {
+        "Path": "TrueMoon.Kton/PhysicsWorldCapabilities.cs",
+        "Sha256": "F2FD34284DE94F370DAE7F9BF3055B28E823FCCA8AEEE04503A5A4CA3432C532"
+      },
+      {
+        "Path": "TrueMoon.Kton/PhysicsWorldId.cs",
+        "Sha256": "710687354E3EF893EEB62D9D4B889B3B8597669E902F993E6AC9F1ECEE1EF1BD"
+      },
+      {
+        "Path": "TrueMoon.Kton/PhysicsWorldOptions.cs",
+        "Sha256": "9C11CE82765C6A80F6CC31F0999C6A8772288D8C2B6813DA004845FDF443CDC1"
+      },
+      {
+        "Path": "TrueMoon.Kton/TrueMoon.Kton.csproj",
+        "Sha256": "D76707803E1C2EA30AA97354A236343D1929567051F332B09ADCE7771B6990FA"
+      },
+      {
+        "Path": "TrueMoon.Kton/Bodies/PhysicsBodyCommand.cs",
+        "Sha256": "EFFCAC8FCE070AFB2E52A180E5457104A7F84FB31CA9EA19FB25DFE99556B803"
+      },
+      {
+        "Path": "TrueMoon.Kton/Bodies/PhysicsBodyDescription.cs",
+        "Sha256": "30C3DE44EA80020BEF96F38130B537FBFF7B2D3D844B6FB6B34B8665B451BC38"
+      },
+      {
+        "Path": "TrueMoon.Kton/Bodies/PhysicsBodyId.cs",
+        "Sha256": "836D3E632EFC1BDE9821F1FD8A77447FE670F0674D7BA2F065C8B38E8AF21021"
+      },
+      {
+        "Path": "TrueMoon.Kton/Contacts/PhysicsContactEvent.cs",
+        "Sha256": "C3956761982CEAE6707C150EFDC8AA4314B0921AD142ACB67743103A3DBCA822"
+      },
+      {
+        "Path": "TrueMoon.Kton/Joints/PhysicsBallSocket.cs",
+        "Sha256": "71A9A4D556134A69A1F46A119773F507D41B473663FCE475E67D06B9F0018A70"
+      },
+      {
+        "Path": "TrueMoon.Kton/Joints/PhysicsJointId.cs",
+        "Sha256": "35DD5DAA686F7D6D63CB418E0D2E12872147B117BC405515AEC20A3096660AC5"
+      },
+      {
+        "Path": "TrueMoon.Kton/Queries/PhysicsQuery.cs",
+        "Sha256": "BC4C527ABC0BC9683F253388838C6B36244FF15C152E1B7FC29661B42C0BC780"
+      },
+      {
+        "Path": "TrueMoon.Kton/Shapes/PhysicsShapeDefinition.cs",
+        "Sha256": "C2D68F22EA00D4814C36BD0B7C3C516930A478DD337C669E0218D03785F4D523"
+      },
+      {
+        "Path": "TrueMoon.Kton/Shapes/PhysicsShapeId.cs",
+        "Sha256": "A739117491728DA8BB485F5EAE4B0AAB08A8F2459EDCD603119DF45401EBDAC0"
+      }
+    ],
+    "VerificationSha256": "DC0B44400D5FB979BD602D25CFC808D308EAFD6F8929EE9D38C7C4B69F4C894F",
+    "RawDirectory": "TestResults/KtonPHYS3-contracts-20261112",
+    "Reports": [
+      {
+        "AssemblyReferences": [
+          "System.Collections",
+          "System.Numerics.Vectors",
+          "System.Runtime"
+        ],
+        "Name": "source-Debug",
+        "Checks": 131,
+        "ReportSha256": "6FD5DC1ED17261694145AB9FCC1BBF8578D29020FF80C8DA190A6C22CFC07F55",
+        "ActualDllSha256": "226588B72ED827E4BCB07CA6C013B0F2ADBFF5B8964C933442743078A48EF2A9",
+        "WorldUsageExecuted": false
+      },
+      {
+        "AssemblyReferences": [
+          "System.Collections",
+          "System.Numerics.Vectors",
+          "System.Runtime"
+        ],
+        "Name": "package-Debug",
+        "Checks": 131,
+        "ReportSha256": "5E1ADA742EB12C23468E524C83920CEC87ED34C873B0896A2880816BAEA9B49D",
+        "ActualDllSha256": "C2763AD0D4B3029DD167D98C02FAEFA213861FBEBE2CE6E5218019AC42842331",
+        "WorldUsageExecuted": false
+      },
+      {
+        "AssemblyReferences": [
+          "System.Collections",
+          "System.Numerics.Vectors",
+          "System.Runtime"
+        ],
+        "Name": "package-Release",
+        "Checks": 131,
+        "ReportSha256": "7531CD7613CECD8C470F3A78082609946AADA90C54BFDAD0359F34423FCB3512",
+        "ActualDllSha256": "C2763AD0D4B3029DD167D98C02FAEFA213861FBEBE2CE6E5218019AC42842331",
+        "WorldUsageExecuted": false
+      }
+    ]
+  },
+  "BuildWarnings": {
+    "Errors": 0,
+    "KtonProviderWarnings": 0,
+    "ExistingContractsWarnings": 167,
+    "TotalWarnings": 167,
+    "Scope": "Targeted source Debug build; no full solution build/suite claimed."
+  },
+  "ApiDelta": {
+    "Force": "Queued F*dt for next step; SetVelocity preserves pending force, Sleep clears it.",
+    "Capabilities": "IPhysicsWorld.Capabilities reports RigidBodySimulation, Queries and ContactEvents; public signatures unchanged. Event capacity is per-buffer; query scratch includes collector and conservative BVH traversal payload.",
+    "Factory": "Existing IFactory<IPhysicsWorld,PhysicsWorldOptions>; caller owns successful worlds. Factory retains only failed creation resource owner for cleanup retry."
+  },
+  "ProofBoundaries": [
+    "Fault injection is bounded stage/commit/callback instrumentation, not arbitrary BEPU.Dispose partial failure, unsafe heap corruption or process crash.",
+    "Generation uint.MaxValue seed exercises the real allocator retirement without billions of iterations.",
+    "One worker callback fault does not prove multi-worker exception and ownership matrix.",
+    "Pool counters and live-world plateau are not proof of all process/GC leaks or hard total RAM caps.",
+    "FastLinear60 evidence is the sphere0.1/speed600/wall0.04 fixture, not angular or arbitrary-scene CCD.",
+    "App/Cobalt/configuration/ECS, other OS/AOT/2+workers, remote publish and full solution/native GPU/release acceptance were not run."
+  ],
+  "Documentation": "docs/physics/QUERIES_CONTACTS.md",
+  "History": "docs/physics/HISTORY.md#phys3-2026-11-12",
+  "QueryPolicy": {
+    "Collector": "Bounded nearest sorted prefix; tail untouched; explicit truncation; primitive body scan bounded MaxBodies, mesh BVH candidates exact-tested.",
+    "MeshBackface": "Start query COM on front side required for sweep/overlap; clockwise winding, no closed-volume mesh inside.",
+    "Scratch": "Resident collector payload + conservative maximum native BVH stack reserve among included meshes; n<=256:1024, otherwise1024+6*nextPowerOfTwo(n). Excludes fixed ABI locals/headers/retained allocator blocks."
+  },
+  "ContactPolicy": {
+    "Identity": "Full World/Slot/Generation body IDs + subshapes; A/B canonical; normal A-to-B.",
+    "Transitions": "Physical Begin/awake Stay/sleep identity retention; delete/teleport End old IDs; same-pair End before new Begin; cancellation retains pending Ends.",
+    "Capacity": "Each raw sample, active/current cache, pending End, working/published buffer is bounded by MaxContactEvents.",
+    "Overflow": "Raw/cache/final event overflow => ContactOverflow/Faulted, no successful partial tick/snapshot."
+  },
+  "PinnedTraversalSources": [
+    {
+      "File": "Tree_RayCast.cs",
+      "Sha256": "741FFF1818D9EAF95A713AC9EC2192B14235E2DFE80D0A7F0068F7DD3D2EDE66",
+      "Url": "https://github.com/bepu/bepuphysics2/blob/29ed466870534c413aba9eeccd813cf15d135d0b/BepuPhysics/Trees/Tree_RayCast.cs"
+    },
+    {
+      "File": "Tree_VolumeQuery.cs",
+      "Sha256": "59CAD93DDA21BBCA310B6413F91C64A6B3C5452B996E529F8D4CD4B3F379820E",
+      "Url": "https://github.com/bepu/bepuphysics2/blob/29ed466870534c413aba9eeccd813cf15d135d0b/BepuPhysics/Trees/Tree_VolumeQuery.cs"
+    }
+  ]
+}

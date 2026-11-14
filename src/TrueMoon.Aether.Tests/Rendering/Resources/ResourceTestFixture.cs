@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
 using System.Numerics;
-using TrueMoon.Aether.Rendering;
-using TrueMoon.Aether.Rendering.Resources;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Runtime.Rendering;
+using TrueMoon.Aether.Runtime.Rendering.Resources;
 
 namespace TrueMoon.Aether.Tests.Rendering.Resources;
 

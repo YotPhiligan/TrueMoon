@@ -1,4 +1,1109 @@
+<a id="arch34-2026-11-14"></a>
+## 2026-11-14 — ARCH3.4: headless Tooling
+
+[API/ownership/compatibility](TOOLING.md), [91перенос/split mapping](ARCH34_MIGRATION.csv),
+[versioned manifest/SHA/точные commands](ARCH34_BASELINE.json).
+
+Выделен TrueMoon.Aether.Tooling: compiler/preflight/capture/publisher, authoring/
+history/persistence, project/document/source sessions, headless preview coordination
+и diagnostic report writer/pure DTO. Editor presentation entry/VM/TransformEditor
+control остаются в UI. Старый Aether проект выведен из текущего wiring; никаких
+forwarders. Full UseAether/AetherHost workflow теперь в Tooling и по-прежнему явно
+соединяет Runtime с GameEditor/ScenePreview. Editor переведён на Tooling; optional
+UI bridge и Runtime+UI без Tooling — ARCH3.5.
+
+Новый UseAetherTooling и UseConfiguredAetherTooling регистрируют headless graph без
+RuntimeEngine/окна/GPU/SDK startup. Exact schema Aether:Tooling использует общие App
+providers; identity/RuntimeAccess остаются в composition root. App-owned host
+единолично владеет compiler product, отдельно App-owned Projects владеет project/
+document/source products. Overrides/factories/aliases, rollback/retry сохранены.
+Default game ABI нейтрален. Frozen Build выбирает last-good/source baseline после
+opening check; failure/cancel не меняют document/selection и не запускают игру.
+Terminal Stop явно discards unsaved memory после compiler drain, файлы не сохраняет.
+Normal transitions требуют Save/Discard/Cancel. Cleanup failure сохраняет owner.
+Schema2 exact ABI и byte formats не менялись; Tooling DLL дополнительно reserved.
+
+Финальные проверки Windows x64 / SDK11.0.100 / net11.0 / latest / runtime-async=on /
+xUnit2 VSTest, без профиля-исключения или увеличения deadlines:
+
+- Non-incremental solution D/R0errors; warnings Debug/Release: 1570/1570.
+- Полный Aether по3353passed/0failed/0skipped D/R; Abstractions26, Player17,
+  Editor1496 — каждый D/R, failed/skipped0. Всего4892passed/configuration.
+- Tooling6profiles source Debug/published Release/fresh NuGet ×both DI;11local
+  packages, offline feed/cache/CPM isolation, package graph без ProjectReferences/
+  старого монолита/Editor/Alloy/Argentis. По30checks: real project+SDK, edit/Undo/Redo,
+  stable IDs/custom schema data, save/reopen, frozen neutral Build/source baseline,
+  failed/cancelled Build preserves last-good/reaps PID; save conflict preserves
+  external SHA+dirty memory, cancelled Save, pure diagnostic export и cleanup.
+  UI assemblies и Vulkan/Skia/GLFW/audio native modules не загружены.
+- Runtime8profiles, включая isolated runtime root без sdk и empty --list-sdks;
+  prepared scene/game ticks и real ECS/ownership, оба DI. Producer с SDK отдельно;
+  системный SDK не удалялся.11local packages с Tooling только для publisher.
+- Native Player6source/published/fresh ×both DI,17local packages,5captures/profile;
+  actual game Loaded при Playing, Tooling/Editor не загружены; Vulkan0errors/0warnings,
+  handles/slots0, surfaces/devices balanced, resize/minimize/restore.
+- ConfigurationDelivery15profiles/18packages, source/published/fresh both DI,
+  protected identity/config snapshots и actual child Stop/reap.
+- Independent package hosts8DLL/apphost/provider cases +2expected no-bootstrap
+  failures из согласованной configuration поставки;17packages и4shader resource gate.
+- Два внешних consumers AetherCameraContractProbe/AetherSourceWatchPerformance собраны
+  D/R; benchmark не запускался. Source-watch consumer теперь зависит от Tooling,
+  metadata helper больше не содержит obsolete deferred monolith path; Tooling
+  metadata/pack -NoBuild отдельно проверены после полной матрицы.
+
+<a id="arch34-tests"></a>
+### Requirement | Evidence
+
+| Требование | Точная проверка |
+| --- | --- |
+| Tooling без UI и pure export input | ToolingAppTests.ToolingAssembly_ContainsHeadlessServicesAndExportData_WithoutUiReference |
+| Inert startup, snapshot и единственный compiler owner, оба DI | ToolingAppTests.EmptyStartup_PerformsNoProjectSdkOrArtifactWork_AndTerminalStopIsRepeatable |
+| Full/headless aggregate взаимоисключающие в обоих порядках | ToolingAppTests.HeadlessAndFullWorkflow_RejectBothRegistrationOrders |
+| Cleanup failure удерживает реальный authoring owner до retry | ToolingAppTests.TerminalCleanupFailure_RetainsAuthoringProductForRetry_AndThenReleasesItOnce |
+| Rehash не обходит запрет private Tooling copy | GameBuildTests.RehashedManifest_StillValidatesSchemaContractAndDependencyPolicy, tooling-copy case |
+| Real file/SDK/package workflow | ToolingConsumer/Verify.ps1:6canonical profiles, по30checks; exact commands/SHA в manifest |
+| Регрессия прежних authoring/project/document/source/diagnostic consumers | Полные Aether3353 и Editor1496 D/R на окончательном коде |
+
+9новых ToolingApp cases +1artifact policy case. Focused9/9 Debug подтвердил
+composition/cleanup до полного прогона. Полные suites запущены последовательно,
+после всех delivery proofs, исключая известную конкуренцию SDK exclusive leases.
+
+Команды: PowerShell7, каждый Verify с уникальным EvidenceDirectory; Player также
+получает существующий ValidationDirectory. ToolingConsumer/RuntimeConsumer/PlayerProbe/
+ConfigurationDelivery Verify.ps1 затем AetherPackageConsumer/VerifyPackages.ps1 с
+PackageVerification=<run>/configuration-docs/verification.json. Точные subprocess
+arguments/versions/feeds/cache paths — в manifest. Затем для Debug и Release:
+
+```powershell
+dotnet build TrueMoon.slnx -c <configuration> --no-incremental --verbosity quiet "-bl:<run>/solution-canonical-<configuration>-{}.binlog"
+dotnet test <project>/<project>.csproj -c <configuration> --no-build --no-restore --logger "console;verbosity=normal" --logger trx --results-directory <run>/canonical-<project>-<configuration> "-bl:<run>/canonical-<project>-<configuration>-{}.binlog"
+```
+
+Промежуточные ошибки integration/harness и отложенной registration/terminal cleanup
+не выданы за passing: исправлены до финальных proofs/suites. Первая configuration
+canonical попытка прервана read/write collision JSON-отчёта. Повтор выявил stale
+Editor Release binary: этот verifier использует pack --no-build. После свежего
+non-incremental Release preparation configuration-accepted выполнен на окончательных
+bytes. Затем current Editor package/source guide examples получили migrated imports,
+и configuration-docs/packages-docs повторили delivery с окончательной документацией.
+Предыдущие failed/superseded reports сохранены. Исходники accepted proofs
+сверены по SHA; два analyzer bin/Release outputs затем пересобраны ordinary solution,
+их before/after SHA отдельно в manifest. Source inputs совпадают.
+
+Git HEAD не изменён, shared dirty main и исходный ZIP2249files сохранены; commit/push
+не запрашивались. Directory.Packages.props и bundled Skia4.156 DLL имеют исходные SHA.
+Raw logs/TRX/binlogs — ignored TestResults/ARCH34-20261114-011418 и temporary feeds/
+roots, retention не гарантирован; versioned manifest/HISTORY сохраняют outcomes.
+Other OS/RID/AOT/trimming/device loss/performance/release, production mods/ALC
+collection/hot replacement/migration, ENG7b.3 и causal drain follow-up отдельно.
+
+<a id="engine-status-before-arch34-2026-11-14"></a>
+### Предыдущий engine STATUS целиком перед ARCH3.4
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-13 — ARCH3.3 завершён: самостоятельный Runtime.**
+[App/configuration/ownership и breaking migration](RUNTIME.md),
+[карта переносов](ARCH33_MIGRATION.csv), [manifest/SHA](ARCH33_BASELINE.json),
+[команды и история](HISTORY.md#arch33-2026-11-13).
+
+Runtime содержит ECS/session/scene activation/control/frame/render/resource paths.
+Общие game/ECS/scene/input/checkpoint/render values канонические в Abstractions.
+Player и runtime child не требуют compiler/authoring/Editor. Прежний Aether временно
+содержит workflow поверх Runtime; project/document coordination ещё в Editor.
+App единолично владеет RuntimeEngine; runtime options/schemas отделены от Build.
+Schema2 artifact разделяет exact Abstractions+Contracts и optional RuntimeAccess;
+**старые game/host DLL, artifacts и captures нужно пересобрать**. Forwarding facade нет.
+
+| Фактическая финальная проверка | Результат |
+| --- | --- |
+| Non-incremental solution Debug/Release | В каждом0errors/1560warnings |
+| Полный Aether Debug/Release | По3343passed/0failed/0skipped |
+| Abstractions / Player / Editor Debug/Release | По26 /17 /1496passed; failed/skipped0 |
+| Runtime-only consumer |8profiles на двух DI: source/publish/fresh/SDK-free,11packages; prepared scene/game ticks и real World; workflow/UI не загружены |
+| Native Player |6profiles source/publish/fresh ×both DI,17packages;5captures/profile; validation0/0, handles/slots0, surfaces balanced |
+| App/configuration/child delivery |15source/published/fresh profiles,18packages, both DI и Stop/reap |
+| Independent package hosts |8DLL/apphost/provider cases +2expected no-bootstrap failures;17packages из согласованного feed |
+
+Профиль: Windows x64, SDK11.0.100/net11.0/runtime-async=on/xUnit2 VSTest.
+SDK-free проверка использует отдельный runtime root без sdk и с пустым --list-sdks;
+системный SDK не удалялся. Полные suites запускались последовательно; ранний
+конфликт SDK lease и исправленные migration attempts сохранены в истории.
+Остальные модульные suites, other OS/AOT/device-loss/performance/release не заявлены.
+Production mod loader/доказанная ALC collection/hot replacement — ARCH3.6–9.
+Skia DLL и пакетные версии этого среза не изменены.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS4 App/configuration/DI 2026-11-12
+
+TrueMoon.Kton.Bepu public App integration/factories/lifecycle реализованы:
+192checks/profile (96Cobalt+96MicrosoftDI), source/fresh NuGet Debug/published Release;
+реальные worlds, generated constructor,9package closure и cleanup retry.
+Current PHYS2–3 regression309×3. [Scope/evidence](../physics/HISTORY.md#phys4-2026-11-12),
+[App guide](../physics/APP.md), [следующий PHYS5](../physics/STATUS.md).
+ECS bridge ещё впереди и согласуется с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue),
+[ARCH1i](PLAN.md#arch1i-physics). Engine/GPU/platform readiness и очередь не меняются.
+
+## Следующий конкретный шаг
+
+**ARCH3.4 — headless Tooling:** вынести compiler/capture/preflight, authoring,
+project/document/history/load/save/source-watch coordination из временного Aether
+и Editor в отдельный слой. Проверить independent CLI open/edit/Undo/Redo/save/reopen/
+Build без UI/native activation, cancellation/failed build/save и last-good ownership.
+Затем ARCH3.5 — Editor UI с optional Tooling bridge, включая Runtime+UI без Tooling;
+после него ARCH3.6–9 — моды. ENG7b.3/release и causal drain follow-up открыты.
+Audio/Kton сохраняют собственные очереди; proposed Request/Claim/Decision не изменены.
+[Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch33-2026-11-13).
+
+
+<a id="arch33-2026-11-13"></a>
+## 2026-11-13 — ARCH3.3: самостоятельный Runtime
+
+[API/ownership/миграция](RUNTIME.md), [фактическая карта переносов](ARCH33_MIGRATION.csv),
+[versioned manifest, команды, графы и SHA](ARCH33_BASELINE.json).
+
+Выделен пакет/assembly/RootNamespace TrueMoon.Aether.Runtime: World/scheduler/pools,
+scene activation, game/session/control/frame/transport и готовые GPU/material/resource
+paths. Pure game/ECS/scene/input/checkpoint/render models стали каноническими в
+Abstractions. Прежний Aether остаётся явным compiler/capture/publisher/authoring
+workflow поверх Runtime; Editor project/document coordination переносится в ARCH3.4.
+Player, child example и независимый Runtime consumer не имеют workflow dependency.
+Никаких C# type forwarders или скрытого compiler fallback не добавлено.
+
+UseAetherRuntime/RuntimeOptions и общие Runtime schemas отделены от Build/Authoring.
+App единолично освобождает RuntimeEngine, workflow его заимствует и сначала drain-ит
+свои продукты. Caller-owned World/scheduler/loader factories, rollback, retry и
+reverse App stop сохраняются. Runtime diagnostics не создают compiler; SceneDocumentCodec
+не ищет authoring factory через DI и допускает только явный validator override.
+
+GameBuildArtifact — только read/validate/Pin; workflow GameArtifactPublisher публикует,
+GameBuildResult хранит process-local compiler/capture provenance. Schema2 фиксирует
+точные full identities/SHA Abstractions+Contracts и optional RuntimeAccess. Private
+shared copies запрещены; schema1/captures/старые game/host DLL нужно пересобрать.
+Editor source workflow явно сохраняет RuntimeAccess для World-aware проектов.
+Scene/project/control/frame/checkpoint byte formats и shared identity fences сохранены.
+
+Фактические финальные проверки Windows x64, SDK11.0.100/net11.0/latest/runtime-async=on,
+xUnit2/VSTest; без профиля-исключения или повышения deadlines:
+
+- Non-incremental solution Debug и Release: в каждом0errors/1560warnings.
+- Полный Aether: по3343passed/0failed/0skipped Debug и Release.
+- Abstractions26, Player17, Editor1496: каждый Debug и Release, failed/skipped0.
+- RuntimeConsumer:8source Debug/published Release/fresh NuGet/SDK-free ×both DI;
+  11local packages (workflow publisher отдельным executable), runtime graph без
+  workflow/UI и без ProjectReferences в fresh consumer. Подготовленная scene,
+  neutral game4ticks/revision41/color19 и настоящий World:2executions/total88/count3,
+  2factory calls, Stop/Dispose ровно1. SDK-free root содержит runtime11.0.0 без sdk,
+  --list-sdks пуст; PATH/DOTNET_ROOT ограничены. Системный SDK не удалялся.
+- Native Player:6source/published/fresh ×both DI;17local packages;5captures/profile,
+  game loaded во время Playing, workflow/Editor не загружены. Vulkan errors/warnings0/0,
+  handles/slots0 после cleanup, surfaces/devices сбалансированы; resize/minimize/restore.
+- ConfigurationDelivery:15source/published/fresh consumer profiles,18packages;
+  оба DI, protected bootstrap settings и actual child Stop/reap.
+- AetherPackageConsumer:8DLL/apphost/provider cases +2expected no-bootstrap failures,
+  fresh feed/cache,17packages из согласованной configuration поставки;4shader gate.
+- Вне solution адресно собраны AetherCameraContractProbe и AetherSourceWatchPerformance.
+  Их прежние исследовательские/native сценарии не объявлены повторёнными.
+
+Команды запуска (все dotnet операции имеют уникальный -bl с {}):
+
+```powershell
+# Каждый Verify получил отдельный -EvidenceDirectory в TestResults/ARCH33-20261113-002839.
+./ManualTests/RuntimeConsumer/Verify.ps1 -EvidenceDirectory <run>/runtime-canonical
+./ManualTests/PlayerProbe/Verify.ps1 -ValidationDirectory <Vulkan-validation-layer-directory> -EvidenceDirectory <run>/player-canonical
+./ManualTests/ConfigurationDelivery/Verify.ps1 -EvidenceDirectory <run>/configuration-canonical
+./ManualTests/AetherPackageConsumer/VerifyPackages.ps1 -EvidenceDirectory <run>/packages-canonical -PackageVerification <run>/configuration-canonical/verification.json
+# Последовательно для Debug, затем Release; suites внутри конфигурации также последовательно.
+dotnet build TrueMoon.slnx -c <configuration> --no-incremental --verbosity quiet "-bl:<run>/solution-canonical-<configuration>-{}.binlog"
+dotnet test <project>/<project>.csproj -c <configuration> --no-build --no-restore --logger "console;verbosity=normal" --logger trx --results-directory <run>/canonical-<project>-<configuration> "-bl:<run>/canonical-<project>-<configuration>-{}.binlog"
+```
+
+Точные аргументы Verify/package/source/publish commands сохранены в manifest.
+Исходная рабочая копия shared dirty main сохранена ZIP2281files; HEAD не изменён,
+commit/push не запрашивались. Directory.Packages.props и bundled Skia4.156 DLL имеют
+исходные для этой задачи SHA; native rebuild здесь не выполнялся.
+Исходники всех accepted proofs совпадают с финальными. Два binary analyzer witnesses
+Cobalt/Enerit из bin/Release затем пересобраны ordinary non-incremental solution;
+их before/after SHA и причина отдельно записаны в manifest, это build outputs.
+
+<a id="arch33-tests"></a>
+### Требования и доказательства адресных guards
+
+| Требование | Проверка и наблюдаемое поведение |
+| --- | --- |
+| Независимая runtime assembly/App graph | RuntimeBoundaryTests: нет workflow/UI references или compiler witness; SceneWorldLoadError единственный canonical; обе DI, immutable options и factory cleanup1 |
+| Явный game ABI и exact shared policy | GameBuildTests: rehashed manifest не обходит missing/duplicate/identity/private DLL/capability validation; concrete-runtime game default rejected, explicit RuntimeAccess loads and ticks |
+| Runtime loading не запускает authoring | SceneLoadingConfigurationTests: authoring dependencies не активируются; explicit SceneDocumentCodec override используется на обеих DI |
+| Failed creation не освобождает не полученный compiler | AppIntegrationTests: compiler factory calls0 при более ранней ошибке; acquired runtime products освобождены |
+| Стабильные canonical wire values | Abstractions fixed JSON/material/mesh/preview fixtures проверяют ожидаемые bytes/slots/offsets |
+
+13новых theory cases дают Aether3330→3343. Финальный focused subset31/31 Debug и
+Release; affected scene/runtime/resource/frozen subset499/499 Debug. Затем прошли
+полные последовательные suites на том же production коде.
+
+Промежуточные failed migration builds/proofs сохранены локально: устаревшие namespaces,
+ABI/publisher fixtures и consumer templates исправлены до canonical acceptance.
+Ранние параллельные полные suites дали по3338/3339: единственная ошибка — конфликт
+эксклюзивного SDK .version lease с другим процессом проверки. Narrow case прошёл
+последовательно в D/R; final3343 D/R и все остальные suites запущены последовательно.
+Это не скрытый passing ранних попыток; приведённые выше итоги относятся к final run.
+
+Raw logs/TRX/binlogs/reports — ignored TestResults/ARCH33-20261113-002839 и временные
+isolated feeds/runtime roots; гарантии retention для них нет. Этот HISTORY и
+ARCH33_BASELINE сохраняют дату, outcomes, command forms и SHA независимо от raw logs.
+Production mod unload/ALC collection, hot replacement/migration — ARCH3.6–9;
+Tooling/UI — ARCH3.4–5. Другие OS/RID, AOT/trimming, device loss, performance,
+ENG7b.3/release и causal drain follow-up отдельно; чужие suites этим срезом не
+перетестированы. Нового Skia native build или wider research matrix не было.
+
+<a id="engine-status-before-arch33-2026-11-13"></a>
+### Предыдущий engine STATUS целиком перед ARCH3.3
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-12 — ARCH3.2 завершён: существующий ECS подключён к Abstractions.**
+[App/DI/API/ownership и совместимость](ECS_BINDING.md),
+[manifest/SHA](ARCH32_BASELINE.json), [история](HISTORY.md#arch32-2026-11-12).
+Один World/scheduler/typed storage; независимые компоненты и системы исполняются
+через neutral API, оба DI providers и injected factories. Production builtin
+pipeline использует binding. Schema1 artifact/compiler/child/Player shared closure
+включает Abstractions; требуется пересборка прежних artifacts.
+
+| Фактическая проверка | Результат |
+| --- | --- |
+| Полный Aether Debug/Release | по3330passed/0failed/0skipped |
+| Финальный Debug binding/fingerprint subset | 109passed;27новых cases |
+| Abstractions, Editor, Player Debug/Release | по26/1496/17passed |
+| Solution non-incremental Debug | 0errors/1556warnings |
+| Независимый real World host | 6profiles source/publish/fresh ×both DI;10local packages; extension only Abstractions+Contracts |
+| Player source/publish/fresh ×both DI | 6profiles/16local packages,5captures/profile; validation0/0, handles/slots0, surfaces balanced |
+
+Далее **ARCH3.3 — самостоятельный Runtime**, затем Tooling и Editor UI.
+Legacy builtin values/scene/game-entry API остаются до следующего переноса;
+type-forwarding, schema2 и production mod loader этим этапом не введены.
+Unload roots перечислены; World GC не доказывает ALC collection/live replacement.
+Performance, release/device-loss/other OS и causal drain follow-up отдельно.
+Предыдущие результаты ARCH3.1 сохранены в истории; нового Release solution/
+all-module acceptance этим этапом не заявляется.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS4 App/configuration/DI 2026-11-12
+
+TrueMoon.Kton.Bepu public App integration/factories/lifecycle реализованы:
+192checks/profile (96Cobalt+96MicrosoftDI), source/fresh NuGet Debug/published Release;
+реальные worlds, generated constructor,9package closure и cleanup retry.
+Current PHYS2–3 regression309×3. [Scope/evidence](../physics/HISTORY.md#phys4-2026-11-12),
+[App guide](../physics/APP.md), [следующий PHYS5](../physics/STATUS.md).
+ECS bridge ещё впереди и согласуется с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue),
+[ARCH1i](PLAN.md#arch1i-physics). Engine/GPU/platform readiness и очередь не меняются.
+
+## Следующий конкретный шаг
+
+**ARCH3.2 — действующий ECS на новых контрактах:** scheduler/context/pools/registry,
+builtin systems и внешняя система с custom struct component в реальном World.
+Проверить data/order, stale/wrong-World handles, retained leases, cancellation/fault,
+phase playback и Stop/Dispose; перечислить registry/pool/factory unload roots.
+После этого ARCH3.3–5 — Runtime/Tooling/Editor UI, затем моды. ENG7b.3/release и
+causal drain follow-up остаются открытыми; Audio/Kton имеют собственные очереди.
+Proposed game Request/Claim/Decision не изменены.
+[Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch31-2026-11-12).
+
+<a id="arch32-2026-11-12"></a>
+## 2026-11-12 — ARCH3.2: реальные ECS bindings к Abstractions
+
+Завершён [binding](ECS_BINDING.md): новый neutral ISystem API исполняется на том же
+World/typed pools/phase buffer и access/order graph. Добавлены neutral metadata и
+IFactory<T>/IFactory<T,World> registrations, data-only exact-schema value factory
+adapter, dual builtin systems; production PrimitiveSimulationFactory использует
+neutral путь. Legacy overloads, builtin value types и scene/game models сохранены
+до ARCH3.3. Optional IComponent не вводит boxed storage или managed компоненты.
+
+Invocation stamp/thread/liveness/declarations, retained queries/writers, live и
+deferred commands, cancellation/fault и Stop/Dispose/retry проверены в реальном ECS.
+Duplicate wrapper/legacy aliases имеют один cleanup owner. После successful cleanup
+binding отпускает World; Type/registry/pool/factory/metadata roots явно перечислены.
+GC World test не выдаётся за доказанную collection ALC или hot mod replacement.
+
+Abstractions включён в schema1 shared hash, game loader exact identity/allowlist,
+compiler ordinary/frozen references и child/Player BuildIdentity. Старые artifacts
+нужно пересобрать; schema2/game-entry ABI остаётся дальше. Reserved private copy и
+tampered counterpart проверяются, allowlist не ослаблен. Обновлены package guides,
+solution wiring и независимые proof closures.
+
+Фактические проверки .NET11/SDK11.0.100/runtime-async=on/xUnit2 VSTest:
+
+- Aether полный Debug и Release: по3330passed/0failed/0skipped.
+- Финальный Debug binding/fingerprint subset:109passed;27новых cases в двух новых
+  test classes (включая four DI/factory profile variants).
+- Abstractions Debug/Release:по26passed; Editor Debug/Release:по1496passed;
+  Player Debug/Release:по17passed.
+- Solution non-incremental Debug:0errors/1556warnings; это не новая Release
+  solution/all-module/native regression. Другие модули этим этапом не тестировались.
+- Real World extension host:6profiles source Debug/published Release/fresh NuGet ×
+  Cobalt/MS DI;10свежих local packages, offline feed/cache/CPM isolation,
+  extension graph только Abstractions+Contracts/0ProjectReference; exact DLL bytes.
+- Player:6source/published/fresh profiles ×both DI,16согласованных local packages;
+  по5captures, actual game loaded, Editor не загружен; validation errors/warnings0,
+  handles/slots0 и created/released surfaces совпали.
+
+Первый полный Debug запуск прерван после обнаружения устаревшей copy fixture
+NativeRuntimeLaunchTests (4shared DLL вместо5). Fixture расширена, добавлены обе
+tamper theories index4 и Player Abstractions tamper case. Дочерний testhost остался
+после cancellation; неудачная повторная сборка с MSB3021/3027 сохранена как failed
+attempt. Принадлежащий этому запуску процесс с подтверждёнными executable/config
+и его child завершены; чистый полный прогон выше успешен. Два nullable forwarding
+warnings устранены compile-time annotations при сохранённом runtime null check.
+
+Команды, TRX/profile/package/source SHA и границы хранятся в
+[ARCH32_BASELINE.json](ARCH32_BASELINE.json); raw TestResults локальны и ignored,
+не являются единственной записью результата и не объявлены опубликованным архивом.
+Нет новых performance/allocation, production mod collection/hot replacement,
+device-loss/other OS/AOT/release acceptance claims. Следующий этап — ARCH3.3.
+
+<a id="engine-status-before-arch32-2026-11-12"></a>
+### Предыдущий engine STATUS целиком перед ARCH3.2
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-12 — ARCH3.1 завершён: отдельный контрактный SDK Abstractions.**
+[API и совместимость](ABSTRACTIONS.md), [история](HISTORY.md#arch31-2026-11-12),
+[manifest/SHA](ARCH31_BASELINE.json).116public types,105neutral counterparts,
+только BCL+Contracts; scoped system/query/command API без concrete World,
+optional IComponent и stable IDs/exact schema versions. Canonical values/bytes сохранены.
+
+| Фактическая проверка | Результат |
+| --- | --- |
+| Полная solution non-incremental Debug/Release | 0errors,1556existing warnings в каждой конфигурации |
+| Новый Abstractions suite Debug/Release | **26passed/0failed/0skipped** в каждой; найден и выполнен точным solution |
+| API/metadata closure | BCL+Contracts only,0native imports; complete public signature graph |
+| Independent extension/host | 6profiles:source Debug/published Release/fresh NuGet ×Cobalt/MS DI; one Type identity/factory owner, no Runtime/Tooling/Editor/backend load |
+| Fresh package graph | 6local packages, offline private feed/cache/CPM isolation; extension only Abstractions+Contracts,0ProjectReference, exact DLL SHA |
+| Обновлённый inventory | 487source files,628public types;0parse errors,19known private Editor source-generator analysis diagnostics; actual builds green |
+
+Это новый ABI **до переключения исполнения**. Прежние Aether/Editor/Player source
+не изменены (SHA); legacy definitions временно остаются. Новый extension пока не
+подключён автоматически к старому scheduler/game loader. Новых full runtime/native
+regression claims нет; Player/ARCH1f.4 результаты предыдущие и сохранены в истории.
+Real World binding, loader/shared set/schema2 и physical layer extraction — дальше.
+ALC unload request не равен доказанной collection; live mods ещё не реализованы.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS3 queries/events 2026-11-12
+
+TrueMoon.Kton.Bepu bounded ray/sweep/overlap и Begin/Stay/End реализованы:
+309checks source/fresh NuGet Debug/published Release, mesh BVH/scratch/filter/
+generation/sleep/delete/teleport/overflow, current neutral131×3/actual5DLL SHA.
+[Scope/evidence](../physics/HISTORY.md#phys3-2026-11-12), [policy](../physics/QUERIES_CONTACTS.md),
+[следующий PHYS4](../physics/STATUS.md). App/ECS ещё не реализованы, bridge согласуется
+с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue), [ARCH1i](PLAN.md#arch1i-physics).
+Результаты не утверждают full engine/GPU/platform readiness и не переставляют очередь.
+
+## Следующий конкретный шаг
+
+**ARCH3.2 — действующий ECS на новых контрактах:** scheduler/context/pools/registry,
+builtin systems и внешняя система с custom struct component в реальном World.
+Проверить data/order, stale/wrong-World handles, retained leases, cancellation/fault,
+phase playback и Stop/Dispose; перечислить registry/pool/factory unload roots.
+После этого ARCH3.3–5 — Runtime/Tooling/Editor UI, затем моды. ENG7b.3/release и
+causal drain follow-up остаются открытыми; Audio/Kton имеют собственные очереди.
+Proposed game Request/Claim/Decision не изменены.
+[Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch31-2026-11-12).
+---
+<a id="arch31-2026-11-12"></a>
+## 2026-11-12 — ARCH3.1: независимый Abstractions SDK
+
+Выделен новый namespace/assembly ABI TrueMoon.Aether.Abstractions:116public types,
+105соответствий исходной neutral map плюс system marker/frozen metadata/scoped typed
+access и pure codec helpers. Старая World связь в system description/context и GPU
+surface dependency в primitive value validation отсутствуют в новом SDK. API и все
+assembly references замкнуты только на BCL+TrueMoon.Contracts; native imports0.
+Snapshot/canonical scene/input/checkpoint/render/preview IDs и bytes сохранены.
+
+Это staged introduction: существующий Aether/Editor/Player source не изменён
+от начального SHA snapshot. Legacy/new определения не interchangeable и не являются
+type-forwarders. До ARCH3.2–3 старый scheduler/loader продолжает прежний ABI;
+current artifacts/allowlists/HostContractId/frozen references не retag и не ослаблены.
+Общая planned0.4.0-alpha migration/version остаётся решением ARCH3.0, props не повышены.
+Pure render/preview codecs размещены в новом SDK для closure constructor hashing/validation;
+это уточнение owner относительно предварительной карты, без IO/native services.
+
+Фактические проверки: solution non-incremental D/R0errors/1556existing warnings;
+Abstractions26passed/0failed/0skipped в каждой конфигурации и discovery через exact
+TrueMoon.slnx. Полный metadata/API walk, отсутствие World/compiler/native/backend,
+immutable metadata/scene data, limits, managed-reference rejection/unmarked structs,
+stamped context/query/writer expiration (включая новую invocation), declared access,
+wrong thread/cancellation, stale/wrong-World identity guard и callback exception forwarding.
+Проверки runtime behavior здесь относятся к явно обозначенному access double;
+real World/pool/playback/scheduler fault semantics не объявлены реализованными.
+
+Independent C# extension ссылается только на Abstractions. Source Debug, published
+Release и fresh package-only Release выполняются на Cobalt/MS DI:6profiles,
+lazy IFactory activation, private extension ALC и exact shared host contracts,
+один Execute/Stop/Dispose owner. Mismatched private shared copy отвергается до load.
+Host не загружает legacy Aether/Runtime/Tooling/Editor/Silk/Skia. Fresh6packages
+одной новой версии, private offline feed/cache/CPM isolation,2package-only graphs
+без ProjectReference, extension local packages только Abstractions/Contracts,
+package provenance и installed/output DLL SHA проверены. Это bounded acceptance
+helper, не production mod loader; ALC collection/unload success не заявлялись.
+
+После diagnostics/f.4/Player inventory обновлён отдельно:487source/25generated
+inputs,796declared/628public types;0parse errors.19binding diagnostics относятся
+к старым private Editor LibraryImport helpers без запуска generators и производным
+ошибкам, не к новому SDK и не к actual build. Исторические ARCH3.0 CSV/JSON не
+пересозданы. [Current type map](ARCH31_TYPE_MAP.csv), [contract correspondence](ARCH31_CONTRACT_MAP.csv),
+[project XML graph](ARCH31_PROJECT_MAP.csv), [manifest/inputs/commands/SHA](ARCH31_BASELINE.json).
+Raw evidence:TestResults/ARCH31-20261112-193254. Первичные ошибки port closure
+(World/GPU helper references), test constructor argument и ImmutableArray equality
+исправлены адресно; финальные passing результаты выше, skip/fallback нет.
+
+Параллельные Audio/Kton изменения сохранены. Общая runtime/native/release matrix
+не повторялась; build/test historical Player baseline не выдан за новый запуск.
+Далее ARCH3.2 — real ECS binding; schema2/Runtime/Tooling/UI — ARCH3.3–5, mods —3.6–9.
+Предложенная game Request/Claim/Decision не менялась.
+
+<a id="engine-status-before-arch31-2026-11-12"></a>
+## Engine STATUS перед ARCH3.1 (целиком)
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-12 — минимальные ENG7b.1–2 завершены в Windows x64 scope.**
+[Player API/CLI/ownership](PLAYER.md), [история и границы](HISTORY.md#eng7b12-2026-11-12),
+[manifest/SHA](ENG7B12_BASELINE.json). Local game/session/window/input без Editor,
+parent/bootstrap/IPC; selected artifact/scene зафиксированы до App; обычный запуск
+не ищет SDK/исходники и не вызывает build. Player-only и combined entry examples;
+внутренний --runtime сохранил обязательную проверку protected child identity.
+
+| Финальная проверка | Результат |
+| --- | --- |
+| Non-incremental solution Debug/Release | 0errors; warnings backlog сохранён |
+| Full Aether Release | 3300passed /0failed /0skipped |
+| Aether Debug | Первый full:3299passed/1fixture failure; после clean rebuild Player core + этот process test **32/32passed**. Единого чистого повторного full Debug не заявляем |
+| Player / Editor Debug и Release | **17 /1496 passed**,0failed/0skipped в каждой конфигурации; Player обнаружен точным solution |
+| Реальные Player-only/combined CLI | По12checks D/R, pre-App failures/child identity rejection |
+| Native source Debug/published Release/fresh package-only Release, оба DI | 6profiles ×5captures;0core+sync errors/warnings; все local surface/slot/handle owners освобождены |
+| Native startup failure / legacy surface | Ожидаемый missing-layer startup failure очистил partial native owner; legacy21cases/80frames,0GPU/NT/UI owners |
+
+GPU→GPU copy и current-source-aware actual presentation разрешают Playing;
+resize/suspend/restore/Stop очищают ввод и согласуют game/World retirement.
+Failed scene/game cleanup удерживает loader до retry. Обе DI composition и
+стандартный configuration helper проверены. ARCH1f.4 baseline сохранён в истории.
+ENG7b.3 combined/crash/reap matrix и физический вынос Tooling/compiler — дальше;
+старый Aether DLL ещё не разделён. Causal drain follow-up, checkpoint/content
+migration f.6, import/audio adapters и physical/device-loss/performance/release gates открыты.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS2 provider 2026-11-12
+
+TrueMoon.Kton.Bepu rigid-body provider реализован:184checks source/fresh NuGet
+Debug/published Release, generations/retirement, bodies/joints/commands/Step/
+cleanup; current neutral API131×3, actual5DLL SHA. [Scope/evidence](../physics/HISTORY.md#phys2-2026-11-12),
+[provider](../physics/PROVIDER.md), [следующий PHYS3](../physics/STATUS.md).
+Queries/contact events явно недоступны до PHYS3; App/ECS ещё не реализованы,
+bridge согласуется с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue),
+[ARCH1i](PLAN.md#arch1i-physics). Эти результаты не утверждают full engine/GPU/platform
+readiness и не переставляют engine очередь.
+
+## Следующий конкретный шаг
+
+**ARCH3.1 — Abstractions:** перед переносом освежить карту с дельтой diagnostics,
+f.4 и Player ([новые типы](ENG7B12_BASELINE.json), [граница package](PACKAGE_BOUNDARIES.md)).
+Затем ARCH3.2–5 — ECS binding/Runtime/Tooling/independent Editor UI, далее моды.
+ENG7b.3 остаётся отдельной расширенной приёмкой. Proposed game Request/Claim/Decision
+не менялись. Audio/Kton имеют собственные очереди; причинный drain follow-up открыт.
+[Предыдущий STATUS целиком](HISTORY.md#engine-status-before-eng7b12-2026-11-12).
+
+<a id="eng7b12-2026-11-12"></a>
+## 2026-11-12 — ENG7b.1–2: минимальный local Player
+
+Реализованы pre-App role parser/schema, captured PlayerStart (artifact fingerprint,
+bounded immutable world/legacy scene), lazy local session и отдельный Player UI package.
+Прежние game entry/factories/protocol/input/render snapshot contracts используются
+локально без child/pipe/parent/Editor services. Typed View/data/style/factory и
+UseAetherLocalRuntime/UseAetherPlayer/UseConfiguredAetherPlayer соблюдают App ownership;
+actual presentation разрешает Playing; resize/suspend/restore закрывают старые tickets.
+Cleanup дренирует GL/Vulkan/mesh перед World/game/loader; failed cleanup сохраняет
+владельцев для retry. Player-only и combined examples выбирают graph до App.Build.
+
+Фактические результаты: [manifest с входами/SHA/командами](ENG7B12_BASELINE.json),
+`TestResults/ENG7b12-20261112-181233`. Solution non-incremental D/R0errors.
+Full Aether Release3300/0/0; Player17/0/0 и Editor1496/0/0 в каждой конфигурации.
+Debug full дал3299passed/1failed: параллельно запущенный мной non-incremental rebuild
+удалил EngineSessionProbe.runtimeconfig.json, удерживаемые DLL вызвали24MSB3021.
+После выхода testhost clean Debug rebuild0errors; все31Player core + тот process
+test прошли32/32. Release recheck тех же32/32; единого clean full Debug rerun не было.
+Это исправление процедуры проверки, не causal fix старого post-reap drain timeout.
+Первичные failures/TRX/binlogs сохранены, не выданы за passing.
+
+Реальные entry CLI:12checks в Debug и12в Release (help, mutually exclusive/duplicate
+role, required inputs, malformed/missing child identity, forbidden fallback,
+invalid artifact до App/diagnostic report). Player tests также найдены и выполнены
+через точный TrueMoon.slnx с уникальными TRX. Configuration profile/explicit overrides
+и единственный lazy graph проверены на Cobalt и Microsoft DI.
+
+Native: source Debug, published Release и fresh package-only Release, каждый Cobalt
+и MS DI:6profiles, по5PNG captures (white, independent tint, one-shot geometry,
+resize, restore); game в текущем CLR, Editor не загружен. По3surfaces созданы/освобождены,
+core+sync0errors/0warnings, live slots/NT handles0. Scene file изменён после capture,
+игра использует захваченный revision. Обычный кадр — GPU→GPU; readback только capture.
+Fresh15packages одной новой версии, offline feed/private cache/CPM isolation,
+2graphs без ProjectReference, local package provenance и installed/output Aether SHA.
+Отдельно ожидаемый ErrorLayerNotPresent при native startup: остановлено, partial
+surface1/1,slots0,handles0. Legacy primitive surface probe:21cases/80frames, reap/cleanup,
+GPU/NT/UI owners0. Общая CORE8.5 delivery matrix не повторялась.
+
+Не закрыты ENG7b.3 combined-exe Editor/Runtime crash/reap matrix, physical ARCH3
+extraction, mod reload, logical content checkpoint f.6, general release/device-loss/
+performance. Proposed game Request/Claim/Decision не изменены. Параллельные Audio/
+Kton изменения сохранены. Следующий этап — ARCH3.1 с обновлением inventory delta.
+
+<a id="engine-status-before-eng7b12-2026-11-12"></a>
+## Engine STATUS перед ENG7b.1–2 (целиком)
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-12 — ARCH1f.4 завершён в bounded Windows x64 scope.**
+[Surface API/ownership/fence](RENDER_SURFACE.md), [проверки](HISTORY.md#arch1f4-2026-11-12),
+[versioned manifest/SHA](ARCH1F4_BASELINE.json). Vulkan indexed unlit mesh использует
+тот же surface device; shared material, independent tint и current-source-aware
+Playing fence реализованы. CPU/upload/production не заменяют actual presentation.
+Failed mesh cleanup удерживает World/game loader до retry; legacy paths сохранены.
+
+| Финальная проверка | Результат |
+| --- | --- |
+| Solution Debug/Release | 0errors; Debug242/Release1556warnings, backlog сохранён |
+| Full Aether + Editor в каждой конфигурации | **3269 +1496 passed /0failed /0skipped** |
+| Native source Debug/published Release/fresh package-only Release | По10captures/3children;0core+sync errors/warnings;0live GPU/NT/UI/runtime owners |
+| Fresh local delivery | 15packages,32exact external nupkg, offline private feed/cache,3graphs без ProjectReferences и exact DLL SHA |
+| Legacy primitive native | 2generations/4frames, validation0 и полная cleanup |
+
+Reload/delete/resize/suspend/Stop/new generation, Unsupported Replace до StopOld и
+failed camera после actual upload проверены. Logical content checkpoint migration
+остаётся f.6; textures/lighting/import/audio, physical/device-loss/performance/release
+matrix не закрыты. ARCH2e.4b diagnostics добавлены, но прежний intermittent timeout
+не воспроизводился и causal fix открыт. All11-suite8568/configuration — предыдущий
+baseline, не повторение этого этапа. Новые assemblies/Mod SDK/reload ещё запланированы.
+
+**2026-11-12 — TrueMoon.Audio Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка](../audio/HISTORY.md#aud1-2026-11-12), [manifest](../audio/AUD1_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS1 contracts 2026-11-12
+
+TrueMoon.Kton neutral BCL-only API/IDs/limits/CCD profiles/validation реализован:
+по131checks source Debug/fresh NuGet Debug/published Release, dependencies0/DLL SHA.
+[Контракт](../physics/CONTRACTS.md), [scope/evidence](../physics/HISTORY.md#phys1-2026-11-12),
+[статус/следующий PHYS2](../physics/STATUS.md). Provider/App/ECS ещё не реализованы;
+bridge согласуется с ARCH3. [PHYS0–8](../physics/PLAN.md#current-physics-queue) —
+единственный подробный план; [ARCH1i](PLAN.md#arch1i-physics) — navigation.
+PHYS0 soft-contact CCD предел сохранён; новые контракты не утверждают runtime,
+renderer/GPU/platform readiness и не переставляют engine очередь.
+
+## Следующий конкретный шаг
+
+**[ENG7b.1–2](PLAN.md#eng7b-режимы-запуска-editor-и-player--2026-10-29):** минимальный Player после завершённого ARCH1f.4.
+Role selection/Main и standalone composition; затем ARCH3.1–5
+слои/ECS → ARCH3.6–9 моды. [Единственная подробная очередь](PLAN.md#current-engine-queue).
+До ARCH3.1 обновить дельту карты после diagnostics/f.4/Player. Причинный ARCH2e.4b
+follow-up остаётся открытым при повторении; import/audio/Nom, ED и release gates
+сохраняются. Proposed game Request/Claim/Decision не менялись.
+[Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch1f4-2026-11-12).
+
+
 # Engine / Editor: история решений и проверок
+
+<a id="audio-module-2026-11-12"></a>
+## ARCH1h: выделение TrueMoon.Audio AUD1 — 2026-11-12
+
+По запросу пользователя создан самостоятельный Windows x64 App/DI аудиомодуль
+на исправленном MiniAudioEx. Единственный подробный план перенесён в
+[Audio PLAN](../audio/PLAN.md), [API/build guide](../audio/README.md),
+[новые проверки и ограничения](../audio/HISTORY.md#aud1-2026-11-12), [manifest](../audio/AUD1_RESULTS.json).
+23tests D/R, solution discovery и по23offline+18muted WASAPI checks в source Debug,
+published Release и fresh package-only consumer. Это новый модульный результат;
+исторический native RED/GREEN ниже не повторялся. Aether/ECS/UI code не менялся
+этой audio-задачей; captured-asset/device-loss/RT/другие OS и engine adapter отдельно.
+
+<a id="audio-native-fix-2026-11-12"></a>
+## ARCH1h.0 MiniAudioEx libvorbis lifetime fix — 2026-11-12
+
+По запросу пользователя исправлен native failed-init путь и повторены проверки,
+включая повреждённый OGG. [Recipe/patch](../../eng/native/MiniAudioEx/README.md),
+[versioned manifest](AUDIO_NATIVE_FIX_RESULTS.json), [consumer](../../ManualTests/MiniAudioExResearch/README.md).
+Upstream source pinned9f85b56157027cc57c7cd0a13fea7fee3f1e167e, miniaudio0.11.26.
+Managed netstandard2.0/2.1 assemblies взяты неизменными из JAJ4.0.1; исходный пакет
+не перезаписан. Локальный package ID **TrueMoon.MiniAudioEx4.0.1-truemoon.1**,
+только win-x64 native; лицензии/patch/provenance включены. Внешней публикации не было.
+
+Причина: adapter выделял caller-owned `OggVorbis_File`, но после отказа
+`ov_open_callbacks/ov_fopen/ov_wfopen/ov_mopen` не освобождал его. Patch завершает
+data-source base, освобождает внешний блок тем же allocator и обнуляет pointer.
+Внутреннее частично созданное состояние очищает сам bundled libvorbis; повторный
+`ov_clear` на failed-open не вызывается. Required callbacks/null/empty arguments
+проверяются до allocation; успешный uninit также обнуляет освобождённый pointer.
+Публичные C signatures/structures и managed assembly names/API сохранены.
+
+Финальная фактическая команда из src, PowerShell7/MSVC C++ Build Tools/Windows SDK:
+
+```powershell
+pwsh -NoLogo -NoProfile -File eng/native/MiniAudioEx/Verify.ps1 -EvidenceDirectory TestResults/MiniAudioExFix-20261112/final-02 -Device -SourceArchive TestResults/MiniAudioExFix-20261112/inspect/miniaudioex-9f85b561.zip -ManagedArchive TestResults/MiniAudioEx-20261112/final-02/feed/jaj.packages.miniaudioex.4.0.1.nupkg
+```
+
+Без двух archive arguments recipe скачивает те же pinned SHA. Исходники baseline/fixed
+распаковываются отдельно вне checkout; apply --check и original/patched SHA обязательны.
+MSVC14.51.36231, `/O2 /MD`, linker `/Brepro`; четыре исходных C4034 предупреждения
+upstream одинаковы в baseline/patched. Regression.c — `/W4 /WX`, без warnings.
+Остаётся зависимость от VCRUNTIME140/UCRT; redistributable не вложен.
+Сборки с этим toolset из разных temp roots дали byte-identical patched DLL
+F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB.
+Exact final nupkg SHA9C696B9293932D6D09F85DF523D675D7780D7B30D505E3B487674E6C5F1F6955;
+ZIP timestamps могут менять package SHA между сборками. Native/managed/patch/source/
+fixture/report hashes сохранены в manifest; raw logs/binlogs/PCM остаются в local ignored
+TestResults без автоматической очистки, versioned manifest не зависит от их сохранности.
+
+| Проверка | Фактический результат финального запуска |
+| --- | --- |
+| Native original source-built RED control |278checks,131failures,110040retained bytes/131blocks, expected exit1. Это воспроизведение дефекта, не passing тест |
+| Native patched GREEN |286checks,0failures,0retained adapter bytes/blocks. Общие278checks плюс8fixed-only null/empty/repeated-uninit checks |
+| Native entry points | Callback/memory/narrow-file/wide-file, по8повторов WAV/OggS/truncated/bad-CRC; valid OGG decode, missing callbacks, read failure, обе OOM allocations |
+| Compatibility | Все1286original exports сохранены; отдельный процесс с original shipped DLL сравнил размеры всех68allocation types; оба managed assets неизменны |
+| Fresh NuGet source Debug / published Release FDD | По334checks: inspect10+cleanup4+offline97+muted WASAPI16+raw defect regression4+malformed regression5+failure stress198. Без FileVorbisBackend guard, exact loaded patched DLL SHA |
+| Failure stress |64отказа/profile на corrupt WAV/OggS/truncated/bad-CRC; каждый возвращается к allocation baseline и закрывает файл; затем valid OGG играет; final native counters0 |
+| Streaming/lifecycle |10-minute WAV115200044bytes/full float230400000bytes, tracked peak1940431bytes;32active-dispose cycles/profile, repeated Dispose/rollback,8post-GC samples по210handles, native owners/ledgers0 |
+| Actual device | Muted WASAPI shared, FiiO Q series/48kHz, request256frames/actual374×3periods;1803/1806callbacks D/R,0mix failures/overflow, stop/drain и6reopen cycles/profile |
+| Build/profile |SDK11.0.100/net11.0/latest/runtime-async=on через общий BuildProfile; private feed/cache/CPM isolation, Debug build0warnings/0errors и successful Release publish. Новый solution build/full suites не запускались |
+
+Первый local packaging attempt дал дублированные lib/runtime paths (NU1202), исправлен
+точными MSBuild item paths. Первый вызов общего wrapper после успешной native сборки
+выявил ошибку передачи absolute evidence path; оба runners используют GetFullPath с base.
+Эти незавершённые попытки сохранены отдельно; приведённые counts относятся к final-02.
+
+Конкретный failed-init blocker снят для Windows x64 dependency. Allocator считает внешний
+adapter через callbacks; внутренние CRT malloc libvorbis и все OS allocations не объявлены
+полностью инструментированными. Короткие process trends не заменяют long soak.
+Нового audible audition не было: использовался нулевой gain только своего output stream,
+системная громкость не менялась. Прежнее подтверждение слышимости относится к историческому
+upstream audition ниже. OGG duration API/monotonic loop cursor, device loss, AOT/trimming
+и другие OS/RIDs отдельно. App/DI/ECS модуль не реализован; дальше h.0 package/API/
+ownership/budgets. Renderer/Player порядок работ не менялся.
+
+<a id="arch1f4-2026-11-12"></a>
+## ARCH1f.4: actual mesh surface и Playing fence — 2026-11-12
+
+[Контракт/матрица точных тестов](RENDER_SURFACE.md), [versioned manifest/SHA](ARCH1F4_BASELINE.json),
+[повторяемый runner](../../ManualTests/RenderSurface/Verify.ps1). Реализованы explicit
+mesh game/source capability, App/IFactory view owner, тот же surface VkDevice/queue,
+indexed float3/UInt32 unlit pipeline и независимый linear tint. Material-sRGB decode,
+linear multiplication и один encode проверены actual pixels188/128/255.
+
+CPU activation/upload/GPU completion не открывают Playing. Fixed132byte stamp и
+actual-presentation acknowledgement сверяют текущий source. Content/camera change
+во время GPU flight не возобновляет устаревшую ревизию; accepted outcome отделён
+от общей readiness. Resize/suspend закрывают fence, new presentation возвращает
+прежний mode, explicit Pause отменяет auto-resume. Legacy headless/primitive путь
+сохранён. Failed retirement удерживает World/protocol/game loader до cleanup retry.
+
+Финальные ordinary solution D/R:0errors (Debug242/Release1556 warnings — backlog не
+закрыт). Full Aether3269 и Editor1496 passed в каждой конфигурации,0failed/0skipped;
+26 новых Aether cases относительно ARCH2e.4b. Final TRX/команды/binlogs:
+`TestResults/ARCH1f4-20261112-160211/final-*`, `solution-final-*`.
+
+Source Debug/published Release/fresh package-only Release: по10captures/3children,
+core+sync validation0errors/0warnings;0live slots/handles/uploads, balanced buffer/
+memory/device owners, parent без selected game CLR, child без UI/Editor assemblies.
+Shared geometry/material, independent tint/reset, shared gray reload, delete, mesh
+revision, resize/suspend/resume, Stop/fresh World и failed camera **после native upload**
+проверены. Unsupported checkpoint Replace отклонён до StopOld; identity/view/image
+сохранены. Logical content revision/checkpoint migration остаётся f.6.
+
+Независимый consumer:15fresh framework packages версии `0.3.0.1-alpha.meshsurface.20261112172507`,32exact external
+nupkg, offline feed/private cache,0ProjectReferences в трёх graphs, общий build profile
+и exact installed/output Aether DLL hashes. Raw evidence:
+`TestResults/ARCH1f4-20261112-160211/delivery-final/verification.json`.
+Это адресная local prerelease поставка, не повторение всей CORE8.5/release matrix.
+
+Старый primitive Vulkan native proof также прошёл:2generations/4frames, validation0,
+0owners; raw `legacy-primitive-native`. PNG tint/gray/resized geometry осмотрены.
+Mesh SPIR-V получен существующим cached Veldrid.SPIRV1.0.15 toolchain без нового
+framework dependency; shader/source/native compiler SHA сохранены. Отдельный
+`spirv-val` CLI отсутствовал и не объявляется выполненным; actual Vulkan validation
+проверила загруженные shader modules/pipelines. Первый native/report consumer имел
+исправленный UI disposal, первый package consumer — недостающий локальный capability
+collector; failed logs и предыдущие проверки сохранены, не заменены финальным run.
+
+ARCH3 CSV остаются историческими; [дельта](ARCH3_MAP.md#arch1f4-delta) перечисляет7новых
+public declarations и новый game fixture. Полную карту обновить после минимального
+Player, до ARCH3.1. Следующий этап — ENG7b.1–2. Causal drain timeout, import/audio/
+physics, ED и physical/device-loss/performance/release gates остаются своими задачами.
+Proposed game Request/Claim/Decision не менялись.
+
+<a id="engine-status-before-arch1f4-2026-11-12"></a>
+## Полный engine STATUS перед ARCH1f.4
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-12 — короткий ARCH2e.4b срез завершён; current baseline проверен.**
+[Диагностика и интерпретация](DRAIN_DIAGNOSTICS.md), [команды/evidence/границы](HISTORY.md#arch2e4b-2026-11-12),
+[versioned manifest/TRX SHA](ARCH2E4B_BASELINE.json). Добавлены реальный EOF/read/file
+progress, queue/worker/UTC, PID/session/generation/job correlation и cleanup phases;
+первичный timeout/read/close error и ownership сохранены, deadlines 2s/5s прежние.
+
+| Проверка | Фактический результат 12 ноября |
+| --- | --- |
+| Ordinary solution builds Debug/Release | 0 errors; incremental Debug263warnings, Release1556warnings. Warning backlog не закрывался |
+| Все11suites в каждой конфигурации | **8568passed /0failed /0skipped**; Core662, Aether3243, Editor1496. Это новые полные runs, не сумма replays |
+| Адресная диагностика Debug | Core30/30, Aether13/13; controlled timeout, read failure, partial close/retry, реальные graceful/exit/kill children |
+| Source Debug/published Release diagnostics | По6actual generations/profile, EOF/file queue drained, Released, bounded stdout/stderr/files; launch failure и ownership проверены |
+| Независимый package consumer | Один fresh Core package: новые public fields/JSON roundtrip/exact DLL SHA в Debug и Release FDD publish, private feed/cache и общий profile |
+
+Исторический intermittent post-reap/diagnostics timeout **не воспроизведён**;
+полезная диагностика добавлена, причинный production fix не заявлен. Aether package/
+GPU/full delivery, physical/release/performance matrix этим срезом не повторялись.
+Последняя согласованная16package поставка остаётся [CORE8.5,11ноября](../core/HISTORY.md#core85-delivery-2026-11-11).
+[ARCH3.0 карта](ARCH3_MAP.md) готова как статический снимок до этой диагностики;
+новые assemblies/Mod SDK/reload ещё запланированы.
+
+**2026-11-12 — изолированный MiniAudioEx4.0.1 prototype проверен.**
+[Команды, результаты и ограничения](HISTORY.md#audio-prototype-2026-11-12),
+[versioned manifest](AUDIO_PROTOTYPE_RESULTS.json), [runner](../../ManualTests/MiniAudioExResearch/README.md).
+По127checks в source Debug/published Release: offline10+4+97 и muted actual WASAPI16;
+10-minute WAV streaming peak1,940,431tracked bytes,32dispose cycles, post-GC handles210,
+native live counters0. Слышимые SFX/OGG пользователь подтвердил в согласованном audition;
+исправленный crossfade проверен финальным muted PCM/device profile.
+Raw libvorbis probing WAV/malformed OGG воспроизводят840/1680byte leaks в обоих profiles;
+research routing не чинит malformed input. OGG length unavailable, process-only loopback
+invalid_args; production eligibility false. Далее decoder fix/replacement и negative proofs,
+затем решение h.0 о production path/API/budgets; App/ECS module ещё не реализован.
+
+## Kton / физика — планирование 2026-11-12
+
+Пользователь выбрал имя **TrueMoon.Kton** и приоритет BEPUphysics v2.
+[PHYS0–8](../physics/PLAN.md#current-physics-queue) — единственный подробный план
+самостоятельного модуля и ECS/session bridge; [ARCH1i](PLAN.md#arch1i-physics) —
+engine navigation. Headless probe не требует GPU; production bridge зависит от
+согласования ARCH3 ECS boundaries. Простой ragdoll необязателен. Новых C# packages,
+App registrations, simulation/build/test результатов в этой работе нет.
+
+## Следующий конкретный шаг
+
+**[ARCH1f.4](PLAN.md#arch1f-rendering):** actual mesh/material surface renderer и
+required-view Runtime Playing fence. Далее минимальный Player ENG7b.1–2 → ARCH3.1–5
+слои/ECS → ARCH3.6–9 моды. [Единственная подробная очередь](PLAN.md#current-engine-queue).
+До ARCH3.1 обновить дельту карты после diagnostics/f.4/Player. Причинный ARCH2e.4b
+follow-up остаётся открытым при повторении; import/audio/Nom, ED и release gates
+сохраняются. Proposed game Request/Claim/Decision не менялись.
+[Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch2e4b-2026-11-12).
+
+
+<a id="audio-prototype-2026-11-12"></a>
+## ARCH1h.0 MiniAudioEx Windows prototype — 2026-11-12
+
+[Runner и команды](../../ManualTests/MiniAudioExResearch/README.md), [versioned manifest](AUDIO_PROTOTYPE_RESULTS.json),
+[первичное сравнение](AUDIO_RESEARCH.md). По запросу пользователя создан самостоятельный
+console binding prototype. Production projects/CPM/solution/App/ECS не менялись.
+Исследовательские native owners не объявлены публичным модулем TrueMoon.
+
+Финальная команда из src:
+
+```powershell
+pwsh -NoProfile -File ManualTests/MiniAudioExResearch/Verify.ps1 -EvidenceDirectory TestResults/MiniAudioEx-20261112/final-02 -Device -MutedDevice
+```
+
+SDK11.0.100/net11.0/LangVersion latest/runtime-async=on получены через общий
+BuildProfile; fresh private feed/cache, snapshots и CPM isolation. Пакеты:
+MiniAudioEx4.0.1 (nuspec commit076ed1d1b323d705ac26093dc4a18e998a7857d8) и
+OggVorbisEncoder1.2.2 только для собственной generated music. Archive/native/managed,
+source/report SHA и команды сохранены в manifest; все MSBuild calls имеют binlogs.
+Debug build0warnings/0errors; Release FDD publish успешен. Это не новый solution build/test.
+
+| Профиль | Фактический результат |
+| --- | --- |
+| Source Debug |127successful checks: inspect10, minimal cleanup4, offline97, muted actual WASAPI16 |
+| Published Release FDD | Те же127checks; exact native DLL SHA совпадает с source |
+| Offline/streaming | Known PCM gain/mono-stereo/pause/resume/seek/loop/EOF,64voices, Cyrillic paths; OGG44.1→48kHz, seek/refill; long WAV115,200,044bytes, full float PCM230,400,000bytes, peak tracked native1,940,431bytes |
+| Lifecycle |32active-dispose cycles/profile, repeated Dispose, two engines, failed allocation/startup, invalid WAV; file exclusive reopen, configured native bytes/blocks и object owner counters0. Post-GC handles210 во всех8samples/profile; private bytes bounded, exact samples в manifest |
+| Actual device | WASAPI shared на FiiO Q series,48kHz; request256frames, negotiated374×3 periods. Final output muted через gain только своего stream; callbacks1806Debug/1809Release, mix errors0/overflow0, stopped callbacks unchanged,6silent reopen cycles/profile |
+| Callback timing | Diagnostic instrumentation included: p99 .0109/.0119ms, max .3723/.4513ms D/R. Это не RT SLA, hardware underrun count или end-to-end latency |
+| Vendor negative controls | По2отдельных processes/profile с expected exit1: raw libvorbis WAV probe840bytes/1block; malformed OGG1680bytes/2blocks. Дефекты воспроизведены, не исправлены и не включены в127successful checks |
+
+Слышимый audition согласован с пользователем отдельно: SFX и generated OGG music
+подтверждены как нормально слышимые. Этот ранний audition завершился неверной
+modulo-cursor assertion; также позднее исправлена base gain/fader ошибка crossfade
+в harness. Финальный исправленный crossfade/EOF PCM проверен в muted device profiles;
+повторного подтверждения его слышимости не заявляем. Контрольная PCM-запись:
+`TestResults/MiniAudioEx-20261112/final-02/device-muted-Debug.rendered.wav`.
+Это output микшера до device gain, не запись OS output/колонок.
+
+Process-only loopback в audible attempts вернул invalid_args(-2); system-wide
+capture/микрофон и системная громкость не менялись. Capture failure не скрыта
+под passing loopback. На OGG length возвращается not_implemented; cursor неизвестной
+длины монотонен на loop. Seek применяется mixing thread и может быть отложен до
+следующего полного блока; WAV exact loop проверяется отдельно по PCM vectors.
+
+Native libvorbis failure path локализован чтением release source
+[9f85b561](https://github.com/japajoe/miniaudioex/blob/9f85b56157027cc57c7cd0a13fea7fee3f1e167e/src/miniaudioex/extras/miniaudio_libvorbis.c):
+после allocation OggVorbis_File ошибочный ov_open/ov_fopen возвращает invalid_file
+без освобождения этой allocation. Восьмибайтовый malformed fixture вызывает два
+неуспешных probes. FileVorbisBackend ограничивает probes для valid WAV/OGG fixtures,
+но не устраняет malformed OGG leak. ProductionEligible=false — следующее действие
+audio: исправить/заменить decoder, повторить эти negative proofs, затем решить h.0
+integration/API/budgets. Исходный путь не принимается как production dependency.
+
+Custom allocator не считает все internal malloc libvorbis/OS; native callbacks и
+allocator содержат managed instrumentation. Нет10-minute realtime soak, device-loss,
+default-device switch, other OS/RID/AOT/trimming, App/DI/ECS/Nom/mod unload proofs.
+H.0 остаётся частичным, h.1/h.2 целиком не закрыты; основной renderer/Player порядок сохранён.
+
+<a id="arch2e4b-2026-11-12"></a>
+## ARCH2e.4b: короткий diagnostic slice и полный baseline — 2026-11-12
+
+[Руководство/матрица точных тестов](DRAIN_DIAGNOSTICS.md), [versioned результаты и SHA](ARCH2E4B_BASELINE.json).
+Добавлены EOF/read/file progress/UTC, queued chunks/drained, managed file-worker ID,
+output-owner PID/session/generation/job correlation, release flags и native cleanup phases.
+Timeout хранит bounded JSON в message и Exception.Data; read/close error остаётся тем
+же объектом. Диагностика не выводит environment/raw output и не выполняет IO.
+Control/process/output/receiver/child/build-pin порядок, 2s/5s, capture bounds и retry ownership сохранены.
+
+Полные ordinary solution builds SDK11.0.100/net11.0/runtime-async=on:
+Debug0errors/263warnings (incremental), Release0errors/1556warnings. Все11suites
+по8568passed/0failed/0skipped D/R; Core662 (новый1), Aether3243, Editor1496.
+Это отдельные полные runs, не сумма replays; xUnit2/VSTest и прежний serial profile.
+Targeted Debug Core30/Aether13 прошли; controlled timeout/read error/partial close
+проверяют новое evidence, не воспроизводят причину исторического intermittent сбоя.
+
+Команды из корня src (каждая MSBuild invocation сохранила уникальный binlog):
+
+```powershell
+dotnet build TrueMoon.slnx -c Debug -m --verbosity minimal '-bl:<run>/solution-Debug-{}.binlog'
+dotnet build TrueMoon.slnx -c Release -m --verbosity minimal '-bl:<run>/solution-Release-{}.binlog'
+# Каждый из 11 *.Tests/*.Tests.csproj, обе конфигурации, после соответствующего fresh build:
+dotnet test <project> -c <Debug|Release> --no-build --settings <run>/serial.runsettings --logger 'trx;LogFileName=tests.trx' --results-directory <run>/<project>-<configuration> --verbosity minimal '-bl:<result>/test-{}.binlog'
+# Targeted Debug с обычным restore/build:
+dotnet test TrueMoon.Tests/TrueMoon.Tests.csproj -c Debug --filter 'FullyQualifiedName~ProcessOutput' --settings <run>/serial.runsettings --logger 'trx;LogFileName=tests.trx' --results-directory <result> '-bl:<result>/build-{}.binlog'
+dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug --filter 'FullyQualifiedName~OwnedProcessOutputTests|FullyQualifiedName~NativeRuntimeOutputTests|FullyQualifiedName~Diagnostics.ProcessDiagnosticsTests|FullyQualifiedName~ChildDiagnosticProcessTests' --settings <run>/serial.runsettings --logger 'trx;LogFileName=tests.trx' --results-directory <result> '-bl:<result>/build-{}.binlog'
+```
+
+Raw `<run>` — ignored TestResults/ARCH2e4b-20261112-150909; аргументы каждой команды,
+TRX22 и binlogs, baseline-results/build-results и source SHA сохранены отдельно.
+Общий manifest хранит числа и TRX/source SHA даже при последующей очистке raw artifacts.
+
+Source Debug и `dotnet publish ... -c Release --no-build --self-contained false`
+EngineSessionProbe diagnostics прошли по6actual children (>2Mi characters/stream,
+8retained files≤1MiB, EOF/queues/Released), плюс controlled launch rejection.
+Во время Debug baseline эти короткие proofs выполнялись отдельно (~9s), без
+framework rebuild и с отдельными outputs. Один fresh Core package
+0.3.0.1-alpha.arch2e4b.20261112150909: private external feed/cache, exported
+BuildProfile/SDK/TF/Features/CPM isolation, Debug consumer и Release FDD publish,
+progress/EOF/JSON roundtrip, DLL SHA совпал с текущим Release Core.
+Core pack использовал --no-build; это не свежая согласованная поставка16packages.
+Глобальный SDK/версии/зависимости/project refs не менялись.
+
+Первый sandbox attempt завершился до restore из-за denied NuGet.Config;
+authorized ordinary restore/build прошёл. Первый дополнительный harness ожидал3
+generations вместо существующих6; runtime exit0/report Passed=true. Postcondition
+исправлен, исходные artifacts сохранены, новая полная proof запись — proofs-v2.
+Ни один из этих эпизодов не выдаётся за drain/runtime failure или исправление его причины.
+
+**Непроизвольный drain/cleanup timeout не повторился. Causal fix открыт.**
+Не собирались failure heap/stacks старого эпизода, Aether package/native GPU,
+physical/performance/full release matrix не повторялись. Следующий этап — f.4;
+при повторении сначала сохранить первое evidence, затем диагностировать actual owner.
+ARCH3.0 CSV остаётся датированным snapshot; перед .1 нужна дельта diagnostics/f.4/Player.
+Заявка игры и параллельное audio исследование сохранены.
+
+Итоговая сверка: SHA всех22TRX совпал с manifest;10целевых source changes,
+1773прочих protected inputs без изменений,3предыдущих STATUS сохранены целиком.
+Новые52относительные ссылки/anchors проверены,221существующий explicit anchor
+сохранён; git diff --check прошёл. Новые проверки после этой записи не запускались.
+
+<a id="engine-status-before-arch2e4b-2026-11-12"></a>
+## STATUS до короткого ARCH2e.4b — архив 2026-11-12
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-12 — ARCH3.0: карта типов, зависимостей и совместимости завершена статически.**
+[Решения и ограничения](ARCH3_MAP.md), [488 публичных типов](ARCH3_TYPE_MAP.csv),
+[61 проект](ARCH3_PROJECT_MAP.csv), [58 запрещённых связей сигнатур](ARCH3_COUPLINGS.csv),
+[manifest/SHA](ARCH3_INVENTORY.json). Просмотрены 385 файлов и 646 объявленных типов.
+Определены четыре основные сборки, optional Editor.Tooling integration без ECS Core,
+breaking API/artifact migration, ownership/budgets и маршрут consumers.
+
+| Работа/проверка | Результат и граница вывода |
+| --- | --- |
+| Статическая работа 12 ноября | Roslyn inventory + source/IDE usages; public coverage 488/488, allowed target DAG и документы проверены. Аналитические LibraryImport diagnostics описаны в карте; solution build не выполнялся |
+| Реализация ARCH3.1–9 | Запланирована; действуют прежние Aether/Editor assemblies и child replacement. Новые Mod SDK/manager/reload ещё отсутствуют |
+| Последние фактические runtime tests, 11 ноября, CORE8.5 | Aether 3243 и Editor 1496 каждый D/R, Failed 0, Skipped 0; сегодня build/tests/native не запускались |
+| Последняя фактическая поставка | Source/published hosts, 8 package game cases на обоих DI и 2 fresh GPU profiles в прежних границах; [scope](../core/HISTORY.md#core85-delivery-2026-11-11) |
+
+**2026-11-12 — первичное исследование audio ARCH1h.0; без изменений C#.**
+[Сравнение библиотек и предложение модуля](AUDIO_RESEARCH.md): основной кандидат
+miniaudio через advanced/native MiniAudioEx 4.0.1, запасной SoLoud. Пользователь
+выбрал сначала Windows, затем Linux/macOS. H.0 частичен: backend/API/budgets
+не утверждены; exact nupkg, offline/device и native delivery не проверялись.
+Следующий audio шаг — изолированный binding spike; основная очередь указана ниже.
+
+## Следующий конкретный шаг
+
+**Короткий [ARCH2e.4b](PLAN.md#arch2e4b-drain-diagnostics) срез:** полезный bounded
+failure snapshot owner/readers/EOF/queues/cleanup и отдельный current baseline.
+Replay не доказывает исправление причины; при отсутствии повторения сохранить
+диагностику и ограничение вывода, не блокировать f.4 бессрочно.
+
+Далее **f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5 слои/ECS
+→ ARCH3.6–9 моды**. [Точная очередь](PLAN.md#current-engine-queue); перед .1 обновить
+дельту карты после f.4/Player. Import/audio/Nom, ED и physical/release/performance
+сохраняют свои критерии. Proposed game Request/Claim/Decision не менялись.
+[История карты и предыдущий STATUS целиком](HISTORY.md#arch30-2026-11-12).
+
+<a id="arch30-2026-11-12"></a>
+## ARCH3.0: статическая карта и порядок перед переносом — 2026-11-12
+
+По запросу пользователя порядок зафиксирован в [текущей очереди](PLAN.md#current-engine-queue):
+ARCH3.0 → короткий ARCH2e.4b → ARCH1f.4 → минимальный ENG7b.1–2 → ARCH3.1–5 → ARCH3.6–9.
+Результат — [карта решений](ARCH3_MAP.md), CSV всех 488 публичных типов,
+61 project XML graph, 58 forbidden public-signature pairs и versioned input digest.
+Просмотрены 385 source files/646 declared types; 444 простых маршрута и 44 split/adapter.
+Package/Assembly/RootNamespace: Abstractions, Runtime, Tooling, Editor.UI;
+optional Editor.Tooling integration выбрана, отдельный ECS Core не нужен.
+Явная breaking API/artifact migration запланирована для будущей 0.4.0-alpha линии;
+scene/project formats и stable IDs переносом не меняются, старые games/artifacts пересобираются.
+
+Метод: ignored `inventory.ps1` (Roslyn 5.9 из PowerShell 7.7/.NET11,
+source + existing generated/dependency inputs), `classify.ps1`, IDE dependency/find-usages,
+адресное чтение host/compiler/loader/identity/World/editor owners; команда helpers —
+`pwsh -NoProfile -File TestResults/ARCH30-20261112-141900/<helper>.ps1`.
+Parse errors 0; 19 analytical binding diagnostics только private LibraryImport helpers
+без generated implementations/derived definite assignment. Это ограничение анализа,
+не build solution. Generated/conditional API и native ABI повторно проверяются при переносе.
+`ARCH3_INVENTORY.json` хранит base SHA, счётчики, allowed graph и digest 449 входных файлов;
+raw JSON/IDE evidence сохранены дополнительно в ignored TestResults той же даты.
+Документационные проверки: inventory coverage/CSV identities, acyclic allowed graph,
+relative links/anchors, полный архив заменённых STATUS, SHA guards и git diff --check.
+Исходники C#, .csproj, build profile, runners и предложенная заявка игры не менялись.
+Build/tests/native не запускались; результаты CORE8.5 остаются датированными 11 ноября.
+Параллельное audio исследование/его STATUS сохранены; оно не меняет основной порядок.
+
+<a id="engine-status-before-arch30-2026-11-12"></a>
+## STATUS до карты ARCH3.0 — архив 2026-11-12
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-12 — первичное исследование audio ARCH1h.0; без изменений C#.**
+[Сравнение библиотек и предложение модуля](AUDIO_RESEARCH.md): основной кандидат
+miniaudio через advanced/native MiniAudioEx 4.0.1, запасной SoLoud. Пользователь
+выбрал сначала Windows, затем Linux/macOS. H.0 частичен: backend/API/budgets
+не утверждены; exact nupkg, offline/device и native delivery не проверялись.
+Следующий audio шаг — изолированный binding spike; общая очередь ARCH3.0 сохранена.
+
+**2026-11-12 — планирование ARCH3; только документация.**
+По запросу пользователя зафиксированы четыре слоя Abstractions / Runtime /
+Tooling / Editor UI, ECS contracts и hot replacement модов через collectible ALC.
+[Единственный подробный план ARCH3.0–9](PLAN.md#arch3-layers-mods).
+
+Реализация разделения, Abstractions-only Mod SDK и замена модов в живом World
+ещё не начаты. Сейчас действуют прежние Aether/Editor assemblies и child replacement;
+наличие collectible GameBuildLoader не означает готовый mod manager.
+
+| Проверка/работа | Текущий результат |
+| --- | --- |
+| Новая работа 12 ноября | План, зависимости, lifecycle/rollback/migration и приёмка разбиты на 10 этапов; ссылки/anchors и diff проверены документационным аудитом |
+| Последние фактические runtime tests, 11 ноября, CORE8.5 | Aether 3243 и Editor 1496 каждый D/R; Failed 0, Skipped 0. Сегодня build/tests/native не запускались |
+| Последняя фактическая поставка | Source/published hosts, 8 package game cases на обоих DI и 2 fresh GPU viewport profiles прошли в прежних границах; [scope](../core/HISTORY.md#core85-delivery-2026-11-11) |
+
+Первым supported reload mode планируется смена систем со стабильными component
+types; mod-owned types/schema changes переносятся в private новый World с явной
+migration. Identity, ownership, resumable quiesce и cooperative unload verification
+имеют отдельные критерии, не являются новой гарантией текущего Runtime.
+
+## Следующий конкретный шаг
+
+**[ARCH3.0](PLAN.md#arch3-0):** карта public types/dependencies/consumers,
+целевые package names и namespace/API/artifact compatibility policy.
+ARCH1f.4 surface renderer/Playing fence, g.1 importer, h.0 audio, ED и прежние
+reliability/physical/release gates сохраняют свои критерии. Proposed game заявка
+не принималась. [Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch3-2026-11-12).
+
+<a id="arch3-planning-2026-11-12"></a>
+## ARCH3: слои и моды — планирование 2026-11-12
+
+По явному запросу пользователя добавлен [ARCH3.0–9](PLAN.md#arch3-layers-mods).
+Abstractions, Runtime, headless Tooling и независимый Editor UI; ECS contracts,
+typed components/value handles; collectible ALC, shared type identity, module
+ownership, system-only reload и migration нового World для mod component types.
+Определены candidate/quiesce/capture/commit/retire/unload, failure outcomes,
+независимые package consumers и повторная reload acceptance.
+ARCH2 остаётся историей, ENG6 ссылается на новый ALC маршрут; f.4/import/audio/ED
+не отменены. Запрос игры прочитан как контекст, Request/Claim/Decision не менялись.
+Изменена только документация; новые build/test/native passing результаты отсутствуют.
+Проверки этой записи — SHA guards, относительные ссылки/anchors и git diff --check.
+
+<a id="engine-status-before-arch3-2026-11-12"></a>
+## STATUS до ARCH3 — архив 2026-11-12
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-11 — CORE8.5: свежая согласованная .NET 11 поставка проверена.**
+SDK 11.0.100 / net11.0 / runtime-async=on. Полные suites повторно прошли в каждой
+конфигурации Debug/Release: Aether 3243, Editor 1496; Failed 0, Skipped 0.
+Runtime/API/dependencies в CORE8.5 не менялись; обновлены runners и документация.
+[Поставка, команды и границы](../core/HISTORY.md#core85-delivery-2026-11-11),
+[переход](../core/DOTNET11_MIGRATION.md).
+
+Source/published Runtime examples и 8 independent package game cases (оба DI, DLL/apphost, build/publish) проверили compile/load/replacement/stop/reap; два fresh GPU viewport profiles прошли. F.4 mesh surface renderer/Playing fence, g.1 importer, h.0 audio и прежние reliability gates остаются отдельными. Proposed game заявка не принималась.
+
+Сквозной CORE8 завершён; далее функциональная очередь владельца модуля.
+[Предыдущий STATUS](HISTORY.md#engine-status-before-core85-2026-11-11).
 
 <a id="core85-2026-11-11"></a>
 ## CORE8.5: согласованная поставка — 2026-11-11
@@ -13029,3 +14134,275 @@ Editor: ED5b v1 и observer4f закрыты в своих scopes. Local-oriente
 либо rotation/scale требуют отдельного выбора. Reliability: изолировать native game
 fixtures от repo legacy CLI-tool restore и получить current full baseline; прежний
 post-reap drain timeout требует собственного причинного evidence. Physical/release отдельно.
+
+
+<a id="arch35-2026-11-14"></a>
+## ARCH3.5 — Editor UI / optional bridge, 14.11.2026
+
+Запрос: следующий согласованный этап после ARCH3.4. Реализация: отдельные
+TrueMoon.Aether.Editor.UI и TrueMoon.Aether.Editor.Tooling. UI → Runtime/Alloy.Hosting,
+без Tooling; optional bridge → UI + Tooling. Views/styles/данные и шесть INPC ports
+выделены, concrete VM/commands сохраняют full workflow. Общая viewport binding
+заимствует FrameSession. TranslationTarget остаётся authoring adapter, чистая math — UI.
+Runtime-only UseAetherEditorUi/UseConfiguredAetherEditorUi и optional window adapter
+принимают явный PlayerStart/RuntimeComposition. Startup не запускает игру/SDK;
+inspection показывает captured scene, камера остаётся game-owned. Новые window keys
+Editor:RuntimeWindow используют общий WindowConfigurationSchema. Full Editor:Window
+и другие keys/typed callbacks, single DI ownership, factory products и lifecycle прежние.
+Terminal Stop обновляет capabilities даже из idle; это закреплено отдельной regression.
+Schema2 и существующие byte formats сохранены; old Editor package/project удалён,
+нужны new namespaces/package references и coherent rebuild, facade не добавлен.
+
+85file/split mappings: ARCH35_MIGRATION.csv; API/ownership/limits: EDITOR_LAYERS.md.
+Git HEAD 73df16229da1db54e1170ac0d56b9d385f91abd7, shared dirty main
+сохранён. Накопленные предыдущие изменения и src/.codex не сбрасывались; commit/push
+в этом запросе не выполнялись. Исходный snapshot содержит2268source/config/doc files.
+
+| Требование | Точная адресная проверка |
+| --- | --- |
+| Lazy graph, no Tooling, read-only selection, one DI disposer, оба DI | RuntimeEditorTests.RuntimeUi_RegistersLazyGraphAndReadonlyInspection_WithoutTooling |
+| Cancel/drain до viewport readiness, no late admission, оба DI | RuntimeEditorTests.PendingViewportStartup_CancelsAndDrains_WithoutLaunchingOrLateAdmission |
+| Common schema instances, explicit protected identity и duplicate rejection, оба DI | RuntimeEditorTests.ConfiguredRuntimeUi_UsesExactCommonSchemasAndRejectsIdentityMismatch |
+| Owner-thread presentation | RuntimeEditorTests.RuntimeInspection_RejectsForeignPresentationThread_AndRetainsSelection |
+| Typed World values, retained rows и no redundant refresh | RuntimeEditorTests.CapturedWorldInspection_FormatsTypedValues_WithoutMutatingOrRebuildingPresentation |
+| Terminal Stop из idle disables Start/Run | RuntimeEditorTests.TerminalStopFromIdle_NotifiesDisabledCapabilities_WithoutStartingRuntime |
+| Исходный manual child использует Runtime schema/engine без Tooling activation, оба DI | ManualRuntimeBootstrapTests.ChildComposition_UsesExactRuntimeSchemaAndRuntimeEngine_WithoutToolingOrNativeActivation |
+
+Адресные cases и два ManualRuntimeBootstrapTests входят в полные1507Editor tests D/R. Полная matrix:
+`dotnet test <project>/<project>.csproj -c <Debug|Release> --no-build --no-restore
+--logger "trx;LogFileName=tests.trx" --results-directory <fresh-directory>
+"-bl:<fresh-directory>/test-{}.binlog"` для Abstractions.Tests, Player.Tests,
+Editor.Tests и Aether.Tests. По26/17/1507/3353passed = 4903 на configuration;
+failed/notExecuted0. При последней сверке исправлен также child bootstrap исходного
+ManualTests/AetherEditorHost: exact RuntimeConfigurationSchemas.Engine, RuntimeEngine
+и surface registration вместо старого full host. Два новых composition cases прошли
+на обоих DI, затем повторены полные Editor D/R и solution builds. Aether.Tests и её
+Runtime/Tooling/Abstractions DLL в обоих outputs остались byte-identical; подтверждённые
+3353D/R не запускались повторно после этой consumer-only правки. Отдельного нового
+native legacy CLI smoke исходного manual host не было.
+Две non-incremental `dotnet build TrueMoon.slnx -c <configuration>
+-t:Rebuild -m -v:q "-bl:<fresh-path>-{}.binlog"`:0errors, warnings
+1570/1570. Уникальные binlogs/TRX/report SHA — в ARCH35_BASELINE.json.
+
+Новая independent native приёмка `ManualTests/EditorUiConsumer/Verify.ps1
+-ValidationDirectory <existing-layer> -EvidenceDirectory <fresh-directory>`:
+8profiles (source Debug/published Release/fresh-package/SDK-free ×Cobalt/Microsoft),
+по28checks,2actual mesh captures/profile,17packages и3package graphs. Publisher с
+Tooling выполняется отдельно до execution; UI process/graph без Tooling, game не
+загружается в родителя. Verified first presentation, Step exactly once, Play/Pause
+ticks, Stop/reap, zero owners и validation0/0; SDK отсутствует в execution root.
+SDK-free означает copied host/runtime без sdk, не изменение системной установки.
+
+Полная поставка: `ManualTests/ConfigurationDelivery/Verify.ps1 -EvidenceDirectory
+<fresh-directory>` после D/R build:15profiles/19packages. `Export-Keys.ps1` по этому
+manifest:18schemas/149keys. `ManualTests/AetherPackageConsumer/VerifyPackages.ps1
+-PackageVerification <configuration-manifest> -EvidenceDirectory <fresh-directory>`:
+18packages,8DLL/apphost/provider cases и2expected no-bootstrap failures.
+`VerifyGui.ps1 -PackageVerification <package-manifest> -ValidationDirectory <layer>
+-RunProfile SourceDebug|PackageRelease -HostKind All -Scenario Workflow`:
+4cases, standard/Cobalt и embedded/Microsoft в каждом профиле. Open/edit/save/undo,
+preview→game, frozen package preparation, play/pause/step, Replace/rollback/last-good,
+stop и UI/native ownership прошли. Child validation0/0, owners0/reap. Это Workflow,
+не новая приёмка всех Failure/Cancel/WindowRoot/SourceWatch/physical scenarios.
+Новые Editor.UI/Editor.Tooling прошли `eng/Check-PackageMetadata.ps1 -Pack -NoBuild
+-Project <two-projects> -RunDirectory <fresh-TestResults/PackageMetadata-directory>`.
+PowerShell7 parser и namespace/project boundary audit прошли.
+
+Ранние попытки сохранены отдельно: integration builds выявили недостающие ports и
+старые imports в independent GUI. Live GUI fixture имел net10 lock target и ссылку
+на PreviewGameSession implementation; он переведён на baked SDK/TFM/language/features
+snapshot, $(TF), CPM isolation и собственный neutral CameraTransform. Промежуточный
+NuGetAudit в generated props был удалён как неподдержанный frozen subset. Thread
+test исправлен на настоящий отдельный Thread вместо inline-able Task.Run. Ранний
+GUI package run прошёл cases, но manifest отверг source drift после terminal-Stop
+fix; он не является canonical passing. После правок выполнена вся canonical matrix.
+
+Ограничения: Windows x64/current native profile; no new native rebuild, другие OS,
+AOT, device loss/soak/performance/release и Mod SDK/unload не приняты. Previous
+Skia/physics/audio и ARCH2e.4b causal drain outcomes не расширены. Props SHA и Skia
+DLL SHA сохранены. Следующий ARCH3.6; ARCH3.7–9 и ENG7b.3/release остаются отдельно.
+Raw artifacts: E:/source/my/TrueMoon.Tales/TrueMoon/src/TestResults/ARCH35-20261114-164647, ignored local TestResults и temporary feeds/roots;
+retention не гарантируется. Versioned manifest/HISTORY сохраняют scope, команды,
+outcomes и SHA без зависимости от доступности старых локальных логов.
+
+<a id="engine-status-before-arch35-2026-11-14"></a>
+## Полный engine STATUS до ARCH3.5, 14.11.2026
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-14 — ARCH3.4 завершён: самостоятельный headless Tooling.**
+[API/App/DI/ownership/миграция](TOOLING.md), [91перенос/split mapping](ARCH34_MIGRATION.csv),
+[manifest/SHA](ARCH34_BASELINE.json), [команды и история](HISTORY.md#arch34-2026-11-14).
+
+Tooling содержит compiler/preflight/capture/publisher, authoring/history/persistence,
+project/document/source sessions, preview coordination и diagnostic writer/pure DTO.
+UseAetherTooling не создаёт RuntimeEngine/окно/GPU и не запускает SDK в idle App.
+Общая configuration, explicit identity/RuntimeAccess и single ownership сохранены.
+Failed/cancelled Build сохраняет last-good/document; cleanup failure держит owner
+для retry. Terminal App Stop discards unsaved memory после compiler drain, не Save.
+Old Aether проект убран из текущего wiring; imports→Tooling, нужен coherent rebuild
+hosts/games/artifacts/captures. Schema2 и scene/project/control/frame formats прежние.
+Editor переведён на Tooling; UI/optional bridge пока не разделены.
+
+| Финальная проверка | Результат |
+| --- | --- |
+| Non-incremental solution Debug/Release |0errors; warnings D/R 1570/1570 |
+| Полные Aether / Abstractions / Player / Editor D/R | По3353 /26 /17 /1496passed, failed/skipped0 |
+| Headless Tooling source/publish/fresh ×both DI |6profiles, по30real IO/SDK/workflow checks,11packages, no UI/native activation |
+| Runtime-only source/publish/fresh/SDK-free ×both DI |8profiles; prepared scene/game+real ECS, no Tooling/UI;11packages |
+| Native Player source/publish/fresh ×both DI |6profiles/17packages,5captures/profile; Vulkan0/0, handles/slots0, surfaces balanced |
+| App/configuration/child |15profiles/18packages, protected settings и Stop/reap |
+| Independent package hosts |8DLL/apphost/provider cases +2expected no-bootstrap failures,17packages |
+
+Windows x64 / SDK11.0.100 / net11.0 / runtime-async=on / xUnit2 VSTest.
+SDK-free означает isolated runtime root без sdk, системный SDK не удалялся.
+Другие module suites/OS/AOT/device loss/performance/release/mod reload не заявлены.
+Package props и Skia DLL сохранены; native rebuild этого этапа не было.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS4 App/configuration/DI 2026-11-12
+
+TrueMoon.Kton.Bepu public App integration/factories/lifecycle реализованы:
+192checks/profile (96Cobalt+96MicrosoftDI), source/fresh NuGet Debug/published Release;
+реальные worlds, generated constructor,9package closure и cleanup retry.
+Current PHYS2–3 regression309×3. [Scope/evidence](../physics/HISTORY.md#phys4-2026-11-12),
+[App guide](../physics/APP.md), [следующий PHYS5](../physics/STATUS.md).
+ECS bridge ещё впереди и согласуется с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue),
+[ARCH1i](PLAN.md#arch1i-physics). Engine/GPU/platform readiness и очередь не меняются.
+
+## Следующий конкретный шаг
+
+**ARCH3.5 — Editor UI без обязательного Tooling:** выделить View/Data/styles и
+UI-owned capability ports; full project/document/build adapters — optional bridge.
+Проверить два независимых приложения: Runtime+UI без Tooling и полный Editor с ним,
+с сохранением open/edit/save/build/play/stop и UI/native ownership.
+После этого ARCH3.6–9 — моды/collectible loader/reload/migration. ENG7b.3/release и
+causal drain follow-up открыты. Audio/Kton имеют собственные очереди.
+Proposed Request/Claim/Decision не изменены.
+[Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch34-2026-11-14).
+
+
+<a id="arch36-2026-11-14"></a>
+## 2026-11-14 — ARCH3.6: Mod SDK, manifest и collectible loader
+
+Запрос: следующий этап после ARCH3.5. [Контракты/политики/ownership/ограничения](MODS.md),
+[versioned manifest/SHA](ARCH36_BASELINE.json). Shared dirty main и preexisting
+изменения сохранены, commit/push не выполнялись. Proposed requests не изменены.
+
+Abstractions.Mods: module entry/registration/service lifecycle и data-only manifest.
+Runtime.Mods: strict bounded immutable artifact admission, exact shared/private
+resolution, WholeGroup dependency order, ModHost App ownership, private typed ECS
+Worlds, startup/cancel/cleanup outcomes и retry, weak unload tickets. Composition
+wrapper запрещает module Types/generic arguments и App/provider/bootstrap owners.
+Tooling.Mods публикует новый hash-addressed directory без overwrite; Runtime
+остаётся без Tooling. Старый GameBuildLoader и byte formats не менялись.
+Exact shared hashes требуют coherent rebuild/republication SDK/host/game/mod.
+
+Финальные команды: `TestResults/ARCH36-20261114-190230/Run-Final.ps1` (non-incremental solution D/R;
+full Aether/Abstractions/Player/Editor xUnit2 VSTest D/R с binlogs/TRX) и
+`ManualTests/ModConsumer/Verify.ps1 -EvidenceDirectory TestResults/ARCH36-20261114-190230/mod-delivery`
+через PowerShell7. BuildProfile helper зафиксировал SDK/TFM/language/features/CPM.
+Доказательства: final-checks.json, final-*.trx/log/binlog, mod-delivery/verification.json;
+шесть точных manifests сохранены в ArtifactManifests. Промежуточные initial/second/
+mods-final/aether-debug/aether-final-debug логи не подменяют финальную приёмку.
+
+| Gate | Результат |
+| --- | --- |
+| Solution D/R | 0errors, warnings1570/1570 (новых Mod warnings нет) |
+| Aether / Abstractions / Player / Editor D/R | 3406 /26 /17 /1507; 4956/configuration, failed/skipped0 |
+| Mod failure/ownership/collection cases | 53/configuration, включая actual component/system, private refs, startup + cleanup failure, App cancellation, tick fence, запрещённый root resolution |
+| Source D/R + published D/R + fresh + SDK-free ×both DI | 12 managed profiles; value7→8, exact stop/dispose и collected ALC |
+| Fresh packages | 11 framework packages; отдельный закрытый local feed, пустой NuGet cache; SDK graph ровно Abstractions+Contracts |
+| SDK-free | runtime root без sdk; prepared mod/private DLL execution без compiler/tooling в Runtime host |
+
+Начальные проверки выявили неполный FullName unsigned DLL (PublicKeyToken=null),
+исправлена нормализация. При review root DI guard дополнен IApp/IServiceProvider/
+bootstrap запретами; они проверены вместе с weak collection. Services drain идёт
+до систем/World cleanup. Production sources после финального snapshot не менялись.
+Package props и пользовательская Skia DLL сохранили начальные SHA.
+
+Не проверялись native mods, GPU/native/GUI/configuration delivery, другие модули/
+OS/AOT/trimming, forced abort, production release, system hot replacement и World
+migration. Stage3.5 native/GUI passing остаётся исторической записью. Следующий
+ARCH3.7 — отдельная candidate generation, quiesce/capture/commit/retire.
+
+<a id="engine-status-before-arch36-2026-11-14"></a>
+### Предыдущий engine STATUS целиком
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-14 — ARCH3.5 завершён: независимый Editor UI и optional Editor.Tooling.**
+[API/ports/App/DI/ownership/миграция](EDITOR_LAYERS.md), [85переносов/split mapping](ARCH35_MIGRATION.csv),
+[manifest/SHA](ARCH35_BASELINE.json), [команды/границы](HISTORY.md#arch35-2026-11-14).
+
+Editor.UI содержит View/data/styles/ports, viewport math и Runtime-only App/window
+adapter; его graph не содержит Tooling. Editor.Tooling подключает полный project/
+document/build/inspector/history/preview/diagnostic workflow. Full concrete VM
+реализуют UI ports; disposable aliases не добавлены. Selection/camera/draft/history,
+stale document/layout/generation fences и actual mesh Playing fence сохранены.
+Runtime UI принимает готовые PlayerStart/identity, показывает captured read-only
+inspection и session controls; недоступные Build/Replace не делают IO/SDK work.
+Terminal Stop/cancel/drain и disabled capabilities проверены; UI parent владеет
+View/controller, App — сервисами. Старый Editor project/package выведен из wiring;
+нужна миграция namespace/package и coherent rebuild hosts/games/artifacts/captures.
+Общая версия и schema2/scene/project/control/frame/checkpoint formats прежние.
+
+| Фактическая проверка | Результат |
+| --- | --- |
+| Non-incremental solution Debug/Release |0errors, warnings 1570/1570 |
+| Полные Aether / Abstractions / Player / Editor D/R | По3353 /26 /17 /1507passed; 4903 на configuration, failed/skipped0 |
+| Runtime + UI source/publish/fresh/SDK-free ×both DI |8native profiles, по28checks,17packages; graph без Tooling,16actual mesh captures |
+| Full Editor source Debug и fresh-package published Release |4Workflow cases: standard/Cobalt и embedded/Microsoft DI в каждом профиле; open/edit/save/build/play/pause/step/replace/stop |
+| App/configuration/child |15profiles/19packages;18schemas/149keys |
+| Independent package hosts |8DLL/apphost/provider cases +2expected no-bootstrap failures;18packages |
+| Metadata новых пакетов |Editor.UI и Editor.Tooling pack/validation прошли |
+
+Native profiles: Vulkan validation0errors/0warnings, logical owners/handles0,
+surfaces/slots balanced и child reap. Windows x64, SDK11.0.100, net11.0,
+runtime-async=on, xUnit2/VSTest. SDK-free — отдельный runtime root без sdk;
+системная установка не менялась. Полные другие module suites/OS/AOT/device loss/
+performance/release/mod unload этим этапом не проверялись. Package props и Skia DLL
+сохранены; native rebuild не выполнялся. Старые passing результаты не подменяют эти прогоны.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS4 App/configuration/DI 2026-11-12
+
+TrueMoon.Kton.Bepu public App integration/factories/lifecycle реализованы:
+192checks/profile (96Cobalt+96MicrosoftDI), source/fresh NuGet Debug/published Release;
+реальные worlds, generated constructor,9package closure и cleanup retry.
+Current PHYS2–3 regression309×3. [Scope/evidence](../physics/HISTORY.md#phys4-2026-11-12),
+[App guide](../physics/APP.md), [следующий PHYS5](../physics/STATUS.md).
+ECS bridge ещё впереди и согласуется с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue),
+[ARCH1i](PLAN.md#arch1i-physics). Engine/GPU/platform readiness и очередь не меняются.
+
+## Следующий конкретный шаг
+
+**ARCH3.6 — Mod SDK, manifest и collectible loader:** module entry/factory contracts,
+dependency/API/hash checks, immutable artifact directory, shared/private resolution,
+load/stop/dispose/unload с weak-reference proof и явными failure outcomes.
+ARCH3.7–9 добавят system reload/new-World migration и приёмку; существующий game
+loader не объявлен готовым mod manager. ENG7b.3/release и causal drain follow-up
+остаются открыты. Audio/Kton имеют свои очереди. Proposed Request/Claim/Decision
+не изменены. [Предыдущий STATUS целиком](HISTORY.md#engine-status-before-arch35-2026-11-14).

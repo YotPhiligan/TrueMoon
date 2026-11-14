@@ -1,8 +1,10 @@
-using TrueMoon.Aether.Editor;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
 using System.Text.Json;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using SkiaSharp;
+using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -203,7 +205,7 @@ internal static partial class EditorHeaderSmoke
     internal static async Task ConfirmDocumentPathAsync(UiSession ui, EditorView view, CancellationToken token)
     {
         var requested = false;
-        await ui.InvokeAsync(() => requested = view.Documents?.DataContext is TrueMoon.Aether.Editor.Documents.EditorDocumentViewModel { IsPathPromptOpen: true }).WaitAsync(token);
+        await ui.InvokeAsync(() => requested = view.Documents?.DataContext is EditorDocumentViewModel { IsPathPromptOpen: true }).WaitAsync(token);
         if (!requested) return;
         await UntilAsync(ui, () => view.Documents is { IsVisible: true } tools && tools.Actions.IsVisible && tools.ConfirmPath.IsEnabled && !ui.NeedsUpdate, token);
         await ui.InvokeAsync(() => Click(ui, view.Documents!.ConfirmPath)).WaitAsync(token);

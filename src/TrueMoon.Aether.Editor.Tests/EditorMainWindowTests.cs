@@ -1,9 +1,14 @@
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tests.Editing;
 using TrueMoon.Aether.Editor.Tests.Inspector;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.UI.Editing;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.SourceTracking;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
 using Xunit;

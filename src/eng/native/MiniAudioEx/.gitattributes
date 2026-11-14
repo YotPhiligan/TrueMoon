@@ -1,0 +1,2 @@
+# Build.ps1 verifies the exact patch bytes from Source.lock.json on every platform.
+libvorbis-lifetime.patch text eol=lf whitespace=-blank-at-eol

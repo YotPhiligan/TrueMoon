@@ -1,4 +1,5 @@
-using TrueMoon.Aether.Editor.Diagnostics;
+using TrueMoon.Aether.Editor.Tooling.Diagnostics;
+using TrueMoon.Aether.Tooling.Diagnostics;
 using TrueMoon.Diagnostics;
 
 namespace TrueMoon.Aether.Editor.Tests.Diagnostics;

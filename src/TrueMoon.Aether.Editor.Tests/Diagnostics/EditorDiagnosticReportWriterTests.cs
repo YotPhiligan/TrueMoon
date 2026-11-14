@@ -1,5 +1,5 @@
 using System.Text.Json;
-using TrueMoon.Aether.Editor.Diagnostics;
+using TrueMoon.Aether.Tooling.Diagnostics;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Diagnostics;

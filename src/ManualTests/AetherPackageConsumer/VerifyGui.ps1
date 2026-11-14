@@ -15,7 +15,10 @@ $trueMoonBuildProfile = Get-TrueMoonBuildProfile -Workspace ([IO.Path]::GetFullP
 $ErrorActionPreference = 'Stop'
 $guiWorkspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $guiBaseline = Get-Content -LiteralPath $PackageVerification -Raw | ConvertFrom-Json
-if (!$guiBaseline.Completed -or $guiBaseline.Cases.Count -ne 8 -or $guiBaseline.Packages.Count -ne 15) { throw 'A completed ARCH2e.1/2 package proof is required.' }
+if (!$guiBaseline.Completed -or $guiBaseline.Cases.Count -ne 8 -or $guiBaseline.Packages.Count -ne 18 -or
+    @('TrueMoon.Aether.Runtime','TrueMoon.Aether.Tooling','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling' | Where-Object { $_ -notin $guiBaseline.Packages.Id }).Count) {
+    throw 'A completed coherent package proof with separate Runtime/Tooling/Editor.UI/Editor.Tooling is required.'
+}
 $guiValidation = [IO.Path]::GetFullPath($ValidationDirectory)
 if (!(Test-Path -LiteralPath "$guiValidation/VkLayer_khronos_validation.json") -or !(Test-Path -LiteralPath "$guiValidation/VkLayer_khronos_validation.dll")) { throw 'Provide the extracted validation layer directory.' }
 $guiEvidence = if ($EvidenceDirectory) { [IO.Path]::GetFullPath($EvidenceDirectory) } else { Join-Path $guiWorkspace ('TestResults/ARCH2e3-' + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
@@ -126,7 +129,7 @@ try {
         Copy-Item -LiteralPath "$guiWorkspace/Examples/AetherRuntimeHost/Program.cs" -Destination "$consumer/Runtime/Program.cs"
         [IO.File]::WriteAllText("$consumer/Runtime/Runtime.csproj", @"
 <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><RootNamespace>TrueMoon.Examples.AetherRuntimeHost</RootNamespace></PropertyGroup>
-<ItemGroup><PackageReference Include="TrueMoon" Version="$($guiBaseline.Version)" /><PackageReference Include="TrueMoon.Aether" Version="$($guiBaseline.Version)" /></ItemGroup></Project>
+<ItemGroup><PackageReference Include="TrueMoon" Version="$($guiBaseline.Version)" /><PackageReference Include="TrueMoon.Aether.Tooling" Version="$($guiBaseline.Version)" /></ItemGroup></Project>
 "@)
         foreach ($name in @('NotoSans-Regular.ttf','OFL.txt')) { Copy-Item -LiteralPath "$guiWorkspace/Examples/AetherEditor/Assets/Fonts/$name" -Destination "$consumer/Gui/Assets/Fonts/$name" }
         $feed = [Security.SecurityElement]::Escape($guiBaseline.Feed)

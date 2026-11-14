@@ -1,9 +1,8 @@
-using TrueMoon.Aether.Editor;
 using System.Text.Json;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Aether.Runtime;
-using TrueMoon.Aether.Sessions;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 using TrueMoon.Configuration;
@@ -16,20 +15,9 @@ internal static class RuntimeEntryPoint
     internal static async Task RunAsync()
     {
         var bootstrap = RuntimeBootstrap.ReadEnvironment();
-        var launch = bootstrap.Launch; var parentId = bootstrap.ParentProcessId;
-        var preview = launch.Role == RuntimeRole.EditPreview;
-        await using var app = App.Build(context =>
-        {
-            context.UseConfiguration(ConfigurationProfiles.Create(profile =>
-            {
-                profile.AddSchema(DiagnosticsConfigurationSchema.Default); profile.AddSchema(AetherConfigurationSchemas.Engine);
-                profile.Override("Diagnostics:JsonDirectory", Path.Combine(launch.ReportDirectory, "diagnostics", "runtime"));
-                profile.Override("Diagnostics:JsonUseRunDirectories", true);
-            }));
-            context.UseConfiguredDiagnostics();
-            context.UseConfiguredAetherRuntime(bootstrap);
-        });
-        var engine = app.Services.Resolve<AetherHost>()!;
+        var launch = bootstrap.Launch;
+        await using var app = App.Build(context => { ConfigureApp(context, bootstrap); });
+        var engine = app.Services.Resolve<RuntimeEngine>()!;
         AetherRuntimeHost? runtime=null;var started=false;Exception? failure=null;
         try { await app.StartAsync();started=true;runtime=app.Services.Resolve<AetherRuntimeHost>()!;await runtime.RunAsync(); }
         catch(Exception error){failure=error;throw;}
@@ -42,5 +30,18 @@ internal static class RuntimeEntryPoint
                 FailureType=failure?.GetType().FullName,NoGpuSurfaceProduced=engine.Gpu.LastSurfaceProducer==null,
                 ChildDiagnostics = runtime?.ChildDiagnosticsStatus }));
         }
+    }
+
+    internal static void ConfigureApp(IAppConfigurationContext context, RuntimeBootstrap bootstrap)
+    {
+        context.UseConfiguration(ConfigurationProfiles.Create(profile =>
+        {
+            profile.AddSchema(DiagnosticsConfigurationSchema.Default); profile.AddSchema(RuntimeConfigurationSchemas.Engine);
+            profile.Override("Diagnostics:JsonDirectory", Path.Combine(bootstrap.Launch.ReportDirectory, "diagnostics", "runtime"));
+            profile.Override("Diagnostics:JsonUseRunDirectories", true);
+        }));
+        context.UseConfiguredDiagnostics();
+        context.UseConfiguredAetherRuntime(bootstrap);
+        context.UseAetherSurfaceRendering();
     }
 }

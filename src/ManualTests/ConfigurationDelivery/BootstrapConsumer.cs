@@ -1,12 +1,13 @@
+using TrueMoon.Aether.Runtime;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Diagnostics;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Abstractions.Sessions;
 using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
@@ -64,7 +65,7 @@ internal static class Program
                 Check(data.GetProperty("GameBuildId").GetString() == launch.Identity.GameBuildId);
                 Check(data.GetProperty("ReportDirectory").GetString() == launch.ReportDirectory);
                 Check(data.GetProperty("MaxBatchRecords").GetInt32() == 4);
-                Check(data.GetProperty("BuildTimeoutSeconds").GetInt32() == 7);
+                Check(data.GetProperty("CommandTimeoutSeconds").GetInt32() == 7);
                 Check(data.GetProperty("OrdinaryUnitId").GetInt32() == 77);
                 Check(data.GetProperty("AppName").GetString() == "bootstrap-child");
                 Check(!Directory.Exists(launch.ReportDirectory));
@@ -107,17 +108,17 @@ internal static class Program
             var bootstrap = RuntimeBootstrap.ReadEnvironment();
             var probeProfile = ConfigurationProfiles.Create(builder =>
             {
-                builder.AddSchema(AetherConfigurationSchemas.Engine);
+                builder.AddSchema(RuntimeConfigurationSchemas.Engine);
                 builder.Override("Aether:ReportDirectory", Path.Combine(directory, "spoofed"));
                 builder.Override("Aether:ChildDiagnostics:MaxBatchRecords", 12);
-                builder.Override("Aether:BuildTimeout", TimeSpan.FromSeconds(7));
+                builder.Override("Aether:Deadlines:Command", TimeSpan.FromSeconds(7));
             });
-            AetherSettings prepared;
+            RuntimeSettings prepared;
             await using (var probe = Builder(microsoft, child: true).Setup(context => context.UseConfiguration(probeProfile)
                 .UseConfiguredAetherRuntime(bootstrap, value =>
                 { value.ReportDirectory = "callback-spoof"; value.ChildDiagnostics.MaxBatchRecords = 17; value.GpuValidation = false; })).Build())
             {
-                prepared = probe.Services.Resolve<IConfigurationReader>().Current.GetOptions(AetherConfigurationSchemas.Engine);
+                prepared = probe.Services.Resolve<IConfigurationReader>().Current.GetOptions(RuntimeConfigurationSchemas.Engine);
                 if (!probe.Services.Resolve<RuntimeStartupSettings>().GpuValidation || !bootstrap.Settings.GpuValidation)
                     throw new InvalidOperationException("Captured startup flags were replaced.");
                 await using var parent = probe.Services.Resolve<IFactory<UnitParentProcessEventsHandler>>().Create()!;
@@ -140,7 +141,7 @@ internal static class Program
                     ControlPipeCaptured = !string.IsNullOrEmpty(bootstrap.ParentLaunch?.ControlPipe) && bootstrap.ParentLaunch.ControlPipe == unit.ControlPipe,
                     bootstrap.Settings.GpuValidation, bootstrap.Launch.Identity.HostContractId, bootstrap.Launch.Identity.GameBuildId,
                     prepared.ReportDirectory, prepared.ChildDiagnostics.MaxBatchRecords,
-                    BuildTimeoutSeconds = (int)prepared.BuildTimeout.TotalSeconds,
+                    CommandTimeoutSeconds = (int)prepared.Deadlines.Command.TotalSeconds,
                     OrdinaryUnitId = app.Services.Resolve<IConfigurationReader>().Current.Read<int>("Mithril:UnitId").Value
                 };
                 var ready = Path.Combine(directory, "ready.json");

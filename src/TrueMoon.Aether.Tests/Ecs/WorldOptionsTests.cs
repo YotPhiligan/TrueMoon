@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Runtime.Ecs;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Ecs;

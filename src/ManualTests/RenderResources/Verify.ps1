@@ -16,8 +16,8 @@ if((Test-Path -LiteralPath $cpuRun) -or (Test-Path -LiteralPath $cpuEvidence)){t
 $cpuDotnet=(Get-Command dotnet -ErrorAction Stop).Source
 $cpuFeed=Join-Path $cpuRun 'feed';$cpuCache=Join-Path $cpuRun 'cache';$cpuSource=Join-Path $cpuRun 'source';$cpuFresh=Join-Path $cpuRun 'fresh';$cpuCwd=Join-Path $cpuRun 'unrelated working directory'
 foreach($directory in @($cpuRun,$cpuEvidence,$cpuFeed,$cpuCache,$cpuSource,$cpuFresh,$cpuCwd)){[void][IO.Directory]::CreateDirectory($directory)}
-$cpuVersion='0.2.2.7-renderresources.'+(Get-Date -Format 'yyyyMMddHHmmss')
-$cpuPackages=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Aether')
+$cpuVersion=$trueMoonBuildProfile.Version+'.renderresources.'+(Get-Date -Format 'yyyyMMddHHmmss')
+$cpuPackages=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Enerit.Generator','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime')
 $cpuReport=[ordered]@{Completed=$false;RunDirectory=$cpuRun;Version=$cpuVersion;Commands=@();Packages=@();ExternalPackages=@();Graphs=@();Sources=@();Profiles=@();Failure=$null;GpuRun=$false;WindowRun=$false}
 function Save-CpuReport {$cpuReport|ConvertTo-Json -Depth 12|Set-Content -LiteralPath (Join-Path $cpuEvidence 'verification.json') -Encoding utf8}
 function Invoke-Cpu([string]$name,[string[]]$arguments,[string]$cwd=$cpuWorkspace,[switch]$isolated){
@@ -65,7 +65,7 @@ try{
         [IO.File]::WriteAllText((Join-Path $directory 'Directory.Build.props'),"<Project><PropertyGroup><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><LangVersion>latest</LangVersion><NuGetAudit>false</NuGetAudit></PropertyGroup></Project>")
         Copy-Item -LiteralPath $program -Destination (Join-Path $directory 'Program.cs')
     }
-    $aether=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Aether/TrueMoon.Aether.csproj'))
+    $aether=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj'))
     $bootstrap=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon/TrueMoon.csproj'))
     [IO.File]::WriteAllText((Join-Path $cpuSource 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>RenderResourcesConsumer</AssemblyName><RootNamespace>RenderResourcesConsumer</RootNamespace></PropertyGroup><ItemGroup><ProjectReference Include=`"$aether`"/><ProjectReference Include=`"$bootstrap`"/></ItemGroup></Project>")
     Invoke-Cpu 'source-restore' @('restore','Consumer.csproj','--configfile',"$cpuSource/NuGet.Config","-bl:$cpuEvidence/source-restore-{}.binlog") $cpuSource
@@ -80,7 +80,7 @@ try{
         if(!(Test-Path -LiteralPath $path)){throw "Missing package: $id"}
         $cpuReport.Packages+=@{Id=$id;Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash}
     }
-    [IO.File]::WriteAllText((Join-Path $cpuFresh 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>RenderResourcesConsumer</AssemblyName><RootNamespace>RenderResourcesConsumer</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include=`"TrueMoon`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Aether`" Version=`"$cpuVersion`"/></ItemGroup></Project>")
+    [IO.File]::WriteAllText((Join-Path $cpuFresh 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>RenderResourcesConsumer</AssemblyName><RootNamespace>RenderResourcesConsumer</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include=`"TrueMoon`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Aether.Runtime`" Version=`"$cpuVersion`"/></ItemGroup></Project>")
     Invoke-Cpu 'fresh-restore' @('restore','Consumer.csproj','--configfile',"$cpuFresh/NuGet.Config",'--no-http-cache',"-bl:$cpuEvidence/fresh-restore-{}.binlog") $cpuFresh -isolated
     $graph=Get-Content -LiteralPath "$cpuFresh/obj/project.assets.json" -Raw|ConvertFrom-Json -AsHashtable
     if($graph.libraries.Values.Where({$_.type -eq 'project'}).Count){throw 'Fresh consumer contains ProjectReferences.'}

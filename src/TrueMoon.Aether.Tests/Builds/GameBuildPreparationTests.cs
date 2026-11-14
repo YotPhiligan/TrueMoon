@@ -7,7 +7,10 @@ using System.Reflection.Emit;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
-using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Tooling.Builds;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Builds;
@@ -569,7 +572,7 @@ public sealed class GameBuildPreparationTests
     {
         using var files = new Files();
         await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, files.Artifacts);
-        GameBuildArtifact first;
+        GameBuildResult first;
         try { first = await compiler.BuildAsync(files.Request); }
         catch (Exception error)
         {
@@ -606,7 +609,7 @@ public sealed class GameBuildPreparationTests
         Assert.NotSame(first.Inputs.SourceWatch, reused.Inputs.SourceWatch);
         Assert.Equal(first.Compilation!.Fingerprint, reused.Compilation!.Fingerprint);
         Assert.Equal(File.ReadAllBytes(Path.Combine(first.DirectoryPath, first.EntryAssembly)), File.ReadAllBytes(Path.Combine(reused.DirectoryPath, reused.EntryAssembly)));
-        var reopened = GameBuildArtifact.Open(reused.DirectoryPath, GameBuildFixture.Hash);
+        var reopened = new GameBuildResult(GameBuildArtifact.Open(reused.DirectoryPath, GameBuildFixture.Hash));
         Assert.Equal(2, reopened.SourceRevision); Assert.Null(reopened.Inputs); Assert.Null(reopened.Compilation);
         await compiler.VerifyInputsAsync(reused.Inputs, reused.Compilation);
         var fresh = await compiler.BuildAsync(request with { SourceRevision = 3, ReuseArtifact = false });
@@ -638,7 +641,7 @@ public sealed class GameBuildPreparationTests
         await using var firstCompiler = new GameBuildCompiler(GameBuildFixture.Hash, files.Artifacts);
         var request = files.Request with { ReuseArtifact = true };
         var first = await firstCompiler.BuildAsync(request);
-        if (change == "deleted") GameBuildArtifact.DeleteOwned(first.DirectoryPath, files.Artifacts);
+        if (change == "deleted") GameArtifactPublisher.DeleteOwned(first.DirectoryPath, files.Artifacts);
         if (change == "corrupt") File.AppendAllText(Path.Combine(first.DirectoryPath, first.EntryAssembly), "corrupt");
         await using var nextCompiler = new GameBuildCompiler(GameBuildFixture.Hash, files.Artifacts);
         var compiler = change == "new-compiler" ? nextCompiler : firstCompiler;
@@ -722,14 +725,14 @@ public sealed class GameBuildPreparationTests
         {
             await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, artifacts);
             var artifact = await compiler.BuildAsync(new(project, "Game.Logic.dll", "Game.Logic.RoomGame", 1)
-                { TrackInputs = true, CaptureCompilation = true, CapturePreparation = true });
+                { RuntimeAccess = true, TrackInputs = true, CaptureCompilation = true, CapturePreparation = true });
             Assert.Contains(artifact.Inputs!.Preparation!.Files, file => file.Path == Path.GetFullPath("../../Directory.Build.props", Path.GetDirectoryName(project)!));
-            Assert.Contains(artifact.Compilation!.Files, file => file.Path == typeof(TrueMoon.Aether.Sessions.IGameSession).Assembly.Location);
+            Assert.Contains(artifact.Compilation!.Files, file => file.Path == typeof(IGameSession).Assembly.Location);
             Assert.Equal("net11.0", GameBuildProfile.TargetFramework);
             Assert.Equal(11, Version.Parse(artifact.Inputs.Preparation.SdkVersion).Major);
             using (var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(artifact.DirectoryPath, GameBuildArtifact.ManifestFile))))
             {
-                Assert.Equal(1, manifest.RootElement.GetProperty("Schema").GetInt32());
+                Assert.Equal(2, manifest.RootElement.GetProperty("Schema").GetInt32());
                 Assert.Equal("net11.0", manifest.RootElement.GetProperty("TargetFramework").GetString());
             }
             using (var evaluation = JsonDocument.Parse(File.ReadAllText(Path.Combine(compiler.DiagnosticsDirectory!, "before.evaluation.json"))))
@@ -743,7 +746,7 @@ public sealed class GameBuildPreparationTests
             Assert.True(File.Exists(Path.Combine(artifact.DirectoryPath, "Game.Logic.dll")));
             Assert.Null(compiler.ProcessId); Assert.False(Directory.Exists(Path.Combine(compiler.DiagnosticsDirectory!, "preparation")));
         }
-        finally { if (artifactInsideCheckout) GameBuildArtifact.DeleteOwned(artifacts, results); }
+        finally { if (artifactInsideCheckout) GameArtifactPublisher.DeleteOwned(artifacts, results); }
     }
 
     [Theory]

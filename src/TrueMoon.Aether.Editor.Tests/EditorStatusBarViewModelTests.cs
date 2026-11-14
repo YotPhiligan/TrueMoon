@@ -1,10 +1,16 @@
-﻿using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
 using TrueMoon.Aether.Editor.Tests.Editing;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Runtime.Preview;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Preview;
+using TrueMoon.Aether.Tooling.Scenes;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests;
@@ -194,14 +200,14 @@ public sealed class EditorStatusBarViewModelTests
     {
         using var source = new HeaderFixture(openDocument: true);
         var entered = DocumentData.Signal(); var cancelled = false; var stops = 0;
-        using var preview = new TrueMoon.Aether.Editor.Editing.EditorPreview(async (scene, token) =>
+        using var preview = new EditorPreview(async (scene, token) =>
         {
             entered.TrySetResult();
             try { await Task.Delay(Timeout.Infinite, token); }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { cancelled = true; throw; }
             return EditingFixture.Receipt(scene);
         }, () => { stops++; return Task.CompletedTask; });
-        using var transform = new TrueMoon.Aether.Editor.Editing.EditorTransformViewModel(source.Owner.Commands, preview);
+        using var transform = new EditorTransformViewModel(source.Owner.Commands, preview);
         transform.Refresh(DocumentData.Child.Value.ToString());
         using var model = new EditorStatusBarViewModel(source.Model, source.Documents, transform);
         model.ShowPreview(); DocumentUiFixture.Wait(entered.Task); transform.Refresh(DocumentData.Child.Value.ToString());
@@ -216,10 +222,10 @@ public sealed class EditorStatusBarViewModelTests
     public void PreviewFailure_IsActionableAndRetryClearsErrorAfterActualPresentation()
     {
         using var source = new HeaderFixture(openDocument: true); var attempts = 0;
-        using var preview = new TrueMoon.Aether.Editor.Editing.EditorPreview((scene, _) => ++attempts == 1 ?
-            Task.FromException<TrueMoon.Aether.Preview.ScenePreviewDocument>(new IOException("preview complete failure\nline two")) :
+        using var preview = new EditorPreview((scene, _) => ++attempts == 1 ?
+            Task.FromException<ScenePreviewDocument>(new IOException("preview complete failure\nline two")) :
             Task.FromResult(EditingFixture.Receipt(scene)), () => Task.CompletedTask);
-        using var transform = new TrueMoon.Aether.Editor.Editing.EditorTransformViewModel(source.Owner.Commands, preview);
+        using var transform = new EditorTransformViewModel(source.Owner.Commands, preview);
         transform.Refresh(DocumentData.Child.Value.ToString());
         using var model = new EditorStatusBarViewModel(source.Model, source.Documents, transform);
         model.ShowPreview(); DocumentUiFixture.Wait(preview.Pending); transform.Refresh(DocumentData.Child.Value.ToString());

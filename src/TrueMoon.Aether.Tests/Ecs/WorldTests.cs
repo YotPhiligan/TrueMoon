@@ -1,4 +1,5 @@
-using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Runtime.Ecs;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Ecs;
@@ -73,6 +74,12 @@ public sealed class WorldTests
         var destroyed = world.CreateEntity();
         world.DestroyEntity(destroyed);
         world.AddComponent(live, new Position(41, 43));
+        if (kind is "negative-index" or "zero-generation")
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new EntityHandle(world.Id, kind == "negative-index" ? -1 : live.Index, kind == "zero-generation" ? 0U : 1U));
+            Assert.True(world.IsAlive(live)); Assert.Equal(new Position(41, 43), world.GetComponent<Position>(live));
+            return;
+        }
         var invalid = kind switch
         {
             "default" => default,

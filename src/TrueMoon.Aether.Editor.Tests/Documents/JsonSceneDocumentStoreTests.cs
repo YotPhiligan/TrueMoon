@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Tooling.Scenes;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Documents;

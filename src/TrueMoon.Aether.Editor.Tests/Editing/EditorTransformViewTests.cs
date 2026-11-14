@@ -1,7 +1,6 @@
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
+using TrueMoon.Aether.Editor.UI.Editing;
 using TrueMoon.Argentis;
 using Xunit;
 

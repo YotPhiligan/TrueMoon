@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
-using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Tooling.Builds;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Builds;

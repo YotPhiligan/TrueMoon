@@ -1,16 +1,20 @@
+using TrueMoon.Aether.Runtime;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 using TrueMoon.Mithril;
@@ -49,8 +53,8 @@ internal static class RuntimeLaunchProbe
                 generations.Add(await RunGenerationAsync(factory, second, runtime.RuntimeAssemblyPath, false, deadline.Token));
 
                 // Publish bytes already built with the probe. Never resolve a game Type in this parent.
-                var artifact = GameBuildArtifact.Publish(AppContext.BaseDirectory, Path.Combine(directory, "artifacts"),
-                    hostId, "Game.Logic.dll", "Game.Logic.ProbeGame", 7, cancellationToken: deadline.Token);
+                var artifact = GameArtifactPublisher.Publish(AppContext.BaseDirectory, Path.Combine(directory, "artifacts"),
+                    hostId, "Game.Logic.dll", "Game.Logic.ProbeGame", 7, cancellationToken: deadline.Token, runtimeAccess: true);
                 artifactReport = new { artifact.BuildId, artifact.DirectoryPath, artifact.EntryAssembly,
                     Sha256 = FileHash(Path.Combine(artifact.DirectoryPath, artifact.EntryAssembly)), CompilerStarted = false };
                 var game = new SessionLaunch(new(session, 3, hostId, artifact.BuildId, Nonce()),

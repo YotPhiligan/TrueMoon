@@ -1,6 +1,6 @@
 using TrueMoon.Aether.Editor.Tests.Documents;
-using TrueMoon.Aether.Editor.Translation;
-using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Translation;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;

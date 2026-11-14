@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editor.Editing;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.SourceTracking;
 using Xunit;
+using EditorSourceFile = TrueMoon.Aether.Tooling.SourceTracking.EditorSourceFile;
 
 namespace TrueMoon.Aether.Editor.Tests.Editing;
 

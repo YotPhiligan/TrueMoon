@@ -1,0 +1,680 @@
+﻿{
+    "Stage":  "ENG7b.1-2",
+    "Completed":  true,
+    "VerifiedUtc":  "2026-11-12T14:09:51.0854074Z",
+    "Head":  "73df16229da1db54e1170ac0d56b9d385f91abd7",
+    "Branch":  "main",
+    "Scope":  "Minimal Windows x64 local Player; no full ENG7b.3 matrix or physical ARCH3 extraction",
+    "BuildProfile":  {
+                         "Workspace":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+                         "Framework":  "net11.0",
+                         "TestFramework":  "net11.0",
+                         "Sdk":  "11.0.100",
+                         "Version":  "0.3.0.1-alpha",
+                         "LanguageVersion":  "latest",
+                         "Features":  ";runtime-async=on",
+                         "Sources":  [
+                                         {
+                                             "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Build.props",
+                                             "Sha256":  "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+                                         },
+                                         {
+                                             "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props",
+                                             "Sha256":  "D76B9692C5ACCBE093FBA3DFDDADC2CF99738760C648CA425BB4E741869CC4F8"
+                                         },
+                                         {
+                                             "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\global.json",
+                                             "Sha256":  "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+                                         },
+                                         {
+                                             "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\BuildProfile.ps1",
+                                             "Sha256":  "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+                                         }
+                                     ],
+                         "EvidencePath":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ENG7b12-20261112-181233\\delivery\\profile-b604bcde0d7347358c5c2d5155c8ecc0.json"
+                     },
+    "Builds":  [
+                   {
+                       "NonIncremental":  true,
+                       "Evidence":  {
+                                        "Sha256":  "90B25E2F842B6707173476504B4CFF4C1FC3A7A3683F39E0EEF03EAC8C160ED9",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/solution-Debug-final.log"
+                                    },
+                       "Configuration":  "Debug",
+                       "Warnings":  1556,
+                       "Errors":  0
+                   },
+                   {
+                       "NonIncremental":  true,
+                       "Evidence":  {
+                                        "Sha256":  "8D9EF01B509B670C3C42F9C0A402129141D2EDEFE2D2034BEB2F74C3FF4998EC",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/solution-Release-final.log"
+                                    },
+                       "Configuration":  "Release",
+                       "Warnings":  1556,
+                       "Errors":  0
+                   }
+               ],
+    "Tests":  {
+                  "AetherDebugRecheck":  {
+                                             "Skipped":  0,
+                                             "Evidence":  {
+                                                              "Sha256":  "319930B631371FF7BE1D965D88A2E24C59E2EFA3103F9889E91296B045CE783A",
+                                                              "Path":  "TestResults/ENG7b12-20261112-181233/aether-Debug-final-recheck.trx"
+                                                          },
+                                             "Failed":  0,
+                                             "Passed":  32
+                                         },
+                  "EditorRelease":  {
+                                        "Skipped":  0,
+                                        "Evidence":  {
+                                                         "Sha256":  "FD7DEBF3D8C8DAF560A397D16C540407322019D38E57F84E665516A7E345E848",
+                                                         "Path":  "TestResults/ENG7b12-20261112-181233/editor-Release.trx"
+                                                     },
+                                        "Failed":  0,
+                                        "Passed":  1496
+                                    },
+                  "AetherReleaseRecheck":  {
+                                               "Skipped":  0,
+                                               "Evidence":  {
+                                                                "Sha256":  "58CBD753C2315B319D221BC5C479BE4D51494463571148563FCD98CD32C0440F",
+                                                                "Path":  "TestResults/ENG7b12-20261112-181233/aether-Release-final-recheck.trx"
+                                                            },
+                                               "Failed":  0,
+                                               "Passed":  32
+                                           },
+                  "PlayerRelease":  {
+                                        "Skipped":  0,
+                                        "Evidence":  {
+                                                         "Sha256":  "729F2ED0D21183CAD97A82D75BE2D712451825C6BD928163B87723B602C1250A",
+                                                         "Path":  "TestResults/ENG7b12-20261112-181233/player-final2-Release.trx"
+                                                     },
+                                        "Failed":  0,
+                                        "Passed":  17
+                                    },
+                  "PlayerDebug":  {
+                                      "Skipped":  0,
+                                      "Evidence":  {
+                                                       "Sha256":  "11DFA3B7C36D26BD804D0116DDAC64EC701068F8902F20EA510C4C3F7C8D8DF5",
+                                                       "Path":  "TestResults/ENG7b12-20261112-181233/player-final2-Debug.trx"
+                                                   },
+                                      "Failed":  0,
+                                      "Passed":  17
+                                  },
+                  "AetherDebugFirst":  {
+                                           "Passed":  3299,
+                                           "Skipped":  0,
+                                           "Evidence":  {
+                                                            "Sha256":  "670A61131F8DB336190BEBCDCA274B18F38B95374C40A7C445147969F96C8A3B",
+                                                            "Path":  "TestResults/ENG7b12-20261112-181233/aether-Debug.trx"
+                                                        },
+                                           "Failed":  1,
+                                           "Disposition":  "Clean Debug solution rebuild, then all 31 Player core tests and this process test passed in a 32-test recheck. No single clean 3300-test Debug rerun claimed.",
+                                           "Cause":  "Concurrent rebuild removed EngineSessionProbe.runtimeconfig.json while the testhost was running",
+                                           "Failure":  "TrueMoon.Aether.Tests.Diagnostics.ChildDiagnosticProcessTests.ThreeActualGenerations_ForwardProvenanceAndLossWhileControlAndLocalFilesSurviveFloodAndBrokenSinks"
+                                       },
+                  "EditorDebug":  {
+                                      "Skipped":  0,
+                                      "Evidence":  {
+                                                       "Sha256":  "8D211E5C66296AE50C7A375052E030CFD80C7A96BE6C73357A8FE97DC4829FF9",
+                                                       "Path":  "TestResults/ENG7b12-20261112-181233/editor-Debug.trx"
+                                                   },
+                                      "Failed":  0,
+                                      "Passed":  1496
+                                  },
+                  "AetherRelease":  {
+                                        "Skipped":  0,
+                                        "Evidence":  {
+                                                         "Sha256":  "E771CBDBB6A1FF95088F44CE47CAB7D6B4C559585BBC3BA3EDD0242CE15B51D3",
+                                                         "Path":  "TestResults/ENG7b12-20261112-181233/aether-Release.trx"
+                                                     },
+                                        "Failed":  0,
+                                        "Passed":  3300
+                                    }
+              },
+    "Launch":  [
+                   {
+                       "Evidence":  {
+                                        "Sha256":  "D5889639BB1C5D24552AB3487D79AC47B5F4C50E32397796BDBF18605ECF2E25",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/launch-Debug/verification.json"
+                                    },
+                       "Configuration":  "Debug",
+                       "Cases":  12
+                   },
+                   {
+                       "Evidence":  {
+                                        "Sha256":  "4F4A4833EB046CB476C132D06CE951D8A4ECDC228C7DD0D368ED61453BF7108C",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/launch-Release/verification.json"
+                                    },
+                       "Configuration":  "Release",
+                       "Cases":  12
+                   }
+               ],
+    "Native":  [
+                   {
+                       "EditorLoaded":  false,
+                       "SurfacesCreated":  3,
+                       "GameLoaded":  true,
+                       "Warnings":  0,
+                       "SurfacesReleased":  3,
+                       "Errors":  0,
+                       "CopiedFrames":  19,
+                       "Captures":  5,
+                       "OpenHandles":  0,
+                       "Evidence":  {
+                                        "Sha256":  "922C4E6E117CBB7F69BB1CC10D3A3028108FE305034A56AFD5A4FAE90507F59C",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/delivery/source-cobalt/player.json"
+                                    },
+                       "PresentedFrames":  30,
+                       "Name":  "source-cobalt",
+                       "DevicesCreated":  3,
+                       "DevicesReleased":  3,
+                       "SlotsCreated":  9,
+                       "SlotsReleased":  9
+                   },
+                   {
+                       "EditorLoaded":  false,
+                       "SurfacesCreated":  3,
+                       "GameLoaded":  true,
+                       "Warnings":  0,
+                       "SurfacesReleased":  3,
+                       "Errors":  0,
+                       "CopiedFrames":  19,
+                       "Captures":  5,
+                       "OpenHandles":  0,
+                       "Evidence":  {
+                                        "Sha256":  "B56A3AD0C349D2A5EC2C9B40B45CABB38E46E4D90547029C539B3F1F9341A01A",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/delivery/source-microsoft/player.json"
+                                    },
+                       "PresentedFrames":  31,
+                       "Name":  "source-microsoft",
+                       "DevicesCreated":  3,
+                       "DevicesReleased":  3,
+                       "SlotsCreated":  9,
+                       "SlotsReleased":  9
+                   },
+                   {
+                       "EditorLoaded":  false,
+                       "SurfacesCreated":  3,
+                       "GameLoaded":  true,
+                       "Warnings":  0,
+                       "SurfacesReleased":  3,
+                       "Errors":  0,
+                       "CopiedFrames":  18,
+                       "Captures":  5,
+                       "OpenHandles":  0,
+                       "Evidence":  {
+                                        "Sha256":  "A17C18DF0859E9BDF0CA5F8C8700684E9D94875848BEF097C5EE8654DFF14C72",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/delivery/published-cobalt/player.json"
+                                    },
+                       "PresentedFrames":  29,
+                       "Name":  "published-cobalt",
+                       "DevicesCreated":  3,
+                       "DevicesReleased":  3,
+                       "SlotsCreated":  9,
+                       "SlotsReleased":  9
+                   },
+                   {
+                       "EditorLoaded":  false,
+                       "SurfacesCreated":  3,
+                       "GameLoaded":  true,
+                       "Warnings":  0,
+                       "SurfacesReleased":  3,
+                       "Errors":  0,
+                       "CopiedFrames":  19,
+                       "Captures":  5,
+                       "OpenHandles":  0,
+                       "Evidence":  {
+                                        "Sha256":  "03A02E417D341BE32B4224F1BDE64940D31B6675B720FE10598013EB0F213304",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/delivery/published-microsoft/player.json"
+                                    },
+                       "PresentedFrames":  30,
+                       "Name":  "published-microsoft",
+                       "DevicesCreated":  3,
+                       "DevicesReleased":  3,
+                       "SlotsCreated":  9,
+                       "SlotsReleased":  9
+                   },
+                   {
+                       "EditorLoaded":  false,
+                       "SurfacesCreated":  3,
+                       "GameLoaded":  true,
+                       "Warnings":  0,
+                       "SurfacesReleased":  3,
+                       "Errors":  0,
+                       "CopiedFrames":  18,
+                       "Captures":  5,
+                       "OpenHandles":  0,
+                       "Evidence":  {
+                                        "Sha256":  "B5B3DE9B4E3B71868FB9853E094B5C9DB27A84A67BF2483C1B6B520366D55DD0",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/delivery/fresh-cobalt/player.json"
+                                    },
+                       "PresentedFrames":  30,
+                       "Name":  "fresh-cobalt",
+                       "DevicesCreated":  3,
+                       "DevicesReleased":  3,
+                       "SlotsCreated":  9,
+                       "SlotsReleased":  9
+                   },
+                   {
+                       "EditorLoaded":  false,
+                       "SurfacesCreated":  3,
+                       "GameLoaded":  true,
+                       "Warnings":  0,
+                       "SurfacesReleased":  3,
+                       "Errors":  0,
+                       "CopiedFrames":  18,
+                       "Captures":  5,
+                       "OpenHandles":  0,
+                       "Evidence":  {
+                                        "Sha256":  "606FA97730191C7EE45581C3A6C77D16244345D989D2F1006E558824F1001DE5",
+                                        "Path":  "TestResults/ENG7b12-20261112-181233/delivery/fresh-microsoft/player.json"
+                                    },
+                       "PresentedFrames":  30,
+                       "Name":  "fresh-microsoft",
+                       "DevicesCreated":  3,
+                       "DevicesReleased":  3,
+                       "SlotsCreated":  9,
+                       "SlotsReleased":  9
+                   }
+               ],
+    "Delivery":  {
+                     "CacheIsolation":  true,
+                     "ProjectReferences":  0,
+                     "Evidence":  {
+                                      "Sha256":  "453BD1EA9821ADB749D8C1331288129DC46DAF92B794AE6F9A389BE11DD6C1BD",
+                                      "Path":  "TestResults/ENG7b12-20261112-181233/delivery/verification.json"
+                                  },
+                     "Profiles":  6,
+                     "Packages":  [
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Contracts.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "79FCAED9E66FD1DDF81253271371A6A3FC57306ED138A7B8B621573EC0D51F57",
+                                          "Id":  "TrueMoon.Contracts"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Core.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "CD2DC70A8EAA75C2921DA1367EF68CCB2A9D5ED533B4621B2DC72D03399157E3",
+                                          "Id":  "TrueMoon.Core"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Cobalt.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "DBDB3DB9A99000DF055E69FA7F5B05B3827B734ABDFFAC80B82F03CEA27EB276",
+                                          "Id":  "TrueMoon.Cobalt"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "E306795881A545AAD01C13F5F84020EAE0C659D57CD920ABEFC6AB998A3CB883",
+                                          "Id":  "TrueMoon"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Extensions.DependencyInjection.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "32DC9A1B9ABA21BCF9330101CE7DB7E8766861A869ABE3B88AD1EB64161A3265",
+                                          "Id":  "TrueMoon.Extensions.DependencyInjection"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Enerit.Generator.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "213CD74BDCA18B7DC320301CBED518F4B591CEDCD0999EDE50698B5CC2DD4957",
+                                          "Id":  "TrueMoon.Enerit.Generator"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Enerit.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "15A676EE58A09E88F91ACDF526D3D7031B496C398F470CA3C7055CE115F8D963",
+                                          "Id":  "TrueMoon.Enerit"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Mithril.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "7BD8FD193848976CFD8B32CE699288C7B98D63DF079E04EDCE0CDC150C13C943",
+                                          "Id":  "TrueMoon.Mithril"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Argentis.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "BEBC09FE89B3AE14E7A0C10E2FE8EEA03DEAFF88A00F65CA2104722EBF79770A",
+                                          "Id":  "TrueMoon.Argentis"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Alloy.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "4E36E9E0026684AC6237649D3C28645DF1F40B7BA8B0066FD36334D7020E3AFA",
+                                          "Id":  "TrueMoon.Alloy"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Alloy.Rendering.Skia.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "8603FE19EF423691E67438810B455360FECF4594F58787F106FB0D04AE891BE6",
+                                          "Id":  "TrueMoon.Alloy.Rendering.Skia"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Alloy.Platform.Silk.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "CC8DCEDC93DC5CC9022453C2DE8851C78DD4BE8AF6D927B64F255C42AF27FA6E",
+                                          "Id":  "TrueMoon.Alloy.Platform.Silk"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Alloy.Hosting.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "1B1C1D31C51ADB8866F5435DA9055CB322B6BC06A99790AC4D0997CE4A734F9C",
+                                          "Id":  "TrueMoon.Alloy.Hosting"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Aether.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "AF5B871D59FDEE19F09CE5DEEDF84C46C91B69E909D4D4B498978B572C2981E2",
+                                          "Id":  "TrueMoon.Aether"
+                                      },
+                                      {
+                                          "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-728a0079c24e4a1fa88d5258b1ff600b/feed/TrueMoon.Aether.Player.0.3.0.1-alpha.player.20261112185050.nupkg",
+                                          "Sha256":  "682A1F0EB916998DB89362BA32EFA58A8715A0F4E860BC3EC74C4F407ED17473",
+                                          "Id":  "TrueMoon.Aether.Player"
+                                      }
+                                  ],
+                     "Version":  "0.3.0.1-alpha.player.20261112185050",
+                     "Graphs":  [
+                                    {
+                                        "Project":  "probe",
+                                        "ProjectReferences":  0,
+                                        "AssetsSha256":  "B83A855B81396CA2D8CF4A85BADC9795B3EB49E7865563A2E1CECBCEFE90F62F"
+                                    },
+                                    {
+                                        "Project":  "game",
+                                        "ProjectReferences":  0,
+                                        "AssetsSha256":  "869AEAD91F4183FA4DDADB2F4FC2E00876D042AA21E41B0972C1C8AF393DCADC"
+                                    }
+                                ]
+                 },
+    "FailedNativeStartup":  {
+                                "Evidence":  {
+                                                 "Sha256":  "7324ACBD226C1FAF3C9173CFF54251528FEE541D3BD46BA39FF2659145D40E11",
+                                                 "Path":  "TestResults/ENG7b12-20261112-181233/failed-native-startup/acceptance.json"
+                                             },
+                                "Runtime":  {
+                                                "Sha256":  "B7B237B95908DE28D99EEE49F116CAF862E2821AAC38458E00BCB2AAF2785BC0",
+                                                "Path":  "TestResults/ENG7b12-20261112-181233/failed-native-startup/player.json"
+                                            },
+                                "ExpectedPrimary":  "ErrorLayerNotPresent",
+                                "RemainingOwners":  0,
+                                "Stopped":  true
+                            },
+    "LegacyPrimitive":  {
+                            "Resources":  0,
+                            "Evidence":  {
+                                             "Sha256":  "54545D57BB74E18231981969B510DC08FB693CF422043D8B0EAAA09D90AFD83F",
+                                             "Path":  "TestResults/ENG7b12-20261112-181233/legacy-primitive/gpu-surface-report.json"
+                                         },
+                            "Frames":  80,
+                            "Handles":  0,
+                            "Cases":  21,
+                            "ActiveUiSessions":  0
+                        },
+    "SolutionDiscovery":  {
+                              "Sha256":  "F3108471D6AA425E1B2179C685005249297AC55BB6D9D4EB480BD71AE6707451",
+                              "Path":  "TestResults/ENG7b12-20261112-181233/solution-discovery-final.log"
+                          },
+    "PublicTypeDelta":  [
+                            {
+                                "Type":  "PlayerConfigurationExtensions",
+                                "File":  "TrueMoon.Aether.Player/PlayerConfigurationExtensions.cs",
+                                "Namespace":  "TrueMoon.Aether.Player"
+                            },
+                            {
+                                "Type":  "PlayerInput",
+                                "File":  "TrueMoon.Aether.Player/PlayerInput.cs",
+                                "Namespace":  "TrueMoon.Aether.Player"
+                            },
+                            {
+                                "Type":  "PlayerOptions",
+                                "File":  "TrueMoon.Aether.Player/PlayerOptions.cs",
+                                "Namespace":  "TrueMoon.Aether.Player"
+                            },
+                            {
+                                "Type":  "PlayerViewModel",
+                                "File":  "TrueMoon.Aether.Player/PlayerView.cs",
+                                "Namespace":  "TrueMoon.Aether.Player"
+                            },
+                            {
+                                "Type":  "PlayerCanvas",
+                                "File":  "TrueMoon.Aether.Player/PlayerView.cs",
+                                "Namespace":  "TrueMoon.Aether.Player"
+                            },
+                            {
+                                "Type":  "PlayerView",
+                                "File":  "TrueMoon.Aether.Player/PlayerView.cs",
+                                "Namespace":  "TrueMoon.Aether.Player"
+                            },
+                            {
+                                "Type":  "PlayerViewStyle",
+                                "File":  "TrueMoon.Aether.Player/PlayerView.cs",
+                                "Namespace":  "TrueMoon.Aether.Player"
+                            },
+                            {
+                                "Type":  "PlayerWindow",
+                                "File":  "TrueMoon.Aether.Player/PlayerWindow.cs",
+                                "Namespace":  "TrueMoon.Aether.Player"
+                            },
+                            {
+                                "Type":  "GpuLocalSurfaceRequest",
+                                "File":  "TrueMoon.Aether/Gpu/Surfaces/GpuLocalSurfaceSession.cs",
+                                "Namespace":  "TrueMoon.Aether.Gpu.Surfaces"
+                            },
+                            {
+                                "Type":  "GpuLocalSurfaceSession",
+                                "File":  "TrueMoon.Aether/Gpu/Surfaces/GpuLocalSurfaceSession.cs",
+                                "Namespace":  "TrueMoon.Aether.Gpu.Surfaces"
+                            },
+                            {
+                                "Type":  "AetherLaunchOptions",
+                                "File":  "TrueMoon.Aether/Hosting/AetherLaunchOptions.cs",
+                                "Namespace":  "TrueMoon.Aether.Hosting"
+                            },
+                            {
+                                "Type":  "AetherLaunchRole",
+                                "File":  "TrueMoon.Aether/Hosting/AetherLaunchRole.cs",
+                                "Namespace":  "TrueMoon.Aether.Hosting"
+                            },
+                            {
+                                "Type":  "PlayerConfigurationExtensions",
+                                "File":  "TrueMoon.Aether/PlayerConfigurationExtensions.cs",
+                                "Namespace":  "TrueMoon.Aether"
+                            },
+                            {
+                                "Type":  "PlayerSession",
+                                "File":  "TrueMoon.Aether/Runtime/PlayerSession.cs",
+                                "Namespace":  "TrueMoon.Aether.Runtime"
+                            },
+                            {
+                                "Type":  "PlayerStart",
+                                "File":  "TrueMoon.Aether/Runtime/PlayerStart.cs",
+                                "Namespace":  "TrueMoon.Aether.Runtime"
+                            },
+                            {
+                                "Type":  "PlayerState",
+                                "File":  "TrueMoon.Aether/Runtime/PlayerStatus.cs",
+                                "Namespace":  "TrueMoon.Aether.Runtime"
+                            },
+                            {
+                                "Type":  "PlayerStatus",
+                                "File":  "TrueMoon.Aether/Runtime/PlayerStatus.cs",
+                                "Namespace":  "TrueMoon.Aether.Runtime"
+                            }
+                        ],
+    "Sources":  [
+                    {
+                        "Sha256":  "3F9CEA542D1A51683A9422D1F08961AC269247C79E78304A7C9F8AA5E74CD419",
+                        "Path":  "Examples/AetherHost/AetherHost.csproj"
+                    },
+                    {
+                        "Sha256":  "4E8F191312BA893FACC44C7A190D64C0A51AC17E24A0C026D7755D5785309952",
+                        "Path":  "Examples/AetherHost/EditorApplication.cs"
+                    },
+                    {
+                        "Sha256":  "8D6FC48AE2E9A50EF54DF4361F15C7E91B7E0A7A207FA71AC310BAF19E68113C",
+                        "Path":  "Examples/AetherHost/Program.cs"
+                    },
+                    {
+                        "Sha256":  "E40E22FB7A3FA77758D07E331F97C888B28651566B8D083E2B928A8527E080BC",
+                        "Path":  "Examples/AetherHost/README.md"
+                    },
+                    {
+                        "Sha256":  "4FA67F4CDF33404AC5CAF7FC7324DE797CFD51A0311D63C79E6F137528F1EFC8",
+                        "Path":  "Examples/AetherHost/RuntimeApplication.cs"
+                    },
+                    {
+                        "Sha256":  "1B2719FDECA6515C542C265655EBD778BEAC2B89C3E2BC4E7DD6F71D55986F77",
+                        "Path":  "Examples/AetherPlayer/AetherPlayer.csproj"
+                    },
+                    {
+                        "Sha256":  "4EA6BC1D8F0FEC497D4D9ADC1715167F8E8DE64D50FA746A4D606963FFEAF796",
+                        "Path":  "Examples/AetherPlayer/PlayerApplication.cs"
+                    },
+                    {
+                        "Sha256":  "054AC8A352CD142A52508ABC050D6F8E3A114087E082318A3AD8D4FE5A0B16C9",
+                        "Path":  "Examples/AetherPlayer/Program.cs"
+                    },
+                    {
+                        "Sha256":  "1F1143AC32F70C0332525CB1A7CDBE1064D795C214BB46311B38CE3020B5E9DE",
+                        "Path":  "Examples/AetherPlayer/README.md"
+                    },
+                    {
+                        "Sha256":  "51C9563BD6E6FD9CD05EC40E2C34BA5A209C42FE960A331A492C7630910BE1B0",
+                        "Path":  "ManualTests/PlayerProbe/PlayerProbe.csproj"
+                    },
+                    {
+                        "Sha256":  "E4EA7878C8E00B59C7181B912494AEAD23F1B11EC5962BD2C6EEBF1276CA3317",
+                        "Path":  "ManualTests/PlayerProbe/Program.cs"
+                    },
+                    {
+                        "Sha256":  "897BD8CDEF6B8A240E3D4E1F0924200421AC8B1B5422612E10F3F7DAC1830050",
+                        "Path":  "ManualTests/PlayerProbe/README.md"
+                    },
+                    {
+                        "Sha256":  "2B9D28C2445E42CDBC547CE340EB58DFAA1411DC92F71539BA93EB7DB7817484",
+                        "Path":  "ManualTests/PlayerProbe/Verify.ps1"
+                    },
+                    {
+                        "Sha256":  "D2921EE411D303BAEE7C467DB3336931A54C92156CC8552310D05FC9B283324B",
+                        "Path":  "ManualTests/PlayerProbe/VerifyLaunch.ps1"
+                    },
+                    {
+                        "Sha256":  "17EC66D245B6A2FEF94E1B58212570D68E58C5FA721619CA55C1ED685258E026",
+                        "Path":  "TrueMoon.Aether.Player.Tests/PlayerCompositionTests.cs"
+                    },
+                    {
+                        "Sha256":  "F15234F0558C41F29FF62BB6D25075391CA613E739707FD64FC938D8D5959E04",
+                        "Path":  "TrueMoon.Aether.Player.Tests/PlayerInputTests.cs"
+                    },
+                    {
+                        "Sha256":  "94C019C8905E287DCDF4EA547B968D0D4F93CBD488241D2ABFE605BC9C7DEFCA",
+                        "Path":  "TrueMoon.Aether.Player.Tests/TrueMoon.Aether.Player.Tests.csproj"
+                    },
+                    {
+                        "Sha256":  "D9C7A15DD3C25F7AF1ECF8602058795FE6939D2F1F3E8AAF5C6C6B0C6F6C535A",
+                        "Path":  "TrueMoon.Aether.Player/PACKAGE.md"
+                    },
+                    {
+                        "Sha256":  "5EF3DD823BCC6AE73C72F7973D9EEBE435B4F537680365B1970D8D7FDB04F690",
+                        "Path":  "TrueMoon.Aether.Player/PlayerConfigurationExtensions.cs"
+                    },
+                    {
+                        "Sha256":  "EEF0544D8EA3E8CB53910A88FE8016E6D0ED65AE3D9EECAE7BDE659525001F8D",
+                        "Path":  "TrueMoon.Aether.Player/PlayerInput.cs"
+                    },
+                    {
+                        "Sha256":  "25222B295C757559C9692221837EB4F9BE74BAF902D6F8D49995B32C81D93B90",
+                        "Path":  "TrueMoon.Aether.Player/PlayerOptions.cs"
+                    },
+                    {
+                        "Sha256":  "EDF82060196485583328F2502C28AE7F5DAABC733A202E904C15AA6B5C041073",
+                        "Path":  "TrueMoon.Aether.Player/PlayerView.cs"
+                    },
+                    {
+                        "Sha256":  "D5E78E796C2538C15D4E3574F353FAFB87D907988486A12116AD14C91F7726BE",
+                        "Path":  "TrueMoon.Aether.Player/PlayerWindow.cs"
+                    },
+                    {
+                        "Sha256":  "33FB81D26BD0BC778127DB5BC02D267CA7B7CC20D435B69CC5E21ADC51E0093D",
+                        "Path":  "TrueMoon.Aether.Player/TrueMoon.Aether.Player.csproj"
+                    },
+                    {
+                        "Sha256":  "57299D5A66A5725F2975A54FAFCFD32FC253BF6B4094F29E0793A5B00840A8F5",
+                        "Path":  "TrueMoon.Aether.Tests/Hosting/AetherLaunchOptionsTests.cs"
+                    },
+                    {
+                        "Sha256":  "3C912929A4914B160ED369ED0E3E9076589EBE5DA8790F35C96864D9294FB2FB",
+                        "Path":  "TrueMoon.Aether.Tests/Runtime/LocalPlayerSessionTests.cs"
+                    },
+                    {
+                        "Sha256":  "89341090E55B4721764AC7CAAD79B37FFBBFBEEA840668DFAA1C2F0E50E0A537",
+                        "Path":  "TrueMoon.Aether.Tests/Runtime/PlayerStartTests.cs"
+                    },
+                    {
+                        "Sha256":  "77AEA5089BCF2C7E9EC72D3DB247B26320A8A8D23F2AD20821EBD4EF3AAD813C",
+                        "Path":  "TrueMoon.Aether/AppConfigurationExtensions.cs"
+                    },
+                    {
+                        "Sha256":  "5A2D70509129BCFB40FAE1C196F7DB23FC3AEFE032FC52DD78F1D78F4DA07022",
+                        "Path":  "TrueMoon.Aether/Gpu/GpuResourceHost.cs"
+                    },
+                    {
+                        "Sha256":  "4F4DDC57ABCCE3B3CB49F1C4C287457759420E146584C51B15877E704DC44847",
+                        "Path":  "TrueMoon.Aether/Gpu/OpenGl/GpuOpenGlContext.cs"
+                    },
+                    {
+                        "Sha256":  "0381CAF8BEA340F8B5DF46949E94A4007633214A73CB20DDC7702CED943800D8",
+                        "Path":  "TrueMoon.Aether/Gpu/OpenGl/OpenGlSharedFrame.cs"
+                    },
+                    {
+                        "Sha256":  "E8A384C0C2C95D3003A800771C2C4EAA84971859D181FE6675DE664E8C9CDB4F",
+                        "Path":  "TrueMoon.Aether/Gpu/Surfaces/GpuLocalSurfaceSession.cs"
+                    },
+                    {
+                        "Sha256":  "B1C83F00DD9A43EBF6BEA1A85C3615BD4CDDFC4FCBD402E12CDF360622AEFD3B",
+                        "Path":  "TrueMoon.Aether/Gpu/Surfaces/GpuSurfaceSession.cs"
+                    },
+                    {
+                        "Sha256":  "E80B6458AB66D6F4839A2887CE0E12E04BBD2E374B931AD8A5BF7CD08F4489B2",
+                        "Path":  "TrueMoon.Aether/Hosting/AetherLaunchOptions.cs"
+                    },
+                    {
+                        "Sha256":  "4B77F0B0E8ECC200E8BB9F9A1516CE655576C5BB1FA652D37FC8A369523B6728",
+                        "Path":  "TrueMoon.Aether/Hosting/AetherLaunchRole.cs"
+                    },
+                    {
+                        "Sha256":  "601BB1B54ED6F3979D91B0C4003AF5CBACD78B5156D5285CBEDB864E6F4528B1",
+                        "Path":  "TrueMoon.Aether/Hosting/BuildIdentity.cs"
+                    },
+                    {
+                        "Sha256":  "CB1EC40488F321E461B85EC61844990AAB9A6C440522A866D8269F18C041B65A",
+                        "Path":  "TrueMoon.Aether/PlayerConfigurationExtensions.cs"
+                    },
+                    {
+                        "Sha256":  "D186ACEFC35EF0610C0527BAB6B65E1F1860BCAB0EAB17C4EEF5521D212F5F5D",
+                        "Path":  "TrueMoon.Aether/Runtime/GameBuildLoader.cs"
+                    },
+                    {
+                        "Sha256":  "51E983737EA0D33A838FFD73597C29F16030963ADC927F099986891282E6F579",
+                        "Path":  "TrueMoon.Aether/Runtime/PlayerSession.cs"
+                    },
+                    {
+                        "Sha256":  "97AE8D1275BD9216E53A0CF187C4EB35748C29833E169273B23AC51EB810E646",
+                        "Path":  "TrueMoon.Aether/Runtime/PlayerStart.cs"
+                    },
+                    {
+                        "Sha256":  "A83CDBF2E5448C4C226985499C444031B45CFB8E49F7CF6935614AA7DB1C1F1D",
+                        "Path":  "TrueMoon.Aether/Runtime/PlayerStatus.cs"
+                    },
+                    {
+                        "Sha256":  "6897A6AE1272881E41993A121D87E3CC79A0198420A828B9911FBBB420279592",
+                        "Path":  "TrueMoon.Aether/Runtime/RuntimeProtocol.Local.cs"
+                    }
+                ],
+    "Boundaries":  [
+                       "No single clean full Debug rerun claimed: see explicit first-run failure and clean targeted retry",
+                       "No full combined Editor/Runtime/Player crash/reap matrix",
+                       "No physical removal of compiler/Tooling from old Aether DLL",
+                       "No mod hot replacement or checkpoint/content migration",
+                       "No general release/device-loss/performance acceptance"
+                   ],
+    "Request":  "Proposed game request/Claim/Decision unchanged",
+    "ExistingTypeExtensions":  [
+                                   "RuntimeProtocol.Local: local World activation, existing partial type",
+                                   "BuildIdentity.ForPlayer: exact delivered Player fingerprint",
+                                   "GpuResourceHost.CreateLocalSurface: one retained local owner",
+                                   "GpuOpenGlContext.ReadAdapter: current GL adapter capture",
+                                   "GpuSurfaceImports/OpenGlSharedFrame: real SafeProcessHandle local import"
+                               ]
+}

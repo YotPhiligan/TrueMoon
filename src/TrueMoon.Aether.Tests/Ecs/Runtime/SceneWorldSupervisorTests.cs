@@ -1,13 +1,19 @@
 using System.Security.Cryptography;
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Loading;
-using TrueMoon.Aether.Ecs.Runtime;
+using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
+using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Runtime;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Scenes.Authoring;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Ecs.Loading;
+using TrueMoon.Aether.Runtime.Ecs.Runtime;
+using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using Xunit;
+using SceneWorldLoadError = TrueMoon.Aether.Abstractions.Ecs.Loading.SceneWorldLoadError;
 
 namespace TrueMoon.Aether.Tests.Ecs.Runtime;
 
@@ -258,7 +264,7 @@ public sealed class SceneWorldSupervisorTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => supervisor.StartWorldAsync(data, token: cancelled.Token));
         await Assert.ThrowsAsync<ArgumentNullException>(() => supervisor.StartWorldAsync(null!));
-        await Assert.ThrowsAsync<ArgumentNullException>(() => supervisor.StartWorldAsync(data, (TrueMoon.Aether.Builds.GameBuildArtifact)null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => supervisor.StartWorldAsync(data, (GameBuildArtifact)null!));
         Assert.Empty(factory.Leases); Assert.Null(supervisor.Status.Identity);
         await supervisor.StartWorldAsync(data); Assert.Equal(1UL, supervisor.Status.Identity!.Generation);
     }

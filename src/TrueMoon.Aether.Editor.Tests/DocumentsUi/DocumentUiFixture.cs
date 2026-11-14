@@ -1,8 +1,11 @@
-﻿using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Projects;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;

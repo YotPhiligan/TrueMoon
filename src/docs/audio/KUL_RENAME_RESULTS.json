@@ -1,0 +1,858 @@
+{
+  "SchemaVersion": 1,
+  "Date": "2026-11-12",
+  "Completed": true,
+  "Module": "TrueMoon.Kul",
+  "Version": "0.3.0.1-alpha",
+  "PreviousName": "TrueMoon.Audio",
+  "Scope": "Project, package, assembly, namespace, tests and consumer rename; playback and ownership semantics unchanged.",
+  "PreservedApi": [
+    "UseAudio",
+    "UseConfiguredAudio",
+    "IAudioService",
+    "AudioSession",
+    "AudioClip",
+    "AudioPlayback",
+    "Audio:* configuration keys"
+  ],
+  "Project": "TrueMoon.Kul/TrueMoon.Kul.csproj",
+  "TestProject": "TrueMoon.Kul.Tests/TrueMoon.Kul.Tests.csproj",
+  "ProbeProject": "ManualTests/KulModuleProbe/KulModuleProbe.csproj",
+  "SemanticRefactoring": {
+    "PreviewBeforeApply": true,
+    "RootNamespaceProperties": [
+      "TrueMoon.Kul",
+      "TrueMoon.Kul.Tests",
+      "TrueMoon.KulModuleProbe"
+    ],
+    "Tool": "Rider execute_tool / reorganize_namespaces",
+    "AppliedChanges": [
+      {
+        "Files": 24,
+        "Scope": "TrueMoon.Audio",
+        "Conflicts": 0
+      },
+      {
+        "Files": 5,
+        "Scope": "TrueMoon.Audio.Tests",
+        "Conflicts": 0
+      },
+      {
+        "Files": 2,
+        "Scope": "ManualTests/AudioModuleProbe",
+        "Conflicts": 0
+      }
+    ]
+  },
+  "Tests": {
+    "Debug": {
+      "Sha256": "A87D417CCA8F56638355C9DC2A3E73DCD17F04AD243E46C294A183590E26FF90",
+      "Skipped": 0,
+      "Passed": 23,
+      "Names": [
+        "TrueMoon.Kul.Tests.AudioAppTests.AppOwnsOneHostAndDrainsForgottenSessions",
+        "TrueMoon.Kul.Tests.AudioAppTests.ConfiguredAudioUsesCommonProfileAndExplicitOverride",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.FileAndResidentLimitsRejectAndReleaseFailedPreparation",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.NativeConstructionFailureRollsBackInitializedParents(stage: \"engine\")",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.AdmissionLimitsAndSessionIdentityAreEnforcedAndReusable",
+        "TrueMoon.Kul.Tests.AudioAppTests.DisposeBeforeStartCreatesNoNativeGraphAndClosesFactory",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.OggMusicStreamsSeeksPausesAndClosesItsFile",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"ogg-header\")",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.NativeConstructionFailureRollsBackInitializedParents(stage: \"resources\")",
+        "TrueMoon.Kul.Tests.AudioAppTests.TwoAppsAndEarlySessionDisposalHaveIndependentLifetime",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.MicrosoftAdapterBorrowsAliasesAndDrainsOneNativeOwner",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.SoundVoicesMixIndependentKnownPcmAndRetainClipUntilLastRelease",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.TenMinuteMusicUsesStreamingInsteadOfResidentWholeFilePcm",
+        "TrueMoon.Kul.Tests.AudioAppTests.RegistrationCopiesOptionsAndRejectsDuplicates",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MusicLimitReturnsCapacityAndRepeatedSessionDisposalClosesStreams",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"truncated\")",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.ConcurrentControlsSessionDisposeAndAppStopDoNotUseFreedNativeMemory",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"wav\")",
+        "TrueMoon.Kul.Tests.AudioAppTests.LaterStartupFailureRollsBackAudioAndItsNativeResources",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.EofCollectionAndLoopingUseRealFramesAndReturnCapacity",
+        "TrueMoon.Kul.Tests.AudioAppTests.InvalidStartupLimitsAreRejectedBeforeNativeInitialization",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.PlaybackPauseResumeSeekStopAndGainAffectActualPcm",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"bad-crc\")"
+      ],
+      "Path": "TestResults/KulRename-20261112/kul-debug.trx",
+      "Command": "dotnet test TrueMoon.Kul.Tests/TrueMoon.Kul.Tests.csproj -c Debug --logger 'trx;LogFileName=kul-debug.trx' --results-directory TestResults/KulRename-20261112 '-bl:TestResults/KulRename-20261112/tests-debug-{}.binlog'",
+      "Failed": 0
+    },
+    "Release": {
+      "Sha256": "839C1B4E6E4FCA33A52D56583F78A989A471ED954012F387CE354BE1D0C8FF3A",
+      "Skipped": 0,
+      "Passed": 23,
+      "Names": [
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.SoundVoicesMixIndependentKnownPcmAndRetainClipUntilLastRelease",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.NativeConstructionFailureRollsBackInitializedParents(stage: \"resources\")",
+        "TrueMoon.Kul.Tests.AudioAppTests.InvalidStartupLimitsAreRejectedBeforeNativeInitialization",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MusicLimitReturnsCapacityAndRepeatedSessionDisposalClosesStreams",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"ogg-header\")",
+        "TrueMoon.Kul.Tests.AudioAppTests.ConfiguredAudioUsesCommonProfileAndExplicitOverride",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.PlaybackPauseResumeSeekStopAndGainAffectActualPcm",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.ConcurrentControlsSessionDisposeAndAppStopDoNotUseFreedNativeMemory",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.OggMusicStreamsSeeksPausesAndClosesItsFile",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.AdmissionLimitsAndSessionIdentityAreEnforcedAndReusable",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"bad-crc\")",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"wav\")",
+        "TrueMoon.Kul.Tests.AudioAppTests.LaterStartupFailureRollsBackAudioAndItsNativeResources",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.MicrosoftAdapterBorrowsAliasesAndDrainsOneNativeOwner",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.TenMinuteMusicUsesStreamingInsteadOfResidentWholeFilePcm",
+        "TrueMoon.Kul.Tests.AudioAppTests.RegistrationCopiesOptionsAndRejectsDuplicates",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.EofCollectionAndLoopingUseRealFramesAndReturnCapacity",
+        "TrueMoon.Kul.Tests.AudioAppTests.TwoAppsAndEarlySessionDisposalHaveIndependentLifetime",
+        "TrueMoon.Kul.Tests.AudioAppTests.DisposeBeforeStartCreatesNoNativeGraphAndClosesFactory",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"truncated\")",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.FileAndResidentLimitsRejectAndReleaseFailedPreparation",
+        "TrueMoon.Kul.Tests.AudioAppTests.AppOwnsOneHostAndDrainsForgottenSessions",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.NativeConstructionFailureRollsBackInitializedParents(stage: \"engine\")"
+      ],
+      "Path": "TestResults/KulRename-20261112/kul-release.trx",
+      "Command": "dotnet test TrueMoon.Kul.Tests/TrueMoon.Kul.Tests.csproj -c Release --logger 'trx;LogFileName=kul-release.trx' --results-directory TestResults/KulRename-20261112 '-bl:TestResults/KulRename-20261112/tests-release-{}.binlog'",
+      "Failed": 0
+    },
+    "OtherSuitesRepeated": false,
+    "SolutionDiscovery": {
+      "Sha256": "51DCB7B7DE814FA1EBB85DBC51BC6E3D4BA44E88C88F4A4F27730965285211EB",
+      "Skipped": 0,
+      "Passed": 23,
+      "Names": [
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.MicrosoftAdapterBorrowsAliasesAndDrainsOneNativeOwner",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.OggMusicStreamsSeeksPausesAndClosesItsFile",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.AdmissionLimitsAndSessionIdentityAreEnforcedAndReusable",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.PlaybackPauseResumeSeekStopAndGainAffectActualPcm",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.NativeConstructionFailureRollsBackInitializedParents(stage: \"resources\")",
+        "TrueMoon.Kul.Tests.AudioAppTests.InvalidStartupLimitsAreRejectedBeforeNativeInitialization",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"ogg-header\")",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.EofCollectionAndLoopingUseRealFramesAndReturnCapacity",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.FileAndResidentLimitsRejectAndReleaseFailedPreparation",
+        "TrueMoon.Kul.Tests.AudioAppTests.LaterStartupFailureRollsBackAudioAndItsNativeResources",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"wav\")",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.TenMinuteMusicUsesStreamingInsteadOfResidentWholeFilePcm",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.NativeConstructionFailureRollsBackInitializedParents(stage: \"engine\")",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MusicLimitReturnsCapacityAndRepeatedSessionDisposalClosesStreams",
+        "TrueMoon.Kul.Tests.AudioAppTests.TwoAppsAndEarlySessionDisposalHaveIndependentLifetime",
+        "TrueMoon.Kul.Tests.AudioAppTests.DisposeBeforeStartCreatesNoNativeGraphAndClosesFactory",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"bad-crc\")",
+        "TrueMoon.Kul.Tests.AudioAppTests.RegistrationCopiesOptionsAndRejectsDuplicates",
+        "TrueMoon.Kul.Tests.AudioPlaybackTests.SoundVoicesMixIndependentKnownPcmAndRetainClipUntilLastRelease",
+        "TrueMoon.Kul.Tests.AudioAppTests.AppOwnsOneHostAndDrainsForgottenSessions",
+        "TrueMoon.Kul.Tests.AudioAppTests.ConfiguredAudioUsesCommonProfileAndExplicitOverride",
+        "TrueMoon.Kul.Tests.AudioStreamingTests.MalformedInputRepeatedlyRejectsWithoutLosingPlaybackOrNativeOwners(kind: \"truncated\")",
+        "TrueMoon.Kul.Tests.NativeLifetimeTests.ConcurrentControlsSessionDisposeAndAppStopDoNotUseFreedNativeMemory"
+      ],
+      "Path": "TestResults/KulRename-20261112/solution-discovery/MEGA6_PH-DEV_2026-11-12_19_34_31_net11.0[11].trx",
+      "Command": "dotnet test TrueMoon.slnx -c Debug --no-build --no-restore --filter 'FullyQualifiedName~TrueMoon.Kul.Tests' --logger trx --results-directory TestResults/KulRename-20261112/solution-discovery '-bl:TestResults/KulRename-20261112/solution-kul-{}.binlog'",
+      "Failed": 0
+    }
+  },
+  "Command": "pwsh -NoLogo -NoProfile -File ManualTests/KulModuleProbe/Verify.ps1 -EvidenceDirectory TestResults/KulRename-20261112/acceptance -Device",
+  "Verification": {
+    "Sha256": "8189D396A8C9BE470964CFAC4D574990CD029D40535D8448F46FCA7BF4D92DE6",
+    "Path": "TestResults/KulRename-20261112/acceptance/verification.json",
+    "Utc": "2026-11-12T19:35:47.5915948+05:00"
+  },
+  "Profile": {
+    "Workspace": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+    "Framework": "net11.0",
+    "TestFramework": "net11.0",
+    "Sdk": "11.0.100",
+    "Version": "0.3.0.1-alpha",
+    "LanguageVersion": "latest",
+    "Features": ";runtime-async=on",
+    "Sources": [
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Build.props",
+        "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props",
+        "Sha256": "6A37F638ABB48B705FDC8281D0EF2634EA187B523746C5221F0B45F7EDF9A58C"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\global.json",
+        "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\BuildProfile.ps1",
+        "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+      }
+    ],
+    "EvidencePath": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\profile\\profile-ed5646cf6ba5408985c0217efcdb7093.json"
+  },
+  "PackageModuleSha256": "0307DFDE10879E676EC106D5606A2298926EE9FD711B8C998B2AE58AA605EF0F",
+  "NativeDependency": {
+    "NativeSha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB",
+    "Pins": {
+      "upstream": "https://github.com/japajoe/miniaudioex",
+      "revision": "9f85b56157027cc57c7cd0a13fea7fee3f1e167e",
+      "miniaudioVersion": "0.11.26",
+      "archiveUrl": "https://codeload.github.com/japajoe/miniaudioex/zip/9f85b56157027cc57c7cd0a13fea7fee3f1e167e",
+      "archiveSha256": "FD533CE9AC9BFCDA9CC93A63B00E458E3A28E9D06B8772D47FF9AB3E2F516FD2",
+      "patchedFile": "src/miniaudioex/extras/miniaudio_libvorbis.c",
+      "originalFileSha256": "C4FE9B40AA4B16CB1B4C5D5636C9E4A04D92A91AA54A6768D96756866427E90D",
+      "patchedFileSha256": "7808071F0C3CA8457882FBA299FE10D584261F74AC9BF38B3B1E833BBD658223",
+      "patchSha256": "D9DDCA3DA584DEEF9FF4549CD18453AB92A23B270D1217826E5FC235A0C00DF5",
+      "managedPackageId": "JAJ.Packages.MiniAudioEx",
+      "managedPackageVersion": "4.0.1",
+      "managedPackageSha256": "E57733E2FFBB45703EE03C1945B396CEA322F3DE06A6C1D7D4F6F834834809E7",
+      "originalNativeSha256": "70F7DD4E6A1DECBEE0791E22D231B7286E99BDE15AB86262284FF62C2CA3A641",
+      "packageId": "TrueMoon.MiniAudioEx",
+      "packageVersion": "4.0.1-truemoon.1",
+      "runtimeIdentifier": "win-x64"
+    },
+    "Sha256": "9C696B9293932D6D09F85DF523D675D7780D7B30D505E3B487674E6C5F1F6955"
+  },
+  "Reports": [
+    {
+      "Name": "source-Debug-Offline",
+      "Observations": {
+        "Output": {
+          "IsRunning": true,
+          "Mode": 1,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "BeforeStop": {
+          "IsRunning": true,
+          "Mode": 1,
+          "SampleRate": 48000,
+          "Sessions": 1,
+          "Clips": 0,
+          "Voices": 1,
+          "MusicStreams": 1,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "AfterStop": {
+          "IsRunning": false,
+          "Mode": 1,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "Assemblies": [
+          {
+            "Name": "TrueMoon",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\TrueMoon.dll",
+            "Sha256": "E86BB13DF520362C18DB84D9080A298F23E9C1A5FAB1066821FBFC385FE28795"
+          },
+          {
+            "Name": "TrueMoon.Kul",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\TrueMoon.Kul.dll",
+            "Sha256": "F30107F5D22A18C62B7331C93AD01E49F7C4CA74CA0581BE5299F8FDF4A65A2D"
+          },
+          {
+            "Name": "TrueMoon.Contracts",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\TrueMoon.Contracts.dll",
+            "Sha256": "E23E6766D9EF5702EA417108059CCB2A944F903348266EF20A8B5DE040BE7570"
+          },
+          {
+            "Name": "MiniAudioExNET",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\MiniAudioExNET.dll",
+            "Sha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575"
+          }
+        ],
+        "Native": {
+          "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\runtimes\\win-x64\\native\\miniaudioex.DLL",
+          "Sha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+        }
+      },
+      "Checks": 23,
+      "Path": "TestResults/KulRename-20261112/acceptance/source-Debug-Offline.json",
+      "Sha256": "2E11E9B4557CF57A5795E379160410042E7E5A839A47A5B4FFFFDCF00A7478A1"
+    },
+    {
+      "Name": "source-Debug-Device",
+      "Observations": {
+        "Output": {
+          "IsRunning": true,
+          "Mode": 0,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 374,
+          "DevicePeriods": 3
+        },
+        "BeforeStop": {
+          "IsRunning": true,
+          "Mode": 0,
+          "SampleRate": 48000,
+          "Sessions": 1,
+          "Clips": 0,
+          "Voices": 1,
+          "MusicStreams": 1,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 374,
+          "DevicePeriods": 3
+        },
+        "AfterStop": {
+          "IsRunning": false,
+          "Mode": 0,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "Assemblies": [
+          {
+            "Name": "TrueMoon",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\TrueMoon.dll",
+            "Sha256": "E86BB13DF520362C18DB84D9080A298F23E9C1A5FAB1066821FBFC385FE28795"
+          },
+          {
+            "Name": "TrueMoon.Kul",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\TrueMoon.Kul.dll",
+            "Sha256": "F30107F5D22A18C62B7331C93AD01E49F7C4CA74CA0581BE5299F8FDF4A65A2D"
+          },
+          {
+            "Name": "TrueMoon.Contracts",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\TrueMoon.Contracts.dll",
+            "Sha256": "E23E6766D9EF5702EA417108059CCB2A944F903348266EF20A8B5DE040BE7570"
+          },
+          {
+            "Name": "MiniAudioExNET",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\MiniAudioExNET.dll",
+            "Sha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575"
+          }
+        ],
+        "Native": {
+          "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\source-Debug\\runtimes\\win-x64\\native\\miniaudioex.DLL",
+          "Sha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+        }
+      },
+      "Checks": 18,
+      "Path": "TestResults/KulRename-20261112/acceptance/source-Debug-Device.json",
+      "Sha256": "BE0A77F4020564E9B50621B2E523C94309E749C03FBDDD49BE32E37F361CB0A7"
+    },
+    {
+      "Name": "published-Release-Offline",
+      "Observations": {
+        "Output": {
+          "IsRunning": true,
+          "Mode": 1,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "BeforeStop": {
+          "IsRunning": true,
+          "Mode": 1,
+          "SampleRate": 48000,
+          "Sessions": 1,
+          "Clips": 0,
+          "Voices": 1,
+          "MusicStreams": 1,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "AfterStop": {
+          "IsRunning": false,
+          "Mode": 1,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "Assemblies": [
+          {
+            "Name": "TrueMoon",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\TrueMoon.dll",
+            "Sha256": "B8B06344D4C2DE3DAAA6FB8FC68387C7DDA53947BD2B526EB0CAA49D75D204DE"
+          },
+          {
+            "Name": "TrueMoon.Kul",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\TrueMoon.Kul.dll",
+            "Sha256": "0307DFDE10879E676EC106D5606A2298926EE9FD711B8C998B2AE58AA605EF0F"
+          },
+          {
+            "Name": "TrueMoon.Contracts",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\TrueMoon.Contracts.dll",
+            "Sha256": "374D749F97C444FDBC2281AA80F55279EC85FD3C9D4B3471DE1B51250AB78A88"
+          },
+          {
+            "Name": "MiniAudioExNET",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\MiniAudioExNET.dll",
+            "Sha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575"
+          }
+        ],
+        "Native": {
+          "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\runtimes\\win-x64\\native\\miniaudioex.DLL",
+          "Sha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+        }
+      },
+      "Checks": 23,
+      "Path": "TestResults/KulRename-20261112/acceptance/published-Release-Offline.json",
+      "Sha256": "0849A2B3590E04AD71DAE0FCE0ED855EE0519BC497608CCE3D944F746E900F40"
+    },
+    {
+      "Name": "published-Release-Device",
+      "Observations": {
+        "Output": {
+          "IsRunning": true,
+          "Mode": 0,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 374,
+          "DevicePeriods": 3
+        },
+        "BeforeStop": {
+          "IsRunning": true,
+          "Mode": 0,
+          "SampleRate": 48000,
+          "Sessions": 1,
+          "Clips": 0,
+          "Voices": 1,
+          "MusicStreams": 1,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 374,
+          "DevicePeriods": 3
+        },
+        "AfterStop": {
+          "IsRunning": false,
+          "Mode": 0,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "Assemblies": [
+          {
+            "Name": "TrueMoon",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\TrueMoon.dll",
+            "Sha256": "B8B06344D4C2DE3DAAA6FB8FC68387C7DDA53947BD2B526EB0CAA49D75D204DE"
+          },
+          {
+            "Name": "TrueMoon.Kul",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\TrueMoon.Kul.dll",
+            "Sha256": "0307DFDE10879E676EC106D5606A2298926EE9FD711B8C998B2AE58AA605EF0F"
+          },
+          {
+            "Name": "TrueMoon.Contracts",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\TrueMoon.Contracts.dll",
+            "Sha256": "374D749F97C444FDBC2281AA80F55279EC85FD3C9D4B3471DE1B51250AB78A88"
+          },
+          {
+            "Name": "MiniAudioExNET",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\MiniAudioExNET.dll",
+            "Sha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575"
+          }
+        ],
+        "Native": {
+          "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\published-Release\\runtimes\\win-x64\\native\\miniaudioex.DLL",
+          "Sha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+        }
+      },
+      "Checks": 18,
+      "Path": "TestResults/KulRename-20261112/acceptance/published-Release-Device.json",
+      "Sha256": "5C11218D56926063EB356D4C16CAD346AB7338B3179136417C2C727FED7D6A35"
+    },
+    {
+      "Name": "package-Release-Offline",
+      "Observations": {
+        "Output": {
+          "IsRunning": true,
+          "Mode": 1,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "BeforeStop": {
+          "IsRunning": true,
+          "Mode": 1,
+          "SampleRate": 48000,
+          "Sessions": 1,
+          "Clips": 0,
+          "Voices": 1,
+          "MusicStreams": 1,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "AfterStop": {
+          "IsRunning": false,
+          "Mode": 1,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "Assemblies": [
+          {
+            "Name": "TrueMoon",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\TrueMoon.dll",
+            "Sha256": "B8B06344D4C2DE3DAAA6FB8FC68387C7DDA53947BD2B526EB0CAA49D75D204DE"
+          },
+          {
+            "Name": "TrueMoon.Kul",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\TrueMoon.Kul.dll",
+            "Sha256": "0307DFDE10879E676EC106D5606A2298926EE9FD711B8C998B2AE58AA605EF0F"
+          },
+          {
+            "Name": "TrueMoon.Contracts",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\TrueMoon.Contracts.dll",
+            "Sha256": "374D749F97C444FDBC2281AA80F55279EC85FD3C9D4B3471DE1B51250AB78A88"
+          },
+          {
+            "Name": "MiniAudioExNET",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\MiniAudioExNET.dll",
+            "Sha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575"
+          }
+        ],
+        "Native": {
+          "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\runtimes\\win-x64\\native\\miniaudioex.DLL",
+          "Sha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+        }
+      },
+      "Checks": 23,
+      "Path": "TestResults/KulRename-20261112/acceptance/package-Release-Offline.json",
+      "Sha256": "B1E2AC5FD156EF1FB9845CCE249088D67669AA85B6136BD67001C42130E77F44"
+    },
+    {
+      "Name": "package-Release-Device",
+      "Observations": {
+        "Output": {
+          "IsRunning": true,
+          "Mode": 0,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 374,
+          "DevicePeriods": 3
+        },
+        "BeforeStop": {
+          "IsRunning": true,
+          "Mode": 0,
+          "SampleRate": 48000,
+          "Sessions": 1,
+          "Clips": 0,
+          "Voices": 1,
+          "MusicStreams": 1,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 374,
+          "DevicePeriods": 3
+        },
+        "AfterStop": {
+          "IsRunning": false,
+          "Mode": 0,
+          "SampleRate": 48000,
+          "Sessions": 0,
+          "Clips": 0,
+          "Voices": 0,
+          "MusicStreams": 0,
+          "ResidentSoundBytes": 0,
+          "DevicePeriodFrames": 0,
+          "DevicePeriods": 0
+        },
+        "Assemblies": [
+          {
+            "Name": "TrueMoon",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\TrueMoon.dll",
+            "Sha256": "B8B06344D4C2DE3DAAA6FB8FC68387C7DDA53947BD2B526EB0CAA49D75D204DE"
+          },
+          {
+            "Name": "TrueMoon.Kul",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\TrueMoon.Kul.dll",
+            "Sha256": "0307DFDE10879E676EC106D5606A2298926EE9FD711B8C998B2AE58AA605EF0F"
+          },
+          {
+            "Name": "TrueMoon.Contracts",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\TrueMoon.Contracts.dll",
+            "Sha256": "374D749F97C444FDBC2281AA80F55279EC85FD3C9D4B3471DE1B51250AB78A88"
+          },
+          {
+            "Name": "MiniAudioExNET",
+            "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\MiniAudioExNET.dll",
+            "Sha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575"
+          }
+        ],
+        "Native": {
+          "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KulRename-20261112\\acceptance\\package-published-Release\\runtimes\\win-x64\\native\\miniaudioex.DLL",
+          "Sha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+        }
+      },
+      "Checks": 18,
+      "Path": "TestResults/KulRename-20261112/acceptance/package-Release-Device.json",
+      "Sha256": "F57138C40589F7417C38AD612DF18575880BB6660572EB5DEB30AE34987C3C19"
+    }
+  ],
+  "Packages": [
+    {
+      "Bytes": 151331,
+      "Name": "TrueMoon.0.3.0.1-alpha.nupkg",
+      "Sha256": "434EFDAEE6B5BDE3B8BDC76273393BF55ADAC5AB5E244A6787AA79F5E3B50BBA"
+    },
+    {
+      "Bytes": 77581,
+      "Name": "TrueMoon.Cobalt.0.3.0.1-alpha.nupkg",
+      "Sha256": "0F3FDB90A275D6EEC2730ADF90EE7F5E40BD317669CC9831EE84F11081DE69DC"
+    },
+    {
+      "Bytes": 86731,
+      "Name": "TrueMoon.Contracts.0.3.0.1-alpha.nupkg",
+      "Sha256": "872C3CAE72650DBCBDF2B6EB58B3E80521D954520E3F42FDF220689060FD06CD"
+    },
+    {
+      "Bytes": 47713,
+      "Name": "TrueMoon.Kul.0.3.0.1-alpha.nupkg",
+      "Sha256": "10575FED3B83E21EA58A615C2DADD8262C7FEA9A29EF8B0AA410455D487AAAFC"
+    },
+    {
+      "Bytes": 606487,
+      "Name": "TrueMoon.MiniAudioEx.4.0.1-truemoon.1.nupkg",
+      "Sha256": "9C696B9293932D6D09F85DF523D675D7780D7B30D505E3B487674E6C5F1F6955"
+    }
+  ],
+  "Sources": [
+    {
+      "Path": "TrueMoon.Kul\\AppConfigurationExtensions.cs",
+      "Sha256": "9F5FE7493460C2A6887738A26EBAA1C2FE70FDFF298FBFB4B6C98C998C52BF70"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioClip.cs",
+      "Sha256": "A26EFA148A5A86CC8FA3A158AC6E99A9B870D3F766DB2B85795B315D8138F586"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioConfigurationSchema.cs",
+      "Sha256": "E16FFEC759C7FCB3422F72A9EC83757A8EC54A8764DAD4DCD403433BF6212BEB"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioException.cs",
+      "Sha256": "1BC60F0F3CE1391FBC795ED8B217A118B8D3A7E481D13B14DD9873B82AD3DC49"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioMode.cs",
+      "Sha256": "A95067837C29FB7D69FF2EBB2F6C52958CE3D02F45FD46749F5230AF33741C06"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioOptions.cs",
+      "Sha256": "501C3462500F9E9F0A3E4505F720744C83808761D70C0A07C6048E3CA1360846"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioPlayback.cs",
+      "Sha256": "A8A3E7818BFA86B0B4A93904B64213DBB1395335AEDBBD7FD0501846B993A2BD"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioPlaybackState.cs",
+      "Sha256": "333CECB9DC11F52111D9682F1608C8418FBDAC53B97D10D21B1E185D9DF57149"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioPlayOptions.cs",
+      "Sha256": "433456A0E50B324FBB7650AB4447B1D365F78ADD253758B72ED13BC71C54940A"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioSession.cs",
+      "Sha256": "D58E8B3F2B037D1EFEEE3966AA5342E06D9571FE9039DC55C8D69DA817ED6516"
+    },
+    {
+      "Path": "TrueMoon.Kul\\AudioSnapshot.cs",
+      "Sha256": "E5EC353F9480B2CBF7C7FACB9F1447E86AE9FED975AF1B416C16738DE7245F30"
+    },
+    {
+      "Path": "TrueMoon.Kul\\IAudioService.cs",
+      "Sha256": "BFE8DDDE8AAB57DDB12465AF119D0FE7F04F1C5343682766A1E5780E9DE7A436"
+    },
+    {
+      "Path": "TrueMoon.Kul\\PACKAGE.md",
+      "Sha256": "1307EC4B5A1F94744F9E8FD3B35303CFB6CE848CA2FA069881D1F431656F7401"
+    },
+    {
+      "Path": "TrueMoon.Kul\\TrueMoon.Kul.csproj",
+      "Sha256": "DEC15DCAB554EEB766AC72C9EFDEB756464A57E6538E9FBBFFBE184BAC8EB4B9"
+    },
+    {
+      "Path": "TrueMoon.Kul\\Hosting\\AudioHost.cs",
+      "Sha256": "36B236E365640DCC49C9FF111A29A01A09B78EF6E6F2670C17C19B3506899173"
+    },
+    {
+      "Path": "TrueMoon.Kul\\Hosting\\AudioLifecycle.cs",
+      "Sha256": "27D1711E4B1706B7D504CF9B78B0A700E6FAC93200E4BC905B0FD70E3E205DC5"
+    },
+    {
+      "Path": "TrueMoon.Kul\\Hosting\\AudioService.cs",
+      "Sha256": "04A77DA7652D394FF7A25EED72E79A1C3BFEF5934F638A528424D22A4A508D58"
+    },
+    {
+      "Path": "TrueMoon.Kul\\Native\\AudioGraph.cs",
+      "Sha256": "9E1F5DDDAAD1F5A5762E62F2A1B210479923231A8B79748C248E5E471AD07F04"
+    },
+    {
+      "Path": "TrueMoon.Kul\\Native\\DecoderTableHandle.cs",
+      "Sha256": "0D0E29CBDFF832516924335C7F3C81AF83623858CAEF1D7E65EEFC5548C7307C"
+    },
+    {
+      "Path": "TrueMoon.Kul\\Native\\NativeHandle.cs",
+      "Sha256": "0CCBE6931632A6B9C848FCB900C8467E244EBD190C8D2FF8960CABCCF7F0A015"
+    },
+    {
+      "Path": "TrueMoon.Kul.Tests\\AudioAppTests.cs",
+      "Sha256": "AEB276341B5026BF481CF6ACDB3C4CE14300DC1BB5BBF97C136EAB245F96FD95"
+    },
+    {
+      "Path": "TrueMoon.Kul.Tests\\AudioFixture.cs",
+      "Sha256": "87B8CE14EDA2BC03D1306A8532EE7B904561E7E54C73D3090729EAADDF8CC40C"
+    },
+    {
+      "Path": "TrueMoon.Kul.Tests\\AudioPlaybackTests.cs",
+      "Sha256": "30FE2ECF27DF8CE6D7C112010D7B0860C5808EA164193BB46D9B350F66F06890"
+    },
+    {
+      "Path": "TrueMoon.Kul.Tests\\AudioStreamingTests.cs",
+      "Sha256": "4BEA6582642A9156086C7C4FF356EF81ACB7358D79E29DACC4797EDE56B549D1"
+    },
+    {
+      "Path": "TrueMoon.Kul.Tests\\NativeLifetimeTests.cs",
+      "Sha256": "7C7D06E517D39B64BF6524868C1F6668BC20C9B84FDCF27BE5C0A2F122E1A027"
+    },
+    {
+      "Path": "TrueMoon.Kul.Tests\\TrueMoon.Kul.Tests.csproj",
+      "Sha256": "FEDCA18E23B31DE71B7432C73E0378B3E3D11F97387D74EB89E1901EA3D16612"
+    },
+    {
+      "Path": "ManualTests\\KulModuleProbe\\KulModuleProbe.csproj",
+      "Sha256": "08CE83335C0DF8F9C89B23FBE188DE2198A4FDCAAFC26D30BAC7C1364D2AED9D"
+    },
+    {
+      "Path": "ManualTests\\KulModuleProbe\\ProbeFixtures.cs",
+      "Sha256": "216CDD1A810657E8ADD23AA57C314AA00AF6B97BCCA1A9FF5F88B5516BDF4E56"
+    },
+    {
+      "Path": "ManualTests\\KulModuleProbe\\Program.cs",
+      "Sha256": "5AA32356D0E6DB4BB260F043931D96D1745843F799817013DC0DED016282166D"
+    },
+    {
+      "Path": "ManualTests\\KulModuleProbe\\README.md",
+      "Sha256": "C277286F619410B33D42628352D7D48D9045FB70C61D706D3E900ADC03DF95BF"
+    },
+    {
+      "Path": "ManualTests\\KulModuleProbe\\Verify.ps1",
+      "Sha256": "FCA6AF7A691D62F589E761C0CDBC32E5A1430D7BA6C3556DB3D2C8C448F1DD93"
+    }
+  ],
+  "Fixtures": [
+    {
+      "Bytes": 47595,
+      "Name": "музыка.ogg",
+      "Sha256": "B6AAFAF2334A8B579CABF71B4CA4FD6F3C6E17E7ECD368BF0B45FA4D5B43082D"
+    },
+    {
+      "Bytes": 24044,
+      "Name": "эффект.wav",
+      "Sha256": "FB01DED2F065309B54C383A73678D5A76B1481B3A80AE9A85F1B64BABA38FD06"
+    },
+    {
+      "Bytes": 47595,
+      "Name": "bad-crc.ogg",
+      "Sha256": "AD31C731BDFD03838B52064C62ED7D3D346DE43FCB27995C648153F88AC67B51"
+    },
+    {
+      "Bytes": 96044,
+      "Name": "constant.wav",
+      "Sha256": "DFE331E712D08D5D02030FB4D652ECCE8D6F8D98F5F8E729A59511065995AE98"
+    },
+    {
+      "Bytes": 8,
+      "Name": "corrupt.ogg",
+      "Sha256": "05D2C0A4E8911EB47D3085A6214529C18EDF74ACD5FF5D6489BCD8914B27CA86"
+    },
+    {
+      "Bytes": 115200044,
+      "Name": "long.wav",
+      "Sha256": "740FDCB3F00FA868E893C5FD9388322371CDA1D0548A7CF10E33CA7B4864ABCE"
+    },
+    {
+      "Bytes": 128,
+      "Name": "truncated.ogg",
+      "Sha256": "CACAA71F4BB672F5A6E3370E11A8AEEE549031F0937EDC77499C1C643A2586C1"
+    }
+  ],
+  "HistoricalAudit": {
+    "Sha256": "EC6708182491111D8F8C2E3D658EA643C425F101ED8246DEB9A24180D65AAE77",
+    "Modified": false,
+    "Path": "docs/audio/AUD1_RESULTS.json",
+    "Meaning": "Original TrueMoon.Audio result retained with original names, commands and hashes."
+  },
+  "Metadata": [
+    {
+      "Sha256": "E7854F32067E6C69CA41186DDAFB1F66EF6C54D263E9BBE29767EC21E75A4B0C",
+      "Path": "TrueMoon.slnx"
+    },
+    {
+      "Sha256": "9DEF15EF5FCAE51FA7EE3AE90F7EE33586D5F4D509962716F9A669160DC6228C",
+      "Path": "NuGet.Config"
+    },
+    {
+      "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C",
+      "Path": "Directory.Build.props"
+    },
+    {
+      "Sha256": "6A37F638ABB48B705FDC8281D0EF2634EA187B523746C5221F0B45F7EDF9A58C",
+      "Path": "Directory.Packages.props"
+    },
+    {
+      "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6",
+      "Path": "global.json"
+    },
+    {
+      "Sha256": "4964FDDC524F3AFDBE5E52155073894CCAA0769472F34EFDFFC9082108BDD477",
+      "Path": "../README.md"
+    }
+  ],
+  "Limitations": [
+    "Windows x64 only; device output muted, no new audible confirmation.",
+    "Native dependency, codec lifetime fix and functional Audio API unchanged.",
+    "No compatibility package or namespace shim under the former TrueMoon.Audio identity.",
+    "Other suites, full solution builds and the historical native RED/GREEN regression were not rerun.",
+    "Raw logs/TRX/binlogs/packages remain local ignored TestResults; this versioned manifest preserves scope/results/hashes.",
+    "Packages were built locally; no remote publication or Git commit/push."
+  ]
+}

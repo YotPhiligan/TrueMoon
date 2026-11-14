@@ -1,0 +1,86 @@
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
+
+namespace TrueMoon.Aether.Editor.Tooling.Hierarchy;
+
+public sealed partial class EditorHierarchyViewModel
+{
+    private SceneAuthoringState? _renameState;
+    private string? _renameId;
+    private string _renameText = "", _renameOriginal = "", _renameError = "";
+    private bool _canRename;
+    /// <summary>Whether the selected occurrence admits an inline name draft.</summary>
+    public bool CanRename => _canRename;
+    /// <summary>Whether an uncommitted name draft is present.</summary>
+    public bool IsRenaming => _renameId != null;
+    /// <summary>The stable identity being renamed, independent of its display name.</summary>
+    public string? RenameId => _renameId;
+    /// <summary>Validator explanation for the retained name draft; command failures remain general diagnostics.</summary>
+    public string RenameError => _renameError;
+    /// <summary>Whether the name validator rejected the current draft.</summary>
+    public bool HasRenameError => _renameError.Length != 0;
+    /// <summary>Editable name; an empty value restores the generated display label.</summary>
+    public string RenameText
+    {
+        get => _renameText;
+        set
+        {
+            VerifyOwner(); ArgumentNullException.ThrowIfNull(value);
+            if (_renameText == value) return;
+            ClearRenameError(); Set(ref _renameText, value, nameof(RenameText));
+        }
+    }
+    /// <summary>Starts a draft fenced to the currently admitted document state.</summary>
+    public bool BeginRename()
+    {
+        VerifyOwner(); Refresh(); if (!CanRename) return false;
+        _renameState = _commands.Read().Document!.Content;
+        _renameId = _selected; _renameOriginal = _items.Single(item => item.Id == _selected).Name;
+        RenameText = _renameOriginal;
+        OnPropertyChanged(nameof(RenameId)); OnPropertyChanged(nameof(IsRenaming)); Refresh(); return true;
+    }
+    /// <summary>Commits a valid draft as one shared history entry, preserving the entity identity.</summary>
+    public bool CommitRename()
+    {
+        VerifyOwner(); var state = _renameState; Refresh();
+        if (!IsRenaming || !ReferenceEquals(state, _renameState)) return false;
+        if (_renameText == _renameOriginal) { CancelRename(); return true; }
+        try
+        {
+            var name = _renameText.Length == 0 ? null : _renameText;
+            var result = _commands.EditHierarchy(state!.Document, new(new(Guid.NewGuid(), state.Document.Revision, "editor"),
+                names: [new(new EntityId(Guid.Parse(_renameId!)), name)]));
+            if (!result.Succeeded)
+            {
+                ClearRenameError();
+                var diagnostic = (result.Error + ": " + result.Message).ReplaceLineEndings("\n");
+                if (result.Error == SceneAuthoringError.InvalidName) SetRenameError(diagnostic);
+                Set(ref _error, diagnostic, nameof(ErrorText)); return false;
+            }
+            ClearRename(); _workspace.SetDocument(_commands.Read().Document!.Content);
+            _transform.Refresh(_workspace.SelectedId); Refresh(); return true;
+        }
+        catch (Exception error) { ClearRenameError(); Set(ref _error, error.Message.ReplaceLineEndings("\n"), nameof(ErrorText)); return false; }
+    }
+    /// <summary>Discards an uncommitted name without changing the document or history.</summary>
+    public void CancelRename() { VerifyOwner(); ClearRename(); Refresh(); }
+    private void ClearRename()
+    {
+        ClearRenameError();
+        if (!IsRenaming) return;
+        _renameId = null; _renameState = null;
+        OnPropertyChanged(nameof(RenameId)); OnPropertyChanged(nameof(IsRenaming));
+    }
+    private void SetRenameError(string message)
+    {
+        var hadError = HasRenameError;
+        if (!SetProperty(ref _renameError, message, nameof(RenameError))) return;
+        if (hadError != HasRenameError) OnPropertyChanged(nameof(HasRenameError));
+    }
+    private void ClearRenameError()
+    {
+        if (!HasRenameError) return;
+        if (_error == _renameError) Set(ref _error, "", nameof(ErrorText));
+        SetRenameError("");
+    }
+}

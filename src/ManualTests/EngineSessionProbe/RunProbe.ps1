@@ -36,7 +36,7 @@ if ($GpuValidationLayerDirectory) {
     $env:TRUEMOON_GPU_VALIDATION = '1'
 }
 function Sources {
-    $roots = @('TrueMoon.Aether','TrueMoon.Aether.Tests','ManualTests/EngineSessionProbe','ManualTests/Game.Logic','TrueMoon','TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon.Cobalt.Generator','TrueMoon.Extensions.DependencyInjection','TrueMoon.Enerit','TrueMoon.Enerit.Generator','TrueMoon.Mithril')
+    $roots = @('TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime','TrueMoon.Aether.Tooling','TrueMoon.Aether.Tests','ManualTests/EngineSessionProbe','ManualTests/Game.Logic','TrueMoon','TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon.Cobalt.Generator','TrueMoon.Extensions.DependencyInjection','TrueMoon.Enerit','TrueMoon.Enerit.Generator','TrueMoon.Mithril')
     if ($IncludeViewport -or $IncludeGpuCapabilities -or $IncludeGpuImport -or $IncludeGpuSurface -or $IncludeGpuViewport -or $IncludeEditorGpu -or $IncludeScene -or $IncludeInput -or $IncludeRoom -or $IncludeInteraction) { $roots += @('TrueMoon.Argentis','TrueMoon.Alloy','TrueMoon.Alloy.Hosting','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Rendering.Skia','ManualTests/AlloyTest/Assets/Fonts') }
     $files = @('Directory.Build.props','Directory.Packages.props','global.json') | ForEach-Object { Get-Item (Join-Path $workspace $_) }
     $files += foreach ($root in $roots) { Get-ChildItem (Join-Path $workspace $root) -Recurse -File | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.Extension -in '.cs','.csproj','.ps1','.props','.targets','.dll','.json','.ttf','.txt','.vert','.frag','.spv' } }

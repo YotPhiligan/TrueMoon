@@ -1,5 +1,7 @@
 # TrueMoon: общий план развития
 
+Выполнено2026-11-12: **SkiaSharp/native4.156.0** согласованы; source/published native, UI/Hosting/Editor D/R и fresh-package delivery проверены. [Единственная детальная задача и scope](alloy/PLAN.md#skiasharp-41560-completed). Engine/functional UI очередь и release gates сохраняются.
+
 **UI2026-11-08:** [UIA3d validation/shadows](alloy/PLAN.md#uia3d-validation-shadows) и [UIA3d.1 Vulkan frosted barrier](alloy/PLAN.md#uia3d1-vulkan-backdrop) реализованы и проверены в указанном scope. Детальная очередь у UI владельца; engine/Nom порядок сохранён.
 
 **UI typography2026-11-08:** по запросу пользователя Segoe UI Variable Text — default controls/text; Editor consumer подключён. Детальный task и границы — [UI PA8c.3b](alloy/PLAN.md#pa8c3b-default-fonts). Общий порядок engine/Nom не изменён.
@@ -11,9 +13,19 @@
 
 <a id="current-roadmap"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-11
+## Текущая очередь — актуализация 2026-11-14
 
-По запросу2026-11-11 ближайший общий этап — [CORE8: восстановление solution на .NET11](core/PLAN.md#core8-dotnet11).
+По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика
+ARCH2e.4b → ARCH1f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5
+слои/ECS → ARCH3.6–9 моды/reload**. [Единственная подробная очередь](engine/PLAN.md#current-engine-queue).
+[ARCH3.0 карта завершена статически](engine/ARCH3_MAP.md): 385 файлов, 488 public
+types, 61 project graph; owners/compatibility и optional Editor.Tooling integration
+определены в исходной карте. ARCH3.1–5 теперь реализованы; import/audio/ED и release
+gates сохраняют свои IDs/критерии. Короткий diagnostics срез завершён 12 ноября:
+[baseline D/R](engine/HISTORY.md#arch2e4b-2026-11-12), 8568passed/configuration;
+причина старого timeout остаётся открыта. ARCH1f.4 завершён: [surface/fence и actual proofs](engine/HISTORY.md#arch1f4-2026-11-12). ENG7b.1–2 также завершены: [local Player и role/cleanup proofs](engine/HISTORY.md#eng7b12-2026-11-12). ARCH3.1 завершён: [независимый SDK](engine/ABSTRACTIONS.md). ARCH3.2 завершён: [real ECS binding и shared identity](engine/ECS_BINDING.md). ARCH3.3 завершён: [самостоятельный Runtime, App и schema2 ABI](engine/RUNTIME.md), [проверки](engine/ARCH33_BASELINE.json). ARCH3.4 завершён: [headless Tooling](engine/TOOLING.md), [приёмка](engine/ARCH34_BASELINE.json). ARCH3.5 завершён: [Editor UI/optional bridge](engine/EDITOR_LAYERS.md), [приёмка](engine/ARCH35_BASELINE.json). ARCH3.6 завершён: [managed Mod SDK/loader](engine/MODS.md), [приёмка](engine/ARCH36_BASELINE.json). Следующий ARCH3.7 — system reload.
+
+Предыдущий сквозной этап — [CORE8: восстановление solution на .NET11](core/PLAN.md#core8-dotnet11), завершён 11 ноября.
 CORE8.0/8.1 managed inputs готовы: 61 net11 проекта, 45 runners на общем profile,
 external CPM restore исправлен, source build D/R0errors. Независимая поставка:
 16packages/15profiles, по230checks и4owned children на source/published/fresh.
@@ -74,6 +86,20 @@ LiteDB provider отменены. Прежние AST результаты — и
 Детали import/audio этапов — в engine плане, storage — в Nom; массовая миграция не назначена. Маршрут ежедневного Editor,
 performance и release сохраняются ниже как независимые варианты продолжения.
 
+**Физика2026-11-12:** пользователь выбрал **TrueMoon.Kton** и BEPUphysics v2 как
+приоритетный backend. Самостоятельные Physics API/provider и ECS/session bridge
+Aether запланированы в [единственном плане PHYS0–8](physics/PLAN.md#current-physics-queue).
+Headless PHYS0 проверен на общем .NET11: exact beta.33, по114checks source Debug/
+published Release,64cleanup cycles/owners0/pools0; [границы и CCD/material предел](physics/HISTORY.md#phys0-2026-11-12).
+PHYS1 neutral BCL-only API/validation реализован:131checks source/fresh package
+D/published R; [контракт](physics/CONTRACTS.md). PHYS2 provider реализован:184checks
+source/fresh package D/published R, [scope](physics/PROVIDER.md); PHYS3 queries/
+events реализован:309checks/profile, [policy](physics/QUERIES_CONTACTS.md). PHYS4 App/
+configuration/DI реализован:192checks/profile обоих DI; [App guide](physics/APP.md),
+[evidence](physics/HISTORY.md#phys4-2026-11-12). Далее PHYS5 ECS bridge по ARCH3
+ECS boundaries, простой ragdoll — необязательный PHYS7. Текущая очередь Aether
+сохраняется. [Имя и источники](physics/NAMING.md).
+
 [CORE7 — единая конфигурация App и модулей](core/PLAN.md#core7-unified-configuration):
 2026-11-11 CORE7.0–7.6 завершены в configuration scope:
 [guide](core/CONFIGURATION_GUIDE.md), [139keys](core/CONFIGURATION_KEYS.md),
@@ -83,21 +109,23 @@ Source/published/fresh: по230checks на обоих DI,4owned children/profile
 
 | Направление | Следующий результат | План владельца |
 | --- | --- | --- |
+| Слои Aether и моды | ARCH3.0–6 завершены: слои/ECS, Editor UI/optional bridge и managed Mod SDK/loader. Далее ARCH3.7 system reload →3.8 migration →3.9 приёмка | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
 | .NET 11, CORE8 завершён | Inputs/generators/frozen game/runtime regression и свежая согласованная поставка проверены; функциональная очередь продолжается у владельцев | [CORE8](core/PLAN.md#core8-dotnet11), [итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11) |
 | Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
-| ECS и отображение, текущий шаг | После готовых f.2/f.3 resources/owned snapshots — f.4 actual Vulkan surface renderer/Playing fence | [ARCH1f.4](engine/PLAN.md#arch1f-rendering), [snapshot API](engine/RENDER_SNAPSHOTS.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
+| ECS и отображение, функциональная очередь | F.2/f.3/f.4 resources/snapshots/actual Vulkan surface и Playing fence готовы; далее минимальный Player | [ARCH1f.4](engine/PLAN.md#arch1f-rendering), [snapshot API](engine/RENDER_SNAPSHOTS.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
 | Исследование ассетов моделей | Кандидат и captured-I/O/limits/ID/cancel research prototype проверены; далее полный format policy и g.1 App/IFactory adapter/discovery | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [captured contract](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) |
 | Самостоятельное хранение ассетов | NOM0–6 IO/process scope и NOM7 local4package delivery/independent consumers проверены; далее engine g.2 bridge по согласованию, другие OS/RID/modes и physical/release gates отдельно; [disk-full/recovery](nom/DURABILITY.md) после UAC прошёл5cases/D/R; [VM harness](nom/VM_CRASH.md) сохранён, actual verification отложена; [NOM8a/b buffer/raw API](nom/BUFFER_API.md#nom8b-raw-api) реализован и проверен; consumer bridge g.2 после g.1 по согласованию engine; hardware power-off исключён | [Nom queue](nom/PLAN.md#nom-own-queue), [решение](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07) |
-| Исследование аудиомодуля | Backend/codec/package scope, real-time/device/clip ownership и ECS integration; затем offline и device prototypes | [ARCH1h.0–2](engine/PLAN.md#arch1h-audio) |
+| Kton / самостоятельная 3D-физика | BEPU — приоритет; PHYS0–4 research/contracts/provider/queries/events/App/DI проверены → PHYS5 ECS bridge/персонаж → поставка; простой ragdoll необязателен | [PHYS0–8](physics/PLAN.md#current-physics-queue), [статус](physics/STATUS.md), [ARCH1i](engine/PLAN.md#arch1i-physics) |
+| Аудиомодуль | TrueMoon.Kul AUD1 Windows x64 App/DI/sound/music реализован; следующие AUD2–3 — device loss/RT/queues/other OS. Engine ECS bridge отдельно | [Audio PLAN](audio/PLAN.md#current-audio-queue), [ARCH1h](engine/PLAN.md#arch1h-audio) |
 | Editor, контракт готов | ED4g.3/4 завершены; ED5a.0 camera/selection contract зафиксирован2026-11-08 и проверен numerical probe20checks | [Контракт](engine/EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1), [scope](engine/HISTORY.md#ed5a0-contract-2026-11-08) |
 | Editor, численный срез готов | ED5a.1 immutable camera/projection/unprojection/ray/pick API;77newcases, Aether1857 D/R и Editor1353 Debug | [Scope](engine/HISTORY.md#ed5a1-values-2026-11-08) |
 | Editor, transport/receipt готов | ED5a.2 Control4/Frame2, same-child camera lane и actual receipt; Aether2103/Editor1363 D/R и source/published native в указанном scope | [Проверки/limitations](engine/HISTORY.md#ed5a2-view-2026-11-08) |
 | Editor, v1 acceptance завершена | ED5a.4 bounded Windows x64: Editor1412/Aether2104 D/R, source/published/fresh-package GPU и supported Windows input; physical held-button/multi-monitor gates отдельно | [Scope](engine/HISTORY.md#ed5a4-acceptance-2026-11-08) |
 | Editor, завершённый v1 срез | ED5b world translation: transient outline → один commit/Undo либо cancel; проверен09ноября. Local-oriented handles/snapping и rotation/scale требуют отдельного scope | [Единственный план Editor](engine/EDITOR_PLAN.md#ed5b-translation) |
 | Performance, завершённый срез | ED6b.2e.4f allocation objective проверен09ноября:−3.46/−3.51% workload при latency близкой к baseline; общий speedup не заявлен | [Единственный task](engine/EDITOR_PLAN.md#ed6b2e4f-observer-cost), [measurements](engine/OBSERVER_COST.md) |
-| Надёжность | Один текущий full-solution Debug/Release baseline; отдельно причинное evidence post-reap drain timeout | [ARCH2e.4b](engine/PLAN.md#arch2e4b-drain-diagnostics), R2/R3 |
+| Надёжность | Короткий ARCH2e.4b срез и current D/R baseline выполнены 12 ноября; причинное evidence старого timeout остаётся открыто | [Диагностика/проверки](engine/HISTORY.md#arch2e4b-2026-11-12), R2/R3 |
 | Visual quality | Baseline реальных дефектов текста/геометрии на текущем default Variable Text перед следующими rendering options | [PA8c.0](alloy/PLAN.md#pa8c-качество-рендеринга-и-текста--2026-10-31); [завершённая typography](alloy/PLAN.md#pa8c3b-default-fonts) |
-| Приёмка выпуска | Выбрать supported scope, повторить fresh packages/native и доступные physical/hardware gates | R1–R6 ниже, [UI STATUS](alloy/STATUS.md#блокеры-и-ограничения) |
+| Приёмка выпуска | Выбрать supported scope, повторить fresh packages/native и доступные physical/hardware gates | R1–R6 ниже, [UI STATUS](alloy/STATUS.md) |
 
 Numeric physical input проверяется отдельно при подходящем вводе. Unverified
 arrows/captured Esc не означают подтверждённый physical-keyboard defect; они не

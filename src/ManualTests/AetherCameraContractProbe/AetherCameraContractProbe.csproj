@@ -6,6 +6,6 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../TrueMoon.Aether/TrueMoon.Aether.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" />
   </ItemGroup>
 </Project>

@@ -1,8 +1,9 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text.Json;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Runtime.Checkpoints;
+using TrueMoon.Aether.Runtime.Sessions;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Checkpoints;

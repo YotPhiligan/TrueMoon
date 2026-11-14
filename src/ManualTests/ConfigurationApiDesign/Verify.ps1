@@ -49,7 +49,7 @@ foreach ($name in @('Directory.Build.props', 'Directory.Build.targets', 'Directo
     [IO.File]::WriteAllText((Join-Path $outputPath $name), '<Project />', $utf8)
 }
 $libraries = [ordered]@{}
-foreach ($directory in @('TrueMoon.Aether.Editor', 'TrueMoon', 'TrueMoon.Cobalt', 'TrueMoon.Extensions.DependencyInjection')) {
+foreach ($directory in @('TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling', 'TrueMoon', 'TrueMoon.Cobalt', 'TrueMoon.Extensions.DependencyInjection')) {
     $binaryPath = Join-Path $repoPath "$directory/bin/Debug/$($trueMoonBuildProfile.Framework)"
     if (-not (Test-Path -LiteralPath $binaryPath -PathType Container)) { throw "Missing local assemblies: $binaryPath" }
     foreach ($file in Get-ChildItem -LiteralPath $binaryPath -Filter '*.dll') { $libraries[$file.BaseName] = $file.FullName }

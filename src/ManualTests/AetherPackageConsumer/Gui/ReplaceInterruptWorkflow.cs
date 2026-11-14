@@ -1,15 +1,24 @@
-﻿using System.Diagnostics;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Tooling.Documents;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Security.Cryptography;
 using TrueMoon;
-using TrueMoon.Aether.Editor;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Editor.Projects;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI.Editing;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Tooling.Builds;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -232,7 +241,7 @@ internal static class ReplaceInterruptWorkflow
             Program.Check(bytes.Length is > 0 and < 1024 * 1024 && bytes.SequenceEqual(File.ReadAllBytes(original)), "Interrupted SDK did not use the captured package archive.");
             packageArchiveHash = Convert.ToBase64String(SHA512.HashData(bytes));
             using var locked = JsonDocument.Parse(File.ReadAllText(Path.Combine(projects.Active.Project.RootDirectory, "Shared", "packages.lock.json")));
-            Program.Check(locked.RootElement.GetProperty("dependencies").GetProperty("net10.0").GetProperty("Game.Packaged").GetProperty("contentHash").GetString() == packageArchiveHash,
+            Program.Check(locked.RootElement.GetProperty("dependencies").GetProperty(SceneGameSource.TargetFramework).GetProperty("Game.Packaged").GetProperty("contentHash").GetString() == packageArchiveHash,
                 "Observed archive differs from its locked content hash.");
             var published = File.ReadAllBytes(Path.Combine(selected.DirectoryPath, "Game.Packaged.dll"));
             var payload = preparation == null ? published : File.ReadAllBytes(Path.Combine(preparation, "packages", "game.packaged", "1.0.0", "Game.Packaged.dll"));

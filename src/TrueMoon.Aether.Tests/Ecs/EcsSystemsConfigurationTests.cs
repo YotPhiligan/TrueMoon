@@ -1,7 +1,12 @@
-using TrueMoon.Aether.Ecs;
+using IEcsSystem = TrueMoon.Aether.Runtime.Ecs.IEcsSystem;
+using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
+using EcsSystemContext = TrueMoon.Aether.Runtime.Ecs.EcsSystemContext;
+using EcsSystemDescription = TrueMoon.Aether.Runtime.Ecs.EcsSystemDescription;
 
 namespace TrueMoon.Aether.Tests.Ecs;
 
@@ -19,7 +24,7 @@ public sealed class EcsSystemsConfigurationTests
         }).Build();
         await app.StartAsync();
         Assert.Empty(app.Services.ResolveAll<EcsScheduler>());
-        Assert.Empty(app.Services.ResolveAll<IEcsSystem>());
+        Assert.Empty(app.Services.ResolveAll<Aether.Runtime.Ecs.IEcsSystem>());
         Assert.Empty(app.Services.ResolveAll<World>());
         var factory = Assert.Single(app.Services.ResolveAll<IFactory<EcsScheduler, World>>());
         Assert.Same(factory, app.Services.Resolve<IFactory<EcsScheduler, World>>());

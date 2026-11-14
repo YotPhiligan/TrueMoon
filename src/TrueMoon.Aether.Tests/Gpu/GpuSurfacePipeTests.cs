@@ -1,9 +1,9 @@
 using System.Buffers.Binary;
 using System.IO.Pipes;
 using System.Text.Json;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Gpu.Surfaces;
-using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 using Xunit;
 

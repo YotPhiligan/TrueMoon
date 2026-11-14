@@ -1,6 +1,7 @@
+using TrueMoon.Aether.Runtime;
 using Silk.NET.Vulkan;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Gpu;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Sessions;
 
 namespace EngineSessionProbe;
 

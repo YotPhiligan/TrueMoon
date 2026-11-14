@@ -1,12 +1,14 @@
 using System.Diagnostics;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Transport;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Transport;
 using TrueMoon.Aether.Tests.Builds;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
@@ -122,7 +124,7 @@ public sealed class GameReplacementTests(GameBuildFixture builds) : IClassFixtur
         if (invalid == "scene") request = request with { Scene = new("room", 8, []) };
         if (invalid == "artifact")
         {
-            var copy = GameBuildArtifact.Publish(builds.B.DirectoryPath, Path.Combine(builds.Root, "replace-tampered"), builds.B.HostContractId,
+            var copy = GameArtifactPublisher.Publish(builds.B.DirectoryPath, Path.Combine(builds.Root, "replace-tampered"), builds.B.HostContractId,
                 builds.B.EntryAssembly, builds.B.EntryType, 8, ["Game.Private.dll"]);
             File.AppendAllText(Path.Combine(copy.DirectoryPath, copy.EntryAssembly), "tampered"); request = request with { Candidate = copy };
         }

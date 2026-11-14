@@ -17,7 +17,9 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 
 <a id="current-editor-queue"></a>
 <a id="точка-продолжения--ревизия-2026-11-05"></a>
-## Точка продолжения — актуализация 2026-11-11
+## Точка продолжения — актуализация 2026-11-14
+
+ARCH3.5 завершён 2026-11-14: [Editor.UI и optional Editor.Tooling](EDITOR_LAYERS.md) выделены. View/data/styles/ports работают с Runtime без Tooling, полный project/document/build/authoring workflow подключается bridge. [Единая очередь](PLAN.md#current-engine-queue), [фактическая приёмка](ARCH35_BASELINE.json). ARCH3.6 добавил [managed Mod SDK/loader](MODS.md); следующий ARCH3.7 — system reload. Детальные ED задачи ниже сохраняются.
 
 CORE8.3: SDK preflight и frozen game compiler переведены на module target .NET11;
 full Editor1496/Aether3243 D/R и SDK11-only source/published runtime proof прошли.

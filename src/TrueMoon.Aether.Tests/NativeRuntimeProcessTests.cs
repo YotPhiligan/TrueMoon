@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.Json;
+using TrueMoon.Aether.Runtime.Sessions;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests;
@@ -45,7 +46,7 @@ public sealed class NativeRuntimeProcessTests
             Assert.Equal(0, result.GetProperty("Mappings").GetInt32());
             var leases = result.GetProperty("Leases").EnumerateArray().ToArray();
             Assert.Equal(scenario == "build-artifacts" ? 3 : 8, leases.Length);
-            var identities = leases.Select(lease => lease.GetProperty("Identity").Deserialize<TrueMoon.Aether.Sessions.SessionIdentity>()!).ToArray();
+            var identities = leases.Select(lease => lease.GetProperty("Identity").Deserialize<SessionIdentity>()!).ToArray();
             Assert.Equal(leases.Length, identities.Distinct().Count());
             Assert.All(identities, identity => identity.Validate());
             Assert.All(leases, lease =>
@@ -171,7 +172,7 @@ public sealed class NativeRuntimeProcessTests
                     Assert.Equal(1ul, frame.GetProperty("Tick").GetUInt64());
                     Assert.True(frame.GetProperty("FrameId").GetUInt64() > 0);
                     Assert.Equal(0xff2080c0u, frame.GetProperty("Color").GetUInt32());
-                    Assert.Equal(global::TrueMoon.Aether.Frames.FramePattern.Pixel(16, 10, 32, 16, frame.GetProperty("FrameId").GetUInt64(), 1, 0xff2080c0),
+                    Assert.Equal(global::TrueMoon.Aether.Runtime.Frames.FramePattern.Pixel(16, 10, 32, 16, frame.GetProperty("FrameId").GetUInt64(), 1, 0xff2080c0),
                         frame.GetProperty("Pixel").GetUInt32());
                 }
                 else Assert.Equal(JsonValueKind.Null, generation.GetProperty("CpuFrame").ValueKind);

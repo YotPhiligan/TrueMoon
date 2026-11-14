@@ -1,9 +1,16 @@
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Projects;
-using TrueMoon.Aether.Editing;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Preview;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Argentis;
 using Xunit;
 
@@ -205,15 +212,15 @@ public sealed class ProjectPickerTests
         var commands = new EditorCommands((_, _) => { calls++; return Task.CompletedTask; }, default);
         using var model = new EditorViewModel(workspace, commands, docs);
         var status = new GameEditorStatus(0, null, GameEditorOperation.Idle, null, null, false);
-        model.Refresh(new(TrueMoon.Aether.Sessions.SessionState.Stopped), status);
+        model.Refresh(new(SessionState.Stopped), status);
         model.Select(DocumentData.Child.Value.ToString("D")); Assert.Equal(2, workspace.EntityCount);
         h.OpenNext(); h.Decision(); h.Commands.Choose(DocumentCloseChoice.Discard); h.Complete();
         docs.Refresh(); model.Execute(EditorCommand.Build); DocumentUiFixture.Wait(commands.Pending); Assert.Equal(0, calls);
-        model.Refresh(new(TrueMoon.Aether.Sessions.SessionState.Stopped), status);
+        model.Refresh(new(SessionState.Stopped), status);
         Assert.Same(h.Projects.Active, workspace.Project); Assert.True(model.HasProject); Assert.Null(model.SelectedId);
         Assert.Equal(0, model.EntityCount); Assert.True(model.CanBuild); model.Execute(EditorCommand.Build);
         DocumentUiFixture.Wait(commands.Pending); Assert.Equal(1, calls);
-        h.Run(DocumentCommand.CloseProject); model.Refresh(new(TrueMoon.Aether.Sessions.SessionState.Stopped), status);
+        h.Run(DocumentCommand.CloseProject); model.Refresh(new(SessionState.Stopped), status);
         Assert.False(model.HasProject); Assert.False(model.CanBuild); Assert.Empty(workspace.HierarchyItems);
     }
 
@@ -251,12 +258,12 @@ public sealed class ProjectPickerTests
         {
             Assert.Same(old, docs.Project);
             h.OpenNext(); h.Complete();
-            return new(TrueMoon.Aether.Sessions.SessionState.Stopped);
+            return new(SessionState.Stopped);
         }, () => EditorWorkspaceTests.Status(GameEditorOperation.Idle, candidate: true));
         Assert.Same(old, workspace.Project); Assert.NotSame(workspace.Project, h.Projects.Active);
         Assert.False(model.CanStart); Assert.False(model.CanBuild);
         model.RunSimulation(); model.Execute(EditorCommand.Build); DocumentUiFixture.Wait(commands.Pending); Assert.Equal(0, calls);
-        model.Refresh(() => new(TrueMoon.Aether.Sessions.SessionState.Stopped), () => EditorWorkspaceTests.Status(GameEditorOperation.Idle, candidate: false));
+        model.Refresh(() => new(SessionState.Stopped), () => EditorWorkspaceTests.Status(GameEditorOperation.Idle, candidate: false));
         Assert.Same(h.Projects.Active, workspace.Project); Assert.True(model.CanBuild); Assert.False(model.CanStart);
     }
 
@@ -264,7 +271,7 @@ public sealed class ProjectPickerTests
     public void FailedCloseSave_PreservesOldContextAndUndoAndSupportsUserRetry()
     {
         using var h = new Fixture(); h.NewEditedScene(); var old = h.Projects.Active!; var document = h.Current.Read().Content!.Document;
-        var failure = new IOException("Save failed"); h.Files.Write = (_, _, _, _) => Task.FromException<TrueMoon.Aether.Scenes.SceneFileStamp>(failure);
+        var failure = new IOException("Save failed"); h.Files.Write = (_, _, _, _) => Task.FromException<SceneFileStamp>(failure);
         Assert.True(h.Commands.Execute(DocumentCommand.CloseProject)); h.Decision(); h.Commands.Choose(DocumentCloseChoice.Save, "retry.aetherscene"); h.Complete();
         Assert.Same(failure, h.Commands.Read().Error); Assert.Same(old, h.Projects.Active);
         Assert.Same(document, h.Current.Read().Content!.Document); Assert.Equal(1, h.Current.Read().Content!.UndoCount);

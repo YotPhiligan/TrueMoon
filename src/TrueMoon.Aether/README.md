@@ -1,3 +1,10 @@
+# Прежний монолит TrueMoon.Aether — историческое руководство
+
+ARCH3.4, 2026-11-14: этот проект удалён из текущего solution/package wiring.
+Актуальные API: [Tooling](../TrueMoon.Aether.Tooling/README.md),
+[Runtime](../TrueMoon.Aether.Runtime/README.md), [migration guide](../docs/engine/TOOLING.md).
+Ниже сохранено прежнее описание/API; оно не является текущим package quickstart.
+
 # TrueMoon.Aether
 
 Экспериментальный модуль игрового движка TrueMoon. Одна библиотека содержит
@@ -12,7 +19,7 @@ contracts игровой сессии, supervisor, control protocol, CPU frame t
 ## Headless ECS World
 
 `UseAetherEcs()` регистрирует App-local `IFactory<World>` из `TrueMoon.Contracts`;
-тип World находится в `TrueMoon.Aether.Ecs`. Для подключения не нужны `UseAether`,
+тип World находится в `TrueMoon.Aether.Runtime.Ecs`. Для подключения не нужны `UseAether`,
 runtime child, окно или GPU. Создавать World в session/owner через внедрённую
 фабрику; её результаты принадлежат caller и должны быть явно освобождены им.
 App не регистрирует singleton World и не удерживает Worlds до своего завершения.
@@ -65,7 +72,7 @@ scene/primitive transport не меняется ростом локальног�
 
 ## Registry и загрузка сцены в World
 
-`TrueMoon.Aether.Ecs.Loading` предоставляет immutable ComponentRegistry и
+`TrueMoon.Aether.Runtime.Ecs.Loading` предоставляет immutable ComponentRegistry и
 SceneWorldLoader. Builder.Register<T> связывает exact ComponentSchema/version с
 runtime value type и importer; optional references/validator задают data-only
 проверки до создания World. Один stable type имеет один CLR type во всех версиях;
@@ -300,7 +307,7 @@ Raw stdout/stderr не определяет автоматически event sev
 | `TrueMoon.Aether.Scenes` | Immutable authoring/scene aggregates, inheritance/parent graph resolution и явная проекция в существующий SceneSnapshot |
 | `TrueMoon.Aether.Scenes.Authoring` | Caller-owned document session, atomic Transform batches, revision/operation receipts и bounded Undo/Redo без Runtime/UI |
 | `TrueMoon.Aether.Preview` | Built-in static scene consumer и revision-bound Edit preview через existing supervisor/GPU viewport |
-| `TrueMoon.Aether.Transport` | Control DTOs, `IEngineControl` и adapters |
+| `TrueMoon.Aether.Runtime.Transport` | Control DTOs, `IEngineControl` и adapters |
 | `TrueMoon.Aether.Checkpoints` | Checkpoint state, capability, outcomes и codec |
 | `SessionSupervisor` / `RuntimeProtocol` | Serialized commands, readiness, generations, heartbeat, stop/reap и observable failures |
 | `SharedFrameRing` / `FrameProducer` / `FrameReceiver` | Bounded Windows shared-memory transport, validated frames и latest-frame receiver |
@@ -323,6 +330,8 @@ Contracts/Enerit/Mithril и Silk.NET.Vulkan2.23.0; зависимостей на
 
 ```csharp
 using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Scenes;
 
 var appearanceType = new ComponentTypeId(Guid.NewGuid());
 var appearance = new ComponentId(Guid.NewGuid());
@@ -407,6 +416,8 @@ Hierarchy/definitions/provenance остаются в authoring snapshot; callbac
 using TrueMoon;
 using TrueMoon.Aether;
 using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Scenes.Authoring;
 using TrueMoon.Dependencies;
 
@@ -645,6 +656,8 @@ cleanup. Failed reap блокирует следующий launch до успе�
 using TrueMoon;
 using TrueMoon.Aether;
 using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Sessions;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Dependencies;
@@ -863,7 +876,7 @@ compiler и payload по прежним правилам.
 items, literal imports/HintPath/linked files и globs внутри project directory.
 Target/UsingTask, property/condition functions, custom SDK/analyzers, external globs,
 PackageReference без PackageDirectory и ProjectReference без отдельного graph opt-in отклоняются до SDK execution. Repository guard
-`ProjectReference Condition="'$(AetherContractPath)' == ''"` поддержан как неактивный
+`ProjectReference Condition="'$(AetherAbstractionsPath)' == ''"` поддержан как неактивный
 при frozen contract reference. Другой executable MSBuild code не исполняется.
 
 Используются absolute dotnet/MSBuild.dll, exact `--fx-version`, поддержанные
@@ -884,7 +897,7 @@ freeze учитываются отдельно от module tests; reuse/cache/Re
 
 ## Наблюдаемые входы сборки — ED6b.2a
 
-`GameBuildRequest.TrackInputs = true` включает process-local `GameBuildArtifact.Inputs`:
+`GameBuildRequest.TrackInputs = true` включает process-local `GameBuildResult.Inputs`:
 SHA256 evaluated files (Compile/resources/analyzers/configuration/HintPath references),
 canonical MSBuild properties/items и preprocessed imports. Compile ticket и owned job
 paths не входят в identity. До и после компиляции входы должны совпасть; GameEditor
@@ -908,6 +921,7 @@ Persistent mismatch возвращает `GameBuildInputsChangedException`, не
 
 ```csharp
 using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Runtime.Builds;
 
 var candidate = await engine.Builds.BuildAsync(new GameBuildRequest(
     "Game.Logic/Game.Logic.csproj", "Game.Logic.dll", "Game.Logic.ProbeGame",
@@ -924,12 +938,12 @@ Caller сопоставляет SourceRevision с актуальными изм�
 поздний результат сборки сам не возобновляет остановленную игру.
 
 Game project — доверенная локальная net11.0 library; он должен использовать
-переданные compiler свойства MSBuild `AetherContractPath` и `TrueMoonContractsPath`
+переданные compiler свойства MSBuild `AetherAbstractionsPath` и `TrueMoonContractsPath`
 как non-copying references:
 
 ```xml
-<Reference Include="TrueMoon.Aether">
-  <HintPath>$(AetherContractPath)</HintPath>
+<Reference Include="TrueMoon.Aether.Abstractions">
+  <HintPath>$(AetherAbstractionsPath)</HintPath>
   <Private>false</Private>
 </Reference>
 <Reference Include="TrueMoon.Contracts">
@@ -1114,7 +1128,7 @@ checkpoint/first tick/новый Step и failure/cleanup matrix.
 
 ## GPU capabilities — ENG4a
 
-`TrueMoon.Aether.Gpu` содержит pure capabilities snapshots и
+`TrueMoon.Aether.Runtime.Gpu` содержит pure capabilities snapshots и
 `GpuTransportProbe.Evaluate(expectedIdentity, producer, consumer, width, height)`.
 Snapshots копируют adapter lists; полный session stamp, schema/profile1,
 Windows x64, device/driver UUID, Vulkan image/memory/semaphore и актуальные GL
@@ -1173,7 +1187,7 @@ CPU viewport остаётся default; slots/resize/reuse/restart — ENG4c. Н�
 
 ## Reusable GPU surfaces — ENG4c
 
-`TrueMoon.Aether.Gpu.Surfaces.GpuSurfaceSession` получается через
+`TrueMoon.Aether.Runtime.Gpu.Surfaces.GpuSurfaceSession` получается через
 `await host.Gpu.ConnectSurfaceAsync(ownedRuntime, adapter, borrowedGlContext)`.
 На App разрешён один unreleased surface session; failed cleanup блокирует новый.
 `ConfigureAsync(width, height)` создаёт три persistent slots на одном Vulkan
@@ -1354,14 +1368,14 @@ observer; compiler preflight остаётся обязательным.
 
 ## External preview camera geometry
 
-`TrueMoon.Aether.Preview.PreviewCamera` is an immutable external camera, separate
+`TrueMoon.Aether.Abstractions.Preview.PreviewCamera` is an immutable external camera, separate
 from authoring, World and game checkpoints. Default pose is (0,1,6), identity
 orientation, pivot(0,1,0), distance6, vertical FOV pi/3, near0.1/far100, revision1.
 WithView returns the same instance for an exact no-op; any changed camera/navigation
 value advances the exact ulong revision. Invalid candidates and overflow do not
 mutate the previous instance. Context epochs and publication remain caller-owned.
 
-`TrueMoon.Aether.Rendering.PerspectiveProjection` shares rigid-pose validation and
+`TrueMoon.Aether.Abstractions.Rendering.PerspectiveProjection` shares rigid-pose validation and
 RH row-vector Vulkan projection math with Ecs.Rendering.PerspectiveCamera.
 `camera.CreateProjection(width,height)` freezes a CameraProjection with a usable
 inverse and physical extent16..1920 by16..1080. TryProject accepts finite points in

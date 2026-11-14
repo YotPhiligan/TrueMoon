@@ -1,5 +1,14 @@
 # Эксперимент внешнего Vulkan handoff
 
+**2026-11-12 — SkiaSharp/native4.156.0:** текущая Windows x64 DLL пересобрана из
+NuGet source commit `c4ef20229bd56e41731aa94eebe8b082b8ef886c` / Skia gitlink
+`d1717dc22ef2203b7fc9bf0e01078b37b1a4af6b`. GENERAL/HOST patch сохранён и проверен
+для этого exact pin; ABI v1/48bytes, extension source и ownership не менялись.
+Source Debug/published Release прошли ABI,18readbacks,36GPU-композиций,
+3backend comparison и frosted-shadow matrix; core/sync validation0/0.
+[Manifest и scope](../../../docs/alloy/SKIASHARP41560_RESULTS.json),
+[история](../../../docs/alloy/HISTORY.md#skiasharp-41560-2026-11-12).
+
 **2026-11-08 — UIA3d.1:** для pinned4.155.0 ApplyNativeInterop дополнительно
 применяет [vulkan-general-host-stage.patch](vulkan-general-host-stage.patch) через
 [ApplyVulkanGeneralStage.ps1](ApplyVulkanGeneralStage.ps1). GENERAL source access
@@ -10,7 +19,7 @@ source отвергается. SourcePins неизменны; другие legac
 BuildNativeInterop -InstallToRenderer записывает DLL hash и sourcePatches id/hash
 в build metadata. [Проверки и source pins](../../../docs/alloy/HISTORY.md#vulkan-backdrop-2026-11-08).
 
-Текущая поставляемая пара — **SkiaSharp/native4.155.0**, обновлена2026-11-07.
+Предыдущая поставленная пара — **SkiaSharp/native4.155.0**, обновлена2026-11-07.
 Source Debug/published Release прошли ABI,18readbacks и36внешних GPU-композиций
 в каждом profile; core/synchronization validation0errors/0warnings, включая teardown.
 ABI v1/48-byte descriptor и extension source не менялись.
@@ -33,8 +42,9 @@ DLL теперь хранится в `TrueMoon.Alloy.Rendering.Skia/NativeAssets
 | 4.153.1 | 4783f51448f9b070dda4f87b83e941c9599e466e | 45afab4f1f0921f3feb97f58cf89b136fffa85e6 |
 | 4.154.0 | 8771a4343c7ca2e5edf18f79a3b7b23c77fff60d | 993e88f35c9d107669824cf5575c002964e4b087 |
 | 4.155.0 | d25e7fa628a2576e50ecc42004cc4fd03c6657f5 | c2d78902a56e24827a7273a4ed3461ce18780680 |
+| 4.156.0 | c4ef20229bd56e41731aa94eebe8b082b8ef886c | d1717dc22ef2203b7fc9bf0e01078b37b1a4af6b |
 
-Текущий4.155.0 source commit взят из repository metadata официального NuGet;
+Предыдущий4.155.0 source commit взят из repository metadata официального NuGet;
 проверен gitlink Skia. Release branch используется только для получения sources,
 BuildNativeInterop отвергает отличающийся HEAD. Native154.0 отклонён managed155
 с range[155.0,156.0), официальный155.0 без extension — ABI gate, оба exit2.
@@ -66,6 +76,14 @@ Managed lease удерживает владельца и SafeHandle descriptor. 
 
 ## Сборка
 
+Native producer использует upstream global.json (SDK10.0.401/latestPatch;
+здесь10.0.404), managed TrueMoon consumers — общий SDK11/net11 profile. M156
+требует VS2026 default MSVC v145+; используется установленный14.51.36231/Spectre.
+Tool restore получает явный upstream nuget.config без inherited source mapping.
+WindowsSdkVersion можно задать явно; иначе выбирается полный установленный SDK
+с headers/libs/rc, а не отсутствующий upstream default28000. Выбранные MSVC/SDK
+версии записываются в build metadata; compiler/SDK автоматически не устанавливаются.
+
 Команды выполняются из src. TestResults игнорируется Git. Системный NuGet cache не подменяется.
 
 Нужны Git, .NET 10, Python 3, Ninja, MSVC x64, Windows SDK и x64 Spectre libraries. Запуск7ноября использует existing Build Tools2026 18.11.3, MSVC14.51.36231/Spectre и SDK10.0.26100.0; compiler/SDK не устанавливались. Ninja1.13.2 извлечён локально из [официального release](https://github.com/ninja-build/ninja/releases/tag/v1.13.2); SHA-256 архива проверен: 07FC8261B42B20E71D1720B39068C2E14FFCEE6396B76FB7A795FB460B78DC65.
@@ -73,23 +91,23 @@ Managed lease удерживает владельца и SafeHandle descriptor. 
 Пример использует реальный Python из LibreOffice; WindowsApps alias и launcher LibreOffice не подходят для дочерних процессов. При другом Python пути/переменные надо заменить.
 
 ```powershell
-git clone --depth 1 --branch release/4.155.0 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41550-20261107/SkiaSharp
-git -C TestResults/SkiaSharp41550-20261107/SkiaSharp checkout --detach d25e7fa628a2576e50ecc42004cc4fd03c6657f5
+git -c core.longpaths=true clone --depth 1 --branch release/4.156.0 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41560-20261112/SkiaSharp
+git -c core.longpaths=true -C TestResults/SkiaSharp41560-20261112/SkiaSharp checkout --detach c4ef20229bd56e41731aa94eebe8b082b8ef886c
 $env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.17'
 $env:PATH = 'C:/Program Files/LibreOffice/program;' + $env:PATH
 pwsh -NoProfile -File ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 `
-  -SkiaSharpSourcePath TestResults/SkiaSharp41550-20261107/SkiaSharp `
+  -SkiaSharpSourcePath TestResults/SkiaSharp41560-20261112/SkiaSharp `
   -VisualStudioPath 'C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools' `
   -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.17/bin/python.exe' `
   -NinjaPath TestResults/SkiaSharp41550-20261107/tools/ninja/ninja.exe -CheckOnly
 # Повторить без -CheckOnly для source build.
 ```
 
-BuildNativeInterop.ps1 инициализирует shallow pinned Skia submodule и depot_tools только при его наличии в .gitmodules, проверяет gitlink, применяет extension и запускает upstream Cake libSkiaSharp с Vulkan, без Direct3D. Git core.longpaths и PATH настраиваются только для процесса и восстанавливаются; глобальные Git/Windows настройки не меняются. Скрипт подбирает MSVC prefix 14.4 для pinned GN recipe. ApplyNativeInterop.ps1 создаёт feature branch при detached HEAD/защищённой ветке и допускает повторное применение идентичного extension; отличающиеся файлы не перезаписывает. externals-download не вызывается.
+BuildNativeInterop.ps1 инициализирует shallow pinned Skia submodule и depot_tools только при его наличии в .gitmodules, проверяет gitlink, применяет extension и запускает upstream Cake libSkiaSharp с Vulkan, без Direct3D. Git core.longpaths и PATH настраиваются только для процесса и восстанавливаются; глобальные Git/Windows настройки не меняются. Legacy pins используют MSVC family prefix; M156 проверяет VS default toolset/Spectre. ApplyNativeInterop.ps1 создаёт feature branch при detached HEAD/защищённой ветке и допускает повторное применение идентичного extension; отличающиеся файлы не перезаписывает. externals-download не вызывается.
 
-Готовая DLL: TestResults/SkiaSharp41550-20261107/SkiaSharp/output/native/windows/x64/libSkiaSharp.dll.
+Готовая DLL: TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.dll.
 
-SHA-256 текущего артефакта:B1C01F7D0A6DCCF9CD9CEF0027306B89EC84A71487825519EE3BCEC72D2E1754.
+SHA-256 текущего артефакта:70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A.
 
 ## Запуск
 
@@ -97,19 +115,21 @@ SHA-256 текущего артефакта:B1C01F7D0A6DCCF9CD9CEF0027306B89EC84
 
 ```powershell
 dotnet build ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj '-bl:skia-probe-{}.binlog'
-$probe = 'ManualTests/AlloyVulkanTest/bin/Debug/net10.0/AlloyVulkanTest.dll'
-$native = 'TestResults/SkiaSharp41550-20261107/SkiaSharp/output/native/windows/x64/libSkiaSharp.dll'
+. ./ManualTests/BuildProfile.ps1
+$profile = Get-TrueMoonBuildProfile -Workspace (Get-Location).Path
+$probe = "ManualTests/AlloyVulkanTest/bin/Debug/$($profile.Framework)/AlloyVulkanTest.dll"
+$native = 'TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.dll'
 dotnet $probe --interop-check --native-skia $native
 dotnet $probe --interop --native-skia $native
 
-$env:VK_LAYER_PATH = (Resolve-Path TestResults/VulkanInterop/tools/validation-1.4.363.0/Bin).Path
+$env:VK_LAYER_PATH = (Resolve-Path TestResults/EditorWindow-20261104/tools/validation).Path
 dotnet $probe --interop --validation --native-skia $native
 dotnet $probe --validation --native-skia $native
 # Исходный smoke (теперь автоматически использует bundled DLL):
 dotnet $probe
 ```
 
-Для validation нужны VkLayer_khronos_validation.dll и его JSON manifest. В этом запуске они извлечены в указанный локальный Bin из подписанного LunarG Vulkan SDK 1.4.363.0 (Authenticode Valid); SDK installer не выполнялся для установки, системный Vulkan runtime/registry не менялись. Можно указать Bin другого установленного SDK. VK_LAYER_PATH действует для процесса/дочерних процессов. --validation требует слой явно, включает synchronization validation, сохраняет callback delegate живым до DestroyInstance и проверяет счётчики после полного teardown. Отсутствие слоя возвращает код 2, без пропуска проверки.
+Для validation нужны VkLayer_khronos_validation.dll и его JSON manifest. В первоначальном запуске2026-10-04 они извлечены из подписанного LunarG Vulkan SDK1.4.363.0 (тогда Authenticode Valid). Run12ноября использует существующий layer/manifest из TestResults/EditorWindow-20261104/tools/validation; SDK installer и системный Vulkan registry не менялись. Можно указать Bin другого установленного SDK. VK_LAYER_PATH действует для процесса/дочерних процессов. --validation требует слой явно, включает synchronization validation, сохраняет callback delegate живым до DestroyInstance и проверяет счётчики после полного teardown. Отсутствие слоя возвращает код 2, без пропуска проверки.
 
 ## Фактические проверки 2026-10-04
 

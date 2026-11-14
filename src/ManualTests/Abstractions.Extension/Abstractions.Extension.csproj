@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <RootNamespace>TrueMoon.ManualTests.ContractExtension</RootNamespace>
+    <AssemblyName>ContractExtension</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../TrueMoon.Aether.Abstractions/TrueMoon.Aether.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

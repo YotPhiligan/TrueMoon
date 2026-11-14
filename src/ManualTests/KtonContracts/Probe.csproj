@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>KtonContracts</AssemblyName>
+    <RootNamespace>KtonContracts</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+  <!-- Verify.ps1 injects either the real source ProjectReference or one exact fresh NuGet PackageReference. -->
+</Project>

@@ -372,7 +372,7 @@ symmetric1px edge envelope with coverage32 (typography retains24). Uses default
 system fonts, preserves input/selection, verifies idle and owned tree disposal.
 The menu sample now uses the default frosted backdrop over a black/white split.
 BlurWitness pins actual Gaussian mixing, so a tint/opaque/no-blur substitute fails.
-Pinned native4.155.0 includes the GENERAL source-stage HOST fix for VUID02819.
+Pinned native4.156.0 includes the GENERAL source-stage HOST fix for VUID02819.
 `--design-frosted-menu` remains an explicit alias; `--design-opaque-menu` and
 `--design-no-shadows` are positive controls. `--design-no-blur` must fail the semantic
 pixel assertion. A pre-fix `--native-skia` DLL must reproduce VUID02819.

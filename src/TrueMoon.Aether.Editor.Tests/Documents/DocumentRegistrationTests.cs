@@ -1,7 +1,9 @@
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Projects;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;

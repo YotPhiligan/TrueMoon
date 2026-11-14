@@ -27,8 +27,9 @@ try {
     $specifications=@(
         @('TrueMoon','TrueMoon.Configuration.CoreConfigurationSchemas',@('App','Paths')),
         @('TrueMoon','TrueMoon.Diagnostics.DiagnosticsConfigurationSchema',@('Default')),
-        @('TrueMoon.Aether','TrueMoon.Aether.AetherConfigurationSchemas',@('Engine','World','Scheduler','SceneLoading','Primitives','RenderResources','Authoring')),
-        @('TrueMoon.Aether.Editor','TrueMoon.Aether.Editor.EditorConfigurationSchemas',@('Options','Diagnostics','SourceEditor','Window')),
+        @('TrueMoon.Aether.Tooling','TrueMoon.Aether.Tooling.AetherConfigurationSchemas',@('Engine','World','Scheduler','SceneLoading','Primitives','RenderResources','Authoring')),
+        @('TrueMoon.Aether.Editor.Tooling','TrueMoon.Aether.Editor.Tooling.EditorConfigurationSchemas',@('Options','Diagnostics','SourceEditor','Window')),
+        @('TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.UI.EditorUiConfigurationSchemas',@('Window')),
         @('TrueMoon.Enerit','TrueMoon.Enerit.IO.Pipes.PipesConfigurationSchema',@('Default')),
         @('TrueMoon.Nom','TrueMoon.Nom.NomConfigurationSchema',@('Default')),
         @('TrueMoon.Alloy.Hosting','TrueMoon.Alloy.Hosting.WindowConfigurationSchema',@('Default'))
@@ -54,7 +55,7 @@ try {
             }
         }
     }
-    if ($schemas.Count -ne 17) { throw 'Expected the 17 standard schemas.' }
+    if ($schemas.Count -ne 18) { throw 'Expected the 18 standard schemas, including Runtime Editor UI.' }
     $lines=[Collections.Generic.List[string]]::new()
     $lines.Add('# Стандартные ключи конфигурации')
     $lines.Add('')

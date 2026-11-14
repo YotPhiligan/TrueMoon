@@ -12,6 +12,9 @@ The project is under active **alpha** development. The source version is current
 | Dependency injection | [Cobalt](src/TrueMoon.Cobalt), [Cobalt.Generator](src/TrueMoon.Cobalt.Generator), [Extensions.DependencyInjection](src/TrueMoon.Extensions.DependencyInjection) | Service registration/resolution, lifetimes, generated registration and an optional Microsoft DI adapter |
 | Interprocess calls | [Enerit](src/TrueMoon.Enerit), [Enerit.Generator](src/TrueMoon.Enerit.Generator) | Invocation client/server adapters, serialization and transport implementations |
 | Units and processes | [Mithril](src/TrueMoon.Mithril) | Unit configuration, process hosting and lifecycle/restart policies |
+| Physics | [Kton](src/TrueMoon.Kton), [Kton.Bepu](src/TrueMoon.Kton.Bepu) | Headless 3D physics contracts, BEPU provider and App/configuration integration; published worlds remain caller-owned |
+| Engine | [Abstractions](src/TrueMoon.Aether.Abstractions), [Runtime](src/TrueMoon.Aether.Runtime), [Tooling](src/TrueMoon.Aether.Tooling), [Editor UI](src/TrueMoon.Aether.Editor.UI), [Editor.Tooling](src/TrueMoon.Aether.Editor.Tooling) | Game/ECS and Mod SDK, execution, headless authoring and optional editor bridge |
+| Audio | [Kul](src/TrueMoon.Kul) | Windows x64 sound voices and streamed music on the patched MiniAudioEx dependency; App/DI sessions and owned resource cleanup |
 | UI controls | [Argentis](src/TrueMoon.Argentis) | Elements, controls, properties, bindings, layout, input and themes |
 | UI runtime | [Alloy](src/TrueMoon.Alloy) | Retained UI sessions and backend-independent rendering contracts |
 | Rendering | [Rendering.Skia](src/TrueMoon.Alloy.Rendering.Skia) | Raster, OpenGL and Vulkan backends with bundled extended native Skia |
@@ -22,6 +25,8 @@ UI is optional: bootstrap, DI, IPC and units do not depend on the graphics modul
 ## Build from source
 
 Projects target `net11.0` through shared `TF` / `TestsTF` properties. [global.json](src/global.json) selects stable .NET SDK `11.0.100` with `latestMinor` roll-forward; the compiler uses `LangVersion=latest` and `runtime-async=on`. Package versions are centralized in [Directory.Packages.props](src/Directory.Packages.props). Use matching versions of all TrueMoon packages. See the [.NET 11 migration guide](src/docs/core/DOTNET11_MIGRATION.md) for frozen game artifacts, independent consumers and the supported Windows x64 profile.
+
+Before the first solution restore, build and install Kul's local patched `TrueMoon.MiniAudioEx` dependency using the [audio build guide](src/docs/audio/README.md). The fork is supplied from `src/eng/native/MiniAudioEx/feed` and is not published to nuget.org.
 
 Run the following from the repository root:
 

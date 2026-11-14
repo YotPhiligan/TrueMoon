@@ -1,5 +1,6 @@
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Rendering;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Ecs.Rendering;
@@ -11,7 +12,7 @@ public sealed class PrimitiveSimulationOptionsTests
     {
         var options = new PrimitiveSimulationOptions();
         Assert.Equal((65536, 64, TimeSpan.FromSeconds(1d / 60)), (options.MaximumTransformEntities, options.MaximumPrimitives, options.FixedStep));
-        Assert.Equal(new TrueMoon.Aether.Checkpoints.CameraTransform(0, 1, 6, 0, 0, 0), options.Camera);
+        Assert.Equal(new CameraTransform(0, 1, 6, 0, 0, 0), options.Camera);
         Assert.Equal((MathF.PI / 3, .1f, 100f), (options.FieldOfView, options.Near, options.Far));
     }
 

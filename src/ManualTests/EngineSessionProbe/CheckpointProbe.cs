@@ -1,14 +1,17 @@
+using TrueMoon.Aether.Runtime;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Checkpoints;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 
 namespace EngineSessionProbe;
@@ -34,7 +37,7 @@ public static class CheckpointProbe
         catch (InvalidDataException) { }
         Check(host.Supervisor.Status.Identity == firstIdentity && !factory.Leases[0].ResourcesReleased, "Preflight disturbed the old game.");
         var root = FindWorkspace();
-        var build = await host.Builds.BuildAsync(new(Path.Combine(root, "ManualTests/Game.Logic/Game.Logic.csproj"), "Game.Logic.dll", "Game.Logic.ProbeGame", scene.Revision));
+        var build = await host.Builds.BuildAsync(new(Path.Combine(root, "ManualTests/Game.Logic/Game.Logic.csproj"), "Game.Logic.dll", "Game.Logic.ProbeGame", scene.Revision) { RuntimeAccess = true });
         Check(build.BuildId != checkpoint.SourceGameBuildId, "Cross-build restore was not exercised.");
         await host.Supervisor.StopAsync();
         var starting = host.Frames.StartAsync(scene, build, checkpoint, 32, 16);

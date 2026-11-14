@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>$(TF)</TargetFramework><RootNamespace>TrueMoon.ManualTests.ModPrivateDependency</RootNamespace><IsPackable>false</IsPackable><GenerateDocumentationFile>false</GenerateDocumentationFile></PropertyGroup>
+</Project>

@@ -1,7 +1,7 @@
 using System.Numerics;
-using TrueMoon.Aether.Editor.Translation;
-using TrueMoon.Aether.Preview;
-using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Abstractions.Preview;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Editor.UI.Translation;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Translation;

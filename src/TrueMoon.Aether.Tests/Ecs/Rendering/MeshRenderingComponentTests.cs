@@ -1,11 +1,12 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Loading;
-using TrueMoon.Aether.Ecs.Rendering;
-using TrueMoon.Aether.Ecs.Transforms;
-using TrueMoon.Aether.Rendering;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Ecs.Rendering;
+using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Ecs.Loading;
+using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Ecs.Rendering;

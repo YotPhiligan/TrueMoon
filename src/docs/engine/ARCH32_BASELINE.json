@@ -1,0 +1,684 @@
+{
+  "Completed": true,
+  "Stage": "ARCH3.2",
+  "Date": "2026-11-12",
+  "GitHead": "73df16229da1db54e1170ac0d56b9d385f91abd7",
+  "WorkingTree": "Shared dirty main preserved; no commit or push requested",
+  "BuildProfile": {
+    "Workspace": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+    "Framework": "net11.0",
+    "TestFramework": "net11.0",
+    "Sdk": "11.0.100",
+    "Version": "0.3.0.1-alpha",
+    "LanguageVersion": "latest",
+    "Features": ";runtime-async=on",
+    "Sources": [
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Build.props",
+        "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props",
+        "Sha256": "6A37F638ABB48B705FDC8281D0EF2634EA187B523746C5221F0B45F7EDF9A58C"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\global.json",
+        "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\BuildProfile.ps1",
+        "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+      }
+    ],
+    "EvidencePath": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\delivery-final\\profile-c567bc301153483bb9ce813216cc3a3d.json"
+  },
+  "Implementation": {
+    "SharedChildAssemblies": [
+      "TrueMoon.Aether",
+      "TrueMoon.Contracts",
+      "TrueMoon.Aether.Abstractions",
+      "TrueMoon.Enerit",
+      "TrueMoon.Mithril"
+    ],
+    "NeutralExtensionDependencies": [
+      "TrueMoon.Aether.Abstractions",
+      "TrueMoon.Contracts"
+    ],
+    "Runtime": "Existing TrueMoon.Aether World, scheduler, typed pools and phase buffer",
+    "ArtifactSchema": 1,
+    "SharedGameAssemblies": [
+      "TrueMoon.Aether",
+      "TrueMoon.Contracts",
+      "TrueMoon.Aether.Abstractions"
+    ],
+    "Contracts": "TrueMoon.Aether.Abstractions",
+    "Registry": "Exact neutral scalar schema + typed IFactory, detached effective values",
+    "Builtins": "Movement, Transform, PrimitiveExtraction dual interfaces; production factory selects neutral API",
+    "RebuildExistingArtifacts": true
+  },
+  "Tests": [
+    {
+      "Skipped": 0,
+      "Failed": 0,
+      "Sha256": "4CA1402F0185D1D517024F2E1B991514FD85CEA7BCF54DB966CCD4B740CB47DB",
+      "Passed": 3330,
+      "File": "aether-debug-clean.trx"
+    },
+    {
+      "Skipped": 0,
+      "Failed": 0,
+      "Sha256": "E307EFD1A2E9BB145D3BDA0059D372656010586BD3CAFE86EC3D9CBD16775D2F",
+      "Passed": 3330,
+      "File": "aether-release.trx"
+    },
+    {
+      "Skipped": 0,
+      "Failed": 0,
+      "Sha256": "158ECBC50C7502290EEC8DD9A37CED162C4B9AB9FA56D23A1080C7149D49EB8B",
+      "Passed": 109,
+      "File": "final-binding-debug.trx"
+    },
+    {
+      "Skipped": 0,
+      "Failed": 0,
+      "Sha256": "0E722765CE7E01F8A9826DF9E9D7DBBC7A7F3E8B209E79719DFF8E9EECDA4C67",
+      "Passed": 26,
+      "File": "TrueMoon.Aether.Abstractions.Tests-debug.trx"
+    },
+    {
+      "Skipped": 0,
+      "Failed": 0,
+      "Sha256": "4568B9A5754920BFB2C91301E749C1A43E46356533A19D8CA2EB2B5E4AF9B7A5",
+      "Passed": 1496,
+      "File": "TrueMoon.Aether.Editor.Tests-debug.trx"
+    },
+    {
+      "Skipped": 0,
+      "Failed": 0,
+      "Sha256": "21FA54C735914DAEEA5EB815F59FC4AF98A4B612A420FFD3B80CC6D78D631E42",
+      "Passed": 17,
+      "File": "TrueMoon.Aether.Player.Tests-debug.trx"
+    },
+    {
+      "Skipped": 0,
+      "Failed": 0,
+      "Sha256": "16BA70A8E7C343B5FE3F01D36CAB717D95DFFF5185D42DB055A9412088DEEEAA",
+      "Passed": 26,
+      "File": "TrueMoon.Aether.Abstractions.Tests-release.trx"
+    },
+    {
+      "Skipped": 0,
+      "Failed": 0,
+      "Sha256": "720D1494AF26BD25F38E37E4D41A2DB1320ED2DD3794346B384C9B318B5E688C",
+      "Passed": 1496,
+      "File": "TrueMoon.Aether.Editor.Tests-release.trx"
+    },
+    {
+      "Skipped": 0,
+      "Failed": 0,
+      "Sha256": "9708D8FD1552DD48172EA8107294CE46D91173584CBD2D1170AE819AEED002B0",
+      "Passed": 17,
+      "File": "TrueMoon.Aether.Player.Tests-release.trx"
+    }
+  ],
+  "NewCases": 27,
+  "Requirements": [
+    {
+      "Requirement": "Actual typed pools, optional marker and five callback shapes",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.RealTypedPools_AllCallbackShapesAndExclusions_MutateWithoutComponentBoxing"
+      ]
+    },
+    {
+      "Requirement": "Mixed legacy/neutral ordering and phase publication",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.SharedGraph_OrdersLegacyAndNeutralSystems_AndPublishesCommandsOnlyAtPhaseBoundary"
+      ]
+    },
+    {
+      "Requirement": "Live command set/add/remove/destroy",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.NeutralCommandTargets_UpdateRemoveAndDestroyTheSameGenerationalEntity"
+      ]
+    },
+    {
+      "Requirement": "Stale/wrong World, declarations, nested query and structural access",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.InvalidAccess_IsTerminal_WithoutPublishingCommandsOrTick"
+      ]
+    },
+    {
+      "Requirement": "Retained invocation capabilities and owner thread",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.RetainedContextQueryAndWriter_CannotReviveInTheNextInvocation_OrAfterDisposal",
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.CrossThreadInvocation_IsRejected_WhileHandledViolationLeavesOwnerUsable"
+      ]
+    },
+    {
+      "Requirement": "Fault partial writes, cancellation and stop discard commands",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.CallbackFailure_PreservesCompletedDirectWrites_AndDiscardsPhaseCommands",
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.CancellationOrRequestedStop_DiscardsPendingCommands_WithoutPoisoningWorld"
+      ]
+    },
+    {
+      "Requirement": "Exclusive ownership and cleanup retry",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.DuplicateInnerSystemAcrossNeutralAndLegacyRegistrations_IsStoppedAndDisposedOnce",
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.FailedCreationAndCleanup_RetainTheSameOwnerUntilSuccessfulRetry"
+      ]
+    },
+    {
+      "Requirement": "DI providers and independent/World factory profiles",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.AppFactories_CreateNeutralSystemsLazily_AndNoResolutionOccursDuringTicks"
+      ]
+    },
+    {
+      "Requirement": "Binding drops World after cleanup (not mod ALC collection)",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.EcsContractBindingTests.RetainedNeutralContext_DoesNotKeepDisposedWorldAlive"
+      ]
+    },
+    {
+      "Requirement": "Neutral registry effective values/schema/lifetime",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Ecs.Loading.ContractComponentRegistryTests.ExactNeutralSchema_ImportsDetachedEffectiveDefaultsAndOverrides_IntoTypedPool",
+        "TrueMoon.Aether.Tests.Ecs.Loading.ContractComponentRegistryTests.SchemaDrift_IsRejectedBeforeValueFactoryOrWorldCreation",
+        "TrueMoon.Aether.Tests.Ecs.Loading.ContractComponentRegistryTests.ValueFactoryFailure_DisposesPrivateWorld_AndPreservesImporterCause",
+        "TrueMoon.Aether.Tests.Ecs.Loading.ContractComponentRegistryTests.NeutralRegistration_RejectsManagedComponentsMultiplicityAndAmbiguousMappings"
+      ]
+    },
+    {
+      "Requirement": "Shared ABI identity and tamper rejection",
+      "Tests": [
+        "TrueMoon.Aether.Tests.Builds.GameBuildTests.PublishedBuilds_LoadDifferentBehaviorAndShareOnlyHostContract",
+        "TrueMoon.Aether.Tests.Builds.GameBuildTests.RehashedManifest_StillValidatesSchemaContractAndDependencyPolicy",
+        "TrueMoon.Aether.Tests.NativeRuntimeLaunchTests.ForRuntime_RejectsEachTamperedSharedCounterpart",
+        "TrueMoon.Aether.Tests.NativeRuntimeLaunchTests.ValidateRuntime_RejectsEachTamperedHostSharedCounterpart",
+        "TrueMoon.Aether.Tests.Runtime.PlayerStartTests.PlayerFingerprint_RequiresDeliveredIdenticalSharedAssemblies"
+      ]
+    }
+  ],
+  "Solution": {
+    "Command": "dotnet build TrueMoon.slnx -c Debug --no-incremental --verbosity quiet -bl:<unique-{}.binlog>",
+    "Errors": 0,
+    "Warnings": 1556,
+    "Configuration": "Debug",
+    "NonIncremental": true,
+    "LogSha256": "564257D1DA53C148EF8245FE9AFBC8374468E0FDF3852EC03A4020DD7E7926C6"
+  },
+  "Commands": [
+    "dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug/Release --logger trx --results-directory <run> -bl:<unique-{}.binlog>",
+    "dotnet test <Abstractions|Editor|Player>.Tests/<project>.csproj -c Debug/Release --logger trx --results-directory <run> -bl:<unique-{}.binlog>",
+    "pwsh -File ManualTests/EcsContractHost/Verify.ps1 -EvidenceDirectory <fresh-directory>",
+    "pwsh -File ManualTests/PlayerProbe/Verify.ps1 -ValidationDirectory <existing-Khronos-layer> -EvidenceDirectory <fresh-directory>"
+  ],
+  "ExtensionDelivery": {
+    "ReportSha256": "9BA2990AB7006501ECF5B8A14DF5975647809E9877CDBA6F0AABF1CF30277FE0",
+    "Packages": [
+      {
+        "Sha256": "1A013DB54DFF0CCE117510ADFDA5DDBAE46195D6715C1D68E44B3384540AAB75",
+        "Id": "TrueMoon.Contracts",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.Contracts.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      },
+      {
+        "Sha256": "84051BC97070D02BF16D02E7A5C1573CE0D80EFF753494F6E054E7EE6E9C24B5",
+        "Id": "TrueMoon.Core",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.Core.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      },
+      {
+        "Sha256": "C9456C59B96012ED3F2164DDA1F01754F603A1F5D67850E027540FA3F4C911CD",
+        "Id": "TrueMoon.Cobalt",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.Cobalt.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      },
+      {
+        "Sha256": "606336B18CEED0DF6B907B8E84E42270AC497C4A2F805ABDC7829F462302BB26",
+        "Id": "TrueMoon",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      },
+      {
+        "Sha256": "EBC402D84F9C109F5E4AA8A17B3E9F69F5D27D9E27ABEA4BD0B30CEF6E76E589",
+        "Id": "TrueMoon.Extensions.DependencyInjection",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.Extensions.DependencyInjection.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      },
+      {
+        "Sha256": "695E36AA18F9EB417E76143B97076D53E98F7CBFC7A5E6B4802BC590A90BFED2",
+        "Id": "TrueMoon.Aether.Abstractions",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.Aether.Abstractions.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      },
+      {
+        "Sha256": "71EAC66B8656435474F11A4F4F84856A1D735F74E220A66A0D07218DF3FA15C5",
+        "Id": "TrueMoon.Enerit.Generator",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.Enerit.Generator.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      },
+      {
+        "Sha256": "88FBD59D53F992A6CE7F6A533553D6F128B48114C830BC6C60A4F6541C29B2BD",
+        "Id": "TrueMoon.Enerit",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.Enerit.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      },
+      {
+        "Sha256": "A5EDC9B08C4F83FA0772607F03C7DE6AB1BB1D62E52920A9FBEC2D0A96A2F355",
+        "Id": "TrueMoon.Mithril",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.Mithril.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      },
+      {
+        "Sha256": "D2D755801A3C6E908621ACA60BB1B78A51EB26B0B417FCCB770838FBE27D1B1C",
+        "Id": "TrueMoon.Aether",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH32-delivery-ade599277e4749af9d2a970ab27d0c05/feed/TrueMoon.Aether.0.3.0.1-alpha.arch32.20261112214725.nupkg"
+      }
+    ],
+    "RealWorld": true,
+    "Graphs": [
+      {
+        "ProjectReferences": 0,
+        "Project": "EcsContractHost",
+        "LocalPackages": [
+          "TrueMoon/0.3.0.1-alpha.arch32.20261112214725",
+          "TrueMoon.Aether/0.3.0.1-alpha.arch32.20261112214725",
+          "TrueMoon.Aether.Abstractions/0.3.0.1-alpha.arch32.20261112214725",
+          "TrueMoon.Cobalt/0.3.0.1-alpha.arch32.20261112214725",
+          "TrueMoon.Contracts/0.3.0.1-alpha.arch32.20261112214725",
+          "TrueMoon.Core/0.3.0.1-alpha.arch32.20261112214725",
+          "TrueMoon.Enerit/0.3.0.1-alpha.arch32.20261112214725",
+          "TrueMoon.Extensions.DependencyInjection/0.3.0.1-alpha.arch32.20261112214725",
+          "TrueMoon.Mithril/0.3.0.1-alpha.arch32.20261112214725"
+        ],
+        "AssetsSha256": "CB3B4407D208878E6306F005E86A2EFF495E49DE5EF77C28D216BCE70F490F13"
+      },
+      {
+        "ProjectReferences": 0,
+        "Project": "Extension",
+        "LocalPackages": [
+          "TrueMoon.Aether.Abstractions/0.3.0.1-alpha.arch32.20261112214725",
+          "TrueMoon.Contracts/0.3.0.1-alpha.arch32.20261112214725"
+        ],
+        "AssetsSha256": "318A61112FDF7013EEA78072847FB0B0182E0818F7D50E4509A40142E2717FA5"
+      }
+    ],
+    "Expected": {
+      "Total": 88,
+      "EntityCount": 3,
+      "Executions": 2,
+      "Stops": 1,
+      "ForbiddenAssemblies": 0,
+      "Disposals": 1,
+      "FactoryCalls": 2
+    },
+    "Profiles": [
+      {
+        "Sha256": "15B817091EDF962EB07F342A664D7039F018C43CECBB0A1ADCD9CD461028385F",
+        "Name": "source-cobalt",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\delivery-final/source-cobalt.json"
+      },
+      {
+        "Sha256": "63D03EC327E3C0DE6ED097673E9A6DCF4B7C80801D247398EEE92497DA05F0EF",
+        "Name": "source-microsoft",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\delivery-final/source-microsoft.json"
+      },
+      {
+        "Sha256": "C9DACF2487EEF03284C8A740095D90A781CCAC06378466C5EAC9DC0FB79996BD",
+        "Name": "published-cobalt",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\delivery-final/published-cobalt.json"
+      },
+      {
+        "Sha256": "4D805D9295AC7D201D5A4BEC1D602F68EDF42271C7A31C75141D5F46CF7FFC0E",
+        "Name": "published-microsoft",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\delivery-final/published-microsoft.json"
+      },
+      {
+        "Sha256": "8BF69219BA8C9AE41E1D80131ADF0ABDDBECF8E6437C8C2E876406BE010BC98A",
+        "Name": "fresh-cobalt",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\delivery-final/fresh-cobalt.json"
+      },
+      {
+        "Sha256": "1F2DF7F89009E09081396AD832C1BED9AE3DC3D04DC6699751F210BD608C6C7F",
+        "Name": "fresh-microsoft",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\delivery-final/fresh-microsoft.json"
+      }
+    ]
+  },
+  "PlayerRegression": {
+    "Profiles": [
+      {
+        "Name": "source-cobalt",
+        "Sha256": "23808130BE76D485A3E909EF34E6CA6506B41716C446837FD89424184B45E1A5",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\player/source-cobalt/player.json"
+      },
+      {
+        "Name": "source-microsoft",
+        "Sha256": "A8017844EC5CAB46A679523ACDD4E32D4275C02A6E6F1A0869F0F0364F5BF0D8",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\player/source-microsoft/player.json"
+      },
+      {
+        "Name": "published-cobalt",
+        "Sha256": "4B6908FE574F74C40B30D5573761FF7BF321019205EB1457F887729E4EC1C16F",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\player/published-cobalt/player.json"
+      },
+      {
+        "Name": "published-microsoft",
+        "Sha256": "713BCA75B6624826DD48B3F403C90D0372B431520E0D5F402A42B44B3BB10372",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\player/published-microsoft/player.json"
+      },
+      {
+        "Name": "fresh-cobalt",
+        "Sha256": "58D34B77E52362E1F4FD048CE2407B381F9B68C157299C7F24DED2CAD58FFD62",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\player/fresh-cobalt/player.json"
+      },
+      {
+        "Name": "fresh-microsoft",
+        "Sha256": "C6A7165D362792278ABA612E79AB1510CE2E7D8CC0CCD3D2FCC10DBDAE146E23",
+        "Report": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444\\player/fresh-microsoft/player.json"
+      }
+    ],
+    "Expected": {
+      "BalancedSurfaces": true,
+      "LiveSlots": 0,
+      "ValidationErrors": 0,
+      "Captures": 5,
+      "ValidationWarnings": 0,
+      "EditorLoaded": false,
+      "OpenHandles": 0
+    },
+    "Packages": [
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Contracts.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "DEC8D0F68B85F352F9981CC124BFB20A5987EB8A2223FD65C1108BD0DCFAFC3F",
+        "Id": "TrueMoon.Contracts"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Core.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "04DB9E27982E07CA1DBE8EC48393D347C1DA68C78FC9ABD0753236B8C2F9E514",
+        "Id": "TrueMoon.Core"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Cobalt.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "E586E14CAEAA99A851F5DAD315171C5F6A529B06C57620E670CD08D9B8953657",
+        "Id": "TrueMoon.Cobalt"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "260781F3033534F2ABB159DABD9D6573DC08CEA979B5275D68840E6284532080",
+        "Id": "TrueMoon"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Extensions.DependencyInjection.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "5D0D12B6D70B3FABE716A95B2BE8AFD132C244A6F38D1E360C2088F534D93718",
+        "Id": "TrueMoon.Extensions.DependencyInjection"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Enerit.Generator.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "9E7D22559F3EF2F444126DF32C8691D69F89A1E27EFECEA2A308AF84C005B1C8",
+        "Id": "TrueMoon.Enerit.Generator"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Enerit.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "BF4F232F704F8A6316E9ABE896E3805D10EABC25C7FD9F5B8DC16BDDBEA7E328",
+        "Id": "TrueMoon.Enerit"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Mithril.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "2D78EEE1A579C614471D59AEBDA30833C667ED3B7D1C35F31AA7CDEBB6534FE5",
+        "Id": "TrueMoon.Mithril"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Argentis.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "0BC926CB7F3515F7B1873966AB792C55FD57410913E22E49FFAF8351F8F1F52A",
+        "Id": "TrueMoon.Argentis"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Alloy.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "0E3B14315423E2D1D5E74DBA6C6209F602154274C991DD8F99FA4EA9BD5B3817",
+        "Id": "TrueMoon.Alloy"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Alloy.Rendering.Skia.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "F3C7C528CD3D59FE216B705E75759E8E521880FF8E169B1D364277BDB20C48B4",
+        "Id": "TrueMoon.Alloy.Rendering.Skia"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Alloy.Platform.Silk.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "A134D06918C4E3705A214F6B265F863DF9EF29D2AFD6F71C2BB40A9C9274C931",
+        "Id": "TrueMoon.Alloy.Platform.Silk"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Alloy.Hosting.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "3C5E42F9A1744BB5B081C60D36C299D556CC1CC32CC62D8B39F593D2EE8CE45C",
+        "Id": "TrueMoon.Alloy.Hosting"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Aether.Abstractions.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "4C579EAEF0DCA45646AC7E689532B2AF9667E9FF7E1CABF0B68B88F2358F78E4",
+        "Id": "TrueMoon.Aether.Abstractions"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Aether.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "492D9C55BA3155F9AA7FD5B743D19CD11D91D24B463B4143312871F25096E765",
+        "Id": "TrueMoon.Aether"
+      },
+      {
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-PlayerDelivery-3794379e3d5e4229b1b2e77e48ccdfa4/feed/TrueMoon.Aether.Player.0.3.0.1-alpha.player.20261112214747.nupkg",
+        "Sha256": "31F3C7367E693A61E70D5A70691459BAD932BBF8B01F8B8596FE25322C75A137",
+        "Id": "TrueMoon.Aether.Player"
+      }
+    ],
+    "ReportSha256": "37789E3465E20D653155AE9A45CCC1F3A17B9C29F55C46E8686EFDF7C6C3D53A",
+    "Graphs": [
+      {
+        "ProjectReferences": 0,
+        "AssetsSha256": "DF3AAC20DAD40D9626BD1ACE38BAE4023D6A8F4EF79C8BEE0E6F9939595C6C17",
+        "Project": "probe"
+      },
+      {
+        "ProjectReferences": 0,
+        "AssetsSha256": "E4CE02DE1202E2D6998CCDF00F0B0C57D996278BC6BF91CA33F36102166652E4",
+        "Project": "game"
+      }
+    ]
+  },
+  "Sources": [
+    {
+      "Sha256": "E589D3D1390CADDA4EE7B5DD393ADE4252023FC30D228F7E935108D3AEB06958",
+      "BeforeSha256": "1D74963EE55DF2DB39DF12B83201C589BC5DB266FCA54A7AA2E35966D384E561",
+      "Path": "ManualTests/Abstractions.Host/ProbeAccess.cs"
+    },
+    {
+      "Sha256": "1A0A52A6C8A51EBA97E5E95E0340A2B69F09165093E5E31B6E74668FF27FD069",
+      "BeforeSha256": "2E9F8E2C63B76805F2862C389E3E35A6E9A0FF22B5E1BB3B5014BDDDC58FE8FD",
+      "Path": "ManualTests/Abstractions.Extension/ExtensionSystem.cs"
+    },
+    {
+      "Sha256": "62C5AFBFE4BC8C45DED4073901E36729B9086D3D7BAB87EAF9D4799C0F237701",
+      "BeforeSha256": "66F295B4606852EF00CDFEFA107CEA6B40E7A6A98A335C311A105634BC727BB0",
+      "Path": "TrueMoon.Aether.Tests/Builds/GameBuildTests.cs"
+    },
+    {
+      "Sha256": "3C85B79B00AABC82AC570C9B116E4C69E0EC126A746DEBCEB5975FB01B92CF21",
+      "BeforeSha256": "A71CC3F02104770026E1713DC77EAB422B384C725F22A9B1416189A7F2D6B9A7",
+      "Path": "TrueMoon.Aether.Tests/Builds/GameBuildFixture.cs"
+    },
+    {
+      "Sha256": "29028C22FC6CB475B06E5E6D4E578D7F8EFB96666BBE8EF90CD24FC90D0B5C15",
+      "BeforeSha256": "94DFC89A2793123F8AAD3A88DB4C4D2608FDEBE758E60F418B55C2FB873D9CEC",
+      "Path": "TrueMoon.Aether/TrueMoon.Aether.csproj"
+    },
+    {
+      "Sha256": "D5DD7A43D7D918DAE02F5180ED75BDFFE0E67E9DF83AF3C71B520FA631CE84AA",
+      "BeforeSha256": "601BB1B54ED6F3979D91B0C4003AF5CBACD78B5156D5285CBEDB864E6F4528B1",
+      "Path": "TrueMoon.Aether/Hosting/BuildIdentity.cs"
+    },
+    {
+      "Sha256": "D3AEB74F363E9F8E1ED82DE63D4F851FA0C053D57CFA713FEDD5887C88C0CE1B",
+      "BeforeSha256": "122B767970EA94F5B0608BECABB1EFC130E0222D05B17E0256F70510C1144560",
+      "Path": "TrueMoon.Aether.Tests/NativeRuntimeLaunchTests.cs"
+    },
+    {
+      "Sha256": "6E679969D5FDB5F160B650959DE4F55F73B0BCE59F2D90103CC2A0D2D03A2DAA",
+      "BeforeSha256": "89341090E55B4721764AC7CAAD79B37FFBBFBEEA840668DFAA1C2F0E50E0A537",
+      "Path": "TrueMoon.Aether.Tests/Runtime/PlayerStartTests.cs"
+    },
+    {
+      "Sha256": "197699BA058EBBD0B809BDA2305AB67B56A245D7435D6688E80F2FE0A7822306",
+      "BeforeSha256": "2718F6368C109CDA2454B6840D0448C5757A16A5535D632F14C1F86C77E4A4BC",
+      "Path": "TrueMoon.Aether.Abstractions/Ecs/IEcsSystemAccess.cs"
+    },
+    {
+      "Sha256": "77EC6041B88F2E2989FF492314A3C981412E8AAE94154F9D728408761670C381",
+      "BeforeSha256": "B74DC6655E509A6D33D864E90C7679F19A57D768FB38989A14D1DDFBB4903E0B",
+      "Path": "TrueMoon.Aether.Abstractions/Ecs/EcsSystemContext.cs"
+    },
+    {
+      "Sha256": "FDE7B98FBE267565AB0EDE0B1187A20E7921DC89EDDDB5295B742D57AFF4CB19",
+      "BeforeSha256": "D186ACEFC35EF0610C0527BAB6B65E1F1860BCAB0EAB17C4EEF5521D212F5F5D",
+      "Path": "TrueMoon.Aether/Runtime/GameBuildLoader.cs"
+    },
+    {
+      "Sha256": "7D8E53DD3EFBA54AEED686589FB22B4E929A5A1A34FA091DADCF52046D2EF535",
+      "BeforeSha256": "70E5EDF31E4271420BFB13113558A8E922C30F5E7556250D2ADF314091225757",
+      "Path": "TrueMoon.Aether/Builds/GameBuildArtifact.cs"
+    },
+    {
+      "Sha256": "BEA2193F7F452D826CD008DAAC6C98D1D2F84CC7F4710B20A4738E916898BEE0",
+      "BeforeSha256": "E3F67176D77FA4023BD48F3EC5FB3F45031F262D060FCE57D4D5DBE9B834CE43",
+      "Path": "TrueMoon.Aether/Builds/GameBuildCompiler.cs"
+    },
+    {
+      "Sha256": "C629B0072CD4780DE44D959F8B31A57A8830FA2126134FCF0BC0B8CEDD0615E7",
+      "BeforeSha256": "9360207AA4F6780E2C2C7CFF7E79F1F6E9979BBE5592AC09B3EE2DB9CAFD3C50",
+      "Path": "TrueMoon.Aether/Ecs/EcsScheduler.cs"
+    },
+    {
+      "Sha256": "4C8DB00A78FA963738D955682129E0140BE9BA230BC59C6F3DC1FFB7D94A270E",
+      "BeforeSha256": "8E6061BB306D236CFEB8DC47EF8320E5E7C2868B9693D2AED99A68856D59AF19",
+      "Path": "TrueMoon.Aether/Ecs/EcsSystemsBuilder.cs"
+    },
+    {
+      "Sha256": "9D5DD67F593D7835BD1BCBC350AD0278EF8780E2D56C0DB27253D1AB908BB00D",
+      "BeforeSha256": "9050D5D2D4ECB50986600F2F7D8197C4FDBDFCD35EE8DF861E95470344EE4486",
+      "Path": "TrueMoon.Aether/Ecs/EcsSystemRegistration.cs"
+    },
+    {
+      "Sha256": "65E2514A568D3859916615D8D871846FCA28022038FE5BB11DB57BADC64A21DD",
+      "BeforeSha256": "3BF9C217359D5E5A3F5D2EC787DE766808C70F3E1E8F454FEBA65BDAD4EBD01B",
+      "Path": "TrueMoon.Aether/Ecs/EcsSystemDescription.cs"
+    },
+    {
+      "Sha256": "481C2B355F1271408752168F87193224BC5A062A1C2C02CC50C720C6CB14FF67",
+      "BeforeSha256": "C1EAA22729DAA5E6310C28BCECC44BAF5B9501254BF41B07F3AECB3DA2C44ED1",
+      "Path": "TrueMoon.Aether/Builds/GameBuildPreparation.cs"
+    },
+    {
+      "Sha256": "19D54386F5FFAC5C9EB9D18011D67580AC2CC71CA7FE7D16DE2429BE38A2799A",
+      "BeforeSha256": "25D1B2C8F3AB6F091D8C41CA9D53CF5A906C20A24E53BA658B16B6F3CC627D2A",
+      "Path": "TrueMoon.Aether/Ecs/World.cs"
+    },
+    {
+      "Sha256": "5C0FFD250090ADA0D04ECFC069DA8CD16340770D3916CDE08F8D4D112F7EF8F6",
+      "BeforeSha256": "3716AD3F3C630BD83308F42458CA0E6FCD2F117BB7731B9EC549F490343ACDC0",
+      "Path": "TrueMoon.Aether/Ecs/Transforms/TransformSystem.cs"
+    },
+    {
+      "Sha256": "E3606336181B4C82EB8E4C07A7B1A5EF25349918923E91A4E62891AAD817145D",
+      "BeforeSha256": "8D4E393B37C7C5F5FAA560E703D2E1BB970EBB4FAF526A8F1CCE0D8E8E227971",
+      "Path": "TrueMoon.Aether/Ecs/Motion/MovementSystem.cs"
+    },
+    {
+      "Sha256": "A8DAB4AA4335101916A43C0BB7F92DD6A5FA05D2CE6172B3A79123F86EFB3BF2",
+      "BeforeSha256": "792E24817BE4DFBE5EBA3B6A8A8C37E3F68A5F8B459718B1B3D0F49B4DFC5B57",
+      "Path": "TrueMoon.Aether/Ecs/Loading/ComponentRegistryBuilder.cs"
+    },
+    {
+      "Sha256": "30535FF5A0979CDD4C1B65B1F7BB308476516F2C0FA53ED5FDD91B004B12D2DC",
+      "BeforeSha256": "CA91480718462BC6EF750666D7134ADAB64DBB7C7D50E1B611595042B27059D4",
+      "Path": "TrueMoon.Aether/Ecs/Rendering/PrimitiveSimulationFactory.cs"
+    },
+    {
+      "Sha256": "74A604D5FD5A2BD24BCA15BFFCFB1313C7DA86DACDB9C13DE4B8D01302CA6941",
+      "BeforeSha256": "176E32918F5B6E092D864B666E02F7F7F83A900D9724FE7A4A3DAA963F77E094",
+      "Path": "TrueMoon.Aether/Ecs/Rendering/PrimitiveExtractionSystem.cs"
+    },
+    {
+      "Sha256": "9FD1C58A273C73796A5EF33DDEDFDDA9F52DAE0FE1231BB691D0A4AE91F2ABAD",
+      "Path": "TrueMoon.Aether/Builds/GameSharedContracts.cs"
+    },
+    {
+      "Sha256": "D8105A4583EDF71EE1DDB8DEC9D2C5C52D40AA0327863BC250AAF16BB2810F38",
+      "Path": "TrueMoon.Aether/Ecs/EcsContractAccess.cs"
+    },
+    {
+      "Sha256": "63CD9B1C44BD4EB17EA463EBCAE701CE4F57DB79A3E6D559E814209D6B0C2B46",
+      "Path": "TrueMoon.Aether/Ecs/EcsContractSystem.cs"
+    },
+    {
+      "Sha256": "FBF74EE421177149A3C1F14207971985BC54A5CCB11944655665ECBEDE00E6A5",
+      "Path": "TrueMoon.Aether/Ecs/Loading/ContractComponentValues.cs"
+    },
+    {
+      "Sha256": "AD80E289736A2A3CB4EDAE2C10FF28BBF99EC0DC0393E15CAFEBD00382B47C51",
+      "Path": "TrueMoon.Aether.Tests/Ecs/EcsContractBindingTests.cs"
+    },
+    {
+      "Sha256": "7453A648E8171113BFD8DE6F7F5E9598BF7C717226C23201D0664C2B0810D5DE",
+      "Path": "TrueMoon.Aether.Tests/Ecs/Loading/ContractComponentRegistryTests.cs"
+    },
+    {
+      "Sha256": "CAC641FD0A367CFA2AAF3BF21369720E2BDDD34FB3AFD65C5E129686B67A2511",
+      "Path": "ManualTests/EcsContractHost/EcsContractHost.csproj"
+    },
+    {
+      "Sha256": "CFB1B87F8557A1D310CC871BC338D42744ACC2259EE56B4162E1C90D34A5FF3E",
+      "Path": "ManualTests/EcsContractHost/Program.cs"
+    },
+    {
+      "Sha256": "369B7673AAAB483A4FDFCD256B827D26B9AECF701FD5B14CCBBF36B8B11A8A67",
+      "Path": "ManualTests/EcsContractHost/Verify.ps1"
+    },
+    {
+      "Sha256": "8C15AD96911B67E25561974E5CC3A1703D29EB9115C5DD56C776FAD67CCF8743",
+      "Path": "ManualTests/EcsContractHost/README.md"
+    },
+    {
+      "Sha256": "C438C5C2A70DFC68D7AED7D7D7E801B78C7AE9984300F47B436EB3B43A8CE0CF",
+      "Path": "ManualTests/Game.Logic/Game.Logic.csproj"
+    },
+    {
+      "Sha256": "E6226954AECC1277B0813450E6EA09FCB7DCED5966B621AA825F292FDCE14866",
+      "Path": "ManualTests/PlayerProbe/Verify.ps1"
+    },
+    {
+      "Sha256": "BF1373BC42D6AE4BCD0B3E0D4C2EF63E58FDB10D9F3B15D8D25C3399CB8DD811",
+      "Path": "ManualTests/RenderSurface/Verify.ps1"
+    },
+    {
+      "Sha256": "B68691A3A0CEA0A36044C31E233FBA4ABC18293BD02431F1D5D946ED07250C06",
+      "Path": "TrueMoon.Aether/PACKAGE.md"
+    },
+    {
+      "Sha256": "38B05A074CD1996950C3D20D101D974438020E8D0125D44CCB175BB59F8FBA88",
+      "Path": "TrueMoon.Aether.Abstractions/PACKAGE.md"
+    },
+    {
+      "Sha256": "3380217C11EBA626B5FA0FA80C721A14061E9B9C152CC07FB4402531C13FFF8D",
+      "Path": "TrueMoon.slnx"
+    }
+  ],
+  "Boundaries": [
+    "Legacy builtin component values, scene/game models and old overloads remain until ARCH3.3; no type forwarding",
+    "Schema1 shared closure expanded explicitly; no schema2/game-entry ABI switch or artifact retag",
+    "World GC case is not private ALC collection or production hot replacement",
+    "Registry/pool/metadata/factory/delegate roots documented; release graphs before mod unload",
+    "No allocation/performance improvement or new device-loss/other OS/AOT/release claims",
+    "Other modules were compiled by solution Debug; their test suites were not run"
+  ],
+  "Attempts": [
+    "Initial scoped ECS/build regression 1098 passed",
+    "First full Debug interrupted after stale 4-file shared fixture detected; fixture now 5 files with tamper cases",
+    "One retry build failed MSB3021/3027 because cancelled testhost survived; exact owned executable/config verified, own process tree stopped, clean full run passed",
+    "Nullable forwarding annotations retain outer null-result validation; final Debug subset and full Release use final sources"
+  ],
+  "RawEvidence": {
+    "Retention": "Local ignored TestResults and OS temp feeds; not a published archive; dated outcomes, commands and SHA retained in this versioned manifest and HISTORY",
+    "Directory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH32-20261112-205444"
+  },
+  "Next": "ARCH3.3 standalone Runtime"
+}

@@ -1,0 +1,3484 @@
+{
+  "Stage": "ARCH1f.4",
+  "Completed": true,
+  "VerifiedUtc": "2026-11-12T12:55:45.5735578+00:00",
+  "Head": "73df16229da1db54e1170ac0d56b9d385f91abd7",
+  "Branch": "main",
+  "WorkingTree": "Existing uncommitted ARCH3/ARCH2e.4b and parallel research preserved",
+  "BuildProfile": {
+    "Workspace": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+    "Framework": "net11.0",
+    "TestFramework": "net11.0",
+    "Sdk": "11.0.100",
+    "Version": "0.3.0.1-alpha",
+    "LanguageVersion": "latest",
+    "Features": ";runtime-async=on",
+    "Sources": [
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Build.props",
+        "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props",
+        "Sha256": "4292CD7B581C08609FA173BEBB188F99729068CBA1A24CDD69F97C3CE7D50335"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\global.json",
+        "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\BuildProfile.ps1",
+        "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+      }
+    ],
+    "EvidencePath": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH1f4-20261112-160211\\delivery-final\\profile-50ef1b3973b749e98aebab06209e8d96.json"
+  },
+  "Builds": [
+    {
+      "Errors": 0,
+      "Configuration": "Debug",
+      "Sha256": "66E8283D250FB8038646B9FF71DF984D45CEF6A1E64279185D372EB7E00DD3DD",
+      "Log": "TestResults\\ARCH1f4-20261112-160211\\solution-final-Debug.log",
+      "Warnings": 242
+    },
+    {
+      "Errors": 0,
+      "Configuration": "Release",
+      "Sha256": "986E8F86302983356D8EF34A7296618AE0831CFB180E51E8BF82F999E40E9663",
+      "Log": "TestResults\\ARCH1f4-20261112-160211\\solution-final-Release.log",
+      "Warnings": 1556
+    }
+  ],
+  "Tests": [
+    {
+      "Project": "TrueMoon.Aether.Tests",
+      "Configuration": "Debug",
+      "Passed": 3269,
+      "Failed": 0,
+      "Skipped": 0,
+      "TRX": "TestResults\\ARCH1f4-20261112-160211\\final-TrueMoon.Aether.Tests-Debug.trx",
+      "Sha256": "7A3689A5BCB69DB3A80230C746CE44ADDCDE61D4077AAF4746530F3F5F84E05B",
+      "Times": "<Times creation=\"2026-11-12T17:28:03.0446650+05:00\" queuing=\"2026-11-12T17:28:03.0446651+05:00\" start=\"2026-11-12T17:28:02.2991664+05:00\" finish=\"2026-11-12T17:40:07.9942519+05:00\" xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\" />"
+    },
+    {
+      "Project": "TrueMoon.Aether.Editor.Tests",
+      "Configuration": "Debug",
+      "Passed": 1496,
+      "Failed": 0,
+      "Skipped": 0,
+      "TRX": "TestResults\\ARCH1f4-20261112-160211\\final-TrueMoon.Aether.Editor.Tests-Debug.trx",
+      "Sha256": "493308C5FFE90F4ED88EFAC8DB9158941F5916FA2003E26A84AD2B5E19704BE1",
+      "Times": "<Times creation=\"2026-11-12T17:40:09.7872957+05:00\" queuing=\"2026-11-12T17:40:09.7872958+05:00\" start=\"2026-11-12T17:40:08.9567993+05:00\" finish=\"2026-11-12T17:41:25.6435409+05:00\" xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\" />"
+    },
+    {
+      "Project": "TrueMoon.Aether.Tests",
+      "Configuration": "Release",
+      "Passed": 3269,
+      "Failed": 0,
+      "Skipped": 0,
+      "TRX": "TestResults\\ARCH1f4-20261112-160211\\final-TrueMoon.Aether.Tests-Release.trx",
+      "Sha256": "C5AA09ACCA2915BDEEFB14360A72FEE205A37305E7B4661E0B6BE72391FED013",
+      "Times": "<Times creation=\"2026-11-12T17:41:27.7735791+05:00\" queuing=\"2026-11-12T17:41:27.7735792+05:00\" start=\"2026-11-12T17:41:26.6036124+05:00\" finish=\"2026-11-12T17:53:29.2239406+05:00\" xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\" />"
+    },
+    {
+      "Project": "TrueMoon.Aether.Editor.Tests",
+      "Configuration": "Release",
+      "Passed": 1496,
+      "Failed": 0,
+      "Skipped": 0,
+      "TRX": "TestResults\\ARCH1f4-20261112-160211\\final-TrueMoon.Aether.Editor.Tests-Release.trx",
+      "Sha256": "50316374B8A6FCD56B5BB4F1996287B5B1D7BCCD148B02188F3A8A03D190AABB",
+      "Times": "<Times creation=\"2026-11-12T17:53:31.7319336+05:00\" queuing=\"2026-11-12T17:53:31.7319337+05:00\" start=\"2026-11-12T17:53:30.3382386+05:00\" finish=\"2026-11-12T17:54:42.6180691+05:00\" xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\" />"
+    }
+  ],
+  "Native": [
+    {
+      "Name": "source-native",
+      "Report": "TestResults\\ARCH1f4-20261112-160211\\delivery-final\\source-native\\verification.json",
+      "Sha256": "B0233E96B1E6B410CB6B693F84FE6CD1219468AB799A63D3668585CC07A4B816",
+      "Captures": [
+        {
+          "Generation": 1,
+          "Phase": "initial",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 1,
+            "Tick": 0,
+            "Checksum": 0,
+            "ProducedTimestamp": 185926212307,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eccb0bdb-36af-467a-a930-3771477bbbf4",
+              "WorldId": "e42bc0a7-e4ed-48a8-83e2-95aa3ef8f863",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 0,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "51BA4FCF3BD91418E5BF1C8987B12A817D4AE34219A4F44C8EF4DE6F1D5C19C1"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "0DFE59C0499D5C0920250F15075409EBC255860213A4AAB0E6D74C4D5B4102E5"
+        },
+        {
+          "Generation": 1,
+          "Phase": "tint",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 1,
+            "FrameId": 2,
+            "Tick": 1,
+            "Checksum": 0,
+            "ProducedTimestamp": 185926890157,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eccb0bdb-36af-467a-a930-3771477bbbf4",
+              "WorldId": "e42bc0a7-e4ed-48a8-83e2-95aa3ef8f863",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 1,
+              "Sequence": 2,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "51BA4FCF3BD91418E5BF1C8987B12A817D4AE34219A4F44C8EF4DE6F1D5C19C1"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "D412D2DB62CA3B84F4A8916D5BDF5BE874757D07055222DD5CC3D1A5C4C3F254"
+        },
+        {
+          "Generation": 1,
+          "Phase": "reset",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 2,
+            "FrameId": 3,
+            "Tick": 2,
+            "Checksum": 0,
+            "ProducedTimestamp": 185927244703,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eccb0bdb-36af-467a-a930-3771477bbbf4",
+              "WorldId": "e42bc0a7-e4ed-48a8-83e2-95aa3ef8f863",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 2,
+              "Sequence": 3,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "51BA4FCF3BD91418E5BF1C8987B12A817D4AE34219A4F44C8EF4DE6F1D5C19C1"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "0DFE59C0499D5C0920250F15075409EBC255860213A4AAB0E6D74C4D5B4102E5"
+        },
+        {
+          "Generation": 1,
+          "Phase": "material-reload",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 4,
+            "Tick": 3,
+            "Checksum": 0,
+            "ProducedTimestamp": 185927604842,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eccb0bdb-36af-467a-a930-3771477bbbf4",
+              "WorldId": "e42bc0a7-e4ed-48a8-83e2-95aa3ef8f863",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 3,
+              "Sequence": 4,
+              "BindingRevision": 2,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "E0373072973E4BDEAFB5C4AE9708AF4D23BC5247A3446F7E1CC5B9D56D794F70"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "5A68C47BF78C81C60E0D123CCDAC84A4D564FCF50AAE23A18D844C4945D79EEE"
+        },
+        {
+          "Generation": 1,
+          "Phase": "delete",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 1,
+            "FrameId": 5,
+            "Tick": 4,
+            "Checksum": 0,
+            "ProducedTimestamp": 185927725849,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eccb0bdb-36af-467a-a930-3771477bbbf4",
+              "WorldId": "e42bc0a7-e4ed-48a8-83e2-95aa3ef8f863",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 4,
+              "Sequence": 5,
+              "BindingRevision": 2,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "E0373072973E4BDEAFB5C4AE9708AF4D23BC5247A3446F7E1CC5B9D56D794F70"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 866,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "061F993E7AAC5E2F454B5C50B5B94F37CBE6A8926EE54CFE842D5CBD7274E956"
+        },
+        {
+          "Generation": 1,
+          "Phase": "mesh-reload",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 2,
+            "FrameId": 6,
+            "Tick": 5,
+            "Checksum": 0,
+            "ProducedTimestamp": 185928065039,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eccb0bdb-36af-467a-a930-3771477bbbf4",
+              "WorldId": "e42bc0a7-e4ed-48a8-83e2-95aa3ef8f863",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 5,
+              "Sequence": 6,
+              "BindingRevision": 3,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "06394F7BEDA5414215ABF9D1D4628CC152343DF8AB402B3CAB384A18F0394CDA"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 208,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "4AB7CEAD086C5D583A6364D8852B809A80CFB9D99AF71A9A690ECFE4D4A1D064"
+        },
+        {
+          "Generation": 1,
+          "Phase": "resize",
+          "Width": 384,
+          "Height": 216,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 1,
+            "Tick": 5,
+            "Checksum": 0,
+            "ProducedTimestamp": 185929301926,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "ee9e50ab-2559-43be-8cc2-0884810dcb76",
+              "WorldId": "e42bc0a7-e4ed-48a8-83e2-95aa3ef8f863",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 5,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 2,
+              "ManifestHash": "06394F7BEDA5414215ABF9D1D4628CC152343DF8AB402B3CAB384A18F0394CDA"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 304,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "A6C166EBC96A590AF96FD163BF96E5467CA0EDF138E771D604351ABA0A10674D"
+        },
+        {
+          "Generation": 1,
+          "Phase": "resume",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 1,
+            "FrameId": 2,
+            "Tick": 5,
+            "Checksum": 0,
+            "ProducedTimestamp": 185930521614,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "66858d8f-c459-4397-bc1c-305ae8c62be6",
+              "WorldId": "e42bc0a7-e4ed-48a8-83e2-95aa3ef8f863",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 5,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 4,
+              "ManifestHash": "06394F7BEDA5414215ABF9D1D4628CC152343DF8AB402B3CAB384A18F0394CDA"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 208,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "4AB7CEAD086C5D583A6364D8852B809A80CFB9D99AF71A9A690ECFE4D4A1D064"
+        },
+        {
+          "Generation": 1,
+          "Phase": "replace-rejected",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 2,
+            "FrameId": 3,
+            "Tick": 5,
+            "Checksum": 0,
+            "ProducedTimestamp": 185931041940,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "66858d8f-c459-4397-bc1c-305ae8c62be6",
+              "WorldId": "e42bc0a7-e4ed-48a8-83e2-95aa3ef8f863",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 5,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 4,
+              "ManifestHash": "06394F7BEDA5414215ABF9D1D4628CC152343DF8AB402B3CAB384A18F0394CDA"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 208,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "4AB7CEAD086C5D583A6364D8852B809A80CFB9D99AF71A9A690ECFE4D4A1D064"
+        },
+        {
+          "Generation": 2,
+          "Phase": "initial",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 1,
+            "Tick": 0,
+            "Checksum": 0,
+            "ProducedTimestamp": 185936272615,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "dd541e66-b551-494a-a50a-0b0c296b253f",
+              "WorldId": "fad36e2e-31a3-4451-bc89-07359eca53e1",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 0,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "51BA4FCF3BD91418E5BF1C8987B12A817D4AE34219A4F44C8EF4DE6F1D5C19C1"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "0DFE59C0499D5C0920250F15075409EBC255860213A4AAB0E6D74C4D5B4102E5"
+        }
+      ],
+      "Children": [
+        {
+          "ProcessId": 60000,
+          "Reaped": true,
+          "ResourcesReleased": true
+        },
+        {
+          "ProcessId": 46776,
+          "Reaped": true,
+          "ResourcesReleased": true
+        },
+        {
+          "ProcessId": 49536,
+          "Reaped": true,
+          "ResourcesReleased": true
+        }
+      ],
+      "Resources": 0,
+      "Handles": 0,
+      "ActiveUiSessions": 0,
+      "FailedStartupObserved": true,
+      "UnsupportedReplacePreservedGeneration": true,
+      "Vulkan": [
+        {
+          "ValidationEnabled": true,
+          "Errors": 0,
+          "Warnings": 0,
+          "Messages": [],
+          "SurfacesCreated": 3,
+          "SurfacesReleased": 3,
+          "SlotsCreated": 9,
+          "SlotsReleased": 9,
+          "LiveSlots": 0,
+          "OpenHandles": 0,
+          "DevicesCreated": 3,
+          "DevicesReleased": 3,
+          "MeshResources": [
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 4,
+              "BuffersReleased": 4,
+              "AllocationsCreated": 4,
+              "AllocationsReleased": 4,
+              "Uploads": 2,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            },
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            },
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            }
+          ]
+        },
+        {
+          "ValidationEnabled": true,
+          "Errors": 0,
+          "Warnings": 0,
+          "Messages": [],
+          "SurfacesCreated": 1,
+          "SurfacesReleased": 1,
+          "SlotsCreated": 3,
+          "SlotsReleased": 3,
+          "LiveSlots": 0,
+          "OpenHandles": 0,
+          "DevicesCreated": 1,
+          "DevicesReleased": 1,
+          "MeshResources": [
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            }
+          ]
+        },
+        {
+          "ValidationEnabled": true,
+          "Errors": 0,
+          "Warnings": 0,
+          "Messages": [],
+          "SurfacesCreated": 1,
+          "SurfacesReleased": 1,
+          "SlotsCreated": 3,
+          "SlotsReleased": 3,
+          "LiveSlots": 0,
+          "OpenHandles": 0,
+          "DevicesCreated": 1,
+          "DevicesReleased": 1,
+          "MeshResources": [
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "published-native",
+      "Report": "TestResults\\ARCH1f4-20261112-160211\\delivery-final\\published-native\\verification.json",
+      "Sha256": "6425B6353349196ADA25F45E16895172E30777C5F360550616D07AB8A97F53CB",
+      "Captures": [
+        {
+          "Generation": 1,
+          "Phase": "initial",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 1,
+            "Tick": 0,
+            "Checksum": 0,
+            "ProducedTimestamp": 186035644712,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "97a4f27c-34bd-4d53-9eee-67d603d4037f",
+              "WorldId": "8a0e0426-83a7-405e-acf2-91f962824481",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 0,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "FB6115E287ECAF41556FE7613C5BDDC8B9DF56856614DB6A4B4789338567CF24"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "0DFE59C0499D5C0920250F15075409EBC255860213A4AAB0E6D74C4D5B4102E5"
+        },
+        {
+          "Generation": 1,
+          "Phase": "tint",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 1,
+            "FrameId": 2,
+            "Tick": 1,
+            "Checksum": 0,
+            "ProducedTimestamp": 186036205556,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "97a4f27c-34bd-4d53-9eee-67d603d4037f",
+              "WorldId": "8a0e0426-83a7-405e-acf2-91f962824481",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 1,
+              "Sequence": 2,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "FB6115E287ECAF41556FE7613C5BDDC8B9DF56856614DB6A4B4789338567CF24"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "D412D2DB62CA3B84F4A8916D5BDF5BE874757D07055222DD5CC3D1A5C4C3F254"
+        },
+        {
+          "Generation": 1,
+          "Phase": "reset",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 2,
+            "FrameId": 3,
+            "Tick": 2,
+            "Checksum": 0,
+            "ProducedTimestamp": 186036621485,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "97a4f27c-34bd-4d53-9eee-67d603d4037f",
+              "WorldId": "8a0e0426-83a7-405e-acf2-91f962824481",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 2,
+              "Sequence": 3,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "FB6115E287ECAF41556FE7613C5BDDC8B9DF56856614DB6A4B4789338567CF24"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "0DFE59C0499D5C0920250F15075409EBC255860213A4AAB0E6D74C4D5B4102E5"
+        },
+        {
+          "Generation": 1,
+          "Phase": "material-reload",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 4,
+            "Tick": 3,
+            "Checksum": 0,
+            "ProducedTimestamp": 186036986397,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "97a4f27c-34bd-4d53-9eee-67d603d4037f",
+              "WorldId": "8a0e0426-83a7-405e-acf2-91f962824481",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 3,
+              "Sequence": 4,
+              "BindingRevision": 2,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "77DFC8C5D5FA37E808E0FAABAC376102E258222FF7233200938F29449E9E5D0E"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "5A68C47BF78C81C60E0D123CCDAC84A4D564FCF50AAE23A18D844C4945D79EEE"
+        },
+        {
+          "Generation": 1,
+          "Phase": "delete",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 1,
+            "FrameId": 5,
+            "Tick": 4,
+            "Checksum": 0,
+            "ProducedTimestamp": 186037114682,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "97a4f27c-34bd-4d53-9eee-67d603d4037f",
+              "WorldId": "8a0e0426-83a7-405e-acf2-91f962824481",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 4,
+              "Sequence": 5,
+              "BindingRevision": 2,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "77DFC8C5D5FA37E808E0FAABAC376102E258222FF7233200938F29449E9E5D0E"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 866,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "061F993E7AAC5E2F454B5C50B5B94F37CBE6A8926EE54CFE842D5CBD7274E956"
+        },
+        {
+          "Generation": 1,
+          "Phase": "mesh-reload",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 2,
+            "FrameId": 6,
+            "Tick": 5,
+            "Checksum": 0,
+            "ProducedTimestamp": 186037407726,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "97a4f27c-34bd-4d53-9eee-67d603d4037f",
+              "WorldId": "8a0e0426-83a7-405e-acf2-91f962824481",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 5,
+              "Sequence": 6,
+              "BindingRevision": 3,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "308793CF0962434B17483BE47A1B2FC26F3447DB7EB5CF95F71EBFFC400295EE"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 208,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "4AB7CEAD086C5D583A6364D8852B809A80CFB9D99AF71A9A690ECFE4D4A1D064"
+        },
+        {
+          "Generation": 1,
+          "Phase": "resize",
+          "Width": 384,
+          "Height": 216,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 1,
+            "Tick": 5,
+            "Checksum": 0,
+            "ProducedTimestamp": 186038710763,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "2fef0d61-a5df-4cbb-8a1e-0b0c2c2f5970",
+              "WorldId": "8a0e0426-83a7-405e-acf2-91f962824481",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 5,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 2,
+              "ManifestHash": "308793CF0962434B17483BE47A1B2FC26F3447DB7EB5CF95F71EBFFC400295EE"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 304,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "A6C166EBC96A590AF96FD163BF96E5467CA0EDF138E771D604351ABA0A10674D"
+        },
+        {
+          "Generation": 1,
+          "Phase": "resume",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 1,
+            "FrameId": 2,
+            "Tick": 6,
+            "Checksum": 0,
+            "ProducedTimestamp": 186039966520,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "7c568b2a-218a-4302-a2d5-9a47d9c27525",
+              "WorldId": "8a0e0426-83a7-405e-acf2-91f962824481",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 6,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 4,
+              "ManifestHash": "308793CF0962434B17483BE47A1B2FC26F3447DB7EB5CF95F71EBFFC400295EE"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 208,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "4AB7CEAD086C5D583A6364D8852B809A80CFB9D99AF71A9A690ECFE4D4A1D064"
+        },
+        {
+          "Generation": 1,
+          "Phase": "replace-rejected",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 2,
+            "FrameId": 3,
+            "Tick": 7,
+            "Checksum": 0,
+            "ProducedTimestamp": 186040378730,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "7c568b2a-218a-4302-a2d5-9a47d9c27525",
+              "WorldId": "8a0e0426-83a7-405e-acf2-91f962824481",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 7,
+              "Sequence": 2,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 4,
+              "ManifestHash": "308793CF0962434B17483BE47A1B2FC26F3447DB7EB5CF95F71EBFFC400295EE"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 208,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "4AB7CEAD086C5D583A6364D8852B809A80CFB9D99AF71A9A690ECFE4D4A1D064"
+        },
+        {
+          "Generation": 2,
+          "Phase": "initial",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 1,
+            "Tick": 0,
+            "Checksum": 0,
+            "ProducedTimestamp": 186045874508,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "95d57649-deba-4aae-9e6d-d9014fbe6480",
+              "WorldId": "3c2a33ee-4394-4127-b189-228dcf32523f",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 0,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "FB6115E287ECAF41556FE7613C5BDDC8B9DF56856614DB6A4B4789338567CF24"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "0DFE59C0499D5C0920250F15075409EBC255860213A4AAB0E6D74C4D5B4102E5"
+        }
+      ],
+      "Children": [
+        {
+          "ProcessId": 59332,
+          "Reaped": true,
+          "ResourcesReleased": true
+        },
+        {
+          "ProcessId": 46812,
+          "Reaped": true,
+          "ResourcesReleased": true
+        },
+        {
+          "ProcessId": 59040,
+          "Reaped": true,
+          "ResourcesReleased": true
+        }
+      ],
+      "Resources": 0,
+      "Handles": 0,
+      "ActiveUiSessions": 0,
+      "FailedStartupObserved": true,
+      "UnsupportedReplacePreservedGeneration": true,
+      "Vulkan": [
+        {
+          "ValidationEnabled": true,
+          "Errors": 0,
+          "Warnings": 0,
+          "Messages": [],
+          "SurfacesCreated": 3,
+          "SurfacesReleased": 3,
+          "SlotsCreated": 9,
+          "SlotsReleased": 9,
+          "LiveSlots": 0,
+          "OpenHandles": 0,
+          "DevicesCreated": 3,
+          "DevicesReleased": 3,
+          "MeshResources": [
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 4,
+              "BuffersReleased": 4,
+              "AllocationsCreated": 4,
+              "AllocationsReleased": 4,
+              "Uploads": 2,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            },
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            },
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            }
+          ]
+        },
+        {
+          "ValidationEnabled": true,
+          "Errors": 0,
+          "Warnings": 0,
+          "Messages": [],
+          "SurfacesCreated": 1,
+          "SurfacesReleased": 1,
+          "SlotsCreated": 3,
+          "SlotsReleased": 3,
+          "LiveSlots": 0,
+          "OpenHandles": 0,
+          "DevicesCreated": 1,
+          "DevicesReleased": 1,
+          "MeshResources": [
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            }
+          ]
+        },
+        {
+          "ValidationEnabled": true,
+          "Errors": 0,
+          "Warnings": 0,
+          "Messages": [],
+          "SurfacesCreated": 1,
+          "SurfacesReleased": 1,
+          "SlotsCreated": 3,
+          "SlotsReleased": 3,
+          "LiveSlots": 0,
+          "OpenHandles": 0,
+          "DevicesCreated": 1,
+          "DevicesReleased": 1,
+          "MeshResources": [
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "fresh-native",
+      "Report": "TestResults\\ARCH1f4-20261112-160211\\delivery-final\\fresh-native\\verification.json",
+      "Sha256": "09394007B7F61B2AA9902E8B907977C70F3F668E37D6C6F24C376F03C9CC2C26",
+      "Captures": [
+        {
+          "Generation": 1,
+          "Phase": "initial",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 1,
+            "Tick": 0,
+            "Checksum": 0,
+            "ProducedTimestamp": 186287081349,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eb381343-2df8-4f0e-bf9a-701b6b9586f2",
+              "WorldId": "ffd9a648-290d-4898-b701-ac42c2cbde52",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 0,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "1EAD907C531ACA33FE08262C89F6330CD1BD05619E6BF0DE18ECD9E783AFB42C"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "0DFE59C0499D5C0920250F15075409EBC255860213A4AAB0E6D74C4D5B4102E5"
+        },
+        {
+          "Generation": 1,
+          "Phase": "tint",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 1,
+            "FrameId": 2,
+            "Tick": 1,
+            "Checksum": 0,
+            "ProducedTimestamp": 186287667282,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eb381343-2df8-4f0e-bf9a-701b6b9586f2",
+              "WorldId": "ffd9a648-290d-4898-b701-ac42c2cbde52",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 1,
+              "Sequence": 2,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "1EAD907C531ACA33FE08262C89F6330CD1BD05619E6BF0DE18ECD9E783AFB42C"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "D412D2DB62CA3B84F4A8916D5BDF5BE874757D07055222DD5CC3D1A5C4C3F254"
+        },
+        {
+          "Generation": 1,
+          "Phase": "reset",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 2,
+            "FrameId": 3,
+            "Tick": 2,
+            "Checksum": 0,
+            "ProducedTimestamp": 186287954887,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eb381343-2df8-4f0e-bf9a-701b6b9586f2",
+              "WorldId": "ffd9a648-290d-4898-b701-ac42c2cbde52",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 2,
+              "Sequence": 3,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "1EAD907C531ACA33FE08262C89F6330CD1BD05619E6BF0DE18ECD9E783AFB42C"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "0DFE59C0499D5C0920250F15075409EBC255860213A4AAB0E6D74C4D5B4102E5"
+        },
+        {
+          "Generation": 1,
+          "Phase": "material-reload",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 4,
+            "Tick": 3,
+            "Checksum": 0,
+            "ProducedTimestamp": 186288331649,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eb381343-2df8-4f0e-bf9a-701b6b9586f2",
+              "WorldId": "ffd9a648-290d-4898-b701-ac42c2cbde52",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 3,
+              "Sequence": 4,
+              "BindingRevision": 2,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "93BED423A8894EC101403BD438D010069EA8B906C355AA304D11CBB397A08C0B"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "5A68C47BF78C81C60E0D123CCDAC84A4D564FCF50AAE23A18D844C4945D79EEE"
+        },
+        {
+          "Generation": 1,
+          "Phase": "delete",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 1,
+            "FrameId": 5,
+            "Tick": 4,
+            "Checksum": 0,
+            "ProducedTimestamp": 186288483687,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eb381343-2df8-4f0e-bf9a-701b6b9586f2",
+              "WorldId": "ffd9a648-290d-4898-b701-ac42c2cbde52",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 4,
+              "Sequence": 5,
+              "BindingRevision": 2,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "93BED423A8894EC101403BD438D010069EA8B906C355AA304D11CBB397A08C0B"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 866,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "061F993E7AAC5E2F454B5C50B5B94F37CBE6A8926EE54CFE842D5CBD7274E956"
+        },
+        {
+          "Generation": 1,
+          "Phase": "mesh-reload",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 2,
+            "FrameId": 6,
+            "Tick": 5,
+            "Checksum": 0,
+            "ProducedTimestamp": 186288772553,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "eb381343-2df8-4f0e-bf9a-701b6b9586f2",
+              "WorldId": "ffd9a648-290d-4898-b701-ac42c2cbde52",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 5,
+              "Sequence": 6,
+              "BindingRevision": 3,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "81AB9FF8D0AD1B303F79B93A30AF76486B7D799FA72DD50A7022D001F15AB0CF"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 208,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "4AB7CEAD086C5D583A6364D8852B809A80CFB9D99AF71A9A690ECFE4D4A1D064"
+        },
+        {
+          "Generation": 1,
+          "Phase": "resize",
+          "Width": 384,
+          "Height": 216,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 1,
+            "Tick": 5,
+            "Checksum": 0,
+            "ProducedTimestamp": 186290186787,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "d140b3ce-2448-42f8-8a12-3f4466947f46",
+              "WorldId": "ffd9a648-290d-4898-b701-ac42c2cbde52",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 5,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 2,
+              "ManifestHash": "81AB9FF8D0AD1B303F79B93A30AF76486B7D799FA72DD50A7022D001F15AB0CF"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 304,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "A6C166EBC96A590AF96FD163BF96E5467CA0EDF138E771D604351ABA0A10674D"
+        },
+        {
+          "Generation": 1,
+          "Phase": "resume",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 1,
+            "FrameId": 2,
+            "Tick": 5,
+            "Checksum": 0,
+            "ProducedTimestamp": 186291542843,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "299b935c-c1f9-4ae0-b928-e73e2f5f2bf5",
+              "WorldId": "ffd9a648-290d-4898-b701-ac42c2cbde52",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 5,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 4,
+              "ManifestHash": "81AB9FF8D0AD1B303F79B93A30AF76486B7D799FA72DD50A7022D001F15AB0CF"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 208,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "4AB7CEAD086C5D583A6364D8852B809A80CFB9D99AF71A9A690ECFE4D4A1D064"
+        },
+        {
+          "Generation": 1,
+          "Phase": "replace-rejected",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 2,
+            "FrameId": 3,
+            "Tick": 6,
+            "Checksum": 0,
+            "ProducedTimestamp": 186292061199,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "299b935c-c1f9-4ae0-b928-e73e2f5f2bf5",
+              "WorldId": "ffd9a648-290d-4898-b701-ac42c2cbde52",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 6,
+              "Sequence": 2,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 4,
+              "ManifestHash": "81AB9FF8D0AD1B303F79B93A30AF76486B7D799FA72DD50A7022D001F15AB0CF"
+            }
+          },
+          "LeftPixels": 0,
+          "RightPixels": 208,
+          "RequireFence": false,
+          "Presented": true,
+          "Sha256": "4AB7CEAD086C5D583A6364D8852B809A80CFB9D99AF71A9A690ECFE4D4A1D064"
+        },
+        {
+          "Generation": 2,
+          "Phase": "initial",
+          "Width": 320,
+          "Height": 180,
+          "Metadata": {
+            "Slot": 0,
+            "FrameId": 1,
+            "Tick": 0,
+            "Checksum": 0,
+            "ProducedTimestamp": 186297489586,
+            "PreviewView": null,
+            "RenderView": {
+              "ViewId": "29c8c55c-97dc-4aab-b0d1-2b8c6191834d",
+              "WorldId": "fc7ce17c-faf7-4a94-a596-ba732068bb6d",
+              "SceneId": "458ddc79-8803-4dc0-b24b-9445695d980a",
+              "SourceRevision": 41,
+              "Tick": 0,
+              "Sequence": 1,
+              "BindingRevision": 1,
+              "CameraRevision": 1,
+              "SurfaceGeneration": 1,
+              "ManifestHash": "1EAD907C531ACA33FE08262C89F6330CD1BD05619E6BF0DE18ECD9E783AFB42C"
+            }
+          },
+          "LeftPixels": 862,
+          "RightPixels": 866,
+          "RequireFence": true,
+          "Presented": true,
+          "Sha256": "0DFE59C0499D5C0920250F15075409EBC255860213A4AAB0E6D74C4D5B4102E5"
+        }
+      ],
+      "Children": [
+        {
+          "ProcessId": 39448,
+          "Reaped": true,
+          "ResourcesReleased": true
+        },
+        {
+          "ProcessId": 55120,
+          "Reaped": true,
+          "ResourcesReleased": true
+        },
+        {
+          "ProcessId": 59672,
+          "Reaped": true,
+          "ResourcesReleased": true
+        }
+      ],
+      "Resources": 0,
+      "Handles": 0,
+      "ActiveUiSessions": 0,
+      "FailedStartupObserved": true,
+      "UnsupportedReplacePreservedGeneration": true,
+      "Vulkan": [
+        {
+          "ValidationEnabled": true,
+          "Errors": 0,
+          "Warnings": 0,
+          "Messages": [],
+          "SurfacesCreated": 3,
+          "SurfacesReleased": 3,
+          "SlotsCreated": 9,
+          "SlotsReleased": 9,
+          "LiveSlots": 0,
+          "OpenHandles": 0,
+          "DevicesCreated": 3,
+          "DevicesReleased": 3,
+          "MeshResources": [
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 4,
+              "BuffersReleased": 4,
+              "AllocationsCreated": 4,
+              "AllocationsReleased": 4,
+              "Uploads": 2,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            },
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            },
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            }
+          ]
+        },
+        {
+          "ValidationEnabled": true,
+          "Errors": 0,
+          "Warnings": 0,
+          "Messages": [],
+          "SurfacesCreated": 1,
+          "SurfacesReleased": 1,
+          "SlotsCreated": 3,
+          "SlotsReleased": 3,
+          "LiveSlots": 0,
+          "OpenHandles": 0,
+          "DevicesCreated": 1,
+          "DevicesReleased": 1,
+          "MeshResources": [
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            }
+          ]
+        },
+        {
+          "ValidationEnabled": true,
+          "Errors": 0,
+          "Warnings": 0,
+          "Messages": [],
+          "SurfacesCreated": 1,
+          "SurfacesReleased": 1,
+          "SlotsCreated": 3,
+          "SlotsReleased": 3,
+          "LiveSlots": 0,
+          "OpenHandles": 0,
+          "DevicesCreated": 1,
+          "DevicesReleased": 1,
+          "MeshResources": [
+            {
+              "ValidationEnabled": false,
+              "Errors": 0,
+              "Warnings": 0,
+              "DevicesCreated": 0,
+              "DevicesReleased": 0,
+              "BuffersCreated": 2,
+              "BuffersReleased": 2,
+              "AllocationsCreated": 2,
+              "AllocationsReleased": 2,
+              "Uploads": 1,
+              "VerifiedUploads": 0,
+              "LiveUploads": 0,
+              "DeviceName": null,
+              "Messages": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "LegacyPrimitive": {
+    "Report": "TestResults\\ARCH1f4-20261112-160211\\legacy-primitive-native\\verification.json",
+    "Completed": true,
+    "Sha256": "8DE128B2501460782F10731D97873BD4B3C2063A5EBEFCB37992AE6199BC489A"
+  },
+  "Delivery": {
+    "Version": "0.3.0.1-alpha.meshsurface.20261112172507",
+    "Report": "TestResults\\ARCH1f4-20261112-160211\\delivery-final\\verification.json",
+    "ExternalPackages": [
+      {
+        "Sha256": "4C595155E5023F3704647DB061665DBD9354C4EDD09883F7748EC19F244363F5",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\11.0.0\\microsoft.extensions.dependencyinjection.11.0.0.nupkg",
+        "Identity": "Microsoft.Extensions.DependencyInjection/11.0.0"
+      },
+      {
+        "Sha256": "3A1FF7EC1DE65781D47C9C60742F7163A4E9CE9C09C701CD8202DED9A20D4995",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\5.9.0\\microsoft.codeanalysis.analyzers.5.9.0.nupkg",
+        "Identity": "Microsoft.CodeAnalysis.Analyzers/5.9.0"
+      },
+      {
+        "Sha256": "77EFD4715C24C8CD6B36F9B92980A2F5A86E4A7B53648D4F1CA3B79A3933A429",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\microsoft.codeanalysis.common\\5.9.0\\microsoft.codeanalysis.common.5.9.0.nupkg",
+        "Identity": "Microsoft.CodeAnalysis.Common/5.9.0"
+      },
+      {
+        "Sha256": "7602C3DBAA122268F3B26C6CC0DD02EB9224DEA9442ED27AF5C3FE56D643993F",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\microsoft.codeanalysis.csharp\\5.9.0\\microsoft.codeanalysis.csharp.5.9.0.nupkg",
+        "Identity": "Microsoft.CodeAnalysis.CSharp/5.9.0"
+      },
+      {
+        "Sha256": "E4BE95E0621FFB1B8070137EAC5A1F8544E1D1F517E041A863592C88C49530AC",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\harfbuzzsharp\\14.2.1.301\\harfbuzzsharp.14.2.1.301.nupkg",
+        "Identity": "HarfBuzzSharp/14.2.1.301"
+      },
+      {
+        "Sha256": "1E22D3BC6765AE70D227A61A30AF88B94AE646DC26EC03C26E7487F9752CBF38",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\harfbuzzsharp.nativeassets.linux\\14.2.1.301\\harfbuzzsharp.nativeassets.linux.14.2.1.301.nupkg",
+        "Identity": "HarfBuzzSharp.NativeAssets.Linux/14.2.1.301"
+      },
+      {
+        "Sha256": "1E952B7472A56B5DF53A830A491B3614EE004A7B51557D2C32D53D73A2A4C651",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\harfbuzzsharp.nativeassets.macos\\14.2.1.301\\harfbuzzsharp.nativeassets.macos.14.2.1.301.nupkg",
+        "Identity": "HarfBuzzSharp.NativeAssets.macOS/14.2.1.301"
+      },
+      {
+        "Sha256": "20518A559C120CB322B57D8986DE49C5DCA4ECA2547EE69F756B38211B7DD10E",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\harfbuzzsharp.nativeassets.win32\\14.2.1.301\\harfbuzzsharp.nativeassets.win32.14.2.1.301.nupkg",
+        "Identity": "HarfBuzzSharp.NativeAssets.Win32/14.2.1.301"
+      },
+      {
+        "Sha256": "45F336A978AA7626A63E45EBE080E435CD0865217D89366FE2EA2EFC4EF3352D",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\microsoft.dotnet.platformabstractions\\3.1.6\\microsoft.dotnet.platformabstractions.3.1.6.nupkg",
+        "Identity": "Microsoft.DotNet.PlatformAbstractions/3.1.6"
+      },
+      {
+        "Sha256": "D32818F092CE20AB98170C1D542B4397CFFC7D5E480BD2608AF7F35EC8D75EC2",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\microsoft.extensions.dependencymodel\\9.0.9\\microsoft.extensions.dependencymodel.9.0.9.nupkg",
+        "Identity": "Microsoft.Extensions.DependencyModel/9.0.9"
+      },
+      {
+        "Sha256": "2E0AE765CBB1D3D571EC95257C7E3EC9C2593B922FE8F4B2FB9915F88EA8C301",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.core\\2.23.0\\silk.net.core.2.23.0.nupkg",
+        "Identity": "Silk.NET.Core/2.23.0"
+      },
+      {
+        "Sha256": "6D794A4913C76F8B4467C86E9B480BB732D9B913C763488F29F66EE6F9E4E521",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.vulkan\\2.23.0\\silk.net.vulkan.2.23.0.nupkg",
+        "Identity": "Silk.NET.Vulkan/2.23.0"
+      },
+      {
+        "Sha256": "6F0CA2D4AD38652DF24DC8E4E88D38BFB36FFDA99DDD4D825FE56AE2D73B7377",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\skiasharp\\4.155.0\\skiasharp.4.155.0.nupkg",
+        "Identity": "SkiaSharp/4.155.0"
+      },
+      {
+        "Sha256": "B655B033CEDA03228940AFE31DEFCE45BC32B162D91FE379E6BFAA9F4AEC93C0",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\skiasharp.harfbuzz\\4.153.1\\skiasharp.harfbuzz.4.153.1.nupkg",
+        "Identity": "SkiaSharp.HarfBuzz/4.153.1"
+      },
+      {
+        "Sha256": "489A5D301F0BB68401D329F5A77DC3FB2A6E51295320DA17C630C0ED5F5B2FF8",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\skiasharp.nativeassets.linux\\4.153.1\\skiasharp.nativeassets.linux.4.153.1.nupkg",
+        "Identity": "SkiaSharp.NativeAssets.Linux/4.153.1"
+      },
+      {
+        "Sha256": "1506B13F60F36478D16BF6D5512A47791F4233E63B0E11F1A8D5763360FFEAE6",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\skiasharp.nativeassets.macos\\4.155.0\\skiasharp.nativeassets.macos.4.155.0.nupkg",
+        "Identity": "SkiaSharp.NativeAssets.macOS/4.155.0"
+      },
+      {
+        "Sha256": "763EB7F4DADD4E5A0C0044E0A3E54E99F686CE782AC41E3F5C75BFD09563A72D",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\skiasharp.nativeassets.win32\\4.155.0\\skiasharp.nativeassets.win32.4.155.0.nupkg",
+        "Identity": "SkiaSharp.NativeAssets.Win32/4.155.0"
+      },
+      {
+        "Sha256": "26D4B69B3FA1EA81DD5AE5FD3E79180FC4C1A8440FA74129B202097604B53A6D",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\topten.richtextkit\\0.6.170\\topten.richtextkit.0.6.170.nupkg",
+        "Identity": "Topten.RichTextKit/0.6.170"
+      },
+      {
+        "Sha256": "140E34166C5FEC405AFB3575894CF42DE3BD6FB46725133E3311717DA5E6D934",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net\\2.23.0\\silk.net.2.23.0.nupkg",
+        "Identity": "Silk.NET/2.23.0"
+      },
+      {
+        "Sha256": "91241B0BE8132EF8445A790A5900B04AC1AE0C8195DB4F62B32CE5AC50D23B15",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.glfw\\2.23.0\\silk.net.glfw.2.23.0.nupkg",
+        "Identity": "Silk.NET.GLFW/2.23.0"
+      },
+      {
+        "Sha256": "787411EC8060C2CB674BCD190DADAF220F74DA262516080F2A210856897B5766",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.input\\2.23.0\\silk.net.input.2.23.0.nupkg",
+        "Identity": "Silk.NET.Input/2.23.0"
+      },
+      {
+        "Sha256": "820F440B5C52EA0CA33FF4ABBE52A29EA9D304AF86344B6A5151EB6A0A2EB16C",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.input.common\\2.23.0\\silk.net.input.common.2.23.0.nupkg",
+        "Identity": "Silk.NET.Input.Common/2.23.0"
+      },
+      {
+        "Sha256": "1A0C2CBE6AF057205C485F1006A1A394954514803194B3C8689A9DC6E74084EE",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.input.glfw\\2.23.0\\silk.net.input.glfw.2.23.0.nupkg",
+        "Identity": "Silk.NET.Input.Glfw/2.23.0"
+      },
+      {
+        "Sha256": "6C471EB49D9B597B10E15BE0B24B63BAB44523DEF9480E3318E08FBC0171CF4A",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.maths\\2.23.0\\silk.net.maths.2.23.0.nupkg",
+        "Identity": "Silk.NET.Maths/2.23.0"
+      },
+      {
+        "Sha256": "20A6C5DC1550B52BBAEDA8EEBCB273268D41B5F9F4E5CEE2E76FD9DAD2FB5361",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.openal\\2.23.0\\silk.net.openal.2.23.0.nupkg",
+        "Identity": "Silk.NET.OpenAL/2.23.0"
+      },
+      {
+        "Sha256": "CCAF53CD7D043F66B035EA5849CF31B247A5FCCED82A21469500314E28FF5A4C",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.opengl\\2.23.0\\silk.net.opengl.2.23.0.nupkg",
+        "Identity": "Silk.NET.OpenGL/2.23.0"
+      },
+      {
+        "Sha256": "35FEF593764DC0657CDF250472E9761D88FFF09EE419E1F25954D1689D640B24",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.vulkan.extensions.ext\\2.23.0\\silk.net.vulkan.extensions.ext.2.23.0.nupkg",
+        "Identity": "Silk.NET.Vulkan.Extensions.EXT/2.23.0"
+      },
+      {
+        "Sha256": "F6462BA09B10A2113710DD51A31A7B61E045B829B78AAE27B92F4020D64530DC",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.vulkan.extensions.khr\\2.23.0\\silk.net.vulkan.extensions.khr.2.23.0.nupkg",
+        "Identity": "Silk.NET.Vulkan.Extensions.KHR/2.23.0"
+      },
+      {
+        "Sha256": "60D179941FF6BF4D6F4E46DF51655BA500F9CBBDB30EA2DCC7B24571F75CFA66",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.windowing\\2.23.0\\silk.net.windowing.2.23.0.nupkg",
+        "Identity": "Silk.NET.Windowing/2.23.0"
+      },
+      {
+        "Sha256": "69BC0064CF7DE765E811F9E0F7552C081489347448E70A89CBC2E03E1D012E16",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.windowing.common\\2.23.0\\silk.net.windowing.common.2.23.0.nupkg",
+        "Identity": "Silk.NET.Windowing.Common/2.23.0"
+      },
+      {
+        "Sha256": "8F164CB9452AB7E0145B2E61D0147303C8320F6AD6A9632B24FB6077887A00D6",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\silk.net.windowing.glfw\\2.23.0\\silk.net.windowing.glfw.2.23.0.nupkg",
+        "Identity": "Silk.NET.Windowing.Glfw/2.23.0"
+      },
+      {
+        "Sha256": "F8121464EF88C15BC1C421DA4E39C4029A116D8994D38A600FBB9E8D989D13BE",
+        "Source": "C:\\Users\\MEGA6\\.nuget\\packages\\ultz.native.glfw\\3.4.0\\ultz.native.glfw.3.4.0.nupkg",
+        "Identity": "Ultz.Native.GLFW/3.4.0"
+      }
+    ],
+    "Sha256": "1F168F6B00D47F9F5A07D3BFB3ABF5BA0BCB72032D1AF55BD8F09840259FE0E7",
+    "Graphs": [
+      {
+        "Project": "probe",
+        "AssetsSha256": "403289499869463142B8F6AA5F883849A5B74DB5109563778D7D0CC35D919A37",
+        "ProjectReferences": 0
+      },
+      {
+        "Project": "runtime",
+        "AssetsSha256": "8D8B538D46391F6638627E0A3F0818B7D23C52FC9DA69C36D627F215ADDE8E18",
+        "ProjectReferences": 0
+      },
+      {
+        "Project": "game",
+        "AssetsSha256": "FFC4A7DCBE9E659AA056F6C65A62B1A535BEA67CF18458533FB572C9A28C0228",
+        "ProjectReferences": 0
+      }
+    ],
+    "Packages": [
+      {
+        "Id": "TrueMoon.Contracts",
+        "Sha256": "AC6A72B8BA45443C54C46496A37EDA056ED0BD7CF4802B8F914828318AC41438",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Contracts.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Core",
+        "Sha256": "C41B01ADEFC851E293D1E505819CFA766F3F19D81E47A5B9EA6F8940FBEF2DDE",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Core.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Cobalt",
+        "Sha256": "FD592875740E58F1C8DAE29F72320E978B10FD8CF490886F8C256BD5889E4E0A",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Cobalt.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon",
+        "Sha256": "C58B1EF9AFBF286CEC9829259C3DAD6B8CABA0461CAF8F1EB7E3707A1D229B25",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Extensions.DependencyInjection",
+        "Sha256": "3C942D586B9CBD9013A48E17BD8B1772B1C13C85280CFA257C46A5E69C2E0E9E",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Extensions.DependencyInjection.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Enerit.Generator",
+        "Sha256": "E801FCC8A08B9CC90B58A94DE16D146DC5F5F55811349F36974F680F28D84ECF",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Enerit.Generator.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Enerit",
+        "Sha256": "C85E5F11D1595A77BE8B0C79A1519D1AC17A87A2341D320A198F1479DA76416E",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Enerit.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Mithril",
+        "Sha256": "4F40E9C59843BA1C57E35B9FE5D7448BE09DAD016C66D4DA9CE090712A6933E6",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Mithril.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Argentis",
+        "Sha256": "9436B9B18A15E7993FA34D263E61C5B9DCD5C348058BA36CAE35A35BE7B89FD3",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Argentis.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Alloy",
+        "Sha256": "49EF418E495A29B0E4A41888B704A8C3FC8CDDDB157368C6AF3302F4D1316F9A",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Alloy.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Alloy.Rendering.Skia",
+        "Sha256": "F1B6A920F39736A29CABACBAE85DFBAFCF2FAB14BA7B321DFBC8329E7E216D5F",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Alloy.Rendering.Skia.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Alloy.Platform.Silk",
+        "Sha256": "115703EBB1CE9ABA817FA482F11A31889BDF2C4F1D7B2A38AD6F400EC94FD6AC",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Alloy.Platform.Silk.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Alloy.Hosting",
+        "Sha256": "972AD18BD4596962DF761380C03039DA5C07F0F1981D54D7AAE49233D77F4E58",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Alloy.Hosting.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Aether",
+        "Sha256": "2B0DDF97CBC14BB6127DA9E220381938A57CE9B0FF49E107646378016E541467",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Aether.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      },
+      {
+        "Id": "TrueMoon.Aether.Editor",
+        "Sha256": "3D570F61BB9EA333144900EE96FAB2749A6CA0AB3E0657996B0BA1D9EDB23824",
+        "Path": "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-RenderSurface-3086b15ad8ba4d21a1fe70a51e8584a7/feed/TrueMoon.Aether.Editor.0.3.0.1-alpha.meshsurface.20261112172507.nupkg"
+      }
+    ]
+  },
+  "Sources": [
+    {
+      "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C",
+      "Path": "Directory.Build.props"
+    },
+    {
+      "Sha256": "4292CD7B581C08609FA173BEBB188F99729068CBA1A24CDD69F97C3CE7D50335",
+      "Path": "Directory.Packages.props"
+    },
+    {
+      "Sha256": "FFE04357454B7B16017AD0774F801B00DCCD6F8AB9C7187BA1FD215D033C7E8A",
+      "Path": "Examples\\AetherRuntimeHost\\AetherRuntimeHost.csproj"
+    },
+    {
+      "Sha256": "28B5CEC1368FE2E7835364972CAE8F431BE475668854ABB375419B24AE8078F3",
+      "Path": "Examples\\AetherRuntimeHost\\Program.cs"
+    },
+    {
+      "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6",
+      "Path": "global.json"
+    },
+    {
+      "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF",
+      "Path": "ManualTests\\BuildProfile.ps1"
+    },
+    {
+      "Sha256": "6D5D09F08F69564DD0B3E24E8B8A9F2A7BD17443EE6AC07695DDA42D67144369",
+      "Path": "ManualTests\\EngineSessionProbe\\EngineSessionProbe.csproj"
+    },
+    {
+      "Sha256": "24B1148EB820AF8E9CB540ED827883422FF62F2894C3A644B02DDE869D06AB4A",
+      "Path": "ManualTests\\EngineSessionProbe\\GpuCapabilityCollector.cs"
+    },
+    {
+      "Sha256": "09215C2909169AFC7520EB87B90A43D82F7630EA3506B8807FA9C02815DB62C1",
+      "Path": "ManualTests\\EngineSessionProbe\\MeshSurfaceProbe.cs"
+    },
+    {
+      "Sha256": "0BE5D6C45E1AC2CF77A21817736595F67EB88BF580A2D623A898A79704247C4C",
+      "Path": "ManualTests\\RenderSurface.Game\\FailedMeshGame.cs"
+    },
+    {
+      "Sha256": "B4A970ED52E9D09EA3646260E47EBDC3C4666794FC6189A3CF7A05A1DE58C6FB",
+      "Path": "ManualTests\\RenderSurface.Game\\MeshGame.cs"
+    },
+    {
+      "Sha256": "951C1BA052A3C2027F520348758B7A0E57C599C295B65BA6D20F4971D7E51426",
+      "Path": "ManualTests\\RenderSurface.Game\\RenderSurface.Game.csproj"
+    },
+    {
+      "Sha256": "C79AF1FE4DC5231B56646C2AAF43977C75954512EDC4B8F6ABF3227827B548F0",
+      "Path": "ManualTests\\RenderSurface\\Verify.ps1"
+    },
+    {
+      "Sha256": "8901E908C8BFD9405D780E35B03A3FCF252FFCF328D6455E27DDCEA6EE0B730A",
+      "Path": "TrueMoon.Aether.Editor\\AetherEditorConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "B45F9FEF2876203B99711309030873A8391E14CDD15BC658F85B9217C62F882D",
+      "Path": "TrueMoon.Aether.Editor\\AetherEditorOptions.cs"
+    },
+    {
+      "Sha256": "794CEFDD6266FB2F8D466848A79E1EDC3962FDDDDA5E87183019C245CB16B60E",
+      "Path": "TrueMoon.Aether.Editor\\AssemblyInfo.cs"
+    },
+    {
+      "Sha256": "1BC4C0E861327667FA9272D7E3705828F8F470C743DC48D0E8AB3002338314EA",
+      "Path": "TrueMoon.Aether.Editor\\ConfiguredEditorExtensions.cs"
+    },
+    {
+      "Sha256": "5E59EBC5DF9C0641C4DF1DF4500D93BD8359B37E1FEFFD9232418D1B5E0973B5",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\CommandSourceFileNavigator.cs"
+    },
+    {
+      "Sha256": "B39FFA0793592D2835627ADDBB282CD54DD2F3ADB94204472E2634D297664306",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\DiagnosticsConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "ED057A6174F412E7D337736075EF69E66CDAFD1F57844EE22439AF374C3437DF",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticEntry.cs"
+    },
+    {
+      "Sha256": "2C3C2BA1315C3F5CDAD9456CF4FA066496B70A8198EC7FF6561A43EE1201340B",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticExportOptions.cs"
+    },
+    {
+      "Sha256": "FD162C852F07CAC3E6974F1F9006DE71C58397D97458E6ADB38BC74DD9E0B417",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticMode.cs"
+    },
+    {
+      "Sha256": "B1FEEBB1DA5A5649BF403BB9B63C87FFA1ACF23F6BB0602F3AD51566DB7D0052",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticPresentation.cs"
+    },
+    {
+      "Sha256": "A05DB82CDF53253003F31BD3EEAEDFFE3F29453791FBE999075D8347765E2893",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticReportWriter.cs"
+    },
+    {
+      "Sha256": "A36AEC8A7E8C15FDBBE06026BFDDB25296F482D6178AA5E9E519B91F31488F6A",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticReportWriter.Export.cs"
+    },
+    {
+      "Sha256": "AF8C205ED22FFF4779060A3393C9D4C72D3BD149E1E727D96AB2C8DC796AA6A3",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticSettings.cs"
+    },
+    {
+      "Sha256": "08150888FEBABEED870E5BA07902895A2FB58856F1EDADF7278D5C6D4A5488B0",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticsOptions.cs"
+    },
+    {
+      "Sha256": "BDD52542E77A14EE46674579D5FAF913B01776E77D9A25F49DFBD8872224193C",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticsView.cs"
+    },
+    {
+      "Sha256": "F339DD6E2BF9B47DCE31D627EA1C4BB006DB51F5C9B7A293E5E820474962EE91",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticsViewModel.Compiler.cs"
+    },
+    {
+      "Sha256": "6510798E8E0F3919814FD7FE4704BC302B29BD3DF2978C825131257681E5A21B",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticsViewModel.cs"
+    },
+    {
+      "Sha256": "7F9DAEB5F638E1AEAB75F8458A28D10602EB4D2F5DEFE04011051465F4FA966D",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticsViewModel.Export.cs"
+    },
+    {
+      "Sha256": "4720BE4621D8974CCE661B0A3D5AB9B9694600DE04EF5CC7A9AE3840E8728D26",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticsViewModel.Processes.cs"
+    },
+    {
+      "Sha256": "0D007806A94D0469D1D788DAE1DCD4530D78FA2F9A846130C021F04417155004",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\EditorDiagnosticsViewStyle.cs"
+    },
+    {
+      "Sha256": "8EA01D3C812A867C604AC90CEB34106B8B949C560421E29B4CFE37ABC450671F",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\ISourceFileNavigator.cs"
+    },
+    {
+      "Sha256": "219BF4E23AB49D49ECF3618AB9B21D535738DCC6DEDD12E57714CA5977CCC437",
+      "Path": "TrueMoon.Aether.Editor\\Diagnostics\\SourceEditorOptions.cs"
+    },
+    {
+      "Sha256": "09D6C80AA9BAD05B3CA23CF57765B7B6CA6B65E414D918651F5F9E9148C82DF0",
+      "Path": "TrueMoon.Aether.Editor\\DocumentConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "1F00EE143A45A041DF2622FFF906F219E1EEFE71C7541B7D1D3B4C8BA0DCAD7E",
+      "Path": "TrueMoon.Aether.Editor\\Documents\\DocumentCommand.cs"
+    },
+    {
+      "Sha256": "143AA89F3F207B9C8B11D4ABA7B2B6542E9C02DCE49B83C73E44D49DBFB96E7F",
+      "Path": "TrueMoon.Aether.Editor\\Documents\\EditorDocumentCommands.cs"
+    },
+    {
+      "Sha256": "1363B228D225FD680BA9E90CA3A978012F614529A20CA96CF535CA3DF3B69E3B",
+      "Path": "TrueMoon.Aether.Editor\\Documents\\EditorDocumentView.cs"
+    },
+    {
+      "Sha256": "60DAE4F0F65DA58C6AD7603508C197D10CEA2F7781C3A8A8C237ED4D59538B6F",
+      "Path": "TrueMoon.Aether.Editor\\Documents\\EditorDocumentViewModel.cs"
+    },
+    {
+      "Sha256": "7A8FF81160896D4D7A87FEBA5CC4D59C7BAE06D29BDB18D33F02543D09566E7A",
+      "Path": "TrueMoon.Aether.Editor\\Documents\\EditorDocumentViewStyle.cs"
+    },
+    {
+      "Sha256": "2F8B1F5D8BE877D79C6B76D39328B209F46D13A6FC7F77DB32EA8215068F9BDF",
+      "Path": "TrueMoon.Aether.Editor\\Documents\\SceneDocumentSession.cs"
+    },
+    {
+      "Sha256": "2175E070525D54F02AB83639575E8FCD37D027306B0400BCD365CEB138BBFDA8",
+      "Path": "TrueMoon.Aether.Editor\\Documents\\SceneDocumentState.cs"
+    },
+    {
+      "Sha256": "736D0688EB4DC3146B433D2288CA0762FBCC502DCD6FD1D88E782C643136E577",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorInspectorView.cs"
+    },
+    {
+      "Sha256": "79C19229F59BE3E6062483E47361A1C3B5AAFDC6BFA46216E8126D5D59EF5CBB",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorInspectorViewModel.cs"
+    },
+    {
+      "Sha256": "2B11D0251D0D887A39ACFE6BB040543B7022603074FC01BB3977933467224DE2",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorInspectorViewStyle.cs"
+    },
+    {
+      "Sha256": "569A14FE648CF383DBD2EDED92884239E0E97A033CCA4600BCEB84C36770890C",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorPreview.cs"
+    },
+    {
+      "Sha256": "6DBE73AD9643AC7D3E2812B80D109221C6791E3DA204632C8C568810EE7D9B03",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorScenePlayback.cs"
+    },
+    {
+      "Sha256": "3857865D5AEB18483AAC4BDD9D363486C20B4353915DC4656F179CC8D16E4245",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceCensus.cs"
+    },
+    {
+      "Sha256": "46707B8755BB7D48BC04343DDD9E6C59B71F6210DEAED89A4D845241240F1E93",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceDirectoryCache.cs"
+    },
+    {
+      "Sha256": "F60FEC1418160B9478B66340C37E2DAC91B0B8F982A8E450AF12C725F270AFD3",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceDirectoryPin.cs"
+    },
+    {
+      "Sha256": "B2AB4B63C4212EA7C33BF8C7AF12B20DAD5E9A577DE8807F43C4BC96A5989732",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceFile.cs"
+    },
+    {
+      "Sha256": "A414D6AA3EF497B3F96111BC9C93FFB360530438E4B2CE8E8D418A5AA1102522",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceHints.cs"
+    },
+    {
+      "Sha256": "DBCF59A61AA36837FA395D6DD266A01AAEEBDA2D714A9E61C1D7C38EB32837BD",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceOpenBatch.cs"
+    },
+    {
+      "Sha256": "E634246572859BDC85C50894FAEBF147D6C69459FE4B15385FEF7FFF521CAEF5",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceScan.cs"
+    },
+    {
+      "Sha256": "0470814D4A565EDAC1C5BD22E3C5B023A8B139ED0CAC87E10BCCC302966F75B7",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceSnapshot.cs"
+    },
+    {
+      "Sha256": "13B99F82EC522BFB214B06D9414407AD63457745017AC0C661EAF05E4E588731",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceWatch.cs"
+    },
+    {
+      "Sha256": "2B5A7D6FAB0DB80240D668B35812B2942DFCF4090EFD22BB713151A0AFDE271E",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceWatchFactory.cs"
+    },
+    {
+      "Sha256": "5AA781E1069E9901F5034DD895C7BD3F7834CE855C7868D024E0161D1D6DDDAC",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorSourceWatchOptions.cs"
+    },
+    {
+      "Sha256": "AFF6F8C640BE92682A39E119DEB594B232B7A1008C208FF27BE3A54BAF8D91B6",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorTransformView.cs"
+    },
+    {
+      "Sha256": "BE1C920D5976EA80BD4D5A4F8610734B29C256AB7B73FB4A101DF150C0A939F3",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorTransformViewModel.cs"
+    },
+    {
+      "Sha256": "A666B3B1612A66CE68B06E77A8F5B31FF2F8A70BF9B145B6A26936761FE9CFE7",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\EditorTransformViewStyle.cs"
+    },
+    {
+      "Sha256": "0F940D6BB79EA3A2C7A0085A72C34DA8F1438D663108EB56BEBD8C9E78471EEE",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\InspectorComponent.cs"
+    },
+    {
+      "Sha256": "E43CE50BA4D3094AC34A5FA6716A818C77A0E3E0982EF013923804FB5ABA62B0",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\InspectorProperty.cs"
+    },
+    {
+      "Sha256": "3A0A087172948FCD123EC80956289B15323558AF29FEBE1710EDACED660B5BAF",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\InspectorPropertyControls.cs"
+    },
+    {
+      "Sha256": "DBA062CC655361C9BB1DC3898D9D908AB5B17C3506394F8BE1CF95B5AB2A726E",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\TransformEditor.cs"
+    },
+    {
+      "Sha256": "9BDD6577E667CAF24A2E31A5A3CFA92258D1F632ACCE3E5630D66543FC8CBAD9",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\TransformField.cs"
+    },
+    {
+      "Sha256": "47EE4AA4B2A3D45F8CD488A986DF1FCDDFA0E7365DA1D4279EE54490B7BA9214",
+      "Path": "TrueMoon.Aether.Editor\\Editing\\TransformGroup.cs"
+    },
+    {
+      "Sha256": "C2189BCCFF36BBF26D1BA7F3F46B66DC1DFBE4E78C3C90C99BC246035078B518",
+      "Path": "TrueMoon.Aether.Editor\\EditingConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "1B4A6701936D29FBDBB0B17783A31C46BC573FBF2ED2960FF6FDE17E7D76ACB3",
+      "Path": "TrueMoon.Aether.Editor\\EditorCameraNavigation.cs"
+    },
+    {
+      "Sha256": "2A7FC69B92B8895C65A4F45684BB76FB7A407FDF1FBBE84D2A0144D183EB0D57",
+      "Path": "TrueMoon.Aether.Editor\\EditorCommand.cs"
+    },
+    {
+      "Sha256": "C3120C89B30C21415032C88CE66C9725806BEEA0AA0A6CCBCC4451115BA500C9",
+      "Path": "TrueMoon.Aether.Editor\\EditorCommands.cs"
+    },
+    {
+      "Sha256": "6060BBCE98EE3C279B930E42EF89466422698B16665DC810BAF845E18E9F96D8",
+      "Path": "TrueMoon.Aether.Editor\\EditorConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "50B421F3CCB33B5EABA3D747DABADE260ECA996E3E016CFB50496C46E458B727",
+      "Path": "TrueMoon.Aether.Editor\\EditorConfigurationSchemas.cs"
+    },
+    {
+      "Sha256": "5E3D32E0C420F6D93914A7275415AFEBB92AEB4EB4F9FBB008DF0B887842A4B4",
+      "Path": "TrueMoon.Aether.Editor\\EditorHeaderView.cs"
+    },
+    {
+      "Sha256": "870EF6D1A03E8975926484325FE1B550DC824F1C495C086BF058C72F61959EF2",
+      "Path": "TrueMoon.Aether.Editor\\EditorHeaderViewStyle.cs"
+    },
+    {
+      "Sha256": "5E2F0DE5917D9081162CE929E0440093AF57874DECEF3AF04A03B50AF8B4EB8C",
+      "Path": "TrueMoon.Aether.Editor\\EditorIsland.cs"
+    },
+    {
+      "Sha256": "B114E117E979307776A884E96ABCAA02DCFF7F941950025280D92779507F8D32",
+      "Path": "TrueMoon.Aether.Editor\\EditorLayout.cs"
+    },
+    {
+      "Sha256": "83B2C3287A163E6930FF686585DBA399F6A5297D876F51D8D4B73F7CCEF56DB6",
+      "Path": "TrueMoon.Aether.Editor\\EditorMainWindow.cs"
+    },
+    {
+      "Sha256": "F4F04A9F3F5D82CD5CA5292D497111C33E15A57C67DA2C386A37D4AE585BCC67",
+      "Path": "TrueMoon.Aether.Editor\\EditorMainWindowArguments.cs"
+    },
+    {
+      "Sha256": "6A5BE106B556CF29D0D72506AE28BAD2BBAD6B5E0ED8B688A332A85C0338F667",
+      "Path": "TrueMoon.Aether.Editor\\EditorMainWindowStyle.cs"
+    },
+    {
+      "Sha256": "A3052809B2BD11B5FDB61E771F169A740AAC0D5AA62C845D1BBA2087A11040CE",
+      "Path": "TrueMoon.Aether.Editor\\EditorScene.cs"
+    },
+    {
+      "Sha256": "F19C7EB56BDC13AA29A703E54A3141F05D18D266D827BE16C4843380E933EF69",
+      "Path": "TrueMoon.Aether.Editor\\EditorSession.cs"
+    },
+    {
+      "Sha256": "26610CE8577F157C72F0851A316215412FBE5C053CBE564C28EAE006A93E22F3",
+      "Path": "TrueMoon.Aether.Editor\\EditorStatusBarView.cs"
+    },
+    {
+      "Sha256": "15E70BEF677D3F821F251F302909255B0B3349FCB63D794159344261FF030594",
+      "Path": "TrueMoon.Aether.Editor\\EditorStatusBarViewModel.cs"
+    },
+    {
+      "Sha256": "8F64DAE3B56B65A219E5ECB01783C5AD58F43C16DC16E0581CA183FC18001AD1",
+      "Path": "TrueMoon.Aether.Editor\\EditorStatusBarViewStyle.cs"
+    },
+    {
+      "Sha256": "0D41FC59D4CED3E7476712127FE65F7741D4F578BD2CF8775BE740A52D52AED0",
+      "Path": "TrueMoon.Aether.Editor\\EditorStatusPopupView.cs"
+    },
+    {
+      "Sha256": "A36E2C247905DCD9AB62888008AD8AC6EA88AD379BCF41EE7F91B4229D2A3CC7",
+      "Path": "TrueMoon.Aether.Editor\\EditorStatusPopupViewStyle.cs"
+    },
+    {
+      "Sha256": "338ABBC0BB8FF0404E9D3EF69D6F5A940A17F999979AAC519A235CC771E8EC73",
+      "Path": "TrueMoon.Aether.Editor\\EditorView.cs"
+    },
+    {
+      "Sha256": "904C70907E6CA382D291454B20718932112ABC2AC2A1F969905CF1C0A96E7E8D",
+      "Path": "TrueMoon.Aether.Editor\\EditorViewModel.cs"
+    },
+    {
+      "Sha256": "AA3A6FB986BA0E5A7C43B403A9EECFB5A1F003AD36E79C2448EAF9A9426A8006",
+      "Path": "TrueMoon.Aether.Editor\\EditorViewport.cs"
+    },
+    {
+      "Sha256": "983932DBA5748DC93E9FDF8DC6CE866225554F6E1F203EA20E3E9CFCD450C9B2",
+      "Path": "TrueMoon.Aether.Editor\\EditorViewportArguments.cs"
+    },
+    {
+      "Sha256": "E9230DEB6E4B25B1F95AED699820D3C329257FB502AB4E992E42245728E54D0F",
+      "Path": "TrueMoon.Aether.Editor\\EditorViewportBinding.cs"
+    },
+    {
+      "Sha256": "C9DA9DB2F83E03870D237C51BE38790CDF0699EB1AADDD7743BB9FA8597E482F",
+      "Path": "TrueMoon.Aether.Editor\\EditorViewportController.cs"
+    },
+    {
+      "Sha256": "05397BEAD449344E23B7BFC759979812ED4CD4492F2434D6A692DD80679F3C6C",
+      "Path": "TrueMoon.Aether.Editor\\EditorViewportController.Translation.cs"
+    },
+    {
+      "Sha256": "42B2A95ADE253AEBBF98230E1251034EA692A42F2673BBD6458DD058D877D26D",
+      "Path": "TrueMoon.Aether.Editor\\EditorViewportState.cs"
+    },
+    {
+      "Sha256": "ED1FD5EC00A7A5B16758031C2461D492FCC253795CE35DF0075236B458539D2D",
+      "Path": "TrueMoon.Aether.Editor\\EditorViewStyle.cs"
+    },
+    {
+      "Sha256": "C1B168B86FAC7CE179FA724AEBC00B95A30E1CEB8EA6F0EF1401829B3BE939B7",
+      "Path": "TrueMoon.Aether.Editor\\EditorWindow.cs"
+    },
+    {
+      "Sha256": "E3F27939C6FA131870347743BE1119859F02E7D81C5C73440964E1F24EE3CB2D",
+      "Path": "TrueMoon.Aether.Editor\\EditorWindowConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "1D3CC83136C049D4BE51E52EC0F3A9D7634684EBF6755A247F4B0ED67264B580",
+      "Path": "TrueMoon.Aether.Editor\\EditorWorkspace.cs"
+    },
+    {
+      "Sha256": "3863DB63B185E5503C533DEFB5012E0614D70257079D94AFCED71FE4F332C177",
+      "Path": "TrueMoon.Aether.Editor\\HeaderConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "5712C76802C6E301F91A98A509CCF1DA2443010AE5CE0EE258AACAC9D6C787F2",
+      "Path": "TrueMoon.Aether.Editor\\Hierarchy\\EditorEntityKind.cs"
+    },
+    {
+      "Sha256": "D77AD6EA130B7650AFE35FDF1AFE823AAA8FFB7FCDB9F117D02D203AF2B0F92C",
+      "Path": "TrueMoon.Aether.Editor\\Hierarchy\\EditorHierarchyView.cs"
+    },
+    {
+      "Sha256": "61F9A4BA397F5A3CB2CC94BD9072ABC0985D12808967C63068A2FD7C79F8EA6D",
+      "Path": "TrueMoon.Aether.Editor\\Hierarchy\\EditorHierarchyView.Entities.cs"
+    },
+    {
+      "Sha256": "04D9CD4142A6C50A44F3198C3810E0F99EFEB66A32C428EACE3BCD0475696EE7",
+      "Path": "TrueMoon.Aether.Editor\\Hierarchy\\EditorHierarchyViewModel.cs"
+    },
+    {
+      "Sha256": "BC12929A84E33A4DE8E5A1E9EBA0704FA717390C68468D437A22431ACF6DB93E",
+      "Path": "TrueMoon.Aether.Editor\\Hierarchy\\EditorHierarchyViewModel.Entities.cs"
+    },
+    {
+      "Sha256": "80CDDE9462DD7D736EF3B80B9605A02CCA2F0FED9C53463A25251DD94C9FAD8F",
+      "Path": "TrueMoon.Aether.Editor\\Hierarchy\\EditorHierarchyViewModel.Rename.cs"
+    },
+    {
+      "Sha256": "D2DABF3A039BFAD752391094F574B72EF126D3357F397021E0AC9920E9024CF4",
+      "Path": "TrueMoon.Aether.Editor\\Hierarchy\\EditorHierarchyViewStyle.cs"
+    },
+    {
+      "Sha256": "12A85582B0BFC1022ACF58548E79B7DC691476BBCF2F2371B3407AE44FCC4588",
+      "Path": "TrueMoon.Aether.Editor\\Hierarchy\\HierarchyItem.cs"
+    },
+    {
+      "Sha256": "FE6FA072B0DC067F0E98319C5275ECD3E6B8BB8880CB2A22A3FBA2F0665E20ED",
+      "Path": "TrueMoon.Aether.Editor\\HierarchyConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "761337BD15B0CBE8BEE73614E03B2C7B872C37C05DFA36854FDEDF47807A0848",
+      "Path": "TrueMoon.Aether.Editor\\PACKAGE.md"
+    },
+    {
+      "Sha256": "B28984188FACB36A5DEE7DB1D5AA9CF87134AFAD419A62D7DC863337AD2BC57F",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\DotnetProjectToolchain.cs"
+    },
+    {
+      "Sha256": "51B96A76563F5CFF7A3740EAF518ECC202B86A7B55A45F1F1FA546E79506477A",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\EditorProjects.cs"
+    },
+    {
+      "Sha256": "55103CF146AC82CA930F147A007AF41A829DD183B047E1902FEC106963CC824C",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\EditorProjectsLifetime.cs"
+    },
+    {
+      "Sha256": "212534594E0DC6C38162522F76AF101E9AD6496DD72E198ADD77F627722BC8A1",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\IProjectStore.cs"
+    },
+    {
+      "Sha256": "DD1A57435BCD4D5DD4197953D202C217EB983EFFF7D20A0B07D1D4484C45A060",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\IProjectToolchain.cs"
+    },
+    {
+      "Sha256": "D746AB75FD41875D574D756092DD1A3C45C23400BC282665DF4F8A10D8E656A7",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\JsonProjectStore.cs"
+    },
+    {
+      "Sha256": "5913544FEA4A72027D46A5903D9A0A25BB0E31952F8B786F95111B62FAB2D112",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\ProjectDescription.cs"
+    },
+    {
+      "Sha256": "DFEEC65A93535E8AC22D05D7558E803742B7A8A3F5D549F55624DA7C86BB06E7",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\ProjectSession.cs"
+    },
+    {
+      "Sha256": "B8B791FFE599922C18A624A4F18865A33C135D93D38A953B686D5D6C95B6B40E",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\ProjectSessionArguments.cs"
+    },
+    {
+      "Sha256": "9C0A31D47D00693E6FBE2E55D621FC8E9E0F7CCA31A9FA1CD6139DBBF0A56EF9",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\ProjectSessionFactory.cs"
+    },
+    {
+      "Sha256": "0B30AB0057296C9FEE6C9A595241A1A7167937806EEE755B5E13CEC4356AF7DD",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\ProjectToolchainInfo.cs"
+    },
+    {
+      "Sha256": "D797329B7AB7537FAFD287EE60C6F15C43A11833B10DB0D2FA502D4BB1102B7D",
+      "Path": "TrueMoon.Aether.Editor\\Projects\\ResolvedProject.cs"
+    },
+    {
+      "Sha256": "CE4DD873B82E8841E424E9D8B64A0B8C85F59E27399D835D5600E802C8F719E7",
+      "Path": "TrueMoon.Aether.Editor\\PropertyRow.cs"
+    },
+    {
+      "Sha256": "A65DAE8EE257043708484F6B9D5130103C0CA5ADBCE1B01448FBDEDBC07E5A17",
+      "Path": "TrueMoon.Aether.Editor\\README.md"
+    },
+    {
+      "Sha256": "F5466D0B9083B98E80DEF37EAD5D89B3ADF86160BDC416EFD1CBB89859C3FA9C",
+      "Path": "TrueMoon.Aether.Editor\\StatusBarConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "5F3FA41369A939A0606893627259283CA52C224BCB78C57EAF386A67398DB2B4",
+      "Path": "TrueMoon.Aether.Editor\\Translation\\TranslationDrag.cs"
+    },
+    {
+      "Sha256": "F6E49A8C944344052C1390BCFDE04D7AD8FC58C8EE78EF9EEB90ADA05DF9262C",
+      "Path": "TrueMoon.Aether.Editor\\Translation\\TranslationGeometry.cs"
+    },
+    {
+      "Sha256": "2AEF2124DBBDA49BEC436086C5F4ABB460022725505D196880C345871617DFB8",
+      "Path": "TrueMoon.Aether.Editor\\Translation\\TranslationHandle.cs"
+    },
+    {
+      "Sha256": "576FD83F377A65FA4EE0E630AB99344EDB72661915E91F819C47583AA370B269",
+      "Path": "TrueMoon.Aether.Editor\\Translation\\TranslationTarget.cs"
+    },
+    {
+      "Sha256": "148542A800A63F4DB19F03AC08429A58F9C8C4390F459F1A440A84790D6CA8B8",
+      "Path": "TrueMoon.Aether.Editor\\TrueMoon.Aether.Editor.csproj"
+    },
+    {
+      "Sha256": "00E16679B39C0207C5213702F38109A522F33783CAFAA6B3F74EAFD8EF6DC692",
+      "Path": "TrueMoon.Aether\\AetherConfigurationSchemas.cs"
+    },
+    {
+      "Sha256": "2114FE7A3CBBA089993D7736F87B7F8392664C8095EF64F91EBE409AFB6B65A6",
+      "Path": "TrueMoon.Aether\\AetherDiagnosticEvents.cs"
+    },
+    {
+      "Sha256": "3882A0936ADC707896F3B589B036F64D77860949CE699BFAE4C77C15954C31A1",
+      "Path": "TrueMoon.Aether\\AppConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "86111EFD93E8A10101B9F9C500C65B8C257593BCB5427FA53C70EE9DB529D262",
+      "Path": "TrueMoon.Aether\\AssemblyInfo.cs"
+    },
+    {
+      "Sha256": "CBB8951BA0C835A90DDA85C61A9277D04B2E78F309068FA6D3B581CC7E8616C2",
+      "Path": "TrueMoon.Aether\\AuthoringConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "F5224FE560D65FDBD146551E459E6C338F7896CA15F5E59FE28BA1C665139513",
+      "Path": "TrueMoon.Aether\\Builds\\BuildDiagnosticStore.cs"
+    },
+    {
+      "Sha256": "70E5EDF31E4271420BFB13113558A8E922C30F5E7556250D2ADF314091225757",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildArtifact.cs"
+    },
+    {
+      "Sha256": "1235D215A0A08A190D3AF78C6D9118DCBEB5C6D56F39655E5ED3BF699DA4D73F",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildCompilation.cs"
+    },
+    {
+      "Sha256": "EA3B4BF55093E85ACFCA2BE6A73F687D0E5DD57A5568FA960E6BA266FE53F8D0",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildCompilationSnapshot.cs"
+    },
+    {
+      "Sha256": "E3F67176D77FA4023BD48F3EC5FB3F45031F262D060FCE57D4D5DBE9B834CE43",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildCompiler.cs"
+    },
+    {
+      "Sha256": "00A656A8785DBC9BA4C9076E44F35531F32EB0306B781CD740FD351070608020",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildDiagnostic.cs"
+    },
+    {
+      "Sha256": "737B6060D6E316B455D17A5E021AE9BE6AD5840B0C0E2640C38049D8156B7BB7",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildDiagnosticBatch.cs"
+    },
+    {
+      "Sha256": "6905A705F4FD62812E9316D30762C9381C389FFF89138B3C0586A5222F395BED",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildDiagnosticReader.cs"
+    },
+    {
+      "Sha256": "3BC451B8573AB38F3B59859E050B7473181B0997BFC5FDCC33BC9D17753825D8",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildInputFile.cs"
+    },
+    {
+      "Sha256": "63AFE54260142CCE8FED86EA25DEE79B54C37ADDA9DE7B35F96DE4D9F6E11D44",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildInputsChangedException.cs"
+    },
+    {
+      "Sha256": "DC4AEF470B3B783E0E7A077666E080C9244C081292CF681F87D6860833D4C25E",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildInputSnapshot.cs"
+    },
+    {
+      "Sha256": "95EE6C61CB9E9D34CFB4BB006CF7577B46150838111BDD9CA36BE9855BF26951",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildPackages.cs"
+    },
+    {
+      "Sha256": "C1EAA22729DAA5E6310C28BCECC44BAF5B9501254BF41B07F3AECB3DA2C44ED1",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildPreparation.cs"
+    },
+    {
+      "Sha256": "969B3179119D3C612E06944CBDD83EBAA515B0AE1137508C31FAAFE9C9832981",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildPreparationSnapshot.cs"
+    },
+    {
+      "Sha256": "1148F3A0173DD7623A24F7988DC51E19B9F84699A880B20AC242EF95C0039669",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildProfile.cs"
+    },
+    {
+      "Sha256": "7E2164F7BB880BB2F04F6015A0D9D89B1E257C803954573E34F3AA6A1069DD8E",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildProjectCompilationSnapshot.cs"
+    },
+    {
+      "Sha256": "D22D0376FFA7FD75C4372333E17C357F4B79ED22140F4AFC5F45DE782D08945E",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildRequest.cs"
+    },
+    {
+      "Sha256": "004885D193F54E86DE44CE5EEE6D32843DFC626B00E4A3ED3FECD2A9E8B376D9",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildRetentionOptions.cs"
+    },
+    {
+      "Sha256": "8E9EC0328A1F1378E2899FDDA5BAC8C56D6B540FD715D9F3584793BA50689BF4",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildRetentionStatus.cs"
+    },
+    {
+      "Sha256": "FCCB77C72623398FFB3191881F9B4FDD044F2C53E927A38359D83AA93D37C0B7",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildSourceWatchDescriptor.cs"
+    },
+    {
+      "Sha256": "A1DC2F3110232F723BC2629C89B87E5654EE7CA76DC71BE11F8F7DE4C6BE6A3D",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildSourceWatchPolicy.cs"
+    },
+    {
+      "Sha256": "544D955D2CC9EE88494C4FDCA5585C7F2F3E64E707E626F3C93495B110448B28",
+      "Path": "TrueMoon.Aether\\Builds\\GameBuildSourceWatchProbe.cs"
+    },
+    {
+      "Sha256": "B5484D0B3DA544BF5271C65C5F112C8131F7899E1B6A6DAD4C5C08890689711C",
+      "Path": "TrueMoon.Aether\\Checkpoints\\GameCheckpoint.cs"
+    },
+    {
+      "Sha256": "FA43C5D1A562458957AB7D24E02D598683B74AABB9921F7D2617F30D7E6F38EC",
+      "Path": "TrueMoon.Aether\\Checkpoints\\GameCheckpointCodec.cs"
+    },
+    {
+      "Sha256": "885F973A46A5D26BD5DFC0486309F94FD5A58CAED85D027051C091843F7DC831",
+      "Path": "TrueMoon.Aether\\Checkpoints\\GameObjectStates.cs"
+    },
+    {
+      "Sha256": "A4D5AE962E291E7D134661C151F929FAEDD4791D053CBE298AD06F3B6F7CFF0A",
+      "Path": "TrueMoon.Aether\\ConfiguredAetherExtensions.cs"
+    },
+    {
+      "Sha256": "BFC07D4D956C3EC90BC103761C998F1854558FD1769372C83E7FA26368387002",
+      "Path": "TrueMoon.Aether\\Diagnostics\\AetherProcessDiagnostics.cs"
+    },
+    {
+      "Sha256": "621DAA4166F65DC13090051138993DC125512CA18CE5777158A8A55F6DAB39FA",
+      "Path": "TrueMoon.Aether\\Diagnostics\\BoundedDiagnosticClient.cs"
+    },
+    {
+      "Sha256": "8E5B99C2E3AD0F51E5CE01104665DB86033646B7E396ACAE90FF8B5A0A74DBF7",
+      "Path": "TrueMoon.Aether\\Diagnostics\\BoundedDiagnosticHandler.cs"
+    },
+    {
+      "Sha256": "2836173EEC0B96D7693BF07CC8ED96B1BDC62206B6C24506EBB5C12BDA823145",
+      "Path": "TrueMoon.Aether\\Diagnostics\\ChildDiagnosticCodec.cs"
+    },
+    {
+      "Sha256": "A4D0D6A2A60F29BE031FDC34194ABB510752F9B20BB893CAC76150527F8E34D7",
+      "Path": "TrueMoon.Aether\\Diagnostics\\ChildDiagnosticDeliveryOptions.cs"
+    },
+    {
+      "Sha256": "590FFC795FA8E761825FF553CA7E436D41B22B8B0716FB504A19234E09B31577",
+      "Path": "TrueMoon.Aether\\Diagnostics\\ChildDiagnosticFactories.cs"
+    },
+    {
+      "Sha256": "81025E5E83E3F95998D9A63FC0BBEA92AE306A5ECDFF41E78D4F72A8C16189FF",
+      "Path": "TrueMoon.Aether\\Diagnostics\\ChildDiagnosticForwarder.cs"
+    },
+    {
+      "Sha256": "35649C2EFDFB760AC1D1AE8C133986FD5B8E112FFCC824129191BFC2953B2385",
+      "Path": "TrueMoon.Aether\\Diagnostics\\ChildDiagnosticRate.cs"
+    },
+    {
+      "Sha256": "9AFCD1C0B9F3607AFBD32DE7748D31AC3345D825E3C09304960E171B39D2FC99",
+      "Path": "TrueMoon.Aether\\Diagnostics\\ChildDiagnosticReceiver.cs"
+    },
+    {
+      "Sha256": "12E53309E423B5F1FEB2BA92B694A48C1DAEBE3A7D203631DD1D65F073F7BB0E",
+      "Path": "TrueMoon.Aether\\Diagnostics\\ChildDiagnosticStatus.cs"
+    },
+    {
+      "Sha256": "ADBB667851D10030A95FE6A5FDE634D51A30713A12C1FF8A84A1B23686C8FD90",
+      "Path": "TrueMoon.Aether\\Diagnostics\\DiagnosticDeliveryPacket.cs"
+    },
+    {
+      "Sha256": "A7A490F6D7AAF4BDAB6F915C20E5415A0F1FA0DA0BA4F5F6D88E767A10AADF43",
+      "Path": "TrueMoon.Aether\\Diagnostics\\DiagnosticDeliveryReply.cs"
+    },
+    {
+      "Sha256": "02FBCFA54C8C767AB4765B47CE5C878FB5A7241F0AF4E1A036A4DBAC37F20444",
+      "Path": "TrueMoon.Aether\\Diagnostics\\IChildDiagnosticDelivery.cs"
+    },
+    {
+      "Sha256": "47AEE47F95E200AAC923F8CD5ECCD5C59BE7AC9A4A909217880E3F89131EF4E9",
+      "Path": "TrueMoon.Aether\\Diagnostics\\ProcessDiagnosticSnapshot.cs"
+    },
+    {
+      "Sha256": "2DC4BD67D0AEF582011741FAF9BAEEE365A6A9937A084B30E8A54E32E977C463",
+      "Path": "TrueMoon.Aether\\Diagnostics\\RuntimeDiagnosticObservation.cs"
+    },
+    {
+      "Sha256": "73FA5187FEA1849F9CEE6201F350214DE7FCB2B6487E38D6C0076622C4D81B46",
+      "Path": "TrueMoon.Aether\\Diagnostics\\RuntimeDiagnosticObservationCodec.cs"
+    },
+    {
+      "Sha256": "F6504A80D96B564B33021C88BC89630B7237C9061C210AE51D6591203FAD4CD1",
+      "Path": "TrueMoon.Aether\\Ecs\\CommandPlaybackResult.cs"
+    },
+    {
+      "Sha256": "4DAC6E464EED8C8DCD2168411C3B953C94C52289E07EEA4352A1E20614D3C590",
+      "Path": "TrueMoon.Aether\\Ecs\\ComponentPool.cs"
+    },
+    {
+      "Sha256": "BD07DDFC466CBB6DB597843FCAB56C25A59472BA04E1E4D3974BDED0A705100B",
+      "Path": "TrueMoon.Aether\\Ecs\\DeferredEntity.cs"
+    },
+    {
+      "Sha256": "E9CDBA9C899F526E76A7671045458A41EE1E84AC8E8C7DC5D66F89908F25BAC0",
+      "Path": "TrueMoon.Aether\\Ecs\\EcsPhase.cs"
+    },
+    {
+      "Sha256": "9360207AA4F6780E2C2C7CFF7E79F1F6E9979BBE5592AC09B3EE2DB9CAFD3C50",
+      "Path": "TrueMoon.Aether\\Ecs\\EcsScheduler.cs"
+    },
+    {
+      "Sha256": "A795A846B19C0F89AD4FB084EBF7041A890D3AA5E518328ED613B3CBFC084C65",
+      "Path": "TrueMoon.Aether\\Ecs\\EcsSchedulerCreationException.cs"
+    },
+    {
+      "Sha256": "46DC5A3CFE013CA35B02B3C7A8C15D13013AAB692AC2815DF61FA09893DDB29A",
+      "Path": "TrueMoon.Aether\\Ecs\\EcsSchedulerOptions.cs"
+    },
+    {
+      "Sha256": "77FE8FADEB4727C76DA8A2A02DFAC2CEBA573CE1E2C437FAAF378C448124B3BA",
+      "Path": "TrueMoon.Aether\\Ecs\\EcsSchedulerState.cs"
+    },
+    {
+      "Sha256": "2BEE1D57F470249D1A12623FE51B0A965B947BC7CB64C831EAFF3CB72405E212",
+      "Path": "TrueMoon.Aether\\Ecs\\EcsSystemContext.cs"
+    },
+    {
+      "Sha256": "3BF9C217359D5E5A3F5D2EC787DE766808C70F3E1E8F454FEBA65BDAD4EBD01B",
+      "Path": "TrueMoon.Aether\\Ecs\\EcsSystemDescription.cs"
+    },
+    {
+      "Sha256": "9050D5D2D4ECB50986600F2F7D8197C4FDBDFCD35EE8DF861E95470344EE4486",
+      "Path": "TrueMoon.Aether\\Ecs\\EcsSystemRegistration.cs"
+    },
+    {
+      "Sha256": "8E6061BB306D236CFEB8DC47EF8320E5E7C2868B9693D2AED99A68856D59AF19",
+      "Path": "TrueMoon.Aether\\Ecs\\EcsSystemsBuilder.cs"
+    },
+    {
+      "Sha256": "63889C79308E60FB658139D62C5089178E5D541C4DC09A1A99EFA64319755D1D",
+      "Path": "TrueMoon.Aether\\Ecs\\EntityCommandBuffer.cs"
+    },
+    {
+      "Sha256": "BE38787542F5E2EF3D333B0F03CD1BAA864AA2C236D36BEC5427691B2C5727CE",
+      "Path": "TrueMoon.Aether\\Ecs\\EntityHandle.cs"
+    },
+    {
+      "Sha256": "57F7697242CD490AF7F5E2DDAC60C7F5A5092145E6E7F164155EEBB32259D020",
+      "Path": "TrueMoon.Aether\\Ecs\\EntityQuery.cs"
+    },
+    {
+      "Sha256": "1E7EC09FC8EDD4BBF5837AB6B496DE42E4710B469A4B706F4348CF43C6B3A913",
+      "Path": "TrueMoon.Aether\\Ecs\\IEcsSystem.cs"
+    },
+    {
+      "Sha256": "9A02C04A6C36A57D6E3830455E4F000AA48E83A7DABF6D5767071AAEF2841264",
+      "Path": "TrueMoon.Aether\\Ecs\\InteractionEnabled.cs"
+    },
+    {
+      "Sha256": "FFC26EA13B78B3D2417868A78E150DAFFC649325C9CFF26A9FCE7B7B9EC5FFAE",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\ComponentBinding.cs"
+    },
+    {
+      "Sha256": "B5AFEC86B4CC31D00C59886CB32E47EE8CF3D9A45EB166556C5470986428C031",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\ComponentLoadContext.cs"
+    },
+    {
+      "Sha256": "3D8AD9202B94606AB5B9FC64D5C81FD039F10188944615449020F742866ED97A",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\ComponentReference.cs"
+    },
+    {
+      "Sha256": "925F165EF2F63807D76C7D3FFB5C57657A1F7D1B55E1BF955EFFBEE15A8AA7CD",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\ComponentRegistry.cs"
+    },
+    {
+      "Sha256": "792E24817BE4DFBE5EBA3B6A8A8C37E3F68A5F8B459718B1B3D0F49B4DFC5B57",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\ComponentRegistryBuilder.cs"
+    },
+    {
+      "Sha256": "2C3BB8B60F175CAEA9BF87C4FBD96B99F792A193795436B822B10574B43E3342",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\ComponentValidationContext.cs"
+    },
+    {
+      "Sha256": "7773DD0B2E24034279520C2894908ADFE97BEB0452053F18431D9AE836FDB6C1",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\SceneWorld.cs"
+    },
+    {
+      "Sha256": "B1F85D01A266BAA1C9EDE92D393E2CAC36CA8235FB2E61C3D8547BD6783E6852",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\SceneWorldCodec.cs"
+    },
+    {
+      "Sha256": "9DCB953B8F0A2D00E392439BCC854EE6A8DFC2921CC3FAABFB08E9892F72CFF1",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\SceneWorldData.cs"
+    },
+    {
+      "Sha256": "CC530319544D75CEFE7B0C7B06A79D4B7076DE820DA77242D0CCCA56E53CBC94",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\SceneWorldLoader.cs"
+    },
+    {
+      "Sha256": "1FB6AAF192457F6215E3FD5B15A2FF6E827E11860302678F71D28F2FD12F1DA1",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\SceneWorldLoadException.cs"
+    },
+    {
+      "Sha256": "6088966658733B07F37A3FAD69C607FC441E0C939328E5AE1E0C6F72D4CE482A",
+      "Path": "TrueMoon.Aether\\Ecs\\Loading\\SceneWorldLoadOptions.cs"
+    },
+    {
+      "Sha256": "366CBB8A535B68523236B7B434F9CC26F3240A9927FA976C111B07DEBDDA8368",
+      "Path": "TrueMoon.Aether\\Ecs\\Motion\\LinearVelocity.cs"
+    },
+    {
+      "Sha256": "8D4E393B37C7C5F5FAA560E703D2E1BB970EBB4FAF526A8F1CCE0D8E8E227971",
+      "Path": "TrueMoon.Aether\\Ecs\\Motion\\MovementSystem.cs"
+    },
+    {
+      "Sha256": "71CF435A852A018569665FE36924E11E12F0E16D5281118C5C41ED50D9F796E5",
+      "Path": "TrueMoon.Aether\\Ecs\\PrimitiveEcsComponents.cs"
+    },
+    {
+      "Sha256": "2A3C4E2EDDF675C96651BAC81A62DDFE07A0CDA272CDF41970CC3511F38B3A6F",
+      "Path": "TrueMoon.Aether\\Ecs\\QueryCallbacks.cs"
+    },
+    {
+      "Sha256": "B3711A2CA0A081C9F3443471001A8A5D443329DC75F06C502CC71CD68A318EE8",
+      "Path": "TrueMoon.Aether\\Ecs\\QueryExclusions.cs"
+    },
+    {
+      "Sha256": "2E50E0552EB7BC2529BF93C8E4A7C2075E7E5DB927BE0C7AAF949B1C8B283AAE",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\MeshRenderer.cs"
+    },
+    {
+      "Sha256": "FC06911F093D5EEAB4F8145B6156A5CFEA11188ED8E7CE009B6F1C5DD0FD8FFB",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\MeshRenderingComponents.cs"
+    },
+    {
+      "Sha256": "6A4C3B65FCBAF56DE1975A279CA914F1A9FC5BB8A0AD80512419803656EC0917",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\MeshSnapshotExtraction.cs"
+    },
+    {
+      "Sha256": "F0C0D5043A38BC0D5976ACBD84EA6E5FA2DBE4346A62286C501C6EBABFED2BF7",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\PerspectiveCamera.cs"
+    },
+    {
+      "Sha256": "2791FFF99EEBDE2CB0F3D4EC707363480FBEEAF3BE8A8CC07950871810407D60",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\PrimitiveAppearance.cs"
+    },
+    {
+      "Sha256": "176E32918F5B6E092D864B666E02F7F7F83A900D9724FE7A4A3DAA963F77E094",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\PrimitiveExtractionSystem.cs"
+    },
+    {
+      "Sha256": "AEDD2C6849F0AEB738B8B992C2EF717810AA802B75BC422CE26597617985E88A",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\PrimitiveRenderSnapshot.cs"
+    },
+    {
+      "Sha256": "0F4F7A03AE208D2CDA04B90641E2C348BC064188154BA2304CDBB8E04C16F208",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\PrimitiveSimulation.cs"
+    },
+    {
+      "Sha256": "CA91480718462BC6EF750666D7134ADAB64DBB7C7D50E1B611595042B27059D4",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\PrimitiveSimulationFactory.cs"
+    },
+    {
+      "Sha256": "498A433A501A87167E8C47EFD60EAAD788FB210EC897A0B1955040925806B161",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\PrimitiveSimulationOptions.cs"
+    },
+    {
+      "Sha256": "D687525635B5B2CA3D709588C59F14D0BC83C89120CA4C32BFCA4E64110FEFEB",
+      "Path": "TrueMoon.Aether\\Ecs\\Rendering\\RenderResourceComponents.cs"
+    },
+    {
+      "Sha256": "A0092FE905F5FE17A20FCAD0C9BB8C996378E39F25AACF332DE832E5BEB6D3D5",
+      "Path": "TrueMoon.Aether\\Ecs\\Runtime\\PrimitiveGameSession.cs"
+    },
+    {
+      "Sha256": "CEB809B5408F729D2CB5292BA36A052583205E26BC76CC7DE08D44388ACF64F0",
+      "Path": "TrueMoon.Aether\\Ecs\\Runtime\\SceneWorldGameSession.cs"
+    },
+    {
+      "Sha256": "3582B1B6E3BCEEF6A5446CF5D6ADE0E4A7EC8BFFBA3E72865DA7998A7CD1E1A8",
+      "Path": "TrueMoon.Aether\\Ecs\\Runtime\\SceneWorldPreparationException.cs"
+    },
+    {
+      "Sha256": "C9E1D9ECE77DBB8FAE425405787039AB16B5E211E09ECF5619F2EA0705DB1B3B",
+      "Path": "TrueMoon.Aether\\Ecs\\SystemGraph.cs"
+    },
+    {
+      "Sha256": "D7A58D724082B4C1B55A498C23A2A1C1FCBA2529C1BDF5ABE6467FA33D35BE2C",
+      "Path": "TrueMoon.Aether\\Ecs\\Transforms\\LocalTransform.cs"
+    },
+    {
+      "Sha256": "8E0A71A270AE92A9AFD7F7A4216239A45AF2A0728C6F0656903BBB28A960BA92",
+      "Path": "TrueMoon.Aether\\Ecs\\Transforms\\TransformEvaluationException.cs"
+    },
+    {
+      "Sha256": "2DCA4C7E4881CE3E63BA160140C6EB8CD1940310AFC505173CB8BC3CCB0930B2",
+      "Path": "TrueMoon.Aether\\Ecs\\Transforms\\TransformMath.cs"
+    },
+    {
+      "Sha256": "BEE402415A879F50504E4639C5EF84E65E404923B3394696E0B1C5A4825F57C0",
+      "Path": "TrueMoon.Aether\\Ecs\\Transforms\\TransformParent.cs"
+    },
+    {
+      "Sha256": "3716AD3F3C630BD83308F42458CA0E6FCD2F117BB7731B9EC549F490343ACDC0",
+      "Path": "TrueMoon.Aether\\Ecs\\Transforms\\TransformSystem.cs"
+    },
+    {
+      "Sha256": "8331572E63C0F499A96FB13B7FC6FDBE58FD39DBF85FE51BB2C814EA4F793874",
+      "Path": "TrueMoon.Aether\\Ecs\\Transforms\\WorldTransform.cs"
+    },
+    {
+      "Sha256": "15B4D47EC8AA0A942A1DCE2370AAD6EE6DDCA5AF16AFA9457251FFC4E84D6AAE",
+      "Path": "TrueMoon.Aether\\Ecs\\World.CommandValidation.cs"
+    },
+    {
+      "Sha256": "25D1B2C8F3AB6F091D8C41CA9D53CF5A906C20A24E53BA658B16B6F3CC627D2A",
+      "Path": "TrueMoon.Aether\\Ecs\\World.cs"
+    },
+    {
+      "Sha256": "050559982F92114E6ED1DF36F79AE2895359AE79915E507DFFB53026BBE37254",
+      "Path": "TrueMoon.Aether\\Ecs\\World.Execution.cs"
+    },
+    {
+      "Sha256": "4D7B358C91BE773FF1499C2098E39A90C1223A27091527A14DB5F6E0C1FA38CC",
+      "Path": "TrueMoon.Aether\\Ecs\\World.SceneLoading.cs"
+    },
+    {
+      "Sha256": "AAF80CB489C5C5E20F88E39357ACBF76709AE0E969D5B4587B307DC4CF8F55E4",
+      "Path": "TrueMoon.Aether\\Ecs\\WorldOptions.cs"
+    },
+    {
+      "Sha256": "B3B3E63349E21AEFF9459070A785B35D715139DDF15CAB04C2CC2FDEDEDD89B9",
+      "Path": "TrueMoon.Aether\\EcsConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "23957F3D4F1F8331A1ACA67EB8F68F832643EC340F28B20A9627E9BDFF191EE5",
+      "Path": "TrueMoon.Aether\\EcsSceneLoadingConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "33E3A79F85F1CA1D3FEC186713C983EBCD35D43DA00D6B4C894CA94A9F27327F",
+      "Path": "TrueMoon.Aether\\Editing\\GameEditor.cs"
+    },
+    {
+      "Sha256": "CBFB59C7C9FCAB846513BAF713D2CC56E325D9CCCB3AD0D7B7383830EEE10140",
+      "Path": "TrueMoon.Aether\\Editing\\GameEditorContext.cs"
+    },
+    {
+      "Sha256": "93144ABB8FE28B5B9C05FE71321C6C8A7CF2B191C6C92B4BF8C5BEF4526ECDCA",
+      "Path": "TrueMoon.Aether\\Frames\\Frames.cs"
+    },
+    {
+      "Sha256": "023E0DB828200746915EB345406D0944F1A9B5C8FE17F8ABC2F0D8703B6E469D",
+      "Path": "TrueMoon.Aether\\Frames\\FrameSession.cs"
+    },
+    {
+      "Sha256": "D1BBDE231791103096CCB38645E2C3A2E2D62EB9EDC9CD9563E2D27604E1AFBD",
+      "Path": "TrueMoon.Aether\\Frames\\FrameTrace.cs"
+    },
+    {
+      "Sha256": "1C7BB15856405EA45BA0DE7DD4A0CA091BEAE775F1A2AD9BE627A884C45E2765",
+      "Path": "TrueMoon.Aether\\Frames\\FrameWorkers.cs"
+    },
+    {
+      "Sha256": "D5C8BB9CE8CE4188CD00BD315FAE08F15C24AB2715AEF904E0A255233595583E",
+      "Path": "TrueMoon.Aether\\Frames\\SharedFrameRing.cs"
+    },
+    {
+      "Sha256": "0959E22190405F45108B6A03CB5BE7A37BF391BECDF868F4B8301C6924B20748",
+      "Path": "TrueMoon.Aether\\Frames\\ViewportPresentation.cs"
+    },
+    {
+      "Sha256": "C9AB839EFC78E12E421C9D68CCE6F55E82B7AC129549848D7DF7C0B8B6C8ED88",
+      "Path": "TrueMoon.Aether\\Gpu\\GpuCapabilities.cs"
+    },
+    {
+      "Sha256": "B4AA134FCDE96B29D2514FE5D191BA3DC3BA037E84069F5C5A9253B1445CD220",
+      "Path": "TrueMoon.Aether\\Gpu\\GpuDeviceObservation.cs"
+    },
+    {
+      "Sha256": "611F7EE759F548B545054C4995AA19C5AF3C87F27346BB7DADEED624D93C3D99",
+      "Path": "TrueMoon.Aether\\Gpu\\GpuFrameConnection.cs"
+    },
+    {
+      "Sha256": "9C196030F7CAB39C6D14AD68970F2E23C611CF0609D3177824AF1E67C482FDE8",
+      "Path": "TrueMoon.Aether\\Gpu\\GpuFrameOffer.cs"
+    },
+    {
+      "Sha256": "6F6F72D2372F371129B961BA1901C82BDD68504E70131D60BCB78F4DF9E2B66B",
+      "Path": "TrueMoon.Aether\\Gpu\\GpuReferencePattern.cs"
+    },
+    {
+      "Sha256": "924E9DC4FEC660A2EACFF414C81C95C1CB6684AB14964B73306C05B6D5C2AE44",
+      "Path": "TrueMoon.Aether\\Gpu\\GpuResourceHost.cs"
+    },
+    {
+      "Sha256": "F6AC802F1432CDBA87EC924FABC1A29A79843072629870B79932A1C0E77D2A0F",
+      "Path": "TrueMoon.Aether\\Gpu\\GpuTransportProbe.cs"
+    },
+    {
+      "Sha256": "4D7ABFADCC0B711189A76AD4EBCF529EAFFBA741BF59BEA67E91C74C1B4AF87F",
+      "Path": "TrueMoon.Aether\\Gpu\\Interop\\GpuNtHandle.cs"
+    },
+    {
+      "Sha256": "D8BA069E68C338E78734C7C167615C23EB4C00EA4313CD1AC66E7CDC60B9E062",
+      "Path": "TrueMoon.Aether\\Gpu\\OpenGl\\GpuOpenGlContext.cs"
+    },
+    {
+      "Sha256": "3B5C3430714B2045DDA26C882A7882E50EBC0903066C568EAC1DB72189C59679",
+      "Path": "TrueMoon.Aether\\Gpu\\OpenGl\\GpuOpenGlTexture.cs"
+    },
+    {
+      "Sha256": "87EA345B65F4C03A9B83530509FAAFEF4B9B3735F75386BCF720C3DCA1ABB962",
+      "Path": "TrueMoon.Aether\\Gpu\\OpenGl\\OpenGlSharedFrame.cs"
+    },
+    {
+      "Sha256": "FE349EE5429E83266BAC00D38936185761537687E3111FC87F5B476A423BBF46",
+      "Path": "TrueMoon.Aether\\Gpu\\Surfaces\\GpuFrameData.cs"
+    },
+    {
+      "Sha256": "C88184FC92D5A4783D8B65672771A07E1CD2A4F15B1F762619680A354060D3F0",
+      "Path": "TrueMoon.Aether\\Gpu\\Surfaces\\GpuSurfaceOffer.cs"
+    },
+    {
+      "Sha256": "00FD5B2E7FD3E6C39DCC2CA6530B9296D74D4830D610657CB8751D132096A8C5",
+      "Path": "TrueMoon.Aether\\Gpu\\Surfaces\\GpuSurfaceProducer.cs"
+    },
+    {
+      "Sha256": "940BA377A75CBD7E37E7CFE778258B67D76412A38CDD6A5C4B756B3692492C81",
+      "Path": "TrueMoon.Aether\\Gpu\\Surfaces\\GpuSurfaceSession.cs"
+    },
+    {
+      "Sha256": "184B78F99DC258FF7D089A4D3804B2E662FA4EA9ED3134578387A005C7D253F7",
+      "Path": "TrueMoon.Aether\\Gpu\\Surfaces\\GpuViewportTransport.cs"
+    },
+    {
+      "Sha256": "A26A1FB201AE1F4EF11CEAC385D9EEEAF9398AC281054884FF81668FEE6D7697",
+      "Path": "TrueMoon.Aether\\Gpu\\Surfaces\\IGpuSurfaceFrameSource.cs"
+    },
+    {
+      "Sha256": "84624DC1D65B702A1760CD01EE607D30AA8A6B6C35D758808C739FCE2C33D6B2",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\Shaders\\cube.frag"
+    },
+    {
+      "Sha256": "098665DFA6BED07B329B45E0BF45E675DA47E07A7DB7DC94AD000AB23CBB878B",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\Shaders\\cube.frag.spv"
+    },
+    {
+      "Sha256": "0604FDAA372D96EFD1202453AACDC5276B998B2DACC58877C596159F8A83C3C6",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\Shaders\\cube.vert"
+    },
+    {
+      "Sha256": "6C138DBBEB07BE5A045FB3DD7029ACA94692195B6B35065CF4C5A33CF71BB499",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\Shaders\\cube.vert.spv"
+    },
+    {
+      "Sha256": "5B76A5C734529CA63AEC63C0D9BCA5DCFEAD6506DEA4B031FCB9CE1835D269BC",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\Shaders\\mesh.frag"
+    },
+    {
+      "Sha256": "F240443A90BD53AED4024A1E4A28927F566993AB542A2E4DC618FAEF909BD772",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\Shaders\\mesh.frag.spv"
+    },
+    {
+      "Sha256": "1DB84FAE0483C79E158C72FFF4B2AF5DFB534774C4D4B2FE81728E0C67441D03",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\Shaders\\mesh.vert"
+    },
+    {
+      "Sha256": "35BCCEE06FC98F61D945ADCD250F1459646B2C999207E5C963F312D5DBCF10AB",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\Shaders\\mesh.vert.spv"
+    },
+    {
+      "Sha256": "B9F4C8EFB2856564F6998CBD0A79B57BDCED4EDBBA62BF756DA738F0683689FC",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\Shaders\\README.md"
+    },
+    {
+      "Sha256": "D58DC4C6D735415BB3C5C3F26A12A105B1D6F44970046BD3F3502E450F4B0637",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\VulkanMeshUpload.cs"
+    },
+    {
+      "Sha256": "6308320751E3F98B999314CF3AE46FB13C1BDE0006E1E993BE3760377349DBD9",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\VulkanPrimitiveRenderer.cs"
+    },
+    {
+      "Sha256": "CFE6E4AA31E0D3300B1FD9826B5F3726087DC9BCC463D29DFA289652ED25B2DB",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\VulkanRenderResourceBackend.cs"
+    },
+    {
+      "Sha256": "1FA7E8B6D13334D8DBF03768072FAA21ADFF9DF5CB30CF98E5D1542769244709",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\VulkanSharedFrame.cs"
+    },
+    {
+      "Sha256": "8BCFF9CDF5E63360988702ED0FEBAA5C96F03E7D17D1D616B90A11A1C6777DFB",
+      "Path": "TrueMoon.Aether\\Gpu\\Vulkan\\VulkanSharedFrame.Snapshots.cs"
+    },
+    {
+      "Sha256": "5C2D7CD207CCE0F0809859582CF89C5EFA24A479C70C9A8D1D35DC1DE3EF1188",
+      "Path": "TrueMoon.Aether\\Hosting\\AetherAppLifetime.cs"
+    },
+    {
+      "Sha256": "8CA280F6815DCE645A920BEA2C9231B13F87A728C6893ACBE2F1997A97269E51",
+      "Path": "TrueMoon.Aether\\Hosting\\AetherComposition.cs"
+    },
+    {
+      "Sha256": "D3BDA65BD9DF264C7252977922204C0DE5BD3637086B28F89E324818E723CFE9",
+      "Path": "TrueMoon.Aether\\Hosting\\AetherHost.cs"
+    },
+    {
+      "Sha256": "CBAB5E5084F32130ABC97A30BEAEFB240256B1B04FFB0B666635639F3E2BAC36",
+      "Path": "TrueMoon.Aether\\Hosting\\AetherHostFactory.cs"
+    },
+    {
+      "Sha256": "AC1DBCA31F43A1062E7043DF7568AFC9B0BFEBB334A7EFB4813F41F213D6EF54",
+      "Path": "TrueMoon.Aether\\Hosting\\AetherOptions.cs"
+    },
+    {
+      "Sha256": "805B71E31F769CE063953E47386311FD0609D0869C73E293997C6D0CFF2DB88A",
+      "Path": "TrueMoon.Aether\\Hosting\\AetherSettings.cs"
+    },
+    {
+      "Sha256": "3EBC8E66EA5F8AA87B1CB4790FD97CC6183D5AE55D123363933C63C1D85993F5",
+      "Path": "TrueMoon.Aether\\Hosting\\BuildIdentity.cs"
+    },
+    {
+      "Sha256": "BC23B97E373B03F742A05B6F27398D70B57D53B1D05063ECB31DF165112849BF",
+      "Path": "TrueMoon.Aether\\Hosting\\NativeRuntime.cs"
+    },
+    {
+      "Sha256": "FD7ACB8EBD1CB75101EE20549809589630B9F45A3D24B242454B14A547C431C6",
+      "Path": "TrueMoon.Aether\\Hosting\\NativeRuntimeLaunch.cs"
+    },
+    {
+      "Sha256": "EF814B4EAE78F812561CEA83E66F9329D981DC3E64F3CBAD1031619E04CD0632",
+      "Path": "TrueMoon.Aether\\Hosting\\OwnedProcessOutput.cs"
+    },
+    {
+      "Sha256": "AA13B9F88994226EC30398CAD86A59DBB193996036E4FB3ACA0A52B046E1A46A",
+      "Path": "TrueMoon.Aether\\Hosting\\RuntimeBootstrap.cs"
+    },
+    {
+      "Sha256": "4E91BC2136D0F12608911031A91328F5A6B3344BBA07E565EDB9314324D6E175",
+      "Path": "TrueMoon.Aether\\Hosting\\RuntimeLaunchIdentity.cs"
+    },
+    {
+      "Sha256": "F876351513A540D163926067D7D136D9F7D3C525D41250FB59009D647D7F79D7",
+      "Path": "TrueMoon.Aether\\Hosting\\RuntimeStartupSettings.cs"
+    },
+    {
+      "Sha256": "E910A22B9D5B1B1962AABCB31431042F56C5FF95A829B9E20822071BC34F89D4",
+      "Path": "TrueMoon.Aether\\Input\\FirstPersonCamera.cs"
+    },
+    {
+      "Sha256": "9046FA9665471158F7702AE7EE4D4EBCB7CE9A64608D858C3431A46EDC33204B",
+      "Path": "TrueMoon.Aether\\Input\\GameInput.cs"
+    },
+    {
+      "Sha256": "B4DFFDED04E3528BACEB74E890C0C282F83FBAD04E8FC31EB1365DB58009DBC1",
+      "Path": "TrueMoon.Aether\\Input\\GameInputAccumulator.cs"
+    },
+    {
+      "Sha256": "ACE420F796FE287BE0735105B96051E81BBF1EA1AE6BDF97AA7DC90AD08378C9",
+      "Path": "TrueMoon.Aether\\Input\\IInputGameSession.cs"
+    },
+    {
+      "Sha256": "90A7BF8FA672E11E376AE391D4461D563D52EAE92448DD4D73CFD0956196EFE7",
+      "Path": "TrueMoon.Aether\\Interactions\\PrimitiveRaycast.cs"
+    },
+    {
+      "Sha256": "40B2F0F6AC87454E53B1DC6FE77ADD5A4C205D3C01C6EC9687E5CDE1DBD7DFBE",
+      "Path": "TrueMoon.Aether\\PACKAGE.md"
+    },
+    {
+      "Sha256": "69A6524FEF36965D4A1CC837CF009A62C53E35541E9DD68350202D012E8382D9",
+      "Path": "TrueMoon.Aether\\Preview\\PreviewCamera.cs"
+    },
+    {
+      "Sha256": "624EA6BDAA94C48F679C0EB842814F26B3F866E2D96A24696D14EFCF633CC602",
+      "Path": "TrueMoon.Aether\\Preview\\PreviewGameSession.cs"
+    },
+    {
+      "Sha256": "A4A97F2AAE469ACFE275C1A547159FA5CE2DAD4643E495E90F024166BB1120F3",
+      "Path": "TrueMoon.Aether\\Preview\\PreviewPickPrimitive.cs"
+    },
+    {
+      "Sha256": "1B4B4A48CB8DD6F256F531D17BFB82391622ABFB2D188D16F2F1EA1ECCE4B8CD",
+      "Path": "TrueMoon.Aether\\Preview\\PreviewPickResult.cs"
+    },
+    {
+      "Sha256": "5056A80FCF9572A0DB44C40FD24EEC12B54ABCB24F792283CCBF54317237B864",
+      "Path": "TrueMoon.Aether\\Preview\\PreviewPickSnapshot.cs"
+    },
+    {
+      "Sha256": "D0FA7C8CEF8F380ED8396533205B5905A6160B338A68225466F90F54E7BAF477",
+      "Path": "TrueMoon.Aether\\Preview\\PreviewPresentedView.cs"
+    },
+    {
+      "Sha256": "8EF7377AE72D7FA241C180E4EBBBB456D1338A60582B403E88425F5C0BE74EF4",
+      "Path": "TrueMoon.Aether\\Preview\\PreviewViewCodec.cs"
+    },
+    {
+      "Sha256": "507D7C8EFDFDAEA7F1D93AC3DE27F7F5A3B455FF3168A148AAA10EA14EE1666E",
+      "Path": "TrueMoon.Aether\\Preview\\PreviewViewContext.cs"
+    },
+    {
+      "Sha256": "96F279A970DA8E16FD8057F213C150AB9C2880A7E1ADAC977367E0CD80F03008",
+      "Path": "TrueMoon.Aether\\Preview\\PreviewViewState.cs"
+    },
+    {
+      "Sha256": "8EF03ECECC418EFD1AF61C8C86DA915016A4AA3E4F7F2B6D5F9E381E761FA7FB",
+      "Path": "TrueMoon.Aether\\Preview\\ScenePreview.cs"
+    },
+    {
+      "Sha256": "38911729F6393205C201DDA9FA4DED8D0D9DA549B4845D514F37C3D01C5034F9",
+      "Path": "TrueMoon.Aether\\Preview\\ScenePreview.View.cs"
+    },
+    {
+      "Sha256": "79B104CD578E3C61936DEEFFE69DCEC2951A8451B99E0B56D550A6D2ED361116",
+      "Path": "TrueMoon.Aether\\PrimitiveEcsConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "E7C5D7D9E603CB97C1D49FF86DD7B5E380F6FCE638874C1CE2A9ADCD76C34425",
+      "Path": "TrueMoon.Aether\\README.md"
+    },
+    {
+      "Sha256": "AE4CE9A8A80191DF5836BFF836B21A7ADE6EF931C5B2B30DF2073DE5A4C440E2",
+      "Path": "TrueMoon.Aether\\Rendering\\BuiltinRenderContent.cs"
+    },
+    {
+      "Sha256": "F37433D78F2590D68EDA62072BA037BD02024878147DAEB959DFE2FB55F3C9C2",
+      "Path": "TrueMoon.Aether\\Rendering\\CameraProjection.cs"
+    },
+    {
+      "Sha256": "C9CA4D766581FC277B2FDED285DC09283CF5918D3944E0F6086F47E28E3EC33A",
+      "Path": "TrueMoon.Aether\\Rendering\\ContentValidation.cs"
+    },
+    {
+      "Sha256": "87A84115C05B6AE25891C277C4648BDB488B011F3422976AE181ED505BCF9CC1",
+      "Path": "TrueMoon.Aether\\Rendering\\MaterialBindingSetDefinition.cs"
+    },
+    {
+      "Sha256": "05B50A127C87B629D61852E2C0A0E48916835F399B7FD36E259E663ADE4FBE6C",
+      "Path": "TrueMoon.Aether\\Rendering\\MeshDefinition.cs"
+    },
+    {
+      "Sha256": "A272B1971B34F3475DFA66D93D7E5C785BADE87F7236CBD1846F49A30FFB3648",
+      "Path": "TrueMoon.Aether\\Rendering\\OpaqueUnlitMaterialDefinition.cs"
+    },
+    {
+      "Sha256": "EB908035919C040F4FA433C1580CBB2D7F79EED0E3381D116529189980AA4E49",
+      "Path": "TrueMoon.Aether\\Rendering\\PerspectiveProjection.cs"
+    },
+    {
+      "Sha256": "40A5192F94DCBFC0F5A255DC70F51CF12B2BF0003DFE9B1E3DDA7AADABEC1F6C",
+      "Path": "TrueMoon.Aether\\Rendering\\PrimitiveScene.cs"
+    },
+    {
+      "Sha256": "B8C226E1D30D331468C477AF1EBC840C1E990410ADCFA9B3FB443076BEFCE205",
+      "Path": "TrueMoon.Aether\\Rendering\\Ray3.cs"
+    },
+    {
+      "Sha256": "6889CEDF5567C5D704824A301994FF3FBB70C816D599AC49F2898EEAEACB6BED",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderAssetDefinition.cs"
+    },
+    {
+      "Sha256": "4CD0489FB9093265C0F29400A4ECC52EA5497598E470D011755B413FE74FAE19",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderAssetKey.cs"
+    },
+    {
+      "Sha256": "4F5456BDCD2A31DDB69E9D96754395619689B38FA1A700EF9FD30BF1CDADD6CD",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderBounds.cs"
+    },
+    {
+      "Sha256": "E249424643DA1E15E228CEAFE9C07C970FC55E685768D8C07E9BF8BE8004F56B",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderColor.cs"
+    },
+    {
+      "Sha256": "20E9E23B9D00BF5A53077C8C92CB51434A854864F1D5CF61F389423E9736497F",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderContentCodec.cs"
+    },
+    {
+      "Sha256": "10BD68F76C8A69F7F6C7D1255BC13BE1A8DF733FEDE6FDE685E8AD449031276A",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderContentException.cs"
+    },
+    {
+      "Sha256": "1A14C96B436AA3F61B45FD1BD1A6F6D0E079E80B0CEAAD96FC349A95971301AB",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderContentHash.cs"
+    },
+    {
+      "Sha256": "D118C0D8AE440CD3969D4C0C03F41BEB204E99490BEA3662EF35865E6F3A124D",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderContentManifest.cs"
+    },
+    {
+      "Sha256": "9943EDDED376947275BDD2C5BECC8FBD27A1998FBF07012CC26D6A9C66C69C64",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderContentProfile.cs"
+    },
+    {
+      "Sha256": "3746EDBF8B29D9EEDB155B955A76213CC483E9CC6711831FDD0ECE1FA3B62DF9",
+      "Path": "TrueMoon.Aether\\Rendering\\RenderPrimitive.cs"
+    },
+    {
+      "Sha256": "C71C136A1C51E162319DB4814B9E232B8A4B08E7DDFDC2B47271FA479E72A3FF",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderAllocationBudget.cs"
+    },
+    {
+      "Sha256": "32F79F5B6CDC7D7229B36BCFB79F857E13252EE066872A02BDF1EB18C24CEB4C",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderContentCatalog.cs"
+    },
+    {
+      "Sha256": "9D0E25B24CBC6F50678D395C5C33B80DD760C974A498894F2D08FD354E692693",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderDeviceOwner.cs"
+    },
+    {
+      "Sha256": "D6C8D2493F8B02312BF6D41C2427184609C0DDE74BC523270BB40E70B8D9B1E8",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderDeviceRequest.cs"
+    },
+    {
+      "Sha256": "1CD8B4E9BECBBEBBCB111AC4753DD15D4D321593A19F4A87B38B4E0AD3B9A39C",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderPreparation.cs"
+    },
+    {
+      "Sha256": "3AB2E8682D7FFF90CFD3DBB0C8963DF330E3CC9233A80CCE218E0D0C7E716F59",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderResourceAccounting.cs"
+    },
+    {
+      "Sha256": "A0FE14F66C252815CBBFB11834439172A45D39BDCD13989A4502A8F45C326CBF",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderResourceException.cs"
+    },
+    {
+      "Sha256": "CE556B04A31F9A15A07E909FBDAFC272A6302A0B2F885CEC0C519F8A4FED73B4",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderResourceHost.cs"
+    },
+    {
+      "Sha256": "ECDBE9F1A29B4B1CCF12AEA23CB0D1234D960F8A2152FF277F04BF1C516A6A0F",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderResourceOptions.cs"
+    },
+    {
+      "Sha256": "5E0DEFDBAC3E5E54C5ACCF70EE421C51B7198DCDD51127336491A4F4C00CF705",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderSnapshotResources.cs"
+    },
+    {
+      "Sha256": "E6D0157E7D0B17E6675688B484685111D04BE8DD021DC1425BD9234779502C21",
+      "Path": "TrueMoon.Aether\\Rendering\\Resources\\RenderWorldBinding.cs"
+    },
+    {
+      "Sha256": "166EE3C0539CE5A78E4FF89FC533948B1150B72F9898662E34CB73EFABCA5BD0",
+      "Path": "TrueMoon.Aether\\Rendering\\ScenePrimitive.cs"
+    },
+    {
+      "Sha256": "40049C8BC6E8FBFC2F3D3F6C8FD9FBE584376C511D1511570E8D7D4E3E119EAE",
+      "Path": "TrueMoon.Aether\\Rendering\\Snapshots\\IRenderSnapshotGameSession.cs"
+    },
+    {
+      "Sha256": "0432BA99459C3E741270361AB3498013D6142F6B2A76D8A7C681500076297B31",
+      "Path": "TrueMoon.Aether\\Rendering\\Snapshots\\RenderSnapshotData.cs"
+    },
+    {
+      "Sha256": "64C0F7D33CFB1D0CC6C1D8A0A611E44494800950203B7086ED81C5219EF45D8D",
+      "Path": "TrueMoon.Aether\\Rendering\\Snapshots\\RenderSnapshotStamp.cs"
+    },
+    {
+      "Sha256": "69660B52741F32A1BEFA2B9AA9E08A4B27F478C6B43D1349F4AEE7BB984490D5",
+      "Path": "TrueMoon.Aether\\Rendering\\Snapshots\\RenderSnapshotSubmission.cs"
+    },
+    {
+      "Sha256": "6F08B58B3DB7CE3C87CAA6EB5406B324C1F7CBC7D79B10B706B4899D81A05B0F",
+      "Path": "TrueMoon.Aether\\Rendering\\Snapshots\\RenderSnapshotView.cs"
+    },
+    {
+      "Sha256": "BBF3076EFFD5BC815A18B29632BF6D09346D79C4C1E872A25FB9E9EC138BCCD8",
+      "Path": "TrueMoon.Aether\\Rendering\\Snapshots\\RenderViewConfiguration.cs"
+    },
+    {
+      "Sha256": "2A6430B142EF75353779A574C56FD74C5DFA6748C7631F185DF03C8DE2D681B9",
+      "Path": "TrueMoon.Aether\\Rendering\\ViewportImageBounds.cs"
+    },
+    {
+      "Sha256": "D1DF90543EE2D218CAE9B2FD262599574E576958619C2729186CE4B58DE068CE",
+      "Path": "TrueMoon.Aether\\RenderResourceConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "5D0E8621265E736B1BB323D04F775D20C041156B9ABEE33CACEAC2A9FF598BB1",
+      "Path": "TrueMoon.Aether\\Runtime\\AetherRuntimeHost.cs"
+    },
+    {
+      "Sha256": "4BB03A64CEC439776E1D4AD6DCFD3C98C09572AF9B476EC142C867AEAD97120D",
+      "Path": "TrueMoon.Aether\\Runtime\\GameBuildLoader.cs"
+    },
+    {
+      "Sha256": "2C9ACD086D018E09689C8C9463E3F26E986A662D6618DCDFF3D2B329A8C08CD4",
+      "Path": "TrueMoon.Aether\\Runtime\\GameSessionFactory.cs"
+    },
+    {
+      "Sha256": "D62AC9D39DECA7577D4D2EA94F05AABAFB71165029D84A3980434E16EC7BF5C1",
+      "Path": "TrueMoon.Aether\\Runtime\\IGameSessionEntry.cs"
+    },
+    {
+      "Sha256": "F7931312A90078211065BDEEB3B47C0404400CE6E829C539F89DB89E9EF0AB82",
+      "Path": "TrueMoon.Aether\\Runtime\\RenderViewReadiness.cs"
+    },
+    {
+      "Sha256": "74A428554B4D7EC61598570D366AEF9B4E014FFCAE25E2BF6CACF7275294B669",
+      "Path": "TrueMoon.Aether\\Runtime\\RuntimeHostFactory.cs"
+    },
+    {
+      "Sha256": "E8EEFF7DA6DF59698747351A0156FABFCDB9F0A34D71095059A77D0DA65E0BC9",
+      "Path": "TrueMoon.Aether\\Runtime\\RuntimeMeshRenderHost.cs"
+    },
+    {
+      "Sha256": "1D06F6C7A87C71D98272EF191A257B641E06D17D39AE7B24658C88FE4F5EBAAF",
+      "Path": "TrueMoon.Aether\\Runtime\\RuntimeProtocol.cs"
+    },
+    {
+      "Sha256": "1FD93A3CB20FCE249571F33B593FA73EB3091B3CED3C5A31E282F3310399CF01",
+      "Path": "TrueMoon.Aether\\Runtime\\RuntimeProtocol.SceneWorld.cs"
+    },
+    {
+      "Sha256": "D1CF0960F94B8211C28ACA989B7659E4FD6E9E994C01512965B5DD8159DDA451",
+      "Path": "TrueMoon.Aether\\Runtime\\SceneWorldStaging.cs"
+    },
+    {
+      "Sha256": "A53AAD4A6BC71A2010E860746427E2A75E19D94ECF65A5BD453E166DECA3D946",
+      "Path": "TrueMoon.Aether\\RuntimeConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "5EA174272FCF6CC2881DF40EF336E1AF43DB80785A08AD1F18BBAA5399120366",
+      "Path": "TrueMoon.Aether\\ScenePersistenceConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "935DA913ADB226EB15878975388C7CF5EE62DB8AD1A5A0EB48938CE757618008",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\ComponentEditBatch.cs"
+    },
+    {
+      "Sha256": "6BB007AC65F59C782D61F63D560C9799F14738758EAA2E091B59B5EA2C3DE4CD",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\ComponentEditPreparation.cs"
+    },
+    {
+      "Sha256": "4D5E3FC9B1E5063B20A03DFB3F2AD9F7CE10D9DEA11D00A2D11AF8DBA2370C04",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\EntityEditBatch.cs"
+    },
+    {
+      "Sha256": "7DF60533D48DDEC0FB9AC72E188CAB4D9DA3B0E228043BBF9B19A9C65A85E167",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\EntityEditPreparation.cs"
+    },
+    {
+      "Sha256": "083FEF0677E0E29291B142D9D17EA65595DAE50C6A66CC65029BD9F6F10A263D",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\EntityIntentEquality.cs"
+    },
+    {
+      "Sha256": "FB1A6F6E42F67F14B736BF677817D59FD87499637F40854FD1084ED92548EBDB",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\HierarchyEditBatch.cs"
+    },
+    {
+      "Sha256": "48005711ED1D08EC1C3DB4B7DE9DC20293059810B06148D15218B70FD9E8C768",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\HierarchyEditPreparation.cs"
+    },
+    {
+      "Sha256": "F4513B8BC2441C29A6F2DF28ACC7E4E78B5022DC5CFB7B62A8E27451DA11C08E",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\ISceneAuthoringSession.cs"
+    },
+    {
+      "Sha256": "3589C334DD449D0991A8ABA51E5D675081545724449364A9E59BE4EA2F03F0F5",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\ReparentBatch.cs"
+    },
+    {
+      "Sha256": "A4F20C8102E06036CBB3F928792E0A47C9532F43CBDD42C31F3E466F1D9C7401",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\SceneAuthoringOptions.cs"
+    },
+    {
+      "Sha256": "5C80A67DBE4E51A587FAE06E597F2360CBEDBF2E7556E556232E68C4DCB922BA",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\SceneAuthoringSession.cs"
+    },
+    {
+      "Sha256": "27B71E3F79F9C51E84F6D1042E94680F9A07FDFEE0CF9091957DF59F7FB5B05E",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\SceneAuthoringSessionFactory.cs"
+    },
+    {
+      "Sha256": "1D5A5134E8472AD9A5A0E174A7D84616E2907B4FF32B1234A62C91236DA45363",
+      "Path": "TrueMoon.Aether\\Scenes\\Authoring\\TransformEditBatch.cs"
+    },
+    {
+      "Sha256": "423A6C2EB959BA44AE654DE01A5B2205409B51D2E13D94C231A0ADF17B057987",
+      "Path": "TrueMoon.Aether\\Scenes\\AuthoringValidation.cs"
+    },
+    {
+      "Sha256": "69FD4203885A242C36D7A61143C3E26FE9F5E65027C093CF832608EA37D14FE4",
+      "Path": "TrueMoon.Aether\\Scenes\\BuiltInComponents.cs"
+    },
+    {
+      "Sha256": "423AA8C441677BB584F01F6C77EB8C86AFE535BE42F2A02F07ABF498DB5DCEBD",
+      "Path": "TrueMoon.Aether\\Scenes\\ComponentData.cs"
+    },
+    {
+      "Sha256": "12144A0A57607B451985BB9314CBEB7C0C0043C528C9B9E94F2F0CA3537B3429",
+      "Path": "TrueMoon.Aether\\Scenes\\ComponentPropertyOverride.cs"
+    },
+    {
+      "Sha256": "A4AC4FF40BC55AAB6C6F8E261A14E1BD0F30A516ED95680DC08FA11B05AB42E8",
+      "Path": "TrueMoon.Aether\\Scenes\\ComponentPropertySchema.cs"
+    },
+    {
+      "Sha256": "2CCA027A9893729A787739A84630D98E605137D490BC77D871659D84BC82F779",
+      "Path": "TrueMoon.Aether\\Scenes\\ComponentSchema.cs"
+    },
+    {
+      "Sha256": "B5E89C2E43697350178AB8379C0C472F8914CB2962CE8F2597838A597E48F9D8",
+      "Path": "TrueMoon.Aether\\Scenes\\EntityDefinition.cs"
+    },
+    {
+      "Sha256": "6F8B5125CF19850F08378D513530CD8E476B7FBD493391E6104A614F9196C208",
+      "Path": "TrueMoon.Aether\\Scenes\\EntityIdentifiers.cs"
+    },
+    {
+      "Sha256": "F78DCCCB87FF4BDC50EC20CC8B3037F7B4F4F24A5F67E01414CA7F4BE1976DBC",
+      "Path": "TrueMoon.Aether\\Scenes\\EntityInstance.cs"
+    },
+    {
+      "Sha256": "95E188F0E412C28D50F25A6DEF3CB2CD3496601997F63B5F0240E7EB54195389",
+      "Path": "TrueMoon.Aether\\Scenes\\EntityPatch.cs"
+    },
+    {
+      "Sha256": "4B2DB226B3323D87D4ABCED9486A10DEDE3A8693DB010F67FA742E1FBF0FDD9D",
+      "Path": "TrueMoon.Aether\\Scenes\\EntityResolutionException.cs"
+    },
+    {
+      "Sha256": "BCB141F0D45E2760110A0E0228B152850788CAF9532B75F2A629FD38D8441E72",
+      "Path": "TrueMoon.Aether\\Scenes\\EntityResolver.cs"
+    },
+    {
+      "Sha256": "856506BD98D374E542B8FFE2E4ECC733CD901BA59E392271E26068B59314BEFA",
+      "Path": "TrueMoon.Aether\\Scenes\\ISceneDocumentStore.cs"
+    },
+    {
+      "Sha256": "FEC8E300956FFECB2B54C97A34CBEE6650FB97EBD94A8995D59C90A97F940843",
+      "Path": "TrueMoon.Aether\\Scenes\\JsonSceneDocumentStore.cs"
+    },
+    {
+      "Sha256": "A0D7B957F7787924075509C7374098ACF0D3C4D4FA3BF86CBEAD9836C2D8BC61",
+      "Path": "TrueMoon.Aether\\Scenes\\PrimitiveSceneAdapter.cs"
+    },
+    {
+      "Sha256": "5523DEADB82F6ACEFA78BB964EAA7A33F2809BD20C2E3B24CC8734026EA7AA4C",
+      "Path": "TrueMoon.Aether\\Scenes\\PropertyValue.cs"
+    },
+    {
+      "Sha256": "30D8B366840D9A969D642EA009BE1562E7D8876597474860092EEB21C756F07D",
+      "Path": "TrueMoon.Aether\\Scenes\\ResolvedEntity.cs"
+    },
+    {
+      "Sha256": "26A4C41C351A133DCFAFA10F195C6FEE2477190915AB38801995DDA9F15FBB9C",
+      "Path": "TrueMoon.Aether\\Scenes\\ResolvedSceneSnapshot.cs"
+    },
+    {
+      "Sha256": "4BF2281470C88A8F80E3EC6F72B193ED856AB385D928FAA1DBE843ED977A466E",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneDocument.cs"
+    },
+    {
+      "Sha256": "AFD0CC1A22A35191046E7F80CC57950B81219D5430E5F49D8FD25272F278A4F3",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneEntity.cs"
+    },
+    {
+      "Sha256": "7ACD254A1D72891C5BF86DE468DD38EF129C6B7624C03CDC7C21D963D0A1A529",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneEntityProjection.cs"
+    },
+    {
+      "Sha256": "4C8A0AA3018B28D56E4EC7937F46D7FE1CE7B9817F14E97C35CC65B5E1A7C6B4",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneFile.cs"
+    },
+    {
+      "Sha256": "FEDFDA90BFA1C89ADAF3ADE4A49BEDCF08F34741EACF95F0A457CD4A63354D6D",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneFileCodec.cs"
+    },
+    {
+      "Sha256": "460790ADA2F4E8F290CB3E167CC7CB3C2513BFD524AEEED8138E1B7A1F0AC666",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneFileConflictException.cs"
+    },
+    {
+      "Sha256": "7D4A73B9CB21C225C4F67045E135D9D373F6F8CD4E19A87FDBD761F21BB01B94",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneFileStamp.cs"
+    },
+    {
+      "Sha256": "EC3FA38837E53181C30F53933EFC685D1938B0264F3E0B21978C38DE74362E34",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneId.cs"
+    },
+    {
+      "Sha256": "32D84FB99F811F2C16F03D68FA3AB97DA943BA23AA769E2D2ED8BCEFB6B33323",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneResolutionException.cs"
+    },
+    {
+      "Sha256": "201B6D1032F951FADD5D6145C046454FB6C55A392C1B1913AC5827274644B0AA",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneResolutionService.cs"
+    },
+    {
+      "Sha256": "7069A1FF72EB91654081CCACD5C46403B6C74AEAE1638E19CC1C2E92A3784726",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneResolver.cs"
+    },
+    {
+      "Sha256": "11DBD387BBBFFD37F84D816F4B61F2B08B8A909C6017680FD7DDB7F260C70D8B",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneSnapshot.cs"
+    },
+    {
+      "Sha256": "7B1DF325B14F2F70F699E3A1DFD3713DC247C3A541F5B8454EF041DE53161C04",
+      "Path": "TrueMoon.Aether\\Scenes\\SceneSnapshotAdapter.cs"
+    },
+    {
+      "Sha256": "3395A31A947999DFF47F908555F8E4636880043DFE9D3ABFBB79173816EE7BC2",
+      "Path": "TrueMoon.Aether\\Sessions\\GameReplacement.cs"
+    },
+    {
+      "Sha256": "B58CF79D2BF5AC586FBE0CA9CB9AC07F334A2B8531B5185A140B3E27020FD4FF",
+      "Path": "TrueMoon.Aether\\Sessions\\IGameSession.cs"
+    },
+    {
+      "Sha256": "29047379BDC2AA6EBD712F472986268F856847AFF552484E34EE3B3E4744893B",
+      "Path": "TrueMoon.Aether\\Sessions\\ReplacementAdmission.cs"
+    },
+    {
+      "Sha256": "05FE44582EA4EA8D815018D47ED470D8388B6D5E4306BD47D363FFA83F4AEC6E",
+      "Path": "TrueMoon.Aether\\Sessions\\ReplacementContracts.cs"
+    },
+    {
+      "Sha256": "4C376C117693C0A85E9C28A0DD9E8337CACFD701B13FC299F55B66833D99B769",
+      "Path": "TrueMoon.Aether\\Sessions\\SessionIdentity.cs"
+    },
+    {
+      "Sha256": "FE2F4FF3764D7675457D10C605FB0E29B7D814BAFC63A903261360D503354BF9",
+      "Path": "TrueMoon.Aether\\Sessions\\SessionSupervisor.cs"
+    },
+    {
+      "Sha256": "1B34D4A5B84CFB5C37DBB7E1F1E815C968E9BAC07A2705E750F2B5FC61839D12",
+      "Path": "TrueMoon.Aether\\Sessions\\SessionSupervisor.RenderView.cs"
+    },
+    {
+      "Sha256": "D676BB4B21C0112BAF07030E63344895F4D634D14C0FAF927CF55CC5B0A66C18",
+      "Path": "TrueMoon.Aether\\Sessions\\SessionSupervisor.SceneWorld.cs"
+    },
+    {
+      "Sha256": "4A78D90BEED5A7C8FA7E72F4AEDEEE7A9EE27FF2C0FBE6A477F6A92705126DD4",
+      "Path": "TrueMoon.Aether\\SurfaceRenderingConfigurationExtensions.cs"
+    },
+    {
+      "Sha256": "51435CB0F1D4CA2E74DFCCE4FC3ACE5DFBC431B9A6DB74EEC9CB0215FBB77C04",
+      "Path": "TrueMoon.Aether\\Transport\\CommandKind.cs"
+    },
+    {
+      "Sha256": "6062AD76ABEC9D97F640CF8420DAA6B69AFC0F7FE9075AAD9F6D6BC7F9DC1AC4",
+      "Path": "TrueMoon.Aether\\Transport\\ControlReply.cs"
+    },
+    {
+      "Sha256": "06832BF9694E649A54FF4A90EEFD9745138565C6367EF4A280674F33D3082989",
+      "Path": "TrueMoon.Aether\\Transport\\ControlRequest.cs"
+    },
+    {
+      "Sha256": "0FED5CA43D963ECF8B7F337EE998228BFADFDCD262B7B6A59F3FE504DE7AD78F",
+      "Path": "TrueMoon.Aether\\Transport\\ControlTransport.cs"
+    },
+    {
+      "Sha256": "BDEAD7B32AAF90BBD38762FAB48279404FFB87C20120EF2EBD6EE1E4DCB80D48",
+      "Path": "TrueMoon.Aether\\Transport\\IEngineControl.cs"
+    },
+    {
+      "Sha256": "94DFC89A2793123F8AAD3A88DB4C4D2608FDEBE758E60F418B55C2FB873D9CEC",
+      "Path": "TrueMoon.Aether\\TrueMoon.Aether.csproj"
+    },
+    {
+      "Sha256": "95BAD7137F4E3A2BAEFACB3E2BDE46F7B3265CD2F98A6978FB99656921C0A73F",
+      "Path": "TrueMoon.slnx"
+    }
+  ],
+  "Shaders": {
+    "NativeCompilerSHA256": "CCDE17890A36EA829C61DBC58ED1F5DB13DD0539C4768A72BE984BDA0801B4D6",
+    "Results": [
+      {
+        "SPIRVSHA256": "35BCCEE06FC98F61D945ADCD250F1459646B2C999207E5C963F312D5DBCF10AB",
+        "Source": "mesh.vert",
+        "SourceSHA256": "1DB84FAE0483C79E158C72FFF4B2AF5DFB534774C4D4B2FE81728E0C67441D03",
+        "Bytes": 860
+      },
+      {
+        "SPIRVSHA256": "F240443A90BD53AED4024A1E4A28927F566993AB542A2E4DC618FAEF909BD772",
+        "Source": "mesh.frag",
+        "SourceSHA256": "5B76A5C734529CA63AEC63C0D9BCA5DCFEAD6506DEA4B031FCB9CE1835D269BC",
+        "Bytes": 1036
+      }
+    ],
+    "Compiler": "Veldrid.SPIRV 1.0.15 / existing cached native glslang; no framework dependency added"
+  },
+  "Limits": [
+    "Windows x64 measured adapter only",
+    "No device-loss/physical multi-adapter/performance/release matrix",
+    "Logical content checkpoint/Replace remains ARCH1f.6",
+    "No textures/lighting/import/audio or assembly split",
+    "Shader CLI validator unavailable; actual Vulkan core/sync validation passed"
+  ]
+}

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>$(TF)</TargetFramework><AssemblyName>ModFixture</AssemblyName><RootNamespace>TrueMoon.ManualTests.ModFixture</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TrueMoon.Aether.Abstractions" Version="__VERSION__" />
+    <PackageReference Include="TrueMoon.Contracts" Version="__VERSION__" />
+    <ProjectReference Include="../Private/ModPrivateDependency.csproj" />
+  </ItemGroup>
+</Project>

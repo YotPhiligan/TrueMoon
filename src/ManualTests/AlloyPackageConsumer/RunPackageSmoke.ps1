@@ -168,8 +168,17 @@ function Verify-Generation([string] $Consumer, [string] $Configuration, [bool] $
         $expected = Join-Path $cache ("truemoon.cobalt/$PackageVersion/analyzers/dotnet/cs/TrueMoon.Cobalt.Generator.dll".ToLowerInvariant())
         if ($matching.Count -ne 1 -or !$matching[0].Equals($expected, [StringComparison]::OrdinalIgnoreCase)) { throw 'Compiler did not use the bundled package analyzer.' }
         if ((Get-FileHash -LiteralPath $expected).Hash -ne $summary.AnalyzerSha256) { throw 'Compiler analyzer hash differs from package.' }
-        foreach ($name in @('CobaltResolversRegistration.g.cs', '*ConsumerModel*SingletonResolver.g.cs', '*ConsumerView*TransientResolver.g.cs')) {
-            if (!@($files | Where-Object Name -like $name).Count) { throw "Missing consumer generated source $name." }
+        if (@($files | Where-Object Name -eq 'CobaltResolversRegistration.g.cs').Count -ne 1) { throw 'Missing or duplicated consumer registration source.' }
+        foreach ($required in @(@{ Type = 'ConsumerModel'; Lifetime = 'Singleton' }, @{ Type = 'ConsumerView'; Lifetime = 'Transient' })) {
+            $name = "Cobalt_$($required.Type)_*_Resolver.g.cs"
+            $generated = @($files | Where-Object Name -like $name)
+            if ($generated.Count -ne 1) { throw "Missing or duplicated consumer generated source $name." }
+            $content = [IO.File]::ReadAllText($generated[0].FullName)
+            $type = 'global::AlloyPackageConsumer.' + $required.Type
+            if (!$content.Contains("global::TrueMoon.Cobalt.IResolver<$type, $type>") -or
+                !$content.Contains("ServiceLifetime => global::TrueMoon.Cobalt.ServiceLifetime.$($required.Lifetime);")) {
+                throw "Wrong consumer generated type or lifetime: $name."
+            }
         }
         Remember $expected
     } elseif ($matching.Count -or @($files | Where-Object { $_.FullName -like '*TrueMoon.Cobalt*' }).Count) { throw 'DI-only consumer still contains generated Cobalt code/analyzer.' }

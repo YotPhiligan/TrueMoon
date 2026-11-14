@@ -1,9 +1,10 @@
 using System.Numerics;
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Rendering;
-using TrueMoon.Aether.Rendering;
-using TrueMoon.Aether.Rendering.Resources;
-using TrueMoon.Aether.Rendering.Snapshots;
+using TrueMoon.Aether.Abstractions.Ecs.Rendering;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Rendering.Resources;
+using TrueMoon.Aether.Runtime.Rendering.Snapshots;
 using TrueMoon.Aether.Tests.Rendering.Resources;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;

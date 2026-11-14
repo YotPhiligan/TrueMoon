@@ -8,7 +8,7 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../TrueMoon.Aether/TrueMoon.Aether.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" />
     <ProjectReference Include="../Game.Logic/Game.Logic.csproj" />
     <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
     <ProjectReference Include="../../TrueMoon.Mithril/TrueMoon.Mithril.csproj" />

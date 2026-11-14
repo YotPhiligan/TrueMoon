@@ -9,34 +9,52 @@ namespace AetherGuiConsumer;
 // Consumer-owned source fixture compiled by the editor, never loaded into the editor CLR.
 internal static class SceneGameSource
 {
+    internal static string TargetFramework => Profile("Framework");
+    private static string Profile(string key) => typeof(SceneGameSource).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+        .Single(value => value.Key == "TrueMoon.Build." + key).Value ?? throw new InvalidDataException("Missing captured consumer build profile: " + key);
+    private static void WriteBuildProfile(string root)
+    {
+        static string Xml(string value) => System.Security.SecurityElement.Escape(value)!;
+        File.WriteAllText(Path.Combine(root, "Directory.Build.props"), $"""
+            <Project><PropertyGroup>
+              <TF>{Xml(TargetFramework)}</TF><TargetFramework>$(TF)</TargetFramework>
+              <LangVersion>{Xml(Profile("LanguageVersion"))}</LangVersion><Features>{Xml(Profile("Features"))}</Features>
+            </PropertyGroup></Project>
+            """);
+        File.WriteAllText(Path.Combine(root, "Directory.Build.targets"), "<Project/>");
+        File.WriteAllText(Path.Combine(root, "Directory.Packages.props"), "<Project><PropertyGroup><ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally></PropertyGroup></Project>");
+        File.WriteAllText(Path.Combine(root, "global.json"), JsonSerializer.Serialize(new { sdk = new { version = Profile("Sdk"), allowPrerelease = false, rollForward = "disable" } }));
+    }
     internal static void Write(string directory)
     {
         var shared = Path.Combine(Path.GetDirectoryName(directory)!, "Shared"); Directory.CreateDirectory(shared);
+        WriteBuildProfile(Path.GetDirectoryName(directory)!);
         File.WriteAllText(Path.Combine(shared, "Game.Shared.csproj"), """
-            <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+            <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>$(TF)</TargetFramework></PropertyGroup>
             <ItemGroup><PackageReference Include="Game.Packaged" Version="[1.0.0]"/></ItemGroup></Project>
             """);
         File.WriteAllText(Path.Combine(shared, "Constants.cs"), "namespace Game.Shared; public static class Constants { public static int Version => Game.Packaged.Marker.Version; }");
         WritePackage(Path.GetDirectoryName(directory)!, shared);
         File.WriteAllText(Path.Combine(directory, "Game.csproj"), """
             <Project Sdk="Microsoft.NET.Sdk">
-              <PropertyGroup><TargetFramework>net10.0</TargetFramework><AssemblyName>Game.Logic</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+              <PropertyGroup><TargetFramework>$(TF)</TargetFramework><AssemblyName>Game.Logic</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
               <ItemGroup>
                 <ProjectReference Include="../Shared/Game.Shared.csproj" />
-                <Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference>
+                <Reference Include="TrueMoon.Aether.Abstractions"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference>
                 <Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference>
               </ItemGroup>
             </Project>
             """);
         File.WriteAllText(Path.Combine(directory, "Game.cs"), """
-            using TrueMoon.Aether.Scenes;
-            using TrueMoon.Aether.Sessions;
-            using TrueMoon.Aether.Rendering;
-            using TrueMoon.Aether.Checkpoints;
+            using TrueMoon.Aether.Abstractions.Scenes;
+            using TrueMoon.Aether.Abstractions.Sessions;
+            using TrueMoon.Aether.Abstractions.Rendering;
+            using TrueMoon.Aether.Abstractions.Checkpoints;
             namespace Game.Logic;
-            public sealed class ProbeGame : ICheckpointGameSession, IRenderGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
+            public sealed class ProbeGame : ICheckpointGameSession, IRenderGameSession, TrueMoon.Aether.Abstractions.Runtime.IGameSessionEntry
             {
                 private PrimitiveScene? _scene;
+                private static CameraTransform Camera => new(0, 1, 6, 0, 0, 0);
                 private static readonly bool RejectRestore = false;
                 private static readonly string? RestoreGate = null;
                 private static readonly string? CaptureNotice = null;
@@ -47,7 +65,7 @@ internal static class SceneGameSource
                 public void Load(SceneSnapshot scene)
                 {
                     if (Game.Shared.Constants.Version != 1) throw new InvalidOperationException("Unexpected private dependency payload.");
-                    _scene = new PrimitiveScene(TrueMoon.Aether.Preview.PreviewGameSession.Camera,
+                    _scene = new PrimitiveScene(Camera,
                         scene.CopyEntities().Where(e => e.Primitive != null).Select(e => e.Primitive!.ToPrimitive()));
                     Revision = scene.Revision; TickNumber = 0;
                 }
@@ -55,7 +73,7 @@ internal static class SceneGameSource
                 public GameCheckpointState CaptureCheckpoint()
                 {
                     if (CaptureNotice is { } notice) File.AppendAllText(notice, Environment.ProcessId + "\n");
-                    return new(TickNumber, TrueMoon.Aether.Preview.PreviewGameSession.Camera, false);
+                    return new(TickNumber, Camera, false);
                 }
                 public void RestoreCheckpoint(GameCheckpointState state)
                 {
@@ -96,11 +114,11 @@ internal static class SceneGameSource
             il.Emit(OpCodes.Ldc_I4_1); il.Emit(OpCodes.Ret);
             type.DefineProperty("Version", PropertyAttributes.None, typeof(int), null).SetGetMethod(getter); type.CreateType();
             using var bytes = new MemoryStream(); assembly.Save(bytes);
-            using var dll = archive.CreateEntry("lib/net10.0/Game.Packaged.dll").Open(); dll.Write(bytes.ToArray());
+            using var dll = archive.CreateEntry($"lib/{TargetFramework}/Game.Packaged.dll").Open(); dll.Write(bytes.ToArray());
         }
         File.WriteAllText(Path.Combine(shared, "packages.lock.json"), JsonSerializer.Serialize(new
         {
-            version = 1, dependencies = new Dictionary<string, object> { ["net10.0"] = new Dictionary<string, object>
+            version = 1, dependencies = new Dictionary<string, object> { [TargetFramework] = new Dictionary<string, object>
             { ["Game.Packaged"] = new { type = "Direct", requested = "[1.0.0, 1.0.0]", resolved = "1.0.0", contentHash = Convert.ToBase64String(SHA512.HashData(File.ReadAllBytes(path))) } } }
         }));
     }

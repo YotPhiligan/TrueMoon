@@ -1,9 +1,9 @@
 # Core: план bootstrap и общих контрактов
 
 <a id="current-core-queue"></a>
-## Точка продолжения — актуализация 2026-11-11
+## Точка продолжения — актуализация 2026-11-12
 
-Ближайшая работа по запросу пользователя — [CORE8: восстановление solution на .NET11](#core8-dotnet11).
+Предыдущий сквозной этап — [CORE8: восстановление solution на .NET11](#core8-dotnet11), завершён 11 ноября.
 CORE8.0 и CORE8.1 завершены в managed build-input/profile scope: все 61 проекта
 net11.0, общий SDK/TFM profile для 45 runners, исправленный внешний CPM restore,
 ordinary source build D/R и 16-package App/child delivery.
@@ -21,7 +21,7 @@ CORE7.0–7.6 завершены на прежнем net10 профиле: [guid
 [Предыдущие6945cases/D/R и16package proofs](HISTORY.md#core76-2026-11-10)
 не подтверждают текущие net11 inputs. Новые настройки подключать через общий слой.
 CORE6 routing/metrics/quota, engine f.4 и wider physical/release gates сохранены;
-следующая общая проверка сборки предшествует продолжению feature работы.
+текущий общий baseline D/R прошёл 12 ноября: 11 suites по8568passed/configuration. [ARCH2e.4b](../engine/PLAN.md#arch2e4b-drain-diagnostics) добавил output progress/EOF и cleanup diagnostics без causal fix; далее engine f.4.
 
 CORE0–5 и bounded CORE6 сохраняют исторические proofs. App-private/bootstrap
 diagnostic routing, aggregate metrics CORE6d/generation CORE6e и artifact quota

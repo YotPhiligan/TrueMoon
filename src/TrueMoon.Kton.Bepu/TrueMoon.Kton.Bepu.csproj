@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>BEPU rigid-body provider for TrueMoon.Kton with bounded queries, gameplay contacts and App configuration/lifecycle integration.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);physics;bepu;3d</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TrueMoon.Kton/TrueMoon.Kton.csproj" />
+    <ProjectReference Include="../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
+    <PackageReference Include="BepuPhysics" />
+    <PackageReference Include="BepuUtilities" />
+    <InternalsVisibleTo Include="KtonProviderProbe" />
+    <InternalsVisibleTo Include="KtonAppProbe" />
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+  </ItemGroup>
+</Project>

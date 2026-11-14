@@ -1,29 +1,40 @@
 # TrueMoon: общий статус
 
-**2026-11-11 — CORE8.5 завершён; согласованный переход на .NET 11 проверен.**
-[Поставка и команды](core/HISTORY.md#core85-delivery-2026-11-11), [миграция](core/DOTNET11_MIGRATION.md).
-SDK 11.0.100 / net11.0 / runtime-async=on. Созданы 16 свежих локальных packages
-одной версии (0.3.0.1-alpha.core85.20261111221352), проверены runtime/analyzer/native payloads и графы.
-App/configuration: 15 source/published/fresh profiles, 690 checks / 12 children,
-оба DI. Source/published example hosts — 4 cases, package game — 8 cases,
-fresh native GPU viewport — 2 profiles. Remote publication не выполнялась.
+**2026-11-12 — SkiaSharp/native4.156.0:** bundled Windows x64 DLL пересобрана из exact sources; ABI1/48bytes/GENERAL-HOST fix сохранены. Native source/published validation0/0, Alloy1224/Hosting171/Editor1496 D/R и fresh10package/40case proof прошли. [Результаты/границы](alloy/STATUS.md). Текущая engine очередь ведётся в модульном плане; physical/release gates прежние.
 
-Все 11 suites заново прошли Debug и Release: **Passed 8567, Failed 0, Skipped 0
-на конфигурацию**. Ordinary solution builds D/R прошли. В CORE8.5 менялись
-runners и документация; C# runtime, API, SDK pin и зависимости сохранены.
-Physical/release/performance и причины прежних diagnostics/drain timeout
-остаются отдельными. [Предыдущая сводка](HISTORY.md#common-status-before-core85-2026-11-11).
+**2026-11-14 — ARCH3.6 завершён: managed Mod SDK / manifest / collectible loader.**
+SDK — Abstractions+Contracts, Runtime — App-owned WholeGroup loader/private ECS
+Worlds, Tooling — immutable publisher. Exact dependency/API/hash checks, local
+factories, startup/cancel/cleanup retry и фактическая weak-reference collection
+проверены. Solution D/R0errors, warnings1570/1570; Aether3406/Abstractions26/
+Player17/Editor1507 каждый D/R =4956passed, failed/skipped0; 53 новых Mod cases.
+12 managed source/publish/fresh/SDK-free profiles на Cobalt/MS DI, 11packages;
+SDK graph только Abstractions+Contracts, Runtime без Tooling/UI. Native/GPU и
+другие module/release gates этим этапом не повторялись. Package props/Skia сохранены.
+[API/границы](engine/MODS.md), [manifest](engine/ARCH36_BASELINE.json),
+[история](engine/HISTORY.md#arch36-2026-11-14). Следующий ARCH3.7 — system reload;
+new-World migration — ARCH3.8; causal drain follow-up и ENG7b.3/release открыты.
+[Предыдущий STATUS целиком](HISTORY.md#common-status-before-arch36-2026-11-14).
+
+**Kton/физика2026-11-12 — PHYS4 App/configuration/DI/lifetime завершён:**
+192checks/profile (96Cobalt+96MicrosoftDI) source/fresh NuGet Debug/published Release;
+public подключение, schema/defaults/factory ownership и cleanup retry. Current
+PHYS2–3 regression309×3. [Scope/evidence](physics/HISTORY.md#phys4-2026-11-12),
+[App guide](physics/APP.md), [единый план](physics/PLAN.md#current-physics-queue).
+Далее PHYS5 ECS bridge по ARCH3; other OS/AOT/parallel workers/release отдельно.
 
 ## Состояние модулей
 
 | Направление | Что реализовано в проверенном scope | Что дальше у владельца |
 | --- | --- | --- |
-| [Core](core/STATUS.md) | CORE8.0–5 завершены: 16 согласованных packages, source/published/fresh App и actual child/native consumers, все 11 suites по 8567 тестов D/R | Функциональная очередь ARCH1f.4; Core/diagnostics follow-up отдельно |
+| [Core](core/STATUS.md) | ARCH2e.4b progress/EOF metadata, Core662 D/R, fresh Core package proof; CORE8 завершён в прежнем scope | Engine ARCH3.6 Mod SDK/loader; causal drain follow-up открыт |
 | [Cobalt](cobalt/STATUS.md) | CORE8.2 net11: runtime/adapter179 и generator96 D/R; package generation; прежние COB6e/COB5a.1 сохранены | Измеренные allocation gains подтверждены; следующий measured backlog у Cobalt, scopes/массовая миграция не назначены |
 | [Enerit](enerit/STATUS.md) | CORE8.2 net11: runtime354 и generator114 D/R, actual generated IPC/package proof; same-build contracts сохранены | ENE6c при расширении протокола; scalar CPU/allocations и queue distribution отдельно |
 | [Mithril](mithril/STATUS.md) | Protected typed launch;155 D/R, current source/published/fresh App/child proof, stop/reap; lifecycle сохранён | MIT6 fault/containment/resource-trend; не второй restart поверх Aether |
-| [Alloy/Argentis](alloy/STATUS.md) | Window/typed editors/styles/typography, UIA3d validation/shadows и UIA3e SplitView проверены в своих source/publish/package scopes | Studio интегрирует SplitView у consumer; PA8c.0 visual baseline и physical/release gates отдельно |
-| [Aether/Editor](engine/STATUS.md) | CORE8.3 net11 frozen game profile; full Aether3243/Editor1496 D/R, source/published SDK11-only compile/reuse/load/Stop/reap | CORE8.5 завершён; [ARCH1f.4](engine/PLAN.md#arch1f-rendering) surface renderer и прежние reliability gates отдельно |
+| [Alloy/Argentis](alloy/STATUS.md) | SkiaSharp/native4.156.0, native validation0/0, UI1224/Hosting171/Editor1496 D/R и fresh10-package/40-case delivery | PA8c.0 visual baseline, physical input/DPI, K7/K8 и release matrix отдельно; functional queue сохранена |
+| [Aether/Editor](engine/STATUS.md) | ARCH3.5 UI/optional bridge; Aether3353/Editor1507 D/R,8Runtime+UI native,4full GUI,15configuration/package8+2 | ARCH3.6 Mod SDK/loader →reload; [API/границы](engine/EDITOR_LAYERS.md), ENG7b.3/causal follow-up отдельно |
+| [Kton/physics](physics/STATUS.md) | PHYS4 App/configuration/factory/lifecycle:192checks/profile обоих DI, source/fresh package D/published R; provider regression309×3 | [PHYS5](physics/PLAN.md#phys5): ECS/session bridge по ARCH3; controller/дальнейшая поставка отдельно |
+| [Kul/audio](audio/STATUS.md) | AUD1 Windows x64: App/DI, sound voices и music streaming;23tests D/R, source/publish/fresh-package по23offline+18muted WASAPI checks | Aether ECS/asset bridge отдельно; AUD2–3 device loss/RT/queues/other OS |
 | [Nom/storage](nom/STATUS.md) | NOM0–NOM8, subsystem namespaces; CORE7.5 common admission,874cases D/R, actual stores в both-DI module consumer | Engine g.2 после g.1 по согласованию; VM verification отложена, power-off исключён; wider release отдельно |
 
 ## Общие этапы
@@ -39,6 +50,14 @@ G6/R1–R6 не закрыты; alpha version сама по себе ничег�
 
 | Дата и scope | Последний относящийся результат | Где подробности |
 | --- | --- | --- |
+| 2026-11-14, ARCH3.4 | Solution D/R0errors; Aether3353/Abstractions26/Player17/Editor1496 каждый D/R; Tooling6×30checks/Runtime8/Player6/config15/package8+2 | [Команды/границы](engine/HISTORY.md#arch34-2026-11-14), [manifest](engine/ARCH34_BASELINE.json) |
+| 2026-11-13, ARCH3.3 | Non-incremental solution D/R0errors/1560warnings; Aether3343/Abstractions26/Player17/Editor1496 каждый D/R; runtime8/Player6/config15/package8+2 profiles | [Команды/границы](engine/HISTORY.md#arch33-2026-11-13), [manifest](engine/ARCH33_BASELINE.json) |
+| 2026-11-12, Kton PHYS4 |192checks/profile=96Cobalt+96MicrosoftDI source/fresh NuGet D/published R;9package DLL SHA+shared framework; current provider regression309×3 | [Команды/границы](physics/HISTORY.md#phys4-2026-11-12), [manifest](physics/PHYS4_RESULTS.json) |
+| 2026-11-12, Kton PHYS3 |309checks/profile source/fresh NuGet D/published R, neutral131×3; exact5DLL SHA; BVH/queries/events/ID/overflow, repeated queries0managed bytes/pool plateau | [Команды/границы](physics/HISTORY.md#phys3-2026-11-12), [manifest](physics/PHYS3_RESULTS.json) |
+| 2026-11-12, Kton PHYS2 |184/184checks source/fresh NuGet D/published R, current neutral131×3; fault/cleanup/retirement/captured mesh/CCD,5package DLL SHA; owners/pools0 | [Команды/границы](physics/HISTORY.md#phys2-2026-11-12), [manifest](physics/PHYS2_RESULTS.json) |
+| 2026-11-12, Kton PHYS1 | Neutral API/validation,131/131checks source Debug/fresh NuGet Debug/published Release; dependencies0, exact DLL SHA, targeted build0warnings/0errors | [Scope/команды](physics/HISTORY.md#phys1-2026-11-12), [manifest](physics/PHYS1_RESULTS.json) |
+| 2026-11-12, Kton PHYS0 | Exact2package graph/DLL SHA,114/114checks каждый source Debug/published Release наnet11;64cleanup cycles/owners0/pool bytes0; known soft-contact CCD предел | [Scope/команды](physics/HISTORY.md#phys0-2026-11-12), [manifest](physics/PHYS0_RESULTS.json) |
+| 2026-11-12, ARCH2e.4b | Ordinary solution D/R0errors; все11suites по8568passed/0failed/0skipped; targeted43Debug, source/published12children, один fresh Core package consumer | [Evidence/границы](engine/HISTORY.md#arch2e4b-2026-11-12) |
 | 2026-11-11, CORE8.5 | 16 packages; 690 App/configuration checks; 4 source/published host cases, 8 package game cases, 2 fresh native profiles; все 11 suites D/R по 8567/8567, failed/skipped 0 | [Команды/границы](core/HISTORY.md#core85-delivery-2026-11-11) |
 | 2026-11-11, CORE8.4 | 11 suites: 8567/8567 D/R, failed/skipped 0; 24 source/published native сценария; solution D/R без ошибок | [Команды/границы](core/HISTORY.md#core84-runtime-2026-11-11) |
 | 2026-11-11, CORE8.3 |Full Aether3243/Editor1496 D/R; SDK11-only source/published game compile/reuse/load/Stop/reap,2children; solution D/R0errors | [Команды/границы](core/HISTORY.md#core83-frozen-2026-11-11) |
@@ -109,12 +128,10 @@ ignored TestResults могут отсутствовать в checkout; HISTORY �
 
 ## Следующий конкретный шаг
 
-**CORE8 завершён.** Следующая функциональная очередь — ARCH1f.4 ниже; новые задачи требуют своего scope и проверок. [Итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11).
-
-
-[ARCH1f.4](engine/PLAN.md#arch1f-rendering): actual Vulkan mesh/material surface
-renderer и required-view Runtime Playing fence поверх готовых resource/snapshot
-owners. Importer g.1 и audio h.0 остаются самостоятельными этапами; Nom g.2 после g.1.
+**ARCH3.3 — самостоятельный Runtime:** физическое выделение execution/render/scene
+activation без compiler/project/Tooling/Editor UI; сохранить DI/ownership и headless
+профиль. Затем ARCH3.4–5 и моды. [Очередь](engine/PLAN.md#current-engine-queue).
+ENG7b.3, release gates, causal drain follow-up и собственные Audio/Kton/Nom/ED критерии сохраняются.
 
 Editor ED5b v1/observer4f завершены; расширение tools требует отдельного scope.
 Reliability: текущие CORE8.3/4 full net11 проверки используют ordinary nested restore,

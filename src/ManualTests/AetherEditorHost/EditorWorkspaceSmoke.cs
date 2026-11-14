@@ -1,9 +1,13 @@
-using TrueMoon.Aether.Editor;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
 using System.Text.Json;
 using SkiaSharp;
-using TrueMoon.Aether.Editor.Projects;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;

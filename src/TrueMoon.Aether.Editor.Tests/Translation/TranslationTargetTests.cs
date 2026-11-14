@@ -1,9 +1,11 @@
 using System.Numerics;
+using TrueMoon.Aether.Abstractions.Preview;
+using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.Documents;
-using TrueMoon.Aether.Editor.Translation;
-using TrueMoon.Aether.Preview;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Aether.Editor.Tooling.Translation;
+using TrueMoon.Aether.Editor.UI.Translation;
+using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Translation;

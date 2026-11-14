@@ -27,7 +27,7 @@ $summary = [ordered]@{
 # Written before builds/runs: a failed/partial experiment must remain visibly incomplete.
 function Save-Summary { $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $run 'summary.json') -Encoding UTF8 }
 function Sources {
-    $roots = @('TrueMoon.Aether','TrueMoon.Aether.Tests','ManualTests/EngineSessionProbe','ManualTests/Game.Logic',
+    $roots = @('TrueMoon.Aether.Tooling','TrueMoon.Aether.Tests','ManualTests/EngineSessionProbe','ManualTests/Game.Logic',
         'TrueMoon','TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon.Cobalt.Generator','TrueMoon.Extensions.DependencyInjection',
         'TrueMoon.Enerit','TrueMoon.Enerit.Generator','TrueMoon.Mithril','TrueMoon.Argentis','TrueMoon.Alloy',
         'TrueMoon.Alloy.Hosting','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Rendering.Skia','ManualTests/AlloyTest/Assets/Fonts')

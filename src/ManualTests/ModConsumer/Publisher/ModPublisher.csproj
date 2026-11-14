@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$(TF)</TargetFramework><IsPackable>false</IsPackable><GenerateDocumentationFile>false</GenerateDocumentationFile></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../../TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" /></ItemGroup>
+</Project>

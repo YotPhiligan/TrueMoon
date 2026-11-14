@@ -16,8 +16,8 @@ if((Test-Path -LiteralPath $cpuRun) -or (Test-Path -LiteralPath $cpuEvidence)){t
 $cpuDotnet=(Get-Command dotnet -ErrorAction Stop).Source
 $cpuFeed=Join-Path $cpuRun 'feed';$cpuCache=Join-Path $cpuRun 'cache';$cpuSource=Join-Path $cpuRun 'source';$cpuFresh=Join-Path $cpuRun 'fresh';$cpuCwd=Join-Path $cpuRun 'unrelated working directory'
 foreach($directory in @($cpuRun,$cpuEvidence,$cpuFeed,$cpuCache,$cpuSource,$cpuFresh,$cpuCwd)){[void][IO.Directory]::CreateDirectory($directory)}
-$cpuVersion='0.2.5.2-rendersnapshots.'+(Get-Date -Format 'yyyyMMddHHmmss')
-$cpuPackages=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Aether')
+$cpuVersion=$trueMoonBuildProfile.Version+'.rendersnapshots.'+(Get-Date -Format 'yyyyMMddHHmmss')
+$cpuPackages=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Enerit.Generator','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime')
 $cpuReport=[ordered]@{Completed=$false;RunDirectory=$cpuRun;Version=$cpuVersion;Commands=@();Packages=@();ExternalPackages=@();Graphs=@();Sources=@();Profiles=@();Failure=$null;GpuRun=$false;WindowRun=$false}
 function Save-CpuReport {$cpuReport|ConvertTo-Json -Depth 12|Set-Content -LiteralPath (Join-Path $cpuEvidence 'verification.json') -Encoding utf8}
 function Invoke-Cpu([string]$name,[string[]]$arguments,[string]$cwd=$cpuWorkspace,[switch]$isolated){
@@ -46,7 +46,7 @@ function Add-CpuProfile([string]$name,[string]$assembly,[string]$reportDirectory
 try{
     $program=Join-Path $PSScriptRoot 'Program.cs'
     $cpuReport.Sources+=@{Path=$program;Sha256=(Get-FileHash -LiteralPath $program).Hash}
-    Get-ChildItem (Join-Path $cpuWorkspace 'TrueMoon.Aether') -Recurse -File -Filter '*.cs' | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } | ForEach-Object { $cpuReport.Sources+=@{Path=$_.FullName;Sha256=(Get-FileHash -LiteralPath $_.FullName).Hash} }
+    Get-ChildItem (Join-Path $cpuWorkspace 'TrueMoon.Aether.Tooling') -Recurse -File -Filter '*.cs' | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } | ForEach-Object { $cpuReport.Sources+=@{Path=$_.FullName;Sha256=(Get-FileHash -LiteralPath $_.FullName).Hash} }
     # Exact external dependencies from the existing restored graph only; no live feed or package upgrades.
     $external=@{}
     foreach($id in @($cpuPackages+'TrueMoon.Cobalt.Generator')){
@@ -68,7 +68,7 @@ try{
         [IO.File]::WriteAllText((Join-Path $directory 'Directory.Build.targets'),'<Project/>')
         Copy-Item -LiteralPath $program -Destination (Join-Path $directory 'Program.cs')
     }
-    $aether=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Aether/TrueMoon.Aether.csproj'))
+    $aether=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj'))
     $bootstrap=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon/TrueMoon.csproj'))
     [IO.File]::WriteAllText((Join-Path $cpuSource 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>RenderSnapshotsConsumer</AssemblyName><RootNamespace>RenderSnapshotsConsumer</RootNamespace></PropertyGroup><ItemGroup><ProjectReference Include=`"$aether`"/><ProjectReference Include=`"$bootstrap`"/></ItemGroup></Project>")
     Invoke-Cpu 'source-restore' @('restore','Consumer.csproj','--no-dependencies','--configfile',"$cpuSource/NuGet.Config","-bl:$cpuEvidence/source-restore-{}.binlog") $cpuSource
@@ -83,7 +83,7 @@ try{
         if(!(Test-Path -LiteralPath $path)){throw "Missing package: $id"}
         $cpuReport.Packages+=@{Id=$id;Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash}
     }
-    [IO.File]::WriteAllText((Join-Path $cpuFresh 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>RenderSnapshotsConsumer</AssemblyName><RootNamespace>RenderSnapshotsConsumer</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include=`"TrueMoon`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Aether`" Version=`"$cpuVersion`"/></ItemGroup></Project>")
+    [IO.File]::WriteAllText((Join-Path $cpuFresh 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>RenderSnapshotsConsumer</AssemblyName><RootNamespace>RenderSnapshotsConsumer</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include=`"TrueMoon`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Aether.Runtime`" Version=`"$cpuVersion`"/></ItemGroup></Project>")
     Invoke-Cpu 'fresh-restore' @('restore','Consumer.csproj','--configfile',"$cpuFresh/NuGet.Config",'--no-http-cache',"-bl:$cpuEvidence/fresh-restore-{}.binlog") $cpuFresh -isolated
     $graph=Get-Content -LiteralPath "$cpuFresh/obj/project.assets.json" -Raw|ConvertFrom-Json -AsHashtable
     if($graph.libraries.Values.Where({$_.type -eq 'project'}).Count){throw 'Fresh consumer contains ProjectReferences.'}
@@ -96,8 +96,8 @@ try{
     Invoke-Cpu 'fresh-publish' @('publish','Consumer.csproj','--no-restore','-c','Release','-o',"$cpuRun/fresh-published",'-p:UseAppHost=false',"-bl:$cpuEvidence/fresh-publish-{}.binlog") $cpuFresh -isolated
     Add-CpuProfile 'fresh-proof' "$cpuRun/fresh-published/RenderSnapshotsConsumer.dll" "$cpuEvidence/fresh-proof" -isolated
     foreach($source in $cpuReport.Sources){if((Get-FileHash -LiteralPath $source.Path).Hash -ne $source.Sha256){throw 'Consumer source drift.'}}
-    $installed=Join-Path $cpuCache ($graph.libraries["TrueMoon.Aether/$cpuVersion"].path+"/lib/$($trueMoonBuildProfile.Framework)/TrueMoon.Aether.dll")
-    $loaded=Join-Path $cpuRun 'fresh-published/TrueMoon.Aether.dll'
+    $installed=Join-Path $cpuCache ($graph.libraries["TrueMoon.Aether/$cpuVersion"].path+"/lib/$($trueMoonBuildProfile.Framework)/TrueMoon.Aether.Tooling.dll")
+    $loaded=Join-Path $cpuRun 'fresh-published/TrueMoon.Aether.Tooling.dll'
     if((Get-FileHash -LiteralPath $installed).Hash -ne (Get-FileHash -LiteralPath $loaded).Hash){throw 'Installed/output Aether mismatch.'}
     $cpuReport.Completed=$true
 }catch{$cpuReport.Failure=$_.Exception.ToString();throw}

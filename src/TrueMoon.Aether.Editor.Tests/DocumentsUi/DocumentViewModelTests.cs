@@ -1,7 +1,10 @@
-﻿using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
 using System.Reflection;
-using TrueMoon.Aether.Editor.Documents;
 using TrueMoon.Aether.Editor.Tests.Documents;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Argentis;
 using Xunit;
 

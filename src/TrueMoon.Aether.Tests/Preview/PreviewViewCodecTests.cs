@@ -2,10 +2,10 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Numerics;
 using System.Text.Json;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Preview;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
+using TrueMoon.Aether.Abstractions.Preview;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Transport;
 using TrueMoon.Generated.TrueMoon.Aether;
 using Xunit;
 

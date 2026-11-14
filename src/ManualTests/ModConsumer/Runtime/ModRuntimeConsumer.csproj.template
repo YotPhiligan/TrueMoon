@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$(TF)</TargetFramework><AssemblyName>ModRuntimeConsumer</AssemblyName><RootNamespace>TrueMoon.ManualTests.ModConsumer.Runtime</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TrueMoon" Version="__VERSION__" />
+    <PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="__VERSION__" />
+    <PackageReference Include="TrueMoon.Aether.Runtime" Version="__VERSION__" />
+  </ItemGroup>
+</Project>

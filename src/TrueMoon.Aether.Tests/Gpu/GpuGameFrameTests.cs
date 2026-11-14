@@ -1,6 +1,6 @@
-using TrueMoon.Aether.Transport;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Gpu.Surfaces;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Gpu.Surfaces;
+using TrueMoon.Aether.Runtime.Transport;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Gpu;

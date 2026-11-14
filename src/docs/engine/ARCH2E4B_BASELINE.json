@@ -1,0 +1,444 @@
+{
+    "Schema":  1,
+    "Date":  "2026-11-12",
+    "Task":  "ARCH2e.4b short diagnostics slice",
+    "BaseCommit":  "73df16229da1db54e1170ac0d56b9d385f91abd7",
+    "Profile":  {
+                    "Workspace":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+                    "Framework":  "net11.0",
+                    "TestFramework":  "net11.0",
+                    "Sdk":  "11.0.100",
+                    "Version":  "0.3.0.1-alpha",
+                    "LanguageVersion":  "latest",
+                    "Features":  ";runtime-async=on",
+                    "Sources":  [
+                                    {
+                                        "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Build.props",
+                                        "Sha256":  "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+                                    },
+                                    {
+                                        "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props",
+                                        "Sha256":  "4292CD7B581C08609FA173BEBB188F99729068CBA1A24CDD69F97C3CE7D50335"
+                                    },
+                                    {
+                                        "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\global.json",
+                                        "Sha256":  "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+                                    },
+                                    {
+                                        "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\BuildProfile.ps1",
+                                        "Sha256":  "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+                                    }
+                                ],
+                    "EvidencePath":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH2e4b-20261112-150909\\proofs-v2\\profile\\profile-3b4706c985dd4d55b6e9665928fc2c12.json"
+                },
+    "SourceChanges":  [
+                          {
+                              "BeforeSHA256":  "13A78ECC3EA83AE264C2106A2212B5709A2039E2049A23331FFC373EEB8F4F9F",
+                              "Path":  "ManualTests/EngineSessionProbe/DiagnosticsProbe.cs",
+                              "SHA256":  "CB467BCCACBEA1C2468D9A32489779DA1E308F915E824DDA46CD4E61214C0A62"
+                          },
+                          {
+                              "BeforeSHA256":  "354D14CA1CFD6F0F9FC71F9233D0C591004B1686B06F544953F98865336DA064",
+                              "Path":  "TrueMoon.Aether.Tests/NativeRuntimeOutputTests.cs",
+                              "SHA256":  "610927E8841A6FD1804418ADEBCAE5D54F1CEC6FFAE3B34DBFBB72E6843EC371"
+                          },
+                          {
+                              "BeforeSHA256":  "8CEE85658B55261E745E0C395EB3EBF69873C251CEE8E1D72118C6331463920E",
+                              "Path":  "TrueMoon.Aether.Tests/OwnedProcessOutputTests.cs",
+                              "SHA256":  "10FBABF583184AC56AEF496CB4076373D2056CFD815B1255B88E5DCA12508096"
+                          },
+                          {
+                              "BeforeSHA256":  "E9BE00336CEAB18A1DEE315631A4C81CAEC65C28FA6CDC74D425F43A41A829FC",
+                              "Path":  "TrueMoon.Aether/Builds/GameBuildCompiler.cs",
+                              "SHA256":  "E3F67176D77FA4023BD48F3EC5FB3F45031F262D060FCE57D4D5DBE9B834CE43"
+                          },
+                          {
+                              "BeforeSHA256":  "24218110619F60A46D0C98703BB2188C5E490BF4562FAA38C8253B30DDAE743B",
+                              "Path":  "TrueMoon.Aether/Diagnostics/ProcessDiagnosticSnapshot.cs",
+                              "SHA256":  "47AEE47F95E200AAC923F8CD5ECCD5C59BE7AC9A4A909217880E3F89131EF4E9"
+                          },
+                          {
+                              "BeforeSHA256":  "0664B774AC5A0DBAD35EF774F863D1B8BCA08A016A989E3D3CEDC5265ED31178",
+                              "Path":  "TrueMoon.Aether/Hosting/NativeRuntime.cs",
+                              "SHA256":  "BC23B97E373B03F742A05B6F27398D70B57D53B1D05063ECB31DF165112849BF"
+                          },
+                          {
+                              "BeforeSHA256":  "CE2D2EC135544ED9070A7106F70CCD2C921D6591D101CA80B0B7E7626C20E632",
+                              "Path":  "TrueMoon.Aether/Hosting/OwnedProcessOutput.cs",
+                              "SHA256":  "EF814B4EAE78F812561CEA83E66F9329D981DC3E64F3CBAD1031619E04CD0632"
+                          },
+                          {
+                              "BeforeSHA256":  "92A263EFF924D13781B2170337115588A4ACEF0FA748888B95384112FD7A8C5C",
+                              "Path":  "TrueMoon.Core/ProcessOutputCapture.cs",
+                              "SHA256":  "FD7B1E37A26F7D9D538507BE8420D6AE9783853879D2F3244B86DCD01721F4D7"
+                          },
+                          {
+                              "BeforeSHA256":  "D6C166797904E2F5851F61595DF00DDD9E0617F29084295EE15A93805D8D2F8C",
+                              "Path":  "TrueMoon.Core/ProcessOutputSnapshot.cs",
+                              "SHA256":  "AA9DF83620A149DD386075FEDCB756CA3047EB08C11101DB439CF5195737E603"
+                          },
+                          {
+                              "BeforeSHA256":  "992136DAB315BC0D11566A1E6B53BA8F0064E6FED3DF01447ED63FF100728CC2",
+                              "Path":  "TrueMoon.Tests/ProcessOutputCaptureTests.cs",
+                              "SHA256":  "A5F7978607A9A311C1100F9AFCAD5DEC7AD6A3BE09711DFB3C647B33BE350CD7"
+                          }
+                      ],
+    "Builds":  {
+                   "value":  [
+                                 {
+                                     "Configuration":  "Debug",
+                                     "Arguments":  [
+                                                       "build",
+                                                       "TrueMoon.slnx",
+                                                       "-c",
+                                                       "Debug",
+                                                       "-m",
+                                                       "--verbosity",
+                                                       "minimal",
+                                                       "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH2e4b-20261112-150909\\solution-Debug-{}.binlog"
+                                                   ],
+                                     "Warnings":  263,
+                                     "Seconds":  9.2621479,
+                                     "Errors":  0,
+                                     "Exit":  0
+                                 },
+                                 {
+                                     "Configuration":  "Release",
+                                     "Arguments":  [
+                                                       "build",
+                                                       "TrueMoon.slnx",
+                                                       "-c",
+                                                       "Release",
+                                                       "-m",
+                                                       "--verbosity",
+                                                       "minimal",
+                                                       "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH2e4b-20261112-150909\\solution-Release-{}.binlog"
+                                                   ],
+                                     "Warnings":  1556,
+                                     "Seconds":  21.6383585,
+                                     "Errors":  0,
+                                     "Exit":  0
+                                 }
+                             ],
+                   "Count":  2
+               },
+    "Tests":  [
+                  {
+                      "Exit":  0,
+                      "Seconds":  5.7693286,
+                      "TrxSHA256":  "D09752B888517ADC139F0A47CFCFECC454D3DF3A49397AB2BB20754BCBC4BF13",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Tests",
+                      "Skipped":  0,
+                      "Executed":  662,
+                      "Passed":  662,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  3.2067242,
+                      "TrxSHA256":  "A04D699074B81598B73F3ECB16BA26ED905FCB27DCA14AD5EFABD11741851C07",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Cobalt.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Cobalt.Tests",
+                      "Skipped":  0,
+                      "Executed":  179,
+                      "Passed":  179,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  14.1054036,
+                      "TrxSHA256":  "3B9966DBFF3E22149664C46D8E70E6C067CB6864E75AFCB2AB76A193CA62480F",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Cobalt.Generator.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Cobalt.Generator.Tests",
+                      "Skipped":  0,
+                      "Executed":  96,
+                      "Passed":  96,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  29.4627594,
+                      "TrxSHA256":  "C096064CD635F647AC94A58B61F2910D38989897108A124D836D266D986C6D51",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Enerit.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Enerit.Tests",
+                      "Skipped":  0,
+                      "Executed":  354,
+                      "Passed":  354,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  6.6385717,
+                      "TrxSHA256":  "A20E097EBC48FED7ABDE6757AACAECE1F13389D90A31E39F8EA90355D631A5E7",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Enerit.Generator.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Enerit.Generator.Tests",
+                      "Skipped":  0,
+                      "Executed":  114,
+                      "Passed":  114,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  36.0881471,
+                      "TrxSHA256":  "70216EFEB7150ED57592C2CD1A3308AD58E2D508275C11E5D01192017E1794D6",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Mithril.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Mithril.Tests",
+                      "Skipped":  0,
+                      "Executed":  155,
+                      "Passed":  155,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  37.9255501,
+                      "TrxSHA256":  "3F1C8A826BD1760B81581A12A6C38FC8CDECA359A5F56859D102A132E0111057",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Nom.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Nom.Tests",
+                      "Skipped":  0,
+                      "Executed":  874,
+                      "Passed":  874,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  4.1753726,
+                      "TrxSHA256":  "771479C32690022BC9237A9D4C5D79B1EB580C2047943D059F47285962E7363E",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Alloy.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Alloy.Tests",
+                      "Skipped":  0,
+                      "Executed":  1224,
+                      "Passed":  1224,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  2.7354692,
+                      "TrxSHA256":  "477B04084C54A684BA4B8F2D339D6594751D8AD01E1CA414D11C0662A7E7965F",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Alloy.Hosting.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Alloy.Hosting.Tests",
+                      "Skipped":  0,
+                      "Executed":  171,
+                      "Passed":  171,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  733.8848279,
+                      "TrxSHA256":  "1C03699657299CD3C47255D1509E89DC7AB6AF0B828C7B4389F9FA375D92B89C",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Aether.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Aether.Tests",
+                      "Skipped":  0,
+                      "Executed":  3243,
+                      "Passed":  3243,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  71.5758569,
+                      "TrxSHA256":  "B17D4BDB432451774D8EBC93E8DA885FDD81F3EA22D564E57D74C607F729CAB0",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Aether.Editor.Tests-Debug/tests.trx",
+                      "Project":  "TrueMoon.Aether.Editor.Tests",
+                      "Skipped":  0,
+                      "Executed":  1496,
+                      "Passed":  1496,
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  3.9117388,
+                      "TrxSHA256":  "BFB88FB401509DAB09D0CCC263ED4BFE758EFF5CDD1EAC5A7FE24AB2035722D3",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Tests",
+                      "Skipped":  0,
+                      "Executed":  662,
+                      "Passed":  662,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  1.8015949,
+                      "TrxSHA256":  "2AE34838147CF9B94742658A3F29CB86AB9ECAE6605D3B319A06C00C1C1B785B",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Cobalt.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Cobalt.Tests",
+                      "Skipped":  0,
+                      "Executed":  179,
+                      "Passed":  179,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  8.9154606,
+                      "TrxSHA256":  "32036C5AF345CE3695C5A7E17F172219D341BE2C638DAC2C529C745A3FCC0409",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Cobalt.Generator.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Cobalt.Generator.Tests",
+                      "Skipped":  0,
+                      "Executed":  96,
+                      "Passed":  96,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  26.108258,
+                      "TrxSHA256":  "BD8F1B79606EA8A682EBEA715724B72CD78507A809EA77B7F56F9441CCBABC95",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Enerit.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Enerit.Tests",
+                      "Skipped":  0,
+                      "Executed":  354,
+                      "Passed":  354,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  5.4019473,
+                      "TrxSHA256":  "6C45D0BD2B702A2884EDC3A3753C956F9A3E05910CBA07F7783D010B78181158",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Enerit.Generator.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Enerit.Generator.Tests",
+                      "Skipped":  0,
+                      "Executed":  114,
+                      "Passed":  114,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  33.1851774,
+                      "TrxSHA256":  "579400D5546581D90F7E16B1C9859E0340053C5B68D31938D9A47ABB70113C4C",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Mithril.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Mithril.Tests",
+                      "Skipped":  0,
+                      "Executed":  155,
+                      "Passed":  155,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  18.9500196,
+                      "TrxSHA256":  "0F880F0CBA3123E67B75CC8C8B70817A98734FA11700C101F8D26696D35D5922",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Nom.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Nom.Tests",
+                      "Skipped":  0,
+                      "Executed":  874,
+                      "Passed":  874,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  3.3297454,
+                      "TrxSHA256":  "E179898B98773930759C6183AF537F2C6A9E558362FA755C03E5374140A6CDEB",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Alloy.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Alloy.Tests",
+                      "Skipped":  0,
+                      "Executed":  1224,
+                      "Passed":  1224,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  2.3911894,
+                      "TrxSHA256":  "60F5005567C2ACFE781DCBB74803DFC04C2C75524AEF824675DC72675482DFEC",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Alloy.Hosting.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Alloy.Hosting.Tests",
+                      "Skipped":  0,
+                      "Executed":  171,
+                      "Passed":  171,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  599.2091312,
+                      "TrxSHA256":  "F8391CAC692283C33F2BDD1B6CFB6364BB62A440C4440875C75E66B4B023158C",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Aether.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Aether.Tests",
+                      "Skipped":  0,
+                      "Executed":  3243,
+                      "Passed":  3243,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  },
+                  {
+                      "Exit":  0,
+                      "Seconds":  70.8792917,
+                      "TrxSHA256":  "D4C690FC6E24CD0E044944FA2F88B73A87D3C8694FD6A97D90418C9A1E9F2097",
+                      "Trx":  "TestResults/ARCH2e4b-20261112-150909/baseline-TrueMoon.Aether.Editor.Tests-Release/tests.trx",
+                      "Project":  "TrueMoon.Aether.Editor.Tests",
+                      "Skipped":  0,
+                      "Executed":  1496,
+                      "Passed":  1496,
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  }
+              ],
+    "PerConfiguration":  {
+                             "Suites":  11,
+                             "Skipped":  0,
+                             "Failed":  0,
+                             "Passed":  8568
+                         },
+    "FocusedDebug":  {
+                         "Core":  30,
+                         "Skipped":  0,
+                         "Aether":  13,
+                         "Failed":  0
+                     },
+    "Proofs":  [
+                   {
+                       "Sha256":  "56B68563F0D1E114E1389BBB4EE52A26163A311B485889E7A64163026A3BF8EC",
+                       "Passed":  true,
+                       "Children":  6,
+                       "Name":  "source-diagnostics",
+                       "Report":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH2e4b-20261112-150909\\proofs-v2\\source-diagnostics"
+                   },
+                   {
+                       "Sha256":  "EB9AB6B097E2832B173B5CDD59E1BA195CD5EA5EFD170A8A44CCFD9EB8D77506",
+                       "Passed":  true,
+                       "Children":  6,
+                       "Name":  "published-diagnostics",
+                       "Report":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\ARCH2e4b-20261112-150909\\proofs-v2\\published-diagnostics"
+                   },
+                   {
+                       "Passed":  true,
+                       "CoreAssembly":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH2e4b-Core-a07639d2b98e42abae8be7065d44d50c\\consumer\\bin\\Debug\\net11.0\\TrueMoon.Core.dll",
+                       "Name":  "core-package-debug"
+                   },
+                   {
+                       "Passed":  true,
+                       "CoreAssembly":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-ARCH2e4b-Core-a07639d2b98e42abae8be7065d44d50c\\consumer\\published\\TrueMoon.Core.dll",
+                       "Name":  "core-package-published"
+                   }
+               ],
+    "CorePackageVersion":  "0.3.0.1-alpha.arch2e4b.20261112150909",
+    "CorePackageSHA256":  "627A2AFD0CB213EF03F140A1F2EE74329B353932E41876320B859AF450820BFD",
+    "UnexpectedDrainTimeoutReproduced":  false,
+    "CausalFixClaimed":  false,
+    "GpuOrPhysicalAcceptanceRun":  false,
+    "CoherentFullDeliveryRepeated":  false,
+    "Runner":  "xUnit 2 / VSTest; serial collections, MaxCpuCount=1; same .NET11 profile; no test-only build properties",
+    "RawEvidence":  "TestResults/ARCH2e4b-20261112-150909",
+    "Limitations":  [
+                        "Historical post-reap timeout cause remains open; controlled timeout is diagnostic validation only",
+                        "One fresh Core package only; Aether package/native GPU matrix not repeated",
+                        "Extra source/published/Core proofs overlapped the Debug suite for approximately 9 seconds; no framework rebuild, independent outputs/cache",
+                        "First sandbox attempt failed before restore on NuGet.Config access; authorized ordinary restore/build passed",
+                        "First proof runner expected 3 generations while existing scenario emits 6; runtime exit 0; corrected postcondition rerun in proofs-v2, original artifacts preserved"
+                    ]
+}

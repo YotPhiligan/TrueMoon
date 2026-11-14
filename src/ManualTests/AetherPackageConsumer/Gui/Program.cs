@@ -1,15 +1,24 @@
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Tooling.Documents;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Editor;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Projects;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -130,7 +139,7 @@ internal static class Program
         var sessions = app.Services.Resolve<HostedUiSessionFactory>()!;
         var window = app.Services.Resolve<HostedUiWindow>()!;
         var documents = app.Services.Resolve<EditorDocumentCommands>()!;
-        var factory = (NativeRuntimeFactory)app.Services.Resolve<TrueMoon.Aether.Sessions.IRuntimeFactory>()!;
+        var factory = (NativeRuntimeFactory)app.Services.Resolve<TrueMoon.Aether.Runtime.Sessions.IRuntimeFactory>()!;
         using var startup = CancellationTokenSource.CreateLinkedTokenSource(token);
         void Presented(UiSession ui)
         {

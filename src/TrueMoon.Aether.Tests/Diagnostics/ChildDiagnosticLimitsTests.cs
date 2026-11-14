@@ -1,7 +1,7 @@
 ﻿using System.Buffers;
 using System.Text.Json;
-using TrueMoon.Aether.Diagnostics;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Diagnostics;
 using TrueMoon.Enerit.IO;
 using Xunit;

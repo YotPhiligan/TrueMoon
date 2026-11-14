@@ -2,12 +2,17 @@ using System.Diagnostics;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
-using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Abstractions.Sessions;
 using TrueMoon.Aether.Runtime;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
@@ -16,6 +21,26 @@ namespace TrueMoon.Aether.Tests.Builds;
 
 public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<GameBuildFixture>
 {
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void ConcreteRuntimeGame_RequiresExplicitSharedRuntimeCapability(bool allowRuntime)
+    {
+        var source = Path.GetDirectoryName(typeof(global::Game.Logic.ProbeGame).Assembly.Location)!;
+        var destination = Path.Combine(fixture.Root, "runtime-capability-" + allowRuntime);
+        GameBuildArtifact Publish() => GameArtifactPublisher.Publish(source, destination, GameBuildFixture.Hash,
+            "Game.Logic.dll", "Game.Logic.ProbeGame", 41, runtimeAccess: allowRuntime);
+        if (!allowRuntime)
+        {
+            var error = Assert.Throws<InvalidDataException>(() => Publish());
+            Assert.Contains("Undeclared game dependency: TrueMoon.Aether.Runtime", error.Message);
+            return;
+        }
+        var artifact = Publish(); Assert.True(artifact.RuntimeAccess);
+        using var loaded = GameBuildLoader.Load(new(artifact.DirectoryPath, artifact.BuildId), GameBuildFixture.Hash);
+        loaded.Session.Load(new("shared", 41, [])); loaded.Session.Tick();
+        Assert.Equal(41, loaded.Session.Revision); Assert.Equal(1UL, loaded.Session.TickNumber);
+    }
+
     [Fact]
     public void PublishedBuilds_LoadDifferentBehaviorAndShareOnlyHostContract()
     {
@@ -29,6 +54,9 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
         Assert.Equal(23, first.Session.Revision); Assert.Equal(1ul, first.Session.TickNumber);
         Assert.Equal(0xff2080c0u, first.Session.PatternColor); Assert.Equal(0xffc06020u, second.Session.PatternColor);
         Assert.Contains(typeof(IGameSession), first.Session.GetType().GetInterfaces());
+        Assert.Same(typeof(Abstractions.Ecs.ISystem), first.Session.GetType().GetProperty("SharedEcsContract")!.GetValue(null));
+        Assert.DoesNotContain(AssemblyLoadContext.GetLoadContext(first.Session.GetType().Assembly)!.Assemblies,
+            assembly => assembly.GetName().Name == "TrueMoon.Aether.Abstractions");
         Assert.NotSame(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(first.Session.GetType().Assembly));
         Assert.NotSame(first.Session.GetType().Assembly, second.Session.GetType().Assembly);
         Assert.DoesNotContain(AssemblyLoadContext.Default.Assemblies, assembly => assembly.GetName().Name is "Game.Candidate" or "Game.Private");
@@ -69,27 +97,44 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
     [InlineData("contract")]
     [InlineData("path")]
     [InlineData("framework")]
+    [InlineData("abstractions-copy")]
     [InlineData("duplicate")]
     [InlineData("legacy-target")]
     [InlineData("future-target")]
+    [InlineData("shared-missing")]
+    [InlineData("shared-duplicate")]
+    [InlineData("shared-identity")]
+    [InlineData("runtime-copy")]
+    [InlineData("workflow-copy")]
+    [InlineData("tooling-copy")]
+    [InlineData("runtime-capability")]
     public void RehashedManifest_StillValidatesSchemaContractAndDependencyPolicy(string invalid)
     {
         var artifact = fixture.CopyA(); var manifestPath = Path.Combine(artifact.DirectoryPath, GameBuildArtifact.ManifestFile);
         var json = JsonNode.Parse(File.ReadAllText(manifestPath))!;
         switch (invalid)
         {
-            case "schema": json["Schema"] = 2; break;
-            case "contract": json["ContractSha256"] = new string('B', 64); break;
+            case "schema": json["Schema"] = 1; break;
+            case "contract": json["RuntimeSha256"] = new string('B', 64); break;
             case "path": json["Files"]![0]!["Name"] = "../Game.Candidate.dll"; break;
             case "framework": json["Files"]![0]!["Name"] = "System.Runtime.dll"; break;
+            case "abstractions-copy": json["Files"]![0]!["Name"] = "TrueMoon.Aether.Abstractions.dll"; break;
             case "duplicate": json["Files"]![1]!["Name"] = "game.candidate.DLL"; break;
             case "legacy-target": json["TargetFramework"] = "net10.0"; break;
             case "future-target": json["TargetFramework"] = "net12.0"; break;
+            case "shared-missing": json["SharedContracts"]!.AsArray().RemoveAt(0); break;
+            case "shared-duplicate": json["SharedContracts"]![1] = json["SharedContracts"]![0]!.DeepClone(); break;
+            case "shared-identity": json["SharedContracts"]![0]!["Identity"] = "wrong exact assembly identity"; break;
+            case "runtime-copy": json["Files"]![0]!["Name"] = "TrueMoon.Aether.Runtime.dll"; break;
+            case "workflow-copy": json["Files"]![0]!["Name"] = "TrueMoon.Aether.dll"; break;
+            case "tooling-copy": json["Files"]![0]!["Name"] = "TrueMoon.Aether.Tooling.dll"; break;
+            case "runtime-capability": json["RuntimeAccess"] = true; break;
         }
         var bytes = System.Text.Encoding.UTF8.GetBytes(json.ToJsonString()); File.WriteAllBytes(manifestPath, bytes);
         var id = Convert.ToHexString(SHA256.HashData(bytes)); var renamed = Path.Combine(Path.GetDirectoryName(artifact.DirectoryPath)!, id);
         Directory.Move(artifact.DirectoryPath, renamed);
         var error = Assert.Throws<InvalidDataException>(() => GameBuildArtifact.Open(renamed, GameBuildFixture.Hash, id));
+        if (invalid == "tooling-copy") Assert.Contains("framework/Aether copies are forbidden", error.Message);
         if (invalid is "legacy-target" or "future-target")
         {
             Assert.Contains("net11.0", error.Message);
@@ -99,14 +144,14 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
     [Fact]
     public void MissingPrivateDependency_IsRejectedBeforeAnyGameLoad()
     {
-        Assert.Throws<InvalidDataException>(() => GameBuildArtifact.Publish(fixture.A.DirectoryPath, Path.Combine(fixture.Root, "incomplete"),
+        Assert.Throws<InvalidDataException>(() => GameArtifactPublisher.Publish(fixture.A.DirectoryPath, Path.Combine(fixture.Root, "incomplete"),
             GameBuildFixture.Hash, fixture.A.EntryAssembly, fixture.A.EntryType, 1));
         Assert.Empty(Directory.EnumerateDirectories(Path.Combine(fixture.Root, "incomplete")));
     }
     [Fact]
     public void InvalidEntryType_FailsLoadingAndReleasesArtifactPins()
     {
-        var artifact = GameBuildArtifact.Publish(fixture.A.DirectoryPath, Path.Combine(fixture.Root, "wrong-type"), GameBuildFixture.Hash,
+        var artifact = GameArtifactPublisher.Publish(fixture.A.DirectoryPath, Path.Combine(fixture.Root, "wrong-type"), GameBuildFixture.Hash,
             fixture.A.EntryAssembly, "System.String", 1, ["Game.Private.dll"]);
         Assert.Throws<TypeLoadException>(() => GameBuildLoader.Load(new(artifact.DirectoryPath, artifact.BuildId), GameBuildFixture.Hash));
         // Context unload is cooperative. Rename proves our no-delete pin was released
@@ -339,16 +384,16 @@ public sealed class GameBuildTests(GameBuildFixture fixture) : IClassFixture<Gam
 
     private async Task<GameBuildArtifact> BuildFactoryGame(string directory, string creation)
     {
-        var source = GameBuildFixture.Source("0xff123456u")
+        var source = ("using TrueMoon.Aether.Runtime.Scenes;\n" + GameBuildFixture.Source("0xff123456u"))
             .Replace("=> new Game();", "=> " + creation + ";")
             .Replace("public ulong TickNumber", """
-                private Game(TrueMoon.Aether.Scenes.SceneResolutionService services) { Services = services; }
-                public TrueMoon.Aether.Scenes.SceneResolutionService Services { get; }
+                private Game(TrueMoon.Aether.Runtime.Scenes.SceneResolutionService services) { Services = services; }
+                public TrueMoon.Aether.Runtime.Scenes.SceneResolutionService Services { get; }
                 public ulong TickNumber
                 """);
-        var project = fixture.Project(directory, "Game.Candidate", source);
+        var project = fixture.Project(directory, "Game.Candidate", source, "<Reference Include=\"TrueMoon.Aether.Runtime\"><HintPath>$(AetherRuntimePath)</HintPath><Private>false</Private></Reference>");
         await using var compiler = new GameBuildCompiler(GameBuildFixture.Hash, Path.Combine(fixture.Root, directory + "-artifacts"));
-        return await compiler.BuildAsync(new(project, "Game.Candidate.dll", "Game.Candidate.Game", 1));
+        return await compiler.BuildAsync(new(project, "Game.Candidate.dll", "Game.Candidate.Game", 1) { RuntimeAccess = true });
     }
 
     private static void AssertArtifactPinsReleased(GameBuildArtifact artifact)

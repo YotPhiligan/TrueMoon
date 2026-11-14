@@ -1,17 +1,20 @@
+using TrueMoon.Aether.Runtime;
 using System.Collections.Immutable;
 using System.Numerics;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Input;
-using TrueMoon.Aether.Interactions;
-using TrueMoon.Aether.Rendering;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Input;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Abstractions.Runtime;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Input;
+using TrueMoon.Aether.Runtime.Interactions;
 
 namespace Game.Logic;
 
 /// <summary>Authored room with fixed-tick camera, occluded reach queries and checkpointed per-object switches.</summary>
-public sealed class RoomGame : ICheckpointGameSession, IRenderGameSession, IInputGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
+public sealed class RoomGame : ICheckpointGameSession, IRenderGameSession, IInputGameSession, IGameSessionEntry
 {
-    public static global::TrueMoon.Aether.Sessions.IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new RoomGame();
+    public static global::TrueMoon.Aether.Abstractions.Sessions.IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new RoomGame();
     private SceneSnapshot? _scene;
     private ImmutableArray<InteractionBody> _bodies = [];
     private GameObjectStates _objects = GameObjectStates.Empty;

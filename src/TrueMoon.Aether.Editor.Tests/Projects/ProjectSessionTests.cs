@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Editor.Projects;
+using TrueMoon.Aether.Tooling.Projects;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Projects;
@@ -15,6 +15,7 @@ public sealed class ProjectSessionTests
         var sdk = new ProjectToolchainInfo("10.0.402");
         using var session = new ProjectSession(new(project, sdk));
         var request = session.CreateBuildRequest(revision);
+        Assert.True(request.RuntimeAccess);
         Assert.Equal(Path.Combine(fixture.Root, "Game", "Game.csproj"), request.ProjectPath);
         Assert.Equal("Room.Logic.dll", request.EntryAssembly);
         Assert.Equal("Room.Logic.Game+Nested", request.EntryType);

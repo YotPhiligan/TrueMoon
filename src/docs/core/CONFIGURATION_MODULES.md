@@ -1,5 +1,17 @@
 # Общая конфигурация Aether, Editor и модулей — CORE7.5
 
+ARCH3.3 (2026-11-13): standalone Runtime schemas/helpers теперь в `TrueMoon.Aether.Runtime`.
+Для Runtime-only/child используйте `RuntimeConfigurationSchemas.Engine` и
+`UseConfiguredAetherRuntime` с `RuntimeComposition`/`RuntimeSettings` или protected bootstrap.
+Build/Authoring settings остаются в workflow. Runtime World/Scheduler/SceneLoading/
+Primitives/RenderResources properties на старом AetherConfigurationSchemas указывают
+на те же exact Runtime schema instances. [API/ownership](../engine/RUNTIME.md).
+
+ARCH3.4 (2026-11-14): `UseConfiguredAetherTooling` и точный
+`ToolingConfigurationSchemas.Settings` добавляют headless startup keys
+`Aether:Tooling:*`. Host identity/RuntimeAccess остаются в явном ToolingComposition;
+старые full Aether/Editor schema keys сохранены. [API/ownership](../engine/TOOLING.md).
+
 [Главное руководство](CONFIGURATION_GUIDE.md), [все стандартные ключи](CONFIGURATION_KEYS.md),
 [единый App/child delivery runner](../../ManualTests/ConfigurationDelivery/README.md).
 
@@ -25,6 +37,8 @@
 | `.Diagnostics` / `Editor:Diagnostics` | `UseConfiguredAetherEditorDiagnostics` | Bounded console/presentation budgets |
 | `.SourceEditor` / `Editor:SourceEditor` | `UseConfiguredAetherEditorSourceNavigation` | Explicit executable/argument template; подключать только при нужной функции |
 | `.Window` / `Editor:Window` | `UseConfiguredAetherEditorWindow(fonts)` | Standard Editor scalar window settings, default 1280x800, minimum 1100x700 |
+| `RuntimeConfigurationSchemas.Engine` / `Aether` | `UseConfiguredAetherEditorUi(start, composition)` | Runtime + UI без Tooling; artifact/scene/identity и factories передаются явно |
+| `EditorUiConfigurationSchemas.Window` / `Editor:RuntimeWindow` | `UseConfiguredAetherEditorUiWindow(fonts)` | Обычное Runtime UI окно через общий WindowConfigurationSchema; default 1280x800, minimum 1100x700 |
 | `PipesConfigurationSchema.Default` / `Enerit:Pipes` | `UseConfiguredPipesServiceTransport` | Existing admission, connection and deadline limits |
 | `NomConfigurationSchema.Default` / `Nom` | `UseConfiguredNom` | Open-store/queue/batch/document/index limits, drain timeout |
 | `WindowConfigurationSchema.Default` / `Alloy:Window` | `UseConfiguredPresentation` | Scalar graphics API/window/frame/chrome settings |
@@ -124,6 +138,17 @@ Editor фиксирует presence validation отдельно: без CLI на�
 canonical env, явные --validation=true/false побеждают даже invalid lower env.
 ResolveRuntimeSettings объединяет уже captured inputs до App; глобальный env
 не меняется. Programmatic Validation=true также остаётся явным выбором.
+
+## Самостоятельные Kul и Kton
+
+Добавленные после CORE7.5 модули подключаются к тому же общему configuration profile:
+Kul предоставляет `AudioConfigurationSchema.Default` и `UseConfiguredAudio`
+([guide](../audio/README.md)); Kton — `BepuPhysicsConfigurationSchema.Default`
+и `UseConfiguredBepuPhysics` ([App/DI/ownership и точные поля](../physics/APP.md)).
+В composition root используются точные schema instances; собственных правил
+приоритетов args/environment/JSON эти модули не вводят. Их самостоятельные
+проверки фиксируются в [audio STATUS](../audio/STATUS.md) и
+[physics STATUS](../physics/STATUS.md), отдельно от исторической CORE7.5 matrix.
 
 ## Остальные чтения и проверки
 

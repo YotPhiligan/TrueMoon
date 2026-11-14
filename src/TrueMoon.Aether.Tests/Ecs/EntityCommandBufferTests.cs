@@ -1,4 +1,5 @@
-using TrueMoon.Aether.Ecs;
+using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Runtime.Ecs;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Ecs;
@@ -153,7 +154,9 @@ public sealed class EntityCommandBufferTests
             case "played-token":
                 commands.Playback(); commands.CreateEntity(); invalid = own; break;
             case "future-token": invalid = new DeferredEntity(own.BufferId, own.BatchId, own.Index + 1); break;
-            case "negative-token": invalid = new DeferredEntity(own.BufferId, own.BatchId, -1); break;
+            case "negative-token":
+                Assert.Throws<ArgumentOutOfRangeException>(() => new DeferredEntity(own.BufferId, own.BatchId, -1));
+                Assert.Equal(1, commands.Count); Assert.Equal(47, world.GetComponent<int>(live)); return;
             case "wrong-batch": invalid = new DeferredEntity(own.BufferId, Guid.NewGuid(), own.Index); break;
             default: throw new ArgumentException(nameof(kind));
         }
@@ -192,7 +195,7 @@ public sealed class EntityCommandBufferTests
         Assert.Throws<ArgumentException>(() => firstResult.Resolve(second));
         Assert.Throws<ArgumentException>(() => secondResult.Resolve(first));
         Assert.Throws<ArgumentException>(() => firstResult.Resolve(default));
-        Assert.Throws<ArgumentException>(() => firstResult.Resolve(new(first.BufferId, first.BatchId, -1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new DeferredEntity(first.BufferId, first.BatchId, -1));
         Assert.Throws<ArgumentException>(() => firstResult.Resolve(new(first.BufferId, first.BatchId, 1)));
         Assert.Throws<ArgumentException>(() => firstResult.Resolve(new(Guid.NewGuid(), first.BatchId, 0)));
         Assert.Equal(2, world.EntityCount);

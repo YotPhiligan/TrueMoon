@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TestsTF)</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <ProjectReference Include="../TrueMoon.Aether.Abstractions/TrueMoon.Aether.Abstractions.csproj" />
+    <ProjectReference Include="../TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" />
+    <ProjectReference Include="../ManualTests/Abstractions.Extension/Abstractions.Extension.csproj" />
+    <ProjectReference Include="../ManualTests/Abstractions.Host/Abstractions.Host.csproj" />
+  </ItemGroup>
+</Project>

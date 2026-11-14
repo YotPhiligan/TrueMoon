@@ -1,6 +1,6 @@
 using System.Text;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editor.Projects;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Projects;
 
 namespace AetherSourceWatchPerformance;
 
@@ -33,7 +33,7 @@ internal sealed record SourceGraph(ResolvedProject Project, GameBuildRequest Req
                 <Project Sdk="Microsoft.NET.Sdk">
                   <PropertyGroup><TargetFramework>net10.0</TargetFramework><AssemblyName>Perf.{{name}}</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
                   <ItemGroup>{{references}}
-                    <Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference>
+                    <Reference Include="TrueMoon.Aether.Abstractions"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference>
                     <Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference>
                   </ItemGroup>
                 </Project>
@@ -50,10 +50,10 @@ internal sealed record SourceGraph(ResolvedProject Project, GameBuildRequest Req
             if (profile == "bytes") File.WriteAllText(Path.Combine(directory, "Marker.cs"), $"namespace Perf.{name}; public static class Marker {{ public const int Value = 1; }}");
         }
         File.WriteAllText(Path.Combine(root, "Root", "Game.cs"), """
-            using TrueMoon.Aether.Scenes;
-            using TrueMoon.Aether.Sessions;
+            using TrueMoon.Aether.Abstractions.Scenes;
+            using TrueMoon.Aether.Abstractions.Sessions;
             namespace Perf.Root;
-            public sealed class Game : IGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry
+            public sealed class Game : IGameSession, TrueMoon.Aether.Abstractions.Runtime.IGameSessionEntry
             {
                 public static IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new Game();
                 public ulong TickNumber { get; private set; }

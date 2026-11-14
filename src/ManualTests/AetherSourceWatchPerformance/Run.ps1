@@ -21,7 +21,7 @@ $harness = Join-Path $PSScriptRoot "bin/Release/$($trueMoonBuildProfile.TestFram
 if (!(Test-Path -LiteralPath $harness)) { throw 'Build the Release harness first.' }
 $inputs = @(
     Get-ChildItem -LiteralPath $PSScriptRoot -File | Where-Object Extension -in @('.cs','.csproj','.ps1')
-    Get-ChildItem -LiteralPath "$workspace/TrueMoon.Aether.Editor/Editing" -Filter 'EditorSource*.cs' -File
+    Get-ChildItem -LiteralPath "$workspace/TrueMoon.Aether.Tooling/SourceTracking" -Filter 'EditorSource*.cs' -File
     Get-ChildItem -LiteralPath "$workspace/TrueMoon.Aether/Builds" -Filter '*.cs' -File
     Get-ChildItem -LiteralPath (Split-Path -Parent $harness) -Filter 'TrueMoon*.dll' -File
     Get-Item -LiteralPath $harness

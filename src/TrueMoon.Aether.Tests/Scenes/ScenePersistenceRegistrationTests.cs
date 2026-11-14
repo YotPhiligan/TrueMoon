@@ -1,6 +1,8 @@
-﻿using System.Security.Cryptography;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Scenes.Authoring;
+using System.Security.Cryptography;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;

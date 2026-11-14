@@ -1,8 +1,12 @@
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Loading;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Ecs.Loading;
+using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
@@ -191,7 +195,7 @@ public sealed class SceneLoadingConfigurationTests
     [Theory]
     [InlineData(false, false)] [InlineData(false, true)]
     [InlineData(true, false)] [InlineData(true, true)]
-    public async Task Codec_UsesExistingSceneCodecOrAuthoringFactoryWithoutReplacingIt(bool di, bool existingCodec)
+    public async Task RuntimeCodec_DoesNotActivateOrReplaceAuthoringDependencies(bool di, bool existingCodec)
     {
         var validators = new ValidationFactory(new SceneAuthoringSessionFactory(Resolution(), new SceneAuthoringOptions()));
         var sceneCodec = new SceneFileCodec(validators);
@@ -213,10 +217,29 @@ public sealed class SceneLoadingConfigurationTests
         var source = Document(1);
         var encoded = codec.Encode(new(source));
         var roundtrip = codec.Decode(encoded);
-        Assert.Equal(2, validators.Calls);
+        Assert.Equal(0, validators.Calls);
         Assert.Equal((source.Id, source.Revision), (roundtrip.Scene.Id, roundtrip.Scene.Revision));
         Assert.Equal(source.Entities.Single().Name, roundtrip.Scene.Entities.Single().Name);
         Assert.Equal(41L, roundtrip.Scene.Entities.Single().Changes.PropertyOverrides.Single().Value.GetInteger());
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task RuntimeCodec_UsesExplicitRuntimeValidationOverride(bool di)
+    {
+        var validators = new ValidationFactory(new SceneAuthoringSessionFactory(Resolution(), new SceneAuthoringOptions()));
+        var scenes = new SceneFileCodec(validators);
+        await using var app = Builder(di).Setup(context =>
+        {
+            context.UseAetherEcs();
+            context.Services(services => services.Singleton<TrueMoon.Aether.Runtime.Scenes.SceneDocumentCodec>(_ => scenes));
+            context.UseAetherSceneLoading(_ => new ComponentRegistryBuilder().Build());
+        }).Build();
+        var codec = app.Services.Resolve<SceneWorldCodec>()!;
+        Assert.Same(scenes, app.Services.Resolve<TrueMoon.Aether.Runtime.Scenes.SceneDocumentCodec>());
+        var source = Document(1); var result = codec.Decode(codec.Encode(new(source)));
+        Assert.Equal(2, validators.Calls);
+        Assert.Equal(source.Id, result.Scene.Id); Assert.Equal(source.Revision, result.Scene.Revision);
     }
 
     [Theory]

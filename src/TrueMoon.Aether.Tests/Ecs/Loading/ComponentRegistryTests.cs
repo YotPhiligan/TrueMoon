@@ -1,6 +1,8 @@
-using TrueMoon.Aether.Ecs.Loading;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Ecs.Loading;
 using Xunit;
+using SceneWorldLoadError = TrueMoon.Aether.Abstractions.Ecs.Loading.SceneWorldLoadError;
 
 namespace TrueMoon.Aether.Tests.Ecs.Loading;
 

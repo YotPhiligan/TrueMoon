@@ -1,10 +1,9 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
-using TrueMoon.Aether.Diagnostics;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Diagnostics;
 using TrueMoon.Enerit.IO;
 using TrueMoon.Enerit.IO.Pipes;
@@ -95,8 +94,8 @@ internal sealed class DeliveryEvents<T> : IEventsSource<T>
 internal sealed class DeliveryHandler(Func<DiagnosticDeliveryPacket, CancellationToken, Task<DiagnosticDeliveryReply>> push) : IInvocationServerHandler<IChildDiagnosticDelivery>
 {
     // Delegates to the actual generated codec; tests control only the service behavior.
-    private readonly IInvocationServerHandler<IChildDiagnosticDelivery> _inner = new TrueMoon.Generated.TrueMoon.Aether.ChildDiagnosticDeliveryInvocationServerHandler(
-        new DeliveryService(push), new DeliveryEvents<TrueMoon.Generated.TrueMoon.Aether.ChildDiagnosticDeliveryInvocationServerHandler>());
+    private readonly IInvocationServerHandler<IChildDiagnosticDelivery> _inner = new TrueMoon.Generated.TrueMoon.Aether.Runtime.ChildDiagnosticDeliveryInvocationServerHandler(
+        new DeliveryService(push), new DeliveryEvents<TrueMoon.Generated.TrueMoon.Aether.Runtime.ChildDiagnosticDeliveryInvocationServerHandler>());
     public Task<(bool, Exception?)> HandleAsync(byte method, ReadOnlyMemory<byte> memory, IBufferWriter<byte> writer, CancellationToken token = default) => _inner.HandleAsync(method, memory, writer, token);
     private sealed class DeliveryService(Func<DiagnosticDeliveryPacket, CancellationToken, Task<DiagnosticDeliveryReply>> action) : IChildDiagnosticDelivery
     { public Task<DiagnosticDeliveryReply> PushAsync(DiagnosticDeliveryPacket packet, CancellationToken cancellationToken = default) => action(packet, cancellationToken); }

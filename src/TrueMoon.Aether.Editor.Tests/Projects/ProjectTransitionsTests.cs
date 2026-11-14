@@ -1,7 +1,8 @@
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Editor.Tests.Documents;
-using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Projects;
@@ -62,7 +63,7 @@ public sealed class ProjectTransitionsTests
         Assert.Same(old, h.Projects.Active); Assert.Same(state.Document, h.State.Document);
         Assert.True(h.Sessions.Products[1].IsClosed); Assert.Equal(0, h.Authoring.Products[0].Disposals);
         var error = new IOException("Save denied");
-        h.Documents.Write = (_, _, _, _) => Task.FromException<TrueMoon.Aether.Scenes.SceneFileStamp>(error);
+        h.Documents.Write = (_, _, _, _) => Task.FromException<SceneFileStamp>(error);
         Assert.Same(error, await Assert.ThrowsAsync<IOException>(() => h.SwitchAsync(DocumentCloseChoice.Save, "new.aetherscene")));
         Assert.Same(old, h.Projects.Active); Assert.Same(state.Document, h.State.Document);
         Assert.True(h.State.UndoCount > 0); Assert.True(h.Current.Read().IsDirty); Assert.False(old.IsClosed);
@@ -74,7 +75,7 @@ public sealed class ProjectTransitionsTests
     {
         await using var h = await Harness.CreateAsync(); h.Edit(31);
         using var cancel = new CancellationTokenSource(); var old = h.Projects.Active!; var expected = h.State.Document;
-        h.Documents.Write = (_, _, _, _) => { cancel.Cancel(); return Task.FromResult(new TrueMoon.Aether.Scenes.SceneFileStamp("committed")); };
+        h.Documents.Write = (_, _, _, _) => { cancel.Cancel(); return Task.FromResult(new SceneFileStamp("committed")); };
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => h.SwitchAsync(DocumentCloseChoice.Save, "saved.aetherscene", cancel.Token));
         Assert.Same(old, h.Projects.Active); Assert.False(old.IsClosed); Assert.Same(expected, h.State.Document);
         Assert.False(h.Current.Read().IsDirty); Assert.Equal("committed", h.Current.Read().Stamp!.Sha256);
@@ -159,7 +160,7 @@ public sealed class ProjectTransitionsTests
     public async Task FailedCloseSave_RetainsEditableDocumentAndSupportsRetry()
     {
         await using var h = await Harness.CreateAsync(); h.Edit(53); var old = h.Projects.Active!;
-        h.Documents.Write = (_, _, _, _) => Task.FromException<TrueMoon.Aether.Scenes.SceneFileStamp>(new IOException("Disk full"));
+        h.Documents.Write = (_, _, _, _) => Task.FromException<SceneFileStamp>(new IOException("Disk full"));
         await Assert.ThrowsAsync<IOException>(() => h.Projects.CloseAsync(DocumentCloseChoice.Save, "retry.aetherscene"));
         Assert.Same(old, h.Projects.Active); Assert.False(old.IsClosed); Assert.True(h.State.UndoCount > 0);
         h.Edit(59); Assert.Equal(59, DocumentData.X(h.State)); var expected = h.State.Document;

@@ -1,5 +1,8 @@
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
@@ -37,10 +40,10 @@ public sealed class EditorHeaderConfigurationTests
         Assert.NotSame(first, second); Assert.NotSame(first.Menu, second.Menu); Assert.NotSame(first.RunButton, second.RunButton);
         Assert.NotSame(first.RunCommand, second.RunCommand); Assert.Equal(2, style.Configurations);
         Assert.Equal("First project", first.Caption.Value); Assert.Equal("Second project", second.Caption.Value);
-        source.Refresh(TrueMoon.Aether.Sessions.SessionState.Stopped, candidate: true); ui1.Update(); ui2.Update();
+        source.Refresh(SessionState.Stopped, candidate: true); ui1.Update(); ui2.Update();
         Assert.True(first.RunButton.IsEnabled); Assert.True(second.RunButton.IsEnabled);
         ui1.Dispose(); Assert.True(first.IsDisposed); Assert.False(second.IsDisposed);
-        source.Refresh(TrueMoon.Aether.Sessions.SessionState.Playing, candidate: true); ui2.Update();
+        source.Refresh(SessionState.Playing, candidate: true); ui2.Update();
         Assert.True(second.PauseButton.IsEnabled); Assert.False(second.RunButton.IsEnabled);
         app.Dispose(); Assert.False(second.IsDisposed);
         Assert.Throws<ObjectDisposedException>(() => source.Model.Select("green-cube"));

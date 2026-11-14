@@ -1,15 +1,19 @@
+using TrueMoon.Aether.Runtime;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Numerics;
 using SkiaSharp;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Input;
-using TrueMoon.Aether.Checkpoints;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Input;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -76,7 +80,7 @@ internal static class RoomViewportProbe
                 var checks = new[] { (new Vector3(-1.5f, 1, -1), new SKColor(204, 51, 38)),
                     (new Vector3(1.5f, 1, -1), new SKColor(51, 204, 77)),
                     (new Vector3(0, 1, -2), check.Active ? new SKColor(166, 133, 17) : new SKColor(25, 66, 149)) };
-                var projection = new TrueMoon.Aether.Rendering.PrimitiveScene(check.Camera, 0, Vector3.One)
+                var projection = new PrimitiveScene(check.Camera, 0, Vector3.One)
                     .CreateViewProjection(check.Width, check.Height);
                 foreach (var (position, color) in checks)
                 {
@@ -226,8 +230,8 @@ internal static class RoomViewportProbe
             File.WriteAllText(Path.Combine(input, "Game.cs"), text);
             File.WriteAllText(Path.Combine(input, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
             var path = Path.Combine(input, "Game.Logic.csproj");
-            File.WriteAllText(path, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether\"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Contracts\"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
-            return new(path, "Game.Logic.dll", "Game.Logic.RoomGame", revision);
+            File.WriteAllText(path, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether.Runtime\"><HintPath>$(AetherRuntimePath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Aether.Abstractions\"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Contracts\"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
+            return new(path, "Game.Logic.dll", "Game.Logic.RoomGame", revision) { RuntimeAccess = true };
         }
     }
     private sealed record Pending(string Name, ulong Tick, ulong Generation, int Width, int Height, uint Color, CameraTransform Camera, bool Active)

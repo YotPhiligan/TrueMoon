@@ -1,0 +1,345 @@
+{
+  "Date": "2026-11-12",
+  "Scope": "Isolated Windows x64 MiniAudioEx binding prototype with routed valid fixtures.",
+  "ProductionEligible": false,
+  "Completed": true,
+  "Command": "pwsh -NoProfile -File ManualTests/MiniAudioExResearch/Verify.ps1 -EvidenceDirectory TestResults/MiniAudioEx-20261112/final-02 -Device -MutedDevice",
+  "Sdk": "11.0.100",
+  "Framework": "net11.0",
+  "LanguageVersion": "latest",
+  "Features": ";runtime-async=on",
+  "ProfileSources": [
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Build.props",
+      "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props",
+      "Sha256": "4292CD7B581C08609FA173BEBB188F99729068CBA1A24CDD69F97C3CE7D50335"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\global.json",
+      "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+    },
+    {
+      "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\BuildProfile.ps1",
+      "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+    }
+  ],
+  "PrototypeSources": [
+    {
+      "Name": "AudioGraph.cs",
+      "Sha256": "157EB49B7F8A2239EBA52BBCE2F67984951BE8F5BBE8FC37332BD5B5D40B4BAE"
+    },
+    {
+      "Name": "FileVorbisBackend.cs",
+      "Sha256": "51D9A29ECA1289408C6CCD02ED58CB0FA65B43EB97F7F5EBC24C7FF800BAF361"
+    },
+    {
+      "Name": "Fixtures.cs",
+      "Sha256": "B61173578A6037A6978234A7B3EFE94F43926369E4E67C4130142DCDC119866C"
+    },
+    {
+      "Name": "LoopbackCapture.cs",
+      "Sha256": "FD8D6372606556F5F90BE07D08D4698A253A845AECB3613A93C20D6D62B56105"
+    },
+    {
+      "Name": "NativeAllocationTracker.cs",
+      "Sha256": "59E2DA0F8FFD1D56042BE4ACBE5AFBCDE49F8C8CE26F6FBB55AC84F632740E02"
+    },
+    {
+      "Name": "NativeOwner.cs",
+      "Sha256": "C147074C78DBBFFDE9226140EFD70607034F78B6700A61D612C011578B2797C6"
+    },
+    {
+      "Name": "PlaybackTelemetry.cs",
+      "Sha256": "02BCCD1DA8B5732F1CDC6C93FD99A096A097A732A0A59FD64192DD6F74685FFB"
+    },
+    {
+      "Name": "Probe.csproj",
+      "Sha256": "323EA97004F3AD957925D623C351C6210219B85D5FA064F997AF8FA82D7DA51D"
+    },
+    {
+      "Name": "Program.cs",
+      "Sha256": "80EB7D6B37414C273692CDDAED92CB9BBD71F403DB800AB6552B41A3C7BAF3B1"
+    },
+    {
+      "Name": "README.md",
+      "Sha256": "DE74E31E4222A23DFFD807848096419C770303924F132EA917823BB2E4726802"
+    },
+    {
+      "Name": "Verify.ps1",
+      "Sha256": "AADFF21F056E88B63CC9A7DB5D3B7FDCDFE7145E43BA7F6996120BE452048E3B"
+    }
+  ],
+  "Packages": [
+    {
+      "Sha256": "E57733E2FFBB45703EE03C1945B396CEA322F3DE06A6C1D7D4F6F834834809E7",
+      "Bytes": 5452358,
+      "Id": "JAJ.Packages.MiniAudioEx",
+      "Version": "4.0.1"
+    },
+    {
+      "Sha256": "6D3D4E4C3928B54D5E37F02F345CEC3FB8D19B8CB718D1A5EC58D70A1561341F",
+      "Bytes": 1080050,
+      "Id": "OggVorbisEncoder",
+      "Version": "1.2.2"
+    }
+  ],
+  "MiniAudioExRepositoryCommit": "076ed1d1b323d705ac26093dc4a18e998a7857d8",
+  "ReviewedNativeSourceCommit": "9f85b56157027cc57c7cd0a13fea7fee3f1e167e",
+  "Profiles": [
+    {
+      "Configuration": "Debug",
+      "Delivery": "source build",
+      "Checks": 127,
+      "Breakdown": {
+        "Offline": 97,
+        "MutedActualDevice": 16,
+        "Inspect": 10,
+        "MinimalCleanup": 4
+      },
+      "NativeSha256": "70F7DD4E6A1DECBEE0791E22D231B7286E99BDE15AB86262284FF62C2CA3A641",
+      "ManagedSha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575",
+      "NativeObjectSizes": {
+        "context": 720,
+        "device": 3312,
+        "engine": 1360,
+        "sound": 1024,
+        "resource_manager": 992,
+        "resource_manager_data_source": 744
+      },
+      "LongStream": {
+        "FileBytes": 115200044,
+        "FullDecodedFloatBytes": 230400000,
+        "PeakTrackedNativeBytes": 1940431
+      },
+      "Lifetime": {
+        "Cycles": 32,
+        "BaselineHandles": 213,
+        "HandleSamples": [
+          210,
+          210,
+          210,
+          210,
+          210,
+          210,
+          210,
+          210
+        ],
+        "PrivateByteSamples": [
+          9523200,
+          9035776,
+          9318400,
+          9408512,
+          9482240,
+          9555968,
+          9650176,
+          9609216
+        ]
+      },
+      "Device": {
+        "Backend": "WASAPI",
+        "RequestedFrames": 256,
+        "ActualPeriodFrames": 374,
+        "ActualPeriods": 3,
+        "ActualSampleRate": 48000,
+        "Name": "Динамики (FiiO Q series)"
+      },
+      "PlaybackCallbacks": {
+        "Blocks": 1806,
+        "Frames": 462336,
+        "Failures": 0,
+        "CaptureOverflowBlocks": 0,
+        "CallbackIncludesManagedInstrumentation": true,
+        "P50Milliseconds": 0.0022,
+        "P99Milliseconds": 0.0109,
+        "MaxMilliseconds": 0.3723
+      },
+      "DevicePeakTrackedNativeBytes": 2768071,
+      "MusicTailRmsAfterKnownEof": 0.020562649379888106,
+      "FinalLiveObjects": 0,
+      "FinalLiveObjectBytes": 0,
+      "TrackedNativeAllocationsZero": true,
+      "StreamFilesExclusivelyReopened": true,
+      "OggLengthResult": "not_implemented",
+      "ActualOutputMuted": true,
+      "RawReports": [
+        {
+          "Name": "inspect-Debug",
+          "Sha256": "BF3523D890965FE247E1F6A54AE5A0D36A0D112583FE846A4ABBBB5D6CD6ADEC",
+          "Path": "TestResults/MiniAudioEx-20261112/final-02/inspect-Debug.json"
+        },
+        {
+          "Name": "cleanup-Debug",
+          "Sha256": "BAE6D6F22B8798911DAB9A4F8FEC8710BEAC1258600A4972ABB73D58D25642E1",
+          "Path": "TestResults/MiniAudioEx-20261112/final-02/cleanup-Debug.json"
+        },
+        {
+          "Name": "offline-Debug",
+          "Sha256": "B3DB4BD0ABEA691F1E7F5CAF52F0E5F281F46A9C0C3633B6F30079734308EB45",
+          "Path": "TestResults/MiniAudioEx-20261112/final-02/offline-Debug.json"
+        },
+        {
+          "Name": "device-muted-Debug",
+          "Sha256": "5C26AF0E658E1C5FA4A6404A5C7388929973C62FBC1B319A25B3A51D4658F09F",
+          "Path": "TestResults/MiniAudioEx-20261112/final-02/device-muted-Debug.json"
+        }
+      ]
+    },
+    {
+      "Configuration": "Release",
+      "Delivery": "framework-dependent published",
+      "Checks": 127,
+      "Breakdown": {
+        "Offline": 97,
+        "MutedActualDevice": 16,
+        "Inspect": 10,
+        "MinimalCleanup": 4
+      },
+      "NativeSha256": "70F7DD4E6A1DECBEE0791E22D231B7286E99BDE15AB86262284FF62C2CA3A641",
+      "ManagedSha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575",
+      "NativeObjectSizes": {
+        "context": 720,
+        "device": 3312,
+        "engine": 1360,
+        "sound": 1024,
+        "resource_manager": 992,
+        "resource_manager_data_source": 744
+      },
+      "LongStream": {
+        "FileBytes": 115200044,
+        "FullDecodedFloatBytes": 230400000,
+        "PeakTrackedNativeBytes": 1940431
+      },
+      "Lifetime": {
+        "Cycles": 32,
+        "BaselineHandles": 213,
+        "HandleSamples": [
+          210,
+          210,
+          210,
+          210,
+          210,
+          210,
+          210,
+          210
+        ],
+        "PrivateByteSamples": [
+          9162752,
+          8810496,
+          8986624,
+          9093120,
+          9203712,
+          9297920,
+          9388032,
+          9412608
+        ]
+      },
+      "Device": {
+        "Backend": "WASAPI",
+        "RequestedFrames": 256,
+        "ActualPeriodFrames": 374,
+        "ActualPeriods": 3,
+        "ActualSampleRate": 48000,
+        "Name": "Динамики (FiiO Q series)"
+      },
+      "PlaybackCallbacks": {
+        "Blocks": 1809,
+        "Frames": 463104,
+        "Failures": 0,
+        "CaptureOverflowBlocks": 0,
+        "CallbackIncludesManagedInstrumentation": true,
+        "P50Milliseconds": 0.0027,
+        "P99Milliseconds": 0.0119,
+        "MaxMilliseconds": 0.4513
+      },
+      "DevicePeakTrackedNativeBytes": 2768071,
+      "MusicTailRmsAfterKnownEof": 0.02055774654501052,
+      "FinalLiveObjects": 0,
+      "FinalLiveObjectBytes": 0,
+      "TrackedNativeAllocationsZero": true,
+      "StreamFilesExclusivelyReopened": true,
+      "OggLengthResult": "not_implemented",
+      "ActualOutputMuted": true,
+      "RawReports": [
+        {
+          "Name": "inspect-Release",
+          "Sha256": "EF32AB910396903F8BFD3542841E80372099DB857E71F915D68B534C2353DEF4",
+          "Path": "TestResults/MiniAudioEx-20261112/final-02/inspect-Release.json"
+        },
+        {
+          "Name": "cleanup-Release",
+          "Sha256": "3F8D827C84A545B1F9DE2D0CCE3D80EB78C6CECB3BB9B58090005E6615A960BA",
+          "Path": "TestResults/MiniAudioEx-20261112/final-02/cleanup-Release.json"
+        },
+        {
+          "Name": "offline-Release",
+          "Sha256": "C0A0020C9ACF46965A5323C09D72BF3B8AE262536839C8A216E26659AAE0E18A",
+          "Path": "TestResults/MiniAudioEx-20261112/final-02/offline-Release.json"
+        },
+        {
+          "Name": "device-muted-Release",
+          "Sha256": "5444365B4AD62634C28514130DC0739D7469045556C9AE4681795C6ED59A357C",
+          "Path": "TestResults/MiniAudioEx-20261112/final-02/device-muted-Release.json"
+        }
+      ]
+    }
+  ],
+  "KnownDefects": [
+    {
+      "Bytes": 840,
+      "ExpectedExitCode": 1,
+      "Path": "TestResults/MiniAudioEx-20261112/final-02/raw-vorbis-defect-Debug.json",
+      "Sha256": "CA9AAFC13802C6CB94159E3502F5CA200D770CD0866CC2F19116DAFDB7A77E28",
+      "Blocks": 1,
+      "Name": "raw-vorbis-defect-Debug"
+    },
+    {
+      "Bytes": 1680,
+      "ExpectedExitCode": 1,
+      "Path": "TestResults/MiniAudioEx-20261112/final-02/malformed-vorbis-defect-Debug.json",
+      "Sha256": "A78334DBE4FD25AFBFC1A5130C560A5E2B2D1AD8531D48D8DB477FF5481CE49E",
+      "Blocks": 2,
+      "Name": "malformed-vorbis-defect-Debug"
+    },
+    {
+      "Bytes": 840,
+      "ExpectedExitCode": 1,
+      "Path": "TestResults/MiniAudioEx-20261112/final-02/raw-vorbis-defect-Release.json",
+      "Sha256": "657EBBFA805A82BD2884C911F08E51284D6A7378E2D2D97B2979A777195C2008",
+      "Blocks": 1,
+      "Name": "raw-vorbis-defect-Release"
+    },
+    {
+      "Bytes": 1680,
+      "ExpectedExitCode": 1,
+      "Path": "TestResults/MiniAudioEx-20261112/final-02/malformed-vorbis-defect-Release.json",
+      "Sha256": "91ADD5019C6B236281F7FF405A6FB27CCABF2A663C1DAD91B856406C8C335BDE",
+      "Blocks": 2,
+      "Name": "malformed-vorbis-defect-Release"
+    }
+  ],
+  "AudibleConfirmation": {
+    "Limitation": "Audition used the earlier harness with a bad crossfade base gain and an incorrect modulo-cursor assertion. Final corrected crossfade is verified by muted actual-device PCM, not a second listening confirmation.",
+    "Scope": "SFX and generated OGG music heard normally in the explicitly coordinated audition.",
+    "Date": "2026-11-12",
+    "ConfirmedByUser": true,
+    "Report": "TestResults/MiniAudioEx-20261112/audition-01.json"
+  },
+  "ProcessOnlyLoopback": {
+    "Outcome": "invalid_args (-2)",
+    "Report": "TestResults/MiniAudioEx-20261112/device-03/device-Debug.json",
+    "SystemWideCaptureEnabled": false
+  },
+  "Limitations": [
+    "Native live/peak bytes observe configured allocation callbacks; libvorbis internal malloc and OS allocations are not all counted.",
+    "FileVorbisBackend avoids non-OGG probes but does not fix malformed OGG or replace full format validation.",
+    "Ogg duration is unavailable; unknown-length streaming cursor is monotonic across loops.",
+    "Diagnostic callbacks/allocators include managed instrumentation; callback timings are not a production RT benchmark or end-to-end latency.",
+    "No 10-minute real-time soak, driver underrun measurement, physical device loss/default-device switching, Linux/macOS, AOT or trimming proof.",
+    "No production App/DI/ECS/Nom module; no current solution build/test run is claimed by this prototype."
+  ],
+  "EvidenceDirectory": "TestResults/MiniAudioEx-20261112/final-02",
+  "VerificationSha256": "1D268FD32083C8680EB99B030515209AC673C02BC241A6B8DB84D899E89899D0"
+}

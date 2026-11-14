@@ -9,7 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
-    <ProjectReference Include="../../TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj" />
     <None Update="Assets/Fonts/NotoSans-Regular.ttf;Assets/Fonts/OFL.txt"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

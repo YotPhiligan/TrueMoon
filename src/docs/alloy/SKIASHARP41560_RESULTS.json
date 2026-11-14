@@ -1,0 +1,932 @@
+{
+  "Completed": true,
+  "Date": "2026-11-12",
+  "Task": "SkiaSharp/native 4.156.0",
+  "GitHead": "73df16229da1db54e1170ac0d56b9d385f91abd7",
+  "ManagedVersion": "4.156.0",
+  "ManagedSelection": "Already changed by the user; Directory.Packages.props preserved byte-for-byte",
+  "Native": {
+    "skiaSharpVersion": "4.156.0",
+    "skiaSharpRevision": "c4ef20229bd56e41731aa94eebe8b082b8ef886c",
+    "skiaRevision": "d1717dc22ef2203b7fc9bf0e01078b37b1a4af6b",
+    "interopAbi": 1,
+    "runtimeIdentifier": "win-x64",
+    "sha256": "70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A",
+    "msvcVersion": "14.51.36231",
+    "windowsSdkVersion": "10.0.26100.0",
+    "sourcePatches": [
+      {
+        "id": "vulkan-general-host-stage",
+        "sha256": "58F1F52FD510A5EA234AFCCBCA35DC220B4A9832F5BAB509C0D6169B34E0AEBC"
+      }
+    ]
+  },
+  "NativeBytes": 9075712,
+  "NativeBuild": {
+    "ExitCode": 0,
+    "ElapsedSeconds": 104.2725477
+  },
+  "Source": {
+    "RepositoryMetadata": "SkiaSharp 4.156.0 official NuGet nuspec",
+    "SkiaRepository": "https://github.com/mono/skia",
+    "Release": "https://github.com/mono/SkiaSharp/releases/tag/v4.156.0",
+    "Repository": "https://github.com/mono/SkiaSharp",
+    "Revision": "c4ef20229bd56e41731aa94eebe8b082b8ef886c",
+    "SkiaGitlink": "d1717dc22ef2203b7fc9bf0e01078b37b1a4af6b"
+  },
+  "Toolchain": {
+    "Ninja": "1.13.2",
+    "ConsumersSdk": "11.0.100",
+    "Features": "runtime-async=on",
+    "TestRunner": "xUnit 2 / VSTest",
+    "WindowsSdk": "10.0.26100.0",
+    "ProducerSdk": "10.0.404 (upstream global.json 10.0.401/latestPatch)",
+    "Framework": "net11.0",
+    "Direct3D": false,
+    "MSVC": "14.51.36231",
+    "Vulkan": true,
+    "NewCompilerOrSdkInstalled": false,
+    "Python": "3.13.17"
+  },
+  "ABI": {
+    "Exports": [
+      "tm_skia_vk_interop_abi_version",
+      "tm_skia_vk_texture_info_size",
+      "tm_skia_vk_surface_acquire",
+      "tm_skia_vk_texture_return",
+      "tm_skia_vk_texture_delete"
+    ],
+    "DescriptorBytes": 48,
+    "Version": 1,
+    "ExportLogSha256": "D5EBDA8B21C3929813B812134ADD5CDCC83AE0854DB07CF6713616613F4031CA",
+    "Ownership": "Single native Skia handle; sequential same-queue borrow/return, existing owner-thread cleanup",
+    "HeaderAndExtensionChanged": false
+  },
+  "NativeProfiles": {
+    "GpuCompositionsPerProfile": 36,
+    "ReadbacksPerProfile": 18,
+    "Comparison": "Same tree raster/OpenGL/Vulkan, 3 scales",
+    "LeasesPerCompositionProfile": 18,
+    "CoreAndSyncValidationWarnings": 0,
+    "SourceDebugAndPublishedRelease": {
+      "Completed": true,
+      "NativeSha256": "70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A",
+      "Cases": [
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\AlloyVulkanTest\\bin\\Debug\\net11.0/AlloyVulkanTest.dll",
+            "--interop-check"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "83E16247573D491F637D05D0934A5B4C102B95256FC56820131AA5EDE2416463",
+          "Name": "source-abi"
+        },
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\AlloyVulkanTest\\bin\\Debug\\net11.0/AlloyVulkanTest.dll",
+            "--interop",
+            "--validation"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "8959960B56B7CDEB3088D7CEAE9759D101B2D9FC139B0A60993CC19A25E22E51",
+          "Name": "source-readback"
+        },
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\AlloyVulkanTest\\bin\\Debug\\net11.0/AlloyVulkanTest.dll",
+            "--interop-compose",
+            "--validation"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "62FA4DA00F6A4A5FA0BF2BC6468153B6785597A934173685D358C086A02D3A81",
+          "Name": "source-composition"
+        },
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\AlloyVulkanTest\\bin\\Debug\\net11.0/AlloyVulkanTest.dll",
+            "--backend-compare",
+            "--validation"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "D23EABED3728D99DD6B687876A0E2063B9CC3E04AC1F5333CB3CF81810EA6992",
+          "Name": "source-compare"
+        },
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\AlloyVulkanTest\\bin\\Debug\\net11.0/AlloyVulkanTest.dll",
+            "--validation-shadows",
+            "--validation",
+            "--design-output",
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\SkiaSharp41560-20261112-232439\\native-final/gallery-source"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "604B8B6AAB6C5DD0C626F6B3B0DD6E7B28F706CBD70514AF0A3FD9C6A19B09C1",
+          "Name": "source-shadows"
+        },
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\SkiaSharp41560-20261112-232439\\published/AlloyVulkanTest.dll",
+            "--interop-check"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "D27C94DCA0C625F137DA428C17C26ADC64EA6282D0FD208D8CEAC0065BEAB445",
+          "Name": "published-abi"
+        },
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\SkiaSharp41560-20261112-232439\\published/AlloyVulkanTest.dll",
+            "--interop",
+            "--validation"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "B1E9332944CB8F742DC5621021B6EDE021FADCF427D6E66ED908FC6EE02583D2",
+          "Name": "published-readback"
+        },
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\SkiaSharp41560-20261112-232439\\published/AlloyVulkanTest.dll",
+            "--interop-compose",
+            "--validation"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "C0A7A7266C8432F9470287901DD1836BA9BABC610C0F896BF1C0F471C82EB2AC",
+          "Name": "published-composition"
+        },
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\SkiaSharp41560-20261112-232439\\published/AlloyVulkanTest.dll",
+            "--backend-compare",
+            "--validation"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "F66354BE4AAA7510E84303E8C9A6790B5F1BE69A9FFF5CB75A74AFBB4751777D",
+          "Name": "published-compare"
+        },
+        {
+          "Arguments": [
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\SkiaSharp41560-20261112-232439\\published/AlloyVulkanTest.dll",
+            "--validation-shadows",
+            "--validation",
+            "--design-output",
+            "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\SkiaSharp41560-20261112-232439\\native-final/gallery-published"
+          ],
+          "ExitCode": 0,
+          "LogSha256": "B171B5FAF54CD28D755339BD5860660B3AC5EDE36F83CEA0DA41764E1E4337B3",
+          "Name": "published-shadows"
+        }
+      ],
+      "Failure": null
+    },
+    "CoreAndSyncValidationErrors": 0,
+    "Decorations": "Dark/light x100/150/200%, 18captures/12comparisons per profile with actual blur witnesses"
+  },
+  "NegativeControls": {
+    "StockNative156WithoutExtension": {
+      "LogSha256": "6C16E6E0F6C30A7740B76B2F60D103257D071E1C60112BD88D72FF6E4F5C87E7",
+      "ExitCode": 2
+    },
+    "UnknownSource": {
+      "LogSha256": "679AB329109C54B4F09F5E515C8E0AFF25745D5749C4EF85856ECF57264E461C",
+      "ExitCode": 1
+    },
+    "OmittedAnalyzer": {
+      "Name": "build-without-analyzer",
+      "ExitCode": 1,
+      "Diagnostic": "CS0246"
+    },
+    "OldNative155": {
+      "LogSha256": "0B3D5CAEA51798AED7C88974898CDB7C51433F0806788775C15B1374E6F3FBD0",
+      "ExitCode": 2
+    },
+    "PatchIdempotencyPins": [
+      "4.155.0",
+      "4.156.0"
+    ]
+  },
+  "Tests": [
+    {
+      "Configuration": "debug",
+      "Failed": 0,
+      "Project": "TrueMoon.Alloy.Tests",
+      "Passed": 1224,
+      "Skipped": 0,
+      "TrxSha256": "8D4246FDA3EFFB2EE96DB0B72EBBA7FE77D0BB0D3B6B8849CFF6613CF7C22F7D"
+    },
+    {
+      "Configuration": "debug",
+      "Failed": 0,
+      "Project": "TrueMoon.Alloy.Hosting.Tests",
+      "Passed": 171,
+      "Skipped": 0,
+      "TrxSha256": "E490E137DE0309B1F27E991F1D0E615ADCBAC2A2D215B57E4504914BCC5CD408"
+    },
+    {
+      "Configuration": "debug",
+      "Failed": 0,
+      "Project": "TrueMoon.Aether.Editor.Tests",
+      "Passed": 1496,
+      "Skipped": 0,
+      "TrxSha256": "FCA4B6D9567D797F09F41DC9C9B71F0313B26708621DB9B05E0340DD7D7F2B58"
+    },
+    {
+      "Configuration": "release",
+      "Failed": 0,
+      "Project": "TrueMoon.Alloy.Tests",
+      "Passed": 1224,
+      "Skipped": 0,
+      "TrxSha256": "02D71AC0BCBE613B061FC5D2295FE4624DF9BF22102AC2B8CAD1904DCC090632"
+    },
+    {
+      "Configuration": "release",
+      "Failed": 0,
+      "Project": "TrueMoon.Alloy.Hosting.Tests",
+      "Passed": 171,
+      "Skipped": 0,
+      "TrxSha256": "27707CEB11EF5A5A409F17B493BFA6CC1B0DE7C07E701CAA43EBADABDC4A6139"
+    },
+    {
+      "Configuration": "release",
+      "Failed": 0,
+      "Project": "TrueMoon.Aether.Editor.Tests",
+      "Passed": 1496,
+      "Skipped": 0,
+      "TrxSha256": "613532DCA0C03DC029E01BB9887BD43F535028B97667AFC8FF77E11FBAD70232"
+    }
+  ],
+  "Solution": {
+    "LogSha256": "043F092F4D0BF5B7D0D74422EFAC9A088DF1635BCDB571D3BA1BC7331ACAC57E",
+    "Configuration": "Debug",
+    "NonIncremental": true,
+    "Errors": 0,
+    "Warnings": 1556
+  },
+  "PackageProof": {
+    "AppCases": 36,
+    "RawDirectory": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\AlloyPackages\\skia41560-final-20261112-235200",
+    "Packages": [
+      {
+        "Sha256": "B27AB81754BBF19A3A5DCD91A28BB81D734079087A32733A13FE5AB4AEB4011A",
+        "RuntimeSha256": "93A90BDEF45A354D1CEC41CE58FC15E8F1C58168FE354617461E84A4805A337C",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      },
+      {
+        "Sha256": "0D052162B8C8C2F66BAC1B12281FC22C0B50EA5E4322CDE41B7036B98E0CBBDB",
+        "RuntimeSha256": "0B4169E2E42B47BAA6C2A943695C9F63F1E70DD47AF91386028808A14DDC2F32",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon.Alloy",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      },
+      {
+        "Sha256": "FFB2084FB3D1A01A3EB6567EA4F46FB0DCA5EA48958FC13F36812FF18AC44583",
+        "RuntimeSha256": "706F6243E0EE8A177D7A60C398A5975F35436D42A727EDEEEB1C1BDA60FDAEFB",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon.Alloy.Hosting",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      },
+      {
+        "Sha256": "5B52D2D0E30DEEEC157AF6D00088A82A91AEE3AEA3920348681C11756050223F",
+        "RuntimeSha256": "F0AC2268F594DA6BA8B78400B4BA48B99A8430AB6380FE9371C46A5C78B31B47",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon.Alloy.Platform.Silk",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      },
+      {
+        "Sha256": "7CAAD798AF55B3F2BA9768DC9CC4FB97FB862D346FB30B5BD31E47A08E270D6E",
+        "RuntimeSha256": "F25F4C4CD925E06AC64FC0A4BF30DD456BB9B1A0D1E0B83BC7F1424917EBEDBD",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon.Alloy.Rendering.Skia",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      },
+      {
+        "Sha256": "916091323C581BD1B6E177BA23DF7B51BB974DCEBA13C2F3E738E00728B46ADF",
+        "RuntimeSha256": "3A36E2C77772CC71D4330AA347E4B3D96085B6449CBDF15F0FC0A01E908EFC4F",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon.Argentis",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      },
+      {
+        "Sha256": "86801BD652060D8D13F818BE6E6F1A5A4ECAAA66DEDF1C020959BF75F904F709",
+        "RuntimeSha256": "F9B2D342B4ADA40F70CDFF28BC7A33AA541DD18F0945DCB73E792C2963C6D4D3",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon.Cobalt",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      },
+      {
+        "Sha256": "D76ABB9580A1AA58F01C797C352E8576C90CEB8CC67CE76E319D5186950BB1A1",
+        "RuntimeSha256": "B1C080DA9A2CBC632324EA55D2AA2EFED90E358AF60B8FC70BB4539DC45D6198",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon.Contracts",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      },
+      {
+        "Sha256": "FD999340B3E6D20C2965F7727ADBD437C4FD73B1C5DA2E030BB319A360A3140D",
+        "RuntimeSha256": "12B55A71F0D7F30C8B8480029C2458DFA2D7FFA2021ADC032C5AB608DE9D7A77",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon.Core",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      },
+      {
+        "Sha256": "0019847882C25BBE615C87E1F459C73FEA1F2CAA98C1A18B1F7DCA4197E0C5BE",
+        "RuntimeSha256": "35A003549B0F5F5D6E73B3DBC48FADFA92A42D3E6A6AD6D82FA91CE52721F602",
+        "Readme": "PACKAGE.md",
+        "Id": "TrueMoon.Extensions.DependencyInjection",
+        "Version": "0.3.0.1-alpha.ui.20261112185201005"
+      }
+    ],
+    "DirectCases": [
+      {
+        "Name": "direct-Debug-build",
+        "NativeSha256": "70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A"
+      },
+      {
+        "Name": "direct-Debug-publish",
+        "NativeSha256": "70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A"
+      },
+      {
+        "Name": "direct-Release-build",
+        "NativeSha256": "70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A"
+      },
+      {
+        "Name": "direct-Release-publish",
+        "NativeSha256": "70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A"
+      }
+    ],
+    "Version": "0.3.0.1-alpha.ui.20261112185201005",
+    "Profiles": [
+      {
+        "Backend": "raster",
+        "Name": "generated-Debug-build-cobalt-raster",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "generated-Debug-build-cobalt-opengl",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "generated-Debug-build-cobalt-vulkan",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "generated-Debug-build-di-raster",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "generated-Debug-build-di-opengl",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "generated-Debug-build-di-vulkan",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "generated-Debug-publish-cobalt-raster",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "generated-Debug-publish-cobalt-opengl",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "generated-Debug-publish-cobalt-vulkan",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "generated-Debug-publish-di-raster",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "generated-Debug-publish-di-opengl",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "generated-Debug-publish-di-vulkan",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "generated-Release-build-cobalt-raster",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "generated-Release-build-cobalt-opengl",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "generated-Release-build-cobalt-vulkan",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "generated-Release-build-di-raster",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "generated-Release-build-di-opengl",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "generated-Release-build-di-vulkan",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "generated-Release-publish-cobalt-raster",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "generated-Release-publish-cobalt-opengl",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "generated-Release-publish-cobalt-vulkan",
+        "Subscriptions": 0,
+        "Provider": "cobalt",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "generated-Release-publish-di-raster",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "generated-Release-publish-di-opengl",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "generated-Release-publish-di-vulkan",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "di-only-Debug-build-di-raster",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "di-only-Debug-build-di-opengl",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "di-only-Debug-build-di-vulkan",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "di-only-Debug-publish-di-raster",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "di-only-Debug-publish-di-opengl",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "di-only-Debug-publish-di-vulkan",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "di-only-Release-build-di-raster",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "di-only-Release-build-di-opengl",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "di-only-Release-build-di-vulkan",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "raster",
+        "Name": "di-only-Release-publish-di-raster",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "opengl",
+        "Name": "di-only-Release-publish-di-opengl",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      },
+      {
+        "Backend": "vulkan",
+        "Name": "di-only-Release-publish-di-vulkan",
+        "Subscriptions": 0,
+        "Provider": "di",
+        "Cleanup": true,
+        "ModelDisposeCalls": 1,
+        "ActiveSessions": 0,
+        "Completed": true
+      }
+    ],
+    "SummarySha256": "463741AC32FF8000142169B8EFA0A98C6F557E985A0A74AE5A0E8D705DBD50D4",
+    "Completed": true,
+    "ProducerSourceHashes": 435,
+    "Binlogs": [
+      {
+        "Name": "build-di-only-Debug-20261112-185243--53288--WDYeLC.binlog",
+        "Sha256": "4A5F617EFC2EC01FA825EBA6246E0F302BD0ED86AEAD178B274AD4CC788344BE"
+      },
+      {
+        "Name": "build-di-only-Release-20261112-185252--53288--kwnrls.binlog",
+        "Sha256": "19D9AD8580D70A7458D4B91A27ED58303B3CD9328213338B939C6236A8FBCE90"
+      },
+      {
+        "Name": "build-direct-Debug-20261112-185300--53288--98CYDo.binlog",
+        "Sha256": "A79ECEACDE89B06ACEA31DF5BE16D6C2EAFCEEE1A5B72BF9A857A81CCDD4E8BB"
+      },
+      {
+        "Name": "build-direct-Release-20261112-185302--53288--7aGmb6.binlog",
+        "Sha256": "3BFB701D1DB3AAB605BC2C8B8BC813FE0AAAA74ABCA143049017F095BF4B036F"
+      },
+      {
+        "Name": "build-generated-Debug-20261112-185213--53288--ujh8HO.binlog",
+        "Sha256": "FCD7B3490BB2A968618B80211DA4718A4881DB985F28B00B9CA99A33084F83C7"
+      },
+      {
+        "Name": "build-generated-Release-20261112-185228--53288--G_ageK.binlog",
+        "Sha256": "E03C611F0F93C575877F7A48C3EA96C26618EFA2C5388D77DC5CFFA262021265"
+      },
+      {
+        "Name": "build-without-analyzer-20261112-185305--53288--QGGeVK.binlog",
+        "Sha256": "DBADB18C2FD308A43743D5051A2006192465E887C23B3A6B1570FF492D76D9D7"
+      },
+      {
+        "Name": "pack-TrueMoon-20261112-185210--53288--h1Bnzz.binlog",
+        "Sha256": "FDA0EA784ED6DF537732D9847B7A1817C293B06649CF71C503D925DCBBA2D009"
+      },
+      {
+        "Name": "pack-TrueMoon.Alloy-20261112-185202--53288--Wp6Obj.binlog",
+        "Sha256": "DCC02DC5C61A1A77EAB6882FD02B1D0F828ADB5932087AF9939403C94E138B22"
+      },
+      {
+        "Name": "pack-TrueMoon.Alloy.Hosting-20261112-185206--53288--r5cL9E.binlog",
+        "Sha256": "58DDDD0822217E6E2D9AB7A6235D35AA61CFDEFED056ED563A2F0F05759FD3BD"
+      },
+      {
+        "Name": "pack-TrueMoon.Alloy.Platform.Silk-20261112-185204--53288--DeX9ig.binlog",
+        "Sha256": "2AD2A892864A01F7C583DB56B40E04C60349862295E585AFD2163B69C681DA7E"
+      },
+      {
+        "Name": "pack-TrueMoon.Alloy.Rendering.Skia-20261112-185203--53288--9wpYvf.binlog",
+        "Sha256": "1B4385E94583B5476451F130C5A053B41276299C877299DE95E1F98F76DA5770"
+      },
+      {
+        "Name": "pack-TrueMoon.Argentis-20261112-185201--53288--j5yQrK.binlog",
+        "Sha256": "FDB3F03AA4A8355B31F996979DD5823755E4678C2D844397045AA9B45D4C8BC7"
+      },
+      {
+        "Name": "pack-TrueMoon.Cobalt-20261112-185207--53288--u3twgB.binlog",
+        "Sha256": "5BA6E41C245532144C6D0678F2C6CD8E67E7D77B75FD6CDE56301A01B92918B5"
+      },
+      {
+        "Name": "pack-TrueMoon.Contracts-20261112-185202--53288--xSX2Mo.binlog",
+        "Sha256": "E31926F9C84834606D6777C0655E0BA22DAD631BEA4909C22125A3A4E72CE1BC"
+      },
+      {
+        "Name": "pack-TrueMoon.Core-20261112-185206--53288--T8rc9t.binlog",
+        "Sha256": "E3535FDE91DC15E99E795540A1C86EB3981D649DE01EF3928ECEC6EC5220579C"
+      },
+      {
+        "Name": "pack-TrueMoon.Extensions.DependencyInjection-20261112-185212--53288--xy2aEG.binlog",
+        "Sha256": "0BCADFCF34E5F42E9C25A5765FC6FF6B17FD2D133E3BDFCD9536DE6DC8BEA599"
+      },
+      {
+        "Name": "publish-di-only-Debug-20261112-185244--53288--GwPz2G.binlog",
+        "Sha256": "5C734DDAF4FE07A6CD79A443128906FF1A76DEBEA7489E4AE41D810076AA3690"
+      },
+      {
+        "Name": "publish-di-only-Release-20261112-185252--53288--HOlgYu.binlog",
+        "Sha256": "C0EDF16F010095C353A0D6DBE3B7FD285E132FC75E248F7A6DABF3B732CA6845"
+      },
+      {
+        "Name": "publish-direct-Debug-20261112-185301--53288--5nWNf5.binlog",
+        "Sha256": "76E42E4FF922C1FDF088FB540AA0181178434929BF16D10FAA42C45D418250F4"
+      },
+      {
+        "Name": "publish-direct-Release-20261112-185303--53288--mQLeSC.binlog",
+        "Sha256": "575A5AA72A596C28B3277EAD8B6C6F864D76104C7BF1A0DB963EA2D8CF480165"
+      },
+      {
+        "Name": "publish-generated-Debug-20261112-185214--53288--3LwvLx.binlog",
+        "Sha256": "5417765C82F7CA80DDE4A450116501847F978FD9E430ADB6047813365009D34E"
+      },
+      {
+        "Name": "publish-generated-Release-20261112-185229--53288--y_dxi4.binlog",
+        "Sha256": "5E83E56CD222A18D357C2112B0B63856BAE227CF0C806D1A0DCAF024451C5F6D"
+      },
+      {
+        "Name": "restore-di-only-20261112-185243--53288--hyP7oF.binlog",
+        "Sha256": "B9242E577369B28A09BCE9ABB6A1196754F20EE42D1366653FA1C5986B228283"
+      },
+      {
+        "Name": "restore-direct-20261112-185300--53288--AEHSMR.binlog",
+        "Sha256": "5101C5EC82373E2D019B5B35DA5DE38AADD868EF62B54E78C967ED084ECBA64F"
+      },
+      {
+        "Name": "restore-generated-20261112-185213--53288--CQea5R.binlog",
+        "Sha256": "10BAA637543085FD33B86940A62DC11B624A1B18FFD0B8D618C16157F573BCC0"
+      },
+      {
+        "Name": "restore-without-analyzer-20261112-185304--53288--dY8YaW.binlog",
+        "Sha256": "1BB621767E1D4BC15679895923589B87558797FD547CEE0FC7936DECB5AACFA2"
+      }
+    ]
+  },
+  "Commands": [
+    "pwsh -File ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 -SkiaSharpSourcePath <exact-source> -VisualStudioPath <existing-VS> -PythonPath <real-python> -NinjaPath <existing-ninja> -InstallToRenderer",
+    "dotnet build/publish ManualTests/AlloyVulkanTest/AlloyVulkanTest.csproj -c Debug/Release -bl:<unique-{}.binlog>",
+    "AlloyVulkanTest --interop-check / --interop --validation / --interop-compose --validation / --backend-compare --validation / --validation-shadows --validation --design-output <fresh>",
+    "dotnet test <Alloy|Hosting|Editor>.Tests/<project>.csproj -c Debug/Release --logger trx --results-directory <evidence> -bl:<unique-{}.binlog>",
+    "dotnet build TrueMoon.slnx -c Debug --no-incremental -bl:<unique-{}.binlog>",
+    "pwsh -File ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 -RunDirectory <fresh>"
+  ],
+  "Sources": [
+    {
+      "Path": "ManualTests/AlloyVulkanTest/NativeInterop/SourcePins.psd1",
+      "Sha256": "317D7BD653E6B8E8E49D68931EBE186D5F9258F6F0D4E0D0EE1CF1FFE64A9934"
+    },
+    {
+      "Path": "ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1",
+      "Sha256": "BC8340C48FECAA2EBEF2F74B9B6A6102F13B2C1ED7133AA0C2B6EA8BB43E5167"
+    },
+    {
+      "Path": "ManualTests/AlloyVulkanTest/NativeInterop/ApplyNativeInterop.ps1",
+      "Sha256": "05F45B777261B37903DB40558EFA54884978D980BB31A958F3D47ADF449709AD"
+    },
+    {
+      "Path": "ManualTests/AlloyVulkanTest/NativeInterop/ApplyVulkanGeneralStage.ps1",
+      "Sha256": "4AA76B9E51240F16F0B55BAFE5A9305D57E021AADAF132D7114882B8A79348CF"
+    },
+    {
+      "Path": "ManualTests/AlloyVulkanTest/NativeInterop/vulkan-general-host-stage.patch",
+      "Sha256": "58F1F52FD510A5EA234AFCCBCA35DC220B4A9832F5BAB509C0D6169B34E0AEBC"
+    },
+    {
+      "Path": "ManualTests/AlloyVulkanTest/NativeInterop/truemoon_vk_interop.h",
+      "Sha256": "8C1AE65F988B5F07D8F594441930A5F1375F237C1C58B917B0DB49A418725F9E"
+    },
+    {
+      "Path": "ManualTests/AlloyVulkanTest/NativeInterop/truemoon_vk_interop.inc",
+      "Sha256": "B3B96CD65907B5AC2C17E316EACF4249A34E19023091589363DCFB5596B2B529"
+    },
+    {
+      "Path": "ManualTests/AlloyVulkanTest/NativeInterop/README.md",
+      "Sha256": "0F6BD1F365373DDCECE779C7350356E58691D113F4A919F40849333ACD170749"
+    },
+    {
+      "Path": "ManualTests/AlloyVulkanTest/README.md",
+      "Sha256": "483859223D6CF1450C351343656624913326D68C1D1C76229D870BC114C2C352"
+    },
+    {
+      "Path": "ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1",
+      "Sha256": "A6076DDC234D93A13E588EE90AB6C7215A9DBC324CE4BC86385010F0E008D7DF"
+    },
+    {
+      "Path": "TrueMoon.Alloy.Rendering.Skia/README.md",
+      "Sha256": "3D9CCE429A93FE482603D5363F2708DB23EA0B71A59AA40FD0495BC4378E542E"
+    },
+    {
+      "Path": "TrueMoon.Alloy.Rendering.Skia/PACKAGE.md",
+      "Sha256": "08C02CCE2E404A6309AB79BE830C69CB4E282E5AC4CEF3279BC5D15C241BF007"
+    },
+    {
+      "Path": "TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.dll",
+      "Sha256": "70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A"
+    },
+    {
+      "Path": "TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.build.json",
+      "Sha256": "07058B8279AAB421747871CF3E40D2A381DD5D6BC3D391A442FAC56B4D06514F"
+    },
+    {
+      "Path": "Directory.Packages.props",
+      "Sha256": "9A5507DD1784617C30DCEE01BCBC6C73FBBC6B27818E15BD312F18079F1FE285"
+    },
+    {
+      "Path": "NuGet.Config",
+      "Sha256": "9DEF15EF5FCAE51FA7EE3AE90F7EE33586D5F4D509962716F9A669160DC6228C"
+    },
+    {
+      "Path": "Directory.Build.props",
+      "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+    },
+    {
+      "Path": "global.json",
+      "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+    }
+  ],
+  "Attempts": [
+    "Initial clone checkout exceeded Windows paths; repaired only new isolated checkout using process-local core.longpaths",
+    "Native attempt1 failed inherited NuGet source mapping; recipe now passes explicit pinned upstream nuget.config",
+    "Native attempt2 reached toolchain and failed missing upstream default Windows SDK28000; recipe selects complete installed SDK26100 and validates VS default MSVC/Spectre",
+    "Final native source build1475steps/104.27seconds exit0; upstream compiler/GN/link warnings retained, zero native warnings not claimed",
+    "First local GPU driver had an absolute-path join error before published cases; final fresh10-case run passed",
+    "First package attempt compiled but outdated resolver hint-name assertion failed; runner now checks hashed hint names, exact type/lifetime and analyzer hash",
+    "Intermediate package pass retained; final frozen pass repeated after completing renderer rebuild instructions"
+  ],
+  "Boundaries": [
+    "Windows x64 framework-dependent raster/OpenGL/Vulkan scope only",
+    "No C# API or custom C ABI/ownership change; no managed version rollback or package-cache DLL substitution",
+    "Physical input/DPI/OS capture, K7 GDI soak, K8 device loss/VRAM, performance and wider release gates stay open",
+    "No new Aether runtime-async/full Runtime/Player test claim; Editor regression and UI consumers only",
+    "Source checkouts/intermediates/raw logs remain local ignored TestResults; results/commands/package and source SHA retained here and in HISTORY; no NuGet publication or git commit/push"
+  ],
+  "RawEvidence": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\SkiaSharp41560-20261112-232439"
+}

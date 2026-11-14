@@ -1,16 +1,23 @@
+using TrueMoon.Aether.Runtime;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editor;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Editor.Projects;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI.Editing;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Abstractions.Sessions;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -151,7 +158,7 @@ internal static class PackageInputWorkflow
     private static string ArchivePayloadHash(string path)
     {
         using var file = File.OpenRead(path); using var archive = new ZipArchive(file, ZipArchiveMode.Read);
-        var entry = archive.GetEntry("lib/net10.0/Game.Packaged.dll")!; Program.Check(entry.Length is > 0 and < 1024 * 1024, "Package fixture DLL exceeds its bound.");
+        var entry = archive.GetEntry($"lib/{SceneGameSource.TargetFramework}/Game.Packaged.dll")!; Program.Check(entry.Length is > 0 and < 1024 * 1024, "Package fixture DLL exceeds its bound.");
         using var input = entry.Open(); return Convert.ToHexString(SHA256.HashData(input));
     }
 }

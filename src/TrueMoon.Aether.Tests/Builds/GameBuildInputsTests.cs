@@ -1,5 +1,6 @@
 using System.Security;
-using TrueMoon.Aether.Builds;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Tooling.Builds;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Builds;
@@ -24,7 +25,7 @@ public sealed class GameBuildInputsTests(GameBuildFixture builds) : IClassFixtur
         var second = await compiler.BuildAsync(request with { SourceRevision = 99 });
         Assert.Equal(inputs.Fingerprint, second.Inputs!.Fingerprint);
         Assert.NotEqual(first.BuildId, second.BuildId);
-        Assert.Null(GameBuildArtifact.Open(first.DirectoryPath, GameBuildFixture.Hash).Inputs);
+        Assert.Null(new GameBuildResult(GameBuildArtifact.Open(first.DirectoryPath, GameBuildFixture.Hash)).Inputs);
         Assert.Contains(inputs.Files, f => f.Path.EndsWith("Game.cs", StringComparison.Ordinal));
         Assert.Null(compiler.ProcessId);
         Assert.All(compiler.ReadDiagnostics(16, 0), item => Assert.True(item.Completed && item.ResourcesReleased));

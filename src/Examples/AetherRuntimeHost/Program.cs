@@ -1,10 +1,10 @@
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
 using EngineRuntimeHost = TrueMoon.Aether.Runtime.AetherRuntimeHost;
-using TrueMoon.Aether.Sessions;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 
@@ -39,20 +39,21 @@ internal static class Program
                 JsonDirectory = Path.Combine(launch.ReportDirectory, "diagnostics", "runtime"),
                 JsonUseRunDirectories = true, ConsoleOutput = consoleDiagnostics
             });
-            context.UseAether(options =>
+            context.UseAetherRuntime(options =>
             {
                 options.HostContractId = launch.Identity.HostContractId;
                 options.GameBuildId = launch.Identity.GameBuildId;
                 options.ReportDirectory = launch.ReportDirectory;
                 options.ChildDiagnostics = launch.DiagnosticDelivery ?? new() { Enabled = false };
             });
+            context.UseAetherSurfaceRendering();
             if (launch.Role == RuntimeRole.EditPreview)
-                context.UseAetherPreviewRuntime(launch, bootstrap.ParentProcessId);
-            else context.UseAetherRuntime(launch, bootstrap.ParentProcessId);
+                context.UseAetherPreviewRuntime(bootstrap);
+            else context.UseAetherRuntime(bootstrap);
         });
         await app.StartAsync();
         var runtime = app.Services.Resolve<EngineRuntimeHost>()!;
-        var engine = app.Services.Resolve<AetherHost>()!;
+        var engine = app.Services.Resolve<RuntimeEngine>()!;
         // Capture while the selected collectible game is still loaded, not after Unload.
         var assemblies = ReadAssemblies();
         Exception? failure = null;

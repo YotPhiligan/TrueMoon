@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using TrueMoon.Aether.Editor.Projects;
+using TrueMoon.Aether.Tooling.Projects;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Projects;

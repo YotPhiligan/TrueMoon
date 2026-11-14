@@ -1,0 +1,48 @@
+{
+  "Date": "2026-11-12",
+  "Kind": "Static source architecture inventory; no repository build/test",
+  "BaseCommit": "73df16229da1db54e1170ac0d56b9d385f91abd7",
+  "SourceFiles": 385,
+  "DeclaredTypes": 646,
+  "PublicTypes": 488,
+  "Projects": 61,
+  "PublicTypesByLayer": {
+    "Abstractions": 105,
+    "Runtime": 211,
+    "Tooling": 84,
+    "Editor.UI": 74,
+    "Editor.Tooling": 14
+  },
+  "PlainMoves": 444,
+  "SplitOrAdapterTypes": 44,
+  "ForbiddenPublicSignaturePairs": 58,
+  "InputFiles": 449,
+  "InputSHA256": "408F6D02FF81B9DA9588897931FBB17C0407C7A2EB23EC666C1991F4F293AE34",
+  "InputAlgorithm": "Ordinal-sorted relative/path:UPPERCASE_SHA256 lines joined with LF, UTF-8 no BOM, no trailing LF; source .cs excluding bin/obj in Aether and Editor, all 61 .csproj, root Directory.Build.props, Directory.Packages.props, global.json (Directory.Build.targets absent)",
+  "AllowedInternalLayerDependencies": {
+    "Abstractions": [],
+    "Editor.Tooling": [
+      "Abstractions",
+      "Runtime",
+      "Tooling",
+      "Editor.UI"
+    ],
+    "Tooling": [
+      "Abstractions",
+      "Runtime"
+    ],
+    "Editor.UI": [
+      "Abstractions",
+      "Runtime"
+    ],
+    "Runtime": [
+      "Abstractions"
+    ]
+  },
+  "ParseErrors": 0,
+  "AnalyticalBindingDiagnostics": 19,
+  "AnalysisLimitations": "Roslyn 5.9; existing generated inputs/Release dependencies; source generators not run; 19 diagnostics only private LibraryImport helper implementations/definite assignment; not build errors",
+  "TypeMapSHA256": "5FCE7D4CC1CF1C5BBEA436626FE2BD33F1F33AFD5F8AC5944992D40014BCDB58",
+  "ProjectMapSHA256": "0158BA47E6A9B9ACB1CFA38BF081742D47F72E5BF1FC59EEDBC09BEC44ECFF2F",
+  "CouplingsSHA256": "734E1AC6D74A7FAF073F66497E71787A372B9D91FE5F664F8F49B308CA4EAF9E"
+}

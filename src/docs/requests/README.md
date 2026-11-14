@@ -9,7 +9,7 @@
 
 Каждая заявка — отдельный каталог
 `docs/requests/<module>/<UTC-date>-<consumer>-<slug>-<uuid8>/Request.md`.
-Модули: `core`, `cobalt`, `enerit`, `mithril`, `alloy`, `engine`, `nom`.
+Модули: `core`, `cobalt`, `enerit`, `mithril`, `alloy`, `engine`, `nom`, `physics` (Kton).
 Идентификатор не требует общего счётчика или редактируемого индекса. Список
 заявок — содержимое каталога модуля; его PLAN содержит постоянную ссылку сюда.
 

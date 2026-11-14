@@ -1,10 +1,10 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Gpu.Surfaces;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Gpu.Surfaces;
+using TrueMoon.Aether.Runtime.Sessions;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Preview;

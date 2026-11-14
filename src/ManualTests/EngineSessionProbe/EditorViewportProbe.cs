@@ -1,3 +1,4 @@
+using TrueMoon.Aether.Runtime;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security;
@@ -5,14 +6,17 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Transport;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Alloy.Rendering.Skia;
@@ -204,7 +208,7 @@ public static class EditorViewportProbe
             }
             foreach (var kind in new[] { "missing", "tampered" })
             {
-                var copy = GameBuildArtifact.Publish(b.DirectoryPath, Path.Combine(directory, "copy-" + kind), BuildIdentity.HostId, b.EntryAssembly, b.EntryType, 8);
+                var copy = GameArtifactPublisher.Publish(b.DirectoryPath, Path.Combine(directory, "copy-" + kind), BuildIdentity.HostId, b.EntryAssembly, b.EntryType, 8, runtimeAccess: true);
                 host.Editor.SetContext(Context(inputB)); await host.Editor.SelectBuildAsync(copy, token); var old = host.Supervisor.Status.Identity; var count = factory.Inner.Leases.Count;
                 if (kind == "missing") File.Delete(Path.Combine(copy.DirectoryPath, copy.EntryAssembly)); else File.AppendAllText(Path.Combine(copy.DirectoryPath, copy.EntryAssembly), "tampered");
                 await RecordFailureAsync(kind, () => host.Editor.ReplaceAsync(token), e => Probe.Check(e is GameReplacementException && host.Supervisor.Status.Identity == old && factory.Inner.Leases.Count == count, "Invalid artifact touched the old child."));
@@ -283,9 +287,9 @@ public static class EditorViewportProbe
         var project = Path.Combine(input, "Game.Logic.csproj");
         File.WriteAllText(project, $$"""
             <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
-            <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup>{{target}}</Project>
+            <ItemGroup><Reference Include="TrueMoon.Aether.Runtime"><HintPath>$(AetherRuntimePath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Aether.Abstractions"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup>{{target}}</Project>
             """);
-        return new(project, "Game.Logic.dll", "Game.Logic.ProbeGame", revision);
+        return new(project, "Game.Logic.dll", "Game.Logic.ProbeGame", revision) { RuntimeAccess = true };
     }
     private static (GameBuildRequest Request, string Marker, string Release) HeldProject(string directory, string name)
     {

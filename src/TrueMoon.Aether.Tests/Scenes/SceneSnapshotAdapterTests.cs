@@ -1,5 +1,6 @@
 using Game.Logic;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Scenes;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Scenes;

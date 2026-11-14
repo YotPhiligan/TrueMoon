@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.UI;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests;

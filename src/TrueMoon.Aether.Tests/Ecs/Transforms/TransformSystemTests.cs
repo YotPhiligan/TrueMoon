@@ -1,10 +1,14 @@
+using IEcsSystem = TrueMoon.Aether.Runtime.Ecs.IEcsSystem;
 using System.Numerics;
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Loading;
-using TrueMoon.Aether.Ecs.Transforms;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Ecs.Loading;
+using TrueMoon.Aether.Runtime.Ecs.Transforms;
 using TrueMoon.Aether.Tests.Ecs.Loading;
 using Xunit;
+using EcsSystemContext = TrueMoon.Aether.Runtime.Ecs.EcsSystemContext;
 
 namespace TrueMoon.Aether.Tests.Ecs.Transforms;
 
@@ -250,7 +254,7 @@ public sealed class TransformSystemTests
     public void Execute_RejectsSchedulerContextFromAnotherWorld()
     {
         using var owner = new World(); using var foreign = new World(); using var system = new TransformSystem(owner);
-        using var scheduler = EcsScheduler.Create(foreign, [new(TransformSystem.Describe(), new Factory<IEcsSystem, World>(_ => new ContextProbe(system)))]);
+        using var scheduler = EcsScheduler.Create(foreign, [new(TransformSystem.Describe(), new Factory<Aether.Runtime.Ecs.IEcsSystem, World>(_ => new ContextProbe(system)))]);
         Assert.Throws<InvalidOperationException>(() => scheduler.Tick(TimeSpan.FromSeconds(1)));
         Assert.Null(system.LastTick); Assert.Equal(0UL, scheduler.TickNumber); Assert.False(owner.IsFaulted); Assert.True(foreign.IsFaulted);
     }

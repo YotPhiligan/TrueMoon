@@ -58,7 +58,7 @@ try{
         $dir=Join-Path $run $candidate.Name;[void][IO.Directory]::CreateDirectory($dir)
         Copy-Item "$PSScriptRoot/*.cs" -Destination $dir
         '<Project/>'|Set-Content (Join-Path $dir 'Directory.Build.props');'<Project/>'|Set-Content (Join-Path $dir 'Directory.Build.targets')
-        $reference=[Security.SecurityElement]::Escape((Join-Path $workspace 'TrueMoon.Aether/TrueMoon.Aether.csproj'))
+        $reference=[Security.SecurityElement]::Escape((Join-Path $workspace 'TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj'))
         $project=Join-Path $dir 'ModelImportResearch.csproj'
         @"
 <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>$($trueMoonBuildProfile.Framework)</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AllowUnsafeBlocks>true</AllowUnsafeBlocks><DefineConstants>$($candidate.Define)</DefineConstants></PropertyGroup><ItemGroup><PackageReference Include="$($candidate.Id)" Version="$($candidate.Version)"/><ProjectReference Include="$reference"/></ItemGroup></Project>

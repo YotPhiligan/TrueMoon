@@ -17,7 +17,7 @@ $cpuDotnet=(Get-Command dotnet -ErrorAction Stop).Source
 $cpuFeed=Join-Path $cpuRun 'feed';$cpuCache=Join-Path $cpuRun 'cache';$cpuSource=Join-Path $cpuRun 'source';$cpuFresh=Join-Path $cpuRun 'fresh';$cpuCwd=Join-Path $cpuRun 'unrelated working directory'
 foreach($directory in @($cpuRun,$cpuEvidence,$cpuFeed,$cpuCache,$cpuSource,$cpuFresh,$cpuCwd)){[void][IO.Directory]::CreateDirectory($directory)}
 $cpuVersion='0.2.5.2-core75.'+(Get-Date -Format 'yyyyMMddHHmmss')
-$cpuPackages=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Extensions.DependencyInjection','TrueMoon.Enerit.Generator','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Argentis','TrueMoon.Alloy','TrueMoon.Alloy.Rendering.Skia','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Hosting','TrueMoon.Aether','TrueMoon.Aether.Editor','TrueMoon.Nom')
+$cpuPackages=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Extensions.DependencyInjection','TrueMoon.Enerit.Generator','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Argentis','TrueMoon.Alloy','TrueMoon.Alloy.Rendering.Skia','TrueMoon.Alloy.Platform.Silk','TrueMoon.Alloy.Hosting','TrueMoon.Aether.Abstractions','TrueMoon.Aether.Runtime','TrueMoon.Aether.Tooling','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling','TrueMoon.Nom')
 $cpuReport=[ordered]@{Completed=$false;RunDirectory=$cpuRun;Version=$cpuVersion;Commands=@();Packages=@();ExternalPackages=@();Graphs=@();Sources=@();Profiles=@();Failure=$null;GpuRun=$false;WindowRun=$false}
 function Save-CpuReport {$cpuReport|ConvertTo-Json -Depth 12|Set-Content -LiteralPath (Join-Path $cpuEvidence 'verification.json') -Encoding utf8}
 function Invoke-Cpu([string]$name,[string[]]$arguments,[string]$cwd=$cpuWorkspace,[switch]$isolated){
@@ -49,7 +49,7 @@ try{
     foreach($sourceDirectory in $cpuPackages) {
         Get-ChildItem (Join-Path $cpuWorkspace $sourceDirectory) -Recurse -File -Filter '*.cs' | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } | ForEach-Object { $cpuReport.Sources+=@{Path=$_.FullName;Sha256=(Get-FileHash -LiteralPath $_.FullName).Hash} }
     }
-    foreach($rootSource in @('TrueMoon/AppBuilder.cs','TrueMoon/AppConfigurationContext.cs','TrueMoon/DefaultApp.cs','TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj')) { $path=Join-Path $cpuWorkspace $rootSource; $cpuReport.Sources+=@{Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash} }
+    foreach($rootSource in @('TrueMoon/AppBuilder.cs','TrueMoon/AppConfigurationContext.cs','TrueMoon/DefaultApp.cs','TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj')) { $path=Join-Path $cpuWorkspace $rootSource; $cpuReport.Sources+=@{Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash} }
     # Exact external dependencies from the existing restored graph only; no live feed or package upgrades.
     $external=@{}
     foreach($id in @($cpuPackages+'TrueMoon.Cobalt.Generator')){
@@ -73,7 +73,7 @@ try{
     }
     $aether=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Contracts/TrueMoon.Contracts.csproj'))
     $bootstrap=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon/TrueMoon.csproj'))
-    $mithril=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj'))
+    $mithril=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj'))
     $nom=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Nom/TrueMoon.Nom.csproj'))
     $adapter=[Security.SecurityElement]::Escape((Join-Path $cpuWorkspace 'TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj'))
     [IO.File]::WriteAllText((Join-Path $cpuSource 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>ConfigurationModulesConsumer</AssemblyName><RootNamespace>ConfigurationModulesConsumer</RootNamespace></PropertyGroup><ItemGroup><ProjectReference Include=`"$aether`"/><ProjectReference Include=`"$bootstrap`"/><ProjectReference Include=`"$mithril`"/><ProjectReference Include=`"$nom`"/><ProjectReference Include=`"$adapter`"/></ItemGroup></Project>")
@@ -89,7 +89,7 @@ try{
         if(!(Test-Path -LiteralPath $path)){throw "Missing package: $id"}
         $cpuReport.Packages+=@{Id=$id;Path=$path;Sha256=(Get-FileHash -LiteralPath $path).Hash}
     }
-    [IO.File]::WriteAllText((Join-Path $cpuFresh 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>ConfigurationModulesConsumer</AssemblyName><RootNamespace>ConfigurationModulesConsumer</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include=`"TrueMoon`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Contracts`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Aether.Editor`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Nom`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Enerit.Generator`" Version=`"$cpuVersion`" PrivateAssets=`"all`"/><PackageReference Include=`"TrueMoon.Extensions.DependencyInjection`" Version=`"$cpuVersion`"/></ItemGroup></Project>")
+    [IO.File]::WriteAllText((Join-Path $cpuFresh 'Consumer.csproj'),"<Project Sdk=`"Microsoft.NET.Sdk`"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>ConfigurationModulesConsumer</AssemblyName><RootNamespace>ConfigurationModulesConsumer</RootNamespace></PropertyGroup><ItemGroup><PackageReference Include=`"TrueMoon`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Contracts`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Aether.Editor.Tooling`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Nom`" Version=`"$cpuVersion`"/><PackageReference Include=`"TrueMoon.Enerit.Generator`" Version=`"$cpuVersion`" PrivateAssets=`"all`"/><PackageReference Include=`"TrueMoon.Extensions.DependencyInjection`" Version=`"$cpuVersion`"/></ItemGroup></Project>")
     Invoke-Cpu 'fresh-restore' @('restore','Consumer.csproj','--configfile',"$cpuFresh/NuGet.Config",'--no-http-cache',"-bl:$cpuEvidence/fresh-restore-{}.binlog") $cpuFresh -isolated
     $graph=Get-Content -LiteralPath "$cpuFresh/obj/project.assets.json" -Raw|ConvertFrom-Json -AsHashtable
     if($graph.libraries.Values.Where({$_.type -eq 'project'}).Count){throw 'Fresh consumer contains ProjectReferences.'}

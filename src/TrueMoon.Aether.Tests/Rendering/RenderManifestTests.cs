@@ -2,7 +2,8 @@ using System.Buffers.Binary;
 using System.Collections;
 using System.Numerics;
 using System.Security.Cryptography;
-using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Runtime.Rendering;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Rendering;

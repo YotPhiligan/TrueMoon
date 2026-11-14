@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <RootNamespace>TrueMoon.Kul</RootNamespace>
+    <AssemblyName>TrueMoon.Kul</AssemblyName>
+    <PackageId>TrueMoon.Kul</PackageId>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Windows x64 audio sessions, decoded sound clips and streamed music with App-owned MiniAudioEx lifetime.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);audio;sound;music;miniaudio</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
+    <PackageReference Include="TrueMoon.MiniAudioEx" />
+    <InternalsVisibleTo Include="TrueMoon.Kul.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+  </ItemGroup>
+</Project>

@@ -1,6 +1,6 @@
 using System.Text.Json;
-using TrueMoon.Aether.Diagnostics;
-using TrueMoon.Aether.Gpu;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Diagnostics;
 using Xunit;
 using static TrueMoon.Aether.Tests.Diagnostics.ChildDiagnosticFixture;

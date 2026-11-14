@@ -1,17 +1,28 @@
+using TrueMoon.Aether.Abstractions.Ecs.Rendering;
+using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Abstractions.Ecs.Motion;
+using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Runtime;
 using System.Buffers.Binary;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Ecs.Loading;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Scenes.Authoring;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Ecs.Loading;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using TrueMoon.Dependencies;
 
 namespace EngineSessionProbe;
@@ -37,8 +48,8 @@ public static class SceneWorldRuntimeProbe
             Check(!GameLoaded(), "The proof parent has already loaded Game.Logic.");
             runtime = Command(Path.GetFullPath(runtimePath));
             hostId = BuildIdentity.ForRuntime(runtime.RuntimeAssemblyPath);
-            artifact = GameBuildArtifact.Publish(Path.GetFullPath(gameDirectory), Path.Combine(reportDirectory, "artifacts"),
-                hostId, "Game.Logic.dll", "Game.Logic.WorldProbeGame", 23);
+            artifact = GameArtifactPublisher.Publish(Path.GetFullPath(gameDirectory), Path.Combine(reportDirectory, "artifacts"),
+                hostId, "Game.Logic.dll", "Game.Logic.WorldProbeGame", 23, runtimeAccess: true);
             var (data, color) = Corpus(); expectedColor = color;
             var resolution = new SceneResolutionService(new Factory<EntityResolver, SceneDocument>(source => new(source.Definitions, source.Schemas)));
             var codec = new SceneWorldCodec(new SceneFileCodec(new SceneAuthoringSessionFactory(resolution, new SceneAuthoringOptions())));

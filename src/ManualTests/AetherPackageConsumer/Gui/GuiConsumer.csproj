@@ -8,8 +8,12 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <AssemblyMetadata Include="TrueMoon.Build.Framework" Value="$(TF)" />
+    <AssemblyMetadata Include="TrueMoon.Build.Sdk" Value="$(NETCoreSdkVersion)" />
+    <AssemblyMetadata Include="TrueMoon.Build.LanguageVersion" Value="$(LangVersion)" />
+    <AssemblyMetadata Include="TrueMoon.Build.Features" Value="$(Features)" />
     <ProjectReference Include="../../../TrueMoon/TrueMoon.csproj" />
-    <ProjectReference Include="../../../TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj" />
+    <ProjectReference Include="../../../TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj" />
     <ProjectReference Include="../../../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
     <Content Include="../../../Examples/AetherEditor/Assets/Fonts/NotoSans-Regular.ttf" Link="Assets/Fonts/NotoSans-Regular.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../../Examples/AetherEditor/Assets/Fonts/OFL.txt" Link="Assets/Fonts/OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

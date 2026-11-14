@@ -1,7 +1,9 @@
 ﻿using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Tooling.Editing;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;

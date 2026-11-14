@@ -9,6 +9,13 @@ Runtime identity, factories, documents и mutable UI state в каталог н�
 
 Воспроизведение: ManualTests/ConfigurationDelivery/Export-Keys.ps1 -VerificationManifest <successful-manifest> -OutputPath <catalog.md>.
 
+Этот generated каталог сохраняет scope CORE7.6. Новые самостоятельные модули
+публикуют дополнительные schemas отдельно: Kul — `AudioConfigurationSchema.Default`
+(`Audio:*`, [подключение](../audio/README.md)); Kton —
+`BepuPhysicsConfigurationSchema.Default` (`Kton:DefaultWorld:*`,
+[16 полей и App integration](../physics/APP.md)). Они используют общий configuration
+profile; экспорт CORE7.6 не считается их полной проверкой или полным каталогом.
+
 ## Aether
 
 | Key | Type | Default JSON | CLI aliases | Required |
@@ -177,6 +184,21 @@ Runtime identity, factories, documents и mutable UI state в каталог н�
 | `Editor:Diagnostics:MaximumRetainedBytes` | `Int32` | `1048576` |  | false |
 | `Editor:Diagnostics:RecordsPerRefresh` | `Int32` | `64` |  | false |
 | `Editor:Diagnostics:RefreshInterval` | `TimeSpan` | `"00:00:00.1000000"` |  | false |
+
+## Editor:RuntimeWindow
+
+| Key | Type | Default JSON | CLI aliases | Required |
+| --- | --- | --- | --- | --- |
+| `Editor:RuntimeWindow:EnableDiagnostics` | `Boolean` | `false` |  | false |
+| `Editor:RuntimeWindow:FrameMode` | `UiFrameMode` | `2` |  | false |
+| `Editor:RuntimeWindow:FramesPerSecond` | `Int32` | `60` |  | false |
+| `Editor:RuntimeWindow:GraphicsApi` | `Nullable<UiWindowGraphicsApi>` | `null` |  | false |
+| `Editor:RuntimeWindow:Height` | `Int32` | `800` |  | false |
+| `Editor:RuntimeWindow:Title` | `String` | `"TrueMoon Aether Runtime"` |  | false |
+| `Editor:RuntimeWindow:TitleBarOverContent` | `Boolean` | `false` |  | false |
+| `Editor:RuntimeWindow:UseDefaultWindowFrame` | `Boolean` | `true` |  | false |
+| `Editor:RuntimeWindow:UseSystemAccentBorder` | `Boolean` | `false` |  | false |
+| `Editor:RuntimeWindow:Width` | `Int32` | `1280` |  | false |
 
 ## Editor:SourceEditor
 

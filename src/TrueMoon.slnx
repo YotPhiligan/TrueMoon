@@ -1,9 +1,25 @@
 <Solution>
   <Folder Name="/Aether/">
+    <Project Path="TrueMoon.Aether.Abstractions/TrueMoon.Aether.Abstractions.csproj" />
+    <Project Path="TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" />
+    <Project Path="TrueMoon.Aether.Abstractions.Tests/TrueMoon.Aether.Abstractions.Tests.csproj" />
+    <Project Path="TrueMoon.Aether.Player/TrueMoon.Aether.Player.csproj" />
+    <Project Path="TrueMoon.Aether.Player.Tests/TrueMoon.Aether.Player.Tests.csproj" />
     <Project Path="TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj" />
-    <Project Path="TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj" />
+    <Project Path="TrueMoon.Aether.Editor.UI/TrueMoon.Aether.Editor.UI.csproj" />
+    <Project Path="TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj" />
     <Project Path="TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj" />
-    <Project Path="TrueMoon.Aether/TrueMoon.Aether.csproj" />
+    <Project Path="TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" />
+    <Project Path="ManualTests/ToolingConsumer/ToolingConsumer.csproj" />
+    <Project Path="ManualTests/ModFixture/ModFixture.csproj" />
+    <Project Path="ManualTests/ModPrivateDependency/ModPrivateDependency.csproj" />
+    <Project Path="ManualTests/ModConsumer/Runtime/ModRuntimeConsumer.csproj" />
+    <Project Path="ManualTests/ModConsumer/Publisher/ModPublisher.csproj" />
+  </Folder>
+  <Folder Name="/Kul/">
+    <Project Path="TrueMoon.Kul/TrueMoon.Kul.csproj" />
+    <Project Path="TrueMoon.Kul.Tests/TrueMoon.Kul.Tests.csproj" />
+    <Project Path="ManualTests/KulModuleProbe/KulModuleProbe.csproj" />
   </Folder>
   <Folder Name="/Alloy/">
     <Project Path="TrueMoon.Alloy.Hosting.Tests/TrueMoon.Alloy.Hosting.Tests.csproj" />
@@ -24,11 +40,21 @@
     <Project Path="TrueMoon.Cobalt\TrueMoon.Cobalt.csproj" />
   </Folder>
   <Folder Name="/Engine/">
+    <Project Path="ManualTests/Abstractions.Extension/Abstractions.Extension.csproj" />
+    <Project Path="ManualTests/Abstractions.Host/Abstractions.Host.csproj" />
+    <Project Path="ManualTests/EcsContractHost/EcsContractHost.csproj" />
+    <Project Path="ManualTests/RuntimeConsumer/RuntimeConsumer.csproj" />
+    <Project Path="ManualTests/RuntimeArtifactTool/RuntimeArtifactTool.csproj" />
+    <Project Path="ManualTests/PlayerProbe/PlayerProbe.csproj" />
+    <Project Path="ManualTests/EditorUiConsumer/EditorUiConsumer.csproj" />
     <Project Path="ManualTests/AetherEditorHost/AetherEditorHost.csproj" />
     <Project Path="ManualTests/EngineSessionProbe/EngineSessionProbe.csproj" />
     <Project Path="ManualTests/Game.Logic/Game.Logic.csproj" />
+    <Project Path="ManualTests/RenderSurface.Game/RenderSurface.Game.csproj" />
   </Folder>
   <Folder Name="/Examples/">
+    <Project Path="Examples/AetherPlayer/AetherPlayer.csproj" />
+    <Project Path="Examples/AetherHost/AetherHost.csproj" />
     <Project Path="Examples/AetherEditor/AetherEditor.csproj" />
     <Project Path="Examples/AetherRuntimeHost/AetherRuntimeHost.csproj" />
   </Folder>
@@ -49,6 +75,10 @@
     <Project Path="ManualTests/AppUnitsPipesProbe/AppUnitsPipesProbe.csproj" />
     <Project Path="ManualTests\AlloyTest\AlloyTest.csproj" />
     <Project Path="ManualTests\CobaltTest\CobaltTest.csproj" />
+  </Folder>
+  <Folder Name="/Kton/">
+    <Project Path="TrueMoon.Kton/TrueMoon.Kton.csproj" />
+    <Project Path="TrueMoon.Kton.Bepu/TrueMoon.Kton.Bepu.csproj" />
   </Folder>
   <Folder Name="/Nom/">
     <Project Path="ManualTests/NomAssetTool/NomAssetTool.csproj" />

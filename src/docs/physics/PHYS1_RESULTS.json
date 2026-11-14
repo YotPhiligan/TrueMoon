@@ -1,0 +1,921 @@
+{
+  "SchemaVersion": 1,
+  "Module": "TrueMoon.Kton",
+  "Phase": "PHYS1",
+  "Date": "2026-11-12",
+  "Completed": true,
+  "Readiness": {
+    "NeutralContractsAndValidation": true,
+    "Provider": false,
+    "ECS": false,
+    "ProductionPhysicsModule": false,
+    "AppDI": false
+  },
+  "Scope": "Neutral public API and actual pure validation. World usage compiled, never executed using a fake provider. No simulation/runtime query/event/cleanup acceptance.",
+  "WorkspaceHead": "73df16229da1db54e1170ac0d56b9d385f91abd7",
+  "WorkspaceDirty": true,
+  "Command": "pwsh -NoProfile -File ManualTests/KtonContracts/Verify.ps1 -EvidenceDirectory TestResults/KtonPHYS1-final-20261112",
+  "RawEvidenceDirectory": "TestResults/KtonPHYS1-final-20261112",
+  "VerificationSha256": "CA4E4FEE839FF336FA446DAE4DFFC5D17EFAEA1ABB1DC0270FCE32ABB440B98C",
+  "BuildProfile": {
+    "TF": "net11.0",
+    "Features": ";runtime-async=on",
+    "Version": "0.3.0.1-alpha",
+    "PrivateFeedAndCache": true,
+    "ExternalSources": false,
+    "SourceInputs": [
+      {
+        "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C",
+        "Path": "Directory.Build.props"
+      },
+      {
+        "Sha256": "D76B9692C5ACCBE093FBA3DFDDADC2CF99738760C648CA425BB4E741869CC4F8",
+        "Path": "Directory.Packages.props"
+      },
+      {
+        "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6",
+        "Path": "global.json"
+      },
+      {
+        "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF",
+        "Path": "ManualTests/BuildProfile.ps1"
+      }
+    ],
+    "LangVersion": "latest",
+    "CPMIsolated": true,
+    "Sdk": "11.0.100",
+    "TestsTF": "net11.0"
+  },
+  "Package": {
+    "Id": "TrueMoon.Kton",
+    "Sha256": "05B51F26EB53BBC428001280B53F513D102D5926C1455E75F6B5555638A0A72E",
+    "Version": "0.3.0.1-alpha.phys1.20261112133059",
+    "Dependencies": [],
+    "DllSha256": "0B7EE54306C92407505C2DABBFE65F9F6B24B4D134C5C46C9AB9AE76C2AB6F4B"
+  },
+  "SourceInputs": [
+    {
+      "Path": "ManualTests/KtonContracts/Probe.csproj",
+      "Sha256": "0D519B68ED9E7107C695685B6D4B80AA00CA4E8E5592F7E294BD6045DB869E34"
+    },
+    {
+      "Path": "ManualTests/KtonContracts/Program.cs",
+      "Sha256": "C51708CCC0D6C35E11B09108782F50397B04165939600E0C24FA44C58248C09E"
+    },
+    {
+      "Path": "ManualTests/KtonContracts/README.md",
+      "Sha256": "796CCD57A9C0C5F1CE26812A0C9D134671710C35FE6BF8B4897161E46C0FA110"
+    },
+    {
+      "Path": "ManualTests/KtonContracts/Verify.ps1",
+      "Sha256": "AB6CFEF022F78B52EA51511513BD64991E66CCE6E3C09C593A1FCD3A528A2FE7"
+    },
+    {
+      "Path": "TrueMoon.Kton/IPhysicsWorld.cs",
+      "Sha256": "5A52D23F510F2BDF623C7C9B19A5A1ED9D2387CF08FD915766905206F0EA4115"
+    },
+    {
+      "Path": "TrueMoon.Kton/PACKAGE.md",
+      "Sha256": "82BC74EB1F29A7AAD43C187552D1F5881D91EE2A3F98B79D1701F74E861BA94F"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsError.cs",
+      "Sha256": "3242F54CE6FF86828A3CB713FDF548017F01F59E8ABC3AB49FBE88EA106823F9"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsIdentity.cs",
+      "Sha256": "FAF128469C8CC48F168D2689C57656C9BEA449750F5956F7571B1AC9D2B15C6C"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsLimits.cs",
+      "Sha256": "D24ED98CF248363AE71B4DF44E57430030B62E8D73B566EFC811BE452F74FBF4"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsPose.cs",
+      "Sha256": "67D871C6E6C66AC984286B75E81CC8A4F12E50F6D895A1F413A7FEEF11AF0AAD"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsQualityProfile.cs",
+      "Sha256": "F111685C9A5E3141447BE3E62C337630848DBA1F198EA7F0298EC38FCFDC9861"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsValidation.cs",
+      "Sha256": "EDF0105A385DAAE7A174F04A30DE3E7ECF97897983797B18F08105955819621B"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsWorldId.cs",
+      "Sha256": "710687354E3EF893EEB62D9D4B889B3B8597669E902F993E6AC9F1ECEE1EF1BD"
+    },
+    {
+      "Path": "TrueMoon.Kton/PhysicsWorldOptions.cs",
+      "Sha256": "9C11CE82765C6A80F6CC31F0999C6A8772288D8C2B6813DA004845FDF443CDC1"
+    },
+    {
+      "Path": "TrueMoon.Kton/TrueMoon.Kton.csproj",
+      "Sha256": "D76707803E1C2EA30AA97354A236343D1929567051F332B09ADCE7771B6990FA"
+    },
+    {
+      "Path": "TrueMoon.Kton/Bodies/PhysicsBodyCommand.cs",
+      "Sha256": "2FFD9517EE14EC1E720D58C99300F84B9D44DDABA1DFDDBC41213DEA5C98477D"
+    },
+    {
+      "Path": "TrueMoon.Kton/Bodies/PhysicsBodyDescription.cs",
+      "Sha256": "30C3DE44EA80020BEF96F38130B537FBFF7B2D3D844B6FB6B34B8665B451BC38"
+    },
+    {
+      "Path": "TrueMoon.Kton/Bodies/PhysicsBodyId.cs",
+      "Sha256": "836D3E632EFC1BDE9821F1FD8A77447FE670F0674D7BA2F065C8B38E8AF21021"
+    },
+    {
+      "Path": "TrueMoon.Kton/Contacts/PhysicsContactEvent.cs",
+      "Sha256": "C3956761982CEAE6707C150EFDC8AA4314B0921AD142ACB67743103A3DBCA822"
+    },
+    {
+      "Path": "TrueMoon.Kton/Joints/PhysicsBallSocket.cs",
+      "Sha256": "71A9A4D556134A69A1F46A119773F507D41B473663FCE475E67D06B9F0018A70"
+    },
+    {
+      "Path": "TrueMoon.Kton/Joints/PhysicsJointId.cs",
+      "Sha256": "35DD5DAA686F7D6D63CB418E0D2E12872147B117BC405515AEC20A3096660AC5"
+    },
+    {
+      "Path": "TrueMoon.Kton/Queries/PhysicsQuery.cs",
+      "Sha256": "BC4C527ABC0BC9683F253388838C6B36244FF15C152E1B7FC29661B42C0BC780"
+    },
+    {
+      "Path": "TrueMoon.Kton/Shapes/PhysicsShapeDefinition.cs",
+      "Sha256": "C2D68F22EA00D4814C36BD0B7C3C516930A478DD337C669E0218D03785F4D523"
+    },
+    {
+      "Path": "TrueMoon.Kton/Shapes/PhysicsShapeId.cs",
+      "Sha256": "A739117491728DA8BB485F5EAE4B0AAB08A8F2459EDCD603119DF45401EBDAC0"
+    }
+  ],
+  "Commands": [
+    {
+      "ExitCode": 0,
+      "Name": "source-restore",
+      "Arguments": [
+        "restore",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\source-consumer\\Probe.csproj",
+        "--configfile",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\NuGet.Config",
+        "--packages",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\packages",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\source-artifacts",
+        "-p:NuGetAudit=false",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112/source-restore-{}.binlog"
+      ]
+    },
+    {
+      "ExitCode": 0,
+      "Name": "source-build-Debug",
+      "Arguments": [
+        "build",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\source-consumer\\Probe.csproj",
+        "--no-restore",
+        "-c",
+        "Debug",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\source-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\source-Debug",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112/source-build-Debug-{}.binlog"
+      ]
+    },
+    {
+      "ExitCode": 0,
+      "Name": "source-Debug",
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\source-Debug\\KtonContracts.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\source-Debug.json"
+      ]
+    },
+    {
+      "ExitCode": 0,
+      "Name": "pack-Release",
+      "Arguments": [
+        "pack",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TrueMoon.Kton\\TrueMoon.Kton.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\source-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\feed",
+        "-p:PackageVersion=0.3.0.1-alpha.phys1.20261112133059",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112/pack-Release-{}.binlog"
+      ]
+    },
+    {
+      "ExitCode": 0,
+      "Name": "package-restore",
+      "Arguments": [
+        "restore",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-consumer\\Probe.csproj",
+        "--configfile",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\NuGet.Config",
+        "--packages",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\packages",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-artifacts",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112/package-restore-{}.binlog"
+      ]
+    },
+    {
+      "ExitCode": 0,
+      "Name": "package-build-Debug",
+      "Arguments": [
+        "build",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-consumer\\Probe.csproj",
+        "--no-restore",
+        "-c",
+        "Debug",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-Debug",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112/package-build-Debug-{}.binlog"
+      ]
+    },
+    {
+      "ExitCode": 0,
+      "Name": "package-Debug",
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-Debug\\KtonContracts.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-Debug.json"
+      ]
+    },
+    {
+      "ExitCode": 0,
+      "Name": "package-publish-Release",
+      "Arguments": [
+        "publish",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-consumer\\Probe.csproj",
+        "--no-restore",
+        "-c",
+        "Release",
+        "--self-contained",
+        "false",
+        "--artifacts-path",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-artifacts",
+        "-o",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-Release",
+        "-bl:E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112/package-publish-Release-{}.binlog"
+      ]
+    },
+    {
+      "ExitCode": 0,
+      "Name": "package-Release",
+      "Arguments": [
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-Release\\KtonContracts.dll",
+        "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KtonPHYS1-final-20261112\\package-Release.json"
+      ]
+    }
+  ],
+  "Profiles": [
+    {
+      "Runtime": ".NET 11.0.0",
+      "ReportSha256": "FCC2B122BCA36AC82ED8A3EAEEBE2E5912B5BDCB92F1B211FCEC399D4263CF71",
+      "Failed": 0,
+      "Architecture": "X64",
+      "ActualDllSha256": "7D27D86B6765E2C683EBC81C32BBBCE7333A3A2C3B165C1D3829234185A25EAB",
+      "Checks": 131,
+      "OS": "Microsoft Windows 10.0.26340",
+      "WorldUsageExecuted": false,
+      "Name": "source-Debug",
+      "ActualAssemblyReferences": [
+        "System.Collections",
+        "System.Numerics.Vectors",
+        "System.Runtime"
+      ],
+      "Completed": true
+    },
+    {
+      "Runtime": ".NET 11.0.0",
+      "ReportSha256": "9F6F25D00F7F458E74DFEAF107C8CF4DF26785804C3A5FD8120EF26F205B60A5",
+      "Failed": 0,
+      "Architecture": "X64",
+      "ActualDllSha256": "0B7EE54306C92407505C2DABBFE65F9F6B24B4D134C5C46C9AB9AE76C2AB6F4B",
+      "Checks": 131,
+      "OS": "Microsoft Windows 10.0.26340",
+      "WorldUsageExecuted": false,
+      "Name": "package-Debug",
+      "ActualAssemblyReferences": [
+        "System.Collections",
+        "System.Numerics.Vectors",
+        "System.Runtime"
+      ],
+      "Completed": true
+    },
+    {
+      "Runtime": ".NET 11.0.0",
+      "ReportSha256": "EB56584B1E63409808033B1DA56550A0891E939CB9FC5DDE37E5B7E750BCCBF0",
+      "Failed": 0,
+      "Architecture": "X64",
+      "ActualDllSha256": "0B7EE54306C92407505C2DABBFE65F9F6B24B4D134C5C46C9AB9AE76C2AB6F4B",
+      "Checks": 131,
+      "OS": "Microsoft Windows 10.0.26340",
+      "WorldUsageExecuted": false,
+      "Name": "package-Release",
+      "ActualAssemblyReferences": [
+        "System.Collections",
+        "System.Numerics.Vectors",
+        "System.Runtime"
+      ],
+      "Completed": true
+    }
+  ],
+  "OutcomeCatalog": [
+    {
+      "Name": "default-world-invalid",
+      "Passed": true
+    },
+    {
+      "Name": "default-body-invalid",
+      "Passed": true
+    },
+    {
+      "Name": "default-shape-invalid",
+      "Passed": true
+    },
+    {
+      "Name": "default-joint-invalid",
+      "Passed": true
+    },
+    {
+      "Name": "world-incarnations-distinct",
+      "Passed": true
+    },
+    {
+      "Name": "live-body",
+      "Passed": true
+    },
+    {
+      "Name": "default-body-rejected",
+      "Passed": true
+    },
+    {
+      "Name": "zero-generation-rejected",
+      "Passed": true
+    },
+    {
+      "Name": "negative-slot-rejected",
+      "Passed": true
+    },
+    {
+      "Name": "foreign-world-precedes-liveness",
+      "Passed": true
+    },
+    {
+      "Name": "stale-body-after-slot-reuse",
+      "Passed": true
+    },
+    {
+      "Name": "removed-body",
+      "Passed": true
+    },
+    {
+      "Name": "different-live-slot",
+      "Passed": true
+    },
+    {
+      "Name": "last-generation-is-structurally-live",
+      "Passed": true
+    },
+    {
+      "Name": "retired-slot-is-stale",
+      "Passed": true
+    },
+    {
+      "Name": "live-shape",
+      "Passed": true
+    },
+    {
+      "Name": "stale-shape",
+      "Passed": true
+    },
+    {
+      "Name": "foreign-shape",
+      "Passed": true
+    },
+    {
+      "Name": "live-joint",
+      "Passed": true
+    },
+    {
+      "Name": "removed-joint",
+      "Passed": true
+    },
+    {
+      "Name": "foreign-joint",
+      "Passed": true
+    },
+    {
+      "Name": "typed-error-preserved",
+      "Passed": true
+    },
+    {
+      "Name": "success-does-not-throw",
+      "Passed": true
+    },
+    {
+      "Name": "success-exception-rejected",
+      "Passed": true
+    },
+    {
+      "Name": "default-options",
+      "Passed": true
+    },
+    {
+      "Name": "null-options",
+      "Passed": true
+    },
+    {
+      "Name": "null-limits",
+      "Passed": true
+    },
+    {
+      "Name": "unknown-quality",
+      "Passed": true
+    },
+    {
+      "Name": "nan-gravity",
+      "Passed": true
+    },
+    {
+      "Name": "infinite-diagnostic-time",
+      "Passed": true
+    },
+    {
+      "Name": "zero-diagnostic-time",
+      "Passed": true
+    },
+    {
+      "Name": "baseline-matches-phys0",
+      "Passed": true
+    },
+    {
+      "Name": "fast-avoids-known-soft-ccd-combination",
+      "Passed": true
+    },
+    {
+      "Name": "profile-has-no-public-tuning-setters",
+      "Passed": true
+    },
+    {
+      "Name": "unknown-profile-resolution-rejected",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-0",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-1",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-2",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-3",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-4",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-5",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-6",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-7",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-8",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-9",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-10",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-11",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-12",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-limit-13",
+      "Passed": true
+    },
+    {
+      "Name": "reduced-limits",
+      "Passed": true
+    },
+    {
+      "Name": "admission-at-capacity",
+      "Passed": true
+    },
+    {
+      "Name": "admission-over-capacity",
+      "Passed": true
+    },
+    {
+      "Name": "capacity-sum-does-not-wrap",
+      "Passed": true
+    },
+    {
+      "Name": "negative-capacity-input",
+      "Passed": true
+    },
+    {
+      "Name": "first-tick",
+      "Passed": true
+    },
+    {
+      "Name": "repeated-tick",
+      "Passed": true
+    },
+    {
+      "Name": "skipped-tick",
+      "Passed": true
+    },
+    {
+      "Name": "tick-does-not-wrap",
+      "Passed": true
+    },
+    {
+      "Name": "identity-pose",
+      "Passed": true
+    },
+    {
+      "Name": "default-quaternion",
+      "Passed": true
+    },
+    {
+      "Name": "scaled-quaternion-not-normalized",
+      "Passed": true
+    },
+    {
+      "Name": "nonfinite-quaternion",
+      "Passed": true
+    },
+    {
+      "Name": "unbounded-position",
+      "Passed": true
+    },
+    {
+      "Name": "sphere",
+      "Passed": true
+    },
+    {
+      "Name": "box-full-sizes",
+      "Passed": true
+    },
+    {
+      "Name": "capsule-full-cylinder",
+      "Passed": true
+    },
+    {
+      "Name": "zero-sphere",
+      "Passed": true
+    },
+    {
+      "Name": "nan-sphere",
+      "Passed": true
+    },
+    {
+      "Name": "negative-box",
+      "Passed": true
+    },
+    {
+      "Name": "capsule-total-height",
+      "Passed": true
+    },
+    {
+      "Name": "capsule-zero-segment-use-sphere-instead",
+      "Passed": true
+    },
+    {
+      "Name": "unknown-shape",
+      "Passed": true
+    },
+    {
+      "Name": "static-mesh",
+      "Passed": true
+    },
+    {
+      "Name": "missing-index-triple",
+      "Passed": true
+    },
+    {
+      "Name": "negative-mesh-index",
+      "Passed": true
+    },
+    {
+      "Name": "out-of-range-mesh-index",
+      "Passed": true
+    },
+    {
+      "Name": "degenerate-mesh-triangle",
+      "Passed": true
+    },
+    {
+      "Name": "nonfinite-mesh-vertex",
+      "Passed": true
+    },
+    {
+      "Name": "mesh-byte-admission-before-cook",
+      "Passed": true
+    },
+    {
+      "Name": "mesh-triangle-admission",
+      "Passed": true
+    },
+    {
+      "Name": "mesh-byte-budget",
+      "Passed": true
+    },
+    {
+      "Name": "dynamic-body",
+      "Passed": true
+    },
+    {
+      "Name": "static-body",
+      "Passed": true
+    },
+    {
+      "Name": "kinematic-body",
+      "Passed": true
+    },
+    {
+      "Name": "dynamic-zero-mass",
+      "Passed": true
+    },
+    {
+      "Name": "nan-mass",
+      "Passed": true
+    },
+    {
+      "Name": "static-moving-rejected",
+      "Passed": true
+    },
+    {
+      "Name": "dynamic-concave-mesh",
+      "Passed": true
+    },
+    {
+      "Name": "kinematic-concave-mesh",
+      "Passed": true
+    },
+    {
+      "Name": "baseline-speed-envelope",
+      "Passed": true
+    },
+    {
+      "Name": "fast-linear-envelope",
+      "Passed": true
+    },
+    {
+      "Name": "fast-linear-over-envelope",
+      "Passed": true
+    },
+    {
+      "Name": "angular-envelope",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-body-mode",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-friction",
+      "Passed": true
+    },
+    {
+      "Name": "layer-index-not-mask",
+      "Passed": true
+    },
+    {
+      "Name": "mass-ratio-at-limit",
+      "Passed": true
+    },
+    {
+      "Name": "mass-ratio-over-limit",
+      "Passed": true
+    },
+    {
+      "Name": "friction-combine-symmetric-min",
+      "Passed": true
+    },
+    {
+      "Name": "collision-masks-symmetric",
+      "Passed": true
+    },
+    {
+      "Name": "one-sided-mask-insufficient",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-layer-never-wraps-shift",
+      "Passed": true
+    },
+    {
+      "Name": "ball-socket-input",
+      "Passed": true
+    },
+    {
+      "Name": "self-joint",
+      "Passed": true
+    },
+    {
+      "Name": "foreign-joint-body",
+      "Passed": true
+    },
+    {
+      "Name": "nonfinite-anchor",
+      "Passed": true
+    },
+    {
+      "Name": "empty-batch-still-needs-valid-world",
+      "Passed": true
+    },
+    {
+      "Name": "velocity-command",
+      "Passed": true
+    },
+    {
+      "Name": "force-command",
+      "Passed": true
+    },
+    {
+      "Name": "teleport-command",
+      "Passed": true
+    },
+    {
+      "Name": "invalid-later-command-rejects-whole-validation",
+      "Passed": true
+    },
+    {
+      "Name": "command-budget-cumulative",
+      "Passed": true
+    },
+    {
+      "Name": "foreign-command",
+      "Passed": true
+    },
+    {
+      "Name": "nan-force",
+      "Passed": true
+    },
+    {
+      "Name": "ray-metres",
+      "Passed": true
+    },
+    {
+      "Name": "ray-unit-direction-required",
+      "Passed": true
+    },
+    {
+      "Name": "zero-ray-distance",
+      "Passed": true
+    },
+    {
+      "Name": "nan-ray-distance",
+      "Passed": true
+    },
+    {
+      "Name": "query-exclusion-foreign-world",
+      "Passed": true
+    },
+    {
+      "Name": "malformed-exclusion-not-treated-as-none",
+      "Passed": true
+    },
+    {
+      "Name": "convex-sweep",
+      "Passed": true
+    },
+    {
+      "Name": "mesh-query-shape-rejected",
+      "Passed": true
+    },
+    {
+      "Name": "foreign-sweep-shape",
+      "Passed": true
+    },
+    {
+      "Name": "convex-overlap",
+      "Passed": true
+    },
+    {
+      "Name": "overlap-pose-invalid",
+      "Passed": true
+    },
+    {
+      "Name": "runtime-net11",
+      "Passed": true
+    },
+    {
+      "Name": "no-backend-or-engine-references",
+      "Passed": true
+    },
+    {
+      "Name": "only-kton-public-namespaces",
+      "Passed": true
+    },
+    {
+      "Name": "commands-are-values",
+      "Passed": true
+    },
+    {
+      "Name": "hits-are-values",
+      "Passed": true
+    },
+    {
+      "Name": "contact-events-are-values",
+      "Passed": true
+    }
+  ],
+  "OutcomeCatalogScope": "Same named 131 outcomes pass in all three profiles. Catalog below is source Debug; individual raw hashes retained.",
+  "ProfilesDefined": {
+    "FastLinear60": {
+      "Ccd": "Swept",
+      "EvidenceBoundary": "PHYS0 sphere radius0.1/speed600/static wall0.04 only; no arbitrary-scene/angular CCD guarantee.",
+      "MaximumRecoverySpeed": 2,
+      "Workers": 1,
+      "SolverSubsteps": 4,
+      "ExplicitLinearSpeedAdmission": 600,
+      "ContactSpringHz": 600,
+      "Iterations": 8,
+      "MinimumSweepTimestepSeconds": 1E-06,
+      "SweepConvergenceSeconds": 1E-06,
+      "MaximumSpeculativeMargin": 0.01,
+      "DampingRatio": 1,
+      "DtSeconds": "1/60",
+      "CollisionSteps": 1
+    },
+    "Baseline60": {
+      "Iterations": 8,
+      "DampingRatio": 1,
+      "SolverSubsteps": 4,
+      "DtSeconds": "1/60",
+      "CollisionSteps": 1,
+      "ExplicitLinearSpeedAdmission": 60,
+      "MaximumRecoverySpeed": 2,
+      "MaximumSpeculativeMargin": "unbounded",
+      "Ccd": "Speculative",
+      "ContactSpringHz": 120,
+      "Workers": 1
+    }
+  },
+  "AdmissionCeilings": {
+    "Bodies": 1024,
+    "MeshInputBytes": 16777216,
+    "CommandsPerTick": 4096,
+    "Joints": 4096,
+    "MeshVertices": 65536,
+    "QueryScratchBytes": 1048576,
+    "Shapes": 2048,
+    "ContactEvents": 8192,
+    "MeshTriangles": 65536,
+    "QueryHits": 256
+  },
+  "Diagnostics": {
+    "BackendPoolThresholdBytes": 16777216,
+    "Scope": "Policy definitions; not hard total-memory caps or measured all-capacity frame budgets.",
+    "StepTargetMilliseconds": 1
+  },
+  "DeferredRuntimeProofs": [
+    "Live slot allocator/reuse/retirement and state-dependent admission before mutation.",
+    "Actual quality profile mapping and simulation/command/failure/cleanup behavior.",
+    "Many-hit nearest-prefix ordering/truncation, initial overlap/backfaces and bounded scratch.",
+    "Gameplay contact reduction, sleep/delete/teleport identities and overflow faults.",
+    "App/Cobalt/configuration/IFactory lifetime and Aether ECS bridge.",
+    "Convex hull/compound cooking; characters/ragdoll; AOT/parallel workers and other platforms."
+  ],
+  "PreviousAttempt": {
+    "Outcome": "Passed; two malformed-XML documentation warnings. Fixed comment and added invalid-world empty-batch admission before final 131-check run.",
+    "Directory": "TestResults/KtonPHYS1-attempt1-20261112",
+    "ChecksPerScope": 130
+  },
+  "Documentation": "docs/physics/CONTRACTS.md",
+  "History": "docs/physics/HISTORY.md#phys1-2026-11-12"
+}

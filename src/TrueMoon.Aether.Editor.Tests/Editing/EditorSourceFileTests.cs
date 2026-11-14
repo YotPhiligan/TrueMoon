@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using TrueMoon.Aether.Editor.Editing;
 using Xunit;
+using EditorSourceFile = TrueMoon.Aether.Tooling.SourceTracking.EditorSourceFile;
 
 namespace TrueMoon.Aether.Editor.Tests.Editing;
 

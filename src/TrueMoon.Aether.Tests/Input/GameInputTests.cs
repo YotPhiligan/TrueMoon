@@ -1,9 +1,10 @@
 using System.Numerics;
 using EngineSessionProbe;
 using Game.Logic;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Input;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Input;
+using TrueMoon.Aether.Runtime.Input;
+using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Argentis;
 using Xunit;
 

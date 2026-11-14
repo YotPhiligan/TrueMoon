@@ -35,7 +35,7 @@ $packageVersion = if ($sharedDelivery) { $sharedDelivery.Version } else { $trueM
 $packageIds = @('TrueMoon.Contracts', 'TrueMoon.Core', 'TrueMoon.Cobalt', 'TrueMoon',
     'TrueMoon.Extensions.DependencyInjection', 'TrueMoon.Enerit.Generator', 'TrueMoon.Enerit', 'TrueMoon.Mithril',
     'TrueMoon.Argentis', 'TrueMoon.Alloy', 'TrueMoon.Alloy.Rendering.Skia', 'TrueMoon.Alloy.Platform.Silk',
-    'TrueMoon.Alloy.Hosting', 'TrueMoon.Aether', 'TrueMoon.Aether.Editor')
+    'TrueMoon.Alloy.Hosting', 'TrueMoon.Aether.Abstractions', 'TrueMoon.Aether.Runtime', 'TrueMoon.Aether.Tooling', 'TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling')
 $packageReport = [ordered]@{
     Completed = $false; Stage = 'ARCH2e.1/2'; RunDirectory = $packageRun; Consumer = $packageConsumer
     Version = $packageVersion; Feed = $packageFeed; Cache = $packageCache; GpuRun = $false; WindowRun = $false
@@ -211,7 +211,7 @@ try {
     foreach ($profile in @('build-Debug', 'published-Release')) {
         $editor = if ($profile -eq 'build-Debug') { "$packageConsumer/Editor/bin/Debug/$($trueMoonBuildProfile.Framework)" } else { "$packageRun/published/Editor" }
         $runtime = if ($profile -eq 'build-Debug') { "$packageConsumer/Runtime/bin/Debug/$($trueMoonBuildProfile.Framework)" } else { "$packageRun/published/Runtime" }
-        foreach ($id in @('TrueMoon', 'TrueMoon.Aether', 'TrueMoon.Aether.Editor', 'TrueMoon.Argentis', 'TrueMoon.Alloy')) {
+        foreach ($id in @('TrueMoon', 'TrueMoon.Aether.Tooling', 'TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling', 'TrueMoon.Argentis', 'TrueMoon.Alloy')) {
             $package = @($packageReport.Packages | Where-Object Id -eq $id)[0]
             Assert-PackageResource $profile "$editor/$id.dll" (Get-PackageZipHash $package.Path "lib/$($trueMoonBuildProfile.Framework)/$id.dll")
         }
@@ -236,8 +236,8 @@ try {
                 $result = Get-Content -LiteralPath "$report/report.json" -Raw | ConvertFrom-Json
                 if (!$result.Passed -or $result.GameLoadedInParent -or $result.Runtime.Children.Count -ne 3) { throw 'Incomplete runtime proof.' }
                 foreach ($shader in $result.Runtime.Shaders) {
-                    $file = $shader.Name.Replace('TrueMoon.Aether.Gpu.Vulkan.Shaders.', '')
-                    if ($shader.Sha256 -ne (Get-PackageHash (Join-Path $packageWorkspace "TrueMoon.Aether/Gpu/Vulkan/Shaders/$file"))) { throw 'Embedded shader differs from source.' }
+                    $file = $shader.Name.Replace('TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.', '')
+                    if ($shader.Sha256 -ne (Get-PackageHash (Join-Path $packageWorkspace "TrueMoon.Aether.Runtime/Gpu/Vulkan/Shaders/$file"))) { throw 'Embedded shader differs from source.' }
                 }
                 foreach ($assembly in @($result.Assemblies | Where-Object Name -match '^TrueMoon(?:\.|$)')) {
                     $owner = @($packageReport.Packages | Where-Object Id -eq $assembly.Name)

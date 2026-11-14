@@ -1,18 +1,30 @@
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Preview;
+using TrueMoon.Aether.Tooling.Preview;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Diagnostics;
 using System.Diagnostics;
 using System.Numerics;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon;
-using TrueMoon.Aether.Editor;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Diagnostics;
-using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Editor.Projects;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Preview;
-using TrueMoon.Aether.Rendering;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI.Diagnostics;
+using TrueMoon.Aether.Editor.Tooling.Diagnostics;
+using TrueMoon.Aether.Editor.UI.Editing;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Abstractions.Preview;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Abstractions.Sessions;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -86,7 +98,7 @@ internal static class Workflow
             Program.Check(document.Read().Content!.UndoCount == 0 && !document.Read().IsDirty && document.Read().Content!.Document.Id == original.Document.Id,
                 "Save/reopen lost identity/value or retained ephemeral history.");
             var hierarchy = view.Hierarchy ?? throw new InvalidOperationException("Missing hierarchy.");
-            var hierarchyModel = (TrueMoon.Aether.Editor.Hierarchy.EditorHierarchyViewModel)hierarchy.DataContext!;
+            var hierarchyModel = (TrueMoon.Aether.Editor.Tooling.Hierarchy.EditorHierarchyViewModel)hierarchy.DataContext!;
             await Until(() => hierarchyModel.CanRename);
             await ui.InvokeAsync(() =>
             {
@@ -374,7 +386,7 @@ internal static class Workflow
                 var successIdentity = replaced.Identity; var successPid = replaced.ProcessId!.Value;
                 await File.WriteAllTextAsync(source, "invalid C# replacement", token);
                 await ReplaceCommand();
-                Program.Check(playback.Error is TrueMoon.Aether.Builds.GameBuildException && engine.Supervisor.Status.Identity == successIdentity &&
+                Program.Check(playback.Error is TrueMoon.Aether.Tooling.Builds.GameBuildException && engine.Supervisor.Status.Identity == successIdentity &&
                     engine.Supervisor.Status.State == SessionState.Paused && !runtimes.Leases.Single(lease => lease.ProcessId == successPid).ResourcesReleased,
                     "Compiler failure changed or stopped the old game.");
                 await File.WriteAllTextAsync(source, changed.Replace("RejectRestore = false", "RejectRestore = true", StringComparison.Ordinal), token);
@@ -534,7 +546,7 @@ internal static class Workflow
                 await Click(console.Mode);
                 await Until(() => data.Mode == EditorDiagnosticMode.StandardOutput && data.Processes?.Processes.Any(process =>
                     process.ProcessId == crashedPid && process.StandardOutput?.Output.TotalCharacters > 0) == true);
-                TrueMoon.Aether.Diagnostics.ProcessDiagnosticSnapshot raw = null!;
+                TrueMoon.Aether.Runtime.Diagnostics.ProcessDiagnosticSnapshot raw = null!;
                 await ui.InvokeAsync(() =>
                 {
                     raw = data.Processes!.Processes.Single(process => process.ProcessId == crashedPid);

@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Threading.Channels;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Editor.Projects;
 using TrueMoon.Aether.Editor.Tests.Projects;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.SourceTracking;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Editing;

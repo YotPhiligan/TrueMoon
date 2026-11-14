@@ -1,12 +1,15 @@
+using TrueMoon.Aether.Runtime;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -145,8 +148,8 @@ internal static class SceneViewportProbe
             File.WriteAllText(Path.Combine(input, "Game.cs"), text);
             File.WriteAllText(Path.Combine(input, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
             var path = Path.Combine(input, "Game.Logic.csproj");
-            File.WriteAllText(path, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether\"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Contracts\"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
-            return new(path, "Game.Logic.dll", "Game.Logic.ProbeGame", revision);
+            File.WriteAllText(path, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether.Runtime\"><HintPath>$(AetherRuntimePath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Aether.Abstractions\"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Contracts\"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
+            return new(path, "Game.Logic.dll", "Game.Logic.ProbeGame", revision) { RuntimeAccess = true };
         }
     }
     private sealed record Pending(string Name, ulong Tick, ulong Generation, int Width, int Height, uint Color)

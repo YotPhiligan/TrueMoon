@@ -1,11 +1,15 @@
+using TrueMoon.Aether.Runtime;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Gpu.OpenGl;
-using TrueMoon.Aether.Gpu.Surfaces;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Gpu.OpenGl;
+using TrueMoon.Aether.Runtime.Gpu.Surfaces;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Abstractions.Sessions;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -96,6 +100,6 @@ internal sealed class ConsumerViewport : IFactory<IGameViewportTransport, GpuRes
 // A mutable reference shared only by this composition; the UI parent owns its current View.
 internal sealed class EditorViewReference
 {
-    internal TrueMoon.Aether.Editor.EditorView? View;
+    internal TrueMoon.Aether.Editor.UI.EditorView? View;
     internal Border? Parent;
 }

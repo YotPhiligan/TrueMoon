@@ -1,10 +1,12 @@
 {
-  "skiaSharpVersion": "4.155.0",
-  "skiaSharpRevision": "d25e7fa628a2576e50ecc42004cc4fd03c6657f5",
-  "skiaRevision": "c2d78902a56e24827a7273a4ed3461ce18780680",
+  "skiaSharpVersion": "4.156.0",
+  "skiaSharpRevision": "c4ef20229bd56e41731aa94eebe8b082b8ef886c",
+  "skiaRevision": "d1717dc22ef2203b7fc9bf0e01078b37b1a4af6b",
   "interopAbi": 1,
   "runtimeIdentifier": "win-x64",
-  "sha256": "B1C01F7D0A6DCCF9CD9CEF0027306B89EC84A71487825519EE3BCEC72D2E1754",
+  "sha256": "70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A",
+  "msvcVersion": "14.51.36231",
+  "windowsSdkVersion": "10.0.26100.0",
   "sourcePatches": [
     {
       "id": "vulkan-general-host-stage",

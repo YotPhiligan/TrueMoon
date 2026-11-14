@@ -1,0 +1,23 @@
+# TrueMoon.Aether.Editor.Tooling
+
+Optional full Editor workflow over `TrueMoon.Aether.Tooling` and `TrueMoon.Aether.Editor.UI`.
+Headless Tooling and Runtime + UI consumers do not need this package.
+
+Call `UseAetherEditor` / `UseConfiguredAetherEditor` from the consumer App using
+`TrueMoon.Aether.Editor.Tooling`; Views/styles and presentation data are in
+`TrueMoon.Aether.Editor.UI` and its semantic subnamespaces. The optional standard
+window uses `UseAetherEditorWindow` / `UseConfiguredAetherEditorWindow`.
+Existing typed options, exact schema instances/keys, factory overrides and
+open/edit/save/build/play/stop/Save-Discard-Cancel behavior are retained.
+
+Concrete project/document/inspector/hierarchy/status/diagnostic ViewModels implement
+UI-owned presentation ports without exposing Tooling types to Views. App owns models
+and command/session services once; Views borrow them and own their subscriptions,
+child controls and factory-created viewport controllers. Embedded hosts own View/UI,
+call `EditorSession.Present` after presentation and drain before context release.
+Selection/camera/draft/history ownership and stale-generation fences remain in adapters.
+
+This replaces the previous `TrueMoon.Aether.Editor` package. Update PackageReferences
+and namespaces and rebuild matching hosts/games/artifacts/captures together. No facade
+or type forwarding is supplied; scene/project/control/frame/checkpoint formats stay
+unchanged. Mod loading/hot replacement is a later architecture stage.

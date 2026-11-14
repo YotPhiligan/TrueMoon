@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <RootNamespace>TrueMoon.Aether.Tooling</RootNamespace>
+    <AssemblyName>TrueMoon.Aether.Tooling</AssemblyName>
+    <PackageId>TrueMoon.Aether.Tooling</PackageId>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Headless Aether project/document authoring, compiler/capture, source observation and explicit workflow composition.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);game-engine;sessions;ipc;frames</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" />
+    <ProjectReference Include="../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
+    <ProjectReference Include="../TrueMoon.Aether.Abstractions/TrueMoon.Aether.Abstractions.csproj" />
+    <ProjectReference Include="../TrueMoon.Enerit/TrueMoon.Enerit.csproj" />
+    <ProjectReference Include="../TrueMoon.Mithril/TrueMoon.Mithril.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+  </ItemGroup>
+</Project>

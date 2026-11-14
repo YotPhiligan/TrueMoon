@@ -1,13 +1,17 @@
+using TrueMoon.Aether.Runtime;
 using System.Buffers.Binary;
 using System.Text.Json;
 using System.Security;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 
 namespace EngineSessionProbe;
@@ -46,7 +50,7 @@ public static class BuildProbe
         await host.Supervisor.StopAsync(); var b = await pending;
         Check(host.Supervisor.Status.State == SessionState.Stopped && factory.Leases.Count == 1, "Late build completion launched a game after Stop.");
         Check(a.BuildId != b.BuildId && hostHash == Hash(typeof(AetherHost).Assembly.Location), "Build overwrote host or reused A/B identity.");
-        var tampered = GameBuildArtifact.Publish(a.DirectoryPath, Path.Combine(directory, "tampered"), a.HostContractId, a.EntryAssembly, a.EntryType, a.SourceRevision);
+        var tampered = GameArtifactPublisher.Publish(a.DirectoryPath, Path.Combine(directory, "tampered"), a.HostContractId, a.EntryAssembly, a.EntryType, a.SourceRevision);
         var dll = Path.Combine(tampered.DirectoryPath, tampered.EntryAssembly); var bytes = File.ReadAllBytes(dll); bytes[^1] ^= 1; File.WriteAllBytes(dll, bytes);
         try { await host.Supervisor.StartAsync(authoring.Snapshot(), tampered); throw new InvalidOperationException("Tampered build was accepted."); }
         catch (InvalidDataException) { }
@@ -95,14 +99,13 @@ public static class BuildProbe
         var path = Path.Combine(root, "Game.Candidate.csproj");
         File.WriteAllText(path, """
             <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net11.0</TargetFramework></PropertyGroup>
-            <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
+            <ItemGroup><Reference Include="TrueMoon.Aether.Abstractions"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
             """);
         var source = color == "invalid C#" ? color : $$"""
-            using TrueMoon.Aether.Frames;
-            using TrueMoon.Aether.Scenes;
-            using TrueMoon.Aether.Sessions;
+            using TrueMoon.Aether.Abstractions.Scenes;
+            using TrueMoon.Aether.Abstractions.Sessions;
             namespace Game.Candidate;
-            public sealed class Game : IGameSession, TrueMoon.Aether.Runtime.IGameSessionEntry {
+            public sealed class Game : IGameSession, TrueMoon.Aether.Abstractions.Runtime.IGameSessionEntry {
                 public static IGameSession Create(global::TrueMoon.Services.IServiceResolver? services) => new Game();
                 public ulong TickNumber { get; private set; }
                 public long Revision { get; private set; }

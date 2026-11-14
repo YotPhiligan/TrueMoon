@@ -1,22 +1,31 @@
+using TrueMoon.Aether.Runtime;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editor;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Projects;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Diagnostics;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Abstractions.Sessions;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
-using TrueMoon.Aether.Editor.Diagnostics;
+using TrueMoon.Aether.Editor.UI.Diagnostics;
+using TrueMoon.Aether.Editor.Tooling.Diagnostics;
 using TrueMoon.Extensions.DependencyInjection;
 
 namespace PackageEditor;
@@ -221,13 +230,19 @@ internal static class Program
         Check(observedGames.Length == 3 && observedGames.All(row => row.GetProperty("CollectorAvailable").GetBoolean() && !row.GetProperty("DeviceAvailable").GetBoolean()), "Game diagnostic report lost numeric child health/unavailable CPU device state.");
         Check(children.Select(child => child.Metadata.GetProperty("GameBuildId").GetString()).SequenceEqual(new[] { a.BuildId, b.BuildId, b.BuildId }),
             "Runtime did not execute the selected build sequence.");
-        var shaders = typeof(AetherHost).Assembly.GetManifestResourceNames().Where(n => n.EndsWith(".spv", StringComparison.Ordinal))
+        var shaders = typeof(RuntimeEngine).Assembly.GetManifestResourceNames().Where(n => n.EndsWith(".spv", StringComparison.Ordinal))
             .Select(n =>
             {
-                using var stream = typeof(AetherHost).Assembly.GetManifestResourceStream(n)!;
+                using var stream = typeof(RuntimeEngine).Assembly.GetManifestResourceStream(n)!;
                 return new { Name = n, Sha256 = Convert.ToHexString(SHA256.HashData(stream)) };
             }).ToArray();
-        Check(shaders.Length == 2, "Aether embedded shaders are missing.");
+        Check(shaders.Select(shader => shader.Name).Order(StringComparer.Ordinal).SequenceEqual(new[]
+        {
+            "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.cube.frag.spv",
+            "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.cube.vert.spv",
+            "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.mesh.frag.spv",
+            "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.mesh.vert.spv"
+        }), "Runtime embedded shader closure differs.");
         return new { HostId = hostId, RuntimePath = runtimePath, Builds = new[] { a, b }, Checkpoint = checkpoint.State, Shaders = shaders,
             Replacement = replacement.Identity, MaxLive = maxLive, Children = children, ImportedRecords = imported.Length,
             IdentityRejected = true, Mappings = host.Frames.MappingCount, DiagnosticReport = diagnosticReport };

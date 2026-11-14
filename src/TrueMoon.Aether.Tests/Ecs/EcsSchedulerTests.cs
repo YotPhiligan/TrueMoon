@@ -1,6 +1,11 @@
-using TrueMoon.Aether.Ecs;
+using IEcsSystem = TrueMoon.Aether.Runtime.Ecs.IEcsSystem;
+using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Runtime.Ecs;
 using Xunit;
 using Xunit.Abstractions;
+using EcsCommandWriter = TrueMoon.Aether.Runtime.Ecs.EcsCommandWriter;
+using EcsSystemContext = TrueMoon.Aether.Runtime.Ecs.EcsSystemContext;
+using EcsSystemDescription = TrueMoon.Aether.Runtime.Ecs.EcsSystemDescription;
 
 namespace TrueMoon.Aether.Tests.Ecs;
 
@@ -732,10 +737,10 @@ public sealed class EcsSchedulerTests(ITestOutputHelper output)
     private struct Velocity(int value) { internal int Value = value; }
     private readonly struct Blocked { }
     private readonly record struct ManagedValue(string Text);
-    private sealed class ProbeFactory(Func<World, IEcsSystem> create) : IFactory<IEcsSystem, World>, IDisposable
+    private sealed class ProbeFactory(Func<World, Aether.Runtime.Ecs.IEcsSystem> create) : IFactory<Aether.Runtime.Ecs.IEcsSystem, World>, IDisposable
     {
         internal int Calls, Disposals;
-        public IEcsSystem Create(World world) { Calls++; return create(world); }
+        public Aether.Runtime.Ecs.IEcsSystem Create(World world) { Calls++; return create(world); }
         public void Dispose() => Disposals++;
     }
     private sealed class ProbeSystem(Action<EcsSystemContext>? execute = null, Action? stop = null, Action? dispose = null) : IEcsSystem

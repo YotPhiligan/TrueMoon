@@ -1,6 +1,9 @@
-﻿using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Editor.Hierarchy;
-using TrueMoon.Aether.Editor.Tests.Documents;
+﻿using TrueMoon.Aether.Editor.Tests.Documents;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.Tooling.Hierarchy;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Editing;
+using TrueMoon.Aether.Editor.UI.Hierarchy;
 using TrueMoon.Argentis;
 using Xunit;
 

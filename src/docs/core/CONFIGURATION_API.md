@@ -474,7 +474,8 @@ fonts и запуск/остановка сервисов здесь не вып
 // api: editor
 using TrueMoon;
 using TrueMoon.Aether;
-using TrueMoon.Aether.Editor;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Hosting;
 using TrueMoon.Configuration;
 using TrueMoon.Services;

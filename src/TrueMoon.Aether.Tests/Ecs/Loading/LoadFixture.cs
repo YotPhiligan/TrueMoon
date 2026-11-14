@@ -1,5 +1,6 @@
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Scenes;
 
 namespace TrueMoon.Aether.Tests.Ecs.Loading;
 

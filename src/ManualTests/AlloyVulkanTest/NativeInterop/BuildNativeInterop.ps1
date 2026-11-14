@@ -3,6 +3,7 @@ param(
     [string]$VisualStudioPath = $env:VS_INSTALL,
     [string]$PythonPath,
     [string]$NinjaPath,
+    [string]$WindowsSdkVersion,
     [switch]$InstallToRenderer,
     [switch]$CheckOnly
 )
@@ -29,9 +30,30 @@ $spectre = @(Get-ChildItem -LiteralPath (Join-Path $VisualStudioPath 'VC/Tools/M
     Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'lib/spectre/x64') })
 if (!$spectre.Count) { throw 'Native build blocked: the pinned Windows recipe requires x64 MSVC Spectre libraries.' }
 $selectedToolset = $spectre | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
+if ($pin['DefaultMsvcToolset']) {
+    # M156 selects the VS default toolset itself instead of consuming vcToolsetVersion.
+    $defaultToolset = [IO.File]::ReadAllText((Join-Path $VisualStudioPath 'VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt')).Trim()
+    $selectedToolset = $spectre | Where-Object Name -eq $defaultToolset | Select-Object -First 1
+    if (!$selectedToolset -or [version]$defaultToolset -lt [version]'14.50') {
+        throw 'The pinned M156 recipe requires the VS default MSVC v145+ toolset with x64 Spectre libraries.'
+    }
+}
 # This pinned Skia GN recipe appends one digit to the family prefix (14.4 -> 14.44).
 $selectedToolsetVersion = [version]$selectedToolset.Name
 $toolsetVersion = '{0}.{1}' -f $selectedToolsetVersion.Major, [int][Math]::Floor($selectedToolsetVersion.Minor / 10)
+$windowsSdkRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits/10'
+$completeSdks = @(Get-ChildItem -LiteralPath (Join-Path $windowsSdkRoot 'Include') -Directory -ErrorAction SilentlyContinue | Where-Object {
+    (Test-Path -LiteralPath (Join-Path $_.FullName 'um/Windows.h')) -and
+    (Test-Path -LiteralPath (Join-Path $_.FullName 'ucrt/stdlib.h')) -and
+    (Test-Path -LiteralPath (Join-Path $windowsSdkRoot "Lib/$($_.Name)/um/x64/kernel32.lib")) -and
+    (Test-Path -LiteralPath (Join-Path $windowsSdkRoot "Lib/$($_.Name)/ucrt/x64/ucrt.lib")) -and
+    (Test-Path -LiteralPath (Join-Path $windowsSdkRoot "bin/$($_.Name)/x64/rc.exe"))
+})
+if (!$WindowsSdkVersion) { $WindowsSdkVersion = ($completeSdks | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1).Name }
+if (!$WindowsSdkVersion -or !($completeSdks | Where-Object Name -eq $WindowsSdkVersion)) {
+    throw 'Supply an installed complete Windows x64 SDK with -WindowsSdkVersion; no SDK is installed automatically.'
+}
+Write-Output "Native toolchain: MSVC $($selectedToolset.Name), Windows SDK $WindowsSdkVersion"
 if (!$PythonPath) {
     $command = Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($command) { $PythonPath = $command.Source }
@@ -81,11 +103,18 @@ try {
     & git submodule update --init --depth 1 -- $requiredSubmodules
     if ($LASTEXITCODE -ne 0) { throw 'Submodule initialization failed.' }
     & (Join-Path $PSScriptRoot 'ApplyNativeInterop.ps1') -SkiaSourcePath (Join-Path $root 'externals/skia')
-    & dotnet tool restore
+    # The isolated upstream feeds must not inherit TrueMoon's package source mapping.
+    $toolNugetConfig = Join-Path $root 'nuget.config'
+    if (!(Test-Path -LiteralPath $toolNugetConfig)) { throw 'The pinned source is missing its NuGet configuration.' }
+    & dotnet tool restore --configfile $toolNugetConfig
     if ($LASTEXITCODE -ne 0) { throw 'Cake tool restore failed.' }
     Push-Location (Join-Path $root 'native/windows')
     try {
-        & dotnet cake --target=libSkiaSharp --arch=x64 --configuration=Release --llvm=msvc "--vcToolsetVersion=$toolsetVersion" "--vsinstall=$VisualStudioPath" "--python=$PythonPath" --supportVulkan=true --supportDirect3D=false
+        $nativeArguments = @('--target=libSkiaSharp', '--arch=x64', '--configuration=Release', '--llvm=msvc',
+            "--vsinstall=$VisualStudioPath", "--python=$PythonPath", "--windowsSdkVersion=$WindowsSdkVersion",
+            '--supportVulkan=true', '--supportDirect3D=false')
+        if (!$pin['DefaultMsvcToolset']) { $nativeArguments += "--vcToolsetVersion=$toolsetVersion" }
+        & dotnet cake @nativeArguments
         if ($LASTEXITCODE -ne 0) { throw 'Native Skia build failed; do not substitute packaged native assets.' }
     } finally { Pop-Location }
     $dll = Join-Path $root 'output/native/windows/x64/libSkiaSharp.dll'
@@ -105,8 +134,9 @@ try {
             skiaSharpVersion = $pin.Version; skiaSharpRevision = $pin.SkiaSharpRevision
             skiaRevision = $pin.SkiaRevision; interopAbi = 1; runtimeIdentifier = 'win-x64'
             sha256 = (Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash
+            msvcVersion = $selectedToolset.Name; windowsSdkVersion = $WindowsSdkVersion
         }
-        if ($pin.Version -eq '4.155.0') {
+        if ($pin['VulkanGeneralHostStage']) {
             $metadata.sourcePatches = @([ordered]@{
                 id = 'vulkan-general-host-stage'
                 sha256 = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'vulkan-general-host-stage.patch') -Algorithm SHA256).Hash

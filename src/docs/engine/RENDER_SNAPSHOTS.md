@@ -52,3 +52,19 @@ recording и ждёт accepted uses/actual cleanup. Отмена Stop wait не 
 Cleanup failure оставляет owner/исходную ошибку для retry. Backend/device не уничтожаются
 при live snapshot refs. Source/published/fresh-package CPU proof и tests отделены от
 нового surface renderer, Runtime Playing fence, device loss и physical GPU acceptance.
+
+<a id="surface-consumer"></a>
+## Actual surface consumer — ARCH1f.4, 2026-11-12
+
+[Surface integration](RENDER_SURFACE.md) реализует backend submission на том же
+VkDevice/queue, что reusable frame. Owner возвращается до native work, complete
+означает подтверждённый Vulkan fence; cleanup сохраняет неизвестный outcome для
+retry. Pause повторно использует current envelope через внутреннюю recording
+резервацию, предварительно collect завершённых uses. Public Clone не добавлен.
+Resource handles остаются не-владеющими; native rendering не приобретает lifetime
+из inspection data. Runtime drains view до World/collectible game/surface teardown.
+
+Fixed132byte `RenderSnapshotStamp` содержит только detached provenance. First actual
+presentation и последующие `FrameSession.PresentedAsync` согласуют Playing с текущим
+source; готовый, но устаревший in-flight кадр не открывает fence новой ревизии.
+CPU snapshot proofs выше по-прежнему не заменяют отдельный native proof f.4.

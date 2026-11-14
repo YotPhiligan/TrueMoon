@@ -1,10 +1,12 @@
+using TrueMoon.Aether.Runtime;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Abstractions.Sessions;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 using EngineRuntime = TrueMoon.Aether.Runtime.AetherRuntimeHost;
@@ -27,18 +29,18 @@ internal static class Program
                     JsonDirectory = Path.Combine(launch.ReportDirectory, "diagnostics", "runtime", launch.Identity.Generation.ToString()),
                     JsonUseRunDirectories = true
                 });
-                c.UseAether(o =>
+                c.UseAetherRuntime(o =>
                 {
                     o.HostContractId = launch.Identity.HostContractId; o.GameBuildId = launch.Identity.GameBuildId;
                     o.ReportDirectory = launch.ReportDirectory;
                     o.ChildDiagnostics = launch.DiagnosticDelivery ?? new() { Enabled = false };
                 });
-                if (launch.Role == RuntimeRole.EditPreview) c.UseAetherPreviewRuntime(launch, bootstrap.ParentProcessId);
-                else c.UseAetherRuntime(launch, bootstrap.ParentProcessId);
+                if (launch.Role == RuntimeRole.EditPreview) c.UseAetherPreviewRuntime(bootstrap);
+                else c.UseAetherRuntime(bootstrap);
             });
             await app.StartAsync();
             var runtime = app.Services.Resolve<EngineRuntime>()!;
-            var host = app.Services.Resolve<AetherHost>()!;
+            var host = app.Services.Resolve<RuntimeEngine>()!;
             var source = app.Services.Resolve<IEventsSourceFactory>()!.Create("TrueMoon.Package.Runtime");
             Console.WriteLine("PACKAGE_RUNTIME_STDOUT"); Console.Error.WriteLine("PACKAGE_RUNTIME_STDERR");
             var work = runtime.RunAsync();

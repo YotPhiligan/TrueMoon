@@ -1,0 +1,893 @@
+{
+  "SchemaVersion": 1,
+  "RecordedDate": "2026-11-12",
+  "Scope": "Windows x64 MiniAudioEx libvorbis failed-init cleanup correction; isolated native build and fresh NuGet consumer, no App/DI/ECS audio module.",
+  "Completed": true,
+  "DependencyProfileVerified": true,
+  "AudioModuleImplemented": false,
+  "ProductionAudioModuleReady": false,
+  "Command": "pwsh -NoLogo -NoProfile -File eng/native/MiniAudioEx/Verify.ps1 -EvidenceDirectory TestResults/MiniAudioExFix-20261112/final-02 -Device -SourceArchive TestResults/MiniAudioExFix-20261112/inspect/miniaudioex-9f85b561.zip -ManagedArchive TestResults/MiniAudioEx-20261112/final-02/feed/jaj.packages.miniaudioex.4.0.1.nupkg",
+  "EvidenceDirectory": "TestResults/MiniAudioExFix-20261112/final-02",
+  "EvidenceRetention": "Raw TestResults and temporary extracted sources are local ignored evidence, retained without automated cleanup; versioned result summary and source/fixture/report hashes remain here.",
+  "Pins": {
+    "upstream": "https://github.com/japajoe/miniaudioex",
+    "revision": "9f85b56157027cc57c7cd0a13fea7fee3f1e167e",
+    "miniaudioVersion": "0.11.26",
+    "archiveUrl": "https://codeload.github.com/japajoe/miniaudioex/zip/9f85b56157027cc57c7cd0a13fea7fee3f1e167e",
+    "archiveSha256": "FD533CE9AC9BFCDA9CC93A63B00E458E3A28E9D06B8772D47FF9AB3E2F516FD2",
+    "patchedFile": "src/miniaudioex/extras/miniaudio_libvorbis.c",
+    "originalFileSha256": "C4FE9B40AA4B16CB1B4C5D5636C9E4A04D92A91AA54A6768D96756866427E90D",
+    "patchedFileSha256": "7808071F0C3CA8457882FBA299FE10D584261F74AC9BF38B3B1E833BBD658223",
+    "patchSha256": "D9DDCA3DA584DEEF9FF4549CD18453AB92A23B270D1217826E5FC235A0C00DF5",
+    "managedPackageId": "JAJ.Packages.MiniAudioEx",
+    "managedPackageVersion": "4.0.1",
+    "managedPackageSha256": "E57733E2FFBB45703EE03C1945B396CEA322F3DE06A6C1D7D4F6F834834809E7",
+    "originalNativeSha256": "70F7DD4E6A1DECBEE0791E22D231B7286E99BDE15AB86262284FF62C2CA3A641",
+    "packageId": "TrueMoon.MiniAudioEx",
+    "packageVersion": "4.0.1-truemoon.1",
+    "runtimeIdentifier": "win-x64"
+  },
+  "Toolchain": {
+    "VisualStudio": "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools",
+    "CompilerSha256": "B0A1818EBAE6DA7F18230A84E76CE839212584AC4C2AB55B97A0D5268085DA57",
+    "Optimization": "/O2",
+    "RuntimeLibrary": "/MD",
+    "Msvc": "14.51.36231",
+    "LinkRepro": true
+  },
+  "BuildProfile": {
+    "Workspace": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+    "Framework": "net11.0",
+    "TestFramework": "net11.0",
+    "Sdk": "11.0.100",
+    "Version": "0.3.0.1-alpha",
+    "LanguageVersion": "latest",
+    "Features": ";runtime-async=on",
+    "Sources": [
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Build.props",
+        "Sha256": "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props",
+        "Sha256": "4292CD7B581C08609FA173BEBB188F99729068CBA1A24CDD69F97C3CE7D50335"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\global.json",
+        "Sha256": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+      },
+      {
+        "Path": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\BuildProfile.ps1",
+        "Sha256": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+      }
+    ],
+    "EvidencePath": "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\MiniAudioExFix-20261112\\final-02\\native\\profile\\profile-2345aa8278ee4f07967c381182b17191.json"
+  },
+  "BuildReceipt": {
+    "Sha256": "63E2C82050FE029C11B1825A818F28A20B8FB2B14123AD1375E68EB3F1F0EE79",
+    "Path": "TestResults/MiniAudioExFix-20261112/final-02/native/native-build.json"
+  },
+  "Verification": {
+    "Utc": "2026-11-12T17:55:30.6243744+05:00",
+    "MutedDevice": true,
+    "DeviceRequested": true,
+    "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/verification.json",
+    "KnownDefects": [],
+    "AudibleRequested": false,
+    "Sha256": "19AF2C46FCF26248372D6201B544F1B885F2CA88AFB1BA17E7181B41D38C71FB"
+  },
+  "Package": {
+    "Sha256": "9C696B9293932D6D09F85DF523D675D7780D7B30D505E3B487674E6C5F1F6955",
+    "Version": "4.0.1-truemoon.1",
+    "PublishedExternally": false,
+    "Path": "TestResults/MiniAudioExFix-20261112/final-02/native/feed/TrueMoon.MiniAudioEx.4.0.1-truemoon.1.nupkg",
+    "Entries": [
+      "_rels/.rels",
+      "TrueMoon.MiniAudioEx.nuspec",
+      "README.md",
+      "THIRD-PARTY-NOTICES.md",
+      "lib/netstandard2.0/MiniAudioExNET.dll",
+      "lib/netstandard2.1/MiniAudioExNET.dll",
+      "libvorbis-lifetime.patch",
+      "licenses/miniaudioex.txt",
+      "licenses/minivorbis.txt",
+      "licenses/truemoon.txt",
+      "native-build.json",
+      "runtimes/win-x64/native/miniaudioex.dll",
+      "[Content_Types].xml",
+      "package/services/metadata/core-properties/nuget.psmdcp"
+    ],
+    "Id": "TrueMoon.MiniAudioEx"
+  },
+  "Native": {
+    "BaselineSha256": "603DCB2A8C3B7A3F717F8D70C772D13042A093D483D772296F78C5B1AE31A01D",
+    "PatchSha256": "D9DDCA3DA584DEEF9FF4549CD18453AB92A23B270D1217826E5FC235A0C00DF5",
+    "Exports": {
+      "Baseline": 1286,
+      "Removed": [],
+      "Patched": 1286,
+      "Original": 1286
+    },
+    "PatchedSha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB",
+    "SameToolsetRepeatBuildsByteIdentical": true,
+    "RequiredRuntime": "MSVC /MD, VCRUNTIME140.dll and Windows UCRT; not bundled by this recipe.",
+    "Warnings": {
+      "baseline": [
+        {
+          "Code": "C4034",
+          "Count": 4
+        }
+      ],
+      "patched": [
+        {
+          "Code": "C4034",
+          "Count": 4
+        }
+      ]
+    },
+    "RegressionWarningsAsErrors": true
+  },
+  "ManagedAssets": [
+    {
+      "Path": "lib/netstandard2.0/MiniAudioExNET.dll",
+      "Unmodified": true,
+      "Sha256": "057F476D50D3E6FEC83358AC6C299D14729BC90E22AD4EAAAB82F00517BA209E"
+    },
+    {
+      "Path": "lib/netstandard2.1/MiniAudioExNET.dll",
+      "Unmodified": true,
+      "Sha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575"
+    }
+  ],
+  "Compatibility": {
+    "OriginalAbiReport": {
+      "Sha256": "6771994358C6E506E1B4F226FC3DE40256D0B523AF7546BAF2AEC7A7AFF9F92C",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/original-abi-control.json"
+    },
+    "ManagedDllsChanged": false,
+    "NativeAllocationTypesCompared": 68,
+    "AllTypeSizesEqual": true,
+    "PublicSignaturesAndStructuresChanged": false,
+    "DecoderRoutingGuardUsed": false
+  },
+  "NativeRegression": {
+    "EntryPoints": [
+      "callbacks",
+      "memory",
+      "narrow-file",
+      "wide-file"
+    ],
+    "RepeatsPerEntryAndFixture": 8,
+    "InvalidFixtures": [
+      "constant.wav",
+      "corrupt.ogg",
+      "truncated.ogg",
+      "bad-crc.ogg"
+    ],
+    "ExpectedPatchedExit": 0,
+    "BaselineReportSha256": "17D3AB2E6749EA3B45349329E8BD413D7447985C6EBE0F67D4793BBAEB86BE23",
+    "ExpectedBaselineExit": 1,
+    "Baseline": {
+      "Completed": false,
+      "Checks": 278,
+      "Failures": 131,
+      "ObservedLeakedBytes": 110040,
+      "ObservedLeakedBlocks": 131
+    },
+    "Patched": {
+      "Completed": true,
+      "Checks": 286,
+      "Failures": 0,
+      "ObservedLeakedBytes": 0,
+      "ObservedLeakedBlocks": 0
+    },
+    "ExtraCases": [
+      "valid OGG decoding and cleanup",
+      "missing required callbacks",
+      "injected read failure",
+      "each vtable allocation failure",
+      "fixed-only null and empty input",
+      "fixed-only repeated uninit after rejected null input"
+    ],
+    "PatchedReportSha256": "56D6106E43653E26EDA093E3B77ABE755521483A2241B4E1970F36F4C3E873F0"
+  },
+  "ConsumerChecks": {
+    "WASAPIReopenCyclesPerProfile": 6,
+    "BuildErrors": 0,
+    "Debug": 334.0,
+    "PublishedRelease": 334.0,
+    "FailureCyclesPerProfile": 64,
+    "LifecycleCyclesPerProfile": 32,
+    "BuildWarnings": 0,
+    "FullSolutionBuildOrTestsRepeated": false
+  },
+  "Sources": [
+    {
+      "Sha256": "FF4692E3A765BB6D3183FE1BA5D24E6CAA34329987DB2BD87C0704DEF819E971",
+      "Path": "eng/native/MiniAudioEx/Build.ps1"
+    },
+    {
+      "Sha256": "D9DDCA3DA584DEEF9FF4549CD18453AB92A23B270D1217826E5FC235A0C00DF5",
+      "Path": "eng/native/MiniAudioEx/libvorbis-lifetime.patch"
+    },
+    {
+      "Sha256": "753C8AAFDAFE723D4D7A5C98713B169EB518AA22CEBDB841C20594C1C0CA942B",
+      "Path": "eng/native/MiniAudioEx/PACKAGE.md"
+    },
+    {
+      "Sha256": "5DB6B184E59B615906C137C43412A221607B9F8CFABB59718C21EB875D6F9146",
+      "Path": "eng/native/MiniAudioEx/README.md"
+    },
+    {
+      "Sha256": "2B41103E21D7CAB133083993B8DD3795B75E1A963BA7B48DF7E529FA1792526F",
+      "Path": "eng/native/MiniAudioEx/Regression.c"
+    },
+    {
+      "Sha256": "A7F156771D2A4CD6CB280B7CC32B797936B5B49EC5C1532B55CDACDBAACC863C",
+      "Path": "eng/native/MiniAudioEx/Source.lock.json"
+    },
+    {
+      "Sha256": "EDF6DA554C8969AFBC0BA08AF3995D83471B8832A63B2CE588A48516BDD6E372",
+      "Path": "eng/native/MiniAudioEx/THIRD-PARTY-NOTICES.md"
+    },
+    {
+      "Sha256": "0A6740595C49D2F34DF86C090516BDBCF47C34E954BF53F08384C1D5CD36C260",
+      "Path": "eng/native/MiniAudioEx/Verify.ps1"
+    },
+    {
+      "Sha256": "803D6C77995BD9D1FC1A0325506E4CAE7924A2564C69F242EE7D2FBFA9EFF843",
+      "Path": "ManualTests/MiniAudioExResearch/AudioGraph.cs"
+    },
+    {
+      "Sha256": "51D9A29ECA1289408C6CCD02ED58CB0FA65B43EB97F7F5EBC24C7FF800BAF361",
+      "Path": "ManualTests/MiniAudioExResearch/FileVorbisBackend.cs"
+    },
+    {
+      "Sha256": "28C704A470C97BE94E085FC01523DFEC0159814DF7580F73EF757A832FC62208",
+      "Path": "ManualTests/MiniAudioExResearch/Fixtures.cs"
+    },
+    {
+      "Sha256": "FD8D6372606556F5F90BE07D08D4698A253A845AECB3613A93C20D6D62B56105",
+      "Path": "ManualTests/MiniAudioExResearch/LoopbackCapture.cs"
+    },
+    {
+      "Sha256": "59E2DA0F8FFD1D56042BE4ACBE5AFBCDE49F8C8CE26F6FBB55AC84F632740E02",
+      "Path": "ManualTests/MiniAudioExResearch/NativeAllocationTracker.cs"
+    },
+    {
+      "Sha256": "C147074C78DBBFFDE9226140EFD70607034F78B6700A61D612C011578B2797C6",
+      "Path": "ManualTests/MiniAudioExResearch/NativeOwner.cs"
+    },
+    {
+      "Sha256": "02BCCD1DA8B5732F1CDC6C93FD99A096A097A732A0A59FD64192DD6F74685FFB",
+      "Path": "ManualTests/MiniAudioExResearch/PlaybackTelemetry.cs"
+    },
+    {
+      "Sha256": "323EA97004F3AD957925D623C351C6210219B85D5FA064F997AF8FA82D7DA51D",
+      "Path": "ManualTests/MiniAudioExResearch/Probe.csproj"
+    },
+    {
+      "Sha256": "F3802F2F5BE31230A36E4B0A0BC8B5725FB8585179756BAFDEBD7AEA2FA0BA86",
+      "Path": "ManualTests/MiniAudioExResearch/Program.cs"
+    },
+    {
+      "Sha256": "4EBC58266E4733591379A1A7B5996787CD0A8687492BB0A821939BCB6B7A9116",
+      "Path": "ManualTests/MiniAudioExResearch/README.md"
+    },
+    {
+      "Sha256": "3A351C2D85880721401C954F5BDA0DF239E219148ACB17ED1195856C3A3FA030",
+      "Path": "ManualTests/MiniAudioExResearch/Verify.ps1"
+    }
+  ],
+  "Fixtures": [
+    {
+      "Name": "музыка-A.ogg",
+      "Sha256": "B6AAFAF2334A8B579CABF71B4CA4FD6F3C6E17E7ECD368BF0B45FA4D5B43082D",
+      "Bytes": 47595
+    },
+    {
+      "Name": "музыка-B.ogg",
+      "Sha256": "8C612F9599716C0A016D09FFFEFCAD021FAC9D030F9D273102A8A9175418002A",
+      "Bytes": 46166
+    },
+    {
+      "Name": "эффект.wav",
+      "Sha256": "4161676BE2EFA1126B79110A9AEECD8EBCAE3DD232DF69AEF299F085002991F9",
+      "Bytes": 24044
+    },
+    {
+      "Name": "bad-crc.ogg",
+      "Sha256": "AD31C731BDFD03838B52064C62ED7D3D346DE43FCB27995C648153F88AC67B51",
+      "Bytes": 47595
+    },
+    {
+      "Name": "constant.wav",
+      "Sha256": "DFE331E712D08D5D02030FB4D652ECCE8D6F8D98F5F8E729A59511065995AE98",
+      "Bytes": 96044
+    },
+    {
+      "Name": "corrupt.ogg",
+      "Sha256": "05D2C0A4E8911EB47D3085A6214529C18EDF74ACD5FF5D6489BCD8914B27CA86",
+      "Bytes": 8
+    },
+    {
+      "Name": "corrupt.wav",
+      "Sha256": "66840DDA154E8A113C31DD0AD32F7F3A366A80E8136979D8F5A101D3D29D6F72",
+      "Bytes": 8
+    },
+    {
+      "Name": "impulse.wav",
+      "Sha256": "5CDECD2A9C14B91AF2F6F5E1C2748EC1264E6915ACB8711EC1F056AB2EB63F50",
+      "Bytes": 60
+    },
+    {
+      "Name": "long-music.wav",
+      "Sha256": "E367C6C282CDF7C72C7F5B233E12FD81016E7AE83084984072147613DDB2B20E",
+      "Bytes": 115200044
+    },
+    {
+      "Name": "truncated.ogg",
+      "Sha256": "CACAA71F4BB672F5A6E3370E11A8AEEE549031F0937EDC77499C1C643A2586C1",
+      "Bytes": 128
+    },
+    {
+      "Name": "valid.ogg",
+      "Sha256": "B6AAFAF2334A8B579CABF71B4CA4FD6F3C6E17E7ECD368BF0B45FA4D5B43082D",
+      "Bytes": 47595
+    }
+  ],
+  "Reports": [
+    {
+      "Name": "inspect-Debug",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/inspect-Debug.json",
+      "Sha256": "EB5C562EBA7FB686613EB6CCEE544F71525757673176F73CCF584612AF3B6752",
+      "Checks": 10,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "NativeSha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB",
+        "ManagedSha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575",
+        "ManagedAssembly": "MiniAudioExNET, Version=4.0.1.0, Culture=neutral, PublicKeyToken=null",
+        "NativeObjectSizes": {
+          "context": 720,
+          "device": 3312,
+          "engine": 1360,
+          "sound": 1024,
+          "resource_manager": 992,
+          "resource_manager_data_source": 744
+        },
+        "AllNativeObjectSizes": {
+          "async_notification": 0,
+          "biquad_coefficient": 4,
+          "biquad": 64,
+          "bpf": 40,
+          "bpf2": 64,
+          "bpf_node": 400,
+          "channel": 1,
+          "context": 720,
+          "data_source": 0,
+          "data_source_node": 368,
+          "data_source_vtable": 56,
+          "decoder": 552,
+          "decoding_backend_vtable": 40,
+          "delay": 48,
+          "delay_node": 408,
+          "device": 3312,
+          "device_capture": 1400,
+          "device_descriptor": 296,
+          "device_id": 256,
+          "device_info": 1544,
+          "device_notification": 16,
+          "device_playback": 1432,
+          "device_resampling": 32,
+          "effect_node": 384,
+          "encoder": 120,
+          "engine": 1360,
+          "fader": 40,
+          "fence": 16,
+          "gainer": 48,
+          "hishelf2": 64,
+          "hishelf_node": 424,
+          "hpf": 56,
+          "hpf1": 40,
+          "hpf2": 64,
+          "hpf_node": 416,
+          "log": 112,
+          "loshelf2": 64,
+          "loshelf_node": 424,
+          "lpf": 56,
+          "lpf1": 40,
+          "lpf2": 64,
+          "lpf_node": 416,
+          "node": 0,
+          "node_base": 360,
+          "node_graph": 752,
+          "node_input_bus": 72,
+          "node_output_bus": 56,
+          "node_vtable": 24,
+          "noise": 152,
+          "notch2": 64,
+          "notch_node": 424,
+          "panner": 16,
+          "peak2": 64,
+          "peak_node": 424,
+          "procedural_data_source": 104,
+          "pulsewave": 160,
+          "resampling_backend_vtable": 80,
+          "resource_manager": 992,
+          "resource_manager_data_source": 744,
+          "sound": 1024,
+          "sound_inlined": 1040,
+          "sound_group": 1024,
+          "spatializer": 200,
+          "spatializer_listener": 112,
+          "splitter_node": 360,
+          "stack": 24,
+          "vfs": 0,
+          "waveform": 120
+        }
+      }
+    },
+    {
+      "Name": "cleanup-Debug",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/cleanup-Debug.json",
+      "Sha256": "08CA7C8750D082B9EB01567CC51C84DAC934E9C1A0CAA71B2D43D93F66B9198F",
+      "Checks": 4,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "AllocationSnapshots": [
+          {
+            "Phase": "engine",
+            "Bytes": 1167015,
+            "Blocks": 5
+          },
+          {
+            "Phase": "sound-loaded",
+            "Bytes": 1361951,
+            "Blocks": 10
+          },
+          {
+            "Phase": "sound-released",
+            "Bytes": 1167015,
+            "Blocks": 5
+          },
+          {
+            "Phase": "graph-disposed",
+            "Bytes": 0,
+            "Blocks": 0
+          }
+        ]
+      }
+    },
+    {
+      "Name": "offline-Debug",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/offline-Debug.json",
+      "Sha256": "1564D447776CF8C2EA2ECEB66C6229690601D9AC622BDC6F2E642157A2EC171A",
+      "Checks": 97,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "SeekCursor": {
+          "Requested": 1000,
+          "Rendered": 1024,
+          "Actual": 2024
+        },
+        "OggDecodedLengthFrames": 0,
+        "OggLengthResult": "not_implemented",
+        "OggLengthLimitation": "Bundled libvorbis reports no usable length; duration must be captured separately.",
+        "OfflinePeakTrackedNativeBytes": 1941047,
+        "LongStream": {
+          "FileBytes": 115200044,
+          "FullDecodedFloatBytes": 230400000,
+          "PeakTrackedNativeBytes": 1940431
+        },
+        "Lifetime": {
+          "Cycles": 32,
+          "BaselineHandles": 213,
+          "HandleSamples": [
+            210,
+            210,
+            210,
+            210,
+            210,
+            210,
+            210,
+            210
+          ],
+          "PrivateByteSamples": [
+            9887744,
+            9560064,
+            9588736,
+            9674752,
+            9785344,
+            9990144,
+            9998336,
+            9981952
+          ]
+        }
+      }
+    },
+    {
+      "Name": "device-muted-Debug",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/device-muted-Debug.json",
+      "Sha256": "DB52D906BA6707FF94EF933B9D9CBC6C973164977156C3E6138FB8D85916B635",
+      "Checks": 16,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "Device": {
+          "Backend": "WASAPI",
+          "RequestedFrames": 256,
+          "ActualPeriodFrames": 374,
+          "ActualPeriods": 3,
+          "ActualSampleRate": 48000,
+          "Name": "Динамики (FiiO Q series)"
+        },
+        "LoopbackAvailable": false,
+        "AudibleRequested": false,
+        "MusicCursorAfterSeekAndLoop": 614656,
+        "MusicTailRmsAfterKnownEof": 0.02056635173009359,
+        "UnknownLengthCursorPolicy": "With unavailable duration, cursor remains monotonic across decoder loops.",
+        "PlaybackCallbacks": {
+          "Blocks": 1803,
+          "Frames": 461568,
+          "Failures": 0,
+          "CaptureOverflowBlocks": 0,
+          "CallbackIncludesManagedInstrumentation": true,
+          "P50Milliseconds": 0.0026,
+          "P99Milliseconds": 0.0137,
+          "MaxMilliseconds": 0.3069
+        },
+        "LoopbackFrames": 0,
+        "ProcessLoopbackOnly": false,
+        "DevicePeakTrackedNativeBytes": 2768071
+      }
+    },
+    {
+      "Name": "raw-vorbis-defect-Debug",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/raw-vorbis-defect-Debug.json",
+      "Sha256": "0418621D45FC257E662B21341C5746B7989FEB549ED209F520A170D101232C94",
+      "Checks": 4,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "RawVorbisLeak": {
+          "Bytes": 0,
+          "Blocks": 0
+        }
+      }
+    },
+    {
+      "Name": "malformed-vorbis-defect-Debug",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/malformed-vorbis-defect-Debug.json",
+      "Sha256": "E94480F49E906D52C0760BCBCAB6ADC0FABA7C9DD37D4764462670E996717C77",
+      "Checks": 5,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "MalformedVorbisLeak": {
+          "Bytes": 0,
+          "Blocks": 0
+        }
+      }
+    },
+    {
+      "Name": "failure-stress-Debug",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/failure-stress-Debug.json",
+      "Sha256": "7CE15BB1EE93A0EF24EF497EBBA0B1F96C243A53571DD186926EA1F9CA3D1BB7",
+      "Checks": 198,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "FailureBaseline": {
+          "baselineBytes": 1167015,
+          "baselineBlocks": 5
+        },
+        "FailureCycles": 64
+      }
+    },
+    {
+      "Name": "inspect-Release",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/inspect-Release.json",
+      "Sha256": "B396AAFE1ABD31F7832B78436B07AF4033A13E1CB9FB2700C19204773F5BD23D",
+      "Checks": 10,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "NativeSha256": "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB",
+        "ManagedSha256": "3DFF661426D521606764CB02E00D45D2DB35F100D9C36A2414B378662D652575",
+        "ManagedAssembly": "MiniAudioExNET, Version=4.0.1.0, Culture=neutral, PublicKeyToken=null",
+        "NativeObjectSizes": {
+          "context": 720,
+          "device": 3312,
+          "engine": 1360,
+          "sound": 1024,
+          "resource_manager": 992,
+          "resource_manager_data_source": 744
+        },
+        "AllNativeObjectSizes": {
+          "async_notification": 0,
+          "biquad_coefficient": 4,
+          "biquad": 64,
+          "bpf": 40,
+          "bpf2": 64,
+          "bpf_node": 400,
+          "channel": 1,
+          "context": 720,
+          "data_source": 0,
+          "data_source_node": 368,
+          "data_source_vtable": 56,
+          "decoder": 552,
+          "decoding_backend_vtable": 40,
+          "delay": 48,
+          "delay_node": 408,
+          "device": 3312,
+          "device_capture": 1400,
+          "device_descriptor": 296,
+          "device_id": 256,
+          "device_info": 1544,
+          "device_notification": 16,
+          "device_playback": 1432,
+          "device_resampling": 32,
+          "effect_node": 384,
+          "encoder": 120,
+          "engine": 1360,
+          "fader": 40,
+          "fence": 16,
+          "gainer": 48,
+          "hishelf2": 64,
+          "hishelf_node": 424,
+          "hpf": 56,
+          "hpf1": 40,
+          "hpf2": 64,
+          "hpf_node": 416,
+          "log": 112,
+          "loshelf2": 64,
+          "loshelf_node": 424,
+          "lpf": 56,
+          "lpf1": 40,
+          "lpf2": 64,
+          "lpf_node": 416,
+          "node": 0,
+          "node_base": 360,
+          "node_graph": 752,
+          "node_input_bus": 72,
+          "node_output_bus": 56,
+          "node_vtable": 24,
+          "noise": 152,
+          "notch2": 64,
+          "notch_node": 424,
+          "panner": 16,
+          "peak2": 64,
+          "peak_node": 424,
+          "procedural_data_source": 104,
+          "pulsewave": 160,
+          "resampling_backend_vtable": 80,
+          "resource_manager": 992,
+          "resource_manager_data_source": 744,
+          "sound": 1024,
+          "sound_inlined": 1040,
+          "sound_group": 1024,
+          "spatializer": 200,
+          "spatializer_listener": 112,
+          "splitter_node": 360,
+          "stack": 24,
+          "vfs": 0,
+          "waveform": 120
+        }
+      }
+    },
+    {
+      "Name": "cleanup-Release",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/cleanup-Release.json",
+      "Sha256": "CA904BE9ED48DC31BE07EDC94A75AE229498AC004AB8F002B09592D2B833C378",
+      "Checks": 4,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "AllocationSnapshots": [
+          {
+            "Phase": "engine",
+            "Bytes": 1167111,
+            "Blocks": 7
+          },
+          {
+            "Phase": "sound-loaded",
+            "Bytes": 1361951,
+            "Blocks": 10
+          },
+          {
+            "Phase": "sound-released",
+            "Bytes": 1167015,
+            "Blocks": 5
+          },
+          {
+            "Phase": "graph-disposed",
+            "Bytes": 0,
+            "Blocks": 0
+          }
+        ]
+      }
+    },
+    {
+      "Name": "offline-Release",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/offline-Release.json",
+      "Sha256": "3E3E751A28287175E52662D21D0607DF15B5D88FC12772E8A24815F4589A12A9",
+      "Checks": 97,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "SeekCursor": {
+          "Requested": 1000,
+          "Rendered": 1024,
+          "Actual": 2024
+        },
+        "OggDecodedLengthFrames": 0,
+        "OggLengthResult": "not_implemented",
+        "OggLengthLimitation": "Bundled libvorbis reports no usable length; duration must be captured separately.",
+        "OfflinePeakTrackedNativeBytes": 1941047,
+        "LongStream": {
+          "FileBytes": 115200044,
+          "FullDecodedFloatBytes": 230400000,
+          "PeakTrackedNativeBytes": 1940431
+        },
+        "Lifetime": {
+          "Cycles": 32,
+          "BaselineHandles": 213,
+          "HandleSamples": [
+            210,
+            210,
+            210,
+            210,
+            210,
+            210,
+            210,
+            210
+          ],
+          "PrivateByteSamples": [
+            9560064,
+            9191424,
+            9330688,
+            9400320,
+            9519104,
+            9641984,
+            9650176,
+            9621504
+          ]
+        }
+      }
+    },
+    {
+      "Name": "device-muted-Release",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/device-muted-Release.json",
+      "Sha256": "6729D219692E35F5AF7F9114DE648537EC6E52FE6B3FBD039C90141F3726073C",
+      "Checks": 16,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "Device": {
+          "Backend": "WASAPI",
+          "RequestedFrames": 256,
+          "ActualPeriodFrames": 374,
+          "ActualPeriods": 3,
+          "ActualSampleRate": 48000,
+          "Name": "Динамики (FiiO Q series)"
+        },
+        "LoopbackAvailable": false,
+        "AudibleRequested": false,
+        "MusicCursorAfterSeekAndLoop": 614144,
+        "MusicTailRmsAfterKnownEof": 0.020562347222453835,
+        "UnknownLengthCursorPolicy": "With unavailable duration, cursor remains monotonic across decoder loops.",
+        "PlaybackCallbacks": {
+          "Blocks": 1806,
+          "Frames": 462336,
+          "Failures": 0,
+          "CaptureOverflowBlocks": 0,
+          "CallbackIncludesManagedInstrumentation": true,
+          "P50Milliseconds": 0.0024,
+          "P99Milliseconds": 0.0115,
+          "MaxMilliseconds": 0.2992
+        },
+        "LoopbackFrames": 0,
+        "ProcessLoopbackOnly": false,
+        "DevicePeakTrackedNativeBytes": 2768071
+      }
+    },
+    {
+      "Name": "raw-vorbis-defect-Release",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/raw-vorbis-defect-Release.json",
+      "Sha256": "776B468A1E5CFE9574A4EA67726EB63CCA94AC2FE84521BDF85194236A81EA0D",
+      "Checks": 4,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "RawVorbisLeak": {
+          "Bytes": 0,
+          "Blocks": 0
+        }
+      }
+    },
+    {
+      "Name": "malformed-vorbis-defect-Release",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/malformed-vorbis-defect-Release.json",
+      "Sha256": "2ADAA9BEC249036A598DC5F488D2F0B8B19110DB8EEE2319FA0768AD5F373302",
+      "Checks": 5,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "MalformedVorbisLeak": {
+          "Bytes": 0,
+          "Blocks": 0
+        }
+      }
+    },
+    {
+      "Name": "failure-stress-Release",
+      "Path": "TestResults/MiniAudioExFix-20261112/final-02/consumer/failure-stress-Release.json",
+      "Sha256": "4C8E7AFC1080469783CA625C05A2F51A697206138BA425FAACC1757DBF04D629",
+      "Checks": 198,
+      "Completed": true,
+      "LiveObjects": 0,
+      "LiveObjectBytes": 0,
+      "CleanupFailures": [],
+      "Observations": {
+        "RawVorbisBackend": true,
+        "FailureBaseline": {
+          "baselineBytes": 1167015,
+          "baselineBlocks": 5
+        },
+        "FailureCycles": 64
+      }
+    }
+  ],
+  "Limitations": [
+    "Allocator counters cover adapter allocations through configured callbacks; internal libvorbis CRT allocations and all OS resources are not exhaustively counted.",
+    "Short process trends and 64 malformed failures are bounded regression evidence, not an unbounded soak.",
+    "Bundled OGG duration API remains not_implemented; unknown-length looping cursor is monotonic.",
+    "Only Windows x64 packaged and checked; Linux/macOS and other RIDs require separate builds and acceptance.",
+    "Final actual WASAPI run used zero gain on this output stream; no new audible confirmation or process loopback recording was performed.",
+    "App/DI/ECS integration, command queues, production budgets, device loss, trimming and NativeAOT remain separate work.",
+    "Historical upstream prototype results remain in AUDIO_PROTOTYPE_RESULTS.json.",
+    "A packaging path error and wrapper absolute-path error in earlier local attempts were corrected before this final successful run."
+  ]
+}

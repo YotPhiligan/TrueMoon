@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.Tracing;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Gpu.Surfaces;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Gpu.Surfaces;
+using TrueMoon.Aether.Runtime.Sessions;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Frames;

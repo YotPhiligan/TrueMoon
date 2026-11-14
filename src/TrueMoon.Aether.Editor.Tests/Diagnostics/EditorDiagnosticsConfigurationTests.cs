@@ -1,7 +1,13 @@
-using TrueMoon.Aether.Editor.Diagnostics;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Editor.Hierarchy;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.Tooling.Diagnostics;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Diagnostics;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.UI.Editing;
+using TrueMoon.Aether.Editor.UI.Hierarchy;
+using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
@@ -32,7 +38,7 @@ public sealed class EditorDiagnosticsConfigurationTests
         var processes = new EditorDiagnosticContextTests.Context();
         using var app = App.Builder(configuration => { if (microsoft) configuration.UseDI(); }).Setup(context =>
         {
-            context.Services(services => services.Singleton<TrueMoon.Aether.Diagnostics.IProcessDiagnosticsSource>(_ => processes));
+            context.Services(services => services.Singleton<IProcessDiagnosticsSource>(_ => processes));
             Assert.Same(context, context.UseAetherEditorDiagnostics());
             context.UseDiagnostics(new DiagnosticPipelineOptions { MemoryCapacity = 16 });
         }).Build();

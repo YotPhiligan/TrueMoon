@@ -1,8 +1,12 @@
-﻿using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Projects;
+using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.Projects;
+using TrueMoon.Aether.Editor.Tooling.Documents;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Argentis;
@@ -24,7 +28,7 @@ public sealed class DocumentCompositionTests
                 .Singleton<IProjectStore>(_ => new EditorProjectsTests.Store(files.Project))
                 .Singleton<IProjectToolchain>(_ => new EditorProjectsTests.Toolchain())
                 .Singleton<ISceneDocumentStore>(_ => store)
-                .Singleton<IFactory<TrueMoon.Aether.Scenes.Authoring.ISceneAuthoringSession, TrueMoon.Aether.Scenes.SceneDocument>>(_ => authoring));
+                .Singleton<IFactory<ISceneAuthoringSession, SceneDocument>>(_ => authoring));
             context.UseAetherEditorDocuments().UseAetherEditorProjects();
             context.Services(services => services
                 .Singleton<EditorDocumentCommands>(resolver => new(resolver.Resolve<EditorProjects>()!, () => true, () => { stops++; return Task.CompletedTask; }))

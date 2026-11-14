@@ -5,6 +5,49 @@ namespace TrueMoon.Tests;
 
 public sealed class ProcessOutputCaptureTests
 {
+    [Fact]
+    public async Task Progress_DistinguishesPendingReadFromEofAndDrainedFileWithoutOwningReader()
+    {
+        var directory = NewDirectory();
+        using var reader = new PausedReader("private-output");
+        var capture = new ProcessOutputCapture(reader, filePath: Path.Combine(directory, "progress.log"));
+        try
+        {
+            await reader.WaitingForEnd.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var waiting = capture.Read(0);
+            Assert.Equal("AwaitingRead", waiting.ReadStage);
+            Assert.False(waiting.EndOfStream);
+            Assert.False(waiting.FileQueueDrained);
+            Assert.False(capture.ReadCompletion.IsCompleted);
+            Assert.False(capture.FileCompletion.IsCompleted);
+            Assert.InRange(waiting.QueuedFileChunks, 0, 8);
+            Assert.Equal("", waiting.Text);
+            Assert.Equal(14, waiting.TotalCharacters);
+            Assert.NotNull(waiting.ReadStageUtc);
+            Assert.NotNull(waiting.FileStageUtc);
+
+            reader.End.TrySetResult();
+            await capture.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+            var finished = capture.Read(0);
+            Assert.True(finished.EndOfStream);
+            Assert.Equal("EndOfStream", finished.ReadStage);
+            Assert.Equal("Completed", finished.FileStage);
+            Assert.True(finished.FileQueueDrained);
+            Assert.Equal(0, finished.QueuedFileChunks);
+            Assert.True(finished.FileWorkerThreadId > 0);
+            Assert.True(finished.ReadStageUtc >= waiting.ReadStageUtc);
+            Assert.True(finished.FileStageUtc >= waiting.FileStageUtc);
+            Assert.False(reader.Disposed);
+            Assert.Equal("private-output", await File.ReadAllTextAsync(Path.Combine(directory, "progress.log")));
+        }
+        finally
+        {
+            reader.End.TrySetResult();
+            await capture.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData("", 8, "", 0)]
     [InlineData("1234567", 8, "1234567", 0)]
@@ -25,6 +68,10 @@ public sealed class ProcessOutputCaptureTests
         Assert.Equal(0, snapshot.FileBytesWritten);
         Assert.Equal(0, snapshot.FileBytesDropped);
         Assert.Null(snapshot.FileError);
+        Assert.True(snapshot.EndOfStream);
+        Assert.Equal("EndOfStream", snapshot.ReadStage);
+        Assert.Equal("Disabled", snapshot.FileStage);
+        Assert.Equal(0, snapshot.FileWorkerThreadId);
     }
 
     [Fact]
@@ -154,6 +201,10 @@ public sealed class ProcessOutputCaptureTests
             Assert.Equal("prefix", await File.ReadAllTextAsync(path));
             Assert.Equal(6, capture.Read().FileBytesWritten);
             Assert.False(reader.Disposed);
+            Assert.False(capture.Read().EndOfStream);
+            Assert.Equal("Failed", capture.Read().ReadStage);
+            Assert.True(capture.Read().FileQueueDrained);
+            Assert.Equal("Completed", capture.Read().FileStage);
         }
         finally { Directory.Delete(directory, recursive: true); }
     }

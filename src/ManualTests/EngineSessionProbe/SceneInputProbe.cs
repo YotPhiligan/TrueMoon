@@ -1,14 +1,12 @@
+using TrueMoon.Aether.Runtime;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Input;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -16,6 +14,11 @@ using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
 using TrueMoon.Alloy.Platform.Silk;
 using System.Reflection;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Input;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Hosting;
 using NativeKey = Silk.NET.Input.Key;
 
 namespace EngineSessionProbe;
@@ -155,7 +158,7 @@ internal static class SceneInputProbe
             await Owner(() => { input = new(host, window, view); view.Canvas.GameplayInput = input; }); sender = input.RunAsync(inputEnd.Token);
             window.Closing += async _ => { await DrainInput(); await host.DisposeAsync(); Probe.Check(!view.IsDisposed && host.Gpu.ResourceCount == 0, "Input/UI closed before GPU drain."); return true; };
             var source = File.ReadAllText(Path.Combine(CheckpointProbe.FindWorkspace(), "ManualTests/Game.Logic/CameraGame.cs"));
-            var a = proof ? Project("a", source, 1) : new GameBuildRequest(Path.Combine(CheckpointProbe.FindWorkspace(), "ManualTests/Game.Logic/Game.Logic.csproj"), "Game.Logic.dll", room ? "Game.Logic.RoomGame" : "Game.Logic.CameraGame", 1);
+            var a = proof ? Project("a", source, 1) : new GameBuildRequest(Path.Combine(CheckpointProbe.FindWorkspace(), "ManualTests/Game.Logic/Game.Logic.csproj"), "Game.Logic.dll", room ? "Game.Logic.RoomGame" : "Game.Logic.CameraGame", 1) { RuntimeAccess = true };
             GameEditorContext Context(GameBuildRequest build) => new(build, room ? RoomScene.Snapshot() : authoring.Snapshot(), authoring.Selection);
             host.Editor.SetContext(Context(a)); await host.Editor.BuildAsync(token); await host.Editor.StartAsync(640, 360, token);
             if (!proof) { await window.Completion.WaitAsync(token); passed = true; }
@@ -258,8 +261,8 @@ internal static class SceneInputProbe
             var path = Path.Combine(directory, "input-" + name); Directory.CreateDirectory(path);
             File.WriteAllText(Path.Combine(path, "Game.cs"), text); File.WriteAllText(Path.Combine(path, "NuGet.Config"), "<configuration><packageSources><clear /></packageSources></configuration>");
             var project = Path.Combine(path, "Game.Logic.csproj");
-            File.WriteAllText(project, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether\"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Contracts\"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
-            return new(project, "Game.Logic.dll", "Game.Logic.CameraGame", revision);
+            File.WriteAllText(project, "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Reference Include=\"TrueMoon.Aether.Runtime\"><HintPath>$(AetherRuntimePath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Aether.Abstractions\"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference><Reference Include=\"TrueMoon.Contracts\"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>");
+            return new(project, "Game.Logic.dll", "Game.Logic.CameraGame", revision) { RuntimeAccess = true };
         }
     }
     private sealed record Pending(string Name, GameCheckpointState State, ulong Generation, uint Color, int Width)

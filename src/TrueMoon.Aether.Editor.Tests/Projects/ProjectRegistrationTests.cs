@@ -1,4 +1,5 @@
-using TrueMoon.Aether.Editor.Projects;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;

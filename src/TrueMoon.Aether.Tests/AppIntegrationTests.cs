@@ -1,14 +1,16 @@
 using Game.Logic;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editing;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Gpu;
 using TrueMoon.Aether.Tests.Scenes;
-using TrueMoon.Aether.Transport;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
 using TrueMoon.Aether.Runtime;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Runtime.Scenes;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
@@ -46,7 +48,7 @@ public sealed class AppIntegrationTests
         await app.StartAsync();
         var host = Assert.IsType<AetherHost>(app.Services.Resolve<AetherHost>());
         Assert.Same(host, app.Services.Resolve<AetherHost>()); Assert.Equal(1, calls); Assert.Empty(factory.Leases);
-        var diagnostics = app.Services.Resolve<TrueMoon.Aether.Diagnostics.IProcessDiagnosticsSource>()!;
+        var diagnostics = app.Services.Resolve<IProcessDiagnosticsSource>()!;
         Assert.False(diagnostics is IDisposable); Assert.False(diagnostics is IAsyncDisposable);
         var initialDiagnostics = diagnostics.Read(16, 128); Assert.False(initialDiagnostics.RuntimeAvailable); Assert.True(initialDiagnostics.BuildAvailable); Assert.Empty(initialDiagnostics.Processes);
         await host.Supervisor.StartAsync(Scene());
@@ -250,6 +252,7 @@ public sealed class AppIntegrationTests
     [InlineData(true, true)]
     public async Task HostFactoryFailure_RollsBackAllAcquiredDependenciesAndPreservesCleanupErrors(bool di, bool cleanupFailure)
     {
+        var compilerCalls = 0;
         var expected = new IOException("replacement factory failed");
         var cleanup = new IOException("GPU rollback failed");
         var resource = new RollbackResource(cleanupFailure ? cleanup : null);
@@ -265,7 +268,7 @@ public sealed class AppIntegrationTests
                 { gpu = new(); gpu.Own(resource); return gpu; }))
                 .Singleton<IFactory<FrameSession, (SessionSupervisor, GpuResourceHost)>>(_ =>
                     new global::TrueMoon.Factory<FrameSession, (SessionSupervisor Supervisor, GpuResourceHost Gpu)>(args => frames = new(args.Supervisor, transport)))
-                .Singleton<IFactory<GameBuildCompiler>>(_ => new global::TrueMoon.Factory<GameBuildCompiler>(() => compiler))
+                .Singleton<IFactory<GameBuildCompiler>>(_ => new global::TrueMoon.Factory<GameBuildCompiler>(() => { compilerCalls++; return compiler; }))
                 .Singleton<IFactory<GameReplacement, (SessionSupervisor, FrameSession)>>(_ =>
                     new global::TrueMoon.Factory<GameReplacement, (SessionSupervisor, FrameSession)>(_ => throw expected)));
             c.UseAether(o => Configure(o, new Factory()));
@@ -278,7 +281,7 @@ public sealed class AppIntegrationTests
             Assert.Same(cleanup, gpu.CleanupError);
         }
         else Assert.Same(expected, Assert.Throws<IOException>(() => factory.Create()));
-        AssertCompilerClosed(compiler);
+        Assert.Equal(0, compilerCalls); // Runtime creation failed before the workflow acquired this caller-owned compiler.
         await Assert.ThrowsAsync<ObjectDisposedException>(() => frames.StartAsync(Scene(), 32, 16));
         await Assert.ThrowsAsync<ObjectDisposedException>(() => supervisor.StartAsync(Scene()));
         Assert.Equal(1, resource.Disposals); Assert.Equal(1, transport.Disposals); Assert.Equal(0, transport.Connections);
@@ -337,7 +340,7 @@ public sealed class AppIntegrationTests
             c.UseAetherRuntime(launch, int.MaxValue);
             if (duplicate) c.UseAetherRuntime(launch, int.MaxValue);
         });
-        Assert.Equal(duplicate ? "The runtime is already registered." : "Call UseAether before UseAetherRuntime.",
+        Assert.Equal(duplicate ? "The runtime is already registered." : "Register the RuntimeEngine before the child runtime.",
             Assert.Throws<InvalidOperationException>(() => builder.Build()).Message);
         Assert.Equal(0, calls);
     }

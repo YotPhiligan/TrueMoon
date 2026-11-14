@@ -1,4 +1,4 @@
-using TrueMoon.Aether.Editor.Projects;
+using TrueMoon.Aether.Tooling.Projects;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Projects;

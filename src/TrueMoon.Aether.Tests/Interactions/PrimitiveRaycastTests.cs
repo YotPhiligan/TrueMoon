@@ -1,7 +1,6 @@
 using System.Numerics;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Interactions;
-using TrueMoon.Aether.Rendering;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Runtime.Interactions;
 using Xunit;
 
 namespace TrueMoon.Aether.Tests.Interactions;

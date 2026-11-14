@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <RootNamespace>TrueMoon.ManualTests.ModFixture</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../ModPrivateDependency/ModPrivateDependency.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Abstractions/TrueMoon.Aether.Abstractions.csproj" />
+    <ProjectReference Include="../../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
+  </ItemGroup>
+</Project>

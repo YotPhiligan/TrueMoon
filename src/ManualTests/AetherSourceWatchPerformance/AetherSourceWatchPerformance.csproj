@@ -8,6 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
-    <ProjectReference Include="../../TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" />
   </ItemGroup>
 </Project>

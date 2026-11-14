@@ -1,6 +1,8 @@
 using TrueMoon;
-using TrueMoon.Aether.Editor;
-using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
@@ -75,7 +77,7 @@ internal static class WindowRootWorkflow
             Program.Check(Environment.CurrentManagedThreadId == owner && ReferenceEquals(EditorMainWindow.FromRoot(current.Root), root) &&
                 ReferenceEquals(root!.EditorView, view) && root.Bounds == view.Bounds, "Window was rebuilt or moved its content.");
             checkedFrames++;
-            var source = view.DataContext!.Source;
+            var source = ((EditorViewModel)view.DataContext!).Source;
             if (source != null) { sourceOwners.Add(source.OwnerKey.ToString()); sourceStates.Add(source.State.ToString()); }
             if (pending) return;
             pending = true;

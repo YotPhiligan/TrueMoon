@@ -1,5 +1,46 @@
 # Core: история проверок и ревью
 
+<a id="arch2e4b-2026-11-12"></a>
+## Output progress и baseline ARCH2e.4b — 2026-11-12
+
+Engine ведёт [единственный подробный task/evidence](../engine/HISTORY.md#arch2e4b-2026-11-12).
+Core ProcessOutputSnapshot получил init-only EOF/read/file UTC/queue/worker metadata;
+constructor, borrowed reader, file bounds и separate tasks сохранены. Один новый
+focused case и расширенные existing error assertions; Core662/662 D/R, targeted30Debug.
+Ordinary solution D/R0errors,11suites по8568passed. Fresh Core package external
+Debug/Release FDD consumer: progress/EOF и JSON roundtrip, точный SHA Release DLL.
+Команды, package SHA, module counts и scope — [manifest](../engine/ARCH2E4B_BASELINE.json).
+Полная16package delivery/GPU matrix не повторялась; causal timeout fix не заявлен.
+
+<a id="core-status-before-arch2e4b-2026-11-12"></a>
+## STATUS до ARCH2e.4b — архив 2026-11-12
+
+# Core: состояние и точка продолжения
+
+**2026-11-11 — CORE8.5 и миграция CORE8 завершены в согласованном профиле.**
+[План](PLAN.md#core8-dotnet11), [поставка, команды и ограничения](HISTORY.md#core85-delivery-2026-11-11),
+[руководство перехода](DOTNET11_MIGRATION.md), [manifest пакетов и SHA](CORE8_DELIVERY.json).
+
+- SDK 11.0.100 / net11.0 / runtime-async=on; runtime/API/dependencies в CORE8.5 не менялись.
+- 16 свежих локальных TrueMoon packages одной версии: 0.3.0.1-alpha.core85.20261111221352.
+  Runtime/analyzer/buildTransitive/native payloads и dependency versions проверены.
+- App/configuration: 15 source/published/fresh profiles, 690 checks / 12 children, оба DI.
+- Source/published examples: 4 cases; package game: 8 cases на обоих DI; fresh native viewport: 2 profiles.
+- Все 11 suites повторно прошли D/R: **Passed 8567, Failed 0, Skipped 0 на конфигурацию**.
+- Обычные solution builds D/R прошли; исторический warning backlog не закрывался.
+
+Root README, AGENTS, package instructions и независимые runners используют текущий
+профиль. Remote publication не выполнялась. [Предыдущий STATUS](HISTORY.md#core-status-before-core85-2026-11-11).
+
+## Следующий конкретный шаг
+
+Сквозная .NET 11 миграция завершена. [ARCH3.0 статическая карта](../engine/ARCH3_MAP.md)
+готова 12 ноября без изменения Core/runtime. Следующий короткий срез —
+[ARCH2e.4b diagnostics](../engine/PLAN.md#arch2e4b-drain-diagnostics) у фактического
+owner; затем renderer f.4 и минимальный Player перед переносом слоёв.
+[Единственная подробная engine очередь](../engine/PLAN.md#current-engine-queue).
+Physical/release/performance и прежние reliability причины не закрываются package acceptance.
+
 <a id="core85-delivery-2026-11-11"></a>
 ## CORE8.5: свежая согласованная поставка — 2026-11-11
 

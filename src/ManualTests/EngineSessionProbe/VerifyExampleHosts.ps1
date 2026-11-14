@@ -72,9 +72,9 @@ function Assert-DeploymentFile([string]$deploymentProfile, [string]$path, [strin
 
 function Assert-ManagedResources([string]$deploymentProfile, [string]$directory) {
     foreach ($assembly in @(
-        @{ File = 'TrueMoon.Aether.Editor.dll'; Type = 'EditorViewStyle' },
+        @{ File = 'TrueMoon.Aether.Editor.UI.dll'; Type = 'EditorViewStyle' },
         @{ File = 'TrueMoon.Argentis.dll'; Type = 'Theme' },
-        @{ File = 'TrueMoon.Aether.dll'; Type = $null }
+        @{ File = 'TrueMoon.Aether.Runtime.dll'; Type = $null }
     )) {
         $stream = [IO.File]::OpenRead((Join-Path $directory $assembly.File))
         try {
@@ -89,12 +89,12 @@ function Assert-ManagedResources([string]$deploymentProfile, [string]$directory)
                     [byte[]]$blob = $pe.GetSectionData($pe.PEHeaders.CorHeader.ResourcesDirectory.RelativeVirtualAddress).GetContent()
                     foreach ($shader in @('cube.vert.spv', 'cube.frag.spv')) {
                         $resource = @($metadata.ManifestResources | ForEach-Object { $metadata.GetManifestResource($_) } |
-                            Where-Object { $metadata.GetString($_.Name) -eq "TrueMoon.Aether.Gpu.Vulkan.Shaders.$shader" })
+                            Where-Object { $metadata.GetString($_.Name) -eq "TrueMoon.Aether.Runtime.Gpu.Vulkan.Shaders.$shader" })
                         if ($resource.Count -ne 1 -or -not $resource[0].Implementation.IsNil) { throw "Missing embedded shader: $shader" }
                         $offset = [int]$resource[0].Offset; $length = [BitConverter]::ToInt32($blob, $offset)
                         [byte[]]$bytes = $blob[($offset + 4)..($offset + 3 + $length)]
                         $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
-                        $source = Join-Path $deploymentWorkspace "TrueMoon.Aether/Gpu/Vulkan/Shaders/$shader"
+                        $source = Join-Path $deploymentWorkspace "TrueMoon.Aether.Runtime/Gpu/Vulkan/Shaders/$shader"
                         if ($length -le 4 -or [BitConverter]::ToUInt32($bytes, 0) -ne 0x07230203 -or
                             $hash -ne (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash) { throw "Invalid embedded shader: $shader" }
                         $deploymentSummary.Resources += [ordered]@{ Profile = $deploymentProfile; Path = "$directory/$($assembly.File):$shader"; Bytes = $length; Sha256 = $hash; Source = $source }
@@ -111,16 +111,20 @@ function Assert-DependencyClosure([string]$directory, [string]$entry, [switch]$r
     $deps = Get-Content -LiteralPath (Join-Path $directory "$entry.deps.json") -Raw | ConvertFrom-Json
     $names = @($deps.libraries.PSObject.Properties.Name | ForEach-Object { ($_ -split '/')[0] })
     $forbidden = @('EngineSessionProbe', 'Game.Logic', 'AetherEditorHost')
-    if ($runtime) { $forbidden += @('AetherEditor', 'TrueMoon.Aether.Editor', 'TrueMoon.Argentis', 'SkiaSharp') }
+    if ($runtime) { $forbidden += @('TrueMoon.Aether.Tooling', 'AetherEditor', 'TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling', 'TrueMoon.Argentis', 'SkiaSharp') }
     foreach ($name in $names) {
         if ($name -in $forbidden -or $name -match 'Tests$|ManualTests' -or $runtime -and $name -match '^TrueMoon\.Alloy|^Silk\.NET\.(OpenGL|Windowing|GLFW|Input)') {
             throw "Unexpected dependency in ${entry}: $name"
         }
     }
-    foreach ($required in @('TrueMoon', 'TrueMoon.Aether')) {
+    foreach ($required in @('TrueMoon', 'TrueMoon.Aether.Runtime')) {
         if ($required -notin $names) { throw "Missing dependency in ${entry}: $required" }
     }
-    if (-not $runtime -and 'TrueMoon.Aether.Editor' -notin $names) { throw 'Editor module missing from editor closure.' }
+    if (-not $runtime) {
+        foreach ($required in @('TrueMoon.Aether.Tooling','TrueMoon.Aether.Editor.UI','TrueMoon.Aether.Editor.Tooling')) {
+            if ($required -notin $names) { throw "Editor module missing from editor closure: $required" }
+        }
+    }
     if ($runtime -and (Test-Path -LiteralPath (Join-Path $directory 'Assets/Fonts'))) { throw 'Runtime unexpectedly owns fonts.' }
 }
 
@@ -128,8 +132,8 @@ try {
     $inputs = @('Examples/AetherEditor/Program.cs', 'Examples/AetherEditor/AetherEditor.csproj',
         'Examples/AetherEditor/Assets/Fonts/NotoSans-Regular.ttf', 'Examples/AetherEditor/Assets/Fonts/OFL.txt',
         'Examples/AetherRuntimeHost/Program.cs', 'Examples/AetherRuntimeHost/AetherRuntimeHost.csproj',
-        'TrueMoon.Aether/TrueMoon.Aether.csproj', 'TrueMoon.Aether/Gpu/Vulkan/Shaders/cube.vert.spv',
-        'TrueMoon.Aether/Gpu/Vulkan/Shaders/cube.frag.spv', 'TrueMoon.Aether.Editor/TrueMoon.Aether.Editor.csproj',
+        'TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj', 'TrueMoon.Aether.Runtime/Gpu/Vulkan/Shaders/cube.vert.spv',
+        'TrueMoon.Aether.Runtime/Gpu/Vulkan/Shaders/cube.frag.spv', 'TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj',
         'TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.dll')
     $before = @{}
     foreach ($inputPath in $inputs) { $before[$inputPath] = (Get-FileHash -LiteralPath (Join-Path $deploymentWorkspace $inputPath)).Hash }
@@ -161,7 +165,7 @@ try {
         }
         Assert-ManagedResources $deploymentProfile $editor
         # The runtime shares Aether's embedded shaders without loading the Editor assembly.
-        Assert-DeploymentFile $deploymentProfile "$runtime/TrueMoon.Aether.dll" "$editor/TrueMoon.Aether.dll"
+        Assert-DeploymentFile $deploymentProfile "$runtime/TrueMoon.Aether.Tooling.dll" "$editor/TrueMoon.Aether.Tooling.dll"
         $text = Invoke-DeploymentProcess "$deploymentProfile-help" "$editor/AetherEditor.exe" @('--help')
         if ($text -notmatch 'AetherEditor --runtime') { throw 'Missing editor CLI help.' }
         foreach ($mode in @('missing-runtime', 'unknown', 'missing-value', 'duplicate', 'invalid-project')) {

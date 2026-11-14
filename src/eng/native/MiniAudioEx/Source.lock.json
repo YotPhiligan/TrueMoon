@@ -1,0 +1,18 @@
+{
+  "upstream": "https://github.com/japajoe/miniaudioex",
+  "revision": "9f85b56157027cc57c7cd0a13fea7fee3f1e167e",
+  "miniaudioVersion": "0.11.26",
+  "archiveUrl": "https://codeload.github.com/japajoe/miniaudioex/zip/9f85b56157027cc57c7cd0a13fea7fee3f1e167e",
+  "archiveSha256": "FD533CE9AC9BFCDA9CC93A63B00E458E3A28E9D06B8772D47FF9AB3E2F516FD2",
+  "patchedFile": "src/miniaudioex/extras/miniaudio_libvorbis.c",
+  "originalFileSha256": "C4FE9B40AA4B16CB1B4C5D5636C9E4A04D92A91AA54A6768D96756866427E90D",
+  "patchedFileSha256": "7808071F0C3CA8457882FBA299FE10D584261F74AC9BF38B3B1E833BBD658223",
+  "patchSha256": "D9DDCA3DA584DEEF9FF4549CD18453AB92A23B270D1217826E5FC235A0C00DF5",
+  "managedPackageId": "JAJ.Packages.MiniAudioEx",
+  "managedPackageVersion": "4.0.1",
+  "managedPackageSha256": "E57733E2FFBB45703EE03C1945B396CEA322F3DE06A6C1D7D4F6F834834809E7",
+  "originalNativeSha256": "70F7DD4E6A1DECBEE0791E22D231B7286E99BDE15AB86262284FF62C2CA3A641",
+  "packageId": "TrueMoon.MiniAudioEx",
+  "packageVersion": "4.0.1-truemoon.1",
+  "runtimeIdentifier": "win-x64"
+}

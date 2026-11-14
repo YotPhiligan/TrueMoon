@@ -1,5 +1,5 @@
 using System.Text.Json;
-using TrueMoon.Aether.Editor.Projects;
+using TrueMoon.Aether.Tooling.Projects;
 
 namespace TrueMoon.Aether.Editor.Tests.Projects;
 

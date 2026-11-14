@@ -1,10 +1,14 @@
-﻿using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Abstractions.Preview;
 using TrueMoon.Aether.Runtime;
-using TrueMoon.Aether.Sessions;
-using TrueMoon.Aether.Transport;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Preview;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Transport;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Tooling.Preview;
 using TrueMoon.Dependencies;
 using TrueMoon.Enerit.IO.Pipes;
 using TrueMoon.Extensions.DependencyInjection;
@@ -99,7 +103,7 @@ public sealed class PreviewRuntimeRegistrationTests
             else if (scenario != "missing-aether") context.UseAetherPreviewRuntime(preview, int.MaxValue);
         });
         var error = Assert.Throws<InvalidOperationException>(() => builder.Build());
-        Assert.Equal(scenario == "missing-aether" ? "Call UseAether before UseAetherRuntime." : "The runtime is already registered.", error.Message);
+        Assert.Equal(scenario == "missing-aether" ? "Register the RuntimeEngine before the child runtime." : "The runtime is already registered.", error.Message);
         Assert.Equal(0, calls);
     }
 

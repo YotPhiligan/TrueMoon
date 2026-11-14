@@ -1,14 +1,17 @@
+using TrueMoon.Aether.Runtime;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Checkpoints;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 
 namespace EngineSessionProbe;
@@ -25,7 +28,7 @@ public static class ReplacementProbe
         }));
         await app.StartAsync(); var host = app.Services.Resolve<AetherHost>()!; var scene = authoring.Snapshot();
         var root = CheckpointProbe.FindWorkspace(); var source = File.ReadAllText(Path.Combine(root, "ManualTests/Game.Logic/ProbeGame.cs"));
-        var a = await host.Builds.BuildAsync(new(Path.Combine(root, "ManualTests/Game.Logic/Game.Logic.csproj"), "Game.Logic.dll", "Game.Logic.ProbeGame", 7));
+        var a = await host.Builds.BuildAsync(new(Path.Combine(root, "ManualTests/Game.Logic/Game.Logic.csproj"), "Game.Logic.dll", "Game.Logic.ProbeGame", 7) { RuntimeAccess = true });
         var bSource = source.Replace("0xff2080c0", "0xffc06020").Replace("X + 0.125f", "X + 0.25f");
         var b = await BuildAsync(host, directory, "b", bSource, 8);
         var rejected = await BuildAsync(host, directory, "reject", bSource.Replace("state.Validate();", "state.Validate(); if (state.Tick > 0) throw new CheckpointRejectedException(CheckpointOutcome.RestoreRejected);"), 9);
@@ -69,7 +72,7 @@ public static class ReplacementProbe
         await app.StopAsync(); Check(factory.Leases.All(l => l.Reaped && l.ResourcesReleased), "Native replacement child leaked.");
         Check(before == JsonSerializer.Serialize(authoring) && !AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "Game.Logic"), "Editor state or CLR was changed.");
         return new { Passed = true, Scenario = "replacement", Applied = applied, State = state, FirstFrame = firstFrame, Loaded = loaded,
-            Builds = new[] { a, b, rejected, held }.Select(x => new { x.BuildId, x.DirectoryPath, x.EntryAssembly, x.SourceRevision }), MaxLive = maxLive,
+            Builds = new GameBuildArtifact[] { a, b, rejected, held }.Select(x => new { x.BuildId, x.DirectoryPath, x.EntryAssembly, x.SourceRevision }), MaxLive = maxLive,
             CandidateFailure = new { candidateError.Phase, candidateError.RollbackAttempted, candidateError.RollbackSucceeded, Cause = candidateError.InnerException!.GetType().Name },
             RollbackFailure = new { rollbackError.Phase, rollbackError.RollbackAttempted, rollbackError.RollbackSucceeded, Cause = rollbackError.InnerException!.GetType().Name, Recovery = rollbackError.RecoveryError!.GetType().Name },
             StopFenced = true, EditorPreserved = before == JsonSerializer.Serialize(authoring), GameLoadedInEditor = false, Mappings = host.Frames.MappingCount,
@@ -82,9 +85,9 @@ public static class ReplacementProbe
         var project = Path.Combine(input, "Game.Logic.csproj");
         File.WriteAllText(project, """
             <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net11.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
-            <ItemGroup><Reference Include="TrueMoon.Aether"><HintPath>$(AetherContractPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
+            <ItemGroup><Reference Include="TrueMoon.Aether.Runtime"><HintPath>$(AetherRuntimePath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Aether.Abstractions"><HintPath>$(AetherAbstractionsPath)</HintPath><Private>false</Private></Reference><Reference Include="TrueMoon.Contracts"><HintPath>$(TrueMoonContractsPath)</HintPath><Private>false</Private></Reference></ItemGroup></Project>
             """);
-        return await host.Builds.BuildAsync(new(project, "Game.Logic.dll", "Game.Logic.ProbeGame", revision));
+        return await host.Builds.BuildAsync(new(project, "Game.Logic.dll", "Game.Logic.ProbeGame", revision) { RuntimeAccess = true });
     }
     private static JsonElement Loaded(string directory, ulong generation, GameBuildArtifact build)
     {

@@ -1,13 +1,15 @@
 using System.Numerics;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Loading;
-using TrueMoon.Aether.Ecs.Motion;
-using TrueMoon.Aether.Ecs.Rendering;
-using TrueMoon.Aether.Ecs.Runtime;
-using TrueMoon.Aether.Ecs.Transforms;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Ecs.Rendering;
+using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Ecs.Motion;
+using TrueMoon.Aether.Runtime.Ecs.Rendering;
+using TrueMoon.Aether.Runtime.Ecs.Transforms;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Tooling;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using Xunit;
@@ -132,7 +134,7 @@ public sealed class PrimitiveSimulationTests
         await app.StartAsync();
         using var scene = PrimitivePipelineFixture.Loader().Load(PrimitivePipelineFixture.Document(velocity: true));
         using var simulation = Factory(app).Create(new(scene));
-        Assert.Equal(new TrueMoon.Aether.Checkpoints.CameraTransform(4, 5, 6, 0, 0, 0), simulation.Snapshot.Scene.Camera);
+        Assert.Equal(new CameraTransform(4, 5, 6, 0, 0, 0), simulation.Snapshot.Scene.Camera);
         simulation.Tick();
         Assert.Equal(new Vector3(1.5f, 0, 0), Assert.Single(simulation.Snapshot.Items).Primitive.World.Translation);
     }

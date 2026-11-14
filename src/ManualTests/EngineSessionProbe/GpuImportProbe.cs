@@ -1,18 +1,22 @@
+using TrueMoon.Aether.Runtime;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Gpu;
-using TrueMoon.Aether.Gpu.OpenGl;
-using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Runtime.Gpu;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Dependencies;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using System.ComponentModel;
+using TrueMoon.Aether.Runtime.Gpu.OpenGl;
+using TrueMoon.Aether.Tooling.Hosting;
 
 namespace EngineSessionProbe;
 
@@ -65,7 +69,7 @@ public static class GpuImportProbe
                     ownerThread = Environment.CurrentManagedThreadId; var gl = w.NativeWindow.GLContext!; verify = gl.MakeCurrent;
                     resolve = n => gl.TryGetProcAddress(n, out var p) ? p : 0; verify(); context = new(resolve, verify, Owner);
                     // Correlate actual GL device; Vulkan producer independently validates both UUIDs again.
-                    var identity = new TrueMoon.Aether.Sessions.SessionIdentity(Guid.NewGuid(), 1, BuildIdentity.HostId, BuildIdentity.GameId, new('A', 64));
+                    var identity = new SessionIdentity(Guid.NewGuid(), 1, BuildIdentity.HostId, BuildIdentity.GameId, new('A', 64));
                     var capabilities = GpuCapabilityCollector.OpenGl(identity, resolve).Capabilities;
                     Probe.Check(capabilities.Error == null && capabilities.Devices.Count == 1 && capabilities.Features is { RequiredProcedures: true, OptimalTiling: true }, "Current GL context is not eligible.");
                     adapter = capabilities.Devices[0]; initialized.TrySetResult();

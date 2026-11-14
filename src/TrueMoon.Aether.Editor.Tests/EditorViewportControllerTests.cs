@@ -1,7 +1,8 @@
 using System.Numerics;
-using TrueMoon.Aether.Editor.Documents;
+using TrueMoon.Aether.Abstractions.Preview;
 using TrueMoon.Aether.Editor.Tests.Documents;
-using TrueMoon.Aether.Preview;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Alloy.Runtime;
 using TrueMoon.Argentis;
 using Xunit;

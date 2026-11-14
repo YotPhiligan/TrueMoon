@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <RootNamespace>TrueMoon.Aether.Runtime</RootNamespace>
+    <AssemblyName>TrueMoon.Aether.Runtime</AssemblyName>
+    <PackageId>TrueMoon.Aether.Runtime</PackageId>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Aether execution, typed ECS, prepared scenes and game artifacts, rendering and resource ownership. No project compiler, authoring workflow or editor UI.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);aether;runtime;ecs;rendering</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TrueMoon.Aether.Abstractions/TrueMoon.Aether.Abstractions.csproj" />
+    <ProjectReference Include="../TrueMoon.Contracts/TrueMoon.Contracts.csproj" />
+    <ProjectReference Include="../TrueMoon.Enerit/TrueMoon.Enerit.csproj" />
+    <ProjectReference Include="../TrueMoon.Mithril/TrueMoon.Mithril.csproj" />
+    <ProjectReference Include="../TrueMoon.Enerit.Generator/TrueMoon.Enerit.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Silk.NET.Vulkan" />
+    <EmbeddedResource Include="Gpu/Vulkan/Shaders/*.spv" />
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+  </ItemGroup>
+</Project>

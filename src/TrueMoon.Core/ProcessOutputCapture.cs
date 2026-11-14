@@ -22,6 +22,10 @@ public sealed class ProcessOutputCapture
     private long _characters, _written, _fileDropped;
     private string? _fileError;
     private string _fileStage;
+    private string _readStage = "Queued";
+    private DateTimeOffset _readStageUtc = DateTimeOffset.UtcNow, _fileStageUtc = DateTimeOffset.UtcNow;
+    private bool _endOfStream;
+    private int _fileWorkerThreadId;
 
     /// <summary>Starts capture. No newline is required and the reader remains borrowed.</summary>
     /// <param name="reader">Redirected text stream owned by the process lease.</param>
@@ -79,7 +83,12 @@ public sealed class ProcessOutputCapture
             var captureOffset = _count > 0 && char.IsLowSurrogate(_tail[_start]) ? 1 : 0;
             return new(new string(chars, offset, chars.Length - offset), _characters,
                 _characters - _count + captureOffset, _written, _fileDropped, _fileError)
-            { OmittedCharacters = omitted + offset - captureOffset };
+            {
+                OmittedCharacters = omitted + offset - captureOffset,
+                ReadStage = _readStage, ReadStageUtc = _readStageUtc, EndOfStream = _endOfStream,
+                FileStage = _fileStage, FileStageUtc = _fileStageUtc, FileWorkerThreadId = _fileWorkerThreadId,
+                QueuedFileChunks = _chunks.Reader.Count, FileQueueDrained = _chunks.Reader.Completion.IsCompleted
+            };
         }
     }
 
@@ -104,9 +113,16 @@ public sealed class ProcessOutputCapture
         long offered = 0;
         try
         {
-            int count;
-            while ((count = await _reader.ReadAsync(buffer.AsMemory()).ConfigureAwait(false)) != 0)
+            while (true)
             {
+                ReadStage("AwaitingRead");
+                var count = await _reader.ReadAsync(buffer.AsMemory()).ConfigureAwait(false);
+                if (count == 0)
+                {
+                    lock (_gate) { _endOfStream = true; _readStage = "EndOfStream"; _readStageUtc = DateTimeOffset.UtcNow; }
+                    break;
+                }
+                ReadStage("Capturing");
                 Append(buffer.AsSpan(0, count));
                 if (_path is not null)
                 {
@@ -120,7 +136,10 @@ public sealed class ProcessOutputCapture
                 Offer(bytes.AsSpan(0, size));
             }
         }
+        catch { ReadStage("Failed"); throw; }
         finally { _chunks.Writer.TryComplete(); _fileAvailable?.Release(); }
+
+        void ReadStage(string stage) { lock (_gate) { _readStage = stage; _readStageUtc = DateTimeOffset.UtcNow; } }
 
         void Offer(ReadOnlySpan<byte> encoded)
         {
@@ -146,6 +165,7 @@ public sealed class ProcessOutputCapture
 
     private void Write()
     {
+        lock (_gate) _fileWorkerThreadId = Environment.CurrentManagedThreadId;
         FileStream? file = null;
         try
         {
@@ -196,7 +216,7 @@ public sealed class ProcessOutputCapture
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException) { Failure(error); }
             Stage("Completed");
         }
-        void Stage(string stage) { lock (_gate) _fileStage = stage; }
+        void Stage(string stage) { lock (_gate) { _fileStage = stage; _fileStageUtc = DateTimeOffset.UtcNow; } }
         void Failure(Exception error)
         {
             var text = error.GetType().Name + ": " + error.Message;

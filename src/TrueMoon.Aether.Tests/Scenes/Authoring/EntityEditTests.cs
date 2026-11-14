@@ -1,5 +1,6 @@
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Tooling.Scenes;
+using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using Xunit;
 using static TrueMoon.Aether.Tests.Scenes.Authoring.AuthoringTestData;
 

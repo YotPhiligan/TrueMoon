@@ -3,9 +3,9 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TrueMoon;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Editor.Editing;
-using TrueMoon.Aether.Editor.Projects;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.SourceTracking;
+using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Dependencies;
 
 namespace AetherSourceWatchPerformance;

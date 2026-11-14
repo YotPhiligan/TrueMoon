@@ -7,8 +7,9 @@ $source = (Resolve-Path -LiteralPath $SkiaSourcePath).Path
 $revision = & git -C $source rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Could not read the Skia source revision.' }
 $pins = Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'SourcePins.psd1')
-if ($revision -ne $pins['4.155.0'].SkiaRevision) {
-    throw 'The Vulkan GENERAL host-stage patch is verified only for the pinned SkiaSharp4.155.0 source.'
+$pin = $pins.Values | Where-Object { $_.SkiaRevision -eq $revision -and $_['VulkanGeneralHostStage'] } | Select-Object -First 1
+if (!$pin) {
+    throw 'The Vulkan GENERAL host-stage patch requires an explicitly verified source pin.'
 }
 $patch = Join-Path $PSScriptRoot 'vulkan-general-host-stage.patch'
 # Reject unexpected source edits; allow only the exact forward or already-applied patch.

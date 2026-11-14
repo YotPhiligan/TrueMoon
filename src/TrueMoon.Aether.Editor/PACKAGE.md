@@ -1,5 +1,9 @@
 # TrueMoon.Aether.Editor
 
+ARCH3.4: headless project/document/source/authoring/compiler services now live in
+TrueMoon.Aether.Tooling. This full Editor references Tooling; independent Runtime +
+Editor UI without Tooling is ARCH3.5. Use matching packages and migrated imports.
+
 Current delivery profile (CORE8, 2026-11-11): **net11.0 / .NET 11**, built with
 SDK 11.0.100 and runtime-async=on. Use matching TrueMoon package versions.
 Native UI acceptance is bounded to Windows x64; other OS/RID, AOT/trimming,
@@ -7,7 +11,7 @@ performance and release gates require separate evidence. Dated net10 results
 below remain historical and do not define the current package target.
 
 Reusable editor module for TrueMoon App, targeting net11.0. Includes retained
-View/Data/styles, scene hierarchy/inspector, project/document coordination,
+View/Data/styles, scene hierarchy/inspector, adapters to Tooling project/document coordination,
 commands and an optional Windows x64 Skia/OpenGL window integration.
 
 The inspector exposes `ResetTransformGroup(TransformGroup)` with Position/Rotation/Scale
@@ -53,7 +57,10 @@ var fonts = SkiaFontCatalog.FromSystemFonts(
 ```csharp
 using TrueMoon;
 using TrueMoon.Aether.Editor;
-using TrueMoon.Aether.Hosting;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Dependencies;
 
@@ -233,7 +240,7 @@ entries. It is a trusted-local compatibility check, not authentication or a comp
 native/private-dependency hash. Do not mutate deployments in place during a session.
 Different pair identities invalidate old game artifacts/checkpoints; rebuild games.
 Scene/project formats and control3/frame1/snapshot2 are unchanged. See the
-[Aether runtime contract](../TrueMoon.Aether/PACKAGE.md) for bootstrap bounds.
+[Aether runtime contract](../TrueMoon.Aether.Runtime/PACKAGE.md) for bootstrap bounds.
 
 The directed smoke consumer AetherEditorHost explicitly selects
 `NativeRuntimeLaunch.CurrentProcess("--runtime")` with the previous `BuildIdentity.HostId`

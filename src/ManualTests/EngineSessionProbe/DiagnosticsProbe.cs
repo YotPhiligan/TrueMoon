@@ -1,9 +1,12 @@
-﻿using System.Diagnostics;
+using TrueMoon.Aether.Runtime;
+using System.Diagnostics;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
 
@@ -29,7 +32,7 @@ internal static class DiagnosticsProbe
             });
         });
         await app.StartAsync();
-        var host = app.Services.Resolve<TrueMoon.Aether.Hosting.AetherHost>()!;
+        var host = app.Services.Resolve<AetherHost>()!;
         var factory = (NativeRuntimeFactory)app.Services.Resolve<IRuntimeFactory>()!;
         var pipeline = app.Services.Resolve<DiagnosticPipeline>()!;
         var captures = new List<object>();
@@ -57,6 +60,10 @@ internal static class DiagnosticsProbe
                     stdout.FileBytesDropped > 0 && stderr.FileBytesDropped > 0, "Runtime file budget/loss missing.");
                 Probe.Check(stdout.FileError is null && stderr.FileError is null && lease.Reaped && lease.ResourcesReleased,
                     "Capture or process cleanup failed.");
+                Probe.Check(stdout.EndOfStream && stderr.EndOfStream && stdout.FileQueueDrained && stderr.FileQueueDrained &&
+                    stdout.FileStage == "Completed" && stderr.FileStage == "Completed" &&
+                    stdout.QueuedFileChunks == 0 && stderr.QueuedFileChunks == 0,
+                    "Output task completion did not match EOF/file queue progress.");
                 captures.Add(new { Generation = generation, lease.ProcessId, stdout.TotalCharacters,
                     StdoutDropped = stdout.DroppedCharacters, StderrDropped = stderr.DroppedCharacters, StopMilliseconds = watch.Elapsed.TotalMilliseconds });
             }
@@ -76,6 +83,7 @@ internal static class DiagnosticsProbe
         var result = new { Passed = true, Scenario = "diagnostics", EditorPid = Environment.ProcessId,
             Generations = captures, Files = files.Select(file => new { Name = Path.GetFileName(file), Bytes = new FileInfo(file).Length }),
             StructuredRecords = records.Count, SinkHealth = pipeline.Health(),
+            Processes = factory.ReadDiagnostics(8, 0),
             Reaped = factory.Leases.All(lease => lease.Reaped && lease.ResourcesReleased) };
         Records.Write(directory, "diagnostics.json", result);
         return result;

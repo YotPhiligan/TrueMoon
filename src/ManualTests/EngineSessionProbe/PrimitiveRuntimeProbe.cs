@@ -1,16 +1,24 @@
+using TrueMoon.Aether.Abstractions.Ecs.Rendering;
+using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Abstractions.Ecs.Motion;
+using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Runtime;
 using System.Buffers.Binary;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using TrueMoon;
-using TrueMoon.Aether;
-using TrueMoon.Aether.Builds;
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Loading;
-using TrueMoon.Aether.Frames;
-using TrueMoon.Aether.Hosting;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Sessions;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
+using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Runtime.Diagnostics;
+using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Frames;
+using TrueMoon.Aether.Tooling.Builds;
+using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Dependencies;
 
 namespace EngineSessionProbe;
@@ -30,8 +38,8 @@ public static class PrimitiveRuntimeProbe
             Check(!GameLoaded(), "Parent loaded Game.Logic before the primitive proof.");
             var runtime = RuntimeCommand(runtimePath); hostId = BuildIdentity.ForRuntime(runtime.RuntimeAssemblyPath);
             factory = new NativeRuntimeFactory(runtime);
-            build = GameBuildArtifact.Publish(gameDirectory, Path.Combine(reportDirectory, "artifacts"), hostId,
-                "Game.Logic.dll", "Game.Logic.PrimitiveProbeGame", 31);
+            build = GameArtifactPublisher.Publish(gameDirectory, Path.Combine(reportDirectory, "artifacts"), hostId,
+                "Game.Logic.dll", "Game.Logic.PrimitiveProbeGame", 31, runtimeAccess: true);
             var data = CreateScene(); var initialColor = ExpectedColor(0); var movedColor = ExpectedColor(1);
             Check(initialColor != movedColor, "Movement oracle did not distinguish completed ticks.");
             await using var app = App.Build(context => context.UseAether(options =>

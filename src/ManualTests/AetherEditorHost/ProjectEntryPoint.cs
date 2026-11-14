@@ -1,9 +1,10 @@
-using TrueMoon.Aether.Editor;
-using TrueMoon.Aether.Scenes;
+using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Abstractions.Scenes;
 using System.Text.Json;
-using TrueMoon.Aether.Editor.Projects;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether;
+using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Projects;
+using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Dependencies;
 
 namespace TrueMoon.ManualTests.AetherEditorHost;

@@ -1,9 +1,14 @@
+using IEcsSystem = TrueMoon.Aether.Runtime.Ecs.IEcsSystem;
 using System.Numerics;
-using TrueMoon.Aether.Ecs;
-using TrueMoon.Aether.Ecs.Motion;
-using TrueMoon.Aether.Ecs.Transforms;
+using TrueMoon.Aether.Abstractions.Ecs;
+using TrueMoon.Aether.Abstractions.Ecs.Motion;
+using TrueMoon.Aether.Abstractions.Ecs.Transforms;
+using TrueMoon.Aether.Runtime.Ecs;
+using TrueMoon.Aether.Runtime.Ecs.Motion;
+using TrueMoon.Aether.Runtime.Ecs.Transforms;
 using TrueMoon.Aether.Tests.Ecs.Transforms;
 using Xunit;
+using EcsSystemContext = TrueMoon.Aether.Runtime.Ecs.EcsSystemContext;
 
 namespace TrueMoon.Aether.Tests.Ecs.Motion;
 
@@ -189,7 +194,7 @@ public sealed class MovementSystemTests
     {
         using var owner = new World(); var entity = Moving(owner, new(1, 2, 3), new(5, 7, 11));
         using var foreign = new World(); using var target = new MovementSystem(owner);
-        using var scheduler = EcsScheduler.Create(foreign, [new(MovementSystem.Describe(), new Factory<IEcsSystem, World>(_ => new ContextProbe(target)))]);
+        using var scheduler = EcsScheduler.Create(foreign, [new(MovementSystem.Describe(), new Factory<Aether.Runtime.Ecs.IEcsSystem, World>(_ => new ContextProbe(target)))]);
         Assert.Throws<InvalidOperationException>(() => scheduler.Tick(TimeSpan.FromSeconds(1)));
         Assert.Equal(new Vector3(1, 2, 3), owner.GetComponent<LocalTransform>(entity).Position); Assert.False(owner.IsFaulted); Assert.True(foreign.IsFaulted);
     }
@@ -210,8 +215,8 @@ public sealed class MovementSystemTests
         Assert.Equal(new[] { typeof(WorldTransform) }, transform.Snapshot().Writes);
         using var scheduler = EcsScheduler.Create(world,
         [
-            new(transform, new Factory<IEcsSystem, World>(w => new TransformSystem(w))),
-            new(movement, new Factory<IEcsSystem, World>(w => new MovementSystem(w)))
+            new(transform, new Factory<Aether.Runtime.Ecs.IEcsSystem, World>(w => new TransformSystem(w))),
+            new(movement, new Factory<Aether.Runtime.Ecs.IEcsSystem, World>(w => new MovementSystem(w)))
         ]);
         Assert.True(scheduler.Tick(TimeSpan.FromSeconds(2)));
         // Local displacement remains parent-space despite the child's own 180-degree rotation.

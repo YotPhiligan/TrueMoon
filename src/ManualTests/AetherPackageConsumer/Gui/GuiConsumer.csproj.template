@@ -9,8 +9,12 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <AssemblyMetadata Include="TrueMoon.Build.Framework" Value="$(TF)" />
+    <AssemblyMetadata Include="TrueMoon.Build.Sdk" Value="$(NETCoreSdkVersion)" />
+    <AssemblyMetadata Include="TrueMoon.Build.LanguageVersion" Value="$(LangVersion)" />
+    <AssemblyMetadata Include="TrueMoon.Build.Features" Value="$(Features)" />
     <PackageReference Include="TrueMoon" Version="PACKAGE_VERSION" />
-    <PackageReference Include="TrueMoon.Aether.Editor" Version="PACKAGE_VERSION" />
+    <PackageReference Include="TrueMoon.Aether.Editor.Tooling" Version="PACKAGE_VERSION" />
     <PackageReference Include="TrueMoon.Extensions.DependencyInjection" Version="PACKAGE_VERSION" />
     <None Update="Assets/Fonts/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

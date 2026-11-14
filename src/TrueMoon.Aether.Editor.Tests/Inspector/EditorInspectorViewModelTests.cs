@@ -1,10 +1,8 @@
-﻿using System.Globalization;
-using TrueMoon.Aether.Editor.Documents;
-using TrueMoon.Aether.Editor.Editing;
+using System.Globalization;
+using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tests.Documents;
 using TrueMoon.Aether.Editor.Tests.DocumentsUi;
-using TrueMoon.Aether.Scenes;
-using TrueMoon.Aether.Scenes.Authoring;
+using TrueMoon.Aether.Editor.UI.Documents;
 using Xunit;
 
 namespace TrueMoon.Aether.Editor.Tests.Inspector;
