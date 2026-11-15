@@ -1,7 +1,58 @@
 # Core: план bootstrap и общих контрактов
 
 <a id="current-core-queue"></a>
-## Точка продолжения — актуализация 2026-11-12
+## Точка продолжения — актуализация 2026-11-15
+
+<a id="dep1-dependency-refresh"></a>
+### DEP1 — обновление зависимостей и native coherence, 2026-11-15
+
+По запросу пользователя проверены18central entries:17публичных package IDs через
+official NuGet v3/registration listed metadata и один private MiniAudioEx fork через
+upstream NuGet/GitHub. **Завершено в Windows x64 profile**;
+[команды/результаты](HISTORY.md#dep1-2026-11-15), [manifest/SHA](DEPENDENCY_REFRESH_20261115.json).
+Это единственная детальная межмодульная задача; native producer принадлежит Alloy,
+его текущие source pins/ABI и общефреймворковые проверки согласованы здесь.
+
+| Package | Было | Стало |
+| --- | --- | --- |
+| Microsoft.CodeAnalysis.Analyzers |5.9.0|5.12.0|
+| Microsoft.CodeAnalysis.CSharp |5.9.0|5.12.0|
+| SkiaSharp |4.156.0|4.156.1|
+| Topten.RichTextKit |0.6.172|0.6.173|
+| Silk.NET.Windowing.Extensions.Veldrid |2.19.0|2.23.0|
+| Microsoft.IO.RecyclableMemoryStream |3.0.0|4.0.1|
+
+Последние две строки — существующий центральный каталог без consumers в текущем
+solution; новые PackageReference/Runtime зависимости не добавлялись. Для обычных
+пакетов выбран latest listed stable; уже выбранная BEPU beta-линейка сохранена:
+exact2.5.0-beta.33 — последняя, stable2.4.0 не становится downgrade. Новые Skia/BDN
+preview не выбирались. Private MiniAudioEx4.0.1-truemoon.1 оставлен: upstream4.0.1
+и native HEAD совпадают с lock, собственный libvorbis fix нужен по-прежнему.
+
+- [x] Только existing central version declarations; CPM/profile/TFM/SDK/ranges,
+  PrivateAssets, namespace, App/DI/lifetime и C# API сохранены.
+- [x] Extended libSkiaSharp пересобрана из exact official4.156.1 parent/Skia gitlink;
+  добавлен pin, GENERAL/HOST patch и ABI1/48bytes сохранены. Matching DLL/build.json
+  установлены в renderer; нельзя подставить stock DLL без extension.
+- [x] Restore с NuGetAuditMode=all прошёл без advisories/NU1900; это проверка данных
+  NuGet audit на момент запуска, не самостоятельная гарантия безопасности кода.
+- [x] Non-incremental solution Debug/Release0errors/1570warnings; warning location/ID
+  sets совпали с предыдущей проверкой.16suites по9110passed/config,0failed/0skipped.
+- [x] Source Debug/published Release: ABI,18readbacks/36GPU compositions/3backend
+  compare/18typography captures/12comparisons каждый, validation0/0. Old155/stock156
+  и неизвестный pin отклонены; patch idempotent.
+- [x] 27framework package metadata/payload archives; fresh UI10package feed,
+  36App+4direct cases, generated/DI-only, raster/OpenGL/Vulkan, D/R build/publish и
+  expected missing-analyzer control.435source fingerprints совпали.
+- [x] Kul source/published/fresh4reports×43checks, оба DI, muted actual WASAPI;
+  native MiniAudioEx SHA прежний, final resources0. Native audio rebuild не нужен.
+
+Не входят новая публикация внешнего feed, изменение общей framework version,
+preview migration, SDK/platform migration, upstream native fork publication,
+новые C# APIs, physical input/listening/device-loss/long-soak и other-OS acceptance.
+Прежняя functional engine очередь ENG7b.3/ED/import и module/release gates сохраняются.
+
+### Предыдущие завершённые этапы
 
 Предыдущий сквозной этап — [CORE8: восстановление solution на .NET11](#core8-dotnet11), завершён 11 ноября.
 CORE8.0 и CORE8.1 завершены в managed build-input/profile scope: все 61 проекта

@@ -1345,3 +1345,27 @@ Queue distribution/aggregate metrics — по consumer. Существующий
 <!-- Совместимость прежних ссылок STATUS; записи перенесены в HISTORY. -->
 <a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
 Прежние датированные разделы — в [полном архиве](HISTORY.md#status-before-planning-revision-2026-11-05).
+
+<a id="enerit-status-before-dep1-2026-11-15"></a>
+## Previous enerit STATUS before DEP1 — 2026-11-15
+
+# Enerit: состояние и точка продолжения
+
+**2026-11-11 — CORE8.5: свежая согласованная .NET 11 поставка проверена.**
+SDK 11.0.100 / net11.0 / runtime-async=on. Полные suites повторно прошли в каждой
+конфигурации Debug/Release: runtime 354, generator 114; Failed 0, Skipped 0.
+Runtime/API/dependencies в CORE8.5 не менялись; обновлены runners и документация.
+[Поставка, команды и границы](../core/HISTORY.md#core85-delivery-2026-11-11),
+[переход](../core/DOTNET11_MIGRATION.md).
+
+Свежий matching generator и actual generated IPC проверены у независимого game consumer на обоих DI. Same-build contracts сохранены. ENE6c, protocol expansion, MMF и performance остаются отдельными.
+
+Сквозной CORE8 завершён; далее функциональная очередь владельца модуля.
+[Предыдущий STATUS](HISTORY.md#enerit-status-before-core85-2026-11-11).
+
+<a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
+
+<a id="dep1-2026-11-15"></a>
+## DEP1 dependency refresh — 2026-11-15
+
+Новая полная D/R проверка, six-package version refresh и согласованная native Skia4.156.1 поставка выполнены в [единственной межмодульной записи](../core/HISTORY.md#dep1-2026-11-15). Прежние manifests и функциональные gates сохранены; точный scope нового запуска — в записи Core.

@@ -1,5 +1,7 @@
 # Документация TrueMoon
 
+Актуальная сверка зависимостей и native DLL: [DEP1 —2026-11-15](core/PLAN.md#dep1-dependency-refresh), [результаты/SHA](core/DEPENDENCY_REFRESH_20261115.json).
+
 TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и необязательного UI. Входная карта проекта и quickstart находятся в [корневом README](../../README.md). Эта страница помогает выбрать документ по задаче; текущая готовность определяется датированными проверками в STATUS, а не наличием проекта или API.
 
 ## Kul / Audio

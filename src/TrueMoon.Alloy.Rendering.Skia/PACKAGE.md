@@ -94,7 +94,7 @@ one GPU copy per image, not zero-copy or a measured performance guarantee.
 Migration: raw Vulkan descriptors remain in Rendering.Skia; Silk-specific factories and window presenter types moved to Hosting. Output/native loader paths are unchanged by the transitive package fix. Rebuild alpha consumers after updating assembly references/imports.
 
 The current CORE8 delivery profile is framework-dependent Windows x64 / .NET 11.
-The bundled extended native library matches SkiaSharp 4.156.0 (Skia M156), preserving
+The bundled extended native library matches SkiaSharp 4.156.1 (Skia M156), preserving
 Vulkan ABI v1 and the 48-byte descriptor. Existing applications must rebuild/publish
 to receive the matching DLL. Other OS/architectures, single-file, trimming,
 NativeAOT and self-contained deployment retain separate acceptance gates.
@@ -107,5 +107,5 @@ opacity, and disposes per-draw filter/paint resources. No layout or hit-area gro
 Windows x64 source/published Dark/Light100/150/200% gallery passed with frosted menu
 surfaces and actual blur pixel witnesses. Native Skia's GENERAL source stage now
 includes HOST for its existing HOST_WRITE access mask, fixing VUID02819. The patch
-is source-built into the bundled4.156.0 library; ABI/ownership are unchanged. Fresh
+is source-built into the bundled4.156.1 library; ABI/ownership are unchanged. Fresh
 package Vulkan Debug/published Release consumers passed validation including teardown.

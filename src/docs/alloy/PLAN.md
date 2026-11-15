@@ -1,5 +1,11 @@
 # TrueMoon.Alloy: план первой рабочей версии
 
+Выполнено2026-11-15: **SkiaSharp/native4.156.1 +RichTextKit0.6.173**, exact parent/gitlink,
+GENERAL/HOST patch/ABI1/48bytes сохранены. Native source/published GPU/typography и
+fresh10package40case delivery прошли; полные UI/Hosting/Editor suites D/R прошли.
+Единственная детальная dependency задача — [Core DEP1](../core/PLAN.md#dep1-dependency-refresh),
+[результаты/SHA](../core/HISTORY.md#dep1-2026-11-15). Functional UI/release очередь прежняя.
+
 <a id="skiasharp-41560-completed"></a>
 Выполнено2026-11-12: **SkiaSharp/native4.156.0** — exact source pins, extended
 Windows x64 DLL и GENERAL/HOST patch, ABI1/48bytes. Native build recipe учитывает

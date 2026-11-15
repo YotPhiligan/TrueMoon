@@ -3664,3 +3664,151 @@ OS/RID/AOT, interprocess/durability гарантий. Engine f.4 и Mithril MIT6
 CORE7.6: свести документацию/ключи/совместимость, повторить итоговую поставку и
 объединённый независимый App/child consumer на обоих DI. Отдельно получить чистый
 последовательный Aether baseline с изоляцией nested fixtures от legacy tool restore.
+
+<a id="core-status-before-dep1-2026-11-15"></a>
+## Previous core STATUS before DEP1 — 2026-11-15
+
+# Core: состояние и точка продолжения
+
+**2026-11-12 — output progress diagnostics и current baseline ARCH2e.4b.**
+ProcessOutputSnapshot расширен EOF/read/file stage/UTC, bounded queue и worker
+metadata; constructor/borrowing/Completion и file bounds сохранены. [API/границы](../engine/DRAIN_DIAGNOSTICS.md).
+Подробная задача ведётся у engine, новых App/DI/configuration/lifecycle APIs нет.
+
+- Core full suite **662passed/0failed/0skipped** каждый Debug/Release; новый1case.
+- Адресные ProcessOutput tests Debug:30/30, включая independent file-worker proof.
+- Ordinary solution D/R0errors; все11suites по8568passed/configuration.
+- Один свежий Core package `0.3.0.1-alpha.arch2e4b.20261112150909`: external
+  private feed/cache, общий SDK/TFM/Features/CPM isolation, Debug и Release FDD
+  consumer подтвердили progress/EOF/JSON roundtrip и exact Release assembly SHA.
+- Исторический drain timeout не воспроизведён; его причина и wider release/
+  GPU/performance остаются открыты. ThreadPool/deadlines не настраивались.
+
+[Команды и ограничения](HISTORY.md#arch2e4b-2026-11-12), [общий manifest](../engine/ARCH2E4B_BASELINE.json).
+CORE8 завершён 11 ноября в прежнем scope; последняя согласованная16package delivery —
+[CORE8.5](HISTORY.md#core85-delivery-2026-11-11). Она не выдаётся за повторённую сегодня.
+
+## Следующий конкретный шаг
+
+Engine [ARCH1f.4](../engine/PLAN.md#arch1f-rendering) → минимальный Player →
+ARCH3.1–5. Диагностика причин повторного timeout продолжится при evidence;
+[точная очередь](../engine/PLAN.md#current-engine-queue). [Предыдущий STATUS целиком](HISTORY.md#core-status-before-arch2e4b-2026-11-12).
+
+<a id="dep1-2026-11-15"></a>
+## DEP1 — dependency refresh и native Skia4.156.1, 2026-11-15
+
+Запрос пользователя: «проверим обновления пакетов, обновимся до актуальной версии,
+и проверим, возможно понадобится пересобрать нативную нашу библиотеку».
+[Единственная детальная задача](PLAN.md#dep1-dependency-refresh), [manifest/SHA](DEPENDENCY_REFRESH_20261115.json).
+
+В официальном NuGet flat-container и registration metadata проверены17public IDs,
+listed versions и stable/existing-beta policy;18-й central entry — private MiniAudioEx.
+Audit сохранён в TestResults/PackageUpdates/audit-20261115-01. Обновлены:
+
+| Package | Было | Стало |
+| --- | --- | --- |
+| Microsoft.CodeAnalysis.Analyzers |5.9.0|5.12.0|
+| Microsoft.CodeAnalysis.CSharp |5.9.0|5.12.0|
+| SkiaSharp |4.156.0|4.156.1|
+| Topten.RichTextKit |0.6.172|0.6.173|
+| Silk.NET.Windowing.Extensions.Veldrid |2.19.0|2.23.0|
+| Microsoft.IO.RecyclableMemoryStream |3.0.0|4.0.1|
+
+Два последних ID не потребляются текущим solution: изменён existing catalog, новые
+PackageReference не вводились. BEPU2.5.0-beta.33 уже последняя beta; stable2.4.0 не
+выбран как downgrade. Skia4.159preview/BenchmarkDotNet0.16preview не выбраны.
+SDK11.0.100/net11/runtime-async и обычная framework version0.3.0.1-alpha сохранены.
+C# source/public API, App/DI/lifecycle/namespace и private-assets metadata не менялись.
+
+Наш graphics-native asset **пересобран**, так как bundled DLL должна соответствовать
+новому exact SkiaSharp source. Official4.156.1 nupkg SHA:
+C5C3A10242A4E9AC1F7ACEF4BC3F0CA84E9EF993F2876244E82082EB300E8504.
+NuGet parent `c8c35b59e8de5efbc2abf52fc26202ae1731e593` и GitHub/gitlink
+`712ea097151d4951652dee046a8944376fd8df1b` сверены независимо. Добавлен SourcePins
+entry4.156.1, legacy pins сохранены. Source build сохранил exact GENERAL/HOST patch
+58F1F52FD510A5EA234AFCCBCA35DC220B4A9832F5BAB509C0D6169B34E0AEBC,
+ABI1/48bytes и extension sources. DLL9076224bytes:
+7CAD4A4AA72DFEC19F05C686088BCF38D6585C984E19C4884985FF4C03CA8FCE.
+MSVC14.51.36231/WindowsSDK10.0.26100.0, Python3.13.18, Ninja; overall127.76s/exit0.
+Parent source используется с upstream SDK10.0.404; TrueMoon consumers — SDK11 profile.
+
+Команды/фактически выполненная приёмка:
+
+- NuGet/GitHub HTTP audit:17central public IDs плюс MiniAudioEx upstream4.0.1 и
+  HEAD9f85b56157027cc57c7cd0a13fea7fee3f1e167e. Native audio lock/patch/binary прежние;
+  собственного audio rebuild/original leak RED-GREEN не было.
+- `dotnet restore TrueMoon.slnx --force-evaluate -p:NuGetAudit=true -p:NuGetAuditMode=all -bl:<unique>`:
+  exit0, advisories/NU1900 не сообщены. Это NuGet metadata check на момент запуска.
+- `BuildNativeInterop.ps1 -SkiaSharpSourcePath <new exact source> -VisualStudioPath <VS18 BuildTools> -PythonPath <real Python3.13.18> -NinjaPath <ninja.exe> -InstallToRenderer`:
+  fresh source build, без prebuilt-native fallback; DLL и build.json обновлены вместе.
+- `dotnet build TrueMoon.slnx -c <Debug|Release> -m --no-restore --no-incremental -bl:<unique>`:
+  **0errors/1570warnings каждый**. Diagnostic location/ID sets совпали с pre-update
+  KUL_ECS solution logs; языки сообщений отличаются, поэтому сравнивались location/ID.
+- `dotnet test <each of16solution test projects> -c <Debug|Release> --no-build --no-restore --logger trx --results-directory TestResults/PackageUpdates/regression-01 -bl:<unique>`:
+  **9110passed/0failed/0skipped каждый**,32TRX. Suites сериализованы из-за SDK/build lease;
+  production deadlines не менялись. Полный Aether suite занял496/498s, не зависание.
+- Source Debug и опубликованный Release `AlloyVulkanTest`:
+  `--interop-check`; `--interop --validation`; `--interop-compose --validation`;
+  `--backend-compare --validation`; `--validation-shadows --design-output <fresh> --validation`.
+  Каждый: ABI1/48bytes,18readbacks,36GPU compositions,3backend comparisons,
+  18typography captures/12full-frame comparisons; validation0errors/0warnings including teardown.
+  Loaded native hashes сверены. Old155/stock156безextension exit2 ожидаемы;
+  unknown source pin exit1 ожидаем; patch CheckOnly idempotent.
+- `eng/Check-PackageMetadata.ps1 -Pack -NoBuild -IncludeProject <all27intended framework projects> -RunDirectory TestResults/PackageMetadata/dependency-refresh-20261115-final`:
+  **27projects/27archives passed**. Перед этим unrestricted scan обнаружил3independent
+  ManualTests templates, не являющихся framework packages; сохранён failed attempt,
+  финальный scope явно перечисляет все выпускаемые проекты и не изменяет fixtures.
+- `ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1 -RunDirectory <fresh TestResults/AlloyPackages/dependency-refresh-20261115>`:
+  **10packages,36App+4direct cases**; generated/DI-only, Cobalt/MS DI,
+  raster/OpenGL/Vulkan, Debug/Release build/publish. Exact runtime/analyzer/native SHA,
+  package-only graph, transitive native delivery и435source fingerprints проверены.
+  Omitted-analyzer control — expected CS0246/exit1, не positive build failure.
+- `ManualTests/KulEcs/Verify.ps1 -EvidenceDirectory TestResults/PackageUpdates/kul-device-final -Device`:
+  **4reports×43checks**, оба DI, source Debug/published Release/fresh Debug/fresh
+  published Release. Actual WASAPI muted только для своего stream, без offline fallback
+  или global volume changes.13coherent local archives/18-library closure, exact native
+  MiniAudioEx SHA; final sessions/clips/voices/streams/resident bytes0, files unlocked.
+
+Первый source checkout остановился на Windows long paths; он сохранён отдельно,
+финальный clean checkout использует process-local core.longpaths, глобальные Git/OS
+settings не менялись. Первый native attempt указал устаревший Python3.13.17;
+обнаружен installed3.13.18, пересборка выполнена с ним. Только final successful
+reports считаются acceptance. Pre-explicit-restore assets snapshot уже содержал
+обновлённые packages; before/after declaration proof берётся из сохранённого CPM
+файла/official audit, а этот snapshot не выдаётся за pre-edit resolved graph.
+
+Полная module matrix:
+
+| Suite | Debug | Release |
+| --- | --- | --- |
+| Aether.Abstractions |26|26|
+| Aether.Player |17|17|
+| Aether.Editor |1507|1507|
+| Aether |3533|3533|
+| Aether.Kul |103|103|
+| Kul |27|27|
+| Alloy.Hosting |171|171|
+| Alloy |1224|1224|
+| Cobalt.Generator |96|96|
+| Cobalt |179|179|
+| Aether.Kton |68|68|
+| Nom |874|874|
+| Enerit.Generator |114|114|
+| Enerit |354|354|
+| Mithril |155|155|
+| Core/App |662|662|
+| Total |9110|9110|
+
+Это отдельные UI/audio fresh deliveries и27metadata archives, не новая unified
+27package architecture matrix. Dedicated independent typed-IPC и309-case provider
+runner отдельно не повторялись; source suites генератора/IPC/provider bridge прошли.
+Не выполнялись external NuGet publication/framework version bump, physical input/
+listening, device-loss/long-soak/hard RT/other OS/RID/AOT/trimming/release acceptance.
+Raw logs/binlogs/TRX/packages — в ignored TestResults, versioned manifest сохраняет
+outcome/source pins/SHA/scope без обещания внешнего retention.
+
+Финальная повторная official NuGet/GitHub сверка:0available updates по принятой
+policy, MiniAudioEx HEAD прежний. QA:450source hash checks (включая435UI fingerprints),
+27archive SHA и32TRX SHA,84local links/anchors прошли; C# files changed0,
+git diff --check прошёл. Release-ветка SkiaSharp4.156.1 существует и указывает
+на exact NuGet parent commit; текущая инструкция checkout сверена.

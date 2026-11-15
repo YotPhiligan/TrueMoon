@@ -1,25 +1,27 @@
 # Core: состояние и точка продолжения
 
-**2026-11-12 — output progress diagnostics и current baseline ARCH2e.4b.**
-ProcessOutputSnapshot расширен EOF/read/file stage/UTC, bounded queue и worker
-metadata; constructor/borrowing/Completion и file bounds сохранены. [API/границы](../engine/DRAIN_DIAGNOSTICS.md).
-Подробная задача ведётся у engine, новых App/DI/configuration/lifecycle APIs нет.
+**2026-11-15 — DEP1: зависимости обновлены, native Skia согласована.**
+[Единственная детальная задача](PLAN.md#dep1-dependency-refresh),
+[команды/границы](HISTORY.md#dep1-2026-11-15), [manifest/SHA](DEPENDENCY_REFRESH_20261115.json).
 
-- Core full suite **662passed/0failed/0skipped** каждый Debug/Release; новый1case.
-- Адресные ProcessOutput tests Debug:30/30, включая independent file-worker proof.
-- Ordinary solution D/R0errors; все11suites по8568passed/configuration.
-- Один свежий Core package `0.3.0.1-alpha.arch2e4b.20261112150909`: external
-  private feed/cache, общий SDK/TFM/Features/CPM isolation, Debug и Release FDD
-  consumer подтвердили progress/EOF/JSON roundtrip и exact Release assembly SHA.
-- Исторический drain timeout не воспроизведён; его причина и wider release/
-  GPU/performance остаются открыты. ThreadPool/deadlines не настраивались.
+Обновлены6central declarations: Roslyn Analyzers/CSharp5.12.0, SkiaSharp4.156.1,
+RichTextKit0.6.173, Silk Veldrid extension2.23.0 и RecyclableMemoryStream4.0.1.
+Две последние записи не имеют consumers в текущем solution. Остальные public IDs
+актуальны в принятой stable/existing-BEPU-beta policy. SDK11/net11/runtime-async,
+App/DI/lifetime и C# source/API не менялись; новые dependencies не вводились.
 
-[Команды и ограничения](HISTORY.md#arch2e4b-2026-11-12), [общий manifest](../engine/ARCH2E4B_BASELINE.json).
-CORE8 завершён 11 ноября в прежнем scope; последняя согласованная16package delivery —
-[CORE8.5](HISTORY.md#core85-delivery-2026-11-11). Она не выдаётся за повторённую сегодня.
+Полная новая проверка:16suites по9110passed каждый Debug/Release,0failed/0skipped;
+non-incremental solution0errors/1570warnings/config. Warning location/ID sets прежние.
+Restore NuGetAuditMode=all: advisories/NU1900 не сообщены.27metadata/payload archives
+прошли. Fresh UI10packages:36App+4direct cases, оба DI/3backends/D/R/build+publish,
+correct generator/native SHA и expected missing-analyzer failure.
 
-## Следующий конкретный шаг
+libSkiaSharp4.156.1 собрана из exact sources с GENERAL/HOST patch, ABI1/48bytes;
+source/published GPU/typography validation0/0. MiniAudioEx upstream/pins/binary
+актуальны и не менялись;4Kul delivery reports×43muted actual WASAPI checks прошли.
+Это27metadata checks и отдельные fresh UI/audio deliveries, не новая единая
+согласованная поставка всех27пакетов во все архитектурные consumers.
 
-Engine [ARCH1f.4](../engine/PLAN.md#arch1f-rendering) → минимальный Player →
-ARCH3.1–5. Диагностика причин повторного timeout продолжится при evidence;
-[точная очередь](../engine/PLAN.md#current-engine-queue). [Предыдущий STATUS целиком](HISTORY.md#core-status-before-arch2e4b-2026-11-12).
+Следующий конкретный шаг — прежний [ENG7b.3 кандидат](../engine/PLAN.md#current-engine-queue)
+или выбранная пользователем module задача. Historical drain cause, CORE6 и physical/
+release/device-loss/soak/other OS остаются отдельными. [Предыдущий STATUS](HISTORY.md#core-status-before-dep1-2026-11-15).

@@ -12,13 +12,13 @@
     <PackageVersion Include="Silk.NET" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.Vulkan" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.Vulkan.Extensions.EXT" Version="2.23.0" />
-    <PackageVersion Include="Silk.NET.Windowing.Extensions.Veldrid" Version="2.19.0" />
-    <PackageVersion Include="SkiaSharp" Version="4.156.0" />
-    <PackageVersion Include="Topten.RichTextKit" Version="0.6.172" />
+    <PackageVersion Include="Silk.NET.Windowing.Extensions.Veldrid" Version="2.23.0" />
+    <PackageVersion Include="SkiaSharp" Version="4.156.1" />
+    <PackageVersion Include="Topten.RichTextKit" Version="0.6.173" />
     <PackageVersion Include="Veldrid.SPIRV" Version="1.0.15" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" PrivateAssets="all" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
-    <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0" PrivateAssets="all" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" PrivateAssets="all" />
+    <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="4.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />

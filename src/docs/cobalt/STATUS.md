@@ -1,15 +1,17 @@
 # Cobalt / DI: состояние и точка продолжения
 
-**2026-11-11 — CORE8.5: свежая согласованная .NET 11 поставка проверена.**
-SDK 11.0.100 / net11.0 / runtime-async=on. Полные suites повторно прошли в каждой
-конфигурации Debug/Release: runtime/adapter 179, generator 96; Failed 0, Skipped 0.
-Runtime/API/dependencies в CORE8.5 не менялись; обновлены runners и документация.
-[Поставка, команды и границы](../core/HISTORY.md#core85-delivery-2026-11-11),
-[переход](../core/DOTNET11_MIGRATION.md).
+**2026-11-15 — DEP1: Roslyn Analyzers/CSharp обновлены5.9.0→5.12.0.**
+SDK11/net11/runtime-async profile и production C# source/API сохранены.
+Runtime/adapter179 и generator96passed каждый Debug/Release,0failed/0skipped.
+Source-generated consumer через fresh UI packages прошёл D/R build/publish,
+bundled analyzer SHA, generated initialization/DI/lifecycle на Cobalt/MS DI;
+DI-only/direct consumers также прошли, missing-analyzer control ожидаемо отказал.
 
-Свежие Cobalt analyzer/buildTransitive payloads и generated DI проверены у independent consumers; Cobalt и Microsoft DI adapter — на actual App/game lifecycle. Performance measurements, scopes и новая factory API не добавлялись.
-
-Сквозной CORE8 завершён; далее функциональная очередь владельца модуля.
-[Предыдущий STATUS](HISTORY.md#cobalt-status-before-core85-2026-11-11).
+[Единственный межмодульный план](../core/PLAN.md#dep1-dependency-refresh),
+[команды и ограничения](../core/HISTORY.md#dep1-2026-11-15),
+[manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).
+Новые scopes/factory APIs и performance measurements не добавлялись.
+COB5/6/7 функциональная очередь прежняя. [Предыдущий STATUS](HISTORY.md#cobalt-status-before-dep1-2026-11-15).
 
 <a id="предыдущий-cob7-run--2026-10-15"></a>
+[Исторические проверки](HISTORY.md#cobalt-status-before-dep1-2026-11-15).

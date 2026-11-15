@@ -1,5 +1,11 @@
 # TrueMoon: общий план развития
 
+Выполнено2026-11-15: **DEP1 dependency refresh** —6central versions обновлены до latest stable,
+extended native Skia4.156.1 пересобрана из exact sources;16suites по9110D/R,
+GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliveries прошли.
+[Единственная детальная задача/границы](core/PLAN.md#dep1-dependency-refresh).
+Функциональная engine/UI очередь и physical/release gates сохраняются.
+
 Выполнено2026-11-12: **SkiaSharp/native4.156.0** согласованы; source/published native, UI/Hosting/Editor D/R и fresh-package delivery проверены. [Единственная детальная задача и scope](alloy/PLAN.md#skiasharp-41560-completed). Engine/functional UI очередь и release gates сохраняются.
 
 **UI2026-11-08:** [UIA3d validation/shadows](alloy/PLAN.md#uia3d-validation-shadows) и [UIA3d.1 Vulkan frosted barrier](alloy/PLAN.md#uia3d1-vulkan-backdrop) реализованы и проверены в указанном scope. Детальная очередь у UI владельца; engine/Nom порядок сохранён.

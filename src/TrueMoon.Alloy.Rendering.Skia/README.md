@@ -1,11 +1,12 @@
 # Нативная Skia для TrueMoon.Alloy.Rendering.Skia
 
-**Обновление2026-11-12:** managed/native пара **4.156.0 / SkiaM156**. Extended DLL
-пересобрана из exact NuGet source commit/gitlink; Vulkan GENERAL/HOST patch сохранён,
-ABI v1/48bytes и ownership не изменены. Рецепт использует отдельный upstream NuGet
-config, проверяет VS default MSVC/Spectre для M156 и явно выбирает установленный
-полный Windows SDK. В build.json записаны revisions, DLL/patch SHA и toolchain versions.
-[Результаты и границы](../docs/alloy/HISTORY.md#skiasharp-41560-2026-11-12).
+**Обновление2026-11-15:** managed/native пара **4.156.1 / SkiaM156**. Extended DLL
+пересобрана из official NuGet source commit `c8c35b59e8de5efbc2abf52fc26202ae1731e593`
+и Skia gitlink `712ea097151d4951652dee046a8944376fd8df1b`. Vulkan GENERAL/HOST patch,
+ABI v1/48bytes и ownership сохранены. MSVC14.51.36231/WindowsSDK10.0.26100.0;
+в build.json записаны revisions и DLL/patch SHA. Exact pin добавлен без удаления legacy pins.
+[Общий dependency refresh и приёмка](../docs/core/HISTORY.md#dep1-2026-11-15).
+Предыдущая4.156.0 приёмка12ноября сохранена [в истории](../docs/alloy/HISTORY.md#skiasharp-41560-2026-11-12).
 
 **Обновление2026-11-08:** исправлен Vulkan frosted backdrop VUID02819: в pinned
 GrVkImage GENERAL source stage добавлен HOST к ALL_COMMANDS для существующего
@@ -18,7 +19,7 @@ fresh5package Vulkan consumer прошли с validation0/0 и actual blur witne
 
 Проект хранит проверенную Windows x64 библиотеку с Vulkan interop extension:
 
-- `NativeAssets/win-x64/libSkiaSharp.dll` — SkiaSharp 4.156.0, ABI v1, около 9 MB.
+- `NativeAssets/win-x64/libSkiaSharp.dll` — SkiaSharp 4.156.1, ABI v1, около 9 MB.
 - `NativeAssets/win-x64/libSkiaSharp.build.json` — точные revisions и SHA-256 артефакта.
 - Исходники extension и инструменты: [NativeInterop](../ManualTests/AlloyVulkanTest/NativeInterop/README.md).
 
@@ -106,19 +107,19 @@ Native asset/ABI, lease/ownership и retirement в 2.1b не изменялис�
 При первом запуске:
 
 ```powershell
-git -c core.longpaths=true clone --depth 1 --branch release/4.156.0 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41560-20261112/SkiaSharp
-git -c core.longpaths=true -C TestResults/SkiaSharp41560-20261112/SkiaSharp checkout --detach c4ef20229bd56e41731aa94eebe8b082b8ef886c
+git -c core.longpaths=true clone --depth 1 --branch release/4.156.1 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41561/SkiaSharp
+git -c core.longpaths=true -C TestResults/SkiaSharp41561/SkiaSharp checkout --detach c8c35b59e8de5efbc2abf52fc26202ae1731e593
 ```
 
 Повторная сборка с используемыми в этой машине инструментами:
 
 ```powershell
-$env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.17'
+$env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.18'
 $env:PATH = 'C:/Program Files/LibreOffice/program;' + $env:PATH
 pwsh -NoProfile -File ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 `
-  -SkiaSharpSourcePath TestResults/SkiaSharp41560-20261112/SkiaSharp `
+  -SkiaSharpSourcePath TestResults/SkiaSharp41561/SkiaSharp `
   -VisualStudioPath 'C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools' `
-  -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.17/bin/python.exe' `
+  -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.18/bin/python.exe' `
   -NinjaPath TestResults/SkiaSharp41550-20261107/tools/ninja/ninja.exe -InstallToRenderer
 ```
 

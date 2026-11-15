@@ -1,34 +1,22 @@
 # Aether / Editor: состояние и точка продолжения
 
-**2026-11-15 — Kul подключён к игровой scene session, ARCH1h.2a.**
-[Контракт/API](../audio/ECS_BRIDGE.md), [единственная детальная задача](PLAN.md#arch1h2a-kul-session),
-[команды/результаты](HISTORY.md#kul-ecs-2026-11-15), [manifest/SHA](../audio/KUL_ECS_RESULTS.json).
+**2026-11-15 — DEP1: полный engine regression после обновления зависимостей прошёл.**
+[Детальная задача](../core/PLAN.md#dep1-dependency-refresh),
+[команды/границы](../core/HISTORY.md#dep1-2026-11-15), [manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).
+Последний функциональный этап — [Kul ARCH1h.2a](../audio/ECS_BRIDGE.md);
+ARCH1j → PHYS5 → Kul сохраняет завершённый bounded scope.
 
-Optional neutral SDK и Runtime adapter добавляют source/command/state, явный immutable
-audio capture, prepared sound/music pool и session playback. Тик выполняет controls
-после primitive extraction; пауза сохраняет позиции, paused Step остаётся silent.
-Кандидаты готовятся бесшумно; cleanup освобождает native session до capture pins/World.
-Проверены same-entity Kton/Kul, полные phase commands, generation/rebind/EOF и cleanup retry.
-Базовые Runtime/Abstractions, Kton/Bepu и26common ARCH1j hashes сохранены.
+Каждый Debug/Release: Aether3533, Editor1507, Player17, Abstractions26,
+Kton bridge68, Kul bridge103passed,0failed/0skipped. Весь solution16suites9110/config;
+non-incremental builds0errors/1570warnings, warning location/ID sets прежние.
+Новая SkiaSharp/native4.156.1 и RichTextKit0.6.173 прошли source/published
+GPU/typography validation0/0, fresh UI10package36App+4direct cases.
+Kul source/published/fresh reports с обоими DI и muted actual WASAPI также прошли.
 
-| Проверка15ноября | Результат/точный scope |
-| --- | --- |
-| Новый Kul bridge suite Debug/Release |103passed/config, failed/skipped0 |
-| Самостоятельный Kul suite Debug/Release |27passed/config, включая4новых native flags tests |
-| Common/Kton regression Debug/Release |104+68passed/config; не новый full engine/Editor suite |
-| Solution |Non-incremental D/R0errors/1570existing warnings; финальные incremental D/R0errors/0warnings; exact discovery103cases |
-| Independent source/published/fresh |4offline reports×59checks +4muted actual WASAPI reports×43checks, оба DI |
-| Packages |3metadata/payload checks;13coherent archives/profile,18-library closure, exact managed/native SHA |
+C# engine contracts/source не менялись. Это отдельные UI/audio fresh deliveries и
+27metadata checks, не новая единая architecture delivery для всех frozen/mod/Player
+consumers. [Предыдущий STATUS](HISTORY.md#engine-status-before-dep1-2026-11-15).
 
-Предыдущие ARCH3.1–9/ARCH1j/PHYS5 результаты сохраняют свои даты и scope:
-[предыдущий STATUS](HISTORY.md#engine-status-before-kul-ecs-2026-11-15).
-Audio не подключается автоматически к Editor preview. Spatial/listener, Editor import/
-Nom, fixed GameBuildArtifact ABI/ALC extension, native-state reload/migration,
-device loss/soak/RT/other OS и audibility остаются отдельными задачами.
-
-## Следующий конкретный шаг
-
-Запрошенная последовательность ARCH1j → PHYS5 → Kul ARCH1h.2a завершена.
-Следующий прежний engine кандидат — ENG7b.3, расширенная host/Player matrix;
-ED/import/Nom, PHYS6 и AUD2–3 выбираются отдельно. Functional/physical/release gates
-и причина исторического drain timeout сохранены. Claims/requests не менялись.
+Следующий прежний кандидат — ENG7b.3; ED/import/Nom, PHYS6/AUD2–3 и physical/release
+gates выбираются отдельно. Historical drain cause, spatial audio и native-state
+migration/other OS не закрыты. Request/Claim/Decision не менялись.

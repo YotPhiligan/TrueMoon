@@ -1,5 +1,11 @@
 # Эксперимент внешнего Vulkan handoff
 
+**2026-11-15 — SkiaSharp/native4.156.1:** exact NuGet parent
+`c8c35b59e8de5efbc2abf52fc26202ae1731e593` / Skia gitlink
+`712ea097151d4951652dee046a8944376fd8df1b`. Extended source build, GENERAL/HOST patch,
+ABI v1/48bytes и ownership сохранены. [Общий dependency refresh и результаты](../../../docs/core/HISTORY.md#dep1-2026-11-15).
+Датированная4.156.0 приёмка ниже остаётся исторической.
+
 **2026-11-12 — SkiaSharp/native4.156.0:** текущая Windows x64 DLL пересобрана из
 NuGet source commit `c4ef20229bd56e41731aa94eebe8b082b8ef886c` / Skia gitlink
 `d1717dc22ef2203b7fc9bf0e01078b37b1a4af6b`. GENERAL/HOST patch сохранён и проверен
@@ -43,6 +49,7 @@ DLL теперь хранится в `TrueMoon.Alloy.Rendering.Skia/NativeAssets
 | 4.154.0 | 8771a4343c7ca2e5edf18f79a3b7b23c77fff60d | 993e88f35c9d107669824cf5575c002964e4b087 |
 | 4.155.0 | d25e7fa628a2576e50ecc42004cc4fd03c6657f5 | c2d78902a56e24827a7273a4ed3461ce18780680 |
 | 4.156.0 | c4ef20229bd56e41731aa94eebe8b082b8ef886c | d1717dc22ef2203b7fc9bf0e01078b37b1a4af6b |
+| 4.156.1 | c8c35b59e8de5efbc2abf52fc26202ae1731e593 | 712ea097151d4951652dee046a8944376fd8df1b |
 
 Предыдущий4.155.0 source commit взят из repository metadata официального NuGet;
 проверен gitlink Skia. Release branch используется только для получения sources,
@@ -91,14 +98,14 @@ WindowsSdkVersion можно задать явно; иначе выбирает�
 Пример использует реальный Python из LibreOffice; WindowsApps alias и launcher LibreOffice не подходят для дочерних процессов. При другом Python пути/переменные надо заменить.
 
 ```powershell
-git -c core.longpaths=true clone --depth 1 --branch release/4.156.0 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41560-20261112/SkiaSharp
-git -c core.longpaths=true -C TestResults/SkiaSharp41560-20261112/SkiaSharp checkout --detach c4ef20229bd56e41731aa94eebe8b082b8ef886c
-$env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.17'
+git -c core.longpaths=true clone --depth 1 --branch release/4.156.1 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41561/SkiaSharp
+git -c core.longpaths=true -C TestResults/SkiaSharp41561/SkiaSharp checkout --detach c8c35b59e8de5efbc2abf52fc26202ae1731e593
+$env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.18'
 $env:PATH = 'C:/Program Files/LibreOffice/program;' + $env:PATH
 pwsh -NoProfile -File ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 `
-  -SkiaSharpSourcePath TestResults/SkiaSharp41560-20261112/SkiaSharp `
+  -SkiaSharpSourcePath TestResults/SkiaSharp41561/SkiaSharp `
   -VisualStudioPath 'C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools' `
-  -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.17/bin/python.exe' `
+  -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.18/bin/python.exe' `
   -NinjaPath TestResults/SkiaSharp41550-20261107/tools/ninja/ninja.exe -CheckOnly
 # Повторить без -CheckOnly для source build.
 ```
@@ -107,7 +114,7 @@ BuildNativeInterop.ps1 инициализирует shallow pinned Skia submodul
 
 Готовая DLL: TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.dll.
 
-SHA-256 текущего артефакта:70DE4E07A42556E65293AFBB7A7A217D31890E7AC7F3628129C608438D54220A.
+SHA-256 текущего артефакта:7CAD4A4AA72DFEC19F05C686088BCF38D6585C984E19C4884985FF4C03CA8FCE.
 
 ## Запуск
 

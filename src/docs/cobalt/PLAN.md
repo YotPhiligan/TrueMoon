@@ -1,7 +1,9 @@
 # Cobalt / DI: план модуля
 
 <a id="current-cobalt-queue"></a>
-## Точка продолжения — актуализация 2026-11-11
+## Точка продолжения — актуализация 2026-11-15
+
+DEP1 обновил Roslyn Analyzers/CSharp до5.12.0; source/API и functional очередь прежние. Полные runtime/generator suites D/R прошли. [Единственная детальная задача/результаты](../core/PLAN.md#dep1-dependency-refresh).
 
 CORE8.2 завершил текущую .NET11 compatibility сверку: runtime/adapter179 и
 generator96 каждый D/R, independent package generated DI/IPC прошёл.

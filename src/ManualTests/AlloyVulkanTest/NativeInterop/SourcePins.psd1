@@ -27,4 +27,11 @@
         VulkanGeneralHostStage = $true
         DefaultMsvcToolset = $true
     }
+    '4.156.1' = @{
+        Version = '4.156.1'
+        SkiaSharpRevision = 'c8c35b59e8de5efbc2abf52fc26202ae1731e593'
+        SkiaRevision = '712ea097151d4951652dee046a8944376fd8df1b'
+        VulkanGeneralHostStage = $true
+        DefaultMsvcToolset = $true
+    }
 }

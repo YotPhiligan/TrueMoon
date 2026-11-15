@@ -1,15 +1,17 @@
 # Enerit: состояние и точка продолжения
 
-**2026-11-11 — CORE8.5: свежая согласованная .NET 11 поставка проверена.**
-SDK 11.0.100 / net11.0 / runtime-async=on. Полные suites повторно прошли в каждой
-конфигурации Debug/Release: runtime 354, generator 114; Failed 0, Skipped 0.
-Runtime/API/dependencies в CORE8.5 не менялись; обновлены runners и документация.
-[Поставка, команды и границы](../core/HISTORY.md#core85-delivery-2026-11-11),
-[переход](../core/DOTNET11_MIGRATION.md).
+**2026-11-15 — DEP1: generator проверен с Roslyn5.12.0.**
+Полные runtime354/generator114passed каждый Debug/Release,0failed/0skipped.
+SDK11/net11/runtime-async, production C# source/API, endpoint/transport/ownership
+не менялись. Enerit и generator package metadata/payload проверены в27archive gate;
+matching generator/runtime вошли в fresh audio delivery graph. Новая отдельная
+independent typed-IPC matrix в этом dependency refresh не запускалась.
 
-Свежий matching generator и actual generated IPC проверены у независимого game consumer на обоих DI. Same-build contracts сохранены. ENE6c, protocol expansion, MMF и performance остаются отдельными.
-
-Сквозной CORE8 завершён; далее функциональная очередь владельца модуля.
-[Предыдущий STATUS](HISTORY.md#enerit-status-before-core85-2026-11-11).
+[Детальный межмодульный план](../core/PLAN.md#dep1-dependency-refresh),
+[команды/границы](../core/HISTORY.md#dep1-2026-11-15),
+[manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).
+ENE6c, protocol expansion/MMF/performance сохраняются отдельными задачами.
+[Предыдущий STATUS](HISTORY.md#enerit-status-before-dep1-2026-11-15).
 
 <a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
+[Исторические проверки](HISTORY.md#enerit-status-before-dep1-2026-11-15).

@@ -1,5 +1,9 @@
 # MiniAudioEx libvorbis lifetime correction
 
+Проверка2026-11-15: upstream managed4.0.1 и native HEAD совпадают с текущим lock;
+TrueMoon.MiniAudioEx4.0.1-truemoon.1/patch/binary не менялись, новая пересборка не нужна.
+Полные Kul/bridge tests и новый muted WASAPI delivery прошли в [DEP1](../../../docs/core/HISTORY.md#dep1-2026-11-15).
+Original source rebuild/RED-GREEN ниже сохраняют прежний scope и дату.
 Исходники MiniAudioEx0.11.26 зафиксированы на `9f85b56157027cc57c7cd0a13fea7fee3f1e167e`.
 Managed MiniAudioEx.NET4.0.1 берётся неизменённым из точного NuGet archive.
 Source/archive/file/patch SHA находятся в `Source.lock.json`; сторонние исходники

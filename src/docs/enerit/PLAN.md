@@ -5,7 +5,9 @@ Enerit:Pipes schema и UseConfiguredPipesServiceTransport, сохраняя endp
 handlers и transport ownership. Детальная задача — Core; IPC очередь ниже сохранена.
 
 <a id="current-enerit-queue"></a>
-## Точка продолжения — актуализация 2026-11-11
+## Точка продолжения — актуализация 2026-11-15
+
+DEP1 обновил Roslyn Analyzers/CSharp до5.12.0; source/API и functional очередь прежние. Полные runtime/generator suites D/R прошли. [Единственная детальная задача/результаты](../core/PLAN.md#dep1-dependency-refresh).
 
 CORE8.2 проверил net11: runtime354/generator114 каждый D/R и132fresh-package
 generated DI/IPCscenarios общей матрицы. Test/probe trace flags сверяются с
