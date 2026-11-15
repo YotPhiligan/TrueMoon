@@ -31,6 +31,15 @@ owns its systems and borrows World; dispose scheduler before scene/World, and
 retire render resources before game/ALC. Failed cleanup retains ownership for retry.
 App owns singleton RuntimeEngine; workflow hosts borrow it and request Stop.
 
+UseAetherSceneSubsystems opts scene sessions into DI-created subsystem resources
+and additional systems in the same scheduler. Each result is session-owned;
+prepare before activation, dispose systems before their subsystem dependencies,
+then release SceneWorld. Failed cleanup retains its World lease for retry.
+PrimitiveGameSession forwards actual Play/Pause, including presentation fences,
+through the optional Abstractions IGamePlaybackSession contract. ExternalMotion
+entities skip built-in velocity movement. This common layer activates no physics
+or audio backend and does not migrate native subsystem state during mod reload.
+
 Game/ECS/scene/input/checkpoint/render/preview values are canonical Abstractions
 types. Host-specific World/context/legacy-system APIs reside in Runtime.Ecs;
 neutral game/mod systems use Abstractions.Ecs without a World/container capability.

@@ -107,10 +107,11 @@ internal sealed class AudioHost(AudioOptions settings) : IDisposable
 
     private AudioPlayback StartVoice(AudioSession session, NativeHandle handle, AudioClip? clip, bool streaming, AudioPlayOptions options)
     {
-        var voice = new AudioPlayback(session, handle, clip, streaming);
+        var voice = new AudioPlayback(session, handle, clip, streaming)
+        { Paused = options.StartPaused, RetainAtEnd = options.RetainAtEnd, Looping = options.Loop };
         MiniAudioNative.ma_sound_set_volume(voice.Pointer, options.Volume);
         MiniAudioNative.ma_sound_set_looping(voice.Pointer, options.Loop ? 1u : 0u);
-        Check(MiniAudioNative.ma_sound_start(voice.Pointer), "Start audio voice");
+        if (!options.StartPaused) Check(MiniAudioNative.ma_sound_start(voice.Pointer), "Start audio voice");
         session.Voices.Add(voice);
         return voice;
     }
@@ -132,7 +133,7 @@ internal sealed class AudioHost(AudioOptions settings) : IDisposable
     {
         int collected = 0;
         foreach (var voice in session.Voices.ToArray())
-            if (MiniAudioNative.ma_sound_at_end(voice.Pointer) != 0) { Release(voice); collected++; }
+            if (!voice.RetainAtEnd && MiniAudioNative.ma_sound_at_end(voice.Pointer) != 0) { Release(voice); collected++; }
         return collected;
     }
 
@@ -243,6 +244,10 @@ internal sealed class AudioHost(AudioOptions settings) : IDisposable
         AudioOptions.ValidateVolume(value);
         lock (Gate) { EnsureVoice(voice); MiniAudioNative.ma_sound_set_volume(voice.Pointer, value); }
     }
+    internal bool GetLoop(AudioPlayback voice)
+    { lock (Gate) { EnsureVoice(voice); return voice.Looping; } }
+    internal void SetLoop(AudioPlayback voice, bool value)
+    { lock (Gate) { EnsureVoice(voice); MiniAudioNative.ma_sound_set_looping(voice.Pointer, value ? 1u : 0u); voice.Looping = value; } }
     internal float Volume
     {
         get { lock (Gate) { EnsureRunning(); return volume; } }

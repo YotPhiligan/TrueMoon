@@ -1,0 +1,1202 @@
+﻿{
+    "Completed":  true,
+    "Stage":  "ARCH1h.2a",
+    "Date":  "2026-11-15",
+    "GitHead":  "a7bdeacd2656a001dc028d89aee77a8de936b194",
+    "Branch":  "feat/aether-session-subsystems",
+    "WorkingTree":  "Uncommitted ARCH1j/PHYS5/Kul changes retained",
+    "Profile":  {
+                    "Workspace":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src",
+                    "Framework":  "net11.0",
+                    "TestFramework":  "net11.0",
+                    "Sdk":  "11.0.100",
+                    "Version":  "0.3.0.1-alpha",
+                    "LanguageVersion":  "latest",
+                    "Features":  ";runtime-async=on",
+                    "Sources":  [
+                                    {
+                                        "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Build.props",
+                                        "Sha256":  "5179F5F79FB7BC9275BA46CA52F9768585BB3AFD2E5D7CACA28BA7D9942CE11C"
+                                    },
+                                    {
+                                        "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\Directory.Packages.props",
+                                        "Sha256":  "9A5507DD1784617C30DCEE01BCBC6C73FBBC6B27818E15BD312F18079F1FE285"
+                                    },
+                                    {
+                                        "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\global.json",
+                                        "Sha256":  "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6"
+                                    },
+                                    {
+                                        "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\ManualTests\\BuildProfile.ps1",
+                                        "Sha256":  "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF"
+                                    }
+                                ],
+                    "EvidencePath":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\acceptance-offline-final\\profile-25c7aafcf5ab40a599cdd30e10038c71.json"
+                },
+    "Builds":  [
+                   {
+                       "Path":  "TestResults/KUL_ECS/solution-debug.log",
+                       "Warnings":  1570,
+                       "Errors":  0,
+                       "Sha256":  "56281900F02DE506B9D20FA6334DF078E6EFCD0F0DC2BBA4D4ABB1C8E2D24647",
+                       "Configuration":  "Debug",
+                       "NonIncremental":  true
+                   },
+                   {
+                       "Path":  "TestResults/KUL_ECS/solution-final-Debug.log",
+                       "Warnings":  0,
+                       "Errors":  0,
+                       "Sha256":  "47248E38C16ABB6CEF508DF9EF8A6575A299C0E8F5954870D6E0CA0806CCAA6E",
+                       "Configuration":  "Debug",
+                       "NonIncremental":  false
+                   },
+                   {
+                       "Path":  "TestResults/KUL_ECS/solution-release.log",
+                       "Warnings":  1570,
+                       "Errors":  0,
+                       "Sha256":  "C370A49966295D0B750473C100655B3F5A2DABC08E278B17E9B6D18C9216ADA5",
+                       "Configuration":  "Release",
+                       "NonIncremental":  true
+                   },
+                   {
+                       "Path":  "TestResults/KUL_ECS/solution-final-Release.log",
+                       "Warnings":  0,
+                       "Errors":  0,
+                       "Sha256":  "6F868CA30A34D2FE37FC3EA44BBE1DDADD2FF54CCE86F6D3584B0213F41C94B9",
+                       "Configuration":  "Release",
+                       "NonIncremental":  false
+                   }
+               ],
+    "Tests":  [
+                  {
+                      "Path":  "TestResults/KUL_ECS/tests/kul-ecs-final-debug.trx",
+                      "Passed":  103,
+                      "Skipped":  0,
+                      "Sha256":  "05E6CF411013781EAC2E77484EB4288C6825C358EA916B30379B66BFC6AAED90",
+                      "Configuration":  "Debug",
+                      "Failed":  0
+                  },
+                  {
+                      "Path":  "TestResults/KUL_ECS/tests/kul-ecs-final-release.trx",
+                      "Passed":  103,
+                      "Skipped":  0,
+                      "Sha256":  "9902631DF0BD9F8E2BEB2CB6290676B3AED2C6CABE8F52B7F057B0D09BA7993B",
+                      "Configuration":  "Release",
+                      "Failed":  0
+                  }
+              ],
+    "NativeModuleTests":  [
+                              {
+                                  "Path":  "TestResults/KUL_ECS/tests/kul-native-debug.trx",
+                                  "Passed":  27,
+                                  "Skipped":  0,
+                                  "Sha256":  "D97B829457CBC770939032EBC68CF5CDD76CD6F1282153DE28FED6A3D9052FE0",
+                                  "Configuration":  "Debug",
+                                  "Failed":  0
+                              },
+                              {
+                                  "Path":  "TestResults/KUL_ECS/tests/kul-native-release.trx",
+                                  "Passed":  27,
+                                  "Skipped":  0,
+                                  "Sha256":  "0FA2007C18A36357E637C054CE4FB4B3CFC1317CCE45AEC31FDED158F84D2092",
+                                  "Configuration":  "Release",
+                                  "Failed":  0
+                              }
+                          ],
+    "CommonRegression":  [
+                             {
+                                 "Path":  "TestResults/KUL_ECS/regression/common-Debug.trx",
+                                 "Passed":  104,
+                                 "Skipped":  0,
+                                 "Sha256":  "E204F3F835414BF252D63013334F6CB6F3CFCDA328F613A28FB405A945168373",
+                                 "Configuration":  "Debug",
+                                 "Failed":  0
+                             },
+                             {
+                                 "Path":  "TestResults/KUL_ECS/regression/common-Release.trx",
+                                 "Passed":  104,
+                                 "Skipped":  0,
+                                 "Sha256":  "EA2AE4405437A651683813591F1B876B03D90E02EF37B73847389E87419A8CB8",
+                                 "Configuration":  "Release",
+                                 "Failed":  0
+                             }
+                         ],
+    "PhysicsRegression":  [
+                              {
+                                  "Path":  "TestResults/KUL_ECS/regression/kton-Debug.trx",
+                                  "Passed":  68,
+                                  "Skipped":  0,
+                                  "Sha256":  "54376A256C74A56C9AA92C3FFDDE41D2EE48EEEAB7400DD16CB87E5C44656BD1",
+                                  "Configuration":  "Debug",
+                                  "Failed":  0
+                              },
+                              {
+                                  "Path":  "TestResults/KUL_ECS/regression/kton-Release.trx",
+                                  "Passed":  68,
+                                  "Skipped":  0,
+                                  "Sha256":  "DA8242FF4580911649A9F32E48B36A3D10179467BA5E245374D7E1FACB8164FB",
+                                  "Configuration":  "Release",
+                                  "Failed":  0
+                              }
+                          ],
+    "SolutionDiscovery":  [
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0.trx",
+                                  "Sha256":  "2BC050FCAD8AF7B19CB1ECE5E31B22AEC8FBC5F900C0CB07D2782C735A61F18F",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[10].trx",
+                                  "Sha256":  "3313C71C2E01A4653E489BFED9D42E5708C22B58EFD1921244039F5BEECEE14F",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[11].trx",
+                                  "Sha256":  "74D4408C5A44D321B0C6AE2F6410D8D153F2B54FCE3AF3ED111443E90FB62925",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[12].trx",
+                                  "Sha256":  "0F43BE5673E2E1A60AD8199CFAD81392A38DF9440B4B63A10CF34CF7EB3DC0CC",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[13].trx",
+                                  "Sha256":  "682E82E1C020E0165FFE1C250B66EEF51C902F356F93BD689D60E457EA1BAA8C",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[1].trx",
+                                  "Sha256":  "34CA4AE9BF70C4C083593F4830268A16D9FB8798CD45E881C89F0882CCDB80AC",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[2].trx",
+                                  "Sha256":  "413B600B5A3D6C837314C53AFC7D2DC78727C0056F852A399A64B7CD85820662",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[3].trx",
+                                  "Sha256":  "195746C8FFC7A4449F63CC61DA85A662784DC0B3B50A4AE7AA5609C715D1FB63",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[4].trx",
+                                  "Sha256":  "EF559C2EE366F8618AE24FB858132FC1ED1526DBDBA1F7AA48FB41E234D4455A",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[5].trx",
+                                  "Sha256":  "F61F7A9EF4E150D7AA2417165F48F7F0499BA461B0835FC81B369F6F6E2D7089",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[6].trx",
+                                  "Sha256":  "C5576C651C5626A937CC8A3B50263C69A4F83A9FB59DFC307F34F3ADC176B96D",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[7].trx",
+                                  "Sha256":  "98764F882DF4C0AA988898AC4FDD81B57454FD25964E778FA79972F1F8C85365",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[8].trx",
+                                  "Sha256":  "9C992102ADDE7A5D4B46EA02D273897772E03BA0B0F104F25B681853297EA4DC",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_37_net11.0[9].trx",
+                                  "Sha256":  "9BB200D6830EEE2CC1FC8DC4814E17F77E6E63DF27C54847C2CB266BEA2FF541",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_38_net11.0.trx",
+                                  "Sha256":  "3F3EF821E771649D0286D5EF5AF19D769A8983450399726C42D321DF6EC7E0BB",
+                                  "Passed":  0
+                              },
+                              {
+                                  "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\discovery-final\\MEGA6_PH-DEV_2026-11-15_20_15_38_net11.0[1].trx",
+                                  "Sha256":  "714E01828BF2D14D7B18812894D7D80BDF724AC83A51DAB13796269FED7260C6",
+                                  "Passed":  103
+                              }
+                          ],
+    "Consumers":  [
+                      {
+                          "Mode":  "offline-final",
+                          "Reports":  [
+                                          {
+                                              "Checks":  59,
+                                              "Name":  "source-debug",
+                                              "Sha256":  "1EC03F5B1A1FF029E6267154387ECB108ED0BD31B61A901E56267591F771B4D5",
+                                              "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\acceptance-offline-final/source-debug.json",
+                                              "NativeSha256":  "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+                                          },
+                                          {
+                                              "Checks":  59,
+                                              "Name":  "source-published",
+                                              "Sha256":  "972ABCC9C5EF01AC1C71915E7D5BC8264D1D68994A9634291F74DEB82378AE65",
+                                              "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\acceptance-offline-final/source-published.json",
+                                              "NativeSha256":  "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+                                          },
+                                          {
+                                              "Checks":  59,
+                                              "Name":  "fresh-Debug",
+                                              "Sha256":  "EDF17858326304CD1056B197EF87DED746AA8C98DB00F6803FD06F8A25001C51",
+                                              "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\acceptance-offline-final/fresh-Debug.json",
+                                              "NativeSha256":  "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+                                          },
+                                          {
+                                              "Checks":  59,
+                                              "Name":  "fresh-Release",
+                                              "Sha256":  "1EFC94E7B059F4643A97DDE0F280C93D7E85130643400E190336AAB3E44A3C74",
+                                              "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\acceptance-offline-final/fresh-Release.json",
+                                              "NativeSha256":  "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB"
+                                          }
+                                      ],
+                          "Path":  "TestResults/KUL_ECS/acceptance-offline-final/verification.json",
+                          "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                          "Packages":  [
+                                           {
+                                               "Id":  "TrueMoon.Contracts",
+                                               "Sha256":  "65DD72BFEDC64E310B0865E73BF717F9B2CB4019A5F108ABEFA7BE991D795400",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Contracts.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Core",
+                                               "Sha256":  "1E70D072049E91B4C2C5C50AA018F67265CEE15CFA6531C4A3259CF11448918E",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Core.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Cobalt",
+                                               "Sha256":  "98B2BDD4A483166BE17D11E7E3A1E57FE7B63811453C2DB5A40D28BF50D03CEA",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Cobalt.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon",
+                                               "Sha256":  "614295519D41A861A2C8716442AAE6B66B9C9250E24E09504F76EAA3D23440A7",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Extensions.DependencyInjection",
+                                               "Sha256":  "92AD2BAF63B08A4B1661EBB06367D0CA07F69739E092CB647F70A371176ADE14",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Extensions.DependencyInjection.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Aether.Abstractions",
+                                               "Sha256":  "DFBA292C1102F66E787B6A233C6AFDAB5363030833278C6C2F1D8B201DAC62E8",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Aether.Abstractions.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Enerit.Generator",
+                                               "Sha256":  "98C2E0388D8166180CEF5A2D7F6245129B9A6B07B9A8E90D6933BA8D78CE5406",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Enerit.Generator.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Enerit",
+                                               "Sha256":  "2852170526B2273D654528990703E0DDC88C0E823FF18D764F4F121282F8519D",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Enerit.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Mithril",
+                                               "Sha256":  "A21917186D9AB098BE29352ACFF25BCAE994A9200CF166BBB0BAA3FB4E4B739D",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Mithril.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Aether.Runtime",
+                                               "Sha256":  "8F60595141FBCA7E2E3E5ADC4EB47D2755DD8E991F4D01B823ECCFF128414FD9",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Aether.Runtime.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Kul",
+                                               "Sha256":  "04502ED42B34BAD2DD3FD40E6946745E26B6C989F94A91FEC3CD47D9C4597F38",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Kul.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Aether.Kul",
+                                               "Sha256":  "675BCB7D819829FF45E499CEB8325C2BC808D605AECA5921F39A92067E041963",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Aether.Kul.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           },
+                                           {
+                                               "Id":  "TrueMoon.Aether.Kul.Runtime",
+                                               "Sha256":  "31C82F3F62C4B53A416BAADC1B7E0390D8AD7C2F81D089E9EE55CA9AAFA6BEAC",
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115201030",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-4dfd39a02c8840949ef0e9f8dc312457\\feed/TrueMoon.Aether.Kul.Runtime.0.3.0.1-alpha.kulecs.20261115201030.nupkg"
+                                           }
+                                       ],
+                          "Sha256":  "84FA97798210B69941602804C5D8E4E5DD04632ED90DD09E97E87ABFC3A06B78",
+                          "Graph":  {
+                                        "Sha256":  "3458C126A78B01BFABA413D4210D3FD40029B99589675D08D523DD3A6B5C5D69",
+                                        "ProjectReferences":  0,
+                                        "Libraries":  [
+                                                          "Microsoft.DotNet.PlatformAbstractions/3.1.6",
+                                                          "Microsoft.Extensions.DependencyInjection/11.0.0",
+                                                          "Microsoft.Extensions.DependencyModel/9.0.9",
+                                                          "Silk.NET.Core/2.23.0",
+                                                          "Silk.NET.Vulkan/2.23.0",
+                                                          "TrueMoon/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Aether.Abstractions/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Aether.Kul/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Aether.Kul.Runtime/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Aether.Runtime/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Cobalt/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Contracts/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Core/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Enerit/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Extensions.DependencyInjection/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.Kul/0.3.0.1-alpha.kulecs.20261115201030",
+                                                          "TrueMoon.MiniAudioEx/4.0.1-truemoon.1",
+                                                          "TrueMoon.Mithril/0.3.0.1-alpha.kulecs.20261115201030"
+                                                      ]
+                                    }
+                      },
+                      {
+                          "Mode":  "device",
+                          "Reports":  [
+                                          {
+                                              "Sha256":  "D35EEE7EBF7F7EE96625AF03288DFCF7F57EACE36930AF5520EF48D2FA1C1ADB",
+                                              "NativeSha256":  "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB",
+                                              "Name":  "source-debug",
+                                              "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\acceptance-device/source-debug.json",
+                                              "Checks":  43
+                                          },
+                                          {
+                                              "Sha256":  "BF37794AC4ADBF48FD7D0376C6758FE63A1D4CB10546311730DAE6D1C9E805A6",
+                                              "NativeSha256":  "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB",
+                                              "Name":  "source-published",
+                                              "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\acceptance-device/source-published.json",
+                                              "Checks":  43
+                                          },
+                                          {
+                                              "Sha256":  "71A3CB91546E90D6C3315850E29222E92BB833412A2B2D2AF80EC868B0323D21",
+                                              "NativeSha256":  "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB",
+                                              "Name":  "fresh-Debug",
+                                              "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\acceptance-device/fresh-Debug.json",
+                                              "Checks":  43
+                                          },
+                                          {
+                                              "Sha256":  "E048BFF0101ED645CBD1E3B6F89DBB9A6031F35126B32DDBE695F99F90502536",
+                                              "NativeSha256":  "F2F6333F915E08673551C03CA5818F3136BE0B138BD507FB86C878D4A3EE60CB",
+                                              "Name":  "fresh-Release",
+                                              "Path":  "E:\\source\\my\\TrueMoon.Tales\\TrueMoon\\src\\TestResults\\KUL_ECS\\acceptance-device/fresh-Release.json",
+                                              "Checks":  43
+                                          }
+                                      ],
+                          "Path":  "TestResults/KUL_ECS/acceptance-device/verification.json",
+                          "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                          "Packages":  [
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "99530BD4DD7D75CBB40A495405325C5EB9D8670221C5B62D5D8D6BE70D010BE7",
+                                               "Id":  "TrueMoon.Contracts",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Contracts.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "4E7F0DFCF4F4088ABCCE1C64A1EC4A618ACDEB99E0B5E36C4B1502B754C2EC96",
+                                               "Id":  "TrueMoon.Core",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Core.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "1B9B0C13295C09A591EFE664BBBC44FED52CF261CFD98CE0CB9F0F76BC4053C5",
+                                               "Id":  "TrueMoon.Cobalt",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Cobalt.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "58FA4D87736ABC36E3C22F50C3AC0FEE4123BD0D3249ACAF142465050BB98958",
+                                               "Id":  "TrueMoon",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "8FC4E062F103319E3324953A887351B019FDB6778D40DF48E1F76A5CBF2A62B6",
+                                               "Id":  "TrueMoon.Extensions.DependencyInjection",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Extensions.DependencyInjection.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "D6466EB72EEB845C9782368BE88E526934260A06131F8BD7126F60C1A7EA63E8",
+                                               "Id":  "TrueMoon.Aether.Abstractions",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Aether.Abstractions.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "FBB226D8200F25AF77056F44A4BAC18A1A88708B940278A717E44A2449FB7A74",
+                                               "Id":  "TrueMoon.Enerit.Generator",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Enerit.Generator.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "AC6250ED76F104BE72E94CD0339CBE5DEE822D75DEB0AE5855E7067E0FC9FCE2",
+                                               "Id":  "TrueMoon.Enerit",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Enerit.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "ADCD478D54DB2A8119B4F8E679F13A96CB903CD4C2B2A67F0F68DB1390C12B9F",
+                                               "Id":  "TrueMoon.Mithril",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Mithril.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "27F692C28108240FC3E2BD41AF05AB0192DF7BBB494C4423262511C374A387CE",
+                                               "Id":  "TrueMoon.Aether.Runtime",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Aether.Runtime.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "1709030E10D4834C51FBE91F596048CBEA09F2189AFC581F2D3CE0BBDF45FC8D",
+                                               "Id":  "TrueMoon.Kul",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Kul.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "7ED5212B08A26E8D16368D0856306BD9BD702F5B284EB18A6788B26AA9B0B01B",
+                                               "Id":  "TrueMoon.Aether.Kul",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Aether.Kul.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           },
+                                           {
+                                               "Version":  "0.3.0.1-alpha.kulecs.20261115200926",
+                                               "Sha256":  "E19E149229CC6B5F8C6669916BCBEB1B65C8DBA17930FA49F92A226D87983726",
+                                               "Id":  "TrueMoon.Aether.Kul.Runtime",
+                                               "Path":  "C:\\Users\\MEGA6\\AppData\\Local\\Temp\\TrueMoon-KUL-ECS-b22d451b1d014a09835aeec983397559\\feed/TrueMoon.Aether.Kul.Runtime.0.3.0.1-alpha.kulecs.20261115200926.nupkg"
+                                           }
+                                       ],
+                          "Sha256":  "0BFF1A0C370458F817F6953CA4A31B779CD8930322157F993735B9AC2B44A2F5",
+                          "Graph":  {
+                                        "Sha256":  "388A59DEE5ADFB5CCE48B1B7EAE8DD442171571059D2B17AE8FBEB909DB82C08",
+                                        "ProjectReferences":  0,
+                                        "Libraries":  [
+                                                          "Microsoft.DotNet.PlatformAbstractions/3.1.6",
+                                                          "Microsoft.Extensions.DependencyInjection/11.0.0",
+                                                          "Microsoft.Extensions.DependencyModel/9.0.9",
+                                                          "Silk.NET.Core/2.23.0",
+                                                          "Silk.NET.Vulkan/2.23.0",
+                                                          "TrueMoon/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Aether.Abstractions/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Aether.Kul/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Aether.Kul.Runtime/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Aether.Runtime/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Cobalt/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Contracts/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Core/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Enerit/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Extensions.DependencyInjection/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.Kul/0.3.0.1-alpha.kulecs.20261115200926",
+                                                          "TrueMoon.MiniAudioEx/4.0.1-truemoon.1",
+                                                          "TrueMoon.Mithril/0.3.0.1-alpha.kulecs.20261115200926"
+                                                      ]
+                                    }
+                      }
+                  ],
+    "Metadata":  {
+                     "Sha256":  "C2C88C5DC7009D228BFBAAE30D46884D5EA6038FA460D48EB058E9FF13F009D9",
+                     "Path":  "TestResults/PackageMetadata/kul-ecs-final/summary.json"
+                 },
+    "Sources":  [
+                    {
+                        "Sha256":  "630C444061A0AD2BC7FF1B9617D8BF464BF1FBD1FD1442B07538D6E30BB05317",
+                        "Path":  "TrueMoon.Aether.Kul/AudioAssetId.cs"
+                    },
+                    {
+                        "Sha256":  "A4CAD7EDF899E9E42BEA1820BBF22158D8E27D67F7216B1C83E14720A60576E8",
+                        "Path":  "TrueMoon.Aether.Kul/AudioAssetKind.cs"
+                    },
+                    {
+                        "Sha256":  "63D4AC4807897B9D95435143E34849F0FC4DF01D92D91C260B0202F75C46C23A",
+                        "Path":  "TrueMoon.Aether.Kul/AudioCommandKind.cs"
+                    },
+                    {
+                        "Sha256":  "268A247D5DDE36CBD3CC195284D7E148042463C5B332CC4AF70F1B43915B567C",
+                        "Path":  "TrueMoon.Aether.Kul/AudioComponentSchemas.cs"
+                    },
+                    {
+                        "Sha256":  "3436A911140EADEE50A60F31D2A8FBFB8B40EECB7DBF911F1E17795DA02846A6",
+                        "Path":  "TrueMoon.Aether.Kul/AudioContentAsset.cs"
+                    },
+                    {
+                        "Sha256":  "E120B4F7A17E80149076E4F2BCB4E0BC49AF05BF5993135B8779B150219675F9",
+                        "Path":  "TrueMoon.Aether.Kul/AudioContentManifest.cs"
+                    },
+                    {
+                        "Sha256":  "0F2EDD867C9AF93467778FB3331D75A77002D2297EDCD6472DFF60E5677C9F91",
+                        "Path":  "TrueMoon.Aether.Kul/AudioEntityCommands.cs"
+                    },
+                    {
+                        "Sha256":  "E5F4FCA07250077E30DB76CA8D59F28ABFE9C4E1CFA8784CB26F09294507B05A",
+                        "Path":  "TrueMoon.Aether.Kul/AudioPlaybackCommand.cs"
+                    },
+                    {
+                        "Sha256":  "0806D766C032470E0C9389AD2D1E29CE6E3A20CF0947C360ED26498381802626",
+                        "Path":  "TrueMoon.Aether.Kul/AudioSource.cs"
+                    },
+                    {
+                        "Sha256":  "95A3BE50DE6A1D5586D114198AFFD64FD50533A5A4D4BE8BB8A9724C66905A29",
+                        "Path":  "TrueMoon.Aether.Kul/AudioSourcePhase.cs"
+                    },
+                    {
+                        "Sha256":  "4B5098A8BF64AB6AF850F1AD900BF8C74018FEE01A502839BC341FD92F53C7CB",
+                        "Path":  "TrueMoon.Aether.Kul/AudioSourceState.cs"
+                    },
+                    {
+                        "Sha256":  "9DAA68EF3D16CBECD3526FC4C9FE4230C47F7129ECD9F34F19208868E72D36A1",
+                        "Path":  "TrueMoon.Aether.Kul/PACKAGE.md"
+                    },
+                    {
+                        "Sha256":  "651282BC1066342043887B19500C50B8AF3DE967CEE10E8B0F5143A3F6051CF5",
+                        "Path":  "TrueMoon.Aether.Kul/TrueMoon.Aether.Kul.csproj"
+                    },
+                    {
+                        "Sha256":  "FC24E1847745EDAA8668A5502D56230CFD0C1FA55E4C0E40349DFA8D799D544E",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/AppConfigurationExtensions.cs"
+                    },
+                    {
+                        "Sha256":  "7ED7BDC0C5F8ACE0DA1C8C9B8666506DA3C54499DA6FE78F7395AAA00E5CA49A",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/AudioBridgeConfigurationSchema.cs"
+                    },
+                    {
+                        "Sha256":  "C5E39161754C4B708D97AC7C2AD6C81B1FE45C5BB9E88D51577F4342ED6AB669",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/AudioBridgeOptions.cs"
+                    },
+                    {
+                        "Sha256":  "304D7DC57189825B11066D94E4279BC3332E65E10F5153322AD857B9BACE3559",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/AudioBridgeSystem.cs"
+                    },
+                    {
+                        "Sha256":  "4065ED2CCF69C87651B611170A3B9C503984E9E318CE3A6CA44326F8605A8368",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/AudioComponentRegistry.cs"
+                    },
+                    {
+                        "Sha256":  "EC8585A6FFE27E08B4ECEBC2231ED26EC0B877722D4937E8F0D4F2D509E585EF",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/AudioSceneSubsystem.cs"
+                    },
+                    {
+                        "Sha256":  "BB735D1E1D2DBC3D5CAA9ED8FEC98718243421DB0F279F584E029015343D4686",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/AudioSceneSubsystemFactory.cs"
+                    },
+                    {
+                        "Sha256":  "32EE2503DB8748134F4E7E4153136AC1BE553338864AEAD8D23AE3E06A6C4CC0",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/PACKAGE.md"
+                    },
+                    {
+                        "Sha256":  "68FA95B6457EC49E59F538733AEC671E76406C39E6EAB48ED75CBE7D37C0DD36",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/TrueMoon.Aether.Kul.Runtime.csproj"
+                    },
+                    {
+                        "Sha256":  "803710E61173CBF2DEFD86F7D853A45A6605CA5BB0CFF020D7DB009E9BC3E513",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/Content/AudioContentLease.cs"
+                    },
+                    {
+                        "Sha256":  "92572EB807C5AC4E7E471A8836A655DA58F323397F24D07A05853ED9D2ABE289",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/Content/AudioContentLoadArguments.cs"
+                    },
+                    {
+                        "Sha256":  "F2D21F545196D7C86665F417F350FB1B831EB836F9A09822F882B57857D72FA7",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/Content/AudioContentReference.cs"
+                    },
+                    {
+                        "Sha256":  "9FCD6AE2B66A523778AD309CDE7174CDCECD7F5ABB7A7E30414788F128DE3054",
+                        "Path":  "TrueMoon.Aether.Kul.Runtime/Content/IAudioContentLease.cs"
+                    },
+                    {
+                        "Sha256":  "FC9F957127B94C70D43EAF469E8F5A3DC1C0B507182D6D45538C81F8E393B0D3",
+                        "Path":  "TrueMoon.Aether.Kul.Tests/AudioContentTests.cs"
+                    },
+                    {
+                        "Sha256":  "1A21FF4CAE73AD1B029914831B0A9EFB9864E38817BA77FA322F6CDB6AE01D19",
+                        "Path":  "TrueMoon.Aether.Kul.Tests/AudioFixture.cs"
+                    },
+                    {
+                        "Sha256":  "4D8760638800A83244D8200A3694BD6E61EE7881F6B2EE602FFA246BF74C0DF6",
+                        "Path":  "TrueMoon.Aether.Kul.Tests/AudioGraph.cs"
+                    },
+                    {
+                        "Sha256":  "9367A224F41C989E5A1173770FFF52BC38635526F642F0D312004B3358FF10EF",
+                        "Path":  "TrueMoon.Aether.Kul.Tests/AudioLifecycleTests.cs"
+                    },
+                    {
+                        "Sha256":  "C68D4738D1D678788D6A07FE38B73D73BA6C2D708965B74E59E41423A05F4067",
+                        "Path":  "TrueMoon.Aether.Kul.Tests/AudioPhysicsCompositionTests.cs"
+                    },
+                    {
+                        "Sha256":  "81339D56F70F8482AD7BDB7FFAFDC1F6E7096BFEC769C59EE7C1FF3959127925",
+                        "Path":  "TrueMoon.Aether.Kul.Tests/AudioRegistrationTests.cs"
+                    },
+                    {
+                        "Sha256":  "D8992C7B5644D4AFAC03E516F3F05223F7E7841A62F7F1A2B9E02EB6A25A56C2",
+                        "Path":  "TrueMoon.Aether.Kul.Tests/AudioTransportTests.cs"
+                    },
+                    {
+                        "Sha256":  "0DF59DEAE4BAE23301643CAD82D96E4025EC654E4A19C5336327F65D7AD2168B",
+                        "Path":  "TrueMoon.Aether.Kul.Tests/TrueMoon.Aether.Kul.Tests.csproj"
+                    },
+                    {
+                        "Sha256":  "9F5FE7493460C2A6887738A26EBAA1C2FE70FDFF298FBFB4B6C98C998C52BF70",
+                        "Path":  "TrueMoon.Kul/AppConfigurationExtensions.cs"
+                    },
+                    {
+                        "Sha256":  "A26EFA148A5A86CC8FA3A158AC6E99A9B870D3F766DB2B85795B315D8138F586",
+                        "Path":  "TrueMoon.Kul/AudioClip.cs"
+                    },
+                    {
+                        "Sha256":  "E16FFEC759C7FCB3422F72A9EC83757A8EC54A8764DAD4DCD403433BF6212BEB",
+                        "Path":  "TrueMoon.Kul/AudioConfigurationSchema.cs"
+                    },
+                    {
+                        "Sha256":  "1BC60F0F3CE1391FBC795ED8B217A118B8D3A7E481D13B14DD9873B82AD3DC49",
+                        "Path":  "TrueMoon.Kul/AudioException.cs"
+                    },
+                    {
+                        "Sha256":  "A95067837C29FB7D69FF2EBB2F6C52958CE3D02F45FD46749F5230AF33741C06",
+                        "Path":  "TrueMoon.Kul/AudioMode.cs"
+                    },
+                    {
+                        "Sha256":  "501C3462500F9E9F0A3E4505F720744C83808761D70C0A07C6048E3CA1360846",
+                        "Path":  "TrueMoon.Kul/AudioOptions.cs"
+                    },
+                    {
+                        "Sha256":  "469A8B46733A175916F1BC1A08F4C28382F20659736FCCDEBF7497FA917C8577",
+                        "Path":  "TrueMoon.Kul/AudioPlayback.cs"
+                    },
+                    {
+                        "Sha256":  "333CECB9DC11F52111D9682F1608C8418FBDAC53B97D10D21B1E185D9DF57149",
+                        "Path":  "TrueMoon.Kul/AudioPlaybackState.cs"
+                    },
+                    {
+                        "Sha256":  "4DFDB157962D831E69AF3FA24E91962CF223D2F6B86BDB7E29BA1434AB6A7E7B",
+                        "Path":  "TrueMoon.Kul/AudioPlayOptions.cs"
+                    },
+                    {
+                        "Sha256":  "D58E8B3F2B037D1EFEEE3966AA5342E06D9571FE9039DC55C8D69DA817ED6516",
+                        "Path":  "TrueMoon.Kul/AudioSession.cs"
+                    },
+                    {
+                        "Sha256":  "E5EC353F9480B2CBF7C7FACB9F1447E86AE9FED975AF1B416C16738DE7245F30",
+                        "Path":  "TrueMoon.Kul/AudioSnapshot.cs"
+                    },
+                    {
+                        "Sha256":  "BFE8DDDE8AAB57DDB12465AF119D0FE7F04F1C5343682766A1E5780E9DE7A436",
+                        "Path":  "TrueMoon.Kul/IAudioService.cs"
+                    },
+                    {
+                        "Sha256":  "49B677FF05B26A341A2D52788A8B99F52BFF6F049610740B967BEC9D4AD0CA96",
+                        "Path":  "TrueMoon.Kul/PACKAGE.md"
+                    },
+                    {
+                        "Sha256":  "DEC15DCAB554EEB766AC72C9EFDEB756464A57E6538E9FBBFFBE184BAC8EB4B9",
+                        "Path":  "TrueMoon.Kul/TrueMoon.Kul.csproj"
+                    },
+                    {
+                        "Sha256":  "EC784887B64F580AC614746E6712820FD4A852FD54ED96E6F1BDF2F33001595A",
+                        "Path":  "TrueMoon.Kul/Hosting/AudioHost.cs"
+                    },
+                    {
+                        "Sha256":  "27D1711E4B1706B7D504CF9B78B0A700E6FAC93200E4BC905B0FD70E3E205DC5",
+                        "Path":  "TrueMoon.Kul/Hosting/AudioLifecycle.cs"
+                    },
+                    {
+                        "Sha256":  "04A77DA7652D394FF7A25EED72E79A1C3BFEF5934F638A528424D22A4A508D58",
+                        "Path":  "TrueMoon.Kul/Hosting/AudioService.cs"
+                    },
+                    {
+                        "Sha256":  "9E1F5DDDAAD1F5A5762E62F2A1B210479923231A8B79748C248E5E471AD07F04",
+                        "Path":  "TrueMoon.Kul/Native/AudioGraph.cs"
+                    },
+                    {
+                        "Sha256":  "0D0E29CBDFF832516924335C7F3C81AF83623858CAEF1D7E65EEFC5548C7307C",
+                        "Path":  "TrueMoon.Kul/Native/DecoderTableHandle.cs"
+                    },
+                    {
+                        "Sha256":  "0CCBE6931632A6B9C848FCB900C8467E244EBD190C8D2FF8960CABCCF7F0A015",
+                        "Path":  "TrueMoon.Kul/Native/NativeHandle.cs"
+                    },
+                    {
+                        "Sha256":  "AEB276341B5026BF481CF6ACDB3C4CE14300DC1BB5BBF97C136EAB245F96FD95",
+                        "Path":  "TrueMoon.Kul.Tests/AudioAppTests.cs"
+                    },
+                    {
+                        "Sha256":  "87B8CE14EDA2BC03D1306A8532EE7B904561E7E54C73D3090729EAADDF8CC40C",
+                        "Path":  "TrueMoon.Kul.Tests/AudioFixture.cs"
+                    },
+                    {
+                        "Sha256":  "30FE2ECF27DF8CE6D7C112010D7B0860C5808EA164193BB46D9B350F66F06890",
+                        "Path":  "TrueMoon.Kul.Tests/AudioPlaybackTests.cs"
+                    },
+                    {
+                        "Sha256":  "4BEA6582642A9156086C7C4FF356EF81ACB7358D79E29DACC4797EDE56B549D1",
+                        "Path":  "TrueMoon.Kul.Tests/AudioStreamingTests.cs"
+                    },
+                    {
+                        "Sha256":  "7C7D06E517D39B64BF6524868C1F6668BC20C9B84FDCF27BE5C0A2F122E1A027",
+                        "Path":  "TrueMoon.Kul.Tests/NativeLifetimeTests.cs"
+                    },
+                    {
+                        "Sha256":  "1786E2DFC1C83E30AE97FCF74D707DF14D9500BF4CF48725E6C96448A081EFF5",
+                        "Path":  "TrueMoon.Kul.Tests/PreparedPlaybackTests.cs"
+                    },
+                    {
+                        "Sha256":  "FEDCA18E23B31DE71B7432C73E0378B3E3D11F97387D74EB89E1901EA3D16612",
+                        "Path":  "TrueMoon.Kul.Tests/TrueMoon.Kul.Tests.csproj"
+                    },
+                    {
+                        "Sha256":  "901BB987B3149C2066EC1256923BF4BD1E56ADE19ED89BABEAB5DCC3E7862D01",
+                        "Path":  "ManualTests/KulEcs/Probe.csproj"
+                    },
+                    {
+                        "Sha256":  "3B1B3FE2563F36478BF51DBEE6917F490240C2360E95D428A977DC8013F03372",
+                        "Path":  "ManualTests/KulEcs/Program.cs"
+                    },
+                    {
+                        "Sha256":  "EAD8175056BFF7E9421BC880CD007E679B842B52B1CA937EC511BFA195C824C0",
+                        "Path":  "ManualTests/KulEcs/README.md"
+                    },
+                    {
+                        "Sha256":  "6F9184BDDBB1BF3B8C3ADE92F1E44874280CF3401FEBC63A23B36D7B9AB9E513",
+                        "Path":  "ManualTests/KulEcs/Verify.ps1"
+                    }
+                ],
+    "ProtectedARCH1j":  [
+                            {
+                                "Path":  "ManualTests/RuntimeConsumer/Program.cs",
+                                "Sha256":  "02373D564EDABB142CB153B8335721ADB45E96D1E32486EC1D3DDEAB2FF8DD4E"
+                            },
+                            {
+                                "Path":  "ManualTests/RuntimeConsumer/SessionSubsystemProof.cs",
+                                "Sha256":  "70A802C6AACA268BD9BE117CE311D47FF6DF2F09CDD10CFF5AE6463F324643D2"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Abstractions/Ecs/Motion/ExternalMotion.cs",
+                                "Sha256":  "334265A1C09D37E341C94A72DB9F3BBF64A8FB73FE486C4A5C8F676293CCA17E"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Abstractions/PACKAGE.md",
+                                "Sha256":  "106F28FB0CC695E3F1448F77EEFFFB0B88BA89B341C887AA2C6300C996446B1C"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Abstractions/Sessions/IGamePlaybackSession.cs",
+                                "Sha256":  "E827B29552CD769955AB99B13F43341C32705E4AD6293303D46C916E2E228FB6"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/Motion/MovementSystem.cs",
+                                "Sha256":  "EA27DB3701FCEA35E3D47651C26AB12E305D8FE031702B3F4332744FC078C13C"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/Rendering/PrimitiveSimulation.cs",
+                                "Sha256":  "F9F8EE0F64E2357FC7E2BA722E542EEEE23087087E3AFE5B0FEA5DBEB59C5F72"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/Rendering/PrimitiveSimulationFactory.cs",
+                                "Sha256":  "4C127609AD82943471A182A37FF72E54589A89E4512C406EFABEEBE1B2606B12"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/Runtime/ISceneSubsystem.cs",
+                                "Sha256":  "E4EF61284FECB5C428DB698F2371063B0AF6D625B4A0F2F3A09EF48AA8B22685"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/Runtime/PrimitiveGameSession.cs",
+                                "Sha256":  "AA2D28DBD29292B2D7D5FE46386CB18AEA27841FEA893ACC7199C3B1D8D79084"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/Runtime/SceneSubsystemArguments.cs",
+                                "Sha256":  "6C22874B6B366A2601FDA7E2DEFD1D80E01F51FA9B5DEFA1DCE976E270F1116F"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/Runtime/SceneSubsystemsBuilder.cs",
+                                "Sha256":  "C52ABC47D3C8A63625DF12B71CE284017D1A31E8DDBC62C22FE970F0E3254B60"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/Runtime/SceneSubsystemSession.cs",
+                                "Sha256":  "7F904E6533299B01651CE0A161FDC29668B5428D351220A48E1D2D4035DDB810"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/Runtime/SceneWorldGameSession.cs",
+                                "Sha256":  "E5804B0CFDC57AE488EEDE145B6A3261E3098A8EB425E7C7C87D65C46C31A167"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/World.cs",
+                                "Sha256":  "1AAF30BD92BDE84B269B39CCB911ABB29147AF34BADBFDF71BF434AF92DC029C"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/World.Execution.cs",
+                                "Sha256":  "265836CE99EC190FE0F867FCD21FC46831235B401CFA1A6AEDCB9D493B290E46"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/World.SceneLoading.cs",
+                                "Sha256":  "43F451283AF21713F26D18C9984D5ECE608A5A951D27C5298EE8EB03A7DC1574"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/Ecs/World.SceneSubsystems.cs",
+                                "Sha256":  "CD791021BEFD8723C4A9F92EB9F202807785703E10F30D304416E7EFFFF5F315"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/PACKAGE.md",
+                                "Sha256":  "C36FED18B8950951E15552D24F161DAC123A275F04A76647DEB70A5AE6C61EE8"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/PrimitiveEcsConfigurationExtensions.cs",
+                                "Sha256":  "FC0B50DC7F75D81B2E739D753258243B6311E9C67AC8368B856D83EB3E74579E"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/RuntimeProtocol.cs",
+                                "Sha256":  "4747E8F680FC9818119BA5D78F4713C9B8168C88A8F88B048277DBA2D4DC6220"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/RuntimeProtocol.SceneWorld.cs",
+                                "Sha256":  "CBC5FDB16C4BAF32C5BAB538AC903188C807819F5BDB2674394F66C804F2834A"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Runtime/SceneSubsystemConfigurationExtensions.cs",
+                                "Sha256":  "FB34EE90E70D4D1996615E942CB0B5D80A2E48B3D9EF657C89EF6880ABE8F90C"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Tests/Ecs/Motion/MovementSystemTests.cs",
+                                "Sha256":  "E4AB3BB1FAA1140602B0115CEC15EF711D8E1EBD201D5765E19C41EBBE6A4895"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Tests/Ecs/Runtime/SceneSubsystemSessionTests.cs",
+                                "Sha256":  "7B5F914A931B9DAF96850E462C14D5C7EBB7D79C9A63F3639D3F050138DE7BF7"
+                            },
+                            {
+                                "Path":  "TrueMoon.Aether.Tests/Runtime/RequiredMeshProtocolTests.cs",
+                                "Sha256":  "2EFFB0D4B6C6A40A16E568F3C4A86824BD36A026675C350F2220B39F918AD1EF"
+                            }
+                        ],
+    "ProtectedPHYS5":  [
+                           {
+                               "Sha256":  "E79FFF47C6286A6543E38F2215A01C7A3A7323BAD87C58BD25F3191A7A0AA0E6",
+                               "Path":  "TrueMoon.Aether.Kton/PACKAGE.md"
+                           },
+                           {
+                               "Sha256":  "0B7EC5C7829F7BA11A51D21E808598D2B0A6089D7E9D5B0DA0FB962A9980915E",
+                               "Path":  "TrueMoon.Aether.Kton/PhysicsBody.cs"
+                           },
+                           {
+                               "Sha256":  "3683FFEB4CC6F79FDBC2DAD0EDB5A7C9F5F17DED203A19FE1F2F6E078F4D98C7",
+                               "Path":  "TrueMoon.Aether.Kton/PhysicsComponentSchemas.cs"
+                           },
+                           {
+                               "Sha256":  "54C04221A0A5D58388A61829132858ED60713E1D9928D6EE691418B5352035FC",
+                               "Path":  "TrueMoon.Aether.Kton/PhysicsContact.cs"
+                           },
+                           {
+                               "Sha256":  "05D8BB78C36E8D960B2442C000A1DB58E65791DF08700597011E75DE7D4E7E5D",
+                               "Path":  "TrueMoon.Aether.Kton/PhysicsEntityCommands.cs"
+                           },
+                           {
+                               "Sha256":  "FB2A0D46BD85A5901D9793FA63A43473F9DA7808DC144FFC31AB0096822E199B",
+                               "Path":  "TrueMoon.Aether.Kton/PhysicsTeleport.cs"
+                           },
+                           {
+                               "Sha256":  "93996D00700216E781D01F62FFC6F80453032F4DFDBC8EB45759F00AE8D2E72C",
+                               "Path":  "TrueMoon.Aether.Kton/PhysicsVelocity.cs"
+                           },
+                           {
+                               "Sha256":  "83132DBDB748B55A8AA9937B9070FA099B9FA0B1D67258D99AC32D7B6033DE6C",
+                               "Path":  "TrueMoon.Aether.Kton/TrueMoon.Aether.Kton.csproj"
+                           },
+                           {
+                               "Sha256":  "4FD783DBBF391AA0520E9DF60BD1CFA4EC20B1447870B8CC8E5A2E9D7A1579B5",
+                               "Path":  "TrueMoon.Aether.Kton.Runtime/AppConfigurationExtensions.cs"
+                           },
+                           {
+                               "Sha256":  "FCFB2D823E8BAC3D91BB01F1DD7E8FF34B29FE96525A7F224740D6D40F34D2ED",
+                               "Path":  "TrueMoon.Aether.Kton.Runtime/PACKAGE.md"
+                           },
+                           {
+                               "Sha256":  "0633615DB66B5CAF3E1B5E38CA338C4319D49E4986A5F7AC63E66BB004A2D454",
+                               "Path":  "TrueMoon.Aether.Kton.Runtime/PhysicsBridgeConfigurationSchema.cs"
+                           },
+                           {
+                               "Sha256":  "BA27835EC9B86076494ADD823C5269BD0EED157669115E98F4F9B5B61C354245",
+                               "Path":  "TrueMoon.Aether.Kton.Runtime/PhysicsBridgeOptions.cs"
+                           },
+                           {
+                               "Sha256":  "51C2EDA3EC85F72AB7618856C3420306F97A91852C185FC3F2C7B7B2FF3B6AD9",
+                               "Path":  "TrueMoon.Aether.Kton.Runtime/PhysicsBridgeSystem.cs"
+                           },
+                           {
+                               "Sha256":  "B6DD274DA8622D7B501B771C55173CA0DCA77C680B4BC3184C2512C131B214D7",
+                               "Path":  "TrueMoon.Aether.Kton.Runtime/PhysicsComponentRegistry.cs"
+                           },
+                           {
+                               "Sha256":  "D289791392D28431A43D1CF6EA25DE296E7F97D9BE3CC98AD7A7D251E1C822B5",
+                               "Path":  "TrueMoon.Aether.Kton.Runtime/PhysicsSceneSubsystem.cs"
+                           },
+                           {
+                               "Sha256":  "C374466FF97A8B5B183CBE26BD78E11DBCDF26DA373720D83CD3F63CFD3AC9A4",
+                               "Path":  "TrueMoon.Aether.Kton.Runtime/PhysicsSceneSubsystemFactory.cs"
+                           },
+                           {
+                               "Sha256":  "DDE2AF1A5B24021E838F24FAAC2D817AB1FDC21EC5833B9B6F132F205C6C00E3",
+                               "Path":  "TrueMoon.Aether.Kton.Runtime/TrueMoon.Aether.Kton.Runtime.csproj"
+                           },
+                           {
+                               "Sha256":  "8EA1B68504CF859C38A2B40D6F5DA3ACE46537B2692CD6F29E3C1907CB6AE2A2",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/FaultWorldFactory.cs"
+                           },
+                           {
+                               "Sha256":  "E37E9F7F014D52C959D0F6DEE89670066ADFD61EEC1FBB32EC3BA74959519F33",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/PhysicsContactTests.cs"
+                           },
+                           {
+                               "Sha256":  "4A9674E1C9005E385EF957E695115B725308B286C86657C843457A4E4FB510EB",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/PhysicsContractsTests.cs"
+                           },
+                           {
+                               "Sha256":  "51B92BAFE81425A7F251D925E20F24DECAC6364963401873B2F394AA9A45B249",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/PhysicsFixture.cs"
+                           },
+                           {
+                               "Sha256":  "258B6B4E45A5BC39FD05DC7DDC6EA0C822094E812787FD2BA096228D1726A171",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/PhysicsGraph.cs"
+                           },
+                           {
+                               "Sha256":  "7642ABF3CA2A6A333AE6C14446770B3FB81DD3DD44802ECEBF1EBBA90C01EBCB",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/PhysicsLifecycleTests.cs"
+                           },
+                           {
+                               "Sha256":  "8B1DF1F6FFB7AA2AB5191B08311E60976EF829700D8A13EC35F59E5495BA81DF",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/PhysicsReconciliationTests.cs"
+                           },
+                           {
+                               "Sha256":  "1D1D588C9C820175BC952C061481651C111D7EECE1E7E52855BCF3D83B4E9E4C",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/PhysicsRegistrationTests.cs"
+                           },
+                           {
+                               "Sha256":  "460D37FED06B8269C195A7CD0E56C1DCE02ED0055F19533605824E35DFA78D34",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/PhysicsSceneSubsystemTests.cs"
+                           },
+                           {
+                               "Sha256":  "5E5EB96F34AD3EF4632896BAF06DA3130AC31960C2803BE599AFCD55B0D5E515",
+                               "Path":  "TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj"
+                           },
+                           {
+                               "Sha256":  "4282C905A561FEBE0BE93315E835A9182F4C79B7289C84716EE89FA4470987F0",
+                               "Path":  "ManualTests/KtonEcs/Probe.csproj"
+                           },
+                           {
+                               "Sha256":  "188A32E70157EB5387A89966DD74E19BE5C1FC4C2883F5D65E88D20689FBEB0E",
+                               "Path":  "ManualTests/KtonEcs/Program.cs"
+                           },
+                           {
+                               "Sha256":  "E5F9E88A625975BEB478DC64001E64FCD7D846FD107C4492C02DB600D808883B",
+                               "Path":  "ManualTests/KtonEcs/README.md"
+                           },
+                           {
+                               "Sha256":  "AFC24FF90166B867227A0BC3F86BC2BE0B64BE6E33F7C53ED25FF8EF28A52578",
+                               "Path":  "ManualTests/KtonEcs/Verify.ps1"
+                           }
+                       ],
+    "ProtectedProviders":  [
+                               {
+                                   "Sha256":  "978D0264078BF454DC3736D09F31DFD6E4B3B0403894C69CBDED5A4D20833444",
+                                   "Path":  "TrueMoon.Kton/IPhysicsWorld.cs"
+                               },
+                               {
+                                   "Sha256":  "3242F54CE6FF86828A3CB713FDF548017F01F59E8ABC3AB49FBE88EA106823F9",
+                                   "Path":  "TrueMoon.Kton/PhysicsError.cs"
+                               },
+                               {
+                                   "Sha256":  "FAF128469C8CC48F168D2689C57656C9BEA449750F5956F7571B1AC9D2B15C6C",
+                                   "Path":  "TrueMoon.Kton/PhysicsIdentity.cs"
+                               },
+                               {
+                                   "Sha256":  "1BEABB229667239AC010037D7C733D1BADDB53B7AA00C7C1C8747B3A26F6212D",
+                                   "Path":  "TrueMoon.Kton/PhysicsLimits.cs"
+                               },
+                               {
+                                   "Sha256":  "67D871C6E6C66AC984286B75E81CC8A4F12E50F6D895A1F413A7FEEF11AF0AAD",
+                                   "Path":  "TrueMoon.Kton/PhysicsPose.cs"
+                               },
+                               {
+                                   "Sha256":  "F111685C9A5E3141447BE3E62C337630848DBA1F198EA7F0298EC38FCFDC9861",
+                                   "Path":  "TrueMoon.Kton/PhysicsQualityProfile.cs"
+                               },
+                               {
+                                   "Sha256":  "EDF0105A385DAAE7A174F04A30DE3E7ECF97897983797B18F08105955819621B",
+                                   "Path":  "TrueMoon.Kton/PhysicsValidation.cs"
+                               },
+                               {
+                                   "Sha256":  "F2FD34284DE94F370DAE7F9BF3055B28E823FCCA8AEEE04503A5A4CA3432C532",
+                                   "Path":  "TrueMoon.Kton/PhysicsWorldCapabilities.cs"
+                               },
+                               {
+                                   "Sha256":  "710687354E3EF893EEB62D9D4B889B3B8597669E902F993E6AC9F1ECEE1EF1BD",
+                                   "Path":  "TrueMoon.Kton/PhysicsWorldId.cs"
+                               },
+                               {
+                                   "Sha256":  "9C11CE82765C6A80F6CC31F0999C6A8772288D8C2B6813DA004845FDF443CDC1",
+                                   "Path":  "TrueMoon.Kton/PhysicsWorldOptions.cs"
+                               },
+                               {
+                                   "Sha256":  "D76707803E1C2EA30AA97354A236343D1929567051F332B09ADCE7771B6990FA",
+                                   "Path":  "TrueMoon.Kton/TrueMoon.Kton.csproj"
+                               },
+                               {
+                                   "Sha256":  "EFFCAC8FCE070AFB2E52A180E5457104A7F84FB31CA9EA19FB25DFE99556B803",
+                                   "Path":  "TrueMoon.Kton/Bodies/PhysicsBodyCommand.cs"
+                               },
+                               {
+                                   "Sha256":  "30C3DE44EA80020BEF96F38130B537FBFF7B2D3D844B6FB6B34B8665B451BC38",
+                                   "Path":  "TrueMoon.Kton/Bodies/PhysicsBodyDescription.cs"
+                               },
+                               {
+                                   "Sha256":  "836D3E632EFC1BDE9821F1FD8A77447FE670F0674D7BA2F065C8B38E8AF21021",
+                                   "Path":  "TrueMoon.Kton/Bodies/PhysicsBodyId.cs"
+                               },
+                               {
+                                   "Sha256":  "C3956761982CEAE6707C150EFDC8AA4314B0921AD142ACB67743103A3DBCA822",
+                                   "Path":  "TrueMoon.Kton/Contacts/PhysicsContactEvent.cs"
+                               },
+                               {
+                                   "Sha256":  "71A9A4D556134A69A1F46A119773F507D41B473663FCE475E67D06B9F0018A70",
+                                   "Path":  "TrueMoon.Kton/Joints/PhysicsBallSocket.cs"
+                               },
+                               {
+                                   "Sha256":  "35DD5DAA686F7D6D63CB418E0D2E12872147B117BC405515AEC20A3096660AC5",
+                                   "Path":  "TrueMoon.Kton/Joints/PhysicsJointId.cs"
+                               },
+                               {
+                                   "Sha256":  "BC4C527ABC0BC9683F253388838C6B36244FF15C152E1B7FC29661B42C0BC780",
+                                   "Path":  "TrueMoon.Kton/Queries/PhysicsQuery.cs"
+                               },
+                               {
+                                   "Sha256":  "C2D68F22EA00D4814C36BD0B7C3C516930A478DD337C669E0218D03785F4D523",
+                                   "Path":  "TrueMoon.Kton/Shapes/PhysicsShapeDefinition.cs"
+                               },
+                               {
+                                   "Sha256":  "A739117491728DA8BB485F5EAE4B0AAB08A8F2459EDCD603119DF45401EBDAC0",
+                                   "Path":  "TrueMoon.Kton/Shapes/PhysicsShapeId.cs"
+                               },
+                               {
+                                   "Sha256":  "0F1AB2CF8174B8FB2EE817BFDC9EE3675440B7E33DDEBDA48A5F16C6F1E9045F",
+                                   "Path":  "TrueMoon.Kton.Bepu/AppConfigurationExtensions.cs"
+                               },
+                               {
+                                   "Sha256":  "EE6D723556E33AC782FAB9C1D3CD1A87558C47B5753126C99AB86A834627DB2F",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuPhysicsConfigurationSchema.cs"
+                               },
+                               {
+                                   "Sha256":  "E6F961CF5A757B8E63F6FCB5AEB3488C60BB54A89DD4F29C1E9882A8408CA13D",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuPhysicsOptions.cs"
+                               },
+                               {
+                                   "Sha256":  "DADE9B3F7004FC59EA2ABD27A4EE54223B2A6F3470BA31D9C0F36180504D3F32",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuPhysicsWorldFactory.cs"
+                               },
+                               {
+                                   "Sha256":  "5EC45DDCA66891BA492E4A444095DC650D1010A2151014C652FE3961719D9771",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuResourceSnapshot.cs"
+                               },
+                               {
+                                   "Sha256":  "A6180C75488D9C09F2E72BE2F571CCEE79F1D9836DC61FD5BAC360B93ECD5E21",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuWorld.Bodies.cs"
+                               },
+                               {
+                                   "Sha256":  "936882DE66B779408E440F71D49B68F3F62EE51FC8AD0559EECB792094FFAF52",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuWorld.Commands.cs"
+                               },
+                               {
+                                   "Sha256":  "1A776F15DB1FC008CCDE4CC41DA2DAB373259BD809C527CBEB67887FD00622A4",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuWorld.Contacts.cs"
+                               },
+                               {
+                                   "Sha256":  "B86029B33190528385C54A9430D1C047B6E462FF3FC5956545498534AAD50163",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuWorld.cs"
+                               },
+                               {
+                                   "Sha256":  "A5CA0C39A6A80FA06CAB63D402350F55DA8C524C23EDC9FF952F5C2189AC8573",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuWorld.Joints.cs"
+                               },
+                               {
+                                   "Sha256":  "917BC95FD09EDD6964F9348C742D65D161BFCD7871D52F4E884670DD4A4AB33F",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuWorld.Queries.cs"
+                               },
+                               {
+                                   "Sha256":  "9733E3E8BCD17D92092A5EBD6F84D7D6A8B1375AE4B90B5FAC29943C7FCF7082",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuWorld.Shapes.cs"
+                               },
+                               {
+                                   "Sha256":  "DE8029D63B329A011CF65AEC5E667838F8E5066BCBB7EEAAAD0FF7FBED0FFCD3",
+                                   "Path":  "TrueMoon.Kton.Bepu/BepuWorld.Step.cs"
+                               },
+                               {
+                                   "Sha256":  "5CADB36FA9F591DBB25E4171F1855A7C080B17A3590B41619E7EC4E6F15C7B2C",
+                                   "Path":  "TrueMoon.Kton.Bepu/ContactState.cs"
+                               },
+                               {
+                                   "Sha256":  "63AD117F7421717B878030C8B6734444F4FE82B91186A32F310C99974CF3CEDD",
+                                   "Path":  "TrueMoon.Kton.Bepu/FaultInjection.cs"
+                               },
+                               {
+                                   "Sha256":  "5A2014592297F2C62BBB21DD4297330895478376D679C1FFCD24B8C44F8EEFC5",
+                                   "Path":  "TrueMoon.Kton.Bepu/GenerationalSlots.cs"
+                               },
+                               {
+                                   "Sha256":  "95E0F55A93F9BDAA146C2830BE2B8E2BFC388F4932F8DD220470AAC43400D293",
+                                   "Path":  "TrueMoon.Kton.Bepu/NarrowPhase.cs"
+                               },
+                               {
+                                   "Sha256":  "BFA88298E5F1758C756ED8340C96BF8EFBDDE24C9AED61BEE2BE904F3B5BA2BE",
+                                   "Path":  "TrueMoon.Kton.Bepu/TrueMoon.Kton.Bepu.csproj"
+                               },
+                               {
+                                   "Sha256":  "75EAC9E2C2123C7806EAA6888D5B11F8B37366C309513B431DCFB783EC99CE45",
+                                   "Path":  "TrueMoon.Kton.Bepu/WorldEntries.cs"
+                               },
+                               {
+                                   "Sha256":  "AC19F256043185E00791FFC6500523FF54D2B9B6491EDC1B3E3C309DE444462F",
+                                   "Path":  "TrueMoon.Kton.Bepu/WorldResources.cs"
+                               },
+                               {
+                                   "Sha256":  "A8304D87B0E1DBCB609270B3F192EAA568A1EB2E491CED7E4947B27E4A89FC3C",
+                                   "Path":  "TrueMoon.Kton.Bepu/Hosting/AppPhysicsWorldFactory.cs"
+                               },
+                               {
+                                   "Sha256":  "A2F8A22F9BDB49951A3DB23C4E002C22646E595E457CC4CE0A4369AAFB06D0ED",
+                                   "Path":  "TrueMoon.Kton.Bepu/Hosting/BepuPhysicsHost.cs"
+                               },
+                               {
+                                   "Sha256":  "D439532EFF42306BE0709AD061A25F4F1524A2E3B05487371E57BCB9EDCC98E0",
+                                   "Path":  "TrueMoon.Kton.Bepu/Hosting/PhysicsLifecycle.cs"
+                               }
+                           ],
+    "Solution":  {
+                     "Sha256":  "0ADCBD076B5A8DD5AB8842AD7CB1E711260579B7239882BF8EB990178976059C",
+                     "Path":  "TrueMoon.slnx"
+                 },
+    "Limitations":  [
+                        "Windows x64 nonspatial v1",
+                        "No automatic Editor import/Nom/fixed GameBuildArtifact ABI or ALC extension",
+                        "No native-state reload/migration",
+                        "No native rebuild/original RED-GREEN or physical listening",
+                        "No device-loss/long soak/hard RT or peak/async budgets/other OS",
+                        "Scoped tests, not a new full engine/Editor/framework regression"
+                    ],
+    "FinalQA":  {
+                    "ProtectedARCH1j":  26,
+                    "ProtectedPHYS5":  31,
+                    "GitDiffCheck":  true,
+                    "NamespaceFiles":  54,
+                    "ProtectedProviders":  43,
+                    "SourceHashesChecked":  165,
+                    "IntermediateStateFilesOutsideGit":  true,
+                    "CurrentSourceHashes":  65,
+                    "MarkdownLinks":  26,
+                    "WhitespaceFiles":  65
+                }
+}

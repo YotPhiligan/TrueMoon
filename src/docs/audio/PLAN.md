@@ -9,6 +9,8 @@
 Функциональные имена Audio API и ключи Audio:* сохранены.
 Направление выделено из [ARCH1h](../engine/PLAN.md#arch1h-audio). Здесь — единственный
 детальный план модуля; ECS/session bridge движка остаётся отдельным потребителем.
+По запросу2026-11-15 engine-порядок: [общий session слой ARCH1j](../engine/SESSION_SUBSYSTEMS.md)
+→ Kton PHYS5 → [Kul ARCH1h.2a](../engine/PLAN.md#arch1h2a-kul-session). Все три шага завершены2026-11-15 в своих профилях; самостоятельные AUD2–3 сохраняются.
 
 1. **AUD1 Windows v1** — App/DI, звуки, музыка, native ownership, common configuration,
    source/published/fresh-package acceptance. **Завершён в указанном Windows x64 scope**;
@@ -36,7 +38,7 @@ manager при Start; IAudioService и factory/lifecycle adapters не влад�
 decoded sound, voice — отдельный cursor/gain/loop. Выпущенный clip больше не играет
 новые voices, существующие удерживают общий PCM до последнего Dispose. Music voice
 стримит файл на native workers. Pause/Stop держат resources, Dispose освобождает;
-EOF voices собираются явно либо при следующем admission. Между sessions clips не передаются.
+EOF voices собираются явно либо при следующем admission, кроме явных RetainAtEnd voices. StartPaused позволяет бесшумную подготовку; AudioPlayback.Loop меняет policy существующего голоса. Defaults новых options false сохраняют прежнее поведение. Между sessions clips не передаются.
 
 Порядок teardown: закрыть admission → native device stop/drain → voices → clips → engine/
 device → resource manager/worker join → decoder-table storage → context.
@@ -59,9 +61,10 @@ unity. Потребитель выбирает gain/headroom; clipping/limiter p
 workload принимается в AUD2.
 
 Device — actual WASAPI или явная startup error, offline mode выбран явно и не открывает
-устройство. Файлы локальные, неизменные до освобождения; captured asset identity/Nom
-bridge пока не реализованы. OGG duration может быть unavailable, loop cursor — monotonic.
-Нет автоматического device-loss recovery, пространственного звука и ECS integration.
+устройство. Файлы локальные, неизменные до освобождения. Optional [Aether adapter](ECS_BRIDGE.md)
+реализует captured identity/pins и ECS/session playback; Nom/Editor import отдельно.
+OGG duration может быть unavailable, loop cursor — monotonic.
+Нет автоматического device-loss recovery и пространственного звука.
 
 ## Критерии приёмки AUD1
 

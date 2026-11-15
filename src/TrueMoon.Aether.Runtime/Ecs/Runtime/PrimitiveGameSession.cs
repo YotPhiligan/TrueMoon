@@ -30,6 +30,8 @@ public class PrimitiveGameSession : SceneWorldGameSession, IRenderGameSession
         simulation.Tick();
         if (simulation.TickNumber != nextTick) throw new InvalidDataException("Primitive simulation did not complete exactly one tick.");
     }
+    /// <inheritdoc />
+    protected override void PlaybackChanged(bool playing) => (_simulation ?? throw new InvalidOperationException("Primitive simulation is not ready.")).SetPlaying(playing);
     /// <summary>Returns detached values from the last completed tick without reading/mutating component pools.</summary>
     /// <returns>Immutable frame accepted by the existing primitive renderer.</returns>
     public PrimitiveScene CaptureRenderScene()

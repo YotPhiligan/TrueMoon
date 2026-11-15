@@ -75,7 +75,8 @@ public sealed partial class RuntimeProtocol
         {
             if (_disposed) return;
             if (_sceneActivating) throw new InvalidOperationException("Leave the scene importer before disposing its protocol.");
-            _disposed = true; _stopping = true; _playing = false; _input.Clear(); _sceneStage = null;
+            SetPlayback(false);
+            _disposed = true; _stopping = true; _input.Clear(); _sceneStage = null;
             _sceneEnd.Dispose();
         }
         if (cancellationError != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cancellationError).Throw();

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <Description>Optional Kul audio integration with Aether scene subsystems, captured content and session-owned prepared voices.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);aether;kul;audio;runtime;ecs</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TrueMoon.Aether.Kul/TrueMoon.Aether.Kul.csproj" />
+    <ProjectReference Include="../TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" />
+    <ProjectReference Include="../TrueMoon.Kul/TrueMoon.Kul.csproj" />
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+  </ItemGroup>
+</Project>

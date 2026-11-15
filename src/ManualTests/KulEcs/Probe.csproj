@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><AssemblyName>KulEcsProbe</AssemblyName>
+    <RootNamespace>TrueMoon.ManualTests.KulEcs</RootNamespace>
+    <IsPackable>false</IsPackable><UseAppHost>false</UseAppHost>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup><None Include="music.ogg" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+</Project>

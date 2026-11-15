@@ -9,7 +9,7 @@ namespace TrueMoon.Aether.Runtime.Ecs.Runtime;
 /// <summary>Initial-scene ECS game contract with atomic activation and explicit scene ownership.</summary>
 /// <remarks>The runtime serializes calls. The injected loader and its dependencies are borrowed;
 /// this session owns the returned scene, including retained failed-cleanup resources. No checkpoint or live replacement is implied.</remarks>
-public abstract class SceneWorldGameSession : IGameSession
+public abstract class SceneWorldGameSession : IGameSession, IGamePlaybackSession
 {
     private readonly SceneWorldLoader _loader;
     private SceneWorld? _scene, _cleanup;
@@ -94,6 +94,23 @@ public abstract class SceneWorldGameSession : IGameSession
     /// <param name="scene">Private borrowed candidate; ActiveScene is still null.</param><param name="cancellationToken">Cooperative cancellation.</param>
     /// <returns>Exclusively owned controller/graph, or null when none is required.</returns>
     protected virtual IDisposable? PrepareSceneWorld(SceneWorld scene, CancellationToken cancellationToken) => null;
+
+    /// <summary>Notifies prepared resources when actual runtime playback changes; never advances a tick.</summary>
+    /// <param name="playing">Continuous gameplay is allowed by the host.</param>
+    public void SetPlaying(bool playing)
+    {
+        Enter();
+        try
+        {
+            var scene = _scene ?? throw new InvalidOperationException("No scene World is active.");
+            if (playing && scene.World.IsFaulted) throw new InvalidOperationException("A faulted World cannot resume.");
+            try { PlaybackChanged(playing); }
+            catch (Exception error) { scene.World.MarkFaulted(error); throw; }
+        }
+        finally { _busy = false; }
+    }
+    /// <summary>Changes prepared real-time resources while the World remains borrowed.</summary><param name="playing">Actual runtime mode.</param>
+    protected virtual void PlaybackChanged(bool playing) { }
 
     /// <summary>Releases the active scene or retained failed preparation. Failed disposals remain owned for retry.</summary>
     public void Dispose()

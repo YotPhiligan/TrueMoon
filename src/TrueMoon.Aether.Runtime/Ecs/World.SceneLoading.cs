@@ -29,7 +29,7 @@ public sealed partial class World
     internal void DisposeScene(object owner)
     {
         CheckSceneOwner(owner);
-        if (_activeQuery || _schedulerOwner != null || _systemPlan != null || _activatingSystems)
+        if (_activeQuery || _schedulerOwner != null || _sceneSubsystemOwner != null || _systemPlan != null || _activatingSystems)
             throw new InvalidOperationException("Finish queries and scheduler cleanup before disposing SceneWorld.");
         _sceneOwner = null; _sceneLoading = false; Dispose();
     }

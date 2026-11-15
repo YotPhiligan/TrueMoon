@@ -47,6 +47,14 @@ releases them. Dispose the session when leaving a game/preview; App shutdown dra
 forgotten sessions. Disposing a clip prevents new plays while existing voices keep
 its PCM alive. Session products are not DI-owned aliases.
 
+For a reusable prepared bank, set `AudioPlayOptions.StartPaused = true` and
+`RetainAtEnd = true`. Preparation then emits no samples until `Play()`, and EOF
+collection (including admission by other sessions) preserves the voice. Dispose
+retained voices explicitly. Both options default to false. `AudioPlayback.Loop`
+changes the loop policy of an existing voice. The optional
+`TrueMoon.Aether.Kul.Runtime` adapter uses these controls for scene-owned playback;
+this standalone package retains no dependency on the engine.
+
 File preparation is synchronous control-thread work. Prepare sounds outside frame
 loops. Music uses native resource-manager workers and keeps its file open until
 voice disposal. Stream seek queues worker refill and may briefly render silence.

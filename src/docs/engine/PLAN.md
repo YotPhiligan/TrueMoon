@@ -27,7 +27,32 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 11. [ARCH3.7](#arch3-7) — stable-component system replacement завершён 14 ноября: [API/ownership](MOD_RELOAD.md), [проверки](ARCH37_BASELINE.json).
 12. [ARCH3.8](#arch3-8) — private components/new-World migration завершён 2026-11-15: [API/ownership](MOD_MIGRATION.md), [приёмка](ARCH38_BASELINE.json).
 13. [ARCH3.9](#arch3-9) — завершён 2026-11-15: [единая поставка/guide](ARCHITECTURE_GUIDE.md), [приёмка/SHA](ARCH39_BASELINE.json).
-14. Следующий кандидат — [ENG7b.3](#eng7b-режимы-запуска-editor-и-player--2026-10-29), расширенная host/Player матрица; прежние functional/release очереди сохранены.
+14. [ARCH1j — общий слой сессии](#arch1j-session-subsystems), [Kton PHYS5](../physics/PLAN.md#phys5) и [Kul ARCH1h.2a](#arch1h2a-kul-session) завершены2026-11-15 в своём scope. Следующий прежний кандидат — ENG7b.3; functional/release gates сохраняются.
+
+<a id="arch1j-session-subsystems"></a>
+### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
+
+По запросу пользователя выбран порядок: **общий session слой → Kton PHYS5 →
+Kul ECS/captured-assets adapter**. ENG7b.3 сохраняется отдельным acceptance этапом,
+не функциональной предпосылкой интеграции. [Контракт/API](SESSION_SUBSYSTEMS.md).
+
+Реализованы opt-in `UseAetherSceneSubsystems`, frozen selection существующих
+DI `IFactory<T, SceneSubsystemArguments>`, private preparation и World lease,
+общий scheduler с дополнительными registrations, ExternalMotion marker и actual
+Play/Pause notifications без изменения IPC. Scheduler освобождается до dependencies;
+failed cleanup сохраняет owners/World для retry. Native providers не подключаются
+автоматически; concrete [Kton PHYS5](../physics/ECS_BRIDGE.md) и [Kul ARCH1h.2a](../audio/ECS_BRIDGE.md) реализованы отдельными optional adapters.
+
+Приёмка общего слоя: lazy creation/independent sessions на Cobalt/MS DI,
+same-tick movement/transform/frame, Play/Pause/Step/Stop/presentation fences,
+cancel/factory/system/tick/playback failures, reverse cleanup/alias rejection и
+retained World lease. Independent Runtime consumer дополнен8checks/profile в
+source Debug/published Release/fresh NuGet/SDK-free, каждый с обоими DI.
+Завершён2026-11-15: [полные результаты/команды](HISTORY.md#arch1j-2026-11-15), [manifest/SHA](ARCH1J_BASELINE.json). PHYS5 и Kul ARCH1h.2a также завершены2026-11-15 в своих ограниченных профилях.
+
+Общий слой не реализует subsystem checkpoint capture/restore, native-state
+migration/mod reload, spatial audio/device loss или Kton controller. Эти критерии,
+functional ED/import/Player очереди и physical/release gates не отменяются.
 
 Abstractions/ECS binding, Runtime, headless Tooling и Editor UI/optional bridge выделены. Mod SDK/loader и stable-component system replacement добавлены в ARCH3.6–7; component migration реализована в ARCH3.8; новый Player UI package добавлен в ENG7b.1–2. Import/audio/Nom и ED сохраняют
 свои номера и критерии; завершение всех graphics/audio возможностей не prerequisite
@@ -1769,11 +1794,12 @@ shared decoded clips/independent voices, native music streaming и stop/drain/Di
 в bounded Windows scope. Cobalt и MS-DI adapter проверены, actual WASAPI приглушён.
 Зависимость — исправленный локальный TrueMoon.MiniAudioEx4.0.1-truemoon.1;
 [исторический native fix](HISTORY.md#audio-native-fix-2026-11-12) и [исследование](AUDIO_RESEARCH.md) сохранены.
-App-модуль готов в AUD1 scope; **Aether ECS/Nom/captured-asset bridge не реализован**.
+App-модуль готов в AUD1 scope;2026-11-15 завершён [ARCH1h.2a](#arch1h2a-kul-session)
+— optional nonspatial Aether ECS/captured-content adapter. Nom/Editor import и
+автоматическое расширение fixed game ABI/ALC остаются отдельными задачами.
 Device loss, long RT workload, hard peak budgets/command queues, spatial audio и Linux/macOS
 остаются AUD2–3. Исторические широкие h.0–2 критерии ниже не закрываются автоматически
-первым AUD1 профилем. Следующая engine audio работа — требования и adapter source/listener
-с учётом ARCH3 boundaries; renderer/Player очередь не меняется.
+первым AUD1 или ограниченным ARCH1h.2a профилем; renderer/Player gates сохраняются.
 
 | Этап | Результат и зависимости | Критерий завершения |
 | --- | --- | --- |
@@ -1781,7 +1807,40 @@ Device loss, long RT workload, hard peak budgets/command queues, spatial audio �
 | ARCH1h.1 | После h.0: headless/offline prototype и выбранный минимальный sound profile | Decode/mix/commands проверены по известным PCM vectors: timing, gain, loop, pause/stop, sample rate/channels, clipping policy и bounded voice admission. Null/offline mode явно выбран, не выдаётся за успешное открытие physical device; invalid/cancel/overload/cleanup проверены |
 | ARCH1h.2 | После h.1: App-owned audio service/device и ECS source/listener consumer | App/IFactory/lifetime, startup failure, source deletion, pause/resume, session switch/Stop/Replace и device loss/disconnect имеют явные outcomes. Captured audio assets доступны Runtime; source/published/fresh-package proof, callback drain/owners и фактическое воспроизведение проверяются отдельно от offline tests |
 
-Вопросы ARCH1h.0:
+<a id="arch1h2a-kul-session"></a>
+#### ARCH1h.2a — Kul nonspatial scene bridge, 2026-11-15
+
+По запросу пользователя после общего ARCH1j и Kton PHYS5 подключён Kul к игровой
+сессии. **Завершён ограниченный Windows x64 nonspatial sound/music profile**;
+[контракт/API](../audio/ECS_BRIDGE.md), [команды/evidence](HISTORY.md#kul-ecs-2026-11-15),
+[manifest/SHA](../audio/KUL_ECS_RESULTS.json). Это единственная детальная engine задача;
+самостоятельные AUD2–3 и широкие исторические h.2 criteria сохраняются отдельно.
+
+- [x] Neutral SDK: ref-free Source/Command/State, stable optional source schema,
+  полные phase commands; без Runtime/Kul/native/UI dependencies.
+- [x] Public UseAetherKul/UseConfiguredAetherKul, copied common configuration,
+  Cobalt/MS DI factories и AddKulAudio в одном общем subsystem builder.
+- [x] Explicit captured directory/manifest SHA, bounded all-file validation и pins;
+  decoded shared sounds/fixed prepared sound+music voices до publication, silent
+  preparation. В tick только controls, без file open/decode/native voice allocation.
+- [x] Monotonic commands, gain/loop/seek/EOF, source deletion/rebinding/generation,
+  complete preflight и limits; actual Play/Pause/Stop, silent paused Step, fresh
+  candidate/replacement и reverse cleanup/retry с сохранением World lease.
+- [x] 103adapter tests и27native-module tests каждый D/R; same-entity Kton/Kul,
+  extraction failure before audible commit;104common+68PHYS5 regression каждый D/R.
+  Non-incremental solution0errors/1570existing warnings и финальные incremental
+  D/R0errors/0warnings; exact slnx discovery103cases.
+- [x] Source Debug/published Release/fresh NuGet Debug/published Release, каждый с
+  обоими DI:4offline reports×59checks и4muted actual WASAPI reports×43checks.
+  Closed13archive feed/18library runtime closure, exact managed/native SHA,
+  final native owners/resident bytes0, files unlocked;3metadata/payload checks.
+
+Не входят: spatial/listener/occlusion, Editor import/Nom integration, автоматическое
+audio extension fixed GameBuildArtifact ABI/ALC policy, native-state reload/migration,
+device loss, long soak/hard RT/peak/async budgets и другие OS. Физическое
+прослушивание и native rebuild не выполнялись; patched backend binary прежний.
+
+#### Исторические вопросы ARCH1h.0 — 2026-11-07
 
 - Определить границу общего audio package/backend и Aether integration: устройство,
   decoder, mixer, clip/stream owners — сервисы; source/listener/settings — данные ECS.
@@ -1837,7 +1896,7 @@ PHYS3 queries/events реализованы:309checks source/fresh-package D/pub
 [policy](../physics/QUERIES_CONTACTS.md), [evidence](../physics/HISTORY.md#phys3-2026-11-12).
 PHYS4 public App/configuration/DI/lifecycle завершён:192checks/profile обоих DI,
 current provider regression309×3; [App guide](../physics/APP.md),
-[evidence](../physics/HISTORY.md#phys4-2026-11-12). Далее PHYS5 ECS/session bridge.
+[evidence](../physics/HISTORY.md#phys4-2026-11-12). PHYS5 завершён2026-11-15: [API/профиль](../physics/ECS_BRIDGE.md), [68tests D/R и independent acceptance](../physics/HISTORY.md#phys5-2026-11-15). Следующий физический feature — PHYS6; Kul ARCH1h.2a также завершён; дальнейший выбор — по общей очереди.
 Текущая очередь Player → ARCH3 сохраняется;
 proposed game Request/Claim/Decision не изменены.
 
@@ -1994,7 +2053,7 @@ ARCH1a.1/2 реализованы/проверены2026-10-22; ARCH1a в цел
 | ARCH1f | [F.0/f.1 CPU contracts](RENDERING_CONTRACTS.md) и [f.2 resource services](RENDER_RESOURCES.md) реализованы по своим scope2026-11-06/07; f.3–6 запланированы | CPU/unit/package и actual Vulkan resource upload/readback имеют отдельные checks; owned extraction/submitted-frame leases/surface renderer proof ещё нужны; primitive64 не объявлен новым renderer |
 | ARCH1g | [Model assets/import research](#arch1g-model-assets): выбран AssimpNetter6.0.5 low-level после [8-profile spike](MODEL_IMPORT_RESEARCH.md#decision-2026-11-07), production graph не менялся | G.0 ещё требует captured-I/O/identity/budgets/cancel decisions перед g.1; current builtin/in-memory profile не считается file importer |
 | ARCH1i | [Kton/BEPU и отдельный физический модуль](#arch1i-physics): PHYS4 App/configuration/DI/lifetime,192checks/profile обоих DI и provider regression309×3; далее PHYS5 bridge | Детальная реализация/приёмка bridge только в [PHYS5](../physics/PLAN.md#phys5), общий модуль — [PHYS0–8](../physics/PLAN.md#current-physics-queue) |
-| ARCH1h | [TrueMoon.Kul AUD1](../audio/PLAN.md#current-audio-queue), 2026-11-12: App/DI/sound/music/cleanup,23tests D/R и source/publish/fresh-package muted WASAPI | Общий модуль готов в Windows v1 scope; Aether ECS/captured-asset bridge ещё нужен. Audio AUD2–3: device loss/RT/queues/other OS |
+| ARCH1h | [TrueMoon.Kul AUD1](../audio/PLAN.md#current-audio-queue), 2026-11-12: App/DI/sound/music/cleanup,23tests D/R и source/publish/fresh-package muted WASAPI | Общий модуль готов в Windows v1 scope; optional [ARCH1h.2a](#arch1h2a-kul-session) ECS/captured-content bridge завершён2026-11-15. Audio AUD2–3: device loss/RT/queues/other OS |
 
 Порядок уточнён2026-10-23: для приложения Editor первый минимальный ARCH1b.1
 выполнен; независимый Edit preview и ED1a также реализованы в своих границах.

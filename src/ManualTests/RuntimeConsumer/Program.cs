@@ -101,6 +101,7 @@ internal static class Program
         foreach (var owned in new object[] { system!, observer! })
             if (Number(owned, "Stops") != 1 || Number(owned, "Disposals") != 1) throw new InvalidOperationException("DI disposed caller-owned systems twice.");
         var shared = typeof(TSystem).GetInterfaces().Single(t => t.FullName == typeof(A.IEcsSystem).FullName);
+        var subsystemChecks = await SessionSubsystemProof.Run(args.Length == 4);
         var context = AssemblyLoadContext.GetLoadContext(assembly)!;
         var privateExtension = context.IsCollectible && context != AssemblyLoadContext.Default;
         var sharedContracts = ReferenceEquals(shared, typeof(A.IEcsSystem)) && context.Assemblies.All(a => a.GetName().Name is not ("TrueMoon.Contracts" or "TrueMoon.Aether.Abstractions"));
@@ -111,7 +112,7 @@ internal static class Program
         await File.WriteAllTextAsync(args[2], JsonSerializer.Serialize(new
         {
             Completed = true, Stage = "ARCH3.3", GameTicks = load.Session.TickNumber, GameRevision = load.Session.Revision, GameColor = load.Session.PatternColor, load.Artifact.BuildId, RuntimeOnly = true, Provider = args.Length == 4 ? "Microsoft" : "Cobalt", RealWorld = true,
-            FactoryCalls = calls, PrivateExtension = privateExtension, SharedContracts = sharedContracts, ForbiddenAssemblies = forbidden,
+            FactoryCalls = calls, PrivateExtension = privateExtension, SharedContracts = sharedContracts, ForbiddenAssemblies = forbidden, SceneSubsystemChecks = subsystemChecks,
             Executions = Number(system!, "Executions"), Stops = Number(system!, "Stops"), Disposals = Number(system!, "Disposals"),
             Total = Number(observer!, "Total"), Count = Number(observer!, "Count"), WorldId = worldId, Schema = schema.TypeId.Value,
             ExtensionAssembly = assembly.Location, ContractAssembly = typeof(A.ISystem).Assembly.Location,

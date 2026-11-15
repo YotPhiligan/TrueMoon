@@ -14751,3 +14751,277 @@ Runtime-only, Tooling, Runtime+UI без Tooling, full Editor и reload; мин�
 с освобождением retired ALC/owners/subscriptions/resources. ENG7b.3/release, causal
 drain follow-up и Audio/Kton/Nom/ED очереди сохранены. Request/Claim/Decision не менялись.
 [Предыдущий STATUS](HISTORY.md#engine-status-before-arch38-2026-11-15).
+
+<a id="arch1j-2026-11-15"></a>
+## ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
+
+Scope: opt-in DI subsystem owners/private preparation, общий ECS scheduler,
+actual playback notifications и retained World lease. [API/границы](SESSION_SUBSYSTEMS.md),
+[приёмка/SHA](ARCH1J_BASELINE.json). Ветка `feat/aether-session-subsystems`, исходный
+HEAD `a7bdeac`; новые изменения учитываются SHA в manifest. Выбран порядок
+ARCH1j → Kton PHYS5 → Kul ECS/captured-assets adapter; ENG7b.3 остаётся отдельно.
+
+`UseAetherSceneSubsystems` замораживает выбор typed factories, не создаёт instances
+до private preparation и не добавляет backend dependencies. Additional systems
+исполняются существующим scheduler. ExternalMotion исключает двойное velocity
+движение; IGamePlaybackSession передаёт фактические mode/presentation pauses.
+Ошибки preparation/system/tick/playback, cancellation и cleanup сохраняют исходную
+причину и владельца. World нельзя освободить до cleanup retry. Disposal order:
+scheduler/systems → subsystem resources в обратном порядке → scene/World.
+
+Фактические проверки на Windows x64, SDK11.0.100/net11.0/runtime-async=on:
+
+- `dotnet build TrueMoon.slnx -c Debug|Release --no-restore --no-incremental -m -bl:<unique>`:
+  оба профиля0errors/1570warnings, прежний набор; binlogs/logs сохранены локально.
+- `dotnet test <project.csproj> -c Debug|Release --no-restore --no-build --logger trx --results-directory <evidence> -bl:<unique>`:
+  Aether3533, Abstractions26, Player17, Editor1507 каждый D/R; итого5083/config,
+  failed/skipped0. Это четыре затронутых suite, не новый полный14-project run.
+- Адресный Debug filter SceneSubsystemSessionTests/PrimitiveSimulationTests/
+  PrimitiveScenePreparationTests/RequiredMeshProtocolTests/MovementSystemTests:
+ 104passed; новые27subsystem cases и2protocol cases входят в полные3533 D/R.
+- `pwsh -NoProfile -File ManualTests/RuntimeConsumer/Verify.ps1 -EvidenceDirectory TestResults/SessionSubsystems/runtime-consumer-fixed`:
+ 8profiles source Debug/published Release/fresh NuGet/SDK-free × оба DI;
+  в каждом8новых subsystem checks, всего64. Проверены distinct session Worlds,
+  lazy factories, ExternalMotion/same-tick frame, actual mode и disposal order.
+  Прежние artifact/typed-ECS/shared-ABI checks также прошли; exact version/SHA в manifest.
+- `eng/Check-PackageMetadata.ps1 -Pack -NoBuild -IncludeProject <Abstractions.csproj,Runtime.csproj> -RunDirectory TestResults/PackageMetadata/ARCH1j-20261115-fixed`:
+ 2projects/2archives, metadata/README/XML/assets passed. Это локальный pack, не push.
+
+Первый targeted run выявил ожидаемое изменение read metadata Movement: assert
+обновлён с учётом ExternalMotion. Первый consumer run пропустил существующий
+UseAetherEcs prerequisite; исправлен composition root, все8profiles повторены.
+Первичный restore упёрся в sandbox-доступ к штатному NuGet.Config; финальные
+restore/consumer/full Aether child checks выполнены с разрешённым расширенным
+доступом. Ошибочные попытки сохранены отдельно, не считаются passing evidence.
+
+Raw artifacts находятся в ignored `TestResults/SessionSubsystems/` и
+`TestResults/PackageMetadata/ARCH1j-20261115-fixed/`; временный feed/cache/runtime-only
+root указан в consumer verification.json. Это локальное хранение без внешнего
+retention promise. Команды/итог/scope и компактный SHA manifest сохранены в Git.
+Финальные packaged README дополнительно проверены metadata pack после consumer proof.
+
+Kton PHYS5 и Kul ECS/Nom/captured-assets adapters ещё не реализованы этим срезом.
+Новой native/GPU/physical/device-loss приёмки, subsystem checkpoint capture/restore
+и native-state migration/mod reload нет. Причина исторического drain timeout,
+AUD2–3 и общие release gates сохраняются. Следующий кодовый шаг — Kton PHYS5.
+
+<a id="phys5-2026-11-15"></a>
+## PHYS5 подключение Kton к Aether — 2026-11-15
+
+Единственная детальная задача/приёмка — [physics PHYS5](../physics/PLAN.md#phys5),
+[контракт](../physics/ECS_BRIDGE.md), [полный execution record](../physics/HISTORY.md#phys5-2026-11-15),
+[manifest/SHA](../physics/PHYS5_RESULTS.json). Новые optional SDK/Runtime bridge
+пакеты не добавляют references в базовый Aether.Runtime/Abstractions. Общий ARCH1j
+source unchanged, проверены26protected hashes; его исторические5083/config не
+считаются повторёнными. Текущая common regression104D/R прошла отдельно.
+PHYS5 tests68D/R, slnx discovery68, source/published/fresh both-DI consumer168checks;
+solution D/R0errors/1570warnings. Новых GPU/window/device-loss/game-artifact ABI/
+native-state migration proofs нет. Далее Kul adapter; ENG7b.3/ED/import/release
+gates сохранены. Previous STATUS полностью сохранён ниже.
+
+<a id="engine-status-before-phys5-2026-11-15"></a>
+## Previous engine STATUS before PHYS5 — 2026-11-15
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-15 — ARCH1j: общий слой подсистем игровой сессии реализован и проверен.**
+[API/ownership](SESSION_SUBSYSTEMS.md), [результаты/команды](HISTORY.md#arch1j-2026-11-15),
+[manifest/SHA](ARCH1J_BASELINE.json). Opt-in DI factories/private preparation,
+additional systems в общем scheduler, ExternalMotion и actual Play/Pause callbacks;
+failed cleanup удерживает World lease до retry. Kton/Kul backend dependencies не добавлены.
+Solution D/R0errors/1570warnings; четыре suite: Aether3533/Abstractions26/Player17/
+Editor1507 каждый D/R, failed/skipped0. Independent Runtime consumer8profiles,
+в каждом8subsystem checks;2local packages metadata/payload passed.
+Следующий этап по запросу пользователя: **Kton PHYS5 → Kul ECS/captured-assets adapter**.
+ENG7b.3 и прочие functional/causal/release gates сохранены отдельно.
+
+**2026-11-15 — ARCH3.9 завершён: сквозная регрессия, единая поставка и руководство.**
+[Выбор слоёв/SDK/ownership/migration](ARCHITECTURE_GUIDE.md),
+[518соответствий/417sources](ARCH39_MIGRATION.csv), [graph6projects](ARCH39_PROJECT_GRAPH.json),
+[baseline/SHA](ARCH39_BASELINE.json), [команды/evidence](HISTORY.md#arch39-2026-11-15).
+
+ARCH3.1–9 закрыты в scoped Windows x64 profile: Abstractions, Runtime, headless
+Tooling, Editor.UI и optional Editor.Tooling bridge; Mod SDK/loader, stable World
+replacement и private-component migration. Одна immutable поставка20nupkg версии
+`0.3.0.1-alpha.arch39.20261115005454` использована всеми consumers по точным SHA. Новых production
+API/namespace переносов в этом этапе нет; поправлены acceptance runners и навигация.
+
+| Проверка | Фактический результат |
+| --- | --- |
+| Non-incremental solution Debug/Release |0errors;1570warnings/configuration, прежний набор |
+| Все14test projects Debug/Release |8906passed/configuration,28TRX, failed/skipped0 |
+| SDK / Runtime / Tooling / Runtime+UI / Player |6 /8 /6 /8 /6profiles; coherent packages, isolated caches/closed feeds, оба DI |
+| Common configuration/App/child |15profiles;20пакетов одной версии, фактические owned children |
+| Stable reload / private-component migration |По12profiles ×20замен =480retired ALC; old collect при live current,24final contexts после App cleanup |
+| Legacy mod loader |12profiles; прежние load/unload semantics сохранены |
+| Full Editor |8package cases +2source GUI +2published-package GUI; Standard/Cobalt и Embedded/MS DI |
+| Negative delivery / map |7invalid manifests rejected +positive exact copy;518namespace/path mappings,6project boundaries |
+
+Source/published/fresh NuGet/SDK-free там, где предусмотрено соответствующим runner.
+Повторные mod profiles сохраняют snapshots/disposed Worlds/stale contexts/guards,
+проверяют IDs/relations/values/state/tick, старые commands/callbacks, owners0 и exact
+disposal. Private migration:1explicit v1→v2 и19same-schema/new-CLR-generation steps.
+Native Runtime+UI/Player/full Editor отдельно проверены validation0/0, resource/
+handle/surface balance и child reap. Это не20GPU-mod-migrations: asset/native/GPU
+migration не входит в managed profile. Unfenced side effects не получают rollback.
+Другие OS/RID/AOT/trimming, physical input/DPI, device loss/K7/VRAM/long soak и
+release gates не расширены. Causal drain follow-up не закрывается passing runs.
+
+**2026-11-12 — TrueMoon.Kul Windows x64 AUD1 готов в описанном scope.**
+[Единственный план/контракт](../audio/PLAN.md), [App/DI и native build guide](../audio/README.md),
+[новая приёмка Kul](../audio/HISTORY.md#kul-rename-2026-11-12), [manifest](../audio/KUL_RENAME_RESULTS.json).
+UseAudio/UseConfiguredAudio, caller-owned sessions, decoded clips/voices, music streaming,
+App stop/drain и partial-start rollback реализованы на исправленном MiniAudioEx.
+23tests D/R, discovery через solution; source Debug/published Release/fresh-package
+по23offline+18muted actual WASAPI checks, logical owners0/files closed после Stop.
+Исторический [native fix](HISTORY.md#audio-native-fix-2026-11-12) не повторялся этим срезом;
+все новые profiles загрузили exact patched DLL. Нового audible audition не было.
+Далее Aether ECS/captured-asset adapter по ARCH3 boundaries. В Audio AUD2–3 остаются
+device loss/RT soak/queues/hard peaks/spatial/другие OS; renderer/Player очередь прежняя.
+
+## Kton / физика — PHYS4 App/configuration/DI 2026-11-12
+
+TrueMoon.Kton.Bepu public App integration/factories/lifecycle реализованы:
+192checks/profile (96Cobalt+96MicrosoftDI), source/fresh NuGet Debug/published Release;
+реальные worlds, generated constructor,9package closure и cleanup retry.
+Current PHYS2–3 regression309×3. [Scope/evidence](../physics/HISTORY.md#phys4-2026-11-12),
+[App guide](../physics/APP.md), [следующий PHYS5](../physics/STATUS.md).
+ECS bridge ещё впереди и согласуется с ARCH3. [Единый план](../physics/PLAN.md#current-physics-queue),
+[ARCH1i](PLAN.md#arch1i-physics). Engine/GPU/platform readiness и очередь не меняются.
+
+## Следующий конкретный шаг
+
+**Kton PHYS5:** подключить физический мир к готовому session-subsystem слою,
+component registry/prepare/reconcile/Step/writeback/ExternalMotion, spawn/delete/teleport,
+next-tick contacts и pause/Stop/Replace cleanup. Затем Kul ECS/captured-assets adapter.
+Детальная физика остаётся в [PHYS5](../physics/PLAN.md#phys5);
+[общий контракт](SESSION_SUBSYSTEMS.md). Конкретные bridges этим срезом не объявлены готовыми.
+Request/Claim/Decision не менялись. ENG7b.3, ED/import и causal/release gates сохраняются.
+
+<a id="engine-status-before-kul-ecs-2026-11-15"></a>
+## Previous engine STATUS before Kul ECS — 2026-11-15
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-15 — PHYS5: Kton подключён к игровой scene session.**
+[API/profile](../physics/ECS_BRIDGE.md), [единственная детальная задача](../physics/PLAN.md#phys5),
+[команды/результаты](../physics/HISTORY.md#phys5-2026-11-15), [manifest/SHA](../physics/PHYS5_RESULTS.json).
+
+Optional `TrueMoon.Aether.Kton` SDK и `TrueMoon.Aether.Kton.Runtime` добавляют
+body/velocity/teleport/contact components, registry/App/DI и owned physics world.
+Provider остаётся явным. Exact60Hz Step перед builtin Movement, ExternalMotion,
+same-tick pose writeback и next-tick contact entities; spawn/delete/attach/detach,
+descriptor replacement, stale generations и cleanup retry проверены на actual BEPU.
+Базовые Runtime/Abstractions и source общего ARCH1j в этом шаге не менялись.
+
+| Проверка15ноября | Результат/точный scope |
+| --- | --- |
+| Non-incremental solution Debug/Release |0errors/1570existing warnings/configuration |
+| Новый PHYS5 suite Debug/Release |68passed/configuration, failed/skipped0 |
+| Solution discovery |68PHYS5 cases через точный TrueMoon.slnx; остальные14suite filter matches0 |
+| Common subsystem regression Debug/Release |104passed/configuration; не новый full Aether/Editor run |
+| Independent source/published/fresh NuGet |4reports ×42checks, оба DI,8provider executions; final owners0/pools0 |
+| Packages |2new package metadata/payload checks;14coherent archives,20-library runtime closure |
+
+Предыдущие ARCH3.1–9 и ARCH1j scoped results сохраняют свои даты и критерии:
+[ARCH3 guide](ARCHITECTURE_GUIDE.md), [общий session contract](SESSION_SUBSYSTEMS.md),
+[предыдущий STATUS](HISTORY.md#engine-status-before-phys5-2026-11-15).
+Физический bridge не объявляет готовыми game-artifact ABI extension, mod/physics
+native-state checkpoint/migration, mesh imports/controller, GPU pixels или physical/
+device-loss/other-OS acceptance. Причина старого drain timeout и release gates прежние.
+
+## Следующий конкретный шаг
+
+**Kul ECS/captured-assets adapter:** ограниченный nonspatial sound/music profile,
+immutable audio inputs до tick, session-owned playback и actual Play/Pause/Stop/
+Replace. Самостоятельный Kul AUD1 уже имеет прежний Windows scope; AUD2–3 device-loss/
+RT/queues/OS не подменяются новым adapter. Детальная engine задача — [ARCH1h](PLAN.md#arch1h-audio).
+ENG7b.3/ED/import/Nom и PHYS6 остаются отдельными этапами. Claims/requests не менялись.
+
+<a id="kul-ecs-2026-11-15"></a>
+## Kul ARCH1h.2a — scene audio, 2026-11-15
+
+По запросу «давай теперь подключим Kul к движку» завершён nonspatial sound/music
+adapter после ARCH1j/PHYS5. [Контракт](../audio/ECS_BRIDGE.md),
+[единственная детальная задача](PLAN.md#arch1h2a-kul-session), [manifest/SHA](../audio/KUL_ECS_RESULTS.json).
+Новые SDK/Runtime/test projects зарегистрированы в TrueMoon.slnx. Neutral SDK не
+зависит от Kul/native/Runtime. UseAetherKul/UseConfiguredAetherKul/AddKulAudio
+используют existing DI factory contracts. Captured content hash/lease и copied
+limits фиксируются до tick; native session/voices/streams принадлежат сцене.
+Самостоятельный Kul получил additive StartPaused/RetainAtEnd и mutable Loop,
+без смены backend package/binary. Existing defaults сохранены.
+
+Пойман и исправлен реальный EOF defect: native at_end остаётся установленным после
+Stop/Seek до Play. Rewound/not-yet-started состояние теперь отличается от natural
+EOF. Explicit Play повторяет звук и после paused Step, Resume/global Play не
+повторяют EOF. Stale Seek при asset rebind сохраняет sequence без применения к
+короткому новому clip. Новые regression cases проверяют actual PCM, а не только enum.
+
+Фактически выполнено15ноября:
+
+- `dotnet build TrueMoon.slnx -c <Debug|Release> -m --no-incremental -bl:<unique>`:
+  0errors/1570existing warnings каждый. После последних7test cases финальные
+  incremental solution builds D/R0errors/0warnings.
+- `dotnet test TrueMoon.Aether.Kul.Tests/TrueMoon.Aether.Kul.Tests.csproj -c <Debug|Release> --artifacts-path <temp> --logger trx --results-directory TestResults/KUL_ECS/tests -bl:<unique>`:
+  **103passed/0failed/0skipped** каждый. Factories/config/schema/content hash+pins,
+  commands/modes/EOF/gain/loop/seek, preflight/capacity, generation/rebind, candidates,
+  cancellation/retained cleanup, actual Kton+Kul same entity и extraction-before-audio.
+- Самостоятельный `TrueMoon.Kul.Tests` тем же D/R runner: **27passed** каждый
+  (23прежних+4новых flags/loop/retained admission cases),0failed/0skipped.
+- `dotnet test TrueMoon.slnx -c Debug --no-build --no-restore --filter FullyQualifiedName~TrueMoon.Aether.Kul.Tests --logger trx --results-directory TestResults/KUL_ECS/discovery-final -bl:<unique>`:
+  **103cases**, остальные15suite filter matches0. Это discovery, не полный regression.
+- Common filter `FullyQualifiedName~MovementSystemTests|FullyQualifiedName~PrimitiveSimulationTests|FullyQualifiedName~PrimitiveScenePreparationTests|FullyQualifiedName~SceneSubsystemSessionTests|FullyQualifiedName~RequiredMeshProtocolTests`
+  в TrueMoon.Aether.Tests: **104passed** каждый D/R. TrueMoon.Aether.Kton.Tests:
+  **68passed** каждый D/R. Все0failed/0skipped.26ARCH1j, PHYS5 source/provider hashes сохранены.
+- `pwsh -NoProfile -File ManualTests/KulEcs/Verify.ps1 -EvidenceDirectory TestResults/KUL_ECS/acceptance-offline-final`:
+  **4reports×59checks**, оба DI; known PCM/gain/silence, OGG stream, prepared pool,
+  actual session commands/pause/seek/rebind, failed candidate, detach, Stop/Replace,
+  native cleanup/closed files, neutral SDK dependency check.
+- Тот же runner `-EvidenceDirectory TestResults/KUL_ECS/acceptance-device -Device`:
+  **4reports×43checks**, оба DI, actual WASAPI **только этот stream muted**,
+  cursor advance/pause/seek/stream/cleanup. Ни global volume changes, ни offline fallback.
+- Каждый consumer run: source Debug/published Release/fresh package-only Debug/
+  published Release; shared BuildProfile snapshot, CPM isolation, exact closed13archive
+  feed и18-library closure. Managed DLL и miniaudioex.dll SHA сверены с closed cache,
+  all owners/resident bytes0, files unlocked. Versions/hashes сохранены в manifest.
+- `eng/Check-PackageMetadata.ps1 -Pack -NoBuild -IncludeProject @('TrueMoon.Aether.Kul/TrueMoon.Aether.Kul.csproj','TrueMoon.Aether.Kul.Runtime/TrueMoon.Aether.Kul.Runtime.csproj','TrueMoon.Kul/TrueMoon.Kul.csproj') -RunDirectory TestResults/PackageMetadata/kul-ecs-final`:
+  **3projects/3archives passed**, descriptions/readmes/payload/dependencies.
+
+Начальная sandbox restore не смогла прочитать user NuGet.Config; повтор с разрешённым
+доступом прошёл. В первой независимой попытке closure assertion ошибочно считала
+System.Runtime зависимостью engine; исправлена точная проверка TrueMoon.Aether.Runtime.
+Только финальные успешные reports используются как acceptance. Narrow Roslyn
+source-to-test helper недоступен из-за отсутствующего Microsoft.CodeAnalysis4.14;
+он не заменялся ручным pairing и не выдаётся за coverage measurement. Тесты
+построены по явным поведенческим требованиям и проверены assertion/gap review.
+
+Raw evidence: TestResults/KUL_ECS и TestResults/PackageMetadata/kul-ecs-final,
+не versioned; manifest содержит SHA/итог без обещания внешнего retention.
+SDK/package/native versions и unchanged-source proofs сохранены в manifest.
+Не повторялись native rebuild/original RED-GREEN, слушание, full framework suites,
+GPU/physical input, release/device-loss/soak/RT/другие OS. Spatial/listener, Editor
+import/Nom, fixed GameBuildArtifact ABI/ALC extension и native-state migration отдельно.
+Claims/requests, локальный .codex и прежние незакоммиченные этапы сохранены.
+
+Приёмочная связь с запросом и проверенными контрактами:
+
+| Requirement | Evidence |
+| --- | --- |
+| «давай теперь подключим Kul к движку» | `SharedSession_ComposesKtonAndKulOnSameEntityWithIndependentTimeAndOrderedCleanup`;103adapter tests D/R и8independent delivery reports |
+| Silent preparation и paused Step | `PreparationAndPausedStep_RemainSilentUntilActualSessionPlay` |
+| EOF replay и повторное использование voice pool | `EofReplayQueuedDuringPause_StartsOnlyAfterGlobalResumeAndEndedSlotCanBeReused` |
+| Complete preflight до native effects | `InvalidCommands_FaultBeforeExecutingAnotherSourcesPendingPlay` |
+| Native cleanup до pins/World с retry | `CleanupFailure_ReleasesNativeFirstAndRetainsPinsAndBorrowedWorldUntilRetry` |
+| Independent immutable capture | `ContentLease_VerifiesAllFilesPinsAgainstMutationAndReleasesOnDispose` |
+
+Assertion/gap review:43generated test methods,304direct assertions; state/cursor,
+known PCM, resource counts и file locks дают независимые наблюдения. Нет assertion-free
+или trivial-only tests. Из финального review добавлены negative length/null hash,
+runtime finite gain bounds и retained failed-unpublished cleanup cases. Это статический
+behavioral gap review, не измерение coverage и не выполненный mutation run.
+Reparse rejection проверен по source, без symlink/junction fixture; искусственный
+native mid-control fault seam не вводился. Низкоуровневые custom-scheduler misuse
+guards не исчерпывающе тестировались. RT/device-loss scope не расширяется.
+
+Финальная QA:165source hashes сверены (65current+26ARCH1j+31PHYS5+43provider),
+54namespace/file mappings,65whitespace checks и26local links/explicit anchors прошли.
+Git diff --check прошёл; промежуточные test workflow files находятся вне Git.

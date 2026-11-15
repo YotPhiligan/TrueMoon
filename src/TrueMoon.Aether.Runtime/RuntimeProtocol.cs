@@ -32,7 +32,7 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
     /// <summary>Whether this game explicitly requires the GPU mesh-view/1 profile.</summary>
     public bool RequiresMeshView => game is IRenderSnapshotGameSession;
     private ulong _sequence;
-    private bool _hello, _loaded, _playing, _stopping;
+    private bool _hello, _loaded, _playing, _stopping, _playbackFaulted;
     private ulong _surfaceGeneration;
     private SceneSnapshot? _scene;
     private bool _awaitingRestore = requireRestore;
@@ -84,13 +84,13 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                     RequireReady();
                     RefreshRequiredView();
                     if (request.Playing && RequiresMeshView && !_renderView.IsReady) throw new InvalidOperationException("Required mesh view has not been prepared and presented.");
-                    _input.Clear(); _resumeAfterPresentation = false; _playing = request.Playing; break;
+                    _input.Clear(); _resumeAfterPresentation = false; SetPlayback(request.Playing); break;
                 case CommandKind.PresentRenderView:
                     RequireReady();
                     if (!RequiresMeshView) throw new NotSupportedException("Mesh-view presentation capability unavailable.");
                     meshPresentationAccepted = _renderView.TryPresented(RenderSnapshotStamp.Decode(request.RenderViewStamp ?? throw new InvalidDataException("Missing mesh presentation stamp.")),
                         ((IRenderSnapshotGameSession)game).ReadRenderScene());
-                    if (meshPresentationAccepted && _resumeAfterPresentation) { _playing = true; _resumeAfterPresentation = false; }
+                    if (meshPresentationAccepted && _resumeAfterPresentation) { SetPlayback(true); _resumeAfterPresentation = false; }
                     break;
                 case CommandKind.SetPreviewView:
                     RequireReady();
@@ -101,7 +101,7 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                     RequireReady();
                     if (_playing) throw new InvalidOperationException("Step requires Paused.");
                     TickGame(); break;
-                case CommandKind.Stop: _input.Clear(); _sceneStage = null; _stopping = true; _playing = false; break;
+                case CommandKind.Stop: SetPlayback(false); _input.Clear(); _sceneStage = null; _stopping = true; break;
                 case CommandKind.BeginSceneWorld:
                 case CommandKind.AppendSceneWorld:
                 case CommandKind.ActivateSceneWorld:
@@ -181,7 +181,7 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                 RenderViewVersion = RequiresMeshView ? 1 : 0, RenderViewReady = RequiresMeshView && _renderView.IsReady,
                 RenderViewPresentationAccepted = meshPresentationAccepted,
                 CheckpointOutcome = (int)checkpointOutcome, Checkpoint = checkpoint, InputOutcome = (int)inputOutcome,
-                Phase = _stopping ? "Stopping" : SceneGame?.IsFaulted == true ? "Faulted" : !_loaded ? "HelloAccepted" : _playing ? "Playing" : "Paused"
+                Phase = _stopping ? "Stopping" : _playbackFaulted || SceneGame?.IsFaulted == true ? "Faulted" : !_loaded ? "HelloAccepted" : _playing ? "Playing" : "Paused"
             };
             if (role == RuntimeRole.EditPreview && game is Preview.PreviewGameSession previewGame)
             {
@@ -198,23 +198,43 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
     private void RequireReady()
     {
         ObjectDisposedException.ThrowIf(_disposed, this); RequireScene();
-        if (SceneGame?.IsFaulted == true) throw new InvalidOperationException("The scene World is faulted.");
+        if (_playbackFaulted || SceneGame?.IsFaulted == true) throw new InvalidOperationException("The game session is faulted.");
         if (_awaitingRestore) throw new InvalidOperationException("Restore must complete before readiness/frames.");
     }
     private void TickGame()
     {
-        if (game is IInputGameSession controlled) controlled.Tick(_input.Take()); else game.Tick();
+        try { if (game is IInputGameSession controlled) controlled.Tick(_input.Take()); else game.Tick(); }
+        catch (Exception error)
+        {
+            _playbackFaulted = true;
+            try { SetPlayback(false); } catch (Exception pause) { throw new AggregateException(error, pause); }
+            throw;
+        }
         RefreshRequiredView();
+    }
+    private void SetPlayback(bool playing)
+    {
+        if (_playing == playing && !_playbackFaulted) return;
+        if (playing && _playbackFaulted) throw new InvalidOperationException("A faulted session cannot resume playback.");
+        _playing = false;
+        try { if (_loaded && game is IGamePlaybackSession playback) playback.SetPlaying(playing); _playing = playing; }
+        catch (Exception error)
+        {
+            _playbackFaulted = true;
+            if (playing && _loaded && game is IGamePlaybackSession playback)
+                try { playback.SetPlaying(false); } catch (Exception pause) { throw new AggregateException(error, pause); }
+            throw;
+        }
     }
     private void RefreshRequiredView()
     {
         if (_renderView.IsReady && game is IRenderSnapshotGameSession mesh && !_renderView.MatchesSource(mesh.ReadRenderScene()))
-        { _resumeAfterPresentation |= _playing; _playing = false; _input.Clear(); _renderView.Invalidate(); }
+        { _resumeAfterPresentation |= _playing; SetPlayback(false); _input.Clear(); _renderView.Invalidate(); }
     }
     public void FixedTick()
     {
         if (!_worldSerial.Wait(0)) return;
-        try { lock (_gate) { if (!_disposed && _loaded && _playing && !_stopping && !_awaitingRestore && SceneGame?.IsFaulted != true &&
+        try { lock (_gate) { if (!_disposed && _loaded && _playing && !_stopping && !_playbackFaulted && !_awaitingRestore && SceneGame?.IsFaulted != true &&
             (!RequiresMeshView || _renderView.IsReady)) TickGame(); } }
         finally { _worldSerial.Release(); }
     }
@@ -238,7 +258,7 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
     {
         lock (_gate)
         {
-            if (_disposed || !_loaded || _stopping || _awaitingRestore || SceneGame?.IsFaulted == true || RequiresMeshView) { frame = default; return false; }
+            if (_disposed || !_loaded || _stopping || _playbackFaulted || _awaitingRestore || SceneGame?.IsFaulted == true || RequiresMeshView) { frame = default; return false; }
             frame = (game.TickNumber, game.PatternColor); return true;
         }
     }
@@ -266,12 +286,12 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
         {
             if (_disposed || _stopping) return;
             _renderView.Produced(stamp);
-            if (_playing && !_renderView.IsReady) { _resumeAfterPresentation = true; _playing = false; _input.Clear(); }
+            if (_playing && !_renderView.IsReady) { _resumeAfterPresentation = true; SetPlayback(false); _input.Clear(); }
         }
     }
     internal void DetachRenderSurface()
     {
         if (!RequiresMeshView) return;
-        lock (_gate) { _resumeAfterPresentation |= _playing; _playing = false; _input.Clear(); _renderView.Reset(); }
+        lock (_gate) { _resumeAfterPresentation |= _playing; SetPlayback(false); _input.Clear(); _renderView.Reset(); }
     }
 }

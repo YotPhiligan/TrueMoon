@@ -561,3 +561,152 @@ typed options/configuration schema/snapshots и existing IFactory registration;
 App-local duplicates, startup/failed startup, caller-owned world lifetime и
 stop/drain/dispose/retry на Cobalt и существующем Microsoft DI adapter.
 Затем PHYS5 — ECS/session bridge по согласованным ARCH3 boundaries.
+
+<a id="physics-status-before-phys5-2026-11-15"></a>
+## Previous STATUS before PHYS5 — 2026-11-15
+
+# TrueMoon.Kton: состояние и следующий шаг
+
+**2026-11-15:** [общий session-subsystem слой Aether](../engine/SESSION_SUBSYSTEMS.md)
+реализован и проверен отдельно. PHYS5 выбран следующим этапом; Kton bridge ещё
+не реализован. Новых backend-проверок Kton эта работа не добавляет.
+
+**2026-11-14 — предкоммитная сверка:** App192checks и provider309checks повторены
+каждый в source Debug/fresh package Debug/published Release; package metadata
+Kton/Kton.Bepu прошла. [Состав, команды и границы](../COMMIT_AUDIT_2026-11-14.md).
+PHYS5 и wider delivery/release readiness этим не объявляются.
+
+**2026-11-12 — PHYS4 public App/configuration/DI/lifetime реализован и проверен.**
+
+[Единый план](PLAN.md#current-physics-queue), [App guide](APP.md), [контракт](CONTRACTS.md),
+[provider](PROVIDER.md), [queries/events](QUERIES_CONTACTS.md),
+[команды/границы](HISTORY.md#phys4-2026-11-12), [manifest](PHYS4_RESULTS.json),
+[runner](../../ManualTests/KtonApp/README.md).
+
+| Область | Реализация | Фактическая проверка12ноября |
+| --- | --- | --- |
+| App/configuration | UseBepuPhysics/UseConfiguredBepuPhysics,16fields Kton:DefaultWorld:*, validated detached startup snapshot | Все fields, source priority/provenance/callback precedence, invalid/null/duplicates/mixed registration, no backend allocation at Build/start |
+| DI/factory | Existing typed/base IFactory aliases, один App-owned BepuPhysicsHost, adapters не IDisposable | **192/192checks/profile:96Cobalt+96MicrosoftDI**, source Debug/fresh NuGet Debug/published Release; real generated consumer constructor; exact9package graph/9DLL SHA+1shared-framework DLL |
+| World ownership | Create() defaults, Create(options) complete arguments; successful worlds exclusively caller-owned | Независимые миры/Apps, immutable snapshots, early disposal, live world после App disposal; no alias double Dispose |
+| Lifecycle/failures | Reverse consumer stop/startup rollback, permanent admission close, retained failed-candidate owner | Startup/stop/DI Dispose/cached failure, cancellation boundaries, cleanup error aggregation, explicit retained-host retry и caller-world retry after App; final owners0/pools0 |
+| Provider regression | PHYS2–3 bodies/joints/commands/fixed Step/queries/contacts/generational IDs | **309/309checks×3profiles** повторены на текущем provider;5package closure/actual DLL SHA; neutral-only suite отдельно не запускалась |
+| Следующие этапы | PHYS5 Aether ECS/session bridge, PHYS6 controller, PHYS8 wider delivery/performance | Full solution tests/GPU/native launch/other OS/AOT/2+workers/remote release в PHYS4 не запускались |
+
+## Ограничения
+
+App закрывает фабрику и очищает unpublished failed creations; сессия join/drain/dispose
+своих миров. Root fallback disposal выданных миров не введён. Host.IsReleased не
+утверждает PublishedWorlds=0. После финального App/DI Dispose failure новая попытка
+выполняется на заранее удержанном borrowed BepuPhysicsHost: App/provider могут
+вернуть закешированную ошибку. Мир с failed Dispose сохраняется самим caller.
+
+Профиль проверки: Windows x64/.NET11/JIT/1worker. Fault injection доказывает retry
+между завершёнными стадиями, не arbitrary partial unsafe BEPU.Dispose recovery.
+No-arg factory defaults фиксируются до ресурсов; App configuration reload не меняет
+модуль/миры. Stop cleanup синхронный и не прерывается cancellation token.
+Source targeted build0errors/494existing upstream XML/nullability warnings;
+Kton/provider/probe warnings0; fresh consumer Debug/Release0warnings/0errors.
+Budgets не являются hard RAM/frame-time гарантиями. Предыдущий PHYS3 STATUS сохранён
+в [HISTORY](HISTORY.md#physics-status-before-phys4-2026-11-12), manifests PHYS0–3 не переписаны.
+
+## Следующий конкретный шаг
+
+**[PHYS5](PLAN.md#phys5):** согласовать Aether Abstractions/Runtime boundary по ARCH3,
+добавить ECS value components/registry, prepare/update/writeback и session ownership.
+Проверить spawn/delete/teleport, pause/Stop/Replace, next-tick contact events и cleanup
+без освобождения borrowed ECS World/dependencies. Текущая очередь Aether/Claims не менялась.
+
+
+<a id="phys5-2026-11-15"></a>
+## PHYS5 — Aether ECS/session bridge, 2026-11-15
+
+По запросу пользователя после общего ARCH1j реализовано подключение Kton к движку.
+[Контракт/профиль](ECS_BRIDGE.md), [manifest/SHA](PHYS5_RESULTS.json),
+[independent runner](../../ManualTests/KtonEcs/README.md).
+
+Новые пакеты: `TrueMoon.Aether.Kton` (reference-free components/schemas/helpers;
+только Abstractions+neutral Kton) и `TrueMoon.Aether.Kton.Runtime` (App/DI factories,
+registry/reconciliation/Step/writeback/contact projection и session ownership).
+Выбор provider остаётся у composition root. Existing Kton/Bepu/Runtime/Abstractions
+source не менялся; проверены26protected hashes предыдущего ARCH1j. В solution
+добавлены2production projects и один xUnit2/VSTest test project.
+
+Profile v1: box/sphere/capsule, Static/Dynamic/Kinematic, root/unit-scale COM pose,
+точный60Hz. ExternalMotion исключает двойную integration. Полная preflight перед
+native mutation; explicit velocity/monotonic teleport, phase spawn/attach/detach/
+delete и descriptor replacement. Retired body/entity generations сохраняются в
+End events. PhysicsContact entities публикуются после Movement; Gameplay читает
+события предыдущего tick. Overflow не обрезается; после mutation failure нужна
+очистка terminally faulted session. Dispose order: systems → native world →
+borrowed scene/World → App dependencies; native failure сохраняет owner/World lease.
+
+Фактические проверки Windows x64 / SDK11.0.100 / net11.0 / runtime-async=on:
+
+- `dotnet build TrueMoon.slnx -c Debug|Release --no-restore --no-incremental -m -bl:<unique>`:
+ 0errors/1570existing warnings в каждой конфигурации. Новые production проекты
+ отдельно собраны Debug0warnings/0errors.
+- `dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj -c Debug|Release --no-restore --logger trx --results-directory TestResults/PHYS5/tests -bl:<unique>`:
+ **68passed/0failed/0skipped каждый D/R**,42methods. Только финальные
+ `PHYS5-Debug-final.trx`/`PHYS5-Release-final.trx`; промежуточные66cases не подменяют их.
+- `dotnet test TrueMoon.slnx -c Debug --no-build --no-restore --filter FullyQualifiedName~TrueMoon.Aether.Kton.Tests --logger trx --results-directory TestResults/PHYS5/discovery -bl:<unique>`:
+ 15TRX,68executed в новом проекте; остальные14suite не имели совпадений фильтра.
+ Это discovery proof, а не полный15-suite regression.
+- Common subsystem/movement/primitive/preparation/required-mesh regression:
+ `dotnet test TrueMoon.Aether.Tests/TrueMoon.Aether.Tests.csproj -c Debug|Release --no-build --no-restore --filter <five exact class selectors> ...`:
+ **104passed каждый D/R**,failed/skipped0. Сами backend/module old suites этим
+ не объявляются повторёнными; PHYS5 tests используют actual BEPU и оба DI.
+- `pwsh -NoProfile -File ManualTests/KtonEcs/Verify.ps1 -EvidenceDirectory TestResults/PHYS5/consumer-03`:
+ source Debug/published Release/fresh NuGet Debug/published Release, каждый с Cobalt
+ и Microsoft DI. **42checks/report ×4reports =168checks**,8provider executions.
+ Проверены real fall/settling/static/kinematic, same-tick CPU frame pose, next-tick
+ contacts, generations/spawn/delete/teleport, invalid candidate сохраняет old session,
+ Stop/replacement и final owners0/pools0.14coherent local archives одной версии,
+ fresh runtime graph20libraries =13TrueMoon runtime +7external; Enerit.Generator —
+ build-time archive, не runtime dependency. Cache/feed изолированы, all loaded
+ TrueMoon/BEPU output DLL SHA совпали с installed closed cache.
+- `eng/Check-PackageMetadata.ps1 -Pack -NoBuild -IncludeProject <two exact new csproj paths> -RunDirectory TestResults/PackageMetadata/PHYS5-20261115`:
+ 2projects/2archives metadata/README/XML/assets passed. Local pack, не external push.
+
+Первые два independent attempts остановились на verifier assertions после успешных
+source/published executions: analyzer ошибочно ожидался в runtime graph, затем
+ненормализованный Windows feed path сравнивался с нормализованным metadata source.
+Исправлен только runner, не ослаблена изоляция. Финальный consumer-03 прошёл полностью.
+Static Roslyn source-pairing helper имел отдельный missing Microsoft.CodeAnalysis4.14
+prerequisite; это не target compile/test failure, ручная pairing classification не
+подставлялась. Полезные behavioral tests построены по матрице требований ниже.
+Coverage percentages и production mutation runs не заявлены.
+
+Raw logs/TRX/binlogs/cache/feed находятся в ignored TestResults/PHYS5,
+TestResults/PackageMetadata/PHYS5-20261115 и temp root из consumer verification.json.
+Это локальный retention без внешнего хранения; итог/scope/команды и компактный SHA
+manifest сохраняются в versioned документах.
+
+Новое GPU/window/physical/device-loss evidence не создавалось; CPU frame pose не
+подменяет actual pixels или соответствие collider/render geometry. Native-state
+checkpoint/mod migration, fixed GameBuildArtifact ABI extension, controller,
+ragdoll и mesh asset import остаются вне PHYS5. Дальше по общей очереди — Kul
+ECS/captured-assets adapter; следующий физический feature — PHYS6 отдельно.
+
+## Requirement | Evidence
+
+| Requirement | Exact generated test evidence |
+| --- | --- |
+| User: давай теперь подключим Kton к движку по PHYS5 | PhysicsSceneSubsystemTests.Registration_IsLazyAndSessionsOwnIndependentNativeWorlds; PhysicsSceneSubsystemTests.Step_RespectsStaticDynamicKinematicModesAndSkipsOrdinaryMovement |
+| lazy App DI both providers | Registration_IsLazyAndSessionsOwnIndependentNativeWorlds (Cobalt/Microsoft cases), native owners0 before scene preparation and independent owners2 after two sessions |
+| registry schemas | PhysicsContractsTests.Schemas_PinExactIdentitiesKindsDefaultsAndRequiredTypes; PhysicsRegistrationTests.Registry_RejectsUnsupportedSchemaVersionBeforeNativeCreation |
+| neutral SDK / no Runtime or BEPU dependency | PhysicsContractsTests.ComponentValues_AreReferenceFreeAndContractsDoNotReferenceRuntimeOrBepu |
+| actual BEPU static/dynamic/kinematic step/writeback, ExternalMotion no double movement | Step_RespectsStaticDynamicKinematicModesAndSkipsOrdinaryMovement; Gravity_AdvancesAllSupportedPrimitivesAndWritesBackVelocity; AngularVelocity_RotatesNativePoseAndChangedCommandWritesBack |
+| complete schema-to-provider descriptor forwarding | PhysicsLifecycleTests.SceneData_ForwardsCompleteDescriptorToSelectedProvider (mass/material/filter/sensor/pose/linear/angular and native shape World identity) |
+| helper phase spawn/delete/attach/detach | PhysicsContractsTests.PhaseHelpers_SpawnDetachReattachAndDeleteCompleteRolesWithoutChangingNeighbor; PhysicsReconciliationTests.GameplayHelpers_SpawnDetachReattachDeleteAndNeverReviveStaleGenerations |
+| explicit PhysicsTeleport sequence/clear-velocity | Teleport_IsSequencedClearsVelocityAndReplaysWithoutRepeatingDiscontinuity; Teleport_RejectsZeroOrChangedReplayWithoutAdvancingNativeTick; DescriptorChange_RecreatesNativeIdentityWithoutChangingEcsIdentity |
+| parent/scale/incomplete roles reject | UnitScaleAndRootParent_AreRequiredForEveryMode; MissingRuntimeRoles_AreRejectedBeforeNativeMutation; DirectBodyRemoval_WithResidualRolesRejectsBeforeStepping; DirectPoseEdit_IsRejectedBeforeAnyOtherBodyNativeWriteback |
+| stale entity/body generations | GameplayHelpers_SpawnDetachReattachDeleteAndNeverReviveStaleGenerations; Mapping_RejectsForeignWorldIdentitiesEvenWhenSlotsMatch; RemovedBodyEnd_UsesOriginalGenerationsEvenWhenEntitySlotIsReused |
+| next-tick contacts | PhysicsContactTests.Contacts_AreVisibleToGameplayOnNextTickAndPreviousBatchIsRetired (Begin/Stay/Teleported End and event-entity retirement) |
+| capacity failure explicit, no truncation | ProjectionAtCapacity_PublishesCompleteEventAndRetiresPreviousBatch; ProjectionOverflow_IsExplicitAndDoesNotPublishPartialContactEntities; EcsCommandCapacityFailure_DoesNotPretendToPublishContactBatch |
+| collision filter applied to native world | CollisionMaskZero_DisablesContactProjectionWithoutStoppingPhysics |
+| pause/Stop/Replace/new scene failure preserves old session | Step_RespectsStaticDynamicKinematicModesAndSkipsOrdinaryMovement (paused no advance + one explicit step); FailedCandidatePreparation_LeavesOldSessionRunningAndReplacementIndependent (old continues after bad candidate, valid new session then old disposal) |
+| cleanup retains native owner and borrowed World | PhysicsLifecycleTests.CleanupFailure_RetainsNativeOwnerAndBorrowedWorldUntilExplicitRetry; CancellationAndCleanupFailure_PreserveOriginalErrorsAndRetainedCandidateForRetry |
+| cancellation/factory/native faults | CancellationAfterNativeCreation_ReleasesWorldWithoutPublishingCandidate; PrecancelledPreparation_RejectsBeforeNativeCreation; PreparationFailures_DoNotPublishOrLeakNativeResources; NativeStepFailure_PreservesErrorFaultsEcsAndDoesNotAdvancePublishedTick |
+| common configuration | ConfiguredRegistration_UsesExactSchemaAndExplicitOverrideBeforeSnapshot; ConfiguredRegistration_RequiresRegisteredExactSchema; Registration_AdmitsExactProjectionBoundariesAndSnapshotsOptions; Registration_RejectsInvalidProjectionBoundsBeforeAnyNativeResources |
+| empty session / fixed-step profile | EmptyScene_StepsWithoutInventingBodiesOrEventsAndReleasesNativeWorld; IncompatibleFixedStep_IsRejectedBeforeNativeWorldCreation |
+| scaffolding and entry-point registration | TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj; parent-owned TrueMoon.slnx /Kton/ registration; direct project runs above |

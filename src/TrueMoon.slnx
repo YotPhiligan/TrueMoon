@@ -18,6 +18,9 @@
   </Folder>
   <Folder Name="/Kul/">
     <Project Path="TrueMoon.Kul/TrueMoon.Kul.csproj" />
+    <Project Path="TrueMoon.Aether.Kul/TrueMoon.Aether.Kul.csproj" />
+    <Project Path="TrueMoon.Aether.Kul.Runtime/TrueMoon.Aether.Kul.Runtime.csproj" />
+    <Project Path="TrueMoon.Aether.Kul.Tests/TrueMoon.Aether.Kul.Tests.csproj" />
     <Project Path="TrueMoon.Kul.Tests/TrueMoon.Kul.Tests.csproj" />
     <Project Path="ManualTests/KulModuleProbe/KulModuleProbe.csproj" />
   </Folder>
@@ -77,6 +80,9 @@
     <Project Path="ManualTests\CobaltTest\CobaltTest.csproj" />
   </Folder>
   <Folder Name="/Kton/">
+    <Project Path="TrueMoon.Aether.Kton/TrueMoon.Aether.Kton.csproj" />
+    <Project Path="TrueMoon.Aether.Kton.Runtime/TrueMoon.Aether.Kton.Runtime.csproj" />
+    <Project Path="TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj" />
     <Project Path="TrueMoon.Kton/TrueMoon.Kton.csproj" />
     <Project Path="TrueMoon.Kton.Bepu/TrueMoon.Kton.Bepu.csproj" />
   </Folder>

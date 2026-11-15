@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <Description>Optional Kton physics integration with Aether scene subsystems, typed ECS, contact events and session-owned cleanup. Provider selected by App.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+    <PackageTags>$(PackageTags);aether;kton;physics;runtime;ecs</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TrueMoon.Aether.Kton/TrueMoon.Aether.Kton.csproj" />
+    <ProjectReference Include="../TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" />
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+  </ItemGroup>
+</Project>

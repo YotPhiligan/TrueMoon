@@ -163,7 +163,7 @@ public sealed partial class World : IDisposable
     public void Dispose()
     {
         if (IsDisposed) return;
-        if (_activeQuery || _schedulerOwner != null || _sceneOwner != null || _preparingReload)
+        if (_activeQuery || _schedulerOwner != null || _sceneOwner != null || _sceneSubsystemOwner != null || _preparingReload)
             throw new InvalidOperationException("Finish queries/scheduler cleanup and dispose the owning SceneWorld before its World.");
         IsDisposed = true;
         _pools.Clear(); _slots = []; _freeIndices = [];

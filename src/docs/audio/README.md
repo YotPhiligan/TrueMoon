@@ -6,6 +6,10 @@
 [Выбор имени и переход с TrueMoon.Audio](NAMING.md). Публичные типы находятся
 в `TrueMoon.Kul`; `UseAudio` и конфигурационные ключи `Audio:*` сохранены.
 
+Для игровых сессий Aether есть optional [ECS/captured-content adapter](ECS_BRIDGE.md):
+`TrueMoon.Aether.Kul` SDK и `TrueMoon.Aether.Kul.Runtime`. Подключение явное через
+`UseAetherKul` и общий `AddKulAudio`; автоматическое включение Editor preview не требуется.
+
 ## Сборка исправленной MiniAudioEx
 
 Нужны PowerShell7, Windows x64, MSVC C++ Build Tools + Windows SDK, совместимый

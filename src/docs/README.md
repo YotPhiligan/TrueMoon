@@ -6,7 +6,8 @@ TrueMoon состоит из bootstrap/lifecycle, DI, IPC, units/processes и н
 
 [TrueMoon.Kul: сборка, локальный native feed и App/DI](audio/README.md),
 [API/ownership](../TrueMoon.Kul/PACKAGE.md), [план](audio/PLAN.md),
-[текущие проверки](audio/STATUS.md). Windows x64 AUD1; Aether ECS bridge отдельно.
+[текущие проверки](audio/STATUS.md). Windows x64 AUD1;
+[optional Aether ECS/captured-content bridge](audio/ECS_BRIDGE.md) — ARCH1h.2a.
 
 ## Kton / Physics
 

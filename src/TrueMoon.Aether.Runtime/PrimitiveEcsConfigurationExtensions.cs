@@ -1,6 +1,7 @@
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Motion;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
+using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Aether.Runtime.Ecs.Transforms;
 using TrueMoon.Services;
 
@@ -36,6 +37,7 @@ public static class PrimitiveEcsConfigurationExtensions
                 new Factory<PrimitiveExtractionSystem, PrimitiveExtractionArguments>(arguments => new(arguments)));
         services.Singleton<IFactory<PrimitiveSimulation, PrimitiveSimulationRequest>>(resolver => new PrimitiveSimulationFactory(
             resolver.Resolve<IFactory<TransformSystem, World>>(), resolver.Resolve<IFactory<MovementSystem, World>>(),
-            resolver.Resolve<IFactory<PrimitiveExtractionSystem, PrimitiveExtractionArguments>>(), limits));
+            resolver.Resolve<IFactory<PrimitiveExtractionSystem, PrimitiveExtractionArguments>>(), limits,
+            resolver.TryResolve<IFactory<SceneSubsystemSession, SceneSubsystemArguments>>()));
     }
 }

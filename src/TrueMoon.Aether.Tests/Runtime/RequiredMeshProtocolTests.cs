@@ -39,6 +39,7 @@ public sealed class RequiredMeshProtocolTests
         Produce(protocol, resized); stale.Sequence = 6; stale.RenderViewStamp = resized.Encode();
         var resumed = await protocol.SendAsync(stale); Assert.Equal("Playing", resumed.Phase); Assert.True(resumed.RenderViewReady);
         protocol.FixedTick(); Assert.Equal(2UL, game.TickNumber);
+        Assert.Equal(new[] { true, false, true }, game.Playback);
     }
     [Fact]
     public async Task ContentChangeDuringGpuFlight_OldActualPresentationCannotResumePlaying_AndCurrentFrameCanRetry()
@@ -62,6 +63,37 @@ public sealed class RequiredMeshProtocolTests
         Assert.True(resumed.RenderViewReady); Assert.Equal("Playing", resumed.Phase); protocol.FixedTick(); Assert.Equal(2UL, game.TickNumber);
         ack.Sequence = 9; ack.RenderViewStamp = inFlight.Encode(); var staleAfterReady = await protocol.SendAsync(ack);
         Assert.True(staleAfterReady.RenderViewReady); Assert.False(staleAfterReady.RenderViewPresentationAccepted);
+        Assert.Equal(new[] { true, false, true }, game.Playback);
+    }
+    [Fact]
+    public async Task Playback_NotifiesActualTransitionsAndStopWithoutAdvancingPausedTicks()
+    {
+        var id = Identity(); using var game = new PlaybackGame(); var protocol = new RuntimeProtocol(id, game, 17);
+        await protocol.SendAsync(ControlRequest.Create(id, 1, CommandKind.Hello)); await Load(protocol, id);
+        Assert.Empty(game.Playback); protocol.FixedTick(); Assert.Equal(0UL, game.TickNumber);
+        var play = ControlRequest.Create(id, 3, CommandKind.SetMode); play.Playing = true;
+        await protocol.SendAsync(play); protocol.FixedTick(); Assert.Equal(1UL, game.TickNumber);
+        play.Sequence = 4; await protocol.SendAsync(play); Assert.Equal(new[] { true }, game.Playback);
+        await protocol.SendAsync(ControlRequest.Create(id, 5, CommandKind.SetMode));
+        protocol.FixedTick(); Assert.Equal(1UL, game.TickNumber);
+        await protocol.SendAsync(ControlRequest.Create(id, 6, CommandKind.Step)); Assert.Equal(2UL, game.TickNumber);
+        play.Sequence = 7; await protocol.SendAsync(play);
+        await protocol.SendAsync(ControlRequest.Create(id, 8, CommandKind.Stop)); protocol.FixedTick();
+        Assert.Equal(new[] { true, false, true, false }, game.Playback); Assert.Equal(2UL, game.TickNumber);
+        protocol.Dispose(); protocol.Dispose(); Assert.False(game.Disposed);
+    }
+    [Fact]
+    public async Task PlaybackFailure_BlocksFurtherTicksAndDisposeRetriesPauseWithoutOwningGame()
+    {
+        var id = Identity(); using var game = new PlaybackGame(); var protocol = new RuntimeProtocol(id, game, 17);
+        await protocol.SendAsync(ControlRequest.Create(id, 1, CommandKind.Hello)); await Load(protocol, id);
+        var play = ControlRequest.Create(id, 3, CommandKind.SetMode); play.Playing = true; await protocol.SendAsync(play);
+        game.FailPause = true;
+        Assert.Throws<IOException>(() => protocol.Dispose()); protocol.FixedTick(); Assert.Equal(0UL, game.TickNumber);
+        Assert.Equal("Faulted", (await protocol.SendAsync(ControlRequest.Create(id, 4, CommandKind.GetStatus))).Phase);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => protocol.SendAsync(ControlRequest.Create(id, 5, CommandKind.Step)));
+        game.FailPause = false; protocol.Dispose(); Assert.False(game.Disposed);
+        Assert.Equal(new[] { true, false, false }, game.Playback);
     }
     [Fact]
     public async Task HeadlessLegacyPlayIsIndependent_MeshProfileRejectsCpuSurfaceAndForeignPayloadKinds()
@@ -91,8 +123,10 @@ public sealed class RequiredMeshProtocolTests
         public void Tick() => TickNumber++;
         public virtual void Dispose() { }
     }
-    internal sealed class MeshGame : LegacyGame, IRenderSnapshotGameSession
+    internal sealed class MeshGame : LegacyGame, IRenderSnapshotGameSession, IGamePlaybackSession
     {
+        internal readonly List<bool> Playback = [];
+        public void SetPlaying(bool playing) => Playback.Add(playing);
         private readonly World _world = new();
         internal RenderContentManifest Content = BuiltinRenderContent.Create(Guid.NewGuid(), RenderContentHash.Compute("build"u8), Guid.NewGuid());
         internal ulong CameraRevision = 1;
@@ -101,5 +135,12 @@ public sealed class RequiredMeshProtocolTests
         public RenderSnapshotStamp Stamp() => RenderSnapshotStampTests.Stamp() with { WorldId = _world.Id, SceneId = ReadRenderScene().SceneId.Value,
             SourceRevision = Revision, CameraRevision = CameraRevision, ManifestHash = Convert.ToHexString(Content.Digest.ToArray()) };
         public override void Dispose() => _world.Dispose();
+    }
+    internal sealed class PlaybackGame : LegacyGame, IGamePlaybackSession
+    {
+        internal readonly List<bool> Playback = [];
+        internal bool FailPause, Disposed;
+        public void SetPlaying(bool playing) { Playback.Add(playing); if (!playing && FailPause) throw new IOException("pause"); }
+        public override void Dispose() => Disposed = true;
     }
 }

@@ -145,6 +145,13 @@ ResolveRuntimeSettings объединяет уже captured inputs до App; г�
 Kul предоставляет `AudioConfigurationSchema.Default` и `UseConfiguredAudio`
 ([guide](../audio/README.md)); Kton — `BepuPhysicsConfigurationSchema.Default`
 и `UseConfiguredBepuPhysics` ([App/DI/ownership и точные поля](../physics/APP.md)).
+PHYS5 предоставляет `PhysicsBridgeConfigurationSchema.Default` и `UseConfiguredAetherKton`:
+`Kton:Bridge:MaximumContactEvents` (default64,1..256), отдельно от provider defaults;
+[API/ownership](../physics/ECS_BRIDGE.md).
+Kul ARCH1h.2a предоставляет `AudioBridgeConfigurationSchema.Default` и
+`UseConfiguredAetherKul(reference, overrides)`: четыре bounded поля `Audio:Bridge:*`
+([точные defaults/границы](../audio/ECS_BRIDGE.md)). Capture identity/path остаётся
+explicit immutable input, отдельно от приоритетов обычных settings.
 В composition root используются точные schema instances; собственных правил
 приоритетов args/environment/JSON эти модули не вводят. Их самостоятельные
 проверки фиксируются в [audio STATUS](../audio/STATUS.md) и

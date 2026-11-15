@@ -99,6 +99,7 @@ public sealed partial class World
     internal void ClaimScheduler(object owner)
     {
         CheckPlayback();
+        if (_preparingSceneSubsystems) throw new InvalidOperationException("Finish subsystem preparation before scheduler activation.");
         if (_schedulerOwner != null) throw new InvalidOperationException("The World already has a scheduler owner.");
         _schedulerOwner = owner;
         _activatingSystems = true;

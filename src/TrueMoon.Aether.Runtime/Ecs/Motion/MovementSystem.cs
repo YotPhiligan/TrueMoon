@@ -25,7 +25,7 @@ public sealed class MovementSystem : IEcsSystem, Abstractions.Ecs.IEcsSystem
     /// <summary>Creates fresh Movement phase metadata.</summary><returns>Read velocity/write local pose description.</returns>
     public static EcsSystemDescription Describe() => EcsSystemDescription.FromContract(DescribeContract());
     /// <summary>Neutral metadata for execution through the Abstractions binding.</summary><returns>Fresh access declarations.</returns>
-    public static Abstractions.Ecs.EcsSystemDescription DescribeContract() => new Abstractions.Ecs.EcsSystemDescription("builtin.movement", Abstractions.Ecs.EcsPhase.Movement).Read<LinearVelocity>().Write<LocalTransform>();
+    public static Abstractions.Ecs.EcsSystemDescription DescribeContract() => new Abstractions.Ecs.EcsSystemDescription("builtin.movement", Abstractions.Ecs.EcsPhase.Movement).Read<LinearVelocity>().Read<ExternalMotion>().Write<LocalTransform>();
     /// <summary>Applies one positive step. Preflight failure/cancellation leaves every position unchanged.</summary>
     /// <param name="deltaTime">Positive duration.</param><param name="cancellationToken">Preflight cancellation.</param>
     public void Advance(TimeSpan deltaTime, CancellationToken cancellationToken = default)
@@ -37,7 +37,7 @@ public sealed class MovementSystem : IEcsSystem, Abstractions.Ecs.IEcsSystem
         try
         {
             _prepared.Clear(); var seconds = deltaTime.TotalSeconds;
-            _world.Query<LinearVelocity>().ForEach((EntityHandle entity, in LinearVelocity velocity) =>
+            _world.Query<LinearVelocity>().Without<ExternalMotion>().ForEach((EntityHandle entity, in LinearVelocity velocity) =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (_prepared.Count == _maximumEntities) throw new TransformEvaluationException(TransformEvaluationError.LimitExceeded, entity);

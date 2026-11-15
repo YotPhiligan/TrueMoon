@@ -1,6 +1,7 @@
 using TrueMoon.Aether.Abstractions.Ecs.Rendering;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Motion;
+using TrueMoon.Aether.Runtime.Ecs.Runtime;
 using TrueMoon.Aether.Runtime.Ecs.Transforms;
 
 namespace TrueMoon.Aether.Runtime.Ecs.Rendering;
@@ -9,19 +10,22 @@ namespace TrueMoon.Aether.Runtime.Ecs.Rendering;
 /// <param name="Scene">Borrowed private scene. Discard it if preparation fails.</param><param name="CancellationToken">Preparation cancellation.</param>
 public sealed record PrimitiveSimulationRequest(SceneWorld Scene, CancellationToken CancellationToken = default);
 
-/// <summary>Owns a three-system scheduler, borrows its scene, and publishes only completed-tick detached frames.</summary>
+/// <summary>Owns a scheduler and optional subsystems, borrows its scene, and publishes completed-tick detached frames.</summary>
 public sealed class PrimitiveSimulation : IDisposable
 {
     private readonly World _world;
     private readonly TimeSpan _step;
     private EcsScheduler? _scheduler;
+    private IDisposable? _subsystemOwner;
     private PrimitiveRenderSnapshot? _snapshot;
     private bool _disposed, _busy, _disposing;
     internal TransformSystem? Transforms;
     internal MovementSystem? Movement;
     internal PrimitiveExtractionSystem? Extraction;
+    internal SceneSubsystemSession? Subsystems;
     internal PrimitiveSimulation(World world, TimeSpan step) { _world = world; _step = step; }
     internal void Attach(EcsScheduler scheduler) => _scheduler = scheduler;
+    internal void AttachSubsystems(IDisposable owner) => _subsystemOwner = owner;
     internal void Prime(SceneWorld scene, CancellationToken token)
     {
         if (!ReferenceEquals(Transforms?.Owner, _world) || !ReferenceEquals(Movement?.Owner, _world) || !ReferenceEquals(Extraction?.Owner, _world))
@@ -37,6 +41,15 @@ public sealed class PrimitiveSimulation : IDisposable
     public Guid WorldId => _world.Id;
     /// <summary>Gets completed scheduler ticks, including initial zero.</summary>
     public ulong TickNumber => _scheduler?.TickNumber ?? 0;
+    /// <summary>Notifies optional real-time resources without advancing simulation.</summary><param name="playing">Actual runtime mode.</param>
+    public void SetPlaying(bool playing)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_busy || _disposing) throw new InvalidOperationException("Primitive simulation is busy or cleaning up.");
+        _busy = true;
+        try { Subsystems?.SetPlaying(playing); }
+        finally { _busy = false; }
+    }
     /// <summary>Gets the last complete detached frame. Captured values remain valid after World/controller disposal.</summary>
     public PrimitiveRenderSnapshot Snapshot
     {
@@ -62,6 +75,12 @@ public sealed class PrimitiveSimulation : IDisposable
             if (frame.Tick != scheduler.TickNumber || frame.WorldId != _world.Id) throw new InvalidDataException("Primitive frame tick/World mismatch.");
             _snapshot = frame;
         }
+        catch (Exception error)
+        {
+            try { Subsystems?.SetPlaying(false); }
+            catch (Exception pause) { throw new AggregateException(error, pause); }
+            throw;
+        }
         finally { _busy = false; }
     }
     /// <summary>Disposes the owned graph before the borrowed scene. Failed cleanup is retained for retry.</summary>
@@ -73,6 +92,7 @@ public sealed class PrimitiveSimulation : IDisposable
         try
         {
             _scheduler?.Dispose(); _scheduler = null;
+            _subsystemOwner?.Dispose(); _subsystemOwner = null; Subsystems = null;
             Transforms = null; Movement = null; Extraction = null; _snapshot = null; _disposed = true;
         }
         finally { _busy = false; }

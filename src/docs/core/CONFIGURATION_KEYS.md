@@ -15,6 +15,17 @@ Runtime identity, factories, documents и mutable UI state в каталог н�
 `BepuPhysicsConfigurationSchema.Default` (`Kton:DefaultWorld:*`,
 [16 полей и App integration](../physics/APP.md)). Они используют общий configuration
 profile; экспорт CORE7.6 не считается их полной проверкой или полным каталогом.
+PHYS5 добавляет optional `PhysicsBridgeConfigurationSchema.Default`: Int32
+`Kton:Bridge:MaximumContactEvents`, default64/range1..256/StartupOnly;
+[подключение и границы](../physics/ECS_BRIDGE.md). Исторический generated export не переписывается.
+
+Kul ARCH1h.2a добавляет optional `AudioBridgeConfigurationSchema.Default`, StartupOnly:
+`Audio:Bridge:MaximumSources` Int32 default64/range1..256,
+`MaximumPreparedVoices` Int32 default64/range1..256,
+`MaximumAssets` Int32 default32/range1..64,
+`MaximumEncodedBytes` Int64 default268435456/range1..1073741824.
+Capture directory/manifest identity остаются explicit runtime input, не обычными
+configuration overrides. [Подключение](../audio/ECS_BRIDGE.md).
 
 ## Aether
 

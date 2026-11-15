@@ -6,7 +6,7 @@ namespace TrueMoon.Aether.Runtime.Ecs.Rendering;
 
 internal sealed class PrimitiveSimulationFactory(IFactory<TransformSystem, World> transforms,
     IFactory<MovementSystem, World> movement, IFactory<PrimitiveExtractionSystem, PrimitiveExtractionArguments> extraction,
-    PrimitiveSimulationOptions options) : IFactory<PrimitiveSimulation, PrimitiveSimulationRequest>
+    PrimitiveSimulationOptions options, IFactory<SceneSubsystemSession, SceneSubsystemArguments>? subsystems = null) : IFactory<PrimitiveSimulation, PrimitiveSimulationRequest>
 {
     private readonly PrimitiveSimulationOptions _options = options.Snapshot();
     public PrimitiveSimulation Create(PrimitiveSimulationRequest arguments)
@@ -18,6 +18,15 @@ internal sealed class PrimitiveSimulationFactory(IFactory<TransformSystem, World
         var owner = new PrimitiveSimulation(scene.World, _options.FixedStep);
         try
         {
+            if (subsystems != null)
+            {
+                try
+                {
+                    owner.Subsystems = subsystems.Create(new(scene, _options.FixedStep, token)) ?? throw new InvalidOperationException("Subsystem session factory returned null.");
+                    owner.AttachSubsystems(owner.Subsystems);
+                }
+                catch (SceneWorldPreparationException error) { owner.AttachSubsystems(error.CleanupOwner); throw; }
+            }
             EcsScheduler scheduler;
             try
             {
@@ -26,7 +35,8 @@ internal sealed class PrimitiveSimulationFactory(IFactory<TransformSystem, World
                     new(MovementSystem.DescribeContract(), new Factory<Abstractions.Ecs.ISystem, World>(world => owner.Movement = movement.Create(world))),
                     new(TransformSystem.DescribeContract(), new Factory<Abstractions.Ecs.ISystem, World>(world => owner.Transforms = transforms.Create(world))),
                     new(PrimitiveExtractionSystem.DescribeContract(), new Factory<Abstractions.Ecs.ISystem, World>(world => owner.Extraction =
-                        extraction.Create(new(world, scene.Scene.Id, scene.Scene.Revision, _options))))
+                        extraction.Create(new(world, scene.Scene.Id, scene.Scene.Revision, _options)))),
+                    .. owner.Subsystems?.Systems ?? []
                 ]);
             }
             catch (EcsSchedulerCreationException error) { owner.Attach(error.CleanupOwner); throw; }

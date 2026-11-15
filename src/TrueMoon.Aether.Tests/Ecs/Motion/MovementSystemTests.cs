@@ -209,7 +209,7 @@ public sealed class MovementSystemTests
         var movement = MovementSystem.Describe(); var transform = TransformSystem.Describe();
         Assert.Equal("builtin.movement", movement.Id); Assert.Equal(EcsPhase.Movement, movement.Phase);
         Assert.Equal("builtin.transform", transform.Id); Assert.Equal(EcsPhase.Transform, transform.Phase);
-        Assert.Equal(new[] { typeof(LinearVelocity) }, movement.Snapshot().Reads);
+        Assert.True(movement.Snapshot().Reads.SetEquals([typeof(LinearVelocity), typeof(ExternalMotion)]));
         Assert.Equal(new[] { typeof(LocalTransform) }, movement.Snapshot().Writes);
         Assert.True(transform.Snapshot().Reads.SetEquals([typeof(LocalTransform), typeof(TransformParent)]));
         Assert.Equal(new[] { typeof(WorldTransform) }, transform.Snapshot().Writes);

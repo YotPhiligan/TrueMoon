@@ -13,6 +13,8 @@ public sealed class AudioPlayback : IDisposable
     internal AudioClip? Clip { get; }
     internal bool Released;
     internal bool Paused;
+    internal bool RetainAtEnd;
+    internal bool Looping;
     /// <summary>Whether this voice uses worker-fed music streaming.</summary>
     public bool IsStreaming { get; }
     /// <summary>Current state, including Disposed after App stop.</summary>
@@ -23,6 +25,8 @@ public sealed class AudioPlayback : IDisposable
     public ulong? LengthFrames => Session.Host.Length(this);
     /// <summary>Current voice gain, between zero and one.</summary>
     public float Volume { get => Session.Host.GetVolume(this); set => Session.Host.SetVolume(this, value); }
+    /// <summary>Whether playback repeats at EOF. Changes affect this voice only.</summary>
+    public bool Loop { get => Session.Host.GetLoop(this); set => Session.Host.SetLoop(this, value); }
     /// <summary>Resumes a paused/stopped voice; an ended voice is rewound before starting.</summary>
     public void Play() => Session.Host.Play(this);
     /// <summary>Pauses at the current cursor.</summary>

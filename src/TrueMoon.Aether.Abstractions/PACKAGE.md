@@ -35,6 +35,11 @@ persistence and migrations use ComponentTypeId plus exact positive schema versio
 No UseAbstractions registration is needed: this package owns no App services or
 resources. App/DI/factory and lifecycle bindings belong to the runtime implementation.
 
+IGamePlaybackSession is an optional actual playback notification, separate from
+fixed ticks and disposal ownership. ExternalMotion is a reference-free marker
+excluding an entity from built-in velocity integration when another subsystem
+owns its pose. Neither contract references a physics/audio provider.
+
 ARCH3.8 adds optional bidirectional migration registrations (default interface
 implementations reject unsupported backends), neutral bounded ModWorldSnapshot,
 IModEntityMap and exclusively owned IModComponentMigrator contracts. Persistent IDs

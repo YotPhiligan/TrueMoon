@@ -1,6 +1,6 @@
 # TrueMoon.Kton: самостоятельный модуль физики и ECS Aether
 
-**2026-11-12 — PHYS4 public App/configuration/DI/lifetime реализован и проверен; далее PHYS5 ECS bridge.**
+**2026-11-15 — PHYS5 ECS/session bridge реализован и проверен; Kul ARCH1h.2a также завершён; PHYS6 отдельно.**
 BEPUphysics v2 принят как **приоритетный backend**. Это выбор направления, а не
 утверждение полной App/ECS/platform readiness. Exact beta.33 принят для ограниченного PHYS2 provider scope.
 Пользователь выбрал имя **TrueMoon.Kton**: [решение и источники лора](NAMING.md).
@@ -20,8 +20,9 @@ package D/published R, [bounded storage/transition policy](QUERIES_CONTACTS.md).
 [PHYS4 App/configuration/DI/lifetime завершён](HISTORY.md#phys4-2026-11-12):192checks
 на профиль (96Cobalt+96MicrosoftDI), source/fresh package D/published R;
 [публичное подключение и ownership](APP.md). Current PHYS2–3 regression309×3.
-Далее **PHYS5 — ECS bridge** → PHYS6 — простой персонаж →
-PHYS8 — независимая поставка и измерения. PHYS7 — отдельное необязательное развитие
+**[PHYS5 ECS bridge](#phys5) завершён2026-11-15**: [контракт](ECS_BRIDGE.md),
+[68tests D/R и independent source/publish/fresh](HISTORY.md#phys5-2026-11-15).
+Kul ARCH1h.2a завершён в nonspatial scope; физическая очередь — PHYS6 → PHYS8. PHYS7 — отдельное необязательное развитие
 простого ragdoll, не prerequisite первого модуля.
 
 Подробные задачи физики, включая ECS bridge, ведутся **только здесь**.
@@ -63,7 +64,8 @@ TrueMoon.Kton.Bepu с exact beta.33 и existing IFactory из Contracts. PHYS4 �
 | --- | --- | --- |
 | Physics API (`TrueMoon.Kton`) | World/body/shape/joint identity, descriptors, запросы/результаты, options, ошибки и validation; реализован PHYS1 | Только BCL/System.Numerics, без package/project dependencies; существующий IFactory из Contracts использует provider/App composition root |
 | BEPU provider (`TrueMoon.Kton.Bepu`) | Simulation, pools/dispatcher, shape/joint storage, mapping и публичное App-подключение | Physics API, точные BepuPhysics/BepuUtilities; без Aether/Tooling/UI |
-| Aether bridge (`TrueMoon.Aether.Kton`) | Value components/registry bindings, системы синхронизации и session ownership | Physics API и необходимые Aether Abstractions/Runtime; выбор provider делает composition root |
+| Aether SDK (TrueMoon.Aether.Kton) | Reference-free components, exact scene schemas и command helpers | Neutral Kton + Aether.Abstractions; без Runtime/BEPU/Tooling/UI |
+| Aether bridge (TrueMoon.Aether.Kton.Runtime) | App/DI, registry bindings, reconciliation/Step/writeback/contact projection и session ownership | SDK выше + Aether.Runtime; provider выбирает composition root |
 
 Разделение provider оправдано независимостью публичных контрактов и Mod SDK от
 BEPU. Дополнительная Physics.Abstractions сборка и универсальный plugin framework
@@ -345,13 +347,22 @@ stop/final Dispose и retained-owner retry; repeated cleanup и App isolation п
 <a id="phys5"></a>
 ### PHYS5 — ECS/session bridge Aether
 
-После PHYS4 и согласования ARCH3 contract boundary: value components/registry,
-prepare/update/writeback, reconciliation и исключение из обычного MovementSystem.
-Проверить spawn/delete на phase boundaries, stale/world generation, body modes,
-teleport, parent/scale rejects, next-tick events, pause/Stop/Replace и preparation
-failure с живой old session. Необходимо owned bridge disposal без disposal borrowed
-World/dependencies. Общий Aether checkpoint/IPC расширяется только по согласованной
-capability; headless proof отделён от визуального consumer.
+**Завершён2026-11-15** после PHYS4 и общего [ARCH1j](../engine/SESSION_SUBSYSTEMS.md).
+[Контракт/принятое разделение SDK и Runtime](ECS_BRIDGE.md),
+[проверки/команды](HISTORY.md#phys5-2026-11-15), [manifest/SHA](PHYS5_RESULTS.json).
+
+Value components/schemas и DI factories, full preflight/reconciliation, exact60Hz
+Step/writeback/ExternalMotion, phase spawn/delete/attach/detach/descriptor replacement,
+explicit teleport и next-tick contact entities реализованы. Родители/nonunit scale/
+incomplete roles/stale generations имеют явные outcomes. Scene subsystem owns свой
+physics world, не borrowed World/dependencies; failed cleanup сохраняет owner/lease,
+failed candidate не нарушает old session. Общий checkpoint/IPC не расширялся.
+
+Приёмка:68tests D/R, exact slnx discovery68, common regression104D/R; independent
+source Debug/published Release/fresh NuGet Debug/published Release по42checks/report
+на обоих DI, final owners0/pools0.2new package metadata/payload, solution D/R0errors.
+Headless/CPU acceptance отделена от actual GPU/physical/native-state reload scope.
+Kul ARCH1h.2a также завершён; PHYS6/PHYS8 остаются отдельным физическим развитием.
 
 <a id="phys6"></a>
 ### PHYS6 — простой игровой персонаж

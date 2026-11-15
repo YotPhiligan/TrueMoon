@@ -20,6 +20,11 @@ RootNamespace. Runtime исполняет подготовленную игру 
 
 ## App, конфигурация и ownership
 
+Необязательные подсистемы игровой сессии подключаются через
+[`UseAetherSceneSubsystems`](SESSION_SUBSYSTEMS.md): DI-фабрики, подготовка private
+scene, общий scheduler, actual Play/Pause и retained cleanup до освобождения World.
+Общий слой не зависит от Kton/Kul и не включает их backend автоматически.
+
 ```csharp
 using TrueMoon.Aether.Runtime;
 using TrueMoon.Aether.Runtime.Hosting;

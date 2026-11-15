@@ -20,3 +20,10 @@ Runtime-only root содержит dotnet host/fxr и Microsoft.NETCore.App ну
 FDD assets без SDK в выбранном root/PATH, не удаление SDK с рабочей машины.
 Unload request не является доказательством collection или live mod replacement.
 Native/GPU проверяется отдельным PlayerProbe. [API/границы](../../docs/engine/RUNTIME.md).
+
+ARCH1j,2026-11-15: каждый профиль дополнительно выполняет8checks общего
+session-subsystem слоя: lazy DI factories, независимые session owners, actual
+playback notifications, ExternalMotion без двойного движения, same-tick transform/
+frame и scheduler-before-resources-before-World cleanup. `SceneSubsystemChecks`
+сохраняется в JSON каждого consumer. [Контракт](../../docs/engine/SESSION_SUBSYSTEMS.md).
+Это headless проверка общего слоя, а не подключение Kton/Kul или GPU/native reload.
