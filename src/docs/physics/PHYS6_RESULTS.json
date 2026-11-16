@@ -1,0 +1,319 @@
+{
+  "Stage": "PHYS6",
+  "Completed": true,
+  "Utc": "2026-11-16T16:04:57.0565466+00:00",
+  "Version": "1.2611.16.2-alpha",
+  "BaseRevision": "54640e1eb7adf54d4e79c43afae37c7b80f7b583",
+  "TargetMainVersion": "1.2611.16.1-alpha",
+  "Profile": {
+    "Sdk": "11.0.100",
+    "Backend": "BepuPhysics/BepuUtilities 2.5.0-beta.33",
+    "FixedHz": 60,
+    "Framework": "net11.0",
+    "Platform": "Windows x64",
+    "Features": ";runtime-async=on"
+  },
+  "Tests": [
+    {
+      "Path": "TestResults/PHYS6/accepted-debug.trx",
+      "Configuration": "debug",
+      "Skipped": 0,
+      "Sha256": "EB2BF4A9CB08BB3104FD3411A610EE5330FD65EBE7C5294518C8FA4CDC124C88",
+      "Command": "dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj --no-build --no-restore -c debug --logger trx (exact paths/binlog in accepted-debug.log/.binlog)",
+      "ExistingPHYS5": 68,
+      "Passed": 124,
+      "Failed": 0,
+      "NewPHYS6": 56
+    },
+    {
+      "Path": "TestResults/PHYS6/accepted-release.trx",
+      "Configuration": "release",
+      "Skipped": 0,
+      "Sha256": "65949DFE32CA6797B9EF01F6FE2298AA7A11EB71F530CAF41FD35A317B29C6D6",
+      "Command": "dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj --no-build --no-restore -c release --logger trx (exact paths/binlog in accepted-release.log/.binlog)",
+      "ExistingPHYS5": 68,
+      "Passed": 124,
+      "Failed": 0,
+      "NewPHYS6": 56
+    }
+  ],
+  "SolutionBuilds": {
+    "DebugLog": "TestResults/PHYS6/accepted-solution-debug.log",
+    "ReleaseErrors": 0,
+    "ReleaseLog": "TestResults/PHYS6/accepted-solution-release.log",
+    "DebugErrors": 0,
+    "Scope": "Build all solution projects; not a run of all16test suites"
+  },
+  "IndependentProfiles": [
+    {
+      "Path": "TestResults/PHYS6-delivery-accepted/source-debug.json",
+      "Kind": "PHYS5/PHYS6 session delivery",
+      "Checks": 52,
+      "Name": "source-debug",
+      "Sha256": "63D7AF3F4D4EFDA345A834158FBF9EB6E490A04507EF9D3FFFA0A7DFF13DBC44"
+    },
+    {
+      "Path": "TestResults/PHYS6-delivery-accepted/source-published.json",
+      "Kind": "PHYS5/PHYS6 session delivery",
+      "Checks": 52,
+      "Name": "source-published",
+      "Sha256": "F907A6B802B485924C94D46211CF469C413008E20B3169EAF53217F3D82876FF"
+    },
+    {
+      "Path": "TestResults/PHYS6-delivery-accepted/fresh-Debug.json",
+      "Kind": "PHYS5/PHYS6 session delivery",
+      "Checks": 52,
+      "Name": "fresh-Debug",
+      "Sha256": "11924F8EEEBDEACDA102E4801EC2AD3643D0F85DC899A49C260F68057F457959"
+    },
+    {
+      "Path": "TestResults/PHYS6-delivery-accepted/fresh-Release.json",
+      "Kind": "PHYS5/PHYS6 session delivery",
+      "Checks": 52,
+      "Name": "fresh-Release",
+      "Sha256": "0E0B6C028C5167E3D87C3B98FE63A8D365A212E715A1B5E4B51F11DE11CD8CB3"
+    },
+    {
+      "Path": "TestResults/PHYS6-provider-accepted/source-Debug.json",
+      "Kind": "PHYS2-3 regression",
+      "Checks": 309,
+      "Name": "source-Debug",
+      "Sha256": "6CC6E8558934F6C7BD4ABEF49C0D5399663A261D7E51B1724BAD6D93A4C2D888"
+    },
+    {
+      "Path": "TestResults/PHYS6-provider-accepted/package-Debug.json",
+      "Kind": "PHYS2-3 regression",
+      "Checks": 309,
+      "Name": "package-Debug",
+      "Sha256": "8B048253ABB185F320C09BACABF18309754FA7991BC1BBFFB51A7DD32F5261E6"
+    },
+    {
+      "Path": "TestResults/PHYS6-provider-accepted/package-Release.json",
+      "Kind": "PHYS2-3 regression",
+      "Checks": 309,
+      "Name": "package-Release",
+      "Sha256": "5804099EFBEB720392929086F08DE9442CE7F967530706B621DFC9C1119F6429"
+    }
+  ],
+  "Packages": [
+    {
+      "Id": "TrueMoon.Contracts",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "970066F9ED85B612FB722ABC29F99AFAF0E825CA1D458CAD7AFCE79E52AFCD5B"
+    },
+    {
+      "Id": "TrueMoon.Core",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "86DDA5A3D7DF7FD7FB74F0ABD3FC2F8C6B8685061903701C459EA0C795CA608A"
+    },
+    {
+      "Id": "TrueMoon.Cobalt",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "300DC9F4B19222163210EA363043036E9AE6695746B662D4B8CD028D2434642C"
+    },
+    {
+      "Id": "TrueMoon",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "40EE5599C1C037BAB7CA88E5A088DD4E992F2D216C03F468CA642E9756B795EE"
+    },
+    {
+      "Id": "TrueMoon.Extensions.DependencyInjection",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "608B7726D63E775BF56D641FD0C27034399BEE651752EB9F39DD36B2DCB4E60C"
+    },
+    {
+      "Id": "TrueMoon.Aether.Abstractions",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "673CC9B550D02F1A388B2CDA11763B6FB6C6299047D3DCCF499A7C20139888F9"
+    },
+    {
+      "Id": "TrueMoon.Enerit.Generator",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "FFCC73DBE5AF8ABEAC1931B0DC52D8ABFBBD775F1117AAD3DD4403EB9EB02FEC"
+    },
+    {
+      "Id": "TrueMoon.Enerit",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "E446BF846B7B6C1996618664E336CB1FEF3784893AC70943227A0E5CDF11C26D"
+    },
+    {
+      "Id": "TrueMoon.Mithril",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "960B0320F900541EFF3D70868482FCCD6D3BBC6DE955AD9348299DFE908C8CAE"
+    },
+    {
+      "Id": "TrueMoon.Aether.Runtime",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "FE5EBDFFAF6FC8E441F7B648EF71E9B8B846E1E9BB27EA5EA5A1498ACFF0E05A"
+    },
+    {
+      "Id": "TrueMoon.Kton",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "8D498A57D4F0CA7D8D248C30C59BFAFE9D7EF23B35CD5CFD55859808CD44C4B3"
+    },
+    {
+      "Id": "TrueMoon.Kton.Bepu",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "8018B10AF662C7734675DD355A845D866362ED72FDD0A76B068274CE269FFD2D"
+    },
+    {
+      "Id": "TrueMoon.Aether.Kton",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "4833DD5B3A150459CC580F58950F495EEF1D8C7F6EDA34662E9C683C228E2455"
+    },
+    {
+      "Id": "TrueMoon.Aether.Kton.Runtime",
+      "Version": "1.2611.16.2-alpha",
+      "Sha256": "38D0E70BDB4566BC08CA5460CA36DD35EE3AF1A20DAC750071B81E156A7D025E"
+    }
+  ],
+  "CharacterLicenseFiles": [
+    {
+      "Path": "licenses/characters/LICENSE.BEPU.txt",
+      "Sha256": "4CD13F7A31E98F51C4FB960A115E9A9AB9C42284CA5D5C9B5CCBCF322DE45BFD"
+    },
+    {
+      "Path": "licenses/characters/THIRD-PARTY.md",
+      "Sha256": "58EC661B344DE6DBD9BB6F4A22888C96DDF2E406AF1D041116C88E78E826E51C"
+    },
+    {
+      "Path": "licenses/characters/CharacterMotionConstraint.tt",
+      "Sha256": "A1D6C5E5918B8154ECB7661E8B5D6B9B3F4AF788975B0C7F2BA0FA53688F9855"
+    }
+  ],
+  "FreshGraph": {
+    "ProjectReferences": 0,
+    "Sha256": "FF1A7CDB4B4EEC3EE1F00CFCD302F50590E062730210479049FD63D1FD81FE33",
+    "Libraries": [
+      "BepuPhysics/2.5.0-beta.33",
+      "BepuUtilities/2.5.0-beta.33",
+      "Microsoft.DotNet.PlatformAbstractions/3.1.6",
+      "Microsoft.Extensions.DependencyInjection/11.0.0",
+      "Microsoft.Extensions.DependencyModel/9.0.9",
+      "Silk.NET.Core/2.23.0",
+      "Silk.NET.Vulkan/2.23.0",
+      "TrueMoon/1.2611.16.2-alpha",
+      "TrueMoon.Aether.Abstractions/1.2611.16.2-alpha",
+      "TrueMoon.Aether.Kton/1.2611.16.2-alpha",
+      "TrueMoon.Aether.Kton.Runtime/1.2611.16.2-alpha",
+      "TrueMoon.Aether.Runtime/1.2611.16.2-alpha",
+      "TrueMoon.Cobalt/1.2611.16.2-alpha",
+      "TrueMoon.Contracts/1.2611.16.2-alpha",
+      "TrueMoon.Core/1.2611.16.2-alpha",
+      "TrueMoon.Enerit/1.2611.16.2-alpha",
+      "TrueMoon.Extensions.DependencyInjection/1.2611.16.2-alpha",
+      "TrueMoon.Kton/1.2611.16.2-alpha",
+      "TrueMoon.Kton.Bepu/1.2611.16.2-alpha",
+      "TrueMoon.Mithril/1.2611.16.2-alpha"
+    ]
+  },
+  "FinalResourceOwnership": "Both DI:0published worlds,0active owners,0pool bytes after cleanup",
+  "Delivery": {
+    "Path": "TestResults/PHYS6-delivery-accepted/verification.json",
+    "Command": "pwsh -NoProfile -File ManualTests/KtonEcs/Verify.ps1 -EvidenceDirectory TestResults/PHYS6-delivery-accepted",
+    "Sha256": "BD80C57A5CDB566268A1F7D97BE41ECA86259CC5959FA590D4F62CD147260A80"
+  },
+  "ProviderRegression": {
+    "Path": "TestResults/PHYS6-provider-accepted/verification.json",
+    "Command": "pwsh -NoProfile -File ManualTests/KtonProvider/Verify.ps1 -EvidenceDirectory TestResults/PHYS6-provider-accepted",
+    "Scope": "Existing PHYS2-3 regression; legacy PHYS3 label does not describe current App/ECS readiness",
+    "Sha256": "C0DC1E76BD36B8655D9B3DFEDE6F503E29D302DEF9E4C4F61E2A8B2D2FCE92E8"
+  },
+  "Sources": {
+    "TrueMoon.Kton/IPhysicsWorld.cs": "978D0264078BF454DC3736D09F31DFD6E4B3B0403894C69CBDED5A4D20833444",
+    "TrueMoon.Kton/PACKAGE.md": "E32036937E63B2A9AF42C82CCD656DB1FE3A53B4FF14A6638FEA266931C98F96",
+    "TrueMoon.Kton/PhysicsError.cs": "3242F54CE6FF86828A3CB713FDF548017F01F59E8ABC3AB49FBE88EA106823F9",
+    "TrueMoon.Kton/PhysicsIdentity.cs": "FAF128469C8CC48F168D2689C57656C9BEA449750F5956F7571B1AC9D2B15C6C",
+    "TrueMoon.Kton/PhysicsLimits.cs": "1BEABB229667239AC010037D7C733D1BADDB53B7AA00C7C1C8747B3A26F6212D",
+    "TrueMoon.Kton/PhysicsPose.cs": "67D871C6E6C66AC984286B75E81CC8A4F12E50F6D895A1F413A7FEEF11AF0AAD",
+    "TrueMoon.Kton/PhysicsQualityProfile.cs": "F111685C9A5E3141447BE3E62C337630848DBA1F198EA7F0298EC38FCFDC9861",
+    "TrueMoon.Kton/PhysicsValidation.cs": "EDF0105A385DAAE7A174F04A30DE3E7ECF97897983797B18F08105955819621B",
+    "TrueMoon.Kton/PhysicsWorldCapabilities.cs": "4133714D4471CE7271FD1676C612751F32302AC30936378DF0DDDEA82B65DCBE",
+    "TrueMoon.Kton/PhysicsWorldId.cs": "710687354E3EF893EEB62D9D4B889B3B8597669E902F993E6AC9F1ECEE1EF1BD",
+    "TrueMoon.Kton/PhysicsWorldOptions.cs": "9C11CE82765C6A80F6CC31F0999C6A8772288D8C2B6813DA004845FDF443CDC1",
+    "TrueMoon.Kton/TrueMoon.Kton.csproj": "D76707803E1C2EA30AA97354A236343D1929567051F332B09ADCE7771B6990FA",
+    "TrueMoon.Kton/Bodies/PhysicsBodyCommand.cs": "EFFCAC8FCE070AFB2E52A180E5457104A7F84FB31CA9EA19FB25DFE99556B803",
+    "TrueMoon.Kton/Bodies/PhysicsBodyDescription.cs": "30C3DE44EA80020BEF96F38130B537FBFF7B2D3D844B6FB6B34B8665B451BC38",
+    "TrueMoon.Kton/Bodies/PhysicsBodyId.cs": "836D3E632EFC1BDE9821F1FD8A77447FE670F0674D7BA2F065C8B38E8AF21021",
+    "TrueMoon.Kton/Characters/IPhysicsCharacterWorld.cs": "0CE6D46E04A12E70C46B478287E98DD8C4B342C11E79E9018EB04707E8E3ED8D",
+    "TrueMoon.Kton/Characters/PhysicsCharacterId.cs": "582F7ED76FD582FBE689D8E9CBA63CB2F23F9D80B5C79E78B358C949BC02855C",
+    "TrueMoon.Kton/Characters/PhysicsCharacterOptions.cs": "01216B8084128EA909DBDF530F68F2E51AB46FD3CF25081C3F50AE0939581B26",
+    "TrueMoon.Kton/Contacts/PhysicsContactEvent.cs": "C3956761982CEAE6707C150EFDC8AA4314B0921AD142ACB67743103A3DBCA822",
+    "TrueMoon.Kton/Joints/PhysicsBallSocket.cs": "71A9A4D556134A69A1F46A119773F507D41B473663FCE475E67D06B9F0018A70",
+    "TrueMoon.Kton/Joints/PhysicsJointId.cs": "35DD5DAA686F7D6D63CB418E0D2E12872147B117BC405515AEC20A3096660AC5",
+    "TrueMoon.Kton/Queries/PhysicsQuery.cs": "BC4C527ABC0BC9683F253388838C6B36244FF15C152E1B7FC29661B42C0BC780",
+    "TrueMoon.Kton/Shapes/PhysicsShapeDefinition.cs": "C2D68F22EA00D4814C36BD0B7C3C516930A478DD337C669E0218D03785F4D523",
+    "TrueMoon.Kton/Shapes/PhysicsShapeId.cs": "A739117491728DA8BB485F5EAE4B0AAB08A8F2459EDCD603119DF45401EBDAC0",
+    "TrueMoon.Kton.Bepu/AppConfigurationExtensions.cs": "0F1AB2CF8174B8FB2EE817BFDC9EE3675440B7E33DDEBDA48A5F16C6F1E9045F",
+    "TrueMoon.Kton.Bepu/BepuPhysicsConfigurationSchema.cs": "EE6D723556E33AC782FAB9C1D3CD1A87558C47B5753126C99AB86A834627DB2F",
+    "TrueMoon.Kton.Bepu/BepuPhysicsOptions.cs": "E6F961CF5A757B8E63F6FCB5AEB3488C60BB54A89DD4F29C1E9882A8408CA13D",
+    "TrueMoon.Kton.Bepu/BepuPhysicsWorldFactory.cs": "DADE9B3F7004FC59EA2ABD27A4EE54223B2A6F3470BA31D9C0F36180504D3F32",
+    "TrueMoon.Kton.Bepu/BepuResourceSnapshot.cs": "5EC45DDCA66891BA492E4A444095DC650D1010A2151014C652FE3961719D9771",
+    "TrueMoon.Kton.Bepu/BepuWorld.Bodies.cs": "8B668B74C7A4CC17594E279DD1D496CAB83F3041AF269C62C13916A282839626",
+    "TrueMoon.Kton.Bepu/BepuWorld.Characters.cs": "398B4373572144F2BEEAF85D151F5A51308FEF725CD5FD638427D954114B6B44",
+    "TrueMoon.Kton.Bepu/BepuWorld.Commands.cs": "AA185FEFEA0D3136524251BF910523C2740B36DF18E0396F57D4B9F806431652",
+    "TrueMoon.Kton.Bepu/BepuWorld.Contacts.cs": "1A776F15DB1FC008CCDE4CC41DA2DAB373259BD809C527CBEB67887FD00622A4",
+    "TrueMoon.Kton.Bepu/BepuWorld.cs": "464A7E8F001EC59AE852D22DA6FB9C529D580ADEC6799E61AED3401CDF9DC82B",
+    "TrueMoon.Kton.Bepu/BepuWorld.Joints.cs": "123292CACE1E3DA65B2794E4F80D7A8BEFD4C216F825FE3FB58F7F67B92770B3",
+    "TrueMoon.Kton.Bepu/BepuWorld.Queries.cs": "917BC95FD09EDD6964F9348C742D65D161BFCD7871D52F4E884670DD4A4AB33F",
+    "TrueMoon.Kton.Bepu/BepuWorld.Shapes.cs": "9733E3E8BCD17D92092A5EBD6F84D7D6A8B1375AE4B90B5FAC29943C7FCF7082",
+    "TrueMoon.Kton.Bepu/BepuWorld.Step.cs": "DE8029D63B329A011CF65AEC5E667838F8E5066BCBB7EEAAAD0FF7FBED0FFCD3",
+    "TrueMoon.Kton.Bepu/ContactState.cs": "5CADB36FA9F591DBB25E4171F1855A7C080B17A3590B41619E7EC4E6F15C7B2C",
+    "TrueMoon.Kton.Bepu/FaultInjection.cs": "63AD117F7421717B878030C8B6734444F4FE82B91186A32F310C99974CF3CEDD",
+    "TrueMoon.Kton.Bepu/GenerationalSlots.cs": "5A2014592297F2C62BBB21DD4297330895478376D679C1FFCD24B8C44F8EEFC5",
+    "TrueMoon.Kton.Bepu/NarrowPhase.cs": "0C43A741FB5DD25ECCC87EFF2B34FDF3118FB65108DEB526C3BF0EF843AA4DA8",
+    "TrueMoon.Kton.Bepu/PACKAGE.md": "B7259B7AF5107D7DA9CCD8898DF89A4AA4A52475DA98FE89C6B17F7E43D3256A",
+    "TrueMoon.Kton.Bepu/TrueMoon.Kton.Bepu.csproj": "1ACBA0F9B87457A1068F977EAB789DCE9B23BA3B7F19672C5C1A8A7E0C55BBB8",
+    "TrueMoon.Kton.Bepu/WorldEntries.cs": "6FE4800F66D41F6DE24483DC4F43F66F639BAB3F2F9DC8EFEB177D4DF339E633",
+    "TrueMoon.Kton.Bepu/WorldResources.cs": "1DCBD0EFD366A78BB2CA7B70B335C5766ED4DD6ADABEA9D41A13461648D6331A",
+    "TrueMoon.Kton.Bepu/Characters/CharacterControllers.cs": "EDB9D16F4CEA6309B08BC106A6B3C0015DD481D0CAE42E094692D360F2C96AF7",
+    "TrueMoon.Kton.Bepu/Characters/CharacterMotionConstraint.cs": "A6267726FB80272EDDFB32A80611F89038AD69C152DACCE336FDEDBCD55FA3F1",
+    "TrueMoon.Kton.Bepu/Characters/CharacterMotionConstraint.tt": "A1D6C5E5918B8154ECB7661E8B5D6B9B3F4AF788975B0C7F2BA0FA53688F9855",
+    "TrueMoon.Kton.Bepu/Characters/LICENSE.BEPU.txt": "4CD13F7A31E98F51C4FB960A115E9A9AB9C42284CA5D5C9B5CCBCF322DE45BFD",
+    "TrueMoon.Kton.Bepu/Characters/THIRD-PARTY.md": "58EC661B344DE6DBD9BB6F4A22888C96DDF2E406AF1D041116C88E78E826E51C",
+    "TrueMoon.Kton.Bepu/Hosting/AppPhysicsWorldFactory.cs": "A8304D87B0E1DBCB609270B3F192EAA568A1EB2E491CED7E4947B27E4A89FC3C",
+    "TrueMoon.Kton.Bepu/Hosting/BepuPhysicsHost.cs": "A2F8A22F9BDB49951A3DB23C4E002C22646E595E457CC4CE0A4369AAFB06D0ED",
+    "TrueMoon.Kton.Bepu/Hosting/PhysicsLifecycle.cs": "D439532EFF42306BE0709AD061A25F4F1524A2E3B05487371E57BCB9EDCC98E0",
+    "TrueMoon.Aether.Kton/PACKAGE.md": "08EC8C0B7A461A7F2B2A3CE3912C2A693862BFFEECD1237CA0AA1AE520618F61",
+    "TrueMoon.Aether.Kton/PhysicsBody.cs": "9959F6F539A3187888696FAD9CF1980A825EE791AA2890134EE290DA53B4EEFE",
+    "TrueMoon.Aether.Kton/PhysicsCharacter.cs": "2AC14FCC6244EFC497B26EA6AEA020D018F23760F1A40E442BE58AF924E5A3EC",
+    "TrueMoon.Aether.Kton/PhysicsComponentSchemas.cs": "286BE3CF24B26D7A70BC9EACECE3D92AC9C39CB4E5C448F58FBE37623262CA8B",
+    "TrueMoon.Aether.Kton/PhysicsContact.cs": "73086E6B4B2B35FDA5FC9A800B4B6EEA7C44E7E31C3123BDBC8A1C70FCB5221E",
+    "TrueMoon.Aether.Kton/PhysicsEntityCommands.cs": "FD636DA0E2E497D3563771FD9E975680F7A90B3A9E61EA44EE75441ACD4DF3D4",
+    "TrueMoon.Aether.Kton/PhysicsTeleport.cs": "5F5DF746CFD78EA63F31888E22E6203E158C1A86C09D55DED6373041E12CC9FD",
+    "TrueMoon.Aether.Kton/PhysicsVelocity.cs": "2FFB9241DD96EDD08EE51588F366E7C9F77C3B34DD95851710FE933D6F42FF7E",
+    "TrueMoon.Aether.Kton/TrueMoon.Aether.Kton.csproj": "A4613F60AC5988E15156542378CB317CE79C8759CB336C2D2D760B87B9724C2A",
+    "TrueMoon.Aether.Kton.Runtime/AppConfigurationExtensions.cs": "C91470FDFBF54EC7F2C862C594FEC28C80789A169EFD9F571716EF338AE383DC",
+    "TrueMoon.Aether.Kton.Runtime/PACKAGE.md": "29D2C140B7C02CFD00CD22A71D56F4E03901F4CD334A1DDA80263415BF7747FB",
+    "TrueMoon.Aether.Kton.Runtime/PhysicsBridgeConfigurationSchema.cs": "3D810BDC96FAE52B201564F072F58BCC90A31450832012FB4E2AB274CB69A9C6",
+    "TrueMoon.Aether.Kton.Runtime/PhysicsBridgeOptions.cs": "DA6E8EFC0CFE417B3C6DB25A3FAB673A4E4CA75B2CD8285FB7E047A2AA68422D",
+    "TrueMoon.Aether.Kton.Runtime/PhysicsBridgeSystem.cs": "885B0D28DE21B7D66FD06E954895F95F8C6DB7F7CCA585F8AF12EE8146A231D8",
+    "TrueMoon.Aether.Kton.Runtime/PhysicsComponentRegistry.cs": "9284F2DD45E663EEA7C4DAC99DE6327710193C853689F039B17FC7539AF9B541",
+    "TrueMoon.Aether.Kton.Runtime/PhysicsSceneSubsystem.Characters.cs": "7EEBB887524A512A2597FFE00483464F9D43F91F76C43C08A03B2CFEE0454EEC",
+    "TrueMoon.Aether.Kton.Runtime/PhysicsSceneSubsystem.cs": "BDDF0B10CF60396CECEAB2E30AA05610D4DD897F9ED14F8C5210FCE0E94B63B8",
+    "TrueMoon.Aether.Kton.Runtime/PhysicsSceneSubsystemFactory.cs": "EB841C8FDA427B71DDA3FFB9409B4F201A4DBE12373513B6C3D16B42DAF54489",
+    "TrueMoon.Aether.Kton.Runtime/TrueMoon.Aether.Kton.Runtime.csproj": "879EC26BC3EF783DEB9DA4CF6DFAD8D12A3084946DD3411060C2D8B7C24BF9F4",
+    "ManualTests/KtonEcs/Probe.csproj": "154580C73CC90AEC0857B3AFAAF52B3A4BE6B9DDC85E92828EC053249F09F098",
+    "ManualTests/KtonEcs/Program.cs": "84E239E67B93F6A6E7CD63BC800C2B9C9BA032CA11B790720B3F6285FB083BA2",
+    "ManualTests/KtonEcs/README.md": "784C21C355711F82AE336FA648DC57D19E04BF8951E65B0EF8D560072BBBC52E",
+    "ManualTests/KtonEcs/Verify.ps1": "938B6CD02296462BC75269C1A63C97B1B6768752EA6ED962634DAAD758C37072",
+    "Directory.Build.props": "6DEDE1D57D03957137CA9A780A09B8E9C4CA0222AF6E09E37AC68EA46926AE3E",
+    "Directory.Packages.props": "6DD33BB1EE3D8CE963AF8F8E3F727085000DBC5DF1E598B651B9033BB1970589",
+    "global.json": "473EC54A06616270476FE4702BA94939A4CEA0FB1A786094B3B2466EA8E350F6",
+    "ManualTests/BuildProfile.ps1": "9504E7F76846AAD327364BC65D06779F119F55A474B76005A4571450A75D79DF",
+    "TrueMoon.Aether.Kton.Tests/FaultWorldFactory.cs": "D90ADB797FBAF1F9CF589E69B98A807BE60F364EA1D4634E1B0DB4B3A6D6D775",
+    "TrueMoon.Aether.Kton.Tests/PhysicsCharacterSceneTests.cs": "153BA6F72B4B84E19176FE7F04425ADECCD992C3D3C1BBEC6110A73EC9BDC7BA",
+    "TrueMoon.Aether.Kton.Tests/PhysicsContactTests.cs": "975D714A22439FC280DA30166815162243267D374164D7032B51ED87D234E6D8",
+    "TrueMoon.Aether.Kton.Tests/PhysicsContractsTests.cs": "A20DEC29E3AC82D198EB95F4518B4BEFF5F6E00396B96A470F3979D026DEE2C9",
+    "TrueMoon.Aether.Kton.Tests/PhysicsFixture.cs": "BEEB27F9994F85CC34992EBD16F752B19A21AA9D79052006FC9D2973DF5819E0",
+    "TrueMoon.Aether.Kton.Tests/PhysicsGraph.cs": "28999E5D8F01900A2309652D2556DD252910CCD0D6D9A4F95450B3223B011E6A",
+    "TrueMoon.Aether.Kton.Tests/PhysicsLifecycleTests.cs": "EEF1DD179672AE45E1D113DCCA159762FC6A170DE40BAD5D55FC189ABAFC86B2",
+    "TrueMoon.Aether.Kton.Tests/PhysicsReconciliationTests.cs": "B69F8C28912815849D43C1BBAD4E9430CA34AC7DA4D6759A106535F8FB1EB051",
+    "TrueMoon.Aether.Kton.Tests/PhysicsRegistrationTests.cs": "86FD5D98085557F4C81B0FAB049D839D7CBE9A2E7292604ED180C488AE22E528",
+    "TrueMoon.Aether.Kton.Tests/PhysicsSceneSubsystemTests.cs": "1E250541E2EE79F92278645014C294F54FC23C28FA174C7E8C3118AF0FE363CA",
+    "TrueMoon.Aether.Kton.Tests/ProviderCharacterTests.cs": "8A0EF6DA34330A8F6ACB3AF42F81FC77552D2A81565BC80A08F15AA8FEF4B8F5",
+    "TrueMoon.Aether.Kton.Tests/ProviderCharacterValidationTests.cs": "B3E6FAFC956144366D9BDA8B41C148B4A71AC94DFEB564393FE6A359FF7B2EC6"
+  },
+  "Scope": "PHYS6 upright capsule, support/slopes/jump, dynamic/moving bodies and optional Aether schema/session integration. CPU/headless only; no auto-stairs,crouch,root motion,air steering,GPU,full16suite rerun,mod-state migration,other OS or PHYS8 performance/release acceptance.",
+  "Retention": "Raw TestResults and temporary closed feed/cache are local ignored artifacts; this versioned manifest and HISTORY preserve counts, scope, commands and hashes. Archives are not published to a remote feed."
+}

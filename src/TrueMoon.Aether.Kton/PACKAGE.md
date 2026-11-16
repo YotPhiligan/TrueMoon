@@ -1,5 +1,15 @@
 # TrueMoon.Aether.Kton
 
+PHYS6: add the optional `PhysicsComponentSchemas.Character` v1 schema to a scene
+with an upright dynamic `PhysicsBody` capsule. `PhysicsCharacter` holds settings;
+`PhysicsCharacterInput` holds persistent world XZ velocity and a monotonically
+increasing `JumpSequence`. Increase the sequence for each jump; retaining it never
+repeats the jump. `PhysicsCharacterState` is physics-owned support output, updated
+in the same Movement tick as the pose. Input/state and native handles are not
+persisted. Runtime attachment/detachment uses `PhysicsEntityCommands.AddCharacter`
+and `RemoveCharacter`; `RemoveBody` clears character roles too. Automatic stairs,
+crouch, air steering and root motion are outside this profile.
+
 Optional reference-free physics components, exact scene schemas and phase-command
 helpers for Aether games/mods. References Aether.Abstractions and backend-neutral
 TrueMoon.Kton; no Runtime, Tooling, UI or BEPU dependency. Use matching package versions.

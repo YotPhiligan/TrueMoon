@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><AssemblyName>KtonPerformanceProbe</AssemblyName>
+    <RootNamespace>TrueMoon.ManualTests.KtonPerformance</RootNamespace>
+    <IsPackable>false</IsPackable><UseAppHost>false</UseAppHost>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+</Project>

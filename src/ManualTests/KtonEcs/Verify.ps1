@@ -10,13 +10,13 @@ if(Test-Path -LiteralPath $evidence){throw 'Use a fresh evidence directory.'}
 $run=Join-Path ([IO.Path]::GetTempPath()) ('TrueMoon-PHYS5-'+[Guid]::NewGuid().ToString('N'))
 foreach($directory in @($evidence,$run,"$run/feed","$run/working")){[void][IO.Directory]::CreateDirectory($directory)}
 $profile=Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
-$version=$profile.Version+'.phys5.'+(Get-Date -Format 'yyyyMMddHHmmss')
+$version=$profile.Version
 $family=@('TrueMoon.Contracts','TrueMoon.Core','TrueMoon.Cobalt','TrueMoon','TrueMoon.Extensions.DependencyInjection',
  'TrueMoon.Aether.Abstractions','TrueMoon.Enerit.Generator','TrueMoon.Enerit','TrueMoon.Mithril','TrueMoon.Aether.Runtime',
  'TrueMoon.Kton','TrueMoon.Kton.Bepu','TrueMoon.Aether.Kton','TrueMoon.Aether.Kton.Runtime')
 $feed=[IO.Path]::GetFullPath("$run/feed");$config="$run/NuGet.Config"
 [IO.File]::WriteAllText($config,'<configuration><packageSources><clear/><add key="closed" value="'+[Security.SecurityElement]::Escape($feed)+'"/></packageSources><fallbackPackageFolders><clear/></fallbackPackageFolders></configuration>')
-$report=[ordered]@{Completed=$false;Stage='PHYS5';Version=$version;BuildProfile=$profile;RunDirectory=$run;Commands=@();Reports=@();Packages=@();ExternalPackages=@();Graph=$null;Sources=@();Failure=$null;Scope='Actual BEPU scene integration; headless CPU snapshots. No new GPU/physical/device-loss acceptance.'}
+$report=[ordered]@{Completed=$false;Stage='PHYS6';Version=$version;BuildProfile=$profile;RunDirectory=$run;Commands=@();Reports=@();Packages=@();ExternalPackages=@();Graph=$null;Sources=@();Failure=$null;Scope='PHYS5 regression and PHYS6 capsule controller scene integration; headless CPU snapshots. No new GPU/physical/device-loss acceptance.'}
 function Save-Report{$report|ConvertTo-Json -Depth 14|Set-Content -LiteralPath "$evidence/verification.json" -Encoding utf8}
 function Invoke-Checked([string]$name,[string[]]$arguments,[string]$cache="$run/cache"){
  if($arguments[0] -in @('build','publish','pack','restore','msbuild')){$arguments+="-bl:$evidence/$name-{}.binlog"}
@@ -51,11 +51,12 @@ function Probe([string]$name,[string]$output,[string]$cache="$run/cache"){
  $report.Reports+=@{Name=$name;Path=$path;Checks=$proof.CheckCount;Sha256=(Get-FileHash -LiteralPath $path).Hash};Save-Report
 }
 try{
- foreach($directory in @('TrueMoon.Aether.Kton','TrueMoon.Aether.Kton.Runtime','ManualTests/KtonEcs')){
-  foreach($file in Get-ChildItem -LiteralPath "$workspace/$directory" -File -Recurse|Where-Object{ $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.Extension -in @('.cs','.csproj','.ps1')}){
+ foreach($directory in @('TrueMoon.Kton','TrueMoon.Kton.Bepu','TrueMoon.Aether.Kton','TrueMoon.Aether.Kton.Runtime','ManualTests/KtonEcs')){
+  foreach($file in Get-ChildItem -LiteralPath "$workspace/$directory" -File -Recurse|Where-Object{ $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.Extension -in @('.cs','.csproj','.ps1','.md','.txt','.tt')}){
    $report.Sources+=@{Path=$file.FullName;Sha256=(Get-FileHash -LiteralPath $file.FullName).Hash}
   }
  }
+ $report.Sources+=@{Path="$workspace/Directory.Build.props";Sha256=(Get-FileHash -LiteralPath "$workspace/Directory.Build.props").Hash}
  $external=@{}
  foreach($id in @($family+'TrueMoon.Cobalt.Generator')){
   $assets=Get-Content -LiteralPath "$workspace/$id/obj/project.assets.json" -Raw|ConvertFrom-Json -AsHashtable
@@ -78,6 +79,17 @@ try{
   Invoke-Checked "pack-$id" @('pack',"$workspace/$id/$id.csproj",'-c','Release','--no-restore','--artifacts-path',$sourceArtifacts,'-o',$feed,"-p:Version=$version",'--verbosity','quiet')
   $archive="$feed/$id.$version.nupkg";$report.Packages+=@{Id=$id;Version=$version;Path=$archive;Sha256=(Get-FileHash -LiteralPath $archive).Hash}
  }
+ $archive=[IO.Compression.ZipFile]::OpenRead("$feed/TrueMoon.Kton.Bepu.$version.nupkg")
+ try{
+  $report.CharacterLicenseFiles=@()
+  foreach($name in @('LICENSE.BEPU.txt','THIRD-PARTY.md','CharacterMotionConstraint.tt')){
+   $entry=$archive.GetEntry("licenses/characters/$name");if(!$entry){throw "Missing controller license/provenance: $name"}
+   $stream=$entry.Open();try{$hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream))}finally{$stream.Dispose()}
+   if($hash -ne (Get-FileHash -LiteralPath "$workspace/TrueMoon.Kton.Bepu/Characters/$name").Hash){throw "Controller notice content mismatch: $name"}
+   $report.CharacterLicenseFiles+=@{Path=$entry.FullName;Sha256=$hash}
+  }
+ }finally{$archive.Dispose()}
+ Save-Report
  $fresh=Consumer 'fresh' $true;$cache="$run/fresh-cache";$freshArtifacts="$run/fresh-artifacts"
  Invoke-Checked 'fresh-restore' @('restore',$fresh,'--configfile',$config,'--artifacts-path',$freshArtifacts) $cache
  $assetFiles=@(Get-ChildItem -LiteralPath "$freshArtifacts/obj" -Recurse -Filter project.assets.json)

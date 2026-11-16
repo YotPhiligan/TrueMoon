@@ -18,7 +18,7 @@ namespace TrueMoon.Aether.Kton.Runtime;
 /// <remarks>Calls are externally serialized. Dispose after scheduler cleanup and before the scene/App dependencies.
 /// Native cleanup failure retains the world for retry. Physics owns root unit-scale poses; use PhysicsTeleport for
 /// discontinuities and PhysicsEntityCommands for complete phase-boundary attachment/detachment.</remarks>
-public sealed class PhysicsSceneSubsystem : ISceneSubsystem
+public sealed partial class PhysicsSceneSubsystem : ISceneSubsystem
 {
     /// <summary>Exact version-one scene duration. Both current Kton quality profiles simulate60Hz.</summary>
     public static TimeSpan FixedStep { get; } = TimeSpan.FromSeconds(1d / 60);
@@ -29,6 +29,8 @@ public sealed class PhysicsSceneSubsystem : ISceneSubsystem
     private readonly Dictionary<EntityHandle, Entry> _entries = [];
     private readonly Dictionary<PhysicsBodyId, EntityHandle> _entities = [], _retired = [];
     private readonly List<Candidate> _candidates = [];
+    private readonly List<Candidate> _candidatePool = [];
+    private readonly List<EntityHandle> _removals = [];
     private readonly Dictionary<EntityHandle, Candidate> _present = [];
     private readonly List<PhysicsBodyCommand> _commands = [];
     private readonly List<EntityHandle> _oldEvents = [];
@@ -78,11 +80,13 @@ public sealed class PhysicsSceneSubsystem : ISceneSubsystem
         {
             if (!_world.HasComponent<PhysicsVelocity>(candidate.Entity)) _world.AddComponent(candidate.Entity, candidate.Velocity);
             _world.AddComponent(candidate.Entity, new ExternalMotion());
+            InitializeCharacterRoles(candidate);
         }
         token.ThrowIfCancellationRequested();
         var description = new A.EcsSystemDescription("kton.physics", EcsPhase.Movement).Before("builtin.movement")
             .Read<PhysicsBody>().Read<PhysicsTeleport>().Read<ExternalMotion>().Read<TransformParent>().Read<WorldTransform>()
             .Write<LocalTransform>().Write<PhysicsVelocity>().Write<PhysicsContact>();
+        description.Read<PhysicsCharacter>().Read<PhysicsCharacterInput>().Write<PhysicsCharacterState>();
         Systems = [new(description, new Factory<A.ISystem, World>(world =>
         {
             if (!ReferenceEquals(world, _world)) throw new InvalidOperationException("Physics system World mismatch.");
@@ -92,6 +96,7 @@ public sealed class PhysicsSceneSubsystem : ISceneSubsystem
     private void Capture(bool initial, CancellationToken token)
     {
         var physics = _physics!; _candidates.Clear(); _present.Clear();
+        foreach (var candidate in _candidatePool) candidate.Reset();
         _world.Query<PhysicsBody>().ForEach((EntityHandle entity, in PhysicsBody descriptor) =>
         {
             token.ThrowIfCancellationRequested();
@@ -103,8 +108,7 @@ public sealed class PhysicsSceneSubsystem : ISceneSubsystem
                 throw new NotSupportedException("Physics PHYS5 requires a root entity with unit scale.");
             if (initial)
             {
-                var source = _scene.Entities.Single(pair => pair.Value == entity);
-                if (_scene.Scene.Entities[source.Key].ParentId != null) throw new NotSupportedException("Physics PHYS5 requires root scene entities.");
+                ValidateAuthoredRoot(entity);
                 if (_world.HasComponent<ExternalMotion>(entity)) throw new InvalidOperationException("Physics cannot take another motion owner's marker.");
             }
             else if (!_world.HasComponent<TransformParent>(entity) || !_world.HasComponent<WorldTransform>(entity) || !_world.HasComponent<ExternalMotion>(entity) || !_world.HasComponent<PhysicsVelocity>(entity))
@@ -124,36 +128,56 @@ public sealed class PhysicsSceneSubsystem : ISceneSubsystem
             // Live provider lookup is performed by CreateBody. This pure preflight uses a structurally valid shape identity.
             var id = previous?.Shape ?? new PhysicsShapeId(physics.Id, 0, 1);
             var checkedVelocity = previous != null && previous.Descriptor == descriptor && previous.LastVelocity == velocity ? default : velocity;
-            PhysicsValidation.ValidateBody(physics.Options, Description(id, descriptor, transform, checkedVelocity), shape).ThrowIfFailure();
-            var candidate = new Candidate(entity, descriptor, transform, velocity, teleport, shape, previous);
+            var description = previous?.Descriptor == descriptor ? previous.BodyDescription : Description(id, descriptor, transform, velocity);
+            PhysicsValidation.ValidateBody(physics.Options, description, shape, new(transform.Position, transform.Rotation), checkedVelocity.Linear, checkedVelocity.Angular).ThrowIfFailure();
+            var index = _candidates.Count;
+            if (index == _candidatePool.Count) _candidatePool.Add(new());
+            var candidate = _candidatePool[index];
+            candidate.Entity = entity; candidate.Descriptor = descriptor; candidate.Transform = transform; candidate.Velocity = velocity;
+            candidate.Teleport = teleport; candidate.Shape = shape; candidate.Previous = previous;
+            CaptureCharacter(candidate, initial);
             _present.Add(entity, candidate); _candidates.Add(candidate);
         });
         foreach (var entity in _entries.Keys)
             if (!_present.ContainsKey(entity) && _world.IsAlive(entity) &&
                 (_world.HasComponent<ExternalMotion>(entity) || _world.HasComponent<PhysicsVelocity>(entity) || _world.HasComponent<PhysicsTeleport>(entity)))
                 throw new InvalidDataException("Physics detachment must remove all owned roles; use PhysicsEntityCommands.RemoveBody.");
-        var masses = _candidates.Where(candidate => candidate.Descriptor.Motion == PhysicsBodyMotion.Dynamic).Select(candidate => candidate.Descriptor.Mass).ToArray();
-        if (masses.Length != 0) PhysicsValidation.ValidateMassRatio(masses.Min(), masses.Max()).ThrowIfFailure();
+        ValidateCharacterRoles();
+        var minimum = float.PositiveInfinity; var maximum = float.NegativeInfinity;
+        foreach (var candidate in _candidates)
+        {
+            if (candidate.Descriptor.Motion != PhysicsBodyMotion.Dynamic) continue;
+            minimum = MathF.Min(minimum, candidate.Descriptor.Mass); maximum = MathF.Max(maximum, candidate.Descriptor.Mass);
+        }
+        if (minimum != float.PositiveInfinity) PhysicsValidation.ValidateMassRatio(minimum, maximum).ThrowIfFailure();
         _candidates.Sort(static (a,b) => a.Entity.Index.CompareTo(b.Entity.Index));
     }
     private void Reconcile()
     {
-        var physics = _physics!; _retired.Clear();
-        foreach (var pair in _entries.ToArray())
+        var physics = _physics!; _retired.Clear(); _removals.Clear();
+        foreach (var pair in _entries)
         {
             if (_present.TryGetValue(pair.Key, out var candidate) && candidate.Descriptor == pair.Value.Descriptor) continue;
-            var entry = pair.Value; physics.RemoveBody(entry.Body); physics.RemoveShape(entry.Shape);
-            _retired.Add(entry.Body, pair.Key); _entities.Remove(entry.Body); _entries.Remove(pair.Key);
+            _removals.Add(pair.Key);
+        }
+        foreach (var entity in _removals)
+        {
+            var entry = _entries[entity]; RemoveController(entry); physics.RemoveBody(entry.Body); physics.RemoveShape(entry.Shape);
+            _retired.Add(entry.Body, entity); _entities.Remove(entry.Body); _entries.Remove(entity);
         }
         foreach (var candidate in _candidates)
         {
             if (_entries.ContainsKey(candidate.Entity)) continue;
             var shape = physics.CreateShape(candidate.Shape);
-            var body = physics.CreateBody(Description(shape, candidate.Descriptor, candidate.Transform, candidate.Velocity));
-            var entry = new Entry(candidate.Descriptor, shape, candidate.Shape, body, candidate.Transform, candidate.Velocity)
-            { LastTeleport = candidate.Previous?.LastTeleport ?? default };
+            var description = Description(shape, candidate.Descriptor, candidate.Transform, candidate.Velocity);
+            var body = physics.CreateBody(description);
+            var entry = new Entry(candidate.Descriptor, shape, candidate.Shape, body, candidate.Transform, candidate.Velocity, description)
+            { LastTeleport = candidate.Previous?.LastTeleport ?? default, LastJumpSequence = candidate.Previous?.LastJumpSequence ?? 0,
+              LastCharacterState = candidate.Previous?.LastCharacterState ?? default };
             _entries.Add(candidate.Entity, entry); _entities.Add(body, candidate.Entity);
         }
+        ReconcileCharacters();
+        _removals.Clear();
     }
     internal void Advance(A.EcsSystemContext context)
     {
@@ -183,6 +207,7 @@ public sealed class PhysicsSceneSubsystem : ISceneSubsystem
                     _commands.Add(new(PhysicsCommandKind.SetVelocity, entry.Body, velocity.Linear, velocity.Angular));
             }
             if (_commands.Count != 0) _physics.ApplyCommands(CollectionsMarshal.AsSpan(_commands));
+            SubmitCharacterInputs();
             var result = _physics.Step(context.TickNumber); LastCompletedTick = result.Tick;
             if (result.ContactEventCount > _maximumEvents) throw new PhysicsException(new(PhysicsErrorCode.ContactOverflow, "Bridge.ContactProjection"));
             var count = _physics.CopyContactEvents(_raw); _contacts.Clear();
@@ -199,6 +224,7 @@ public sealed class PhysicsSceneSubsystem : ISceneSubsystem
                 var transform = new LocalTransform(state.Pose.Position, state.Pose.Orientation, Vector3.One);
                 var velocity = new PhysicsVelocity(state.LinearVelocity, state.AngularVelocity);
                 _world.SetComponent(candidate.Entity, transform); _world.SetComponent(candidate.Entity, velocity);
+                PublishCharacter(candidate.Entity, entry);
                 entry.LastTransform = transform; entry.LastVelocity = velocity;
                 if (candidate.Teleport is { } request) entry.LastTeleport = request;
             }
@@ -228,7 +254,7 @@ public sealed class PhysicsSceneSubsystem : ISceneSubsystem
         try
         {
             _physics?.Dispose(); _physics = null;
-            _entries.Clear(); _entities.Clear(); _retired.Clear(); _candidates.Clear(); _present.Clear(); _commands.Clear(); _oldEvents.Clear(); _contacts.Clear(); _raw = [];
+            _entries.Clear(); _entities.Clear(); _retired.Clear(); _candidates.Clear(); _candidatePool.Clear(); _removals.Clear(); _present.Clear(); _commands.Clear(); _oldEvents.Clear(); _contacts.Clear(); _raw = [];
             Systems = []; _disposed = true;
         }
         finally { _busy = false; }
@@ -238,16 +264,49 @@ public sealed class PhysicsSceneSubsystem : ISceneSubsystem
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_busy || _disposing || _physics?.State != PhysicsWorldState.Ready) throw new InvalidOperationException("Physics subsystem is not ready.");
     }
-    private sealed record Candidate(EntityHandle Entity, PhysicsBody Descriptor, LocalTransform Transform, PhysicsVelocity Velocity,
-        PhysicsTeleport? Teleport, PhysicsShapeDefinition Shape, Entry? Previous);
-    private sealed class Entry(PhysicsBody descriptor, PhysicsShapeId shape, PhysicsShapeDefinition definition, PhysicsBodyId body, LocalTransform transform, PhysicsVelocity velocity)
+    private void ValidateAuthoredRoot(EntityHandle entity)
+    {
+        foreach (var pair in _scene.Entities)
+        {
+            if (pair.Value != entity) continue;
+            if (_scene.Scene.Entities[pair.Key].ParentId != null) throw new NotSupportedException("Physics PHYS5 requires root scene entities.");
+            return;
+        }
+        throw new InvalidDataException("Physics entity is absent from the private authored scene.");
+    }
+    // Per-world bounded scratch, reset before every full capture. Never a published entity/descriptor cache.
+    private sealed class Candidate
+    {
+        internal EntityHandle Entity;
+        internal PhysicsBody Descriptor;
+        internal LocalTransform Transform;
+        internal PhysicsVelocity Velocity;
+        internal PhysicsTeleport? Teleport;
+        internal PhysicsShapeDefinition Shape = null!;
+        internal Entry? Previous;
+        internal PhysicsCharacter? Character;
+        internal PhysicsCharacterInput Input;
+        internal TrueMoon.Kton.Characters.PhysicsCharacterOptions? CharacterOptions;
+        internal void Reset()
+        {
+            Entity = default; Descriptor = default; Transform = default; Velocity = default; Teleport = null;
+            Shape = null!; Previous = null; Character = null; Input = default; CharacterOptions = null;
+        }
+    }
+    private sealed class Entry(PhysicsBody descriptor, PhysicsShapeId shape, PhysicsShapeDefinition definition, PhysicsBodyId body, LocalTransform transform, PhysicsVelocity velocity, PhysicsBodyDescription description)
     {
         internal PhysicsBody Descriptor = descriptor;
+        internal readonly PhysicsBodyDescription BodyDescription = description;
         internal PhysicsShapeId Shape = shape;
         internal PhysicsShapeDefinition ShapeDefinition = definition;
         internal PhysicsBodyId Body = body;
         internal LocalTransform LastTransform = transform;
         internal PhysicsVelocity LastVelocity = velocity;
         internal PhysicsTeleport LastTeleport;
+        internal TrueMoon.Kton.Characters.PhysicsCharacterId Character;
+        internal PhysicsCharacter? CharacterDescriptor;
+        internal TrueMoon.Kton.Characters.PhysicsCharacterOptions? CharacterOptions;
+        internal ulong LastJumpSequence;
+        internal PhysicsCharacterState LastCharacterState;
     }
 }

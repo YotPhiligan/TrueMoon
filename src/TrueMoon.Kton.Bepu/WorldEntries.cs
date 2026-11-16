@@ -31,6 +31,7 @@ internal sealed class BodyEntry(PhysicsBodyId id, PhysicsBodyDescription descrip
     internal CollidableReference Collider;
     internal int JointReferences;
     internal Vector3 PendingImpulse;
+    internal CharacterEntry? Character;
 }
 internal sealed class JointEntry(PhysicsJointId id, PhysicsBallSocket description, ConstraintHandle backend)
 {

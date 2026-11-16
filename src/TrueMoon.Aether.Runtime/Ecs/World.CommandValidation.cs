@@ -16,6 +16,17 @@ public sealed partial class World
         private readonly Dictionary<(EntityHandle Entity, Type Type), bool> _memberships = [];
         private readonly HashSet<Type> _newTypes = [];
 
+        internal void ResetFromWorld()
+        {
+            Clear(); _nextIndex = world._nextIndex; _originalFreeCount = world._freeCount;
+        }
+        // Drop all component Type references on every exit, including cancellation/failure.
+        // The container array types themselves refer only to shared BCL/SDK types.
+        internal void Clear()
+        {
+            _freed.Clear(); _slots.Clear(); _memberships.Clear(); _newTypes.Clear();
+        }
+
         internal EntityHandle Create()
         {
             int index;

@@ -9,6 +9,7 @@ internal sealed class WorldResources
     internal readonly BufferPool Pool = new();
     internal ThreadDispatcher? Dispatcher;
     internal Simulation? Simulation;
+    internal Characters.CharacterControllers? Characters;
     private readonly BepuPhysicsWorldFactory _factory;
     private readonly FaultInjection _faults;
     private bool _simulationDisposed, _dispatcherDisposed, _released;
@@ -20,6 +21,7 @@ internal sealed class WorldResources
         _diagnosticBudget = world.Options.Limits.PoolDiagnosticBudgetBytes;
         _faults.Visit(Checkpoint.PoolCreated);
         Dispatcher = new ThreadDispatcher(world.Profile.Workers); _faults.Visit(Checkpoint.DispatcherCreated);
+        Characters = new(Pool, Math.Min(16, world.Options.Limits.MaxBodies), world.Options.Limits.MaxBodies);
         Simulation = BepuPhysics.Simulation.Create(Pool, new NarrowPhase(world), new PoseIntegrator(world.Options.Gravity),
             new SolveDescription(world.Profile.SolverIterations, world.Profile.SolverSubsteps));
         _faults.Visit(Checkpoint.SimulationCreated); Sample();
@@ -34,7 +36,7 @@ internal sealed class WorldResources
     {
         if (_released) return;
         Sample();
-        if (!_simulationDisposed) { _faults.Visit(Checkpoint.BeforeSimulationDispose); Simulation?.Dispose(); _simulationDisposed = true; }
+        if (!_simulationDisposed) { _faults.Visit(Checkpoint.BeforeSimulationDispose); Characters?.Dispose(); Simulation?.Dispose(); _simulationDisposed = true; }
         if (!_dispatcherDisposed) { _faults.Visit(Checkpoint.BeforeDispatcherDispose); Dispatcher?.Dispose(); _dispatcherDisposed = true; }
         _faults.Visit(Checkpoint.BeforePoolClear); Pool.Clear();
         var remaining = PoolBytes;

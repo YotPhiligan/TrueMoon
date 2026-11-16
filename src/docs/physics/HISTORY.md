@@ -759,3 +759,363 @@ pre-PHYS5 STATUS сохранены в [истории](HISTORY.md#physics-statu
 ## DEP1 dependency refresh — 2026-11-15
 
 Новая полная D/R проверка, six-package version refresh и согласованная native Skia4.156.1 поставка выполнены в [единственной межмодульной записи](../core/HISTORY.md#dep1-2026-11-15). Прежние manifests и функциональные gates сохранены; точный scope нового запуска — в записи Core.
+
+<a id="physics-status-before-phys6-2026-11-16"></a>
+## STATUS перед PHYS6 — 16.11.2026
+
+# TrueMoon.Kton: состояние и следующий шаг
+
+**2026-11-15 — DEP1: BEPU остаётся актуальным2.5.0-beta.33, PHYS5 regression прошёл.**
+NuGet показывает stable2.4.0 и latest existing beta2.5.0-beta.33; downgrade не выполнялся.
+Exact BepuPhysics/BepuUtilities ranges, provider/C# API/source и ownership сохранены.
+Полный Aether.Kton suite68passed каждый Debug/Release,0failed/0skipped; actual BEPU
+bridge/scene lifecycle входят в этот suite. Самостоятельный309-case provider runner
+в dependency refresh отдельно не повторялся.
+
+[Контракт PHYS5](ECS_BRIDGE.md), [его детальная задача](PLAN.md#phys5),
+[DEP1 и новая межмодульная приёмка](../core/HISTORY.md#dep1-2026-11-15),
+[manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).
+Прежние full provider и independent PHYS5 delivery results сохраняют свои даты:
+[предыдущий STATUS](HISTORY.md#physics-status-before-dep1-2026-11-15).
+
+Следующий физический feature — PHYS6 controller, PHYS8 по отдельному scope;
+PHYS7 необязателен. Общая очередь остаётся у engine, Requests/Claims не менялись.
+
+<a id="phys6-2026-11-16"></a>
+## PHYS6 — контроллер капсулы / Aether — 16.11.2026
+
+Версия `1.2611.16.2-alpha` зафиксирована до итоговых сборок/проверок. Начальная и
+финальная origin/main — `54640e1eb7adf54d4e79c43afae37c7b80f7b583`, Version1.2611.16.1-alpha;
+новая alpha версия выше при NuGet comparison. [Контракт/fixture matrix](CHARACTERS.md),
+[единственная задача](PLAN.md#phys6), [источники/архивы/report SHA](PHYS6_RESULTS.json).
+
+Добавлены neutral optional character capability и generation-safe handles; borrowed
+upright dynamic capsule, locked rotation/inertia restoration, velocity/support/slope,
+single jump, dynamic push/recoil, moving point velocity, teleport/remove invalidation.
+BEPU demo exact commit29ed466870534c413aba9eeccd813cf15d135d0b адаптирован отдельно
+от renderer/input; Apache license, provenance и исходный `.tt` входят в пакет.
+В Aether — optional Character v1 schema, reference-free settings/input/state,
+monotonic jump sequence, same-tick pose/support, runtime roles/cleanup и full preflight.
+
+Финальные проверки, все exit0:
+
+| Проверка | Команда/артефакт | Результат |
+| --- | --- | --- |
+| xUnit2/VSTest Debug/Release | `dotnet build TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj --no-restore -c Debug`; final Release built through solution; затем `dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj --no-build --no-restore -c Debug` / `-c Release`, TRX/logger/unique binlogs в `TestResults/PHYS6/accepted-*` | 124passed каждый,0failed/0skipped:56PHYS6+68PHYS5 |
+| Solution build D/R | `dotnet build TrueMoon.slnx --no-restore -c Debug` / `-c Release`, unique binlogs `accepted-solution-*` | 0errors; существующие XML/nullability/analyzer warnings сохраняются |
+| Independent delivery | `pwsh -NoProfile -File ManualTests/KtonEcs/Verify.ps1 -EvidenceDirectory TestResults/PHYS6-delivery-accepted` | 52checks каждый source Debug/published Release/fresh NuGet Debug/Release; оба DI;14coherent packages, exact external closure, output/cache SHA и3license entries проверены |
+| PHYS2–3 regression | `pwsh -NoProfile -File ManualTests/KtonProvider/Verify.ps1 -EvidenceDirectory TestResults/PHYS6-provider-accepted` | 309checks каждый source Debug/fresh package Debug/published package Release |
+
+В финальных independent profiles world/resource owners и pool bytes после cleanup0.
+Проверены все fixtures PHYS6: floor/mesh seams/crest/moving platform/ceiling/teleport/
+support loss; обе60Hz настройки для floor/jump, linear+angular platforms, dynamic
+jump recoil и filter/sensor exclusion. Exact test names — в CHARACTERS.md и тестах.
+Gap/assertion review закрыл world-Z/yaw, внутренние mesh diagonals, dynamic recoil,
+joint exclusion в обоих порядках и отсутствие preflight writeback движущегося соседа.
+Статический pairing analyzer не запустился из-за отсутствующего Microsoft.CodeAnalysis4.14;
+его результаты не используются. Research/plan/review остались в локальном temp scratch.
+
+При проверке packaging обнаружен лишний path segment Characters; исправлен
+PackagePath metadata по MSBuild item-management, затем delivery полностью повторён.
+Валидатор input также проверяет валидность options; regression фиксирует NaN/ceilings.
+Пакеты используют persisted repository Version, временный QA suffix не подменяет её.
+Новые immutable feeds/evidence создавались отдельно; прежние archives/manifests не
+перезаписывались. Raw artifacts локальны/ignored, retention до ручной очистки;
+этот HISTORY и manifest сохраняют команды/scope/counts/SHA без зависимости от temp.
+
+Это Windows x64 CPU/headless acceptance. Полные16suites, native/GPU/physical,
+другие ОС, shared-game-ABI/mod-state migration и PHYS8 performance/release matrix
+здесь не повторялись. Native Skia/SDK/TFM/dependencies не менялись и native rebuild
+не требовался. Auto-stairs/crouch/root motion/air steering не входят в PHYS6.
+Следующий физический этап — отдельно выбранный PHYS8 scope; PHYS7 ragdoll optional.
+
+<a id="physics-status-before-phys81-2026-11-16"></a>
+## STATUS перед PHYS8.1 — 16.11.2026
+
+# TrueMoon.Kton: состояние и следующий шаг
+
+**2026-11-16 — PHYS6: контроллер капсулы и Aether integration завершены.**
+Версия `1.2611.16.2-alpha`; [контракт/fixtures](CHARACTERS.md),
+[единственная задача](PLAN.md#phys6), [команды](HISTORY.md#phys6-2026-11-16),
+[manifest/SHA](PHYS6_RESULTS.json).
+
+Нейтральная optional capability заимствует upright dynamic capsule, блокирует
+вращение и восстанавливает инерцию после снятия. Скорость/торможение, support/slope,
+прыжок, динамические и moving supports, teleport/invalidation реализованы. Aether
+получает reference-free настройки/input/state, v1 authoring schema, jump sequence,
+same-tick pose/support и phase-boundary lifecycle. BEPU demo license/provenance
+и исходный constraint template включены в provider package.
+
+Фактически выполнено:124passed каждый Debug/Release (56новых+68PHYS5),0failed/
+0skipped; solution builds D/R0errors. Independent both-DI consumer52checks в каждом
+source Debug/published Release/fresh NuGet D/R профиле;14точных пакетов одной версии,
+license/content SHA и fresh graph/output hashes проверены. PHYS2–3 regression309×3
+также прошёл. Финальные world owners/pools равны0.
+
+Это CPU/headless Windows x64 scope. Полные16suites, GPU/physical/other OS, native
+mod-state migration и полная release matrix сейчас не повторялись. Native Skia,
+dependencies и SDK/TFM не менялись. Auto-stairs, crouch/root motion и air steering
+в PHYS6 не входят. [Прежний статус](HISTORY.md#physics-status-before-phys6-2026-11-16).
+
+Следующий физический этап — PHYS8: отдельно выбрать workload/performance и platform/
+release scope. PHYS7 ragdoll остаётся необязательным; общая functional очередь у engine.
+
+<a id="phys81-2026-11-16"></a>
+## PHYS8.1 — Windows x64 baseline — 16.11.2026
+
+[Метод/таблица/ограничения](PERFORMANCE.md), [задача](PLAN.md#phys81),
+[полные Release числа/source/package/report SHA](PHYS81_RESULTS.json).
+Только новый `ManualTests/KtonPerformance` consumer и документация; все93source
+SHA PHYS6 сохранились, production API/build inputs/пакетное содержимое не менялись.
+Версия1.2611.16.2-alpha сохранена; предыдущие PHYS6 manifests/archives не переписаны.
+
+Финальная команда (exit0):
+`pwsh -NoProfile -File ManualTests/KtonPerformance/Verify.ps1 -EvidenceDirectory TestResults/PHYS81-04`.
+Shared BuildProfile/SDK11.0.100/net11/runtime-async и explicit CPM isolation;
+14точных TrueMoon packages/closed external feed, fresh package-only graph и DLL
+output/cache SHA проверены. Не выполнялось remote publishing.
+
+| Профиль | Результат |
+| --- | --- |
+| source Debug | 12smoke workloads ×600samples, оба DI/оба пути |
+| source published Release | 28baseline workloads ×600samples |
+| fresh NuGet Debug | 12smoke workloads ×600samples |
+| fresh published Release | 28baseline workloads ×600samples |
+
+Всего80fixtures,48000measured Steps и120warmup ticks наfixture; в каждом App/world
+независимы. Матрица100/1000active/sleeping bodies,1/32/256walking controllers,
+standalone public Step и full PrimitiveGameSession.Tick. Отсутствуют drawable
+components; сохраняется пустой render-snapshot bookkeeping. Worker1/8iterations/
+4substeps/Baseline60, current body ceilings. Для256-controller ECS выбран explicit
+allowed bridge MaximumContactEvents256(обычный default64), другиеfixtures сохраняют64.
+Никакие production defaults/ceilings не повышались. Published gameplay contact
+events суммарно1392000; raw narrowphase invocations не инструментированы.
+
+На AMD Ryzen9 9900X/.NET11 x64/AVX2+AVX512F/workstation GC основной устойчивый
+allocation witness: ECS1000active~444653–444764Б/tick, sleeping1000~444653Б/tick;
+standalone1000active/sleeping0Б/tick. Full ECS active1000p99~0.897–1.1785мс,
+sleeping1000~0.8099–1.0057мс, диапазон четырёх Release observations. Это весь session
+tick; attribution не проводилась, виновник не устанавливается по одному macrobaseline.
+Standalone32/256controllers дают около56Б/tick. Step p99 diagnostic1ms превышен
+в двух Cobalt standalone256observations; бюджет не менялся и не является SLA.
+Fixed-order/tiered-JIT bias не устранён, p99 не используется для DI comparison.
+
+Pool high-water максимум5160960Б (только sampled BEPU pools, не process/native RSS).
+Во всех80fixtures после Stop0worlds/owners/pool bytes. Максимальный scene/world
+teardown4.229мс по всем и3.0446мс по Release; App Stop туда не включён.
+GC allocation counters primary-thread/process-wide и approximate managed heap
+записаны отдельно; искусственных GC нет. Таймеры используют preallocated buffers,
+percentiles nearest rank; setup/validation/JSON/cleanup не входят в окно.
+
+Свежая функциональная регрессия (оба exit0):
+`dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj --no-build --no-restore -c Debug`
+и `-c Release`, unique binlogs/TRX в `TestResults/PHYS81-04/regression-*` — каждый
+124passed,0failed/0skipped. Source hashes подтверждают соответствие уже собранных
+assemblies неизменным входам. Полные solution/16suites/native/GPU сейчас не повторялись.
+
+Промежуточные failed runs сохранены отдельно: неверное чтение registry исправлено
+на точный CPU string; probe factory/query signatures приведены к API. Попытка
+drawable workload выявила существующий primitive limit; headless physical fixtures
+используют сущности без Appearance.256-controller ECS default64contact projection
+действительно вызвал typed ContactOverflow; финальный allowed preset256проходит.
+Ни один из этих failed attempts не выдан за completed baseline.
+
+Raw TestResults/temp feeds/caches локальны/ignored до ручной очистки. Этот HISTORY
+и versioned manifest сохраняют scope/commands/counts/measurements/SHA без требования
+доступности temp. Research не подтверждает10000bodies,2/4/8workers,ragdoll,raw
+callback/stalls,visual/interpolation/physical,other OS/AOT или общую PHYS8 release
+readiness. Следующий срез — PHYS8.2 attribution и уменьшение подтверждённых allocations.
+
+<a id="physics-status-before-phys82-2026-11-16"></a>
+## STATUS перед PHYS8.2 — 16.11.2026
+
+# TrueMoon.Kton: состояние и следующий шаг
+
+**2026-11-16 — PHYS8.1: первый Windows x64 performance baseline завершён.**
+[Задача/очередь](PLAN.md#phys81), [метод и числа](PERFORMANCE.md),
+[команды/ограничения](HISTORY.md#phys81-2026-11-16), [manifest/SHA](PHYS81_RESULTS.json).
+Production не менялся: все93source SHA PHYS6 сохранились, Version1.2611.16.2-alpha.
+
+Новый non-packaged measurement consumer:100/1000active/sleeping bodies,
+1/32/256walking controllers, standalone и Aether session, оба DI. Source/fresh Debug
+smoke по12workloads и published source/fresh Release baseline по28;80fixtures,
+48000measured Steps.14точных пакетов, closed feed/fresh graph/output hashes проверены.
+По124functional tests каждый Debug/Release,0failed/0skipped. Owners/pools после
+cleanup0во всех fixtures; общий PHYS8 ещё открыт.
+
+На Ryzen9 9900X/.NET11 в Release ECS1000active: full tick p99~0.90–1.18мс,
+около445КБ allocations/tick; sleeping1000также около445КБ/tick. Это наблюдение
+полного session tick, точный вклад требует attribution. Standalone1000active
+показал0Б/tick; standalone32/256controllers — около56Б/tick. SIMD/solver/pool/GC/
+teardown и profile-specific значения сохранены. Fixed-order/tiered-JIT bias не
+устранён, performance SLA/сравнение DI overhead не заявляются.
+
+Baseline60/1worker/current ceilings. Для256controllers ECS явный allowed projection
+preset256вместо default64; production defaults прежние.10000bodies/2/4/8workers,
+raw callbacks/stalls, drawable/GPU/visual, other OS/AOT и release matrix отдельно.
+[Прежняя PHYS6 сводка](HISTORY.md#physics-status-before-phys81-2026-11-16).
+
+Следующий срез — [PHYS8.2](PLAN.md#phys82): attribution и уменьшение allocations
+полного ECS-пути с сохранением preflight/identity/lifecycle/contacts и повторной
+проверкой на baseline fixtures. PHYS7 ragdoll остаётся необязательным.
+
+<a id="phys82-2026-11-16"></a>
+## PHYS8.2 — attribution/оптимизация allocations — 16.11.2026
+
+Версия1.2611.16.3-alpha выбрана до финальных сборок/проверок; origin/main на
+выборе54640e1eb7adf54d4e79c43afae37c7b80f7b583,Version1.2611.16.1-alpha; local
+предыдущий набор1.2611.16.2-alpha. Generation/stage не менялись. [Контракт/изменения/
+результаты](ALLOCATION_OPTIMIZATION.md), [task](PLAN.md#phys82), [manifest/SHA](PHYS82_RESULTS.json).
+
+Применены analyzing-dotnet-performance (critical+collections/memory/structural
+references), dotnet-trace-collect, binlog-generation/run-tests, code-testing-agent.
+Bounded scan recipes/counts хранятся в manifest;7/7class declarations sealed,
+строковых critical patterns0; оставшиесяnewList/LINQ/ToArray в scan scope — cold
+scheduler construction/cleanup, а не новый hot target. Sampled allocation stacks
+подтвердили Candidate/PhysicsBodyDescription в Capture, entry snapshots в Reconcile
+и capture closure. Shared contact command/validation types остаются отдельной целью.
+
+Production changes: bounded per-world resettable Candidate scratch; immutable
+body/controller settings; additive supplied-motion ValidateBody overload с прежним
+полным policy/shape/motion/mass/material/filter admission; staged removals вместо
+snapshot array; single-pass min/max mass; authored-root lookup вне nested hot capture.
+Не пропущены full preflight/root/scale/roles/sequence/shape/motion checks, generation
+reuse/delete/replace или retry ownership. Schema/contact entity timing прежние.
+
+Финальные команды (все exit0, unique binlogs/TRX/report hashes в manifest):
+
+| Проверка | Команда/результат |
+| --- | --- |
+| Solution | `dotnet build TrueMoon.slnx --no-restore -c Debug` / `-c Release`:0errors; существующие XML/nullability/analyzer warnings548/1570 |
+| xUnit2/VSTest | `dotnet test TrueMoon.Aether.Kton.Tests/TrueMoon.Aether.Kton.Tests.csproj --no-build --no-restore -c Debug` / `-c Release`:155passed каждый,0failed/0skipped;31new cases |
+| Macro+exact cohort attribution | `pwsh -NoProfile -File ManualTests/KtonPerformance/Verify.ps1 -EvidenceDirectory TestResults/PHYS82-final -ComparisonReport TestResults/PHYS81-04/verification.json`:4normal profiles/80fixtures +12before/12after attribution,104fixtures/62400samples |
+| Neutral contracts | `pwsh -NoProfile -File ManualTests/KtonContracts/Verify.ps1 -EvidenceDirectory TestResults/PHYS82-contracts`:131checks×3 |
+| Provider | `pwsh -NoProfile -File ManualTests/KtonProvider/Verify.ps1 -EvidenceDirectory TestResults/PHYS82-provider`:309checks×3 |
+| ECS delivery | `pwsh -NoProfile -File ManualTests/KtonEcs/Verify.ps1 -EvidenceDirectory TestResults/PHYS82-ecs`:52checks×4,обаDI,14exact packages и3license entries/hash |
+
+Macro consumer проверен source Debug/published Release/fresh NuGet Debug/Release.
+Для comparison один и тот же новый allocation-marker consumer восстановлен против
+immutable14старых `.2-alpha` и14новых `.3-alpha` архивов в разныхfreshcache; exact
+SDK/TFM/LangVersion/features, package-only graphs, source/archive/output SHA verified.
+Владельцы worlds/resources и pool bytes после Stop0во всех104fixtures. Новые
+артефакты/evidence создавались отдельно, immutable старые не перезаписывались.
+
+Точные primary-thread results:1000active444653–444765→440–841.43Б/tick(>99.8%),
+1000sleeping444653.44→440Б(99.90%),256controllers334266.08→209719–209732Б(~37.26%).
+На1000sleeping phase breakdown:bridge444261.44→48Б,nativeStep0→0,movement96→96,
+playback0→0,transform88→88,emptyextraction208→208. Для256controllers осталось
+~112.7КБ recording+~96.6КБ playback и~56–68Б nativeStep. Shared scheduler/commands/
+transforms production files не менялись. Attributed counters primary-thread,
+all-thread totals отдельно. Timing SLA/DI comparison не заявляются из-за fixed
+warmup/order/tiered-JIT bias; profiling trace timings не смешиваются с baseline.
+
+Before/after EventPipe traces собраны cached dotnet-trace `collect --profile gc-verbose`
+из immutable consumers; проанализированы cached TraceEvent3.1.21. Raw trace/parser
+source/output SHA сохраняются в manifest. GCAllocationTick weights включают setup
+и не выдаются за точные byte totals. После оптимизации прежние per-frame hot
+types перестали доминировать; shared command/validation types подтверждены повторно.
+
+Новые tests проверяют allocations warmed128body graph и реальный pose/tick/cleanup,
+scratch shift/char roles/delete/generation reuse, изменённый descriptor/settings до
+native replacement/writebacks, mass ratio100и соседний float, supplied-motion
+валидацию всех immutable fields/pose/speed/static rules. Gap/assertion review завершён;
+31cases/9methods/78assertion sites,0empty/trivial-only. Pairing analyzer запущен один
+раз, prerequisite Microsoft.CodeAnalysis4.14 отсутствует; его результаты не использованы.
+Промежуточные TraceLog nettrace-conversion и test ReadOnlyMemory compile ошибки
+исправлены; failed attempts не названы итоговой приёмкой. Исходники тестов заморожены
+до155-case D/R runs.
+
+Raw TestResults/binlogs/TRX/traces/temp feed/cache локальны/ignored до ручной очистки;
+versioned HISTORY+manifest сохраняют commands/scope/counts/measurements/SHA. SDK/TFM/
+dependencies/native binaries не менялись и native rebuild не требовался. Не выполнена
+новая full16suite/GPU/visual/otherOS/AOT/expanded workers acceptance; PHYS8 в целом
+открыт. Следующая measured цель — shared command recording/playback с сохранением
+atomic preflight, independent maps, token/generation и private-type/retired-ALC lifetime.
+
+<a id="physics-status-before-phys83-2026-11-16"></a>
+## STATUS перед PHYS8.3 — 16.11.2026
+
+# TrueMoon.Kton: состояние и следующий шаг
+
+**2026-11-16 — PHYS8.2: allocation attribution и оптимизация ECS-пути завершены.**
+Версия `1.2611.16.3-alpha`; [задача](PLAN.md#phys82),
+[источники/изменения/числа](ALLOCATION_OPTIMIZATION.md),
+[команды/границы](HISTORY.md#phys82-2026-11-16), [manifest/SHA](PHYS82_RESULTS.json).
+
+Trace подтвердил per-body Candidate/PhysicsBodyDescription и entry-array snapshots
+в bridge. Bounded per-world scratch и immutable templates, полный supplied-motion
+validator, staged removals/mass scan убрали hot churn. Full preflight до native
+mutation, roles/shape/motion/mass/sequence, identity, lifecycle и contact timing прежние.
+
+Один probe наimmutable2/3-alpha package cohorts:1000body ECS~445КБ→440–842Б/tick
+(>99.8%),256walking controllers334КБ→210КБ(~37.26%). Для1000sleeping bridge48Б,
+native0Б, movement96Б, transforms88Б, empty extraction208Б. Phase counters и
+allocation traces независимы от timing baseline; SLA/DI overhead comparison нет.
+
+155functional tests каждый Debug/Release(31новый),0failed/0skipped; solution builds
+D/R0errors. Neutral contracts131×3/provider309×3/independent ECS52×4 прошли;
+14новых и14старых packages, обаfreshgraphs/cache/output/license SHA проверены.
+104macro/attribution fixtures,62400measured Steps; финальные worlds/owners/pools0.
+Native/SDK/TFM/dependencies не менялись; full16suites/GPU/other OS не повторялись.
+[Предыдущий baseline статус](HISTORY.md#physics-status-before-phys82-2026-11-16).
+
+Следующая измеренная цель — shared deferred contact command recording/playback:
+~112.7КБ+96.6КБ/tick при256controllers, с отдельным контрактом immutable maps,
+tokens/generations/private-type/ALC lifetime. Общий ECS buffer пока прежний.
+Expanded capacities/workers, raw callbacks/stalls, visual/interpolation/other OS/AOT
+и общий PHYS8 release scope открыты; PHYS7 ragdoll optional.
+
+<a id="phys83-2026-11-16"></a>
+## 16.11.2026 — PHYS8.3 deferred-команды контактов
+
+Пользователь запросил уменьшить allocations deferred-команд контактов. Источники
+из PHYS8.2 подтверждены phase counters:~112.7КБ recording/bridge +96.6КБ playback
+на256controllers. Compact value records/copied payload blocks и reused validation/
+targets/reservations устранили churn. Detached published mapping сохранён, private
+Type handlers не кешируются статически и освобождаются после pending batch.
+[Контракт/числа/точные test names](DEFERRED_COMMAND_ALLOCATIONS.md),
+[manifest/SHA](PHYS83_RESULTS.json). Общий API/schema/generation/contact timing прежний.
+
+Версия1.2611.16.4-alpha выбрана до финальных проверок относительно рабочей .3-alpha
+и remote main .1-alpha (SHA54640e1eb7adf54d4e79c43afae37c7b80f7b583).
+Промежуточные непубликованные QA feeds сохранены раздельно без перезаписи архивов;
+финальная immutable cohort — PHYS83-final-03. Legacy PHYS6 stage label ECS consumer
+описывает прежний набор52checks, а не итоговую readiness PHYS6/8 по новому запуску.
+
+Фактически выполненные команды (каждой MSBuild команде отдельный binlog):
+
+```powershell
+pwsh -NoProfile -File ManualTests/KtonPerformance/Verify.ps1 -EvidenceDirectory TestResults/PHYS83-final-03 -ComparisonReport TestResults/PHYS82-final/verification.json
+pwsh -NoProfile -File ManualTests/KtonEcs/Verify.ps1 -EvidenceDirectory TestResults/PHYS83-ecs-03
+# Сначала solution nonincremental D/R, затем последовательные suites без других SDK работ:
+foreach ($configuration in @('Debug','Release')) {
+    dotnet build TrueMoon.slnx -c $configuration -m --no-restore --no-incremental '-bl:TestResults/PHYS83-new-build-{}.binlog'
+}
+foreach ($project in @('TrueMoon.Aether.Tests','TrueMoon.Aether.Kton.Tests','TrueMoon.Aether.Kul.Tests')) {
+    foreach ($configuration in @('Debug','Release')) {
+        dotnet test "$project/$project.csproj" -c $configuration --no-build --no-restore --logger trx --results-directory TestResults/PHYS83-new-tests '-bl:TestResults/PHYS83-new-test-{}.binlog'
+    }
+}
+```
+
+Полные Aether3554/Kton157/Kul103passed каждый Debug/Release,0failed/0skipped;
+20новых ECS и2contact cases. Solution D/R0errors/1570warnings; independent ECS52×4;
+macro4профиля80fixtures +before/after attribution12×2 =104fixtures/62400measuredSteps.
+Оба DI, source/publish/fresh graphs/cache/output,14старых+14новых archives/license
+SHA проверены; после всех fixtures owners/worlds/pools0. Exact-consumer256controller
+full ECS209719–209732→6720Б/tick(~96.8%), bridge48Б/playback6224Б. Primary-thread phase
+counters отделены от baseline timing; timing SLA не назначался.
+
+Первый focused run выявил, что70KB struct не поддерживается текущим CLR T[] pool:
+TypeLoadException; допустимый60KB value подтвердил oversized16KiB-block handling.
+Первый full Debug дал diagnostic StopAsync timeout в minimum50ms fixture; связь с
+параллельным forced GC вероятна, не доказана. Новые allocation/ALC tests получили
+отдельную nonparallel xUnit collection, полные D/R повторены. Diagnostic tests и
+production deadlines не менялись; первый failed TRX/input hashes сохранены.
+Static pairing analyzer не запущен успешно из-за прежнего prerequisite
+Microsoft.CodeAnalysis4.14; его выводы не считаются test evidence.
+
+Native/ABI/dependencies/SDK/TFM прежние, native rebuild не требуется. Full16suites,
+GPU/visual/interpolation/other OS/AOT, expanded limits/workers/raw callbacks/stalls
+и общий PHYS8 release scope не подтверждались. Raw TestResults/temp feeds локальны;
+versioned manifest хранит observed numbers/scope/source/archive/report/test hashes.

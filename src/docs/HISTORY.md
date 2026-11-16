@@ -9681,3 +9681,113 @@ packages во все architecture consumers этот run не повторяет
 функциональная очередь ENG7b.3/ED/import и release gates сохранены.
 Historical drain cause, physical input/listening/device loss/long soak/hard RT,
 other OS/RID/AOT/trimming и общий release не закрыты. [Предыдущий STATUS](HISTORY.md#common-status-before-dep1-2026-11-15).
+
+<a id="common-status-before-phys6-2026-11-16"></a>
+## STATUS перед PHYS6 — 16.11.2026
+
+# TrueMoon: общий статус
+
+**2026-11-16 — ENG7b.3: Editor/Player launch acceptance завершена.**
+[Задача](engine/PLAN.md#eng7b3-launch-acceptance), [матрица/миграция](engine/LAUNCH_ACCEPTANCE.md),
+[команды/границы](engine/HISTORY.md#eng7b3-2026-11-16), [manifest/SHA](engine/ENG7B3_BASELINE.json).
+Версия — `1.2611.16.1-alpha`; SDK/TFM/dependencies/native ABI прежние.
+
+Исправлен повторный mesh Play после Stop; сохранились stale generation fences.
+Combined child использует standalone Runtime graph.34native profiles на обоих DI,
+54game cycles с crash/recovery,36identity rejections,60CLI cases и12окон примеров
+прошли. Player отдельно проверен без SDK. Документы/history/selection сохраняются,
+Editor не загружает игру; normal validation0/0 и parent reap/resources проверены.
+
+19package archives одной версии и7fresh closed-feed graphs проверены. Полные
+16suites по9111passed каждый Debug/Release,0failed/0skipped; non-incremental
+solution builds0errors. Это launch/delivery scope Windows x64, не all27 architecture
+acceptance и не общий release. [Модульный статус](engine/STATUS.md),
+[общий build/version статус](core/STATUS.md), [прежний STATUS](HISTORY.md#common-status-before-eng7b3-2026-11-16).
+
+Следующий functional scope выбирается отдельно: PHYS6, import g.1→g.2, ED4i/ED5,
+AUD2–3. Physical/DPI/K7/device-loss/VRAM/soak/other OS, historical drain cause и
+общая release matrix открыты. Requests и consumer-код игры/Studio не менялись.
+
+<a id="common-status-before-phys81-2026-11-16"></a>
+## STATUS перед PHYS8.1 — 16.11.2026
+
+# TrueMoon: общий статус
+
+**2026-11-16 — PHYS6: контроллер персонажа подключён к Kton и сессии Aether.**
+Версия `1.2611.16.2-alpha`; [задача](physics/PLAN.md#phys6),
+[контракт](physics/CHARACTERS.md), [проверки/границы](physics/HISTORY.md#phys6-2026-11-16),
+[manifest/SHA](physics/PHYS6_RESULTS.json).
+
+Capsule movement/support/slopes/jump и взаимодействие с dynamic/moving bodies
+проверены; Aether использует optional character schema и sequenced input/state.
+Kton/Aether124tests прошли каждый Debug/Release,0failed/0skipped; solution builds
+D/R0errors. Both-DI independent consumer52checks×4 source/publish/fresh,14точных
+пакетов одной версии и PHYS2–3 regression309×3 прошли. Owners/pools после cleanup0.
+
+Это отдельный Windows x64 CPU/headless feature scope. ENG7b.3 launch acceptance
+сохраняет собственную версию1.2611.16.1-alpha и дату; полные16suites/native/GPU
+из той приёмки сейчас не повторялись. SDK/TFM/dependencies/native binaries прежние.
+[Предыдущая сводка](HISTORY.md#common-status-before-phys6-2026-11-16).
+
+PHYS6 завершён. Далее выбрать PHYS8 scope, import g.1→g.2, ED4i/ED5 либо AUD2–3.
+Auto-stairs/crouch/root motion, physical/DPI/K7/device-loss/VRAM/soak/other OS,
+historical drain cause и общая release matrix самостоятельны. Requests/Claims
+и consumer-код игры/Studio не менялись.
+
+<a id="common-status-before-phys82-2026-11-16"></a>
+## STATUS перед PHYS8.2 — 16.11.2026
+
+# TrueMoon: общий статус
+
+**2026-11-16 — PHYS8.1: Windows x64 baseline Kton и Aether session завершён.**
+[Единственная задача](physics/PLAN.md#phys81), [метод/наблюдения](physics/PERFORMANCE.md),
+[история/команды](physics/HISTORY.md#phys81-2026-11-16), [manifest/SHA](physics/PHYS81_RESULTS.json).
+Только новый ManualTests consumer и документация; production/profile/dependencies
+и все93PHYS6source SHA прежние, версия1.2611.16.2-alpha сохраняется.
+
+80workload profiles/48000measured Steps: обе DI, standalone/full ECS, source/fresh
+Debug smoke и published Release baseline;14coherent packages/fresh hashes проверены.
+Kton/Aether124functional tests каждый D/R,0failed/0skipped. Финальные owners/pools0.
+Полный ECS1000body tick выделяет около445КБ даже для sleeping workload; это
+измеренная цель следующего среза, не утверждение виновника без attribution.
+
+Следующий физический срез — [PHYS8.2 allocation attribution/оптимизация](physics/PLAN.md#phys82).
+PHYS8 в целом открыт: expanded capacities/workers, raw callbacks/stalls, visual,
+other OS и release matrix отдельно. Числа baseline относятся к одной машине;
+numeric SLA и performance DI comparison не приняты. ENG7b.3/native/full16suite
+результаты сохраняют прежние даты и сейчас не повторялись.
+[Сохранённый PHYS6 статус](HISTORY.md#common-status-before-phys81-2026-11-16).
+Import g.1→g.2, ED4i/ED5 и AUD2–3 сохраняют свои планы; Requests/Claims и consumer
+код игры/Studio не менялись.
+
+<a id="common-status-before-phys83-2026-11-16"></a>
+## STATUS перед PHYS8.3 — 16.11.2026
+
+# TrueMoon: общий статус
+
+**2026-11-16 — PHYS8.2: источники allocations ECS-пути подтверждены и уменьшены.**
+Версия `1.2611.16.3-alpha`; [единственная задача](physics/PLAN.md#phys82),
+[реализация/измерения](physics/ALLOCATION_OPTIMIZATION.md),
+[команды](physics/HISTORY.md#phys82-2026-11-16), [manifest/SHA](physics/PHYS82_RESULTS.json).
+
+Full ECS1000bodies:~445КБ→440–842Б/tick(>99.8%);256controllers334КБ→210КБ(~37.26%).
+Один consumer наimmutable старых/новых пакетах, phase allocation counters и
+trace stacks. Убраны повторные bridge scratch/descriptor/entry snapshots, все
+preflight/identity/lifecycle/contact guarantees сохранены. Timing SLA не задавался.
+
+155Kton/Aether tests каждый D/R,0failed/0skipped; solution builds0errors.
+Contracts131×3/provider309×3/ECS52×4,104macro/attribution profiles и14новых/14старых
+package archives прошли; fresh graph/output/license SHA, owners/pools0 проверены.
+SDK/TFM/dependencies/native binaries прежние. Полные16suites/GPU/visual/other OS
+не повторялись; PHYS8 в целом открыт.
+[Предыдущая сводка](HISTORY.md#common-status-before-phys82-2026-11-16).
+
+Следующая измеренная цель — shared deferred command recording/playback с сохранением
+atomic validation, independent reservation maps, tokens/generations/private-type/ALC
+lifetime. Остальные physics/release gates и import/ED/AUD планы самостоятельны.
+Requests/Claims и consumer код игры/Studio не менялись.
+
+<a id="phys83-2026-11-16"></a>
+## 16.11.2026 — PHYS8.3 deferred contact allocations
+
+[Детальная запись](physics/HISTORY.md#phys83-2026-11-16), [manifest/SHA](physics/PHYS83_RESULTS.json). Version1.2611.16.4-alpha:256controller ECS~210КБ→6720Б/tick(~96.8%) на обоих DI. Aether3554/Kton157/Kul103tests каждый D/R и solution0errors; independent package proofs прошли. Первый diagnostic timeout/изоляция новых forced-GC tests сохранены в evidence, production deadlines прежние. Native rebuild не нужен; общий PHYS8/platform/release scope остаётся открыт.

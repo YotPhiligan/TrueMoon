@@ -1,6 +1,6 @@
 # TrueMoon.Kton: самостоятельный модуль физики и ECS Aether
 
-**2026-11-15 — PHYS5 ECS/session bridge реализован и проверен; Kul ARCH1h.2a также завершён; PHYS6 отдельно.**
+**2026-11-16 — PHYS8.3 deferred-команды контактов оптимизированы; PHYS8 в целом открыт.**
 BEPUphysics v2 принят как **приоритетный backend**. Это выбор направления, а не
 утверждение полной App/ECS/platform readiness. Exact beta.33 принят для ограниченного PHYS2 provider scope.
 Пользователь выбрал имя **TrueMoon.Kton**: [решение и источники лора](NAMING.md).
@@ -22,7 +22,7 @@ package D/published R, [bounded storage/transition policy](QUERIES_CONTACTS.md).
 [публичное подключение и ownership](APP.md). Current PHYS2–3 regression309×3.
 **[PHYS5 ECS bridge](#phys5) завершён2026-11-15**: [контракт](ECS_BRIDGE.md),
 [68tests D/R и independent source/publish/fresh](HISTORY.md#phys5-2026-11-15).
-Kul ARCH1h.2a завершён в nonspatial scope; физическая очередь — PHYS6 → PHYS8. PHYS7 — отдельное необязательное развитие
+Kul ARCH1h.2a завершён в nonspatial scope; [PHYS6 завершён](#phys6); [PHYS8.1 baseline](#phys81) завершён; [PHYS8.2 завершён](#phys82); [PHYS8.3 завершён](#phys83); далее остальные PHYS8 gates. PHYS7 — отдельное необязательное развитие
 простого ragdoll, не prerequisite первого модуля.
 
 Подробные задачи физики, включая ECS bridge, ведутся **только здесь**.
@@ -362,17 +362,24 @@ failed candidate не нарушает old session. Общий checkpoint/IPC н
 source Debug/published Release/fresh NuGet Debug/published Release по42checks/report
 на обоих DI, final owners0/pools0.2new package metadata/payload, solution D/R0errors.
 Headless/CPU acceptance отделена от actual GPU/physical/native-state reload scope.
-Kul ARCH1h.2a также завершён; PHYS6/PHYS8 остаются отдельным физическим развитием.
+Kul ARCH1h.2a также завершён; PHYS6 завершён16.11.2026, PHYS8 остаётся отдельным физическим развитием.
 
 <a id="phys6"></a>
-### PHYS6 — простой игровой персонаж
+### PHYS6 — простой игровой персонаж — завершён 16.11.2026
 
-После PHYS5: принять ограниченный controller на основе BEPU example с сохранением
+Реализован ограниченный controller на основе BEPU example с сохранением
 license/provenance и собственным сопровождением адаптации. Capsule, управление
 скоростью, ground/support, slope limit, прыжок и взаимодействие с dynamic body.
 Fixtures: ровный пол, швы mesh, подъём/спуск через вершину склона, moving platform,
 низкий потолок, teleport и потеря опоры. Auto-stairs, crouch/root motion/сложная
 локомоция не объявляются готовыми; их necessity и acceptance определяются отдельно.
+
+[Контракт и матрица PHYS6](CHARACTERS.md), [проверки/команды](HISTORY.md#phys6-2026-11-16),
+[manifest/SHA](PHYS6_RESULTS.json). Нейтральная optional capability, заимствованная
+капсула, App-owned factory/caller-owned world, reference-free Aether roles и sequenced
+jump. 56новых cases, полный Kton/Aether suite124passed каждый D/R; independent
+consumer52checks×4 на обоих DI и provider regression309×3. Версия1.2611.16.2-alpha.
+PHYS8 performance/platform/release acceptance остаётся самостоятельной задачей.
 
 <a id="phys7"></a>
 ### PHYS7 — необязательный простой ragdoll
@@ -407,6 +414,75 @@ active ragdoll/get-up не является критерием PHYS7 или пе
 - Описать App standalone/ECS usage, limits, supported platforms, version upgrade,
   unsupported checkpoint/replay и Known Issues; все actual commands/outcomes — в
   HISTORY после первых запусков. API/package readiness не наследуется от других модулей.
+
+<a id="phys81"></a>
+#### PHYS8.1 — Windows x64 baseline — завершён 16.11.2026
+
+Без изменения production API/defaults/ceilings: отдельный App/DI consumer,
+100/1000active/sleeping bodies,1/32/256walking controllers, standalone и полный
+headless session tick, Cobalt/MS DI. Source/fresh Debug smoke по12workloads,
+published source/fresh Release по28;120warmup+600samples, p50/p95/p99/allocations/
+pool high-water/teardown.256-controller ECS явно выбирает разрешённый projection
+capacity256.14пакетов одной persisted версии и fresh graph/output hashes проверены;
+124functional tests каждый D/R. Все93PHYS6source hashes сохранились, версия1.2611.16.2-alpha
+не повышается для нового non-packaged ManualTests consumer и документации.
+[Метод/наблюдения/ограничения](PERFORMANCE.md), [история](HISTORY.md#phys81-2026-11-16),
+[manifest/SHA](PHYS81_RESULTS.json). Общая PHYS8 readiness не объявляется.
+
+<a id="phys82"></a>
+#### PHYS8.2 — allocation attribution и адресная оптимизация — завершён 16.11.2026
+
+Baseline зафиксировал около445КБ/tick в полном ECS-пути на1000active и sleeping
+bodies и около56Б/tick в standalone32/256controllers. Сначала разделить вклад
+session/scheduler/transforms/bridge и backend, затем убрать подтверждённые повторные
+allocations/подготовку. Сохранить полный preflight до мутации, identity/generations,
+phase-boundary attach/detach, ownership/retry cleanup, contact timing и controller
+поведение. После production правок — новая общая версия до финальных проверок,
+те же workloads и функциональная регрессия; стабилизировать warmup/повторения до
+сравнительного timing target. Не назначать numeric SLA по одному macrobaseline.
+
+Выполнено: [источники/реализация/сравнение](ALLOCATION_OPTIMIZATION.md),
+[команды](HISTORY.md#phys82-2026-11-16), [manifest/SHA](PHYS82_RESULTS.json).
+Одним новым probe наimmutable `.2-alpha`/`.3-alpha` установлено:1000body full ECS
+~445КБ→440–842Б/tick(>99.8%),256controllers334КБ→210КБ(~37.26%). Вклад native,
+bridge, movement, playback, transforms и extraction разделён primary-thread counters;
+allocation traces подтверждают hot callsites. Reused scratch/immutable templates,
+новый allocation-free motion validator, removals scratch/mass scan сохраняют полный
+preflight/identity/lifecycle/contact timing.155tests D/R,131×3contracts,309×3provider,
+52×4independent ECS и104macro/attribution fixtures прошли. Версия1.2611.16.3-alpha
+выбрана до финальных проверок; timing SLA не назначался.
+
+Оставшиеся shared command recording/playback allocations — отдельная следующая
+измеренная цель: сохранить immutable reservation maps, batch tokens, generations,
+full-batch validation и отсутствие удержания private component types/retired ALC.
+Общий EntityCommandBuffer в этом срезе не менялся. Визуальные/platform/release gates
+не закрываются наличием performance результата.
+
+Остальные критерии PHYS8 выше сохраняются: explicit expanded capacity/worker profiles,
+raw callbacks/stall diagnostics, visual pose/interpolation/Stop и platform/release
+matrix.10000bodies/2/4/8workers требуют отдельного preset/решения, ragdoll optional.
+
+<a id="phys83"></a>
+#### PHYS8.3 — deferred-команды контактов — завершён 16.11.2026
+
+Измеренная следующая цель PHYS8.2: убрать per-command objects и per-playback scratch
+без изменения публичного ECS API/форматов/contact timing. Общий Runtime buffer
+теперь использует value records, скопированные reference-free payload blocks,
+reused validation/targets/reservations и bounded instance handler cache. Full
+preflight до commit, cancellation retry/fault behavior и independent published maps
+сохранены; collectible Type/closed generic handlers освобождаются при завершении
+batch/reset/dispose, World component pools сохраняют отдельное владение.
+
+[Реализация/измерения/границы](DEFERRED_COMMAND_ALLOCATIONS.md),
+[команды](HISTORY.md#phys83-2026-11-16), [manifest/SHA](PHYS83_RESULTS.json).
+Один probe/immutable `.3-alpha` и `.4-alpha` cohorts:256controllers full ECS
+209719–209732→6720Б/tick(~96.8%) на обоих DI; bridge48Б, playback6224Б на detached
+result/256handles.20новых ECS cases +2contact cases, Aether3554/Kton157/Kul103passed
+каждый D/R; solution0errors, independent ECS52×4 и104macro/attribution fixtures.
+Первый full Debug с diagnostic50msStop timeout сохранён в evidence; новые forced-GC/
+allocation tests изолированы в nonparallel collection, D/R повторены полностью.
+Причинность timeout не установлена, production deadlines прежние. Версия1.2611.16.4-alpha
+зафиксирована до финальных проверок. Timing SLA и общий PHYS8 release не объявляются.
 
 ## Источники решения
 

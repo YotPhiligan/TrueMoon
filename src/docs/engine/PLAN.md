@@ -1521,7 +1521,7 @@ Runtime-edit/full snapshot ARCH1c и горячая смена launch role ос�
 
 Этап не включает Kton/Kul activation, subsystem native-state migration, physical
 input/DPI/device loss/other OS/performance или общий release. Старые ARCH3.9 proofs
-не переписаны. Далее выбрать PHYS6/import g.1→g.2/ED functional scope; Requests/
+не переписаны. PHYS6 завершён16.11.2026; далее выбрать import g.1→g.2/ED/PHYS8 functional scope; Requests/
 Claims/Decisions этим завершением автоматически не закрываются.
 
 Уточнение очереди 2026-11-12: минимальные ENG7b.1–2 выполняются после ARCH1f.4
@@ -1909,7 +1909,7 @@ callback→completion и планом h.1. Модели g.0 и audio h.0 мог�
 Kton API/provider независимы от Aether/Tooling/UI/GPU. Aether потребляет физику
 через value components, phase synchronization и session ownership; размещение
 bridge contracts/runtime systems согласуется с ARCH3.1–3. Подробные критерии
-интеграции — [PHYS5](../physics/PLAN.md#phys5), персонажа — PHYS6, простой ragdoll —
+интеграции — [PHYS5](../physics/PLAN.md#phys5), персонажа — [PHYS6](../physics/PLAN.md#phys6), простой ragdoll —
 необязательный PHYS7. Backend types и world owners не помещаются в ECS values.
 Headless PHYS0 выполнен независимо от surface renderer: exact beta.33,
 по114checks source Debug/published Release на общем .NET11,64cleanup cycles/
@@ -1922,7 +1922,7 @@ PHYS3 queries/events реализованы:309checks source/fresh-package D/pub
 [policy](../physics/QUERIES_CONTACTS.md), [evidence](../physics/HISTORY.md#phys3-2026-11-12).
 PHYS4 public App/configuration/DI/lifecycle завершён:192checks/profile обоих DI,
 current provider regression309×3; [App guide](../physics/APP.md),
-[evidence](../physics/HISTORY.md#phys4-2026-11-12). PHYS5 завершён2026-11-15: [API/профиль](../physics/ECS_BRIDGE.md), [68tests D/R и independent acceptance](../physics/HISTORY.md#phys5-2026-11-15). Следующий физический feature — PHYS6; Kul ARCH1h.2a также завершён; дальнейший выбор — по общей очереди.
+[evidence](../physics/HISTORY.md#phys4-2026-11-12). PHYS5 завершён2026-11-15: [API/профиль](../physics/ECS_BRIDGE.md), [68tests D/R и independent acceptance](../physics/HISTORY.md#phys5-2026-11-15). PHYS6 завершён2026-11-16: [контракт/fixtures](../physics/CHARACTERS.md), [124tests D/R и independent acceptance](../physics/HISTORY.md#phys6-2026-11-16). PHYS8.1 baseline завершён2026-11-16: [метод/наблюдения](../physics/PERFORMANCE.md). [PHYS8.2](../physics/PLAN.md#phys82) allocation attribution/оптимизация завершён16.11.2026: [результат](../physics/ALLOCATION_OPTIMIZATION.md),155tests D/R,Version1.2611.16.3-alpha. [PHYS8.3](../physics/PLAN.md#phys83) завершил shared command allocation срез: [результат/границы](../physics/DEFERRED_COMMAND_ALLOCATIONS.md), Version1.2611.16.4-alpha; full Aether3554/Kton157/Kul103tests D/R. Другие PHYS8 gates открыты. Kul ARCH1h.2a также завершён; дальнейший выбор — по общей очереди.
 Текущая очередь Player → ARCH3 сохраняется;
 proposed game Request/Claim/Decision не изменены.
 

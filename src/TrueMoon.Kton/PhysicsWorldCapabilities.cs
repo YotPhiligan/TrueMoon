@@ -11,5 +11,7 @@ public enum PhysicsWorldCapabilities
     /// <summary>Bounded ray/sweep/overlap queries.</summary>
     Queries = 2,
     /// <summary>Generation-safe gameplay contact events.</summary>
-    ContactEvents = 4
+    ContactEvents = 4,
+    /// <summary>Upright dynamic capsule controllers through IPhysicsCharacterWorld.</summary>
+    Characters = 8
 }

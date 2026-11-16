@@ -9,7 +9,7 @@ namespace TrueMoon.Kton.Bepu;
 
 internal struct NarrowPhase(BepuWorld world) : INarrowPhaseCallbacks
 {
-    public void Initialize(Simulation simulation) { }
+    public void Initialize(Simulation simulation) => world.Resources.Characters!.Initialize(simulation);
     public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
     {
         if (world.Faults.FailContactCallback) { world.CallbackFailed = true; return false; }
@@ -30,6 +30,8 @@ internal struct NarrowPhase(BepuWorld world) : INarrowPhaseCallbacks
         { world.CallbackFailed = true; return false; }
         material.FrictionCoefficient = a.Description.Material.CombineFriction(b.Description.Material);
         world.RecordContact(pair, ref manifold);
+        if (!a.Description.IsSensor && !b.Description.IsSensor)
+            world.Resources.Characters!.TryReportContacts(pair, ref manifold, workerIndex, ref material);
         return !a.Description.IsSensor && !b.Description.IsSensor;
     }
     public bool ConfigureContactManifold(int workerIndex, CollidablePair pair, int childIndexA, int childIndexB, ref ConvexContactManifold manifold)

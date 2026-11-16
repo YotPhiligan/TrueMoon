@@ -7,7 +7,7 @@ using TrueMoon.Kton.Shapes;
 
 namespace TrueMoon.Kton.Bepu;
 
-internal sealed partial class BepuWorld : IPhysicsWorld
+internal sealed partial class BepuWorld : IPhysicsWorld, TrueMoon.Kton.Characters.IPhysicsCharacterWorld
 {
     private readonly BepuPhysicsWorldFactory _factory;
     internal readonly WorldResources Resources;
@@ -27,14 +27,14 @@ internal sealed partial class BepuWorld : IPhysicsWorld
     internal bool CallbackFailed;
     private Simulation Simulation => Resources.Simulation!;
     public PhysicsWorldId Id { get; } = new(Guid.NewGuid());
-    public PhysicsWorldCapabilities Capabilities => PhysicsWorldCapabilities.RigidBodySimulation | PhysicsWorldCapabilities.Queries | PhysicsWorldCapabilities.ContactEvents;
+    public PhysicsWorldCapabilities Capabilities => PhysicsWorldCapabilities.RigidBodySimulation | PhysicsWorldCapabilities.Queries | PhysicsWorldCapabilities.ContactEvents | PhysicsWorldCapabilities.Characters;
     public PhysicsWorldOptions Options { get; }
     public PhysicsWorldState State => (PhysicsWorldState)Volatile.Read(ref _state);
     public ulong LastCompletedTick => Volatile.Read(ref _tick);
     internal BepuWorld(BepuPhysicsWorldFactory factory, WorldResources resources, PhysicsWorldOptions options, FaultInjection faults)
     {
         _factory = factory; Resources = resources; Options = options; Faults = faults; Profile = PhysicsProfileSettings.For(options.Quality);
-        Bodies = new(options.Limits.MaxBodies); Shapes = new(options.Limits.MaxShapes); Joints = new(options.Limits.MaxJoints);
+        Bodies = new(options.Limits.MaxBodies); Shapes = new(options.Limits.MaxShapes); Joints = new(options.Limits.MaxJoints); Characters = new(options.Limits.MaxBodies);
         ByBackend = new(options.Limits.MaxBodies); DisabledPairs = new(options.Limits.MaxJoints);
         _prepared = new PreparedBody[options.Limits.MaxBodies]; _touched = new int[options.Limits.MaxBodies];
         _queryHits = new PhysicsHit[Math.Min(options.Limits.MaxQueryHits, options.Limits.MaxQueryScratchBytes / System.Runtime.CompilerServices.Unsafe.SizeOf<PhysicsHit>())];
@@ -91,7 +91,7 @@ internal sealed partial class BepuWorld : IPhysicsWorld
             if (State == PhysicsWorldState.Disposed) return;
             Volatile.Write(ref _state, (int)PhysicsWorldState.Disposing);
             // Each resource stage retains its completion bit, so a boundary failure can be retried without double-disposal.
-            Resources.Dispose(); Bodies.Clear(); Shapes.Clear(); Joints.Clear(); ByBackend.Clear(); DisabledPairs.Clear(); Array.Clear(_prepared); Contacts.Clear();
+            Resources.Dispose(); Bodies.Clear(); Shapes.Clear(); Joints.Clear(); Characters.Clear(); ByBackend.Clear(); DisabledPairs.Clear(); Array.Clear(_prepared); Contacts.Clear();
             _factory.WorldReleased(); Volatile.Write(ref _state, (int)PhysicsWorldState.Disposed);
         }
         catch (Exception error) { throw new PhysicsException(new(PhysicsErrorCode.Faulted, "World.Cleanup"), error); }

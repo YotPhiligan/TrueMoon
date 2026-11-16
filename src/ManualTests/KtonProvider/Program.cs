@@ -67,7 +67,7 @@ internal static partial class Program
         using (var b = typed.Create(Options()))
         {
             Check("independent-world-incarnations", a.Id != b.Id);
-            Check("explicit-phys3-capabilities", a.Capabilities == (PhysicsWorldCapabilities.RigidBodySimulation | PhysicsWorldCapabilities.Queries | PhysicsWorldCapabilities.ContactEvents));
+            Check("explicit-provider-capabilities", a.Capabilities == (PhysicsWorldCapabilities.RigidBodySimulation | PhysicsWorldCapabilities.Queries | PhysicsWorldCapabilities.ContactEvents | PhysicsWorldCapabilities.Characters));
             var fall = Ball(a, new(0, 10, 0)); var still = Ball(b, new(0, 10, 0)); Step(a, 30); Step(b, 30);
             Check("gravity-first-world", a.GetBodyState(fall).Pose.Position.Y < 9);
             Near("second-world-not-integrated-by-first", b.GetBodyState(still).Pose.Position.Y, 10);

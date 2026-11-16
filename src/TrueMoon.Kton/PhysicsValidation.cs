@@ -125,19 +125,29 @@ public static class PhysicsValidation
     /// <param name="options">World policy.</param><param name="body">Body input.</param><param name="shape">Actual captured shape for body.Shape.</param>
     /// <returns>Neutral admission error or success.</returns>
     public static PhysicsError ValidateBody(PhysicsWorldOptions options, PhysicsBodyDescription? body, PhysicsShapeDefinition? shape)
+        => ValidateBody(options, body, shape, body?.Pose ?? default, body?.LinearVelocity ?? default, body?.AngularVelocity ?? default);
+
+    /// <summary>Checks immutable body settings against a current motion snapshot without allocating a replacement descriptor.
+    /// Performs the same complete policy, shape, mass, material and filter admission as the descriptor overload.</summary>
+    /// <param name="options">World policy.</param><param name="body">Captured immutable settings, including shape identity and motion kind.</param>
+    /// <param name="shape">Actual captured shape for body.Shape.</param><param name="pose">Current pose, replacing body.Pose for this check.</param>
+    /// <param name="linearVelocity">Current linear velocity, replacing body.LinearVelocity.</param>
+    /// <param name="angularVelocity">Current angular velocity, replacing body.AngularVelocity.</param><returns>Neutral admission error or success.</returns>
+    public static PhysicsError ValidateBody(PhysicsWorldOptions options, PhysicsBodyDescription? body, PhysicsShapeDefinition? shape,
+        PhysicsPose pose, Vector3 linearVelocity, Vector3 angularVelocity)
     {
         var error = Validate(options); if (error.IsFailure) return error;
         if (body is null) return Invalid("Body");
         if (!body.Shape.IsValid) return new(PhysicsErrorCode.InvalidIdentifier, "Body.Shape");
         if (!Enum.IsDefined(body.Motion)) return Invalid("Body.Motion");
-        error = Validate(body.Pose); if (error.IsFailure) return error;
+        error = Validate(pose); if (error.IsFailure) return error;
         error = ValidateShape(shape, options.Limits); if (error.IsFailure) return error;
         if (shape is PhysicsStaticMesh && body.Motion != PhysicsBodyMotion.Static) return new(PhysicsErrorCode.UnsupportedGeometry, "Body.Shape");
         if (!float.IsFinite(body.Mass) || (body.Motion == PhysicsBodyMotion.Dynamic ? body.Mass is < 0.01f or > 10000 : body.Mass != 0))
             return Invalid("Body.Mass");
-        if (!Speed(body.LinearVelocity, PhysicsProfileSettings.For(options.Quality).MaximumLinearSpeed)) return Invalid("Body.LinearVelocity");
-        if (!Speed(body.AngularVelocity, MaximumAngularSpeed)) return Invalid("Body.AngularVelocity");
-        if (body.Motion == PhysicsBodyMotion.Static && (body.LinearVelocity != Vector3.Zero || body.AngularVelocity != Vector3.Zero))
+        if (!Speed(linearVelocity, PhysicsProfileSettings.For(options.Quality).MaximumLinearSpeed)) return Invalid("Body.LinearVelocity");
+        if (!Speed(angularVelocity, MaximumAngularSpeed)) return Invalid("Body.AngularVelocity");
+        if (body.Motion == PhysicsBodyMotion.Static && (linearVelocity != Vector3.Zero || angularVelocity != Vector3.Zero))
             return Invalid("Body.StaticVelocity");
         if (!float.IsFinite(body.Material.Friction) || body.Material.Friction is < 0 or > 4) return Invalid("Body.Material.Friction");
         if (body.Filter.Layer >= 32) return Invalid("Body.Filter.Layer");

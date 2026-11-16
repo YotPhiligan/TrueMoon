@@ -8,7 +8,7 @@ App integration is provided separately by TrueMoon.Kton.Bepu's PHYS4
 UseBepuPhysics/UseConfiguredBepuPhysics entry points. This neutral assembly remains
 independent of App/DI implementation and BEPU.
 
-Use `TrueMoon.Kton`, `.Bodies`, `.Shapes`, `.Joints`, `.Queries` and `.Contacts`.
+Use `TrueMoon.Kton`, `.Bodies`, `.Shapes`, `.Joints`, `.Queries`, `.Contacts` and `.Characters`.
 `PhysicsValidation` returns a `PhysicsError` before mutation; provider operations
 throw `PhysicsException` with the same stable category. Runtime IDs contain a
 world incarnation, slot and generation. Do not serialize them as authoring IDs.
@@ -42,7 +42,18 @@ here. Queries write bounded caller-owned spans and report truncation; gameplay
 contact overflow faults the world. Disposal failures retain the owner for retry.
 
 Before publishing a session, require its needed `IPhysicsWorld.Capabilities` flags.
-The BEPU provider currently supplies RigidBodySimulation, Queries and ContactEvents.
+The BEPU provider supplies RigidBodySimulation, Queries, ContactEvents and Characters.
+
+PHYS6 adds the optional `IPhysicsCharacterWorld` capability, generation-safe
+`PhysicsCharacterId`, immutable `PhysicsCharacterOptions`, world XZ velocity/jump
+input and support snapshots. Controllers borrow upright dynamic nonsensor capsules.
+Remove a controller before removing its body; removal restores inertia and leaves
+the body alive. Input velocity persists, jump is consumed once at the next Step.
+`PhysicsValidation.ValidateBody` also accepts an explicit current pose and linear/
+angular velocities alongside captured immutable settings. This overload performs
+the same complete admission without allocating a replacement descriptor per frame.
+No air steering, automatic stairs, crouch or root motion is promised. The neutral
+package still has no provider, App, native or Aether dependency.
 Other providers must explicitly reject operations for absent features. A zero
 published event count alone does not prove that the scene had no physical collisions.
 

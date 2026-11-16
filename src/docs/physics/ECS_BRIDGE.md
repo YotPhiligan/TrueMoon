@@ -151,7 +151,8 @@ SceneWorld → App dependencies. Подсистема не освобождае�
 
 Общий checkpoint/IPC не расширен. Snapshot/restore native world, native-state
 migration/mod reload, physics interpolation, queries для игровых систем как
-отдельный injected session reader, meshes и character controller требуют своих
-контрактов. [PHYS6](PLAN.md#phys6) остаётся следующим физическим feature;
-по общей выбранной очереди после PHYS5 идёт Kul ECS/captured-assets adapter.
+отдельный injected session reader и meshes требуют своих контрактов. Character
+controller добавлен отдельно в [PHYS6](CHARACTERS.md), завершён16.11.2026:
+optional schema/input/state, sequenced jump и same-tick support. Kul ECS adapter
+также завершён; следующий физический этап — PHYS8.
 Headless/CPU evidence отделён от actual GPU/physical/platform/release acceptance.

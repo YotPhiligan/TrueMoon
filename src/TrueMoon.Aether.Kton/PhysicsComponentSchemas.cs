@@ -10,6 +10,11 @@ public static class PhysicsComponentSchemas
     public static ComponentTypeId BodyId { get; } = new(new Guid("b5ec3c81-79a9-4a11-b052-9fe141d5a001"));
     /// <summary>Stable optional velocity schema identity.</summary>
     public static ComponentTypeId VelocityId { get; } = new(new Guid("b5ec3c81-79a9-4a11-b052-9fe141d5a002"));
+    /// <summary>Stable optional character settings identity.</summary>
+    public static ComponentTypeId CharacterId { get; } = new(new Guid("b5ec3c81-79a9-4a11-b052-9fe141d5a003"));
+    /// <summary>Controller settings v1; requires an upright dynamic capsule body. Inputs and state are runtime data.</summary>
+    public static ComponentSchema Character { get; } = new(CharacterId, 1,
+        [Number("speed",6),Number("slope", MathF.PI / 4),Number("horizontalForce",1000),Number("verticalForce",1000),Number("jumpSpeed",5)], requiredTypes: [BodyId]);
     /// <summary>Body v1; requires the canonical Transform.</summary>
     public static ComponentSchema Body { get; } = new(BodyId, 1,
     [

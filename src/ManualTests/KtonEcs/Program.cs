@@ -43,7 +43,7 @@ internal static class Program
             (name.StartsWith("TrueMoon", StringComparison.Ordinal) || name is "BepuPhysics" or "BepuUtilities")).Select(assembly => new
             { Name = assembly.GetName().Name, assembly.Location, Sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(assembly.Location))), References = assembly.GetReferencedAssemblies().Select(reference => reference.Name).ToArray() }).ToArray();
         var output = Path.GetFullPath(args[0]); Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-        await File.WriteAllTextAsync(output, JsonSerializer.Serialize(new { Completed = true, Stage = "PHYS5", CheckCount = Checks.Count, Checks, Owners, Assemblies = assemblies, NativeRendering = false }, new JsonSerializerOptions { WriteIndented = true }));
+        await File.WriteAllTextAsync(output, JsonSerializer.Serialize(new { Completed = true, Stage = "PHYS6", CheckCount = Checks.Count, Checks, Owners, Assemblies = assemblies, NativeRendering = false }, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
     private static async Task Run(bool microsoft)
@@ -114,6 +114,26 @@ internal static class Program
         second.Tick(); second.Dispose();
         using (var replaced = games.Create() ?? throw new InvalidOperationException("Null replacement."))
         { replaced.LoadSceneWorld(new(data)); replaced.Tick(); Check("replace-starts-fresh-scene", replaced.ActiveScene!.World.Id != scene.World.Id && replaced.TickNumber == 1); }
+        using (var characterGame = games.Create() ?? throw new InvalidOperationException("Null character game."))
+        {
+            var characterDocument = CharacterDocument(); characterGame.LoadSceneWorld(new(characterDocument));
+            var world = characterGame.ActiveScene!.World;
+            var character = characterGame.ActiveScene.Entities[characterDocument.Entities[1].Id];
+            var floor = characterGame.ActiveScene.Entities[characterDocument.Entities[0].Id];
+            for (var i = 0; i < 90; i++) characterGame.Tick();
+            var support = world.GetComponent<PhysicsCharacterState>(character);
+            Check("character-schema-and-support", support.IsSupported && support.SupportEntity == floor && support.SupportNormal.Y > .99f);
+            world.SetComponent(character, new PhysicsCharacterInput(new(2, 0)));
+            for (var i = 0; i < 60; i++) characterGame.Tick();
+            var walking = world.GetComponent<LocalTransform>(character);
+            Check("character-walk-same-tick-pose", walking.Position.X is > 1.8f and < 2.1f && MathF.Abs(world.GetComponent<PhysicsVelocity>(character).Linear.X - 2) < .05f);
+            world.SetComponent(character, new PhysicsCharacterInput(Vector2.Zero, 1)); characterGame.Tick();
+            Check("character-sequenced-jump", !world.GetComponent<PhysicsCharacterState>(character).IsSupported && world.GetComponent<PhysicsVelocity>(character).Linear.Y > 4.5f);
+            for (var i = 0; i < 150; i++) characterGame.Tick();
+            Check("character-jump-not-replayed", world.GetComponent<PhysicsCharacterState>(character).IsSupported && world.GetComponent<LocalTransform>(character).Position.Y is > .97f and < 1.03f);
+            world.AddComponent(character, new PhysicsTeleport(1, new(new(0, 4, 0), Quaternion.Identity), true)); characterGame.Tick();
+            Check("character-teleport-loses-support", !world.GetComponent<PhysicsCharacterState>(character).IsSupported && world.GetComponent<LocalTransform>(character).Position.Y > 3.9f);
+        }
         await app.StopAsync();
         var resources = host.Resources;
         Check("final-owners-pools-zero", host.IsReleased && resources.PublishedWorlds == 0 && resources.ActiveResourceOwners == 0 && resources.MaximumPoolBytesAfterCleanup == 0 && !resources.PendingFailedCreationCleanup);
@@ -134,6 +154,20 @@ internal static class Program
             BuiltInComponents.Schemas.Concat([PhysicsComponentSchemas.Body,PhysicsComponentSchemas.Velocity]));
     }
     private static KeyValuePair<string, PropertyValue> Number(string key, double value) => new(key, PropertyValue.From(value));
+    private static SceneDocument CharacterDocument()
+    {
+        var floor = new EntityDefinitionId(Guid.NewGuid()); var character = new EntityDefinitionId(Guid.NewGuid());
+        EntityDefinition Definition(EntityDefinitionId id, bool capsule) => new(id, new(new ComponentData[]
+        {
+            new(new(Guid.NewGuid()), BuiltInComponents.TransformId, 1, [Number("y",capsule ? 2 : -.5)]),
+            new(new(Guid.NewGuid()), BuiltInComponents.AppearanceId, 1),
+            new(new(Guid.NewGuid()), PhysicsComponentSchemas.BodyId, 1,
+                [Integer("motion",capsule ? 1 : 0),Integer("shape",capsule ? 3 : 1),Number("x",capsule ? .5 : 20),Number("y",1),Number("z",capsule ? 0 : 20),Number("mass",capsule ? 1 : 0)])
+        }.Concat(capsule ? new ComponentData[] { new(new(Guid.NewGuid()), PhysicsComponentSchemas.CharacterId, 1) } : [])));
+        return new(new(Guid.NewGuid()), 1, [new(new(Guid.NewGuid()),floor),new(new(Guid.NewGuid()),character)],
+            [Definition(floor,false),Definition(character,true)],
+            BuiltInComponents.Schemas.Concat([PhysicsComponentSchemas.Body,PhysicsComponentSchemas.Character]));
+    }
     private static KeyValuePair<string, PropertyValue> Integer(string key, long value) => new(key, PropertyValue.From(value));
     private sealed class Observer : ISceneSubsystem
     {

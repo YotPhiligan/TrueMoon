@@ -1,5 +1,22 @@
 # TrueMoon: общий план развития
 
+Выполнено2026-11-16: [PHYS8.3 — deferred-команды контактов](physics/PLAN.md#phys83),
+[реализация/числа](physics/DEFERRED_COMMAND_ALLOCATIONS.md), Version1.2611.16.4-alpha.
+Shared Runtime buffer:~210КБ→6720Б/tick при256controllers; independent maps/preflight/ALC
+lifetime сохранены. Полные Aether/Kton/Kul D/R прошли; остальные PHYS8 gates открыты.
+
+Выполнено2026-11-16: [PHYS8.2 — allocation attribution/оптимизация](physics/PLAN.md#phys82),
+[источники/результат](physics/ALLOCATION_OPTIMIZATION.md), Version1.2611.16.3-alpha.
+Полный preflight/lifecycle/contacts сохранён. На этапе PHYS8.2 shared commands оставались открыты; следующий срез завершён в PHYS8.3 выше. Остальные PHYS8 release gates открыты.
+
+Выполнено2026-11-16: [PHYS8.1 — Windows x64 baseline](physics/PLAN.md#phys81),
+[метод/числа](physics/PERFORMANCE.md). Исторический baseline для PHYS8.2;
+production не менялся, Version1.2611.16.2-alpha сохранена; весь PHYS8 ещё открыт.
+
+Выполнено2026-11-16: [PHYS6 — контроллер капсулы и сессия Aether](physics/PLAN.md#phys6),
+версия1.2611.16.2-alpha. [Контракт/fixtures](physics/CHARACTERS.md),
+[результаты](physics/HISTORY.md#phys6-2026-11-16). PHYS8 и release gates отдельно.
+
 Выполнено2026-11-16: [ENG7b.3 — Editor/Player launch/delivery](engine/PLAN.md#eng7b3-launch-acceptance),
 версия1.2611.16.1-alpha. Повторный GPU Play исправлен; native/package и полная D/R
 регрессия прошли в bounded Windows x64 scope. Functional/release gates сохраняются.
@@ -123,13 +140,13 @@ Source/published/fresh: по230checks на обоих DI,4owned children/profile
 
 | Направление | Следующий результат | План владельца |
 | --- | --- | --- |
-| Слои Aether и моды | ARCH3.1–9, общий ARCH1j, Kton PHYS5 и Kul ARCH1h.2a завершены в указанном scope. ENG7b.3 завершён2026-11-16; далее выбрать PHYS6/import/ED functional scope, release gates отдельно | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
+| Слои Aether и моды | ARCH3.1–9, общий ARCH1j, Kton PHYS5 и Kul ARCH1h.2a завершены в указанном scope. ENG7b.3 завершён2026-11-16; PHYS6 завершён; далее выбрать import/ED/PHYS8 functional scope, release gates отдельно | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
 | .NET 11, CORE8 завершён | Inputs/generators/frozen game/runtime regression и свежая согласованная поставка проверены; функциональная очередь продолжается у владельцев | [CORE8](core/PLAN.md#core8-dotnet11), [итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11) |
 | Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
 | ECS и отображение, функциональная очередь | F.2/f.3/f.4 resources/snapshots/actual Vulkan surface и Playing fence готовы; далее минимальный Player | [ARCH1f.4](engine/PLAN.md#arch1f-rendering), [snapshot API](engine/RENDER_SNAPSHOTS.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
 | Исследование ассетов моделей | Кандидат и captured-I/O/limits/ID/cancel research prototype проверены; далее полный format policy и g.1 App/IFactory adapter/discovery | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [captured contract](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) |
 | Самостоятельное хранение ассетов | NOM0–6 IO/process scope и NOM7 local4package delivery/independent consumers проверены; далее engine g.2 bridge по согласованию, другие OS/RID/modes и physical/release gates отдельно; [disk-full/recovery](nom/DURABILITY.md) после UAC прошёл5cases/D/R; [VM harness](nom/VM_CRASH.md) сохранён, actual verification отложена; [NOM8a/b buffer/raw API](nom/BUFFER_API.md#nom8b-raw-api) реализован и проверен; consumer bridge g.2 после g.1 по согласованию engine; hardware power-off исключён | [Nom queue](nom/PLAN.md#nom-own-queue), [решение](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07) |
-| Kton / самостоятельная 3D-физика | BEPU — приоритет; PHYS0–5 и ECS/session bridge проверены в Windows/headless profile.68tests D/R, actual both-DI source/published/fresh; controller PHYS6/PHYS8 отдельно; Kul ARCH1h.2a также завершён | [PHYS0–8](physics/PLAN.md#current-physics-queue), [статус](physics/STATUS.md), [ARCH1i](engine/PLAN.md#arch1i-physics) |
+| Kton / самостоятельная 3D-физика | BEPU — приоритет; PHYS0–6 и capsule/session bridge проверены в Windows/headless profile.124tests D/R, both-DI source/published/fresh52checks×4; PHYS8.1/8.2 baseline и allocations завершены в указанном scope;1000body445КБ→<1КБ/tick,155tests D/R; shared commands и остальные PHYS8 gates открыты; Kul ARCH1h.2a также завершён | [PHYS0–8](physics/PLAN.md#current-physics-queue), [статус](physics/STATUS.md), [ARCH1i](engine/PLAN.md#arch1i-physics) |
 | Аудиомодуль | TrueMoon.Kul AUD1 и optional ARCH1h.2a ECS/captured-content bridge реализованы и проверены в Windows x64 scope; следующие AUD2–3 — device loss/RT/queues/other OS | [Audio PLAN](audio/PLAN.md#current-audio-queue), [ARCH1h](engine/PLAN.md#arch1h-audio) |
 | Editor, контракт готов | ED4g.3/4 завершены; ED5a.0 camera/selection contract зафиксирован2026-11-08 и проверен numerical probe20checks | [Контракт](engine/EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1), [scope](engine/HISTORY.md#ed5a0-contract-2026-11-08) |
 | Editor, численный срез готов | ED5a.1 immutable camera/projection/unprojection/ray/pick API;77newcases, Aether1857 D/R и Editor1353 Debug | [Scope](engine/HISTORY.md#ed5a1-values-2026-11-08) |

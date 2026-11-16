@@ -56,11 +56,13 @@ internal sealed partial class BepuWorld
         try
         {
             var entry = Body(body);
+            if (entry.Character != null) throw BepuPhysicsWorldFactory.Error(PhysicsErrorCode.ResourceInUse, "Body.Character");
             if (entry.JointReferences != 0) throw BepuPhysicsWorldFactory.Error(PhysicsErrorCode.ResourceInUse, "Body.Joints");
             Contacts.PreflightInvalidation(body);
             try
             {
                 Faults.Visit(Checkpoint.BeforeMutation);
+                InvalidateCharacterSupports(entry);
                 Contacts.Invalidate(body, TrueMoon.Kton.Contacts.PhysicsContactEndReason.BodyRemoved);
                 if (entry.Description.Motion == PhysicsBodyMotion.Static) Simulation.Statics.Remove(entry.StaticHandle); else Simulation.Bodies.Remove(entry.Handle);
                 ByBackend.Remove(entry.Collider.Packed); entry.Shape.BodyReferences--; Bodies.Remove(body.Slot);

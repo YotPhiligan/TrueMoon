@@ -17,6 +17,12 @@ public static class PhysicsComponentRegistry
             _ = ReadBody(context).CaptureShape();
         });
         builder.Register<PhysicsVelocity>(PhysicsComponentSchemas.Velocity, context => ReadVelocity(context));
+        builder.Register<PhysicsCharacter>(PhysicsComponentSchemas.Character, context => new()
+        {
+            MaximumSpeed = context.GetSingle("speed"), MaximumSlopeRadians = context.GetSingle("slope"),
+            MaximumHorizontalForce = context.GetSingle("horizontalForce"), MaximumVerticalForce = context.GetSingle("verticalForce"),
+            JumpSpeed = context.GetSingle("jumpSpeed")
+        });
         return builder;
     }
     private static PhysicsBody ReadBody(ComponentValidationContext context) => new(

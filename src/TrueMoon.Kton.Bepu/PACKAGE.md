@@ -5,6 +5,16 @@ PHYS2 implements world-owned immutable shapes, static/dynamic/kinematic bodies,
 generational identities, BallSocket, bounded command admission, fixed Step and
 resource ownership. Exact dependencies: BepuPhysics/BepuUtilities 2.5.0-beta.33.
 PHYS3 adds bounded raycast/convex sweep/overlap and Begin/Stay/End contact events.
+PHYS6 adds `IPhysicsCharacterWorld` in `TrueMoon.Kton.Characters`: attach a controller
+to an existing upright dynamic nonsensor capsule with `CreateCharacter(body, options)`.
+The controller borrows its body, locks rotation, and restores inertia when removed.
+Remove the controller before removing its body; world disposal releases both.
+`SetCharacterInput(id, new(worldXZVelocity, jump))` retains target velocity and consumes
+the jump pulse at the next fixed Step. `GetCharacterState` reports pose, velocity,
+support body and normal. Walkable slopes and moving/dynamic supports use BEPU solver
+constraints. Teleport/remove immediately invalidates affected supports. No air steering,
+automatic stairs, crouching or root motion. Imported controller license and provenance
+are shipped under `licenses/characters/` (Apache-2.0).
 
 Use the existing `IFactory<IPhysicsWorld, PhysicsWorldOptions>` contract from
 TrueMoon.Contracts. `BepuPhysicsWorldFactory` is the low-level factory implementation;

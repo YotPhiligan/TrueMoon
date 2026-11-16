@@ -31,6 +31,15 @@ owns its systems and borrows World; dispose scheduler before scene/World, and
 retire render resources before game/ALC. Failed cleanup retains ownership for retry.
 App owns singleton RuntimeEngine; workflow hosts borrow it and request Stop.
 
+Deferred commands use compact records, copied reference-free values in reusable
+payload blocks (including oversized individual values), and
+buffer-owned validation/target scratch. Complete batch preflight still precedes
+commit. CommandPlaybackResult retains an independent copy of reservation identities;
+later batches/reset/dispose cannot change it. Cancellation retains pending commands
+for retry, validation failure requires Reset, and unexpected commit failure faults
+the World. Reset/dispose clear recorded values and handler references; collectible type handlers
+(including constructed generics) are not retained beyond their pending batch.
+
 UseAetherSceneSubsystems opts scene sessions into DI-created subsystem resources
 and additional systems in the same scheduler. Each result is session-owned;
 prepare before activation, dispose systems before their subsystem dependencies,

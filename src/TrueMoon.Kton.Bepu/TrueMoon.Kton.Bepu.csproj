@@ -14,5 +14,6 @@
     <InternalsVisibleTo Include="KtonProviderProbe" />
     <InternalsVisibleTo Include="KtonAppProbe" />
     <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+    <None Update="Characters/LICENSE.BEPU.txt;Characters/THIRD-PARTY.md;Characters/CharacterMotionConstraint.tt" Pack="true" PackagePath="licenses/characters/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

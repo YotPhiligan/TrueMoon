@@ -15179,3 +15179,120 @@ native manifest. Это ignored локальные artifacts без отдель
 release. Kton/Kul не активируются этой launch fixture;19package delivery не новая
 полная all27 architecture matrix. ED/import/PHYS6/AUD2–3 остаются отдельными;
 Requests/Claims/Decisions и потребительский код игры/Studio не менялись.
+
+<a id="engine-status-before-phys6-2026-11-16"></a>
+## STATUS перед PHYS6 — 16.11.2026
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-16 — ENG7b.3 завершён в Windows x64 launch/delivery scope.**
+[Единственная задача](PLAN.md#eng7b3-launch-acceptance),
+[матрица/миграция](LAUNCH_ACCEPTANCE.md), [история/команды](HISTORY.md#eng7b3-2026-11-16),
+[manifest/SHA](ENG7B3_BASELINE.json). Версия — `1.2611.16.1-alpha`.
+
+Исправлен второй mesh Play после Stop: GPU generation начинается с1 для новой
+runtime connection, resize продолжает текущую generation; stale child/tickets
+отвергаются. Combined child использует standalone Runtime/frozen bootstrap.
+Новый регрессионный тест и реальные native повторные циклы прошли.
+
+Source Debug/published Release/fresh NuGet:34profiles на Cobalt/MS DI,54game cycles
+с crash/recovery,36identity rejections,60CLI cases,12окон реальных примеров.
+Player-only/combined Player отдельно прошли4SDK-free runs. Документ/история/selection
+сохранены; Editor не загружает game, нормальный child validation0/0, owners/reap
+проверены.19точных package archives,7closed-feed graphs, native/shared/font payloads
+и1033source hashes согласованы; это не новая полная поставка всех27packages.
+
+Полная свежая регрессия:16suites по9111passed каждый Debug/Release,0failed/0skipped;
+Aether3534/Editor1507/Player17/Abstractions26 и bridges68/103 входят в totals.
+Non-incremental solution builds D/R0errors. SDK/TFM/dependencies/native ABI прежние;
+native Skia4.156.1 повторно не пересобиралась. [Прежний STATUS](HISTORY.md#engine-status-before-eng7b3-2026-11-16).
+
+ENG7b.3 больше не следующая задача. Далее выбрать functional scope: PHYS6 controller,
+production import g.1→g.2 либо ED4i/дальнейшие ED5 инструменты. AUD2–3, physical/
+release/device-loss/other OS и историческая drain cause самостоятельны.
+Requests/Claims/Decisions и код потребителей не менялись.
+
+<a id="engine-status-before-phys81-2026-11-16"></a>
+## STATUS перед PHYS8.1 — 16.11.2026
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-16 — PHYS6: optional character roles подключены к игровой сессии.**
+Единственная детальная задача у [Kton](../physics/PLAN.md#phys6),
+[контракт](../physics/CHARACTERS.md), [команды/границы](../physics/HISTORY.md#phys6-2026-11-16),
+[manifest/SHA](../physics/PHYS6_RESULTS.json). Версия1.2611.16.2-alpha.
+
+Character schema/input/support state работают в существующей scene-owned physics
+subsystem и fixed Movement фазе; jump sequence исключает повторный прыжок.
+Runtime attach/detach/descriptor replacement/delete и failed preparation cleanup
+проверены. Pose/velocity/support публикуются в одном tick; contact timing PHYS5 прежний.
+
+Kton/Aether124tests каждый D/R,0failed/0skipped; solution builds D/R0errors.
+Independent source Debug/published Release/fresh NuGet D/R:52checks каждый, оба DI,
+14пакетов согласованной версии; owners/pools0. Это headless CPU acceptance.
+Новая GPU/physical/mod-state migration/shared-game-ABI приёмка не заявляется.
+
+ENG7b.3 завершён ранее сегодня на1.2611.16.1-alpha; его9111tests/16suites,
+native/launch proofs остаются датированной историей и сейчас не повторялись.
+[Сохранённая сводка ENG7b.3](HISTORY.md#engine-status-before-phys6-2026-11-16).
+Далее выбрать import g.1→g.2, ED4i/ED5, AUD2–3 либо отдельный PHYS8 scope.
+Physical/release/device-loss/other OS и историческая drain cause самостоятельны.
+Requests/Claims/Decisions и код потребителей не менялись.
+
+<a id="engine-status-before-phys82-2026-11-16"></a>
+## STATUS перед PHYS8.2 — 16.11.2026
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-16 — PHYS8.1: baseline полного ECS→physics→ECS tick завершён.**
+Детальная задача у [Kton](../physics/PLAN.md#phys81),
+[измерения/границы](../physics/PERFORMANCE.md), [команды](../physics/HISTORY.md#phys81-2026-11-16),
+[manifest/SHA](../physics/PHYS81_RESULTS.json). Production Aether/Kton не менялся,
+все93PHYS6source SHA прежние; версия1.2611.16.2-alpha сохраняется.
+
+Source/fresh Debug smoke и published Release baseline на Cobalt/MS DI:80workload
+profiles всего,48000measured Steps,14package closed feed и fresh output hashes.
+124functional tests каждый D/R прошли,0failed/0skipped; после cleanup owners/pools0.
+В ECS1000active/sleeping bodies наблюдается около445КБ allocations/tick; точный
+вклад scheduler/transforms/bridge ещё не разделён. Headless fixtures не имеют
+drawable components; GPU/interpolation/visual acceptance не выводятся из измерений.
+
+Следующий физический срез — [PHYS8.2](../physics/PLAN.md#phys82): allocation attribution
+и адресная оптимизация с сохранением preflight/identity/lifecycle/contacts. PHYS6
+готов; [его прежняя сводка](HISTORY.md#engine-status-before-phys81-2026-11-16).
+Import/ED/AUD и physical/release/device-loss/other OS остаются отдельными задачами.
+ENG7b.3 launch/native/full16suite proofs не повторялись. Requests/Claims/Decisions
+и код потребителей не менялись.
+
+<a id="engine-status-before-phys83-2026-11-16"></a>
+## STATUS перед PHYS8.3 — 16.11.2026
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-16 — PHYS8.2: allocations physics bridge уменьшены.**
+Детальная задача у [Kton](../physics/PLAN.md#phys82),
+[измерения/реализация](../physics/ALLOCATION_OPTIMIZATION.md),
+[команды](../physics/HISTORY.md#phys82-2026-11-16), [manifest/SHA](../physics/PHYS82_RESULTS.json).
+Версия1.2611.16.3-alpha; shared ECS scheduler/commands/transforms production code прежний.
+
+Before/after наодном probe/двухimmutable cohorts: full ECS1000bodies~445КБ→440–842Б
+заtick(>99.8%);256controllers334КБ→210КБ(~37.26%). Главные sources в Capture/Reconcile
+подтверждены trace/phase counters. Full preflight, identity, attach/detach, generation
+reuse, cleanup retry и contact timing сохранены; добавлен neutral motion-validation
+overload без смены прежнего API/schema behavior.
+
+155Kton/Aether tests D/R,0failed/0skipped; solution builds D/R0errors. Contracts/
+provider/ECS independent acceptance и104macro/attribution profiles прошли; exact
+old/new packages/fresh hashes и owners/pools0 проверены. Timing SLA не принят.
+[Сохранённый baseline статус](HISTORY.md#engine-status-before-phys82-2026-11-16).
+
+Следующая measured цель — shared ECS contact command recording/playback, сохраняя
+atomic preflight/independent mappings/token-generation/private-type/ALC lifetime.
+GPU/visual/other OS/full16suite acceptance не повторялась; PHYS8 в целом открыт.
+Import/ED/AUD и physical/release gates самостоятельны; Requests/Claims и consumer
+код не менялись.
+
+<a id="phys83-2026-11-16"></a>
+## 16.11.2026 — PHYS8.3 shared ECS buffer
+
+Deferred contact command allocation срез завершён: [единственная запись проверок](../physics/HISTORY.md#phys83-2026-11-16), [manifest/SHA](../physics/PHYS83_RESULTS.json). Version1.2611.16.4-alpha; полные Aether3554/Kton157/Kul103tests D/R, solution D/R0errors, independent ECS52×4 и104macro/attribution fixtures. Full preflight/independent maps/collectible lifetime сохранены. Старый diagnostic timeout и новый nonparallel test collection отражены в manifest; production deadlines прежние. Full16suites/GPU/other OS не повторялись.

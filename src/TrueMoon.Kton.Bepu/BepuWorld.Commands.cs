@@ -41,6 +41,8 @@ internal sealed partial class BepuWorld
                         RequireDynamic(motion); prepared.Linear = prepared.Angular = prepared.PendingImpulse = Vector3.Zero; prepared.Awake = false; break;
                 }
                 ValidateMotion(prepared.Pose, prepared.Linear, prepared.Angular);
+                if (body.Character != null && (!Upright(prepared.Pose) || prepared.Angular != Vector3.Zero || command.Kind == PhysicsCommandKind.Sleep))
+                    throw BepuPhysicsWorldFactory.Error(PhysicsErrorCode.InvalidArgument, "Character.BodyCommand");
                 if (motion == PhysicsBodyMotion.Dynamic)
                     ValidateMotion(prepared.Pose, prepared.Linear + prepared.PendingImpulse / body.Description.Mass, prepared.Angular);
             }
@@ -51,7 +53,11 @@ internal sealed partial class BepuWorld
                 for (var i = 0; i < touched; i++)
                 {
                     ref var prepared = ref _prepared[_touched[i]]; var entry = prepared.Entry!;
-                    if (prepared.Teleported) Contacts.Invalidate(entry.Id, TrueMoon.Kton.Contacts.PhysicsContactEndReason.Teleported);
+                    if (prepared.Teleported)
+                    {
+                        InvalidateCharacterSupports(entry);
+                        Contacts.Invalidate(entry.Id, TrueMoon.Kton.Contacts.PhysicsContactEndReason.Teleported);
+                    }
                     if (entry.Description.Motion == PhysicsBodyMotion.Static)
                     {
                         var reference = Simulation.Statics[entry.StaticHandle];

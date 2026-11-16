@@ -13,6 +13,7 @@ public static class PhysicsEntityCommands
     {
         ArgumentNullException.ThrowIfNull(description);
         return description.Write<PhysicsBody>().Write<PhysicsVelocity>().Write<PhysicsTeleport>().Write<ExternalMotion>()
+            .Write<PhysicsCharacter>().Write<PhysicsCharacterInput>().Write<PhysicsCharacterState>()
             .Write<LocalTransform>().Write<TransformParent>().Write<WorldTransform>();
     }
     /// <summary>Records a root entity with complete transform and physics roles. Gameplay-phase spawns activate in the next Movement.</summary>
@@ -33,7 +34,14 @@ public static class PhysicsEntityCommands
     /// <param name="commands">Active writer.</param><param name="entity">Live/batch-local identity.</param>
     public static void RemoveBody(EcsCommandWriter commands, CommandTarget entity)
     {
+        RemoveCharacter(commands, entity);
         commands.RemoveComponent<PhysicsBody>(entity); commands.RemoveComponent<PhysicsVelocity>(entity);
         commands.RemoveComponent<PhysicsTeleport>(entity); commands.RemoveComponent<ExternalMotion>(entity);
     }
+    /// <summary>Attaches complete character roles to an existing PhysicsBody capsule at a phase boundary.</summary>
+    public static void AddCharacter(EcsCommandWriter commands, CommandTarget entity, PhysicsCharacter character, PhysicsCharacterInput input = default)
+    { commands.AddComponent(entity, character); commands.AddComponent(entity, input); commands.AddComponent(entity, default(PhysicsCharacterState)); }
+    /// <summary>Removes the controller while leaving the body and its transform alive.</summary>
+    public static void RemoveCharacter(EcsCommandWriter commands, CommandTarget entity)
+    { commands.RemoveComponent<PhysicsCharacter>(entity); commands.RemoveComponent<PhysicsCharacterInput>(entity); commands.RemoveComponent<PhysicsCharacterState>(entity); }
 }

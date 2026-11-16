@@ -13,6 +13,7 @@ internal sealed partial class BepuWorld
         {
             PhysicsValidation.ValidateJoint(Id, description).ThrowIfFailure();
             var a = Body(description.BodyA); var b = Body(description.BodyB);
+            if (a.Character != null || b.Character != null) throw BepuPhysicsWorldFactory.Error(PhysicsErrorCode.ResourceInUse, "Joint.Character");
             if (a.Description.Motion == PhysicsBodyMotion.Static || b.Description.Motion == PhysicsBodyMotion.Static
                 || (a.Description.Motion != PhysicsBodyMotion.Dynamic && b.Description.Motion != PhysicsBodyMotion.Dynamic))
                 throw BepuPhysicsWorldFactory.Error(PhysicsErrorCode.InvalidArgument, "Joint.BodyModes");
