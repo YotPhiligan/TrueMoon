@@ -1,29 +1,22 @@
 # TrueMoon: общий статус
 
-**2026-11-15 — DEP1: зависимости обновлены до latest stable, native Skia пересобрана.**
-[Единственная детальная задача](core/PLAN.md#dep1-dependency-refresh),
-[команды/результаты](core/HISTORY.md#dep1-2026-11-15), [manifest/SHA](core/DEPENDENCY_REFRESH_20261115.json).
-Обновлены6central entries: Roslyn5.12.0 (2IDs), SkiaSharp4.156.1,
-RichTextKit0.6.173, Silk Veldrid extension2.23.0, RecyclableMemoryStream4.0.1.
-Два последних ID не имеют consumers в текущем solution. Остальные публичные entries
-актуальны в stable/existing-BEPU-beta policy; SDK/TFM/общая framework version прежние.
+**2026-11-16 — ENG7b.3: Editor/Player launch acceptance завершена.**
+[Задача](engine/PLAN.md#eng7b3-launch-acceptance), [матрица/миграция](engine/LAUNCH_ACCEPTANCE.md),
+[команды/границы](engine/HISTORY.md#eng7b3-2026-11-16), [manifest/SHA](engine/ENG7B3_BASELINE.json).
+Версия — `1.2611.16.1-alpha`; SDK/TFM/dependencies/native ABI прежние.
 
-| Направление | Новая проверка15ноября | Что дальше |
-| --- | --- | --- |
-| [Core/Cobalt/Enerit/Mithril](core/STATUS.md) |Roslyn5.12.0; полные runtime/generator/DI/IPC suites,27framework metadata archives |Функциональные задачи у владельцев |
-| [Alloy/Argentis](alloy/STATUS.md) |Exact native4.156.1 source build, ABI1/48bytes, GPU/typography validation0/0; fresh UI10packages/40cases |PA8c/physical input/DPI/K7/K8/release |
-| [Aether/Editor](engine/STATUS.md) |Полные Aether3533/Editor1507/Player17/Abstractions26 каждый D/R; bridges103+68 |ENG7b.3 кандидат, ED/import отдельно |
-| [Kton](physics/STATUS.md) |BEPU beta33 актуален, PHYS5 68D/R |PHYS6/PHYS8 отдельно |
-| [Kul](audio/STATUS.md) |27module+103bridge D/R;4delivery reports×43muted WASAPI checks, native fork актуален |AUD2–3/spatial/import/Nom отдельно |
-| [Nom](nom/STATUS.md) |Полный Nom874D/R, storage/source API не менялись |Прежние g.2/VM/hardware boundaries |
+Исправлен повторный mesh Play после Stop; сохранились stale generation fences.
+Combined child использует standalone Runtime graph.34native profiles на обоих DI,
+54game cycles с crash/recovery,36identity rejections,60CLI cases и12окон примеров
+прошли. Player отдельно проверен без SDK. Документы/history/selection сохраняются,
+Editor не загружает игру; normal validation0/0 и parent reap/resources проверены.
 
-Полные16suites по9110passed каждый Debug/Release,0failed/0skipped. Non-incremental
-solution0errors/1570warnings/config; warning location/ID sets совпали с прежними.
-Restore NuGetAuditMode=all advisories/NU1900 не сообщил. Проверены27metadata/payload
-archives и отдельные fresh UI/audio deliveries; единую поставку всех27framework
-packages во все architecture consumers этот run не повторяет.
+19package archives одной версии и7fresh closed-feed graphs проверены. Полные
+16suites по9111passed каждый Debug/Release,0failed/0skipped; non-incremental
+solution builds0errors. Это launch/delivery scope Windows x64, не all27 architecture
+acceptance и не общий release. [Модульный статус](engine/STATUS.md),
+[общий build/version статус](core/STATUS.md), [прежний STATUS](HISTORY.md#common-status-before-eng7b3-2026-11-16).
 
-Запрошенные ARCH1j → PHYS5 → Kul ранее завершены в своих bounded profiles;
-функциональная очередь ENG7b.3/ED/import и release gates сохранены.
-Historical drain cause, physical input/listening/device loss/long soak/hard RT,
-other OS/RID/AOT/trimming и общий release не закрыты. [Предыдущий STATUS](HISTORY.md#common-status-before-dep1-2026-11-15).
+Следующий functional scope выбирается отдельно: PHYS6, import g.1→g.2, ED4i/ED5,
+AUD2–3. Physical/DPI/K7/device-loss/VRAM/soak/other OS, historical drain cause и
+общая release matrix открыты. Requests и consumer-код игры/Studio не менялись.

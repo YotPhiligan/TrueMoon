@@ -26,4 +26,4 @@ Escape/focus loss/resize/minimize снимают capture и очищают held/
 Закрытие/Ctrl+C останавливают loop, затем surface/mesh resources и game/World.
 
 [API, ownership и границы приёмки](../../docs/engine/PLAYER.md).
-Расширенная combined-exe/crash/reap матрица остаётся ENG7b.3.
+ENG7b.3 завершён в Windows x64 launch/delivery scope: [матрица и границы](../../docs/engine/LAUNCH_ACCEPTANCE.md), [воспроизводимый runner](../../ManualTests/LaunchProfiles/README.md).

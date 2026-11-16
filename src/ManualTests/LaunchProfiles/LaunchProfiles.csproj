@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(TF)</TargetFramework>
+    <RootNamespace>TrueMoon.ManualTests.LaunchProfiles</RootNamespace>
+    <StartupObject>TrueMoon.ManualTests.LaunchProfiles.Program</StartupObject>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Player/TrueMoon.Aether.Player.csproj" />
+    <ProjectReference Include="../../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
+    <Compile Include="../PlayerProbe/Program.cs" Link="PlayerProfile.cs" />
+    <Compile Include="../AetherEditorHost/RuntimeEntryPoint.cs" Link="RuntimeEntryPoint.cs" />
+    <None Include="../../Examples/AetherEditor/Assets/Fonts/*" Link="Assets/Fonts/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

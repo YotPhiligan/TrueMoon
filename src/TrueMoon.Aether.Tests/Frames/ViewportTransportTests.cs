@@ -15,6 +15,37 @@ public sealed class ViewportTransportTests
     private static SceneSnapshot Scene() => new("room", 7, []);
     private static FrameMetadata Metadata(ulong frame = 1) => new(0, frame, 0, 0, 1);
     [Fact]
+    public async Task Restart_UsesFreshRuntimeSurfaceGenerationAndRejectsPreviousChildTickets()
+    {
+        var factory = new ReplacementRuntimeFixture(); var transport = new Transport();
+        await using var supervisor = new SessionSupervisor(factory, Hash, Hash, "viewport-restart-tests");
+        await using var frames = new FrameSession(supervisor, transport);
+        var start = frames.StartAsync(Scene(), 32, 16);
+        await transport.Configured.WaitAsync(TimeSpan.FromSeconds(3));
+        var first = frames.Presentation!; var oldTicket = first.Issue(Metadata());
+        Assert.Equal(1UL, first.Surface.Generation);
+        Assert.True(frames.Presented(oldTicket)); await start;
+        var resize = frames.ResizeAsync(64, 32);
+        await transport.Configured.WaitAsync(TimeSpan.FromSeconds(3));
+        var resized = frames.Presentation!;
+        Assert.Equal(2UL, resized.Surface.Generation);
+        Assert.True(frames.Presented(resized.Issue(Metadata()))); await resize;
+        await frames.StopAsync();
+
+        var restart = frames.StartAsync(Scene(), 32, 16);
+        await transport.Configured.WaitAsync(TimeSpan.FromSeconds(3));
+        var next = frames.Presentation!;
+        Assert.Equal(1UL, next.Surface.Generation);
+        Assert.True(next.Surface.Identity.Generation > first.Surface.Identity.Generation);
+        Assert.Equal(2, transport.Connections.Count);
+        Assert.False(frames.Presented(oldTicket));
+        Assert.False(restart.IsCompleted);
+        Assert.True(frames.Presented(next.Issue(Metadata()))); await restart;
+        await frames.StopAsync();
+        Assert.All(transport.Connections, connection => Assert.True(connection.Disposed));
+    }
+
+    [Fact]
     public async Task StartResizeSuspend_RequireCurrentActualPresentationAndDrainConnectionBeforeChildStop()
     {
         var factory = new ReplacementRuntimeFixture(); var transport = new Transport();

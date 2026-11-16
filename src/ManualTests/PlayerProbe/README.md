@@ -21,3 +21,7 @@ file после capture; показывает два cube, независимы�
 
 Это bounded Windows x64/GPU acceptance минимального Player. Combined role/crash/reap,
 выделение остальных Tooling workflows и общий release/device-loss/performance gate — отдельные этапы.
+
+Расширенная ENG7b.3 matrix завершена в [LaunchProfiles](../LaunchProfiles/README.md):
+combined/separate hosts, повторные Play/Stop/crash, документы/history, CLI и SDK-free
+Player. Этот runner сохраняет отдельный минимальный Player scope.

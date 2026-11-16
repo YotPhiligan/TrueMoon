@@ -18,14 +18,17 @@ internal static class RuntimeEntryPoint
         var launch = bootstrap.Launch;
         await using var app = App.Build(context => { ConfigureApp(context, bootstrap); });
         var engine = app.Services.Resolve<RuntimeEngine>()!;
-        AetherRuntimeHost? runtime=null;var started=false;Exception? failure=null;
-        try { await app.StartAsync();started=true;runtime=app.Services.Resolve<AetherRuntimeHost>()!;await runtime.RunAsync(); }
+        AetherRuntimeHost? runtime=null;var started=false;Exception? failure=null;string[] assemblies=[];
+        try { await app.StartAsync();started=true;runtime=app.Services.Resolve<AetherRuntimeHost>()!;
+            assemblies=AppDomain.CurrentDomain.GetAssemblies().Select(assembly=>assembly.GetName().Name??"").ToArray();await runtime.RunAsync(); }
         catch(Exception error){failure=error;throw;}
         finally
         {
             if(runtime!=null)await runtime.DisposeAsync(); await app.StopAsync();
             File.WriteAllText(Path.Combine(launch.ReportDirectory, $"runtime-{launch.Identity.Generation}.json"), JsonSerializer.Serialize(new
             { Pid = Environment.ProcessId, Validation = engine.Gpu.LastSurfaceProducer, Resources = engine.Gpu.ResourceCount, Handles = engine.Gpu.OpenHandleCount,
+                GameLoaded=assemblies.Contains("RenderSurface.Game"),EditorLoaded=assemblies.Any(name=>name.StartsWith("TrueMoon.Aether.Editor",StringComparison.Ordinal)),
+                ToolingLoaded=assemblies.Contains("TrueMoon.Aether.Tooling"),
                 Started=started,RuntimeActivated=runtime!=null,FailurePhase=failure==null?null:!started?"AppStartup":runtime==null?"GameActivation":"Run",
                 FailureType=failure?.GetType().FullName,NoGpuSurfaceProduced=engine.Gpu.LastSurfaceProducer==null,
                 ChildDiagnostics = runtime?.ChildDiagnosticsStatus }));

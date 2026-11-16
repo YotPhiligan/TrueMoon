@@ -1,9 +1,10 @@
-# Минимальный Aether Player — ENG7b.1–2
+# Aether Player — ENG7b.1–3
 
 `TrueMoon.Aether.Player` — самостоятельная App/UI integration без зависимости от
-Editor package. Low-level `UseAetherLocalRuntime(PlayerStart)` находится в Aether и
-не требует UI. Сборка Aether пока содержит прежние Tooling/compiler типы;
-их физический вынос остаётся ARCH3.3.
+Editor package. Low-level `UseAetherLocalRuntime(PlayerStart)` находится в
+`TrueMoon.Aether.Runtime` и не требует UI. Runtime/Tooling физически разделены
+в ARCH3.3; Player-only closure не содержит Tooling/Editor. Комбинированный deployment
+может включать эти DLL, но Player/child не создают их графы.
 
 ## Запуск и конфигурация
 
@@ -73,8 +74,10 @@ Closing handler не ждёт собственную window Completion. Failed s
 
 [Воспроизводимый native proof](../../ManualTests/PlayerProbe/README.md),
 [история](HISTORY.md#eng7b12-2026-11-12), [manifest/SHA](ENG7B12_BASELINE.json).
-ENG7b.3 сохраняет расширенную combined-exe/отдельные hosts/crash/reap/delivery matrix;
-этот срез её не закрывает. Нет live переключения Editor↔Player, hot replace модов,
-logical content checkpoint, SDK publishing UI, textures/audio/import, device-loss
-или общей release/performance acceptance. Исторический ARCH3 inventory требует
-дельты этих новых Player типов перед физическим переносом ARCH3.1–5.
+ENG7b.3 завершён2026-11-16: [матрица/миграция](LAUNCH_ACCEPTANCE.md),
+[полная запись](HISTORY.md#eng7b3-2026-11-16), [manifest/SHA](ENG7B3_BASELINE.json).
+Source/published/fresh и SDK-free Player проверены с точными package/shared/native
+payloads. Нет live переключения Editor↔Player, subsystem native-state migration,
+logical content checkpoint, SDK publishing UI, production textures/import, device-loss
+или общей release/performance acceptance. Kul — отдельный optional scene bridge;
+он не включён в эту launch fixture.

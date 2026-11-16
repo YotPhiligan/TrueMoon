@@ -15068,3 +15068,114 @@ ED/import/Nom, PHYS6 и AUD2–3 выбираются отдельно. Function
 ## DEP1 dependency refresh — 2026-11-15
 
 Новая полная D/R проверка, six-package version refresh и согласованная native Skia4.156.1 поставка выполнены в [единственной межмодульной записи](../core/HISTORY.md#dep1-2026-11-15). Прежние manifests и функциональные gates сохранены; точный scope нового запуска — в записи Core.
+
+<a id="engine-status-before-eng7b3-2026-11-16"></a>
+## STATUS перед ENG7b.3 — сохранён 2026-11-16
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-15 — DEP1: полный engine regression после обновления зависимостей прошёл.**
+[Детальная задача](../core/PLAN.md#dep1-dependency-refresh),
+[команды/границы](../core/HISTORY.md#dep1-2026-11-15), [manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).
+Последний функциональный этап — [Kul ARCH1h.2a](../audio/ECS_BRIDGE.md);
+ARCH1j → PHYS5 → Kul сохраняет завершённый bounded scope.
+
+Каждый Debug/Release: Aether3533, Editor1507, Player17, Abstractions26,
+Kton bridge68, Kul bridge103passed,0failed/0skipped. Весь solution16suites9110/config;
+non-incremental builds0errors/1570warnings, warning location/ID sets прежние.
+Новая SkiaSharp/native4.156.1 и RichTextKit0.6.173 прошли source/published
+GPU/typography validation0/0, fresh UI10package36App+4direct cases.
+Kul source/published/fresh reports с обоими DI и muted actual WASAPI также прошли.
+
+C# engine contracts/source не менялись. Это отдельные UI/audio fresh deliveries и
+27metadata checks, не новая единая architecture delivery для всех frozen/mod/Player
+consumers. [Предыдущий STATUS](HISTORY.md#engine-status-before-dep1-2026-11-15).
+
+Следующий прежний кандидат — ENG7b.3; ED/import/Nom, PHYS6/AUD2–3 и physical/release
+gates выбираются отдельно. Historical drain cause, spatial audio и native-state
+migration/other OS не закрыты. Request/Claim/Decision не менялись.
+
+<a id="eng7b3-2026-11-16"></a>
+## ENG7b.3 — Editor/Player launch и coherent delivery, 2026-11-16
+
+Запрос пользователя: выполнить ENG7b.3 после ARCH1j/PHYS5/Kul и DEP1. Завершено
+в Windows x64/.NET11/runtime-async scope. Общая Version впервые переведена на
+календарную схему: `0.3.0.1-alpha` → `1.2611.16.1-alpha`, зафиксирована до финальной
+приёмки после fetch/сверки main b2b71dacbcde3a1188dbb3cd652396059a5f469d.
+[Матрица/API/ограничения](LAUNCH_ACCEPTANCE.md), [versioned manifest/SHA](ENG7B3_BASELINE.json).
+
+Новый `ManualTests/LaunchProfiles` проверяет public launch parser, реальные
+Editor/Runtime/Player registrations и project-owned authoring document. История
+содержит по одному Undo/Redo; selected artifact готовится отдельным процессом с
+точным labelled parent/runtime fingerprint. Editor не компилирует и не загружает
+game DLL. Реальные entry points примеров проверяются также отдельными окнами.
+
+Воспроизведён дефект второго mesh Play после Stop: FrameSession продолжал общий
+surface generation, новый GPU producer начинал с 1. До исправления первый цикл
+проходил, второй падал `Mesh frame requires the matching GPU surface profile.`
+После исправления generation начинается с 1 на новую connection и возрастает на
+resize внутри неё; полная SessionIdentity и presentation instance сохраняют stale
+fences. Новый `ViewportTransportTests.Restart_UsesFreshRuntimeSurfaceGenerationAndRejectsPreviousChildTickets`
+проверяет 1→2→новый runtime 1, stale ticket, actual presentation и disposal.
+Адресный Debug run: 11 passed/0 failed/0 skipped. Development failures сохранены
+в TestResults/ENG7B3-development; первоначальная подготовка workspace/ID/bootstrap
+в runner была исправлена отдельно от воспроизведённого production generation bug.
+
+Комбинированный RuntimeApplication переведён с workflow facade на standalone
+Runtime registration и полный frozen bootstrap. Child completion сообщает graph,
+native validation и owner counts. Shared Player proof теперь проверяет все новые
+Editor.* assemblies/Tooling и явно выбранные scene ID/revision, а не только старую
+Editor assembly. CLI runner проверяет причины отказа, malformed JSON при валидном
+parent, invalid parent и дополнительные role/format/dimension/duplicate cases.
+
+Финальные команды из src:
+
+```powershell
+pwsh -NoProfile -File ManualTests/LaunchProfiles/Verify.ps1 -ValidationDirectory TestResults/EditorWindow-20261104/tools/validation -EvidenceDirectory TestResults/ENG7B3-20261116-01
+# Фактически использованный локальный launcher сохранён в ignored evidence:
+pwsh -NoProfile -File TestResults/ENG7B3-development/RunRegression.ps1
+# Воспроизводимая последовательность без этого scratch-файла (свежие results/binlogs):
+dotnet restore TrueMoon.slnx '-bl:TestResults/ENG7B3-new-restore-{}.binlog'
+$projects = ([xml](Get-Content TrueMoon.slnx -Raw)).SelectNodes('//Project') |
+    ForEach-Object { $_.Path } | Where-Object { $_ -like '*.Tests.csproj' }
+if ($projects.Count -ne 16) { throw 'Expected 16 current test projects.' }
+foreach ($configuration in @('Debug','Release')) {
+    dotnet build TrueMoon.slnx -c $configuration -m --no-restore --no-incremental '-bl:TestResults/ENG7B3-new-build-{}.binlog'
+    if ($LASTEXITCODE) { throw 'Build failed.' }
+    foreach ($project in $projects) {
+        dotnet test $project -c $configuration --no-build --no-restore --logger trx --results-directory TestResults/ENG7B3-new-regression '-bl:TestResults/ENG7B3-new-test-{}.binlog'
+        if ($LASTEXITCODE) { throw 'Tests failed.' }
+    }
+}
+```
+
+Первая команда: 34 instrumented profiles (18Editor/16Player), 54 game cycles с
+18crashes/recovery, 36 direct-child identity rejections, 684 Editor assertions,
+60CLI cases и12реальных окон примеров; каждый child reaped, parent resources0.
+Нормальный Stop: validation0errors/0warnings и balanced surfaces/devices; crash
+не объявлен graceful native teardown. Source Debug/published Release/fresh NuGet
+Release проверены на обоих DI; ещё4Player runs — на runtime-only .NET без SDK.
+
+19архивов одной **точной** корневой версии;7independent closed-feed graphs,
+0ProjectReference/один пустой cache, metadata origins, shared DLL hashes и bundled
+extended native/font/license payloads проверены.1033source fingerprints и build
+profile совпали после приёмки. Native Skia4.156.1/ABI1/48bytes и dependencies
+не менялись/не пересобирались. Разница local/published entry fingerprints штатна;
+game artifact каждый раз соответствует выбранному exact host/counterpart.
+
+Регрессия после solution restore: non-incremental build Debug/Release0errors/1570warnings;
+16suites по9111passed/config,0failed/0skipped (Aether3534, Editor1507, Player17,
+Abstractions26, Kton68, Aether.Kul103, Kul27 и прочие из manifest). Каждая MSBuild
+команда имеет отдельный binlog. Aether suites выполнялись последовательно без
+других SDK работ; команды, TRX hashes и scoped результаты сохранены в manifest.
+
+Raw evidence: TestResults/ENG7B3-20261116-01/verification.json и
+TestResults/ENG7B3-regression-01/regression.json; временный closed feed указан в
+native manifest. Это ignored локальные artifacts без отдельной retention guarantee;
+версии/scope/outcomes/hashes сохраняет versioned ENG7B3_BASELINE.json.
+
+Не закрыты physical input/DPI/device loss/K7/VRAM/soak/other OS/RID/performance,
+историческая causal drain проблема, subsystem native-state migration и общий
+release. Kton/Kul не активируются этой launch fixture;19package delivery не новая
+полная all27 architecture matrix. ED/import/PHYS6/AUD2–3 остаются отдельными;
+Requests/Claims/Decisions и потребительский код игры/Studio не менялись.

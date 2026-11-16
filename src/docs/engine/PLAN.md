@@ -7,7 +7,7 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 
 <a id="current-engine-queue"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-15
+## Текущая очередь — актуализация 2026-11-16
 
 **Согласованный порядок 2026-11-12:**
 
@@ -27,7 +27,7 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 11. [ARCH3.7](#arch3-7) — stable-component system replacement завершён 14 ноября: [API/ownership](MOD_RELOAD.md), [проверки](ARCH37_BASELINE.json).
 12. [ARCH3.8](#arch3-8) — private components/new-World migration завершён 2026-11-15: [API/ownership](MOD_MIGRATION.md), [приёмка](ARCH38_BASELINE.json).
 13. [ARCH3.9](#arch3-9) — завершён 2026-11-15: [единая поставка/guide](ARCHITECTURE_GUIDE.md), [приёмка/SHA](ARCH39_BASELINE.json).
-14. [ARCH1j — общий слой сессии](#arch1j-session-subsystems), [Kton PHYS5](../physics/PLAN.md#phys5) и [Kul ARCH1h.2a](#arch1h2a-kul-session) завершены2026-11-15 в своём scope. Следующий прежний кандидат — ENG7b.3; functional/release gates сохраняются.
+14. [ARCH1j — общий слой сессии](#arch1j-session-subsystems), [Kton PHYS5](../physics/PLAN.md#phys5) и [Kul ARCH1h.2a](#arch1h2a-kul-session) завершены2026-11-15 в своём scope. ENG7b.3 завершён2026-11-16: [матрица/границы](LAUNCH_ACCEPTANCE.md); functional/release gates сохраняются.
 
 <a id="arch1j-session-subsystems"></a>
 ### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
@@ -1461,7 +1461,7 @@ Editor или Player при запуске; отдельные executables ос�
 Editor управляют игровой сессией и сохраняют роль родительского приложения.
 **ENG7b.1–2 завершены 2026-11-12 в минимальном Windows x64 scope.**
 [API/defaults/ownership](PLAYER.md), [проверки и точные границы](HISTORY.md#eng7b12-2026-11-12), [manifest/SHA](ENG7B12_BASELINE.json).
-Same-exe child остаётся отдельной внутренней ролью; расширенная ENG7b.3 matrix открыта.
+Same-exe child остаётся отдельной внутренней ролью. ENG7b.3 завершён2026-11-16: [launch acceptance](LAUNCH_ACCEPTANCE.md), [manifest/SHA](ENG7B3_BASELINE.json).
 
 | Роль | Запуск и владение |
 | --- | --- |
@@ -1496,12 +1496,38 @@ Runtime-edit/full snapshot ARCH1c и горячая смена launch role ос�
 | --- | --- |
 | ENG7b.1 **завершён 2026-11-12** | Контракт role selection/Main, mutually exclusive arguments и pre-App validation; выбрать default/inputs для combined host. Подтвердить DI generation/registration и один App/owner graph на роль на Cobalt/MS DI, отсутствие Editor graph в Player и обязательный bootstrap у child |
 | ENG7b.2 **завершён 2026-11-12** | Standalone Player composition: local runtime/session/window/input и опциональный HUD. Закрытие окна, cancellation/startup failure/Stop освобождают owned UI/session/render resources; Editor package не требуется Player-only consumer |
-| ENG7b.3 | Combined-exe и отдельные host profiles в source Debug/published Release, далее затронутый independent NuGet proof: startup selection, selected game/content, child identity rejection, повторные Play/Stop/crash и reap, отсутствие game load в Editor CLR и сохранность документа |
+| ENG7b.3 **завершён 2026-11-16** | [Матрица/границы](LAUNCH_ACCEPTANCE.md), [manifest/SHA](ENG7B3_BASELINE.json): combined/separate hosts source Debug/published Release/fresh NuGet, startup selection, selected game/content, child identity rejection, повторные Play/Stop/crash/reap, game isolation и сохранность документа/history; дополнительно SDK-free Player |
+
+<a id="eng7b3-launch-acceptance"></a>
+#### ENG7b.3 — расширенная launch/delivery matrix, 2026-11-16
+
+**Завершён по запросу пользователя** в Windows x64/.NET11/runtime-async scope,
+версия `1.2611.16.1-alpha`. [Контракт/матрица](LAUNCH_ACCEPTANCE.md),
+[команды/проверки/ограничения](HISTORY.md#eng7b3-2026-11-16), [manifest/SHA](ENG7B3_BASELINE.json).
+
+- [x] Combined/default Editor/Player и отдельный Runtime: source Debug, published
+  Release, independent package-only consumers, оба DI;20CLI cases/profile с причиной
+  отказа,12native окон реальных entry points и34instrumented profiles.
+- [x] Выбранные game artifact/content, presentation fence и последовательность
+  Play/Pause/Step/Stop/crash/recovery:54cycles; Editor не загружает игру и не
+  компилирует prebuilt artifact; view/selection/document bytes/Undo/Redo сохраняются.
+- [x] Child самостоятельно отклоняет forged fingerprint/claimed entry до App:
+  36direct-child отрицательных запусков; cleanup/reap проверены.
+- [x] 19archives одной **сохранённой** версии,7closed-feed graphs/0ProjectReference,
+  exact shared/native/font payloads и4SDK-free Player runs.
+- [x] Исправлен GPU generation mismatch второго Play после Stop; новый unit case
+  и actual native сценарий проверяют переход1→resize2→новый runtime1 со stale fences.
+- [x] Полные16suites по9111passed каждый D/R,0failed/0skipped; solution D/R0errors.
+
+Этап не включает Kton/Kul activation, subsystem native-state migration, physical
+input/DPI/device loss/other OS/performance или общий release. Старые ARCH3.9 proofs
+не переписаны. Далее выбрать PHYS6/import g.1→g.2/ED functional scope; Requests/
+Claims/Decisions этим завершением автоматически не закрываются.
 
 Уточнение очереди 2026-11-12: минимальные ENG7b.1–2 выполняются после ARCH1f.4
 и до ARCH3.1 как поведенческий Player baseline: selected artifact/content, окно/input,
 role validation и cleanup без создания Editor graph. HUD optional; расширенная
-ENG7b.3 matrix остаётся отдельным этапом. Физическое исключение compiler/Tooling
+ENG7b.3 matrix была отдельным этапом и завершена2026-11-16 в указанном выше scope. Физическое исключение compiler/Tooling
 из нынешней Aether DLL подтверждается после ARCH3.3, не выдаётся за готовое здесь.
 Полный World/ECS и новый DI scope API сами по себе для выбора роли не требуются.
 

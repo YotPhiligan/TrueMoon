@@ -12,6 +12,8 @@ public enum ViewportTransportKind
 }
 
 /// <summary>Transport-independent surface identity and extent; contains no native or mapping handles.</summary>
+/// <remarks>GPU generations advance within one runtime connection. A new runtime identity starts at generation1;
+/// the complete session identity and presentation instance fence tickets from earlier children.</remarks>
 public sealed record ViewportSurface(SessionIdentity Identity, ulong Generation, int Width, int Height, ViewportTransportKind Transport)
 {
     /// <summary>Whether rendering is suspended without allocations.</summary>

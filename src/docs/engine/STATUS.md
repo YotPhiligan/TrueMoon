@@ -1,22 +1,28 @@
 # Aether / Editor: состояние и точка продолжения
 
-**2026-11-15 — DEP1: полный engine regression после обновления зависимостей прошёл.**
-[Детальная задача](../core/PLAN.md#dep1-dependency-refresh),
-[команды/границы](../core/HISTORY.md#dep1-2026-11-15), [manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).
-Последний функциональный этап — [Kul ARCH1h.2a](../audio/ECS_BRIDGE.md);
-ARCH1j → PHYS5 → Kul сохраняет завершённый bounded scope.
+**2026-11-16 — ENG7b.3 завершён в Windows x64 launch/delivery scope.**
+[Единственная задача](PLAN.md#eng7b3-launch-acceptance),
+[матрица/миграция](LAUNCH_ACCEPTANCE.md), [история/команды](HISTORY.md#eng7b3-2026-11-16),
+[manifest/SHA](ENG7B3_BASELINE.json). Версия — `1.2611.16.1-alpha`.
 
-Каждый Debug/Release: Aether3533, Editor1507, Player17, Abstractions26,
-Kton bridge68, Kul bridge103passed,0failed/0skipped. Весь solution16suites9110/config;
-non-incremental builds0errors/1570warnings, warning location/ID sets прежние.
-Новая SkiaSharp/native4.156.1 и RichTextKit0.6.173 прошли source/published
-GPU/typography validation0/0, fresh UI10package36App+4direct cases.
-Kul source/published/fresh reports с обоими DI и muted actual WASAPI также прошли.
+Исправлен второй mesh Play после Stop: GPU generation начинается с1 для новой
+runtime connection, resize продолжает текущую generation; stale child/tickets
+отвергаются. Combined child использует standalone Runtime/frozen bootstrap.
+Новый регрессионный тест и реальные native повторные циклы прошли.
 
-C# engine contracts/source не менялись. Это отдельные UI/audio fresh deliveries и
-27metadata checks, не новая единая architecture delivery для всех frozen/mod/Player
-consumers. [Предыдущий STATUS](HISTORY.md#engine-status-before-dep1-2026-11-15).
+Source Debug/published Release/fresh NuGet:34profiles на Cobalt/MS DI,54game cycles
+с crash/recovery,36identity rejections,60CLI cases,12окон реальных примеров.
+Player-only/combined Player отдельно прошли4SDK-free runs. Документ/история/selection
+сохранены; Editor не загружает game, нормальный child validation0/0, owners/reap
+проверены.19точных package archives,7closed-feed graphs, native/shared/font payloads
+и1033source hashes согласованы; это не новая полная поставка всех27packages.
 
-Следующий прежний кандидат — ENG7b.3; ED/import/Nom, PHYS6/AUD2–3 и physical/release
-gates выбираются отдельно. Historical drain cause, spatial audio и native-state
-migration/other OS не закрыты. Request/Claim/Decision не менялись.
+Полная свежая регрессия:16suites по9111passed каждый Debug/Release,0failed/0skipped;
+Aether3534/Editor1507/Player17/Abstractions26 и bridges68/103 входят в totals.
+Non-incremental solution builds D/R0errors. SDK/TFM/dependencies/native ABI прежние;
+native Skia4.156.1 повторно не пересобиралась. [Прежний STATUS](HISTORY.md#engine-status-before-eng7b3-2026-11-16).
+
+ENG7b.3 больше не следующая задача. Далее выбрать functional scope: PHYS6 controller,
+production import g.1→g.2 либо ED4i/дальнейшие ED5 инструменты. AUD2–3, physical/
+release/device-loss/other OS и историческая drain cause самостоятельны.
+Requests/Claims/Decisions и код потребителей не менялись.

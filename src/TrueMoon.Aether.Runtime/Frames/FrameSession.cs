@@ -209,6 +209,10 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
         Interlocked.Exchange(ref _presentation, null)?.Close();
         if (transport != null)
         {
+            // A new connection owns a fresh runtime-local GPU generation counter.
+            // SessionIdentity fences old children/tickets; resize generations advance
+            // only within this connection, matching the producer's Configure protocol.
+            if (_connection == null) _surfaceGeneration = 0;
             var viewport = new ViewportSurface(identity, checked(++_surfaceGeneration), width, height, TransportKind); viewport.Validate();
             _connection ??= await transport.ConnectAsync(supervisor.ActiveRuntime ?? throw new InvalidOperationException("No owned runtime."), token).ConfigureAwait(false);
             var presentation = new ViewportPresentation(viewport); Volatile.Write(ref _presentation, presentation);

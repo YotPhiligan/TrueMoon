@@ -15,15 +15,15 @@ namespace TrueMoon.ManualTests.PlayerProbe;
 
 internal static class Program
 {
-    private static async Task<int> Main(string[] args)
+    internal static async Task<int> Main(string[] args)
     {
-        if (args.Length is <2 or >3 || args.Length==3 && args[2]!="microsoft") throw new ArgumentException("PlayerProbe <compiled-game-directory> <report-directory> [microsoft]");
-        var microsoft=args.Length==3;
+        if (args.Length is <2 or >4 || args.Length>=3 && args[2] is not ("microsoft" or "cobalt")) throw new ArgumentException("PlayerProbe <compiled-game-directory> <report-directory> [cobalt|microsoft] [selected-snapshot]");
+        var microsoft=args.Length>=3 && args[2]=="microsoft";
         var report = Path.GetFullPath(args[1]); Directory.CreateDirectory(report);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(90)); var token = timeout.Token;
         var build = GameBuildArtifact.Open(Path.GetFullPath(args[0]), BuildIdentity.HostId);
-        var scenePath = Path.Combine(report, "scene.json");
-        await File.WriteAllTextAsync(scenePath, "{\"formatVersion\":1,\"id\":\"player\",\"revision\":41,\"entities\":[]}", token);
+        var scenePath = args.Length == 4 ? Path.GetFullPath(args[3]) : Path.Combine(report, "scene.json");
+        if (args.Length != 4) await File.WriteAllTextAsync(scenePath, "{\"formatVersion\":1,\"id\":\"player\",\"revision\":41,\"entities\":[]}", token);
         var start = await PlayerStart.CaptureAsync(build.DirectoryPath, BuildIdentity.HostId, scenePath, true, token);
         // The file is no longer a live input after bootstrap capture.
         await File.WriteAllTextAsync(scenePath, "changed after capture", token);
@@ -41,7 +41,7 @@ internal static class Program
             await app.StartAsync(token); await player.Ready.WaitAsync(token);
             Check(session.Status.State == PlayerState.Playing && session.Status.RenderViewReady, "No actual presentation/Playing fence.");
             gameSeen = Loaded("RenderSurface.Game");
-            Check(gameSeen && !Loaded("TrueMoon.Aether.Editor") && !Loaded("TrueMoon.Aether"), "Wrong role assembly graph.");
+            Check(gameSeen && !EditorLoaded() && !Loaded("TrueMoon.Aether.Tooling") && !Loaded("TrueMoon.Aether"), "Wrong role assembly graph.");
             Check(!app.Services.ResolveAll<RuntimeEngine>().Any() && !app.Services.ResolveAll<AetherRuntimeHost>().Any(), "Player created a process host.");
             await Capture("white");
             input.Capture(100, 100); input.Key(UiKey.W, true);
@@ -70,8 +70,9 @@ internal static class Program
             catch (Exception error) { failure = failure == null ? error : new AggregateException(failure, error); }
             await File.WriteAllTextAsync(Path.Combine(report, "player.json"), JsonSerializer.Serialize(new
             { Pid = Environment.ProcessId, Provider=microsoft?"Microsoft":"Cobalt", HostId = BuildIdentity.HostId, BuildId = build.BuildId, start.SceneHash,
+              SceneId = start.Snapshot?.Id, SceneRevision = start.Snapshot?.Revision,
               GameLoaded = gameSeen, GameStillLoadedAfterStop = Loaded("RenderSurface.Game"),
-              EditorLoaded = Loaded("TrueMoon.Aether.Editor"), WorkflowLoaded = Loaded("TrueMoon.Aether") || Loaded("TrueMoon.Aether.Tooling"),
+              EditorLoaded = EditorLoaded(), WorkflowLoaded = Loaded("TrueMoon.Aether") || Loaded("TrueMoon.Aether.Tooling"),
               player.CopiedFrames, player.PresentedFrames, State = session.Status, Captures = captures,
               Validation = session.Surface?.Diagnostics, Error = failure?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));
         }
@@ -109,5 +110,6 @@ internal static class Program
         }
     }
     private static bool Loaded(string name) => AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == name);
+    private static bool EditorLoaded() => AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name?.StartsWith("TrueMoon.Aether.Editor", StringComparison.Ordinal) == true);
     private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
 }

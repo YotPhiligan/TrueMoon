@@ -16,4 +16,4 @@ CLI старого `Examples/AetherEditor --runtime <path>` не изменён.
 В deployment этого host присутствуют Editor dependencies. Player branch не создаёт
 Editor services. Для поставки без Editor assembly используйте Player-only host.
 Runtime branch создаёт прежний Runtime/Game либо EditPreview, без окна/HUD.
-Успех минимального local Player не заменяет дальнейшую ENG7b.3 matrix этих ветвей.
+ENG7b.3 завершён в Windows x64 launch/delivery scope: [матрица и границы](../../docs/engine/LAUNCH_ACCEPTANCE.md), [воспроизводимый runner](../../ManualTests/LaunchProfiles/README.md).

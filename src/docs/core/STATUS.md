@@ -1,27 +1,18 @@
 # Core: состояние и точка продолжения
 
-**2026-11-15 — DEP1: зависимости обновлены, native Skia согласована.**
-[Единственная детальная задача](PLAN.md#dep1-dependency-refresh),
-[команды/границы](HISTORY.md#dep1-2026-11-15), [manifest/SHA](DEPENDENCY_REFRESH_20261115.json).
+**2026-11-16 — ENG7b.3: новая согласованная версия и общая регрессия.**
+Детальная задача у [engine](../engine/PLAN.md#eng7b3-launch-acceptance),
+[результаты/границы](../engine/HISTORY.md#eng7b3-2026-11-16),
+[manifest/SHA](../engine/ENG7B3_BASELINE.json). `Version=1.2611.16.1-alpha` впервые
+применяет [VER1](PLAN.md#ver1-agent-versioning); SDK11/net11/runtime-async прежние.
 
-Обновлены6central declarations: Roslyn Analyzers/CSharp5.12.0, SkiaSharp4.156.1,
-RichTextKit0.6.173, Silk Veldrid extension2.23.0 и RecyclableMemoryStream4.0.1.
-Две последние записи не имеют consumers в текущем solution. Остальные public IDs
-актуальны в принятой stable/existing-BEPU-beta policy. SDK11/net11/runtime-async,
-App/DI/lifetime и C# source/API не менялись; новые dependencies не вводились.
+Полные16suites по9111passed каждый Debug/Release,0failed/0skipped; non-incremental
+solution builds0errors.19точных launch-package archives и7closed-feed consumers,
+34native profiles/12окон/60CLI cases прошли. Это scope Editor/Player launch, не
+новая all27 architecture acceptance. Core/Cobalt/Enerit/Mithril source/API,
+dependencies и native binaries не менялись. DEP1 и VER1 сохраняют прежние даты:
+[предыдущий STATUS](HISTORY.md#core-status-before-eng7b3-2026-11-16).
 
-Полная новая проверка:16suites по9110passed каждый Debug/Release,0failed/0skipped;
-non-incremental solution0errors/1570warnings/config. Warning location/ID sets прежние.
-Restore NuGetAuditMode=all: advisories/NU1900 не сообщены.27metadata/payload archives
-прошли. Fresh UI10packages:36App+4direct cases, оба DI/3backends/D/R/build+publish,
-correct generator/native SHA и expected missing-analyzer failure.
-
-libSkiaSharp4.156.1 собрана из exact sources с GENERAL/HOST patch, ABI1/48bytes;
-source/published GPU/typography validation0/0. MiniAudioEx upstream/pins/binary
-актуальны и не менялись;4Kul delivery reports×43muted actual WASAPI checks прошли.
-Это27metadata checks и отдельные fresh UI/audio deliveries, не новая единая
-согласованная поставка всех27пакетов во все архитектурные consumers.
-
-Следующий конкретный шаг — прежний [ENG7b.3 кандидат](../engine/PLAN.md#current-engine-queue)
-или выбранная пользователем module задача. Historical drain cause, CORE6 и physical/
-release/device-loss/soak/other OS остаются отдельными. [Предыдущий STATUS](HISTORY.md#core-status-before-dep1-2026-11-15).
+Следующий этап — выбранная пользователем функциональная задача engine/модуля.
+CORE6, historical drain cause и physical/release/device-loss/other OS остаются
+отдельными. Скрипт автоматического повышения версии/CI ещё не реализован.
