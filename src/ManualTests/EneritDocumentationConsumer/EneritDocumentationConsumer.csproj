@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(TF)</TargetFramework>
+    <RootNamespace>TrueMoon.ManualTests.EneritDocumentationConsumer</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated/$(Configuration)</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TrueMoon" Version="$(TrueMoonPackageVersion)" />
+    <PackageReference Include="TrueMoon.Enerit" Version="$(TrueMoonPackageVersion)" />
+    <PackageReference Include="TrueMoon.Enerit.Generator" Version="$(TrueMoonPackageVersion)" PrivateAssets="all" />
+  </ItemGroup>
+  <Target Name="CaptureEneritAnalyzer" AfterTargets="CoreCompile">
+    <WriteLinesToFile File="$(IntermediateOutputPath)analyzers.txt" Lines="@(Analyzer)" Overwrite="true" />
+  </Target>
+</Project>

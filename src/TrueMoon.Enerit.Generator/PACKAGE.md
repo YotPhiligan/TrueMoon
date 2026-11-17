@@ -16,6 +16,10 @@ not a runtime library. Do not ship it with the application output.
 UseInvocationService<T>() and ListenInvocationService<T,TImplementation>() declarations
 trigger generation of client, handler, codecs and App-local typed factories.
 The generated adapters do not require Cobalt to discover generated classes.
+Generated public clients, handlers, serializers and the module initializer include
+XML documentation. Consumers can enable GenerateDocumentationFile and treat CS1591
+as an error without disabling the diagnostic in their own code. Generated nullable
+context warnings (CS8669) remain a separate known limitation.
 A Cobalt consumer still explicitly registers its own local implementation and
 references TrueMoon.Cobalt.Generator. Microsoft DI can construct local services
 without the Cobalt analyzer.

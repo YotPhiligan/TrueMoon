@@ -1,17 +1,20 @@
 # Enerit: состояние и точка продолжения
 
-**2026-11-15 — DEP1: generator проверен с Roslyn5.12.0.**
-Полные runtime354/generator114passed каждый Debug/Release,0failed/0skipped.
-SDK11/net11/runtime-async, production C# source/API, endpoint/transport/ownership
-не менялись. Enerit и generator package metadata/payload проверены в27archive gate;
-matching generator/runtime вошли в fresh audio delivery graph. Новая отдельная
-independent typed-IPC matrix в этом dependency refresh не запускалась.
+**2026-11-17 — ENE6e: заявка Studio на generated XML docs реализована и проверена.**
+[Задача](PLAN.md#ene6e-generated-xml-docs), [заявка/решение](../requests/enerit/20261116-studio-generated-xml-docs-f2ad173c/Decision.md),
+[команды/границы](HISTORY.md#ene6e-2026-11-17), [manifest/SHA](ENE6E_RESULTS.json).
 
-[Детальный межмодульный план](../core/PLAN.md#dep1-dependency-refresh),
-[команды/границы](../core/HISTORY.md#dep1-2026-11-15),
-[manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).
-ENE6c, protocol expansion/MMF/performance сохраняются отдельными задачами.
-[Предыдущий STATUS](HISTORY.md#enerit-status-before-dep1-2026-11-15).
+Version **1.2611.17.1-alpha**. Generated public clients/handlers/DTO serializers и
+module initializer имеют XML docs; публичные сигнатуры/registration/IPC прежние.
+NoWarn не добавлен, consumer CS1591 остаётся error. CS8669 не исправлялся.
 
-<a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
-[Исторические проверки](HISTORY.md#enerit-status-before-dep1-2026-11-15).
+Полные Enerit.Generator118 и runtime354 tests каждый Debug/Release, failed/skipped0.
+Fresh6-package Cobalt consumer: strict docs D/R, 5 generated sources/configuration,
+8 actual same-process pipe calls, module initialization и pending0/worker drain;
+2 expected negative CS1591 builds. Common build profile/analyzer SHA/isolated graph
+и unchanged inputs проверены. Пакеты локальные, не опубликованы.
+
+Полный Studio/solution, Microsoft DI, native, MMF, другие OS/AOT не запускались.
+Studio owner обновляет matching generator/runtime и выполняет свою приёмку отдельно.
+ENE6c, performance c1/c8 baseline и wider protocol/platform acceptance сохраняются.
+[Предыдущий статус](HISTORY.md#enerit-status-before-ene6e-2026-11-17).

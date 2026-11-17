@@ -45,6 +45,7 @@ public static class SourceHandleExtensions
                     ? "global::System.Threading.Tasks.Task"
                     : $"global::System.Threading.Tasks.Task<{GenerationUtils.GetTypeString(returnTypeSymbol)}>")
                 : $"{GenerationUtils.GetTypeString(methodSymbol.ReturnType)}");
+        handle.AppendLine("    /// <inheritdoc />");
         handle.AppendLine($"    public {methodRetStr} {methodSymbol.Name}({str})");
         handle.AppendLine("    {");
         if (isTask)
@@ -409,9 +410,11 @@ public static class SourceHandleExtensions
         handle.AppendLine();
 
         handle.AppendLine($"// {fullname}");
+        handle.AppendLine("/// <summary>Generated typed invocation client for the service contract.</summary>");
         handle.AppendLine($"public sealed class {implementationClassName} : global::{fullname}");
         handle.AppendLine("{");
         handle.AppendLine($"    private readonly IInvocationClient<global::{fullname}> _invocationClient;");
+        handle.AppendLine("    /// <summary>Creates the service adapter using the supplied invocation client.</summary>");
         handle.AppendLine($"    public {implementationClassName}(IInvocationClient<global::{fullname}> invocationClient)");
         handle.AppendLine("    {");
         handle.AppendLine("        _invocationClient = invocationClient;");
@@ -435,9 +438,11 @@ public static class SourceHandleExtensions
         var name = handle.Symbol.Name;
         
         handle.AppendLine($"// {handle.Symbol},  {name}");
+        handle.AppendLine("/// <summary>Generated invocation payload serialization for this type.</summary>");
         handle.AppendLine($"public static class {name}SerializationExtensions");
         handle.AppendLine("{");
 
+        handle.AppendLine("    /// <summary>Writes the payload to the supplied buffer.</summary>");
         handle.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
 
         var typeStr = handle.Symbol.NullableAnnotation == NullableAnnotation.Annotated
@@ -470,16 +475,19 @@ public static class SourceHandleExtensions
         handle.AppendLine();
 
         handle.AppendLine($"// {fullname}");
+        handle.AppendLine("/// <summary>Generated invocation dispatch for the service contract.</summary>");
         handle.AppendLine($"public sealed class {handlerImplementationClassName} : IInvocationServerHandler<global::{fullname}>");
         handle.AppendLine("{");
         handle.AppendLine($"    private readonly global::{fullname} _service;");
         handle.AppendLine($"    private readonly IEventsSource<{handlerImplementationClassName}> _eventsSource;");
+        handle.AppendLine("    /// <summary>Creates the handler using the supplied service and diagnostics source.</summary>");
         handle.AppendLine($"    public {handlerImplementationClassName}(global::{fullname} service, IEventsSource<{handlerImplementationClassName}> eventsSource)");
         handle.AppendLine("    {");
         handle.AppendLine("        _service = service;");
         handle.AppendLine("        _eventsSource = eventsSource;");
         handle.AppendLine("    }");
         handle.AppendLine();
+        handle.AppendLine("    /// <inheritdoc />");
         handle.AppendLine("    public async Task<(bool, Exception?)> HandleAsync(byte method, ReadOnlyMemory<byte> readHandle, IBufferWriter<byte> bufferWriter, CancellationToken cancellationToken = default)");
         handle.AppendLine("    {");
         handle.AppendLine("        switch (method)");

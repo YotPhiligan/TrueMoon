@@ -1,5 +1,8 @@
 # TrueMoon: общий план развития
 
+Выполнено 2026-11-17: [ENE6e — generated XML docs Enerit](enerit/PLAN.md#ene6e-generated-xml-docs),
+Version1.2611.17.1-alpha. Заявка Studio закрыта в framework scope; [проверки/границы](enerit/HISTORY.md#ene6e-2026-11-17). Функциональная очередь не менялась.
+
 Выполнено 2026-11-17: [PHYS8.4 — визуальный debug-consumer](physics/PLAN.md#phys84),
 [уровень/скриншот/проверки](physics/VISUAL_PLAYGROUND.md). 16 CPU/native профилей,
 96 CPU-групп/96 PNG на обоих DI, validation и cleanup проверены. Ручной Win32

@@ -5,7 +5,10 @@ Enerit:Pipes schema и UseConfiguredPipesServiceTransport, сохраняя endp
 handlers и transport ownership. Детальная задача — Core; IPC очередь ниже сохранена.
 
 <a id="current-enerit-queue"></a>
-## Точка продолжения — актуализация 2026-11-15
+## Точка продолжения — актуализация 2026-11-17
+
+Завершено 17.11.2026: [ENE6e — XML-документация generated-кода](#ene6e-generated-xml-docs)
+по заявке Studio. Остальная очередь ниже сохраняется.
 
 DEP1 обновил Roslyn Analyzers/CSharp до5.12.0; source/API и functional очередь прежние. Полные runtime/generator suites D/R прошли. [Единственная детальная задача/результаты](../core/PLAN.md#dep1-dependency-refresh).
 
@@ -28,6 +31,18 @@ acceptance остаются отдельными, не обязательным�
 Первичный roadmap2026-10-09. [Статус](STATUS.md), [общий план](../PLAN.md), [правила](../PLANNING.md). Планируемые semantics и новые API уточняются перед соответствующим этапом.
 
 ## Границы
+
+<a id="ene6e-generated-xml-docs"></a>
+### ENE6e — XML-документация generated-кода
+
+Принята 17.11.2026 [заявка Studio](../requests/enerit/20261116-studio-generated-xml-docs-f2ad173c/Request.md).
+Публичные generated client/handler/serializer и module initializer получают XML docs.
+Критерии: GenerateDocumentationFile и CS1591 как ошибка в Debug/Release; регистрация
+module initializer и typed IPC сохраняются; собственный undocumented public member
+consumer продолжает давать CS1591. Source/fresh6-package Cobalt consumer D/R проверен: XML docs и module initializer, 8 pipe calls, 2 negative CS1591 builds. Generator118/runtime354 tests каждый D/R, failed/skipped0. Version1.2611.17.1-alpha; [команды/границы](HISTORY.md#ene6e-2026-11-17), [manifest/SHA](ENE6E_RESULTS.json).
+Глобальный NoWarn, изменение протокола/endpoint/DTO/ownership и CS8669 не входят.
+
+### Состав модуля
 
 TrueMoon.Enerit, Enerit.Generator, Enerit.Tests и Enerit.Generator.Tests. Invocation client/server, handler resolution, сериализация, pipes/memory-mapped transports и generated service adapters.
 

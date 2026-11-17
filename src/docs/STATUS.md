@@ -1,18 +1,15 @@
 # TrueMoon: общий статус
 
-**2026-11-17 — PHYS8.4: визуальный тестовый уровень и автоматическая приёмка реализованы.**
-[Единственная задача](physics/PLAN.md#phys84), [скриншот/управление/границы](physics/VISUAL_PLAYGROUND.md),
-[команды](physics/HISTORY.md#phys84-2026-11-17), [manifest/SHA](physics/PHYS84_RESULTS.json).
+**2026-11-17 — ENE6e: generated XML docs Enerit исправлены по заявке Studio.**
+Общая Version **1.2611.17.1-alpha**. [Задача/проверки](enerit/HISTORY.md#ene6e-2026-11-17),
+[manifest/SHA](enerit/ENE6E_RESULTS.json). Generator118/runtime354 tests каждый D/R,
+fresh6-package Cobalt strict-docs consumer с initializer/8 pipe calls и negative
+CS1591 controls прошли. Сигнатуры/IPC/ownership/native/dependencies прежние;
+CS8669 остаётся backlog. Пакеты локальные, не опубликованы; полный Studio и общая
+solution/native acceptance не выполнялись. Studio обновляет matching packages отдельно.
 
-ManualTests/KtonVisual: actual game session/Kton, slope/platform/jump/ceiling,
-consumer pose interpolation и Vulkan/OpenGL. Source Debug/published Release/fresh
-NuGet Debug/Release, Cobalt/MS DI, CPU/native — 16 профилей, 96 CPU-групп/96 PNG.
-Validation 0/0, final GPU/physics/UI owners/handles/pools 0; 19 package archives,
-isolated graph/cache и loaded DLL SHA проверены. Unit/full-solution suites не повторялись.
-
-Production/native/dependencies не менялись, версия 1.2611.16.4-alpha сохранена.
-Ручной Win32 input/close не подтверждён из-за ограничения Computer Use; отдельный
-пробный процесс завершён адресно, не считается passing интерактивного прогона.
-Exact capsule mesh, expanded physics workload/workers, physical/DPI/device-loss/
-platform/release и import/ED/AUD остаются открытыми. UIQA-DOC и входящая Enerit-заявка
-не изменялись. [Предыдущая сводка](HISTORY.md#common-status-before-phys84-2026-11-17).
+Предыдущий функциональный срез — [PHYS8.4](physics/VISUAL_PLAYGROUND.md): visual
+playground и его автоматическая матрица. Ручной Win32 input/close и остальные
+PHYS8/physical/DPI/device-loss/platform/release gates сохраняются. Import/ED/AUD
+очередь не менялась; UIQA-DOC локальные изменения сохранены.
+[Предыдущая сводка](HISTORY.md#common-status-before-ene6e-2026-11-17).

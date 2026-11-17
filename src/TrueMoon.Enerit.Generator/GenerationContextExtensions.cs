@@ -66,6 +66,7 @@ public static class GenerationContextExtensions
     
         handle.AppendLine();
         
+        handle.AppendLine("    /// <summary>Reads a payload and advances the supplied offset.</summary>");
         handle.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
         handle.AppendLine($"    public static global::{typeValue} Deserialize(this global::{typeStr} instance, ReadOnlySpan<byte> span, ref int offset)");
         handle.AppendLine("    {");

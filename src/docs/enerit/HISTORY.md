@@ -1369,3 +1369,83 @@ Runtime/API/dependencies в CORE8.5 не менялись; обновлены ru
 ## DEP1 dependency refresh — 2026-11-15
 
 Новая полная D/R проверка, six-package version refresh и согласованная native Skia4.156.1 поставка выполнены в [единственной межмодульной записи](../core/HISTORY.md#dep1-2026-11-15). Прежние manifests и функциональные gates сохранены; точный scope нового запуска — в записи Core.
+
+<a id="ene6e-2026-11-17"></a>
+## ENE6e: XML-документация generated-кода — 2026-11-17
+
+По [заявке Studio](../requests/enerit/20261116-studio-generated-xml-docs-f2ad173c/Request.md)
+добавлены summary для generated client/handler, constructors, DTO serializers и
+module initializer; методы реализации наследуют документацию интерфейса.
+Public visibility/signatures, registration factories и тела методов не менялись;
+NoWarn/pragma suppression не добавлены. CS8669 остаётся отдельным backlog.
+Version **1.2611.17.1-alpha** выбрана по UTC и current origin/main до финальных
+тестов и упаковки. Native/зависимости не менялись.
+
+Четыре новые cases: Debug/Release optimization для
+`GeneratedDocumentationTests.DocumentedGeneratedServices_CompileEmitXmlAndRegister`
+(strict CS1591, emitted XML для всех пяти sources, module initializer registration)
+и `UndocumentedConsumerMember_RemainsCs1591Error` (ровно одна CS1591 error на
+consumer-методе, emission fails). Исправленный RED fixture воспроизвёл generated
+CS1591 до production-патча; green и полные suites прошли после него.
+Первоначальный fixture содержал неподдержанный custom struct/TME001 и был исправлен
+до документационного RED; это не дефект generator documentation.
+
+Финальные suites: Enerit.Generator **118**, Enerit runtime **354**, каждый Debug и
+Release, failed/skipped 0. Команда для каждой пары project/configuration:
+
+```powershell
+foreach ($configuration in @('Debug','Release')) {
+    foreach ($project in @('TrueMoon.Enerit.Generator.Tests','TrueMoon.Enerit.Tests')) {
+        $name = "$project-$configuration"
+        dotnet test "$project/$project.csproj" -c $configuration --no-restore --logger "trx;LogFileName=$name.trx" --results-directory TestResults/EneritXml-20261117/suites "-bl:TestResults/EneritXml-20261117/$name-{}.binlog" -v quiet
+    }
+}
+pwsh -NoProfile -File ManualTests/EneritDocumentationConsumer/Run.ps1 -ResultsDirectory TestResults/EneritXml-20261117/packages-02
+```
+
+Имена project: `TrueMoon.Enerit.Generator.Tests`, `TrueMoon.Enerit.Tests`.
+[Consumer/повторение](../../ManualTests/EneritDocumentationConsumer/README.md),
+[manifest, input/package/log/TRX/binlog SHA](ENE6E_RESULTS.json).
+Source reference tests и fresh packages согласованы по production inputs.
+
+Package proof: 6 matching archives, private closed feed/new cache, no source
+ProjectReferences, exact analyzer path/SHA. Общий SDK/TFM/LangVersion/features из
+BuildProfile. Debug/Release GenerateDocumentationFile + CS1591 WarningsAsErrors
+собрались, каждый дал 5 Enerit generated files. Two App/Cobalt graphs выполнили
+по4 настоящих same-process named-pipe calls (identity/project DTO, empty/Unicode),
+module initializer и App-owned generated factories использованы без ручного Init.
+После Stop client pending0/Completion success; оба negative builds дают только
+CS1591 на `ConsumerApi.Undocumented()`. Существующие CS8669 warnings сохранены.
+
+Первый package run собрал docs, но runtime fixture не подключил обязательный
+UseDiagnostics/IEventsSourceFactory; composition root consumer исправлен.
+Повторный запуск в новом packages-02 завершён полностью, входы до/после неизменны.
+Старые red/failed artifacts не переписывались. Raw evidence — ignored TestResults;
+versioned manifest сохраняет outcome/scope/hashes. Автоматическая retention/upload
+не настроена; удаление raw файлов не создаёт нового passing результата.
+
+Это focused Windows x64/Cobalt proof; полный Studio и solution, Microsoft DI,
+separate-process restart, MMF, другие OS/AOT и native/release matrix не запускались.
+Пакеты локальные, не опубликованы; Studio owner должен обновить matching generator/
+runtime и повторить собственную сборку. Заявка закрыта в framework scope.
+
+<a id="enerit-status-before-ene6e-2026-11-17"></a>
+## STATUS до ENE6e — архив 2026-11-17
+
+# Enerit: состояние и точка продолжения
+
+**2026-11-15 — DEP1: generator проверен с Roslyn5.12.0.**
+Полные runtime354/generator114passed каждый Debug/Release,0failed/0skipped.
+SDK11/net11/runtime-async, production C# source/API, endpoint/transport/ownership
+не менялись. Enerit и generator package metadata/payload проверены в27archive gate;
+matching generator/runtime вошли в fresh audio delivery graph. Новая отдельная
+independent typed-IPC matrix в этом dependency refresh не запускалась.
+
+[Детальный межмодульный план](../core/PLAN.md#dep1-dependency-refresh),
+[команды/границы](../core/HISTORY.md#dep1-2026-11-15),
+[manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).
+ENE6c, protocol expansion/MMF/performance сохраняются отдельными задачами.
+[Предыдущий STATUS](HISTORY.md#enerit-status-before-dep1-2026-11-15).
+
+<a id="предыдущие-проверки-ene5-baseline--2026-10-15"></a>
+[Исторические проверки](HISTORY.md#enerit-status-before-dep1-2026-11-15).

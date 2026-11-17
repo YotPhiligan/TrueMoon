@@ -82,8 +82,10 @@ public class ServicesGenerator : IIncrementalGenerator
             sb.AppendLine($"namespace {ctx.NamespacePrefix};");
             sb.AppendLine();
         
+            sb.AppendLine("/// <summary>Registers generated invocation clients and handlers when the assembly loads.</summary>");
             sb.AppendLine("public static class ModuleInitializer");
             sb.AppendLine("{");
+            sb.AppendLine("    /// <summary>Publishes generated service factories to invocation service storage.</summary>");
             sb.AppendLine("    [ModuleInitializer]");
             sb.AppendLine("    public static void Init()");
             sb.AppendLine("    {");
