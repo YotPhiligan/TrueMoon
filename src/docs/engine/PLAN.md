@@ -7,7 +7,7 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 
 <a id="current-engine-queue"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-16
+## Текущая очередь — актуализация 2026-11-17
 
 **Согласованный порядок 2026-11-12:**
 
@@ -28,6 +28,10 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 12. [ARCH3.8](#arch3-8) — private components/new-World migration завершён 2026-11-15: [API/ownership](MOD_MIGRATION.md), [приёмка](ARCH38_BASELINE.json).
 13. [ARCH3.9](#arch3-9) — завершён 2026-11-15: [единая поставка/guide](ARCHITECTURE_GUIDE.md), [приёмка/SHA](ARCH39_BASELINE.json).
 14. [ARCH1j — общий слой сессии](#arch1j-session-subsystems), [Kton PHYS5](../physics/PLAN.md#phys5) и [Kul ARCH1h.2a](#arch1h2a-kul-session) завершены2026-11-15 в своём scope. ENG7b.3 завершён2026-11-16: [матрица/границы](LAUNCH_ACCEPTANCE.md); functional/release gates сохраняются.
+
+Завершены 17.11.2026: [g.1a source capture](#arch1g1a-source-capture), [g.1b isolated CPU import](#arch1g1b-isolated-import)
+и [g.1c persistent IDs/atomic ledger](#arch1g1c-subasset-ledger). Ограниченный CPU g.1 завершён;
+далее g.2 Nom/build/runtime integration. ED/PHYS8/AUD и release gates самостоятельны.
 
 <a id="arch1j-session-subsystems"></a>
 ### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
@@ -1738,19 +1742,19 @@ generic controls — в UI плане. Новый пакет/backend/render grap
 <a id="arch1g-model-assets"></a>
 ### ARCH1g. Импорт и загрузка ассетов моделей — план исследования 2026-11-07
 
-Статус: **кандидат g.1 выбран — AssimpNetter6.0.5, low-level API**;
-[captured I/O/limits/ID/cancel contract v1](MODEL_IMPORT_CAPTURE.md#capture-v1) реализован
-и проверен как Windows x64 research prototype. Production importer/file delivery ещё
-не реализованы. [Сравнение и решение](MODEL_IMPORT_RESEARCH.md#decision-2026-11-07)
-основаны на4variants/8Debug-published Release profiles, actual version/SHA/delivery,
-literal geometry/hierarchy/slots и scoped allocation measurements. G.0 не закрыт
-полностью: static-profile details, stable IDs, captured I/O, numeric budgets и
-native cancel/isolation ещё требуют решения; зависимости production не добавлены.
-Владелец — engine/content направление; текущие f.1 CPU definitions и f.2 owners
-предоставляют основу, но поддерживают frozen builtin/in-memory content. Файловый
-import должен получить собственный контракт inputs/build/delivery до подключения
-к Runtime. Детальные задачи ведутся здесь, общий PLAN только ссылается на них.
+Статус17.11.2026: **ограниченный glTF2/GLB CPU producer g.1 завершён** —
+[source capture](#arch1g1a-source-capture), [isolated parser](#arch1g1b-isolated-import),
+[persistent IDs/atomic ledger](#arch1g1c-subasset-ledger). [Текущий контракт](MODEL_SUBASSET_LEDGER.md).
+AssimpNetter/Assimp6.0.5 в отдельном Windows x64 worker; producer-local authoring
+sidecar хранит complete candidate+ledger checkpoint. Следующий g.2 — captured build,
+Nom catalog/bytes и Runtime delivery/activation; это не второй generic asset store.
+Владелец — engine/content; общие render contracts f.1/f.2 не переносятся в storage.
 
+[Research7.11.2026](MODEL_IMPORT_RESEARCH.md#decision-2026-11-07) и
+[исходный captured contract](MODEL_IMPORT_CAPTURE.md#capture-v1) сохраняют свои даты,
+профили и проверки. Historical broader format/performance questions ниже не обещают
+current SLA, другие форматы, GPU или release readiness. Детали/проверки у владельца
+в этом плане; общий PLAN только ссылается на них.
 | Этап | Результат и зависимости | Критерий завершения |
 | --- | --- | --- |
 | ARCH1g.0 | Исследование форматов, importer libraries и content pipeline; доступно до f.3/4 | Матрица вариантов по возможностям, лицензиям/redistribution, managed/native зависимостям, поддержанным OS/RID, determinism и стоимости. Decision record выбирает ограниченный первый profile, явные unsupported cases, численные budgets и протокол измерений; определены fixtures и план прототипа |
@@ -1796,11 +1800,10 @@ SourceId/subasset ledger не зависит от content revision; rename/resto
 explicit mappings, publication atomic по generation. Числа — bounded research profile,
 не latency SLA; существующие f.1/2 budgets не расширяются.
 
-G.0 остаётся частичным до полного coordinate/unit/material/unsupported-feature policy.
-Следующий import шаг g.1: App registration и typed factory/owners, bounded dependency
-discovery и handle-verified source capture, native semantic locator→persistent ledger,
-полная validated CPU candidate+ledger transaction. Исследовательские manual owners
-и пофайловый local capture не заменяют эти production contracts.
+G.0 format policy и CPU g.1 завершены в ограниченном glTF2/GLB профиле через
+[g.1a](#arch1g1a-source-capture), [g.1b](#arch1g1b-isolated-import), [g.1c](#arch1g1c-subasset-ledger).
+Следующий g.2: Nom/build/runtime captured bytes, complete manifest и activation;
+прочие форматы, GPU/Editor preview и release gates остаются отдельными проверками.
 
 Storage boundary2026-11-07: persistent catalog/bytes/snapshots принадлежат
 [самостоятельному TrueMoon.Nom](../nom/PLAN.md#nom-own-queue) вне Aether. Пользователь
@@ -1808,6 +1811,79 @@ Storage boundary2026-11-07: persistent catalog/bytes/snapshots принадле�
 и detailed NOM0–NOM7 ведутся только у Nom. NOM2 переключил App/catalog на свой KV; далее NOM3. G.1 владеет
 import/decode/CPU validation, g.2 — consumer/build/runtime integration. Engine f.3/f.4
 не получают новой зависимости; публичные render contracts не переносятся в storage.
+
+<a id="arch1g1a-source-capture"></a>
+#### ARCH1g.1a — App/IFactory и handle-verified model source capture
+
+Реализован и проверен первый законченный срез g.1, 17.11.2026: optional Tooling factory создаёт
+caller-owned одноразовый capture. Он автоматически собирает glTF/GLB+BIN либо
+OBJ+MTL, фиксирует ancestor/file handles без delete/write sharing для файлов,
+проверяет reparse/final paths и повторно SHA перед возвратом immutable bytes.
+Budgets: максимум32files/16MiB file/32MiB closure, JSON depth64/131072tokens,
+OBJ/MTL line4096UTF8bytes, raw name1024chars/normalized path256UTF8bytes,
+directory depth128; request может только снизить
+file/count/closure limits. Relative local names без parent/URI/percent/device aliases;
+case collisions, duplicate JSON properties и неподдержанные texture/extensions
+дают явный отказ. SourceId явный и persistent; source revision не canonical mesh key.
+Метод захвата не декодирует geometry и не публикует ledger/artifacts.
+
+Проверены оба App DI, lazy/no-IO registration, deterministic dependency bytes/revision,
+missing/unsafe/reparse/locked inputs, limit boundaries, malformed GLB/JSON/UTF8,
+cancel/Dispose/single-use и отсутствие handles после всех outcomes. Source D/R и
+fresh isolated Tooling consumer; SDK/TFM/features общие. 54new cases, Aether3608/Editor1507 tests каждый D/R; 8profiles/40groups/272assertions, 11packages, Version1.2611.17.2-alpha. [API/границы](MODEL_SOURCE_CAPTURE.md), [проверки](HISTORY.md#arch1g1a-2026-11-17), [SHA](MODEL_SOURCE_CAPTURE_RESULTS.json). Native Assimp, semantic
+subasset matching, CPU candidate+ledger transaction, Nom/build/runtime delivery
+остаются следующими срезами g.1/g.2. Общий g.1 не объявляется завершённым.
+
+<a id="arch1g1b-isolated-import"></a>
+#### ARCH1g.1b — isolated Assimp worker и validated CPU candidate
+
+Реализован и проверен 17.11.2026. [API/format policy/ownership](MODEL_IMPORT_WORKER.md),
+[фактические команды и scope](HISTORY.md#arch1g1b-2026-11-17), [manifest/SHA](MODEL_IMPORT_WORKER_RESULTS.json).
+Optional App/typed factory в Tooling; отдельный непакетируемый worker с pinned
+AssimpNetter/Assimp6.0.5. Захваченные glTF2/GLB bytes, явные RH/+Y/meters и unlit
+material rules. Existing CPU codecs/validators дают mesh/material/instance candidate.
+Native parser не подключён к Runtime/Tooling dependency graph consumers.
+
+App владеет single-admission1/0 и stop/drain, caller — factory product и candidate.
+Job512MiB/one-process/kill-on-close до native activation; finite≤30s deadline,
+bounded callbacks/packets/pipes, exact native ABI/hash и pinned deployment.
+Actual kill/reap и cleanup retry обязательны перед release admission/publication.
+Проверены оба DI, source Debug/published Release, fresh package Debug/published
+Release и отдельный Debug worker:10profiles/50groups/870assertions/210reaped workers,
+11matching local packages; Aether/Editor full D/R в manifest. Version1.2611.17.3-alpha.
+
+Candidate indices **не persistent identity**. На этапе g.1b следующий **g.1c** включал —
+native semantic locators, persistent subasset matching/explicit rename/restore и
+atomic candidate+ledger transaction. Затем g.2 Nom/build/runtime integration.
+OBJ/FBX decode, textures/animation, GPU preview, other OS/AOT и release acceptance
+не включены. Общие планы ссылаются сюда; отдельная заявка приложения не создавалась.
+
+<a id="arch1g1c-subasset-ledger"></a>
+#### ARCH1g.1c — persistent subasset IDs и atomic candidate+ledger publication
+
+Завершён 17.11.2026 в bounded static glTF2/GLB scope, Version1.2611.17.4-alpha.
+[Контракт/schema/limits/ownership](MODEL_SUBASSET_LEDGER.md), [команды/результаты](HISTORY.md#arch1g1c-2026-11-17),
+[immutable manifest/SHA](MODEL_SUBASSET_LEDGER_RESULTS.json).
+
+Source→native provenance tags дают авторские locators; ambiguity, включая unused
+objects и node ancestors, не позволяет автоматический matching. Permanent random
+IDs для meshes/materials/slots/bindings/instances сохраняются при reorder/content edit;
+same-kind rename и tombstone restore требуют explicit mappings. Typed session factory
+в Tooling/App; readonly Open, caller ownership, shared1/0 и Stop/drain. Единый bounded
+checksummed sidecar атомарно публикует CPU candidate+ledger+associations по generation CAS.
+Этот producer-local checkpoint не заменяет Nom asset catalog/CAS.
+
+Проверены real native geometry/slots/material/hierarchy, source array reorder, explicit
+rename/delete/restore/disambiguation, unused duplicate namespace и Unicode; новые
+reader processes, concurrent reads, abrupt publisher kill/reap и lease release;
+source→fresh package durable handoff, оба DI, D/R worker/consumer и Aether/Editor full D/R.
+74new cases,10profiles/100groups/1425assertions,400reaped processes,11matching packages.
+Limits1024active/4096total ledger, locator256UTF8bytes, candidate8MiB/record12MiB;
+native/CPU limits прежние. Failed/stale/cancelled precommit сохраняет exact old head.
+
+**Ограниченный CPU g.1 завершён. Далее g.2 — Nom/build/runtime captured assets и
+activation; actual GPU/Editor asset consumer проверяется отдельно.** Прочие форматы,
+OS/AOT и release gates не закрываются этим срезом.
 
 <a id="arch1h-audio"></a>
 ### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07

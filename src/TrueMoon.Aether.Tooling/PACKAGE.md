@@ -1,5 +1,28 @@
 # TrueMoon.Aether.Tooling
 
+Optional model import: `UseAetherModelSourceCapture()` provides caller-owned capture
+operations, and `UseAetherModelImport()` provides a caller-owned
+`IFactory<ModelImportOperation, ModelImportArguments>` plus an App-owned admission/stop
+host. Supply captured glTF2/GLB bytes, a reviewed separately published Windows x64
+Assimp worker manifest, an absolute dotnet host and scratch directory. Import yields
+validated immutable mesh/material/instance CPU candidates only. One active operation,
+zero queue; default deadline10s, maximum30s, kill/reap before release. No Assimp package
+is loaded into Tooling and no native activation occurs at registration. Dispose factory
+products; App Stop drains active import/publication work. Native cleanup failure retains
+admission for explicit DisposeAsync retry.
+
+The same opt-in module provides `IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>`.
+`OpenAsync` reads a bounded checksummed sidecar without creating/migrating files.
+`PublishAsync(candidate, expectedGeneration, edits)` atomically commits the CPU candidate,
+permanent mesh/material/slot/binding-set/instance IDs and tombstones in one file.
+Authored semantic names or `extras.truemoon.subasset` labels drive matching; ambiguous
+keys require explicit labels, rename/restore require explicit same-kind mappings.
+Persistent IDs survive content and discovery-order changes. SourceId is caller-owned;
+move its record with the source and allocate a new SourceId for a copy. Cooperating
+writers serialize on a permanent `.write-lock` sidecar; failed/stale/cancelled precommit
+work preserves the old head. Store scope is local Windows process-crash consistency.
+Nom, runtime manifests, build delivery and GPU activation remain separate integration.
+
 Headless project/document authoring, transactional history, scene persistence,
 SDK preflight, frozen compilation/capture/publication, source observation,
 preview coordination and bounded diagnostic export. No Editor/Alloy/Argentis

@@ -9852,3 +9852,95 @@ Production/native/dependencies не менялись, версия 1.2611.16.4-a
 Exact capsule mesh, expanded physics workload/workers, physical/DPI/device-loss/
 platform/release и import/ED/AUD остаются открытыми. UIQA-DOC и входящая Enerit-заявка
 не изменялись. [Предыдущая сводка](HISTORY.md#common-status-before-phys84-2026-11-17).
+
+<a id="arch1g1a-2026-11-17"></a>
+## ARCH1g.1a — 2026-11-17
+
+Production source capture, Version1.2611.17.2-alpha. Единственная подробная задача
+и current acceptance — [engine](engine/HISTORY.md#arch1g1a-2026-11-17),
+[manifest/SHA](engine/MODEL_SOURCE_CAPTURE_RESULTS.json). Aether3608/Editor1507 D/R,
+8source/published/fresh profiles и 11package archives проверены; полный g.1 не закрыт.
+Timing fixture serialization не меняет production diagnostic deadlines/causal status.
+
+<a id="common-status-before-g1a-2026-11-17"></a>
+## STATUS до ARCH1g.1a — архив 2026-11-17
+
+# TrueMoon: общий статус
+
+**2026-11-17 — ENE6e: generated XML docs Enerit исправлены по заявке Studio.**
+Общая Version **1.2611.17.1-alpha**. [Задача/проверки](enerit/HISTORY.md#ene6e-2026-11-17),
+[manifest/SHA](enerit/ENE6E_RESULTS.json). Generator118/runtime354 tests каждый D/R,
+fresh6-package Cobalt strict-docs consumer с initializer/8 pipe calls и negative
+CS1591 controls прошли. Сигнатуры/IPC/ownership/native/dependencies прежние;
+CS8669 остаётся backlog. Пакеты локальные, не опубликованы; полный Studio и общая
+solution/native acceptance не выполнялись. Studio обновляет matching packages отдельно.
+
+Предыдущий функциональный срез — [PHYS8.4](physics/VISUAL_PLAYGROUND.md): visual
+playground и его автоматическая матрица. Ручной Win32 input/close и остальные
+PHYS8/physical/DPI/device-loss/platform/release gates сохраняются. Import/ED/AUD
+очередь не менялась; UIQA-DOC локальные изменения сохранены.
+[Предыдущая сводка](HISTORY.md#common-status-before-ene6e-2026-11-17).
+
+<a id="arch1g1b-2026-11-17"></a>
+## 2026-11-17 — ARCH1g.1b isolated CPU model import
+
+Version1.2611.17.3-alpha, separate Windows x64 Assimp6.0.5 worker + Tooling App/IFactory.
+Captured glTF2/GLB → validated CPU geometry/material/instances; admission1/0, Job512MiB,
+deadline/kill/reap/cleanup retry. [Единственная детальная задача](engine/PLAN.md#arch1g1b-isolated-import),
+[команды/границы](engine/HISTORY.md#arch1g1b-2026-11-17), [SHA](engine/MODEL_IMPORT_WORKER_RESULTS.json).
+10profiles/870assertions/210reaped workers,11packages; Aether3624/3624 и Editor1507/1507 D/R,
+failed/skipped0. Следующий g.1c stable subasset IDs/ledger, затем g.2. No GPU/other OS/AOT/full-release claim.
+
+<a id="common-status-before-g1b-2026-11-17"></a>
+### Предыдущий общий STATUS целиком перед ARCH1g.1b
+# TrueMoon: общий статус
+
+**2026-11-17 — ARCH1g.1a: model source capture готов в Windows x64 scope.**
+Общая Version **1.2611.17.2-alpha**. [API/границы](engine/MODEL_SOURCE_CAPTURE.md),
+[задача/проверки](engine/HISTORY.md#arch1g1a-2026-11-17), [manifest/SHA](engine/MODEL_SOURCE_CAPTURE_RESULTS.json).
+App/IFactory, glTF/GLB BIN/OBJ MTL dependencies, immutable source bytes/identity,
+handle-verified paths, limits/cancel/cleanup проверены. Current Aether3608/Editor1507
+tests каждый D/R, failed/skipped0; 54new cases, 8source/published/fresh profiles,
+40groups/272assertions и 11matching package archives. Native file IO проверен;
+Assimp/native libraries/dependency versions не менялись, GPU/native renderer не запускался.
+
+Initial diagnostic Stop50ms timeout сохранён; timing fixture serialized, final D/R
+green без смены production deadlines. Причина исходной задержки не установлена.
+Полный g.1 import/CPU projection/semantic ledger и g.2 Nom/build/runtime delivery
+остаются следующими срезами. PHYS8 physical/DPI/device loss, ED/AUD, other OS/AOT
+и release gates самостоятельны. ENE6e завершён ранее; UIQA-DOC изменения сохранены.
+Пакеты локальные/не опубликованы; полной solution/native acceptance не было.
+[Предыдущая сводка](HISTORY.md#common-status-before-g1a-2026-11-17).
+
+<a id="arch1g1c-2026-11-17"></a>
+## 2026-11-17 — ARCH1g.1c permanent IDs / atomic ledger
+
+Version1.2611.17.4-alpha. [Детальная задача](engine/PLAN.md#arch1g1c-subasset-ledger),
+[API/границы](engine/MODEL_SUBASSET_LEDGER.md), [команды/результаты](engine/HISTORY.md#arch1g1c-2026-11-17),
+[SHA](engine/MODEL_SUBASSET_LEDGER_RESULTS.json). Stable semantic IDs, explicit
+rename/restore, tombstones, complete candidate+ledger sidecar CAS/atomic publication.
+10profiles/1425assertions/400reaped processes;4durable source→fresh handoffs,11packages.
+Aether3698/3698, Editor1507/1507 D/R passed, failed/skipped0.
+Bounded CPU g.1 complete; g.2 Nom/build/runtime delivery next. No GPU/other OS/AOT/full-release claim.
+
+<a id="common-status-before-g1c-2026-11-17"></a>
+### Предыдущий общий STATUS целиком перед ARCH1g.1c
+# TrueMoon: общий статус
+
+**2026-11-17 — ARCH1g.1b: отдельный Assimp worker и CPU model candidates готовы в Windows x64 scope.**
+Общая Version **1.2611.17.3-alpha**. [API/границы](engine/MODEL_IMPORT_WORKER.md),
+[задача](engine/PLAN.md#arch1g1b-isolated-import), [проверки/SHA](engine/MODEL_IMPORT_WORKER_RESULTS.json).
+Tooling/App/typed factory, immutable captured input и mesh/material/instance projection,
+Job512MiB, admission1/0, deadline/kill/reap и cleanup retry проверены. Assimp6.0.5 —
+только в отдельном executable; свежий Tooling package graph без Assimp dependency.
+
+Текущие Aether3624/3624 и Editor1507/1507 D/R tests, failed/skipped0;
+16new cases, 10profiles/50groups/870assertions, 210reaped workers, 11matching local
+packages. Source/published/fresh consumers и оба DI проверены, worker/licenses/feed
+сохранены. Пакеты не опубликованы; all-solution/GPU/release acceptance не объявляется.
+
+Следующий engine шаг — **g.1c semantic subasset IDs/ledger transaction**, затем g.2
+Nom/build/runtime delivery. PHYS8 physical/DPI/device loss, ED/AUD, other OS/AOT и
+release gates самостоятельны. Исторический diagnostic drain cause открыт.
+ENE6e завершён ранее; чужие UIQA-DOC изменения сохранены.
+[Предыдущая сводка](HISTORY.md#common-status-before-g1b-2026-11-17).

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>$(TestsTF)</TargetFramework>
+    <AssemblyName>TrueMoon.Aether.Importing.Assimp</AssemblyName><RootNamespace>TrueMoon.ManualTests.ModelImportConsumer</RootNamespace>
+    <IsPackable>false</IsPackable><GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup><Compile Include="FakeWorker.cs" /></ItemGroup>
+</Project>

@@ -1,5 +1,12 @@
 # Model import: captured I/O, limits, identity и отмена
 
+17.11.2026: [production source capture ARCH1g.1a](MODEL_SOURCE_CAPTURE.md),
+[isolated CPU import ARCH1g.1b](MODEL_IMPORT_WORKER.md) и [persistent ID/atomic ledger g.1c](MODEL_SUBASSET_LEDGER.md)
+завершают ограниченный glTF2/GLB CPU-профиль на общем .NET11 SDK/App/IFactory.
+Nom/build/runtime delivery (g.2) остаётся следующим этапом.
+Ниже сохранён исходный research contract и фактические результаты
+07.11.2026, включая его исторический net10 профиль.
+
 <a id="capture-v1"></a>
 ## Решение ARCH1g.0 — 2026-11-07
 

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>$(TestsTF)</TargetFramework>
+    <AssemblyName>ModelImportProbe</AssemblyName><RootNamespace>TrueMoon.ManualTests.ModelImportConsumer</RootNamespace>
+    <IsPackable>false</IsPackable><GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" /><Compile Include="../ModelImportResearch/Fixtures.cs" Link="Fixtures.cs" />
+    <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
+    <ProjectReference Include="../../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" />
+  </ItemGroup>
+</Project>

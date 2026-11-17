@@ -15326,3 +15326,275 @@ import/ED/AUD и историческая drain cause самостоятельн
 ## 17.11.2026 — PHYS8.4 local visual consumer
 
 [Единственная подробная запись](../physics/HISTORY.md#phys84-2026-11-17), [manifest/SHA](../physics/PHYS84_RESULTS.json). 16 CPU/native профилей, 96 групп/96 PNG, оба DI, closed 19-package cohort, validation0/0 и final resources0. ManualTests consumer не меняет production API/Version; manual Win32 input/close не подтверждён из-за ограничения Computer Use. Existing Editor/Player/IPC/ALC/release proofs не расширяются этим срезом.
+
+<a id="arch1g1a-2026-11-17"></a>
+## ARCH1g.1a — model source capture — 2026-11-17
+
+Реализованы optional `UseAetherModelSourceCapture`, Contracts IFactory с явными
+SourceId/directory/root/limits, caller-owned single-use capture и detached readonly
+input. [API/контракт/численные budgets](MODEL_SOURCE_CAPTURE.md),
+[manifest/SHA/команды](MODEL_SOURCE_CAPTURE_RESULTS.json).
+Version **1.2611.17.2-alpha** зафиксирована до финальных сборок/проверок/pack;
+generation/stage сохранены. Assimp/native libraries/dependency versions не менялись;
+новый Win32 managed interop проверен реальными file/directory handles.
+
+glTF/GLB BIN и OBJ/MTL dependencies обнаруживаются автоматически; все файлы/ancestors
+закреплены handles, final names/reparse проверяются, SHA повторно читается перед
+выдачей результата. Relative unsafe names, case collisions, duplicate JSON,
+unsupported textures/extensions, malformed/truncated/oversized/missing/locked inputs
+не дают partial source manifest. После cancel/error/success handles0; файлы доступны
+для exclusive open/delete. Limits проверяются до file-buffer allocations, JSON
+projection и path splitting; directory walk итеративный и bounded.
+
+Повторные normalized dependencies объединяются до file IO и MTL validation;
+duplicate buffer declarations используют максимальную minimum length. Проверка
+1000mtllib references/1MiB MTL показала **4153856–4162424 bytes** managed allocations
+на 8 source/fresh/DI профилях, при regression budget16MiB для этого workload.
+Это process-total allocation delta, не native/managed peak, timing или общий heap cap.
+
+54 новых source capture cases входят в current Aether suites: **3608/3608** каждый
+Debug/Release, Editor **1507/1507** каждый Debug/Release; failed/skipped0.
+Начальные 40cases прошли; до финальной поставки добавлены 32/33file, raw-name,
+Unicode UTF8, deep-directory, duplicate declaration/minimum-length и long physical
+path (>512chars final-name buffer) cases. Синхронные guards проверены Action lambdas,
+не obsolete Func<Task> Throws overload. Final accepted suite — отдельный каталог.
+
+Первый полный Debug до final guards: **3597passed/1failed**, TimeoutException в
+`ChildDiagnosticReceiverTests.ExactOptionBounds_AreCopiedBeforeUseAndAcceptOneFullBatch(false)`
+на StopAsync с минимальным50ms budget. Этот runtime и его options не менялись.
+Изолированный контроль2/2 прошёл; исходный failure не перезаписывался. Весь fixture,
+проверяющий real20/50ms bounds, помещён в nonparallel xUnit collection отдельно от
+compiler/process workload. Последующие полные D/R suites прошли; production
+deadlines не подняты. Причина исходной задержки и historical post-reap drain cause
+не объявляются установленными/исправленными этой сменой test scheduling.
+
+Source Debug/published Release/fresh NuGet Debug/published Release × Cobalt/MS DI:
+**8profiles,40groups,272assertions**, один input revision во всех профилях.
+11 matching persisted-version archives, offline closed feed, new source/fresh
+caches/artifacts и unrelated working directory; fresh ProjectReferences0,
+package metadata source/loaded DLL SHA и source inputs до/после проверены.
+По10 started capture owners/profile освобождены; дополнительный idle lazy product
+освобождён отдельным using. Readonly snapshots пережили mutation/delete, missing/
+unsafe/limit/cancel failures и App.Stop; physical sources unlocked.
+
+Команды итогового запуска (использовались отдельные log/TRX/binlog names):
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelCaptureConsumer/Verify.ps1 -EvidenceDirectory TestResults/ModelSourceCapture-20261117/packages-03
+foreach ($configuration in @('Debug','Release')) {
+    foreach ($project in @('TrueMoon.Aether.Tests','TrueMoon.Aether.Editor.Tests')) {
+        $name = "accepted-$project-$configuration"
+        dotnet test "$project/$project.csproj" -c $configuration --no-restore --logger "trx;LogFileName=$name.trx" --results-directory TestResults/ModelSourceCapture-20261117/accepted-suites "-bl:TestResults/ModelSourceCapture-20261117/$name-{}.binlog" -v quiet
+    }
+}
+```
+
+Canonical raw matrix/packages-03 и current accepted-suites находятся в ignored
+TestResults/ModelSourceCapture-20261117; archives и assets graph скопированы в его
+delivery с SHA verification. Temp run/cache paths сохранены в raw matrix. Upload/
+retention automation не настроены, evidence нужно сохранять вместе с manifest.
+Исторические packages-01/02, first failed/full/final-before-dedup результаты оставлены
+отдельно. Они не подменяют final source hashes, current suites или package matrix.
+
+Это только g.1a, не завершённый g.1 importer: selected format/coordinates/materials,
+isolated Assimp worker и CPU candidate+semantic ledger transaction ещё нужны.
+Nom/build/runtime bridge — g.2. GPU/native renderer, другие OS/AOT, полная solution,
+Editor native acceptance и release readiness не проверялись. UIQA-DOC правки сохранены.
+
+<a id="engine-status-before-g1a-2026-11-17"></a>
+## STATUS до ARCH1g.1a — архив 2026-11-17
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-17 — PHYS8.4: локальный Kton visual consumer и автоматическая приёмка готовы.**
+Подробная задача у [Kton](../physics/PLAN.md#phys84), [скриншот/API/границы](../physics/VISUAL_PLAYGROUND.md),
+[команды](../physics/HISTORY.md#phys84-2026-11-17), [manifest/SHA](../physics/PHYS84_RESULTS.json).
+
+Настоящая PrimitiveGameSession/Kton + existing Vulkan/OpenGL primitive surface;
+копии поз интерполируются consumer без мутации Physics World. Pause/Step/Stop/Reset,
+склон/прыжок/потолок/платформа и routed input проверены в 16 профилях: source D,
+published R, fresh NuGet D/R, оба DI, CPU/native отдельно. 96 CPU-групп/96 PNG,
+validation 0/0 и финальные resources/handles/UI sessions 0; 19 package archives
+и fresh graph/cache/loaded SHA подтверждены. Полные unit/solution suites не повторялись.
+
+ManualTests consumer не добавляет production API/native/dependency изменений;
+Version 1.2611.16.4-alpha сохранена. Капсула — stepped proxy; это локальный consumer,
+не новая Editor/Player IPC/ALC/reload приёмка. Ручной Win32 input/close не подтверждён:
+Computer Use не смог надёжно активировать/наблюдать окно, наш probe завершён адресно.
+[Предыдущий статус](HISTORY.md#engine-status-before-phys84-2026-11-17).
+
+Далее PHYS8 expanded capacity/workers/raw callbacks/stalls; физический input/DPI,
+device loss/other OS, import/ED/AUD и историческая drain cause самостоятельны.
+Чужие UIQA-DOC изменения и заявка Enerit сохранены.
+
+<a id="arch1g1b-2026-11-17"></a>
+## 2026-11-17 — ARCH1g.1b: isolated Assimp CPU import
+
+Version **1.2611.17.3-alpha** frozen before final builds. Baseline/main22d7f11:
+main1.2611.17.1-alpha, preceding uncommitted g.1a1.2611.17.2-alpha; new3 is higher.
+[API/политика/ownership](MODEL_IMPORT_WORKER.md), [manifest/SHA/точные аргументы](MODEL_IMPORT_WORKER_RESULTS.json).
+
+Optional UseAetherModelImport, App-owned admission1/0, caller-owned operation/candidate;
+fixed finite deadline, cancellation/Stop, kill + actual exit/drain and cleanup retry.
+Separate Windows x64 AssimpNetter/Assimp6.0.5 worker, output-local single-precision ABI,
+native SHA90984E886CF7394560E44FECD5A5666BECD2A93E98251974A562ECB79CFBA386.
+All native FileIO is captured bytes only; scene/cursors released before library unload.
+Static glTF2/GLB RH/+Y/meters triangle meshes, hierarchy/instances, linear→sRGB opaque
+materials; old CPU bounds/codecs retained. Candidate indices are not persistent IDs.
+
+Фактически выполнено:
+
+- pwsh -NoProfile -File ManualTests/ModelImportConsumer/Verify.ps1 -EvidenceDirectory TestResults/ModelImportWorker-20261117/accepted-05.
+  10profiles: source Debug/published Release/fresh Debug/published Release × Cobalt/MSDI,
+  all with the same Release worker; plus source consumer × two DI with Debug worker.
+  50groups,870assertions,210actual reaped children, stable CPU fingerprint7583CFF259755993FB4DFA4070C9D5550C43F7825880E0F98CA357DE8C2CE0C0.
+  11coherent packages, closed feed/new cache/zero project references/native-free Tooling
+  graph, loaded DLL SHA; immutable Release worker manifest/licenses/feed retained.
+- Four serialized dotnet test runs for TrueMoon.Aether.Tests and TrueMoon.Aether.Editor.Tests,
+  each Debug/Release, VSTest/xUnit2/net11.0/runtime-async=on and unique binlogs/TRX.
+  Aether3624/3624, Editor1507/1507 passed; failed/skipped0. Exact args and TRX SHA in manifest.
+  16new import cases; source capture cases remain54.
+
+| Requirement | Evidence |
+|---|---|
+| Exact CPU bytes/color/world and revision | ModelImportTests.CandidateRoundTripPreservesGeometryColorTransformAndRevision; native group CapturedBytesGeometryMaterialsHierarchyAndRepeat |
+| Invalid packet/links/transforms/aggregate quotas | CandidatePacketRejectsMalformedOrForeignPayload; CandidateRejectsInvalidMaterialAndMeshLinks; CandidateRejectsSingularTransformAndAggregateQuota |
+| Lazy DI factory, caller ownership, closed admission | AppFactoryIsLazyCallerOwnedAndClosedAfterStop; AdmissionRejectsSecondOperationUntilFirstReleasesAndIdleDisposalDoesNotReleaseAnother |
+| Native failures/deadline/cancel/Job commit denial/reap | consumer group CrashPacketQuotaDeadlineCancellationAndAdmission; 21workers/profile OS exit checks |
+| Failed cleanup retry and terminal App stop | consumer groups ManifestPinAndCleanupRetry; AppStopReapsAndClosesAdmission |
+
+Initial dev focused tests70/70 passed before final version; final suites above supersede
+them. Retained accepted-01 failed on license item metadata; accepted-02–04 on closed
+feed restore profile. Binlog replay identified dotnet restore -r setting plural
+RuntimeIdentifiers and downloading unused runtime packs; final restore uses the same
+single RuntimeIdentifier as publish and snapshots the SDK-selected restore graph.
+No production runtime workaround or deadline increase was introduced.
+
+Raw logs/binlogs/TRX/proofs and worker/feed remain ignored under TestResults/ModelImportWorker-20261117;
+accepted-05/delivery is the retained local delivery. Packages not published and no Git commit/push.
+This proves static CPU import and process/resource isolation, not a hostile-code sandbox.
+Blocked cancellation/commit denial use the acceptance-only fake worker; no claim of
+cancellation at a specific native instruction. Persistent locators/IDs/ledger are g.1c;
+Nom/build/runtime delivery g.2. GPU/Editor asset preview, other OS/AOT, all-solution and
+release gates remain independent. Historical diagnostic drain cause is not diagnosed here.
+
+<a id="engine-status-before-g1b-2026-11-17"></a>
+### Предыдущий engine STATUS целиком перед ARCH1g.1b
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-17 — ARCH1g.1a: production source capture реализован и проверен.**
+Version **1.2611.17.2-alpha**. [Задача](PLAN.md#arch1g1a-source-capture),
+[API/границы](MODEL_SOURCE_CAPTURE.md), [команды](HISTORY.md#arch1g1a-2026-11-17),
+[manifest/SHA](MODEL_SOURCE_CAPTURE_RESULTS.json).
+
+Optional App/typed factory, caller-owned single-use capture; automatic glTF/GLB BIN
+и OBJ/MTL closure, readonly bytes/SourceId/input revision. Windows handles pin
+files/ancestors, reject reparse/final-name mismatches и revalidate SHA. Budgets,
+unsafe/missing/corrupt/locked/deep/long paths, cancel/Dispose и release проверены.
+Repeated references объединяются; 1000references/1MiB MTL ~4.15–4.16MB allocations
+при exact-workload regression budget16MiB, без общего memory/latency SLA.
+
+Current Aether3608/Editor1507 tests каждый D/R, failed/skipped0; 54 новых capture
+cases. 8source/published/fresh-package profiles × оба DI:40groups/272assertions,
+11matching archives, isolated graph/cache/loaded SHA, zero owned handles/unlocked
+sources и stable revision проверены. Пакеты локальные, не опубликованы.
+
+Initial full Debug diagnostic Stop50ms timeout сохранён; isolated2/2 и subsequent
+full suites прошли после serialization timing fixture. Runtime deadlines прежние;
+causal diagnosis не объявлена. [Предыдущий статус](HISTORY.md#engine-status-before-g1a-2026-11-17).
+
+Далее g.1: selected-format/coordinates/material policy, isolated Assimp parser,
+validated CPU candidates и semantic subasset ledger transaction; g.2 — Nom/build/
+Runtime delivery. Assimp/GPU/Editor native не запускались, другие OS/AOT/release,
+PHYS8 manual/DPI/device loss, ED/AUD и historical drain cause самостоятельны.
+
+<a id="arch1g1c-2026-11-17"></a>
+## 2026-11-17 — ARCH1g.1c: permanent IDs и atomic candidate+ledger
+
+Version **1.2611.17.4-alpha** зафиксирована до финальных builds/tests/pack.
+Main22d7f11=1.2611.17.1-alpha, preceding g.1b=1.2611.17.3-alpha; new4 выше обеих.
+[API/схема/ownership/ограничения](MODEL_SUBASSET_LEDGER.md), [точные команды/SHA](MODEL_SUBASSET_LEDGER_RESULTS.json).
+
+ModelImportSemantics/recipe2, проверенные native transport tags и source-global
+ambiguity policy; ID ledger с random Guid по semantic key отдельно от revisions.
+Mesh/material/slot/binding/instance projections согласованы; persistent SlotId в mesh.
+Явные labels, same-kind rename, tombstones и explicit restore. Local sidecar schema1
+объединяет candidate+ledger+bindings с checksum, generation CAS, OS lock, content flush
+и single-file atomic commit; readonly Open без migrations/recovery. App factory,
+caller-owned sessions, shared1/0 admission и Stop/drain. Source paths/hash/indices не IDs.
+
+Фактически выполнено:
+
+- pwsh -NoProfile -File ManualTests/ModelLedgerConsumer/Verify.ps1 -EvidenceDirectory TestResults/ModelLedger-20261117/accepted-01.
+  10profiles: source Debug, source published Release, fresh NuGet Debug/published Release
+  × Cobalt/MSDI с одним Release worker, плюс Debug-worker pair. Сначала legacy g.1b
+ 5groups/87assertions/21workers per profile, затем g.1c native/persistence сценарии.
+  Всего100groups/1425assertions,360worker exits +30reader exits +10killed/reaped
+  publishers; 31concurrent complete monotonic reads,4source→fresh durable ID handoffs.
+  11matching packages, isolated cache/closed feed/zero project references/no Assimp in
+  Tooling graph/loaded SHA. Worker closure, licenses, manifest и feed retained locally.
+- Four serialized full dotnet test runs, Aether и Editor каждый Debug/Release,
+  net11.0/xUnit2/VSTest/runtime-async=on, unique binlogs/TRX. Aether3698/3698 и
+  Editor1507/1507 passed, failed/skipped0. Exact args/TRX SHA in manifest.
+  74new test cases; dev focused Importing144/144 preceded final version and is retained
+  separately. Broad test research/plan/review evidence copied to ignored test-review.
+
+| Requirement | Exact evidence |
+|---|---|
+| Stable IDs, immutable ledger, ordinal keys | Reconcile_AllKindsAndOrdinalLocatorsGetDistinctSourceIndependentIds; ConstructorAndReconcileDetachInputsAndExposeCanonicalReadOnlyEntries |
+| Rename/delete/explicit restore | Reconcile_ExplicitRestoreAndActiveOrTombstoneRenameRetainIds; Reimport_DeleteRequiresExplicitRestoreAndPreservesBytesOnImplicitRevival |
+| No identity inference from index/content | Reimport_DoesNotInferRenameFromSameContentAndIndexButExplicitMappingPreservesIds; native NativeReorderRenameDeleteAndExplicitRestore |
+| Complete durable candidate/slot/material links | PublishAndReopen_PreserveCompleteCpuCandidateLedgerAndPersistentAssociations; NativeLocatorsPermanentSlotsRestartAndContentRevision |
+| No partial state on stale/cancel/IO failure | Session_StaleForeignInvalidAndCancelledPublishesKeepCurrentAndExactOldBytes; Session_LateReplacementFailureKeepsCurrentAndExactBytesAndRemovesPendingFile |
+| Atomic concurrent read/crash/restart | ConcurrentReadsAbruptPublisherExitAndRestart; staging observed before actual kill/reap; complete head reopens and later writer acquires OS-released lease |
+| Labels/unused namespace/Unicode | Publish_MissingOrDuplicateHintsRequireExplicitLabels; GlobalUnusedAndHierarchyAmbiguityAndUnicode |
+| App ownership/Stop and both DI | AppFactory_IsLazyCallerOwnedAndSessionsShareAdmissionUntilStopDrainsCancellation |
+| Numeric bounds/corrupt records | ActiveBudgetAppliesToConstructorAndReconciliation; TotalBudgetRetainsAndCountsTombstonesWhenAdding; Read_RejectsCorruptEnvelopeAndChecksummedInvalidPayloadWithoutChangingBytes |
+
+Initial dev failures preserved: an obsolete copied fake worker lacked the memory-test
+mode; rebuilding current fake fixed the harness timeout. Six initial unit failures
+were ImmutableArray wrapper comparisons, corrected to element assertions. Native
+delete exposed lazy Assimp material tables; transport verification now accepts only
+validated tagged subsets and requires its one checked default. Real concurrent
+ReplaceFileW/read exposed transient sharing conflict; reader now shares replacement
+handles and retries only Win32sharing/lock errors, bounded20attempts/5ms, cancellable.
+No native deadline was increased. Postcommit token is not checked; no test claims
+cancellation/kill at a particular instruction or power-loss durability.
+
+Producer sidecar is an authoring checkpoint, not Nom catalog/CAS/runtime delivery.
+Bounded CPU g.1 is complete; g.2 must capture/publish bytes via Nom/build and activate
+in Runtime. GPU/Editor asset preview, other formats/OS/AOT and full release remain
+separate. Native6.0.5 package reused with exact hash/ABI; no own C++ rebuild.
+Historical diagnostic drain cause not diagnosed here. No Git commit/push or remote
+package publication. Raw logs/binlogs/TRX/crash leftovers and accepted-01/delivery
+remain ignored under TestResults/ModelLedger-20261117; manifest records retention.
+
+<a id="engine-status-before-g1c-2026-11-17"></a>
+### Предыдущий engine STATUS целиком перед ARCH1g.1c
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-17 — ARCH1g.1b: isolated Assimp CPU import реализован и проверен.**
+Version **1.2611.17.3-alpha**. [Задача](PLAN.md#arch1g1b-isolated-import),
+[API/политика/ownership](MODEL_IMPORT_WORKER.md), [проверки](HISTORY.md#arch1g1b-2026-11-17),
+[manifest/SHA](MODEL_IMPORT_WORKER_RESULTS.json).
+
+Optional Tooling App/IFactory и caller-owned one-shot операции; App-owned admission
+1active/0queued и stop/drain. Отдельный Windows x64 worker с pinned AssimpNetter/
+Assimp6.0.5 читает только captured bytes. Job512MiB, finite≤30s deadline, kill/reap,
+bounded pipes/packets, pinned publish closure и cleanup retry проверены.
+
+Статические glTF2/GLB: правые +Y/meters, triangle topology, shared instances/world
+matrices, linear RGB→sRGB opaque-unlit materials; неподдержанные features отвергаются.
+Результат — immutable CPU candidate с input/recipe revision, без persistent asset ID.
+
+Текущие Aether3624/3624 и Editor1507/1507 D/R tests, failed/skipped0;
+16new importer cases. 10source/published/fresh/Debug-worker profiles × оба DI:
+50groups/870assertions, 210actual reaped children, 11matching packages и native SHA.
+Fresh Tooling graph/cache без project references/Assimp; загруженные DLL SHA проверены.
+Worker closure/licenses/feed сохранены локально, пакеты не опубликованы.
+
+Далее **g.1c — semantic locators, stable subasset IDs и atomic ledger publication**;
+полный g.1 ещё открыт, затем g.2 Nom/build/runtime delivery. OBJ units/MTL decoding,
+GPU/Editor asset preview, other OS/AOT и release gates самостоятельны. Исторический
+diagnostic drain cause не пересмотрен; production deadlines не менялись.
+[Предыдущий статус](HISTORY.md#engine-status-before-g1b-2026-11-17).

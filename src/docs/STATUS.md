@@ -1,15 +1,20 @@
 # TrueMoon: общий статус
 
-**2026-11-17 — ENE6e: generated XML docs Enerit исправлены по заявке Studio.**
-Общая Version **1.2611.17.1-alpha**. [Задача/проверки](enerit/HISTORY.md#ene6e-2026-11-17),
-[manifest/SHA](enerit/ENE6E_RESULTS.json). Generator118/runtime354 tests каждый D/R,
-fresh6-package Cobalt strict-docs consumer с initializer/8 pipe calls и negative
-CS1591 controls прошли. Сигнатуры/IPC/ownership/native/dependencies прежние;
-CS8669 остаётся backlog. Пакеты локальные, не опубликованы; полный Studio и общая
-solution/native acceptance не выполнялись. Studio обновляет matching packages отдельно.
+**2026-11-17 — ARCH1g.1c: permanent model subasset IDs и atomic ledger publication.**
+Version **1.2611.17.4-alpha**. [Контракт/границы](engine/MODEL_SUBASSET_LEDGER.md),
+[задача](engine/PLAN.md#arch1g1c-subasset-ledger), [проверки/SHA](engine/MODEL_SUBASSET_LEDGER_RESULTS.json).
+Семантическое сопоставление, rename/tombstones/explicit restore, App/IFactory/session,
+readonly Open, generation CAS и единый checksummed CPU+ledger sidecar проверены.
+Native parser изолирован; источником permanent ID не становятся порядок или content hash.
 
-Предыдущий функциональный срез — [PHYS8.4](physics/VISUAL_PLAYGROUND.md): visual
-playground и его автоматическая матрица. Ручной Win32 input/close и остальные
-PHYS8/physical/DPI/device-loss/platform/release gates сохраняются. Import/ED/AUD
-очередь не менялась; UIQA-DOC локальные изменения сохранены.
-[Предыдущая сводка](HISTORY.md#common-status-before-ene6e-2026-11-17).
+Текущие Aether3698/3698 и Editor1507/1507 D/R tests, failed/skipped0;
+74new cases,10profiles/100groups/1425assertions;400owned processes reaped,
+4source→fresh ledger handoffs,11matching local packages, exact native/loaded DLL SHA.
+Результаты относятся к bounded static CPU profile; all-solution/GPU/release acceptance
+не объявляется. Delivery/worker/feed сохранены, пакеты не опубликованы.
+
+**g.1 CPU producer завершён; далее g.2 Nom/build/runtime delivery и activation.**
+Producer-local authoring sidecar не заменяет Nom catalog/CAS. PHYS8 physical/DPI/device
+loss, ED/AUD, other OS/AOT и release gates самостоятельны. Historical diagnostic
+drain cause открыт; чужие UIQA-DOC изменения сохранены.
+[Предыдущая сводка](HISTORY.md#common-status-before-g1c-2026-11-17).

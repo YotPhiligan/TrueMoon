@@ -6,6 +6,7 @@ using Xunit;
 
 namespace TrueMoon.Aether.Tests.Diagnostics;
 
+[Collection(nameof(ChildDiagnosticReceiverTimingCollection))]
 public sealed class ChildDiagnosticReceiverTests
 {
     [Theory]

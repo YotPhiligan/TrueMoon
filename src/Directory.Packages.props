@@ -4,6 +4,8 @@
     <ManagePackageVersionsCentrally Condition="'$(ManagePackageVersionsCentrally)' == ''">$(MSBuildProjectFullPath.StartsWith('$(MSBuildThisFileDirectory)', System.StringComparison.OrdinalIgnoreCase))</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Optional isolated importer only; Tooling and Runtime do not reference native Assimp. -->
+    <PackageVersion Include="AssimpNetter" Version="[6.0.5]" />
     <PackageVersion Include="TrueMoon.MiniAudioEx" Version="4.0.1-truemoon.1" />
     <!-- Local patched Windows x64 dependency; see eng/native/MiniAudioEx. -->
     <PackageVersion Include="BepuPhysics" Version="[2.5.0-beta.33]" />

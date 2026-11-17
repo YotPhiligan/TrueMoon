@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Aether/">
+    <Project Path="TrueMoon.Aether.Importing.Assimp/TrueMoon.Aether.Importing.Assimp.csproj" />
     <Project Path="TrueMoon.Aether.Abstractions/TrueMoon.Aether.Abstractions.csproj" />
     <Project Path="TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" />
     <Project Path="TrueMoon.Aether.Abstractions.Tests/TrueMoon.Aether.Abstractions.Tests.csproj" />
