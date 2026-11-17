@@ -1,21 +1,18 @@
 # TrueMoon: общий статус
 
-**2026-11-16 — PHYS8.3: allocations deferred-команд контактов уменьшены.**
-Версия `1.2611.16.4-alpha`; [задача](physics/PLAN.md#phys83),
-[изменения/измерения](physics/DEFERRED_COMMAND_ALLOCATIONS.md),
-[команды](physics/HISTORY.md#phys83-2026-11-16), [manifest/SHA](physics/PHYS83_RESULTS.json).
+**2026-11-17 — PHYS8.4: визуальный тестовый уровень и автоматическая приёмка реализованы.**
+[Единственная задача](physics/PLAN.md#phys84), [скриншот/управление/границы](physics/VISUAL_PLAYGROUND.md),
+[команды](physics/HISTORY.md#phys84-2026-11-17), [manifest/SHA](physics/PHYS84_RESULTS.json).
 
-256controllers full ECS209719–209732→6720Б/tick(~96.8%) на Cobalt/MS DI.
-Compact records/copied payload blocks/reused validation сохраняют full preflight,
-immutable maps, tokens/generations/private-type/ALC lifetime. API/schema прежние.
+ManualTests/KtonVisual: actual game session/Kton, slope/platform/jump/ceiling,
+consumer pose interpolation и Vulkan/OpenGL. Source Debug/published Release/fresh
+NuGet Debug/Release, Cobalt/MS DI, CPU/native — 16 профилей, 96 CPU-групп/96 PNG.
+Validation 0/0, final GPU/physics/UI owners/handles/pools 0; 19 package archives,
+isolated graph/cache и loaded DLL SHA проверены. Unit/full-solution suites не повторялись.
 
-Свежие D/R: Aether3554/Kton157/Kul103passed каждый,0failed/0skipped;22новых cases;
-solution builds0errors. Первый full Debug имел diagnostic50msStop timeout; новые
-GC/allocation tests изолированы, полные D/R повторены, production deadlines прежние.
-Причина timeout не доказана. Independent ECS52×4,104macro/attribution fixtures,
-62400Steps и14старых/14новых packages прошли, final owners/pools0.
-
-Native/SDK/TFM/dependencies не менялись; native rebuild не нужен. Full16suites/GPU/
-other OS не повторялись; PHYS8 в целом открыт. Expanded physics profiles/visual/
-platform/release и import/ED/AUD планы самостоятельны. Requests/Claims и код игры/
-Studio не менялись. [Предыдущая сводка](HISTORY.md#common-status-before-phys83-2026-11-16).
+Production/native/dependencies не менялись, версия 1.2611.16.4-alpha сохранена.
+Ручной Win32 input/close не подтверждён из-за ограничения Computer Use; отдельный
+пробный процесс завершён адресно, не считается passing интерактивного прогона.
+Exact capsule mesh, expanded physics workload/workers, physical/DPI/device-loss/
+platform/release и import/ED/AUD остаются открытыми. UIQA-DOC и входящая Enerit-заявка
+не изменялись. [Предыдущая сводка](HISTORY.md#common-status-before-phys84-2026-11-17).

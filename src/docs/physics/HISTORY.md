@@ -1119,3 +1119,88 @@ Native/ABI/dependencies/SDK/TFM прежние, native rebuild не требуе
 GPU/visual/interpolation/other OS/AOT, expanded limits/workers/raw callbacks/stalls
 и общий PHYS8 release scope не подтверждались. Raw TestResults/temp feeds локальны;
 versioned manifest хранит observed numbers/scope/source/archive/report/test hashes.
+
+<a id="physics-status-before-phys84-2026-11-17"></a>
+## STATUS перед PHYS8.4 — 17.11.2026
+
+# TrueMoon.Kton: состояние и следующий шаг
+
+**2026-11-16 — PHYS8.3: allocations deferred-команд контактов уменьшены.**
+Версия `1.2611.16.4-alpha`; [задача](PLAN.md#phys83),
+[реализация/числа](DEFERRED_COMMAND_ALLOCATIONS.md), [команды](HISTORY.md#phys83-2026-11-16),
+[manifest/SHA](PHYS83_RESULTS.json). [Предыдущий статус](HISTORY.md#physics-status-before-phys83-2026-11-16).
+
+Shared Runtime buffer хранит value records/copied payload blocks и переиспользует
+validation/targets. Полный preflight, independent mappings, retry/fault semantics,
+tokens/generations и private-type/ALC lifetime сохранены; API/schema прежние.
+
+Один probe наimmutable `.3-alpha`/`.4-alpha` cohorts:256controllers full ECS
+209719–209732→6720Б/tick(~96.8%) на обоих DI; bridge48Б, playback6224Б.
+Последние6224Б сохраняют detached result/256reservation handles. Timing SLA нет.
+
+Свежая регрессия D/R: Aether3554, Kton157, Kul103passed каждый,0failed/0skipped;
+22новых cases, solution D/R0errors. Independent ECS52×4 и104macro/attribution
+fixtures/62400measured Steps прошли;14старых/14новых package archives, fresh graphs,
+output/license SHA и final owners/pools0 проверены. Первый full Debug имел diagnostic
+50msStop timeout; после изоляции forced-GC/allocation tests полные D/R повторены.
+Причина конкретного timeout не доказана, production deadlines не менялись.
+
+Native/SDK/TFM/dependencies прежние, native rebuild не нужен. Full16suites/GPU/other OS
+не повторялись. Далее PHYS8: expanded capacity/worker presets, raw callbacks/stalls,
+visual pose/interpolation/Stop и platform/release matrix; PHYS7 ragdoll optional.
+
+<a id="phys84-2026-11-17"></a>
+## 17.11.2026 — PHYS8.4 визуальный уровень
+
+По запросу пользователя добавлен непакетируемый ManualTests/KtonVisual на existing
+App/DI/PrimitiveGameSession/Kton и Vulkan/OpenGL primitive surface. [Контракт/скриншот](VISUAL_PLAYGROUND.md),
+[consumer/run instructions](../../ManualTests/KtonVisual/README.md), [manifest/SHA](PHYS84_RESULTS.json).
+Уровень: пол/склон/платформа/кубы/потолок, actual PHYS6 capsule и stepped render proxy.
+Consumer интерполирует копии соседних завершённых поз, сохраняет physics tick;
+Pause/Step/teleport/reset не оставляют trails. Имеются WASD/Space и mode commands.
+
+Канонический запуск:
+
+```powershell
+pwsh -NoProfile -File ManualTests/KtonVisual/Verify.ps1 -EvidenceDirectory TestResults/PHYS84-final-04 -ValidationDirectory TestResults/EditorWindow-20261104/tools/validation
+```
+
+Script использует общий BuildProfile и unique binlog каждой MSBuild команды;
+exact external archives из restored workspace cache, private offline feed, новый
+NuGet cache/output вне checkout. Source Debug/published Release/fresh NuGet Debug/
+published Release, каждый CPU/native на Cobalt/MS DI — 16 профилей. 12 CPU-групп и
+12 PNG на соответствующий профиль: всего 96 групп/96 PNG. Loaded framework DLL
+сопоставлены с isolated cache; graph не содержит project references, все 19 собственных
+archives имеют persisted Version. Extended Skia DLL/font/license snapshots совпали
+в source/fresh outputs. Source/validation hashes сохранены до и после матрицы.
+
+Проверены actual UI tree/routed input/CPU raster, focus-loss и key-repeat через смену
+режима, floor/slope/jump/landing/low ceiling/platform, adjacent pose endpoints и
+midpoint, render centres и сохранение physics poses/tick, contacts, один Paused Step,
+teleport/reset/Stop. Native три дробных кадра одного tick различаются; два paused
+кадра совпадают по pixel SHA. UI команды проходят общий dispatcher interactive loop;
+старый ticket после Stop отвергается, новый World имеет другую identity. Native
+core/synchronization validation 0errors/0warnings; два surface/device поколения
+на профиль освобождены, final GPU owners/handles/UI sessions/physics worlds/pools0.
+
+Development attempts сохранены отдельно: вход склона исправлен с выступающей
+ступеньки на плавное пересечение с полом; потолок опущен до реально ограничивающей
+прыжок высоты. Первое native начало отказало ErrorLayerNotPresent; найден прежний
+локальный Khronos layer, env задан только дочерним процессам. QA wrapper сначала
+ожидал standalone Cobalt.Generator package, затем ошибочно переносил analyzer-only
+PrivateAssets на runtime Cobalt; отдельная package reference исправлена, полная
+матрица после исправления и уточнения потолка повторена. Production code не менялся.
+
+Дополнительный Play.ps1 Release build открыл окно. Computer Use получил правильный
+title/id, но снимки показывали перекрывающий Rider, reliable activation/input не
+подтверждены. Ввод прекращён; после отмены exec оставшийся только наш child
+остановлен по подтверждённым PID/command line. Это не passing ручного Win32 input
+или штатного закрытия interactive loop; эта граница остаётся открытой.
+
+Общая Version 1.2611.16.4-alpha сохранена: изменения только ManualTests/docs,
+framework/native/dependencies/ABI/shaders прежние. Полные solution/unit suites
+не запускались заново; исторические PHYS8.3 результаты не считаются новым прогоном.
+Exact collider mesh, ручной Win32/DPI, Editor/Player IPC/ALC/reload, expanded limits/
+workers/raw callbacks/stalls, device loss/other OS/AOT и общий PHYS8 release scope
+самостоятельны. Raw TestResults/temp evidence локальны; tracked manifest сохраняет
+hashes/counts/scope, один исходный native PNG сохранён в docs как пример, не baseline.

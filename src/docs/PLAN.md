@@ -1,5 +1,10 @@
 # TrueMoon: общий план развития
 
+Выполнено 2026-11-17: [PHYS8.4 — визуальный debug-consumer](physics/PLAN.md#phys84),
+[уровень/скриншот/проверки](physics/VISUAL_PLAYGROUND.md). 16 CPU/native профилей,
+96 CPU-групп/96 PNG на обоих DI, validation и cleanup проверены. Ручной Win32
+input/close открыт. Непакетируемый consumer, production Version 1.2611.16.4-alpha сохранена.
+
 Выполнено2026-11-16: [PHYS8.3 — deferred-команды контактов](physics/PLAN.md#phys83),
 [реализация/числа](physics/DEFERRED_COMMAND_ALLOCATIONS.md), Version1.2611.16.4-alpha.
 Shared Runtime buffer:~210КБ→6720Б/tick при256controllers; independent maps/preflight/ALC

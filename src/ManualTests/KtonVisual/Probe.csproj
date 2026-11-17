@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>KtonVisualProbe</AssemblyName>
+    <TargetFramework>$(TestsTF)</TargetFramework>
+    <RootNamespace>TrueMoon.ManualTests.KtonVisual</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
+    <ProjectReference Include="../../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Kton.Runtime/TrueMoon.Aether.Kton.Runtime.csproj" />
+    <ProjectReference Include="../../TrueMoon.Kton.Bepu/TrueMoon.Kton.Bepu.csproj" />
+    <ProjectReference Include="../../TrueMoon.Alloy.Hosting/TrueMoon.Alloy.Hosting.csproj" />
+    <ProjectReference Include="../../TrueMoon.Cobalt.Generator/TrueMoon.Cobalt.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../AlloyTest/Assets/Fonts/NotoSans-Regular.ttf" Link="Assets/Fonts/NotoSans-Regular.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../AlloyTest/Assets/Fonts/OFL.txt" Link="Assets/Fonts/OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

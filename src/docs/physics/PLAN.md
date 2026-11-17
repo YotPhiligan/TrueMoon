@@ -1,6 +1,6 @@
 # TrueMoon.Kton: самостоятельный модуль физики и ECS Aether
 
-**2026-11-16 — PHYS8.3 deferred-команды контактов оптимизированы; PHYS8 в целом открыт.**
+**2026-11-17 — PHYS8.4 visual consumer реализован и проверен автоматически; PHYS8 в целом открыт.**
 BEPUphysics v2 принят как **приоритетный backend**. Это выбор направления, а не
 утверждение полной App/ECS/platform readiness. Exact beta.33 принят для ограниченного PHYS2 provider scope.
 Пользователь выбрал имя **TrueMoon.Kton**: [решение и источники лора](NAMING.md).
@@ -22,7 +22,7 @@ package D/published R, [bounded storage/transition policy](QUERIES_CONTACTS.md).
 [публичное подключение и ownership](APP.md). Current PHYS2–3 regression309×3.
 **[PHYS5 ECS bridge](#phys5) завершён2026-11-15**: [контракт](ECS_BRIDGE.md),
 [68tests D/R и independent source/publish/fresh](HISTORY.md#phys5-2026-11-15).
-Kul ARCH1h.2a завершён в nonspatial scope; [PHYS6 завершён](#phys6); [PHYS8.1 baseline](#phys81) завершён; [PHYS8.2 завершён](#phys82); [PHYS8.3 завершён](#phys83); далее остальные PHYS8 gates. PHYS7 — отдельное необязательное развитие
+Kul ARCH1h.2a завершён в nonspatial scope; [PHYS6 завершён](#phys6); [PHYS8.1 baseline](#phys81) завершён; [PHYS8.2 завершён](#phys82); [PHYS8.3 завершён](#phys83); [PHYS8.4 automatic scope проверен](#phys84); далее expanded workload и остальные PHYS8 gates. PHYS7 — отдельное необязательное развитие
 простого ragdoll, не prerequisite первого модуля.
 
 Подробные задачи физики, включая ECS bridge, ведутся **только здесь**.
@@ -483,6 +483,29 @@ result/256handles.20новых ECS cases +2contact cases, Aether3554/Kton157/Kul
 allocation tests изолированы в nonparallel collection, D/R повторены полностью.
 Причинность timeout не установлена, production deadlines прежние. Версия1.2611.16.4-alpha
 зафиксирована до финальных проверок. Timing SLA и общий PHYS8 release не объявляются.
+
+<a id="phys84"></a>
+#### PHYS8.4 — визуальный debug-consumer — автоматическая приёмка 17.11.2026
+
+Реализован ManualTests/KtonVisual: actual PrimitiveGameSession/Kton и существующий
+Vulkan/OpenGL primitive surface; floor/slope/platform/dynamic cubes/ceiling/capsule
+controller. Интерполяция копий поз принадлежит consumer и не меняет Physics World.
+Pause/Step/Stop/Reset, stale tickets/новая World identity и input edges проверены.
+Капсула рисуется ступенчатым proxy, точная collider mesh не заявляется.
+
+[Уровень/скриншот/запуск](VISUAL_PLAYGROUND.md), [команды](HISTORY.md#phys84-2026-11-17),
+[manifest/SHA](PHYS84_RESULTS.json). 16 CPU/native профилей source Debug/published
+Release/fresh NuGet Debug/published Release на обоих DI: 96 CPU-групп, 96 PNG,
+validation 0/0 и final owners/handles/pools/UI sessions 0. Closed 19-package cohort,
+cache/output/native/font SHA проверены. Общая Version 1.2611.16.4-alpha сохраняется:
+production API/native/dependencies не изменены, consumer непакетируемый.
+
+Ручной Win32 input/close остаётся открытым: Computer Use не смог надёжно наблюдать/
+активировать окно; probe после отмены завершён по точному PID/command line.
+Эта попытка отделена от успешной scripted-матрицы. Полные unit/solution suites,
+Editor/Player IPC/ALC/reload, exact mesh, device loss/other OS/AOT не подтверждались.
+Следующий независимый технический срез PHYS8 — расширенные 10k-body/worker presets
+и raw callbacks/stalls; общая release readiness остаётся открыта.
 
 ## Источники решения
 

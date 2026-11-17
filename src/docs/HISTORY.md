@@ -9791,3 +9791,33 @@ Requests/Claims и consumer код игры/Studio не менялись.
 ## 16.11.2026 — PHYS8.3 deferred contact allocations
 
 [Детальная запись](physics/HISTORY.md#phys83-2026-11-16), [manifest/SHA](physics/PHYS83_RESULTS.json). Version1.2611.16.4-alpha:256controller ECS~210КБ→6720Б/tick(~96.8%) на обоих DI. Aether3554/Kton157/Kul103tests каждый D/R и solution0errors; independent package proofs прошли. Первый diagnostic timeout/изоляция новых forced-GC tests сохранены в evidence, production deadlines прежние. Native rebuild не нужен; общий PHYS8/platform/release scope остаётся открыт.
+
+<a id="common-status-before-phys84-2026-11-17"></a>
+## STATUS перед PHYS8.4 — 17.11.2026
+
+# TrueMoon: общий статус
+
+**2026-11-16 — PHYS8.3: allocations deferred-команд контактов уменьшены.**
+Версия `1.2611.16.4-alpha`; [задача](physics/PLAN.md#phys83),
+[изменения/измерения](physics/DEFERRED_COMMAND_ALLOCATIONS.md),
+[команды](physics/HISTORY.md#phys83-2026-11-16), [manifest/SHA](physics/PHYS83_RESULTS.json).
+
+256controllers full ECS209719–209732→6720Б/tick(~96.8%) на Cobalt/MS DI.
+Compact records/copied payload blocks/reused validation сохраняют full preflight,
+immutable maps, tokens/generations/private-type/ALC lifetime. API/schema прежние.
+
+Свежие D/R: Aether3554/Kton157/Kul103passed каждый,0failed/0skipped;22новых cases;
+solution builds0errors. Первый full Debug имел diagnostic50msStop timeout; новые
+GC/allocation tests изолированы, полные D/R повторены, production deadlines прежние.
+Причина timeout не доказана. Independent ECS52×4,104macro/attribution fixtures,
+62400Steps и14старых/14новых packages прошли, final owners/pools0.
+
+Native/SDK/TFM/dependencies не менялись; native rebuild не нужен. Full16suites/GPU/
+other OS не повторялись; PHYS8 в целом открыт. Expanded physics profiles/visual/
+platform/release и import/ED/AUD планы самостоятельны. Requests/Claims и код игры/
+Studio не менялись. [Предыдущая сводка](HISTORY.md#common-status-before-phys83-2026-11-16).
+
+<a id="phys84-2026-11-17"></a>
+## 17.11.2026 — PHYS8.4 visual level
+
+[Подробная запись](physics/HISTORY.md#phys84-2026-11-17), [manifest/SHA](physics/PHYS84_RESULTS.json). Actual local game/Kton/Vulkan-OpenGL consumer: 16 CPU/native профилей на обоих DI, 96 групп/96 PNG, validation0/0 и cleanup0. Source/publish/fresh package graphs/hashes проверены, full unit/solution suites не повторялись. Version1.2611.16.4-alpha сохранена для неизменного framework; ручной Win32 input/close открыт, отдельная Computer Use попытка не считается passing.

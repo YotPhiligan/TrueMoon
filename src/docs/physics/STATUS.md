@@ -1,25 +1,26 @@
 # TrueMoon.Kton: состояние и следующий шаг
 
-**2026-11-16 — PHYS8.3: allocations deferred-команд контактов уменьшены.**
-Версия `1.2611.16.4-alpha`; [задача](PLAN.md#phys83),
-[реализация/числа](DEFERRED_COMMAND_ALLOCATIONS.md), [команды](HISTORY.md#phys83-2026-11-16),
-[manifest/SHA](PHYS83_RESULTS.json). [Предыдущий статус](HISTORY.md#physics-status-before-phys83-2026-11-16).
+**2026-11-17 — PHYS8.4: визуальный debug-consumer реализован, автоматическая приёмка прошла.**
+[Задача](PLAN.md#phys84), [уровень/скриншот/границы](VISUAL_PLAYGROUND.md),
+[команды](HISTORY.md#phys84-2026-11-17), [manifest/SHA](PHYS84_RESULTS.json).
 
-Shared Runtime buffer хранит value records/copied payload blocks и переиспользует
-validation/targets. Полный preflight, independent mappings, retry/fault semantics,
-tokens/generations и private-type/ALC lifetime сохранены; API/schema прежние.
+ManualTests/KtonVisual использует настоящую PrimitiveGameSession, SceneWorld/scheduler
+и Kton. Пол, склон, движущаяся платформа, прыжок, низкий потолок и dynamic cubes;
+отображение через Vulkan/OpenGL surface. Капсула показана ступенчатым proxy.
+Consumer интерполирует копии поз; Physics World и metadata tick сохраняются.
+Pause показывает завершённую позу, Step выполняет один tick, Stop/Reset закрывают
+старые tickets и освобождают World/surface. Есть helper Play.ps1 с WASD/Space и командами.
 
-Один probe наimmutable `.3-alpha`/`.4-alpha` cohorts:256controllers full ECS
-209719–209732→6720Б/tick(~96.8%) на обоих DI; bridge48Б, playback6224Б.
-Последние6224Б сохраняют detached result/256reservation handles. Timing SLA нет.
+Фактически прошли 16 профилей: source Debug/published Release/fresh NuGet Debug/
+published Release, каждый CPU/native на Cobalt/MS DI. 96 CPU-групп и 96 PNG;
+validation 0/0, финальные GPU owners/handles/UI sessions/physics worlds/pools — 0.
+19 собственных архивов одной версии, isolated graph/cache и loaded DLL SHA проверены;
+extended Skia/font snapshots совпадают в четырёх outputs. Full unit/solution suites
+в этом срезе не повторялись. [Предыдущий статус](HISTORY.md#physics-status-before-phys84-2026-11-17).
 
-Свежая регрессия D/R: Aether3554, Kton157, Kul103passed каждый,0failed/0skipped;
-22новых cases, solution D/R0errors. Independent ECS52×4 и104macro/attribution
-fixtures/62400measured Steps прошли;14старых/14новых package archives, fresh graphs,
-output/license SHA и final owners/pools0 проверены. Первый full Debug имел diagnostic
-50msStop timeout; после изоляции forced-GC/allocation tests полные D/R повторены.
-Причина конкретного timeout не доказана, production deadlines не менялись.
-
-Native/SDK/TFM/dependencies прежние, native rebuild не нужен. Full16suites/GPU/other OS
-не повторялись. Далее PHYS8: expanded capacity/worker presets, raw callbacks/stalls,
-visual pose/interpolation/Stop и platform/release matrix; PHYS7 ragdoll optional.
+Ручной интерактивный Win32-прогон не подтверждён: Computer Use не смог надёжно
+активировать/наблюдать тестовое окно; отдельный пробный процесс завершён адресно.
+Это не failure scripted-матрицы и не proof штатного закрытия interactive loop.
+Общая Version 1.2611.16.4-alpha сохранена: production/native/dependencies прежние.
+Далее — explicit 10k-body/worker profiles и raw callbacks/stalls; ручной input/close,
+точная collider mesh, DPI/device loss/other OS/AOT и общая PHYS8 readiness открыты.

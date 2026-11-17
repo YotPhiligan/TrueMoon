@@ -1,21 +1,22 @@
 # Aether / Editor: состояние и точка продолжения
 
-**2026-11-16 — PHYS8.3: shared deferred command buffer оптимизирован.**
-Детальная задача у [Kton](../physics/PLAN.md#phys83),
-[реализация/числа](../physics/DEFERRED_COMMAND_ALLOCATIONS.md),
-[команды](../physics/HISTORY.md#phys83-2026-11-16), [manifest/SHA](../physics/PHYS83_RESULTS.json).
-Версия1.2611.16.4-alpha. API/schema/contact timing, full preflight, independent maps
-и private-type/ALC lifetime сохранены; scheduler/transforms production code прежний.
+**2026-11-17 — PHYS8.4: локальный Kton visual consumer и автоматическая приёмка готовы.**
+Подробная задача у [Kton](../physics/PLAN.md#phys84), [скриншот/API/границы](../physics/VISUAL_PLAYGROUND.md),
+[команды](../physics/HISTORY.md#phys84-2026-11-17), [manifest/SHA](../physics/PHYS84_RESULTS.json).
 
-256controllers full ECS209719–209732→6720Б/tick(~96.8%) на обоих DI.
-После warmup bridge48Б, playback6224Б — detached mapping остаётся независимым.
-22новых cases; полные Aether3554/Kton157/Kul103passed каждый Debug/Release,
-0failed/0skipped; solution builds0errors. Первый full Debug имел diagnostic50msStop
-timeout; новые forced-GC/allocation tests изолированы, D/R повторены полностью,
-production deadlines прежние. Причинность конкретного timeout не установлена.
+Настоящая PrimitiveGameSession/Kton + existing Vulkan/OpenGL primitive surface;
+копии поз интерполируются consumer без мутации Physics World. Pause/Step/Stop/Reset,
+склон/прыжок/потолок/платформа и routed input проверены в 16 профилях: source D,
+published R, fresh NuGet D/R, оба DI, CPU/native отдельно. 96 CPU-групп/96 PNG,
+validation 0/0 и финальные resources/handles/UI sessions 0; 19 package archives
+и fresh graph/cache/loaded SHA подтверждены. Полные unit/solution suites не повторялись.
 
-Independent ECS52×4 и104macro/attribution fixtures/62400Steps, coherent old/new
-packages и final owners/pools0 проверены. [Предыдущий статус](HISTORY.md#engine-status-before-phys83-2026-11-16).
-Native/SDK/TFM/dependencies прежние; full16suites/GPU/other OS не повторялись.
-PHYS8 expanded workers/capacities, raw callbacks/stalls, visual/platform/release gates,
-import/ED/AUD и историческая drain cause самостоятельны. Requests/Claims не менялись.
+ManualTests consumer не добавляет production API/native/dependency изменений;
+Version 1.2611.16.4-alpha сохранена. Капсула — stepped proxy; это локальный consumer,
+не новая Editor/Player IPC/ALC/reload приёмка. Ручной Win32 input/close не подтверждён:
+Computer Use не смог надёжно активировать/наблюдать окно, наш probe завершён адресно.
+[Предыдущий статус](HISTORY.md#engine-status-before-phys84-2026-11-17).
+
+Далее PHYS8 expanded capacity/workers/raw callbacks/stalls; физический input/DPI,
+device loss/other OS, import/ED/AUD и историческая drain cause самостоятельны.
+Чужие UIQA-DOC изменения и заявка Enerit сохранены.
