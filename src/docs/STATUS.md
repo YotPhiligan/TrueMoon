@@ -1,20 +1,12 @@
 # TrueMoon: общий статус
 
-**2026-11-17 — ARCH1g.1c: permanent model subasset IDs и atomic ledger publication.**
-Version **1.2611.17.4-alpha**. [Контракт/границы](engine/MODEL_SUBASSET_LEDGER.md),
-[задача](engine/PLAN.md#arch1g1c-subasset-ledger), [проверки/SHA](engine/MODEL_SUBASSET_LEDGER_RESULTS.json).
-Семантическое сопоставление, rename/tombstones/explicit restore, App/IFactory/session,
-readonly Open, generation CAS и единый checksummed CPU+ledger sidecar проверены.
-Native parser изолирован; источником permanent ID не становятся порядок или content hash.
+**2026-11-18 — ARCH1g.2a**, version **1.2611.18.1-alpha**. Первая модель
+загружается в CPU-каталог Runtime из сборки, зафиксированной на точном снимке Nom.
+Две сборки с одинаковой игровой DLL сохраняют свои версии геометрии после реимпорта.
+Постоянные ID совпадают. [Контракт и границы](engine/MODEL_BUILD_DELIVERY.md).
 
-Текущие Aether3698/3698 и Editor1507/1507 D/R tests, failed/skipped0;
-74new cases,10profiles/100groups/1425assertions;400owned processes reaped,
-4source→fresh ledger handoffs,11matching local packages, exact native/loaded DLL SHA.
-Результаты относятся к bounded static CPU profile; all-solution/GPU/release acceptance
-не объявляется. Delivery/worker/feed сохранены, пакеты не опубликованы.
-
-**g.1 CPU producer завершён; далее g.2 Nom/build/runtime delivery и activation.**
-Producer-local authoring sidecar не заменяет Nom catalog/CAS. PHYS8 physical/DPI/device
-loss, ED/AUD, other OS/AOT и release gates самостоятельны. Historical diagnostic
-drain cause открыт; чужие UIQA-DOC изменения сохранены.
-[Предыдущая сводка](HISTORY.md#common-status-before-g1c-2026-11-17).
+4 профиля source/fresh published × Cobalt/MS DI, 13 локальных пакетов.
+Проверены Aether 3698/3698, Player 17/17, Nom 874/874 в Debug/Release.
+Следующий срез g.2 — размещение в сцене и native render proof. Физические
+проверки PHYS8, ED/AUD и release gates ведутся в планах владельцев.
+[Предыдущая сводка](HISTORY.md#common-status-before-g2a-2026-11-18).

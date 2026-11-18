@@ -15598,3 +15598,61 @@ Worker closure/licenses/feed сохранены локально, пакеты �
 GPU/Editor asset preview, other OS/AOT и release gates самостоятельны. Исторический
 diagnostic drain cause не пересмотрен; production deadlines не менялись.
 [Предыдущий статус](HISTORY.md#engine-status-before-g1b-2026-11-17).
+
+<a id="arch1g2a-2026-11-18"></a>
+## 2026-11-18 — ARCH1g.2a, точная доставка модели
+
+Version 1.2611.18.1-alpha, baseline f809557. GameBuildRequest получает detached
+render input из точного снимка Nom. SHA render payload входит в BuildId, legacy
+managed-only publication остаётся на schema 2. Runtime восстанавливает манифест
+и открывает CPU lease через существующий каталог.
+
+Выполнен ManualTests/ModelBuildConsumer/Verify.ps1 с EvidenceDirectory
+TestResults/ModelBuild-20261118/accepted-01. Source Debug и fresh package-only
+published Release прошли на Cobalt и Microsoft DI. Для каждого профиля реальный
+Assimp импортировал один и тот же glTF до и после изменения вершины. Runtime
+в отдельных процессах подтвердил X=1 и X=2, прежние индексы и постоянные ID.
+Старый снимок Nom воспроизвёл прежний BuildId после второй публикации. Nom и
+исходники закрыты и перемещены перед запуском Runtime. Подмена байта отклонена,
+завершённые CPU leases освобождены. Fresh Runtime graph проверен без Nom,
+Tooling и Assimp. 13 локальных пакетов одной версии, native Assimp SHA
+90984E886CF7394560E44FECD5A5666BECD2A93E98251974A562ECB79CFBA386.
+
+Полные существующие suites выполнены последовательно в Debug и Release.
+Aether 3698/3698, Player 17/17, Nom 874/874. Failed/skipped 0.
+TRX и уникальные binlogs сохранены в TestResults/ModelBuild-20261118/regression-01.
+Отчёт acceptance verification.json SHA256 1F8B3D90FA85A145815B0BC78F4083FC72BD6E8776BF14A662FCA5937ABD7865.
+[Точный контракт и область результата](MODEL_BUILD_DELIVERY.md).
+
+<a id="engine-status-before-g2a-2026-11-18"></a>
+### Предыдущий engine STATUS
+
+# Aether / Editor: состояние и точка продолжения
+
+**2026-11-17 — ARCH1g.1c: persistent subasset IDs и atomic candidate+ledger готовы.**
+Version **1.2611.17.4-alpha**. [Задача](PLAN.md#arch1g1c-subasset-ledger),
+[API/схема/ownership](MODEL_SUBASSET_LEDGER.md), [команды/границы](HISTORY.md#arch1g1c-2026-11-17),
+[manifest/SHA](MODEL_SUBASSET_LEDGER_RESULTS.json).
+
+Authored semantic locators проходят проверенную source→native transport binding;
+постоянные Mesh/Material/Slot/BindingSet/Instance IDs отделены от indices/content.
+Reorder/content edit сохраняют IDs; явные rename/restore и tombstones проверены.
+Неоднозначные names, включая unused objects/ancestor paths, требуют explicit labels.
+
+Caller-owned LedgerSession, readonly Open и App-owned shared admission1/0/Stop/drain.
+Один checksummed12MiB sidecar содержит полный CPU candidate+ledger+associations;
+expectedGeneration CAS, OS writer lock, flush и atomic rename. Reader во время
+replacement видит целый old/new record; killed publisher не оставляет torn head.
+Crash orphan staging игнорируется; локальные filesystem/power-loss границы в guide.
+
+Текущие Aether3698/3698 и Editor1507/1507 D/R tests, failed/skipped0;
+74new ledger/store/session cases. 10profiles на обоих DI:100groups/1425assertions,
+360reaped workers +30readers +10killed/reaped publishers; 31coherent concurrent reads,
+4source→fresh durable handoffs,11matching packages; closed feed/cache/loaded SHA.
+Worker/native6.0.5/SHA/precision и source freeze проверены; delivery сохранена локально.
+
+**Ограниченный CPU g.1 завершён. Следующий g.2 — Nom/build/runtime artifacts,
+captured delivery и activation.** Producer sidecar не становится вторым asset store.
+GPU/Editor asset preview, прочие форматы/OS/AOT, ED/PHYS8/AUD и release gates отдельны.
+Исторический diagnostic drain cause не пересмотрен; пакеты не опубликованы.
+[Предыдущий статус](HISTORY.md#engine-status-before-g1c-2026-11-17).

@@ -3,6 +3,7 @@ using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TrueMoon.Aether.Abstractions.Rendering;
 
 namespace TrueMoon.Aether.Runtime.Builds;
 
@@ -11,10 +12,12 @@ public sealed class GameBuildArtifact
 {
     /// <summary>The bounded artifact manifest file name.</summary>
     public const string ManifestFile = "game-build.json";
+    /// <summary>Fixed payload name for builds with captured render resources.</summary>
+    public const string RenderContentFile = "render-content.bin";
     internal static readonly JsonSerializerOptions Json = new() { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
     private readonly Manifest _manifest;
-    private GameBuildArtifact(string directory, string id, Manifest manifest)
-    { DirectoryPath = directory; BuildId = id; _manifest = manifest; }
+    private GameBuildArtifact(string directory, string id, Manifest manifest, RenderContentManifest? renderContent)
+    { DirectoryPath = directory; BuildId = id; _manifest = manifest; RenderContent = renderContent; }
     /// <summary>Gets the absolute directory, named by the manifest SHA256.</summary>
     public string DirectoryPath { get; }
     /// <summary>Gets the manifest SHA256 used by session identity.</summary>
@@ -31,12 +34,14 @@ public sealed class GameBuildArtifact
     public IReadOnlyList<string> Files => Array.AsReadOnly(_manifest.Files.Select(f => f.Name).ToArray());
     /// <summary>Whether this artifact explicitly shares the concrete Runtime assembly.</summary>
     public bool RuntimeAccess => _manifest.RuntimeAccess;
+    /// <summary>Validated immutable render resources keyed to this build, or null for managed-only artifacts.</summary>
+    public RenderContentManifest? RenderContent { get; }
     internal IEnumerable<System.Reflection.Assembly> SharedAssemblies => GameSharedContracts.For(RuntimeAccess);
     internal static string RuntimeHash => HashFile(typeof(GameBuildArtifact).Assembly.Location);
     internal static readonly HashSet<string> FrameworkNames = System.IO.Directory.EnumerateFiles(
         Path.GetDirectoryName(typeof(object).Assembly.Location)!, "*.dll").Select(Path.GetFileNameWithoutExtension).ToHashSet(StringComparer.OrdinalIgnoreCase)!;
 
-    /// <summary>Validates manifest, shared contract, complete dependency set and all DLL hashes.</summary>
+    /// <summary>Validates the manifest, managed dependency set and optional render payload before returning a build.</summary>
     public static GameBuildArtifact Open(string directory, string hostContractId, string? expectedBuildId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory); ValidateIdentity(hostContractId);
@@ -48,12 +53,12 @@ public sealed class GameBuildArtifact
         if (Path.GetFileName(path) != id || expectedBuildId != null && expectedBuildId != id)
             throw new InvalidDataException("Game manifest identity mismatch.");
         using (var header = JsonDocument.Parse(bytes))
-            if (!header.RootElement.TryGetProperty("Schema", out var schema) || schema.GetInt32() != 2)
-                throw new InvalidDataException("Unsupported game manifest schema; rebuild the game for the layered Runtime (schema 2).");
+            if (!header.RootElement.TryGetProperty("Schema", out var schema) || schema.GetInt32() is not (2 or 3))
+                throw new InvalidDataException("Unsupported game manifest schema. Rebuild the game for the layered Runtime.");
         var manifest = JsonSerializer.Deserialize<Manifest>(bytes, Json) ?? throw new InvalidDataException("Missing game manifest.");
         if (manifest.HostContractId != hostContractId) throw new InvalidDataException("Game build belongs to another host.");
-        ValidateManifest(path, manifest);
-        return new(path, id, manifest);
+        var content = ValidateManifest(path, manifest, id);
+        return new(path, id, manifest, content);
     }
 
     /// <summary>Pins every artifact file against replacement/deletion until the owned runtime is reaped.</summary>
@@ -62,7 +67,9 @@ public sealed class GameBuildArtifact
         var pin = new FilePins();
         try
         {
-            foreach (var name in new[] { ManifestFile }.Concat(_manifest.Files.Select(f => f.Name)))
+            var names = _manifest.Files.Select(f => f.Name).Prepend(ManifestFile);
+            if (_manifest.Content != null) names = names.Append(RenderContentFile);
+            foreach (var name in names)
                 pin.Streams.Add(new FileStream(Path.Combine(DirectoryPath, name), FileMode.Open, FileAccess.Read, FileShare.Read));
             Open(DirectoryPath, HostContractId, BuildId);
             return pin;
@@ -78,11 +85,11 @@ public sealed class GameBuildArtifact
                 FrameworkNames.Contains(Path.GetFileNameWithoutExtension(n)) || GameSharedContracts.IsReserved(Path.GetFileNameWithoutExtension(n))))
             throw new InvalidDataException("Declare 1..16 distinct private managed DLL names; framework/Aether copies are forbidden.");
     }
-    internal static void ValidateManifest(string directory, Manifest manifest)
+    internal static RenderContentManifest? ValidateManifest(string directory, Manifest manifest, string id)
     {
         if (manifest.TargetFramework != GameBuildProfile.TargetFramework)
             throw new InvalidDataException($"Game manifest targets '{manifest.TargetFramework}'; expected {GameBuildProfile.TargetFramework}. Rebuild the game artifact.");
-        if (manifest.Schema != 2 || manifest.RuntimeSha256 != RuntimeHash || manifest.Files == null || manifest.SharedContracts == null ||
+        if (manifest.Schema != (manifest.Content == null ? 2 : 3) || manifest.RuntimeSha256 != RuntimeHash || manifest.Files == null || manifest.SharedContracts == null ||
             !manifest.SharedContracts.SequenceEqual(GameSharedContracts.Describe(manifest.RuntimeAccess)))
             throw new InvalidDataException("Unsupported game manifest or shared contract.");
         ValidateIdentity(manifest.HostContractId); ValidateEntry(manifest.EntryType, manifest.SourceRevision);
@@ -108,8 +115,19 @@ public sealed class GameBuildArtifact
             }
         }
         var expected = manifest.Files.Select(f => f.Name).Append(ManifestFile).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (manifest.Content != null) expected.Add(RenderContentFile);
         if (System.IO.Directory.EnumerateFileSystemEntries(directory).Any(p => !expected.Contains(Path.GetFileName(p))))
             throw new InvalidDataException("Unexpected artifact payload.");
+        if (manifest.Content is not { } payload) return null;
+        var contentPath = Path.Combine(directory, RenderContentFile);
+        RejectLink(contentPath);
+        using var input = new FileStream(contentPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (payload.Length is <= 0 or > GameBuildRenderContent.MaximumBytes || input.Length != payload.Length)
+            throw new InvalidDataException("Game build render payload length mismatch.");
+        var bytes = new byte[(int)payload.Length];
+        input.ReadExactly(bytes);
+        if (Hash(bytes) != payload.Sha256) throw new InvalidDataException("Game build render payload hash mismatch.");
+        return GameBuildRenderContent.Read(bytes, RenderContentHash.Parse(id));
     }
     internal static void ValidateIdentity(string value)
     { if (value is not { Length: 64 } || !value.All(Uri.IsHexDigit)) throw new InvalidDataException("Expected SHA256 host identity."); }
@@ -120,9 +138,11 @@ public sealed class GameBuildArtifact
     internal static string HashFile(string path) { using var stream = File.OpenRead(path); return Convert.ToHexString(SHA256.HashData(stream)); }
     internal static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
     internal sealed record BuildFile(string Name, string Sha256, long Length);
+    internal sealed record RenderPayload(string Sha256, long Length);
     internal sealed record Manifest(int Schema, string TargetFramework, string HostContractId, string RuntimeSha256,
         bool RuntimeAccess, GameSharedContracts.Descriptor[] SharedContracts,
-        string EntryAssembly, string EntryType, long SourceRevision, BuildFile[] Files);
+        string EntryAssembly, string EntryType, long SourceRevision, BuildFile[] Files,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] RenderPayload? Content = null);
     private sealed class FilePins : IDisposable
     {
         internal readonly List<FileStream> Streams = [];

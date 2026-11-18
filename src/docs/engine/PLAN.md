@@ -31,7 +31,7 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 
 Завершены 17.11.2026: [g.1a source capture](#arch1g1a-source-capture), [g.1b isolated CPU import](#arch1g1b-isolated-import)
 и [g.1c persistent IDs/atomic ledger](#arch1g1c-subasset-ledger). Ограниченный CPU g.1 завершён;
-далее g.2 Nom/build/runtime integration. ED/PHYS8/AUD и release gates самостоятельны.
+[ARCH1g.2a](#arch1g2a-model-delivery) провёл одну модель через Nom → Build → Runtime. Далее сцена и native render.
 
 <a id="arch1j-session-subsystems"></a>
 ### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
@@ -1746,7 +1746,7 @@ generic controls — в UI плане. Новый пакет/backend/render grap
 [source capture](#arch1g1a-source-capture), [isolated parser](#arch1g1b-isolated-import),
 [persistent IDs/atomic ledger](#arch1g1c-subasset-ledger). [Текущий контракт](MODEL_SUBASSET_LEDGER.md).
 AssimpNetter/Assimp6.0.5 в отдельном Windows x64 worker; producer-local authoring
-sidecar хранит complete candidate+ledger checkpoint. Следующий g.2 — captured build,
+sidecar хранит complete candidate+ledger checkpoint. [Первый срез g.2](#arch1g2a-model-delivery) проверил captured build,
 Nom catalog/bytes и Runtime delivery/activation; это не второй generic asset store.
 Владелец — engine/content; общие render contracts f.1/f.2 не переносятся в storage.
 
@@ -1884,6 +1884,19 @@ native/CPU limits прежние. Failed/stale/cancelled precommit сохран�
 **Ограниченный CPU g.1 завершён. Далее g.2 — Nom/build/runtime captured assets и
 activation; actual GPU/Editor asset consumer проверяется отдельно.** Прочие форматы,
 OS/AOT и release gates не закрываются этим срезом.
+
+<a id="arch1g2a-model-delivery"></a>
+#### ARCH1g.2a — одна модель через Nom → Build → Runtime
+
+Завершён 18.11.2026. Мост Nom публикует канонические mesh/material/
+binding-set bytes и строит точный снимок. Build включает снимок в артефакт.
+Runtime открывает проверенный CPU render scope выбранного BuildId. Реимпорт
+сохраняет постоянные ID, обе сборки получают собственные geometry revisions.
+Доказаны исходники и independent fresh packages на обоих DI.
+[Контракт](MODEL_BUILD_DELIVERY.md), [проверки](HISTORY.md#arch1g2a-2026-11-18).
+
+Далее размещение экземпляров в сцене и native render proof, затем расширенная
+матрица выбора ассетов и жизненного цикла по критериям ARCH1g.2.
 
 <a id="arch1h-audio"></a>
 ### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07

@@ -280,7 +280,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
             if (Directory.EnumerateFiles(output, "*.dll").Any(p => !allowed.Contains(Path.GetFileName(p))))
                 throw new InvalidDataException("Compiler output contains undeclared DLLs; use a non-copying frozen Aether reference.");
             GameBuildResult artifact = new(GameArtifactPublisher.Publish(output, _root, _hostId, request.EntryAssembly, request.EntryType,
-                request.SourceRevision, request.Dependencies, end.Token, request.RuntimeAccess));
+                request.SourceRevision, request.Dependencies, end.Token, request.RuntimeAccess, request.RenderContent));
             if (inputs != null) artifact = artifact.WithInputs(inputs, captured?.WithProjects(captured.Projects, new(artifact.DirectoryPath, artifact.BuildId)));
             if (captured != null) await File.WriteAllTextAsync(Path.Combine(job, "capture.json"), JsonSerializer.Serialize(artifact.Compilation), end.Token).ConfigureAwait(false);
             owned.GameBuildId = artifact.BuildId;

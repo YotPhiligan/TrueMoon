@@ -34,6 +34,8 @@ namespace TrueMoon.Aether.Tooling.Builds
         /// <remarks>Requires CapturePreparation. Keeps one process-local result; a new source ticket republishes its manifest.
         /// Missing/changed inputs or unavailable payloads rebuild normally. No persisted cache or reopened provenance is trusted.</remarks>
         public bool ReuseArtifact { get; init; }
+        /// <summary>Optional frozen render resources, captured before compilation and committed with the managed build.</summary>
+        public GameBuildRenderContent? RenderContent { get; init; }
     }
 
     /// <summary>A failed compiler exit with persistent stdout/stderr diagnostics.</summary>

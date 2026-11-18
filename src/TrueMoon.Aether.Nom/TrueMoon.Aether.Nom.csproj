@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(TF)</TargetFramework>
+    <Description>Optional Aether model publication and exact render snapshot capture from Nom.</Description>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TrueMoon.Aether.Tooling/TrueMoon.Aether.Tooling.csproj" />
+    <ProjectReference Include="../TrueMoon.Nom/TrueMoon.Nom.csproj" />
+    <None Update="PACKAGE.md" Pack="true" PackagePath="PACKAGE.md" />
+  </ItemGroup>
+</Project>

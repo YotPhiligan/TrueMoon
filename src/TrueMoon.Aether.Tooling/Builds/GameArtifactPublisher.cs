@@ -10,7 +10,13 @@ public static class GameArtifactPublisher
     /// <remarks>Only explicitly declared flat managed DLLs are supported. Native libraries/assets are outside ENG3a.</remarks>
     public static GameBuildArtifact Publish(string outputDirectory, string artifactRoot, string hostContractId,
         string entryAssembly, string entryType, long sourceRevision, IEnumerable<string>? dependencies = null,
-        CancellationToken cancellationToken = default, bool runtimeAccess = false)
+        CancellationToken cancellationToken = default, bool runtimeAccess = false) =>
+        Publish(outputDirectory, artifactRoot, hostContractId, entryAssembly, entryType, sourceRevision,
+            dependencies, cancellationToken, runtimeAccess, null);
+
+    internal static GameBuildArtifact Publish(string outputDirectory, string artifactRoot, string hostContractId,
+        string entryAssembly, string entryType, long sourceRevision, IEnumerable<string>? dependencies,
+        CancellationToken cancellationToken, bool runtimeAccess, GameBuildRenderContent? renderContent)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory); ArgumentException.ThrowIfNullOrWhiteSpace(artifactRoot);
         ValidateIdentity(hostContractId); ValidateEntry(entryType, sourceRevision);
@@ -30,9 +36,19 @@ public static class GameArtifactPublisher
                 var target = Path.Combine(staging, name); File.Copy(source, target);
                 files.Add(new(name, HashFile(target), length));
             }
-            var manifest = new Manifest(2, GameBuildProfile.TargetFramework, hostContractId, RuntimeHash, runtimeAccess, GameSharedContracts.Describe(runtimeAccess), entryAssembly, entryType, sourceRevision, files.ToArray());
-            ValidateManifest(staging, manifest);
+            RenderPayload? payload = null;
+            if (renderContent != null)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var path = Path.Combine(staging, RenderContentFile);
+                using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    renderContent.WriteTo(output);
+                payload = new RenderPayload(HashFile(path), new FileInfo(path).Length);
+            }
+            var manifest = new Manifest(payload == null ? 2 : 3, GameBuildProfile.TargetFramework, hostContractId, RuntimeHash,
+                runtimeAccess, GameSharedContracts.Describe(runtimeAccess), entryAssembly, entryType, sourceRevision, files.ToArray(), payload);
             var bytes = JsonSerializer.SerializeToUtf8Bytes(manifest, Json); var id = Hash(bytes);
+            ValidateManifest(staging, manifest, id);
             File.WriteAllBytes(Path.Combine(staging, ManifestFile), bytes);
             cancellationToken.ThrowIfCancellationRequested();
             var destination = Path.Combine(root, id);

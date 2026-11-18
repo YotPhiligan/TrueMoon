@@ -1,5 +1,11 @@
 # TrueMoon: общий план развития
 
+Выполнено 2026-11-18: [ARCH1g.2a](engine/PLAN.md#arch1g2a-model-delivery),
+Version1.2611.18.1-alpha. Одна модель проходит Nom → Build → Runtime.
+Две сборки сохраняют свои ревизии геометрии после реимпорта с теми же ID.
+Далее размещение в сцене и native render proof.
+
+
 Выполнено 2026-11-17: [ARCH1g.1c — permanent IDs и atomic candidate+ledger](engine/PLAN.md#arch1g1c-subasset-ledger),
 Version1.2611.17.4-alpha. [Контракт/проверки](engine/MODEL_SUBASSET_LEDGER.md).
 Ограниченный CPU g.1 завершён; далее g.2 Nom/build/runtime delivery и activation.
@@ -164,7 +170,7 @@ Source/published/fresh: по230checks на обоих DI,4owned children/profile
 | .NET 11, CORE8 завершён | Inputs/generators/frozen game/runtime regression и свежая согласованная поставка проверены; функциональная очередь продолжается у владельцев | [CORE8](core/PLAN.md#core8-dotnet11), [итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11) |
 | Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
 | ECS и отображение, функциональная очередь | F.2/f.3/f.4 resources/snapshots/actual Vulkan surface и Playing fence готовы; далее минимальный Player | [ARCH1f.4](engine/PLAN.md#arch1f-rendering), [snapshot API](engine/RENDER_SNAPSHOTS.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
-| Исследование ассетов моделей | Research prototype и g.1a App/IFactory/handle-verified dependency bytes проверены; далее selected format policy/native parser/CPU candidate+ledger g.1, затем g.2 | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [captured contract](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) |
+| Исследование ассетов моделей | CPU g.1 завершён. [g.2a](engine/PLAN.md#arch1g2a-model-delivery) проверил доставку одной модели и точных ревизий, далее сцена и native render | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [captured contract](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) |
 | Самостоятельное хранение ассетов | NOM0–6 IO/process scope и NOM7 local4package delivery/independent consumers проверены; далее engine g.2 bridge по согласованию, другие OS/RID/modes и physical/release gates отдельно; [disk-full/recovery](nom/DURABILITY.md) после UAC прошёл5cases/D/R; [VM harness](nom/VM_CRASH.md) сохранён, actual verification отложена; [NOM8a/b buffer/raw API](nom/BUFFER_API.md#nom8b-raw-api) реализован и проверен; consumer bridge g.2 после g.1 по согласованию engine; hardware power-off исключён | [Nom queue](nom/PLAN.md#nom-own-queue), [решение](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07) |
 | Kton / самостоятельная 3D-физика | BEPU — приоритет; PHYS0–6 и capsule/session bridge проверены в Windows/headless profile.124tests D/R, both-DI source/published/fresh52checks×4; PHYS8.1/8.2 baseline и allocations завершены в указанном scope;1000body445КБ→<1КБ/tick,155tests D/R; shared commands и остальные PHYS8 gates открыты; Kul ARCH1h.2a также завершён | [PHYS0–8](physics/PLAN.md#current-physics-queue), [статус](physics/STATUS.md), [ARCH1i](engine/PLAN.md#arch1i-physics) |
 | Аудиомодуль | TrueMoon.Kul AUD1 и optional ARCH1h.2a ECS/captured-content bridge реализованы и проверены в Windows x64 scope; следующие AUD2–3 — device loss/RT/queues/other OS | [Audio PLAN](audio/PLAN.md#current-audio-queue), [ARCH1h](engine/PLAN.md#arch1h-audio) |
