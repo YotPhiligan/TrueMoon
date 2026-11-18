@@ -78,7 +78,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
                     EditorCommand.Replace => model.CanReplace, EditorCommand.Cancel => model.CanCancel, _ => false
                 }));
             }
-            foreach (var command in new[] { DocumentCommand.New, DocumentCommand.Open, DocumentCommand.Save, DocumentCommand.SaveAs, DocumentCommand.Close, DocumentCommand.OpenProject, DocumentCommand.CloseProject })
+            foreach (var command in new[] { DocumentCommand.New, DocumentCommand.Open, DocumentCommand.Save, DocumentCommand.SaveAs, DocumentCommand.Close, DocumentCommand.OpenProject, DocumentCommand.CloseProject, DocumentCommand.OpenBuild })
             {
                 var value = command;
                 _documents.Add(value, Command(() => documents.Request(value), () => value switch
@@ -86,7 +86,8 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
                     DocumentCommand.New => documents.CanNew, DocumentCommand.Open => documents.CanOpen,
                     DocumentCommand.Save => documents.CanSave, DocumentCommand.SaveAs => documents.CanSaveAs,
                     DocumentCommand.Close => documents.CanClose,
-                    DocumentCommand.OpenProject => documents.CanOpenProject, DocumentCommand.CloseProject => documents.CanCloseProject, _ => false
+                    DocumentCommand.OpenProject => documents.CanOpenProject, DocumentCommand.CloseProject => documents.CanCloseProject,
+                    DocumentCommand.OpenBuild => documents.CanOpenBuild, _ => false
                 }));
             }
             RunCommand = Command(model.RunSimulation, () => model.CanRun);
@@ -119,6 +120,7 @@ public sealed class EditorHeaderView : View<IEditorViewModel>, IUiFrameParticipa
                     File(DocumentCommand.OpenProject, "Открыть проект по пути", UiSymbol.Folder),
                     File(DocumentCommand.CloseProject, "Закрыть проект", UiSymbol.Close),
                     Runtime(EditorCommand.Build, "Собрать проект", UiSymbol.Build),
+                    ..(documents.SupportsPublishedBuilds ? new[] { File(DocumentCommand.OpenBuild, "Выбрать опубликованную сборку", UiSymbol.Folder) } : []),
                     Runtime(EditorCommand.Replace, "Применить сборку", UiSymbol.Build),
                     Runtime(EditorCommand.Cancel, "Отменить операцию", UiSymbol.Close)
                 ]),

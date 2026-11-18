@@ -89,9 +89,10 @@ NOM0–2 проверены; NOM3 deterministic IO/process acceptance прове
 | NOM8a, реализован2026-11-08 | [Byte buffer API](BUFFER_API.md#nom8-buffer-api), memory/batch/copy/read/load и lifecycle | Byte mutable/readonly variants без overload ambiguity; Span snapshot до Task return, Memory borrowed до actual terminal state, no caller disposal. Checked byte ceilings, non-array/non-pinnable memory, empty/slices/tails/cancel/Stop/unknown/replay/atomicity; stream-equivalent exact versions, source/published/fresh-package regression и bounded IO allocation measurements |
 | NOM8b, реализован и проверен2026-11-08 | [Explicit raw T:unmanaged helpers](BUFFER_API.md#nom8b-raw-api) поверх byte/Stream pipeline | Checked long elements×runtime sizeof(T) до projection/allocation, divisibility и element return counts; mutable/readonly variants/type inference. Layout/endianness/nonzero padding принадлежат consumer, format/type info автоматически не добавляются. Typed boundaries/overflow/non-pinnable ownership/cancel/Stop/unknown/replay, source/published/fresh-package acceptance и managed-T compiler rejection проверены |
 
-NOM0–NOM8 выполнены в описанных локальных scope; NOM3/4 physical VM acceptance
-остаётся отложенной. Следующий storage consumer bridge — engine ARCH1g.2 после
-g.1 importer adapter, по согласованию владельца engine.
+NOM0–NOM8 выполнены в описанных локальных scope. NOM3/4 physical VM acceptance
+остаётся отложенной. Первый storage consumer bridge проверен в
+[ARCH1g.2a](../engine/PLAN.md#arch1g2a-model-delivery). Поставку модели в Player
+и Editor ведёт [план Aether](../engine/PLAN.md#arch1g-model-assets).
 
 ### Структура исходников — 2026-11-08
 

@@ -4,9 +4,11 @@ using TrueMoon.Aether.Abstractions.Rendering;
 
 namespace TrueMoon.Aether.Tooling.Importing;
 
-// Private v2 candidate protocol. Input remains v1. All lengths are bounded before allocation.
+// The worker emits v2. Parent-published candidates with explicit scaling persist as v3.
 internal static class ModelImportProtocol
 {
+    private const int NativeCandidate = 0x32434d54;
+    private const int ScaledCandidate = 0x33434d54;
     internal const int MaximumOutputBytes = 8 * 1024 * 1024;
     private const int MaximumInputBytes = 32 * 1024 * 1024 + 32768;
 
@@ -42,8 +44,10 @@ internal static class ModelImportProtocol
     internal static byte[] Encode(ModelImportCandidate candidate)
     {
         using var stream = new MemoryStream(); using var writer = new BinaryWriter(stream, Encoding.UTF8);
-        writer.Write(0x32434d54); WriteText(writer, ModelImportCandidate.Recipe);
+        var scaled = candidate.GeometryScale != 1;
+        writer.Write(scaled ? ScaledCandidate : NativeCandidate); WriteText(writer, ModelImportCandidate.Recipe);
         writer.Write(candidate.SourceId.ToByteArray()); WriteText(writer, candidate.InputRevision);
+        if (scaled) writer.Write(candidate.GeometryScale);
         writer.Write(candidate.Materials.Count);
         foreach (var material in candidate.Materials) Asset(writer, material);
         writer.Write(candidate.Meshes.Count);
@@ -66,21 +70,26 @@ internal static class ModelImportProtocol
 
     internal static ModelImportCandidate ReadOutput(string path, CapturedModelSource source)
     {
-        try { using var reader = Open(path, MaximumOutputBytes); return ReadOutputCore(reader, source.SourceId, source.InputRevision); }
+        try { using var reader = Open(path, MaximumOutputBytes); return ReadOutputCore(reader, source.SourceId, source.InputRevision, allowScaled: false); }
         catch (EndOfStreamException error) { throw new InvalidDataException("Truncated candidate packet.", error); }
     }
 
     internal static ModelImportCandidate Decode(byte[] bytes, Guid sourceId, string inputRevision)
     {
         Require(bytes.Length <= MaximumOutputBytes, "Candidate packet quota.");
-        try { using var reader = new BinaryReader(new MemoryStream(bytes, writable: false)); return ReadOutputCore(reader, sourceId, inputRevision); }
+        try { using var reader = new BinaryReader(new MemoryStream(bytes, writable: false)); return ReadOutputCore(reader, sourceId, inputRevision, allowScaled: true); }
         catch (EndOfStreamException error) { throw new InvalidDataException("Truncated candidate packet.", error); }
     }
 
-    private static ModelImportCandidate ReadOutputCore(BinaryReader reader, Guid sourceId, string inputRevision)
+    private static ModelImportCandidate ReadOutputCore(BinaryReader reader, Guid sourceId, string inputRevision, bool allowScaled)
     {
-        Require(reader.ReadInt32() == 0x32434d54 && Text(reader, 128) == ModelImportCandidate.Recipe, "Candidate recipe/version.");
+        var version = reader.ReadInt32();
+        Require((version == NativeCandidate || allowScaled && version == ScaledCandidate) &&
+            Text(reader, 128) == ModelImportCandidate.Recipe, "Candidate recipe/version.");
         Require(new Guid(Bytes(reader, 16)) == sourceId && Text(reader, 64) == inputRevision, "Candidate input identity mismatch.");
+        var geometryScale = version == ScaledCandidate ? reader.ReadSingle() : 1;
+        Require(ModelImportCandidate.IsValidGeometryScale(geometryScale) &&
+            (version != ScaledCandidate || geometryScale != 1), "Invalid candidate geometry scale.");
         var materials = new OpaqueUnlitMaterialDefinition[Count(reader, 128)];
         for (var i = 0; i < materials.Length; i++) materials[i] = ReadAsset(reader, RenderContentProfile.MaximumSmallAssetBytes) as OpaqueUnlitMaterialDefinition
             ?? throw new InvalidDataException("Expected opaque material.");
@@ -101,7 +110,7 @@ internal static class ModelImportProtocol
             return hints;
         }
         var semantics = new ModelImportSemantics(Hints(64), Hints(128), Hints(4096));
-        End(reader); return new(sourceId, inputRevision, meshes, materials, instances, semantics);
+        End(reader); return new(sourceId, inputRevision, meshes, materials, instances, semantics, geometryScale);
     }
 
     private static void Asset(BinaryWriter writer, RenderAssetDefinition asset) { var bytes = RenderContentCodec.Encode(asset); writer.Write(bytes.Length); writer.Write(bytes); }

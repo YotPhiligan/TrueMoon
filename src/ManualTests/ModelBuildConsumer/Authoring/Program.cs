@@ -21,10 +21,13 @@ using TrueMoon.Aether.Tooling.Scenes.Authoring;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Nom;
+using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] != "--editor") return 2;
-var editorProbe = args.Length == 8;
+    args.Length == 8 && args[7] is not ("--editor" or "--revisions" or "--multi-model")) return 2;
+var editorProbe = args.Length == 8 && args[7] == "--editor";
+var revisionProbe = args.Length == 8 && args[7] == "--revisions";
+var multiModelProbe = args.Length == 8 && args[7] == "--multi-model";
 var evidence = Path.GetFullPath(args[1]);
 if (Directory.Exists(evidence)) throw new IOException("Use a fresh output directory.");
 Directory.CreateDirectory(evidence);
@@ -41,6 +44,7 @@ var projectId = Guid.Parse("ab0e80cb-9a94-4b86-9bff-308678bd91ab");
 var storeId = Guid.Parse("ae24f96d-89a8-4ecc-bc22-4bd0cf2f093e");
 var sourceId = Guid.Parse("ce662048-9dcb-4c60-aaf0-213342054fa6");
 var sourceDirectory = Path.Combine(evidence, "source");
+var secondSourceDirectory = Path.Combine(evidence, "source-green");
 var storeDirectory = Path.Combine(evidence, "nom");
 var gameDirectory = Path.Combine(evidence, "game");
 Fixtures.Create(sourceDirectory);
@@ -157,6 +161,11 @@ var scenePath = Path.Combine(evidence, "placed.aetherscene");
 GameBuildResult oldBuild, newBuild, legacyBuild;
 PublishedModelImport oldModel, newModel;
 string oldSnapshotId, newSnapshotId;
+GameBuildResult? scaledBuild = null;
+PublishedModelImport? scaledModel = null;
+PublishedModelImport? greenModel = null;
+string? greenSnapshotId = null;
+object? revisionEvidence = null;
 await using (var app = App.Builder(builder => { if (args[0] == "microsoft") builder.UseDI(); }).Setup(context =>
 {
     context.UseNom();
@@ -180,13 +189,18 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
     var request = new GameBuildRequest(project, "DeliveryGame.dll", "DeliveryGame.Entry", 1) { RuntimeAccess = true };
     var codec = new SceneFileCodec(app.Services.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!);
     await using var ledger = ledgerFactory.Create(new(sourceId, Path.Combine(evidence, "ledger", "scene.tmledger")))!;
-    async Task<PublishedModelImport> Import(long generation)
+    async Task<CapturedModelSource> Capture(Guid? identity = null, string? directory = null)
     {
-        await using var capture = captureFactory.Create(new(sourceId, sourceDirectory, "scene.gltf"))!;
-        await using var operation = importFactory.Create(new(await capture.CaptureAsync(), worker, Path.Combine(evidence, "scratch")))!;
+        await using var capture = captureFactory.Create(new(identity ?? sourceId, directory ?? sourceDirectory, "scene.gltf"))!;
+        return await capture.CaptureAsync();
+    }
+    async Task<PublishedModelImport> Import(long generation, CapturedModelSource source, float scale = 1,
+        ModelImportLedgerSession? target = null)
+    {
+        await using var operation = importFactory.Create(new(source, worker, Path.Combine(evidence, "scratch")) { GeometryScale = scale })!;
         var candidate = await operation.ImportAsync();
         Check(operation.WorkerReaped, "Import worker must exit before publication.");
-        return await ledger.PublishAsync(candidate, generation);
+        return await (target ?? ledger).PublishAsync(candidate, generation);
     }
     legacyBuild = await compiler.BuildAsync(request with { EntryType = "DeliveryGame.Legacy" });
     Check(legacyBuild.Artifact.RenderContent == null && !File.Exists(Path.Combine(legacyBuild.DirectoryPath, GameBuildArtifact.RenderContentFile)),
@@ -198,10 +212,16 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         "requires frozen render content");
     await using (var store = storeFactory.Create(new(storeDirectory, projectId, storeId, AssetStoreOpenMode.Create))!)
     {
-        oldModel = await Import(0);
+        Task<GameBuildRenderContent> CaptureBuildContent(string modelSnapshotId) =>
+            greenSnapshotId is { } green
+                ? bridge.CaptureSnapshotsAsync(store, [modelSnapshotId, green])
+                : bridge.CaptureAsync(store, modelSnapshotId);
+
+        var rootHash = Hash(path);
+        var vertices = Path.Combine(sourceDirectory, "scene.bin");
+        var originalBinHash = Hash(vertices);
+        oldModel = await Import(0, await Capture());
         var placed = ImportedModelScene.Place(initialScene, oldModel, placement);
-        var sceneBytes = codec.Encode(placed);
-        File.WriteAllBytes(scenePath, sceneBytes);
         Check(placed.Entities.Skip(1).Select(entity => entity.Id.Value).SequenceEqual(oldModel.Instances.Select(instance => instance.Id)) &&
             placed.Definitions.Length == 2 && placed.Entities[0].Id == cameraId && placed.Revision == 41,
             "Model placement lost stable instances or the existing scene entries.");
@@ -211,16 +231,41 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         Reject(() => ImportedModelScene.Place(initialScene, oldModel, shear), "positive-scale scene transform");
         var snapshot = await bridge.PublishAsync(store, oldModel, store.ContentGeneration);
         oldSnapshotId = snapshot.Id;
-        oldBuild = await compiler.BuildAsync(request with { RenderContent = await bridge.CaptureAsync(store, oldSnapshotId) });
+        var greenPlacement = Matrix4x4.CreateTranslation(2, 0, 0);
+        if (multiModelProbe)
+        {
+            Directory.CreateDirectory(secondSourceDirectory);
+            var greenRoot = original.DeepClone();
+            greenRoot["meshes"]![0]!["primitives"]![0]!["material"] = 1;
+            File.WriteAllText(Path.Combine(secondSourceDirectory, "scene.gltf"), greenRoot.ToJsonString());
+            File.Copy(vertices, Path.Combine(secondSourceDirectory, "scene.bin"));
+            var greenSourceId = Guid.Parse("65710c6d-6781-4476-9bb8-735fc518f008");
+            await using var greenLedger = ledgerFactory.Create(new(greenSourceId, Path.Combine(evidence, "ledger", "green.tmledger")))!;
+            greenModel = await Import(0, await Capture(greenSourceId, secondSourceDirectory), target: greenLedger);
+            Check(!greenModel.Ledger.Entries.Select(entry => entry.Id).Intersect(oldModel.Ledger.Entries.Select(entry => entry.Id)).Any(),
+                "Models with separate sources share persistent IDs.");
+            placed = ImportedModelScene.Place(placed, greenModel, greenPlacement);
+            greenSnapshotId = (await bridge.PublishAsync(store, greenModel, store.ContentGeneration)).Id;
+        }
+        var sceneBytes = codec.Encode(placed);
+        File.WriteAllBytes(scenePath, sceneBytes);
+        oldBuild = await compiler.BuildAsync(request with { RenderContent = await CaptureBuildContent(oldSnapshotId) });
 
-        var vertices = Path.Combine(sourceDirectory, "scene.bin");
         var bytes = File.ReadAllBytes(vertices);
-        BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(12), 2);
+        // The dependency-only cases change the corner's Y inside the original accessor bounds.
+        var dependencyOnly = revisionProbe || multiModelProbe;
+        BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(dependencyOnly ? 16 : 12), dependencyOnly ? .5f : 2f);
         File.WriteAllBytes(vertices, bytes);
-        original["accessors"]![0]!["max"]![0] = 2;
-        File.WriteAllText(path, original.ToJsonString());
-        newModel = await Import(1);
-        Check(sceneBytes.SequenceEqual(codec.Encode(ImportedModelScene.Place(initialScene, newModel, placement))),
+        if (!dependencyOnly)
+        {
+            original["accessors"]![0]!["max"]![0] = 2;
+            File.WriteAllText(path, original.ToJsonString());
+        }
+        var dependencyCapture = await Capture();
+        newModel = await Import(1, dependencyCapture);
+        var reimportedScene = ImportedModelScene.Place(initialScene, newModel, placement);
+        if (greenModel != null) reimportedScene = ImportedModelScene.Place(reimportedScene, greenModel, greenPlacement);
+        Check(sceneBytes.SequenceEqual(codec.Encode(reimportedScene)),
             "Asset-only reimport changed the placed scene document.");
         var latest = await bridge.PublishAsync(store, newModel, store.ContentGeneration);
         newSnapshotId = latest.Id;
@@ -230,9 +275,106 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         Check(meshRevision.Digest == oldMesh.Geometry.Revision.ToString() &&
             latest.Members.Single(member => member.AssetId == oldMesh.AssetId).Digest != meshRevision.Digest,
             "Nom did not retain distinct exact mesh revisions for the same asset ID.");
-        newBuild = await compiler.BuildAsync(request with { RenderContent = await bridge.CaptureAsync(store, newSnapshotId) });
-        var repeatedOld = await compiler.BuildAsync(request with { RenderContent = await bridge.CaptureAsync(store, oldSnapshotId) });
+        newBuild = await compiler.BuildAsync(request with { RenderContent = await CaptureBuildContent(newSnapshotId) });
+        var repeatedOld = await compiler.BuildAsync(request with { RenderContent = await CaptureBuildContent(oldSnapshotId) });
         Check(repeatedOld.BuildId == oldBuild.BuildId, "Capturing an old Nom snapshot followed the current head.");
+
+        if (greenSnapshotId is { } green)
+        {
+            Check(rootHash == Hash(path) && originalBinHash != Hash(vertices), "Dependency-only edit changed the root model.");
+            AssetResourceVersion[] greenResources;
+            await using (var lease = await store.OpenSnapshotAsync(green))
+                greenResources = lease.Manifest.Members;
+            var greenAlias = await store.CreateSnapshotAsync(greenResources, 256);
+            Check(greenAlias.Id != green, "Expected equivalent assets in a distinct snapshot.");
+            var reordered = await bridge.CaptureSnapshotsAsync(store, [greenAlias.Id, oldSnapshotId, green, oldSnapshotId]);
+            var reorderedBuild = await compiler.BuildAsync(request with { RenderContent = reordered });
+            Check(reorderedBuild.BuildId == oldBuild.BuildId, "Snapshot order or duplicate resources changed BuildId.");
+
+            await RejectAsync<InvalidDataException>(
+                () => bridge.CaptureSnapshotsAsync(store, [green, oldSnapshotId, newSnapshotId]), "Conflicting render revisions");
+            await RejectAsync<KeyNotFoundException>(
+                () => bridge.CaptureSnapshotsAsync(store, [oldSnapshotId, new string('a', 64)]), "Unknown snapshot");
+            await RejectAsync<ArgumentOutOfRangeException>(() => bridge.CaptureSnapshotsAsync(store, []), "1..32");
+            await RejectAsync<ArgumentOutOfRangeException>(
+                () => bridge.CaptureSnapshotsAsync(store, Enumerable.Repeat(green, 33).ToArray()), "1..32");
+            await RejectAsync<OperationCanceledException>(
+                () => bridge.CaptureSnapshotsAsync(store, [oldSnapshotId, green], new CancellationToken(canceled: true)));
+            foreach (var id in new[] { oldSnapshotId, newSnapshotId, green, greenAlias.Id })
+                await store.RemoveSnapshotAsync(id); // Removal verifies success and failure paths released their read leases.
+        }
+
+        if (revisionProbe)
+        {
+            var updatedBinHash = Hash(vertices);
+            Check(rootHash == Hash(path) && originalBinHash != updatedBinHash &&
+                oldModel.Candidate.InputRevision != newModel.Candidate.InputRevision, "Dependency edit was not isolated to the external buffer.");
+            try
+            {
+                await using var invalid = importFactory.Create(new(dependencyCapture, worker, Path.Combine(evidence, "scratch")) { GeometryScale = float.NaN });
+                throw new InvalidOperationException("Invalid scale reached a usable import operation.");
+            }
+            catch (ArgumentOutOfRangeException error) when (error.Message.Contains("geometry scale", StringComparison.Ordinal)) { }
+
+            scaledModel = await Import(2, dependencyCapture, 1.5f);
+            var reopened = await ledger.OpenAsync();
+            Check(reopened?.Candidate.GeometryScale == 1.5f && reopened.Candidate.Revision == scaledModel.Candidate.Revision &&
+                scaledModel.Candidate.InputRevision == newModel.Candidate.InputRevision &&
+                scaledModel.Candidate.Revision != newModel.Candidate.Revision &&
+                scaledModel.Ledger.Entries.SequenceEqual(oldModel.Ledger.Entries) &&
+                sceneBytes.SequenceEqual(codec.Encode(ImportedModelScene.Place(initialScene, scaledModel, placement))),
+                "Settings changed the input identity, scene or IDs, or failed to persist in the ledger.");
+            var scaledSnapshot = await bridge.PublishAsync(store, scaledModel, store.ContentGeneration);
+            scaledBuild = await compiler.BuildAsync(request with { RenderContent = await bridge.CaptureAsync(store, scaledSnapshot.Id) });
+            var snapshots = new[] { snapshot, latest, scaledSnapshot };
+            var builds = new[] { oldBuild, newBuild, scaledBuild };
+            Check(snapshots.Select(item => item.Id).Distinct().Count() == 3 &&
+                builds.Select(build => build.BuildId).Distinct().Count() == 3 &&
+                builds.Select(build => Hash(Path.Combine(build.DirectoryPath, build.EntryAssembly))).Distinct().Count() == 1,
+                "Dependency or setting did not produce a distinct immutable build with the same game DLL.");
+
+            var ids = scaledSnapshot.Members.Select(member => member.AssetId).ToArray();
+            var expectedGeneration = store.ContentGeneration;
+            var deletedGeneration = await store.DeleteResourcesAsync(expectedGeneration, ids);
+            Check(deletedGeneration == expectedGeneration + 1 && (await store.QueryAssetsAsync(new(Source: sourceId))).Items.Length == 0 &&
+                (await store.QueryAssetsAsync(new(Source: sourceId, IncludeDeleted: true))).Items.Select(item => item.Id).Order().SequenceEqual(ids.Order()),
+                "Deleting the resources did not leave the exact persistent tombstones.");
+            foreach (var id in ids)
+                Check(await store.FindResourceAsync(id) == null, "Deleted asset still has a current head.");
+            for (var i = 0; i < snapshots.Length; i++)
+            {
+                var retainedBuild = await compiler.BuildAsync(request with { RenderContent = await bridge.CaptureAsync(store, snapshots[i].Id) });
+                Check(retainedBuild.BuildId == builds[i].BuildId, "Deleted head changed a retained exact snapshot.");
+                await store.RemoveSnapshotAsync(snapshots[i].Id);
+            }
+
+            // This fresh store made exactly three publication reservations, one per variant.
+            await store.PruneResourceOperationsAsync(3);
+            var plan = await store.PlanGarbageCollectionAsync();
+            var expectedRevisions = snapshots.SelectMany(item => item.Members).Select(member => member.Revision).Distinct().Count();
+            var expectedObjects = snapshots.SelectMany(item => item.Members).Select(member => member.Digest).Distinct().Count();
+            Check(plan.RevisionsToPrune == expectedRevisions && plan.ObjectsToDelete == expectedObjects,
+                "The garbage plan did not include the stored model payloads.");
+            var garbage = await store.CollectGarbageAsync(plan);
+            Check(!garbage.CleanupPending && garbage.RevisionsPruned == expectedRevisions && garbage.ObjectsDeleted == expectedObjects,
+                "Deleted model data was not reclaimed from Nom.");
+            foreach (var saved in snapshots)
+            {
+                try
+                {
+                    await bridge.CaptureAsync(store, saved.Id);
+                    throw new InvalidOperationException("A removed Nom snapshot could still supply a build.");
+                }
+                catch (KeyNotFoundException) { }
+            }
+            revisionEvidence = new
+            {
+                RootSha256 = rootHash, OriginalBinSha256 = originalBinHash, UpdatedBinSha256 = updatedBinHash,
+                OriginalInput = oldModel.Candidate.InputRevision, DependencyInput = newModel.Candidate.InputRevision,
+                ScaledInput = scaledModel.Candidate.InputRevision, AppliedScale = reopened!.Candidate.GeometryScale,
+                Snapshots = snapshots.Select(item => item.Id), DeletedIds = ids, DeletionGeneration = deletedGeneration, Garbage = garbage
+            };
+        }
     }
     Check(oldModel.Ledger.Entries.SequenceEqual(newModel.Ledger.Entries), "Reimport changed persistent subasset identities.");
     Check(oldBuild.BuildId != newBuild.BuildId && oldBuild.SourceRevision == newBuild.SourceRevision,
@@ -245,6 +387,7 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
 // Only the artifact copies are supplied to Runtime. Rename the closed store and the source directory.
 Directory.Move(storeDirectory, storeDirectory + "-offline");
 Directory.Move(sourceDirectory, sourceDirectory + "-offline");
+if (multiModelProbe) Directory.Move(secondSourceDirectory, secondSourceDirectory + "-offline");
 if (editorProbe)
 {
     var scenes = Directory.CreateDirectory(Path.Combine(evidence, "Scenes"));
@@ -265,24 +408,56 @@ if (editorProbe)
 }
 var oldProof = await ReadBuild(oldBuild, "old");
 var newProof = await ReadBuild(newBuild, "new");
+if (multiModelProbe)
+{
+    var reopened = await ReadBuild(oldBuild, "old-reopened");
+    var sceneHash = Hash(scenePath);
+    AssertGeometry(oldProof, oldModel, 1, 0, oldBuild, sceneHash);
+    AssertGeometry(newProof, newModel, 1, .5f, newBuild, sceneHash);
+    AssertGeometry(reopened, oldModel, 1, 0, oldBuild, sceneHash);
+    AssertGeometry(oldProof, greenModel!, 1, 0, oldBuild, sceneHash);
+    AssertGeometry(newProof, greenModel!, 1, 0, newBuild, sceneHash);
+    AssertGeometry(reopened, greenModel!, 1, 0, oldBuild, sceneHash);
+    var baselineMask = oldProof.GetProperty("Mask");
+    var updatedMask = newProof.GetProperty("Mask");
+    var restoredMask = reopened.GetProperty("Mask");
+    Check(baselineMask.GetProperty("Sha256").GetString() != updatedMask.GetProperty("Sha256").GetString() &&
+        baselineMask.GetProperty("Sha256").GetString() == restoredMask.GetProperty("Sha256").GetString() &&
+        baselineMask.GetProperty("GreenPixels").GetInt32() > 100 &&
+        baselineMask.GetProperty("GreenSha256").GetString() == updatedMask.GetProperty("GreenSha256").GetString() &&
+        baselineMask.GetProperty("GreenSha256").GetString() == restoredMask.GetProperty("GreenSha256").GetString(),
+        "Reimport changed the other model or failed to change the intended model on GPU.");
+    File.WriteAllText(Path.Combine(evidence, "multi-model.json"), JsonSerializer.Serialize(new
+    {
+        Completed = true, Provider = args[0], SceneSha256 = sceneHash, OldSnapshot = oldSnapshotId,
+        NewSnapshot = newSnapshotId, GreenSnapshot = greenSnapshotId, Old = oldProof, New = newProof, Reopened = reopened
+    }, new JsonSerializerOptions { WriteIndented = true }));
+    return 0;
+}
+if (revisionProbe)
+{
+    var scaledProof = await ReadBuild(scaledBuild!, "scaled");
+    var reopened = await ReadBuild(oldBuild, "old-reopened");
+    var sceneHash = Hash(scenePath);
+    AssertGeometry(oldProof, oldModel, 1, 0, oldBuild, sceneHash);
+    AssertGeometry(newProof, newModel, 1, .5f, newBuild, sceneHash);
+    AssertGeometry(scaledProof, scaledModel!, 1.5f, .75f, scaledBuild!, sceneHash);
+    AssertGeometry(reopened, oldModel, 1, 0, oldBuild, sceneHash);
+    string Mask(JsonElement proof) => proof.GetProperty("Mask").GetProperty("Sha256").GetString()!;
+    Check(Mask(oldProof) == Mask(reopened) && new[] { Mask(oldProof), Mask(newProof), Mask(scaledProof) }.Distinct().Count() == 3 &&
+        scaledProof.GetProperty("Mask").GetProperty("RedPixels").GetInt32() > 1.6 * newProof.GetProperty("Mask").GetProperty("RedPixels").GetInt32(),
+        "Archived builds did not render all three distinct revisions after deletion.");
+    File.WriteAllText(Path.Combine(evidence, "revisions.json"), JsonSerializer.Serialize(new
+    {
+        Completed = true, Provider = args[0], SceneSha256 = sceneHash, Revisions = revisionEvidence,
+        Original = oldProof, Dependency = newProof, Scaled = scaledProof, Reopened = reopened
+    }, new JsonSerializerOptions { WriteIndented = true }));
+    return 0;
+}
 var reopenedProof = await ReadBuild(oldBuild, "old-reopened");
 var sceneSha256 = Hash(scenePath);
-foreach (var (proof, model, width, build) in new[] { (oldProof, oldModel, 1f, oldBuild), (newProof, newModel, 2f, newBuild) })
-{
-    var mesh = proof.GetProperty("Meshes").EnumerateArray().Single();
-    var expected = model.Meshes.Single();
-    Check(proof.GetProperty("BuildId").GetString() == build.BuildId && proof.GetProperty("ProjectId").GetGuid() == projectId,
-        "Runtime reported the wrong build/project identity.");
-    Check(proof.GetProperty("SceneSha256").GetString() == sceneSha256 && proof.GetProperty("SceneId").GetGuid() == sceneId.Value &&
-        proof.GetProperty("SceneRevision").GetInt64() == 41, "Player rendered an unexpected scene revision.");
-    Check(mesh.GetProperty("Id").GetGuid() == expected.AssetId && mesh.GetProperty("Slot").GetGuid() == expected.SlotId &&
-        mesh.GetProperty("Binding").GetGuid() == expected.BindingSetId && mesh.GetProperty("Material").GetGuid() == expected.MaterialId,
-        "Runtime mesh, slot, binding or material identity changed.");
-    Check(mesh.GetProperty("VertexX").GetSingle() == width && mesh.GetProperty("MaximumX").GetSingle() == width &&
-        mesh.GetProperty("Indices").EnumerateArray().Select(value => value.GetUInt32()).SequenceEqual(new uint[] { 0, 1, 2 }) &&
-        mesh.GetProperty("Revision").GetString() == expected.Geometry.Revision.ToString(),
-        "Runtime received incorrect vertex, topology, bounds or revision.");
-}
+AssertGeometry(oldProof, oldModel, 1, 0, oldBuild, sceneSha256);
+AssertGeometry(newProof, newModel, 2, 0, newBuild, sceneSha256);
 var oldMask = oldProof.GetProperty("Mask");
 var newMask = newProof.GetProperty("Mask");
 Check(oldMask.GetProperty("Sha256").GetString() == reopenedProof.GetProperty("Mask").GetProperty("Sha256").GetString() &&
@@ -312,6 +487,26 @@ File.WriteAllText(Path.Combine(evidence, "report.json"), JsonSerializer.Serializ
     StableIds = newModel.Ledger.Entries.Select(entry => new { entry.Key, entry.Id }), Old = oldProof, New = newProof, Reopened = reopenedProof
 }, new JsonSerializerOptions { WriteIndented = true }));
 return 0;
+
+void AssertGeometry(JsonElement proof, PublishedModelImport model, float x, float y, GameBuildResult build, string sceneHash)
+{
+    var expected = model.Meshes.Single();
+    var meshes = proof.GetProperty("Meshes");
+    Check(meshes.GetArrayLength() == (multiModelProbe ? 2 : 1), "Build delivered the wrong mesh count.");
+    var mesh = meshes.EnumerateArray().Single(entry => entry.GetProperty("Id").GetGuid() == expected.AssetId);
+    Check(proof.GetProperty("BuildId").GetString() == build.BuildId && proof.GetProperty("ProjectId").GetGuid() == projectId,
+        "Runtime reported the wrong build/project identity.");
+    Check(proof.GetProperty("SceneSha256").GetString() == sceneHash && proof.GetProperty("SceneId").GetGuid() == sceneId.Value &&
+        proof.GetProperty("SceneRevision").GetInt64() == (multiModelProbe ? 42 : 41), "Player rendered an unexpected scene revision.");
+    Check(mesh.GetProperty("Id").GetGuid() == expected.AssetId && mesh.GetProperty("Slot").GetGuid() == expected.SlotId &&
+        mesh.GetProperty("Binding").GetGuid() == expected.BindingSetId && mesh.GetProperty("Material").GetGuid() == expected.MaterialId,
+        "Runtime mesh, slot, binding or material identity changed.");
+    Check(mesh.GetProperty("VertexX").GetSingle() == x && mesh.GetProperty("VertexY").GetSingle() == y &&
+        mesh.GetProperty("MaximumX").GetSingle() == x &&
+        mesh.GetProperty("Indices").EnumerateArray().Select(value => value.GetUInt32()).SequenceEqual(new uint[] { 0, 1, 2 }) &&
+        mesh.GetProperty("Revision").GetString() == expected.Geometry.Revision.ToString(),
+        "Runtime received incorrect vertex, topology, bounds or revision.");
+}
 
 async Task<JsonElement> ReadBuild(GameBuildResult build, string name)
 {
@@ -360,6 +555,13 @@ static string Hash(string path)
 static void Check(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
+}
+
+static async Task RejectAsync<TException>(Func<Task> action, string? message = null) where TException : Exception
+{
+    try { await action(); }
+    catch (TException error) when (message == null || error.Message.Contains(message, StringComparison.Ordinal)) { return; }
+    throw new InvalidOperationException($"Expected {typeof(TException).Name} from snapshot capture.");
 }
 
 static void Reject(Func<object> action, string message)

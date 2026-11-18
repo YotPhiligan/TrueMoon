@@ -1,9 +1,12 @@
 # TrueMoon.Nom: состояние и точка продолжения
 
-**2026-11-18 — первый внешний consumer ARCH1g.2a проверен.**
-TrueMoon.Aether.Nom использует существующие batch, exact snapshot и read-stream API.
-Nom сохраняет обе ревизии меша с одним AssetId и отдаёт их по отдельным снимкам.
-Результаты и дальнейшая интеграция ведутся в [плане Aether](../engine/PLAN.md#arch1g2a-model-delivery).
-Текущие Nom suites 874/874 в Debug/Release, failed/skipped 0.
+**2026-11-18 — ARCH1g.2h проверил захват нескольких снимков в одну сборку.**
+Мост TrueMoon.Aether.Nom использует существующие exact snapshot и read-stream API.
+Перестановка и повтор эквивалентных снимков сохраняют BuildId, конфликт ревизий
+одного AssetId отклоняется. Снимки удалось удалить после успешного и неудачного
+захвата, а сохранённые сборки открылись на GPU в четырёх профилях Player.
+В Debug и Release Nom 874/874.
+[Проверки ARCH1g.2h](../engine/HISTORY.md#arch1g2h-2026-11-18),
+[предыдущий прогон удаления и GC](../engine/HISTORY.md#arch1g2g-2026-11-18).
 Решение об отсрочке VM acceptance сохраняется.
 [Предыдущий статус](HISTORY.md#nom-status-before-g2a-2026-11-18).

@@ -39,6 +39,7 @@ public sealed class GameBuildCompiler : IDisposable, IAsyncDisposable
     }
     /// <summary>Last best-effort retention pass. Active, unrecognized and incomplete directories are preserved.</summary>
     public GameBuildRetentionStatus? RetentionStatus { get; private set; }
+    internal string ArtifactRoot => _root;
     /// <summary>Live bounded compiler stdout tail, file loss and error counters.</summary>
     public ProcessOutputSnapshot? StandardOutputStatus => _stdout?.Read();
     /// <summary>Live bounded compiler stderr tail, file loss and error counters.</summary>

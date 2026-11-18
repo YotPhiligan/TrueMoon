@@ -16,6 +16,7 @@ using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
+using TrueMoon.Argentis;
 using TrueMoon.Configuration;
 using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
@@ -37,7 +38,8 @@ internal static class EditorModelBuildSmoke
         var sceneHash = Hash(File.ReadAllBytes(scenePath));
         Check(oldBuild.BuildId != newBuild.BuildId, "Scene probe requires two distinct build IDs.");
         var compiler = Path.Combine(report, "editor-compiler");
-        using var cancelReplacement = new CancellationTokenSource();
+        CopyArtifact(oldBuild, compiler);
+        Action? cancelReplacement = null;
         SessionIdentity? cancelledCandidate = null;
         var cancelOnLoad = 0;
         var fonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
@@ -69,7 +71,7 @@ internal static class EditorModelBuildSmoke
                         identity.GameBuildId == oldBuild.BuildId && Interlocked.Exchange(ref cancelOnLoad, 0) == 1)
                     {
                         cancelledCandidate = identity;
-                        cancelReplacement.Cancel();
+                        cancelReplacement!();
                     }
                 }
             });
@@ -79,21 +81,28 @@ internal static class EditorModelBuildSmoke
         var native = (NativeRuntimeFactory)app.Services.Resolve<IRuntimeFactory>()!;
         var documents = app.Services.Resolve<EditorDocumentCommands>()!;
         var playback = app.Services.Resolve<EditorScenePlayback>()!;
+        cancelReplacement = () => playback.Execute(EditorCommand.Cancel);
         var window = app.Services.Resolve<HostedUiWindow>()!;
         var captures = new List<FrameProof>();
+        var first = new TaskCompletionSource<UiSession>(TaskCreationOptions.RunContinuationsAsynchronously);
+        window.FramePresented += OnFirstFrame;
+        void OnFirstFrame(UiSession ui) { window.FramePresented -= OnFirstFrame; first.TrySetResult(ui); }
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(90));
         var token = timeout.Token;
         try
         {
             await app.StartAsync(token);
             await app.Services.Resolve<EditorWindow>()!.Ready.WaitAsync(token);
+            var ui = await first.Task.WaitAsync(token);
+            EditorView view = null!;
+            await ui.InvokeAsync(() => view = EditorMainWindow.FromRoot(ui.Root).EditorView).WaitAsync(token);
             Check(documents.Execute(DocumentCommand.Open, scenePath), "Editor declined opening the placed scene.");
             await documents.Pending.WaitAsync(token);
             var before = documents.Read().Document ?? throw new InvalidOperationException("No active document.");
             var content = before.Content ?? throw new InvalidOperationException("Editor did not load the placed scene.");
             Check(content.Document.Entities.Length == 3 && !before.IsDirty, "Unexpected captured scene.");
 
-            Check(playback.RunSelectedBuild(oldBuild), "Editor did not admit the first build.");
+            await ChooseBuild(oldBuild.BuildId.ToLowerInvariant(), "Запустить опубликованную сборку");
             await Complete();
             while (engine.Supervisor.Status.Tick < 5)
             {
@@ -102,7 +111,7 @@ internal static class EditorModelBuildSmoke
             }
             var original = await CapturePlaying("old", oldBuild, 5);
             Check(!playback.RunSelectedBuild(newBuild), "Editor admitted a second independent Start.");
-            Check(playback.ReplaceSelectedBuild(newBuild), "Editor did not admit hot Replace.");
+            await ChooseBuild(newBuild.DirectoryPath, "Заменить текущую сборку");
             await Complete();
             var updated = await CapturePlaying("new", newBuild, original.Tick);
             Check(native.Leases.Count == 2 && updated.Generation > original.Generation,
@@ -111,7 +120,7 @@ internal static class EditorModelBuildSmoke
 
             var beforeCorruption = engine.Supervisor.Status.Identity;
             var previousSurface = engine.Frames.Presentation;
-            Check(playback.ReplaceSelectedBuild(corruptBuild), "Editor did not admit corrupt candidate preflight.");
+            await ChooseBuild(corruptBuild.DirectoryPath, "Заменить текущую сборку");
             await playback.Pending.WaitAsync(token);
             Check(playback.Error is InvalidDataException corruption &&
                 corruption.Message.Contains("render payload hash mismatch", StringComparison.Ordinal) &&
@@ -121,12 +130,14 @@ internal static class EditorModelBuildSmoke
             var afterCorruption = await CapturePlaying("after-corruption", newBuild, updated.Tick);
 
             Volatile.Write(ref cancelOnLoad, 1);
-            Check(playback.ReplaceSelectedBuild(oldBuild, cancelReplacement.Token), "Editor did not admit cancellable Replace.");
+            await ChooseBuild(oldBuild.BuildId, "Заменить текущую сборку");
             await playback.Pending.WaitAsync(token);
             Check(cancelledCandidate is not null && playback.Error is GameReplacementException
                 { Phase: "Candidate", RollbackAttempted: true, RollbackSucceeded: true, RecoveryError: null, InnerException: OperationCanceledException } &&
                 native.Leases.Count == 4, "Cancellation after scene load did not recover the previous build exactly once.");
             var recovered = await CapturePlaying("after-cancel", newBuild, afterCorruption.Tick);
+            await EditorHeaderSmoke.UntilAsync(ui, () => ((EditorDocumentViewModel)view.Documents!.DataContext!).ErrorText ==
+                "Замена отменена. Предыдущая сборка восстановлена.", token);
             Check(recovered.Generation > cancelledCandidate!.Generation && cancelledCandidate.Generation > updated.Generation,
                 "Cancellation did not advance the runtime generation on recovery.");
             await CheckReleased(updated.Generation);
@@ -134,7 +145,7 @@ internal static class EditorModelBuildSmoke
             Check(native.Leases[2].Identity == cancelledCandidate && native.Leases[2].Reaped && native.Leases[2].ResourcesReleased,
                 "Cancelled candidate survived rollback.");
 
-            Check(playback.ReplaceSelectedBuild(oldBuild), "Recovered Editor session could not Replace again.");
+            await ChooseBuild(oldBuild.BuildId, "Заменить текущую сборку");
             await Complete();
             var reopened = await CapturePlaying("old-reopened", oldBuild, recovered.Tick);
             Check(native.Leases.Count == 5 && reopened.Generation > recovered.Generation, "Unexpected runtime generations.");
@@ -159,6 +170,25 @@ internal static class EditorModelBuildSmoke
             window.Close();
             await window.Completion.WaitAsync(token);
 
+            async Task ChooseBuild(string selection, string title)
+            {
+                var tools = view.Documents!;
+                var model = (EditorDocumentViewModel)tools.DataContext!;
+                await EditorHeaderSmoke.UntilAsync(ui, () => model.CanOpenBuild, token);
+                await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "document.OpenBuild", token, confirmPath: false);
+                await EditorHeaderSmoke.UntilAsync(ui, () => tools.IsVisible && tools.Actions.IsVisible && !ui.NeedsUpdate, token);
+                await ui.InvokeAsync(() =>
+                {
+                    Check(model.PathRequest == DocumentCommand.OpenBuild && model.PathPromptText == title, "Wrong build selection prompt.");
+                    ui.Focus(tools.PathInput);
+                    ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+                    ui.HandleInput(new(InputKind.Text, Text: selection));
+                    Check(model.RequestedPath == selection, "Artifact path never reached its bound field.");
+                }).WaitAsync(token);
+                await EditorHeaderSmoke.ConfirmDocumentPathAsync(ui, view, token);
+                await EditorHeaderSmoke.UntilAsync(ui, () => !model.IsPathPromptOpen, token);
+            }
+
             async Task Complete()
             {
                 await playback.Pending.WaitAsync(token);
@@ -174,6 +204,9 @@ internal static class EditorModelBuildSmoke
                     status.Tick >= minimumTick && engine.Supervisor.RequiredRenderViewVersion == 1,
                     $"Expected {artifact.BuildId} Playing at tick >= {minimumTick}, observed {identity.GameBuildId} {status.State} at tick {status.Tick}.");
                 var manifest = artifact.RenderContent!;
+                await EditorHeaderSmoke.UntilAsync(ui, () =>
+                    view.Header!.Caption.AccessibleName.Contains(artifact.BuildId, StringComparison.Ordinal) &&
+                    view.Header.Caption.Value.Contains(artifact.BuildId[..12], StringComparison.Ordinal), token);
                 var frame = await Capture(name, identity, content.Document.Id.Value, content.Document.Revision, manifest.Digest);
                 Check(frame.Tick >= minimumTick, "Presented frame predates the checkpoint.");
                 var after = documents.Read().Document!;
@@ -200,6 +233,7 @@ internal static class EditorModelBuildSmoke
         }
         finally
         {
+            window.FramePresented -= OnFirstFrame;
             try { await documents.StopAsync(); }
             finally { await app.StopAsync(); }
         }
@@ -250,15 +284,21 @@ internal static class EditorModelBuildSmoke
 
     private static GameBuildArtifact CorruptCopy(GameBuildArtifact artifact, string report, string hostId)
     {
-        var directory = Directory.CreateDirectory(Path.Combine(report, "corrupt", artifact.BuildId)).FullName;
-        foreach (var path in Directory.EnumerateFiles(artifact.DirectoryPath))
-            File.Copy(path, Path.Combine(directory, Path.GetFileName(path)));
+        var directory = CopyArtifact(artifact, Path.Combine(report, "corrupt"));
         var copy = GameBuildArtifact.Open(directory, hostId, artifact.BuildId);
         var payload = Path.Combine(directory, GameBuildArtifact.RenderContentFile);
         var bytes = File.ReadAllBytes(payload);
         bytes[^1] ^= 1;
         File.WriteAllBytes(payload, bytes);
         return copy;
+    }
+
+    private static string CopyArtifact(GameBuildArtifact artifact, string root)
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(root, artifact.BuildId)).FullName;
+        foreach (var path in Directory.EnumerateFiles(artifact.DirectoryPath))
+            File.Copy(path, Path.Combine(directory, Path.GetFileName(path)));
+        return directory;
     }
 
     private static PixelMask Measure(SKBitmap pixels, SKRectI clip)

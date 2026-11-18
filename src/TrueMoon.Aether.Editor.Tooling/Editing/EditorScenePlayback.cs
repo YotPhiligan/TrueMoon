@@ -28,6 +28,7 @@ public sealed class EditorScenePlayback
     private readonly Func<long, CancellationToken, Task> _start;
     private readonly Func<long, CancellationToken, Task> _replace;
     private readonly Func<GameBuildArtifact, long, CancellationToken, Task>? _selectBuild;
+    private readonly Func<string, GameBuildArtifact>? _openBuild;
     private readonly CancellationToken _lifetime;
     private readonly Task _ready;
     private CancellationTokenSource? _cancellation;
@@ -50,12 +51,13 @@ public sealed class EditorScenePlayback
         : this(documents, preview, runtime, () => editor.Status, (editor ?? throw new ArgumentNullException(nameof(editor))).SetContext, EditorCommands.Dispatch(editor, ready),
             (version, token) => editor.StartBuildAsync(960, 540, version, token), lifetime, ready,
             (version, token) => editor.ReplaceBuildAsync(version, token),
-            (build, version, token) => editor.SelectBuildForContextAsync(build, version, token)) { }
+            (build, version, token) => editor.SelectBuildForContextAsync(build, version, token), editor.OpenPublishedBuild) { }
 
     internal EditorScenePlayback(EditorDocumentCommands documents, EditorPreview preview, Func<SessionStatus> runtime,
         Func<GameEditorStatus> editor, Action<GameEditorContext> setContext,
         Func<EditorCommand, CancellationToken, Task> dispatch, Func<long, CancellationToken, Task> start, CancellationToken lifetime = default, Task? ready = null,
-        Func<long, CancellationToken, Task>? replace = null, Func<GameBuildArtifact, long, CancellationToken, Task>? selectBuild = null)
+        Func<long, CancellationToken, Task>? replace = null, Func<GameBuildArtifact, long, CancellationToken, Task>? selectBuild = null,
+        Func<string, GameBuildArtifact>? openBuild = null)
     {
         ArgumentNullException.ThrowIfNull(documents); ArgumentNullException.ThrowIfNull(preview); ArgumentNullException.ThrowIfNull(runtime);
         ArgumentNullException.ThrowIfNull(editor); ArgumentNullException.ThrowIfNull(setContext); ArgumentNullException.ThrowIfNull(dispatch); ArgumentNullException.ThrowIfNull(start);
@@ -64,6 +66,7 @@ public sealed class EditorScenePlayback
         _ready = ready ?? Task.CompletedTask;
         _replace = replace ?? ((_, token) => dispatch(EditorCommand.Replace, token));
         _selectBuild = selectBuild;
+        _openBuild = openBuild;
     }
 
     /// <summary>Actual completion of scene work or an interrupt, including compiler/runtime drain.</summary>
@@ -138,11 +141,50 @@ public sealed class EditorScenePlayback
         return Execute(EditorCommand.Replace, false, build, token);
     }
 
-    private bool Execute(EditorCommand command, bool play, GameBuildArtifact? selectedBuild = null, CancellationToken caller = default)
+    internal SessionIdentity? PublishedBuildTarget { get { lock (_gate) return _runningIdentity; } }
+
+    internal string? ActivePublishedBuildId
+    {
+        get
+        {
+            lock (_gate)
+            {
+                var runtime = _runtime();
+                return _ownsRuntime && _runningSelectedBuild && runtime.State is SessionState.Playing or SessionState.Paused &&
+                    runtime.Identity == _runningIdentity ? runtime.Identity?.GameBuildId : null;
+            }
+        }
+    }
+
+    internal bool CanUsePublishedBuild(SessionIdentity? expected)
+    {
+        lock (_gate)
+            return _openBuild != null && _runningIdentity == expected &&
+                CanExecute(expected == null ? EditorCommand.Start : EditorCommand.Replace, selectedBuild: true);
+    }
+
+    internal bool UsePublishedBuild(string selection, EditorDocumentCommandState target, SessionIdentity? expected)
     {
         lock (_gate)
         {
-            if (caller.IsCancellationRequested || !CanExecute(command, selectedBuild != null)) return false;
+            if (string.IsNullOrWhiteSpace(selection) || !CanUsePublishedBuild(expected)) return false;
+            return Execute(expected == null ? EditorCommand.Start : EditorCommand.Replace, expected == null,
+                openBuild: (project, content, token) =>
+                {
+                    if (!ReferenceEquals(project, target.Project) || !ReferenceEquals(content, target.Document?.Content) ||
+                        PublishedBuildTarget != expected)
+                        throw new OperationCanceledException("Build selection was superseded.", token);
+                    return _openBuild!(selection);
+                });
+        }
+    }
+
+    private bool Execute(EditorCommand command, bool play, GameBuildArtifact? build = null, CancellationToken caller = default,
+        Func<ProjectSession, SceneAuthoringState, CancellationToken, GameBuildArtifact>? openBuild = null)
+    {
+        lock (_gate)
+        {
+            if (caller.IsCancellationRequested || !CanExecute(command, build != null || openBuild != null)) return false;
             if (command is EditorCommand.Stop or EditorCommand.Cancel)
             {
                 var interrupted = _pending; var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -168,6 +210,8 @@ public sealed class EditorScenePlayback
             {
                 if (command is not (EditorCommand.Build or EditorCommand.Start or EditorCommand.Replace))
                 { await _dispatch(command, token).ConfigureAwait(false); return; }
+                var selectedBuild = build ?? openBuild?.Invoke(project, content, token);
+                token.ThrowIfCancellationRequested();
                 var scene = selectedBuild == null ? PrimitiveSceneAdapter.Project(content.Resolved, token) : null;
                 var world = selectedBuild == null ? null : new SceneWorldData(content.Document);
                 if (selectedBuild?.RenderContent is { } manifest && manifest.ProjectId != project.Project.Description.Id)

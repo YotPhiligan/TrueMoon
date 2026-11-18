@@ -2,7 +2,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$EvidenceDirectory,
-    [Parameter(Mandatory)][string]$ValidationDirectory
+    [Parameter(Mandatory)][string]$ValidationDirectory,
+    [switch]$FreshPackages
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,10 +19,16 @@ if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' 
 [void][IO.Directory]::CreateDirectory($evidence)
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
-$report = [ordered]@{ Completed = $false; Stage = 'ARCH1g.2d'; Profile = $profile; Runs = @(); Commands = @() }
+$report = [ordered]@{
+    Completed = $false
+    Stage = if ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Profile = $profile
+    Runs = @()
+    Commands = @()
+}
 
 function Invoke-Step([string]$name, [string[]]$arguments) {
-    if ($arguments[0] -in @('build', 'publish')) { $arguments += "-bl:$evidence/$name-{}.binlog" }
+    if ($arguments[0] -in @('build', 'publish', 'restore', 'pack')) { $arguments += "-bl:$evidence/$name-{}.binlog" }
     & $dotnet @arguments *> "$evidence/$name.log"
     $code = $LASTEXITCODE
     $report.Commands += @{ Name = $name; Arguments = $arguments; ExitCode = $code }
@@ -32,6 +39,175 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
     Write-Host "$name passed"
 }
 
+function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
+    foreach ($provider in @('cobalt', 'microsoft')) {
+        $output = "$directory/$provider"
+        Invoke-Step "$name-$provider" @($authoring, $provider, $output, $worker, $editor,
+            $dotnet, $profile.TestFramework, $profile.Sdk, '--editor')
+        $path = "$output/editor-model.json"
+        $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+        if (!$proof.Completed -or $proof.Captures.Count -ne 5 -or !$proof.RollbackSucceeded -or !$proof.CorruptRejectedBeforeHandoff) {
+            throw "Incomplete Editor evidence for $name-$provider"
+        }
+        $children = @(Get-ChildItem -LiteralPath $output -Filter 'runtime-*.json' -File)
+        if ($children.Count -ne 5) { throw "Missing runtime child evidence for $name-$provider" }
+        foreach ($child in $children) {
+            $state = Get-Content -LiteralPath $child.FullName -Raw | ConvertFrom-Json
+            $gpu = $state.Validation
+            if ($state.Resources -ne 0 -or $state.Handles -ne 0 -or $state.EditorLoaded -or $state.ToolingLoaded -or
+                !$gpu.ValidationEnabled -or $gpu.Errors -ne 0 -or $gpu.Warnings -ne 0 -or
+                $gpu.DevicesCreated -ne $gpu.DevicesReleased -or $gpu.SurfacesCreated -ne $gpu.SurfacesReleased -or
+                $gpu.SlotsCreated -ne $gpu.SlotsReleased -or $gpu.OpenHandles -ne 0 -or $gpu.LiveSlots -ne 0) {
+                throw "Runtime ownership or validation mismatch in $($child.FullName)"
+            }
+            if ($child.BaseName -eq "runtime-$($proof.CancelledGeneration)" -and $gpu.SurfacesCreated -ne 0) {
+                throw 'Cancelled candidate allocated a surface.'
+            }
+        }
+        $report.Runs += @{
+            Name = "$name-$provider"; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash
+            Children = @($children | ForEach-Object {
+                @{ Path = $_.FullName; Sha256 = (Get-FileHash -LiteralPath $_.FullName).Hash }
+            })
+            Captures = @($proof.Captures.Name | ForEach-Object {
+                @{ Path = "$output/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$output/$_.png").Hash }
+            })
+        }
+    }
+}
+
+function Test-FreshEditor {
+    $packages = @('TrueMoon.Contracts', 'TrueMoon.Core', 'TrueMoon.Cobalt', 'TrueMoon',
+        'TrueMoon.Extensions.DependencyInjection', 'TrueMoon.Aether.Abstractions',
+        'TrueMoon.Enerit.Generator', 'TrueMoon.Enerit', 'TrueMoon.Mithril', 'TrueMoon.Aether.Runtime',
+        'TrueMoon.Aether.Tooling', 'TrueMoon.Nom', 'TrueMoon.Aether.Nom', 'TrueMoon.Argentis', 'TrueMoon.Alloy',
+        'TrueMoon.Alloy.Rendering.Skia', 'TrueMoon.Alloy.Platform.Silk', 'TrueMoon.Alloy.Hosting',
+        'TrueMoon.Aether.Editor.UI', 'TrueMoon.Aether.Editor.Tooling')
+    $version = $profile.Version
+    $feed = "$evidence/feed"
+    $root = Join-Path ([IO.Path]::GetTempPath()) ('TrueMoon-EditorPackages-' + [Guid]::NewGuid().ToString('N'))
+    $cache = "$root/cache"
+    $report.PackageConsumerRoot = $root
+    $report.Packages = @()
+    $report.ExternalPackages = @()
+    $report.Graphs = @()
+    [void][IO.Directory]::CreateDirectory($feed)
+    Write-TrueMoonConsumerBuildProfile -Profile $profile -Directory $root
+    [IO.File]::WriteAllText("$root/Directory.Build.targets", '<Project/>')
+    $escapedFeed = [Security.SecurityElement]::Escape($feed)
+    $config = "$root/NuGet.Config"
+    [IO.File]::WriteAllText($config, "<configuration><packageSources><clear/><add key='closed' value='$escapedFeed'/></packageSources><fallbackPackageFolders><clear/></fallbackPackageFolders></configuration>")
+
+    foreach ($id in $packages) {
+        Invoke-Step "pack-$id" @('pack', "$id/$id.csproj", '-c', 'Release', '-o', $feed, '-v:q')
+        $archive = "$feed/$id.$version.nupkg"
+        $report.Packages += @{ Id = $id; Version = $version; Path = $archive; Sha256 = (Get-FileHash -LiteralPath $archive).Hash }
+    }
+    $external = @{}
+    foreach ($id in @($packages + 'TrueMoon.Cobalt.Generator')) {
+        $assets = Get-Content -LiteralPath "$workspace/$id/obj/project.assets.json" -Raw | ConvertFrom-Json -AsHashtable
+        foreach ($library in $assets.libraries.GetEnumerator()) {
+            if ($library.Value.type -ne 'package' -or $external.ContainsKey($library.Key)) { continue }
+            $file = ($library.Key.Replace('/', '.') + '.nupkg').ToLowerInvariant()
+            $archive = $null
+            foreach ($folder in $assets.packageFolders.Keys) {
+                $candidate = Join-Path (Join-Path $folder $library.Value.path) $file
+                if (Test-Path -LiteralPath $candidate) { $archive = $candidate; break }
+            }
+            if (!$archive) { throw "Missing exact archive $($library.Key)." }
+            Copy-Item -LiteralPath $archive -Destination "$feed/$file"
+            $external[$library.Key] = $true
+            $report.ExternalPackages += @{ Id = $library.Key; Path = "$feed/$file"; Sha256 = (Get-FileHash -LiteralPath "$feed/$file").Hash }
+        }
+    }
+
+    [void][IO.Directory]::CreateDirectory("$root/Authoring")
+    [void][IO.Directory]::CreateDirectory("$root/Editor")
+    Copy-Item -LiteralPath "$PSScriptRoot/Authoring/Program.cs", "$PSScriptRoot/../ModelImportResearch/Fixtures.cs" -Destination "$root/Authoring"
+    $editorSources = "$workspace/ManualTests/AetherEditorHost"
+    Copy-Item -LiteralPath "$editorSources/EditorModelBuildSmoke.cs", "$editorSources/EditorHeaderSmoke.cs",
+        "$editorSources/RuntimeEntryPoint.cs" -Destination "$root/Editor"
+    [IO.File]::WriteAllText("$root/Editor/Program.cs", @'
+using TrueMoon.ManualTests.AetherEditorHost;
+
+try
+{
+    if (args is ["--runtime"]) await RuntimeEntryPoint.RunAsync();
+    else if (args.FirstOrDefault() == "--model-build-probe") await EditorModelBuildSmoke.RunAsync(args[1..]);
+    else throw new ArgumentException("Unknown Editor probe role.");
+    return 0;
+}
+catch (Exception error)
+{
+    Console.Error.WriteLine(error);
+    return 1;
+}
+'@)
+
+    Push-Location $root
+    try {
+        foreach ($consumer in @(
+            @{ Name = 'Authoring'; Assembly = 'Authoring'; Feature = 'TrueMoon.Aether.Nom' },
+            @{ Name = 'Editor'; Assembly = 'ModelBuildEditorProbe'; Feature = 'TrueMoon.Aether.Editor.Tooling' }
+        )) {
+            $name = $consumer.Name
+            $directory = "$root/$name"
+            $project = "$directory/Consumer.csproj"
+            $references = @('TrueMoon', 'TrueMoon.Extensions.DependencyInjection', $consumer.Feature) | ForEach-Object {
+                "<PackageReference Include='$($_)' Version='[$version]'/>"
+            }
+            [IO.File]::WriteAllText($project, @"
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>$($consumer.Assembly)</AssemblyName><AllowUnsafeBlocks>true</AllowUnsafeBlocks></PropertyGroup>
+  <ItemGroup>$references</ItemGroup>
+</Project>
+"@)
+            Invoke-Step "fresh-$name-restore" @('restore', $project, '--configfile', $config, '--packages', $cache, '--no-http-cache', '-v:q')
+            $assetsPath = "$directory/obj/project.assets.json"
+            $assets = Get-Content -LiteralPath $assetsPath -Raw | ConvertFrom-Json -AsHashtable
+            if ($assets.packageFolders.Count -ne 1 -or
+                [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath(@($assets.packageFolders.Keys)[0])) -ne [IO.Path]::GetFullPath($cache) -or
+                @($assets.libraries.Values | Where-Object type -ne 'package').Count -ne 0) {
+                throw "Non-isolated package graph for $name."
+            }
+            $frameworkPackages = @()
+            foreach ($library in $assets.libraries.GetEnumerator()) {
+                $installed = Join-Path $cache $library.Value.path
+                $metadata = Get-Content -LiteralPath "$installed/.nupkg.metadata" -Raw | ConvertFrom-Json
+                if ([IO.Path]::GetFullPath($metadata.source) -ne [IO.Path]::GetFullPath($feed)) { throw 'Restore accessed another feed.' }
+                $id, $resolvedVersion = $library.Key.Split('/')
+                if ($id -notin $packages) { continue }
+                if ($resolvedVersion -ne $version) { throw "Wrong TrueMoon version $($library.Key)." }
+                $file = "$id.$version.nupkg".ToLowerInvariant()
+                if ((Get-FileHash -LiteralPath "$installed/$file").Hash -ne (Get-FileHash -LiteralPath "$feed/$file").Hash) {
+                    throw "Installed archive differs from the closed feed for $id."
+                }
+                $frameworkPackages += $id
+            }
+            $published = "$root/$name-output"
+            Invoke-Step "fresh-$name-publish" @('publish', $project, '--no-restore', '-c', 'Release', '--self-contained', 'false',
+                '-p:UseAppHost=false', '-o', $published, '-v:q')
+            $binaries = @()
+            foreach ($id in $frameworkPackages) {
+                $installed = "$cache/$($id.ToLowerInvariant())/$version/lib/$($profile.Framework)/$id.dll"
+                if (!(Test-Path -LiteralPath $installed)) { continue }
+                $dll = "$published/$id.dll"
+                $sha = (Get-FileHash -LiteralPath $dll).Hash
+                if ($sha -ne (Get-FileHash -LiteralPath $installed).Hash) { throw "Published DLL differs from the package for $id." }
+                $binaries += @{ Id = $id; Path = $dll; Sha256 = $sha }
+            }
+            $report.Graphs += @{
+                Name = $name; PackageCount = $assets.libraries.Count; FrameworkPackages = $frameworkPackages
+                AssetsSha256 = (Get-FileHash -LiteralPath $assetsPath).Hash; Binaries = $binaries
+            }
+        }
+        [void][IO.Directory]::CreateDirectory("$root/Editor-output/Assets/Fonts")
+        Copy-Item -LiteralPath "$workspace/Examples/AetherEditor/Assets/Fonts/NotoSans-Regular.ttf",
+            "$workspace/Examples/AetherEditor/Assets/Fonts/OFL.txt" -Destination "$root/Editor-output/Assets/Fonts"
+        Test-EditorConsumers 'fresh-Release' "$evidence/fresh-Release" "$root/Authoring-output/Authoring.dll" "$root/Editor-output/ModelBuildEditorProbe.dll"
+    } finally { Pop-Location }
+}
+
 $previousLayerPath = $env:VK_LAYER_PATH
 $env:VK_LAYER_PATH = $validation
 Push-Location $workspace
@@ -39,27 +215,17 @@ try {
     $worker = "$evidence/worker"
     Invoke-Step worker @('publish', 'TrueMoon.Aether.Importing.Assimp/TrueMoon.Aether.Importing.Assimp.csproj',
         '-c', 'Release', '-r', 'win-x64', '--self-contained', 'false', '-p:UseAppHost=false', '-o', $worker, '-v:q')
-    foreach ($configuration in @('Debug', 'Release')) {
-        $directory = "$evidence/$configuration"
-        Invoke-Step "$configuration-authoring" @('build', "$PSScriptRoot/Authoring/Authoring.csproj", '-c', $configuration, '-o', "$directory/authoring", '-v:q')
-        $verb = if ($configuration -eq 'Debug') { 'build' } else { 'publish' }
-        Invoke-Step "$configuration-editor" @($verb, 'ManualTests/AetherEditorHost/AetherEditorHost.csproj', '-c', $configuration, '-o', "$directory/editor", '-v:q')
-        foreach ($provider in @('cobalt', 'microsoft')) {
-            $name = "$configuration-$provider"
-            $output = "$directory/$provider"
-            Invoke-Step $name @("$directory/authoring/Authoring.dll", $provider, $output, $worker, "$directory/editor/AetherEditorHost.dll",
-                $dotnet, $profile.TestFramework, $profile.Sdk, '--editor')
-            $path = "$output/editor-model.json"
-            $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-            if (!$proof.Completed -or $proof.Captures.Count -ne 5 -or !$proof.RollbackSucceeded -or !$proof.CorruptRejectedBeforeHandoff) {
-                throw "Incomplete Editor evidence for $name"
-            }
-            $report.Runs += @{
-                Name = $name; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash
-                Captures = @($proof.Captures.Name | ForEach-Object {
-                    @{ Path = "$output/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$output/$_.png").Hash }
-                })
-            }
+    $report.NativeSha256 = (Get-FileHash -LiteralPath "$worker/assimp.dll").Hash
+    if ($report.NativeSha256 -ne '90984E886CF7394560E44FECD5A5666BECD2A93E98251974A562ECB79CFBA386') { throw 'Native worker drift.' }
+    if ($FreshPackages) {
+        Test-FreshEditor
+    } else {
+        foreach ($configuration in @('Debug', 'Release')) {
+            $directory = "$evidence/$configuration"
+            Invoke-Step "$configuration-authoring" @('build', "$PSScriptRoot/Authoring/Authoring.csproj", '-c', $configuration, '-o', "$directory/authoring", '-v:q')
+            $verb = if ($configuration -eq 'Debug') { 'build' } else { 'publish' }
+            Invoke-Step "$configuration-editor" @($verb, 'ManualTests/AetherEditorHost/AetherEditorHost.csproj', '-c', $configuration, '-o', "$directory/editor", '-v:q')
+            Test-EditorConsumers $configuration $directory "$directory/authoring/Authoring.dll" "$directory/editor/AetherEditorHost.dll"
         }
     }
     $report.Completed = $true

@@ -1,5 +1,20 @@
 # TrueMoon: общий план развития
 
+Выполнено 2026-11-18 [ARCH1g.2h](engine/PLAN.md#arch1g2h-multiple-models).
+Две модели используют один артефакт. Замена точного снимка одной модели
+меняет только её геометрию на GPU.
+
+Выполнено 2026-11-18 [ARCH1g.2g](engine/PLAN.md#arch1g2g-dependency-settings-deletion).
+Изменение BIN и настройка масштаба дали разные сборки. Все сохранённые
+артефакты загрузили свою геометрию после удаления ресурсов из Nom.
+
+Выполнено 2026-11-18 [ARCH1g.2f](engine/PLAN.md#arch1g2f-fresh-editor-packages).
+Независимый Editor на свежих NuGet-пакетах прошёл выбор сборки, горячий Replace,
+отказ и откат на GPU.
+
+Выполнено 2026-11-18 [ARCH1g.2e](engine/PLAN.md#arch1g2e-build-selection-ui).
+Опубликованная сборка выбирается из меню Editor.
+
 Выполнено 2026-11-18 [ARCH1g.2d](engine/PLAN.md#arch1g2d-full-scene-replace).
 Editor меняет сборку полной сцены через Replace и восстанавливает прежнюю
 геометрию на GPU после отмены в дочернем процессе.
@@ -81,7 +96,7 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 
 <a id="current-roadmap"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-16
+## Текущая очередь — актуализация 2026-11-18
 
 По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика
 ARCH2e.4b → ARCH1f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5
@@ -129,13 +144,14 @@ F.3 owned render snapshots реализован09ноября; ближайше�
 По запросу2026-11-07 добавлены исследования [загрузки моделей ARCH1g.0](engine/PLAN.md#arch1g-model-assets)
 и [аудиомодуля ARCH1h.0](engine/PLAN.md#arch1h-audio): выбор форматов/backends,
 content delivery, App/ECS integration, resource ownership и критерии прототипов.
-Направления остаются до production реализации; очередность f.3→f.4 сохраняется,
-новые пакеты/API и поддержка файловых форматов этим не объявлены.
+Порядок f.3→f.4 был выполнен до сквозной интеграции импорта. Аудиоинтеграция
+проверена в профиле ARCH1h.2a. Текущая очередь и границы указаны в таблице ниже.
 G.0 выбрал [AssimpNetter6.0.5 low-level](engine/MODEL_IMPORT_RESEARCH.md#decision-2026-11-07)
 для g.1 после8Debug/published Release comparative profiles.
 [Captured import v1](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) проверен как research
 prototype: frozen dependency I/O, limits, persistent ID ledger и native worker cancel.
-Production adapter/discovery/full format policy ещё нужны; Runtime contracts не расширены.
+Этот профиль лёг в основу ограниченного importer ARCH1g.1 и поставки ARCH1g.2.
+Отдельный план Aether фиксирует дальнейшую поддержку форматов.
 Самостоятельный модуль **TrueMoon.Nom** хранит assets вне Aether. Решение пользователя
 2026-11-07 обновлено: **полностью заменить LiteDB собственной реализацией** —
 transactional KV catalog, append-only journal, bounded key index и streamed immutable
@@ -149,7 +165,7 @@ probes удалены. NOM3 deterministic IO/process acceptance проверен
 пользователем; аппаратный power-off исключён из текущего scope.
 NOM4 checkpoint/offline compaction и [NOM5 indexes/snapshots/pins/offline GC](nom/RETENTION.md) реализованы и проверены в IO/process scope; NOM6 [backup/restore](nom/BACKUP.md) и [limits/workload](nom/PERFORMANCE.md) проверены; [NOM7 package delivery/independent consumers](nom/DELIVERY.md) проверен в local Windows x64 portable/win-x64 framework-dependent scope. External publish/остальные платформы и physical gates открыты. Vendor fix/upgrade/worker и optional
 LiteDB provider отменены. Прежние AST результаты — история; текущие proofs и scope —
-[Nom STATUS](nom/STATUS.md). Engine f.3→f.4 и importer g.1 сохраняются.
+[Nom STATUS](nom/STATUS.md). Первый потребитель Nom из Aether проверен в ARCH1g.2a.
 
 Детали import/audio этапов — в engine плане, storage — в Nom; массовая миграция не назначена. Маршрут ежедневного Editor,
 performance и release сохраняются ниже как независимые варианты продолжения.
@@ -177,12 +193,12 @@ Source/published/fresh: по230checks на обоих DI,4owned children/profile
 
 | Направление | Следующий результат | План владельца |
 | --- | --- | --- |
-| Слои Aether и моды | ARCH3.1–9, общий ARCH1j, Kton PHYS5 и Kul ARCH1h.2a завершены в указанном scope. ENG7b.3 завершён2026-11-16; PHYS6 завершён; далее выбрать import/ED/PHYS8 functional scope, release gates отдельно | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
+| Слои Aether и моды | ARCH3.1–9, ARCH1j, Kton PHYS5 и Kul ARCH1h.2a завершены в своих профилях. После ENG7b.3 и ARCH1g.2a–d продолжается редакторский путь опубликованной сборки. Критерии выпуска ведутся отдельно | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
 | .NET 11, CORE8 завершён | Inputs/generators/frozen game/runtime regression и свежая согласованная поставка проверены; функциональная очередь продолжается у владельцев | [CORE8](core/PLAN.md#core8-dotnet11), [итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11) |
 | Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
 | ECS и отображение, функциональная очередь | F.2/f.3/f.4 resources/snapshots/actual Vulkan surface и Playing fence готовы; далее минимальный Player | [ARCH1f.4](engine/PLAN.md#arch1f-rendering), [snapshot API](engine/RENDER_SNAPSHOTS.md); inspector отдельно [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
-| Исследование ассетов моделей | CPU g.1 завершён. [g.2a](engine/PLAN.md#arch1g2a-model-delivery) проверил доставку одной модели и точных ревизий, далее сцена и native render | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [captured contract](engine/MODEL_IMPORT_CAPTURE.md#capture-v1) |
-| Самостоятельное хранение ассетов | NOM0–6 IO/process scope и NOM7 local4package delivery/independent consumers проверены; далее engine g.2 bridge по согласованию, другие OS/RID/modes и physical/release gates отдельно; [disk-full/recovery](nom/DURABILITY.md) после UAC прошёл5cases/D/R; [VM harness](nom/VM_CRASH.md) сохранён, actual verification отложена; [NOM8a/b buffer/raw API](nom/BUFFER_API.md#nom8b-raw-api) реализован и проверен; consumer bridge g.2 после g.1 по согласованию engine; hardware power-off исключён | [Nom queue](nom/PLAN.md#nom-own-queue), [решение](nom/STORAGE_DESIGN.md#nom-own-store-2026-11-07) |
+| Ассеты моделей | ARCH1g.1a–c дали ограниченный CPU import и постоянные ID. ARCH1g.2a–g проверили доставку точных ревизий через Nom, GPU в Player и Editor, Replace и откат, меню выбора на свежих пакетах, изменение зависимости и масштаба, удаление ресурсов при сохранённых сборках. ARCH1g.2h проверил объединение снимков и независимое обновление двух моделей | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [текущий статус](engine/STATUS.md) |
+| Самостоятельное хранение ассетов | NOM0–8 проверены в указанных локальных профилях. Первый Aether consumer использует batch и точные снимки Nom в ARCH1g.2a. Другие платформы и профили выпуска открыты, VM acceptance отложена | [Nom queue](nom/PLAN.md#nom-own-queue), [статус](nom/STATUS.md) |
 | Kton / самостоятельная 3D-физика | BEPU — приоритет; PHYS0–6 и capsule/session bridge проверены в Windows/headless profile.124tests D/R, both-DI source/published/fresh52checks×4; PHYS8.1/8.2 baseline и allocations завершены в указанном scope;1000body445КБ→<1КБ/tick,155tests D/R; shared commands и остальные PHYS8 gates открыты; Kul ARCH1h.2a также завершён | [PHYS0–8](physics/PLAN.md#current-physics-queue), [статус](physics/STATUS.md), [ARCH1i](engine/PLAN.md#arch1i-physics) |
 | Аудиомодуль | TrueMoon.Kul AUD1 и optional ARCH1h.2a ECS/captured-content bridge реализованы и проверены в Windows x64 scope; следующие AUD2–3 — device loss/RT/queues/other OS | [Audio PLAN](audio/PLAN.md#current-audio-queue), [ARCH1h](engine/PLAN.md#arch1h-audio) |
 | Editor, контракт готов | ED4g.3/4 завершены; ED5a.0 camera/selection contract зафиксирован2026-11-08 и проверен numerical probe20checks | [Контракт](engine/EDITOR_CAMERA_SELECTION.md#ed5a-view-contract-v1), [scope](engine/HISTORY.md#ed5a0-contract-2026-11-08) |

@@ -1,4 +1,6 @@
 using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.Tooling.Editing;
+using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Editing;
 using TrueMoon.Aether.Tooling.Projects;
@@ -12,6 +14,8 @@ namespace TrueMoon.Aether.Editor.Tooling.Documents;
 public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDocumentViewModel
 {
     private readonly EditorDocumentCommands _commands;
+    private readonly EditorScenePlayback? _playback;
+    private readonly EditorInspectorViewModel? _inspector;
     private int _owner;
     private bool _disposed;
     private string _path = "Main.aetherscene", _savePath = "Untitled.aetherscene", _projectPath = "";
@@ -22,22 +26,60 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     private string? _dismissedError;
     private bool _canConfirmPath;
     private bool _canOpenProject, _canCloseProject;
+    private bool _canOpenBuild;
+    private string _buildPath = "";
+    private string? _activeBuildId;
+    private EditorDocumentCommandState? _buildTarget;
+    private SessionIdentity? _buildRuntime;
 
     /// <summary>Creates a model borrowing the App-owned coordinator. The first owner operation establishes the UI thread.</summary>
     /// <param name="commands">Tracked document actions.</param>
-    public EditorDocumentViewModel(EditorDocumentCommands commands)
-    { ArgumentNullException.ThrowIfNull(commands); _commands = commands; }
+    public EditorDocumentViewModel(EditorDocumentCommands commands) : this(commands, null, null) { }
+
+    internal EditorDocumentViewModel(EditorDocumentCommands commands, EditorScenePlayback? playback, EditorInspectorViewModel? inspector)
+    { ArgumentNullException.ThrowIfNull(commands); _commands = commands; _playback = playback; _inspector = inspector; }
 
     /// <summary>Gets/sets the input used by Open, SaveAs and first Save. Completion never replaces this draft.</summary>
-    public string PathDraft { get => _path; set { VerifyOwner(); ArgumentNullException.ThrowIfNull(value); if (_path == value) return; SetProperty(ref _path, value, nameof(PathDraft)); if (_pathRequest != DocumentCommand.OpenProject) OnPropertyChanged(nameof(RequestedPath)); } }
+    public string PathDraft { get => _path; set { VerifyOwner(); ArgumentNullException.ThrowIfNull(value); if (_path == value) return; SetProperty(ref _path, value, nameof(PathDraft)); if (_pathRequest is not (DocumentCommand.OpenProject or DocumentCommand.OpenBuild)) OnPropertyChanged(nameof(RequestedPath)); } }
     /// <summary>Retained project manifest draft, separate from scene and first-save paths.</summary>
     public string ProjectPathDraft { get => _projectPath; set { VerifyOwner(); ArgumentNullException.ThrowIfNull(value); if (_projectPath == value) return; SetProperty(ref _projectPath, value, nameof(ProjectPathDraft)); if (_pathRequest == DocumentCommand.OpenProject) OnPropertyChanged(nameof(RequestedPath)); } }
     /// <summary>Path edited by the shared retained prompt.</summary>
-    public string RequestedPath { get => _pathRequest == DocumentCommand.OpenProject ? ProjectPathDraft : PathDraft; set { if (_pathRequest == DocumentCommand.OpenProject) ProjectPathDraft = value; else PathDraft = value; } }
+    public string RequestedPath
+    {
+        get => _pathRequest switch { DocumentCommand.OpenProject => ProjectPathDraft, DocumentCommand.OpenBuild => _buildPath, _ => PathDraft };
+        set
+        {
+            if (_pathRequest == DocumentCommand.OpenProject) ProjectPathDraft = value;
+            else if (_pathRequest == DocumentCommand.OpenBuild)
+            {
+                VerifyOwner();
+                ArgumentNullException.ThrowIfNull(value);
+                SetProperty(ref _buildPath, value, nameof(RequestedPath));
+                RefreshPathAdmission();
+            }
+            else PathDraft = value;
+        }
+    }
     /// <summary>Accessible path input label.</summary>
-    public string PathInputLabel => _pathRequest == DocumentCommand.OpenProject ? "Путь проекта" : "Путь сцены";
+    public string PathInputLabel => _pathRequest switch
+    {
+        DocumentCommand.OpenProject => "Путь проекта",
+        DocumentCommand.OpenBuild => "BuildId или папка сборки",
+        _ => "Путь сцены"
+    };
     /// <summary>Prompt hint without changing the canonical scene-root contract.</summary>
-    public string PathHint => _pathRequest == DocumentCommand.OpenProject ? "Полный путь к файлу .aetherproj" : ScenesRoot;
+    public string PathHint => _pathRequest switch
+    {
+        DocumentCommand.OpenProject => "Полный путь к файлу .aetherproj",
+        DocumentCommand.OpenBuild => "BuildId из каталога сборок или полный путь к папке артефакта",
+        _ => ScenesRoot
+    };
+    /// <inheritdoc />
+    public bool SupportsPublishedBuilds => _playback != null;
+    /// <inheritdoc />
+    public bool CanOpenBuild => _canOpenBuild;
+    /// <summary>Exact BuildId of the selected artifact currently playing or paused.</summary>
+    public string? ActiveBuildId => _activeBuildId;
     /// <summary>Actual active project snapshot; owned by the project coordinator.</summary>
     public ProjectSession? Project => _state?.Project;
     /// <summary>Whether this host supplies dynamic project/runtime rebinding.</summary>
@@ -60,11 +102,13 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     {
         ArgumentNullException.ThrowIfNull(baseTitle);
         return baseTitle + (ProjectName.Length == 0 ? "" : " · " + ProjectName) +
-            (Document?.Content == null ? "" : " · " + Title);
+            (Document?.Content == null ? "" : " · " + Title) +
+            (ActiveBuildId is { } build ? " · Build " + build[..12] : "");
     }
     /// <summary>Formats the shared accessible caption and full document/root path.</summary>
     /// <param name="baseTitle">Host-selected base caption.</param><returns>Caption followed by its path description.</returns>
-    public string GetWindowCaptionDescription(string baseTitle) => GetWindowCaption(baseTitle) + "\n" + (Document?.Path ?? ScenesRoot);
+    public string GetWindowCaptionDescription(string baseTitle) => GetWindowCaption(baseTitle) + "\n" + (Document?.Path ?? ScenesRoot) +
+        (ActiveBuildId is { } build ? "\nBuildId " + build : "");
     /// <summary>Gets the canonical scene root used to interpret relative input.</summary>
     public string ScenesRoot => _root;
     /// <summary>Gets an actionable error without dropping path drafts or document content.</summary>
@@ -78,6 +122,7 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     /// <summary>Heading of the requested path operation.</summary>
     public string PathPromptText => _pathRequest is DocumentCommand.Open ? "Открыть сцену" :
         _pathRequest == DocumentCommand.OpenProject ? "Открыть проект (.aetherproj)" :
+        _pathRequest == DocumentCommand.OpenBuild ? _buildRuntime == null ? "Запустить опубликованную сборку" : "Заменить текущую сборку" :
         _pathRequest != null ? "Сохранить сцену как" : AwaitingDecision ? "Несохранённые изменения" : _error.Length != 0 ? "Ошибка операции" : Title;
     /// <summary>Fresh admission for the requested path action.</summary>
     public bool CanConfirmPath => _canConfirmPath;
@@ -90,7 +135,12 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     /// <summary>Gets whether the pending decision needs a first-save path.</summary>
     public bool NeedsSavePath => _needsSavePath;
     /// <summary>Gets whether the path draft can be edited.</summary>
-    public bool CanEditPath => _pathRequest == DocumentCommand.OpenProject ? CanOpenProject : CanOpen;
+    public bool CanEditPath => _pathRequest switch
+    {
+        DocumentCommand.OpenProject => CanOpenProject,
+        DocumentCommand.OpenBuild => CanOpenBuild,
+        _ => CanOpen
+    };
     /// <summary>Gets New availability.</summary>
     public bool CanNew => _canNew;
     /// <summary>Gets Open availability.</summary>
@@ -130,6 +180,8 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
         if (previous?.Document != next.Document) OnPropertyChanged(nameof(Document));
         SetProperty(ref _canNew, _commands.CanExecute(DocumentCommand.New), nameof(CanNew));
         var wasEditable = CanEditPath;
+        SetProperty(ref _canOpenBuild, _inspector?.CanCancel != true && _playback?.CanUsePublishedBuild(_playback.PublishedBuildTarget) == true, nameof(CanOpenBuild));
+        SetProperty(ref _activeBuildId, _playback?.ActivePublishedBuildId, nameof(ActiveBuildId));
         SetProperty(ref _canOpenProject, _commands.CanExecute(DocumentCommand.OpenProject), nameof(CanOpenProject));
         SetProperty(ref _canCloseProject, _commands.CanExecute(DocumentCommand.CloseProject), nameof(CanCloseProject));
         SetProperty(ref _canOpen, _commands.CanExecute(DocumentCommand.Open), nameof(CanOpen));
@@ -150,11 +202,22 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
         SetProperty(ref _root, next.ScenesDirectory ?? "Проект не открыт", nameof(ScenesRoot));
         if (previousRoot != _root) OnPropertyChanged(nameof(PathHint));
         if (next.Error == null) _dismissedError = null;
-        SetProperty(ref _error, next.Error == null ? "" : "Ошибка: " + next.Error.Message, nameof(ErrorText));
+        var errorText = next.Error switch
+        {
+            null => "",
+            GameReplacementException { RollbackSucceeded: true, InnerException: OperationCanceledException } =>
+                "Замена отменена. Предыдущая сборка восстановлена.",
+            GameReplacementException { RollbackSucceeded: true } error =>
+                "Предыдущая сборка восстановлена. " + error.Message,
+            _ => "Ошибка: " + next.Error.Message
+        };
+        SetProperty(ref _error, errorText, nameof(ErrorText));
         var target = next.Operation switch { DocumentCommand.OpenProject => "открытием другого проекта", DocumentCommand.CloseProject => "закрытием проекта", DocumentCommand.Open => "открытием другой сцены", DocumentCommand.New => "созданием сцены", DocumentCommand.Exit => "выходом", _ => "закрытием сцены" };
         SetProperty(ref _decision, "Сохранить изменения перед " + target + "?", nameof(DecisionText));
+        if (_pathRequest == DocumentCommand.OpenBuild && (!MatchesBuildTarget(next) || _playback!.PublishedBuildTarget != _buildRuntime))
+            SetPathRequest(null);
         if (toolsVisible != IsToolsVisible) OnPropertyChanged(nameof(IsToolsVisible));
-        _canConfirmPath = _pathRequest is { } pathCommand && _commands.CanExecute(pathCommand);
+        _canConfirmPath = CanSubmitPath();
         if (confirm != CanConfirmPath) OnPropertyChanged(nameof(CanConfirmPath));
         if (dismiss != CanDismissTools) OnPropertyChanged(nameof(CanDismissTools));
         if (promptText != PathPromptText) OnPropertyChanged(nameof(PathPromptText));
@@ -165,6 +228,17 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     public void Request(DocumentCommand command)
     {
         VerifyOwner();
+        if (command == DocumentCommand.OpenBuild)
+        {
+            var state = _commands.Read();
+            var runtime = _playback?.PublishedBuildTarget;
+            if (_inspector?.CanCancel == true || _playback?.CanUsePublishedBuild(runtime) != true) return;
+            _buildTarget = state;
+            _buildRuntime = runtime;
+            _dismissedError = null;
+            SetPathRequest(command);
+            return;
+        }
         if (command is not (DocumentCommand.New or DocumentCommand.Open or DocumentCommand.Save or DocumentCommand.SaveAs or DocumentCommand.Close or DocumentCommand.OpenProject or DocumentCommand.CloseProject))
             throw new ArgumentOutOfRangeException(nameof(command));
         if (!_commands.CanExecute(command)) return;
@@ -178,6 +252,15 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     public void ConfirmPath()
     {
         VerifyOwner();
+        if (_pathRequest == DocumentCommand.OpenBuild)
+        {
+            if (CanSubmitPath() && _playback!.UsePublishedBuild(_buildPath, _buildTarget!, _buildRuntime))
+            {
+                SetPathRequest(null);
+                Refresh();
+            }
+            return;
+        }
         if (_pathRequest is not { } command || !_commands.CanExecute(command)) return;
         SetPathRequest(null); Execute(command);
     }
@@ -189,7 +272,8 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     private void SetPathRequest(DocumentCommand? command)
     {
         var previous = _pathRequest; _pathRequest = command;
-        _canConfirmPath = command is { } requested && _commands.CanExecute(requested);
+        if (command != DocumentCommand.OpenBuild) { _buildTarget = null; _buildRuntime = null; }
+        _canConfirmPath = CanSubmitPath();
         if (previous != command)
         {
             OnPropertyChanged(nameof(PathRequest)); OnPropertyChanged(nameof(IsPathPromptOpen)); OnPropertyChanged(nameof(PathPromptText)); OnPropertyChanged(nameof(CanConfirmPath));
@@ -198,6 +282,21 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
         }
         OnPropertyChanged(nameof(IsToolsVisible));
     }
+
+    private void RefreshPathAdmission() => SetProperty(ref _canConfirmPath, CanSubmitPath(), nameof(CanConfirmPath));
+
+    private bool CanSubmitPath()
+    {
+        if (_pathRequest != DocumentCommand.OpenBuild)
+            return _pathRequest is { } requested && _commands.CanExecute(requested);
+        var state = _commands.Read();
+        return MatchesBuildTarget(state) && !string.IsNullOrWhiteSpace(_buildPath) && _inspector?.CanCancel != true &&
+            _playback?.CanUsePublishedBuild(_buildRuntime) == true;
+    }
+
+    private bool MatchesBuildTarget(EditorDocumentCommandState state) => _buildTarget is { } target &&
+        ReferenceEquals(target.Project, state.Project) && ReferenceEquals(target.Document?.Content, state.Document?.Content) &&
+        target.Document?.OpeningId == state.Document?.OpeningId;
 
     /// <summary>Invokes the shared action using the current path draft.</summary>
     /// <param name="command">Document action.</param>

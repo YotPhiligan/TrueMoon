@@ -15722,6 +15722,136 @@ Vulkan validation 0/0, живых GPU resources/handles нет.
 `TestResults/ARCH1g2-replace-regression-20261118-02`.
 [Контракт и воспроизведение](MODEL_BUILD_DELIVERY.md#arch1g2d-world-replace).
 
+<a id="arch1g2e-2026-11-18"></a>
+## 2026-11-18 — ARCH1g.2e, выбор сборки из меню Editor
+
+Version 1.2611.18.5-alpha, baseline 1931bc8. Действие меню «Проект» использует
+существующий редактор пути. Типизированный выбор фиксирует проект, документ
+и runtime identity. Артефакт открывается и проверяется в фоновой операции
+под общим допуском Editor. UI показывает короткий фактический BuildId в
+заголовке, полный ID в доступном описании и сообщение об успешном откате.
+
+`ManualTests/ModelBuildConsumer/VerifyEditor.ps1` выполнен с EvidenceDirectory
+`TestResults/ARCH1g2-picker-20261118-02` и ValidationDirectory
+`TestResults/EditorWindow-20261104/tools/validation`. Source Debug и published
+Release на Cobalt и Microsoft DI в Editor. SHA256 `verification.json`
+`6C506AEB165995905C60152BA622A703AE6C1C5AC4159C568103AD16635BAB22`.
+
+В нативном окне тест открывает меню вводом F10 и мыши, вводит BuildId и
+абсолютный путь в привязанное поле, нажимает подтверждение. Отмена
+команды детерминированно подаётся координатору после загрузки сцены кандидата.
+Проверены Start, Replace, повреждённый артефакт, откат и повторный Replace.
+Пиксельные маски 25 096 → 50 422 → 50 422 → 50 422 → 25 096. Заголовок
+проверен для всех видимых кадров. Сцена сохранила хэш и ревизию, 20 runtime
+child завершены, Vulkan validation 0/0, GPU-ресурсы и handles освобождены.
+
+Целевые регрессии Aether 82/82 и Editor 472/472 в Debug и Release. Ошибок и
+пропусков нет. TRX и binlogs в `TestResults/ARCH1g2-picker-regression-20261118-01`.
+[Сценарий и контракт](MODEL_BUILD_DELIVERY.md#arch1g2e-editor-build-picker).
+
+<a id="arch1g2f-2026-11-18"></a>
+## 2026-11-18 — ARCH1g.2f, приёмка независимого Editor
+
+Version 1.2611.18.5-alpha. `ManualTests/ModelBuildConsumer/VerifyEditor.ps1`
+с `-FreshPackages`, EvidenceDirectory `TestResults/ARCH1g2-packages-20261118-01`
+и ValidationDirectory `TestResults/EditorWindow-20261104/tools/validation`.
+SHA256 отчёта `verification.json`
+`7E47F0414C826E335D0DFFDBBE27CD913963B77CEBD04FBE3A356B5142439BBB`.
+
+20 пакетов TrueMoon упакованы один раз в новый закрытый feed вместе с
+32 внешними архивами. Два независимых проекта с точными PackageReference
+расположены вне checkout. Restore подтвердил единый feed и свежий cache,
+типы всех библиотек package, точные версии и SHA256 установленных архивов
+TrueMoon. Графы Authoring и Editor содержат 17 и 46 пакетов соответственно.
+В publish подтверждены SHA256 12 и 17 DLL TrueMoon, соответственно.
+Worker Assimp использовал штатный native SHA.
+
+Оба профиля Release прошли Start, Replace и восстановление через UI полного
+Editor. Повреждённый артефакт оставил текущий Runtime, отменённый кандидат
+освободился без поверхности. Результаты 25 096 → 50 422 → 50 422 → 50 422 →
+25 096 красных пикселей на обоих DI. Все 10 Runtime завершены, GPU и handles
+освобождены, Vulkan validation 0/0. GUI показывает BuildId фактической сборки.
+
+Режим без `-FreshPackages` также прогнан после расширения скрипта. Четыре
+профиля source Debug / published Release × Cobalt / Microsoft DI завершены.
+Отчёт `TestResults/ARCH1g2-packages-source-20261118-01/verification.json`,
+SHA256 `B4CF14B0205EB38CCFE50CF6F1F46BE45662955397F525F75F2F955B1EA545A6`.
+
+Перед поставкой ARCH1g.2e–h тот же профиль `VerifyEditor.ps1 -FreshPackages`
+повторён на версии 1.2611.18.7-alpha. Оба DI прошли выбор BuildId и пути,
+горячий Replace, отказ на повреждённом артефакте и откат после отмены.
+Завершены 10 дочерних Runtime, Vulkan validation 0/0.
+Отчёт `TestResults/ARCH1g2-eh-editor-delivery-20261118-01/verification.json`,
+SHA256 `C642C41308FFB4DA5A4AC282037DA9E53A86E243714549E9C9B59FDAB51AB5C5`.
+[Сценарий и контракт](MODEL_BUILD_DELIVERY.md#arch1g2f-editor-packages).
+
+<a id="arch1g2g-2026-11-18"></a>
+## 2026-11-18 — ARCH1g.2g, зависимость, настройка и удаление модели
+
+Version 1.2611.18.6-alpha. `ManualTests/ModelBuildConsumer/Verify.ps1`
+с `-RevisionMatrix`, EvidenceDirectory `TestResults/ARCH1g2-revisions-20261118-01`
+и ValidationDirectory `TestResults/EditorWindow-20261104/tools/validation`.
+SHA256 отчёта `verification.json`
+`9F864DF6EEBFF31885ECF93CFFF43FAE33D5E3A7469AED29B3372D077C507108`.
+
+В Source Debug и Release из свежего закрытого feed проверены Cobalt и Microsoft
+DI. Feed содержит 19 пакетов TrueMoon и 32 внешних архива. Во всех четырёх
+профилях один `.gltf` получил новую геометрию после изменения только внешнего
+`.bin`. Вторые входы повторно импортированы с `GeometryScale = 1.5`; NaN отклонён
+до запуска worker. Координаты контрольной вершины `(X, Y)` прошли
+`(1, 0) → (1, 0.5) → (1.5, 0.75)`. Ledger после повторного открытия сохранил
+кандидат и масштаб. Все три сборки используют прежние subasset ID и один хэш
+`.aetherscene`; ревизии меша и BuildId различаются.
+
+После удаления четырёх heads Nom каждый сохранённый снимок по-прежнему дал
+точный BuildId. После удаления снимков и очистки журнала GC убрал восемь ревизий
+и восемь объектов (1084 байта на профиль). Повторный захват удалённых снимков
+отклонён. Player запущен после закрытия и перемещения Nom и исходников. Видимая
+маска для исходной, обновлённой, масштабированной и повторно открытой исходной
+сборки составила `8753 → 8748 → 19683 → 8753` красных пикселей во всех профилях.
+Хэши первой и последней масок совпали. Все 16 запусков Player завершены, Vulkan
+validation 0/0, поверхности, slot устройства и дескрипторы освобождены.
+
+В Debug и Release Aether Importing 144/144, Nom 874/874, без ошибок и пропусков.
+TRX и binlogs в `TestResults/ARCH1g2-revisions-regression-20261118-01`.
+Штатный режим ARCH1g.2b без `-RevisionMatrix` также прошёл во всех четырёх
+профилях. Отчёт `TestResults/ARCH1g2-default-delivery-20261118-03/verification.json`,
+SHA256 `C70947FC265947C13D59321F1457FF3DC418CAB051604C0080604946B23ABE35`.
+[Сценарий и контракт](MODEL_BUILD_DELIVERY.md#arch1g2g-model-revisions).
+
+<a id="arch1g2h-2026-11-18"></a>
+## 2026-11-18 — ARCH1g.2h, две статические модели в одной сборке
+
+Version 1.2611.18.7-alpha. `ManualTests/ModelBuildConsumer/Verify.ps1 -MultiModel`
+с EvidenceDirectory `TestResults/ARCH1g2-multi-model-20261118-02` и
+ValidationDirectory `TestResults/EditorWindow-20261104/tools/validation`.
+SHA256 файла `verification.json`
+`1EEE35ECDCEF73A247E63F02F3F050F457584B11FFE670EBAB28740AFB912C3D`.
+
+Source Debug и published Release на Cobalt и Microsoft DI. Свежий закрытый feed
+из 19 пакетов TrueMoon и 32 внешних архивов. В сцену ревизии 42 помещены по два
+экземпляра двух независимых импортов. Изменён внешний BIN красной модели.
+Те же байты сцены и игровой DLL использованы в обеих сборках. Селектор из
+переставленных снимков, эквивалентного снимка и повтора ID дал исходный BuildId.
+Отклонены конфликт ревизий, отсутствующий снимок, пустой список, 33 снимка и
+отмена до запуска. Все четыре снимка удалены после проверок.
+
+В каждом профиле Player трижды запущен после закрытия Nom и перемещения его
+каталога и обоих источников. Красная маска прошла `8753 → 8748 → 8753` пикселя
+с одинаковым исходным и восстановленным хэшами. Зелёная маска содержала 8742
+пикселя с одним SHA256 во всех трёх запусках. Проверены точные ключи обоих мешей,
+штампы GPU-кадров, исходный BuildId при повторном запуске, 12 завершившихся
+Player, Vulkan validation 0/0 и освобождение GPU-ресурсов и дескрипторов.
+
+В Debug и Release прошли Aether Builds/Importing/Rendering/ECS Rendering
+1093/1093 и полный Nom 874/874. Отчёты VSTest в
+`TestResults/ARCH1g2-multi-model-regression-20261118-01`.
+Сценарии с одной моделью ARCH1g.2b и g.2g повторены в тех же четырёх профилях
+Authoring/Player на версии .7. Отчёт
+`TestResults/ARCH1g2-single-model-replay-20261118-01/verification.json`,
+SHA256 `CD6333FF60D27F579C244EE8AEEB492CB7C8134C43E806D9AAA11B61D8D3685F`.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1g2h-multiple-models).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

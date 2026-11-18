@@ -1,8 +1,10 @@
 #Requires -Version 7.2
-[CmdletBinding()]
+[CmdletBinding(DefaultParameterSetName = 'Revisions')]
 param(
     [Parameter(Mandatory)][string]$EvidenceDirectory,
-    [Parameter(Mandatory)][string]$ValidationDirectory
+    [Parameter(Mandatory)][string]$ValidationDirectory,
+    [Parameter(ParameterSetName = 'Revisions')][switch]$RevisionMatrix,
+    [Parameter(ParameterSetName = 'MultiModel')][switch]$MultiModel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,7 +34,7 @@ $feed = "$evidence/feed"
 [void][IO.Directory]::CreateDirectory($feed)
 $report = [ordered]@{
     Completed = $false
-    Stage = 'ARCH1g.2b'
+    Stage = if ($MultiModel) { 'ARCH1g.2h' } elseif ($RevisionMatrix) { 'ARCH1g.2g' } else { 'ARCH1g.2b' }
     Profile = $profile
     Runs = @()
     Packages = @()
@@ -57,16 +59,44 @@ function Test-Consumers([string]$ProfileName, [string]$Authoring, [string]$Runti
     foreach ($provider in @('cobalt', 'microsoft')) {
         $name = "$ProfileName-$provider"
         $directory = "$evidence/$name"
-        Invoke-DotnetStep $name @($Authoring, $provider, $directory, $worker, $Runtime, $dotnet, $profile.TestFramework, $profile.Sdk)
-        $path = "$directory/report.json"
+        $arguments = @($Authoring, $provider, $directory, $worker, $Runtime, $dotnet, $profile.TestFramework, $profile.Sdk)
+        if ($RevisionMatrix) { $arguments += '--revisions' }
+        if ($MultiModel) { $arguments += '--multi-model' }
+        Invoke-DotnetStep $name $arguments
+        $path = if ($MultiModel) { "$directory/multi-model.json" } elseif ($RevisionMatrix) { "$directory/revisions.json" } else { "$directory/report.json" }
         $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-        if (!$proof.Completed -or $proof.Old.Meshes[0].VertexX -ne 1 -or $proof.New.Meshes[0].VertexX -ne 2 -or
+        if ($RevisionMatrix) {
+            if (!$proof.Completed -or $proof.Revisions.AppliedScale -ne 1.5 -or $proof.Revisions.Garbage.ObjectsDeleted -lt 1 -or
+                $proof.Reopened.Mask.Sha256 -ne $proof.Original.Mask.Sha256 -or
+                @($proof.Original.BuildId, $proof.Dependency.BuildId, $proof.Scaled.BuildId | Sort-Object -Unique).Count -ne 3) {
+                throw 'Incomplete model revision or deletion evidence.'
+            }
+            $report.Runs += @{
+                Name = $name; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash
+                SceneSha256 = $proof.SceneSha256
+                Builds = @($proof.Original.BuildId, $proof.Dependency.BuildId, $proof.Scaled.BuildId)
+                Captures = @('old', 'new', 'scaled', 'old-reopened' | ForEach-Object {
+                    @{ Path = "$directory/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$directory/$_.png").Hash }
+                })
+            }
+            continue
+        }
+        if (!$proof.Completed -or
             $proof.Old.Mask.Sha256 -ne $proof.Reopened.Mask.Sha256 -or $proof.Old.Mask.Sha256 -eq $proof.New.Mask.Sha256) {
             throw 'Unexpected GPU geometry report.'
         }
+        if ($MultiModel) {
+            if ($proof.Old.Meshes.Count -ne 2 -or $proof.New.Meshes.Count -ne 2 -or $proof.Old.Mask.GreenPixels -le 100 -or
+                $proof.Old.Mask.GreenSha256 -ne $proof.New.Mask.GreenSha256 -or
+                $proof.Old.Mask.GreenSha256 -ne $proof.Reopened.Mask.GreenSha256) {
+                throw 'Unexpected two-model GPU geometry report.'
+            }
+        } elseif ($proof.Old.Meshes[0].VertexX -ne 1 -or $proof.New.Meshes[0].VertexX -ne 2) {
+            throw 'Unexpected single-model GPU geometry report.'
+        }
         $report.Runs += @{
             Name = $name; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash
-            OldBuild = $proof.OldBuild; NewBuild = $proof.NewBuild; SceneSha256 = $proof.SceneSha256
+            OldBuild = $proof.Old.BuildId; NewBuild = $proof.New.BuildId; SceneSha256 = $proof.SceneSha256
             Captures = @('old', 'new', 'old-reopened' | ForEach-Object {
                 @{ Path = "$directory/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$directory/$_.png").Hash }
             })

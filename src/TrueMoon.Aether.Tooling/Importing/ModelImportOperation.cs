@@ -25,6 +25,8 @@ public sealed class ModelImportOperation : IAsyncDisposable
     internal ModelImportOperation(ModelImportHost host, ModelImportArguments arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments); ArgumentNullException.ThrowIfNull(arguments.Source); ArgumentNullException.ThrowIfNull(arguments.Worker);
+        if (!ModelImportCandidate.IsValidGeometryScale(arguments.GeometryScale))
+            throw new ArgumentOutOfRangeException(nameof(arguments), "Model geometry scale must be finite and positive.");
         if (!Path.IsPathFullyQualified(arguments.ScratchDirectory)) throw new ArgumentException("Absolute scratch directory required.");
         var deadline = arguments.Deadline ?? TimeSpan.FromSeconds(10);
         if (deadline <= TimeSpan.Zero || deadline > TimeSpan.FromSeconds(30)) throw new ArgumentOutOfRangeException(nameof(arguments), "Deadline must be finite and <= 30 seconds.");
@@ -82,7 +84,7 @@ public sealed class ModelImportOperation : IAsyncDisposable
             Volatile.Write(ref _reaped, 1);
             if (_process.ExitCode != 0 || stdout.Replace("\r", "", StringComparison.Ordinal) != "TMIM/1 READY\nTMIM/1 DONE\n" || stderr.Length != 0)
                 throw new InvalidDataException($"Model worker failed (exit {_process.ExitCode}). {stderr}");
-            var result = ModelImportProtocol.ReadOutput(output, _arguments.Source);
+            var result = ModelImportProtocol.ReadOutput(output, _arguments.Source).ScaleGeometry(_arguments.GeometryScale, token);
             await _deployment.RevalidateAsync(token).ConfigureAwait(false); token.ThrowIfCancellationRequested(); return result;
         }
         catch (OperationCanceledException error) when (deadline.IsCancellationRequested && !caller.IsCancellationRequested && !_stop.IsCancellationRequested)

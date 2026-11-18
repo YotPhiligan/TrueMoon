@@ -59,7 +59,7 @@ try
             {
                 Id = binding.Mesh.AssetId, Slot = mesh.Slots.Single().SlotId, Binding = entry.Key.AssetId,
                 Material = material.Key.AssetId, Revision = binding.Mesh.Revision.ToString(),
-                MaximumX = mesh.Bounds.Maximum.X, VertexX = mesh.Vertices[1].X,
+                MaximumX = mesh.Bounds.Maximum.X, VertexX = mesh.Vertices[1].X, VertexY = mesh.Vertices[1].Y,
                 Indices = mesh.Indices.ToArray()
             };
         }).ToArray();
@@ -142,6 +142,8 @@ catch (Exception error)
 static PixelMask Measure(SKBitmap pixels)
 {
     var mask = new byte[checked(pixels.Width * pixels.Height)];
+    var greenMask = new byte[mask.Length];
+    var green = 0;
     var top = 0;
     var bottom = 0;
     var left = pixels.Width;
@@ -150,16 +152,22 @@ static PixelMask Measure(SKBitmap pixels)
     for (var x = 0; x < pixels.Width; x++)
     {
         var color = pixels.GetPixel(x, y);
+        var index = y * pixels.Width + x;
+        if (color.Green > 200 && color.Red < 25 && color.Blue < 25)
+        {
+            greenMask[index] = 1;
+            green++;
+        }
         if (color.Red <= 200 || color.Green >= 25 || color.Blue >= 25) continue;
         left = Math.Min(left, x);
         right = Math.Max(right, x);
         if (y < pixels.Height / 2) top++;
         else bottom++;
-        mask[y * pixels.Width + x] = 1;
+        mask[index] = 1;
     }
     Check(top > 100 && bottom > 100, "Expected both placed model instances in the GPU frame.");
     return new(pixels.Width, pixels.Height, left, right, top + bottom, top, bottom,
-        Convert.ToHexString(SHA256.HashData(mask)));
+        Convert.ToHexString(SHA256.HashData(mask)), green, Convert.ToHexString(SHA256.HashData(greenMask)));
 }
 
 static void Check(bool condition, string message)
@@ -167,5 +175,6 @@ static void Check(bool condition, string message)
     if (!condition) throw new InvalidOperationException(message);
 }
 
-internal sealed record PixelMask(int Width, int Height, int Left, int Right, int RedPixels, int Upper, int Lower, string Sha256);
+internal sealed record PixelMask(int Width, int Height, int Left, int Right, int RedPixels, int Upper, int Lower,
+    string Sha256, int GreenPixels, string GreenSha256);
 internal sealed record Capture(PixelMask Mask, ulong FrameId, ulong Tick, string ManifestHash);

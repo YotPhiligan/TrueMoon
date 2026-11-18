@@ -1543,6 +1543,9 @@ failed/skipped0; narrow19+34. SourceDebug/Cobalt/native Skia raster consumer:
 
 ### ED6b. Build/Play/Stop из редактора — 2026-10-29
 
+Выбор опубликованной сборки в меню проекта и горячий Replace полной сцены
+ведутся в [ARCH1g.2](PLAN.md#arch1g-model-assets).
+
 Начат ED6b.1 по согласованному startup-only выбору Editor/Player. Существующий
 legacy demo Build/Replace и Edit preview не закрывают игровой workflow открытого
 authoring document. Нужен следующий прикладной срез поверх общих engine contracts:

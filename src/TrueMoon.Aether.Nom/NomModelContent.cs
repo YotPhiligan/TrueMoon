@@ -12,6 +12,7 @@ namespace TrueMoon.Aether.Nom;
 public sealed class NomModelContent
 {
     private const int MaximumRoots = 256;
+    private const int MaximumSnapshots = 32;
     internal NomModelContent() { }
 
     /// <summary>Publishes a single model's render resources as an atomic Nom batch and freezes the acknowledged exact revisions.</summary>
@@ -70,34 +71,69 @@ public sealed class NomModelContent
     /// <summary>Reads and validates the exact members of a retained Nom snapshot into detached build input.</summary>
     /// <param name="store">Borrowed project store that owns the snapshot.</param><param name="snapshotId">Exact Nom snapshot ID.</param>
     /// <param name="token">Cooperative cancellation.</param><returns>Build input independent of the store and its leases.</returns>
-    public async Task<GameBuildRenderContent> CaptureAsync(IProjectAssetStore store, string snapshotId,
+    public Task<GameBuildRenderContent> CaptureAsync(IProjectAssetStore store, string snapshotId,
+        CancellationToken token = default) => CaptureSnapshotsAsync(store, [snapshotId], token);
+
+    /// <summary>Combines exact retained snapshots from one project store into a single detached build input.</summary>
+    /// <remarks>Accepts up to 32 snapshot IDs. Repeated identical assets are included once.
+    /// Conflicting versions of the same asset fail capture. Order does not affect the build payload.
+    /// The caller keeps the selected snapshots retained until capture completes.</remarks>
+    /// <param name="store">Borrowed project store that owns all the snapshots.</param>
+    /// <param name="snapshotIds">Exact Nom snapshot IDs to include.</param>
+    /// <param name="token">Cooperative cancellation.</param>
+    /// <returns>Validated build input independent of the store and its leases.</returns>
+    public async Task<GameBuildRenderContent> CaptureSnapshotsAsync(IProjectAssetStore store, IReadOnlyList<string> snapshotIds,
         CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(store);
-        await using var snapshot = await store.OpenSnapshotAsync(snapshotId, token).ConfigureAwait(false);
-        var members = snapshot.Manifest.Members;
-        if (members.Length is < 1 or > MaximumRoots) throw new InvalidDataException("Model render snapshot member budget exceeded.");
-        var entries = new List<RenderAssetEntry>(members.Length);
+        ArgumentNullException.ThrowIfNull(snapshotIds);
+        var count = snapshotIds.Count;
+        if (count is < 1 or > MaximumSnapshots) throw new ArgumentOutOfRangeException(nameof(snapshotIds), "Select 1..32 model render snapshots.");
+        token.ThrowIfCancellationRequested();
+        var selected = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < count; i++) selected.Add(snapshotIds[i]);
+
+        var project = store.ProjectId;
+        var entries = new List<RenderAssetEntry>();
+        var seen = new Dictionary<Guid, (Guid Kind, RenderContentHash Digest, long Length)>();
         long total = 24;
-        foreach (var member in members)
+        foreach (var snapshotId in selected)
         {
             token.ThrowIfCancellationRequested();
-            var maximum = member.KindId == RenderContentProfile.MeshKindId
-                ? RenderContentProfile.MaximumMeshBytes : RenderContentProfile.MaximumSmallAssetBytes;
-            if (member.Length is <= 0 || member.Length > maximum)
-                throw new InvalidDataException("Invalid render snapshot member length.");
-            total += member.Length + 20;
-            if (total > GameBuildRenderContent.MaximumBytes) throw new InvalidDataException("Model render payload exceeds its budget.");
-            await using var input = await snapshot.OpenResourceAsync(member, token).ConfigureAwait(false);
-            var bytes = new byte[(int)member.Length];
-            await input.ReadExactlyAsync(bytes, token).ConfigureAwait(false);
-            var definition = RenderContentCodec.Decode(bytes);
-            if (definition.KindId != member.KindId || definition.Revision != RenderContentHash.Parse(member.Digest))
-                throw new InvalidDataException("Nom member does not match the canonical render resource.");
-            entries.Add(Entry(store.ProjectId, member.AssetId, definition));
+            await using var snapshot = await store.OpenSnapshotAsync(snapshotId, token).ConfigureAwait(false);
+            var members = snapshot.Manifest.Members;
+            if (members.Length is < 1 or > MaximumRoots) throw new InvalidDataException("Model render snapshot member budget exceeded.");
+            foreach (var member in members)
+            {
+                token.ThrowIfCancellationRequested();
+                var maximum = member.KindId == RenderContentProfile.MeshKindId
+                    ? RenderContentProfile.MaximumMeshBytes : RenderContentProfile.MaximumSmallAssetBytes;
+                if (member.Length is <= 0 || member.Length > maximum)
+                    throw new InvalidDataException("Invalid render snapshot member length.");
+                var digest = RenderContentHash.Parse(member.Digest);
+                var identity = (member.KindId, digest, member.Length);
+                if (seen.TryGetValue(member.AssetId, out var previous))
+                {
+                    if (previous != identity)
+                        throw new InvalidDataException($"Conflicting render revisions for asset {member.AssetId:D} in the selected Nom snapshots.");
+                    continue;
+                }
+                if (entries.Count == RenderContentProfile.MaximumManifestEntries)
+                    throw new InvalidDataException("Model render payload exceeds its entry budget.");
+                total += member.Length + 20;
+                if (total > GameBuildRenderContent.MaximumBytes) throw new InvalidDataException("Model render payload exceeds its budget.");
+                await using var input = await snapshot.OpenResourceAsync(member, token).ConfigureAwait(false);
+                var bytes = new byte[(int)member.Length];
+                await input.ReadExactlyAsync(bytes, token).ConfigureAwait(false);
+                var definition = RenderContentCodec.Decode(bytes);
+                if (definition.KindId != member.KindId || definition.Revision != digest)
+                    throw new InvalidDataException("Nom member does not match the canonical render resource.");
+                entries.Add(Entry(project, member.AssetId, definition));
+                seen.Add(member.AssetId, identity);
+            }
         }
         token.ThrowIfCancellationRequested();
-        return new GameBuildRenderContent(store.ProjectId, entries);
+        return new GameBuildRenderContent(project, entries);
     }
 
     private static RenderAssetEntry Entry(Guid project, Guid id, RenderAssetDefinition definition) =>

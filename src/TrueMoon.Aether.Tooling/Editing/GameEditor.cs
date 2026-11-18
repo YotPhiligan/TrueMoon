@@ -80,6 +80,21 @@ public sealed class GameEditor
     public Task<GameBuildResult> SelectBuildAsync(GameBuildArtifact build, CancellationToken token = default)
         => SelectBuildCoreAsync(build, null, token);
 
+    /// <summary>Opens an immutable artifact by BuildId in the configured build directory or by an absolute artifact directory.</summary>
+    public GameBuildArtifact OpenPublishedBuild(string selection)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(selection);
+        selection = selection.Trim();
+        if (selection.Length == 64 && selection.All(Uri.IsHexDigit))
+        {
+            var id = selection.ToUpperInvariant();
+            return GameBuildArtifact.Open(Path.Combine(_builds.ArtifactRoot, id), _hostId, id);
+        }
+        if (!Path.IsPathFullyQualified(selection))
+            throw new InvalidDataException("Укажите BuildId или абсолютный путь к папке опубликованной сборки.");
+        return GameBuildArtifact.Open(selection, _hostId);
+    }
+
     /// <summary>Explicitly selects a published artifact for the exact authoring context.</summary>
     /// <param name="build">Previously published artifact.</param>
     /// <param name="expectedContextVersion">Context observed before selection.</param>

@@ -54,6 +54,10 @@ OBJ, FBX, embedded data URIs and other formats is outside this recipe.
 
 - Coordinates: right-handed, +Y up, meters. No winding, handedness or unit conversion.
   Assimp column matrices are transposed to System.Numerics row matrices; world = local × parent.
+  The parent can scale local mesh positions through `ModelImportArguments.GeometryScale`.
+  The default is one. The setting must be finite and positive. Bounds scale with
+  positions, instance matrices retain their authored coordinates, and the result
+  passes the mesh validators.
 - Only static triangle primitives. No explicit post-process triangulation, vertex joining,
   normal generation, mesh optimization or transform baking. Assimp may normalize its
   imported vertex/index representation. The CPU mesh retains local positions/indices;
@@ -74,7 +78,10 @@ OBJ, FBX, embedded data URIs and other formats is outside this recipe.
 
 Candidate-local mesh/material indices have no persistence meaning. `SourceId` remains
 caller-supplied, `InputRevision` identifies captured bytes, and `Revision` hashes input
-identity, recipe, semantic hints and canonical CPU bytes. CPU candidates are not RenderContentManifest/AssetKey values.
+identity, recipe, semantic hints, applied scale and canonical CPU bytes. The
+worker emits the v2 candidate packet. The ledger stores nondefault scale in a
+v3 candidate packet and also reads existing v2 records with scale one.
+CPU candidates are not RenderContentManifest/AssetKey values.
 Persistent subasset IDs and atomic ledger publication are provided by [g.1c](MODEL_SUBASSET_LEDGER.md);
 Nom/build/runtime integration remains **g.2**. In the child only, name fields are replaced
 by checked transport tags in a derived captured JSON/GLB. Original InputRevision and BIN

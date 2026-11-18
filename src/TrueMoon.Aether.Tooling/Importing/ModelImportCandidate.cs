@@ -8,11 +8,13 @@ namespace TrueMoon.Aether.Tooling.Importing;
 public sealed class ModelImportCandidate
 {
     internal ModelImportCandidate(Guid sourceId, string inputRevision, IEnumerable<ModelImportMesh> meshes,
-        IEnumerable<OpaqueUnlitMaterialDefinition> materials, IEnumerable<ModelImportInstance> instances, ModelImportSemantics? semantics = null)
+        IEnumerable<OpaqueUnlitMaterialDefinition> materials, IEnumerable<ModelImportInstance> instances, ModelImportSemantics? semantics = null,
+        float geometryScale = 1)
     {
         if (sourceId == Guid.Empty || inputRevision.Length != 64 || !inputRevision.All(Uri.IsHexDigit))
             throw new InvalidDataException("Invalid model input identity.");
-        SourceId = sourceId; InputRevision = inputRevision;
+        if (!IsValidGeometryScale(geometryScale)) throw new InvalidDataException("Model geometry scale must be finite and positive.");
+        SourceId = sourceId; InputRevision = inputRevision; GeometryScale = geometryScale;
         Meshes = Array.AsReadOnly(meshes.Take(65).ToArray());
         Materials = Array.AsReadOnly(materials.Take(129).ToArray());
         Instances = Array.AsReadOnly(instances.Take(4097).ToArray());
@@ -45,7 +47,9 @@ public sealed class ModelImportCandidate
     public Guid SourceId { get; }
     /// <summary>Exact captured-input fingerprint.</summary>
     public string InputRevision { get; }
-    /// <summary>SHA256 of canonical CPU candidate bytes and recipe; not a persistent subasset ID.</summary>
+    /// <summary>Scale already applied to local mesh geometry. One is the native worker's output.</summary>
+    public float GeometryScale { get; }
+    /// <summary>SHA256 of canonical CPU candidate bytes, recipe and applied scale; not a persistent subasset ID.</summary>
     public string Revision { get; }
     /// <summary>Validated immutable geometry and candidate-local material links.</summary>
     public IReadOnlyList<ModelImportMesh> Meshes { get; }
@@ -55,6 +59,27 @@ public sealed class ModelImportCandidate
     public IReadOnlyList<ModelImportInstance> Instances { get; }
     /// <summary>Authored identity hints; ambiguous/missing hints do not prevent CPU-only import.</summary>
     public ModelImportSemantics Semantics { get; }
+
+    internal static bool IsValidGeometryScale(float value) => float.IsFinite(value) && value > 0;
+
+    internal ModelImportCandidate ScaleGeometry(float scale, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (scale == 1) return this;
+        var scaled = new ModelImportMesh[Meshes.Count];
+        for (var i = 0; i < scaled.Length; i++)
+        {
+            token.ThrowIfCancellationRequested();
+            var mesh = Meshes[i];
+            var geometry = mesh.Geometry;
+            var vertices = new Vector3[geometry.Vertices.Length];
+            for (var vertex = 0; vertex < vertices.Length; vertex++) vertices[vertex] = geometry.Vertices[vertex] * scale;
+            var bounds = new RenderBounds(geometry.Bounds.Minimum * scale, geometry.Bounds.Maximum * scale);
+            scaled[i] = new(new MeshDefinition(vertices, geometry.Indices, geometry.Slots, bounds), mesh.MaterialIndex);
+        }
+        token.ThrowIfCancellationRequested();
+        return new(SourceId, InputRevision, scaled, Materials, Instances, Semantics, scale);
+    }
 }
 
 /// <summary>One triangle mesh; MaterialIndex addresses this candidate only.</summary>

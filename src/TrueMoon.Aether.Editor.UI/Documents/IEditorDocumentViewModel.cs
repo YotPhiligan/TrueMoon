@@ -29,6 +29,12 @@ public interface IEditorDocumentViewModel : System.ComponentModel.INotifyPropert
     /// <summary>Close/retry project cleanup admission.</summary>
     bool CanCloseProject { get; }
 
+    /// <summary>Whether this host supports choosing a published artifact for the open scene.</summary>
+    bool SupportsPublishedBuilds => false;
+
+    /// <summary>Whether choosing a published artifact for the current context is available.</summary>
+    bool CanOpenBuild => false;
+
     /// <summary>Gets/sets a separate untitled-save path while deciding a transition.</summary>
     string SavePathDraft { get; set; }
 
