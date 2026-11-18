@@ -38,7 +38,9 @@ public sealed class GameEditor
     public void SetContext(GameEditorContext context)
     {
         ArgumentNullException.ThrowIfNull(context); ArgumentNullException.ThrowIfNull(context.Build);
-        ArgumentNullException.ThrowIfNull(context.Scene); ArgumentNullException.ThrowIfNull(context.Selection);
+        ArgumentNullException.ThrowIfNull(context.Selection);
+        if ((context.Scene == null) == (context.World == null))
+            throw new ArgumentException("Provide exactly one game scene payload.", nameof(context));
         var build = context.Build;
         ArgumentException.ThrowIfNullOrWhiteSpace(build.ProjectPath); ArgumentException.ThrowIfNullOrWhiteSpace(build.EntryType);
         if (build.SourceRevision < 0) throw new ArgumentOutOfRangeException(nameof(context));
@@ -76,12 +78,26 @@ public sealed class GameEditor
 
     /// <summary>Explicitly selects a previously published build for the current context and runtime.</summary>
     public Task<GameBuildResult> SelectBuildAsync(GameBuildArtifact build, CancellationToken token = default)
+        => SelectBuildCoreAsync(build, null, token);
+
+    /// <summary>Explicitly selects a published artifact for the exact authoring context.</summary>
+    /// <param name="build">Previously published artifact.</param>
+    /// <param name="expectedContextVersion">Context observed before selection.</param>
+    /// <param name="token">Selection cancellation.</param>
+    /// <returns>The validated candidate.</returns>
+    public Task<GameBuildResult> SelectBuildForContextAsync(GameBuildArtifact build, long expectedContextVersion, CancellationToken token = default)
+    {
+        if (expectedContextVersion < 0) throw new ArgumentOutOfRangeException(nameof(expectedContextVersion));
+        return SelectBuildCoreAsync(build, expectedContextVersion, token);
+    }
+
+    private Task<GameBuildResult> SelectBuildCoreAsync(GameBuildArtifact build, long? expectedContextVersion, CancellationToken token)
         => Run(GameEditorOperation.Select, command =>
         {
             ArgumentNullException.ThrowIfNull(build);
             var validated = GameBuildArtifact.Open(build.DirectoryPath, _hostId, build.BuildId);
             Select(command, validated); return Task.FromResult(new GameBuildResult(validated));
-        }, token, clearCandidate: true);
+        }, token, clearCandidate: true, expectedVersion: expectedContextVersion);
 
     private void Select(Command command, GameBuildResult build)
     {
@@ -113,11 +129,14 @@ public sealed class GameEditor
     private Task StartCoreAsync(int width, int height, long? expectedVersion, CancellationToken token)
         => Run(GameEditorOperation.Start, async command =>
         {
-            var candidate = Candidate(command, required: expectedVersion.HasValue);
+            var world = command.Context.World;
+            var candidate = Candidate(command, required: expectedVersion.HasValue || world != null);
             await VerifyCandidateAsync(command, candidate).ConfigureAwait(false);
             lock (_gate) CheckCurrent(command);
-            if (candidate == null) await _frames.StartAsync(command.Context.Scene, width, height, token: command.Cancellation.Token).ConfigureAwait(false);
-            else await _frames.StartAsync(command.Context.Scene, candidate.Build, width, height, token: command.Cancellation.Token).ConfigureAwait(false);
+            var cancellationToken = command.Cancellation.Token;
+            if (world != null) await _frames.StartWorldAsync(world, candidate!.Build, width, height, token: cancellationToken).ConfigureAwait(false);
+            else if (candidate == null) await _frames.StartAsync(command.Context.Scene!, width, height, token: cancellationToken).ConfigureAwait(false);
+            else await _frames.StartAsync(command.Context.Scene!, candidate.Build, width, height, token: cancellationToken).ConfigureAwait(false);
             lock (_gate) if (_status.ContextVersion == command.Version) _status = _status with { Candidate = null };
             return true;
         }, token, expectedVersion: expectedVersion);
@@ -139,11 +158,12 @@ public sealed class GameEditor
     private Task<GameReplacementResult> ReplaceCoreAsync(long? expectedVersion, CancellationToken token)
         => Run(GameEditorOperation.Replace, async command =>
         {
+            var scene = command.Context.Scene ?? throw new InvalidOperationException("Full scene playback requires Stop before switching builds.");
             var candidate = Candidate(command, required: true)!;
             var identity = command.Origin ?? throw new InvalidOperationException("No originating runtime to replace.");
             await VerifyCandidateAsync(command, candidate).ConfigureAwait(false);
             lock (_gate) CheckCurrent(command);
-            var result = await _replacement.ReplaceAsync(new(candidate.Build, identity, command.Context.Scene,
+            var result = await _replacement.ReplaceAsync(new(candidate.Build, identity, scene,
                 command.Context.Build.SourceRevision), command.Cancellation.Token).ConfigureAwait(false);
             lock (_gate) if (_status.ContextVersion == command.Version) _status = _status with { Candidate = null };
             return result;

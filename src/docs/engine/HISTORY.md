@@ -15657,6 +15657,35 @@ readiness — 1155/1155, полный Player — 17/17 в Debug и Release. Ош
 нет. TRX и binlogs в `TestResults/ARCH1g2b-regression-20261118-01`.
 [Контракт и воспроизведение](MODEL_BUILD_DELIVERY.md#arch1g2b-scene-gpu).
 
+<a id="arch1g2c-2026-11-18"></a>
+## 2026-11-18 — ARCH1g.2c, выбор сборки в Editor
+
+Version 1.2611.18.3-alpha, baseline f5a950e. `EditorScenePlayback.RunSelectedBuild`
+использует активный проект и полный immutable документ, exact-версию контекста
+и выбранный BuildId. Работает поверх обычного admission и Stop/cleanup Editor.
+Горячая замена для полной сцены остаётся отдельным шагом.
+
+`ManualTests/ModelBuildConsumer/VerifyEditor.ps1` выполнен с EvidenceDirectory
+`TestResults/ARCH1g2-editor-20261118-03` и ValidationDirectory
+`TestResults/EditorWindow-20261104/tools/validation`. Source Debug и published
+Release на Cobalt и Microsoft DI в родительском Editor. Runtime-child использует
+стандартную конфигурацию AetherEditorHost. SHA256 `verification.json`
+`C079FD969DFFE2BE17575063FC4067D3594C4602D35004F01833E1AFAE81721D`.
+
+Во всех 4 профилях один Editor открыл `placed.aetherscene` и сделал
+old → Stop → new → Stop → old → Stop. Штампы фактически представленных GPU-кадров
+сверены с SceneId, revision и digest каждого манифеста. Маски 25 096 → 50 422
+→ 25 096 красных пикселей на области 1644×925. Совпали хэш первой и повторной
+старой маски и хэш файла сцены до и после всех запусков. Подготовка импорта и
+артефактов выполнялась до открытия Editor. В самом Editor выбранный артефакт
+использовался без компиляции и загрузки игровой DLL в родительский процесс.
+Все 12 Runtime-процессов завершены и reaped. После Stop нет живого viewport,
+GPU-ресурсов и открытых handles. Vulkan validation 0/0.
+
+Целевые Aether 176/176 и Editor 367/367 в обеих конфигурациях. Ошибок и
+пропусков нет. TRX и binlogs в `TestResults/ARCH1g2-editor-regression-20261118-01`.
+[Контракт и воспроизведение](MODEL_BUILD_DELIVERY.md#arch1g2c-editor-builds).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

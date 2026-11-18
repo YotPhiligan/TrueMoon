@@ -1,12 +1,11 @@
 # TrueMoon: общий статус
 
-**2026-11-18 — ARCH1g.2b**, version **1.2611.18.2-alpha**. Нативный Player
-открывает одну сцену с импортированной моделью на старой и новой сборках.
-После реимпорта GPU-кадр новой сборки показывает изменённую геометрию, старая
-сборка при повторном открытии воспроизводит прежнюю. ID сохранены.
-[Контракт](engine/MODEL_BUILD_DELIVERY.md#arch1g2b-scene-gpu).
+**2026-11-18 — ARCH1g.2c**, version **1.2611.18.3-alpha**. Полная сцена с
+импортированной моделью запускается на выбранном BuildId в Editor. Проверены
+оба артефакта и возврат к старой геометрии в одном окне с освобождением дочерних
+сессий и GPU-ресурсов между запусками. [Контракт](engine/MODEL_BUILD_DELIVERY.md#arch1g2c-editor-builds).
 
-Пройдены четыре профиля source Debug / fresh published Release × Cobalt /
-Microsoft DI. Далее расширенная матрица g.2 по выбору сборки и жизненному циклу.
+Пройдены четыре профиля source Debug / published Release × Cobalt / Microsoft DI
+в Editor. Далее выбор из UI, reload/Replace и отдельный fresh package Editor.
 Физические проверки PHYS8, ED/AUD и release gates ведутся в планах владельцев.
-[Проверки g.2b](engine/HISTORY.md#arch1g2b-2026-11-18).
+[Проверки g.2c](engine/HISTORY.md#arch1g2c-2026-11-18).

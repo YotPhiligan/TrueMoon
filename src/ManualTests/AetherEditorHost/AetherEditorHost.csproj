@@ -11,6 +11,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="TrueMoon.Aether.Editor.Tests" />
     <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
+    <ProjectReference Include="../../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="../../TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj" />
   </ItemGroup>
   <ItemGroup>

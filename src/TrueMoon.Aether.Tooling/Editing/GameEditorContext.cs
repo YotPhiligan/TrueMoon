@@ -1,10 +1,15 @@
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Tooling.Builds;
 
 namespace TrueMoon.Aether.Tooling.Editing;
 
 /// <summary>Explicit authoring inputs. Setting a context snapshots inputs and invalidates the previous candidate.</summary>
-public sealed record GameEditorContext(GameBuildRequest Build, SceneSnapshot Scene, string Selection);
+public sealed record GameEditorContext(GameBuildRequest Build, SceneSnapshot? Scene, string Selection)
+{
+    /// <summary>Optional full scene payload, exclusive with the legacy primitive scene.</summary>
+    public SceneWorldData? World { get; init; }
+}
 
 /// <summary>One serialized Editor command; Stop can interrupt any other command.</summary>
 public enum GameEditorOperation

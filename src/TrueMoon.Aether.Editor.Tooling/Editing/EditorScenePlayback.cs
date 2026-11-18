@@ -1,6 +1,8 @@
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.UI;
+using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Scenes;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Tooling.Documents;
@@ -25,6 +27,7 @@ public sealed class EditorScenePlayback
     private readonly Func<EditorCommand, CancellationToken, Task> _dispatch;
     private readonly Func<long, CancellationToken, Task> _start;
     private readonly Func<long, CancellationToken, Task> _replace;
+    private readonly Func<GameBuildArtifact, long, CancellationToken, Task>? _selectBuild;
     private readonly CancellationToken _lifetime;
     private readonly Task _ready;
     private CancellationTokenSource? _cancellation;
@@ -32,6 +35,7 @@ public sealed class EditorScenePlayback
     private Task? _interrupt;
     private Exception? _error;
     private bool _ownsRuntime;
+    private bool _runningSelectedBuild;
     private ProjectSession? _runningProject;
     private SceneAuthoringState? _runningContent;
     private SessionIdentity? _runningIdentity;
@@ -45,12 +49,13 @@ public sealed class EditorScenePlayback
         Func<SessionStatus> runtime, Task ready, CancellationToken lifetime = default)
         : this(documents, preview, runtime, () => editor.Status, (editor ?? throw new ArgumentNullException(nameof(editor))).SetContext, EditorCommands.Dispatch(editor, ready),
             (version, token) => editor.StartBuildAsync(960, 540, version, token), lifetime, ready,
-            (version, token) => editor.ReplaceBuildAsync(version, token)) { }
+            (version, token) => editor.ReplaceBuildAsync(version, token),
+            (build, version, token) => editor.SelectBuildForContextAsync(build, version, token)) { }
 
     internal EditorScenePlayback(EditorDocumentCommands documents, EditorPreview preview, Func<SessionStatus> runtime,
         Func<GameEditorStatus> editor, Action<GameEditorContext> setContext,
         Func<EditorCommand, CancellationToken, Task> dispatch, Func<long, CancellationToken, Task> start, CancellationToken lifetime = default, Task? ready = null,
-        Func<long, CancellationToken, Task>? replace = null)
+        Func<long, CancellationToken, Task>? replace = null, Func<GameBuildArtifact, long, CancellationToken, Task>? selectBuild = null)
     {
         ArgumentNullException.ThrowIfNull(documents); ArgumentNullException.ThrowIfNull(preview); ArgumentNullException.ThrowIfNull(runtime);
         ArgumentNullException.ThrowIfNull(editor); ArgumentNullException.ThrowIfNull(setContext); ArgumentNullException.ThrowIfNull(dispatch); ArgumentNullException.ThrowIfNull(start);
@@ -58,6 +63,7 @@ public sealed class EditorScenePlayback
         _dispatch = dispatch; _start = start; _lifetime = lifetime;
         _ready = ready ?? Task.CompletedTask;
         _replace = replace ?? ((_, token) => dispatch(EditorCommand.Replace, token));
+        _selectBuild = selectBuild;
     }
 
     /// <summary>Actual completion of scene work or an interrupt, including compiler/runtime drain.</summary>
@@ -94,7 +100,7 @@ public sealed class EditorScenePlayback
                 EditorCommand.Play => _ownsRuntime && runtime.State == SessionState.Paused,
                 EditorCommand.Pause => _ownsRuntime && runtime.State == SessionState.Playing,
                 EditorCommand.Step => _ownsRuntime && runtime.State == SessionState.Paused,
-                EditorCommand.Replace => _ownsRuntime && runtime.State is SessionState.Paused or SessionState.Playing &&
+                EditorCommand.Replace => _ownsRuntime && !_runningSelectedBuild && runtime.State is SessionState.Paused or SessionState.Playing &&
                     runtime.Identity == _runningIdentity && _runningIdentity != null &&
                     ReferenceEquals(document.Project, _runningProject) && ReferenceEquals(document.Document.Content, _runningContent),
                 _ => false
@@ -109,7 +115,17 @@ public sealed class EditorScenePlayback
     /// <returns>True only if admitted.</returns>
     public bool RunSimulation() => CanExecute(EditorCommand.Play) ? Execute(EditorCommand.Play) : Execute(EditorCommand.Start, true);
 
-    private bool Execute(EditorCommand command, bool play)
+    /// <summary>Starts and plays the current full scene on a specifically selected immutable build.</summary>
+    /// <remarks>Uses current authoring revision and the ordinary Start/Stop admission. Stop before selecting another build.</remarks>
+    /// <param name="build">Published build for the active project and this Editor's runtime host.</param>
+    /// <returns>True only if the command was admitted. Inspect Pending and Error for the result.</returns>
+    public bool RunSelectedBuild(GameBuildArtifact build)
+    {
+        ArgumentNullException.ThrowIfNull(build);
+        return Execute(EditorCommand.Start, true, build);
+    }
+
+    private bool Execute(EditorCommand command, bool play, GameBuildArtifact? selectedBuild = null)
     {
         lock (_gate)
         {
@@ -139,24 +155,34 @@ public sealed class EditorScenePlayback
             {
                 if (command is not (EditorCommand.Build or EditorCommand.Start or EditorCommand.Replace))
                 { await _dispatch(command, token).ConfigureAwait(false); return; }
-                var scene = PrimitiveSceneAdapter.Project(content.Resolved, token);
+                var scene = selectedBuild == null ? PrimitiveSceneAdapter.Project(content.Resolved, token) : null;
+                var world = selectedBuild == null ? null : new SceneWorldData(content.Document);
+                if (selectedBuild?.RenderContent is { } manifest && manifest.ProjectId != project.Project.Description.Id)
+                    throw new InvalidDataException("Selected render content belongs to another project.");
                 var replacing = command == EditorCommand.Replace;
                 var origin = _runtime().Identity;
                 if (!replacing) await _preview.StopAsync().ConfigureAwait(false);
                 VerifyCapture(project, content, token);
                 if (replacing) VerifyRunning(project, content, origin, token);
                 else if (_runtime().State != SessionState.Stopped) throw new InvalidOperationException("Stop the previous runtime before starting a scene game.");
-                var revision = Interlocked.Increment(ref _revision);
-                _setContext(new(project.CreateBuildRequest(revision) with { TrackInputs = true, CaptureCompilation = true, CapturePreparation = true,
-                    CaptureProjectReferences = true, ReuseArtifact = command == EditorCommand.Start }, scene, ""));
+                var revision = selectedBuild?.SourceRevision ?? Interlocked.Increment(ref _revision);
+                var request = project.CreateBuildRequest(revision);
+                if (selectedBuild == null)
+                    request = request with { TrackInputs = true, CaptureCompilation = true, CapturePreparation = true,
+                        CaptureProjectReferences = true, ReuseArtifact = command == EditorCommand.Start };
+                _setContext(new(request, scene, "") { World = world });
                 var selected = _editor();
-                if (!ReferenceEquals(selected.Context?.Scene, scene) || selected.Context.Build.SourceRevision != revision)
-                    throw new OperationCanceledException("Game context was superseded before compilation.", token);
+                if (selected.Context is not { } context || !ReferenceEquals(context.Scene, scene) ||
+                    !ReferenceEquals(context.World, world) || context.Build.SourceRevision != revision)
+                    throw new OperationCanceledException("Game context was superseded during game preparation.", token);
                 var version = selected.ContextVersion;
-                await _dispatch(EditorCommand.Build, token).ConfigureAwait(false);
+                if (selectedBuild == null)
+                    await _dispatch(EditorCommand.Build, token).ConfigureAwait(false);
+                else
+                    await (_selectBuild ?? throw new InvalidOperationException("Artifact selection is unavailable."))(selectedBuild, version, token).ConfigureAwait(false);
                 VerifyCapture(project, content, token);
                 var built = _editor();
-                if (built.ContextVersion == version && ReferenceEquals(built.Context?.Scene, scene) &&
+                if (selectedBuild == null && built.ContextVersion == version && ReferenceEquals(built.Context?.Scene, scene) &&
                     built.Candidate is { } candidate && candidate.ContextVersion == version)
                     project.BindSourceBuild(candidate.Build);
                 if (command == EditorCommand.Build) return;
@@ -179,7 +205,11 @@ public sealed class EditorScenePlayback
                 try
                 {
                     await startup.ConfigureAwait(false); token.ThrowIfCancellationRequested();
-                    lock (_gate) { _runningProject = project; _runningContent = content; _runningIdentity = _runtime().Identity; }
+                    lock (_gate)
+                    {
+                        _runningProject = project; _runningContent = content; _runningIdentity = _runtime().Identity;
+                        _runningSelectedBuild = selectedBuild != null;
+                    }
                     if (play) await _dispatch(EditorCommand.Play, token).ConfigureAwait(false);
                 }
                 catch (Exception failure)

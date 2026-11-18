@@ -1,8 +1,12 @@
 # TrueMoon: общий план развития
 
+Выполнено 2026-11-18 [ARCH1g.2c](engine/PLAN.md#arch1g2c-model-editor-builds).
+Один Editor запускает открытую сцену с обеими сборками через Stop/Start
+и показывает геометрию каждого BuildId на GPU.
+
 Выполнено 2026-11-18 [ARCH1g.2b](engine/PLAN.md#arch1g2b-model-scene-gpu).
 Одна сцена с импортированной моделью показывает точную геометрию выбранной сборки
-в Player на GPU. Далее расширенная матрица выбора ассетов и жизненного цикла.
+в Player на GPU.
 
 Выполнено 2026-11-18: [ARCH1g.2a](engine/PLAN.md#arch1g2a-model-delivery),
 Version1.2611.18.1-alpha. Одна модель проходит Nom → Build → Runtime.

@@ -22,7 +22,9 @@ using TrueMoon.Dependencies;
 using TrueMoon.Extensions.DependencyInjection;
 using TrueMoon.Nom;
 
-if (args.Length != 7 || args[0] is not ("microsoft" or "cobalt")) return 2;
+if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
+    args.Length == 8 && args[7] != "--editor") return 2;
+var editorProbe = args.Length == 8;
 var evidence = Path.GetFullPath(args[1]);
 if (Directory.Exists(evidence)) throw new IOException("Use a fresh output directory.");
 Directory.CreateDirectory(evidence);
@@ -234,6 +236,24 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
 // Only the artifact copies are supplied to Runtime. Rename the closed store and the source directory.
 Directory.Move(storeDirectory, storeDirectory + "-offline");
 Directory.Move(sourceDirectory, sourceDirectory + "-offline");
+if (editorProbe)
+{
+    var scenes = Directory.CreateDirectory(Path.Combine(evidence, "Scenes"));
+    Directory.CreateDirectory(Path.Combine(evidence, "Content"));
+    var scene = Path.Combine(scenes.FullName, Path.GetFileName(scenePath));
+    File.Move(scenePath, scene);
+    var manifest = Path.Combine(evidence, "Delivery.aetherproj");
+    File.WriteAllText(manifest, JsonSerializer.Serialize(new
+    {
+        formatVersion = 1, id = projectId, name = "Imported model delivery",
+        gameProject = "game/DeliveryGame.csproj", entryAssembly = "DeliveryGame.dll", entryType = "DeliveryGame.Entry",
+        scenesRoot = "Scenes", contentRoot = "Content"
+    }));
+    var result = await RunChild("editor", [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene,
+        oldBuild.DirectoryPath, newBuild.DirectoryPath], TimeSpan.FromSeconds(120));
+    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, "editor-model.json")), result.Error);
+    return 0;
+}
 var oldProof = await ReadBuild(oldBuild, "old");
 var newProof = await ReadBuild(newBuild, "new");
 var reopenedProof = await ReadBuild(oldBuild, "old-reopened");
@@ -292,21 +312,25 @@ async Task<JsonElement> ReadBuild(GameBuildResult build, string name)
     return document.RootElement.Clone();
 }
 
-async Task<(int ExitCode, string Error)> RunRuntime(string directory, string buildId, string name)
+Task<(int ExitCode, string Error)> RunRuntime(string directory, string buildId, string name) =>
+    RunChild(name, [runtimeAssembly, args[0], directory, buildId, hostId, Path.Combine(evidence, name + ".json"), scenePath],
+        TimeSpan.FromSeconds(90));
+
+async Task<(int ExitCode, string Error)> RunChild(string name, string[] arguments, TimeSpan timeout)
 {
     var info = new ProcessStartInfo(dotnet)
     {
         UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
         WorkingDirectory = evidence
     };
-    foreach (var argument in new[] { runtimeAssembly, args[0], directory, buildId, hostId, Path.Combine(evidence, name + ".json"), scenePath })
+    foreach (var argument in arguments)
         info.ArgumentList.Add(argument);
     using var child = Process.Start(info) ?? throw new IOException("Runtime child could not start.");
     var stdout = child.StandardOutput.ReadToEndAsync();
     var stderr = child.StandardError.ReadToEndAsync();
     try
     {
-        await child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(90));
+        await child.WaitForExitAsync().WaitAsync(timeout);
     }
     finally
     {

@@ -26,4 +26,20 @@ pixels while keeping its left edge. A fourth process rejects a copy with an
 altered render payload. The evidence directory retains the PNGs, measurements,
 build/snapshot IDs, validation counters, package hashes and logs.
 
+## Editor switching
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 `
+  -EvidenceDirectory 'TestResults/ModelBuildEditor/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The Editor probe reuses the imported scene and builds. A single full Editor
+window opens the scene and drives the published-build selection API for
+old, new, and old again, with Stop between starts. It checks Play after
+presentation, each child's BuildId, the scene and manifest stamp, PNG geometry,
+and that Stop reaps the child and releases the viewport. It repeats the
+sequence in source Debug and published Release with Cobalt and Microsoft DI
+in the Editor host.
+
 [Contract and ownership](../../docs/engine/MODEL_BUILD_DELIVERY.md)

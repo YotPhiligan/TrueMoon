@@ -33,6 +33,7 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 и [g.1c persistent IDs/atomic ledger](#arch1g1c-subasset-ledger). Ограниченный CPU g.1 завершён;
 [ARCH1g.2a](#arch1g2a-model-delivery) провёл одну модель через Nom → Build → Runtime.
 [ARCH1g.2b](#arch1g2b-model-scene-gpu) разместил её в сцене и проверил обе сборки на GPU.
+[ARCH1g.2c](#arch1g2c-model-editor-builds) проверил смену сборок в одном Editor через Stop/Start.
 
 <a id="arch1j-session-subsystems"></a>
 ### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
@@ -1906,8 +1907,19 @@ Runtime открывает проверенный CPU render scope выбран�
 Release на обоих DI. [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2b-scene-gpu),
 [проверки](HISTORY.md#arch1g2b-2026-11-18).
 
-Далее расширенная матрица выбора ассетов и жизненного цикла по критериям ARCH1g.2,
-включая переключение сборки в Editor и владение при reload/replace.
+<a id="arch1g2c-model-editor-builds"></a>
+#### ARCH1g.2c — смена выбранной сборки в Editor через Stop/Start
+
+Завершён 18.11.2026. API Editor запускает полный открытый документ на точном
+опубликованном BuildId. В одном Editor проверена последовательность старая
+сборка → Stop → новая → Stop → старая. GPU-кадры имеют штамп соответствующего
+манифеста, каждый Stop освобождает runtime child и viewport. Документ
+сохраняет ту же ревизию. [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2c-editor-builds),
+[проверки](HISTORY.md#arch1g2c-2026-11-18).
+
+Следующие задачи ARCH1g.2 — интерактивный выбор артефакта, reload/Replace
+полной сцены с отменой, откатом и освобождением ресурсов, затем приёмка
+пути Editor на свежих пакетах.
 
 <a id="arch1h-audio"></a>
 ### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07
