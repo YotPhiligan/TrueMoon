@@ -127,14 +127,14 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                     RequireReady();
                     if (_playing) throw new InvalidOperationException("Checkpoint capture requires Paused.");
                     var beforeTick = game.TickNumber; var beforeRevision = game.Revision;
-                    if (_scene == null || game is not ICheckpointGameSession captureGame) checkpointOutcome = CheckpointOutcome.Unsupported;
+                    if (CheckpointScene is not { } captureScene || game is not ICheckpointGameSession captureGame) checkpointOutcome = CheckpointOutcome.Unsupported;
                     else
                     {
                         try
                         {
                             var state = captureGame.CaptureCheckpoint();
                             if (state == null || state.Tick != beforeTick) throw new InvalidDataException("Capture returned an incoherent tick.");
-                            checkpoint = GameCheckpointCodec.Encode(new(identity.HostContractId, identity.GameBuildId, _scene!.Id, _scene.Revision, state));
+                            checkpoint = GameCheckpointCodec.Encode(new(identity.HostContractId, identity.GameBuildId, captureScene.Id, captureScene.Revision, state));
                             checkpointOutcome = CheckpointOutcome.Captured;
                         }
                         catch (CheckpointRejectedException error) when (error.Outcome is CheckpointOutcome.CaptureRejected or CheckpointOutcome.Unsupported)
@@ -147,14 +147,14 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                 case CommandKind.RestoreCheckpoint:
                     RequireScene();
                     if (!_awaitingRestore || _playing || _surfaceGeneration != 0) throw new InvalidOperationException("Restore is only valid before fresh runtime readiness.");
-                    if (game is not ICheckpointGameSession restoreGame) checkpointOutcome = CheckpointOutcome.Unsupported;
+                    if (CheckpointScene is not { } restoreScene || game is not ICheckpointGameSession restoreGame) checkpointOutcome = CheckpointOutcome.Unsupported;
                     else
                     {
                         GameCheckpoint? restored = null;
                         try
                         {
                             restored = GameCheckpointCodec.Decode(request.Checkpoint ?? throw new InvalidDataException("Missing checkpoint."));
-                            restored.ValidateFor(identity.HostContractId, _scene!);
+                            restored.ValidateFor(identity.HostContractId, restoreScene.Id, restoreScene.Revision);
                         }
                         catch (InvalidDataException) { checkpointOutcome = CheckpointOutcome.RestoreRejected; }
                         if (restored != null && checkpointOutcome == CheckpointOutcome.None)
@@ -164,7 +164,7 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
                             { checkpointOutcome = CheckpointOutcome.RestoreRejected; }
                             if (checkpointOutcome == CheckpointOutcome.None)
                             {
-                                if (game.Revision != _scene!.Revision || game.TickNumber != restored.State.Tick || restoreGame.CaptureCheckpoint() != restored.State)
+                                if (game.Revision != restoreScene.Revision || game.TickNumber != restored.State.Tick || restoreGame.CaptureCheckpoint() != restored.State)
                                     throw new InvalidDataException("Restore did not apply the complete state.");
                                 _input.Clear(); _awaitingRestore = false; checkpointOutcome = CheckpointOutcome.Restored;
                             }
@@ -194,6 +194,9 @@ public sealed partial class RuntimeProtocol(SessionIdentity identity, IGameSessi
         }
         finally { _worldSerial.Release(); }
     }
+    private (string Id, long Revision)? CheckpointScene => _scene is { } primitive
+        ? (primitive.Id, primitive.Revision)
+        : SceneGame?.ActiveScene?.Scene is { } world ? (world.Id.Value.ToString("D"), world.Revision) : null;
     private void RequireScene() { if (!_loaded) throw new InvalidOperationException("Scene required."); }
     private void RequireReady()
     {

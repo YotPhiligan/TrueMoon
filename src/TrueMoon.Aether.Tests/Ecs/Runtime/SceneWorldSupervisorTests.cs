@@ -47,11 +47,14 @@ public sealed class SceneWorldSupervisorTests
         Assert.Equal(lease.Game.ActiveScene!.World.Id, status.SceneWorldId);
         Assert.Equal(lease.Game.RegistryId, status.SceneRegistryId);
         Assert.Equal((100, 100), (status.SceneEntityCount, status.SceneComponentCount));
-        Assert.Null(supervisor.Configuration);
+        var configuration = supervisor.Configuration!.Value;
+        Assert.Null(configuration.Scene);
+        Assert.Same(data, configuration.World);
         var begin = Assert.Single(lease.Requests, request => request.Kind == (int)CommandKind.BeginSceneWorld);
         Assert.Equal((bytes.Length, data.Scene.Id.Value.ToString("D"), 17L, lease.Game.RegistryId.ToString("D")),
             (begin.SceneBytes, begin.SceneId, begin.Revision, begin.SceneRegistryId));
         Assert.Equal(Convert.ToHexString(SHA256.HashData(bytes)), begin.SceneDigest);
+        Assert.Equal(begin.SceneDigest, configuration.WorldDigest);
         var chunks = lease.Requests.Where(request => request.Kind == (int)CommandKind.AppendSceneWorld).ToArray();
         Assert.Equal((bytes.Length + 32767) / 32768, chunks.Length);
         Assert.Equal(bytes, chunks.SelectMany(request => request.SceneChunk!).ToArray());
@@ -72,6 +75,7 @@ public sealed class SceneWorldSupervisorTests
         Assert.Equal((1L, 1UL), (stepped.Tick, supervisor.Status.Tick));
         Assert.Equal(103, loaded.World.GetComponent<Value>(entity).Number);
         await supervisor.StopAsync();
+        Assert.Null(supervisor.Configuration);
         Assert.True(loaded.IsDisposed); Assert.True(lease.ResourcesReleased);
         Assert.Equal(new[] { "Stop", "Dispose" }, lease.Cleanup);
     }

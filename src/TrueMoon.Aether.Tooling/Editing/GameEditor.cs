@@ -158,13 +158,12 @@ public sealed class GameEditor
     private Task<GameReplacementResult> ReplaceCoreAsync(long? expectedVersion, CancellationToken token)
         => Run(GameEditorOperation.Replace, async command =>
         {
-            var scene = command.Context.Scene ?? throw new InvalidOperationException("Full scene playback requires Stop before switching builds.");
             var candidate = Candidate(command, required: true)!;
             var identity = command.Origin ?? throw new InvalidOperationException("No originating runtime to replace.");
             await VerifyCandidateAsync(command, candidate).ConfigureAwait(false);
             lock (_gate) CheckCurrent(command);
-            var result = await _replacement.ReplaceAsync(new(candidate.Build, identity, scene,
-                command.Context.Build.SourceRevision), command.Cancellation.Token).ConfigureAwait(false);
+            var result = await _replacement.ReplaceAsync(new(candidate.Build, identity, command.Context.Scene,
+                command.Context.Build.SourceRevision) { World = command.Context.World }, command.Cancellation.Token).ConfigureAwait(false);
             lock (_gate) if (_status.ContextVersion == command.Version) _status = _status with { Candidate = null };
             return result;
         }, token, expectedVersion: expectedVersion);

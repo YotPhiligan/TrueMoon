@@ -15686,6 +15686,42 @@ GPU-ресурсов и открытых handles. Vulkan validation 0/0.
 пропусков нет. TRX и binlogs в `TestResults/ARCH1g2-editor-regression-20261118-01`.
 [Контракт и воспроизведение](MODEL_BUILD_DELIVERY.md#arch1g2c-editor-builds).
 
+<a id="arch1g2d-2026-11-18"></a>
+## 2026-11-18 — ARCH1g.2d, горячий Replace и восстановление полной сцены
+
+Version 1.2611.18.4-alpha, baseline aeb9f6d. Полная сцена проходит
+существующую транзакцию Replace и использует checkpoint capability игры.
+Parent сверяет точный World payload, child восстанавливает состояние до
+первого кадра. Нативный RED выявил гонку IPC подтверждения первого кадра.
+Viewport регистрирует факт показа, а активная транзакция владеет
+подтверждением первого mesh-кадра.
+
+`ManualTests/ModelBuildConsumer/VerifyEditor.ps1` выполнен с EvidenceDirectory
+`TestResults/ARCH1g2-replace-20261118-03` и ValidationDirectory
+`TestResults/EditorWindow-20261104/tools/validation`. Четыре профиля
+source Debug / published Release × Cobalt / Microsoft DI в Editor.
+SHA256 `verification.json`
+`40281EF680A631773559336A4CA8DDB26A12C1458A059CEA24A82CA40C1FE2C5`.
+
+В каждом профиле Editor сделал Start старой сборки, Replace новой,
+отклонение копии с повреждённым render payload, отмену после активации полного
+World кандидата и восстановление, затем Replace старой сборки. Прежний child
+при повреждении сохранился. При отмене candidate generation 3 завершилась
+до создания поверхности, recovery generation 4 вернула сборку generation 2,
+её checkpoint и Playing. Сверены BuildId поверхности и SceneId, revision,
+manifest digest в штампе каждого кадра. Красные пиксели 25 096 → 50 422 →
+50 422 → 50 422 → 25 096. Хэш маски после отказа и отката совпал с маской
+новой сборки. Возврат к исходной сборке воспроизвёл исходную маску. Открытая сцена
+сохранена с тем же содержимым и хэшем. Все 20 runtime child завершены и reaped,
+Vulkan validation 0/0, живых GPU resources/handles нет.
+
+Целевые Aether 294/294 и Editor 367/367, полный Player 17/17 в Debug и Release.
+Ошибок и пропусков нет. Проверки протокола обновлены для активации полной
+сцены перед restore, несовместимой ревизии, запрета кадров и тиков до restore
+и сохранения unsupported для игры без checkpoint. TRX и binlogs в
+`TestResults/ARCH1g2-replace-regression-20261118-02`.
+[Контракт и воспроизведение](MODEL_BUILD_DELIVERY.md#arch1g2d-world-replace).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

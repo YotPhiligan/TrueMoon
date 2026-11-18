@@ -34,6 +34,7 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 [ARCH1g.2a](#arch1g2a-model-delivery) провёл одну модель через Nom → Build → Runtime.
 [ARCH1g.2b](#arch1g2b-model-scene-gpu) разместил её в сцене и проверил обе сборки на GPU.
 [ARCH1g.2c](#arch1g2c-model-editor-builds) проверил смену сборок в одном Editor через Stop/Start.
+[ARCH1g.2d](#arch1g2d-full-scene-replace) проверил горячий Replace и восстановление полной сцены.
 
 <a id="arch1j-session-subsystems"></a>
 ### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
@@ -1917,9 +1918,18 @@ Release на обоих DI. [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2b-
 сохраняет ту же ревизию. [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2c-editor-builds),
 [проверки](HISTORY.md#arch1g2c-2026-11-18).
 
-Следующие задачи ARCH1g.2 — интерактивный выбор артефакта, reload/Replace
-полной сцены с отменой, откатом и освобождением ресурсов, затем приёмка
-пути Editor на свежих пакетах.
+<a id="arch1g2d-full-scene-replace"></a>
+#### ARCH1g.2d — горячий Replace полной сцены
+
+Завершён 18.11.2026. В одном Editor заменена выбранная сборка полной сцены
+с сохранением checkpoint и Playing. Повреждённый артефакт отклонён до
+смены child. При отмене после активации сцены кандидата восстановлена
+предыдущая сборка и её геометрия в новом child. Фактические GPU-кадры и
+освобождение ресурсов подтверждены в четырёх профилях.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1g2d-world-replace),
+[проверки](HISTORY.md#arch1g2d-2026-11-18).
+
+Далее интерактивный выбор артефакта и приёмка пути Editor на свежих пакетах.
 
 <a id="arch1h-audio"></a>
 ### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07

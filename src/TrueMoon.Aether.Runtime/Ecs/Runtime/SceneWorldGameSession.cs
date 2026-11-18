@@ -32,6 +32,20 @@ public abstract class SceneWorldGameSession : IGameSession, IGamePlaybackSession
     public bool IsFaulted => _scene?.World.IsFaulted == true;
     /// <summary>Gets initial resolved component cardinality; runtime mutations do not rewrite source metadata.</summary>
     public int SceneComponentCount { get; private set; }
+
+    /// <summary>Commits the restored tick after a derived checkpoint implementation restores its fresh active scene.</summary>
+    /// <remarks>Call during checkpoint restore before the first tick. The derived game owns validation and restoration of all other state.</remarks>
+    protected void RestoreSceneTick(ulong tick)
+    {
+        Enter();
+        try
+        {
+            if (_scene == null || _scene.World.IsFaulted || TickNumber != 0)
+                throw new InvalidOperationException("Checkpoint restore requires a fresh active scene.");
+            TickNumber = tick;
+        }
+        finally { _busy = false; }
+    }
     /// <summary>Gets the game's CPU frame pattern color.</summary>
     public abstract uint PatternColor { get; }
 

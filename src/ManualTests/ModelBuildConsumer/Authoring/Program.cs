@@ -68,6 +68,7 @@ File.WriteAllText(project, $$"""
 File.WriteAllText(Path.Combine(gameDirectory, "Entry.cs"), """
     using System;
     using System.Threading;
+    using TrueMoon.Aether.Abstractions.Checkpoints;
     using TrueMoon.Aether.Abstractions.Rendering;
     using TrueMoon.Aether.Abstractions.Runtime;
     using TrueMoon.Aether.Abstractions.Scenes;
@@ -93,7 +94,7 @@ File.WriteAllText(Path.Combine(gameDirectory, "Entry.cs"), """
         public void Dispose() { }
     }
     public sealed class Entry(SceneWorldLoader loader, IFactory<TransformSystem, World> transforms, RenderContentManifest content)
-        : SceneWorldGameSession(loader), IGameBuildSessionEntry, IRenderSnapshotGameSession
+        : SceneWorldGameSession(loader), IGameBuildSessionEntry, IRenderSnapshotGameSession, ICheckpointGameSession
     {
         private TransformSystem? _transform;
         public static IGameSession Create(IServiceResolver? services, RenderContentManifest content)
@@ -117,6 +118,14 @@ File.WriteAllText(Path.Combine(gameDirectory, "Entry.cs"), """
             catch { transform.Dispose(); throw; }
         }
         protected override void TickWorld(SceneWorld scene, ulong nextTick) => _transform!.Update(nextTick);
+        public GameCheckpointState CaptureCheckpoint() => new(TickNumber, new(0, 0, 5, 0, 0, 0), false);
+        public void RestoreCheckpoint(GameCheckpointState state)
+        {
+            if (state with { Tick = TickNumber } != CaptureCheckpoint())
+                throw new CheckpointRejectedException(CheckpointOutcome.RestoreRejected);
+            if (state.Tick != 0) _transform!.Update(state.Tick);
+            RestoreSceneTick(state.Tick);
+        }
         public RenderSceneSource ReadRenderScene()
         {
             var scene = ActiveScene!;

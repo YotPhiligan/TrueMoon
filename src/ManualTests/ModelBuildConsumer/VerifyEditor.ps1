@@ -18,7 +18,7 @@ if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' 
 [void][IO.Directory]::CreateDirectory($evidence)
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
-$report = [ordered]@{ Completed = $false; Stage = 'ARCH1g.2 Editor'; Profile = $profile; Runs = @(); Commands = @() }
+$report = [ordered]@{ Completed = $false; Stage = 'ARCH1g.2d'; Profile = $profile; Runs = @(); Commands = @() }
 
 function Invoke-Step([string]$name, [string[]]$arguments) {
     if ($arguments[0] -in @('build', 'publish')) { $arguments += "-bl:$evidence/$name-{}.binlog" }
@@ -51,10 +51,12 @@ try {
                 $dotnet, $profile.TestFramework, $profile.Sdk, '--editor')
             $path = "$output/editor-model.json"
             $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-            if (!$proof.Completed -or $proof.Captures.Count -ne 3) { throw "Incomplete Editor evidence for $name" }
+            if (!$proof.Completed -or $proof.Captures.Count -ne 5 -or !$proof.RollbackSucceeded -or !$proof.CorruptRejectedBeforeHandoff) {
+                throw "Incomplete Editor evidence for $name"
+            }
             $report.Runs += @{
                 Name = $name; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash
-                Captures = @('old', 'new', 'old-reopened' | ForEach-Object {
+                Captures = @($proof.Captures.Name | ForEach-Object {
                     @{ Path = "$output/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$output/$_.png").Hash }
                 })
             }

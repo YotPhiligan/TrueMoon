@@ -83,6 +83,9 @@ public sealed class EditorScenePlayback
     /// <summary>Checks current admission; stale presentation never authorizes an action.</summary>
     /// <param name="command">Game command.</param><returns>Whether the command can be accepted now.</returns>
     public bool CanExecute(EditorCommand command)
+        => CanExecute(command, selectedBuild: false);
+
+    private bool CanExecute(EditorCommand command, bool selectedBuild)
     {
         if (!Enum.IsDefined(command)) throw new ArgumentOutOfRangeException(nameof(command));
         lock (_gate)
@@ -100,7 +103,7 @@ public sealed class EditorScenePlayback
                 EditorCommand.Play => _ownsRuntime && runtime.State == SessionState.Paused,
                 EditorCommand.Pause => _ownsRuntime && runtime.State == SessionState.Playing,
                 EditorCommand.Step => _ownsRuntime && runtime.State == SessionState.Paused,
-                EditorCommand.Replace => _ownsRuntime && !_runningSelectedBuild && runtime.State is SessionState.Paused or SessionState.Playing &&
+                EditorCommand.Replace => _ownsRuntime && _runningSelectedBuild == selectedBuild && runtime.State is SessionState.Paused or SessionState.Playing &&
                     runtime.Identity == _runningIdentity && _runningIdentity != null &&
                     ReferenceEquals(document.Project, _runningProject) && ReferenceEquals(document.Document.Content, _runningContent),
                 _ => false
@@ -125,18 +128,28 @@ public sealed class EditorScenePlayback
         return Execute(EditorCommand.Start, true, build);
     }
 
-    private bool Execute(EditorCommand command, bool play, GameBuildArtifact? selectedBuild = null)
+    /// <summary>Replaces the selected build of the running full scene and preserves its checkpoint and playback mode.</summary>
+    /// <param name="build">Published candidate for the current project, scene and host.</param>
+    /// <param name="token">Cancellation of the forward operation. The Editor owns any required recovery.</param>
+    /// <returns>True if admitted. Await Pending and inspect Error for the result.</returns>
+    public bool ReplaceSelectedBuild(GameBuildArtifact build, CancellationToken token = default)
+    {
+        ArgumentNullException.ThrowIfNull(build);
+        return Execute(EditorCommand.Replace, false, build, token);
+    }
+
+    private bool Execute(EditorCommand command, bool play, GameBuildArtifact? selectedBuild = null, CancellationToken caller = default)
     {
         lock (_gate)
         {
-            if (!CanExecute(command)) return false;
+            if (caller.IsCancellationRequested || !CanExecute(command, selectedBuild != null)) return false;
             if (command is EditorCommand.Stop or EditorCommand.Cancel)
             {
                 var interrupted = _pending; var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 _interrupt = completion.Task;
                 _ = InterruptAsync(command, interrupted, completion); return true;
             }
-            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
+            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime, caller);
             Task work;
             try
             {

@@ -1,5 +1,9 @@
 # TrueMoon: общий план развития
 
+Выполнено 2026-11-18 [ARCH1g.2d](engine/PLAN.md#arch1g2d-full-scene-replace).
+Editor меняет сборку полной сцены через Replace и восстанавливает прежнюю
+геометрию на GPU после отмены в дочернем процессе.
+
 Выполнено 2026-11-18 [ARCH1g.2c](engine/PLAN.md#arch1g2c-model-editor-builds).
 Один Editor запускает открытую сцену с обеими сборками через Stop/Start
 и показывает геометрию каждого BuildId на GPU.

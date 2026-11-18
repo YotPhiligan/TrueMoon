@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Runtime.Builds;
 
@@ -24,7 +25,11 @@ public sealed record ReplacementDeadlines
 /// <param name="Candidate">Completed immutable artifact.</param><param name="ExpectedIdentity">Session this selection targets.</param>
 /// <param name="Scene">Current authoring snapshot, compatible with the running world.</param>
 /// <param name="ExpectedSourceRevision">Current compiler input revision; stale completion must not be applied.</param>
-public sealed record GameReplacementRequest(GameBuildArtifact Candidate, SessionIdentity ExpectedIdentity, SceneSnapshot Scene, long ExpectedSourceRevision);
+public sealed record GameReplacementRequest(GameBuildArtifact Candidate, SessionIdentity ExpectedIdentity, SceneSnapshot? Scene, long ExpectedSourceRevision)
+{
+    /// <summary>Full scene compatible with the running world, exclusive with the primitive scene payload.</summary>
+    public SceneWorldData? World { get; init; }
+}
 
 /// <summary>A candidate became ready with restored state and the previous mode.</summary>
 /// <param name="PreviousIdentity">Reaped original generation.</param><param name="Identity">Ready candidate generation.</param>

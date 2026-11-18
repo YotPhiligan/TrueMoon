@@ -72,7 +72,13 @@ public sealed class GameCheckpoint
     public void ValidateFor(string hostContractId, SceneSnapshot scene)
     {
         ArgumentNullException.ThrowIfNull(scene);
-        if (!string.Equals(HostContractId, hostContractId, StringComparison.OrdinalIgnoreCase) || SceneId != scene.Id || SceneRevision != scene.Revision)
+        ValidateFor(hostContractId, scene.Id, scene.Revision);
+    }
+
+    /// <summary>Preflights the exact scene identity and revision for a loaded scene of either format.</summary>
+    public void ValidateFor(string hostContractId, string sceneId, long sceneRevision)
+    {
+        if (!string.Equals(HostContractId, hostContractId, StringComparison.OrdinalIgnoreCase) || SceneId != sceneId || SceneRevision != sceneRevision)
             throw new InvalidDataException("Checkpoint host/scene/revision is incompatible.");
         State.Validate();
     }

@@ -19,7 +19,7 @@ public sealed partial class RuntimeProtocol
     {
         var session = SceneGame ?? throw new NotSupportedException("This runtime does not advertise full scene World loading.");
         token.ThrowIfCancellationRequested();
-        if (_loaded || _awaitingRestore) throw new InvalidOperationException("Full scene activation requires a fresh runtime without checkpoint restore.");
+        if (_loaded) throw new InvalidOperationException("Full scene activation requires a fresh runtime.");
         switch (kind)
         {
             case CommandKind.BeginSceneWorld:

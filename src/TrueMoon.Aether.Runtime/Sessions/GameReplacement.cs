@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Abstractions.Checkpoints;
+using TrueMoon.Aether.Abstractions.Ecs.Loading;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Frames;
@@ -48,7 +49,9 @@ public sealed class GameReplacement
     private async Task<GameReplacementResult> ReplaceCoreAsync(GameReplacementRequest request, CancellationToken token)
     {
         ArgumentNullException.ThrowIfNull(request); ArgumentNullException.ThrowIfNull(request.Candidate);
-        ArgumentNullException.ThrowIfNull(request.ExpectedIdentity); ArgumentNullException.ThrowIfNull(request.Scene);
+        ArgumentNullException.ThrowIfNull(request.ExpectedIdentity);
+        if ((request.Scene == null) == (request.World == null))
+            throw new ArgumentException("Provide exactly one replacement scene payload.", nameof(request));
         token.ThrowIfCancellationRequested();
         _supervisor.EnsureReplacementOpen();
         using var owner = await _frames.ReserveReplacementAsync(_deadlines, token).ConfigureAwait(false);
@@ -57,7 +60,7 @@ public sealed class GameReplacement
         var phase = "Preflight"; var stoppedOld = false; var pausedOld = false; var wasPlaying = false;
         var rollbackAttempted = false; var rollbackSucceeded = false;
         GameCheckpoint? checkpoint = null; ViewportSurface? surface = null;
-        (SceneSnapshot Scene, GameBuildArtifact? Build, string Behavior)? old = null;
+        (SceneSnapshot? Scene, SceneWorldData? World, string? WorldDigest, GameBuildArtifact? Build, string Behavior)? old = null;
         IDisposable? candidatePin = null, oldPin = null;
         try
         {
@@ -66,7 +69,7 @@ public sealed class GameReplacement
             await _supervisor.StatusForReplacementAsync(owner, forward.Token).ConfigureAwait(false);
             old = _supervisor.Configuration ?? throw new InvalidOperationException("No running game configuration.");
             if (_supervisor.Status.Identity != request.ExpectedIdentity || request.Candidate.SourceRevision != request.ExpectedSourceRevision ||
-                old.Value.Scene.Id != request.Scene.Id || old.Value.Scene.Revision != request.Scene.Revision)
+                !MatchesScene())
                 throw new InvalidDataException("Replacement selection is stale or scene revision is incompatible.");
             if (surface?.Suspended == true) throw new InvalidOperationException("Resume a visible surface before replacing its game.");
             GameBuildArtifact.Open(request.Candidate.DirectoryPath, request.ExpectedIdentity.HostContractId, request.Candidate.BuildId);
@@ -82,12 +85,14 @@ public sealed class GameReplacement
             if (wasPlaying) await SetModeAsync(false, owner, forward.Token).ConfigureAwait(false);
             pausedOld = true; phase = "Capture";
             checkpoint = await _supervisor.CaptureForReplacementAsync(owner, forward.Token).ConfigureAwait(false);
-            checkpoint.ValidateFor(request.ExpectedIdentity.HostContractId, request.Scene);
+            var sceneId = request.World?.Scene.Id.Value.ToString("D") ?? request.Scene!.Id;
+            var sceneRevision = request.World?.Scene.Revision ?? request.Scene!.Revision;
+            checkpoint.ValidateFor(request.ExpectedIdentity.HostContractId, sceneId, sceneRevision);
             forward.Token.ThrowIfCancellationRequested(); _supervisor.Admission.Check(owner);
             phase = "StopOld"; stoppedOld = true;
             await _frames.StopForReplacementAsync(forward.Token).ConfigureAwait(false);
             phase = "Candidate";
-            await StartAsync(request.Scene, request.Candidate, checkpoint, surface, "normal", owner, forward.Token).ConfigureAwait(false);
+            await StartAsync(request.Scene, request.World, request.Candidate, checkpoint, surface, "normal", owner, forward.Token).ConfigureAwait(false);
             phase = "CandidateMode";
             if (wasPlaying) await SetModeAsync(true, owner, forward.Token).ConfigureAwait(false);
             forward.Token.ThrowIfCancellationRequested(); _supervisor.Admission.Check(owner);
@@ -128,7 +133,7 @@ public sealed class GameReplacement
                         _supervisor.Admission.Check(owner); rollbackAttempted = true;
                         Recovery("Replace.RecoveryStarting", 1304);
                         using var recovery = CancellationTokenSource.CreateLinkedTokenSource(owner.Total.Token, owner.Interrupted.Token);
-                        await StartAsync(old.Value.Scene, old.Value.Build, checkpoint, surface, old.Value.Behavior, owner, recovery.Token).ConfigureAwait(false);
+                        await StartAsync(old.Value.Scene, old.Value.World, old.Value.Build, checkpoint, surface, old.Value.Behavior, owner, recovery.Token).ConfigureAwait(false);
                         if (wasPlaying) await SetModeAsync(true, owner, recovery.Token).ConfigureAwait(false);
                         _supervisor.Admission.Check(owner); rollbackSucceeded = true;
                         Recovery("Replace.RecoveryCompleted", 1305);
@@ -155,6 +160,11 @@ public sealed class GameReplacement
             throw new GameReplacementException(phase, cause, rollbackAttempted, rollbackSucceeded, recoveryError);
         }
         finally { oldPin?.Dispose(); candidatePin?.Dispose(); }
+
+        bool MatchesScene() => request.World is { } world
+            ? _supervisor.MatchesReplacementWorld(world, forward.Token)
+            : old?.Scene is { } scene && scene.Id == request.Scene!.Id && scene.Revision == request.Scene.Revision;
+
         void Recovery(string name, int id, Exception? error = null)
             => AetherDiagnosticEvents.Emit(_events, error == null ? DiagnosticLevel.Information : DiagnosticLevel.Error,
                 id, name, "Replacement recovery state", () =>
@@ -172,11 +182,16 @@ public sealed class GameReplacement
         using var mode = CancellationTokenSource.CreateLinkedTokenSource(token); mode.CancelAfter(TimeSpan.FromSeconds(2));
         await _supervisor.ModeForReplacementAsync(playing, owner, mode.Token).ConfigureAwait(false);
     }
-    private async Task StartAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint checkpoint, ViewportSurface? surface, string behavior,
+    private async Task StartAsync(SceneSnapshot? scene, SceneWorldData? world, GameBuildArtifact? build, GameCheckpoint checkpoint, ViewportSurface? surface, string behavior,
         ReplacementAdmission.Lease owner, CancellationToken token)
     {
         using var startup = CancellationTokenSource.CreateLinkedTokenSource(token); startup.CancelAfter(TimeSpan.FromSeconds(15));
-        if (surface == null) await _supervisor.StartForReplacementAsync(scene, build, checkpoint, behavior, owner, startup.Token).ConfigureAwait(false);
-        else await _frames.StartForReplacementAsync(scene, build, checkpoint, surface.Width, surface.Height, behavior, owner, startup.Token).ConfigureAwait(false);
+        if (world != null)
+        {
+            if (surface == null) await _supervisor.StartWorldForReplacementAsync(world, build, checkpoint, behavior, owner, startup.Token).ConfigureAwait(false);
+            else await _frames.StartWorldForReplacementAsync(world, build, checkpoint, surface.Width, surface.Height, behavior, owner, startup.Token).ConfigureAwait(false);
+        }
+        else if (surface == null) await _supervisor.StartForReplacementAsync(scene!, build, checkpoint, behavior, owner, startup.Token).ConfigureAwait(false);
+        else await _frames.StartForReplacementAsync(scene!, build, checkpoint, surface.Width, surface.Height, behavior, owner, startup.Token).ConfigureAwait(false);
     }
 }

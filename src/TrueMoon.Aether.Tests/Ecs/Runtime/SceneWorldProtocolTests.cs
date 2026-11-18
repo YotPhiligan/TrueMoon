@@ -6,6 +6,7 @@ using TrueMoon.Aether.Abstractions.Input;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Abstractions.Sessions;
 using TrueMoon.Aether.Runtime;
+using TrueMoon.Aether.Runtime.Checkpoints;
 using TrueMoon.Aether.Runtime.Ecs;
 using TrueMoon.Aether.Runtime.Ecs.Loading;
 using TrueMoon.Aether.Runtime.Ecs.Runtime;
@@ -73,17 +74,34 @@ public sealed class SceneWorldProtocolTests
     }
 
     [Fact]
-    public async Task RestoreRequiredRuntime_RejectsWorldTransferBeforeStagingOrImport()
+    public async Task RestoreRequiredRuntime_ActivatesWorldButFencesFramesAndTicksUntilCompatibleRestore()
     {
-        using var game = CreateGame(); var codec = Codec();
-        using var protocol = new RuntimeProtocol(Identity, game, 17, requireRestore: true, sceneWorldCodec: codec);
-        var bytes = codec.Encode(new(Document(1)));
-        await protocol.SendAsync(ControlRequest.Create(Identity, 1, CommandKind.Hello));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => protocol.SendAsync(Begin(Identity, 2, game.RegistryId, bytes, Document(1))));
-        Assert.Null(game.ActiveScene); Assert.Equal((-1L, 0UL), (game.Revision, game.TickNumber));
-        Assert.False(protocol.TryCaptureFrame(out _));
-        var status = await protocol.SendAsync(ControlRequest.Create(Identity, 2, CommandKind.GetStatus));
-        Assert.Equal(("HelloAccepted", "", 0), (status.Phase, status.SceneLoadId, status.SceneLoadOffset));
+        using var fixture = new Fixture(requireRestore: true);
+        var source = Document(1);
+        var bytes = fixture.Codec.Encode(new(source));
+        await fixture.Send(CommandKind.Hello);
+        await fixture.Begin(bytes, source);
+        await fixture.AppendAll(bytes);
+        var activated = await fixture.Send(CommandKind.ActivateSceneWorld, fixture.StampTransfer);
+        Assert.Equal(("Paused", source.Revision, 1), (activated.Phase, activated.Revision, fixture.Imports));
+        await AssertNotReady(fixture);
+
+        var state = new GameCheckpointState(13, default, false);
+        var id = source.Id.Value.ToString("D");
+        var rejected = await Restore(new(Hash, Hash, id, source.Revision - 1, state));
+        Assert.Equal((int)CheckpointOutcome.RestoreRejected, rejected.CheckpointOutcome);
+        Assert.Equal(0UL, fixture.Game.TickNumber);
+        await AssertNotReady(fixture);
+
+        var restored = await Restore(new(Hash, Hash, id, source.Revision, state));
+        Assert.Equal(((int)CheckpointOutcome.Restored, "Paused", 13L), (restored.CheckpointOutcome, restored.Phase, restored.Tick));
+        var captured = await fixture.Send(CommandKind.CaptureCheckpoint);
+        var checkpoint = GameCheckpointCodec.Decode(captured.Checkpoint!);
+        Assert.Equal((id, source.Revision, state), (checkpoint.SceneId, checkpoint.SceneRevision, checkpoint.State));
+        Assert.Equal(14L, (await fixture.Send(CommandKind.Step)).Tick);
+
+        Task<ControlReply> Restore(GameCheckpoint checkpoint) =>
+            fixture.Send(CommandKind.RestoreCheckpoint, request => request.Checkpoint = GameCheckpointCodec.Encode(checkpoint));
     }
 
     [Fact]
@@ -438,24 +456,18 @@ public sealed class SceneWorldProtocolTests
     }
 
     [Fact]
-    public async Task FullWorldProfile_DoesNotPretendToSupportLegacyCheckpoint()
+    public async Task FullWorldProfile_WithoutCheckpointCapabilityReportsUnsupported()
     {
-        var codec = Codec(); var loader = Loader();
-        using var game = new CheckpointGame(loader);
-        using var protocol = new RuntimeProtocol(Identity, game, 17, sceneWorldCodec: codec);
-        ulong sequence = 1;
-        await protocol.SendAsync(ControlRequest.Create(Identity, sequence++, CommandKind.Hello));
-        var source = Document(1); var bytes = codec.Encode(new(source));
-        var begin = Begin(Identity, sequence++, game.RegistryId, bytes, source); await protocol.SendAsync(begin);
-        var append = ControlRequest.Create(Identity, sequence++, CommandKind.AppendSceneWorld);
-        append.SceneLoadId = begin.SceneLoadId; append.SceneRegistryId = begin.SceneRegistryId; append.SceneChunk = bytes;
-        await protocol.SendAsync(append);
-        var activate = ControlRequest.Create(Identity, sequence++, CommandKind.ActivateSceneWorld);
-        activate.SceneLoadId = begin.SceneLoadId; activate.SceneRegistryId = begin.SceneRegistryId; await protocol.SendAsync(activate);
-        var result = await protocol.SendAsync(ControlRequest.Create(Identity, sequence, CommandKind.CaptureCheckpoint));
+        using var fixture = new Fixture();
+        var source = Document(1); var bytes = fixture.Codec.Encode(new(source));
+        await fixture.Send(CommandKind.Hello);
+        await fixture.Begin(bytes, source);
+        await fixture.AppendAll(bytes);
+        await fixture.Send(CommandKind.ActivateSceneWorld, fixture.StampTransfer);
+        var result = await fixture.Send(CommandKind.CaptureCheckpoint);
         Assert.Equal((int)CheckpointOutcome.Unsupported, result.CheckpointOutcome);
-        Assert.Null(result.Checkpoint); Assert.Equal(0, game.Captures);
-        Assert.Equal((source.Revision, 0UL), (game.Revision, game.TickNumber));
+        Assert.Null(result.Checkpoint);
+        Assert.Equal((source.Revision, 0UL), (fixture.Game.Revision, fixture.Game.TickNumber));
     }
 
     [Fact]
@@ -546,9 +558,8 @@ public sealed class SceneWorldProtocolTests
     }
     private sealed class CheckpointGame(SceneWorldLoader loader) : TestGame(loader), ICheckpointGameSession
     {
-        internal int Captures;
-        public GameCheckpointState CaptureCheckpoint() { Captures++; throw new InvalidOperationException("unsupported ECS checkpoint"); }
-        public void RestoreCheckpoint(GameCheckpointState state) => throw new InvalidOperationException("unsupported ECS checkpoint");
+        public GameCheckpointState CaptureCheckpoint() => new(TickNumber, default, false);
+        public void RestoreCheckpoint(GameCheckpointState state) => RestoreSceneTick(state.Tick);
     }
     private sealed class LegacyGame : IGameSession
     {
@@ -569,10 +580,11 @@ public sealed class SceneWorldProtocolTests
         internal ulong Next { get; private set; } = 1;
         internal ControlReply? Last;
         private string _operation = "";
-        internal Fixture(Func<ComponentLoadContext, Counter>? importer = null)
+        internal Fixture(Func<ComponentLoadContext, Counter>? importer = null, bool requireRestore = false)
         {
-            Game = new(Loader(context => { Imports++; return importer?.Invoke(context) ?? new Counter(context.GetInt32("value"), context.GetString("label").Length); }));
-            Protocol = new(Identity, Game, 17, sceneWorldCodec: Codec);
+            var loader = Loader(context => { Imports++; return importer?.Invoke(context) ?? new Counter(context.GetInt32("value"), context.GetString("label").Length); });
+            Game = requireRestore ? new CheckpointGame(loader) : new TestGame(loader);
+            Protocol = new(Identity, Game, 17, requireRestore: requireRestore, sceneWorldCodec: Codec);
         }
         internal async Task<ControlReply> Send(CommandKind kind, Action<ControlRequest>? configure = null, CancellationToken token = default)
         {

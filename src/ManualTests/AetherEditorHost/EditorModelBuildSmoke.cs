@@ -33,9 +33,13 @@ internal static class EditorModelBuildSmoke
         var hostId = BuildIdentity.HostId;
         var oldBuild = GameBuildArtifact.Open(args[4], hostId);
         var newBuild = GameBuildArtifact.Open(args[5], hostId);
+        var corruptBuild = CorruptCopy(oldBuild, report, hostId);
         var sceneHash = Hash(File.ReadAllBytes(scenePath));
         Check(oldBuild.BuildId != newBuild.BuildId, "Scene probe requires two distinct build IDs.");
         var compiler = Path.Combine(report, "editor-compiler");
+        using var cancelReplacement = new CancellationTokenSource();
+        SessionIdentity? cancelledCandidate = null;
+        var cancelOnLoad = 0;
         var fonts = SkiaFontCatalog.Load("Noto Sans", new Dictionary<string, string>
         {
             ["Noto Sans"] = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", "NotoSans-Regular.ttf")
@@ -58,7 +62,16 @@ internal static class EditorModelBuildSmoke
             context.UseConfiguredAetherEditor(new AetherComposition
             {
                 HostContractId = hostId, GameBuildId = new string('0', 64),
-                RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime")
+                RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime"),
+                StatusChanged = status =>
+                {
+                    if (status is { State: SessionState.Starting, SceneLoaded: true, Identity: { } identity } &&
+                        identity.GameBuildId == oldBuild.BuildId && Interlocked.Exchange(ref cancelOnLoad, 0) == 1)
+                    {
+                        cancelledCandidate = identity;
+                        cancelReplacement.Cancel();
+                    }
+                }
             });
             context.UseConfiguredAetherEditorWindow(fonts, options => { options.Width = 1100; options.Height = 720; });
         }).Build();
@@ -80,51 +93,110 @@ internal static class EditorModelBuildSmoke
             var content = before.Content ?? throw new InvalidOperationException("Editor did not load the placed scene.");
             Check(content.Document.Entities.Length == 3 && !before.IsDirty, "Unexpected captured scene.");
 
-            foreach (var (name, artifact) in new[] { ("old", oldBuild), ("new", newBuild), ("old-reopened", oldBuild) })
+            Check(playback.RunSelectedBuild(oldBuild), "Editor did not admit the first build.");
+            await Complete();
+            while (engine.Supervisor.Status.Tick < 5)
             {
-                var leaseIndex = native.Leases.Count;
-                Check(playback.RunSelectedBuild(artifact), "Editor did not admit selected build.");
+                await engine.Supervisor.GetStatusAsync(token);
+                await Task.Delay(16, token);
+            }
+            var original = await CapturePlaying("old", oldBuild, 5);
+            Check(!playback.RunSelectedBuild(newBuild), "Editor admitted a second independent Start.");
+            Check(playback.ReplaceSelectedBuild(newBuild), "Editor did not admit hot Replace.");
+            await Complete();
+            var updated = await CapturePlaying("new", newBuild, original.Tick);
+            Check(native.Leases.Count == 2 && updated.Generation > original.Generation,
+                "Successful Replace did not activate exactly one new child.");
+            await CheckReleased(original.Generation);
+
+            var beforeCorruption = engine.Supervisor.Status.Identity;
+            var previousSurface = engine.Frames.Presentation;
+            Check(playback.ReplaceSelectedBuild(corruptBuild), "Editor did not admit corrupt candidate preflight.");
+            await playback.Pending.WaitAsync(token);
+            Check(playback.Error is InvalidDataException corruption &&
+                corruption.Message.Contains("render payload hash mismatch", StringComparison.Ordinal) &&
+                engine.Supervisor.Status.Identity == beforeCorruption &&
+                ReferenceEquals(previousSurface, engine.Frames.Presentation) && native.Leases.Count == 2,
+                "Corrupt candidate changed the running child or viewport.");
+            var afterCorruption = await CapturePlaying("after-corruption", newBuild, updated.Tick);
+
+            Volatile.Write(ref cancelOnLoad, 1);
+            Check(playback.ReplaceSelectedBuild(oldBuild, cancelReplacement.Token), "Editor did not admit cancellable Replace.");
+            await playback.Pending.WaitAsync(token);
+            Check(cancelledCandidate is not null && playback.Error is GameReplacementException
+                { Phase: "Candidate", RollbackAttempted: true, RollbackSucceeded: true, RecoveryError: null, InnerException: OperationCanceledException } &&
+                native.Leases.Count == 4, "Cancellation after scene load did not recover the previous build exactly once.");
+            var recovered = await CapturePlaying("after-cancel", newBuild, afterCorruption.Tick);
+            Check(recovered.Generation > cancelledCandidate!.Generation && cancelledCandidate.Generation > updated.Generation,
+                "Cancellation did not advance the runtime generation on recovery.");
+            await CheckReleased(updated.Generation);
+            // The cancelled candidate had completed scene activation. Restore and surface configuration were still pending.
+            Check(native.Leases[2].Identity == cancelledCandidate && native.Leases[2].Reaped && native.Leases[2].ResourcesReleased,
+                "Cancelled candidate survived rollback.");
+
+            Check(playback.ReplaceSelectedBuild(oldBuild), "Recovered Editor session could not Replace again.");
+            await Complete();
+            var reopened = await CapturePlaying("old-reopened", oldBuild, recovered.Tick);
+            Check(native.Leases.Count == 5 && reopened.Generation > recovered.Generation, "Unexpected runtime generations.");
+            await CheckReleased(recovered.Generation);
+
+            Check(playback.Execute(EditorCommand.Stop), "Editor did not admit final Stop.");
+            await Complete();
+            Check(engine.Supervisor.Status.State == SessionState.Stopped && engine.Frames.Presentation == null &&
+                engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0,
+                "Final Stop retained viewport resources.");
+            await CheckReleased(reopened.Generation);
+
+            var old = original.Mask;
+            var next = updated.Mask;
+            Check(old == reopened.Mask && next == afterCorruption.Mask && next == recovered.Mask &&
+                old.Width == next.Width && old.Height == next.Height && Math.Abs(old.Left - next.Left) <= 1 &&
+                next.Right > old.Right + 10 && next.RedPixels > old.RedPixels * 1.6,
+                "GPU scene does not show the expected replacement or recovered geometry.");
+            Check(!Directory.Exists(Path.Combine(compiler, "jobs")) &&
+                AppDomain.CurrentDomain.GetAssemblies().All(assembly => assembly.GetName().Name != "DeliveryGame"),
+                "Selecting a published artifact compiled or loaded game code in the parent.");
+            window.Close();
+            await window.Completion.WaitAsync(token);
+
+            async Task Complete()
+            {
                 await playback.Pending.WaitAsync(token);
-                if (playback.Error is { } error) throw new InvalidOperationException("Editor selected build failed.", error);
+                if (playback.Error is { } error) throw new InvalidOperationException("Editor scene command failed.", error);
+            }
+
+            async Task<FrameProof> CapturePlaying(string name, GameBuildArtifact artifact, ulong minimumTick)
+            {
+                await engine.Supervisor.GetStatusAsync(token);
                 var status = engine.Supervisor.Status;
                 var identity = status.Identity ?? throw new InvalidOperationException("No selected runtime identity.");
                 Check(status.State == SessionState.Playing && identity.GameBuildId == artifact.BuildId &&
-                    native.Leases.Count == leaseIndex + 1 && engine.Supervisor.RequiredRenderViewVersion == 1,
-                    "Selected build did not reach Playing after the mesh presentation fence.");
-                var lease = native.Leases[leaseIndex];
-                Check(!playback.RunSelectedBuild(artifact) && !playback.CanExecute(EditorCommand.Replace),
-                    "Selected build switching must wait for Stop.");
+                    status.Tick >= minimumTick && engine.Supervisor.RequiredRenderViewVersion == 1,
+                    $"Expected {artifact.BuildId} Playing at tick >= {minimumTick}, observed {identity.GameBuildId} {status.State} at tick {status.Tick}.");
                 var manifest = artifact.RenderContent!;
-                var mask = await Capture(name, identity, content.Document.Id.Value, content.Document.Revision, manifest.Digest);
-                Check(playback.Execute(EditorCommand.Stop), "Editor did not admit Stop.");
-                await playback.Pending.WaitAsync(token);
-                if (playback.Error is { } stopError) throw new InvalidOperationException("Editor Stop failed.", stopError);
-                Check(lease.Reaped && lease.ResourcesReleased && engine.Supervisor.Status.State == SessionState.Stopped &&
-                    engine.Frames.Presentation == null && engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0,
-                    "Stop retained owned child or viewport resources.");
+                var frame = await Capture(name, identity, content.Document.Id.Value, content.Document.Revision, manifest.Digest);
+                Check(frame.Tick >= minimumTick, "Presented frame predates the checkpoint.");
                 var after = documents.Read().Document!;
                 Check(ReferenceEquals(content, after.Content) && before.IsDirty == after.IsDirty &&
-                    sceneHash == Hash(File.ReadAllBytes(scenePath)), "Playing changed the open authoring document.");
-                using var child = JsonDocument.Parse(await File.ReadAllBytesAsync(Path.Combine(report, $"runtime-{identity.Generation}.json"), token));
+                    sceneHash == Hash(File.ReadAllBytes(scenePath)), "Replace changed the open authoring document.");
+                var proof = new FrameProof(name, artifact.BuildId, identity.Generation, status.ProcessId!.Value,
+                    manifest.Digest.ToString(), frame.Tick, frame.Mask);
+                captures.Add(proof);
+                return proof;
+            }
+
+            async Task CheckReleased(ulong generation)
+            {
+                var lease = native.Leases.Single(lease => lease.Identity.Generation == generation);
+                Check(lease.Reaped && lease.ResourcesReleased, "Retired child or handles survived replacement.");
+                using var child = JsonDocument.Parse(await File.ReadAllBytesAsync(Path.Combine(report, $"runtime-{generation}.json"), token));
                 var stats = child.RootElement;
                 var validation = stats.GetProperty("Validation");
                 Check(stats.GetProperty("Pid").GetInt32() == lease.ProcessId && stats.GetProperty("Resources").GetInt32() == 0 &&
                     stats.GetProperty("Handles").GetInt32() == 0 && validation.GetProperty("ValidationEnabled").GetBoolean() &&
                     validation.GetProperty("Errors").GetInt32() == 0 && validation.GetProperty("Warnings").GetInt32() == 0,
                     "Incorrect child validation or resource cleanup.");
-                captures.Add(new(name, artifact.BuildId, identity.Generation, lease.ProcessId, manifest.Digest.ToString(), mask));
             }
-
-            var old = captures[0].Mask;
-            var updated = captures[1].Mask;
-            Check(old == captures[2].Mask && old.Width == updated.Width && old.Height == updated.Height &&
-                Math.Abs(old.Left - updated.Left) <= 1 && updated.Right > old.Right + 10 &&
-                updated.RedPixels > old.RedPixels * 1.6, "GPU scene does not show the expected stable and changed geometry.");
-            Check(!Directory.Exists(Path.Combine(compiler, "jobs")) &&
-                AppDomain.CurrentDomain.GetAssemblies().All(assembly => assembly.GetName().Name != "DeliveryGame"),
-                "Selecting a published artifact compiled or loaded game code in the parent.");
-            window.Close();
-            await window.Completion.WaitAsync(token);
         }
         finally
         {
@@ -134,12 +206,13 @@ internal static class EditorModelBuildSmoke
 
         await File.WriteAllTextAsync(Path.Combine(report, "editor-model.json"), JsonSerializer.Serialize(new
         {
-            Completed = true, Provider = args[0], SceneSha256 = sceneHash, Captures = captures
+            Completed = true, Provider = args[0], SceneSha256 = sceneHash, Captures = captures,
+            CancelledGeneration = cancelledCandidate!.Generation, CorruptRejectedBeforeHandoff = true, RollbackSucceeded = true
         }, new JsonSerializerOptions { WriteIndented = true }), token);
 
-        async Task<PixelMask> Capture(string name, SessionIdentity identity, Guid sceneId, long revision, RenderContentHash digest)
+        async Task<(PixelMask Mask, ulong Tick)> Capture(string name, SessionIdentity identity, Guid sceneId, long revision, RenderContentHash digest)
         {
-            var result = new TaskCompletionSource<PixelMask>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var result = new TaskCompletionSource<(PixelMask Mask, ulong Tick)>(TaskCreationOptions.RunContinuationsAsynchronously);
             void Presented(UiSession ui)
             {
                 if (result.Task.IsCompleted) return;
@@ -161,7 +234,7 @@ internal static class EditorModelBuildSmoke
                     var scale = ui.Viewport.Scale;
                     var clip = new SKRectI((int)(bounds.X * scale), (int)(bounds.Y * scale),
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
-                    result.TrySetResult(Measure(pixels, clip));
+                    result.TrySetResult((Measure(pixels, clip), stamp.Tick));
                 }
                 catch (Exception error) { result.TrySetException(error); }
             }
@@ -173,6 +246,19 @@ internal static class EditorModelBuildSmoke
             }
             finally { window.FramePresented -= Presented; }
         }
+    }
+
+    private static GameBuildArtifact CorruptCopy(GameBuildArtifact artifact, string report, string hostId)
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(report, "corrupt", artifact.BuildId)).FullName;
+        foreach (var path in Directory.EnumerateFiles(artifact.DirectoryPath))
+            File.Copy(path, Path.Combine(directory, Path.GetFileName(path)));
+        var copy = GameBuildArtifact.Open(directory, hostId, artifact.BuildId);
+        var payload = Path.Combine(directory, GameBuildArtifact.RenderContentFile);
+        var bytes = File.ReadAllBytes(payload);
+        bytes[^1] ^= 1;
+        File.WriteAllBytes(payload, bytes);
+        return copy;
     }
 
     private static PixelMask Measure(SKBitmap pixels, SKRectI clip)
@@ -206,5 +292,5 @@ internal static class EditorModelBuildSmoke
     }
 
     private sealed record PixelMask(int Width, int Height, int Left, int Right, int RedPixels, string Sha256);
-    private sealed record FrameProof(string Name, string BuildId, ulong Generation, int Pid, string ManifestHash, PixelMask Mask);
+    private sealed record FrameProof(string Name, string BuildId, ulong Generation, int Pid, string ManifestHash, ulong Tick, PixelMask Mask);
 }

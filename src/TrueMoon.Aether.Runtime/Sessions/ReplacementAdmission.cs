@@ -27,6 +27,12 @@ internal sealed class ReplacementAdmission
             else if (_active != null) throw new InvalidOperationException("Replacement owns this session; wait for completion or Stop.");
         }
     }
+    // The viewport still records actual draws. During replacement the transaction confirms the initial mesh draw.
+    internal void CheckPassivePresentation()
+    {
+        lock (_gate)
+            if (_active != null) throw new OperationCanceledException("Replacement owns presentation confirmation.");
+    }
     internal void Interrupt()
     {
         lock (_gate)

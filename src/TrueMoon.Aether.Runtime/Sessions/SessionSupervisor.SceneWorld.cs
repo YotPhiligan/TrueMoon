@@ -11,6 +11,15 @@ public sealed partial class SessionSupervisor
     private string? _activeWorldId, _activeRegistryId, _activeSceneOperation;
     private int _activeSceneBytes, _activeEntityCount, _activeComponentCount;
 
+    internal bool MatchesReplacementWorld(SceneWorldData scene, CancellationToken token)
+    {
+        if (Configuration is not { World: { } active, WorldDigest: { } digest } ||
+            scene.FormatVersion != active.FormatVersion ||
+            scene.Scene.Id != active.Scene.Id || scene.Scene.Revision != active.Scene.Revision) return false;
+        return ReferenceEquals(active.Scene, scene.Scene) ||
+            digest == Convert.ToHexString(SHA256.HashData(_sceneWorldCodec!.Encode(scene, token)));
+    }
+
     /// <summary>Starts a fresh fixed-build runtime with a complete scene, using negotiated bounded chunks.</summary>
     /// <param name="scene">Complete authoring document.</param><param name="behavior">Explicit probe behavior.</param>
     /// <param name="token">Startup cancellation, including transfer and activation.</param><returns>Completion after Paused readiness.</returns>

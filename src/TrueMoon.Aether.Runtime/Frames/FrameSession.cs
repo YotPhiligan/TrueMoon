@@ -67,7 +67,11 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
     public async Task<bool> PresentedAsync(ViewportFrame frame, CancellationToken token = default)
     {
         if (!Presented(frame)) return false;
-        if (frame.Metadata.RenderView is { } stamp) return await supervisor.ConfirmRenderViewAsync(stamp, token).ConfigureAwait(false);
+        if (frame.Metadata.RenderView is { } stamp)
+        {
+            try { return await supervisor.ConfirmRenderViewAsync(stamp, token, expectedIdentity: frame.Presentation.Surface.Identity).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (!token.IsCancellationRequested) { return false; }
+        }
         return true;
     }
     public FrameSurface? Surface => supervisor.Status.State is SessionState.Paused or SessionState.Playing ? Volatile.Read(ref _surface) : null;
@@ -112,6 +116,10 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
     internal Task StartForReplacementAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint checkpoint, int width, int height,
         string behavior, ReplacementAdmission.Lease owner, CancellationToken token)
         => StartCoreAsync(scene, build, checkpoint, width, height, behavior, token, owner);
+
+    internal Task StartWorldForReplacementAsync(SceneWorldData scene, GameBuildArtifact? build, GameCheckpoint checkpoint, int width, int height,
+        string behavior, ReplacementAdmission.Lease owner, CancellationToken token)
+        => StartCoreAsync(null, build, checkpoint, width, height, behavior, token, owner, worldScene: scene);
     internal async Task<ReplacementAdmission.Lease> ReserveReplacementAsync(ReplacementDeadlines deadlines, CancellationToken token)
     {
         var frameFence = Volatile.Read(ref _fence); var controlFence = supervisor.StopVersion;
@@ -156,7 +164,8 @@ public sealed class FrameSession(SessionSupervisor supervisor, IGameViewportTran
             {
                 if (worldScene != null)
                 {
-                    if (build == null) await supervisor.StartWorldAsync(worldScene, behavior, deadline.Token).ConfigureAwait(false);
+                    if (owner != null) await supervisor.StartWorldForReplacementAsync(worldScene, build, checkpoint!, behavior, owner, deadline.Token).ConfigureAwait(false);
+                    else if (build == null) await supervisor.StartWorldAsync(worldScene, behavior, deadline.Token).ConfigureAwait(false);
                     else await supervisor.StartWorldAsync(worldScene, build, behavior, deadline.Token).ConfigureAwait(false);
                 }
                 else if (role == RuntimeRole.EditPreview)

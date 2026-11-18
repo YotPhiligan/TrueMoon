@@ -26,7 +26,7 @@ pixels while keeping its left edge. A fourth process rejects a copy with an
 altered render payload. The evidence directory retains the PNGs, measurements,
 build/snapshot IDs, validation counters, package hashes and logs.
 
-## Editor switching
+## Editor hot replacement
 
 ```powershell
 pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 `
@@ -35,11 +35,14 @@ pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 `
 ```
 
 The Editor probe reuses the imported scene and builds. A single full Editor
-window opens the scene and drives the published-build selection API for
-old, new, and old again, with Stop between starts. It checks Play after
-presentation, each child's BuildId, the scene and manifest stamp, PNG geometry,
-and that Stop reaps the child and releases the viewport. It repeats the
-sequence in source Debug and published Release with Cobalt and Microsoft DI
-in the Editor host.
+window starts the old build and replaces it with the new build while playing.
+It then submits a damaged copy of the old artifact and verifies that the
+current child and surface survive preflight. A second attempt cancels after
+the candidate has activated its full scene. The probe checks one recovery
+of the previous build and its checkpoint, then replaces it successfully once
+more. It compares the scene and manifest stamps, captured ticks and GPU
+pixel masks throughout. After the final Stop it checks that the children
+and GPU resources were released. The sequence runs in source Debug and
+published Release with Cobalt and Microsoft DI in the Editor host.
 
 [Contract and ownership](../../docs/engine/MODEL_BUILD_DELIVERY.md)

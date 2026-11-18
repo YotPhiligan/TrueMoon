@@ -96,7 +96,7 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
     private Task? _cleanup;
     internal ReplacementAdmission Admission { get; } = new();
     internal int StopVersion => Volatile.Read(ref _fence);
-    internal (SceneSnapshot Scene, GameBuildArtifact? Build, string Behavior)? Configuration { get; private set; }
+    internal (SceneSnapshot? Scene, SceneWorldData? World, string? WorldDigest, GameBuildArtifact? Build, string Behavior)? Configuration { get; private set; }
     internal void EnsureReplacementOpen() => ObjectDisposedException.ThrowIf(_disposed || Volatile.Read(ref _closing) != 0, this);
     private CancellationTokenSource? _work;
     private Task _monitor = Task.CompletedTask;
@@ -146,13 +146,16 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
     internal Task StartForReplacementAsync(SceneSnapshot scene, GameBuildArtifact? build, GameCheckpoint checkpoint, string behavior,
         ReplacementAdmission.Lease owner, CancellationToken token) => StartCoreAsync(scene, build, checkpoint, behavior, token, owner);
 
+    internal Task StartWorldForReplacementAsync(SceneWorldData scene, GameBuildArtifact? build, GameCheckpoint checkpoint, string behavior,
+        ReplacementAdmission.Lease owner, CancellationToken token) => StartCoreAsync(null, build, checkpoint, behavior, token, owner, worldScene: scene);
+
     private async Task StartCoreAsync(SceneSnapshot? scene, GameBuildArtifact? build, GameCheckpoint? checkpoint, string behavior, CancellationToken token,
         ReplacementAdmission.Lease? owner = null, RuntimeRole role = RuntimeRole.Game, SceneWorldData? worldScene = null, PreviewViewState? previewView = null)
     {
         if (scene == null && worldScene == null) throw new ArgumentNullException(nameof(scene));
-        checkpoint?.ValidateFor(_hostId, scene!);
         var sceneId = worldScene?.Scene.Id.Value.ToString("D") ?? scene!.Id;
         var sceneRevision = worldScene?.Scene.Revision ?? scene!.Revision;
+        checkpoint?.ValidateFor(_hostId, sceneId, sceneRevision);
         var fence = Volatile.Read(ref _fence);
         await _gate.WaitAsync(token).ConfigureAwait(false);
         var phase = "Launch";
@@ -220,7 +223,7 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
                 var mode = await ExchangeAsync(CommandKind.SetMode, r => r.Playing = false, startup.Token).ConfigureAwait(false);
                 if (mode.Phase != "Paused") throw new InvalidDataException("Paused acknowledgement missing.");
                 Publish(Status with { State = SessionState.Paused, Tick = unchecked((ulong)mode.Tick) });
-                Configuration = scene == null ? null : (scene, build, behavior);
+                Configuration = (scene, worldScene, worldBytes == null ? null : Convert.ToHexString(SHA256.HashData(worldBytes)), build, behavior);
                 _monitor = MonitorAsync(_lease, _work.Token);
             }
             catch (Exception error)
@@ -323,10 +326,16 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
         try
         {
             ObjectDisposedException.ThrowIf(_disposed || Volatile.Read(ref _closing) != 0, this);
-            Admission.Check(owner);
+            if (kind == CommandKind.PresentRenderView && expectedIdentity != null) Admission.CheckPassivePresentation();
+            else Admission.Check(owner);
             if (expectedIdentity != null && Status.Identity != expectedIdentity) throw new OperationCanceledException("Input belongs to an earlier runtime.");
             if (fence != Volatile.Read(ref _fence)) throw new OperationCanceledException("Command superseded by Stop.");
-            if (Status.State is not (SessionState.Paused or SessionState.Playing)) throw new InvalidOperationException("Runtime is not Ready.");
+            if (Status.State is not (SessionState.Paused or SessionState.Playing))
+            {
+                if (kind == CommandKind.PresentRenderView && expectedIdentity != null)
+                    throw new OperationCanceledException("Presented frame belongs to an inactive runtime.");
+                throw new InvalidOperationException("Runtime is not Ready.");
+            }
             if (kind == CommandKind.Step && Status.State != SessionState.Paused) throw new InvalidOperationException("Step requires Paused.");
             if (kind == CommandKind.CaptureCheckpoint && Status.State != SessionState.Paused) throw new InvalidOperationException("Pause before capturing a checkpoint.");
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token, _work!.Token);
@@ -439,7 +448,7 @@ public sealed partial class SessionSupervisor : IAsyncDisposable
                 TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
         await _cleanup.WaitAsync(cleanupDeadline).ConfigureAwait(false);
-        _lease = null; _cleanup = null;
+        _lease = null; _cleanup = null; Configuration = null;
     }
     private static async Task CleanupLeaseAsync(IRuntimeLease lease, CancellationToken gracefulDeadline)
     {
