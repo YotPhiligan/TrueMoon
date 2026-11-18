@@ -15,7 +15,7 @@
     <PackageVersion Include="Silk.NET.Vulkan" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.Vulkan.Extensions.EXT" Version="2.23.0" />
     <PackageVersion Include="Silk.NET.Windowing.Extensions.Veldrid" Version="2.23.0" />
-    <PackageVersion Include="SkiaSharp" Version="4.156.1" />
+    <PackageVersion Include="SkiaSharp" Version="4.157.0" />
     <PackageVersion Include="Topten.RichTextKit" Version="0.6.173" />
     <PackageVersion Include="Veldrid.SPIRV" Version="1.0.15" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0" PrivateAssets="all" />

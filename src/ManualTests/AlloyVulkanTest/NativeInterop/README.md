@@ -1,5 +1,10 @@
 # Эксперимент внешнего Vulkan handoff
 
+**2026-11-18 — SkiaSharp/native 4.157.0.** Официальный тег и NuGet указывают
+на commit `2a53a3c8641073bc914c63ee158bbf62b8a0bb92` с Skia gitlink
+`51cb594d773b5383a45065ea3c8cbec398ad2c36`. DLL собрана с Vulkan GENERAL/HOST
+и ABI v1/48 байт. [Команды и результаты](../../../docs/alloy/HISTORY.md#skiasharp-41570-2026-11-18).
+
 **2026-11-15 — SkiaSharp/native4.156.1:** exact NuGet parent
 `c8c35b59e8de5efbc2abf52fc26202ae1731e593` / Skia gitlink
 `712ea097151d4951652dee046a8944376fd8df1b`. Extended source build, GENERAL/HOST patch,
@@ -50,6 +55,7 @@ DLL теперь хранится в `TrueMoon.Alloy.Rendering.Skia/NativeAssets
 | 4.155.0 | d25e7fa628a2576e50ecc42004cc4fd03c6657f5 | c2d78902a56e24827a7273a4ed3461ce18780680 |
 | 4.156.0 | c4ef20229bd56e41731aa94eebe8b082b8ef886c | d1717dc22ef2203b7fc9bf0e01078b37b1a4af6b |
 | 4.156.1 | c8c35b59e8de5efbc2abf52fc26202ae1731e593 | 712ea097151d4951652dee046a8944376fd8df1b |
+| 4.157.0 | 2a53a3c8641073bc914c63ee158bbf62b8a0bb92 | 51cb594d773b5383a45065ea3c8cbec398ad2c36 |
 
 Предыдущий4.155.0 source commit взят из repository metadata официального NuGet;
 проверен gitlink Skia. Release branch используется только для получения sources,
@@ -84,8 +90,8 @@ Managed lease удерживает владельца и SafeHandle descriptor. 
 ## Сборка
 
 Native producer использует upstream global.json (SDK10.0.401/latestPatch;
-здесь10.0.404), managed TrueMoon consumers — общий SDK11/net11 profile. M156
-требует VS2026 default MSVC v145+; используется установленный14.51.36231/Spectre.
+здесь10.0.404), managed TrueMoon consumers — общий SDK11/net11 profile. M156 и M157
+используют VS2026 default MSVC v145+. Для M157 использованы 14.52.37025/Spectre.
 Tool restore получает явный upstream nuget.config без inherited source mapping.
 WindowsSdkVersion можно задать явно; иначе выбирается полный установленный SDK
 с headers/libs/rc, а не отсутствующий upstream default28000. Выбранные MSVC/SDK
@@ -98,19 +104,20 @@ WindowsSdkVersion можно задать явно; иначе выбирает�
 Пример использует реальный Python из LibreOffice; WindowsApps alias и launcher LibreOffice не подходят для дочерних процессов. При другом Python пути/переменные надо заменить.
 
 ```powershell
-git -c core.longpaths=true clone --depth 1 --branch release/4.156.1 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41561/SkiaSharp
-git -c core.longpaths=true -C TestResults/SkiaSharp41561/SkiaSharp checkout --detach c8c35b59e8de5efbc2abf52fc26202ae1731e593
+git -c core.longpaths=true clone --depth 1 --branch v4.157.0 https://github.com/mono/SkiaSharp.git TestResults/SkiaSharp41570/SkiaSharp
+git -c core.longpaths=true -C TestResults/SkiaSharp41570/SkiaSharp checkout --detach 2a53a3c8641073bc914c63ee158bbf62b8a0bb92
 $env:PYTHONHOME = 'C:/Program Files/LibreOffice/program/python-core-3.13.18'
 $env:PATH = 'C:/Program Files/LibreOffice/program;' + $env:PATH
 pwsh -NoProfile -File ManualTests/AlloyVulkanTest/NativeInterop/BuildNativeInterop.ps1 `
-  -SkiaSharpSourcePath TestResults/SkiaSharp41561/SkiaSharp `
+  -SkiaSharpSourcePath TestResults/SkiaSharp41570/SkiaSharp `
   -VisualStudioPath 'C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools' `
   -PythonPath 'C:/Program Files/LibreOffice/program/python-core-3.13.18/bin/python.exe' `
-  -NinjaPath TestResults/SkiaSharp41550-20261107/tools/ninja/ninja.exe -CheckOnly
+  -NinjaPath TestResults/SkiaSharp41550-20261107/tools/ninja/ninja.exe `
+  -WindowsSdkVersion 10.0.26100.0 -CheckOnly
 # Повторить без -CheckOnly для source build.
 ```
 
-BuildNativeInterop.ps1 инициализирует shallow pinned Skia submodule и depot_tools только при его наличии в .gitmodules, проверяет gitlink, применяет extension и запускает upstream Cake libSkiaSharp с Vulkan, без Direct3D. Git core.longpaths и PATH настраиваются только для процесса и восстанавливаются; глобальные Git/Windows настройки не меняются. Legacy pins используют MSVC family prefix; M156 проверяет VS default toolset/Spectre. ApplyNativeInterop.ps1 создаёт feature branch при detached HEAD/защищённой ветке и допускает повторное применение идентичного extension; отличающиеся файлы не перезаписывает. externals-download не вызывается.
+BuildNativeInterop.ps1 инициализирует shallow pinned Skia submodule и depot_tools только при его наличии в .gitmodules, проверяет gitlink, применяет extension и запускает upstream Cake libSkiaSharp с Vulkan, без Direct3D. Git core.longpaths и PATH настраиваются только для процесса и восстанавливаются; глобальные Git/Windows настройки не меняются. Legacy pins используют MSVC family prefix. Для M156 и M157 проверяется VS default toolset/Spectre. ApplyNativeInterop.ps1 создаёт feature branch при detached HEAD/защищённой ветке и допускает повторное применение идентичного extension; отличающиеся файлы не перезаписывает. externals-download не вызывается.
 
 Готовая DLL: TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.dll.
 

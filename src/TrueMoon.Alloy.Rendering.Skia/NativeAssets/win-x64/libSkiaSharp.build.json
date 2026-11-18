@@ -1,11 +1,11 @@
 {
-  "skiaSharpVersion": "4.156.1",
-  "skiaSharpRevision": "c8c35b59e8de5efbc2abf52fc26202ae1731e593",
-  "skiaRevision": "712ea097151d4951652dee046a8944376fd8df1b",
+  "skiaSharpVersion": "4.157.0",
+  "skiaSharpRevision": "2a53a3c8641073bc914c63ee158bbf62b8a0bb92",
+  "skiaRevision": "51cb594d773b5383a45065ea3c8cbec398ad2c36",
   "interopAbi": 1,
   "runtimeIdentifier": "win-x64",
-  "sha256": "7CAD4A4AA72DFEC19F05C686088BCF38D6585C984E19C4884985FF4C03CA8FCE",
-  "msvcVersion": "14.51.36231",
+  "sha256": "1D664EC789D08D769CA3EDC00FFB4BBFFB36879E5678EAE32F7626EFCB038D39",
+  "msvcVersion": "14.52.37025",
   "windowsSdkVersion": "10.0.26100.0",
   "sourcePatches": [
     {

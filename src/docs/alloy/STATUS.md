@@ -1,12 +1,22 @@
 # Alloy / Argentis: состояние и точка продолжения
 
+**2026-11-18 — SkiaSharp 4.157.0 и нативная Skia M157.**
+Version **1.2611.18.9-alpha**. DLL пересобрана для Windows x64 с Vulkan
+GENERAL/HOST и ABI v1. Решение собрано в Debug и Release. Пройдены
+2919 тестов Alloy, Hosting, Aether Editor и Player в каждой конфигурации.
+Проверены загрузка, Vulkan readback, композиция, raster/OpenGL/Vulkan и
+размытие в Source Debug и published Release, validation 0/0. Независимые
+потребители прошли 40 сценариев на свежих локальных пакетах.
+[Ревизии и SHA](../../TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.build.json),
+[приёмка](HISTORY.md#skiasharp-41570-2026-11-18).
+
 **2026-11-15 — SkiaSharp/native4.156.1 и RichTextKit0.6.173 проверены.**
 Обновление входит в [DEP1](../core/PLAN.md#dep1-dependency-refresh);
 [полные результаты](../core/HISTORY.md#dep1-2026-11-15), [manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).
 
 Extended Windows x64 DLL9076224bytes пересобрана из exact NuGet parent/Skia gitlink;
-GENERAL/HOST patch, ABI1/48bytes/ownership и C# source/API прежние. Current source pins,
-toolchain и native SHA записаны в [build metadata](../../TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.build.json).
+GENERAL/HOST patch, ABI1/48bytes/ownership и C# source/API прежние. Ревизии,
+toolchain и native SHA 4.156.1 указаны в [отчёте DEP1](../core/HISTORY.md#dep1-2026-11-15).
 [Рецепт и consumer delivery](../../TrueMoon.Alloy.Rendering.Skia/README.md).
 
 | Проверка15ноября | Результат |

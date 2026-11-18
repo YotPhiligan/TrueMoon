@@ -7308,3 +7308,39 @@ K8/device-loss/VRAM и release matrix сохраняют отдельные кр
 ## DEP1 dependency refresh — 2026-11-15
 
 Новая полная D/R проверка, six-package version refresh и согласованная native Skia4.156.1 поставка выполнены в [единственной межмодульной записи](../core/HISTORY.md#dep1-2026-11-15). Прежние manifests и функциональные gates сохранены; точный scope нового запуска — в записи Core.
+
+<a id="skiasharp-41570-2026-11-18"></a>
+## 2026-11-18 — SkiaSharp 4.157.0 и расширенная Windows x64 DLL
+
+Version 1.2611.18.9-alpha. Официальный nupkg и GitHub tag совпали по родительскому
+commit `2a53a3c8641073bc914c63ee158bbf62b8a0bb92`, Skia gitlink
+`51cb594d773b5383a45065ea3c8cbec398ad2c36`. SHA256 официального SkiaSharp nupkg
+`EFD16D3F8FF965F6CDD1F66FBD422B9985B78B22DA3AB5D10C5EAB3B40CF3327`.
+[NuGet](https://www.nuget.org/packages/SkiaSharp/4.157.0),
+[релиз](https://github.com/mono/SkiaSharp/releases/tag/v4.157.0).
+
+`BuildNativeInterop.ps1 -InstallToRenderer -WindowsSdkVersion 10.0.26100.0`
+собрал 1479 целей из свежего checkout с MSVC 14.52.37025/Spectre, Python 3.13.18,
+Ninja 1.13.2 и SDK .NET 10.0.404. Применены Vulkan GENERAL/HOST и экспорты TrueMoon,
+ABI v1/48 байт. Процесс завершился с exit 0 за 163 с, с предупреждениями MSVC
+и LNK4199 для отключённого Direct3D. DLL 9 207 808 байт.
+[Ревизии, SHA DLL и патча](../../TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.build.json).
+
+- Restore решения разрешил SkiaSharp и официальные NativeAssets 4.157.0.
+  Сборки решения Debug и Release завершились с 0 ошибок и 1506 предупреждениями
+  в каждой конфигурации. Полные suites Alloy 1224, Hosting 171, Aether Editor
+  1507 и Player 17 прошли в обеих конфигурациях. Отчёт
+  `TestResults/SkiaSharp41570-20261118/managed/verification.json`, SHA256
+  `0F10B4F7A9FA76902EF5E57F82AD33576E13BC28C7FBD7ADB90779EA927DC5B9`.
+- Source Debug и published Release проверили совпадение SHA загружаемой DLL.
+  В каждом профиле пройдены ABI, 18 Vulkan readback, 36 внешних композиций,
+  3 сравнения raster/OpenGL/Vulkan и frosted-shadow профиль с 18 кадрами
+  и 12 сравнениями. Vulkan validation 0/0, включая teardown. DLL M156
+  отклонена по версии, штатная M157 — по отсутствующим экспортам.
+  Отчёт `TestResults/SkiaSharp41570-20261118/native-probes/native-probes.json`,
+  SHA256 `078728ADBF923E01C3A1D46040D4F7535C8D9CE121A97E8BCA71A42CA2C8070B`.
+- `ManualTests/AlloyPackageConsumer/RunPackageSmoke.ps1` проверил 10 свежих
+  локальных архивов, 36 App и 4 прямых сценария, а также ожидаемый отказ
+  без analyzer. SHA DLL совпал в архиве renderer и независимых потребителях.
+  Отчёт `TestResults/AlloyPackages/skia-41570-20261118-01/summary.json`,
+  SHA256 `A8DFE494C1CCFBB29406943C6CA1BB9AA6CAE4DD50625A5B11BE5FD092780820`.

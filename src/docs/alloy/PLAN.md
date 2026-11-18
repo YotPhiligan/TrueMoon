@@ -1,5 +1,12 @@
 # TrueMoon.Alloy: план первой рабочей версии
 
+<a id="skiasharp-41570-completed"></a>
+Выполнено 18.11.2026. SkiaSharp обновлён до **4.157.0**, расширенная
+Windows x64 DLL пересобрана из соответствующих исходников с Vulkan GENERAL/HOST
+и ABI v1. В Debug и Release пройдены ABI, Vulkan и сравнение raster/OpenGL/Vulkan.
+Свежие NuGet-пакеты прошли проверку независимых потребителей.
+[Приёмка и границы](HISTORY.md#skiasharp-41570-2026-11-18).
+
 Выполнено2026-11-15: **SkiaSharp/native4.156.1 +RichTextKit0.6.173**, exact parent/gitlink,
 GENERAL/HOST patch/ABI1/48bytes сохранены. Native source/published GPU/typography и
 fresh10package40case delivery прошли; полные UI/Hosting/Editor suites D/R прошли.
