@@ -1,6 +1,8 @@
 using System.Reflection;
+using TrueMoon.Aether.Abstractions.Rendering;
 using TrueMoon.Aether.Abstractions.Runtime;
 using TrueMoon.Aether.Abstractions.Sessions;
+using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Services;
 
 namespace TrueMoon.Aether.Runtime;
@@ -18,5 +20,21 @@ internal sealed class GameSessionFactory(IServiceResolver? services) : IFactory<
             .MakeGenericMethod(arguments).CreateDelegate<Func<IServiceResolver?, IGameSession>>();
         return dispatch(services) ?? throw new InvalidDataException("Game entry factory returned null.");
     }
+
+    internal IGameSession Create(Type entryType, GameBuildArtifact artifact)
+    {
+        if (!artifact.RuntimeAccess || !typeof(IGameBuildSessionEntry).IsAssignableFrom(entryType))
+            return Create(entryType);
+
+        var content = artifact.RenderContent ??
+            throw new InvalidDataException("Game build entry requires frozen render content.");
+        var dispatch = typeof(GameSessionFactory).GetMethod(nameof(CreateBuildEntry), BindingFlags.Static | BindingFlags.NonPublic)!
+            .MakeGenericMethod(entryType).CreateDelegate<Func<IServiceResolver?, RenderContentManifest, IGameSession>>();
+        return dispatch(services, content) ?? throw new InvalidDataException("Game build entry factory returned null.");
+    }
+
     private static IGameSession CreateEntry<T>(IServiceResolver? services) where T : IGameSessionEntry => T.Create(services);
+
+    private static IGameSession CreateBuildEntry<T>(IServiceResolver? services, RenderContentManifest content)
+        where T : IGameBuildSessionEntry => T.Create(services, content);
 }

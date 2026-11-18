@@ -15624,6 +15624,39 @@ TRX и уникальные binlogs сохранены в TestResults/ModelBuild
 Отчёт acceptance verification.json SHA256 1F8B3D90FA85A145815B0BC78F4083FC72BD6E8776BF14A662FCA5937ABD7865.
 [Точный контракт и область результата](MODEL_BUILD_DELIVERY.md).
 
+<a id="arch1g2b-2026-11-18"></a>
+## 2026-11-18 — ARCH1g.2b, сцена и GPU
+
+Version 1.2611.18.2-alpha, baseline c7cb64a. Tooling размещает экземпляры
+одного опубликованного model import через постоянные ID ledger. GameBuildLoader
+передаёт манифест выбранной сборки через `IGameBuildSessionEntry`. Старый
+entry без render payload активируется. Новый entry требует payload.
+
+`ManualTests/ModelBuildConsumer/Verify.ps1` выполнен с EvidenceDirectory
+`TestResults/ARCH1g2b-20261118-04` и ValidationDirectory
+`TestResults/EditorWindow-20261104/tools/validation`. Четыре профиля
+source Debug / fresh NuGet published Release × Cobalt / Microsoft DI.
+19 локальных пакетов и 32 внешних архива в закрытом feed.
+SHA256 `verification.json`
+`2F0191ADDAC19F2945D92D2A29DE3CBFD2E506C61BDD3ACC5972A6BC5B5B0574`.
+
+Для каждого профиля одна `placed.aetherscene` (revision 41) открыта в
+отдельных Player-процессах со старой, новой и повторно старой сборками.
+Хэши сцены и игровой DLL совпадают внутри профиля, ID экземпляров и ресурсов
+сохранены. Nom и исходники перемещены до старта всех Player-процессов.
+Каждый кадр 960×540 имеет точный stamp сцены и манифеста. Старая маска
+содержит 8 753 красных пикселя, новая 17 496. Их правые границы X=467 и X=560
+при общей левой границе X=352. Маска при повторном запуске старой сборки
+совпала с первой. PNG и их SHA256 сохранены в отчёте. Все 12 запусков
+завершились без сообщений Vulkan validation. Счётчики поверхностей, слотов,
+устройств, mesh buffers и allocations сбалансированы, живых uploads и
+открытых handles нет. Копия с подменой render payload отклонена до Player App.
+
+Целевые Aether tests по GameBuild, SceneWorld, Scenes, Rendering и render-view
+readiness — 1155/1155, полный Player — 17/17 в Debug и Release. Ошибок и пропусков
+нет. TRX и binlogs в `TestResults/ARCH1g2b-regression-20261118-01`.
+[Контракт и воспроизведение](MODEL_BUILD_DELIVERY.md#arch1g2b-scene-gpu).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

@@ -1,4 +1,4 @@
-# ARCH1g.2a — одна модель через Nom, Build и Runtime
+# ARCH1g.2 — импортированная модель в Build, Runtime и Player
 
 Authoring App подключает `UseNom()`, `UseAetherModelImport()` и
 `UseAetherNomContent()`. Мост `TrueMoon.Aether.Nom` принимает опубликованный
@@ -43,8 +43,7 @@ Runtime открывает артефакт по точному BuildId, про�
 CPU lease через `UseAetherRenderResources()` и
 `IFactory<RenderManifestLease, RenderContentManifest>`. Пакет Runtime может
 читать артефакт самостоятельно. Nom, Tooling и Assimp нужны на стороне
-authoring. Экземпляры модели и их ID остаются в authoring ledger, размещение
-scene entities и вывод через GPU относятся к следующему срезу.
+authoring.
 
 [Воспроизводимый прогон](../../ManualTests/ModelBuildConsumer/README.md) выполняет
 два реальных импорта статического glTF с разной координатой вершины. Он
@@ -53,3 +52,31 @@ scene entities и вывод через GPU относятся к следующ
 BuildId. Отдельные Runtime-процессы получают обе версии из артефактов после
 закрытия и перемещения Nom и исходников. Изменённая копия payload отклоняется.
 [Фактические результаты](HISTORY.md#arch1g2a-2026-11-18)
+
+<a id="arch1g2b-scene-gpu"></a>
+## ARCH1g.2b — размещение и GPU
+
+`ImportedModelScene.Place(scene, publishedModel, placement)` в Tooling возвращает
+новую ревизию сцены. Постоянный ID экземпляра из ledger становится EntityId.
+Экземпляры одного mesh используют общее определение с MeshRenderer, который хранит
+стабильные mesh и binding-set AssetId. Поза узла из импорта компонуется с placement
+и записывается в Transform v1. Этот формат поддерживает положительный масштаб,
+поворот и перенос. Сдвиговая деформация (shear) и отражение отклоняются. Повторное
+размещение одного импорта в той же сцене требует отдельной схемы ID размещения.
+Caller сохраняет документ через существующий codec `.aetherscene`.
+
+Игра с `RuntimeAccess` может реализовать `IGameBuildSessionEntry`. Штатная фабрика
+Runtime передаёт ей проверенный `RenderContentManifest` выбранного артефакта на
+время жизни сессии. Фабрика игры связывает `MeshRenderingComponents` с этим
+манифестом, а `SceneWorldLoader` разрешает ссылки ECS при загрузке сцены.
+Вход без render payload отклоняется при активации такого entry. Для
+`IGameSessionEntry` и явно зарегистрированной пользовательской фабрики
+действует прежний контракт.
+
+Проверка использует одну сцену с камерой и двумя экземплярами одного
+импортированного меша. Player получает её через `PlayerStart.CaptureAsync`.
+Три последовательных запуска проверяют старый BuildId, новый BuildId и снова
+старый BuildId. Проверка сверяет штамп сцены и манифеста, затем считывает пиксели
+после представления Vulkan-кадра на Skia OpenGL surface. Замена одной вершины
+увеличивает площадь изображения обеих копий, старый билд при повторном открытии
+даёт идентичную маску. [Фактические результаты](HISTORY.md#arch1g2b-2026-11-18)

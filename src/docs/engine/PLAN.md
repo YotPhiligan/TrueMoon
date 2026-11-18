@@ -31,7 +31,8 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 
 Завершены 17.11.2026: [g.1a source capture](#arch1g1a-source-capture), [g.1b isolated CPU import](#arch1g1b-isolated-import)
 и [g.1c persistent IDs/atomic ledger](#arch1g1c-subasset-ledger). Ограниченный CPU g.1 завершён;
-[ARCH1g.2a](#arch1g2a-model-delivery) провёл одну модель через Nom → Build → Runtime. Далее сцена и native render.
+[ARCH1g.2a](#arch1g2a-model-delivery) провёл одну модель через Nom → Build → Runtime.
+[ARCH1g.2b](#arch1g2b-model-scene-gpu) разместил её в сцене и проверил обе сборки на GPU.
 
 <a id="arch1j-session-subsystems"></a>
 ### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
@@ -1895,8 +1896,18 @@ Runtime открывает проверенный CPU render scope выбран�
 Доказаны исходники и independent fresh packages на обоих DI.
 [Контракт](MODEL_BUILD_DELIVERY.md), [проверки](HISTORY.md#arch1g2a-2026-11-18).
 
-Далее размещение экземпляров в сцене и native render proof, затем расширенная
-матрица выбора ассетов и жизненного цикла по критериям ARCH1g.2.
+<a id="arch1g2b-model-scene-gpu"></a>
+#### ARCH1g.2b — экземпляры модели в сцене и проверка GPU
+
+Завершён 18.11.2026. Сцена использует постоянные ID экземпляров, меша и привязки
+материала. Player загружает одинаковые байты сцены с выбранным BuildId.
+После реимпорта новая сборка показывает изменённую форму, повторно открытая
+старая даёт прежнюю маску GPU. Подтверждено для source Debug и fresh published
+Release на обоих DI. [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2b-scene-gpu),
+[проверки](HISTORY.md#arch1g2b-2026-11-18).
+
+Далее расширенная матрица выбора ассетов и жизненного цикла по критериям ARCH1g.2,
+включая переключение сборки в Editor и владение при reload/replace.
 
 <a id="arch1h-audio"></a>
 ### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07

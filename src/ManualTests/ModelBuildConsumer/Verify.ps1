@@ -1,12 +1,20 @@
 #Requires -Version 7.2
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$EvidenceDirectory)
+param(
+    [Parameter(Mandatory)][string]$EvidenceDirectory,
+    [Parameter(Mandatory)][string]$ValidationDirectory
+)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot '../BuildProfile.ps1')
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $evidence = [IO.Path]::GetFullPath($EvidenceDirectory, $workspace)
+$validation = [IO.Path]::GetFullPath($ValidationDirectory, $workspace)
+$validationFiles = @('VkLayer_khronos_validation.json', 'VkLayer_khronos_validation.dll')
+foreach ($file in $validationFiles) {
+    if (!(Test-Path -LiteralPath "$validation/$file" -PathType Leaf)) { throw "Missing validation layer file $file" }
+}
 if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' }
 [void][IO.Directory]::CreateDirectory($evidence)
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
@@ -16,18 +24,21 @@ $roots = @('TrueMoon', 'TrueMoon.Extensions.DependencyInjection')
 $packages = @('TrueMoon.Contracts', 'TrueMoon.Core', 'TrueMoon.Cobalt', 'TrueMoon',
     'TrueMoon.Extensions.DependencyInjection', 'TrueMoon.Aether.Abstractions',
     'TrueMoon.Enerit.Generator', 'TrueMoon.Enerit', 'TrueMoon.Mithril',
-    'TrueMoon.Aether.Runtime', 'TrueMoon.Aether.Tooling', 'TrueMoon.Nom', 'TrueMoon.Aether.Nom')
+    'TrueMoon.Aether.Runtime', 'TrueMoon.Aether.Tooling', 'TrueMoon.Nom', 'TrueMoon.Aether.Nom',
+    'TrueMoon.Argentis', 'TrueMoon.Alloy', 'TrueMoon.Alloy.Rendering.Skia', 'TrueMoon.Alloy.Platform.Silk',
+    'TrueMoon.Alloy.Hosting', 'TrueMoon.Aether.Player')
 $worker = "$evidence/worker"
 $feed = "$evidence/feed"
 [void][IO.Directory]::CreateDirectory($feed)
 $report = [ordered]@{
     Completed = $false
-    Stage = 'ARCH1g.2a'
+    Stage = 'ARCH1g.2b'
     Profile = $profile
     Runs = @()
     Packages = @()
     ExternalPackages = @()
     Commands = @()
+    Validation = @($validationFiles | ForEach-Object { @{ Path = "$validation/$_"; Sha256 = (Get-FileHash -LiteralPath "$validation/$_").Hash } })
 }
 
 function Invoke-DotnetStep([string]$Name, [string[]]$Arguments) {
@@ -49,8 +60,17 @@ function Test-Consumers([string]$ProfileName, [string]$Authoring, [string]$Runti
         Invoke-DotnetStep $name @($Authoring, $provider, $directory, $worker, $Runtime, $dotnet, $profile.TestFramework, $profile.Sdk)
         $path = "$directory/report.json"
         $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-        if (!$proof.Completed -or $proof.Old.Meshes[0].VertexX -ne 1 -or $proof.New.Meshes[0].VertexX -ne 2) { throw 'Unexpected Runtime report.' }
-        $report.Runs += @{ Name = $name; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash; OldBuild = $proof.OldBuild; NewBuild = $proof.NewBuild }
+        if (!$proof.Completed -or $proof.Old.Meshes[0].VertexX -ne 1 -or $proof.New.Meshes[0].VertexX -ne 2 -or
+            $proof.Old.Mask.Sha256 -ne $proof.Reopened.Mask.Sha256 -or $proof.Old.Mask.Sha256 -eq $proof.New.Mask.Sha256) {
+            throw 'Unexpected GPU geometry report.'
+        }
+        $report.Runs += @{
+            Name = $name; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash
+            OldBuild = $proof.OldBuild; NewBuild = $proof.NewBuild; SceneSha256 = $proof.SceneSha256
+            Captures = @('old', 'new', 'old-reopened' | ForEach-Object {
+                @{ Path = "$directory/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$directory/$_.png").Hash }
+            })
+        }
     }
 }
 
@@ -69,6 +89,8 @@ function New-PackageConsumer([string]$Directory, [string]$AssemblyName, [string]
     return $project
 }
 
+$previousLayerPath = $env:VK_LAYER_PATH
+$env:VK_LAYER_PATH = $validation
 Push-Location $workspace
 try {
     Invoke-DotnetStep 'worker' @('publish', 'TrueMoon.Aether.Importing.Assimp/TrueMoon.Aether.Importing.Assimp.csproj',
@@ -109,7 +131,7 @@ try {
     $config = "$fresh/NuGet.Config"
     [IO.File]::WriteAllText($config, "<configuration><packageSources><clear/><add key='closed' value='$escapedFeed'/></packageSources><fallbackPackageFolders><clear/></fallbackPackageFolders></configuration>")
     $authoring = New-PackageConsumer "$fresh/Authoring" 'Authoring' 'TrueMoon.Aether.Nom'
-    $runtime = New-PackageConsumer "$fresh/Runtime" 'ModelBuildRuntimeProbe' 'TrueMoon.Aether.Runtime'
+    $runtime = New-PackageConsumer "$fresh/Runtime" 'ModelBuildRuntimeProbe' 'TrueMoon.Aether.Player'
     Copy-Item -LiteralPath "$PSScriptRoot/Authoring/Program.cs", "$PSScriptRoot/../ModelImportResearch/Fixtures.cs" -Destination "$fresh/Authoring"
     Copy-Item -LiteralPath "$PSScriptRoot/Runtime/Program.cs" -Destination "$fresh/Runtime"
     Push-Location $fresh
@@ -126,10 +148,13 @@ try {
             }
             Invoke-DotnetStep "fresh-$name-publish" @('publish', $project, '--no-restore', '-c', 'Release', '--self-contained', 'false', '-p:UseAppHost=false', '-o', "$fresh/$name-output", '-v:q')
         }
+        [void][IO.Directory]::CreateDirectory("$fresh/Runtime-output/Assets/Fonts")
+        Copy-Item -Path "$workspace/Examples/AetherEditor/Assets/Fonts/*" -Destination "$fresh/Runtime-output/Assets/Fonts"
         Test-Consumers 'fresh-release' "$fresh/Authoring-output/Authoring.dll" "$fresh/Runtime-output/ModelBuildRuntimeProbe.dll"
     } finally { Pop-Location }
     $report.Completed = $true
 } finally {
     Pop-Location
+    $env:VK_LAYER_PATH = $previousLayerPath
     $report | ConvertTo-Json -Depth 18 | Set-Content -LiteralPath "$evidence/verification.json" -Encoding utf8
 }

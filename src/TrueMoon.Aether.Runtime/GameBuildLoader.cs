@@ -23,7 +23,8 @@ public sealed class GameBuildLoader : IDisposable
             var type = assembly.GetType(artifact.EntryType, throwOnError: true)!;
             if (!type.IsVisible || type.IsAbstract || !typeof(IGameSession).IsAssignableFrom(type))
                 throw new InvalidDataException("Game entry must implement the shared IGameSession contract.");
-            _session = sessions.Create(type) ?? throw new InvalidDataException("Game session factory returned null.");
+            _session = (sessions is GameSessionFactory defaultFactory ? defaultFactory.Create(type, artifact) : sessions.Create(type))
+                ?? throw new InvalidDataException("Game session factory returned null.");
             LoadedAssemblyPath = assembly.Location;
         }
         catch { _context.Unload(); _context = null; _pin.Dispose(); throw; }

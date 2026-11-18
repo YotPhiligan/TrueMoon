@@ -8,6 +8,8 @@
   <ItemGroup>
     <ProjectReference Include="../../../TrueMoon/TrueMoon.csproj" />
     <ProjectReference Include="../../../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
-    <ProjectReference Include="../../../TrueMoon.Aether.Runtime/TrueMoon.Aether.Runtime.csproj" />
+    <ProjectReference Include="../../../TrueMoon.Aether.Player/TrueMoon.Aether.Player.csproj" />
+    <None Include="../../../Examples/AetherEditor/Assets/Fonts/*" Link="Assets/Fonts/%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

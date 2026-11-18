@@ -1,9 +1,12 @@
 # TrueMoon: общий план развития
 
+Выполнено 2026-11-18 [ARCH1g.2b](engine/PLAN.md#arch1g2b-model-scene-gpu).
+Одна сцена с импортированной моделью показывает точную геометрию выбранной сборки
+в Player на GPU. Далее расширенная матрица выбора ассетов и жизненного цикла.
+
 Выполнено 2026-11-18: [ARCH1g.2a](engine/PLAN.md#arch1g2a-model-delivery),
 Version1.2611.18.1-alpha. Одна модель проходит Nom → Build → Runtime.
 Две сборки сохраняют свои ревизии геометрии после реимпорта с теми же ID.
-Далее размещение в сцене и native render proof.
 
 
 Выполнено 2026-11-17: [ARCH1g.1c — permanent IDs и atomic candidate+ledger](engine/PLAN.md#arch1g1c-subasset-ledger),
