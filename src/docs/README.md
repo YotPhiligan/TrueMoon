@@ -91,6 +91,7 @@ Contracts и Core — разные независимые сборки. DI provi
 - **Engine sessions:** [ENG1 headless probe](../ManualTests/EngineSessionProbe/README.md): fresh owned child generations, Hello/scene readiness,20Start/Stop и bounded crash/cancel/cleanup; ENG2 CPU viewport/owned pixel image и запуск окна описаны в том же guide.
 - **Renderer/native/GPU ownership:** [Rendering.Skia](../TrueMoon.Alloy.Rendering.Skia/README.md), [Vulkan interop](alloy/VULKAN-INTEROP.md), [manual probes](../ManualTests/AlloyVulkanTest/README.md) и [performance baseline](alloy/PERFORMANCE_BASELINE.md).
 - **NuGet и native assets:** [independent consumer](../ManualTests/AlloyPackageConsumer/README.md). Его проверенная конфигурация — Windows x64/net10.0/framework-dependent build/publish без RID; это не общий release proof.
+- **Стратегия UI-проверок без Computer Use:** [UiSession, raster, тестовый host и native evidence](alloy/UI_TESTING.md).
 - **Фиксированные шрифты и UI screenshots:** [K2/K4 golden guide](alloy/GOLDEN_TESTS.md): font snapshots,30эталонов, pixel tolerance, Debug/Release runner и диагностические diff PNG.
 - **Owned child lifecycle:** [bounded Mithril probe](../ManualTests/MithrilLifecycleProbe/README.md): Never handle startup/shutdown/disposal и Debug/published Release matrix.
 - **App/units и parent lifecycle:** [Mithril composition probe](../ManualTests/MithrilCompositionProbe/README.md): main/child/owned external, rollback и parent exit на Cobalt/DI, App/Never scope.

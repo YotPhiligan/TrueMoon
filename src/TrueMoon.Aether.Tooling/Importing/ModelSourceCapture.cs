@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace TrueMoon.Aether.Tooling.Importing;
 
 /// <summary>Caller-owned, single-use Windows source capture. Dispose waits for cancellation and actual IO cleanup.</summary>
@@ -39,6 +41,41 @@ public sealed class ModelSourceCapture : IDisposable, IAsyncDisposable
             if (_operation != null) throw new InvalidOperationException("A source capture operation can run only once.");
             return _operation = RunAsync(cancellationToken);
         }
+    }
+
+    /// <summary>Rechecks the source closure and geometry scale of a published import before authoring a new build.</summary>
+    /// <remarks>Consumes this single-use capture. The result describes the captured inputs at the time of the check.
+    /// Capture failures report Unavailable. Cancellation and invalid arguments propagate to the caller.</remarks>
+    /// <param name="published">The import that supplied the selected build resources.</param>
+    /// <param name="geometryScale">The finite positive scale requested for the next import.</param>
+    /// <param name="cancellationToken">Cancels source capture and comparison.</param>
+    /// <returns>A detached result for the selected import.</returns>
+    public async Task<ModelImportFreshness> CheckFreshnessAsync(PublishedModelImport published, float geometryScale = 1,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(published);
+        if (published.Candidate.SourceId != _arguments.SourceId)
+            throw new ArgumentException("The published import is for another model source.", nameof(published));
+        if (!ModelImportCandidate.IsValidGeometryScale(geometryScale))
+            throw new ArgumentOutOfRangeException(nameof(geometryScale), "Model geometry scale must be finite and positive.");
+
+        var settingsChanged = geometryScale != published.Candidate.GeometryScale;
+        CapturedModelSource source;
+        try
+        {
+            source = await CaptureAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or
+            NotSupportedException or Win32Exception)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new(ModelImportFreshnessStatus.Unavailable, null, null, settingsChanged, error);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var inputChanged = source.InputRevision != published.Candidate.InputRevision;
+        var status = inputChanged || settingsChanged ? ModelImportFreshnessStatus.Stale : ModelImportFreshnessStatus.Current;
+        return new(status, source.InputRevision, inputChanged, settingsChanged, null);
     }
 
     private async Task<CapturedModelSource> RunAsync(CancellationToken caller)

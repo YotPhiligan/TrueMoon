@@ -10,6 +10,12 @@ GENERAL/HOST и ABI v1. Решение собрано в Debug и Release. Пр�
 [Ревизии и SHA](../../TrueMoon.Alloy.Rendering.Skia/NativeAssets/win-x64/libSkiaSharp.build.json),
 [приёмка](HISTORY.md#skiasharp-41570-2026-11-18).
 
+16.11.2026 — документационная фиксация [UIQA-DOC](PLAN.md#ui-testing-guidance):
+добавлена [инструкция UI-проверок](UI_TESTING.md), ссылки из AGENTS/docs README и
+GOLDEN_TESTS. API и ссылки сверены; новых build/test/native прогонов нет.
+Виртуальный native backend/общий test driver не добавлены; physical/GPU gates
+сохраняются. Общая Version не менялась: production и пакеты не изменены.
+
 **2026-11-15 — SkiaSharp/native4.156.1 и RichTextKit0.6.173 проверены.**
 Обновление входит в [DEP1](../core/PLAN.md#dep1-dependency-refresh);
 [полные результаты](../core/HISTORY.md#dep1-2026-11-15), [manifest/SHA](../core/DEPENDENCY_REFRESH_20261115.json).

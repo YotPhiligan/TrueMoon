@@ -34,7 +34,7 @@ $feed = "$evidence/feed"
 [void][IO.Directory]::CreateDirectory($feed)
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($MultiModel) { 'ARCH1g.2h' } elseif ($RevisionMatrix) { 'ARCH1g.2g' } else { 'ARCH1g.2b' }
+    Stage = if ($MultiModel) { 'ARCH1g.2i' } elseif ($RevisionMatrix) { 'ARCH1g.2g' } else { 'ARCH1g.2b' }
     Profile = $profile
     Runs = @()
     Packages = @()
@@ -86,6 +86,11 @@ function Test-Consumers([string]$ProfileName, [string]$Authoring, [string]$Runti
             throw 'Unexpected GPU geometry report.'
         }
         if ($MultiModel) {
+            if ($proof.Freshness.RedBeforeEdit.Status -ne 'Current' -or $proof.Freshness.GreenBeforeEdit.Status -ne 'Current' -or
+                $proof.Freshness.RedAfterEdit.Status -ne 'Stale' -or $proof.Freshness.GreenAfterEdit.Status -ne 'Current' -or
+                $proof.Freshness.RedAfterReimport.Status -ne 'Current' -or $proof.Freshness.GreenAfterReimport.Status -ne 'Current') {
+                throw 'Unexpected model import freshness.'
+            }
             if ($proof.Old.Meshes.Count -ne 2 -or $proof.New.Meshes.Count -ne 2 -or $proof.Old.Mask.GreenPixels -le 100 -or
                 $proof.Old.Mask.GreenSha256 -ne $proof.New.Mask.GreenSha256 -or
                 $proof.Old.Mask.GreenSha256 -ne $proof.Reopened.Mask.GreenSha256) {

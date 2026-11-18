@@ -230,6 +230,17 @@ configuration proofs не заменяют native/GPU/release acceptance.
 
 ## UI направление
 
+### Проверки UI
+
+Перед изменением UI читать [переиспользуемую инструкцию](docs/alloy/UI_TESTING.md).
+По умолчанию начинать с UiSession/routed input и дополнять CPU raster, тестовым
+host или native profile по контракту задачи. Computer Use не является обязательной
+зависимостью UI-тестов. Отделять fake metrics от настоящего raster, опубликованное
+host state от Win32-ввода, logical scale от physical DPI, CPU PNG от GPU present.
+Сохранять ownership/cleanup и подтверждать observable state/побочные эффекты;
+инструкция не объявляет виртуальный native backend или новые passing результаты.
+Pixel/font/baseline policy — в [GOLDEN_TESTS](docs/alloy/GOLDEN_TESTS.md).
+
 ### View, данные и оформление
 
 Штатный подход для новых и целенаправленно перерабатываемых экранов — типизированный

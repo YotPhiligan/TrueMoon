@@ -39,6 +39,7 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 [ARCH1g.2f](#arch1g2f-fresh-editor-packages) повторил сценарий в независимом Editor из закрытого feed.
 [ARCH1g.2g](#arch1g2g-dependency-settings-deletion) проверил правку зависимости, настройку и удаление ресурсов.
 [ARCH1g.2h](#arch1g2h-multiple-models) объединил точные снимки двух импортированных моделей в одной сборке.
+[ARCH1g.2i](#arch1g2i-import-freshness) проверил актуальность этих импортов перед новой сборкой.
 
 <a id="arch1j-session-subsystems"></a>
 ### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
@@ -1974,6 +1975,17 @@ heads, снимков и объектов из Nom каждый артефакт
 сборках после закрытия Nom и перемещения обоих исходников.
 [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2h-multiple-models),
 [проверки](HISTORY.md#arch1g2h-2026-11-18).
+
+<a id="arch1g2i-import-freshness"></a>
+#### ARCH1g.2i — проверка актуальности импорта
+
+Завершён 18.11.2026. Явная проверка в Tooling сравнивает свежий захват
+зависимостей и запрошенный масштаб с импортом выбранного снимка.
+В двухмодельном сценарии изменение внешнего BIN пометило устаревшей одну
+модель при неизменном корневом glTF. Новая сборка прошла проверку после
+реимпорта. Player подтвердил геометрию обеих сборок.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1g2i-import-freshness),
+[проверки](HISTORY.md#arch1g2i-2026-11-18).
 
 <a id="arch1h-audio"></a>
 ### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07

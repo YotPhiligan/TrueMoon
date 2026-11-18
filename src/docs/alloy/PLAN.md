@@ -7,6 +7,18 @@ Windows x64 DLL пересобрана из соответствующих ис�
 Свежие NuGet-пакеты прошли проверку независимых потребителей.
 [Приёмка и границы](HISTORY.md#skiasharp-41570-2026-11-18).
 
+<a id="ui-testing-guidance"></a>
+## UIQA-DOC — методика проверок UI
+
+Документация выполнена 16.11.2026: [UI_TESTING.md](UI_TESTING.md) связывает
+существующие UiSession/input, Window host contracts, Skia raster и native scopes.
+Навигация добавлена в AGENTS/docs README; GOLDEN_TESTS сохраняет подробные правила
+шрифтов, pixel tolerance и baseline. Методика применима к consumers без Computer Use.
+Проверка документации: сигнатуры/ownership сверены с public API и существующими
+tests; относительные ссылки проверены. Новых build/test/native результатов нет.
+Public API, пакеты и функциональная очередь этим этапом не меняются; новый общий
+host/driver не реализован. Документация не требует повышения общей Version.
+
 Выполнено2026-11-15: **SkiaSharp/native4.156.1 +RichTextKit0.6.173**, exact parent/gitlink,
 GENERAL/HOST patch/ABI1/48bytes сохранены. Native source/published GPU/typography и
 fresh10package40case delivery прошли; полные UI/Hosting/Editor suites D/R прошли.

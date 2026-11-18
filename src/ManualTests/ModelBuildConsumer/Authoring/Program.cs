@@ -166,6 +166,7 @@ PublishedModelImport? scaledModel = null;
 PublishedModelImport? greenModel = null;
 string? greenSnapshotId = null;
 object? revisionEvidence = null;
+var freshnessEvidence = new Dictionary<string, object>();
 await using (var app = App.Builder(builder => { if (args[0] == "microsoft") builder.UseDI(); }).Setup(context =>
 {
     context.UseNom();
@@ -194,6 +195,19 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         await using var capture = captureFactory.Create(new(identity ?? sourceId, directory ?? sourceDirectory, "scene.gltf"))!;
         return await capture.CaptureAsync();
     }
+    async Task<ModelImportFreshness> CheckImport(string stage, PublishedModelImport model, string directory, float scale = 1,
+        CancellationToken token = default)
+    {
+        await using var capture = captureFactory.Create(new(model.Candidate.SourceId, directory, "scene.gltf"))!;
+        var result = await capture.CheckFreshnessAsync(model, scale, token);
+        Check(capture.OpenHandleCount == 0, "Freshness check retained source handles.");
+        freshnessEvidence.Add(stage, new
+        {
+            Status = result.Status.ToString(), result.CapturedInputRevision, result.InputChanged, result.SettingsChanged,
+            Error = result.CaptureError?.GetType().Name
+        });
+        return result;
+    }
     async Task<PublishedModelImport> Import(long generation, CapturedModelSource source, float scale = 1,
         ModelImportLedgerSession? target = null)
     {
@@ -213,13 +227,24 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
     await using (var store = storeFactory.Create(new(storeDirectory, projectId, storeId, AssetStoreOpenMode.Create))!)
     {
         Task<GameBuildRenderContent> CaptureBuildContent(string modelSnapshotId) =>
-            greenSnapshotId is { } green
-                ? bridge.CaptureSnapshotsAsync(store, [modelSnapshotId, green])
+            greenSnapshotId is { } greenCaptureId
+                ? bridge.CaptureSnapshotsAsync(store, [modelSnapshotId, greenCaptureId])
                 : bridge.CaptureAsync(store, modelSnapshotId);
+
+        async Task<GameBuildResult> BuildModel(string modelSnapshotId) =>
+            await compiler.BuildAsync(request with { RenderContent = await CaptureBuildContent(modelSnapshotId) });
+
+        Task<GameBuildResult> BuildChecked(string modelSnapshotId, ModelImportFreshness red, ModelImportFreshness green)
+        {
+            if (red.Status != ModelImportFreshnessStatus.Current || green.Status != ModelImportFreshnessStatus.Current)
+                throw new InvalidOperationException("Both model imports must be current to build new content.");
+            return BuildModel(modelSnapshotId);
+        }
 
         var rootHash = Hash(path);
         var vertices = Path.Combine(sourceDirectory, "scene.bin");
         var originalBinHash = Hash(vertices);
+        var originalBinWriteTime = File.GetLastWriteTimeUtc(vertices);
         oldModel = await Import(0, await Capture());
         var placed = ImportedModelScene.Place(initialScene, oldModel, placement);
         Check(placed.Entities.Skip(1).Select(entity => entity.Id.Value).SequenceEqual(oldModel.Instances.Select(instance => instance.Id)) &&
@@ -249,19 +274,64 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         }
         var sceneBytes = codec.Encode(placed);
         File.WriteAllBytes(scenePath, sceneBytes);
-        oldBuild = await compiler.BuildAsync(request with { RenderContent = await CaptureBuildContent(oldSnapshotId) });
+        if (greenModel != null)
+        {
+            var red = await CheckImport("RedBeforeEdit", oldModel, sourceDirectory);
+            var green = await CheckImport("GreenBeforeEdit", greenModel, secondSourceDirectory);
+            oldBuild = await BuildChecked(oldSnapshotId, red, green);
+
+            var settings = await CheckImport("RedSettingsOnly", oldModel, sourceDirectory, scale: 1.5f);
+            Check(settings is { Status: ModelImportFreshnessStatus.Stale, InputChanged: false, SettingsChanged: true } &&
+                settings.CapturedInputRevision == oldModel.Candidate.InputRevision,
+                "A settings-only edit did not invalidate the selected import.");
+            var moved = vertices + ".held";
+            File.Move(vertices, moved);
+            try
+            {
+                var missing = await CheckImport("RedMissingDependency", oldModel, sourceDirectory);
+                Check(missing is { Status: ModelImportFreshnessStatus.Unavailable, InputChanged: null,
+                    CapturedInputRevision: null, CaptureError: FileNotFoundException }, "Missing dependency was not reported separately.");
+                var intact = await CheckImport("GreenWhileRedMissing", greenModel, secondSourceDirectory);
+                Check(intact.Status == ModelImportFreshnessStatus.Current, "A missing dependency affected the other model.");
+            }
+            finally { File.Move(moved, vertices); }
+            await RejectAsync<OperationCanceledException>(
+                () => CheckImport("Cancelled", oldModel, sourceDirectory, token: new CancellationToken(canceled: true)));
+        }
+        else oldBuild = await BuildModel(oldSnapshotId);
 
         var bytes = File.ReadAllBytes(vertices);
         // The dependency-only cases change the corner's Y inside the original accessor bounds.
         var dependencyOnly = revisionProbe || multiModelProbe;
         BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(dependencyOnly ? 16 : 12), dependencyOnly ? .5f : 2f);
         File.WriteAllBytes(vertices, bytes);
+        string? detectedInputRevision = null;
+        if (greenModel != null)
+        {
+            File.SetLastWriteTimeUtc(vertices, originalBinWriteTime);
+            Check(File.GetLastWriteTimeUtc(vertices) == originalBinWriteTime && new FileInfo(vertices).Length == bytes.Length &&
+                Hash(path) == rootHash && Hash(vertices) != originalBinHash,
+                "Expected a BIN-only edit with matching size and timestamp.");
+            var red = await CheckImport("RedAfterEdit", oldModel, sourceDirectory);
+            var green = await CheckImport("GreenAfterEdit", greenModel, secondSourceDirectory);
+            Check(red is { Status: ModelImportFreshnessStatus.Stale, InputChanged: true, SettingsChanged: false } &&
+                red.CapturedInputRevision != oldModel.Candidate.InputRevision &&
+                green is { Status: ModelImportFreshnessStatus.Current, InputChanged: false, SettingsChanged: false } &&
+                green.CapturedInputRevision == greenModel.Candidate.InputRevision,
+                "A dependency-only edit must invalidate just the model that references it.");
+            detectedInputRevision = red.CapturedInputRevision;
+            await RejectAsync<InvalidOperationException>(() => BuildChecked(oldSnapshotId, red, green), "must be current");
+            Check((await ledger.OpenAsync())?.Candidate.Revision == oldModel.Candidate.Revision,
+                "Freshness checks modified the published import.");
+        }
         if (!dependencyOnly)
         {
             original["accessors"]![0]!["max"]![0] = 2;
             File.WriteAllText(path, original.ToJsonString());
         }
         var dependencyCapture = await Capture();
+        Check(greenModel == null || detectedInputRevision == dependencyCapture.InputRevision,
+            "The new import did not capture the revision identified by preflight.");
         newModel = await Import(1, dependencyCapture);
         var reimportedScene = ImportedModelScene.Place(initialScene, newModel, placement);
         if (greenModel != null) reimportedScene = ImportedModelScene.Place(reimportedScene, greenModel, greenPlacement);
@@ -275,32 +345,38 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         Check(meshRevision.Digest == oldMesh.Geometry.Revision.ToString() &&
             latest.Members.Single(member => member.AssetId == oldMesh.AssetId).Digest != meshRevision.Digest,
             "Nom did not retain distinct exact mesh revisions for the same asset ID.");
-        newBuild = await compiler.BuildAsync(request with { RenderContent = await CaptureBuildContent(newSnapshotId) });
-        var repeatedOld = await compiler.BuildAsync(request with { RenderContent = await CaptureBuildContent(oldSnapshotId) });
+        if (greenModel != null)
+        {
+            var red = await CheckImport("RedAfterReimport", newModel, sourceDirectory);
+            var green = await CheckImport("GreenAfterReimport", greenModel, secondSourceDirectory);
+            newBuild = await BuildChecked(newSnapshotId, red, green);
+        }
+        else newBuild = await BuildModel(newSnapshotId);
+        var repeatedOld = await BuildModel(oldSnapshotId);
         Check(repeatedOld.BuildId == oldBuild.BuildId, "Capturing an old Nom snapshot followed the current head.");
 
-        if (greenSnapshotId is { } green)
+        if (greenSnapshotId is { } greenId)
         {
             Check(rootHash == Hash(path) && originalBinHash != Hash(vertices), "Dependency-only edit changed the root model.");
             AssetResourceVersion[] greenResources;
-            await using (var lease = await store.OpenSnapshotAsync(green))
+            await using (var lease = await store.OpenSnapshotAsync(greenId))
                 greenResources = lease.Manifest.Members;
             var greenAlias = await store.CreateSnapshotAsync(greenResources, 256);
-            Check(greenAlias.Id != green, "Expected equivalent assets in a distinct snapshot.");
-            var reordered = await bridge.CaptureSnapshotsAsync(store, [greenAlias.Id, oldSnapshotId, green, oldSnapshotId]);
+            Check(greenAlias.Id != greenId, "Expected equivalent assets in a distinct snapshot.");
+            var reordered = await bridge.CaptureSnapshotsAsync(store, [greenAlias.Id, oldSnapshotId, greenId, oldSnapshotId]);
             var reorderedBuild = await compiler.BuildAsync(request with { RenderContent = reordered });
             Check(reorderedBuild.BuildId == oldBuild.BuildId, "Snapshot order or duplicate resources changed BuildId.");
 
             await RejectAsync<InvalidDataException>(
-                () => bridge.CaptureSnapshotsAsync(store, [green, oldSnapshotId, newSnapshotId]), "Conflicting render revisions");
+                () => bridge.CaptureSnapshotsAsync(store, [greenId, oldSnapshotId, newSnapshotId]), "Conflicting render revisions");
             await RejectAsync<KeyNotFoundException>(
                 () => bridge.CaptureSnapshotsAsync(store, [oldSnapshotId, new string('a', 64)]), "Unknown snapshot");
             await RejectAsync<ArgumentOutOfRangeException>(() => bridge.CaptureSnapshotsAsync(store, []), "1..32");
             await RejectAsync<ArgumentOutOfRangeException>(
-                () => bridge.CaptureSnapshotsAsync(store, Enumerable.Repeat(green, 33).ToArray()), "1..32");
+                () => bridge.CaptureSnapshotsAsync(store, Enumerable.Repeat(greenId, 33).ToArray()), "1..32");
             await RejectAsync<OperationCanceledException>(
-                () => bridge.CaptureSnapshotsAsync(store, [oldSnapshotId, green], new CancellationToken(canceled: true)));
-            foreach (var id in new[] { oldSnapshotId, newSnapshotId, green, greenAlias.Id })
+                () => bridge.CaptureSnapshotsAsync(store, [oldSnapshotId, greenId], new CancellationToken(canceled: true)));
+            foreach (var id in new[] { oldSnapshotId, newSnapshotId, greenId, greenAlias.Id })
                 await store.RemoveSnapshotAsync(id); // Removal verifies success and failure paths released their read leases.
         }
 
@@ -430,7 +506,8 @@ if (multiModelProbe)
     File.WriteAllText(Path.Combine(evidence, "multi-model.json"), JsonSerializer.Serialize(new
     {
         Completed = true, Provider = args[0], SceneSha256 = sceneHash, OldSnapshot = oldSnapshotId,
-        NewSnapshot = newSnapshotId, GreenSnapshot = greenSnapshotId, Old = oldProof, New = newProof, Reopened = reopened
+        NewSnapshot = newSnapshotId, GreenSnapshot = greenSnapshotId, Freshness = freshnessEvidence,
+        Old = oldProof, New = newProof, Reopened = reopened
     }, new JsonSerializerOptions { WriteIndented = true }));
     return 0;
 }
@@ -561,7 +638,7 @@ static async Task RejectAsync<TException>(Func<Task> action, string? message = n
 {
     try { await action(); }
     catch (TException error) when (message == null || error.Message.Contains(message, StringComparison.Ordinal)) { return; }
-    throw new InvalidOperationException($"Expected {typeof(TException).Name} from snapshot capture.");
+    throw new InvalidOperationException($"Expected {typeof(TException).Name} from the checked operation.");
 }
 
 static void Reject(Func<object> action, string message)

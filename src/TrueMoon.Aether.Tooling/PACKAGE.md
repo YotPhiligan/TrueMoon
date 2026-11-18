@@ -23,6 +23,12 @@ writers serialize on a permanent `.write-lock` sidecar; failed/stale/cancelled p
 work preserves the old head. Store scope is local Windows process-crash consistency.
 Nom, runtime manifests, build delivery and GPU activation remain separate integration.
 
+Before assembling a new build, use a fresh capture operation's
+`CheckFreshnessAsync(published, geometryScale, token)` for each selected import.
+It compares a newly captured source closure and the requested scale with the exact
+published import that supplied the build resources. Results are `Current`,
+`Stale`, or `Unavailable`. This read-only check needs no worker deployment.
+
 Headless project/document authoring, transactional history, scene persistence,
 SDK preflight, frozen compilation/capture/publication, source observation,
 preview coordination and bounded diagnostic export. No Editor/Alloy/Argentis

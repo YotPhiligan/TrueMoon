@@ -1,5 +1,8 @@
 # K2/K4: фиксированные шрифты и полные кадры Settings
 
+Выбор уровня проверки и общие правила — [UI_TESTING.md](UI_TESTING.md).
+Ниже — конкретная golden fixture и её датированные результаты.
+
 Контрольная сцена — исходные `View1`, `SettingsModel` и `SettingsFormSmoke` из
 `ManualTests/AlloyTest`. Golden probe compile-link использует те же исходники,
 40 шагов ввода/изменения модели и сравнивает logical bounds, focus/selection,

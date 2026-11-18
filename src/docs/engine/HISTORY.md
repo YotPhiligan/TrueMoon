@@ -15852,6 +15852,43 @@ Authoring/Player на версии .7. Отчёт
 SHA256 `CD6333FF60D27F579C244EE8AEEB492CB7C8134C43E806D9AAA11B61D8D3685F`.
 [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2h-multiple-models).
 
+<a id="arch1g2i-2026-11-18"></a>
+## 2026-11-18 — ARCH1g.2i, актуальность импорта
+
+Version 1.2611.18.8-alpha. `ManualTests/ModelBuildConsumer/Verify.ps1 -MultiModel`
+с EvidenceDirectory `TestResults/ARCH1g2-import-freshness-20261118-02` и
+ValidationDirectory `TestResults/EditorWindow-20261104/tools/validation`.
+SHA256 файла `verification.json`
+`DE8D0E20C3AF67CCCA6C9BA8B5F8454CBD62D680F2EA00EB7639228FCF558A26`.
+
+В Source Debug и Release из закрытого локального feed прошли Cobalt и
+Microsoft DI. Feed содержит 19 пакетов TrueMoon и 32 внешних архива.
+В каждом профиле статусы красной и зелёной моделей прошли
+`Current/Current → Stale/Current → Current/Current`. Красный BIN изменился
+при тех же размере, времени изменения и байтах корневого glTF. Authoring
+отклонил новую сборку со старым импортом, затем собрал новый BuildId после
+реимпорта. Проверка сохранила опубликованный кандидат и закрыла файловые
+handles. Масштаб 1.5 на прежних байтах дал `Stale` по настройкам, временно
+отсутствующий BIN дал `Unavailable`, отмена прервала проверку.
+
+После отключения Nom и исходников три запуска Player на профиль показали
+маски красной модели `8753 → 8748 → 8753`, зелёной — по 8742 пикселя с
+одинаковым SHA256. Vulkan validation 0/0, все 12 процессов завершились,
+GPU slots и дескрипторы освобождены.
+
+Aether Importing 144/144 в Debug и Release. Отчёты VSTest в
+`TestResults/ARCH1g2-import-freshness-regression-20261118-01`.
+
+Перед пушем повторён профиль `Verify.ps1 -MultiModel` на версии
+1.2611.18.10-alpha. Четыре профиля снова дали `Stale/Current` после правки
+BIN и `Current/Current` после реимпорта. Оба выхода Player содержат
+SkiaSharp 4.157.0 и DLL с SHA текущей поставки. Vulkan validation 0/0 в
+12 запусках. Отчёт `TestResults/ARCH1g2i-delivery-20261118-01/verification.json`,
+SHA256 `BCC7841FA697D7014655D5E8D6023D2ACB90DDA83B99F1C4E8C76707E7AB68C7`.
+Aether Importing 144/144 в Debug и Release, отчёты в
+`TestResults/ARCH1g2i-delivery-regression-20261118-01`.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1g2i-import-freshness).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

@@ -91,7 +91,12 @@ pwsh -NoProfile -File ManualTests/ModelBuildConsumer/Verify.ps1 -MultiModel `
 
 Two independent imports place red and green models in one scene. The Authoring
 probe combines their exact Nom snapshots, then reimports the red model after
-editing its external BIN. It checks canonical BuildId under reordered and
+editing its external BIN. Before a new build, it compares a fresh capture with
+the published import for each model. Both imports start current. Editing the
+red BIN at the same length and modification time marks only the red model stale.
+Reimport makes both current again. The probe also checks a settings-only change,
+a missing dependency, cancellation and rejection of a new build with stale content.
+It checks canonical BuildId under reordered and
 overlapping snapshots, rejection of conflicting revisions and missing snapshots,
 and release of the snapshot leases. Player opens the old, new and old builds
 after the source directories and closed Nom store have been moved. The red mask
