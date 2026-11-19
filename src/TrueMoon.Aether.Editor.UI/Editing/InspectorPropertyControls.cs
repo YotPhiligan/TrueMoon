@@ -5,7 +5,7 @@ namespace TrueMoon.Aether.Editor.UI.Editing;
 /// <summary>Typed retained parts of a scalar editor, keyed by component occurrence and property.</summary>
 /// <param name="Property">Borrowed draft model.</param><param name="Row">Owned property subtree.</param>
 /// <param name="Input">Typed CheckBox, TextBox or multiline RichTextEditor.</param><param name="Null">Optional explicit-null switch.</param>
-/// <param name="Reset">Stage inheritance reset.</param><param name="Source">Bound provenance label.</param>
+/// <param name="Reset">Stages a property reset or restores the current mesh's material.</param><param name="Source">Bound provenance label.</param>
 public sealed record InspectorPropertyControls(InspectorProperty Property, VStack Row, Element Input,
     CheckBox? Null, Button Reset, Text Source);
 

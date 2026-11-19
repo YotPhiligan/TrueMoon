@@ -16133,6 +16133,45 @@ TRX и логи в `TestResults/ED4i-inspector-restart-regression-20261119-01`.
 Драйвер ждёт строку сохранённой сущности на UI thread перед кликом.
 [Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#restore-renderer-choices-after-restarting-editor).
 
+<a id="ed4i-material-reset-2026-11-19"></a>
+## 2026-11-19 — ED4i, вернуть материал меша
+
+Версия `1.2611.19.8-alpha`. Инспектор заменил меш выбранного экземпляра
+и применил переопределение материала. «Вернуть материал меша» подставила
+исходную привязку текущего меша в черновик. Cancel сохранил прежнюю запись
+истории, повторный выбор с Apply создал одну запись. После Apply действие
+недоступно до другого выбора материала.
+
+Сборки с переопределением, сбросом, Undo и Redo закрепили один и тот же
+RenderAssetKey меша и ID слота. Ссылки на меш и привязку второго экземпляра
+общего определения совпали во всех состояниях. Сброс перекрасил выбранный
+экземпляр из красного в зелёный.
+RGBA области 686 × 925 совпали для пары переопределение и Undo, а также для
+пары сброс и Redo. Синий канал, общий для обоих цветов тестовых материалов,
+совпал во всех четырёх состояниях. Первый вариант цветовой маски дал разницу
+в пять пикселей на границе. В приёмке геометрия сверяется по точному ключу
+меша и по каналу, интенсивность которого совпадает у обоих материалов.
+
+`VerifyEditor.ps1 -RenderMaterialReset` прошёл в Source Debug и Published
+Release на Cobalt и Microsoft DI. В 20 Runtime Vulkan validation показала
+0 ошибок и 0 предупреждений. После Stop освобождены устройства, поверхности,
+slots и handles.
+EvidenceDirectory `TestResults/ED4i-material-reset-20261119-02`,
+SHA256 `verification.json`
+`E21E2CE94695026DC8B279CCC7293BE3123DB09D5D5C5FF24E31D041411E7605`.
+
+`VerifyEditor.ps1 -RenderMaterialReset -FreshPackages` повторил проверку
+на обоих DI в независимом Editor из 20 пакетов. В 10 Runtime Vulkan
+validation показала 0 ошибок и 0 предупреждений. Ресурсы освобождены.
+EvidenceDirectory `TestResults/ED4i-material-reset-packages-20261119-01`,
+SHA256 `verification.json`
+`657F6C1BA794CB02F2587347D988A970245581A866E1FEB2FC64E23DCF278BD5`.
+
+`TrueMoon.Aether.Editor.Tests` прошёл 1507/1507 в Debug и Release.
+Запуск через `dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c <Debug|Release> --no-restore`.
+TRX и логи в `TestResults/ED4i-material-reset-regression-20261119-01`.
+[Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#restore-the-meshs-imported-material).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

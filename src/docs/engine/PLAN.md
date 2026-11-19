@@ -19,7 +19,8 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 [Первый срез ED4i](EDITOR_PLAN.md#ed4i-render-components) меняет меш и материал
 одного экземпляра. В `main` это поставка `098fc53`, версия `1.2611.19.7-alpha`.
 [Сохранение привязки после перезапуска](EDITOR_PLAN.md#ed4i-render-binding-restart)
-проверено в ED4i. Ближайшие предложения — [сброс материала](EDITOR_PLAN.md#ed4i-next)
+и [сброс материала меша](EDITOR_PLAN.md#ed4i-material-reset) проверены в ED4i.
+Ближайшие предложения — [диагностика отсутствующих ссылок](EDITOR_PLAN.md#ed4i-next)
 и [первичный импорт из Editor](#arch1g-editor-import-proposal).
 
 **Согласованный порядок 2026-11-12:**

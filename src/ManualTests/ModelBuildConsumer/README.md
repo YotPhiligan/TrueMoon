@@ -218,3 +218,21 @@ exact resource keys, then builds in an empty output directory. The receipts
 record both process IDs, scene and import file hashes, and identical RGBA
 pixels in the unobstructed viewport area containing the visible model pixels.
 `-FreshPackages` repeats the two-process check in an independent Editor.
+
+## Restore the mesh's imported material
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -RenderMaterialReset `
+  -EvidenceDirectory 'TestResults/EditorRenderMaterialReset/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The Editor replaces one occurrence's mesh and assigns a different material.
+It clicks “Вернуть материал меша”, cancels the draft, then stages the action
+again and applies it. The probe builds and displays the override, restored
+material, Undo and Redo states on Vulkan. Every state keeps the exact mesh
+key and slot, and the sibling keeps its references. The viewport's blue
+channel stays identical across the fixture's red and green materials. RGBA
+pixels in the unobstructed viewport match on override and Undo, and on
+restore and Redo.
+`-FreshPackages` repeats the scenario in an independent published Editor.

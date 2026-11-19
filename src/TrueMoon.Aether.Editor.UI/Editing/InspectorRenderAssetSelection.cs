@@ -15,4 +15,8 @@ public sealed record InspectorRenderAssetChoice(Guid Id, string Name);
 /// <param name="Material">Current draft or committed material identity.</param>
 /// <param name="Enabled">Whether the current scene admits editing.</param>
 public sealed record InspectorRenderAssetSelection(ComponentId Component, IReadOnlyList<InspectorRenderAssetChoice> Meshes,
-    IReadOnlyList<InspectorRenderAssetChoice> Materials, Guid? Mesh, Guid? Material, bool Enabled);
+    IReadOnlyList<InspectorRenderAssetChoice> Materials, Guid? Mesh, Guid? Material, bool Enabled)
+{
+    /// <summary>Whether the current mesh has a different published default binding available.</summary>
+    public bool CanRestoreMeshMaterial { get; init; }
+}

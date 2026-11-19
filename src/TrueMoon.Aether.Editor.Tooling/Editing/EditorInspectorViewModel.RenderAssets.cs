@@ -38,9 +38,13 @@ public partial class EditorInspectorViewModel
         }
         _renderKey = key;
         var mesh = Guid.TryParseExact(_renderMesh.Value, "D", out var meshId) && _sceneAssets?.ContainsMesh(meshId) == true ? meshId : (Guid?)null;
-        var material = mesh.HasValue && Guid.TryParseExact(_renderBinding.Value, "D", out var binding)
-            ? _sceneAssets!.MaterialForBinding(mesh.Value, binding) : null;
-        var next = new InspectorRenderAssetSelection(_renderMesh.ComponentId, _meshChoices, mesh.HasValue ? _materialChoices : [], mesh, material, enabled);
+        var binding = Guid.TryParseExact(_renderBinding.Value, "D", out var bindingId) ? bindingId : (Guid?)null;
+        var material = mesh.HasValue && binding.HasValue ? _sceneAssets!.MaterialForBinding(mesh.Value, binding.Value) : null;
+        var defaultBinding = mesh.HasValue ? _sceneAssets!.DefaultBinding(mesh.Value) : null;
+        var next = new InspectorRenderAssetSelection(_renderMesh.ComponentId, _meshChoices, mesh.HasValue ? _materialChoices : [], mesh, material, enabled)
+        {
+            CanRestoreMeshMaterial = enabled && defaultBinding.HasValue && defaultBinding != binding
+        };
         // Equivalent displayed values can still target a different entity, opening or import generation.
         _renderAssets = next;
         OnPropertyChanged(nameof(RenderAssets));
@@ -94,5 +98,18 @@ public partial class EditorInspectorViewModel
         }
         finally { _loading = false; }
         DraftChanged();
+    }
+
+    /// <inheritdoc />
+    public void RestoreMeshMaterial(InspectorRenderAssetSelection selection)
+    {
+        VerifyOwner();
+        Refresh(_selection);
+        if (!ReferenceEquals(_renderAssets, selection) || !selection.CanRestoreMeshMaterial ||
+            selection.Mesh is not { } mesh || _sceneAssets is not { } assets || _renderBinding == null ||
+            assets.DefaultBinding(mesh) is not { } binding) return;
+
+        _renderDraftAssets = assets;
+        _renderBinding.Value = binding.ToString("D");
     }
 }

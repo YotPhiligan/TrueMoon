@@ -117,7 +117,9 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 
 [Приёмка перезапуска ED4i](engine/EDITOR_PLAN.md#ed4i-render-binding-restart) подтвердила сохранение MeshRenderer и совпадение пикселей из новой сборки.
 
-Ближайшие предложения — [сброс материала](engine/EDITOR_PLAN.md#ed4i-next),
+[Сброс материала меша](engine/EDITOR_PLAN.md#ed4i-material-reset) реализован и проверен на Vulkan с Undo и Redo.
+
+Ближайшие предложения — [диагностика отсутствующих ссылок](engine/EDITOR_PLAN.md#ed4i-next),
 [первичный импорт из Editor](engine/PLAN.md#arch1g-editor-import-proposal).
 
 По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика

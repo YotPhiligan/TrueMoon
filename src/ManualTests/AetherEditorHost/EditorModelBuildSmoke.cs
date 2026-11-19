@@ -394,7 +394,8 @@ internal static class EditorModelBuildSmoke
         var saveInspector = args.Length == 7 && args[6] == "--render-inspector-save";
         var reopenInspector = args.Length == 7 && args[6] == "--render-inspector-reopen";
         var restartInspector = saveInspector || reopenInspector;
-        var probeRenderInspector = restartInspector || args.Length == 7 && args[6] == "--render-inspector";
+        var resetMaterial = args.Length == 7 && args[6] == "--render-material-reset";
+        var probeRenderInspector = resetMaterial || restartInspector || args.Length == 7 && args[6] == "--render-inspector";
         var probePlacement = args.Length == 9 && args[6] == "--model-placement";
         var probeCatalog = probePlacement || args.Length == 9 && args[6] == "--model-catalog";
         var probePersistence = probeCatalog || args.Length == 9 && args[6] == "--persisted-imports";
@@ -759,6 +760,73 @@ internal static class EditorModelBuildSmoke
                 Check(changed.Artifact.RenderContent?.Resolve(binding, RenderContentProfile.BindingSetKindId).Definition is MaterialBindingSetDefinition set &&
                     set.Mesh.AssetId == greenMesh.AssetId && set.Bindings.Single().Material.AssetId == redMesh.MaterialId,
                     "Build did not publish the requested independent material binding.");
+                if (resetMaterial)
+                {
+                    var original = ProveMaterial(changed, binding, redMesh.MaterialId);
+                    var resetButton = inspector.Properties[(renderer.Id, "bindings")].Reset;
+                    await StageRestore();
+                    await ClickInspector(() => inspector.Cancel);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { HasDraft: false, RenderAssets.Material: { } material }
+                        && material == redMesh.MaterialId, token);
+                    Check(ReferenceEquals(document.Read().Content, edit), "Cancel changed the committed material override.");
+
+                    await StageRestore();
+                    await ClickInspector(() => inspector.Apply);
+                    var reset = document.Read().Content!;
+                    Check(reset.UndoCount == edit.UndoCount + 1, "Restoring the material created more than one history entry.");
+                    var resetFrame = ProveMaterial(await BuildAndShow("inspector-material-reset"), greenMesh.BindingSetId, greenMesh.MaterialId);
+                    await VerifyInspectorChoice(target, renderer.Id, greenMesh.AssetId, greenMesh.MaterialId);
+                    await ui.InvokeAsync(() => Check(!resetButton.IsEnabled, "Restore was available with the default material already selected.")).WaitAsync(token);
+
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
+                    Check(document.Read().Content!.ContentRevision == edit.ContentRevision, "Undo did not restore the override revision.");
+                    var undoFrame = ProveMaterial(await BuildAndShow("inspector-material-undo"), binding, redMesh.MaterialId);
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.redo", token);
+                    Check(document.Read().Content!.ContentRevision == reset.ContentRevision, "Redo did not restore the reset revision.");
+                    var redoFrame = ProveMaterial(await BuildAndShow("inspector-material-redo"), greenMesh.BindingSetId, greenMesh.MaterialId);
+
+                    var steps = new[] { original, resetFrame, undoFrame, redoFrame };
+                    var originalPixels = original.Frame.Pixels;
+                    Check(steps.All(step => step.Mesh == original.Mesh && step.Slot == original.Slot &&
+                            step.Frame.Pixels != null && step.Frame.Pixels.BlueSha256 == originalPixels?.BlueSha256) &&
+                        originalPixels?.BlueSha256 != null && original.Frame.Mask.RedPixels - resetFrame.Frame.Mask.RedPixels > 100 &&
+                        resetFrame.Frame.Mask.GreenPixels - original.Frame.Mask.GreenPixels > 100 &&
+                        originalPixels != resetFrame.Frame.Pixels && originalPixels == undoFrame.Frame.Pixels &&
+                        resetFrame.Frame.Pixels == redoFrame.Frame.Pixels && original.Material == undoFrame.Material &&
+                        resetFrame.Material == redoFrame.Material && original.Binding == undoFrame.Binding && resetFrame.Binding == redoFrame.Binding &&
+                        engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0,
+                        "Material reset changed geometry, failed to recolor the target, or did not round-trip through Undo and Redo.");
+                    await File.WriteAllTextAsync(Path.Combine(report, "editor-render-material-reset.json"), JsonSerializer.Serialize(new
+                    {
+                        Completed = true, Captures = captures, States = steps, Entity = target.Value, Sibling = sibling.Value
+                    }), token);
+                    return;
+
+                    async Task StageRestore()
+                    {
+                        await EditorHeaderSmoke.UntilAsync(ui, () => resetButton.IsEnabled && resetButton.Value == "Вернуть материал меша", token);
+                        await ClickInspector(() => resetButton);
+                        await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { CanApply: true, RenderAssets: { } draft } &&
+                            draft.Mesh == greenMesh.AssetId && draft.Material == greenMesh.MaterialId, token);
+                        Check(ReferenceEquals(document.Read().Content, edit), "Restore changed the committed scene before Apply.");
+                    }
+
+                    InspectorMaterialProof ProveMaterial((FrameProof Frame, GameBuildArtifact Artifact) run, Guid bindingId, Guid material)
+                    {
+                        var manifest = run.Artifact.RenderContent!;
+                        var entry = manifest.Resolve(bindingId, RenderContentProfile.BindingSetKindId);
+                        var bindingSet = (MaterialBindingSetDefinition)entry.Definition;
+                        var slot = bindingSet.Bindings.Single();
+                        var primary = Renderer(target);
+                        var other = Renderer(sibling);
+                        Check(Id(primary, "mesh") == greenMesh.AssetId && Id(primary, "bindings") == bindingId &&
+                            Id(other, "mesh") == redMesh.AssetId && Id(other, "bindings") == redMesh.BindingSetId &&
+                            bindingSet.Mesh.AssetId == greenMesh.AssetId && slot.Material.AssetId == material &&
+                            manifest.Resolve(bindingSet.Mesh).Key == bindingSet.Mesh && manifest.Resolve(slot.Material).Key == slot.Material,
+                            "The scene or captured manifest changed the selected mesh or the sibling's renderer.");
+                        return new(run.Frame, AssetProof.From(bindingSet.Mesh), AssetProof.From(slot.Material), AssetProof.From(entry.Key), slot.SlotId);
+                    }
+                }
                 await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.CanUndo, token);
                 await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
                 var undone = document.Read();
@@ -949,8 +1017,9 @@ internal static class EditorModelBuildSmoke
                     var scale = ui.Viewport.Scale;
                     var clip = new SKRectI((int)(bounds.X * scale), (int)(bounds.Y * scale),
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
-                    var mask = Measure(pixels, clip);
-                    var exact = name is "inspector-saved" or "inspector-reopened" ? MeasureViewportPixels(view, pixels, clip, scale, mask) : null;
+                    var mask = Measure(pixels, clip, resetMaterial);
+                    var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before";
+                    var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
@@ -984,7 +1053,7 @@ internal static class EditorModelBuildSmoke
         return directory;
     }
 
-    private static PixelMask Measure(SKBitmap pixels, SKRectI clip)
+    private static PixelMask Measure(SKBitmap pixels, SKRectI clip, bool allowSingleRedOccurrence)
     {
         Check(clip.Left >= 0 && clip.Top >= 0 && clip.Right <= pixels.Width && clip.Bottom <= pixels.Height &&
             clip.Width > 0 && clip.Height > 0, "Invalid GPU image bounds.");
@@ -1011,11 +1080,11 @@ internal static class EditorModelBuildSmoke
             left = Math.Min(left, x);
             right = Math.Max(right, x);
         }
-        Check(upper > 100 && lower > 100, "Expected both occurrences in the GPU viewport.");
+        Check(allowSingleRedOccurrence ? upper + lower > 100 && green > 100 : upper > 100 && lower > 100, "Expected occurrences in the GPU viewport.");
         return new(clip.Width, clip.Height, left, right, upper + lower, Hash(mask), green, Hash(greenMask));
     }
 
-    private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask)
+    private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask, bool materialReset)
     {
         // The Editor chrome overlays the viewport. Compare a rectangle clear of the panels and their shadows.
         const float clearance = 12;
@@ -1028,21 +1097,24 @@ internal static class EditorModelBuildSmoke
             Math.Max(image.Top, (int)MathF.Ceiling((header.Y + header.Height + clearance) * scale)),
             Math.Min(image.Right, (int)MathF.Floor((inspector.X - clearance) * scale)),
             Math.Min(image.Bottom, (int)MathF.Floor((status.Y - clearance) * scale)));
-        var cropped = Measure(pixels, crop);
+        var cropped = Measure(pixels, crop, materialReset);
         Check(cropped.RedPixels == mask.RedPixels && cropped.GreenPixels == mask.GreenPixels,
             "The unobstructed viewport crop does not contain all visible model pixels.");
         var rgba = new byte[checked(crop.Width * crop.Height * 4)];
+        // The fixture's red and green materials have identical blue values, including on blended edges.
+        var blue = materialReset ? new byte[rgba.Length / 4] : null;
         var index = 0;
         for (var y = crop.Top; y < crop.Bottom; y++)
         for (var x = crop.Left; x < crop.Right; x++)
         {
             var pixel = pixels.GetPixel(x, y);
+            if (blue != null) blue[index / 4] = pixel.Blue;
             rgba[index++] = pixel.Red;
             rgba[index++] = pixel.Green;
             rgba[index++] = pixel.Blue;
             rgba[index++] = pixel.Alpha;
         }
-        return new(crop.Left, crop.Top, crop.Width, crop.Height, Hash(rgba));
+        return new(crop.Left, crop.Top, crop.Width, crop.Height, Hash(rgba)) { BlueSha256 = blue == null ? null : Hash(blue) };
     }
 
     private static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
@@ -1052,7 +1124,10 @@ internal static class EditorModelBuildSmoke
     }
 
     private sealed record PixelMask(int Width, int Height, int Left, int Right, int RedPixels, string Sha256, int GreenPixels, string GreenSha256);
-    private sealed record ViewportPixelProof(int X, int Y, int Width, int Height, string Sha256);
+    private sealed record ViewportPixelProof(int X, int Y, int Width, int Height, string Sha256)
+    {
+        public string? BlueSha256 { get; init; }
+    }
     private sealed record FrameProof(string Name, string BuildId, ulong Generation, int Pid, string ManifestHash, ulong Tick, PixelMask Mask)
     {
         public ViewportPixelProof? Pixels { get; init; }
@@ -1062,6 +1137,7 @@ internal static class EditorModelBuildSmoke
         internal static AssetProof From(RenderAssetKey key) => new(key.ProjectId, key.AssetId, key.KindId, key.SchemaVersion, key.Revision.ToString());
     }
     private sealed record ImportGeneration(Guid SourceId, long Generation);
+    private sealed record InspectorMaterialProof(FrameProof Frame, AssetProof Mesh, AssetProof Material, AssetProof Binding, Guid Slot);
     private sealed record InspectorRestartProof(int EditorPid, Guid OpeningId, Guid SceneId, long SceneRevision, string SceneSha256,
         string SelectionSha256, Guid Entity, AssetProof Mesh, AssetProof Material, AssetProof Binding, Guid Slot, ImportGeneration[] Imports, FrameProof Frame);
     private sealed record ModelImportProof(bool Completed, string BeforeEdit, string AfterEdit, string WhileMissing,

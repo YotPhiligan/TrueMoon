@@ -24,9 +24,10 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--revisions" or "--multi-model")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--revisions" or "--multi-model")) return 2;
+var renderMaterialReset = args.Length == 8 && args[7] == "--editor-render-material-reset";
 var renderInspectorRestart = args.Length == 8 && args[7] == "--editor-render-inspector-restart";
-var renderInspector = renderInspectorRestart || args.Length == 8 && args[7] == "--editor-render-inspector";
+var renderInspector = renderMaterialReset || renderInspectorRestart || args.Length == 8 && args[7] == "--editor-render-inspector";
 var editorPlacement = args.Length == 8 && args[7] == "--editor-model-placement";
 var editorCatalog = editorPlacement || args.Length == 8 && args[7] == "--editor-model-catalog";
 var editorPersistence = editorCatalog || args.Length == 8 && args[7] == "--editor-persisted-imports";
@@ -543,9 +544,9 @@ if (editorProbe)
     }
     if (editorReimport) editorArguments = [.. editorArguments, editorPlacement ? "--model-placement" :
         editorCatalog ? "--model-catalog" : editorPersistence ? "--persisted-imports" : "--reimport", workerPath, dotnet];
-    else if (editorImports) editorArguments = [.. editorArguments, renderInspector ? "--render-inspector" : "--imports"];
+    else if (editorImports) editorArguments = [.. editorArguments, renderMaterialReset ? "--render-material-reset" : renderInspector ? "--render-inspector" : "--imports"];
     var result = await RunChild("editor", editorArguments, TimeSpan.FromSeconds(120));
-    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, renderInspector ? "editor-render-inspector.json" :
+    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, renderMaterialReset ? "editor-render-material-reset.json" : renderInspector ? "editor-render-inspector.json" :
         editorImports ? "editor-imports.json" : "editor-model.json")), result.Error);
     return 0;
 }

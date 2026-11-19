@@ -96,6 +96,10 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
     /// <param name="assetId">Persistent asset identity from the displayed choices.</param>
     void SelectRenderAsset(InspectorRenderAssetSelection selection, InspectorProperty property, Guid assetId) { }
 
+    /// <summary>Stages the current mesh's imported material in the existing inspector draft.</summary>
+    /// <param name="selection">Exact displayed renderer selection.</param>
+    void RestoreMeshMaterial(InspectorRenderAssetSelection selection) { }
+
     /// <summary>Gets exact schemas and current dependency/multiplicity admission for addition.</summary>
     IReadOnlyList<InspectorComponentType> AddableTypes { get; }
 

@@ -249,6 +249,9 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
                 var choices = RenderChoices(property.Property);
                 picker.Value = choices.Items.FirstOrDefault(item => item.Id == choices.Selected)?.Name ?? "Выбрать";
                 picker.IsEnabled = _shownRenderAssets?.Enabled == true && choices.Items.Count != 0;
+                if (property.Property.Key == "bindings")
+                    property.Reset.IsEnabled = _shownRenderAssets is { CanRestoreMeshMaterial: true } selection &&
+                        selection.Component == property.Property.ComponentId;
             }
             if (property.Input is CheckBox boolean) boolean.Value = property.Property.BooleanValue ? "Да" : "Нет";
             if (_genericEditors.TryGetValue((property.Property.ComponentId, property.Property.Key), out var editor))
@@ -289,24 +292,36 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         input.ColorRole = property.Kind == PropertyValueKind.Boolean ? EditorColorRole.Boolean :
             property.Kind == PropertyValueKind.String ? EditorColorRole.Text : EditorColorRole.Number;
         input.AccessibleName = component + " " + (property.IsRenderReference ? property.Label : property.Key);
-        var reset = Action(UiSymbol.Undo, "Сбросить " + component + " · " + property.Label + " к наследуемому значению или умолчанию").WithRole(ResetRole).Bind(UiProperties.Enabled, property, x => x.CanReset)
-            .OnClick(() => _model.ResetProperty(property));
+        var restoreMaterial = property.IsRenderReference && property.Key == "bindings";
+        var reset = restoreMaterial
+            ? Button.Simple("Вернуть материал меша").WithRole(ActionRole).OnClick(() =>
+            {
+                if (_shownRenderAssets is { CanRestoreMeshMaterial: true } selection && selection.Component == property.ComponentId)
+                    _model.RestoreMeshMaterial(selection);
+            })
+            : Action(UiSymbol.Undo, "Сбросить " + component + " · " + property.Label + " к наследуемому значению или умолчанию").WithRole(ResetRole)
+                .Bind(UiProperties.Enabled, property, x => x.CanReset).OnClick(() => _model.ResetProperty(property));
+        if (restoreMaterial) reset.AccessibleName = reset.Value;
         var nullable = property.IsNullable ? CheckBox.Create("null").WithRole(NullRole)
             .BindTwoWay(CheckBox.IsCheckedProperty, property, x => x.IsNull)
             .Bind(UiProperties.Enabled, property, x => x.CanChangeNull) : null;
         if (nullable != null) { nullable.ColorRole = input.ColorRole; nullable.AccessibleName = "Нет значения · " + component + " " + property.Key; }
         var source = Text.Plain().WithRole(MetadataRole).BindText(property, x => x.SourceText);
         var showDetails = _details.Contains(property.ComponentId);
-        source.IsVisible = showDetails; reset.IsVisible = showDetails && !property.IsRenderReference;
+        source.IsVisible = showDetails; reset.IsVisible = restoreMaterial || showDetails && !property.IsRenderReference;
         var row = VStack.Create().WithRole(StackRole);
         var line = new PropertyEditorRow(content, nullable, property.Label).WithRole(FieldRole);
         line.Label.WithRole(VectorLabelRole); line.Empty.WithRole(EmptyValueRole);
         line.Empty.AccessibleName = component + " " + property.Key + ": null";
         line.ValueWidth = property.Kind == PropertyValueKind.Boolean ? 96 : property.Kind == PropertyValueKind.String ? float.NaN : 120;
         line.ShowEmpty(property.IsNull); _genericEditors.Add((property.ComponentId, property.Key), line);
-        var details = HStack.Create().WithRole(RowRole).WithChildren(reset, source); details.IsVisible = showDetails;
+        var details = HStack.Create().WithRole(RowRole);
+        if (!restoreMaterial) details.Add(reset);
+        details.Add(source);
+        details.IsVisible = showDetails;
         row.Add(line);
         if (choices != null) row.Add(choices);
+        if (restoreMaterial) row.Add(reset);
         row.Add(details);
         return new(property, row, input, nullable, reset, source);
     }
@@ -424,7 +439,11 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         _detailsButtons[id].Tone = visible ? ControlTone.Accent : ControlTone.Neutral;
         if (_transformDetails.TryGetValue(id, out var panel)) panel.IsVisible = visible;
         foreach (var entry in _properties.Where(p => p.Key.Item1 == id).Select(p => p.Value))
-        { entry.Reset.IsVisible = visible && !entry.Property.IsRenderReference; entry.Source.IsVisible = visible; entry.Source.Parent!.IsVisible = visible; }
+        {
+            if (!entry.Property.IsRenderReference) entry.Reset.IsVisible = visible;
+            entry.Source.IsVisible = visible;
+            entry.Source.Parent!.IsVisible = visible;
+        }
     }
     private void RemoveProperty((ComponentId, string) address, VStack body)
     { var old = _properties[address]; body.Items.Remove(old.Row); old.Row.Dispose(); _properties.Remove(address); _genericEditors.Remove(address); _numericEditors.Remove(address); _renderLists.Remove(address); }
