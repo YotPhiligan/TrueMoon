@@ -15944,6 +15944,57 @@ SHA256 `verification.json` `C49C0A76DD06689237BD1F9994C2927746AC57D435273B0BF8C8
 кадров Player для двух моделей записано отдельно в ARCH1g.2h–j.
 [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2k-editor-model-imports).
 
+<a id="arch1g2l-2026-11-19"></a>
+## 2026-11-19 — ARCH1g.2l, реимпорт выбранной модели в Editor
+
+Version 1.2611.19.3-alpha. `ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ModelReimport`
+прошёл в Source Debug и Published Release с Cobalt и Microsoft DI.
+EvidenceDirectory `TestResults/ARCH1g2l-editor-reimport-20261119-01`, SHA256
+`verification.json` `D1FAA190FD714928A3DE5AFFBAD6E288928344448266DFA65AA0EFB410FF0C74`.
+Повтор с `-FreshPackages` прошёл на Cobalt и Microsoft DI с 20 пакетами в закрытом
+feed. EvidenceDirectory `TestResults/ARCH1g2l-editor-reimport-packages-20261119-01`,
+SHA256 `verification.json` `1AC242EFAB4690BAD60A0977E05F83E1E8BE34FA921250CE00EDA67385573E1A`.
+
+В нативном окне редактировался BIN одной из двух моделей. При удалённом BIN
+команда реимпорта завершилась ошибкой до записи ledger. После восстановления
+worker записал новое поколение ledger. Отмена через панель статуса перед
+публикацией Nom сохранила выбранный импорт и предыдущую сборку. Повторная
+команда использовала то же сохранённое поколение. Новая сборка сохранила ID,
+содержимое сцены и точные ревизии второй модели.
+
+В трёх GPU-запусках на профиль проверены предыдущий, новый и повторно открытый
+предыдущий BuildId. Маска первой модели менялась и возвращалась к исходной,
+маска второй совпадала. В 18 дочерних запусках Vulkan validation 0 ошибок и
+0 предупреждений. После Stop освобождены устройства, поверхности, slots и handles.
+`TrueMoon.Aether.Editor.Tests` — 1507/1507 в Debug и Release. Отчёты VSTest
+в `TestResults/ARCH1g2l-editor-regression-20261119-01`.
+[Подключение и границы](MODEL_BUILD_DELIVERY.md#arch1g2l-editor-reimport).
+
+<a id="arch1g2m-2026-11-19"></a>
+## 2026-11-19 — ARCH1g.2m, сохранённый выбор моделей сцены
+
+Version 1.2611.19.4-alpha. `VerifyEditor.ps1 -ModelSelectionPersistence`
+прошёл в Source Debug и Published Release на
+Cobalt и Microsoft DI. EvidenceDirectory `TestResults/ARCH1g2m-editor-selection-20261119-01`,
+SHA256 `verification.json` `AF5B3B5F2F6FF0DA3D217868CF99BF126A7EA8C7A168E5AD475297E51F5C0D67`.
+Повтор с `-FreshPackages` прошёл на обоих DI с 20 пакетами в закрытом feed.
+EvidenceDirectory `TestResults/ARCH1g2m-editor-selection-packages-20261119-01`,
+SHA256 `verification.json` `FCBF7716FC806760395A2DDDF00238A0E0CD9D30891AE7BB92D467D373944C94`.
+
+После отмены нового импорта ledger уже содержал следующее поколение. Повторное
+открытие через команду Editor восстановило прежний выбор и кнопку реимпорта
+из доверенной фабрики приложения. Запись выбора и время её изменения
+сохранились при чтении. Повтор завершил публикацию, следующее открытие
+восстановило новые ресурсы только выбранной модели. Конфликт отпечатка
+сохранил конкурирующую запись, повреждённый checkpoint не заменил открытую
+сцену. Из восстановленного выбора выпущена сборка. На GPU старая сборка,
+новая и повторно открытая старая подтвердили обе точные ревизии геометрии.
+В 18 дочерних запусках Vulkan validation не обнаружила ошибок и предупреждений.
+После Stop освобождены устройства, поверхности, slots и handles.
+`TrueMoon.Aether.Editor.Tests` — 1507/1507 в Debug и Release. Отчёты VSTest
+в `TestResults/ARCH1g2m-editor-regression-20261119-01`.
+[Подключение и границы](MODEL_BUILD_DELIVERY.md#arch1g2m-persisted-model-selection).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

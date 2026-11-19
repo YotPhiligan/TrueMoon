@@ -69,6 +69,24 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     /// <summary>Reads the latest source status of the selected models for the given opening without I/O.</summary>
     public IReadOnlyList<SceneModelImportStatus> ReadModelImports(Guid openingId) => ModelImports?.Read(openingId) ?? [];
 
+    /// <summary>Reimports one selected model under the document operation gate and swaps its frozen resources on success.</summary>
+    /// <param name="openingId">Exact current document opening.</param>
+    /// <param name="sourceId">Persistent identity of the selected model.</param>
+    /// <param name="generation">The expected selected ledger generation.</param>
+    /// <param name="cancellationToken">Cancellation before the document selection changes.</param>
+    /// <returns>Completion of import, publication and document selection.</returns>
+    public Task ReimportModelAsync(Guid openingId, Guid sourceId, long generation, CancellationToken cancellationToken = default)
+    {
+        var models = ModelImports ?? throw new InvalidOperationException("Model source capture is not configured for this document.");
+        return Begin(DocumentOperation.Loading, async token =>
+        {
+            if (openingId == Guid.Empty || Read().OpeningId != openingId)
+                throw new InvalidOperationException("The reimport targets a different document opening.");
+            await models.ReimportAsync(openingId, sourceId, generation, token).ConfigureAwait(false);
+            return true;
+        }, cancellationToken);
+    }
+
     /// <summary>Rechecks the selected sources before Build and returns their frozen resources, when selected.</summary>
     public Task<GameBuildRenderContent?> CheckModelImportsAsync(Guid openingId, CancellationToken cancellationToken = default) =>
         ModelImports?.CheckAsync(openingId, cancellationToken) ?? Task.FromResult<GameBuildRenderContent?>(null);
@@ -110,6 +128,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
             token.ThrowIfCancellationRequested();
             candidate = _authoring.Create(document) ?? throw new InvalidOperationException("Authoring factory returned null.");
             var state = candidate.Read();
+            var imports = ModelImports == null ? null : await ModelImports.RestoreAsync(document.Id.Value, token).ConfigureAwait(false);
             if (!await AllowTransitionAsync(choice, saveCurrentAs, token).ConfigureAwait(false)) return false;
             ISceneAuthoringSession? previous;
             lock (_gate)
@@ -118,9 +137,10 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                 if (_closing) throw new OperationCanceledException(token);
                 previous = _current; _current = candidate; candidate = null; _generation++; _openingId = Guid.NewGuid();
                 _path = path; _stamp = stamp; _saved = path == null ? null : state.ContentRevision;
+                ModelImports?.Open(document.Id.Value, _openingId, imports);
             }
             if (previous != null) Release(previous);
-            if (ModelImports != null) await ModelImports.ClearAsync().ConfigureAwait(false);
+            if (ModelImports != null) await ModelImports.StartOpenedWatchesAsync().ConfigureAwait(false);
             return true;
         }
         catch (Exception error) { failure = error; throw; }

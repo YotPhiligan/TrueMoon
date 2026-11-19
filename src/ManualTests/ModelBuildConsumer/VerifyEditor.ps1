@@ -4,7 +4,9 @@ param(
     [Parameter(Mandatory)][string]$EvidenceDirectory,
     [Parameter(Mandatory)][string]$ValidationDirectory,
     [switch]$FreshPackages,
-    [switch]$ModelImports
+    [switch]$ModelImports,
+    [switch]$ModelReimport,
+    [switch]$ModelSelectionPersistence
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,11 +20,13 @@ foreach ($file in @('VkLayer_khronos_validation.json', 'VkLayer_khronos_validati
 }
 if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' }
 [void][IO.Directory]::CreateDirectory($evidence)
+$reimportProbe = $ModelReimport -or $ModelSelectionPersistence
+$modelStatusProbe = $ModelImports -or $reimportProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -43,12 +47,12 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
-        $fixture = if ($ModelImports) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
+        $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
         Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
             $dotnet, $profile.TestFramework, $profile.Sdk, $mode)
-        if ($ModelImports) {
+        if ($modelStatusProbe) {
             [void][IO.Directory]::CreateDirectory($output)
             $path = "$output/editor-imports.json"
             Copy-Item -LiteralPath "$fixture/editor-imports.json" -Destination $path
@@ -56,7 +60,22 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
             if (!$proof.Completed -or !$proof.MatchingContent -or !$proof.Blocked -or
                 $proof.BeforeEdit -eq $proof.AfterEdit -or $proof.BeforeEdit -ne $proof.AfterReimport -or
                 $proof.OldBuild -eq $proof.NewBuild) { throw "Incomplete model import evidence for $name-$provider" }
-            $report.Runs += @{ Name = "$name-$provider"; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash; Fixture = $fixture }
+            $run = @{ Name = "$name-$provider"; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash; Fixture = $fixture }
+            if ($reimportProbe) {
+                if (!$proof.CancelledAfterLedger -or !$proof.MissingSourceRejected -or $proof.Captures.Count -ne 3) {
+                    throw "Incomplete Editor reimport evidence for $name-$provider"
+                }
+                $run.Captures = @($proof.Captures.Name | ForEach-Object {
+                    @{ Path = "$fixture/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$fixture/$_.png").Hash }
+                })
+                $run.Children = @(Get-ChildItem -LiteralPath $fixture -Filter 'runtime-*.json' -File | ForEach-Object {
+                    @{ Path = $_.FullName; Sha256 = (Get-FileHash -LiteralPath $_.FullName).Hash }
+                })
+                if ($run.Children.Count -ne 3) { throw "Missing reimport runtime child evidence for $name-$provider" }
+            }
+            if ($ModelSelectionPersistence -and (!$proof.RestoredPriorGeneration -or !$proof.RestoredNewGeneration -or
+                !$proof.ConflictRejected -or !$proof.CorruptRejected)) { throw "Incomplete persisted import evidence for $name-$provider" }
+            $report.Runs += $run
             continue
         }
         $path = "$output/editor-model.json"
@@ -163,13 +182,13 @@ catch (Exception error)
     Push-Location $root
     try {
         foreach ($consumer in @(
-            @{ Name = 'Authoring'; Assembly = 'Authoring'; Feature = 'TrueMoon.Aether.Nom' },
-            @{ Name = 'Editor'; Assembly = 'ModelBuildEditorProbe'; Feature = 'TrueMoon.Aether.Editor.Tooling' }
+            @{ Name = 'Authoring'; Assembly = 'Authoring'; Features = @('TrueMoon.Aether.Nom') },
+            @{ Name = 'Editor'; Assembly = 'ModelBuildEditorProbe'; Features = @('TrueMoon.Aether.Editor.Tooling','TrueMoon.Aether.Nom') }
         )) {
             $name = $consumer.Name
             $directory = "$root/$name"
             $project = "$directory/Consumer.csproj"
-            $references = @('TrueMoon', 'TrueMoon.Extensions.DependencyInjection', $consumer.Feature) | ForEach-Object {
+            $references = (@('TrueMoon', 'TrueMoon.Extensions.DependencyInjection') + $consumer.Features) | ForEach-Object {
                 "<PackageReference Include='$($_)' Version='[$version]'/>"
             }
             [IO.File]::WriteAllText($project, @"

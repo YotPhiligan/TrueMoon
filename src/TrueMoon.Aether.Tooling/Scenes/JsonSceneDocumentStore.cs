@@ -17,7 +17,7 @@ public sealed class JsonSceneDocumentStore(SceneFileCodec codec) : ISceneDocumen
         path = Normalize(path);
         cancellationToken.ThrowIfCancellationRequested();
         await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
-        var bytes = await ReadBytesAsync(input, cancellationToken).ConfigureAwait(false);
+        var bytes = await ReadBytesAsync(input, SceneFileCodec.MaximumBytes, cancellationToken).ConfigureAwait(false);
         return new(_codec.Decode(bytes, cancellationToken), Stamp(bytes));
     }
 
@@ -28,6 +28,12 @@ public sealed class JsonSceneDocumentStore(SceneFileCodec codec) : ISceneDocumen
         path = Normalize(path);
         cancellationToken.ThrowIfCancellationRequested();
         var bytes = _codec.Encode(document, cancellationToken);
+        return await WriteAtomicAsync(path, bytes, expected, SceneFileCodec.MaximumBytes, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task<SceneFileStamp> WriteAtomicAsync(string path, byte[] bytes, SceneFileStamp? expected,
+        int maximumBytes, CancellationToken cancellationToken)
+    {
         var stamp = Stamp(bytes);
         // The empty sidecar remains after closing; no stale ownership survives a process exit.
         using var writerLock = new FileStream(path + ".write-lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -49,7 +55,7 @@ public sealed class JsonSceneDocumentStore(SceneFileCodec codec) : ISceneDocumen
             else
             {
                 await using var original = OpenExisting(path);
-                var observed = Stamp(await ReadBytesAsync(original, cancellationToken).ConfigureAwait(false));
+                var observed = Stamp(await ReadBytesAsync(original, maximumBytes, cancellationToken).ConfigureAwait(false));
                 if (observed != expected) throw new SceneFileConflictException(path);
                 cancellationToken.ThrowIfCancellationRequested();
                 File.Replace(temporary, path, destinationBackupFileName: null);
@@ -70,9 +76,10 @@ public sealed class JsonSceneDocumentStore(SceneFileCodec codec) : ISceneDocumen
         catch (FileNotFoundException error) { throw new SceneFileConflictException(path, error); }
     }
 
-    private static async Task<byte[]> ReadBytesAsync(FileStream input, CancellationToken token)
+    internal static async Task<byte[]> ReadBytesAsync(FileStream input, int maximumBytes, CancellationToken token)
     {
-        var bytes = new byte[SceneFileCodec.MaximumBytes + 1];
+        if (input.Length > maximumBytes) throw new InvalidDataException("Scene file exceeds the byte limit.");
+        var bytes = new byte[checked((int)input.Length)];
         var count = 0;
         while (count < bytes.Length)
         {
@@ -80,11 +87,11 @@ public sealed class JsonSceneDocumentStore(SceneFileCodec codec) : ISceneDocumen
             if (read == 0) break;
             count += read;
         }
-        if (count > SceneFileCodec.MaximumBytes) throw new InvalidDataException("Scene file exceeds the byte limit.");
-        return bytes[..count];
+        if (count != bytes.Length || input.ReadByte() >= 0) throw new InvalidDataException("Scene file length changed during read.");
+        return bytes;
     }
 
-    private static SceneFileStamp Stamp(byte[] bytes) => new(Convert.ToHexString(SHA256.HashData(bytes)));
+    internal static SceneFileStamp Stamp(byte[] bytes) => new(Convert.ToHexString(SHA256.HashData(bytes)));
     private static string Normalize(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);

@@ -34,6 +34,13 @@ public interface IEditorStatusBarViewModel : System.ComponentModel.INotifyProper
     /// <summary>Whether the active document has selected model imports.</summary>
     bool HasModelImports => ModelImportDetails.Length != 0;
 
+    /// <summary>Available model reimport targets in this opening.</summary>
+    IReadOnlyList<EditorModelReimportAction> ModelReimports => [];
+
+    /// <summary>Requests reimport for the displayed target.</summary>
+    /// <param name="action">Exact model and document selection shown by the view.</param>
+    void ReimportModel(EditorModelReimportAction action) { }
+
     /// <summary>Source-specific semantic styling.</summary>
     EditorStatusKind SourceKind { get; }
 

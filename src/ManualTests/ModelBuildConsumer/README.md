@@ -124,4 +124,34 @@ updated canonical render keys. The probe also rejects a mismatched frozen payloa
 and verifies that closing the scene clears the selection. `-FreshPackages` runs
 the same scenario with an independently published Editor from the closed feed.
 
+## Reimport a selected model in Editor
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ModelReimport `
+  -EvidenceDirectory 'TestResults/EditorModelReimport/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The native Editor probe clicks the selected model's reimport action. It verifies
+failure on a missing dependency and cancels between the ledger commit and Nom
+publication. A second click finishes publishing the same generation. Build
+preserves the other model and the placed scene. Three GPU captures check the
+original, updated and reopened original builds. `-FreshPackages` repeats the
+scenario in a published consumer from the closed local feed.
+
+## Restore the saved model selection
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ModelSelectionPersistence `
+  -EvidenceDirectory 'TestResults/EditorModelSelection/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The reimport scenario also reopens the scene after the ledger advances and
+the reimport is cancelled. It verifies read-only restoration of the retained
+generation, then retries from the restored selection. Reopening after success
+preserves the new exact resources. A competing write and malformed checkpoint
+exercise both conflict boundaries before Build and the old/new GPU comparison.
+`-FreshPackages` repeats the scenario in the independently published Editor.
+
 [Contract and ownership](../../docs/engine/MODEL_BUILD_DELIVERY.md)

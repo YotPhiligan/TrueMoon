@@ -10,6 +10,7 @@ public sealed class GameBuildRenderContent
     public const int MaximumBytes = 12 * 1024 * 1024;
     private const int Magic = 0x31435254; // TRC1
     private readonly byte[] _bytes;
+    private readonly ImmutableArray<RenderAssetEntry> _entries;
 
     /// <summary>Exact canonical resource identities in this frozen payload.</summary>
     public ImmutableArray<RenderAssetKey> AssetKeys { get; }
@@ -23,7 +24,8 @@ public sealed class GameBuildRenderContent
         if (entries.Count == 0) throw new InvalidDataException("A render payload must contain at least one asset.");
         // The real build identity is assigned after publishing the payload digest.
         var validated = new RenderContentManifest(projectId, RenderContentHash.Compute("TRC1"u8), Guid.NewGuid(), entries);
-        AssetKeys = validated.Entries.Select(entry => entry.Key).ToImmutableArray();
+        _entries = validated.Entries;
+        AssetKeys = _entries.Select(entry => entry.Key).ToImmutableArray();
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
         writer.Write(Magic);
@@ -38,6 +40,20 @@ public sealed class GameBuildRenderContent
             writer.Write(bytes);
         }
         _bytes = stream.ToArray();
+    }
+
+    /// <summary>Creates a new frozen payload by replacing exact resource revisions and retaining the other entries.</summary>
+    /// <param name="previous">Exact keys to replace.</param>
+    /// <param name="replacement">Replacement render closure for the same project.</param>
+    /// <returns>Validated canonical payload with the replacement and all unaffected resources.</returns>
+    public GameBuildRenderContent WithReplacedAssets(IEnumerable<RenderAssetKey> previous, GameBuildRenderContent replacement)
+    {
+        ArgumentNullException.ThrowIfNull(previous);
+        ArgumentNullException.ThrowIfNull(replacement);
+        var removed = previous.ToHashSet();
+        if (removed.Count == 0 || !removed.IsSubsetOf(AssetKeys))
+            throw new InvalidDataException("The replaced resource revisions must belong to the frozen payload.");
+        return new(_entries[0].Key.ProjectId, [.. _entries.Where(entry => !removed.Contains(entry.Key)), .. replacement._entries]);
     }
 
     internal void WriteTo(Stream output) => output.Write(_bytes);

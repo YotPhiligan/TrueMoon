@@ -22,6 +22,13 @@ the selected generations and their exact frozen render payload to the open docum
 with `SceneDocumentSession.SelectModelImportsAsync`. The status popup shows source
 freshness per selected model. Building from the document checks each source before
 compilation. The published build chooser opens the immutable artifact as before.
+Register `UseAetherModelImport()` before Editor and attach `SceneModelReimportSettings`
+to each selection that should offer a reimport button. It carries the existing
+ledger, trusted worker deployment, scratch directory and project publisher. The
+document command replaces that model's frozen resources once publication succeeds.
+With `UseAetherSceneModelSelectionPersistence()` registered before Editor, opening
+a scene restores its saved model selection and source statuses. Projects choose
+whether to reconnect the reimport action through the trusted settings factory.
 
 This replaces the previous `TrueMoon.Aether.Editor` package. Update PackageReferences
 and namespaces and rebuild matching hosts/games/artifacts/captures together. No facade

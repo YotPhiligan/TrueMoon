@@ -10,15 +10,7 @@ internal sealed class ModelSourceWatchHost(IFactory<ModelSourceCapture, ModelSou
 
     public ModelSourceWatch Create(ModelSourceWatchArguments arguments)
     {
-        ArgumentNullException.ThrowIfNull(arguments);
-        ArgumentNullException.ThrowIfNull(arguments.Source);
-        ArgumentNullException.ThrowIfNull(arguments.Published);
-        if (arguments.Published.Candidate.SourceId != arguments.Source.SourceId)
-            throw new ArgumentException("The published import is for another model source.", nameof(arguments));
-        if (!ModelImportCandidate.IsValidGeometryScale(arguments.GeometryScale) ||
-            arguments.PollInterval < TimeSpan.FromMilliseconds(100) || arguments.PollInterval > TimeSpan.FromMinutes(1))
-            throw new ArgumentOutOfRangeException(nameof(arguments), "Invalid model watch settings.");
-
+        ValidateArguments(arguments);
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_closed, this);
@@ -30,6 +22,19 @@ internal sealed class ModelSourceWatchHost(IFactory<ModelSourceCapture, ModelSou
             _active.Add(watch);
             return watch;
         }
+    }
+
+    internal static void ValidateArguments(ModelSourceWatchArguments arguments)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Source);
+        ArgumentNullException.ThrowIfNull(arguments.Published);
+        if (arguments.Published.Candidate.SourceId != arguments.Source.SourceId)
+            throw new ArgumentException("The published import is for another model source.", nameof(arguments));
+        if (!ModelImportCandidate.IsValidGeometryScale(arguments.GeometryScale) ||
+            arguments.PollInterval < TimeSpan.FromMilliseconds(100) || arguments.PollInterval > TimeSpan.FromMinutes(1))
+            throw new ArgumentOutOfRangeException(nameof(arguments), "Invalid model watch settings.");
+
     }
 
     internal void Release(ModelSourceWatch watch)

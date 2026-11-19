@@ -91,6 +91,7 @@ public sealed class EditorViewModel : ViewModel, IDisposable, IEditorViewModel
         _source?.OwnerKey == project.OwnerKey ? _source : null;
     /// <summary>Latest authoring source status for each explicitly selected import.</summary>
     public string ModelImportDetails => _modelImportDetails;
+    internal IReadOnlyList<SceneModelImportStatus> ModelImports => _imports;
     public IReadOnlyList<KeyValuePair<string, string>> Properties => _properties;
     public bool CanBuild => _canBuild;
     public bool CanStart => _canStart;
@@ -178,6 +179,7 @@ public sealed class EditorViewModel : ViewModel, IDisposable, IEditorViewModel
                 ModelImportFreshnessStatus.Unavailable => "Исходники недоступны",
                 _ => "Проверяется"
             }))), nameof(ModelImportDetails));
+            OnPropertyChanged(nameof(ModelImports));
         }
         RefreshState();
         _hierarchy?.Refresh();

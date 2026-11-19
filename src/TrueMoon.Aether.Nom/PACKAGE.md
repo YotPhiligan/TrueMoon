@@ -1,5 +1,11 @@
 # TrueMoon.Aether.Nom
 
+`UseAetherNomContent()` also provides `IFactory<IModelImportContentPublisher,
+IProjectAssetStore>` for reimporting selected models in an Aether document. Each
+publisher borrows an open project store. It publishes a model's render closure,
+then captures the exact Nom snapshot as detached build input. The store owner
+controls durable revision and snapshot retention.
+
 Register `UseAetherNomContent()` at the authoring App composition root alongside
 `UseNom()`. Resolve `NomModelContent` and borrow an open project store. Publish a
 committed `PublishedModelImport` against the expected Nom generation, then capture

@@ -43,6 +43,20 @@ document services. Provide the current opening ID, published imports and the exa
 frozen `GameBuildRenderContent`. The document session owns the watches and releases
 them on reselection or close.
 
+For an explicit reimport, attach `SceneModelReimportSettings` and use
+`SceneDocumentSession.ReimportModelAsync` with the displayed opening, source ID and
+ledger generation. The document validates compatible placements and resource IDs
+before committing the worker result. It switches the selected resources after the
+project publisher returns the exact new closure. The published ledger can be reused
+on retry when the captured input and settings match.
+
+Enable `UseAetherSceneModelSelectionPersistence()` before Editor document
+registration to retain selections across openings. Explicit selection or successful
+reimport saves the exact published generations in a project-local record keyed by
+scene ID. Opening reads this record and reconstructs detached build resources.
+Optionally supply `IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>`
+to reattach trusted worker and project publisher settings to a saved ledger reference.
+
 Headless project/document authoring, transactional history, scene persistence,
 SDK preflight, frozen compilation/capture/publication, source observation,
 preview coordination and bounded diagnostic export. No Editor/Alloy/Argentis

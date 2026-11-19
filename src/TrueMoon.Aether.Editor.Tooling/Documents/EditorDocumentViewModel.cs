@@ -1,3 +1,4 @@
+using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Runtime.Sessions;
@@ -301,6 +302,14 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     /// <summary>Invokes the shared action using the current path draft.</summary>
     /// <param name="command">Document action.</param>
     public void Execute(DocumentCommand command) { VerifyOwner(); _commands.Execute(command, command == DocumentCommand.OpenProject ? ProjectPathDraft : PathDraft); Refresh(); }
+
+    internal bool CanReimportModel => CanSave && _inspector?.CanCancel != true;
+
+    internal void ReimportModel(EditorModelReimportAction action)
+    {
+        VerifyOwner();
+        if (CanReimportModel && _commands.ReimportModel(action)) Refresh();
+    }
     /// <summary>Resolves the pending transition using the separate first-save draft.</summary>
     /// <param name="choice">Save/Discard/Cancel.</param>
     public void Choose(DocumentCloseChoice choice) { VerifyOwner(); _commands.Choose(choice, SavePathDraft); Refresh(); }

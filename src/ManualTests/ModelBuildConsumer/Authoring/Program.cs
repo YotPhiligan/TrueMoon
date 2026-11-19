@@ -24,8 +24,10 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--revisions" or "--multi-model")) return 2;
-var editorImports = args.Length == 8 && args[7] == "--editor-imports";
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--revisions" or "--multi-model")) return 2;
+var editorPersistence = args.Length == 8 && args[7] == "--editor-persisted-imports";
+var editorReimport = editorPersistence || args.Length == 8 && args[7] == "--editor-reimport";
+var editorImports = editorReimport || args.Length == 8 && args[7] == "--editor-imports";
 var editorProbe = editorImports || args.Length == 8 && args[7] == "--editor";
 var revisionProbe = args.Length == 8 && args[7] == "--revisions";
 var multiModelProbe = editorImports || args.Length == 8 && args[7] == "--multi-model";
@@ -459,6 +461,8 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
                 Snapshots = snapshots.Select(item => item.Id), DeletedIds = ids, DeletionGeneration = deletedGeneration, Garbage = garbage
             };
         }
+        if (editorReimport)
+            await bridge.PublishAsync(store, oldModel, store.ContentGeneration);
     }
     Check(oldModel.Ledger.Entries.SequenceEqual(newModel.Ledger.Entries), "Reimport changed persistent subasset identities.");
     Check(oldBuild.BuildId != newBuild.BuildId && oldBuild.SourceRevision == newBuild.SourceRevision,
@@ -487,7 +491,7 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
 }
 
 // Runtime receives only artifacts. The Editor import probe also needs the authoring sources.
-Directory.Move(storeDirectory, storeDirectory + "-offline");
+if (!editorReimport) Directory.Move(storeDirectory, storeDirectory + "-offline");
 if (!editorImports)
 {
     Directory.Move(sourceDirectory, sourceDirectory + "-offline");
@@ -508,7 +512,8 @@ if (editorProbe)
     }));
     string[] editorArguments = [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene,
         oldBuild.DirectoryPath, newBuild.DirectoryPath];
-    if (editorImports) editorArguments = [.. editorArguments, "--imports"];
+    if (editorReimport) editorArguments = [.. editorArguments, editorPersistence ? "--persisted-imports" : "--reimport", workerPath, dotnet];
+    else if (editorImports) editorArguments = [.. editorArguments, "--imports"];
     var result = await RunChild("editor", editorArguments, TimeSpan.FromSeconds(120));
     Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, editorImports ? "editor-imports.json" : "editor-model.json")), result.Error);
     return 0;

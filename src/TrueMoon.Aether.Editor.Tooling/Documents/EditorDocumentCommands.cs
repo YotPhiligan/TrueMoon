@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Editing;
@@ -87,8 +88,11 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             return _selectProject != null && (command == DocumentCommand.OpenProject ? _projects.CanSelect : _projects.CanClose) &&
                 _projects.Active?.Documents?.Read().Operation is null or DocumentOperation.None;
         if (!BindingReady) return false;
-        var document = _projects.Active?.Documents?.Read();
+        var session = _projects.Active?.Documents;
+        var document = session?.Read();
         if (document == null || document.IsClosed || document.Operation != DocumentOperation.None) return false;
+        if (command == DocumentCommand.ReimportModel)
+            return session!.ReadModelImports(document.OpeningId).Any(model => model.CanReimport);
         return command is DocumentCommand.New or DocumentCommand.Open ||
             document.Content != null && command is DocumentCommand.Save or DocumentCommand.SaveAs or DocumentCommand.Close;
     }
@@ -97,6 +101,11 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     /// <param name="command">New/Open/Save/SaveAs/Close.</param><param name="path">Scenes-relative Open/SaveAs or untitled Save target.</param>
     /// <returns>True when accepted. Observe Pending and Read for completion/errors.</returns>
     public bool Execute(DocumentCommand command, string path = "")
+        => Execute(command, path, null);
+
+    internal bool ReimportModel(EditorModelReimportAction action) => Execute(DocumentCommand.ReimportModel, "", action);
+
+    private bool Execute(DocumentCommand command, string path, EditorModelReimportAction? reimport)
     {
         Validate(command); ArgumentNullException.ThrowIfNull(path);
         TaskCompletionSource completion; CancellationTokenSource cancellation; SceneDocumentSession? document;
@@ -104,6 +113,9 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         {
             if (!Available(command)) return false;
             document = _projects.Active?.Documents;
+            if (command == DocumentCommand.ReimportModel && (reimport == null || document == null ||
+                document.Read().OpeningId != reimport.OpeningId || !document.ReadModelImports(reimport.OpeningId).Any(model =>
+                    model.CanReimport && model.SourceId == reimport.SourceId && model.Generation == reimport.Generation))) return false;
             cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             _cancellation = cancellation; _pending = completion.Task; _busy = true; _operation = command; _error = null; _cancellationError = null;
@@ -174,6 +186,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
                         break;
                     case DocumentCommand.SaveAs: await document.SaveAsAsync(path, token).ConfigureAwait(false); break;
                     case DocumentCommand.Close: await document.CloseAsync(choice, saveAs, token).ConfigureAwait(false); break;
+                    case DocumentCommand.ReimportModel:
+                        await document.ReimportModelAsync(reimport!.OpeningId, reimport.SourceId, reimport.Generation, token).ConfigureAwait(false); break;
                 }
             }
             catch (OperationCanceledException) { }

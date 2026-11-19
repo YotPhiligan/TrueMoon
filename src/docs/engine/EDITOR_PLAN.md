@@ -20,9 +20,10 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 ## Точка продолжения — актуализация 2026-11-19
 
 [ARCH1g.2k](PLAN.md#arch1g2k-editor-model-imports) проверил статусы
-выбранных импортов и команду Build из меню. Следующий кандидат для Editor —
-явная команда реимпорта одной модели в панели статуса. Сценарий и критерии
-ведутся в [ARCH1g.2l](PLAN.md#arch1g2l-editor-reimport).
+выбранных импортов и команду Build из меню. [ARCH1g.2l](PLAN.md#arch1g2l-editor-reimport)
+добавил действие реимпорта модели из панели статуса с повтором после отмены.
+[ARCH1g.2m](PLAN.md#arch1g2m-persisted-model-selection) восстановил сохранённый
+выбор моделей при повторном открытии документа.
 
 ARCH3.5 завершён 2026-11-14: [Editor.UI и optional Editor.Tooling](EDITOR_LAYERS.md) выделены. View/data/styles/ports работают с Runtime без Tooling, полный project/document/build/authoring workflow подключается bridge. [Единая очередь](PLAN.md#current-engine-queue), [фактическая приёмка](ARCH35_BASELINE.json). ARCH3.6 добавил [managed Mod SDK/loader](MODS.md); ARCH3.7 добавил [stable-component system replacement](MOD_RELOAD.md); ARCH3.8 добавил [owned-World component migration](MOD_MIGRATION.md); ARCH3.9 завершил [сквозную приёмку/поставку](ARCHITECTURE_GUIDE.md). Детальные ED задачи ниже сохраняются.
 
@@ -1552,7 +1553,7 @@ failed/skipped0; narrow19+34. SourceDebug/Cobalt/native Skia raster consumer:
 ведутся в [ARCH1g.2](PLAN.md#arch1g-model-assets).
 Статусы явно выбранных импортов открытого документа и предсборочная проверка
 исходников моделей ведутся в [ARCH1g.2k](PLAN.md#arch1g2k-editor-model-imports).
-Предложение по команде реимпорта в панели статуса — [ARCH1g.2l](PLAN.md#arch1g2l-editor-reimport).
+Команда реимпорта в панели статуса ведётся в [ARCH1g.2l](PLAN.md#arch1g2l-editor-reimport).
 
 Начат ED6b.1 по согласованному startup-only выбору Editor/Player. Существующий
 legacy demo Build/Replace и Edit preview не закрывают игровой workflow открытого

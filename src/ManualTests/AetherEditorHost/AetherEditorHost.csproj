@@ -13,6 +13,7 @@
     <ProjectReference Include="../../TrueMoon/TrueMoon.csproj" />
     <ProjectReference Include="../../TrueMoon.Extensions.DependencyInjection/TrueMoon.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="../../TrueMoon.Aether.Editor.Tooling/TrueMoon.Aether.Editor.Tooling.csproj" />
+    <ProjectReference Include="../../TrueMoon.Aether.Nom/TrueMoon.Aether.Nom.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="../../Examples/AetherEditor/Assets/Fonts/NotoSans-Regular.ttf" Link="Assets/Fonts/NotoSans-Regular.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

@@ -4,6 +4,7 @@ using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Runtime.Sessions;
+using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Editing;
 using TrueMoon.Aether.Tooling.SourceTracking;
 using TrueMoon.Argentis;
@@ -28,6 +29,10 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
     private string _sourceSummary = "", _sourceDetails = "", _modelImportDetails = "";
     private EditorStatusKind _sourceKind;
     private bool _hasSource;
+    private IReadOnlyList<SceneModelImportStatus> _modelImports = [];
+    private IReadOnlyList<EditorModelReimportAction> _modelReimports = [];
+    private Guid _importOpening;
+    private bool _canReimport;
     /// <summary>Creates presentation without taking ownership of the injected models.</summary>
     public EditorStatusBarViewModel(EditorViewModel editor, EditorDocumentViewModel documents, EditorInspectorViewModel transform)
     {
@@ -58,6 +63,8 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
     public string ModelImportDetails => _modelImportDetails;
     /// <summary>Whether the active document has selected model imports.</summary>
     public bool HasModelImports => _modelImportDetails.Length != 0;
+    /// <inheritdoc />
+    public IReadOnlyList<EditorModelReimportAction> ModelReimports => _modelReimports;
     /// <summary>Source-specific semantic styling.</summary>
     public EditorStatusKind SourceKind => _sourceKind;
     /// <summary>Whether the current project has a source segment.</summary>
@@ -105,8 +112,13 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
         else if (_documents.IsBusy)
         {
             kind = EditorStatusKind.Busy;
-            summary = _documents.Operation is DocumentCommand.Save or DocumentCommand.SaveAs ? "Сохранение сцены…" :
-                _documents.Operation == DocumentCommand.Open ? "Открытие сцены…" : "Операция с документом…";
+            summary = _documents.Operation switch
+            {
+                DocumentCommand.Save or DocumentCommand.SaveAs => "Сохранение сцены…",
+                DocumentCommand.Open => "Открытие сцены…",
+                DocumentCommand.ReimportModel => "Переимпорт модели…",
+                _ => "Операция с документом…"
+            };
         }
         else if (_editor.Operation != GameEditorOperation.Idle) { kind = EditorStatusKind.Busy; summary = operation; }
         else if (preview.Busy) { kind = EditorStatusKind.Busy; summary = "Обновление Edit Preview…"; }
@@ -126,6 +138,15 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
         SetProperty(ref _canCancel, _documents.CanCancel || _editor.CanCancel || preview.Busy && _transform.CanStopPreview, nameof(CanCancel));
         SetProperty(ref _canPreview, _transform.CanPreview, nameof(CanPreview));
         SetProperty(ref _canStopPreview, _transform.CanStopPreview, nameof(CanStopPreview));
+        var opening = _documents.Document?.OpeningId ?? Guid.Empty;
+        var imports = _editor.ModelImports;
+        var enabled = _documents.CanReimportModel;
+        if (opening != _importOpening || !ReferenceEquals(imports, _modelImports) || enabled != _canReimport)
+        {
+            _importOpening = opening; _modelImports = imports; _canReimport = enabled;
+            SetProperty(ref _modelReimports, Array.AsReadOnly(imports.Where(model => model.CanReimport).Select(model =>
+                new EditorModelReimportAction(opening, model.SourceId, model.Generation, model.Name, enabled)).ToArray()), nameof(ModelReimports));
+        }
     }
     private void RefreshSource()
     {
@@ -169,6 +190,12 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
     public void ShowPreview() { ObjectDisposedException.ThrowIf(_disposed, this); _transform.ShowPreview(); }
     /// <summary>Fences and drains the existing preview owner.</summary>
     public Task StopPreviewAsync() { ObjectDisposedException.ThrowIf(_disposed, this); return _transform.StopPreviewAsync(); }
+    /// <inheritdoc />
+    public void ReimportModel(EditorModelReimportAction action)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (action.Enabled) _documents.ReimportModel(action);
+    }
     /// <summary>Disconnects subscriptions; the injected models remain App-owned.</summary>
     public void Dispose()
     {
