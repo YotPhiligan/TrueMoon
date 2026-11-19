@@ -134,6 +134,7 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
                 DocumentCommand.Open => "Открытие сцены…",
                 DocumentCommand.ReimportModel => "Переимпорт модели…",
                 DocumentCommand.ReadModelCatalog => "Чтение каталога моделей…",
+                DocumentCommand.PlaceModel => "Добавление модели в сцену…",
                 DocumentCommand.SelectModel => "Обновление выбора моделей…",
                 _ => "Операция с документом…"
             };
@@ -185,11 +186,15 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
             SetProperty(ref _projectModels, [], nameof(ProjectModels));
             return;
         }
-        var selected = imports.Select(model => model.SourceId).ToHashSet();
+        var selected = imports.ToDictionary(model => model.SourceId);
         var registered = items.Select(model => model.SourceId).ToHashSet();
-        SetProperty(ref _projectModels, Array.AsReadOnly(items.Select(item => new EditorProjectModelRow(opening, item.SourceId,
-            item.Name, item.SourcePath, selected.Contains(item.SourceId), canChange)).Concat(imports.Where(item => !registered.Contains(item.SourceId))
-            .Select(item => new EditorProjectModelRow(opening, item.SourceId, item.Name, "", true, canChange))).ToArray()), nameof(ProjectModels));
+        SetProperty(ref _projectModels, Array.AsReadOnly(items.Select(item =>
+            CreateRow(item.SourceId, item.Name, item.SourcePath, selected.GetValueOrDefault(item.SourceId)))
+            .Concat(imports.Where(item => !registered.Contains(item.SourceId)).Select(item => CreateRow(item.SourceId, item.Name, "", item)))
+            .ToArray()), nameof(ProjectModels));
+
+        EditorProjectModelRow CreateRow(Guid sourceId, string name, string path, SceneModelImportStatus? selection) =>
+            new(opening, sourceId, name, path, selection != null, canChange) { SelectedGeneration = selection?.Generation };
     }
     private void RefreshSource()
     {
@@ -241,6 +246,8 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
     }
     /// <inheritdoc />
     public void ReadModelCatalog() { ObjectDisposedException.ThrowIf(_disposed, this); _documents.ReadModelCatalog(); }
+    /// <inheritdoc />
+    public void PlaceModel(EditorProjectModelRow row) { ObjectDisposedException.ThrowIf(_disposed, this); _documents.PlaceModel(row); }
     /// <inheritdoc />
     public void SelectModel(EditorProjectModelRow row) { ObjectDisposedException.ThrowIf(_disposed, this); if (row.CanChange) _documents.SelectModel(row); }
     /// <summary>Disconnects subscriptions; the injected models remain App-owned.</summary>

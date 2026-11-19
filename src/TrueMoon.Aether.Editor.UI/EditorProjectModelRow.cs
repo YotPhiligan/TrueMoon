@@ -7,4 +7,8 @@ namespace TrueMoon.Aether.Editor.UI;
 /// <param name="SourcePath">Project-relative root file, when registered.</param>
 /// <param name="Selected">Whether the model belongs to the current scene selection.</param>
 /// <param name="CanChange">Current scene selection admission.</param>
-public sealed record EditorProjectModelRow(Guid OpeningId, Guid SourceId, string Name, string SourcePath, bool Selected, bool CanChange);
+public sealed record EditorProjectModelRow(Guid OpeningId, Guid SourceId, string Name, string SourcePath, bool Selected, bool CanChange)
+{
+    /// <summary>Exact selected generation available for placement.</summary>
+    public long? SelectedGeneration { get; init; }
+}

@@ -100,6 +100,15 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
         _current = restored?.Content is not { } content ? null : new(openingId, restored.Imports, [], content);
     }
 
+    internal SceneModelImportSelection RequirePlacementSelection(Guid openingId, Guid sourceId, long generation)
+    {
+        if (_current is { } current && current.OpeningId == openingId &&
+            current.Imports.FirstOrDefault(model => model.Watch.Source.SourceId == sourceId &&
+                model.Watch.Published.Generation == generation) is { } selected)
+            return selected;
+        throw new InvalidOperationException("Выбранный импорт изменился. Повторите добавление модели.");
+    }
+
     internal async Task SetCatalogSelectionAsync(Guid openingId, Guid sourceId, bool selected, ProjectModelCatalog catalog, CancellationToken token)
     {
         var current = _current?.Imports ?? [];

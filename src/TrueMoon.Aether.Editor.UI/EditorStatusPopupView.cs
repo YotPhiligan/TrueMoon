@@ -11,7 +11,7 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
 {
     private readonly IEditorStatusBarViewModel _model;
     private readonly Dictionary<(Guid Opening, Guid Source, string Name), (Button Button, EditorModelReimportAction Target)> _reimportButtons = [];
-    private readonly Dictionary<(Guid Opening, Guid Source), (CheckBox Check, EditorProjectModelRow Row)> _catalogChecks = [];
+    private readonly Dictionary<(Guid Opening, Guid Source), (HStack Layout, CheckBox Check, Button Place, EditorProjectModelRow Row)> _catalogRows = [];
 
     /// <summary>Popup content.</summary>
     public VStack Body { get; } = new();
@@ -33,7 +33,7 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
     public VStack ReimportActions { get; } = new();
     /// <summary>Explicitly reads or refreshes the project model list.</summary>
     public Button ReadModelCatalog { get; }
-    /// <summary>Project model checkboxes.</summary>
+    /// <summary>Project model selection and placement rows.</summary>
     public VStack ModelCatalogRows { get; } = new();
     /// <summary>Scrollable project model list.</summary>
     public ScrollViewer ModelCatalogList { get; }
@@ -92,39 +92,47 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
     {
         var rows = _model.ProjectModels;
         var active = rows.Select(row => (row.OpeningId, row.SourceId)).ToHashSet();
-        foreach (var key in _catalogChecks.Keys.Where(key => !active.Contains(key)).ToArray())
+        foreach (var key in _catalogRows.Keys.Where(key => !active.Contains(key)).ToArray())
         {
-            var check = _catalogChecks[key].Check;
-            ModelCatalogRows.Items.Remove(check);
-            _catalogChecks.Remove(key);
-            check.Dispose();
+            var layout = _catalogRows[key].Layout;
+            ModelCatalogRows.Items.Remove(layout);
+            _catalogRows.Remove(key);
+            layout.Dispose();
         }
         for (var index = 0; index < rows.Count; index++)
         {
             var row = rows[index];
             var key = (row.OpeningId, row.SourceId);
-            if (!_catalogChecks.TryGetValue(key, out var entry))
+            if (!_catalogRows.TryGetValue(key, out var entry))
             {
                 var check = CheckBox.Create().WithRole(EditorStatusPopupViewStyle.CatalogChoice);
                 check.OnClick(() =>
                 {
-                    if (!_catalogChecks.TryGetValue(key, out var target)) return;
+                    if (!_catalogRows.TryGetValue(key, out var target)) return;
                     check.IsChecked = target.Row.Selected;
                     _model.SelectModel(target.Row);
                 });
-                entry = (check, row);
-                ModelCatalogRows.Items.Add(check);
+                var place = Button.Simple("Добавить в сцену").WithRole(EditorStatusPopupViewStyle.CatalogPlace);
+                place.OnClick(() =>
+                {
+                    if (_catalogRows.TryGetValue(key, out var target)) _model.PlaceModel(target.Row);
+                });
+                var layout = new HStack().WithRole(EditorStatusPopupViewStyle.CatalogRow).WithChildren(place, check);
+                entry = (layout, check, place, row);
+                ModelCatalogRows.Items.Add(layout);
             }
-            if (!ReferenceEquals(ModelCatalogRows.Children[index], entry.Check))
+            if (!ReferenceEquals(ModelCatalogRows.Children[index], entry.Layout))
             {
-                ModelCatalogRows.Items.Remove(entry.Check);
-                ModelCatalogRows.Items.Insert(index, entry.Check);
+                ModelCatalogRows.Items.Remove(entry.Layout);
+                ModelCatalogRows.Items.Insert(index, entry.Layout);
             }
-            _catalogChecks[key] = (entry.Check, row);
+            _catalogRows[key] = (entry.Layout, entry.Check, entry.Place, row);
             entry.Check.Value = row.SourcePath.Length == 0 ? row.Name : row.Name + " · " + row.SourcePath;
             entry.Check.AccessibleName = entry.Check.Value;
             entry.Check.IsChecked = row.Selected;
             entry.Check.IsEnabled = row.CanChange;
+            entry.Place.AccessibleName = $"Добавить «{row.Name}» в сцену";
+            entry.Place.IsEnabled = row.CanChange && row.SelectedGeneration.HasValue;
         }
         ModelCatalogList.IsVisible = rows.Count > 0;
         ModelCatalogMessage.IsVisible = _model.ModelCatalogMessage.Length > 0;

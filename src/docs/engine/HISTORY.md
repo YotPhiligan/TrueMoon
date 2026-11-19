@@ -16021,6 +16021,37 @@ GPU подтверждает точную геометрию старой и н�
 `TestResults/ARCH1g2n-editor-regression-20261119-01`.
 [Подключение и границы](MODEL_BUILD_DELIVERY.md#arch1g2n-project-model-catalog).
 
+<a id="arch1g2o-2026-11-19"></a>
+## 2026-11-19 — ARCH1g.2o, размещение модели из каталога
+
+Версия `1.2611.19.6-alpha`. Нативный Editor открывал сцену с камерой и зелёной
+моделью. Клик по «Добавить в сцену» разместил оба экземпляра красной модели с ID
+из ledger. Undo восстановил сохранённое содержимое сцены, определения и схемы.
+Redo восстановил оба экземпляра. Save сохранил сцену, повторное открытие
+восстановило её ревизию 44, оба ID и закреплённое поколение импорта.
+
+Build после повторного открытия запустил эту ревизию на GPU. Кадр подтвердил
+SceneId, ревизию, BuildId и хеш render manifest. В новой сборке видны оба
+красных экземпляра, маска зелёной модели сохранилась после реимпорта.
+В 18 завершившихся дочерних запусках Vulkan validation показала 0 ошибок и
+0 предупреждений. Устройства, поверхности, slots и handles освобождены.
+
+`VerifyEditor.ps1 -ModelPlacement` прошёл в Source Debug и Published Release на
+Cobalt и Microsoft DI. EvidenceDirectory `TestResults/ARCH1g2o-editor-placement-20261119-02`.
+SHA256 `verification.json` `70A7668E2C40D5C35A9966B8960FB3DD152CF71F52E4B1E5A0FB95C17EAAFBCB`.
+Профиль с `-FreshPackages` подтвердил оба DI в Release с 20 свежими пакетами.
+EvidenceDirectory `TestResults/ARCH1g2o-editor-placement-packages-20261119-01`.
+SHA256 `verification.json` `398911C4AD500955A3BA70A041E48EC274336B516886F82D6F444A4A275893ED`.
+
+Первый нативный прогон поймал закрытие popup при смене фокуса между поиском
+строки и кликом. Тестовый драйвер теперь выполняет поиск и клик в одном
+обращении к UI thread. Повторный прогон прошёл.
+
+`TrueMoon.Aether.Editor.Tests` прошёл 1507/1507 в Debug и Release, ошибок
+и пропусков 0. Команда `dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c <Debug|Release> --no-restore`.
+TRX и логи в `TestResults/ARCH1g2o-editor-regression-20261119-01`.
+[Подключение и поведение](MODEL_BUILD_DELIVERY.md#arch1g2o-place-catalog-model).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

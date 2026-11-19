@@ -24,8 +24,9 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--revisions" or "--multi-model")) return 2;
-var editorCatalog = args.Length == 8 && args[7] == "--editor-model-catalog";
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--revisions" or "--multi-model")) return 2;
+var editorPlacement = args.Length == 8 && args[7] == "--editor-model-placement";
+var editorCatalog = editorPlacement || args.Length == 8 && args[7] == "--editor-model-catalog";
 var editorPersistence = editorCatalog || args.Length == 8 && args[7] == "--editor-persisted-imports";
 var editorReimport = editorPersistence || args.Length == 8 && args[7] == "--editor-reimport";
 var editorImports = editorReimport || args.Length == 8 && args[7] == "--editor-imports";
@@ -281,7 +282,7 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
             greenSnapshotId = (await bridge.PublishAsync(store, greenModel, store.ContentGeneration)).Id;
         }
         var sceneBytes = codec.Encode(placed);
-        File.WriteAllBytes(scenePath, sceneBytes);
+        File.WriteAllBytes(scenePath, editorPlacement ? codec.Encode(ImportedModelScene.Place(initialScene, greenModel!, greenPlacement)) : sceneBytes);
         if (greenModel != null)
         {
             var red = await CheckImport("RedBeforeEdit", oldModel, sourceDirectory);
@@ -513,7 +514,8 @@ if (editorProbe)
     }));
     string[] editorArguments = [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene,
         oldBuild.DirectoryPath, newBuild.DirectoryPath];
-    if (editorReimport) editorArguments = [.. editorArguments, editorCatalog ? "--model-catalog" : editorPersistence ? "--persisted-imports" : "--reimport", workerPath, dotnet];
+    if (editorReimport) editorArguments = [.. editorArguments, editorPlacement ? "--model-placement" :
+        editorCatalog ? "--model-catalog" : editorPersistence ? "--persisted-imports" : "--reimport", workerPath, dotnet];
     else if (editorImports) editorArguments = [.. editorArguments, "--imports"];
     var result = await RunChild("editor", editorArguments, TimeSpan.FromSeconds(120));
     Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, editorImports ? "editor-imports.json" : "editor-model.json")), result.Error);

@@ -26,6 +26,8 @@ error icon/validator tooltip для полей и shadows панелей/мен�
 выбор моделей при повторном открытии документа.
 [ARCH1g.2n](PLAN.md#arch1g2n-project-model-catalog) добавляет список импортированных
 моделей проекта и выбор ресурсов для открытой сцены.
+[ARCH1g.2o](PLAN.md#arch1g2o-place-catalog-model) размещает выбранный импорт в
+сцене с обычными Undo, Redo и сохранением документа.
 
 ARCH3.5 завершён 2026-11-14: [Editor.UI и optional Editor.Tooling](EDITOR_LAYERS.md) выделены. View/data/styles/ports работают с Runtime без Tooling, полный project/document/build/authoring workflow подключается bridge. [Единая очередь](PLAN.md#current-engine-queue), [фактическая приёмка](ARCH35_BASELINE.json). ARCH3.6 добавил [managed Mod SDK/loader](MODS.md); ARCH3.7 добавил [stable-component system replacement](MOD_RELOAD.md); ARCH3.8 добавил [owned-World component migration](MOD_MIGRATION.md); ARCH3.9 завершил [сквозную приёмку/поставку](ARCHITECTURE_GUIDE.md). Детальные ED задачи ниже сохраняются.
 

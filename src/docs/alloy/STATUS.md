@@ -1,5 +1,11 @@
 # Alloy / Argentis: состояние и точка продолжения
 
+**2026-11-19 — Editor ARCH1g.2o.** Строка каталога моделей получила действие
+добавления в сцену. Маршрутизованные клики в нативном host подтвердили
+добавление, Undo/Redo и Save. После повторного открытия сборка показала
+сохранённую модель в Vulkan на Cobalt и Microsoft DI.
+[Проверки Editor](../engine/HISTORY.md#arch1g2o-2026-11-19).
+
 **2026-11-18 — SkiaSharp 4.157.0 и нативная Skia M157.**
 Version **1.2611.18.9-alpha**. DLL пересобрана для Windows x64 с Vulkan
 GENERAL/HOST и ABI v1. Решение собрано в Debug и Release. Пройдены

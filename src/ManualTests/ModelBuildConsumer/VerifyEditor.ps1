@@ -7,7 +7,8 @@ param(
     [switch]$ModelImports,
     [switch]$ModelReimport,
     [switch]$ModelSelectionPersistence,
-    [switch]$ModelCatalog
+    [switch]$ModelCatalog,
+    [switch]$ModelPlacement
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,14 +22,15 @@ foreach ($file in @('VkLayer_khronos_validation.json', 'VkLayer_khronos_validati
 }
 if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' }
 [void][IO.Directory]::CreateDirectory($evidence)
-$persistenceProbe = $ModelSelectionPersistence -or $ModelCatalog
+$catalogProbe = $ModelCatalog -or $ModelPlacement
+$persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
 $modelStatusProbe = $ModelImports -or $reimportProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -49,7 +51,7 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
         Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
@@ -77,8 +79,12 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
             }
             if ($persistenceProbe -and (!$proof.RestoredPriorGeneration -or !$proof.RestoredNewGeneration -or
                 !$proof.ConflictRejected -or !$proof.CorruptRejected)) { throw "Incomplete persisted import evidence for $name-$provider" }
-            if ($ModelCatalog -and (!$proof.CatalogSelectionVerified -or !$proof.MissingModelRejected -or !$proof.EmptySelectionRestored)) {
+            if ($catalogProbe -and (!$proof.CatalogSelectionVerified -or !$proof.MissingModelRejected -or !$proof.EmptySelectionRestored)) {
                 throw "Incomplete project model catalog evidence for $name-$provider"
+            }
+            if ($ModelPlacement -and (!$proof.Placement -or $proof.Placement.InstanceIds.Count -ne 2 -or
+                $proof.Captures[1].BuildId -ne $proof.NewBuild -or $proof.Captures[1].Mask.RedPixels -le 200)) {
+                throw "Incomplete placement or GPU evidence for $name-$provider"
             }
             $report.Runs += $run
             continue

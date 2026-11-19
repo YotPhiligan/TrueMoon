@@ -263,6 +263,22 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     /// <param name="batch">Frozen entity request.</param><param name="cancellationToken">Before-commit cancellation.</param><returns>Shared engine receipt.</returns>
     public SceneAuthoringResult EditEntities(EntityEditBatch batch, CancellationToken cancellationToken = default)
     { lock (_gate) { VerifyEditable(); return Current.EditEntities(batch, cancellationToken); } }
+
+    internal SceneAuthoringResult PlaceSelectedModel(SceneDocument expected, Guid openingId, Guid sourceId,
+        long generation, CancellationToken cancellationToken) => Edit(expected, _ =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var imports = ModelImports ?? throw new InvalidOperationException("The project model catalog is not configured.");
+        var model = imports.RequirePlacementSelection(openingId, sourceId, generation);
+        var placed = ImportedModelScene.Place(expected, model.Watch.Published);
+        var name = EntityInstance.IsValidName(model.Name) ? model.Name : null;
+        var entities = placed.Entities.Skip(expected.Entities.Length).Select(entity =>
+            new EntityInstance(entity.Id, entity.DefinitionId, entity.Changes, entity.ParentId, name, entity.SiblingOrder));
+        var batch = new CreateEntitiesBatch(new(Guid.NewGuid(), expected.Revision, "editor"), entities,
+            placed.Definitions.Skip(expected.Definitions.Length), placed.Schemas.Skip(expected.Schemas.Length));
+        return Current.EditEntities(batch, cancellationToken);
+    });
+
     /// <summary>Restores prior content using the existing engine history.</summary>
     /// <param name="operation">Engine operation identity.</param><param name="cancellationToken">Before-commit cancellation.</param>
     /// <returns>Engine receipt.</returns>

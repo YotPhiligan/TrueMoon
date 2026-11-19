@@ -54,6 +54,9 @@ public interface IEditorStatusBarViewModel : System.ComponentModel.INotifyProper
     /// <summary>Requests a selection change for the displayed model and opening.</summary>
     /// <param name="row">Exact displayed selection target.</param>
     void SelectModel(EditorProjectModelRow row) { }
+    /// <summary>Adds the exact selected model generation to the open scene.</summary>
+    /// <param name="row">Displayed model and opening.</param>
+    void PlaceModel(EditorProjectModelRow row) { }
 
     /// <summary>Source-specific semantic styling.</summary>
     EditorStatusKind SourceKind { get; }

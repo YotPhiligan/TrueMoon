@@ -323,6 +323,12 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
         if (CanReimportModel && _commands.SelectModel(row)) Refresh();
     }
 
+    internal void PlaceModel(EditorProjectModelRow row)
+    {
+        VerifyOwner();
+        if (CanReimportModel && _commands.PlaceModel(row)) Refresh();
+    }
+
     internal void ReimportModel(EditorModelReimportAction action)
     {
         VerifyOwner();

@@ -94,7 +94,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         var session = _projects.Active?.Documents;
         var document = session?.Read();
         if (document == null || document.IsClosed || document.Operation != DocumentOperation.None) return false;
-        if (command is DocumentCommand.ReadModelCatalog or DocumentCommand.SelectModel)
+        if (command is DocumentCommand.ReadModelCatalog or DocumentCommand.SelectModel or DocumentCommand.PlaceModel)
             return session!.HasModelCatalog && (command == DocumentCommand.ReadModelCatalog || document.Content != null);
         if (command == DocumentCommand.ReimportModel)
             return session!.ReadModelImports(document.OpeningId).Any(model => model.CanReimport);
@@ -110,12 +110,14 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
 
     internal bool ReimportModel(EditorModelReimportAction action) => Execute(DocumentCommand.ReimportModel, "", action);
     internal bool SelectModel(EditorProjectModelRow row) => Execute(DocumentCommand.SelectModel, "", null, row);
+    internal bool PlaceModel(EditorProjectModelRow row) => Execute(DocumentCommand.PlaceModel, "", null, row);
 
     private bool Execute(DocumentCommand command, string path, EditorModelReimportAction? reimport, EditorProjectModelRow? catalogChoice = null)
     {
         Validate(command); ArgumentNullException.ThrowIfNull(path);
         TaskCompletionSource completion; CancellationTokenSource cancellation; SceneDocumentSession? document;
         ProjectSession? owner;
+        SceneDocument? placementDocument = null;
         lock (_gate)
         {
             if (!Available(command)) return false;
@@ -127,6 +129,14 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             if (command == DocumentCommand.SelectModel && (catalogChoice == null || document == null ||
                 document.Read().OpeningId != catalogChoice.OpeningId || document.ReadModelImports(catalogChoice.OpeningId)
                     .Any(item => item.SourceId == catalogChoice.SourceId) != catalogChoice.Selected)) return false;
+            if (command == DocumentCommand.PlaceModel)
+            {
+                var state = document?.Read();
+                if (catalogChoice?.SelectedGeneration is not { } generation || state?.OpeningId != catalogChoice.OpeningId ||
+                    state.Content?.Document is not { } expected || !document!.ReadModelImports(state.OpeningId)
+                        .Any(item => item.SourceId == catalogChoice.SourceId && item.Generation == generation)) return false;
+                placementDocument = expected;
+            }
             cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             _cancellation = cancellation; _pending = completion.Task; _busy = true; _operation = command; _error = null; _cancellationError = null;
@@ -213,6 +223,11 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
                         break;
                     case DocumentCommand.SelectModel:
                         await document.SetCatalogModelSelectedAsync(catalogChoice!.OpeningId, catalogChoice.SourceId, !catalogChoice.Selected, token).ConfigureAwait(false);
+                        break;
+                    case DocumentCommand.PlaceModel:
+                        var placement = document.PlaceSelectedModel(placementDocument!, catalogChoice!.OpeningId,
+                            catalogChoice.SourceId, catalogChoice.SelectedGeneration!.Value, token);
+                        if (!placement.Succeeded) throw new InvalidOperationException($"{placement.Error}: {placement.Message}");
                         break;
                 }
             }

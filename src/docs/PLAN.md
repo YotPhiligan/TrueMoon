@@ -112,6 +112,7 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 
 [ARCH1g.2n](engine/PLAN.md#arch1g2n-project-model-catalog) добавляет список
 импортированных моделей проекта и выбор ресурсов для открытой сцены.
+[ARCH1g.2o](engine/PLAN.md#arch1g2o-place-catalog-model) размещает модель из каталога в сцене.
 
 По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика
 ARCH2e.4b → ARCH1f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5

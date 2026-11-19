@@ -168,4 +168,19 @@ with missing resources. The probe reopens the scene with both models and with
 an empty selection, then verifies GPU output for the original and reimported
 builds. `-FreshPackages` repeats the scenario in the independent published Editor.
 
+## Place a catalog model in the scene
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ModelPlacement `
+  -EvidenceDirectory 'TestResults/EditorModelPlacement/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The native Editor opens a scene containing the camera and the green model. It
+adds the red model through the catalog row, undoes and redoes the placement
+through the Edit menu, saves through the File menu, and reopens the scene.
+The probe checks occurrence IDs, the saved revision and the selected generation.
+It then builds and presents the scene through the GPU viewport and matches the
+presented scene revision, BuildId and render manifest.
+
 [Contract and ownership](../../docs/engine/MODEL_BUILD_DELIVERY.md)

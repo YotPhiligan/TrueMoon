@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
 using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;
@@ -36,7 +37,8 @@ internal static class EditorModelBuildSmoke
         string report, GameBuildArtifact oldBuild, GameBuildArtifact newBuild,
         SceneDocumentSession document, Guid openingId, IFactory<ModelImportLedgerSession, ModelImportLedgerArguments> ledgers,
         UiSession ui, EditorView view, AetherHost engine, EditorScenePlayback playback, EditorDocumentCommands commands,
-        PausedPublication? publication, ModelImportWorkerDeployment? worker, string scenePath, bool persist, bool catalog, CancellationToken token)
+        PausedPublication? publication, ModelImportWorkerDeployment? worker, string scenePath, bool persist, bool catalog,
+        bool placeModel, CancellationToken token)
     {
         var redId = Guid.Parse("ce662048-9dcb-4c60-aaf0-213342054fa6");
         var greenId = Guid.Parse("65710c6d-6781-4476-9bb8-735fc518f008");
@@ -61,12 +63,10 @@ internal static class EditorModelBuildSmoke
         if (catalog)
         {
             await OpenStatus(null);
-            await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
-                popup.ReadModelCatalog.IsEnabled && popup.ReadModelCatalog.Bounds.Width > 0 && !ui.NeedsUpdate, token, HoldStatus);
-            await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, ((EditorStatusPopupView)view.Overlays.Popup!).ReadModelCatalog)).WaitAsync(token);
+            await ClickCatalog(popup => popup.ReadModelCatalog);
             await commands.Pending.WaitAsync(token);
             await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
-                popup.ModelCatalogRows.Children.OfType<CheckBox>().Select(check => (check.Value, check.IsChecked))
+                CatalogChecks(popup).Select(check => (check.Value, check.IsChecked))
                     .SequenceEqual(new[] { ("Green · source-green/scene.gltf", false), ("Red · source/scene.gltf", false) }), token, HoldStatus);
             await ToggleCatalogModel("Red", redId, selected: true);
             await Build();
@@ -79,6 +79,7 @@ internal static class EditorModelBuildSmoke
         else await Select(redBefore, oldContent);
         var checkpoint = Path.Combine(report, "Content", ".aether-model-imports", document.Read().Content!.Document.Id.Value.ToString("N") + ".tmimports");
         var initialSelection = persist ? await File.ReadAllBytesAsync(checkpoint, token) : [];
+        var placement = placeModel ? await PlaceCatalogModel() : null;
         if (persist)
         {
             using var saved = JsonDocument.Parse(initialSelection);
@@ -215,28 +216,88 @@ internal static class EditorModelBuildSmoke
         var baseline = previous.Candidate!.Build.Artifact;
         return (new(true, current, stale, unavailable, current, blocked!, true, baseline.BuildId, updated!.BuildId,
             cancelledAfterLedger, missingRejected, [], restoredPrior, restoredNew, conflictRejected, corruptRejected,
-            catalogVerified, missingModelRejected, emptyRestored), baseline, updated);
+            catalogVerified, missingModelRejected, emptyRestored) { Placement = placement }, baseline, updated);
+
+        async Task<ModelPlacementProof> PlaceCatalogModel()
+        {
+            var baseline = document.Read().Content!;
+            var originals = baseline.Document.Entities.Select(entity => entity.Id).ToHashSet();
+            var expectedIds = redBefore.Instances.Select(instance => instance.Id).ToArray();
+            const string action = "Добавить «Red» в сцену";
+            await OpenStatus(null);
+            var pending = commands.Pending;
+            await ClickCatalog(popup => CatalogButtons(popup).SingleOrDefault(button => button.AccessibleName == action));
+            await ui.InvokeAsync(() => view.Overlays.Close(false)).WaitAsync(token);
+            Check(!ReferenceEquals(pending, commands.Pending), "Catalog did not admit placing Red.");
+            await commands.Pending.WaitAsync(token);
+            var state = document.Read();
+            Check(commands.Read().Error == null && state.Content is { } placed && state.IsDirty &&
+                placed.UndoCount == baseline.UndoCount + 1 && HasPlacedModel(placed.Document),
+                $"Placement did not commit the expected instances in one history entry: {commands.Read().Error}");
+
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.Inspector!.DataContext!.CanUndo, token);
+            await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
+            state = document.Read();
+            Check(state.Content is { } undone && !state.IsDirty && undone.ContentRevision == baseline.ContentRevision &&
+                undone.Document.Entities.Select(entity => entity.Id).ToHashSet().SetEquals(originals) &&
+                undone.Document.Definitions.Length == baseline.Document.Definitions.Length &&
+                undone.Document.Schemas.Length == baseline.Document.Schemas.Length,
+                "A single Undo did not restore the saved scene and its catalogs.");
+            Check(document.ReadModelImports(openingId).Any(item => item.SourceId == redId && item.Generation == redBefore.Generation),
+                "Undo changed the selected import.");
+
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.Inspector!.DataContext!.CanRedo, token);
+            await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.redo", token);
+            state = document.Read();
+            var redone = state.Content ?? throw new InvalidOperationException("Redo lost the active scene.");
+            Check(state.IsDirty && HasPlacedModel(redone.Document), "Redo did not restore the same model instances.");
+            var revision = redone.Document.Revision;
+
+            await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Save", token);
+            await commands.Pending.WaitAsync(token);
+            Check(commands.Read().Error == null && !document.Read().IsDirty, $"Editor could not save the placed model: {commands.Read().Error}");
+            var savedHash = Hash(await File.ReadAllBytesAsync(scenePath, token));
+            await Reopen(initialSelection);
+            var reopened = document.Read().Content!.Document;
+            Check(reopened.Revision == revision && HasPlacedModel(reopened) &&
+                document.ReadModelImports(openingId).Any(item => item.SourceId == redId && item.Generation == redBefore.Generation),
+                "Reopening changed the placed entities or their selected import.");
+            return new(reopened.Id.Value, revision, savedHash, expectedIds, redBefore.Generation);
+
+            bool HasPlacedModel(SceneDocument scene) =>
+                scene.Entities.Length == originals.Count + expectedIds.Length && originals.IsSubsetOf(scene.Entities.Select(entity => entity.Id)) &&
+                scene.Entities.Where(entity => !originals.Contains(entity.Id)).Select(entity => entity.Id.Value).ToHashSet().SetEquals(expectedIds);
+        }
+
+        static IEnumerable<CheckBox> CatalogChecks(EditorStatusPopupView popup) =>
+            popup.ModelCatalogRows.Children.OfType<HStack>().SelectMany(row => row.Children.OfType<CheckBox>());
+
+        static IEnumerable<Button> CatalogButtons(EditorStatusPopupView popup) =>
+            popup.ModelCatalogRows.Children.OfType<HStack>().SelectMany(row => row.Children.OfType<Button>());
+
+        Task ClickCatalog(Func<EditorStatusPopupView, Button?> find) => EditorHeaderSmoke.UntilAsync(ui, () =>
+        {
+            // The window can lose focus while the test is awaiting the next UI dispatch.
+            // Resolve the live target and send input in the same owner-thread callback.
+            if (ui.NeedsUpdate || view.Overlays.Popup is not EditorStatusPopupView popup ||
+                find(popup) is not { IsEnabled: true, Bounds.Width: > 0 } button) return false;
+            EditorHeaderSmoke.Move(ui, button);
+            EditorHeaderSmoke.Click(ui, button);
+            return true;
+        }, token, HoldStatus);
 
         async Task ToggleCatalogModel(string name, Guid id, bool selected)
         {
             await OpenStatus(null);
-            await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
-                popup.ModelCatalogRows.Children.OfType<CheckBox>().Any(check => check.Value.StartsWith(name + " · ", StringComparison.Ordinal) &&
-                    check.IsChecked != selected && check.IsEnabled && check.Bounds.Width > 0) && !ui.NeedsUpdate, token, HoldStatus);
             var pending = commands.Pending;
-            await ui.InvokeAsync(() =>
-            {
-                var popup = (EditorStatusPopupView)view.Overlays.Popup!;
-                var check = popup.ModelCatalogRows.Children.OfType<CheckBox>().Single(item => item.Value.StartsWith(name + " · ", StringComparison.Ordinal));
-                EditorHeaderSmoke.Move(ui, check);
-                EditorHeaderSmoke.Click(ui, check);
-            }).WaitAsync(token);
+            await ClickCatalog(popup => CatalogChecks(popup).SingleOrDefault(check =>
+                check.Value.StartsWith(name + " · ", StringComparison.Ordinal) && check.IsChecked != selected));
             Check(!ReferenceEquals(pending, commands.Pending), $"Catalog did not admit choosing {name}.");
             await commands.Pending.WaitAsync(token);
             Check(commands.Read().Error == null && document.ReadModelImports(openingId).Any(item => item.SourceId == id) == selected,
                 $"Catalog did not change selection for {name}: {commands.Read().Error}");
             await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
-                popup.ModelCatalogRows.Children.OfType<CheckBox>().Any(check => check.Value.StartsWith(name + " · ", StringComparison.Ordinal) && check.IsChecked == selected), token, HoldStatus);
+                CatalogChecks(popup).Any(check => check.Value.StartsWith(name + " · ", StringComparison.Ordinal) && check.IsChecked == selected), token, HoldStatus);
             await ui.InvokeAsync(() => view.Overlays.Close(false)).WaitAsync(token);
         }
 
@@ -329,7 +390,8 @@ internal static class EditorModelBuildSmoke
 
     internal static async Task RunAsync(string[] args)
     {
-        var probeCatalog = args.Length == 9 && args[6] == "--model-catalog";
+        var probePlacement = args.Length == 9 && args[6] == "--model-placement";
+        var probeCatalog = probePlacement || args.Length == 9 && args[6] == "--model-catalog";
         var probePersistence = probeCatalog || args.Length == 9 && args[6] == "--persisted-imports";
         var probeReimport = probePersistence || args.Length == 9 && args[6] == "--reimport";
         var probeImports = probeReimport || args.Length == 7 && args[6] == "--imports";
@@ -429,7 +491,7 @@ internal static class EditorModelBuildSmoke
             var content = before.Content ?? throw new InvalidOperationException("Editor did not load the placed scene.");
             if (probeImports)
             {
-                Check(content.Document.Entities.Length == 5 && !before.IsDirty, "Unexpected two-model scene.");
+                Check(content.Document.Entities.Length == (probePlacement ? 3 : 5) && !before.IsDirty, "Unexpected fixture scene.");
                 var document = documents.Read().Project?.Documents ?? throw new InvalidOperationException("No project document session.");
                 var ledgerFactory = app.Services.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>()!;
                 if (probeReimport)
@@ -458,11 +520,17 @@ internal static class EditorModelBuildSmoke
                 }
                 var (proof, baselineBuild, updatedBuild) = await VerifyModelImportsAsync(report, oldBuild, newBuild,
                     document, before.OpeningId, ledgerFactory, ui, view, engine, playback, documents, publication, worker,
-                    scenePath, probePersistence, probeCatalog, token);
+                    scenePath, probePersistence, probeCatalog, probePlacement, token);
                 if (probePersistence)
                 {
                     before = document.Read();
                     content = before.Content ?? throw new InvalidOperationException("Restored document is no longer active.");
+                }
+                if (proof.Placement is { } placement)
+                {
+                    Check(sceneHash != placement.SceneSha256 && content.Document.Id.Value == placement.SceneId &&
+                        content.Document.Revision == placement.SceneRevision, "Build did not retain the saved placement revision.");
+                    sceneHash = placement.SceneSha256;
                 }
                 if (probeReimport)
                 {
@@ -745,7 +813,12 @@ internal static class EditorModelBuildSmoke
         string AfterReimport, string Blocked, bool MatchingContent, string OldBuild, string NewBuild,
         bool CancelledAfterLedger, bool MissingSourceRejected, IReadOnlyList<FrameProof> Captures, bool RestoredPriorGeneration,
         bool RestoredNewGeneration, bool ConflictRejected, bool CorruptRejected, bool CatalogSelectionVerified, bool MissingModelRejected,
-        bool EmptySelectionRestored);
+        bool EmptySelectionRestored)
+    {
+        public ModelPlacementProof? Placement { get; init; }
+    }
+
+    private sealed record ModelPlacementProof(Guid SceneId, long SceneRevision, string SceneSha256, Guid[] InstanceIds, long Generation);
 
     private sealed class PausedPublication(IModelImportContentPublisher inner) : IModelImportContentPublisher
     {
