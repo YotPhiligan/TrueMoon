@@ -2,7 +2,7 @@ using TrueMoon.Aether.Abstractions.Rendering;
 
 namespace TrueMoon.Aether.Runtime.Rendering.Resources;
 
-/// <summary>Counted mesh cache and bounded preparation factory for one session/world/device generation.</summary>
+/// <summary>Counted mesh and texture cache and bounded preparation factory for one session/world/device generation.</summary>
 /// <remarks>The owner borrows its CPU catalog, owns the injected backend factory result and tracks operation products until released.</remarks>
 public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPreparation, RenderManifestLease>
 {
@@ -87,9 +87,9 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
             {
                 foreach (var asset in content.Manifest.Entries)
                 {
-                    if (asset.Definition is not MeshDefinition) continue;
+                    if (asset.Definition is not (MeshDefinition or BaseColorTextureDefinition)) continue;
                     ResourceGuard.Require(_entries.TryGetValue(asset.Key, out var entry) && entry.References > 0 && entry.Error == null && entry.Completion.Task.IsCompletedSuccessfully,
-                        RenderResourceError.StaleHandle, "Required mesh is not completely ready.");
+                        RenderResourceError.StaleHandle, "Required mesh or texture is not completely ready.");
                     var lease = new EntryLease(this, entry!); leases.Add(lease); entry!.References++;
                 }
                 return new(this, content, leases, revision);
@@ -102,26 +102,26 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
             }
         }
     }
-    internal EntryLease Acquire(RenderAssetEntry mesh)
+    internal EntryLease Acquire(RenderAssetEntry asset)
     {
         lock (_gate)
         {
             EnsureOpen();
-            if (_entries.TryGetValue(mesh.Key, out var existing))
+            if (_entries.TryGetValue(asset.Key, out var existing))
             {
-                ResourceGuard.Require(existing.References > 0 && existing.Error == null, RenderResourceError.Conflict, "Mesh is retiring or failed; cleanup must finish before retry.");
+                ResourceGuard.Require(existing.References > 0 && existing.Error == null, RenderResourceError.Conflict, "Resource is retiring or failed; cleanup must finish before retry.");
                 existing.References++; return new(this, existing);
             }
-            ResourceGuard.Require(_entries.Count < _options.MaximumGpuEntries, RenderResourceError.LimitExceeded, "Mesh entry admission exhausted.");
+            ResourceGuard.Require(_entries.Count < _options.MaximumGpuEntries, RenderResourceError.LimitExceeded, "GPU resource entry admission exhausted.");
             var slotIndex = _slots.FindIndex(static slot => slot.Entry == null && !slot.Retired);
             if (slotIndex < 0)
             {
-                ResourceGuard.Require(_slots.Count < _options.MaximumGpuEntries, RenderResourceError.LimitExceeded, "Mesh slots retired their generation capacity.");
+                ResourceGuard.Require(_slots.Count < _options.MaximumGpuEntries, RenderResourceError.LimitExceeded, "Resource slots retired their generation capacity.");
                 slotIndex = _slots.Count; _slots.Add(new());
             }
             var slot = _slots[slotIndex];
-            var entry = new Entry(mesh, new(Id, Generation, slotIndex, slot.Generation), CancellationTokenSource.CreateLinkedTokenSource(_end.Token));
-            slot.Entry = entry; _entries.Add(mesh.Key, entry); entry.References = 1;
+            var entry = new Entry(asset, new(Id, Generation, slotIndex, slot.Generation), CancellationTokenSource.CreateLinkedTokenSource(_end.Token));
+            slot.Entry = entry; _entries.Add(asset.Key, entry); entry.References = 1;
             _ = Task.Run(() => UploadAsync(entry));
             return new(this, entry);
         }
@@ -138,14 +138,28 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
                     try { _backend = _backends.Create(_request) ?? throw new RenderResourceException(RenderResourceError.BackendFailure, "Backend factory returned null."); }
                     catch (RenderResourceCreationException failure) { lock (_gate) _failedBackends.Add(failure.CleanupOwner); throw; }
                 }
-                try { entry.Upload = _backend.MeshUploads.Create(new(entry.Value, AllocationBudget)) ?? throw new RenderResourceException(RenderResourceError.BackendFailure, "Upload factory returned null."); entry.Owner = entry.Upload; }
+                try
+                {
+                    if (entry.Value.Definition is BaseColorTextureDefinition)
+                    {
+                        if (_backend is not IFactory<IRenderTextureUpload, RenderTextureUploadRequest> textures)
+                            throw new RenderResourceException(RenderResourceError.BackendFailure, "The render backend does not support base-color textures.");
+                        entry.Owner = entry.TextureUpload = textures.Create(new(entry.Value, AllocationBudget))
+                            ?? throw new RenderResourceException(RenderResourceError.BackendFailure, "Texture upload factory returned null.");
+                    }
+                    else
+                        entry.Owner = entry.Upload = _backend.MeshUploads.Create(new(entry.Value, AllocationBudget))
+                            ?? throw new RenderResourceException(RenderResourceError.BackendFailure, "Mesh upload factory returned null.");
+                }
                 catch (RenderResourceCreationException failure) { entry.Owner = failure.CleanupOwner; throw; }
             }
             finally { _backendGate.Release(); }
-            var upload = entry.Upload ?? throw new RenderResourceException(RenderResourceError.BackendFailure, "Missing upload owner.");
-            await upload.PrepareAsync(entry.End.Token).ConfigureAwait(false);
+            var preparation = entry.TextureUpload is { } texture
+                ? texture.PrepareAsync(entry.End.Token)
+                : entry.Upload!.PrepareAsync(entry.End.Token);
+            await preparation.ConfigureAwait(false);
             entry.End.Token.ThrowIfCancellationRequested();
-            ResourceGuard.Require(entry.Upload.IsReady, RenderResourceError.BackendFailure, "Upload returned without confirmed readiness.");
+            ResourceGuard.Require(entry.IsReady, RenderResourceError.BackendFailure, "Upload returned without confirmed readiness.");
             lock (_gate) { EnsureOpen(); entry.Completion.TrySetResult(); }
         }
         catch (Exception error)
@@ -186,10 +200,10 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
         {
             EnsureOpen();
             ResourceGuard.Require(handle.OwnerId == Id && handle.DeviceGeneration == Generation && handle.Slot >= 0 && handle.Slot < _slots.Count,
-                RenderResourceError.StaleHandle, "Foreign or invalid mesh handle.");
+                RenderResourceError.StaleHandle, "Foreign or invalid GPU resource handle.");
             var slot = _slots[handle.Slot]; var entry = slot.Entry;
             ResourceGuard.Require(!slot.Retired && slot.Generation == handle.SlotGeneration && entry != null && entry.References > 0 && entry.Error == null &&
-                entry.Completion.Task.IsCompletedSuccessfully && entry.Upload is { IsReady: true, IsReleased: false }, RenderResourceError.StaleHandle, "Retired or unready mesh handle.");
+                entry.Completion.Task.IsCompletedSuccessfully && entry.IsReady, RenderResourceError.StaleHandle, "Retired or unready GPU resource handle.");
             return entry!.Value.Key;
         }
     }
@@ -198,7 +212,16 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
         lock (_gate)
         {
             ValidateHandle(handle);
-            return _slots[handle.Slot].Entry!.Upload!;
+            return _slots[handle.Slot].Entry!.Upload ?? throw new RenderResourceException(RenderResourceError.InvalidIdentity, "The retained resource is not a mesh.");
+        }
+    }
+    internal IRenderTextureUpload BorrowTextureUpload(RenderResourceHandle handle)
+    {
+        lock (_gate)
+        {
+            ValidateHandle(handle);
+            return _slots[handle.Slot].Entry!.TextureUpload
+                ?? throw new RenderResourceException(RenderResourceError.InvalidIdentity, "The retained resource is not a base-color texture.");
         }
     }
     private async ValueTask ReleaseAsync(EntryLease lease)
@@ -219,7 +242,7 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
             if (entry.Owner != null)
             {
                 await entry.Owner.DisposeAsync().ConfigureAwait(false);
-                ResourceGuard.Require(entry.Upload == null || entry.Upload.IsReleased, RenderResourceError.CleanupFailed, "Upload cleanup retained ownership.");
+                ResourceGuard.Require(entry.UploadReleased, RenderResourceError.CleanupFailed, "Upload cleanup retained ownership.");
                 entry.Owner = null;
             }
             lock (_gate)
@@ -264,7 +287,7 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
             foreach (var operation in operations) { try { await operation.DisposeAsync().ConfigureAwait(false); } catch (Exception error) { errors.Add(error); } }
             foreach (var failed in _failedBackends.ToArray()) { try { await failed.DisposeAsync().ConfigureAwait(false); _failedBackends.Remove(failed); } catch (Exception error) { errors.Add(error); } }
             if (errors.Count != 0) throw new AggregateException("Device cleanup retained resources.", errors);
-            ResourceGuard.Require(_entries.Count == 0, RenderResourceError.CleanupFailed, "Device still owns mesh entries.");
+            ResourceGuard.Require(_entries.Count == 0, RenderResourceError.CleanupFailed, "Device still owns GPU resource entries.");
             if (_backend != null) { await _backend.DisposeAsync().ConfigureAwait(false); ResourceGuard.Require(_backend.IsReleased, RenderResourceError.CleanupFailed, "Backend context was not released."); _backend = null; }
             IsReleased = true;
         }
@@ -275,7 +298,10 @@ public sealed class RenderDeviceOwner : IAsyncDisposable, IFactory<RenderPrepara
         internal RenderAssetEntry Value { get; } = value; internal RenderResourceHandle Handle { get; } = handle;
         internal CancellationTokenSource End { get; } = end; internal SemaphoreSlim CleanupGate { get; } = new(1, 1);
         internal TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        internal int References; internal IRenderMeshUpload? Upload; internal IAsyncDisposable? Owner; internal Exception? Error, CancellationError; internal bool Released;
+        internal int References; internal IRenderMeshUpload? Upload; internal IRenderTextureUpload? TextureUpload;
+        internal IAsyncDisposable? Owner; internal Exception? Error, CancellationError; internal bool Released;
+        internal bool IsReady => Upload is { IsReady: true, IsReleased: false } || TextureUpload is { IsReady: true, IsReleased: false };
+        internal bool UploadReleased => (Upload?.IsReleased ?? true) && (TextureUpload?.IsReleased ?? true);
     }
     internal sealed class EntryLease(RenderDeviceOwner owner, Entry value)
     { internal Entry Value { get; } = value; internal bool ReferenceReleased; internal ValueTask ReleaseAsync() => owner.ReleaseAsync(this); }

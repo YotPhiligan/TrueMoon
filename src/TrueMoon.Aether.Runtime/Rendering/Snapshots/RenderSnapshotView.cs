@@ -32,7 +32,6 @@ public sealed class RenderSnapshotView : IAsyncDisposable
     }
     /// <summary>Unique process-local view identity, never reused after disposal.</summary>
     public Guid Id { get; } = Guid.NewGuid();
-    internal RenderDeviceOwner Device => _request.Binding.Device;
     /// <summary>Last successfully published detached inspection data, null before capture/while suspended/after stop.</summary>
     public RenderSnapshotData? Current => Volatile.Read(ref _published);
     /// <summary>Last atomic counter observation at a view operation boundary.</summary>

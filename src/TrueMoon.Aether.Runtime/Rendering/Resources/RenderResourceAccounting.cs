@@ -14,9 +14,11 @@ public static class RenderResourceAccounting
         return definition switch
         {
             MeshDefinition mesh => (long)mesh.Vertices.Length * Unsafe.SizeOf<System.Numerics.Vector3>() +
-                (long)mesh.Indices.Length * sizeof(uint) + (long)mesh.Slots.Length * Unsafe.SizeOf<MeshSlot>(),
+                (long)mesh.Uv0.Length * Unsafe.SizeOf<System.Numerics.Vector2>() + (long)mesh.Indices.Length * sizeof(uint) +
+                (long)mesh.Slots.Length * Unsafe.SizeOf<MeshSlot>(),
             MaterialBindingSetDefinition bindings => (long)bindings.Bindings.Length * Unsafe.SizeOf<MaterialSlotBinding>(),
             OpaqueUnlitMaterialDefinition => 0,
+            BaseColorTextureDefinition texture => texture.Pixels.Length,
             _ => throw new RenderResourceException(RenderResourceError.InvalidIdentity, "Unsupported CPU definition.")
         };
     }

@@ -250,7 +250,7 @@ public sealed partial class VulkanSharedFrame : IGpuResource
         }
         finally { ReleaseGates(); }
     }
-    private unsafe void Submit(bool returned, PrimitiveScene? scene = null, RenderSnapshotData? snapshot = null, RenderDeviceOwner? resources = null)
+    private unsafe void Submit(bool returned, PrimitiveScene? scene = null, RenderSnapshotData? snapshot = null, RenderSnapshotResources? resources = null)
     {
         Check(_vk!.ResetFences(_device, 1, in _fence), "ResetFences"); Check(_vk.ResetCommandBuffer(_command, 0), "ResetCommandBuffer");
         var begin = new CommandBufferBeginInfo { SType = StructureType.CommandBufferBeginInfo, Flags = CommandBufferUsageFlags.OneTimeSubmitBit };

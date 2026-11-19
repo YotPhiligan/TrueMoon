@@ -19,6 +19,8 @@ public static class RenderContentProfile
     public const int MaximumMeshBytes = 2 * 1024 * 1024;
     /// <summary>Maximum material or binding-set canonical bytes.</summary>
     public const int MaximumSmallAssetBytes = 4096;
+    /// <summary>Maximum width or height of a base-color texture.</summary>
+    public const int MaximumTextureDimension = 512;
     /// <summary>Maximum distinct assets in one frozen manifest.</summary>
     public const int MaximumManifestEntries = 1024;
     /// <summary>Maximum canonical manifest fingerprint bytes.</summary>
@@ -31,6 +33,8 @@ public static class RenderContentProfile
     public static Guid MaterialKindId { get; } = Id("1202");
     /// <summary>Persistent exact binding-set kind.</summary>
     public static Guid BindingSetKindId { get; } = Id("1203");
+    /// <summary>Persistent opaque sRGB base-color texture kind.</summary>
+    public static Guid BaseColorTextureKindId { get; } = Id("1204");
     /// <summary>Built-in shader family, layout version one.</summary>
     public static Guid UnlitFamilyId { get; } = Id("1301");
     /// <summary>Built-in cube asset, scoped to the manifest project.</summary>
@@ -42,5 +46,5 @@ public static class RenderContentProfile
     /// <summary>Stable material slot of the built-in cube.</summary>
     public static Guid DefaultSlotId { get; } = Id("1404");
     internal static Guid Id(string suffix) => Guid.Parse("6fc9fce0-9547-42f5-b4df-f05f306f" + suffix);
-    internal static bool IsKind(Guid kind) => kind == MeshKindId || kind == MaterialKindId || kind == BindingSetKindId;
+    internal static bool IsKind(Guid kind) => kind == MeshKindId || kind == MaterialKindId || kind == BindingSetKindId || kind == BaseColorTextureKindId;
 }

@@ -38,10 +38,19 @@ public sealed class RenderContentManifest
         Entries = snapshot.OrderBy(static entry => entry.Key.AssetId.ToString("N"), StringComparer.Ordinal).ToImmutableArray();
         foreach (var entry in Entries)
         {
-            if (entry.Definition is not MaterialBindingSetDefinition bindings) continue;
-            var mesh = Resolve(bindings.Mesh);
-            bindings.ValidateAgainst(mesh.Key, (MeshDefinition)mesh.Definition);
-            foreach (var binding in bindings.Bindings) Resolve(binding.Material);
+            if (entry.Definition is OpaqueUnlitMaterialDefinition { BaseColorTexture: { } texture }) Resolve(texture);
+            if (entry.Definition is MaterialBindingSetDefinition bindings)
+            {
+                var entryMesh = Resolve(bindings.Mesh);
+                var mesh = (MeshDefinition)entryMesh.Definition;
+                bindings.ValidateAgainst(entryMesh.Key, mesh);
+                foreach (var binding in bindings.Bindings)
+                {
+                    var material = (OpaqueUnlitMaterialDefinition)Resolve(binding.Material).Definition;
+                    ContentValidation.Require(!material.BaseColorTexture.HasValue || !mesh.Uv0.IsEmpty,
+                        RenderContentError.UnsupportedLayout, "A textured material requires a mesh UV0 stream.");
+                }
+            }
         }
         Digest = RenderContentHash.Compute(RenderContentCodec.EncodeManifest(this));
     }

@@ -466,3 +466,38 @@ VkDevice/queue, indexed unlit shaders, f.2/f.3 leases, current-source-aware pres
 не возобновляют его после content/camera change. Headless/primitive capability
 сохраняет прежние границы. Logical material/content checkpoint migration остаётся f.6.
 Фактические результаты перечисляются в STATUS/HISTORY отдельно от CPU v1 выше.
+
+<a id="base-color-texture"></a>
+## ARCH1f.5. Базовый цвет с текстурой
+
+`BaseColorTextureDefinition` хранит от 1×1 до 512×512 texels. Формат — плотный
+RGBA8 sRGB, с alpha 255 и первой строкой при V=0. В TMRA это tag 4, schema 1:
+после заголовка идут два UInt32 размера и texels по строкам. Ревизия — SHA256
+полных canonical bytes.
+
+`MeshDefinition` с layout 2 (`PositionFloat3Uv0Float2`) добавляет по одному
+конечному float2 на вершину. В TMRA поток UV0 расположен между позициями и
+индексами. `OpaqueUnlitMaterialDefinition` layout 2 добавляет к цвету точный ключ
+base-color texture и `RenderTextureSampler.NearestClamp` (nearest для min/mag,
+clamp-to-edge, нормализованные UV, один mip level). Layout 1 и его canonical
+bytes сохраняются. Манифест проверяет полное совпадение ключа текстуры и наличие
+UV0 у каждого меша, у которого есть привязка к текстурному материалу.
+
+`GameBuildRequest.RenderContent` замораживает эту цепочку зависимостей в
+`render-content.bin`. `IGameBuildSessionEntry.Create` получает проверенный
+манифест выбранной сборки. Замена texels создаёт новый ключ ревизии текстуры, а
+материал и binding set получают новые ревизии, когда ссылаются на этот ключ.
+Отсутствующие, чужие и несовпадающие ревизии отклоняются при проверке closure.
+
+В Vulkan текстура загружается как optimal RGBA8 sRGB. Аппаратное декодирование
+даёт linear RGB, который умножается на linear base color и instance tint.
+Шейдер кодирует результат в sRGB один раз для RGBA8 UNORM surface. Image,
+sampler и descriptor принадлежат точной ревизии на устройстве. Snapshot leases
+удерживают их до подтверждённого завершения кадра. Запись команд находит ключ
+текстуры через материал в удерживаемом манифесте этого кадра. Размер draw range
+и лимит 4096 записей сохраняются. Загрузка использует общий
+Vulkan queue gate и учитывает фактические image/staging allocations в существующих
+device/staging ceilings. Backend без texture upload или Vulkan без необходимой
+поддержки формата отклоняет подготовку.
+
+[Vulkan-проверка и команда запуска](RENDER_SURFACE.md#base-color-texture).

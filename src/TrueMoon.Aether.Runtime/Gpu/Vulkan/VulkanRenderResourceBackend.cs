@@ -17,14 +17,30 @@ namespace TrueMoon.Aether.Runtime.Gpu.Vulkan;
 /// <param name="LiveUploads">Unreleased upload owners.</param><param name="DeviceName">Copied physical device name.</param><param name="Messages">Bounded validation messages.</param>
 public sealed record VulkanResourceDiagnostics(bool ValidationEnabled, int Errors, int Warnings, int DevicesCreated, int DevicesReleased,
     int BuffersCreated, int BuffersReleased, int AllocationsCreated, int AllocationsReleased, int Uploads, int VerifiedUploads,
-    int LiveUploads, string? DeviceName, string[] Messages);
+    int LiveUploads, string? DeviceName, string[] Messages)
+{
+    /// <summary>Confirmed base-color texture uploads.</summary>
+    public int TextureUploads { get; init; }
+    /// <summary>Latest confirmed canonical base-color texture revision.</summary>
+    public string? LastTextureRevision { get; init; }
+    /// <summary>Base-color texture images allocated by this context.</summary>
+    public int TextureImagesCreated { get; init; }
+    /// <summary>Base-color texture images destroyed by this context.</summary>
+    public int TextureImagesReleased { get; init; }
+    /// <summary>Texture samplers created by this context.</summary>
+    public int TextureSamplersCreated { get; init; }
+    /// <summary>Texture samplers destroyed by this context.</summary>
+    public int TextureSamplersReleased { get; init; }
+}
 
 /// <summary>Lazy standalone Vulkan geometry preparation context. It performs no shader, draw or surface work.</summary>
 /// <remarks>Uploads borrow this externally synchronized context. Their owners must release before backend disposal.</remarks>
-public sealed class VulkanRenderResourceBackend : IRenderResourceBackend, IFactory<IRenderMeshUpload, RenderMeshUploadRequest>
+public sealed class VulkanRenderResourceBackend : IRenderResourceBackend, IFactory<IRenderMeshUpload, RenderMeshUploadRequest>,
+    IFactory<IRenderTextureUpload, RenderTextureUploadRequest>
 {
     private readonly Lock _ownersGate = new();
     private readonly HashSet<VulkanMeshUpload> _uploads = [];
+    private readonly HashSet<VulkanTextureUpload> _textures = [];
     private readonly RenderDeviceRequest _request;
     internal readonly SemaphoreSlim NativeGate;
     private readonly bool _borrowed;
@@ -44,6 +60,9 @@ public sealed class VulkanRenderResourceBackend : IRenderResourceBackend, IFacto
     private string? _deviceName;
     private int _errors, _warnings, _devicesCreated, _devicesReleased;
     internal int BuffersCreated, BuffersReleased, AllocationsCreated, AllocationsReleased, UploadsCompleted, UploadsVerified;
+    internal int TextureImagesCreated, TextureImagesReleased, TextureSamplersCreated, TextureSamplersReleased;
+    private int _textureUploads;
+    private string? _lastTextureRevision;
     /// <summary>Stores arguments without loading Vulkan or creating native objects.</summary><param name="request">Explicit context/validation settings.</param>
     public VulkanRenderResourceBackend(RenderDeviceRequest request)
     { ArgumentNullException.ThrowIfNull(request); request.Identity.Validate(); ResourceGuard.Require(request.DeviceGeneration != 0, RenderResourceError.InvalidIdentity, "Zero device generation."); _request = request; NativeGate = new(1, 1); }
@@ -63,7 +82,13 @@ public sealed class VulkanRenderResourceBackend : IRenderResourceBackend, IFacto
         get
         {
             lock (_ownersGate) return new(_request.EnableValidation && _devicesCreated != 0, _errors, _warnings, _devicesCreated, _devicesReleased,
-                BuffersCreated, BuffersReleased, AllocationsCreated, AllocationsReleased, UploadsCompleted, UploadsVerified, _uploads.Count, _deviceName, _messages.ToArray());
+                BuffersCreated, BuffersReleased, AllocationsCreated, AllocationsReleased, UploadsCompleted, UploadsVerified,
+                _uploads.Count + _textures.Count, _deviceName, _messages.ToArray())
+            {
+                TextureUploads = _textureUploads, LastTextureRevision = _lastTextureRevision,
+                TextureImagesCreated = TextureImagesCreated, TextureImagesReleased = TextureImagesReleased,
+                TextureSamplersCreated = TextureSamplersCreated, TextureSamplersReleased = TextureSamplersReleased
+            };
         }
     }
     /// <summary>Returns an owner before allocation/upload begins.</summary><param name="arguments">Geometry and mandatory budget.</param><returns>Caller-owned upload.</returns>
@@ -80,6 +105,27 @@ public sealed class VulkanRenderResourceBackend : IRenderResourceBackend, IFacto
         }
     }
     internal void Released(VulkanMeshUpload upload) { lock (_ownersGate) _uploads.Remove(upload); }
+
+    IRenderTextureUpload IFactory<IRenderTextureUpload, RenderTextureUploadRequest>.Create(RenderTextureUploadRequest request)
+    {
+        request.Texture.Key.Validate(RenderContentProfile.BaseColorTextureKindId);
+        ResourceGuard.Require(request.Texture.Definition is BaseColorTextureDefinition && request.Texture.Key.Revision == request.Texture.Definition.Revision,
+            RenderResourceError.InvalidIdentity, "Upload requires matching base-color texels.");
+        lock (_ownersGate)
+        {
+            ResourceGuard.Require(!_closed, RenderResourceError.Closed, "Vulkan backend is closed.");
+            var upload = new VulkanTextureUpload(this, request);
+            _textures.Add(upload);
+            return upload;
+        }
+    }
+
+    internal void TextureUploaded(RenderAssetKey key)
+    {
+        lock (_ownersGate) { _textureUploads++; _lastTextureRevision = key.Revision.ToString(); }
+    }
+
+    internal void Released(VulkanTextureUpload upload) { lock (_ownersGate) _textures.Remove(upload); }
     internal unsafe void EnsureContext()
     {
         if (_borrowed) _checkContext!();
@@ -158,7 +204,7 @@ public sealed class VulkanRenderResourceBackend : IRenderResourceBackend, IFacto
     /// <summary>Requires uploads to be released, then destroys the context after confirmed idle. Unknown outcome retains ownership.</summary>
     public async ValueTask DisposeAsync()
     {
-        lock (_ownersGate) { if (IsReleased) return; _closed = true; ResourceGuard.Require(_uploads.Count == 0, RenderResourceError.CleanupFailed, "Release Vulkan upload owners before their context."); }
+        lock (_ownersGate) { if (IsReleased) return; _closed = true; ResourceGuard.Require(_uploads.Count == 0 && _textures.Count == 0, RenderResourceError.CleanupFailed, "Release Vulkan upload owners before their context."); }
         await NativeGate.WaitAsync().ConfigureAwait(false);
         try { if (!IsReleased) ReleaseContext(); }
         finally { NativeGate.Release(); }

@@ -7,18 +7,19 @@ namespace TrueMoon.Aether.Abstractions.Rendering;
 public static class RenderContentCodec
 {
     /// <summary>Encodes validated immutable data. GUIDs use RFC4122 order; scalar values are little-endian.</summary>
-    /// <param name="definition">Supported mesh, opaque material or binding set.</param><returns>Detached canonical payload.</returns>
+    /// <param name="definition">Supported mesh, opaque material, binding set or base-color texture.</param><returns>Detached canonical payload.</returns>
     public static byte[] Encode(RenderAssetDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);
         var (tag, length) = definition switch
         {
-            MeshDefinition mesh => (1, checked(60 + mesh.Vertices.Length * 12 + mesh.Indices.Length * 4 + mesh.Slots.Length * 24)),
-            OpaqueUnlitMaterialDefinition => (2, 44),
+            MeshDefinition mesh => (1, checked(60 + mesh.Vertices.Length * 12 + mesh.Uv0.Length * 8 + mesh.Indices.Length * 4 + mesh.Slots.Length * 24)),
+            OpaqueUnlitMaterialDefinition material => (2, material.BaseColorTexture.HasValue ? 132 : 44),
             MaterialBindingSetDefinition set => (3, checked(100 + set.Bindings.Length * 100)),
+            BaseColorTextureDefinition texture => (4, checked(20 + texture.Pixels.Length)),
             _ => throw new RenderContentException(RenderContentError.AssetKindMismatch, "Unknown CPU asset definition.")
         };
-        var limit = tag == 1 ? RenderContentProfile.MaximumMeshBytes : RenderContentProfile.MaximumSmallAssetBytes;
+        var limit = tag is 1 or 4 ? RenderContentProfile.MaximumMeshBytes : RenderContentProfile.MaximumSmallAssetBytes;
         ContentValidation.Require(length <= limit, RenderContentError.LimitExceeded, "Canonical asset payload exceeds admission.");
         var result = new byte[length]; var writer = new Writer(result);
         writer.Bytes("TMRA"u8); writer.U16(1); writer.U16((ushort)tag); writer.U32((uint)definition.SchemaVersion);
@@ -29,15 +30,21 @@ public static class RenderContentCodec
                 writer.U32((uint)mesh.Vertices.Length); writer.U32((uint)mesh.Indices.Length); writer.U32((uint)mesh.Slots.Length);
                 writer.Vector(mesh.Bounds.Minimum); writer.Vector(mesh.Bounds.Maximum);
                 foreach (var vertex in mesh.Vertices) writer.Vector(vertex);
+                foreach (var uv in mesh.Uv0) { writer.Float(uv.X); writer.Float(uv.Y); }
                 foreach (var index in mesh.Indices) writer.U32(index);
                 foreach (var slot in mesh.Slots) { writer.Guid(slot.SlotId); writer.U32(slot.FirstIndex); writer.U32(slot.IndexCount); }
                 break;
             case OpaqueUnlitMaterialDefinition material:
                 writer.Guid(material.ShaderFamilyId); writer.U32((uint)material.LayoutVersion); writer.Vector(material.BaseColorSrgb);
+                if (material.BaseColorTexture is { } textureKey)
+                { writer.Key(textureKey); writer.U32((uint)material.Sampler!.Value); }
                 break;
             case MaterialBindingSetDefinition set:
                 writer.Key(set.Mesh); writer.U32((uint)set.Bindings.Length);
                 foreach (var binding in set.Bindings) { writer.Guid(binding.SlotId); writer.Key(binding.Material); }
+                break;
+            case BaseColorTextureDefinition texture:
+                writer.U32((uint)texture.Width); writer.U32((uint)texture.Height); writer.Bytes(texture.Pixels.AsSpan());
                 break;
         }
         return result;
@@ -53,39 +60,53 @@ public static class RenderContentCodec
         ContentValidation.Require(reader.U16() == 1, RenderContentError.UnsupportedVersion, "Unsupported canonical codec version.");
         var tag = reader.U16();
         ContentValidation.Require(reader.U32() == 1, RenderContentError.UnsupportedVersion, "Unsupported asset schema version.");
-        ContentValidation.Require(tag is >= 1 and <= 3, RenderContentError.AssetKindMismatch, "Unknown canonical asset kind.");
-        if (tag != 1) ContentValidation.Require(payload.Length <= RenderContentProfile.MaximumSmallAssetBytes, RenderContentError.LimitExceeded, "Small asset admission exceeded.");
+        ContentValidation.Require(tag is >= 1 and <= 4, RenderContentError.AssetKindMismatch, "Unknown canonical asset kind.");
+        if (tag is 2 or 3) ContentValidation.Require(payload.Length <= RenderContentProfile.MaximumSmallAssetBytes, RenderContentError.LimitExceeded, "Small asset admission exceeded.");
         RenderAssetDefinition result;
         if (tag == 1)
         {
             var topology = (MeshTopology)reader.U32(); var layout = (MeshVertexLayout)reader.U32(); var format = (MeshIndexFormat)reader.U32();
-            ContentValidation.Require(topology == MeshTopology.TriangleList && layout == MeshVertexLayout.PositionFloat3 && format == MeshIndexFormat.UInt32,
+            ContentValidation.Require(topology == MeshTopology.TriangleList &&
+                layout is MeshVertexLayout.PositionFloat3 or MeshVertexLayout.PositionFloat3Uv0Float2 && format == MeshIndexFormat.UInt32,
                 RenderContentError.UnsupportedLayout, "Unsupported canonical geometry layout.");
             var vertices = Count(reader.U32(), RenderContentProfile.MaximumVertices);
             var indices = Count(reader.U32(), RenderContentProfile.MaximumIndices);
             var slots = Count(reader.U32(), RenderContentProfile.MaximumSlots);
             var bounds = new RenderBounds(reader.Vector(), reader.Vector());
-            reader.Expect(vertices * 12 + indices * 4 + slots * 24);
+            var hasUv0 = layout == MeshVertexLayout.PositionFloat3Uv0Float2;
+            reader.Expect(vertices * (hasUv0 ? 20 : 12) + indices * 4 + slots * 24);
             var positions = new Vector3[vertices]; var elements = new uint[indices]; var ranges = new MeshSlot[slots];
             for (var i = 0; i < vertices; i++) positions[i] = reader.Vector();
+            var uv0 = hasUv0 ? new Vector2[vertices] : [];
+            for (var i = 0; i < uv0.Length; i++) uv0[i] = new(reader.Float(), reader.Float());
             for (var i = 0; i < indices; i++) elements[i] = reader.U32();
             for (var i = 0; i < slots; i++) ranges[i] = new(reader.Guid(), reader.U32(), reader.U32());
-            result = new MeshDefinition(positions, elements, ranges, bounds, topology: topology, vertexLayout: layout, indexFormat: format);
+            result = hasUv0 ? new MeshDefinition(positions, uv0, elements, ranges, bounds) : new MeshDefinition(positions, elements, ranges, bounds);
         }
         else if (tag == 2)
         {
-            reader.Expect(32);
             var family = reader.Guid(); var layout = reader.U32(); var color = reader.Vector();
-            ContentValidation.Require(layout == 1, RenderContentError.UnsupportedLayout, "Unsupported material layout.");
-            result = new OpaqueUnlitMaterialDefinition(color, family, (int)layout);
+            ContentValidation.Require(family == RenderContentProfile.UnlitFamilyId && layout is 1 or 2,
+                RenderContentError.UnsupportedLayout, "Unsupported material family or layout.");
+            reader.Expect(layout == 1 ? 0 : 88);
+            result = layout == 1 ? new OpaqueUnlitMaterialDefinition(color, family) :
+                new OpaqueUnlitMaterialDefinition(color, reader.Key(), (RenderTextureSampler)reader.U32());
         }
-        else
+        else if (tag == 3)
         {
             var mesh = reader.Key(); var count = Count(reader.U32(), RenderContentProfile.MaximumSlots);
             reader.Expect(count * 100);
             var bindings = new MaterialSlotBinding[count];
             for (var i = 0; i < count; i++) bindings[i] = new(reader.Guid(), reader.Key());
             result = new MaterialBindingSetDefinition(mesh, bindings);
+        }
+        else
+        {
+            var width = Count(reader.U32(), RenderContentProfile.MaximumTextureDimension);
+            var height = Count(reader.U32(), RenderContentProfile.MaximumTextureDimension);
+            var bytes = width * height * 4;
+            reader.Expect(bytes);
+            result = new BaseColorTextureDefinition(width, height, reader.Bytes(bytes));
         }
         ContentValidation.Require(Encode(result).AsSpan().SequenceEqual(payload), RenderContentError.InvalidPayload, "Asset payload is not canonical.");
         return result;

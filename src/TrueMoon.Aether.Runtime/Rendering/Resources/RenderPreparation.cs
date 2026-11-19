@@ -7,7 +7,7 @@ public enum RenderPreparationState
 {
     /// <summary>Queued or preparing.</summary>
     Pending,
-    /// <summary>The entire required mesh closure is ready.</summary>
+    /// <summary>The entire required mesh and texture closure is ready.</summary>
     Ready,
     /// <summary>Preparation failed; cleanup may require retry.</summary>
     Failed,
@@ -52,7 +52,7 @@ public sealed class RenderPreparation : IAsyncDisposable
             Token.ThrowIfCancellationRequested();
             foreach (var entry in Manifest.Entries)
             {
-                if (entry.Definition is not MeshDefinition) continue;
+                if (entry.Definition is not (MeshDefinition or BaseColorTextureDefinition)) continue;
                 Token.ThrowIfCancellationRequested();
                 var lease = _owner.Acquire(entry); _entries.Add(lease);
                 await lease.Value.Completion.Task.WaitAsync(Token).ConfigureAwait(false);
@@ -89,7 +89,7 @@ public sealed class RenderPreparation : IAsyncDisposable
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposing) != 0 || IsReleased, this);
         ResourceGuard.Require(State == RenderPreparationState.Ready, RenderResourceError.Closed, "Preparation is not completely ready.");
-        var lease = _entries.FirstOrDefault(item => item.Value.Value.Key == key);
+        var lease = _entries.FirstOrDefault(item => item.Value.Value.Key == key && item.Value.Value.Definition is MeshDefinition);
         ResourceGuard.Require(lease != null, RenderResourceError.InvalidIdentity, "Mesh is outside this ready binding.");
         _owner.ValidateHandle(lease!.Value.Handle); return lease.Value.Handle;
     }

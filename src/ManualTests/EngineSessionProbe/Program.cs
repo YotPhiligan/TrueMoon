@@ -31,6 +31,8 @@ try
         return await PrimitiveNativeProbe.RunAsync(Path.GetFullPath(nativePrimitiveRuntime), Path.GetFullPath(nativePrimitiveGame), Path.GetFullPath(nativePrimitiveReport));
     if (args is ["--mesh-surface-proof", var meshRuntime, var meshGame, var meshReport])
         return await MeshSurfaceProbe.RunAsync(Path.GetFullPath(meshRuntime), Path.GetFullPath(meshGame), Path.GetFullPath(meshReport));
+    if (args is ["--mesh-surface-proof", var textureRuntime, var textureGame, var textureReport, var textureProject])
+        return await MeshSurfaceProbe.RunAsync(Path.GetFullPath(textureRuntime), Path.GetFullPath(textureGame), Path.GetFullPath(textureReport), Path.GetFullPath(textureProject));
     if (args is ["--child-diagnostics-proof", var deliveryDirectory]) return await ChildDiagnosticDeliveryProbe.RunAsync(Path.GetFullPath(deliveryDirectory));
     if (args is ["--edit-preview-proof", var previewDirectory]) return await EditPreviewProbe.RunAsync(Path.GetFullPath(previewDirectory));
     if (args is ["--scene"]) return await SceneInputProbe.RunAsync(null);

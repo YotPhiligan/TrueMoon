@@ -22,7 +22,8 @@ internal sealed class VulkanMeshUpload(VulkanRenderResourceBackend backend, Rend
     public bool IsReleased { get; private set; }
     internal VulkanRenderResourceBackend Backend => backend;
     internal VkBuffer Geometry => IsReady && !IsReleased ? _geometry : throw new InvalidOperationException("Mesh upload is not live.");
-    internal ulong IndexOffset => checked((ulong)((MeshDefinition)request.Mesh.Definition).Vertices.Length * 12);
+    internal ulong Uv0Offset => checked((ulong)((MeshDefinition)request.Mesh.Definition).Vertices.Length * 12);
+    internal ulong IndexOffset => checked(Uv0Offset + (ulong)((MeshDefinition)request.Mesh.Definition).Uv0.Length * 8);
     public Task PrepareAsync(CancellationToken cancellationToken)
     { lock (_gate) return _job ??= PrepareCoreAsync(cancellationToken); }
     private async Task PrepareCoreAsync(CancellationToken token)
@@ -34,13 +35,19 @@ internal sealed class VulkanMeshUpload(VulkanRenderResourceBackend backend, Rend
     private unsafe void Upload(CancellationToken token)
     {
         var vk = backend.Api!; var device = backend.Device; var mesh = (MeshDefinition)request.Mesh.Definition;
-        var length = checked(mesh.Vertices.Length * 12 + mesh.Indices.Length * 4);
+        var length = checked((int)IndexOffset + mesh.Indices.Length * 4);
         _cpuReservation = request.Budget.Reserve(0, 0, length);
         var bytes = new byte[length]; var offset = 0;
         foreach (var vertex in mesh.Vertices)
         {
             BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(offset), vertex.X); BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(offset + 4), vertex.Y);
             BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(offset + 8), vertex.Z); offset += 12;
+        }
+        foreach (var uv in mesh.Uv0)
+        {
+            BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(offset), uv.X);
+            BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(offset + 4), uv.Y);
+            offset += 8;
         }
         foreach (var index in mesh.Indices) { BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(offset), index); offset += 4; }
         token.ThrowIfCancellationRequested();

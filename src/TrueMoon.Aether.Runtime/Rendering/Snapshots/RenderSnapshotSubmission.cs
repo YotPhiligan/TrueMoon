@@ -87,7 +87,7 @@ public sealed class RenderSnapshotRecording : IAsyncDisposable
 {
     private readonly RenderSnapshotView _view;
     internal RenderSnapshotView.Envelope Envelope { get; }
-    internal RenderDeviceOwner Device => _view.Device;
+    internal RenderSnapshotResources Resources => Envelope.Resources!;
     internal Task<RenderSnapshotSubmission> SubmitAsync(IFactory<IRenderSnapshotSubmission, RenderSnapshotData> factory, CancellationToken token)
         => _view.SubmitAsync(this, factory, token);
     internal RenderSnapshotRecording(RenderSnapshotView view, RenderSnapshotView.Envelope envelope) { _view = view; Envelope = envelope; }

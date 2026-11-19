@@ -172,7 +172,7 @@ internal sealed class VulkanSurface(SessionIdentity identity, ulong generation, 
     internal Task<GpuFrameCompletion> ProduceSnapshotAsync(GpuFrameStamp stamp, Rendering.Snapshots.RenderSnapshotRecording recording, CancellationToken token)
         => ExecuteAsync(async () =>
         {
-            var use = await recording.SubmitAsync(_slots[stamp.Slot].SnapshotSubmissions(stamp, recording.Device), token).ConfigureAwait(false);
+            var use = await recording.SubmitAsync(_slots[stamp.Slot].SnapshotSubmissions(stamp, recording.Resources), token).ConfigureAwait(false);
             await use.Completion.ConfigureAwait(false);
             return new GpuFrameCompletion(stamp, true);
         }, token);

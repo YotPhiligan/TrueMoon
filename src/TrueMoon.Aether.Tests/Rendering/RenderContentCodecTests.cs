@@ -150,7 +150,7 @@ public sealed class RenderContentCodecTests
             case "codec-zero": BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(4), 0); break;
             case "codec": BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(4), 2); break;
             case "tag-zero": BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(6), 0); break;
-            case "tag-next": BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(6), 4); break;
+            case "tag-next": BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(6), 5); break;
             case "tag-high": BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(6), ushort.MaxValue); break;
             case "schema-zero": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(8), 0); break;
             default: BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(8), uint.MaxValue); break;
@@ -182,8 +182,10 @@ public sealed class RenderContentCodecTests
     [InlineData("material-color", RenderContentError.InvalidMaterial)]
     [InlineData("material-family", RenderContentError.UnsupportedLayout)]
     [InlineData("material-layout", RenderContentError.UnsupportedLayout)]
+    [InlineData("material-missing-texture", RenderContentError.InvalidPayload)]
     [InlineData("mesh-topology", RenderContentError.UnsupportedLayout)]
     [InlineData("mesh-layout", RenderContentError.UnsupportedLayout)]
+    [InlineData("mesh-missing-uv", RenderContentError.InvalidPayload)]
     [InlineData("mesh-format", RenderContentError.UnsupportedLayout)]
     [InlineData("mesh-bounds", RenderContentError.InvalidBounds)]
     [InlineData("mesh-vertex", RenderContentError.InvalidGeometry)]
@@ -198,8 +200,10 @@ public sealed class RenderContentCodecTests
             case "material-color": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(32), 0x7fc00000); break;
             case "material-family": Array.Clear(bytes, 12, 16); break;
             case "material-layout": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(28), uint.MaxValue); break;
+            case "material-missing-texture": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(28), 2); break;
             case "mesh-topology": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(12), 0); break;
-            case "mesh-layout": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(16), 2); break;
+            case "mesh-layout": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(16), uint.MaxValue); break;
+            case "mesh-missing-uv": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(16), 2); break;
             case "mesh-format": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(20), uint.MaxValue); break;
             case "mesh-bounds": BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(36), 2); break;
             case "mesh-vertex": BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(60), 0x7f800000); break;

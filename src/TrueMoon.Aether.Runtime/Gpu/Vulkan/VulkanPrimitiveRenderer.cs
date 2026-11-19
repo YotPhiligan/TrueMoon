@@ -17,6 +17,9 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
     private Framebuffer _framebuffer;
     private PipelineLayout _layout;
     private Pipeline _pipeline;
+    private DescriptorSetLayout _texturedSetLayout;
+    private PipelineLayout _texturedLayout;
+    private Pipeline _texturedPipeline;
     internal bool MeshProfile { get; init; }
 
     internal void Initialize()
@@ -63,24 +66,53 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
         var framebuffer = new FramebufferCreateInfo { SType = StructureType.FramebufferCreateInfo, RenderPass = _pass,
             AttachmentCount = 2, PAttachments = views, Width = (uint)width, Height = (uint)height, Layers = 1 };
         Check(vk.CreateFramebuffer(device, in framebuffer, null, out _framebuffer), "CreatePrimitiveFramebuffer");
+        CreateLayout(default, out _layout);
+        CreatePipeline(MeshProfile ? "mesh" : "cube", false, _layout, ref _pipeline);
+    }
+
+    private void EnsureTexturedPipeline()
+    {
+        if (_texturedPipeline.Handle != 0) return;
+        _texturedSetLayout = VulkanTextureUpload.CreateLayout(vk, device);
+        try
+        {
+            CreateLayout(_texturedSetLayout, out _texturedLayout);
+            CreatePipeline("mesh-textured", true, _texturedLayout, ref _texturedPipeline);
+        }
+        catch
+        {
+            ReleaseTexturedPipeline();
+            throw;
+        }
+    }
+
+    private void CreateLayout(DescriptorSetLayout setLayout, out PipelineLayout target)
+    {
         var push = new PushConstantRange(ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, 80);
-        var layout = new PipelineLayoutCreateInfo { SType = StructureType.PipelineLayoutCreateInfo, PushConstantRangeCount = 1, PPushConstantRanges = &push };
-        Check(vk.CreatePipelineLayout(device, in layout, null, out _layout), "CreatePrimitiveLayout");
+        var layout = new PipelineLayoutCreateInfo { SType = StructureType.PipelineLayoutCreateInfo, PushConstantRangeCount = 1, PPushConstantRanges = &push,
+            SetLayoutCount = setLayout.Handle == 0 ? 0u : 1u, PSetLayouts = &setLayout };
+        Check(vk.CreatePipelineLayout(device, in layout, null, out target), "CreatePrimitiveLayout");
+    }
+
+    private void CreatePipeline(string shader, bool textured, PipelineLayout layout, ref Pipeline target)
+    {
         ShaderModule vertex = default, fragment = default;
         try
         {
-            vertex = Shader(MeshProfile ? "mesh.vert.spv" : "cube.vert.spv"); fragment = Shader(MeshProfile ? "mesh.frag.spv" : "cube.frag.spv");
+            vertex = Shader(shader + ".vert.spv"); fragment = Shader(shader + ".frag.spv");
             var name = stackalloc byte[5] { (byte)'m', (byte)'a', (byte)'i', (byte)'n', 0 };
             var stages = stackalloc PipelineShaderStageCreateInfo[2];
             stages[0] = new() { SType = StructureType.PipelineShaderStageCreateInfo, Stage = ShaderStageFlags.VertexBit, Module = vertex, PName = name };
             stages[1] = new() { SType = StructureType.PipelineShaderStageCreateInfo, Stage = ShaderStageFlags.FragmentBit, Module = fragment, PName = name };
             var input = new PipelineVertexInputStateCreateInfo { SType = StructureType.PipelineVertexInputStateCreateInfo };
-            var binding = new VertexInputBindingDescription(0, 12, VertexInputRate.Vertex);
-            var attribute = new VertexInputAttributeDescription(0, 0, Format.R32G32B32Sfloat, 0);
+            var bindings = stackalloc VertexInputBindingDescription[2]
+                { new(0, 12, VertexInputRate.Vertex), new(1, 8, VertexInputRate.Vertex) };
+            var attributes = stackalloc VertexInputAttributeDescription[2]
+                { new(0, 0, Format.R32G32B32Sfloat, 0), new(1, 1, Format.R32G32Sfloat, 0) };
             if (MeshProfile)
             {
-                input.VertexBindingDescriptionCount = 1; input.PVertexBindingDescriptions = &binding;
-                input.VertexAttributeDescriptionCount = 1; input.PVertexAttributeDescriptions = &attribute;
+                input.VertexBindingDescriptionCount = textured ? 2u : 1u; input.PVertexBindingDescriptions = bindings;
+                input.VertexAttributeDescriptionCount = textured ? 2u : 1u; input.PVertexAttributeDescriptions = attributes;
             }
             var assembly = new PipelineInputAssemblyStateCreateInfo { SType = StructureType.PipelineInputAssemblyStateCreateInfo, Topology = PrimitiveTopology.TriangleList };
             var viewport = new Viewport(0, 0, width, height, 0, 1); var scissor = new Rect2D(default, new((uint)width, (uint)height));
@@ -95,9 +127,9 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
             var blend = new PipelineColorBlendStateCreateInfo { SType = StructureType.PipelineColorBlendStateCreateInfo, AttachmentCount = 1, PAttachments = &colorBlend };
             var pipeline = new GraphicsPipelineCreateInfo { SType = StructureType.GraphicsPipelineCreateInfo, StageCount = 2, PStages = stages,
                 PVertexInputState = &input, PInputAssemblyState = &assembly, PViewportState = &viewportState, PRasterizationState = &raster,
-                PMultisampleState = &multisample, PDepthStencilState = &depth, PColorBlendState = &blend, Layout = _layout, RenderPass = _pass, BasePipelineIndex = -1 };
+                PMultisampleState = &multisample, PDepthStencilState = &depth, PColorBlendState = &blend, Layout = layout, RenderPass = _pass, BasePipelineIndex = -1 };
             // Even a failed create may return a handle; retain it for owner cleanup.
-            fixed (Pipeline* target = &_pipeline) Check(vk.CreateGraphicsPipelines(device, default, 1, &pipeline, null, target), "CreatePrimitivePipeline");
+            fixed (Pipeline* output = &target) Check(vk.CreateGraphicsPipelines(device, default, 1, &pipeline, null, output), "CreatePrimitivePipeline");
         }
         finally
         {
@@ -133,38 +165,80 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
         vk.CmdEndRenderPass(command);
     }
 
-    internal void DrawSnapshot(CommandBuffer command, RenderSnapshotData snapshot, RenderDeviceOwner resources)
+    internal void DrawSnapshot(CommandBuffer command, RenderSnapshotData snapshot, RenderSnapshotResources resources)
     {
-        if (!MeshProfile || snapshot.DeviceGeneration != resources.Generation || snapshot.Identity != resources.Identity ||
+        var owner = resources.Device;
+        if (!MeshProfile || snapshot.DeviceGeneration != owner.Generation || snapshot.Identity != owner.Identity ||
+            snapshot.BindingRevision != resources.BindingRevision || snapshot.ManifestDigest != resources.Manifest.Digest ||
             snapshot.Configuration.Width != width || snapshot.Configuration.Height != height)
             throw new InvalidDataException("Mesh snapshot/device/target mismatch.");
         // Resolve every non-owning handle before recording; the accepted snapshot
         // submission owns the retained uploads until its actual GPU fence completes.
-        foreach (var draw in snapshot.Draws) Resolve(draw);
+        foreach (var draw in snapshot.Draws)
+        {
+            var mesh = ResolveMesh(draw);
+            if (ResolveTexture(draw) != null)
+            {
+                if (mesh.IndexOffset == mesh.Uv0Offset)
+                    throw new InvalidDataException("Textured mesh has no UV0 stream.");
+                EnsureTexturedPipeline();
+            }
+        }
         var clears = stackalloc ClearValue[2];
         clears[0].Color = new ClearColorValue(snapshot.ClearColorSrgb.X, snapshot.ClearColorSrgb.Y, snapshot.ClearColorSrgb.Z, 1);
         clears[1].DepthStencil = new ClearDepthStencilValue(1, 0);
         var begin = new RenderPassBeginInfo { SType = StructureType.RenderPassBeginInfo, RenderPass = _pass, Framebuffer = _framebuffer,
             RenderArea = new(default, new((uint)width, (uint)height)), ClearValueCount = 2, PClearValues = clears };
         vk.CmdBeginRenderPass(command, in begin, SubpassContents.Inline);
-        vk.CmdBindPipeline(command, PipelineBindPoint.Graphics, _pipeline);
+        Pipeline boundPipeline = default;
+        var buffers = stackalloc Silk.NET.Vulkan.Buffer[2];
+        var offsets = stackalloc ulong[2];
+        offsets[0] = 0;
         foreach (var draw in snapshot.Draws)
         {
-            var upload = Resolve(draw); var buffer = upload.Geometry; ulong offset = 0;
-            vk.CmdBindVertexBuffers(command, 0, 1, &buffer, &offset);
-            vk.CmdBindIndexBuffer(command, buffer, upload.IndexOffset, IndexType.Uint32);
+            var upload = ResolveMesh(draw);
+            var texture = ResolveTexture(draw);
+            var textured = texture != null;
+            var pipeline = textured ? _texturedPipeline : _pipeline;
+            var layout = textured ? _texturedLayout : _layout;
+            if (pipeline.Handle != boundPipeline.Handle)
+            {
+                vk.CmdBindPipeline(command, PipelineBindPoint.Graphics, pipeline);
+                boundPipeline = pipeline;
+            }
+            buffers[0] = upload.Geometry;
+            if (texture != null)
+            {
+                buffers[1] = upload.Geometry;
+                offsets[1] = upload.Uv0Offset;
+                var descriptor = texture.Descriptor;
+                vk.CmdBindDescriptorSets(command, PipelineBindPoint.Graphics, layout, 0, 1, &descriptor, 0, null);
+            }
+            vk.CmdBindVertexBuffers(command, 0, textured ? 2u : 1u, buffers, offsets);
+            vk.CmdBindIndexBuffer(command, upload.Geometry, upload.IndexOffset, IndexType.Uint32);
             var constants = new Constants(draw.World * snapshot.ViewProjection, new(draw.ColorLinear, 1));
             RenderPrimitive.ValidateMatrix(constants.Transform);
-            vk.CmdPushConstants(command, _layout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, 80, &constants);
+            vk.CmdPushConstants(command, layout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, 80, &constants);
             vk.CmdDrawIndexed(command, checked((uint)draw.Slot.IndexCount), 1, checked((uint)draw.Slot.FirstIndex), 0, 0);
         }
         vk.CmdEndRenderPass(command);
 
-        VulkanMeshUpload Resolve(RenderDrawRange draw)
+        VulkanMeshUpload ResolveMesh(RenderDrawRange draw)
         {
-            if (resources.ValidateHandle(draw.Handle) != draw.Mesh || resources.BorrowUpload(draw.Handle) is not VulkanMeshUpload upload ||
+            if (owner.ValidateHandle(draw.Handle) != draw.Mesh || owner.BorrowUpload(draw.Handle) is not VulkanMeshUpload upload ||
                 upload.Backend.Device.Handle != device.Handle || !ReferenceEquals(upload.Backend.Api, vk))
                 throw new InvalidDataException("Mesh is not retained on this surface device.");
+            return upload;
+        }
+
+        VulkanTextureUpload? ResolveTexture(RenderDrawRange draw)
+        {
+            if (!resources.HasBaseColorTextures ||
+                ((OpaqueUnlitMaterialDefinition)resources.Manifest.Resolve(draw.Material).Definition).BaseColorTexture is not { } key)
+                return null;
+            if (owner.BorrowTextureUpload(resources.Handle(key)) is not VulkanTextureUpload upload ||
+                upload.Backend.Device.Handle != device.Handle || !ReferenceEquals(upload.Backend.Api, vk))
+                throw new InvalidDataException("Texture is not retained on this surface device.");
             return upload;
         }
     }
@@ -188,6 +262,7 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
     }
     public void Dispose()
     {
+        ReleaseTexturedPipeline();
         if (_pipeline.Handle != 0) vk.DestroyPipeline(device, _pipeline, null); _pipeline = default;
         if (_layout.Handle != 0) vk.DestroyPipelineLayout(device, _layout, null); _layout = default;
         if (_framebuffer.Handle != 0) vk.DestroyFramebuffer(device, _framebuffer, null); _framebuffer = default;
@@ -196,6 +271,13 @@ internal sealed unsafe class VulkanPrimitiveRenderer(Vk vk, PhysicalDevice physi
         if (_colorView.Handle != 0) vk.DestroyImageView(device, _colorView, null); _colorView = default;
         if (_depth.Handle != 0) vk.DestroyImage(device, _depth, null); _depth = default;
         if (_depthMemory.Handle != 0) vk.FreeMemory(device, _depthMemory, null); _depthMemory = default;
+    }
+
+    private void ReleaseTexturedPipeline()
+    {
+        if (_texturedPipeline.Handle != 0) vk.DestroyPipeline(device, _texturedPipeline, null); _texturedPipeline = default;
+        if (_texturedLayout.Handle != 0) vk.DestroyPipelineLayout(device, _texturedLayout, null); _texturedLayout = default;
+        if (_texturedSetLayout.Handle != 0) vk.DestroyDescriptorSetLayout(device, _texturedSetLayout, null); _texturedSetLayout = default;
     }
     private static void Check(Result result, string operation) { if (result != Result.Success) throw new IOException(operation + ": " + result); }
     [StructLayout(LayoutKind.Sequential)]

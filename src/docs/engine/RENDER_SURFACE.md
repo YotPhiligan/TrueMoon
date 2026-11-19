@@ -1,5 +1,7 @@
 # ARCH1f.4: required mesh surface и Playing fence
 
+Первый текстурный профиль описан в разделе [ARCH1f.5](#base-color-texture).
+
 Нормативный профиль — [opaque-unlit/1](RENDERING_CONTRACTS.md), владельцы ресурсов —
 [f.2](RENDER_RESOURCES.md), detached snapshots и submissions — [f.3](RENDER_SNAPSHOTS.md).
 Подробная задача и очередь остаются в [PLAN](PLAN.md#arch1f-rendering).
@@ -116,3 +118,25 @@ Aether DLL, core/synchronization validation и реальные RGBA pixels. Rea
 ревизий. Textures/lighting/import/audio, device loss, physical multi-adapter matrix,
 performance/long-run release acceptance и neutral Abstractions/Mod SDK сюда не входят.
 Датированные результаты и manifest фиксируются в STATUS/HISTORY после запуска.
+
+<a id="base-color-texture"></a>
+## ARCH1f.5. Build → Runtime → Vulkan с базовой текстурой
+
+Профиль `-BaseColorTexture` создаёт две сборки обычным `GameBuildCompiler.BuildAsync`.
+Обе содержат один меш, один материал, одну текстуру 2×2 и sampler
+`NearestClamp`. У текстуры один логический ID и две ревизии. Сборки
+запускаются в порядке A → B → A. Probe проверяет точный Build ID дочернего
+процесса, digest переданного в кадр манифеста и ревизию фактического Vulkan upload.
+Шесть точек readback проверяют четыре texels и выбор крайних texels при UV
+вне [0,1]. Оба кадра A сравниваются побайтно по SHA256. Probe также проверяет
+показ каждого кадра, Vulkan core/sync validation и освобождение image, sampler,
+буферов, памяти, surface и процесса в каждом поколении.
+
+```powershell
+pwsh -File ManualTests/RenderSurface/Verify.ps1 -BaseColorTexture -ValidationDirectory <layer-dir> -EvidenceDirectory <fresh-dir>
+```
+
+Runner покрывает source Debug, published Release и изолированный Release из
+свежих пакетов. Контракт доступен в [RENDERING_CONTRACTS](RENDERING_CONTRACTS.md#base-color-texture).
+Доставка начинается с типизированных RGBA8-данных и UV0. Подключение текстур
+из импорта glTF и выбор параметров sampler в Editor относятся к следующим срезам.

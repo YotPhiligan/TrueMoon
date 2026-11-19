@@ -1688,8 +1688,23 @@ overrides не мутируют общий asset. World не владеет borr
 | ARCH1f.2 | Реализован2026-11-07: [resource owners/leases/preparation](RENDER_RESOURCES.md), frozen in-memory catalog, App/IFactory integration, atomic World binding и standalone Vulkan upload | Bounded old/candidate/retiring allocations и metadata, counted CPU/preparation leases, stale owner/device/slot rejection; cancel/late completion/failed creation/reload/drain retry. Explicit pinned-key rebind, no sync GPU wait в scene loader; unit/source/published/fresh-package CPU и actual Vulkan upload/readback проверены отдельно. Surface rendering/Playing fence — f.3/4; external-file delivery отдельно |
 | ARCH1f.3 | Реализован2026-11-09: [owned render snapshots](RENDER_SNAPSHOTS.md), explicit camera/mesh/material extraction, bounded mailbox/recording/submission owners, App/IFactory | Same-tick complete matrices/exact keys/masks/tint/shear bounds, drop/coalesce/reload retain, actual backend completion/cleanup contract, generation fence/retry/budgets;1376scoped D/R и source/published/fresh7package CPU proofs. [Evidence/limits](HISTORY.md#render-snapshots-2026-11-09); actual Vulkan surface — f.4 |
 | ARCH1f.4 | Реализован2026-11-12: [Vulkan consumer/Playing fence](RENDER_SURFACE.md), built-in cube/shared opaque unlit material/independent tint | Две entities/один shared asset, изменение override не меняет соседа, reload/delete/resize/suspend/Stop/Replace/failed startup не нарушают retirement; actual source Debug/published Release pixels/core+sync validation/ownership и затронутый fresh-package consumer проверяются отдельно от headless |
-| ARCH1f.5 | Texture/sampler profile, затем Light/lighting/PBR по выбранному workload | Layout/capability и color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes; performance/native evidence для каждого добавленного profile, без заявления готовности transparency/shadows/skinning |
+| ARCH1f.5 | [Первый срез](#arch1f5-base-color-texture): непрозрачная RGBA8 sRGB base-color texture, UV0 и `NearestClamp` через Build → Runtime → Vulkan. Дальше подключение текстур из импорта и расширение поддерживаемых профилей по workload | Layout/capability и color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes и performance/native evidence для каждого нового профиля. Light/lighting/PBR — последующие этапы |
 | ARCH1f.6 | Content revisions и runtime material overrides в checkpoint/Replace после ARCH1e.5 | Logical IDs/revisions вместо handles, required content preparation до resume, remap/migration/failed restore/stale generation; render cache восстанавливается, capability недоступна без полного support участников |
+
+<a id="arch1f5-base-color-texture"></a>
+#### ARCH1f.5. Первый срез базовой текстуры — 2026-11-19
+
+Один меш и один sampler `NearestClamp`. Build сохраняет точный ключ текстуры
+в материале и включает её в замороженный артефакт. Runtime выделяет один Vulkan
+image и sampler на используемую ревизию и удерживает их вместе со snapshot.
+Приёмка запускает A → B → A с общим логическим ID и двумя ревизиями, сравнивает
+Vulkan upload, пиксели, digest манифеста и освобождение ресурсов.
+[Контракт](RENDERING_CONTRACTS.md#base-color-texture),
+[приёмка](RENDER_SURFACE.md#base-color-texture).
+
+Следующий срез этого направления — провести текстуру и sampler из glTF через
+импорт/Nom в этот же Build/runtime профиль. Дополнительные sampler modes,
+data textures, mipmaps, lighting и PBR остаются отдельными задачами.
 
 <a id="arch1f0-render-contracts"></a>
 #### ARCH1f.0. Первый mesh/material/resource contract — 2026-11-06

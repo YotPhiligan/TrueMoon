@@ -16346,3 +16346,37 @@ captured delivery и activation.** Producer sidecar не становится в
 GPU/Editor asset preview, прочие форматы/OS/AOT, ED/PHYS8/AUD и release gates отдельны.
 Исторический diagnostic drain cause не пересмотрен; пакеты не опубликованы.
 [Предыдущий статус](HISTORY.md#engine-status-before-g1c-2026-11-17).
+
+<a id="arch1f5-base-color-2026-11-19"></a>
+## 2026-11-19 — ARCH1f.5: Build → Runtime → Vulkan с базовой текстурой
+
+Версия `1.2611.19.12-alpha`, SDK `11.0.100`, `net11.0`. Три профиля:
+source Debug, published Release, package-only Release из изолированного feed
+с 18 пакетами TrueMoon и 3 restore graphs. Runtime загружал
+`render-content.bin` выбранного Build. Build отказал в замене texels при
+старом ключе текстуры в материале с `RevisionMismatch`.
+
+| Сборка | Ревизия текстуры с ID `733e1928-391e-49f7-84cb-d39b96dc39ec` | RGBA в (140,70) | SHA256 кадра 320×180 |
+| --- | --- | --- | --- |
+| A и повтор A | `922bbed019565cb959f8c139fee72e29409e7687db25a7ace760781fbb3997df` | `C12047FF` | `67D432C53E9D3C1D5A7FF382AD68B3018422F9D22529976D00AF6AC07A7033FD` |
+| B | `09764b3080012ef7035c04bd9a3fdd641f95576ec703b36738980cc34ceda3ec` | `19CE30FF` | `708A503AEEE816FA943E296B73BB766005E33C2081F517191833F394BF0AB702` |
+
+Те же контрольные значения и хеши получены во всех профилях на Vulkan-адаптере
+`D69A207DD3EC6D8F5F325359A59FA086`. Три остальных texels остались
+`2775E0FF`, `529741FF` и `DCA45CFF`. Две точки с UV вне [0,1] совпали с
+крайними texels. Отчёты сверяют Build ID, render manifest digest, ревизию GPU
+upload и фактический показ. Во всех 9 дочерних процессах Vulkan core/sync
+validation сообщила 0 ошибок и 0 предупреждений, по одному image и sampler
+создано и освобождено, live uploads/handles/slots после Stop равны 0.
+
+Адресная регрессия Aether по Rendering, GPU и GameBuildTests прошла по 953
+теста в Debug и Release. В том числе проверен прежний лимит 4096 draw ranges.
+Нетекстурный сценарий ARCH1f.4 прошёл 10 кадров в source Debug. TRX и
+Vulkan-отчёт сохранены в `TestResults/ARCH1f5-compat-20261119-02`.
+
+Локальный отчёт `TestResults/ARCH1f5-base-color-20261119-05/verification.json`.
+SHA256 `7EEDE99BF8EBEFEA8D9E3CE61B02F8216A1E33440BB2476038CDDC2D2748206D`.
+В подкаталогах профилей сохранены PNG, точные ключи и runtime cleanup.
+Команда запуска описана в [RENDER_SURFACE](RENDER_SURFACE.md#base-color-texture).
+Встроенные SPIR-V шейдеры собраны `glslang 16.6.0` с
+`-V --target-env vulkan1.1`. [Khronos glslang](https://github.com/KhronosGroup/glslang)

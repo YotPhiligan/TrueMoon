@@ -15,7 +15,9 @@ public enum MeshTopology
 public enum MeshVertexLayout
 {
     /// <summary>Three little-endian Single coordinates, stride twelve.</summary>
-    PositionFloat3 = 1
+    PositionFloat3 = 1,
+    /// <summary>Packed positions plus a separate packed float2 UV0 stream.</summary>
+    PositionFloat3Uv0Float2 = 2
 }
 
 /// <summary>Supported exact index representation.</summary>
@@ -41,17 +43,41 @@ public sealed class MeshDefinition : RenderAssetDefinition
     /// <param name="vertexLayout">Packed position-f32x3 only.</param><param name="indexFormat">UInt32 only.</param>
     public MeshDefinition(IReadOnlyList<Vector3> vertices, IReadOnlyList<uint> indices, IReadOnlyList<MeshSlot> slots, RenderBounds bounds,
         int schemaVersion = 1, MeshTopology topology = MeshTopology.TriangleList, MeshVertexLayout vertexLayout = MeshVertexLayout.PositionFloat3,
-        MeshIndexFormat indexFormat = MeshIndexFormat.UInt32) : base(RenderContentProfile.MeshKindId, schemaVersion)
+        MeshIndexFormat indexFormat = MeshIndexFormat.UInt32)
+        : this(vertices, null, indices, slots, bounds, schemaVersion, topology, vertexLayout, indexFormat) { }
+
+    /// <summary>Creates a triangle mesh with one UV0 coordinate per position.</summary>
+    /// <param name="vertices">Finite positions within the profile coordinate range.</param>
+    /// <param name="uv0">Normalized sampler coordinates. Finite values outside the unit square use edge clamping.</param>
+    /// <param name="indices">Indices into both vertex streams.</param>
+    /// <param name="slots">Distinct ordered ranges covering all indices.</param>
+    /// <param name="bounds">Inclusive local bounds covering all positions.</param>
+    public MeshDefinition(IReadOnlyList<Vector3> vertices, IReadOnlyList<Vector2> uv0, IReadOnlyList<uint> indices,
+        IReadOnlyList<MeshSlot> slots, RenderBounds bounds)
+        : this(vertices, uv0 ?? throw new ArgumentNullException(nameof(uv0)), indices, slots, bounds, 1, MeshTopology.TriangleList,
+            MeshVertexLayout.PositionFloat3Uv0Float2, MeshIndexFormat.UInt32) { }
+
+    private MeshDefinition(IReadOnlyList<Vector3> vertices, IReadOnlyList<Vector2>? uv0, IReadOnlyList<uint> indices,
+        IReadOnlyList<MeshSlot> slots, RenderBounds bounds, int schemaVersion, MeshTopology topology, MeshVertexLayout vertexLayout,
+        MeshIndexFormat indexFormat) : base(RenderContentProfile.MeshKindId, schemaVersion)
     {
         ArgumentNullException.ThrowIfNull(vertices); ArgumentNullException.ThrowIfNull(indices); ArgumentNullException.ThrowIfNull(slots);
-        ContentValidation.Require(topology == MeshTopology.TriangleList && vertexLayout == MeshVertexLayout.PositionFloat3 && indexFormat == MeshIndexFormat.UInt32,
-            RenderContentError.UnsupportedLayout, "Only triangle-list position-f32x3/UInt32 geometry is supported.");
+        ContentValidation.Require(topology == MeshTopology.TriangleList && indexFormat == MeshIndexFormat.UInt32 &&
+            vertexLayout == (uv0 == null ? MeshVertexLayout.PositionFloat3 : MeshVertexLayout.PositionFloat3Uv0Float2),
+            RenderContentError.UnsupportedLayout, "Unsupported triangle-list vertex streams or index format.");
         ContentValidation.Require(vertices.Count <= RenderContentProfile.MaximumVertices && indices.Count <= RenderContentProfile.MaximumIndices &&
             slots.Count <= RenderContentProfile.MaximumSlots, RenderContentError.LimitExceeded, "Mesh collection admission exceeded.");
         ContentValidation.Require(vertices.Count > 0 && indices.Count > 0 && indices.Count % 3 == 0 && slots.Count > 0,
             RenderContentError.InvalidGeometry, "Mesh geometry and slots must be nonempty complete triangles.");
         bounds.Validate();
         Vertices = ContentValidation.Copy(vertices, RenderContentProfile.MaximumVertices, nameof(vertices));
+        if (uv0 != null)
+        {
+            ContentValidation.Require(uv0.Count == Vertices.Length, RenderContentError.InvalidGeometry, "UV0 must cover every position.");
+            Uv0 = ContentValidation.Copy(uv0, RenderContentProfile.MaximumVertices, nameof(uv0));
+            foreach (var uv in Uv0)
+                ContentValidation.Require(float.IsFinite(uv.X) && float.IsFinite(uv.Y), RenderContentError.InvalidGeometry, "Invalid UV0 coordinate.");
+        }
         Indices = ContentValidation.Copy(indices, RenderContentProfile.MaximumIndices, nameof(indices));
         Slots = ContentValidation.Copy(slots, RenderContentProfile.MaximumSlots, nameof(slots));
         Bounds = bounds; Topology = topology; VertexLayout = vertexLayout; IndexFormat = indexFormat;
@@ -77,6 +103,8 @@ public sealed class MeshDefinition : RenderAssetDefinition
     }
     /// <summary>Gets copied immutable positions.</summary>
     public ImmutableArray<Vector3> Vertices { get; }
+    /// <summary>Copied UV0 stream, empty for a position-only mesh.</summary>
+    public ImmutableArray<Vector2> Uv0 { get; } = [];
     /// <summary>Gets copied immutable indices.</summary>
     public ImmutableArray<uint> Indices { get; }
     /// <summary>Gets stable ranges in increasing first-index order.</summary>
