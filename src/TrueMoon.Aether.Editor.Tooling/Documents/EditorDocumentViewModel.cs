@@ -4,6 +4,7 @@ using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Argentis;
 
@@ -179,6 +180,7 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
         if (previous?.Operation != next.Operation) OnPropertyChanged(nameof(Operation));
         if (previous?.RuntimeOperation != next.RuntimeOperation) OnPropertyChanged(nameof(RuntimeOperation));
         if (previous?.Document != next.Document) OnPropertyChanged(nameof(Document));
+        if (!ReferenceEquals(previous?.ModelCatalog, next.ModelCatalog)) OnPropertyChanged(nameof(ModelCatalog));
         SetProperty(ref _canNew, _commands.CanExecute(DocumentCommand.New), nameof(CanNew));
         var wasEditable = CanEditPath;
         SetProperty(ref _canOpenBuild, _inspector?.CanCancel != true && _playback?.CanUsePublishedBuild(_playback.PublishedBuildTarget) == true, nameof(CanOpenBuild));
@@ -304,6 +306,22 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     public void Execute(DocumentCommand command) { VerifyOwner(); _commands.Execute(command, command == DocumentCommand.OpenProject ? ProjectPathDraft : PathDraft); Refresh(); }
 
     internal bool CanReimportModel => CanSave && _inspector?.CanCancel != true;
+
+    internal IReadOnlyList<ProjectModelCatalogItem>? ModelCatalog => _state?.ModelCatalog;
+    internal bool HasModelCatalog => Project?.Documents?.HasModelCatalog == true;
+    internal bool CanReadModelCatalog => HasModelCatalog && _commands.CanExecute(DocumentCommand.ReadModelCatalog);
+
+    internal void ReadModelCatalog()
+    {
+        VerifyOwner();
+        if (_commands.Execute(DocumentCommand.ReadModelCatalog)) Refresh();
+    }
+
+    internal void SelectModel(EditorProjectModelRow row)
+    {
+        VerifyOwner();
+        if (CanReimportModel && _commands.SelectModel(row)) Refresh();
+    }
 
     internal void ReimportModel(EditorModelReimportAction action)
     {

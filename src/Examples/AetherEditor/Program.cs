@@ -3,6 +3,7 @@ using TrueMoon;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.Tooling;
 using TrueMoon.Aether.Runtime.Hosting;
+using TrueMoon.Aether.Tooling;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
@@ -58,6 +59,10 @@ internal static class Program
             await using var app = App.Build(context =>
             {
                 context.UseDiagnostics(new DiagnosticPipelineOptions { JsonDirectory = diagnostics, JsonUseRunDirectories = true });
+                context.UseAetherModelSourceCapture();
+                context.UseAetherModelImport();
+                context.UseAetherSceneModelSelectionPersistence();
+                context.UseAetherProjectModelCatalog();
                 context.UseAetherEditor(engine =>
                 {
                     engine.RuntimeLaunch = launch;

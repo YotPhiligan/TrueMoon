@@ -3,6 +3,7 @@ using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
 
@@ -21,6 +22,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     private readonly CancellationToken _lifetime;
     private readonly Action<ProjectSession?>? _selectProject;
     private ProjectSession? _boundProject;
+    private (ProjectSession Project, IReadOnlyList<ProjectModelCatalogItem> Items)? _modelCatalog;
     private bool _projectReady = true;
     private Task _pending = Task.CompletedTask;
     private Task<bool>? _exit;
@@ -69,7 +71,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
             var project = _projects.Active;
             return new(_operation, _busy, _decision != null, _exiting, _closed, project?.Documents?.Read(),
                 project?.Project.ScenesDirectory, _error, !_closed && BindingReady && _canTransition())
-                { Project = project, ProjectReady = BindingReady, ProjectSwitchEnabled = _selectProject != null, RuntimeOperation = _runtimeOperation };
+                { Project = project, ProjectReady = BindingReady, ProjectSwitchEnabled = _selectProject != null, RuntimeOperation = _runtimeOperation,
+                    ModelCatalog = _modelCatalog is { } catalog && ReferenceEquals(catalog.Project, project) ? catalog.Items : null };
         }
     }
 
@@ -91,6 +94,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         var session = _projects.Active?.Documents;
         var document = session?.Read();
         if (document == null || document.IsClosed || document.Operation != DocumentOperation.None) return false;
+        if (command is DocumentCommand.ReadModelCatalog or DocumentCommand.SelectModel)
+            return session!.HasModelCatalog && (command == DocumentCommand.ReadModelCatalog || document.Content != null);
         if (command == DocumentCommand.ReimportModel)
             return session!.ReadModelImports(document.OpeningId).Any(model => model.CanReimport);
         return command is DocumentCommand.New or DocumentCommand.Open ||
@@ -104,18 +109,24 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         => Execute(command, path, null);
 
     internal bool ReimportModel(EditorModelReimportAction action) => Execute(DocumentCommand.ReimportModel, "", action);
+    internal bool SelectModel(EditorProjectModelRow row) => Execute(DocumentCommand.SelectModel, "", null, row);
 
-    private bool Execute(DocumentCommand command, string path, EditorModelReimportAction? reimport)
+    private bool Execute(DocumentCommand command, string path, EditorModelReimportAction? reimport, EditorProjectModelRow? catalogChoice = null)
     {
         Validate(command); ArgumentNullException.ThrowIfNull(path);
         TaskCompletionSource completion; CancellationTokenSource cancellation; SceneDocumentSession? document;
+        ProjectSession? owner;
         lock (_gate)
         {
             if (!Available(command)) return false;
-            document = _projects.Active?.Documents;
+            owner = _projects.Active;
+            document = owner?.Documents;
             if (command == DocumentCommand.ReimportModel && (reimport == null || document == null ||
                 document.Read().OpeningId != reimport.OpeningId || !document.ReadModelImports(reimport.OpeningId).Any(model =>
                     model.CanReimport && model.SourceId == reimport.SourceId && model.Generation == reimport.Generation))) return false;
+            if (command == DocumentCommand.SelectModel && (catalogChoice == null || document == null ||
+                document.Read().OpeningId != catalogChoice.OpeningId || document.ReadModelImports(catalogChoice.OpeningId)
+                    .Any(item => item.SourceId == catalogChoice.SourceId) != catalogChoice.Selected)) return false;
             cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime);
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             _cancellation = cancellation; _pending = completion.Task; _busy = true; _operation = command; _error = null; _cancellationError = null;
@@ -149,7 +160,11 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
                             try
                             {
                                 var actual = _projects.Active; _selectProject!(actual);
-                                lock (_gate) { _boundProject = actual; _projectReady = true; }
+                                lock (_gate)
+                                {
+                                    if (!ReferenceEquals(previous, actual)) _modelCatalog = null;
+                                    _boundProject = actual; _projectReady = true;
+                                }
                             }
                             catch (Exception binding) when (transitionFailure != null) { throw new AggregateException(transitionFailure, binding); }
                         }
@@ -188,6 +203,17 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
                     case DocumentCommand.Close: await document.CloseAsync(choice, saveAs, token).ConfigureAwait(false); break;
                     case DocumentCommand.ReimportModel:
                         await document.ReimportModelAsync(reimport!.OpeningId, reimport.SourceId, reimport.Generation, token).ConfigureAwait(false); break;
+                    case DocumentCommand.ReadModelCatalog:
+                        var catalog = await document.ReadModelCatalogAsync(token).ConfigureAwait(false);
+                        lock (_gate)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (ReferenceEquals(_projects.Active, owner)) _modelCatalog = (owner!, catalog);
+                        }
+                        break;
+                    case DocumentCommand.SelectModel:
+                        await document.SetCatalogModelSelectedAsync(catalogChoice!.OpeningId, catalogChoice.SourceId, !catalogChoice.Selected, token).ConfigureAwait(false);
+                        break;
                 }
             }
             catch (OperationCanceledException) { }

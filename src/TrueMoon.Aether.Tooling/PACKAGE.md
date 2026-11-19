@@ -57,6 +57,12 @@ scene ID. Opening reads this record and reconstructs detached build resources.
 Optionally supply `IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>`
 to reattach trusted worker and project publisher settings to a saved ledger reference.
 
+Register `UseAetherProjectModelCatalog()` before Editor to make project imports
+available to scenes. The `IFactory<ProjectModelCatalog, ResolvedProject>` product
+registers a source and its published ledger through `RegisterAsync`. The catalog
+stores portable references, and Editor loads the exact published generation only
+when a model is selected. The existing per-scene checkpoint retains the choice.
+
 Headless project/document authoring, transactional history, scene persistence,
 SDK preflight, frozen compilation/capture/publication, source observation,
 preview coordination and bounded diagnostic export. No Editor/Alloy/Argentis

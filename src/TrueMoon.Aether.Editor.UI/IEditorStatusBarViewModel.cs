@@ -41,6 +41,20 @@ public interface IEditorStatusBarViewModel : System.ComponentModel.INotifyProper
     /// <param name="action">Exact model and document selection shown by the view.</param>
     void ReimportModel(EditorModelReimportAction action) { }
 
+    /// <summary>Whether the active project has a model catalog.</summary>
+    bool HasModelCatalog => false;
+    /// <summary>Whether reading the project model list is currently admitted.</summary>
+    bool CanReadModelCatalog => false;
+    /// <summary>Availability or empty-state message for the catalog.</summary>
+    string ModelCatalogMessage => "";
+    /// <summary>Latest project model rows in the context of the active scene.</summary>
+    IReadOnlyList<EditorProjectModelRow> ProjectModels => [];
+    /// <summary>Reads or refreshes the available project models.</summary>
+    void ReadModelCatalog() { }
+    /// <summary>Requests a selection change for the displayed model and opening.</summary>
+    /// <param name="row">Exact displayed selection target.</param>
+    void SelectModel(EditorProjectModelRow row) { }
+
     /// <summary>Source-specific semantic styling.</summary>
     EditorStatusKind SourceKind { get; }
 

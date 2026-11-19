@@ -10,6 +10,32 @@ namespace TrueMoon.Aether.Tooling;
 /// <summary>App registration for caller/project-owned Editor document sessions borrowing Aether scene persistence.</summary>
 public static class DocumentConfigurationExtensions
 {
+    /// <summary>Registers the catalog factory used by import producers and Editor documents.</summary>
+    /// <param name="context">Application composition context.</param>
+    /// <returns>The same context.</returns>
+    /// <remarks>Register model source capture and import first. Register scene model selection persistence before Editor.</remarks>
+    public static IAppConfigurationContext UseAetherProjectModelCatalog(this IAppConfigurationContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        context.Services(services =>
+        {
+            if (services.Exist<Registration>() || services.Exist<IFactory<ProjectModelCatalog, ResolvedProject>>())
+                throw new InvalidOperationException("Register the project model catalog once, before editor documents.");
+            if (!services.Exist<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>() ||
+                !services.Exist<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>())
+                throw new InvalidOperationException("The project model catalog requires model import and source capture.");
+            var hasReimport = services.Exist<IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>>();
+            services.Singleton<IFactory<ProjectModelCatalog, ResolvedProject>>(resolver =>
+            {
+                var ledgers = resolver.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>();
+                var captures = resolver.Resolve<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>();
+                var reimport = hasReimport ? resolver.Resolve<IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>>() : null;
+                return new Factory<ProjectModelCatalog, ResolvedProject>(project => new(project, ledgers, captures, reimport));
+            });
+        });
+        return context;
+    }
+
     /// <summary>Enables project-local persistence and read-only restoration of document model selections.</summary>
     /// <param name="context">Application composition context.</param>
     /// <returns>The same context.</returns>
@@ -43,8 +69,11 @@ public static class DocumentConfigurationExtensions
             {
                 var hasWatches = services.Exist<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>();
                 var persistsModels = services.Exist<ModelSelectionPersistence>();
+                var hasCatalog = services.Exist<IFactory<ProjectModelCatalog, ResolvedProject>>();
                 if (persistsModels && !hasWatches)
                     throw new InvalidOperationException("Register model source capture before enabling model selection persistence.");
+                if (hasCatalog && !persistsModels)
+                    throw new InvalidOperationException("The Editor model catalog requires scene model selection persistence.");
                 var hasImport = services.Exist<IFactory<ModelImportOperation, ModelImportArguments>>() &&
                     services.Exist<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>();
                 var restoresReimport = hasImport && services.Exist<IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>>();
@@ -52,6 +81,7 @@ public static class DocumentConfigurationExtensions
                     new Factory<SceneDocumentSession, ResolvedProject>(project => new(project, resolver.Resolve<ISceneDocumentStore>()!,
                         resolver.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!)
                     {
+                        ModelCatalog = hasCatalog ? resolver.Resolve<IFactory<ProjectModelCatalog, ResolvedProject>>().Create(project) : null,
                         ModelImports = hasWatches ? new(project.Description.Id,
                             resolver.Resolve<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>(),
                             resolver.Resolve<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>(),

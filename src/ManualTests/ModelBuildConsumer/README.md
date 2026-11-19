@@ -154,4 +154,18 @@ preserves the new exact resources. A competing write and malformed checkpoint
 exercise both conflict boundaries before Build and the old/new GPU comparison.
 `-FreshPackages` repeats the scenario in the independently published Editor.
 
+## Select project models in Editor
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ModelCatalog `
+  -EvidenceDirectory 'TestResults/EditorModelCatalog/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The fixture registers two published models in the project catalog and selects
+them through checkboxes in the Editor status panel. Build rejects a placed model
+with missing resources. The probe reopens the scene with both models and with
+an empty selection, then verifies GPU output for the original and reimported
+builds. `-FreshPackages` repeats the scenario in the independent published Editor.
+
 [Contract and ownership](../../docs/engine/MODEL_BUILD_DELIVERY.md)

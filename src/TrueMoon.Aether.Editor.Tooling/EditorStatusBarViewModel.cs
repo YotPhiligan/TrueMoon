@@ -6,6 +6,7 @@ using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.SourceTracking;
 using TrueMoon.Argentis;
 
@@ -33,6 +34,13 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
     private IReadOnlyList<EditorModelReimportAction> _modelReimports = [];
     private Guid _importOpening;
     private bool _canReimport;
+    private bool _hasModelCatalog, _canReadModelCatalog;
+    private string _catalogMessage = "";
+    private IReadOnlyList<ProjectModelCatalogItem>? _catalogItems;
+    private IReadOnlyList<SceneModelImportStatus> _catalogImports = [];
+    private IReadOnlyList<EditorProjectModelRow> _projectModels = [];
+    private Guid _catalogOpening;
+    private bool _canChangeCatalog;
     /// <summary>Creates presentation without taking ownership of the injected models.</summary>
     public EditorStatusBarViewModel(EditorViewModel editor, EditorDocumentViewModel documents, EditorInspectorViewModel transform)
     {
@@ -65,6 +73,14 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
     public bool HasModelImports => _modelImportDetails.Length != 0;
     /// <inheritdoc />
     public IReadOnlyList<EditorModelReimportAction> ModelReimports => _modelReimports;
+    /// <inheritdoc />
+    public bool HasModelCatalog => _hasModelCatalog;
+    /// <inheritdoc />
+    public bool CanReadModelCatalog => _canReadModelCatalog;
+    /// <inheritdoc />
+    public string ModelCatalogMessage => _catalogMessage;
+    /// <inheritdoc />
+    public IReadOnlyList<EditorProjectModelRow> ProjectModels => _projectModels;
     /// <summary>Source-specific semantic styling.</summary>
     public EditorStatusKind SourceKind => _sourceKind;
     /// <summary>Whether the current project has a source segment.</summary>
@@ -117,6 +133,8 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
                 DocumentCommand.Save or DocumentCommand.SaveAs => "Сохранение сцены…",
                 DocumentCommand.Open => "Открытие сцены…",
                 DocumentCommand.ReimportModel => "Переимпорт модели…",
+                DocumentCommand.ReadModelCatalog => "Чтение каталога моделей…",
+                DocumentCommand.SelectModel => "Обновление выбора моделей…",
                 _ => "Операция с документом…"
             };
         }
@@ -147,6 +165,31 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
             SetProperty(ref _modelReimports, Array.AsReadOnly(imports.Where(model => model.CanReimport).Select(model =>
                 new EditorModelReimportAction(opening, model.SourceId, model.Generation, model.Name, enabled)).ToArray()), nameof(ModelReimports));
         }
+        RefreshCatalog(opening, imports, enabled);
+    }
+
+    private void RefreshCatalog(Guid opening, IReadOnlyList<SceneModelImportStatus> imports, bool canChange)
+    {
+        var items = _documents.ModelCatalog;
+        SetProperty(ref _hasModelCatalog, _documents.HasModelCatalog, nameof(HasModelCatalog));
+        SetProperty(ref _canReadModelCatalog, _documents.CanReadModelCatalog, nameof(CanReadModelCatalog));
+        var message = _documents.Operation == DocumentCommand.ReadModelCatalog ? "Чтение каталога…" : items == null ? "" :
+            items.Count == 0 && imports.Count == 0 ? "В каталог ещё не добавлены модели." :
+            opening == Guid.Empty ? "Откройте сцену, чтобы выбрать модели." : "";
+        SetProperty(ref _catalogMessage, message, nameof(ModelCatalogMessage));
+        if (ReferenceEquals(items, _catalogItems) && ReferenceEquals(imports, _catalogImports) &&
+            opening == _catalogOpening && canChange == _canChangeCatalog) return;
+        _catalogItems = items; _catalogImports = imports; _catalogOpening = opening; _canChangeCatalog = canChange;
+        if (items == null)
+        {
+            SetProperty(ref _projectModels, [], nameof(ProjectModels));
+            return;
+        }
+        var selected = imports.Select(model => model.SourceId).ToHashSet();
+        var registered = items.Select(model => model.SourceId).ToHashSet();
+        SetProperty(ref _projectModels, Array.AsReadOnly(items.Select(item => new EditorProjectModelRow(opening, item.SourceId,
+            item.Name, item.SourcePath, selected.Contains(item.SourceId), canChange)).Concat(imports.Where(item => !registered.Contains(item.SourceId))
+            .Select(item => new EditorProjectModelRow(opening, item.SourceId, item.Name, "", true, canChange))).ToArray()), nameof(ProjectModels));
     }
     private void RefreshSource()
     {
@@ -196,6 +239,10 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (action.Enabled) _documents.ReimportModel(action);
     }
+    /// <inheritdoc />
+    public void ReadModelCatalog() { ObjectDisposedException.ThrowIf(_disposed, this); _documents.ReadModelCatalog(); }
+    /// <inheritdoc />
+    public void SelectModel(EditorProjectModelRow row) { ObjectDisposedException.ThrowIf(_disposed, this); if (row.CanChange) _documents.SelectModel(row); }
     /// <summary>Disconnects subscriptions; the injected models remain App-owned.</summary>
     public void Dispose()
     {

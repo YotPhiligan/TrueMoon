@@ -15995,6 +15995,32 @@ SHA256 `verification.json` `FCBF7716FC806760395A2DDDF00238A0E0CD9D30891AE7BB92D4
 в `TestResults/ARCH1g2m-editor-regression-20261119-01`.
 [Подключение и границы](MODEL_BUILD_DELIVERY.md#arch1g2m-persisted-model-selection).
 
+<a id="arch1g2n-2026-11-19"></a>
+## 2026-11-19 — ARCH1g.2n, каталог моделей проекта в Editor
+
+Version 1.2611.19.5-alpha. `VerifyEditor.ps1 -ModelCatalog` прошёл в Source Debug
+и Published Release на Cobalt и Microsoft DI. EvidenceDirectory
+`TestResults/ARCH1g2n-editor-catalog-20261119-02`, SHA256 `verification.json`
+`BAF43303A8741DB1CE43EBAB349C1B14A56CC47139E84E1308E7C6D71DCD353B`.
+Повтор с `-FreshPackages` прошёл на обоих DI с 20 пакетами в закрытом feed.
+EvidenceDirectory `TestResults/ARCH1g2n-editor-catalog-packages-20261119-01`,
+SHA256 `verification.json` `70D29FC94155FEA6425B2FD5764472B8095AC727FA4FF2C6D823CF2BB602E1BC`.
+
+Два опубликованных импорта зарегистрированы через API каталога. В нативном
+Editor их имена и относительные пути показаны в порядке сортировки. Флажки
+добавляют точные поколения в выбор сцены. Build с одним флажком сообщает
+об отсутствующем импорте размещённой модели. После выбора обеих моделей
+сборка проходит. Снятие обоих флажков сохраняет пустой набор, который
+восстанавливается при новом открытии. Повтор реимпорта, восстановление прежней
+ревизии после отмены и конфликт записи выбора проверены тем же сценарием.
+GPU подтверждает точную геометрию старой и новой сборок и неизменность второй модели.
+В 18 дочерних запусках Vulkan validation не обнаружила ошибок и предупреждений.
+После Stop освобождены устройства, поверхности, slots и handles.
+Стандартный `Examples/AetherEditor` собран в Release. `TrueMoon.Aether.Editor.Tests`
+прошёл 1507/1507 в Debug и Release. Отчёты в
+`TestResults/ARCH1g2n-editor-regression-20261119-01`.
+[Подключение и границы](MODEL_BUILD_DELIVERY.md#arch1g2n-project-model-catalog).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

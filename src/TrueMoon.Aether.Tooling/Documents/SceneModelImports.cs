@@ -79,6 +79,7 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
     internal async Task<RestoredSelection?> RestoreAsync(Guid sceneId, CancellationToken token)
     {
         if (store == null || await store.ReadAsync(sceneId, token).ConfigureAwait(false) is not { } checkpoint) return null;
+        if (checkpoint.Models.Length == 0) return new([], null, checkpoint.Stamp);
         var content = new GameBuildRenderContent(projectId, checkpoint.Models.SelectMany(model => Entries(model.Watch.Published)).ToArray());
         var selected = Validate(checkpoint.Models, content);
         foreach (var model in selected)
@@ -96,7 +97,32 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
         if (_current is { } previous) _retired.AddRange(previous.Watches);
         _sceneId = sceneId;
         _stamp = restored?.Stamp;
-        _current = restored == null ? null : new(openingId, restored.Imports, [], restored.Content);
+        _current = restored?.Content is not { } content ? null : new(openingId, restored.Imports, [], content);
+    }
+
+    internal async Task SetCatalogSelectionAsync(Guid openingId, Guid sourceId, bool selected, ProjectModelCatalog catalog, CancellationToken token)
+    {
+        var current = _current?.Imports ?? [];
+        var contains = current.Any(model => model.Watch.Source.SourceId == sourceId);
+        if (contains == selected) return;
+        SceneModelImportSelection[] next;
+        if (selected)
+        {
+            if (current.Length == 8) throw new InvalidOperationException("Для сцены можно выбрать до восьми моделей.");
+            next = [.. current, await catalog.LoadAsync(sourceId, token).ConfigureAwait(false)];
+        }
+        else next = current.Where(model => model.Watch.Source.SourceId != sourceId).ToArray();
+
+        if (next.Length != 0)
+        {
+            var content = new GameBuildRenderContent(projectId, next.SelectMany(model => Entries(model.Watch.Published)).ToArray());
+            await SelectAsync(openingId, next, content, token).ConfigureAwait(false);
+            return;
+        }
+        await PersistAsync([], token).ConfigureAwait(false);
+        if (_current is { } previous) _retired.AddRange(previous.Watches);
+        _current = null;
+        await DrainRetiredAsync().ConfigureAwait(false);
     }
 
     internal async Task StartOpenedWatchesAsync()
@@ -283,7 +309,7 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
         return DrainRetiredAsync();
     }
 
-    internal sealed record RestoredSelection(SceneModelImportSelection[] Imports, GameBuildRenderContent Content, SceneFileStamp Stamp);
+    internal sealed record RestoredSelection(SceneModelImportSelection[] Imports, GameBuildRenderContent? Content, SceneFileStamp Stamp);
 
     private async Task DrainRetiredAsync()
     {

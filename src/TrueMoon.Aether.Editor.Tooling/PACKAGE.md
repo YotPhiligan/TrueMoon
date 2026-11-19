@@ -29,6 +29,9 @@ document command replaces that model's frozen resources once publication succeed
 With `UseAetherSceneModelSelectionPersistence()` registered before Editor, opening
 a scene restores its saved model selection and source statuses. Projects choose
 whether to reconnect the reimport action through the trusted settings factory.
+With `UseAetherProjectModelCatalog()` enabled, the status panel offers **Project
+models**. Its checkboxes update the resource selection for the active scene.
+Models come from the authoring pipeline's project registrations.
 
 This replaces the previous `TrueMoon.Aether.Editor` package. Update PackageReferences
 and namespaces and rebuild matching hosts/games/artifacts/captures together. No facade

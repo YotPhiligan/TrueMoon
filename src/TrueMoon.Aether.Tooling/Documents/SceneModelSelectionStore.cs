@@ -31,7 +31,7 @@ internal sealed class SceneModelSelectionStore(ResolvedProject project,
         try
         {
             var file = JsonSerializer.Deserialize<SelectionFile>(bytes, Json);
-            if (file is not { FormatVersion: 1, Models.Length: > 0 and <= 8 } ||
+            if (file is not { FormatVersion: 1, Models.Length: <= 8 } ||
                 file.SceneId != sceneId || file.ProjectId != project.Description.Id)
                 throw new InvalidDataException("Saved model imports belong to a different scene or project, or have an unsupported format.");
             var models = new List<SceneModelImportSelection>(file.Models.Length);
@@ -43,10 +43,11 @@ internal sealed class SceneModelSelectionStore(ResolvedProject project,
                     (size += row.Published.Length) > MaximumLedgers)
                     throw new InvalidDataException("Invalid saved model import.");
                 var published = ModelImportLedgerCodec.Decode(row.Published, row.SourceId);
-                var source = new ModelSourceCaptureArguments(row.SourceId, Resolve(row.SourceDirectory, allowRoot: true), row.RootName, row.Limits);
+                var source = new ModelSourceCaptureArguments(row.SourceId,
+                    ProjectModelPaths.Resolve(project.RootDirectory, row.SourceDirectory, allowRoot: true), row.RootName, row.Limits);
                 var watch = new ModelSourceWatchArguments(source, published, row.GeometryScale)
                     { UseFileSystemNotifications = row.Notifications, PollInterval = TimeSpan.FromTicks(row.PollTicks) };
-                var ledger = row.Ledger == null ? null : new ModelImportLedgerArguments(row.SourceId, Resolve(row.Ledger));
+                var ledger = row.Ledger == null ? null : new ModelImportLedgerArguments(row.SourceId, ProjectModelPaths.Resolve(project.RootDirectory, row.Ledger));
                 var settings = ledger == null ? null : reimport?.Create(new(project, ledger));
                 models.Add(new(row.Name, watch) { Reimport = settings == null ? null : settings with { Ledger = ledger! }, SavedLedger = ledger });
             }
@@ -69,9 +70,9 @@ internal sealed class SceneModelSelectionStore(ResolvedProject project,
             var data = ModelImportLedgerCodec.Encode(watch.Published);
             if ((size += data.Length) > MaximumLedgers) throw new InvalidDataException("Saved model imports exceed their byte limit.");
             var ledger = model.Reimport?.Ledger ?? model.SavedLedger;
-            rows.Add(new(watch.Source.SourceId, model.Name, Relative(watch.Source.Directory, allowRoot: true), watch.Source.RootName,
+            rows.Add(new(watch.Source.SourceId, model.Name, ProjectModelPaths.Relative(project.RootDirectory, watch.Source.Directory, allowRoot: true), watch.Source.RootName,
                 watch.Source.Limits, watch.GeometryScale, watch.UseFileSystemNotifications, watch.PollInterval.Ticks,
-                ledger == null ? null : Relative(ledger.Path), data));
+                ledger == null ? null : ProjectModelPaths.Relative(project.RootDirectory, ledger.Path), data));
         }
         var bytes = JsonSerializer.SerializeToUtf8Bytes(new SelectionFile(1, project.Description.Id, sceneId, rows.ToArray()), Json);
         if (bytes.Length > MaximumBytes) throw new InvalidDataException("Saved model imports exceed their byte limit.");
@@ -82,22 +83,6 @@ internal sealed class SceneModelSelectionStore(ResolvedProject project,
     }
 
     private string FilePath(Guid sceneId) => Path.Combine(project.ContentDirectory, ".aether-model-imports", sceneId.ToString("N") + ".tmimports");
-
-    private string Relative(string path, bool allowRoot = false)
-    {
-        if (!Path.IsPathFullyQualified(path)) throw new InvalidDataException("Expected an absolute model path in the active project.");
-        var relative = Path.GetRelativePath(project.RootDirectory, path).Replace('\\', '/');
-        return allowRoot && relative == "." ? relative : Normalize(relative);
-    }
-
-    private string Resolve(string path, bool allowRoot = false) => allowRoot && path == "." ? project.RootDirectory :
-        Path.GetFullPath(Path.Combine(project.RootDirectory, Normalize(path)));
-
-    private static string Normalize(string path)
-    {
-        try { return ModelSourcePath.Normalize(path); }
-        catch (ArgumentException error) { throw new InvalidDataException("Saved model paths must stay relative to the active project.", error); }
-    }
 
     internal sealed record Checkpoint(SceneModelImportSelection[] Models, SceneFileStamp Stamp);
     private sealed record SelectionFile(int FormatVersion, Guid ProjectId, Guid SceneId, ModelRow[] Models);

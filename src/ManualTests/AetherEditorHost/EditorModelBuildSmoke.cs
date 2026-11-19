@@ -17,6 +17,7 @@ using TrueMoon.Aether.Tooling;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Hosting;
 using TrueMoon.Aether.Tooling.Importing;
+using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
@@ -35,7 +36,7 @@ internal static class EditorModelBuildSmoke
         string report, GameBuildArtifact oldBuild, GameBuildArtifact newBuild,
         SceneDocumentSession document, Guid openingId, IFactory<ModelImportLedgerSession, ModelImportLedgerArguments> ledgers,
         UiSession ui, EditorView view, AetherHost engine, EditorScenePlayback playback, EditorDocumentCommands commands,
-        PausedPublication? publication, ModelImportWorkerDeployment? worker, string scenePath, bool persist, CancellationToken token)
+        PausedPublication? publication, ModelImportWorkerDeployment? worker, string scenePath, bool persist, bool catalog, CancellationToken token)
     {
         var redId = Guid.Parse("ce662048-9dcb-4c60-aaf0-213342054fa6");
         var greenId = Guid.Parse("65710c6d-6781-4476-9bb8-735fc518f008");
@@ -54,7 +55,28 @@ internal static class EditorModelBuildSmoke
         const string current = "Red · Актуальна\nGreen · Актуальна";
         const string stale = "Red · Импорт устарел\nGreen · Актуальна";
         const string unavailable = "Red · Исходники недоступны\nGreen · Актуальна";
-        await Select(redBefore, oldContent);
+        var catalogVerified = false;
+        var missingModelRejected = false;
+        var emptyRestored = false;
+        if (catalog)
+        {
+            await OpenStatus(null);
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
+                popup.ReadModelCatalog.IsEnabled && popup.ReadModelCatalog.Bounds.Width > 0 && !ui.NeedsUpdate, token, HoldStatus);
+            await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, ((EditorStatusPopupView)view.Overlays.Popup!).ReadModelCatalog)).WaitAsync(token);
+            await commands.Pending.WaitAsync(token);
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
+                popup.ModelCatalogRows.Children.OfType<CheckBox>().Select(check => (check.Value, check.IsChecked))
+                    .SequenceEqual(new[] { ("Green · source-green/scene.gltf", false), ("Red · source/scene.gltf", false) }), token, HoldStatus);
+            await ToggleCatalogModel("Red", redId, selected: true);
+            await Build();
+            missingModelRejected = playback.Error?.Message.Contains("выберите импорт в каталоге", StringComparison.Ordinal) == true;
+            Check(missingModelRejected, "Build admitted a placed model missing from the resource selection.");
+            await ToggleCatalogModel("Green", greenId, selected: true);
+            catalogVerified = document.ReadModelImports(openingId).Select(item => item.SourceId).ToHashSet().SetEquals([redId, greenId]);
+            Check(catalogVerified, "Editor catalog did not apply both choices to the scene.");
+        }
+        else await Select(redBefore, oldContent);
         var checkpoint = Path.Combine(report, "Content", ".aether-model-imports", document.Read().Content!.Document.Id.Value.ToString("N") + ".tmimports");
         var initialSelection = persist ? await File.ReadAllBytesAsync(checkpoint, token) : [];
         if (persist)
@@ -156,6 +178,17 @@ internal static class EditorModelBuildSmoke
             restoredNew = restored != null && restored.AssetKeys.SequenceEqual(newContent.AssetKeys) &&
                 document.ReadModelImports(openingId).Single(item => item.SourceId == greenId).Generation == green.Generation;
             Check(restoredNew, "Opening the new checkpoint changed the selected resources.");
+            if (catalog)
+            {
+                await ToggleCatalogModel("Red", redId, selected: false);
+                await ToggleCatalogModel("Green", greenId, selected: false);
+                await Reopen(await File.ReadAllBytesAsync(checkpoint, token));
+                emptyRestored = document.ReadModelImports(openingId).Count == 0;
+                Check(emptyRestored, "Removing the last catalog model did not persist an empty scene selection.");
+                await ToggleCatalogModel("Red", redId, selected: true);
+                await ToggleCatalogModel("Green", greenId, selected: true);
+                latestSelection = await File.ReadAllBytesAsync(checkpoint, token);
+            }
 
             var competing = latestSelection.Append((byte)'\n').ToArray();
             await File.WriteAllBytesAsync(checkpoint, competing, token);
@@ -181,7 +214,31 @@ internal static class EditorModelBuildSmoke
 
         var baseline = previous.Candidate!.Build.Artifact;
         return (new(true, current, stale, unavailable, current, blocked!, true, baseline.BuildId, updated!.BuildId,
-            cancelledAfterLedger, missingRejected, [], restoredPrior, restoredNew, conflictRejected, corruptRejected), baseline, updated);
+            cancelledAfterLedger, missingRejected, [], restoredPrior, restoredNew, conflictRejected, corruptRejected,
+            catalogVerified, missingModelRejected, emptyRestored), baseline, updated);
+
+        async Task ToggleCatalogModel(string name, Guid id, bool selected)
+        {
+            await OpenStatus(null);
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
+                popup.ModelCatalogRows.Children.OfType<CheckBox>().Any(check => check.Value.StartsWith(name + " · ", StringComparison.Ordinal) &&
+                    check.IsChecked != selected && check.IsEnabled && check.Bounds.Width > 0) && !ui.NeedsUpdate, token, HoldStatus);
+            var pending = commands.Pending;
+            await ui.InvokeAsync(() =>
+            {
+                var popup = (EditorStatusPopupView)view.Overlays.Popup!;
+                var check = popup.ModelCatalogRows.Children.OfType<CheckBox>().Single(item => item.Value.StartsWith(name + " · ", StringComparison.Ordinal));
+                EditorHeaderSmoke.Move(ui, check);
+                EditorHeaderSmoke.Click(ui, check);
+            }).WaitAsync(token);
+            Check(!ReferenceEquals(pending, commands.Pending), $"Catalog did not admit choosing {name}.");
+            await commands.Pending.WaitAsync(token);
+            Check(commands.Read().Error == null && document.ReadModelImports(openingId).Any(item => item.SourceId == id) == selected,
+                $"Catalog did not change selection for {name}: {commands.Read().Error}");
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
+                popup.ModelCatalogRows.Children.OfType<CheckBox>().Any(check => check.Value.StartsWith(name + " · ", StringComparison.Ordinal) && check.IsChecked == selected), token, HoldStatus);
+            await ui.InvokeAsync(() => view.Overlays.Close(false)).WaitAsync(token);
+        }
 
         async Task Reopen(byte[] expected)
         {
@@ -218,19 +275,23 @@ internal static class EditorModelBuildSmoke
             await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup == null, token);
         }
 
-        async Task OpenStatus(string expected)
+        async Task OpenStatus(string? expected)
         {
             var button = view.StatusBar!.SummaryButton;
             await ui.InvokeAsync(() => view.Header!.Menu.CloseMenu()).WaitAsync(token);
-            await EditorHeaderSmoke.UntilAsync(ui, () => view.StatusBar.DataContext!.ModelImportDetails == expected &&
+            await EditorHeaderSmoke.UntilAsync(ui, () => (expected == null || view.StatusBar.DataContext!.ModelImportDetails == expected) &&
                 button.Bounds.Width > 0 && !ui.NeedsUpdate, token);
             await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
-                popup.ModelImportDetails.IsVisible && popup.ModelImportDetails.Value == expected, token, () =>
-                {
-                    if (view.Overlays.Popup is EditorStatusPopupView) return;
-                    EditorHeaderSmoke.Move(ui, button);
-                    EditorHeaderSmoke.Click(ui, button);
-                });
+                (expected == null || popup.ModelImportDetails.IsVisible && popup.ModelImportDetails.Value == expected), token, HoldStatus);
+        }
+
+        // A native focus change can dismiss the transient popup. Reopen only the presentation.
+        void HoldStatus()
+        {
+            if (view.Overlays.Popup is EditorStatusPopupView || view.StatusBar?.SummaryButton is not { IsVisible: true } button ||
+                button.Bounds.Width <= 0) return;
+            EditorHeaderSmoke.Move(ui, button);
+            EditorHeaderSmoke.Click(ui, button);
         }
 
         async Task ClickReimport(string expected)
@@ -239,7 +300,7 @@ internal static class EditorModelBuildSmoke
             const string label = "Переимпортировать «Red»";
             await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
                 popup.ReimportActions.Children.OfType<Button>().Any(button => button.Value == label && button.IsEnabled && button.Bounds.Width > 0)
-                && !ui.NeedsUpdate, token);
+                && !ui.NeedsUpdate, token, HoldStatus);
             var before = commands.Pending;
             await ui.InvokeAsync(() =>
             {
@@ -268,7 +329,8 @@ internal static class EditorModelBuildSmoke
 
     internal static async Task RunAsync(string[] args)
     {
-        var probePersistence = args.Length == 9 && args[6] == "--persisted-imports";
+        var probeCatalog = args.Length == 9 && args[6] == "--model-catalog";
+        var probePersistence = probeCatalog || args.Length == 9 && args[6] == "--persisted-imports";
         var probeReimport = probePersistence || args.Length == 9 && args[6] == "--reimport";
         var probeImports = probeReimport || args.Length == 7 && args[6] == "--imports";
         if (args.Length != 6 && !probeImports || args[0] is not ("cobalt" or "microsoft")) throw new ArgumentException("Invalid model delivery probe arguments.");
@@ -324,6 +386,7 @@ internal static class EditorModelBuildSmoke
                     new Factory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>(request =>
                         new(request.Ledger, worker!, Path.Combine(report, "scratch"), publication!))));
             }
+            if (probeCatalog) context.UseAetherProjectModelCatalog();
             context.UseConfiguredAetherEditor(new AetherComposition
             {
                 HostContractId = hostId, GameBuildId = new string('0', 64),
@@ -379,8 +442,23 @@ internal static class EditorModelBuildSmoke
                     worker = new(args[7], args[8], Directory.EnumerateFiles(args[7], "*", SearchOption.AllDirectories)
                         .ToDictionary(path => Path.GetRelativePath(args[7], path).Replace('\\', '/'), path => Hash(File.ReadAllBytes(path))));
                 }
+                if (probeCatalog)
+                {
+                    var projectFactory = app.Services.Resolve<IFactory<ProjectModelCatalog, ResolvedProject>>()!;
+                    var catalog = projectFactory.Create(documents.Read().Project!.Project)!;
+                    await Register("Red", "source", "red-baseline.tmledger", "ce662048-9dcb-4c60-aaf0-213342054fa6");
+                    await Register("Green", "source-green", "green.tmledger", "65710c6d-6781-4476-9bb8-735fc518f008");
+
+                    Task Register(string name, string folder, string ledger, string sourceId)
+                    {
+                        var id = Guid.Parse(sourceId);
+                        return catalog.RegisterAsync(name, new(id, Path.Combine(report, folder), "scene.gltf"),
+                            new(id, Path.Combine(report, "ledger", ledger)), token);
+                    }
+                }
                 var (proof, baselineBuild, updatedBuild) = await VerifyModelImportsAsync(report, oldBuild, newBuild,
-                    document, before.OpeningId, ledgerFactory, ui, view, engine, playback, documents, publication, worker, scenePath, probePersistence, token);
+                    document, before.OpeningId, ledgerFactory, ui, view, engine, playback, documents, publication, worker,
+                    scenePath, probePersistence, probeCatalog, token);
                 if (probePersistence)
                 {
                     before = document.Read();
@@ -666,7 +744,8 @@ internal static class EditorModelBuildSmoke
     private sealed record ModelImportProof(bool Completed, string BeforeEdit, string AfterEdit, string WhileMissing,
         string AfterReimport, string Blocked, bool MatchingContent, string OldBuild, string NewBuild,
         bool CancelledAfterLedger, bool MissingSourceRejected, IReadOnlyList<FrameProof> Captures, bool RestoredPriorGeneration,
-        bool RestoredNewGeneration, bool ConflictRejected, bool CorruptRejected);
+        bool RestoredNewGeneration, bool ConflictRejected, bool CorruptRejected, bool CatalogSelectionVerified, bool MissingModelRejected,
+        bool EmptySelectionRestored);
 
     private sealed class PausedPublication(IModelImportContentPublisher inner) : IModelImportContentPublisher
     {

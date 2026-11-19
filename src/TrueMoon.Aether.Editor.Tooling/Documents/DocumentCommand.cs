@@ -1,6 +1,7 @@
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.Projects;
 
 namespace TrueMoon.Aether.Editor.Tooling.Documents;
@@ -25,4 +26,6 @@ public sealed record EditorDocumentCommandState(DocumentCommand Operation, bool 
     public bool ProjectSwitchEnabled { get; init; }
     /// <summary>Scene game command sharing document admission, or Idle.</summary>
     public GameEditorOperation RuntimeOperation { get; init; }
+    /// <summary>Latest completed project model list. Null means no list has been read.</summary>
+    public IReadOnlyList<ProjectModelCatalogItem>? ModelCatalog { get; init; }
 }

@@ -1,4 +1,7 @@
 ﻿using TrueMoon.Aether.Abstractions.Scenes;
+using TrueMoon.Aether.Abstractions.Rendering;
+using TrueMoon.Aether.Runtime.Ecs.Rendering;
+using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
@@ -28,6 +31,36 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     private bool _closing, _discarding, _closed;
     private Exception? _error;
     internal SceneModelImports? ModelImports { get; init; }
+    internal ProjectModelCatalog? ModelCatalog { get; init; }
+
+    /// <summary>Whether this project exposes a catalog of its imported models.</summary>
+    public bool HasModelCatalog => ModelCatalog != null;
+
+    /// <summary>Reads the project catalog without selecting models or editing a scene.</summary>
+    /// <param name="cancellationToken">Read cancellation.</param>
+    /// <returns>Detached project model list.</returns>
+    public Task<IReadOnlyList<ProjectModelCatalogItem>> ReadModelCatalogAsync(CancellationToken cancellationToken = default) =>
+        (ModelCatalog ?? throw new InvalidOperationException("The project model catalog is not configured.")).ReadAsync(cancellationToken);
+
+    /// <summary>Adds or removes a registered model in the resource selection for one document opening.</summary>
+    /// <param name="openingId">Exact current document opening.</param>
+    /// <param name="sourceId">Catalog model source identity.</param>
+    /// <param name="selected">Whether this model should belong to the scene selection.</param>
+    /// <param name="cancellationToken">Cancellation before selection commit.</param>
+    /// <returns>Completion of the scene resource selection change.</returns>
+    public Task SetCatalogModelSelectedAsync(Guid openingId, Guid sourceId, bool selected, CancellationToken cancellationToken = default)
+    {
+        var catalog = ModelCatalog ?? throw new InvalidOperationException("The project model catalog is not configured.");
+        var models = ModelImports ?? throw new InvalidOperationException("The project model selection is not configured.");
+        if (sourceId == Guid.Empty) throw new ArgumentException("A model source identity is required.", nameof(sourceId));
+        return Begin(DocumentOperation.Loading, async token =>
+        {
+            if (openingId == Guid.Empty || Read().OpeningId != openingId)
+                throw new InvalidOperationException("The model selection targets a different document opening.");
+            await models.SetCatalogSelectionAsync(openingId, sourceId, selected, catalog, token).ConfigureAwait(false);
+            return true;
+        }, cancellationToken);
+    }
 
     /// <summary>Creates an initially empty owner borrowing App services.</summary>
     /// <param name="project">Project whose scenes directory bounds all file paths.</param>
@@ -88,8 +121,27 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     }
 
     /// <summary>Rechecks the selected sources before Build and returns their frozen resources, when selected.</summary>
-    public Task<GameBuildRenderContent?> CheckModelImportsAsync(Guid openingId, CancellationToken cancellationToken = default) =>
-        ModelImports?.CheckAsync(openingId, cancellationToken) ?? Task.FromResult<GameBuildRenderContent?>(null);
+    public async Task<GameBuildRenderContent?> CheckModelImportsAsync(Guid openingId, CancellationToken cancellationToken = default)
+    {
+        var content = ModelImports == null ? null : await ModelImports.CheckAsync(openingId, cancellationToken).ConfigureAwait(false);
+        if (HasModelCatalog && Read() is { Content: { } scene } current && current.OpeningId == openingId)
+        {
+            var keys = content?.AssetKeys.Select(key => (key.AssetId, key.KindId)).ToHashSet() ?? [];
+            foreach (var entity in scene.Resolved.Entities.Values)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                foreach (var renderer in entity.Components.Values.Where(component => component.TypeId == MeshRenderingComponents.MeshRendererId))
+                {
+                    var mesh = Guid.ParseExact(renderer.Properties["mesh"].Value.GetString(), "D");
+                    var bindings = Guid.ParseExact(renderer.Properties["bindings"].Value.GetString(), "D");
+                    if (content == null && mesh == RenderContentProfile.CubeAssetId && bindings == RenderContentProfile.CubeBindingSetAssetId) continue;
+                    if (!keys.Contains((mesh, RenderContentProfile.MeshKindId)) || !keys.Contains((bindings, RenderContentProfile.BindingSetKindId)))
+                        throw new InvalidOperationException("Для размещённой модели выберите импорт в каталоге моделей проекта.");
+                }
+            }
+        }
+        return content;
+    }
 
     /// <summary>Selects a validated new unsaved document after applying the current document's close policy.</summary>
     /// <param name="document">Immutable new content.</param><param name="choice">Decision for existing unsaved content.</param>

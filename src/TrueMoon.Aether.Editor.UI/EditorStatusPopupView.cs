@@ -11,6 +11,7 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
 {
     private readonly IEditorStatusBarViewModel _model;
     private readonly Dictionary<(Guid Opening, Guid Source, string Name), (Button Button, EditorModelReimportAction Target)> _reimportButtons = [];
+    private readonly Dictionary<(Guid Opening, Guid Source), (CheckBox Check, EditorProjectModelRow Row)> _catalogChecks = [];
 
     /// <summary>Popup content.</summary>
     public VStack Body { get; } = new();
@@ -30,6 +31,14 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
     public Text ModelImportDetails { get; }
     /// <summary>Actions for the selected models configured for reimport.</summary>
     public VStack ReimportActions { get; } = new();
+    /// <summary>Explicitly reads or refreshes the project model list.</summary>
+    public Button ReadModelCatalog { get; }
+    /// <summary>Project model checkboxes.</summary>
+    public VStack ModelCatalogRows { get; } = new();
+    /// <summary>Scrollable project model list.</summary>
+    public ScrollViewer ModelCatalogList { get; }
+    /// <summary>Model catalog status.</summary>
+    public Text ModelCatalogMessage { get; }
     /// <summary>Creates a transient view. OverlayHost owns it; the model/style stay App-owned.</summary>
     public EditorStatusPopupView(IEditorStatusBarViewModel model, IViewStyle<EditorStatusPopupView> style, EditorStatusPopupArguments arguments)
     {
@@ -45,8 +54,12 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
                 .OnClick(() => { _ = Observe(model.StopPreviewAsync()); });
             PreviewDetails = Text.Plain().BindText(model, x => x.PreviewDetails);
             ModelImportDetails = Row(x => x.ModelImportDetails).Bind(UiProperties.Visible, model, x => x.HasModelImports);
+            ReadModelCatalog = Button.Simple("Модели проекта").Bind(UiProperties.Visible, model, x => x.HasModelCatalog)
+                .Bind(UiProperties.Enabled, model, x => x.CanReadModelCatalog).OnClick(model.ReadModelCatalog);
+            ModelCatalogMessage = Row(x => x.ModelCatalogMessage);
+            ModelCatalogList = new ScrollViewer { MaxHeight = 150 }.Content(ModelCatalogRows);
             PreviewActions.WithChildren(StartPreview, StopPreview);
-            Body.WithChildren(Title, Row(x => x.Summary),
+            Body.WithChildren(Title, ReadModelCatalog, ModelCatalogMessage, ModelCatalogList, Row(x => x.Summary),
                 Row(x => x.RuntimeDetails), Row(x => x.OperationDetails),
                 Row(x => x.SourceSummary), Row(x => x.SourceDetails),
                 ModelImportDetails, ReimportActions,
@@ -55,6 +68,7 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
             MaxHeight = 420;
             Content(model, _ => new ScrollViewer().Content(Body)); this.WithViewStyle(style);
             SynchronizeReimport();
+            SynchronizeCatalog();
             model.PropertyChanged += ModelChanged;
             Text Row(System.Linq.Expressions.Expression<Func<IEditorStatusBarViewModel, string>> value) =>
                 Text.Plain().WithRole(EditorStatusPopupViewStyle.Row).BindText(model, value);
@@ -70,6 +84,50 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
     {
         if (args.PropertyName == nameof(IEditorStatusBarViewModel.ModelReimports))
             Dispatch(() => { if (!IsDisposed) SynchronizeReimport(); });
+        if (args.PropertyName is nameof(IEditorStatusBarViewModel.ProjectModels) or nameof(IEditorStatusBarViewModel.ModelCatalogMessage))
+            Dispatch(() => { if (!IsDisposed) SynchronizeCatalog(); });
+    }
+
+    private void SynchronizeCatalog()
+    {
+        var rows = _model.ProjectModels;
+        var active = rows.Select(row => (row.OpeningId, row.SourceId)).ToHashSet();
+        foreach (var key in _catalogChecks.Keys.Where(key => !active.Contains(key)).ToArray())
+        {
+            var check = _catalogChecks[key].Check;
+            ModelCatalogRows.Items.Remove(check);
+            _catalogChecks.Remove(key);
+            check.Dispose();
+        }
+        for (var index = 0; index < rows.Count; index++)
+        {
+            var row = rows[index];
+            var key = (row.OpeningId, row.SourceId);
+            if (!_catalogChecks.TryGetValue(key, out var entry))
+            {
+                var check = CheckBox.Create().WithRole(EditorStatusPopupViewStyle.CatalogChoice);
+                check.OnClick(() =>
+                {
+                    if (!_catalogChecks.TryGetValue(key, out var target)) return;
+                    check.IsChecked = target.Row.Selected;
+                    _model.SelectModel(target.Row);
+                });
+                entry = (check, row);
+                ModelCatalogRows.Items.Add(check);
+            }
+            if (!ReferenceEquals(ModelCatalogRows.Children[index], entry.Check))
+            {
+                ModelCatalogRows.Items.Remove(entry.Check);
+                ModelCatalogRows.Items.Insert(index, entry.Check);
+            }
+            _catalogChecks[key] = (entry.Check, row);
+            entry.Check.Value = row.SourcePath.Length == 0 ? row.Name : row.Name + " · " + row.SourcePath;
+            entry.Check.AccessibleName = entry.Check.Value;
+            entry.Check.IsChecked = row.Selected;
+            entry.Check.IsEnabled = row.CanChange;
+        }
+        ModelCatalogList.IsVisible = rows.Count > 0;
+        ModelCatalogMessage.IsVisible = _model.ModelCatalogMessage.Length > 0;
     }
 
     private void SynchronizeReimport()
