@@ -1,5 +1,8 @@
 # TrueMoon: общий план развития
 
+Выполнено 2026-11-19 [ARCH1g.2j](engine/PLAN.md#arch1g2j-model-source-watch).
+Уведомления Windows и полный опрос запускают проверку актуальности модели.
+
 Выполнено 2026-11-18. SkiaSharp обновлён до 4.157.0 вместе с расширенной
 Windows x64 DLL. [Приёмка Alloy](alloy/HISTORY.md#skiasharp-41570-2026-11-18).
 

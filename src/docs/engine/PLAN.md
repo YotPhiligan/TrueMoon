@@ -40,6 +40,7 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 [ARCH1g.2g](#arch1g2g-dependency-settings-deletion) проверил правку зависимости, настройку и удаление ресурсов.
 [ARCH1g.2h](#arch1g2h-multiple-models) объединил точные снимки двух импортированных моделей в одной сборке.
 [ARCH1g.2i](#arch1g2i-import-freshness) проверил актуальность этих импортов перед новой сборкой.
+[ARCH1g.2j](#arch1g2j-model-source-watch) подключил уведомления и периодическую проверку источников моделей.
 
 <a id="arch1j-session-subsystems"></a>
 ### ARCH1j — общий слой подсистем игровой сессии, 2026-11-15
@@ -1986,6 +1987,16 @@ heads, снимков и объектов из Nom каждый артефакт
 реимпорта. Player подтвердил геометрию обеих сборок.
 [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2i-import-freshness),
 [проверки](HISTORY.md#arch1g2i-2026-11-18).
+
+<a id="arch1g2j-model-source-watch"></a>
+#### ARCH1g.2j — наблюдение за исходниками моделей
+
+Завершён 19.11.2026. Tooling использует события Windows для корня модели и
+известных зависимостей, объединяет сигналы и выполняет проверку g.2i. Периодический
+захват покрывает пропущенные события. У двух моделей проверены изоляция
+изменения BIN, удаление и восстановление, опрос без уведомлений и остановка App.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1g2j-model-source-watch),
+[проверки](HISTORY.md#arch1g2j-2026-11-19).
 
 <a id="arch1h-audio"></a>
 ### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07

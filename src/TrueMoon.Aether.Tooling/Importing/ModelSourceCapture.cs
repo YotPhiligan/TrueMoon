@@ -30,6 +30,12 @@ public sealed class ModelSourceCapture : IDisposable, IAsyncDisposable
     /// <summary>Tracked open physical file/directory handles; zero after a completed, cancelled or failed operation.</summary>
     public int OpenHandleCount => Volatile.Read(ref _handles);
 
+    internal ModelSourceCaptureArguments Arguments => _arguments;
+    internal CapturedModelSource? CompletedCapture
+    {
+        get { lock (_gate) return _operation is { IsCompletedSuccessfully: true } completed ? completed.Result : null; }
+    }
+
     /// <summary>Captures a complete bounded dependency set once. No result escapes before revalidation and cleanup.</summary>
     /// <param name="cancellationToken">Cancellation is checked during reads, scanning and before returning the result.</param>
     /// <returns>Detached immutable input for a later parser; never a partial manifest.</returns>

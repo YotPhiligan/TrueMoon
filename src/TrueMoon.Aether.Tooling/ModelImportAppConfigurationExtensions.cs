@@ -1,4 +1,5 @@
 using TrueMoon.Aether.Tooling.Importing;
+using TrueMoon.Services;
 
 namespace TrueMoon.Aether.Tooling;
 
@@ -34,20 +35,28 @@ public static class ModelImportAppConfigurationExtensions
         return context;
     }
 
-    /// <summary>Registers a typed factory for caller-owned, single-use source capture operations.</summary>
+    /// <summary>Registers typed factories for caller-owned source captures and model source watches.</summary>
     /// <param name="context">Application composition root.</param>
     /// <returns>The same context.</returns>
-    /// <remarks>Registration performs no file IO. Dispose each factory product before App shutdown.
-    /// Limits and source identities are explicit per-operation arguments; the factory owns no products.</remarks>
+    /// <remarks>Registration performs no file IO. Callers own captures and can close their watches early.
+    /// App Stop closes watch admission and drains active watches.</remarks>
     public static IAppConfigurationContext UseAetherModelSourceCapture(this IAppConfigurationContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         context.Services(services =>
         {
-            if (services.Exist<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>())
+            if (services.Exist<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>() ||
+                services.Exist<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>())
                 throw new InvalidOperationException("Model source capture is already registered.");
             services.Singleton<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>(_ =>
-                new Factory<ModelSourceCapture, ModelSourceCaptureArguments>(arguments => new ModelSourceCapture(arguments)));
+                new Factory<ModelSourceCapture, ModelSourceCaptureArguments>(arguments => new ModelSourceCapture(arguments)))
+                .Singleton<ModelSourceWatchHost>(resolver => new(
+                    resolver.Resolve<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>(),
+                    resolver.TryResolve<TimeProvider>() ?? TimeProvider.System))
+                .Singleton<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>(resolver =>
+                    new Factory<ModelSourceWatch, ModelSourceWatchArguments>(resolver.Resolve<ModelSourceWatchHost>().Create))
+                .Singleton<ModelSourceWatchLifetime>(resolver => new(resolver.Resolve<ModelSourceWatchHost>()))
+                .Singleton<IStoppable>(resolver => resolver.Resolve<ModelSourceWatchLifetime>());
         });
         return context;
     }

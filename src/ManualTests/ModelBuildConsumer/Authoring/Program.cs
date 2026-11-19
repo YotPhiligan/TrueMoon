@@ -166,6 +166,7 @@ PublishedModelImport? scaledModel = null;
 PublishedModelImport? greenModel = null;
 string? greenSnapshotId = null;
 object? revisionEvidence = null;
+object? watchEvidence = null;
 var freshnessEvidence = new Dictionary<string, object>();
 await using (var app = App.Builder(builder => { if (args[0] == "microsoft") builder.UseDI(); }).Setup(context =>
 {
@@ -183,6 +184,7 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
     await app.StartAsync();
     var storeFactory = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
     var captureFactory = app.Services.Resolve<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>()!;
+    var watchFactory = app.Services.Resolve<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>()!;
     var importFactory = app.Services.Resolve<IFactory<ModelImportOperation, ModelImportArguments>>()!;
     var ledgerFactory = app.Services.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>()!;
     var bridge = app.Services.Resolve<NomModelContent>()!;
@@ -279,6 +281,9 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
             var red = await CheckImport("RedBeforeEdit", oldModel, sourceDirectory);
             var green = await CheckImport("GreenBeforeEdit", greenModel, secondSourceDirectory);
             oldBuild = await BuildChecked(oldSnapshotId, red, green);
+            watchEvidence = await ModelWatchProbe.RunAsync(watchFactory,
+                new(new(sourceId, sourceDirectory, "scene.gltf"), oldModel),
+                new(new(greenModel.Candidate.SourceId, secondSourceDirectory, "scene.gltf"), greenModel), vertices);
 
             var settings = await CheckImport("RedSettingsOnly", oldModel, sourceDirectory, scale: 1.5f);
             Check(settings is { Status: ModelImportFreshnessStatus.Stale, InputChanged: false, SettingsChanged: true } &&
@@ -457,7 +462,25 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         "Geometry changed without changing build identity.");
     Check(Hash(Path.Combine(oldBuild.DirectoryPath, oldBuild.EntryAssembly)) == Hash(Path.Combine(newBuild.DirectoryPath, newBuild.EntryAssembly)),
         "Managed binaries changed in the asset-only build scenario.");
-    await app.StopAsync();
+    if (multiModelProbe)
+    {
+        var arguments = new ModelSourceWatchArguments(new(sourceId, sourceDirectory, "scene.gltf"), newModel);
+        await using var watch = watchFactory.Create(arguments)!;
+        await ModelWatchProbe.WaitAsync(watch, ModelImportFreshnessStatus.Current);
+        await app.StopAsync();
+        Check(watch.IsClosed, "App Stop did not close its active model watch.");
+        await RejectAsync<ObjectDisposedException>(() => Task.FromResult(watchFactory.Create(arguments)));
+        ModelSourceWatch unstartedWatch;
+        await using (var unstarted = App.Builder(builder => { if (args[0] == "microsoft") builder.UseDI(); })
+            .Setup(context => context.UseAetherModelSourceCapture()).Build())
+        {
+            var factory = unstarted.Services.Resolve<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>()!;
+            unstartedWatch = factory.Create(arguments)!;
+            await ModelWatchProbe.WaitAsync(unstartedWatch, ModelImportFreshnessStatus.Current);
+        }
+        Check(unstartedWatch.IsClosed, "App disposal without Start did not close its model watch.");
+    }
+    else await app.StopAsync();
 }
 
 // Only the artifact copies are supplied to Runtime. Rename the closed store and the source directory.
@@ -506,7 +529,7 @@ if (multiModelProbe)
     File.WriteAllText(Path.Combine(evidence, "multi-model.json"), JsonSerializer.Serialize(new
     {
         Completed = true, Provider = args[0], SceneSha256 = sceneHash, OldSnapshot = oldSnapshotId,
-        NewSnapshot = newSnapshotId, GreenSnapshot = greenSnapshotId, Freshness = freshnessEvidence,
+        NewSnapshot = newSnapshotId, GreenSnapshot = greenSnapshotId, Freshness = freshnessEvidence, Watch = watchEvidence,
         Old = oldProof, New = newProof, Reopened = reopened
     }, new JsonSerializerOptions { WriteIndented = true }));
     return 0;

@@ -96,6 +96,10 @@ the published import for each model. Both imports start current. Editing the
 red BIN at the same length and modification time marks only the red model stale.
 Reimport makes both current again. The probe also checks a settings-only change,
 a missing dependency, cancellation and rejection of a new build with stale content.
+The model watcher proof uses a one-minute polling interval and observes the red
+BIN edit, removal and restoration through native hints before the first poll.
+The green watch remains at its initial observation. A polling-only watch confirms
+the same edit. App Stop and disposal before Start both close live watches.
 It checks canonical BuildId under reordered and
 overlapping snapshots, rejection of conflicting revisions and missing snapshots,
 and release of the snapshot leases. Player opens the old, new and old builds

@@ -123,7 +123,8 @@ function Test-FreshEditor {
 
     [void][IO.Directory]::CreateDirectory("$root/Authoring")
     [void][IO.Directory]::CreateDirectory("$root/Editor")
-    Copy-Item -LiteralPath "$PSScriptRoot/Authoring/Program.cs", "$PSScriptRoot/../ModelImportResearch/Fixtures.cs" -Destination "$root/Authoring"
+    Copy-Item -LiteralPath "$PSScriptRoot/Authoring/Program.cs", "$PSScriptRoot/Authoring/ModelWatchProbe.cs",
+        "$PSScriptRoot/../ModelImportResearch/Fixtures.cs" -Destination "$root/Authoring"
     $editorSources = "$workspace/ManualTests/AetherEditorHost"
     Copy-Item -LiteralPath "$editorSources/EditorModelBuildSmoke.cs", "$editorSources/EditorHeaderSmoke.cs",
         "$editorSources/RuntimeEntryPoint.cs" -Destination "$root/Editor"

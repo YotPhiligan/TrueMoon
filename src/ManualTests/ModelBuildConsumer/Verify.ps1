@@ -34,7 +34,7 @@ $feed = "$evidence/feed"
 [void][IO.Directory]::CreateDirectory($feed)
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($MultiModel) { 'ARCH1g.2i' } elseif ($RevisionMatrix) { 'ARCH1g.2g' } else { 'ARCH1g.2b' }
+    Stage = if ($MultiModel) { 'ARCH1g.2j' } elseif ($RevisionMatrix) { 'ARCH1g.2g' } else { 'ARCH1g.2b' }
     Profile = $profile
     Runs = @()
     Packages = @()
@@ -86,6 +86,10 @@ function Test-Consumers([string]$ProfileName, [string]$Authoring, [string]$Runti
             throw 'Unexpected GPU geometry report.'
         }
         if ($MultiModel) {
+            if (!$proof.Watch.RedNotified -or !$proof.Watch.MissingNotified -or !$proof.Watch.RecoveryNotified -or
+                $proof.Watch.GreenSequence -ne 1 -or !$proof.Watch.PollingDetectedEdit) {
+                throw 'Unexpected model notification or polling evidence.'
+            }
             if ($proof.Freshness.RedBeforeEdit.Status -ne 'Current' -or $proof.Freshness.GreenBeforeEdit.Status -ne 'Current' -or
                 $proof.Freshness.RedAfterEdit.Status -ne 'Stale' -or $proof.Freshness.GreenAfterEdit.Status -ne 'Current' -or
                 $proof.Freshness.RedAfterReimport.Status -ne 'Current' -or $proof.Freshness.GreenAfterReimport.Status -ne 'Current') {
@@ -167,7 +171,8 @@ try {
     [IO.File]::WriteAllText($config, "<configuration><packageSources><clear/><add key='closed' value='$escapedFeed'/></packageSources><fallbackPackageFolders><clear/></fallbackPackageFolders></configuration>")
     $authoring = New-PackageConsumer "$fresh/Authoring" 'Authoring' 'TrueMoon.Aether.Nom'
     $runtime = New-PackageConsumer "$fresh/Runtime" 'ModelBuildRuntimeProbe' 'TrueMoon.Aether.Player'
-    Copy-Item -LiteralPath "$PSScriptRoot/Authoring/Program.cs", "$PSScriptRoot/../ModelImportResearch/Fixtures.cs" -Destination "$fresh/Authoring"
+    Copy-Item -LiteralPath "$PSScriptRoot/Authoring/Program.cs", "$PSScriptRoot/Authoring/ModelWatchProbe.cs",
+        "$PSScriptRoot/../ModelImportResearch/Fixtures.cs" -Destination "$fresh/Authoring"
     Copy-Item -LiteralPath "$PSScriptRoot/Runtime/Program.cs" -Destination "$fresh/Runtime"
     Push-Location $fresh
     try {

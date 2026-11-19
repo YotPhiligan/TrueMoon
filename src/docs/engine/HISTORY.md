@@ -15889,6 +15889,34 @@ Aether Importing 144/144 в Debug и Release, отчёты в
 `TestResults/ARCH1g2i-delivery-regression-20261118-01`.
 [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2i-import-freshness).
 
+<a id="arch1g2j-2026-11-19"></a>
+## 2026-11-19 — ARCH1g.2j, наблюдение за исходниками моделей
+
+Version 1.2611.19.1-alpha. `ManualTests/ModelBuildConsumer/Verify.ps1 -MultiModel`
+прошёл в Source Debug и Release на свежих пакетах с Cobalt и Microsoft DI.
+EvidenceDirectory `TestResults/ARCH1g2-model-watch-20261119-02`,
+SHA256 файла `verification.json`
+`693C12EF206F416276E9B724519FEAB706927705121CAB6071275125AB19CF07`.
+
+В каждом профиле минутный опрос был длиннее окна проверки события. События
+Windows привели к состояниям `Current → Stale → Unavailable → Current` после
+правки, удаления и восстановления красного BIN. Зелёная модель осталась
+на первом наблюдении. С отключёнными уведомлениями правку подтвердил опрос.
+App Stop запретил создание новых наблюдателей и закрыл активный, а Dispose
+закрыл наблюдатель в App, который ещё не был запущен.
+
+Прежняя предсборочная проверка g.2i прошла с двумя моделями, обе сборки
+и повтор исходной открылись в Player. В 12 GPU-запусках Vulkan validation 0/0,
+поверхности, slots и дескрипторы освобождены.
+
+Aether Importing 144/144 в Debug и Release. Отчёты VSTest в
+`TestResults/ARCH1g2-model-watch-regression-20261119-01`.
+Независимый Editor на свежих пакетах прошёл выбор сборки, Replace и откат
+в двух профилях Release, Cobalt и Microsoft DI. Отчёт
+`TestResults/ARCH1g2-model-watch-editor-20261119-01/verification.json`,
+SHA256 `B79323280A5A588296EC45C7F29B3F8B89F87244539CA3FC5DD17E94ABE05A6A`.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1g2j-model-source-watch).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

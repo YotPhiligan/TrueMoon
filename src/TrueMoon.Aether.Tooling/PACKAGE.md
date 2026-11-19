@@ -29,6 +29,14 @@ It compares a newly captured source closure and the requested scale with the exa
 published import that supplied the build resources. Results are `Current`,
 `Stale`, or `Unavailable`. This read-only check needs no worker deployment.
 
+`UseAetherModelSourceCapture()` also registers
+`IFactory<ModelSourceWatch, ModelSourceWatchArguments>`. Create a watch for
+each selected published import and read its latest comparison with `Read()`.
+File notifications wake the same byte-level check and complete polling covers
+missed notifications. Dispose the watch when replacing the selected import or
+settings. App shutdown drains outstanding watches. Use an explicit freshness
+check when admitting a new build.
+
 Headless project/document authoring, transactional history, scene persistence,
 SDK preflight, frozen compilation/capture/publication, source observation,
 preview coordination and bounded diagnostic export. No Editor/Alloy/Argentis
