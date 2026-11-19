@@ -9,7 +9,8 @@ param(
     [switch]$ModelSelectionPersistence,
     [switch]$ModelCatalog,
     [switch]$ModelPlacement,
-    [switch]$RenderInspector
+    [switch]$RenderInspector,
+    [switch]$RenderInspectorRestart
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,12 +27,13 @@ if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' 
 $catalogProbe = $ModelCatalog -or $ModelPlacement
 $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
-$modelStatusProbe = $ModelImports -or $reimportProbe -or $RenderInspector
+$renderProbe = $RenderInspector -or $RenderInspectorRestart
+$modelStatusProbe = $ModelImports -or $reimportProbe -or $renderProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -52,22 +54,48 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
         Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
             $dotnet, $profile.TestFramework, $profile.Sdk, $mode)
-        if ($RenderInspector) {
+        if ($renderProbe) {
             [void][IO.Directory]::CreateDirectory($output)
-            $path = "$output/editor-render-inspector.json"
-            Copy-Item -LiteralPath "$fixture/editor-render-inspector.json" -Destination $path
-            $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-            $children = @(Get-ChildItem -LiteralPath $fixture -Filter 'runtime-*.json' -File)
-            if (!$proof.Completed -or $proof.Captures.Count -ne 3 -or $children.Count -ne 3 -or
-                $proof.Captures[0].BuildId -eq $proof.Captures[1].BuildId -or
-                $proof.Captures[0].Mask.Sha256 -eq $proof.Captures[1].Mask.Sha256 -or
-                $proof.Captures[0].Mask.Sha256 -ne $proof.Captures[2].Mask.Sha256) {
-                throw "Incomplete MeshRenderer inspector evidence for $name-$provider"
+            $run = @{ Name = "$name-$provider"; Fixture = $fixture }
+            if ($RenderInspectorRestart) {
+                $savedPath = "$output/inspector-saved.json"
+                $reopenedPath = "$output/inspector-reopened.json"
+                Copy-Item -LiteralPath "$fixture/editor-saved/inspector-restart.json" -Destination $savedPath
+                Copy-Item -LiteralPath "$fixture/editor-reopened/inspector-restart.json" -Destination $reopenedPath
+                $saved = Get-Content -LiteralPath $savedPath -Raw | ConvertFrom-Json
+                $reopened = Get-Content -LiteralPath $reopenedPath -Raw | ConvertFrom-Json
+                $savedChildren = @(Get-ChildItem -LiteralPath "$fixture/editor-saved" -Filter 'runtime-*.json' -File)
+                $reopenedChildren = @(Get-ChildItem -LiteralPath "$fixture/editor-reopened" -Filter 'runtime-*.json' -File)
+                if ($savedChildren.Count -ne 2 -or $reopenedChildren.Count -ne 1 -or $saved.EditorPid -eq $reopened.EditorPid -or
+                    $saved.OpeningId -eq $reopened.OpeningId -or $saved.Binding.AssetId -ne $reopened.Binding.AssetId -or
+                    $saved.SceneSha256 -ne $reopened.SceneSha256 -or $saved.SelectionSha256 -ne $reopened.SelectionSha256 -or
+                    !$saved.Frame.Pixels -or !$reopened.Frame.Pixels -or $saved.Frame.Pixels.Sha256 -ne $reopened.Frame.Pixels.Sha256) {
+                    throw "Incomplete MeshRenderer restart evidence for $name-$provider"
+                }
+                $children = $savedChildren + $reopenedChildren
+                $run.Saved = @{ Path = $savedPath; Sha256 = (Get-FileHash -LiteralPath $savedPath).Hash }
+                $run.Reopened = @{ Path = $reopenedPath; Sha256 = (Get-FileHash -LiteralPath $reopenedPath).Hash }
+                $images = @("$fixture/editor-saved/inspector-before.png", "$fixture/editor-saved/inspector-saved.png",
+                    "$fixture/editor-reopened/inspector-reopened.png")
+            } else {
+                $path = "$output/editor-render-inspector.json"
+                Copy-Item -LiteralPath "$fixture/editor-render-inspector.json" -Destination $path
+                $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+                $children = @(Get-ChildItem -LiteralPath $fixture -Filter 'runtime-*.json' -File)
+                if (!$proof.Completed -or $proof.Captures.Count -ne 3 -or $children.Count -ne 3 -or
+                    $proof.Captures[0].BuildId -eq $proof.Captures[1].BuildId -or
+                    $proof.Captures[0].Mask.Sha256 -eq $proof.Captures[1].Mask.Sha256 -or
+                    $proof.Captures[0].Mask.Sha256 -ne $proof.Captures[2].Mask.Sha256) {
+                    throw "Incomplete MeshRenderer inspector evidence for $name-$provider"
+                }
+                $run.Path = $path
+                $run.Sha256 = (Get-FileHash -LiteralPath $path).Hash
+                $images = @($proof.Captures.Name | ForEach-Object { "$fixture/$_.png" })
             }
             foreach ($child in $children) {
                 $state = Get-Content -LiteralPath $child.FullName -Raw | ConvertFrom-Json
@@ -79,11 +107,9 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                     throw "Runtime ownership or validation mismatch in $($child.FullName)"
                 }
             }
-            $report.Runs += @{
-                Name = "$name-$provider"; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash; Fixture = $fixture
-                Children = @($children | ForEach-Object { @{ Path = $_.FullName; Sha256 = (Get-FileHash -LiteralPath $_.FullName).Hash } })
-                Captures = @($proof.Captures.Name | ForEach-Object { @{ Path = "$fixture/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$fixture/$_.png").Hash } })
-            }
+            $run.Children = @($children | ForEach-Object { @{ Path = $_.FullName; Sha256 = (Get-FileHash -LiteralPath $_.FullName).Hash } })
+            $run.Captures = @($images | ForEach-Object { @{ Path = $_; Sha256 = (Get-FileHash -LiteralPath $_).Hash } })
+            $report.Runs += $run
             continue
         }
         if ($modelStatusProbe) {

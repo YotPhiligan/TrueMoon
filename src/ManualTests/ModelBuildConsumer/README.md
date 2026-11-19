@@ -201,3 +201,20 @@ The probe builds and displays the original, edited and undone scene revisions
 on Vulkan. It checks the selected material in the edited build manifest and
 compares the GPU masks, including exact recovery after one Undo.
 `-FreshPackages` runs the same scenario in an independent published Editor.
+
+## Restore renderer choices after restarting Editor
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -RenderInspectorRestart `
+  -EvidenceDirectory 'TestResults/EditorRenderInspectorRestart/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The first Editor applies the mesh and material in the inspector and saves the
+scene. It builds the saved revision and captures the Vulkan viewport before
+exiting. The next Editor opens the same file and restores the pinned imports
+from disk. It checks the displayed mesh and material, the binding ID and the
+exact resource keys, then builds in an empty output directory. The receipts
+record both process IDs, scene and import file hashes, and identical RGBA
+pixels in the unobstructed viewport area containing the visible model pixels.
+`-FreshPackages` repeats the two-process check in an independent Editor.

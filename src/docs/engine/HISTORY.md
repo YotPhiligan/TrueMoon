@@ -16090,6 +16090,49 @@ watch probe после восстановления BIN до завершени�
 и перед запуском Editor. Изолированный пакетный стенд включает штатный
 драйвер клика по дереву сцены.
 
+<a id="ed4i-render-binding-restart-2026-11-19"></a>
+## 2026-11-19 — ED4i, сохранение привязки и перезапуск Editor
+
+Приёмка на версии `1.2611.19.7-alpha`. Первый процесс выбрал в инспекторе
+меш второй модели и материал первой, применил правку, сохранил сцену и
+собрал ревизию 43. Стенд дождался завершения процесса, запустил новый Editor
+и сверил PID обоих процессов с отчётами. Новый Editor открыл тот же файл
+и восстановил закреплённые импорты с диска.
+
+Совпали значения и подписи полей инспектора, ID сущности и ID привязки,
+ID слота и точные ключи меша, материала и привязки в манифесте. Файлы сцены
+и выбора импортов сохранили SHA256 после открытия и Build. Сборка во втором
+процессе создана командой Editor в отдельном пустом каталоге сборок. Для
+предъявленного кадра проверены BuildId, ID и ревизия сцены и хеш манифеста.
+
+Совпали маски видимой геометрии и все RGBA-пиксели области 686 × 925,
+содержащей все видимые пиксели обеих моделей и свободной от панелей Editor.
+В четырёх прогонах Source Debug и Published Release получен RGBA SHA256
+`9C3EA47360C2633B2555CD19C8D58F1FE4E9393C44E297A90128EAC8C710A415`.
+Vulkan validation прошла с 0 ошибками и 0 предупреждениями в 12 Runtime.
+После Stop устройства, поверхности, slots и handles освобождены.
+
+`VerifyEditor.ps1 -RenderInspectorRestart` выполнен на Cobalt и Microsoft DI.
+EvidenceDirectory `TestResults/ED4i-inspector-restart-20261119-03`,
+SHA256 `verification.json`
+`2E142F9D52514B4F7A9DF4CCB2A191234B7CE3B2EA17F9B474B591635E61AA88`.
+
+`VerifyEditor.ps1 -RenderInspectorRestart -FreshPackages` повторил результат
+в независимом Editor с 20 пакетами на Cobalt и Microsoft DI. Обе пары процессов
+получили тот же RGBA SHA256. В шести дочерних Runtime освобождены ресурсы,
+Vulkan validation показала 0 ошибок и 0 предупреждений.
+EvidenceDirectory `TestResults/ED4i-inspector-restart-packages-20261119-01`,
+SHA256 `verification.json`
+`8035C402F6A080387484F0ACFAC526A68571EFF8C7C2D45C941959C057B7F866`.
+
+`TrueMoon.Aether.Editor.Tests` прошёл 1507/1507 в Debug и Release.
+Запуск через `dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c <Debug|Release> --no-restore`.
+TRX и логи в `TestResults/ED4i-inspector-restart-regression-20261119-01`.
+
+Одно из промежуточных открытий обнаружило гонку теста с обновлением дерева.
+Драйвер ждёт строку сохранённой сущности на UI thread перед кликом.
+[Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#restore-renderer-choices-after-restarting-editor).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

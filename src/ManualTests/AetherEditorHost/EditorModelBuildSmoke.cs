@@ -391,7 +391,10 @@ internal static class EditorModelBuildSmoke
 
     internal static async Task RunAsync(string[] args)
     {
-        var probeRenderInspector = args.Length == 7 && args[6] == "--render-inspector";
+        var saveInspector = args.Length == 7 && args[6] == "--render-inspector-save";
+        var reopenInspector = args.Length == 7 && args[6] == "--render-inspector-reopen";
+        var restartInspector = saveInspector || reopenInspector;
+        var probeRenderInspector = restartInspector || args.Length == 7 && args[6] == "--render-inspector";
         var probePlacement = args.Length == 9 && args[6] == "--model-placement";
         var probeCatalog = probePlacement || args.Length == 9 && args[6] == "--model-catalog";
         var probePersistence = probeCatalog || args.Length == 9 && args[6] == "--persisted-imports";
@@ -399,16 +402,22 @@ internal static class EditorModelBuildSmoke
         var probeImports = probeRenderInspector || probeReimport || args.Length == 7 && args[6] == "--imports";
         if (args.Length != 6 && !probeImports || args[0] is not ("cobalt" or "microsoft")) throw new ArgumentException("Invalid model delivery probe arguments.");
         var report = args[1];
+        var proofDirectory = restartInspector ? Path.Combine(report, saveInspector ? "editor-saved" : "editor-reopened") : report;
         var project = args[2];
         var scenePath = args[3];
         var hostId = BuildIdentity.HostId;
         var oldBuild = GameBuildArtifact.Open(args[4], hostId);
         var newBuild = GameBuildArtifact.Open(args[5], hostId);
-        var corruptBuild = CorruptCopy(oldBuild, report, hostId);
+        var corruptBuild = restartInspector ? null : CorruptCopy(oldBuild, report, hostId);
         var sceneHash = Hash(File.ReadAllBytes(scenePath));
         Check(oldBuild.BuildId != newBuild.BuildId, "Scene probe requires two distinct build IDs.");
-        var compiler = Path.Combine(report, "editor-compiler");
-        CopyArtifact(oldBuild, compiler);
+        var compiler = Path.Combine(proofDirectory, "editor-compiler");
+        if (restartInspector)
+        {
+            Check(!Directory.Exists(proofDirectory), "Expected a fresh report and build directory for this Editor process.");
+            Directory.CreateDirectory(compiler);
+        }
+        else CopyArtifact(oldBuild, compiler);
         PausedPublication? publication = null;
         ModelImportWorkerDeployment? worker = null;
         Action? cancelReplacement = null;
@@ -425,7 +434,7 @@ internal static class EditorModelBuildSmoke
             profile.AddSchema(EditorConfigurationSchemas.Options);
             profile.AddSchema(EditorConfigurationSchemas.Diagnostics);
             profile.AddSchema(EditorConfigurationSchemas.Window);
-            profile.Override("Aether:ReportDirectory", report);
+            profile.Override("Aether:ReportDirectory", proofDirectory);
             profile.Override("Aether:BuildDirectory", compiler);
             profile.Override("Aether:GpuValidation", true);
             profile.Override("Editor:ProjectPath", project);
@@ -443,14 +452,15 @@ internal static class EditorModelBuildSmoke
                 context.UseNom();
                 context.UseAetherNomContent();
             }
+            if (probePersistence || restartInspector)
+                context.UseAetherSceneModelSelectionPersistence();
             if (probePersistence)
             {
-                context.UseAetherSceneModelSelectionPersistence();
                 context.Services(services => services.Singleton<IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>>(_ =>
                     new Factory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>(request =>
                         new(request.Ledger, worker!, Path.Combine(report, "scratch"), publication!))));
             }
-            if (probeCatalog) context.UseAetherProjectModelCatalog();
+            if (probeCatalog || restartInspector) context.UseAetherProjectModelCatalog();
             context.UseConfiguredAetherEditor(new AetherComposition
             {
                 HostContractId = hostId, GameBuildId = new string('0', 64),
@@ -594,7 +604,7 @@ internal static class EditorModelBuildSmoke
 
             var beforeCorruption = engine.Supervisor.Status.Identity;
             var previousSurface = engine.Frames.Presentation;
-            await ChooseBuild(corruptBuild.DirectoryPath, "Заменить текущую сборку");
+            await ChooseBuild(corruptBuild!.DirectoryPath, "Заменить текущую сборку");
             await playback.Pending.WaitAsync(token);
             Check(playback.Error is InvalidDataException corruption &&
                 corruption.Message.Contains("render payload hash mismatch", StringComparison.Ordinal) &&
@@ -671,6 +681,33 @@ internal static class EditorModelBuildSmoke
 
             async Task VerifyRenderInspector(SceneDocumentSession document, IFactory<ModelImportLedgerSession, ModelImportLedgerArguments> ledgers)
             {
+                var inspector = view.Inspector!;
+                var initialHash = sceneHash;
+                var checkpoint = Path.Combine(report, "Content", ".aether-model-imports", content.Document.Id.Value.ToString("N") + ".tmimports");
+                if (reopenInspector)
+                {
+                    var prior = JsonSerializer.Deserialize<InspectorRestartProof>(
+                        await File.ReadAllBytesAsync(Path.Combine(report, "editor-saved", "inspector-restart.json"), token))
+                        ?? throw new InvalidDataException("Missing saved inspector proof.");
+                    var reopenedTarget = new EntityId(prior.Entity);
+                    var reopenedRenderer = Renderer(reopenedTarget);
+                    Check(Environment.ProcessId != prior.EditorPid && !before.IsDirty && before.OpeningId != prior.OpeningId &&
+                        content.Document.Id.Value == prior.SceneId && content.Document.Revision == prior.SceneRevision &&
+                        initialHash == prior.SceneSha256 && Hash(await File.ReadAllBytesAsync(checkpoint, token)) == prior.SelectionSha256 &&
+                        Id(reopenedRenderer, "bindings") == prior.Binding.AssetId && Id(reopenedRenderer, "mesh") == prior.Mesh.AssetId,
+                        "A new Editor did not restore the saved scene and binding ID.");
+                    await VerifyInspectorChoice(reopenedTarget, reopenedRenderer.Id, prior.Mesh.AssetId, prior.Material.AssetId);
+                    var reopenedFrame = await BuildAndShow("inspector-reopened");
+                    var reopenedProof = await CreateRestartProof(reopenedTarget, prior.Mesh.AssetId, prior.Material.AssetId, prior.Binding.AssetId, reopenedFrame);
+                    Check(reopenedProof.Mesh == prior.Mesh && reopenedProof.Material == prior.Material && reopenedProof.Binding == prior.Binding &&
+                        reopenedProof.Slot == prior.Slot && reopenedProof.Imports.SequenceEqual(prior.Imports) &&
+                        reopenedProof.SelectionSha256 == prior.SelectionSha256 && reopenedProof.Frame.Mask == prior.Frame.Mask &&
+                        reopenedProof.Frame.Pixels != null && reopenedProof.Frame.Pixels == prior.Frame.Pixels,
+                        "The rebuilt scene did not reproduce the exact resource keys, import generations and GPU pixels.");
+                    await WriteRestartProof(reopenedProof);
+                    return;
+                }
+
                 var red = await ReadImport("ce662048-9dcb-4c60-aaf0-213342054fa6", "red-baseline.tmledger");
                 var green = await ReadImport("65710c6d-6781-4476-9bb8-735fc518f008", "green.tmledger");
                 var redMesh = red.Meshes.Single();
@@ -686,7 +723,6 @@ internal static class EditorModelBuildSmoke
 
                 var baseline = await BuildAndShow("inspector-before");
                 await EditorHierarchySmoke.ClickItemAsync(ui, view, target.Value.ToString("D"), token);
-                var inspector = view.Inspector!;
                 await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.RenderAssets is { Enabled: true } selection &&
                     selection.Mesh == redMesh.AssetId && selection.Material == redMesh.MaterialId, token);
                 await Choose("mesh", "Меш", greenMesh.AssetId);
@@ -704,6 +740,21 @@ internal static class EditorModelBuildSmoke
                     binding != greenMesh.BindingSetId && Id(edit.Resolved.Entities[sibling].Components[renderer.Id], "mesh") == redMesh.AssetId &&
                     Id(edit.Resolved.Entities[sibling].Components[renderer.Id], "bindings") == redMesh.BindingSetId,
                     "Apply did not commit both choices once or modified the sibling sharing the definition.");
+                if (saveInspector)
+                {
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Save", token);
+                    await documents.Pending.WaitAsync(token);
+                    var savedState = document.Read();
+                    sceneHash = Hash(await File.ReadAllBytesAsync(scenePath, token));
+                    Check(documents.Read().Error == null && !savedState.IsDirty && ReferenceEquals(savedState.Content, edit) &&
+                        sceneHash != initialHash, $"Editor did not save the edited renderer references: {documents.Read().Error}");
+                    await VerifyInspectorChoice(target, renderer.Id, greenMesh.AssetId, redMesh.MaterialId);
+                    var savedFrame = await BuildAndShow("inspector-saved");
+                    Check(savedFrame.Frame.Mask.Sha256 != baseline.Frame.Mask.Sha256 && savedFrame.Frame.Pixels != null,
+                        "The saved renderer edit was not visible in the GPU frame.");
+                    await WriteRestartProof(await CreateRestartProof(target, greenMesh.AssetId, redMesh.MaterialId, binding, savedFrame));
+                    return;
+                }
                 var changed = await BuildAndShow("inspector-after");
                 Check(changed.Artifact.RenderContent?.Resolve(binding, RenderContentProfile.BindingSetKindId).Definition is MaterialBindingSetDefinition set &&
                     set.Mesh.AssetId == greenMesh.AssetId && set.Bindings.Single().Material.AssetId == redMesh.MaterialId,
@@ -734,6 +785,8 @@ internal static class EditorModelBuildSmoke
                     await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "runtime.Build", token);
                     await Complete();
                     var artifact = engine.Editor.Status.Candidate?.Build.Artifact ?? throw new InvalidOperationException("No inspector Build candidate.");
+                    if (restartInspector)
+                        Check(Path.GetDirectoryName(artifact.DirectoryPath) == compiler, "Build came from outside the current Editor's compiler directory.");
                     Check(playback.RunSelectedBuild(artifact), "Editor declined running the inspector Build.");
                     await Complete();
                     var frame = await CapturePlaying(name, artifact, 0);
@@ -742,6 +795,43 @@ internal static class EditorModelBuildSmoke
                     await CheckReleased(frame.Generation);
                     return (frame, artifact);
                 }
+
+                async Task VerifyInspectorChoice(EntityId entity, ComponentId component, Guid mesh, Guid material)
+                {
+                    var entityId = entity.Value.ToString("D");
+                    await EditorHeaderSmoke.UntilAsync(ui, () => view.Hierarchy!.Tree.Items.Any(item => item.Id == entityId) &&
+                        !ui.NeedsUpdate, token);
+                    await EditorHierarchySmoke.ClickItemAsync(ui, view, entityId, token);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { HasDraft: false, RenderAssets: { Enabled: true } selection } &&
+                        selection.Component == component && selection.Mesh == mesh && selection.Material == material &&
+                        Shows("mesh", selection.Meshes.Single(choice => choice.Id == mesh).Name) &&
+                        Shows("bindings", selection.Materials.Single(choice => choice.Id == material).Name), token);
+
+                    bool Shows(string key, string name) => inspector.Properties.TryGetValue((component, key), out var field) &&
+                        field.Input is Button button && button.Value == name;
+                }
+
+                async Task<InspectorRestartProof> CreateRestartProof(EntityId entity, Guid mesh, Guid material, Guid bindingId,
+                    (FrameProof Frame, GameBuildArtifact Artifact) run)
+                {
+                    var manifest = run.Artifact.RenderContent ?? throw new InvalidDataException("Build did not contain render resources.");
+                    var bindingEntry = manifest.Resolve(bindingId, RenderContentProfile.BindingSetKindId);
+                    var bindings = (MaterialBindingSetDefinition)bindingEntry.Definition;
+                    var slot = bindings.Bindings.Single();
+                    Check(bindings.Mesh.AssetId == mesh && slot.Material.AssetId == material &&
+                        manifest.Resolve(bindings.Mesh).Key == bindings.Mesh && manifest.Resolve(slot.Material).Key == slot.Material,
+                        "Build did not pin the selected mesh and material.");
+                    var imports = document.ReadModelImports(before.OpeningId).OrderBy(item => item.SourceId)
+                        .Select(item => new ImportGeneration(item.SourceId, item.Generation)).ToArray();
+                    Check(imports.Length == 2 && engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0,
+                        "Inspector Build lost a selected import or retained GPU resources.");
+                    return new(Environment.ProcessId, before.OpeningId, content.Document.Id.Value, content.Document.Revision, sceneHash,
+                        Hash(await File.ReadAllBytesAsync(checkpoint, token)), entity.Value, AssetProof.From(bindings.Mesh),
+                        AssetProof.From(slot.Material), AssetProof.From(bindingEntry.Key), slot.SlotId, imports, run.Frame);
+                }
+
+                Task WriteRestartProof(InspectorRestartProof proof) => File.WriteAllTextAsync(
+                    Path.Combine(proofDirectory, "inspector-restart.json"), JsonSerializer.Serialize(proof), token);
 
                 async Task Choose(string key, string label, Guid assetId)
                 {
@@ -799,7 +889,7 @@ internal static class EditorModelBuildSmoke
                 Check(ReferenceEquals(content, after.Content) && before.IsDirty == after.IsDirty &&
                     sceneHash == Hash(File.ReadAllBytes(scenePath)), "Replace changed the open authoring document.");
                 var proof = new FrameProof(name, artifact.BuildId, identity.Generation, status.ProcessId!.Value,
-                    manifest.Digest.ToString(), frame.Tick, frame.Mask);
+                    manifest.Digest.ToString(), frame.Tick, frame.Mask) { Pixels = frame.Pixels };
                 captures.Add(proof);
                 return proof;
             }
@@ -808,7 +898,7 @@ internal static class EditorModelBuildSmoke
             {
                 var lease = native.Leases.Single(lease => lease.Identity.Generation == generation);
                 Check(lease.Reaped && lease.ResourcesReleased, "Retired child or handles survived replacement.");
-                using var child = JsonDocument.Parse(await File.ReadAllBytesAsync(Path.Combine(report, $"runtime-{generation}.json"), token));
+                using var child = JsonDocument.Parse(await File.ReadAllBytesAsync(Path.Combine(proofDirectory, $"runtime-{generation}.json"), token));
                 var stats = child.RootElement;
                 var validation = stats.GetProperty("Validation");
                 Check(stats.GetProperty("Pid").GetInt32() == lease.ProcessId && stats.GetProperty("Resources").GetInt32() == 0 &&
@@ -834,15 +924,16 @@ internal static class EditorModelBuildSmoke
             CancelledGeneration = cancelledCandidate!.Generation, CorruptRejectedBeforeHandoff = true, RollbackSucceeded = true
         }, new JsonSerializerOptions { WriteIndented = true }), token);
 
-        async Task<(PixelMask Mask, ulong Tick)> Capture(string name, SessionIdentity identity, Guid sceneId, long revision, RenderContentHash digest)
+        async Task<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels)> Capture(string name, SessionIdentity identity, Guid sceneId, long revision, RenderContentHash digest)
         {
-            var result = new TaskCompletionSource<(PixelMask Mask, ulong Tick)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var result = new TaskCompletionSource<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels)>(TaskCreationOptions.RunContinuationsAsynchronously);
             void Presented(UiSession ui)
             {
                 if (result.Task.IsCompleted) return;
                 try
                 {
-                    var canvas = EditorMainWindow.FromRoot(ui.Root).EditorView.Canvas;
+                    var view = EditorMainWindow.FromRoot(ui.Root).EditorView;
+                    var canvas = view.Canvas;
                     if (!canvas.CanAcknowledgeDraw || canvas.DrawnFrame is not { } frame ||
                         frame.Presentation.Surface.Identity != identity ||
                         !ReferenceEquals(frame.Presentation, engine.Frames.Presentation)) return;
@@ -852,13 +943,15 @@ internal static class EditorModelBuildSmoke
                         "GPU draw was not from the captured scene and selected build.");
                     using var image = ((SkiaOpenGLSurface)ui.Rendering).ReadbackImage();
                     using var png = image.Encode(SKEncodedImageFormat.Png, 100);
-                    using (var file = File.Create(Path.Combine(report, name + ".png"))) png.SaveTo(file);
+                    using (var file = File.Create(Path.Combine(proofDirectory, name + ".png"))) png.SaveTo(file);
                     using var pixels = SKBitmap.FromImage(image);
                     var bounds = canvas.ImageBounds;
                     var scale = ui.Viewport.Scale;
                     var clip = new SKRectI((int)(bounds.X * scale), (int)(bounds.Y * scale),
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
-                    result.TrySetResult((Measure(pixels, clip), stamp.Tick));
+                    var mask = Measure(pixels, clip);
+                    var exact = name is "inspector-saved" or "inspector-reopened" ? MeasureViewportPixels(view, pixels, clip, scale, mask) : null;
+                    result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
             }
@@ -922,6 +1015,36 @@ internal static class EditorModelBuildSmoke
         return new(clip.Width, clip.Height, left, right, upper + lower, Hash(mask), green, Hash(greenMask));
     }
 
+    private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask)
+    {
+        // The Editor chrome overlays the viewport. Compare a rectangle clear of the panels and their shadows.
+        const float clearance = 12;
+        var hierarchy = view.HierarchyIsland.Bounds;
+        var inspector = view.InspectorIsland.Bounds;
+        var header = view.Header!.Bounds;
+        var status = view.StatusBar!.Bounds;
+        var crop = new SKRectI(
+            Math.Max(image.Left, (int)MathF.Ceiling((hierarchy.X + hierarchy.Width + clearance) * scale)),
+            Math.Max(image.Top, (int)MathF.Ceiling((header.Y + header.Height + clearance) * scale)),
+            Math.Min(image.Right, (int)MathF.Floor((inspector.X - clearance) * scale)),
+            Math.Min(image.Bottom, (int)MathF.Floor((status.Y - clearance) * scale)));
+        var cropped = Measure(pixels, crop);
+        Check(cropped.RedPixels == mask.RedPixels && cropped.GreenPixels == mask.GreenPixels,
+            "The unobstructed viewport crop does not contain all visible model pixels.");
+        var rgba = new byte[checked(crop.Width * crop.Height * 4)];
+        var index = 0;
+        for (var y = crop.Top; y < crop.Bottom; y++)
+        for (var x = crop.Left; x < crop.Right; x++)
+        {
+            var pixel = pixels.GetPixel(x, y);
+            rgba[index++] = pixel.Red;
+            rgba[index++] = pixel.Green;
+            rgba[index++] = pixel.Blue;
+            rgba[index++] = pixel.Alpha;
+        }
+        return new(crop.Left, crop.Top, crop.Width, crop.Height, Hash(rgba));
+    }
+
     private static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
     private static void Check(bool condition, string message)
     {
@@ -929,7 +1052,18 @@ internal static class EditorModelBuildSmoke
     }
 
     private sealed record PixelMask(int Width, int Height, int Left, int Right, int RedPixels, string Sha256, int GreenPixels, string GreenSha256);
-    private sealed record FrameProof(string Name, string BuildId, ulong Generation, int Pid, string ManifestHash, ulong Tick, PixelMask Mask);
+    private sealed record ViewportPixelProof(int X, int Y, int Width, int Height, string Sha256);
+    private sealed record FrameProof(string Name, string BuildId, ulong Generation, int Pid, string ManifestHash, ulong Tick, PixelMask Mask)
+    {
+        public ViewportPixelProof? Pixels { get; init; }
+    }
+    private sealed record AssetProof(Guid ProjectId, Guid AssetId, Guid KindId, int SchemaVersion, string Revision)
+    {
+        internal static AssetProof From(RenderAssetKey key) => new(key.ProjectId, key.AssetId, key.KindId, key.SchemaVersion, key.Revision.ToString());
+    }
+    private sealed record ImportGeneration(Guid SourceId, long Generation);
+    private sealed record InspectorRestartProof(int EditorPid, Guid OpeningId, Guid SceneId, long SceneRevision, string SceneSha256,
+        string SelectionSha256, Guid Entity, AssetProof Mesh, AssetProof Material, AssetProof Binding, Guid Slot, ImportGeneration[] Imports, FrameProof Frame);
     private sealed record ModelImportProof(bool Completed, string BeforeEdit, string AfterEdit, string WhileMissing,
         string AfterReimport, string Blocked, bool MatchingContent, string OldBuild, string NewBuild,
         bool CancelledAfterLedger, bool MissingSourceRejected, IReadOnlyList<FrameProof> Captures, bool RestoredPriorGeneration,

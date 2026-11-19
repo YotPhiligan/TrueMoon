@@ -24,8 +24,9 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--revisions" or "--multi-model")) return 2;
-var renderInspector = args.Length == 8 && args[7] == "--editor-render-inspector";
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--revisions" or "--multi-model")) return 2;
+var renderInspectorRestart = args.Length == 8 && args[7] == "--editor-render-inspector-restart";
+var renderInspector = renderInspectorRestart || args.Length == 8 && args[7] == "--editor-render-inspector";
 var editorPlacement = args.Length == 8 && args[7] == "--editor-model-placement";
 var editorCatalog = editorPlacement || args.Length == 8 && args[7] == "--editor-model-catalog";
 var editorPersistence = editorCatalog || args.Length == 8 && args[7] == "--editor-persisted-imports";
@@ -526,6 +527,20 @@ if (editorProbe)
     }));
     string[] editorArguments = [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene,
         oldBuild.DirectoryPath, newBuild.DirectoryPath];
+    if (renderInspectorRestart)
+    {
+        var saved = await RunChild("editor-saved", [.. editorArguments, "--render-inspector-save"], TimeSpan.FromSeconds(120));
+        Check(saved.ExitCode == 0, saved.Error);
+        var reopened = await RunChild("editor-reopened", [.. editorArguments, "--render-inspector-reopen"], TimeSpan.FromSeconds(120));
+        Check(reopened.ExitCode == 0, reopened.Error);
+        Check(saved.Pid != reopened.Pid, "Expected separate editor processes.");
+        foreach (var (phase, pid) in new[] { ("editor-saved", saved.Pid), ("editor-reopened", reopened.Pid) })
+        {
+            using var report = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(evidence, phase, "inspector-restart.json")));
+            Check(report.RootElement.GetProperty("EditorPid").GetInt32() == pid, $"Incorrect editor process for {phase}.");
+        }
+        return 0;
+    }
     if (editorReimport) editorArguments = [.. editorArguments, editorPlacement ? "--model-placement" :
         editorCatalog ? "--model-catalog" : editorPersistence ? "--persisted-imports" : "--reimport", workerPath, dotnet];
     else if (editorImports) editorArguments = [.. editorArguments, renderInspector ? "--render-inspector" : "--imports"];
@@ -645,11 +660,11 @@ async Task<JsonElement> ReadBuild(GameBuildResult build, string name)
     return document.RootElement.Clone();
 }
 
-Task<(int ExitCode, string Error)> RunRuntime(string directory, string buildId, string name) =>
+Task<(int ExitCode, string Error, int Pid)> RunRuntime(string directory, string buildId, string name) =>
     RunChild(name, [runtimeAssembly, args[0], directory, buildId, hostId, Path.Combine(evidence, name + ".json"), scenePath],
         TimeSpan.FromSeconds(90));
 
-async Task<(int ExitCode, string Error)> RunChild(string name, string[] arguments, TimeSpan timeout)
+async Task<(int ExitCode, string Error, int Pid)> RunChild(string name, string[] arguments, TimeSpan timeout)
 {
     var info = new ProcessStartInfo(dotnet)
     {
@@ -672,7 +687,7 @@ async Task<(int ExitCode, string Error)> RunChild(string name, string[] argument
         File.WriteAllText(Path.Combine(evidence, name + ".stdout.log"), await stdout);
         File.WriteAllText(Path.Combine(evidence, name + ".stderr.log"), await stderr);
     }
-    return (child.ExitCode, await stderr);
+    return (child.ExitCode, await stderr, child.Id);
 }
 
 static string Hash(string path)

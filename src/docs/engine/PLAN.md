@@ -16,6 +16,11 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 [ARCH1g.2n](#arch1g2n-project-model-catalog) добавляет выбор импортов проекта
 из каталога Editor.
 [ARCH1g.2o](#arch1g2o-place-catalog-model) добавляет модель из каталога в сцену.
+[Первый срез ED4i](EDITOR_PLAN.md#ed4i-render-components) меняет меш и материал
+одного экземпляра. В `main` это поставка `098fc53`, версия `1.2611.19.7-alpha`.
+[Сохранение привязки после перезапуска](EDITOR_PLAN.md#ed4i-render-binding-restart)
+проверено в ED4i. Ближайшие предложения — [сброс материала](EDITOR_PLAN.md#ed4i-next)
+и [первичный импорт из Editor](#arch1g-editor-import-proposal).
 
 **Согласованный порядок 2026-11-12:**
 
@@ -1766,9 +1771,12 @@ generic controls — в UI плане. Новый пакет/backend/render grap
 AssimpNetter/Assimp6.0.5 в отдельном Windows x64 worker; producer-local authoring
 sidecar хранит complete candidate+ledger checkpoint. Срезы g.2a–j проверили
 доставку точных ревизий через Nom, запуск и Replace на GPU, наблюдение за
-исходниками. В [g.2k](#arch1g2k-editor-model-imports) проверены статусы
-выбранных моделей и допуск Build. [g.2l](#arch1g2l-editor-reimport) добавил команду
-реимпорта выбранной модели поверх этого пути.
+исходниками. [g.2k](#arch1g2k-editor-model-imports) добавил статусы и допуск Build,
+[g.2l](#arch1g2l-editor-reimport) — реимпорт выбранной модели,
+[g.2m](#arch1g2m-persisted-model-selection) — восстановление выбора,
+[g.2n](#arch1g2n-project-model-catalog) — каталог моделей проекта,
+[g.2o](#arch1g2o-place-catalog-model) — добавление в сцену. Выбор меша и материала
+размещённого экземпляра ведётся в [ED4i](EDITOR_PLAN.md#ed4i-render-components).
 Владелец — engine/content; общие render contracts f.1/f.2 не переносятся в storage.
 
 [Research7.11.2026](MODEL_IMPORT_RESEARCH.md#decision-2026-11-07) и
@@ -2104,6 +2112,20 @@ Editor добавляет вторую модель из каталога, вы�
 на GPU с ID и ревизией сохранённой сцены. Исходная модель остаётся на месте.
 [Подключение и поведение](MODEL_BUILD_DELIVERY.md#arch1g2o-place-catalog-model),
 [проверки](HISTORY.md#arch1g2o-2026-11-19).
+
+<a id="arch1g-editor-import-proposal"></a>
+#### Первичный импорт из Editor — предложение от 19.11.2026
+
+Текущий каталог принимает ранее опубликованный импорт через API регистрации.
+Предлагаемый срез начинает с glTF/GLB внутри проекта. Команда Editor захватывает
+исходник с зависимостями, запускает существующий worker, публикует импорт
+и регистрирует его в каталоге. После успеха модель можно выбрать и разместить.
+
+Приёмка проходит от проекта без записи в каталоге до размещённой модели в
+сборке на GPU. Повторное открытие проекта восстанавливает запись. При ошибке
+или отмене каталог показывает только импорты, подготовленные к использованию.
+Отдельно проверить повтор операции после ошибки регистрации опубликованного
+импорта.
 
 <a id="arch1h-audio"></a>
 ### ARCH1h. Аудиомодуль и ECS integration — план исследования 2026-11-07

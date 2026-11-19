@@ -50,10 +50,9 @@ Windows input доступного supported scope. ED5b world translation v1 р
 local-oriented handles/snapping и rotation/scale — отдельный будущий scope.
 Held-button hardware input и multi-monitor DPI остаются отдельными gates.
 
-Уточнение2026-11-06: ECS и renderer/material resources включены в engine план
-[ARCH1e/f](PLAN.md#arch1f-rendering). Будущий inspector consumer —
-[ED4i](#ed4i-render-components); его реализации ещё нет. Выбор asset/override в UI
-следует готовым schema/content contracts и не становится prerequisite group reset/units.
+Контракты ECS, рендера и материалов ведутся в [ARCH1e/f](PLAN.md#arch1f-rendering).
+Первый срез [ED4i](#ed4i-render-components) использует их для выбора однослотового
+меша и материала из импортов сцены. [Предлагаемое продолжение](#ed4i-next).
 
 | Очередь | Результат | Статус |
 | --- | --- | --- |
@@ -1225,7 +1224,8 @@ theme/retained state, повторный Play/Stop/Replace и cleanup; headless 
 
 #### Первый срез ED4i — меш и материал из импортов сцены
 
-Реализован 19.11.2026, версия `1.2611.19.7-alpha`.
+Реализован и проверен 19.11.2026, в `main` с коммита `098fc53`,
+версия `1.2611.19.7-alpha`.
 [Приёмка](HISTORY.md#ed4i-render-inspector-2026-11-19).
 
 Инспектор предлагает однослотовые меши и непрозрачные материалы из импортов,
@@ -1241,20 +1241,34 @@ Build создаёт привязку для выбранного слота и�
 Undo. Поля Camera, редактирование общих материалов и работа с несколькими
 слотами остаются в очереди ED4i.
 
-- [ ] Retained schema-driven поля mesh/material reference, slots, enabled/layers и
-  camera projection; выбор ID/type/revision и missing/incompatible diagnostics без
-  загрузки Game.Logic или native handles в Data/ViewModel.
-- [ ] Per-entity material override/reset явно отличается от shared asset edit.
-  Scene binding/override проходит existing draft/Apply/Cancel/history; shared asset
-  получает собственный document/version/conflict/history contract до его UI editing.
-  Редактирование одной entity не меняет материал всех остальных неявно.
-- [ ] Mesh replacement с несовместимыми slots требует explicit remap/rejection.
-  Pending/Ready/Failed и late completion проверяют document/session/revision;
-  неподдержанная capability видна пользователю, fallback не скрывает ошибку.
-- [ ] Поведенческие проверки reference/slots/override/reset/Undo/Redo/save/reopen,
-  read-only Play и stale reload; retained focus/selection/theme и design-code roles.
-  Native preview подтверждает tint/shared-asset outcomes и cleanup отдельно от
-  headless tests. GPU allocation/IO не выполняются из View/style.
+<a id="ed4i-render-binding-restart"></a>
+#### ED4i — сохранение привязки и перезапуск Editor
+
+Проверено 19.11.2026 на версии `1.2611.19.7-alpha`. Первый Editor сохранил
+замену меша и материала и показал сохранённую сцену на GPU. Новый процесс
+восстановил значения инспектора из сцены и закреплённых импортов. Совпали
+ID привязки, ID слота, точные ключи ресурсов и пиксели видимой геометрии.
+[Приёмка](HISTORY.md#ed4i-render-binding-restart-2026-11-19).
+
+<a id="ed4i-next"></a>
+#### Продолжение ED4i — предложения от 19.11.2026
+
+1. **Сброс материала.** Добавить действие «Вернуть материал меша». Оно проходит
+   через Apply и меняет материал выбранного экземпляра при сохранении его меша.
+   Один Undo возвращает переопределение, Redo повторяет сброс. Проверка на двух
+   экземплярах общего определения фиксирует ссылки и пиксели обоих.
+2. **Диагностика отсутствующей ссылки.** При недоступном импорте указать,
+   какой меш, материал или привязку нужно восстановить.
+3. **Два слота.** Начать с публикуемой модели с постоянными ID двух слотов.
+   Смена материала одного слота сохраняет соседнюю привязку. При смене меша
+   несовместимый набор слотов требует явного решения. Текущий producer создаёт
+   однослотовые меши, поэтому здесь нужен совместимый сценарий публикации
+   двухслотового ресурса с сохранением ID при реимпорте.
+
+В очереди ED4i также остаются Camera projection, специализированные поля
+enabled/layers, поведение при смене ресурсов и в Play, нативный Edit Preview.
+Редактирование общего материала требует собственного контракта сохранения,
+версии и конфликтов. Для UI остаются проверки фокуса, выбора и темы.
 
 ## ED5. Edit preview и инструменты viewport
 
