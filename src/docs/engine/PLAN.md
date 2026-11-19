@@ -20,7 +20,8 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 одного экземпляра. В `main` это поставка `098fc53`, версия `1.2611.19.7-alpha`.
 [Сохранение привязки после перезапуска](EDITOR_PLAN.md#ed4i-render-binding-restart)
 и [сброс материала меша](EDITOR_PLAN.md#ed4i-material-reset) проверены в ED4i.
-Ближайшие предложения — [диагностика отсутствующих ссылок](EDITOR_PLAN.md#ed4i-next)
+[Диагностика отсутствующих ссылок](EDITOR_PLAN.md#ed4i-reference-diagnostics)
+проверена в инспекторе и при Build. Ближайшие предложения — [два слота](EDITOR_PLAN.md#ed4i-next)
 и [первичный импорт из Editor](#arch1g-editor-import-proposal).
 
 **Согласованный порядок 2026-11-12:**

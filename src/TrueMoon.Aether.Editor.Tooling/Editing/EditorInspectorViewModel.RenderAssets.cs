@@ -8,6 +8,7 @@ public partial class EditorInspectorViewModel
 {
     private InspectorProperty? _renderMesh, _renderBinding;
     private SceneRenderAssets? _sceneAssets, _renderDraftAssets;
+    private string? _renderReferenceDiagnostic;
     private InspectorRenderAssetSelection? _renderAssets;
     private (SceneRenderAssets? Assets, ComponentId Component, EntityId Entity, Guid Opening, string Mesh, string Binding, bool Enabled) _renderKey;
     private IReadOnlyList<InspectorRenderAssetChoice> _meshChoices = [], _materialChoices = [];
@@ -22,6 +23,7 @@ public partial class EditorInspectorViewModel
         if (_renderMesh == null || _renderBinding == null)
         {
             _renderKey = default;
+            _renderReferenceDiagnostic = null;
             _meshChoices = _materialChoices = [];
             SetProperty(ref _renderAssets, null, nameof(RenderAssets));
             return;
@@ -37,13 +39,14 @@ public partial class EditorInspectorViewModel
             _materialChoices = Choices(_sceneAssets?.Materials);
         }
         _renderKey = key;
-        var mesh = Guid.TryParseExact(_renderMesh.Value, "D", out var meshId) && _sceneAssets?.ContainsMesh(meshId) == true ? meshId : (Guid?)null;
-        var binding = Guid.TryParseExact(_renderBinding.Value, "D", out var bindingId) ? bindingId : (Guid?)null;
-        var material = mesh.HasValue && binding.HasValue ? _sceneAssets!.MaterialForBinding(mesh.Value, binding.Value) : null;
+        var references = SceneRenderAssets.ResolveReferences(_sceneAssets, _renderMesh.Value, _renderBinding.Value);
+        _renderReferenceDiagnostic = references.Diagnostic;
+        var mesh = references.Mesh;
         var defaultBinding = mesh.HasValue ? _sceneAssets!.DefaultBinding(mesh.Value) : null;
-        var next = new InspectorRenderAssetSelection(_renderMesh.ComponentId, _meshChoices, mesh.HasValue ? _materialChoices : [], mesh, material, enabled)
+        var next = new InspectorRenderAssetSelection(_renderMesh.ComponentId, _meshChoices, mesh.HasValue ? _materialChoices : [],
+            mesh, references.Material, enabled)
         {
-            CanRestoreMeshMaterial = enabled && defaultBinding.HasValue && defaultBinding != binding
+            CanRestoreMeshMaterial = enabled && defaultBinding.HasValue && defaultBinding != references.Binding
         };
         // Equivalent displayed values can still target a different entity, opening or import generation.
         _renderAssets = next;
@@ -58,10 +61,12 @@ public partial class EditorInspectorViewModel
         if (_renderAssets == null) yield break;
         if (HasRenderDraft && !ReferenceEquals(_renderDraftAssets, _sceneAssets))
             yield return "Ресурсы сцены изменились. Отмените черновик и повторите выбор.";
+        else if (_renderReferenceDiagnostic is { } diagnostic)
+            yield return diagnostic;
         else if (_sceneAssets == null)
             yield return "Для выбора меша и материала отметьте импорт модели в каталоге сцены.";
         else if (_renderAssets.Material == null)
-            yield return "Меш или его материал недоступен. Выберите меш из ресурсов сцены.";
+            yield return "Выбор материала доступен для однослотового меша.";
     }
 
     /// <inheritdoc />

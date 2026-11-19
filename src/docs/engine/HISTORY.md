@@ -16172,6 +16172,42 @@ SHA256 `verification.json`
 TRX и логи в `TestResults/ED4i-material-reset-regression-20261119-01`.
 [Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#restore-the-meshs-imported-material).
 
+<a id="ed4i-reference-diagnostics-2026-11-19"></a>
+## 2026-11-19 — ED4i, диагностика отсутствующих ссылок
+
+Версия `1.2611.19.9-alpha`. Один экземпляр использовал материал из второго
+импорта. Снятие импорта меша показало точный ID меша, а снятие импорта материала
+показало ID его привязки и меша. Проверены текст в панели инспектора и сообщение
+Build с ID сущности. В обоих случаях прежние ContextVersion и кандидат сборки
+сохранились. Документ сохранил свою ревизию во время диагностики и восстановления.
+
+Возврат импортов восстановил выбор в инспекторе, точный RenderAssetKey
+привязки и GPU-кадр из новой сборки. Полные маски объектов и RGBA области
+686 × 925 совпали. SHA256 RGBA
+`E338DA53BAEACB88119254139601386F9BF5310BA5CF8D3A0BF6A519E3AE89FB`.
+
+`VerifyEditor.ps1 -RenderReferenceDiagnostics` прошёл в Source Debug
+и Published Release на Cobalt и Microsoft DI. В восьми Runtime Vulkan
+validation показала 0 ошибок и 0 предупреждений. Ресурсы освобождены.
+EvidenceDirectory `TestResults/ED4i-reference-diagnostics-20261119-01`,
+SHA256 `verification.json`
+`ED5705E7D93D9063A66A0FC8FBFBF33D1F18EE456F32CCFDA886F81E033554EC`.
+
+`VerifyEditor.ps1 -RenderReferenceDiagnostics -FreshPackages` повторил
+результат на обоих DI в независимом Editor из 20 пакетов. В четырёх Runtime
+Vulkan validation показала 0 ошибок и 0 предупреждений. Ресурсы освобождены.
+EvidenceDirectory `TestResults/ED4i-reference-diagnostics-packages-20261119-01`,
+SHA256 `verification.json`
+`CBBCF969F1D4E306B36173C8ED5A604BABFD08990CE7C7A6C14C2FAA72865175`.
+[Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#diagnose-a-missing-mesh-or-material-binding).
+
+Прежний профиль `VerifyEditor.ps1 -ModelCatalog` прошёл в Source Debug и
+Published Release на Cobalt и Microsoft DI. EvidenceDirectory
+`TestResults/ED4i-reference-catalog-regression-20261119-01`, SHA256
+`verification.json` `1ABE3B54FC701559D2AA10687AF57E4E0392980BAC077D83D00744AC27C88EFC`.
+Тесты Editor прошли 1507/1507 в каждой конфигурации Debug и Release.
+TRX сохранены в `TestResults/ED4i-reference-diagnostics-regression-20261119-01`.
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

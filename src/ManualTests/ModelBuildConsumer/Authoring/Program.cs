@@ -24,10 +24,11 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--revisions" or "--multi-model")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--revisions" or "--multi-model")) return 2;
+var renderReferenceDiagnostics = args.Length == 8 && args[7] == "--editor-render-reference-diagnostics";
 var renderMaterialReset = args.Length == 8 && args[7] == "--editor-render-material-reset";
 var renderInspectorRestart = args.Length == 8 && args[7] == "--editor-render-inspector-restart";
-var renderInspector = renderMaterialReset || renderInspectorRestart || args.Length == 8 && args[7] == "--editor-render-inspector";
+var renderInspector = renderReferenceDiagnostics || renderMaterialReset || renderInspectorRestart || args.Length == 8 && args[7] == "--editor-render-inspector";
 var editorPlacement = args.Length == 8 && args[7] == "--editor-model-placement";
 var editorCatalog = editorPlacement || args.Length == 8 && args[7] == "--editor-model-catalog";
 var editorPersistence = editorCatalog || args.Length == 8 && args[7] == "--editor-persisted-imports";
@@ -260,6 +261,7 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         if (editorImports)
             File.Copy(Path.Combine(evidence, "ledger", "scene.tmledger"), Path.Combine(evidence, "ledger", "red-baseline.tmledger"));
         var placed = ImportedModelScene.Place(initialScene, oldModel, placement);
+        var redOnly = placed;
         Check(placed.Entities.Skip(1).Select(entity => entity.Id.Value).SequenceEqual(oldModel.Instances.Select(instance => instance.Id)) &&
             placed.Definitions.Length == 2 && placed.Entities[0].Id == cameraId && placed.Revision == 41,
             "Model placement lost stable instances or the existing scene entries.");
@@ -293,7 +295,8 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
             greenSnapshotId = (await bridge.PublishAsync(store, greenModel, store.ContentGeneration)).Id;
         }
         var sceneBytes = codec.Encode(placed);
-        File.WriteAllBytes(scenePath, editorPlacement ? codec.Encode(ImportedModelScene.Place(initialScene, greenModel!, greenPlacement)) : sceneBytes);
+        File.WriteAllBytes(scenePath, editorPlacement ? codec.Encode(ImportedModelScene.Place(initialScene, greenModel!, greenPlacement)) :
+            renderReferenceDiagnostics ? codec.Encode(redOnly) : sceneBytes);
         if (greenModel != null)
         {
             var red = await CheckImport("RedBeforeEdit", oldModel, sourceDirectory);
@@ -544,9 +547,11 @@ if (editorProbe)
     }
     if (editorReimport) editorArguments = [.. editorArguments, editorPlacement ? "--model-placement" :
         editorCatalog ? "--model-catalog" : editorPersistence ? "--persisted-imports" : "--reimport", workerPath, dotnet];
-    else if (editorImports) editorArguments = [.. editorArguments, renderMaterialReset ? "--render-material-reset" : renderInspector ? "--render-inspector" : "--imports"];
+    else if (editorImports) editorArguments = [.. editorArguments, renderReferenceDiagnostics ? "--render-reference-diagnostics" :
+        renderMaterialReset ? "--render-material-reset" : renderInspector ? "--render-inspector" : "--imports"];
     var result = await RunChild("editor", editorArguments, TimeSpan.FromSeconds(120));
-    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, renderMaterialReset ? "editor-render-material-reset.json" : renderInspector ? "editor-render-inspector.json" :
+    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, renderReferenceDiagnostics ? "editor-render-reference-diagnostics.json" :
+        renderMaterialReset ? "editor-render-material-reset.json" : renderInspector ? "editor-render-inspector.json" :
         editorImports ? "editor-imports.json" : "editor-model.json")), result.Error);
     return 0;
 }

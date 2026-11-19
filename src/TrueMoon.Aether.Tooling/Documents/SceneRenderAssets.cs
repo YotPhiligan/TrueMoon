@@ -10,6 +10,7 @@ namespace TrueMoon.Aether.Tooling.Documents;
 internal sealed class SceneRenderAssets
 {
     internal sealed record Choice(Guid Id, string Name);
+    internal readonly record struct References(Guid? Mesh, Guid Binding, Guid? Material, string? Diagnostic);
 
     private readonly GameBuildRenderContent _content;
     private readonly Dictionary<Guid, RenderAssetEntry> _entries;
@@ -33,7 +34,6 @@ internal sealed class SceneRenderAssets
 
     internal IReadOnlyList<Choice> Meshes { get; }
     internal IReadOnlyList<Choice> Materials { get; }
-    internal bool ContainsMesh(Guid mesh) => _defaults.ContainsKey(mesh);
     internal Guid? DefaultBinding(Guid mesh) => _defaults.GetValueOrDefault(mesh)?.Binding;
 
     internal Guid? BindingForMaterial(Guid mesh, Guid material)
@@ -45,12 +45,49 @@ internal sealed class SceneRenderAssets
         return _entries.ContainsKey(id) || id == Guid.Empty ? null : id;
     }
 
-    internal Guid? MaterialForBinding(Guid mesh, Guid binding)
+    internal static References ResolveReferences(SceneRenderAssets? assets, string meshReference, string bindingReference,
+        bool allowMissingMesh = false, IReadOnlyDictionary<Guid, RenderAssetEntry>? generated = null)
     {
-        if (!_defaults.ContainsKey(mesh)) return null;
-        if (_entries.TryGetValue(binding, out var entry))
-            return entry.Definition is MaterialBindingSetDefinition set && set.Mesh == _entries[mesh].Key &&
-                set.Bindings.Length == 1 ? set.Bindings[0].Material.AssetId : null;
+        if (!Guid.TryParseExact(meshReference, "D", out var mesh) || mesh == Guid.Empty)
+            return new(null, default, null, "Ссылка на меш должна содержать непустой ID.");
+        var validBinding = Guid.TryParseExact(bindingReference, "D", out var binding) && binding != Guid.Empty;
+        if (assets == null && mesh == RenderContentProfile.CubeAssetId)
+        {
+            if (!validBinding) return new(null, binding, null, InvalidBinding(mesh));
+            return binding == RenderContentProfile.CubeBindingSetAssetId ? default : new(null, binding, null, MissingBinding(mesh, binding));
+        }
+        var geometry = assets?._entries.GetValueOrDefault(mesh);
+        if (geometry?.Definition is not MeshDefinition definition)
+        {
+            if (allowMissingMesh && validBinding) return default;
+            return new(null, binding, null, geometry == null
+                ? $"Меш {mesh:D} отсутствует. Выберите его импорт в каталоге сцены."
+                : $"По ссылке {mesh:D} ожидается меш.");
+        }
+        if (!validBinding)
+            return new(mesh, binding, null, InvalidBinding(mesh));
+
+        var entry = assets!._entries.GetValueOrDefault(binding) ?? generated?.GetValueOrDefault(binding);
+        if (entry != null)
+        {
+            if (entry.Definition is not MaterialBindingSetDefinition set)
+                return new(mesh, binding, null, $"По ссылке {binding:D} ожидается привязка материала для меша {mesh:D}.");
+            if (set.Mesh != geometry.Key)
+                return new(mesh, binding, null, $"Привязка материала {binding:D} относится к мешу {set.Mesh.AssetId:D}. Требуется привязка для меша {mesh:D}.");
+            return new(mesh, binding, set.Bindings.Length == 1 ? set.Bindings[0].Material.AssetId : null, null);
+        }
+        if (definition.Slots.Length == 1 && assets!.FindOverrideMaterial(mesh, binding) is { } material)
+            return new(mesh, binding, material, null);
+        return new(mesh, binding, null, MissingBinding(mesh, binding));
+    }
+
+    private static string InvalidBinding(Guid mesh) => $"Ссылка на привязку материала меша {mesh:D} должна содержать непустой ID.";
+
+    private static string MissingBinding(Guid mesh, Guid binding) =>
+        $"Привязка материала {binding:D} для меша {mesh:D} отсутствует. Выберите импорт материала или назначьте материал заново.";
+
+    private Guid? FindOverrideMaterial(Guid mesh, Guid binding)
+    {
         Guid? material = null;
         foreach (var choice in Materials)
         {
@@ -61,41 +98,35 @@ internal sealed class SceneRenderAssets
         return material;
     }
 
-    internal GameBuildRenderContent PrepareBuild(ResolvedSceneSnapshot scene, bool requireAll, CancellationToken token)
+    internal static GameBuildRenderContent? PrepareBuild(SceneRenderAssets? assets, ResolvedSceneSnapshot scene, bool requireAll, CancellationToken token)
     {
+        if (assets == null && !requireAll) return null;
         var added = new Dictionary<Guid, RenderAssetEntry>();
         foreach (var entity in scene.Entities.Values)
         {
             token.ThrowIfCancellationRequested();
             foreach (var renderer in entity.Components.Values.Where(component => component.TypeId == MeshRenderingComponents.MeshRendererId))
             {
-                var mesh = Guid.ParseExact(renderer.Properties["mesh"].Value.GetString(), "D");
-                var binding = Guid.ParseExact(renderer.Properties["bindings"].Value.GetString(), "D");
-                if (!_entries.TryGetValue(mesh, out var geometry) || geometry.Definition is not MeshDefinition definition)
-                {
-                    if (!requireAll) continue;
-                    throw MissingImport();
-                }
-                var entry = _entries.GetValueOrDefault(binding) ?? added.GetValueOrDefault(binding);
-                if (entry != null)
-                {
-                    if (entry.Definition is not MaterialBindingSetDefinition set || set.Mesh != geometry.Key)
-                        throw new InvalidOperationException("Привязка материала относится к другому мешу.");
-                    continue;
-                }
-                if (definition.Slots.Length != 1 || MaterialForBinding(mesh, binding) is not { } material)
-                    throw MissingImport();
-                var variant = new MaterialBindingSetDefinition(geometry.Key, [new(definition.Slots[0].SlotId, _entries[material].Key)]);
+                var references = ResolveReferences(assets, renderer.Properties["mesh"].Value.GetString(),
+                    renderer.Properties["bindings"].Value.GetString(), allowMissingMesh: !requireAll, generated: added);
+                if (references.Diagnostic is { } error)
+                    throw new InvalidOperationException($"Сущность {entity.Id.Value:D}. {error}");
+                if (assets == null || references.Mesh is not { } mesh || references.Material is not { } material) continue;
+                var binding = references.Binding;
+                if (assets._entries.ContainsKey(binding) || added.ContainsKey(binding)) continue;
+
+                var geometry = assets._entries[mesh];
+                var definition = (MeshDefinition)geometry.Definition;
+                var variant = new MaterialBindingSetDefinition(geometry.Key, [new(definition.Slots[0].SlotId, assets._entries[material].Key)]);
                 added.Add(binding, new(variant.CreateKey(geometry.Key.ProjectId, binding), variant));
-                if (_entries.Count + added.Count > RenderContentProfile.MaximumManifestEntries)
+                if (assets._entries.Count + added.Count > RenderContentProfile.MaximumManifestEntries)
                     throw new InvalidOperationException("Превышен лимит ресурсов в сборке сцены.");
             }
         }
-        return added.Count == 0 ? _content : new(_content.Entries[0].Key.ProjectId, [.. _content.Entries, .. added.Values]);
+        if (added.Count == 0) return assets?._content;
+        var content = assets!._content;
+        return new(content.Entries[0].Key.ProjectId, [.. content.Entries, .. added.Values]);
     }
-
-    private static InvalidOperationException MissingImport() =>
-        new("Для размещённой модели выберите импорт в каталоге моделей проекта.");
 
     private static Guid MaterialBindingId(Guid mesh, Guid material)
     {

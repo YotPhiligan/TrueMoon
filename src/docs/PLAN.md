@@ -119,7 +119,9 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 
 [Сброс материала меша](engine/EDITOR_PLAN.md#ed4i-material-reset) реализован и проверен на Vulkan с Undo и Redo.
 
-Ближайшие предложения — [диагностика отсутствующих ссылок](engine/EDITOR_PLAN.md#ed4i-next),
+[Диагностика отсутствующих ссылок](engine/EDITOR_PLAN.md#ed4i-reference-diagnostics) проверена в инспекторе и при Build.
+
+Ближайшие предложения — [два слота](engine/EDITOR_PLAN.md#ed4i-next),
 [первичный импорт из Editor](engine/PLAN.md#arch1g-editor-import-proposal).
 
 По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика

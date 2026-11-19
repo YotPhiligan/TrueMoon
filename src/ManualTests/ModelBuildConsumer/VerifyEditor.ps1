@@ -11,7 +11,8 @@ param(
     [switch]$ModelPlacement,
     [switch]$RenderInspector,
     [switch]$RenderInspectorRestart,
-    [switch]$RenderMaterialReset
+    [switch]$RenderMaterialReset,
+    [switch]$RenderReferenceDiagnostics
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,13 +29,13 @@ if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' 
 $catalogProbe = $ModelCatalog -or $ModelPlacement
 $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
-$renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset
+$renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics
 $modelStatusProbe = $ModelImports -or $reimportProbe -or $renderProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -55,7 +56,7 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
         Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
@@ -63,7 +64,20 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
         if ($renderProbe) {
             [void][IO.Directory]::CreateDirectory($output)
             $run = @{ Name = "$name-$provider"; Fixture = $fixture }
-            if ($RenderMaterialReset) {
+            if ($RenderReferenceDiagnostics) {
+                $path = "$output/editor-render-reference-diagnostics.json"
+                Copy-Item -LiteralPath "$fixture/editor-render-reference-diagnostics.json" -Destination $path
+                $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+                $children = @(Get-ChildItem -LiteralPath $fixture -Filter 'runtime-*.json' -File)
+                if (!$proof.Completed -or $proof.Captures.Count -ne 2 -or $children.Count -ne 2 -or
+                    !$proof.MissingMesh.Contains($proof.Mesh) -or !$proof.MissingBinding.Contains($proof.Binding) -or
+                    $proof.Captures[0].Pixels.Sha256 -ne $proof.Captures[1].Pixels.Sha256) {
+                    throw "Incomplete missing mesh, binding or GPU recovery evidence for $name-$provider"
+                }
+                $run.Path = $path
+                $run.Sha256 = (Get-FileHash -LiteralPath $path).Hash
+                $images = @($proof.Captures.Name | ForEach-Object { "$fixture/$_.png" })
+            } elseif ($RenderMaterialReset) {
                 $path = "$output/editor-render-material-reset.json"
                 Copy-Item -LiteralPath "$fixture/editor-render-material-reset.json" -Destination $path
                 $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json

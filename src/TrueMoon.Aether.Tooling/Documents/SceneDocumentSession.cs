@@ -1,6 +1,4 @@
 ﻿using TrueMoon.Aether.Abstractions.Scenes;
-using TrueMoon.Aether.Abstractions.Rendering;
-using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes;
@@ -124,24 +122,9 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     public async Task<GameBuildRenderContent?> CheckModelImportsAsync(Guid openingId, CancellationToken cancellationToken = default)
     {
         var selection = ModelImports == null ? null : await ModelImports.CheckAsync(openingId, cancellationToken).ConfigureAwait(false);
-        if (selection is { } found)
-            return Read() is { Content: { } active } state && state.OpeningId == openingId
-                ? found.Assets.PrepareBuild(active.Resolved, HasModelCatalog, cancellationToken) : found.Content;
-        if (HasModelCatalog && Read() is { Content: { } scene } current && current.OpeningId == openingId)
-        {
-            foreach (var entity in scene.Resolved.Entities.Values)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                foreach (var renderer in entity.Components.Values.Where(component => component.TypeId == MeshRenderingComponents.MeshRendererId))
-                {
-                    var mesh = Guid.ParseExact(renderer.Properties["mesh"].Value.GetString(), "D");
-                    var bindings = Guid.ParseExact(renderer.Properties["bindings"].Value.GetString(), "D");
-                    if (mesh != RenderContentProfile.CubeAssetId || bindings != RenderContentProfile.CubeBindingSetAssetId)
-                        throw new InvalidOperationException("Для размещённой модели выберите импорт в каталоге моделей проекта.");
-                }
-            }
-        }
-        return null;
+        return Read() is { Content: { } scene } current && current.OpeningId == openingId
+            ? SceneRenderAssets.PrepareBuild(selection?.Assets, scene.Resolved, HasModelCatalog, cancellationToken)
+            : selection?.Content;
     }
 
     internal SceneRenderAssets? ReadRenderAssets(Guid openingId) => ModelImports?.ReadRenderAssets(openingId);

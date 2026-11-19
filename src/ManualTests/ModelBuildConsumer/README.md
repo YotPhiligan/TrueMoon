@@ -236,3 +236,18 @@ channel stays identical across the fixture's red and green materials. RGBA
 pixels in the unobstructed viewport match on override and Undo, and on
 restore and Redo.
 `-FreshPackages` repeats the scenario in an independent published Editor.
+
+## Diagnose a missing mesh or material binding
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -RenderReferenceDiagnostics `
+  -EvidenceDirectory 'TestResults/EditorRenderReferenceDiagnostics/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+One instance uses a material from another selected import. The probe removes
+the mesh import and then the material import through scene catalog selection.
+The inspector displays the exact missing reference. Build rejects each case
+before changing the previous candidate. Selecting the imports again restores
+the same asset binding and the same viewport pixels on Vulkan.
+`-FreshPackages` repeats the scenario in an independent published Editor.

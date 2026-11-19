@@ -71,7 +71,7 @@ internal static class EditorModelBuildSmoke
                     .SequenceEqual(new[] { ("Green · source-green/scene.gltf", false), ("Red · source/scene.gltf", false) }), token, HoldStatus);
             await ToggleCatalogModel("Red", redId, selected: true);
             await Build();
-            missingModelRejected = playback.Error?.Message.Contains("выберите импорт в каталоге", StringComparison.Ordinal) == true;
+            missingModelRejected = playback.Error?.Message.Contains($"Меш {green.Meshes.Single().AssetId:D} отсутствует", StringComparison.Ordinal) == true;
             Check(missingModelRejected, "Build admitted a placed model missing from the resource selection.");
             await ToggleCatalogModel("Green", greenId, selected: true);
             catalogVerified = document.ReadModelImports(openingId).Select(item => item.SourceId).ToHashSet().SetEquals([redId, greenId]);
@@ -395,7 +395,8 @@ internal static class EditorModelBuildSmoke
         var reopenInspector = args.Length == 7 && args[6] == "--render-inspector-reopen";
         var restartInspector = saveInspector || reopenInspector;
         var resetMaterial = args.Length == 7 && args[6] == "--render-material-reset";
-        var probeRenderInspector = resetMaterial || restartInspector || args.Length == 7 && args[6] == "--render-inspector";
+        var referenceDiagnostics = args.Length == 7 && args[6] == "--render-reference-diagnostics";
+        var probeRenderInspector = referenceDiagnostics || resetMaterial || restartInspector || args.Length == 7 && args[6] == "--render-inspector";
         var probePlacement = args.Length == 9 && args[6] == "--model-placement";
         var probeCatalog = probePlacement || args.Length == 9 && args[6] == "--model-catalog";
         var probePersistence = probeCatalog || args.Length == 9 && args[6] == "--persisted-imports";
@@ -453,7 +454,7 @@ internal static class EditorModelBuildSmoke
                 context.UseNom();
                 context.UseAetherNomContent();
             }
-            if (probePersistence || restartInspector)
+            if (probePersistence || restartInspector || referenceDiagnostics)
                 context.UseAetherSceneModelSelectionPersistence();
             if (probePersistence)
             {
@@ -461,7 +462,7 @@ internal static class EditorModelBuildSmoke
                     new Factory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>(request =>
                         new(request.Ledger, worker!, Path.Combine(report, "scratch"), publication!))));
             }
-            if (probeCatalog || restartInspector) context.UseAetherProjectModelCatalog();
+            if (probeCatalog || restartInspector || referenceDiagnostics) context.UseAetherProjectModelCatalog();
             context.UseConfiguredAetherEditor(new AetherComposition
             {
                 HostContractId = hostId, GameBuildId = new string('0', 64),
@@ -504,7 +505,7 @@ internal static class EditorModelBuildSmoke
             var content = before.Content ?? throw new InvalidOperationException("Editor did not load the placed scene.");
             if (probeImports)
             {
-                Check(content.Document.Entities.Length == (probePlacement ? 3 : 5) && !before.IsDirty, "Unexpected fixture scene.");
+                Check(content.Document.Entities.Length == (probePlacement || referenceDiagnostics ? 3 : 5) && !before.IsDirty, "Unexpected fixture scene.");
                 var document = documents.Read().Project?.Documents ?? throw new InvalidOperationException("No project document session.");
                 var ledgerFactory = app.Services.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>()!;
                 if (probeRenderInspector)
@@ -717,6 +718,11 @@ internal static class EditorModelBuildSmoke
                 var sibling = new EntityId(red.Instances[1].Id);
                 var renderer = Renderer(target);
                 var opening = before.OpeningId;
+                if (referenceDiagnostics)
+                {
+                    await VerifyReferenceDiagnostics();
+                    return;
+                }
                 var saved = content;
                 await document.SelectModelImportsAsync(opening,
                     [new("Red", Watch(red, "source")), new("Green", Watch(green, "source-green"))],
@@ -844,6 +850,69 @@ internal static class EditorModelBuildSmoke
                     Completed = true, Captures = captures, Entity = target.Value, Mesh = greenMesh.AssetId,
                     Material = redMesh.MaterialId, Binding = binding
                 }), token);
+
+                async Task VerifyReferenceDiagnostics()
+                {
+                    var factory = app.Services.Resolve<IFactory<ProjectModelCatalog, ResolvedProject>>()!;
+                    var catalog = factory.Create(documents.Read().Project!.Project)!;
+                    var redId = red.Candidate.SourceId;
+                    var greenId = green.Candidate.SourceId;
+                    await catalog.RegisterAsync("Red", Watch(red, "source").Source,
+                        new(redId, Path.Combine(report, "ledger", "red-baseline.tmledger")), token);
+                    await catalog.RegisterAsync("Green", Watch(green, "source-green").Source,
+                        new(greenId, Path.Combine(report, "ledger", "green.tmledger")), token);
+                    await SetSelected(redId, true);
+                    await SetSelected(greenId, true);
+                    await VerifyInspectorChoice(target, renderer.Id, redMesh.AssetId, redMesh.MaterialId);
+                    await Choose("bindings", "Материал", greenMesh.MaterialId);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { CanApply: true, RenderAssets.Material: { } material } &&
+                        material == greenMesh.MaterialId, token);
+                    await ClickInspector(() => inspector.Apply);
+                    var committed = document.Read().Content!;
+                    var binding = Id(committed.Resolved.Entities[target].Components[renderer.Id], "bindings");
+                    Check(binding != redMesh.BindingSetId, "The scene did not acquire a material override.");
+                    var initial = await BuildAndShow("inspector-diagnostics-before");
+                    var previous = engine.Editor.Status;
+
+                    await SetSelected(redId, false);
+                    var missingMesh = await ExpectBlocked($"Меш {redMesh.AssetId:D} отсутствует");
+                    await SetSelected(redId, true);
+                    await SetSelected(greenId, false);
+                    var missingBinding = await ExpectBlocked($"Привязка материала {binding:D} для меша {redMesh.AssetId:D} отсутствует");
+                    await SetSelected(greenId, true);
+                    await VerifyInspectorChoice(target, renderer.Id, redMesh.AssetId, greenMesh.MaterialId);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => !inspector.DataContext!.HasDiagnostics, token);
+                    var restored = await BuildAndShow("inspector-diagnostics-recovered");
+                    var expectedBinding = initial.Artifact.RenderContent!.Resolve(binding, RenderContentProfile.BindingSetKindId);
+                    Check(ReferenceEquals(document.Read().Content, committed) &&
+                        restored.Artifact.RenderContent!.Resolve(expectedBinding.Key).Key == expectedBinding.Key &&
+                        initial.Frame.Mask == restored.Frame.Mask && initial.Frame.Pixels != null && initial.Frame.Pixels == restored.Frame.Pixels &&
+                        engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0,
+                        "Selecting the missing imports did not recover the same binding and GPU pixels.");
+                    await File.WriteAllTextAsync(Path.Combine(report, "editor-render-reference-diagnostics.json"), JsonSerializer.Serialize(new
+                    {
+                        Completed = true, Mesh = redMesh.AssetId, Material = greenMesh.MaterialId, Binding = binding,
+                        MissingMesh = missingMesh, MissingBinding = missingBinding, Captures = captures
+                    }), token);
+
+                    Task SetSelected(Guid source, bool selected) => document.SetCatalogModelSelectedAsync(opening, source, selected, token);
+
+                    async Task<string> ExpectBlocked(string diagnostic)
+                    {
+                        await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.DiagnosticsText.Contains(diagnostic, StringComparison.Ordinal) &&
+                            inspector.Error.IsVisible && inspector.Error.Text.Contains(diagnostic, StringComparison.Ordinal) &&
+                            view.DataContext!.CanBuild, token);
+                        await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "runtime.Build", token);
+                        await playback.Pending.WaitAsync(token);
+                        var current = engine.Editor.Status;
+                        var buildError = playback.Error?.Message;
+                        Check(buildError?.Contains(diagnostic, StringComparison.Ordinal) == true &&
+                            ReferenceEquals(document.Read().Content, committed) && current.ContextVersion == previous.ContextVersion &&
+                            ReferenceEquals(current.Candidate, previous.Candidate),
+                            $"Build did not reject the reference before changing the candidate. {buildError}");
+                        return buildError!;
+                    }
+                }
 
                 async Task<(FrameProof Frame, GameBuildArtifact Artifact)> BuildAndShow(string name)
                 {
@@ -1017,9 +1086,10 @@ internal static class EditorModelBuildSmoke
                     var scale = ui.Viewport.Scale;
                     var clip = new SKRectI((int)(bounds.X * scale), (int)(bounds.Y * scale),
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
-                    var mask = Measure(pixels, clip, resetMaterial);
-                    var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before";
-                    var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial) : null;
+                    var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics;
+                    var mask = Measure(pixels, clip, allowSingleRedOccurrence);
+                    var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" || referenceDiagnostics;
+                    var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
@@ -1084,7 +1154,8 @@ internal static class EditorModelBuildSmoke
         return new(clip.Width, clip.Height, left, right, upper + lower, Hash(mask), green, Hash(greenMask));
     }
 
-    private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask, bool materialReset)
+    private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask,
+        bool materialReset, bool allowSingleRedOccurrence)
     {
         // The Editor chrome overlays the viewport. Compare a rectangle clear of the panels and their shadows.
         const float clearance = 12;
@@ -1097,7 +1168,7 @@ internal static class EditorModelBuildSmoke
             Math.Max(image.Top, (int)MathF.Ceiling((header.Y + header.Height + clearance) * scale)),
             Math.Min(image.Right, (int)MathF.Floor((inspector.X - clearance) * scale)),
             Math.Min(image.Bottom, (int)MathF.Floor((status.Y - clearance) * scale)));
-        var cropped = Measure(pixels, crop, materialReset);
+        var cropped = Measure(pixels, crop, allowSingleRedOccurrence);
         Check(cropped.RedPixels == mask.RedPixels && cropped.GreenPixels == mask.GreenPixels,
             "The unobstructed viewport crop does not contain all visible model pixels.");
         var rgba = new byte[checked(crop.Width * crop.Height * 4)];
