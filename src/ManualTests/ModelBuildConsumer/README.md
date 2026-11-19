@@ -275,6 +275,22 @@ process reopens the project and scene, then compares the catalog and ledger
 bytes, the exact mesh and material keys, both slot IDs and the viewport pixels.
 `-FreshPackages` repeats the complete two-process scenario from the closed feed.
 
+## Restore an edited material slot after restarting Editor
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -RenderMaterialSlotsRestart `
+  -EvidenceDirectory 'TestResults/EditorRenderMaterialSlotsRestart/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The first Editor imports and places the two-slot mesh, replaces the left slot's
+red material with white in the inspector and saves the scene. A new Editor opens
+the saved scene and checks both named material controls. Each process builds from
+its own output directory. The probe compares the two slot IDs, the mesh, binding
+and material keys, the saved scene and import hashes, and the exact viewport
+pixels with the white left slot and green right slot.
+`-FreshPackages` repeats the check from the closed feed.
+
 ## Diagnose a missing mesh or material binding
 
 ```powershell

@@ -14,7 +14,8 @@ param(
     [switch]$RenderMaterialReset,
     [switch]$RenderReferenceDiagnostics,
     [switch]$RenderMaterialSlots,
-    [switch]$InitialModelImport
+    [switch]$InitialModelImport,
+    [switch]$RenderMaterialSlotsRestart
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,13 +32,14 @@ if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' 
 $catalogProbe = $ModelCatalog -or $ModelPlacement
 $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
-$renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics -or $RenderMaterialSlots -or $InitialModelImport
+$initialImportProbe = $InitialModelImport -or $RenderMaterialSlotsRestart
+$renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics -or $RenderMaterialSlots -or $initialImportProbe
 $modelStatusProbe = $ModelImports -or $reimportProbe -or $renderProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($RenderMaterialSlotsRestart) { 'ED4i-material-slots-restart' } elseif ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -58,7 +60,7 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($RenderMaterialSlotsRestart) { '--editor-render-material-slots-restart' } elseif ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
         Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
@@ -66,7 +68,7 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
         if ($renderProbe) {
             [void][IO.Directory]::CreateDirectory($output)
             $run = @{ Name = "$name-$provider"; Fixture = $fixture }
-            if ($InitialModelImport) {
+            if ($initialImportProbe) {
                 $savedPath = "$output/import-saved.json"
                 $reopenedPath = "$output/import-reopened.json"
                 Copy-Item -LiteralPath "$fixture/import-saved/editor-initial-model-import.json" -Destination $savedPath
@@ -81,6 +83,12 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                     $saved.Slots[0].Id -ne $reopened.Slots[0].Id -or $saved.Slots[1].Id -ne $reopened.Slots[1].Id -or
                     !$saved.Frame.Pixels -or !$reopened.Frame.Pixels -or $saved.Frame.Pixels.Sha256 -ne $reopened.Frame.Pixels.Sha256) {
                     throw "Incomplete initial import, exact slot restoration or GPU evidence for $name-$provider"
+                }
+                if ($RenderMaterialSlotsRestart -and (!$saved.OverrideVerified -or !$reopened.OverrideVerified -or
+                    $saved.Binding.AssetId -ne $reopened.Binding.AssetId -or $saved.Binding.Revision -ne $reopened.Binding.Revision -or
+                    $saved.SelectionSha256 -ne $reopened.SelectionSha256 -or
+                    $saved.Frame.Pixels.Slots.WhitePixels -le 100 -or $saved.Frame.Mask.GreenPixels -le 100 -or $saved.Frame.Mask.RedPixels -ne 0)) {
+                    throw "Incomplete saved material override, inspector restoration or edited GPU evidence for $name-$provider"
                 }
                 $children = $savedChildren + $reopenedChildren
                 $run.Saved = @{ Path = $savedPath; Sha256 = (Get-FileHash -LiteralPath $savedPath).Hash }

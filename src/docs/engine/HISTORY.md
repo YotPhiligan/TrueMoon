@@ -16278,6 +16278,42 @@ SHA256 RGBA совпал с исходными профилями. EvidenceDirec
 Логи и TRX сохранены в `TestResults/ARCH1g2p-initial-import-regression-20261119-01`.
 [Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#import-the-first-model-from-editor).
 
+<a id="ed4i-material-slot-restart-2026-11-19"></a>
+## 2026-11-19 — ED4i, сохранение материала слота
+
+Проверка на версии `1.2611.19.11-alpha`. Первый процесс Editor импортировал
+и разместил двухслотовую glTF, заменил красный материал `left` на белый через
+инспектор, применил правку одной операцией истории и сохранил сцену.
+Второй процесс открыл сцену с диска и показал оба материала в инспекторе.
+
+Сверены SHA256 файла сцены, записи каталога, ledger и выбора импорта.
+В новой сборке совпали ID обоих слотов и точные ключи меша, производной
+привязки и двух материалов. Точный ключ зелёного материала `right`
+совпал с исходным ключом импорта. На Vulkan совпали все пиксели области
+686 × 925, в ней 16 653 белых и 16 926 зелёных пикселей.
+SHA256 RGBA `CD604C1465E2A99B7AC0997075347F40A71EA24D42BCAF58C82B3DC8B90347DE`.
+
+`VerifyEditor.ps1 -RenderMaterialSlotsRestart` прошёл в Source Debug
+и Published Release на Cobalt и Microsoft DI. В восьми Runtime было
+0 ошибок и 0 предупреждений Vulkan, ресурсы и дескрипторы освобождены.
+EvidenceDirectory `TestResults/ED4i-material-slots-restart-20261119-01`,
+SHA256 `verification.json`
+`4CAD86A809674612CD92C9CFFCF0585C3115483FE6467AE82C579BF401BD57E7`.
+
+`-RenderMaterialSlotsRestart -FreshPackages` повторил результат в
+независимом Editor на обоих DI. В четырёх Runtime было 0 ошибок и 0
+предупреждений Vulkan, ресурсы и дескрипторы освобождены.
+EvidenceDirectory `TestResults/ED4i-material-slots-restart-packages-20261119-01`,
+SHA256 `verification.json`
+`38649B60C8D295D896DE4A1983EC37F27F0F760EFE2396DA6DEBB73B422596E8`.
+
+Прежний профиль `-InitialModelImport` повторно прошёл в четырёх профилях
+Source Debug и Published Release. EvidenceDirectory
+`TestResults/ED4i-material-slots-restart-import-regression-20261119-01`,
+SHA256 `verification.json`
+`31B5EE9DD208E16E277906DBA6CB4E44E0439BE2D1308C0F8AF7DA38F17FC28F`.
+[Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#restore-an-edited-material-slot-after-restarting-editor).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

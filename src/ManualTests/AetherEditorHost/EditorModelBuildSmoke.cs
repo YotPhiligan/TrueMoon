@@ -9,6 +9,7 @@ using TrueMoon.Aether.Editor.Tooling.Documents;
 using TrueMoon.Aether.Editor.Tooling.Editing;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
+using TrueMoon.Aether.Editor.UI.Editing;
 using TrueMoon.Aether.Nom;
 using TrueMoon.Aether.Runtime.Builds;
 using TrueMoon.Aether.Runtime.Ecs.Rendering;
@@ -391,8 +392,10 @@ internal static class EditorModelBuildSmoke
 
     internal static async Task RunAsync(string[] args)
     {
-        var saveInitialImport = args.Length == 7 && args[6] == "--initial-import-save";
-        var reopenInitialImport = args.Length == 7 && args[6] == "--initial-import-reopen";
+        var initialMode = args.Length == 7 ? args[6] : null;
+        var saveInitialImport = initialMode is "--initial-import-save" or "--initial-import-save-slot";
+        var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot";
+        var persistSlotOverride = initialMode is "--initial-import-save-slot" or "--initial-import-reopen-slot";
         var initialImport = saveInitialImport || reopenInitialImport;
         var saveInspector = args.Length == 7 && args[6] == "--render-inspector-save";
         var reopenInspector = args.Length == 7 && args[6] == "--render-inspector-reopen";
@@ -768,9 +771,6 @@ internal static class EditorModelBuildSmoke
                     var placed = document.Read();
                     Check(documents.Read().Error == null && placed.IsDirty && placed.Content?.UndoCount == content.UndoCount + 1 &&
                         placed.Content.Document.Entities.Length == 2, $"Catalog did not place exactly one instance: {documents.Read().Error}");
-                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Save", token);
-                    await documents.Pending.WaitAsync(token);
-                    Check(documents.Read().Error == null && !document.Read().IsDirty, $"Cannot save the placed scene: {documents.Read().Error}");
                 }
                 else
                 {
@@ -788,14 +788,25 @@ internal static class EditorModelBuildSmoke
                 var published = await ledger.OpenAsync(token) ?? throw new InvalidDataException("Committed catalog ledger is missing.");
                 var mesh = published.Meshes.Single();
                 var entityId = published.Instances.Single().Id;
+                var leftMaterial = persistSlotOverride
+                    ? published.Bindings.Single(item => item.Key.Locator == "builtin/material/default").Id
+                    : mesh.Slots[0].MaterialId;
+                if (persistSlotOverride) await VerifyOverrideInInspector();
+                if (saveInitialImport)
+                {
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Save", token);
+                    await documents.Pending.WaitAsync(token);
+                    Check(documents.Read().Error == null && !document.Read().IsDirty, $"Cannot save the placed scene: {documents.Read().Error}");
+                }
                 before = document.Read();
                 content = before.Content!;
                 sceneHash = Hash(await File.ReadAllBytesAsync(scenePath, token));
                 var renderer = content.Resolved.Entities[new(entityId)].Components.Values.Single(value => value.TypeId == MeshRenderingComponents.MeshRendererId);
+                var bindingId = Guid.ParseExact(renderer.Properties["bindings"].Value.GetString(), "D");
                 Check(content.Document.Entities.Length == 2 && published.Generation == 1 &&
                     document.ReadModelImports(before.OpeningId).Single(item => item.SourceId == row.SourceId).Generation == published.Generation &&
                     renderer.Properties["mesh"].Value.GetString() == mesh.AssetId.ToString("D") &&
-                    renderer.Properties["bindings"].Value.GetString() == mesh.BindingSetId.ToString("D") &&
+                    (bindingId != mesh.BindingSetId) == persistSlotOverride &&
                     mesh.Slots.Length == 2 && mesh.Slots[0].SlotId != mesh.Slots[1].SlotId &&
                     mesh.Geometry.Slots.Select(slot => slot.SlotId).SequenceEqual(mesh.Slots.Select(slot => slot.SlotId)),
                     "The scene and restored import do not agree on the published mesh, slots and placement.");
@@ -806,15 +817,17 @@ internal static class EditorModelBuildSmoke
                 var artifact = engine.Editor.Status.Candidate?.Build.Artifact ?? throw new InvalidOperationException("New Editor Build is missing.");
                 Check(Path.GetDirectoryName(artifact.DirectoryPath) == compiler, "The Editor used a preexisting build.");
                 var manifest = artifact.RenderContent!;
-                var binding = manifest.Resolve(mesh.BindingSetId, RenderContentProfile.BindingSetKindId);
+                var binding = manifest.Resolve(bindingId, RenderContentProfile.BindingSetKindId);
                 var exact = (MaterialBindingSetDefinition)binding.Definition;
+                var imported = (MaterialBindingSetDefinition)manifest.Resolve(mesh.BindingSetId, RenderContentProfile.BindingSetKindId).Definition;
                 var slots = exact.Bindings.Select(slot => new ImportedSlotProof(slot.SlotId, AssetProof.From(slot.Material))).ToArray();
-                Check(exact.Mesh.AssetId == mesh.AssetId && PublishedSlotsAgree(), "Build lost the slot IDs or their exact material keys.");
+                Check(exact.Mesh == imported.Mesh && exact.Mesh.AssetId == mesh.AssetId && PublishedSlotsAgree(),
+                    "Build lost the slot IDs or their exact material keys.");
                 var stores = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
                 var nomId = session.Project.Description.Id;
                 await using (var store = stores.Create(new(Path.Combine(session.Project.ContentDirectory, ".aether-model-content"),
                     nomId, nomId, AssetStoreOpenMode.Open, token))!)
-                    foreach (var entry in manifest.Entries)
+                    foreach (var entry in manifest.Entries.Where(entry => !persistSlotOverride || entry.Key.AssetId != bindingId))
                         Check(await store.FindResourceAsync(entry.Key.AssetId) is { } head && head.KindId == entry.Key.KindId &&
                             head.Digest == entry.Key.Revision.ToString(), "Nom did not retain the exact imported resource.");
 
@@ -824,16 +837,25 @@ internal static class EditorModelBuildSmoke
                 Check(playback.Execute(EditorCommand.Stop), "Editor declined stopping the new Build.");
                 await Complete();
                 await CheckReleased(frame.Generation);
+                if (persistSlotOverride)
+                    Check(frame.Mask.RedPixels == 0 && frame.Mask.GreenPixels > 100 && frame.Pixels?.Slots is { WhitePixels: > 100 },
+                        "The rebuilt GPU frame did not show the white override and unchanged green material.");
+                var checkpoint = Path.Combine(session.Project.ContentDirectory, ".aether-model-imports", content.Document.Id.Value.ToString("N") + ".tmimports");
                 var result = new InitialImportProof(true, Environment.ProcessId, before.OpeningId, row.SourceId, row.SourcePath, entityId,
                     published.Generation, sceneHash, Hash(await File.ReadAllBytesAsync(catalogFile, token)),
-                    Hash(await File.ReadAllBytesAsync(ledgerPath, token)), AssetProof.From(exact.Mesh), AssetProof.From(binding.Key), slots, frame, failedAdmission);
+                    Hash(await File.ReadAllBytesAsync(ledgerPath, token)), AssetProof.From(exact.Mesh), AssetProof.From(binding.Key), slots, frame, failedAdmission)
+                {
+                    SelectionSha256 = Hash(await File.ReadAllBytesAsync(checkpoint, token)),
+                    OverrideVerified = persistSlotOverride
+                };
                 if (reopenInitialImport)
                 {
                     var prior = JsonSerializer.Deserialize<InitialImportProof>(await File.ReadAllBytesAsync(priorProof, token))!;
                     Check(prior.Completed && prior.RegistrationRetry && prior.EditorPid != result.EditorPid && prior.OpeningId != result.OpeningId &&
                         prior.SourceId == result.SourceId && prior.SourcePath == result.SourcePath && prior.Entity == result.Entity &&
                         prior.Generation == result.Generation && prior.SceneSha256 == result.SceneSha256 && prior.CatalogSha256 == result.CatalogSha256 &&
-                        prior.LedgerSha256 == result.LedgerSha256 && prior.Mesh == result.Mesh && prior.Binding == result.Binding &&
+                        prior.LedgerSha256 == result.LedgerSha256 && prior.SelectionSha256 == result.SelectionSha256 &&
+                        prior.OverrideVerified == result.OverrideVerified && prior.Mesh == result.Mesh && prior.Binding == result.Binding &&
                         prior.Slots.SequenceEqual(result.Slots) && prior.Frame.Mask == result.Frame.Mask &&
                         prior.Frame.Pixels != null && prior.Frame.Pixels == result.Frame.Pixels,
                         "The restarted Editor did not restore the exact catalog, scene, slot IDs and GPU frame.");
@@ -841,9 +863,48 @@ internal static class EditorModelBuildSmoke
                 await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-initial-model-import.json"), JsonSerializer.Serialize(result), token);
 
                 bool PublishedSlotsAgree() => manifest.Resolve(exact.Mesh).Definition is MeshDefinition geometry &&
-                    geometry.Slots.SequenceEqual(mesh.Geometry.Slots) &&
-                    exact.Bindings.Select(value => (value.SlotId, value.Material.AssetId))
-                        .SequenceEqual(mesh.Slots.Select(value => (value.SlotId, value.MaterialId)));
+                    geometry.Slots.SequenceEqual(mesh.Geometry.Slots) && exact.Bindings.Length == 2 &&
+                    exact.Bindings[0].SlotId == mesh.Slots[0].SlotId && exact.Bindings[0].Material.AssetId == leftMaterial &&
+                    exact.Bindings[1] == imported.Bindings[1] && exact.Bindings[1].SlotId == mesh.Slots[1].SlotId &&
+                    exact.Bindings[1].Material.AssetId == mesh.Slots[1].MaterialId &&
+                    exact.Bindings.All(slot => manifest.Resolve(slot.Material).Key == slot.Material);
+
+                async Task VerifyOverrideInInspector()
+                {
+                    var inspector = view.Inspector!;
+                    var unedited = document.Read().Content!;
+                    var component = unedited.Resolved.Entities[new(entityId)].Components.Values.Single(
+                        value => value.TypeId == MeshRenderingComponents.MeshRendererId).Id;
+                    await EditorHierarchySmoke.ClickItemAsync(ui, view, entityId.ToString("D"), token);
+                    if (saveInitialImport)
+                    {
+                        await SeeSlotMaterials(mesh.Slots[0].MaterialId);
+                        string? option = null;
+                        await ui.InvokeAsync(() => option = inspector.DataContext!.RenderAssets!.Materials.Single(item => item.Id == leftMaterial).Name)
+                            .WaitAsync(token);
+                        await ClickInspector(() => SlotButton("left"));
+                        await ClickInspector(() => SlotButton("left · " + option));
+                        await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { CanApply: true, RenderAssets: { } draft } &&
+                            draft.Slots.Count == 2 && draft.Slots[0].Material == leftMaterial &&
+                            draft.Slots[1].Material == mesh.Slots[1].MaterialId, token);
+                        Check(ReferenceEquals(document.Read().Content, unedited), "Slot selection leaked out of the draft before Apply.");
+                        await ClickInspector(() => inspector.Apply);
+                        Check(document.Read().Content!.UndoCount == unedited.UndoCount + 1, "Applying the override did not create one history entry.");
+                    }
+                    await SeeSlotMaterials(leftMaterial);
+
+                    Task SeeSlotMaterials(Guid expectedLeft) => EditorHeaderSmoke.UntilAsync(ui, () =>
+                        inspector.DataContext is { HasDraft: false, RenderAssets: { Enabled: true } selection } &&
+                        selection.Component == component && selection.Mesh == mesh.AssetId && selection.Slots.Count == 2 &&
+                        Shows(selection, 0, "left", expectedLeft) && Shows(selection, 1, "right", mesh.Slots[1].MaterialId), token);
+
+                    bool Shows(InspectorRenderAssetSelection selection, int index, string name, Guid material) =>
+                        selection.Slots[index].Id == mesh.Slots[index].SlotId && selection.Slots[index].Material == material &&
+                        SlotButton(name)?.Value == name + " · " + selection.Materials.Single(item => item.Id == material).Name;
+
+                    Button? SlotButton(string name) => inspector.Properties.TryGetValue((component, "bindings"), out var field)
+                        ? Descendants(field.Row).OfType<Button>().SingleOrDefault(button => button.AccessibleName == "Материал слота " + name) : null;
+                }
 
                 async Task EnterPath(string path)
                 {
@@ -1271,19 +1332,6 @@ internal static class EditorModelBuildSmoke
                         .OfType<Button>().SingleOrDefault(button => button.AccessibleName == option));
                 }
 
-                Task ClickInspector(Func<Element?> find) => EditorHeaderSmoke.UntilAsync(ui, () =>
-                {
-                    if (find() is not { IsEffectivelyEnabled: true, Bounds.Width: > 0, Bounds.Height: > 0 } element) return false;
-                    inspector.Scroll.BringIntoView(element.Bounds);
-                    if (ui.NeedsUpdate || !inspector.Scroll.ChildClipBounds.Contains(element.Bounds.X + element.Bounds.Width / 2,
-                        element.Bounds.Y + element.Bounds.Height / 2)) return false;
-                    EditorHeaderSmoke.Move(ui, element);
-                    EditorHeaderSmoke.Click(ui, element);
-                    return true;
-                }, token);
-
-                static IEnumerable<Element> Descendants(Element element) =>
-                    element.Children.Concat(element.Children.SelectMany(Descendants));
                 static Guid Id(ResolvedComponent component, string key) => Guid.Parse(component.Properties[key].Value.GetString());
                 ResolvedComponent Renderer(EntityId entity) => content.Resolved.Entities[entity].Components.Values.Single(
                     component => component.TypeId == MeshRenderingComponents.MeshRendererId);
@@ -1295,6 +1343,21 @@ internal static class EditorModelBuildSmoke
                     return await ledger.OpenAsync(token) ?? throw new InvalidOperationException("Inspector fixture ledger is missing.");
                 }
             }
+
+            Task ClickInspector(Func<Element?> find) => EditorHeaderSmoke.UntilAsync(ui, () =>
+            {
+                if (find() is not { IsEffectivelyEnabled: true, Bounds.Width: > 0, Bounds.Height: > 0 } element) return false;
+                var scroll = view.Inspector!.Scroll;
+                scroll.BringIntoView(element.Bounds);
+                if (ui.NeedsUpdate || !scroll.ChildClipBounds.Contains(element.Bounds.X + element.Bounds.Width / 2,
+                    element.Bounds.Y + element.Bounds.Height / 2)) return false;
+                EditorHeaderSmoke.Move(ui, element);
+                EditorHeaderSmoke.Click(ui, element);
+                return true;
+            }, token);
+
+            static IEnumerable<Element> Descendants(Element element) =>
+                element.Children.Concat(element.Children.SelectMany(Descendants));
 
             async Task<FrameProof> CapturePlaying(string name, GameBuildArtifact artifact, ulong minimumTick)
             {
@@ -1375,10 +1438,11 @@ internal static class EditorModelBuildSmoke
                     var clip = new SKRectI((int)(bounds.X * scale), (int)(bounds.Y * scale),
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
                     var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics || initialImport;
-                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, materialSlots);
+                    var compareSlots = materialSlots || persistSlotOverride;
+                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots);
                     var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
                         referenceDiagnostics || materialSlots || initialImport;
-                    var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence, materialSlots) : null;
+                    var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence, compareSlots) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
@@ -1538,7 +1602,11 @@ internal static class EditorModelBuildSmoke
     private sealed record ImportedSlotProof(Guid Id, AssetProof Material);
     private sealed record InitialImportProof(bool Completed, int EditorPid, Guid OpeningId, Guid SourceId, string SourcePath, Guid Entity,
         long Generation, string SceneSha256, string CatalogSha256, string LedgerSha256, AssetProof Mesh, AssetProof Binding,
-        ImportedSlotProof[] Slots, FrameProof Frame, bool RegistrationRetry);
+        ImportedSlotProof[] Slots, FrameProof Frame, bool RegistrationRetry)
+    {
+        public string SelectionSha256 { get; init; } = "";
+        public bool OverrideVerified { get; init; }
+    }
     private sealed record ModelImportProof(bool Completed, string BeforeEdit, string AfterEdit, string WhileMissing,
         string AfterReimport, string Blocked, bool MatchingContent, string OldBuild, string NewBuild,
         bool CancelledAfterLedger, bool MissingSourceRejected, IReadOnlyList<FrameProof> Captures, bool RestoredPriorGeneration,

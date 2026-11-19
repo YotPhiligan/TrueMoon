@@ -25,8 +25,9 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-initial-model-import" or "--revisions" or "--multi-model")) return 2;
-var editorInitialImport = args.Length == 8 && args[7] == "--editor-initial-model-import";
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-initial-model-import" or "--revisions" or "--multi-model")) return 2;
+var restartSlotOverride = args.Length == 8 && args[7] == "--editor-render-material-slots-restart";
+var editorInitialImport = restartSlotOverride || args.Length == 8 && args[7] == "--editor-initial-model-import";
 var renderSlots = args.Length == 8 && args[7] == "--editor-render-material-slots";
 var renderReferenceDiagnostics = args.Length == 8 && args[7] == "--editor-render-reference-diagnostics";
 var renderMaterialReset = args.Length == 8 && args[7] == "--editor-render-material-reset";
@@ -209,9 +210,11 @@ if (editorInitialImport)
         scenesRoot = "Scenes", contentRoot = "Content"
     }));
     string[] arguments = [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene, workerPath, dotnet];
-    var saved = await RunChild("import-saved", [.. arguments, "--initial-import-save"], TimeSpan.FromSeconds(120));
+    var saved = await RunChild("import-saved",
+        [.. arguments, restartSlotOverride ? "--initial-import-save-slot" : "--initial-import-save"], TimeSpan.FromSeconds(120));
     Check(saved.ExitCode == 0, saved.Error);
-    var reopened = await RunChild("import-reopened", [.. arguments, "--initial-import-reopen"], TimeSpan.FromSeconds(120));
+    var reopened = await RunChild("import-reopened",
+        [.. arguments, restartSlotOverride ? "--initial-import-reopen-slot" : "--initial-import-reopen"], TimeSpan.FromSeconds(120));
     Check(reopened.ExitCode == 0 && saved.Pid != reopened.Pid, reopened.Error);
     return 0;
 }
