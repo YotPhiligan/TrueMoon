@@ -20,6 +20,7 @@ public class InspectorProperty : Bindable
     public string Key => Schema.Id;
     /// <summary>Gets the presentation label.</summary>
     public string Label { get; }
+    internal bool IsRenderReference { get; init; }
     /// <summary>Gets the scalar kind, independent of an explicit null value.</summary>
     public PropertyValueKind Kind => Schema.Kind;
     /// <summary>Gets whether explicit null is accepted.</summary>

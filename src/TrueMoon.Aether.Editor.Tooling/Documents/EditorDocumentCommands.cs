@@ -313,6 +313,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     /// <returns>The engine receipt.</returns>
     public SceneAuthoringResult EditComponents(SceneDocument expected, ComponentEditBatch batch)
     { ArgumentNullException.ThrowIfNull(batch); return Edit(expected, document => document.EditComponents(batch, _lifetime)); }
+    internal SceneAuthoringResult EditRenderComponents(SceneDocument expected, SceneRenderAssets assets, ComponentEditBatch batch)
+        => Edit(expected, document => document.EditRenderComponents(assets, batch, _lifetime));
     /// <summary>Edits name/placement metadata under the existing document/runtime/IO admission gate.</summary>
     /// <param name="expected">Exact captured document.</param><param name="batch">Atomic metadata request.</param><returns>Engine receipt.</returns>
     public SceneAuthoringResult EditHierarchy(SceneDocument expected, HierarchyEditBatch batch)

@@ -87,6 +87,15 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
     /// <summary>Gets only effective components of the selected authoring entity.</summary>
     IReadOnlyList<InspectorComponent> Components { get; }
 
+    /// <summary>Detached choices for the selected MeshRenderer, when present.</summary>
+    InspectorRenderAssetSelection? RenderAssets => null;
+
+    /// <summary>Stages an asset choice in the existing inspector draft.</summary>
+    /// <param name="selection">Exact displayed renderer choices.</param>
+    /// <param name="property">Mesh or material field being edited.</param>
+    /// <param name="assetId">Persistent asset identity from the displayed choices.</param>
+    void SelectRenderAsset(InspectorRenderAssetSelection selection, InspectorProperty property, Guid assetId) { }
+
     /// <summary>Gets exact schemas and current dependency/multiplicity admission for addition.</summary>
     IReadOnlyList<InspectorComponentType> AddableTypes { get; }
 

@@ -13,6 +13,7 @@ public sealed class EditorInspectorViewStyle : IViewStyle<EditorInspectorView>
         styles.Root().FontSize(12);
         styles.Role(EditorInspectorView.SectionRole).Background(Color.Transparent).Set(UiProperties.BorderColor, t => t.Border).BorderWidth(1).Padding(new Thickness(6));
         styles.Role(EditorInspectorView.StackRole).Spacing(4);
+        styles.Role(EditorInspectorView.RenderChoicesRole).Padding(new Thickness(0, 2, 0, 2));
         styles.Role(EditorInspectorView.RowRole).Spacing(3);
         styles.Role(EditorInspectorView.TransformGroupRole).Spacing(4);
         styles.Role(EditorInspectorView.HeaderRole).FontSize(13).Height(26).Padding(new Thickness(20, 2, 4, 2));

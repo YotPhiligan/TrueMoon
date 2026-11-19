@@ -123,10 +123,12 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     /// <summary>Rechecks the selected sources before Build and returns their frozen resources, when selected.</summary>
     public async Task<GameBuildRenderContent?> CheckModelImportsAsync(Guid openingId, CancellationToken cancellationToken = default)
     {
-        var content = ModelImports == null ? null : await ModelImports.CheckAsync(openingId, cancellationToken).ConfigureAwait(false);
+        var selection = ModelImports == null ? null : await ModelImports.CheckAsync(openingId, cancellationToken).ConfigureAwait(false);
+        if (selection is { } found)
+            return Read() is { Content: { } active } state && state.OpeningId == openingId
+                ? found.Assets.PrepareBuild(active.Resolved, HasModelCatalog, cancellationToken) : found.Content;
         if (HasModelCatalog && Read() is { Content: { } scene } current && current.OpeningId == openingId)
         {
-            var keys = content?.AssetKeys.Select(key => (key.AssetId, key.KindId)).ToHashSet() ?? [];
             foreach (var entity in scene.Resolved.Entities.Values)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -134,13 +136,25 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                 {
                     var mesh = Guid.ParseExact(renderer.Properties["mesh"].Value.GetString(), "D");
                     var bindings = Guid.ParseExact(renderer.Properties["bindings"].Value.GetString(), "D");
-                    if (content == null && mesh == RenderContentProfile.CubeAssetId && bindings == RenderContentProfile.CubeBindingSetAssetId) continue;
-                    if (!keys.Contains((mesh, RenderContentProfile.MeshKindId)) || !keys.Contains((bindings, RenderContentProfile.BindingSetKindId)))
+                    if (mesh != RenderContentProfile.CubeAssetId || bindings != RenderContentProfile.CubeBindingSetAssetId)
                         throw new InvalidOperationException("Для размещённой модели выберите импорт в каталоге моделей проекта.");
                 }
             }
         }
-        return content;
+        return null;
+    }
+
+    internal SceneRenderAssets? ReadRenderAssets(Guid openingId) => ModelImports?.ReadRenderAssets(openingId);
+
+    internal SceneAuthoringResult EditRenderComponents(SceneRenderAssets expected, ComponentEditBatch batch, CancellationToken token)
+    {
+        lock (_gate)
+        {
+            VerifyEditable();
+            if (!ReferenceEquals(ReadRenderAssets(_openingId), expected))
+                throw new InvalidOperationException("Ресурсы сцены изменились. Отмените черновик и повторите выбор.");
+            return Current.EditComponents(batch, token);
+        }
     }
 
     /// <summary>Selects a validated new unsaved document after applying the current document's close policy.</summary>

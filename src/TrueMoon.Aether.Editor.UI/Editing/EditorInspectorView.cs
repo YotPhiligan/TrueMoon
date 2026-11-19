@@ -50,6 +50,9 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     private readonly IEditorInspectorViewModel _model;
     private readonly Dictionary<ComponentId, InspectorComponentControls> _components = [];
     private readonly Dictionary<(ComponentId, string), InspectorPropertyControls> _properties = [];
+    private readonly Dictionary<(ComponentId, string), ScrollViewer> _renderLists = [];
+    private InspectorRenderAssetSelection? _shownRenderAssets;
+    internal static ViewStyleRole<ScrollViewer> RenderChoicesRole { get; } = new("InspectorRenderChoices");
     private readonly Dictionary<(ComponentTypeId, int), Button> _addButtons = [];
     private readonly Dictionary<ComponentId, Button> _restoreButtons = [];
     private readonly HashSet<ComponentId> _collapsed = [];
@@ -144,7 +147,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         if (change.PropertyName == nameof(IEditorInspectorViewModel.HasSelection)) Dispatch(CloseHint);
         if (change.PropertyName is nameof(IEditorInspectorViewModel.Components) or nameof(IEditorInspectorViewModel.AddableTypes) or
             nameof(IEditorInspectorViewModel.RemovedComponents) or nameof(IEditorInspectorViewModel.CanChangeComponents) or
-            nameof(IEditorInspectorViewModel.HasDraft) or nameof(IEditorInspectorViewModel.DiagnosticsText))
+            nameof(IEditorInspectorViewModel.HasDraft) or nameof(IEditorInspectorViewModel.DiagnosticsText) or nameof(IEditorInspectorViewModel.RenderAssets))
         {
             if (_synchronizePending) return;
             _synchronizePending = true;
@@ -154,12 +157,18 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     private void Synchronize()
     {
         VerifyAccess();
+        if (!ReferenceEquals(_shownRenderAssets, _model.RenderAssets))
+        {
+            foreach (var list in _renderLists.Values) CloseRenderChoices(list);
+            _shownRenderAssets = _model.RenderAssets;
+        }
         foreach (var box in NumericEditors()) if (box.IsDragging && !(box.IsGestureCurrent?.Invoke() ?? true)) box.CancelGesture();
         var wanted = _model.Components.Select(c => c.Id).ToHashSet();
         foreach (var id in _components.Keys.Where(id => !wanted.Contains(id)).ToArray())
         {
             var section = _components[id]; ComponentList.Items.Remove(section.Section); section.Section.Dispose(); _components.Remove(id);
-            foreach (var address in _properties.Keys.Where(key => key.Item1 == id).ToArray()) { _properties.Remove(address); _genericEditors.Remove(address); _numericEditors.Remove(address); }
+            foreach (var address in _properties.Keys.Where(key => key.Item1 == id).ToArray())
+            { _properties.Remove(address); _genericEditors.Remove(address); _numericEditors.Remove(address); _renderLists.Remove(address); }
             _collapsed.Remove(id);
             _details.Remove(id); _detailsButtons.Remove(id); _transforms.Remove(id); _transformDetails.Remove(id);
         }
@@ -235,6 +244,12 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         {
             property.Input.HasError = property.Property.HasError; property.Input.IsModified = property.Property.HasDraft;
             property.Input.ErrorMessage = property.Property.Error;
+            if (property.Property.IsRenderReference && property.Input is Button picker)
+            {
+                var choices = RenderChoices(property.Property);
+                picker.Value = choices.Items.FirstOrDefault(item => item.Id == choices.Selected)?.Name ?? "Выбрать";
+                picker.IsEnabled = _shownRenderAssets?.Enabled == true && choices.Items.Count != 0;
+            }
             if (property.Input is CheckBox boolean) boolean.Value = property.Property.BooleanValue ? "Да" : "Нет";
             if (_genericEditors.TryGetValue((property.Property.ComponentId, property.Property.Key), out var editor))
             {
@@ -248,7 +263,15 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     private InspectorPropertyControls CreateProperty(InspectorProperty property, string component)
     {
         Element input; Element content;
-        if (property.Kind == PropertyValueKind.Boolean)
+        ScrollViewer? choices = null;
+        if (property.IsRenderReference)
+        {
+            choices = new ScrollViewer { MaxHeight = 134 }.WithRole(RenderChoicesRole);
+            choices.IsVisible = false;
+            _renderLists.Add((property.ComponentId, property.Key), choices);
+            content = input = Button.Simple("Выбрать").WithRole(ActionRole).OnClick(() => ToggleRenderChoices(property, choices));
+        }
+        else if (property.Kind == PropertyValueKind.Boolean)
             content = input = CheckBox.Create().WithRole(BooleanRole).BindTwoWay(CheckBox.IsCheckedProperty, property, x => x.BooleanValue);
         else if (property.Kind == PropertyValueKind.String)
             content = input = RichTextEditor.Create(new() { WordWrap = true }).WithRole(StringRole)
@@ -262,10 +285,10 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             ConfigureNumber(number, property);
         }
         input.MinWidth = 0; input.MinHeight = 0;
-        input.Bind(UiProperties.Enabled, property, x => x.CanWrite);
+        if (!property.IsRenderReference) input.Bind(UiProperties.Enabled, property, x => x.CanWrite);
         input.ColorRole = property.Kind == PropertyValueKind.Boolean ? EditorColorRole.Boolean :
             property.Kind == PropertyValueKind.String ? EditorColorRole.Text : EditorColorRole.Number;
-        input.AccessibleName = component + " " + property.Key;
+        input.AccessibleName = component + " " + (property.IsRenderReference ? property.Label : property.Key);
         var reset = Action(UiSymbol.Undo, "Сбросить " + component + " · " + property.Label + " к наследуемому значению или умолчанию").WithRole(ResetRole).Bind(UiProperties.Enabled, property, x => x.CanReset)
             .OnClick(() => _model.ResetProperty(property));
         var nullable = property.IsNullable ? CheckBox.Create("null").WithRole(NullRole)
@@ -274,7 +297,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         if (nullable != null) { nullable.ColorRole = input.ColorRole; nullable.AccessibleName = "Нет значения · " + component + " " + property.Key; }
         var source = Text.Plain().WithRole(MetadataRole).BindText(property, x => x.SourceText);
         var showDetails = _details.Contains(property.ComponentId);
-        source.IsVisible = showDetails; reset.IsVisible = showDetails;
+        source.IsVisible = showDetails; reset.IsVisible = showDetails && !property.IsRenderReference;
         var row = VStack.Create().WithRole(StackRole);
         var line = new PropertyEditorRow(content, nullable, property.Label).WithRole(FieldRole);
         line.Label.WithRole(VectorLabelRole); line.Empty.WithRole(EmptyValueRole);
@@ -282,8 +305,47 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         line.ValueWidth = property.Kind == PropertyValueKind.Boolean ? 96 : property.Kind == PropertyValueKind.String ? float.NaN : 120;
         line.ShowEmpty(property.IsNull); _genericEditors.Add((property.ComponentId, property.Key), line);
         var details = HStack.Create().WithRole(RowRole).WithChildren(reset, source); details.IsVisible = showDetails;
-        row.WithChildren(line, details);
+        row.Add(line);
+        if (choices != null) row.Add(choices);
+        row.Add(details);
         return new(property, row, input, nullable, reset, source);
+    }
+
+    private (IReadOnlyList<InspectorRenderAssetChoice> Items, Guid? Selected) RenderChoices(InspectorProperty property)
+    {
+        if (_shownRenderAssets is not { } selection || selection.Component != property.ComponentId) return ([], null);
+        return property.Key == "mesh" ? (selection.Meshes, selection.Mesh) : (selection.Materials, selection.Material);
+    }
+
+    private void ToggleRenderChoices(InspectorProperty property, ScrollViewer scroll)
+    {
+        var open = !scroll.IsVisible;
+        foreach (var list in _renderLists.Values) CloseRenderChoices(list);
+        if (!open || _shownRenderAssets is not { Enabled: true } selection) return;
+        var choices = RenderChoices(property);
+        var rows = VStack.Create().WithRole(StackRole);
+        foreach (var item in choices.Items)
+        {
+            var button = Button.Simple(item.Name).WithRole(ActionRole).OnClick(() =>
+            {
+                CloseRenderChoices(scroll);
+                _model.SelectRenderAsset(selection, property, item.Id);
+            });
+            button.AccessibleName = property.Label + " · " + item.Name;
+            button.Tone = item.Id == choices.Selected ? ControlTone.Accent : ControlTone.Neutral;
+            rows.Add(button);
+        }
+        scroll.Content(rows);
+        scroll.IsVisible = true;
+    }
+
+    private static void CloseRenderChoices(ScrollViewer scroll)
+    {
+        if (!scroll.IsVisible) return;
+        scroll.IsVisible = false;
+        var list = scroll.Child;
+        scroll.SetContent(null);
+        list?.Dispose();
     }
     private void CreateTransform(InspectorComponent component, VStack body)
     {
@@ -362,10 +424,10 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         _detailsButtons[id].Tone = visible ? ControlTone.Accent : ControlTone.Neutral;
         if (_transformDetails.TryGetValue(id, out var panel)) panel.IsVisible = visible;
         foreach (var entry in _properties.Where(p => p.Key.Item1 == id).Select(p => p.Value))
-        { entry.Reset.IsVisible = visible; entry.Source.IsVisible = visible; entry.Source.Parent!.IsVisible = visible; }
+        { entry.Reset.IsVisible = visible && !entry.Property.IsRenderReference; entry.Source.IsVisible = visible; entry.Source.Parent!.IsVisible = visible; }
     }
     private void RemoveProperty((ComponentId, string) address, VStack body)
-    { var old = _properties[address]; body.Items.Remove(old.Row); old.Row.Dispose(); _properties.Remove(address); _genericEditors.Remove(address); _numericEditors.Remove(address); }
+    { var old = _properties[address]; body.Items.Remove(old.Row); old.Row.Dispose(); _properties.Remove(address); _genericEditors.Remove(address); _numericEditors.Remove(address); _renderLists.Remove(address); }
     private static void Reorder(VStack parent, Element child, int index)
     { if (ReferenceEquals(parent.Children[index], child)) return; parent.Items.Remove(child); parent.Items.Insert(index, child); }
 

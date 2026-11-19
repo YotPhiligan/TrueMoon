@@ -5,6 +5,7 @@ using TrueMoon.Aether.Editor.Tooling.Translation;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Editing;
 using TrueMoon.Aether.Editor.UI.Translation;
+using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Preview;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
@@ -15,7 +16,7 @@ namespace TrueMoon.Aether.Editor.Tooling.Editing;
 
 
 /// <summary>Schema-driven inspector drafts over one shared document authoring history; borrows App-owned dependencies.</summary>
-public class EditorInspectorViewModel : ViewModel, IDisposable, IEditorInspectorViewModel
+public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorInspectorViewModel
 {
     bool IEditorInspectorViewModel.CanAdjustNumeric(InspectorProperty property) => CanAdjustNumeric(property);
     bool IEditorInspectorViewModel.IsNumericGestureCurrent(InspectorProperty property, long id) => IsNumericGestureCurrent(property, id);
@@ -174,6 +175,7 @@ public class EditorInspectorViewModel : ViewModel, IDisposable, IEditorInspector
         if (changedSelection || !HasDraft && !ReferenceEquals(_baseline, content?.Document)) Load(content);
         else if (changedOpening || !ReferenceEquals(_baseline, content?.Document)) _conflict = true;
         _available = state.RuntimeIdle && !state.Busy && !state.Exiting && !state.Closed && state.Document?.Operation == DocumentOperation.None;
+        _sceneAssets = state.Project?.Documents?.ReadRenderAssets(opening);
         if (content != null) _preview.Synchronize(content.Resolved);
         UpdateState(content);
     }
@@ -198,6 +200,7 @@ public class EditorInspectorViewModel : ViewModel, IDisposable, IEditorInspector
     private void Load(SceneAuthoringState? content)
     {
         _baseline = content?.Document; _component = default; _entity = default; _conflict = false;
+        _renderMesh = _renderBinding = null; _renderDraftAssets = null;
         SetProperty(ref _error, "", nameof(ErrorText)); _loading = true;
         try
         {
@@ -212,22 +215,33 @@ public class EditorInspectorViewModel : ViewModel, IDisposable, IEditorInspector
                 {
                     var schema = content!.Document.Schemas.Single(s => s.TypeId == component.TypeId && s.Version == component.SchemaVersion);
                     var fields = new List<InspectorProperty>();
-                    var ordered = schema.Properties.Values.OrderBy(p => component.TypeId == BuiltInComponents.TransformId ?
-                        Array.FindIndex(Fields.ToArray(), f => f.Key == p.Id) : 0).ThenBy(p => p.Id, StringComparer.Ordinal);
+                    var ordered = schema.Properties.Values.OrderBy(p => component.TypeId == BuiltInComponents.TransformId
+                        ? Array.FindIndex(Fields.ToArray(), f => f.Key == p.Id)
+                        : component.TypeId == MeshRenderingComponents.MeshRendererId ? p.Id == "mesh" ? -2 : p.Id == "bindings" ? -1 : 0 : 0)
+                        .ThenBy(p => p.Id, StringComparer.Ordinal);
                     foreach (var property in ordered)
                     {
                         var address = (component.Id, property.Id); wanted.Add(address);
+                        var renderReference = component.TypeId == MeshRenderingComponents.MeshRendererId &&
+                            component.SchemaVersion == 1 && property.Kind == PropertyValueKind.String && property.Id is "mesh" or "bindings";
                         InspectorProperty field;
                         if (component.TypeId == BuiltInComponents.TransformId)
                         {
                             field = Fields.Single(f => f.Key == property.Id); field.ComponentId = component.Id; _component = component.Id;
                         }
                         else if (!_properties.TryGetValue(address, out field!) || field.Schema.Kind != property.Kind ||
-                            field.Schema.IsNullable != property.IsNullable || field.Schema.DefaultValue != property.DefaultValue)
+                            field.Schema.IsNullable != property.IsNullable || field.Schema.DefaultValue != property.DefaultValue ||
+                            field.IsRenderReference != renderReference)
                         {
                             if (field != null) field.Changed -= DraftChanged;
-                            field = new(component.Id, property, property.Id, VerifyOwner);
+                            var label = renderReference ? property.Id == "mesh" ? "Меш" : "Материал" : property.Id;
+                            field = new(component.Id, property, label, VerifyOwner) { IsRenderReference = renderReference };
                             field.Changed += DraftChanged;
+                        }
+                        if (renderReference)
+                        {
+                            if (field.Key == "mesh") _renderMesh = field;
+                            else _renderBinding = field;
                         }
                         _properties[address] = field;
                         var value = component.Properties[property.Id];
@@ -266,6 +280,7 @@ public class EditorInspectorViewModel : ViewModel, IDisposable, IEditorInspector
     /// <param name="type">Persistent component type.</param><returns>A presentation name, never used for addressing.</returns>
     public static string ComponentName(ComponentTypeId type) => type == BuiltInComponents.TransformId ? "Transform" :
         type == BuiltInComponents.AppearanceId ? "Appearance" : type == BuiltInComponents.InteractionId ? "Interaction" :
+        type == MeshRenderingComponents.MeshRendererId ? "MeshRenderer" :
         "Component " + type.Value.ToString("D")[..8];
     private static string Source(EntityValueSource source, bool schemaDefault) => schemaDefault ? "По умолчанию из схемы" :
         source.EntityId != null ? "Локальное значение" :
@@ -382,15 +397,17 @@ public class EditorInspectorViewModel : ViewModel, IDisposable, IEditorInspector
     {
         var valid = true;
         foreach (var field in _active) valid &= field.TryValue(out _);
-        return valid;
+        return valid && (!HasRenderDraft || ReferenceEquals(_renderDraftAssets, _sceneAssets) && _renderAssets?.Material != null);
     }
     private void UpdateState(SceneAuthoringState? content)
     {
+        RefreshRenderAssets();
         var valid = Validate(); var draft = HasDraft;
         if (_scaleLinkError.Length != 0) { valid = false; _scaleErrorField?.SetError(_scaleLinkError); }
         SetProperty(ref _validationText, string.Join("\n", _components.SelectMany(component => component.Properties
             .Where(field => field.HasError).Select(field => component.Title + " · " +
-                (field is TransformField transform ? transform.DisplayLabel : field.Label) + ": " + field.Error))), nameof(DiagnosticsText));
+                (field is TransformField transform ? transform.DisplayLabel : field.Label) + ": " + field.Error))
+            .Concat(RenderDiagnostic())), nameof(DiagnosticsText));
         SetProperty(ref _canEdit, _available && _component != default, nameof(CanEdit));
         SetProperty(ref _canLinkScale, CanEdit && !_conflict, nameof(CanLinkScale));
         SetProperty(ref _canEditProperties, _available && _entity != default, nameof(CanEditProperties));
@@ -423,7 +440,10 @@ public class EditorInspectorViewModel : ViewModel, IDisposable, IEditorInspector
             field.TryValue(out var value);
             return new PropertyEdit(_entity, field.ComponentId, field.Key, value, field.IsReset);
         }).ToArray();
-        Mutate(() => _commands.EditComponents(_baseline!, new(Operation(), edits)));
+        var batch = new ComponentEditBatch(Operation(), edits);
+        Mutate(() => HasRenderDraft
+            ? _commands.EditRenderComponents(_baseline!, _renderDraftAssets!, batch)
+            : _commands.EditComponents(_baseline!, batch));
     }
     /// <summary>Compatibility policy for consumers that requested a full nine-value Transform replacement.</summary>
     protected virtual bool ReplaceWholeTransform => false;
@@ -432,7 +452,7 @@ public class EditorInspectorViewModel : ViewModel, IDisposable, IEditorInspector
     public void ResetProperty(InspectorProperty property)
     {
         ArgumentNullException.ThrowIfNull(property); VerifyOwner(); Refresh(_selection);
-        if (CanEditProperties && !_conflict && _active.Contains(property)) property.Reset();
+        if (CanEditProperties && !_conflict && _active.Contains(property) && !property.IsRenderReference) property.Reset();
     }
     private static int GroupOffset(TransformGroup group) => group switch
     {

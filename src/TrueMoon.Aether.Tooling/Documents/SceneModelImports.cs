@@ -290,7 +290,10 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
     internal IReadOnlyList<SceneModelImportStatus> Read(Guid openingId) =>
         _current is { } selection && selection.OpeningId == openingId ? selection.Read() : [];
 
-    internal async Task<GameBuildRenderContent?> CheckAsync(Guid openingId, CancellationToken token)
+    internal SceneRenderAssets? ReadRenderAssets(Guid openingId) =>
+        _current is { } selection && selection.OpeningId == openingId ? selection.RenderAssets : null;
+
+    internal async Task<(SceneRenderAssets Assets, GameBuildRenderContent Content)?> CheckAsync(Guid openingId, CancellationToken token)
     {
         var selection = _current;
         if (selection == null || selection.OpeningId != openingId) return null;
@@ -306,7 +309,7 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
         }
         token.ThrowIfCancellationRequested();
         if (!ReferenceEquals(selection, _current)) throw new OperationCanceledException("Model import selection changed during capture.", token);
-        return selection.Content;
+        return (selection.RenderAssets, selection.Content);
     }
 
     internal Task ClearAsync()
@@ -335,6 +338,8 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
     {
         private readonly Lock _gate = new();
         private IReadOnlyList<SceneModelImportStatus> _statuses = [];
+        private readonly Lazy<SceneRenderAssets> _renderAssets = new(() => new(Content, Imports));
+        internal SceneRenderAssets RenderAssets => _renderAssets.Value;
 
         internal IReadOnlyList<SceneModelImportStatus> Read()
         {

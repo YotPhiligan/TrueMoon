@@ -8,7 +8,8 @@ param(
     [switch]$ModelReimport,
     [switch]$ModelSelectionPersistence,
     [switch]$ModelCatalog,
-    [switch]$ModelPlacement
+    [switch]$ModelPlacement,
+    [switch]$RenderInspector
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,12 +26,12 @@ if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' 
 $catalogProbe = $ModelCatalog -or $ModelPlacement
 $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
-$modelStatusProbe = $ModelImports -or $reimportProbe
+$modelStatusProbe = $ModelImports -or $reimportProbe -or $RenderInspector
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -51,11 +52,40 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
         Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
             $dotnet, $profile.TestFramework, $profile.Sdk, $mode)
+        if ($RenderInspector) {
+            [void][IO.Directory]::CreateDirectory($output)
+            $path = "$output/editor-render-inspector.json"
+            Copy-Item -LiteralPath "$fixture/editor-render-inspector.json" -Destination $path
+            $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+            $children = @(Get-ChildItem -LiteralPath $fixture -Filter 'runtime-*.json' -File)
+            if (!$proof.Completed -or $proof.Captures.Count -ne 3 -or $children.Count -ne 3 -or
+                $proof.Captures[0].BuildId -eq $proof.Captures[1].BuildId -or
+                $proof.Captures[0].Mask.Sha256 -eq $proof.Captures[1].Mask.Sha256 -or
+                $proof.Captures[0].Mask.Sha256 -ne $proof.Captures[2].Mask.Sha256) {
+                throw "Incomplete MeshRenderer inspector evidence for $name-$provider"
+            }
+            foreach ($child in $children) {
+                $state = Get-Content -LiteralPath $child.FullName -Raw | ConvertFrom-Json
+                $gpu = $state.Validation
+                if ($state.Resources -ne 0 -or $state.Handles -ne 0 -or !$gpu.ValidationEnabled -or $gpu.Errors -ne 0 -or
+                    $gpu.Warnings -ne 0 -or $gpu.DevicesCreated -ne $gpu.DevicesReleased -or
+                    $gpu.SurfacesCreated -ne $gpu.SurfacesReleased -or $gpu.SlotsCreated -ne $gpu.SlotsReleased -or
+                    $gpu.OpenHandles -ne 0 -or $gpu.LiveSlots -ne 0) {
+                    throw "Runtime ownership or validation mismatch in $($child.FullName)"
+                }
+            }
+            $report.Runs += @{
+                Name = "$name-$provider"; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash; Fixture = $fixture
+                Children = @($children | ForEach-Object { @{ Path = $_.FullName; Sha256 = (Get-FileHash -LiteralPath $_.FullName).Hash } })
+                Captures = @($proof.Captures.Name | ForEach-Object { @{ Path = "$fixture/$_.png"; Sha256 = (Get-FileHash -LiteralPath "$fixture/$_.png").Hash } })
+            }
+            continue
+        }
         if ($modelStatusProbe) {
             [void][IO.Directory]::CreateDirectory($output)
             $path = "$output/editor-imports.json"
@@ -172,7 +202,7 @@ function Test-FreshEditor {
         "$PSScriptRoot/../ModelImportResearch/Fixtures.cs" -Destination "$root/Authoring"
     $editorSources = "$workspace/ManualTests/AetherEditorHost"
     Copy-Item -LiteralPath "$editorSources/EditorModelBuildSmoke.cs", "$editorSources/EditorHeaderSmoke.cs",
-        "$editorSources/RuntimeEntryPoint.cs" -Destination "$root/Editor"
+        "$editorSources/EditorHierarchySmoke.cs", "$editorSources/RuntimeEntryPoint.cs" -Destination "$root/Editor"
     [IO.File]::WriteAllText("$root/Editor/Program.cs", @'
 using TrueMoon.ManualTests.AetherEditorHost;
 

@@ -14,6 +14,7 @@ public sealed class GameBuildRenderContent
 
     /// <summary>Exact canonical resource identities in this frozen payload.</summary>
     public ImmutableArray<RenderAssetKey> AssetKeys { get; }
+    internal ImmutableArray<RenderAssetEntry> Entries => _entries;
 
     /// <summary>Validates the complete render closure and captures its canonical bytes.</summary>
     /// <param name="projectId">Project that owns all asset keys.</param>

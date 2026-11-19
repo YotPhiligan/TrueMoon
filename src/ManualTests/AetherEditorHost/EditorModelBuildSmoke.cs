@@ -11,6 +11,7 @@ using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Documents;
 using TrueMoon.Aether.Nom;
 using TrueMoon.Aether.Runtime.Builds;
+using TrueMoon.Aether.Runtime.Ecs.Rendering;
 using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
@@ -390,11 +391,12 @@ internal static class EditorModelBuildSmoke
 
     internal static async Task RunAsync(string[] args)
     {
+        var probeRenderInspector = args.Length == 7 && args[6] == "--render-inspector";
         var probePlacement = args.Length == 9 && args[6] == "--model-placement";
         var probeCatalog = probePlacement || args.Length == 9 && args[6] == "--model-catalog";
         var probePersistence = probeCatalog || args.Length == 9 && args[6] == "--persisted-imports";
         var probeReimport = probePersistence || args.Length == 9 && args[6] == "--reimport";
-        var probeImports = probeReimport || args.Length == 7 && args[6] == "--imports";
+        var probeImports = probeRenderInspector || probeReimport || args.Length == 7 && args[6] == "--imports";
         if (args.Length != 6 && !probeImports || args[0] is not ("cobalt" or "microsoft")) throw new ArgumentException("Invalid model delivery probe arguments.");
         var report = args[1];
         var project = args[2];
@@ -494,6 +496,13 @@ internal static class EditorModelBuildSmoke
                 Check(content.Document.Entities.Length == (probePlacement ? 3 : 5) && !before.IsDirty, "Unexpected fixture scene.");
                 var document = documents.Read().Project?.Documents ?? throw new InvalidOperationException("No project document session.");
                 var ledgerFactory = app.Services.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>()!;
+                if (probeRenderInspector)
+                {
+                    await VerifyRenderInspector(document, ledgerFactory);
+                    window.Close();
+                    await window.Completion.WaitAsync(token);
+                    return;
+                }
                 if (probeReimport)
                 {
                     var storeFactory = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
@@ -658,6 +667,118 @@ internal static class EditorModelBuildSmoke
             {
                 await playback.Pending.WaitAsync(token);
                 if (playback.Error is { } error) throw new InvalidOperationException("Editor scene command failed.", error);
+            }
+
+            async Task VerifyRenderInspector(SceneDocumentSession document, IFactory<ModelImportLedgerSession, ModelImportLedgerArguments> ledgers)
+            {
+                var red = await ReadImport("ce662048-9dcb-4c60-aaf0-213342054fa6", "red-baseline.tmledger");
+                var green = await ReadImport("65710c6d-6781-4476-9bb8-735fc518f008", "green.tmledger");
+                var redMesh = red.Meshes.Single();
+                var greenMesh = green.Meshes.Single();
+                var target = new EntityId(red.Instances[0].Id);
+                var sibling = new EntityId(red.Instances[1].Id);
+                var renderer = Renderer(target);
+                var opening = before.OpeningId;
+                var saved = content;
+                await document.SelectModelImportsAsync(opening,
+                    [new("Red", Watch(red, "source")), new("Green", Watch(green, "source-green"))],
+                    new(oldBuild.RenderContent!.ProjectId, oldBuild.RenderContent.Entries), token);
+
+                var baseline = await BuildAndShow("inspector-before");
+                await EditorHierarchySmoke.ClickItemAsync(ui, view, target.Value.ToString("D"), token);
+                var inspector = view.Inspector!;
+                await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.RenderAssets is { Enabled: true } selection &&
+                    selection.Mesh == redMesh.AssetId && selection.Material == redMesh.MaterialId, token);
+                await Choose("mesh", "Меш", greenMesh.AssetId);
+                Check(document.Read().Content == saved, "Choosing a mesh changed the committed scene before Apply.");
+                await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.RenderAssets is { } selection &&
+                    selection.Mesh == greenMesh.AssetId && selection.Material == greenMesh.MaterialId, token);
+                await Choose("bindings", "Материал", redMesh.MaterialId);
+                await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.CanApply &&
+                    inspector.DataContext.RenderAssets?.Material == redMesh.MaterialId, token);
+                await ClickInspector(() => inspector.Apply);
+                var edit = document.Read().Content!;
+                var rendererEdit = edit.Resolved.Entities[target].Components[renderer.Id];
+                var binding = Id(rendererEdit, "bindings");
+                Check(edit.UndoCount == saved.UndoCount + 1 && Id(rendererEdit, "mesh") == greenMesh.AssetId &&
+                    binding != greenMesh.BindingSetId && Id(edit.Resolved.Entities[sibling].Components[renderer.Id], "mesh") == redMesh.AssetId &&
+                    Id(edit.Resolved.Entities[sibling].Components[renderer.Id], "bindings") == redMesh.BindingSetId,
+                    "Apply did not commit both choices once or modified the sibling sharing the definition.");
+                var changed = await BuildAndShow("inspector-after");
+                Check(changed.Artifact.RenderContent?.Resolve(binding, RenderContentProfile.BindingSetKindId).Definition is MaterialBindingSetDefinition set &&
+                    set.Mesh.AssetId == greenMesh.AssetId && set.Bindings.Single().Material.AssetId == redMesh.MaterialId,
+                    "Build did not publish the requested independent material binding.");
+                await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.CanUndo, token);
+                await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
+                var undone = document.Read();
+                Check(!undone.IsDirty && undone.Content?.ContentRevision == saved.ContentRevision &&
+                    Id(undone.Content.Resolved.Entities[target].Components[renderer.Id], "mesh") == redMesh.AssetId &&
+                    Id(undone.Content.Resolved.Entities[target].Components[renderer.Id], "bindings") == redMesh.BindingSetId,
+                    "One Undo did not restore both references.");
+                var restored = await BuildAndShow("inspector-undo");
+                Check(baseline.Frame.Mask == restored.Frame.Mask && baseline.Frame.Mask.Sha256 != changed.Frame.Mask.Sha256 &&
+                    baseline.Frame.Mask.GreenSha256 == changed.Frame.Mask.GreenSha256 && changed.Frame.Mask.RedPixels > 200 &&
+                    engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0,
+                    "GPU pixels did not show the mesh/material edit and exact Undo restoration.");
+                await File.WriteAllTextAsync(Path.Combine(report, "editor-render-inspector.json"), JsonSerializer.Serialize(new
+                {
+                    Completed = true, Captures = captures, Entity = target.Value, Mesh = greenMesh.AssetId,
+                    Material = redMesh.MaterialId, Binding = binding
+                }), token);
+
+                async Task<(FrameProof Frame, GameBuildArtifact Artifact)> BuildAndShow(string name)
+                {
+                    before = document.Read();
+                    content = before.Content!;
+                    await EditorHeaderSmoke.UntilAsync(ui, () => view.DataContext!.CanBuild, token);
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "runtime.Build", token);
+                    await Complete();
+                    var artifact = engine.Editor.Status.Candidate?.Build.Artifact ?? throw new InvalidOperationException("No inspector Build candidate.");
+                    Check(playback.RunSelectedBuild(artifact), "Editor declined running the inspector Build.");
+                    await Complete();
+                    var frame = await CapturePlaying(name, artifact, 0);
+                    Check(playback.Execute(EditorCommand.Stop), "Editor declined stopping the inspector Build.");
+                    await Complete();
+                    await CheckReleased(frame.Generation);
+                    return (frame, artifact);
+                }
+
+                async Task Choose(string key, string label, Guid assetId)
+                {
+                    string? option = null;
+                    await ui.InvokeAsync(() =>
+                    {
+                        var selection = inspector.DataContext!.RenderAssets!;
+                        option = label + " · " + (key == "mesh" ? selection.Meshes : selection.Materials).Single(item => item.Id == assetId).Name;
+                    }).WaitAsync(token);
+                    await ClickInspector(() => inspector.Properties[(renderer.Id, key)].Input);
+                    await ClickInspector(() => Descendants(inspector.Properties[(renderer.Id, key)].Row)
+                        .OfType<Button>().SingleOrDefault(button => button.AccessibleName == option));
+                }
+
+                Task ClickInspector(Func<Element?> find) => EditorHeaderSmoke.UntilAsync(ui, () =>
+                {
+                    if (find() is not { IsEffectivelyEnabled: true, Bounds.Width: > 0, Bounds.Height: > 0 } element) return false;
+                    inspector.Scroll.BringIntoView(element.Bounds);
+                    if (ui.NeedsUpdate || !inspector.Scroll.ChildClipBounds.Contains(element.Bounds.X + element.Bounds.Width / 2,
+                        element.Bounds.Y + element.Bounds.Height / 2)) return false;
+                    EditorHeaderSmoke.Move(ui, element);
+                    EditorHeaderSmoke.Click(ui, element);
+                    return true;
+                }, token);
+
+                static IEnumerable<Element> Descendants(Element element) =>
+                    element.Children.Concat(element.Children.SelectMany(Descendants));
+                static Guid Id(ResolvedComponent component, string key) => Guid.Parse(component.Properties[key].Value.GetString());
+                ResolvedComponent Renderer(EntityId entity) => content.Resolved.Entities[entity].Components.Values.Single(
+                    component => component.TypeId == MeshRenderingComponents.MeshRendererId);
+                ModelSourceWatchArguments Watch(PublishedModelImport import, string folder) =>
+                    new(new(import.Candidate.SourceId, Path.Combine(report, folder), "scene.gltf"), import);
+                async Task<PublishedModelImport> ReadImport(string source, string filename)
+                {
+                    await using var ledger = ledgers.Create(new(Guid.Parse(source), Path.Combine(report, "ledger", filename)))!;
+                    return await ledger.OpenAsync(token) ?? throw new InvalidOperationException("Inspector fixture ledger is missing.");
+                }
             }
 
             async Task<FrameProof> CapturePlaying(string name, GameBuildArtifact artifact, ulong minimumTick)

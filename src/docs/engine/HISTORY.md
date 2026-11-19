@@ -16052,6 +16052,44 @@ SHA256 `verification.json` `398911C4AD500955A3BA70A041E48EC274336B516886F82D6F44
 TRX и логи в `TestResults/ARCH1g2o-editor-regression-20261119-01`.
 [Подключение и поведение](MODEL_BUILD_DELIVERY.md#arch1g2o-place-catalog-model).
 
+<a id="ed4i-render-inspector-2026-11-19"></a>
+## 2026-11-19 — ED4i, выбор меша и материала
+
+Версия `1.2611.19.7-alpha`. Нативный инспектор выбрал меш второй модели и
+материал первой для одной из двух сущностей, использующих общее определение.
+До Apply ссылки в документе не изменились. Apply создал одну запись истории.
+Соседний экземпляр сохранил исходные ссылки. В манифест новой сборки вошла
+привязка к точным ключам выбранного меша и материала.
+
+На Vulkan маска красной геометрии изменилась с 25 096 до 19 371 пикселя.
+Маска зелёной модели осталась прежней. Один Undo восстановил обе ссылки
+и исходную маску. Для каждого кадра проверены BuildId, ID и ревизия сцены,
+а также хеш render manifest.
+
+`VerifyEditor.ps1 -RenderInspector` прошёл в Source Debug и Published Release
+на Cobalt и Microsoft DI. EvidenceDirectory
+`TestResults/ED4i-render-inspector-20261119-03`, SHA256 `verification.json`
+`A23CA2F942B9A77098ED634A0E004948C5C3D8468EE826F885ACC0A6BE19871C`.
+В 12 дочерних запусках Vulkan validation показала 0 ошибок и 0 предупреждений.
+После Stop освобождены устройства, поверхности, slots и handles.
+
+`VerifyEditor.ps1 -RenderInspector -FreshPackages` проверил независимый
+Editor на Cobalt и Microsoft DI и 20 пакетов в закрытом feed. Ещё шесть
+дочерних запусков прошли с Vulkan validation 0 ошибок и 0 предупреждений
+и сбалансированным освобождением ресурсов. EvidenceDirectory
+`TestResults/ED4i-render-inspector-packages-20261119-02`, SHA256 `verification.json`
+`8DF90C2323D3B4EC2BB3C7598AA0CEE371E0450A0F52A7F4302B1CC378E30CE9`.
+
+`TrueMoon.Aether.Editor.Tests` прошёл 1507/1507 в Debug и Release.
+Запуск через `dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c <Debug|Release> --no-restore`.
+TRX и логи в `TestResults/ED4i-render-inspector-regression-20261119-01`.
+
+Первые попытки остановились на проверке актуальности исходника и ожидании
+watch probe после восстановления BIN до завершения проверки. В принятом
+сценарии исходный BIN восстанавливается после остановки authoring-приложения
+и перед запуском Editor. Изолированный пакетный стенд включает штатный
+драйвер клика по дереву сцены.
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

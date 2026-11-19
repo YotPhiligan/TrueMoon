@@ -24,12 +24,13 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--revisions" or "--multi-model")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--revisions" or "--multi-model")) return 2;
+var renderInspector = args.Length == 8 && args[7] == "--editor-render-inspector";
 var editorPlacement = args.Length == 8 && args[7] == "--editor-model-placement";
 var editorCatalog = editorPlacement || args.Length == 8 && args[7] == "--editor-model-catalog";
 var editorPersistence = editorCatalog || args.Length == 8 && args[7] == "--editor-persisted-imports";
 var editorReimport = editorPersistence || args.Length == 8 && args[7] == "--editor-reimport";
-var editorImports = editorReimport || args.Length == 8 && args[7] == "--editor-imports";
+var editorImports = editorReimport || renderInspector || args.Length == 8 && args[7] == "--editor-imports";
 var editorProbe = editorImports || args.Length == 8 && args[7] == "--editor";
 var revisionProbe = args.Length == 8 && args[7] == "--revisions";
 var multiModelProbe = editorImports || args.Length == 8 && args[7] == "--multi-model";
@@ -165,6 +166,7 @@ var placement = Matrix4x4.CreateRotationZ(.1f) * Matrix4x4.CreateTranslation(.25
 var scenePath = Path.Combine(evidence, "placed.aetherscene");
 GameBuildResult oldBuild, newBuild, legacyBuild;
 PublishedModelImport oldModel, newModel;
+byte[]? inspectorBaseline = null;
 string oldSnapshotId, newSnapshotId;
 GameBuildResult? scaledBuild = null;
 PublishedModelImport? scaledModel = null;
@@ -272,7 +274,14 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
             var greenRoot = original.DeepClone();
             greenRoot["meshes"]![0]!["primitives"]![0]!["material"] = 1;
             File.WriteAllText(Path.Combine(secondSourceDirectory, "scene.gltf"), greenRoot.ToJsonString());
-            File.Copy(vertices, Path.Combine(secondSourceDirectory, "scene.bin"));
+            var greenBuffer = Path.Combine(secondSourceDirectory, "scene.bin");
+            if (renderInspector)
+            {
+                var greenVertices = File.ReadAllBytes(vertices);
+                BinaryPrimitives.WriteSingleLittleEndian(greenVertices.AsSpan(12), .55f);
+                File.WriteAllBytes(greenBuffer, greenVertices);
+            }
+            else File.Copy(vertices, greenBuffer);
             var greenSourceId = Guid.Parse("65710c6d-6781-4476-9bb8-735fc518f008");
             await using var greenLedger = ledgerFactory.Create(new(greenSourceId, Path.Combine(evidence, "ledger", "green.tmledger")))!;
             greenModel = await Import(0, await Capture(greenSourceId, secondSourceDirectory), target: greenLedger);
@@ -313,6 +322,7 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         else oldBuild = await BuildModel(oldSnapshotId);
 
         var bytes = File.ReadAllBytes(vertices);
+        if (renderInspector) inspectorBaseline = bytes.ToArray();
         // The dependency-only cases change the corner's Y inside the original accessor bounds.
         var dependencyOnly = revisionProbe || multiModelProbe;
         BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(dependencyOnly ? 16 : 12), dependencyOnly ? .5f : 2f);
@@ -501,6 +511,8 @@ if (!editorImports)
 }
 if (editorProbe)
 {
+    if (inspectorBaseline != null)
+        File.WriteAllBytes(Path.Combine(sourceDirectory, "scene.bin"), inspectorBaseline);
     var scenes = Directory.CreateDirectory(Path.Combine(evidence, "Scenes"));
     Directory.CreateDirectory(Path.Combine(evidence, "Content"));
     var scene = Path.Combine(scenes.FullName, Path.GetFileName(scenePath));
@@ -516,9 +528,10 @@ if (editorProbe)
         oldBuild.DirectoryPath, newBuild.DirectoryPath];
     if (editorReimport) editorArguments = [.. editorArguments, editorPlacement ? "--model-placement" :
         editorCatalog ? "--model-catalog" : editorPersistence ? "--persisted-imports" : "--reimport", workerPath, dotnet];
-    else if (editorImports) editorArguments = [.. editorArguments, "--imports"];
+    else if (editorImports) editorArguments = [.. editorArguments, renderInspector ? "--render-inspector" : "--imports"];
     var result = await RunChild("editor", editorArguments, TimeSpan.FromSeconds(120));
-    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, editorImports ? "editor-imports.json" : "editor-model.json")), result.Error);
+    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, renderInspector ? "editor-render-inspector.json" :
+        editorImports ? "editor-imports.json" : "editor-model.json")), result.Error);
     return 0;
 }
 var oldProof = await ReadBuild(oldBuild, "old");

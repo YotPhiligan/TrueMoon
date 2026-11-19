@@ -184,3 +184,20 @@ It then builds and presents the scene through the GPU viewport and matches the
 presented scene revision, BuildId and render manifest.
 
 [Contract and ownership](../../docs/engine/MODEL_BUILD_DELIVERY.md)
+
+## Change MeshRenderer assets in the inspector
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -RenderInspector `
+  -EvidenceDirectory 'TestResults/EditorRenderInspector/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The fixture selects two published imports with different shapes and base
+colors. In the real inspector it chooses a different mesh for one occurrence
+and assigns a material from the other import. It applies both refs together
+and checks that the sibling sharing the original definition keeps its refs.
+The probe builds and displays the original, edited and undone scene revisions
+on Vulkan. It checks the selected material in the edited build manifest and
+compares the GPU masks, including exact recovery after one Undo.
+`-FreshPackages` runs the same scenario in an independent published Editor.
