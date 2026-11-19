@@ -1,7 +1,9 @@
 # TrueMoon: общий план развития
 
-Выполнено 2026-11-19 [ARCH1g.2j](engine/PLAN.md#arch1g2j-model-source-watch).
-Уведомления Windows и полный опрос запускают проверку актуальности модели.
+**19.11.2026.** [ARCH1g.2j](engine/PLAN.md#arch1g2j-model-source-watch) в `main`,
+коммит `5a8d7cf`. [ARCH1g.2k](engine/PLAN.md#arch1g2k-editor-model-imports)
+реализован и проверен. Статусы выбранных моделей видны
+в Editor, а Build повторно проверяет исходники. [Текущая очередь](#current-roadmap)
 
 Выполнено 2026-11-18. SkiaSharp обновлён до 4.157.0 вместе с расширенной
 Windows x64 DLL. [Приёмка Alloy](alloy/HISTORY.md#skiasharp-41570-2026-11-18).
@@ -106,7 +108,10 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 
 <a id="current-roadmap"></a>
 <a id="текущая-очередь--ревизия-2026-11-05"></a>
-## Текущая очередь — актуализация 2026-11-18
+## Текущая очередь — актуализация 2026-11-19
+
+Продолжение импорта моделей, предложенное к обсуждению, — явный реимпорт
+одной выбранной модели в Editor. [ARCH1g.2l](engine/PLAN.md#arch1g2l-editor-reimport)
 
 По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика
 ARCH2e.4b → ARCH1f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5
@@ -191,9 +196,10 @@ D/published R; [контракт](physics/CONTRACTS.md). PHYS2 provider реал
 source/fresh package D/published R, [scope](physics/PROVIDER.md); PHYS3 queries/
 events реализован:309checks/profile, [policy](physics/QUERIES_CONTACTS.md). PHYS4 App/
 configuration/DI реализован:192checks/profile обоих DI; [App guide](physics/APP.md),
-[evidence](physics/HISTORY.md#phys4-2026-11-12). Далее PHYS5 ECS bridge по ARCH3
-ECS boundaries, простой ragdoll — необязательный PHYS7. Текущая очередь Aether
-сохраняется. [Имя и источники](physics/NAMING.md).
+[evidence](physics/HISTORY.md#phys4-2026-11-12). PHYS5 подключил ECS bridge,
+PHYS6 добавил контроллер персонажа. Ближайший независимый срез PHYS8 — профили
+10 000 тел и воркеров. Простой ragdoll остаётся необязательным PHYS7.
+[Текущий статус Kton](physics/STATUS.md), [имя и источники](physics/NAMING.md).
 
 [CORE7 — единая конфигурация App и модулей](core/PLAN.md#core7-unified-configuration):
 2026-11-11 CORE7.0–7.6 завершены в configuration scope:
@@ -204,11 +210,11 @@ Source/published/fresh: по230checks на обоих DI,4owned children/profile
 
 | Направление | Следующий результат | План владельца |
 | --- | --- | --- |
-| Слои Aether и моды | ARCH3.1–9, ARCH1j, Kton PHYS5 и Kul ARCH1h.2a завершены в своих профилях. После ENG7b.3 и ARCH1g.2a–d продолжается редакторский путь опубликованной сборки. Критерии выпуска ведутся отдельно | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
+| Слои Aether и моды | ARCH3.1–9, ARCH1j и ENG7b.3 завершены в проверенных профилях. Критерии дальнейшей приёмки выпуска ведутся отдельно | [Текущая очередь](engine/PLAN.md#current-engine-queue), [карта](engine/ARCH3_MAP.md) |
 | .NET 11, CORE8 завершён | Inputs/generators/frozen game/runtime regression и свежая согласованная поставка проверены; функциональная очередь продолжается у владельцев | [CORE8](core/PLAN.md#core8-dotnet11), [итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11) |
 | Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
 | ECS и отображение | ARCH1f.2–4 и минимальный Player проверены. Следующий профиль рендера ARCH1f.5 — текстуры и sampler. Инспектор рендер-компонентов ведётся в ED4i | [Рендер](engine/PLAN.md#arch1f-rendering), [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
-| Ассеты моделей | ARCH1g.1a–c дали ограниченный CPU import и постоянные ID. ARCH1g.2a–g проверили доставку точных ревизий через Nom, GPU в Player и Editor, Replace и откат, меню выбора на свежих пакетах, изменение зависимости и масштаба, удаление ресурсов при сохранённых сборках. ARCH1g.2h проверил объединение снимков и независимое обновление двух моделей | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [текущий статус](engine/STATUS.md) |
+| Ассеты моделей | ARCH1g.1a–c дали ограниченный CPU-импорт и постоянные ID. ARCH1g.2a–j в `main` проверили доставку точных ревизий через Nom, GPU, Replace и наблюдение за исходниками. ARCH1g.2k проверил статусы в Editor и Build для двух моделей. Следующий кандидат — ARCH1g.2l, явный реимпорт из Editor | [ARCH1g.0–2](engine/PLAN.md#arch1g-model-assets), [ARCH1g.2l](engine/PLAN.md#arch1g2l-editor-reimport) |
 | Самостоятельное хранение ассетов | NOM0–8 проверены в указанных локальных профилях. Первый Aether consumer использует batch и точные снимки Nom в ARCH1g.2a. Другие платформы и профили выпуска открыты, VM acceptance отложена | [Nom queue](nom/PLAN.md#nom-own-queue), [статус](nom/STATUS.md) |
 | Kton / самостоятельная 3D-физика | PHYS0–6 готовы в проверенных профилях. PHYS8.1–3 закрыли baseline, аллокации и deferred-команды контактов. PHYS8.4 прошёл автоматическую приёмку визуального consumer. Далее профили 10 000 тел, воркеры, callbacks и stalls. Ручной Win32 input/close открыт | [PHYS0–8](physics/PLAN.md#current-physics-queue), [статус](physics/STATUS.md) |
 | Аудиомодуль | TrueMoon.Kul AUD1 и optional ARCH1h.2a ECS/captured-content bridge реализованы и проверены в Windows x64 scope; следующие AUD2–3 — device loss/RT/queues/other OS | [Audio PLAN](audio/PLAN.md#current-audio-queue), [ARCH1h](engine/PLAN.md#arch1h-audio) |

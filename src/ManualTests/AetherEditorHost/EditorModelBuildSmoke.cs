@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text.Json;
 using SkiaSharp;
@@ -12,7 +13,9 @@ using TrueMoon.Aether.Runtime.Frames;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Documents;
 using TrueMoon.Aether.Tooling.Hosting;
+using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Alloy.Runtime;
@@ -25,9 +28,122 @@ namespace TrueMoon.ManualTests.AetherEditorHost;
 
 internal static class EditorModelBuildSmoke
 {
+    private static async Task<object> VerifyModelImportsAsync(string report, GameBuildArtifact oldBuild, GameBuildArtifact newBuild,
+        SceneDocumentSession document, Guid openingId, IFactory<ModelImportLedgerSession, ModelImportLedgerArguments> ledgers,
+        UiSession ui, EditorView view, AetherHost engine, EditorScenePlayback playback, CancellationToken token)
+    {
+        var redId = Guid.Parse("ce662048-9dcb-4c60-aaf0-213342054fa6");
+        var greenId = Guid.Parse("65710c6d-6781-4476-9bb8-735fc518f008");
+        var redBefore = await ReadImport(redId, "red-baseline.tmledger");
+        var redAfter = await ReadImport(redId, "scene.tmledger");
+        var green = await ReadImport(greenId, "green.tmledger");
+        var buffer = Path.Combine(report, "source", "scene.bin");
+        var edited = await File.ReadAllBytesAsync(buffer, token);
+        var original = edited.ToArray();
+        BinaryPrimitives.WriteSingleLittleEndian(original.AsSpan(16), 0f);
+        await File.WriteAllBytesAsync(buffer, original, token);
+
+        var oldContent = Freeze(oldBuild);
+        var newContent = Freeze(newBuild);
+        const string current = "Red · Актуальна\nGreen · Актуальна";
+        const string stale = "Red · Импорт устарел\nGreen · Актуальна";
+        const string unavailable = "Red · Исходники недоступны\nGreen · Актуальна";
+        await Select(redBefore, oldContent);
+        await Status(current);
+        await Build();
+        var previous = engine.Editor.Status;
+        Check(playback.Error == null && previous.Context?.World != null && previous.Candidate != null &&
+            Matches(previous.Candidate.Build.Artifact, oldContent), $"Initial Editor Build failed: {playback.Error}");
+
+        await File.WriteAllBytesAsync(buffer, edited, token);
+        await Build();
+        var blocked = playback.Error?.Message;
+        var afterBlock = engine.Editor.Status;
+        Check(blocked?.Contains("«Red» устарела", StringComparison.Ordinal) == true &&
+            previous.ContextVersion == afterBlock.ContextVersion && ReferenceEquals(previous.Candidate, afterBlock.Candidate),
+            $"Editor Build did not reject changed sources before creating a new context: {blocked}");
+        await Status(stale);
+        await EditorHeaderSmoke.UntilAsync(ui, () => view.StatusBar!.DataContext!.ErrorDetails.Contains(blocked!, StringComparison.Ordinal), token);
+
+        File.Move(buffer, buffer + ".missing");
+        try
+        {
+            await Build();
+            Check(playback.Error?.Message.Contains("«Red» недоступны", StringComparison.Ordinal) == true &&
+                ReferenceEquals(previous.Candidate, engine.Editor.Status.Candidate), "Missing BIN did not block Build.");
+            await Status(unavailable);
+        }
+        finally { File.Move(buffer + ".missing", buffer); }
+        await Status(stale);
+
+        try
+        {
+            await Select(redAfter, oldContent);
+            throw new InvalidOperationException("Editor accepted old render content for the new import.");
+        }
+        catch (InvalidDataException) { }
+        await Status(stale);
+        await Select(redAfter, newContent);
+        await Status(current);
+        await Build();
+        var updated = engine.Editor.Status.Candidate?.Build.Artifact;
+        Check(playback.Error == null && updated != null && updated.BuildId != previous.Candidate!.Build.BuildId &&
+            Matches(updated, newContent), $"Editor Build with the reimported model failed: {playback.Error}");
+
+        return new
+        {
+            Completed = true, BeforeEdit = current, AfterEdit = stale, WhileMissing = unavailable, AfterReimport = current, Blocked = blocked,
+            MatchingContent = true, OldBuild = previous.Candidate!.Build.BuildId, NewBuild = updated!.BuildId
+        };
+
+        async Task<PublishedModelImport> ReadImport(Guid id, string path)
+        {
+            await using var ledger = ledgers.Create(new(id, Path.Combine(report, "ledger", path)))!;
+            return await ledger.OpenAsync(token) ?? throw new InvalidOperationException($"Missing ledger {path}.");
+        }
+
+        Task Select(PublishedModelImport red, GameBuildRenderContent frozen) => document.SelectModelImportsAsync(openingId,
+            [new("Red", Watch(red, "source")), new("Green", Watch(green, "source-green"))], frozen, token);
+
+        ModelSourceWatchArguments Watch(PublishedModelImport import, string path) =>
+            new(new(import.Candidate.SourceId, Path.Combine(report, path), "scene.gltf"), import)
+            { UseFileSystemNotifications = false, PollInterval = TimeSpan.FromSeconds(5) };
+
+        async Task Status(string expected)
+        {
+            var button = view.StatusBar!.SummaryButton;
+            await ui.InvokeAsync(() => view.Header!.Menu.CloseMenu()).WaitAsync(token);
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.StatusBar.DataContext!.ModelImportDetails == expected &&
+                button.Bounds.Width > 0 && !ui.NeedsUpdate, token);
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
+                popup.ModelImportDetails.IsVisible && popup.ModelImportDetails.Value == expected, token, () =>
+                {
+                    if (view.Overlays.Popup is EditorStatusPopupView) return;
+                    EditorHeaderSmoke.Move(ui, button);
+                    EditorHeaderSmoke.Click(ui, button);
+                });
+            await ui.InvokeAsync(() => ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Escape))).WaitAsync(token);
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup == null, token);
+        }
+
+        async Task Build()
+        {
+            await EditorHeaderSmoke.UntilAsync(ui, () => view.DataContext!.CanBuild, token);
+            await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "runtime.Build", token);
+            await playback.Pending.WaitAsync(token);
+        }
+
+        static GameBuildRenderContent Freeze(GameBuildArtifact artifact) =>
+            new(artifact.RenderContent!.ProjectId, artifact.RenderContent.Entries);
+
+        static bool Matches(GameBuildArtifact artifact, GameBuildRenderContent content) =>
+            artifact.RenderContent?.Entries.Select(entry => entry.Key).SequenceEqual(content.AssetKeys) == true;
+    }
+
     internal static async Task RunAsync(string[] args)
     {
-        if (args.Length != 6 || args[0] is not ("cobalt" or "microsoft")) throw new ArgumentException("Invalid model delivery probe arguments.");
+        var probeImports = args.Length == 7 && args[6] == "--imports";
+        if (args.Length != 6 && !probeImports || args[0] is not ("cobalt" or "microsoft")) throw new ArgumentException("Invalid model delivery probe arguments.");
         var report = args[1];
         var project = args[2];
         var scenePath = args[3];
@@ -61,6 +177,11 @@ internal static class EditorModelBuildSmoke
         await using var app = App.Builder(builder => { if (args[0] == "microsoft") builder.UseDI(); }).Setup(context =>
         {
             context.UseConfiguration(configuration);
+            if (probeImports)
+            {
+                context.UseAetherModelSourceCapture();
+                context.UseAetherModelImport();
+            }
             context.UseConfiguredAetherEditor(new AetherComposition
             {
                 HostContractId = hostId, GameBuildId = new string('0', 64),
@@ -100,6 +221,24 @@ internal static class EditorModelBuildSmoke
             await documents.Pending.WaitAsync(token);
             var before = documents.Read().Document ?? throw new InvalidOperationException("No active document.");
             var content = before.Content ?? throw new InvalidOperationException("Editor did not load the placed scene.");
+            if (probeImports)
+            {
+                Check(content.Document.Entities.Length == 5 && !before.IsDirty, "Unexpected two-model scene.");
+                var document = documents.Read().Project?.Documents ?? throw new InvalidOperationException("No project document session.");
+                var ledgerFactory = app.Services.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>()!;
+                var proof = await VerifyModelImportsAsync(report, oldBuild, newBuild, document, before.OpeningId,
+                    ledgerFactory, ui, view, engine, playback, token);
+                Check(ReferenceEquals(content, document.Read().Content) && !document.Read().IsDirty &&
+                    sceneHash == Hash(File.ReadAllBytes(scenePath)), "Import selection or Build modified the authoring scene.");
+                Check(documents.Execute(DocumentCommand.Close), "Editor declined closing the document.");
+                await documents.Pending.WaitAsync(token);
+                await EditorHeaderSmoke.UntilAsync(ui, () => view.StatusBar!.DataContext!.ModelImportDetails.Length == 0, token);
+                Check(document.ReadModelImports(before.OpeningId).Count == 0, "Closing the scene retained selected imports.");
+                window.Close();
+                await window.Completion.WaitAsync(token);
+                await File.WriteAllTextAsync(Path.Combine(report, "editor-imports.json"), JsonSerializer.Serialize(proof), token);
+                return;
+            }
             Check(content.Document.Entities.Length == 3 && !before.IsDirty, "Unexpected captured scene.");
 
             await ChooseBuild(oldBuild.BuildId.ToLowerInvariant(), "Запустить опубликованную сборку");

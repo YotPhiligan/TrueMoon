@@ -108,4 +108,20 @@ changes and returns to its original pixels. The green mask matches across all
 three launches. This runs in source Debug and fresh-package Release on both DI
 providers.
 
+## Selected model imports in Editor
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ModelImports `
+  -EvidenceDirectory 'TestResults/EditorModelImports/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The probe opens a two-model scene, attaches both published imports and uses the
+status popup and Project menu in a native Editor window. Editing or removing the
+red BIN changes only its status and blocks Build before compilation. Selecting
+the reimported generation restores both current statuses. A new Build carries the
+updated canonical render keys. The probe also rejects a mismatched frozen payload
+and verifies that closing the scene clears the selection. `-FreshPackages` runs
+the same scenario with an independently published Editor from the closed feed.
+
 [Contract and ownership](../../docs/engine/MODEL_BUILD_DELIVERY.md)

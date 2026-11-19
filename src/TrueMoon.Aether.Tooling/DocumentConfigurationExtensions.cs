@@ -1,5 +1,6 @@
 ﻿using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.Projects;
 using TrueMoon.Aether.Tooling.Scenes;
 using TrueMoon.Aether.Tooling.Scenes.Authoring;
@@ -22,9 +23,17 @@ public static class DocumentConfigurationExtensions
                 throw new InvalidOperationException("Call UseAetherAuthoring before UseAetherEditorDocuments.");
             services.Singleton<Registration>(_ => new());
             if (!services.Exist<IFactory<SceneDocumentSession, ResolvedProject>>())
+            {
+                var hasWatches = services.Exist<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>();
                 services.Singleton<IFactory<SceneDocumentSession, ResolvedProject>>(resolver =>
                     new Factory<SceneDocumentSession, ResolvedProject>(project => new(project, resolver.Resolve<ISceneDocumentStore>()!,
-                        resolver.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!)));
+                        resolver.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!)
+                    {
+                        ModelImports = hasWatches ? new(project.Description.Id,
+                            resolver.Resolve<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>(),
+                            resolver.Resolve<IFactory<ModelSourceWatch, ModelSourceWatchArguments>>()) : null
+                    }));
+            }
         });
         return context.UseAetherScenePersistence();
     }

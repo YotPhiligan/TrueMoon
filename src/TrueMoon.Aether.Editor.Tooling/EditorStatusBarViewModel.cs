@@ -25,7 +25,7 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
     private string _summary = "", _entities = "", _runtime = "", _operation = "", _preview = "", _previewDetails = "", _error = "";
     private EditorStatusKind _kind;
     private bool _canCancel, _canPreview, _canStopPreview;
-    private string _sourceSummary = "", _sourceDetails = "";
+    private string _sourceSummary = "", _sourceDetails = "", _modelImportDetails = "";
     private EditorStatusKind _sourceKind;
     private bool _hasSource;
     /// <summary>Creates presentation without taking ownership of the injected models.</summary>
@@ -54,6 +54,10 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
     public string SourceSummary => _sourceSummary;
     /// <summary>Last observation, baseline and coverage details.</summary>
     public string SourceDetails => _sourceDetails;
+    /// <summary>Advisory status for the active document's model imports.</summary>
+    public string ModelImportDetails => _modelImportDetails;
+    /// <summary>Whether the active document has selected model imports.</summary>
+    public bool HasModelImports => _modelImportDetails.Length != 0;
     /// <summary>Source-specific semantic styling.</summary>
     public EditorStatusKind SourceKind => _sourceKind;
     /// <summary>Whether the current project has a source segment.</summary>
@@ -126,6 +130,9 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
     private void RefreshSource()
     {
         var source = _editor.Source;
+        var hadImports = HasModelImports;
+        SetProperty(ref _modelImportDetails, _editor.ModelImportDetails, nameof(ModelImportDetails));
+        if (hadImports != HasModelImports) OnPropertyChanged(nameof(HasModelImports));
         var state = source?.State ?? EditorSourceState.Unavailable;
         var summary = !_editor.HasProject ? "Проект не открыт" : state switch
         {

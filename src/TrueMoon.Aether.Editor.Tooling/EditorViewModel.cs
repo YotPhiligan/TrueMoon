@@ -7,6 +7,8 @@ using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.UI.Translation;
 using TrueMoon.Aether.Runtime.Sessions;
 using TrueMoon.Aether.Tooling.Editing;
+using TrueMoon.Aether.Tooling.Documents;
+using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Aether.Tooling.SourceTracking;
 using TrueMoon.Argentis;
 
@@ -34,6 +36,8 @@ public sealed class EditorViewModel : ViewModel, IDisposable, IEditorViewModel
     private int? _processId;
     private int _presentationOwner;
     private EditorSourceSnapshot? _source;
+    private IReadOnlyList<SceneModelImportStatus> _imports = [];
+    private string _modelImportDetails = "";
 
     /// <summary>Creates a model borrowing App-owned workspace and command services.</summary>
     public EditorViewModel(EditorWorkspace workspace, EditorCommands commands, EditorDocumentViewModel? documents = null,
@@ -85,6 +89,8 @@ public sealed class EditorViewModel : ViewModel, IDisposable, IEditorViewModel
     /// <summary>Last immutable source publication pulled after current project/document binding; no worker calls this model.</summary>
     public EditorSourceSnapshot? Source => _workspace.Project is { IsClosed: false } project &&
         _source?.OwnerKey == project.OwnerKey ? _source : null;
+    /// <summary>Latest authoring source status for each explicitly selected import.</summary>
+    public string ModelImportDetails => _modelImportDetails;
     public IReadOnlyList<KeyValuePair<string, string>> Properties => _properties;
     public bool CanBuild => _canBuild;
     public bool CanStart => _canStart;
@@ -160,6 +166,19 @@ public sealed class EditorViewModel : ViewModel, IDisposable, IEditorViewModel
         var source = project is { IsClosed: false } ? project.SourceWatch?.Read() : null;
         if (source?.OwnerKey != project?.OwnerKey) source = null;
         SetProperty(ref _source, source, nameof(Source));
+        IReadOnlyList<SceneModelImportStatus> imports = _documents?.Document is { } document && project?.Documents is { } session
+            ? session.ReadModelImports(document.OpeningId) : [];
+        if (!ReferenceEquals(imports, _imports))
+        {
+            _imports = imports;
+            SetProperty(ref _modelImportDetails, string.Join("\n", imports.Select(item => item.Name + " · " + (item.Status switch
+            {
+                ModelImportFreshnessStatus.Current => "Актуальна",
+                ModelImportFreshnessStatus.Stale => "Импорт устарел",
+                ModelImportFreshnessStatus.Unavailable => "Исходники недоступны",
+                _ => "Проверяется"
+            }))), nameof(ModelImportDetails));
+        }
         RefreshState();
         _hierarchy?.Refresh();
     }

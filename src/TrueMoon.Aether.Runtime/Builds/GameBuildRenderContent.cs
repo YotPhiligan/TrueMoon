@@ -11,6 +11,9 @@ public sealed class GameBuildRenderContent
     private const int Magic = 0x31435254; // TRC1
     private readonly byte[] _bytes;
 
+    /// <summary>Exact canonical resource identities in this frozen payload.</summary>
+    public ImmutableArray<RenderAssetKey> AssetKeys { get; }
+
     /// <summary>Validates the complete render closure and captures its canonical bytes.</summary>
     /// <param name="projectId">Project that owns all asset keys.</param>
     /// <param name="entries">Exact CPU mesh, material and binding entries.</param>
@@ -20,6 +23,7 @@ public sealed class GameBuildRenderContent
         if (entries.Count == 0) throw new InvalidDataException("A render payload must contain at least one asset.");
         // The real build identity is assigned after publishing the payload digest.
         var validated = new RenderContentManifest(projectId, RenderContentHash.Compute("TRC1"u8), Guid.NewGuid(), entries);
+        AssetKeys = validated.Entries.Select(entry => entry.Key).ToImmutableArray();
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
         writer.Write(Magic);

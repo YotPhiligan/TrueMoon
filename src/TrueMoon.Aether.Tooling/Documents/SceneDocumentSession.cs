@@ -27,6 +27,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     private Task<bool>? _close;
     private bool _closing, _discarding, _closed;
     private Exception? _error;
+    internal SceneModelImports? ModelImports { get; init; }
 
     /// <summary>Creates an initially empty owner borrowing App services.</summary>
     /// <param name="project">Project whose scenes directory bounds all file paths.</param>
@@ -49,6 +50,28 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                 content != null && (_saved == null || content.ContentRevision != _saved), _error, _closed) { OpeningId = content == null ? Guid.Empty : _openingId };
         }
     }
+
+    /// <summary>Selects exact frozen model resources for the current document opening and starts observing their sources.</summary>
+    /// <remarks>Register model source capture before document services. The caller supplies the exact content for these imports.</remarks>
+    public Task SelectModelImportsAsync(Guid openingId, IReadOnlyList<SceneModelImportSelection> imports,
+        GameBuildRenderContent content, CancellationToken cancellationToken = default)
+    {
+        var models = ModelImports ?? throw new InvalidOperationException("Model source capture is not configured for this document.");
+        return Begin(DocumentOperation.Loading, async token =>
+        {
+            if (openingId == Guid.Empty || Read().OpeningId != openingId)
+                throw new InvalidOperationException("The model selection targets a different document opening.");
+            await models.SelectAsync(openingId, imports, content, token).ConfigureAwait(false);
+            return true;
+        }, cancellationToken);
+    }
+
+    /// <summary>Reads the latest source status of the selected models for the given opening without I/O.</summary>
+    public IReadOnlyList<SceneModelImportStatus> ReadModelImports(Guid openingId) => ModelImports?.Read(openingId) ?? [];
+
+    /// <summary>Rechecks the selected sources before Build and returns their frozen resources, when selected.</summary>
+    public Task<GameBuildRenderContent?> CheckModelImportsAsync(Guid openingId, CancellationToken cancellationToken = default) =>
+        ModelImports?.CheckAsync(openingId, cancellationToken) ?? Task.FromResult<GameBuildRenderContent?>(null);
 
     /// <summary>Selects a validated new unsaved document after applying the current document's close policy.</summary>
     /// <param name="document">Immutable new content.</param><param name="choice">Decision for existing unsaved content.</param>
@@ -97,6 +120,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                 _path = path; _stamp = stamp; _saved = path == null ? null : state.ContentRevision;
             }
             if (previous != null) Release(previous);
+            if (ModelImports != null) await ModelImports.ClearAsync().ConfigureAwait(false);
             return true;
         }
         catch (Exception error) { failure = error; throw; }
@@ -299,6 +323,7 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
                     foreach (var retired in _retired.ToArray()) { retired.Dispose(); _retired.Remove(retired); }
                     _current?.Dispose(); _current = null; _path = null; _stamp = null; _saved = null; _generation++; _openingId = Guid.Empty;
                 }
+                if (ModelImports != null) await ModelImports.ClearAsync().ConfigureAwait(false);
             }
         }
         catch (Exception error) { failure = error; }

@@ -24,10 +24,11 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--revisions" or "--multi-model")) return 2;
-var editorProbe = args.Length == 8 && args[7] == "--editor";
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--revisions" or "--multi-model")) return 2;
+var editorImports = args.Length == 8 && args[7] == "--editor-imports";
+var editorProbe = editorImports || args.Length == 8 && args[7] == "--editor";
 var revisionProbe = args.Length == 8 && args[7] == "--revisions";
-var multiModelProbe = args.Length == 8 && args[7] == "--multi-model";
+var multiModelProbe = editorImports || args.Length == 8 && args[7] == "--multi-model";
 var evidence = Path.GetFullPath(args[1]);
 if (Directory.Exists(evidence)) throw new IOException("Use a fresh output directory.");
 Directory.CreateDirectory(evidence);
@@ -248,6 +249,8 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         var originalBinHash = Hash(vertices);
         var originalBinWriteTime = File.GetLastWriteTimeUtc(vertices);
         oldModel = await Import(0, await Capture());
+        if (editorImports)
+            File.Copy(Path.Combine(evidence, "ledger", "scene.tmledger"), Path.Combine(evidence, "ledger", "red-baseline.tmledger"));
         var placed = ImportedModelScene.Place(initialScene, oldModel, placement);
         Check(placed.Entities.Skip(1).Select(entity => entity.Id.Value).SequenceEqual(oldModel.Instances.Select(instance => instance.Id)) &&
             placed.Definitions.Length == 2 && placed.Entities[0].Id == cameraId && placed.Revision == 41,
@@ -483,10 +486,13 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
     else await app.StopAsync();
 }
 
-// Only the artifact copies are supplied to Runtime. Rename the closed store and the source directory.
+// Runtime receives only artifacts. The Editor import probe also needs the authoring sources.
 Directory.Move(storeDirectory, storeDirectory + "-offline");
-Directory.Move(sourceDirectory, sourceDirectory + "-offline");
-if (multiModelProbe) Directory.Move(secondSourceDirectory, secondSourceDirectory + "-offline");
+if (!editorImports)
+{
+    Directory.Move(sourceDirectory, sourceDirectory + "-offline");
+    if (multiModelProbe) Directory.Move(secondSourceDirectory, secondSourceDirectory + "-offline");
+}
 if (editorProbe)
 {
     var scenes = Directory.CreateDirectory(Path.Combine(evidence, "Scenes"));
@@ -500,9 +506,11 @@ if (editorProbe)
         gameProject = "game/DeliveryGame.csproj", entryAssembly = "DeliveryGame.dll", entryType = "DeliveryGame.Entry",
         scenesRoot = "Scenes", contentRoot = "Content"
     }));
-    var result = await RunChild("editor", [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene,
-        oldBuild.DirectoryPath, newBuild.DirectoryPath], TimeSpan.FromSeconds(120));
-    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, "editor-model.json")), result.Error);
+    string[] editorArguments = [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene,
+        oldBuild.DirectoryPath, newBuild.DirectoryPath];
+    if (editorImports) editorArguments = [.. editorArguments, "--imports"];
+    var result = await RunChild("editor", editorArguments, TimeSpan.FromSeconds(120));
+    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, editorImports ? "editor-imports.json" : "editor-model.json")), result.Error);
     return 0;
 }
 var oldProof = await ReadBuild(oldBuild, "old");

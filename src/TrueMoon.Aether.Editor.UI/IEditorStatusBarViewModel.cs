@@ -29,6 +29,11 @@ public interface IEditorStatusBarViewModel : System.ComponentModel.INotifyProper
     /// <summary>Last observation, baseline and coverage details.</summary>
     string SourceDetails { get; }
 
+    /// <summary>Advisory source status of the selected model imports, or empty for scenes without a selection.</summary>
+    string ModelImportDetails => "";
+    /// <summary>Whether the active document has selected model imports.</summary>
+    bool HasModelImports => ModelImportDetails.Length != 0;
+
     /// <summary>Source-specific semantic styling.</summary>
     EditorStatusKind SourceKind { get; }
 

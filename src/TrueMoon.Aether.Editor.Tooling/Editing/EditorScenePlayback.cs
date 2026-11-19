@@ -212,8 +212,12 @@ public sealed class EditorScenePlayback
                 { await _dispatch(command, token).ConfigureAwait(false); return; }
                 var selectedBuild = build ?? openBuild?.Invoke(project, content, token);
                 token.ThrowIfCancellationRequested();
-                var scene = selectedBuild == null ? PrimitiveSceneAdapter.Project(content.Resolved, token) : null;
-                var world = selectedBuild == null ? null : new SceneWorldData(content.Document);
+                var modelContent = selectedBuild == null && project.Documents is { } document
+                    ? await document.CheckModelImportsAsync(document.Read().OpeningId, token).ConfigureAwait(false) : null;
+                VerifyCapture(project, content, token);
+                var fullScene = selectedBuild != null || modelContent != null;
+                var scene = fullScene ? null : PrimitiveSceneAdapter.Project(content.Resolved, token);
+                var world = fullScene ? new SceneWorldData(content.Document) : null;
                 if (selectedBuild?.RenderContent is { } manifest && manifest.ProjectId != project.Project.Description.Id)
                     throw new InvalidDataException("Selected render content belongs to another project.");
                 var replacing = command == EditorCommand.Replace;
@@ -226,7 +230,7 @@ public sealed class EditorScenePlayback
                 var request = project.CreateBuildRequest(revision);
                 if (selectedBuild == null)
                     request = request with { TrackInputs = true, CaptureCompilation = true, CapturePreparation = true,
-                        CaptureProjectReferences = true, ReuseArtifact = command == EditorCommand.Start };
+                        CaptureProjectReferences = true, ReuseArtifact = command == EditorCommand.Start, RenderContent = modelContent };
                 _setContext(new(request, scene, "") { World = world });
                 var selected = _editor();
                 if (selected.Context is not { } context || !ReferenceEquals(context.Scene, scene) ||
@@ -240,6 +244,7 @@ public sealed class EditorScenePlayback
                 VerifyCapture(project, content, token);
                 var built = _editor();
                 if (selectedBuild == null && built.ContextVersion == version && ReferenceEquals(built.Context?.Scene, scene) &&
+                    ReferenceEquals(built.Context?.World, world) &&
                     built.Candidate is { } candidate && candidate.ContextVersion == version)
                     project.BindSourceBuild(candidate.Build);
                 if (command == EditorCommand.Build) return;

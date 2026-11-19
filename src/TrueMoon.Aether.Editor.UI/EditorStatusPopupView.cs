@@ -22,6 +22,8 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
     public HStack PreviewActions { get; } = new();
     /// <summary>Gets actual preview revisions.</summary>
     public Text PreviewDetails { get; }
+    /// <summary>Gets the selected model import statuses.</summary>
+    public Text ModelImportDetails { get; }
     /// <summary>Creates a transient view. OverlayHost owns it; the model/style stay App-owned.</summary>
     public EditorStatusPopupView(IEditorStatusBarViewModel model, IViewStyle<EditorStatusPopupView> style, EditorStatusPopupArguments arguments)
     {
@@ -35,10 +37,12 @@ public sealed class EditorStatusPopupView : View<IEditorStatusBarViewModel>
             StopPreview = Button.Simple("Остановить Preview").Bind(UiProperties.Enabled, model, x => x.CanStopPreview)
                 .OnClick(() => { _ = Observe(model.StopPreviewAsync()); });
             PreviewDetails = Text.Plain().BindText(model, x => x.PreviewDetails);
+            ModelImportDetails = Row(x => x.ModelImportDetails).Bind(UiProperties.Visible, model, x => x.HasModelImports);
             PreviewActions.WithChildren(StartPreview, StopPreview);
             Body.WithChildren(Title, Row(x => x.Summary),
                 Row(x => x.RuntimeDetails), Row(x => x.OperationDetails),
                 Row(x => x.SourceSummary), Row(x => x.SourceDetails),
+                ModelImportDetails,
                 Row(x => x.EntityText), Row(x => x.PreviewSummary),
                 PreviewDetails, PreviewActions, Error);
             MaxHeight = 420;

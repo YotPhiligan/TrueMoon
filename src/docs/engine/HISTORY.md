@@ -15917,6 +15917,33 @@ Aether Importing 144/144 в Debug и Release. Отчёты VSTest в
 SHA256 `B79323280A5A588296EC45C7F29B3F8B89F87244539CA3FC5DD17E94ABE05A6A`.
 [Контракт](MODEL_BUILD_DELIVERY.md#arch1g2j-model-source-watch).
 
+<a id="arch1g2k-2026-11-19"></a>
+## 2026-11-19 — ARCH1g.2k, выбранные импорты в Editor
+
+Version 1.2611.19.2-alpha. `ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ModelImports`
+прошёл в Source Debug и Published Release, оба с Cobalt и Microsoft DI.
+EvidenceDirectory `TestResults/ARCH1g2-model-imports-20261119-04`, SHA256
+`verification.json` `A8F01A250C18862BB288E2EC279ADF938EF8B9AA2002567894DE0BBA52AFA2F4`.
+Повтор с `-FreshPackages` прошёл с обоими DI. Закрытый feed содержал 20 пакетов
+этой версии. EvidenceDirectory `TestResults/ARCH1g2-model-imports-packages-20261119-01`,
+SHA256 `verification.json` `C49C0A76DD06689237BD1F9994C2927746AC57D435273B0BF8C8AC390EA2BA60`.
+
+Все шесть запусков открыли сцену с двумя моделями. Панель статуса показала
+`Current → Stale → Unavailable → Stale` для красной модели и `Current` для
+зелёной после правки, удаления и восстановления BIN. Команда Build из меню
+отклонила устаревший и недоступный импорт до смены контекста сборки, сохранив
+предыдущего кандидата. Сессия отвергла новый импорт со старым payload.
+После выбора нового поколения обе модели вернулись в `Current`, Build
+создал новый артефакт с точными ключами ресурсов. Содержимое документа,
+файл сцены и признак несохранённых изменений сохранились. Закрытие документа
+сняло наблюдение.
+
+`TrueMoon.Aether.Editor.Tests` — 1507/1507 в Debug и Release. Отчёты VSTest
+сохранены в `TestResults/ARCH1g2-model-imports-editor-tests-20261119-01`.
+Проверка открывает нативное окно Editor и собирает артефакты. Сравнение
+кадров Player для двух моделей записано отдельно в ARCH1g.2h–j.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1g2k-editor-model-imports).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

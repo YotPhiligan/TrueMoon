@@ -3,7 +3,8 @@
 param(
     [Parameter(Mandatory)][string]$EvidenceDirectory,
     [Parameter(Mandatory)][string]$ValidationDirectory,
-    [switch]$FreshPackages
+    [switch]$FreshPackages,
+    [switch]$ModelImports
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,7 +22,7 @@ $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $ev
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -42,8 +43,22 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        Invoke-Step "$name-$provider" @($authoring, $provider, $output, $worker, $editor,
-            $dotnet, $profile.TestFramework, $profile.Sdk, '--editor')
+        $mode = if ($ModelImports) { '--editor-imports' } else { '--editor' }
+        # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
+        $fixture = if ($ModelImports) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
+        Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
+            $dotnet, $profile.TestFramework, $profile.Sdk, $mode)
+        if ($ModelImports) {
+            [void][IO.Directory]::CreateDirectory($output)
+            $path = "$output/editor-imports.json"
+            Copy-Item -LiteralPath "$fixture/editor-imports.json" -Destination $path
+            $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+            if (!$proof.Completed -or !$proof.MatchingContent -or !$proof.Blocked -or
+                $proof.BeforeEdit -eq $proof.AfterEdit -or $proof.BeforeEdit -ne $proof.AfterReimport -or
+                $proof.OldBuild -eq $proof.NewBuild) { throw "Incomplete model import evidence for $name-$provider" }
+            $report.Runs += @{ Name = "$name-$provider"; Path = $path; Sha256 = (Get-FileHash -LiteralPath $path).Hash; Fixture = $fixture }
+            continue
+        }
         $path = "$output/editor-model.json"
         $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
         if (!$proof.Completed -or $proof.Captures.Count -ne 5 -or !$proof.RollbackSucceeded -or !$proof.CorruptRejectedBeforeHandoff) {

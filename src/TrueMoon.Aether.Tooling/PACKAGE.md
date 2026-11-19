@@ -37,6 +37,12 @@ missed notifications. Dispose the watch when replacing the selected import or
 settings. App shutdown drains outstanding watches. Use an explicit freshness
 check when admitting a new build.
 
+Project-owned Editor documents can manage these watches through
+`SceneDocumentSession.SelectModelImportsAsync`. Register model source capture before
+document services. Provide the current opening ID, published imports and the exact
+frozen `GameBuildRenderContent`. The document session owns the watches and releases
+them on reselection or close.
+
 Headless project/document authoring, transactional history, scene persistence,
 SDK preflight, frozen compilation/capture/publication, source observation,
 preview coordination and bounded diagnostic export. No Editor/Alloy/Argentis
