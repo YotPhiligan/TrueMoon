@@ -1,14 +1,18 @@
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using TrueMoon;
 using TrueMoon.Aether.Editor.UI;
 using TrueMoon.Aether.Editor.Tooling;
+using TrueMoon.Aether.Nom;
 using TrueMoon.Aether.Runtime.Hosting;
 using TrueMoon.Aether.Tooling;
+using TrueMoon.Aether.Tooling.Importing;
 using TrueMoon.Alloy.Hosting;
 using TrueMoon.Alloy.Rendering.Skia;
 using TrueMoon.Argentis;
 using TrueMoon.Dependencies;
 using TrueMoon.Diagnostics;
+using TrueMoon.Nom;
 
 namespace TrueMoon.Examples.AetherEditor;
 
@@ -16,7 +20,8 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
-        const string usage = "AetherEditor --runtime path/to/AetherRuntimeHost.exe [--project project.aetherproj] [--font font.ttf] [--report directory]";
+        const string usage = "AetherEditor --runtime path/to/AetherRuntimeHost.exe [--project project.aetherproj] [--font font.ttf] [--report directory]" +
+            " [--model-worker directory --model-dotnet dotnet.exe --model-worker-sha256 manifest.json]";
         try
         {
             if (args is ["--help"]) { Console.WriteLine(usage); return 0; }
@@ -27,7 +32,7 @@ internal static class Program
             for (var index = 0; index < args.Length; index++)
             {
                 var name = args[index];
-                if (name is not ("--runtime" or "--project" or "--font" or "--report"))
+                if (name is not ("--runtime" or "--project" or "--font" or "--report" or "--model-worker" or "--model-dotnet" or "--model-worker-sha256"))
                     throw new ArgumentException($"Unknown argument '{name}'. {usage}");
                 if (++index == args.Length || string.IsNullOrWhiteSpace(args[index]) || args[index].StartsWith("--", StringComparison.Ordinal))
                     throw new ArgumentException($"{name} requires a value. {usage}");
@@ -43,6 +48,18 @@ internal static class Program
             var project = values.GetValueOrDefault("--project");
             if (project != null && !project.EndsWith(".aetherproj", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("--project requires a .aetherproj manifest.");
+            ModelImportWorkerDeployment? worker = null;
+            if (values.ContainsKey("--model-worker") || values.ContainsKey("--model-dotnet") || values.ContainsKey("--model-worker-sha256"))
+            {
+                if (!values.TryGetValue("--model-worker", out var workerDirectory) || !values.TryGetValue("--model-dotnet", out var workerHost) ||
+                    !values.TryGetValue("--model-worker-sha256", out var hashesPath))
+                    throw new ArgumentException("Supply all three model worker options together.");
+                await using var file = File.OpenRead(hashesPath);
+                if (file.Length > 64 * 1024) throw new InvalidDataException("The model worker manifest exceeds its byte limit.");
+                var hashes = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(file)
+                    ?? throw new InvalidDataException("The model worker manifest must contain a path-to-SHA256 map.");
+                worker = new(workerDirectory, workerHost, hashes);
+            }
 
             var report = values.GetValueOrDefault("--report") ?? Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrueMoon", "AetherEditor", "runs", Guid.NewGuid().ToString("N"));
@@ -61,6 +78,12 @@ internal static class Program
                 context.UseDiagnostics(new DiagnosticPipelineOptions { JsonDirectory = diagnostics, JsonUseRunDirectories = true });
                 context.UseAetherModelSourceCapture();
                 context.UseAetherModelImport();
+                if (worker != null)
+                {
+                    context.UseNom();
+                    context.UseAetherNomContent();
+                    context.UseAetherNomProjectModelImports(worker, Path.Combine(report, "model-scratch"));
+                }
                 context.UseAetherSceneModelSelectionPersistence();
                 context.UseAetherProjectModelCatalog();
                 context.UseAetherEditor(engine =>

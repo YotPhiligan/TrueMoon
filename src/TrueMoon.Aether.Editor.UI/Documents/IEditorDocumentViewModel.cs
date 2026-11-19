@@ -35,6 +35,9 @@ public interface IEditorDocumentViewModel : System.ComponentModel.INotifyPropert
     /// <summary>Whether choosing a published artifact for the current context is available.</summary>
     bool CanOpenBuild => false;
 
+    /// <summary>Whether the active project can import a new model.</summary>
+    bool CanImportModel => false;
+
     /// <summary>Gets/sets a separate untitled-save path while deciding a transition.</summary>
     string SavePathDraft { get; set; }
 

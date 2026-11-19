@@ -16244,6 +16244,40 @@ Editor из 20 пакетов на обоих DI. Четыре Runtime пока�
 в `TestResults/ED4i-material-slots-regression-20261119-02`.
 [Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#edit-one-slot-of-an-imported-two-slot-mesh).
 
+<a id="arch1g2p-2026-11-19"></a>
+## 2026-11-19 — ARCH1g.2p, первичный импорт из Editor
+
+Версия `1.2611.19.11-alpha`. Проект начинался с камеры, двухслотовой glTF
+с внешним BIN и пустого каталога. Команда Editor использовала worker, ledger
+и Nom. Проверены отмена диалога, отказ при отсутствующем BIN и отказ регистрации
+при занятой блокировке записи каталога. Повтор использовал тот же ledger, а
+повторная команда с альтернативным разделителем сохранила одну строку.
+
+Editor разместил модель из каталога, сохранил сцену, собрал и показал её на
+Vulkan. Проверены точные ресурсы Nom, ID меша, привязки, экземпляра и двух
+слотов с материалами. В отдельном процессе восстановились каталог и выбор
+импорта. Совпали SHA256 каталога, ledger и сцены, точные RenderAssetKey и RGBA
+области 686 × 925. В ней учтены 16 653 красных и 16 926 зелёных пикселей.
+SHA256 RGBA `6906DB097254B304B8841E1FFCF78046330BBA57CE255F09968A1634EB195331`.
+
+`VerifyEditor.ps1 -InitialModelImport` прошёл на Cobalt и Microsoft DI
+в Source Debug и Published Release. В восьми Runtime было 0 ошибок и 0
+предупреждений Vulkan. Ресурсы и дескрипторы освобождены. EvidenceDirectory
+`TestResults/ARCH1g2p-initial-import-20261119-02`, SHA256 `verification.json`
+`B59D7BC4F4F7E924B07F75864A7DD95725E1C2FE68D0B483BCADCD22EC0C0DEC`.
+
+`-InitialModelImport -FreshPackages` повторил двухпроцессный сценарий
+на обоих DI в независимом Editor из 20 пакетов. В четырёх Runtime было
+0 ошибок и 0 предупреждений Vulkan, ресурсы и дескрипторы освобождены.
+SHA256 RGBA совпал с исходными профилями. EvidenceDirectory
+`TestResults/ARCH1g2p-initial-import-packages-20261119-01`, SHA256
+`verification.json` `B47FB9AC118C2D8CD7F945EB4062B6BE20234F78F539946EE2091A50C77E3822`.
+
+`Examples/AetherEditor` собран в Release. В каждой конфигурации Debug и Release
+прошли 144 теста импорта Aether и 1507 тестов Editor без ошибок и пропусков.
+Логи и TRX сохранены в `TestResults/ARCH1g2p-initial-import-regression-20261119-01`.
+[Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#import-the-first-model-from-editor).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

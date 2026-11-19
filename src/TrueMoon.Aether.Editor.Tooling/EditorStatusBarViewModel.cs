@@ -133,6 +133,7 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
                 DocumentCommand.Save or DocumentCommand.SaveAs => "Сохранение сцены…",
                 DocumentCommand.Open => "Открытие сцены…",
                 DocumentCommand.ReimportModel => "Переимпорт модели…",
+                DocumentCommand.ImportModel => "Импорт модели…",
                 DocumentCommand.ReadModelCatalog => "Чтение каталога моделей…",
                 DocumentCommand.PlaceModel => "Добавление модели в сцену…",
                 DocumentCommand.SelectModel => "Обновление выбора моделей…",

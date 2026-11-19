@@ -25,7 +25,8 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--revisions" or "--multi-model")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-initial-model-import" or "--revisions" or "--multi-model")) return 2;
+var editorInitialImport = args.Length == 8 && args[7] == "--editor-initial-model-import";
 var renderSlots = args.Length == 8 && args[7] == "--editor-render-material-slots";
 var renderReferenceDiagnostics = args.Length == 8 && args[7] == "--editor-render-reference-diagnostics";
 var renderMaterialReset = args.Length == 8 && args[7] == "--editor-render-material-reset";
@@ -152,7 +153,7 @@ File.WriteAllText(Path.Combine(gameDirectory, "Entry.cs"), """
 var path = Path.Combine(sourceDirectory, "scene.gltf");
 var original = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
 var primitives = original["meshes"]![0]!["primitives"]!.AsArray();
-if (renderSlots)
+if (renderSlots || editorInitialImport)
 {
     original["meshes"]![0]!["extras"] = JsonNode.Parse("""{"truemoon":{"combineMaterialSlots":true}}""");
     primitives[0]!["extras"] = JsonNode.Parse("""{"truemoon":{"subasset":"left"}}""");
@@ -190,6 +191,30 @@ var initialScene = new SceneDocument(sceneId, 40, [new(cameraId, cameraDefinitio
     ]))], [BuiltInComponents.Schemas[0], MeshRenderingComponents.CameraSchema]);
 var placement = renderSlots ? Matrix4x4.Identity : Matrix4x4.CreateRotationZ(.1f) * Matrix4x4.CreateTranslation(.25f, 0, 0);
 var scenePath = Path.Combine(evidence, "placed.aetherscene");
+if (editorInitialImport)
+{
+    var scenes = Directory.CreateDirectory(Path.Combine(evidence, "Scenes"));
+    Directory.CreateDirectory(Path.Combine(evidence, "Content"));
+    var scene = Path.Combine(scenes.FullName, "placed.aetherscene");
+    await using (var authoring = App.Build(context => context.UseAetherAuthoring()))
+    {
+        var codec = new SceneFileCodec(authoring.Services.Resolve<IFactory<ISceneAuthoringSession, SceneDocument>>()!);
+        await File.WriteAllBytesAsync(scene, codec.Encode(initialScene));
+    }
+    var manifest = Path.Combine(evidence, "Delivery.aetherproj");
+    await File.WriteAllTextAsync(manifest, JsonSerializer.Serialize(new
+    {
+        formatVersion = 1, id = projectId, name = "Initial model import",
+        gameProject = "game/DeliveryGame.csproj", entryAssembly = "DeliveryGame.dll", entryType = "DeliveryGame.Entry",
+        scenesRoot = "Scenes", contentRoot = "Content"
+    }));
+    string[] arguments = [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene, workerPath, dotnet];
+    var saved = await RunChild("import-saved", [.. arguments, "--initial-import-save"], TimeSpan.FromSeconds(120));
+    Check(saved.ExitCode == 0, saved.Error);
+    var reopened = await RunChild("import-reopened", [.. arguments, "--initial-import-reopen"], TimeSpan.FromSeconds(120));
+    Check(reopened.ExitCode == 0 && saved.Pid != reopened.Pid, reopened.Error);
+    return 0;
+}
 GameBuildResult oldBuild, newBuild, legacyBuild;
 PublishedModelImport oldModel, newModel;
 byte[]? inspectorBaseline = null;

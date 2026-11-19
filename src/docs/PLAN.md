@@ -123,7 +123,8 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 
 [Два слота ED4i](engine/EDITOR_PLAN.md#ed4i-material-slots) провели именованные
 слоты через импорт, Nom и Build и подтвердили замену одного материала на Vulkan.
-Следующее предложение по импорту — [первичный импорт из Editor](engine/PLAN.md#arch1g-editor-import-proposal).
+[Первичный импорт ARCH1g.2p](engine/PLAN.md#arch1g2p-initial-model-import) добавил
+команду Editor от glTF с внешним BIN до каталога и размещённой сцены на Vulkan.
 
 По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика
 ARCH2e.4b → ARCH1f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5
@@ -226,7 +227,7 @@ Source/published/fresh: по230checks на обоих DI,4owned children/profile
 | .NET 11, CORE8 завершён | Inputs/generators/frozen game/runtime regression и свежая согласованная поставка проверены; функциональная очередь продолжается у владельцев | [CORE8](core/PLAN.md#core8-dotnet11), [итоговая поставка](core/HISTORY.md#core85-delivery-2026-11-11) |
 | Конфигурация, CORE7.0–7.6 завершены в указанном scope | Применение общего слоя в новых/целевых consumers; providers/lifecycle extensions по отдельному запросу | [План Core](core/PLAN.md#core7-unified-configuration), [guide](core/CONFIGURATION_GUIDE.md) |
 | ECS и отображение | ARCH1f.2–4 и минимальный Player проверены. Следующий профиль рендера ARCH1f.5 — текстуры и sampler. В первом срезе ED4i инспектор выбирает меш и материал для одного MeshRenderer | [Рендер](engine/PLAN.md#arch1f-rendering), [ED4i](engine/EDITOR_PLAN.md#ed4i-render-components) |
-| Ассеты моделей | ARCH1g.2a–k проверили доставку точных ревизий через Nom, GPU, Replace и допуск Build. ARCH1g.2l–o добавили реимпорт, восстановление выбора, каталог и размещение в сцене. Предложен первичный импорт из Editor | [ARCH1g](engine/PLAN.md#arch1g-model-assets), [предложение](engine/PLAN.md#arch1g-editor-import-proposal) |
+| Ассеты моделей | ARCH1g.2a–k проверили доставку точных ревизий через Nom, GPU, Replace и допуск Build. ARCH1g.2l–o добавили реимпорт, восстановление выбора, каталог и размещение в сцене. ARCH1g.2p добавил первичный импорт из Editor и восстановление каталога | [ARCH1g](engine/PLAN.md#arch1g-model-assets), [первичный импорт](engine/PLAN.md#arch1g2p-initial-model-import) |
 | Самостоятельное хранение ассетов | NOM0–8 проверены в указанных локальных профилях. Первый Aether consumer использует batch и точные снимки Nom в ARCH1g.2a. Другие платформы и профили выпуска открыты, VM acceptance отложена | [Nom queue](nom/PLAN.md#nom-own-queue), [статус](nom/STATUS.md) |
 | Kton / самостоятельная 3D-физика | PHYS0–6 готовы в проверенных профилях. PHYS8.1–3 закрыли baseline, аллокации и deferred-команды контактов. PHYS8.4 прошёл автоматическую приёмку визуального consumer. Далее профили 10 000 тел, воркеры, callbacks и stalls. Ручной Win32 input/close открыт | [PHYS0–8](physics/PLAN.md#current-physics-queue), [статус](physics/STATUS.md) |
 | Аудиомодуль | TrueMoon.Kul AUD1 и optional ARCH1h.2a ECS/captured-content bridge реализованы и проверены в Windows x64 scope; следующие AUD2–3 — device loss/RT/queues/other OS | [Audio PLAN](audio/PLAN.md#current-audio-queue), [ARCH1h](engine/PLAN.md#arch1h-audio) |

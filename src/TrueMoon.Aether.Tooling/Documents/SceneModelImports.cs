@@ -273,7 +273,9 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
 
     private IEnumerable<RenderAssetKey> Keys(PublishedModelImport published) => Entries(published).Select(entry => entry.Key);
 
-    private IEnumerable<RenderAssetEntry> Entries(PublishedModelImport published)
+    private IEnumerable<RenderAssetEntry> Entries(PublishedModelImport published) => GetRenderEntries(projectId, published);
+
+    internal static IEnumerable<RenderAssetEntry> GetRenderEntries(Guid project, PublishedModelImport published)
     {
         var materials = published.Materials.ToDictionary(material => material.AssetId,
             material => new RenderAssetEntry(Key(material.AssetId, material.Definition), material.Definition));
@@ -288,7 +290,7 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
         }
 
         RenderAssetKey Key(Guid id, RenderAssetDefinition definition) =>
-            new(projectId, id, definition.KindId, definition.SchemaVersion, definition.Revision);
+            new(project, id, definition.KindId, definition.SchemaVersion, definition.Revision);
     }
 
     internal IReadOnlyList<SceneModelImportStatus> Read(Guid openingId) =>

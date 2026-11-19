@@ -28,11 +28,12 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     private string? _dismissedError;
     private bool _canConfirmPath;
     private bool _canOpenProject, _canCloseProject;
-    private bool _canOpenBuild;
-    private string _buildPath = "";
+    private bool _canOpenBuild, _canImportModel;
+    private string _buildPath = "", _modelPath = "";
     private string? _activeBuildId;
     private EditorDocumentCommandState? _buildTarget;
     private SessionIdentity? _buildRuntime;
+    private ProjectSession? _importTarget;
 
     /// <summary>Creates a model borrowing the App-owned coordinator. The first owner operation establishes the UI thread.</summary>
     /// <param name="commands">Tracked document actions.</param>
@@ -42,13 +43,14 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     { ArgumentNullException.ThrowIfNull(commands); _commands = commands; _playback = playback; _inspector = inspector; }
 
     /// <summary>Gets/sets the input used by Open, SaveAs and first Save. Completion never replaces this draft.</summary>
-    public string PathDraft { get => _path; set { VerifyOwner(); ArgumentNullException.ThrowIfNull(value); if (_path == value) return; SetProperty(ref _path, value, nameof(PathDraft)); if (_pathRequest is not (DocumentCommand.OpenProject or DocumentCommand.OpenBuild)) OnPropertyChanged(nameof(RequestedPath)); } }
+    public string PathDraft { get => _path; set { VerifyOwner(); ArgumentNullException.ThrowIfNull(value); if (_path == value) return; SetProperty(ref _path, value, nameof(PathDraft)); if (_pathRequest is not (DocumentCommand.OpenProject or DocumentCommand.OpenBuild or DocumentCommand.ImportModel)) OnPropertyChanged(nameof(RequestedPath)); } }
     /// <summary>Retained project manifest draft, separate from scene and first-save paths.</summary>
     public string ProjectPathDraft { get => _projectPath; set { VerifyOwner(); ArgumentNullException.ThrowIfNull(value); if (_projectPath == value) return; SetProperty(ref _projectPath, value, nameof(ProjectPathDraft)); if (_pathRequest == DocumentCommand.OpenProject) OnPropertyChanged(nameof(RequestedPath)); } }
     /// <summary>Path edited by the shared retained prompt.</summary>
     public string RequestedPath
     {
-        get => _pathRequest switch { DocumentCommand.OpenProject => ProjectPathDraft, DocumentCommand.OpenBuild => _buildPath, _ => PathDraft };
+        get => _pathRequest switch { DocumentCommand.OpenProject => ProjectPathDraft, DocumentCommand.OpenBuild => _buildPath,
+            DocumentCommand.ImportModel => _modelPath, _ => PathDraft };
         set
         {
             if (_pathRequest == DocumentCommand.OpenProject) ProjectPathDraft = value;
@@ -59,6 +61,13 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
                 SetProperty(ref _buildPath, value, nameof(RequestedPath));
                 RefreshPathAdmission();
             }
+            else if (_pathRequest == DocumentCommand.ImportModel)
+            {
+                VerifyOwner();
+                ArgumentNullException.ThrowIfNull(value);
+                SetProperty(ref _modelPath, value, nameof(RequestedPath));
+                RefreshPathAdmission();
+            }
             else PathDraft = value;
         }
     }
@@ -67,6 +76,7 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     {
         DocumentCommand.OpenProject => "Путь проекта",
         DocumentCommand.OpenBuild => "BuildId или папка сборки",
+        DocumentCommand.ImportModel => "Путь модели",
         _ => "Путь сцены"
     };
     /// <summary>Prompt hint without changing the canonical scene-root contract.</summary>
@@ -74,12 +84,15 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     {
         DocumentCommand.OpenProject => "Полный путь к файлу .aetherproj",
         DocumentCommand.OpenBuild => "BuildId из каталога сборок или полный путь к папке артефакта",
+        DocumentCommand.ImportModel => "Путь к .gltf или .glb относительно корня проекта",
         _ => ScenesRoot
     };
     /// <inheritdoc />
     public bool SupportsPublishedBuilds => _playback != null;
     /// <inheritdoc />
     public bool CanOpenBuild => _canOpenBuild;
+    /// <inheritdoc />
+    public bool CanImportModel => _canImportModel;
     /// <summary>Exact BuildId of the selected artifact currently playing or paused.</summary>
     public string? ActiveBuildId => _activeBuildId;
     /// <summary>Actual active project snapshot; owned by the project coordinator.</summary>
@@ -125,6 +138,7 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     public string PathPromptText => _pathRequest is DocumentCommand.Open ? "Открыть сцену" :
         _pathRequest == DocumentCommand.OpenProject ? "Открыть проект (.aetherproj)" :
         _pathRequest == DocumentCommand.OpenBuild ? _buildRuntime == null ? "Запустить опубликованную сборку" : "Заменить текущую сборку" :
+        _pathRequest == DocumentCommand.ImportModel ? "Импортировать модель" :
         _pathRequest != null ? "Сохранить сцену как" : AwaitingDecision ? "Несохранённые изменения" : _error.Length != 0 ? "Ошибка операции" : Title;
     /// <summary>Fresh admission for the requested path action.</summary>
     public bool CanConfirmPath => _canConfirmPath;
@@ -141,6 +155,7 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     {
         DocumentCommand.OpenProject => CanOpenProject,
         DocumentCommand.OpenBuild => CanOpenBuild,
+        DocumentCommand.ImportModel => CanImportModel,
         _ => CanOpen
     };
     /// <summary>Gets New availability.</summary>
@@ -184,6 +199,7 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
         SetProperty(ref _canNew, _commands.CanExecute(DocumentCommand.New), nameof(CanNew));
         var wasEditable = CanEditPath;
         SetProperty(ref _canOpenBuild, _inspector?.CanCancel != true && _playback?.CanUsePublishedBuild(_playback.PublishedBuildTarget) == true, nameof(CanOpenBuild));
+        SetProperty(ref _canImportModel, _commands.CanExecute(DocumentCommand.ImportModel), nameof(CanImportModel));
         SetProperty(ref _activeBuildId, _playback?.ActivePublishedBuildId, nameof(ActiveBuildId));
         SetProperty(ref _canOpenProject, _commands.CanExecute(DocumentCommand.OpenProject), nameof(CanOpenProject));
         SetProperty(ref _canCloseProject, _commands.CanExecute(DocumentCommand.CloseProject), nameof(CanCloseProject));
@@ -219,6 +235,8 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
         SetProperty(ref _decision, "Сохранить изменения перед " + target + "?", nameof(DecisionText));
         if (_pathRequest == DocumentCommand.OpenBuild && (!MatchesBuildTarget(next) || _playback!.PublishedBuildTarget != _buildRuntime))
             SetPathRequest(null);
+        if (_pathRequest == DocumentCommand.ImportModel && !ReferenceEquals(_importTarget, next.Project))
+            SetPathRequest(null);
         if (toolsVisible != IsToolsVisible) OnPropertyChanged(nameof(IsToolsVisible));
         _canConfirmPath = CanSubmitPath();
         if (confirm != CanConfirmPath) OnPropertyChanged(nameof(CanConfirmPath));
@@ -231,6 +249,14 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     public void Request(DocumentCommand command)
     {
         VerifyOwner();
+        if (command == DocumentCommand.ImportModel)
+        {
+            if (!_commands.CanExecute(command)) return;
+            _importTarget = _commands.Read().Project;
+            _dismissedError = null;
+            SetPathRequest(command);
+            return;
+        }
         if (command == DocumentCommand.OpenBuild)
         {
             var state = _commands.Read();
@@ -264,7 +290,16 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
             }
             return;
         }
-        if (_pathRequest is not { } command || !_commands.CanExecute(command)) return;
+        if (_pathRequest == DocumentCommand.ImportModel)
+        {
+            if (CanSubmitPath() && _commands.ImportModel(_modelPath, _importTarget!))
+            {
+                SetPathRequest(null);
+                Refresh();
+            }
+            return;
+        }
+        if (_pathRequest is not { } command || !CanSubmitPath()) return;
         SetPathRequest(null); Execute(command);
     }
     /// <summary>Dismisses path tools or a displayed error without changing the document or its history.</summary>
@@ -276,6 +311,7 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     {
         var previous = _pathRequest; _pathRequest = command;
         if (command != DocumentCommand.OpenBuild) { _buildTarget = null; _buildRuntime = null; }
+        if (command != DocumentCommand.ImportModel) _importTarget = null;
         _canConfirmPath = CanSubmitPath();
         if (previous != command)
         {
@@ -290,6 +326,9 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
 
     private bool CanSubmitPath()
     {
+        if (_pathRequest == DocumentCommand.ImportModel)
+            return !string.IsNullOrWhiteSpace(_modelPath) && _importTarget != null && ReferenceEquals(_importTarget, _commands.Read().Project) &&
+                _commands.CanExecute(DocumentCommand.ImportModel);
         if (_pathRequest != DocumentCommand.OpenBuild)
             return _pathRequest is { } requested && _commands.CanExecute(requested);
         var state = _commands.Read();
@@ -303,7 +342,13 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
 
     /// <summary>Invokes the shared action using the current path draft.</summary>
     /// <param name="command">Document action.</param>
-    public void Execute(DocumentCommand command) { VerifyOwner(); _commands.Execute(command, command == DocumentCommand.OpenProject ? ProjectPathDraft : PathDraft); Refresh(); }
+    public void Execute(DocumentCommand command)
+    {
+        VerifyOwner();
+        var path = command switch { DocumentCommand.OpenProject => ProjectPathDraft, DocumentCommand.ImportModel => _modelPath, _ => PathDraft };
+        _commands.Execute(command, path);
+        Refresh();
+    }
 
     internal bool CanReimportModel => CanSave && _inspector?.CanCancel != true;
 

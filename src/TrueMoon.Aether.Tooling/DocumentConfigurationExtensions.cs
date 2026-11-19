@@ -25,12 +25,14 @@ public static class DocumentConfigurationExtensions
                 !services.Exist<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>())
                 throw new InvalidOperationException("The project model catalog requires model import and source capture.");
             var hasReimport = services.Exist<IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>>();
+            var hasImport = services.Exist<IFactory<ModelImportOperation, ModelImportArguments>>();
             services.Singleton<IFactory<ProjectModelCatalog, ResolvedProject>>(resolver =>
             {
                 var ledgers = resolver.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>();
                 var captures = resolver.Resolve<IFactory<ModelSourceCapture, ModelSourceCaptureArguments>>();
                 var reimport = hasReimport ? resolver.Resolve<IFactory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>>() : null;
-                return new Factory<ProjectModelCatalog, ResolvedProject>(project => new(project, ledgers, captures, reimport));
+                var import = hasImport ? resolver.Resolve<IFactory<ModelImportOperation, ModelImportArguments>>() : null;
+                return new Factory<ProjectModelCatalog, ResolvedProject>(project => new(project, ledgers, captures, reimport, import));
             });
         });
         return context;

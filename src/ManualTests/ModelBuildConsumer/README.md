@@ -258,6 +258,23 @@ material in the inspector and compares two Vulkan frames. The red and white
 masks coincide and the entire right region matches pixel for pixel.
 `-FreshPackages` repeats the scenario in an independent published Editor.
 
+## Import the first model from Editor
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -InitialModelImport `
+  -EvidenceDirectory 'TestResults/EditorInitialModelImport/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The project starts with a camera scene and an empty model catalog. The probe
+enters the path to a two-slot glTF with an external BIN through the Editor's
+project menu. It exercises dismissal, missing BIN and retry after a blocked
+catalog write. It then selects, places and saves the imported mesh, checks the
+actual Nom resource heads and displays a new Build on Vulkan. A separate Editor
+process reopens the project and scene, then compares the catalog and ledger
+bytes, the exact mesh and material keys, both slot IDs and the viewport pixels.
+`-FreshPackages` repeats the complete two-process scenario from the closed feed.
+
 ## Diagnose a missing mesh or material binding
 
 ```powershell

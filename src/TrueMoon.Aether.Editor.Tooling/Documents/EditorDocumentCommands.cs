@@ -96,6 +96,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         if (document == null || document.IsClosed || document.Operation != DocumentOperation.None) return false;
         if (command is DocumentCommand.ReadModelCatalog or DocumentCommand.SelectModel or DocumentCommand.PlaceModel)
             return session!.HasModelCatalog && (command == DocumentCommand.ReadModelCatalog || document.Content != null);
+        if (command == DocumentCommand.ImportModel)
+            return session!.CanImportModel;
         if (command == DocumentCommand.ReimportModel)
             return session!.ReadModelImports(document.OpeningId).Any(model => model.CanReimport);
         return command is DocumentCommand.New or DocumentCommand.Open ||
@@ -103,7 +105,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     }
 
     /// <summary>Starts one action; unavailable/concurrent actions leave state untouched.</summary>
-    /// <param name="command">New/Open/Save/SaveAs/Close.</param><param name="path">Scenes-relative Open/SaveAs or untitled Save target.</param>
+    /// <param name="command">Document or project action.</param><param name="path">Source or destination path for the selected action.</param>
     /// <returns>True when accepted. Observe Pending and Read for completion/errors.</returns>
     public bool Execute(DocumentCommand command, string path = "")
         => Execute(command, path, null);
@@ -111,8 +113,10 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     internal bool ReimportModel(EditorModelReimportAction action) => Execute(DocumentCommand.ReimportModel, "", action);
     internal bool SelectModel(EditorProjectModelRow row) => Execute(DocumentCommand.SelectModel, "", null, row);
     internal bool PlaceModel(EditorProjectModelRow row) => Execute(DocumentCommand.PlaceModel, "", null, row);
+    internal bool ImportModel(string path, ProjectSession project) => Execute(DocumentCommand.ImportModel, path, null, importTarget: project);
 
-    private bool Execute(DocumentCommand command, string path, EditorModelReimportAction? reimport, EditorProjectModelRow? catalogChoice = null)
+    private bool Execute(DocumentCommand command, string path, EditorModelReimportAction? reimport,
+        EditorProjectModelRow? catalogChoice = null, ProjectSession? importTarget = null)
     {
         Validate(command); ArgumentNullException.ThrowIfNull(path);
         TaskCompletionSource completion; CancellationTokenSource cancellation; SceneDocumentSession? document;
@@ -122,6 +126,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
         {
             if (!Available(command)) return false;
             owner = _projects.Active;
+            if (importTarget != null && !ReferenceEquals(importTarget, owner)) return false;
             document = owner?.Documents;
             if (command == DocumentCommand.ReimportModel && (reimport == null || document == null ||
                 document.Read().OpeningId != reimport.OpeningId || !document.ReadModelImports(reimport.OpeningId).Any(model =>
@@ -213,11 +218,18 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
                     case DocumentCommand.Close: await document.CloseAsync(choice, saveAs, token).ConfigureAwait(false); break;
                     case DocumentCommand.ReimportModel:
                         await document.ReimportModelAsync(reimport!.OpeningId, reimport.SourceId, reimport.Generation, token).ConfigureAwait(false); break;
+                    case DocumentCommand.ImportModel:
                     case DocumentCommand.ReadModelCatalog:
-                        var catalog = await document.ReadModelCatalogAsync(token).ConfigureAwait(false);
+                        var catalogToken = token;
+                        if (command == DocumentCommand.ImportModel)
+                        {
+                            await document.ImportModelAsync(path, token).ConfigureAwait(false);
+                            catalogToken = CancellationToken.None; // Refresh the committed entry even if cancel arrived after registration.
+                        }
+                        var catalog = await document.ReadModelCatalogAsync(catalogToken).ConfigureAwait(false);
                         lock (_gate)
                         {
-                            token.ThrowIfCancellationRequested();
+                            catalogToken.ThrowIfCancellationRequested();
                             if (ReferenceEquals(_projects.Active, owner)) _modelCatalog = (owner!, catalog);
                         }
                         break;

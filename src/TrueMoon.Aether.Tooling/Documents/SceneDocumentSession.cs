@@ -34,6 +34,22 @@ public sealed class SceneDocumentSession : IDisposable, IAsyncDisposable
     /// <summary>Whether this project exposes a catalog of its imported models.</summary>
     public bool HasModelCatalog => ModelCatalog != null;
 
+    /// <summary>Whether the project host enables initial model import.</summary>
+    public bool CanImportModel => ModelCatalog?.CanImport == true;
+
+    /// <summary>Imports a project-relative model into the project catalog independently of scene selection.</summary>
+    /// <param name="path">Path to the model relative to the project root.</param>
+    /// <param name="cancellationToken">Cancellation before catalog publication.</param>
+    public Task ImportModelAsync(string path, CancellationToken cancellationToken = default)
+    {
+        var catalog = ModelCatalog ?? throw new InvalidOperationException("The project model catalog is not configured.");
+        return Begin(DocumentOperation.Loading, async token =>
+        {
+            await catalog.ImportAsync(path, token).ConfigureAwait(false);
+            return true;
+        }, cancellationToken);
+    }
+
     /// <summary>Reads the project catalog without selecting models or editing a scene.</summary>
     /// <param name="cancellationToken">Read cancellation.</param>
     /// <returns>Detached project model list.</returns>

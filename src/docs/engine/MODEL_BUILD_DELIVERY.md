@@ -340,6 +340,27 @@ scratch и настройки запуска задаются приложени
 
 [Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#select-project-models-in-editor).
 
+## Первичный импорт из Editor
+
+После `UseNom()` и `UseAetherNomContent()` зарегистрируйте
+`UseAetherNomProjectModelImports(worker, scratchDirectory)` перед
+`UseAetherProjectModelCatalog()` и Editor. Доверенный worker и рабочий
+каталог задаёт приложение. В примере их можно передать через CLI.
+[Запуск примера](../../Examples/AetherEditor/README.md).
+
+В меню «Проект» выберите «Импортировать модель» и укажите путь к
+`.gltf` или `.glb` относительно корня проекта. Capture читает модель
+и её зависимости. Editor публикует ledger и точные ресурсы в Nom, затем
+атомарно добавляет строку каталога. Для размещения отметьте модель в
+«Модели проекта» и нажмите «Добавить в сцену».
+
+В каталоге контента проекта сохраняются `.aether-model-ledgers`,
+`.aether-model-content` и запись `.aether-model-catalog.json`. При сбое
+регистрации по прежнему пути повторно используется ledger с той же ревизией
+входа. Повтор уже зарегистрированного пути оставляет единственную запись.
+Для замены содержимого зарегистрированной модели служит переимпорт.
+[Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#import-the-first-model-from-editor).
+
 <a id="arch1g2o-place-catalog-model"></a>
 ## ARCH1g.2o — размещение модели из каталога
 

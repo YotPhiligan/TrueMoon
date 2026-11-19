@@ -391,6 +391,9 @@ internal static class EditorModelBuildSmoke
 
     internal static async Task RunAsync(string[] args)
     {
+        var saveInitialImport = args.Length == 7 && args[6] == "--initial-import-save";
+        var reopenInitialImport = args.Length == 7 && args[6] == "--initial-import-reopen";
+        var initialImport = saveInitialImport || reopenInitialImport;
         var saveInspector = args.Length == 7 && args[6] == "--render-inspector-save";
         var reopenInspector = args.Length == 7 && args[6] == "--render-inspector-reopen";
         var restartInspector = saveInspector || reopenInspector;
@@ -403,19 +406,20 @@ internal static class EditorModelBuildSmoke
         var probePersistence = probeCatalog || args.Length == 9 && args[6] == "--persisted-imports";
         var probeReimport = probePersistence || args.Length == 9 && args[6] == "--reimport";
         var probeImports = probeRenderInspector || probeReimport || args.Length == 7 && args[6] == "--imports";
-        if (args.Length != 6 && !probeImports || args[0] is not ("cobalt" or "microsoft")) throw new ArgumentException("Invalid model delivery probe arguments.");
+        if (args.Length != 6 && !probeImports && !initialImport || args[0] is not ("cobalt" or "microsoft")) throw new ArgumentException("Invalid model delivery probe arguments.");
         var report = args[1];
-        var proofDirectory = restartInspector ? Path.Combine(report, saveInspector ? "editor-saved" : "editor-reopened") : report;
+        var proofDirectory = initialImport ? Path.Combine(report, saveInitialImport ? "import-saved" : "import-reopened") :
+            restartInspector ? Path.Combine(report, saveInspector ? "editor-saved" : "editor-reopened") : report;
         var project = args[2];
         var scenePath = args[3];
         var hostId = BuildIdentity.HostId;
-        var oldBuild = GameBuildArtifact.Open(args[4], hostId);
-        var newBuild = GameBuildArtifact.Open(args[5], hostId);
-        var corruptBuild = restartInspector ? null : CorruptCopy(oldBuild, report, hostId);
+        var oldBuild = initialImport ? null! : GameBuildArtifact.Open(args[4], hostId);
+        var newBuild = initialImport ? null! : GameBuildArtifact.Open(args[5], hostId);
+        var corruptBuild = restartInspector || initialImport ? null : CorruptCopy(oldBuild, report, hostId);
         var sceneHash = Hash(File.ReadAllBytes(scenePath));
-        Check(oldBuild.BuildId != newBuild.BuildId, "Scene probe requires two distinct build IDs.");
+        Check(initialImport || oldBuild.BuildId != newBuild.BuildId, "Scene probe requires two distinct build IDs.");
         var compiler = Path.Combine(proofDirectory, "editor-compiler");
-        if (restartInspector)
+        if (restartInspector || initialImport)
         {
             Check(!Directory.Exists(proofDirectory), "Expected a fresh report and build directory for this Editor process.");
             Directory.CreateDirectory(compiler);
@@ -423,6 +427,10 @@ internal static class EditorModelBuildSmoke
         else CopyArtifact(oldBuild, compiler);
         PausedPublication? publication = null;
         ModelImportWorkerDeployment? worker = null;
+        var initialWorker = initialImport
+            ? new ModelImportWorkerDeployment(args[4], args[5], Directory.EnumerateFiles(args[4], "*", SearchOption.AllDirectories)
+                .ToDictionary(path => Path.GetRelativePath(args[4], path).Replace('\\', '/'), path => Hash(File.ReadAllBytes(path))))
+            : null;
         Action? cancelReplacement = null;
         SessionIdentity? cancelledCandidate = null;
         var cancelOnLoad = 0;
@@ -445,17 +453,19 @@ internal static class EditorModelBuildSmoke
         await using var app = App.Builder(builder => { if (args[0] == "microsoft") builder.UseDI(); }).Setup(context =>
         {
             context.UseConfiguration(configuration);
-            if (probeImports)
+            if (probeImports || initialImport)
             {
                 context.UseAetherModelSourceCapture();
                 context.UseAetherModelImport();
             }
-            if (probeReimport)
+            if (probeReimport || initialImport)
             {
                 context.UseNom();
                 context.UseAetherNomContent();
             }
-            if (probePersistence || restartInspector || referenceDiagnostics)
+            if (initialWorker != null)
+                context.UseAetherNomProjectModelImports(initialWorker, Path.Combine(report, "scratch"));
+            if (probePersistence || restartInspector || referenceDiagnostics || initialImport)
                 context.UseAetherSceneModelSelectionPersistence();
             if (probePersistence)
             {
@@ -463,14 +473,14 @@ internal static class EditorModelBuildSmoke
                     new Factory<SceneModelReimportSettings, SceneModelReimportRestoreArguments>(request =>
                         new(request.Ledger, worker!, Path.Combine(report, "scratch"), publication!))));
             }
-            if (probeCatalog || restartInspector || referenceDiagnostics) context.UseAetherProjectModelCatalog();
+            if (probeCatalog || restartInspector || referenceDiagnostics || initialImport) context.UseAetherProjectModelCatalog();
             context.UseConfiguredAetherEditor(new AetherComposition
             {
                 HostContractId = hostId, GameBuildId = new string('0', 64),
                 RuntimeLaunch = NativeRuntimeLaunch.CurrentProcess("--runtime"),
                 StatusChanged = status =>
                 {
-                    if (status is { State: SessionState.Starting, SceneLoaded: true, Identity: { } identity } &&
+                    if (!initialImport && status is { State: SessionState.Starting, SceneLoaded: true, Identity: { } identity } &&
                         identity.GameBuildId == oldBuild.BuildId && Interlocked.Exchange(ref cancelOnLoad, 0) == 1)
                     {
                         cancelledCandidate = identity;
@@ -504,6 +514,13 @@ internal static class EditorModelBuildSmoke
             await documents.Pending.WaitAsync(token);
             var before = documents.Read().Document ?? throw new InvalidOperationException("No active document.");
             var content = before.Content ?? throw new InvalidOperationException("Editor did not load the placed scene.");
+            if (initialImport)
+            {
+                await VerifyInitialImport();
+                window.Close();
+                await window.Completion.WaitAsync(token);
+                return;
+            }
             if (probeImports)
             {
                 Check(content.Document.Entities.Length == (materialSlots ? 2 : probePlacement || referenceDiagnostics ? 3 : 5) && !before.IsDirty,
@@ -681,6 +698,201 @@ internal static class EditorModelBuildSmoke
             {
                 await playback.Pending.WaitAsync(token);
                 if (playback.Error is { } error) throw new InvalidOperationException("Editor scene command failed.", error);
+            }
+
+            async Task VerifyInitialImport()
+            {
+                const string source = "source/scene.gltf";
+                var session = documents.Read().Project ?? throw new InvalidOperationException("Project is not open.");
+                var document = session.Documents!;
+                var catalogFile = Path.Combine(session.Project.ContentDirectory, ".aether-model-catalog.json");
+                var ledgerFolder = Path.Combine(session.Project.ContentDirectory, ".aether-model-ledgers");
+                var priorProof = Path.Combine(report, "import-saved", "editor-initial-model-import.json");
+                var tools = view.Documents!;
+                var model = (EditorDocumentViewModel)tools.DataContext!;
+                var ledgers = app.Services.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>()!;
+                var failedAdmission = false;
+                if (saveInitialImport)
+                {
+                    Check(!File.Exists(catalogFile) && !Directory.Exists(ledgerFolder) && content.Document.Entities.Length == 1,
+                        "The fixture already contained an import or placed model.");
+                    await ReadCatalog();
+                    await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
+                        popup.ModelCatalogMessage.Value == "В каталог ещё не добавлены модели." &&
+                        popup.ModelCatalogRows.Children.Count == 0, token, HoldCatalog);
+                    await CloseCatalog();
+
+                    var pending = documents.Pending;
+                    await EnterPath(source);
+                    await EditorHeaderSmoke.UntilAsync(ui, () =>
+                    {
+                        if (ui.NeedsUpdate || !tools.CancelPath.IsVisible || tools.CancelPath.Bounds.Width <= 0) return false;
+                        EditorHeaderSmoke.Move(ui, tools.CancelPath);
+                        EditorHeaderSmoke.Click(ui, tools.CancelPath);
+                        return true;
+                    }, token);
+                    Check(ReferenceEquals(pending, documents.Pending) && !File.Exists(catalogFile), "Dismissing the prompt started an import.");
+                    await Import("source/missing.gltf");
+                    Check(documents.Read().Error is FileNotFoundException && !File.Exists(catalogFile),
+                        $"A missing BIN did not stop the initial import: {documents.Read().Error}");
+
+                    using (new FileStream(catalogFile + ".write-lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                    {
+                        await Import(source);
+                        Check(documents.Read().Error is IOException && !File.Exists(catalogFile),
+                            $"A blocked registration exposed a catalog row: {documents.Read().Error}");
+                    }
+                    var pendingLedger = Directory.EnumerateFiles(ledgerFolder, "*.tmledger").Single();
+                    var pendingHash = Hash(await File.ReadAllBytesAsync(pendingLedger, token));
+                    failedAdmission = true;
+                    await Import(source);
+                    Check(documents.Read().Error == null && File.Exists(catalogFile) &&
+                        Hash(await File.ReadAllBytesAsync(pendingLedger, token)) == pendingHash,
+                        $"Retry failed to register the published ledger: {documents.Read().Error}");
+                    var committedHash = Hash(await File.ReadAllBytesAsync(catalogFile, token));
+                    await Import(@"source\scene.gltf");
+                    Check(documents.Read().Error == null && Hash(await File.ReadAllBytesAsync(catalogFile, token)) == committedHash,
+                        "Repeating an imported path changed the catalog.");
+                    var item = documents.Read().ModelCatalog!.Single();
+                    Check(item.SourcePath == source && Path.GetFileNameWithoutExtension(pendingLedger) == item.SourceId.ToString("N"),
+                        "Catalog did not publish the retry's source identity.");
+
+                    await ClickCatalog(popup => popup.ModelCatalogRows.Children.OfType<HStack>()
+                        .SelectMany(row => row.Children.OfType<CheckBox>()).SingleOrDefault(check => check.Value.EndsWith(source, StringComparison.Ordinal) && !check.IsChecked));
+                    await documents.Pending.WaitAsync(token);
+                    Check(document.ReadModelImports(before.OpeningId).Single().SourceId == item.SourceId, "Catalog did not select the new source.");
+                    await ClickCatalog(popup => popup.ModelCatalogRows.Children.OfType<HStack>()
+                        .SelectMany(row => row.Children.OfType<Button>()).SingleOrDefault(button => button.AccessibleName == "Добавить «scene.gltf» в сцену"));
+                    await documents.Pending.WaitAsync(token);
+                    await CloseCatalog();
+                    var placed = document.Read();
+                    Check(documents.Read().Error == null && placed.IsDirty && placed.Content?.UndoCount == content.UndoCount + 1 &&
+                        placed.Content.Document.Entities.Length == 2, $"Catalog did not place exactly one instance: {documents.Read().Error}");
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Save", token);
+                    await documents.Pending.WaitAsync(token);
+                    Check(documents.Read().Error == null && !document.Read().IsDirty, $"Cannot save the placed scene: {documents.Read().Error}");
+                }
+                else
+                {
+                    await ReadCatalog();
+                    await EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
+                        popup.ModelCatalogRows.Children.OfType<HStack>().SelectMany(row => row.Children.OfType<CheckBox>())
+                            .Any(check => check.Value.EndsWith(source, StringComparison.Ordinal) && check.IsChecked), token, HoldCatalog);
+                    await CloseCatalog();
+                }
+
+                var row = documents.Read().ModelCatalog!.Single();
+                Check(row.SourcePath == source, "Catalog source path changed.");
+                var ledgerPath = Path.Combine(ledgerFolder, $"{row.SourceId:N}.tmledger");
+                await using var ledger = ledgers.Create(new(row.SourceId, ledgerPath))!;
+                var published = await ledger.OpenAsync(token) ?? throw new InvalidDataException("Committed catalog ledger is missing.");
+                var mesh = published.Meshes.Single();
+                var entityId = published.Instances.Single().Id;
+                before = document.Read();
+                content = before.Content!;
+                sceneHash = Hash(await File.ReadAllBytesAsync(scenePath, token));
+                var renderer = content.Resolved.Entities[new(entityId)].Components.Values.Single(value => value.TypeId == MeshRenderingComponents.MeshRendererId);
+                Check(content.Document.Entities.Length == 2 && published.Generation == 1 &&
+                    document.ReadModelImports(before.OpeningId).Single(item => item.SourceId == row.SourceId).Generation == published.Generation &&
+                    renderer.Properties["mesh"].Value.GetString() == mesh.AssetId.ToString("D") &&
+                    renderer.Properties["bindings"].Value.GetString() == mesh.BindingSetId.ToString("D") &&
+                    mesh.Slots.Length == 2 && mesh.Slots[0].SlotId != mesh.Slots[1].SlotId &&
+                    mesh.Geometry.Slots.Select(slot => slot.SlotId).SequenceEqual(mesh.Slots.Select(slot => slot.SlotId)),
+                    "The scene and restored import do not agree on the published mesh, slots and placement.");
+
+                await EditorHeaderSmoke.UntilAsync(ui, () => view.DataContext!.CanBuild, token);
+                await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "runtime.Build", token);
+                await Complete();
+                var artifact = engine.Editor.Status.Candidate?.Build.Artifact ?? throw new InvalidOperationException("New Editor Build is missing.");
+                Check(Path.GetDirectoryName(artifact.DirectoryPath) == compiler, "The Editor used a preexisting build.");
+                var manifest = artifact.RenderContent!;
+                var binding = manifest.Resolve(mesh.BindingSetId, RenderContentProfile.BindingSetKindId);
+                var exact = (MaterialBindingSetDefinition)binding.Definition;
+                var slots = exact.Bindings.Select(slot => new ImportedSlotProof(slot.SlotId, AssetProof.From(slot.Material))).ToArray();
+                Check(exact.Mesh.AssetId == mesh.AssetId && PublishedSlotsAgree(), "Build lost the slot IDs or their exact material keys.");
+                var stores = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
+                var nomId = session.Project.Description.Id;
+                await using (var store = stores.Create(new(Path.Combine(session.Project.ContentDirectory, ".aether-model-content"),
+                    nomId, nomId, AssetStoreOpenMode.Open, token))!)
+                    foreach (var entry in manifest.Entries)
+                        Check(await store.FindResourceAsync(entry.Key.AssetId) is { } head && head.KindId == entry.Key.KindId &&
+                            head.Digest == entry.Key.Revision.ToString(), "Nom did not retain the exact imported resource.");
+
+                Check(playback.RunSelectedBuild(artifact), "Editor declined launching the new Build.");
+                await Complete();
+                var frame = await CapturePlaying("initial-model", artifact, 0);
+                Check(playback.Execute(EditorCommand.Stop), "Editor declined stopping the new Build.");
+                await Complete();
+                await CheckReleased(frame.Generation);
+                var result = new InitialImportProof(true, Environment.ProcessId, before.OpeningId, row.SourceId, row.SourcePath, entityId,
+                    published.Generation, sceneHash, Hash(await File.ReadAllBytesAsync(catalogFile, token)),
+                    Hash(await File.ReadAllBytesAsync(ledgerPath, token)), AssetProof.From(exact.Mesh), AssetProof.From(binding.Key), slots, frame, failedAdmission);
+                if (reopenInitialImport)
+                {
+                    var prior = JsonSerializer.Deserialize<InitialImportProof>(await File.ReadAllBytesAsync(priorProof, token))!;
+                    Check(prior.Completed && prior.RegistrationRetry && prior.EditorPid != result.EditorPid && prior.OpeningId != result.OpeningId &&
+                        prior.SourceId == result.SourceId && prior.SourcePath == result.SourcePath && prior.Entity == result.Entity &&
+                        prior.Generation == result.Generation && prior.SceneSha256 == result.SceneSha256 && prior.CatalogSha256 == result.CatalogSha256 &&
+                        prior.LedgerSha256 == result.LedgerSha256 && prior.Mesh == result.Mesh && prior.Binding == result.Binding &&
+                        prior.Slots.SequenceEqual(result.Slots) && prior.Frame.Mask == result.Frame.Mask &&
+                        prior.Frame.Pixels != null && prior.Frame.Pixels == result.Frame.Pixels,
+                        "The restarted Editor did not restore the exact catalog, scene, slot IDs and GPU frame.");
+                }
+                await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-initial-model-import.json"), JsonSerializer.Serialize(result), token);
+
+                bool PublishedSlotsAgree() => manifest.Resolve(exact.Mesh).Definition is MeshDefinition geometry &&
+                    geometry.Slots.SequenceEqual(mesh.Geometry.Slots) &&
+                    exact.Bindings.Select(value => (value.SlotId, value.Material.AssetId))
+                        .SequenceEqual(mesh.Slots.Select(value => (value.SlotId, value.MaterialId)));
+
+                async Task EnterPath(string path)
+                {
+                    await EditorHeaderSmoke.UntilAsync(ui, () => model.CanImportModel, token);
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "document.ImportModel", token, confirmPath: false);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => tools.IsVisible && tools.Actions.IsVisible && !ui.NeedsUpdate, token);
+                    await ui.InvokeAsync(() =>
+                    {
+                        Check(model.PathRequest == DocumentCommand.ImportModel, "Wrong model import prompt.");
+                        ui.Focus(tools.PathInput);
+                        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+                        ui.HandleInput(new(InputKind.Text, Text: path));
+                        Check(model.RequestedPath == path, "Model source path did not reach the prompt.");
+                    }).WaitAsync(token);
+                }
+
+                async Task Import(string path)
+                {
+                    var pending = documents.Pending;
+                    await EnterPath(path);
+                    await EditorHeaderSmoke.ConfirmDocumentPathAsync(ui, view, token);
+                    Check(!ReferenceEquals(pending, documents.Pending), "Editor declined importing the source.");
+                    await documents.Pending.WaitAsync(token);
+                }
+
+                async Task ReadCatalog()
+                {
+                    await ClickCatalog(popup => popup.ReadModelCatalog);
+                    await documents.Pending.WaitAsync(token);
+                    Check(documents.Read().Error == null, $"Cannot read the project catalog: {documents.Read().Error}");
+                }
+
+                Task ClickCatalog(Func<EditorStatusPopupView, Button?> find) => EditorHeaderSmoke.UntilAsync(ui, () =>
+                {
+                    if (ui.NeedsUpdate || view.Overlays.Popup is not EditorStatusPopupView popup ||
+                        find(popup) is not { IsEnabled: true, Bounds.Width: > 0 } button) return false;
+                    EditorHeaderSmoke.Move(ui, button);
+                    EditorHeaderSmoke.Click(ui, button);
+                    return true;
+                }, token, HoldCatalog);
+
+                void HoldCatalog()
+                {
+                    if (view.Overlays.Popup is EditorStatusPopupView || view.StatusBar?.SummaryButton is not { IsVisible: true, Bounds.Width: > 0 } button) return;
+                    EditorHeaderSmoke.Move(ui, button);
+                    EditorHeaderSmoke.Click(ui, button);
+                }
+
+                Task CloseCatalog() => ui.InvokeAsync(() => view.Overlays.Close(false)).WaitAsync(token);
             }
 
             async Task VerifyRenderInspector(SceneDocumentSession document, IFactory<ModelImportLedgerSession, ModelImportLedgerArguments> ledgers)
@@ -1162,10 +1374,10 @@ internal static class EditorModelBuildSmoke
                     var scale = ui.Viewport.Scale;
                     var clip = new SKRectI((int)(bounds.X * scale), (int)(bounds.Y * scale),
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
-                    var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics;
+                    var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics || initialImport;
                     var mask = Measure(pixels, clip, allowSingleRedOccurrence, materialSlots);
                     var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
-                        referenceDiagnostics || materialSlots;
+                        referenceDiagnostics || materialSlots || initialImport;
                     var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence, materialSlots) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
@@ -1323,6 +1535,10 @@ internal static class EditorModelBuildSmoke
     private sealed record InspectorMaterialProof(FrameProof Frame, AssetProof Mesh, AssetProof Material, AssetProof Binding, Guid Slot);
     private sealed record InspectorRestartProof(int EditorPid, Guid OpeningId, Guid SceneId, long SceneRevision, string SceneSha256,
         string SelectionSha256, Guid Entity, AssetProof Mesh, AssetProof Material, AssetProof Binding, Guid Slot, ImportGeneration[] Imports, FrameProof Frame);
+    private sealed record ImportedSlotProof(Guid Id, AssetProof Material);
+    private sealed record InitialImportProof(bool Completed, int EditorPid, Guid OpeningId, Guid SourceId, string SourcePath, Guid Entity,
+        long Generation, string SceneSha256, string CatalogSha256, string LedgerSha256, AssetProof Mesh, AssetProof Binding,
+        ImportedSlotProof[] Slots, FrameProof Frame, bool RegistrationRetry);
     private sealed record ModelImportProof(bool Completed, string BeforeEdit, string AfterEdit, string WhileMissing,
         string AfterReimport, string Blocked, bool MatchingContent, string OldBuild, string NewBuild,
         bool CancelledAfterLedger, bool MissingSourceRejected, IReadOnlyList<FrameProof> Captures, bool RestoredPriorGeneration,
