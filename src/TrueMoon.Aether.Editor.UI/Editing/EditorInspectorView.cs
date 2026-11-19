@@ -52,6 +52,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
     private readonly Dictionary<(ComponentId, string), InspectorPropertyControls> _properties = [];
     private readonly Dictionary<(ComponentId, string), ScrollViewer> _renderLists = [];
     private InspectorRenderAssetSelection? _shownRenderAssets;
+    private Guid? _openRenderSlot;
     internal static ViewStyleRole<ScrollViewer> RenderChoicesRole { get; } = new("InspectorRenderChoices");
     private readonly Dictionary<(ComponentTypeId, int), Button> _addButtons = [];
     private readonly Dictionary<ComponentId, Button> _restoreButtons = [];
@@ -250,8 +251,11 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
                 picker.Value = choices.Items.FirstOrDefault(item => item.Id == choices.Selected)?.Name ?? "Выбрать";
                 picker.IsEnabled = _shownRenderAssets?.Enabled == true && choices.Items.Count != 0;
                 if (property.Property.Key == "bindings")
+                {
                     property.Reset.IsEnabled = _shownRenderAssets is { CanRestoreMeshMaterial: true } selection &&
                         selection.Component == property.Property.ComponentId;
+                    RefreshSlotPickers(property);
+                }
             }
             if (property.Input is CheckBox boolean) boolean.Value = property.Property.BooleanValue ? "Да" : "Нет";
             if (_genericEditors.TryGetValue((property.Property.ComponentId, property.Property.Key), out var editor))
@@ -320,10 +324,15 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         details.Add(source);
         details.IsVisible = showDetails;
         row.Add(line);
+        var slotPanel = restoreMaterial ? VStack.Create().WithRole(StackRole) : null;
+        if (slotPanel != null) row.Add(slotPanel);
         if (choices != null) row.Add(choices);
         if (restoreMaterial) row.Add(reset);
         row.Add(details);
-        return new(property, row, input, nullable, reset, source);
+        return new(property, row, input, nullable, reset, source)
+        {
+            SlotPickers = slotPanel == null ? null : (slotPanel, new())
+        };
     }
 
     private (IReadOnlyList<InspectorRenderAssetChoice> Items, Guid? Selected) RenderChoices(InspectorProperty property)
@@ -332,26 +341,68 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         return property.Key == "mesh" ? (selection.Meshes, selection.Mesh) : (selection.Materials, selection.Material);
     }
 
-    private void ToggleRenderChoices(InspectorProperty property, ScrollViewer scroll)
+    private void RefreshSlotPickers(InspectorPropertyControls controls)
     {
-        var open = !scroll.IsVisible;
+        var property = controls.Property;
+        if (controls.SlotPickers is not { } pickers) return;
+        var key = (property.ComponentId, property.Key);
+        var selection = _shownRenderAssets;
+        var slots = selection?.Component == property.ComponentId ? selection.Slots : [];
+        _genericEditors[key].IsVisible = slots.Count == 0;
+        pickers.Panel.IsVisible = slots.Count != 0;
+        foreach (var stale in pickers.Buttons.Keys.Where(id => slots.All(slot => slot.Id != id)).ToArray())
+        {
+            var button = pickers.Buttons[stale];
+            pickers.Panel.Items.Remove(button);
+            button.Dispose();
+            pickers.Buttons.Remove(stale);
+        }
+        for (var i = 0; i < slots.Count; i++)
+        {
+            var slot = slots[i];
+            if (!pickers.Buttons.TryGetValue(slot.Id, out var button))
+            {
+                button = Button.Simple().WithRole(ActionRole)
+                    .OnClick(() => ToggleRenderChoices(property, _renderLists[key], slot.Id));
+                pickers.Buttons.Add(slot.Id, button);
+                pickers.Panel.Add(button);
+            }
+            var material = selection!.Materials.FirstOrDefault(item => item.Id == slot.Material);
+            button.Value = slot.Name + " · " + (material?.Name ?? "Выбрать");
+            button.AccessibleName = "Материал слота " + slot.Name;
+            button.IsEnabled = slot.CanSelect && selection.Materials.Count != 0;
+            Reorder(pickers.Panel, button, i);
+        }
+    }
+
+    private void ToggleRenderChoices(InspectorProperty property, ScrollViewer scroll) => ToggleRenderChoices(property, scroll, null);
+
+    private void ToggleRenderChoices(InspectorProperty property, ScrollViewer scroll, Guid? slotId)
+    {
+        var open = !scroll.IsVisible || _openRenderSlot != slotId;
         foreach (var list in _renderLists.Values) CloseRenderChoices(list);
         if (!open || _shownRenderAssets is not { Enabled: true } selection) return;
-        var choices = RenderChoices(property);
+        var slot = slotId.HasValue ? selection.Slots.FirstOrDefault(item => item.Id == slotId) : null;
+        if (slotId.HasValue && slot is not { CanSelect: true }) return;
+        (IReadOnlyList<InspectorRenderAssetChoice> Items, Guid? Selected) choices =
+            slot == null ? RenderChoices(property) : (selection.Materials, slot.Material);
+        var label = slot == null ? property.Label : "Материал слота " + slot.Name;
         var rows = VStack.Create().WithRole(StackRole);
         foreach (var item in choices.Items)
         {
             var button = Button.Simple(item.Name).WithRole(ActionRole).OnClick(() =>
             {
                 CloseRenderChoices(scroll);
-                _model.SelectRenderAsset(selection, property, item.Id);
+                if (slot == null) _model.SelectRenderAsset(selection, property, item.Id);
+                else _model.SelectRenderSlotMaterial(selection, slot.Id, item.Id);
             });
-            button.AccessibleName = property.Label + " · " + item.Name;
+            button.AccessibleName = label + " · " + item.Name;
             button.Tone = item.Id == choices.Selected ? ControlTone.Accent : ControlTone.Neutral;
             rows.Add(button);
         }
         scroll.Content(rows);
         scroll.IsVisible = true;
+        _openRenderSlot = slotId;
     }
 
     private static void CloseRenderChoices(ScrollViewer scroll)

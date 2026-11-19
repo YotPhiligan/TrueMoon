@@ -1,14 +1,18 @@
+using System.Collections.Immutable;
 using System.Numerics;
 using System.Text;
 using TrueMoon.Aether.Abstractions.Rendering;
 
 namespace TrueMoon.Aether.Tooling.Importing;
 
-// The worker emits v2. Parent-published candidates with explicit scaling persist as v3.
+// Single-slot candidates keep their original encoding. Grouped candidates carry explicit slot locators.
 internal static class ModelImportProtocol
 {
     private const int NativeCandidate = 0x32434d54;
     private const int ScaledCandidate = 0x33434d54;
+    private const int GroupedCandidate = 0x34434d54;
+    private const int ScaledGroupedCandidate = 0x35434d54;
+    private const string GroupedRecipe = "aether.assimp605.gltf2-static-opaque-unlit/grouped-slots/1";
     internal const int MaximumOutputBytes = 8 * 1024 * 1024;
     private const int MaximumInputBytes = 32 * 1024 * 1024 + 32768;
 
@@ -45,13 +49,30 @@ internal static class ModelImportProtocol
     {
         using var stream = new MemoryStream(); using var writer = new BinaryWriter(stream, Encoding.UTF8);
         var scaled = candidate.GeometryScale != 1;
-        writer.Write(scaled ? ScaledCandidate : NativeCandidate); WriteText(writer, ModelImportCandidate.Recipe);
+        var grouped = candidate.Meshes.Any(mesh => !mesh.SlotMaterials.IsEmpty);
+        var version = grouped ? (scaled ? ScaledGroupedCandidate : GroupedCandidate) : (scaled ? ScaledCandidate : NativeCandidate);
+        writer.Write(version);
+        WriteText(writer, grouped ? GroupedRecipe : ModelImportCandidate.Recipe);
         writer.Write(candidate.SourceId.ToByteArray()); WriteText(writer, candidate.InputRevision);
         if (scaled) writer.Write(candidate.GeometryScale);
         writer.Write(candidate.Materials.Count);
         foreach (var material in candidate.Materials) Asset(writer, material);
         writer.Write(candidate.Meshes.Count);
-        foreach (var mesh in candidate.Meshes) { writer.Write(mesh.MaterialIndex); Asset(writer, mesh.Geometry); Budget(stream); }
+        foreach (var mesh in candidate.Meshes)
+        {
+            writer.Write(mesh.MaterialIndex);
+            Asset(writer, mesh.Geometry);
+            if (grouped)
+            {
+                writer.Write(mesh.SlotMaterials.Length);
+                foreach (var slot in mesh.SlotMaterials)
+                {
+                    WriteText(writer, slot.Locator);
+                    writer.Write(slot.MaterialIndex);
+                }
+            }
+            Budget(stream);
+        }
         writer.Write(candidate.Instances.Count);
         foreach (var instance in candidate.Instances)
         {
@@ -84,12 +105,14 @@ internal static class ModelImportProtocol
     private static ModelImportCandidate ReadOutputCore(BinaryReader reader, Guid sourceId, string inputRevision, bool allowScaled)
     {
         var version = reader.ReadInt32();
-        Require((version == NativeCandidate || allowScaled && version == ScaledCandidate) &&
-            Text(reader, 128) == ModelImportCandidate.Recipe, "Candidate recipe/version.");
+        var grouped = version is GroupedCandidate or ScaledGroupedCandidate;
+        var scaled = version is ScaledCandidate or ScaledGroupedCandidate;
+        Require((version is NativeCandidate or GroupedCandidate || allowScaled && scaled) &&
+            Text(reader, 128) == (grouped ? GroupedRecipe : ModelImportCandidate.Recipe), "Candidate recipe/version.");
         Require(new Guid(Bytes(reader, 16)) == sourceId && Text(reader, 64) == inputRevision, "Candidate input identity mismatch.");
-        var geometryScale = version == ScaledCandidate ? reader.ReadSingle() : 1;
+        var geometryScale = scaled ? reader.ReadSingle() : 1;
         Require(ModelImportCandidate.IsValidGeometryScale(geometryScale) &&
-            (version != ScaledCandidate || geometryScale != 1), "Invalid candidate geometry scale.");
+            (!scaled || geometryScale != 1), "Invalid candidate geometry scale.");
         var materials = new OpaqueUnlitMaterialDefinition[Count(reader, 128)];
         for (var i = 0; i < materials.Length; i++) materials[i] = ReadAsset(reader, RenderContentProfile.MaximumSmallAssetBytes) as OpaqueUnlitMaterialDefinition
             ?? throw new InvalidDataException("Expected opaque material.");
@@ -97,8 +120,13 @@ internal static class ModelImportProtocol
         for (var i = 0; i < meshes.Length; i++)
         {
             var material = reader.ReadInt32(); var mesh = ReadAsset(reader, RenderContentProfile.MaximumMeshBytes) as MeshDefinition
-                ?? throw new InvalidDataException("Expected triangle mesh."); meshes[i] = new(mesh, material);
+                ?? throw new InvalidDataException("Expected triangle mesh.");
+            var slotCount = grouped ? Count(reader, 2) : 0;
+            var slots = ImmutableArray.CreateBuilder<ModelImportSlot>(slotCount);
+            for (var index = 0; index < slotCount; index++) slots.Add(new(Text(reader, 256), reader.ReadInt32()));
+            meshes[i] = new(mesh, material) { SlotMaterials = slots.MoveToImmutable() };
         }
+        Require(!grouped || meshes.Any(mesh => !mesh.SlotMaterials.IsEmpty), "Grouped packet has no grouped mesh.");
         var instances = new ModelImportInstance[Count(reader, 4096)];
         for (var i = 0; i < instances.Length; i++) instances[i] = new(reader.ReadInt32(), new Matrix4x4(
             reader.ReadSingle(),reader.ReadSingle(),reader.ReadSingle(),reader.ReadSingle(),reader.ReadSingle(),reader.ReadSingle(),reader.ReadSingle(),reader.ReadSingle(),

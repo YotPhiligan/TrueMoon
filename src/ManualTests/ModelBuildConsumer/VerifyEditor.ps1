@@ -12,7 +12,8 @@ param(
     [switch]$RenderInspector,
     [switch]$RenderInspectorRestart,
     [switch]$RenderMaterialReset,
-    [switch]$RenderReferenceDiagnostics
+    [switch]$RenderReferenceDiagnostics,
+    [switch]$RenderMaterialSlots
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,13 +30,13 @@ if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' 
 $catalogProbe = $ModelCatalog -or $ModelPlacement
 $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
-$renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics
+$renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics -or $RenderMaterialSlots
 $modelStatusProbe = $ModelImports -or $reimportProbe -or $renderProbe
 $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $evidence
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -56,7 +57,7 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
         Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
@@ -64,7 +65,26 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
         if ($renderProbe) {
             [void][IO.Directory]::CreateDirectory($output)
             $run = @{ Name = "$name-$provider"; Fixture = $fixture }
-            if ($RenderReferenceDiagnostics) {
+            if ($RenderMaterialSlots) {
+                $path = "$output/editor-render-material-slots.json"
+                $importPath = "$output/import-render-material-slots.json"
+                Copy-Item -LiteralPath "$fixture/editor-render-material-slots.json" -Destination $path
+                Copy-Item -LiteralPath "$fixture/import-render-material-slots.json" -Destination $importPath
+                $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+                $import = Get-Content -LiteralPath $importPath -Raw | ConvertFrom-Json
+                $children = @(Get-ChildItem -LiteralPath $fixture -Filter 'runtime-*.json' -File)
+                if (!$proof.Completed -or !$import.Completed -or $proof.Captures.Count -ne 2 -or $children.Count -ne 2 -or
+                    $import.Slots.Count -ne 2 -or $import.Slots[0].Id -ne $proof.EditedSlot -or $import.Slots[1].Id -ne $proof.PreservedSlot -or
+                    $import.Mesh -ne $proof.Mesh.AssetId -or $import.OldGeneration -ne 1 -or $import.NewGeneration -ne 2 -or
+                    $proof.Captures[0].Pixels.Slots.RedMask -ne $proof.Captures[1].Pixels.Slots.WhiteMask -or
+                    $proof.Captures[0].Pixels.Slots.RightRgba -ne $proof.Captures[1].Pixels.Slots.RightRgba) {
+                    throw "Incomplete persistent slot or GPU evidence for $name-$provider"
+                }
+                $run.Path = $path
+                $run.Sha256 = (Get-FileHash -LiteralPath $path).Hash
+                $run.Import = @{ Path = $importPath; Sha256 = (Get-FileHash -LiteralPath $importPath).Hash }
+                $images = @($proof.Captures.Name | ForEach-Object { "$fixture/$_.png" })
+            } elseif ($RenderReferenceDiagnostics) {
                 $path = "$output/editor-render-reference-diagnostics.json"
                 Copy-Item -LiteralPath "$fixture/editor-render-reference-diagnostics.json" -Destination $path
                 $proof = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json

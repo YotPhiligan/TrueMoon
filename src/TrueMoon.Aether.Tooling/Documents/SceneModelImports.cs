@@ -264,21 +264,25 @@ internal sealed class SceneModelImports(Guid projectId, IFactory<ModelSourceCapt
         if (!previous.Bindings.Select(value => (value.Key, value.Id)).ToHashSet()
                 .SetEquals(next.Bindings.Select(value => (value.Key, value.Id))) ||
             !previous.Instances.ToHashSet().SetEquals(next.Instances) ||
-            !previous.Meshes.Select(mesh => (mesh.AssetId, mesh.BindingSetId, mesh.SlotId, mesh.MaterialId)).ToHashSet()
-                .SetEquals(next.Meshes.Select(mesh => (mesh.AssetId, mesh.BindingSetId, mesh.SlotId, mesh.MaterialId))))
+            !MeshSlots(previous).ToHashSet().SetEquals(MeshSlots(next)))
             throw new InvalidDataException("Реимпорт изменяет состав, привязки или размещение модели в сцене.");
+
+        static IEnumerable<(Guid Mesh, Guid Binding, Guid Slot, Guid Material)> MeshSlots(PublishedModelImport publish) =>
+            publish.Meshes.SelectMany(mesh => mesh.Slots.Select(slot => (mesh.AssetId, mesh.BindingSetId, slot.SlotId, slot.MaterialId)));
     }
 
     private IEnumerable<RenderAssetKey> Keys(PublishedModelImport published) => Entries(published).Select(entry => entry.Key);
 
     private IEnumerable<RenderAssetEntry> Entries(PublishedModelImport published)
     {
-        foreach (var material in published.Materials) yield return new(Key(material.AssetId, material.Definition), material.Definition);
+        var materials = published.Materials.ToDictionary(material => material.AssetId,
+            material => new RenderAssetEntry(Key(material.AssetId, material.Definition), material.Definition));
+        foreach (var material in materials.Values) yield return material;
         foreach (var mesh in published.Meshes)
         {
             var geometry = Key(mesh.AssetId, mesh.Geometry);
-            var material = published.Materials.Single(item => item.AssetId == mesh.MaterialId);
-            var bindings = new MaterialBindingSetDefinition(geometry, [new(mesh.SlotId, Key(material.AssetId, material.Definition))]);
+            var bindings = new MaterialBindingSetDefinition(geometry, mesh.Slots
+                .Select(slot => new MaterialSlotBinding(slot.SlotId, materials[slot.MaterialId].Key)).ToArray());
             yield return new(geometry, mesh.Geometry);
             yield return new(Key(mesh.BindingSetId, bindings), bindings);
         }

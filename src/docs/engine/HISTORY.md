@@ -16208,6 +16208,42 @@ Published Release на Cobalt и Microsoft DI. EvidenceDirectory
 Тесты Editor прошли 1507/1507 в каждой конфигурации Debug и Release.
 TRX сохранены в `TestResults/ED4i-reference-diagnostics-regression-20261119-01`.
 
+<a id="ed4i-material-slots-2026-11-19"></a>
+## 2026-11-19 — ED4i, два слота материала
+
+Версия `1.2611.19.10-alpha`. Один glTF mesh с явным
+`extras.truemoon.combineMaterialSlots` и двумя именованными примитивами
+прошёл через worker, ledger, Nom и Build. Перестановка примитивов и изменение
+геометрии дали новую ревизию меша с теми же ID меша, слотов и исходной
+привязки. После загрузки ledger совпали оба назначения материалов.
+Документ с размещённой моделью остался байт-в-байт тем же.
+
+В Editor выбрали белый материал для `left`. Apply записал новый ID
+привязки одной операцией. В новой сборке сохранились точный ключ меша,
+оба ID слотов и точный ключ зелёного материала `right`.
+Vulkan показал 16 653 красных и затем 16 653 белых пикселя с одной маской.
+Правая область 343 × 925 совпала по RGBA, включая 16 926 зелёных пикселей.
+SHA256 области `85E1DD930FA5CED48A3600E882157665FDA0A231CCBF7C44339B8DB823014C9E`.
+
+`VerifyEditor.ps1 -RenderMaterialSlots` прошёл в Source Debug и Published
+Release на Cobalt и Microsoft DI. В восьми Runtime Vulkan validation
+показала 0 ошибок и 0 предупреждений. Ресурсы освобождены.
+EvidenceDirectory `TestResults/ED4i-material-slots-20261119-03`, SHA256
+`verification.json` `B3B37E397F558BCCC1A5261E67EF8116FCA0B11B74074C93F69C8BD7B25E177B`.
+
+`-RenderMaterialSlots -FreshPackages` повторил сценарий в независимом
+Editor из 20 пакетов на обоих DI. Четыре Runtime показали 0 ошибок и 0
+предупреждений Vulkan, ресурсы освобождены. SHA256 правой области совпал
+с Source Debug и Published Release. EvidenceDirectory
+`TestResults/ED4i-material-slots-packages-20261119-01`, SHA256
+`verification.json` `364DB22935DB3FED07F2A5AA5A9A6E8203E2562380747F8E08CE6E55EA122689`.
+
+В каждой конфигурации Debug и Release прошли 678 тестов
+`TrueMoon.Aether.Tests` по импорту и рендеру и все 1507 тестов
+`TrueMoon.Aether.Editor.Tests`. Ошибок и пропусков нет. TRX сохранены
+в `TestResults/ED4i-material-slots-regression-20261119-02`.
+[Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#edit-one-slot-of-an-imported-two-slot-mesh).
+
 <a id="engine-status-before-g2a-2026-11-18"></a>
 ### Предыдущий engine STATUS
 

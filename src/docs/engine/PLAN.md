@@ -21,8 +21,9 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 [Сохранение привязки после перезапуска](EDITOR_PLAN.md#ed4i-render-binding-restart)
 и [сброс материала меша](EDITOR_PLAN.md#ed4i-material-reset) проверены в ED4i.
 [Диагностика отсутствующих ссылок](EDITOR_PLAN.md#ed4i-reference-diagnostics)
-проверена в инспекторе и при Build. Ближайшие предложения — [два слота](EDITOR_PLAN.md#ed4i-next)
-и [первичный импорт из Editor](#arch1g-editor-import-proposal).
+проверена в инспекторе и при Build. [Два слота ED4i](EDITOR_PLAN.md#ed4i-material-slots)
+добавляют устойчивые ID слотов при импорте и замену материала одного слота.
+[Первичный импорт из Editor](#arch1g-editor-import-proposal) остаётся предложением.
 
 **Согласованный порядок 2026-11-12:**
 

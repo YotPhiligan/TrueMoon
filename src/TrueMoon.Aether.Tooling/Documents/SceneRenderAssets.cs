@@ -10,19 +10,22 @@ namespace TrueMoon.Aether.Tooling.Documents;
 internal sealed class SceneRenderAssets
 {
     internal sealed record Choice(Guid Id, string Name);
-    internal readonly record struct References(Guid? Mesh, Guid Binding, Guid? Material, string? Diagnostic);
+    internal readonly record struct References(Guid? Mesh, Guid Binding, MaterialBindingSetDefinition? Definition, string? Diagnostic);
 
     private readonly GameBuildRenderContent _content;
     private readonly Dictionary<Guid, RenderAssetEntry> _entries;
-    private readonly Dictionary<Guid, PublishedMeshBinding> _defaults;
-    private sealed record PublishedMeshBinding(Guid Binding, Guid Material);
+    private readonly Dictionary<Guid, Guid> _defaults;
+    private readonly Dictionary<Guid, string> _slotNames;
 
     internal SceneRenderAssets(GameBuildRenderContent content, IReadOnlyList<SceneModelImportSelection> imports)
     {
         _content = content;
         _entries = content.Entries.ToDictionary(entry => entry.Key.AssetId);
         _defaults = imports.SelectMany(model => model.Watch.Published.Meshes)
-            .ToDictionary(mesh => mesh.AssetId, mesh => new PublishedMeshBinding(mesh.BindingSetId, mesh.MaterialId));
+            .ToDictionary(mesh => mesh.AssetId, mesh => mesh.BindingSetId);
+        _slotNames = imports.SelectMany(model => model.Watch.Published.Bindings)
+            .Where(binding => binding.Kind == Importing.ModelSubassetKind.Slot)
+            .ToDictionary(binding => binding.Id, binding => Uri.UnescapeDataString(binding.Key.Locator[(binding.Key.Locator.LastIndexOf('/') + 1)..]));
         Meshes = Choices(Importing.ModelSubassetKind.Mesh);
         Materials = Choices(Importing.ModelSubassetKind.Material);
 
@@ -34,14 +37,19 @@ internal sealed class SceneRenderAssets
 
     internal IReadOnlyList<Choice> Meshes { get; }
     internal IReadOnlyList<Choice> Materials { get; }
-    internal Guid? DefaultBinding(Guid mesh) => _defaults.GetValueOrDefault(mesh)?.Binding;
+    internal Guid? DefaultBinding(Guid mesh) => _defaults.TryGetValue(mesh, out var binding) ? binding : null;
+    internal MaterialBindingSetDefinition? DefaultDefinition(Guid mesh) =>
+        DefaultBinding(mesh) is { } binding ? (MaterialBindingSetDefinition)_entries[binding].Definition : null;
+    internal string SlotName(Guid slot) => _slotNames[slot];
 
-    internal Guid? BindingForMaterial(Guid mesh, Guid material)
+    internal Guid? BindingForMaterial(Guid mesh, Guid slot, Guid material)
     {
-        if (!_defaults.TryGetValue(mesh, out var original) ||
+        if (DefaultDefinition(mesh) is not { } original ||
             _entries.GetValueOrDefault(material)?.Definition is not OpaqueUnlitMaterialDefinition) return null;
-        if (original.Material == material) return original.Binding;
-        var id = MaterialBindingId(mesh, material);
+        var imported = original.Bindings.FirstOrDefault(value => value.SlotId == slot);
+        if (imported.SlotId == Guid.Empty) return null;
+        if (imported.Material.AssetId == material) return _defaults[mesh];
+        var id = MaterialBindingId(mesh, original.Bindings.Length == 1 ? null : slot, material);
         return _entries.ContainsKey(id) || id == Guid.Empty ? null : id;
     }
 
@@ -57,7 +65,7 @@ internal sealed class SceneRenderAssets
             return binding == RenderContentProfile.CubeBindingSetAssetId ? default : new(null, binding, null, MissingBinding(mesh, binding));
         }
         var geometry = assets?._entries.GetValueOrDefault(mesh);
-        if (geometry?.Definition is not MeshDefinition definition)
+        if (geometry?.Definition is not MeshDefinition)
         {
             if (allowMissingMesh && validBinding) return default;
             return new(null, binding, null, geometry == null
@@ -74,10 +82,10 @@ internal sealed class SceneRenderAssets
                 return new(mesh, binding, null, $"По ссылке {binding:D} ожидается привязка материала для меша {mesh:D}.");
             if (set.Mesh != geometry.Key)
                 return new(mesh, binding, null, $"Привязка материала {binding:D} относится к мешу {set.Mesh.AssetId:D}. Требуется привязка для меша {mesh:D}.");
-            return new(mesh, binding, set.Bindings.Length == 1 ? set.Bindings[0].Material.AssetId : null, null);
+            return new(mesh, binding, set, null);
         }
-        if (definition.Slots.Length == 1 && assets!.FindOverrideMaterial(mesh, binding) is { } material)
-            return new(mesh, binding, material, null);
+        if (assets.FindOverrideBinding(mesh, binding) is { } variant)
+            return new(mesh, binding, variant, null);
         return new(mesh, binding, null, MissingBinding(mesh, binding));
     }
 
@@ -86,16 +94,23 @@ internal sealed class SceneRenderAssets
     private static string MissingBinding(Guid mesh, Guid binding) =>
         $"Привязка материала {binding:D} для меша {mesh:D} отсутствует. Выберите импорт материала или назначьте материал заново.";
 
-    private Guid? FindOverrideMaterial(Guid mesh, Guid binding)
+    private MaterialBindingSetDefinition? FindOverrideBinding(Guid mesh, Guid binding)
     {
-        Guid? material = null;
-        foreach (var choice in Materials)
+        if (DefaultDefinition(mesh) is not { } original) return null;
+        MaterialBindingSetDefinition? result = null;
+        for (var i = 0; i < original.Bindings.Length; i++)
         {
-            if (BindingForMaterial(mesh, choice.Id) != binding) continue;
-            if (material.HasValue) return null;
-            material = choice.Id;
+            var slot = original.Bindings[i];
+            Guid? identitySlot = original.Bindings.Length == 1 ? null : slot.SlotId;
+            foreach (var choice in Materials)
+            {
+                if (choice.Id == slot.Material.AssetId || MaterialBindingId(mesh, identitySlot, choice.Id) != binding) continue;
+                if (result != null) return null;
+                var slots = original.Bindings.SetItem(i, slot with { Material = _entries[choice.Id].Key });
+                result = new(original.Mesh, slots);
+            }
         }
-        return material;
+        return result;
     }
 
     internal static GameBuildRenderContent? PrepareBuild(SceneRenderAssets? assets, ResolvedSceneSnapshot scene, bool requireAll, CancellationToken token)
@@ -111,14 +126,11 @@ internal sealed class SceneRenderAssets
                     renderer.Properties["bindings"].Value.GetString(), allowMissingMesh: !requireAll, generated: added);
                 if (references.Diagnostic is { } error)
                     throw new InvalidOperationException($"Сущность {entity.Id.Value:D}. {error}");
-                if (assets == null || references.Mesh is not { } mesh || references.Material is not { } material) continue;
+                if (assets == null || references.Definition is not { } variant) continue;
                 var binding = references.Binding;
                 if (assets._entries.ContainsKey(binding) || added.ContainsKey(binding)) continue;
 
-                var geometry = assets._entries[mesh];
-                var definition = (MeshDefinition)geometry.Definition;
-                var variant = new MaterialBindingSetDefinition(geometry.Key, [new(definition.Slots[0].SlotId, assets._entries[material].Key)]);
-                added.Add(binding, new(variant.CreateKey(geometry.Key.ProjectId, binding), variant));
+                added.Add(binding, new(variant.CreateKey(variant.Mesh.ProjectId, binding), variant));
                 if (assets._entries.Count + added.Count > RenderContentProfile.MaximumManifestEntries)
                     throw new InvalidOperationException("Превышен лимит ресурсов в сборке сцены.");
             }
@@ -128,13 +140,14 @@ internal sealed class SceneRenderAssets
         return new(content.Entries[0].Key.ProjectId, [.. content.Entries, .. added.Values]);
     }
 
-    private static Guid MaterialBindingId(Guid mesh, Guid material)
+    private static Guid MaterialBindingId(Guid mesh, Guid? slot, Guid material)
     {
-        ReadOnlySpan<byte> domain = "Aether.Scene.MaterialBinding/1"u8;
-        Span<byte> input = stackalloc byte[domain.Length + 32];
+        ReadOnlySpan<byte> domain = slot.HasValue ? "Aether.Scene.MaterialBinding/2"u8 : "Aether.Scene.MaterialBinding/1"u8;
+        Span<byte> input = stackalloc byte[domain.Length + (slot.HasValue ? 48 : 32)];
         domain.CopyTo(input);
         mesh.TryWriteBytes(input[domain.Length..]);
         material.TryWriteBytes(input[(domain.Length + 16)..]);
+        if (slot is { } id) id.TryWriteBytes(input[(domain.Length + 32)..]);
         Span<byte> hash = stackalloc byte[32];
         SHA256.HashData(input, hash);
         return new(hash[..16]);

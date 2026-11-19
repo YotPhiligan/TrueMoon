@@ -7,7 +7,7 @@ namespace TrueMoon.Aether.Editor.UI.Editing;
 /// <param name="Name">Published model and subasset label.</param>
 public sealed record InspectorRenderAssetChoice(Guid Id, string Name);
 
-/// <summary>Current mesh and single-slot material choices for one renderer occurrence.</summary>
+/// <summary>Current mesh and material choices for one renderer occurrence.</summary>
 /// <param name="Component">Selected renderer occurrence.</param>
 /// <param name="Meshes">Available published meshes.</param>
 /// <param name="Materials">Available materials for the effective mesh.</param>
@@ -19,4 +19,14 @@ public sealed record InspectorRenderAssetSelection(ComponentId Component, IReadO
 {
     /// <summary>Whether the current mesh has a different published default binding available.</summary>
     public bool CanRestoreMeshMaterial { get; init; }
+
+    /// <summary>Named slots for a mesh with several material ranges.</summary>
+    public IReadOnlyList<InspectorRenderSlot> Slots { get; init; } = [];
 }
+
+/// <summary>One published slot and its effective material in the inspector.</summary>
+/// <param name="Id">Persistent mesh slot identity.</param>
+/// <param name="Name">Imported slot label.</param>
+/// <param name="Material">Effective material identity, if resolved.</param>
+/// <param name="CanSelect">Whether the slot currently admits a material change.</param>
+public sealed record InspectorRenderSlot(Guid Id, string Name, Guid? Material, bool CanSelect);

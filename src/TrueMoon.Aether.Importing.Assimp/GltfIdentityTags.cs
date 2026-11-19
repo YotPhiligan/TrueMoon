@@ -15,6 +15,7 @@ internal sealed class GltfIdentityTags
     internal Dictionary<string,MeshInfo> Meshes { get; } = new(StringComparer.Ordinal);
     internal Dictionary<string,MaterialInfo> Materials { get; } = new(StringComparer.Ordinal);
     internal Dictionary<string,NodeInfo> Nodes { get; } = new(StringComparer.Ordinal);
+    internal Dictionary<int,string> SlottedMeshes { get; } = [];
 
     internal static GltfIdentityTags Create(CapturedModelSource source)
     {
@@ -24,14 +25,26 @@ internal sealed class GltfIdentityTags
         var root=JsonNode.Parse(json.Span,documentOptions:new() { MaxDepth=64 })!.AsObject();
         var meshes=root["meshes"]!.AsArray(); var nodes=root["nodes"]?.AsArray() ?? []; var materials=root["materials"]?.AsArray() ?? [];
         Require(meshes.Count is >0 and <=64 && nodes.Count<=4096 && materials.Count<=127,"Source semantic table limits.");
+        var meshLabels = meshes.Select(mesh => Label(mesh!.AsObject())).ToArray();
         for(var m=0;m<meshes.Count;m++)
         {
-            var mesh=meshes[m]!.AsObject(); var label=Label(mesh); var primitives=mesh["primitives"]!.AsArray();
+            var mesh=meshes[m]!.AsObject(); var label=meshLabels[m]; var primitives=mesh["primitives"]!.AsArray();
             Require(primitives.Count>0 && primitives.Count<=64-result.Meshes.Count,"Source primitive budget.");
+            if (mesh["extras"] is JsonObject extras && extras["truemoon"] is JsonObject settings &&
+                settings["combineMaterialSlots"]?.GetValue<bool>() == true)
+            {
+                Require(label != null && meshLabels.Count(value => value == label) == 1 && primitives.Count == 2,
+                    "Combined material slots require a unique mesh label and exactly two primitives.");
+                result.SlottedMeshes.Add(m, "mesh/" + label);
+            }
+            var slotLabels = result.SlottedMeshes.ContainsKey(m) ? new HashSet<string>(StringComparer.Ordinal) : null;
             for(var p=0;p<primitives.Count;p++)
             {
                 var primitive=primitives[p]!.AsObject(); var part=Explicit(primitive); var suffix=part!=null ? "/primitive/"+part : primitives.Count==1 ? "" : null;
                 var locator=label==null || suffix==null ? null : Bounded("mesh/"+label+suffix);
+                if (slotLabels != null)
+                    Require(part != null && locator != null && Bounded("slot/" + locator) != null && slotLabels.Add(part),
+                        "Combined material slots require distinct explicit primitive subasset labels.");
                 var material=primitive["material"]?.GetValue<int>() ?? -1; Require(material>=-1 && material<materials.Count,"Source primitive material reference.");
                 result.Meshes.Add(MeshTag(m,primitives.Count,p),new(m,material,locator,suffix));
             }
@@ -86,7 +99,8 @@ internal sealed class GltfIdentityTags
     internal string? Instance(NodeInfo node,MeshInfo mesh)
     {
         Require(node.SourceMesh==mesh.SourceMesh,"Native node/primitive provenance mismatch.");
-        return node.Locator==null || mesh.InstanceSuffix==null ? null : Bounded("instance/"+node.Locator+mesh.InstanceSuffix);
+        var suffix = SlottedMeshes.ContainsKey(mesh.SourceMesh) ? "" : mesh.InstanceSuffix;
+        return node.Locator==null || suffix==null ? null : Bounded("instance/"+node.Locator+suffix);
     }
     private static string MeshTag(int mesh,int count,int primitive) => "tm-m-"+mesh+(count>1 ? "-"+primitive : "");
     private static string MaterialTag(int material) => "tm-t-"+material;

@@ -395,8 +395,9 @@ internal static class EditorModelBuildSmoke
         var reopenInspector = args.Length == 7 && args[6] == "--render-inspector-reopen";
         var restartInspector = saveInspector || reopenInspector;
         var resetMaterial = args.Length == 7 && args[6] == "--render-material-reset";
+        var materialSlots = args.Length == 7 && args[6] == "--render-material-slots";
         var referenceDiagnostics = args.Length == 7 && args[6] == "--render-reference-diagnostics";
-        var probeRenderInspector = referenceDiagnostics || resetMaterial || restartInspector || args.Length == 7 && args[6] == "--render-inspector";
+        var probeRenderInspector = materialSlots || referenceDiagnostics || resetMaterial || restartInspector || args.Length == 7 && args[6] == "--render-inspector";
         var probePlacement = args.Length == 9 && args[6] == "--model-placement";
         var probeCatalog = probePlacement || args.Length == 9 && args[6] == "--model-catalog";
         var probePersistence = probeCatalog || args.Length == 9 && args[6] == "--persisted-imports";
@@ -505,7 +506,8 @@ internal static class EditorModelBuildSmoke
             var content = before.Content ?? throw new InvalidOperationException("Editor did not load the placed scene.");
             if (probeImports)
             {
-                Check(content.Document.Entities.Length == (probePlacement || referenceDiagnostics ? 3 : 5) && !before.IsDirty, "Unexpected fixture scene.");
+                Check(content.Document.Entities.Length == (materialSlots ? 2 : probePlacement || referenceDiagnostics ? 3 : 5) && !before.IsDirty,
+                    "Unexpected fixture scene.");
                 var document = documents.Read().Project?.Documents ?? throw new InvalidOperationException("No project document session.");
                 var ledgerFactory = app.Services.Resolve<IFactory<ModelImportLedgerSession, ModelImportLedgerArguments>>()!;
                 if (probeRenderInspector)
@@ -711,6 +713,11 @@ internal static class EditorModelBuildSmoke
                 }
 
                 var red = await ReadImport("ce662048-9dcb-4c60-aaf0-213342054fa6", "red-baseline.tmledger");
+                if (materialSlots)
+                {
+                    await VerifyMaterialSlots(red);
+                    return;
+                }
                 var green = await ReadImport("65710c6d-6781-4476-9bb8-735fc518f008", "green.tmledger");
                 var redMesh = red.Meshes.Single();
                 var greenMesh = green.Meshes.Single();
@@ -914,6 +921,75 @@ internal static class EditorModelBuildSmoke
                     }
                 }
 
+                async Task VerifyMaterialSlots(PublishedModelImport model)
+                {
+                    var mesh = model.Meshes.Single();
+                    var left = mesh.Slots[0];
+                    var right = mesh.Slots[1];
+                    var white = model.Bindings.Single(item => item.Key.Locator == "builtin/material/default").Id;
+                    var target = new EntityId(model.Instances.Single().Id);
+                    var renderer = Renderer(target);
+                    var saved = content;
+                    await document.SelectModelImportsAsync(before.OpeningId, [new("Two slots", Watch(model, "source"))],
+                        new(oldBuild.RenderContent!.ProjectId, oldBuild.RenderContent.Entries), token);
+                    var baseline = await BuildAndShow("slots-before");
+
+                    await EditorHierarchySmoke.ClickItemAsync(ui, view, target.Value.ToString("D"), token);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.RenderAssets is { Enabled: true } selection &&
+                        selection.Mesh == mesh.AssetId && selection.Slots.Count == 2 &&
+                        selection.Slots[0] is { Name: "left", CanSelect: true } first && first.Id == left.SlotId && first.Material == left.MaterialId &&
+                        selection.Slots[1] is { Name: "right", CanSelect: true } second && second.Id == right.SlotId && second.Material == right.MaterialId,
+                        token);
+                    string? option = null;
+                    await ui.InvokeAsync(() => option = inspector.DataContext!.RenderAssets!.Materials.Single(item => item.Id == white).Name)
+                        .WaitAsync(token);
+                    await ClickInspector(() => FindSlotButton("Материал слота left"));
+                    await ClickInspector(() => FindSlotButton("Материал слота left · " + option));
+                    await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext is { CanApply: true, RenderAssets: { } draft } &&
+                        draft.Slots[0].Material == white && draft.Slots[1].Material == right.MaterialId &&
+                        FindSlotButton("Материал слота right") is { IsEnabled: false }, token);
+                    Check(ReferenceEquals(document.Read().Content, saved), "Choosing the slot material committed it before Apply.");
+                    await ClickInspector(() => inspector.Apply);
+                    var edited = document.Read().Content!;
+                    var variant = Id(edited.Resolved.Entities[target].Components[renderer.Id], "bindings");
+                    Check(edited.UndoCount == saved.UndoCount + 1 && variant != mesh.BindingSetId, "Apply did not commit exactly one binding change.");
+                    var changed = await BuildAndShow("slots-after");
+                    var originalSet = ProveBinding(baseline.Artifact, mesh.BindingSetId, left.MaterialId);
+                    var editedSet = ProveBinding(changed.Artifact, variant, white);
+                    Check(originalSet.Mesh == editedSet.Mesh && originalSet.Bindings[1] == editedSet.Bindings[1] &&
+                        baseline.Artifact.BuildId != changed.Artifact.BuildId && Id(Renderer(target), "mesh") == mesh.AssetId,
+                        "The slot edit changed the mesh or the untouched material key.");
+                    var beforePixels = baseline.Frame.Pixels?.Slots ?? throw new InvalidDataException("Missing baseline slot pixels.");
+                    var afterPixels = changed.Frame.Pixels?.Slots ?? throw new InvalidDataException("Missing edited slot pixels.");
+                    Check(baseline.Frame.Mask.RedPixels > 100 && changed.Frame.Mask.RedPixels == 0 &&
+                        beforePixels.WhitePixels == 0 && afterPixels.WhitePixels == baseline.Frame.Mask.RedPixels &&
+                        beforePixels.RedMask == afterPixels.WhiteMask && baseline.Frame.Mask.GreenPixels > 100 &&
+                        baseline.Frame.Mask.GreenSha256 == changed.Frame.Mask.GreenSha256 && beforePixels.RightRgba == afterPixels.RightRgba &&
+                        engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0,
+                        $"GPU slot comparison failed. Before: {beforePixels}. After: {afterPixels}.");
+                    await File.WriteAllTextAsync(Path.Combine(report, "editor-render-material-slots.json"), JsonSerializer.Serialize(new
+                    {
+                        Completed = true, Captures = captures, Mesh = AssetProof.From(editedSet.Mesh), Binding = variant,
+                        EditedSlot = left.SlotId, PreservedSlot = right.SlotId, PreservedMaterial = AssetProof.From(editedSet.Bindings[1].Material)
+                    }), token);
+
+                    Button? FindSlotButton(string name) => inspector.Properties.TryGetValue((renderer.Id, "bindings"), out var field)
+                        ? Descendants(field.Row).OfType<Button>().SingleOrDefault(button => button.AccessibleName == name) : null;
+
+                    MaterialBindingSetDefinition ProveBinding(GameBuildArtifact artifact, Guid id, Guid material)
+                    {
+                        var manifest = artifact.RenderContent!;
+                        var entry = manifest.Resolve(id, RenderContentProfile.BindingSetKindId);
+                        var set = (MaterialBindingSetDefinition)entry.Definition;
+                        var geometry = (MeshDefinition)manifest.Resolve(set.Mesh).Definition;
+                        Check(set.Mesh.AssetId == mesh.AssetId && set.Bindings.Select(slot => slot.SlotId).SequenceEqual([left.SlotId, right.SlotId]) &&
+                            geometry.Slots.SequenceEqual(mesh.Geometry.Slots) && set.Bindings[0].Material.AssetId == material &&
+                            set.Bindings[1].Material.AssetId == right.MaterialId && set.Bindings.All(slot => manifest.Resolve(slot.Material).Key == slot.Material),
+                            "Editor Build did not capture both exact slots and their materials.");
+                        return set;
+                    }
+                }
+
                 async Task<(FrameProof Frame, GameBuildArtifact Artifact)> BuildAndShow(string name)
                 {
                     before = document.Read();
@@ -1087,9 +1163,10 @@ internal static class EditorModelBuildSmoke
                     var clip = new SKRectI((int)(bounds.X * scale), (int)(bounds.Y * scale),
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
                     var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics;
-                    var mask = Measure(pixels, clip, allowSingleRedOccurrence);
-                    var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" || referenceDiagnostics;
-                    var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence) : null;
+                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, materialSlots);
+                    var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
+                        referenceDiagnostics || materialSlots;
+                    var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence, materialSlots) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
@@ -1123,7 +1200,7 @@ internal static class EditorModelBuildSmoke
         return directory;
     }
 
-    private static PixelMask Measure(SKBitmap pixels, SKRectI clip, bool allowSingleRedOccurrence)
+    private static PixelMask Measure(SKBitmap pixels, SKRectI clip, bool allowSingleRedOccurrence, bool materialSlots = false)
     {
         Check(clip.Left >= 0 && clip.Top >= 0 && clip.Right <= pixels.Width && clip.Bottom <= pixels.Height &&
             clip.Width > 0 && clip.Height > 0, "Invalid GPU image bounds.");
@@ -1150,12 +1227,13 @@ internal static class EditorModelBuildSmoke
             left = Math.Min(left, x);
             right = Math.Max(right, x);
         }
-        Check(allowSingleRedOccurrence ? upper + lower > 100 && green > 100 : upper > 100 && lower > 100, "Expected occurrences in the GPU viewport.");
+        Check(materialSlots ? green > 100 : allowSingleRedOccurrence ? upper + lower > 100 && green > 100 : upper > 100 && lower > 100,
+            "Expected occurrences in the GPU viewport.");
         return new(clip.Width, clip.Height, left, right, upper + lower, Hash(mask), green, Hash(greenMask));
     }
 
     private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask,
-        bool materialReset, bool allowSingleRedOccurrence)
+        bool materialReset, bool allowSingleRedOccurrence, bool materialSlots)
     {
         // The Editor chrome overlays the viewport. Compare a rectangle clear of the panels and their shadows.
         const float clearance = 12;
@@ -1168,7 +1246,7 @@ internal static class EditorModelBuildSmoke
             Math.Max(image.Top, (int)MathF.Ceiling((header.Y + header.Height + clearance) * scale)),
             Math.Min(image.Right, (int)MathF.Floor((inspector.X - clearance) * scale)),
             Math.Min(image.Bottom, (int)MathF.Floor((status.Y - clearance) * scale)));
-        var cropped = Measure(pixels, crop, allowSingleRedOccurrence);
+        var cropped = Measure(pixels, crop, allowSingleRedOccurrence, materialSlots);
         Check(cropped.RedPixels == mask.RedPixels && cropped.GreenPixels == mask.GreenPixels,
             "The unobstructed viewport crop does not contain all visible model pixels.");
         var rgba = new byte[checked(crop.Width * crop.Height * 4)];
@@ -1185,7 +1263,39 @@ internal static class EditorModelBuildSmoke
             rgba[index++] = pixel.Blue;
             rgba[index++] = pixel.Alpha;
         }
-        return new(crop.Left, crop.Top, crop.Width, crop.Height, Hash(rgba)) { BlueSha256 = blue == null ? null : Hash(blue) };
+        return new(crop.Left, crop.Top, crop.Width, crop.Height, Hash(rgba))
+        {
+            BlueSha256 = blue == null ? null : Hash(blue),
+            Slots = materialSlots ? MeasureSlots(rgba, crop.Width, crop.Height, cropped) : null
+        };
+    }
+
+    private static SlotPixelProof MeasureSlots(byte[] rgba, int width, int height, PixelMask cropped)
+    {
+        var split = width / 2;
+        var right = new byte[(width - split) * height * 4];
+        var white = new byte[width * height];
+        var whiteCount = 0;
+        var greenCount = 0;
+        for (var y = 0; y < height; y++)
+        {
+            var row = y * width;
+            rgba.AsSpan((row + split) * 4, (width - split) * 4).CopyTo(right.AsSpan(y * (width - split) * 4));
+            for (var x = 0; x < width; x++)
+            {
+                var i = (row + x) * 4;
+                var red = rgba[i];
+                var green = rgba[i + 1];
+                var blue = rgba[i + 2];
+                if (red < 25 && green > 200 && blue < 25 && x >= split) greenCount++;
+                if (red <= 200 || green <= 200 || blue <= 200) continue;
+                Check(x < split, "Replacement slot pixels escaped the left viewport region.");
+                white[row + x] = 1;
+                whiteCount++;
+            }
+        }
+        Check(greenCount == cropped.GreenPixels, "The preserved green slot is outside the compared region.");
+        return new(cropped.Sha256, whiteCount, Hash(white), Hash(right));
     }
 
     private static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
@@ -1198,7 +1308,9 @@ internal static class EditorModelBuildSmoke
     private sealed record ViewportPixelProof(int X, int Y, int Width, int Height, string Sha256)
     {
         public string? BlueSha256 { get; init; }
+        public SlotPixelProof? Slots { get; init; }
     }
+    private sealed record SlotPixelProof(string RedMask, int WhitePixels, string WhiteMask, string RightRgba);
     private sealed record FrameProof(string Name, string BuildId, ulong Generation, int Pid, string ManifestHash, ulong Tick, PixelMask Mask)
     {
         public ViewportPixelProof? Pixels { get; init; }

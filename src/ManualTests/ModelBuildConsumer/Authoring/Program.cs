@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelImportResearch;
 using TrueMoon;
+using TrueMoon.Aether.Abstractions.Rendering;
 using TrueMoon.Aether.Abstractions.Scenes;
 using TrueMoon.Aether.Nom;
 using TrueMoon.Aether.Runtime;
@@ -24,11 +25,12 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--revisions" or "--multi-model")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--revisions" or "--multi-model")) return 2;
+var renderSlots = args.Length == 8 && args[7] == "--editor-render-material-slots";
 var renderReferenceDiagnostics = args.Length == 8 && args[7] == "--editor-render-reference-diagnostics";
 var renderMaterialReset = args.Length == 8 && args[7] == "--editor-render-material-reset";
 var renderInspectorRestart = args.Length == 8 && args[7] == "--editor-render-inspector-restart";
-var renderInspector = renderReferenceDiagnostics || renderMaterialReset || renderInspectorRestart || args.Length == 8 && args[7] == "--editor-render-inspector";
+var renderInspector = renderSlots || renderReferenceDiagnostics || renderMaterialReset || renderInspectorRestart || args.Length == 8 && args[7] == "--editor-render-inspector";
 var editorPlacement = args.Length == 8 && args[7] == "--editor-model-placement";
 var editorCatalog = editorPlacement || args.Length == 8 && args[7] == "--editor-model-catalog";
 var editorPersistence = editorCatalog || args.Length == 8 && args[7] == "--editor-persisted-imports";
@@ -36,7 +38,7 @@ var editorReimport = editorPersistence || args.Length == 8 && args[7] == "--edit
 var editorImports = editorReimport || renderInspector || args.Length == 8 && args[7] == "--editor-imports";
 var editorProbe = editorImports || args.Length == 8 && args[7] == "--editor";
 var revisionProbe = args.Length == 8 && args[7] == "--revisions";
-var multiModelProbe = editorImports || args.Length == 8 && args[7] == "--multi-model";
+var multiModelProbe = editorImports && !renderSlots || args.Length == 8 && args[7] == "--multi-model";
 var evidence = Path.GetFullPath(args[1]);
 if (Directory.Exists(evidence)) throw new IOException("Use a fresh output directory.");
 Directory.CreateDirectory(evidence);
@@ -150,11 +152,32 @@ File.WriteAllText(Path.Combine(gameDirectory, "Entry.cs"), """
 var path = Path.Combine(sourceDirectory, "scene.gltf");
 var original = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
 var primitives = original["meshes"]![0]!["primitives"]!.AsArray();
-primitives.RemoveAt(1);
-original["nodes"]![0]!["translation"] = new JsonArray(0, 0, 0);
-original["nodes"]![1]!["translation"] = new JsonArray(-1.5, -1.25, 0);
-original["nodes"]![2]!["translation"] = new JsonArray(-1.5, .25, 0);
-File.WriteAllText(path, original.ToJsonString());
+if (renderSlots)
+{
+    original["meshes"]![0]!["extras"] = JsonNode.Parse("""{"truemoon":{"combineMaterialSlots":true}}""");
+    primitives[0]!["extras"] = JsonNode.Parse("""{"truemoon":{"subasset":"left"}}""");
+    primitives[1]!["extras"] = JsonNode.Parse("""{"truemoon":{"subasset":"right"}}""");
+    original["nodes"] = JsonNode.Parse("""[{"name":"two slots","mesh":0}]""");
+    var bin = Path.Combine(sourceDirectory, "scene.bin");
+    var bytes = File.ReadAllBytes(bin);
+    float[] positions = [-1.55f, -.65f, 0, -.4f, -.65f, 0, -1.55f, .5f, 0, .4f, -.65f, 0, 1.55f, -.65f, 0, .4f, .5f, 0];
+    for (var index = 0; index < positions.Length; index++)
+        BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(index * sizeof(float)), positions[index]);
+    File.WriteAllBytes(bin, bytes);
+    original["accessors"]![0]!["min"] = new JsonArray(-1.55, -.65, 0);
+    original["accessors"]![0]!["max"] = new JsonArray(-.4, .5, 0);
+    original["accessors"]![1]!["min"] = new JsonArray(.4, -.65, 0);
+    original["accessors"]![1]!["max"] = new JsonArray(1.55, .5, 0);
+}
+else
+{
+    primitives.RemoveAt(1);
+    original["nodes"]![0]!["translation"] = new JsonArray(0, 0, 0);
+    original["nodes"]![1]!["translation"] = new JsonArray(-1.5, -1.25, 0);
+    original["nodes"]![2]!["translation"] = new JsonArray(-1.5, .25, 0);
+}
+var sourceJson = original.ToJsonString();
+File.WriteAllText(path, sourceJson);
 var sceneId = new SceneId(Guid.Parse("4716d534-193a-4b12-a058-73a71d1fb340"));
 var cameraId = new EntityId(Guid.Parse("3c26b955-01fa-46f1-bab5-e24a07464745"));
 var cameraDefinition = new EntityDefinitionId(Guid.Parse("585db33c-e0bc-4dfc-a251-d55c005dbc23"));
@@ -165,7 +188,7 @@ var initialScene = new SceneDocument(sceneId, 40, [new(cameraId, cameraDefinitio
             new Dictionary<string, PropertyValue> { ["z"] = PropertyValue.From(5d) }),
         new(new(Guid.Parse("33f571d0-da11-4e0c-b4ba-d1068cd827fc")), MeshRenderingComponents.CameraId, 1)
     ]))], [BuiltInComponents.Schemas[0], MeshRenderingComponents.CameraSchema]);
-var placement = Matrix4x4.CreateRotationZ(.1f) * Matrix4x4.CreateTranslation(.25f, 0, 0);
+var placement = renderSlots ? Matrix4x4.Identity : Matrix4x4.CreateRotationZ(.1f) * Matrix4x4.CreateTranslation(.25f, 0, 0);
 var scenePath = Path.Combine(evidence, "placed.aetherscene");
 GameBuildResult oldBuild, newBuild, legacyBuild;
 PublishedModelImport oldModel, newModel;
@@ -329,8 +352,8 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
         var bytes = File.ReadAllBytes(vertices);
         if (renderInspector) inspectorBaseline = bytes.ToArray();
         // The dependency-only cases change the corner's Y inside the original accessor bounds.
-        var dependencyOnly = revisionProbe || multiModelProbe;
-        BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(dependencyOnly ? 16 : 12), dependencyOnly ? .5f : 2f);
+        var dependencyOnly = revisionProbe || multiModelProbe || renderSlots;
+        BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(dependencyOnly ? 16 : 12), renderSlots ? -.2f : dependencyOnly ? .5f : 2f);
         File.WriteAllBytes(vertices, bytes);
         string? detectedInputRevision = null;
         if (greenModel != null)
@@ -356,6 +379,13 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
             original["accessors"]![0]!["max"]![0] = 2;
             File.WriteAllText(path, original.ToJsonString());
         }
+        if (renderSlots)
+        {
+            var first = primitives[0];
+            primitives.RemoveAt(0);
+            primitives.Add(first);
+            File.WriteAllText(path, original.ToJsonString());
+        }
         var dependencyCapture = await Capture();
         Check(greenModel == null || detectedInputRevision == dependencyCapture.InputRevision,
             "The new import did not capture the revision identified by preflight.");
@@ -379,6 +409,30 @@ await using (var app = App.Builder(builder => { if (args[0] == "microsoft") buil
             newBuild = await BuildChecked(newSnapshotId, red, green);
         }
         else newBuild = await BuildModel(newSnapshotId);
+        if (renderSlots)
+        {
+            var newMesh = newModel.Meshes.Single();
+            var reopened = await ledger.OpenAsync() ?? throw new InvalidDataException("Grouped model ledger did not reopen.");
+            var publishedSlots = oldModel.Bindings.Where(item => item.Kind == ModelSubassetKind.Slot).ToArray();
+            Check(oldModel.Instances.Count == 1 && oldMesh.Slots.Length == 2 &&
+                oldMesh.Slots.SequenceEqual(newMesh.Slots) && oldMesh.Slots.SequenceEqual(reopened.Meshes.Single().Slots) &&
+                publishedSlots.Select(item => item.Key.Locator).SequenceEqual(["slot/mesh/shared/primitive/left", "slot/mesh/shared/primitive/right"]) &&
+                oldMesh.Geometry.Slots.Select(slot => slot.SlotId).SequenceEqual(publishedSlots.Select(item => item.Id)) &&
+                oldMesh.Slots.Select(slot => slot.MaterialId).Distinct().Count() == 2,
+                "Reordering primitives during reimport changed a persistent slot, its material or the instance.");
+            var oldSet = (MaterialBindingSetDefinition)oldBuild.Artifact.RenderContent!.Entries
+                .Single(entry => entry.Key.AssetId == oldMesh.BindingSetId).Definition;
+            var newSet = (MaterialBindingSetDefinition)newBuild.Artifact.RenderContent!.Entries
+                .Single(entry => entry.Key.AssetId == newMesh.BindingSetId).Definition;
+            Check(oldSet.Bindings.SequenceEqual(newSet.Bindings) && oldSet.Mesh.AssetId == newSet.Mesh.AssetId && oldSet.Mesh != newSet.Mesh,
+                "Nom or Build lost the stable default material assignments across geometry revisions.");
+            File.WriteAllText(Path.Combine(evidence, "import-render-material-slots.json"), JsonSerializer.Serialize(new
+            {
+                Completed = true, Mesh = oldMesh.AssetId, Slots = publishedSlots, OldGeneration = oldModel.Generation,
+                NewGeneration = newModel.Generation, OldSnapshot = oldSnapshotId, NewSnapshot = newSnapshotId,
+                OldBuild = oldBuild.BuildId, NewBuild = newBuild.BuildId
+            }));
+        }
         var repeatedOld = await BuildModel(oldSnapshotId);
         Check(repeatedOld.BuildId == oldBuild.BuildId, "Capturing an old Nom snapshot followed the current head.");
 
@@ -518,6 +572,7 @@ if (editorProbe)
 {
     if (inspectorBaseline != null)
         File.WriteAllBytes(Path.Combine(sourceDirectory, "scene.bin"), inspectorBaseline);
+    if (renderSlots) File.WriteAllText(path, sourceJson);
     var scenes = Directory.CreateDirectory(Path.Combine(evidence, "Scenes"));
     Directory.CreateDirectory(Path.Combine(evidence, "Content"));
     var scene = Path.Combine(scenes.FullName, Path.GetFileName(scenePath));
@@ -547,10 +602,10 @@ if (editorProbe)
     }
     if (editorReimport) editorArguments = [.. editorArguments, editorPlacement ? "--model-placement" :
         editorCatalog ? "--model-catalog" : editorPersistence ? "--persisted-imports" : "--reimport", workerPath, dotnet];
-    else if (editorImports) editorArguments = [.. editorArguments, renderReferenceDiagnostics ? "--render-reference-diagnostics" :
+    else if (editorImports) editorArguments = [.. editorArguments, renderSlots ? "--render-material-slots" : renderReferenceDiagnostics ? "--render-reference-diagnostics" :
         renderMaterialReset ? "--render-material-reset" : renderInspector ? "--render-inspector" : "--imports"];
     var result = await RunChild("editor", editorArguments, TimeSpan.FromSeconds(120));
-    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, renderReferenceDiagnostics ? "editor-render-reference-diagnostics.json" :
+    Check(result.ExitCode == 0 && File.Exists(Path.Combine(evidence, renderSlots ? "editor-render-material-slots.json" : renderReferenceDiagnostics ? "editor-render-reference-diagnostics.json" :
         renderMaterialReset ? "editor-render-material-reset.json" : renderInspector ? "editor-render-inspector.json" :
         editorImports ? "editor-imports.json" : "editor-model.json")), result.Error);
     return 0;

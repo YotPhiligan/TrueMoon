@@ -237,6 +237,27 @@ pixels in the unobstructed viewport match on override and Undo, and on
 restore and Redo.
 `-FreshPackages` repeats the scenario in an independent published Editor.
 
+## Edit one slot of an imported two-slot mesh
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -RenderMaterialSlots `
+  -EvidenceDirectory 'TestResults/EditorRenderMaterialSlots/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+Set `meshes[].extras.truemoon.combineMaterialSlots` to `true` on a uniquely
+named glTF mesh with two triangle primitives. Give each primitive a distinct
+`extras.truemoon.subasset` label. The import ledger assigns each slot a
+persistent ID from the mesh and primitive labels. Primitive order may change
+on reimport. The inspector offers both slots and allows one material override
+per mesh instance. Revert the override to edit the other slot.
+
+The probe reorders the primitives and reimports geometry, then checks both
+slot IDs through the reopened ledger, Nom and Build. It changes the left
+material in the inspector and compares two Vulkan frames. The red and white
+masks coincide and the entire right region matches pixel for pixel.
+`-FreshPackages` repeats the scenario in an independent published Editor.
+
 ## Diagnose a missing mesh or material binding
 
 ```powershell

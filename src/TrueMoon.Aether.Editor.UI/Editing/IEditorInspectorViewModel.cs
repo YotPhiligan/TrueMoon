@@ -96,6 +96,12 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
     /// <param name="assetId">Persistent asset identity from the displayed choices.</param>
     void SelectRenderAsset(InspectorRenderAssetSelection selection, InspectorProperty property, Guid assetId) { }
 
+    /// <summary>Stages a material choice for one named slot in the current renderer.</summary>
+    /// <param name="selection">Exact displayed renderer choices.</param>
+    /// <param name="slot">Persistent slot identity.</param>
+    /// <param name="material">Selected material identity.</param>
+    void SelectRenderSlotMaterial(InspectorRenderAssetSelection selection, Guid slot, Guid material) { }
+
     /// <summary>Stages the current mesh's imported material in the existing inspector draft.</summary>
     /// <param name="selection">Exact displayed renderer selection.</param>
     void RestoreMeshMaterial(InspectorRenderAssetSelection selection) { }

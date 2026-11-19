@@ -34,7 +34,8 @@ public sealed class NomModelContent
         foreach (var mesh in model.Meshes)
         {
             var geometry = Entry(project, mesh.AssetId, mesh.Geometry);
-            var binding = new MaterialBindingSetDefinition(geometry.Key, [new(mesh.SlotId, materials[mesh.MaterialId].Key)]);
+            var binding = new MaterialBindingSetDefinition(geometry.Key, mesh.Slots
+                .Select(slot => new MaterialSlotBinding(slot.SlotId, materials[slot.MaterialId].Key)).ToArray());
             entries.Add(geometry);
             entries.Add(Entry(project, mesh.BindingSetId, binding));
         }

@@ -121,8 +121,9 @@ GPU validation0/0,27metadata archives и отдельные fresh UI/audio deliv
 
 [Диагностика отсутствующих ссылок](engine/EDITOR_PLAN.md#ed4i-reference-diagnostics) проверена в инспекторе и при Build.
 
-Ближайшие предложения — [два слота](engine/EDITOR_PLAN.md#ed4i-next),
-[первичный импорт из Editor](engine/PLAN.md#arch1g-editor-import-proposal).
+[Два слота ED4i](engine/EDITOR_PLAN.md#ed4i-material-slots) провели именованные
+слоты через импорт, Nom и Build и подтвердили замену одного материала на Vulkan.
+Следующее предложение по импорту — [первичный импорт из Editor](engine/PLAN.md#arch1g-editor-import-proposal).
 
 По запросу 2026-11-12 зафиксирован порядок: **ARCH3.0 карта → короткая диагностика
 ARCH2e.4b → ARCH1f.4 surface renderer → минимальный Player ENG7b.1–2 → ARCH3.1–5

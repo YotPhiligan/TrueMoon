@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Numerics;
 using TrueMoon.Aether.Abstractions.Rendering;
 
@@ -8,9 +9,20 @@ namespace TrueMoon.Aether.Tooling.Importing;
 public sealed record ModelSubassetBinding(ModelSubassetKind Kind, int Index, ModelSubassetKey Key, Guid Id);
 
 /// <summary>CPU mesh with permanent mesh/slot/material/binding identities.</summary>
-/// <param name="AssetId">Mesh ID.</param><param name="SlotId">Material slot ID.</param><param name="MaterialId">Material ID.</param>
-/// <param name="BindingSetId">Binding-set ID reserved for runtime artifact construction.</param><param name="Geometry">Immutable geometry with the permanent slot ID.</param>
-public sealed record PublishedModelMesh(Guid AssetId, Guid SlotId, Guid MaterialId, Guid BindingSetId, MeshDefinition Geometry);
+/// <param name="AssetId">Mesh ID.</param><param name="SlotId">First material slot ID.</param><param name="MaterialId">First slot's material ID.</param>
+/// <param name="BindingSetId">Binding-set ID reserved for runtime artifact construction.</param><param name="Geometry">Immutable geometry with the permanent slot IDs.</param>
+public sealed record PublishedModelMesh(Guid AssetId, Guid SlotId, Guid MaterialId, Guid BindingSetId, MeshDefinition Geometry)
+{
+    internal PublishedModelSlot? SecondSlot { get; init; }
+
+    /// <summary>The imported material assignment for each slot in geometry order.</summary>
+    public ImmutableArray<PublishedModelSlot> Slots => SecondSlot is { } second
+        ? [new(SlotId, MaterialId), second] : [new(SlotId, MaterialId)];
+}
+
+/// <summary>Persistent material assignment from the imported model.</summary>
+/// <param name="SlotId">Material slot identity.</param><param name="MaterialId">Imported material asset identity.</param>
+public readonly record struct PublishedModelSlot(Guid SlotId, Guid MaterialId);
 
 /// <summary>Opaque material with a permanent asset identity.</summary>
 /// <param name="AssetId">Persistent ID.</param><param name="Definition">Immutable CPU material.</param>
@@ -28,7 +40,7 @@ public sealed class PublishedModelImport
         if (generation <= 0 || candidate.SourceId != ledger.SourceId) throw new InvalidDataException("Invalid published model generation/identity.");
         Generation = generation; Candidate = candidate; Ledger = ledger;
         var entries = bindings.Take(1025).OrderBy(value => value.Kind).ThenBy(value => value.Index).ToArray();
-        var expected = checked(candidate.Meshes.Count * 3 + candidate.Materials.Count + candidate.Instances.Count);
+        var expected = checked(candidate.Meshes.Count * 2 + Count(candidate, ModelSubassetKind.Slot) + candidate.Materials.Count + candidate.Instances.Count);
         if (entries.Length != expected || expected > 1024) throw new InvalidDataException("Published model binding count mismatch.");
         var selectors = new HashSet<(ModelSubassetKind,int)>(); var keys = new HashSet<ModelSubassetKey>();
         var active = ledger.Entries.Where(value => value.Active).ToDictionary(value => value.Key);
@@ -42,11 +54,22 @@ public sealed class PublishedModelImport
         Bindings = Array.AsReadOnly(entries);
         var ids = entries.ToDictionary(value => (value.Kind,value.Index), value => value.Id);
         var meshes = new PublishedModelMesh[candidate.Meshes.Count];
+        var nextExtraSlot = meshes.Length;
         for (var i = 0; i < meshes.Length; i++)
         {
-            var mesh = candidate.Meshes[i]; var slot = ids[(ModelSubassetKind.Slot,i)]; var geometry = mesh.Geometry;
-            meshes[i] = new(ids[(ModelSubassetKind.Mesh,i)],slot,ids[(ModelSubassetKind.Material,mesh.MaterialIndex)],ids[(ModelSubassetKind.BindingSet,i)],
-                new MeshDefinition(geometry.Vertices,geometry.Indices,new[] {new MeshSlot(slot,0,(uint)geometry.Indices.Length)},geometry.Bounds));
+            var mesh = candidate.Meshes[i];
+            var geometry = mesh.Geometry;
+            var slots = geometry.Slots.ToArray();
+            slots[0] = slots[0] with { SlotId = ids[(ModelSubassetKind.Slot, i)] };
+            PublishedModelSlot? second = null;
+            if (slots.Length == 2)
+            {
+                slots[1] = slots[1] with { SlotId = ids[(ModelSubassetKind.Slot, nextExtraSlot++)] };
+                second = new(slots[1].SlotId, ids[(ModelSubassetKind.Material, mesh.MaterialAt(1))]);
+            }
+            meshes[i] = new(ids[(ModelSubassetKind.Mesh, i)], slots[0].SlotId, ids[(ModelSubassetKind.Material, mesh.MaterialIndex)],
+                ids[(ModelSubassetKind.BindingSet, i)], new MeshDefinition(geometry.Vertices, geometry.Indices, slots, geometry.Bounds))
+                { SecondSlot = second };
         }
         Meshes = Array.AsReadOnly(meshes);
         Materials = Array.AsReadOnly(candidate.Materials.Select((material,index) => new PublishedModelMaterial(ids[(ModelSubassetKind.Material,index)],material)).ToArray());
@@ -69,7 +92,8 @@ public sealed class PublishedModelImport
 
     internal static int Count(ModelImportCandidate candidate, ModelSubassetKind kind) => kind switch
     {
-        ModelSubassetKind.Mesh or ModelSubassetKind.Slot or ModelSubassetKind.BindingSet => candidate.Meshes.Count,
+        ModelSubassetKind.Mesh or ModelSubassetKind.BindingSet => candidate.Meshes.Count,
+        ModelSubassetKind.Slot => candidate.Meshes.Sum(mesh => mesh.Geometry.Slots.Length),
         ModelSubassetKind.Material => candidate.Materials.Count, ModelSubassetKind.Instance => candidate.Instances.Count,
         _ => throw new InvalidDataException("Unknown subasset kind.")
     };
@@ -93,9 +117,14 @@ public sealed class PublishedModelImport
             ModelSubassetValidation.Locator(locator); keys.Add((kind,index,new(kind,locator))); return locator;
         }
         for (var i = 0; i < meshLocators.Length; i++) meshLocators[i] = Resolve(ModelSubassetKind.Mesh,i,candidate.Semantics.Meshes[i]);
+        var nextExtraSlot = meshLocators.Length;
         for (var i = 0; i < meshLocators.Length; i++)
         {
-            Resolve(ModelSubassetKind.Slot,i,"slot/"+meshLocators[i]); Resolve(ModelSubassetKind.BindingSet,i,"binding/"+meshLocators[i]);
+            var slots = candidate.Meshes[i].SlotMaterials;
+            var prefix = "slot/" + meshLocators[i];
+            Resolve(ModelSubassetKind.Slot, i, slots.IsEmpty ? prefix : prefix + "/" + slots[0].Locator);
+            if (!slots.IsEmpty) Resolve(ModelSubassetKind.Slot, nextExtraSlot++, prefix + "/" + slots[1].Locator);
+            Resolve(ModelSubassetKind.BindingSet, i, "binding/" + meshLocators[i]);
         }
         for (var i = 0; i < candidate.Materials.Count; i++) Resolve(ModelSubassetKind.Material,i,candidate.Semantics.Materials[i]);
         for (var i = 0; i < candidate.Instances.Count; i++) Resolve(ModelSubassetKind.Instance,i,candidate.Semantics.Instances[i]);

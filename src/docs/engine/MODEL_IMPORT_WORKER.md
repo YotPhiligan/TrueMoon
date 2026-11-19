@@ -62,9 +62,13 @@ OBJ, FBX, embedded data URIs and other formats is outside this recipe.
   normal generation, mesh optimization or transform baking. Assimp may normalize its
   imported vertex/index representation. The CPU mesh retains local positions/indices;
   each node occurrence carries its world matrix.
-- Existing `MeshDefinition`, one default material slot and `RenderContentCodec` validate
-  topology, indices, finite positions, bounds and existing render budgets. There is no
-  new render format or widened mesh limit.
+- By default, each primitive projects to a mesh with one material slot.
+  `meshes[].extras.truemoon.combineMaterialSlots: true` opts a uniquely named mesh
+  with exactly two triangle primitives into a combined mesh. Each primitive supplies a
+  distinct `extras.truemoon.subasset` label. The worker orders the ranges by label and
+  keeps the material of each primitive. The ledger keys the slots by mesh and primitive
+  labels. `MeshDefinition` and `RenderContentCodec` apply the existing geometry and
+  render budgets to the combined mesh.
 - Opaque, single-sided, untextured material. glTF linear baseColorFactor RGB is encoded
   to stored sRGB through `RenderColor.Encode`; alpha must be 1. The existing renderer is
   unlit: metallic/roughness values are range-checked and deliberately not represented.
@@ -79,8 +83,10 @@ OBJ, FBX, embedded data URIs and other formats is outside this recipe.
 Candidate-local mesh/material indices have no persistence meaning. `SourceId` remains
 caller-supplied, `InputRevision` identifies captured bytes, and `Revision` hashes input
 identity, recipe, semantic hints, applied scale and canonical CPU bytes. The
-worker emits the v2 candidate packet. The ledger stores nondefault scale in a
-v3 candidate packet and also reads existing v2 records with scale one.
+worker emits v2 for ordinary candidates and v4 for combined meshes with explicit slot
+labels and material indices. The ledger uses v3 and v5 for the respective nondefault
+scale variants, and reads all four versions. Existing v2 and v3 bytes and revisions
+are preserved.
 CPU candidates are not RenderContentManifest/AssetKey values.
 Persistent subasset IDs and atomic ledger publication are provided by [g.1c](MODEL_SUBASSET_LEDGER.md);
 Nom/build/runtime integration remains **g.2**. In the child only, name fields are replaced

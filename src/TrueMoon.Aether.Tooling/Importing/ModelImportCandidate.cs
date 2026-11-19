@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Numerics;
 using System.Security.Cryptography;
 using TrueMoon.Aether.Abstractions.Rendering;
@@ -27,8 +28,22 @@ public sealed class ModelImportCandidate
         {
             if (mesh.Geometry == null || mesh.MaterialIndex < 0 || mesh.MaterialIndex >= Materials.Count)
                 throw new InvalidDataException("Invalid mesh material reference.");
-            if (mesh.Geometry.Slots.Length != 1 || mesh.Geometry.Slots[0].SlotId != RenderContentProfile.DefaultSlotId)
-                throw new InvalidDataException("Imported meshes require one default material slot.");
+            if (mesh.SlotMaterials.IsEmpty)
+            {
+                if (mesh.Geometry.Slots.Length != 1 || mesh.Geometry.Slots[0].SlotId != RenderContentProfile.DefaultSlotId)
+                    throw new InvalidDataException("An ungrouped imported mesh requires one default material slot.");
+                continue;
+            }
+            if (mesh.Geometry.Slots.Length != 2 || mesh.SlotMaterials.Length != 2 ||
+                mesh.SlotMaterials[0].MaterialIndex != mesh.MaterialIndex ||
+                mesh.SlotMaterials[0].Locator == mesh.SlotMaterials[1].Locator)
+                throw new InvalidDataException("A grouped imported mesh requires two distinct named material slots.");
+            foreach (var slot in mesh.SlotMaterials)
+            {
+                ModelSubassetValidation.Locator(slot.Locator);
+                if (slot.MaterialIndex < 0 || slot.MaterialIndex >= Materials.Count)
+                    throw new InvalidDataException("Invalid slot material reference.");
+            }
         }
         foreach (var material in Materials) ArgumentNullException.ThrowIfNull(material);
         foreach (var instance in Instances)
@@ -75,7 +90,7 @@ public sealed class ModelImportCandidate
             var vertices = new Vector3[geometry.Vertices.Length];
             for (var vertex = 0; vertex < vertices.Length; vertex++) vertices[vertex] = geometry.Vertices[vertex] * scale;
             var bounds = new RenderBounds(geometry.Bounds.Minimum * scale, geometry.Bounds.Maximum * scale);
-            scaled[i] = new(new MeshDefinition(vertices, geometry.Indices, geometry.Slots, bounds), mesh.MaterialIndex);
+            scaled[i] = mesh with { Geometry = new MeshDefinition(vertices, geometry.Indices, geometry.Slots, bounds) };
         }
         token.ThrowIfCancellationRequested();
         return new(SourceId, InputRevision, scaled, Materials, Instances, Semantics, scale);
@@ -83,7 +98,14 @@ public sealed class ModelImportCandidate
 }
 
 /// <summary>One triangle mesh; MaterialIndex addresses this candidate only.</summary>
-public sealed record ModelImportMesh(MeshDefinition Geometry, int MaterialIndex);
+public sealed record ModelImportMesh(MeshDefinition Geometry, int MaterialIndex)
+{
+    internal ImmutableArray<ModelImportSlot> SlotMaterials { get; init; } = [];
+
+    internal int MaterialAt(int slot) => SlotMaterials.IsEmpty ? MaterialIndex : SlotMaterials[slot].MaterialIndex;
+}
+
+internal readonly record struct ModelImportSlot(string Locator, int MaterialIndex);
 
 /// <summary>One occurrence of a candidate-local mesh with a row-vector world transform.</summary>
 public readonly record struct ModelImportInstance(int MeshIndex, Matrix4x4 World);

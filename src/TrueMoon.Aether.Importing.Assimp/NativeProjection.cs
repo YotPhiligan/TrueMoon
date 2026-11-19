@@ -8,6 +8,8 @@ namespace TrueMoon.Aether.Importing.Assimp;
 
 internal static unsafe class NativeProjection
 {
+    private static readonly Guid SecondCandidateSlotId = new(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
     internal static ModelImportCandidate Import(CapturedModelSource source, CapturedIo io, GltfIdentityTags tags)
     {
         var api = AssimpLibrary.Instance;
@@ -62,28 +64,75 @@ internal static unsafe class NativeProjection
                 var name=mesh->Name.GetString(); Require(tags.Meshes.TryGetValue(name,out var info) && seenMeshes.Add(name),"Unrecognized/duplicate native mesh transport tag.");
                 Require(mesh->MaterialIndex<materialSources.Length && materialSources[mesh->MaterialIndex]==info!.Material,"Native material provenance mismatch."); meshInfos[i]=info!;
             }
+            var projected = new List<ModelImportMesh>(meshes.Length);
+            var meshLocators = new List<string?>(meshes.Length);
+            var indicesByPrimitive = new int[meshes.Length];
+            var grouped = Enumerable.Range(0, meshes.Length).ToLookup(index => meshInfos[index].SourceMesh);
+            for (var i = 0; i < meshes.Length; i++)
+            {
+                var info = meshInfos[i];
+                if (!tags.SlottedMeshes.TryGetValue(info.SourceMesh, out var locator))
+                {
+                    indicesByPrimitive[i] = projected.Count;
+                    projected.Add(meshes[i]);
+                    meshLocators.Add(info.Locator);
+                    continue;
+                }
+                var parts = grouped[info.SourceMesh].OrderBy(index => meshInfos[index].InstanceSuffix, StringComparer.Ordinal).ToArray();
+                Require(parts.Length == 2, "Missing combined native primitive.");
+                if (i != parts.Min()) continue;
+                foreach (var part in parts) indicesByPrimitive[part] = projected.Count;
+                projected.Add(CombineSlots(meshes[parts[0]], meshes[parts[1]],
+                    meshInfos[parts[0]].InstanceSuffix![1..], meshInfos[parts[1]].InstanceSuffix![1..]));
+                meshLocators.Add(locator);
+            }
             var instances = new List<ModelImportInstance>(); var nodes = 0;
             var instanceLocators=new List<string?>();
             var visited = new HashSet<nint>();
             void Visit(AiNode* node, Matrix4x4 parent, int depth,string? parentTag=null)
             {
                 Require(node != null && ++nodes <= 4096 && depth <= 64 && visited.Add((nint)node), "Native node/depth/cycle quota.");
-                Require(node->NumMeshes <= 4096 - instances.Count && node->NumChildren <= 4096 - nodes, "Native instance/child quota.");
+                Require(node->NumMeshes <= 4096 - instances.Count && node->NumChildren <= 4096 - nodes &&
+                    (node->NumMeshes == 0 || node->Meshes != 0), "Native instance/child quota.");
                 outputBytes = checked(outputBytes + node->NumMeshes * 68L); Require(outputBytes <= ModelImportProtocol.MaximumOutputBytes, "CPU instance aggregate quota.");
                 var world = Matrix4x4.Transpose(node->Transformation) * parent;
                 var name=node->Name.GetString(); var tagged=tags.Nodes.TryGetValue(name,out var info);
                 Require(tagged ? info!.ParentTag==parentTag : depth==0 && node->NumMeshes==0 && name=="ROOT","Native node provenance mismatch.");
+                var combined = info?.SourceMesh is { } sourceMesh && tags.SlottedMeshes.ContainsKey(sourceMesh);
+                if (combined) Require(node->NumMeshes == 2 && ((uint*)node->Meshes)[0] != ((uint*)node->Meshes)[1],
+                    "A combined native node must contain both distinct primitives.");
                 for (var i = 0; i < node->NumMeshes; i++)
                 {
                     var meshIndex=checked((int)((uint*)node->Meshes)[i]); Require(tagged && meshIndex>=0 && meshIndex<meshInfos.Length,"Native instance provenance mismatch.");
-                    instances.Add(new(meshIndex,world)); instanceLocators.Add(tags.Instance(info!,meshInfos[meshIndex]));
+                    var locator = tags.Instance(info!, meshInfos[meshIndex]);
+                    if (combined && i != 0) continue;
+                    instances.Add(new(indicesByPrimitive[meshIndex], world));
+                    instanceLocators.Add(locator);
                 }
                 for (var i = 0; i < node->NumChildren; i++) Visit((AiNode*)((nint*)node->Children)[i], world, depth + 1,tagged ? name : parentTag);
             }
             Visit((AiNode*)scene->RootNode, Matrix4x4.Identity, 0);
-            return new(source.SourceId, source.InputRevision, meshes, materials, instances,new(meshInfos.Select(info=>info.Locator),materialLocators,instanceLocators));
+            return new(source.SourceId, source.InputRevision, projected, materials, instances, new(meshLocators, materialLocators, instanceLocators));
         }
         finally { api.ReleaseImport(pointer); }
     }
+
+    private static ModelImportMesh CombineSlots(ModelImportMesh first, ModelImportMesh second, string firstLocator, string secondLocator)
+    {
+        var a = first.Geometry;
+        var b = second.Geometry;
+        Require(a.Vertices.Length + b.Vertices.Length <= RenderContentProfile.MaximumVertices &&
+            a.Indices.Length + b.Indices.Length <= RenderContentProfile.MaximumIndices, "Combined native mesh quota.");
+        var offset = (uint)a.Vertices.Length;
+        var split = (uint)a.Indices.Length;
+        var bounds = new RenderBounds(Vector3.Min(a.Bounds.Minimum, b.Bounds.Minimum), Vector3.Max(a.Bounds.Maximum, b.Bounds.Maximum));
+        var geometry = new MeshDefinition([.. a.Vertices, .. b.Vertices], [.. a.Indices, .. b.Indices.Select(index => index + offset)],
+            [new(RenderContentProfile.DefaultSlotId, 0, split), new(SecondCandidateSlotId, split, (uint)b.Indices.Length)], bounds);
+        return new(geometry, first.MaterialIndex)
+        {
+            SlotMaterials = [new(firstLocator, first.MaterialIndex), new(secondLocator, second.MaterialIndex)]
+        };
+    }
+
     private static void Require(bool condition, string message) => ModelImportProtocol.Require(condition, message);
 }

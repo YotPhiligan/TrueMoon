@@ -397,7 +397,8 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     {
         var valid = true;
         foreach (var field in _active) valid &= field.TryValue(out _);
-        return valid && (!HasRenderDraft || ReferenceEquals(_renderDraftAssets, _sceneAssets) && _renderAssets?.Material != null);
+        return valid && (!HasRenderDraft || ReferenceEquals(_renderDraftAssets, _sceneAssets) &&
+            _renderAssets is { Mesh: not null } && _renderReferenceDiagnostic == null);
     }
     private void UpdateState(SceneAuthoringState? content)
     {

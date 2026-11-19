@@ -7,7 +7,10 @@ namespace TrueMoon.Aether.Editor.UI.Editing;
 /// <param name="Input">Typed CheckBox, TextBox or multiline RichTextEditor.</param><param name="Null">Optional explicit-null switch.</param>
 /// <param name="Reset">Stages a property reset or restores the current mesh's material.</param><param name="Source">Bound provenance label.</param>
 public sealed record InspectorPropertyControls(InspectorProperty Property, VStack Row, Element Input,
-    CheckBox? Null, Button Reset, Text Source);
+    CheckBox? Null, Button Reset, Text Source)
+{
+    internal (VStack Panel, Dictionary<Guid, Button> Buttons)? SlotPickers { get; init; }
+}
 
 /// <summary>Typed parts of one component section.</summary>
 /// <param name="Section">Owned section.</param><param name="Header">Expand/collapse action.</param>

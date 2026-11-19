@@ -42,11 +42,20 @@ public partial class EditorInspectorViewModel
         var references = SceneRenderAssets.ResolveReferences(_sceneAssets, _renderMesh.Value, _renderBinding.Value);
         _renderReferenceDiagnostic = references.Diagnostic;
         var mesh = references.Mesh;
+        var imported = mesh.HasValue ? _sceneAssets!.DefaultDefinition(mesh.Value) : null;
+        var resolved = references.Definition;
         var defaultBinding = mesh.HasValue ? _sceneAssets!.DefaultBinding(mesh.Value) : null;
+        var overrideSlot = resolved?.Bindings.FirstOrDefault(slot =>
+            imported?.Bindings.Any(item => item.SlotId == slot.SlotId && item.Material != slot.Material) == true).SlotId;
+        var slots = imported is { Bindings.Length: > 1 }
+            ? imported.Bindings.Select((slot, index) => new InspectorRenderSlot(slot.SlotId, _sceneAssets!.SlotName(slot.SlotId),
+                resolved?.Bindings[index].Material.AssetId, enabled && (overrideSlot is null || overrideSlot == Guid.Empty || overrideSlot == slot.SlotId))).ToArray()
+            : [];
         var next = new InspectorRenderAssetSelection(_renderMesh.ComponentId, _meshChoices, mesh.HasValue ? _materialChoices : [],
-            mesh, references.Material, enabled)
+            mesh, resolved is { Bindings.Length: 1 } ? resolved.Bindings[0].Material.AssetId : null, enabled)
         {
-            CanRestoreMeshMaterial = enabled && defaultBinding.HasValue && defaultBinding != references.Binding
+            CanRestoreMeshMaterial = enabled && defaultBinding.HasValue && defaultBinding != references.Binding,
+            Slots = Array.AsReadOnly(slots)
         };
         // Equivalent displayed values can still target a different entity, opening or import generation.
         _renderAssets = next;
@@ -65,8 +74,8 @@ public partial class EditorInspectorViewModel
             yield return diagnostic;
         else if (_sceneAssets == null)
             yield return "Для выбора меша и материала отметьте импорт модели в каталоге сцены.";
-        else if (_renderAssets.Material == null)
-            yield return "Выбор материала доступен для однослотового меша.";
+        else if (_renderAssets.Slots.Count > 0 && _renderAssets.Slots.Any(slot => !slot.CanSelect) && _renderAssets.Enabled)
+            yield return "Можно переопределить один слот. Верните материал меша, чтобы изменить другой слот.";
     }
 
     /// <inheritdoc />
@@ -87,9 +96,9 @@ public partial class EditorInspectorViewModel
         }
         else if (ReferenceEquals(property, _renderBinding) && selection.Mesh is { } currentMesh)
         {
-            if (assetId == selection.Material) return;
+            if (assetId == selection.Material || selection.Slots.Count != 0 || assets.DefaultDefinition(currentMesh) is not { } original) return;
             mesh = currentMesh;
-            binding = assets.BindingForMaterial(mesh, assetId);
+            binding = assets.BindingForMaterial(mesh, original.Bindings[0].SlotId, assetId);
         }
         else return;
 
@@ -103,6 +112,20 @@ public partial class EditorInspectorViewModel
         }
         finally { _loading = false; }
         DraftChanged();
+    }
+
+    /// <inheritdoc />
+    public void SelectRenderSlotMaterial(InspectorRenderAssetSelection selection, Guid slot, Guid material)
+    {
+        VerifyOwner();
+        Refresh(_selection);
+        if (!ReferenceEquals(_renderAssets, selection) || !selection.Enabled || selection.Mesh is not { } mesh ||
+            _sceneAssets is not { } assets || _renderBinding == null ||
+            selection.Slots.FirstOrDefault(item => item.Id == slot) is not { CanSelect: true } selected || selected.Material == material ||
+            assets.BindingForMaterial(mesh, slot, material) is not { } binding) return;
+
+        _renderDraftAssets = assets;
+        _renderBinding.Value = binding.ToString("D");
     }
 
     /// <inheritdoc />
