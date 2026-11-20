@@ -307,6 +307,25 @@ on Vulkan must have the same texture ID and a different revision. The top-left
 texel changes and the other three texels and the green slot still match.
 `-FreshPackages` runs the same open-project scenario from the closed feed.
 
+## Hot Replace a playing scene after PNG reimport
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ImportedTextureReplace `
+  -EvidenceDirectory 'TestResults/EditorImportedTextureReplace/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The Editor starts the saved scene on Vulkan. While it plays, the probe
+changes only the external PNG, reimports through the open document API and
+publishes the new candidate through the game compiler. The regular Reimport and
+Build controls require a stopped game. Before Replace, the original child
+advances its tick and presents the exact original pixels and manifest digest.
+The published-build picker performs Replace. The next child plays from the
+checkpoint, presents the new texel and keeps the other texels and the green
+slot. The probe checks both uploaded revisions and retirement of resources.
+It issues Stop only after capturing the replacement frame.
+`-FreshPackages` runs the same scenario from the closed feed.
+
 ## Restore an edited material slot after restarting Editor
 
 ```powershell

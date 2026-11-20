@@ -393,7 +393,8 @@ internal static class EditorModelBuildSmoke
     internal static async Task RunAsync(string[] args)
     {
         var initialMode = args.Length == 7 ? args[6] : null;
-        var reimportTexture = initialMode == "--initial-import-reimport-texture";
+        var replaceTexture = initialMode == "--initial-import-replace-texture";
+        var reimportTexture = replaceTexture || initialMode == "--initial-import-reimport-texture";
         var saveInitialImport = reimportTexture || initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture";
         var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture";
         var verifyImportedTexture = reimportTexture || initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
@@ -842,11 +843,16 @@ internal static class EditorModelBuildSmoke
                     await playback.Pending.WaitAsync(token);
                 }
 
-                async Task<InitialImportProof> BuildAndCapture(PublishedModelImport publication, string name, uint? topLeft = null)
+                async Task<InitialImportProof> BuildAndCapture(PublishedModelImport publication, string name, uint? topLeft = null,
+                    GameBuildArtifact? replacement = null, ulong minimumTick = 0)
                 {
-                    await StartBuild();
-                    await Complete();
-                    var artifact = engine.Editor.Status.Candidate?.Build.Artifact ?? throw new InvalidOperationException("New Editor Build is missing.");
+                    if (replacement == null)
+                    {
+                        await StartBuild();
+                        await Complete();
+                    }
+                    var artifact = replacement ?? engine.Editor.Status.Candidate?.Build.Artifact
+                        ?? throw new InvalidOperationException("New Editor Build is missing.");
                     Check(Path.GetDirectoryName(artifact.DirectoryPath) == compiler, "The Editor used a preexisting build.");
                     var manifest = artifact.RenderContent!;
                     var binding = manifest.Resolve(bindingId, RenderContentProfile.BindingSetKindId);
@@ -869,12 +875,13 @@ internal static class EditorModelBuildSmoke
                             Check(await store.FindResourceAsync(entry.Key.AssetId) is { } head && head.KindId == entry.Key.KindId &&
                                 head.Digest == entry.Key.Revision.ToString(), "Nom did not retain the exact imported resource.");
 
-                    Check(playback.RunSelectedBuild(artifact), "Editor declined launching the new Build.");
+                    if (replacement == null)
+                        Check(playback.RunSelectedBuild(artifact), "Editor declined launching the new Build.");
+                    else
+                        await ChooseBuild(artifact.BuildId, "Заменить текущую сборку");
                     await Complete();
-                    var frame = await CapturePlaying(name, artifact, 0, topLeft);
-                    Check(playback.Execute(EditorCommand.Stop), "Editor declined stopping the new Build.");
-                    await Complete();
-                    await CheckReleased(frame.Generation, textureKey);
+                    var frame = await CapturePlaying(name, artifact, minimumTick, topLeft);
+                    if (!replaceTexture) await StopAndCheck(frame.Generation, textureKey);
                     if (persistSlotOverride)
                         Check(frame.Mask.RedPixels == 0 && frame.Mask.GreenPixels > 100 && frame.Pixels?.Slots is { WhitePixels: > 100 },
                             "The rebuilt GPU frame did not show the white override and unchanged green material.");
@@ -904,34 +911,25 @@ internal static class EditorModelBuildSmoke
                         beforeEdit.Where(entry => entry.Value != afterEdit[entry.Key]).Select(entry => entry.Key).SequenceEqual([png]),
                         "The PNG must be the only changed source file.");
 
-                    // Observe staleness in the UI before the explicit build recheck.
                     await ShowImportStatus(ModelImportFreshnessStatus.Stale, staleText, published.Generation);
                     await CloseCatalog();
-                    var retained = engine.Editor.Status;
-                    await StartBuild();
-                    var blocked = playback.Error?.Message;
-                    Check(blocked?.Contains($"«{row.Name}» устарела", StringComparison.Ordinal) == true &&
-                        retained.ContextVersion == engine.Editor.Status.ContextVersion &&
-                        ReferenceEquals(retained.Candidate, engine.Editor.Status.Candidate),
-                        $"Stale texture admitted a Build or replaced the previous candidate: {blocked}");
-                    await ShowImportStatus(ModelImportFreshnessStatus.Stale, staleText, published.Generation);
-                    var pending = documents.Pending;
-                    await EditorHeaderSmoke.UntilAsync(ui, () =>
+                    string? blocked = null;
+                    if (replaceTexture)
                     {
-                        if (ui.NeedsUpdate || view.Overlays.Popup is not EditorStatusPopupView popup ||
-                            popup.ReimportActions.Children.OfType<Button>().SingleOrDefault(
-                                button => button.Value == $"Переимпортировать «{row.Name}»") is not { IsEffectivelyEnabled: true } action ||
-                            !documents.CanExecute(DocumentCommand.ReimportModel)) return false;
-                        ui.Focus(action);
-                        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter));
-                        ui.HandleInput(new(InputKind.KeyUp, Key: UiKey.Enter));
-                        return true;
-                    }, token, HoldCatalog);
-                    Check(!ReferenceEquals(pending, documents.Pending), "The Reimport button did not admit a document command.");
-                    await documents.Pending.WaitAsync(token);
-                    await CloseCatalog();
-                    Check(documents.Read().Error == null,
-                        $"Editor could not reimport the selected model: {documents.Read().Error}");
+                        // The Editor locks document commands during play. Publish through the document API.
+                        await document.ReimportModelAsync(before.OpeningId, row.SourceId, published.Generation, token);
+                    }
+                    else
+                    {
+                        var retained = engine.Editor.Status;
+                        await StartBuild();
+                        blocked = playback.Error?.Message;
+                        Check(blocked?.Contains($"«{row.Name}» устарела", StringComparison.Ordinal) == true &&
+                            retained.ContextVersion == engine.Editor.Status.ContextVersion &&
+                            ReferenceEquals(retained.Candidate, engine.Editor.Status.Candidate),
+                            $"Stale texture admitted a Build or replaced the previous candidate: {blocked}");
+                        await ReimportFromStatusPopup();
+                    }
 
                     var revised = await ledger.OpenAsync(token) ?? throw new InvalidDataException("The revised model ledger is missing.");
                     Check(revised.Generation == published.Generation + 1 && revised.Candidate.InputRevision != published.Candidate.InputRevision &&
@@ -945,7 +943,25 @@ internal static class EditorModelBuildSmoke
                     content = sameScene.Content!;
                     await ShowImportStatus(ModelImportFreshnessStatus.Current, currentText, revised.Generation);
                     await CloseCatalog();
-                    var updated = await BuildAndCapture(revised, "texture-reimported", 0x2194D5FF);
+                    FrameProof? retainedFrame = null;
+                    GameBuildArtifact? replacement = null;
+                    if (replaceTexture)
+                    {
+                        var original = engine.Editor.OpenPublishedBuild(initial.Frame.BuildId);
+                        var running = engine.Supervisor.Status;
+                        var request = session.CreateBuildRequest(checked(original.SourceRevision + 1)) with
+                        {
+                            TrackInputs = true, CaptureCompilation = true, CapturePreparation = true, CaptureProjectReferences = true,
+                            RenderContent = await document.CheckModelImportsAsync(before.OpeningId, token)
+                        };
+                        replacement = (await engine.Builds.BuildAsync(request, token)).Artifact;
+                        retainedFrame = await CapturePlaying("texture-before-replace", original, initial.Frame.Tick + 1);
+                        Check(running.State == SessionState.Playing && running.Identity?.Generation == initial.Frame.Generation &&
+                            retainedFrame.Generation == initial.Frame.Generation && retainedFrame.Pid == initial.Frame.Pid &&
+                            retainedFrame.Pixels == initial.Frame.Pixels && native.Leases.Count == 1,
+                            "Publishing the new texture and Build changed the playing child or its viewport.");
+                    }
+                    var updated = await BuildAndCapture(revised, "texture-reimported", 0x2194D5FF, replacement, retainedFrame?.Tick ?? 0);
                     var oldTexture = initial.Texture ?? throw new InvalidDataException("Missing original texture.");
                     var newTexture = updated.Texture ?? throw new InvalidDataException("Missing revised texture.");
                     Check(oldTexture.AssetId == newTexture.AssetId && oldTexture.Revision != newTexture.Revision &&
@@ -963,13 +979,45 @@ internal static class EditorModelBuildSmoke
                         initialPixels.Slots!.RightRgba == updatedPixels.Slots!.RightRgba &&
                         newTiles == oldTiles with { TopLeft = oldTiles.TopLeft with { Rgba = "2194D5FF" } },
                         "The new Build must change the expected texel and preserve the other regions.");
+                    if (retainedFrame != null)
+                    {
+                        Check(native.Leases.Count == 2 && updated.Frame.Generation == retainedFrame.Generation + 1 &&
+                            updated.Frame.Pid != retainedFrame.Pid, "Replace did not activate exactly one new playing child.");
+                        var oldKey = engine.Editor.OpenPublishedBuild(initial.Frame.BuildId).RenderContent!
+                            .Resolve(oldTexture.AssetId, RenderContentProfile.BaseColorTextureKindId).Key;
+                        await CheckReleased(initial.Frame.Generation, oldKey);
+                        var newKey = replacement!.RenderContent!.Resolve(newTexture.AssetId, RenderContentProfile.BaseColorTextureKindId).Key;
+                        await StopAndCheck(updated.Frame.Generation, newKey);
+                    }
 
                     await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-texture-reimport.json"), JsonSerializer.Serialize(new
                     {
-                        Completed = true, Before = initial, After = updated, BuildBlocked = blocked,
+                        Completed = true, Before = initial, After = updated, BuildBlocked = blocked, RetainedBeforeReplace = retainedFrame,
                         Statuses = new[] { currentText, staleText, currentText },
                         ChangedDependency = png, SourceBefore = beforeEdit, SourceAfter = afterEdit
                     }), token);
+
+                    async Task ReimportFromStatusPopup()
+                    {
+                        await ShowImportStatus(ModelImportFreshnessStatus.Stale, staleText, published.Generation);
+                        var pending = documents.Pending;
+                        await EditorHeaderSmoke.UntilAsync(ui, () =>
+                        {
+                            if (ui.NeedsUpdate || view.Overlays.Popup is not EditorStatusPopupView popup ||
+                                popup.ReimportActions.Children.OfType<Button>().SingleOrDefault(
+                                    button => button.Value == $"Переимпортировать «{row.Name}»") is not { IsEffectivelyEnabled: true } action ||
+                                !documents.CanExecute(DocumentCommand.ReimportModel)) return false;
+                            ui.Focus(action);
+                            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter));
+                            ui.HandleInput(new(InputKind.KeyUp, Key: UiKey.Enter));
+                            return true;
+                        }, token, HoldCatalog);
+                        Check(!ReferenceEquals(pending, documents.Pending), "The Reimport button did not admit a document command.");
+                        await documents.Pending.WaitAsync(token);
+                        await CloseCatalog();
+                        Check(documents.Read().Error == null,
+                            $"Editor could not reimport the selected model: {documents.Read().Error}");
+                    }
 
                     Dictionary<string, string> SourceHashes() => Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories)
                         .ToDictionary(path => Path.GetRelativePath(sourceDirectory, path).Replace('\\', '/'), path => Hash(File.ReadAllBytes(path)), StringComparer.Ordinal);
@@ -979,6 +1027,15 @@ internal static class EditorModelBuildSmoke
                             popup.ModelImportDetails is { IsVisible: true, Value: var text } && text == display &&
                             document.ReadModelImports(before.OpeningId).SingleOrDefault() is { } selected &&
                             selected.SourceId == row.SourceId && selected.Status == status && selected.Generation == generation, token, HoldCatalog);
+                }
+
+                async Task StopAndCheck(ulong generation, RenderAssetKey? texture)
+                {
+                    Check(playback.Execute(EditorCommand.Stop), "Editor declined Stop after viewport capture.");
+                    await Complete();
+                    await CheckReleased(generation, texture);
+                    Check(engine.Supervisor.Status.State == SessionState.Stopped && engine.Frames.Presentation == null &&
+                        engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0, "Stop retained viewport resources.");
                 }
 
                 async Task VerifyOverrideInInspector()

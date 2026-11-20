@@ -16493,3 +16493,47 @@ Editor повторно прошёл в Debug/Cobalt. TRX и оба отчёта
 в `TestResults/ARCH1f5-editor-png-reimport-20261120-tests/`.
 
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#reimport-a-changed-png-in-the-open-editor).
+
+<a id="arch1f5-editor-texture-replace-2026-11-20"></a>
+## 2026-11-20 — ARCH1f.5, горячий Replace сцены после переимпорта PNG
+
+Профиль `VerifyEditor.ps1 -ImportedTextureReplace` на `1.2611.20.1-alpha`
+запустил исходную сборку в одном Editor и изменил только `textures/color.png`.
+Панель статуса показала `Актуальна → Импорт устарел → Актуальна`. Команды
+переимпорта и Build в интерфейсе требуют остановленной игры. Сценарий использовал
+API открытого документа для переимпорта и штатный компилятор для публикации
+кандидата. Сохранились ID, открытие сцены и байты сохранённого документа.
+
+После публикации кандидата исходный Runtime продолжал Playing с теми же PID,
+поколением, BuildId и digest манифеста. Тик вырос, хеш RGBA области viewport
+совпал с исходным. Штатный выбор BuildId через меню «Заменить текущую сборку»
+перевёл сцену в Playing на следующем поколении Runtime без команды Stop.
+На Debug/Cobalt тики кадров прошли `0 → 608 → 646`. Во всех профилях
+счётчик тиков продолжился с checkpoint.
+
+| Кадр | Верхний левый texel | SHA256 области viewport |
+| --- | --- | --- |
+| Исходный и после публикации кандидата | `D51006FF` | `D0DDF026EF5DF0A39A2A30B132022292B1A900C4E971E5D6D211213981DFA61A` |
+| После Replace | `2194D5FF` | `2C26CFE50949BAADC90C13887C689C7D8EA713A16F94EFFCF5A4A38224E302E4` |
+
+Старый Runtime загрузил точную ревизию
+`44db5f765514d6d53bea2d8d7a5bf1a5db1f502e873b884e1ea21addf3473267`, новый —
+`25b37b9935adb1ab5b591583a9b27a81879fadfd262f74ce1cb6d2ef85ea6227`
+при том же ID текстуры. Остальные три texels и правый слот совпали.
+Vulkan validation показал 0 ошибок и предупреждений. Первый Runtime
+освободил image и sampler при Replace, второй — после финального Stop.
+
+- Source Debug и published Release, Cobalt и Microsoft DI.
+  `TestResults/ARCH1f5-editor-texture-replace-20261120-04/verification.json`,
+  SHA256 `33009F005392BD35C8A8EFD940FCB476C8AD1DC18F78D68C63C356486F74A5A9`.
+- Release из 20 свежих пакетов закрытого feed, Cobalt и Microsoft DI.
+  `TestResults/ARCH1f5-editor-texture-replace-20261120-fresh-01/verification.json`,
+  SHA256 `13FD7A29F26275C85B9FA3BD2D5EFCD022EE34610D801430294D62D4358B1270`.
+
+Во всех шести профилях сверены хеши JSON, PNG и отчётов 12 дочерних Runtime.
+Предыдущий сценарий переимпорта через панель статуса повторно прошёл в
+Debug/Cobalt. Его результат — `legacy-reimport-debug-cobalt.json` рядом с
+отчётом source-профилей. Исходные PNG и child JSON лежат во временных каталогах,
+пути и хеши зафиксированы в `verification.json`.
+
+[Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#hot-replace-a-playing-scene-after-png-reimport).
