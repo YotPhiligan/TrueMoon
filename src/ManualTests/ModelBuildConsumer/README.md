@@ -291,6 +291,22 @@ green slot, and the unobstructed RGBA viewport. It also checks the exact Vulkan
 upload and native cleanup. Use `-FreshPackages` with a fresh evidence directory
 to repeat the scenario using the closed feed.
 
+## Reimport a changed PNG in the open Editor
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ImportedTextureReimport `
+  -EvidenceDirectory 'TestResults/EditorImportedTextureReimport/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+One Editor imports, places and saves the textured glTF. The probe presents a
+baseline Build, changes only the external PNG and observes staleness in the
+status popup before attempting another Build. It checks the Build rejection,
+activates the model's Reimport action with Enter and observes the current status. A new Build
+on Vulkan must have the same texture ID and a different revision. The top-left
+texel changes and the other three texels and the green slot still match.
+`-FreshPackages` runs the same open-project scenario from the closed feed.
+
 ## Restore an edited material slot after restarting Editor
 
 ```powershell

@@ -16453,3 +16453,43 @@ SHA отчётов — `8D43FE574F252F6BF0833621AF090A31DA09E98837F49C7DED718AC5
 TRX и отчёты прежнего сценария находятся в
 `TestResults/ARCH1f5-editor-texture-20261120-tests`.
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#restore-an-imported-png-texture-after-restarting-editor).
+
+<a id="arch1f5-editor-texture-reimport-2026-11-20"></a>
+## 2026-11-20 — ARCH1f.5: переимпорт PNG в открытом Editor
+
+На версии `1.2611.20.1-alpha` Editor импортировал, разместил и сохранил
+двухслотовую glTF, затем собрал и показал исходную модель. В том же
+процессе и открытии сцены заменён только `textures/color.png`. Хеши glTF,
+BIN и остальных исходников совпали. Панель статуса показала
+«Актуальна → Импорт устарел → Актуальна». Устаревание наблюдали до попытки
+Build. Build выдал отказ и сохранил прежний кандидат. Реимпорт активирован
+клавишей Enter на штатной кнопке панели статуса.
+
+Поколение ledger и выбора импорта изменилось с 1 на 2. Совпали ID источника,
+экземпляра, меша, материалов, привязки, слотов и текстуры. Ревизия меша и
+ключ материала правого слота совпали, точные ключи текстуры, левого материала
+и привязки обновились в Nom и в Build. Сохранённый документ и каталог
+совпали по хешу.
+
+| Сборка | Ревизия текстуры | Верхний левый texel | SHA256 области viewport 686×925 |
+| --- | --- | --- | --- |
+| До переимпорта | `44db5f765514d6d53bea2d8d7a5bf1a5db1f502e873b884e1ea21addf3473267` | `D51006FF` | `D0DDF026EF5DF0A39A2A30B132022292B1A900C4E971E5D6D211213981DFA61A` |
+| После переимпорта | `25b37b9935adb1ab5b591583a9b27a81879fadfd262f74ce1cb6d2ef85ea6227` | `2194D5FF` | `2C26CFE50949BAADC90C13887C689C7D8EA713A16F94EFFCF5A4A38224E302E4` |
+
+Остальные три texels совпали по цвету, области и числу пикселей. Правый
+слот совпал побайтно, включая фон правой части viewport. Во всех 12
+Runtime подтверждена точная ревизия upload, освобождение image и sampler
+и 0 ошибок и предупреждений Vulkan validation. Cobalt и Microsoft DI
+прошли source Debug, published Release и Release из 20 свежих пакетов.
+
+- `TestResults/ARCH1f5-editor-png-reimport-20261120-03/verification.json`,
+  SHA256 `579D8EEDB2339071328D77F0DB0ED9B3D67D0B7D47E0A4F50BEE8CF85246F8D6`.
+- `TestResults/ARCH1f5-editor-png-reimport-20261120-fresh-01/verification.json`,
+  SHA256 `DAD017EAC84ABE16A4CC03C3731D1C89419D13838A89DA75C43E924255B15949`.
+
+`TrueMoon.Aether.Editor.Tests` прошёл по 1 507 тестов в Debug и Release.
+Предыдущий сценарий восстановления текстурированной сцены после перезапуска
+Editor повторно прошёл в Debug/Cobalt. TRX и оба отчёта перезапуска сохранены
+в `TestResults/ARCH1f5-editor-png-reimport-20261120-tests/`.
+
+[Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#reimport-a-changed-png-in-the-open-editor).

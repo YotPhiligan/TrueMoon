@@ -1688,7 +1688,7 @@ overrides не мутируют общий asset. World не владеет borr
 | ARCH1f.2 | Реализован2026-11-07: [resource owners/leases/preparation](RENDER_RESOURCES.md), frozen in-memory catalog, App/IFactory integration, atomic World binding и standalone Vulkan upload | Bounded old/candidate/retiring allocations и metadata, counted CPU/preparation leases, stale owner/device/slot rejection; cancel/late completion/failed creation/reload/drain retry. Explicit pinned-key rebind, no sync GPU wait в scene loader; unit/source/published/fresh-package CPU и actual Vulkan upload/readback проверены отдельно. Surface rendering/Playing fence — f.3/4; external-file delivery отдельно |
 | ARCH1f.3 | Реализован2026-11-09: [owned render snapshots](RENDER_SNAPSHOTS.md), explicit camera/mesh/material extraction, bounded mailbox/recording/submission owners, App/IFactory | Same-tick complete matrices/exact keys/masks/tint/shear bounds, drop/coalesce/reload retain, actual backend completion/cleanup contract, generation fence/retry/budgets;1376scoped D/R и source/published/fresh7package CPU proofs. [Evidence/limits](HISTORY.md#render-snapshots-2026-11-09); actual Vulkan surface — f.4 |
 | ARCH1f.4 | Реализован2026-11-12: [Vulkan consumer/Playing fence](RENDER_SURFACE.md), built-in cube/shared opaque unlit material/independent tint | Две entities/один shared asset, изменение override не меняет соседа, reload/delete/resize/suspend/Stop/Replace/failed startup не нарушают retirement; actual source Debug/published Release pixels/core+sync validation/ownership и затронутый fresh-package consumer проверяются отдельно от headless |
-| ARCH1f.5 | [Build → Runtime → Vulkan](#arch1f5-base-color-texture) поддерживает RGBA8 sRGB, UV0 и `NearestClamp`. [Импорт glTF](#arch1f5-imported-png) проводит внешнюю PNG через Nom. [Приёмка Editor](#arch1f5-editor-texture-restart) подтвердила восстановление точных ключей и кадра после перезапуска | Layout/capability, color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes и performance/native evidence для каждого нового профиля. Light/lighting/PBR — последующие этапы |
+| ARCH1f.5 | [Build → Runtime → Vulkan](#arch1f5-base-color-texture) поддерживает RGBA8 sRGB, UV0 и `NearestClamp`. [Импорт glTF](#arch1f5-imported-png) проводит внешнюю PNG через Nom. Editor проверен при [перезапуске](#arch1f5-editor-texture-restart) и [переимпорте после правки PNG](#arch1f5-editor-texture-reimport) | Layout/capability, color/data texture semantics, formats/uploads/budgets, явные unsupported/fallback outcomes и performance/native evidence для каждого нового профиля. Light/lighting/PBR — последующие этапы |
 | ARCH1f.6 | Content revisions и runtime material overrides в checkpoint/Replace после ARCH1e.5 | Logical IDs/revisions вместо handles, required content preparation до resume, remap/migration/failed restore/stale generation; render cache восстанавливается, capability недоступна без полного support участников |
 
 <a id="arch1f5-base-color-texture"></a>
@@ -1724,9 +1724,18 @@ Vulkan upload, пиксели, digest манифеста и освобожден
 [Контракт Editor](MODEL_BUILD_DELIVERY.md#первичный-импорт-из-editor),
 [результаты](HISTORY.md#arch1f5-editor-texture-restart-2026-11-20).
 
-Следующий срез Editor — изменить только PNG в открытом проекте, показать
-устаревание и проверить штатную команду переимпорта с сохранением ID.
-Дополнительные sampler modes, data textures, mipmaps, lighting и PBR ведутся отдельно.
+<a id="arch1f5-editor-texture-reimport"></a>
+#### ARCH1f.5. Переимпорт внешней PNG в открытом Editor
+
+Сценарий меняет только PNG в открытом проекте. Панель статуса сама показывает
+устаревание, проверка Build подтверждает отказ для старого импорта. Штатный
+переимпорт обновляет ревизию текстуры и поколение выбранного импорта с теми же
+ID модели, слотов и текстуры. Build и Vulkan проверяют новую ревизию и изменение
+одного texel. Соседний слот и остальные texels сравниваются с исходным кадром.
+[Приёмка](HISTORY.md#arch1f5-editor-texture-reimport-2026-11-20).
+
+Следующий профиль выбирается по игровому сценарию. Дополнительные sampler
+modes, data textures, mipmaps, lighting и PBR ведутся отдельно.
 
 <a id="arch1f0-render-contracts"></a>
 #### ARCH1f.0. Первый mesh/material/resource contract — 2026-11-06

@@ -393,9 +393,10 @@ internal static class EditorModelBuildSmoke
     internal static async Task RunAsync(string[] args)
     {
         var initialMode = args.Length == 7 ? args[6] : null;
-        var saveInitialImport = initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture";
+        var reimportTexture = initialMode == "--initial-import-reimport-texture";
+        var saveInitialImport = reimportTexture || initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture";
         var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture";
-        var verifyImportedTexture = initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
+        var verifyImportedTexture = reimportTexture || initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
         var persistSlotOverride = initialMode is "--initial-import-save-slot" or "--initial-import-reopen-slot";
         var initialImport = saveInitialImport || reopenInitialImport;
         var saveInspector = args.Length == 7 && args[6] == "--render-inspector-save";
@@ -412,7 +413,8 @@ internal static class EditorModelBuildSmoke
         var probeImports = probeRenderInspector || probeReimport || args.Length == 7 && args[6] == "--imports";
         if (args.Length != 6 && !probeImports && !initialImport || args[0] is not ("cobalt" or "microsoft")) throw new ArgumentException("Invalid model delivery probe arguments.");
         var report = args[1];
-        var proofDirectory = initialImport ? Path.Combine(report, saveInitialImport ? "import-saved" : "import-reopened") :
+        var proofDirectory = reimportTexture ? Path.Combine(report, "import-reimported") :
+            initialImport ? Path.Combine(report, saveInitialImport ? "import-saved" : "import-reopened") :
             restartInspector ? Path.Combine(report, saveInspector ? "editor-saved" : "editor-reopened") : report;
         var project = args[2];
         var scenePath = args[3];
@@ -812,59 +814,13 @@ internal static class EditorModelBuildSmoke
                     mesh.Geometry.Slots.Select(slot => slot.SlotId).SequenceEqual(mesh.Slots.Select(slot => slot.SlotId)),
                     "The scene and restored import do not agree on the published mesh, slots and placement.");
 
-                await EditorHeaderSmoke.UntilAsync(ui, () => view.DataContext!.CanBuild, token);
-                await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "runtime.Build", token);
-                await Complete();
-                var artifact = engine.Editor.Status.Candidate?.Build.Artifact ?? throw new InvalidOperationException("New Editor Build is missing.");
-                Check(Path.GetDirectoryName(artifact.DirectoryPath) == compiler, "The Editor used a preexisting build.");
-                var manifest = artifact.RenderContent!;
-                var binding = manifest.Resolve(bindingId, RenderContentProfile.BindingSetKindId);
-                var exact = (MaterialBindingSetDefinition)binding.Definition;
-                var imported = (MaterialBindingSetDefinition)manifest.Resolve(mesh.BindingSetId, RenderContentProfile.BindingSetKindId).Definition;
-                var slots = exact.Bindings.Select(slot => new ImportedSlotProof(slot.SlotId, AssetProof.From(slot.Material))).ToArray();
-                Check(exact.Mesh == imported.Mesh && exact.Mesh.AssetId == mesh.AssetId && PublishedSlotsAgree(),
-                    "Build lost the slot IDs or their exact material keys.");
-                RenderAssetKey? textureKey = null;
-                if (verifyImportedTexture)
-                {
-                    var publishedTexture = published.Texture ?? throw new InvalidDataException("Catalog ledger lost the external texture.");
-                    var texture = manifest.Resolve(publishedTexture.AssetId, RenderContentProfile.BaseColorTextureKindId);
-                    textureKey = texture.Key;
-                    var left = (OpaqueUnlitMaterialDefinition)manifest.Resolve(exact.Bindings[0].Material).Definition;
-                    var right = (OpaqueUnlitMaterialDefinition)manifest.Resolve(exact.Bindings[1].Material).Definition;
-                    Check(texture.Definition.Revision == publishedTexture.Definition.Revision &&
-                        exact.Bindings[0].Material.AssetId == publishedTexture.MaterialId &&
-                        left.BaseColorTexture == textureKey && left.Sampler == RenderTextureSampler.NearestClamp &&
-                        right.BaseColorTexture == null &&
-                        ((MeshDefinition)manifest.Resolve(exact.Mesh).Definition).Uv0.SequenceEqual(mesh.Geometry.Uv0),
-                        "Build did not preserve the exact imported texture, sampler and UV0 assignment.");
-                }
-                var stores = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
-                var nomId = session.Project.Description.Id;
-                await using (var store = stores.Create(new(Path.Combine(session.Project.ContentDirectory, ".aether-model-content"),
-                    nomId, nomId, AssetStoreOpenMode.Open, token))!)
-                    foreach (var entry in manifest.Entries.Where(entry => !persistSlotOverride || entry.Key.AssetId != bindingId))
-                        Check(await store.FindResourceAsync(entry.Key.AssetId) is { } head && head.KindId == entry.Key.KindId &&
-                            head.Digest == entry.Key.Revision.ToString(), "Nom did not retain the exact imported resource.");
-
-                Check(playback.RunSelectedBuild(artifact), "Editor declined launching the new Build.");
-                await Complete();
-                var frame = await CapturePlaying("initial-model", artifact, 0);
-                Check(playback.Execute(EditorCommand.Stop), "Editor declined stopping the new Build.");
-                await Complete();
-                await CheckReleased(frame.Generation, textureKey);
-                if (persistSlotOverride)
-                    Check(frame.Mask.RedPixels == 0 && frame.Mask.GreenPixels > 100 && frame.Pixels?.Slots is { WhitePixels: > 100 },
-                        "The rebuilt GPU frame did not show the white override and unchanged green material.");
                 var checkpoint = Path.Combine(session.Project.ContentDirectory, ".aether-model-imports", content.Document.Id.Value.ToString("N") + ".tmimports");
-                var result = new InitialImportProof(true, Environment.ProcessId, before.OpeningId, row.SourceId, row.SourcePath, entityId,
-                    published.Generation, sceneHash, Hash(await File.ReadAllBytesAsync(catalogFile, token)),
-                    Hash(await File.ReadAllBytesAsync(ledgerPath, token)), AssetProof.From(exact.Mesh), AssetProof.From(binding.Key), slots, frame, failedAdmission)
+                var result = await BuildAndCapture(published, "initial-model");
+                if (reimportTexture)
                 {
-                    SelectionSha256 = Hash(await File.ReadAllBytesAsync(checkpoint, token)),
-                    OverrideVerified = persistSlotOverride,
-                    Texture = textureKey is { } key ? AssetProof.From(key) : null
-                };
+                    await VerifyTextureReimport(result);
+                    return;
+                }
                 if (reopenInitialImport)
                 {
                     var prior = JsonSerializer.Deserialize<InitialImportProof>(await File.ReadAllBytesAsync(priorProof, token))!;
@@ -879,12 +835,151 @@ internal static class EditorModelBuildSmoke
                 }
                 await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-initial-model-import.json"), JsonSerializer.Serialize(result), token);
 
-                bool PublishedSlotsAgree() => manifest.Resolve(exact.Mesh).Definition is MeshDefinition geometry &&
-                    geometry.Slots.SequenceEqual(mesh.Geometry.Slots) && exact.Bindings.Length == 2 &&
-                    exact.Bindings[0].SlotId == mesh.Slots[0].SlotId && exact.Bindings[0].Material.AssetId == leftMaterial &&
-                    exact.Bindings[1] == imported.Bindings[1] && exact.Bindings[1].SlotId == mesh.Slots[1].SlotId &&
-                    exact.Bindings[1].Material.AssetId == mesh.Slots[1].MaterialId &&
-                    exact.Bindings.All(slot => manifest.Resolve(slot.Material).Key == slot.Material);
+                async Task StartBuild()
+                {
+                    await EditorHeaderSmoke.UntilAsync(ui, () => view.DataContext!.CanBuild, token);
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "runtime.Build", token);
+                    await playback.Pending.WaitAsync(token);
+                }
+
+                async Task<InitialImportProof> BuildAndCapture(PublishedModelImport publication, string name, uint? topLeft = null)
+                {
+                    await StartBuild();
+                    await Complete();
+                    var artifact = engine.Editor.Status.Candidate?.Build.Artifact ?? throw new InvalidOperationException("New Editor Build is missing.");
+                    Check(Path.GetDirectoryName(artifact.DirectoryPath) == compiler, "The Editor used a preexisting build.");
+                    var manifest = artifact.RenderContent!;
+                    var binding = manifest.Resolve(bindingId, RenderContentProfile.BindingSetKindId);
+                    var exact = (MaterialBindingSetDefinition)binding.Definition;
+                    var imported = (MaterialBindingSetDefinition)manifest.Resolve(mesh.BindingSetId, RenderContentProfile.BindingSetKindId).Definition;
+                    var slots = exact.Bindings.Select(slot => new ImportedSlotProof(slot.SlotId, AssetProof.From(slot.Material))).ToArray();
+                    var geometry = (MeshDefinition)manifest.Resolve(exact.Mesh).Definition;
+                    Check(exact.Mesh == imported.Mesh && exact.Mesh.AssetId == mesh.AssetId && geometry.Slots.SequenceEqual(mesh.Geometry.Slots) &&
+                        exact.Bindings.Length == 2 && exact.Bindings[0].SlotId == mesh.Slots[0].SlotId && exact.Bindings[0].Material.AssetId == leftMaterial &&
+                        exact.Bindings[1] == imported.Bindings[1] && exact.Bindings[1].SlotId == mesh.Slots[1].SlotId &&
+                        exact.Bindings[1].Material.AssetId == mesh.Slots[1].MaterialId &&
+                        exact.Bindings.All(slot => manifest.Resolve(slot.Material).Key == slot.Material),
+                        "Build lost the slot IDs or their exact material keys.");
+                    var textureKey = VerifyImportedTextureKey(verifyImportedTexture, publication, manifest, exact, publication.Meshes.Single());
+                    var stores = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
+                    var nomId = session.Project.Description.Id;
+                    await using (var store = stores.Create(new(Path.Combine(session.Project.ContentDirectory, ".aether-model-content"),
+                        nomId, nomId, AssetStoreOpenMode.Open, token))!)
+                        foreach (var entry in manifest.Entries.Where(entry => !persistSlotOverride || entry.Key.AssetId != bindingId))
+                            Check(await store.FindResourceAsync(entry.Key.AssetId) is { } head && head.KindId == entry.Key.KindId &&
+                                head.Digest == entry.Key.Revision.ToString(), "Nom did not retain the exact imported resource.");
+
+                    Check(playback.RunSelectedBuild(artifact), "Editor declined launching the new Build.");
+                    await Complete();
+                    var frame = await CapturePlaying(name, artifact, 0, topLeft);
+                    Check(playback.Execute(EditorCommand.Stop), "Editor declined stopping the new Build.");
+                    await Complete();
+                    await CheckReleased(frame.Generation, textureKey);
+                    if (persistSlotOverride)
+                        Check(frame.Mask.RedPixels == 0 && frame.Mask.GreenPixels > 100 && frame.Pixels?.Slots is { WhitePixels: > 100 },
+                            "The rebuilt GPU frame did not show the white override and unchanged green material.");
+                    return new(true, Environment.ProcessId, before.OpeningId, row.SourceId, row.SourcePath, entityId,
+                        publication.Generation, sceneHash, Hash(await File.ReadAllBytesAsync(catalogFile, token)),
+                        Hash(await File.ReadAllBytesAsync(ledgerPath, token)), AssetProof.From(exact.Mesh), AssetProof.From(binding.Key), slots, frame, failedAdmission)
+                    {
+                        SelectionSha256 = Hash(await File.ReadAllBytesAsync(checkpoint, token)),
+                        OverrideVerified = persistSlotOverride,
+                        Texture = textureKey is { } key ? AssetProof.From(key) : null
+                    };
+                }
+
+                async Task VerifyTextureReimport(InitialImportProof initial)
+                {
+                    const string png = "textures/color.png";
+                    var sourceDirectory = Path.Combine(report, "source");
+                    var beforeEdit = SourceHashes();
+                    var currentText = $"{row.Name} · Актуальна";
+                    var staleText = $"{row.Name} · Импорт устарел";
+                    await ShowImportStatus(ModelImportFreshnessStatus.Current, currentText, published.Generation);
+                    await CloseCatalog();
+                    await File.WriteAllBytesAsync(Path.Combine(sourceDirectory, png),
+                        await File.ReadAllBytesAsync(Path.Combine(report, "revised-color.png"), token), token);
+                    var afterEdit = SourceHashes();
+                    Check(beforeEdit.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(afterEdit.Keys) &&
+                        beforeEdit.Where(entry => entry.Value != afterEdit[entry.Key]).Select(entry => entry.Key).SequenceEqual([png]),
+                        "The PNG must be the only changed source file.");
+
+                    // Observe staleness in the UI before the explicit build recheck.
+                    await ShowImportStatus(ModelImportFreshnessStatus.Stale, staleText, published.Generation);
+                    await CloseCatalog();
+                    var retained = engine.Editor.Status;
+                    await StartBuild();
+                    var blocked = playback.Error?.Message;
+                    Check(blocked?.Contains($"«{row.Name}» устарела", StringComparison.Ordinal) == true &&
+                        retained.ContextVersion == engine.Editor.Status.ContextVersion &&
+                        ReferenceEquals(retained.Candidate, engine.Editor.Status.Candidate),
+                        $"Stale texture admitted a Build or replaced the previous candidate: {blocked}");
+                    await ShowImportStatus(ModelImportFreshnessStatus.Stale, staleText, published.Generation);
+                    var pending = documents.Pending;
+                    await EditorHeaderSmoke.UntilAsync(ui, () =>
+                    {
+                        if (ui.NeedsUpdate || view.Overlays.Popup is not EditorStatusPopupView popup ||
+                            popup.ReimportActions.Children.OfType<Button>().SingleOrDefault(
+                                button => button.Value == $"Переимпортировать «{row.Name}»") is not { IsEffectivelyEnabled: true } action ||
+                            !documents.CanExecute(DocumentCommand.ReimportModel)) return false;
+                        ui.Focus(action);
+                        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.Enter));
+                        ui.HandleInput(new(InputKind.KeyUp, Key: UiKey.Enter));
+                        return true;
+                    }, token, HoldCatalog);
+                    Check(!ReferenceEquals(pending, documents.Pending), "The Reimport button did not admit a document command.");
+                    await documents.Pending.WaitAsync(token);
+                    await CloseCatalog();
+                    Check(documents.Read().Error == null,
+                        $"Editor could not reimport the selected model: {documents.Read().Error}");
+
+                    var revised = await ledger.OpenAsync(token) ?? throw new InvalidDataException("The revised model ledger is missing.");
+                    Check(revised.Generation == published.Generation + 1 && revised.Candidate.InputRevision != published.Candidate.InputRevision &&
+                        revised.Bindings.SequenceEqual(published.Bindings) && revised.Instances.SequenceEqual(published.Instances),
+                        "PNG-only reimport changed the model identities or placement.");
+                    var sameScene = document.Read();
+                    Check(sameScene.OpeningId == initial.OpeningId && !sameScene.IsDirty &&
+                        Hash(await File.ReadAllBytesAsync(scenePath, token)) == initial.SceneSha256,
+                        "Reimport changed or reopened the authoring document.");
+                    before = sameScene;
+                    content = sameScene.Content!;
+                    await ShowImportStatus(ModelImportFreshnessStatus.Current, currentText, revised.Generation);
+                    await CloseCatalog();
+                    var updated = await BuildAndCapture(revised, "texture-reimported", 0x2194D5FF);
+                    var oldTexture = initial.Texture ?? throw new InvalidDataException("Missing original texture.");
+                    var newTexture = updated.Texture ?? throw new InvalidDataException("Missing revised texture.");
+                    Check(oldTexture.AssetId == newTexture.AssetId && oldTexture.Revision != newTexture.Revision &&
+                        initial.Frame.BuildId != updated.Frame.BuildId && updated.Mesh == initial.Mesh &&
+                        updated.Binding.AssetId == initial.Binding.AssetId && updated.Binding.Revision != initial.Binding.Revision &&
+                        updated.Slots[0].Id == initial.Slots[0].Id && updated.Slots[0].Material.AssetId == initial.Slots[0].Material.AssetId &&
+                        updated.Slots[0].Material.Revision != initial.Slots[0].Material.Revision && updated.Slots[1] == initial.Slots[1] &&
+                        updated.SelectionSha256 != initial.SelectionSha256 && updated.CatalogSha256 == initial.CatalogSha256,
+                        "Reimport did not preserve IDs and update the exact texture/material/binding revisions.");
+                    var initialPixels = initial.Frame.Pixels!;
+                    var updatedPixels = updated.Frame.Pixels!;
+                    var oldTiles = initialPixels.Texture!;
+                    var newTiles = updatedPixels.Texture!;
+                    Check(initialPixels.Sha256 != updatedPixels.Sha256 &&
+                        initialPixels.Slots!.RightRgba == updatedPixels.Slots!.RightRgba &&
+                        newTiles == oldTiles with { TopLeft = oldTiles.TopLeft with { Rgba = "2194D5FF" } },
+                        "The new Build must change the expected texel and preserve the other regions.");
+
+                    await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-texture-reimport.json"), JsonSerializer.Serialize(new
+                    {
+                        Completed = true, Before = initial, After = updated, BuildBlocked = blocked,
+                        Statuses = new[] { currentText, staleText, currentText },
+                        ChangedDependency = png, SourceBefore = beforeEdit, SourceAfter = afterEdit
+                    }), token);
+
+                    Dictionary<string, string> SourceHashes() => Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories)
+                        .ToDictionary(path => Path.GetRelativePath(sourceDirectory, path).Replace('\\', '/'), path => Hash(File.ReadAllBytes(path)), StringComparer.Ordinal);
+
+                    Task ShowImportStatus(ModelImportFreshnessStatus status, string display, long generation) =>
+                        EditorHeaderSmoke.UntilAsync(ui, () => view.Overlays.Popup is EditorStatusPopupView popup &&
+                            popup.ModelImportDetails is { IsVisible: true, Value: var text } && text == display &&
+                            document.ReadModelImports(before.OpeningId).SingleOrDefault() is { } selected &&
+                            selected.SourceId == row.SourceId && selected.Status == status && selected.Generation == generation, token, HoldCatalog);
+                }
 
                 async Task VerifyOverrideInInspector()
                 {
@@ -1376,7 +1471,7 @@ internal static class EditorModelBuildSmoke
             static IEnumerable<Element> Descendants(Element element) =>
                 element.Children.Concat(element.Children.SelectMany(Descendants));
 
-            async Task<FrameProof> CapturePlaying(string name, GameBuildArtifact artifact, ulong minimumTick)
+            async Task<FrameProof> CapturePlaying(string name, GameBuildArtifact artifact, ulong minimumTick, uint? textureTopLeft = null)
             {
                 await engine.Supervisor.GetStatusAsync(token);
                 var status = engine.Supervisor.Status;
@@ -1388,7 +1483,7 @@ internal static class EditorModelBuildSmoke
                 await EditorHeaderSmoke.UntilAsync(ui, () =>
                     view.Header!.Caption.AccessibleName.Contains(artifact.BuildId, StringComparison.Ordinal) &&
                     view.Header.Caption.Value.Contains(artifact.BuildId[..12], StringComparison.Ordinal), token);
-                var frame = await Capture(name, identity, content.Document.Id.Value, content.Document.Revision, manifest.Digest);
+                var frame = await Capture(name, identity, content.Document.Id.Value, content.Document.Revision, manifest.Digest, textureTopLeft);
                 Check(frame.Tick >= minimumTick, "Presented frame predates the checkpoint.");
                 var after = documents.Read().Document!;
                 Check(ReferenceEquals(content, after.Content) && before.IsDirty == after.IsDirty &&
@@ -1442,7 +1537,8 @@ internal static class EditorModelBuildSmoke
             CancelledGeneration = cancelledCandidate!.Generation, CorruptRejectedBeforeHandoff = true, RollbackSucceeded = true
         }, new JsonSerializerOptions { WriteIndented = true }), token);
 
-        async Task<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels)> Capture(string name, SessionIdentity identity, Guid sceneId, long revision, RenderContentHash digest)
+        async Task<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels)> Capture(string name, SessionIdentity identity, Guid sceneId,
+            long revision, RenderContentHash digest, uint? textureTopLeft = null)
         {
             var result = new TaskCompletionSource<(PixelMask Mask, ulong Tick, ViewportPixelProof? Pixels)>(TaskCreationOptions.RunContinuationsAsynchronously);
             void Presented(UiSession ui)
@@ -1468,12 +1564,12 @@ internal static class EditorModelBuildSmoke
                     var clip = new SKRectI((int)(bounds.X * scale), (int)(bounds.Y * scale),
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
                     var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics || initialImport;
-                    var compareSlots = materialSlots || persistSlotOverride;
+                    var compareSlots = materialSlots || persistSlotOverride || reimportTexture;
                     var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots);
                     var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
                         referenceDiagnostics || materialSlots || initialImport;
                     var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence,
-                        compareSlots, verifyImportedTexture) : null;
+                        compareSlots, verifyImportedTexture ? textureTopLeft ?? 0xD51006FF : null) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
@@ -1486,6 +1582,28 @@ internal static class EditorModelBuildSmoke
             }
             finally { window.FramePresented -= Presented; }
         }
+    }
+
+    private static RenderAssetKey? VerifyImportedTextureKey(bool verifyImportedTexture, PublishedModelImport published,
+        RenderContentManifest manifest, MaterialBindingSetDefinition exact, PublishedModelMesh mesh)
+    {
+        RenderAssetKey? textureKey = null;
+        if (verifyImportedTexture)
+        {
+            var publishedTexture = published.Texture ?? throw new InvalidDataException("Catalog ledger lost the external texture.");
+            var texture = manifest.Resolve(publishedTexture.AssetId, RenderContentProfile.BaseColorTextureKindId);
+            textureKey = texture.Key;
+            var left = (OpaqueUnlitMaterialDefinition)manifest.Resolve(exact.Bindings[0].Material).Definition;
+            var right = (OpaqueUnlitMaterialDefinition)manifest.Resolve(exact.Bindings[1].Material).Definition;
+            Check(texture.Definition.Revision == publishedTexture.Definition.Revision &&
+                  exact.Bindings[0].Material.AssetId == publishedTexture.MaterialId &&
+                  left.BaseColorTexture == textureKey && left.Sampler == RenderTextureSampler.NearestClamp &&
+                  right.BaseColorTexture == null &&
+                  ((MeshDefinition)manifest.Resolve(exact.Mesh).Definition).Uv0.SequenceEqual(mesh.Geometry.Uv0),
+                "Build did not preserve the exact imported texture, sampler and UV0 assignment.");
+        }
+
+        return textureKey;
     }
 
     private static GameBuildArtifact CorruptCopy(GameBuildArtifact artifact, string report, string hostId)
@@ -1540,7 +1658,7 @@ internal static class EditorModelBuildSmoke
     }
 
     private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask,
-        bool materialReset, bool allowSingleRedOccurrence, bool materialSlots, bool verifyImportedTexture)
+        bool materialReset, bool allowSingleRedOccurrence, bool materialSlots, uint? textureTopLeft)
     {
         // The Editor chrome overlays the viewport. Compare a rectangle clear of the panels and their shadows.
         const float clearance = 12;
@@ -1574,13 +1692,13 @@ internal static class EditorModelBuildSmoke
         {
             BlueSha256 = blue == null ? null : Hash(blue),
             Slots = materialSlots ? MeasureSlots(rgba, crop.Width, crop.Height, cropped) : null,
-            Texture = verifyImportedTexture ? MeasureTextureTiles(rgba, crop.Width) : null
+            Texture = textureTopLeft is { } color ? MeasureTextureTiles(rgba, crop.Width, color) : null
         };
     }
 
-    private static TextureTileProof MeasureTextureTiles(byte[] rgba, int width)
+    private static TextureTileProof MeasureTextureTiles(byte[] rgba, int width, uint expectedTopLeft)
     {
-        var topLeft = Tile(0xD51006FF);
+        var topLeft = Tile(expectedTopLeft);
         var topRight = Tile(0xE40911FF);
         var bottomLeft = Tile(0xF2160BFF);
         var bottomRight = Tile(0xFC0316FF);

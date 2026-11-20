@@ -367,6 +367,12 @@ scratch и настройки запуска задаются приложени
 четыре цвета текстурного слота и кадр Vulkan после сборки в каждом процессе.
 [Приёмка PNG в Editor](../../ManualTests/ModelBuildConsumer/README.md#restore-an-imported-png-texture-after-restarting-editor).
 
+Если в открытом проекте изменился только PNG, панель статуса показывает
+«Импорт устарел». Build перепроверяет выбранное поколение и отклоняет его
+до переимпорта. Команда «Переимпортировать» обновляет точный ключ текстуры
+для той же открытой сцены, сохраняя ID текстуры и существующие привязки.
+[Проверка переимпорта PNG](../../ManualTests/ModelBuildConsumer/README.md#reimport-a-changed-png-in-the-open-editor).
+
 <a id="arch1g2o-place-catalog-model"></a>
 ## ARCH1g.2o — размещение модели из каталога
 
