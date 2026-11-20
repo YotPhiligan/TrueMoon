@@ -25,10 +25,11 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--revisions" or "--multi-model")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--editor-playing-texture-workflow" or "--revisions" or "--multi-model")) return 2;
 var restartSlotOverride = args.Length == 8 && args[7] == "--editor-render-material-slots-restart";
 var restartImportedTexture = args.Length == 8 && args[7] == "--editor-imported-texture-restart";
-var replaceTexture = args.Length == 8 && args[7] == "--editor-imported-texture-replace";
+var textureWorkflow = args.Length == 8 && args[7] == "--editor-playing-texture-workflow";
+var replaceTexture = textureWorkflow || args.Length == 8 && args[7] == "--editor-imported-texture-replace";
 var reimportTexture = replaceTexture || args.Length == 8 && args[7] == "--editor-imported-texture-reimport";
 var editorInitialImport = restartSlotOverride || restartImportedTexture || reimportTexture || args.Length == 8 && args[7] == "--editor-initial-model-import";
 var renderSlots = args.Length == 8 && args[7] == "--editor-render-material-slots";
@@ -222,7 +223,8 @@ if (editorInitialImport)
         // Same 2×2 PNG with only the first texel changed to 2194D5FF.
         const string replacement = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAHUlEQVR4AQESAO3/ACGU1f/kCRH/APIWC//8Axb/TywIralGM+UAAAAASUVORK5CYII=";
         File.WriteAllBytes(Path.Combine(evidence, "revised-color.png"), Convert.FromBase64String(replacement));
-        var mode = replaceTexture ? "--initial-import-replace-texture" : "--initial-import-reimport-texture";
+        var mode = textureWorkflow ? "--initial-import-playing-texture-workflow" :
+            replaceTexture ? "--initial-import-replace-texture" : "--initial-import-reimport-texture";
         var reimported = await RunChild("import-reimported", [.. arguments, mode], TimeSpan.FromSeconds(120));
         Check(reimported.ExitCode == 0, reimported.Error);
         return 0;

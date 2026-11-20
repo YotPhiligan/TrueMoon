@@ -317,14 +317,29 @@ pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ImportedT
 
 The Editor starts the saved scene on Vulkan. While it plays, the probe
 changes only the external PNG, reimports through the open document API and
-publishes the new candidate through the game compiler. The regular Reimport and
-Build controls require a stopped game. Before Replace, the original child
+publishes the new candidate through the game compiler. Before Replace, the original child
 advances its tick and presents the exact original pixels and manifest digest.
 The published-build picker performs Replace. The next child plays from the
 checkpoint, presents the new texel and keeps the other texels and the green
 slot. The probe checks both uploaded revisions and retirement of resources.
 It issues Stop only after capturing the replacement frame.
 `-FreshPackages` runs the same scenario from the closed feed.
+
+## Reimport, Build and Replace from the Editor during play
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -PlayingTextureWorkflow `
+  -EvidenceDirectory 'TestResults/EditorPlayingTextureWorkflow/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+While the scene plays, change the external PNG. The Build menu rejects the
+stale import and the playing viewport still matches the original. Invoke
+Reimport in the status popup, then use the Build menu to publish a candidate.
+The original Runtime and pixels stay active until the published-build picker
+confirms Replace. The picker offers the prepared BuildId. The new Runtime
+continues from the checkpoint and shows the new exact texture revision on
+Vulkan. The probe records both upload revisions and checks native cleanup.
 
 ## Restore an edited material slot after restarting Editor
 

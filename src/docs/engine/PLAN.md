@@ -1749,6 +1749,20 @@ viewport при растущем тике. После Replace из меню св
 [Контракт](MODEL_BUILD_DELIVERY.md#arch1f5-hot-texture-replace),
 [приёмка](HISTORY.md#arch1f5-editor-texture-replace-2026-11-20).
 
+<a id="arch1f5-editor-playing-texture-workflow"></a>
+#### ARCH1f.5. Переимпорт, Build и Replace из интерфейса во время Playing
+
+Открыть действия переимпорта выбранной модели и сборки кандидата для
+играющей сцены. Переимпорт сохраняет открытый документ и публикует новую
+ревизию ресурса. Build фиксирует актуальные ресурсы и предлагает BuildId
+в диалоге замены. Активная сборка продолжает Playing до подтверждения
+Replace. Ошибка или отмена Build оставляет прежний Runtime в Playing.
+На Vulkan сверять пиксели исходной сборки после отклонённого Build и после
+публикации кандидата, затем точную новую ревизию текстуры и продолжение
+тика после Replace.
+[Контракт](MODEL_BUILD_DELIVERY.md#arch1f5-hot-texture-replace),
+[приёмка](HISTORY.md#arch1f5-editor-playing-texture-workflow-2026-11-20).
+
 <a id="arch1f0-render-contracts"></a>
 #### ARCH1f.0. Первый mesh/material/resource contract — 2026-11-06
 

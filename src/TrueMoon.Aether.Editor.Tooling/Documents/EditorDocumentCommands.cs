@@ -17,6 +17,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     private readonly Lock _gate = new();
     private readonly EditorProjects _projects;
     private readonly Func<bool> _canTransition;
+    private readonly Func<bool>? _canReimportWhilePlaying;
     private readonly Func<Task> _stopRuntime;
     private readonly Func<Task> _stopPreview;
     private readonly CancellationToken _lifetime;
@@ -52,11 +53,16 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     /// <param name="selectProject">Binds or clears the actual committed project's build identity before admission reopens.</param>
     public EditorDocumentCommands(EditorProjects projects, Func<bool> canTransition, Func<Task> stopRuntime,
         CancellationToken lifetime, Func<Task>? stopPreview, Action<ProjectSession?>? selectProject)
+        : this(projects, canTransition, stopRuntime, lifetime, stopPreview, selectProject, null) { }
+
+    internal EditorDocumentCommands(EditorProjects projects, Func<bool> canTransition, Func<Task> stopRuntime,
+        CancellationToken lifetime, Func<Task>? stopPreview, Action<ProjectSession?>? selectProject, Func<bool>? canReimportWhilePlaying)
     {
         ArgumentNullException.ThrowIfNull(projects); ArgumentNullException.ThrowIfNull(canTransition); ArgumentNullException.ThrowIfNull(stopRuntime);
         _projects = projects; _canTransition = canTransition; _stopRuntime = stopRuntime; _lifetime = lifetime;
         _stopPreview = stopPreview ?? (() => Task.CompletedTask);
         _selectProject = selectProject; _boundProject = projects.Active;
+        _canReimportWhilePlaying = canReimportWhilePlaying;
     }
 
     /// <summary>Gets actual completion of the last accepted UI action, including a pending decision.</summary>
@@ -86,7 +92,8 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
 
     private bool Available(DocumentCommand command)
     {
-        if (_closed || _busy || _exiting || _lifetime.IsCancellationRequested || !_canTransition()) return false;
+        if (_closed || _busy || _exiting || _lifetime.IsCancellationRequested) return false;
+        if (!_canTransition() && (command != DocumentCommand.ReimportModel || _canReimportWhilePlaying?.Invoke() != true)) return false;
         if (command is DocumentCommand.OpenProject or DocumentCommand.CloseProject)
             return _selectProject != null && (command == DocumentCommand.OpenProject ? _projects.CanSelect : _projects.CanClose) &&
                 _projects.Active?.Documents?.Read().Operation is null or DocumentOperation.None;
@@ -259,7 +266,7 @@ public sealed class EditorDocumentCommands : IDisposable, IAsyncDisposable
     }
 
     // Runtime preparation and controls use the same gate and tracked completion as file/edit/exit operations.
-    // Controls may run while the game is paused/playing; entering Build/Start still requires idle runtime admission.
+    // Starting a game or building from Edit mode requires idle runtime admission.
     internal Task RunRuntimeAsync(GameEditorOperation operation, bool entering,
         Func<ProjectSession, SceneAuthoringState, CancellationToken, Task> action, CancellationToken caller)
     {

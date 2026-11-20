@@ -1301,7 +1301,9 @@ ID привязки и предлагает вернуть импорт или �
 [Приёмка](HISTORY.md#ed4i-material-slot-restart-2026-11-19).
 
 Импорт внешней PNG, сохранение сцены и её проверка после перезапуска Editor
-ведутся в [ARCH1f.5](PLAN.md#arch1f5-editor-texture-restart).
+ведутся в [ARCH1f.5](PLAN.md#arch1f5-editor-texture-restart). Переимпорт,
+сборка кандидата и Replace во время Playing описаны в
+[сценарии ARCH1f.5 из интерфейса](PLAN.md#arch1f5-editor-playing-texture-workflow).
 
 <a id="ed4i-next"></a>
 #### Продолжение ED4i — предложения от 19.11.2026

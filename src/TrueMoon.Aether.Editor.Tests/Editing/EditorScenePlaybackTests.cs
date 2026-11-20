@@ -37,7 +37,7 @@ public sealed class EditorScenePlaybackTests
         Assert.Equal(11, context.Scene.CopyEntities().Single(e => e.Id == DocumentData.Child.Value.ToString("D")).X);
         Assert.Equal(new[] { "preview-stop", "context", "Build", "Start", "Play" }, h.Events.ToArray());
         Assert.False(h.Documents.Commands.CanExecute(DocumentCommand.Save)); Assert.False(h.Documents.Commands.CanExecute(DocumentCommand.OpenProject));
-        Assert.False(h.Playback.CanExecute(EditorCommand.Build)); Assert.True(h.Playback.CanExecute(EditorCommand.Replace));
+        Assert.True(h.Playback.CanExecute(EditorCommand.Build)); Assert.True(h.Playback.CanExecute(EditorCommand.Replace));
         Assert.True(h.Playback.Execute(EditorCommand.Pause)); h.Complete(); Assert.Equal(SessionState.Paused, h.State);
         Assert.True(h.Playback.Execute(EditorCommand.Step)); h.Complete(); Assert.Equal(1, h.Steps);
         Assert.True(h.Playback.RunSimulation()); h.Complete(); Assert.Equal(SessionState.Playing, h.State); Assert.Equal(1, h.Builds);
@@ -48,6 +48,82 @@ public sealed class EditorScenePlaybackTests
         Assert.True(h.Playback.RunSimulation()); h.Complete();
         Assert.Equal(2, h.Builds); Assert.True(h.Context!.Build.SourceRevision > context.Build.SourceRevision);
         Assert.Same(before.Content, h.Documents.Document.Read().Content);
+    }
+
+    [Fact]
+    public void BuildWhilePlaying_CompilesWithoutChangingTheOwnedRuntimeOrDocument()
+    {
+        using var h = new Fixture();
+        Assert.True(h.Playback.RunSimulation()); h.Complete();
+        var identity = h.Identity;
+        var document = h.Documents.Document.Read().Content;
+        var oldRevision = h.Context!.Build.SourceRevision;
+
+        Assert.True(h.Playback.Execute(EditorCommand.Build)); h.Complete();
+
+        Assert.Null(h.Playback.Error);
+        Assert.Equal(new[] { "context", "Build" }, h.Events.Skip(5));
+        Assert.True(h.Context!.Build.SourceRevision > oldRevision);
+        Assert.Equal(identity, h.Identity);
+        Assert.Equal(SessionState.Playing, h.State);
+        Assert.Same(document, h.Documents.Document.Read().Content);
+        Assert.False(h.Playback.CanExecute(EditorCommand.Start));
+        Assert.False(h.Documents.Commands.CanExecute(DocumentCommand.Close));
+    }
+
+    [Theory]
+    [InlineData("paused")]
+    [InlineData("runtime changed")]
+    [InlineData("document changed")]
+    public void BuildWhilePlaying_RequiresTheOwnedPlayingScene(string change)
+    {
+        using var h = new Fixture();
+        Assert.True(h.Playback.RunSimulation()); h.Complete();
+        if (change == "paused") { Assert.True(h.Playback.Execute(EditorCommand.Pause)); h.Complete(); }
+        else if (change == "runtime changed") h.Identity = Fixture.NewIdentity();
+        else DocumentUiFixture.Wait(h.Documents.Document.NewAsync(DocumentData.Scene(), DocumentCloseChoice.Discard));
+
+        Assert.False(h.Playback.CanExecute(EditorCommand.Build));
+        Assert.False(h.Playback.Execute(EditorCommand.Build));
+        Assert.Equal(1, h.Builds);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildWhilePlaying_FailureOrCancelKeepsTheGameAndAllowsRetry(bool cancel)
+    {
+        using var h = new Fixture();
+        Assert.True(h.Playback.RunSimulation()); h.Complete();
+        var identity = h.Identity;
+        var entered = DocumentData.Signal();
+        var failure = new IOException("compiler failed");
+        h.Build = async token =>
+        {
+            entered.TrySetResult();
+            if (cancel) await Task.Delay(Timeout.Infinite, token);
+            else throw failure;
+        };
+
+        Assert.True(h.Playback.Execute(EditorCommand.Build));
+        DocumentUiFixture.Wait(entered.Task);
+        if (cancel)
+        {
+            Assert.False(h.Playback.CanExecute(EditorCommand.Build));
+            Assert.True(h.Playback.Execute(EditorCommand.Cancel));
+        }
+        h.Complete();
+
+        Assert.Same(cancel ? null : failure, h.Playback.Error);
+        Assert.Equal(identity, h.Identity);
+        Assert.Equal(SessionState.Playing, h.State);
+        Assert.Equal(0, h.Stops);
+        Assert.Equal(0, h.Replaces);
+        h.Build = null;
+        Assert.True(h.Playback.Execute(EditorCommand.Build)); h.Complete();
+        Assert.Null(h.Playback.Error);
+        Assert.Equal(3, h.Builds);
+        Assert.Equal(identity, h.Identity);
     }
 
     [Theory] [InlineData("build")] [InlineData("preview")]
@@ -274,7 +350,7 @@ public sealed class EditorScenePlaybackTests
         inspector.Fields[0].Value = "24"; model.Refresh(h.Runtime(), h.Editor());
         Assert.False(model.CanRun); Assert.False(model.CanBuild); model.RunSimulation(); Assert.Equal(0, h.Starts);
         inspector.Cancel(); model.Refresh(h.Runtime(), h.Editor()); model.RunSimulation(); h.Complete();
-        model.Refresh(h.Runtime(), h.Editor()); Assert.True(model.CanStop); Assert.True(model.CanPause); Assert.False(model.CanBuild);
+        model.Refresh(h.Runtime(), h.Editor()); Assert.True(model.CanStop); Assert.True(model.CanPause); Assert.True(model.CanBuild);
         Assert.True(model.CanReplace); model.Execute(EditorCommand.Replace); h.Complete(); Assert.Equal(1, h.Replaces);
         model.Execute(EditorCommand.Stop); h.Complete(); model.Refresh(h.Runtime(), h.Editor());
         Assert.Equal(selection, model.SelectedId); Assert.True(model.CanRun); Assert.Equal(0, legacy);

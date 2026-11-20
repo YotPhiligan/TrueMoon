@@ -18,7 +18,8 @@ param(
     [switch]$RenderMaterialSlotsRestart,
     [switch]$ImportedTextureRestart,
     [switch]$ImportedTextureReimport,
-    [switch]$ImportedTextureReplace
+    [switch]$ImportedTextureReplace,
+    [switch]$PlayingTextureWorkflow
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,7 +36,8 @@ if (Test-Path -LiteralPath $evidence) { throw 'Use a fresh evidence directory.' 
 $catalogProbe = $ModelCatalog -or $ModelPlacement
 $persistenceProbe = $ModelSelectionPersistence -or $catalogProbe
 $reimportProbe = $ModelReimport -or $persistenceProbe
-$textureReimportProbe = $ImportedTextureReimport -or $ImportedTextureReplace
+$textureReplaceProbe = $ImportedTextureReplace -or $PlayingTextureWorkflow
+$textureReimportProbe = $ImportedTextureReimport -or $textureReplaceProbe
 $initialImportProbe = $InitialModelImport -or $RenderMaterialSlotsRestart -or $ImportedTextureRestart -or $textureReimportProbe
 $renderProbe = $RenderInspector -or $RenderInspectorRestart -or $RenderMaterialReset -or $RenderReferenceDiagnostics -or $RenderMaterialSlots -or $initialImportProbe
 $modelStatusProbe = $ModelImports -or $reimportProbe -or $renderProbe
@@ -43,7 +45,7 @@ $profile = Get-TrueMoonBuildProfile -Workspace $workspace -EvidenceDirectory $ev
 $dotnet = (Get-Command dotnet).Source
 $report = [ordered]@{
     Completed = $false
-    Stage = if ($ImportedTextureReplace) { 'ARCH1f.5-editor-texture-replace' } elseif ($ImportedTextureReimport) { 'ARCH1f.5-editor-texture-reimport' } elseif ($ImportedTextureRestart) { 'ARCH1f.5-editor-texture-restart' } elseif ($RenderMaterialSlotsRestart) { 'ED4i-material-slots-restart' } elseif ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
+    Stage = if ($PlayingTextureWorkflow) { 'ARCH1f.5-editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { 'ARCH1f.5-editor-texture-replace' } elseif ($ImportedTextureReimport) { 'ARCH1f.5-editor-texture-reimport' } elseif ($ImportedTextureRestart) { 'ARCH1f.5-editor-texture-restart' } elseif ($RenderMaterialSlotsRestart) { 'ED4i-material-slots-restart' } elseif ($InitialModelImport) { 'ARCH1g.2p' } elseif ($RenderMaterialSlots) { 'ED4i-material-slots' } elseif ($RenderReferenceDiagnostics) { 'ED4i-reference-diagnostics' } elseif ($RenderMaterialReset) { 'ED4i-material-reset' } elseif ($RenderInspectorRestart) { 'ED4i-restart' } elseif ($RenderInspector) { 'ED4i' } elseif ($ModelPlacement) { 'ARCH1g.2o' } elseif ($ModelCatalog) { 'ARCH1g.2n' } elseif ($ModelSelectionPersistence) { 'ARCH1g.2m' } elseif ($ModelReimport) { 'ARCH1g.2l' } elseif ($ModelImports) { 'ARCH1g.2k' } elseif ($FreshPackages) { 'ARCH1g.2f' } else { 'ARCH1g.2e' }
     Profile = $profile
     Runs = @()
     Commands = @()
@@ -64,7 +66,7 @@ function Invoke-Step([string]$name, [string[]]$arguments) {
 function Test-EditorConsumers([string]$name, [string]$directory, [string]$authoring, [string]$editor) {
     foreach ($provider in @('cobalt', 'microsoft')) {
         $output = "$directory/$provider"
-        $mode = if ($ImportedTextureReplace) { '--editor-imported-texture-replace' } elseif ($ImportedTextureReimport) { '--editor-imported-texture-reimport' } elseif ($ImportedTextureRestart) { '--editor-imported-texture-restart' } elseif ($RenderMaterialSlotsRestart) { '--editor-render-material-slots-restart' } elseif ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
+        $mode = if ($PlayingTextureWorkflow) { '--editor-playing-texture-workflow' } elseif ($ImportedTextureReplace) { '--editor-imported-texture-replace' } elseif ($ImportedTextureReimport) { '--editor-imported-texture-reimport' } elseif ($ImportedTextureRestart) { '--editor-imported-texture-restart' } elseif ($RenderMaterialSlotsRestart) { '--editor-render-material-slots-restart' } elseif ($InitialModelImport) { '--editor-initial-model-import' } elseif ($RenderMaterialSlots) { '--editor-render-material-slots' } elseif ($RenderReferenceDiagnostics) { '--editor-render-reference-diagnostics' } elseif ($RenderMaterialReset) { '--editor-render-material-reset' } elseif ($RenderInspectorRestart) { '--editor-render-inspector-restart' } elseif ($RenderInspector) { '--editor-render-inspector' } elseif ($ModelPlacement) { '--editor-model-placement' } elseif ($ModelCatalog) { '--editor-model-catalog' } elseif ($ModelSelectionPersistence) { '--editor-persisted-imports' } elseif ($ModelReimport) { '--editor-reimport' } elseif ($ModelImports) { '--editor-imports' } else { '--editor' }
         # The frozen compiler mirrors ancestors; keep its fixture outside the checkout at a short path.
         $fixture = if ($modelStatusProbe) { Join-Path ([IO.Path]::GetTempPath()) ('tme-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)) } else { $output }
         Invoke-Step "$name-$provider" @($authoring, $provider, $fixture, $worker, $editor,
@@ -80,7 +82,7 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                 $before = $proof.Before
                 $after = $proof.After
                 $children = @(Get-ChildItem -LiteralPath $childDirectory -Filter 'runtime-*.json' -File)
-                if (!$proof.Completed -or (!$ImportedTextureReplace -and !$proof.BuildBlocked) -or $proof.Statuses.Count -ne 3 -or
+                if (!$proof.Completed -or ((!$textureReplaceProbe -or $PlayingTextureWorkflow) -and !$proof.BuildBlocked) -or $proof.Statuses.Count -ne 3 -or
                     !$proof.Statuses[0].EndsWith(' · Актуальна') -or !$proof.Statuses[1].EndsWith(' · Импорт устарел') -or
                     $proof.Statuses[0] -ne $proof.Statuses[2] -or
                     $proof.ChangedDependency -ne 'textures/color.png' -or $children.Count -ne 2 -or
@@ -94,7 +96,7 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                 $run.Path = $path
                 $run.Sha256 = (Get-FileHash -LiteralPath $path).Hash
                 $images = @("$childDirectory/initial-model.png", "$childDirectory/texture-reimported.png")
-                if ($ImportedTextureReplace) {
+                if ($textureReplaceProbe) {
                     $retained = $proof.RetainedBeforeReplace
                     if (!$retained -or $retained.Pid -ne $before.Frame.Pid -or $retained.Generation -ne $before.Frame.Generation -or
                         $retained.BuildId -ne $before.Frame.BuildId -or $retained.ManifestHash -ne $before.Frame.ManifestHash -or
@@ -104,6 +106,15 @@ function Test-EditorConsumers([string]$name, [string]$directory, [string]$author
                         throw "Incomplete playing texture retention or hot Replace evidence for $name-$provider"
                     }
                     $images += "$childDirectory/texture-before-replace.png"
+                    if ($PlayingTextureWorkflow) {
+                        $rejected = $proof.AfterBlockedBuild
+                        if (!$rejected -or $rejected.Pid -ne $retained.Pid -or $rejected.Generation -ne $retained.Generation -or
+                            $rejected.BuildId -ne $retained.BuildId -or $rejected.Pixels.Sha256 -ne $retained.Pixels.Sha256 -or
+                            $rejected.Tick -gt $retained.Tick) {
+                            throw "The rejected Build did not retain the original playing Runtime for $name-$provider"
+                        }
+                        $images += "$childDirectory/texture-after-blocked-build.png"
+                    }
                 }
             } elseif ($initialImportProbe) {
                 $savedPath = "$output/import-saved.json"

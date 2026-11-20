@@ -100,15 +100,18 @@ public sealed class EditorScenePlayback
             var document = _documents.Read(); var runtime = _runtime(); var editor = _editor();
             if (document.Closed || document.Exiting || document.Busy || !document.ProjectReady || document.Document?.Content == null ||
                 document.Document.IsClosed || document.Document.Operation != DocumentOperation.None || editor.Closed || editor.Operation != GameEditorOperation.Idle) return false;
+            var canStart = !_ownsRuntime && (runtime.State == SessionState.Stopped || _preview.Read().Active);
+            var sameGame = _ownsRuntime && _runningIdentity != null && runtime.Identity == _runningIdentity &&
+                ReferenceEquals(document.Project, _runningProject) && ReferenceEquals(document.Document.Content, _runningContent);
             return command switch
             {
-                EditorCommand.Build or EditorCommand.Start => !_ownsRuntime && (runtime.State == SessionState.Stopped || _preview.Read().Active),
+                EditorCommand.Start => canStart,
+                EditorCommand.Build => canStart || sameGame && runtime.State == SessionState.Playing,
                 EditorCommand.Play => _ownsRuntime && runtime.State == SessionState.Paused,
                 EditorCommand.Pause => _ownsRuntime && runtime.State == SessionState.Playing,
                 EditorCommand.Step => _ownsRuntime && runtime.State == SessionState.Paused,
-                EditorCommand.Replace => _ownsRuntime && _runningSelectedBuild == selectedBuild && runtime.State is SessionState.Paused or SessionState.Playing &&
-                    runtime.Identity == _runningIdentity && _runningIdentity != null &&
-                    ReferenceEquals(document.Project, _runningProject) && ReferenceEquals(document.Document.Content, _runningContent),
+                EditorCommand.Replace => sameGame && (selectedBuild || !_runningSelectedBuild) &&
+                    runtime.State is SessionState.Paused or SessionState.Playing,
                 _ => false
             };
         }
@@ -142,6 +145,7 @@ public sealed class EditorScenePlayback
     }
 
     internal SessionIdentity? PublishedBuildTarget { get { lock (_gate) return _runningIdentity; } }
+    internal string? PreparedBuildId => _editor().Candidate?.Build.Artifact.BuildId;
 
     internal string? ActivePublishedBuildId
     {
@@ -191,6 +195,8 @@ public sealed class EditorScenePlayback
                 _interrupt = completion.Task;
                 _ = InterruptAsync(command, interrupted, completion); return true;
             }
+            var buildingWhilePlaying = command == EditorCommand.Build && _ownsRuntime;
+            var runningOrigin = _runningIdentity;
             var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime, caller);
             Task work;
             try
@@ -200,7 +206,7 @@ public sealed class EditorScenePlayback
                     EditorCommand.Build => GameEditorOperation.Build, EditorCommand.Start => GameEditorOperation.Start,
                     EditorCommand.Replace => GameEditorOperation.Replace,
                     EditorCommand.Play => GameEditorOperation.Play, EditorCommand.Pause => GameEditorOperation.Pause, _ => GameEditorOperation.Step
-                }, command is EditorCommand.Build or EditorCommand.Start, RunAsync, cancellation.Token);
+                }, command == EditorCommand.Start || command == EditorCommand.Build && !buildingWhilePlaying, RunAsync, cancellation.Token);
             }
             catch { cancellation.Dispose(); throw; }
             _cancellation = cancellation; _error = null;
@@ -210,6 +216,9 @@ public sealed class EditorScenePlayback
             {
                 if (command is not (EditorCommand.Build or EditorCommand.Start or EditorCommand.Replace))
                 { await _dispatch(command, token).ConfigureAwait(false); return; }
+                var replacing = command == EditorCommand.Replace;
+                var usesRunningGame = replacing || buildingWhilePlaying;
+                if (usesRunningGame) VerifyRunning(project, content, runningOrigin, token);
                 var selectedBuild = build ?? openBuild?.Invoke(project, content, token);
                 token.ThrowIfCancellationRequested();
                 var modelContent = selectedBuild == null && project.Documents is { } document
@@ -220,11 +229,9 @@ public sealed class EditorScenePlayback
                 var world = fullScene ? new SceneWorldData(content.Document) : null;
                 if (selectedBuild?.RenderContent is { } manifest && manifest.ProjectId != project.Project.Description.Id)
                     throw new InvalidDataException("Selected render content belongs to another project.");
-                var replacing = command == EditorCommand.Replace;
-                var origin = _runtime().Identity;
-                if (!replacing) await _preview.StopAsync().ConfigureAwait(false);
+                if (!usesRunningGame) await _preview.StopAsync().ConfigureAwait(false);
                 VerifyCapture(project, content, token);
-                if (replacing) VerifyRunning(project, content, origin, token);
+                if (usesRunningGame) VerifyRunning(project, content, runningOrigin, token);
                 else if (_runtime().State != SessionState.Stopped) throw new InvalidOperationException("Stop the previous runtime before starting a scene game.");
                 var revision = selectedBuild?.SourceRevision ?? Interlocked.Increment(ref _revision);
                 var request = project.CreateBuildRequest(revision);
@@ -242,6 +249,7 @@ public sealed class EditorScenePlayback
                 else
                     await (_selectBuild ?? throw new InvalidOperationException("Artifact selection is unavailable."))(selectedBuild, version, token).ConfigureAwait(false);
                 VerifyCapture(project, content, token);
+                if (usesRunningGame) VerifyRunning(project, content, runningOrigin, token);
                 var built = _editor();
                 if (selectedBuild == null && built.ContextVersion == version && ReferenceEquals(built.Context?.Scene, scene) &&
                     ReferenceEquals(built.Context?.World, world) &&
@@ -250,11 +258,14 @@ public sealed class EditorScenePlayback
                 if (command == EditorCommand.Build) return;
                 if (replacing)
                 {
-                    VerifyRunning(project, content, origin, token);
                     try
                     {
                         await _documents.RunCapturedRuntime(project, content, captured => _replace(version, captured), token).ConfigureAwait(false);
-                        lock (_gate) _runningIdentity = _runtime().Identity;
+                        lock (_gate)
+                        {
+                            _runningIdentity = _runtime().Identity;
+                            _runningSelectedBuild = selectedBuild != null;
+                        }
                     }
                     catch (GameReplacementException error) when (error.RollbackSucceeded)
                     { lock (_gate) _runningIdentity = _runtime().Identity; throw; }
@@ -295,7 +306,7 @@ public sealed class EditorScenePlayback
             if (origin == null || runtime.Identity != origin || origin != _runningIdentity ||
                 runtime.State is not (SessionState.Paused or SessionState.Playing) ||
                 !ReferenceEquals(project, _runningProject) || !ReferenceEquals(content, _runningContent))
-                throw new OperationCanceledException("Replacement no longer targets the owned game/document.", token);
+                throw new OperationCanceledException("The operation no longer targets the owned game/document.", token);
     }
 
     private void VerifyCapture(ProjectSession project, SceneAuthoringState content, CancellationToken token)

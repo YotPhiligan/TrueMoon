@@ -167,7 +167,7 @@ public sealed class EditorStatusBarViewModel : ViewModel, IDisposable, IEditorSt
             SetProperty(ref _modelReimports, Array.AsReadOnly(imports.Where(model => model.CanReimport).Select(model =>
                 new EditorModelReimportAction(opening, model.SourceId, model.Generation, model.Name, enabled)).ToArray()), nameof(ModelReimports));
         }
-        RefreshCatalog(opening, imports, enabled);
+        RefreshCatalog(opening, imports, _documents.CanChangeModelCatalog);
     }
 
     private void RefreshCatalog(Guid opening, IReadOnlyList<SceneModelImportStatus> imports, bool canChange)

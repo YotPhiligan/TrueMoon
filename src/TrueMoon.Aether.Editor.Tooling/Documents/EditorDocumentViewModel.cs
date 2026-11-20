@@ -264,6 +264,7 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
             if (_inspector?.CanCancel == true || _playback?.CanUsePublishedBuild(runtime) != true) return;
             _buildTarget = state;
             _buildRuntime = runtime;
+            if (runtime != null && _playback.PreparedBuildId is { } prepared) _buildPath = prepared;
             _dismissedError = null;
             SetPathRequest(command);
             return;
@@ -350,7 +351,8 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
         Refresh();
     }
 
-    internal bool CanReimportModel => CanSave && _inspector?.CanCancel != true;
+    internal bool CanReimportModel => _inspector?.CanCancel != true && _commands.CanExecute(DocumentCommand.ReimportModel);
+    internal bool CanChangeModelCatalog => CanSave && _inspector?.CanCancel != true;
 
     internal IReadOnlyList<ProjectModelCatalogItem>? ModelCatalog => _state?.ModelCatalog;
     internal bool HasModelCatalog => Project?.Documents?.HasModelCatalog == true;
@@ -365,13 +367,13 @@ public sealed class EditorDocumentViewModel : ViewModel, IDisposable, IEditorDoc
     internal void SelectModel(EditorProjectModelRow row)
     {
         VerifyOwner();
-        if (CanReimportModel && _commands.SelectModel(row)) Refresh();
+        if (CanChangeModelCatalog && _commands.SelectModel(row)) Refresh();
     }
 
     internal void PlaceModel(EditorProjectModelRow row)
     {
         VerifyOwner();
-        if (CanReimportModel && _commands.PlaceModel(row)) Refresh();
+        if (CanChangeModelCatalog && _commands.PlaceModel(row)) Refresh();
     }
 
     internal void ReimportModel(EditorModelReimportAction action)

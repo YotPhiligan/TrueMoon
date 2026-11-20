@@ -393,7 +393,8 @@ internal static class EditorModelBuildSmoke
     internal static async Task RunAsync(string[] args)
     {
         var initialMode = args.Length == 7 ? args[6] : null;
-        var replaceTexture = initialMode == "--initial-import-replace-texture";
+        var textureWorkflow = initialMode == "--initial-import-playing-texture-workflow";
+        var replaceTexture = textureWorkflow || initialMode == "--initial-import-replace-texture";
         var reimportTexture = replaceTexture || initialMode == "--initial-import-reimport-texture";
         var saveInitialImport = reimportTexture || initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture";
         var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture";
@@ -682,7 +683,7 @@ internal static class EditorModelBuildSmoke
             window.Close();
             await window.Completion.WaitAsync(token);
 
-            async Task ChooseBuild(string selection, string title)
+            async Task ChooseBuild(string selection, string title, bool usePrepared = false)
             {
                 var tools = view.Documents!;
                 var model = (EditorDocumentViewModel)tools.DataContext!;
@@ -692,9 +693,12 @@ internal static class EditorModelBuildSmoke
                 await ui.InvokeAsync(() =>
                 {
                     Check(model.PathRequest == DocumentCommand.OpenBuild && model.PathPromptText == title, "Wrong build selection prompt.");
-                    ui.Focus(tools.PathInput);
-                    ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
-                    ui.HandleInput(new(InputKind.Text, Text: selection));
+                    if (!usePrepared)
+                    {
+                        ui.Focus(tools.PathInput);
+                        ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+                        ui.HandleInput(new(InputKind.Text, Text: selection));
+                    }
                     Check(model.RequestedPath == selection, "Artifact path never reached its bound field.");
                 }).WaitAsync(token);
                 await EditorHeaderSmoke.ConfirmDocumentPathAsync(ui, view, token);
@@ -839,7 +843,9 @@ internal static class EditorModelBuildSmoke
                 async Task StartBuild()
                 {
                     await EditorHeaderSmoke.UntilAsync(ui, () => view.DataContext!.CanBuild, token);
+                    var pending = playback.Pending;
                     await EditorHeaderSmoke.ClickActionAsync(ui, view, "project", "runtime.Build", token);
+                    Check(!ReferenceEquals(pending, playback.Pending), "The Build menu action did not admit a command.");
                     await playback.Pending.WaitAsync(token);
                 }
 
@@ -875,10 +881,12 @@ internal static class EditorModelBuildSmoke
                             Check(await store.FindResourceAsync(entry.Key.AssetId) is { } head && head.KindId == entry.Key.KindId &&
                                 head.Digest == entry.Key.Revision.ToString(), "Nom did not retain the exact imported resource.");
 
-                    if (replacement == null)
-                        Check(playback.RunSelectedBuild(artifact), "Editor declined launching the new Build.");
+                    if (replacement != null)
+                        await ChooseBuild(artifact.BuildId, "Заменить текущую сборку", usePrepared: textureWorkflow);
+                    else if (textureWorkflow)
+                        await ChooseBuild(artifact.BuildId, "Запустить опубликованную сборку");
                     else
-                        await ChooseBuild(artifact.BuildId, "Заменить текущую сборку");
+                        Check(playback.RunSelectedBuild(artifact), "Editor declined launching the new Build.");
                     await Complete();
                     var frame = await CapturePlaying(name, artifact, minimumTick, topLeft);
                     if (!replaceTexture) await StopAndCheck(frame.Generation, textureKey);
@@ -899,6 +907,7 @@ internal static class EditorModelBuildSmoke
                 {
                     const string png = "textures/color.png";
                     var sourceDirectory = Path.Combine(report, "source");
+                    var original = replaceTexture ? engine.Editor.OpenPublishedBuild(initial.Frame.BuildId) : null;
                     var beforeEdit = SourceHashes();
                     var currentText = $"{row.Name} · Актуальна";
                     var staleText = $"{row.Name} · Импорт устарел";
@@ -914,7 +923,8 @@ internal static class EditorModelBuildSmoke
                     await ShowImportStatus(ModelImportFreshnessStatus.Stale, staleText, published.Generation);
                     await CloseCatalog();
                     string? blocked = null;
-                    if (replaceTexture)
+                    FrameProof? afterBlockedBuild = null;
+                    if (replaceTexture && !textureWorkflow)
                     {
                         // The Editor locks document commands during play. Publish through the document API.
                         await document.ReimportModelAsync(before.OpeningId, row.SourceId, published.Generation, token);
@@ -928,6 +938,16 @@ internal static class EditorModelBuildSmoke
                             retained.ContextVersion == engine.Editor.Status.ContextVersion &&
                             ReferenceEquals(retained.Candidate, engine.Editor.Status.Candidate),
                             $"Stale texture admitted a Build or replaced the previous candidate: {blocked}");
+                        if (textureWorkflow)
+                        {
+                            await EditorHeaderSmoke.UntilAsync(ui, () => tools.IsVisible &&
+                                model.ErrorText.Contains(blocked!, StringComparison.Ordinal) &&
+                                tools.DismissTools is { IsEffectivelyEnabled: true, Bounds.Width: > 0 } && !ui.NeedsUpdate, token);
+                            await ui.InvokeAsync(() => EditorHeaderSmoke.Click(ui, tools.DismissTools)).WaitAsync(token);
+                            await EditorHeaderSmoke.UntilAsync(ui, () => !tools.IsVisible && !ui.NeedsRender, token);
+                            afterBlockedBuild = await CapturePlaying("texture-after-blocked-build", original!, initial.Frame.Tick);
+                            CheckRetained(afterBlockedBuild);
+                        }
                         await ReimportFromStatusPopup();
                     }
 
@@ -945,21 +965,30 @@ internal static class EditorModelBuildSmoke
                     await CloseCatalog();
                     FrameProof? retainedFrame = null;
                     GameBuildArtifact? replacement = null;
-                    if (replaceTexture)
+                    if (original != null)
                     {
-                        var original = engine.Editor.OpenPublishedBuild(initial.Frame.BuildId);
                         var running = engine.Supervisor.Status;
-                        var request = session.CreateBuildRequest(checked(original.SourceRevision + 1)) with
+                        if (textureWorkflow)
                         {
-                            TrackInputs = true, CaptureCompilation = true, CapturePreparation = true, CaptureProjectReferences = true,
-                            RenderContent = await document.CheckModelImportsAsync(before.OpeningId, token)
-                        };
-                        replacement = (await engine.Builds.BuildAsync(request, token)).Artifact;
-                        retainedFrame = await CapturePlaying("texture-before-replace", original, initial.Frame.Tick + 1);
-                        Check(running.State == SessionState.Playing && running.Identity?.Generation == initial.Frame.Generation &&
-                            retainedFrame.Generation == initial.Frame.Generation && retainedFrame.Pid == initial.Frame.Pid &&
-                            retainedFrame.Pixels == initial.Frame.Pixels && native.Leases.Count == 1,
-                            "Publishing the new texture and Build changed the playing child or its viewport.");
+                            await StartBuild();
+                            await Complete();
+                            replacement = engine.Editor.Status.Candidate?.Build.Artifact
+                                ?? throw new InvalidOperationException("Playing Build published no candidate.");
+                        }
+                        else
+                        {
+                            var request = session.CreateBuildRequest(checked(original.SourceRevision + 1)) with
+                            {
+                                TrackInputs = true, CaptureCompilation = true, CapturePreparation = true, CaptureProjectReferences = true,
+                                RenderContent = await document.CheckModelImportsAsync(before.OpeningId, token)
+                            };
+                            replacement = (await engine.Builds.BuildAsync(request, token)).Artifact;
+                        }
+                        Check(running.State == SessionState.Playing && running.Identity?.Generation == initial.Frame.Generation,
+                            "The original Runtime was not playing after reimport.");
+                        var minimumTick = Math.Max(initial.Frame.Tick + 1, afterBlockedBuild?.Tick ?? 0);
+                        retainedFrame = await CapturePlaying("texture-before-replace", original, minimumTick);
+                        CheckRetained(retainedFrame);
                     }
                     var updated = await BuildAndCapture(revised, "texture-reimported", 0x2194D5FF, replacement, retainedFrame?.Tick ?? 0);
                     var oldTexture = initial.Texture ?? throw new InvalidDataException("Missing original texture.");
@@ -983,7 +1012,7 @@ internal static class EditorModelBuildSmoke
                     {
                         Check(native.Leases.Count == 2 && updated.Frame.Generation == retainedFrame.Generation + 1 &&
                             updated.Frame.Pid != retainedFrame.Pid, "Replace did not activate exactly one new playing child.");
-                        var oldKey = engine.Editor.OpenPublishedBuild(initial.Frame.BuildId).RenderContent!
+                        var oldKey = original!.RenderContent!
                             .Resolve(oldTexture.AssetId, RenderContentProfile.BaseColorTextureKindId).Key;
                         await CheckReleased(initial.Frame.Generation, oldKey);
                         var newKey = replacement!.RenderContent!.Resolve(newTexture.AssetId, RenderContentProfile.BaseColorTextureKindId).Key;
@@ -993,9 +1022,15 @@ internal static class EditorModelBuildSmoke
                     await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-texture-reimport.json"), JsonSerializer.Serialize(new
                     {
                         Completed = true, Before = initial, After = updated, BuildBlocked = blocked, RetainedBeforeReplace = retainedFrame,
+                        AfterBlockedBuild = afterBlockedBuild,
                         Statuses = new[] { currentText, staleText, currentText },
                         ChangedDependency = png, SourceBefore = beforeEdit, SourceAfter = afterEdit
                     }), token);
+
+                    void CheckRetained(FrameProof frame) =>
+                        Check(frame.Generation == initial.Frame.Generation && frame.Pid == initial.Frame.Pid &&
+                            frame.Pixels == initial.Frame.Pixels && native.Leases.Count == 1,
+                            "The playing child or its viewport changed before Replace.");
 
                     async Task ReimportFromStatusPopup()
                     {

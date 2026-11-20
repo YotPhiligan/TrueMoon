@@ -108,7 +108,8 @@ public static class AetherEditorConfigurationExtensions
                     {
                         if (project == null) engine.Editor.ClearContext();
                         else engine.Editor.SetContext(new(project.CreateBuildRequest(0), new SceneSnapshot("Сцена не открыта", 0, []), ""));
-                    });
+                    }, () => commands.Pending.IsCompleted && engine.Supervisor.Status.State == SessionState.Playing &&
+                             engine.Editor.Status.Operation == GameEditorOperation.Idle);
             });
             if (!services.Exist<EditorDocumentViewModel>()) services.Singleton<EditorDocumentViewModel>(r =>
                 new(r.Resolve<EditorDocumentCommands>(), r.Resolve<EditorScenePlayback>(), r.Resolve<EditorInspectorViewModel>()));

@@ -16537,3 +16537,53 @@ Debug/Cobalt. Его результат — `legacy-reimport-debug-cobalt.json` 
 пути и хеши зафиксированы в `verification.json`.
 
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#hot-replace-a-playing-scene-after-png-reimport).
+
+<a id="arch1f5-editor-playing-texture-workflow-2026-11-20"></a>
+## 2026-11-20 — ARCH1f.5, полный сценарий из интерфейса во время Playing
+
+Версия `1.2611.20.2-alpha`. В профиле `-PlayingTextureWorkflow` Editor
+запускает исходную сборку из меню. Изменение только `textures/color.png`
+даёт «Импорт устарел». Build сообщает об устаревшей модели, диалог ошибки
+закрывается кнопкой «Закрыть». Следующий кадр Vulkan имеет те же PID,
+поколение, BuildId и RGBA viewport, а счётчик тиков продолжает расти.
+
+Enter на действии «Переимпортировать» в панели статуса обновляет ledger с
+поколения 1 на 2. Build через меню проекта создаёт кандидат. До подтверждения
+Replace исходный Runtime показывает прежнюю текстуру. Диалог «Заменить текущую
+сборку» предлагает BuildId кандидата. После подтверждения этот BuildId играет
+в следующем поколении Runtime с сохранённым checkpoint. Stop выполняется после
+приёмочного кадра и проверки освобождения первого Runtime.
+
+Хеш RGBA viewport совпал в трёх кадрах до Replace. После Replace верхний
+левый texel изменился с `D51006FF` на `2194D5FF`. Остальные три texels
+и правый слот совпали. Сохранились ID модели, меша, слотов и текстуры.
+Vulkan загрузил ревизии `44db5f765514d6d53bea2d8d7a5bf1a5db1f502e873b884e1ea21addf3473267`
+и `25b37b9935adb1ab5b591583a9b27a81879fadfd262f74ce1cb6d2ef85ea6227`
+по очереди. В Debug/Cobalt тики прошли `0 → 45 → 520 → 558`.
+
+В `TrueMoon.Aether.Editor.Tests` прошли по 1 513 тестов в Debug и Release.
+`BuildWhilePlaying_CompilesWithoutChangingTheOwnedRuntimeOrDocument`
+подтвердил сохранение активной игры и документа.
+`BuildWhilePlaying_RequiresTheOwnedPlayingScene` проверил отказ
+для Paused, другого Runtime и сменившегося документа.
+`BuildWhilePlaying_FailureOrCancelKeepsTheGameAndAllowsRetry`
+проверил ошибку компиляции, отмену и повторный Build с тем же Runtime.
+TRX сохранены в `TestResults/ARCH1f5-editor-playing-texture-20261120-tests/`.
+
+- Source Debug и published Release, Cobalt и Microsoft DI.
+  `TestResults/ARCH1f5-editor-playing-texture-20261120-02/verification.json`,
+  SHA256 `34AF5C4F52FF2473C6FA765F6F007F65B1A44785F480DE2A11A9D5AB03F094C2`.
+- Release из 20 свежих пакетов закрытого feed, Cobalt и Microsoft DI.
+  `TestResults/ARCH1f5-editor-playing-texture-20261120-fresh-01/verification.json`,
+  SHA256 `F92CF7146E5CF78DA12EA2280402439093A9E430BF545E43360B4A89C76AB930`.
+
+В шести профилях сверены хеши PNG и JSON и подтверждены точные ревизии
+upload всех 12 Runtime. Vulkan validation показал 0 ошибок и предупреждений,
+все процессы и ресурсы освобождены.
+
+Предыдущий сценарий Replace из опубликованной сборки повторно прошёл в
+Debug/Cobalt. Повреждённый артефакт отклонён до смены Runtime, при отмене
+восстановлены прежняя сборка и её кадр. Отчёт
+`legacy-editor-replace-debug-cobalt.json` сохранён рядом с source-профилями.
+
+[Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#reimport-build-and-replace-from-the-editor-during-play).
