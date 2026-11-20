@@ -184,7 +184,7 @@ The UI alpha acceptance remains open: fixed-font/full golden comparisons, physic
 Для кода src сохраняются [существующие подробные правила](src/AGENTS.md).
 
 Игра TrueMoon.Tales использует пакеты фреймворка; тексты, лор, арты, ролики и код
-видеостудии имеют отдельные репозитории. Актуальные пути и завершённый перенос Book описаны в [Workspace](../TrueMoon.Workspace/MIGRATION.md).
+видеостудии имеют отдельные репозитории. Актуальные пути и завершённый перенос Book описаны в [карте проектов TrueMoon.Tales](../Projects.md).
 31.10.2026 удалены только две регистрации отсутствующих worktree alloy/enerit;
 ветки codex/alloy-next, codex/enerit-next и main сохранены с прежними commit ID.
 Эта организационная проверка не является новой сборкой или проверкой UI alpha.
