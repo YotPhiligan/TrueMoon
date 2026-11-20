@@ -25,9 +25,10 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-initial-model-import" or "--revisions" or "--multi-model")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--revisions" or "--multi-model")) return 2;
 var restartSlotOverride = args.Length == 8 && args[7] == "--editor-render-material-slots-restart";
-var editorInitialImport = restartSlotOverride || args.Length == 8 && args[7] == "--editor-initial-model-import";
+var restartImportedTexture = args.Length == 8 && args[7] == "--editor-imported-texture-restart";
+var editorInitialImport = restartSlotOverride || restartImportedTexture || args.Length == 8 && args[7] == "--editor-initial-model-import";
 var renderSlots = args.Length == 8 && args[7] == "--editor-render-material-slots";
 var renderReferenceDiagnostics = args.Length == 8 && args[7] == "--editor-render-reference-diagnostics";
 var renderMaterialReset = args.Length == 8 && args[7] == "--editor-render-material-reset";
@@ -154,7 +155,11 @@ File.WriteAllText(Path.Combine(gameDirectory, "Entry.cs"), """
 var path = Path.Combine(sourceDirectory, "scene.gltf");
 var original = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
 var primitives = original["meshes"]![0]!["primitives"]!.AsArray();
-if (renderSlots || editorInitialImport)
+if (restartImportedTexture)
+{
+    original = WriteTexturedModel(sourceDirectory);
+}
+else if (renderSlots || editorInitialImport)
 {
     original["meshes"]![0]!["extras"] = JsonNode.Parse("""{"truemoon":{"combineMaterialSlots":true}}""");
     primitives[0]!["extras"] = JsonNode.Parse("""{"truemoon":{"subasset":"left"}}""");
@@ -210,14 +215,59 @@ if (editorInitialImport)
         scenesRoot = "Scenes", contentRoot = "Content"
     }));
     string[] arguments = [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene, workerPath, dotnet];
-    var saved = await RunChild("import-saved",
-        [.. arguments, restartSlotOverride ? "--initial-import-save-slot" : "--initial-import-save"], TimeSpan.FromSeconds(120));
+    var saveMode = restartImportedTexture ? "--initial-import-save-texture" :
+        restartSlotOverride ? "--initial-import-save-slot" : "--initial-import-save";
+    var reopenMode = restartImportedTexture ? "--initial-import-reopen-texture" :
+        restartSlotOverride ? "--initial-import-reopen-slot" : "--initial-import-reopen";
+    var saved = await RunChild("import-saved", [.. arguments, saveMode], TimeSpan.FromSeconds(120));
     Check(saved.ExitCode == 0, saved.Error);
-    var reopened = await RunChild("import-reopened",
-        [.. arguments, restartSlotOverride ? "--initial-import-reopen-slot" : "--initial-import-reopen"], TimeSpan.FromSeconds(120));
+    var reopened = await RunChild("import-reopened", [.. arguments, reopenMode], TimeSpan.FromSeconds(120));
     Check(reopened.ExitCode == 0 && saved.Pid != reopened.Pid, reopened.Error);
     return 0;
 }
+
+static JsonObject WriteTexturedModel(string directory)
+{
+    // Opaque 2×2 RGBA PNG, in row order: D51006FF, E40911FF, F2160BFF, FC0316FF.
+    const string png = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAHUlEQVR4AQESAO3/ANUQBv/kCRH/APIWC//8Axb/Rr8IDi5SSecAAAAASUVORK5CYII=";
+    var textures = Directory.CreateDirectory(Path.Combine(directory, "textures"));
+    File.WriteAllBytes(Path.Combine(textures.FullName, "color.png"), Convert.FromBase64String(png));
+    using var writer = new BinaryWriter(File.Create(Path.Combine(directory, "scene.bin")));
+    foreach (var value in new[]
+    {
+        -1.55f, .60f, 0, -.40f, .60f, 0, -.40f, -.65f, 0, -1.55f, -.65f, 0,
+        .40f, -.65f, 0, 1.55f, -.65f, 0, .40f, .50f, 0,
+        -.25f, -.25f, 1.25f, -.25f, 1.25f, 1.25f, -.25f, 1.25f
+    }) writer.Write(value);
+    foreach (var index in new uint[] { 0, 1, 2, 0, 2, 3, 0, 1, 2 }) writer.Write(index);
+
+    return JsonNode.Parse("""
+        {
+          "asset":{"version":"2.0"}, "scene":0, "scenes":[{"nodes":[0]}],
+          "nodes":[{"name":"Textured model","mesh":0}],
+          "meshes":[{"name":"Two slots","extras":{"truemoon":{"combineMaterialSlots":true}},"primitives":[
+            {"attributes":{"POSITION":0,"TEXCOORD_0":2},"indices":3,"material":0,"extras":{"truemoon":{"subasset":"left"}}},
+            {"attributes":{"POSITION":1},"indices":4,"material":1,"extras":{"truemoon":{"subasset":"right"}}}
+          ]}],
+          "materials":[{"name":"PNG color","pbrMetallicRoughness":{"baseColorTexture":{"index":0}}},
+            {"name":"Green","pbrMetallicRoughness":{"baseColorFactor":[0,1,0,1]}}],
+          "images":[{"uri":"textures/color.png"}], "textures":[{"source":0,"sampler":0}],
+          "samplers":[{"magFilter":9728,"minFilter":9728,"wrapS":33071,"wrapT":33071}],
+          "buffers":[{"uri":"scene.bin","byteLength":152}],
+          "bufferViews":[{"buffer":0,"byteLength":48,"target":34962},
+            {"buffer":0,"byteOffset":48,"byteLength":36,"target":34962},
+            {"buffer":0,"byteOffset":84,"byteLength":32,"target":34962},
+            {"buffer":0,"byteOffset":116,"byteLength":24,"target":34963},
+            {"buffer":0,"byteOffset":140,"byteLength":12,"target":34963}],
+          "accessors":[{"bufferView":0,"componentType":5126,"count":4,"type":"VEC3","min":[-1.55,-0.65,0],"max":[-0.4,0.6,0]},
+            {"bufferView":1,"componentType":5126,"count":3,"type":"VEC3","min":[0.4,-0.65,0],"max":[1.55,0.5,0]},
+            {"bufferView":2,"componentType":5126,"count":4,"type":"VEC2"},
+            {"bufferView":3,"componentType":5125,"count":6,"type":"SCALAR"},
+            {"bufferView":4,"componentType":5125,"count":3,"type":"SCALAR"}]
+        }
+        """)!.AsObject();
+}
+
 GameBuildResult oldBuild, newBuild, legacyBuild;
 PublishedModelImport oldModel, newModel;
 byte[]? inspectorBaseline = null;

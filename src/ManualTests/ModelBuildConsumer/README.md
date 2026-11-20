@@ -275,6 +275,22 @@ process reopens the project and scene, then compares the catalog and ledger
 bytes, the exact mesh and material keys, both slot IDs and the viewport pixels.
 `-FreshPackages` repeats the complete two-process scenario from the closed feed.
 
+## Restore an imported PNG texture after restarting Editor
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -ImportedTextureRestart `
+  -EvidenceDirectory 'TestResults/EditorImportedTexture/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+The Editor imports a glTF with an external BIN and a 2×2 PNG, places it from
+the catalog, and saves the scene. A second process reopens the saved scene and
+runs a new Build. Both Builds carry the exact mesh, material, binding and texture
+revisions from Nom. The probe compares the four colored texture regions, the plain
+green slot, and the unobstructed RGBA viewport. It also checks the exact Vulkan
+upload and native cleanup. Use `-FreshPackages` with a fresh evidence directory
+to repeat the scenario using the closed feed.
+
 ## Restore an edited material slot after restarting Editor
 
 ```powershell

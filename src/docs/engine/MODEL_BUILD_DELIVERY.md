@@ -361,6 +361,12 @@ scratch и настройки запуска задаются приложени
 Для замены содержимого зарегистрированной модели служит переимпорт.
 [Воспроизводимый профиль](../../ManualTests/ModelBuildConsumer/README.md#import-the-first-model-from-editor).
 
+Для glTF с внешней PNG тот же путь сохраняет выбранное поколение импорта.
+При повторном открытии сцены Build берёт из Nom точную ревизию текстуры,
+указанную в материале. Профиль проверяет два процесса Editor и сравнивает
+четыре цвета текстурного слота и кадр Vulkan после сборки в каждом процессе.
+[Приёмка PNG в Editor](../../ManualTests/ModelBuildConsumer/README.md#restore-an-imported-png-texture-after-restarting-editor).
+
 <a id="arch1g2o-place-catalog-model"></a>
 ## ARCH1g.2o — размещение модели из каталога
 

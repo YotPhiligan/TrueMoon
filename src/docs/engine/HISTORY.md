@@ -16419,3 +16419,37 @@ worker-конфига и свежие пакеты. Проверены 870 ут�
 Локальный отчёт `TestResults/ARCH1f5-imported-png-20261120-06/verification.json`,
 SHA256 `E5B805D640BB8890B1EDA16AEDE88E62E902BC71282751662D480A638F2A28F5`.
 [Команда воспроизведения](RENDER_SURFACE.md#imported-base-color-texture).
+
+<a id="arch1f5-editor-texture-restart-2026-11-20"></a>
+## 2026-11-20 — ARCH1f.5: восстановление сцены с внешней PNG в Editor
+
+Приёмка версии `1.2611.20.1-alpha` началась с пустого каталога и сцены
+с камерой. В Editor через меню импортирована двухслотовая glTF с внешним
+BIN и PNG 2×2. Левый слот использует `NearestClamp`, правый — зелёный
+материал. Проверены размещение из каталога, Save и Build.
+
+Два процесса Editor на каждом профиле построили сборки в собственных
+каталогах. При повторном открытии совпали хеши документа, каталога, ledger
+и записи выбора импорта, а также ID экземпляра и слотов. Обе сборки
+сошлись с ключами из Nom, включая текстуру с ревизией
+`44db5f765514d6d53bea2d8d7a5bf1a5db1f502e873b884e1ea21addf3473267`.
+На Vulkan в каждом из 12 дочерних Runtime подтверждён один upload этой
+ревизии, освобождение image и sampler и 0 ошибок и предупреждений validation.
+
+Четыре области левого слота показали `D51006FF`, `E40911FF`, `F2160BFF`
+и `FC0316FF` в ожидаемом порядке. Зелёный слот сохранил 16 926 пикселей.
+Хеш области 686×925 совпал до и после рестарта во всех шести профилях
+(`D0DDF026EF5DF0A39A2A30B132022292B1A900C4E971E5D6D211213981DFA61A`).
+Профили — Cobalt и Microsoft DI в source Debug, published Release и
+изолированном Release из 20 свежих пакетов.
+
+Отчёты `TestResults/ARCH1f5-editor-texture-20261120-01/verification.json`
+и `TestResults/ARCH1f5-editor-texture-20261120-fresh-01/verification.json`
+содержат SHA файлов доказательств, пути PNG и отчёты дочерних процессов.
+SHA отчётов — `8D43FE574F252F6BF0833621AF090A31DA09E98837F49C7DED718AC520046CF2`
+и `2E49E9CE35E0C6FB51FFB481239CB2B595AD0ED1D8976A87913DABA9105A01C9`.
+В Debug и Release прошли по 1507 тестов Editor. Прежний сценарий
+двухслотового импорта без текстуры прошёл на Cobalt в Debug.
+TRX и отчёты прежнего сценария находятся в
+`TestResults/ARCH1f5-editor-texture-20261120-tests`.
+[Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#restore-an-imported-png-texture-after-restarting-editor).

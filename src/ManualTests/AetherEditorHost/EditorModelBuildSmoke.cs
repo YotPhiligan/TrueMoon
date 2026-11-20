@@ -393,8 +393,9 @@ internal static class EditorModelBuildSmoke
     internal static async Task RunAsync(string[] args)
     {
         var initialMode = args.Length == 7 ? args[6] : null;
-        var saveInitialImport = initialMode is "--initial-import-save" or "--initial-import-save-slot";
-        var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot";
+        var saveInitialImport = initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture";
+        var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture";
+        var verifyImportedTexture = initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
         var persistSlotOverride = initialMode is "--initial-import-save-slot" or "--initial-import-reopen-slot";
         var initialImport = saveInitialImport || reopenInitialImport;
         var saveInspector = args.Length == 7 && args[6] == "--render-inspector-save";
@@ -823,6 +824,21 @@ internal static class EditorModelBuildSmoke
                 var slots = exact.Bindings.Select(slot => new ImportedSlotProof(slot.SlotId, AssetProof.From(slot.Material))).ToArray();
                 Check(exact.Mesh == imported.Mesh && exact.Mesh.AssetId == mesh.AssetId && PublishedSlotsAgree(),
                     "Build lost the slot IDs or their exact material keys.");
+                RenderAssetKey? textureKey = null;
+                if (verifyImportedTexture)
+                {
+                    var publishedTexture = published.Texture ?? throw new InvalidDataException("Catalog ledger lost the external texture.");
+                    var texture = manifest.Resolve(publishedTexture.AssetId, RenderContentProfile.BaseColorTextureKindId);
+                    textureKey = texture.Key;
+                    var left = (OpaqueUnlitMaterialDefinition)manifest.Resolve(exact.Bindings[0].Material).Definition;
+                    var right = (OpaqueUnlitMaterialDefinition)manifest.Resolve(exact.Bindings[1].Material).Definition;
+                    Check(texture.Definition.Revision == publishedTexture.Definition.Revision &&
+                        exact.Bindings[0].Material.AssetId == publishedTexture.MaterialId &&
+                        left.BaseColorTexture == textureKey && left.Sampler == RenderTextureSampler.NearestClamp &&
+                        right.BaseColorTexture == null &&
+                        ((MeshDefinition)manifest.Resolve(exact.Mesh).Definition).Uv0.SequenceEqual(mesh.Geometry.Uv0),
+                        "Build did not preserve the exact imported texture, sampler and UV0 assignment.");
+                }
                 var stores = app.Services.Resolve<IFactory<IProjectAssetStore, OpenAssetStoreArguments>>()!;
                 var nomId = session.Project.Description.Id;
                 await using (var store = stores.Create(new(Path.Combine(session.Project.ContentDirectory, ".aether-model-content"),
@@ -836,7 +852,7 @@ internal static class EditorModelBuildSmoke
                 var frame = await CapturePlaying("initial-model", artifact, 0);
                 Check(playback.Execute(EditorCommand.Stop), "Editor declined stopping the new Build.");
                 await Complete();
-                await CheckReleased(frame.Generation);
+                await CheckReleased(frame.Generation, textureKey);
                 if (persistSlotOverride)
                     Check(frame.Mask.RedPixels == 0 && frame.Mask.GreenPixels > 100 && frame.Pixels?.Slots is { WhitePixels: > 100 },
                         "The rebuilt GPU frame did not show the white override and unchanged green material.");
@@ -846,7 +862,8 @@ internal static class EditorModelBuildSmoke
                     Hash(await File.ReadAllBytesAsync(ledgerPath, token)), AssetProof.From(exact.Mesh), AssetProof.From(binding.Key), slots, frame, failedAdmission)
                 {
                     SelectionSha256 = Hash(await File.ReadAllBytesAsync(checkpoint, token)),
-                    OverrideVerified = persistSlotOverride
+                    OverrideVerified = persistSlotOverride,
+                    Texture = textureKey is { } key ? AssetProof.From(key) : null
                 };
                 if (reopenInitialImport)
                 {
@@ -856,7 +873,7 @@ internal static class EditorModelBuildSmoke
                         prior.Generation == result.Generation && prior.SceneSha256 == result.SceneSha256 && prior.CatalogSha256 == result.CatalogSha256 &&
                         prior.LedgerSha256 == result.LedgerSha256 && prior.SelectionSha256 == result.SelectionSha256 &&
                         prior.OverrideVerified == result.OverrideVerified && prior.Mesh == result.Mesh && prior.Binding == result.Binding &&
-                        prior.Slots.SequenceEqual(result.Slots) && prior.Frame.Mask == result.Frame.Mask &&
+                        prior.Texture == result.Texture && prior.Slots.SequenceEqual(result.Slots) && prior.Frame.Mask == result.Frame.Mask &&
                         prior.Frame.Pixels != null && prior.Frame.Pixels == result.Frame.Pixels,
                         "The restarted Editor did not restore the exact catalog, scene, slot IDs and GPU frame.");
                 }
@@ -1382,7 +1399,7 @@ internal static class EditorModelBuildSmoke
                 return proof;
             }
 
-            async Task CheckReleased(ulong generation)
+            async Task CheckReleased(ulong generation, RenderAssetKey? texture = null)
             {
                 var lease = native.Leases.Single(lease => lease.Identity.Generation == generation);
                 Check(lease.Reaped && lease.ResourcesReleased, "Retired child or handles survived replacement.");
@@ -1393,6 +1410,19 @@ internal static class EditorModelBuildSmoke
                     stats.GetProperty("Handles").GetInt32() == 0 && validation.GetProperty("ValidationEnabled").GetBoolean() &&
                     validation.GetProperty("Errors").GetInt32() == 0 && validation.GetProperty("Warnings").GetInt32() == 0,
                     "Incorrect child validation or resource cleanup.");
+                if (texture is { } key)
+                {
+                    var resources = validation.GetProperty("MeshResources").EnumerateArray()
+                        .Where(owner => owner.GetProperty("TextureUploads").GetInt32() != 0).Single();
+                    Check(resources.GetProperty("TextureUploads").GetInt32() == 1 &&
+                        resources.GetProperty("LastTextureRevision").GetString() == key.Revision.ToString() &&
+                        resources.GetProperty("LiveUploads").GetInt32() == 0 &&
+                        resources.GetProperty("TextureImagesCreated").GetInt32() == 1 &&
+                        resources.GetProperty("TextureImagesReleased").GetInt32() == 1 &&
+                        resources.GetProperty("TextureSamplersCreated").GetInt32() == 1 &&
+                        resources.GetProperty("TextureSamplersReleased").GetInt32() == 1,
+                        "Runtime used the wrong texture revision or retained native image/sampler ownership.");
+                }
             }
         }
         finally
@@ -1442,7 +1472,8 @@ internal static class EditorModelBuildSmoke
                     var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots);
                     var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
                         referenceDiagnostics || materialSlots || initialImport;
-                    var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence, compareSlots) : null;
+                    var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence,
+                        compareSlots, verifyImportedTexture) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
@@ -1509,7 +1540,7 @@ internal static class EditorModelBuildSmoke
     }
 
     private static ViewportPixelProof MeasureViewportPixels(EditorView view, SKBitmap pixels, SKRectI image, float scale, PixelMask mask,
-        bool materialReset, bool allowSingleRedOccurrence, bool materialSlots)
+        bool materialReset, bool allowSingleRedOccurrence, bool materialSlots, bool verifyImportedTexture)
     {
         // The Editor chrome overlays the viewport. Compare a rectangle clear of the panels and their shadows.
         const float clearance = 12;
@@ -1542,8 +1573,38 @@ internal static class EditorModelBuildSmoke
         return new(crop.Left, crop.Top, crop.Width, crop.Height, Hash(rgba))
         {
             BlueSha256 = blue == null ? null : Hash(blue),
-            Slots = materialSlots ? MeasureSlots(rgba, crop.Width, crop.Height, cropped) : null
+            Slots = materialSlots ? MeasureSlots(rgba, crop.Width, crop.Height, cropped) : null,
+            Texture = verifyImportedTexture ? MeasureTextureTiles(rgba, crop.Width) : null
         };
+    }
+
+    private static TextureTileProof MeasureTextureTiles(byte[] rgba, int width)
+    {
+        var topLeft = Tile(0xD51006FF);
+        var topRight = Tile(0xE40911FF);
+        var bottomLeft = Tile(0xF2160BFF);
+        var bottomRight = Tile(0xFC0316FF);
+        Check(topLeft.X < topRight.X && bottomLeft.X < bottomRight.X &&
+            topLeft.Y < bottomLeft.Y && topRight.Y < bottomRight.Y &&
+            topRight.X < width / 2 && bottomRight.X < width / 2,
+            "The four imported texels did not appear in their expected viewport regions.");
+        return new(topLeft, topRight, bottomLeft, bottomRight);
+
+        TextureTile Tile(uint color)
+        {
+            long sumX = 0, sumY = 0;
+            var count = 0;
+            for (var offset = 0; offset < rgba.Length; offset += 4)
+            {
+                if (BinaryPrimitives.ReadUInt32BigEndian(rgba.AsSpan(offset, 4)) != color) continue;
+                var pixel = offset / 4;
+                sumX += pixel % width;
+                sumY += pixel / width;
+                count++;
+            }
+            Check(count > 100, $"Expected texel {color:X8} in the Editor's Vulkan viewport, got {count} pixels.");
+            return new(color.ToString("X8"), count, (int)(sumX / count), (int)(sumY / count));
+        }
     }
 
     private static SlotPixelProof MeasureSlots(byte[] rgba, int width, int height, PixelMask cropped)
@@ -1585,8 +1646,11 @@ internal static class EditorModelBuildSmoke
     {
         public string? BlueSha256 { get; init; }
         public SlotPixelProof? Slots { get; init; }
+        public TextureTileProof? Texture { get; init; }
     }
     private sealed record SlotPixelProof(string RedMask, int WhitePixels, string WhiteMask, string RightRgba);
+    private sealed record TextureTile(string Rgba, int Count, int X, int Y);
+    private sealed record TextureTileProof(TextureTile TopLeft, TextureTile TopRight, TextureTile BottomLeft, TextureTile BottomRight);
     private sealed record FrameProof(string Name, string BuildId, ulong Generation, int Pid, string ManifestHash, ulong Tick, PixelMask Mask)
     {
         public ViewportPixelProof? Pixels { get; init; }
@@ -1606,6 +1670,7 @@ internal static class EditorModelBuildSmoke
     {
         public string SelectionSha256 { get; init; } = "";
         public bool OverrideVerified { get; init; }
+        public AssetProof? Texture { get; init; }
     }
     private sealed record ModelImportProof(bool Completed, string BeforeEdit, string AfterEdit, string WhileMissing,
         string AfterReimport, string Blocked, bool MatchingContent, string OldBuild, string NewBuild,
