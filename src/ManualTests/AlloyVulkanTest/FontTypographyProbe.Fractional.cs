@@ -146,15 +146,7 @@ internal static partial class FontTypographyProbe
         var started = Stopwatch.GetTimestamp();
         var theme = Theme.Light;
         var root = new Panel { Background = theme.Input };
-        var text = new VStack { Margin = new(24, 20, 0, 0), Spacing = 4, Width = 304,
-            HorizontalAlignment = LayoutAlignment.Start, VerticalAlignment = LayoutAlignment.Start };
-        foreach (var size in FractionalFontSizes)
-        {
-            var row = new HStack { Spacing = 8 };
-            row.Add(new Text($"{size} · Aa 012 Ёй") { FontSize = size, FontWeight = 400, Width = 144 });
-            row.Add(new Text($"{size} · Aa 012 Ёй") { FontSize = size, FontWeight = 600, Width = 144 });
-            text.Add(row);
-        }
+        var text = CreateFractionalSamples();
         var editor = new TextBox { Value = EditorSample, FontSize = 12, Width = 304, Height = 28, Margin = new(24.5f, 107.5f, 0, 0),
             HorizontalAlignment = LayoutAlignment.Start, VerticalAlignment = LayoutAlignment.Start };
         var lines = new FractionalLines { Width = 248, Height = 32, Margin = new(24, 159, 0, 0),
@@ -195,6 +187,20 @@ internal static partial class FontTypographyProbe
         return new(layout, caret, selection, caretInk, selectionInk, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
 
         void Key(UiKey key, bool shift = false) => ui.HandleInput(new(InputKind.KeyDown, Key: key, Shift: shift));
+    }
+
+    private static VStack CreateFractionalSamples()
+    {
+        var text = new VStack { Margin = new(24, 20, 0, 0), Spacing = 4, Width = 304,
+            HorizontalAlignment = LayoutAlignment.Start, VerticalAlignment = LayoutAlignment.Start };
+        foreach (var size in FractionalFontSizes)
+        {
+            var row = new HStack { Spacing = 8 };
+            row.Add(new Text($"{size} · Aa 012 Ёй") { FontSize = size, FontWeight = 400, Width = 144 });
+            row.Add(new Text($"{size} · Aa 012 Ёй") { FontSize = size, FontWeight = 600, Width = 144 });
+            text.Add(row);
+        }
+        return text;
     }
 
     private static Dictionary<string, SKRectI> Regions(FractionalLayout layout, UiViewport viewport) => new()

@@ -233,6 +233,9 @@ internal sealed unsafe class VulkanHostCompositor : IDisposable
     }
 
     internal byte[] Compose(VulkanTextureInfo info, int variant, Action<ImageLayout> stateChanged, bool readback = true)
+        => Compose(info, SceneColors(variant), stateChanged, readback);
+
+    internal byte[] Compose(VulkanTextureInfo info, (SKColor Left, SKColor Right) colors, Action<ImageLayout> stateChanged, bool readback = true)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (info.Width != _width || info.Height != _height || info.Format != (uint)Format.R8G8B8A8Unorm ||
@@ -270,7 +273,6 @@ internal sealed unsafe class VulkanHostCompositor : IDisposable
             { SType = StructureType.RenderPassBeginInfo, RenderPass = _pass, Framebuffer = _framebuffer, RenderArea = new Rect2D(new Offset2D(0, 0), new Extent2D(_width, _height)) };
             vk.CmdBeginRenderPass(command, in render, SubpassContents.Inline);
             vk.CmdBindPipeline(command, PipelineBindPoint.Graphics, _scenePipeline);
-            var colors = SceneColors(variant);
             var push = stackalloc float[8] { colors.Left.Red / 255f, colors.Left.Green / 255f, colors.Left.Blue / 255f, 1,
                 colors.Right.Red / 255f, colors.Right.Green / 255f, colors.Right.Blue / 255f, 1 };
             vk.CmdPushConstants(command, _layout, ShaderStageFlags.FragmentBit, 0, 32, push);

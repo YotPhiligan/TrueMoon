@@ -124,7 +124,27 @@ internal static class OpenGLProbe
         protected override void DrawCore(IDrawingContext context)
         { DuringDraw?.Invoke(); if (Fail) throw new InvalidOperationException("Retry drawing"); }
     }
-    private static unsafe void VerifyComposition(GL gl, UiSession ui, byte[] source)
+    private static void VerifyComposition(GL gl, UiSession ui, byte[] source)
+    {
+        var width = ui.Viewport.Width;
+        var height = ui.Viewport.Height;
+        var background = new SKColor(20, 40, 60);
+        var destination = ComposeOnFramebuffer(gl, ui, (background, background));
+        var panel = ui.Root.Children[0]; var button = panel.Children[0].Children[2];
+        foreach (var point in new[] { (width - 1, height - 1),
+            ((int)((panel.Bounds.X + 4) * ui.Viewport.Scale), (int)((panel.Bounds.Y + 4) * ui.Viewport.Scale)),
+            ((int)((button.Bounds.X + button.Bounds.Width - 8) * ui.Viewport.Scale), (int)((button.Bounds.Y + button.Bounds.Height / 2) * ui.Viewport.Scale)) })
+        {
+            var offset = (point.Item2 * width + point.Item1) * 4;
+            var alpha = source[offset + 3] / 255f;
+            for (var c = 0; c < 3; c++)
+                Require(Math.Abs(destination[offset + c] - (source[offset + c] + new[] { 20, 40, 60 }[c] * (1 - alpha))) <= 1,
+                    "OpenGL GPU composition must preserve scene and blend premultiplied UI.");
+            Require(destination[offset + 3] == 255, "The composed scene must remain opaque.");
+        }
+    }
+
+    internal static unsafe byte[] ComposeOnFramebuffer(GL gl, UiSession ui, (SKColor Left, SKColor Right) colors)
     {
         var width = ui.Viewport.Width; var height = ui.Viewport.Height;
         var texture = gl.GenTexture(); var framebuffer = gl.GenFramebuffer();
@@ -136,30 +156,39 @@ internal static class OpenGLProbe
             gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, texture, 0);
             Require(gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer) == GLEnum.FramebufferComplete, "Host framebuffer incomplete.");
             gl.Disable(EnableCap.ScissorTest); gl.Disable(EnableCap.FramebufferSrgb);
-            gl.ColorMask(true, true, true, true); gl.ClearColor(20 / 255f, 40 / 255f, 60 / 255f, 1);
-            gl.Clear(ClearBufferMask.ColorBufferBit);
+            gl.ColorMask(true, true, true, true);
+            Clear(colors.Left);
+            gl.Enable(EnableCap.ScissorTest);
+            gl.Scissor(width / 2, 0, (uint)(width - width / 2), (uint)height);
+            Clear(colors.Right);
+            gl.Disable(EnableCap.ScissorTest);
             ui.PresentOpenGL(framebuffer, stencilBits: 0, clear: false);
             // Assertions only: window/HUD composition above has no CPU transfer.
             gl.BindFramebuffer(FramebufferTarget.ReadFramebuffer, framebuffer);
             var destination = new byte[width * height * 4];
             fixed (byte* pixels = destination) gl.ReadPixels(0, 0, (uint)width, (uint)height, PixelFormat.Rgba, PixelType.UnsignedByte, pixels);
-            var panel = ui.Root.Children[0]; var button = panel.Children[0].Children[2];
-            foreach (var point in new[] { (width - 1, height - 1),
-                ((int)((panel.Bounds.X + 4) * ui.Viewport.Scale), (int)((panel.Bounds.Y + 4) * ui.Viewport.Scale)),
-                ((int)((button.Bounds.X + button.Bounds.Width - 8) * ui.Viewport.Scale), (int)((button.Bounds.Y + button.Bounds.Height / 2) * ui.Viewport.Scale)) })
+            // Match the top-left origin of the other backends' readbacks.
+            var stride = width * 4;
+            var row = new byte[stride];
+            for (var y = 0; y < height / 2; y++)
             {
-                var src = (point.Item2 * width + point.Item1) * 4;
-                var dst = ((height - point.Item2 - 1) * width + point.Item1) * 4; // GL readback has bottom-left origin.
-                var alpha = source[src + 3] / 255f;
-                for (var c = 0; c < 3; c++)
-                    Require(Math.Abs(destination[dst + c] - (source[src + c] + new[] { 20, 40, 60 }[c] * (1 - alpha))) <= 1,
-                        "OpenGL GPU composition must preserve scene and blend premultiplied UI.");
-                Require(destination[dst + 3] == 255, "The composed scene must remain opaque.");
+                var first = destination.AsSpan(y * stride, stride);
+                var last = destination.AsSpan((height - y - 1) * stride, stride);
+                first.CopyTo(row);
+                last.CopyTo(first);
+                row.AsSpan().CopyTo(last);
             }
             Require(gl.IsFramebuffer(framebuffer) && gl.IsTexture(texture), "UI must not delete host framebuffer/texture.");
             Require(gl.GetError() == GLEnum.NoError, "OpenGL GPU composition generated a GL error.");
+            return destination;
         }
         finally { gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0); gl.DeleteFramebuffer(framebuffer); gl.DeleteTexture(texture); }
+
+        void Clear(SKColor color)
+        {
+            gl.ClearColor(color.Red / 255f, color.Green / 255f, color.Blue / 255f, 1);
+            gl.Clear(ClearBufferMask.ColorBufferBit);
+        }
     }
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     private static void Reject<T>(Action action) where T : Exception

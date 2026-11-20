@@ -424,3 +424,26 @@ one-pixel edge envelope with tolerance 24. OpenGL/Vulkan uses the strict
 per-channel tolerance 2. Region comparisons use neighboring pixels from the
 full frame, including at crop boundaries. A completed comparison outside
 tolerance saves the report and returns exit code 1.
+
+## Small text composition
+
+`--typography-composition --font-output fresh-directory --validation`
+uses the same six text samples at synthetic 125% and 175% in three cases.
+
+| Case | Drawing and composition |
+| --- | --- |
+| `opaque` | Text drawn on the Light theme's opaque input background |
+| `translucent` | The same text and panel rendered as one 60% opacity group over a two-color background |
+| `offscreen` | Text rendered to a transparent premultiplied target and sampled 1:1 over the same two-color background |
+
+The offscreen case uses a Skia raster surface, a borrowed OpenGL framebuffer,
+or the Vulkan host compositor. GPU output is read after composition. The probe
+also captures the source and checks every final pixel against the premultiplied
+blend with tolerance 1. Saved output includes 1:1 frames, 4× nearest-pixel
+text crops, offscreen sources with alpha, and full-frame backend differences.
+
+The report separates raw backend comparisons from same-backend comparisons
+of glyph coverage against the opaque case. The latter use source alpha for
+offscreen and estimate coverage from the red-channel contrast for opaque and
+translucent output. The report records each sample's ink bounds and peak
+coverage. All cases use the current Alloy text settings.
