@@ -21,6 +21,7 @@ public class InspectorProperty : Bindable
     /// <summary>Gets the presentation label.</summary>
     public string Label { get; }
     internal bool IsRenderReference { get; init; }
+    internal bool DisplayNumberInDegrees { get; init; }
     /// <summary>Gets the scalar kind, independent of an explicit null value.</summary>
     public PropertyValueKind Kind => Schema.Kind;
     /// <summary>Gets whether explicit null is accepted.</summary>
@@ -84,7 +85,9 @@ public class InspectorProperty : Bindable
         var oldValue = Value; var oldBoolean = BooleanValue; var oldNull = IsNull;
         var oldDraft = HasDraft; var oldReset = IsReset; var oldSource = SourceText;
         var oldWrite = CanWrite; var oldChangeNull = CanChangeNull; var oldCanReset = CanReset;
-        _value = _original = Format(value).ReplaceLineEndings("\n");
+        _value = _original = DisplayNumberInDegrees
+            ? TransformField.ToDegrees(value.GetNumber()).ToString("G15", CultureInfo.InvariantCulture)
+            : Format(value).ReplaceLineEndings("\n");
         _null = _originalNull = value.Kind == PropertyValueKind.Null; _reset = false; _source = source; _local = local;
         // Reusing fields across selection/history must not enqueue reads for unchanged presentation values.
         if (oldValue != Value) OnPropertyChanged(nameof(Value));
@@ -120,7 +123,7 @@ public class InspectorProperty : Bindable
             case PropertyValueKind.Number:
                 if (double.TryParse(Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && double.IsFinite(number))
                 {
-                    value = PropertyValue.From(number);
+                    value = PropertyValue.From(DisplayNumberInDegrees ? TransformField.ToRadians(number) : number);
                     if (this is TransformField && (!float.IsFinite((float)number) || Key is "sx" or "sy" or "sz" && (float)number <= 0))
                         error = Key is "sx" or "sy" or "sz" ? "Масштаб должен быть > 0" : "Введите конечное число с точкой";
                 }

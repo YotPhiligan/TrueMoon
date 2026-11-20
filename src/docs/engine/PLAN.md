@@ -30,6 +30,8 @@ runtime bootstrap. [Ключи и границы](../core/CONFIGURATION_MODULES.
 проверены в версии `1.2611.20.3-alpha` с Undo и перезапуском Editor.
 [Перенос переопределений](EDITOR_PLAN.md#ed4i-material-transfer) проверен
 на `1.2611.20.4-alpha` со сменой геометрии и Undo на Vulkan.
+[Проекция камеры](EDITOR_PLAN.md#ed4i-camera-projection) добавляет проверку
+угла и плоскостей отсечения перед Apply.
 [Открытые задачи инспектора](EDITOR_PLAN.md#ed4i-next) ведутся в плане Editor.
 
 **Согласованный порядок 2026-11-12:**

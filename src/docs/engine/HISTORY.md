@@ -16714,3 +16714,51 @@ validation, 0 ошибок и предупреждений. Проверены �
 по рендеру, импорту и ECS-загрузке и все 1 513 тестов Editor. TRX в
 `TestResults/ED4i-material-transfer-20261120-tests-01`.
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#transfer-material-overrides-to-another-mesh).
+
+<a id="ed4i-camera-projection-2026-11-20"></a>
+### ED4i — проекция камеры в инспекторе, 20.11.2026
+
+Версия `1.2611.20.5-alpha`. Поля Camera показывают вертикальный угол в
+градусах и расстояния до плоскостей отсечения. Маршрутизованный ввод
+оставил Apply недоступным при ближней плоскости 40 и дальней 30.
+Исправление ближней на 0.25 допустило одну операцию Apply для всех трёх
+полей. Документ хранит 80° в радианах и расстояния 0.25 и 30.
+
+При 80° обе фигуры занимают меньше пикселей. Undo восстановил 60°, исходные
+расстояния 0.1 и 100 и побайтно тот же RGBA viewport. Сохранение после Redo
+и запуск нового Editor восстановили ID камеры, значения инспектора, SHA
+сцены и пиксели при 80° из новой сборки.
+
+| Проекция | Красные пиксели | Зелёные пиксели | SHA256 RGBA viewport |
+| --- | --- | --- | --- |
+| 60° и после Undo | 16 653 | 16 926 | `6906DB097254B304B8841E1FFCF78046330BBA57CE255F09968A1634EB195331` |
+| 80° и после перезапуска | 7 875 | 7 655 | `F800D253F18AE2C42EAD1DE92FF8C161F025F693146BD2135CE840E85AA96756` |
+
+Source Debug, published Release и Release из закрытого feed с 20 пакетами
+TrueMoon прошли на Cobalt и Microsoft DI. Все 24 процесса Runtime завершились
+и освободили ресурсы, Vulkan Validation сообщил 0 ошибок и предупреждений.
+Профиль Windows x64 с SDK 11.0.100 использует маршрутизованный ввод в окне
+Editor. Сверены SHA отчётов, дочерних JSON и захваченных кадров.
+
+| Отчёт в `TestResults` | SHA256 |
+| --- | --- |
+| `ED4i-camera-projection-20261120-01/verification.json` | `D63C9FB8D408E0C430C945942981ADCD0B9F2109854691EF560E35E96822669C` |
+| `ED4i-camera-projection-20261120-fresh-01/verification.json` | `ECC23ECAC99299E5D68FD80B627720A95AA5912B49EB2116A4C792E11EDF136E` |
+
+| Проверка | Метод в `CameraProjectionInspectorTests` |
+| --- | --- |
+| Отображение градусов, запись радиан, один Apply и Undo/Redo | `ProjectionInput_DisplaysDegreesAndCommitsRadiansWithPlanesInOneUndo` |
+| Граничные и непредставимые значения блокируют Apply | `InvalidProjection_RejectedBeforeDocumentChange` |
+| Сброс проверяет наследуемую ближнюю плоскость вместе с черновиком дальней | `ResetNear_ValidatesInheritedValueAgainstDraftFar` |
+
+Точечный запуск прошёл 9 проверок.
+
+```powershell
+dotnet test TrueMoon.Aether.Editor.Tests/TrueMoon.Aether.Editor.Tests.csproj -c Debug --filter FullyQualifiedName~CameraProjectionInspectorTests --results-directory TestResults/ED4i-camera-projection-focused-20261120-01 --logger 'trx;LogFileName=camera-debug.trx' -v:q
+```
+
+В каждом из Debug и Release также прошли 907 выбранных тестов Aether по
+рендеру и ECS-загрузке и все 1 522 теста Editor. TRX сохранены в
+`TestResults/ED4i-camera-projection-20261120-tests-01`.
+
+[Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#edit-and-restore-the-camera-projection).

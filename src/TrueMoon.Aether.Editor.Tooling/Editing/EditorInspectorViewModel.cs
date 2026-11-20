@@ -215,8 +215,10 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
                 {
                     var schema = content!.Document.Schemas.Single(s => s.TypeId == component.TypeId && s.Version == component.SchemaVersion);
                     var fields = new List<InspectorProperty>();
+                    var cameraProjection = HasCameraProjection(schema);
                     var ordered = schema.Properties.Values.OrderBy(p => component.TypeId == BuiltInComponents.TransformId
                         ? Array.FindIndex(Fields.ToArray(), f => f.Key == p.Id)
+                        : cameraProjection ? ProjectionOrder(p.Id)
                         : component.TypeId == MeshRenderingComponents.MeshRendererId ? p.Id == "mesh" ? -2 : p.Id == "bindings" ? -1 : 0 : 0)
                         .ThenBy(p => p.Id, StringComparer.Ordinal);
                     foreach (var property in ordered)
@@ -224,6 +226,9 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
                         var address = (component.Id, property.Id); wanted.Add(address);
                         var renderReference = component.TypeId == MeshRenderingComponents.MeshRendererId &&
                             component.SchemaVersion == 1 && property.Kind == PropertyValueKind.String && property.Id is "mesh" or "bindings";
+                        var label = cameraProjection ? ProjectionLabel(property.Id)
+                            : renderReference ? property.Id == "mesh" ? "Меш" : "Материал" : property.Id;
+                        var displayDegrees = cameraProjection && property.Id == "fov";
                         InspectorProperty field;
                         if (component.TypeId == BuiltInComponents.TransformId)
                         {
@@ -231,11 +236,14 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
                         }
                         else if (!_properties.TryGetValue(address, out field!) || field.Schema.Kind != property.Kind ||
                             field.Schema.IsNullable != property.IsNullable || field.Schema.DefaultValue != property.DefaultValue ||
-                            field.IsRenderReference != renderReference)
+                            field.IsRenderReference != renderReference || field.Label != label || field.DisplayNumberInDegrees != displayDegrees)
                         {
                             if (field != null) field.Changed -= DraftChanged;
-                            var label = renderReference ? property.Id == "mesh" ? "Меш" : "Материал" : property.Id;
-                            field = new(component.Id, property, label, VerifyOwner) { IsRenderReference = renderReference };
+                            field = new(component.Id, property, label, VerifyOwner)
+                            {
+                                IsRenderReference = renderReference,
+                                DisplayNumberInDegrees = displayDegrees
+                            };
                             field.Changed += DraftChanged;
                         }
                         if (renderReference)
@@ -281,6 +289,7 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     public static string ComponentName(ComponentTypeId type) => type == BuiltInComponents.TransformId ? "Transform" :
         type == BuiltInComponents.AppearanceId ? "Appearance" : type == BuiltInComponents.InteractionId ? "Interaction" :
         type == MeshRenderingComponents.MeshRendererId ? "MeshRenderer" :
+        type == MeshRenderingComponents.CameraId ? "Camera" :
         "Component " + type.Value.ToString("D")[..8];
     private static string Source(EntityValueSource source, bool schemaDefault) => schemaDefault ? "По умолчанию из схемы" :
         source.EntityId != null ? "Локальное значение" :
@@ -393,17 +402,18 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
         finally { _restoringGesture = false; }
         _scaleLinkError = ""; _scaleErrorField = null; RebaseScale(); DraftChanged();
     }
-    private bool Validate()
+    private bool Validate(SceneAuthoringState? content)
     {
         var valid = true;
         foreach (var field in _active) valid &= field.TryValue(out _);
+        valid &= ValidateCameraProjections(content);
         return valid && (!HasRenderDraft || ReferenceEquals(_renderDraftAssets, _sceneAssets) &&
             _renderAssets is { Mesh: not null } && _renderReferenceDiagnostic == null);
     }
     private void UpdateState(SceneAuthoringState? content)
     {
         RefreshRenderAssets();
-        var valid = Validate(); var draft = HasDraft;
+        var valid = Validate(content); var draft = HasDraft;
         if (_scaleLinkError.Length != 0) { valid = false; _scaleErrorField?.SetError(_scaleLinkError); }
         SetProperty(ref _validationText, string.Join("\n", _components.SelectMany(component => component.Properties
             .Where(field => field.HasError).Select(field => component.Title + " · " +
@@ -434,7 +444,7 @@ public partial class EditorInspectorViewModel : ViewModel, IDisposable, IEditorI
     public void Apply()
     {
         VerifyOwner(); if (_resettingTransformGroup) return;
-        Refresh(_selection); if (!CanApply || !Validate()) return;
+        Refresh(_selection); if (!CanApply || !Validate(_commands.Read().Document?.Content)) return;
         var replaceTransform = ReplaceWholeTransform && Fields.Any(field => field.HasDraft);
         var edits = _active.Where(field => field.HasDraft || replaceTransform && field is TransformField).Select(field =>
         {

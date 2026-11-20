@@ -411,6 +411,21 @@ compares exact mesh, slot and material keys and Vulkan pixels for the mesh
 with both overrides, then checks Undo and Redo. `-FreshPackages` repeats the
 scenario from the closed feed.
 
+## Edit and restore the camera projection
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -CameraProjection `
+  -EvidenceDirectory 'TestResults/EditorCameraProjection/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+Select the scene camera and edit its vertical angle and clipping distances.
+An invalid near/far pair blocks Apply. A valid edit changes the angle from
+60° to 80° and both distances in one transaction. The probe checks the smaller
+projected shapes in the Vulkan viewport, exact pixel restoration after Undo,
+and the inspector values and viewport pixels after saving the Redo state and
+restarting Editor. `-FreshPackages` uses the closed feed.
+
 ## Diagnose a missing mesh or material binding
 
 ```powershell

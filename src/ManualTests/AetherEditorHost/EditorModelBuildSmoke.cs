@@ -398,8 +398,11 @@ internal static class EditorModelBuildSmoke
         var reimportTexture = replaceTexture || initialMode == "--initial-import-reimport-texture";
         var saveAfterSlotUndo = initialMode == "--initial-import-save-overrides-after-undo";
         var transferMaterials = initialMode == "--initial-import-material-transfer";
-        var saveInitialImport = transferMaterials || saveAfterSlotUndo || reimportTexture || initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture" or "--initial-import-save-overrides";
-        var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture" or "--initial-import-reopen-overrides";
+        var cameraProjection = initialMode is "--initial-import-camera-save" or "--initial-import-camera-reopen";
+        var saveInitialImport = transferMaterials || saveAfterSlotUndo || reimportTexture ||
+            initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture" or "--initial-import-save-overrides" or "--initial-import-camera-save";
+        var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture"
+            or "--initial-import-reopen-overrides" or "--initial-import-camera-reopen";
         var verifyImportedTexture = reimportTexture || initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
         var persistMultipleOverrides = saveAfterSlotUndo || initialMode is "--initial-import-save-overrides" or "--initial-import-reopen-overrides";
         var persistSlotOverride = persistMultipleOverrides || initialMode is "--initial-import-save-slot" or "--initial-import-reopen-slot";
@@ -799,6 +802,11 @@ internal static class EditorModelBuildSmoke
                 var published = await ledger.OpenAsync(token) ?? throw new InvalidDataException("Committed catalog ledger is missing.");
                 var mesh = published.Meshes.Single();
                 var entityId = published.Instances.Single().Id;
+                if (cameraProjection)
+                {
+                    await VerifyCameraProjection();
+                    return;
+                }
                 if (transferMaterials)
                 {
                     await VerifyMaterialTransfer();
@@ -1106,6 +1114,107 @@ internal static class EditorModelBuildSmoke
                     await CheckReleased(generation, texture);
                     Check(engine.Supervisor.Status.State == SessionState.Stopped && engine.Frames.Presentation == null &&
                         engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0, "Stop retained viewport resources.");
+                }
+
+                async Task VerifyCameraProjection()
+                {
+                    var camera = document.Read().Content!.Resolved.Entities.Values.Single(entity =>
+                        entity.Components.Values.Any(component => component.TypeId == MeshRenderingComponents.CameraId));
+                    var component = camera.Components.Values.Single(value => value.TypeId == MeshRenderingComponents.CameraId).Id;
+                    var inspector = view.Inspector!;
+                    var path = Path.Combine(proofDirectory, "editor-camera-projection.json");
+                    var original = new CameraProjectionValues(Math.PI / 3, .1, 100);
+                    var wider = new CameraProjectionValues(80 * (Math.PI / 180d), .25, 30);
+                    await EditorHierarchySmoke.ClickItemAsync(ui, view, camera.Id.Value.ToString("D"), token);
+
+                    if (reopenInitialImport)
+                    {
+                        var savedPath = Path.Combine(report, "import-saved", "editor-camera-projection.json");
+                        var saved = JsonSerializer.Deserialize<CameraProjectionProof>(await File.ReadAllBytesAsync(savedPath, token))!;
+                        await Expect("80", "0.25", "30", draft: false);
+                        var restored = await BuildCameraFrame("camera-reopened", wider);
+                        Check(saved.Completed && saved.EditorPid != Environment.ProcessId && saved.Camera == component.Value &&
+                            saved.SceneSha256 == sceneHash && saved.Current.Values == restored.Values &&
+                            saved.Current.Frame.Pixels != null && saved.Current.Frame.Pixels == restored.Frame.Pixels,
+                            "Reopening Editor did not restore the camera settings and exact Vulkan pixels.");
+                        await SaveProof(restored);
+                        return;
+                    }
+
+                    await Expect("60", "0.1", "100", draft: false);
+                    var initial = await BuildCameraFrame("camera-initial", original);
+                    var unedited = document.Read().Content!;
+                    await Enter("fov", "80");
+                    await Enter("near", "40");
+                    await Enter("far", "30");
+                    await Expect("80", "40", "30", draft: true);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => !inspector.Apply.IsEnabled &&
+                        inspector.Properties[(component, "far")].Property.HasError, token);
+                    Check(ReferenceEquals(document.Read().Content, unedited), "Projection input modified the committed document.");
+
+                    await Enter("near", "0.25");
+                    await Expect("80", "0.25", "30", draft: true);
+                    await ClickInspector(() => inspector.Apply);
+                    var applied = document.Read().Content!;
+                    Check(applied.UndoCount == unedited.UndoCount + 1, "The projection edits must be a single history operation.");
+                    var changed = await BuildCameraFrame("camera-wide", wider);
+                    Check(changed.Frame.Mask.RedPixels < initial.Frame.Mask.RedPixels &&
+                        changed.Frame.Mask.GreenPixels < initial.Frame.Mask.GreenPixels &&
+                        changed.Frame.Pixels!.Sha256 != initial.Frame.Pixels!.Sha256,
+                        "The wider camera did not reduce both projected shapes on Vulkan.");
+
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
+                    await Expect("60", "0.1", "100", draft: false);
+                    Check(document.Read().Content!.ContentRevision == unedited.ContentRevision, "Undo did not restore the camera values.");
+                    var undone = await BuildCameraFrame("camera-undone", original);
+                    Check(initial.Frame.Pixels == undone.Frame.Pixels, "Undo did not restore the exact Vulkan pixels.");
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.redo", token);
+                    await Expect("80", "0.25", "30", draft: false);
+                    Check(document.Read().Content!.ContentRevision == applied.ContentRevision, "Redo did not restore the wider camera.");
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "file", "document.Save", token);
+                    await documents.Pending.WaitAsync(token);
+                    Check(documents.Read().Error == null && !document.Read().IsDirty, "The wider camera scene did not save.");
+                    sceneHash = Hash(await File.ReadAllBytesAsync(scenePath, token));
+                    await SaveProof(changed, initial, undone);
+
+                    async Task Enter(string key, string value)
+                    {
+                        await ClickInspector(() => inspector.Properties[(component, key)].Input);
+                        await ui.InvokeAsync(() =>
+                        {
+                            ui.HandleInput(new(InputKind.KeyDown, Key: UiKey.A, Control: true));
+                            ui.HandleInput(new(InputKind.Text, Text: value));
+                        }).WaitAsync(token);
+                    }
+
+                    Task Expect(string angle, string near, string far, bool draft) =>
+                        EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext?.HasDraft == draft &&
+                            Shows("fov", angle) && Shows("near", near) && Shows("far", far), token);
+
+                    bool Shows(string key, string text) => inspector.Properties.TryGetValue((component, key), out var editor) &&
+                        editor.Input is TextBox input && input.Value == text;
+
+                    async Task<CameraProjectionFrame> BuildCameraFrame(string capture, CameraProjectionValues expected)
+                    {
+                        before = document.Read();
+                        content = before.Content!;
+                        var cameraState = content.Resolved.Entities[camera.Id].Components[component];
+                        var values = new CameraProjectionValues(cameraState.Properties["fov"].Value.GetNumber(),
+                            cameraState.Properties["near"].Value.GetNumber(), cameraState.Properties["far"].Value.GetNumber());
+                        Check(values == expected, "Scene did not contain the exact vertical angle and both distances.");
+                        await StartBuild();
+                        await Complete();
+                        var artifact = engine.Editor.Status.Candidate!.Build.Artifact;
+                        Check(playback.RunSelectedBuild(artifact), "Editor declined playing the camera scene.");
+                        await Complete();
+                        var frame = await CapturePlaying(capture, artifact, 0);
+                        await StopAndCheck(frame.Generation, null);
+                        return new(values, frame);
+                    }
+
+                    Task SaveProof(CameraProjectionFrame current, CameraProjectionFrame? first = null, CameraProjectionFrame? undo = null) =>
+                        File.WriteAllTextAsync(path, JsonSerializer.Serialize(new CameraProjectionProof(true, Environment.ProcessId,
+                            component.Value, sceneHash, current, first, undo)), token);
                 }
 
                 async Task VerifyMaterialTransfer()
@@ -2102,6 +2211,10 @@ internal static class EditorModelBuildSmoke
         string SelectionSha256, Guid Entity, AssetProof Mesh, AssetProof Material, AssetProof Binding, Guid Slot, ImportGeneration[] Imports, FrameProof Frame);
     private sealed record ImportedSlotProof(Guid Id, AssetProof Material);
     private sealed record MaterialTransferFrame(AssetProof Mesh, AssetProof Binding, ImportedSlotProof[] Slots, FrameProof Frame);
+    private sealed record CameraProjectionValues(double Angle, double Near, double Far);
+    private sealed record CameraProjectionFrame(CameraProjectionValues Values, FrameProof Frame);
+    private sealed record CameraProjectionProof(bool Completed, int EditorPid, Guid Camera, string SceneSha256,
+        CameraProjectionFrame Current, CameraProjectionFrame? Initial, CameraProjectionFrame? Undone);
     private sealed record InitialImportProof(bool Completed, int EditorPid, Guid OpeningId, Guid SourceId, string SourcePath, Guid Entity,
         long Generation, string SceneSha256, string CatalogSha256, string LedgerSha256, AssetProof Mesh, AssetProof Binding,
         ImportedSlotProof[] Slots, FrameProof Frame, bool RegistrationRetry)

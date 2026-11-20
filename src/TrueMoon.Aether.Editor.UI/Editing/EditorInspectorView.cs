@@ -287,7 +287,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         {
             var number = new NumberBox().WithRole(NumberRole); content = number;
             number.NumericKind = property.Kind == PropertyValueKind.Integer ? NumericValueKind.Integer : NumericValueKind.Real;
-            if (property.Kind == PropertyValueKind.Integer) number.Step = 1;
+            if (property.Kind == PropertyValueKind.Integer || property.DisplayNumberInDegrees) number.Step = 1;
             input = number.Editor.WithRole(InputRole).BindTwoWay(TextBox.ValueProperty, property, x => x.Value);
             ConfigureNumber(number, property);
         }
@@ -295,7 +295,7 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
         if (!property.IsRenderReference) input.Bind(UiProperties.Enabled, property, x => x.CanWrite);
         input.ColorRole = property.Kind == PropertyValueKind.Boolean ? EditorColorRole.Boolean :
             property.Kind == PropertyValueKind.String ? EditorColorRole.Text : EditorColorRole.Number;
-        input.AccessibleName = component + " " + (property.IsRenderReference ? property.Label : property.Key);
+        input.AccessibleName = component + " " + property.Label;
         var restoreMaterial = property.IsRenderReference && property.Key == "bindings";
         var reset = restoreMaterial
             ? Button.Simple("Вернуть материал меша").WithRole(ActionRole).OnClick(() =>
