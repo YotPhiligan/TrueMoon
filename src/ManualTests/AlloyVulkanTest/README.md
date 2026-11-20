@@ -385,3 +385,42 @@ the exact live tooltip without losing selection/focus; screenshots precede the t
 [Badge audit and current checks](../../docs/alloy/HISTORY.md#validation-badge-2026-11-08).
 See [current native fix evidence](../../docs/alloy/HISTORY.md#vulkan-backdrop-2026-11-08).
 [Current commands/results/limits](../../docs/alloy/HISTORY.md#validation-shadows-2026-11-08).
+
+Add `--design-lower-richtext-hint` to reproduce the PA8c.0 shadow overlap case.
+It opens the lower RichTextEditor hint in Light at synthetic scale 2 and
+saves all three 1480×1300 frames before comparing the GPU captures to
+raster. The report keeps the original tolerances and records exact logical
+bounds, full-frame statistics, and up to 16 out-of-tolerance pixel samples
+per comparison. The output includes full-frame diff PNGs and 8× nearest-pixel
+crops centered on the historical pixel at (1077, 457). A completed comparison
+outside tolerance writes the report and exits with code 1. Use fresh output
+paths for the `--design-no-shadows` and `--design-opaque-menu` controls.
+[PA8c.0 capture results](../../docs/alloy/HISTORY.md#pa8c0-shadow-overlap-2026-11-20).
+
+Use `--design-no-panel-shadow` to suppress only the panel shadow or
+`--design-no-hint-shadow` to suppress only the validation hint shadow.
+Pass both flags to suppress both. Each control keeps the original shadow
+geometry and sets its paint alpha to zero. The menu keeps its usual shadow
+and backdrop in all four cases. Capture reports include the effective
+shadow settings of the panel, hint and menu.
+
+## Fractional typography and thin lines
+
+`--fractional-typography --font-output fresh-directory --validation`
+captures the same Light scene at synthetic 125% and 175% on raster, OpenGL,
+and Vulkan. The scene uses the default font family at sizes 11, 12, and 14,
+with regular and semibold Latin and Cyrillic samples. It draws horizontal
+and vertical lines and rectangular outlines with a width of one logical pixel.
+Each shape group includes integer and fractional coordinates.
+
+Routed keyboard input places the caret after the first word, then selects
+that word with the caret at the same index. The probe checks focus, the
+selection range and the painted bounds of both changes. Each saved 1:1
+frame has 4× nearest-pixel crops for text, editor and lines. Full-frame diff
+PNGs and numeric results for each region accompany the crops.
+
+The CPU/GPU comparison uses flat tolerance 2 and the existing symmetric
+one-pixel edge envelope with tolerance 24. OpenGL/Vulkan uses the strict
+per-channel tolerance 2. Region comparisons use neighboring pixels from the
+full frame, including at crop boundaries. A completed comparison outside
+tolerance saves the report and returns exit code 1.

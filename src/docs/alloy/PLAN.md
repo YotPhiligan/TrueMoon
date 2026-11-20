@@ -71,7 +71,7 @@ UIA3d реализовал validation/shadows; UIA3d.1 исправил Vulkan f
 | --- | --- | --- |
 | Реализовано и проверено | UIA3d validation/shadows, UIA3d.1 Vulkan, UIA3d.2 badge/audit и UIA3d.3 TextBox line fit | [UIA3d.1](#uia3d1-vulkan-backdrop): source/published frosted3backend и fresh5package Vulkan прошли; wider release отдельно |
 | Numeric acceptance | Physical arrows/modifiers/captured Esc/OS pointer modifiers | Unverified input не равен доказанному hardware defect; routed input не заменяет этот proof |
-| Качество отображения | PA8c.0 baseline на текущем default Variable Text, затем PA8c.1/2 по наблюдаемым дефектам | Включить наблюдаемый shadow-overlap: 2pixels delta3/255 в дополнительной Light200 GL композиции UIA3d.2; основной D/R profile прошёл. Новые hinting/AA/metrics требуют сравнения |
+| Качество отображения | PA8c.0 baseline на текущем default Variable Text, затем PA8c.1/2 по наблюдаемым дефектам | [Нижняя подсказка RichText](HISTORY.md#pa8c0-shadow-overlap-2026-11-20) даёт два пикселя за допуском у OpenGL и Vulkan в Light при 2×. [Мелкий текст и геометрия при 1,25× и 1,75×](HISTORY.md#pa8c0-fractional-typography-2026-11-20) сохранены, все сравнения прошли по допуску |
 | Разделение панелей | UIA3e v1 реализован: constraints, capture/cancel, keyboard и retained state | [API/guide](SPLIT_VIEW.md), [проверки/границы](HISTORY.md#split-view-2026-11-09); следующий consumer — Studio |
 | Инфраструктура | Оставшийся INF5 по реальному diagnostics consumer | Не полный redesign scheduler/DI |
 | Release | Wider Window/backend/package, physical K3/K7/K8/VRAM/final alpha matrix | Отдельное окружение/выбранный scope; остановленный поиск NVIDIA workaround не возобновлён |
@@ -1655,9 +1655,17 @@ checks, затем native Debug/published Release и fresh package consumer по
 читаемый текст небольших размеров, чёткие линии/иконки, предсказуемое масштабирование
 и одинаковая композиция на raster/OpenGL/Vulkan. Контрольные consumers — Settings
 и существующие панели Aether.Editor: меню, дерево, inspector, console и text editors.
-Это план, реализация не начата. Текущая общая очередь ED6b сохраняется; при переходе
-к этой ветке первым выполнить PA8c.0, затем PA8c.1/2. Остальные этапы выбирать по
-найденным дефектам и замерам, сохраняя отдельную приёмку каждого среза.
+Первый срез PA8c.0 воспроизвёл расхождение теней у нижнего RichText-поля и
+сохранил кадры трёх backend. [Результат](HISTORY.md#pa8c0-shadow-overlap-2026-11-20).
+[Раздельная проверка теней](HISTORY.md#pa8c0-shadow-contributions-2026-11-20)
+подтвердила выход за допуск при их совместной отрисовке на двух пикселях.
+Базовый профиль для мелкого текста, каретки, выделения и линий при 1,25× и 1,75×
+прошёл в Light. На GPU выделение на один физический пиксель шире, чем на raster.
+[Матрица и кадры](HISTORY.md#pa8c0-fractional-typography-2026-11-20).
+Для PA8c.1 следующий замер покрывает разные варианты композиции текста.
+Для PA8c.2 профиль задаёт исходные размеры и пиксели для проверки выравнивания.
+Остальные этапы выбирать по найденным дефектам и замерам с отдельной приёмкой
+каждого среза.
 
 **Границы.** Общий контракт принадлежит этому UI плану. Argentis сохраняет
 нейтральные text/layout/drawing contracts; Skia/font policy и native ресурсы —
@@ -1668,7 +1676,7 @@ Rendering.Skia, DPI окна и presentation — Platform/Hosting. Новые op
 IME, bidi navigation и новые функции rich editor ведутся в
 [RTE плане](RICH_TEXT_EDITOR_PLAN.md), без дублирования его checklist.
 
-Все подэтапы ниже **запланированы**:
+Критерии готовности по подэтапам
 
 | ID | Результат | Критерий завершения |
 | --- | --- | --- |

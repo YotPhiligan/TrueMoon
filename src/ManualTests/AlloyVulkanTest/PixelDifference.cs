@@ -1,18 +1,26 @@
+using SkiaSharp;
+
 namespace AlloyVulkanTest;
 
 internal sealed record PixelDifference(bool Passed, int DifferentPixels, int OutsideTolerancePixels, int EdgeMatchedPixels, int MaximumChannelDifference,
     double MeanChannelDifference, int? FirstX, int? FirstY)
 {
-    internal static PixelDifference Compare(byte[] expected, byte[] actual, int width, int height, int tolerance, int edgeRadius = 0, int edgeTolerance = 24)
+    internal static PixelDifference Compare(byte[] expected, byte[] actual, int width, int height, int tolerance, int edgeRadius = 0,
+        int edgeTolerance = 24, Action<int, int>? outsideTolerance = null, SKRectI? region = null)
     {
         if (width <= 0 || height <= 0 || expected.Length != checked(width * height * 4) || actual.Length != expected.Length)
             throw new ArgumentException("Equal complete RGBA images and positive dimensions are required.");
         if (tolerance is < 0 or > 255) throw new ArgumentOutOfRangeException(nameof(tolerance));
         if (edgeRadius is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(edgeRadius));
         if (edgeTolerance is < 0 or > 255) throw new ArgumentOutOfRangeException(nameof(edgeTolerance));
+        var area = region ?? new SKRectI(0, 0, width, height);
+        if (area.Left < 0 || area.Top < 0 || area.Right > width || area.Bottom > height || area.Width <= 0 || area.Height <= 0)
+            throw new ArgumentOutOfRangeException(nameof(region));
         var different = 0; var outside = 0; var edges = 0; var maximum = 0; long total = 0; int? x = null, y = null;
-        for (var offset = 0; offset < expected.Length; offset += 4)
+        for (var row = area.Top; row < area.Bottom; row++)
+        for (var column = area.Left; column < area.Right; column++)
         {
+            var offset = (row * width + column) * 4;
             var pixelMaximum = 0;
             for (var channel = 0; channel < 4; channel++)
             {
@@ -24,9 +32,12 @@ internal sealed record PixelDifference(bool Passed, int DifferentPixels, int Out
             if (pixelMaximum <= tolerance) continue;
             if (edgeRadius == 1 && InEnvelope(expected, actual, offset, width, height, tolerance, edgeTolerance)
                 && InEnvelope(actual, expected, offset, width, height, tolerance, edgeTolerance)) { edges++; continue; }
-            outside++; x ??= offset / 4 % width; y ??= offset / 4 / width;
+            outside++;
+            x ??= column;
+            y ??= row;
+            outsideTolerance?.Invoke(column, row);
         }
-        return new(outside == 0, different, outside, edges, maximum, total / (double)expected.Length, x, y);
+        return new(outside == 0, different, outside, edges, maximum, total / (4d * area.Width * area.Height), x, y);
     }
 
     // Both directions are required: adding/removing an edge must not be accepted merely
