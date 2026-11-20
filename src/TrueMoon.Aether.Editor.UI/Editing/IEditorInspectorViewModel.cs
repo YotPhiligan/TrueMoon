@@ -96,6 +96,11 @@ public interface IEditorInspectorViewModel : System.ComponentModel.INotifyProper
     /// <param name="assetId">Persistent asset identity from the displayed choices.</param>
     void SelectRenderAsset(InspectorRenderAssetSelection selection, InspectorProperty property, Guid assetId) { }
 
+    /// <summary>Stages a mesh change with transfer of the current named slot overrides.</summary>
+    /// <param name="selection">Exact displayed renderer choices.</param>
+    /// <param name="mesh">An eligible destination mesh.</param>
+    void SelectMeshWithMaterialOverrides(InspectorRenderAssetSelection selection, Guid mesh) { }
+
     /// <summary>Stages a material choice for one named slot in the current renderer.</summary>
     /// <param name="selection">Exact displayed renderer choices.</param>
     /// <param name="slot">Persistent slot identity.</param>

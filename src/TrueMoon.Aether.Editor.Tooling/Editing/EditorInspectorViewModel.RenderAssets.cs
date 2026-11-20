@@ -49,10 +49,16 @@ public partial class EditorInspectorViewModel
             ? imported.Bindings.Select((slot, index) => new InspectorRenderSlot(slot.SlotId, _sceneAssets!.SlotName(slot.SlotId),
                 resolved?.Bindings[index].Material.AssetId, enabled && resolved != null)).ToArray()
             : [];
+        var canRestore = enabled && defaultBinding.HasValue && defaultBinding != references.Binding;
+        var transferMeshes = canRestore && mesh is { } source && resolved is { Bindings.Length: > 1 }
+            ? _sceneAssets!.Meshes.Where(choice => _sceneAssets.BindingWithTransferredMaterials(source, resolved, choice.Id) != null)
+                .Select(choice => choice.Id).ToArray()
+            : [];
         var next = new InspectorRenderAssetSelection(_renderMesh.ComponentId, _meshChoices, mesh.HasValue ? _materialChoices : [],
             mesh, resolved is { Bindings.Length: 1 } ? resolved.Bindings[0].Material.AssetId : null, enabled)
         {
-            CanRestoreMeshMaterial = enabled && defaultBinding.HasValue && defaultBinding != references.Binding,
+            CanRestoreMeshMaterial = canRestore,
+            MeshesWithMaterialTransfer = Array.AsReadOnly(transferMeshes),
             Slots = Array.AsReadOnly(slots)
         };
         // Equivalent displayed values can still target a different entity, opening or import generation.
@@ -98,13 +104,31 @@ public partial class EditorInspectorViewModel
         }
         else return;
 
-        if (binding == null) return;
+        if (binding is { } id) StageMeshBinding(assets, mesh, id.ToString("D"));
+    }
+
+    /// <inheritdoc />
+    public void SelectMeshWithMaterialOverrides(InspectorRenderAssetSelection selection, Guid mesh)
+    {
+        VerifyOwner();
+        Refresh(_selection);
+        if (!ReferenceEquals(_renderAssets, selection) || !selection.Enabled || _sceneAssets is not { } assets ||
+            _renderMesh == null || _renderBinding == null || selection.Mesh is not { } source ||
+            !selection.MeshesWithMaterialTransfer.Contains(mesh) ||
+            SceneRenderAssets.ResolveReferences(assets, _renderMesh.Value, _renderBinding.Value).Definition is not { } resolved ||
+            assets.BindingWithTransferredMaterials(source, resolved, mesh) is not { } binding) return;
+
+        StageMeshBinding(assets, mesh, binding);
+    }
+
+    private void StageMeshBinding(SceneRenderAssets assets, Guid mesh, string binding)
+    {
         _renderDraftAssets = assets;
         _loading = true;
         try
         {
-            _renderMesh.Value = mesh.ToString("D");
-            _renderBinding.Value = binding.Value.ToString("D");
+            _renderMesh!.Value = mesh.ToString("D");
+            _renderBinding!.Value = binding;
         }
         finally { _loading = false; }
         DraftChanged();

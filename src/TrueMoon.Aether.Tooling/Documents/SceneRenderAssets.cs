@@ -62,8 +62,36 @@ internal sealed class SceneRenderAssets
         var overrides = previous.Bindings.Select(item =>
                 (item.SlotId, MaterialId: item.SlotId == slot ? material : item.Material.AssetId))
             .Where((item, index) => item.MaterialId != original.Bindings[index].Material.AssetId).ToArray();
-        if (overrides.Length == 0) return _defaults[mesh].ToString("D");
-        if (overrides.Length == 1)
+        return OverrideReference(mesh, overrides);
+    }
+
+    internal string? BindingWithTransferredMaterials(Guid source, MaterialBindingSetDefinition current, Guid target)
+    {
+        if (source == target || DefaultDefinition(source) is not { Bindings.Length: > 1 } original ||
+            DefaultDefinition(target) is not { Bindings.Length: > 1 } destination) return null;
+
+        var overrides = new List<(Guid SlotId, Guid MaterialId)>();
+        var foundOverride = false;
+        for (var i = 0; i < original.Bindings.Length; i++)
+        {
+            var slot = original.Bindings[i];
+            var material = current.Bindings[i].Material.AssetId;
+            if (material == slot.Material.AssetId) continue;
+            foundOverride = true;
+            var label = SlotName(slot.SlotId);
+            if (original.Bindings.Count(item => SlotName(item.SlotId) == label) != 1) return null;
+            var matches = destination.Bindings.Where(item => SlotName(item.SlotId) == label).ToArray();
+            if (matches.Length != 1) return null;
+            var match = matches[0];
+            if (match.Material.AssetId != material) overrides.Add((match.SlotId, material));
+        }
+        return foundOverride ? OverrideReference(target, overrides) : null;
+    }
+
+    private string? OverrideReference(Guid mesh, IReadOnlyList<(Guid SlotId, Guid MaterialId)> overrides)
+    {
+        if (overrides.Count == 0) return _defaults[mesh].ToString("D");
+        if (overrides.Count == 1)
             return BindingForMaterial(mesh, overrides[0].SlotId, overrides[0].MaterialId)?.ToString("D");
         var value = SceneMaterialBindingReference.Format(overrides);
         return SceneMaterialBindingReference.TryParse(mesh, value, out var binding, out _) && !_entries.ContainsKey(binding) ? value : null;

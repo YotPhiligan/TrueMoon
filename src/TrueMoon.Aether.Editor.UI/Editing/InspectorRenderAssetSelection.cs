@@ -20,6 +20,9 @@ public sealed record InspectorRenderAssetSelection(ComponentId Component, IReadO
     /// <summary>Whether the current mesh has a different published default binding available.</summary>
     public bool CanRestoreMeshMaterial { get; init; }
 
+    /// <summary>Destination meshes that admit transfer of all current material overrides.</summary>
+    public IReadOnlyList<Guid> MeshesWithMaterialTransfer { get; init; } = [];
+
     /// <summary>Named slots for a mesh with several material ranges.</summary>
     public IReadOnlyList<InspectorRenderSlot> Slots { get; init; } = [];
 }

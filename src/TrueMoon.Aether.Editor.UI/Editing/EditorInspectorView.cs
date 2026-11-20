@@ -399,6 +399,16 @@ public sealed class EditorInspectorView : View<IEditorInspectorViewModel>, IUiIn
             button.AccessibleName = label + " · " + item.Name;
             button.Tone = item.Id == choices.Selected ? ControlTone.Accent : ControlTone.Neutral;
             rows.Add(button);
+            if (slot == null && property.Key == "mesh" && selection.MeshesWithMaterialTransfer.Contains(item.Id))
+            {
+                var transfer = Button.Simple("Выбрать с переносом материалов").WithRole(ActionRole).OnClick(() =>
+                {
+                    CloseRenderChoices(scroll);
+                    _model.SelectMeshWithMaterialOverrides(selection, item.Id);
+                });
+                transfer.AccessibleName = "Выбрать с переносом материалов · " + item.Name;
+                rows.Add(transfer);
+            }
         }
         scroll.Content(rows);
         scroll.IsVisible = true;

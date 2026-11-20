@@ -395,6 +395,22 @@ saved scene. `-FreshPackages` repeats the check from the closed feed.
 `-SaveAfterSlotUndo` saves immediately after Undo and checks that the
 restarted Editor shows the white left slot and the original green right slot.
 
+## Transfer material overrides to another mesh
+
+```powershell
+pwsh -NoProfile -File ManualTests/ModelBuildConsumer/VerifyEditor.ps1 -RenderMaterialTransfer `
+  -EvidenceDirectory 'TestResults/EditorRenderMaterialTransfer/<fresh-run>' `
+  -ValidationDirectory 'C:/VulkanSDK/<version>/Bin'
+```
+
+Import three two-slot meshes. An ordinary choice previews the destination
+defaults. The explicit transfer previews both overrides on the compatible
+mesh. A destination with one matching slot offers transfer once only that
+slot is overridden. Its matching slot has a different index. The probe
+compares exact mesh, slot and material keys and Vulkan pixels for the mesh
+with both overrides, then checks Undo and Redo. `-FreshPackages` repeats the
+scenario from the closed feed.
+
 ## Diagnose a missing mesh or material binding
 
 ```powershell

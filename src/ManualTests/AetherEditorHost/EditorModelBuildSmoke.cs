@@ -397,7 +397,8 @@ internal static class EditorModelBuildSmoke
         var replaceTexture = textureWorkflow || initialMode == "--initial-import-replace-texture";
         var reimportTexture = replaceTexture || initialMode == "--initial-import-reimport-texture";
         var saveAfterSlotUndo = initialMode == "--initial-import-save-overrides-after-undo";
-        var saveInitialImport = saveAfterSlotUndo || reimportTexture || initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture" or "--initial-import-save-overrides";
+        var transferMaterials = initialMode == "--initial-import-material-transfer";
+        var saveInitialImport = transferMaterials || saveAfterSlotUndo || reimportTexture || initialMode is "--initial-import-save" or "--initial-import-save-slot" or "--initial-import-save-texture" or "--initial-import-save-overrides";
         var reopenInitialImport = initialMode is "--initial-import-reopen" or "--initial-import-reopen-slot" or "--initial-import-reopen-texture" or "--initial-import-reopen-overrides";
         var verifyImportedTexture = reimportTexture || initialMode is "--initial-import-save-texture" or "--initial-import-reopen-texture";
         var persistMultipleOverrides = saveAfterSlotUndo || initialMode is "--initial-import-save-overrides" or "--initial-import-reopen-overrides";
@@ -798,6 +799,11 @@ internal static class EditorModelBuildSmoke
                 var published = await ledger.OpenAsync(token) ?? throw new InvalidDataException("Committed catalog ledger is missing.");
                 var mesh = published.Meshes.Single();
                 var entityId = published.Instances.Single().Id;
+                if (transferMaterials)
+                {
+                    await VerifyMaterialTransfer();
+                    return;
+                }
                 var leftMaterial = persistSlotOverride
                     ? published.Bindings.Single(item => item.Key.Locator == "builtin/material/default").Id
                     : mesh.Slots[0].MaterialId;
@@ -1100,6 +1106,155 @@ internal static class EditorModelBuildSmoke
                     await CheckReleased(generation, texture);
                     Check(engine.Supervisor.Status.State == SessionState.Stopped && engine.Frames.Presentation == null &&
                         engine.Gpu.ResourceCount == 0 && engine.Gpu.OpenHandleCount == 0, "Stop retained viewport resources.");
+                }
+
+                async Task VerifyMaterialTransfer()
+                {
+                    var destination = await ImportChoice("source/target.gltf");
+                    var partial = await ImportChoice("source/partial.gltf");
+                    var inspector = view.Inspector!;
+                    var component = document.Read().Content!.Resolved.Entities[new(entityId)].Components.Values
+                        .Single(value => value.TypeId == MeshRenderingComponents.MeshRendererId).Id;
+                    var white = published.Bindings.Single(item => item.Key.Locator == "builtin/material/default").Id;
+                    var red = mesh.Slots[0].MaterialId;
+                    await EditorHierarchySmoke.ClickItemAsync(ui, view, entityId.ToString("D"), token);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => Selection() is { Meshes.Count: 3, Enabled: true } selection &&
+                        selection.Mesh == mesh.AssetId && selection.MeshesWithMaterialTransfer.Count == 0, token);
+                    await ChooseSlot("left", white);
+                    await ClickInspector(() => inspector.Apply);
+                    await ChooseSlot("right", red);
+                    await ClickInspector(() => inspector.Apply);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => Selection() is { } selection &&
+                        selection.MeshesWithMaterialTransfer.SequenceEqual([destination.AssetId]), token);
+
+                    var original = document.Read().Content!;
+                    var meshField = inspector.Properties[(component, "mesh")];
+                    await ChooseMesh(destination.AssetId, transfer: false);
+                    await Expect(destination, destination.Slots[0].MaterialId, destination.Slots[1].MaterialId, draft: true);
+                    Check(ReferenceEquals(document.Read().Content, original), "The ordinary mesh choice committed its draft.");
+                    await ClickInspector(() => inspector.Cancel);
+                    await Expect(mesh, white, red, draft: false);
+                    await ChooseMesh(destination.AssetId, transfer: true);
+                    await Expect(destination, white, red, draft: true);
+                    Check(ReferenceEquals(document.Read().Content, original), "Transfer escaped the inspector draft.");
+                    await ClickInspector(() => inspector.Apply);
+                    var edit = document.Read().Content!;
+                    Check(edit.UndoCount == original.UndoCount + 1, "Transfer must commit the mesh and binding as one edit.");
+                    var transferred = await BuildTransferFrame(destination, "materials-transferred");
+
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
+                    await Expect(mesh, white, red, draft: false);
+                    Check(document.Read().Content!.ContentRevision == original.ContentRevision, "Undo did not restore the original mesh and binding.");
+                    var undo = await BuildTransferFrame(mesh, "material-transfer-undone");
+                    Check(transferred.Frame.Pixels!.Slots!.LeftRgba == undo.Frame.Pixels!.Slots!.LeftRgba &&
+                        transferred.Frame.Mask.RedPixels < undo.Frame.Mask.RedPixels &&
+                        transferred.Frame.Pixels.Slots.RightRgba != undo.Frame.Pixels.Slots.RightRgba,
+                        "Vulkan did not show the same materials on the new right-hand geometry.");
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.redo", token);
+                    await Expect(destination, white, red, draft: false);
+                    Check(document.Read().Content!.ContentRevision == edit.ContentRevision, "Redo did not restore the transfer.");
+
+                    await EditorHeaderSmoke.ClickActionAsync(ui, view, "edit", "edit.undo", token);
+                    await Expect(mesh, white, red, draft: false);
+                    await ChooseSlot("right", mesh.Slots[1].MaterialId);
+                    await ClickInspector(() => inspector.Apply);
+                    await EditorHeaderSmoke.UntilAsync(ui, () => Selection() is { } selection &&
+                        selection.MeshesWithMaterialTransfer.Contains(partial.AssetId), token);
+                    await ChooseMesh(partial.AssetId, transfer: true);
+                    await Expect(partial, partial.Slots[0].MaterialId, white, draft: true);
+                    await ClickInspector(() => inspector.Cancel);
+
+                    await File.WriteAllTextAsync(Path.Combine(proofDirectory, "editor-material-transfer.json"), JsonSerializer.Serialize(new
+                    {
+                        Completed = true, Transferred = transferred, Undone = undo,
+                        OrdinaryChoiceUsesDefaults = true, PartialMatchRejectsTwoOverrides = true, NamedSlotMovesAcrossIndices = true
+                    }), token);
+
+                    InspectorRenderAssetSelection? Selection() => inspector.DataContext?.RenderAssets;
+
+                    Task Expect(PublishedModelMesh target, Guid first, Guid second, bool draft) =>
+                        EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext?.HasDraft == draft && Selection() is { Slots.Count: 2 } selection &&
+                            selection.Mesh == target.AssetId && selection.Slots[0].Id == target.Slots[0].SlotId &&
+                            selection.Slots[1].Id == target.Slots[1].SlotId && selection.Slots[0].Material == first &&
+                            selection.Slots[1].Material == second &&
+                            SlotButton(selection.Slots[0].Name)?.Value == SlotLabel(selection, 0, first) &&
+                            SlotButton(selection.Slots[1].Name)?.Value == SlotLabel(selection, 1, second), token);
+
+                    static string SlotLabel(InspectorRenderAssetSelection selection, int index, Guid material) =>
+                        selection.Slots[index].Name + " · " + selection.Materials.Single(item => item.Id == material).Name;
+
+                    Button? SlotButton(string name) => Descendants(inspector.Properties[(component, "bindings")].Row)
+                        .OfType<Button>().SingleOrDefault(item => item.AccessibleName == "Материал слота " + name);
+
+                    async Task ChooseSlot(string name, Guid material)
+                    {
+                        string option = "";
+                        await ui.InvokeAsync(() => option = Selection()!.Materials.Single(item => item.Id == material).Name).WaitAsync(token);
+                        await ClickInspector(() => SlotButton(name));
+                        await ClickInspector(() => VisibleChoice(inspector.Properties[(component, "bindings")].Row,
+                            $"Материал слота {name} · {option}"));
+                        await EditorHeaderSmoke.UntilAsync(ui, () => inspector.DataContext!.CanApply &&
+                            Selection()!.Slots.Single(item => item.Name == name).Material == material, token);
+                    }
+
+                    async Task ChooseMesh(Guid id, bool transfer)
+                    {
+                        string option = "";
+                        await ui.InvokeAsync(() => option = Selection()!.Meshes.Single(item => item.Id == id).Name).WaitAsync(token);
+                        await ClickInspector(() => meshField.Input);
+                        var action = (transfer ? "Выбрать с переносом материалов · " : "Меш · ") + option;
+                        await ClickInspector(() => VisibleChoice(meshField.Row, action));
+                    }
+
+                    Button? VisibleChoice(Element row, string label)
+                    {
+                        var list = Descendants(row).OfType<ScrollViewer>().Single();
+                        var button = Descendants(list).OfType<Button>().SingleOrDefault(item => item.AccessibleName == label);
+                        if (button is not { Bounds.Width: > 0, Bounds.Height: > 0 }) return null;
+                        list.BringIntoView(button.Bounds);
+                        return list.ChildClipBounds.Contains(button.Bounds.X + button.Bounds.Width / 2,
+                            button.Bounds.Y + button.Bounds.Height / 2) ? button : null;
+                    }
+
+                    async Task<PublishedModelMesh> ImportChoice(string sourcePath)
+                    {
+                        await Import(sourcePath);
+                        Check(documents.Read().Error == null, $"Could not import {sourcePath}: {documents.Read().Error}");
+                        var selected = documents.Read().ModelCatalog!.Single(item => item.SourcePath == sourcePath);
+                        await ClickCatalog(popup => popup.ModelCatalogRows.Children.OfType<HStack>()
+                            .SelectMany(row => row.Children.OfType<CheckBox>()).SingleOrDefault(check => check.Value.EndsWith(sourcePath, StringComparison.Ordinal) && !check.IsChecked));
+                        await documents.Pending.WaitAsync(token);
+                        await CloseCatalog();
+                        await using var imported = ledgers.Create(new(selected.SourceId, Path.Combine(ledgerFolder, $"{selected.SourceId:N}.tmledger")))!;
+                        return (await imported.OpenAsync(token))!.Meshes.Single();
+                    }
+
+                    async Task<MaterialTransferFrame> BuildTransferFrame(PublishedModelMesh target, string capture)
+                    {
+                        before = document.Read();
+                        content = before.Content!;
+                        await StartBuild();
+                        await Complete();
+                        var artifact = engine.Editor.Status.Candidate!.Build.Artifact;
+                        var manifest = artifact.RenderContent!;
+                        var derived = manifest.Entries.Single(entry => entry.Definition is MaterialBindingSetDefinition binding &&
+                            binding.Mesh.AssetId == target.AssetId && entry.Key.AssetId != target.BindingSetId);
+                        var exact = (MaterialBindingSetDefinition)derived.Definition;
+                        Check(manifest.Resolve(exact.Mesh).Key == exact.Mesh &&
+                            exact.Bindings.Select(slot => slot.SlotId).SequenceEqual(target.Slots.Select(slot => slot.SlotId)) &&
+                            exact.Bindings.Select(slot => slot.Material.AssetId).SequenceEqual([white, red]) &&
+                            exact.Bindings.All(slot => manifest.Resolve(slot.Material).Key == slot.Material),
+                            "Build did not pin the selected mesh, its slot IDs and both materials.");
+                        Check(playback.RunSelectedBuild(artifact), "Editor declined playing the transferred binding.");
+                        await Complete();
+                        var frame = await CapturePlaying(capture, artifact, 0);
+                        await StopAndCheck(frame.Generation, null);
+                        Check(frame.Mask.GreenPixels == 0 && frame.Mask.RedPixels > 100 &&
+                            frame.Pixels?.Slots is { WhitePixels: > 100 } pixels && pixels.RedRightPixels == frame.Mask.RedPixels,
+                            "Vulkan did not show white on the left and red on the right.");
+                        return new(AssetProof.From(exact.Mesh), AssetProof.From(derived.Key),
+                            exact.Bindings.Select(slot => new ImportedSlotProof(slot.SlotId, AssetProof.From(slot.Material))).ToArray(), frame);
+                    }
                 }
 
                 async Task VerifyOverrideInInspector()
@@ -1723,12 +1878,13 @@ internal static class EditorModelBuildSmoke
                     var clip = new SKRectI((int)(bounds.X * scale), (int)(bounds.Y * scale),
                         (int)((bounds.X + bounds.Width) * scale), (int)((bounds.Y + bounds.Height) * scale));
                     var allowSingleRedOccurrence = resetMaterial || referenceDiagnostics || initialImport;
-                    var compareSlots = materialSlots || persistSlotOverride || reimportTexture;
-                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots, persistMultipleOverrides);
+                    var compareSlots = materialSlots || persistSlotOverride || reimportTexture || transferMaterials;
+                    var redSlot = persistMultipleOverrides || transferMaterials;
+                    var mask = Measure(pixels, clip, allowSingleRedOccurrence, compareSlots, redSlot);
                     var comparePixels = name is "inspector-saved" or "inspector-reopened" || resetMaterial && name != "inspector-before" ||
                         referenceDiagnostics || materialSlots || initialImport;
                     var exact = comparePixels ? MeasureViewportPixels(view, pixels, clip, scale, mask, resetMaterial, allowSingleRedOccurrence,
-                        compareSlots, verifyImportedTexture ? textureTopLeft ?? 0xD51006FF : null, persistMultipleOverrides) : null;
+                        compareSlots, verifyImportedTexture ? textureTopLeft ?? 0xD51006FF : null, redSlot) : null;
                     result.TrySetResult((mask, stamp.Tick, exact));
                 }
                 catch (Exception error) { result.TrySetException(error); }
@@ -1945,6 +2101,7 @@ internal static class EditorModelBuildSmoke
     private sealed record InspectorRestartProof(int EditorPid, Guid OpeningId, Guid SceneId, long SceneRevision, string SceneSha256,
         string SelectionSha256, Guid Entity, AssetProof Mesh, AssetProof Material, AssetProof Binding, Guid Slot, ImportGeneration[] Imports, FrameProof Frame);
     private sealed record ImportedSlotProof(Guid Id, AssetProof Material);
+    private sealed record MaterialTransferFrame(AssetProof Mesh, AssetProof Binding, ImportedSlotProof[] Slots, FrameProof Frame);
     private sealed record InitialImportProof(bool Completed, int EditorPid, Guid OpeningId, Guid SourceId, string SourcePath, Guid Entity,
         long Generation, string SceneSha256, string CatalogSha256, string LedgerSha256, AssetProof Mesh, AssetProof Binding,
         ImportedSlotProof[] Slots, FrameProof Frame, bool RegistrationRetry)

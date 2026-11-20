@@ -25,7 +25,7 @@ using TrueMoon.Nom;
 using TrueMoon.Nom.Resources;
 
 if (args.Length is < 7 or > 8 || args[0] is not ("microsoft" or "cobalt") ||
-    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-render-material-slot-overrides" or "--editor-render-material-slot-overrides-undo" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--editor-playing-texture-workflow" or "--revisions" or "--multi-model" or "--imported-texture")) return 2;
+    args.Length == 8 && args[7] is not ("--editor" or "--editor-imports" or "--editor-reimport" or "--editor-persisted-imports" or "--editor-model-catalog" or "--editor-model-placement" or "--editor-render-inspector" or "--editor-render-inspector-restart" or "--editor-render-material-reset" or "--editor-render-reference-diagnostics" or "--editor-render-material-slots" or "--editor-render-material-slots-restart" or "--editor-render-material-slot-overrides" or "--editor-render-material-slot-overrides-undo" or "--editor-render-material-transfer" or "--editor-initial-model-import" or "--editor-imported-texture-restart" or "--editor-imported-texture-reimport" or "--editor-imported-texture-replace" or "--editor-playing-texture-workflow" or "--revisions" or "--multi-model" or "--imported-texture")) return 2;
 var playerTexture = args.Length == 8 && args[7] == "--imported-texture";
 var saveAfterSlotUndo = args.Length == 8 && args[7] == "--editor-render-material-slot-overrides-undo";
 var restartMultipleOverrides = saveAfterSlotUndo || args.Length == 8 && args[7] == "--editor-render-material-slot-overrides";
@@ -34,7 +34,8 @@ var restartImportedTexture = args.Length == 8 && args[7] == "--editor-imported-t
 var textureWorkflow = args.Length == 8 && args[7] == "--editor-playing-texture-workflow";
 var replaceTexture = textureWorkflow || args.Length == 8 && args[7] == "--editor-imported-texture-replace";
 var reimportTexture = replaceTexture || args.Length == 8 && args[7] == "--editor-imported-texture-reimport";
-var editorInitialImport = restartSlotOverride || restartImportedTexture || reimportTexture || args.Length == 8 && args[7] == "--editor-initial-model-import";
+var transferMaterials = args.Length == 8 && args[7] == "--editor-render-material-transfer";
+var editorInitialImport = transferMaterials || restartSlotOverride || restartImportedTexture || reimportTexture || args.Length == 8 && args[7] == "--editor-initial-model-import";
 var renderSlots = args.Length == 8 && args[7] == "--editor-render-material-slots";
 var renderReferenceDiagnostics = args.Length == 8 && args[7] == "--editor-render-reference-diagnostics";
 var renderMaterialReset = args.Length == 8 && args[7] == "--editor-render-material-reset";
@@ -193,6 +194,21 @@ else
 }
 var sourceJson = original.ToJsonString();
 File.WriteAllText(path, sourceJson);
+if (transferMaterials)
+{
+    var target = original.DeepClone();
+    target["buffers"]![0]!["uri"] = "target.bin";
+    target["accessors"]![1]!["min"] = new JsonArray(.6, -.65, 0);
+    target["accessors"]![1]!["max"] = new JsonArray(1.25, .5, 0);
+    var bytes = File.ReadAllBytes(Path.Combine(sourceDirectory, "scene.bin"));
+    BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(9 * sizeof(float)), .6f);
+    BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(12 * sizeof(float)), 1.25f);
+    BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(15 * sizeof(float)), .6f);
+    File.WriteAllBytes(Path.Combine(sourceDirectory, "target.bin"), bytes);
+    File.WriteAllText(Path.Combine(sourceDirectory, "target.gltf"), target.ToJsonString());
+    target["meshes"]![0]!["primitives"]![1]!["extras"]!["truemoon"]!["subasset"] = "aux";
+    File.WriteAllText(Path.Combine(sourceDirectory, "partial.gltf"), target.ToJsonString());
+}
 var sceneId = new SceneId(Guid.Parse("4716d534-193a-4b12-a058-73a71d1fb340"));
 var cameraId = new EntityId(Guid.Parse("3c26b955-01fa-46f1-bab5-e24a07464745"));
 var cameraDefinition = new EntityDefinitionId(Guid.Parse("585db33c-e0bc-4dfc-a251-d55c005dbc23"));
@@ -223,6 +239,12 @@ if (editorInitialImport)
         scenesRoot = "Scenes", contentRoot = "Content"
     }));
     string[] arguments = [runtimeAssembly, "--model-build-probe", args[0], evidence, manifest, scene, workerPath, dotnet];
+    if (transferMaterials)
+    {
+        var transfer = await RunChild("import-saved", [.. arguments, "--initial-import-material-transfer"], TimeSpan.FromSeconds(120));
+        Check(transfer.ExitCode == 0, transfer.Error);
+        return 0;
+    }
     if (reimportTexture)
     {
         // Same 2×2 PNG with only the first texel changed to 2194D5FF.

@@ -16675,3 +16675,42 @@ TrueMoon прошли на Cobalt и Microsoft DI для каждого сост
 | `CombinedReference_RejectsDuplicateEmptyAndOverBudgetSlots` | Пройдена |
 
 [Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#persist-independent-overrides-for-two-material-slots).
+
+<a id="ed4i-material-transfer-2026-11-20"></a>
+### ED4i — перенос переопределений между мешами, 20.11.2026
+
+В версии `1.2611.20.4-alpha` штатный импорт создал три меша. Исходный и
+целевой имеют слоты `left` и `right`. У третьего меша `left` и `aux`.
+Обычный выбор целевого меша показал его исходные материалы. Cancel
+вернул текущий выбор. Отдельное действие переноса перенесло белый материал
+в `left` и красный в `right` и создало одну операцию Apply.
+Для третьего меша действие появилось после возврата материала `right`
+к исходному. Белый материал перешёл в `left` с индекса 0 на индекс 1,
+а `aux` сохранил свой материал.
+
+Build закрепил новый ключ меша, ID его слотов и точные ключи исходных
+материалов. Undo вернул исходный меш и привязку. В обеих сборках Vulkan показал
+16 653 белых пикселя слева, а RGBA левой половины совпали побайтно.
+Справа число красных пикселей соответствует изменённой геометрии.
+Redo восстановил ревизию документа с перенесённой привязкой.
+
+| Состояние | Красные пиксели справа | SHA256 RGBA viewport |
+| --- | --- | --- |
+| Целевой меш с переносом | 9 479 | `BE12296A4BDEA3CF3E9887C9C39D8E155BA7FA654460257DBD5998F2F4AC53AB` |
+| Исходный меш после Undo | 16 921 | `B1AF1D5ABAC47D3D9A276E81FFD2557BE96E86916D402358EC5E33DE50967805` |
+
+Source Debug, published Release и Release из закрытого feed с 20 пакетами
+TrueMoon прошли на Cobalt и Microsoft DI. В 12 запусках Runtime включена Vulkan
+validation, 0 ошибок и предупреждений. Проверены освобождение ресурсов и
+завершение процессов. Профиль Windows x64, SDK 11.0.100, маршрутизованный
+ввод в окне Editor. Сверены хеши отчётов, дочерних JSON и кадров.
+
+| Отчёт в `TestResults` | SHA256 |
+| --- | --- |
+| `ED4i-material-transfer-20261120-01/verification.json` | `C3C9ABEAADC3A5DC17D9D26A9FF3E589508B07F5192A1D3350CF6346B6C36575` |
+| `ED4i-material-transfer-20261120-fresh-01/verification.json` | `EDA8F04D7BBEBF7F5C302BB46ED659834B096E17543ADAE231E195751F385CE1` |
+
+В каждой конфигурации Debug и Release прошли 1 051 выбранный тест Aether
+по рендеру, импорту и ECS-загрузке и все 1 513 тестов Editor. TRX в
+`TestResults/ED4i-material-transfer-20261120-tests-01`.
+[Воспроизведение](../../ManualTests/ModelBuildConsumer/README.md#transfer-material-overrides-to-another-mesh).
